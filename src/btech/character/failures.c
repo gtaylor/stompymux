@@ -516,8 +516,9 @@ PartFailureResult mech_generic_failure_check(Mech *mech, FailureSystem system) {
   if (mech_context(mech)->configuration->btech_parts) {
     if (!l)
       l = 5;
-  } else
+  } else {
     return NO_FAILURE;
+  }
   if (btech_random_range_int(mech_context(mech), 1, 5000) != 42)
     return NO_FAILURE; /* ~1/5000 chance */
   if (btech_random_range_int(mech_context(mech), 1, 100) <=
@@ -586,8 +587,9 @@ mech_weapon_failure_check(const MechWeaponFailureRequest *request) {
       return NO_FAILURE;
     if (weapon_catalogue_is_personal_combat(weapon_from_equipment_index(t)))
       return NO_FAILURE;
-  } else
+  } else {
     return NO_FAILURE;
+  }
   if (btech_random_range_int(mech_context(mech), 1, 10) < 9)
     return NO_FAILURE;
   if (btech_random_range_int(mech_context(mech), 1, 100) <=

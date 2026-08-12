@@ -492,8 +492,9 @@ int mech_artillery_to_hit_calculate(const MechArtilleryToHitRequest *request) {
     if ((mech_spotter_dbref(mech) == NOTHING ||
          mech_spotter_dbref(mech) == mech_dbref(mech)))
       base_to_hit += 1;
-  } else
+  } else {
     base_to_hit -= 2;
+  }
   return base_to_hit - mech_fire_adjustment(mech);
 }
 WeaponRangeToHitResult

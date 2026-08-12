@@ -441,12 +441,13 @@ static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
                                max(1, mech_section_original_armor(m, LSIDE))) /
                     100;
               }
-            } else
+            } else {
               candidate->tick_danger +=
                   5 * (29 - min(29, l)) *
                   (100 - 100 * mech_section_armor(m, FSIDE) /
                              max(1, mech_section_original_armor(m, FSIDE))) /
                   100;
+            }
           }
         }
         for (k = 0; k < OPTION_COUNT; k++) {

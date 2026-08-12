@@ -246,8 +246,9 @@ void btech_special_objects_load(BtechContext *context) {
       if (btech_special_object_data_size(
               btech_special_object_definition(type)) > 0)
         new_special_object(context, i, type);
-    } else
+    } else {
       c_xcode(context->database, i); /* Reset the flag */
+    }
   }
   for (special_type = 0; special_type < BTECH_SPECIAL_OBJECT_COUNT;
        special_type++) {

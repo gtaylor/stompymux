@@ -376,12 +376,14 @@ DbRef lookup_player(WorldContext *world, DbRef doer, const char *name,
           find_connected_name(world->database, world->descriptors, doer, name);
       if (is_dark(world->database, thing))
         thing = NOTHING;
-    } else
+    } else {
       thing = NOTHING;
+    }
   } else if (!is_good_obj(world->database, *p)) {
     thing = NOTHING;
-  } else
+  } else {
     thing = *p;
+  }
 
   return thing;
 }

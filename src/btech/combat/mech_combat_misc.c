@@ -248,8 +248,9 @@ void mech_destroy(Mech *target, Mech *mech, bool showboom, const char *reason) {
     if (mech != target) {
       mech_notify(mech, MECHALL, "You destroyed the target!");
       mech_los_broadcast_unit(target, mech, "has been destroyed by %s!");
-    } else
+    } else {
       mech_los_broadcast(target, "has been destroyed!");
+    }
     if (showboom) {
       for (loop = 0; loop < BOOM_LENGTH; loop++) {
         const char *const *message =

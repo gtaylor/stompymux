@@ -247,8 +247,9 @@ void mech_damage_apply(const MechDamageRequest *request) {
       *rear_message = '\0';
       isrear = 0;
     }
-  } else
+  } else {
     *rear_message = '\0';
+  }
   /*   while (mech_section_is_destroyed(wounded, hitloc) && !kill) */
   while (((!mech_is_aerospace_unit(wounded) &&
            !mech_section_internal(wounded, hitloc)) ||
@@ -291,15 +292,16 @@ void mech_damage_apply(const MechDamageRequest *request) {
     if (!secondary_transfer_succeeded) {
       if (mech_is_aerospace_unit(wounded) && !mech_is_destroyed(wounded)) {
         /* Hurt SI instead. */
-        if (mech_structural_integrity(wounded) <= damage)
+        if (mech_structural_integrity(wounded) <= damage) {
           kill = 1;
-        else {
+        } else {
           mech_structural_integrity_set(
               wounded, mech_structural_integrity(wounded) - damage);
           kill = -1;
         }
-      } else
+      } else {
         return;
+      }
     }
     /* Nyah. Damage transferred to waste, shooting a dead mech? */
   }
@@ -315,10 +317,11 @@ void mech_damage_apply(const MechDamageRequest *request) {
     (void)snprintf(notification_buff, sizeof(notification_buff),
                    "for %d points of damage in the %s %s", damage + int_damage,
                    location_buff, rear_message);
-  } else
+  } else {
     (void)snprintf(notification_buff, sizeof(notification_buff),
                    "for %d points of damage in the structure.",
                    damage + int_damage);
+  }
 
   /* Only count initial damage. Transfer is just gonna do that, transfer, not
    * damage again */
@@ -489,11 +492,12 @@ void mech_damage_apply(const MechDamageRequest *request) {
                                    .critical_hits = &crits});
       if (!int_damage && !mech_section_is_destroyed(wounded, hitloc))
         mech_location_breach(attacker, wounded, hitloc);
-    } else
+    } else {
       mech_location_maybe_breach(attacker, wounded, hitloc);
+    }
     if (int_damage > 0 && transfer && (mech_class(wounded) != CLASS_BSUIT)) {
       hitloc = mech_hit_location_transfer(wounded, hitloc);
-      if (hitloc >= 0)
+      if (hitloc >= 0) {
         mech_damage_apply(&(MechDamageRequest){
             .target = wounded,
             .attacker = attacker,
@@ -510,7 +514,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
             .ammunition_mode = W_AMMO_MODE,
             .ignore_swarmers = T_IGNORE_SWARMERS,
         });
-      else {
+      } else {
         mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
         return;
       }

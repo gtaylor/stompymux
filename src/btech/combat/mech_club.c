@@ -128,11 +128,11 @@ void mech_grabclub(DbRef player, void *data, char *buffer) {
   }
 
   if (wc_args == 0) {
-    if (mech_club_location_is_usable(mech, LARM, false))
+    if (mech_club_location_is_usable(mech, LARM, false)) {
       location = LARM;
-    else if (mech_club_location_is_usable(mech, RARM, false))
+    } else if (mech_club_location_is_usable(mech, RARM, false)) {
       location = RARM;
-    else {
+    } else {
       mech_notify(mech, MECHALL,
                   "You don't have a free arm with a working hand actuator!");
       return;

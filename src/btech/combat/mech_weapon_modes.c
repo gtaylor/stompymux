@@ -332,12 +332,12 @@ void mech_inarc_ammo_toggle(DbRef player, void *data, char *buffer) {
 
   wc_args = mech_parseattributes(buffer, args, 2);
 
-  if (wc_args < 2)
+  if (wc_args < 2) {
     mech_toggle_mode_sub(player, mech, buffer, 1, INARC, 0, 0,
                          "Weapon %d has been set to fire INARC Homing pods",
                          "Weapon %d is already set to fire INARC Homing pods",
                          "That weapon is not an INARC launcher!");
-  else {
+  } else {
     switch (ascii_to_upper(*checked_string_suffix(args[1], 0))) {
     case 'X':
       mech_toggle_mode_sub(
@@ -482,12 +482,12 @@ void mech_rac(DbRef player, void *data, char *buffer) {
 
   wc_args = mech_parseattributes(buffer, args, 2);
 
-  if (wc_args < 2)
+  if (wc_args < 2) {
     mech_toggle_mode_sub(player, mech, buffer, 1, RAC, 0, 1,
                          "Weapon %d has been set to fire one shot at a time.",
                          "Weapon %d is already set to fire one shot at a time.",
                          "That weapon is not a RotaryAC!");
-  else {
+  } else {
     switch (args[1][0]) {
     case '2':
       mech_toggle_mode_sub(

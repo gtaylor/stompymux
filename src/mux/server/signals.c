@@ -182,12 +182,13 @@ static void signal_shutdown(uv_signal_t *handle, int signo) {
                                  .player = NOTHING,
                                  .options = SHUTDN_EXIT,
                                  .message = "received SIGTERM from kernel."});
-  } else
+  } else {
     server_shutdown(
         &(ServerShutdownRequest){.control = handlers->control,
                                  .player = NOTHING,
                                  .options = SHUTDN_EXIT | SHUTDN_KILLED,
                                  .message = "received SIGUSR2 from kernel."});
+  }
 }
 
 static void signal_segv(int signo, siginfo_t *siginfo, void *ucontext) {

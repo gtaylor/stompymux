@@ -69,9 +69,10 @@ void mech_land(DbRef player, void *data, char *buffer) {
       mech_jump_complete(mech);
       mech_maybe_move(mech);
     }
-  } else
+  } else {
     mecha_notify(btech_context_evaluation(context), player,
                  "You're not jumping!");
+  }
 }
 
 static bool mech_is_over_water(const Mech *mech) {
@@ -169,8 +170,9 @@ void mech_jump_land(Mech *mech) {
           dfa = death_from_above(mech, target);
         else
           mech_notify(mech, MECHPILOT, "Your DFA target has moved!");
-      } else
+      } else {
         mech_notify(mech, MECHPILOT, "Your target has become invalid.");
+      }
     }
 
     if (!dfa)

@@ -519,20 +519,21 @@ char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
                      DbRef player, DbRef target) {
   (void)evaluation;
   char *buffer = alloc_lbuf("unparse_object");
-  if (target == NOTHING)
+  if (target == NOTHING) {
     string_copy(buffer, "*NOTHING*");
-  else if (target == HOME)
+  } else if (target == HOME) {
     string_copy(buffer, "*HOME*");
-  else if (!is_good_obj(database, target))
+  } else if (!is_good_obj(database, target)) {
     (void)snprintf(buffer, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
-  else if (is_examinable(database, player, target)) {
+  } else if (is_examinable(database, player, target)) {
     char *flags = unparse_flags(database, player, target);
     (void)snprintf(buffer, LBUF_SIZE, "%s(#%ld%s%s)",
                    game_object_name(database, target), target,
                    *flags ? ":" : "", flags);
     free_sbuf(flags);
-  } else
+  } else {
     string_copy(buffer, game_object_name(database, target));
+  }
   return buffer;
 }
 bool convert_flags(EvaluationContext *evaluation, DbRef player, char *list,

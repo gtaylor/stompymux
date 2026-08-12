@@ -279,8 +279,9 @@ void mech_fire_broadcast(Mech *mech, Mech *target, int x, int y,
                                      .y = mech_position_real_y(temp_mech),
                                      .z = mech_position_real_z(temp_mech)},
                            .end = {.x = fx, .y = fy, .z = fz},
-                       })))
+                       }))) {
           defender = 1;
+        }
 
         if (!attacker && !defender)
           continue;
@@ -296,9 +297,10 @@ void mech_fire_broadcast(Mech *mech, Mech *target, int x, int y,
             mech_printf(temp_mech, MECHSTARTED, "%s fires a %s at something!",
                         mech_to_mech_display_id(temp_mech, mech).text,
                         weapname);
-        } else
+        } else {
           mech_printf(temp_mech, MECHSTARTED, "Something %s %s with a %s",
                       is_hit ? "hits" : "misses", buff, weapname);
+        }
       }
     }
   } else {
@@ -332,8 +334,9 @@ void mech_fire_broadcast(Mech *mech, Mech *target, int x, int y,
                                      .y = mech_position_real_y(temp_mech),
                                      .z = mech_position_real_z(temp_mech)},
                            .end = {.x = fx, .y = fy, .z = fz},
-                       })))
+                       }))) {
           defender = 1;
+        }
         if (!attacker && !defender)
           continue;
         if (attacker) {
@@ -345,9 +348,10 @@ void mech_fire_broadcast(Mech *mech, Mech *target, int x, int y,
             mech_printf(temp_mech, MECHSTARTED, "%s fires a %s at something!",
                         mech_to_mech_display_id(temp_mech, mech).text,
                         weapname);
-        } else /* def */
+        } else { /* def */
           mech_printf(temp_mech, MECHSTARTED, "Something fires a %s at %s",
                       weapname, buff);
+        }
       }
     }
   }

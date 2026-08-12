@@ -174,7 +174,7 @@ void mech_vehicle_critical_handle(const VehicleCriticalRequest *request) {
       }
       return;
     }
-  } else
+  } else {
     switch (btech_random_range(context, 1, 10)) {
     case 1:
     case 2:
@@ -248,6 +248,7 @@ void mech_vehicle_critical_handle(const VehicleCriticalRequest *request) {
       return;
       break;
     }
+  }
   mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
   switch (btech_random_range(context, 0, 5)) {
   case 0:

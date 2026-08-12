@@ -183,10 +183,10 @@ void mech_speed_update(Mech *mech) {
 #endif
     mech_heading_change_clear(mech);
   }
-  if (mech_movement_type(mech) == MOVE_QUAD && mech_lateral_movement(mech))
+  if (mech_movement_type(mech) == MOVE_QUAD && mech_lateral_movement(mech)) {
     tempspeed = speed_old_decrease(tempspeed, maxspeed, MP1);
 #ifdef BT_MOVEMENT_MODES
-  else if (mech_lateral_movement(mech)) {
+  } else if (mech_lateral_movement(mech)) {
     if (has_bool_advantage(context, mech_pilot_dbref(mech), "maneuvering_ace"))
       tempspeed = speed_old_decrease(tempspeed, maxspeed, MP2);
     else

@@ -393,11 +393,11 @@ void mech_eta(DbRef player, void *data, char *buffer) {
       .end = {.x = fx, .y = fy, .z = 0.0F},
   });
   float const CURRENT_SPEED = mech_current_speed(mech);
-  if (fabsf(CURRENT_SPEED) < 0.1F)
+  if (fabsf(CURRENT_SPEED) < 0.1F) {
     mech_printf(mech, MECHALL,
                 "Range to hex (%d,%d) is %.1f.  ETA: Never, mech not moving.",
                 eta_x, eta_y, (double)range);
-  else {
+  } else {
     float const ETA_MINUTES =
         fabsf(range / (CURRENT_SPEED / (float)KPH_PER_MP));
     etamin = clamp_float_to_int(ETA_MINUTES);
@@ -493,23 +493,23 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
     lugged += mech_carried_cargo_weight(mech) * mod / 2;
     mech_load_cache_record(mech, lugged);
   }
-  if (mech_is_destroyed(mech))
+  if (mech_is_destroyed(mech)) {
     mspeed = 0.0F;
-  else {
+  } else {
     int mv = mech_cached_calculated_weight(mech);
     int sv = mech_tonnage(mech) * 1024;
 
-    if (mv == 1 && !mech_is_destroyed(mech))
+    if (mv == 1 && !mech_is_destroyed(mech)) {
       mv = sv;
-    else {
+    } else {
       if (mv > sv)
         mv = mv + (mv - sv) / 2;
       else
         mv = mv + (sv - mv) / 3;
     }
-    if (3 * sv < (mech_cached_lugged_weight(mech) + mv))
+    if (3 * sv < (mech_cached_lugged_weight(mech) + mv)) {
       mspeed = 0.0F;
-    else {
+    } else {
       int const TONNAGE = mech_tonnage(mech);
       int const DENOMINATOR = mech_movement_maximum_int(
           1024 * TONNAGE + mech_cached_lugged_weight(mech) / 3,

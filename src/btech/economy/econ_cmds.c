@@ -544,8 +544,9 @@ static void manifest_change(const ManifestChangeRequest *change) {
       else
         count = min(num, econ_find_items(context, LOC2, MATCH.part.id,
                                          MATCH.part.brand));
-    } else
+    } else {
       count = num;
+    }
     foo += count;
     if (!count)
       continue;

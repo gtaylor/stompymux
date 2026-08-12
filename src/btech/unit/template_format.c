@@ -223,9 +223,9 @@ char *my_shortform(const char *source,
                    char buffer[static BTECH_TEXT_CAPACITY]) {
   if (!source)
     return nullptr;
-  if (strlen(source) <= 4 && !strchr(source, '/'))
+  if (strlen(source) <= 4 && !strchr(source, '/')) {
     (void)snprintf(buffer, BTECH_TEXT_CAPACITY, "%s", source);
-  else {
+  } else {
     size_t source_length = strlen(source);
     size_t output_length = 0;
     for (size_t index = 0;
@@ -274,13 +274,14 @@ char *part_figure_out_shname(int i, char buffer[static BTECH_TEXT_CAPACITY]) {
         checked_string_suffix(
             weapon_catalogue_name(ammunition_to_weapon_index(i)),
             part_weapon_short_name_offset(ammunition_to_weapon_index(i))));
-  } else if (equipment_is_bomb(i))
+  } else if (equipment_is_bomb(i)) {
     (void)snprintf(name, sizeof(name), "Bomb_%s",
                    bomb_name(bomb_from_equipment_index(i)));
-  else if (equipment_is_special(i) &&
-           i < special_equipment_index(TEMPLATE_INTERNAL_COUNT))
+  } else if (equipment_is_special(i) &&
+             i < special_equipment_index(TEMPLATE_INTERNAL_COUNT)) {
     (void)snprintf(name, sizeof(name), "%s",
                    template_internal_name(special_from_equipment_index(i)));
+  }
   if (equipment_is_cargo(i) && i < cargo_equipment_index(TEMPLATE_CARGO_COUNT))
     (void)snprintf(name, sizeof(name), "%s",
                    template_cargo_name(cargo_from_equipment_index(i)));
@@ -336,7 +337,7 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
   w_fire_modes &= ~flaggo;
   w_ammo_modes = mech_critical_ammo_mode(mech, x, y);
 
-  if (equipment_is_weapon(mech_critical_part_type(mech, x, y)))
+  if (equipment_is_weapon(mech_critical_part_type(mech, x, y))) {
     (void)fprintf(
         fp, "    %s		  { %s - %s %s}\n", crit,
         get_parts_vlong_name(mech->xcode.context,
@@ -358,7 +359,7 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
         !mech->xcode.context->configuration->btech_parts
             ? ""
             : tprintf("%d ", mech_critical_brand(mech, x, y)));
-  else if (equipment_is_ammunition(mech_critical_part_type(mech, x, y)))
+  } else if (equipment_is_ammunition(mech_critical_part_type(mech, x, y))) {
     (void)fprintf(
         fp, "    %s		  { %s %d %s - }\n", crit,
         get_parts_vlong_name(mech->xcode.context,
@@ -379,11 +380,11 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
                   .delimiter = '|',
                   .buffer = (char[BTECH_TEXT_CAPACITY]){0}})
             : "-");
-  else if (equipment_is_bomb(mech_critical_part_type(mech, x, y)))
+  } else if (equipment_is_bomb(mech_critical_part_type(mech, x, y))) {
     (void)fprintf(fp, "    %s		  { %s - - - }\n", crit,
                   get_parts_vlong_name(mech->xcode.context,
                                        mech_critical_part_type(mech, x, y), 0));
-  else {
+  } else {
     (void)fprintf(fp, "    %s		  { %s %s - %s}\n", crit,
                   get_parts_vlong_name(mech->xcode.context,
                                        mech_critical_part_type(mech, x, y), 0),

@@ -118,9 +118,10 @@ static void do_show_com(const FifoVisit *visit) {
   if (day == t->tm_mday) {
     (void)snprintf(buf, sizeof(buf), "[%02d:%02d] %s", t->tm_hour, t->tm_min,
                    d->msg);
-  } else
+  } else {
     (void)snprintf(buf, sizeof(buf), "[%02d.%02d / %02d:%02d] %s",
                    t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, d->msg);
+  }
   notify_checked(view->evaluation, player, player, buf,
                  MSG_ME_ALL | MSG_F_DOWN);
 }
@@ -251,8 +252,9 @@ void comsys_send_channel_message(EvaluationContext *evaluation,
   if (fifo_length(&ch->last_messages) >= CHANNEL_HISTORY_LEN) {
     c = fifo_pop(&ch->last_messages);
     free((void *)c->msg);
-  } else
+  } else {
     c = checked_storage_allocate(sizeof(*c));
+  }
   c->msg = strdup(mess);
   c->time = evaluation->runtime->clock->now;
   fifo_push(&ch->last_messages, c);
@@ -294,8 +296,9 @@ void comsys_channel_printf(EvaluationContext *evaluation, struct Channel *ch,
   if (fifo_length(&ch->last_messages) >= CHANNEL_HISTORY_LEN) {
     c = fifo_pop(&ch->last_messages);
     free((void *)c->msg);
-  } else
+  } else {
     c = checked_storage_allocate(sizeof(*c));
+  }
   c->msg = strdup(buffer);
   c->time = evaluation->runtime->clock->now;
   fifo_push(&ch->last_messages, c);

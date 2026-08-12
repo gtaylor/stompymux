@@ -377,13 +377,13 @@ static bool apply_menu_property(StyledLinkConfig *config, size_t index,
     }
     return styled_link_text_replace(&item->label, value, error, error_size);
   }
-  if (!strcasecmp(field, "link"))
+  if (!strcasecmp(field, "link")) {
     action_kind = STYLED_LINK_EXTERNAL;
-  else if (!strcasecmp(field, "send"))
+  } else if (!strcasecmp(field, "send")) {
     action_kind = STYLED_LINK_SEND;
-  else if (!strcasecmp(field, "prompt"))
+  } else if (!strcasecmp(field, "prompt")) {
     action_kind = STYLED_LINK_PROMPT;
-  else {
+  } else {
     styled_set_error(error, error_size, "unknown OSC 8 menu item property");
     return false;
   }
@@ -463,13 +463,13 @@ static bool apply_visibility_property(StyledLinkVisibility *visibility,
     }
     if (quoted || !parse_styled_boolean(value, &boolean))
       goto invalid_value;
-    if (!strcasecmp(field, "input"))
+    if (!strcasecmp(field, "input")) {
       visibility->expire_input = boolean;
-    else if (!strcasecmp(field, "prompt"))
+    } else if (!strcasecmp(field, "prompt")) {
       visibility->expire_prompt = boolean;
-    else if (!strcasecmp(field, "output"))
+    } else if (!strcasecmp(field, "output")) {
       visibility->expire_output = boolean;
-    else {
+    } else {
       styled_set_error(error, error_size, "unknown OSC 8 visibility expiry");
       return false;
     }
@@ -505,15 +505,15 @@ apply_selection_property(StyledLinkSelection *selection,
   }
 
   StyledBoolean *destination;
-  if (!strcasecmp(property, "toggle"))
+  if (!strcasecmp(property, "toggle")) {
     destination = &selection->toggle;
-  else if (!strcasecmp(property, "selected"))
+  } else if (!strcasecmp(property, "selected")) {
     destination = &selection->selected;
-  else if (!strcasecmp(property, "exclusive"))
+  } else if (!strcasecmp(property, "exclusive")) {
     destination = &selection->exclusive;
-  else if (!strcasecmp(property, "disabled"))
+  } else if (!strcasecmp(property, "disabled")) {
     destination = &selection->disabled;
-  else {
+  } else {
     styled_set_error(error, error_size, "unknown OSC 8 selection property");
     return false;
   }

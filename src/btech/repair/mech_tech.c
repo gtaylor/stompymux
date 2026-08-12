@@ -182,23 +182,24 @@ static void tech_status(const TechStatusRequest *request) {
         dat = context->clock->now;
       if (dat < context->clock->now)
         dat = context->clock->now;
-    } else
+    } else {
       dat = context->clock->now;
+    }
   }
-  if (dat <= context->clock->now)
+  if (dat <= context->clock->now) {
     mecha_notify(btech_context_evaluation(context), PLAYER,
                  "You have no jobs pending!");
-  else {
+  } else {
     un = clamp_intptr_to_int(
         (intptr_t)((dat - context->clock->now) / TECH_TICK));
     (void)snprintf(buf, sizeof(buf), "You have %d %s%s of repairs pending", un,
                    TECH_UNIT, un != 1 ? "s" : "");
     size_t used = strlen(buf);
     char *append_at = checked_storage_at(buf, sizeof(buf), sizeof(*buf), used);
-    if (un >= context->configuration->btech_maxtechtime)
+    if (un >= context->configuration->btech_maxtechtime) {
       (void)snprintf(append_at, sizeof(buf) - used,
                      " and you're too tired to do more efficiently.");
-    else {
+    } else {
       un = context->configuration->btech_maxtechtime - un;
       (void)snprintf(append_at, sizeof(buf) - used,
                      " and you're ready to do at least %d more %s%s of work.",
@@ -220,8 +221,9 @@ int tech_addtechtime(const TechTimeAddition *addition) {
       old = context->clock->now;
     if (old < context->clock->now)
       old = context->clock->now;
-  } else
+  } else {
     old = context->clock->now;
+  }
   old += (time_t)(addition->units * TECH_TICK);
   silly_atr_set_in(context->database, PLAYER, A_TECHTIME, tprintf("%ld", old));
   tech_status(&(TechStatusRequest){
@@ -323,8 +325,9 @@ int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
     if (pi != t)
       return -3;
     *brand = pb;
-  } else if (brand != NULL)
+  } else if (brand != NULL) {
     *brand = mech_critical_brand(mech, *loc, *pos);
+  }
   return 0;
 }
 

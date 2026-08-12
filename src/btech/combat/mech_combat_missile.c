@@ -274,11 +274,11 @@ int mech_missile_hit_target(const MissileAttackRequest *request) {
   /* Check to see if we're a NARC or iNARC launcher firing homing missiles */
   if (weapon_catalogue_is_missile(weapindx)) {
     if (weapon_catalogue_is_narc(weapindx) &&
-        !(mech_critical_ammo_mode(mech, w_section, w_crit_slot) & NARC_MODE))
+        !(mech_critical_ammo_mode(mech, w_section, w_crit_slot) & NARC_MODE)) {
       w_narc_type = 1;
-    else if (weapon_catalogue_is_inarc(weapindx) &&
-             !(mech_critical_ammo_mode(mech, w_section, w_crit_slot) &
-               INARC_EXPLO_MODE)) {
+    } else if (weapon_catalogue_is_inarc(weapindx) &&
+               !(mech_critical_ammo_mode(mech, w_section, w_crit_slot) &
+                 INARC_EXPLO_MODE)) {
 
       if (mech_critical_ammo_mode(mech, w_section, w_crit_slot) &
           INARC_HAYWIRE_MODE)
@@ -335,12 +335,12 @@ int mech_missile_hit_target(const MissileAttackRequest *request) {
                                   mech_class(hit_mech),
                                   mech_movement_type(hit_mech));
 
-          if (w_narc_type == 1)
+          if (w_narc_type == 1) {
             mech_section_special_add(hit_mech, w_narc_hit_loc, NARC_ATTACHED);
-          else if (w_narc_type == 2)
+          } else if (w_narc_type == 2) {
             mech_section_special_add(hit_mech, w_narc_hit_loc,
                                      INARC_HOMING_ATTACHED);
-          else if (w_narc_type == 3) {
+          } else if (w_narc_type == 3) {
             mech_section_special_add(hit_mech, w_narc_hit_loc,
                                      INARC_HAYWIRE_ATTACHED);
 
@@ -360,9 +360,10 @@ int mech_missile_hit_target(const MissileAttackRequest *request) {
                       "Your NARC Beacon attaches to the target's %s%s!",
                       str_loc_name, t_is_rear == 1 ? " (Rear)" : "");
         }
-      } else
+      } else {
         mech_notify(mech, MECHALL,
                     "Your NARC Beacon flies off into the distance.");
+      }
 
       return 0;
     }

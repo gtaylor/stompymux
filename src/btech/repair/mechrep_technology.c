@@ -112,8 +112,9 @@ void mechrep_raddspecial(DbRef player, void *data, char *buffer) {
                    "Invalid critical data!");
       return;
     }
-  } else
+  } else {
     newdata = 0;
+  }
   mech_critical_part_type_set(mech, index, subsect,
                               itemcode < 0 ? 0
                                            : special_equipment_index(itemcode));

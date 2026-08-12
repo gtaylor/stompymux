@@ -185,13 +185,13 @@ static FlowOutcome lua_flow_step(const FlowStepCall *call) {
   }
   lua_getfield(state, result_index, "action");
   field = lua_tostring(state, -1);
-  if (!field || strcmp(field, "repeat") == 0)
+  if (!field || strcmp(field, "repeat") == 0) {
     outcome.action = FLOW_ACTION_WAIT;
-  else if (strcmp(field, "goto") == 0)
+  } else if (strcmp(field, "goto") == 0) {
     outcome.action = FLOW_ACTION_GOTO;
-  else if (strcmp(field, "done") == 0)
+  } else if (strcmp(field, "done") == 0) {
     outcome.action = FLOW_ACTION_DONE;
-  else {
+  } else {
     if (strcmp(field, "cancel") != 0)
       log_error((LogEntry){.log = runtime->services->log,
                            .key = LOG_BUGS,

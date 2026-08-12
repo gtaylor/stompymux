@@ -128,9 +128,9 @@ static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
   }
   a = mech_section_internal(mech, loc);
   b = mech_section_original_internal(mech, loc);
-  if (a != b)
+  if (a != b) {
     repair_damage_add_detail(damages, FIXINTERNAL, loc, (b - a));
-  else {
+  } else {
     a = mech_section_armor(mech, loc);
     b = mech_section_original_armor(mech, loc);
     if (a != b)
@@ -172,11 +172,12 @@ static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
       else
         repair_damage_add_detail(damages, ENHCRIT_MISC, loc, a);
     } else if (equipment_is_weapon(b) &&
-               !mech_critical_is_destroyed(mech, loc, a))
+               !mech_critical_is_destroyed(mech, loc, a)) {
       repair_damage_add_detail(damages, REPAIRP_T, loc, a);
-    else
+    } else {
       repair_damage_add_detail(
           damages, equipment_is_weapon(b) ? REPAIRG : REPAIRP, loc, a);
+    }
     if (equipment_is_weapon(b))
       a += get_weapon_crits(mech, weapon_from_equipment_index(b)) - 1;
   }
@@ -230,10 +231,11 @@ static void make_scrap_table(RepairDamageTable *damages, Mech *mech) {
     if (!i)
       check_for_scrappage(damages, mech, CTORSO);
     check_for_scrappage(damages, mech, HEAD);
-  } else
+  } else {
     for (i = 0; i < NUM_SECTIONS; i++)
       if (mech_section_original_internal(mech, i))
         check_for_scrappage(damages, mech, i);
+  }
 }
 static void make_damage_table(RepairDamageTable *damages, Mech *mech) {
   int i;
@@ -250,10 +252,11 @@ static void make_damage_table(RepairDamageTable *damages, Mech *mech) {
       check_for_damage(damages, mech, RLEG);
       check_for_damage(damages, mech, HEAD);
     }
-  } else
+  } else {
     for (i = 0; i < NUM_SECTIONS; i++)
       if (mech_section_original_internal(mech, i))
         check_for_damage(damages, mech, i);
+  }
 }
 static int is_under_repair(const RepairDamageTable *damages, Mech *mech,
                            int i) {

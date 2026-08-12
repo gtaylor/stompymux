@@ -543,8 +543,9 @@ void mux_event_tickmech_reload(MuxEvent *e) {
       mech_parts_add(mech, loc, FindAmmoType(mech, loc, pos),
                      mech_critical_brand(mech, loc, pos), 1);
 #endif
-  } else
+  } else {
     mech_fill_part_ammo(mech, loc, pos);
+  }
   armor_string_from_index(loc, buf, mech_class(mech), mech_movement_type(mech));
   do {
     int i = 0;

@@ -156,8 +156,9 @@ void comsys_show_channel_who(EvaluationContext *evaluation, DbRef player,
 
         notify_printf(evaluation, player, "%s [idle %s]", buff, c);
         free_sbuf(c);
-      } else
+      } else {
         notify_printf(evaluation, player, "%s", buff);
+      }
       free_lbuf(buff);
     }
   }
@@ -199,9 +200,9 @@ struct Comuser *select_user(struct Channel *ch, DbRef player) {
       last--;
       continue;
     }
-    if (candidate->who == player)
+    if (candidate->who == player) {
       dir = 0;
-    else if (candidate->who < player) {
+    } else if (candidate->who < player) {
       dir = 1;
       first = current + 1;
     } else {

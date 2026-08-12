@@ -441,8 +441,9 @@ static int commac_load_entries(sqlite3 *sqlite,
     }
     if (result == 0 && step != SQLITE_DONE)
       result = -1;
-  } else if (result == 0)
+  } else if (result == 0) {
     result = -1;
+  }
   sqlite3_finalize(aliases);
   if (result == 0) {
     for (who = 0; who < COMMAC_BUCKET_COUNT; who++) {
@@ -728,8 +729,9 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
     }
     if (result == 0 && step != SQLITE_DONE)
       result = -1;
-  } else if (result == 0)
+  } else if (result == 0) {
     result = -1;
+  }
   sqlite3_finalize(entries);
   if (result == 0) {
     expected_set = 0;

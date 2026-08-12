@@ -59,9 +59,9 @@ int mech_hit_damage_determine(const HitDamageRequest *request) {
   const WeaponRangeProfile RANGES = weapon_catalogue_ranges(WEAPINDX);
 
   /* Find the range to our target */
-  if (hit_mech)
+  if (hit_mech) {
     f_range = mech_range_to(mech, hit_mech);
-  else {
+  } else {
     float fx, fy;
     map_coord_to_real_coord(HIT_X, HIT_Y, &fx, &fy);
     f_range = map_real_range(&(MapRealSegment){
@@ -102,8 +102,9 @@ int mech_hit_damage_determine(const HitDamageRequest *request) {
           w_weap_damage *= 4;
         else
           w_weap_damage *= 2;
-      } else if (mech_class(hit_mech) != CLASS_BSUIT)
+      } else if (mech_class(hit_mech) != CLASS_BSUIT) {
         w_weap_damage /= 2;
+      }
     }
 
     if (W_AMMO_MODE & AC_INCENDIARY_MODE) {
@@ -116,9 +117,9 @@ int mech_hit_damage_determine(const HitDamageRequest *request) {
    * on range */
   if (btech_context_range_modifies_damage(mech_context(mech)) &&
       weapon_catalogue_is_energy(WEAPINDX)) {
-    if (f_range <= 1.0F)
+    if (f_range <= 1.0F) {
       w_weap_damage++;
-    else {
+    } else {
       if (mech_section_is_underwater(mech, W_SECTION)) {
         if (f_range > (float)RANGES.water_long_range)
           w_weap_damage = (w_weap_damage / 2);
@@ -467,7 +468,7 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
                                         : "missile"),
                 (num_missiles_hit > 1 ? "s" : ""));
 
-  if (t_is_lbx)
+  if (t_is_lbx) {
     mech_missile_apply_hits(&(MissileHitsRequest){
         .attacker = mech,
         .target = hit_mech,
@@ -486,7 +487,7 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
         .base_to_hit = BTH,
         .swarm_attack = T_IS_SWARM_ATTACK,
     });
-  else {
+  } else {
     while (num_missiles_hit) {
       if (hit_mech) {
         if (t_using_tc)
@@ -516,7 +517,7 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
                                  .weapon_index = WEAPINDX,
                                  .ammunition_mode = w_ammo_mode,
                                  .ignore_swarmers = T_IS_SWARM_ATTACK});
-      } else
+      } else {
         mech_terrain_hex_hit(
             &(TerrainWeaponHitRequest){.attacker = mech,
                                        .position = {.x = HIT_X, .y = HIT_Y},
@@ -524,6 +525,7 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
                                        .ammunition_mode = w_ammo_mode,
                                        .damage = w_weap_damage,
                                        .hit = true});
+      }
 
       num_missiles_hit--;
     }

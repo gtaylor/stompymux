@@ -129,13 +129,14 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
   oldjs = mech_jump_speed(wounded);
   for (i = 0; i < mech_section_critical_count(wounded, hitloc); i++)
     if (!mech_critical_is_destroyed(wounded, hitloc, i)) {
-      if (disable)
+      if (disable) {
         mech_critical_fire_mode_add(wounded, hitloc, i, DISABLED_MODE);
-      else if (mech_critical_is_disabled(wounded, hitloc, i)) {
+      } else if (mech_critical_is_disabled(wounded, hitloc, i)) {
         mech_critical_destroy(wounded, hitloc, i);
         continue;
-      } else
+      } else {
         mech_critical_destroy(wounded, hitloc, i);
+      }
 
       crit_type = mech_critical_part_type(wounded, hitloc, i);
       if (equipment_is_ammunition(crit_type)) {
@@ -177,9 +178,9 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
           }
           break;
         case ENGINE:
-          if (mech_engine_heat(wounded) < 10)
+          if (mech_engine_heat(wounded) < 10) {
             mech_engine_heat_add(wounded, 5);
-          else if (mech_engine_heat(wounded) < 15) {
+          } else if (mech_engine_heat(wounded) < 15) {
             mech_engine_heat_set(wounded, 15);
             if (attacker) {
               mech_notify(wounded, MECHALL, "Your engine is destroyed!!");

@@ -349,8 +349,9 @@ int mech_c3_free_network_position(const MechNetworkLink *link) {
     if (other_ref > 0) {
       if (other_ref == mech_dbref(link->member))
         return C3_POS_IN_NETWORK;
-    } else
+    } else {
       return i;
+    }
   }
 
   return C3_POS_NO_ROOM;

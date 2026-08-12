@@ -308,21 +308,21 @@ skip_nuke:
   /* If it's a MW or a mech, let's see if there's additional stuff we need to do
    */
   if (mech_class(wounded) == CLASS_MW || mech_class(wounded) == CLASS_MECH) {
-    if (HITLOC == LTORSO)
+    if (HITLOC == LTORSO) {
       mech_section_destroy(&(SectionDestructionRequest){
           .wounded = wounded,
           .attacker = attacker,
           .line_of_sight = LOS,
           .section = LARM,
       });
-    else if (HITLOC == RTORSO)
+    } else if (HITLOC == RTORSO) {
       mech_section_destroy(&(SectionDestructionRequest){
           .wounded = wounded,
           .attacker = attacker,
           .line_of_sight = LOS,
           .section = RARM,
       });
-    else if (HITLOC == CTORSO || HITLOC == HEAD) {
+    } else if (HITLOC == CTORSO || HITLOC == HEAD) {
       if (!mech_is_destroyed(wounded)) {
         if (HITLOC == HEAD) {
           if (attacker && mech_aim_section(attacker) == HEAD) {
@@ -378,15 +378,17 @@ skip_nuke:
     if (HITLOC == TURRET) {
       t_kill_mech = 0;
       mech_turret_auto_turn_set(wounded, false);
-    } else
+    } else {
       t_kill_mech = 1;
+    }
     break;
   case CLASS_VTOL:
     if (HITLOC == ROTOR) {
       t_kill_mech = 0;
       mech_vtol_crash_start(wounded);
-    } else
+    } else {
       t_kill_mech = 1;
+    }
     break;
   case CLASS_MECH:
   case CLASS_VEH_NAVAL:

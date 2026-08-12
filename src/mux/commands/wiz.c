@@ -137,11 +137,11 @@ void do_teleport(CommandInvocation *invocation) {
         is_controls(evaluation->world->database, player, destination) ||
         is_wizard(evaluation->world->database, player);
 
-    if (permitted)
+    if (permitted) {
       permitted = lock_test(evaluation, victim, player, player, destination,
                             LUA_LOCK_TELEPORT, LUA_LOCK_OPERATION_TELEPORT,
                             false, &lock, &result);
-    else {
+    } else {
       lock = (LuaLockInvocation){
           .type = LUA_LOCK_TELEPORT,
           .operation = LUA_LOCK_OPERATION_TELEPORT,

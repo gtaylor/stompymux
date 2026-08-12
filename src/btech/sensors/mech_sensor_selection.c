@@ -120,7 +120,7 @@ static void sensor_mode(Mech *mech, const char *msg, DbRef player, int p, int s,
         sensor_mode_text(&(SensorModeTextRequest){
                              .mech = mech, .sensor = s, .verbose = verbose})
             .text);
-  } else
+  } else {
     notify_printf(btech_context_evaluation(mech_context(mech)), player,
                   "%s: %s", msg,
                   sensor_mode_text(&(SensorModeTextRequest){.mech = mech,
@@ -128,6 +128,7 @@ static void sensor_mode(Mech *mech, const char *msg, DbRef player, int p, int s,
                                                             .full_arc = true,
                                                             .verbose = verbose})
                       .text);
+  }
 }
 
 typedef struct SensorSelection SensorSelection;

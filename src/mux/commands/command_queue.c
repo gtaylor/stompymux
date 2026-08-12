@@ -304,8 +304,9 @@ int halt_que(CommandQueue *queue, DbRef player, DbRef object) {
       mux_timer_stop(point->timer);
       free(point->text);
       cque_free_entry(point);
-    } else
+    } else {
       next = (trail = point)->next;
+    }
 
   if (player == NOTHING)
     player = object;

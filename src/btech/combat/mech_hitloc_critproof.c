@@ -144,8 +144,9 @@ int mech_critproof_hit_location(Mech *mech, int hit_group, int *iscritical) {
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           return TURRET;
-        } else
+        } else {
           return LSIDE;
+        }
       }
       break;
     case RIGHTSIDE:
@@ -166,8 +167,9 @@ int mech_critproof_hit_location(Mech *mech, int hit_group, int *iscritical) {
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           return TURRET;
-        } else
+        } else {
           return RSIDE;
+        }
         break;
       }
       break;
@@ -192,8 +194,9 @@ int mech_critproof_hit_location(Mech *mech, int hit_group, int *iscritical) {
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           return TURRET;
-        } else
+        } else {
           return side;
+        }
       }
     }
     break;
@@ -442,8 +445,9 @@ int mech_critproof_hit_location(Mech *mech, int hit_group, int *iscritical) {
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
-        } else
+        } else {
           hitloc = LSIDE;
+        }
         break;
       case 12:
         hitloc = LSIDE;
@@ -474,8 +478,9 @@ int mech_critproof_hit_location(Mech *mech, int hit_group, int *iscritical) {
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
-        } else
+        } else {
           hitloc = RSIDE;
+        }
         break;
       }
       break;
@@ -511,8 +516,9 @@ int mech_critproof_hit_location(Mech *mech, int hit_group, int *iscritical) {
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
-        } else
+        } else {
           hitloc = FSIDE;
+        }
         break;
       }
       break;

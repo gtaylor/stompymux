@@ -271,10 +271,10 @@ void mech_vtol_tail_rotor_critical_apply(Mech *obj_mech) {
    * Turns slower.
    */
 
-  if (mech_condition_summary(obj_mech).tail_rotor_destroyed)
+  if (mech_condition_summary(obj_mech).tail_rotor_destroyed) {
     mech_notify(obj_mech, MECHALL,
                 "Your damaged tail rotor suffers more damage!");
-  else {
+  } else {
     mech_tail_rotor_destroyed_set(obj_mech, true);
     mech_notify(
         obj_mech, MECHALL,

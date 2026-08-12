@@ -219,18 +219,18 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
     if (string_prefix("type", searchtype)) {
       if (searchfor[0] == '\0')
         break;
-      if (string_prefix("rooms", searchfor))
+      if (string_prefix("rooms", searchfor)) {
         parm->s_rst_type = OBJECT_TYPE_ROOM;
-      else if (string_prefix("exits", searchfor))
+      } else if (string_prefix("exits", searchfor)) {
         parm->s_rst_type = OBJECT_TYPE_EXIT;
-      else if (string_prefix("objects", searchfor) ||
-               string_prefix("things", searchfor))
+      } else if (string_prefix("objects", searchfor) ||
+                 string_prefix("things", searchfor)) {
         parm->s_rst_type = OBJECT_TYPE_THING;
-      else if (string_prefix("garbage", searchfor))
+      } else if (string_prefix("garbage", searchfor)) {
         parm->s_rst_type = OBJECT_TYPE_GARBAGE;
-      else if (string_prefix("players", searchfor))
+      } else if (string_prefix("players", searchfor)) {
         parm->s_rst_type = OBJECT_TYPE_PLAYER;
-      else {
+      } else {
         notify_printf(context, player, "%s: unknown type", searchfor);
         return 0;
       }

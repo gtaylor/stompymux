@@ -531,8 +531,9 @@ void artillery_friendly_adjustment(DbRef mechnum, BattleMap *map, int x,
   if (spotter) {
     if (mech_sees_hex(spotter, map, x, y))
       temp_mech = spotter;
-  } else
+  } else {
     temp_mech = find_mech_in_hex(mech, map, x, y, 2);
+  }
   if (!temp_mech)
     return;
   if (!mech_is_started(temp_mech) || !mech_is_started(mech))

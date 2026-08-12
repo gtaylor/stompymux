@@ -187,9 +187,9 @@ void mech_scan(DbRef player, void *data, char *buffer) {
         return;
       }
       /* look for enemies in that hex... */
-      if (mech_targets_building(mech))
+      if (mech_targets_building(mech)) {
         dob = 1;
-      else if (mech_targets_hex(mech)) {
+      } else if (mech_targets_hex(mech)) {
         dob = 1;
         doh = 1;
       } else {

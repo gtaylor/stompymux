@@ -56,8 +56,9 @@ static void red_black_tree_rotate_right(RedBlackTree bt, RbtreeNode *pivot) {
       pivot->parent->left = child;
     else
       pivot->parent->right = child;
-  } else
+  } else {
     bt->head = child;
+  }
   child->right = pivot;
   pivot->parent = child;
   child->count = pivot->count;
@@ -83,8 +84,9 @@ static void red_black_tree_rotate_left(RedBlackTree bt, RbtreeNode *pivot) {
       pivot->parent->right = child;
     else
       pivot->parent->left = child;
-  } else
+  } else {
     bt->head = child;
+  }
   child->left = pivot;
   pivot->parent = child;
   child->count = pivot->count;

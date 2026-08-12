@@ -41,10 +41,10 @@ void mech_status(DbRef player, void *data, const char *buffer) {
 
   if (!common_checks(player, mech, MECH_USUALSM))
     return;
-  if (!buffer || !strlen(buffer))
+  if (!buffer || !strlen(buffer)) {
     // No arguments, we'll go with our default 'status' output.
     doweap = doinfo = doarmor = doheat = 1;
-  else {
+  } else {
     // Argument provided, only show certain parts.
     const size_t OPTION_LENGTH = strlen(buffer);
     for (size_t position = 0; position < OPTION_LENGTH; position++) {
@@ -119,8 +119,9 @@ void mech_status(DbRef player, void *data, const char *buffer) {
                    displayed_speed(mech_active_heat_sinks(mech)));
     memcpy(weird_buffer, buf, sizeof(weird_buffer));
 
-  } else if (!doheat || (doarmor | doinfo | doweap))
+  } else if (!doheat || (doarmor | doinfo | doweap)) {
     print_generic_status(evaluation, player, mech, usex != 0);
+  }
 
   // Show our armor diagram.
   if (doarmor) {

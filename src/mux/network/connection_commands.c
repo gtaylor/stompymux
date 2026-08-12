@@ -540,15 +540,15 @@ void do_color(CommandInvocation *invocation) {
   if (!strcasecmp(mode, "auto")) {
     descriptor->has_color_override = false;
   } else {
-    if (!strcasecmp(mode, "off"))
+    if (!strcasecmp(mode, "off")) {
       requested = TERMINAL_COLOR_NONE;
-    else if (!strcmp(mode, "16"))
+    } else if (!strcmp(mode, "16")) {
       requested = TERMINAL_COLOR_ANSI_16;
-    else if (!strcmp(mode, "256"))
+    } else if (!strcmp(mode, "256")) {
       requested = TERMINAL_COLOR_ANSI_256;
-    else if (!strcasecmp(mode, "truecolor"))
+    } else if (!strcasecmp(mode, "truecolor")) {
       requested = TERMINAL_COLOR_TRUECOLOR;
-    else {
+    } else {
       notify_checked(&invocation->context->evaluation, invocation->player,
                      invocation->player,
                      "Use color auto, off, 16, 256, or truecolor.",

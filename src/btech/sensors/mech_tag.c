@@ -109,8 +109,9 @@ void mech_tag(DbRef player, void *data, char *buffer) {
 
     los = mech_los_check_unblocked(mech, target, mech_position_x(target),
                                    mech_position_y(target), range);
-  } else
+  } else {
     ref_target = 0;
+  }
 
   if (ref_target < 1 || !los) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,

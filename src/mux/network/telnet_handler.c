@@ -380,22 +380,24 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
       d->is_mssp_enabled = true;
       telnet_send_mssp(d);
     } else if (event->neg.telopt == TELNET_TELOPT_COMPRESS2 &&
-               !d->is_mccp_enabled)
+               !d->is_mccp_enabled) {
       telnet_begin_compress2(telnet);
-    else if (event->neg.telopt == TELNET_CHARSET_OPTION) {
+    } else if (event->neg.telopt == TELNET_CHARSET_OPTION) {
       d->is_charset_enabled = true;
       telnet_send_charset_request(d);
-    } else if (event->neg.telopt == TELNET_GMCP_OPTION)
+    } else if (event->neg.telopt == TELNET_GMCP_OPTION) {
       d->is_gmcp_enabled = true;
+    }
     break;
   case TELNET_EV_DONT:
-    if (event->neg.telopt == TELNET_TELOPT_MSSP)
+    if (event->neg.telopt == TELNET_TELOPT_MSSP) {
       d->is_mssp_enabled = false;
-    else if (event->neg.telopt == TELNET_CHARSET_OPTION) {
+    } else if (event->neg.telopt == TELNET_CHARSET_OPTION) {
       d->is_charset_enabled = false;
       d->is_charset_request_pending = false;
-    } else if (event->neg.telopt == TELNET_GMCP_OPTION)
+    } else if (event->neg.telopt == TELNET_GMCP_OPTION) {
       d->is_gmcp_enabled = false;
+    }
     break;
   case TELNET_EV_COMPRESS:
     d->is_mccp_enabled = event->compress.state != 0;

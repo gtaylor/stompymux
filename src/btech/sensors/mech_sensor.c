@@ -327,11 +327,11 @@ int mech_sensor_driver_base_chance(Mech *mech) {
   int i = 1;
   int perception = mech_perception_target(mech);
 
-  if (perception <= 2)
+  if (perception <= 2) {
     i = 36;
-  else if (perception >= 12)
+  } else if (perception >= 12) {
     i = 1;
-  else {
+  } else {
     static const int MODIFIERS[] = {3, 6, 10, 15, 21, 26, 30, 33, 35};
     const int MODIFIER = *(const int *)checked_storage_at_const(
         MODIFIERS, sizeof(MODIFIERS) / sizeof(*MODIFIERS), sizeof(*MODIFIERS),
@@ -451,9 +451,9 @@ SensorFlagText sensor_flag_text(int flags) {
 
   for (j = 0; j < 32; j++)
     if (flags & (1 << j)) {
-      if (buffer[0] == '\0')
+      if (buffer[0] == '\0') {
         (void)snprintf(buffer, sizeof(text.text), "%d", j);
-      else {
+      } else {
         const size_t USED = strlen(buffer);
         (void)snprintf(checked_storage_region(buffer, sizeof(text.text), USED,
                                               sizeof(text.text) - USED),
@@ -518,8 +518,9 @@ mech_sensor_visibility_update(const MechSensorVisibilityRequest *request) {
     y1 = mech_position_real_y(target);
     if (mech_position_z(mech) >= ATMO_Z && mech_position_z(target) >= ATMO_Z)
       range = range / 3;
-  } else
+  } else {
     map_coord_to_real_coord(request->x, request->y, &x1, &y1);
+  }
   arc = in_weapon_arc(mech, x1, y1);
   if (f & BATTLE_MAP_LOS_SEEN) {
     MechSensorObservationRequest observation = {
@@ -559,13 +560,14 @@ mech_sensor_visibility_update(const MechSensorVisibilityRequest *request) {
                            sizeof(buf) - USED, "Lost: %s, %s arc.",
                            mech_to_mech_display_id_base(mech, target, wlf).text,
                            get_arc_id(mech, arc));
-          } else
+          } else {
             (void)snprintf(
                 buf, sizeof(buf),
                 "You have lost %s from your scanners. It was last in your "
                 "%s arc.",
                 mech_to_mech_display_id_base(mech, target, wlf).text,
                 get_arc_id(mech, arc));
+          }
           if (st & AUTOCON_WARN)
             strlcat(buf, "[reset]", sizeof(buf));
           mech_notify(mech, MECHALL, buf);
@@ -666,8 +668,9 @@ mech_sensor_visibility_update(const MechSensorVisibilityRequest *request) {
       btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_SENSOR, "%s",
                          buf);
 #endif
-    } else
+    } else {
       mech_possible_contact_count_increment(mech);
+    }
   }
   return (unsigned short)f;
 }
@@ -773,11 +776,11 @@ void mech_sensor_description_append(
   size_t used = strlen(buf);
   if (used >= CAPACITY)
     return;
-  if (!request->verbose)
+  if (!request->verbose) {
     (void)snprintf(checked_storage_region(buf, CAPACITY, used, CAPACITY - used),
                    CAPACITY - used, "(R:%s)",
                    mech_sensor_definition(request->sensor)->range_description);
-  else {
+  } else {
     (void)snprintf(checked_storage_region(buf, CAPACITY, used, CAPACITY - used),
                    CAPACITY - used, "\n\tRange:      %s\n\tBlocked by: %s",
                    mech_sensor_definition(request->sensor)->range_description,

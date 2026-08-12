@@ -104,11 +104,11 @@ void red_black_tree_release(RedBlackTree bt, RedBlackTreeRelease release,
         continue;
       }
       parent = node->parent;
-      if (parent && parent->left == node)
+      if (parent && parent->left == node) {
         parent->left = nullptr;
-      else if (parent && parent->right == node)
+      } else if (parent && parent->right == node) {
         parent->right = nullptr;
-      else if (parent) {
+      } else if (parent) {
         (void)fprintf(stderr, "serious braindamage.\n");
         exit(1);
       }
@@ -139,11 +139,11 @@ void red_black_tree_destroy(RedBlackTree bt) {
         continue;
       }
       parent = node->parent;
-      if (parent && parent->left == node)
+      if (parent && parent->left == node) {
         parent->left = nullptr;
-      else if (parent && parent->right == node)
+      } else if (parent && parent->right == node) {
         parent->right = nullptr;
-      else if (parent) {
+      } else if (parent) {
         (void)fprintf(stderr, "serious braindamage.\n");
         exit(1);
       }

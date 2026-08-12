@@ -53,9 +53,9 @@ static void help_command_send_suggestions(EvaluationContext *evaluation,
     }
   }
   *bp = '\0';
-  if (!any)
+  if (!any) {
     notify_printf(evaluation, player, "No help found for '%s'.", needle);
-  else {
+  } else {
     notify_printf(evaluation, player,
                   "No exact match for '%s'. Did you mean:", needle);
     notify_checked(evaluation, player, player, topic_list,

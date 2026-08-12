@@ -477,13 +477,13 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       const char *weapon_name =
           checked_string_suffix(weapon_catalogue_name(WEAPON_INDEX), 3);
       int fire_mode = mech_critical_fire_mode(mech, loop, CRITICAL_INDEX);
-      if (weapon_catalogue_has_special(WEAPON_INDEX, AMS))
+      if (weapon_catalogue_has_special(WEAPON_INDEX, AMS)) {
         btech_text_builder_append_format(
             &weapon_text, " %-16.16s %c%c%c%c%c [%2d] ", weapon_name, ' ',
             conditions.ams_enabled ? ' ' : 'O',
             conditions.ams_enabled ? 'O' : 'F',
             conditions.ams_enabled ? 'N' : 'F', ' ', running_sum + ii);
-      else {
+      } else {
         (void)snprintf(tmpbuf, sizeof(tmpbuf), "%s%s",
                        fire_mode & OS_MODE ? "OS " : "", weapon_name);
         btech_text_builder_append_format(
@@ -509,12 +509,12 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       int temporary_failure =
           mech_critical_temporary_failure(mech, loop, CRITICAL_INDEX);
       if (mech_critical_is_broken(mech, loop, CRITICAL_INDEX) ||
-          temporary_failure == FAIL_DESTROYED)
+          temporary_failure == FAIL_DESTROYED) {
         btech_text_builder_append(&weapon_text,
                                   "[fg=black bold]*****[reset]  || ");
-      else if (mech_critical_is_disabled(mech, loop, CRITICAL_INDEX))
+      } else if (mech_critical_is_disabled(mech, loop, CRITICAL_INDEX)) {
         btech_text_builder_append(&weapon_text, "[fg=red]DISABLE[reset]|| ");
-      else if (temporary_failure) {
+      } else if (temporary_failure) {
         switch (temporary_failure) {
         case FAIL_JAMMED:
           btech_text_builder_append(&weapon_text, "[fg=red]JAMMED[reset] || ");
@@ -532,18 +532,20 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
           btech_text_builder_append(&weapon_text, "[fg=red]AMMOJAM[reset]|| ");
           break;
         }
-      } else if (fire_mode & ROCKET_FIRED)
+      } else if (fire_mode & ROCKET_FIRED) {
         btech_text_builder_append(&weapon_text,
                                   "[fg=black bold]Empty[reset]  || ");
-      else if (weapon_status_byte(weapdata, MAX_WEAPS_SECTION, ii)) {
+      } else if (weapon_status_byte(weapdata, MAX_WEAPS_SECTION, ii)) {
         const int RECYCLE = weapon_status_byte(weapdata, MAX_WEAPS_SECTION, ii);
         btech_text_builder_append_format(&weapon_text, " %2d    || ",
                                          RECYCLE / WEAPON_TICK +
                                              (RECYCLE % WEAPON_TICK ? 1 : 0));
-      } else if (mech_weapon_damaged_slot_count_at(mech, loop, CRITICAL_INDEX))
+      } else if (mech_weapon_damaged_slot_count_at(mech, loop,
+                                                   CRITICAL_INDEX)) {
         btech_text_builder_append(&weapon_text, "[fg=red]DAMAGED[reset]|| ");
-      else
+      } else {
         btech_text_builder_append(&weapon_text, "[fg=green]Ready[reset]  || ");
+      }
 
       if ((ii + running_sum) < ammoweapcount) {
         const int AMMUNITION_INDEX = ii + running_sum;

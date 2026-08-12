@@ -57,8 +57,9 @@ void accumulate_tech_xp(BtechContext *context, DbRef pilot, Mech *mech,
     skname = find_tech_skill_name(mech);
     if (!skname)
       return;
-  } else
+  } else {
     skname = techw;
+  }
 
   xp = max(1, reason);
 

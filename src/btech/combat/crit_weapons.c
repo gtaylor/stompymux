@@ -408,11 +408,11 @@ void mech_vehicle_stabilizer_critical_apply(Mech *obj_mech, int w_loc) {
   armor_string_from_index(w_loc, str_loc_name, mech_class(obj_mech),
                           mech_movement_type(obj_mech));
 
-  if (mech_section_configuration_has(obj_mech, w_loc, STABILIZERS_DESTROYED))
+  if (mech_section_configuration_has(obj_mech, w_loc, STABILIZERS_DESTROYED)) {
     mech_printf(obj_mech, MECHALL,
                 "The destroyed weapon stabilizers in your %s take another hit!",
                 str_loc_name);
-  else {
+  } else {
     mech_printf(obj_mech, MECHALL,
                 "The weapon stabilizers in your %s have been destroyed!",
                 str_loc_name);

@@ -395,11 +395,11 @@ legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
   if (!(BTH >= 3 && BTH <= 12))
     return; /* sure hits aren't interesting */
 
-  if (mech_tonnage(attacker) > 0)
+  if (mech_tonnage(attacker) > 0) {
     multiplier =
         multiplier *
         bounded(50, 100 * ton_value(wounded) / ton_value(attacker), 150);
-  else {
+  } else {
     /* Bring this to the attention of the admins */
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_ERRORS, "%s",

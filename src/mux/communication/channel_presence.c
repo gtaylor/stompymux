@@ -191,13 +191,15 @@ static void do_comconnectchannel(EvaluationContext *evaluation, DbRef player,
       if (user) {
         user->on_next = ch->on_users;
         ch->on_users = user;
-      } else
+      } else {
         notify_printf(evaluation, player,
                       "Bad Comsys Alias: %s for Channel: %s", alias, channel);
+      }
     }
-  } else
+  } else {
     notify_printf(evaluation, player, "Bad Comsys Alias: %s for Channel: %s",
                   alias, channel);
+  }
 }
 
 void do_comdisconnect(EvaluationContext *evaluation, DbRef player) {

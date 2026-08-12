@@ -527,8 +527,9 @@ void process_command(CommandContext *context, char *command, char *arguments[],
       string_copy(command, macroout);
       free_lbuf(macroout);
     }
-  } else
+  } else {
     macerr = 0;
+  }
   if (!do_comsystem(&context->evaluation, PLAYER, command))
     goto exit;
 

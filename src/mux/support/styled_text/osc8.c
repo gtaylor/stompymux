@@ -94,13 +94,13 @@ bool styled_external_uri_valid(const char *uri, char *error,
   size_t length = strlen(uri);
   const char *body;
 
-  if (!strncasecmp(uri, "http:", 5))
+  if (!strncasecmp(uri, "http:", 5)) {
     body = checked_string_suffix(uri, 5);
-  else if (!strncasecmp(uri, "https:", 6))
+  } else if (!strncasecmp(uri, "https:", 6)) {
     body = checked_string_suffix(uri, 6);
-  else if (!strncasecmp(uri, "ftp:", 4))
+  } else if (!strncasecmp(uri, "ftp:", 4)) {
     body = checked_string_suffix(uri, 4);
-  else {
+  } else {
     styled_set_error(error, error_size,
                      "link URI scheme must be http, https, or ftp");
     return false;

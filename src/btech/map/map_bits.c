@@ -113,8 +113,9 @@ static unsigned char **grab_us_an_array(BattleMap *map) {
 
     foob.payload.bits = foo;
     add_mapobj(map, bits_object, &foob, 0);
-  } else
+  } else {
     foo = (*bits_object)->payload.bits;
+  }
   return foo;
 }
 

@@ -325,8 +325,9 @@ BtechScriptResult fun_btdesignex(BtechScriptCall *call) {
           context->btech, context->btech->configuration->database.mech_db,
           id)) {
     safe_tprintf_str(buff, bufc, "1");
-  } else
+  } else {
     safe_tprintf_str(buff, bufc, "0");
+  }
   return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
 }
 BtechScriptResult fun_btsectstatus(BtechScriptCall *call) {

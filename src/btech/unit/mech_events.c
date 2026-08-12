@@ -76,9 +76,9 @@ void mech_staggercheck_heartbeat(Mech *mech) {
     // Dont need to remove stagger anymore, it clears on fall,
     // unless we're using
     // Stagger mode 2 removes damage after it is checked.
-    if (btech_context_stagger_mode(mech_context(mech)) == 2)
+    if (btech_context_stagger_mode(mech_context(mech)) == 2) {
       mech_stagger_damage_remove(mech, stagger_level);
-    else {
+    } else {
       mech_stagger_damage_mark(mech, stagger_level);
       stagger_level = (cur_stagger_damage + prev_stagger_damage) / 20;
     }
@@ -208,9 +208,10 @@ void mech_lock_event(MuxEvent *e) {
       return;
     mech_printf(mech, MECHALL, "The sensors acquire a stable lock on %s.",
                 mech_to_mech_display_id(mech, target).text);
-  } else if (mech_target_hex_x(mech) >= 0 && mech_target_hex_y(mech) >= 0)
+  } else if (mech_target_hex_x(mech) >= 0 && mech_target_hex_y(mech) >= 0) {
     mech_printf(mech, MECHALL, "The sensors acquire a stable lock on (%d,%d).",
                 mech_target_hex_x(mech), mech_target_hex_y(mech));
+  }
 }
 
 /* Various events that don't fit too well to other categories */

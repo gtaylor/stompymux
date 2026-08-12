@@ -115,8 +115,9 @@ void display_target(EvaluationContext *evaluation, DbRef player, Mech *mech) {
         (void)snprintf(buff1, sizeof(buff1), "\t   Aimed Shot Location: %s",
                        location);
         strlcat(buff, buff1, sizeof(buff));
-      } else
+      } else {
         (void)snprintf(buff, sizeof(buff), "Target: NOT in line of sight!\n");
+      }
     }
     mecha_notify(evaluation, player, buff);
   } else if (mech_target_hex_x(mech) != -1 && mech_target_hex_y(mech) != -1) {
@@ -206,9 +207,9 @@ void print_generic_status(EvaluationContext *evaluation, DbRef player,
                   displayed_speed(mech_effective_maximum_speed(mech)),
                   effective_jump_speed_mp(mech, map));
     show_miscbrands(mech, player);
-    if (mech_pilot_dbref(mech) == -1)
+    if (mech_pilot_dbref(mech) == -1) {
       mecha_notify(evaluation, player, "Leader: NONE");
-    else {
+    } else {
       (void)snprintf(
           buff, sizeof(buff), "%s Leader Name: %-16.16s %s Leader injury: %d",
           bsuit_formation_name(mech),
@@ -249,9 +250,9 @@ void print_generic_status(EvaluationContext *evaluation, DbRef player,
                   displayed_speed(mech_effective_maximum_speed(mech)),
                   effective_jump_speed_mp(mech, map));
     show_miscbrands(mech, player);
-    if (mech_pilot_dbref(mech) == -1)
+    if (mech_pilot_dbref(mech) == -1) {
       mecha_notify(evaluation, player, "Pilot: NONE");
-    else {
+    } else {
       (void)snprintf(
           buff, sizeof(buff), "Pilot Name: %-28.28s Pilot Injury: %d",
           game_object_name(context->database, mech_pilot_dbref(mech)),
@@ -337,9 +338,9 @@ void print_generic_status(EvaluationContext *evaluation, DbRef player,
                      move_type);
       mecha_notify(evaluation, player, buff);
       show_miscbrands(mech, player);
-      if (mech_pilot_dbref(mech) == -1)
+      if (mech_pilot_dbref(mech) == -1) {
         mecha_notify(evaluation, player, "Pilot: NONE");
-      else {
+      } else {
         (void)snprintf(
             buff, sizeof(buff), "Pilot Name: %-28.28s Pilot Injury: %d",
             game_object_name(context->database, mech_pilot_dbref(mech)),
@@ -454,8 +455,9 @@ static char *make_heat_scale_info(Mech *mech, const char *fillchar,
   if (heat <= start) {
     heat = 0;
     state = 0;
-  } else
+  } else {
     heat -= start;
+  }
 
   if (start)
     btech_text_builder_append(&text, "<[fg=black bold]");

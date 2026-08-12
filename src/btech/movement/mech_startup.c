@@ -158,7 +158,7 @@ static void mech_startup_event(MuxEvent *e) {
     mech_printf(mech, MECHALL, startup_message(AERO_BOOTMSGS, timer));
   } else if (unit_class == CLASS_BSUIT) {
     mech_printf(mech, MECHALL, startup_message(BSUIT_BOOTMSGS, timer));
-  } else
+  } else {
     switch (movement_type) {
     case MOVE_HOVER:
       mech_printf(mech, MECHALL, startup_message(HOVER_BOOTMSGS, timer));
@@ -184,6 +184,7 @@ static void mech_startup_event(MuxEvent *e) {
       mech_printf(mech, MECHALL, startup_message(BOOTMSGS, timer));
       break;
     }
+  }
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
@@ -443,9 +444,9 @@ void mech_shutdown(DbRef player, void *data, const char *buffer) {
     mech_event_schedule(mech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
   } else if (mech_current_speed(mech) > MP1) {
     mech_notify(mech, MECHALL, "Your systems stop in mid-motion!");
-    if (unit_class == CLASS_MECH)
+    if (unit_class == CLASS_MECH) {
       mech_los_broadcast(mech, "stops in mid-motion, and falls!");
-    else {
+    } else {
       mech_notify(mech, MECHALL,
                   "You tumble end over end and come to a crashing halt!");
       mech_los_broadcast(mech,

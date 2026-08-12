@@ -56,28 +56,32 @@ void mech_overheat_handle(Mech *mech) {
       if (hasinferno) {
         if (btech_random_roll(context) >= 12)
           avoided = 1;
-      } else if (btech_random_roll(context) >= 8)
+      } else if (btech_random_roll(context) >= 8) {
         avoided = 1;
+      }
     } else if (heat >= 23.0F) {
       if (hasinferno) {
         if (btech_random_roll(context) >= 10)
           avoided = 1;
-      } else if (btech_random_roll(context) >= 6)
+      } else if (btech_random_roll(context) >= 6) {
         avoided = 1;
+      }
     } else if (heat >= 19.0F) {
       if (hasinferno) {
         if (btech_random_roll(context) >= 8)
           avoided = 1;
-      } else if (btech_random_roll(context) >= 4)
+      } else if (btech_random_roll(context) >= 4) {
         avoided = 1;
+      }
     } else if ((heat >= 14.0F) && hasinferno) {
       if (btech_random_roll(context) >= 6)
         avoided = 1;
     } else if ((heat >= 10.0F) && hasinferno) {
       if (btech_random_roll(context) >= 4)
         avoided = 1;
-    } else if ((heat < 19.0F) && !hasinferno)
+    } else if ((heat < 19.0F) && !hasinferno) {
       avoided = 1;
+    }
 
     if (!avoided) {
       if (!hasinferno)

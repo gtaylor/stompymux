@@ -468,11 +468,11 @@ void mech_hulldown(DbRef player, void *data, char *buffer) {
 
   if (argc > 0) {
     if (!strcmp(args[0], "-")) {
-      if (!condition.hull_down)
+      if (!condition.hull_down) {
         mech_notify(mech, MECHALL, "You are not hulldown.");
-      else if (mech_event_count(mech, EVENT_CHANGING_HULLDOWN))
+      } else if (mech_event_count(mech, EVENT_CHANGING_HULLDOWN)) {
         mech_notify(mech, MECHALL, "You are busy changing your hulldown mode.");
-      else {
+      } else {
         mech_notify(mech, MECHALL, "You start to lift yourself up.");
         mech_los_broadcast(mech, "begins to raise up on its legs.");
 
@@ -480,15 +480,16 @@ void mech_hulldown(DbRef player, void *data, char *buffer) {
                             mech_hull_down_change_delay(mech), 0);
       }
     } else if (!strcasecmp(args[0], "stop")) {
-      if (!mech_event_count(mech, EVENT_CHANGING_HULLDOWN))
+      if (!mech_event_count(mech, EVENT_CHANGING_HULLDOWN)) {
         mech_notify(mech, MECHALL,
                     "You are not currently changing your hulldown mode.");
-      else {
+      } else {
         mech_event_cancel(mech, EVENT_CHANGING_HULLDOWN);
         mech_notify(mech, MECHALL, "You stop changing your hulldown mode.");
       }
-    } else
+    } else {
       mech_notify(mech, MECHALL, "Invalid argument for 'hulldown'.");
+    }
 
     return;
   }

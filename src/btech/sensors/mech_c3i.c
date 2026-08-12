@@ -58,8 +58,9 @@ int mech_c3i_free_network_position(const MechNetworkLink *link) {
     if (other_ref > 0) {
       if (other_ref == mech_dbref(link->member))
         return C3_POS_IN_NETWORK;
-    } else
+    } else {
       return i;
+    }
   }
 
   return C3_POS_NO_ROOM;
@@ -309,8 +310,9 @@ void mech_c3i_join_leave(DbRef player, void *data, char *buffer) {
   if (target) {
     los = mech_los_check(mech, target, mech_position_x(target),
                          mech_position_y(target), range);
-  } else
+  } else {
     ref_target = 0;
+  }
 
   if ((ref_target < 1) || !los) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,

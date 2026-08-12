@@ -90,10 +90,10 @@ static void vehicle_burn_event(MuxEvent *obj_event) {
   /*
    * Only continue the event if the damage was greater than one
    */
-  if ((w_dam_roll > 1) && mech_section_internal(obj_mech, W_LOC))
+  if ((w_dam_roll > 1) && mech_section_internal(obj_mech, W_LOC)) {
     mech_event_schedule(obj_mech, EVENT_VEHICLEBURN, vehicle_burn_event,
                         VEHICLEBURN_TICK, W_LOC);
-  else {
+  } else {
     if (mech_section_internal(obj_mech, W_LOC))
       mech_printf(obj_mech, MECHALL,
                   "The fire burning on your %s finally goes out.",

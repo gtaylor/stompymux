@@ -249,9 +249,9 @@ void mech_range(DbRef player, void *data, char *buffer) {
                        "Range to %d,%d from %d,%d is: ", ix1, iy1, ix0, iy0);
         map_coord_to_real_coord(ix1, iy1, &x1, &y1);
         map_coord_to_real_coord(ix0, iy0, &x0, &y0);
-        if (battle_map_is_dark(mech_map))
+        if (battle_map_is_dark(mech_map)) {
           z1 = z0 = 0;
-        else {
+        } else {
           z1 = map_scaled_elevation(mech_map, ix1, iy1);
           z0 = map_scaled_elevation(mech_map, ix0, iy0);
         }

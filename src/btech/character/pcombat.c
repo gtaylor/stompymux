@@ -128,8 +128,9 @@ int personal_armor_reduce_damage(const PersonalArmorDamageRequest *request) {
       int_damage = int_damage * 2;
     else
       noblock = 1;
-  } else if (btech_random_range_int(mech_context(wounded), 1, 10) == 2)
+  } else if (btech_random_range_int(mech_context(wounded), 1, 10) == 2) {
     int_damage = int_damage / 2;
+  }
   const PersonalArmorDefinition *armor = personal_armor_at(armor_index);
   if (!armor->name)
     return int_damage;

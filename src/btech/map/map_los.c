@@ -606,8 +606,9 @@ static void trace_maphexlos(const MapHexTraceRequest *request) {
           state->minimum_angle = state->block_angle;
           state->block_angle = trace_ba;
           state->wood_count = newwoods;
-        } else
+        } else {
           state->minimum_angle = trace_ba;
+        }
       } else {
         state->minimum_angle = trace_a;
         state->wood_count += newwoods;
@@ -628,10 +629,11 @@ static void trace_maphexlos(const MapHexTraceRequest *request) {
           else
             set_hexlosinfo(los_map, trace_x, trace_y, MAPLOSHEX_SEETERRAIN);
         }
-      } else if (seestate < 0 && !hexlit(los_map, trace_x, trace_y))
+      } else if (seestate < 0 && !hexlit(los_map, trace_x, trace_y)) {
         set_hexlosinfo(los_map, trace_x, trace_y, MAPLOSHEX_NOLOS);
-      else
+      } else {
         set_hexlosinfo(los_map, trace_x, trace_y, MAPLOSHEX_SEE);
+      }
 
     hexinfluence:
       if (trace_terrain == WATER &&
@@ -690,8 +692,9 @@ bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
          movement == MOVE_HOVER) &&
         mech_position_z(mech) == 0))) {
     bothworlds = 1;
-  } else
+  } else {
     bothworlds = 0;
+  }
 
   const int MECH_Z = mech_position_z(mech);
   start_height = (float)MECH_Z + mech_los_height(mech);

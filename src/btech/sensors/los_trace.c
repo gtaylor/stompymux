@@ -318,7 +318,7 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
 
     /* First get the x and y 'multipliers' -- either 1 or -1 */
     /* they determine the direction of the movement */
-    if (bx > ax)
+    if (bx > ax) {
       if (by > ay) {
         xmul = 1;
         ymul = 1;
@@ -326,7 +326,7 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
         xmul = 1;
         ymul = -1;
       }
-    else if (by > ay) {
+    } else if (by > ay) {
       xmul = -1;
       ymul = 1;
     } else {

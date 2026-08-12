@@ -124,10 +124,10 @@ void mechrep_rsetarmor(DbRef player, void *data, char *buffer) {
   argc--;
   if (argc) {
     // One Argument Given.
-    if (!parse_int_checked(args[1], &temp) || temp < 0)
+    if (!parse_int_checked(args[1], &temp) || temp < 0) {
       mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                    "Invalid armor value!");
-    else {
+    } else {
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
                     "Front armor set to    : %d", temp);
       mech_section_armor_set(mech, index, temp);
@@ -137,10 +137,10 @@ void mechrep_rsetarmor(DbRef player, void *data, char *buffer) {
   }
   if (argc) {
     // Two Arguments Given.
-    if (!parse_int_checked(args[2], &temp) || temp < 0)
+    if (!parse_int_checked(args[2], &temp) || temp < 0) {
       mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                    "Invalid Internal armor value!");
-    else {
+    } else {
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
                     "Internal armor set to : %d", temp);
       mech_section_internal_set(mech, index, temp);
@@ -156,18 +156,19 @@ void mechrep_rsetarmor(DbRef player, void *data, char *buffer) {
       return;
     }
     if (index == CTORSO || index == RTORSO || index == LTORSO) {
-      if (temp < 0)
+      if (temp < 0) {
         mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                      "Invalid Rear armor value!");
-      else {
+      } else {
         notify_printf(btech_context_evaluation(rep->xcode.context), player,
                       "Rear armor set to     : %d", temp);
         mech_section_rear_armor_set(mech, index, temp);
         mech_section_original_rear_armor_set(mech, index, temp);
       }
-    } else
+    } else {
       mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                    "Only the torso can have rear armor.");
+    }
   }
 }
 /*
@@ -492,10 +493,10 @@ void mechrep_rreload(DbRef player, void *data, char *buffer) {
                  "Critslot out of range!");
     return;
   }
-  if (weapon_catalogue_ammunition_per_ton(weapindex) == 0)
+  if (weapon_catalogue_ammunition_per_ton(weapindex) == 0) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "That weapon doesn't require ammo!");
-  else {
+  } else {
     mech_critical_part_type_set(mech, index, subsect,
                                 ammunition_equipment_index(weapindex));
     if (!(mech_critical_fire_mode(mech, index, subsect) & HALFTON_MODE)) {
@@ -631,10 +632,10 @@ void mechrep_rrestock(DbRef player, void *data, char *buffer) {
     return;
   }
   if (weapon_catalogue_ammunition_per_ton(ammunition_to_weapon_index(
-          mech_critical_part_type(mech, index, subsect))) == 0)
+          mech_critical_part_type(mech, index, subsect))) == 0) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "That weapon doesn't require ammo!");
-  else {
+  } else {
     mech_critical_data_set(mech, index, subsect,
                            full_ammo(mech, index, subsect));
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,

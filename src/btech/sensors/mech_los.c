@@ -387,8 +387,9 @@ int mech_los_check(Mech *mech, Mech *target, int x, int y, float hex_range) {
   if (target) {
     x1 = mech_position_real_x(target);
     y1 = mech_position_real_y(target);
-  } else
+  } else {
     map_coord_to_real_coord(x, y, &x1, &y1);
+  }
   arc = in_weapon_arc(mech, x1, y1);
 
   if (mech && target) {

@@ -380,9 +380,10 @@ void check_edge_of_map(Mech *mech) {
     if (map->onmap && btech_context_is_mech(map->xcode.context, map->onmap)) {
       if (dropship_leave(map, mech))
         return;
-    } else if (map->flags & MAPFLAG_MAPO && map->map_object[TYPE_LEAVE])
+    } else if (map->flags & MAPFLAG_MAPO && map->map_object[TYPE_LEAVE]) {
       if (leave_hangar(map, mech))
         return;
+    }
   }
   if (pinned) {
     map_coord_to_real_coord(((mech)->pd.x), ((mech)->pd.y), &((mech)->pd.fx),
@@ -528,16 +529,17 @@ const char *find_gunnery_skill_name(Mech *mech, int weapindx) {
           return "Support_Weapons";
         return "Small_Arms";
       }
-    } else if (weapon_catalogue_is_artillery(weapindx))
+    } else if (weapon_catalogue_is_artillery(weapindx)) {
       return "Gunnery-Artillery";
-    else if (weapon_catalogue_is_missile(weapindx))
+    } else if (weapon_catalogue_is_missile(weapindx)) {
       return "Gunnery-Missile";
-    else if (weapon_catalogue_is_ballistic(weapindx))
+    } else if (weapon_catalogue_is_ballistic(weapindx)) {
       return "Gunnery-Ballistic";
-    else if (weapon_catalogue_is_energy(weapindx))
+    } else if (weapon_catalogue_is_energy(weapindx)) {
       return "Gunnery-Laser";
-    else if (weapon_catalogue_is_flamer(weapindx))
+    } else if (weapon_catalogue_is_flamer(weapindx)) {
       return "Gunnery-Flamer";
+    }
   }
   return NULL;
 }

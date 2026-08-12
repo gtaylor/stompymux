@@ -259,8 +259,9 @@ void mech_actuator_criticals_normalize(Mech *obj_mech) {
       }
     }
 
-  } else if (condition.gyro_damaged)
+  } else if (condition.gyro_damaged) {
     mech_pilot_skill_modifier_add(obj_mech, 3);
+  }
 
   /*
      Let's add in the appropriate modifiers for a dead leg.

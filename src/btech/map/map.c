@@ -555,9 +555,9 @@ void map_savemap(DbRef player, void *data, char *buffer) {
                 .map = map,
                 .position = {.x = j, .y = i},
                 .type = TYPE_FIRE,
-            }))
+            })) {
           terrain = TFIRE;
-        else if (!(map->flags & MAPFLAG_FIRES)) {
+        } else if (!(map->flags & MAPFLAG_FIRES)) {
           map_terrain_set(map, j, i, ' ');
           btech_channel_send(
               map->xcode.context, BTECH_CHANNEL_EVENT_INFO, "%s",
@@ -625,10 +625,10 @@ void map_setmapsize(DbRef player, void *data, char *buffer) {
   map = battle_map_grid_create(x, y);
   if (map == nullptr)
     failed = 1;
-  if (failed)
+  if (failed) {
     btech_channel_send(oldmap->xcode.context, BTECH_CHANNEL_MAP_ERRORS,
                        "Memory allocation failed in setmapsize!");
-  else {
+  } else {
     /* Initialize the hexes in the new map to blank */
     for (i = 0; i < y; i++)
       for (j = 0; j < x; j++)

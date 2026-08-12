@@ -254,8 +254,9 @@ void remove_mech_from_map(BattleMap *map, Mech *mech) {
                      (battle_map_unit_dbref(map, loop) != mech_dbref(mech));
            loop++)
         ;
-  } else
+  } else {
     loop = MAP_SLOT;
+  }
   mech_map_slot_set(mech, 0);
   if (map->mechs_on_map != nullptr && map->mechflags != nullptr &&
       loop != map->first_free) {

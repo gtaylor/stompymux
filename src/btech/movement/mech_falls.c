@@ -120,8 +120,9 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
       mech_fallen_set(mech, true);
     }
     mech_event_cancel(mech, EVENT_MOVE);
-  } else
+  } else {
     mech_maybe_move(mech);
+  }
   if (mech_class(mech) == CLASS_MECH || mech_class(mech) == CLASS_MW)
     mech_make_fall(mech);
 

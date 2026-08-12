@@ -85,10 +85,10 @@ static void mech_dump_event(MuxEvent *ev) {
         if (equipment_is_ammunition(mech_critical_part_type(mech, i, l)))
           if (mech_critical_data(mech, i, l))
             mech_ammunition_dump_decrease(mech, i, l, &e);
-    if (e > 1)
+    if (e > 1) {
       mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK,
                           arg);
-    else {
+    } else {
       mech_notify(mech, MECHALL, "All ammunition dumped.");
       mech_los_broadcast(
           mech, "no longer has ammo dumping from hatches on its back.");
@@ -103,10 +103,10 @@ static void mech_dump_event(MuxEvent *ev) {
         if (!mech_critical_is_nonfunctional(mech, loc, i))
           if (mech_critical_data(mech, loc, i))
             mech_ammunition_dump_decrease(mech, loc, i, &e);
-    if (e > 1)
+    if (e > 1) {
       mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK,
                           arg);
-    else if (e == 1 && mech_is_started(mech)) {
+    } else if (e == 1 && mech_is_started(mech)) {
       armor_string_from_index(loc, buf, mech_class(mech),
                               mech_movement_type(mech));
       mech_printf(mech, MECHALL, "All ammunition in %s dumped.", buf);
@@ -124,10 +124,10 @@ static void mech_dump_event(MuxEvent *ev) {
               weapindx)
             if (mech_critical_data(mech, i, l))
               mech_ammunition_dump_decrease(mech, i, l, &e);
-    if (e > 1)
+    if (e > 1) {
       mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK,
                           arg);
-    else {
+    } else {
       mech_printf(mech, MECHALL, "Ammunition for %s dumped!",
                   get_parts_long_name(mech_context(mech),
                                       weapon_equipment_index(weapindx), 0));
@@ -360,8 +360,9 @@ int mech_ammunition_dump_decrease(Mech *mech, int loc, int pos, int *hm) {
             return ammunition_dump_result(2, hm);
           /* fine, we remove 1 */
           rem = 1;
-        } else
+        } else {
           rem = min(c, AMMUNITION_PER_TON / DUMP_SPEED);
+        }
         mech_ammunition_expenditure_check(&(AmmunitionExpenditureCheck){
             .mech = mech,
             .weapon_index = weapindx,

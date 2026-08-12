@@ -195,13 +195,15 @@ void do_del_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
         macro_notify(match, player,
                      "MACRO: Deleted current slot, resetting to none.");
       }
-    } else
+    } else {
       macro_notify(match, player, "MACRO: That is not a legal macro slot.");
-  } else
+    }
+  } else {
     notify_checked(
         match->evaluation, player, player,
         "MACRO: What set did you want to delete from your macro system?",
         MSG_ME_ALL | MSG_F_DOWN);
+  }
 }
 void do_desc_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                    char *s) {
@@ -214,8 +216,9 @@ void do_desc_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     string_copy(m->desc, s);
     notify_printf(match->evaluation, player,
                   "MACRO: Current slot description to %s.", s);
-  } else
+  } else {
     macro_notify(match, player, "MACRO: You have no current slot set.");
+  }
 }
 void do_chmod_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     char *s) {
@@ -232,8 +235,9 @@ void do_chmod_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     if (*s == '!') {
       sign = 0;
       s = checked_mutable_string_suffix(s, 1);
-    } else
+    } else {
       sign = 1;
+    }
     switch (*s) {
     case 'L':
     case 'l':
@@ -281,8 +285,9 @@ void do_chmod_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
       macro_notify(match, player,
                    "MACRO: Sorry, unknown mode.  Legal modes are: L R W");
     }
-  } else
+  } else {
     macro_notify(match, player, "MACRO: You have no current slot set.");
+  }
 }
 void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                   char *s) {
@@ -316,8 +321,9 @@ void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                      macro_string_item(m, (size_t)i));
       macro_notify(match, player, buffer);
     }
-  } else
+  } else {
     macro_notify(match, player, "MACRO: Permission denied.");
+  }
 }
 void do_edit_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                    char *s) {
@@ -331,11 +337,13 @@ void do_edit_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
       c->curmac = set;
       notify_printf(match->evaluation, player, "MACRO: Current slot set to %d.",
                     set);
-    } else
+    } else {
       macro_notify(match, player, "MACRO: That is not a legal macro slot.");
-  } else
+    }
+  } else {
     macro_notify(match, player,
                  "MACRO: What slot did you want to make current?");
+  }
 }
 void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                      char *s) {
@@ -377,9 +385,10 @@ void do_ex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     which = clamped_atoi(s);
     m = get_macro_set(&(MacroSetRequest){
         .registry = registry, .player = player, .slot = which});
-  } else
+  } else {
     m = get_macro_set(
         &(MacroSetRequest){.registry = registry, .player = player, .slot = -1});
+  }
   if (m) {
     notify_printf(match->evaluation, player, "Macro Definitions for %s",
                   m->desc);
@@ -389,8 +398,9 @@ void do_ex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                      macro_string_item(m, (size_t)i));
       macro_notify(match, player, buffer);
     }
-  } else
+  } else {
     macro_notify(match, player, "MACRO: Illegal macro set to examine.");
+  }
 }
 void do_chown_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     char *cmd) {

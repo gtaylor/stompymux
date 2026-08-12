@@ -135,8 +135,9 @@ void del_mapobj(const MapObjectDeleteRequest *request) {
     if (!tmp->next)
       return;
     tmp->next = mapob->next;
-  } else
+  } else {
     *object_slot = mapob->next;
+  }
   /* Then, the silly thing. Decorations, they suck */
   if (type <= TYPE_LAST_DEC) {
     /* Need to alter terrain back to 'usual' */

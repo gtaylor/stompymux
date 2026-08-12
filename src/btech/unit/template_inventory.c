@@ -58,9 +58,9 @@ static char *dumpweapon_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
   const BtechWeaponSettings *weapon_settings = data;
 
   buffer[0] = 0;
-  if (!i)
+  if (!i) {
     (void)snprintf(buffer, LBUF_SIZE, WDUMP_MASKS);
-  else {
+  } else {
     i--;
     WeaponRangeProfile ranges = weapon_catalogue_ranges(i);
     (void)snprintf(buffer, LBUF_SIZE, WDUMP_MASK, weapon_catalogue_name(i),
@@ -120,8 +120,9 @@ char *techlist_func(Mech *mech, char *buffer) {
             .delimiter = ' ',
             .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
     (void)snprintf(buffer, MBUF_SIZE, "%s %s %s", bufa, bufb, bufc);
-  } else
+  } else {
     (void)snprintf(buffer, MBUF_SIZE, "%s %s", bufa, bufb);
+  }
 
   if (!(strstr(buffer, "XL") || strstr(buffer, "XXL") ||
         strstr(buffer, "LENG") || strstr(buffer, "ICE") ||

@@ -8,24 +8,24 @@ autopilot_weapon_evaluate(const AutopilotWeaponSituation *situation) {
                                       .reason = AUTOPILOT_WEAPON_READY,
                                       .heat_after_fire =
                                           situation->projected_heat};
-  if (!situation->functional)
+  if (!situation->functional) {
     decision.reason = AUTOPILOT_WEAPON_NONFUNCTIONAL;
-  else if (situation->recycling)
+  } else if (situation->recycling) {
     decision.reason = AUTOPILOT_WEAPON_RECYCLING;
-  else if (situation->defensive)
+  } else if (situation->defensive) {
     decision.reason = AUTOPILOT_WEAPON_DEFENSIVE;
-  else if (!situation->ammunition_compatible)
+  } else if (!situation->ammunition_compatible) {
     decision.reason = AUTOPILOT_WEAPON_INCOMPATIBLE_AMMO;
-  else if (situation->ammunition_required && situation->ammunition <= 0)
+  } else if (situation->ammunition_required && situation->ammunition <= 0) {
     decision.reason = AUTOPILOT_WEAPON_NO_AMMO;
-  else if (!situation->in_arc)
+  } else if (!situation->in_arc) {
     decision.reason = AUTOPILOT_WEAPON_OUT_OF_ARC;
-  else if (situation->heat_limited && situation->projected_heat +
-                                              (float)situation->weapon_heat -
-                                              situation->heat_dissipation >
-                                          situation->maximum_heat)
+  } else if (situation->heat_limited && situation->projected_heat +
+                                                (float)situation->weapon_heat -
+                                                situation->heat_dissipation >
+                                            situation->maximum_heat) {
     decision.reason = AUTOPILOT_WEAPON_OVERHEAT;
-  else {
+  } else {
     decision.fire = true;
     decision.heat_after_fire =
         situation->projected_heat + (float)situation->weapon_heat;

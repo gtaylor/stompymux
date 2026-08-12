@@ -240,8 +240,9 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
           if (mech_section_is_crittable(mech, TURRET, (CriticalThreshold){50}))
             *iscritical = 1;
           return TURRET;
-        } else
+        } else {
           return LSIDE;
+        }
       }
       break;
     case RIGHTSIDE:
@@ -266,8 +267,9 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
           if (mech_section_is_crittable(mech, TURRET, (CriticalThreshold){50}))
             *iscritical = 1;
           return TURRET;
-        } else
+        } else {
           return RSIDE;
+        }
         break;
       }
       break;
@@ -296,8 +298,9 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
           if (mech_section_is_crittable(mech, TURRET, (CriticalThreshold){50}))
             *iscritical = 1;
           return TURRET;
-        } else
+        } else {
           return side;
+        }
       }
     }
     break;
@@ -592,8 +595,9 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
           hitloc = TURRET;
           if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
             *iscritical = 1;
-        } else
+        } else {
           hitloc = LSIDE;
+        }
         break;
       case 12:
         hitloc = LSIDE;
@@ -629,8 +633,9 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
           hitloc = TURRET;
           if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
             *iscritical = 1;
-        } else
+        } else {
           hitloc = RSIDE;
+        }
         break;
       }
       break;
@@ -669,8 +674,9 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
           *iscritical = 1;
-        } else
+        } else {
           hitloc = FSIDE;
+        }
         break;
       }
       break;

@@ -410,9 +410,9 @@ void mech_weapon_critical_apply(const WeaponCriticalApplication *application) {
                             &w_weap_size, &w_first_crit);
 
   /* See if we should just destroy the sucker outright */
-  if (mech_weapon_critical_should_destroy(mech, SECTION, CRITICAL, true))
+  if (mech_weapon_critical_should_destroy(mech, SECTION, CRITICAL, true)) {
     t_destroy_weapon = 1;
-  else {
+  } else {
     /* Add the total number of damaged slots */
     w_crit_roll += mech_weapon_damaged_slot_count(mech, SECTION, w_first_crit,
                                                   w_weap_size);
@@ -496,11 +496,11 @@ void mech_weapon_critical_apply(const WeaponCriticalApplication *application) {
   } else {
     mech_critical_fire_mode_add(mech, SECTION, CRITICAL, DAMAGED_MODE);
 
-    if (t_no_crit)
+    if (t_no_crit) {
       mech_printf(mech, MECHALL,
                   "Your %s takes a hit but suffers no noticeable damage!!",
                   weapon_display_name(w_weap_index));
-    else if (t_moderate_crit) {
+    } else if (t_moderate_crit) {
       mech_printf(mech, MECHALL, "Your %s takes a hit but continues working!!",
                   weapon_display_name(w_weap_index));
       mech_critical_damage_flags_add(mech, SECTION, CRITICAL,
@@ -556,19 +556,19 @@ void mech_weapon_status(DbRef player, Mech *mech, char *buffer) {
 
       if (mech_critical_is_broken(mech, sec_iter, WEAPON_CRITICAL) ||
           mech_critical_temporary_failure(mech, sec_iter, WEAPON_CRITICAL) ==
-              FAIL_DESTROYED)
+              FAIL_DESTROYED) {
         strlcat(weapbuff, "|| [fg=red bold]DESTROYED[reset]", sizeof(weapbuff));
-      else {
+      } else {
 
         if (mech_class(mech) == CLASS_MECH)
           w_damaged_slots = mech_weapon_damaged_slot_count_at(mech, sec_iter,
                                                               WEAPON_CRITICAL);
 
-        if (mech_critical_is_disabled(mech, sec_iter, WEAPON_CRITICAL))
+        if (mech_critical_is_disabled(mech, sec_iter, WEAPON_CRITICAL)) {
           strlcat(weapbuff, "|| [fg=red bold]DISABLED[reset]",
                   sizeof(weapbuff));
-        else if (mech_critical_temporary_failure(mech, sec_iter,
-                                                 WEAPON_CRITICAL)) {
+        } else if (mech_critical_temporary_failure(mech, sec_iter,
+                                                   WEAPON_CRITICAL)) {
           switch (mech_critical_temporary_failure(mech, sec_iter,
                                                   WEAPON_CRITICAL)) {
           case FAIL_JAMMED:
@@ -587,12 +587,13 @@ void mech_weapon_status(DbRef player, Mech *mech, char *buffer) {
             strlcat(weapbuff, "|| [fg=yellow]AMMOJAM[reset]", sizeof(weapbuff));
             break;
           }
-        } else if (w_damaged_slots > 0)
+        } else if (w_damaged_slots > 0) {
           strlcat(weapbuff, "|| [fg=yellow bold]DAMAGED[reset]",
                   sizeof(weapbuff));
-        else
+        } else {
           strlcat(weapbuff, "|| [fg=green bold]OPERATIONAL[reset]",
                   sizeof(weapbuff));
+        }
       }
 
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,

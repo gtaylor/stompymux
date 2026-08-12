@@ -264,8 +264,9 @@ redo:
         i = 1;
         template_registry_reset(registry);
         goto redo;
-      } else
+      } else {
         goto oldstyle;
+      }
     }
     return registry->resolved_path;
   }

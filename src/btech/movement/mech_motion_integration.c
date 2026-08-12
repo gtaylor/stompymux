@@ -228,11 +228,11 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
           mech, mech_motion_vector_x(mech) * (float)MOVE_MOD,
           mech_motion_vector_y(mech) * (float)MOVE_MOD);
       if (mech_is_dropship(mech)) {
-        if (mech_position_z(mech) < 10 && step->previous_z >= 10)
+        if (mech_position_z(mech) < 10 && step->previous_z >= 10) {
           dropship_land_warning(mech, 1);
-        else if (mech_position_z(mech) < 50 && step->previous_z >= 50)
+        } else if (mech_position_z(mech) < 50 && step->previous_z >= 50) {
           dropship_land_warning(mech, 0);
-        else if (mech_position_z(mech) < 100 && step->previous_z >= 100) {
+        } else if (mech_position_z(mech) < 100 && step->previous_z >= 100) {
           if (abs(mech_desired_angle(mech)) != 90) {
             if (dropship_notification_is_due(mech)) {
               mech_notify(mech, MECHALL,

@@ -41,9 +41,9 @@ void do_chzone(CommandInvocation *invocation) {
   if (thing == NOTHING)
     return;
 
-  if (!strcasecmp(newobj, "none"))
+  if (!strcasecmp(newobj, "none")) {
     zone = NOTHING;
-  else {
+  } else {
     init_match(&invocation->context->match, player, newobj, OBJECT_TYPE_NOTYPE);
     match_everything(&invocation->context->match, 0);
     zone = noisy_match_result(&invocation->context->match);

@@ -416,8 +416,9 @@ AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request) {
         if (!mech_critical_data(mech, result.secondary.slot.section,
                                 result.secondary.slot.critical))
           t_reset_mode = 1;
-      } else
+      } else {
         t_reset_mode = 1;
+      }
 
       if (t_reset_mode)
         mech_critical_fire_mode_clear(mech, section, critical, w_weap_mode);
@@ -466,8 +467,9 @@ AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request) {
         if (!mech_critical_data(mech, result.secondary.slot.section,
                                 result.secondary.slot.critical))
           t_reset_mode = 1;
-      } else
+      } else {
         t_reset_mode = 1;
+      }
 
       if (t_reset_mode)
         mech_critical_fire_mode_clear(mech, section, critical, w_weap_mode);

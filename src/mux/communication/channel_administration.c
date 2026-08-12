@@ -250,13 +250,13 @@ void do_channel_flags(CommandInvocation *invocation) {
     enable = false;
     flag = checked_mutable_string_suffix(flag, 1);
   }
-  if (strcasecmp(flag, "public") == 0)
+  if (strcasecmp(flag, "public") == 0) {
     flag_value = CHANNEL_PUBLIC;
-  else if (strcasecmp(flag, "loud") == 0)
+  } else if (strcasecmp(flag, "loud") == 0) {
     flag_value = CHANNEL_LOUD;
-  else if (strcasecmp(flag, "transparent") == 0)
+  } else if (strcasecmp(flag, "transparent") == 0) {
     flag_value = CHANNEL_TRANSPARENT;
-  else {
+  } else {
     raw_notify(evaluation, player, "@chan/flags: Unknown flag.");
     return;
   }

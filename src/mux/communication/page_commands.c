@@ -185,8 +185,9 @@ void do_page(CommandInvocation *invocation) {
     safe_str(alias, aladd, &ap);
     safe_chr(')', aladd, &ap);
     *ap = '\0';
-  } else
+  } else {
     aladd[0] = 0;
+  }
 
   /*
    * Count the words
@@ -210,8 +211,9 @@ void do_page(CommandInvocation *invocation) {
       if (ismessage) {
         if (!parse_long_checked(p, &target))
           continue;
-      } else
+      } else {
         target = lookup_player(evaluation->world, PLAYER, p, 1);
+      }
 
       message = mp;
 

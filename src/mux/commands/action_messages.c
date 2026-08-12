@@ -45,9 +45,10 @@ void notify_action(EvaluationContext *evaluation,
                      enactor_message, MSG_ME_ALL | MSG_F_DOWN);
     }
     free_lbuf(d);
-  } else if (enactor_message && *enactor_message)
+  } else if (enactor_message && *enactor_message) {
     notify_checked(evaluation, message.enactor, message.enactor,
                    enactor_message, MSG_ME_ALL | MSG_F_DOWN);
+  }
   /*
    * message to neighbors
    */

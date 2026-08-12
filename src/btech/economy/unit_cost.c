@@ -462,9 +462,9 @@ unsigned long long mech_fasa_cost(Mech *mech) {
 
     // For single heatsinks, we only charge for every heatsink over 10.
     if (TECHNOLOGY & DOUBLE_HEAT_TECH || TECHNOLOGY & CLAN_TECH ||
-        TECHNOLOGY_SECONDARY & COMPACT_HS_TECH || TECHNOLOGY & ICE_TECH)
+        TECHNOLOGY_SECONDARY & COMPACT_HS_TECH || TECHNOLOGY & ICE_TECH) {
       mech_cost_add(mech, &total, "Heat Sinks", (numsinks * sinkcost));
-    else {
+    } else {
       mech_cost_add(mech, &total, "Heat Sinks",
                     (bounded(0, numsinks - 10, 500) * sinkcost));
     }

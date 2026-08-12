@@ -309,9 +309,10 @@ char *mech_damagefunc(const GmvBufferedBidirectionalCall *call) {
               damage_list_append(buffer, &count, "R:%d/%d(%d)", i, j,
                                  mech_critical_full_ammunition(mech, i, j) -
                                      mech_critical_data(mech, i, j));
-          } else if (mech_critical_temporary_failure(mech, i, j))
+          } else if (mech_critical_temporary_failure(mech, i, j)) {
             damage_list_append(buffer, &count, "G:%d/%d(%d)", i, j,
                                mech_critical_temporary_failure(mech, i, j));
+          }
         }
       }
     }

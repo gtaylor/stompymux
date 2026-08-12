@@ -124,8 +124,9 @@ static StringifiedValue stringified_value(int v) {
       i--;
     (void)snprintf(result.text, sizeof(result.text), "%d%c", bounded(0, v, 999),
                    *checked_string_suffix(SUFFIXES, (size_t)i));
-  } else
+  } else {
     (void)snprintf(result.text, sizeof(result.text), "%d", bounded(0, v, 999));
+  }
   return result;
 }
 
@@ -135,8 +136,9 @@ static void display_number_end(BtechTextBuilder *output, CoolMenu *m) {
         output, " [fg=green]%s%4s[reset]",
         (m->value > 0 && !(m->flags & CM_NO_HILITE)) ? "[bold]" : "",
         stringified_value(m->value).text);
-  } else
+  } else {
     btech_text_builder_append(output, " ____");
+  }
 }
 
 static void display_entry(BtechTextBuilder *output, int maxlen, CoolMenu *c) {

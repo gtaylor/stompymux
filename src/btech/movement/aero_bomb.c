@@ -325,11 +325,11 @@ static void bomb_drop(const BombDropRequest *request) {
   t = bomb_calculate_destination(mech, &x, &y);
   const float IMPACT_TIME_TRUNCATED = truncf(t);
   ob = (int)IMPACT_TIME_TRUNCATED / 10;
-  if (made_pilot_skill_roll(mech, 4 + ob) || t < 2.0F)
+  if (made_pilot_skill_roll(mech, 4 + ob) || t < 2.0F) {
     mech_notify(mech, MECHALL,
                 "Despite the slight problems, you keep the craft stable enough "
                 "to drop the bomb right on target..");
-  else {
+  } else {
     mech_notify(mech, MECHALL,
                 "The ship's lurches slightly, dropping the bomb off target!");
     ob = 6 * (1 + ob); /* Max distance missed  */

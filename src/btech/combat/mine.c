@@ -176,8 +176,9 @@ static void mine_explode(const MineExplosion *explosion) {
         mech_notify(mech, MECHALL, "You trigger a mine!");
         break;
       }
-    } else
+    } else {
       hex_los_broadcast(map, o->x, o->y, "A mine explodes in $H!");
+    }
   }
 
   switch (o->datac) {

@@ -378,8 +378,9 @@ int find_weapons_advanced(Mech *mech, int index, unsigned char *weaparray,
         lastweap = temp;
         num_crits = 1;
         weapcount++;
-      } else
+      } else {
         num_crits++;
+      }
     } else if (!weapon_critical_count_is_valid(mech, lastweap, &num_crits,
                                                whine)) {
       return -1;

@@ -338,8 +338,9 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
             .criticals_to_destroy = 1,
             .total_criticals = heat_sink_critical_size});
         destroycrit = 0;
-      } else
+      } else {
         mech_heat_sink_count_remove(wounded, 1);
+      }
       mech_notify(wounded, MECHALL, "You lost a heat sink!");
       if (!mech_is_destroyed(wounded)) {
         (void)snprintf(msgbuf, MBUF_SIZE, "'s %s is covered in a green mist!",
@@ -566,10 +567,10 @@ need to bother with crits if we already have a hip crit here */
       temp = mech_c3_working_masters(mech);
       mech_c3_working_masters_set(mech, mech_c3_working_master_count(mech));
 
-      if (temp == mech_c3_working_masters(mech))
+      if (temp == mech_c3_working_masters(mech)) {
         mech_notify(wounded, MECHALL,
                     "Your destroyed C3 system takes another hit!");
-      else {
+      } else {
         if (mech_c3_working_masters(mech) == 0) {
           mech_c3_destroyed_set(wounded, true);
 

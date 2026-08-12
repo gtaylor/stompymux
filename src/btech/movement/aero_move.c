@@ -104,8 +104,9 @@ static void aero_takeoff_event(MuxEvent *e) {
     if (count > 5) {
       if (!(count % 10))
         mech_printf(mech, MECHALL, "Launch countdown: %ld.", count);
-    } else
+    } else {
       mech_printf(mech, MECHALL, "Launch countdown: %ld.", count);
+    }
     if (i >= 0) {
       if (count == (land_data_entry(i)->launchtime / 4))
         dropship_notification_broadcast(
@@ -660,9 +661,10 @@ int aero_fuel_check(Mech *mech) {
       fuelcost = (int)FUEL_RATIO;
     }
   } else if (fabsf(mech_current_speed(mech)) < MP1 &&
-             fabsf(mech_vertical_speed(mech)) < MP2)
+             fabsf(mech_vertical_speed(mech)) < MP2) {
     if (btech_random_range_int(mech_context(mech), 0, 1) == 0)
       return 0; /* Approximately half of the time free */
+  }
   if (mech_fuel(mech) > 0) {
     if (mech_fuel(mech) <= fuelcost)
       mech_fuel_set(mech, 0);

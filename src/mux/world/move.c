@@ -434,9 +434,9 @@ int move_via_teleport(const ObjectMovementRequest *request) {
       if (!lock_test(evaluation, thing, cause, thing, curr,
                      LUA_LOCK_TELEPORT_OUT, LUA_LOCK_OPERATION_TELEPORT_OUT,
                      false, &lock, &result)) {
-        if ((thing == cause) || (cause == NOTHING))
+        if ((thing == cause) || (cause == NOTHING)) {
           failmsg = "You can't teleport out!";
-        else {
+        } else {
           failmsg = "You can't be teleported out!";
           notify_checked(evaluation, cause, cause,
                          "You can't teleport that out!", MSG_ME);

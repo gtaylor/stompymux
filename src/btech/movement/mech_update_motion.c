@@ -51,19 +51,19 @@ void mech_heading_update(Mech *mech) {
     mw_mod = 2;
   if (btech_context_uses_fasa_turning(context)) {
     constexpr float FASA_TURN_MOD = 1.5F;
-    if (mech_is_jumping(mech))
+    if (mech_is_jumping(mech)) {
       offset = clamp_float_to_int(2.0F * TURN_UNIT_FLOAT * 2.0F * 360.0F *
                                   FASA_TURN_MOD / 60.0F);
-    else {
+    } else {
       float ts = mech_current_speed(mech);
 
       if (ts < 0) {
         maxspeed = maxspeed * 2.0F / 3.0F;
         ts = -ts;
       }
-      if (ts > maxspeed || maxspeed < 0.1F) /* kludge */
+      if (ts > maxspeed || maxspeed < 0.1F) { /* kludge */
         offset = 0;
-      else {
+      } else {
         float const OFFSET_FLOAT = TURN_UNIT_FLOAT * 2.0F * 360.0F *
                                    FASA_TURN_MOD / 60.0F * (maxspeed - ts) *
                                    (omaxspeed / maxspeed) * (float)mw_mod *

@@ -389,9 +389,9 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
     if (*argument == '+') {
       str = btech_attribute_read(mech_context(mech)->database, player,
                                  A_CONTACTOPT, (char[LBUF_SIZE]){0});
-      if (!*str)
+      if (!*str) {
         strlcpy(buff, DEFAULT_CONTACTOPTIONS, sizeof(buff));
-      else {
+      } else {
         strncpy(buff, str, 50);
         buff[49] = 0;
 
@@ -413,31 +413,32 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
       if (C == '\0')
         break;
 
-      if (C == 'd')
+      if (C == 'd') {
 
         (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_DEAD)
                                  : (see_what |= SEE_DEAD);
-      else if (C == 's')
+      } else if (C == 's') {
         (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_SHUTDOWN)
                                  : (see_what |= SEE_SHUTDOWN);
-      else if (C == 'b')
+      } else if (C == 'b') {
         (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_BUILDINGS)
                                  : (see_what |= SEE_BUILDINGS);
-      else if (C == 'e')
+      } else if (C == 'e') {
         (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_ENEMA)
                                  : (see_what |= SEE_ENEMA);
-      else if (C == 'a')
+      } else if (C == 'a') {
         (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_ALLY)
                                  : (see_what |= SEE_ALLY);
-      else if (C == 't')
+      } else if (C == 't') {
         (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_TARGET)
                                  : (see_what |= SEE_TARGET);
-      else if (C == '!') {
+      } else if (C == '!') {
         see_what = (SEE_NEGNEXT | SEE_DEAD | SEE_SHUTDOWN | SEE_ENEMA |
                     SEE_ALLY | SEE_TARGET);
-      } else
+      } else {
         notify_printf(btech_context_evaluation(mech_context(mech)), player,
                       "Ignoring %c as contact option.", C);
+      }
     }
   } else {
     see_what = (SEE_DEAD | SEE_SHUTDOWN | SEE_ENEMA | SEE_ALLY | SEE_TARGET);
@@ -491,8 +492,9 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
                                          (char[LBUF_SIZE]){0});
         inlos = 1;
       }
-    } else
+    } else {
       continue;
+    }
     bearing = map_bearing(
         &(MapRealSegment){.start = {.x = mech_position_real_x(mech),
                                     .y = mech_position_real_y(mech)},

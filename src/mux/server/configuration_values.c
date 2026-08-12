@@ -67,19 +67,19 @@ int cf_bootstrap_object(const ConfigurationCall *call) {
     call->context->fatal_error = true;
     return -1;
   }
-  if (!strcmp(type, "room"))
+  if (!strcmp(type, "room")) {
     object.type = BOOTSTRAP_OBJECT_ROOM;
-  else if (!strcmp(type, "player"))
+  } else if (!strcmp(type, "player")) {
     object.type = BOOTSTRAP_OBJECT_PLAYER;
-  else {
+  } else {
     call->context->fatal_error = true;
     return -1;
   }
-  if (!strcmp(wizard, "true"))
+  if (!strcmp(wizard, "true")) {
     object.wizard = true;
-  else if (!strcmp(wizard, "false"))
+  } else if (!strcmp(wizard, "false")) {
     object.wizard = false;
-  else {
+  } else {
     call->context->fatal_error = true;
     return -1;
   }

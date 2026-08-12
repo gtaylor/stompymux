@@ -426,8 +426,9 @@ int load_template(DbRef player, Mech *mech, char *filename) {
           if (!template_read_int(fp, mech, player, buf, &value))
             return -1;
           mech_critical_data_set(mech, section, critical, value);
-        } else
+        } else {
           mech_critical_data_set(mech, section, critical, 0);
+        }
         mech_critical_fire_mode_set(mech, section, critical, 0);
         mech_critical_ammo_mode_set(mech, section, critical, 0);
         if (template_token_parse(&(TemplateTokenRequest){

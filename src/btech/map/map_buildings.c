@@ -189,20 +189,20 @@ void hit_building(const BuildingHitRequest *request) {
   if (!nmap)
     return;
   if (!damage) {
-    if (!weapon_catalogue_is_missile(WEAPINDX))
+    if (!weapon_catalogue_is_missile(WEAPINDX)) {
       damage = weapon_catalogue_damage(WEAPINDX);
-    else {
+    } else {
       /* Missile weapon.  Multiple Hit locations... */
       if (!btech_context_has_missile_hit_table(mech_context(mech), WEAPINDX))
         return;
       if ((weapon_catalogue_type(WEAPINDX) == STREAK) &&
-          !mech_condition_summary(mech).angel_ecm_disturbed)
+          !mech_condition_summary(mech).angel_ecm_disturbed) {
         num_missiles_hit = btech_context_missile_hit_count(&(MissileHitLookup){
             .context = mech_context(mech),
             .weapon = WEAPINDX,
             .roll = 10,
         });
-      else {
+      } else {
         hit_roll = btech_random_roll(map->xcode.context) - 2;
         num_missiles_hit = btech_context_missile_hit_count(&(MissileHitLookup){
             .context = mech_context(mech),

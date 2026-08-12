@@ -262,9 +262,10 @@ void mech_rotatetorso(DbRef player, void *data, char *buffer) {
                    "Rotate must have LEFT RIGHT or CENTER.");
       break;
     }
-  } else
+  } else {
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid number of arguments!");
+  }
   mark_for_los_update(mech);
 }
 

@@ -318,8 +318,9 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool t_is_c3) {
         w_see_target = TARG_LOS_CLEAR;
       else
         w_see_target = TARG_LOS_SOMETHING;
-    } else
+    } else {
       w_see_target = TARG_LOS_NONE;
+    }
 
     /*
      * If I don't see it, let's see if someone else in the network does
@@ -525,9 +526,9 @@ int mech_network_visibility(const MechNetworkVisibilityRequest *request) {
     if (los) {
       if (!mech_los_check_unblocked(other_mech, mech_target,
                                     mech_position_x(mech_target),
-                                    mech_position_y(mech_target), range))
+                                    mech_position_y(mech_target), range)) {
         los = TARG_LOS_SOMETHING;
-      else {
+      } else {
         los = TARG_LOS_CLEAR;
         break;
       }

@@ -130,12 +130,12 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
     }
   } else {
     if (request->sight) {
-      if (base_to_hit > 900)
+      if (base_to_hit > 900) {
         mech_printf(request->mech, MECHPILOT,
                     "You aim your %s at (%d,%d) - Out of Range.",
                     weapon_display_name(request->weapon_index),
                     request->target_hex.x, request->target_hex.y);
-      else {
+      } else {
         mech_c3_track_emit(request->mech, c3_ref, c3_mech);
         mech_printf(request->mech, MECHPILOT,
                     "You aim your %s at (%d,%d) - BTH: %d",
@@ -229,10 +229,10 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
     return;
   if (weapon_catalogue_is_streak(request->weapon_index)) {
     if (target && (mech_condition_summary(request->mech).angel_ecm_disturbed ||
-                   mech_condition_summary(target).angel_ecm_protected))
+                   mech_condition_summary(target).angel_ecm_protected)) {
       mech_notify(request->mech, MECHALL,
                   "The ECM confuses your streak homing system!");
-    else if (roll < base_to_hit) {
+    } else if (roll < base_to_hit) {
       mech_set_recycle_part(request->mech, request->weapon.section,
                             request->weapon.critical,
                             WEAPON_TICK * btech_context_weapon_recycle_time(

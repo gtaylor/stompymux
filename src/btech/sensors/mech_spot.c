@@ -186,8 +186,9 @@ void mech_spot(DbRef player, void *data, char *buffer) {
     if (mech_spotter_dbref(mech) == mech_dbref(mech)) {
       mech_notify(mech, MECHALL, "You spot no longer.");
       mech_spot_clear_fire_adjustments(mech_map, mech_dbref(mech));
-    } else
+    } else {
       mech_notify(mech, MECHALL, "You disable the datalink to spotter.");
+    }
     mech_spotter_dbref_set(mech, -1);
     return;
   }

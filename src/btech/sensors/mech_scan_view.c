@@ -198,7 +198,8 @@ void mech_view(DbRef player, void *data, char *buffer) {
       mecha_notify(evaluation, player, target_desc);
     else
       mecha_notify(evaluation, player, "That target has no markings.");
-  } else
+  } else {
     mecha_notify(evaluation, player,
                  "Invalid number of arguments to function.");
+  }
 }

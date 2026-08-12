@@ -287,10 +287,10 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
         count++;
       }
   }
-  if (count)
+  if (count) {
     help_section(sections, count - 1)->length =
         i - help_section(sections, count - 1)->start;
-  else {
+  } else {
     help_section(sections, 0)->start = 0;
     help_section(sections, 0)->length = i;
     count = 1;
@@ -304,9 +304,10 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
             command_help_message(ID, help_section(sections, i)->start), 70);
         cool_menu_add_with_flags(
             &c, tprintf("%s%s%s", "[fg=green]", buf, "[reset]"), CM_ONE);
-      } else
+      } else {
         cool_menu_add_with_flags(&c, tprintf("%s command listing: ", type),
                                  CM_ONE | CM_CENTER);
+      }
       const HelpSection *section = help_section(sections, i);
       for (j = section->start + (count == 1 ? 0 : 1);
            j < section->start + section->length; j++) {
@@ -325,10 +326,10 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
           }
       }
     }
-    if (!csho)
+    if (!csho) {
       cool_menu_add_text(
           &c, tprintf("There are no commands you are authorized to use here."));
-    else {
+    } else {
       cool_menu_add_with_flags(&c, NULL, CM_ONE | CM_LINE);
       if (count > 1)
         cool_menu_add_text(&c,
@@ -343,8 +344,9 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
         cool_menu_add_text(&c,
                            "ALL not available for objects with subcategories.");
         dc = -2;
-      } else
+      } else {
         dc = -1;
+      }
     } else {
       if (count == 1) {
         cool_menu_add_text(
@@ -359,8 +361,9 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
         if (i == count) {
           cool_menu_add_text(&c, "Subcategory not found.");
           dc = -2;
-        } else
+        } else {
           dc = i;
+        }
       }
     }
     if (dc > -2) {

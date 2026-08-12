@@ -377,9 +377,9 @@ int handlemwconc(Mech *mech, int initial) {
   int m, roll;
 
   if (is_in_character(mech_context(mech)->database, mech_dbref(mech)) &&
-      mech_pilot_dbref(mech) > 0)
+      mech_pilot_dbref(mech) > 0) {
     m = mw_ic_bth(mech);
-  else {
+  } else {
     if (initial)
       if (mech_pilot_status(mech) > 5) {
         mech_notify(mech, MECHPILOT, "You are killed from personal injuries!!");

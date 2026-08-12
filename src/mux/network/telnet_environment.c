@@ -307,8 +307,9 @@ static bool telnet_environment_set(TelnetEnvironment *environment,
     const TelnetEnvironmentEntry *stored =
         telnet_environment_entry_at_const(environment, index);
     previous_size = stored->name_size + stored->value_size;
-  } else if (environment->count == TELNET_ENVIRONMENT_MAX_ENTRIES)
+  } else if (environment->count == TELNET_ENVIRONMENT_MAX_ENTRIES) {
     return false;
+  }
   if (update->name_size > SIZE_MAX - update->value_size)
     return false;
   new_total = environment->total_size - previous_size + update->name_size +

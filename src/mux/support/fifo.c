@@ -61,8 +61,9 @@ void fifo_push(Fifo **foo, void *data) {
   if (PFOO->first == nullptr) {
     PFOO->first = tmp;
     PFOO->last = tmp;
-  } else
+  } else {
     PFOO->first->prev = tmp;
+  }
   PFOO->first = tmp;
 }
 

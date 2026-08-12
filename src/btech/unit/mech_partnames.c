@@ -201,8 +201,9 @@ static int create_brandname(PartNameRegistry *registry,
     strlcpy(buf3, my_shortform(brn, (char[BTECH_TEXT_CAPACITY]){0}),
             sizeof(buf3));
     (void)snprintf(buf, sizeof(buf), "%s.%s", buf3, buf2);
-  } else
+  } else {
     strlcpy(buf, c, sizeof(buf));
+  }
   p->shorty = strdup(buf);
   p->index = packed_part(id, b);
   *part_index_slot(registry, b, id) = p;

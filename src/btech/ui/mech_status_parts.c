@@ -224,12 +224,12 @@ static char *wspec_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
   int j;
 
   buffer[0] = '\0';
-  if (!i)
+  if (!i) {
     if (menu->configuration->btech_erange)
       (void)snprintf(buffer, LBUF_SIZE, WSDUMP_MASKS_ER);
     else
       (void)snprintf(buffer, LBUF_SIZE, WSDUMP_MASKS_NOER);
-  else {
+  } else {
     i--;
     j = weapon_menu_get(menu, i);
     const WeaponRangeProfile RANGES = weapon_catalogue_ranges(j);
@@ -463,11 +463,11 @@ char *weaponstatus_func(const MechStatusTextRequest *request) {
   unsigned char weapdata[MAX_WEAPS_SECTION];
   int criticals[MAX_WEAPS_SECTION];
 
-  if (!arg)
+  if (!arg) {
     sect = -1;
-  else if (!*arg)
+  } else if (!*arg) {
     return status_text(buffer, "#-1 INVALID SECTION");
-  else {
+  } else {
     sect = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
                                      arg);
     if (sect == -1 || !mech_section_original_internal(mech, sect))

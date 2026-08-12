@@ -67,8 +67,9 @@ bool is_in_weapon_arc(const WeaponArcRequest *request) {
     ((mech)->rd.status) &= ~(ts);
     weaponarc = in_weapon_arc(mech, X, Y);
     ((mech)->rd.status) |= ts;
-  } else
+  } else {
     weaponarc = in_weapon_arc(mech, X, Y);
+  }
 
   switch (((mech)->ud.type)) {
   case CLASS_MECH:
@@ -255,8 +256,9 @@ void do_sub_magic(Mech *mech, int loud) {
                 wanths, ((mech)->ud.numsinks) - wanths,
                 wanths < ((mech)->ud.numsinks) ? "add the extra HS critical(s)"
                                                : "fix the template"));
-  } else
+  } else {
     ((mech)->ud.numsinks) = clamp_int_to_char(wanths);
+  }
   ((mech)->rd.onumsinks) = wanths_f;
 
   if ((((mech)->rd.onumsinks) * shs_size / hs_eff -
@@ -295,9 +297,9 @@ void do_fixextra(Mech *mech) {
     for (j = 0; j < crits_in_loc(mech, i); j++) {
       if (!equipment_is_ammunition(mech_critical_part_type(mech, i, j))) {
         if (!mech_critical_is_broken(mech, i, j) &&
-            !mech_critical_is_destroyed(mech, i, j))
+            !mech_critical_is_destroyed(mech, i, j)) {
           mech_repair_part(mech, i, j);
-        else {
+        } else {
           mech_critical_fire_mode_clear(mech, i, j, DISABLED_MODE);
           mech_repair_part(mech, i, j);
         }
@@ -659,8 +661,9 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
                  .first = i1,
                  .last = i2,
                  .context = request->context,
-             }))
+             })) {
     return;
+  }
   if (c)
     multi_weapon_select(&(MultiWeaponSelectionRequest){
         .mech = mech,

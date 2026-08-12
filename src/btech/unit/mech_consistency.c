@@ -439,10 +439,11 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
                             clamp_float_to_int(mech_ammunition_slot_multiplier(
                                 mech, temp, mech_critical_data(mech, i, j))));
             }
-          } else
+          } else {
             part_pile_add(&pile, t,
                           clamp_float_to_int(
                               mech_ammunition_slot_multiplier(mech, i, j)));
+          }
         }
       }
   }
@@ -531,10 +532,11 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
         &pile, special_equipment_index(HEAT_SINK),
         max(0, weight_heat_sink_count(mech, interactive) * shs_size / hs_eff -
                    (((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size));
-  } else if (interactive > 0)
+  } else if (interactive > 0) {
     cool_menu_add_centered(
         &c,
         tprintf("WARNING: HS count may be off, due to certain odd things."));
+  }
   for (i = 1; i < NUM_ITEMS_M; i++)
     if (part_pile_get(&pile, i)) {
       const int PART_COUNT = part_pile_get(&pile, i);

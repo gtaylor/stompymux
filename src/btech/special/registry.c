@@ -200,8 +200,9 @@ int btech_command_allowed_for_mech(Mech *mech, int cmdflag) {
   if (cmdflag > 0) {
     if (cmdflag & i)
       return 1;
-  } else if (!((0 - cmdflag) & i))
+  } else if (!((0 - cmdflag) & i)) {
     return 1;
+  }
   return 0;
 }
 
@@ -241,8 +242,9 @@ int handled_command_sub(BtechContext *context, DbRef player, DbRef location,
       if (btech_special_object_data_size(
               btech_special_object_definition(type)) > 0)
         return 0;
-    } else
+    } else {
       return 0;
+    }
   }
   if (type > BTECH_SPECIAL_OBJECT_COUNT)
     return 0;
@@ -282,9 +284,10 @@ int handled_command_sub(BtechContext *context, DbRef player, DbRef location,
           .arguments = arguments,
       };
       cmd->handler(&INVOCATION);
-    } else
+    } else {
       mecha_notify(btech_context_evaluation(context), player,
                    "Sorry, that command is restricted!");
+    }
     return 1;
   }
   if (ishelp) {
@@ -586,9 +589,10 @@ void btech_special_object_flag_changed(BtechContext *context, DbRef player,
     btech_special_object_dispose(&(BtechSpecialObjectAction){
         .context = context, .actor = player, .object = obj});
     c_xcode(context->database, obj);
-  } else
+  } else {
     create_special_object(&(BtechSpecialObjectAction){
         .context = context, .actor = player, .object = obj});
+  }
 }
 
 bool btech_special_object_type_can_set(BtechContext *context, DbRef object,
