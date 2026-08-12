@@ -190,9 +190,9 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
        * applicable*/
       /* We should really MIN(100,mod * roll) for the subtract to cap this out
        */
-      if (roll == 0)
+      if (roll == 0) {
         fixtime = fail_fixtime;
-      else {
+      } else {
         fixtime =
             btech_context_uses_variable_technology_time(context)
                 ? (fail_fixtime * 10) /
@@ -218,9 +218,9 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
     }
 
   } else {
-    if (roll == 0)
+    if (roll == 0) {
       fixtime = base_fixtime;
-    else {
+    } else {
       fixtime =
           btech_context_uses_variable_technology_time(context)
               ? (base_fixtime * 10) /
@@ -544,9 +544,9 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
    * repairs */
   oparttype = mech_critical_part_type(mech, loc, part);
   parttype = oparttype;
-  if (equipment_is_actuator(oparttype))
+  if (equipment_is_actuator(oparttype)) {
     parttype = cargo_equipment_index(S_ACTUATOR);
-  else if (oparttype == special_equipment_index(ENGINE)) {
+  } else if (oparttype == special_equipment_index(ENGINE)) {
     if (mech_technology_flags(mech) & XL_TECH)
       parttype = cargo_equipment_index(XL_ENGINE);
     else if (mech_technology_flags(mech) & ICE_TECH)
@@ -558,8 +558,11 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
     else if (mech_technology_flags(mech) & LE_TECH)
       parttype = cargo_equipment_index(LIGHT_ENGINE);
   } else if (oparttype == special_equipment_index(HEAT_SINK) &&
-             mech_has_double_heat_sinks(mech))
-    parttype = cargo_equipment_index(DOUBLE_HEAT_SINK);
+             mech_has_double_heat_sinks(mech)) {
+    {
+      parttype = cargo_equipment_index(DOUBLE_HEAT_SINK);
+    }
+  }
 
   if (equipment_is_ammunition(mech_critical_part_type(mech, loc, part))
           ? 0
@@ -621,9 +624,9 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
        * applicable*/
       /* We should really MIN(100,mod * roll) for the subtract to cap this out
        */
-      if (roll == 0)
+      if (roll == 0) {
         fixtime = fail_fixtime;
-      else {
+      } else {
         fixtime =
             btech_context_uses_variable_technology_time(context)
                 ? (fail_fixtime * 10) /
@@ -649,9 +652,9 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
     }
 
   } else {
-    if (roll == 0)
+    if (roll == 0) {
       fixtime = base_fixtime;
-    else {
+    } else {
       fixtime =
           btech_context_uses_variable_technology_time(context)
               ? (base_fixtime * 10) /

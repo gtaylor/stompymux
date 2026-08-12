@@ -1,6 +1,7 @@
 #include "map_api.h"
 
 #include "map.h"
+#include "map_effect_types.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_identity_api.h"

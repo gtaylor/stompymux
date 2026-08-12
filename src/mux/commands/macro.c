@@ -358,9 +358,9 @@ void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   for (i = 0; i < 5; i++) {
     const int MACRO_INDEX = commac_macro_item(c, (size_t)i);
     if (MACRO_INDEX >= 0) {
-      if (!(is_valid_macro_index(registry, MACRO_INDEX)))
+      if (!(is_valid_macro_index(registry, MACRO_INDEX))) {
         notify_printf(match->evaluation, player, "%d: INVALID MACRO SET!", i);
-      else {
+      } else {
         m = macro_registry_item(registry, (size_t)MACRO_INDEX);
         unparse = unparse_object(match->evaluation->world->database,
                                  match->evaluation, player, m->player);

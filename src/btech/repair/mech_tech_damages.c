@@ -578,18 +578,20 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
           armor_material = " Reinforced";
         else if (mech_technology_flags(mech) & COMPI_TECH)
           armor_material = " Composite";
-      } else if (mech_technology_flags(mech) & FF_TECH)
+      } else if (mech_technology_flags(mech) & FF_TECH) {
         armor_material = " Ferrofibrous";
-      else if (mech_technology_flags(mech) & HARDA_TECH)
+      } else if (mech_technology_flags(mech) & HARDA_TECH) {
         armor_material = " Hardened";
-      else if (mech_technology_flags_secondary(mech) & STEALTH_ARMOR_TECH)
+      } else if (mech_technology_flags_secondary(mech) & STEALTH_ARMOR_TECH) {
         armor_material = " Stealth";
-      else if (mech_technology_flags_secondary(mech) & HVY_FF_ARMOR_TECH)
+      } else if (mech_technology_flags_secondary(mech) & HVY_FF_ARMOR_TECH) {
         armor_material = " Heavy Ferrofibrous";
-      else if (mech_technology_flags_secondary(mech) & LT_FF_ARMOR_TECH)
+      } else if (mech_technology_flags_secondary(mech) & LT_FF_ARMOR_TECH) {
         armor_material = " Light Ferrofibrous";
-      else if (mech_infantry_technology_flags(mech) & CS_PURIFIER_STEALTH_TECH)
+      } else if (mech_infantry_technology_flags(mech) &
+                 CS_PURIFIER_STEALTH_TECH) {
         armor_material = " Purifier Stealth";
+      }
       if (damage->type == FIXINTERNAL) {
         (void)snprintf(buf, sizeof(buf), "Repairs on%s internals (%d points)",
                        armor_material, damage->detail);

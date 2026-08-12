@@ -520,10 +520,10 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
       destroycrit = 0;
 
       if (t_loc_is_arm) {
-        if (special_from_equipment_index(CRIT_TYPE) == HAND_OR_FOOT_ACTUATOR)
+        if (special_from_equipment_index(CRIT_TYPE) == HAND_OR_FOOT_ACTUATOR) {
           mech_printf(wounded, MECHALL, "Your %s hand actuator is destroyed!",
                       HITLOC == LARM ? "left" : "right");
-        else {
+        } else {
           mech_printf(wounded, MECHALL, "Your %s %s arm actuator is destroyed!",
                       HITLOC == LARM ? "left" : "right",
                       special_from_equipment_index(CRIT_TYPE) == LOWER_ACTUATOR

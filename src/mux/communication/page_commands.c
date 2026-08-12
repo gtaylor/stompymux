@@ -157,10 +157,10 @@ void do_page(CommandInvocation *invocation) {
     }
     *target_cursor = '\0';
     if (!*tname) {
-      if (!*targetname)
+      if (!*targetname) {
         notify_checked(evaluation, PLAYER, PLAYER, "You have not paged anyone.",
                        MSG_ME_ALL | MSG_F_DOWN);
-      else {
+      } else {
         for (p = strtok(targetname, " "); p != nullptr;
              p = strtok(nullptr, " ")) {
           if (parse_long_checked(p, &target))

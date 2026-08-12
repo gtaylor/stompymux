@@ -7,7 +7,6 @@
 #include "map_api.h"
 #include "map_conditions_api.h"
 #include "map_dynamic_api.h"
-#include "map_effect_types.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"

@@ -87,9 +87,9 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
   case CLASS_DS:
   case CLASS_BSUIT:
   default:
-    if (mech_technology_flags(mech) & CRITPROOF_TECH)
+    if (mech_technology_flags(mech) & CRITPROOF_TECH) {
       return mech_critproof_hit_location(mech, hit_group, iscritical);
-    else if (btech_context_uses_fasa_criticals(context)) {
+    } else if (btech_context_uses_fasa_criticals(context)) {
       return hit_location_export(
           mech_fasa_hit_location(
               mech, hit_group,

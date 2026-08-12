@@ -1,6 +1,5 @@
 #include "mech_weight_descriptions.h"
 
-#include "equipment_types.h"
 #include "mech_internal.h"
 #include "mech_status_types.h"
 

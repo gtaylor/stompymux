@@ -597,10 +597,10 @@ void update_specials(Mech *mech) {
       }
     }
     if (x != CTORSO && e_count) {
-      if (e_count > 3)
+      if (e_count > 3) {
         ((mech)->rd.specials) |= XXL_TECH;
 
-      else if (e_count == 2) {
+      } else if (e_count == 2) {
         if (cl)
           ((mech)->rd.specials) |= XL_TECH;
 

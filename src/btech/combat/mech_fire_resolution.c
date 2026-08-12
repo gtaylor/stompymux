@@ -553,11 +553,11 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
   }
   if (target) {
     if (mech_los_check(target, request->mech, mech_position_x(request->mech),
-                       mech_position_y(request->mech), range))
+                       mech_position_y(request->mech), range)) {
       mech_printf(target, MECHALL, "%s has fired a %s at you!",
                   mech_to_mech_display_id(target, request->mech).text,
                   weapon_display_name(request->weapon_index));
-    else {
+    } else {
       mech_printf(target, MECHALL,
                   "Something has fired a %s at you from bearing %d!",
                   weapon_display_name(request->weapon_index),

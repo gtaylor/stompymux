@@ -387,9 +387,9 @@ int mech_missile_hit_target(const MissileAttackRequest *request) {
                   request->player_roll == base_to_hit,
   };
   missileindex = mech_missile_hit_index(&index_request);
-  if (missileindex < 0)
+  if (missileindex < 0) {
     hit = min(incoming, 1);
-  else {
+  } else {
     hit = min(incoming, btech_context_missile_hit_count(&(MissileHitLookup){
                             .context = mech_context(mech),
                             .weapon = weapindx,
@@ -429,9 +429,9 @@ int mech_missile_hit_target(const MissileAttackRequest *request) {
     return 0;
 
   if (t_is_inferno) {
-    if (hit_mech)
+    if (hit_mech) {
       mech_inferno_hit(mech, hit_mech, hit, los);
-    else {
+    } else {
       mech_terrain_hex_hit(&(TerrainWeaponHitRequest){
           .attacker = mech,
           .position = request->target_hex,

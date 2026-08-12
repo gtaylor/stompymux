@@ -65,11 +65,11 @@ void mech_motive_system_hit(Mech *mech, int w_roll_mod) {
   if (w_roll < 10) { /* minor effect */
     mech_pilot_skill_modifier_add(mech, 1);
 
-    if (mech_condition_summary(mech).fallen)
+    if (mech_condition_summary(mech).fallen) {
       mech_notify(mech, MECHALL,
                   "[fg=red bold]Your destroyed motive system takes another "
                   "hit![reset]");
-    else {
+    } else {
       mech_printf(
           mech, MECHALL,
           "[fg=red bold]Your motive system takes a minor hit, making it "
@@ -82,11 +82,11 @@ void mech_motive_system_hit(Mech *mech, int w_roll_mod) {
   } else if (w_roll < 12) { /* moderate effect */
     mech_pilot_skill_modifier_add(mech, 2);
 
-    if (mech_condition_summary(mech).fallen)
+    if (mech_condition_summary(mech).fallen) {
       mech_notify(mech, MECHALL,
                   "[fg=red bold]Your destroyed motive system takes another "
                   "hit![reset]");
-    else {
+    } else {
       mech_printf(
           mech, MECHALL,
           "[fg=red bold]Your motive system takes a moderate hit, slowing "
@@ -100,11 +100,11 @@ void mech_motive_system_hit(Mech *mech, int w_roll_mod) {
     mech_max_speed_lower(mech, MP1);
     mech_speed_correct(mech);
   } else {
-    if (mech_condition_summary(mech).fallen)
+    if (mech_condition_summary(mech).fallen) {
       mech_notify(mech, MECHALL,
                   "[fg=red bold]Your destroyed motive system takes another "
                   "hit![reset]");
-    else {
+    } else {
       mech_printf(
           mech, MECHALL,
           "[fg=red bold]Your motive system is destroyed! Your %s can no "

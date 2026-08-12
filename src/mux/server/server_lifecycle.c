@@ -281,9 +281,9 @@ void server_lifecycle_shutdown(ServerLifecycle *lifecycle) {
     }
     uv_run(&lifecycle->event_loop, UV_RUN_DEFAULT);
     status = uv_loop_close(&lifecycle->event_loop);
-    if (status == 0)
+    if (status == 0) {
       lifecycle->event_loop_initialized = false;
-    else {
+    } else {
       log_error((LogEntry){.log = lifecycle->maintenance->log,
                            .key = LOG_ALWAYS,
                            .primary = "INI",

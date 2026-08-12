@@ -64,11 +64,18 @@ static int sensor_woods_count(Mech *target, int flags) {
   return woods;
 }
 
-static int sensor_partial_cover_modifier(const Mech *target, int flags,
-                                         int base) {
-  if (!(flags & BATTLE_MAP_LOS_PARTIAL_COVER))
+typedef struct SensorPartialCoverRequest {
+  const Mech *target;
+  int flags;
+  int base;
+} SensorPartialCoverRequest;
+
+static int
+sensor_partial_cover_modifier(const SensorPartialCoverRequest *request) {
+  if (!(request->flags & BATTLE_MAP_LOS_PARTIAL_COVER))
     return 0;
-  return base + (mech_condition_summary(target).hull_down ? 2 : 0);
+  return request->base +
+         (mech_condition_summary(request->target).hull_down ? 2 : 0);
 }
 
 static int sensor_heat_modifier(float heat) {
@@ -243,13 +250,15 @@ int vislight_tohit(const SensorToHitRequest *request) {
               ? 2 - request->light
               : 0) +
          sensor_woods_count(request->target, request->flags) +
-         sensor_partial_cover_modifier(request->target, request->flags, 3);
+         sensor_partial_cover_modifier(&(SensorPartialCoverRequest){
+             .target = request->target, .flags = request->flags, .base = 3});
 }
 
 int liteamp_tohit(const SensorToHitRequest *request) {
   return ((2 - request->light) / 2) +
          (sensor_woods_count(request->target, request->flags) * 3 / 2) +
-         sensor_partial_cover_modifier(request->target, request->flags, 3);
+         sensor_partial_cover_modifier(&(SensorPartialCoverRequest){
+             .target = request->target, .flags = request->flags, .base = 3});
 }
 
 int infrared_tohit(const SensorToHitRequest *request) {
@@ -263,14 +272,16 @@ int infrared_tohit(const SensorToHitRequest *request) {
          sensor_heat_modifier(heat);
 #else
   return sensor_woods_count(request->target, request->flags) * 4 / 3 +
-         sensor_partial_cover_modifier(request->target, request->flags, 3) +
+         sensor_partial_cover_modifier(&(SensorPartialCoverRequest){
+             .target = request->target, .flags = request->flags, .base = 3}) +
          sensor_heat_modifier(mech_excess_heat(request->target) + 7);
 #endif
 }
 
 int electrom_tohit(const SensorToHitRequest *request) {
   return (sensor_woods_count(request->target, request->flags) * 2 / 3) +
-         sensor_partial_cover_modifier(request->target, request->flags, 3) +
+         sensor_partial_cover_modifier(&(SensorPartialCoverRequest){
+             .target = request->target, .flags = request->flags, .base = 3}) +
          sensor_weight_modifier(mech_tonnage(request->target)) +
          sensor_movement_modifier(mech_current_speed(request->target)) +
          (mech_has_fired_recently(request->target) ? -1 : 0) +
@@ -278,7 +289,9 @@ int electrom_tohit(const SensorToHitRequest *request) {
 }
 
 int seismic_tohit(const SensorToHitRequest *request) {
-  return 2 + sensor_partial_cover_modifier(request->target, request->flags, 3) +
+  return 2 +
+         sensor_partial_cover_modifier(&(SensorPartialCoverRequest){
+             .target = request->target, .flags = request->flags, .base = 3}) +
          sensor_weight_modifier(mech_real_tonnage(request->target)) -
          sensor_movement_modifier(mech_current_speed(request->target)) +
          m_number(request->observer, 0, 1);
@@ -297,6 +310,7 @@ int radar_tohit(const SensorToHitRequest *request) {
                   mech_is_flying_type(request->target)
               ? -3
               : 0) +
-         sensor_partial_cover_modifier(request->target, request->flags, 2) +
+         sensor_partial_cover_modifier(&(SensorPartialCoverRequest){
+             .target = request->target, .flags = request->flags, .base = 2}) +
          sensor_woods_count(request->target, request->flags);
 }

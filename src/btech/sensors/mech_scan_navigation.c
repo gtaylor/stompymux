@@ -475,9 +475,9 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       /* bearing */
       const int BEARING = map_bearing(&(MapRealSegment){
           .start = {.x = x0, .y = y0}, .end = {.x = x1, .y = y1}});
-      if (argc != 0 && argc != 3 && argc != 6)
+      if (argc != 0 && argc != 3 && argc != 6) {
         (void)snprintf(trash, sizeof(trash), "%d degrees.", BEARING);
-      else {
+      } else {
         char elevation_direction = ' ';
         if (z1 > z0)
           elevation_direction = '+';
