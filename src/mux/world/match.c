@@ -384,7 +384,8 @@ static int match_exit_internal(const ExitMatchRequest *request) {
   DbRef baseloc = request->base_location;
   int local = request->confidence;
   DbRef exit;
-  int result, key;
+  int result;
+  int key;
 
   if (!is_good_obj(MD.evaluation->world->database, loc) ||
       !has_exits(MD.evaluation->world->database, loc))

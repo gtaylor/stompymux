@@ -433,7 +433,8 @@ static void help_index_build_keywords(EvaluationContext *evaluation,
                                       HelpIndex *index, DbRef player,
                                       int *warning_count) {
   size_t total_keywords = 0;
-  size_t i, k;
+  size_t i;
+  size_t k;
 
   for (i = 0; i < index->articles.count; i++)
     total_keywords += help_article_item(&index->articles, i)->keywords.count;

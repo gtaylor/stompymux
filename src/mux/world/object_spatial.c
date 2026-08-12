@@ -55,7 +55,8 @@ DbRef where_room(GameDatabase *database,
  * IS the room.
  */
 int nearby(GameDatabase *database, DbRef player, DbRef thing) {
-  DbRef thing_loc, player_loc;
+  DbRef thing_loc;
+  DbRef player_loc;
 
   if (!is_good_obj(database, player) || !is_good_obj(database, thing))
     return 0;

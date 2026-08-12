@@ -118,7 +118,8 @@ void bsuit_swarm_stop(Mech *mech, int intentional) {
 int bsuit_has_enemy_swarmers(Mech *mech) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int count = 0, i;
+  int count = 0;
+  int i;
 
   if (!map)
     return 0;
@@ -148,7 +149,8 @@ int bsuit_has_enemy_swarmers(Mech *mech) {
 int bsuit_has_friendly_riders(Mech *mech) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int count = 0, i;
+  int count = 0;
+  int i;
 
   if (!map)
     return 0;
@@ -178,7 +180,8 @@ int bsuit_has_friendly_riders(Mech *mech) {
 int bsuit_swarmer_count(Mech *mech) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int count = 0, i;
+  int count = 0;
+  int i;
 
   if (!map)
     return 0;
@@ -302,7 +305,8 @@ int bsuit_action_validate(Mech *mech, DbRef player) {
 }
 
 int bsuit_member_count(const Mech *mech) {
-  int i, j = 0;
+  int i;
+  int j = 0;
 
   for (i = 0; i < NUM_BSUIT_MEMBERS; i++)
     if (mech_section_internal(mech, i))
@@ -393,7 +397,8 @@ int bsuit_target_find(DbRef player, Mech *mech, Mech **target, char *buffer) {
 }
 
 int bsuit_jettison_validate(Mech *mech) {
-  int i, j;
+  int i;
+  int j;
 
   if (!(mech_infantry_technology_flags(mech) & MUST_JETTISON_TECH))
     return 0;

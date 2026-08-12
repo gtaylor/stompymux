@@ -177,12 +177,13 @@ void mechrep_rsetarmor(DbRef player, void *data, char *buffer) {
  * Current Flags: O = OS, T = TC, R = Rear
  */
 void mechrep_raddweap(DbRef player, void *data, char *buffer) {
-  char *args[20];    /* The argument array */
-  int argc;          /* Count of arguments */
-  int index;         /* Used to determine section validity */
-  int weapindex;     /* Weapon index number */
-  int weapnumcrits;  /* Number of crits the desired weapon occupies. */
-  int loop, temp;    /* Loop Counters */
+  char *args[20];   /* The argument array */
+  int argc;         /* Count of arguments */
+  int index;        /* Used to determine section validity */
+  int weapindex;    /* Weapon index number */
+  int weapnumcrits; /* Number of crits the desired weapon occupies. */
+  int loop;
+  int temp;          /* Loop Counters */
   int isrear = 0;    /* Rear mounted? */
   int istc = 0;      /* Is the weap TC'd? */
   int isoneshot = 0; /* If 1, weapon is a One-Shot (OS) Weap */
@@ -316,7 +317,10 @@ void mechrep_raddweap(DbRef player, void *data, char *buffer) {
 void mechrep_rfiremode(DbRef player, void *data, char *buffer) {
   char *args[4];
   int argc;
-  int section, critical, weaptype, weapon_number;
+  int section;
+  int critical;
+  int weaptype;
+  int weapon_number;
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
       repair_facility_command_context_initialize(player, data, true,

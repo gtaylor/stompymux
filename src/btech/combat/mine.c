@@ -81,7 +81,8 @@ static int mine_type_index(const char *name) {
 }
 
 void mine_field_add(BattleMap *map, int x, int y, int damage) {
-  MapObject *o, foo;
+  MapObject *o;
+  MapObject foo;
 
   if (is_mine_hex(map, x, y)) {
     for (o = map->map_object[TYPE_MINE]; o; o = o->next)
@@ -271,9 +272,13 @@ static void mine_explode(const MineExplosion *explosion) {
 
 static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
                                     int reason) {
-  MapObject *o, *o2;
+  MapObject *o;
+  MapObject *o2;
   int mdis = (mech_real_tonnage(mech) - 20) / 10;
-  float x1, y1, x2, y2;
+  float x1;
+  float y1;
+  float x2;
+  float y2;
 
   map_coord_to_real_coord(x, y, &x1, &y1);
   for (o = map->map_object[TYPE_MINE]; o; o = o2) {
@@ -404,13 +409,17 @@ static void add_mine_on_map(const MineFieldDefinition *definition) {
   int y = definition->position.y;
   char type = definition->type;
   int data = definition->data;
-  int x1, y1;
+  int x1;
+  int y1;
   int mdis = (100 - data) / 10;
   int t = mdis * 3 / 2;
 
   if (type == MINE_TRIGGER) {
 
-    float fx, fy, fx1, fy1;
+    float fx;
+    float fy;
+    float fx1;
+    float fy1;
 
     /* Get the main hex's location in floating values */
     map_coord_to_real_coord(x, y, &fx, &fy);
@@ -465,7 +474,11 @@ void mine_command_add(DbRef player, void *data, char *buffer) {
 
   char *args[6];
   int argc;
-  int x, y, str, type, extra = 0;
+  int x;
+  int y;
+  int str;
+  int type;
+  int extra = 0;
   BattleMap *map = (BattleMap *)data;
   MapObject foo;
 
@@ -531,7 +544,8 @@ void mine_command_add(DbRef player, void *data, char *buffer) {
 void mine_command_detonate(Mech *mech, int channel) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  MapObject *o, *o2;
+  MapObject *o;
+  MapObject *o2;
   int count = 0;
 
   if (!map)

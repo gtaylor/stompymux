@@ -103,8 +103,12 @@ void mech_rsetxy(DbRef player, void *data, char *buffer) {
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *args[3];
-  int x, y, z, argc;
-  float fx, fy;
+  int x;
+  int y;
+  int z;
+  int argc;
+  float fx;
+  float fy;
   int elevation;
 
   if (!common_checks(player, mech, MECH_MAP))
@@ -151,8 +155,11 @@ void mech_rsetxy(DbRef player, void *data, char *buffer) {
 /* Team/Map commands */
 void mech_rsetmapindex(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  char *args[2], *tempstr;
-  int newindex, nargs, notdone = 0;
+  char *args[2];
+  char *tempstr;
+  int newindex;
+  int nargs;
+  int notdone = 0;
   int loop;
   BattleMap *newmap = NULL;
   BattleMap *oldmap;
@@ -250,7 +257,8 @@ void mech_rsetmapindex(DbRef player, void *data, char *buffer) {
   mech_unit_id_set(mech, targ[0], targ[1]);
   if (mech_position_x(mech) > (newmap->map_width - 1) ||
       mech_position_y(mech) > (newmap->map_height - 1)) {
-    float fx, fy;
+    float fx;
+    float fy;
     mech_position_reset_origin(mech);
     map_coord_to_real_coord(0, 0, &fx, &fy);
     mech_position_real_xy_set(mech, (MapRealPosition){.x = fx, .y = fy});

@@ -133,7 +133,8 @@ int mech_weapon_first_critical(const WeaponCriticalSearch *search) {
   const int W_CRIT_TYPE = search->part_type;
   const int W_MAX_CRITS = search->maximum_criticals;
   int w_crits_in_loc = 0;
-  int w_crit_iter, w_first_crit;
+  int w_crit_iter;
+  int w_first_crit;
 
   /*
    * First let's count the number of crits in this loc, incase
@@ -236,7 +237,8 @@ int get_remaining_armor_percent(Mech *mech) {
 }
 
 int find_obj(Mech *mech, int loc, int type) {
-  int count = 0, i;
+  int count = 0;
+  int i;
 
   for (i = 0; i < NUM_CRITICALS; i++)
     if (mech_critical_part_type(mech, loc, i) == type)
@@ -246,7 +248,8 @@ int find_obj(Mech *mech, int loc, int type) {
 }
 
 int find_obj_with_dest(Mech *mech, int loc, int type) {
-  int count = 0, i;
+  int count = 0;
+  int i;
 
   for (i = 0; i < NUM_CRITICALS; i++)
     if (mech_critical_part_type(mech, loc, i) == type)
@@ -300,7 +303,8 @@ AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request) {
   int section = request->weapon.section;
   int critical = request->weapon.critical;
   AmmunitionCheckResult result = {.gatling_shots = request->gatling_shots};
-  int mod, nmod = 0;
+  int mod;
+  int nmod = 0;
   int w_max_shots = 0;
   int w_rounds_to_check = 1;
   int w_weap_mode = mech_critical_fire_mode(mech, section, critical);

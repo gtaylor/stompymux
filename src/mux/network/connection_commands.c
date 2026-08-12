@@ -105,7 +105,8 @@ int fetch_idle(DescriptorRegistry *descriptors, RuntimeClock *clock,
                DbRef target) {
   Descriptor *d;
   DescriptorIterator iterator = descriptor_iterator_player(descriptors, target);
-  int result, idletime;
+  int result;
+  int idletime;
 
   result = -1;
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
@@ -120,7 +121,8 @@ int fetch_connect(DescriptorRegistry *descriptors, RuntimeClock *clock,
                   DbRef target) {
   Descriptor *d;
   DescriptorIterator iterator = descriptor_iterator_player(descriptors, target);
-  int result, conntime;
+  int result;
+  int conntime;
 
   result = -1;
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
@@ -148,7 +150,9 @@ static void dump_users(Descriptor *e, const char *match) {
   DescriptorIterator iterator =
       descriptor_iterator_connected(runtime->descriptors);
   int count;
-  char *buf, flist[4], slist[4];
+  char *buf;
+  char flist[4];
+  char slist[4];
   size_t flist_length;
   size_t slist_length;
 

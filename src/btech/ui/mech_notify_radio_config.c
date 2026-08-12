@@ -110,7 +110,8 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
   // map pointer is NULL if in a carrier. Careful.
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int i, j;
+  int i;
+  int j;
   RadioCommandCursor input = radio_command_cursor(buffer);
 
   /* UH, this is code that _pretends_ it works :-) */
@@ -307,7 +308,9 @@ void radio_color_code(const RadioColorRequest *request) {
 }
 
 void mech_set_channelmode(DbRef player, void *data, char *buffer) {
-  int chn = -1, nm = 0, i;
+  int chn = -1;
+  int nm = 0;
+  int i;
   Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   char buf[SBUF_SIZE] = {0};

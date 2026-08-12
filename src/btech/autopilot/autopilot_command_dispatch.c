@@ -238,7 +238,8 @@ bool autopilot_slow_down_for_target(const AutopilotApproachRequest *request) {
 void figure_out_range_and_bearing(Mech *mech, int tx, int ty, float *range,
                                   int *bearing) {
 
-  float x, y;
+  float x;
+  float y;
 
   map_coord_to_real_coord(tx, ty, &x, &y);
   *bearing =

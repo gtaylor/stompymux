@@ -173,7 +173,8 @@ static BQUE *cque_deque(CommandQueue *queue, DbRef player) {
 }
 
 static void cque_enqueue(CommandQueue *queue, DbRef player, BQUE *cmd) {
-  BQUE *point, *trail;
+  BQUE *point;
+  BQUE *trail;
   OBJQE *tmp;
 
   cmd->next = nullptr;
@@ -259,7 +260,9 @@ static int que_want(GameDatabase *database, BQUE *entry, DbRef ptarg,
  */
 
 int halt_que(CommandQueue *queue, DbRef player, DbRef object) {
-  BQUE *trail, *point, *next;
+  BQUE *trail;
+  BQUE *point;
+  BQUE *next;
   OBJQE *pque;
 
   int numhalted;
@@ -330,7 +333,8 @@ void do_halt(CommandInvocation *invocation) {
   int key = invocation->key;
   char *target = invocation->first;
   CommandQueue *queue = invocation->context->runtime->commands;
-  DbRef player_targ, obj_targ;
+  DbRef player_targ;
+  DbRef obj_targ;
   int numhalted;
 
   if ((key & HALT_ALL) && !is_wizard(queue->world->database, player)) {
@@ -513,7 +517,8 @@ int do_top(CommandQueue *queue, int ncmds) {
   BQUE *tmp;
   DbRef object;
   int count;
-  char *command, *cp;
+  char *command;
+  char *cp;
 
   if (!queue->head)
     return 0;

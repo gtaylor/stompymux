@@ -53,14 +53,18 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[4];
-  int mapx = 0, mapy = 0;
+  int mapx = 0;
+  int mapy = 0;
   char target_id[2];
   DbRef target;
   int numargs;
   Mech *temp_mech = NULL;
-  float fx, fy, fz = 0.0;
+  float fx;
+  float fy;
+  float fz = 0.0;
   float range = 0.0;
-  int dob = 0, doh = 0;
+  int dob = 0;
+  int doh = 0;
   int options = SHOW_INFO | SHOW_ARMOR | SHOW_WEAPONS;
 
   mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
@@ -357,12 +361,15 @@ void mech_report(DbRef player, void *data, char *buffer) {
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[3];
-  int mapx = 0, mapy = 0;
+  int mapx = 0;
+  int mapy = 0;
   char target_id[2];
   DbRef target;
   int numargs;
   Mech *temp_mech = NULL;
-  float fx, fy, fz = 0.0;
+  float fx;
+  float fy;
+  float fz = 0.0;
   float range = 0.0;
 
   mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));

@@ -62,7 +62,8 @@ int mech_hit_damage_determine(const HitDamageRequest *request) {
   if (hit_mech) {
     f_range = mech_range_to(mech, hit_mech);
   } else {
-    float fx, fy;
+    float fx;
+    float fy;
     map_coord_to_real_coord(HIT_X, HIT_Y, &fx, &fy);
     f_range = map_real_range(&(MapRealSegment){
         .start = {.x = mech_position_real_x(mech),
@@ -206,7 +207,8 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
   const int W_GATTLING_SHOTS = request->gatling_shots;
   const bool T_IS_SWARM_ATTACK = request->swarm_attack;
   const int PLAYER_ROLL = request->player_roll;
-  int isrear = 0, iscritical = 0;
+  int isrear = 0;
+  int iscritical = 0;
   int hitloc = 0;
   int roll;
   int aim_hit = 0;

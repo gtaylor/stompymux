@@ -60,7 +60,9 @@ int mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
   const int HITLOC = request->slot.section;
   const int CRIT_HIT = request->slot.critical;
   const int CRIT_TYPE = request->part_type;
-  int w_max_crits, w_first_crit, w_weap_destroyed = 0;
+  int w_max_crits;
+  int w_first_crit;
+  int w_weap_destroyed = 0;
   int damage;
   char locname[30];
   char msgbuf[MBUF_SIZE] = {0};
@@ -625,7 +627,8 @@ void mech_ammunition_critical_apply(const AmmunitionCriticalRequest *request) {
 
   int w_total_ammo_damage = 0;
   int w_temp_damage = 0;
-  int w_sec_iter, w_slot_iter;
+  int w_sec_iter;
+  int w_slot_iter;
   int w_part_type = 0;
   int w_weap_idx;
   BtechContext *context = mech_context(obj_mech);

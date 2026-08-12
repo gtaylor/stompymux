@@ -120,7 +120,8 @@ static char *format_forwarded_message(const char *msg, const char *prefix) {
 
 static char *dflt_from_msg(GameDatabase *database, DbRef sender,
                            DbRef sendloc) {
-  char *tp, *tbuff;
+  char *tp;
+  char *tbuff;
 
   tp = tbuff = alloc_lbuf("notify_checked.fwdlist");
   safe_str("From ", tbuff, &tp);
@@ -135,8 +136,12 @@ static char *dflt_from_msg(GameDatabase *database, DbRef sender,
 
 void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
                     const char *msg, int key) {
-  char *msg_copy, *tbuff, *buff;
-  DbRef targetloc, recip, obj;
+  char *msg_copy;
+  char *tbuff;
+  char *buff;
+  DbRef targetloc;
+  DbRef recip;
+  DbRef obj;
   int has_neighbors;
   int target_audible;
 

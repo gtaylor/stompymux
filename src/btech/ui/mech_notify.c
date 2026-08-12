@@ -75,7 +75,8 @@ int mech_sees_hex_f(Mech *mech, BattleMap *map, float x, float y, int ix,
 }
 
 int mech_sees_hex(Mech *mech, BattleMap *map, int x, int y) {
-  float fx, fy;
+  float fx;
+  float fy;
 
   map_coord_to_real_coord(x, y, &fx, &fy);
   return mech_sees_hex_f(mech, map, fx, fy, x, y);
@@ -84,7 +85,8 @@ int mech_sees_hex(Mech *mech, BattleMap *map, int x, int y) {
 void hex_los_broadcast(BattleMap *mech_map, int x, int y, const char *message) {
   int i;
   Mech *temp_mech;
-  float fx, fy;
+  float fx;
+  float fy;
 
   /* substitution:
      $h = !alarming ('your hex', '%d,%d')
@@ -169,7 +171,9 @@ static void format_mech_los_message(const MechLosMessageFormat *format) {
 
 void mech_los_broadcast_unit(Mech *mech, Mech *target, const char *message) {
   /* Sends msg to everyone except the mech */
-  int i, a, b;
+  int i;
+  int a;
+  int b;
   char oddbuff[LBUF_SIZE];
   char oddbuff2[LBUF_SIZE];
   Mech *temp_mech;
@@ -232,9 +236,14 @@ void map_broadcast(BattleMap *map, char *message) {
 void mech_fire_broadcast(Mech *mech, Mech *target, int x, int y,
                          BattleMap *mech_map, const char *weapname,
                          int is_hit) {
-  int loop, attacker, defender;
-  float fx, fy, fz;
-  int mapx, mapy;
+  int loop;
+  int attacker;
+  int defender;
+  float fx;
+  float fy;
+  float fz;
+  int mapx;
+  int mapy;
   Mech *temp_mech;
   char buff[SBUF_SIZE];
 

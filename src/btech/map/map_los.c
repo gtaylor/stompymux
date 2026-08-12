@@ -260,7 +260,9 @@ static int mech_los_sees_range(const SensorRangeRequest *request) {
   Mech *mech = request->mech;
   BattleMap *map = request->map;
   int sn = mech_sensor_index(mech, request->sensor);
-  float fx, fy, range;
+  float fx;
+  float fy;
+  float range;
   const SensorDefinition *sensor_definition = mech_sensor_definition(sn);
   float maxvis = (float)sensor_definition->maximum_visibility;
 
@@ -307,7 +309,9 @@ typedef struct SearchlightReachRequest {
 
 static int mech_searchlight_reaches(const SearchlightReachRequest *request) {
   Mech *mech = request->mech;
-  float fx, fy, range;
+  float fx;
+  float fy;
+  float range;
   int arc;
   const float MAXVIS = 60.0F;
 
@@ -387,7 +391,9 @@ static void trace_slitelos(const SliteTraceRequest *request) {
   Mech *mech = request->mech;
   float minangle = -20;
   int trace_range = 0;
-  int trace_x, trace_y, trace_height;
+  int trace_x;
+  int trace_y;
+  int trace_height;
   float trace_a;
   int trace_coordnum =
       trace_los(map, mech_position_x(mech), mech_position_y(mech),
@@ -533,7 +539,8 @@ static void trace_maphexlos(const MapHexTraceRequest *request) {
                      (float)(trace_range + 1);
     int trace_terrain =
         (unsigned char)map_real_terrain_get(map, trace_x, trace_y);
-    int nsensor, newwoods;
+    int nsensor;
+    int newwoods;
 
     for (nsensor = 0; nsensor < MAX_SENSORS; nsensor++) {
       SensorTraceState *state = sensor_trace_state(states, nsensor);
@@ -660,7 +667,9 @@ static void trace_maphexlos(const MapHexTraceRequest *request) {
 
 bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
                        int sy, int xsz, int ysz) {
-  int index, underterrain, bothworlds;
+  int index;
+  int underterrain;
+  int bothworlds;
   float start_height;
   LosTrace trace;
 

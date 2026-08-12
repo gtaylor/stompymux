@@ -40,7 +40,8 @@ void auto_radio_command_position(Autopilot *autopilot, Mech *mech,
                                  AutopilotArgumentList *args, int argc,
                                  char *mesg) {
 
-  int x, y;
+  int x;
+  int y;
 
   /*! \todo {Add in some checks for validity of the arguments} */
 
@@ -267,7 +268,8 @@ void auto_radio_command_sweight(Autopilot *autopilot, Mech *mech,
                                 AutopilotArgumentList *args, int argc,
                                 char *mesg) {
 
-  int x, y;
+  int x;
+  int y;
 
   if (!parse_int_checked(autopilot_argument_list_get(args, 1), &x)) {
     (void)snprintf(mesg, LBUF_SIZE, "!Invalid first int");

@@ -87,8 +87,11 @@ extern const int CARGOWEIGHT[];
 
 void mech_cargo_weight_recalculate(Mech *mech) {
   PartPile pile;
-  int sw, weight = 0; /* in 1/10 tons */
-  int i, j, k;
+  int sw;
+  int weight = 0; /* in 1/10 tons */
+  int i;
+  int j;
+  int k;
   EconomyPartEntryView entry;
 
   memset(&pile, 0, sizeof(pile));
@@ -137,7 +140,9 @@ void mech_cargo_weight_recalculate(Mech *mech) {
 bool loading_bay_blocks_transfer(const LoadingBayCheck *check) {
   Mech *mech = check->mech;
   char *c;
-  int i1, i2, i3 = 0;
+  int i1;
+  int i2;
+  int i3 = 0;
 
   c = btech_attribute_read(mech_context(mech)->database, check->cargo_bay,
                            A_MECHSKILLS, (char[LBUF_SIZE]){0});
@@ -166,9 +171,12 @@ bool loading_bay_blocks_transfer(const LoadingBayCheck *check) {
 void economy_manifest_repair(const EconomyRepairRequest *request) {
   BtechContext *context = request->context;
   BrandedPartPile pile;
-  size_t old_entries, new_entries;
-  int items = 0, kinds = 0;
-  int id, brand;
+  size_t old_entries;
+  size_t new_entries;
+  int items = 0;
+  int kinds = 0;
+  int id;
+  int brand;
   EconomyPartEntryView entry;
 
   memset(&pile, 0, sizeof(pile));
@@ -230,8 +238,10 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
   BrandedPartPile matching_pile;
   char *ch;
   PartDisplayName display_name;
-  int id, brand;
-  int x, i;
+  int id;
+  int brand;
+  int x;
+  int i;
 
   char tmpstr[LBUF_SIZE];
 #ifdef BT_PART_WEIGHTS

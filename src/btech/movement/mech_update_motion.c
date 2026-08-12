@@ -31,7 +31,8 @@ void mech_heading_update(Mech *mech) {
   int mw_mod = 1;
   int const TURN_UNIT = short_to_float_simulation(1);
   float const TURN_UNIT_FLOAT = (float)TURN_UNIT;
-  float maxspeed, omaxspeed;
+  float maxspeed;
+  float omaxspeed;
   BattleMap *mech_map;
   BtechContext *context = mech_context(mech);
 

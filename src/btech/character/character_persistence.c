@@ -33,11 +33,15 @@ static CharacterXpRanking *ranking_at(CharacterXpRanking *rankings,
 void debug_xptop(DbRef player, void *data, const char *buffer) {
   BtechSpecialObject *debug = data;
   BtechContext *context = debug->context;
-  int hm, i, j;
+  int hm;
+  int i;
+  int j;
   CharacterXpRanking rankings[MAX_PLAYERS_ON];
-  int count = 0, gt = 0;
+  int count = 0;
+  int gt = 0;
   CoolMenu *c = NULL;
-  PSTATS stats, *s = &stats;
+  PSTATS stats;
+  PSTATS *s = &stats;
 
   memset(rankings, 0, sizeof(rankings));
   const char *skill_name = buffer;
@@ -113,7 +117,8 @@ void debug_setxplevel(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *debug = data;
   BtechContext *context = debug->context;
   char *args[3];
-  int xpt, code;
+  int xpt;
+  int code;
 
   if (mech_parseattributes(buffer, args, 3) != 2) {
     mecha_notify(btech_context_evaluation(context), player,

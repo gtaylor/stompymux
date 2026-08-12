@@ -148,7 +148,11 @@ bool battle_map_is_underground(const BattleMap *map) {
 
 void map_setconditions(DbRef player, BattleMap *map, char *buffer) {
   char *args[5];
-  int vacuum = -1, underground = -1, grav, temp, argc;
+  int vacuum = -1;
+  int underground = -1;
+  int grav;
+  int temp;
+  int argc;
   int fl;
 
   argc = mech_parseattributes(buffer, args, 4);

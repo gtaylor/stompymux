@@ -142,7 +142,9 @@ static void display_number_end(BtechTextBuilder *output, CoolMenu *m) {
 }
 
 static void display_entry(BtechTextBuilder *output, int maxlen, CoolMenu *c) {
-  int i, j = 0, t = 0;
+  int i;
+  int j = 0;
+  int t = 0;
 
   /* returns: number of characters to forward the main pointer with.
      basically: strlen(ouradditions) */
@@ -202,7 +204,8 @@ static void display_entries(CoolMenu *c, int wnum, int num, char *text) {
 char **make_cool_menu_text(CoolMenu *c, size_t *line_count) {
   char **m;
   int pos = 0;
-  int n, rn;
+  int n;
+  int rn;
 
   m = (char **)checked_storage_allocate(sizeof(*m) * (MAX_MENU_LENGTH + 1));
 
@@ -238,7 +241,8 @@ void cool_menu_entry_add(const CoolMenuEntryRequest *request) {
   CoolMenu **c = request->menu;
   const char *text = request->text;
   const int FLAG = request->flags;
-  CoolMenu *d, *e;
+  CoolMenu *d;
+  CoolMenu *e;
   char first = 'a';
 
   if (!*c) {

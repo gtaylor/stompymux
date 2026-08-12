@@ -244,7 +244,8 @@ void do_comconnect(EvaluationContext *evaluation, DbRef player, Descriptor *d) {
 
 void comsys_disconnect_channel(EvaluationContext *evaluation, DbRef player,
                                char *channel) {
-  struct Comuser *user, *prevuser = nullptr;
+  struct Comuser *user;
+  struct Comuser *prevuser = nullptr;
   struct Channel *ch;
 
   ch = select_channel(evaluation->runtime->channels, channel);

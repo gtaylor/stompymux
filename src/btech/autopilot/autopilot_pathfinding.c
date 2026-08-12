@@ -146,11 +146,18 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
   AutopilotHexBitSet closed_list_bitfield = {0};
   AutopilotHexBitSet open_list_bitfield = {0};
 
-  float x1, y1, x2, y2;                 /* Floating point vars for real cords */
-  short map_x1, map_y1, map_x2, map_y2; /* The actual map 'hexes' */
+  float x1;
+  float y1;
+  float x2;
+  float y2; /* Floating point vars for real cords */
+  short map_x1;
+  short map_y1;
+  short map_x2;
+  short map_y2; /* The actual map 'hexes' */
   int i;
-  int child_g_score, child_h_score; /* the score values for the child hexes */
-  int hexoffset; /* temp int to pass around as the hexoffset */
+  int child_g_score;
+  int child_h_score; /* the score values for the child hexes */
+  int hexoffset;     /* temp int to pass around as the hexoffset */
 
   /* Our lists using Hag's RedBlackTree */
   /* Using two RedBlackTree's to store the open_list so we can sort two

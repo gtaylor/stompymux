@@ -287,7 +287,9 @@ void mech_speed(DbRef player, void *data, char *buffer) {
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition = mech_condition_summary(mech);
   char *args[1];
-  float newspeed, walkspeed, maxspeed;
+  float newspeed;
+  float walkspeed;
+  float maxspeed;
   int i;
 
   if (!common_checks(player, mech, MECH_USUAL))
@@ -506,7 +508,8 @@ void mech_vertical(DbRef player, void *data, char *buffer) {
   BtechContext *context = mech_context(mech);
   char *args[1];
   char buff[50] = {0};
-  float newspeed, maxspeed;
+  float newspeed;
+  float maxspeed;
 
   if (!common_checks(player, mech, MECH_USUAL))
     return;

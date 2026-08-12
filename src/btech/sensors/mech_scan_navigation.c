@@ -54,16 +54,21 @@ static bool parse_navigation_arguments(char *arguments[], size_t count,
 }
 
 void mech_bearing(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *temp_mech = nullptr;
+  Mech *mech = (Mech *)data;
+  Mech *temp_mech = nullptr;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[4];
   int argc;
-  int ix0, iy0;
-  float x0, y0;
-  int ix1, iy1;
+  int ix0;
+  int iy0;
+  float x0;
+  float y0;
+  int ix1;
+  int iy1;
   int values[4];
-  float x1, y1;
+  float x1;
+  float y1;
   char trash[20] = {0};
   char buff[100] = {0};
 
@@ -154,16 +159,24 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
 }
 
 void mech_range(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *temp_mech = nullptr;
+  Mech *mech = (Mech *)data;
+  Mech *temp_mech = nullptr;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[4];
   int argc;
-  int ix0, iy0;
-  float x0, y0, z0;
-  int ix1, iy1;
+  int ix0;
+  int iy0;
+  float x0;
+  float y0;
+  float z0;
+  int ix1;
+  int iy1;
   int values[4];
-  float x1, y1, z1 = 0, hr;
+  float x1;
+  float y1;
+  float z1 = 0;
+  float hr;
   float temp;
   char trash[80];
   char buff[100];
@@ -286,16 +299,26 @@ void mech_range(DbRef player, void *data, char *buffer) {
 }
 
 void mech_vector(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *temp_mech = nullptr;
+  Mech *mech = (Mech *)data;
+  Mech *temp_mech = nullptr;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[6];
   int argc;
-  int ix0, iy0, iz0;
-  float x0, y0, z0;
-  int ix1, iy1, iz1;
+  int ix0;
+  int iy0;
+  int iz0;
+  float x0;
+  float y0;
+  float z0;
+  int ix1;
+  int iy1;
+  int iz1;
   int values[6];
-  float x1, y1, z1 = 0, hr;
+  float x1;
+  float y1;
+  float z1 = 0;
+  float hr;
   float temp;
   char trash[80];
   char buff[100];

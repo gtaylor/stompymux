@@ -307,9 +307,14 @@ void dropship_exhaust_blast(const DropshipExhaustBlastRequest *request) {
   const int DAMAGE = request->damage;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int x = mech_position_x(mech), y = mech_position_y(mech),
-      z = mech_position_z(mech);
-  int x1, y1, x2, y2, d;
+  int x = mech_position_x(mech);
+  int y = mech_position_y(mech);
+  int z = mech_position_z(mech);
+  int x1;
+  int y1;
+  int x2;
+  int y2;
+  int d;
   int rng = (DAMAGE > 100 ? 5 : 3);
   for (x1 = x - rng; x1 <= (x + rng); x1++)
     for (y1 = y - rng; y1 <= (y + rng); y1++) {
@@ -416,7 +421,8 @@ void aero_land(DbRef player, void *data, const char *buffer) {
   Mech *mech = (Mech *)data;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int i, t;
+  int i;
+  int t;
   double horiz = 0.0;
   if (mech_class(mech) != CLASS_VTOL && mech_class(mech) != CLASS_AERO &&
       !mech_is_dropship(mech)) {
@@ -568,11 +574,18 @@ static float length_hypotenuse_float(float x, float y) {
 }
 void aero_speed_update(Mech *mech) {
   float xypart;
-  float wx, wy, wz;
-  float nx, ny, nz;
+  float wx;
+  float wy;
+  float wz;
+  float nx;
+  float ny;
+  float nz;
   float nh;
-  float dx, dy, dz;
-  float vlen, mod;
+  float dx;
+  float dy;
+  float dz;
+  float vlen;
+  float mod;
   float ab = 0.7F;
   float m = 1.0F;
   if (mech_condition_summary(mech).spinning) {

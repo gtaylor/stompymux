@@ -128,7 +128,9 @@ static int char_getskilltargetbycode_noxp(BtechContext *context, DbRef player,
 
 int figure_xp_bonus(BtechContext *context, DbRef player, PSTATS *s, int code) {
   int t = character_value_definition(code)->xpthreshold;
-  int tx, bon, btar;
+  int tx;
+  int bon;
+  int btar;
 
   if (t <= 0)
     return 0;
@@ -161,7 +163,10 @@ int figure_xp_bonus(BtechContext *context, DbRef player, PSTATS *s, int code) {
 
 int character_xp_to_next_level(BtechContext *context, DbRef target, int code) {
   int xpthresh = character_value_definition(code)->xpthreshold;
-  int start_skill, target_skill, counter, running_total = 1;
+  int start_skill;
+  int target_skill;
+  int counter;
+  int running_total = 1;
 
   if (xpthresh <= 0)
     return -1;
@@ -222,7 +227,9 @@ static void char_setstatvalue_by_code(PSTATS *stats, int code, int value) {
 
 void list_charvaluestuff(EvaluationContext *evaluation, DbRef player,
                          int flag) {
-  int found = 0, ok, type;
+  int found = 0;
+  int ok;
+  int type;
   int i;
   char buf[80] = {0};
 
@@ -284,8 +291,12 @@ int char_getvaluecode(BtechContext *context, const char *name) {
 /********************/
 
 int char_rollsaving(BtechContext *context) {
-  int r1, r2, r3;
-  int r12, r13, r23;
+  int r1;
+  int r2;
+  int r3;
+  int r12;
+  int r13;
+  int r23;
 
   r1 = char_rolld6(context, 1);
   r2 = char_rolld6(context, 1);
@@ -306,8 +317,12 @@ int char_rollsaving(BtechContext *context) {
 }
 
 int char_rollunskilled(BtechContext *context) {
-  int r1, r2, r3;
-  int r12, r13, r23;
+  int r1;
+  int r2;
+  int r3;
+  int r12;
+  int r13;
+  int r23;
 
   r1 = char_rolld6(context, 1);
   r2 = char_rolld6(context, 1);
@@ -330,7 +345,8 @@ int char_rollunskilled(BtechContext *context) {
 int char_rollskilled(BtechContext *context) { return char_rolld6(context, 2); }
 
 int char_rolld6(BtechContext *context, int num) {
-  int i, total = 0;
+  int i;
+  int total = 0;
 
   for (i = 0; i < num; i++)
     total += btech_random_range_int(context, 1, 6);
@@ -400,7 +416,8 @@ char_getskilltargetbycode_base(const CharacterSkillTargetCall *call) {
   int code = call->code;
   int modifier = call->modifier;
   bool use_xp = call->use_experience;
-  int val, skill;
+  int val;
+  int skill;
 
   if (code == -1)
     return 18;
@@ -440,7 +457,8 @@ char_getskilltargetbycode_base(const CharacterSkillTargetCall *call) {
 
 int char_getskilltargetbycode(BtechContext *context, DbRef player, int code,
                               int modifier) {
-  PSTATS stats, *s = &stats;
+  PSTATS stats;
+  PSTATS *s = &stats;
 
   character_stats_retrieve(context, player, VALUES_CO, s);
   return char_getskilltargetbycode_base(
@@ -454,7 +472,8 @@ int char_getskilltargetbycode(BtechContext *context, DbRef player, int code,
 
 static int char_getskilltargetbycode_noxp(BtechContext *context, DbRef player,
                                           int code, int modifier) {
-  PSTATS stats, *s = &stats;
+  PSTATS stats;
+  PSTATS *s = &stats;
 
   character_stats_retrieve(context, player, VALUES_CO, s);
   return char_getskilltargetbycode_base(
@@ -472,7 +491,8 @@ int char_getskilltarget(BtechContext *context, DbRef player, const char *name,
 }
 
 int char_getxpbycode(const CharacterValueRequest *request) {
-  PSTATS stats, *s = &stats;
+  PSTATS stats;
+  PSTATS *s = &stats;
 
   if (request->code < 0)
     return 0;
@@ -484,7 +504,8 @@ int char_gainxpbycode(const CharacterExperienceChange *change) {
   BtechContext *context = change->target.context;
   DbRef player = change->target.player;
   int code = change->target.code;
-  PSTATS stats, *s = &stats;
+  PSTATS stats;
+  PSTATS *s = &stats;
 
   if (code < 0)
     return 0;
@@ -526,7 +547,8 @@ int char_getskillsuccess(const CharacterSkillCheck *check) {
   BtechContext *context = check->context;
   DbRef player = check->player;
   const char *name = check->name;
-  int roll, val;
+  int roll;
+  int val;
   int code;
 
   code = char_getvaluecode(context, name);
@@ -552,7 +574,8 @@ int char_getskillsuccess(const CharacterSkillCheck *check) {
 
 int char_getskillmargsucc(BtechContext *context, DbRef player, const char *name,
                           int modifier) {
-  int roll, val;
+  int roll;
+  int val;
   int code;
 
   code = char_getvaluecode(context, name);
@@ -571,7 +594,8 @@ int char_getskillmargsucc(BtechContext *context, DbRef player, const char *name,
 DbRef char_getopposedskill(BtechContext *context, DbRef first,
                            const char *skill1, DbRef second,
                            const char *skill2) {
-  int per1, per2;
+  int per1;
+  int per2;
 
   per1 = char_getskillmargsucc(context, first, skill1, 0);
   per2 = char_getskillmargsucc(context, second, skill2, 0);
@@ -595,7 +619,8 @@ int char_getattrsave(BtechContext *context, DbRef player, const char *name) {
 
 int char_getattrsavesucc(BtechContext *context, DbRef player,
                          const char *name) {
-  int roll, val = char_getattrsave(context, player, name);
+  int roll;
+  int val = char_getattrsave(context, player, name);
 
   if (val == -1)
     return (-1);

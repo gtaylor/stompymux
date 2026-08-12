@@ -46,9 +46,14 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
   float deltax = request->delta.x;
   const float DELTAY = request->delta.y;
   const int LAST_Z = request->previous_z;
-  int elevation, lastelevation;
+  int elevation;
+  int lastelevation;
   int oldterrain;
-  int ot, le, done = 0, tt, avoidbth;
+  int ot;
+  int le;
+  int done = 0;
+  int tt;
+  int avoidbth;
   int isunder = 0;
   float f;
   BtechContext *context = mech_context(mech);

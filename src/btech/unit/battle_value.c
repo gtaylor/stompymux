@@ -360,7 +360,9 @@ float calculate_offensive_bv(Mech *mech) {
   int heat_efficiency;
   int heat_sinks;
   int jump_mp;
-  int i, ii, j;
+  int i;
+  int ii;
+  int j;
   [[maybe_unused]] int weapindx;
   int count;
   int tablecount = 0;
@@ -370,7 +372,9 @@ float calculate_offensive_bv(Mech *mech) {
   int weaptable[64];
   int heattable[64];
   int bvtable[64];
-  int wt, bt, ht;
+  int wt;
+  int bt;
+  int ht;
   int heatcount = 0;
 
   /* First Find Heat Efficiency */

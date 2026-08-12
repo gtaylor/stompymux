@@ -150,8 +150,10 @@ PartDisplayName part_name_long(BtechContext *context, int type, int brand) {
 }
 
 PartDisplayName pos_part_name(Mech *mech, int index, int loop) {
-  int t, b;
-  int newloop, newindex;
+  int t;
+  int b;
+  int newloop;
+  int newindex;
   PartDisplayName name;
 
   if (index < 0 || index >= NUM_SECTIONS || loop < 0 || loop >= NUM_CRITICALS) {
@@ -265,7 +267,8 @@ void mech_weaponspecs(DbRef player, void *data, const char *buffer) {
   /*   unsigned char weaps[8 * MAX_WEAPS_SECTION]; */
   int num_weaps;
   int index;
-  int duplicate, ii;
+  int duplicate;
+  int ii;
   CoolMenu *c;
   WeaponSpecsMenuContext menu = {
       .configuration = context->configuration,
@@ -342,7 +345,9 @@ char *critstatus_func(const MechStatusTextRequest *request) {
   const char *arg = request->argument;
   char *buffer = request->buffer;
   const char *tmp;
-  int index, i, max_crits;
+  int index;
+  int i;
+  int max_crits;
   int type;
 
   if (!arg || !*arg)
@@ -390,7 +395,11 @@ char *armorstatus_func(const MechStatusTextRequest *request) {
   char *buffer = request->buffer;
   const char *const *locs;
   int index;
-  int iter, curarm, curint, totarm, totint;
+  int iter;
+  int curarm;
+  int curint;
+  int totarm;
+  int totint;
 
   if (!arg || !*arg)
     return status_text(buffer, "#-1 INVALID SECTION");
@@ -458,7 +467,12 @@ char *weaponstatus_func(const MechStatusTextRequest *request) {
   Mech *mech = request->mech;
   const char *arg = request->argument;
   char *buffer = request->buffer;
-  int count, sect, loopsect, i, type, totalcount = 0;
+  int count;
+  int sect;
+  int loopsect;
+  int i;
+  int type;
+  int totalcount = 0;
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
   int criticals[MAX_WEAPS_SECTION];
@@ -509,7 +523,10 @@ char *critslot_func(const CriticalSlotTextRequest *request) {
   const char *buf_critnum = request->critical;
   const char *buf_flag = request->field;
   char *buffer = request->buffer;
-  int index, crit, flag, type;
+  int index;
+  int crit;
+  int flag;
+  int type;
 
   index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
                                     buf_section);
@@ -601,9 +618,12 @@ char *critslot_func(const CriticalSlotTextRequest *request) {
 
 void critical_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
                      int index) {
-  int loop, i;
+  int loop;
+  int i;
   char buffer[LBUF_SIZE] = {0};
-  int type, data, w_fire_mode;
+  int type;
+  int data;
+  int w_fire_mode;
   int max_crits = crits_in_loc(mech, index);
   char **foo;
   int count = 0;

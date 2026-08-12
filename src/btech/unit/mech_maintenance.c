@@ -57,7 +57,8 @@ bool is_in_weapon_arc(const WeaponArcRequest *request) {
   const float Y = request->target.y;
   const int SECTION = request->section;
   const int CRITICAL = request->critical;
-  int weaponarc, isrear;
+  int weaponarc;
+  int isrear;
   int wantarc = NOARC;
 
   if (((mech)->ud.type) == CLASS_MECH &&
@@ -198,10 +199,12 @@ int listmatch(const char *const *values, size_t value_count,
 void do_sub_magic(Mech *mech, int loud) {
   int jjs = 0;
   int hses = 0;
-  int wanths, wanths_f;
+  int wanths;
+  int wanths_f;
   int shs_size = mech_heat_sink_critical_size(mech);
   int hs_eff = mech_has_double_heat_sinks(mech) ? 2 : 1;
-  int i, j;
+  int i;
+  int j;
   int inthses = mech_engine_rating(mech) / 25;
   int dest_hses = 0;
   int maxjjs =
@@ -289,7 +292,8 @@ void do_sub_magic(Mech *mech, int loud) {
 
 void do_fixextra(Mech *mech) {
 
-  int i, j;
+  int i;
+  int j;
 
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (mech_section_is_flooded(mech, i))
@@ -313,7 +317,9 @@ void do_fixextra(Mech *mech) {
 
 void do_magic(Mech *mech) {
   Mech opp;
-  int i, j, t;
+  int i;
+  int j;
+  int t;
   int mask = 0;
   int tank_crit_mask = 0;
 
@@ -581,7 +587,9 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
   /* Ugly recursive piece of code :> */
   char *c;
   char empty_buffer[] = "";
-  int i1, i2, i3;
+  int i1;
+  int i2;
+  int i3;
 
   if (buffer)
     buffer =

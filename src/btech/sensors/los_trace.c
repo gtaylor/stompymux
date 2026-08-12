@@ -238,26 +238,35 @@ static MapHexPosition adjacent_hex(MapHexPosition current,
 
 int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
 
-  int i;                    /* Generic counter */
-  float acx, acy, bcx, bcy; /* endpoints CARTESIAN coords */
-  float currcx, currcy;     /* current hex CARTESIAN coords */
-  int currx, curry;         /* current hex being worked from */
-  int nextx, nexty;         /* x & y coords of next hex */
-  int bestx = 0, besty = 0; /* best found so far */
-  int xmul, ymul;           /* Used in 30/150/210/330 special case */
-  HexDirection nexthex;     /* potential next hex being examined */
-  float nextcx, nextcy;     /* Next hex's CARTESIAN coords */
-  float slope;              /* slope of line */
-  float uangle;             /* angle of line (in STD CARTESIAN FORM!) */
-  float sinu;               /* sin of -uangle */
-  float cosu;               /* cos of same */
-  float liney;              /* TRANSFORMED y coord of the line */
-  float tempangle;          /* temporary uangle used for effrad calc */
-  float effrad;             /* effective radius of hex */
-  float currdist;           /* distance along line of current hex */
-  float nextdist;           /* distance along the line of potential hex */
-  float bestdist;           /* "best" (not furthest) distance tried */
-  float enddist;            /* distance along at end of line */
+  int i; /* Generic counter */
+  float acx;
+  float acy;
+  float bcx;
+  float bcy; /* endpoints CARTESIAN coords */
+  float currcx;
+  float currcy; /* current hex CARTESIAN coords */
+  int currx;
+  int curry; /* current hex being worked from */
+  int nextx;
+  int nexty; /* x & y coords of next hex */
+  int bestx = 0;
+  int besty = 0; /* best found so far */
+  int xmul;
+  int ymul;             /* Used in 30/150/210/330 special case */
+  HexDirection nexthex; /* potential next hex being examined */
+  float nextcx;
+  float nextcy;    /* Next hex's CARTESIAN coords */
+  float slope;     /* slope of line */
+  float uangle;    /* angle of line (in STD CARTESIAN FORM!) */
+  float sinu;      /* sin of -uangle */
+  float cosu;      /* cos of same */
+  float liney;     /* TRANSFORMED y coord of the line */
+  float tempangle; /* temporary uangle used for effrad calc */
+  float effrad;    /* effective radius of hex */
+  float currdist;  /* distance along line of current hex */
+  float nextdist;  /* distance along the line of potential hex */
+  float bestdist;  /* "best" (not furthest) distance tried */
+  float enddist;   /* distance along at end of line */
   int found_count = 0;
 
   /* Before doing anything, let's check for special circumstances, this */

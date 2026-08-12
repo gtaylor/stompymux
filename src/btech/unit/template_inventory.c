@@ -85,9 +85,18 @@ void dump_weapons(BtechContext *context, DbRef player) {
 }
 
 char *techlist_func(Mech *mech, char *buffer) {
-  char bufa[SBUF_SIZE], bufb[SBUF_SIZE], bufc[SBUF_SIZE];
-  int i, ii, part = 0, axe = 0, mace = 0, sword = 0, saw = 0, claw = 0,
-             hascase = 0;
+  char bufa[SBUF_SIZE];
+  char bufb[SBUF_SIZE];
+  char bufc[SBUF_SIZE];
+  int i;
+  int ii;
+  int part = 0;
+  int axe = 0;
+  int mace = 0;
+  int sword = 0;
+  int saw = 0;
+  int claw = 0;
+  int hascase = 0;
 
   (void)snprintf(
       bufa, SBUF_SIZE, "%s",
@@ -202,7 +211,12 @@ char *payloadlist_func(Mech *mech, char *buffer) {
   int critical[MAX_WEAPS_SECTION];
   int temp_crit;
 
-  int count, weap_count, ammo_count, section_loop, weap_loop, put_loop;
+  int count;
+  int weap_count;
+  int ammo_count;
+  int section_loop;
+  int weap_loop;
+  int put_loop;
   char payloadbuff[120] = {0};
 
   int payload_items[INVENTORY_ITEM_CAPACITY];
@@ -335,7 +349,11 @@ char *partlist_func(Mech *mech, char *buffer) {
 
   int temp_crit;
 
-  int count, part_count, section_loop, put_loop, act_count;
+  int count;
+  int part_count;
+  int section_loop;
+  int put_loop;
+  int act_count;
   char partlistbuff[120] = {0};
 
   int partlist_items[INVENTORY_ITEM_CAPACITY];

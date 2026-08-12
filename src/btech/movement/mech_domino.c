@@ -39,7 +39,8 @@ int battle_map_mech_count_in_hex(const BattleMapHexOccupancyRequest *request) {
   int x = request->position.x;
   int y = request->position.y;
   Mech *mech;
-  int i, cnt = 0;
+  int i;
+  int cnt = 0;
 
   for (i = 0; i < battle_map_unit_count(map); i++) {
     mech = btech_context_get_mech(battle_map_context(map),
@@ -87,8 +88,12 @@ static void collision_apply_damage(const CollisionDamageRequest *request) {
   Mech *mech = request->target;
   int dam = request->damage;
   CollisionDamageTable table = request->table;
-  int hit_group, isrear, iscrit = 0, hitloc = 0;
-  int i, sp = (dam - 1) / 5;
+  int hit_group;
+  int isrear;
+  int iscrit = 0;
+  int hitloc = 0;
+  int i;
+  int sp = (dam - 1) / 5;
 
   if (!dam)
     return;
@@ -168,7 +173,9 @@ static int mech_domino_resolve_in_hex(const MechDominoRequest *request) {
   int cnt = request->candidate_count;
   MechDominoMode mode = request->mode;
   int tar = btech_random_range_int(mech_context(me), 0, cnt - 1);
-  int i, head, td;
+  int i;
+  int head;
+  int td;
   Mech *mech = nullptr;
   int team = mech_team(me);
 
@@ -333,7 +340,8 @@ static int mech_domino_resolve_in_hex(const MechDominoRequest *request) {
 int mech_domino_resolve(Mech *mech, MechDominoMode mode) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int cnt, fcnt;
+  int cnt;
+  int fcnt;
 
   if (!map)
     return 0;

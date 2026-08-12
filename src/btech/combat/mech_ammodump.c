@@ -70,7 +70,8 @@ static void mech_dump_event(MuxEvent *ev) {
   Mech *mech = (Mech *)ev->data;
   long arg = (long)ev->data2;
   int loc;
-  int i, l;
+  int i;
+  int l;
   int e = 0;
   char buf[SBUF_SIZE];
   int weapindx;
@@ -165,7 +166,9 @@ void mech_dump(DbRef player, void *data, char *buffer) {
   int ammo_loc;
   int ammo_crit;
   int loc;
-  int i, l, count = 0;
+  int i;
+  int l;
+  int count = 0;
   char buf[MBUF_SIZE];
   long type = 0;
 
@@ -342,7 +345,10 @@ static int ammunition_dump_result(int result, int *highest_result) {
 }
 
 int mech_ammunition_dump_decrease(Mech *mech, int loc, int pos, int *hm) {
-  int c, index, weapindx, rem;
+  int c;
+  int index;
+  int weapindx;
+  int rem;
 
   /* It _is_ ammo, and contains something */
 
@@ -395,9 +401,11 @@ int mech_ammunition_dump_decrease(Mech *mech, int loc, int pos, int *hm) {
 void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int w_hit_loc) {
   DumpingAmmunitionItem ammunition_items[MAX_WEAPONS_PER_MECH];
   int w_event_data = -1;
-  int w_sec_iter, w_slot_iter;
+  int w_sec_iter;
+  int w_slot_iter;
   int wc_ammo_items = 0;
-  int part_type = 0, w_part_data = 0;
+  int part_type = 0;
+  int w_part_data = 0;
   int w_loc = 0;
   int weapon_index = 0;
   int w_rnd_idx = 0;

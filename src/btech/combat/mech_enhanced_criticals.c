@@ -80,7 +80,8 @@ int mech_weapon_critical_to_hit_modifier(
   int i;
   int w_ret_mod = 0;
   int count = 0;
-  int nloc, ncrit;
+  int nloc;
+  int ncrit;
 
   if (mech_class(mech) != CLASS_MECH)
     return 0;
@@ -127,7 +128,9 @@ int mech_weapon_critical_heat_modifier(Mech *mech, int section, int critical) {
   int w_weap_index = 0;
   int i;
   int w_ret_mod = 0;
-  int count = 0, nloc, ncrit;
+  int count = 0;
+  int nloc;
+  int ncrit;
 
   mech_weapon_critical_data(mech, section, critical, &w_weap_index,
                             &w_weap_size, &w_first_crit);
@@ -165,7 +168,9 @@ int mech_weapon_critical_damage_penalty(Mech *mech, int section, int critical) {
   int w_weap_index = 0;
   int i;
   int w_ret_mod = 0;
-  int count = 0, nloc, ncrit;
+  int count = 0;
+  int nloc;
+  int ncrit;
 
   if (mech_class(mech) != CLASS_MECH)
     return 0;
@@ -210,7 +215,9 @@ bool mech_weapon_critical_can_explode(const WeaponCriticalRoll *request) {
   int w_weap_index = 0;
   int i;
   int w_explosion_check = 0;
-  int count = 0, nloc, ncrit;
+  int count = 0;
+  int nloc;
+  int ncrit;
 
   if (mech_class(mech) != CLASS_MECH)
     return false;
@@ -257,7 +264,9 @@ bool mech_weapon_critical_can_jam(const WeaponCriticalRoll *request) {
   int w_weap_index = 0;
   int i;
   int w_jam_check = 0;
-  int count = 0, nloc, ncrit;
+  int count = 0;
+  int nloc;
+  int ncrit;
 
   if (mech_class(mech) != CLASS_MECH)
     return false;
@@ -297,7 +306,9 @@ bool mech_weapon_ammo_feed_is_locked(Mech *mech, int section, int critical) {
   int w_first_crit = 0;
   int w_weap_index = 0;
   int i;
-  int count = 0, nloc, ncrit;
+  int count = 0;
+  int nloc;
+  int ncrit;
 
   if (mech_class(mech) != CLASS_MECH)
     return false;
@@ -347,7 +358,9 @@ int mech_weapon_damaged_slot_count(Mech *mech, int section, int w_first_crit,
                                    int w_weap_size) {
   int w_crits_damaged = 0;
   int i;
-  int count = 0, nloc, ncrit;
+  int count = 0;
+  int nloc;
+  int ncrit;
 
   for (i = w_first_crit; i < min(NUM_CRITICALS, w_first_crit + w_weap_size);
        i++) {
@@ -626,7 +639,9 @@ static void mech_weapon_damage_info_show(DbRef player, Mech *mech, int section,
     int disabled;
   } non_operational = {0};
   int damflag;
-  int count = 0, nloc, ncrit;
+  int count = 0;
+  int nloc;
+  int ncrit;
 
   mech_weapon_critical_data(mech, section, critical, &w_weap_index,
                             &w_weap_size, &w_first_crit);

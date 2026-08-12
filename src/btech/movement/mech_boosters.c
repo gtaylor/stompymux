@@ -149,8 +149,10 @@ static void mech_scharge_event(MuxEvent *e) {
 #endif
   BtechContext *context = mech_context(mech);
   int roll = btech_random_roll(context);
-  int j, count = 0;
-  float maxspeed, newmaxspeed = 0.0F;
+  int j;
+  int count = 0;
+  float maxspeed;
+  float newmaxspeed = 0.0F;
   int crit_type;
   char msgbuf[MBUF_SIZE] = {0};
 

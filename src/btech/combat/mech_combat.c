@@ -182,14 +182,16 @@ void mech_sixth_sense_check(Mech *mech, Mech *target) {
 }
 
 void mech_set_target(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *target;
+  Mech *mech = (Mech *)data;
+  Mech *target;
   BtechContext *context = mech_context(mech);
   BattleMap *mech_map;
   char *args[5];
   char target_id[2];
   int argc;
   int los = 1;
-  int newx, newy;
+  int newx;
+  int newy;
   DbRef targetref;
   int mode;
 

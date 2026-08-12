@@ -214,7 +214,10 @@ void initialize_partname_tables(BtechContext *context) {
   const ServerConfiguration *configuration = context->configuration;
   PartNameRegistry *registry = calloc(1, sizeof(*registry));
   int i;
-  int j, c = 0, m, n;
+  int j;
+  int c = 0;
+  int m;
+  int n;
   char tmpbuf[MBUF_SIZE];
 
   if (registry == nullptr)
@@ -658,7 +661,8 @@ const char *partname_func(const PartNameDescriptionRequest *request) {
   BtechContext *context = request->context;
   const int INDEX = request->packed_part;
   PartNameRegistry *registry = context->part_names;
-  int id, brand;
+  int id;
+  int brand;
   PartNameEntry *p;
 
   id = packed_part_id(INDEX);

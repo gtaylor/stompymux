@@ -30,8 +30,10 @@ void move_command(const MoveCommandRequest *request) {
   DbRef player = request->player;
   int key = request->key;
   char *direction = request->direction;
-  DbRef exit, loc;
-  int i, quiet;
+  DbRef exit;
+  DbRef loc;
+  int i;
+  int quiet;
   const ServerConfiguration *configuration = evaluation->world->configuration;
   MatchContext *match = &evaluation->command->match;
 

@@ -180,7 +180,8 @@ AmmunitionHazardResult destructive_ammunition_find(Mech *mech) {
   int maxdamage = 0;
   int damage;
   [[maybe_unused]] int weapindx;
-  int type, data;
+  int type;
+  int data;
 
   for (loop = 0; loop < NUM_SECTIONS; loop++)
     for (critloop = 0; critloop < NUM_CRITICALS; critloop++)
@@ -218,7 +219,8 @@ AmmunitionHazardResult inferno_ammunition_find(Mech *mech) {
   int maxdamage = 0;
   int damage;
   int weapindx;
-  int type, data;
+  int type;
+  int data;
   int mode;
 
   for (loop = 0; loop < NUM_SECTIONS; loop++)

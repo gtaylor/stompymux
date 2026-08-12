@@ -121,7 +121,11 @@ char *mech_tech_timefunc(Mech *mech, char buffer[static LBUF_SIZE]) {
 
 void apply_mech_damage(Mech *omech, char *buf) {
   Mech *mech = mech_temporary_clone(omech);
-  int i, j, i1, i2, i3;
+  int i;
+  int j;
+  int i1;
+  int i2;
+  int i3;
   int do_mag = 0;
 
   if (mech == nullptr)
@@ -267,7 +271,8 @@ char *mech_damagefunc(const GmvBufferedBidirectionalCall *call) {
   /* Lists damage in form:
      A:LOC/num[,LOC/num[,LOC(R)/num]],I:LOC/num
      C:LOC/num,R:LOC/num(num),G:LOC/num(num) */
-  int i, j;
+  int i;
+  int j;
   int count = 0;
 
   if (MODE) {
@@ -322,7 +327,8 @@ char *mech_damagefunc(const GmvBufferedBidirectionalCall *call) {
 char *mech_cent_bearingfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
   int x = mech_position_x(mech);
   int y = mech_position_y(mech);
-  float fx, fy;
+  float fx;
+  float fy;
 
   map_coord_to_real_coord(x, y, &fx, &fy);
   (void)snprintf(
@@ -336,7 +342,8 @@ char *mech_cent_bearingfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
 char *mech_cent_distfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
   int x = mech_position_x(mech);
   int y = mech_position_y(mech);
-  float fx, fy;
+  float fx;
+  float fy;
 
   map_coord_to_real_coord(x, y, &fx, &fy);
   (void)snprintf(buffer, LBUF_SIZE, "%.2f",

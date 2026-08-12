@@ -163,7 +163,8 @@ int meltable(BattleMap *map, int x, int y) {
 }
 
 void ice_growth(DbRef player, BattleMap *map, int num) {
-  int x, y;
+  int x;
+  int y;
   int count = 0;
 
   for (x = 0; x < battle_map_width(map); x++)
@@ -187,7 +188,8 @@ void ice_growth(DbRef player, BattleMap *map, int num) {
 }
 
 void ice_melt(DbRef player, BattleMap *map, int num) {
-  int x, y;
+  int x;
+  int y;
   int count = 0;
 
   for (x = 0; x < battle_map_width(map); x++)

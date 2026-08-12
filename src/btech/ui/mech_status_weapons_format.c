@@ -108,9 +108,11 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
   unsigned short ammomax[8 * MAX_WEAPS_SECTION] = {0};
   unsigned int modearray[8 * MAX_WEAPS_SECTION] = {0};
   char tmpbuf[LBUF_SIZE] = {0};
-  int count, ammoweapcount;
+  int count;
+  int ammoweapcount;
   int loop;
-  int ii, i = 0;
+  int ii;
+  int i = 0;
   char weapname[LBUF_SIZE] = {0};
   char *tmpc;
   char weapbuff[LBUF_SIZE] = {0};

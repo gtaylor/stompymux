@@ -274,8 +274,10 @@ armor_section_abbreviation(const ArmorSectionReference *section) {
 
 int armor_section_from_string(UnitClass type, MechMovementType movement_type,
                               const char *string) {
-  int i, j;
-  const char *c, *d;
+  int i;
+  int j;
+  const char *c;
+  const char *d;
 
   if (string == nullptr || !*string)
     return -1;

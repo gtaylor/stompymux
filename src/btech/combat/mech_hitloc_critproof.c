@@ -15,7 +15,8 @@
 /* Use this when the unit is CRITPROOF because the other
  * hitlocation functions are screwy */
 int mech_critproof_hit_location(Mech *mech, int hit_group, int *iscritical) {
-  int roll, hitloc = 0;
+  int roll;
+  int hitloc = 0;
   int side;
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition = mech_condition_summary(mech);

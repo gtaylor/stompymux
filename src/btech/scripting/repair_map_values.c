@@ -76,8 +76,10 @@ BtechScriptResult fun_btstores(BtechScriptCall *call) {
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
   [[maybe_unused]] const DbRef PLAYER = call->player;
   DbRef it;
-  int i = -1, x = 0;
-  int p, b;
+  int i = -1;
+  int x = 0;
+  int p;
+  int b;
   ScriptPartPile pile;
   if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
@@ -146,8 +148,10 @@ BtechScriptResult fun_btstores_short(BtechScriptCall *call) {
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
   [[maybe_unused]] const DbRef PLAYER = call->player;
   DbRef it;
-  int i = -1, x = 0;
-  int p, b;
+  int i = -1;
+  int x = 0;
+  int p;
+  int b;
   ScriptPartPile pile;
   if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
@@ -216,7 +220,8 @@ BtechScriptResult fun_btmapterr(BtechScriptCall *call) {
   [[maybe_unused]] const DbRef PLAYER = call->player;
   DbRef it;
   BattleMap *map;
-  int x, y;
+  int x;
+  int y;
   int spec;
   char terr;
   it = match_thing(&context->command->match, PLAYER,
@@ -265,7 +270,8 @@ BtechScriptResult fun_btmapelev(BtechScriptCall *call) {
   DbRef it;
   int i;
   BattleMap *map;
-  int x, y;
+  int x;
+  int y;
   int spec;
   it = match_thing(&context->command->match, PLAYER,
                    script_function_argument(fargs, NFARGS, 0));

@@ -20,7 +20,10 @@ void tech_fixarmor(DbRef player, void *data, char *buffer) {
   RepairCommandContext repair_command;
   Mech *mech;
   BtechContext *context;
-  int loc, from, to, change;
+  int loc;
+  int from;
+  int to;
+  int change;
 
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_CONFIGURED, &repair_command);
@@ -105,7 +108,10 @@ void tech_fixinternal(DbRef player, void *data, char *buffer) {
   RepairCommandContext repair_command;
   Mech *mech;
   BtechContext *context;
-  int loc, from, to, change;
+  int loc;
+  int from;
+  int to;
+  int change;
   int ochange;
 
   RepairCommandStatus repair_status = repair_command_context_initialize(

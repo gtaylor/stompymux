@@ -110,7 +110,8 @@ static int clan_modified_time(const Mech *mech, int time) {
   return max(1, time / ((mech_technology_flags(mech) & CLAN_TECH) ? 2 : 1));
 }
 static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
-  int a, b;
+  int a;
+  int b;
   if (mech_section_is_destroyed(mech, loc)) {
     if (mech_class(mech) != CLASS_BSUIT)
       repair_damage_add(damages, REATTACH, loc);
@@ -185,7 +186,8 @@ static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
 }
 static int check_for_scrappage(RepairDamageTable *damages, Mech *mech,
                                int loc) {
-  int a, b;
+  int a;
+  int b;
   int ret = 1;
   if (mech_section_is_destroyed(mech, loc))
     return 1;
@@ -376,7 +378,10 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
   RepairDamageTable damages_storage = {0};
   RepairDamageTable *damages = &damages_storage;
   CoolMenu *c = NULL;
-  int i, j, v1, v2;
+  int i;
+  int j;
+  int v1;
+  int v2;
   char buf[MBUF_SIZE] = {0};
   char buf2[LBUF_SIZE] = {0};
   char buf3[MBUF_SIZE] = {0};
@@ -714,7 +719,8 @@ void tech_fix(DbRef player, void *data, char *buffer) {
   RepairDamageTable damages_storage = {0};
   RepairDamageTable *damages = &damages_storage;
   int n;
-  int low, high;
+  int low;
+  int high;
   RepairCommandContext repair_command;
   if (buffer != nullptr)
     buffer = checked_storage_at(buffer, strlen(buffer) + 1, sizeof(*buffer),

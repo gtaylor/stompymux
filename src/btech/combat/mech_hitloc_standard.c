@@ -32,7 +32,8 @@ static int hit_location_export(HitLocationResult result,
 }
 
 int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
-  int roll, hitloc = 0;
+  int roll;
+  int hitloc = 0;
   int side;
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition = mech_condition_summary(mech);

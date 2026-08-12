@@ -445,7 +445,8 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
   int w_loc;
   int w_arm_to_use = -1;
   char *args[2];
-  char str_location[50], str_punch_with[50];
+  char str_location[50];
+  char str_punch_with[50];
   int w_bth = 0;
   int w_bth_mod_larm = 0;
   int w_bth_mod_rarm = 0;

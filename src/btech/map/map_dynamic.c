@@ -200,7 +200,8 @@ void mech_map_consistency_check(Mech *mech) {
 void eliminate_empties(BattleMap *map) {
   int i;
   int j;
-  int count, oldcount;
+  int count;
+  int oldcount;
   if (!map)
     return;
   for (i = map->first_free - 1; i >= 0; i--)
@@ -291,7 +292,9 @@ void remove_mech_from_map(BattleMap *map, Mech *mech) {
 }
 
 void add_mech_to_map(BattleMap *newmap, Mech *mech) {
-  int loop, count, i;
+  int loop;
+  int count;
+  int i;
 
   for (loop = 0; loop < newmap->first_free; loop++)
     if (battle_map_unit_dbref(newmap, loop) == mech_dbref(mech))

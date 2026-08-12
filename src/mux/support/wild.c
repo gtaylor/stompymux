@@ -196,7 +196,8 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
   WildCursor pattern = wild_cursor(tstr);
   WildCursor data = wild_cursor(dstr);
   size_t data_capture_offset;
-  int argpos, numextra;
+  int argpos;
+  int numextra;
 
   while (wild_cursor_current(&pattern) != '*') {
     switch (wild_cursor_current(&pattern)) {
@@ -422,7 +423,8 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
  * Capture recursion is scoped to this invocation.
  */
 int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
-  int i, value;
+  int i;
+  int value;
   WildcardContext context = {.arguments = args, .argument_count = nargs};
   WildCursor pattern = wild_cursor(tstr);
   WildCursor data = wild_cursor(dstr);

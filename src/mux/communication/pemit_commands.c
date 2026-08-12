@@ -64,8 +64,12 @@ void do_pemit(CommandInvocation *invocation) {
   int key = invocation->key;
   char *recipient = invocation->first;
   char *message = invocation->second;
-  DbRef target, loc;
-  int do_contents, ok_to_do, depth, pemit_flags;
+  DbRef target;
+  DbRef loc;
+  int do_contents;
+  int ok_to_do;
+  int depth;
+  int pemit_flags;
 
   if (key & PEMIT_LIST) {
     do_pemit_list(evaluation, PLAYER, recipient, message);

@@ -288,7 +288,8 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                 mech_real_terrain_get(mech) == BATTLE_TERRAIN_HIGH_WATER) &&
                mech_class(mech) != CLASS_MW) {
 
-      int skillmod, dammod;
+      int skillmod;
+      int dammod;
       float walking_speed = 2.0F * mech_effective_maximum_speed(mech) / 3.0F;
       if (mech_desired_speed(mech) > walking_speed)
         mech_desired_speed_set(mech, walking_speed);

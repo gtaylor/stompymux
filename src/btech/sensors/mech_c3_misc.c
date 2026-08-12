@@ -261,13 +261,20 @@ void mech_network_send_message(DbRef player, Mech *mech, const char *msg,
 void mech_network_show_targets(DbRef player, Mech *mech, bool t_is_c3) {
   BattleMap *obj_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  int i, j, bearing;
+  int i;
+  int j;
+  int bearing;
   Mech *other_mech;
-  float real_range, c3_range;
+  float real_range;
+  float c3_range;
   char buff[LBUF_SIZE];
   const char *mech_name;
   char move_type[30];
-  char c_status1, c_status2, c_status3, c_status4, c_status5;
+  char c_status1;
+  char c_status2;
+  char c_status3;
+  char c_status4;
+  char c_status5;
   char weaponarc;
   int los_flag;
   int arc;
@@ -428,7 +435,8 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool t_is_c3) {
 }
 
 void mech_network_show_status(DbRef player, Mech *mech, bool t_is_c3) {
-  int i, bearing;
+  int i;
+  int bearing;
   Mech *other_mech;
   float range;
   char buff[LBUF_SIZE];
@@ -572,8 +580,11 @@ float mech_network_range_with_members(Mech *mech, Mech *mech_target,
   float best_range = 0.0;
   int i;
   int in_los = 0;
-  int map_x, map_y;
-  float hex_x, hex_y, hex_z;
+  int map_x;
+  int map_y;
+  float hex_x;
+  float hex_y;
+  float hex_z;
   Mech *other_mech;
   BattleMap *map;
 

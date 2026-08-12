@@ -34,7 +34,8 @@ static int mech_jump_speed_mp(const Mech *mech, const BattleMap *map) {
 }
 
 void mech_overheat_handle(Mech *mech) {
-  int avoided = 0, hasinferno = 0;
+  int avoided = 0;
+  int hasinferno = 0;
   BattleMap *mech_map;
   AmmunitionHazardResult ammunition = {0};
   BtechContext *context = mech_context(mech);

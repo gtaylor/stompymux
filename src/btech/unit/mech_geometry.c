@@ -78,8 +78,10 @@ float map_real_range(const MapRealSegment *segment) {
 
 void real_coord_to_map_coord(short *hex_x, short *hex_y, float cart_x,
                              float cart_y) {
-  float x, y;
-  int x_count, y_count;
+  float x;
+  float y;
+  int x_count;
+  int y_count;
 
   if (cart_x < ALPHA) {
     /* Special case: we are in section IV of x-column 0 or off the map */
@@ -196,8 +198,12 @@ void navigate_sketch_mechs(const NavigateSketchRequest *request) {
   BattleMap *map = request->map;
   const int X = request->center.x;
   const int Y = request->center.y;
-  float corner_fx, corner_fy, fx, fy;
-  int row, column;
+  float corner_fx;
+  float corner_fy;
+  float fx;
+  float fy;
+  int row;
+  int column;
   Mech *other;
 
   map_coord_to_real_coord(X, Y, &corner_fx, &corner_fy);

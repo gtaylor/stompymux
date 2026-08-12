@@ -38,7 +38,8 @@ static DbRef promote_dflt(DbRef old, DbRef new) {
 
 DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
                       char *target, DbRef dflt) {
-  DbRef result, result1;
+  DbRef result;
+  DbRef result1;
   int control;
   char *buff;
   size_t target_length = strlen(target);
@@ -167,7 +168,8 @@ DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
 void parse_range(GameDatabase *database,
                  const ServerConfiguration *configuration, char **name,
                  DbRef *low_bound, DbRef *high_bound) {
-  char *buff1, *buff2;
+  char *buff1;
+  char *buff2;
 
   buff1 = *name;
   if (buff1 && *buff1)

@@ -173,7 +173,8 @@ void auto_radio_command_dgoto(Autopilot *autopilot, Mech *mech,
                               AutopilotArgumentList *args, int argc,
                               char *mesg) {
 
-  int x, y;
+  int x;
+  int y;
   char buffer[SBUF_SIZE];
 
   if (!parse_int_checked(autopilot_argument_list_get(args, 1), &x)) {
@@ -293,7 +294,8 @@ void auto_radio_command_goto(Autopilot *autopilot, Mech *mech,
                              AutopilotArgumentList *args, int argc,
                              char *mesg) {
 
-  int x, y;
+  int x;
+  int y;
   char buffer[SBUF_SIZE];
   BattleMap *map;
 
@@ -418,7 +420,8 @@ void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech,
                                 char *mesg) {
 
   char buffer[SBUF_SIZE];
-  int bear, rng;
+  int bear;
+  int rng;
 
   if (fabsf(mech_jump_speed(mech)) < 0.01F) {
     (void)snprintf(mesg, LBUF_SIZE, "!I don't do hiphop and jump around");
@@ -489,7 +492,8 @@ void auto_radio_command_ogoto(Autopilot *autopilot, Mech *mech,
                               AutopilotArgumentList *args, int argc,
                               char *mesg) {
 
-  int x, y;
+  int x;
+  int y;
   char buffer[SBUF_SIZE];
 
   if (!parse_int_checked(autopilot_argument_list_get(args, 1), &x)) {

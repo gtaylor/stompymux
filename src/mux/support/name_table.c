@@ -91,7 +91,8 @@ NameTable *name_table_find_entry(GameDatabase *database,
 void name_table_display(EvaluationContext *evaluation,
                         const ServerConfiguration *configuration, DbRef player,
                         NameTable *ntab, const char *prefix, int list_if_none) {
-  char *buf, *bp;
+  char *buf;
+  char *bp;
   int got_one;
 
   buf = alloc_lbuf("name_table_display");
@@ -124,7 +125,8 @@ void name_table_interpret(const NameTableInterpretRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
   const ServerConfiguration *configuration = request->configuration;
   DbRef player = request->player;
-  char *buf, *bp;
+  char *buf;
+  char *bp;
 
   buf = alloc_lbuf("name_table_interpret");
   bp = buf;
@@ -162,7 +164,8 @@ void name_table_list_set(EvaluationContext *evaluation,
                          const ServerConfiguration *configuration, DbRef player,
                          NameTable *ntab, int flagword, const char *prefix,
                          int list_if_none) {
-  char *buf, *bp;
+  char *buf;
+  char *bp;
   int got_one;
 
   buf = bp = alloc_lbuf("name_table_list_set");

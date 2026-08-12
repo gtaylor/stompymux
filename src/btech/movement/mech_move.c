@@ -349,9 +349,14 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
 
 void mech_eta(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  int argc, eta_x, eta_y;
-  float fx, fy, range;
-  int etahr, etamin;
+  int argc;
+  int eta_x;
+  int eta_y;
+  float fx;
+  float fy;
+  float range;
+  int etahr;
+  int etamin;
   char *args[3];
 
   if (!common_checks(player, mech, MECH_USUAL))
@@ -409,7 +414,8 @@ void mech_eta(DbRef player, void *data, char *buffer) {
 }
 
 float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
-  int lugged = 0, mod = 2;
+  int lugged = 0;
+  int mod = 2;
   Mech *c;
   BattleMap *map;
   MechConditionSummary conditions = mech_condition_summary(mech);
@@ -641,7 +647,10 @@ void mech_stand(DbRef player, void *data, char *buffer) {
   int wc_dead_legs = 0;
   int t_needs_p_skill = 1;
   int t_do_stand = 1;
-  int bth, mechstandtime, standanyway = 0, standcarefulmod = 0;
+  int bth;
+  int mechstandtime;
+  int standanyway = 0;
+  int standcarefulmod = 0;
 
   if (!common_checks(player, mech, MECH_USUAL))
     return;

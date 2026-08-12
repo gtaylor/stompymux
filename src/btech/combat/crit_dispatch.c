@@ -22,8 +22,10 @@ void mech_critical_handle(const CriticalHitDispatch *dispatch) {
   int num = dispatch->count;
   int i;
   int crit_hit;
-  int crit_type, crit_data;
-  int count, index;
+  int crit_type;
+  int crit_data;
+  int count;
+  int index;
   int crit_list[NUM_CRITICALS];
   BtechContext *context = mech_context(wounded);
   MechConditionSummary condition = mech_condition_summary(wounded);

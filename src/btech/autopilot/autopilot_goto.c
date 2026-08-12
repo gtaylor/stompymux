@@ -33,8 +33,10 @@
 void auto_goto_event(MuxEvent *e) {
 
   Autopilot *autopilot = (Autopilot *)e->data;
-  int tx = 0, ty = 0;
-  float dx, dy;
+  int tx = 0;
+  int ty = 0;
+  float dx;
+  float dy;
   Mech *mech = autopilot->mymech;
   float range;
   int bearing;
@@ -127,7 +129,8 @@ void auto_goto_event(MuxEvent *e) {
 void auto_dumbgoto_event(MuxEvent *muxevent) {
 
   Autopilot *autopilot = (Autopilot *)muxevent->data;
-  int tx = 0, ty = 0;
+  int tx = 0;
+  int ty = 0;
   Mech *mech = autopilot->mymech;
   BattleMap *map;
   float range;
@@ -298,7 +301,8 @@ void auto_dumbgoto_event(MuxEvent *muxevent) {
 void auto_astar_goto_event(MuxEvent *muxevent) {
 
   Autopilot *autopilot = (Autopilot *)muxevent->data;
-  int tx = 0, ty = 0;
+  int tx = 0;
+  int ty = 0;
   Mech *mech = autopilot->mymech;
   BattleMap *map;
   float range;

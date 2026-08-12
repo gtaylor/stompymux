@@ -183,8 +183,10 @@ struct Channel *select_channel(ChannelRegistry *channels, const char *channel) {
 }
 
 struct Comuser *select_user(struct Channel *ch, DbRef player) {
-  int last, current;
-  int dir = 1, first = 0;
+  int last;
+  int current;
+  int dir = 1;
+  int first = 0;
 
   if (!ch)
     return nullptr;

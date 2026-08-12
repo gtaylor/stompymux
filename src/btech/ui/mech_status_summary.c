@@ -441,8 +441,10 @@ static char heat_fill_character(const char *fill, char state) {
 
 static char *make_heat_scale_info(Mech *mech, const char *fillchar,
                                   char *heatstr, int length) {
-  int counter = 0, heat = displayed_speed(mech_heat_production(mech)),
-      minheat = displayed_speed(mech_heat_dissipation(mech)), start = 0;
+  int counter = 0;
+  int heat = displayed_speed(mech_heat_production(mech));
+  int minheat = displayed_speed(mech_heat_dissipation(mech));
+  int start = 0;
   char state = 1;
 
   BtechTextBuilder text;

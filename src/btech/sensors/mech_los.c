@@ -93,13 +93,21 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
                  BATTLE_MAP_LOS_TERRAIN_CALCULATED;
   int woods_count = 0;
   int water_count = 0;
-  int height, i;
-  int pos_x, pos_y;
-  float pos_z, z_inc, end_z;
+  int height;
+  int i;
+  int pos_x;
+  int pos_y;
+  float pos_z;
+  float z_inc;
+  float end_z;
   int terrain;
   int dopartials = 0;
-  int underwater, bothworlds, t_underwater, t_bothworlds;
-  int uwatercount = 0, coordcount;
+  int underwater;
+  int bothworlds;
+  int t_underwater;
+  int t_bothworlds;
+  int uwatercount = 0;
+  int coordcount;
   LosTrace trace;
 
 #ifndef BT_PARTIAL
@@ -361,7 +369,8 @@ int mech_los_check_unblocked(Mech *mech, Mech *target, int x, int y,
 
 int mech_los_check(Mech *mech, Mech *target, int x, int y, float hex_range) {
   BattleMap *map;
-  float x1, y1;
+  float x1;
+  float y1;
   int arc;
   int losflag;
 

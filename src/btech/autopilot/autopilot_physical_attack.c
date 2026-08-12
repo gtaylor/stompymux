@@ -42,8 +42,10 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
   int relative_bearing;
   int is_section_destroyed[4];
   int section_hasbusyweap[4];
-  int rleg_bth, lleg_bth;
-  int is_rarm_ready, is_larm_ready;
+  int rleg_bth;
+  int lleg_bth;
+  int is_rarm_ready;
+  int is_larm_ready;
   int i;
   DbRef j;
   float range;

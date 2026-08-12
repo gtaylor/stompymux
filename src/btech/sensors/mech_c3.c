@@ -61,7 +61,8 @@ bool mech_c3_master_slot_is_working(Mech *mech,
   const int SECTION = reference.section;
   const int SLOT = reference.critical;
   int x = 0;
-  int y, t;
+  int y;
+  int t;
   int wc_working_slots = 0;
   int w_start_check = 0;
   int t_do_bump;
@@ -98,7 +99,9 @@ bool mech_c3_master_slot_is_working(Mech *mech,
 }
 
 int mech_c3_working_master_count(Mech *mech) {
-  int x, y, t;
+  int x;
+  int y;
+  int t;
   int wc_slots;
   int wc_working_slots;
   int wc_masters = 0;
@@ -157,7 +160,9 @@ int mech_c3_working_master_count(Mech *mech) {
 }
 
 int mech_c3_total_master_count(Mech *mech) {
-  int x, y, t;
+  int x;
+  int y;
+  int t;
   int wc_slots;
   int wc_masters = 0;
 
@@ -562,7 +567,8 @@ void mech_c3_network_validate(Mech *mech) {
 }
 
 void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *target;
+  Mech *mech = (Mech *)data;
+  Mech *target;
   char *args[2];
   DbRef ref_target;
   int los = 1;

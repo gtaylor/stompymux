@@ -222,7 +222,8 @@ static void smoke_dissipation_event(MuxEvent *e) {
 static void fire_dissipation_event(MuxEvent *e) {
   BattleMap *map = (BattleMap *)e->data;
   MapObject *o = (MapObject *)e->data2;
-  int x, y;
+  int x;
+  int y;
 
   x = o->x;
   y = o->y;
@@ -475,7 +476,8 @@ typedef struct WindSpreadRequest {
 } WindSpreadRequest;
 
 static MapHexPosition wind_spread_position(const WindSpreadRequest *request) {
-  int dx, dy;
+  int dx;
+  int dy;
 
   WindOffsetRequest offset = {
       .direction = (((request->direction + 30) / 60) * 60) % 360,
@@ -497,7 +499,9 @@ static MapHexPosition wind_spread_position(const WindSpreadRequest *request) {
 static void fire_spreading_event(MuxEvent *e) {
   BattleMap *map = (BattleMap *)e->data;
   MapObject *o = (MapObject *)e->data2;
-  int x, y, loop;
+  int x;
+  int y;
+  int loop;
   int flaggo;
   SpreadHex new_fire_hexes[NUM_SPREAD_HEX];
   SpreadHex new_smoke_hexes[NUM_SPREAD_HEX];
@@ -575,7 +579,8 @@ void add_decoration(const MapDecorationRequest *request) {
   foo.datac = (unsigned char)map_real_terrain_get(map, x, y);
   /* if (foo.datac) */
   {
-    MapObject *m, *m2;
+    MapObject *m;
+    MapObject *m2;
     int i;
 
     for (i = 0; i <= TYPE_LAST_DEC; i++) {

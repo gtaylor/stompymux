@@ -33,7 +33,9 @@ void do_find(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *name = invocation->first;
   WorldContext *world = invocation->context->world;
-  DbRef i, low_bound, high_bound;
+  DbRef i;
+  DbRef low_bound;
+  DbRef high_bound;
   char *buff;
 
   parse_range(world->database, world->configuration, &name, &low_bound,
@@ -329,10 +331,19 @@ void do_search(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   char *arg = invocation->first;
-  int flag, destitute;
-  int rcount, ecount, tcount, pcount, gcount;
-  char *buff, *outbuf, *bp;
-  DbRef thing, from, to;
+  int flag;
+  int destitute;
+  int rcount;
+  int ecount;
+  int tcount;
+  int pcount;
+  int gcount;
+  char *buff;
+  char *outbuf;
+  char *bp;
+  DbRef thing;
+  DbRef from;
+  DbRef to;
   SearchCriteria searchparm;
   ObjectList results;
 

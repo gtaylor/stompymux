@@ -60,10 +60,12 @@ void physical_attack_resolve(const PhysicalAttackRequest *request) {
   float max_range = 1;
   char target_id[2];
   DbRef targetnum;
-  int roll, swarming_us;
+  int roll;
+  int swarming_us;
   char location[20];
   int iwa;
-  int rbase_to_hit, glance = 0;
+  int rbase_to_hit;
+  int glance = 0;
 
   /*
    * Common Checks

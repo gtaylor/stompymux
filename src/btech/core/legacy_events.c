@@ -12,7 +12,10 @@
 
 void debug_event_types(DbRef player, void *data, const char *buffer) {
   BtechSpecialObject *debug = data;
-  int i, j, k, tot = 0;
+  int i;
+  int j;
+  int k;
+  int tot = 0;
 
   (void)buffer;
   mecha_notify(btech_context_evaluation(debug->context), player,

@@ -149,9 +149,11 @@ void debug_fixmap(DbRef player, void *data, char *buffer) {
 void map_view(DbRef player, void *data, char *buffer) {
   BattleMap *mech_map = (BattleMap *)data;
   int argc;
-  int x, y;
+  int x;
+  int y;
   char *args[2];
-  int display_height = MAP_DISPLAY_HEIGHT, display_width = MAP_DISPLAY_WIDTH;
+  int display_height = MAP_DISPLAY_HEIGHT;
+  int display_width = MAP_DISPLAY_WIDTH;
   char *str;
   MapText *map_text;
   /* Check if its a valid map */
@@ -222,8 +224,11 @@ void map_view(DbRef player, void *data, char *buffer) {
 }
 void map_addhex(DbRef player, void *data, char *buffer) {
   BattleMap *map;
-  int x, y, argc;
-  char *args[4], elev;
+  int x;
+  int y;
+  int argc;
+  char *args[4];
+  char elev;
   map = (BattleMap *)data;
   argc = mech_parseattributes(buffer, args, 4);
   if (argc != 4) {
@@ -275,7 +280,8 @@ int water_distance(const WaterDistanceRequest *request) {
   int x = request->origin.x;
   int y = request->origin.y;
   int i;
-  int x2, y2;
+  int x2;
+  int y2;
   for (i = 1; i < request->limit; i++) {
     const int DIRECTION_X = hex_direction_x(request->direction);
     x = x + DIRECTION_X;
@@ -296,7 +302,9 @@ int water_distance(const WaterDistanceRequest *request) {
   return request->limit;
 }
 static int eligible_bridge_hex(BattleMap *map, int x, int y) {
-  int i, j, k;
+  int i;
+  int j;
+  int k;
   for (k = 0; k < 3; k++) {
     i = water_distance(&(WaterDistanceRequest){
         .map = map, .origin = {.x = x, .y = y}, .direction = k, .limit = 4});
@@ -316,7 +324,8 @@ static int eligible_bridge_hex(BattleMap *map, int x, int y) {
 }
 /* Convert some of the roads to bridges */
 static void make_bridges(BattleMap *map) {
-  int x, y;
+  int x;
+  int y;
   for (x = 0; x < map->map_width; x++)
     for (y = 0; y < map->map_height; y++)
       if (map_terrain_get(map, x, y) == ROAD)
@@ -327,7 +336,9 @@ int map_checkmapfile(BattleMap *map, char *mapname) {
   char *openfile;
   FILE *fp;
   char row[MAPX * 2 + 3];
-  int i = 0, height, width;
+  int i = 0;
+  int height;
+  int width;
   if (strlen(mapname) >= MAP_NAME_SIZE)
     *map_character(mapname, strlen(mapname) + 1, MAP_NAME_SIZE) = 0;
   openfile = map_filename(map, mapname);
@@ -368,11 +379,17 @@ int map_checkmapfile(BattleMap *map, char *mapname) {
 }
 int map_load(BattleMap *map, char *mapname) {
   char *openfile;
-  char terr, elev;
-  int i1, i2, i3;
+  char terr;
+  char elev;
+  int i1;
+  int i2;
+  int i3;
   FILE *fp;
   char row[MAPX * 2 + 3];
-  int i, j = 0, height, width;
+  int i;
+  int j = 0;
+  int height;
+  int width;
   if (strlen(mapname) >= MAP_NAME_SIZE)
     *map_character(mapname, strlen(mapname) + 1, MAP_NAME_SIZE) = 0;
   openfile = map_filename(map, mapname);
@@ -513,7 +530,8 @@ void map_savemap(DbRef player, void *data, char *buffer) {
   char *args[1];
   FILE *fp;
   char *openfile;
-  int i, j;
+  int i;
+  int j;
   char row[MAPX * 2 + 1];
   char terrain;
   map = (BattleMap *)data;
@@ -601,7 +619,13 @@ void map_savemap(DbRef player, void *data, char *buffer) {
 void map_setmapsize(DbRef player, void *data, char *buffer) {
   BattleMap *oldmap;
   unsigned char **map;
-  int x, y, i, j, failed = 0, x1, y1;
+  int x;
+  int y;
+  int i;
+  int j;
+  int failed = 0;
+  int x1;
+  int y1;
   char *args[4];
   oldmap = (BattleMap *)data;
   if (first_mapobj(oldmap, TYPE_BITS)) {
@@ -664,9 +688,16 @@ void map_clearmechs(DbRef player, void *data, const char *buffer) {
 void map_update(DbRef obj, void *data) {
   BattleMap *map = ((BattleMap *)data);
   Mech *mech;
-  char *tmps, changemsg[LBUF_SIZE] = "";
-  int ma, ml, wind, wspeed, cloudbase = 200;
-  int oldl, oldv, i;
+  char *tmps;
+  char changemsg[LBUF_SIZE] = "";
+  int ma;
+  int ml;
+  int wind;
+  int wspeed;
+  int cloudbase = 200;
+  int oldl;
+  int oldv;
+  int i;
   /* Changed from % 25 to % 60. %60 never hit when the event tick came here
      and was odd. %25 should hit when it is odd or even. */
   if (!(map->xcode.context->events->tick % 25)) {
@@ -710,7 +741,8 @@ void map_update(DbRef obj, void *data) {
   /* Fire/Smoke are event-driven -> nothing related to them done here */
 }
 void initialize_map_empty(BattleMap *new, DbRef key) {
-  int i, j;
+  int i;
+  int j;
   new->mynum = key;
   new->map_width = DEFAULT_MAP_WIDTH;
   new->map_height = DEFAULT_MAP_HEIGHT;
@@ -743,44 +775,5 @@ void newfreemap(DbRef key, void **data,
     }
     battle_map_dynamic_destroy(new);
     break;
-  }
-}
-int map_sizefun(void *data, int flag) {
-  BattleMap *map = (BattleMap *)data;
-  int size = 0;
-  if (!map)
-    return 0;
-  size = sizeof(*map);
-  if (map->map)
-    size += sizeof(*map->map);
-  return size;
-}
-void clear_hex(const TerrainHexEffectRequest *request) {
-  Mech *mech = request->mech;
-  const int X = request->position.x;
-  const int Y = request->position.y;
-  BattleMap *map;
-  map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  if (!map)
-    return;
-  switch (map_terrain_get(map, X, Y)) {
-  case HEAVY_FOREST:
-    map_terrain_set(map, X, Y, LIGHT_FOREST);
-    break;
-  case LIGHT_FOREST:
-    if (btech_random_range(map->xcode.context, 1, 2) == 1)
-      map_terrain_set(map, X, Y, ROUGH);
-    else
-      map_terrain_set(map, X, Y, GRASSLAND);
-    break;
-  default:
-    return;
-  }
-  if (request->intentional) {
-    mech_los_broadcast(mech, tprintf("'s shot clears %d,%d!", X, Y));
-    mech_printf(mech, MECHALL, "You clear %d,%d.", X, Y);
-  } else {
-    mech_los_broadcast(mech, tprintf("'s stray shot clears %d,%d!", X, Y));
-    mech_printf(mech, MECHALL, "You accidentally clear %d,%d!", X, Y);
   }
 }

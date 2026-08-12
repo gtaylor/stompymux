@@ -96,7 +96,8 @@ void mech_weapon_destroy(const WeaponDestructionRequest *request) {
 
 int mech_weapon_count_in_section(Mech *mech, int loc) {
   int i;
-  int j, sec;
+  int j;
+  int sec;
   int count = 0;
 
   WeaponNumberLookupResult lookup = weapon_number_find(
@@ -119,7 +120,8 @@ int mech_weapon_index_in_section(const WeaponSectionLookup *section_lookup) {
   const int LOC = section_lookup->section;
   const int NUM = section_lookup->ordinal;
   int i;
-  int j, sec;
+  int j;
+  int sec;
   int count = 0;
 
   WeaponNumberLookupResult lookup = weapon_number_find(
@@ -143,7 +145,8 @@ int mech_weapon_index_in_section(const WeaponSectionLookup *section_lookup) {
 void mech_weapon_destroy_random(Mech *mech, int hitloc) {
   /* Look for hit locations.. */
   int i = mech_weapon_count_in_section(mech, hitloc);
-  int a, b;
+  int a;
+  int b;
   int first_crit;
 
   if (!i)
@@ -412,7 +415,9 @@ const char *mech_armor_status_set_value(const ArmorStatusSetRequest *request) {
   const char *sectstr = request->section;
   const char *typestr = request->armor_type;
   const char *valuestr = request->value;
-  int index, type, value;
+  int index;
+  int type;
+  int value;
 
   if (!sectstr || !*sectstr)
     return "#-1 INVALID SECTION";
@@ -449,8 +454,12 @@ bool mech_damage_apply_clusters(const DamageClusterRequest *request) {
   const char *mechmsg = request->mech_message;
   const char *mechbroadcast = request->broadcast_message;
 
-  int hitloc = 1, this_time, isrear = 0, dummy = 0;
-  int *dummy1 = &dummy, *dummy2 = &dummy;
+  int hitloc = 1;
+  int this_time;
+  int isrear = 0;
+  int dummy = 0;
+  int *dummy1 = &dummy;
+  int *dummy2 = &dummy;
 
   if (DIRECTION < 8) {
     hitloc = DIRECTION;
@@ -494,8 +503,10 @@ bool mech_damage_apply_clusters(const DamageClusterRequest *request) {
 
 void mech_damage(DbRef player, Mech *mech, char *buffer) {
   char *args[5];
-  int damage, clustersize;
-  int isrear, iscritical;
+  int damage;
+  int clustersize;
+  int isrear;
+  int iscritical;
 
   if (mech_parseattributes(buffer, args, 5) != 4) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -561,7 +572,10 @@ void mech_damage(DbRef player, Mech *mech, char *buffer) {
 
 void mech_damage_section(DbRef player, Mech *mech, char *buffer) {
   char *args[5];
-  int damage, isrear, iscritical, section;
+  int damage;
+  int isrear;
+  int iscritical;
+  int section;
 
   /* ARGS: <SECTION> <DAMAGE> <ISREAR> <ISCRITICAL> */
 

@@ -356,21 +356,34 @@ char mech_contact_status_character(Mech *mech, Mech *mech_target,
 }
 
 void mech_contacts(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *temp_mech;
+  Mech *mech = (Mech *)data;
+  Mech *temp_mech;
   BattleMap *mech_map =
-                btech_context_get_map(mech_context(mech), mech_map_dbref(mech)),
-            *tmp_map;
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
+  BattleMap *tmp_map;
   MapObject *building;
-  int loop, i, j, argc, bearing, buffindex = 0;
-  char *args[1], buff[100];
+  int loop;
+  int i;
+  int j;
+  int argc;
+  int bearing;
+  int buffindex = 0;
+  char *args[1];
+  char buff[100];
   ContactLine contacts[BATTLE_MAP_UNIT_CAPACITY];
-  float range, fx, fy;
+  float range;
+  float fx;
+  float fy;
   char weaponarc;
   const char *mech_name;
   unsigned char see_what;
   char *str;
   char move_type[30];
-  char c_status1, c_status2, c_status3, c_status4, c_status5;
+  char c_status1;
+  char c_status2;
+  char c_status3;
+  char c_status4;
+  char c_status5;
   int losflag;
   int isvb;
   int inlos;

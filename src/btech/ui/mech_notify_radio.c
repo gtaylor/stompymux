@@ -200,7 +200,8 @@ static void scramble_message(const RadioScrambleRequest *request) {
   const bool UNDER_ECM = request->under_ecm;
   const int DIGMODE = request->digital_mode;
 
-  int mr, i;
+  int mr;
+  int i;
   char *header = nullptr;
   char buf[LBUF_SIZE];
 
@@ -298,7 +299,8 @@ static void recursive_commlink(CommRelayContext *relay, int i, int dep) {
 }
 
 static void nonrecursive_commlink(CommRelayContext *relay, int i) {
-  int dep = 0, j;
+  int dep = 0;
+  int j;
   RelaySearchStack comm_loop = {0};
   int iter_c = 0;
   int maxdepth = 0;
@@ -360,7 +362,8 @@ static void nonrecursive_commlink(CommRelayContext *relay, int i) {
 
 static bool find_comm_link(CommRelayContext *relay, BattleMap *map, Mech *from,
                            Mech *to, int freq) {
-  int i, j;
+  int i;
+  int j;
   Mech *t;
 
   relay->node_count = 0;
@@ -438,7 +441,10 @@ static void build_channel_message(char *buf, const char *color,
 
 void sendchannelstuff(Mech *mech, int freq, char *msg) {
   /* The _smart_ code :-) */
-  int loop, bearing, i, isxp;
+  int loop;
+  int bearing;
+  int i;
+  int isxp;
   float range;
   Mech *temp_mech;
   BattleMap *mech_map =
@@ -497,8 +503,10 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
 
             for (i = 0; i < mech_radio_channel_count(temp_mech); i++)
               if (mech_radio_mode(temp_mech, i) & FREQ_SCAN) {
-                int l = clamp_size_to_int(strlen(msg)), t;
-                int mod, diff;
+                int l = clamp_size_to_int(strlen(msg));
+                int t;
+                int mod;
+                int diff;
                 int pr;
 
                 /* Possible skill check here? Nah. */

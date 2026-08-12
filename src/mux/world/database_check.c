@@ -25,7 +25,8 @@
  * Look for references to OBJECT_FLAG_GOING or illegal objects.
  */
 static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
-  DbRef targ, i;
+  DbRef targ;
+  DbRef i;
 
   DO_WHOLE_DB(evaluation->world->database, i) {
     /*
@@ -249,7 +250,11 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
  */
 static void check_loc_exits(EvaluationContext *evaluation, DbRef loc,
                             bool full_check) {
-  DbRef exit, back, temp, exitloc, dest;
+  DbRef exit;
+  DbRef back;
+  DbRef temp;
+  DbRef exitloc;
+  DbRef dest;
 
   if (!is_good_obj(evaluation->world->database, loc))
     return;
@@ -521,7 +526,9 @@ static void check_misplaced_obj(EvaluationContext *evaluation, DbRef *obj,
 
 static void check_loc_contents(EvaluationContext *evaluation, DbRef loc,
                                bool full_check) {
-  DbRef obj, back, temp;
+  DbRef obj;
+  DbRef back;
+  DbRef temp;
 
   if (!is_good_obj(evaluation->world->database, loc))
     return;

@@ -20,9 +20,12 @@
 bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
                           Mech *target) {
   char buffer[LBUF_SIZE];
-  int x, y;
-  short generated_x, generated_y;
-  float fx, fy;
+  int x;
+  int y;
+  short generated_x;
+  short generated_y;
+  float fx;
+  float fy;
   char do_chasetarget;
 
   /* Setup chasetarg

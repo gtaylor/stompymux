@@ -56,7 +56,8 @@ void mech_speed_correct(Mech *mech) {
 void mech_explosion_apply(Mech *wounded, Mech *attacker) {
   int j;
   Mech *target;
-  DbRef i, tmpnext;
+  DbRef i;
+  DbRef tmpnext;
   DbRef from;
   BtechContext *context = mech_context(wounded);
   GameDatabase *database = btech_context_database(context);

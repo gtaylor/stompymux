@@ -221,7 +221,8 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
 }
 
 static void red_black_tree_unlink_leaf(RedBlackTree bt, RbtreeNode *leaf) {
-  RbtreeNode *sibling = nullptr, *node;
+  RbtreeNode *sibling = nullptr;
+  RbtreeNode *node;
 
   node = leaf;
 
@@ -416,7 +417,9 @@ done:
 }
 
 void *red_black_tree_delete(RedBlackTree bt, void *key) {
-  RbtreeNode *node = nullptr, *child = nullptr, *tail;
+  RbtreeNode *node = nullptr;
+  RbtreeNode *child = nullptr;
+  RbtreeNode *tail;
   void *data;
   int compare_result;
 

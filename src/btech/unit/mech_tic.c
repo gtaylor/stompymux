@@ -90,7 +90,8 @@ struct ListTicContext {
 /*****************************************************************************/
 
 static int cleartic_sub_func(const MultiWeaponSelectionCall *call) {
-  int i, j;
+  int i;
+  int j;
   Mech *mech = call->mech;
 
   for (i = call->first; i <= call->last; i++) {
@@ -186,7 +187,8 @@ static int deltic_sub_func(const MultiWeaponSelectionCall *call) {
 }
 
 void deltic_sub(DbRef player, Mech *mech, char *buffer) {
-  int ticnum, argc;
+  int ticnum;
+  int argc;
   char *args[3];
   TicSelectionContext selection;
 
@@ -218,7 +220,11 @@ void deltic_sub(DbRef player, Mech *mech, char *buffer) {
 }
 
 static int firetic_sub_func(const MultiWeaponSelectionCall *call) {
-  int i, j, k, count, weapnum;
+  int i;
+  int j;
+  int k;
+  int count;
+  int weapnum;
   Mech *mech = call->mech;
   const TicSelectionContext *selection = call->context;
   BattleMap *mech_map =
@@ -259,7 +265,8 @@ static int firetic_sub_func(const MultiWeaponSelectionCall *call) {
 }
 
 void firetic_sub(DbRef player, Mech *mech, char *buffer) {
-  int ticnum, argc;
+  int ticnum;
+  int argc;
   char *args[5];
   TicSelectionContext selection;
 
@@ -294,7 +301,9 @@ void firetic_sub(DbRef player, Mech *mech, char *buffer) {
 }
 
 static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
-  int j, section, critical;
+  int j;
+  int section;
+  int critical;
   int count = 0;
   ListTicContext *list = context;
   Mech *mech = list->mech;
@@ -344,7 +353,8 @@ static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
 void listtic_sub(DbRef player, Mech *mech, char *buffer) {
   int ticnum;
   char *args[2];
-  int i, count = 0;
+  int i;
+  int count = 0;
   CoolMenu *c;
   ListTicContext list;
 

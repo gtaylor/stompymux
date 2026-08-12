@@ -37,7 +37,8 @@ void mux_event_tickmech_removesection(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
   char buf[MBUF_SIZE];
-  int loc, extra;
+  int loc;
+  int extra;
 
   /* changed Special2I to Special on AddPartsM statements */
   loc = earg % LOCMAX;
@@ -78,9 +79,14 @@ void mux_event_tickmech_removesection(MuxEvent *e) {
 void mux_event_tickmech_removegun(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   long earg = (long)(e->data2) % PLAYERPOS;
-  int loc, pos, i, extra;
+  int loc;
+  int pos;
+  int i;
+  int extra;
   char buf[MBUF_SIZE];
-  int count = 0, nloc, ncrit;
+  int count = 0;
+  int nloc;
+  int ncrit;
   int size;
 
   RepairEventPayload payload = repair_event_payload_unpack(earg);
@@ -145,7 +151,9 @@ void mux_event_tickmech_removegun(MuxEvent *e) {
 void mux_event_tickmech_removepart(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   long earg = (long)(e->data2) % PLAYERPOS;
-  int loc, pos, extra;
+  int loc;
+  int pos;
+  int extra;
   char buf[MBUF_SIZE];
 
   RepairEventPayload payload = repair_event_payload_unpack(earg);
@@ -351,9 +359,14 @@ void mux_event_tickmech_reseal(MuxEvent *e) {
 void mux_event_tickmech_replacegun(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
-  int loc, pos, i, brand;
+  int loc;
+  int pos;
+  int i;
+  int brand;
   char buf[MBUF_SIZE];
-  int count = 0, nloc, ncrit;
+  int count = 0;
+  int nloc;
+  int ncrit;
   int size;
 
   RepairEventPayload payload = repair_event_payload_unpack(earg);
@@ -414,9 +427,13 @@ void mux_event_tickmech_replacegun(MuxEvent *e) {
 void mux_event_tickmech_repairgun(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   long earg = (long)(e->data2) % PLAYERPOS;
-  int loc, pos, i;
+  int loc;
+  int pos;
+  int i;
   char buf[MBUF_SIZE];
-  int count = 0, nloc, ncrit;
+  int count = 0;
+  int nloc;
+  int ncrit;
   int size;
 
   RepairEventPayload payload = repair_event_payload_unpack(earg);
@@ -464,9 +481,12 @@ void mux_event_tickmech_repairgun(MuxEvent *e) {
 void mux_event_tickmech_repairenhcrit(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   long earg = (long)(e->data2) % PLAYERPOS;
-  int loc, pos;
+  int loc;
+  int pos;
   char buf[MBUF_SIZE];
-  int w_crit_type, w_weap_size, w_first_crit;
+  int w_crit_type;
+  int w_weap_size;
+  int w_first_crit;
 
   RepairEventPayload payload = repair_event_payload_unpack(earg);
   loc = payload.location;
@@ -501,7 +521,8 @@ void mux_event_tickmech_repairenhcrit(MuxEvent *e) {
 void mux_event_tickmech_repairpart(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   long earg = (long)(e->data2) % PLAYERPOS;
-  int loc, pos;
+  int loc;
+  int pos;
   char buf[MBUF_SIZE];
 
   RepairEventPayload payload = repair_event_payload_unpack(earg);
@@ -525,7 +546,9 @@ void mux_event_tickmech_repairpart(MuxEvent *e) {
 void mux_event_tickmech_reload(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   long earg = (long)(e->data2) % PLAYERPOS;
-  int loc, pos, extra;
+  int loc;
+  int pos;
+  int extra;
   char buf[MBUF_SIZE];
 
   RepairEventPayload payload = repair_event_payload_unpack(earg);

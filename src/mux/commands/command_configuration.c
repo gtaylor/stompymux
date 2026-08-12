@@ -147,8 +147,11 @@ int cf_cmd_alias(const ConfigurationCall *call) {
   void *vp = call->value;
   char *str = call->text;
   ConfigurationContext *context = call->context;
-  char *alias, *orig, *ap;
-  CMDENT *cmdp, *cmd2;
+  char *alias;
+  char *orig;
+  char *ap;
+  CMDENT *cmdp;
+  CMDENT *cmd2;
   NameTable *nt;
   int *hp;
 

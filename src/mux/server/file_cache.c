@@ -80,9 +80,13 @@ static FBLOCK *fcache_fill(FBLOCK *fp, char ch) {
 
 static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
                        const char *filename) {
-  int n, nmax, tchars, fd;
+  int n;
+  int nmax;
+  int tchars;
+  int fd;
   char *buff;
-  FBLOCK *fp, *tfp;
+  FBLOCK *fp;
+  FBLOCK *tfp;
   Utf8ValidatorState utf8;
   bool valid_utf8 = true;
 
@@ -234,7 +238,8 @@ void fcache_rawdump(const FileCacheRawDumpRequest *request) {
   const FileCache *cache = request->cache;
   int fd = request->descriptor;
   int num = request->entry;
-  int cnt, remaining;
+  int cnt;
+  int remaining;
   FBLOCK *fp;
 
   if ((num < 0) || (num > FC_LAST))
@@ -285,7 +290,8 @@ void fcache_dump_conn(const FileCache *cache, Descriptor *d, int num) {
 
 void fcache_load(EvaluationContext *evaluation, FileCache *cache,
                  DbRef player) {
-  char *buff, *bufc;
+  char *buff;
+  char *bufc;
   char sbuf[SBUF_SIZE];
   int i;
 

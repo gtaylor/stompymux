@@ -30,7 +30,9 @@ void do_get(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   int key = invocation->key;
   char *what = invocation->first;
-  DbRef thing, playerloc, thingloc;
+  DbRef thing;
+  DbRef playerloc;
+  DbRef thingloc;
   const char *failmsg;
   int quiet;
   LuaLockInvocation lock;
@@ -182,8 +184,11 @@ void do_drop(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   int key = invocation->key;
   char *name = invocation->first;
-  DbRef loc, exitloc, thing;
-  char *buf, *bp;
+  DbRef loc;
+  DbRef exitloc;
+  DbRef thing;
+  char *buf;
+  char *bp;
   int quiet;
   LuaLockInvocation lock;
   LuaLockResult result;

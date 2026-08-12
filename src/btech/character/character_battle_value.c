@@ -93,7 +93,8 @@ static int bth_modifier_value(int bth) {
 }
 
 int has_bool_advantage(BtechContext *context, DbRef player, const char *name) {
-  PSTATS stats, *s = &stats;
+  PSTATS stats;
+  PSTATS *s = &stats;
   char buf[SBUF_SIZE];
 
   strlcpy(buf, name, sizeof(buf));
@@ -175,10 +176,13 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
   const int WEAPINDX = award->weapon_index;
   const int BTH = award->base_to_hit;
   BtechContext *context = mech_context(attacker);
-  int xp, my_speed, th_speed;
+  int xp;
+  int my_speed;
+  int th_speed;
   double my_battle_value;
   double their_battle_value;
-  double my_pilot_bv_mod = 1.0, their_pilot_bv_mod = 1.0;
+  double my_pilot_bv_mod = 1.0;
+  double their_pilot_bv_mod = 1.0;
   double weap_type_mod;
   const char *skname;
   char buf[MBUF_SIZE];
@@ -463,7 +467,8 @@ BtechScriptResult fun_btgetcharvalue(BtechScriptCall *call) {
      fargs[1] = value name / value loc #
      fargs[2] = flaggo (?) */
   DbRef target;
-  int targetcode, flaggo;
+  int targetcode;
+  int flaggo;
 
   target = character_lookup(&(CharacterLookupRequest){
       .context = context,
@@ -539,7 +544,9 @@ BtechScriptResult fun_btsetcharvalue(BtechScriptCall *call) {
      fargs[3] = flaggo (?)
    */
   DbRef target;
-  int targetcode, targetvalue, flaggo;
+  int targetcode;
+  int targetvalue;
+  int flaggo;
 
   target = character_lookup(&(CharacterLookupRequest){
       .context = context,

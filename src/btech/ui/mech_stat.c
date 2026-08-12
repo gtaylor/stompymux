@@ -43,8 +43,13 @@ void do_show_stat(CommandInvocation *invocation) {
   const BtechRollStatistics *statistics =
       &invocation->context->btech->random.statistics;
   DbRef player = invocation->player;
-  int i, j, chancetotal;
-  float f1, f2, chanceperc, optimalrolls;
+  int i;
+  int j;
+  int chancetotal;
+  float f1;
+  float f2;
+  float chanceperc;
+  float optimalrolls;
 
   if (!statistics->total_rolls) {
     mecha_notify(evaluation, player, "No rolls to show statistics for!");

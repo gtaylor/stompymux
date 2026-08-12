@@ -141,7 +141,8 @@ static void sketch_tac_mechs(const TacticalSketch *sketch) {
    * Draw all the 'mechs on the map.
    */
   for (i = 0; i < battle_map_unit_count(map); i++) {
-    int x, y;
+    int x;
+    int y;
     Mech *mech;
 
     const DbRef UNIT_DBREF = battle_map_unit_dbref(map, i);
@@ -273,7 +274,8 @@ static void sketch_tac_cliffs(const TacticalSketch *sketch) {
   int left_offset = sketch->left_offset;
   int cliff_size = sketch->cliff_size;
   const int ORIGIN_OFFSET = top_offset * dispcols + left_offset;
-  int y, x;
+  int y;
+  int x;
   int oddcol1 = tactical_column_is_odd(sx);
 
   wx = minimum_int(wx, map->map_width - sx);
@@ -393,7 +395,8 @@ MapText *map_text_create(const MapTextRequest *request) {
   int left_offset = 0;
   int top_offset = 0;
   int navigate = 0;
-  int sx, sy;
+  int sx;
+  int sy;
   int i;
   char *sketch_buf;
   int oddcol1;

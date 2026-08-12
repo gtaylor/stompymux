@@ -202,8 +202,10 @@ int cf_string(const ConfigurationCall *call) {
 int cf_flagalias(const ConfigurationCall *call) {
   char *str = call->text;
   ConfigurationContext *context = call->context;
-  char *alias, *orig;
-  int *cp, success;
+  char *alias;
+  char *orig;
+  int *cp;
+  int success;
 
   success = 0;
   alias = strtok(str, " \t=,");
@@ -230,7 +232,10 @@ int configuration_modify_bits(const ConfigurationCall *call) {
   char *str = call->text;
   ConfigurationContext *context = call->context;
   char *sp;
-  int f, negate, success, failure;
+  int f;
+  int negate;
+  int success;
+  int failure;
 
   /*
    * Walk through the tokens
@@ -289,7 +294,8 @@ int cf_set_flags(const ConfigurationCall *call) {
   FlagEntry *fp;
   ObjectFlagSet *fset;
 
-  int success, failure;
+  int success;
+  int failure;
 
   /*
    * Walk through the tokens
@@ -354,9 +360,13 @@ int cf_site(const ConfigurationCall *call) {
   long **vp = (long **)call->value;
   char *str = call->text;
   ConfigurationContext *context = call->context;
-  SiteData *site, *last, *head;
-  char *addr_txt, *mask_txt;
-  struct in_addr addr_num, mask_num;
+  SiteData *site;
+  SiteData *last;
+  SiteData *head;
+  char *addr_txt;
+  char *mask_txt;
+  struct in_addr addr_num;
+  struct in_addr mask_num;
 
   addr_txt = strtok(str, " \t=,");
   mask_txt = nullptr;

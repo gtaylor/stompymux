@@ -62,7 +62,8 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   Mech *target;
   DbRef target_num;
-  int argc, through_ice;
+  int argc;
+  int through_ice;
   char *args[4];
   BtechContext *context = mech_context(mech);
 

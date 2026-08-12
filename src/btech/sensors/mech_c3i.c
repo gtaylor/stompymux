@@ -246,7 +246,8 @@ void mech_c3i_network_validate(Mech *mech) {
 }
 
 void mech_c3i_join_leave(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *target;
+  Mech *mech = (Mech *)data;
+  Mech *target;
   char *args[2];
   DbRef ref_target;
   int los = 1;

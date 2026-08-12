@@ -47,7 +47,9 @@ void do_teleport(CommandInvocation *invocation) {
   char *arg2 = invocation->second;
   ServerConfiguration *configuration =
       invocation->context->world->configuration;
-  DbRef victim, destination, exitloc;
+  DbRef victim;
+  DbRef destination;
+  DbRef exitloc;
   char *to;
   int hush = 0;
   LuaLockInvocation lock;
@@ -324,7 +326,8 @@ void do_boot(CommandInvocation *invocation) {
   int key = invocation->key;
   char *name = invocation->first;
   DbRef victim;
-  char *buf, *bp;
+  char *buf;
+  char *bp;
   int count;
 
   if (!is_wizard(evaluation->world->database, player)) {

@@ -98,7 +98,9 @@ float mech_terrain_speed(const MechTerrainSpeedRequest *request) {
 }
 
 void mech_speed_update(Mech *mech) {
-  float acc, tempspeed, maxspeed;
+  float acc;
+  float tempspeed;
+  float maxspeed;
   Mech *target;
   BtechContext *context = mech_context(mech);
   MechConditionSummary conditions = mech_condition_summary(mech);

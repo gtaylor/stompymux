@@ -83,7 +83,10 @@ void mech_ood_damage(Mech *wounded, Mech *attacker, int damage) {
 
 void mech_ood_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  int mof = 0, roll, roll_needed, para = 0;
+  int mof = 0;
+  int roll;
+  int roll_needed;
+  int para = 0;
   int unit_class;
   BtechContext *context;
 
@@ -191,7 +194,9 @@ void mech_ood_event(MuxEvent *e) {
 
     } else if (unit_class == CLASS_BSUIT) {
 
-      int i, ii, dam;
+      int i;
+      int ii;
+      int dam;
 
       mech_notify(mech, MECHALL,
 
@@ -293,7 +298,10 @@ void mech_ood_event(MuxEvent *e) {
 
 void mech_ood_initiate(DbRef player, Mech *mech, char *buffer) {
   char *args[4];
-  int x, y, z = ORBIT_Z, argc;
+  int x;
+  int y;
+  int z = ORBIT_Z;
+  int argc;
   BtechContext *context = mech_context(mech);
 
   argc = mech_parseattributes(buffer, args, 3);

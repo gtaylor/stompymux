@@ -31,6 +31,34 @@ typedef struct SensorModeText {
   char text[MBUF_SIZE];
 } SensorModeText;
 
+void mech_sensor_description_append(
+    const MechSensorDescriptionRequest *request) {
+  if (request->capacity == 0)
+    return;
+  char *buf = request->buffer;
+  const size_t CAPACITY = request->capacity;
+  size_t used = strlen(buf);
+  if (used >= CAPACITY)
+    return;
+  if (!request->verbose) {
+    (void)snprintf(checked_storage_region(buf, CAPACITY, used, CAPACITY - used),
+                   CAPACITY - used, "(R:%s)",
+                   mech_sensor_definition(request->sensor)->range_description);
+  } else {
+    (void)snprintf(checked_storage_region(buf, CAPACITY, used, CAPACITY - used),
+                   CAPACITY - used, "\n\tRange:      %s\n\tBlocked by: %s",
+                   mech_sensor_definition(request->sensor)->range_description,
+                   mech_sensor_definition(request->sensor)->block_description);
+    used = strlen(buf);
+    if (mech_sensor_definition(request->sensor)->special_description &&
+        used < CAPACITY)
+      (void)snprintf(
+          checked_storage_region(buf, CAPACITY, used, CAPACITY - used),
+          CAPACITY - used, "\n\tNotes:      %s",
+          mech_sensor_definition(request->sensor)->special_description);
+  }
+}
+
 void mech_sensors_disable_requiring(Mech *mech, int technology) {
   int primary = mech_sensor_index(mech, 0);
   int secondary = mech_sensor_index(mech, 1);
@@ -266,7 +294,8 @@ int mech_sensor_can_change_to(Mech *mech, int s) {
 }
 
 void sensor_light_availability_check(Mech *mech) {
-  int p = mech_sensor_index(mech, 0), s = mech_sensor_index(mech, 1);
+  int p = mech_sensor_index(mech, 0);
+  int s = mech_sensor_index(mech, 1);
   int same = (p == s);
 
   if (mech_sensor_definition(p)->min_light >= 0 ||
@@ -282,7 +311,8 @@ void sensor_light_availability_check(Mech *mech) {
 }
 
 static int set_sensor(Mech *mech, char ps, char ss) {
-  int prim = -1, sec = -1;
+  int prim = -1;
+  int sec = -1;
   int i;
 
   if (!mech_is_started(mech))

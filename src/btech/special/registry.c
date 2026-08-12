@@ -312,7 +312,8 @@ static bool okay_hcode(BtechContext *context, DbRef object) {
 /* Main entry point */
 bool btech_command_try_execute(BtechContext *context, DbRef player, DbRef loc,
                                char *command) {
-  DbRef curr, temp;
+  DbRef curr;
+  DbRef temp;
 
   if (strlen(command) > (LBUF_SIZE - MBUF_SIZE))
     return 0;

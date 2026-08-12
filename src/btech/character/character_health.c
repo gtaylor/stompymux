@@ -128,9 +128,13 @@ static int loc_mod(int loc) {
 
 void initialize_pc(DbRef player, Mech *mech) {
   BtechContext *context = mech_context(mech);
-  PSTATS stats, *s = &stats;
-  int bruise, lethal, player_bld;
-  int dam, tot;
+  PSTATS stats;
+  PSTATS *s = &stats;
+  int bruise;
+  int lethal;
+  int player_bld;
+  int dam;
+  int tot;
   char *c;
   int cnt;
   char buf1[MBUF_SIZE];
@@ -139,7 +143,8 @@ void initialize_pc(DbRef player, Mech *mech) {
   char buf4[2];
   int ammo1;
   int ammo2;
-  int i, id;
+  int i;
+  int id;
 
   if (!mech_player_character_initialization_begin(mech))
     return;
@@ -304,8 +309,11 @@ void initialize_pc(DbRef player, Mech *mech) {
 
 void fix_pilotdamage(Mech *mech, DbRef player) {
   BtechContext *context = mech_context(mech);
-  PSTATS stats, *s = &stats;
-  int bruise, lethal, player_bld;
+  PSTATS stats;
+  PSTATS *s = &stats;
+  int bruise;
+  int lethal;
+  int player_bld;
 
   character_stats_retrieve(context, player, VALUES_HEALTH | VALUES_ATTRS, s);
   bruise = char_getstatvalue(s, "bruise");
@@ -343,8 +351,10 @@ int mw_ic_bth(Mech *mech) {
   /* Rule Reference: MaxTech Revised, Page 46 ( Pain Resistance = -1 ) */
 
   int player_bld;
-  int bruise, playerhits;
-  PSTATS stats, *s = &stats;
+  int bruise;
+  int playerhits;
+  PSTATS stats;
+  PSTATS *s = &stats;
   int mod = 0;
 
   character_stats_retrieve(context, mech_pilot_dbref(mech),
@@ -374,7 +384,8 @@ int handlemwconc(Mech *mech, int initial) {
   /* Rule Reference: BMR Revised, Page 17 ( >5 Bruise = Death ) */
   /* Rule Reference: Total Warfare, Page 41-42 ( >5 Bruise = Death ) */
 
-  int m, roll;
+  int m;
+  int roll;
 
   if (is_in_character(mech_context(mech)->database, mech_dbref(mech)) &&
       mech_pilot_dbref(mech) > 0) {
@@ -426,9 +437,13 @@ int handlemwconc(Mech *mech, int initial) {
 
 void headhitmwdamage(Mech *mech, Mech *attacker, int dam) {
   BtechContext *context = mech_context(mech);
-  PSTATS stats, *s = &stats;
+  PSTATS stats;
+  PSTATS *s = &stats;
   DbRef player;
-  int damage, bruise, lethaldam, player_bld;
+  int damage;
+  int bruise;
+  int lethaldam;
+  int player_bld;
 
   if (mech_dbref(mech) < 0)
     return;
@@ -482,9 +497,11 @@ void headhitmwdamage(Mech *mech, Mech *attacker, int dam) {
 
 void mwlethaldam(Mech *mech, Mech *attacker, int dam) {
   BtechContext *context = mech_context(mech);
-  PSTATS stats, *s = &stats;
+  PSTATS stats;
+  PSTATS *s = &stats;
   DbRef player;
-  int lethaldam, player_bld;
+  int lethaldam;
+  int player_bld;
 
   if (mech_dbref(mech) < 0)
     return;

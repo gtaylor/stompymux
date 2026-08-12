@@ -69,7 +69,10 @@ static bool parse_coordinate_pair(char *text, int *x, int *y) {
 }
 
 int parse_coord(BattleMap *map, int dir, char *data, int *x, int *y) {
-  int tx, ty, tox, toy;
+  int tx;
+  int ty;
+  int tox;
+  int toy;
   int doh;
 
   if (strchr(data, ',')) {
@@ -107,7 +110,9 @@ static void add_entrances(DbRef loc, BattleMap *map, char *data,
                           MapLinkUpdateStats *stats) {
   char *buf;
   char *args[4];
-  int x, y, i;
+  int x;
+  int y;
+  int i;
   MapObject foo;
 
   memset(&foo, 0, sizeof(MapObject));
@@ -133,9 +138,12 @@ static void add_links(DbRef loc, BattleMap *map, char *data,
                       MapLinkUpdateStats *stats) {
   char *buf;
   char *args[500];
-  int i, found, targ;
+  int i;
+  int found;
+  int targ;
   char *tmps;
-  int x, y;
+  int x;
+  int y;
   MapObject foo;
 
   memset(&foo, 0, sizeof(MapObject));

@@ -338,11 +338,22 @@ BtechScriptResult fun_btgetrange(BtechScriptCall *call) {
   [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
   [[maybe_unused]] const DbRef PLAYER = call->player;
-  DbRef mech_adb, mech_bdb, mapdb;
-  Mech *mech_a, *mech_b;
+  DbRef mech_adb;
+  DbRef mech_bdb;
+  DbRef mapdb;
+  Mech *mech_a;
+  Mech *mech_b;
   BattleMap *map;
-  float fx_a, fy_a, fx_b, fy_b;
-  int x_a, y_a, z_a, x_b, y_b, z_b;
+  float fx_a;
+  float fy_a;
+  float fx_b;
+  float fy_b;
+  int x_a;
+  int y_a;
+  int z_a;
+  int x_b;
+  int y_b;
+  int z_b;
   if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#=1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);

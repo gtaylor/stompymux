@@ -56,7 +56,8 @@ void mech_embark(DbRef player, void *data, char *buffer) {
 
   Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
-  Mech *target, *towee = nullptr;
+  Mech *target;
+  Mech *towee = nullptr;
   int tmp;
   DbRef target_num;
   int argc;

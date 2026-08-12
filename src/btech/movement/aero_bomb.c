@@ -101,8 +101,11 @@ int bomb_weight(int i) { return bomb_info(i)->weight; }
 const char *bomb_name(int i) { return bomb_info(i)->name; }
 
 static void bomb_list(Mech *mech, DbRef player) {
-  int bc = 0, fb;
-  int i, j, k;
+  int bc = 0;
+  int fb;
+  int i;
+  int j;
+  int k;
   char location[20];
   CoolMenu *c = nullptr;
 
@@ -146,7 +149,8 @@ static float bomb_calculate_destination(Mech *mech, short *x, short *y) {
   float fy = mech_position_real_y(mech);
   float fz = mech_position_real_z(mech) / ZSCALE;
   float zspd = mech_motion_vector_z(mech) / ZSCALE;
-  float t, ot;
+  float t;
+  float ot;
 
   ot = t =
       (zspd + sqrtf(zspd * zspd + 2.0F * BOMB_GRAVITY * fz)) / BOMB_GRAVITY;
@@ -160,7 +164,8 @@ static float bomb_calculate_destination(Mech *mech, short *x, short *y) {
 static void bomb_aim(Mech *mech, DbRef player) {
   float t; /* The time of impact */
   char toi[LBUF_SIZE];
-  short x, y;
+  short x;
+  short y;
 
   t = bomb_calculate_destination(mech, &x, &y);
   (void)snprintf(toi, LBUF_SIZE, "%.1f second%s", (double)t,
@@ -238,10 +243,13 @@ static void bomb_simulate_flight(Mech *mech, BattleMap *map, short *x, short *y,
   float fy = mech_position_real_y(mech);
   float fz = mech_position_real_z(mech);
 
-  float delx, dely;
-  float dx, dy;
+  float delx;
+  float dely;
+  float dx;
+  float dy;
   int i;
-  short tx, ty;
+  short tx;
+  short ty;
 
   if (t < 1.0F)
     return;
@@ -276,10 +284,14 @@ static void bomb_drop(const BombDropRequest *request) {
   const DbRef PLAYER = request->player;
   int bn = request->bomb_number;
   int bc = 0;
-  int i, j, k;
-  int lloc = 0, lpos = 0;
+  int i;
+  int j;
+  int k;
+  int lloc = 0;
+  int lpos = 0;
   float t;
-  short x, y;
+  short x;
+  short y;
   int ob;
   int di;
   float dir;

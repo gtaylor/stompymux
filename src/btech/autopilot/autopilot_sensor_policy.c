@@ -141,7 +141,8 @@ void auto_sensor_event(Autopilot *autopilot) {
   BattleMap *map;
   int wanted_s[2];
   int rvis;
-  int slite, prefvis;
+  int slite;
+  int prefvis;
   float trng;
 
   if (!is_good_obj(autopilot->xcode.context->database, autopilot->mymechnum)) {

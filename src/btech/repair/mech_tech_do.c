@@ -112,7 +112,8 @@ static const AmmoType *ammo_type(int index) {
 }
 
 int valid_ammo_mode(Mech *mech, int loc, int part, int let) {
-  int w, i;
+  int w;
+  int i;
 
   if (!equipment_is_ammunition(mech_critical_part_type(mech, loc, part)) ||
       !let)

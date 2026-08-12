@@ -38,7 +38,8 @@ static void give_thing(const GiveThingRequest *request) {
   char *what = request->description;
   MatchContext *match = &evaluation->command->match;
   DbRef thing;
-  char *str, *sp;
+  char *str;
+  char *sp;
   LuaLockInvocation lock;
   LuaLockResult result;
 

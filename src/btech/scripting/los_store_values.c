@@ -83,7 +83,8 @@ BtechScriptResult fun_bthexemit(BtechScriptCall *call) {
      script_function_argument(fargs, nfargs, 3) = message
    */
   BattleMap *map;
-  int x = -1, y = -1;
+  int x = -1;
+  int y = -1;
   const char *msg = script_function_argument(fargs, NFARGS, 3);
   DbRef mapnum;
 
@@ -141,7 +142,8 @@ BtechScriptResult fun_btmakepilotroll(BtechScriptCall *call) {
    */
 
   Mech *mech;
-  int rollmod = 0, dammod = 0;
+  int rollmod = 0;
+  int dammod = 0;
   DbRef mechnum;
 
   if (!is_wizard(context->world->database, PLAYER)) {
@@ -271,9 +273,11 @@ BtechScriptResult fun_bthexlos(BtechScriptCall *call) {
 
   Mech *mech;
   BattleMap *map;
-  int x = -1, y = -1;
+  int x = -1;
+  int y = -1;
   DbRef mechnum;
-  float fx, fy;
+  float fx;
+  float fy;
 
   if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
@@ -338,7 +342,8 @@ BtechScriptResult fun_btlosm2m(BtechScriptCall *call) {
    */
 
   DbRef mechnum;
-  Mech *mech, *target;
+  Mech *mech;
+  Mech *target;
 
   if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
@@ -412,7 +417,9 @@ BtechScriptResult fun_btaddstores(BtechScriptCall *call) {
      script_function_argument(fargs, nfargs, 2) = quantity
    */
   DbRef loc;
-  int id = 0, brand = 0, count;
+  int id = 0;
+  int brand = 0;
+  int count;
 
   if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
@@ -502,7 +509,9 @@ BtechScriptResult fun_btticweaps(BtechScriptCall *call) {
 
   Mech *mech;
   DbRef it;
-  int j, section, critical;
+  int j;
+  int section;
+  int critical;
   int ticnum;
 
   it = match_thing(&context->command->match, PLAYER,

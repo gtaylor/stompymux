@@ -146,7 +146,8 @@ int mech_stagger_modifier_at_level(Mech *mech, int stagger_level) {
 }
 
 static int factoral(int n) {
-  int i, j = 0;
+  int i;
+  int j = 0;
 
   for (i = 1; i <= n; i++)
     j += i;
@@ -355,7 +356,8 @@ void mech_stand_event(MuxEvent *e) {
 }
 
 void mech_plos_event(MuxEvent *e) {
-  Mech *mech = (Mech *)e->data, *target;
+  Mech *mech = (Mech *)e->data;
+  Mech *target;
   BattleMap *map;
   int mapvis;
   int maplight;
@@ -490,7 +492,10 @@ void mech_unjam_ammo_event(MuxEvent *obj_event) {
   Mech *obj_mech = (Mech *)obj_event->data; /* get the mech */
   int w_weap_num =
       clamp_intptr_to_int((intptr_t)obj_event->data2); /* weapon number */
-  int w_sect, w_slot, w_weap_status, w_weap_idx;
+  int w_sect;
+  int w_slot;
+  int w_weap_status;
+  int w_weap_idx;
   int w_roll = 0;
   int w_roll_needed = 0;
 

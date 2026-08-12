@@ -40,9 +40,12 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   DbRef target_dbref;
 
   float range;
-  float fx, fy;
-  int x, y;
-  short generated_x, generated_y;
+  float fx;
+  float fy;
+  int x;
+  int y;
+  short generated_x;
+  short generated_y;
   int bearing;
   long destroy_path = (long)muxevent->data2;
 
@@ -411,7 +414,10 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
 void auto_dumbfollow_event(MuxEvent *muxevent) {
 
   Autopilot *autopilot = (Autopilot *)muxevent->data;
-  int tx, ty, x, y;
+  int tx;
+  int ty;
+  int x;
+  int y;
   int h;
   Mech *leader;
   Mech *mech = autopilot->mymech;

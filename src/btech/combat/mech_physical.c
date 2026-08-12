@@ -280,7 +280,9 @@ void mech_punch(DbRef player, void *data, char *buffer) {
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
   char **args = argl;
-  int argc, ltohit = 4, rtohit = 4;
+  int argc;
+  int ltohit = 4;
+  int rtohit = 4;
   int punching = P_LEFT | P_RIGHT;
   if (!common_checks(player, mech, MECH_USUALO))
     return;
@@ -450,7 +452,9 @@ void mech_axe(DbRef player, void *data, char *buffer) {
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
   char **args = argl;
-  int argc, ltohit = 4, rtohit = 4;
+  int argc;
+  int ltohit = 4;
+  int rtohit = 4;
   int using = P_LEFT | P_RIGHT;
   if (!common_checks(player, mech, MECH_USUALO))
     return;
@@ -528,7 +532,9 @@ void mech_saw(DbRef player, void *data, char *buffer) {
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
   char **args = argl;
-  int argc, ltohit = 4, rtohit = 4;
+  int argc;
+  int ltohit = 4;
+  int rtohit = 4;
   int using = P_LEFT | P_RIGHT;
   if (!common_checks(player, mech, MECH_USUALO))
     return;
@@ -586,7 +592,9 @@ void mech_claw(DbRef player, void *data, char *buffer) {
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
   char **args = argl;
-  int argc, ltohit = 4, rtohit = 4;
+  int argc;
+  int ltohit = 4;
+  int rtohit = 4;
   int using = P_LEFT | P_RIGHT;
   if (!common_checks(player, mech, MECH_USUALO))
     return;
@@ -675,7 +683,9 @@ void mech_mace(DbRef player, void *data, char *buffer) {
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
   char **args = argl;
-  int argc, ltohit = 4, rtohit = 4;
+  int argc;
+  int ltohit = 4;
+  int rtohit = 4;
   int using = P_LEFT | P_RIGHT;
   if (!common_checks(player, mech, MECH_USUALO))
     return;

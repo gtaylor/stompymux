@@ -46,8 +46,11 @@ void mech_ammunition_expenditure_check(
   int targ = ammunition_equipment_index(WEAPINDX);
   int cnt = 0;
   float slots = 0.0F;
-  int t, t2;
-  int i, j, cl;
+  int t;
+  int t2;
+  int i;
+  int j;
+  int cl;
   int sev = 0;
 
   mech_weight_cache_invalidate(mech);
@@ -212,7 +215,8 @@ void mech_destroy(Mech *target, Mech *mech, bool showboom, const char *reason) {
   Mech *ttarget;
   Mech *ctarget;
 
-  DbRef a, b;
+  DbRef a;
+  DbRef b;
 
   if (mech_is_destroyed(target)) {
     if (strncmp(reason, KILL_TYPE_HEAD_TARGET, strlen(KILL_TYPE_HEAD_TARGET)) ==

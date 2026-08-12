@@ -70,7 +70,9 @@ void send_channel_v(const ChannelMessageTarget *target, const char *format,
 char *comsys_channel_from_alias(EvaluationContext *evaluation, DbRef player,
                                 char *alias) {
   struct Commac *c;
-  int first, last, current = 0;
+  int first;
+  int last;
+  int current = 0;
   int dir;
 
   c = get_commac(evaluation->runtime->channels, player);

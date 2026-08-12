@@ -127,7 +127,8 @@ void mech_sight(DbRef player, void *data, char *buffer) {
 }
 
 void mech_view(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *target;
+  Mech *mech = (Mech *)data;
+  Mech *target;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   DbRef targetnum;
   char target_id[5];

@@ -172,8 +172,16 @@ template_read_header(FILE *fp, int *tons, int *tactical_range,
 
 static int template_load_legacy(Mech *mech, const char *id) {
   FILE *fp = nullptr;
-  int i, j, k, t;
-  int i1 = 0, i2 = 0, i3 = 0, i4 = 0, i5 = 0, i6 = 0;
+  int i;
+  int j;
+  int k;
+  int t;
+  int i1 = 0;
+  int i2 = 0;
+  int i3 = 0;
+  int i4 = 0;
+  int i5 = 0;
+  int i6 = 0;
   char *filename;
 
   filename = mech_template_resolve_path(

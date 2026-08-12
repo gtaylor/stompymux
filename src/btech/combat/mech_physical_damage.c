@@ -110,7 +110,11 @@ void physical_damage_resolve(const PhysicalDamageRequest *request) {
   const int SECT = request->section;
   const int GLANCE = request->glancing_damage;
 
-  int hitloc = 0, damage, hitgroup = 0, isrear, iscritical;
+  int hitloc = 0;
+  int damage;
+  int hitgroup = 0;
+  int isrear;
+  int iscritical;
 
   isrear = 0;
   iscritical = 0;
@@ -343,7 +347,8 @@ int death_from_above(Mech *mech, Mech *target) {
   int target_damage;
   int mech_damage;
   int spread;
-  int i, tmpi;
+  int i;
+  int tmpi;
   char location[50];
   BtechContext *context = mech_context(mech);
   BattleMap *map = btech_context_get_map(context, mech_map_dbref(mech));

@@ -402,7 +402,9 @@ static int gamedb_load_economy_parts(PersistenceContext *context,
     return -1;
   while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
     DbRef object;
-    int part_id, brand_id, quantity;
+    int part_id;
+    int brand_id;
+    int quantity;
 
     if (gamedb_column_long(statement, 0, &object) < 0 ||
         !is_good_obj(context->database, object) ||
@@ -477,7 +479,8 @@ static int gamedb_load_character_state(PersistenceContext *context,
   while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
     const char *name;
     DbRef player;
-    int value, xp;
+    int value;
+    int xp;
     long last_used;
     if (gamedb_column_long(statement, 0, &player) < 0 ||
         !character_state_exists(context->database, player) ||

@@ -181,7 +181,8 @@ void do_open(CommandInvocation *invocation) {
   int key = invocation->key;
   char *direction = invocation->first;
   int nlinks = invocation->vector_count;
-  DbRef loc, destnum;
+  DbRef loc;
+  DbRef destnum;
   char *dest;
 
   /*
@@ -274,7 +275,8 @@ void do_link(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   char *what = invocation->first;
   char *where = invocation->second;
-  DbRef thing, room;
+  DbRef thing;
+  DbRef room;
   LuaLockInvocation lock;
   LuaLockResult result;
 
@@ -516,7 +518,9 @@ void do_clone(CommandInvocation *invocation) {
   char *arg2 = invocation->second;
   char *clone_name = nullptr;
   char pure_name[LBUF_SIZE];
-  DbRef clone, thing, loc;
+  DbRef clone;
+  DbRef thing;
+  DbRef loc;
   Flag rmv_flags;
 
   if ((key & CLONE_INVENTORY) ||

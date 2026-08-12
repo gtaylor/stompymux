@@ -191,7 +191,8 @@ int auto_generic_compare(const RedBlackTreeCompareCall *call) {
   void *a = call->lhs;
   void *b = call->rhs;
 
-  int *one, *two;
+  int *one;
+  int *two;
 
   one = (int *)a;
   two = (int *)b;

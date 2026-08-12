@@ -119,8 +119,12 @@ static void look_exits(const LookContext *look, const char *exit_name) {
   DbRef loc = look->location;
   WorldContext *world = evaluation->world;
   DbRef thing;
-  char *buff, *e, *buff1, *command;
-  int foundany, key;
+  char *buff;
+  char *e;
+  char *buff1;
+  char *command;
+  int foundany;
+  int key;
 
   /*
    * make sure location has exits
@@ -460,7 +464,8 @@ void do_look(CommandInvocation *invocation) {
   const DbRef PLAYER = invocation->player;
   const int KEY = invocation->key;
   char *name = invocation->first;
-  DbRef thing, loc;
+  DbRef thing;
+  DbRef loc;
   int look_key;
 
   look_key = LK_SHOWATTR | LK_SHOWEXIT;

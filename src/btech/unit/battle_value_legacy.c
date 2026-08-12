@@ -31,12 +31,32 @@ static float battle_value_skill_multiplier(int gunnery, int piloting) {
 // NOLINTBEGIN(clang-analyzer-deadcode.DeadStores): values support DEBUG_BV
 // output.
 int calculate_bv(Mech *mech, int gunstat, int pilstat) {
-  int defbv = 0, offbv = 0, i, ii, temp, temp2, deduct = 0, offweapbv = 0,
-      defweapbv = 0, armor = 0, intern = 0, weapindx, mostheat = 0,
-      tempheat = 0, mechspec, mechspec2, type, move, pilskl = pilstat,
-      gunskl = gunstat;
-  int debug1 = 0, debug2 = 0, debug3 = 0, debug4 = 0;
-  float maxspeed, mul = 1.00F;
+  int defbv = 0;
+  int offbv = 0;
+  int i;
+  int ii;
+  int temp;
+  int temp2;
+  int deduct = 0;
+  int offweapbv = 0;
+  int defweapbv = 0;
+  int armor = 0;
+  int intern = 0;
+  int weapindx;
+  int mostheat = 0;
+  int tempheat = 0;
+  int mechspec;
+  int mechspec2;
+  int type;
+  int move;
+  int pilskl = pilstat;
+  int gunskl = gunstat;
+  int debug1 = 0;
+  int debug2 = 0;
+  int debug3 = 0;
+  int debug4 = 0;
+  float maxspeed;
+  float mul = 1.00F;
 
   if (!mech)
     return 0;

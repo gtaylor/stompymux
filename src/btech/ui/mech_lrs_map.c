@@ -363,7 +363,12 @@ static void show_lrs_map(const LrsMapRequest *request) {
   const int Y = request->center.y;
   const int DISPLAY_HEIGHT = request->display_height;
   const int MODE = request->mode;
-  int loop, b_width, e_width, b_height, e_height, i;
+  int loop;
+  int b_width;
+  int e_width;
+  int b_height;
+  int e_height;
+  int i;
   Mech *o_mech;
 
   /* These buffers hold styled map cells and their coordinate labels. */
@@ -374,7 +379,8 @@ static void show_lrs_map(const LrsMapRequest *request) {
   short oddcol = 0;
   LrsMechList mechs = {0};
   int last_mech = 0;
-  char prevct = 0, prevcb = 0;
+  char prevct = 0;
+  char prevcb = 0;
   HexLosMap los_map_storage;
   HexLosMap *losmap = nullptr;
 
@@ -507,9 +513,12 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   MapColorScheme colors;
   BattleMap *map;
-  int argc, mode = 0;
-  int x, y;
-  char *args[5], *str;
+  int argc;
+  int mode = 0;
+  int x;
+  int y;
+  char *args[5];
+  char *str;
   int display_height = LRS_DISPLAY_HEIGHT;
 
   if (!common_checks(player, mech, MECH_USUAL))

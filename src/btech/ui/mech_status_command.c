@@ -32,7 +32,11 @@ static char status_option_character(const char *options, size_t length,
 void mech_status(DbRef player, void *data, const char *buffer) {
   Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
-  int doweap = 0, doinfo = 0, doarmor = 0, doshort = 0, doheat = 0;
+  int doweap = 0;
+  int doinfo = 0;
+  int doarmor = 0;
+  int doshort = 0;
+  int doheat = 0;
   int i;
   int usex = 0;
   bool weird = false;

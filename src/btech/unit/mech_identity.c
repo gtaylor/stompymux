@@ -150,7 +150,9 @@ int crits_in_loc(Mech *mech, int index) {
 }
 
 int sect_has_busy_weap(Mech *mech, int sect) {
-  int i = 0, count, critical[MAX_WEAPS_SECTION];
+  int i = 0;
+  int count;
+  int critical[MAX_WEAPS_SECTION];
   unsigned char weaptype[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
 
@@ -406,7 +408,9 @@ void check_edge_of_map(Mech *mech) {
   }
 }
 int map_vertical_bearing(const MapSpatialSegment *segment) {
-  float adj, opp, deg;
+  float adj;
+  float opp;
+  float deg;
 
   adj = map_real_range(&(MapRealSegment){
       .start = {.x = segment->start.x, .y = segment->start.y},
@@ -686,7 +690,8 @@ int mech_pilot_skill_roll_without_experience(
     const PilotSkillRollRequest *request) {
   Mech *mech = request->mech;
   int mods = request->modifier;
-  int roll, roll_needed;
+  int roll;
+  int roll_needed;
 
   if (mech_is_fallen(mech) && request->succeed_when_fallen)
     return 1;
@@ -714,7 +719,8 @@ int mech_pilot_skill_roll_without_experience(
 int mech_pilot_skill_roll(const PilotSkillRollRequest *request) {
   Mech *mech = request->mech;
   int mods = request->modifier;
-  int roll, roll_needed;
+  int roll;
+  int roll_needed;
 
   if (mech_is_fallen(mech) && request->succeed_when_fallen)
     return 1;
@@ -747,7 +753,8 @@ int mech_pilot_skill_roll(const PilotSkillRollRequest *request) {
 }
 
 MapRealPosition map_project_position(const MapProjection *projection) {
-  float xscale, correction;
+  float xscale;
+  float correction;
 
   /* XXX: Something to do with ranges with actual number of hexes? */
   correction = (float)(projection->bearing % 60) / 60.0F;

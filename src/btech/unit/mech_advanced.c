@@ -35,7 +35,9 @@
 static int mech_disableweap_func(const MultiWeaponSelectionCall *call) {
   Mech *mech = call->mech;
   const int INDEX = call->first;
-  int section, critical, weaptype;
+  int section;
+  int critical;
+  int weaptype;
 
   WeaponNumberLookupResult lookup = weapon_number_find(&(
       WeaponNumberLookupRequest){.mech = mech, .number = INDEX, .sight = true});
@@ -160,8 +162,12 @@ void mech_auto_turret(DbRef player, Mech *mech, char *buffer) {
 
 void mech_usebin(DbRef player, Mech *mech, char *buffer) {
   char str_location[80];
-  int w_loc, w_cur_loc;
-  int w_section, w_crit_slot, w_weap_num, w_weap_type;
+  int w_loc;
+  int w_cur_loc;
+  int w_section;
+  int w_crit_slot;
+  int w_weap_num;
+  int w_weap_type;
   char *args[2];
 
   if (!common_checks(player, mech, MECH_USUALSO))

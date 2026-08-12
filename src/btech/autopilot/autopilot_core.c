@@ -303,7 +303,9 @@ void auto_listcommands(DbRef player, void *data, char *buffer) {
 void auto_eventstats(DbRef player, void *data, char *buffer) {
 
   Autopilot *autopilot = (Autopilot *)data;
-  int i, j, total;
+  int i;
+  int j;
+  int total;
 
   mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
                "Events by type: ");
@@ -336,7 +338,9 @@ void auto_eventstats(DbRef player, void *data, char *buffer) {
  */
 static int auto_pilot_on(Autopilot *autopilot) {
 
-  int i, j, count = 0;
+  int i;
+  int j;
+  int count = 0;
 
   for (i = FIRST_AUTO_EVENT; i <= LAST_AUTO_EVENT; i++) {
     j = mux_event_count_type_data(autopilot->xcode.context->events, i,

@@ -118,7 +118,9 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
   Mech *mech = call->mech;
   const DbRef PLAYER = call->actor;
   const int INDEX = call->first;
-  int section, critical, weaptype;
+  int section;
+  int critical;
+  int weaptype;
   const ToggleModeContext *toggle = call->context;
 
   WeaponNumberLookupResult lookup = weapon_number_find(
@@ -525,7 +527,9 @@ static int mech_unjamammo_func(const MultiWeaponSelectionCall *call) {
   Mech *mech = call->mech;
   const DbRef PLAYER = call->actor;
   const int INDEX = call->first;
-  int section, critical, weaptype;
+  int section;
+  int critical;
+  int weaptype;
   int i;
   char location[50];
 

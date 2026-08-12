@@ -105,7 +105,8 @@ void mechrep_rsavetemp(DbRef player, void *data, char *buffer) {
   char *args[1];
   FILE *fp;
   char openfile[512] = {0};
-  int i, j;
+  int i;
+  int j;
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =

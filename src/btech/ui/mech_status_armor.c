@@ -27,7 +27,8 @@ ArmorEvaluation armor_evaluate(const ArmorEvaluationRequest *request) {
   const int LOC = request->section;
   const int FLAG = request->flags;
   int armor_value;
-  int armor_percent, armor_denom;
+  int armor_percent;
+  int armor_denom;
   int repair_flag = 0;
 
   /*
@@ -235,7 +236,8 @@ static ArmorFieldText armor_field_text(Mech *mech, const int LOC,
                                        const int FLAG, int width) {
   ArmorFieldText result = {0};
 
-  int armor_level, armor_value;
+  int armor_level;
+  int armor_value;
 
   /* Sanity check arguments.  */
   if (width < 0)
@@ -323,7 +325,8 @@ void print_armor_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
   char destbuf[LBUF_SIZE];
 
   BtsState current_state = BTS_START_OF_LINE;
-  int tmp_value1 = 0, tmp_value2 = 0;
+  int tmp_value1 = 0;
+  int tmp_value2 = 0;
   int flag;
 
   char tmpbuf[8192];

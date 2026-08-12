@@ -259,7 +259,8 @@ void do_last(CommandInvocation *invocation) {
 int add_player_name(WorldContext *world, DbRef player, char *name) {
   int stat;
   DbRef *p;
-  char *temp, *tp;
+  char *temp;
+  char *tp;
 
   /*
    * Convert to all lowercase
@@ -318,7 +319,8 @@ int add_player_name(WorldContext *world, DbRef player, char *name) {
 
 int delete_player_name(WorldContext *world, DbRef player, char *name) {
   DbRef *p;
-  char *temp, *tp;
+  char *temp;
+  char *tp;
 
   tp = temp = alloc_lbuf("delete_player_name");
   safe_str(name, temp, &tp);
@@ -342,8 +344,10 @@ int delete_player_name(WorldContext *world, DbRef player, char *name) {
 
 DbRef lookup_player(WorldContext *world, DbRef doer, const char *name,
                     int check_who) {
-  DbRef *p, thing;
-  char *temp, *tp;
+  DbRef *p;
+  DbRef thing;
+  char *temp;
+  char *tp;
 
   if (!string_compare(world->configuration, name, "me"))
     return doer;
@@ -427,7 +431,8 @@ void badname_add(WorldContext *world, char *bad_name) {
 }
 
 void badname_remove(WorldContext *world, char *bad_name) {
-  BADNAME *bp, *backp;
+  BADNAME *bp;
+  BADNAME *backp;
 
   /*
    * Look for an exact match on the bad name and remove if found
@@ -467,7 +472,8 @@ int badname_check(WorldContext *world, char *bad_name) {
 void badname_list(EvaluationContext *evaluation, WorldContext *world,
                   DbRef player, const char *prefix) {
   BADNAME *bp;
-  char *buff, *bufp;
+  char *buff;
+  char *bufp;
 
   /*
    * Construct an lbuf with all the names separated by spaces

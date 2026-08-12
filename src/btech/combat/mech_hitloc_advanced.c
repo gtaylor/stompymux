@@ -19,7 +19,8 @@ static int hit_location_or_fallback(const Mech *mech, int preferred,
 
 HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hit_group,
                                                      HitLocationResult result) {
-  int roll, hitloc = 0;
+  int roll;
+  int hitloc = 0;
   int side;
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition = mech_condition_summary(mech);

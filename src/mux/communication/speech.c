@@ -88,8 +88,10 @@ void do_say(CommandInvocation *invocation) {
   char *message = invocation->first;
   char plain_message[LBUF_SIZE];
   DbRef loc;
-  char *buf2, *bp;
-  int say_flags, depth;
+  char *buf2;
+  char *bp;
+  int say_flags;
+  int depth;
 
   /*
    * Convert prefix-coded messages into the normal type

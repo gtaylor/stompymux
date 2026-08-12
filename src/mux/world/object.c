@@ -374,7 +374,8 @@ void destroy_obj(const ObjectDestructionRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
   DbRef player = request->player;
   DbRef obj = request->object;
-  AttributeStack *sp, *next;
+  AttributeStack *sp;
+  AttributeStack *next;
 
   if (!is_good_obj(evaluation->world->database, obj))
     return;
@@ -425,7 +426,8 @@ void destroy_obj(const ObjectDestructionRequest *request) {
  * Empties the contents of a OBJECT_FLAG_GOING object.
  */
 void empty_obj(EvaluationContext *evaluation, DbRef obj) {
-  DbRef targ, next;
+  DbRef targ;
+  DbRef next;
 
   /*
    * Send the contents home

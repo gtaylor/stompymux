@@ -54,7 +54,9 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
   Mech *mech = (Mech *)e->data;
   long earg = ((long)e->data2) % PLAYERPOS;
   DbRef player = ((long)e->data2) / PLAYERPOS;
-  int loc, pos, extra;
+  int loc;
+  int pos;
+  int extra;
   char buf[MBUF_SIZE] = {0};
   char buf2[LBUF_SIZE] = {0};
   int fail = (e->function == mech_event_failure_marker);

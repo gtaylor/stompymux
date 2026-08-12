@@ -68,7 +68,8 @@ void do_alias(CommandInvocation *invocation) {
   char *alias = invocation->second;
   DbRef thing;
   long aflags;
-  char *oldalias, *trimalias;
+  char *oldalias;
+  char *trimalias;
 
   thing = match_controlled(&invocation->context->match, player, name);
   if (thing == NOTHING)
@@ -374,7 +375,8 @@ void do_use(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   const DbRef PLAYER = invocation->player;
   char *object = invocation->first;
-  char *df_use, *df_ouse;
+  char *df_use;
+  char *df_ouse;
   DbRef thing;
   int doit;
   LuaLockInvocation lock;

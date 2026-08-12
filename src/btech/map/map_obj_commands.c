@@ -54,7 +54,9 @@ void map_addfire(DbRef player, void *data, char *buffer) {
   /* Entrance-checking code */
   BattleMap *map = (BattleMap *)data;
   char *args[4];
-  int x, y, d;
+  int x;
+  int y;
+  int d;
 
   if (mech_parseattributes(buffer, args, 3) != 3) {
     mecha_notify(btech_context_evaluation(map->xcode.context), player,
@@ -81,7 +83,9 @@ void map_addfire(DbRef player, void *data, char *buffer) {
 void map_addsmoke(DbRef player, void *data, char *buffer) {
   BattleMap *map = (BattleMap *)data;
   char *args[4];
-  int x, y, d;
+  int x;
+  int y;
+  int d;
 
   if (mech_parseattributes(buffer, args, 3) != 3) {
     mecha_notify(btech_context_evaluation(map->xcode.context), player,
@@ -109,7 +113,9 @@ void map_addsmoke(DbRef player, void *data, char *buffer) {
 void map_add_block(DbRef player, void *data, char *buffer) {
   char *args[4];
   int argc;
-  int x, y, str;
+  int x;
+  int y;
+  int str;
   BattleMap *map = (BattleMap *)data;
   MapObject foo;
   int team = 0;
@@ -163,8 +169,10 @@ void map_add_block(DbRef player, void *data, char *buffer) {
 
 int is_blocked_lz(Mech *mech, BattleMap *map, int x, int y) {
   MapObject *o;
-  float fx, fy;
-  float tx, ty;
+  float fx;
+  float fy;
+  float tx;
+  float ty;
 
   map_coord_to_real_coord(x, y, &fx, &fy);
   for (o = first_mapobj(map, TYPE_B_LZ); o; o = next_mapobj(o)) {
@@ -198,7 +206,8 @@ void map_setlinked(DbRef player, void *data, char *buffer) {
 int map_objects_delete(const MapObjectLookupRequest *request) {
   BattleMap *map = request->map;
   int count = 0;
-  MapObject *foo, *foo2;
+  MapObject *foo;
+  MapObject *foo2;
 
   for (foo = first_mapobj(map, request->type); foo; foo = foo2) {
     foo2 = next_mapobj(foo);
@@ -218,9 +227,13 @@ int map_objects_delete(const MapObjectLookupRequest *request) {
 void map_delobj(DbRef player, void *data, char *buffer) {
   BattleMap *map = (BattleMap *)data;
   char *args[5];
-  MapObject *foo, *foo2;
-  int tt, count = 0, mdel = 0;
-  int x, y;
+  MapObject *foo;
+  MapObject *foo2;
+  int tt;
+  int count = 0;
+  int mdel = 0;
+  int x;
+  int y;
 
   switch (mech_parseattributes(buffer, args, 3)) {
   case 0:

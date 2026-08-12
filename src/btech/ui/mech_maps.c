@@ -47,8 +47,10 @@ static void navigate_plot(const NavigatePlotCall *call) {
 
 void mech_findcenter(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  float fx, fy;
-  int x, y;
+  float fx;
+  float fy;
+  int x;
+  int y;
 
   if (!common_checks(player, mech, MECH_USUAL))
     return;
@@ -88,7 +90,9 @@ tactical_arguments_parse(const TacticalArgumentParseRequest *request) {
   const int MAXRANGE = request->maximum_range;
   TacticalArgumentParseResult result = {0};
   int bearing;
-  float range, fx, fy;
+  float range;
+  float fx;
+  float fy;
   Mech *temp_mech;
   BattleMap *map;
 
@@ -213,8 +217,11 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
   BattleMap *mech_map;
   MapText *map_text;
   char *args[3];
-  int i, dolos, argc;
-  int x, y;
+  int i;
+  int dolos;
+  int argc;
+  int x;
+  int y;
 
   if (!common_checks(player, mech, MECH_USUAL))
     return;

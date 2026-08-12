@@ -107,8 +107,10 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
   int t_in_water = 0;
   int w_targ_move_mod = 0;
   int rangecheck = 0;
-  int j, rbth = 0;
-  float enemy_x, enemy_y;
+  int j;
+  int rbth = 0;
+  float enemy_x;
+  float enemy_y;
   WeaponRangeBracket w_range_bracket = RANGE_TOFAR;
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition = mech_condition_summary(mech);

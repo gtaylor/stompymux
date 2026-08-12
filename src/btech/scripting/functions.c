@@ -187,7 +187,8 @@ int min(int v1, int v2) {
  */
 char *first_parseattribute(char *buffer) {
   size_t length;
-  char *start, *first;
+  char *start;
+  char *first;
 
   /* Look for the first parameter */
   start = buffer;

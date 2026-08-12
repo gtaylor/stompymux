@@ -46,7 +46,8 @@ static RbtreeNode *red_black_tree_find_maximum(RbtreeNode *node) {
 }
 
 RbtreeNode *red_black_tree_find_successor_node(RbtreeNode *node) {
-  RbtreeNode *child, *parent;
+  RbtreeNode *child;
+  RbtreeNode *parent;
   if (!node)
     return nullptr;
   if (node->right != nullptr) {
@@ -68,7 +69,8 @@ RbtreeNode *red_black_tree_find_successor_node(RbtreeNode *node) {
 }
 
 static RbtreeNode *red_black_tree_find_predecessor_node(RbtreeNode *node) {
-  RbtreeNode *child, *parent;
+  RbtreeNode *child;
+  RbtreeNode *parent;
   if (!node)
     return nullptr;
   if (node->left != nullptr) {
@@ -90,7 +92,8 @@ static RbtreeNode *red_black_tree_find_predecessor_node(RbtreeNode *node) {
 
 void red_black_tree_release(RedBlackTree bt, RedBlackTreeRelease release,
                             void *context) {
-  RbtreeNode *node, *parent;
+  RbtreeNode *node;
+  RbtreeNode *parent;
   node = bt->head;
 
   if (bt->head) {
@@ -125,7 +128,8 @@ void red_black_tree_release(RedBlackTree bt, RedBlackTreeRelease release,
 }
 
 void red_black_tree_destroy(RedBlackTree bt) {
-  RbtreeNode *node, *parent;
+  RbtreeNode *node;
+  RbtreeNode *parent;
   node = bt->head;
 
   if (bt->head) {
@@ -231,7 +235,8 @@ bool red_black_tree_exists(RedBlackTree bt, void *key) {
 
 int red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
                         void *context) {
-  RbtreeNode *last, *node;
+  RbtreeNode *last;
+  RbtreeNode *node;
   int depth = 0;
   if (!bt || !bt->head)
     return 1;
@@ -283,7 +288,8 @@ int red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
 unsigned int red_black_tree_size(RedBlackTree bt) { return bt->size; }
 
 void *red_black_tree_search(RedBlackTree bt, int method, void *key) {
-  RbtreeNode *node, *last;
+  RbtreeNode *node;
+  RbtreeNode *last;
   int compare_result;
   int found = 0;
 

@@ -59,7 +59,8 @@ static inline const char *my_serious_str(Mech *mech, int index) {
 }
 
 static inline int my_seriousness_check(Mech *mech, int hitloc) {
-  int orig, new;
+  int orig;
+  int new;
 
   orig = mech_section_original_armor(mech, hitloc);
   if (!orig)
@@ -75,7 +76,8 @@ static inline int my_seriousness_check(Mech *mech, int hitloc) {
 }
 
 static inline int my_seriousness_check_r(Mech *mech, int hitloc) {
-  int orig, new;
+  int orig;
+  int new;
 
   orig = mech_section_original_rear_armor(mech, hitloc);
   if (!orig)
@@ -101,7 +103,8 @@ int cause_armordamage(const ArmorDamageRequest *request) {
   int *crits = request->critical_hits;
   const int W_WEAP_INDX = request->weapon_index;
   const int W_AMMO_MODE = request->ammunition_mode;
-  int int_damage = 0, r;
+  int int_damage = 0;
+  int r;
   int seriousness = 0;
   int t_ap_critical = 0;
   int w_percent_left = 0;

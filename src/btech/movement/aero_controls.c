@@ -26,7 +26,8 @@ enum { MIN_TAKEOFF_SPEED = 3 };
 void aero_thrust(DbRef player, void *data, char *arg) {
   Mech *mech = (Mech *)data;
   char *args[1];
-  float newspeed, maxspeed;
+  float newspeed;
+  float maxspeed;
 
   if (mech_is_landed(mech)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,

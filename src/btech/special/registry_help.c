@@ -194,7 +194,8 @@ static void help_text_add(const HelpTextRequest *request) {
   [[maybe_unused]] const int INITIAL = request->initial_indentation;
   int l1 = help_text_length(msg1);
   int l2 = help_text_length(msg2);
-  int nl1, nl2;
+  int nl1;
+  int nl2;
 
 #ifndef ONE_LINE_TEXTS
 
@@ -260,10 +261,12 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
   const DbRef LOC = request->location;
   const PowerId POWERNEEDED = request->power_needed;
   char *arg = request->argument;
-  int i, j;
+  int i;
+  int j;
   Mech *mech = NULL;
   HelpSection sections[100];
-  int count = 0, csho = 0;
+  int count = 0;
+  int csho = 0;
   CoolMenu *c = NULL;
   char buf[LBUF_SIZE];
   int dc;

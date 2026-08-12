@@ -62,7 +62,8 @@ static bool mech_is_in_water(Mech *mech) {
 }
 
 bool mech_spot_has_artillery(Mech *mech) {
-  int weapnum, weaptype = -2;
+  int weapnum;
+  int weaptype = -2;
 
   for (weapnum = 0; weaptype != -1; weapnum++) {
     WeaponNumberLookupResult lookup = weapon_number_find(
@@ -75,7 +76,8 @@ bool mech_spot_has_artillery(Mech *mech) {
 }
 
 static void mech_check_range(MuxEvent *e) {
-  Mech *spotter = (Mech *)e->data2, *mech = (Mech *)e->data;
+  Mech *spotter = (Mech *)e->data2;
+  Mech *mech = (Mech *)e->data;
   float range;
 
   if (!mech)
@@ -102,7 +104,8 @@ static void mech_check_range(MuxEvent *e) {
 }
 
 static void mech_spot_event(MuxEvent *e) {
-  Mech *target, *mech = (Mech *)e->data;
+  Mech *target;
+  Mech *mech = (Mech *)e->data;
   SpotLinkEventData *sd = (SpotLinkEventData *)e->data2;
 
   target = sd->target;
@@ -147,7 +150,8 @@ void mech_spot_clear_fire_adjustments(BattleMap *map, DbRef mech) {
 }
 
 void mech_spot(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *target;
+  Mech *mech = (Mech *)data;
+  Mech *target;
   char *args[5];
   char target_id[3];
   int argc;
@@ -261,10 +265,16 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
                    int weapontype, int sight, int section, int critical) {
   /* Nim 9/11/96 */
 
-  float spot_range, range;
-  float enemy_x, enemy_y, enemy_z = 0;
-  int los, mapx = 0, mapy = 0;
-  Mech *target = nullptr, *spotter;
+  float spot_range;
+  float range;
+  float enemy_x;
+  float enemy_y;
+  float enemy_z = 0;
+  int los;
+  int mapx = 0;
+  int mapy = 0;
+  Mech *target = nullptr;
+  Mech *spotter;
   int spot_terrain;
   bool found_target = false;
 

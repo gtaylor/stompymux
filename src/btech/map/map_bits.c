@@ -176,7 +176,8 @@ int is_hangar_hex(BattleMap *map, int x, int y) {
 void clear_hex_bits(BattleMap *map, int bits) {
   int xs = map->map_width;
   int ys = map->map_height;
-  int i, j;
+  int i;
+  int j;
   unsigned char **foo;
 
   if (!first_mapobj(map, TYPE_BITS))
@@ -204,7 +205,8 @@ void clear_hex_bits(BattleMap *map, int bits) {
 int bit_size(BattleMap *map) {
   int xs = map->map_width;
   int ys = map->map_height;
-  int i, s = 0;
+  int i;
+  int s = 0;
   unsigned char **foo;
 
   if (!first_mapobj(map, TYPE_BITS))

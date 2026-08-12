@@ -79,7 +79,9 @@ PCACHE *pcache_find(PlayerCache *cache, DbRef player) {
 }
 
 void pcache_trim(PlayerCache *cache) {
-  PCACHE *pp, *pplast, *ppnext;
+  PCACHE *pp;
+  PCACHE *pplast;
+  PCACHE *ppnext;
   return;
 
   pp = cache->head;

@@ -135,7 +135,8 @@ void mech_kickortrip(DbRef player, void *data, char *buffer,
   char *argl[5];
   char **args = argl;
   int argc;
-  int rl = RLEG, ll = LLEG;
+  int rl = RLEG;
+  int ll = LLEG;
   int leg;
   int using = P_RIGHT;
 
@@ -238,7 +239,8 @@ void mech_kickortrip(DbRef player, void *data, char *buffer,
  * Mech/tank charge routines
  */
 void mech_charge(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *target;
+  Mech *mech = (Mech *)data;
+  Mech *target;
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   DbRef targetnum;

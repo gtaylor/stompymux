@@ -73,7 +73,8 @@ static char *dbrefs_to_names(const PageNameListRequest *request) {
   char *list = request->list;
   char *namelist = request->names;
   bool ismessage = request->dbrefs;
-  char *bp, *p;
+  char *bp;
+  char *p;
   char oldlist[LBUF_SIZE];
 
   string_copy(oldlist, list);
@@ -112,7 +113,13 @@ void do_page(CommandInvocation *invocation) {
   char *message = invocation->second;
   char plain_message[LBUF_SIZE];
   DbRef target;
-  char *p, *buf1, *bp, *buf2, *bp2, *mp, *str;
+  char *p;
+  char *buf1;
+  char *bp;
+  char *buf2;
+  char *bp2;
+  char *mp;
+  char *str;
   char targetname[LBUF_SIZE];
   char alias[LBUF_SIZE];
   char aladd[LBUF_SIZE];

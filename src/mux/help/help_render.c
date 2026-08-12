@@ -197,7 +197,8 @@ static void help_render_ensure_newline(HelpTextBuffer *buffer) {
 
 static bool help_article_matches_tags(const HelpArticle *article,
                                       const HelpStringList *tags) {
-  size_t i, j;
+  size_t i;
+  size_t j;
 
   for (i = 0; i < article->article_tags.count; i++)
     for (j = 0; j < tags->count; j++)

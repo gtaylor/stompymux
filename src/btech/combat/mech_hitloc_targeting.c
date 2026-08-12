@@ -93,8 +93,10 @@ static bool mech_has_partial_cover(const Mech *mech) {
  * --Codicus Unitus (cu5)
  */
 int mech_hit_group(Mech *mech, Mech *target) {
-  int m_fs_hw, fs_hw;
-  int m_as_hw, as_hw;
+  int m_fs_hw;
+  int fs_hw;
+  int m_as_hw;
+  int as_hw;
 
   int ad;
 

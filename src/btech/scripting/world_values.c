@@ -54,7 +54,9 @@ BtechScriptResult fun_btweapstat(BtechScriptCall *call) {
   [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
   [[maybe_unused]] const DbRef PLAYER = call->player;
-  int p, weapindx, val = -1;
+  int p;
+  int weapindx;
+  int val = -1;
   if (!is_wizard(context->world->database, PLAYER)) {
     safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
@@ -176,8 +178,11 @@ BtechScriptResult fun_btsetxy(BtechScriptCall *call) {
   [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
   [[maybe_unused]] const DbRef PLAYER = call->player;
-  DbRef mechdb, mapdb;
-  int x, y, z = 0;
+  DbRef mechdb;
+  DbRef mapdb;
+  int x;
+  int y;
+  int z = 0;
   Mech *mech;
   Mech *towee = NULL;
   BattleMap *map;
@@ -270,8 +275,12 @@ BtechScriptResult fun_btmapunits(BtechScriptCall *call) {
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
   [[maybe_unused]] const DbRef PLAYER = call->player;
   BattleMap *map;
-  int x, y;
-  float z, range, real_x, real_y;
+  int x;
+  int y;
+  float z;
+  float range;
+  float real_x;
+  float real_y;
   Mech *mech;
   int loop;
   DbRef mapnum;
@@ -409,8 +418,12 @@ BtechScriptResult fun_btmapemit(BtechScriptCall *call) {
   [[maybe_unused]] const DbRef PLAYER = call->player;
   BattleMap *map;
   DbRef mapnum;
-  int x, y;
-  float real_x, real_y, z, range;
+  int x;
+  int y;
+  float real_x;
+  float real_y;
+  float z;
+  float range;
   if (NFARGS < 2) {
     safe_tprintf_str(buff, bufc, "#-1 TOO FEW ARGUMENTS");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);

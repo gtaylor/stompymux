@@ -21,7 +21,8 @@
 void character_experience_reduce(const CharacterExperienceReduction *change) {
   BtechContext *context = change->context;
   const DbRef PLAYER = change->character;
-  PSTATS stats, *s = &stats;
+  PSTATS stats;
+  PSTATS *s = &stats;
   int i;
 
   character_stats_retrieve(context, PLAYER, VALUES_ALL, s);

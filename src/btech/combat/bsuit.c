@@ -394,7 +394,8 @@ void bsuit_pack_jettison(DbRef player, void *data, char *buffer) {
   Mech *mech = data;
   int wc_jettisoned = 0;
   int wc_suits = 0;
-  int i, j;
+  int i;
+  int j;
 
   if (!common_checks(player, mech, MECH_USUALO))
     return;

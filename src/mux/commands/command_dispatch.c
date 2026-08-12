@@ -36,7 +36,8 @@
 int check_access(GameDatabase *database,
                  const ServerConfiguration *configuration, DbRef player,
                  int mask) {
-  int succ, fail;
+  int succ;
+  int fail;
 
   if (mask & CA_DISABLED)
     return 0;
@@ -141,9 +142,16 @@ static void process_cmdent(const CommandEntryDispatch *dispatch) {
   DbRef cause = dispatch->cause;
   char *arg = dispatch->arguments;
   char *unp_command = dispatch->unparsed_command;
-  char *buf1 = nullptr, *buf2 = nullptr, tchar = '\x00';
+  char *buf1 = nullptr;
+  char *buf2 = nullptr;
+  char tchar = '\x00';
   char *args[MAX_ARG];
-  int nargs = 0, i = 0, fail = 0, parse_flags = 0, key = 0, xkey = 0;
+  int nargs = 0;
+  int i = 0;
+  int fail = 0;
+  int parse_flags = 0;
+  int key = 0;
+  int xkey = 0;
 
   memset((void *)args, 0, sizeof(char *) * MAX_ARG);
 
@@ -381,9 +389,13 @@ void process_command(CommandContext *context, char *command, char *arguments[],
   const DbRef PLAYER = context->player;
   const DbRef CAUSE = context->enactor;
   const bool INTERACTIVE = context->interactive;
-  char *arg = nullptr, *lcbuf = nullptr, *slashp = nullptr;
+  char *arg = nullptr;
+  char *lcbuf = nullptr;
+  char *slashp = nullptr;
   const char *cmdsave = nullptr;
-  int succ = 0, lua_succ = 0, i = 0;
+  int succ = 0;
+  int lua_succ = 0;
+  int i = 0;
   DbRef exit = 0;
   CMDENT *cmdp = nullptr;
   char *macroout = nullptr;

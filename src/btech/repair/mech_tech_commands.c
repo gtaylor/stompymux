@@ -38,7 +38,8 @@ static int tech_int_at(const int *values, size_t count, size_t index) {
 
 static void tech_check_locpart(MuxEvent *e, void *data) {
   TechCheckContext *context = data;
-  int loc, pos;
+  int loc;
+  int pos;
   long l = (long)e->data2;
 
   RepairEventPayload payload = repair_event_payload_unpack(l);
@@ -177,7 +178,8 @@ bool valid_gun_pos(const RepairCriticalSelection *selection) {
   unsigned char weaparray_f[MAX_WEAPS_SECTION];
   unsigned char weapdata_f[MAX_WEAPS_SECTION];
   int critical_f[MAX_WEAPS_SECTION];
-  int i, num_weaps_f;
+  int i;
+  int num_weaps_f;
 
   num_weaps_f =
       find_weapons_advanced(mech, LOC, weaparray_f, weapdata_f, critical_f, 1);

@@ -110,7 +110,8 @@ void auto_reply(Mech *mech, const char *buf) {
 void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
                         char *buffer) {
 
-  int argc, cmd;
+  int argc;
+  int cmd;
   AutopilotArgumentList args;
   AutopilotArgumentList command_args;
   char mech_id[3];

@@ -177,7 +177,9 @@ int mech_missile_hit_index(const MissileHitIndexRequest *request) {
   int w_section = request->weapon.section;
   int w_crit_slot = request->weapon.critical;
   int hit_roll;
-  int r1, r2, r3;
+  int r1;
+  int r2;
+  int r3;
   int t_hotloading =
       (mech_critical_fire_mode(mech, w_section, w_crit_slot) & HOTLOAD_MODE) &&
       weapon_catalogue_supports_indirect_fire(weapindx);
@@ -261,7 +263,8 @@ int mech_missile_hit_target(const MissileAttackRequest *request) {
   int base_to_hit = request->base_to_hit;
   int roll = request->roll;
   int incoming = request->incoming;
-  int isrear = 0, iscritical = 0;
+  int isrear = 0;
+  int iscritical = 0;
   int ams_shotdown = 0;
   int hit;
   int w_narc_type = 0;
@@ -475,9 +478,13 @@ void mech_swarm_missile_hit_target(const MissileAttackRequest *request) {
   int missiles;
   BattleMap *map =
       btech_context_find_object(mech_context(mech), mech_map_dbref(mech));
-  float r = 0.0, ran = 0, flrange = 0.0;
-  Mech *source = mech, *temp_mech;
-  int i, j;
+  float r = 0.0;
+  float ran = 0;
+  float flrange = 0.0;
+  Mech *source = mech;
+  Mech *temp_mech;
+  int i;
+  int j;
   if (!btech_context_has_missile_hit_table(mech_context(mech), weapindx))
     return;
   missiles = btech_context_missile_hit_count(&(MissileHitLookup){
@@ -602,8 +609,12 @@ int mech_ams_intercept(const AmsInterceptRequest *request) {
 
 AmsDefenseResult mech_ams_locate_defenses(Mech *target) {
   AmsDefenseResult result = {0};
-  int am_ssect, am_scrit;
-  int i, j = 0, w, t = 0;
+  int am_ssect;
+  int am_scrit;
+  int i;
+  int j = 0;
+  int w;
+  int t = 0;
 
   if (!(mech_technology_flags(target) &
         (IS_ANTI_MISSILE_TECH | CL_ANTI_MISSILE_TECH)) ||

@@ -227,8 +227,11 @@ int heat_factor(Mech *mech) {
    Returns -(# of crits) if partially damaged.
    remember that values 3 means the weapon IS NOT destroyed.  */
 int weapon_is_nonfunctional(Mech *mech, int section, int crit, int numcrits) {
-  int disabled = 0, dested = 0;
-  int count = 0, nloc, ncrit;
+  int disabled = 0;
+  int dested = 0;
+  int count = 0;
+  int nloc;
+  int ncrit;
   int i;
 
   if (numcrits <= 0)

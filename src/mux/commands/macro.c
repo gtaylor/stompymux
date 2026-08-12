@@ -432,7 +432,8 @@ void do_chown_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 void clear_macro_set(MacroRegistry *registry, int set) {
   MacroSet *m;
   struct Commac *c;
-  int i, j;
+  int i;
+  int j;
   if (is_valid_macro_index(registry, set)) {
     m = macro_registry_item(registry, (size_t)set);
     for (i = 0; i < m->macro_count; i++) {
@@ -502,7 +503,9 @@ void do_clear_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 }
 void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                   char *cmd) {
-  int i, j, where;
+  int i;
+  int j;
+  int where;
   MacroSet *m;
   char *alias;
   char *s;
@@ -656,7 +659,9 @@ char *do_process_macro(const MacroExpansionRequest *request) {
   char *tar;
   char *next;
   MacroSet *m;
-  int first, last, current = 0;
+  int first;
+  int last;
+  int current = 0;
   int dir;
   int i;
   struct Commac *c;

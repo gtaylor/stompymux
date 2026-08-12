@@ -429,7 +429,8 @@ void mux_event_gothru_type(MuxEventScheduler *scheduler, int type,
 int mux_event_last_type_data(MuxEventScheduler *scheduler, int type,
                              const void *data) {
   MuxEvent *e;
-  int last = 0, t;
+  int last = 0;
+  int t;
 
   if (type > LAST_MUXEVENT_TYPE)
     return last;

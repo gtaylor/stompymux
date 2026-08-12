@@ -92,9 +92,12 @@ int template_save(const TemplateSaveRequest *request) {
   const char *reference = request->reference;
   const char *filename = request->filename;
   FILE *fp;
-  int x, x2, inf_x;
+  int x;
+  int x2;
+  int inf_x;
   const char *const *locs;
-  char *d, *c = ctime(&mech->xcode.context->clock->now);
+  char *d;
+  char *c = ctime(&mech->xcode.context->clock->now);
 
   if (!mech_computer_quality(mech))
     computer_conversion(mech);
@@ -388,7 +391,8 @@ long build_bit_vector_no_err(const char *const list[], size_t count,
 int check_specials_list(const char *const special_list[], size_t count,
                         const char *const special_list2[], size_t count2,
                         char *line) {
-  int w_spec_check = -1, w_spec2_check = -1;
+  int w_spec_check = -1;
+  int w_spec2_check = -1;
   char buf[30];
 
   if (!strcasecmp(line, "-"))
@@ -432,7 +436,9 @@ int ammo_i_from_string(char *data) {
 }
 
 void update_specials(Mech *mech) {
-  int x, y, t;
+  int x;
+  int y;
+  int t;
   int masc_count = 0;
   int c3_master_count = 0;
   int tsm_count = 0;

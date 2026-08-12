@@ -49,8 +49,14 @@ static int mech_fall_movement_mode_delay(const Mech *mech) {
 #endif
 
 void mech_fall(Mech *mech, int levels, bool show_message) {
-  int roll, spread, i, hitloc, hit_group = 0;
-  int isrear = 0, damage, iscritical = 0;
+  int roll;
+  int spread;
+  int i;
+  int hitloc;
+  int hit_group = 0;
+  int isrear = 0;
+  int damage;
+  int iscritical = 0;
   int heading_offset = 0;
   BattleMap *map;
   BtechContext *context = mech_context(mech);

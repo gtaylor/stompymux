@@ -50,9 +50,11 @@ static const char *weapon_display_name(int weapon_index) {
 void mech_weapon_fire(const WeaponFireRequest *request) {
   float range = request->range;
   Mech *alt_target;
-  int base_to_hit, rbase_to_hit;
+  int base_to_hit;
+  int rbase_to_hit;
   int roll;
-  int type = -1, modifier;
+  int type = -1;
+  int modifier;
   const bool IS_ARTILLERY =
       weapon_catalogue_is_artillery(request->weapon_index);
   bool range_ok = true;

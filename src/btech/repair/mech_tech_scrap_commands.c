@@ -39,7 +39,9 @@ void tech_removegun(DbRef player, void *data, char *buffer) {
   Mech *mech;
   BtechContext *context;
   EvaluationContext *evaluation;
-  int loc, part, mod = 2;
+  int loc;
+  int part;
+  int mod = 2;
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
@@ -148,7 +150,10 @@ void tech_removepart(DbRef player, void *data, char *buffer) {
   Mech *mech;
   BtechContext *context;
   EvaluationContext *evaluation;
-  int loc, part, t, mod = 2;
+  int loc;
+  int part;
+  int t;
+  int mod = 2;
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
@@ -286,7 +291,8 @@ void tech_removesection(DbRef player, void *data, char *buffer) {
   Mech *mech;
   BtechContext *context;
   EvaluationContext *evaluation;
-  int loc, mod = 2;
+  int loc;
+  int mod = 2;
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {

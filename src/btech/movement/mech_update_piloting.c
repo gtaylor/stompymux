@@ -39,7 +39,8 @@ static bool mech_piloting_is_running(const Mech *mech, float maximum_speed) {
 
 void mech_piloting_update(Mech *mech) {
   BtechContext *context = mech_context(mech);
-  int makeroll = 0, grav = 0;
+  int makeroll = 0;
+  int grav = 0;
   float maxspeed;
   int temp_tick = btech_context_event_tick(context);
 
@@ -175,7 +176,8 @@ void mech_turret_autoturn_update(Mech *mech) {
   MechConditionSummary condition = mech_condition_summary(mech);
   Mech *target;
   int bearing;
-  float fx, fy;
+  float fx;
+  float fy;
 
   if (!mech_is_started(mech) || mech_pilot_is_unconscious(mech) ||
       mech_is_blinded(mech))

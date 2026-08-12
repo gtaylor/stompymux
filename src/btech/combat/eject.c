@@ -59,7 +59,8 @@
 #include "section_types.h"
 
 int contents_teleport(const ContentsTeleportRequest *request) {
-  DbRef i, tmpnext;
+  DbRef i;
+  DbRef tmpnext;
   int count = 0;
   EvaluationContext *evaluation = btech_context_evaluation(request->context);
   GameDatabase *database = btech_context_database(request->context);

@@ -33,7 +33,8 @@ DbRef remove_first(GameDatabase *database, DbRef head, DbRef thing) {
  * Reverse the order of members in a list.
  */
 DbRef reverse_list(GameDatabase *database, DbRef list) {
-  DbRef newlist, rest;
+  DbRef newlist;
+  DbRef rest;
 
   newlist = NOTHING;
   while (list != NOTHING) {

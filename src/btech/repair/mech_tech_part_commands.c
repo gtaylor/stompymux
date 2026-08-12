@@ -37,15 +37,22 @@ typedef struct TechCheckContext {
   int part;
 } TechCheckContext;
 void tech_replacegun(DbRef player, void *data, char *buffer) {
-  int brand = 0, ob = 0;
+  int brand = 0;
+  int ob = 0;
 
-  int roll, rollmod, fixtime, base_fixtime, parttype, fail_fixtime;
+  int roll;
+  int rollmod;
+  int fixtime;
+  int base_fixtime;
+  int parttype;
+  int fail_fixtime;
 
   RepairCommandContext repair_command;
   Mech *mech;
   BtechContext *context;
   EvaluationContext *evaluation;
-  int loc, part;
+  int loc;
+  int part;
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
@@ -257,7 +264,8 @@ void tech_repairgun(DbRef player, void *data, char *buffer) {
   Mech *mech;
   BtechContext *context;
   EvaluationContext *evaluation;
-  int loc, part;
+  int loc;
+  int part;
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
@@ -361,7 +369,8 @@ void tech_fixenhcrit(DbRef player, void *data, char *buffer) {
   Mech *mech;
   BtechContext *context;
   EvaluationContext *evaluation;
-  int loc, part;
+  int loc;
+  int part;
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
@@ -447,7 +456,9 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
   Mech *mech;
   BtechContext *context;
   EvaluationContext *evaluation;
-  int loc, part, t;
+  int loc;
+  int part;
+  int t;
 
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_REQUIRED, &repair_command);
@@ -461,7 +472,13 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
   context = repair_command.context;
   evaluation = repair_command.evaluation;
 
-  int roll, rollmod, fixtime, base_fixtime, parttype, oparttype, fail_fixtime;
+  int roll;
+  int rollmod;
+  int fixtime;
+  int base_fixtime;
+  int parttype;
+  int oparttype;
+  int fail_fixtime;
 
   RepairSelection selection;
   if (!repair_command_parse_part(&repair_command, buffer, true, false,
@@ -668,7 +685,9 @@ void tech_repairpart(DbRef player, void *data, char *buffer) {
   RepairCommandContext repair_command;
   Mech *mech;
   BtechContext *context;
-  int loc, part, t;
+  int loc;
+  int part;
+  int t;
 
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_REQUIRED, &repair_command);

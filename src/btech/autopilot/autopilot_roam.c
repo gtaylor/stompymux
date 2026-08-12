@@ -234,7 +234,10 @@ static void auto_roam_generate_target_hex(Autopilot *autopilot, Mech *mech,
   int start_hex_y = 0;
   short target_hex_x = 0;
   short target_hex_y = 0;
-  float x1, y1, x2, y2;
+  float x1;
+  float y1;
+  float x2;
+  float y2;
   float range;
   int bearing;
   int max_range = 0;
@@ -341,7 +344,8 @@ static void auto_roam_generate_target_hex(Autopilot *autopilot, Mech *mech,
 void auto_astar_roam_event(MuxEvent *muxevent) {
 
   Autopilot *autopilot = (Autopilot *)muxevent->data;
-  int tx, ty;
+  int tx;
+  int ty;
   Mech *mech = autopilot->mymech;
   BattleMap *map;
   float range;

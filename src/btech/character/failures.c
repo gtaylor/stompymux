@@ -509,7 +509,8 @@ PartFailureResult mech_generic_failure_check(Mech *mech, FailureSystem system) {
   int type = system == FAILURE_SYSTEM_COMPUTER ? -1 : -2;
   int i = part_brand_failure_index(type);
   int l = type == -1 ? mech_computer_quality(mech) : mech_radio_quality(mech);
-  int roll, in;
+  int roll;
+  int in;
 
   if (i < 0)
     return NO_FAILURE;
@@ -576,7 +577,8 @@ mech_weapon_failure_check(const MechWeaponFailureRequest *request) {
   int roll;
   int l = mech_critical_brand(mech, request->section, request->critical);
   int t = mech_critical_part_type(mech, request->section, request->critical);
-  int i = part_brand_failure_index(t), in;
+  int i = part_brand_failure_index(t);
+  int in;
 
   if (i < 0)
     return NO_FAILURE;

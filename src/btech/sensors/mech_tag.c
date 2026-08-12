@@ -55,7 +55,8 @@ static void tag_recycle_event(MuxEvent *e) {
 }
 
 void mech_tag(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data, *target;
+  Mech *mech = (Mech *)data;
+  Mech *target;
   char *args[2];
   DbRef ref_target;
   int los = 1;

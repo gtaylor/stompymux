@@ -70,8 +70,15 @@ static const ArtilleryDirection *artillery_direction_at(size_t index) {
 }
 
 static const char *artillery_direction(ArtilleryShot *s) {
-  float fx, fy, tx, ty;
-  int b, d, i, best = -1, bestd = 0;
+  float fx;
+  float fy;
+  float tx;
+  float ty;
+  int b;
+  int d;
+  int i;
+  int best = -1;
+  int bestd = 0;
 
   map_coord_to_real_coord(s->from_x, s->from_y, &fx, &fy);
   map_coord_to_real_coord(s->to_x, s->to_y, &tx, &ty);
@@ -110,7 +117,10 @@ static void artillery_hit_event(MuxEvent *e) {
 void artillery_shoot(const ArtilleryShotRequest *request) {
   Mech *mech = request->mech;
   struct ArtilleryShot *s;
-  float fx, fy, tx, ty;
+  float fx;
+  float fy;
+  float tx;
+  float ty;
 
   s = checked_storage_allocate(sizeof(*s));
   s->from_x = mech_position_x(mech);
@@ -133,7 +143,8 @@ void artillery_shoot(const ArtilleryShotRequest *request) {
 }
 
 static int blast_arcf(float fx, float fy, Mech *mech) {
-  int b, dir;
+  int b;
+  int dir;
 
   b = map_bearing(&(MapRealSegment){.start = {.x = mech_position_real_x(mech),
                                               .y = mech_position_real_y(mech)},
@@ -156,10 +167,15 @@ void blast_hit_real_hex(const BlastRealHexRequest *request) {
   BattleMap *map = request->map;
   Mech *temp_mech;
   int loop;
-  int isrear = 0, iscritical = 0, hitloc;
-  int damleft, arc, ndam;
+  int isrear = 0;
+  int iscritical = 0;
+  int hitloc;
+  int damleft;
+  int arc;
+  int ndam;
   int ground_zero;
-  short tx, ty;
+  short tx;
+  short ty;
 
   /* Not on a map so just return */
   if (!map)
@@ -247,8 +263,10 @@ void blast_hit_real_hex(const BlastRealHexRequest *request) {
 }
 
 void blast_hit_hex(const BlastHexRequest *request) {
-  float ftx, fty;
-  float ffx, ffy;
+  float ftx;
+  float fty;
+  float ffx;
+  float ffy;
 
   map_coord_to_real_coord(request->impact.x, request->impact.y, &ftx, &fty);
   map_coord_to_real_coord(request->source.x, request->source.y, &ffx, &ffy);
@@ -266,10 +284,15 @@ void blast_hit_hex(const BlastHexRequest *request) {
 
 void blast_hit_real_area(const BlastRealAreaRequest *request) {
   BattleMap *map = request->center.map;
-  int x1, y1, x2, y2;
+  int x1;
+  int y1;
+  int x2;
+  int y2;
   int dm;
-  short tx, ty;
-  float hx, hy;
+  short tx;
+  short ty;
+  float hx;
+  float hy;
   float t = map_real_range(&(MapRealSegment){
       .start = request->center.impact,
       .end = request->center.source,
@@ -343,7 +366,8 @@ void blast_hit_real_area(const BlastRealAreaRequest *request) {
 }
 
 void blast_hit_area(const BlastAreaRequest *request) {
-  float fx, fy;
+  float fx;
+  float fy;
 
   map_coord_to_real_coord(request->center.impact.x, request->center.impact.y,
                           &fx, &fy);
@@ -468,7 +492,10 @@ static void artillery_cluster_hit(const ArtilleryImpact *impact) {
   int ty = impact->position.y;
   /* Main idea: Pick <dam/2> bombs of 2pts each, and scatter 'em
      over 5x5 area with weighted numbers */
-  int xd, yd, x, y;
+  int xd;
+  int yd;
+  int x;
+  int y;
   int i;
 
   typedef struct ArtilleryTargetGrid {
@@ -557,7 +584,8 @@ static void artillery_hit(ArtilleryShot *s) {
   int dist;
   int weight;
   BattleMap *map = btech_context_get_map(s->context, s->map);
-  int original_x = 0, original_y = 0;
+  int original_x = 0;
+  int original_y = 0;
   int dam = weapon_catalogue_damage(s->type);
 
   if (!map)

@@ -147,7 +147,8 @@ void mech_createbays(DbRef player, void *data, char *buffer) {
 
 int dropship_bay_number(Mech *ds, int dir) {
   int bayn = 0;
-  int i, j;
+  int i;
+  int j;
 
   for (i = 0; i <= dir; i++) {
     for (j = 0; j < NUM_CRITICALS; j++)
@@ -230,10 +231,13 @@ static int dropship_find_single_adjacent_bay(Mech *mech, DbRef *ref,
 }
 
 static void mech_enterbay_event(MuxEvent *e) {
-  Mech *mech = (Mech *)e->data, *ds, *tmpm = nullptr;
+  Mech *mech = (Mech *)e->data;
+  Mech *ds;
+  Mech *tmpm = nullptr;
   DbRef ref = (DbRef)(intptr_t)e->data2;
   int bayn;
-  int x = 5, y = 5;
+  int x = 5;
+  int y = 5;
   BattleMap *tmpmap;
   BtechContext *context = mech_context(mech);
 
@@ -289,7 +293,8 @@ static void mech_enterbay_event(MuxEvent *e) {
 }
 
 static int dropship_bay_is_open(Mech *mech, Mech *ds, DbRef bayref) {
-  int i, j;
+  int i;
+  int j;
 
   for (i = 0; i < NUM_BAYS; i++)
     if (mech_bay_dbref(ds, i) > 0)
@@ -337,7 +342,8 @@ void mech_enterbay(DbRef player, void *data, char *buffer) {
   int argc;
   DbRef ref = -1;
   int bayn = -1;
-  Mech *mech = data, *ds;
+  Mech *mech = data;
+  Mech *ds;
   BattleMap *map;
   LuaLockInvocation lock;
   LuaLockResult lock_result;
@@ -492,7 +498,8 @@ void mech_enterbay(DbRef player, void *data, char *buffer) {
 
 static void dropship_place_departing_unit(Mech *ds, Mech *mech, DbRef frombay) {
   int i;
-  int nx, ny;
+  int nx;
+  int ny;
   BattleMap *mech_map;
 
   for (i = 0; i < NUM_BAYS; i++)
@@ -516,7 +523,8 @@ static void dropship_place_departing_unit(Mech *ds, Mech *mech, DbRef frombay) {
   /* snippage from mech_Rsetxy */
   mech_position_xy_set(mech, nx, ny);
   mech_position_hex_z_set(mech, mech_position_z(ds));
-  float real_x, real_y;
+  float real_x;
+  float real_y;
   map_coord_to_real_coord(nx, ny, &real_x, &real_y);
   mech_position_real_xy_set(mech, (MapRealPosition){.x = real_x, .y = real_y});
 }

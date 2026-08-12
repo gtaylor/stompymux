@@ -404,7 +404,8 @@ static void remove_case_technology(Mech *mech) {
 }
 
 void mechrep_rdeltech(DbRef player, void *data, char *buffer) {
-  int nv, nv2;
+  int nv;
+  int nv2;
   const long PARSED_NV =
       build_bit_vector(specials, primary_technology_name_count(), buffer);
   const long PARSED_NV2 =
@@ -502,7 +503,8 @@ void mechrep_rdeltech(DbRef player, void *data, char *buffer) {
 }
 
 void mechrep_raddtech(DbRef player, void *data, char *buffer) {
-  int nv, nv2;
+  int nv;
+  int nv2;
   const long PARSED_NV =
       build_bit_vector(specials, primary_technology_name_count(), buffer);
   const long PARSED_NV2 =

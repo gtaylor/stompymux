@@ -437,7 +437,10 @@ static void initialize_objects(GameDatabase *database, DbRef first,
 }
 
 void db_grow(GameDatabase *database, DbRef newtop) {
-  int newsize, marksize, delta, i;
+  int newsize;
+  int marksize;
+  int delta;
+  int i;
   DatabaseMarkBuffer *newmarkbuf;
   GameObject *newdb;
   NAME *newpurenames;

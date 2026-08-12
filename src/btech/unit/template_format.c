@@ -295,7 +295,8 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
   int y1;
   int flaggo = 0;
   int z;
-  int w_fire_modes, w_ammo_modes;
+  int w_fire_modes;
+  int w_ammo_modes;
 
   if (!mech_critical_part_type(mech, x, y))
     return 1;
@@ -400,7 +401,9 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
 
 void dump_locations(FILE *fp, Mech *mech, const char *const locdesc[],
                     size_t location_count) {
-  int x, y, l;
+  int x;
+  int y;
+  int l;
   char buf[512];
 
   for (x = 0; (size_t)x < location_count; x++) {

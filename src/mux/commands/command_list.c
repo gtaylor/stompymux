@@ -210,7 +210,11 @@ static void list_cmdtable(EvaluationContext *evaluation,
 static void list_df_flags(EvaluationContext *evaluation,
                           const ServerConfiguration *configuration,
                           DbRef player) {
-  char *playerb, *roomb, *thingb, *exitb, *buff;
+  char *playerb;
+  char *roomb;
+  char *thingb;
+  char *exitb;
+  char *buff;
 
   playerb = decode_flags(
       &(DecodeFlagsRequest){.database = evaluation->world->database,
@@ -356,10 +360,14 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
 
 static void list_process(EvaluationContext *evaluation,
                          const RuntimeClock *clock, DbRef player) {
-  int pid, psize, maxfds;
+  int pid;
+  int psize;
+  int maxfds;
 
   struct rusage usage;
-  int curr, last, dur;
+  int curr;
+  int last;
+  int dur;
 
   getrusage(RUSAGE_SELF, &usage);
   /*

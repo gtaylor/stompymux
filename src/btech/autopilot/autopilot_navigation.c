@@ -32,7 +32,8 @@ int artillery_round_flight_time(float fx, float fy, float tx, float ty);
 static int mech_snipe_func(const MultiWeaponSelectionCall *call) {
   Mech *mech = call->mech;
   /* Simulate mech movements until flight_time <= now */
-  int now = 0, crashed = 0;
+  int now = 0;
+  int crashed = 0;
   LocationSimulation t;
   Mech *target_mech = call->context;
   BattleMap *map =

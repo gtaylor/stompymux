@@ -71,7 +71,8 @@ int unit_damage_to_personal_combat(
   Mech *target = conversion->target;
   const int WEAPINDX = conversion->weapon_index;
   const int DAM = conversion->damage;
-  int i = 0, j;
+  int i = 0;
+  int j;
 
   if (WEAPINDX >= 0 && weapon_catalogue_is_personal_combat(WEAPINDX))
     return DAM;

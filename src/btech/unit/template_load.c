@@ -29,18 +29,28 @@
 #include <string.h>
 #include <strings.h>
 int load_template(DbRef player, Mech *mech, char *filename) {
-  char line[MAX_STRING_LENGTH], buf[MAX_STRING_LENGTH];
-  int x, y, value;
+  char line[MAX_STRING_LENGTH];
+  char buf[MAX_STRING_LENGTH];
+  int x;
+  int y;
+  int value;
   float decimal_value;
   char cmd[MAX_STRING_LENGTH];
-  char *ptr, *line2;
-  int section = 0, critical, selection, type, brand;
+  char *ptr;
+  char *line2;
+  int section = 0;
+  int critical;
+  int selection;
+  int type;
+  int brand;
   FILE *fp = fopen(filename, "r");
   char *tmpc;
-  int lpos, hpos;
+  int lpos;
+  int hpos;
   int ok_count = 0;
   int is_clan = 0;
-  int w_fire_modes, w_ammo_modes;
+  int w_fire_modes;
+  int w_ammo_modes;
   if (!fp)
     return -1;
   ptr = strrchr(filename, '/');

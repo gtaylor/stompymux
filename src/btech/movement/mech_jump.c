@@ -63,11 +63,15 @@ void mech_jump(DbRef player, void *data, char *buffer) {
   int argc;
   DbRef target;
   char target_id[2];
-  short mapx, mapy;
+  short mapx;
+  short mapy;
   int bearing;
   float range = 0.0;
-  float realx, realy;
-  int sz, tz, jps;
+  float realx;
+  float realy;
+  int sz;
+  int tz;
+  int jps;
   bool dfa_attack = false;
 
   mech_map = btech_context_get_map(context, mech_map_dbref(mech));

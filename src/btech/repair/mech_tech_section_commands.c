@@ -134,7 +134,11 @@ void tech_reattach(DbRef player, void *data, char *buffer) {
 
   int internal_stock = 0;
   int electric_stock = 0;
-  int roll, rollmod, fixtime, base_fixtime, fail_fixtime;
+  int roll;
+  int rollmod;
+  int fixtime;
+  int base_fixtime;
+  int fail_fixtime;
 
   RepairSelection selection;
   if (!repair_command_parse_part(&repair_command, buffer, false, false,

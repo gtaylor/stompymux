@@ -235,7 +235,9 @@ TechPartParseResult tech_part_parse(const TechPartParseRequest *request) {
   TechPartParseResult result = {0};
   Mech *mech = request->mech;
   char *args[5];
-  int l, argc, isrear = 0;
+  int l;
+  int argc;
+  int isrear = 0;
 
   argc = mech_parseattributes(request->text, args, 4);
   if (!argc)
@@ -277,7 +279,12 @@ TechPartParseResult tech_part_parse(const TechPartParseRequest *request) {
 
 int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
   char *args[3];
-  int l, argc, t, c = 0, pi, pb;
+  int l;
+  int argc;
+  int t;
+  int c = 0;
+  int pi;
+  int pb;
   int position;
 
   argc = mech_parseattributes(buffer, args, 3);

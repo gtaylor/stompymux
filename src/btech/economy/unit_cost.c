@@ -240,10 +240,13 @@ static void mech_cost_add_leg_actuators(Mech *mech, int loc, double *total) {
  * construction/cost rules.
  */
 unsigned long long mech_fasa_cost(Mech *mech) {
-  int ii, i, part;
+  int ii;
+  int i;
+  int part;
   double total = 0.0;
   double mod = 1.0;
-  int count, ammoweapcount;
+  int count;
+  int ammoweapcount;
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
   int critical[MAX_WEAPS_SECTION];
@@ -338,7 +341,8 @@ unsigned long long mech_fasa_cost(Mech *mech) {
     /* ---------------------------------
      * Vehicle Costs
      */
-    int pamp = 0, turret = 0;
+    int pamp = 0;
+    int turret = 0;
 
     for (i = 0; i < NUM_SECTIONS; i++)
       for (ii = 0; ii < NUM_CRITICALS; ii++) {

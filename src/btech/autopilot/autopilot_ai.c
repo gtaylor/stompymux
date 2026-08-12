@@ -237,8 +237,13 @@ static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
   const float DELX = request->target_delta.x;
   const float DELY = request->target_delta.y;
   AiPathScoreResult result = {.selected_option = -1};
-  int i, j, k, l, bearing;
-  int sd, sc;
+  int i;
+  int j;
+  int k;
+  int l;
+  int bearing;
+  int sd;
+  int sc;
   AiPathWorkspace workspace = {0};
   for (i = 0; i < OPTION_COUNT; i++) {
     AiPathCandidate *candidate = ai_path_candidate_at(&workspace, i);
@@ -623,7 +628,9 @@ static void ai_adjust_path_option(const AiPathAdjustment *adjustment) {
 int ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
                   float dely) {
   int o;
-  int b_len, b, b_score;
+  int b_len;
+  int b;
+  int b_score;
   AiPathContext path = {0};
   BtechContext *context = mech_context(m);
   BattleMap *map = btech_context_get_map(context, mech_map_dbref(m));

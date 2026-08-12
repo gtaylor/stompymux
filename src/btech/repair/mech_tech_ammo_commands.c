@@ -23,7 +23,9 @@ void tech_toggletype(DbRef player, void *data, char *buffer) {
 
   Mech *mech = data;
   BtechContext *context = mech_context(mech);
-  int loc, part, t;
+  int loc;
+  int part;
+  int t;
   RepairCommandContext repair_command = {
       .player = player,
       .mech = mech,
@@ -79,7 +81,10 @@ void tech_reload(DbRef player, void *data, char *buffer) {
   RepairCommandContext repair_command;
   Mech *mech;
   BtechContext *context;
-  int loc, part, t, change;
+  int loc;
+  int part;
+  int t;
+  int change;
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_CONFIGURED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
@@ -178,7 +183,11 @@ void tech_unload(DbRef player, void *data, char *buffer) {
   Mech *mech;
   BtechContext *context;
   EvaluationContext *evaluation;
-  int loc, part, now, change, mod = 2;
+  int loc;
+  int part;
+  int now;
+  int change;
+  int mod = 2;
 
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, data, REPAIR_STALL_CONFIGURED, &repair_command);

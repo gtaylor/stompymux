@@ -73,7 +73,8 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
   int i;
   int temp_loc;
   char loc_name[50];
-  int damage, temp_damage;
+  int damage;
+  int temp_damage;
 
   if (!common_checks(player, mech, MECH_USUALO))
     return;

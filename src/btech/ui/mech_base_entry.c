@@ -44,15 +44,18 @@
 #include <string.h>
 
 static void mech_enter_event(MuxEvent *e) {
-  Mech *mech = (Mech *)e->data, *tmpm = nullptr;
+  Mech *mech = (Mech *)e->data;
+  Mech *tmpm = nullptr;
   MapObject *mapo;
   BattleMap *map =
-                btech_context_get_map(mech_context(mech), mech_map_dbref(mech)),
-            *newmap;
+      btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
+  BattleMap *newmap;
   const intptr_t TARGET_VALUE = (intptr_t)e->data2;
   char target;
-  int x, y;
-  int obj_x, obj_y;
+  int x;
+  int y;
+  int obj_x;
+  int obj_y;
   LuaLockInvocation lock;
   LuaLockResult lock_result;
 
@@ -143,9 +146,11 @@ static void mech_enter_event(MuxEvent *e) {
 
 void mech_enterbase(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  BattleMap *map, *newmap;
+  BattleMap *map;
+  BattleMap *newmap;
   MapObject *mapo;
-  char target, *tmpc;
+  char target;
+  char *tmpc;
   char *args[2];
   int argc;
 

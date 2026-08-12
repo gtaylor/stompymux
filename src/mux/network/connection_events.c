@@ -220,8 +220,10 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
                                     const char *reason) {
   CommandRuntime *runtime = descriptor_runtime(d);
   CommandContext *command = runtime->background_command;
-  DbRef loc, temp;
-  int num, key;
+  DbRef loc;
+  DbRef temp;
+  int num;
+  int key;
   DescriptorIterator iterator =
       descriptor_iterator_player(runtime->descriptors, player);
 

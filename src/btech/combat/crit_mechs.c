@@ -61,7 +61,11 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
   const int CRIT_TYPE = request->part_type;
   const int CRIT_DATA = request->part_data;
   Mech *mech = wounded;
-  int weapindx, damage, destroycrit, weapon_slot, w_first_crit;
+  int weapindx;
+  int damage;
+  int destroycrit;
+  int weapon_slot;
+  int w_first_crit;
   int temp;
   char locname[30];
   char msgbuf[MBUF_SIZE];

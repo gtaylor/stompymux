@@ -336,7 +336,9 @@ static InternalStructureTotals internal_structure_totals(Mech *mech) {
 }
 
 static int ammo_weight(Mech *mech) {
-  int i, j, w = 0;
+  int i;
+  int j;
+  int w = 0;
 
   for (i = 0; i < NUM_SECTIONS; i++)
     if (!mech_section_is_destroyed(mech, i))
@@ -398,16 +400,23 @@ static void weight_counted_entry_add(CoolMenu **menu, int interactive,
 }
 int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
   PartPile pile;
-  int i, j, w, cl, id;
-  int armor = 0, armor_o;
+  int i;
+  int j;
+  int w;
+  int cl;
+  int id;
+  int armor = 0;
+  int armor_o;
   int total = 0;
   CoolMenu *c = NULL;
   int shs_size;
   int hs_eff;
   char buf[MBUF_SIZE];
-  int ints_c, ints_tot;
+  int ints_c;
+  int ints_tot;
   float gyro_calc = -1;
-  int t, temp;
+  int t;
+  int temp;
 
   memset(&pile, 0, sizeof(pile));
   if (interactive > 0) {
@@ -593,8 +602,14 @@ static int tank_in_pieces(Mech *mech) {
 
 int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
   PartPile pile;
-  int i, j, w, cl, id, t;
-  int armor = 0, armor_o;
+  int i;
+  int j;
+  int w;
+  int cl;
+  int id;
+  int t;
+  int armor = 0;
+  int armor_o;
   int total = 0;
   CoolMenu *c = NULL;
   int shs_size;
@@ -602,7 +617,8 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
   char buf[MBUF_SIZE];
   int es;
   int turr_stuff = 0;
-  int ints_c, ints_tot;
+  int ints_c;
+  int ints_tot;
 
   memset(&pile, 0, sizeof(pile));
   const InternalStructureTotals INTERNALS = internal_structure_totals(mech);

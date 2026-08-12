@@ -347,7 +347,9 @@ int find_weapons_advanced(Mech *mech, int index, unsigned char *weaparray,
                           int whine) {
   int loop;
   int weapcount = 0;
-  int temp, data, lastweap = -1;
+  int temp;
+  int data;
+  int lastweap = -1;
   int num_crits = 0;
 
   for (loop = 0; loop < MAX_WEAPS_SECTION; loop++) {
@@ -396,9 +398,13 @@ int find_ammunition(Mech *mech, unsigned char *weaparray,
                     unsigned int *modearray, int returnall) {
   int loop;
   int weapcount = 0;
-  int temp, data;
+  int temp;
+  int data;
   unsigned int mode;
-  int index, i, j, duplicate;
+  int index;
+  int i;
+  int j;
+  int duplicate;
 
   for (index = 0; index < NUM_SECTIONS; index++)
     for (loop = 0; loop < MAX_WEAPS_SECTION; loop++) {

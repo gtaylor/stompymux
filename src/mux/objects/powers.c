@@ -62,7 +62,8 @@ void init_powertab(WorldIndexes *indexes) {
  * Display available powers.
  */
 void display_powertab(EvaluationContext *evaluation, DbRef player) {
-  char *buf, *bp;
+  char *buf;
+  char *bp;
   POWERENT *fp;
 
   bp = buf = alloc_lbuf("display_powertab");
@@ -195,7 +196,8 @@ char *power_description(const PowerDescriptionRequest *request) {
   GameDatabase *database = request->database;
   DbRef player = request->viewer;
   DbRef target = request->target;
-  char *buff, *bp;
+  char *buff;
+  char *bp;
   POWERENT *fp;
 
   /*

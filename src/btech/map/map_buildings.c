@@ -64,7 +64,8 @@ static void set_building_cf(BattleMap *map, int i1, int i2) {
 static void building_regen_event(MuxEvent *e) {
 #ifdef BUILDINGS_REPAIR_THEMSELVES
   BattleMap *map = e->data;
-  int cf, max;
+  int cf;
+  int max;
 
   if (!get_building_cf(map, &cf, &max))
     return;
@@ -79,7 +80,8 @@ static void building_regen_event(MuxEvent *e) {
 static void building_rebuild_event(MuxEvent *e) {
 #ifdef BUILDINGS_REBUILD_FROM_DESTRUCTION
   BattleMap *map = e->data;
-  int cf = 0, max = 0;
+  int cf = 0;
+  int max = 0;
 
   if (get_building_cf(map, &cf, &max))
     return;
@@ -91,7 +93,8 @@ static void building_rebuild_event(MuxEvent *e) {
 
 void possibly_start_building_regen(BtechContext *context, DbRef obj) {
   BattleMap *map = btech_context_get_map(context, obj);
-  int f, t;
+  int f;
+  int t;
 
   if (map == nullptr || !get_building_cf(map, &f, &t))
     return;
@@ -176,8 +179,10 @@ void hit_building(const BuildingHitRequest *request) {
   MapObject *o;
   BattleMap *map;
   BattleMap *nmap;
-  int num_missiles_hit, hit_roll;
-  int i1, i2;
+  int num_missiles_hit;
+  int hit_roll;
+  int i1;
+  int i2;
 
   map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   if (!map)

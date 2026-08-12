@@ -138,7 +138,10 @@ void do_examine(CommandInvocation *invocation) {
   const DbRef PLAYER = invocation->player;
   const int KEY = invocation->key;
   char *name = invocation->first;
-  DbRef thing, content, exit, loc;
+  DbRef thing;
+  DbRef content;
+  DbRef exit;
+  DbRef loc;
   char *buf2;
 
   /*
@@ -338,7 +341,9 @@ void do_inventory(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   const DbRef PLAYER = invocation->player;
   DbRef thing;
-  char *buff, *s, *e;
+  char *buff;
+  char *s;
+  char *e;
 
   thing = game_object_contents(evaluation->world->database, PLAYER);
   if (thing == NOTHING) {
@@ -388,10 +393,14 @@ void do_entrances(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   const DbRef PLAYER = invocation->player;
   char *name = invocation->first;
-  DbRef thing, i;
-  char *exit, *message;
-  int control_thing, count;
-  long low_bound, high_bound;
+  DbRef thing;
+  DbRef i;
+  char *exit;
+  char *message;
+  int control_thing;
+  int count;
+  long low_bound;
+  long high_bound;
 
   parse_range(world->database, world->configuration, &name, &low_bound,
               &high_bound);

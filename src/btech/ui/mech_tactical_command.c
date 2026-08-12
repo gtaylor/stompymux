@@ -33,13 +33,16 @@ static bool ascii_is_alpha(char value) {
 void mech_tacmap(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   int argc;
-  int x, y;
+  int x;
+  int y;
   char *args_vec[4];
   BattleMap *mech_map;
-  int display_height = MAP_DISPLAY_HEIGHT, display_width = MAP_DISPLAY_WIDTH;
+  int display_height = MAP_DISPLAY_HEIGHT;
+  int display_width = MAP_DISPLAY_WIDTH;
   char *str;
   MapText *map_text;
-  int flags = 3, dohexlos = 0;
+  int flags = 3;
+  int dohexlos = 0;
 
   /* Basic checks for pilot and mech */
   if (!common_checks(player, mech, MECH_USUAL))
