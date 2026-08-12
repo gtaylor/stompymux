@@ -81,7 +81,7 @@ int is_blocked_lz(Mech *mech, BattleMap *map, int x, int y);
 void map_setlinked(DbRef player, void *data, char *buffer);
 int map_objects_delete(const MapObjectLookupRequest *request);
 void map_delobj(DbRef player, void *data, char *buffer);
-int parse_coord(BattleMap *map, int dir, char *data, int *x, int *y);
+bool parse_coord(BattleMap *map, int dir, char *data, int *x, int *y);
 void recursively_updatelinks(BtechContext *context, DbRef from, DbRef loc);
 void map_updatelinks(DbRef player, void *data, char *buffer);
 int map_linked(BtechContext *context, DbRef map_object);

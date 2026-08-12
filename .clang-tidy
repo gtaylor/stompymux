@@ -1,3 +1,6 @@
+# readability-implicit-bool-conversion is intentionally omitted. In C23,
+# comparisons and logical operators still produce int, so enabling this check
+# globally would require casts and wrapper comparisons around valid bool code.
 Checks: >
   clang-analyzer-core.*,
   clang-analyzer-nullability.*,

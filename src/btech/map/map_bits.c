@@ -147,29 +147,29 @@ void unset_hex_mine(BattleMap *map, int x, int y) {
   map_bits_unset(foo, map, x, y, BIT_MINE);
 }
 
-int is_mine_hex(BattleMap *map, int x, int y) {
+bool is_mine_hex(BattleMap *map, int x, int y) {
   unsigned char **foo;
 
   if (!map)
-    return 0;
+    return false;
   if (!first_mapobj(map, TYPE_BITS))
-    return 0;
+    return false;
   foo = grab_us_an_array(map);
   if (!*map_bits_row_slot(foo, map->map_height, y))
-    return 0;
+    return false;
   return map_bits_is_set(foo, map, x, y, BIT_MINE);
 }
 
-int is_hangar_hex(BattleMap *map, int x, int y) {
+bool is_hangar_hex(BattleMap *map, int x, int y) {
   unsigned char **foo;
 
   if (!map)
-    return 0;
+    return false;
   if (!first_mapobj(map, TYPE_BITS))
-    return 0;
+    return false;
   foo = grab_us_an_array(map);
   if (!*map_bits_row_slot(foo, map->map_height, y))
-    return 0;
+    return false;
   return map_bits_is_set(foo, map, x, y, BIT_HANGAR);
 }
 

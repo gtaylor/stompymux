@@ -40,12 +40,12 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
   int what_arc;
   int new_arc;
   int relative_bearing;
-  int is_section_destroyed[4];
-  int section_hasbusyweap[4];
+  bool is_section_destroyed[4];
+  bool section_hasbusyweap[4];
   int rleg_bth;
   int lleg_bth;
-  int is_rarm_ready;
-  int is_larm_ready;
+  bool is_rarm_ready;
+  bool is_larm_ready;
   int i;
   DbRef j;
   float range;
@@ -194,14 +194,12 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
                               mech_position_real_y(physical_target));
 
       /* Check to see what sections are destroyed */
-      memset(is_section_destroyed, 0, sizeof(is_section_destroyed));
       is_section_destroyed[0] = mech_section_is_destroyed(mech, RARM);
       is_section_destroyed[1] = mech_section_is_destroyed(mech, LARM);
       is_section_destroyed[2] = mech_section_is_destroyed(mech, RLEG);
       is_section_destroyed[3] = mech_section_is_destroyed(mech, LLEG);
 
       /* Check to see if the sections have a busy weapon */
-      memset(section_hasbusyweap, 0, sizeof(section_hasbusyweap));
       section_hasbusyweap[0] = sect_has_busy_weap(mech, RARM);
       section_hasbusyweap[1] = sect_has_busy_weap(mech, LARM);
       section_hasbusyweap[2] = sect_has_busy_weap(mech, RLEG);
@@ -322,26 +320,26 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
           !mech_limbs_are_recycling(mech) &&
           (elevation_diff == 0 || elevation_diff == -1)) {
 
-        is_rarm_ready = 0;
-        is_larm_ready = 0;
+        is_rarm_ready = false;
+        is_larm_ready = false;
 
         if (!is_section_destroyed[0] && !section_hasbusyweap[0] &&
             ((new_arc & FORWARDARC) || (new_arc & RSIDEARC))) {
 
           /* We can use the right arm */
-          is_rarm_ready = 1;
+          is_rarm_ready = true;
         }
 
         if (!is_section_destroyed[1] && !section_hasbusyweap[1] &&
             ((new_arc & FORWARDARC) || (new_arc & LSIDEARC))) {
 
           /* We can use the left arm */
-          is_larm_ready = 1;
+          is_larm_ready = true;
         }
 
-        if (is_rarm_ready == 1 && is_larm_ready == 1) {
+        if (is_rarm_ready && is_larm_ready) {
           format_physical_command(buffer, 'b', physical_target);
-        } else if (is_rarm_ready == 1) {
+        } else if (is_rarm_ready) {
           format_physical_command(buffer, 'r', physical_target);
         } else {
           format_physical_command(buffer, 'l', physical_target);
@@ -363,7 +361,6 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
                                mech_position_real_y(physical_target));
 
       /* Check to see what sections are destroyed */
-      memset(is_section_destroyed, 0, sizeof(is_section_destroyed));
       is_section_destroyed[0] = mech_section_is_destroyed(mech, RARM);
       is_section_destroyed[1] = mech_section_is_destroyed(mech, LARM);
       is_section_destroyed[2] = mech_section_is_destroyed(mech, RLEG);

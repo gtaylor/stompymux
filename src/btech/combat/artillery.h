@@ -14,7 +14,7 @@ typedef struct ArtilleryShot {
   int to_x, to_y;     /* hex this lands in */
   int type;           /* weapon index in MechWeapons */
   int mode;           /* weapon mode */
-  int ishit;          /* did we hit target hex? */
+  bool ishit;         /* did we hit target hex? */
   DbRef shooter;      /* nice to know type of information */
   DbRef map;          /* map we're on */
   BtechContext *context;

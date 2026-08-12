@@ -458,7 +458,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
   char buf2[LBUF_SIZE];
   char buf3[LBUF_SIZE];
   char color_code[32];
-  int obs = 0;
+  bool obs = false;
   CommRelayContext *relay;
 
   char ai_buf[LBUF_SIZE];
@@ -566,7 +566,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
       radio_color_code(&(RadioColorRequest){.buffer = color_code,
                                             .mech = temp_mech,
                                             .channel = i,
-                                            .observer = obs != 0,
+                                            .observer = obs,
                                             .team = mech_team(mech)});
 
       /* Let's just do the OBSERVERIC Stuff here. No sense checking

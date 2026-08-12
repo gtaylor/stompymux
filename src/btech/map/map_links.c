@@ -68,7 +68,7 @@ static bool parse_coordinate_pair(char *text, int *x, int *y) {
   return PARSED;
 }
 
-int parse_coord(BattleMap *map, int dir, char *data, int *x, int *y) {
+bool parse_coord(BattleMap *map, int dir, char *data, int *x, int *y) {
   int tx;
   int ty;
   int tox;
@@ -79,7 +79,7 @@ int parse_coord(BattleMap *map, int dir, char *data, int *x, int *y) {
     return parse_coordinate_pair(data, x, y);
   }
   if (!parse_int_checked(data, &doh) || doh < 0)
-    return 0;
+    return false;
   const MapDirection *direction = direction_entry(dir);
   tox = direction->x;
   toy = direction->y;
@@ -103,7 +103,7 @@ int parse_coord(BattleMap *map, int dir, char *data, int *x, int *y) {
     ty = (map->map_height - 1);
   *x = tx;
   *y = ty;
-  return 1;
+  return true;
 }
 
 static void add_entrances(DbRef loc, BattleMap *map, char *data,

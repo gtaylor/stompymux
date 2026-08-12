@@ -77,9 +77,7 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
       .player_killer = mech->rd.mech_prefs & MECHPREF_PKILL,
       .friendly_fire_safety = mech->rd.mech_prefs & MECHPREF_NOFRIENDLYFIRE,
       .attack_emissions = STATUS2 & ATTACKEMIT_MECH,
-      .unit_target_lock = (mech->rd.status & LOCK_TARGET) &&
-                          !(mech->rd.status & (LOCK_BUILDING | LOCK_HEX |
-                                               LOCK_HEX_IGN | LOCK_HEX_CLR)),
+      .unit_target_lock = (STATUS & LOCK_MODES) == LOCK_TARGET,
       .tight_turn_mode = mech->rd.mech_prefs & MECHPREF_TURNMODE,
       .dfa_attacking = STATUS & DFA_ATTACK,
       .turret_jammed = TANK_CRITICAL_STATUS & TURRET_JAMMED,
