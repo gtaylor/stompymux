@@ -344,7 +344,7 @@ unsigned long long mech_fasa_cost(Mech *mech) {
     int pamp = 0;
     int turret = 0;
 
-    for (i = 0; i < NUM_SECTIONS; i++)
+    for (i = 0; i < NUM_SECTIONS; i++) {
       for (ii = 0; ii < NUM_CRITICALS; ii++) {
         part = mech_critical_part_type(mech, i, ii);
         if (!part)
@@ -360,6 +360,7 @@ unsigned long long mech_fasa_cost(Mech *mech) {
               tprintf("PAmp Weight: %d", crit_weight(mech, part)));
         }
       }
+    }
     /*
      * Internals
      * 10,000 * Structure Tonnage
@@ -583,12 +584,12 @@ unsigned long long mech_fasa_cost(Mech *mech) {
 
   int masc_count = 0;
   int bloodhound_count = 0;
-  for (i = 0; i < NUM_SECTIONS; i++)
+  for (i = 0; i < NUM_SECTIONS; i++) {
     for (ii = 0; ii < NUM_CRITICALS; ii++) {
       part = mech_critical_part_type(mech, i, ii);
       if (equipment_is_actuator(part) || part == EMPTY)
         continue;
-      if (equipment_is_special(part))
+      if (equipment_is_special(part)) {
         /* These parts are handled above, don't count their crits */
         switch (special_from_equipment_index(part)) {
         case LIFE_SUPPORT:
@@ -667,6 +668,7 @@ unsigned long long mech_fasa_cost(Mech *mech) {
         default:
           break;
         }
+      }
       if (equipment_is_ammunition(part))
         /* Need Something in here to do CASE for CLAN mechs */
         if ((TECHNOLOGY & CLAN_TECH))
@@ -689,6 +691,7 @@ unsigned long long mech_fasa_cost(Mech *mech) {
       mech_cost_add(mech, &total, part_name(mech_context(mech), part, 0).text,
                     (double)indiv_part_cost);
     }
+  }
   /* We have to account for some other stuff that doesn't divide equally here */
   const int BLOODHOUND_PACKAGES = bloodhound_count / 3;
   if (BLOODHOUND_PACKAGES)

@@ -200,7 +200,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
     }
 
     if (btech_context_damage_experience_mode(mech_context(wounded)) ==
-        BTECH_DAMAGE_XP_GUNNERY)
+        BTECH_DAMAGE_XP_GUNNERY) {
       gunnery_experience_award(&(GunneryExperienceAward){
           .pilot = ATTACK_PILOT,
           .attacker = attacker,
@@ -210,19 +210,23 @@ void mech_damage_apply(const MechDamageRequest *request) {
           .weapon_index = CAUSE,
           .base_to_hit = BTH,
       });
-    else if (btech_context_damage_experience_mode(mech_context(wounded)) ==
-             BTECH_DAMAGE_XP_PILOTING)
+    } else if (btech_context_damage_experience_mode(mech_context(wounded)) ==
+               BTECH_DAMAGE_XP_PILOTING) {
       if (!mech_is_destroyed(wounded) &&
           is_in_character(btech_context_database(mech_context(wounded)),
                           mech_dbref(wounded)) &&
-          mech_team(wounded) != mech_team(attacker))
-        if (mech_class(wounded) != CLASS_MW || mech_class(attacker) == CLASS_MW)
+          mech_team(wounded) != mech_team(attacker)) {
+        if (mech_class(wounded) != CLASS_MW ||
+            mech_class(attacker) == CLASS_MW) {
           piloting_experience_award(&(PilotingExperienceAward){
               .pilot = ATTACK_PILOT,
               .mech = attacker,
               .reason = damage / 3,
               .unconditional = true,
           });
+        }
+      }
+    }
     damage = unit_damage_to_personal_combat(&(PersonalCombatDamageConversion){
         .target = wounded,
         .weapon_index = CAUSE,
@@ -463,7 +467,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
      * selfdamage) we'll check a 'Physical Weapons Table' and abs() the value
      * and pick the name out from there */
     if (btech_context_stat_engine_dbref(mech_context(wounded)) > 0 &&
-        W_WEAP_INDX != -1)
+        W_WEAP_INDX != -1) {
       notify_checked(
           btech_context_evaluation(mech_context(wounded)),
           btech_context_stat_engine_dbref(mech_context(wounded)), GOD,
@@ -479,6 +483,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
                                       mech_section_internal(wounded, hitloc))
                       : int_damage),
           MSG_ME_ALL | MSG_F_DOWN);
+    }
 
     if (int_damage >= 0)
       mech_flood_section(wounded, hitloc, mech_position_z(wounded));
@@ -524,7 +529,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
   /* Non-CASE things get _really_ hurt */
   {
     if (int_damage > 0) {
-      if (mech_is_aerospace_unit(wounded))
+      if (mech_is_aerospace_unit(wounded)) {
         int_damage = cause_armordamage(
             &(ArmorDamageRequest){.wounded = wounded,
                                   .attacker = attacker,
@@ -536,7 +541,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
                                   .critical_hits = &crits,
                                   .weapon_index = W_WEAP_INDX,
                                   .ammunition_mode = W_AMMO_MODE});
-      else
+      } else {
         int_damage = cause_internaldamage(
             &(InternalDamageRequest){.wounded = wounded,
                                      .attacker = attacker,
@@ -544,6 +549,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
                                      .section = hitloc,
                                      .damage = int_damage,
                                      .critical_hits = &crits});
+      }
       if (!mech_section_is_destroyed(wounded, hitloc))
         mech_location_maybe_breach(attacker, wounded, hitloc);
       if (int_damage > 0 && transfer &&
@@ -551,7 +557,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
             (mech_technology_flags(wounded) & CLAN_TECH))) {
         hitloc = mech_hit_location_transfer(wounded, hitloc);
         if (hitloc >= 0) {
-          if (!mech_is_aerospace_unit(wounded))
+          if (!mech_is_aerospace_unit(wounded)) {
             mech_damage_apply(&(MechDamageRequest){
                 .target = wounded,
                 .attacker = attacker,
@@ -568,7 +574,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
                 .ammunition_mode = W_AMMO_MODE,
                 .ignore_swarmers = T_IGNORE_SWARMERS,
             });
-          else
+          } else {
             mech_damage_apply(&(MechDamageRequest){
                 .target = wounded,
                 .attacker = attacker,
@@ -585,6 +591,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
                 .ammunition_mode = W_AMMO_MODE,
                 .ignore_swarmers = T_IGNORE_SWARMERS,
             });
+          }
         } else {
           mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
           return;

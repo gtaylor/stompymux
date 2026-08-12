@@ -591,7 +591,7 @@ void physical_attack_resolve(const PhysicalAttackRequest *request) {
 
     // Do the deed - Damage the victim. If we're tripping, we don't do
     // damage but try to make a skill roll.
-    if (ATTACK_TYPE != PA_TRIP)
+    if (ATTACK_TYPE != PA_TRIP) {
       physical_damage_resolve(
           &(PhysicalDamageRequest){.attacker = mech,
                                    .target = target,
@@ -599,8 +599,9 @@ void physical_attack_resolve(const PhysicalAttackRequest *request) {
                                    .attack_type = ATTACK_TYPE,
                                    .section = SECT,
                                    .glancing_damage = glance});
-    else
+    } else {
       physical_trip(mech, target);
+    }
 
   } else { // We have failed!
     phys_fail(mech, target, ATTACK_TYPE);

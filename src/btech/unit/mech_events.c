@@ -378,7 +378,7 @@ void mech_plos_event(MuxEvent *e) {
     DbRef target_dbref = battle_map_unit_dbref(map, i);
     unsigned short los_flags =
         battle_map_los_flags(map, mech_map_slot(mech), i);
-    if (target_dbref > 0 && target_dbref != mech_dbref(mech))
+    if (target_dbref > 0 && target_dbref != mech_dbref(mech)) {
       if (!(los_flags & BATTLE_MAP_LOS_SEEN)) {
         target = btech_context_find_object(mech->xcode.context, target_dbref);
         if (!target)
@@ -400,6 +400,7 @@ void mech_plos_event(MuxEvent *e) {
         los_flags = mech_sensor_visibility_update(&request);
         battle_map_los_flags_set(map, mech_map_slot(mech), i, los_flags);
       }
+    }
   }
 }
 
@@ -424,7 +425,7 @@ void aero_move_event(MuxEvent *e) {
     mech_movement_update(mech);
     if (mech_is_dropship(mech) &&
         ((mech)->pd.z) <= (mech_position_surface_elevation(mech) + 5) &&
-        ((mech->xcode.context->events->tick / WEAPON_TICK) % 10) == 0)
+        ((mech->xcode.context->events->tick / WEAPON_TICK) % 10) == 0) {
       dropship_exhaust_blast(&(DropshipExhaustBlastRequest){
           .dropship = mech,
           .direct_message = "You are hit by the DropShip's plasma exhaust!",
@@ -434,6 +435,7 @@ void aero_move_event(MuxEvent *e) {
           .tree_message = "light up and burn.",
           .damage = 8,
       });
+    }
     mech_event_schedule(mech, EVENT_MOVE, aero_move_event, MOVE_TICK, 0);
   } else if (mech_is_landed(mech) && !mech_is_fallen(mech) &&
              mech_is_rolling_aerospace_unit(mech)) {

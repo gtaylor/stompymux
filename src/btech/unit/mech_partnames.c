@@ -703,7 +703,7 @@ void destroy_partname_tables(BtechContext *context) {
     return;
   hash_table_destroy(&registry->short_hash);
   hash_table_destroy(&registry->vlong_hash);
-  for (int brand = 0; brand <= BRANDCOUNT; brand++)
+  for (int brand = 0; brand <= BRANDCOUNT; brand++) {
     for (int id = 0; id < NUM_ITEMS; id++) {
       PartNameEntry *part_name = part_index_entry(registry, brand, id);
 
@@ -714,6 +714,7 @@ void destroy_partname_tables(BtechContext *context) {
       free(part_name->vlongy);
       free(part_name);
     }
+  }
   free((void *)registry->short_sorted);
   free((void *)registry->long_sorted);
   free((void *)registry->vlong_sorted);

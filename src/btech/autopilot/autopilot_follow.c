@@ -591,13 +591,14 @@ void auto_dumbfollow_event(MuxEvent *muxevent) {
                                   .target = {.x = tx, .y = ty},
                                   .bearing = -1});
 
-  if (mech_current_speed(leader) < MP1)
+  if (mech_current_speed(leader) < MP1) {
     (void)autopilot_slow_down_for_target(
         &(AutopilotApproachRequest){.autopilot = autopilot,
                                     .mech = mech,
                                     .target = {.x = tx, .y = ty},
                                     .bearing = bearing,
                                     .range = range + 1});
+  }
 
   update_wanted_heading(autopilot, mech, bearing);
 

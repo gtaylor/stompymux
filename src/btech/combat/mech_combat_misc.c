@@ -76,13 +76,15 @@ void mech_ammunition_expenditure_check(
   else
     return;
   /* Okay, we have case of warning here */
-  if (mech_is_started(mech))
-    if ((sev * 65536 + WEAPINDX) % 65536)
+  if (mech_is_started(mech)) {
+    if ((sev * 65536 + WEAPINDX) % 65536) {
       mech_printf(mech, MECHALL,
                   "%sWARNING: Ammo for %s is running low.[reset]",
                   sev ? "[fg=red bold]" : "[fg=yellow bold]",
                   get_parts_long_name(mech_context(mech),
                                       weapon_equipment_index(WEAPINDX), 0));
+    }
+  }
 }
 
 void mech_heat_effect_apply(Mech *mech, Mech *temp_mech, int heatdam,
@@ -162,20 +164,21 @@ void mech_contents_kill_if_in_character(Mech *mech) {
   if (!is_in_character(database, mech_ref))
     return;
   if (!btech_context_in_character_enabled(context) ||
-      btech_context_experience_loss(context) >= 1000)
+      btech_context_experience_loss(context) >= 1000) {
     contents_teleport(&(ContentsTeleportRequest){
         .context = context,
         .source = mech_ref,
         .destination = btech_context_afterlife_dbref(context),
         .options = TELE_LOUD,
     });
-  else
+  } else {
     contents_teleport(&(ContentsTeleportRequest){
         .context = context,
         .source = mech_ref,
         .destination = btech_context_afterlife_dbref(context),
         .options = TELE_XP | TELE_LOUD,
     });
+  }
 }
 
 enum { BOOM_LENGTH = 24 };

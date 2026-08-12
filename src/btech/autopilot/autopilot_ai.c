@@ -340,14 +340,16 @@ static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
           int osc = stack_count;
           for (j = 0; j < path->friend_count; j++) {
             AiPathUnitSimulation *friend = ai_path_unit_at(path->friends, j);
-            if (!friend->out)
+            if (!friend->out) {
               if (candidate->location.x == friend->location.x &&
-                  candidate->location.y == friend->location.y)
+                  candidate->location.y == friend->location.y) {
                 if ((candidate->location.lx != candidate->location.x ||
                      candidate->location.ly != candidate->location.y) ||
                     (friend->location.lx != friend->location.x ||
                      friend->location.ly != friend->location.y))
                   osc--;
+              }
+            }
           }
           if (osc != stack_count)
             candidate->stack_step = i + 1;
@@ -511,12 +513,13 @@ static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
              SAFE_SCORE +
          ai_score_normalize(candidate->movement_score, a->w_msc, a->b_msc,
                             SCORE_MOD * a->auto_goweight);
-    if (GOTENEMY)
+    if (GOTENEMY) {
       sc +=
           ai_score_normalize(candidate->battle_score, a->w_bsc, a->b_bsc,
                              SCORE_MOD * a->auto_fweight) -
           ai_score_normalize(candidate->danger, a->w_dan, a->b_dan,
                              SCORE_MOD * (a->auto_fweight + a->auto_goweight));
+    }
     const AiPathOption *best_option =
         result.selected_option >= 0
             ? ai_path_option_at(options, (size_t)OPTION_COUNT,
@@ -676,7 +679,7 @@ int ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
       b = result.selected_option;
       b_score = result.score;
       b_len = b_score / SAFE_SCORE;
-      if (b_len >= MIN_SAFE)
+      if (b_len >= MIN_SAFE) {
         ai_adjust_path_option(
             &(AiPathAdjustment){.autopilot = a,
                                 .mech = m,
@@ -685,6 +688,7 @@ int ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
                                 .option_count = MNORM_COUNT,
                                 .selected = b,
                                 .score = b_score});
+      }
     } else {
       AiPathScoreResult result = ai_path_score(
           &(AiPathScoreRequest){.path = &path,
@@ -699,7 +703,7 @@ int ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
       b = result.selected_option;
       b_score = result.score;
       b_len = b_score / SAFE_SCORE;
-      if (b_len >= MIN_SAFE)
+      if (b_len >= MIN_SAFE) {
         ai_adjust_path_option(
             &(AiPathAdjustment){.autopilot = a,
                                 .mech = m,
@@ -708,6 +712,7 @@ int ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
                                 .option_count = CFAST_COUNT,
                                 .selected = b,
                                 .score = b_score});
+      }
     }
     return 1; /* We want to keep fighting near foes */
   }
@@ -726,7 +731,7 @@ int ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
     b = result.selected_option;
     b_score = result.score;
     b_len = b_score / SAFE_SCORE;
-    if (b_len >= MIN_SAFE)
+    if (b_len >= MIN_SAFE) {
       ai_adjust_path_option(&(AiPathAdjustment){.autopilot = a,
                                                 .mech = m,
                                                 .description = "moving",
@@ -734,6 +739,7 @@ int ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
                                                 .option_count = MNORM_COUNT,
                                                 .selected = b,
                                                 .score = b_score});
+    }
   } else {
     AiPathScoreResult result = ai_path_score(
         &(AiPathScoreRequest){.path = &path,
@@ -747,7 +753,7 @@ int ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
     b = result.selected_option;
     b_score = result.score;
     b_len = b_score / SAFE_SCORE;
-    if (b_len >= MIN_SAFE)
+    if (b_len >= MIN_SAFE) {
       ai_adjust_path_option(&(AiPathAdjustment){.autopilot = a,
                                                 .mech = m,
                                                 .description = "[f]moving",
@@ -755,6 +761,7 @@ int ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
                                                 .option_count = CFAST_COUNT,
                                                 .selected = b,
                                                 .score = b_score});
+    }
   }
   if (b_len >= MIN_SAFE)
     return 1;

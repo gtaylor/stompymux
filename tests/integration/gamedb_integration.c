@@ -355,12 +355,13 @@ static int check_btech_value(sqlite3 *sqlite, const char *label,
     if (actual != expected)
       result = -1;
   }
-  if (result < 0)
+  if (result < 0) {
     fprintf(stderr,
             "BTech SQLite round-trip mismatch for %s: expected %lld, got %lld "
             "(%s)\n",
             label, (long long)expected, (long long)actual,
             sqlite3_errmsg(sqlite));
+  }
   sqlite3_finalize(statement);
   return result;
 }
@@ -1471,9 +1472,8 @@ int main(int argc, char *argv[]) {
       string_catalog_item((const char *const *)argv, (size_t)argc, 1);
   const char *suite =
       string_catalog_item((const char *const *)argv, (size_t)argc, 2);
-  const char *directory =
-      string_catalog_item((const char *const *)argv, (size_t)argc,
-                          (size_t)argc - 1);
+  const char *directory = string_catalog_item((const char *const *)argv,
+                                              (size_t)argc, (size_t)argc - 1);
   recovery_snapshot = strcmp(suite, "recovery-snapshot") == 0;
   recovery_writer = strcmp(suite, "recovery-writer") == 0;
   recovery_rejection = strcmp(suite, "recovery-rejection") == 0;
@@ -1670,36 +1670,36 @@ int main(int argc, char *argv[]) {
     return result;
   }
   if (recovery_snapshot && result == 0 &&
-      (run_server_crash_in_directory(server, sqlite_read_config,
-                                                    directory, &status) < 0 ||
-                      !WIFSIGNALED(status) || WTERMSIG(status) != SIGKILL ||
-                      check_snapshot_dump_type(crash_database, 1) < 0 ||
-                      check_btech_special_snapshot(crash_database) < 0 ||
-                      check_btech_queued_command_state(crash_database) < 0 ||
-                      check_player_account_state(crash_database) < 0 ||
-                      check_economy_parts(crash_database) < 0 ||
-                      check_character_state(crash_database) < 0)) {
+      (run_server_crash_in_directory(server, sqlite_read_config, directory,
+                                     &status) < 0 ||
+       !WIFSIGNALED(status) || WTERMSIG(status) != SIGKILL ||
+       check_snapshot_dump_type(crash_database, 1) < 0 ||
+       check_btech_special_snapshot(crash_database) < 0 ||
+       check_btech_queued_command_state(crash_database) < 0 ||
+       check_player_account_state(crash_database) < 0 ||
+       check_economy_parts(crash_database) < 0 ||
+       check_character_state(crash_database) < 0)) {
     fprintf(stderr, "SQLite crash-dump fixture failed: %s (status=%d)\n",
             directory, status);
     return 1;
   }
   if (recovery_snapshot && result == 0 &&
-      (run_server_killed_in_directory(server, sqlite_read_config,
-                                                     directory, &status) < 0 ||
-                      !WIFEXITED(status) || WEXITSTATUS(status) != 0 ||
-                      check_snapshot_dump_type(killed_database, 4) < 0 ||
-                      check_btech_special_snapshot(killed_database) < 0 ||
-                      check_btech_queued_command_state(killed_database) < 0 ||
-                      check_player_account_state(killed_database) < 0 ||
-                      check_economy_parts(killed_database) < 0 ||
-                      check_character_state(killed_database) < 0)) {
+      (run_server_killed_in_directory(server, sqlite_read_config, directory,
+                                      &status) < 0 ||
+       !WIFEXITED(status) || WEXITSTATUS(status) != 0 ||
+       check_snapshot_dump_type(killed_database, 4) < 0 ||
+       check_btech_special_snapshot(killed_database) < 0 ||
+       check_btech_queued_command_state(killed_database) < 0 ||
+       check_player_account_state(killed_database) < 0 ||
+       check_economy_parts(killed_database) < 0 ||
+       check_character_state(killed_database) < 0)) {
     fprintf(stderr, "SQLite killed-dump fixture failed: %s (status=%d)\n",
             directory, status);
     return 1;
   }
   if (recovery_snapshot && result == 0 &&
-      (run_server_in_directory_after_tick(server, sqlite_read_config,
-                                          directory, 0, &status) < 0 ||
+      (run_server_in_directory_after_tick(server, sqlite_read_config, directory,
+                                          0, &status) < 0 ||
        !WIFEXITED(status) || WEXITSTATUS(status) == 2 ||
        check_btech_special_snapshot(database) < 0 ||
        check_btech_nondefault_state(database) < 0 ||

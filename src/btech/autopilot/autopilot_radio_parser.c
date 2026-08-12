@@ -162,13 +162,14 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
   const char *command_name = autopilot_argument_list_get(&command_args, 0);
   for (i = 0; radio_command->abbreviation; i++) {
     if (!strncmp(radio_command->abbreviation, command_name,
-                 strlen(radio_command->abbreviation)))
+                 strlen(radio_command->abbreviation))) {
       if (!strncmp(radio_command->name, command_name, strlen(command_name))) {
         if (argc == (radio_command->argument_count + 1)) {
           cmd = i;
           break;
         }
       }
+    }
     radio_command = autopilot_radio_command_at(i + 1);
   }
 

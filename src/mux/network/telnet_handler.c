@@ -442,7 +442,7 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
                 telnet_byte_at(event->sub.buffer, event->sub.size, 0) ==
                     TELNET_ENVIRON_INFO)) {
       if (!telnet_environment_receive(d->telnet_environment, event->sub.buffer,
-                                      event->sub.size))
+                                      event->sub.size)) {
         log_error((LogEntry){.log = descriptor_log(d),
                              .key = LOG_PROBLEMS,
                              .primary = "TELNET",
@@ -450,6 +450,7 @@ static void telnet_event_handler(telnet_t *telnet, telnet_event_t *event,
                   "Descriptor %d sent an invalid or oversized NEW-ENVIRON "
                   "update.",
                   d->descriptor);
+      }
     }
     break;
   case TELNET_EV_WARNING:

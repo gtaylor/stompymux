@@ -64,17 +64,18 @@ typedef struct ShoutRequest {
 
 static void say_shout(const ShoutRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
-  if (request->flags & SAY_NOTAG)
+  if (request->flags & SAY_NOTAG) {
     raw_broadcast(
         evaluation->runtime->descriptors, request->target, "%s%s",
         game_object_name(evaluation->world->database, request->player),
         request->message);
-  else
+  } else {
     raw_broadcast(
         evaluation->runtime->descriptors, request->target, "%s%s%s",
         request->prefix,
         game_object_name(evaluation->world->database, request->player),
         request->message);
+  }
 }
 
 static const char *announce_msg = "Announcement: ";
@@ -371,16 +372,17 @@ void do_say(CommandInvocation *invocation) {
     break;
 
   case SAY_WIZPOSE:
-    if (say_flags & SAY_NOTAG)
+    if (say_flags & SAY_NOTAG) {
       raw_broadcast(invocation->context->runtime->descriptors,
                     OBJECT_FLAG_WIZARD, "%s %s",
                     game_object_name(evaluation->world->database, PLAYER),
                     message);
-    else
+    } else {
       raw_broadcast(invocation->context->runtime->descriptors,
                     OBJECT_FLAG_WIZARD, "Broadcast: %s %s",
                     game_object_name(evaluation->world->database, PLAYER),
                     message);
+    }
     STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "BCAST") {
       log_name(evaluation->log, PLAYER);
       buf2 = alloc_lbuf("do_say.LOG.wizpose");

@@ -180,7 +180,7 @@ static int btech_load_costs(sqlite3 *sqlite, BtechContext *btech) {
       result = -1;
   }
   sqlite3_finalize(statement);
-  if (skipped)
+  if (skipped) {
     log_error((LogEntry){.log = btech->log,
                          .key = LOG_ALWAYS,
                          .primary = "ECO",
@@ -188,6 +188,7 @@ static int btech_load_costs(sqlite3 *sqlite, BtechContext *btech) {
               "Ignored %d SQLite economy rows for parts unavailable in this "
               "build.",
               skipped);
+  }
   return result;
 }
 

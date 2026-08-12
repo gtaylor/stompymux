@@ -166,12 +166,13 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
         mech_context(request->mech), BTECH_CHANNEL_MECH_ATTACKS, "%s",
         tprintf("#%li attacks #%li (weapon) (%i/%i)", mech_dbref(request->mech),
                 mech_dbref(target), base_to_hit, roll));
-    if (mech_condition_summary(target).attack_emissions)
+    if (mech_condition_summary(target).attack_emissions) {
       btech_channel_send(mech_context(request->mech),
                          BTECH_CHANNEL_MECH_ATTACK_EMITS, "%s",
                          tprintf("#%li attacks #%li (weapon) (%i/%i)",
                                  mech_dbref(request->mech), mech_dbref(target),
                                  base_to_hit, roll));
+    }
   } else {
     mech_c3_track_emit(request->mech, c3_ref, c3_mech);
     mech_printf(request->mech, MECHALL, "You fire %s %s (%d,%d) - BTH: %d  %s",
@@ -199,7 +200,7 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
           if (mech_position_x(tmpmech) != request->target_hex.x &&
               mech_position_y(tmpmech) != request->target_hex.y)
             continue;
-          if (mech_condition_summary(tmpmech).attack_emissions)
+          if (mech_condition_summary(tmpmech).attack_emissions) {
             btech_channel_send(
                 mech_context(request->mech), BTECH_CHANNEL_MECH_ATTACK_EMITS,
                 "%s",
@@ -209,6 +210,7 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
                         request->target_hex.y,
                         mech_hex_target_short_name(request->mech), base_to_hit,
                         roll));
+          }
         }
       }
     }
@@ -555,7 +557,7 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
       mech_printf(target, MECHALL, "%s has fired a %s at you!",
                   mech_to_mech_display_id(target, request->mech).text,
                   weapon_display_name(request->weapon_index));
-    else
+    else {
       mech_printf(target, MECHALL,
                   "Something has fired a %s at you from bearing %d!",
                   weapon_display_name(request->weapon_index),
@@ -564,6 +566,7 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
                                 .y = mech_position_real_y(target)},
                       .end = {.x = mech_position_real_x(request->mech),
                               .y = mech_position_real_y(request->mech)}}));
+    }
   }
   mech_fired_recently_set(request->mech, true);
   if (!request->target_kind) /* only record against actual targets */

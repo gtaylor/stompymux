@@ -52,13 +52,14 @@ DbRef battle_map_object_dbref(const MapObject *object) { return object->obj; }
 MapEntranceResult find_entrance(BattleMap *map, char direction) {
   MapObject *tmp;
 
-  for (tmp = first_mapobj(map, TYPE_ENTRANCE); tmp; tmp = next_mapobj(tmp))
+  for (tmp = first_mapobj(map, TYPE_ENTRANCE); tmp; tmp = next_mapobj(tmp)) {
     if (!direction || tmp->datac == direction) {
       return (MapEntranceResult){
           .found = true,
           .position = {.x = tmp->x, .y = tmp->y},
       };
     }
+  }
   return (MapEntranceResult){0};
 }
 
@@ -172,7 +173,7 @@ void del_mapobjst(BattleMap *map, int type) {
   if (!(map->flags & MAPFLAG_MAPO))
     return;
   MapObject **object_slot = map_object_slot(map, type);
-  while (*object_slot)
+  while (*object_slot) {
     del_mapobj(&(MapObjectDeleteRequest){
         .map = map,
         .object = *object_slot,
@@ -180,6 +181,7 @@ void del_mapobjst(BattleMap *map, int type) {
         .preserve_terrain = true,
         .cancel_event = true,
     });
+  }
 }
 
 void del_mapobjs(BattleMap *map) {
@@ -430,7 +432,7 @@ static void check_for_fire(BattleMap *map, SpreadHex hexes[]) {
       continue;
     /* Cackle */
     char terrain = map_real_terrain_get(map, hex->x, hex->y);
-    if (terrain == LIGHT_FOREST || terrain == HEAVY_FOREST)
+    if (terrain == LIGHT_FOREST || terrain == HEAVY_FOREST) {
       add_decoration(&(MapDecorationRequest){
           .map = map,
           .position = {.x = hex->x, .y = hex->y},
@@ -438,6 +440,7 @@ static void check_for_fire(BattleMap *map, SpreadHex hexes[]) {
           .terrain_marker = FIRE,
           .duration = btech_random_range_int(map->xcode.context, 60, 180),
       });
+    }
   }
 }
 
@@ -586,13 +589,14 @@ void add_decoration(const MapDecorationRequest *request) {
     for (i = 0; i <= TYPE_LAST_DEC; i++) {
       for (m = first_mapobj(map, i); m; m = m2) {
         m2 = next_mapobj(m);
-        if (m->x == x && m->y == y)
+        if (m->x == x && m->y == y) {
           del_mapobj(&(MapObjectDeleteRequest){
               .map = map,
               .object = m,
               .type = i,
               .cancel_event = true,
           });
+        }
       }
     }
   }

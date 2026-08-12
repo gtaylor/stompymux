@@ -42,31 +42,34 @@ void mech_critical_handle(const CriticalHitDispatch *dispatch) {
   if (mech_class(wounded) == CLASS_VEH_GROUND ||
       mech_class(wounded) == CLASS_VEH_NAVAL) {
     if (btech_context_uses_advanced_vehicle_criticals(context)) {
-      for (i = 0; i < num; i++)
+      for (i = 0; i < num; i++) {
         mech_advanced_vehicle_critical_handle(
             &(VehicleCriticalRequest){.wounded = wounded,
                                       .attacker = attacker,
                                       .line_of_sight = LOS,
                                       .section = HITLOC});
+      }
 
       return;
     }
     if (!btech_context_uses_fasa_criticals(context)) {
-      for (i = 0; i < num; i++)
+      for (i = 0; i < num; i++) {
         mech_vehicle_critical_handle(
             &(VehicleCriticalRequest){.wounded = wounded,
                                       .attacker = attacker,
                                       .line_of_sight = LOS,
                                       .section = HITLOC});
+      }
       return;
     }
     if (btech_context_uses_fasa_criticals(context)) {
-      for (i = 0; i < num; i++)
+      for (i = 0; i < num; i++) {
         mech_fasa_vehicle_critical_handle(
             &(VehicleCriticalRequest){.wounded = wounded,
                                       .attacker = attacker,
                                       .line_of_sight = LOS,
                                       .section = HITLOC});
+      }
       return;
     }
   }
@@ -74,12 +77,13 @@ void mech_critical_handle(const CriticalHitDispatch *dispatch) {
     return;
   if (mech_class(wounded) == CLASS_VTOL) {
     if (btech_context_uses_advanced_vtol_criticals(context)) {
-      for (i = 0; i < num; i++)
+      for (i = 0; i < num; i++) {
         mech_advanced_vehicle_critical_handle(
             &(VehicleCriticalRequest){.wounded = wounded,
                                       .attacker = attacker,
                                       .line_of_sight = LOS,
                                       .section = HITLOC});
+      }
 
       return;
     }

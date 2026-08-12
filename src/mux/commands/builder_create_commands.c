@@ -619,15 +619,16 @@ void do_clone(CommandInvocation *invocation) {
    * Tell creator about it
    */
 
-  if (arg2 && *arg2)
+  if (arg2 && *arg2) {
     notify_printf(evaluation, player,
                   "%s cloned as %s, new copy is object #%ld.",
                   game_object_name(invocation->context->world->database, thing),
                   arg2, clone);
-  else
+  } else {
     notify_printf(evaluation, player, "%s cloned, new copy is object #%ld.",
                   game_object_name(invocation->context->world->database, thing),
                   clone);
+  }
   /*
    * Put the new thing in its new home.  Break any dropto or link, then
    * * * * * * * try to re-establish it.

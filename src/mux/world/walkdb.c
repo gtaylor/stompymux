@@ -290,13 +290,14 @@ void search_criteria_perform(const SearchExecutionRequest *request) {
      * Check for matching flags
      */
 
-    for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
+    for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++) {
       if (object_flag_set_has(&parm->s_fset, flag) &&
           !game_object_has_flag(
               &(ObjectFlagRequest){.database = context->world->database,
                                    .object = thing,
                                    .flag = flag}))
         goto next_object;
+    }
 
     /*
      * Check for matching power

@@ -507,7 +507,7 @@ void mechrep_rreload(DbRef player, void *data, char *buffer) {
       mech_critical_fire_mode_set(mech, index, subsect, 0);
       mech_critical_ammo_mode_set(mech, index, subsect, 0);
     }
-    if (argc > 3)
+    if (argc > 3) {
       switch (ascii_to_upper(*checked_string_suffix(args[3], 0))) {
       case '+':
         mech_critical_fire_mode_add(mech, index, subsect, HALFTON_MODE);
@@ -585,6 +585,7 @@ void mechrep_rreload(DbRef player, void *data, char *buffer) {
         mech_critical_ammo_mode_set(mech, index, subsect, 0);
         mech_critical_fire_mode_set(mech, index, subsect, 0);
       }
+    }
     mech_critical_data_set(mech, index, subsect,
                            full_ammo(mech, index, subsect));
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,

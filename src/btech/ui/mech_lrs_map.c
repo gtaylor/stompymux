@@ -323,20 +323,22 @@ static MapCellText lrs_hex_text(const MapColorScheme *colors, Mech *mech,
             .colors = colors, .terrain = UNKNOWN_TERRAIN, .elevation = 0}),
         prevc, '?');
 
-  if (mode & LRS_ELEVMODE)
+  if (mode & LRS_ELEVMODE) {
     return lrs_elevation_text(
         &(LrsCellRequest){.colors = colors,
                           .map = map,
                           .position = {.x = x, .y = y},
                           .use_color = (mode & LRS_ELEVCOLORMODE) != 0,
                           .previous_color = prevc});
-  if (mode & LRS_TERRAINMODE)
+  }
+  if (mode & LRS_TERRAINMODE) {
     return lrs_terrain_text(
         &(LrsCellRequest){.colors = colors,
                           .map = map,
                           .position = {.x = x, .y = y},
                           .use_color = (mode & LRS_COLORMODE) != 0,
                           .previous_color = prevc});
+  }
 
   btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
                      tprintf("Unknown LRS mode, mech #%ld mode 0x%x.",
@@ -435,8 +437,8 @@ static void show_lrs_map(const LrsMapRequest *request) {
           *lrs_mech_slot(&mechs, last_mech++) = o_mech;
       }
     }
-    for (i = 0; i < (last_mech - 1); i++) /* Bubble-sort the list
-                                           *  to y/x order */
+    for (i = 0; i < (last_mech - 1); i++) { /* Bubble-sort the list
+                                             *  to y/x order */
       for (loop = (i + 1); loop < last_mech; loop++) {
         if (mech_position_y(lrs_mech_at(&mechs, i)) >
             mech_position_y(lrs_mech_at(&mechs, loop))) {
@@ -452,6 +454,7 @@ static void show_lrs_map(const LrsMapRequest *request) {
           *lrs_mech_slot(&mechs, loop) = o_mech;
         }
       }
+    }
     *lrs_mech_slot(&mechs, last_mech) = nullptr;
     last_mech = 0;
   }

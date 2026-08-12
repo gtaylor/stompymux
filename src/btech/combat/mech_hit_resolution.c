@@ -401,7 +401,7 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
     if (PLAYER_ROLL < BTH)
       return;
 
-    if (t_is_swarm && hit_mech) /* No swarms on hex hits */
+    if (t_is_swarm && hit_mech) { /* No swarms on hex hits */
       mech_swarm_missile_hit_target(&(MissileAttackRequest){
           .attacker = mech,
           .target = hit_mech,
@@ -420,7 +420,7 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
           .swarm_attack = T_IS_SWARM_ATTACK,
           .player_roll = PLAYER_ROLL,
       });
-    else
+    } else {
       (void)mech_missile_hit_target(&(MissileAttackRequest){
           .attacker = mech,
           .target = hit_mech,
@@ -437,6 +437,7 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
           .swarm_attack = T_IS_SWARM_ATTACK,
           .player_roll = PLAYER_ROLL,
       });
+    }
 
     return;
   }
@@ -462,13 +463,14 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
    * Check for non-missile, multiple hit weapons, like LBXs, RACs, RFACs and
    * Ultras
    */
-  if (LOS)
+  if (LOS) {
     mech_printf(mech, MECHALL, "[fg=green]You hit with %d %s%s![reset]",
                 num_missiles_hit,
                 (t_is_ultra || t_is_rac ? "slug"
                  : t_is_lbx             ? "pellet"
                                         : "missile"),
                 (num_missiles_hit > 1 ? "s" : ""));
+  }
 
   if (t_is_lbx) {
     mech_missile_apply_hits(&(MissileHitsRequest){

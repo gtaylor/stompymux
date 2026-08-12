@@ -280,7 +280,7 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
         btech_special_command_definition(ID, (size_t)i);
     if (!btech_command_definition_has_handler(command) &&
         (*command->helpmsg != '@' ||
-         btech_special_command_access(context, PLAYER, POWERNEEDED)))
+         btech_special_command_access(context, PLAYER, POWERNEEDED))) {
       if (ID != GTYPE_MECH ||
           btech_command_allowed_for_mech(mech, command->flag)) {
         if (count)
@@ -289,6 +289,7 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
         help_section(sections, count)->start = i;
         count++;
       }
+    }
   }
   if (count) {
     help_section(sections, count - 1)->length =
@@ -317,7 +318,7 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
         const BtechCommandDefinition *command =
             btech_special_command_definition(ID, (size_t)j);
         if (*command->helpmsg != '@' ||
-            btech_special_command_access(context, PLAYER, POWERNEEDED))
+            btech_special_command_access(context, PLAYER, POWERNEEDED)) {
           if (ID != GTYPE_MECH ||
               btech_command_allowed_for_mech(mech, command->flag)) {
             strlcpy(buf, command->name, sizeof(buf));
@@ -327,6 +328,7 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
             cool_menu_add_with_flags(&c, buf, CM_FOUR);
             csho++;
           }
+        }
       }
     }
     if (!csho) {
@@ -370,7 +372,7 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
       }
     }
     if (dc > -2) {
-      for (i = 0; i < count; i++)
+      for (i = 0; i < count; i++) {
         if (dc == -1 || i == dc) {
           if (count > 1) {
             center_string(
@@ -385,17 +387,20 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
             const BtechCommandDefinition *command =
                 btech_special_command_definition(ID, (size_t)j);
             if (*command->helpmsg != '@' ||
-                btech_special_command_access(context, PLAYER, POWERNEEDED))
+                btech_special_command_access(context, PLAYER, POWERNEEDED)) {
               if (ID != GTYPE_MECH ||
-                  btech_command_allowed_for_mech(mech, command->flag))
+                  btech_command_allowed_for_mech(mech, command->flag)) {
                 help_text_add(&(HelpTextRequest){
                     .menu = &c,
                     .command = command->name,
                     .description = command_help_message(ID, j),
                     .width = 37,
                     .initial_indentation = 1});
+              }
+            }
           }
         }
+      }
     }
   }
   cool_menu_add_with_flags(&c, NULL, CM_ONE | CM_LINE);

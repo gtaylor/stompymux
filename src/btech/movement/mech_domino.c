@@ -361,7 +361,7 @@ int mech_domino_resolve(Mech *mech, MechDominoMode mode) {
       .position = position,
       .relationship = TEAM_RELATIONSHIP_FRIENDLY,
       .team = mech_team(mech)});
-  if (fcnt > 2)
+  if (fcnt > 2) {
     return mech_domino_resolve_in_hex(
         &(MechDominoRequest){.map = map,
                              .moving_mech = mech,
@@ -369,7 +369,8 @@ int mech_domino_resolve(Mech *mech, MechDominoMode mode) {
                              .relationship = TEAM_RELATIONSHIP_FRIENDLY,
                              .mode = mode,
                              .candidate_count = fcnt});
-  if (cnt > 6)
+  }
+  if (cnt > 6) {
     return mech_domino_resolve_in_hex(
         &(MechDominoRequest){.map = map,
                              .moving_mech = mech,
@@ -377,5 +378,6 @@ int mech_domino_resolve(Mech *mech, MechDominoMode mode) {
                              .relationship = TEAM_RELATIONSHIP_HOSTILE,
                              .mode = mode,
                              .candidate_count = cnt - fcnt});
+  }
   return 0;
 }

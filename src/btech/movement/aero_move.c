@@ -171,12 +171,13 @@ static void aero_takeoff_event(MuxEvent *e) {
   mech_notify(mech, MECHALL, land_data_entry(i)->takeoff);
   mech_los_broadcast(mech, land_data_entry(i)->takeoff_others);
   mech_motion_vector_reset(mech);
-  if (mech_is_dropship(mech))
+  if (mech_is_dropship(mech)) {
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_DS_INFO, "%s",
                        tprintf("DS #%ld has lifted off at %d %d "
                                "on map #%ld",
                                mech_dbref(mech), mech_position_x(mech),
                                mech_position_y(mech), battle_map_dbref(map)));
+  }
   if (mech_condition_summary(mech).hidden) {
     mech_notify(mech, MECHALL, "You move too much and break your cover!");
     mech_los_broadcast(mech, "breaks its cover in the brush.");
@@ -207,12 +208,13 @@ void aero_takeoff(DbRef player, void *data, const char *buffer) {
                  "Invalid takeoff argument!");
     return;
   }
-  if (j != 0)
+  if (j != 0) {
     if (!is_wizard(btech_context_database(mech_context(mech)), player)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Insufficient access!");
       return;
     }
+  }
   if (mech_event_count(mech, EVENT_TAKEOFF)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "The launch sequence has already been initiated!");
@@ -282,12 +284,13 @@ void aero_takeoff(DbRef player, void *data, const char *buffer) {
                 "Launch sequence initiated.. type 'land' to abort it.");
   dropship_notification_broadcast_if_due(mech,
                                          "starts warming engines for liftoff!");
-  if (mech_is_dropship(mech))
+  if (mech_is_dropship(mech)) {
     btech_channel_send(
         mech_context(mech), BTECH_CHANNEL_DS_INFO, "%s",
         tprintf("DS #%ld has started takeoff at %d %d on map #%ld",
                 mech_dbref(mech), mech_position_x(mech), mech_position_y(mech),
                 battle_map_dbref(map)));
+  }
   if (mech_condition_summary(mech).hidden) {
     mech_notify(mech, MECHALL, "You break your cover to takeoff!");
     mech_los_broadcast(mech, "breaks its cover as it begins takeoff.");
@@ -316,7 +319,7 @@ void dropship_exhaust_blast(const DropshipExhaustBlastRequest *request) {
   int y2;
   int d;
   int rng = (DAMAGE > 100 ? 5 : 3);
-  for (x1 = x - rng; x1 <= (x + rng); x1++)
+  for (x1 = x - rng; x1 <= (x + rng); x1++) {
     for (y1 = y - rng; y1 <= (y + rng); y1++) {
       x2 = bounded(0, x1, battle_map_width(map) - 1);
       y2 = bounded(0, y1, battle_map_height(map) - 1);
@@ -353,6 +356,7 @@ void dropship_exhaust_blast(const DropshipExhaustBlastRequest *request) {
         break;
       }
     }
+  }
   mech_position_hex_z_set(mech, z + 6);
   BlastRealAreaRequest blast = {
       .center =
@@ -458,13 +462,14 @@ void aero_land(DbRef player, void *data, const char *buffer) {
       mech_printf(
           mech, MECHALL, "Launch aborted by %s.",
           game_object_name(btech_context_database(mech_context(mech)), player));
-      if (mech_is_dropship(mech))
+      if (mech_is_dropship(mech)) {
         btech_channel_send(mech_context(mech), BTECH_CHANNEL_DS_INFO, "%s",
                            tprintf("DS #%ld aborted takeoff at %d %d "
                                    "on map #%ld",
                                    mech_dbref(mech), mech_position_x(mech),
                                    mech_position_y(mech),
                                    battle_map_dbref(map)));
+      }
       mech_event_cancel(mech, EVENT_TAKEOFF);
       return;
     }
@@ -744,12 +749,13 @@ void aero_update(Mech *mech) {
       mech_spinning_set(mech, false);
     }
   }
-  if (mech_is_started(mech))
+  if (mech_is_started(mech)) {
     mech_sensor_visibility_modifier_set(
         mech, bounded(0,
                       mech_sensor_visibility_modifier(mech) +
                           btech_random_range_int(mech_context(mech), -40, 40),
                       100));
+  }
   mech_ecm_check(mech);
   mech_tag_check(mech);
   end_lite_check(mech);

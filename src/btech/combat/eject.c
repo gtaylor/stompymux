@@ -68,12 +68,13 @@ int contents_teleport(const ContentsTeleportRequest *request) {
   SAFE_DOLIST(database, i, tmpnext,
               game_object_contents(database, request->source))
   if ((request->options & TELE_ALL) || !is_wizard(database, i)) {
-    if (request->options & TELE_XP && !is_wizard(database, i))
+    if (request->options & TELE_XP && !is_wizard(database, i)) {
       character_experience_reduce(&(CharacterExperienceReduction){
           .context = request->context,
           .character = i,
           .per_mille = btech_context_experience_loss(request->context),
       });
+    }
     move_via_teleport(
         &(ObjectMovementRequest){.evaluation = evaluation,
                                  .object = i,
@@ -155,36 +156,38 @@ void pickup_mw(Mech *mech, Mech *target) {
                      tprintf("picks up %s.", mech_display_id(target).text));
   mech_printf(mech, MECHALL,
               "You pick up the stray mechwarrior from the field.");
-  if (mech_team(target) != mech_team(mech))
-    if (btech_context_mechwarrior_pickup_triggers_actions(mech_context(mech)))
+  if (mech_team(target) != mech_team(mech)) {
+    if (btech_context_mechwarrior_pickup_triggers_actions(mech_context(mech))) {
       contents_teleport(&(ContentsTeleportRequest){
           .context = mech_context(mech),
           .source = mech_dbref(target),
           .destination = mech_dbref(mech),
           .options = TELE_ALL | TELE_LOUD,
       });
-    else
+    } else {
       contents_teleport(&(ContentsTeleportRequest){
           .context = mech_context(mech),
           .source = mech_dbref(target),
           .destination = mech_dbref(mech),
           .options = TELE_ALL,
       });
-  else if (btech_context_mechwarrior_pickup_triggers_actions(
-               mech_context(mech)))
+    }
+  } else if (btech_context_mechwarrior_pickup_triggers_actions(
+                 mech_context(mech))) {
     contents_teleport(&(ContentsTeleportRequest){
         .context = mech_context(mech),
         .source = mech_dbref(target),
         .destination = mech_dbref(mech),
         .options = TELE_ALL | TELE_LOUD,
     });
-  else
+  } else {
     contents_teleport(&(ContentsTeleportRequest){
         .context = mech_context(mech),
         .source = mech_dbref(target),
         .destination = mech_dbref(mech),
         .options = TELE_ALL,
     });
+  }
   discard_mw(target);
 }
 
@@ -334,7 +337,7 @@ void mech_eject(DbRef player, void *data, char *buffer) {
       return;
     }
   }
-  if (mech_class(mech) == CLASS_MECH)
+  if (mech_class(mech) == CLASS_MECH) {
     if (mech_critical_is_nonfunctional(mech, HEAD, 2)) {
       mecha_notify(
           btech_context_evaluation(mech_context(mech)), player,
@@ -342,6 +345,7 @@ void mech_eject(DbRef player, void *data, char *buffer) {
           "'disembark'");
       return;
     }
+  }
   /* Ok.. time to eject ourselves */
   char_eject(player, mech);
 }

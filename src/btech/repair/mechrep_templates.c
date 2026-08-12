@@ -58,7 +58,7 @@ void mechrep_rloadnew(DbRef player, void *data, char *buffer) {
   }
   RepairFacility *rep = repair_command.facility;
   Mech *mech = repair_command.mech;
-  if (mech_parseattributes(buffer, args, 1) == 1)
+  if (mech_parseattributes(buffer, args, 1) == 1) {
     if (mech_template_load(player, mech, args[0]) == 1) {
       mech_events_cancel_all(mech);
       clear_mech_from_los(mech);
@@ -66,6 +66,7 @@ void mechrep_rloadnew(DbRef player, void *data, char *buffer) {
                    "Template loaded.");
       return;
     }
+  }
   mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                "Unable to read that template.");
 }

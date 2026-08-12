@@ -30,12 +30,13 @@ static char *parse_cleanup(const ServerConfiguration *configuration, int flags,
     result_offset++;
     if (configuration->space_compress &&
         (!(flags & COMMAND_PARSE_NO_COMPRESS) ||
-         (flags & COMMAND_PARSE_STRIP_LEADING)))
+         (flags & COMMAND_PARSE_STRIP_LEADING))) {
       while (*(const char *)checked_storage_at_const(
                  text, capacity, sizeof(char), result_offset) != '\0' &&
              (isspace)((unsigned char)*(const char *)checked_storage_at_const(
                  text, capacity, sizeof(char), result_offset)))
         result_offset++;
+    }
     cursor_offset--;
     while (cursor_offset > result_offset &&
            (isspace)((unsigned char)*(const char *)checked_storage_at_const(

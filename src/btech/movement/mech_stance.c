@@ -165,7 +165,7 @@ void mech_sprint(DbRef player, void *data, char *buffer) {
                  "You cannot sprint while mounted!");
     return;
   }
-  if (mech_class(mech) == CLASS_MECH)
+  if (mech_class(mech) == CLASS_MECH) {
     if (mech_section_is_destroyed(mech, RLEG) ||
         mech_section_is_destroyed(mech, LLEG) ||
         (mech_movement_type(mech) != MOVE_QUAD
@@ -176,6 +176,7 @@ void mech_sprint(DbRef player, void *data, char *buffer) {
                    "That's kind of hard while limping.");
       return;
     }
+  }
 
   if (mech_charge_target_dbref(mech) > 0) {
     mecha_notify(
@@ -290,7 +291,7 @@ void mech_evade(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (mech_class(mech) == CLASS_MECH)
+  if (mech_class(mech) == CLASS_MECH) {
     if (mech_section_is_destroyed(mech, RLEG) ||
         mech_section_is_destroyed(mech, LLEG) ||
         (mech_movement_type(mech) != MOVE_QUAD
@@ -301,6 +302,7 @@ void mech_evade(DbRef player, void *data, char *buffer) {
                    "That's kind of hard while limping.");
       return;
     }
+  }
 
   d |= MODE_EVADE | (condition.evading ? MODE_OFF : MODE_ON);
   if (d & MODE_ON) {

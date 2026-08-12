@@ -244,12 +244,13 @@ int red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
   node = bt->head;
   while (node != nullptr) {
     if (last == node->parent) {
-      if (how == WALK_PREORDER)
+      if (how == WALK_PREORDER) {
         if (!visitor(&(RedBlackTreeVisitCall){.key = node->key,
                                               .data = node->data,
                                               .depth = depth,
                                               .context = context}))
           return 0;
+      }
       if (node->left != nullptr) {
         depth++;
         last = node;
@@ -258,12 +259,13 @@ int red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
       }
     }
     if (last == node->left || (last == node->parent && node->left == nullptr)) {
-      if (how == WALK_INORDER)
+      if (how == WALK_INORDER) {
         if (!visitor(&(RedBlackTreeVisitCall){.key = node->key,
                                               .data = node->data,
                                               .depth = depth,
                                               .context = context}))
           return 0;
+      }
       if (node->right != nullptr) {
         depth++;
         last = node;
@@ -271,12 +273,13 @@ int red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
         continue;
       }
     }
-    if (how == WALK_POSTORDER)
+    if (how == WALK_POSTORDER) {
       if (!visitor(&(RedBlackTreeVisitCall){.key = node->key,
                                             .data = node->data,
                                             .depth = depth,
                                             .context = context}))
         return 0;
+    }
     depth--;
     last = node;
     node = node->parent;

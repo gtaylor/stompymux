@@ -224,7 +224,7 @@ static int part_brand_failure_index(int type) {
     return COMPUTER_INDEX;
   if (type == -2)
     return RADIO_INDEX;
-  if (equipment_is_weapon(type))
+  if (equipment_is_weapon(type)) {
     if (type < weapon_equipment_index(DEFAULT_WEAPON_COUNT)) {
       type = weapon_from_equipment_index(type);
       if (weapon_catalogue_is_personal_combat(type))
@@ -239,6 +239,7 @@ static int part_brand_failure_index(int type) {
         return MISSILE_INDEX;
       return -1;
     }
+  }
   return -1;
 }
 

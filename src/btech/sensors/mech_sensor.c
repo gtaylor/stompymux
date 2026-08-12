@@ -246,13 +246,14 @@ int mech_sensor_can_see(const MechSensorObservationRequest *request) {
 
       if (mech_sensor_definition(sn)->maximum_variation &&
           mech_sensor_range_as_float(
-              mech_sensor_minimum_variable_range(mech, sn)) < range)
+              mech_sensor_minimum_variable_range(mech, sn)) < range) {
         if (mech_sensor_range_as_float(
                 mech_sensor_minimum_variable_range(mech, sn) +
                 (mech_sensor_visibility_modifier(mech) *
                  (mech_sensor_definition(sn)->maximum_variation + 1)) /
                     100) < range)
           continue;
+      }
       j += (i + 1);
     }
     return j;
@@ -286,13 +287,14 @@ int mech_sensor_can_see(const MechSensorObservationRequest *request) {
     return 0;
   if (mech_sensor_definition(sn)->maximum_variation &&
       mech_sensor_range_as_float(mech_sensor_minimum_variable_range(mech, sn)) <
-          range)
+          range) {
     if (mech_sensor_range_as_float(
             mech_sensor_minimum_variable_range(mech, sn) +
             mech_sensor_visibility_modifier(mech) *
                 (mech_sensor_definition(sn)->maximum_variation + 1) / 100) <
         range)
       return 0;
+  }
   return 3;
 }
 
@@ -453,7 +455,7 @@ SensorFlagText sensor_flag_text(int flags) {
   char *buffer = text.text;
   int j;
 
-  for (j = 0; j < 32; j++)
+  for (j = 0; j < 32; j++) {
     if (flags & (1 << j)) {
       if (buffer[0] == '\0') {
         (void)snprintf(buffer, sizeof(text.text), "%d", j);
@@ -464,6 +466,7 @@ SensorFlagText sensor_flag_text(int flags) {
                        sizeof(text.text) - USED, ",%d", j);
       }
     }
+  }
   return text;
 }
 

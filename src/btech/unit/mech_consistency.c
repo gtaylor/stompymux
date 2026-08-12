@@ -340,13 +340,15 @@ static int ammo_weight(Mech *mech) {
   int j;
   int w = 0;
 
-  for (i = 0; i < NUM_SECTIONS; i++)
-    if (!mech_section_is_destroyed(mech, i))
+  for (i = 0; i < NUM_SECTIONS; i++) {
+    if (!mech_section_is_destroyed(mech, i)) {
       for (j = 0; j < crits_in_loc(mech, i); j++)
         if (equipment_is_ammunition(mech_critical_part_type(mech, i, j)))
           w += mech_critical_data(mech, i, j) * 1024 /
                weapon_catalogue_ammunition_per_ton(ammunition_to_weapon_index(
                    mech_critical_part_type(mech, i, j)));
+    }
+  }
   return w;
 }
 
@@ -433,7 +435,7 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
       continue;
     armor += section_weight_armor(mech, i, interactive);
     armor += section_weight_rear_armor(mech, i, interactive);
-    if (interactive >= 0 || !mech_section_is_destroyed(mech, i))
+    if (interactive >= 0 || !mech_section_is_destroyed(mech, i)) {
       for (j = 0; j < NUM_CRITICALS; j++) {
         t = mech_critical_part_type(mech, i, j);
         if (interactive >= 0 || !equipment_is_ammunition(t)) {
@@ -455,6 +457,7 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
           }
         }
       }
+    }
   }
   shs_size = mech_heat_sink_critical_size(mech);
   hs_eff = mech_has_double_heat_sinks(mech) ? 2 : 1;
@@ -546,7 +549,7 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
         &c,
         tprintf("WARNING: HS count may be off, due to certain odd things."));
   }
-  for (i = 1; i < NUM_ITEMS_M; i++)
+  for (i = 1; i < NUM_ITEMS_M; i++) {
     if (part_pile_get(&pile, i)) {
       const int PART_COUNT = part_pile_get(&pile, i);
       if (equipment_is_weapon(i)) {
@@ -564,7 +567,8 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
               w * PART_COUNT);
       }
     }
-  if (((mech)->ud.cargospace))
+  }
+  if (((mech)->ud.cargospace)) {
     weight_entry_add(
         &c, interactive, &total,
         tprintf("CargoSpace (%.2ft)",
@@ -574,7 +578,7 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
                              : ((mech)->rd.specials) & CARGO_TECH  ? 100.0F
                                                                    : 500.0F)) *
                            1024.0F));
-
+  }
   if (interactive > 0) {
     cool_menu_add_line(&c);
     cool_menu_add_text(
@@ -655,7 +659,7 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
   hs_eff = mech_has_double_heat_sinks(mech) ? 2 : 1;
   cl = ((mech)->rd.specials) & CLAN_TECH;
   es = susp_factor(mech);
-  if (es)
+  if (es) {
     (void)snprintf(buf, sizeof(buf), "%-12s(%d->%d eff/wt rat)",
                    ((mech)->rd.specials) & LE_TECH    ? "Engine (Light)"
                    : ((mech)->rd.specials) & CE_TECH  ? "Engine (Compact)"
@@ -665,7 +669,7 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
                                                       : "Engine",
                    mech_engine_rating(mech),
                    mech_engine_rating(mech) - susp_factor(mech));
-  else
+  } else {
     (void)snprintf(buf, sizeof(buf), "%-12s(%d rating)",
                    ((mech)->rd.specials) & LE_TECH    ? "Engine (Light)"
                    : ((mech)->rd.specials) & CE_TECH  ? "Engine (Compact)"
@@ -674,6 +678,7 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
                    : ((mech)->rd.specials) & ICE_TECH ? "Engine (ICE)"
                                                       : "Engine",
                    mech_engine_rating(mech));
+  }
   if (!tank_in_pieces(mech)) {
     weight_entry_add(&c, interactive, &total, buf, (es = engine_weight(mech)));
     if (((mech)->ud.move) == MOVE_HOVER && es < (((mech)->ud.tons) * 1024 / 5))
@@ -728,7 +733,7 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
       &pile, special_equipment_index(HEAT_SINK),
       max(0, ((mech)->ud.numsinks) * shs_size / hs_eff -
                  (((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size));
-  for (i = 1; i < NUM_ITEMS_M; i++)
+  for (i = 1; i < NUM_ITEMS_M; i++) {
     if (part_pile_get(&pile, i)) {
       const int PART_COUNT = part_pile_get(&pile, i);
       if (equipment_is_weapon(i)) {
@@ -746,7 +751,8 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
               w * PART_COUNT);
       }
     }
-  if (((mech)->ud.cargospace))
+  }
+  if (((mech)->ud.cargospace)) {
     weight_entry_add(
         &c, interactive, &total,
         tprintf("CargoSpace (%.2ft)",
@@ -756,6 +762,7 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
                              : ((mech)->rd.specials) & CARGO_TECH  ? 100.0F
                                                                    : 500.0F)) *
                            1024.0F));
+  }
 
   if (interactive > 0) {
     cool_menu_add_line(&c);

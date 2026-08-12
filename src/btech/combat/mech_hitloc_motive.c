@@ -69,12 +69,13 @@ void mech_motive_system_hit(Mech *mech, int w_roll_mod) {
       mech_notify(mech, MECHALL,
                   "[fg=red bold]Your destroyed motive system takes another "
                   "hit![reset]");
-    else
+    else {
       mech_printf(
           mech, MECHALL,
           "[fg=red bold]Your motive system takes a minor hit, making it "
           "harder to control your %s![reset]",
           str_vhl_type_name);
+    }
 
     if (fabsf(mech_current_speed(mech)) > 0.0F)
       mech_los_broadcast(mech, "wobbles slightly.");
@@ -85,12 +86,13 @@ void mech_motive_system_hit(Mech *mech, int w_roll_mod) {
       mech_notify(mech, MECHALL,
                   "[fg=red bold]Your destroyed motive system takes another "
                   "hit![reset]");
-    else
+    else {
       mech_printf(
           mech, MECHALL,
           "[fg=red bold]Your motive system takes a moderate hit, slowing "
           "you down and making it harder to control your %s![reset]",
           str_vhl_type_name);
+    }
 
     if (fabsf(mech_current_speed(mech)) > 0.0F)
       mech_los_broadcast(mech, "wobbles violently.");
@@ -102,12 +104,13 @@ void mech_motive_system_hit(Mech *mech, int w_roll_mod) {
       mech_notify(mech, MECHALL,
                   "[fg=red bold]Your destroyed motive system takes another "
                   "hit![reset]");
-    else
+    else {
       mech_printf(
           mech, MECHALL,
           "[fg=red bold]Your motive system is destroyed! Your %s can no "
           "longer move![reset]",
           str_vhl_type_name);
+    }
 
     if (mech_current_speed(mech) > 0)
       mech_los_broadcast(mech, "shakes violently then begins to slow down.");

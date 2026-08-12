@@ -276,12 +276,13 @@ void remove_mech_from_map(BattleMap *map, Mech *mech) {
       /* Release from towing if tow-guy ain't on same map already */
       t = btech_context_get_mech(map->xcode.context,
                                  battle_map_unit_dbref(map, i));
-      if (t)
+      if (t) {
         if (mech_carried_dbref(t) == mech_dbref(mech)) {
           mech_carried_dbref_set(t, -1);
           mech_towed_clear(mech);
           break;
         }
+      }
     }
   }
   mech_seen_count_reset(mech);

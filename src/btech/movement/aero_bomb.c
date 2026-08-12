@@ -304,8 +304,8 @@ static void bomb_drop(const BombDropRequest *request) {
     return;
   }
   bn--;
-  for (i = 0; i < NUM_SECTIONS; i++)
-    for (j = 0; j < NUM_CRITICALS; j++)
+  for (i = 0; i < NUM_SECTIONS; i++) {
+    for (j = 0; j < NUM_CRITICALS; j++) {
       if (equipment_is_bomb(mech_critical_part_type(mech, i, j)) &&
           !mech_critical_is_destroyed(mech, i, j)) {
         if (bc == bn) {
@@ -314,6 +314,8 @@ static void bomb_drop(const BombDropRequest *request) {
         }
         bc++;
       }
+    }
+  }
   if (!bc) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "No bombs installed.");

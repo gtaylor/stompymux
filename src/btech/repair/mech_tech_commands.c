@@ -95,12 +95,13 @@ int someone_repairing(Mech *mech, int loc, int part) {
                              EVENT_REPAIR_REPAG,     EVENT_REPAIR_MOB,
                              EVENT_REPAIR_REPENHCRIT};
   for (size_t index = 0; index < (sizeof(EVENT_TYPES) / sizeof(EVENT_TYPES[0]));
-       index++)
+       index++) {
     if (someone_repairing_s(
             mech, loc, part,
             tech_int_at(EVENT_TYPES, sizeof(EVENT_TYPES) / sizeof(*EVENT_TYPES),
                         index)))
       return 1;
+  }
   return 0;
 }
 
@@ -150,12 +151,13 @@ int someone_scrapping_part(Mech *mech, int loc, int part) {
   const int EVENT_TYPES[] = {EVENT_REPAIR_SCRP, EVENT_REPAIR_SCRG,
                              EVENT_REPAIR_UMOB};
   for (size_t index = 0; index < (sizeof(EVENT_TYPES) / sizeof(EVENT_TYPES[0]));
-       index++)
+       index++) {
     if (someone_repairing_s(
             mech, loc, part,
             tech_int_at(EVENT_TYPES, sizeof(EVENT_TYPES) / sizeof(*EVENT_TYPES),
                         index)))
       return 1;
+  }
   return 0;
 }
 

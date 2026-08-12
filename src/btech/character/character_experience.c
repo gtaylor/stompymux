@@ -100,12 +100,13 @@ void accumulate_comm_xp(DbRef pilot, Mech *mech) {
     return;
   if (!is_connected(mech_context(mech)->database, pilot))
     return;
-  if (char_gainxp(context, pilot, "Comm-Conventional", xp))
+  if (char_gainxp(context, pilot, "Comm-Conventional", xp)) {
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_XP, "%s",
         tprintf("%s gained %d %s XP (in #%ld)",
                 game_object_name(mech_context(mech)->database, pilot), xp,
                 "Comm-Conventional", mech_dbref(mech)));
+  }
 }
 
 void piloting_experience_award(const PilotingExperienceAward *award) {
@@ -134,12 +135,13 @@ void piloting_experience_award(const PilotingExperienceAward *award) {
   /* Switching to Exile method of tracking xp, where we split
    * Attacking and Piloting xp into two different channels
    */
-  if (char_gainxp(context, PILOT, skname, xp))
+  if (char_gainxp(context, PILOT, skname, xp)) {
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_PILOT_XP, "%s",
         tprintf("%s gained %d %s XP",
                 game_object_name(mech_context(mech)->database, PILOT), xp,
                 skname));
+  }
   /*
       if (char_gainxp(context, pilot, skname, xp))
               btech_channel_send(context, BTECH_CHANNEL_MECH_XP, tprintf("%s
@@ -244,11 +246,13 @@ void accumulate_computer_xp(DbRef pilot, Mech *mech, int reason) {
   BtechContext *context = mech_context(mech);
 
   if (mech && is_in_character(mech_context(mech)->database, mech_dbref(mech)) &&
-      is_player(mech_context(mech)->database, pilot))
-    if (char_gainxp(context, pilot, "computer", max(1, reason)))
+      is_player(mech_context(mech)->database, pilot)) {
+    if (char_gainxp(context, pilot, "computer", max(1, reason))) {
       btech_channel_send(
           context, BTECH_CHANNEL_MECH_XP, "%s",
           tprintf("%s gained %d computer XP (mech #%ld)",
                   game_object_name(mech_context(mech)->database, pilot), reason,
                   mech ? mech_dbref(mech) : -1));
+    }
+  }
 }

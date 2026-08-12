@@ -136,7 +136,7 @@ void mech_spot_clear_fire_adjustments(BattleMap *map, DbRef mech) {
   int i;
   Mech *m;
 
-  for (i = 0; i < battle_map_unit_count(map); i++)
+  for (i = 0; i < battle_map_unit_count(map); i++) {
     if (battle_map_unit_dbref(map, i) >= 0) {
       m = btech_context_get_mech(battle_map_context(map),
                                  battle_map_unit_dbref(map, i));
@@ -147,6 +147,7 @@ void mech_spot_clear_fire_adjustments(BattleMap *map, DbRef mech) {
       if (mech_spotter_dbref(m) == mech)
         mech_fire_adjustment_set(m, 0);
     }
+  }
 }
 
 void mech_spot(DbRef player, void *data, char *buffer) {

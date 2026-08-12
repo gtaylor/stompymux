@@ -180,8 +180,8 @@ void autopilot_speed_up_for_target(const AutopilotApproachRequest *request) {
   if (!map)
     return;
 
-  if (BEARING < 0 || fabsf(mech_desired_speed(mech)) < 2.0F)
-    if (BEARING < 0 || abs(BEARING - mech_heading_degrees(mech)) <= 30)
+  if (BEARING < 0 || fabsf(mech_desired_speed(mech)) < 2.0F) {
+    if (BEARING < 0 || abs(BEARING - mech_heading_degrees(mech)) <= 30) {
       if (mech_position_x(mech) != TX || mech_position_y(mech) != TY) {
         if (map_real_terrain_get(map, mech_position_x(mech),
                                  mech_position_y(mech)) == BATTLE_TERRAIN_WATER)
@@ -190,6 +190,8 @@ void autopilot_speed_up_for_target(const AutopilotApproachRequest *request) {
         else
           ai_set_speed(mech, a, mech_effective_maximum_speed(mech));
       }
+    }
+  }
 }
 
 /*

@@ -183,8 +183,8 @@ void clear_hex_bits(BattleMap *map, int bits) {
   if (!first_mapobj(map, TYPE_BITS))
     return;
   foo = grab_us_an_array(map);
-  for (i = 0; i < ys; i++)
-    if (*map_bits_row_slot(foo, ys, i))
+  for (i = 0; i < ys; i++) {
+    if (*map_bits_row_slot(foo, ys, i)) {
       for (j = 0; j < xs; j++) {
         switch (bits) {
         case 1:
@@ -200,6 +200,8 @@ void clear_hex_bits(BattleMap *map, int bits) {
           break;
         }
       }
+    }
+  }
 }
 
 int bit_size(BattleMap *map) {

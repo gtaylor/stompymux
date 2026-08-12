@@ -135,7 +135,7 @@ void apply_mech_damage(Mech *omech, char *buf) {
     mech_section_armor_set(mech, i, mech_section_original_armor(mech, i));
     mech_section_rear_armor_set(mech, i,
                                 mech_section_original_rear_armor(mech, i));
-    for (j = 0; j < NUM_CRITICALS; j++)
+    for (j = 0; j < NUM_CRITICALS; j++) {
       if (mech_critical_part_type(mech, i, j) &&
           !mech_part_is_structural_placeholder(
               mech_critical_part_type(mech, i, j))) {
@@ -150,6 +150,7 @@ void apply_mech_damage(Mech *omech, char *buf) {
                                         .slot = {.section = i, .critical = j},
                                         .failure = 0});
       }
+    }
   }
   size_t offset = 0;
   const size_t INPUT_LENGTH = strlen(buf);
@@ -180,12 +181,13 @@ void apply_mech_damage(Mech *omech, char *buf) {
         mech_critical_destroyed_set(mech, i1, i2, true);
     } else if (parse_damage_numbers(token, "G:", true, &i1, &i2, &i3)) {
       /* Glitch */
-      if (i1 >= 0 && i1 < NUM_SECTIONS)
+      if (i1 >= 0 && i1 < NUM_SECTIONS) {
         if (i2 >= 0 && i2 < NUM_CRITICALS)
           mech_critical_temporary_failure_set(
               &(CriticalSlotFailureSet){.mech = mech,
                                         .slot = {.section = i1, .critical = i2},
                                         .failure = i3});
+      }
     } else if (parse_damage_numbers(token, "R:", true, &i1, &i2, &i3)) {
       /* Reload */
       if (i1 >= 0 && i1 < NUM_SECTIONS)
@@ -202,7 +204,7 @@ void apply_mech_damage(Mech *omech, char *buf) {
       mech_section_armor_set(omech, i, mech_section_armor(mech, i));
     if (mech_section_rear_armor(mech, i) != mech_section_rear_armor(omech, i))
       mech_section_rear_armor_set(omech, i, mech_section_rear_armor(mech, i));
-    for (j = 0; j < NUM_CRITICALS; j++)
+    for (j = 0; j < NUM_CRITICALS; j++) {
       if (mech_critical_part_type(mech, i, j) &&
           !mech_part_is_structural_placeholder(
               mech_critical_part_type(mech, i, j))) {
@@ -232,6 +234,7 @@ void apply_mech_damage(Mech *omech, char *buf) {
                 .failure = mech_critical_temporary_failure(mech, i, j)});
         }
       }
+    }
   }
   if (do_mag && mech_class(omech) == CLASS_MECH)
     do_magic(omech);
@@ -281,7 +284,7 @@ char *mech_damagefunc(const GmvBufferedBidirectionalCall *call) {
     return buffer;
   };
   buffer[0] = '\0';
-  for (i = 0; i < NUM_SECTIONS; i++)
+  for (i = 0; i < NUM_SECTIONS; i++) {
     if (mech_section_original_internal(mech, i)) {
       if (mech_section_armor(mech, i) != mech_section_original_armor(mech, i))
         damage_list_append(buffer, &count, "A:%d/%d", i,
@@ -293,14 +296,17 @@ char *mech_damagefunc(const GmvBufferedBidirectionalCall *call) {
                            mech_section_original_rear_armor(mech, i) -
                                mech_section_rear_armor(mech, i));
     }
-  for (i = 0; i < NUM_SECTIONS; i++)
-    if (mech_section_original_internal(mech, i))
+  }
+  for (i = 0; i < NUM_SECTIONS; i++) {
+    if (mech_section_original_internal(mech, i)) {
       if (mech_section_internal(mech, i) !=
           mech_section_original_internal(mech, i))
         damage_list_append(buffer, &count, "I:%d/%d", i,
                            mech_section_original_internal(mech, i) -
                                mech_section_internal(mech, i));
-  for (i = 0; i < NUM_SECTIONS; i++)
+    }
+  }
+  for (i = 0; i < NUM_SECTIONS; i++) {
     for (j = 0; j < crits_in_loc(mech, i); j++) {
       if (mech_critical_part_type(mech, i, j) &&
           !mech_part_is_structural_placeholder(
@@ -321,6 +327,7 @@ char *mech_damagefunc(const GmvBufferedBidirectionalCall *call) {
         }
       }
     }
+  }
   return buffer;
 }
 

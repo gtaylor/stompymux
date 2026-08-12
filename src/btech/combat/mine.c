@@ -191,12 +191,13 @@ static void mine_explode(const MineExplosion *explosion) {
         .messages = {.target = "A blast of shrapnel hits you!",
                      .observers = "is hit by shrapnel!"},
         .damage = o->datas});
-    if (!cool)
+    if (!cool) {
       map_objects_delete(&(MapObjectLookupRequest){
           .map = map,
           .position = {.x = o->x, .y = o->y},
           .type = TYPE_MINE,
       });
+    }
     break;
   case MINE_INFERNO:
     update_mine(map, o);
@@ -207,12 +208,13 @@ static void mine_explode(const MineExplosion *explosion) {
                      .observers = "is hit by globs of flaming gel!"},
         .damage = o->datas / 3,
         .heat = o->datas});
-    if (!cool)
+    if (!cool) {
       map_objects_delete(&(MapObjectLookupRequest){
           .map = map,
           .position = {.x = o->x, .y = o->y},
           .type = TYPE_MINE,
       });
+    }
     break;
   case MINE_COMMAND:
     unset_hex_mine(map, o->x, o->y);
@@ -427,7 +429,7 @@ static void add_mine_on_map(const MineFieldDefinition *definition) {
     /* Loop through all the possible hexes within range
      * and add mines to those hexes if they are within
      * range */
-    for (x1 = x - data; x1 <= x + data; x1++)
+    for (x1 = x - data; x1 <= x + data; x1++) {
       for (y1 = y - data; y1 <= y + data; y1++) {
 
         /* Check the range, if in range add a mine */
@@ -440,16 +442,18 @@ static void add_mine_on_map(const MineFieldDefinition *definition) {
             })) <= ((float)data))
           set_hex_mine(map, x1, y1);
       }
+    }
 
   } else if (type >= MINE_LOW && type <= MINE_HIGH) {
 
     if (mine_type_is_vibrating(type) && mdis) {
-      for (x1 = x - mdis; x1 <= (x + mdis); x1++)
+      for (x1 = x - mdis; x1 <= (x + mdis); x1++) {
         for (y1 = y - mdis; y1 <= (y + mdis); y1++)
           if ((abs(x1 - x) + abs(y1 - y)) <= t)
             if (!(x1 < 0 || y1 < 0 || x1 >= map->map_width ||
                   y1 >= map->map_height))
               set_hex_mine(map, x1, y1);
+      }
     } else {
       set_hex_mine(map, x, y);
     }
@@ -461,12 +465,13 @@ void mine_fields_recalculate(BattleMap *map) {
   MapObject *o;
 
   clear_hex_bits(map, 1);
-  for (o = map->map_object[TYPE_MINE]; o; o = o->next)
+  for (o = map->map_object[TYPE_MINE]; o; o = o->next) {
     add_mine_on_map(
         &(MineFieldDefinition){.map = map,
                                .position = {.x = o->x, .y = o->y},
                                .type = clamp_int_to_char(o->datac),
                                .data = clamp_intptr_to_int(o->payload.scalar)});
+  }
 }
 
 /* x y type strength <optvalue> */
@@ -552,7 +557,7 @@ void mine_command_detonate(Mech *mech, int channel) {
     return;
   for (o = map->map_object[TYPE_MINE]; o; o = o2) {
     o2 = o->next;
-    if (o->datac == MINE_COMMAND)
+    if (o->datac == MINE_COMMAND) {
       if (o->payload.scalar == channel) {
         mine_explode(&(MineExplosion){.mech = mech,
                                       .map = map,
@@ -560,6 +565,7 @@ void mine_command_detonate(Mech *mech, int channel) {
                                       .reason = MINE_COMMAND_DETONATION});
         count++;
       }
+    }
   }
   if (count)
     mine_fields_recalculate(map);

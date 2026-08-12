@@ -202,7 +202,7 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
        (WEAPON_TYPE == toggle->special &&
         !weapon_catalogue_is_narc(weaptype)))) {
 
-    if (toggle->special_kind == 0 && (toggle->special & TARTILLERY))
+    if (toggle->special_kind == 0 && (toggle->special & TARTILLERY)) {
       if ((mech_critical_ammo_mode(mech, section, critical) &
            ARTILLERY_MODES) &&
           !(mech_critical_ammo_mode(mech, section, critical) & toggle->mode)) {
@@ -211,6 +211,7 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
             "That weapon has already been set to fire special rounds!");
         return 0;
       }
+    }
     /* Fitz - Group RAC/INARC select: Handle clearing RAC and INARC modes first
      */
     if ((toggle->special == RAC) && !toggle->mode) {

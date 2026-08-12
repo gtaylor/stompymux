@@ -348,12 +348,13 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   }
   if (dob)
     show_building_in_hex(mech, mapx, mapy);
-  if (doh)
+  if (doh) {
     mine_field_scan(
         &(MineFieldScanRequest){.player = player,
                                 .mech = mech,
                                 .range = range,
                                 .position = {.x = mapx, .y = mapy}});
+  }
 }
 
 void mech_report(DbRef player, void *data, char *buffer) {

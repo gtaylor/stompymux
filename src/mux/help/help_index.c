@@ -265,12 +265,13 @@ static void help_index_process_file(const HelpFileProcessRequest *request) {
 
   content = help_slurp_file(absolute_path, nullptr);
   if (!content) {
-    if (index->log != nullptr)
+    if (index->log != nullptr) {
       log_error((LogEntry){.log = index->log,
                            .key = LOG_PROBLEMS,
                            .primary = "HLP",
                            .secondary = "READ"},
                 "%s: unable to read file", relative_path);
+    }
     if (player != NOTHING)
       notify_printf(evaluation, player,
                     "Help index error: %s: unable to read file", relative_path);
@@ -279,12 +280,13 @@ static void help_index_process_file(const HelpFileProcessRequest *request) {
   }
   if (!help_locate_frontmatter(content, &toml_start, &toml_length,
                                &body_start)) {
-    if (index->log != nullptr)
+    if (index->log != nullptr) {
       log_error((LogEntry){.log = index->log,
                            .key = LOG_PROBLEMS,
                            .primary = "HLP",
                            .secondary = "PARSE"},
                 "%s: missing +++ frontmatter delimiters", relative_path);
+    }
     if (player != NOTHING)
       notify_printf(evaluation, player,
                     "Help index error: %s: missing +++ frontmatter "
@@ -298,12 +300,13 @@ static void help_index_process_file(const HelpFileProcessRequest *request) {
   memset(&article, 0, sizeof(article));
   if (!help_frontmatter_parse(toml_start, toml_length, &article, error,
                               sizeof(error))) {
-    if (index->log != nullptr)
+    if (index->log != nullptr) {
       log_error((LogEntry){.log = index->log,
                            .key = LOG_PROBLEMS,
                            .primary = "HLP",
                            .secondary = "PARSE"},
                 "%s: %s", relative_path, error);
+    }
     if (player != NOTHING)
       notify_printf(evaluation, player, "Help index error: %s: %s",
                     relative_path, error);
@@ -313,12 +316,13 @@ static void help_index_process_file(const HelpFileProcessRequest *request) {
     return;
   }
   if (error[0]) {
-    if (index->log != nullptr)
+    if (index->log != nullptr) {
       log_error((LogEntry){.log = index->log,
                            .key = LOG_STARTUP,
                            .primary = "HLP",
                            .secondary = "WARN"},
                 "%s: %s", relative_path, error);
+    }
     if (player != NOTHING)
       notify_printf(evaluation, player, "Help index warning: %s: %s",
                     relative_path, error);
@@ -349,12 +353,13 @@ static void help_index_walk_directory(EvaluationContext *evaluation,
 
   stream = opendir(absolute_dir);
   if (!stream) {
-    if (index->log != nullptr)
+    if (index->log != nullptr) {
       log_error((LogEntry){.log = index->log,
                            .key = LOG_PROBLEMS,
                            .primary = "HLP",
                            .secondary = "OPENDIR"},
                 "unable to open help directory '%s'", absolute_dir);
+    }
     if (player != NOTHING)
       notify_printf(evaluation, player,
                     "Help index error: unable to open help directory '%s'",
@@ -412,7 +417,8 @@ static void help_index_walk_directory(EvaluationContext *evaluation,
         size_t name_length = strlen(entry_name);
 
         if (name_length > 3 &&
-            !strcmp(checked_string_suffix(entry_name, name_length - 3), ".md"))
+            !strcmp(checked_string_suffix(entry_name, name_length - 3),
+                    ".md")) {
           help_index_process_file(
               &(HelpFileProcessRequest){.evaluation = evaluation,
                                         .index = index,
@@ -420,6 +426,7 @@ static void help_index_walk_directory(EvaluationContext *evaluation,
                                         .relative_path = relative_child,
                                         .player = player,
                                         .error_count = error_count});
+        }
       }
     }
     free(absolute_child);
@@ -470,7 +477,7 @@ static void help_index_build_keywords(EvaluationContext *evaluation,
             &index->articles,
             help_keyword_item(index, existing)->article_index);
 
-        if (index->log != nullptr)
+        if (index->log != nullptr) {
           log_error((LogEntry){.log = index->log,
                                .key = LOG_STARTUP,
                                .primary = "HLP",
@@ -478,12 +485,14 @@ static void help_index_build_keywords(EvaluationContext *evaluation,
                     "keyword '%s' declared by both '%s' and '%s'; '%s' wins",
                     keyword_lower, owner->relative_path, article->relative_path,
                     owner->relative_path);
-        if (player != NOTHING)
+        }
+        if (player != NOTHING) {
           notify_printf(evaluation, player,
                         "Help index warning: keyword '%s' declared by both "
                         "'%s' and '%s'; '%s' wins",
                         keyword_lower, owner->relative_path,
                         article->relative_path, owner->relative_path);
+        }
         (*warning_count)++;
         free(keyword_lower);
         continue;
@@ -541,7 +550,7 @@ static void help_index_rebuild(EvaluationContext *evaluation, HelpIndex *index,
   index->last_error_count = (size_t)error_count;
   index->last_warning_count = (size_t)warning_count;
 
-  if (index->log != nullptr)
+  if (index->log != nullptr) {
     log_error((LogEntry){.log = index->log,
                          .key = LOG_STARTUP,
                          .primary = "HLP",
@@ -550,12 +559,14 @@ static void help_index_rebuild(EvaluationContext *evaluation, HelpIndex *index,
               "warning(s)",
               index->articles.count, index->keyword_count, error_count,
               warning_count);
-  if (player != NOTHING)
+  }
+  if (player != NOTHING) {
     notify_printf(evaluation, player,
                   "Help reindexed: %zu article(s), %zu keyword(s), %d "
                   "error(s), %d warning(s).",
                   index->articles.count, index->keyword_count, error_count,
                   warning_count);
+  }
 }
 
 HelpIndex *help_index_create(EvaluationContext *evaluation, ServerLog *log,

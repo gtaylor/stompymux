@@ -308,7 +308,7 @@ void blast_hit_real_area(const BlastRealAreaRequest *request) {
   real_coord_to_map_coord(&tx, &ty, request->center.impact.x,
                           request->center.impact.y);
   for (x1 = (tx - request->neighbor_radius);
-       x1 <= (tx + request->neighbor_radius); x1++)
+       x1 <= (tx + request->neighbor_radius); x1++) {
     for (y1 = (ty - request->neighbor_radius);
          y1 <= (ty + request->neighbor_radius); y1++) {
       int spot;
@@ -363,6 +363,7 @@ void blast_hit_real_area(const BlastRealAreaRequest *request) {
         break;
       }
     }
+  }
 }
 
 void blast_hit_area(const BlastAreaRequest *request) {
@@ -525,7 +526,7 @@ static void artillery_cluster_hit(const ArtilleryImpact *impact) {
       d = *(const int *)checked_storage_at_const(targets.cells, 25,
                                                  sizeof(*targets.cells),
                                                  (size_t)xd * 5U + (size_t)yd);
-      if (d)
+      if (d) {
         artillery_hit_hex(&(ArtilleryImpact){
             .map = map,
             .shot = impact->shot,
@@ -533,6 +534,7 @@ static void artillery_cluster_hit(const ArtilleryImpact *impact) {
             .position = {.x = xd + tx - 2, .y = yd + ty - 2},
             .direct = true,
         });
+      }
     }
   }
 }
@@ -609,23 +611,24 @@ static void artillery_hit(ArtilleryShot *s) {
        have changed target */
   }
   /* It's time to run for your lives, lil' ones ;-) */
-  if (!(s->mode & ARTILLERY_MODES))
+  if (!(s->mode & ARTILLERY_MODES)) {
     hex_los_broadcast(
         map, s->to_x, s->to_y,
         tprintf("%s fire hits $H!",
                 checked_string_suffix(weapon_catalogue_name(s->type), 3)));
-  else if (s->mode & CLUSTER_MODE)
+  } else if (s->mode & CLUSTER_MODE) {
     hex_los_broadcast(map, s->to_x, s->to_y,
                       "A rain of small bomblets hits $H's surroundings!");
-  else if (s->mode & MINE_MODE)
+  } else if (s->mode & MINE_MODE) {
     hex_los_broadcast(map, s->to_x, s->to_y,
                       "A rain of small bomblets hits $H!");
-  else if (s->mode & SMOKE_MODE)
+  } else if (s->mode & SMOKE_MODE) {
     hex_los_broadcast(
         map, s->to_x, s->to_y,
         tprintf("A %s %s hits $h, and smoke starts to billow!",
                 checked_string_suffix(weapon_catalogue_name(s->type), 3),
                 checked_string_suffix(artillery_type(s), 2)));
+  }
 
   /* Basic theory:
      - smoke / ordinary rounds are spread with the ordinary functions

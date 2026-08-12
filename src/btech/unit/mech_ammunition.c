@@ -183,8 +183,8 @@ AmmunitionHazardResult destructive_ammunition_find(Mech *mech) {
   int type;
   int data;
 
-  for (loop = 0; loop < NUM_SECTIONS; loop++)
-    for (critloop = 0; critloop < NUM_CRITICALS; critloop++)
+  for (loop = 0; loop < NUM_SECTIONS; loop++) {
+    for (critloop = 0; critloop < NUM_CRITICALS; critloop++) {
       if (equipment_is_ammunition(
               mech_critical_part_type(mech, loop, critloop)) &&
           !mech_critical_is_destroyed(mech, loop, critloop)) {
@@ -208,6 +208,8 @@ AmmunitionHazardResult destructive_ammunition_find(Mech *mech) {
           maxdamage = damage;
         }
       }
+    }
+  }
   result.damage = maxdamage;
   return result;
 }
@@ -223,8 +225,8 @@ AmmunitionHazardResult inferno_ammunition_find(Mech *mech) {
   int data;
   int mode;
 
-  for (loop = 0; loop < NUM_SECTIONS; loop++)
-    for (critloop = 0; critloop < NUM_CRITICALS; critloop++)
+  for (loop = 0; loop < NUM_SECTIONS; loop++) {
+    for (critloop = 0; critloop < NUM_CRITICALS; critloop++) {
       if (equipment_is_ammunition(
               mech_critical_part_type(mech, loop, critloop)) &&
           !mech_critical_is_destroyed(mech, loop, critloop)) {
@@ -251,6 +253,8 @@ AmmunitionHazardResult inferno_ammunition_find(Mech *mech) {
           maxdamage = damage;
         }
       }
+    }
+  }
   result.damage = maxdamage;
   return result;
 }

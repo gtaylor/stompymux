@@ -443,13 +443,14 @@ legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
   /* Switching to Exile method of tracking xp, where we split
    * Attacking and Piloting xp into two different channels
    */
-  if (char_gainxp(context, PILOT, skname, xp))
+  if (char_gainxp(context, PILOT, skname, xp)) {
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
         tprintf("%s gained %d gun XP from feat of %f %% "
                 "difficulty (%d occurences) against %s",
                 game_object_name(mech_context(attacker)->database, PILOT), xp,
                 multiplier, NUM_OCCURENCES, buf));
+  }
 }
 
 BtechScriptResult fun_btgetcharvalue(BtechScriptCall *call) {

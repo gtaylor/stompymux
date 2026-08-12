@@ -441,8 +441,10 @@ int load_template(DbRef player, Mech *mech, char *filename) {
         }
         mech_critical_fire_mode_set(mech, section, critical, 0);
         mech_critical_ammo_mode_set(mech, section, critical, 0);
-        if (template_token_parse(&(TemplateTokenRequest){
-                .input = line2, .output = buf, .output_capacity = sizeof(buf)}))
+        if (template_token_parse(
+                &(TemplateTokenRequest){.input = line2,
+                                        .output = buf,
+                                        .output_capacity = sizeof(buf)})) {
           if (template_token_parse(
                   &(TemplateTokenRequest){.input = line2,
                                           .output = buf,
@@ -457,6 +459,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
                     .brand = value});
             }
           }
+        }
       }
       for (x = (lpos + 1); x <= hpos; x++) {
         mech_critical_part_type_set(

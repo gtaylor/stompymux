@@ -82,7 +82,7 @@ void debug_xptop(DbRef player, void *data, const char *buffer) {
     gt += ranking->experience;
     count++;
   }
-  for (i = 0; i < (count - 1); i++)
+  for (i = 0; i < (count - 1); i++) {
     for (j = i + 1; j < count; j++) {
       CharacterXpRanking *left =
           ranking_at(rankings, MAX_PLAYERS_ON, (size_t)i);
@@ -94,6 +94,7 @@ void debug_xptop(DbRef player, void *data, const char *buffer) {
         *left = TEMPORARY;
       }
     }
+  }
   cool_menu_add_line(&c);
   for (i = 0; i < min(16, count); i++) {
     const CharacterXpRanking *ranking =

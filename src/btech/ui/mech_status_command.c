@@ -60,35 +60,38 @@ void mech_status(DbRef player, void *data, const char *buffer) {
       case 'A':
         // Armor status
         if (ascii_to_upper(status_option_character(buffer, OPTION_LENGTH,
-                                                   position + 1)) == 'R')
+                                                   position + 1)) == 'R') {
           while (status_option_character(buffer, OPTION_LENGTH, position + 1) !=
                      '\0' &&
                  status_option_character(buffer, OPTION_LENGTH, position + 1) !=
                      ' ')
             position++;
+        }
         doarmor = 1;
         break;
       case 'I':
         // Speed/Heading/Heat
         doinfo = 1;
         if (ascii_to_upper(status_option_character(buffer, OPTION_LENGTH,
-                                                   position + 1)) == 'N')
+                                                   position + 1)) == 'N') {
           while (status_option_character(buffer, OPTION_LENGTH, position + 1) !=
                      '\0' &&
                  status_option_character(buffer, OPTION_LENGTH, position + 1) !=
                      ' ')
             position++;
+        }
         break;
       case 'W':
         // Weapons list.
         doweap = 1;
         if (ascii_to_upper(status_option_character(buffer, OPTION_LENGTH,
-                                                   position + 1)) == 'E')
+                                                   position + 1)) == 'E') {
           while (status_option_character(buffer, OPTION_LENGTH, position + 1) !=
                      '\0' &&
                  status_option_character(buffer, OPTION_LENGTH, position + 1) !=
                      ' ')
             position++;
+        }
         break;
       case 'N':
         // Really weird status display.
@@ -133,18 +136,20 @@ void mech_status(DbRef player, void *data, const char *buffer) {
       print_armor_status(evaluation, player, mech, 1);
       mecha_notify(evaluation, player, " ");
     } else {
-      for (i = 0; i < NUM_SECTIONS; i++)
+      for (i = 0; i < NUM_SECTIONS; i++) {
         if (mech_section_original_armor(mech, i)) {
-          if (mech_section_original_rear_armor(mech, i))
+          if (mech_section_original_rear_armor(mech, i)) {
             append_status(buf, sizeof(buf), "%d|%d|%d ",
                           mech_section_original_armor(mech, i),
                           mech_section_original_internal(mech, i),
                           mech_section_original_rear_armor(mech, i));
-          else
+          } else {
             append_status(buf, sizeof(buf), "%d|%d ",
                           mech_section_original_armor(mech, i),
                           mech_section_original_internal(mech, i));
+          }
         }
+      }
     }
   }
 

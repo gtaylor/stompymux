@@ -80,7 +80,7 @@ static void process_leave_loc(const LocationTransition *transition) {
    * Do OXENTER for receiving room
    */
 
-  if ((dest != NOTHING) && !quiet)
+  if ((dest != NOTHING) && !quiet) {
     notify_action(evaluation,
                   &(ActionMessageInvocation){
                       .message = {.type = LUA_MESSAGE_ENTER_SOURCE,
@@ -90,6 +90,7 @@ static void process_leave_loc(const LocationTransition *transition) {
                                   .cause = cause,
                                   .source = loc,
                                   .destination = dest}});
+  }
 
   /*
    * Display the 'has left' message if we meet any of the following * *
@@ -99,7 +100,7 @@ static void process_leave_loc(const LocationTransition *transition) {
    * wizard.
    */
 
-  if (!quiet)
+  if (!quiet) {
     if ((!is_dark(evaluation->world->database, thing) &&
          !is_dark(evaluation->world->database, loc)) ||
         (canhear && !(is_wizard(evaluation->world->database, thing) &&
@@ -114,6 +115,7 @@ static void process_leave_loc(const LocationTransition *transition) {
               tprintf("%s has left.",
                       game_object_name(evaluation->world->database, thing))});
     }
+  }
 }
 
 /*
@@ -166,7 +168,7 @@ static void process_enter_loc(const LocationTransition *transition) {
    * Do OXLEAVE for sending room
    */
 
-  if ((src != NOTHING) && !quiet)
+  if ((src != NOTHING) && !quiet) {
     notify_action(evaluation,
                   &(ActionMessageInvocation){
                       .message = {.type = LUA_MESSAGE_LEAVE_DESTINATION,
@@ -176,6 +178,7 @@ static void process_enter_loc(const LocationTransition *transition) {
                                   .cause = cause,
                                   .source = src,
                                   .destination = loc}});
+  }
 
   /*
    * Display the 'has arrived' message if we meet all of the following
@@ -212,12 +215,13 @@ void move_object(EvaluationContext *evaluation, DbRef thing, DbRef dest) {
    */
 
   src = game_object_location(evaluation->world->database, thing);
-  if (src != NOTHING)
+  if (src != NOTHING) {
     game_object_set_contents(
         evaluation->world->database, src,
         remove_first(evaluation->world->database,
                      game_object_contents(evaluation->world->database, src),
                      thing));
+  }
 
   /*
    * Special check for HOME
@@ -230,14 +234,15 @@ void move_object(EvaluationContext *evaluation, DbRef thing, DbRef dest) {
    * Add to destination location
    */
 
-  if (dest != NOTHING)
+  if (dest != NOTHING) {
     game_object_set_contents(
         evaluation->world->database, dest,
         insert_first(evaluation->world->database,
                      game_object_contents(evaluation->world->database, dest),
                      thing));
-  else
+  } else {
     game_object_set_next(evaluation->world->database, thing, NOTHING);
+  }
   game_object_set_location(evaluation->world->database, thing, dest);
 
   look_in(&(LookRequest){.evaluation = evaluation,
@@ -461,7 +466,7 @@ int move_via_teleport(const ObjectMovementRequest *request) {
   if (dest == HOME)
     dest = game_object_link(evaluation->world->database, thing);
   canhear = is_hearer(evaluation, thing);
-  if (!(hush & HUSH_LEAVE))
+  if (!(hush & HUSH_LEAVE)) {
     notify_action(evaluation,
                   &(ActionMessageInvocation){
                       .message = {.type = LUA_MESSAGE_TELEPORT_SOURCE,
@@ -471,6 +476,7 @@ int move_via_teleport(const ObjectMovementRequest *request) {
                                   .cause = cause,
                                   .source = src,
                                   .destination = dest}});
+  }
   process_leave_loc(&(LocationTransition){.evaluation = evaluation,
                                           .object = thing,
                                           .other_location = dest,
@@ -478,7 +484,7 @@ int move_via_teleport(const ObjectMovementRequest *request) {
                                           .can_hear = canhear,
                                           .hush = hush});
   move_object(evaluation, thing, dest);
-  if (!(hush & HUSH_ENTER))
+  if (!(hush & HUSH_ENTER)) {
     notify_action(evaluation,
                   &(ActionMessageInvocation){
                       .message = {.type = LUA_MESSAGE_TELEPORT,
@@ -489,6 +495,7 @@ int move_via_teleport(const ObjectMovementRequest *request) {
                                   .source = src,
                                   .destination = dest},
                       .event = LUA_EVENT_TELEPORT});
+  }
   notify_action(evaluation,
                 &(ActionMessageInvocation){
                     .message = {.type = LUA_MESSAGE_MOVE,

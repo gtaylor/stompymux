@@ -166,7 +166,7 @@ int mech_weapon_first_critical(const WeaponCriticalSearch *search) {
      * let's see if our crit falls out of that range.. if so, then
      * we need to figure out what range it actually falls into.
      */
-    if ((w_first_crit + W_MAX_CRITS) <= W_SLOT)
+    if ((w_first_crit + W_MAX_CRITS) <= W_SLOT) {
       w_first_crit = mech_weapon_first_critical(&(WeaponCriticalSearch){
           .mech = obj_mech,
           .weapon = {.section = W_LOC, .critical = W_SLOT},
@@ -174,6 +174,7 @@ int mech_weapon_first_critical(const WeaponCriticalSearch *search) {
           .part_type = W_CRIT_TYPE,
           .maximum_criticals = W_MAX_CRITS,
       });
+    }
   }
 
   return w_first_crit;

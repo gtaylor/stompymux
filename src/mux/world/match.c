@@ -452,12 +452,13 @@ void match_zone_exit(MatchContext *match_context) {
   if (MD.confidence >= CON_DBREF)
     return;
   if (is_good_obj(MD.evaluation->world->database, MD.player) &&
-      has_exits(MD.evaluation->world->database, MD.player))
+      has_exits(MD.evaluation->world->database, MD.player)) {
     (void)match_exit_internal(&(ExitMatchRequest){
         .context = match_context,
         .location = game_object_zone(MD.evaluation->world->database, MD.player),
         .base_location =
             game_object_zone(MD.evaluation->world->database, MD.player)});
+  }
 }
 
 void match_everything(MatchContext *match_context, int key) {

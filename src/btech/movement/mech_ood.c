@@ -165,7 +165,7 @@ void mech_ood_event(MuxEvent *e) {
 
   if (roll >= roll_needed) {
 
-    if (roll_needed > 2)
+    if (roll_needed > 2) {
 
       piloting_experience_award(&(PilotingExperienceAward){
           .pilot = mech_pilot_dbref(mech),
@@ -173,6 +173,7 @@ void mech_ood_event(MuxEvent *e) {
           .reason = bounded(1, (abs(mof) + 1) * 2, 20),
           .unconditional = true,
       });
+    }
   }
 
   mof += (roll - roll_needed);

@@ -87,14 +87,15 @@ void mech_overheat_handle(Mech *mech) {
     if (!avoided) {
       if (!hasinferno)
         ammunition = destructive_ammunition_find(mech);
-      if (ammunition.damage)
+      if (ammunition.damage) {
         mech_ammunition_explode(
             &(AmmunitionExplosionRequest){.attacker = mech,
                                           .target = mech,
                                           .ammunition = ammunition.slot,
                                           .damage = ammunition.damage});
-      else
+      } else {
         mech_notify(mech, MECHALL, "You have no ammunition, lucky you!");
+      }
     }
   }
 

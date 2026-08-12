@@ -259,7 +259,7 @@ int mech_targeting_computer_hit_location(Mech *mech, Mech *target, int *isrear,
   if (hit_group == BACK)
     *isrear = 1;
   if (mech_aim_unit_class(mech) == mech_class(target) &&
-      btech_random_range(mech_context(mech), 1, 6) >= 3)
+      btech_random_range(mech_context(mech), 1, 6) >= 3) {
     switch (mech_class(target)) {
     case CLASS_MECH:
     case CLASS_MW:
@@ -346,6 +346,7 @@ int mech_targeting_computer_hit_location(Mech *mech, Mech *target, int *isrear,
       }
       break;
     }
+  }
   if (mech_class(target) == CLASS_MECH && mech_has_partial_cover(target))
     return mech_punch_hit_location(target, hit_group);
   return mech_hit_location(target, hit_group, iscritical, isrear);
@@ -360,7 +361,7 @@ int mech_aimed_hit_location(Mech *mech, Mech *target, int *isrear,
   hit_group = mech_hit_group(mech, target);
   if (hit_group == BACK)
     *isrear = 1;
-  if (mech_class(target) == CLASS_MECH || mech_class(target) == CLASS_MW)
+  if (mech_class(target) == CLASS_MECH || mech_class(target) == CLASS_MW) {
     switch (mech_aim_section(mech)) {
     case RARM:
       if (hit_group != LEFTSIDE)
@@ -391,9 +392,9 @@ int mech_aimed_hit_location(Mech *mech, Mech *target, int *isrear,
     case HEAD:
       return (HEAD);
     }
-  else if (mech_is_aerospace_unit(target))
+  } else if (mech_is_aerospace_unit(target)) {
     return mech_aim_section(mech);
-  else
+  } else {
     switch (mech_aim_section(mech)) {
     case RSIDE:
       if (hit_group != LEFTSIDE)
@@ -415,6 +416,7 @@ int mech_aimed_hit_location(Mech *mech, Mech *target, int *isrear,
       return (TURRET);
       break;
     }
+  }
 
   if (mech_class(target) == CLASS_MECH && mech_has_partial_cover(target))
     return mech_punch_hit_location(target, hit_group);

@@ -115,19 +115,21 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       result = -1;
     } else {
       for (ObjectFlag flag = OBJECT_FLAG_ANSI;
-           result == 0 && flag < OBJECT_FLAG_COUNT; flag++)
+           result == 0 && flag < OBJECT_FLAG_COUNT; flag++) {
         if (gamedb_column_bool(
                 statement, 9 + (int)flag,
                 checked_storage_at(object_flags, OBJECT_FLAG_COUNT,
                                    sizeof(*object_flags), (size_t)flag)) < 0)
           result = -1;
+      }
       for (PowerId power = POWER_IDLE; result == 0 && power < POWER_COUNT;
-           power++)
+           power++) {
         if (gamedb_column_bool(statement, 29 + (int)power,
                                checked_storage_at(powers, POWER_COUNT,
                                                   sizeof(*powers),
                                                   (size_t)power)) < 0)
           result = -1;
+      }
       if (result != 0)
         continue;
       /* object_name_set()'s parameter isn't const-correct; name is only
@@ -146,7 +148,8 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       if (!game_object_lua_parent_set(context->database, object, lua_parent))
         result = -1;
       game_object_clear_flags(context->database, object);
-      for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
+      for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT;
+           flag++) {
         game_object_set_flag(&(ObjectFlagChangeRequest){
             .database = context->database,
             .object = object,
@@ -154,13 +157,15 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
             .value = *(const bool *)checked_storage_at_const(
                 object_flags, OBJECT_FLAG_COUNT, sizeof(*object_flags),
                 (size_t)flag)});
-      for (PowerId power = POWER_IDLE; power < POWER_COUNT; power++)
+      }
+      for (PowerId power = POWER_IDLE; power < POWER_COUNT; power++) {
         game_object_set_power(&(ObjectPowerChange){
             .target = {.database = context->database,
                        .object = object,
                        .power = power},
             .value = *(const bool *)checked_storage_at_const(
                 powers, POWER_COUNT, sizeof(*powers), (size_t)power)});
+      }
       if (typeof_obj(context->database, object) == OBJECT_TYPE_PLAYER)
         c_connected(context->database, object);
     }

@@ -151,12 +151,13 @@ int dropship_bay_number(Mech *ds, int dir) {
   int j;
 
   for (i = 0; i <= dir; i++) {
-    for (j = 0; j < NUM_CRITICALS; j++)
+    for (j = 0; j < NUM_CRITICALS; j++) {
       if (mech_critical_part_type(ds, dropship_direction_section(i), j) ==
               special_equipment_index(DS_MECHDOOR) ||
           mech_critical_part_type(ds, dropship_direction_section(i), j) ==
               special_equipment_index(DS_AERODOOR))
         break;
+    }
     if (j != NUM_CRITICALS) {
       if (i == dir)
         return bayn;
@@ -209,7 +210,7 @@ static int dropship_find_single_adjacent_bay(Mech *mech, DbRef *ref,
   *ref = 0;
   if (!map)
     return 0;
-  for (loop = 0; loop < battle_map_unit_count(map); loop++)
+  for (loop = 0; loop < battle_map_unit_count(map); loop++) {
     if (battle_map_unit_dbref(map, loop) >= 0) {
       temp_mech = btech_context_get_mech(mech_context(mech),
                                          battle_map_unit_dbref(map, loop));
@@ -227,6 +228,7 @@ static int dropship_find_single_adjacent_bay(Mech *mech, DbRef *ref,
           *ref = mech_dbref(temp_mech);
       }
     }
+  }
   return count;
 }
 
@@ -296,8 +298,8 @@ static int dropship_bay_is_open(Mech *mech, Mech *ds, DbRef bayref) {
   int i;
   int j;
 
-  for (i = 0; i < NUM_BAYS; i++)
-    if (mech_bay_dbref(ds, i) > 0)
+  for (i = 0; i < NUM_BAYS; i++) {
+    if (mech_bay_dbref(ds, i) > 0) {
       if (mech_bay_dbref(ds, i) == bayref) {
         j = dropship_bay_direction(ds, i);
         for (i = 0; i < NUM_CRITICALS; i++) {
@@ -312,6 +314,8 @@ static int dropship_bay_is_open(Mech *mech, Mech *ds, DbRef bayref) {
         }
         return 0;
       }
+    }
+  }
   return 0;
 }
 
@@ -325,13 +329,15 @@ static bool dropship_bay_is_enterable(const DropshipBayEntryRequest *request) {
   const DbRef BAYREF = request->bay;
   int i;
 
-  for (i = 0; i < NUM_BAYS; i++)
-    if (mech_bay_dbref(ds, i) > 0)
+  for (i = 0; i < NUM_BAYS; i++) {
+    if (mech_bay_dbref(ds, i) > 0) {
       if (mech_bay_dbref(ds, i) == BAYREF)
         return btech_context_event_data_count(mech_context(ds),
                                               EVENT_ENTER_HANGAR, BAYREF) > 0
                    ? 0
                    : 1;
+    }
+  }
   return 0;
 }
 
@@ -553,12 +559,13 @@ static int dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
                                .object = mech_dbref(mech),
                                .destination = mech_map_dbref(mech),
                                .cause = 1});
-  if (car)
+  if (car) {
     move_via_teleport(&(ObjectMovementRequest){
         .evaluation = btech_context_evaluation(context),
         .object = mech_dbref(car),
         .destination = mech_map_dbref(mech),
         .cause = 1});
+  }
   mech_notify(mech, MECHALL, "You have left the bay.");
   dropship_place_departing_unit(ds, mech, frombay);
   if (car) {

@@ -95,7 +95,7 @@ int ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location) {
 
   float target_speed = location->ds;
   if (mech_class(mech) != CLASS_MW && mech_movement_type(mech) != MOVE_VTOL &&
-      (mech_movement_type(mech) != MOVE_FLY || mech_is_landed(mech)))
+      (mech_movement_type(mech) != MOVE_FLY || mech_is_landed(mech))) {
     target_speed = mech_terrain_speed(&(MechTerrainSpeedRequest){
         .mech = mech,
         .current_speed = target_speed,
@@ -103,6 +103,7 @@ int ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location) {
         .terrain = location->t,
         .elevation = location->e,
     });
+  }
   if (heading_changed) {
     const int SLOWDOWN =
         btech_context_movement_slowdown_mode(mech_context(mech));

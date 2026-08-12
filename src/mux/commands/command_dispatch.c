@@ -631,12 +631,12 @@ void process_command(CommandContext *context, char *command, char *arguments[],
 
   cmdp = (CMDENT *)hash_table_find(lcbuf, &registry->commands);
   if (cmdp != nullptr) {
-    if ((cmdp->callseq & CS_NO_MACRO) && macerr == 1)
+    if ((cmdp->callseq & CS_NO_MACRO) && macerr == 1) {
       notify_checked(&context->evaluation, PLAYER, PLAYER,
                      "This command is unavailable as macro. Please use an "
                      "attribute instead.",
                      MSG_ME_ALL | MSG_F_DOWN);
-    else
+    } else {
       process_cmdent(&(CommandEntryDispatch){.context = context,
                                              .command = cmdp,
                                              .switches = slashp,
@@ -644,6 +644,7 @@ void process_command(CommandContext *context, char *command, char *arguments[],
                                              .cause = CAUSE,
                                              .arguments = arg,
                                              .unparsed_command = command});
+    }
     free_lbuf(lcbuf);
     context->debug_command = cmdsave;
     goto exit;
@@ -682,7 +683,7 @@ void process_command(CommandContext *context, char *command, char *arguments[],
                                         context->world->database, PLAYER))) ==
         OBJECT_TYPE_ROOM) {
       if (game_object_location(context->world->database, PLAYER) !=
-          game_object_zone(context->world->database, PLAYER))
+          game_object_zone(context->world->database, PLAYER)) {
         lua_succ += lua_list_command_match(
             runtime->lua_owner->runtime, context->descriptor,
             game_object_contents(
@@ -691,6 +692,7 @@ void process_command(CommandContext *context, char *command, char *arguments[],
                     context->world->database,
                     game_object_location(context->world->database, PLAYER))),
             PLAYER, CAUSE, command);
+      }
     } else if (!is_no_command(
                    context->world->database,
                    game_object_zone(context->world->database,

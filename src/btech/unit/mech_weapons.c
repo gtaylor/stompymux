@@ -59,12 +59,13 @@ static bool weapon_critical_count_is_valid(Mech *mech, int weapon_index,
     return true;
   const int EXPECTED = get_weapon_crits(mech, weapon_index);
   if (*critical_count != EXPECTED && EXPECTED < 9) {
-    if (report)
+    if (report) {
       btech_channel_send(
           mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
           tprintf("Error in the numcriticals for weapon on #%ld! "
                   "(Should be: %d, is: %d)",
                   mech->mynum, EXPECTED, *critical_count));
+    }
     return false;
   }
   *critical_count = 0;
@@ -406,7 +407,7 @@ int find_ammunition(Mech *mech, unsigned char *weaparray,
   int j;
   int duplicate;
 
-  for (index = 0; index < NUM_SECTIONS; index++)
+  for (index = 0; index < NUM_SECTIONS; index++) {
     for (loop = 0; loop < MAX_WEAPS_SECTION; loop++) {
       temp = mech_critical_part_type(mech, index, loop);
       if (equipment_is_ammunition(temp)) {
@@ -446,9 +447,10 @@ int find_ammunition(Mech *mech, unsigned char *weaparray,
         }
       }
     }
+  }
   /* Then, prune entries with 0 ammo left */
   if (!returnall) {
-    for (i = 0; i < weapcount; i++)
+    for (i = 0; i < weapcount; i++) {
       if (!*weapon_short_slot(ammoarray, i)) {
         for (j = i + 1; j < weapcount; j++) {
           *weapon_byte_slot(weaparray, j - 1) = *weapon_byte_slot(weaparray, j);
@@ -461,6 +463,7 @@ int find_ammunition(Mech *mech, unsigned char *weaparray,
         i--;
         weapcount--;
       }
+    }
   }
   return (weapcount);
 }

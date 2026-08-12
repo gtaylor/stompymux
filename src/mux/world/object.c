@@ -338,12 +338,13 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
 
   game_object_set_type(evaluation->world->database, obj, (ObjectType)objtype);
   game_object_clear_flags(evaluation->world->database, obj);
-  for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
+  for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++) {
     game_object_set_flag(&(ObjectFlagChangeRequest){
         .database = evaluation->world->database,
         .object = obj,
         .flag = flag,
         .value = object_flag_set_has(default_flags, flag)});
+  }
   unmark(evaluation->world->database, obj);
   buff = munge_space(name);
   object_name_set(evaluation->world->database, obj, buff);

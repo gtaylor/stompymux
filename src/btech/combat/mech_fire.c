@@ -278,7 +278,7 @@ void vehicle_fire_check(Mech *obj_mech, int from_hex_fire) {
     for (w_iter = 0; w_iter < NUM_SECTIONS; w_iter++) {
       w_damage = btech_random_range_int(mech_context(obj_mech), 1, 6);
 
-      if (mech_section_internal(obj_mech, w_iter))
+      if (mech_section_internal(obj_mech, w_iter)) {
         mech_damage_apply(&(MechDamageRequest){.target = obj_mech,
                                                .attacker = obj_mech,
                                                .line_of_sight = 0,
@@ -294,6 +294,7 @@ void vehicle_fire_check(Mech *obj_mech, int from_hex_fire) {
                                                .weapon_index = -1,
                                                .ammunition_mode = 0,
                                                .ignore_swarmers = 1});
+      }
     }
     break;
 

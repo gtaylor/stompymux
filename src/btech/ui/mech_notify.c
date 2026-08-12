@@ -47,7 +47,7 @@ void mech_los_broadcast(Mech *mech, const char *message) {
     if (CANDIDATE != -1 && CANDIDATE != mech_dbref(mech)) {
       temp_mech =
           btech_context_get_mech(battle_map_context(mech_map), CANDIDATE);
-      if (temp_mech)
+      if (temp_mech) {
         if (mech_los_check(temp_mech, mech, mech_position_x(mech),
                            mech_position_y(mech),
                            mech_range_to(temp_mech, mech))) {
@@ -56,6 +56,7 @@ void mech_los_broadcast(Mech *mech, const char *message) {
                          *message != '\'' ? " " : "", message);
           mech_notify(temp_mech, MECHSTARTED, buf);
         }
+      }
     }
   }
 }
@@ -100,7 +101,7 @@ void hex_los_broadcast(BattleMap *mech_map, int x, int y, const char *message) {
     if (CANDIDATE != -1) {
       temp_mech =
           btech_context_get_mech(battle_map_context(mech_map), CANDIDATE);
-      if (temp_mech)
+      if (temp_mech) {
         if (mech_sees_hex_f(temp_mech, mech_map, fx, fy, x, y)) {
           char tbuf[LBUF_SIZE];
           BtechTextBuilder output;
@@ -138,6 +139,7 @@ void hex_los_broadcast(BattleMap *mech_map, int x, int y, const char *message) {
           }
           mech_notify(temp_mech, MECHSTARTED, tbuf);
         }
+      }
     }
   }
 }
@@ -391,15 +393,18 @@ void mech_notify(Mech *mech, MechNotifyAudience audience, const char *buffer) {
                                       .actor = NOTHING,
                                       .exception = mech_dbref(mech),
                                       .message = buffer});
-    if (btech_context_combat_arcs_enabled(mech_context(mech)))
-      for (i = 0; i < NUM_TURRETS; i++)
-        if (mech_turret_dbref(mech, i) > 0)
+    if (btech_context_combat_arcs_enabled(mech_context(mech))) {
+      for (i = 0; i < NUM_TURRETS; i++) {
+        if (mech_turret_dbref(mech, i) > 0) {
           mecha_notify_except(&(MechaNotificationExclusion){
               .evaluation = evaluation,
               .location = mech_turret_dbref(mech, i),
               .actor = NOTHING,
               .exception = mech_turret_dbref(mech, i),
               .message = buffer});
+        }
+      }
+    }
   }
 }
 
@@ -436,14 +441,17 @@ void mech_printf(Mech *mech, MechNotifyAudience audience, const char *format,
                                       .actor = NOTHING,
                                       .exception = mech_dbref(mech),
                                       .message = buffer});
-    if (btech_context_combat_arcs_enabled(mech_context(mech)))
-      for (i = 0; i < NUM_TURRETS; i++)
-        if (mech_turret_dbref(mech, i) > 0)
+    if (btech_context_combat_arcs_enabled(mech_context(mech))) {
+      for (i = 0; i < NUM_TURRETS; i++) {
+        if (mech_turret_dbref(mech, i) > 0) {
           mecha_notify_except(&(MechaNotificationExclusion){
               .evaluation = evaluation,
               .location = mech_turret_dbref(mech, i),
               .actor = NOTHING,
               .exception = mech_turret_dbref(mech, i),
               .message = buffer});
+        }
+      }
+    }
   }
 }

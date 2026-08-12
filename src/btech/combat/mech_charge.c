@@ -314,19 +314,21 @@ void charge_mech(Mech *mech, Mech *target) {
       targ_base_to_hit += 2;
 #endif
     /* Now check to see if its possible for them to even charge */
-    if (mech_charge)
+    if (mech_charge) {
       if (mech_base_to_hit > 12) {
         mech_printf(mech, MECHALL, "Charge: BTH %d\tYou choose not to charge.",
                     mech_base_to_hit);
         mech_charge = 0;
       }
-    if (target_charge)
+    }
+    if (target_charge) {
       if (targ_base_to_hit > 12) {
         mech_printf(target, MECHALL,
                     "Charge: BTH %d\tYou choose not to charge.",
                     targ_base_to_hit);
         target_charge = 0;
       }
+    }
     /* Since neither can charge lets exit */
     if (!mech_charge && !target_charge) {
       /* mech_charge_target_dbref(mech) and the others are set
@@ -369,15 +371,16 @@ void charge_mech(Mech *mech, Mech *target) {
       /* Ok now how much damage will the first unit take from
        * charging */
       if (btech_context_uses_new_charge_rules(context) &&
-          btech_context_uses_technology_level_three_charge_rules(context))
+          btech_context_uses_technology_level_three_charge_rules(context)) {
         target_damage = charge_damage_calculate(
             &(ChargeDamageRequest){.moving = mech,
                                    .opponent = target,
                                    .mass_source = mech,
                                    .uses_new_rules = true,
                                    .divisor = 20});
-      else
+      } else {
         target_damage = (mech_real_tonnage(target) + 5) / 10; /* REUSED! */
+      }
       /* Record the damage for debugging then dish it out */
       received_damage = target_damage;
       spread = target_damage / 5;
@@ -442,15 +445,16 @@ void charge_mech(Mech *mech, Mech *target) {
       /* Ok now how much damage will the second unit take from
        * charging */
       if (btech_context_uses_new_charge_rules(context) &&
-          btech_context_uses_technology_level_three_charge_rules(context))
+          btech_context_uses_technology_level_three_charge_rules(context)) {
         target_damage = charge_damage_calculate(
             &(ChargeDamageRequest){.moving = target,
                                    .opponent = mech,
                                    .mass_source = mech,
                                    .uses_new_rules = true,
                                    .divisor = 20});
-      else
+      } else {
         target_damage = (mech_real_tonnage(mech) + 5) / 10; /* REUSED! */
+      }
       /* Record the damage for debugging then dish it out */
       received_damage = target_damage;
       spread = target_damage / 5;
@@ -652,15 +656,16 @@ void charge_mech(Mech *mech, Mech *target) {
     isrear = (hit_group == BACK);
     /* Damage done to the attacker for the charge */
     if (btech_context_uses_new_charge_rules(context) &&
-        btech_context_uses_technology_level_three_charge_rules(context))
+        btech_context_uses_technology_level_three_charge_rules(context)) {
       mech_damage =
           charge_damage_calculate(&(ChargeDamageRequest){.moving = mech,
                                                          .opponent = target,
                                                          .mass_source = target,
                                                          .uses_new_rules = true,
                                                          .divisor = 20});
-    else
+    } else {
       mech_damage = (mech_real_tonnage(target) + 5) / 10;
+    }
     /* Record the damage then dish it out */
     received_damage = mech_damage;
     spread = mech_damage / 5;

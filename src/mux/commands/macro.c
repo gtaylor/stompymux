@@ -357,7 +357,7 @@ void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                "         LRW");
   for (i = 0; i < 5; i++) {
     const int MACRO_INDEX = commac_macro_item(c, (size_t)i);
-    if (MACRO_INDEX >= 0)
+    if (MACRO_INDEX >= 0) {
       if (!(is_valid_macro_index(registry, MACRO_INDEX)))
         notify_printf(match->evaluation, player, "%d: INVALID MACRO SET!", i);
       else {
@@ -370,8 +370,9 @@ void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
             m->status & MACRO_R ? 'R' : '-', m->status & MACRO_W ? 'W' : '-');
         free_lbuf(unparse);
       }
-    else
+    } else {
       notify_printf(match->evaluation, player, "%d:", i);
+    }
   }
   notify_printf(match->evaluation, player, "Current Macro Slot: %d", c->curmac);
 }

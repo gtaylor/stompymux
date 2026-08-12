@@ -723,7 +723,7 @@ void map_update(DbRef obj, void *data) {
     map->maxvis = clamp_int_to_short(bounded(24, ma * 3, 60));
     map->maplight = clamp_int_to_char(bounded(0, ml, 2));
     map->cloudbase = clamp_int_to_short(cloudbase);
-    if (ml != oldl || ma != oldv)
+    if (ml != oldl || ma != oldv) {
       for (i = 0; i < battle_map_unit_count(map); i++) {
         const DbRef MECH_DBREF = battle_map_unit_dbref(map, i);
         if (MECH_DBREF < 0)
@@ -736,6 +736,7 @@ void map_update(DbRef obj, void *data) {
         if (strlen(changemsg) > 5)
           mech_notify(mech, MECHALL, changemsg);
       }
+    }
   }
   mech_sensor_map_los_update(obj, map);
   /* Fire/Smoke are event-driven -> nothing related to them done here */

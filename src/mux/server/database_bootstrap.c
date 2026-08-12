@@ -121,12 +121,13 @@ bootstrap_initialize_object(EvaluationContext *evaluation,
   game_object_set_link(database, configuration->dbref, NOTHING);
   game_object_set_next(database, configuration->dbref, NOTHING);
   game_object_clear_flags(database, configuration->dbref);
-  for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++)
+  for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++) {
     game_object_set_flag(
         &(ObjectFlagChangeRequest){.database = database,
                                    .object = configuration->dbref,
                                    .flag = flag,
                                    .value = object_flag_set_has(flags, flag)});
+  }
   game_object_clear_powers(database, configuration->dbref);
   object_apply_default_lua_parent(
       &(ObjectCreationIdentity){.evaluation = evaluation,

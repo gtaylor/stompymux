@@ -119,12 +119,13 @@ void mech_explode(DbRef player, void *data, char *buffer) {
 
   if (!override) {
     for (int section = 0; section < NUM_SECTIONS; section++) {
-      if (!mech_section_is_destroyed(mech, section))
+      if (!mech_section_is_destroyed(mech, section)) {
         if (mech_section_has_recycling_weapon(mech, section)) {
           mecha_notify(btech_context_evaluation(context), player,
                        "You have weapons recycling!");
           return;
         }
+      }
       if (mech_section_recycle_ticks(mech, section)) {
         mecha_notify(btech_context_evaluation(context), player,
                      "You are still recovering from your last attack.");
@@ -134,12 +135,13 @@ void mech_explode(DbRef player, void *data, char *buffer) {
   }
 
   if (!strcasecmp(buffer, "stop")) {
-    if (!override)
+    if (!override) {
       if (!btech_context_self_destruct_can_stop(context)) {
         mecha_notify(btech_context_evaluation(context), player,
                      "It's too late to turn back now!");
         return;
       }
+    }
     if (!mech_event_count(mech, EVENT_EXPLODE)) {
       mecha_notify(btech_context_evaluation(context), player,
                    "Your mech isn't undergoing a self-destruct sequence!");

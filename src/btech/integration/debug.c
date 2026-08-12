@@ -135,12 +135,13 @@ static int debug_check_stuff(const RedBlackTreeVisitCall *call) {
   stat->total += size;
   stat->number++;
 
-  if (memory->detail_player > 0)
+  if (memory->detail_player > 0) {
     notify_printf(
         btech_context_evaluation(XCODE_OBJ->context), memory->detail_player,
         "#%5ld: %10s %5ld", KEY_VAL, btech_special_object_type_name(TYPE),
         XCODE_OBJ->type == GTYPE_AUTO ? ((Autopilot *)XCODE_OBJ)->mymechnum
                                       : 0);
+  }
 
   return 1;
 }
@@ -172,17 +173,18 @@ void debug_memory(DbRef player, void *data, const char *buffer) {
   for (int i = 0; i < type_count; i++) {
     DebugMemoryStat *stat = debug_memory_stat(&memory, i);
     if (stat->number) {
-      if (stat->smallest == stat->largest)
+      if (stat->smallest == stat->largest) {
         notify_printf(btech_context_evaluation(debug->context), player,
                       "%4d %-20s: %zu bytes total, %zu each", stat->number,
                       btech_special_object_type_name(i), stat->total,
                       stat->total / (size_t)stat->number);
-      else
+      } else {
         notify_printf(
             btech_context_evaluation(debug->context), player,
             "%4d %-20s: %zu bytes total, %zu avg, %zu/%zu small/large",
             stat->number, btech_special_object_type_name(i), stat->total,
             stat->total / (size_t)stat->number, stat->smallest, stat->largest);
+      }
     }
     gtotal += stat->total;
   }

@@ -348,16 +348,17 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
      * Scan forward until first character matches.
      */
 
-    if (wild_cursor_current(&pattern))
+    if (wild_cursor_current(&pattern)) {
       while (is_notequal(wild_cursor_current(&data),
                          wild_cursor_current(&pattern))) {
         if (!wild_cursor_current(&data))
           return 0;
         wild_cursor_advance(&data);
       }
-    else
+    } else {
       while (wild_cursor_current(&data))
         wild_cursor_advance(&data);
+    }
 
     /*
      * The first character matches, now.  Check if the rest * * *

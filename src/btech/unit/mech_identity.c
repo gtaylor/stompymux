@@ -133,7 +133,7 @@ char *my_to_upper(char *string) {
 }
 
 int crits_in_loc(Mech *mech, int index) {
-  if (((mech)->ud.type) == CLASS_MECH)
+  if (((mech)->ud.type) == CLASS_MECH) {
     switch (index) {
     case HEAD:
     case RLEG:
@@ -144,8 +144,9 @@ int crits_in_loc(Mech *mech, int index) {
       if (mech_is_quad(mech))
         return 6;
     }
-  else if (((mech)->ud.type) == CLASS_MW)
+  } else if (((mech)->ud.type) == CLASS_MW) {
     return 2;
+  }
   return NUM_CRITICALS;
 }
 
@@ -298,12 +299,13 @@ static int leave_hangar(BattleMap *map, Mech *mech) {
       .object = mech->mynum,
       .destination = mech->mapindex,
       .cause = 1});
-  if (car)
+  if (car) {
     move_via_teleport(&(ObjectMovementRequest){
         .evaluation = btech_context_evaluation(mech->xcode.context),
         .object = car->mynum,
         .destination = mech->mapindex,
         .cause = 1});
+  }
   if (is_in_character(mech->xcode.context->database, mech->mynum) &&
       game_object_location(mech->xcode.context->database,
                            mech_pilot_dbref(mech)) != mech->mynum) {
@@ -740,13 +742,14 @@ int mech_pilot_skill_roll(const PilotSkillRollRequest *request) {
   mech_printf(mech, MECHPILOT, "Modified Pilot Skill: BTH %d\tRoll: %d",
               roll_needed, roll);
   if (roll >= roll_needed) {
-    if (roll_needed > 2)
+    if (roll_needed > 2) {
       piloting_experience_award(&(PilotingExperienceAward){
           .pilot = mech_pilot_dbref(mech),
           .mech = mech,
           .reason = bounded(1, roll_needed - 7, max(2, 1 + mods)),
           .unconditional = true,
       });
+    }
     return 1;
   }
   return 0;

@@ -196,26 +196,29 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
                                                     : "[fg=green]Off[reset]");
     }
 
-    if (has_c3_master)
+    if (has_c3_master) {
       append_status(tempbuff, sizeof(tempbuff), "%sC3M[reset]  ",
                     conditions.c3_destroyed           ? "[fg=red]"
                     : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
                     : mech_c3_network_size(mech) > 0  ? "[fg=green bold]"
                                                       : "[fg=green]");
+    }
 
-    if (has_c3_slave)
+    if (has_c3_slave) {
       append_status(tempbuff, sizeof(tempbuff), "%sC3S[reset]  ",
                     conditions.c3_destroyed           ? "[fg=red]"
                     : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
                     : mech_c3_network_size(mech) > 0  ? "[fg=green bold]"
                                                       : "[fg=green]");
+    }
 
-    if (has_c3i)
+    if (has_c3i) {
       append_status(tempbuff, sizeof(tempbuff), "%sC3i[reset]  ",
                     conditions.c3i_destroyed          ? "[fg=red]"
                     : mech_is_any_ecm_disturbed(mech) ? "[fg=yellow]"
                     : mech_c3i_network_size(mech) > 0 ? "[fg=green bold]"
                                                       : "[fg=green]");
+    }
 
     if (technology & TRIPLE_MYOMER_TECH)
       append_status(tempbuff, sizeof(tempbuff), "TSM(%s)  ",
@@ -241,21 +244,23 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
                         mech_to_mech_display_id(mech, tag_target).text));
     }
 
-    if (technology_secondary & SUPERCHARGER_TECH)
+    if (technology_secondary & SUPERCHARGER_TECH) {
       append_status(tempbuff, sizeof(tempbuff), "SCHARGE: %s%d[reset] (%s)",
                     conditions.supercharger_counter > 3   ? "[fg=red bold]"
                     : conditions.supercharger_counter > 0 ? "[fg=yellow bold]"
                                                           : "[fg=green]",
                     conditions.supercharger_counter,
                     conditions.supercharger_enabled ? "On" : "Off");
+    }
 
-    if (technology & MASC_TECH)
+    if (technology & MASC_TECH) {
       append_status(tempbuff, sizeof(tempbuff), "MASC: %s%d[reset] (%s)",
                     conditions.masc_counter > 3   ? "[fg=red bold]"
                     : conditions.masc_counter > 0 ? "[fg=yellow bold]"
                                                   : "[fg=green]",
                     conditions.masc_counter,
                     conditions.masc_enabled ? "On" : "Off");
+    }
 
     mecha_notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;

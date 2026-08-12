@@ -77,13 +77,14 @@ void vehicle_int_check(Mech *mech, int noisy) {
     if (!mech_section_original_internal(mech, location) ||
         mech_section_original_internal(mech, location) == EXPECTED)
       continue;
-    if (noisy)
+    if (noisy) {
       btech_channel_send(
           mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
           tprintf("Template %s / mech #%ld: Invalid internals in loc %d "
                   "(should be %d, are %d)",
                   mech->ud.mech_type, mech->mynum, location, EXPECTED,
                   mech_section_original_internal(mech, location)));
+    }
     mech_section_original_internal_set(mech, location, EXPECTED);
     mech_section_internal_set(mech, location, EXPECTED);
   }
@@ -115,13 +116,14 @@ void mech_int_check(Mech *mech, int noisy) {
         .mech = mech, .location = location, .tonnage_index = tonnage_index});
     if (mech_section_original_internal(mech, location) == EXPECTED)
       continue;
-    if (noisy)
+    if (noisy) {
       btech_channel_send(
           mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
           tprintf("Template %s / mech #%ld: Invalid internals in loc %d "
                   "(should be %d, are %d)",
                   mech->ud.mech_type, mech->mynum, location, EXPECTED,
                   mech_section_original_internal(mech, location)));
+    }
     mech_section_original_internal_set(mech, location, EXPECTED);
     mech_section_internal_set(mech, location, EXPECTED);
   }

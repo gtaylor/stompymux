@@ -83,13 +83,14 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
       armor += (debug2 = mech_section_rear_armor(mech, i) *
                          (mechspec & HARDA_TECH ? 200 : 100));
     }
-    if (!mech_is_aerospace_unit(mech))
+    if (!mech_is_aerospace_unit(mech)) {
       intern += (debug3 = mech_section_internal(mech, i) *
                           (mechspec & COMPI_TECH    ? 50
                            : mechspec & REINFI_TECH ? 200
                                                     : 100));
-    else
+    } else {
       intern = (debug3 = (unsigned char)((mech)->ud.si));
+    }
 #ifdef DEBUG_BV
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
                        tprintf("Armoradd : %d ArmorRadd : %d Internadd : %d",
@@ -244,7 +245,7 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
             weapon_catalogue_has_special(weapon_from_equipment_index(temp),
                                          GAUSS))) &&
           type == CLASS_MECH) {
-        if (mechspec & CLAN_TECH)
+        if (mechspec & CLAN_TECH) {
           if (i == CTORSO || i == HEAD || i == RLEG || i == LLEG) {
 
 #ifdef DEBUG_BV
@@ -254,6 +255,7 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
             deduct += 2000;
             continue;
           }
+        }
         if (mechspec & (XL_TECH | XXL_TECH | ICE_TECH | LE_TECH)) {
 
 #ifdef DEBUG_BV

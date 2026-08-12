@@ -346,12 +346,13 @@ void mech_speed(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  if (mech_class(mech) != CLASS_MECH)
+  if (mech_class(mech) != CLASS_MECH) {
     if (mech_event_count(mech, EVENT_REMOVE_PODS)) {
       mecha_notify(btech_context_evaluation(context), player,
                    "You are too busy removing iNARC pods!");
       return;
     }
+  }
   if (condition.hull_down) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You can not move while hulldown");
@@ -391,7 +392,7 @@ void mech_speed(DbRef player, void *data, char *buffer) {
   if (newspeed < 0.1F) {
 
     /* Possibly a string speed instead? */
-    for (i = 0; speed_table_entry(i)->name; i++)
+    for (i = 0; speed_table_entry(i)->name; i++) {
       if (!strcasecmp(speed_table_entry(i)->name, *speed_argument_slot)) {
         switch (speed_table_entry(i)->flag) {
         case 0:
@@ -409,6 +410,7 @@ void mech_speed(DbRef player, void *data, char *buffer) {
         }
         break;
       }
+    }
   }
 
   if (newspeed > maxspeed)

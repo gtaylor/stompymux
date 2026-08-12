@@ -173,7 +173,7 @@ void fill_default_criticals(Mech *mech, int index) {
         .part_type = EMPTY});
   }
 
-  if (((mech)->ud.type) == CLASS_AERO)
+  if (((mech)->ud.type) == CLASS_AERO) {
     switch (index) {
     case AERO_AFT:
       for (loop = 0; loop < 12; loop++)
@@ -185,7 +185,8 @@ void fill_default_criticals(Mech *mech, int index) {
                                   special_equipment_index(ENGINE));
       break;
     }
-  if (((mech)->ud.type) == CLASS_MECH)
+  }
+  if (((mech)->ud.type) == CLASS_MECH) {
     switch (index) {
     case HEAD:
       mech_critical_part_type_set(mech, index, 0,
@@ -241,6 +242,7 @@ void fill_default_criticals(Mech *mech, int index) {
           mech, index, 3, special_equipment_index(HAND_OR_FOOT_ACTUATOR));
       break;
     }
+  }
 }
 
 ArmorSectionAbbreviation

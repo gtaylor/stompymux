@@ -47,7 +47,7 @@ void aero_thrust(DbRef player, void *data, char *arg) {
     return;
   }
   newspeed = strtof(args[0], nullptr);
-  if ((mech_class(mech) == CLASS_AERO || mech_class(mech) == CLASS_DS))
+  if ((mech_class(mech) == CLASS_AERO || mech_class(mech) == CLASS_DS)) {
     if (newspeed < (MP1 * (float)MIN_TAKEOFF_SPEED / (float)ACCEL_MOD)) {
       mecha_notify(
           btech_context_evaluation(mech_context(mech)), player,
@@ -55,6 +55,7 @@ void aero_thrust(DbRef player, void *data, char *arg) {
                   (double)(MP1 * (float)MIN_TAKEOFF_SPEED / (float)ACCEL_MOD)));
       return;
     }
+  }
   maxspeed = mech_effective_maximum_speed(mech);
   if (!(maxspeed > 0.0F))
     maxspeed = 0.0F;

@@ -399,12 +399,13 @@ int death_from_above(Mech *mech, Mech *target) {
   }
 
   if ((mech_class(target) == CLASS_VTOL) ||
-      (mech_class(target) == CLASS_AERO) || (mech_class(target) == CLASS_DS))
+      (mech_class(target) == CLASS_AERO) || (mech_class(target) == CLASS_DS)) {
     if (!mech_is_landed(target)) {
       mech_notify(mech, MECHALL,
                   "Your target is airborne, you cannot land on it.");
       return 0;
     }
+  }
 
   if ((mech_team(mech) == mech_team(target)) &&
       battle_map_blocks_friendly_fire(map)) {

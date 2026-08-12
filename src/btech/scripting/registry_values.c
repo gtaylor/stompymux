@@ -229,7 +229,7 @@ BtechScriptResult fun_zmechs(BtechScriptCall *call) {
     safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
-  for (i = 0; i < context->btech->database->top; i++)
+  for (i = 0; i < context->btech->database->top; i++) {
     if (typeof_obj(context->btech->database, i) == OBJECT_TYPE_THING) {
       if (game_object_zone(context->btech->database, i) == it) {
         if ((btech_context_which_special(context->btech, i) == GTYPE_MECH) &&
@@ -249,6 +249,7 @@ BtechScriptResult fun_zmechs(BtechScriptCall *call) {
         }
       }
     }
+  }
 
   return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }

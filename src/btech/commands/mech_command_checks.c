@@ -33,22 +33,24 @@ int common_checks(DbRef player, Mech *mech, int flags) {
     }
   }
 
-  if (flags & MECH_PILOT)
+  if (flags & MECH_PILOT) {
     if (mech_is_blinded(mech)) {
       mecha_notify(btech_context_evaluation(context), player,
                    "You are momentarily blinded!");
       return 0;
     }
+  }
 
-  if (flags & MECH_PILOT_CON)
+  if (flags & MECH_PILOT_CON) {
     if (mech_pilot_is_unconscious(mech) &&
         (!mech_is_started(mech) || player == mech_pilot_dbref(mech))) {
       mecha_notify(btech_context_evaluation(context), player,
                    "You are unconscious....zzzzzzz");
       return 0;
     }
+  }
 
-  if (flags & MECH_PILOTONLY)
+  if (flags & MECH_PILOTONLY) {
     if (!is_wizard(btech_context_database(context), player) &&
         is_in_character(btech_context_database(context), mech_dbref(mech)) &&
         mech_pilot_dbref(mech) != player) {
@@ -56,6 +58,7 @@ int common_checks(DbRef player, Mech *mech, int flags) {
                    "Now now, only the pilot can push that button.");
       return 0;
     }
+  }
 
   if (flags & MECH_MAP) {
     if (mech_map_dbref(mech) < 0) {

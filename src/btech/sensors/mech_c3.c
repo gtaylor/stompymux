@@ -436,12 +436,13 @@ void mech_c3_network_add(Mech *mech, Mech *mech_to_add) {
     if (other_ref != mech_dbref(mech_to_add)) {
       other_notify_mech = mech_network_unit(mech, i, 1, 1, 1, 1);
 
-      if (other_notify_mech)
+      if (other_notify_mech) {
         mech_notify(
             other_notify_mech, MECHALL,
             tprintf(
                 "%s connects to your C3 network.",
                 mech_to_mech_display_id(other_notify_mech, mech_to_add).text));
+      }
     }
 
     mech_c3_network_replicate(mech, other_mech);

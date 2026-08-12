@@ -417,14 +417,16 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool t_is_c3) {
 
   /* print a sorted list of detected mechs */
   /* use the ever-popular bubble sort */
-  for (i = 0; i < (buffindex - 1); i++)
-    for (j = (i + 1); j < buffindex; j++)
+  for (i = 0; i < (buffindex - 1); i++) {
+    for (j = (i + 1); j < buffindex; j++) {
       if (c3_contact_line(contacts, j)->sort_range >
           c3_contact_line(contacts, i)->sort_range) {
         C3ContactLine temporary = *c3_contact_line(contacts, i);
         *c3_contact_line(contacts, i) = *c3_contact_line(contacts, j);
         *c3_contact_line(contacts, j) = temporary;
       }
+    }
+  }
 
   for (i = 0; i < buffindex; i++)
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,

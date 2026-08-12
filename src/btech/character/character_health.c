@@ -391,7 +391,7 @@ int handlemwconc(Mech *mech, int initial) {
       mech_pilot_dbref(mech) > 0) {
     m = mw_ic_bth(mech);
   } else {
-    if (initial)
+    if (initial) {
       if (mech_pilot_status(mech) > 5) {
         mech_notify(mech, MECHPILOT, "You are killed from personal injuries!!");
 
@@ -403,6 +403,7 @@ int handlemwconc(Mech *mech, int initial) {
         mech_movement_stop(mech);
         return 0;
       }
+    }
     m = pilot_status_roll_needed(bounded(0, mech_pilot_status(mech), 4));
   }
   if (initial && mech_pilot_is_unconscious(mech))

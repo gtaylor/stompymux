@@ -192,13 +192,14 @@ static FlowOutcome lua_flow_step(const FlowStepCall *call) {
   } else if (strcmp(field, "done") == 0) {
     outcome.action = FLOW_ACTION_DONE;
   } else {
-    if (strcmp(field, "cancel") != 0)
+    if (strcmp(field, "cancel") != 0) {
       log_error((LogEntry){.log = runtime->services->log,
                            .key = LOG_BUGS,
                            .primary = "LUA",
                            .secondary = "FLOW"},
                 "Unknown flow action '%s' from step '%s' in %s; cancelling.",
                 field, step, data->path);
+    }
     outcome.action = FLOW_ACTION_CANCEL;
   }
   lua_pop(state, 1);

@@ -118,13 +118,15 @@ static void mech_dump_event(MuxEvent *ev) {
   }
   if (arg < 65536) {
     weapindx = (int)(arg / 256) - 1;
-    for (; i >= 0; i--)
-      for (l = mech_section_critical_count(mech, i) - 1; l >= 0; l--)
+    for (; i >= 0; i--) {
+      for (l = mech_section_critical_count(mech, i) - 1; l >= 0; l--) {
         if (equipment_is_ammunition(mech_critical_part_type(mech, i, l)))
           if (ammunition_to_weapon_index(mech_critical_part_type(mech, i, l)) ==
               weapindx)
             if (mech_critical_data(mech, i, l))
               mech_ammunition_dump_decrease(mech, i, l, &e);
+      }
+    }
     if (e > 1) {
       mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK,
                           arg);
@@ -415,11 +417,11 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int w_hit_loc) {
   if (w_event_data < 0)
     return;
   if (!w_event_data) { /* Global ammo dump */
-    for (w_sec_iter = 7; w_sec_iter >= 0; w_sec_iter--)
+    for (w_sec_iter = 7; w_sec_iter >= 0; w_sec_iter--) {
       for (w_slot_iter = mech_section_critical_count(mech, w_sec_iter) - 1;
            w_slot_iter >= 0; w_slot_iter--) {
         part_type = mech_critical_part_type(mech, w_sec_iter, w_slot_iter);
-        if (equipment_is_ammunition(part_type))
+        if (equipment_is_ammunition(part_type)) {
           if (mech_critical_data(mech, w_sec_iter, w_slot_iter)) {
             ammunition_item_add(&(AmmunitionItemAddition){
                 .items = ammunition_items,
@@ -428,7 +430,9 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int w_hit_loc) {
                 .part_type = part_type,
                 .slot = {.section = w_sec_iter, .critical = w_slot_iter}});
           }
+        }
       }
+    }
   } else if (w_event_data < 256) { /* Location specific ammo dump */
     w_loc = w_event_data - 1;
     for (w_slot_iter = 0;
@@ -437,7 +441,7 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int w_hit_loc) {
       part_type = mech_critical_part_type(mech, w_loc, w_slot_iter);
 
       /*     part_type = mech_critical_part_type(mech, wSecIter, wSlotIter); */
-      if (equipment_is_ammunition(part_type))
+      if (equipment_is_ammunition(part_type)) {
         if (!mech_critical_is_nonfunctional(mech, w_loc, w_slot_iter) &&
             mech_critical_data(mech, w_loc, w_slot_iter)) {
           ammunition_item_add(&(AmmunitionItemAddition){
@@ -447,10 +451,11 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int w_hit_loc) {
               .part_type = part_type,
               .slot = {.section = w_loc, .critical = w_slot_iter}});
         }
+      }
     }
   } else if (w_event_data < 65536) { /* Weapon specific ammo dump */
     weapon_index = (w_event_data / 256) - 1;
-    for (w_sec_iter = 7; w_sec_iter >= 0; w_sec_iter--)
+    for (w_sec_iter = 7; w_sec_iter >= 0; w_sec_iter--) {
       for (w_slot_iter = mech_section_critical_count(mech, w_sec_iter) - 1;
            w_slot_iter >= 0; w_slot_iter--) {
         part_type = mech_critical_part_type(mech, w_sec_iter, w_slot_iter);
@@ -464,6 +469,7 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int w_hit_loc) {
               .slot = {.section = w_sec_iter, .critical = w_slot_iter}});
         }
       }
+    }
   } else { /* crit specific dump */
     w_sec_iter = ((w_event_data >> 16) & 0xFF) - 1;
     w_slot_iter = ((w_event_data >> 24) & 0xFF) - 1;

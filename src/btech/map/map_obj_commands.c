@@ -35,7 +35,7 @@ void list_mapobjs(DbRef player, BattleMap *map) {
                "X   Y   Type  obj   dc   ds     di");
   mecha_notify(btech_context_evaluation(map->xcode.context), player,
                "--------------------------------------------");
-  for (i = 0; i < NUM_MAPOBJTYPES; i++)
+  for (i = 0; i < NUM_MAPOBJTYPES; i++) {
     for (tmp = first_mapobj(map, i); tmp; tmp = next_mapobj(tmp)) {
       if (i == TYPE_BITS)
         mecha_notify(btech_context_evaluation(map->xcode.context), player,
@@ -46,6 +46,7 @@ void list_mapobjs(DbRef player, BattleMap *map) {
                       map_type_name(i), (int)tmp->obj, tmp->datac, tmp->datas,
                       tmp->payload.scalar);
     }
+  }
   mecha_notify(btech_context_evaluation(map->xcode.context), player,
                "--------------------------------------------");
 }
@@ -268,7 +269,7 @@ void map_delobj(DbRef player, void *data, char *buffer) {
                    "Invalid coordinates!");
       return;
     }
-    for (tt = 0; tt < NUM_MAPOBJTYPES; tt++)
+    for (tt = 0; tt < NUM_MAPOBJTYPES; tt++) {
       for (foo = first_mapobj(map, tt); foo; foo = foo2) {
         foo2 = next_mapobj(foo);
         if (foo->x == x && foo->y == y) {
@@ -283,6 +284,7 @@ void map_delobj(DbRef player, void *data, char *buffer) {
           count++;
         }
       }
+    }
     notify_printf(btech_context_evaluation(map->xcode.context), player,
                   "%d objects at (%d,%d) deleted.", count, x, y);
     break;

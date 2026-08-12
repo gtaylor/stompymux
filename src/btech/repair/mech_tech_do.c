@@ -525,7 +525,7 @@ int repairg_fail(const RepairOperationCall *call) {
   Mech *mech = call->mech;
   int loc = call->selection.location;
   int part = call->selection.part;
-  if (mech_critical_is_destroyed(mech, loc, part))
+  if (mech_critical_is_destroyed(mech, loc, part)) {
     /* If we are calling repairgun on a thing that is actually destroyed
      * the following check *should not* be necessary. Nevertheless... */
     if (get_weapon_crits(mech, weapon_from_equipment_index(
@@ -536,6 +536,7 @@ int repairg_fail(const RepairOperationCall *call) {
                    "You muck around, trashing the gun in the process.");
       return -1;
     }
+  }
   mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                "Your repair fails.. all the parts are wasted for good.");
   return -1;

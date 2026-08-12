@@ -261,7 +261,7 @@ int cause_armordamage(const ArmorDamageRequest *request) {
     }
   }
 
-  if (seriousness > 0 && mech_armor_warning_enabled(wounded))
+  if (seriousness > 0 && mech_armor_warning_enabled(wounded)) {
     mech_printf(wounded, MECHALL, "%sWARNING: %s%s Armor %s",
                 my_serious_color_str(wounded, seriousness),
                 armor_section_abbreviation(
@@ -271,6 +271,7 @@ int cause_armordamage(const ArmorDamageRequest *request) {
                                              .location = HITLOC})
                     .text,
                 ISREAR ? " (Rear)" : "", my_serious_str(wounded, seriousness));
+  }
 
   return int_damage > 0 ? int_damage : 0;
 }
@@ -295,7 +296,7 @@ int cause_internaldamage(const InternalDamageRequest *request) {
     int_damage = int_damage * 2;
   /* Critical hits? */
   btech_context_critical_roll_record(context, r);
-  if (!(*crits))
+  if (!(*crits)) {
     switch (r) {
     case 8:
     case 9:
@@ -361,6 +362,7 @@ int cause_internaldamage(const InternalDamageRequest *request) {
       break;
       /* No critical hit */
     }
+  }
   /* Hmm.. This should be interesting */
   if (mech_class(wounded) == CLASS_MECH && int_damage && HITLOC == CTORSO &&
       mech_section_internal(wounded, HITLOC) ==

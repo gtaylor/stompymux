@@ -192,7 +192,7 @@ size_t lua_visit_global_commands(LuaRuntime *runtime, DbRef player,
 
   if (!runtime || !visitor)
     return 0;
-  for (size_t index = 0; index < runtime->global_module_count; index++)
+  for (size_t index = 0; index < runtime->global_module_count; index++) {
     count += lua_visit_module_commands(&(LuaModuleCommandVisitRequest){
         .runtime = runtime,
         .root = LUA_ROOT_GLOBAL_LOGIC,
@@ -201,6 +201,7 @@ size_t lua_visit_global_commands(LuaRuntime *runtime, DbRef player,
         .player = player,
         .visitor = visitor,
         .context = context});
+  }
   return count;
 }
 

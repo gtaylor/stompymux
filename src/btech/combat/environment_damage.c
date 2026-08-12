@@ -116,7 +116,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
 
   if (!(mech_class(wounded) == CLASS_MECH || mech_class(wounded) == CLASS_MW ||
         mech_class(wounded) == CLASS_BSUIT)) {
-    for (i = 0; i < mech_section_critical_count(wounded, hitloc); i++)
+    for (i = 0; i < mech_section_critical_count(wounded, hitloc); i++) {
       if (mech_critical_part_type(wounded, hitloc, i) &&
           !mech_critical_is_destroyed(wounded, hitloc, i)) {
         if (disable)
@@ -124,10 +124,11 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
         else
           mech_critical_destroy(wounded, hitloc, i);
       }
+    }
     return;
   }
   oldjs = mech_jump_speed(wounded);
-  for (i = 0; i < mech_section_critical_count(wounded, hitloc); i++)
+  for (i = 0; i < mech_section_critical_count(wounded, hitloc); i++) {
     if (!mech_critical_is_destroyed(wounded, hitloc, i)) {
       if (disable) {
         mech_critical_fire_mode_add(wounded, hitloc, i, DISABLED_MODE);
@@ -238,6 +239,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
         }
       }
     }
+  }
   if (breach)
     if (mech_class(wounded) == CLASS_VEH_GROUND ||
         mech_class(wounded) == CLASS_VEH_NAVAL)

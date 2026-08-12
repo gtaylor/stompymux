@@ -122,12 +122,13 @@ void mech_speed_update(Mech *mech) {
     maxspeed = (4.0F / 3.0F) * maxspeed;
 
   if (technology & TRIPLE_MYOMER_TECH) {
-    if (mech_excess_heat(mech) >= 9.0F)
+    if (mech_excess_heat(mech) >= 9.0F) {
       maxspeed =
           ceilf((rintf((mech_effective_maximum_speed(mech) / 1.5F) / MP1) +
                  1.0F) *
                 1.5F) *
           MP1;
+    }
     if (mech_desired_speed(mech) >= maxspeed)
       mech_desired_speed_set(mech, maxspeed);
   }
@@ -146,7 +147,7 @@ void mech_speed_update(Mech *mech) {
       tempspeed = speed_heat_decrease(tempspeed, maxspeed, MP1);
   }
   if (mech_class(mech) != CLASS_MW && mech_movement_type(mech) != MOVE_VTOL &&
-      (mech_movement_type(mech) != MOVE_FLY || mech_is_landed(mech)))
+      (mech_movement_type(mech) != MOVE_FLY || mech_is_landed(mech))) {
     tempspeed = mech_terrain_speed(&(MechTerrainSpeedRequest){
         .mech = mech,
         .current_speed = tempspeed,
@@ -154,6 +155,7 @@ void mech_speed_update(Mech *mech) {
         .terrain = mech_real_terrain_get(mech),
         .elevation = mech_position_elevation(mech),
     });
+  }
   if (mech_heading_changed(mech)) {
     if (btech_context_movement_slowdown_mode(context) == 2) {
       int dif = mech_heading_degrees(mech) - mech_desired_heading_degrees(mech);

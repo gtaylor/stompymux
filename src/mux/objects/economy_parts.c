@@ -35,12 +35,13 @@ static size_t economy_parts_find(const EconomyPartReference *reference) {
   EconomyPartsState *parts =
       &game_database_object(reference->database, reference->object)
            ->economy_parts;
-  for (size_t index = 0; index < parts->count; index++)
+  for (size_t index = 0; index < parts->count; index++) {
     if (economy_part(parts, parts->count, index)->part_id ==
             reference->part_id &&
         economy_part(parts, parts->count, index)->brand_id ==
             reference->brand_id)
       return index;
+  }
   return parts->count;
 }
 

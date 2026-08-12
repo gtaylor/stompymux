@@ -14,6 +14,7 @@ Checks: >
   readability-avoid-const-params-in-decls,
   readability-avoid-return-with-void-value,
   readability-avoid-unconditional-preprocessor-if,
+  readability-braces-around-statements,
   readability-const-return-type,
   readability-duplicate-include,
   readability-else-after-return,
@@ -41,6 +42,7 @@ Checks: >
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^.*/src/(mux|btech)/.*'
 CheckOptions:
+  readability-braces-around-statements.ShortStatementLines: 5
   readability-identifier-naming.ConstantCase: UPPER_CASE
   readability-identifier-naming.EnumCase: CamelCase
   readability-identifier-naming.EnumConstantCase: UPPER_CASE

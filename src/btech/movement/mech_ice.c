@@ -167,14 +167,17 @@ void ice_growth(DbRef player, BattleMap *map, int num) {
   int y;
   int count = 0;
 
-  for (x = 0; x < battle_map_width(map); x++)
-    for (y = 0; y < battle_map_height(map); y++)
-      if (map_real_terrain_get(map, x, y) == BATTLE_TERRAIN_WATER)
+  for (x = 0; x < battle_map_width(map); x++) {
+    for (y = 0; y < battle_map_height(map); y++) {
+      if (map_real_terrain_get(map, x, y) == BATTLE_TERRAIN_WATER) {
         if (btech_random_range(battle_map_context(map), 1, 100) <= num &&
             growable(map, x, y)) {
           map_terrain_set(map, x, y, TMP_TERR);
           count++;
         }
+      }
+    }
+  }
   for (x = 0; x < battle_map_width(map); x++)
     for (y = 0; y < battle_map_height(map); y++)
       if (map_real_terrain_get(map, x, y) == TMP_TERR)
@@ -192,15 +195,18 @@ void ice_melt(DbRef player, BattleMap *map, int num) {
   int y;
   int count = 0;
 
-  for (x = 0; x < battle_map_width(map); x++)
-    for (y = 0; y < battle_map_height(map); y++)
-      if (map_real_terrain_get(map, x, y) == BATTLE_TERRAIN_ICE)
+  for (x = 0; x < battle_map_width(map); x++) {
+    for (y = 0; y < battle_map_height(map); y++) {
+      if (map_real_terrain_get(map, x, y) == BATTLE_TERRAIN_ICE) {
         if (btech_random_range(battle_map_context(map), 1, 100) <= num &&
             meltable(map, x, y)) {
           break_sub(map, nullptr, x, y, "goes swimming as ice breaks!");
           map_terrain_set(map, x, y, TMP_TERR);
           count++;
         }
+      }
+    }
+  }
   for (x = 0; x < battle_map_width(map); x++)
     for (y = 0; y < battle_map_height(map); y++)
       if (map_real_terrain_get(map, x, y) == TMP_TERR)

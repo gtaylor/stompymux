@@ -146,13 +146,14 @@ static bool apply_link_property(const StyledTextPalette *palette,
   const char *dot = strchr(property, '.');
   StyledLinkProperties *properties = &style->base;
 
-  if (!dot)
+  if (!dot) {
     return apply_link_properties(
         palette, properties,
         &(StyledPropertyApplication){.name = property,
                                      .value = value,
                                      .error = error,
                                      .error_size = error_size});
+  }
   const size_t PROPERTY_LENGTH = strlen(property);
   const size_t DOT_OFFSET = PROPERTY_LENGTH - strlen(dot);
   const char *field =
@@ -555,14 +556,15 @@ static bool apply_link_config_property(const StyledTextPalette *palette,
     }
     return styled_link_text_replace(destination, value, error, error_size);
   }
-  if (!strncasecmp(property, "title.", 6))
+  if (!strncasecmp(property, "title.", 6)) {
     return apply_link_properties(
         palette, &config->title_style,
         &(StyledPropertyApplication){.name = checked_string_suffix(property, 6),
                                      .value = value,
                                      .error = error,
                                      .error_size = error_size});
-  if (parse_menu_property(property, &menu_index, &menu_field))
+  }
+  if (parse_menu_property(property, &menu_index, &menu_field)) {
     return apply_menu_property(
         config, menu_index,
         &(StyledPropertyApplication){.name = menu_field,
@@ -570,6 +572,7 @@ static bool apply_link_config_property(const StyledTextPalette *palette,
                                      .quoted = quoted,
                                      .error = error,
                                      .error_size = error_size});
+  }
   if (!strncasecmp(property, "menu.", 5)) {
     styled_set_error(error, error_size, "invalid OSC 8 menu item index");
     return false;
@@ -578,7 +581,7 @@ static bool apply_link_config_property(const StyledTextPalette *palette,
     return apply_visibility_property(&config->visibility,
                                      checked_string_suffix(property, 11), value,
                                      quoted, error, error_size);
-  if (!strncasecmp(property, "selection.", 10))
+  if (!strncasecmp(property, "selection.", 10)) {
     return apply_selection_property(
         &config->selection, &(StyledPropertyApplication){
                                 .name = checked_string_suffix(property, 10),
@@ -586,6 +589,7 @@ static bool apply_link_config_property(const StyledTextPalette *palette,
                                 .quoted = quoted,
                                 .error = error,
                                 .error_size = error_size});
+  }
   if (!strcasecmp(property, "spoiler") || !strcasecmp(property, "disabled")) {
     StyledBoolean *destination =
         !strcasecmp(property, "spoiler") ? &config->spoiler : &config->disabled;

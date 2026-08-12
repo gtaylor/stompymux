@@ -235,7 +235,7 @@ static char *wspec_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
     i--;
     j = weapon_menu_get(menu, i);
     const WeaponRangeProfile RANGES = weapon_catalogue_ranges(j);
-    if (menu->configuration->btech_erange)
+    if (menu->configuration->btech_erange) {
       (void)snprintf(
           buffer, LBUF_SIZE, WSDUMP_MASK_ER, weapon_catalogue_name(j),
           weapon_catalogue_heat(j), weapon_catalogue_damage(j), RANGES.minimum,
@@ -244,13 +244,14 @@ static char *wspec_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
           weapon_catalogue_effective_range(j,
                                            menu->configuration->btech_erange),
           btech_weapon_settings_recycle_time(menu->weapon_settings, j));
-    else
+    } else {
       (void)snprintf(
           buffer, LBUF_SIZE, WSDUMP_MASK_NOER, weapon_catalogue_name(j),
           weapon_catalogue_heat(j), weapon_catalogue_damage(j), RANGES.minimum,
           RANGES.short_range, RANGES.medium_range,
           weapon_catalogue_effective_range(j, false),
           btech_weapon_settings_recycle_time(menu->weapon_settings, j));
+    }
   }
   return buffer;
 }
@@ -294,16 +295,17 @@ void mech_weaponspecs(DbRef player, void *data, const char *buffer) {
                  "You have no weapons!");
     return;
   }
-  if (strcmp(mech_model_name(mech), mech_model_reference(mech)))
+  if (strcmp(mech_model_name(mech), mech_model_reference(mech))) {
     c = sel_col_fun_string_menu_context_k(
         1,
         tprintf("Weapons statistics for %s: %s", mech_model_name(mech),
                 mech_model_reference(mech)),
         wspec_fun, &menu, menu.weapon_count + 1);
-  else
+  } else {
     c = sel_col_fun_string_menu_context_k(
         1, tprintf("Weapons statistics for %s", mech_model_reference(mech)),
         wspec_fun, &menu, menu.weapon_count + 1);
+  }
   show_cool_menu(evaluation, player, c);
   kill_cool_menu(c);
 }

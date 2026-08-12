@@ -61,21 +61,23 @@ static void *configuration_resolve_location(ConfigurationContext *context,
         (size_t)location - sizeof(ServerConfiguration) - 1, 1);
   if (location > sizeof(ServerConfiguration) + sizeof(CommandRegistry) &&
       location <= sizeof(ServerConfiguration) + sizeof(CommandRegistry) +
-                      sizeof(WorldIndexes))
+                      sizeof(WorldIndexes)) {
     return checked_storage_region(
         context->world_indexes, sizeof(*context->world_indexes),
         (size_t)location - sizeof(ServerConfiguration) -
             sizeof(CommandRegistry) - 1,
         1);
+  }
   if (location > sizeof(ServerConfiguration) + sizeof(CommandRegistry) +
                      sizeof(WorldIndexes) &&
       location <= sizeof(ServerConfiguration) + sizeof(CommandRegistry) +
-                      sizeof(WorldIndexes) + sizeof(AccessControlStore))
+                      sizeof(WorldIndexes) + sizeof(AccessControlStore)) {
     return checked_storage_region(
         context->world->access_control, sizeof(*context->world->access_control),
         (size_t)location - sizeof(ServerConfiguration) -
             sizeof(CommandRegistry) - sizeof(WorldIndexes) - 1,
         1);
+  }
   return nullptr;
 }
 

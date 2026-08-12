@@ -372,7 +372,7 @@ static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
   if ((typeof_obj(evaluation->world->database, loc) != OBJECT_TYPE_ROOM) &&
       use_idesc) {
     got = attribute_get(evaluation->world->database, loc, A_IDESC, &aflags);
-    if (*got)
+    if (*got) {
       notify_action(
           evaluation,
           &(ActionMessageInvocation){
@@ -385,8 +385,9 @@ static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
                           .destination = NOTHING},
               .content_attribute = A_IDESC,
               .event = LUA_EVENT_DESCRIBE});
-    else
+    } else {
       show_a_desc(evaluation, player, loc);
+    }
     free_lbuf(got);
   } else {
     show_a_desc(evaluation, player, loc);
@@ -429,7 +430,7 @@ void look_in(const LookRequest *request) {
 
   if (typeof_obj(evaluation->world->database, loc) == OBJECT_TYPE_ROOM) {
     if (lock_test(evaluation, player, player, player, loc, LUA_LOCK_DEFAULT,
-                  LUA_LOCK_OPERATION_LOOK, false, &lock, &result))
+                  LUA_LOCK_OPERATION_LOOK, false, &lock, &result)) {
       notify_action(evaluation,
                     &(ActionMessageInvocation){
                         .message = {.type = LUA_MESSAGE_SUCCESS,
@@ -440,11 +441,12 @@ void look_in(const LookRequest *request) {
                                     .source = NOTHING,
                                     .destination = NOTHING},
                         .event = LUA_EVENT_SUCCESS});
-    else
+    } else {
       notify_lock_failure(&(LockFailureNotification){.evaluation = evaluation,
                                                      .invocation = &lock,
                                                      .result = &result,
                                                      .event = LUA_EVENT_FAIL});
+    }
   }
   if (custom)
     return;

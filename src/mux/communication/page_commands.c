@@ -160,7 +160,7 @@ void do_page(CommandInvocation *invocation) {
       if (!*targetname)
         notify_checked(evaluation, PLAYER, PLAYER, "You have not paged anyone.",
                        MSG_ME_ALL | MSG_F_DOWN);
-      else
+      else {
         for (p = strtok(targetname, " "); p != nullptr;
              p = strtok(nullptr, " ")) {
           if (parse_long_checked(p, &target))
@@ -168,6 +168,7 @@ void do_page(CommandInvocation *invocation) {
                 evaluation, PLAYER, "You last paged %s.",
                 game_object_name(evaluation->world->database, target));
         }
+      }
 
       free_lbuf(buf1);
       free_lbuf(buf2);

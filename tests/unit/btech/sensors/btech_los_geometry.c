@@ -92,12 +92,13 @@ int bounded(int lower, int value, int upper) {
 static void reset_map(BattleMap *map) {
   *map = (BattleMap){
       .map_width = TEST_WIDTH, .map_height = TEST_HEIGHT, .maxvis = 60};
-  for (int y = 0; y < TEST_HEIGHT; ++y)
+  for (int y = 0; y < TEST_HEIGHT; ++y) {
     for (int x = 0; x < TEST_WIDTH; ++x) {
       *cell(terrain, x, y) = GRASSLAND;
       *cell(real_terrain, x, y) = GRASSLAND;
       *cell(elevation, x, y) = 0;
     }
+  }
 }
 
 static Mech make_mech(int x, int y, int z) {

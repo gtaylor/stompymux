@@ -259,12 +259,13 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
 
       /* if a quad has 3 of 4 legs dead, it can't fire at all while prone */
       wc_dead_legs = count_destroyed_legs(mech);
-      if (mech_is_quad(mech))
+      if (mech_is_quad(mech)) {
         if (wc_dead_legs > 2) {
           mecha_notify(btech_context_evaluation(context), PLAYER,
                        "Quads need at least 3 legs to fire while prone.");
           return 0;
         }
+      }
 
       /* quads with all 4 legs can fire all weapons while prone. They do not
        * need to prop. */
@@ -428,13 +429,14 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
         }
         if (btech_context_idf_requires_spotter(context) &&
             weapon_catalogue_supports_indirect_fire(weaptype) &&
-            (mech_spotter_dbref(mech) == -1))
+            (mech_spotter_dbref(mech) == -1)) {
           if (!los) {
             mecha_notify(btech_context_evaluation(context), PLAYER,
                          "That target is not in your direct line of sight"
                          " and you do not have a spotter set!!");
             return 0;
           }
+        }
       } else {
 
         /* default target is a hex */
@@ -477,13 +479,14 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
         /* Check for Spotter here */
         if (btech_context_idf_requires_spotter(context) &&
             weapon_catalogue_supports_indirect_fire(weaptype) &&
-            (mech_spotter_dbref(mech) == -1))
+            (mech_spotter_dbref(mech) == -1)) {
           if (!los) {
             mecha_notify(btech_context_evaluation(context), PLAYER,
                          "That hex target is not in your direct line of sight"
                          " and you do not have a spotter set!!");
             return 0;
           }
+        }
 
         if (!(weapon_catalogue_is_artillery(weaptype) ||
               weapon_catalogue_supports_indirect_fire(weaptype))) {
@@ -630,12 +633,13 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
     });
     los = mech_los_check_unblocked(mech, temp_mech, mapx, mapy, range);
 
-    if (!weapon_catalogue_is_artillery(weaptype))
+    if (!weapon_catalogue_is_artillery(weaptype)) {
       if (!los) {
         mecha_notify(btech_context_evaluation(context), PLAYER,
                      "That hex target is not in your line of sight!");
         return 0;
       }
+    }
     break;
 
   default:

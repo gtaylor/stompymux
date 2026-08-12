@@ -235,9 +235,9 @@ static int firetic_sub_func(const MultiWeaponSelectionCall *call) {
     notify_printf(btech_context_evaluation(mech->xcode.context), call->actor,
                   "Firing weapons in tic #%d!", i);
     count = 0;
-    for (k = 0; k < TICLONGS; k++)
-      if (*tic_word(mech, i, k))
-        for (j = 0; j < SINGLE_TICLONG_SIZE; j++)
+    for (k = 0; k < TICLONGS; k++) {
+      if (*tic_word(mech, i, k)) {
+        for (j = 0; j < SINGLE_TICLONG_SIZE; j++) {
           if (*tic_word(mech, i, k) & (1UL << (unsigned int)j)) {
             weapnum = k * SINGLE_TICLONG_SIZE + j;
             mech_weapon_fire_command(&(WeaponFireCommandRequest){
@@ -257,6 +257,9 @@ static int firetic_sub_func(const MultiWeaponSelectionCall *call) {
               return 1;
             count++;
           }
+        }
+      }
+    }
     if (!count)
       notify_printf(btech_context_evaluation(mech->xcode.context), call->actor,
                     "*Click* (the tic contained no weapons)");

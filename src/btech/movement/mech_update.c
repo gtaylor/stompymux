@@ -124,13 +124,14 @@ void mech_movement_update(Mech *mech) {
       }
     }
 
-    if (!iced)
+    if (!iced) {
       mech_hex_entry_resolve(&(MechHexEntryRequest){
           .mech = mech,
           .map = mech_map,
           .delta = {.x = step.delta_x, .y = step.delta_y},
           .previous_z = last_z,
       });
+    }
 
     if (mech_position_x(mech) == X && mech_position_y(mech) == Y) {
       mech_flood(mech);
@@ -141,13 +142,14 @@ void mech_movement_update(Mech *mech) {
                           mech_dbref(mech))) {
         int hexes_walked = mech_hexes_walked_advance(mech);
         if (!(hexes_walked % PIL_XP_EVERY_N_STEPS) &&
-            mech_has_active_pilot(mech))
+            mech_has_active_pilot(mech)) {
           piloting_experience_award(&(PilotingExperienceAward){
               .pilot = mech_pilot_dbref(mech),
               .mech = mech,
               .reason = 1,
               .unconditional = false,
           });
+        }
       }
 
       mech_domino_resolve(mech, MECH_DOMINO_GROUND);

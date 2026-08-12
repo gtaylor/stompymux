@@ -102,12 +102,13 @@ void mech_heat_update(Mech *mech) {
    * if TSM is/was on.  If it is/was, we recalc what running and walk speeds are
    * to better set how much heat the unit is putting out */
   if (mech_technology_flags(mech) & TRIPLE_MYOMER_TECH) {
-    if (inheat >= 9.0F)
+    if (inheat >= 9.0F) {
       maxspeed =
           ceilf((rintf((mech_effective_maximum_speed(mech) / 1.5F) / MP1) +
                  1.0F) *
                 1.5F) *
           MP1;
+    }
   }
 
   if (fabsf(mech_current_speed(mech)) > 0.0F) {
@@ -174,7 +175,7 @@ void mech_heat_update(Mech *mech) {
 
   if (mech_is_under_special_conditions(mech)) {
     map = btech_context_find_object(context, mech_map_dbref(mech));
-    if (map && battle_map_uses_special_rules(map))
+    if (map && battle_map_uses_special_rules(map)) {
       if (battle_map_temperature(map) < -30 ||
           battle_map_temperature(map) > 50) {
         int dissipation_adjustment;
@@ -184,6 +185,7 @@ void mech_heat_update(Mech *mech) {
           dissipation_adjustment = -(battle_map_temperature(map) - 50 + 9) / 10;
         mech_heat_dissipation_add(mech, (float)dissipation_adjustment);
       }
+    }
   }
 
   /* Handle heat cutoff now */
@@ -222,7 +224,7 @@ void mech_heat_update(Mech *mech) {
    * Bruise, w/o Lifesupport) */
   /* Custom Rule: Give bruise if heat > 30 and Random 0 or 1 */
 
-  if ((btech_context_event_tick(context) % TURN) == 0)
+  if ((btech_context_event_tick(context) % TURN) == 0) {
     if (mech_life_support_is_destroyed(mech) ||
         (mech_excess_heat(mech) > 30.0F &&
          btech_random_range(context, 0, 1) == 0)) {
@@ -235,6 +237,7 @@ void mech_heat_update(Mech *mech) {
         headhitmwdamage(mech, mech, 1);
       }
     }
+  }
 
   if (mech_excess_heat(mech) >= 19.0F) {
     if (inheat < 19.0F) {

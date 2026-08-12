@@ -183,13 +183,14 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
         continue;
       for (j = 0; j < mech_radio_channel_count(t); j++) {
         if (mech_radio_frequency(t, j) == freq &&
-            !(mech_radio_mode(t, j) & FREQ_SCAN))
+            !(mech_radio_mode(t, j) & FREQ_SCAN)) {
           btech_channel_send(
               mech_context(mech), BTECH_CHANNEL_MECH_FREQS, "%s",
               tprintf("ALERT: Possible abuse by #%ld (Team %d)"
                       " setting freq %d matching #%ld (Team %d)!",
                       mech_dbref(mech), mech_team(mech), freq, mech_dbref(t),
                       mech_team(t)));
+        }
       }
     }
   }

@@ -352,9 +352,9 @@ int mech_template_load(DbRef player, Mech *mech, const char *id) {
     return 1;
   }
   mech_template_clear(mech, 1);
-  if (template_load_modern(player, mech, id) < 1)
+  if (template_load_modern(player, mech, id) < 1) {
 #ifdef LOADNEW_LOADS_MUSE_FORMAT
-    if (template_load_legacy(mech, id) < 1)
+    if (template_load_legacy(mech, id) < 1) {
 #endif
 #ifdef LOADNEW_LOADS_OLD_IF_FAIL
       if (template_load_modern(player, mech, mech_origid) < 1)
@@ -363,6 +363,8 @@ int mech_template_load(DbRef player, Mech *mech, const char *id) {
 #endif
 #endif
           return 0;
+    }
+  }
 
   return 1;
 }

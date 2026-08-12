@@ -43,7 +43,7 @@ void mech_ammunition_explode(const AmmunitionExplosionRequest *request) {
       mech_weapon_heat_add(mech, 30.0);
     damage = damage / 2;
   }
-  if (mech_class(mech) == CLASS_BSUIT)
+  if (mech_class(mech) == CLASS_BSUIT) {
     mech_damage_apply(&(MechDamageRequest){.target = mech,
                                            .attacker = attacker,
                                            .line_of_sight = 0,
@@ -59,7 +59,7 @@ void mech_ammunition_explode(const AmmunitionExplosionRequest *request) {
                                            .weapon_index = -1,
                                            .ammunition_mode = 0,
                                            .ignore_swarmers = 0});
-  else
+  } else {
     mech_damage_apply(
         &(MechDamageRequest){.target = mech,
                              .attacker = attacker,
@@ -76,6 +76,7 @@ void mech_ammunition_explode(const AmmunitionExplosionRequest *request) {
                              .weapon_index = -1,
                              .ammunition_mode = 0,
                              .ignore_swarmers = 0});
+  }
 
   if (mech_class(mech) != CLASS_BSUIT) {
     mech_notify(mech, MECHPILOT,

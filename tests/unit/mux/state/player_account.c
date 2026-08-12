@@ -18,20 +18,22 @@ bool is_good_obj(GameDatabase *database, DbRef object) {
 static int check_history(GameDatabase *database) {
   PlayerAccountRef account = {.database = database, .player = 0};
 
-  for (int index = 0; index < 6; index++)
+  for (int index = 0; index < 6; index++) {
     if (!player_account_login_record(
             &(PlayerLoginRecordChange){.account = account,
                                        .outcome = PLAYER_LOGIN_SUCCESS,
                                        .occurred_at = 1000 + index,
                                        .host = "good.example"}))
       return -1;
-  for (int index = 0; index < 5; index++)
+  }
+  for (int index = 0; index < 5; index++) {
     if (!player_account_login_record(
             &(PlayerLoginRecordChange){.account = account,
                                        .outcome = PLAYER_LOGIN_FAILURE,
                                        .occurred_at = 2000 + index,
                                        .host = "bad.example"}))
       return -1;
+  }
   PlayerLoginHistoryResult record =
       player_account_login_history(&(PlayerLoginHistoryRequest){
           .account = account, .outcome = PLAYER_LOGIN_SUCCESS});

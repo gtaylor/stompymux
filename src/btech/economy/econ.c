@@ -33,13 +33,14 @@ void economy_inventory_change(const EconomyInventoryChange *change) {
   }
   if (!(equipment_is_actuator(ID)))
     economy_parts_set_quantity(database, D, ID, brand, base);
-  if (equipment_is_actuator(ID))
+  if (equipment_is_actuator(ID)) {
     economy_inventory_change(&(EconomyInventoryChange){
         .context = context,
         .store = D,
         .part = {.id = cargo_equipment_index(S_ACTUATOR), .brand = brand},
         .quantity_delta = base,
     });
+  }
   /* Successfully changed */
 }
 
@@ -61,11 +62,12 @@ void econ_set_items(BtechContext *context, DbRef d, int id, int brand,
   if (!is_good_obj(context->database, d))
     return;
   i = econ_find_items(context, d, id, brand);
-  if (i != num)
+  if (i != num) {
     economy_inventory_change(&(EconomyInventoryChange){
         .context = context,
         .store = d,
         .part = {.id = id, .brand = brand},
         .quantity_delta = num - i,
     });
+  }
 }

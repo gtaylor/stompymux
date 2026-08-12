@@ -303,7 +303,7 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
   /* Then, we check the hex before target hex */
 #ifdef BT_PARTIAL
 
-  if (coordcount >= 2)
+  if (coordcount >= 2) {
     if (dopartials) {
       const LosTracePoint *penultimate =
           los_trace_point_at(&trace, coordcount - 2);
@@ -315,6 +315,7 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
           mech_real_terrain_get(target) == BATTLE_TERRAIN_WATER)
         new_flag |= BATTLE_MAP_LOS_PARTIAL_COVER;
     }
+  }
 
 #endif
 

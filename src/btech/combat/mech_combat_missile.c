@@ -387,12 +387,13 @@ int mech_missile_hit_target(const MissileAttackRequest *request) {
   missileindex = mech_missile_hit_index(&index_request);
   if (missileindex < 0)
     hit = min(incoming, 1);
-  else
+  else {
     hit = min(incoming, btech_context_missile_hit_count(&(MissileHitLookup){
                             .context = mech_context(mech),
                             .weapon = weapindx,
                             .roll = missileindex,
                         }));
+  }
 
   if (los) {
     mech_printf(mech, MECHALL, "[fg=green]%s with %d missile%s![reset]",
@@ -428,13 +429,14 @@ int mech_missile_hit_target(const MissileAttackRequest *request) {
   if (t_is_inferno) {
     if (hit_mech)
       mech_inferno_hit(mech, hit_mech, hit, los);
-    else
+    else {
       mech_terrain_hex_hit(&(TerrainWeaponHitRequest){
           .attacker = mech,
           .position = request->target_hex,
           .weapon_index = weapindx,
           .ammunition_mode =
               mech_critical_ammo_mode(mech, w_section, w_crit_slot)});
+    }
   } else {
     if (btech_context_glancing_blows_enabled(mech_context(mech)) &&
         (request->player_roll == base_to_hit) && hit_mech) {
@@ -534,12 +536,13 @@ void mech_swarm_missile_hit_target(const MissileAttackRequest *request) {
             continue;
           if (!hit_mech) {
             r = mech_range_to(source, temp_mech);
-            if (r < 1.9F)
+            if (r < 1.9F) {
               if (mech_los_check_unblocked(source, temp_mech,
                                            mech_position_x(source),
                                            mech_position_y(source), r)) {
                 hit_mech = temp_mech;
               }
+            }
           }
         }
       }
@@ -550,12 +553,13 @@ void mech_swarm_missile_hit_target(const MissileAttackRequest *request) {
       mech_notify(hit_mech, MECHALL, "The missile-swarm turns towards you!");
     if (mech_los_check_unblocked(mech, source, mech_position_x(mech),
                                  mech_position_y(mech),
-                                 mech_range_to(mech, source)))
+                                 mech_range_to(mech, source))) {
       mech_printf(
           mech, MECHALL, "Your missile-swarm of %d missile%s targets %s!",
           missiles, missiles > 1 ? "s" : "",
           mech == hit_mech ? "YOU!!"
                            : mech_to_mech_display_id(mech, hit_mech).text);
+    }
     mech_los_broadcast_unit(mech, hit_mech, "'s missile-swarm targets %s!");
   }
 }

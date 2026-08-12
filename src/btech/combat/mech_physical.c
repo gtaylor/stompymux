@@ -310,7 +310,7 @@ void mech_punch(DbRef player, void *data, char *buffer) {
   if (!phys_common_checks(mech))
     return;
   if (punching & P_LEFT) {
-    if (punch_check_arm(mech, LARM))
+    if (punch_check_arm(mech, LARM)) {
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 10,
                                                        .base_to_hit = ltohit,
@@ -319,9 +319,10 @@ void mech_punch(DbRef player, void *data, char *buffer) {
                                                        .arguments = args,
                                                        .map = mech_map,
                                                        .section = LARM});
+    }
   }
   if (punching & P_RIGHT) {
-    if (punch_check_arm(mech, RARM))
+    if (punch_check_arm(mech, RARM)) {
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 10,
                                                        .base_to_hit = rtohit,
@@ -330,6 +331,7 @@ void mech_punch(DbRef player, void *data, char *buffer) {
                                                        .arguments = args,
                                                        .map = mech_map,
                                                        .section = RARM});
+    }
   }
 } // end mech_punch()
 void mech_club(DbRef player, void *data, char *buffer) {
@@ -480,7 +482,7 @@ void mech_axe(DbRef player, void *data, char *buffer) {
   argc = selection.argument_count;
   args = selection.arguments;
   if (using & P_LEFT) {
-    if (axe_check_arm(mech, LARM))
+    if (axe_check_arm(mech, LARM)) {
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 5,
                                                        .base_to_hit = ltohit,
@@ -489,9 +491,10 @@ void mech_axe(DbRef player, void *data, char *buffer) {
                                                        .arguments = args,
                                                        .map = mech_map,
                                                        .section = LARM});
+    }
   }
   if (using & P_RIGHT) {
-    if (axe_check_arm(mech, RARM))
+    if (axe_check_arm(mech, RARM)) {
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 5,
                                                        .base_to_hit = rtohit,
@@ -500,6 +503,7 @@ void mech_axe(DbRef player, void *data, char *buffer) {
                                                        .arguments = args,
                                                        .map = mech_map,
                                                        .section = RARM});
+    }
   }
   if (!using) {
     mech_notify(mech, MECHALL,
@@ -560,7 +564,7 @@ void mech_saw(DbRef player, void *data, char *buffer) {
   argc = selection.argument_count;
   args = selection.arguments;
   if (using & P_LEFT) {
-    if (saw_check_arm(mech, LARM))
+    if (saw_check_arm(mech, LARM)) {
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 7,
                                                        .base_to_hit = ltohit,
@@ -569,9 +573,10 @@ void mech_saw(DbRef player, void *data, char *buffer) {
                                                        .arguments = args,
                                                        .map = mech_map,
                                                        .section = LARM});
+    }
   }
   if (using & P_RIGHT) {
-    if (saw_check_arm(mech, RARM))
+    if (saw_check_arm(mech, RARM)) {
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 7,
                                                        .base_to_hit = rtohit,
@@ -580,6 +585,7 @@ void mech_saw(DbRef player, void *data, char *buffer) {
                                                        .arguments = args,
                                                        .map = mech_map,
                                                        .section = RARM});
+    }
   }
   if (!using) {
     mech_notify(mech, MECHALL, "You don't have a dual saw!");
@@ -711,7 +717,7 @@ void mech_mace(DbRef player, void *data, char *buffer) {
   argc = selection.argument_count;
   args = selection.arguments;
   if (using & P_LEFT) {
-    if (mace_check_arm(mech, LARM))
+    if (mace_check_arm(mech, LARM)) {
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 4,
                                                        .base_to_hit = ltohit,
@@ -720,9 +726,10 @@ void mech_mace(DbRef player, void *data, char *buffer) {
                                                        .arguments = args,
                                                        .map = mech_map,
                                                        .section = LARM});
+    }
   }
   if (using & P_RIGHT) {
-    if (mace_check_arm(mech, RARM))
+    if (mace_check_arm(mech, RARM)) {
       physical_attack_resolve(&(PhysicalAttackRequest){.mech = mech,
                                                        .damage_weight = 4,
                                                        .base_to_hit = rtohit,
@@ -731,6 +738,7 @@ void mech_mace(DbRef player, void *data, char *buffer) {
                                                        .arguments = args,
                                                        .map = mech_map,
                                                        .section = RARM});
+    }
   }
   if (!using) {
     mech_notify(mech, MECHALL, "You don't have a mace!");

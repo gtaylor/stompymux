@@ -104,11 +104,12 @@ int main(void) {
 
   test_exact_paths(&state, &map);
   test_tie_uses_defender_best_hex(&state, &map);
-  for (int ay = 1; ay < TEST_HEIGHT - 1; ay += 3)
+  for (int ay = 1; ay < TEST_HEIGHT - 1; ay += 3) {
     for (int ax = 1; ax < TEST_WIDTH - 1; ax += 3)
       for (int by = 1; by < TEST_HEIGHT - 1; by += 3)
         for (int bx = 1; bx < TEST_WIDTH - 1; bx += 3)
           if (ax != bx || ay != by)
             check_trace_invariants(&state, &map, ax, ay, bx, by);
+  }
   return los_test_result(&state);
 }

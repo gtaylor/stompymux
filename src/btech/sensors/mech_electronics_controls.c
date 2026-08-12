@@ -700,12 +700,13 @@ void remove_inarc_pods_tank(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  if (mech_class(mech) == CLASS_VTOL)
+  if (mech_class(mech) == CLASS_VTOL) {
     if (!mech_is_landed(mech)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "You must land before attempting to remove iNarc pods!");
       return;
     }
+  }
 
   if (mech_event_count(mech, EVENT_UNSTUN_CREW)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,

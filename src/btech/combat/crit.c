@@ -79,12 +79,13 @@ void mech_explosion_apply(Mech *wounded, Mech *attacker) {
   mech_contents_kill_if_in_character(wounded);
   for (j = 0; j < NUM_SECTIONS; j++) {
     if (mech_section_original_internal(wounded, j) &&
-        !mech_section_is_destroyed(wounded, j))
+        !mech_section_is_destroyed(wounded, j)) {
       mech_section_destroy(&(SectionDestructionRequest){
           .wounded = wounded,
           .attacker = attacker,
           .line_of_sight = wounded == attacker ? 0 : 1,
           .section = j});
+    }
   }
 }
 
@@ -168,18 +169,19 @@ void mech_section_actuator_criticals_normalize(Mech *obj_mech, int w_loc) {
         case SHOULDER_OR_HIP:
           t_has_shoulder_or_hip_crit = 1;
 
-          if (t_is_arm)
+          if (t_is_arm) {
             mech_arm_actuator_criticals_normalize(&(ActuatorCritical){
                 .mech = obj_mech,
                 .section = w_loc,
                 .equipment_type = w_crit_type,
             });
-          else
+          } else {
             mech_leg_actuator_criticals_normalize(&(ActuatorCritical){
                 .mech = obj_mech,
                 .section = w_loc,
                 .equipment_type = w_crit_type,
             });
+          }
 
           break;
         }
@@ -204,18 +206,19 @@ void mech_section_actuator_criticals_normalize(Mech *obj_mech, int w_loc) {
           case UPPER_ACTUATOR:
           case LOWER_ACTUATOR:
           case HAND_OR_FOOT_ACTUATOR:
-            if (t_is_arm)
+            if (t_is_arm) {
               mech_arm_actuator_criticals_normalize(&(ActuatorCritical){
                   .mech = obj_mech,
                   .section = w_loc,
                   .equipment_type = w_crit_type,
               });
-            else
+            } else {
               mech_leg_actuator_criticals_normalize(&(ActuatorCritical){
                   .mech = obj_mech,
                   .section = w_loc,
                   .equipment_type = w_crit_type,
               });
+            }
 
             break;
           }

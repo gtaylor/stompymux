@@ -477,7 +477,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
           .start = {.x = x0, .y = y0}, .end = {.x = x1, .y = y1}});
       if (argc != 0 && argc != 3 && argc != 6)
         (void)snprintf(trash, sizeof(trash), "%d degrees.", BEARING);
-      else
+      else {
         (void)snprintf(trash, sizeof(trash), "%d degrees mark %c%d.", BEARING,
                        (z1 > z0   ? '+'
                         : z1 < z0 ? '-'
@@ -485,6 +485,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
                        map_vertical_bearing(&(MapSpatialSegment){
                            .start = {.x = x0, .y = y0, .z = z0},
                            .end = {.x = x1, .y = y1, .z = z1}}));
+      }
       strlcat(buff, trash, sizeof(buff));
 
       mecha_notify(evaluation, player, buff);

@@ -213,8 +213,8 @@ void do_sub_magic(Mech *mech, int loud) {
 
   if (((mech)->rd.specials) & ICE_TECH)
     inthses = 0;
-  for (i = 0; i < NUM_SECTIONS; i++)
-    for (j = 0; j < crits_in_loc(mech, i); j++)
+  for (i = 0; i < NUM_SECTIONS; i++) {
+    for (j = 0; j < crits_in_loc(mech, i); j++) {
       switch (
           special_from_equipment_index(mech_critical_part_type(mech, i, j))) {
       case HEAT_SINK:
@@ -226,6 +226,8 @@ void do_sub_magic(Mech *mech, int loud) {
         jjs++;
         break;
       }
+    }
+  }
   if (((mech)->ud.hsengoverride))
     inthses = ((mech)->ud.hsengoverride);
   hses += min(((mech)->ud.numsinks) * shs_size / hs_eff, inthses * shs_size);
@@ -235,12 +237,13 @@ void do_sub_magic(Mech *mech, int loud) {
     jjs = jjs / 2;
 
   if (jjs > maxjjs) {
-    if (loud)
+    if (loud) {
       btech_channel_send(
           mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
           tprintf("Error in #%ld (%s): %d JJs, yet %d maximum available "
                   "(due to walk MPs)?",
                   mech->mynum, ((mech)->ud.mech_type), jjs, maxjjs));
+    }
 
     jjs = maxjjs;
   }
@@ -337,7 +340,7 @@ void do_magic(Mech *mech) {
       mech_calculated_engine_rating(&opp); /* From intact template */
   opp.mynum = -1;
   /* Ok.. It's at perfect condition. Start inflicting some serious crits.. */
-  for (i = 0; i < NUM_SECTIONS; i++)
+  for (i = 0; i < NUM_SECTIONS; i++) {
     for (j = 0; j < crits_in_loc(mech, i); j++) {
       mech_critical_part_type_set(&opp, i, j,
                                   mech_critical_part_type(mech, i, j));
@@ -349,6 +352,7 @@ void do_magic(Mech *mech) {
       mech_critical_fire_mode_set(&opp, i, j, 0);
       mech_critical_ammo_mode_set(&opp, i, j, 0);
     }
+  }
   if (((mech)->ud.type) == CLASS_MECH)
     do_sub_magic(&opp, 0);
   ((mech)->rd.onumsinks) = ((&opp)->rd.onumsinks);
@@ -359,14 +363,16 @@ void do_magic(Mech *mech) {
         if (!mech_critical_is_destroyed(&opp, i, j)) {
           t = mech_critical_part_type(mech, i, j);
           if (!equipment_is_ammunition(t)) {
-            if (!equipment_is_weapon(t))
-              if (((mech)->ud.type) == CLASS_MECH)
+            if (!equipment_is_weapon(t)) {
+              if (((mech)->ud.type) == CLASS_MECH) {
                 mech_critical_effect_apply(&(CriticalEffectRequest){
                     .wounded = &opp,
                     .attacker = nullptr,
                     .slot = {.section = i, .critical = j},
                     .part_type = t,
                     .part_data = mech_critical_data(mech, i, j)});
+              }
+            }
           }
         }
       } else {
@@ -654,7 +660,7 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
     }
   }
   if (request->mode % 2) {
-    for (i3 = i1; i3 <= i2; i3++)
+    for (i3 = i1; i3 <= i2; i3++) {
       if (request->callback(&(MultiWeaponSelectionCall){
               .mech = mech,
               .actor = PLAYER,
@@ -663,6 +669,7 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
               .context = request->context,
           }))
         return;
+    }
   } else if (request->callback(&(MultiWeaponSelectionCall){
                  .mech = mech,
                  .actor = PLAYER,
@@ -672,7 +679,7 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
              })) {
     return;
   }
-  if (c)
+  if (c) {
     multi_weapon_select(&(MultiWeaponSelectionRequest){
         .mech = mech,
         .actor = PLAYER,
@@ -681,4 +688,5 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
         .callback = request->callback,
         .context = request->context,
     });
+  }
 }

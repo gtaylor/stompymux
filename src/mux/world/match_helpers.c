@@ -172,12 +172,13 @@ void parse_range(GameDatabase *database,
   char *buff2;
 
   buff1 = *name;
-  if (buff1 && *buff1)
+  if (buff1 && *buff1) {
     *name = parse_to(
         &(CommandParseRequest){.configuration = configuration,
                                .source = &buff1,
                                .delimiter = ',',
                                .options = COMMAND_PARSE_STRIP_TRAILING});
+  }
   if (buff1 && *buff1) {
     buff2 = parse_to(
         &(CommandParseRequest){.configuration = configuration,

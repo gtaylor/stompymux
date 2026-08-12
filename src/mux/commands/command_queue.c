@@ -297,7 +297,7 @@ int halt_que(CommandQueue *queue, DbRef player, DbRef object) {
    * Wait queue
    */
 
-  for (point = queue->wait, trail = nullptr; point; point = next)
+  for (point = queue->wait, trail = nullptr; point; point = next) {
     if (que_want(queue->world->database, point, player, object)) {
       numhalted++;
       if (trail)
@@ -310,6 +310,7 @@ int halt_que(CommandQueue *queue, DbRef player, DbRef object) {
     } else {
       next = (trail = point)->next;
     }
+  }
 
   if (player == NOTHING)
     player = object;

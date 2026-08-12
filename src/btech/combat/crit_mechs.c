@@ -417,7 +417,7 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
       break;
     case GYRO:
       /* Hardened Gyro's take one extra hit before damaged */
-      if (mech_technology_flags_secondary(wounded) & HDGYRO_TECH)
+      if (mech_technology_flags_secondary(wounded) & HDGYRO_TECH) {
         if (!mech_condition_summary(wounded).hardened_gyro_damaged) {
           (void)snprintf(msgbuf, MBUF_SIZE,
                          "emits a screech as its "
@@ -427,6 +427,7 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
           mech_notify(wounded, MECHALL, "Your hardened gyro takes a hit!");
           break;
         }
+      }
 
       if (!mech_condition_summary(wounded).gyro_damaged) {
         if (!mech_is_destroyed(wounded) && mech_is_started(wounded)) {
@@ -438,7 +439,7 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
         mech_gyro_damage_set(wounded, true, false);
         mech_pilot_skill_modifier_add(wounded, 3);
         mech_notify(wounded, MECHALL, "Your Gyro has been damaged!");
-        if (attacker)
+        if (attacker) {
           if (!made_pilot_skill_roll(wounded, 0) &&
               !mech_condition_summary(wounded).fallen) {
             if (!mech_is_jumping(wounded) && !mech_is_out_of_control(wounded)) {
@@ -453,6 +454,7 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
               mech_domino_resolve(wounded, MECH_DOMINO_FALL);
             }
           }
+        }
       } else if (!mech_has_destroyed_gyro(wounded)) {
         mech_gyro_damage_set(wounded, true, true);
         mech_notify(wounded, MECHALL, "Your Gyro has been destroyed!");
@@ -521,12 +523,13 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
         if (special_from_equipment_index(CRIT_TYPE) == HAND_OR_FOOT_ACTUATOR)
           mech_printf(wounded, MECHALL, "Your %s hand actuator is destroyed!",
                       HITLOC == LARM ? "left" : "right");
-        else
+        else {
           mech_printf(wounded, MECHALL, "Your %s %s arm actuator is destroyed!",
                       HITLOC == LARM ? "left" : "right",
                       special_from_equipment_index(CRIT_TYPE) == LOWER_ACTUATOR
                           ? "lower"
                           : "upper");
+        }
 
         if ((special_from_equipment_index(CRIT_TYPE) ==
              HAND_OR_FOOT_ACTUATOR) &&

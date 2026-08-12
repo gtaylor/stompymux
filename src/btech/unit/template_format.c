@@ -431,7 +431,7 @@ void dump_locations(FILE *fp, Mech *mech, const char *const locdesc[],
                     mech_section_original_rear_armor(mech, x));
     y = mech_section_configuration(mech, x);
     y &= ~CASE_TECH;
-    if (y)
+    if (y) {
       (void)fprintf(fp, "  Config           { %s }\n",
                     template_bit_string_build(&(TemplateBitStringRequest){
                         .sets =
@@ -442,6 +442,7 @@ void dump_locations(FILE *fp, Mech *mech, const char *const locdesc[],
                         .set_count = 1,
                         .delimiter = ' ',
                         .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
+    }
     l = crits_in_loc(mech, x);
     for (y = 0; y < l;)
       y += dump_item(fp, mech, x, y);

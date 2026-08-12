@@ -89,7 +89,7 @@ void mech_sword(DbRef player, void *data, char *buffer) {
   argument_count = selection.argument_count;
   arguments = selection.arguments;
 
-  if ((using & P_LEFT) && sword_check_arm(mech, LARM))
+  if ((using & P_LEFT) && sword_check_arm(mech, LARM)) {
     physical_attack_resolve(
         &(PhysicalAttackRequest){.mech = mech,
                                  .damage_weight = 10,
@@ -99,7 +99,8 @@ void mech_sword(DbRef player, void *data, char *buffer) {
                                  .arguments = arguments,
                                  .map = map,
                                  .section = LARM});
-  if ((using & P_RIGHT) && sword_check_arm(mech, RARM))
+  }
+  if ((using & P_RIGHT) && sword_check_arm(mech, RARM)) {
     physical_attack_resolve(
         &(PhysicalAttackRequest){.mech = mech,
                                  .damage_weight = 10,
@@ -109,6 +110,7 @@ void mech_sword(DbRef player, void *data, char *buffer) {
                                  .arguments = arguments,
                                  .map = map,
                                  .section = RARM});
+  }
   if (!using)
     mech_notify(mech, MECHALL, "You have no sword to chop people with!");
 }

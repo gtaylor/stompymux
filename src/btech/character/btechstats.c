@@ -209,12 +209,13 @@ static int char_getstatvalue_by_code(PSTATS *stats, int code) {
 static void char_setstatvalue_by_code(PSTATS *stats, int code, int value) {
   if (code < 0)
     return;
-  if (code == EE_NUMBER)
+  if (code == EE_NUMBER) {
     character_stats_value_set(&(CharacterStatsValueChange){
         .stats = stats,
         .code = LIVES_NUMBER,
         .value = character_stats_value_get(stats, LIVES_NUMBER) + value -
                  character_stats_value_get(stats, code)});
+  }
   character_stats_value_set(&(CharacterStatsValueChange){
       .stats = stats, .code = code, .value = value});
 }

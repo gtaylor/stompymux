@@ -281,7 +281,7 @@ static void recursive_commlink(CommRelayContext *relay, int i, int dep) {
   if (dep >= relay->best_depth)
     return;
   *relay_index_slot(relay->path, dep) = i;
-  for (j = 1; j < relay->node_count; j++)
+  for (j = 1; j < relay->node_count; j++) {
     if (relay_connected_get(relay, i, j) && !relay_visited_get(relay, j)) {
       if (j == (relay->node_count - 1)) {
         int k;
@@ -296,6 +296,7 @@ static void recursive_commlink(CommRelayContext *relay, int i, int dep) {
         relay_visited_set(relay, j, false);
       }
     }
+  }
 }
 
 static void nonrecursive_commlink(CommRelayContext *relay, int i) {
@@ -311,7 +312,8 @@ static void nonrecursive_commlink(CommRelayContext *relay, int i) {
 
   while (dep >= 0) {
     i = relay_index_get(relay->path, dep);
-    for (j = relay_index_get(comm_loop.items, dep); j < relay->node_count; j++)
+    for (j = relay_index_get(comm_loop.items, dep); j < relay->node_count;
+         j++) {
       if (relay_connected_get(relay, i, j) && !relay_visited_get(relay, j)) {
         if (j == (relay->node_count - 1)) {
           int k;
@@ -333,6 +335,7 @@ static void nonrecursive_commlink(CommRelayContext *relay, int i) {
           break;
         }
       }
+    }
     if (j == relay->node_count) {
       if (dep > 0)
         relay_visited_set(relay, relay_index_get(comm_loop.items, --dep) - 1,
@@ -382,13 +385,15 @@ static bool find_comm_link(CommRelayContext *relay, BattleMap *map, Mech *from,
       continue;
     if (!(mech_radio_capabilities(t) & RADIO_RELAY))
       continue;
-    for (j = 0; j < mech_radio_channel_count(t); j++)
-      if (mech_radio_frequency(t, j) == freq)
+    for (j = 0; j < mech_radio_channel_count(t); j++) {
+      if (mech_radio_frequency(t, j) == freq) {
         if (mech_radio_mode(t, j) & FREQ_RELAY) {
           if (relay->node_count < MAX_MECHS_PER_MAP - 1)
             relay_mech_set(relay, relay->node_count++, t);
           continue;
         }
+      }
+    }
   }
   relay_mech_set(relay, relay->node_count++, to);
   if (relay->node_count == 2)
@@ -496,12 +501,12 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
       }
       if (i >= mech_radio_channel_count(temp_mech)) {
         /* Possible scanner check */
-        if (!(mech_radio_mode(mech, freq) & FREQ_DIGITAL))
+        if (!(mech_radio_mode(mech, freq) & FREQ_DIGITAL)) {
           if ((mech_radio_capabilities(temp_mech) & RADIO_SCAN) &&
               mech_radio_frequency(mech, freq)) {
             int tnc = 0;
 
-            for (i = 0; i < mech_radio_channel_count(temp_mech); i++)
+            for (i = 0; i < mech_radio_channel_count(temp_mech); i++) {
               if (mech_radio_mode(temp_mech, i) & FREQ_SCAN) {
                 int l = clamp_size_to_int(strlen(msg));
                 int t;
@@ -547,7 +552,9 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
                             i + 'A');
                 mech_radio_frequency_add(temp_mech, i, mod * t);
               }
+            }
           }
+        }
 
         continue;
       }
@@ -693,13 +700,14 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
       if (!obs)
         mech_notify(temp_mech, MECHALL, buf);
       if (isxp && is_in_character(btech_context_database(mech_context(mech)),
-                                  mech_dbref(temp_mech)))
+                                  mech_dbref(temp_mech))) {
         if ((mech_communication_last_tick(temp_mech) + 60) <
             btech_context_event_tick(mech_context(mech))) {
           accumulate_comm_xp(mech_pilot_dbref(temp_mech), temp_mech);
           mech_communication_last_tick_set(
               temp_mech, btech_context_event_tick(mech_context(mech)));
         }
+      }
     }
   } /* End of looping through all the units on the map */
   free(relay);

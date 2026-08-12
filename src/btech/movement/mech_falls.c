@@ -167,15 +167,16 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
     isrear = 1;
   mech_fall_heading_apply(mech, heading_offset);
   if (!mech_fall_is_in_water(mech) &&
-      mech_real_terrain_get(mech) != BATTLE_TERRAIN_HIGH_WATER)
+      mech_real_terrain_get(mech) != BATTLE_TERRAIN_HIGH_WATER) {
 #ifndef REALWEIGHT_DAMAGE
     damage = (levels * (mech_tonnage(mech) + 5)) / 10;
 #else
     damage = (levels * (mech_real_tonnage(mech) + 5)) / 10;
 #endif /* REALWEIGHT_DAMAGE */
-  else
+  } else {
 #ifndef REALWEIGHT_DAMAGE
     damage = (levels * (mech_tonnage(mech) + 5)) / 20;
+  }
 #else
     damage = (levels * (mech_real_tonnage(mech) + 5)) / 20;
 #endif /* REALWEIGHT_DAMAGE */

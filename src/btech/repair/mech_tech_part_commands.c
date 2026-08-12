@@ -162,7 +162,8 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
       notify_printf(evaluation, player,
                     "You muck around, wasting the gun for good...");
       /* part goes , 1.5 * techtime*/
-      if (!(equipment_is_ammunition(mech_critical_part_type(mech, loc, part))))
+      if (!(equipment_is_ammunition(
+              mech_critical_part_type(mech, loc, part)))) {
         economy_inventory_change(&(EconomyInventoryChange){
             .context = context,
             .store = mech_is_dropship(mech)
@@ -173,6 +174,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
                      .brand = mech_critical_brand(mech, loc, part)},
             .quantity_delta = -1,
         });
+      }
       tech_addtechtime(&(TechTimeAddition){
           .context = context, .player = player, .units = fixtime});
       btech_context_event_schedule(
@@ -190,7 +192,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
        */
       if (roll == 0)
         fixtime = fail_fixtime;
-      else
+      else {
         fixtime =
             btech_context_uses_variable_technology_time(context)
                 ? (fail_fixtime * 10) /
@@ -200,6 +202,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
                                           roll
                                     : 0)))
                 : fail_fixtime;
+      }
       if (fail_fixtime - fixtime)
         notify_printf(
             evaluation, player, "Your skill manages to save %d minute%s",
@@ -217,7 +220,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
   } else {
     if (roll == 0)
       fixtime = base_fixtime;
-    else
+    else {
       fixtime =
           btech_context_uses_variable_technology_time(context)
               ? (base_fixtime * 10) /
@@ -227,11 +230,12 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
                                   roll
                             : 0)))
               : base_fixtime;
+    }
     if (base_fixtime - fixtime)
       notify_printf(
           evaluation, player, "Your skill manages to save %d minute%s",
           base_fixtime - fixtime, base_fixtime - fixtime == 1 ? "!" : "s!");
-    if (!(equipment_is_ammunition(mech_critical_part_type(mech, loc, part))))
+    if (!(equipment_is_ammunition(mech_critical_part_type(mech, loc, part)))) {
       economy_inventory_change(&(EconomyInventoryChange){
           .context = context,
           .store = mech_is_dropship(mech)
@@ -242,6 +246,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
                    .brand = mech_critical_brand(mech, loc, part)},
           .quantity_delta = -1,
       });
+    }
     tech_addtechtime(&(TechTimeAddition){
         .context = context, .player = player, .units = fixtime});
     btech_context_event_schedule(
@@ -619,7 +624,7 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
        */
       if (roll == 0)
         fixtime = fail_fixtime;
-      else
+      else {
         fixtime =
             btech_context_uses_variable_technology_time(context)
                 ? (fail_fixtime * 10) /
@@ -629,6 +634,7 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
                                           roll
                                     : 0)))
                 : fail_fixtime;
+      }
       if (fail_fixtime - fixtime)
         notify_printf(
             evaluation, player, "Your skill manages to save %d minute%s",
@@ -646,7 +652,7 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
   } else {
     if (roll == 0)
       fixtime = base_fixtime;
-    else
+    else {
       fixtime =
           btech_context_uses_variable_technology_time(context)
               ? (base_fixtime * 10) /
@@ -656,6 +662,7 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
                                   roll
                             : 0)))
               : base_fixtime;
+    }
     if (base_fixtime - fixtime)
       notify_printf(
           evaluation, player, "Your skill manages to save %d minute%s",

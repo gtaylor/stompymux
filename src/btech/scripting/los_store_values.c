@@ -384,15 +384,16 @@ BtechScriptResult fun_btlosm2m(BtechScriptCall *call) {
   }
 
   if (mech_los_check(mech, target, mech_position_x(mech), mech_position_y(mech),
-                     mech_range_to(mech, target)))
+                     mech_range_to(mech, target))) {
     if (mech_los_check_unblocked(mech, target, mech_position_x(mech),
                                  mech_position_y(mech),
                                  mech_range_to(mech, target)))
       safe_tprintf_str(buff, bufc, "1");
     else
       safe_tprintf_str(buff, bufc, "2");
-  else
+  } else {
     safe_tprintf_str(buff, bufc, "0");
+  }
 
   return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
 }

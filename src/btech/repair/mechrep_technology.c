@@ -79,13 +79,14 @@ void mechrep_raddspecial(DbRef player, void *data, char *buffer) {
   }
   itemcode = find_special_item_code_from_string(rep->xcode.context, args[0]);
 
-  if (itemcode == -1)
+  if (itemcode == -1) {
     if (strcasecmp(args[0], "empty")) {
       mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                    "That is not a valid special object!");
       dump_mech_special_objects(rep->xcode.context, player);
       return;
     }
+  }
   index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
                                     args[1]);
 
@@ -268,13 +269,14 @@ void mechrep_rshowtech(DbRef player, void *data, char *buffer) {
   if (flags & MASC_TECH)
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Myomer Accelerator Signal Circuitry");
-  for (i = 0; i < NUM_SECTIONS; i++)
+  for (i = 0; i < NUM_SECTIONS; i++) {
     if (mech_section_configuration_has(mech, i, CASE_TECH)) {
       armor_string_from_index(i, location, mech_class(mech),
                               mech_movement_type(mech));
       notify_printf(btech_context_evaluation(rep->xcode.context), player,
                     "Cellular Ammunition Storage Equipment in %s", location);
     }
+  }
   if (flags & CLAN_TECH) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Mech is set to Clan Tech.  This means:");

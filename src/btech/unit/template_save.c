@@ -196,7 +196,7 @@ int template_save(const TemplateSaveRequest *request) {
           HVY_FF_ARMOR_TECH | LT_FF_ARMOR_TECH | TAG_TECH | C3I_TECH |
           BLOODHOUND_PROBE_TECH | TCOMP_TECH);
 
-  if (x || x2)
+  if (x || x2) {
     (void)fprintf(
         fp, "Specials         { %s }\n",
         template_bit_string_build(&(TemplateBitStringRequest){
@@ -210,10 +210,11 @@ int template_save(const TemplateSaveRequest *request) {
             .set_count = 2,
             .delimiter = ' ',
             .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
+  }
 
   inf_x = ((mech)->rd.infantry_specials);
 
-  if (inf_x)
+  if (inf_x) {
     (void)fprintf(
         fp, "InfantrySpecials { %s }\n",
         template_bit_string_build(&(TemplateBitStringRequest){
@@ -223,6 +224,7 @@ int template_save(const TemplateSaveRequest *request) {
             .set_count = 1,
             .delimiter = ' ',
             .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
+  }
 
   int result = -1;
   locs = proper_section_string_from_type(((mech)->ud.type), ((mech)->ud.move));
@@ -598,15 +600,16 @@ void update_specials(Mech *mech) {
       if (e_count > 3)
         ((mech)->rd.specials) |= XXL_TECH;
 
-      else if (e_count == 2)
+      else if (e_count == 2) {
         if (cl)
           ((mech)->rd.specials) |= XL_TECH;
 
         else
           ((mech)->rd.specials) |= LE_TECH;
 
-      else
+      } else {
         ((mech)->rd.specials) |= XL_TECH;
+      }
     } else {
       if (x == CTORSO && e_count < 4 && ((mech)->ud.type) == CLASS_MECH)
         ((mech)->rd.specials) |= CE_TECH;
@@ -620,13 +623,14 @@ void update_specials(Mech *mech) {
                 mech->mynum));
   if (tc_count) {
     ((mech)->rd.specials2) |= TCOMP_TECH;
-    for (x = 0; x < NUM_SECTIONS; x++)
+    for (x = 0; x < NUM_SECTIONS; x++) {
       for (y = 0; y < crits_in_loc(mech, x); y++) {
         t = mech_critical_part_type(mech, x, y);
         if (equipment_is_weapon(t))
           if (equipment_can_use_targeting_computer(t))
             mech_critical_fire_mode_add(mech, x, y, ON_TC);
       }
+    }
   }
   if (masc_count >= max(1, (((mech)->ud.tons) / (cl ? 25 : 20))))
     ((mech)->rd.specials) |= MASC_TECH;

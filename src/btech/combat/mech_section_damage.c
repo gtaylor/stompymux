@@ -85,13 +85,14 @@ void mech_weapon_destroy(const WeaponDestructionRequest *request) {
     return; // sanity check
   SplitCriticalLookup split =
       split_critical_find(wounded, (CriticalSlotReference){hitloc, start_crit});
-  if (split.found)
+  if (split.found) {
     mech_weapon_destroy(
         &(WeaponDestructionRequest){.mech = wounded,
                                     .first = split.slot,
                                     .part_type = split.part_type,
                                     .criticals_to_destroy = destroyed,
                                     .total_criticals = sum});
+  }
 }
 
 int mech_weapon_count_in_section(Mech *mech, int loc) {

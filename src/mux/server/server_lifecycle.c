@@ -283,11 +283,12 @@ void server_lifecycle_shutdown(ServerLifecycle *lifecycle) {
     status = uv_loop_close(&lifecycle->event_loop);
     if (status == 0)
       lifecycle->event_loop_initialized = false;
-    else
+    else {
       log_error((LogEntry){.log = lifecycle->maintenance->log,
                            .key = LOG_ALWAYS,
                            .primary = "INI",
                            .secondary = "EVENT"},
                 "Unable to close libuv event loop: %s", uv_strerror(status));
+    }
   }
 }

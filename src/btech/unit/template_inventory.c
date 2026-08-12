@@ -139,7 +139,7 @@ char *techlist_func(Mech *mech, char *buffer) {
       (((mech)->ud.type) != CLASS_BSUIT))
     strlcat(buffer, " FUS ", sizeof(buffer));
 
-  for (i = 0; i < NUM_SECTIONS; i++)
+  for (i = 0; i < NUM_SECTIONS; i++) {
     for (ii = 0; ii < NUM_CRITICALS; ii++) {
       part = mech_critical_part_type(mech, i, ii);
       if (part == special_equipment_index(AXE) && !axe) {
@@ -167,6 +167,7 @@ char *techlist_func(Mech *mech, char *buffer) {
         strlcat(buffer, " CASE", sizeof(buffer));
       }
     }
+  }
 
   if (((mech)->ud.cargospace))
     strlcat(buffer, " INFC", sizeof(buffer));

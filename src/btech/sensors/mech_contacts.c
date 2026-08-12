@@ -691,14 +691,16 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
   if (isvb) {
     /* print a sorted list of detected mechs */
     /* use the ever-popular bubble sort */
-    for (i = 0; i < (buffindex - 1); i++)
-      for (j = (i + 1); j < buffindex; j++)
+    for (i = 0; i < (buffindex - 1); i++) {
+      for (j = (i + 1); j < buffindex; j++) {
         if (contact_line(contacts, j)->sort_range >
             contact_line(contacts, i)->sort_range) {
           ContactLine temporary = *contact_line(contacts, i);
           *contact_line(contacts, i) = *contact_line(contacts, j);
           *contact_line(contacts, j) = temporary;
         }
+      }
+    }
     for (loop = 0; loop < buffindex; loop++)
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    contact_line(contacts, loop)->text);

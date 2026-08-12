@@ -46,36 +46,38 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
    * not, so dispatch to the crit-proof table after that check. */
   switch (mech_class(mech)) {
   case CLASS_VTOL:
-    if (btech_context_uses_advanced_vtol_criticals(context))
+    if (btech_context_uses_advanced_vtol_criticals(context)) {
       return hit_location_export(
           mech_advanced_vehicle_hit_location(
               mech, hit_group,
               (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
           (HitLocationOutput){iscritical, isrear});
-    else if (mech_technology_flags(mech) & CRITPROOF_TECH)
+    } else if (mech_technology_flags(mech) & CRITPROOF_TECH) {
       return mech_critproof_hit_location(mech, hit_group, iscritical);
-    else if (btech_context_uses_fasa_criticals(context))
+    } else if (btech_context_uses_fasa_criticals(context)) {
       return hit_location_export(
           mech_fasa_hit_location(
               mech, hit_group,
               (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
           (HitLocationOutput){iscritical, isrear});
+    }
     break;
   case CLASS_VEH_GROUND:
-    if (btech_context_uses_advanced_vehicle_criticals(context))
+    if (btech_context_uses_advanced_vehicle_criticals(context)) {
       return hit_location_export(
           mech_advanced_vehicle_hit_location(
               mech, hit_group,
               (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
           (HitLocationOutput){iscritical, isrear});
-    else if (mech_technology_flags(mech) & CRITPROOF_TECH)
+    } else if (mech_technology_flags(mech) & CRITPROOF_TECH) {
       return mech_critproof_hit_location(mech, hit_group, iscritical);
-    else if (btech_context_uses_fasa_criticals(context))
+    } else if (btech_context_uses_fasa_criticals(context)) {
       return hit_location_export(
           mech_fasa_hit_location(
               mech, hit_group,
               (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
           (HitLocationOutput){iscritical, isrear});
+    }
     break;
   case CLASS_MECH:
   case CLASS_VEH_NAVAL:
@@ -87,12 +89,13 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
   default:
     if (mech_technology_flags(mech) & CRITPROOF_TECH)
       return mech_critproof_hit_location(mech, hit_group, iscritical);
-    else if (btech_context_uses_fasa_criticals(context))
+    else if (btech_context_uses_fasa_criticals(context)) {
       return hit_location_export(
           mech_fasa_hit_location(
               mech, hit_group,
               (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
           (HitLocationOutput){iscritical, isrear});
+    }
     break;
   }
 

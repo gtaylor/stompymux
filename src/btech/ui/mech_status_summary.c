@@ -353,7 +353,7 @@ void print_generic_status(EvaluationContext *evaluation, DbRef player,
                      mech_id(mech, false).text, mech_ref);
       mecha_notify(evaluation, player, buff);
     }
-    if (mech_class(mech) != CLASS_VTOL && !mech_is_aerospace_unit(mech))
+    if (mech_class(mech) != CLASS_VTOL && !mech_is_aerospace_unit(mech)) {
       if (mech_section_internal(mech, TURRET)) {
         MechConditionSummary conditions = mech_condition_summary(mech);
         if (conditions.turret_jammed)
@@ -361,6 +361,7 @@ void print_generic_status(EvaluationContext *evaluation, DbRef player,
         else if (conditions.turret_locked)
           mecha_notify(evaluation, player, "     TURRET LOCKED");
       }
+    }
     if (mech_is_flying_type(mech) && mech_is_landed(mech))
       mecha_notify(evaluation, player, "LANDED");
     mech_show_flags(&(MechFlagDisplayRequest){
