@@ -215,9 +215,7 @@ struct ServerConfiguration {
                                on 'good' rolls */
   int btech_statengine_obj; /* Object to send stats on hits/crits to. Defaults
                                to -1 (off) */
-#ifdef BT_FREETECHTIME
-  int btech_freetechtime; /* Near instant repair times */
-#endif
+  double btech_techtime_multiplier; /* Overall repair-time multiplier */
 #ifdef BT_COMPLEXREPAIRS
   int btech_complexrepair;
 #endif

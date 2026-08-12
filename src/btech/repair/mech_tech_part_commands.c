@@ -175,11 +175,10 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
             .quantity_delta = -1,
         });
       }
-      tech_addtechtime(&(TechTimeAddition){
+      int delay = tech_addtechtime(&(TechTimeAddition){
           .context = context, .player = player, .units = fixtime});
       btech_context_event_schedule(
-          context, mech, EVENT_REPAIR_REPLG, mech_event_failure_marker,
-          max(1, player_techtime(context, player) * TECH_TICK),
+          context, mech, EVENT_REPAIR_REPLG, mech_event_failure_marker, delay,
           repair_event_payload_pack((RepairEventPayload){
               .location = loc, .position = part, .extra = brand}) +
               (player * PLAYERPOS));
@@ -207,11 +206,10 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
         notify_printf(
             evaluation, player, "Your skill manages to save %d minute%s",
             fail_fixtime - fixtime, fail_fixtime - fixtime == 1 ? "!" : "s!");
-      tech_addtechtime(&(TechTimeAddition){
+      int delay = tech_addtechtime(&(TechTimeAddition){
           .context = context, .player = player, .units = fixtime});
       btech_context_event_schedule(
-          context, mech, EVENT_REPAIR_REPLG, mech_event_failure_marker,
-          max(1, player_techtime(context, player) * TECH_TICK),
+          context, mech, EVENT_REPAIR_REPLG, mech_event_failure_marker, delay,
           repair_event_payload_pack((RepairEventPayload){
               .location = loc, .position = part, .extra = brand}) +
               (player * PLAYERPOS));
@@ -247,11 +245,10 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
           .quantity_delta = -1,
       });
     }
-    tech_addtechtime(&(TechTimeAddition){
+    int delay = tech_addtechtime(&(TechTimeAddition){
         .context = context, .player = player, .units = fixtime});
     btech_context_event_schedule(
-        context, mech, EVENT_REPAIR_REPLG, mux_event_tickmech_replacegun,
-        max(1, player_techtime(context, player) * TECH_TICK),
+        context, mech, EVENT_REPAIR_REPLG, mux_event_tickmech_replacegun, delay,
         repair_event_payload_pack((RepairEventPayload){
             .location = loc, .position = part, .extra = brand}) +
             (player * PLAYERPOS));
@@ -609,11 +606,10 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
                    .brand = mech_critical_brand(mech, loc, part)},
           .quantity_delta = -1,
       });
-      tech_addtechtime(&(TechTimeAddition){
+      int delay = tech_addtechtime(&(TechTimeAddition){
           .context = context, .player = player, .units = fixtime});
       btech_context_event_schedule(
-          context, mech, EVENT_REPAIR_REPL, mech_event_failure_marker,
-          max(1, player_techtime(context, player) * TECH_TICK),
+          context, mech, EVENT_REPAIR_REPL, mech_event_failure_marker, delay,
           repair_event_payload_pack(
               (RepairEventPayload){.location = loc, .position = part}) +
               (player * PLAYERPOS));
@@ -641,11 +637,10 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
         notify_printf(
             evaluation, player, "Your skill manages to save %d minute%s",
             fail_fixtime - fixtime, fail_fixtime - fixtime == 1 ? "!" : "s!");
-      tech_addtechtime(&(TechTimeAddition){
+      int delay = tech_addtechtime(&(TechTimeAddition){
           .context = context, .player = player, .units = fixtime});
       btech_context_event_schedule(
-          context, mech, EVENT_REPAIR_REPL, mech_event_failure_marker,
-          max(1, player_techtime(context, player) * TECH_TICK),
+          context, mech, EVENT_REPAIR_REPL, mech_event_failure_marker, delay,
           repair_event_payload_pack(
               (RepairEventPayload){.location = loc, .position = part}) +
               (player * PLAYERPOS));
@@ -679,14 +674,13 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
         .part = {.id = parttype, .brand = mech_critical_brand(mech, loc, part)},
         .quantity_delta = -1,
     });
-    tech_addtechtime(&(TechTimeAddition){
+    int delay = tech_addtechtime(&(TechTimeAddition){
         .context = context, .player = player, .units = fixtime});
-    btech_context_event_schedule(
-        context, mech, EVENT_REPAIR_REPL, mux_event_tickmech_repairpart,
-        max(1, player_techtime(context, player) * TECH_TICK),
-        repair_event_payload_pack(
-            (RepairEventPayload){.location = loc, .position = part}) +
-            (player * PLAYERPOS));
+    btech_context_event_schedule(context, mech, EVENT_REPAIR_REPL,
+                                 mux_event_tickmech_repairpart, delay,
+                                 repair_event_payload_pack((RepairEventPayload){
+                                     .location = loc, .position = part}) +
+                                     (player * PLAYERPOS));
   }
 }
 

@@ -68,6 +68,20 @@ directives take other shapes:
 An unrecognized key is logged to stderr and skipped rather than aborting the
 whole file; a syntax error in the TOML itself aborts loading.
 
+## BattleTech repair timing
+
+`battletech.techtime_multiplier` scales the duration of newly scheduled repair
+work. It accepts finite values from `0.0` through `10.0`: `1.0` is the baseline,
+`0.5` halves repair time, and `1.5` uses 150% of baseline. A value of `0.0`
+adds no player tech-time debt and completes each newly scheduled repair on the
+event scheduler's one-second minimum delay, regardless of older debt.
+
+Wizards may change the live value with
+`@admin btech_techtime_multiplier=<value>`. Existing tech-time debt and event
+deadlines are not rescaled. New work uses the new value; follow-up units in an
+armor or internal-repair batch use the value current when each unit is
+scheduled.
+
 ## New database bootstrap
 
 When `database.game_database` does not exist, startup creates the configured

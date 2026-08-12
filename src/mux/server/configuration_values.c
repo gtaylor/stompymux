@@ -117,6 +117,21 @@ int cf_int(const ConfigurationCall *call) {
                            "Expected integer: ", call->text);
   return -1;
 }
+
+int cf_techtime_multiplier(const ConfigurationCall *call) {
+  double *value = call->value;
+  float parsed;
+
+  if (parse_float_checked(call->text, &parsed) && parsed >= 0.0F &&
+      parsed <= 10.0F) {
+    *value = (double)parsed;
+    return 0;
+  }
+  configuration_log_syntax(
+      call->context, call->player, call->command,
+      "Expected a finite number from 0.0 through 10.0: ", call->text);
+  return -1;
+}
 /* *INDENT-OFF* */
 
 /* ---------------------------------------------------------------------------

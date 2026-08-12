@@ -195,10 +195,8 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->btech_xploss_for_mw = 1;
   context->configuration->btech_variable_techtime = 0;
   context->configuration->btech_techtime_mod = 0;
+  context->configuration->btech_techtime_multiplier = 1.0;
   context->configuration->btech_statengine_obj = -1;
-#ifdef BT_FREETECHTIME
-  context->configuration->btech_freetechtime = 0;
-#endif
 #ifdef BT_COMPLEXREPAIRS
   context->configuration->btech_complexrepair = 1;
 #endif

@@ -86,6 +86,9 @@ osc8-demo-danger = 'color=white bg=red bold hover.bg=darkred disabled.strikethro
 # -----------------------------------------------
 
 [battletech]
+# Overall repair-time multiplier, from 0.0 through 10.0. Zero makes newly
+# started repairs complete on the event scheduler's next one-second tick.
+techtime_multiplier = 1.0
 # Allow units that lose armor or ammunition to exceed their normal maximum speed.
 dynspeed = 0
 # To-hit penalty applied when firing at a dug-in unit.

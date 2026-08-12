@@ -183,14 +183,7 @@ const char *repair_parse_status_message(RepairParseStatus status) {
 }
 
 void repair_event_schedule(const RepairEventSchedule *schedule) {
-#ifndef BT_FREETECHTIME
   int scheduled_delay = schedule->delay > 1 ? schedule->delay : 1;
-#else
-  int scheduled_delay =
-      btech_context_uses_free_technology_time(mech_context(schedule->mech))
-          ? 2
-          : (schedule->delay > 2 ? schedule->delay : 2);
-#endif
   btech_context_event_schedule(mech_context(schedule->mech), schedule->mech,
                                schedule->event_type, schedule->callback,
                                scheduled_delay,
@@ -199,7 +192,8 @@ void repair_event_schedule(const RepairEventSchedule *schedule) {
 
 void repair_event_schedule_minutes(const RepairEventSchedule *schedule) {
   RepairEventSchedule ticks = *schedule;
-  ticks.delay *= TECH_TICK;
+  ticks.delay =
+      tech_time_scaled_seconds(mech_context(schedule->mech), schedule->delay);
   repair_event_schedule(&ticks);
 }
 
@@ -209,8 +203,9 @@ void repair_event_schedule_with_techtime(const RepairWorkSchedule *schedule) {
       .player = schedule->command->player,
       .units = (schedule->work_time * schedule->multiplier) / 2});
   if (schedule->amount > 0)
-    delay -= TECH_TICK *
-             (schedule->work_time * (schedule->amount - 1) / schedule->amount);
+    delay -= tech_time_scaled_seconds(
+        schedule->command->context,
+        schedule->work_time * (schedule->amount - 1) / schedule->amount);
   repair_event_schedule(
       &(RepairEventSchedule){.mech = schedule->command->mech,
                              .delay = delay,

@@ -281,13 +281,9 @@ bool btech_context_uses_complex_repairs(const BtechContext *context) {
 #endif
 }
 
-bool btech_context_uses_free_technology_time(const BtechContext *context) {
+double btech_context_technology_time_multiplier(const BtechContext *context) {
   assert(context != nullptr);
-#ifdef BT_FREETECHTIME
-  return context->configuration->btech_freetechtime;
-#else
-  return false;
-#endif
+  return context->configuration->btech_techtime_multiplier;
 }
 
 int btech_context_maximum_technology_time(const BtechContext *context) {

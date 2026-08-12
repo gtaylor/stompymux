@@ -10,7 +10,6 @@
 #include "tomlc17.h"
 
 /*
- * ---------------------------------------------------------------------------
  * ConfigTomlKind: how a mapped directive's TOML value is flattened back into
  * the plain-string argument that configuration_set()'s interpreters expect.
  */
@@ -135,8 +134,9 @@ static const ConfigTomlMapping CONFIG_TOML_MAP[] = {
     {"battletech.variable_techtime", "btech_variable_techtime",
      CFG_KIND_SCALAR},
     {"battletech.techtime_mod", "btech_techtime_mod", CFG_KIND_SCALAR},
+    {"battletech.techtime_multiplier", "btech_techtime_multiplier",
+     CFG_KIND_SCALAR},
     {"battletech.statengine_obj", "btech_statengine_obj", CFG_KIND_SCALAR},
-    {"battletech.freetechtime", "btech_freetechtime", CFG_KIND_SCALAR},
     {"battletech.complexrepair", "btech_complexrepair", CFG_KIND_SCALAR},
     {"battletech.seismic_see_stopped", "btech_seismic_see_stopped",
      CFG_KIND_SCALAR},
@@ -282,7 +282,6 @@ static size_t configuration_toml_array_count(toml_datum_t array) {
              ? (size_t)array.u.arr.size
              : 0;
 }
-
 static toml_datum_t configuration_toml_array_item(toml_datum_t array,
                                                   size_t index) {
   return *(const toml_datum_t *)checked_storage_at_const(
@@ -376,6 +375,10 @@ static bool configuration_toml_format_scalar(toml_datum_t datum, char *buf,
   }
   if (datum.type == TOML_BOOLEAN) {
     (void)snprintf(buf, buf_size, "%s", datum.u.boolean ? "true" : "false");
+    return true;
+  }
+  if (datum.type == TOML_FP64) {
+    (void)snprintf(buf, buf_size, "%.17g", datum.u.fp64);
     return true;
   }
   return false;

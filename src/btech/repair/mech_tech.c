@@ -2,6 +2,8 @@
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /* Implements BattleTech repair mechanics for unit tech. */
 
+#include <limits.h>
+#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -221,6 +223,10 @@ static void tech_status(const TechStatusRequest *request) {
 int tech_addtechtime(const TechTimeAddition *addition) {
   BtechContext *context = addition->context;
   const DbRef PLAYER = addition->player;
+  int added_seconds = tech_time_scaled_seconds(context, addition->units);
+  if (added_seconds == 0)
+    return 1;
+
   time_t old;
   char *olds = btech_attribute_read(context->database, PLAYER, A_TECHTIME,
                                     (char[LBUF_SIZE]){0});
@@ -233,11 +239,23 @@ int tech_addtechtime(const TechTimeAddition *addition) {
   } else {
     old = context->clock->now;
   }
-  old += (time_t)(addition->units * TECH_TICK);
+  old += added_seconds;
   silly_atr_set_in(context->database, PLAYER, A_TECHTIME, tprintf("%ld", old));
   tech_status(&(TechStatusRequest){
       .context = context, .player = PLAYER, .completion = old});
   return clamp_intptr_to_int((intptr_t)(old - context->clock->now));
+}
+
+int tech_time_scaled_seconds(BtechContext *context, int units) {
+  if (units <= 0)
+    return 0;
+  double seconds = (double)units * TECH_TICK *
+                   btech_context_technology_time_multiplier(context);
+  if (seconds <= 0.0)
+    return 0;
+  if (seconds >= INT_MAX)
+    return INT_MAX;
+  return max(1, (int)llround(seconds));
 }
 
 TechPartParseResult tech_part_parse(const TechPartParseRequest *request) {

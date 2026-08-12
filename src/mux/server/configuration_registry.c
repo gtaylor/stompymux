@@ -126,11 +126,10 @@ CONF conftable[] = {
     {"btech_variable_techtime", cf_int, CA_GOD,
      CONFIG_LOC(btech_variable_techtime), 0},
     {"btech_techtime_mod", cf_int, CA_GOD, CONFIG_LOC(btech_techtime_mod), 0},
+    {"btech_techtime_multiplier", cf_techtime_multiplier, CA_GOD,
+     CONFIG_LOC(btech_techtime_multiplier), 0},
     {"btech_statengine_obj", cf_int, CA_GOD, CONFIG_LOC(btech_statengine_obj),
      0},
-#ifdef BT_FREETECHTIME
-    {"btech_freetechtime", cf_int, CA_GOD, CONFIG_LOC(btech_freetechtime), 0},
-#endif
 #ifdef BT_COMPLEXREPAIRS
     {"btech_complexrepair", cf_int, CA_GOD, CONFIG_LOC(btech_complexrepair), 0},
 #endif
