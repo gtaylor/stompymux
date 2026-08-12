@@ -263,6 +263,9 @@ static void test_to_hit_signatures(LosTestState *state, Mech *observer,
   target->heat_production = 30.0F;
   los_expect_true(state, "hot target improves infrared to-hit",
                   infrared_tohit(&request) < cold);
+  target->heat_production = 0.0F;
+  los_expect_int(state, "infrared ignores accumulated excess heat", cold,
+                 infrared_tohit(&request));
 
   target->tonnage = 70;
   target->speed = 11.0F;

@@ -79,7 +79,6 @@ sensor_partial_cover_modifier(const SensorPartialCoverRequest *request) {
 }
 
 static int sensor_heat_modifier(float heat) {
-#ifdef BT_SCALED_INFRARED
   if (heat <= 0)
     return 2;
   if (heat > 50)
@@ -87,15 +86,6 @@ static int sensor_heat_modifier(float heat) {
   if (heat > 35)
     return -1;
   return heat > 20 ? 0 : 1;
-#else
-  if (heat <= 7)
-    return 2;
-  if (heat <= 10)
-    return 1;
-  if (heat <= 15)
-    return 0;
-  return heat <= 22 ? -1 : -2;
-#endif
 }
 
 static int sensor_weight_modifier(int tonnage) {
@@ -262,7 +252,6 @@ int liteamp_tohit(const SensorToHitRequest *request) {
 }
 
 int infrared_tohit(const SensorToHitRequest *request) {
-#ifdef BT_SCALED_INFRARED
   float heat = (2 * (mech_heat_production(request->target) -
                      mech_heat_dissipation(request->target))) +
                fminf(mech_heat_production(request->target),
@@ -270,12 +259,6 @@ int infrared_tohit(const SensorToHitRequest *request) {
   return (sensor_woods_count(request->target, request->flags) * 4 / 3) +
          (request->flags & BATTLE_MAP_LOS_PARTIAL_COVER ? 3 : 0) +
          sensor_heat_modifier(heat);
-#else
-  return sensor_woods_count(request->target, request->flags) * 4 / 3 +
-         sensor_partial_cover_modifier(&(SensorPartialCoverRequest){
-             .target = request->target, .flags = request->flags, .base = 3}) +
-         sensor_heat_modifier(mech_excess_heat(request->target) + 7);
-#endif
 }
 
 int electrom_tohit(const SensorToHitRequest *request) {
