@@ -17,8 +17,6 @@
 #include "mux/support/checked_storage.h"
 #include "template_api.h"
 
-#ifdef BT_ADVANCED_ECON
-
 static BtechPartCostSet *cost_set_at(BtechPartCostSet *sets, size_t index) {
   return checked_storage_at(sets, BTECH_PART_COST_SET_COUNT, sizeof(*sets),
                             index);
@@ -290,8 +288,6 @@ int btech_persistence_store_economy(sqlite3 *sqlite,
   sqlite3_finalize(statement);
   return result;
 }
-#endif
-
 /* Register BTech's data tables without making core MUX depend on BTech data. */
 int btech_persistence_register(PersistenceContext *context,
                                BtechContext *btech) {
@@ -299,12 +295,8 @@ int btech_persistence_register(PersistenceContext *context,
           context, "btech_special_state", nullptr,
           btech_persistence_store_special_state, btech) < 0)
     return -1;
-#ifdef BT_ADVANCED_ECON
   btech_part_costs_initialize(btech);
   return persistence_register_sqlite_extension(
       context, "btech_economy", btech_persistence_load_economy,
       btech_persistence_store_economy, btech);
-#else
-  return 0;
-#endif
 }

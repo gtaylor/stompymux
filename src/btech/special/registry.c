@@ -18,7 +18,6 @@
 #include "btconfig.h"
 #include "btech/context.h"
 #include "btechstats_api.h"
-#include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "ds_turret_api.h"
 #include "mech_lifecycle.h"
@@ -481,9 +480,7 @@ void btech_context_release_owned_state(BtechContext *context) {
   context->special_commands = nullptr;
   context->special_command_count = 0;
   btech_stats_destroy(context);
-#ifdef BT_ADVANCED_ECON
   btech_part_costs_destroy(context);
-#endif
   destroy_partname_tables(context);
   missile_hit_registry_destroy(&context->missile_hits);
   btech_weapon_settings_destroy(&context->weapon_settings);

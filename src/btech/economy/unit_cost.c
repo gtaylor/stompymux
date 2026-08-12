@@ -86,7 +86,6 @@ int btech_part_weight(int part) {
     return 102;
 }
 
-#ifdef BT_ADVANCED_ECON
 struct BtechPartCosts {
   unsigned long long specials[SPECIALCOST_SIZE];
   unsigned long long ammunition[AMMOCOST_SIZE];
@@ -771,5 +770,3 @@ unsigned long long mech_fasa_cost(Mech *mech) {
 
   return (unsigned long long)(total * mod);
 } /* End Function */
-
-#endif

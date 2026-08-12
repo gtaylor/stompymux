@@ -10,13 +10,6 @@
  */
 #define BT_CALCULATE_BV
 
-/*
- * Define if you want extra commands in debug objects for loading default
- * advanced-economy data. Persistent economy prices live in the SQLite game
- * database.
- */
-#define BT_ADVANCED_ECON_INIT
-
 /* Define if you want Variable Recycle Times for weapons */
 #define BT_USE_VRT
 

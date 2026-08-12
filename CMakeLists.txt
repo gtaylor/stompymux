@@ -34,7 +34,6 @@ include(CTest)
 set(MUX_SOURCE_DIR "src/mux")
 set(BTECH_SOURCE_DIR "src/btech")
 
-option(BTECH_ADVANCED_ECON "Enable the advanced econ system" ON)
 option(BTECH_COMPLEX_REPAIRS "Enable complex repairs" OFF)
 
 option(BTECH_CARGO_COMMANDS "Enable hardcoded cargo commands" ON)
@@ -151,7 +150,6 @@ unset(CMARK_BUILD_TESTING_SAVED)
 set(BTMUX_NAME "${PROJECT_NAME}")
 set(BTMUX_VERSION_STRING "${BTMUX_NAME} ${PROJECT_VERSION}")
 
-set(BT_ADVANCED_ECON ${BTECH_ADVANCED_ECON})
 set(BT_COMPLEXREPAIRS ${BTECH_COMPLEX_REPAIRS})
 
 configure_file(src/cmake/btmux_build_config.h.in btmux_build_config.h)

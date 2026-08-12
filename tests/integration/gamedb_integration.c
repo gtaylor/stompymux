@@ -366,7 +366,6 @@ static int check_btech_value(sqlite3 *sqlite, const char *label,
   return result;
 }
 
-#ifdef BTMUX_TEST_ADVANCED_ECON
 /* Remove the required extension table to verify strict schema validation. */
 static int drop_sqlite_economy(const char *path) {
   sqlite3 *sqlite;
@@ -444,8 +443,6 @@ static int check_zero_economy(const char *path) {
   sqlite3_close(sqlite);
   return result;
 }
-#endif
-
 static int check_snapshot(const char *path) {
   sqlite3 *sqlite;
   int ok;
@@ -591,13 +588,11 @@ static int check_snapshot(const char *path) {
                        "SELECT schema_version FROM btech_persistence_metadata "
                        "WHERE id = 1;",
                        3) == 0;
-#ifdef BTMUX_TEST_ADVANCED_ECON
   ok =
       ok && query_int(sqlite,
                       "SELECT count(*) FROM sqlite_master WHERE type = 'table' "
                       "AND name = 'btech_economy_costs';",
                       1) == 0;
-#endif
   sqlite3_close(sqlite);
   return ok ? 0 : -1;
 }
@@ -1547,10 +1542,8 @@ int main(int argc, char *argv[]) {
 
   result = run_server(server, config, 1, &status) == 0 && WIFEXITED(status) &&
                    WEXITSTATUS(status) == 0 && check_snapshot(database) == 0 &&
-                   check_minimal_lua_parents(database) == 0
-#ifdef BTMUX_TEST_ADVANCED_ECON
-                   && check_zero_economy(database) == 0
-#endif
+                   check_minimal_lua_parents(database) == 0 &&
+                   check_zero_economy(database) == 0
                ? 0
                : 1;
 
@@ -1652,7 +1645,6 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   if (strcmp(suite, "persistence") == 0) {
-#ifdef BTMUX_TEST_ADVANCED_ECON
     if (run_server(server, config, 0, &status) < 0 || !WIFEXITED(status) ||
         WEXITSTATUS(status) == 2 || check_snapshot(database) < 0 ||
         check_zero_economy(database) < 0 ||
@@ -1661,12 +1653,6 @@ int main(int argc, char *argv[]) {
         run_server(server, config, 0, &status) < 0 || !WIFEXITED(status) ||
         WEXITSTATUS(status) == 2 || check_sparse_economy_cost(database) < 0)
       return 1;
-#else
-    if (run_server(server, config, 0, &status) < 0 || !WIFEXITED(status) ||
-        WEXITSTATUS(status) == 2 || check_snapshot(database) < 0 ||
-        check_commac_snapshot(database) < 0)
-      return 1;
-#endif
     return result;
   }
   if (recovery_snapshot && result == 0 &&
@@ -1810,7 +1796,6 @@ int main(int argc, char *argv[]) {
             directory);
     return 1;
   }
-#ifdef BTMUX_TEST_ADVANCED_ECON
   if (result == 0 &&
       (run_server(server, config, 0, &status) < 0 || !WIFEXITED(status) ||
        WEXITSTATUS(status) == 2 || check_snapshot(database) < 0 ||
@@ -1828,20 +1813,11 @@ int main(int argc, char *argv[]) {
        check_sparse_economy_cost(database) < 0 ||
        check_commac_snapshot(database) < 0))
     result = 1;
-#else
-  if (result == 0 &&
-      (run_server(server, config, 0, &status) < 0 || !WIFEXITED(status) ||
-       WEXITSTATUS(status) == 2 || check_snapshot(database) < 0 ||
-       check_commac_snapshot(database) < 0))
-    result = 1;
-#endif
 
-#ifdef BTMUX_TEST_ADVANCED_ECON
   if (result == 0 && (drop_sqlite_economy(database) < 0 ||
                       run_server(server, config, 0, &status) < 0 ||
                       !WIFEXITED(status) || WEXITSTATUS(status) != 2))
     result = 1;
-#endif
 
   if (result == 0 && (remove_btech_runtime_row(database) < 0 ||
                       run_server_in_directory(server, sqlite_read_config,

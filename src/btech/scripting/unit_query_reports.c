@@ -306,7 +306,6 @@ BtechScriptResult fun_btfasabasecost_ref(BtechScriptCall *call) {
   [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
   [[maybe_unused]] const DbRef PLAYER = call->player;
-#ifdef BT_ADVANCED_ECON
   Mech *mech;
 
   if (!is_wizard(context->world->database, PLAYER)) {
@@ -321,9 +320,6 @@ BtechScriptResult fun_btfasabasecost_ref(BtechScriptCall *call) {
   }
 
   safe_tprintf_str(buff, bufc, "%llu", mech_fasa_cost(mech));
-#else
-  safe_tprintf_str(buff, bufc, "#-1 NO ECONDB SUPPORT");
-#endif
 
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }

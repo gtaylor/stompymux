@@ -550,10 +550,6 @@ add_executable(gamedb_integration_test ${CMAKE_SOURCE_DIR}/tests/integration/gam
 target_link_libraries(gamedb_integration_test PRIVATE btmux_options SQLite3::SQLite3)
 target_include_directories(gamedb_integration_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
-if(BTECH_ADVANCED_ECON)
-  target_compile_definitions(gamedb_integration_test
-    PRIVATE BTMUX_TEST_ADVANCED_ECON=1)
-endif()
 foreach(database_suite IN ITEMS bootstrap persistence recovery-snapshot
                                 recovery-rejection)
   add_test(NAME gamedb_${database_suite}_integration

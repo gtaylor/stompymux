@@ -100,13 +100,11 @@ constexpr int WEAPON_BASE_INDEX = 1;
 constexpr int OSPECIAL_BASE_INDEX = 220;
 constexpr int CARGO_BASE_INDEX = 512;
 
-#ifdef BT_ADVANCED_ECON
 #define SPECIALCOST_SIZE (CARGO_BASE_INDEX - SPECIAL_BASE_INDEX)
 #define AMMOCOST_SIZE NUM_WEAPONS
 #define WEAPCOST_SIZE NUM_WEAPONS
 #define CARGOCOST_SIZE (NUM_ITEMS - NUM_ITEMS_M)
 #define BOMBCOST_SIZE NUM_BOMBS
-#endif
 
 static inline bool equipment_is_ammunition(int equipment) {
   return equipment >= AMMO_BASE_INDEX && equipment < BOMB_BASE_INDEX;

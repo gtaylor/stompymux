@@ -24,7 +24,6 @@ static PartMatchResult cost_part_match(BtechScriptCall *call) {
 }
 
 BtechScriptResult fun_btgetpartcost(BtechScriptCall *call) {
-#ifdef BT_ADVANCED_ECON
   if (!is_wizard(call->evaluation->world->database, call->player)) {
     safe_tprintf_str(call->output.buffer, &call->output.cursor,
                      "#-1 PERMISSION DENIED");
@@ -38,15 +37,10 @@ BtechScriptResult fun_btgetpartcost(BtechScriptCall *call) {
   }
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%llu",
                    btech_part_cost_get(call->evaluation->btech, MATCH.part.id));
-#else
-  safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                   "#-1 NO ECONDB SUPPORT");
-#endif
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
 BtechScriptResult fun_btsetpartcost(BtechScriptCall *call) {
-#ifdef BT_ADVANCED_ECON
   if (!is_wizard(call->evaluation->world->database, call->player)) {
     safe_tprintf_str(call->output.buffer, &call->output.cursor,
                      "#-1 PERMISSION DENIED");
@@ -70,9 +64,5 @@ BtechScriptResult fun_btsetpartcost(BtechScriptCall *call) {
   }
   btech_part_cost_set(call->evaluation->btech, MATCH.part.id, COST);
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%llu", COST);
-#else
-  safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                   "#-1 NO ECONDB SUPPORT");
-#endif
   return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 }
