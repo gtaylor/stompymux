@@ -90,7 +90,7 @@ const char *player_account_password_hash(GameDatabase *database, DbRef player);
 bool player_account_password_hash_set(GameDatabase *database, DbRef player,
                                       const char *hash);
 
-PlayerLastLoginResult player_account_last_login(PlayerAccountRef account);
+PlayerLastLoginResult player_account_last_login(PlayerAccountRef reference);
 bool player_account_last_login_set(const PlayerLastLoginChange *change);
 const char *player_account_last_site(GameDatabase *database, DbRef player);
 bool player_account_last_site_set(GameDatabase *database, DbRef player,

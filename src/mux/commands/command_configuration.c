@@ -132,11 +132,10 @@ int cf_access(const ConfigurationCall *call) {
     access_call.value = &cmdp->perms;
     access_call.text = ap;
     return configuration_modify_bits(&access_call);
-  } else {
-    configuration_log_not_found(context, call->player, call->command, "Command",
-                                str);
-    return -1;
   }
+  configuration_log_not_found(context, call->player, call->command, "Command",
+                              str);
+  return -1;
 }
 
 /*
@@ -196,7 +195,7 @@ int cf_cmd_alias(const ConfigurationCall *call) {
      */
 
     nt = name_table_find_entry(context->database, context->configuration,
-                               call->player, (NameTable *)cmdp->switches, ap);
+                               call->player, cmdp->switches, ap);
     if (!nt) {
       configuration_log_not_found(context, call->player, call->command,
                                   "Switch", ap);

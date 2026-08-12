@@ -104,7 +104,7 @@ bool lua_message_name_is_known(const char *name);
 void lua_push_context(GameDatabase *database, Descriptor *descriptor,
                       lua_State *state, DbRef object, DbRef player, DbRef cause,
                       const char *command, const char *event, const char *scope,
-                      char *arguments[], int argument_count);
+                      char *args[], int nargs);
 int lua_attached_path(LuaRuntime *runtime, DbRef object, char *path,
                       size_t path_size, DbRef *source);
 void do_luaschedule(CommandInvocation *invocation);

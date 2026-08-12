@@ -5,9 +5,9 @@
 #include "mux/communication/comsys.h"
 
 void comsys_process_alias_command(EvaluationContext *evaluation, DbRef player,
-                                  char *alias, char *argument);
+                                  char *arg1, char *arg2);
 void comsys_channel_printf(EvaluationContext *evaluation,
-                           struct Channel *channel, const char *format, ...)
+                           struct Channel *channel, const char *messfmt, ...)
     __attribute__((format(printf, 3, 4)));
 void comsys_leave_channel(EvaluationContext *evaluation, DbRef player,
                           struct Channel *channel);

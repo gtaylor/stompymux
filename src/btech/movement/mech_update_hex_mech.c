@@ -137,12 +137,12 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
       mech_movement_stop(mech);
       mech_position_z_set(mech, lastelevation);
       return (HexTransitionResult){.stop = true, .done = done};
-
-    } else if (collision_check(&(MovementCollisionCheck){
-                   .mech = mech,
-                   .mode = WALK_DROP,
-                   .previous_elevation = lastelevation,
-                   .previous_terrain = oldterrain})) {
+    }
+    if (collision_check(
+            &(MovementCollisionCheck){.mech = mech,
+                                      .mode = WALK_DROP,
+                                      .previous_elevation = lastelevation,
+                                      .previous_terrain = oldterrain})) {
 
       /* Walked off a cliff ... */
       mech_notify(mech, MECHALL, "You notice a large drop in front of you");
@@ -178,14 +178,14 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
       }
       mech_movement_stop(mech);
       return (HexTransitionResult){.stop = true, .done = done};
-
-    } else if (btech_context_requires_backwalk_rolls(context) &&
-               (mech_current_speed(mech) < 0) &&
-               (collision_check(&(MovementCollisionCheck){
-                   .mech = mech,
-                   .mode = WALK_BACK,
-                   .previous_elevation = lastelevation,
-                   .previous_terrain = oldterrain}))) {
+    }
+    if (btech_context_requires_backwalk_rolls(context) &&
+        (mech_current_speed(mech) < 0) &&
+        (collision_check(
+            &(MovementCollisionCheck){.mech = mech,
+                                      .mode = WALK_BACK,
+                                      .previous_elevation = lastelevation,
+                                      .previous_terrain = oldterrain}))) {
 
       mech_printf(mech, MECHALL, "You notice a %s behind you!",
                   (elevation > lastelevation ? "small incline" : "small drop"));

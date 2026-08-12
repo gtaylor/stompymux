@@ -264,7 +264,7 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
        */
       mech_los_broadcast(hit_mech, "is nicked by a glancing blow!");
       mech_notify(hit_mech, MECHALL, "You are nicked by a glancing blow!");
-      w_weap_damage = (int)(w_weap_damage + 1) / 2;
+      w_weap_damage = (w_weap_damage + 1) / 2;
       if (w_weap_damage < 1)
         w_weap_damage = 1; /* very rare case */
     }
@@ -291,9 +291,9 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
             "[fg=green]You cover your target in flaming plasma![reset]");
         mech_weapon_heat_add(hit_mech, (float)w_base_weap_damage);
         return;
-
-      } else if ((weapon_catalogue_is_coolant(WEAPINDX)) &&
-                 (mech_class(hit_mech) != CLASS_MW)) {
+      }
+      if ((weapon_catalogue_is_coolant(WEAPINDX)) &&
+          (mech_class(hit_mech) != CLASS_MW)) {
 
         /* Its a Coolant Gun */
         /* So now we figure out if we want to hit our unit with it

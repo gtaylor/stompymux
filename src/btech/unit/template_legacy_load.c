@@ -342,19 +342,19 @@ int mech_template_load(DbRef player, Mech *mech, const char *id) {
     if (template_load_modern(player, mech, id) <= 0)
       return template_load_legacy(mech, id) > 0;
     return 1;
-  } else {
-    mech_template_clear(mech, 1);
-    if (template_load_modern(player, mech, id) < 1)
+  }
+  mech_template_clear(mech, 1);
+  if (template_load_modern(player, mech, id) < 1)
 #ifdef LOADNEW_LOADS_MUSE_FORMAT
-      if (template_load_legacy(mech, id) < 1)
+    if (template_load_legacy(mech, id) < 1)
 #endif
 #ifdef LOADNEW_LOADS_OLD_IF_FAIL
-        if (template_load_modern(player, mech, mech_origid) < 1)
+      if (template_load_modern(player, mech, mech_origid) < 1)
 #ifdef LOADNEW_LOADS_MUSE_FORMAT
-          if (template_load_legacy(mech, mech_origid) < 1)
+        if (template_load_legacy(mech, mech_origid) < 1)
 #endif
 #endif
-            return 0;
-  }
+          return 0;
+
   return 1;
 }

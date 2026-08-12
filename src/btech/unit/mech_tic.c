@@ -246,7 +246,8 @@ static int firetic_sub_func(const MultiWeaponSelectionCall *call) {
                 mech_notify(mech, MECHALL,
                             "That fall causes you to stop your fire!");
               return 1;
-            } else if (!mech_is_started(mech))
+            }
+            if (!mech_is_started(mech))
               return 1;
             count++;
           }

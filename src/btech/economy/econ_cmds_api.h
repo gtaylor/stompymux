@@ -23,7 +23,7 @@ typedef struct EconomyRepairRequest {
 void economy_manifest_repair(const EconomyRepairRequest *request);
 void mech_rfixstuff(DbRef player, void *data, char *buffer);
 void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
-                   char *buf);
+                   const char *buf);
 void mech_manifest(DbRef player, void *data, char *buffer);
 void mech_stores(DbRef player, void *data, char *buffer);
 void mech_raddstuff(DbRef player, void *data, char *buffer);

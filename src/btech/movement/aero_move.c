@@ -472,7 +472,7 @@ void aero_land(DbRef player, void *data, const char *buffer) {
   }
   horiz = my_sqrtm((double)mech_desired_speed(mech),
                    (double)mech_vertical_speed(mech));
-  if (horiz >= ((double)1.0 + land_data_entry(i)->maxhoriz)) {
+  if (horiz >= (1.0 + land_data_entry(i)->maxhoriz)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You're moving too fast to land.");
     return;

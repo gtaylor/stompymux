@@ -388,8 +388,8 @@ bool telnet_environment_receive(TelnetEnvironment *environment,
   if (environment == nullptr ||
       !telnet_environment_parse_updates(buffer, size, updates, &update_count))
     return false;
-  updated = (unsigned char)telnet_environment_byte(
-                (const unsigned char *)buffer, size, 0) == TELNET_ENVIRON_IS
+  updated = telnet_environment_byte((const unsigned char *)buffer, size, 0) ==
+                    TELNET_ENVIRON_IS
                 ? telnet_environment_create()
                 : telnet_environment_clone(environment);
   if (updated == nullptr) {

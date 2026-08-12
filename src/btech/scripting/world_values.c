@@ -542,14 +542,17 @@ BtechScriptResult fun_btparttype(BtechScriptCall *call) {
   if (equipment_is_weapon(p)) {
     safe_tprintf_str(buff, bufc, "WEAP");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
-  } else if (equipment_is_ammunition(p) ||
-             strstr(script_function_argument(fargs, NFARGS, 0), "Ammo_")) {
+  }
+  if (equipment_is_ammunition(p) ||
+      strstr(script_function_argument(fargs, NFARGS, 0), "Ammo_")) {
     safe_tprintf_str(buff, bufc, "AMMO");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
-  } else if (equipment_is_bomb(p)) {
+  }
+  if (equipment_is_bomb(p)) {
     safe_tprintf_str(buff, bufc, "BOMB");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
-  } else if (equipment_is_special(p)) {
+  }
+  if (equipment_is_special(p)) {
     safe_tprintf_str(buff, bufc, "PART");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 #ifdef BT_COMPLEXREPAIRS
@@ -560,12 +563,13 @@ BtechScriptResult fun_btparttype(BtechScriptCall *call) {
     safe_tprintf_str(buff, bufc, "PART");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 #endif
-  } else if (equipment_is_cargo(p)) {
+  }
+  if (equipment_is_cargo(p)) {
     safe_tprintf_str(buff, bufc, "CARG");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
-  } else {
-    safe_tprintf_str(buff, bufc, "OTHER");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
+  safe_tprintf_str(buff, bufc, "OTHER");
+  return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }

@@ -419,7 +419,6 @@ void destroy_obj(const ObjectDestructionRequest *request) {
   toast_player(evaluation, obj);
 
   object_make_freelist(evaluation->world->database);
-  return;
 }
 
 /**
@@ -440,7 +439,8 @@ void empty_obj(EvaluationContext *evaluation, DbRef obj) {
           "Funny object type in contents list of GOING location. "
           "Flush terminated.");
       break;
-    } else if (game_object_location(evaluation->world->database, targ) != obj) {
+    }
+    if (game_object_location(evaluation->world->database, targ) != obj) {
       object_log_header_error(
           evaluation, targ, obj,
           game_object_location(evaluation->world->database, targ), 1,
@@ -448,17 +448,16 @@ void empty_obj(EvaluationContext *evaluation, DbRef obj) {
           "indicates object really in another location during "
           "cleanup of GOING location.  Flush terminated.");
       break;
-    } else {
-      ZAP_LOC(evaluation->world->database, targ);
-      if (game_object_link(evaluation->world->database, targ) == obj) {
-        game_object_set_link(evaluation->world->database, targ,
-                             new_home(evaluation, targ));
-      }
-      move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
-                                                .object = targ,
-                                                .destination = HOME,
-                                                .cause = NOTHING});
     }
+    ZAP_LOC(evaluation->world->database, targ);
+    if (game_object_link(evaluation->world->database, targ) == obj) {
+      game_object_set_link(evaluation->world->database, targ,
+                           new_home(evaluation, targ));
+    }
+    move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
+                                              .object = targ,
+                                              .destination = HOME,
+                                              .cause = NOTHING});
   }
 
   /*
@@ -473,17 +472,17 @@ void empty_obj(EvaluationContext *evaluation, DbRef obj) {
           "Funny object type in exit list of GOING location. Flush "
           "terminated.");
       break;
-    } else if (game_object_exits(evaluation->world->database, targ) != obj) {
+    }
+    if (game_object_exits(evaluation->world->database, targ) != obj) {
       object_log_header_error(
           evaluation, targ, obj,
           game_object_exits(evaluation->world->database, targ), 1, "Location",
           "indicates exit really in another location during cleanup "
           "of GOING location.  Flush terminated.");
       break;
-    } else {
-      destroy_obj(&(ObjectDestructionRequest){
-          .evaluation = evaluation, .player = NOTHING, .object = targ});
     }
+    destroy_obj(&(ObjectDestructionRequest){
+        .evaluation = evaluation, .player = NOTHING, .object = targ});
   }
 }
 

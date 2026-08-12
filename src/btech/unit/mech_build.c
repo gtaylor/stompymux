@@ -317,7 +317,7 @@ int armor_section_from_string(UnitClass type, MechMovementType movement_type,
   return -1;
 }
 
-int weapon_index_from_string(BtechContext *context, char *string) {
+int weapon_index_from_string(BtechContext *context, const char *string) {
   PartMatchResult match =
       part_match_next(&(PartMatchRequest){.context = context,
                                           .pattern = string,
@@ -328,7 +328,8 @@ int weapon_index_from_string(BtechContext *context, char *string) {
   return -1;
 }
 
-int find_special_item_code_from_string(BtechContext *context, char *buffer) {
+int find_special_item_code_from_string(BtechContext *context,
+                                       const char *buffer) {
   PartMatchResult match =
       part_match_next(&(PartMatchRequest){.context = context,
                                           .pattern = buffer,

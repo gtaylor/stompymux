@@ -115,7 +115,7 @@ const char *mech_lateral_description(Mech *mech) {
   return lateral_mode(i)->full;
 }
 
-void mech_lateral(DbRef player, void *data, char *buffer) {
+void mech_lateral(DbRef player, void *data, const char *buffer) {
 
   /* Rule Reference: BMR Revised, Page 82 (Quad Lateral) */
   /* Rule Reference: MaxTech Revised, Page 46 (All Units w/ Maneuvering Ace) */
@@ -199,7 +199,6 @@ void mech_turnmode(DbRef player, void *data, char *buffer) {
   mech_printf(mech, MECHALL, "Your turning type is : %s",
               mech_condition_summary(mech).tight_turn_mode ? "TIGHT"
                                                            : "NORMAL");
-  return;
 }
 
 void mech_bootlegger(DbRef player, void *data, char *buffer) {
@@ -717,7 +716,8 @@ void mech_stand(DbRef player, void *data, char *buffer) {
                     "Your BTH to stand would be: %d", bth);
       move_arguments_destroy(args, 2);
       return;
-    } else if (strcmp(move_argument(args, 2, 0), "anyway") == 0) {
+    }
+    if (strcmp(move_argument(args, 2, 0), "anyway") == 0) {
       standanyway = 1;
     } else if ((strcmp(move_argument(args, 2, 0), "careful") == 0) &&
                btech_context_stand_careful_modifier(mech_context(mech))) {

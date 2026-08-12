@@ -22,8 +22,7 @@ typedef struct CriticalThreshold {
   int armor_percent;
 } CriticalThreshold;
 
-int mech_section_is_crittable(Mech *mech, int section,
-                              CriticalThreshold threshold);
+int mech_section_is_crittable(Mech *mech, int loc, CriticalThreshold threshold);
 int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear);
 HitLocationResult mech_fasa_hit_location(Mech *mech, int hit_group,
                                          HitLocationResult result);

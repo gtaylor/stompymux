@@ -35,8 +35,6 @@
 #include "mux/support/checked_storage.h"
 #include "registry_api.h"
 
-void sendchannelstuff(Mech *mech, int freq, char *msg);
-
 static void build_auto_reply(char *reply, const char *prefix,
                              const char *message, const char *suffix) {
   char *rp = reply;

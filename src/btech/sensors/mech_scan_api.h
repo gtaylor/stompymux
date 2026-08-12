@@ -12,7 +12,7 @@ void mech_report(DbRef player, void *data, char *buffer);
 void mech_scan_show_turret_facing(EvaluationContext *evaluation, DbRef player,
                                   Mech *mech);
 void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
-                            Mech *mech, Mech *target, float range);
+                            Mech *mech, Mech *temp_mech, float range);
 typedef struct ScanEnemyStatusRequest {
   EvaluationContext *evaluation;
   DbRef player;

@@ -181,7 +181,6 @@ void auto_cal_mapindex(BtechContext *context, Mech *mech) {
       }
     }
   }
-  return;
 }
 
 /*
@@ -423,8 +422,6 @@ void auto_command_chasetarget(Autopilot *autopilot) {
   /* Fire off follow event */
   autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW, auto_astar_follow_event,
                            AUTOPILOT_FOLLOW_TICK, 1);
-
-  return;
 }
 
 /*

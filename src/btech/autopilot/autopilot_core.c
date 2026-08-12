@@ -451,8 +451,6 @@ void auto_engage(DbRef player, void *data, const char *buffer) {
                "Engaging autopilot...");
   autopilot_event_schedule(autopilot, EVENT_AUTOCOM, auto_com_event,
                            AUTOPILOT_NC_DELAY, 0);
-
-  return;
 }
 
 /*
@@ -472,8 +470,6 @@ void auto_disengage(DbRef player, void *data, const char *buffer) {
   auto_stop_pilot(autopilot);
   mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
                "Autopilot has been disengaged.");
-
-  return;
 }
 
 /*

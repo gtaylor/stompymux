@@ -180,8 +180,9 @@ char *part_name_format(const PartNameRequest *request) {
         (request->short_name && !result.is_clan) ? 3 : 0);
     (void)snprintf(request->buffer, BTECH_TEXT_CAPACITY, "%s", source);
     return request->buffer;
-  } else if (equipment_is_ammunition(i) &&
-             i < ammunition_equipment_index(DEFAULT_WEAPON_COUNT)) {
+  }
+  if (equipment_is_ammunition(i) &&
+      i < ammunition_equipment_index(DEFAULT_WEAPON_COUNT)) {
     PartWeaponNameResult result =
         part_weapon_name_check(request, ammunition_to_weapon_index(i));
     if (!result.allowed)
@@ -201,13 +202,15 @@ char *part_name_format(const PartNameRequest *request) {
       (void)snprintf(request->buffer, BTECH_TEXT_CAPACITY, "Bomb_%s",
                      bomb_name(bomb_from_equipment_index(i)));
       return request->buffer;
-    } else if (equipment_is_special(i) &&
-               i < special_equipment_index(TEMPLATE_INTERNAL_COUNT)) {
+    }
+    if (equipment_is_special(i) &&
+        i < special_equipment_index(TEMPLATE_INTERNAL_COUNT)) {
       (void)snprintf(request->buffer, BTECH_TEXT_CAPACITY, "%s",
                      template_internal_name(special_from_equipment_index(i)));
       return request->buffer;
-    } else if (equipment_is_cargo(i) &&
-               i < cargo_equipment_index(TEMPLATE_CARGO_COUNT)) {
+    }
+    if (equipment_is_cargo(i) &&
+        i < cargo_equipment_index(TEMPLATE_CARGO_COUNT)) {
       (void)snprintf(request->buffer, BTECH_TEXT_CAPACITY, "%s",
                      template_cargo_name(cargo_from_equipment_index(i)));
       return request->buffer;

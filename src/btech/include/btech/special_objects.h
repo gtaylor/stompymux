@@ -21,8 +21,8 @@ void btech_special_objects_reset(BtechContext *context);
 void btech_special_object_dispose(const BtechSpecialObjectAction *action);
 void btech_special_object_flag_changed(BtechContext *context,
                                        BtechObjectId player,
-                                       BtechObjectId object,
-                                       bool previously_enabled, bool enabled);
+                                       BtechObjectId object, bool from,
+                                       bool to);
 bool btech_special_object_type_can_set(BtechContext *context,
                                        BtechObjectId object, const char *type,
                                        char *error, size_t error_size);

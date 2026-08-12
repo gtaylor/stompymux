@@ -212,7 +212,6 @@ void log_name(ServerLog *log, DbRef target) {
   styled_text_strip(log->database->styled_text_palette, tp, new, sizeof(new));
   (void)fprintf(stderr, "%s", new);
   free_lbuf(tp);
-  return;
 }
 
 /**
@@ -225,7 +224,6 @@ void log_name_and_loc(ServerLog *log, DbRef player) {
     log_text(" in ");
     log_name(log, game_object_location(log->database, player));
   }
-  return;
 }
 
 /*
@@ -260,7 +258,6 @@ void log_type_and_name(ServerLog *log, DbRef thing) {
   if (is_good_obj(log->database, thing))
     log_text(game_object_name(log->database, thing));
   log_text(")");
-  return;
 }
 
 #ifdef ARBITRARY_LOGFILES

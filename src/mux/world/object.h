@@ -21,7 +21,7 @@ typedef struct CloneHomeRequest {
 
 DbRef clone_home(const CloneHomeRequest *request);
 
-DbRef create_obj(EvaluationContext *evaluation, DbRef player, int object_type,
+DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
                  const char *name);
 typedef struct ObjectCreationIdentity {
   EvaluationContext *evaluation;
@@ -41,4 +41,4 @@ void destroy_obj(const ObjectDestructionRequest *request);
 void empty_obj(EvaluationContext *evaluation, DbRef object);
 void destroy_exit(EvaluationContext *evaluation, DbRef exit);
 void destroy_thing(EvaluationContext *evaluation, DbRef thing);
-void destroy_player(EvaluationContext *evaluation, DbRef player);
+void destroy_player(EvaluationContext *evaluation, DbRef victim);

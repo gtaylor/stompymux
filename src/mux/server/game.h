@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "mux/network/network_output.h" // IWYU pragma: export
+
 #include <stddef.h>
 
 #include "mux/commands/command_context.h"
@@ -67,10 +69,7 @@ typedef struct ExcludingNotification {
 } ExcludingNotification;
 
 void notify_excluding(const ExcludingNotification *notification);
-void notify_printf(EvaluationContext *evaluation, DbRef player,
-                   const char *format, ...)
-    __attribute__((format(printf, 3, 4)));
 void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
-                    const char *message, int key);
-int is_hearer(EvaluationContext *evaluation, DbRef object);
+                    const char *msg, int key);
+int is_hearer(EvaluationContext *evaluation, DbRef thing);
 void report(CommandContext *command);

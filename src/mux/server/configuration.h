@@ -18,13 +18,13 @@ ServerConfiguration *server_configuration_create(void);
 void server_configuration_destroy(ServerConfiguration *configuration);
 void configuration_initialize(ConfigurationContext *context);
 void configuration_log_not_found(ConfigurationContext *context, DbRef player,
-                                 const char *cmd, const char *thing_name,
+                                 const char *cmd, const char *thingname,
                                  const char *thing);
 void configuration_log_syntax(ConfigurationContext *context, DbRef player,
                               const char *cmd, const char *template,
                               const char *argument);
 void configuration_list_access(EvaluationContext *evaluation, DbRef player);
-int configuration_read(ConfigurationContext *context, char *filename);
-int configuration_set(ConfigurationContext *context, char *name, char *value,
+int configuration_read(ConfigurationContext *context, char *fn);
+int configuration_set(ConfigurationContext *context, char *cp, char *ap,
                       DbRef player);
 int configuration_modify_bits(const ConfigurationCall *call);

@@ -44,8 +44,7 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
   if (gunstat == 100 || pilstat == 100) {
     if (mech->xcode.context->events->tick - ((mech)->ud.mechbv_last) < 30)
       return ((mech)->ud.mechbv);
-    else
-      ((mech)->ud.mechbv_last) = mech->xcode.context->events->tick;
+    ((mech)->ud.mechbv_last) = mech->xcode.context->events->tick;
   }
 
   type = (unsigned char)((mech)->ud.type);

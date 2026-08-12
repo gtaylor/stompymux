@@ -506,7 +506,7 @@ void do_look(CommandInvocation *invocation) {
     thing = match_status(evaluation, PLAYER,
                          match_possessed(&invocation->context->match, PLAYER,
                                          ((KEY & LOOK_OUTSIDE) ? loc : PLAYER),
-                                         (char *)name, thing));
+                                         name, thing));
   }
   /*
    * If we found something, go handle it

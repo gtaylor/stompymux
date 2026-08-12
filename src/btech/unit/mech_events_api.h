@@ -10,7 +10,7 @@ void mech_stabilizing_event(MuxEvent *event);
 void mech_jump_event(MuxEvent *event);
 void mech_recovery_event(MuxEvent *event);
 void mech_recycle_event(MuxEvent *event);
-void mech_unconsciousness_extend(Mech *mech, int ticks);
+void mech_unconsciousness_extend(Mech *mech, int len);
 void mech_lateral_event(MuxEvent *event);
 void mech_move_event(MuxEvent *event);
 void mech_stand_event(MuxEvent *event);

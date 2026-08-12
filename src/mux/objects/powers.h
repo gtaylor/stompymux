@@ -31,9 +31,11 @@ typedef struct WorldIndexes WorldIndexes;
 typedef struct EvaluationContext EvaluationContext;
 
 extern void init_powertab(WorldIndexes *indexes);
-extern void display_powertab(EvaluationContext *, DbRef);
-extern void power_set(EvaluationContext *, WorldIndexes *, DbRef, DbRef, char *,
-                      int);
+extern void display_powertab(EvaluationContext * /*evaluation*/,
+                             DbRef /*player*/);
+extern void power_set(EvaluationContext * /*evaluation*/,
+                      WorldIndexes * /*indexes*/, DbRef /*target*/,
+                      DbRef /*player*/, char * /*power*/, int /*key*/);
 typedef struct PowerDescriptionRequest {
   GameDatabase *database;
   DbRef viewer;
@@ -41,9 +43,11 @@ typedef struct PowerDescriptionRequest {
 } PowerDescriptionRequest;
 
 extern char *power_description(const PowerDescriptionRequest *request);
-extern POWERENT *find_power(WorldIndexes *, DbRef, char *);
-extern bool decode_power(EvaluationContext *, WorldIndexes *, DbRef, char *,
-                         PowerId *);
+extern POWERENT *find_power(WorldIndexes * /*indexes*/, DbRef /*thing*/,
+                            char * /*powername*/);
+extern bool decode_power(EvaluationContext * /*evaluation*/,
+                         WorldIndexes * /*indexes*/, DbRef /*player*/,
+                         char * /*powername*/, PowerId * /*id*/);
 typedef struct ObjectPowerRequest {
   GameDatabase *database;
   DbRef object;
@@ -57,7 +61,8 @@ typedef struct ObjectPowerChange {
 
 extern bool game_object_has_power(const ObjectPowerRequest *request);
 extern void game_object_set_power(const ObjectPowerChange *change);
-extern void game_object_clear_powers(GameDatabase *, DbRef);
+extern void game_object_clear_powers(GameDatabase * /*database*/,
+                                     DbRef /*object*/);
 
 static inline bool can_idle(GameDatabase *database, DbRef c) {
   return game_object_has_power(&(ObjectPowerRequest){

@@ -77,14 +77,14 @@ static DbRef parse_linkable_room(EvaluationContext *evaluation,
     notify_checked(evaluation, player, player, "That's not a valid object.",
                    MSG_ME);
     return NOTHING;
-  } else if (!has_contents(evaluation->world->database, room) ||
-             !is_linkable(evaluation->world->database, player, room)) {
+  }
+  if (!has_contents(evaluation->world->database, room) ||
+      !is_linkable(evaluation->world->database, player, room)) {
     notify_checked(evaluation, player, player, "You can't link to that.",
                    MSG_ME);
     return NOTHING;
-  } else {
-    return room;
   }
+  return room;
 }
 
 /*
@@ -117,7 +117,8 @@ static void open_exit(const ExitCreationRequest *request) {
   if (!direction || !*direction) {
     notify_checked(evaluation, player, player, "Open where?", MSG_ME);
     return;
-  } else if (!is_controls(evaluation->world->database, player, loc)) {
+  }
+  if (!is_controls(evaluation->world->database, player, loc)) {
     notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     return;
   }

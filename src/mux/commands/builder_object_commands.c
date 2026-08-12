@@ -146,12 +146,12 @@ void do_name(CommandInvocation *invocation) {
       free_lbuf(buff);
       free_lbuf(compiled_name);
       return;
-    } else if (string_compare(
-                   invocation->context->world->configuration, buff,
-                   game_object_pure_name(invocation->context->world->database,
-                                         thing)) &&
-               (lookup_player(invocation->context->world, NOTHING, buff, 0) !=
-                NOTHING)) {
+    }
+    if (string_compare(invocation->context->world->configuration, buff,
+                       game_object_pure_name(
+                           invocation->context->world->database, thing)) &&
+        (lookup_player(invocation->context->world, NOTHING, buff, 0) !=
+         NOTHING)) {
 
       /*
        * string_compare allows changing foo to Foo, etc.
@@ -191,21 +191,21 @@ void do_name(CommandInvocation *invocation) {
     free_lbuf(buff);
     free_lbuf(compiled_name);
     return;
-  } else {
-    styled_text_strip(evaluation->world->styled_text_palette, newname, new,
-                      sizeof(new));
-    if (!ok_name(invocation->context->world->configuration, new)) {
-      notify_checked(evaluation, player, player,
-                     "That is not a reasonable name.", MSG_ME);
-      free_lbuf(compiled_name);
-      return;
-    }
-    /*
-     * everything ok, change the name
-     */
-    object_name_set(invocation->context->world->database, thing, newname);
-    notify_checked(evaluation, player, player, "Name set.", MSG_ME);
   }
+  styled_text_strip(evaluation->world->styled_text_palette, newname, new,
+                    sizeof(new));
+  if (!ok_name(invocation->context->world->configuration, new)) {
+    notify_checked(evaluation, player, player, "That is not a reasonable name.",
+                   MSG_ME);
+    free_lbuf(compiled_name);
+    return;
+  }
+  /*
+   * everything ok, change the name
+   */
+  object_name_set(invocation->context->world->database, thing, newname);
+  notify_checked(evaluation, player, player, "Name set.", MSG_ME);
+
   free_lbuf(compiled_name);
 }
 /*

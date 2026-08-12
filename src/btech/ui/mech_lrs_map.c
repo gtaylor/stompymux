@@ -242,12 +242,12 @@ static MapCellText lrs_terrain_text(const LrsCellRequest *request) {
     MapCellText result = {0};
     result.text[0] = c;
     return result;
-  } else
-    newc = map_terrain_color_char(&(TerrainColorRequest){
-        .colors = request->colors,
-        .terrain = c,
-        .elevation = map_elevation_get(request->map, request->position.x,
-                                       request->position.y)});
+  }
+  newc = map_terrain_color_char(&(TerrainColorRequest){
+      .colors = request->colors,
+      .terrain = c,
+      .elevation = map_elevation_get(request->map, request->position.x,
+                                     request->position.y)});
 
   return map_cell_text(newc, request->previous_color, c);
 }
@@ -269,12 +269,12 @@ static MapCellText lrs_elevation_text(const LrsCellRequest *request) {
     MapCellText result = {0};
     result.text[0] = c;
     return result;
-  } else
-    newc = map_terrain_color_char(&(TerrainColorRequest){
-        .colors = request->colors,
-        .terrain = map_terrain_get(request->map, request->position.x,
-                                   request->position.y),
-        .elevation = e});
+  }
+  newc = map_terrain_color_char(&(TerrainColorRequest){
+      .colors = request->colors,
+      .terrain = map_terrain_get(request->map, request->position.x,
+                                 request->position.y),
+      .elevation = e});
 
   return map_cell_text(newc, request->previous_color, c);
 }

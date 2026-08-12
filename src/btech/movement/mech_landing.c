@@ -100,8 +100,7 @@ int mech_drop_surface_elevation(Mech *mech) {
       (mech_real_terrain_get(mech) == BATTLE_TERRAIN_ICE &&
        mech_position_z(mech) >= 0))
     return max(0, mech_position_surface_elevation(mech));
-  else
-    return mech_position_surface_elevation(mech);
+  return mech_position_surface_elevation(mech);
 }
 
 void mech_drop_surface_set(Mech *mech, bool check_ice) {

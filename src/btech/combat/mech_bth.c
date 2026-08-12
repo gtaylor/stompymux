@@ -561,11 +561,10 @@ mech_range_to_hit_calculate(const WeaponRangeToHitRequest *request) {
         *w_bth = 0;
         return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
                                         .modifier = modifier};
-      } else {
-        *w_bth = RANGES.water_minimum - range;
-        return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
-                                        .modifier = modifier};
       }
+      *w_bth = RANGES.water_minimum - range;
+      return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
+                                      .modifier = modifier};
     }
     /* Less than or equal to minimum range */
     *w_bth = RANGES.water_minimum - range + 1;
@@ -614,18 +613,17 @@ mech_range_to_hit_calculate(const WeaponRangeToHitRequest *request) {
       *w_bth = 0;
       return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
                                       .modifier = modifier};
-    } else {
-      if (!weapon_catalogue_is_hot_loaded(weapindx, firemode)) {
-        *w_bth = RANGES.minimum - range;
-      } else {
-        if (btech_context_hotload_uses_half_modifier(context))
-          *w_bth = ((RANGES.minimum - range + 1) / 2);
-        else
-          *w_bth = 0;
-      }
-      return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
-                                      .modifier = modifier};
     }
+    if (!weapon_catalogue_is_hot_loaded(weapindx, firemode)) {
+      *w_bth = RANGES.minimum - range;
+    } else {
+      if (btech_context_hotload_uses_half_modifier(context))
+        *w_bth = ((RANGES.minimum - range + 1) / 2);
+      else
+        *w_bth = 0;
+    }
+    return (WeaponRangeToHitResult){.bracket = RANGE_SHORT,
+                                    .modifier = modifier};
   }
   if (weapon_catalogue_is_hot_loaded(weapindx, firemode)) {
     if (btech_context_hotload_uses_half_modifier(context))

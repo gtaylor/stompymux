@@ -407,9 +407,8 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
        */
 
       return 1;
-    } else {
-      wild_cursor_advance(&data);
     }
+    wild_cursor_advance(&data);
   }
 }
 

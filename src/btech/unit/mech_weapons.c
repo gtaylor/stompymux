@@ -525,36 +525,35 @@ weapon_number_find(const WeaponNumberLookupRequest *request) {
             .found = true,
             .value = TIC_NUM_DESTROYED,
             .slot = {.section = loop, .critical = critical_index}};
-      } else if (*weapon_byte_slot(weapdata, index) > 0 && !sight) {
+      }
+      if (*weapon_byte_slot(weapdata, index) > 0 && !sight) {
         return (WeaponNumberLookupResult){
             .found = true,
             .value = (weapon_catalogue_type(weapon_index) == TBEAM)
                          ? TIC_NUM_RECYCLING
                          : TIC_NUM_RELOADING,
             .slot = {.section = loop, .critical = critical_index}};
-      } else {
+      }
+      if (mech_section_recycle_ticks(mech, loop) &&
+          (((mech)->ud.type) == CLASS_MECH ||
+           ((mech)->ud.type) == CLASS_VEH_GROUND ||
+           ((mech)->ud.type) == CLASS_VTOL) &&
+          !sight) {
 
-        if (mech_section_recycle_ticks(mech, loop) &&
-            (((mech)->ud.type) == CLASS_MECH ||
-             ((mech)->ud.type) == CLASS_VEH_GROUND ||
-             ((mech)->ud.type) == CLASS_VTOL) &&
-            !sight) {
-
-          /* just did a physical attack */
-          return (WeaponNumberLookupResult){
-              .found = true,
-              .value = TIC_NUM_PHYSICAL,
-              .slot = {.section = loop, .critical = critical_index}};
-        }
-
-        /* The recylce data for the weapon is clear- it is ready to fire! */
+        /* just did a physical attack */
         return (WeaponNumberLookupResult){
             .found = true,
-            .value = weapon_index,
+            .value = TIC_NUM_PHYSICAL,
             .slot = {.section = loop, .critical = critical_index}};
       }
-    } else
-      running_sum += num_weaps;
+
+      /* The recylce data for the weapon is clear- it is ready to fire! */
+      return (WeaponNumberLookupResult){
+          .found = true,
+          .value = weapon_index,
+          .slot = {.section = loop, .critical = critical_index}};
+    }
+    running_sum += num_weaps;
   }
   return (WeaponNumberLookupResult){.value = -1};
 }

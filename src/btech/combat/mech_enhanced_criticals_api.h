@@ -30,8 +30,8 @@ typedef struct WeaponCriticalRoll {
 bool mech_weapon_critical_can_explode(const WeaponCriticalRoll *request);
 bool mech_weapon_critical_can_jam(const WeaponCriticalRoll *request);
 bool mech_weapon_ammo_feed_is_locked(Mech *mech, int section, int critical);
-int mech_weapon_damaged_slot_count(Mech *mech, int section, int first_critical,
-                                   int weapon_size);
+int mech_weapon_damaged_slot_count(Mech *mech, int section, int w_first_crit,
+                                   int w_weap_size);
 int mech_weapon_damaged_slot_count_at(Mech *mech, int section, int critical);
 bool mech_weapon_critical_should_destroy(Mech *mech, int section, int critical,
                                          bool increment_count);

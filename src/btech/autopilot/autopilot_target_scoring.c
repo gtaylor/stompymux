@@ -128,8 +128,8 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
 
     /* Both values are zero, not going to try and shoot it */
     return target_score;
-
-  } else if (total_internal_original == 0) {
+  }
+  if (total_internal_original == 0) {
 
     /* Just use armor part of the calc */
     damage_score =

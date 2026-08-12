@@ -90,14 +90,12 @@ char *comsys_channel_from_alias(EvaluationContext *evaluation, DbRef player,
 
   if (!dir)
     return commac_channel_at(c, (size_t)current);
-  else {
-    /* This function's other branch returns a genuinely mutable char *
-       from c->channels[]; the return type can't be const. */
+  /* This function's other branch returns a genuinely mutable char *
+   from c->channels[]; the return type can't be const. */
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
-    return (char *)"";
+  return (char *)"";
 #pragma clang diagnostic pop
-  }
 }
 
 typedef struct ComHistoryView ComHistoryView;

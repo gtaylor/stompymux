@@ -25,8 +25,7 @@ void do_pemit_list(EvaluationContext *evaluation, DbRef player, char *list,
   if (!message || !*message || !list || !*list)
     return;
 
-  for (p = (char *)strtok(list, " "); p != nullptr;
-       p = (char *)strtok(nullptr, " ")) {
+  for (p = strtok(list, " "); p != nullptr; p = strtok(nullptr, " ")) {
 
     ok_to_do = 0;
     init_match(&evaluation->command->match, player, p, OBJECT_TYPE_PLAYER);

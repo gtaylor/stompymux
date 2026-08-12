@@ -68,9 +68,9 @@ float mech_los_actual_elevation(BattleMap *map, int x, int y, Mech *mech) {
   }
   if (mech_class(mech) == CLASS_MECH && !mech_is_fallen(mech))
     return mech_los_position_z(mech) + 1.5F;
-  else if (mech_movement_type(mech) == MOVE_NONE)
+  if (mech_movement_type(mech) == MOVE_NONE)
     return mech_los_position_z(mech) + 1.5F;
-  else if (mech_is_dropship(mech))
+  if (mech_is_dropship(mech))
     return mech_los_position_z(mech) + 2.5F +
            (mech_class(mech) == CLASS_DS ? 0.0F : 2.0F);
   if (mech_condition_summary(mech).dug_in)

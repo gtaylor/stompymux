@@ -255,9 +255,8 @@ void comsys_disconnect_channel(EvaluationContext *evaluation, DbRef player,
       else
         ch->on_users = user->on_next;
       return;
-    } else {
-      prevuser = user;
-      user = user->on_next;
     }
+    prevuser = user;
+    user = user->on_next;
   }
 }

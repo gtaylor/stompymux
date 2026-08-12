@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "script_functions_api.h"
+#include "btech/scripting/script_functions_api.h"
 typedef struct BtechContext BtechContext;
 typedef struct CommandInvocation CommandInvocation;
 
@@ -94,7 +94,7 @@ typedef struct GunneryExperienceAward {
 } GunneryExperienceAward;
 
 void gunnery_experience_award(const GunneryExperienceAward *award);
-void debug_xptop(DbRef player, void *data, char *buffer);
+void debug_xptop(DbRef player, void *data, const char *buffer);
 void debug_setxplevel(DbRef player, void *data, char *buffer);
 int btthreshold_func(BtechContext *context, char *skillname);
 struct chargen_struct *retrieve_chargen_struct(DbRef player);

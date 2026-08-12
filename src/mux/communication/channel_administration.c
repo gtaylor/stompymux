@@ -115,7 +115,6 @@ void do_channel_membership_flags(CommandInvocation *invocation) {
   default:
     break;
   }
-  return;
 }
 
 int comsys_test_access(const ChannelAccessRequest *request) {

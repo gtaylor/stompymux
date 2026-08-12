@@ -33,8 +33,6 @@
 #include "mux/world/object.h"
 #include "mux/world/player.h"
 
-extern time_t time(time_t *);
-
 /**
  * Record successful or failed login attempt.
  * If successful, report the number of failures since the last successful
@@ -295,9 +293,8 @@ int add_player_name(WorldContext *world, DbRef player, char *name) {
       free_lbuf(temp);
       if (*p == player) {
         return 1;
-      } else {
-        return 0;
       }
+      return 0;
     }
     /*
      * It's an alias (or an incorrect entry).  Clobber it

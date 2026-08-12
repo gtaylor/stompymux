@@ -202,7 +202,8 @@ void mech_dump(DbRef player, void *data, char *buffer) {
     mech_los_broadcast(mech,
                        "no longer has ammo dumping from hatches on its back.");
     return;
-  } else if (!strcasecmp(args[0], "all")) {
+  }
+  if (!strcasecmp(args[0], "all")) {
     count = 0;
     i = mech_class(mech) == CLASS_MECH ? 7 : 5;
     for (; i >= 0; i--)
@@ -223,7 +224,8 @@ void mech_dump(DbRef player, void *data, char *buffer) {
     mech_los_broadcast(mech, "starts dumping ammo from hatches on its back.");
     mech_event_schedule(mech, EVENT_DUMP, mech_dump_event, DUMP_GRAD_TICK, 0);
     return;
-  } else if (!weapnum && strcmp(args[0], "0")) {
+  }
+  if (!weapnum && strcmp(args[0], "0")) {
     /* Try to find hitloc instead */
     if (mech_event_count(mech, EVENT_DUMP)) {
       mech_notify(mech, MECHALL, "You're already dumping some ammo!");

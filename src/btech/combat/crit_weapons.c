@@ -148,9 +148,10 @@ int mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
         headhitmwdamage(wounded, wounded, 2);
     }
     return 1;
-  } else if (weapon_catalogue_is_anti_missile(
-                 weapon_from_equipment_index(CRIT_TYPE))) { /* Have to shut down
-                                           AMS when its critted */
+  }
+  if (weapon_catalogue_is_anti_missile(
+          weapon_from_equipment_index(CRIT_TYPE))) { /* Have to shut down
+                                    AMS when its critted */
     mech_printf(wounded, MECHALL, "Your %s has been destroyed!",
                 weapon_display_name(WEAPON_INDEX));
 

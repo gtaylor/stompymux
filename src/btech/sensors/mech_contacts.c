@@ -186,16 +186,15 @@ void mech_brief(DbRef player, void *data, char *buffer) {
 char mech_contact_weapon_arc(int arc) {
   if (arc & FORWARDARC)
     return '*';
-  else if (arc & TURRETARC)
+  if (arc & TURRETARC)
     return 't';
-  else if (arc & RSIDEARC)
+  if (arc & RSIDEARC)
     return 'r';
-  else if (arc & LSIDEARC)
+  if (arc & LSIDEARC)
     return 'l';
-  else if (arc & REARARC)
+  if (arc & REARARC)
     return 'v';
-  else
-    return '?';
+  return '?';
 }
 
 /* who: 0 for friend, 1 for enemy, 2 for 'self' */

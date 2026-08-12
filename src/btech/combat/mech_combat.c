@@ -114,8 +114,7 @@ void mech_target(DbRef player, void *data, char *buffer) {
     return;
   }
   mech_targeting_aim_set(
-      mech,
-      (MechAimSelection){.section = index, .unit_class = (UnitClass)type});
+      mech, (MechAimSelection){.section = index, .unit_class = type});
   armor_string_from_index(index, section, type, movement_type);
   notify_printf(btech_context_evaluation(context), player, "%s targetted.",
                 section);

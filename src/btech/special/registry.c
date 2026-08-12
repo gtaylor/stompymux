@@ -135,17 +135,10 @@ size_t btech_special_object_storage_size(int type) {
 /*************CALLABLE PROTOS*****************/
 
 /* Main entry point */
-bool btech_command_try_execute(BtechContext *context, DbRef player, DbRef loc,
-                               char *command);
 
 void list_hashstat(DbRef player, const char *tab_name, HashTable *htab);
-void raw_notify(EvaluationContext *evaluation, DbRef player, const char *msg);
 
 /*************PERSONAL PROTOS*****************/
-void *new_special_object(BtechContext *context, long id, int type);
-void *btech_context_find_object(BtechContext *context, DbRef key);
-int btech_context_which_special(BtechContext *context, DbRef key);
-int btech_context_which_special_attribute(BtechContext *context, DbRef key);
 
 static int compare_dbrefs(const RedBlackTreeCompareCall *call) {
   void *key1 = call->lhs;
@@ -251,7 +244,7 @@ int handled_command_sub(BtechContext *context, DbRef player, DbRef location,
     } else
       return 0;
   }
-  if (type > (int)BTECH_SPECIAL_OBJECT_COUNT)
+  if (type > BTECH_SPECIAL_OBJECT_COUNT)
     return 0;
   type_of_object = btech_special_object_definition(type);
   const size_t COMMAND_NAME_LENGTH = strcspn(command, " ");
@@ -293,7 +286,8 @@ int handled_command_sub(BtechContext *context, DbRef player, DbRef location,
       mecha_notify(btech_context_evaluation(context), player,
                    "Sorry, that command is restricted!");
     return 1;
-  } else if (ishelp) {
+  }
+  if (ishelp) {
     btech_special_object_help(&(SpecialObjectHelpRequest){
         .context = context,
         .player = player,
@@ -334,7 +328,6 @@ bool btech_command_try_execute(BtechContext *context, DbRef player, DbRef loc,
   return 0;
 }
 
-void init_special_hash(BtechContext *context, int which);
 const int GLOBAL_SPECIALS = BTECH_SPECIAL_OBJECT_COUNT;
 
 void *new_special_object(BtechContext *context, DbRef id, int type) {
@@ -534,7 +527,7 @@ int btech_context_which_special_attribute(BtechContext *context, DbRef key) {
   str = btech_attribute_read(context->database, key, A_XTYPE,
                              (char[LBUF_SIZE]){0});
   if (str && *str) {
-    for (i = 0; i < (int)BTECH_SPECIAL_OBJECT_COUNT; i++) {
+    for (i = 0; i < BTECH_SPECIAL_OBJECT_COUNT; i++) {
       if (!strcmp(btech_special_object_definition(i)->type, str)) {
         return_value = i;
         break;
@@ -612,7 +605,7 @@ bool btech_special_object_type_can_set(BtechContext *context, DbRef object,
     }
     return true;
   }
-  for (int index = 0; index < (int)BTECH_SPECIAL_OBJECT_COUNT; index++) {
+  for (int index = 0; index < BTECH_SPECIAL_OBJECT_COUNT; index++) {
     if (!strcmp(btech_special_object_definition(index)->type, type)) {
       requested = index;
       break;

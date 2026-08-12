@@ -378,9 +378,9 @@ void auto_gun_event(Autopilot *autopilot) {
     autopilot_autogun_log(autopilot, "Autogun - No valid current target");
     autopilot_autogun_log(autopilot, "Autogun Event Finished");
     return;
-
-  } else if (mech_is_destroyed(target) ||
-             (mech_map_dbref(target) != mech_map_dbref(mech))) {
+  }
+  if (mech_is_destroyed(target) ||
+      (mech_map_dbref(target) != mech_map_dbref(mech))) {
 
     /* Target is either dead or not on the map anymore */
     autopilot->target = -1;

@@ -224,7 +224,7 @@ void mech_rfixstuff(DbRef player, void *data, char *buffer) {
 }
 
 void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
-                   char *buf) {
+                   const char *buf) {
   GameDatabase *database = context->database;
   BrandedPartPile pile;
   BrandedPartPile matching_pile;

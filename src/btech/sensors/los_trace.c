@@ -367,7 +367,7 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
   los_map_coord_to_real(ax, ay, &acx, &acy);
   los_map_coord_to_real(bx, by, &bcx, &bcy);
 
-  slope = (float)(acy - bcy) / (float)(acx - bcx);
+  slope = (acy - bcy) / (acx - bcx);
 
   uangle = -atanf(slope);
 

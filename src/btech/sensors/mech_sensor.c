@@ -32,7 +32,7 @@
 #include "registry_api.h"
 #include "section_types.h"
 
-#include "autopilot.h"
+#include "autopilot_resume_api.h"
 #include "btechstats_api.h"
 #include "mech_ecm_api.h"
 #include "mech_events.h"

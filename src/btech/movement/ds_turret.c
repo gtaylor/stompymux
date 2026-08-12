@@ -83,31 +83,31 @@ static void turret_targeting_scope_leave(TurretTargetingScope *scope,
   btech_context_combat_arcs_override_set(tur->xcode.context, 0);
 }
 
-void turret_addtic(DbRef player, void *data, char *buffer) {
+void turret_addtic(DbRef player, void *data, const char *buffer) {
   (void)player;
   (void)data;
   (void)buffer;
 }
 
-void turret_deltic(DbRef player, void *data, char *buffer) {
+void turret_deltic(DbRef player, void *data, const char *buffer) {
   (void)player;
   (void)data;
   (void)buffer;
 }
 
-void turret_listtic(DbRef player, void *data, char *buffer) {
+void turret_listtic(DbRef player, void *data, const char *buffer) {
   (void)player;
   (void)data;
   (void)buffer;
 }
 
-void turret_cleartic(DbRef player, void *data, char *buffer) {
+void turret_cleartic(DbRef player, void *data, const char *buffer) {
   (void)player;
   (void)data;
   (void)buffer;
 }
 
-void turret_firetic(DbRef player, void *data, char *buffer) {
+void turret_firetic(DbRef player, void *data, const char *buffer) {
   (void)player;
   (void)data;
   (void)buffer;

@@ -227,7 +227,7 @@ struct LuaServices {
   RuntimeClock *clock;
   CommandContext *background_command;
   ServerLog *log;
-  int *record_players;
+  const int *record_players;
   StyledTextPalette *styled_text_palette;
 };
 
@@ -241,7 +241,7 @@ lua_services_initialize(LuaServices *services,
                         GameDatabase *database, DescriptorRegistry *descriptors,
                         CommandQueue *commands, RuntimeClock *clock,
                         CommandContext *background_command, ServerLog *log,
-                        int *record_players, StyledTextPalette *palette) {
+                        const int *record_players, StyledTextPalette *palette) {
   *services = (LuaServices){
       .configuration = configuration,
       .database = database,

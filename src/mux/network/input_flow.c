@@ -125,7 +125,7 @@ int descriptor_flow_start(const FlowStartRequest *request) {
   return 1;
 }
 
-void descriptor_flow_handle(Descriptor *d, char *input) {
+void descriptor_flow_handle(Descriptor *d, const char *input) {
   InputFlow *flow = d->flow;
   FlowOutcome outcome;
 

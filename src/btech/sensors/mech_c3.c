@@ -53,8 +53,7 @@ static bool mech_has_c3(const Mech *mech) {
 int mech_c3_master_slot_count(const Mech *mech) {
   if (mech_class(mech) == CLASS_MECH)
     return C3_MASTER_MECH_SIZE;
-  else
-    return C3_MASTER_OTHER_SIZE;
+  return C3_MASTER_OTHER_SIZE;
 }
 
 bool mech_c3_master_slot_is_working(Mech *mech,

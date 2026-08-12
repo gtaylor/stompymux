@@ -37,8 +37,6 @@ void btech_heartbeat_stop(BtechContext *context) {
   context->heartbeat_running = false;
 }
 
-void auto_heartbeat(Autopilot *);
-
 static int heartbeat_dispatch(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   BtechSpecialObject *const XCODE_OBJ = data;

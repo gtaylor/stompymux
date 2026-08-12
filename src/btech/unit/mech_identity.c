@@ -431,8 +431,8 @@ int map_bearing(const MapRealSegment *segment) {
    * atan2() doesn't need this check because we never actually divide by
    * dx, but we handle it specially for consistency with existing code.
    */
-  if (DX == 0.f) {
-    return (DY < 0.f) ? 0 : 180;
+  if (DX == 0.F) {
+    return (DY < 0.F) ? 0 : 180;
   }
 
   rads = atan2f(-DX, DY);

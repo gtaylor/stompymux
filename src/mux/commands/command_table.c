@@ -5,14 +5,18 @@
 #include <stdlib.h>
 #include <strings.h>
 
+#include "btech/character/btechstats_api.h"
 #include "btech/context.h" // IWYU pragma: keep
+#include "btech/ui/mech_stat_api.h"
 #include "btmux_build_config.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_internal.h"
 #include "mux/commands/command_keys.h"
+#include "mux/commands/examine_commands.h"
 #include "mux/commands/look.h"
 #include "mux/commands/macro.h" // IWYU pragma: keep
+#include "mux/commands/state_commands.h"
 #include "mux/communication/comsys.h"
 #include "mux/communication/speech.h"
 #include "mux/help/help_command.h"
@@ -22,8 +26,10 @@
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/name_table.h"
+#include "mux/world/database_check.h"
 #include "mux/world/inventory_commands.h"
 #include "mux/world/movement_commands.h"
+#include "mux/world/player.h"
 
 /*
  * ---------------------------------------------------------------------------

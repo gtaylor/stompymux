@@ -548,16 +548,19 @@ char *critslot_func(const CriticalSlotTextRequest *request) {
     if (mech_critical_is_destroyed(mech, index, crit))
       return status_text(buffer, "Destroyed");
     return status_text(buffer, "Operational");
-  } else if (flag == 2) {
+  }
+  if (flag == 2) {
     (void)snprintf(buffer, MBUF_SIZE, "%d",
                    mech_critical_data(mech, index, crit));
     return buffer;
-  } else if (flag == 3) {
+  }
+  if (flag == 3) {
     if (!equipment_is_ammunition(type))
       return status_text(buffer, "#-1 NOT AMMO");
     (void)snprintf(buffer, MBUF_SIZE, "%d", full_ammo(mech, index, crit));
     return buffer;
-  } else if (flag == 4) {
+  }
+  if (flag == 4) {
     if (!equipment_is_ammunition(type))
       return status_text(buffer, "#-1 NOT AMMO");
     type = find_ammo_type(mech, index, crit);
@@ -565,17 +568,16 @@ char *critslot_func(const CriticalSlotTextRequest *request) {
     int weapindex;
     if (!equipment_is_weapon(type))
       return status_text(buffer, "#-1 NOT AMMO OR WEAPON");
-    else {
-      const int AMMO_MODE = mech_critical_ammo_mode(mech, index, crit);
-      weapindex = weapon_from_equipment_index(type);
-      (void)snprintf(buffer, MBUF_SIZE, "%c%c",
-                     get_weapon_fire_mode_letter_model_mode(
-                         weapindex, mech_critical_fire_mode(mech, index, crit)),
-                     AMMO_MODE < 0 ? ' '
-                                   : get_weapon_ammo_mode_letter_model_mode(
-                                         weapindex, (unsigned int)AMMO_MODE));
-      return buffer;
-    }
+    const int AMMO_MODE = mech_critical_ammo_mode(mech, index, crit);
+    weapindex = weapon_from_equipment_index(type);
+    (void)snprintf(buffer, MBUF_SIZE, "%c%c",
+                   get_weapon_fire_mode_letter_model_mode(
+                       weapindex, mech_critical_fire_mode(mech, index, crit)),
+                   AMMO_MODE < 0 ? ' '
+                                 : get_weapon_ammo_mode_letter_model_mode(
+                                       weapindex, (unsigned int)AMMO_MODE));
+    return buffer;
+
   } else if (flag == 6) {
     if (!equipment_is_ammunition(type))
       return status_text(buffer, "#-1 NOT AMMO");

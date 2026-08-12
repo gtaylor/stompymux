@@ -281,30 +281,27 @@ void mech_damage_apply(const MechDamageRequest *request) {
           .ignore_swarmers = T_IGNORE_SWARMERS,
       });
       return;
-    } else {
-      bool secondary_transfer_succeeded = false;
-      if (mech_class(wounded) == CLASS_MECH ||
-          mech_class(wounded) == CLASS_MW ||
-          mech_class(wounded) == CLASS_BSUIT ||
-          mech_is_aerospace_unit(wounded)) {
-        hitloc = mech_hit_location_transfer(wounded, hitloc);
-        secondary_transfer_succeeded = hitloc >= 0;
-      }
-      if (!secondary_transfer_succeeded) {
-        if (mech_is_aerospace_unit(wounded) && !mech_is_destroyed(wounded)) {
-          /* Hurt SI instead. */
-          if (mech_structural_integrity(wounded) <= damage)
-            kill = 1;
-          else {
-            mech_structural_integrity_set(
-                wounded, mech_structural_integrity(wounded) - damage);
-            kill = -1;
-          }
-        } else
-          return;
-      }
-      /* Nyah. Damage transferred to waste, shooting a dead mech? */
     }
+    bool secondary_transfer_succeeded = false;
+    if (mech_class(wounded) == CLASS_MECH || mech_class(wounded) == CLASS_MW ||
+        mech_class(wounded) == CLASS_BSUIT || mech_is_aerospace_unit(wounded)) {
+      hitloc = mech_hit_location_transfer(wounded, hitloc);
+      secondary_transfer_succeeded = hitloc >= 0;
+    }
+    if (!secondary_transfer_succeeded) {
+      if (mech_is_aerospace_unit(wounded) && !mech_is_destroyed(wounded)) {
+        /* Hurt SI instead. */
+        if (mech_structural_integrity(wounded) <= damage)
+          kill = 1;
+        else {
+          mech_structural_integrity_set(
+              wounded, mech_structural_integrity(wounded) - damage);
+          kill = -1;
+        }
+      } else
+        return;
+    }
+    /* Nyah. Damage transferred to waste, shooting a dead mech? */
   }
   if (mech_cocoon_integrity(wounded) > 0 &&
       btech_random_roll(mech_context(wounded)) > 8) {

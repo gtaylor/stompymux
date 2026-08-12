@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "btech/special_objects.h"
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "equipment_types.h"
@@ -18,6 +19,7 @@
 #include "mux/world/object.h"
 /* Ejection code */
 #include "autopilot.h"
+#include "autopilot_resume_api.h"
 #include "bsuit_api.h"
 #include "btconfig.h"
 #include "btech/context.h"

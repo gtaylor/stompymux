@@ -71,7 +71,7 @@ void command_queue_set_lifecycle(CommandQueue *queue,
                                  ServerLifecycle *lifecycle);
 void command_queue_destroy(CommandQueue *queue);
 int cque_init(CommandQueue *queue);
-int halt_que(CommandQueue *queue, DbRef player, DbRef cause);
+int halt_que(CommandQueue *queue, DbRef player, DbRef object);
 typedef struct QueuedCommandRequest {
   CommandQueue *queue;
   DbRef player;
@@ -82,5 +82,5 @@ typedef struct QueuedCommandRequest {
 
 void wait_que(const QueuedCommandRequest *request);
 int que_next(CommandQueue *queue);
-int do_top(CommandQueue *queue, int command_count);
+int do_top(CommandQueue *queue, int ncmds);
 void recover_queue_deposits(CommandQueue *queue);

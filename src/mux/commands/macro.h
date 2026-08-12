@@ -59,8 +59,8 @@ typedef struct MacroSetRequest {
 } MacroSetRequest;
 
 MacroSet *get_macro_set(const MacroSetRequest *request);
-int can_write_macros(DbRef player, MacroSet *m);
-int can_read_macros(GameDatabase *database, DbRef player, MacroSet *m);
+int can_write_macros(DbRef player, MacroSet *set);
+int can_read_macros(GameDatabase *database, DbRef player, MacroSet *set);
 
 void clear_macro_set(MacroRegistry *registry, int set);
 
@@ -76,7 +76,7 @@ void do_clear_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 void do_chmod_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     char *s);
 void do_create_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
-                     char *s);
+                     char *description);
 void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                   char *cmd);
 void do_del_macro(MatchContext *match, MacroRegistry *registry, DbRef player,

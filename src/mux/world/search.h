@@ -36,7 +36,7 @@ struct DatabaseStatistics {
 };
 
 extern int search_criteria_setup(EvaluationContext *context, DbRef player,
-                                 char *search, SearchCriteria *criteria);
+                                 char *search, SearchCriteria *parm);
 typedef struct SearchExecutionRequest {
   EvaluationContext *evaluation;
   SearchCriteria *criteria;
@@ -44,4 +44,5 @@ typedef struct SearchExecutionRequest {
 } SearchExecutionRequest;
 
 extern void search_criteria_perform(const SearchExecutionRequest *request);
-extern void database_statistics_get(GameDatabase *, DatabaseStatistics *);
+extern void database_statistics_get(GameDatabase * /*database*/,
+                                    DatabaseStatistics * /*info*/);

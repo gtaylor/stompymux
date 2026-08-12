@@ -233,7 +233,7 @@ void list_charvaluestuff(EvaluationContext *evaluation, DbRef player,
                   "List of %s available:", character_value_type_name(flag));
   }
   buf[0] = 0;
-  for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
+  for (i = 0; i < NUM_CHARVALUES; i++) {
     ok = 0;
     type = (unsigned char)character_value_definition(i)->type;
     if (flag < 0)
@@ -298,14 +298,11 @@ int char_rollsaving(BtechContext *context) {
   if (r12 > r13) {
     if (r12 > r23)
       return r12;
-    else
-      return r23;
-  } else {
-    if (r13 > r23)
-      return r13;
-    else
-      return r23;
+    return r23;
   }
+  if (r13 > r23)
+    return r13;
+  return r23;
 }
 
 int char_rollunskilled(BtechContext *context) {
@@ -323,14 +320,11 @@ int char_rollunskilled(BtechContext *context) {
   if (r12 < r13) {
     if (r12 < r23)
       return r12;
-    else
-      return r23;
-  } else {
-    if (r13 < r23)
-      return r13;
-    else
-      return r23;
+    return r23;
   }
+  if (r13 < r23)
+    return r13;
+  return r23;
 }
 
 int char_rollskilled(BtechContext *context) { return char_rolld6(context, 2); }
@@ -437,12 +431,11 @@ char_getskilltargetbycode_base(const CharacterSkillTargetCall *call) {
     context->cached_skill = code;
     context->cached_skill_result = 18 - val - skill;
     return context->cached_skill_result + modifier;
-  } else {
-    skill = character_stats_value_get(s, code);
-    if (skill == -1)
-      return (18);
-    return 18 - val - skill;
   }
+  skill = character_stats_value_get(s, code);
+  if (skill == -1)
+    return (18);
+  return 18 - val - skill;
 }
 
 int char_getskilltargetbycode(BtechContext *context, DbRef player, int code,
@@ -554,8 +547,7 @@ int char_getskillsuccess(const CharacterSkillCheck *check) {
 
   if (roll >= val)
     return (1); /* Success! */
-  else
-    return (0); /* Failure */
+  return (0);   /* Failure */
 }
 
 int char_getskillmargsucc(BtechContext *context, DbRef player, const char *name,
@@ -586,10 +578,9 @@ DbRef char_getopposedskill(BtechContext *context, DbRef first,
 
   if (per1 > per2)
     return (first);
-  else if (per2 == per1)
+  if (per2 == per1)
     return (0);
-  else
-    return (second);
+  return (second);
 }
 
 int char_getattrsave(BtechContext *context, DbRef player, const char *name) {
@@ -597,10 +588,9 @@ int char_getattrsave(BtechContext *context, DbRef player, const char *name) {
 
   if (val == -1)
     return (-1);
-  else if (val > 9)
+  if (val > 9)
     return 0;
-  else
-    return (18 - 2 * val);
+  return (18 - 2 * val);
 }
 
 int char_getattrsavesucc(BtechContext *context, DbRef player,
@@ -614,8 +604,7 @@ int char_getattrsavesucc(BtechContext *context, DbRef player,
 
   if (roll >= val)
     return (1);
-  else
-    return (0);
+  return (0);
 }
 
 /************************/

@@ -32,9 +32,9 @@ typedef struct HexLosMap {
   unsigned char map[MAPLOS_MAXX * MAPLOS_MAXY];
 } HexLosMap;
 
-int los_map_hex_index(const HexLosMap *los_map, int x, int y);
+int los_map_hex_index(const HexLosMap *map_info, int x, int y);
 
 unsigned char los_map_flag(const HexLosMap *los_map, int x, int y);
 
-bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech,
-                       int start_x, int start_y, int x_size, int y_size);
+bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
+                       int sy, int xsz, int ysz);

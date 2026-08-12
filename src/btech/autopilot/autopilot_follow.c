@@ -282,12 +282,9 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
         ai_set_speed(mech, autopilot, 0);
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
         return;
-
-      } else {
-
-        /* Path found */
-        autopilot->follow_update_tick = 0;
       }
+      /* Path found */
+      autopilot->follow_update_tick = 0;
 
     } else {
 
@@ -310,12 +307,9 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
         ai_set_speed(mech, autopilot, 0);
         auto_goto_next_command(autopilot, AUTOPILOT_NC_DELAY);
         return;
-
-      } else {
-
-        /* Zero the ticker */
-        autopilot->follow_update_tick = 0;
       }
+      /* Zero the ticker */
+      autopilot->follow_update_tick = 0;
     }
   }
 
@@ -375,21 +369,17 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
                                auto_astar_follow_event, AUTOPILOT_FOLLOW_TICK,
                                0);
       return;
-
-    } else {
-
-      /* Delete the node and goto the next one */
-      temp_astar_node =
-          (AutopilotPathNode *)doubly_linked_list_remove_node_at_pos(
-              autopilot->astar_path, 1);
-      free(temp_astar_node);
-
-      /* Call this event again */
-      autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW,
-                               auto_astar_follow_event, AUTOPILOT_FOLLOW_TICK,
-                               0);
-      return;
     }
+    /* Delete the node and goto the next one */
+    temp_astar_node =
+        (AutopilotPathNode *)doubly_linked_list_remove_node_at_pos(
+            autopilot->astar_path, 1);
+    free(temp_astar_node);
+
+    /* Call this event again */
+    autopilot_event_schedule(autopilot, EVENT_AUTOFOLLOW,
+                             auto_astar_follow_event, AUTOPILOT_FOLLOW_TICK, 0);
+    return;
   }
 
   /* Set our current goal - not the end goal tho - unless this is

@@ -57,7 +57,7 @@ typedef struct BuildingHitRequest {
 } BuildingHitRequest;
 
 /* map.obj.c */
-MapObject *next_mapobj(MapObject *m);
+MapObject *next_mapobj(MapObject *object);
 MapObject *first_mapobj(BattleMap *map, int type);
 MapEntranceResult find_entrance(BattleMap *map, char direction);
 StructureName structure_name(GameDatabase *database, MapObject *mapo);

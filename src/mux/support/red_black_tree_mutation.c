@@ -117,7 +117,8 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
       node->key = key;
       node->data = data;
       return;
-    } else if (compare_result < 0) {
+    }
+    if (compare_result < 0) {
       // Go Left
       if (node->left != nullptr) {
         node = node->left;
@@ -166,58 +167,52 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
             iter->parent->parent->right->color = RED_BLACK_TREE_BLACK;
           iter = iter->parent->parent;
           continue;
-        } else {
-          // Case 2 or 3:
-          // The current node has a black uncle.
-          if (iter->parent->right == iter) {
-            // Case 2:
-            // The current node has a black uncle and is the right child
-            // of the parent. The parent is the red left child. The parent's
-            // sibling, the current node's uncle, is black.
-            red_black_tree_rotate_left(bt, iter->parent);
-            iter = iter->left;
-          }
-          // Case 3:
-          // The current node is a left child. It's parent is a red left child
-          // and has a black sibling.
-          iter->parent->color = RED_BLACK_TREE_BLACK;
-          iter->parent->parent->color = RED_BLACK_TREE_RED;
-          red_black_tree_rotate_right(bt, iter->parent->parent);
-          break;
+        } // Case 2 or 3:
+        // The current node has a black uncle.
+        if (iter->parent->right == iter) {
+          // Case 2:
+          // The current node has a black uncle and is the right child
+          // of the parent. The parent is the red left child. The parent's
+          // sibling, the current node's uncle, is black.
+          red_black_tree_rotate_left(bt, iter->parent);
+          iter = iter->left;
         }
-      } else {
-        // parent is right child of grandparent
-        if (iter->parent->parent->left != nullptr &&
-            iter->parent->parent->left->color == RED_BLACK_TREE_RED) {
-          // Case 1:
-          // The current node has a red uncle and it's parent is parent node is
-          // a red right child.
-          iter->parent->color = RED_BLACK_TREE_BLACK;
-          iter->parent->parent->color = RED_BLACK_TREE_RED;
-          if (iter->parent->parent->left)
-            iter->parent->parent->left->color = RED_BLACK_TREE_BLACK;
-          iter = iter->parent->parent;
-          continue;
-        } else {
-          // Case 2 or 3:
-          // The current node has a black uncle.
-          if (iter->parent->left == iter) {
-            // Case 2:
-            // The current node has a black uncle and is the left child
-            // of the parent. The parent is the red right child. The parent's
-            // sibling, the current node's uncle, is black.
-            red_black_tree_rotate_right(bt, iter->parent);
-            iter = iter->right;
-          }
-          // Case 3:
-          // The current node is a right child. It's parent is a red right child
-          // and has a black sibling.
-          iter->parent->color = RED_BLACK_TREE_BLACK;
-          iter->parent->parent->color = RED_BLACK_TREE_RED;
-          red_black_tree_rotate_left(bt, iter->parent->parent);
-          continue;
-        }
+        // Case 3:
+        // The current node is a left child. It's parent is a red left child
+        // and has a black sibling.
+        iter->parent->color = RED_BLACK_TREE_BLACK;
+        iter->parent->parent->color = RED_BLACK_TREE_RED;
+        red_black_tree_rotate_right(bt, iter->parent->parent);
+        break;
+
+      } // parent is right child of grandparent
+      if (iter->parent->parent->left != nullptr &&
+          iter->parent->parent->left->color == RED_BLACK_TREE_RED) {
+        // Case 1:
+        // The current node has a red uncle and it's parent is parent node is
+        // a red right child.
+        iter->parent->color = RED_BLACK_TREE_BLACK;
+        iter->parent->parent->color = RED_BLACK_TREE_RED;
+        if (iter->parent->parent->left)
+          iter->parent->parent->left->color = RED_BLACK_TREE_BLACK;
+        iter = iter->parent->parent;
+        continue;
+      } // Case 2 or 3:
+      // The current node has a black uncle.
+      if (iter->parent->left == iter) {
+        // Case 2:
+        // The current node has a black uncle and is the left child
+        // of the parent. The parent is the red right child. The parent's
+        // sibling, the current node's uncle, is black.
+        red_black_tree_rotate_right(bt, iter->parent);
+        iter = iter->right;
       }
+      // Case 3:
+      // The current node is a right child. It's parent is a red right child
+      // and has a black sibling.
+      iter->parent->color = RED_BLACK_TREE_BLACK;
+      iter->parent->parent->color = RED_BLACK_TREE_RED;
+      red_black_tree_rotate_left(bt, iter->parent->parent);
     }
   }
   bt->head->color = RED_BLACK_TREE_BLACK;
@@ -416,7 +411,6 @@ done:
   } else {
     red_black_tree_fail("leaf is detached from its parent");
   }
-  return;
 }
 
 void *red_black_tree_delete(RedBlackTree bt, void *key) {
@@ -437,7 +431,8 @@ void *red_black_tree_delete(RedBlackTree bt, void *key) {
     });
     if (compare_result == 0) {
       break;
-    } else if (compare_result < 0) {
+    }
+    if (compare_result < 0) {
       if (node->left != nullptr) {
         node = node->left;
       } else {

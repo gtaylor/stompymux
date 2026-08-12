@@ -114,11 +114,7 @@ auto_create_weapon_node(const AutopilotWeaponRequest *request) {
 /*
  * Destroy weapon node
  */
-static void auto_destroy_weapon_node(AutopilotWeapon *victim) {
-
-  free(victim);
-  return;
-}
+static void auto_destroy_weapon_node(AutopilotWeapon *victim) { free(victim); }
 
 /*
  * Create a target node for the target list
@@ -145,11 +141,7 @@ auto_create_target_node(const AutopilotTargetRequest *request) {
 /*
  * Destroy a target node
  */
-static void auto_destroy_target_node(AutopilotTarget *victim) {
-
-  free(victim);
-  return;
-}
+static void auto_destroy_target_node(AutopilotTarget *victim) { free(victim); }
 
 /*
  * Destroy autopilot's weaplist

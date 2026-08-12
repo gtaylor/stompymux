@@ -19,10 +19,10 @@ typedef struct SiteData SiteData;
 
 void list_siteinfo(EvaluationContext *evaluation,
                    AccessControlStore *access_control, DbRef player);
-int site_data_check(struct sockaddr_storage *address, int address_length,
+int site_data_check(struct sockaddr_storage *saddr, int address_length,
                     SiteData *site_list);
 void make_ulist(GameDatabase *database, DescriptorRegistry *descriptors,
-                DbRef player, char *buffer, char **cursor);
+                DbRef player, char *buffer, char **bufc);
 DbRef find_connected_name(GameDatabase *database,
                           DescriptorRegistry *descriptors, DbRef player,
                           const char *name);

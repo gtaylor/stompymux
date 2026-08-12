@@ -32,8 +32,6 @@
 #include "registry_api.h"
 #include "section_types.h"
 
-void sendchannelstuff(Mech *mech, int freq, char *msg);
-
 void autopilot_radio_clear_commands(Autopilot *autopilot, char *buffer) {
   auto_disengage(autopilot->mynum, autopilot, "");
   auto_delcommand(autopilot->mynum, autopilot, "-1");
@@ -71,8 +69,8 @@ void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech,
 
     (void)snprintf(mesg, LBUF_SIZE, "shooting at whatever I want");
     return;
-
-  } else if (strcmp(autopilot_argument_list_get(args, 1), "off") == 0) {
+  }
+  if (strcmp(autopilot_argument_list_get(args, 1), "off") == 0) {
 
     /* Reset the AI */
     autopilot->target = -2;
@@ -89,8 +87,8 @@ void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech,
 
     (void)snprintf(mesg, LBUF_SIZE, "powering down weapons");
     return;
-
-  } else if (strcmp(autopilot_argument_list_get(args, 1), "threshold") == 0) {
+  }
+  if (strcmp(autopilot_argument_list_get(args, 1), "threshold") == 0) {
 
     /* Ok user specifying a threshold" */
     /* Right now we're only going to allow them to specify a value
@@ -105,15 +103,12 @@ void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech,
 
       (void)snprintf(mesg, LBUF_SIZE, "new threshold set to %d%%", threshold);
       return;
-
-    } else {
-
-      /* Bad value for threshold */
-      (void)snprintf(mesg, LBUF_SIZE,
-                     "!Invalid value used with threshold: "
-                     "Usage autogun threshold [0-100]");
-      return;
     }
+    /* Bad value for threshold */
+    (void)snprintf(mesg, LBUF_SIZE,
+                   "!Invalid value used with threshold: "
+                   "Usage autogun threshold [0-100]");
+    return;
   }
 
   (void)snprintf(mesg, LBUF_SIZE,
@@ -133,8 +128,8 @@ void auto_radio_command_chasetarg(Autopilot *autopilot, Mech *mech,
     auto_set_chasetarget_mode(autopilot, AUTO_CHASETARGET_ON);
     (void)snprintf(mesg, LBUF_SIZE, "Chase Target Mode is Activated");
     return;
-
-  } else if (strcmp(autopilot_argument_list_get(args, 1), "off") == 0) {
+  }
+  if (strcmp(autopilot_argument_list_get(args, 1), "off") == 0) {
 
     auto_set_chasetarget_mode(autopilot, AUTO_CHASETARGET_OFF);
     (void)snprintf(mesg, LBUF_SIZE, "Chase Target Mode is Deactivated");
@@ -238,7 +233,6 @@ void auto_radio_command_embark(Autopilot *autopilot, Mech *mech,
   auto_engage(autopilot->mynum, autopilot, "");
   (void)snprintf(mesg, LBUF_SIZE, "embarking %s",
                  autopilot_argument_list_get(args, 1));
-  return;
 }
 
 /*
@@ -442,24 +436,22 @@ void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech,
     (void)snprintf(mesg, LBUF_SIZE, "jumping on [%s]",
                    autopilot_argument_list_get(args, 1));
     return;
-  } else {
-    if (!parse_int_checked(autopilot_argument_list_get(args, 1), &bear)) {
-      (void)snprintf(mesg, LBUF_SIZE, "!Invalid bearing");
-      return;
-    }
-    if (!parse_int_checked(autopilot_argument_list_get(args, 2), &rng)) {
-      (void)snprintf(mesg, LBUF_SIZE, "!Invalid range");
-      return;
-    }
-    (void)snprintf(buffer, SBUF_SIZE, "%s %s",
-                   autopilot_argument_list_get(args, 1),
-                   autopilot_argument_list_get(args, 2));
-    mech_jump(autopilot->mynum, mech, buffer);
-    (void)snprintf(mesg, LBUF_SIZE, "jump %s degrees %s hexes",
-                   autopilot_argument_list_get(args, 1),
-                   autopilot_argument_list_get(args, 2));
+  }
+  if (!parse_int_checked(autopilot_argument_list_get(args, 1), &bear)) {
+    (void)snprintf(mesg, LBUF_SIZE, "!Invalid bearing");
     return;
   }
+  if (!parse_int_checked(autopilot_argument_list_get(args, 2), &rng)) {
+    (void)snprintf(mesg, LBUF_SIZE, "!Invalid range");
+    return;
+  }
+  (void)snprintf(buffer, SBUF_SIZE, "%s %s",
+                 autopilot_argument_list_get(args, 1),
+                 autopilot_argument_list_get(args, 2));
+  mech_jump(autopilot->mynum, mech, buffer);
+  (void)snprintf(mesg, LBUF_SIZE, "jump %s degrees %s hexes",
+                 autopilot_argument_list_get(args, 1),
+                 autopilot_argument_list_get(args, 2));
 }
 
 /*

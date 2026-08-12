@@ -66,8 +66,8 @@ void log_error(LogEntry entry, const char *format, ...)
 void log_text(const char *text);
 void log_simple(LogEntry entry, const char *message);
 void log_number(int number);
-void log_name(ServerLog *log, DbRef thing);
-void log_name_and_loc(ServerLog *log, DbRef thing);
+void log_name(ServerLog *log, DbRef target);
+void log_name_and_loc(ServerLog *log, DbRef player);
 const char *object_type_name(GameDatabase *database, DbRef thing);
 void log_type_and_name(ServerLog *log, DbRef thing);
 #ifdef ARBITRARY_LOGFILES

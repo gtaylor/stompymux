@@ -431,7 +431,6 @@ static void check_loc_exits(EvaluationContext *evaluation, DbRef loc,
       exit = game_object_next(evaluation->world->database, exit);
     }
   }
-  return;
 }
 
 static void check_exit_chains(EvaluationContext *evaluation, bool full_check) {
@@ -518,7 +517,6 @@ static void check_misplaced_obj(EvaluationContext *evaluation, DbRef *obj,
         "is invalid.  Reset.");
     game_object_set_contents(evaluation->world->database, *obj, loc);
   }
-  return;
 }
 
 static void check_loc_contents(EvaluationContext *evaluation, DbRef loc,
@@ -652,7 +650,6 @@ static void check_loc_contents(EvaluationContext *evaluation, DbRef loc,
       obj = game_object_next(evaluation->world->database, obj);
     }
   }
-  return;
 }
 
 static void check_contents_chains(EvaluationContext *evaluation,

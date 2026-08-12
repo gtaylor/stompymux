@@ -3,11 +3,11 @@
 #include "mux/server/platform.h"
 #include "special_object.h"
 
-void turret_addtic(DbRef player, void *data, char *buffer);
-void turret_deltic(DbRef player, void *data, char *buffer);
-void turret_listtic(DbRef player, void *data, char *buffer);
-void turret_cleartic(DbRef player, void *data, char *buffer);
-void turret_firetic(DbRef player, void *data, char *buffer);
+void turret_addtic(DbRef player, void *data, const char *buffer);
+void turret_deltic(DbRef player, void *data, const char *buffer);
+void turret_listtic(DbRef player, void *data, const char *buffer);
+void turret_cleartic(DbRef player, void *data, const char *buffer);
+void turret_firetic(DbRef player, void *data, const char *buffer);
 void turret_bearing(DbRef player, void *data, char *buffer);
 void turret_eta(DbRef player, void *data, char *buffer);
 void turret_findcenter(DbRef player, void *data, char *buffer);
@@ -25,6 +25,6 @@ void turret_scan(DbRef player, void *data, char *buffer);
 void turret_status(DbRef player, void *data, char *buffer);
 void turret_weaponspecs(DbRef player, void *data, char *buffer);
 void turret_lifecycle_update(DbRef key, void **data,
-                             BtechSpecialLifecycleOperation operation);
+                             BtechSpecialLifecycleOperation selector);
 void turret_initialize(DbRef player, void *data, char *buffer);
 void turret_deinitialize(DbRef player, void *data, char *buffer);

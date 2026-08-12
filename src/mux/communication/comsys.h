@@ -87,8 +87,8 @@ struct Comuser *select_user(struct Channel *ch, DbRef player);
 struct Comuser *channel_user_at(const struct Channel *channel, size_t index);
 struct Comuser **channel_user_slot(struct Channel *channel, size_t index);
 void do_addcom(CommandInvocation *invocation);
-void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *alias,
-                      char *channel);
+void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
+                      char *arg2);
 void do_delcom(CommandInvocation *invocation);
 void do_chan(CommandInvocation *invocation);
 void do_createchannel(CommandInvocation *invocation);

@@ -53,7 +53,7 @@ typedef struct FlowStartRequest {
 int descriptor_flow_start(const FlowStartRequest *request);
 void descriptor_flow_cancel(Descriptor *descriptor);
 void descriptor_flow_destroy(Descriptor *descriptor);
-void descriptor_flow_handle(Descriptor *descriptor, char *input);
+void descriptor_flow_handle(Descriptor *descriptor, const char *input);
 
 typedef struct FlowMenuItem {
   const char *key;

@@ -191,7 +191,7 @@ void descriptor_retain(Descriptor *descriptor);
 /* Release a retained descriptor and destroy it when no references remain. */
 void descriptor_release(Descriptor *descriptor);
 /* Find an authenticated descriptor by its socket descriptor. */
-Descriptor *descriptor_find_by_fd(DescriptorRegistry *registry, int descriptor);
+Descriptor *descriptor_find_by_fd(DescriptorRegistry *registry, int fd);
 /* Mark descriptor disconnected and perform its shutdown lifecycle. */
 void descriptor_shutdown(Descriptor *descriptor,
                          DescriptorShutdownReason reason);

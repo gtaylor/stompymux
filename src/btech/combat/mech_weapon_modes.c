@@ -219,7 +219,8 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
         mech_notify(mech, MECHALL, tprintf(toggle->on_message, INDEX));
       }
       return 0;
-    } else if ((toggle->special == INARC) && !toggle->mode) {
+    }
+    if ((toggle->special == INARC) && !toggle->mode) {
       if (!(mech_critical_ammo_mode(mech, section, critical) & INARC_MODES)) {
         mech_notify(mech, MECHALL, tprintf(toggle->off_message, INDEX));
       } else {
@@ -227,42 +228,38 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
         mech_notify(mech, MECHALL, tprintf(toggle->on_message, INDEX));
       }
       return 0;
-    } else {
-
-      if (toggle->fire_mode) {
-        if (mech_critical_fire_mode(mech, section, critical) & toggle->mode) {
-          if (toggle->special != RAC) { /* Fitz - Keep RAC type weapons on new
-                                      setting if already there */
-            mech_critical_fire_mode_clear(mech, section, critical,
-                                          toggle->mode);
-          }
-          mech_notify(mech, MECHALL, tprintf(toggle->off_message, INDEX));
-          return 0;
-        }
-      } else {
-        if (mech_critical_ammo_mode(mech, section, critical) & toggle->mode) {
-          if (toggle->special != INARC) { /* Fitz - Keep INARC type weapons on
-                                        new setting if already there */
-            mech_critical_ammo_mode_clear(mech, section, critical,
-                                          toggle->mode);
-          }
-          mech_notify(mech, MECHALL, tprintf(toggle->off_message, INDEX));
-          return 0;
-        }
-      }
-
-      if (toggle->fire_mode) {
-        mech_critical_fire_mode_clear(mech, section, critical, FIRE_MODES);
-        mech_critical_fire_mode_add(mech, section, critical, toggle->mode);
-      } else {
-        mech_critical_ammo_mode_clear(mech, section, critical, AMMO_MODES);
-        mech_critical_ammo_mode_add(mech, section, critical, toggle->mode);
-      }
-
-      mech_notify(mech, MECHALL, tprintf(toggle->on_message, INDEX));
-
-      return 0;
     }
+    if (toggle->fire_mode) {
+      if (mech_critical_fire_mode(mech, section, critical) & toggle->mode) {
+        if (toggle->special != RAC) { /* Fitz - Keep RAC type weapons on new
+                                    setting if already there */
+          mech_critical_fire_mode_clear(mech, section, critical, toggle->mode);
+        }
+        mech_notify(mech, MECHALL, tprintf(toggle->off_message, INDEX));
+        return 0;
+      }
+    } else {
+      if (mech_critical_ammo_mode(mech, section, critical) & toggle->mode) {
+        if (toggle->special != INARC) { /* Fitz - Keep INARC type weapons on
+                                      new setting if already there */
+          mech_critical_ammo_mode_clear(mech, section, critical, toggle->mode);
+        }
+        mech_notify(mech, MECHALL, tprintf(toggle->off_message, INDEX));
+        return 0;
+      }
+    }
+
+    if (toggle->fire_mode) {
+      mech_critical_fire_mode_clear(mech, section, critical, FIRE_MODES);
+      mech_critical_fire_mode_add(mech, section, critical, toggle->mode);
+    } else {
+      mech_critical_ammo_mode_clear(mech, section, critical, AMMO_MODES);
+      mech_critical_ammo_mode_add(mech, section, critical, toggle->mode);
+    }
+
+    mech_notify(mech, MECHALL, tprintf(toggle->on_message, INDEX));
+
+    return 0;
   }
   if (toggle->special != RAC) /* Keep RAC type weapons on this setting */
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,

@@ -27,7 +27,7 @@
 #include "mux/world/player_cache.h"
 
 extern void pool_reset(void);
-extern unsigned int alarm(unsigned int seconds);
+
 static void timer_callback(MuxTimer *timer, void *arg);
 
 struct ServerTimer {

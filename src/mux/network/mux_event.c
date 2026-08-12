@@ -91,7 +91,7 @@ void mux_event_scheduler_destroy(MuxEventScheduler *scheduler) {
 #define LAST_MUXEVENT_TYPE (scheduler->last_type)
 /* The main add-to-lists event handling function */
 
-static void mux_event_delete(MuxEvent *);
+static void mux_event_delete(MuxEvent * /*e*/);
 
 static MuxEvent **mux_event_type_slot(MuxEventScheduler *scheduler, int type) {
   if (type < 0 || type > scheduler->last_type)
@@ -242,9 +242,9 @@ static void mux_event_delete(MuxEvent *e) {
   e->timer = nullptr;
 
   if (e->flags & FLAG_FREE_DATA)
-    free((void *)e->data);
+    free(e->data);
   if (e->flags & FLAG_FREE_DATA2)
-    free((void *)e->data2);
+    free(e->data2);
 
   mux_event_main_list_remove(e);
   mux_event_type_list_remove(e);

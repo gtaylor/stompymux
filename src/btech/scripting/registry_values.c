@@ -504,7 +504,7 @@ void set_xcodestuff(DbRef player, void *data, char *buffer) {
   free_text_items(args, 2);
 }
 
-void list_xcodestuff(DbRef player, void *data, char *buffer) {
+void list_xcodestuff(DbRef player, void *data, const char *buffer) {
   BtechContext *context = ((BtechSpecialObject *)data)->context;
   int t, flag = CM_TWO, se_len = 37;
   CoolMenu *c = NULL;

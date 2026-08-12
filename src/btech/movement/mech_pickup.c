@@ -191,48 +191,47 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
   if (mech_class(target) == CLASS_MW) {
     pickup_mw(mech, target);
     return;
-  } else {
-    if (mech_class(mech) == CLASS_MECH) {
-      if (mech_movement_type(mech) == MOVE_QUAD) {
-        mech_notify(mech, MECHALL, "You've got four left feet, you can't tow!");
-        return;
-      }
-      if (mech_section_is_destroyed(mech, LARM)) {
-        mech_notify(mech, MECHALL,
-                    "Your left arm is destroyed, you can't pick up anything.");
-        return;
-      }
-      if (mech_section_is_destroyed(mech, RARM)) {
-        mech_notify(mech, MECHALL,
-                    "Your right arm is destroyed, you can't pick up anything.");
-        return;
-      }
-      if (!(mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                .mech = mech,
-                .slot = {.section = RARM, .critical = 3},
-                .special = HAND_OR_FOOT_ACTUATOR}) &&
-            mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                .mech = mech,
-                .slot = {.section = RARM, .critical = 0},
-                .special = SHOULDER_OR_HIP})) &&
-          !(mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                .mech = mech,
-                .slot = {.section = LARM, .critical = 3},
-                .special = HAND_OR_FOOT_ACTUATOR}) &&
-            mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                .mech = mech,
-                .slot = {.section = LARM, .critical = 0},
-                .special = SHOULDER_OR_HIP}))) {
-        mech_notify(mech, MECHALL,
-                    "You need functioning arm to pick things up!");
-        return;
-      }
-    } else if (!(mech_technology_flags(mech) & SALVAGE_TECH)) {
-      mecha_notify(btech_context_evaluation(context), player,
-                   "You can't pick that up in this MECH/VEHICLE");
+  }
+  if (mech_class(mech) == CLASS_MECH) {
+    if (mech_movement_type(mech) == MOVE_QUAD) {
+      mech_notify(mech, MECHALL, "You've got four left feet, you can't tow!");
       return;
     }
+    if (mech_section_is_destroyed(mech, LARM)) {
+      mech_notify(mech, MECHALL,
+                  "Your left arm is destroyed, you can't pick up anything.");
+      return;
+    }
+    if (mech_section_is_destroyed(mech, RARM)) {
+      mech_notify(mech, MECHALL,
+                  "Your right arm is destroyed, you can't pick up anything.");
+      return;
+    }
+    if (!(mech_critical_is_operational_special(
+              &(CriticalSpecialCheck){.mech = mech,
+                                      .slot = {.section = RARM, .critical = 3},
+                                      .special = HAND_OR_FOOT_ACTUATOR}) &&
+          mech_critical_is_operational_special(
+              &(CriticalSpecialCheck){.mech = mech,
+                                      .slot = {.section = RARM, .critical = 0},
+                                      .special = SHOULDER_OR_HIP})) &&
+        !(mech_critical_is_operational_special(
+              &(CriticalSpecialCheck){.mech = mech,
+                                      .slot = {.section = LARM, .critical = 3},
+                                      .special = HAND_OR_FOOT_ACTUATOR}) &&
+          mech_critical_is_operational_special(
+              &(CriticalSpecialCheck){.mech = mech,
+                                      .slot = {.section = LARM, .critical = 0},
+                                      .special = SHOULDER_OR_HIP}))) {
+      mech_notify(mech, MECHALL, "You need functioning arm to pick things up!");
+      return;
+    }
+  } else if (!(mech_technology_flags(mech) & SALVAGE_TECH)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "You can't pick that up in this MECH/VEHICLE");
+    return;
   }
+
   if (mech_carried_dbref(mech) > 0) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You are already carrying a Mech");

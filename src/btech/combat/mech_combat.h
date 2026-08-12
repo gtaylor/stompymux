@@ -5,5 +5,4 @@
 
 #include "mech_api_types.h"
 
-void mech_c3_track_emit(Mech *mech, DbRef network_reference,
-                        Mech *network_mech);
+void mech_c3_track_emit(Mech *mech, DbRef network_reference, Mech *c3_mech);

@@ -212,8 +212,7 @@ struct Comuser *select_user(struct Channel *ch, DbRef player) {
 
   if (!dir)
     return channel_user_at(ch, (size_t)current);
-  else
-    return nullptr;
+  return nullptr;
 }
 
 void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,

@@ -196,7 +196,7 @@ static int connect_flow_count_connected(DescriptorRegistry *registry) {
 }
 
 static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
-                                                char *password) {
+                                                const char *password) {
   CommandRuntime *runtime = descriptor_runtime(d);
   ServerConfiguration *configuration = runtime->world->configuration;
   int nplayers;
@@ -294,7 +294,7 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
 }
 
 static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
-                                                 char *password) {
+                                                 const char *password) {
   CommandRuntime *runtime = descriptor_runtime(d);
   ServerConfiguration *configuration = runtime->world->configuration;
   int nplayers;

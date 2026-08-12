@@ -22,34 +22,40 @@ typedef struct ServerConfiguration ServerConfiguration;
  *	thing = match_result()
  */
 
-extern void init_match(MatchContext *, DbRef, char *, int);
-extern void init_match_check_keys(MatchContext *, DbRef, char *, int);
-extern void match_player(MatchContext *);
-extern void match_absolute(MatchContext *);
-extern void match_numeric(MatchContext *);
-extern void match_me(MatchContext *);
-extern void match_here(MatchContext *);
-extern void match_home(MatchContext *);
-extern void match_possession(MatchContext *);
-extern void match_neighbor(MatchContext *);
+extern void init_match(MatchContext * /*match_context*/, DbRef /*player*/,
+                       char * /*name*/, int /*type*/);
+extern void init_match_check_keys(MatchContext * /*match_context*/,
+                                  DbRef /*player*/, char * /*name*/,
+                                  int /*type*/);
+extern void match_player(MatchContext * /*match_context*/);
+extern void match_absolute(MatchContext * /*match_context*/);
+extern void match_numeric(MatchContext * /*match_context*/);
+extern void match_me(MatchContext * /*match_context*/);
+extern void match_here(MatchContext * /*match_context*/);
+extern void match_home(MatchContext * /*match_context*/);
+extern void match_possession(MatchContext * /*match_context*/);
+extern void match_neighbor(MatchContext * /*match_context*/);
 bool matches_exit_from_list(const char *string, const char *pattern);
-extern void match_exit(MatchContext *);
-extern void match_carried_exit(MatchContext *);
-extern void match_everything(MatchContext *, int);
-extern DbRef match_result(MatchContext *);
-extern DbRef last_match_result(MatchContext *);
-extern DbRef match_status(EvaluationContext *, DbRef, DbRef);
-extern DbRef noisy_match_result(MatchContext *);
-extern void save_match_state(MatchContext *, MSTATE *);
-extern void restore_match_state(MatchContext *, MSTATE *);
-extern void match_zone_exit(MatchContext *);
-extern DbRef match_possessed(MatchContext *, DbRef player, DbRef thing,
-                             char *target, DbRef default_match);
+extern void match_exit(MatchContext * /*match_context*/);
+extern void match_carried_exit(MatchContext * /*match_context*/);
+extern void match_everything(MatchContext * /*match_context*/, int /*key*/);
+extern DbRef match_result(MatchContext * /*match_context*/);
+extern DbRef last_match_result(MatchContext * /*match_context*/);
+extern DbRef match_status(EvaluationContext * /*evaluation*/, DbRef /*player*/,
+                          DbRef /*match*/);
+extern DbRef noisy_match_result(MatchContext * /*match_context*/);
+extern void save_match_state(MatchContext * /*match_context*/,
+                             MSTATE * /*mstate*/);
+extern void restore_match_state(MatchContext * /*match_context*/,
+                                MSTATE * /*mstate*/);
+extern void match_zone_exit(MatchContext * /*match_context*/);
+extern DbRef match_possessed(MatchContext * /*match_context*/, DbRef player,
+                             DbRef thing, char *target, DbRef dflt);
 extern void parse_range(GameDatabase *database,
                         const ServerConfiguration *configuration, char **name,
                         DbRef *low_bound, DbRef *high_bound);
-extern int parse_thing_slash(MatchContext *, DbRef player, char *thing,
-                             char **after, DbRef *object);
+extern int parse_thing_slash(MatchContext * /*match_context*/, DbRef player,
+                             char *thing, char **after, DbRef *it);
 
 #define NOMATCH_MESSAGE "I don't see that here."
 #define AMBIGUOUS_MESSAGE "I don't know which one you mean!"

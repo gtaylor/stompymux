@@ -29,7 +29,7 @@ void map_clearmechs(DbRef player, void *data, const char *buffer);
 void map_update(DbRef obj, void *data);
 void initialize_map_empty(BattleMap *new, DbRef key);
 void newfreemap(DbRef key, void **data,
-                BtechSpecialLifecycleOperation operation);
+                BtechSpecialLifecycleOperation selector);
 int map_sizefun(void *data, int flag);
 void map_listmechs(DbRef player, void *data, char *buffer);
 void clear_hex(const TerrainHexEffectRequest *request);

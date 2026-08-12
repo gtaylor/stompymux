@@ -65,7 +65,7 @@ typedef struct WeaponDestructionRequest {
 } WeaponDestructionRequest;
 
 void mech_weapon_destroy(const WeaponDestructionRequest *request);
-int mech_weapon_count_in_section(Mech *mech, int section);
+int mech_weapon_count_in_section(Mech *mech, int loc);
 typedef struct WeaponSectionLookup {
   Mech *mech;
   int section;
@@ -73,8 +73,8 @@ typedef struct WeaponSectionLookup {
 } WeaponSectionLookup;
 
 int mech_weapon_index_in_section(const WeaponSectionLookup *lookup);
-void mech_weapon_destroy_random(Mech *mech, int section);
-void mech_heat_sink_destroy(Mech *mech, int section);
+void mech_weapon_destroy_random(Mech *mech, int hitloc);
+void mech_heat_sink_destroy(Mech *mech, int hitloc);
 typedef struct SectionDestructionRequest {
   Mech *wounded;
   Mech *attacker;

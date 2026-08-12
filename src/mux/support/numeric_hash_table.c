@@ -65,7 +65,6 @@ int numeric_hash_table_add(long val, void *hashdata, HashTable *htab) {
 
 void numeric_hash_table_delete(long val, HashTable *htab) {
   red_black_tree_delete(htab->tree, (void *)val);
-  return;
 }
 
 /*

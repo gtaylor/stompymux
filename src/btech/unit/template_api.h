@@ -94,8 +94,8 @@ long build_bit_vector_with_delim(const char *const list[], size_t count,
                                  char *line);
 long build_bit_vector_no_err(const char *const list[], size_t count,
                              char *line);
-int check_specials_list(const char *const specials[], size_t count,
-                        const char *const specials2[], size_t count2,
+int check_specials_list(const char *const special_list[], size_t count,
+                        const char *const special_list2[], size_t count2,
                         char *line);
 int weapon_i_from_string(char *data);
 int ammo_i_from_string(char *data);

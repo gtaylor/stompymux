@@ -48,7 +48,8 @@ void mech_critical_handle(const CriticalHitDispatch *dispatch) {
                                       .section = HITLOC});
 
       return;
-    } else if (!btech_context_uses_fasa_criticals(context)) {
+    }
+    if (!btech_context_uses_fasa_criticals(context)) {
       for (i = 0; i < num; i++)
         mech_vehicle_critical_handle(
             &(VehicleCriticalRequest){.wounded = wounded,
@@ -56,7 +57,8 @@ void mech_critical_handle(const CriticalHitDispatch *dispatch) {
                                       .line_of_sight = LOS,
                                       .section = HITLOC});
       return;
-    } else if (btech_context_uses_fasa_criticals(context)) {
+    }
+    if (btech_context_uses_fasa_criticals(context)) {
       for (i = 0; i < num; i++)
         mech_fasa_vehicle_critical_handle(
             &(VehicleCriticalRequest){.wounded = wounded,
@@ -78,16 +80,14 @@ void mech_critical_handle(const CriticalHitDispatch *dispatch) {
                                       .section = HITLOC});
 
       return;
-    } else {
-      for (i = 0; i < num; i++)
-        mech_vtol_critical_handle(
-            &(VehicleCriticalRequest){.wounded = wounded,
-                                      .attacker = attacker,
-                                      .line_of_sight = LOS,
-                                      .section = HITLOC});
-
-      return;
     }
+    for (i = 0; i < num; i++)
+      mech_vtol_critical_handle(&(VehicleCriticalRequest){.wounded = wounded,
+                                                          .attacker = attacker,
+                                                          .line_of_sight = LOS,
+                                                          .section = HITLOC});
+
+    return;
   }
   while (num > 0) {
     count = 0;

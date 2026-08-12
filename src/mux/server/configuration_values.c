@@ -131,9 +131,8 @@ NameTable bool_names[] = {
 
 int cf_bool(const ConfigurationCall *call) {
   int *vp = call->value;
-  *vp = (int)name_table_search(call->context->database,
-                               call->context->configuration, GOD, bool_names,
-                               call->text);
+  *vp = name_table_search(call->context->database, call->context->configuration,
+                          GOD, bool_names, call->text);
   if (*vp < 0)
     *vp = (long)0;
   return 0;
@@ -149,9 +148,9 @@ int cf_bool_bit(const ConfigurationCall *call) {
   int *vp = call->value;
   int value;
 
-  value = (int)name_table_search(call->context->database,
-                                 call->context->configuration, GOD, bool_names,
-                                 call->text);
+  value =
+      name_table_search(call->context->database, call->context->configuration,
+                        GOD, bool_names, call->text);
   if (value > 0)
     *vp |= (int)call->extra;
   else

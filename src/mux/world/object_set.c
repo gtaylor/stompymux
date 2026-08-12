@@ -39,9 +39,8 @@ DbRef match_controlled(MatchContext *match, DbRef player, char *name) {
     notify_checked(match->evaluation, player, player, "Permission denied.",
                    MSG_ME);
     return NOTHING;
-  } else {
-    return (mat);
   }
+  return (mat);
 }
 
 DbRef match_controlled_quiet(MatchContext *match, DbRef player, char *name) {
@@ -53,9 +52,8 @@ DbRef match_controlled_quiet(MatchContext *match, DbRef player, char *name) {
   if (is_good_obj(match->evaluation->world->database, mat) &&
       !is_controls(match->evaluation->world->database, player, mat)) {
     return NOTHING;
-  } else {
-    return (mat);
   }
+  return (mat);
 }
 
 /*
@@ -325,10 +323,9 @@ bool object_attribute_set(EvaluationContext *evaluation, DbRef player,
                     attr->name, strlen(attrtext) ? "Set." : "Cleared.");
     free_lbuf(compiled);
     return true;
-  } else {
-    notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
-    return false;
   }
+  notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
+  return false;
 }
 
 void do_power(CommandInvocation *invocation) {

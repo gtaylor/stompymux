@@ -78,8 +78,7 @@ static char *dbrefs_to_names(const PageNameListRequest *request) {
 
   string_copy(oldlist, list);
   bp = namelist;
-  for (p = (char *)strtok(oldlist, " "); p != nullptr;
-       p = (char *)strtok(nullptr, " ")) {
+  for (p = strtok(oldlist, " "); p != nullptr; p = strtok(nullptr, " ")) {
     if (ismessage) {
       DbRef target;
       if (parse_long_checked(p, &target))
@@ -155,8 +154,8 @@ void do_page(CommandInvocation *invocation) {
         notify_checked(evaluation, PLAYER, PLAYER, "You have not paged anyone.",
                        MSG_ME_ALL | MSG_F_DOWN);
       else
-        for (p = (char *)strtok(targetname, " "); p != nullptr;
-             p = (char *)strtok(nullptr, " ")) {
+        for (p = strtok(targetname, " "); p != nullptr;
+             p = strtok(nullptr, " ")) {
           if (parse_long_checked(p, &target))
             notify_printf(
                 evaluation, PLAYER, "You last paged %s.",
@@ -192,7 +191,7 @@ void do_page(CommandInvocation *invocation) {
   /*
    * Count the words
    */
-  for (n = 0, str = tname; str; str = (char *)next_token(str, ' '), n++)
+  for (n = 0, str = tname; str; str = next_token(str, ' '), n++)
     ;
 
   target = lookup_player(evaluation->world, PLAYER, tname, 1);
@@ -202,8 +201,7 @@ void do_page(CommandInvocation *invocation) {
                                                 .list = tname,
                                                 .names = buf1,
                                                 .dbrefs = ismessage});
-    for (p = (char *)strtok(tname, " "); p != nullptr;
-         p = (char *)strtok(nullptr, " ")) {
+    for (p = strtok(tname, " "); p != nullptr; p = strtok(nullptr, " ")) {
 
       /*
        * If it's a memory page, grab the number from the *

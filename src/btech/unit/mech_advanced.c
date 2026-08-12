@@ -135,8 +135,8 @@ int find_main_weapon(Mech *mech, int (*callback)(Mech *, int, int, int, int)) {
         *(const unsigned char *)checked_storage_at_const(
             weaparray, MAX_WEAPS_SECTION, sizeof(*weaparray), (size_t)maxcount);
     return callback(mech, maxloc, WEAPON, maxcount, maxcrit);
-  } else
-    return 0;
+  }
+  return 0;
 }
 
 void mech_auto_turret(DbRef player, Mech *mech, char *buffer) {
@@ -277,7 +277,6 @@ void mech_safety(DbRef player, void *data, char *buffer) {
   mech_printf(mech, MECHPILOT, "Weapon safeties are [bold]%s[reset]",
               mech_condition_summary(mech).player_killer ? "[fg=red]OFF"
                                                          : "[fg=green]ON");
-  return;
 }
 
 #define MECHPREF_FLAG_INVERTED 0x01

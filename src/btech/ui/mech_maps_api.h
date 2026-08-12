@@ -25,7 +25,7 @@ void mech_findcenter(DbRef player, void *data, char *buffer);
 const char *get_terrain_name_base(int t);
 const char *get_terrain_name(BattleMap *map, int x, int y);
 void mech_navigate(DbRef player, void *data, char *buffer);
-char get_lrs_mech_char(Mech *mech, Mech *temp_mech);
+char get_lrs_mech_char(Mech *mech, Mech *other);
 void mech_lrsmap(DbRef player, void *data, char *buffer);
 char *terrain_color(char terrain, int elev);
 void tac_map_terr(BattleMap *mech_map, int x, int y, char *terr, char *elev,

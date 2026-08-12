@@ -19,7 +19,6 @@ bool object_attribute_is_administrable(int attribute_number);
 Attribute *object_attribute_administrable_by_name(GameDatabase *database,
                                                   const char *name);
 bool object_attribute_set(EvaluationContext *evaluation, DbRef player,
-                          DbRef thing, int attribute_number,
-                          char *attribute_text, int key);
+                          DbRef thing, int attrnum, char *attrtext, int key);
 void edit_string(char *source, char **destination, const char *from,
                  const char *to);

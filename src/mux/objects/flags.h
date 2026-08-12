@@ -101,24 +101,28 @@ typedef struct WorldIndexes WorldIndexes;
 typedef struct WorldContext WorldContext;
 
 void init_flagtab(WorldIndexes *indexes);
-void display_flagtab(EvaluationContext *, DbRef);
-void flag_set(EvaluationContext *, WorldIndexes *indexes, DbRef, DbRef, char *,
-              int);
-char *flag_description(GameDatabase *, DbRef target);
-char *flags_description(GameDatabase *, DbRef target);
-FlagEntry *find_flag(WorldIndexes *, DbRef, char *);
+void display_flagtab(EvaluationContext * /*evaluation*/, DbRef /*player*/);
+void flag_set(EvaluationContext * /*evaluation*/, WorldIndexes *indexes,
+              DbRef /*target*/, DbRef /*player*/, char * /*name*/, int /*key*/);
+char *flag_description(GameDatabase * /*database*/, DbRef target);
+char *flags_description(GameDatabase * /*database*/, DbRef target);
+FlagEntry *find_flag(WorldIndexes * /*indexes*/, DbRef /*thing*/,
+                     char * /*flagname*/);
 char *decode_flags(const DecodeFlagsRequest *request);
 char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
                      DbRef player, DbRef target);
-char *unparse_object_numonly(GameDatabase *database, DbRef object);
-bool convert_flags(EvaluationContext *, DbRef, char *, ObjectFlagSet *, long *);
+char *unparse_object_numonly(GameDatabase *database, DbRef target);
+bool convert_flags(EvaluationContext * /*evaluation*/, DbRef /*player*/,
+                   char * /*list*/, ObjectFlagSet * /*flags*/, long * /*type*/);
 
 bool game_object_has_flag(const ObjectFlagRequest *request);
 void game_object_set_flag(const ObjectFlagChangeRequest *request);
-void game_object_clear_flags(GameDatabase *, DbRef);
-void game_object_flags_copy(GameDatabase *, DbRef, ObjectFlagSet *);
-bool object_flag_set_has(const ObjectFlagSet *, ObjectFlag);
-void object_flag_set_set(ObjectFlagSet *, ObjectFlag, bool);
+void game_object_clear_flags(GameDatabase * /*database*/, DbRef /*object*/);
+void game_object_flags_copy(GameDatabase * /*database*/, DbRef /*object*/,
+                            ObjectFlagSet * /*flags*/);
+bool object_flag_set_has(const ObjectFlagSet * /*flags*/, ObjectFlag /*flag*/);
+void object_flag_set_set(ObjectFlagSet * /*flags*/, ObjectFlag /*flag*/,
+                         bool /*value*/);
 
 constexpr DbRef GOD = 1;
 
@@ -232,7 +236,7 @@ static inline bool is_dark(GameDatabase *database, DbRef x) {
          (is_wizard(database, x) || !is_alive(database, x));
 }
 
-bool is_safe(GameDatabase *, DbRef object);
+bool is_safe(GameDatabase * /*database*/, DbRef object);
 static inline bool is_examinable(GameDatabase *database, DbRef player,
                                  DbRef target) {
   return target >= 0 && target < database->top &&
@@ -252,12 +256,14 @@ static inline bool is_controls(GameDatabase *database, DbRef player,
          !is_god(database, target);
 }
 
-void mark(GameDatabase *, DbRef);
-void unmark(GameDatabase *, DbRef);
-bool is_marked(GameDatabase *, DbRef);
-void unmark_all(GameDatabase *);
-bool can_link_exit(GameDatabase *, DbRef, DbRef);
-bool is_linkable(GameDatabase *, DbRef, DbRef);
+void mark(GameDatabase * /*database*/, DbRef /*x*/);
+void unmark(GameDatabase * /*database*/, DbRef /*x*/);
+bool is_marked(GameDatabase * /*database*/, DbRef /*x*/);
+void unmark_all(GameDatabase * /*database*/);
+bool can_link_exit(GameDatabase * /*database*/, DbRef /*player*/,
+                   DbRef /*target*/);
+bool is_linkable(GameDatabase * /*database*/, DbRef /*player*/,
+                 DbRef /*target*/);
 
 static inline void object_flag_enable(DbRef object, GameDatabase *database,
                                       ObjectFlag flag) {

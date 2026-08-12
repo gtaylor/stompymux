@@ -217,11 +217,13 @@ static void process_cmdent(const CommandEntryDispatch *dispatch) {
                       "Unrecognized switch '%s' for command '%s'.", switchp,
                       cmdp->cmdname);
         return;
-      } else if (xkey == -2) {
+      }
+      if (xkey == -2) {
         notify_checked(&context->evaluation, player, player,
                        "Permission denied.", MSG_ME_ALL | MSG_F_DOWN);
         return;
-      } else if (!(xkey & SW_MULTIPLE)) {
+      }
+      if (!(xkey & SW_MULTIPLE)) {
         if (i == 1) {
           notify_checked(&context->evaluation, player, player,
                          "Illegal combination of switches.",
@@ -364,7 +366,6 @@ static void process_cmdent(const CommandEntryDispatch *dispatch) {
   default:
     break;
   }
-  return;
 }
 
 /*
@@ -372,8 +373,8 @@ static void process_cmdent(const CommandEntryDispatch *dispatch) {
  * * process_command: Execute a command.
  */
 
-void process_command(CommandContext *context, char *command, char *args[],
-                     int nargs) {
+void process_command(CommandContext *context, char *command, char *arguments[],
+                     int argument_count) {
   CommandRuntime *runtime = context->runtime;
   ServerConfiguration *configuration = runtime->world->configuration;
   CommandRegistry *registry = runtime->command_registry;

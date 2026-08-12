@@ -361,7 +361,7 @@ int mech_domino_resolve(Mech *mech, MechDominoMode mode) {
                              .relationship = TEAM_RELATIONSHIP_FRIENDLY,
                              .mode = mode,
                              .candidate_count = fcnt});
-  else if (cnt > 6)
+  if (cnt > 6)
     return mech_domino_resolve_in_hex(
         &(MechDominoRequest){.map = map,
                              .moving_mech = mech,

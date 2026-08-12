@@ -41,8 +41,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-void sendchannelstuff(Mech *mech, int freq, char *msg);
-
 static void append_lbuf(char *buffer, size_t size, const char *fmt, ...)
     __attribute__((format(printf, 3, 4)));
 
@@ -322,7 +320,8 @@ static void nonrecursive_commlink(CommRelayContext *relay, int i) {
                 relay_index_get(relay->path, k);
           j = relay->node_count;
           break;
-        } else if ((dep + 1) < relay->best_depth) {
+        }
+        if ((dep + 1) < relay->best_depth) {
           relay_visited_set(relay, j, true);
           *relay_index_slot(comm_loop.items, dep++) = j + 1;
           *relay_index_slot(comm_loop.items, dep) = 1;
@@ -625,7 +624,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
         if (temp_mech != mech) {
           if (mech_is_any_ecm_disturbed(mech))
             continue;
-          else if (mech_is_any_ecm_disturbed(temp_mech))
+          if (mech_is_any_ecm_disturbed(temp_mech))
             continue;
         }
 

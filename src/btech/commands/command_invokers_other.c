@@ -5,7 +5,7 @@
 #include "mux/server/platform.h"
 
 #define DEFINE_BTECH_COMMAND_INVOKER(handler)                                  \
-  void handler(DbRef actor, void *object, char *arguments);                    \
+  void handler(DbRef player, void *data, char *buffer);                        \
   void btech_command_invoke_##handler(                                         \
       const BtechCommandInvocation *invocation) {                              \
     handler(invocation->actor, invocation->object, invocation->arguments);     \

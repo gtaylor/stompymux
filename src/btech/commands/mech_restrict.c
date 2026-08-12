@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "autopilot.h"
+#include "autopilot_resume_api.h"
 #include "autopilot_weapon_profile_api.h"
 #include "btech/context.h"
 #include "btech_event.h"

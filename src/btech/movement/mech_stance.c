@@ -202,7 +202,6 @@ void mech_sprint(DbRef player, void *data, char *buffer) {
     mech_event_schedule(mech, EVENT_MOVEMODE, mech_movemode_event,
                         mech_movement_mode_delay(mech), d);
   }
-  return;
 }
 
 void mech_evade(DbRef player, void *data, char *buffer) {
@@ -321,7 +320,6 @@ void mech_evade(DbRef player, void *data, char *buffer) {
     mech_event_schedule(mech, EVENT_MOVEMODE, mech_movemode_event,
                         mech_movement_mode_delay(mech), d);
   }
-  return;
 }
 
 void mech_dodge(DbRef player, void *data, char *buffer) {
@@ -412,7 +410,6 @@ void mech_dodge(DbRef player, void *data, char *buffer) {
     mech_notify(mech, MECHALL, "You begin the process of ceasing to dodge.");
     mech_event_schedule(mech, EVENT_MOVEMODE, mech_movemode_event, TURN, d);
   }
-  return;
 }
 #endif
 

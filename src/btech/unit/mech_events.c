@@ -71,53 +71,50 @@ void mech_staggercheck_heartbeat(Mech *mech) {
     prev_stagger_damage = mech_stagger_damage_current_counted(mech, now);
     if (cur_stagger_damage < 20)
       return;
+    stagger_level = cur_stagger_damage / 20;
+
+    // Dont need to remove stagger anymore, it clears on fall,
+    // unless we're using
+    // Stagger mode 2 removes damage after it is checked.
+    if (btech_context_stagger_mode(mech_context(mech)) == 2)
+      mech_stagger_damage_remove(mech, stagger_level);
     else {
-      stagger_level = cur_stagger_damage / 20;
+      mech_stagger_damage_mark(mech, stagger_level);
+      stagger_level = (cur_stagger_damage + prev_stagger_damage) / 20;
+    }
+    switch (stagger_level) {
+    case 1:
+      mech_notify(mech, MECHALL,
+                  "[fg=yellow bold]The damage causes you to stagger a "
+                  "little.[reset]");
+      mech_los_broadcast(mech, "stumbles slightly!");
+      break;
 
-      // Dont need to remove stagger anymore, it clears on fall,
-      // unless we're using
-      // Stagger mode 2 removes damage after it is checked.
-      if (btech_context_stagger_mode(mech_context(mech)) == 2)
-        mech_stagger_damage_remove(mech, stagger_level);
-      else {
-        mech_stagger_damage_mark(mech, stagger_level);
-        stagger_level = (cur_stagger_damage + prev_stagger_damage) / 20;
-      }
-      switch (stagger_level) {
-      case 1:
-        mech_notify(mech, MECHALL,
-                    "[fg=yellow bold]The damage causes you to stagger a "
-                    "little.[reset]");
-        mech_los_broadcast(mech, "stumbles slightly!");
-        break;
+    case 2:
+      mech_notify(mech, MECHALL,
+                  "[fg=red]The damage causes you to stagger even more![reset]");
+      mech_los_broadcast(mech, "starts to stagger from the damage!");
+      break;
 
-      case 2:
-        mech_notify(
-            mech, MECHALL,
-            "[fg=red]The damage causes you to stagger even more![reset]");
-        mech_los_broadcast(mech, "starts to stagger from the damage!");
-        break;
+    default:
+      mech_notify(
+          mech, MECHALL,
+          "[fg=red bold]The damage causes you to stagger violently while "
+          "attempting to keep your footing![reset]");
+      mech_los_broadcast(
+          mech, "staggers back and forth attempting to keep its footing!");
+      break;
+    }
 
-      default:
-        mech_notify(
-            mech, MECHALL,
-            "[fg=red bold]The damage causes you to stagger violently while "
-            "attempting to keep your footing![reset]");
-        mech_los_broadcast(
-            mech, "staggers back and forth attempting to keep its footing!");
-        break;
-      }
+    // do the actual staggering here
+    mech_notify(mech, MECHALL, "You stagger from the damage!");
 
-      // do the actual staggering here
-      mech_notify(mech, MECHALL, "You stagger from the damage!");
-
-      if (!made_pilot_skill_roll(
-              mech, mech_stagger_modifier_at_level(mech, stagger_level))) {
-        mech_notify(mech, MECHALL,
-                    "You loose the battle with gravity and tumble over!!");
-        mech_los_broadcast(mech, "tumbles over, staggered by the damage!");
-        mech_fall(mech, 1, 0);
-      }
+    if (!made_pilot_skill_roll(
+            mech, mech_stagger_modifier_at_level(mech, stagger_level))) {
+      mech_notify(mech, MECHALL,
+                  "You loose the battle with gravity and tumble over!!");
+      mech_los_broadcast(mech, "tumbles over, staggered by the damage!");
+      mech_fall(mech, 1, 0);
     }
   }
 }
@@ -649,11 +646,10 @@ void mech_movemode_event(MuxEvent *e) {
         mech_notify(mech, MECHALL,
                     "You cannot enter DODGE mode due to physical useage.");
         return;
-      } else {
-        ((mech)->rd.status2) |= DODGING;
-        mech_notify(mech, MECHALL,
-                    "You brace yourself for any oncoming physicals.");
       }
+      ((mech)->rd.status2) |= DODGING;
+      mech_notify(mech, MECHALL,
+                  "You brace yourself for any oncoming physicals.");
     }
   } else {
     if (i & MODE_EVADE) {
@@ -682,7 +678,6 @@ void mech_movemode_event(MuxEvent *e) {
   if (((mech)->rd.speed) > mech_effective_maximum_speed(mech) ||
       ((mech)->rd.desired_speed) > mech_effective_maximum_speed(mech))
     ((mech)->rd.desired_speed) = mech_effective_maximum_speed(mech);
-  return;
 }
 #endif
 

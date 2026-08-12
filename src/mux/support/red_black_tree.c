@@ -55,15 +55,15 @@ RbtreeNode *red_black_tree_find_successor_node(RbtreeNode *node) {
       child = child->left;
     }
     return child;
-  } else {
-    child = node;
-    parent = node->parent;
-    while (parent != nullptr && child == parent->right) {
-      child = parent;
-      parent = child->parent;
-    }
-    return parent;
   }
+  child = node;
+  parent = node->parent;
+  while (parent != nullptr && child == parent->right) {
+    child = parent;
+    parent = child->parent;
+  }
+  return parent;
+
   return nullptr;
 }
 
@@ -76,15 +76,15 @@ static RbtreeNode *red_black_tree_find_predecessor_node(RbtreeNode *node) {
     while (child->right != nullptr)
       child = child->right;
     return child;
-  } else {
-    child = node;
-    parent = node->parent;
-    while (parent != nullptr && child == parent->left) {
-      child = parent;
-      parent = parent->parent;
-    }
-    return parent;
   }
+  child = node;
+  parent = node->parent;
+  while (parent != nullptr && child == parent->left) {
+    child = parent;
+    parent = parent->parent;
+  }
+  return parent;
+
   return nullptr;
 }
 
@@ -98,31 +98,30 @@ void red_black_tree_release(RedBlackTree bt, RedBlackTreeRelease release,
       if (node->left != nullptr) {
         node = node->left;
         continue;
-      } else if (node->right != nullptr) {
+      }
+      if (node->right != nullptr) {
         node = node->right;
         continue;
-      } else {
-        parent = node->parent;
-        if (parent && parent->left == node)
-          parent->left = nullptr;
-        else if (parent && parent->right == node)
-          parent->right = nullptr;
-        else if (parent) {
-          (void)fprintf(stderr, "serious braindamage.\n");
-          exit(1);
-        }
-        release(&(RedBlackTreeReleaseCall){
-            .key = node->key,
-            .data = node->data,
-            .context = context,
-        });
-        free(node);
-        node = parent;
       }
+      parent = node->parent;
+      if (parent && parent->left == node)
+        parent->left = nullptr;
+      else if (parent && parent->right == node)
+        parent->right = nullptr;
+      else if (parent) {
+        (void)fprintf(stderr, "serious braindamage.\n");
+        exit(1);
+      }
+      release(&(RedBlackTreeReleaseCall){
+          .key = node->key,
+          .data = node->data,
+          .context = context,
+      });
+      free(node);
+      node = parent;
     }
   }
   free(bt);
-  return;
 }
 
 void red_black_tree_destroy(RedBlackTree bt) {
@@ -134,26 +133,25 @@ void red_black_tree_destroy(RedBlackTree bt) {
       if (node->left != nullptr) {
         node = node->left;
         continue;
-      } else if (node->right != nullptr) {
+      }
+      if (node->right != nullptr) {
         node = node->right;
         continue;
-      } else {
-        parent = node->parent;
-        if (parent && parent->left == node)
-          parent->left = nullptr;
-        else if (parent && parent->right == node)
-          parent->right = nullptr;
-        else if (parent) {
-          (void)fprintf(stderr, "serious braindamage.\n");
-          exit(1);
-        }
-        free(node);
-        node = parent;
       }
+      parent = node->parent;
+      if (parent && parent->left == node)
+        parent->left = nullptr;
+      else if (parent && parent->right == node)
+        parent->right = nullptr;
+      else if (parent) {
+        (void)fprintf(stderr, "serious braindamage.\n");
+        exit(1);
+      }
+      free(node);
+      node = parent;
     }
   }
   free(bt);
-  return;
 }
 
 void *red_black_tree_find(RedBlackTree bt, void *key) {
@@ -172,7 +170,8 @@ void *red_black_tree_find(RedBlackTree bt, void *key) {
     });
     if (compare_result == 0) {
       return node->data;
-    } else if (compare_result < 0) {
+    }
+    if (compare_result < 0) {
       // Go Left
       if (node->left != nullptr) {
         node = node->left;
@@ -208,7 +207,8 @@ bool red_black_tree_exists(RedBlackTree bt, void *key) {
     });
     if (compare_result == 0) {
       return 1;
-    } else if (compare_result < 0) {
+    }
+    if (compare_result < 0) {
       // Go Left
       if (node->left != nullptr) {
         node = node->left;
@@ -294,7 +294,8 @@ void *red_black_tree_search(RedBlackTree bt, int method, void *key) {
   if (method == SEARCH_FIRST) {
     node = red_black_tree_find_minimum(bt->head);
     return node->data;
-  } else if (method == SEARCH_LAST) {
+  }
+  if (method == SEARCH_LAST) {
     node = red_black_tree_find_maximum(bt->head);
     return node->data;
   }
@@ -310,7 +311,8 @@ void *red_black_tree_search(RedBlackTree bt, int method, void *key) {
     if (compare_result == 0) {
       found = 1;
       break;
-    } else if (compare_result < 0) {
+    }
+    if (compare_result < 0) {
       // Go Left
       if (node->left != nullptr) {
         node = node->left;
@@ -332,8 +334,7 @@ void *red_black_tree_search(RedBlackTree bt, int method, void *key) {
                 method == SEARCH_GTEQ)) {
     if (node)
       return node->data;
-    else
-      return nullptr;
+    return nullptr;
   }
 
   if (!found && (method == SEARCH_EQUAL || method == SEARCH_NEXT ||
@@ -346,39 +347,33 @@ void *red_black_tree_search(RedBlackTree bt, int method, void *key) {
       node = red_black_tree_find_successor_node(last);
       if (node)
         return node->data;
-      else
-        return node;
-    } else {
-      if (last)
-        return last->data;
-      else
-        return last;
+      return node;
     }
+    if (last)
+      return last->data;
+    return last;
   }
 
   if (method == SEARCH_LTEQ || (!found && method == SEARCH_LT)) {
     if (compare_result < 0) {
       node = red_black_tree_find_predecessor_node(last);
       return node->data;
-    } else {
-      return last->data;
     }
+    return last->data;
   }
 
   if (method == SEARCH_NEXT || (found && method == SEARCH_GT)) {
     node = red_black_tree_find_successor_node(node);
     if (node)
       return node->data;
-    else
-      return node;
+    return node;
   }
 
   if (method == SEARCH_PREV || (found && method == SEARCH_LT)) {
     node = red_black_tree_find_predecessor_node(node);
     if (node)
       return node->data;
-    else
-      return node;
+    return node;
   }
 
   return nullptr;

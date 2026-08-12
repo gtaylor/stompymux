@@ -30,7 +30,7 @@ static CharacterXpRanking *ranking_at(CharacterXpRanking *rankings,
   return checked_storage_at(rankings, count, sizeof(*rankings), index);
 }
 
-void debug_xptop(DbRef player, void *data, char *buffer) {
+void debug_xptop(DbRef player, void *data, const char *buffer) {
   BtechSpecialObject *debug = data;
   BtechContext *context = debug->context;
   int hm, i, j;

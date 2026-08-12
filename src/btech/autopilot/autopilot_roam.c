@@ -511,23 +511,20 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
       autopilot_event_schedule(autopilot, EVENT_AUTO_ROAM,
                                auto_astar_roam_event, AUTO_ROAM_TICK, 1);
       return;
-
-    } else {
-
-      /* Delete the node and goto the next one */
-      temp_astar_node =
-          (AutopilotPathNode *)doubly_linked_list_remove_node_at_pos(
-              autopilot->astar_path, 1);
-      free(temp_astar_node);
-
-      /* Update the tick counter */
-      autopilot->roam_update_tick++;
-
-      /* Call this event again */
-      autopilot_event_schedule(autopilot, EVENT_AUTO_ROAM,
-                               auto_astar_roam_event, AUTO_ROAM_TICK, 0);
-      return;
     }
+    /* Delete the node and goto the next one */
+    temp_astar_node =
+        (AutopilotPathNode *)doubly_linked_list_remove_node_at_pos(
+            autopilot->astar_path, 1);
+    free(temp_astar_node);
+
+    /* Update the tick counter */
+    autopilot->roam_update_tick++;
+
+    /* Call this event again */
+    autopilot_event_schedule(autopilot, EVENT_AUTO_ROAM, auto_astar_roam_event,
+                             AUTO_ROAM_TICK, 0);
+    return;
   }
 
   /* Set our current goal - not the end goal tho - unless this is

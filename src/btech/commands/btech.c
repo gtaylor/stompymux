@@ -86,5 +86,4 @@ void do_show(CommandInvocation *invocation) {
   }
   mecha_notify(&command->evaluation, player,
                "Invalid arguments to +show command!");
-  return;
 }

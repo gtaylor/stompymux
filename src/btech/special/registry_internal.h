@@ -75,7 +75,7 @@ const BtechCommandDefinition *btech_special_command_definition(int type,
                                                                size_t index);
 
 void btech_registry_tree_initialize(BtechContext *context);
-int btech_command_allowed_for_mech(Mech *mech, int command_flag);
+int btech_command_allowed_for_mech(Mech *mech, int cmdflag);
 bool btech_special_command_access(BtechContext *context, DbRef object,
                                   PowerId power);
 int btech_context_which_special_attribute(BtechContext *context, DbRef key);

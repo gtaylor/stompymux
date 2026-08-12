@@ -707,7 +707,6 @@ void charge_mech(Mech *mech, Mech *target) {
     mech_set_recycle_limb(mech, FSIDE, PHYSICAL_RECYCLE_TIME);
     mech_set_recycle_limb(mech, TURRET, PHYSICAL_RECYCLE_TIME);
   }
-  return;
 } // end ChargeMech()
 /*
  * Checks to see if we can grab a club with our arms.

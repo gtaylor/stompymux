@@ -286,7 +286,7 @@ static int set_sensor(Mech *mech, char ps, char ss) {
 
   if (!mech_is_started(mech))
     return 0;
-  for (i = 0; i < (int)NUM_SENSORS; i++) {
+  for (i = 0; i < NUM_SENSORS; i++) {
     if (*mech_sensor_definition(i)->match_letter == ps)
       prim = i;
     if (*mech_sensor_definition(i)->match_letter == ss)

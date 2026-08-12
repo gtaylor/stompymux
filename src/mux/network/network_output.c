@@ -138,7 +138,6 @@ void descriptor_queue_write(Descriptor *d, const char *b, int n) {
 
   descriptor_write(d, b, (size_t)n);
   d->output_tot += n;
-  return;
 }
 
 void descriptor_queue_string(Descriptor *d, const char *s) {

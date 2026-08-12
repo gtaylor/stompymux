@@ -108,8 +108,6 @@ constexpr int AUTO_ROAM_NEW_HEX_TICK = 100; /* How often to pick a new hex */
 constexpr int AUTO_GOET = 15;
 constexpr int AUTO_GOTT = 240;
 
-void autopilot_resume_for_mech(Mech *mech);
-
 void autopilot_autogun_log(const Autopilot *autopilot, const char *format, ...)
     __attribute__((format(printf, 2, 3)));
 
@@ -364,7 +362,7 @@ char *auto_get_command_arg(Autopilot *autopilot, int command_number,
                            int arg_number);
 int auto_get_command_enum(Autopilot *autopilot, int command_number);
 void auto_newautopilot(DbRef key, void **data,
-                       BtechSpecialLifecycleOperation operation);
+                       BtechSpecialLifecycleOperation selector);
 
 /* From autopilot_commands.c */
 void auto_cal_mapindex(BtechContext *context, Mech *mech);
@@ -409,7 +407,7 @@ void auto_heartbeat(Autopilot *autopilot);
 /* From autopilot_autogun.c */
 int search_light_in_range(Mech *mech, BattleMap *map);
 int pref_vis_sens(Mech *mech, BattleMap *map, int slite, Mech *target);
-void auto_sensor_event(Autopilot *muxevent);
+void auto_sensor_event(Autopilot *autopilot);
 void auto_gun_event(Autopilot *autopilot);
 void auto_destroy_weaplist(Autopilot *autopilot);
 void auto_update_profile_event(Autopilot *autopilot);

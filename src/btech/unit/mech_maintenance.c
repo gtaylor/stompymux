@@ -204,7 +204,7 @@ void do_sub_magic(Mech *mech, int loud) {
   int inthses = mech_engine_rating(mech) / 25;
   int dest_hses = 0;
   int maxjjs =
-      (int)((float)((mech)->ud.maxspeed) * MP_PER_KPH *
+      (int)((mech)->ud.maxspeed * MP_PER_KPH *
             ((!(((mech)->rd.specials2) & IMPROVED_JJ_TECH)) ? (2 / 3) : 1));
 
   if (((mech)->rd.specials) & ICE_TECH)
@@ -549,11 +549,11 @@ int acceptable_degree(int d) {
    */
   if (d < 0) {
     return (d % 360) + 360;
-  } else if (d >= 360) {
-    return (d % 360);
-  } else {
-    return d;
   }
+  if (d >= 360) {
+    return (d % 360);
+  }
+  return d;
 }
 
 void mark_for_los_update(Mech *mech) {

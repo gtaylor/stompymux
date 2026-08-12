@@ -58,7 +58,7 @@ void map_color_scheme_load(MapColorScheme *colors);
 char map_terrain_color_char(const TerrainColorRequest *request);
 const char *map_color_markup(char color);
 bool style_tac_map(MapText *text, const MapColorScheme *colors,
-                   const char *sketch, int display_columns, int display_rows);
+                   const char *sketch, int dispcols, int disprows);
 int tactical_column_is_odd(int column);
 int tactical_display_columns(int hex_columns);
 typedef struct TacticalHexOffsetRequest {

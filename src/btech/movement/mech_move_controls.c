@@ -476,7 +476,8 @@ void mech_speed(DbRef player, void *data, char *buffer) {
           btech_context_evaluation(context), player,
           "Not being the Pilot of this beast, you cannot move it backwards.");
       return;
-    } else if (newspeed > walkspeed) {
+    }
+    if (newspeed > walkspeed) {
       mecha_notify(btech_context_evaluation(context), player,
                    "Not being the Pilot of this beast, you cannot go faster "
                    "than walking speed.");

@@ -7,7 +7,6 @@
 
 #include "mux/commands/action_messages.h"
 #include "mux/commands/command_context.h"
-#include "mux/commands/command_handlers.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
@@ -171,7 +170,6 @@ void do_enter(CommandInvocation *invocation) {
     notify_checked(evaluation, player, player, "Permission denied.",
                    MSG_ME_ALL | MSG_F_DOWN);
   }
-  return;
 }
 
 void do_leave(CommandInvocation *invocation) {

@@ -186,7 +186,6 @@ void power_set(EvaluationContext *evaluation, WorldIndexes *indexes,
     notify_printf(evaluation, player, "%s - %s %s",
                   game_object_name(evaluation->world->database, target),
                   fp->powername, negate ? "removed." : "granted.");
-  return;
 }
 
 /**

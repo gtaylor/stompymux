@@ -45,8 +45,8 @@ void *fifo_pop(Fifo **foo) {
     tmpd = tmp->data;
     free(tmp);
     return tmpd;
-  } else
-    return nullptr;
+  }
+  return nullptr;
 }
 
 void fifo_push(Fifo **foo, void *data) {

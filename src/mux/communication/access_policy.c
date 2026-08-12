@@ -27,7 +27,7 @@ bool is_in_character_location(GameDatabase *database,
   }
   if (configuration->btech_ooc_comsys && !is_gagged(database, player))
     return 0;
-  else if (is_in_character(database, d) || is_gagged(database, player))
+  if (is_in_character(database, d) || is_gagged(database, player))
     return 1;
   return 0;
 } /* end In_IC_Loc() */

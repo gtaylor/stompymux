@@ -70,5 +70,4 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
   }
   notify_printf(btech_context_evaluation(map->xcode.context), player,
                 "Invalid argument (%s)!", *argument_slot);
-  return;
 }

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "btech/special_objects.h"
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "equipment_types.h"
@@ -400,7 +401,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
    * whatever its towing */
   if (towee && mech_carried_dbref(mech) > 0) {
     mark_for_los_update(towee);
-    mech_rsetmapindex(GOD, (void *)towee, tprintf("%d", (int)-1));
+    mech_rsetmapindex(GOD, (void *)towee, tprintf("%d", (-1)));
     mech_rsetxy(GOD, (void *)towee, tprintf("%d %d", 0, 0));
     move_via_teleport(
         &(ObjectMovementRequest){.evaluation = evaluation,
@@ -414,7 +415,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   }
 
   /* Now handle the unit itself */
-  mech_rsetmapindex(GOD, (void *)mech, tprintf("%d", (int)-1));
+  mech_rsetmapindex(GOD, (void *)mech, tprintf("%d", (-1)));
   mech_rsetxy(GOD, (void *)mech, tprintf("%d %d", 0, 0));
   move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
                                              .object = mech_dbref(mech),

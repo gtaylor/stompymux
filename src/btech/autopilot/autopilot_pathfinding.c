@@ -604,9 +604,8 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
   /* End */
   if (found_path) {
     return 1;
-  } else {
-    return 0;
   }
+  return 0;
 }
 
 void auto_destroy_astar_path(Autopilot *autopilot) {

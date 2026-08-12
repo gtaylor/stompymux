@@ -22,22 +22,26 @@ struct HashTable {
 };
 typedef struct HashTable HashTable;
 
-void hash_table_initialize(HashTable *, int);
-void hash_table_destroy(HashTable *);
+void hash_table_initialize(HashTable * /*htab*/, int /*size*/);
+void hash_table_destroy(HashTable * /*htab*/);
 
-void hash_table_reset(HashTable *);
+void hash_table_reset(HashTable * /*htab*/);
 
 int hash_value(char *, int);
 int hash_mask_get(void *);
-void *hash_table_find(const char *, HashTable *);
-const void *hash_table_find_const(const char *, HashTable *);
-int hash_table_add(const char *, void *, HashTable *);
-int hash_table_add_const(const char *, const void *, HashTable *);
-void hash_table_delete(const char *, HashTable *);
-void hash_table_flush(HashTable *, int);
-int hash_table_replace(char *, void *, HashTable *);
-void hash_table_replace_all(void *, void *, HashTable *);
-char *hash_table_info(const char *, HashTable *);
+void *hash_table_find(const char * /*str*/, HashTable * /*htab*/);
+const void *hash_table_find_const(const char * /*str*/, HashTable * /*htab*/);
+int hash_table_add(const char * /*str*/, void * /*hashdata*/,
+                   HashTable * /*htab*/);
+int hash_table_add_const(const char * /*str*/, const void * /*hashdata*/,
+                         HashTable * /*htab*/);
+void hash_table_delete(const char * /*str*/, HashTable * /*htab*/);
+void hash_table_flush(HashTable * /*htab*/, int /*size*/);
+int hash_table_replace(char * /*str*/, void * /*hashdata*/,
+                       HashTable * /*htab*/);
+void hash_table_replace_all(void * /*old*/, void * /*new*/,
+                            HashTable * /*htab*/);
+char *hash_table_info(const char * /*tab_name*/, HashTable * /*htab*/);
 typedef struct ServerConfiguration ServerConfiguration;
 
 typedef struct NameTableInterpretRequest {
@@ -51,29 +55,40 @@ typedef struct NameTableInterpretRequest {
   const char *false_text;
 } NameTableInterpretRequest;
 
-int name_table_search(GameDatabase *, const ServerConfiguration *, DbRef,
-                      const NameTable *, char *);
-NameTable *name_table_find_entry(GameDatabase *, const ServerConfiguration *,
-                                 DbRef, NameTable *, char *);
-void name_table_display(EvaluationContext *, const ServerConfiguration *, DbRef,
-                        NameTable *, const char *, int);
+int name_table_search(GameDatabase * /*database*/,
+                      const ServerConfiguration * /*configuration*/,
+                      DbRef /*player*/, const NameTable * /*ntab*/,
+                      char * /*flagname*/);
+NameTable *name_table_find_entry(GameDatabase * /*database*/,
+                                 const ServerConfiguration * /*configuration*/,
+                                 DbRef /*player*/, NameTable * /*ntab*/,
+                                 char * /*flagname*/);
+void name_table_display(EvaluationContext * /*evaluation*/,
+                        const ServerConfiguration * /*configuration*/,
+                        DbRef /*player*/, NameTable * /*ntab*/,
+                        const char * /*prefix*/, int /*list_if_none*/);
 void name_table_interpret(const NameTableInterpretRequest *request);
-void name_table_list_set(EvaluationContext *, const ServerConfiguration *,
-                         DbRef, NameTable *, int, const char *, int);
+void name_table_list_set(EvaluationContext * /*evaluation*/,
+                         const ServerConfiguration * /*configuration*/,
+                         DbRef /*player*/, NameTable * /*ntab*/,
+                         int /*flagword*/, const char * /*prefix*/,
+                         int /*list_if_none*/);
 void *hash_table_next_entry(HashTable *htab);
 void *hash_table_first_entry(HashTable *htab);
 char *hash_table_first_key(HashTable *htab);
 char *hash_table_next_key(HashTable *htab);
 
-void numeric_hash_table_initialize(HashTable *, int);
-void numeric_hash_table_destroy(HashTable *);
-void numeric_hash_table_reset(HashTable *);
+void numeric_hash_table_initialize(HashTable * /*htab*/, int /*size*/);
+void numeric_hash_table_destroy(HashTable * /*htab*/);
+void numeric_hash_table_reset(HashTable * /*htab*/);
 void *numeric_hash_table_next_entry(HashTable *htab);
 void *numeric_hash_table_first_entry(HashTable *htab);
 char *numeric_hash_table_info(const char *, HashTable *);
-void *numeric_hash_table_find(long, HashTable *);
-int numeric_hash_table_add(long, void *, HashTable *);
-void numeric_hash_table_delete(long, HashTable *);
-void numeric_hash_table_flush(HashTable *, int);
-int numeric_hash_table_replace(long, void *, HashTable *);
+void *numeric_hash_table_find(long /*val*/, HashTable * /*htab*/);
+int numeric_hash_table_add(long /*val*/, void * /*hashdata*/,
+                           HashTable * /*htab*/);
+void numeric_hash_table_delete(long /*val*/, HashTable * /*htab*/);
+void numeric_hash_table_flush(HashTable * /*htab*/, int /*size*/);
+int numeric_hash_table_replace(long /*val*/, void * /*hashdata*/,
+                               HashTable * /*htab*/);
 extern NameTable powers_nametab[];

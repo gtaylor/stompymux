@@ -38,7 +38,6 @@
 #include "template_api.h"
 
 /* Selectors */
-extern char *strtok(char *s, const char *ct);
 
 /*--------------------------------------------------------------------------*/
 
@@ -499,7 +498,6 @@ void mechrep_rdeltech(DbRef player, void *data, char *buffer) {
     notify_printf(btech_context_evaluation(rep->xcode.context), player,
                   "%s Technology Removed", buffer);
   }
-  return;
 }
 
 void mechrep_raddtech(DbRef player, void *data, char *buffer) {

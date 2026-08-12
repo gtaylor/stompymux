@@ -145,7 +145,7 @@ static int debug_check_stuff(const RedBlackTreeVisitCall *call) {
   return 1;
 }
 
-void debug_memory(DbRef player, void *data, char *buffer) {
+void debug_memory(DbRef player, void *data, const char *buffer) {
   BtechSpecialObject *debug = data;
   BtechContext *context = debug->context;
   size_t gtotal = 0;

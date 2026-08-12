@@ -66,17 +66,19 @@ typedef int (*RedBlackTreeVisitor)(const RedBlackTreeVisitCall *call);
 typedef void (*RedBlackTreeRelease)(const RedBlackTreeReleaseCall *call);
 
 RedBlackTree red_black_tree_init(RedBlackTreeCompare compare, void *context);
-void red_black_tree_destroy(RedBlackTree);
+void red_black_tree_destroy(RedBlackTree /*bt*/);
 
-void red_black_tree_insert(RedBlackTree, void *, void *);
-void *red_black_tree_find(RedBlackTree, void *);
-bool red_black_tree_exists(RedBlackTree, void *);
-void *red_black_tree_delete(RedBlackTree, void *);
-void red_black_tree_release(RedBlackTree tree, RedBlackTreeRelease release,
+void red_black_tree_insert(RedBlackTree /*bt*/, void * /*key*/,
+                           void * /*data*/);
+void *red_black_tree_find(RedBlackTree /*bt*/, void * /*key*/);
+bool red_black_tree_exists(RedBlackTree /*bt*/, void * /*key*/);
+void *red_black_tree_delete(RedBlackTree /*bt*/, void * /*key*/);
+void red_black_tree_release(RedBlackTree bt, RedBlackTreeRelease release,
                             void *context);
 
-int red_black_tree_walk(RedBlackTree tree, int order,
-                        RedBlackTreeVisitor visitor, void *context);
-unsigned int red_black_tree_size(RedBlackTree);
-void *red_black_tree_search(RedBlackTree, int, void *);
-void *red_black_tree_index(RedBlackTree, int);
+int red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
+                        void *context);
+unsigned int red_black_tree_size(RedBlackTree /*bt*/);
+void *red_black_tree_search(RedBlackTree /*bt*/, int /*method*/,
+                            void * /*key*/);
+void *red_black_tree_index(RedBlackTree /*bt*/, int /*index*/);

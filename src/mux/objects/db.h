@@ -257,16 +257,15 @@ static inline void game_object_set_stack(GameDatabase *database, DbRef object,
   game_database_object(database, object)->stackhead = value;
 }
 
-extern DbRef parse_dbref(const char *);
+extern DbRef parse_dbref(const char * /*s*/);
 extern void al_add(DbRef, int);
 extern void al_delete(DbRef, int);
 extern void al_destroy(DbRef);
 extern void al_store(void);
 extern void db_grow(GameDatabase *database, DbRef newtop);
 extern void db_free(GameDatabase *database);
-void object_password_set(GameDatabase *database, DbRef thing,
-                         const char *password);
-void object_name_set(GameDatabase *database, DbRef thing, char *name);
+void object_password_set(GameDatabase *database, DbRef thing, const char *s);
+void object_name_set(GameDatabase *database, DbRef thing, char *s);
 char *game_object_name(GameDatabase *database, DbRef thing);
 char *game_object_pure_name(GameDatabase *database, DbRef thing);
 const char *game_object_lua_parent(GameDatabase *database, DbRef object);
@@ -283,19 +282,17 @@ typedef struct AttributeCopyRequest {
 } AttributeCopyRequest;
 
 void attribute_copy(const AttributeCopyRequest *request);
-void attribute_clear(GameDatabase *database, DbRef thing, int attribute_number);
-void attribute_add_raw(GameDatabase *database, DbRef thing,
-                       int attribute_number, const char *value);
-void attribute_add(GameDatabase *database, DbRef thing, int attribute_number,
-                   const char *value, long flags);
-char *attribute_get_raw(GameDatabase *database, DbRef thing,
-                        int attribute_number);
-char *attribute_get(GameDatabase *database, DbRef thing, int attribute_number,
-                    long *flags);
-char *attribute_get_string(GameDatabase *database, char *buffer, DbRef thing,
-                           int attribute_number, long *flags);
-int attribute_get_info(GameDatabase *database, DbRef thing,
-                       int attribute_number, long *flags);
+void attribute_clear(GameDatabase *database, DbRef thing, int atr);
+void attribute_add_raw(GameDatabase *database, DbRef thing, int atr,
+                       const char *buff);
+void attribute_add(GameDatabase *database, DbRef thing, int atr,
+                   const char *buff, long flags);
+char *attribute_get_raw(GameDatabase *database, DbRef thing, int atr);
+char *attribute_get(GameDatabase *database, DbRef thing, int atr, long *flags);
+char *attribute_get_string(GameDatabase *database, char *s, DbRef thing,
+                           int atr, long *flags);
+int attribute_get_info(GameDatabase *database, DbRef thing, int atr,
+                       long *flags);
 void attribute_free(GameDatabase *database, DbRef thing);
 void toast_player(EvaluationContext *evaluation, DbRef player);
 

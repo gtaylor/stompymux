@@ -206,7 +206,8 @@ void do_destroychannel(CommandInvocation *invocation) {
   if (!ch) {
     raw_notify(evaluation, player, "@chan/destroy: Unknown channel.");
     return;
-  } else if (!is_wizard(evaluation->world->database, player)) {
+  }
+  if (!is_wizard(evaluation->world->database, player)) {
     raw_notify(evaluation, player, "You do not have permission to do that. ");
     return;
   }

@@ -257,7 +257,6 @@ void fcache_rawdump(const FileCacheRawDumpRequest *request) {
     }
     fp = fp->hdr.nxt;
   }
-  return;
 }
 
 static void fcache_dumpbase(Descriptor *d, const FCACHE fc[], size_t count,

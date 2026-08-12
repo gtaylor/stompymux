@@ -9,7 +9,7 @@
 #include "mux/server/platform.h"
 
 #define DEFINE_BTECH_COMMAND_INVOKER(handler)                                  \
-  void handler(DbRef actor, void *object, char *arguments);                    \
+  void handler(DbRef player, void *data, char *buffer);                        \
   void btech_command_invoke_##handler(                                         \
       const BtechCommandInvocation *invocation) {                              \
     handler(invocation->actor, invocation->object, invocation->arguments);     \
@@ -18,7 +18,10 @@ void btech_command_invoke_aero_takeoff(
     const BtechCommandInvocation *invocation) {
   aero_takeoff(invocation->actor, invocation->object, invocation->arguments);
 }
-DEFINE_BTECH_COMMAND_INVOKER(aero_thrust)
+void btech_command_invoke_aero_thrust(
+    const BtechCommandInvocation *invocation) {
+  aero_thrust(invocation->actor, invocation->object, invocation->arguments);
+}
 DEFINE_BTECH_COMMAND_INVOKER(bsuit_attackleg)
 void btech_command_invoke_bsuit_hide(const BtechCommandInvocation *invocation) {
   bsuit_hide(invocation->actor, invocation->object, invocation->arguments);
@@ -93,7 +96,10 @@ DEFINE_BTECH_COMMAND_INVOKER(mech_inferno)
 DEFINE_BTECH_COMMAND_INVOKER(mech_jump)
 DEFINE_BTECH_COMMAND_INVOKER(mech_kick)
 DEFINE_BTECH_COMMAND_INVOKER(mech_land)
-DEFINE_BTECH_COMMAND_INVOKER(mech_lateral)
+void btech_command_invoke_mech_lateral(
+    const BtechCommandInvocation *invocation) {
+  mech_lateral(invocation->actor, invocation->object, invocation->arguments);
+}
 DEFINE_BTECH_COMMAND_INVOKER(mech_lbx)
 DEFINE_BTECH_COMMAND_INVOKER(mech_list_freqs)
 DEFINE_BTECH_COMMAND_INVOKER(mech_listtic)

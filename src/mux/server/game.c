@@ -449,7 +449,6 @@ void server_shutdown(const ServerShutdownRequest *request) {
    */
 
   server_lifecycle_stop(control->lifecycle);
-  return;
 }
 
 int dump_database_internal(ServerControl *control, int dump_type) {

@@ -54,8 +54,8 @@ int name_table_search(GameDatabase *database,
     if (minmatch(flagname, nt->name, nt->minlen)) {
       if (check_access(database, configuration, player, nt->perm)) {
         return nt->flag;
-      } else
-        return -2;
+      }
+      return -2;
     }
   }
   return -1;

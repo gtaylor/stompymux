@@ -255,15 +255,17 @@ static int punch_check_arm(Mech *mech, int arm) {
     mech_printf(mech, MECHALL,
                 "Your %s arm is destroyed, you can't punch with it.", arm_used);
     return 0;
-  } else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                 .mech = mech,
-                 .slot = {.section = arm, .critical = 0},
-                 .special = SHOULDER_OR_HIP})) {
+  }
+  if (!mech_critical_is_operational_special(
+          &(CriticalSpecialCheck){.mech = mech,
+                                  .slot = {.section = arm, .critical = 0},
+                                  .special = SHOULDER_OR_HIP})) {
     mech_printf(mech, MECHALL,
                 "Your %s shoulder is destroyed, you can't punch with that arm.",
                 arm_used);
     return 0;
-  } else if (mech_section_carries_club(mech, arm)) {
+  }
+  if (mech_section_carries_club(mech, arm)) {
     mech_printf(
         mech, MECHALL,
         "You're carrying a club in your %s arm and can't punch with it.",
@@ -421,18 +423,20 @@ static int axe_check_arm(Mech *mech, int arm) {
     mech_printf(mech, MECHALL,
                 "Your %s arm is destroyed, you can't axe with it", arm_used);
     return 0;
-  } else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                 .mech = mech,
-                 .slot = {.section = arm, .critical = 0},
-                 .special = SHOULDER_OR_HIP})) {
+  }
+  if (!mech_critical_is_operational_special(
+          &(CriticalSpecialCheck){.mech = mech,
+                                  .slot = {.section = arm, .critical = 0},
+                                  .special = SHOULDER_OR_HIP})) {
     mech_printf(mech, MECHALL,
                 "Your %s shoulder is destroyed, you can't axe with that arm.",
                 arm_used);
     return 0;
-  } else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                 .mech = mech,
-                 .slot = {.section = arm, .critical = 3},
-                 .special = HAND_OR_FOOT_ACTUATOR})) {
+  }
+  if (!mech_critical_is_operational_special(
+          &(CriticalSpecialCheck){.mech = mech,
+                                  .slot = {.section = arm, .critical = 3},
+                                  .special = HAND_OR_FOOT_ACTUATOR})) {
     mech_printf(mech, MECHALL,
                 "Your %s hand is destroyed, you can't axe with that arm.",
                 arm_used);
@@ -506,10 +510,11 @@ static int saw_check_arm(Mech *mech, int arm) {
     mech_printf(mech, MECHALL,
                 "Your %s arm is destroyed, you can't saw with it", arm_used);
     return 0;
-  } else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                 .mech = mech,
-                 .slot = {.section = arm, .critical = 0},
-                 .special = SHOULDER_OR_HIP})) {
+  }
+  if (!mech_critical_is_operational_special(
+          &(CriticalSpecialCheck){.mech = mech,
+                                  .slot = {.section = arm, .critical = 0},
+                                  .special = SHOULDER_OR_HIP})) {
     mech_printf(mech, MECHALL,
                 "Your %s shoulder is destroyed, you can't saw with that arm.",
                 arm_used);
@@ -641,19 +646,21 @@ static int mace_check_arm(Mech *mech, int arm) {
                 "Your %s arm is destroyed, you can't use a mace with it.",
                 arm_used);
     return 0;
-  } else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                 .mech = mech,
-                 .slot = {.section = arm, .critical = 0},
-                 .special = SHOULDER_OR_HIP})) {
+  }
+  if (!mech_critical_is_operational_special(
+          &(CriticalSpecialCheck){.mech = mech,
+                                  .slot = {.section = arm, .critical = 0},
+                                  .special = SHOULDER_OR_HIP})) {
     mech_printf(
         mech, MECHALL,
         "Your %s shoulder is destroyed, you can't use a mace with that arm.",
         arm_used);
     return 0;
-  } else if (!mech_critical_is_operational_special(&(CriticalSpecialCheck){
-                 .mech = mech,
-                 .slot = {.section = arm, .critical = 3},
-                 .special = HAND_OR_FOOT_ACTUATOR})) {
+  }
+  if (!mech_critical_is_operational_special(
+          &(CriticalSpecialCheck){.mech = mech,
+                                  .slot = {.section = arm, .critical = 3},
+                                  .special = HAND_OR_FOOT_ACTUATOR})) {
     mech_printf(
         mech, MECHALL,
         "Your %s hand is destroyed, you can't use a mace with that arm.",

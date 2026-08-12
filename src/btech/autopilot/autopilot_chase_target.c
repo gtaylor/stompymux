@@ -109,72 +109,70 @@ bool autogun_chase_target(Autopilot *autopilot, Mech *mech, BattleMap *map,
         autopilot_autogun_log(autopilot, "Autogun Event Finished");
 
         return true;
+      }
+      /* Update the ticker */
+      autopilot->chasetarg_update_tick++;
 
-      } else {
+      /* Check to see if we need to turn to face the guy by
+       * generating our target hex and seeing if we are in that
+       * hex then face the bad guy */
+      target = btech_context_get_mech(mech_context(mech), autopilot->target);
+      if (target && (!mech_is_destroyed(target) &&
+                     mech_map_dbref(target) == mech_map_dbref(mech))) {
 
-        /* Update the ticker */
-        autopilot->chasetarg_update_tick++;
+        /* Generate the target hex */
+        /*! \todo {Instead of calcing this all the time, possibly add
+         * variables to the AI to remember it} */
+        MapRealPosition projected = map_project_position(&(MapProjection){
+            .origin = {.x = mech_position_real_x(target),
+                       .y = mech_position_real_y(target)},
+            .bearing = mech_heading_degrees(target) + autopilot->ofsx,
+            .range = (float)autopilot->ofsy});
+        fx = projected.x;
+        fy = projected.y;
 
-        /* Check to see if we need to turn to face the guy by
-         * generating our target hex and seeing if we are in that
-         * hex then face the bad guy */
-        target = btech_context_get_mech(mech_context(mech), autopilot->target);
-        if (target && (!mech_is_destroyed(target) &&
-                       mech_map_dbref(target) == mech_map_dbref(mech))) {
+        real_coord_to_map_coord(&generated_x, &generated_y, fx, fy);
+        x = generated_x;
+        y = generated_y;
 
-          /* Generate the target hex */
-          /*! \todo {Instead of calcing this all the time, possibly add
-           * variables to the AI to remember it} */
-          MapRealPosition projected = map_project_position(&(MapProjection){
-              .origin = {.x = mech_position_real_x(target),
-                         .y = mech_position_real_y(target)},
-              .bearing = mech_heading_degrees(target) + autopilot->ofsx,
-              .range = (float)autopilot->ofsy});
-          fx = projected.x;
-          fy = projected.y;
+        /* Make sure the hex is sane */
+        if (x < 0 || y < 0 || x >= battle_map_width(map) ||
+            y >= battle_map_height(map)) {
 
-          real_coord_to_map_coord(&generated_x, &generated_y, fx, fy);
-          x = generated_x;
-          y = generated_y;
+          /* Bad Target Hex */
 
-          /* Make sure the hex is sane */
-          if (x < 0 || y < 0 || x >= battle_map_width(map) ||
-              y >= battle_map_height(map)) {
-
-            /* Bad Target Hex */
-
-            /* Reset the hex to the Target's current hex */
-            x = mech_position_x(target);
-            y = mech_position_y(target);
-          }
-
-          /* Are we in the target hex and is the target not moving */
-          if ((mech_position_x(mech) == x) && (mech_position_y(mech) == y) &&
-              (mech_current_speed(target) < 0.5F)) {
-
-            /* Get his bearing and face him */
-            map_coord_to_real_coord(x, y, &fx, &fy);
-
-            /* If we're not facing him, turn towards him */
-            if (mech_desired_heading_degrees(mech) !=
-                map_bearing(&(MapRealSegment){
-                    .start = {.x = mech_position_real_x(mech),
-                              .y = mech_position_real_y(mech)},
-                    .end = {.x = fx, .y = fy}})) {
-
-              (void)snprintf(buffer, LBUF_SIZE, "%d",
-                             map_bearing(&(MapRealSegment){
-                                 .start = {.x = mech_position_real_x(mech),
-                                           .y = mech_position_real_y(mech)},
-                                 .end = {.x = fx, .y = fy}}));
-              mech_heading(autopilot->mynum, mech, buffer);
-            }
-            /* Turn towards him */
-          }
-          /* Is he moving and are we in target hex */
+          /* Reset the hex to the Target's current hex */
+          x = mech_position_x(target);
+          y = mech_position_y(target);
         }
-        /* Do we need to turn towards him */
-      } /* Do we need to update */
+
+        /* Are we in the target hex and is the target not moving */
+        if ((mech_position_x(mech) == x) && (mech_position_y(mech) == y) &&
+            (mech_current_speed(target) < 0.5F)) {
+
+          /* Get his bearing and face him */
+          map_coord_to_real_coord(x, y, &fx, &fy);
+
+          /* If we're not facing him, turn towards him */
+          if (mech_desired_heading_degrees(mech) !=
+              map_bearing(
+                  &(MapRealSegment){.start = {.x = mech_position_real_x(mech),
+                                              .y = mech_position_real_y(mech)},
+                                    .end = {.x = fx, .y = fy}})) {
+
+            (void)snprintf(buffer, LBUF_SIZE, "%d",
+                           map_bearing(&(MapRealSegment){
+                               .start = {.x = mech_position_real_x(mech),
+                                         .y = mech_position_real_y(mech)},
+                               .end = {.x = fx, .y = fy}}));
+            mech_heading(autopilot->mynum, mech, buffer);
+          }
+          /* Turn towards him */
+        }
+        /* Is he moving and are we in target hex */
+      }
+      /* Do we need to turn towards him */
+      /* Do we need to update */
     }
     /* Do we run chasetarget */
   }

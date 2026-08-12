@@ -36,12 +36,12 @@ DbRef connect_player(const PlayerConnectionRequest *request);
 DbRef create_player(const PlayerCreationRequest *request);
 int add_player_name(WorldContext *world, DbRef player, char *name);
 int delete_player_name(WorldContext *world, DbRef player, char *name);
-DbRef lookup_player(WorldContext *world, DbRef player, const char *name,
+DbRef lookup_player(WorldContext *world, DbRef doer, const char *name,
                     int check);
 void load_player_names(WorldContext *world);
 void badname_add(WorldContext *world, char *name);
 void badname_remove(WorldContext *world, char *name);
 int badname_check(WorldContext *world, char *name);
 void badname_list(EvaluationContext *evaluation, WorldContext *world,
-                  DbRef player, const char *name);
+                  DbRef player, const char *prefix);
 void do_last(CommandInvocation *invocation);

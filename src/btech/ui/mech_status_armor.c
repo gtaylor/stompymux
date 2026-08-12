@@ -80,25 +80,24 @@ ArmorEvaluation armor_evaluate(const ArmorEvaluationRequest *request) {
     /* Under repair.  */
     return (ArmorEvaluation){.level = ARMOR_LEVEL_REPAIRING,
                              .value = armor_value};
-  } else if (!armor_value) {
+  }
+  if (!armor_value) {
     /* Breached.  */
     return (ArmorEvaluation){.level = ARMOR_LEVEL_OPEN, .value = armor_value};
-  } else {
-    /* Armor condition level.  */
-    armor_percent = (armor_value + 1) * 100 / (armor_denom + 1);
+  } /* Armor condition level.  */
+  armor_percent = (armor_value + 1) * 100 / (armor_denom + 1);
 
-    if (armor_percent <= 45) {
-      return (ArmorEvaluation){.level = ARMOR_LEVEL_CRITICAL,
-                               .value = armor_value};
-    } else if (armor_percent <= 70) {
-      return (ArmorEvaluation){.level = ARMOR_LEVEL_LOW, .value = armor_value};
-    } else if (armor_percent <= 90) {
-      return (ArmorEvaluation){.level = ARMOR_LEVEL_GOOD, .value = armor_value};
-    } else {
-      return (ArmorEvaluation){.level = ARMOR_LEVEL_GREAT,
-                               .value = armor_value};
-    }
+  if (armor_percent <= 45) {
+    return (ArmorEvaluation){.level = ARMOR_LEVEL_CRITICAL,
+                             .value = armor_value};
   }
+  if (armor_percent <= 70) {
+    return (ArmorEvaluation){.level = ARMOR_LEVEL_LOW, .value = armor_value};
+  }
+  if (armor_percent <= 90) {
+    return (ArmorEvaluation){.level = ARMOR_LEVEL_GOOD, .value = armor_value};
+  }
+  return (ArmorEvaluation){.level = ARMOR_LEVEL_GREAT, .value = armor_value};
 }
 
 /* bright green, dark green, bright yellow, dark red, black */

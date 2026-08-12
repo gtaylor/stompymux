@@ -30,7 +30,7 @@
 
 struct sockaddr_storage;
 
-int site_data_check(struct sockaddr_storage *saddr, int saddr_len,
+int site_data_check(struct sockaddr_storage *saddr, int address_length,
                     SiteData *site_list) {
   SiteData *this;
   for (this = site_list; this; this = this->next) {

@@ -258,46 +258,45 @@ int string_compare(const ServerConfiguration *configuration, const char *s1,
     }
     return ascii_to_lower(checked_character_at(s1, LENGTH1 + 1, index1)) -
            ascii_to_lower(checked_character_at(s2, LENGTH2 + 1, index2));
-  } else {
-    while (index1 < LENGTH1 &&
-           character_is_space(checked_character_at(s1, LENGTH1 + 1, index1)))
-      index1++;
-    while (index2 < LENGTH2 &&
-           character_is_space(checked_character_at(s2, LENGTH2 + 1, index2)))
-      index2++;
-    while (index1 < LENGTH1 && index2 < LENGTH2) {
-      const char CHARACTER1 = checked_character_at(s1, LENGTH1 + 1, index1);
-      const char CHARACTER2 = checked_character_at(s2, LENGTH2 + 1, index2);
-      if (character_is_space(CHARACTER1) && character_is_space(CHARACTER2)) {
-        while (index1 < LENGTH1 && character_is_space(checked_character_at(
-                                       s1, LENGTH1 + 1, index1)))
-          index1++;
-        while (index2 < LENGTH2 && character_is_space(checked_character_at(
-                                       s2, LENGTH2 + 1, index2)))
-          index2++;
-      } else if (ascii_to_lower(CHARACTER1) == ascii_to_lower(CHARACTER2)) {
-        index1++;
-        index2++;
-      } else {
-        break;
-      }
-    }
-    if (index1 < LENGTH1 && index2 < LENGTH2)
-      return (1);
-    while (index1 < LENGTH1 &&
-           character_is_space(checked_character_at(s1, LENGTH1 + 1, index1)))
-      index1++;
-    if (index1 < LENGTH1) {
-      return checked_character_at(s1, LENGTH1 + 1, index1);
-    }
-    while (index2 < LENGTH2 &&
-           character_is_space(checked_character_at(s2, LENGTH2 + 1, index2)))
-      index2++;
-    if (index2 < LENGTH2) {
-      return checked_character_at(s2, LENGTH2 + 1, index2);
-    }
-    return (0);
   }
+  while (index1 < LENGTH1 &&
+         character_is_space(checked_character_at(s1, LENGTH1 + 1, index1)))
+    index1++;
+  while (index2 < LENGTH2 &&
+         character_is_space(checked_character_at(s2, LENGTH2 + 1, index2)))
+    index2++;
+  while (index1 < LENGTH1 && index2 < LENGTH2) {
+    const char CHARACTER1 = checked_character_at(s1, LENGTH1 + 1, index1);
+    const char CHARACTER2 = checked_character_at(s2, LENGTH2 + 1, index2);
+    if (character_is_space(CHARACTER1) && character_is_space(CHARACTER2)) {
+      while (index1 < LENGTH1 &&
+             character_is_space(checked_character_at(s1, LENGTH1 + 1, index1)))
+        index1++;
+      while (index2 < LENGTH2 &&
+             character_is_space(checked_character_at(s2, LENGTH2 + 1, index2)))
+        index2++;
+    } else if (ascii_to_lower(CHARACTER1) == ascii_to_lower(CHARACTER2)) {
+      index1++;
+      index2++;
+    } else {
+      break;
+    }
+  }
+  if (index1 < LENGTH1 && index2 < LENGTH2)
+    return (1);
+  while (index1 < LENGTH1 &&
+         character_is_space(checked_character_at(s1, LENGTH1 + 1, index1)))
+    index1++;
+  if (index1 < LENGTH1) {
+    return checked_character_at(s1, LENGTH1 + 1, index1);
+  }
+  while (index2 < LENGTH2 &&
+         character_is_space(checked_character_at(s2, LENGTH2 + 1, index2)))
+    index2++;
+  if (index2 < LENGTH2) {
+    return checked_character_at(s2, LENGTH2 + 1, index2);
+  }
+  return (0);
 }
 
 /**

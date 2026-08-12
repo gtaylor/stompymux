@@ -20,7 +20,7 @@ typedef struct MoveCommandRequest {
 
 void move_command(const MoveCommandRequest *request);
 void do_move(CommandInvocation *invocation);
-void do_enter_internal(EvaluationContext *evaluation, DbRef player,
-                       DbRef target, int key);
+void do_enter_internal(EvaluationContext *evaluation, DbRef player, DbRef thing,
+                       int quiet);
 void do_enter(CommandInvocation *invocation);
 void do_leave(CommandInvocation *invocation);

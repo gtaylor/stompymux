@@ -169,8 +169,7 @@ int find_ammo_type(Mech *mech, int loc, int part) {
   if (!(m & AMMO_MODES)) {
     if (base < 0)
       return ammunition_equipment_index(t);
-    else
-      return cargo_equipment_index(base);
+    return cargo_equipment_index(base);
   }
 
   if (m & LBX_MODE) {
@@ -269,11 +268,11 @@ int find_ammo_type(Mech *mech, int loc, int part) {
 
   if (m & INARC_EXPLO_MODE)
     return cargo_equipment_index(INARC_EXPLO_AMMO);
-  else if (m & INARC_HAYWIRE_MODE)
+  if (m & INARC_HAYWIRE_MODE)
     return cargo_equipment_index(INARC_HAYWIRE_AMMO);
-  else if (m & INARC_ECM_MODE)
+  if (m & INARC_ECM_MODE)
     return cargo_equipment_index(INARC_ECM_AMMO);
-  else if (m & INARC_NEMESIS_MODE)
+  if (m & INARC_NEMESIS_MODE)
     return cargo_equipment_index(INARC_NEMESIS_AMMO);
 
   if (base < 0)

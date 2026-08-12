@@ -52,12 +52,11 @@ int doubly_linked_list_destroy_list(DoublyLinkedList *list) {
   /* Check the size */
   if (list->size != 0) {
     return 0;
-  } else {
-    list->head = nullptr;
-    list->tail = nullptr;
-    free(list);
-    return 1;
   }
+  list->head = nullptr;
+  list->tail = nullptr;
+  free(list);
+  return 1;
 }
 
 /* Destroy a Node - Returns the data in the node */
@@ -100,8 +99,6 @@ void doubly_linked_list_insert_after(DoublyLinkedList *list,
 
   /* Increment */
   list->size++;
-
-  return;
 }
 
 /* Insert a given node before a node */
@@ -127,8 +124,6 @@ void doubly_linked_list_insert_before(DoublyLinkedList *list,
 
   /* Increment */
   list->size++;
-
-  return;
 }
 
 /* Insert a node at the beginning */
@@ -155,8 +150,6 @@ void doubly_linked_list_insert_beginning(DoublyLinkedList *list,
   } else {
     doubly_linked_list_insert_before(list, list->head, newnode);
   }
-
-  return;
 }
 
 /* Insert a node at the end of the list */
@@ -176,8 +169,6 @@ void doubly_linked_list_insert_end(DoublyLinkedList *list,
   } else {
     doubly_linked_list_insert_after(list, list->tail, newnode);
   }
-
-  return;
 }
 
 /* Remove a node from the list - returns the data */

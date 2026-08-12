@@ -25,7 +25,6 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
-#include "mux/support/name_table.h"
 /* default (runtime-resettable) cache parameters */
 
 constexpr int CACHE_DEPTH = 10;
@@ -84,12 +83,6 @@ static void *configuration_resolve_location(ConfigurationContext *context,
  * ---------------------------------------------------------------------------
  * * External symbols.
  */
-
-extern NameTable logdata_nametab[];
-extern NameTable logoptions_nametab[];
-extern NameTable access_nametab[];
-extern NameTable list_names[];
-extern CONF conftable[];
 
 /*
  * ---------------------------------------------------------------------------

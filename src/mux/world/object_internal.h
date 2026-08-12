@@ -21,8 +21,8 @@ typedef struct ObjectPointerError {
 void object_log_pointer_error(const ObjectPointerError *error);
 void object_log_header_error(EvaluationContext *evaluation, DbRef object,
                              DbRef location, DbRef value, bool value_is_object,
-                             const char *value_type, const char *error_type);
+                             const char *valtype, const char *errtype);
 void object_log_simple_error(EvaluationContext *evaluation, DbRef object,
-                             DbRef location, const char *error_type);
+                             DbRef location, const char *errtype);
 void object_purge_going(EvaluationContext *evaluation, bool full_check);
 void object_make_freelist(GameDatabase *database);

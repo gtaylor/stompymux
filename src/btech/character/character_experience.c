@@ -25,7 +25,7 @@ void character_experience_reduce(const CharacterExperienceReduction *change) {
   int i;
 
   character_stats_retrieve(context, PLAYER, VALUES_ALL, s);
-  for (i = 0; i < (int)(NUM_CHARVALUES); i++) {
+  for (i = 0; i < NUM_CHARVALUES; i++) {
     int xp = character_stats_xp_get(s, i);
     if (!xp)
       continue;

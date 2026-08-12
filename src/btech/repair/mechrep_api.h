@@ -9,7 +9,7 @@ typedef struct BtechContext BtechContext;
 
 /* mechrep.c */
 void newfreemechrep(DbRef key, void **data,
-                    BtechSpecialLifecycleOperation operation);
+                    BtechSpecialLifecycleOperation selector);
 void mechrep_rresetcrits(DbRef player, void *data, char *buffer);
 void mechrep_rdisplaysection(DbRef player, void *data, char *buffer);
 void mechrep_rsetradio(DbRef player, void *data, char *buffer);

@@ -8,7 +8,7 @@
 #include "mech_api_types.h"
 #include "mech_condition_api.h"
 #include "mech_crew_api.h"
-#include "mech_hitloc_internal.h"
+#include "mech_hitloc_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_notify_api.h"

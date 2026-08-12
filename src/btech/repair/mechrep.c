@@ -35,7 +35,6 @@
 #include "template_api.h"
 
 /* Selectors */
-extern char *strtok(char *s, const char *ct);
 
 /*--------------------------------------------------------------------------*/
 

@@ -101,8 +101,7 @@ int has_bool_advantage(BtechContext *context, DbRef player, const char *name) {
                            VALUES_ATTRS | VALUES_ADVS | VALUES_HEALTH, s);
   if (char_getstatvalue(s, buf) == 1)
     return 1;
-  else
-    return 0;
+  return 0;
 }
 
 static int ton_value(const Mech *mech) {
@@ -329,13 +328,13 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
       sizeof(buf));
 
   // Emit XP gain over MechAttackXP
-  if (char_gainxp(context, PILOT, skname, (int)xp)) {
+  if (char_gainxp(context, PILOT, skname, xp)) {
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
         tprintf("%s gained %d gun XP from feat of %f/100 difficulty "
                 "(%d damage) against %s",
-                game_object_name(mech_context(attacker)->database, PILOT),
-                (int)xp, multiplier, DAMAGE, buf));
+                game_object_name(mech_context(attacker)->database, PILOT), xp,
+                multiplier, DAMAGE, buf));
     if (mech_context(attacker)->configuration->btech_noisy_xpgain)
       btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
                          tprintf("#%ld in #%ld %d damage #%ld", PILOT,
@@ -440,13 +439,13 @@ legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
   /* Switching to Exile method of tracking xp, where we split
    * Attacking and Piloting xp into two different channels
    */
-  if (char_gainxp(context, PILOT, skname, (int)xp))
+  if (char_gainxp(context, PILOT, skname, xp))
     btech_channel_send(
         context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
         tprintf("%s gained %d gun XP from feat of %f %% "
                 "difficulty (%d occurences) against %s",
-                game_object_name(mech_context(attacker)->database, PILOT),
-                (int)xp, multiplier, NUM_OCCURENCES, buf));
+                game_object_name(mech_context(attacker)->database, PILOT), xp,
+                multiplier, NUM_OCCURENCES, buf));
 }
 
 BtechScriptResult fun_btgetcharvalue(BtechScriptCall *call) {
@@ -482,7 +481,7 @@ BtechScriptResult fun_btgetcharvalue(BtechScriptCall *call) {
   const char *value_name = function_argument(fargs, NFARGS, 1);
   if (!parse_int_checked(value_name, &targetcode))
     targetcode = char_getvaluecode(context, value_name);
-  if (targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES)) {
+  if (targetcode < 0 || targetcode >= NUM_CHARVALUES) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
@@ -558,7 +557,7 @@ BtechScriptResult fun_btsetcharvalue(BtechScriptCall *call) {
   const char *value_name = function_argument(fargs, NFARGS, 1);
   if (!parse_int_checked(value_name, &targetcode))
     targetcode = char_getvaluecode(context, value_name);
-  if (targetcode < 0 || targetcode >= (int)(NUM_CHARVALUES)) {
+  if (targetcode < 0 || targetcode >= NUM_CHARVALUES) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
@@ -728,7 +727,7 @@ BtechScriptResult fun_btcharlist(BtechScriptCall *call) {
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
 
-  for (i = 0; i < (int)(NUM_CHARVALUES); ++i) {
+  for (i = 0; i < NUM_CHARVALUES; ++i) {
     const CharacterValue *definition = character_value_definition(i);
     if (type == definition->type) {
       if (NFARGS == 2 && type != CHAR_ATTRIBUTE) {

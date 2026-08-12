@@ -22,7 +22,6 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_utils_api.h"
-#include "mux/commands/command_handlers.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/character_state.h"
 #include "mux/objects/db.h"
@@ -357,13 +356,13 @@ int mw_ic_bth(Mech *mech) {
     mod = -1;
   if (playerhits >= (8 * player_bld))
     return 3 + mod;
-  else if (playerhits >= (6 * player_bld))
+  if (playerhits >= (6 * player_bld))
     return 5 + mod;
-  else if (playerhits >= (4 * player_bld))
+  if (playerhits >= (4 * player_bld))
     return 7 + mod;
-  else if (playerhits >= (2 * player_bld))
+  if (playerhits >= (2 * player_bld))
     return 10 + mod;
-  else if (playerhits >= -1)
+  if (playerhits >= -1)
     return 11 + mod;
   return 0;
 }

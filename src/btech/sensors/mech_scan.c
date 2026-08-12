@@ -110,22 +110,22 @@ void mech_scan(DbRef player, void *data, char *buffer) {
         return;
       }
       break;
-    } else { /* Default target */
-      switch (ascii_to_upper(*checked_string_suffix(args[0], 0))) {
-      case 'A':
-        options = SHOW_ARMOR;
-        break;
-      case 'I':
-        options = SHOW_INFO;
-        break;
-      case 'W':
-        options = SHOW_WEAPONS;
-        break;
-      default:
-        mecha_notify(evaluation, player, "Truly odd option!");
-        return;
-      }
+    } /* Default target */
+    switch (ascii_to_upper(*checked_string_suffix(args[0], 0))) {
+    case 'A':
+      options = SHOW_ARMOR;
+      break;
+    case 'I':
+      options = SHOW_INFO;
+      break;
+    case 'W':
+      options = SHOW_WEAPONS;
+      break;
+    default:
+      mecha_notify(evaluation, player, "Truly odd option!");
+      return;
     }
+
     [[fallthrough]];
   case 0:
     /* scan current target... */

@@ -113,7 +113,6 @@ static void promote_match(MatchContext *match_context,
     MD.match = what;
   }
   MD.count++;
-  return;
 }
 
 /*
@@ -198,9 +197,8 @@ static DbRef absolute_name(MatchContext *match_context, int need_pound) {
   if (need_pound) {
     if (*MD.string != NUMBER_TOKEN) {
       return NOTHING;
-    } else {
-      mname = checked_mutable_string_suffix(mname, 1);
     }
+    mname = checked_mutable_string_suffix(mname, 1);
   }
   match = parse_dbref(mname);
   if (is_good_obj(MD.evaluation->world->database, match)) {
@@ -238,7 +236,6 @@ void match_me(MatchContext *match_context) {
   if (!string_compare(MD.evaluation->world->configuration, MD.string, "me"))
     promote_match(match_context,
                   (MatchCandidate){MD.player, CON_TOKEN | CON_LOCAL});
-  return;
 }
 
 void match_home(MatchContext *match_context) {
@@ -246,7 +243,6 @@ void match_home(MatchContext *match_context) {
     return;
   if (!string_compare(MD.evaluation->world->configuration, MD.string, "home"))
     promote_match(match_context, (MatchCandidate){HOME, CON_TOKEN});
-  return;
 }
 
 void match_here(MatchContext *match_context) {
@@ -266,7 +262,7 @@ void match_here(MatchContext *match_context) {
         promote_match(match_context,
                       (MatchCandidate){loc, CON_TOKEN | CON_LOCAL});
       } else if (!string_compare(MD.evaluation->world->configuration, MD.string,
-                                 (char *)game_object_pure_name(
+                                 game_object_pure_name(
                                      MD.evaluation->world->database, loc))) {
         promote_match(match_context,
                       (MatchCandidate){loc, CON_COMPLETE | CON_LOCAL});
@@ -291,8 +287,7 @@ static void match_list(MatchContext *match_context, DbRef first, int local) {
      * would overwrite game_object_name()'s static buffer which is
      * needed by string_match().
      */
-    namebuf =
-        (char *)game_object_pure_name(MD.evaluation->world->database, first);
+    namebuf = game_object_pure_name(MD.evaluation->world->database, first);
 
     if (!string_compare(MD.evaluation->world->configuration, namebuf,
                         MD.string)) {
@@ -568,7 +563,7 @@ void init_match(MatchContext *match_context, DbRef player, char *name,
   MD.pref_type = type;
   MD.match = NOTHING;
   MD.player = player;
-  MD.string = munge_space_for_match(match_context, (char *)name);
+  MD.string = munge_space_for_match(match_context, name);
   MD.absolute_form = absolute_name(match_context, 1);
 }
 

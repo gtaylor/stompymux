@@ -376,7 +376,8 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
           .gatling_shots = w_gattling_shots,
       });
       return;
-    } else if (roll < 5) {
+    }
+    if (roll < 5) {
       mech_printf(
           request->mech, MECHALL,
           "[fg=red bold]The ammo loader mechanism jams on your %s![reset]",

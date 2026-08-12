@@ -115,7 +115,7 @@ static void mech_spot_event(MuxEvent *e) {
                 "The data link was not established due to movement!");
     mech_notify(mech, MECHALL,
                 "The data link was not established due to movement!");
-    free((void *)e->data2);
+    free(e->data2);
     return;
   }
   mech_printf(target, MECHALL, "Data link established with %s.",
@@ -126,7 +126,7 @@ static void mech_spot_event(MuxEvent *e) {
   mech_spotter_dbref_set(mech, mech_dbref(target));
   mech_event_schedule(mech, EVENT_SPOT_CHECK, mech_check_range, SPOT_TICK,
                       (intptr_t)target);
-  free((void *)e->data2);
+  free(e->data2);
 }
 
 void mech_spot_clear_fire_adjustments(BattleMap *map, DbRef mech) {
@@ -244,7 +244,8 @@ void mech_spot(DbRef player, void *data, char *buffer) {
     mech_event_schedule(mech, EVENT_SPOT_LOCK, mech_spot_event,
                         WEAPON_TICK * ((int)range / 10 + 5), (intptr_t)dat);
     return;
-  } else if (!los) {
+  }
+  if (!los) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You do not have LOS to that target!");
     return;

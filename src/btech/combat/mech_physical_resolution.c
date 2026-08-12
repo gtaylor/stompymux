@@ -202,23 +202,25 @@ void physical_attack_resolve(const PhysicalAttackRequest *request) {
     return;
     // If we are fallen AND
     //   The target is not a BSuit AND We're not punching
-  } else if (mech_condition_summary(mech).fallen &&
-             (mech_class(target) != CLASS_VEH_GROUND &&
-              mech_class(target) != CLASS_BSUIT)) {
+  }
+  if (mech_condition_summary(mech).fallen &&
+      (mech_class(target) != CLASS_VEH_GROUND &&
+       mech_class(target) != CLASS_BSUIT)) {
     mech_printf(mech, MECHALL, "You can't %s from a prone position.",
                 physical_attack_verb(
                     &(PhysicalVerbRequest){.attack_type = ATTACK_TYPE}));
 
     return;
-  } else if (mech_condition_summary(mech).fallen &&
-             mech_class(target) == CLASS_BSUIT && !swarming_us) {
+  }
+  if (mech_condition_summary(mech).fallen &&
+      mech_class(target) == CLASS_BSUIT && !swarming_us) {
     mech_notify(
         mech, MECHALL,
         "You may only physical suits that are swarming you while prone.");
     return;
-  } else if (mech_condition_summary(mech).fallen &&
-             mech_class(target) == CLASS_VEH_GROUND &&
-             ATTACK_TYPE != PA_PUNCH) {
+  }
+  if (mech_condition_summary(mech).fallen &&
+      mech_class(target) == CLASS_VEH_GROUND && ATTACK_TYPE != PA_PUNCH) {
     mech_notify(mech, MECHALL, "You may only punch vehicles while prone.");
     return;
   } // end if() - Physical while fallen.

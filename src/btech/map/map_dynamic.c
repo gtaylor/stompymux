@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "autopilot.h"
+#include "autopilot_resume_api.h"
 #include "btech_channel.h"
 #include "econ_cmds_api.h"
 #include "map.h"

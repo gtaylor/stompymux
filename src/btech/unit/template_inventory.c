@@ -243,7 +243,8 @@ char *payloadlist_func(Mech *mech, char *buffer) {
             (*inventory_count_slot(payload_items_count, put_loop))++;
             break;
             /* Ok, see if there is no entry */
-          } else if (*inventory_item_slot(payload_items, put_loop) == -1) {
+          }
+          if (*inventory_item_slot(payload_items, put_loop) == -1) {
             *inventory_item_slot(payload_items, put_loop) = weapon;
             (*inventory_count_slot(payload_items_count, put_loop))++;
             weap_count++;
@@ -277,7 +278,8 @@ char *payloadlist_func(Mech *mech, char *buffer) {
               (*inventory_count_slot(payload_items_count, put_loop))++;
               break;
               /* Ok, see if there is no entry */
-            } else if (*inventory_item_slot(payload_items, put_loop) == -1) {
+            }
+            if (*inventory_item_slot(payload_items, put_loop) == -1) {
               *inventory_item_slot(payload_items, put_loop) = temp_crit;
               (*inventory_count_slot(payload_items_count, put_loop))++;
               ammo_count++;
@@ -387,7 +389,8 @@ char *partlist_func(Mech *mech, char *buffer) {
           (*inventory_count_slot(partlist_count, put_loop))++;
           break;
           /* Ok, see if there is no entry */
-        } else if (*inventory_item_slot(partlist_items, put_loop) == -1) {
+        }
+        if (*inventory_item_slot(partlist_items, put_loop) == -1) {
           *inventory_item_slot(partlist_items, put_loop) = temp_crit;
           (*inventory_count_slot(partlist_count, put_loop))++;
           part_count++;

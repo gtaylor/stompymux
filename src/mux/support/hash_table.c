@@ -73,8 +73,8 @@ void *hash_table_find(const char *str, HashTable *htab) {
 #pragma clang diagnostic pop
   if (ent) {
     return ent->data.mutable_data;
-  } else
-    return (void *)ent;
+  }
+  return (void *)ent;
 }
 
 const void *hash_table_find_const(const char *str, HashTable *htab) {
@@ -158,8 +158,6 @@ void hash_table_delete(const char *str, HashTable *htab) {
       free(ent->key);
     free(ent);
   }
-
-  return;
 }
 
 /*
@@ -272,10 +270,9 @@ void *hash_table_next_entry(HashTable *htab) {
   if (ent) {
     htab->last = strdup(ent->key);
     return ent->data.mutable_data;
-  } else {
-    htab->last = nullptr;
-    return nullptr;
   }
+  htab->last = nullptr;
+  return nullptr;
 }
 
 char *hash_table_first_key(HashTable *htab) {
@@ -306,8 +303,7 @@ char *hash_table_next_key(HashTable *htab) {
   if (ent) {
     htab->last = strdup(ent->key);
     return ent->key;
-  } else {
-    htab->last = nullptr;
-    return nullptr;
   }
+  htab->last = nullptr;
+  return nullptr;
 }

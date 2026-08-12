@@ -64,19 +64,20 @@ int btech_part_weight(int part) {
     const int CATALOGUE_WEIGHT = weapon_catalogue_weight(WEAPON_INDEX);
     const float PART_WEIGHT = 10.24F * (float)CATALOGUE_WEIGHT;
     return (int)PART_WEIGHT;
-  } else if (equipment_is_ammunition(part))
+  }
+  if (equipment_is_ammunition(part))
     return 1024;
-  else if (equipment_is_bomb(part))
+  if (equipment_is_bomb(part))
     return 102 * bomb_weight(bomb_from_equipment_index(part));
 #ifndef BT_PART_WEIGHTS
   else if (equipment_is_special(part) && part <= special_equipment_index(CLAW))
     return 1024;
 #else
-  else if (equipment_is_special(
-               part)) /* && i <= special_equipment_index(LAMEQUIP) */
+  if (equipment_is_special(
+          part)) /* && i <= special_equipment_index(LAMEQUIP) */
     return *int_at(INTERNALSWEIGHT, (size_t)TEMPLATE_INTERNAL_COUNT,
                    (size_t)special_from_equipment_index(part));
-  else if (equipment_is_cargo(part))
+  if (equipment_is_cargo(part))
     return *int_at(CARGOWEIGHT, (size_t)TEMPLATE_CARGO_COUNT,
                    (size_t)cargo_from_equipment_index(part));
 #endif /* BT_PART_WEIGHTS */
@@ -147,20 +148,19 @@ unsigned long long btech_part_cost_get(const BtechContext *context, int part) {
   if (equipment_is_weapon(part))
     return *part_cost_at_const(costs->weapons, WEAPCOST_SIZE,
                                (size_t)weapon_from_equipment_index(part));
-  else if (equipment_is_ammunition(part))
+  if (equipment_is_ammunition(part))
     return *part_cost_at_const(costs->ammunition, AMMOCOST_SIZE,
                                (size_t)ammunition_to_weapon_index(part));
-  else if (equipment_is_special(part))
+  if (equipment_is_special(part))
     return *part_cost_at_const(costs->specials, SPECIALCOST_SIZE,
                                (size_t)special_from_equipment_index(part));
-  else if (equipment_is_bomb(part))
+  if (equipment_is_bomb(part))
     return *part_cost_at_const(costs->bombs, BOMBCOST_SIZE,
                                (size_t)bomb_from_equipment_index(part));
-  else if (equipment_is_cargo(part))
+  if (equipment_is_cargo(part))
     return *part_cost_at_const(costs->cargo, CARGOCOST_SIZE,
                                (size_t)cargo_from_equipment_index(part));
-  else
-    return 0;
+  return 0;
 }
 
 void btech_part_cost_set(BtechContext *context, int part,
@@ -188,7 +188,7 @@ static void mech_cost_add(const Mech *mech, double *total, const char *desc,
   *total += value;
   if (mech_context(mech)->configuration->btech_cost_debug)
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("Addprice - %25s %8.0f", desc, (double)value));
+                       tprintf("Addprice - %25s %8.0f", desc, value));
 }
 
 int mech_engine_heat_sink_capacity(const Mech *mech) {
@@ -203,11 +203,11 @@ static void mech_cost_add_arm_actuators(Mech *mech, int loc, double *total) {
     int part = mech_critical_part_type(mech, loc, i);
     if (!equipment_is_actuator(part))
       continue;
-    else if (special_from_equipment_index(part) == SHOULDER_OR_HIP)
+    if (special_from_equipment_index(part) == SHOULDER_OR_HIP)
       continue;
     // BMR Says don't count this.
     // mech_cost_add(mech, total, "Shoulder Actuator", 0);
-    else if (special_from_equipment_index(part) == UPPER_ACTUATOR)
+    if (special_from_equipment_index(part) == UPPER_ACTUATOR)
       mech_cost_add(mech, total, "ARM Upper Actuator", (TONS * 100));
     else if (special_from_equipment_index(part) == LOWER_ACTUATOR)
       mech_cost_add(mech, total, "ARM Lower Actuator", (TONS * 50));
@@ -223,10 +223,10 @@ static void mech_cost_add_leg_actuators(Mech *mech, int loc, double *total) {
     int part = mech_critical_part_type(mech, loc, i);
     if (!equipment_is_actuator(part))
       continue;
-    else if (special_from_equipment_index(part) == SHOULDER_OR_HIP)
+    if (special_from_equipment_index(part) == SHOULDER_OR_HIP)
       continue;
     // BMR Says don't count the Hip
-    else if (special_from_equipment_index(part) == UPPER_ACTUATOR)
+    if (special_from_equipment_index(part) == UPPER_ACTUATOR)
       mech_cost_add(mech, total, "LEG Upper Actuator", (TONS * 150));
     else if (special_from_equipment_index(part) == LOWER_ACTUATOR)
       mech_cost_add(mech, total, "LEG Lower Actuator", (TONS * 80));

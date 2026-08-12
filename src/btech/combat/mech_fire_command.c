@@ -695,7 +695,7 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
   return (1);
 }
 
-void mech_c3_track_emit(Mech *mech, DbRef c3_ref, Mech *c3_mech) {
+void mech_c3_track_emit(Mech *mech, DbRef network_reference, Mech *c3_mech) {
   if (c3_mech && mech_dbref(c3_mech) != mech_dbref(mech)) {
     mech_printf(mech, MECHALL, "Using range data from %s [%s]",
                 btech_attribute_read(

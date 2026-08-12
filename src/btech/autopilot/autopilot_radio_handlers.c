@@ -36,8 +36,6 @@
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 
-void sendchannelstuff(Mech *mech, int freq, char *msg);
-
 void auto_radio_command_position(Autopilot *autopilot, Mech *mech,
                                  AutopilotArgumentList *args, int argc,
                                  char *mesg) {
@@ -88,7 +86,7 @@ void auto_radio_command_report(Autopilot *autopilot, Mech *mech,
   else if (mech_is_fallen(mech))
     strcpy(buffer, "Prone");
   else if (mech_current_speed(mech) >
-           2.0f * mech_effective_maximum_speed(mech) / 3.0f + 0.1f)
+           2.0F * mech_effective_maximum_speed(mech) / 3.0F + 0.1F)
     strcpy(buffer, "Running");
   else if (mech_current_speed(mech) > 1.0F)
     strcpy(buffer, "Walking");
@@ -174,7 +172,6 @@ void auto_radio_command_sensor(Autopilot *autopilot, Mech *mech,
   /* Let AI decide */
   autopilot->flags &= ~AUTOPILOT_LSENS;
   (void)snprintf(mesg, LBUF_SIZE, "using my own judgement with sensors");
-  return;
 }
 
 /*
@@ -285,7 +282,6 @@ void auto_radio_command_sweight(Autopilot *autopilot, Mech *mech,
   autopilot->auto_goweight = x;
   autopilot->auto_fweight = y;
   (void)snprintf(mesg, LBUF_SIZE, "sweight'ed to %d:%d. (go:fight)", x, y);
-  return;
 }
 
 /*
@@ -315,15 +311,12 @@ void auto_radio_command_target(Autopilot *autopilot, Mech *mech,
 
     (void)snprintf(mesg, LBUF_SIZE, "shooting at whatever I want");
     return;
-
-  } else {
-
-    targetref = find_target_dbref_from_map_number(
-        mech, autopilot_argument_list_get(args, 1));
-    if (targetref <= 0) {
-      (void)snprintf(mesg, LBUF_SIZE, "!Unable to see such a target");
-      return;
-    }
+  }
+  targetref = find_target_dbref_from_map_number(
+      mech, autopilot_argument_list_get(args, 1));
+  if (targetref <= 0) {
+    (void)snprintf(mesg, LBUF_SIZE, "!Unable to see such a target");
+    return;
   }
 
   autopilot->target = targetref;

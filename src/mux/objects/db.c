@@ -404,7 +404,6 @@ void attribute_copy(const AttributeCopyRequest *request) {
   object_state_copy(evaluation->world->database, dest, source);
   game_object_lua_parent_set(evaluation->world->database, dest,
                              source_object->lua_parent);
-  return;
 }
 
 /*

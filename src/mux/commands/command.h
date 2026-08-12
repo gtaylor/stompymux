@@ -57,7 +57,6 @@ struct Cmdentry {
 
 void init_cmdtab(CommandRegistry *registry);
 void command_aliases_destroy(HashTable *commands);
-extern NameTable access_nametab[];
 int cf_access(const ConfigurationCall *call);
 int cf_cmd_alias(const ConfigurationCall *call);
 

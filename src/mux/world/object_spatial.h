@@ -14,10 +14,10 @@ typedef struct EvaluationContext EvaluationContext;
 constexpr int VE_LOC_XAM = 0x01;  /* Location is examinable. */
 constexpr int VE_LOC_DARK = 0x02; /* Location is dark. */
 
-DbRef where_is(GameDatabase *database, DbRef object);
+DbRef where_is(GameDatabase *database, DbRef what);
 DbRef where_room(GameDatabase *database,
-                 const ServerConfiguration *configuration, DbRef object);
-int nearby(GameDatabase *database, DbRef player, DbRef object);
+                 const ServerConfiguration *configuration, DbRef what);
+int nearby(GameDatabase *database, DbRef player, DbRef thing);
 typedef struct ExitVisibilityRequest {
   EvaluationContext *evaluation;
   GameDatabase *database;

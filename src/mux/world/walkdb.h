@@ -24,6 +24,6 @@ struct ObjectList {
 
 void object_list_initialize(ObjectList *list);
 void object_list_destroy(ObjectList *list);
-void object_list_add(ObjectList *list, DbRef object);
+void object_list_add(ObjectList *list, DbRef item);
 DbRef object_list_first(ObjectList *list);
 DbRef object_list_next(ObjectList *list);

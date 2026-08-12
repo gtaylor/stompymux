@@ -105,16 +105,16 @@ int do_macro(MatchContext *match, CommandRegistry *commands,
   if (*out) {
     free_lbuf(old);
     return 1;
-  } else {
-    string_copy(in, old);
-    free_lbuf(old);
-    return 2; /*
-               * return any value > 1, and command * * *
-               * processing will
-               */
-  } /*
-     * continue
-     */
+  }
+  string_copy(in, old);
+  free_lbuf(old);
+  return 2; /*
+             * return any value > 1, and command * * *
+             * processing will
+             */
+  /*
+   * continue
+   */
 }
 void do_list_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                    char *s) {
@@ -301,8 +301,8 @@ void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     "MACRO: Illegal Macro Set.  Macros go from 0 to %d.",
                     registry->count - 1);
       return;
-    } else
-      m = macro_registry_item(registry, (size_t)which);
+    }
+    m = macro_registry_item(registry, (size_t)which);
   } else {
     macro_notify(match, player, "MACRO: I do not see that set here.");
     return;
@@ -464,7 +464,8 @@ void do_clear_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     macro_notify(match, player,
                  "MACRO: You are not currently editing a macro set.");
     return;
-  } else if (commac_macro_item(c, (size_t)c->curmac) == -1) {
+  }
+  if (commac_macro_item(c, (size_t)c->curmac) == -1) {
     macro_notify(match, player, "MACRO: That is not a valid macro set.");
     return;
   }
@@ -478,7 +479,8 @@ void do_clear_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
       macro_notify(match, player,
                    "MACRO: You may only CLEAR your own macro sets.");
       return;
-    } else if ((player == m->player) && (m->status & MACRO_L)) {
+    }
+    if ((player == m->player) && (m->status & MACRO_L)) {
       macro_notify(match, player, "MACRO: Sorry, that macro set is locked.");
       return;
     }
@@ -554,11 +556,13 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
     macro_notify(match, player,
                  "MACRO: You must specify a string to substitute for.");
     return;
-  } else if (!*alias || strlen(alias) > 4) {
+  }
+  if (!*alias || strlen(alias) > 4) {
     macro_notify(match, player,
                  "MACRO: Please use an alias from 1 to 4 characters long.");
     return;
-  } else if (!utf8_is_printable_ascii(alias, strlen(alias))) {
+  }
+  if (!utf8_is_printable_ascii(alias, strlen(alias))) {
     notify_checked(
         match->evaluation, player, player,
         "MACRO: Aliases must contain only printable ASCII characters.",

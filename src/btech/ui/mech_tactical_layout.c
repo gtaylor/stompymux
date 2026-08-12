@@ -157,7 +157,7 @@ void tactical_map_sketch(char *buffer, size_t buffer_capacity, BattleMap *map,
         top_character = (char)terrain;
         bottom_character =
             show_underlying_terrain
-                ? (char)map_real_terrain_get(map, start_x + x, start_y + y)
+                ? map_real_terrain_get(map, start_x + x, start_y + y)
                 : (char)terrain;
         break;
       case HIGHWATER:

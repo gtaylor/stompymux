@@ -24,5 +24,5 @@ char *mech_damagefunc(const GmvBufferedBidirectionalCall *call);
 char *mech_cent_bearingfunc(Mech *mech, char buffer[static LBUF_SIZE]);
 char *mech_cent_distfunc(Mech *mech, char buffer[static LBUF_SIZE]);
 void set_xcodestuff(DbRef player, void *data, char *buffer);
-void list_xcodestuff(DbRef player, void *data, char *buffer);
+void list_xcodestuff(DbRef player, void *data, const char *buffer);
 void list_xcodevalues(EvaluationContext *context, DbRef player);

@@ -269,7 +269,7 @@ static PartFailureResult failure_radio_static(const PartFailureCall *call) {
 static void mech_rrec_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   const intptr_t EVENT_VALUE = (intptr_t)e->data2;
-  assert(event_value >= INT_MIN && event_value <= INT_MAX);
+  assert(EVENT_VALUE >= INT_MIN && EVENT_VALUE <= INT_MAX);
   const int VAL = (int)EVENT_VALUE;
 
   mech_radio_range_add(mech, VAL);
@@ -280,7 +280,7 @@ static void mech_rrec_event(MuxEvent *e) {
 static void mech_srec_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   const intptr_t EVENT_VALUE = (intptr_t)e->data2;
-  assert(event_value >= INT_MIN && event_value <= INT_MAX);
+  assert(EVENT_VALUE >= INT_MIN && EVENT_VALUE <= INT_MAX);
   const int VAL = (int)EVENT_VALUE;
   const int VT = VAL / 256;
 

@@ -312,9 +312,8 @@ void search_criteria_perform(const SearchExecutionRequest *request) {
      */
 
     if (parm->s_rst_name != nullptr) {
-      if (!string_prefix(
-              (char *)game_object_pure_name(context->world->database, thing),
-              parm->s_rst_name))
+      if (!string_prefix(game_object_pure_name(context->world->database, thing),
+                         parm->s_rst_name))
         continue;
     }
     /*

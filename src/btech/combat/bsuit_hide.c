@@ -86,14 +86,14 @@ static void mech_hide_event(MuxEvent *e) {
                 "Your spidey sense tingles, telling you this isn't going to "
                 "work......");
     return;
-  } else if (tic < ((long)(mech_hidden_turns(mech) * HIDE_TICK))) {
+  }
+  if (tic < ((long)(mech_hidden_turns(mech) * HIDE_TICK))) {
     tic++;
     mech_event_schedule(mech, EVENT_HIDE, mech_hide_event, 1, tic);
   } else if (!fail) {
     mech_notify(mech, MECHALL, "You are now hidden!");
     mech_hidden_set(mech, true);
   }
-  return;
 }
 
 void bsuit_hide(DbRef player, void *data, const char *buffer) {

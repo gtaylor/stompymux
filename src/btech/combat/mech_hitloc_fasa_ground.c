@@ -445,8 +445,8 @@ HitLocationResult fasa_ground_hit_location(Mech *mech, int hit_group,
                         "Your turret takes a direct hit and locks up!");
           }
           return hit_location_result_at(result, TURRET);
-        } else
-          return hit_location_result_at(result, side);
+        }
+        return hit_location_result_at(result, side);
       case 12:
         /* A Roll on Determining Critical Hits Table */
         if (mech_section_is_crittable(

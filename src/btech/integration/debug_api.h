@@ -9,7 +9,7 @@ typedef struct BtechContext BtechContext;
 /* debug.c */
 void debug_list(DbRef player, void *data, char *buffer);
 void debug_savedb(DbRef player, void *data, char *buffer);
-void debug_memory(DbRef player, void *data, char *buffer);
+void debug_memory(DbRef player, void *data, const char *buffer);
 typedef struct MapShutdownRequest {
   BtechContext *context;
   DbRef actor;
