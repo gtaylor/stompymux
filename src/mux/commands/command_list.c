@@ -11,7 +11,6 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "btmux_build_config.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_handlers.h"
@@ -35,9 +34,7 @@
 #include "mux/world/player.h"
 #include "mux/world/world_context.h"
 
-#ifdef ARBITRARY_LOGFILES
 #include "mux/server/log_cache.h"
-#endif
 
 constexpr char CACHING[] = "object";
 
@@ -461,9 +458,7 @@ NameTable list_names[] = {{"bad_names", 2, CA_WIZARD, LIST_BADNAMES},
                           {"process", 2, CA_WIZARD, LIST_PROCESS},
                           {"site_information", 2, CA_WIZARD, LIST_SITEINFO},
                           {"switches", 2, CA_PUBLIC, LIST_SWITCHES},
-#ifdef ARBITRARY_LOGFILES
                           {"logfiles", 4, CA_WIZARD, LIST_LOGFILES},
-#endif
                           {nullptr, 0, 0, 0}};
 
 extern NameTable logoptions_nametab[];
@@ -542,12 +537,10 @@ void do_list(CommandInvocation *invocation) {
     badname_list(&invocation->context->evaluation, invocation->context->world,
                  PLAYER, "Disallowed names:");
     break;
-#ifdef ARBITRARY_LOGFILES
   case LIST_LOGFILES:
     log_cache_list(&invocation->context->evaluation,
                    invocation->context->log->cache, PLAYER);
     break;
-#endif
   default:
     name_table_display(&invocation->context->evaluation, configuration, PLAYER,
                        list_names, "Unknown option.  Use one of:", 1);

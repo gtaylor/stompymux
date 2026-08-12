@@ -14,7 +14,6 @@
 #include <time.h>
 
 #include "btech/context.h"
-#include "btmux_build_config.h"
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_queue.h"
 #include "mux/commands/macro.h"
@@ -178,12 +177,10 @@ bool mux_server_create(MuxServer *server) {
                                  server_lifecycle_loop(server->lifecycle));
   server->server_control.lifecycle = server->lifecycle;
   command_queue_set_lifecycle(server->commands, server->lifecycle);
-#ifdef ARBITRARY_LOGFILES
   server->log.cache =
       log_cache_create(server_lifecycle_loop(server->lifecycle), &server->log);
   if (server->log.cache == nullptr)
     goto fail;
-#endif
   btech_context_set_lifecycle(server->btech, server->lifecycle);
   server->command_runtime.lifecycle = server->lifecycle;
   return true;

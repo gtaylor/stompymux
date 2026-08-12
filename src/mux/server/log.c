@@ -14,6 +14,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"
+#include "mux/server/log_cache.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
@@ -21,9 +22,6 @@
 #include "mux/support/alloc.h"
 #include "mux/support/name_table.h"
 #include "mux/support/styled_text/markup.h"
-#ifdef ARBITRARY_LOGFILES
-#include "mux/server/log_cache.h"
-#endif
 
 NameTable logdata_nametab[] = {{"flags", 1, 0, LOGOPT_FLAGS},
                                {"location", 1, 0, LOGOPT_LOC},
@@ -260,7 +258,6 @@ void log_type_and_name(ServerLog *log, DbRef thing) {
   log_text(")");
 }
 
-#ifdef ARBITRARY_LOGFILES
 bool log_to_file(const ArbitraryLogRequest *request) {
   char pathname[210]; /* Arbitrary limit in logfile length */
   char message_buffer[4096];
@@ -324,4 +321,3 @@ void do_log(CommandInvocation *invocation) {
   notify_checked(evaluation, player, player, "Message logged.",
                  MSG_ME_ALL | MSG_F_DOWN);
 }
-#endif

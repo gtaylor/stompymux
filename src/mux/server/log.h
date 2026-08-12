@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "btmux_build_config.h"
 #include "mux/objects/db.h" // IWYU pragma: keep
 #include "mux/server/platform.h"
 
@@ -41,14 +40,12 @@ typedef struct LogSystemError {
   const char *failing_object;
 } LogSystemError;
 
-#ifdef ARBITRARY_LOGFILES
 typedef struct ArbitraryLogRequest {
   EvaluationContext *evaluation;
   DbRef actor;
   const char *filename;
   const char *message;
 } ArbitraryLogRequest;
-#endif
 
 void server_log_initialize(ServerLog *log, GameDatabase *database,
                            const ServerConfiguration *configuration);
@@ -70,6 +67,4 @@ void log_name(ServerLog *log, DbRef target);
 void log_name_and_loc(ServerLog *log, DbRef player);
 const char *object_type_name(GameDatabase *database, DbRef thing);
 void log_type_and_name(ServerLog *log, DbRef thing);
-#ifdef ARBITRARY_LOGFILES
 bool log_to_file(const ArbitraryLogRequest *request);
-#endif

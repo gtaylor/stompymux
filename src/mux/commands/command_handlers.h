@@ -64,9 +64,7 @@ void do_session(CommandInvocation *invocation); /* Wizard session listing */
 void do_telnet(CommandInvocation *invocation);  /* Wizard Telnet diagnostics */
 void do_who(CommandInvocation *invocation);     /* Wizard WHO listing */
 /* from log.c */
-#ifdef ARBITRARY_LOGFILES
 void do_log(CommandInvocation *invocation); /* Log to arbitrary logfile */
-#endif
 
 /* Mecha stuff */
 void do_show(CommandInvocation *invocation);

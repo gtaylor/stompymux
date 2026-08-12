@@ -589,6 +589,15 @@ target_include_directories(lua_command_access_test PRIVATE
   "${LUAJIT_SOURCE_DIR}/src")
 add_test(NAME lua_command_access COMMAND lua_command_access_test)
 
+add_executable(lua_log_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/content/lua_log.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/mux_package.c)
+target_link_libraries(lua_log_test PRIVATE btmux_options luajit m)
+target_include_directories(lua_log_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  "${CMAKE_SOURCE_DIR}/src"
+  "${LUAJIT_SOURCE_DIR}/src")
+add_test(NAME lua_log COMMAND lua_log_test)
+
 add_executable(libtelnet_integration_test ${CMAKE_SOURCE_DIR}/tests/integration/libtelnet_integration.c)
 target_link_libraries(libtelnet_integration_test
   PRIVATE btmux_options libtelnet)

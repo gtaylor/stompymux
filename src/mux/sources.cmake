@@ -92,6 +92,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/server/game.c
   ${MUX_MODULE_DIR}/server/database_bootstrap.c
   ${MUX_MODULE_DIR}/server/log.c
+  ${MUX_MODULE_DIR}/server/log_cache.c
   ${MUX_MODULE_DIR}/server/maintenance.c
   ${MUX_MODULE_DIR}/server/mux_server.c
   ${MUX_MODULE_DIR}/server/server_lifecycle.c
@@ -134,7 +135,3 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/world/object_set.c
   ${MUX_MODULE_DIR}/world/walkdb.c
   ${MUX_MODULE_DIR}/commands/wiz.c)
-
-if(BTECH_ENHANCED_LOGGING)
-  target_sources(stompymux PRIVATE ${MUX_MODULE_DIR}/server/log_cache.c)
-endif()

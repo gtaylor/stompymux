@@ -8,7 +8,6 @@
 #include <string.h>
 
 #include "btech/context.h" // IWYU pragma: keep
-#include "btmux_build_config.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_internal.h"
 #include "mux/commands/macro.h" // IWYU pragma: keep
@@ -22,10 +21,6 @@
 #include "mux/support/hash_table.h"
 #include "mux/support/name_table.h"
 #include "mux/support/stringutil.h"
-
-#ifdef ARBITRARY_LOGFILES
-#include "mux/server/log_cache.h"
-#endif
 
 NameTable access_nametab[] = {{"god", 2, CA_GOD, CA_GOD},
                               {"wizard", 3, CA_WIZARD, CA_WIZARD},

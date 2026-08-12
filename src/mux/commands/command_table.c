@@ -8,7 +8,6 @@
 #include "btech/character/btechstats_api.h"
 #include "btech/context.h" // IWYU pragma: keep
 #include "btech/ui/mech_stat_api.h"
-#include "btmux_build_config.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_internal.h"
@@ -261,9 +260,7 @@ CMDENT command_table[] = {
     {"@link", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_link}},
     {"@lua", lua_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_lua}},
     {"@list", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_list}},
-#ifdef ARBITRARY_LOGFILES
     {"@log", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_log}},
-#endif
     {"@name", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_name}},
     {"@newpassword",
      nullptr,

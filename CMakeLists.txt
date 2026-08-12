@@ -35,7 +35,6 @@ set(MUX_SOURCE_DIR "src/mux")
 set(BTECH_SOURCE_DIR "src/btech")
 
 option(BTECH_ADVANCED_ECON "Enable the advanced econ system" ON)
-option(BTECH_ENHANCED_LOGGING "Enable arbitrary server logs" ON)
 option(BTECH_COMPLEX_REPAIRS "Enable complex repairs" OFF)
 
 option(BTECH_CARGO_COMMANDS "Enable hardcoded cargo commands" ON)
@@ -153,7 +152,6 @@ set(BTMUX_NAME "${PROJECT_NAME}")
 set(BTMUX_VERSION_STRING "${BTMUX_NAME} ${PROJECT_VERSION}")
 
 set(BT_ADVANCED_ECON ${BTECH_ADVANCED_ECON})
-set(ARBITRARY_LOGFILES ${BTECH_ENHANCED_LOGGING})
 set(BT_COMPLEXREPAIRS ${BTECH_COMPLEX_REPAIRS})
 
 configure_file(src/cmake/btmux_build_config.h.in btmux_build_config.h)

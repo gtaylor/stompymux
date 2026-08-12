@@ -2,10 +2,13 @@
 
 #include <lauxlib.h>
 #include <lua.h>
+#include <string.h>
 
 #include "mux/lua/mux_package.h"
 #include "mux/lua/mux_package_internal.h"
+#include "mux/objects/flags.h"
 #include "mux/objects/object_state.h"
+#include "mux/server/log.h"
 
 LuaMuxPackage *lua_mux_package_get(lua_State *state) {
   return lua_touserdata(state, lua_upvalueindex(1));
@@ -38,9 +41,34 @@ void lua_mux_require_runtime(LuaMuxPackage *package, lua_State *state,
     luaL_error(state, "mux.%s is unavailable during @lua/check", function);
 }
 
+static int lua_mux_log(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
+  size_t filename_length;
+  size_t message_length;
+  const char *filename = luaL_checklstring(state, 1, &filename_length);
+  const char *message = luaL_checklstring(state, 2, &message_length);
+
+  lua_mux_require_runtime(package, state, "log");
+  if (strlen(filename) != filename_length)
+    return luaL_argerror(state, 1, "filename contains an embedded NUL byte");
+  if (strlen(message) != message_length)
+    return luaL_argerror(state, 2, "message contains an embedded NUL byte");
+  lua_pushboolean(
+      state,
+      log_to_file(&(ArbitraryLogRequest){
+          .evaluation = &package->services->background_command->evaluation,
+          .actor = GOD,
+          .filename = filename,
+          .message = message}));
+  return 1;
+}
+
 void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   object_state_transaction_initialize(&package->state_transaction);
   lua_newtable(state);
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_log, 1);
+  lua_setfield(state, -2, "log");
   lua_mux_install_object_bindings(state, package);
   lua_mux_install_state_bindings(state, package);
   lua_mux_install_attribute_bindings(state, package);

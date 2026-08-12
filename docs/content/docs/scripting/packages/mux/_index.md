@@ -42,6 +42,12 @@ context to identify the object and enactor that triggered them.
 | [`mux.telnet_environment_get`](telnet-environment-get/) | Gets a NEW-ENVIRON variable. |
 | [`mux.flow_start`](flow-start/) | Starts an interactive flow on a descriptor. |
 
+### Server operations
+
+| Function | Description |
+| --- | --- |
+| [`mux.log`](log/) | Appends a message to a named file under `game/logs/`. |
+
 ## Types
 
 | Type | Description |
