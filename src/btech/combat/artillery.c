@@ -516,16 +516,16 @@ static void artillery_cluster_hit(const ArtilleryImpact *impact) {
       y = ty + yd;
     } while (x < 0 || x >= map->map_width || y < 0 || y >= map->map_height);
     /* Whee.. it's time to drop a bomb to the hex */
-    const int TARGET_INDEX = (xd + 2) * 5 + yd + 2;
+    const int TARGET_INDEX = ((xd + 2) * 5) + yd + 2;
     int *target = checked_storage_at(targets.cells, 25, sizeof(*targets.cells),
                                      (size_t)TARGET_INDEX);
     (*target)++;
   }
   for (xd = 0; xd < 5; xd++) {
     for (yd = 0; yd < 5; yd++) {
-      d = *(const int *)checked_storage_at_const(targets.cells, 25,
-                                                 sizeof(*targets.cells),
-                                                 (size_t)xd * 5U + (size_t)yd);
+      d = *(const int *)checked_storage_at_const(
+          targets.cells, 25, sizeof(*targets.cells),
+          ((size_t)xd * 5U) + (size_t)yd);
       if (d) {
         artillery_hit_hex(&(ArtilleryImpact){
             .map = map,
@@ -598,8 +598,8 @@ static void artillery_hit(ArtilleryShot *s) {
     di = btech_random_range_int(battle_map_context(map), 0, 359);
     dir = (float)di * (float)M_PI / 180.0F;
     dist = btech_random_range_int(battle_map_context(map), 2, 7);
-    weight = 100 * (dist * 6) / ((dist * 6 + map->windspeed));
-    dist = (dist * weight + (map->windspeed / 6) * (100 - weight)) / 100;
+    weight = 100 * (dist * 6) / (((dist * 6) + map->windspeed));
+    dist = ((dist * weight) + ((map->windspeed / 6) * (100 - weight))) / 100;
     original_x = s->to_x;
     original_y = s->to_y;
     s->to_x += (int)((float)dist * cosf(dir));

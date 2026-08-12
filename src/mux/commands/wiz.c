@@ -445,7 +445,7 @@ void list_global_controls(EvaluationContext *evaluation,
   char *buf = alloc_lbuf("list_global_controls");
   char *bp = buf;
   constexpr size_t CONTROL_COUNT =
-      sizeof(ENABLE_NAMES) / sizeof(ENABLE_NAMES[0]) - 1;
+      (sizeof(ENABLE_NAMES) / sizeof(ENABLE_NAMES[0])) - 1;
 
   safe_str("Global parameters:", buf, &bp);
   for (size_t index = 0; index < CONTROL_COUNT; index++) {

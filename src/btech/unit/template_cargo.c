@@ -441,7 +441,7 @@ const char *cargo[] = {"Ammo_LBX2",
 #endif
                        NULL};
 
-const int TEMPLATE_CARGO_COUNT = sizeof(cargo) / sizeof(*cargo) - 1;
+const int TEMPLATE_CARGO_COUNT = (sizeof(cargo) / sizeof(*cargo)) - 1;
 
 const char *template_cargo_name(int index) {
   if (index < 0)

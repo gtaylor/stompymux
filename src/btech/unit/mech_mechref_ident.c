@@ -250,7 +250,7 @@ static const MechrefName MY_MECHREF_PILE[] = {
 
 const char *find_mechname_by_mechref(const char *ref) {
   const size_t ENTRY_COUNT =
-      sizeof(MY_MECHREF_PILE) / sizeof(*MY_MECHREF_PILE) - 1;
+      (sizeof(MY_MECHREF_PILE) / sizeof(*MY_MECHREF_PILE)) - 1;
   for (size_t i = 0; i < ENTRY_COUNT; i++) {
     const MechrefName *entry = checked_storage_at_const(
         MY_MECHREF_PILE, ENTRY_COUNT, sizeof(*MY_MECHREF_PILE), i);

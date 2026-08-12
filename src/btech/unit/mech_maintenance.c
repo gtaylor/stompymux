@@ -267,8 +267,8 @@ void do_sub_magic(Mech *mech, int loud) {
   }
   ((mech)->rd.onumsinks) = wanths_f;
 
-  if ((((mech)->rd.onumsinks) * shs_size / hs_eff -
-       (((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size) < 0)
+  if (((((mech)->rd.onumsinks) * shs_size / hs_eff) -
+       ((((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size)) < 0)
     btech_channel_send(
         mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
         tprintf("Error in #%ld (%s): HS less then max possible in engine!",

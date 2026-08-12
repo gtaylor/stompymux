@@ -30,7 +30,7 @@ static void *event_payload(intptr_t data) { return (void *)data; }
 
 const char *btech_event_name(int type) {
   constexpr size_t EVENT_NAME_COUNT =
-      sizeof(EVENT_NAMES) / sizeof(EVENT_NAMES[0]) - 1;
+      (sizeof(EVENT_NAMES) / sizeof(EVENT_NAMES[0])) - 1;
   const size_t INDEX =
       type < 0 || (size_t)type >= EVENT_NAME_COUNT ? 0 : (size_t)type;
   return *(const char *const *)checked_storage_at_const(

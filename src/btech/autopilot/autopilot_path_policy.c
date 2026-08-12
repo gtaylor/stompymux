@@ -17,7 +17,7 @@ static bool path_point_is_valid(const AutopilotPathRequest *request,
 
 static size_t path_offset(const AutopilotPathRequest *request,
                           AutopilotPathPoint point) {
-  return (size_t)point.x * (size_t)request->height + (size_t)point.y;
+  return ((size_t)point.x * (size_t)request->height) + (size_t)point.y;
 }
 
 static AutopilotPathPoint path_point(const AutopilotPathRequest *request,
@@ -96,8 +96,8 @@ autopilot_path_step_evaluate(const AutopilotPathStepRequest *request) {
 
 static int path_hex_distance(AutopilotPathPoint left,
                              AutopilotPathPoint right) {
-  const int LEFT_Z = left.y - (left.x - (left.x & 1)) / 2;
-  const int RIGHT_Z = right.y - (right.x - (right.x & 1)) / 2;
+  const int LEFT_Z = left.y - ((left.x - (left.x & 1)) / 2);
+  const int RIGHT_Z = right.y - ((right.x - (right.x & 1)) / 2);
   const int LEFT_Y = -left.x - LEFT_Z;
   const int RIGHT_Y = -right.x - RIGHT_Z;
   return (abs(left.x - right.x) + abs(LEFT_Y - RIGHT_Y) +
@@ -167,7 +167,7 @@ AutopilotPathResult autopilot_path_find(const AutopilotPathRequest *request) {
         continue;
       const int ESTIMATE =
           *path_score(scores, COUNT, index) +
-          100 * path_hex_distance(path_point(request, index), request->goal);
+          (100 * path_hex_distance(path_point(request, index), request->goal));
       if (ESTIMATE < best || (ESTIMATE == best && index < current)) {
         best = ESTIMATE;
         current = index;

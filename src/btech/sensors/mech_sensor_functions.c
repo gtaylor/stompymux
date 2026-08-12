@@ -128,12 +128,12 @@ int infrared_see(const SensorVisibilityRequest *request) {
 
 int electrom_see(const SensorVisibilityRequest *request) {
   float close_range = request->range < 24 ? 2 : 0;
-  float range_chance = 60 - request->range * 2;
+  float range_chance = 60 - (request->range * 2);
   return (int)((close_range > range_chance ? close_range : range_chance) / 2);
 }
 
 int seismic_see(const SensorVisibilityRequest *request) {
-  return (int)(50 - request->range * 4);
+  return (int)(50 - (request->range * 4));
 }
 
 int radar_see(const SensorVisibilityRequest *request) {
@@ -247,18 +247,18 @@ int vislight_tohit(const SensorToHitRequest *request) {
 }
 
 int liteamp_tohit(const SensorToHitRequest *request) {
-  return (2 - request->light) / 2 +
-         sensor_woods_count(request->target, request->flags) * 3 / 2 +
+  return ((2 - request->light) / 2) +
+         (sensor_woods_count(request->target, request->flags) * 3 / 2) +
          sensor_partial_cover_modifier(request->target, request->flags, 3);
 }
 
 int infrared_tohit(const SensorToHitRequest *request) {
 #ifdef BT_SCALED_INFRARED
-  float heat = 2 * (mech_heat_production(request->target) -
-                    mech_heat_dissipation(request->target)) +
+  float heat = (2 * (mech_heat_production(request->target) -
+                     mech_heat_dissipation(request->target))) +
                fminf(mech_heat_production(request->target),
                      mech_heat_dissipation(request->target));
-  return sensor_woods_count(request->target, request->flags) * 4 / 3 +
+  return (sensor_woods_count(request->target, request->flags) * 4 / 3) +
          (request->flags & BATTLE_MAP_LOS_PARTIAL_COVER ? 3 : 0) +
          sensor_heat_modifier(heat);
 #else
@@ -269,7 +269,7 @@ int infrared_tohit(const SensorToHitRequest *request) {
 }
 
 int electrom_tohit(const SensorToHitRequest *request) {
-  return sensor_woods_count(request->target, request->flags) * 2 / 3 +
+  return (sensor_woods_count(request->target, request->flags) * 2 / 3) +
          sensor_partial_cover_modifier(request->target, request->flags, 3) +
          sensor_weight_modifier(mech_tonnage(request->target)) +
          sensor_movement_modifier(mech_current_speed(request->target)) +

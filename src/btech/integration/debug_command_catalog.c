@@ -29,5 +29,5 @@ const BtechCommandDefinition DEBUGCOMMANDS[] = {
     {0, NULL, NULL, NULL}};
 
 size_t debug_command_count(void) {
-  return sizeof(DEBUGCOMMANDS) / sizeof(*DEBUGCOMMANDS) - 1;
+  return (sizeof(DEBUGCOMMANDS) / sizeof(*DEBUGCOMMANDS)) - 1;
 }

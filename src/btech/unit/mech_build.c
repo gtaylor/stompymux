@@ -108,7 +108,7 @@ bool btech_weapon_settings_set_battle_value(BtechWeaponSettings *settings,
 bool missile_hit_registry_initialize(MissileHitRegistry *registry,
                                      BtechContext *context) {
   const size_t DEFINITION_COUNT =
-      sizeof(MISSILE_HIT_DEFINITIONS) / sizeof(*MISSILE_HIT_DEFINITIONS) - 1;
+      (sizeof(MISSILE_HIT_DEFINITIONS) / sizeof(*MISSILE_HIT_DEFINITIONS)) - 1;
 
   *registry = (MissileHitRegistry){0};
   registry->entries = calloc(DEFINITION_COUNT, sizeof(*registry->entries));

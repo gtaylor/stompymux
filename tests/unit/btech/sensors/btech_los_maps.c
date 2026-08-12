@@ -17,7 +17,7 @@ typedef struct MapFixture {
 
 static char *fixture_cell(char *values, int width, int height, int x, int y) {
   size_t count = (size_t)width * (size_t)height;
-  size_t index = (size_t)y * (size_t)width + (size_t)x;
+  size_t index = ((size_t)y * (size_t)width) + (size_t)x;
   return checked_storage_at(values, count, sizeof(*values), index);
 }
 

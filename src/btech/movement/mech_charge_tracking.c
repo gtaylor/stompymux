@@ -30,8 +30,8 @@ void mech_charge_distance_record(Mech *mech, float delta_x, float delta_y) {
     return;
 
   float x_scale = 1.0F / (float)SCALEMAP;
-  float distance = sqrtf(x_scale * x_scale * delta_x * delta_x +
-                         (float)YSCALE2 * delta_y * delta_y);
+  float distance = sqrtf((x_scale * x_scale * delta_x * delta_x) +
+                         ((float)YSCALE2 * delta_y * delta_y));
   mech_charge_distance_add(mech, distance);
 }
 

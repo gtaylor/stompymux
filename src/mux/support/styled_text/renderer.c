@@ -57,7 +57,7 @@ bool styled_sgr_parse(const char *cursor, const char **end, int *parameters,
     if ((isdigit)((unsigned char)CHARACTER)) {
       if (value > (INT_MAX - 9) / 10)
         return false;
-      value = value * 10 + (CHARACTER - '0');
+      value = (value * 10) + (CHARACTER - '0');
       have_digit = true;
       offset++;
       continue;
@@ -189,7 +189,7 @@ static void ansi_256_rgb(int index, int *red, int *green, int *blue) {
     *blue = *(const int *)checked_storage_at_const(CUBE, 6, sizeof(*CUBE),
                                                    (size_t)(cube_index % 6));
   } else {
-    *red = *green = *blue = 8 + (index - 232) * 10;
+    *red = *green = *blue = 8 + ((index - 232) * 10);
   }
 }
 
@@ -208,8 +208,8 @@ static int distance_squared(const ColorDistanceRequest *request) {
   int red_delta = request->first.red - request->second.red;
   int green_delta = request->first.green - request->second.green;
   int blue_delta = request->first.blue - request->second.blue;
-  return red_delta * red_delta + green_delta * green_delta +
-         blue_delta * blue_delta;
+  return (red_delta * red_delta) + (green_delta * green_delta) +
+         (blue_delta * blue_delta);
 }
 
 static int nearest_ansi(int red, int green, int blue) {

@@ -42,8 +42,8 @@ void character_experience_reduce(const CharacterExperienceReduction *change) {
     character_stats_xp_set(&(CharacterStatsExperienceChange){
         .stats = s,
         .code = i,
-        .value = character_stats_xp_get(s, i) % XP_MAX +
-                 XP_MAX * figure_xp_bonus(context, PLAYER, s, i)});
+        .value = (character_stats_xp_get(s, i) % XP_MAX) +
+                 (XP_MAX * figure_xp_bonus(context, PLAYER, s, i))});
   }
   character_stats_store(context, PLAYER, s, VALUES_ALL);
 }

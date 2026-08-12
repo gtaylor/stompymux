@@ -200,7 +200,7 @@ static void los_trace_store_best(BattleMap *map, LosTrace *trace, int *count,
 
 static void los_map_coord_to_real(int x, int y, float *real_x, float *real_y) {
   *real_x = (float)x * ROOT3 / 2.0F * TRACESCALEMAP;
-  *real_y = ((float)y - 0.5F * (float)(x % 2)) * TRACESCALEMAP;
+  *real_y = ((float)y - (0.5F * (float)(x % 2))) * TRACESCALEMAP;
 }
 
 static MapHexPosition adjacent_hex(MapHexPosition current,
@@ -302,12 +302,13 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
     while (currx != bx) {
       /* Do best of (currx+1,by-currx%2)   */
       /*         or (currx+1,by-currx%2+1) */
-      los_trace_store_best(map, trace, &found_count, currx + 1 * i,
-                           by - currx % 2, currx + 1 * i, by - currx % 2 + 1);
+      los_trace_store_best(map, trace, &found_count, currx + (1 * i),
+                           by - (currx % 2), currx + (1 * i),
+                           by - (currx % 2) + 1);
 
       if (currx != bx)
         los_trace_store(trace, &found_count,
-                        (MapHexPosition){.x = currx + 2 * i, .y = by});
+                        (MapHexPosition){.x = currx + (2 * i), .y = by});
 
       currx += 2 * i;
     }
@@ -323,7 +324,7 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
   /* direction, or odd and goes -y.  It works, try it :) */
   if (abs(by - ay) ==
       (3 * abs(bx - ax) / 2) +
-          abs((bx - ax) % 2) * abs((by < ay) ? (ax % 2) : (1 - ax % 2))) {
+          (abs((bx - ax) % 2) * abs((by < ay) ? (ax % 2) : (1 - (ax % 2))))) {
 
     /* First get the x and y 'multipliers' -- either 1 or -1 */
     /* they determine the direction of the movement */
@@ -349,9 +350,9 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
 
       los_trace_store_best(
           map, trace, &found_count, currx, curry + ymul, currx + xmul,
-          ymul == 1 ? curry + 1 - currx % 2 : curry - currx % 2);
+          ymul == 1 ? curry + 1 - (currx % 2) : curry - (currx % 2));
 
-      curry += (ymul == 1) ? (2 - currx % 2) : (-1 - currx % 2);
+      curry += (ymul == 1) ? (2 - (currx % 2)) : (-1 - (currx % 2));
       currx += xmul;
 
       if (currx == bx && curry == by)
@@ -383,10 +384,10 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
   sinu = sinf(uangle);
   cosu = cosf(uangle);
 
-  liney = acx * sinu + acy * cosu; /* we could just as */
+  liney = (acx * sinu) + (acy * cosu); /* we could just as */
   /* correctly use bx, by */
 
-  enddist = bcx * cosu - bcy * sinu;
+  enddist = (bcx * cosu) - (bcy * sinu);
 
   tempangle = fabsf(uangle);
   while (tempangle > DEG60)
@@ -402,7 +403,7 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
   currx = ax;
   curry = ay;
   los_map_coord_to_real(currx, curry, &currcx, &currcy);
-  currdist = currcx * cosu - currcy * sinu;
+  currdist = (currcx * cosu) - (currcy * sinu);
   bestdist = enddist; /* set this to the endpoint, the worst */
   /* possible point to go to  */
 
@@ -417,11 +418,11 @@ int trace_los(BattleMap *map, int ax, int ay, int bx, int by, LosTrace *trace) {
       los_map_coord_to_real(nextx, nexty, &nextcx, &nextcy);
 
       /* Is it on the line? */
-      if (fabsf((nextcx * sinu + nextcy * cosu) - liney) > effrad)
+      if (fabsf(((nextcx * sinu) + (nextcy * cosu)) - liney) > effrad)
         continue;
 
       /* Where is it?  Find the transformed x coord */
-      nextdist = nextcx * cosu - nextcy * sinu;
+      nextdist = (nextcx * cosu) - (nextcy * sinu);
 
       /* is it forward of the current hex? */
       if (fabsf(enddist - nextdist) > fabsf(enddist - currdist))

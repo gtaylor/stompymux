@@ -5,8 +5,8 @@
 #include <stdint.h>
 
 intptr_t repair_event_payload_pack(RepairEventPayload payload) {
-  return payload.location + payload.position * LOCMAX +
-         payload.extra * LOCMAX * POSMAX + payload.player * PLAYERPOS;
+  return payload.location + (payload.position * LOCMAX) +
+         (payload.extra * LOCMAX * POSMAX) + (payload.player * PLAYERPOS);
 }
 
 RepairEventPayload repair_event_payload_unpack(intptr_t encoded) {

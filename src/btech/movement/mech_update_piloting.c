@@ -34,7 +34,7 @@
 #include "section_types.h"
 
 static bool mech_piloting_is_running(const Mech *mech, float maximum_speed) {
-  return mech_current_speed(mech) > 2.0F * maximum_speed / 3.0F + 0.1F;
+  return mech_current_speed(mech) > (2.0F * maximum_speed / 3.0F) + 0.1F;
 }
 
 void mech_piloting_update(Mech *mech) {

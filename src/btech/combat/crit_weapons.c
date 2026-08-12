@@ -389,8 +389,8 @@ void mech_speed_limit_to_cruise(Mech *obj_mech) {
 
   if (mech_movement_type(obj_mech) == MOVE_VTOL)
     maximum_speed =
-        sqrtf(maximum_speed * maximum_speed -
-              mech_vertical_speed(obj_mech) * mech_vertical_speed(obj_mech));
+        sqrtf((maximum_speed * maximum_speed) -
+              (mech_vertical_speed(obj_mech) * mech_vertical_speed(obj_mech)));
 
   const float WALKING_SPEED = 2.0F * maximum_speed / 3.0F;
   if (WALKING_SPEED < mech_desired_speed(obj_mech))

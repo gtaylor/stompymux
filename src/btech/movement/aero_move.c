@@ -575,7 +575,7 @@ static float degrees_cosine(float angle) {
   return cosf(angle * (float)M_PI / 180.0F);
 }
 static float length_hypotenuse_float(float x, float y) {
-  return sqrtf(x * x + y * y);
+  return sqrtf((x * x) + (y * y));
 }
 void aero_speed_update(Mech *mech) {
   float xypart;
@@ -744,7 +744,7 @@ void aero_update(Mech *mech) {
     time_t const SPIN_DURATION =
         mech_spin_start_tick(mech) - btech_context_now(mech_context(mech));
     int const SPIN_MODIFIER = clamp_intptr_to_int((intptr_t)SPIN_DURATION);
-    if (made_pilot_skill_roll(mech, SPIN_MODIFIER / 15 + 8)) {
+    if (made_pilot_skill_roll(mech, (SPIN_MODIFIER / 15) + 8)) {
       mech_notify(mech, MECHALL, "You recover control of your craft.");
       mech_spinning_set(mech, false);
     }

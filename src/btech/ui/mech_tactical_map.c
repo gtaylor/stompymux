@@ -106,7 +106,7 @@ static void sketch_tac_ownmech(const TacticalSketch *sketch) {
   int left_offset = sketch->left_offset;
 
   int oddcol1 = tactical_column_is_odd(sx);
-  const int ORIGIN_OFFSET = top_offset * dispcols + left_offset;
+  const int ORIGIN_OFFSET = (top_offset * dispcols) + left_offset;
   int x = mech_position_x(mech) - sx;
   int y = mech_position_y(mech) - sy;
 
@@ -134,7 +134,7 @@ static void sketch_tac_mechs(const TacticalSketch *sketch) {
   int left_offset = sketch->left_offset;
   bool docolour = sketch->color;
   int i;
-  const int ORIGIN_OFFSET = top_offset * dispcols + left_offset;
+  const int ORIGIN_OFFSET = (top_offset * dispcols) + left_offset;
   int oddcol1 = tactical_column_is_odd(sx);
 
   /*
@@ -273,7 +273,7 @@ static void sketch_tac_cliffs(const TacticalSketch *sketch) {
   int top_offset = sketch->top_offset;
   int left_offset = sketch->left_offset;
   int cliff_size = sketch->cliff_size;
-  const int ORIGIN_OFFSET = top_offset * dispcols + left_offset;
+  const int ORIGIN_OFFSET = (top_offset * dispcols) + left_offset;
   int y;
   int x;
   int oddcol1 = tactical_column_is_odd(sx);
@@ -416,8 +416,8 @@ MapText *map_text_create(const MapTextRequest *request) {
   if (wx <= 0 || wy <= 0)
     return nullptr;
 
-  sx = cx - wx / 2;
-  sy = cy - wy / 2;
+  sx = cx - (wx / 2);
+  sy = cy - (wy / 2);
   if (!navigate) {
     /*
      * Only allow navigate maps to include off map hexes.
@@ -430,7 +430,7 @@ MapText *map_text_create(const MapTextRequest *request) {
 
   mapcols = tactical_display_columns(wx);
   dispcols = mapcols + 1;
-  disprows = wy * 2 + 1;
+  disprows = (wy * 2) + 1;
   oddcol1 = tactical_column_is_odd(sx);
 
   if (navigate) {
@@ -495,11 +495,11 @@ MapText *map_text_create(const MapTextRequest *request) {
         continue;
       }
       (void)snprintf(scratch, sizeof(scratch), "%3d", label);
-      const int LABEL_OFFSET = left_offset + 1 + x * 3;
+      const int LABEL_OFFSET = left_offset + 1 + (x * 3);
       *tactical_canvas_at(sketch_buf, LABEL_OFFSET) = scratch[0];
       *tactical_canvas_at(sketch_buf, LABEL_OFFSET + dispcols) =
           *checked_string_suffix(scratch, 1);
-      *tactical_canvas_at(sketch_buf, LABEL_OFFSET + 2 * dispcols) =
+      *tactical_canvas_at(sketch_buf, LABEL_OFFSET + (2 * dispcols)) =
           *checked_string_suffix(scratch, 2);
     }
   }
@@ -512,7 +512,7 @@ MapText *map_text_create(const MapTextRequest *request) {
       size_t row_offset;
       size_t right_label_offset;
 
-      row_offset = (size_t)(top_offset + 1 + y * 2) * (size_t)dispcols;
+      row_offset = (size_t)(top_offset + 1 + (y * 2)) * (size_t)dispcols;
       right_label_offset =
           row_offset + (size_t)(dispcols - TACTICAL_RIGHT_LABEL - 1);
       if (label < 0 || label > 999) {
@@ -577,8 +577,8 @@ MapText *map_text_create(const MapTextRequest *request) {
       int len;
       int base_offset;
 
-      base_offset = (i + 1) * dispcols + left_offset;
-      len = (n - i - 1) * 3 + 1;
+      base_offset = ((i + 1) * dispcols) + left_offset;
+      len = ((n - i - 1) * 3) + 1;
       memset(checked_storage_region(sketch_buf, MAP_SKETCH_CAPACITY,
                                     (size_t)base_offset, (size_t)len),
              ' ', (size_t)len);
@@ -588,7 +588,7 @@ MapText *map_text_create(const MapTextRequest *request) {
       *tactical_canvas_at(sketch_buf, base_offset + mapcols - len - 1) = '_';
       *tactical_canvas_at(sketch_buf, base_offset + mapcols - len) = '\0';
 
-      base_offset = (disprows - i - 1) * dispcols + left_offset;
+      base_offset = ((disprows - i - 1) * dispcols) + left_offset;
       len = (n - i) * 3;
       memset(checked_storage_region(sketch_buf, MAP_SKETCH_CAPACITY,
                                     (size_t)base_offset, (size_t)len),
@@ -596,19 +596,20 @@ MapText *map_text_create(const MapTextRequest *request) {
       *tactical_canvas_at(sketch_buf, base_offset + mapcols - len) = '\0';
     }
 
-    const size_t TOP_BLANK_SIZE = (size_t)n * 3U + 1U;
+    const size_t TOP_BLANK_SIZE = ((size_t)n * 3U) + 1U;
     memset(checked_storage_region(sketch_buf, MAP_SKETCH_CAPACITY,
                                   (size_t)left_offset, TOP_BLANK_SIZE),
            ' ', TOP_BLANK_SIZE);
-    *tactical_canvas_at(sketch_buf, left_offset + n * 3 + 1) = '_';
-    *tactical_canvas_at(sketch_buf, left_offset + n * 3 + 2) = '_';
-    *tactical_canvas_at(sketch_buf, left_offset + n * 3 + 3) = '\0';
+    *tactical_canvas_at(sketch_buf, left_offset + (n * 3) + 1) = '_';
+    *tactical_canvas_at(sketch_buf, left_offset + (n * 3) + 2) = '_';
+    *tactical_canvas_at(sketch_buf, left_offset + (n * 3) + 3) = '\0';
   }
 
   size_t line_capacity = (size_t)disprows + 1;
-  size_t buffer_capacity = docolour ? (size_t)dispcols * (size_t)disprows * 32 +
-                                          (size_t)disprows * 8 + 32
-                                    : MAP_SKETCH_CAPACITY;
+  size_t buffer_capacity = docolour
+                               ? ((size_t)dispcols * (size_t)disprows * 32) +
+                                     ((size_t)disprows * 8) + 32
+                               : MAP_SKETCH_CAPACITY;
   MapText *text = map_text_allocate(buffer_capacity, line_capacity);
   if (text == nullptr) {
     free(sketch_buf);

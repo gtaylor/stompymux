@@ -35,5 +35,5 @@ const char *load_cmds[] = {"Reference",
                            NULL};
 
 size_t template_load_command_count(void) {
-  return sizeof(load_cmds) / sizeof(*load_cmds) - 1;
+  return (sizeof(load_cmds) / sizeof(*load_cmds)) - 1;
 }

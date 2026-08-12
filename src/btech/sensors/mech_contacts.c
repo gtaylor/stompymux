@@ -154,7 +154,7 @@ void mech_brief(DbRef player, void *data, char *buffer) {
       return;
     }
     v = bounded(0, v, 6);
-    mech_brief_mode_set(mech, mech_brief_mode(mech) % 4 + v * 4);
+    mech_brief_mode_set(mech, (mech_brief_mode(mech) % 4) + (v * 4));
     mech_printf(
         mech, MECHALL, "Autocontact brevity set to %s.",
         contact_description(AC_DESC, sizeof(AC_DESC) / sizeof(*AC_DESC), v));

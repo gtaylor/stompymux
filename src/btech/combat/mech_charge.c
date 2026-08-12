@@ -42,10 +42,10 @@ static int charge_damage_calculate(const ChargeDamageRequest *request) {
       mech_heading_degrees(moving) - mech_heading_degrees(opponent);
   const float COLLISION_SPEED =
       MOVING_SPEED -
-      OPPONENT_SPEED * cosf((float)HEADING_DIFFERENCE * DEGREES_TO_RADIANS);
+      (OPPONENT_SPEED * cosf((float)HEADING_DIFFERENCE * DEGREES_TO_RADIANS));
   const int MASS = mech_real_tonnage(request->mass_source);
-  const float DAMAGE = COLLISION_SPEED * MP_PER_KPH * ((float)MASS + 5.0F) /
-                           (float)request->divisor +
+  const float DAMAGE = (COLLISION_SPEED * MP_PER_KPH * ((float)MASS + 5.0F) /
+                        (float)request->divisor) +
                        (float)request->bonus;
   return (int)DAMAGE;
 }

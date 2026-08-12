@@ -130,7 +130,7 @@ void mech_cargo_weight_recalculate(Mech *mech) {
     mech_maximum_fuel_set(
         mech,
         mech_original_fuel(mech) +
-            2000 * *part_pile_slot(&pile, special_equipment_index(FUELTANK)));
+            (2000 * *part_pile_slot(&pile, special_equipment_index(FUELTANK))));
     if (mech_fuel(mech) > mech_original_fuel(mech))
       weight += mech_fuel(mech) - mech_original_fuel(mech);
   }

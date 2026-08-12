@@ -613,7 +613,7 @@ const HelpArticle *help_index_find_exact(const HelpIndex *index,
   size_t high = index->keyword_count;
 
   while (low < high) {
-    size_t mid = low + (high - low) / 2;
+    size_t mid = low + ((high - low) / 2);
     const HelpKeywordEntry *keyword = help_keyword_item(index, mid);
     int comparison = strcmp(keyword->keyword, keyword_lower);
 

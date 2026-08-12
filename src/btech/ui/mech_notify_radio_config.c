@@ -395,7 +395,7 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
     default:
       for (i = 0; radio_color_character(i); i++)
         if (MODE_CHARACTER == radio_color_character(i)) {
-          nm = nm % FREQ_REST + FREQ_REST * (i + 1);
+          nm = (nm % FREQ_REST) + (FREQ_REST * (i + 1));
           break;
         }
       if (!radio_color_character(i))
@@ -429,8 +429,8 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
   if (flags.length == 0)
     btech_text_builder_append_character(&flags, '-');
   if (nm / FREQ_REST) {
-    btech_text_builder_append_format(&flags, "/color:%c",
-                                     radio_color_character(nm / FREQ_REST - 1));
+    btech_text_builder_append_format(
+        &flags, "/color:%c", radio_color_character((nm / FREQ_REST) - 1));
   }
   notify_printf(evaluation, player,
                 "Channel %c <send> mode set to %s (flags:%s).", 'A' + chn,
@@ -450,7 +450,7 @@ void mech_list_freqs(DbRef player, void *data, char *buffer) {
     if (mode & FREQ_SCAN)
       scan_mode = 'S';
     else if (mode >= FREQ_REST)
-      scan_mode = radio_color_character(mode / FREQ_REST - 1);
+      scan_mode = radio_color_character((mode / FREQ_REST) - 1);
     else if (mode & FREQ_INFO)
       scan_mode = 'I';
     notify_printf(evaluation, player, "%c    %c%c%c%c    %-9d    %s", 'A' + i,

@@ -74,5 +74,5 @@ const BtechCommandDefinition TURRETCOMMANDS[] = {
     {0, NULL, NULL, NULL}};
 
 size_t turret_command_count(void) {
-  return sizeof(TURRETCOMMANDS) / sizeof(*TURRETCOMMANDS) - 1;
+  return (sizeof(TURRETCOMMANDS) / sizeof(*TURRETCOMMANDS)) - 1;
 }

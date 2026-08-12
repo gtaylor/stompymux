@@ -62,7 +62,7 @@ int mech_attacker_movement_modifier(Mech *mech) {
 
   if (!(fabsf(speed) > 0.0F))
     return base + 0;
-  if (speed > 2.0F * maxspeed / 3.0F + 0.1F)
+  if (speed > (2.0F * maxspeed / 3.0F) + 0.1F)
     return 2;
   return base + 1;
 }
@@ -126,7 +126,7 @@ int mech_target_movement_modifier(Mech *mech, Mech *target, float range) {
     } else {
       /* Moving more than 9 hexes */
       if (btech_context_uses_extended_movement_modifiers(context))
-        return_value = 4 + (int)((target_speed - 10.0F * MP1) / MP4);
+        return_value = 4 + (int)((target_speed - (10.0F * MP1)) / MP4);
       else
         return_value = 4;
     }

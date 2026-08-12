@@ -104,7 +104,7 @@ int m_number(Mech *mech, int low, int high) {
     ((mech)->rd.rnd) = (int)btech_random_i31(&mech->xcode.context->random);
     ((mech)->rd.lastrndu) = mech->xcode.context->events->tick / RANDOM_TICK;
   }
-  return (low + ((mech)->rd.rnd) % (high - low + 1));
+  return (low + (((mech)->rd.rnd) % (high - low + 1)));
 }
 
 MechId mech_id(Mech *mech, bool lowercase) {
@@ -764,13 +764,13 @@ MapRealPosition map_project_position(const MapProjection *projection) {
   if (correction > 0.5F)
     correction = 1.0F - correction;
   correction = -correction * 2.0F; /* 0 - 1 correction */
-  xscale = (1.0F + (float)XSCALE * correction) * (float)SCALEMAP;
+  xscale = (1.0F + ((float)XSCALE * correction)) * (float)SCALEMAP;
 
   float radians = degrees_to_radians((float)projection->bearing);
   return (MapRealPosition){
-      .x = projection->origin.x + projection->range * sinf(radians) * xscale,
+      .x = projection->origin.x + (projection->range * sinf(radians) * xscale),
       .y = projection->origin.y -
-           projection->range * cosf(radians) * (float)SCALEMAP};
+           (projection->range * cosf(radians) * (float)SCALEMAP)};
 }
 
 /* Computes hex range between Cartesian (x0, y0, z0) and (x1, y1, z1).  */

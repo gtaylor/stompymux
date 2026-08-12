@@ -140,8 +140,8 @@ static void ai_score_range_relax(int *minimum, int *maximum, int divisor) {
     return;
   const int OLD_MINIMUM = *minimum;
   const int OLD_MAXIMUM = *maximum;
-  *minimum = (OLD_MINIMUM * (divisor - 1) + OLD_MAXIMUM) / divisor;
-  *maximum = (OLD_MINIMUM + OLD_MAXIMUM * (divisor - 1)) / divisor;
+  *minimum = ((OLD_MINIMUM * (divisor - 1)) + OLD_MAXIMUM) / divisor;
+  *maximum = (OLD_MINIMUM + (OLD_MAXIMUM * (divisor - 1))) / divisor;
 }
 static void ai_send_message(Autopilot *a, Mech *m, const char *msg) {
   auto_reply(m, msg);
@@ -291,7 +291,7 @@ static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
         candidate->best_range = l;
       /* Generally speaking we're going to the point spesified */
       candidate->movement_score +=
-          4 * (2 * (50 - candidate->best_range) + (100 - l));
+          4 * ((2 * (50 - candidate->best_range)) + (100 - l));
       /* Heading change's inherently [slightly] evil */
       if (candidate->location.h != candidate->location.dh)
         candidate->movement_score -= 1;
@@ -380,7 +380,8 @@ static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
           switch (a->auto_cmode) {
           case 0: /* Withdraw */
             if (l > a->auto_cdist)
-              candidate->battle_score += 5 * a->auto_cdist + l - a->auto_cdist;
+              candidate->battle_score +=
+                  (5 * a->auto_cdist) + l - a->auto_cdist;
             else
               candidate->battle_score += 5 * l;
             break;
@@ -431,28 +432,28 @@ static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
                 /* Rear arc is VERY dangerous */
                 candidate->tick_danger +=
                     10 * (29 - min(29, l)) *
-                    (100 - 100 * mech_section_armor(m, BSIDE) /
-                               max(1, mech_section_original_armor(m, BSIDE))) /
+                    (100 - (100 * mech_section_armor(m, BSIDE) /
+                            max(1, mech_section_original_armor(m, BSIDE)))) /
                     100;
               } else if (bearing < 135) {
                 /* right side */
                 candidate->tick_danger +=
                     7 * (29 - min(29, l)) *
-                    (100 - 100 * mech_section_armor(m, RSIDE) /
-                               max(1, mech_section_original_armor(m, RSIDE))) /
+                    (100 - (100 * mech_section_armor(m, RSIDE) /
+                            max(1, mech_section_original_armor(m, RSIDE)))) /
                     100;
               } else {
                 candidate->tick_danger +=
                     7 * (29 - min(29, l)) *
-                    (100 - 100 * mech_section_armor(m, LSIDE) /
-                               max(1, mech_section_original_armor(m, LSIDE))) /
+                    (100 - (100 * mech_section_armor(m, LSIDE) /
+                            max(1, mech_section_original_armor(m, LSIDE)))) /
                     100;
               }
             } else {
               candidate->tick_danger +=
                   5 * (29 - min(29, l)) *
-                  (100 - 100 * mech_section_armor(m, FSIDE) /
-                             max(1, mech_section_original_armor(m, FSIDE))) /
+                  (100 - (100 * mech_section_armor(m, FSIDE) /
+                          max(1, mech_section_original_armor(m, FSIDE)))) /
                   100;
             }
           }
@@ -508,9 +509,9 @@ static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
       candidate->out_step = NORM_SAFE + 1;
     if (!candidate->stack_step)
       candidate->stack_step = candidate->out_step;
-    sc = (candidate->out_step -
-          (candidate->out_step - candidate->stack_step) / 2) *
-             SAFE_SCORE +
+    sc = ((candidate->out_step -
+           ((candidate->out_step - candidate->stack_step) / 2)) *
+          SAFE_SCORE) +
          ai_score_normalize(candidate->movement_score, a->w_msc, a->b_msc,
                             SCORE_MOD * a->auto_goweight);
     if (GOTENEMY) {
@@ -647,13 +648,14 @@ int ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
       a->b_bsc = MAGIC_NUM;
       a->w_bsc = MAGIC_NUM;
       a->b_dan = MAGIC_NUM;
-      a->b_dan = (40 + 20 * 29 + 100) * 30; /* To stay focused */
+      a->b_dan = (40 + (20 * 29) + 100) * 30; /* To stay focused */
     } else {
       /* Slight update ; Un-refine the goals somewhat */
       ai_score_range_relax(&a->w_msc, &a->b_msc, 3);
       ai_score_range_relax(&a->w_bsc, &a->b_bsc, 5);
       ai_score_range_relax(&a->w_dan, &a->b_dan, 8);
-      a->b_dan = max(a->b_dan, (40 + 20 * 29 + 100) * 30); /* To stay focused */
+      a->b_dan =
+          max(a->b_dan, (40 + (20 * 29) + 100) * 30); /* To stay focused */
     }
     a->last_upd = NOW;
   }

@@ -17,7 +17,7 @@ double length_hypotenuse(double x, double y) {
     x = -x;
   if (y < 0)
     y = -y;
-  return sqrt(x * x + y * y);
+  return sqrt((x * x) + (y * y));
 }
 
 double my_sqrtm(double x, double y) {
@@ -30,5 +30,5 @@ double my_sqrtm(double x, double y) {
     y = x;
     x = swap;
   }
-  return sqrt(x * x - y * y);
+  return sqrt((x * x) - (y * y));
 }

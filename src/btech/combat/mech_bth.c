@@ -223,7 +223,7 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
       mech_targeting_computer_type(mech) == TARGCOMP_LONG) {
     int tmp_range;
     if (weapon_catalogue_is_personal_combat(weapindx))
-      tmp_range = (int)(range * 10.0F + 0.95F);
+      tmp_range = (int)((range * 10.0F) + 0.95F);
     else
       tmp_range = (int)(range + 0.95F);
     if (tmp_range > (mech_section_is_underwater(mech, section)
@@ -518,7 +518,7 @@ mech_range_to_hit_calculate(const WeaponRangeToHitRequest *request) {
     w_target_stealth = mech_condition_summary(target).stealth_armor_active ||
                        mech_condition_summary(target).null_signature_active;
   if (weapon_catalogue_is_personal_combat(weapindx))
-    range = (int)(frange * 10.0F + 0.95F);
+    range = (int)((frange * 10.0F) + 0.95F);
   else
     range = (int)(frange + 0.95F);
   if (mech_section_is_underwater(mech, section)) {
@@ -660,8 +660,8 @@ mech_c3_range_to_hit_calculate(const C3RangeToHitRequest *request) {
     w_target_stealth = mech_condition_summary(target).stealth_armor_active ||
                        mech_condition_summary(target).null_signature_active;
   if (weapon_catalogue_is_personal_combat(weapindx)) {
-    real_range_adj = (int)(real_range * 10.0F + 0.95F);
-    c3_range_adj = (int)(c3_range * 10.0F + 0.95F);
+    real_range_adj = (int)((real_range * 10.0F) + 0.95F);
+    c3_range_adj = (int)((c3_range * 10.0F) + 0.95F);
   } else {
     real_range_adj = (int)(real_range + 0.95F);
     c3_range_adj = (int)(c3_range + 0.95F);

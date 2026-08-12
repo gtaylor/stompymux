@@ -628,7 +628,7 @@ int btech_special_load_map_bits(sqlite3 *sqlite, BtechContext *context) {
       current_y = -1;
       expected_byte = 0;
     }
-    bytes_per_row = map->map_width / 4 + (map->map_width % 4 ? 1 : 0);
+    bytes_per_row = (map->map_width / 4) + (map->map_width % 4 ? 1 : 0);
     if (y < 0 || y >= map->map_height || byte_index < 0 ||
         byte_index >= bytes_per_row || (current_y >= 0 && y < current_y) ||
         (y == current_y && byte_index != expected_byte)) {

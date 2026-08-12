@@ -275,7 +275,7 @@ CONF conftable[] = {
     {nullptr, nullptr, 0, 0, 0}};
 
 size_t configuration_entry_count(void) {
-  return sizeof(conftable) / sizeof(*conftable) - 1;
+  return (sizeof(conftable) / sizeof(*conftable)) - 1;
 }
 
 CONF *configuration_entry_at(size_t index) {

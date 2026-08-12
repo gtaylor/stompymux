@@ -114,7 +114,7 @@ static size_t object_state_find(const ObjectStateCollection *collection,
   size_t high = collection ? collection->count : 0;
 
   while (low < high) {
-    size_t middle = low + (high - low) / 2;
+    size_t middle = low + ((high - low) / 2);
     int comparison = object_state_entry_compare(
         object_state_entry_const(collection, middle), name_space, key);
     if (comparison == 0) {

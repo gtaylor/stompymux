@@ -81,11 +81,11 @@ static const LosTracePoint *los_trace_point(const LosTrace *trace, int index) {
 }
 
 static int los_map_index_x(const HexLosMap *los_map, int index) {
-  return index % los_map->xsize + los_map->startx;
+  return (index % los_map->xsize) + los_map->startx;
 }
 
 static int los_map_index_y(const HexLosMap *los_map, int index) {
-  return index / los_map->xsize + los_map->starty;
+  return (index / los_map->xsize) + los_map->starty;
 }
 
 bool battle_map_unit_is_seen(const BattleMap *map, const Mech *observer,
@@ -770,7 +770,7 @@ bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
                               .start_height = start_height,
                               .trace = &trace});
   }
-  for (index = 2 * xsz - 1; index < ysz * xsz; index += xsz) {
+  for (index = (2 * xsz) - 1; index < ysz * xsz; index += xsz) {
     if (*los_map_cell(los_map, index) & MAPLOSHEX_SEEN)
       continue;
     trace_maphexlos(

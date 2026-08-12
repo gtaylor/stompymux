@@ -393,7 +393,7 @@ CMDENT command_table[] = {
     {(char *)nullptr, nullptr, 0, 0, 0, {nullptr}}};
 
 size_t command_table_entry_count(void) {
-  return sizeof(command_table) / sizeof(command_table[0]) - 1;
+  return (sizeof(command_table) / sizeof(command_table[0])) - 1;
 }
 
 CMDENT *command_table_entry_at(size_t index) {

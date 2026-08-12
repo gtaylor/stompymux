@@ -37,5 +37,6 @@ typedef enum RepairDamageType {
 
 /* Reattachs / fixints / fixarmors, repair / reload */
 enum {
-  REPAIR_DAMAGE_CAPACITY = 3 * NUM_SECTIONS + 2 * NUM_SECTIONS * NUM_CRITICALS,
+  REPAIR_DAMAGE_CAPACITY =
+      (3 * NUM_SECTIONS) + (2 * NUM_SECTIONS * NUM_CRITICALS),
 };

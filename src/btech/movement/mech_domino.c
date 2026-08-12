@@ -224,7 +224,7 @@ static int mech_domino_resolve_in_hex(const MechDominoRequest *request) {
   case MECH_DOMINO_JUMP:
   case MECH_DOMINO_FALL:
     td = mech_adjusted_jump_speed_mp(me, map) *
-         (mech_calculated_weight(me) / 1024 + 5) / 10;
+         ((mech_calculated_weight(me) / 1024) + 5) / 10;
     break;
   case MECH_DOMINO_GROUND:
   default:
@@ -233,16 +233,16 @@ static int mech_domino_resolve_in_hex(const MechDominoRequest *request) {
         head - (mech_heading_degrees(mech) + mech_lateral_movement(mech));
     const float RELATIVE_SPEED =
         mech_current_speed(me) -
-        mech_current_speed(mech) *
-            cosf((float)HEADING_DELTA * (float)M_PI / 180.0F);
+        (mech_current_speed(mech) *
+         cosf((float)HEADING_DELTA * (float)M_PI / 180.0F));
     const int MECH_WEIGHT = mech_calculated_weight(me);
     const float DAMAGE = fabsf(RELATIVE_SPEED * MP_PER_KPH) *
-                         ((float)MECH_WEIGHT / 1024.0F + 5.0F) / 15.0F;
+                         (((float)MECH_WEIGHT / 1024.0F) + 5.0F) / 15.0F;
     td = (int)DAMAGE;
     break;
   }
   if (td > 10)
-    td = 10 + (td - 10) / 3;
+    td = 10 + ((td - 10) / 3);
   if (td <= 1) /* No point in 1pt hits */
     return 0;
   switch (mode) {
@@ -285,7 +285,7 @@ static int mech_domino_resolve_in_hex(const MechDominoRequest *request) {
                   mech_to_mech_display_id(mech, me).text);
       mech_los_broadcast_unit(me, mech, "nearly lands on %s!");
       if (!made_pilot_skill_roll(
-              me, cnt + mech_adjusted_jump_speed_mp(me, map) / 2))
+              me, cnt + (mech_adjusted_jump_speed_mp(me, map) / 2)))
         mech_fall(me, 1, mech_adjusted_jump_speed_mp(me, map) / 2);
     }
     return 1;

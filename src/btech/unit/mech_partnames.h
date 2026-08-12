@@ -13,7 +13,7 @@ typedef struct PartNameEntry {
 } PartNameEntry;
 
 static inline int packed_part(int id, int brand) {
-  return NUM_ITEMS * brand + id;
+  return (NUM_ITEMS * brand) + id;
 }
 
 static inline int packed_part_id(int packed) { return packed % NUM_ITEMS; }

@@ -21,5 +21,5 @@ const BtechCommandDefinition AUTOPILOTCOMMANDS[] = {
     {0, NULL, NULL, NULL}};
 
 size_t autopilot_command_count(void) {
-  return sizeof(AUTOPILOTCOMMANDS) / sizeof(*AUTOPILOTCOMMANDS) - 1;
+  return (sizeof(AUTOPILOTCOMMANDS) / sizeof(*AUTOPILOTCOMMANDS)) - 1;
 }

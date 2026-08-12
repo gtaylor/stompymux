@@ -379,8 +379,8 @@ void mech_speed(DbRef player, void *data, char *buffer) {
   maxspeed = mech_effective_maximum_speed(mech);
 
   if (mech_movement_type(mech) == MOVE_VTOL)
-    maxspeed = sqrtf(maxspeed * maxspeed -
-                     mech_vertical_speed(mech) * mech_vertical_speed(mech));
+    maxspeed = sqrtf((maxspeed * maxspeed) -
+                     (mech_vertical_speed(mech) * mech_vertical_speed(mech)));
 
   maxspeed = maxspeed > 0.0F ? maxspeed : 0.0F;
 
@@ -541,8 +541,8 @@ void mech_vertical(DbRef player, void *data, char *buffer) {
   }
   newspeed = strtof(args[0], nullptr);
   maxspeed = mech_effective_maximum_speed(mech);
-  maxspeed = sqrtf(maxspeed * maxspeed -
-                   mech_desired_speed(mech) * mech_desired_speed(mech));
+  maxspeed = sqrtf((maxspeed * maxspeed) -
+                   (mech_desired_speed(mech) * mech_desired_speed(mech)));
   if ((newspeed > maxspeed) || (newspeed < -maxspeed)) {
     (void)snprintf(buff, sizeof(buff),
                    "Max vertical speed is + %d KPH and - %d KPH", (int)maxspeed,

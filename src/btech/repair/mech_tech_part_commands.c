@@ -182,7 +182,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
           max(1, player_techtime(context, player) * TECH_TICK),
           repair_event_payload_pack((RepairEventPayload){
               .location = loc, .position = part, .extra = brand}) +
-              player * PLAYERPOS);
+              (player * PLAYERPOS));
 
     } else {
       notify_printf(evaluation, player, "You manage to save the gun...");
@@ -214,7 +214,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
           max(1, player_techtime(context, player) * TECH_TICK),
           repair_event_payload_pack((RepairEventPayload){
               .location = loc, .position = part, .extra = brand}) +
-              player * PLAYERPOS);
+              (player * PLAYERPOS));
     }
 
   } else {
@@ -254,7 +254,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
         max(1, player_techtime(context, player) * TECH_TICK),
         repair_event_payload_pack((RepairEventPayload){
             .location = loc, .position = part, .extra = brand}) +
-            player * PLAYERPOS);
+            (player * PLAYERPOS));
   }
 
   if (brand)
@@ -613,7 +613,7 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
           max(1, player_techtime(context, player) * TECH_TICK),
           repair_event_payload_pack(
               (RepairEventPayload){.location = loc, .position = part}) +
-              player * PLAYERPOS);
+              (player * PLAYERPOS));
 
     } else {
       notify_printf(evaluation, player, "You manage to save the part...");
@@ -645,7 +645,7 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
           max(1, player_techtime(context, player) * TECH_TICK),
           repair_event_payload_pack(
               (RepairEventPayload){.location = loc, .position = part}) +
-              player * PLAYERPOS);
+              (player * PLAYERPOS));
     }
 
   } else {
@@ -683,7 +683,7 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
         max(1, player_techtime(context, player) * TECH_TICK),
         repair_event_payload_pack(
             (RepairEventPayload){.location = loc, .position = part}) +
-            player * PLAYERPOS);
+            (player * PLAYERPOS));
   }
 }
 

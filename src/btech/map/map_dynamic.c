@@ -373,5 +373,5 @@ void add_mech_to_map(BattleMap *newmap, Mech *mech) {
 size_t mech_size(const BattleMap *map) {
   const size_t UNIT_COUNT = (size_t)map->first_free;
   return UNIT_COUNT * (sizeof(DbRef) + sizeof(char) + sizeof(unsigned short *) +
-                       UNIT_COUNT * sizeof(unsigned short));
+                       (UNIT_COUNT * sizeof(unsigned short)));
 }

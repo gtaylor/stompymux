@@ -383,6 +383,6 @@ int repair_part_type_difficulty(int part_type) {
 int repair_weapon_type_difficulty(int part_type) {
   int weapon = weapon_from_equipment_index(part_type);
   int critical_slots = weapon_catalogue_critical_slots(weapon);
-  float const DIFFICULTY = sqrtf((float)critical_slots * 1.5F - 1.1F);
+  float const DIFFICULTY = sqrtf(((float)critical_slots * 1.5F) - 1.1F);
   return clamp_float_to_int(DIFFICULTY);
 }

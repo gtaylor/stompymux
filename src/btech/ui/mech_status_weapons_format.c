@@ -81,7 +81,7 @@ static const char *section_recycle_status(Mech *mech, int section) {
   if (mech_section_is_destroyed(mech, section))
     return "[fg=black bold]*****[reset]";
   if (recycle > 0)
-    return tprintf("%-5d", recycle / WEAPON_TICK + recycle % WEAPON_TICK);
+    return tprintf("%-5d", (recycle / WEAPON_TICK) + (recycle % WEAPON_TICK));
   return "[fg=green]Ready[reset]";
 }
 
@@ -119,7 +119,7 @@ physical_recycle_status(Mech *mech, int section,
           .mech = mech, .section = section, .type = physical_type}))
     return "[fg=red bold]XX[reset]";
   if (recycle > 0)
-    return tprintf("%-3d", recycle / WEAPON_TICK + recycle % WEAPON_TICK);
+    return tprintf("%-3d", (recycle / WEAPON_TICK) + (recycle % WEAPON_TICK));
   return "[fg=green]Rdy[reset]";
 }
 
@@ -561,7 +561,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       } else if (weapon_status_byte(weapdata, MAX_WEAPS_SECTION, ii)) {
         const int RECYCLE = weapon_status_byte(weapdata, MAX_WEAPS_SECTION, ii);
         btech_text_builder_append_format(&weapon_text, " %2d    || ",
-                                         RECYCLE / WEAPON_TICK +
+                                         (RECYCLE / WEAPON_TICK) +
                                              (RECYCLE % WEAPON_TICK ? 1 : 0));
       } else if (mech_weapon_damaged_slot_count_at(mech, loop,
                                                    CRITICAL_INDEX)) {

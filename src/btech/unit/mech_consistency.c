@@ -113,21 +113,21 @@ static const short ENGINE_DATA[][2] = {{0, 0},
                                        {415, 133},
                                        {420, 145},
                                        {425, 159},
-                                       {430, 87 * 2 + 1},
+                                       {430, (87 * 2) + 1},
                                        {435, 97 * 2},
-                                       {440, 107 * 2 + 1},
-                                       {445, 119 * 2 + 1},
-                                       {450, 133 * 2 + 1},
+                                       {440, (107 * 2) + 1},
+                                       {445, (119 * 2) + 1},
+                                       {450, (133 * 2) + 1},
                                        {455, 150 * 2},
-                                       {460, 168 * 2 + 1},
+                                       {460, (168 * 2) + 1},
                                        {465, 190 * 2},
-                                       {470, 214 * 2 + 1},
+                                       {470, (214 * 2) + 1},
                                        {475, 243 * 2},
-                                       {480, 275 * 2 + 1},
+                                       {480, (275 * 2) + 1},
                                        {485, 313 * 2},
                                        {490, 356 * 2},
-                                       {495, 405 * 2 + 1},
-                                       {500, 462 * 2 + 1},
+                                       {495, (405 * 2) + 1},
+                                       {500, (462 * 2) + 1},
                                        {-1, 0}};
 
 typedef struct PartPile {
@@ -296,7 +296,7 @@ int engine_weight(Mech *mech) {
           ((mech)->ud.type) == CLASS_VTOL ||
           ((mech)->ud.type) == CLASS_VEH_NAVAL)
         /* Vehicles need extra shielding in case of a fusion engine */
-        weight = round_to_halfton(weight + weight / 2);
+        weight = round_to_halfton(weight + (weight / 2));
       if (((mech)->rd.specials) & XL_TECH)
         return round_to_halfton(weight / 2);
       if (((mech)->rd.specials) & XXL_TECH)
@@ -304,7 +304,7 @@ int engine_weight(Mech *mech) {
       if (((mech)->rd.specials) & LE_TECH)
         return round_to_halfton(weight * 3 / 4);
       if (((mech)->rd.specials) & CE_TECH)
-        return round_to_halfton(weight + weight / 2);
+        return round_to_halfton(weight + (weight / 2));
       return weight;
     }
   }
@@ -538,8 +538,8 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
   if (weight_heat_sink_count(mech, interactive)) {
     part_pile_set(
         &pile, special_equipment_index(HEAT_SINK),
-        max(0, weight_heat_sink_count(mech, interactive) * shs_size / hs_eff -
-                   (((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size));
+        max(0, (weight_heat_sink_count(mech, interactive) * shs_size / hs_eff) -
+                   ((((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size)));
   } else if (interactive > 0) {
     cool_menu_add_centered(
         &c,
@@ -578,7 +578,7 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
         &c, tprintf("[fg=green]Total: %s%.1f tons (offset: %.1f)[reset]",
                     (total / 1024) > ((mech)->ud.tons) ? "[fg=red bold]" : "",
                     (double)((float)total / 1024.0F),
-                    (double)((float)mech->ud.tons - (float)total / 1024.0F)));
+                    (double)((float)mech->ud.tons - ((float)total / 1024.0F))));
     cool_menu_add_line(&c);
     show_cool_menu(btech_context_evaluation(mech->xcode.context), player, c);
   }
@@ -667,7 +667,7 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
     if (((mech)->ud.move) == MOVE_HOVER && es < (((mech)->ud.tons) * 1024 / 5))
       weight_entry_add(&c, interactive, &total,
                        "Engine size fix (-> 1/5 hover wt.)",
-                       ((mech)->ud.tons) * 1024 / 5 - es);
+                       (((mech)->ud.tons) * 1024 / 5) - es);
     weight_entry_add(&c, interactive, &total, "Cockpit",
                      round_to_quarterton(((mech)->ud.tons) * 1024 / 20));
     if (((mech)->ud.type) == CLASS_VTOL || ((mech)->ud.move) == MOVE_HOVER ||
@@ -701,8 +701,8 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
 
   part_pile_set(
       &pile, special_equipment_index(HEAT_SINK),
-      max(0, ((mech)->ud.numsinks) * shs_size / hs_eff -
-                 (((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size));
+      max(0, (((mech)->ud.numsinks) * shs_size / hs_eff) -
+                 ((((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size)));
   for (i = 1; i < NUM_ITEMS_M; i++) {
     if (part_pile_get(&pile, i)) {
       const int PART_COUNT = part_pile_get(&pile, i);
@@ -737,7 +737,7 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
         &c, tprintf("[fg=green]Total: %s%.1f tons (offset: %.1f)[reset]",
                     (total / 1024) > ((mech)->ud.tons) ? "[fg=red bold]" : "",
                     (double)((float)total / 1024.0F),
-                    (double)((float)mech->ud.tons - (float)total / 1024.0F)));
+                    (double)((float)mech->ud.tons - ((float)total / 1024.0F))));
     cool_menu_add_line(&c);
     show_cool_menu(btech_context_evaluation(mech->xcode.context), player, c);
   }

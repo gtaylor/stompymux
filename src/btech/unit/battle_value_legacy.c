@@ -308,7 +308,7 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
       mostheat += 1000;
     const int ACTIVE_HEAT_SINKS =
         clamp_float_to_int(mech_active_heat_sinks(mech));
-    temp = mostheat - ACTIVE_HEAT_SINKS * 100;
+    temp = mostheat - (ACTIVE_HEAT_SINKS * 100);
     if (temp > 0) {
       deduct += temp * 5;
 #ifdef DEBUG_BV
@@ -433,7 +433,7 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
     else if (move == MOVE_FOIL || move == MOVE_SUB || move == MOVE_HULL)
       movement_modifier = 0.5F;
     defbv =
-        clamp_float_to_int((float)defbv * movement_modifier - (float)deduct);
+        clamp_float_to_int(((float)defbv * movement_modifier) - (float)deduct);
   }
   defbv = clamp_float_to_int((float)defbv * mul);
 
@@ -469,10 +469,10 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
   const float SPEED_FOR_BV =
       mech_is_dropship(mech) ? walking_speed(EFFECTIVE_SPEED) : EFFECTIVE_SPEED;
   const float SPEED_FACTOR =
-      ((SPEED_FOR_BV / MP1) + (mechspec & MASC_TECH ? 1.0F : 0.0F) +
-       (mechspec & TRIPLE_MYOMER_TECH ? 1.0F : 0.0F) +
-       (mechspec2 & SUPERCHARGER_TECH ? 1.0F : 0.0F) - 5.0F) /
-          10.0F +
+      (((SPEED_FOR_BV / MP1) + (mechspec & MASC_TECH ? 1.0F : 0.0F) +
+        (mechspec & TRIPLE_MYOMER_TECH ? 1.0F : 0.0F) +
+        (mechspec2 & SUPERCHARGER_TECH ? 1.0F : 0.0F) - 5.0F) /
+       10.0F) +
       1.0F;
   mul = powf(SPEED_FACTOR, 1.2F);
 

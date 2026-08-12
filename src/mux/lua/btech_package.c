@@ -187,7 +187,7 @@ static int btech_lua_invoke(lua_State *state) {
 void lua_btech_package_install(lua_State *state, LuaBtechPackage *package) {
   lua_newtable(state);
   constexpr size_t ENTRY_COUNT =
-      sizeof(btech_lua_entries) / sizeof(btech_lua_entries[0]) - 1;
+      (sizeof(btech_lua_entries) / sizeof(btech_lua_entries[0])) - 1;
 
   for (size_t index = 0; index < ENTRY_COUNT; index++) {
     BtechLuaEntry *entry = checked_storage_at(

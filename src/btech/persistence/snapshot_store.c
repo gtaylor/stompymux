@@ -148,7 +148,7 @@ int btech_store_map(const RedBlackTreeVisitCall *call) {
   MapObject *bits_object = first_mapobj(map, TYPE_BITS);
   if (context->result == 0 && bits_object) {
     bits = bits_object->payload.bits;
-    bytes_per_row = map->map_width / 4 + (map->map_width % 4 ? 1 : 0);
+    bytes_per_row = (map->map_width / 4) + (map->map_width % 4 ? 1 : 0);
     for (index = 0; context->result == 0 && index < map->map_height; index++) {
       unsigned char *const *row = stored_bits_row(bits, map->map_height, index);
       if (!*row)

@@ -207,7 +207,7 @@ int heat_factor(Mech *mech) {
     return factor;
   }
   factor = clamp_float_to_int(
-      mech->rd.plus_heat + 2.0F * (mech->rd.plus_heat - mech->rd.minus_heat));
+      mech->rd.plus_heat + (2.0F * (mech->rd.plus_heat - mech->rd.minus_heat)));
   return ((mech_condition_summary(mech).null_signature_active ||
            mech_has_working_ecm_suite(mech) ||
            mech_condition_summary(mech).stealth_armor_active)

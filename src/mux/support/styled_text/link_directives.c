@@ -313,7 +313,7 @@ static bool parse_menu_property(const char *property, size_t *index,
                                 property, LENGTH, cursor))) {
     if (value > OSC8_URI_LIMIT)
       return false;
-    value = value * 10 +
+    value = (value * 10) +
             (size_t)(directive_character(property, LENGTH, cursor++) - '0');
   }
   if (value == 0 || value > OSC8_URI_LIMIT || cursor + 1 >= LENGTH ||
@@ -417,7 +417,7 @@ static bool parse_uint32_milliseconds(const char *value, bool quoted,
     uint64_t digit = (uint64_t)(CHARACTER - '0');
     if (parsed > (UINT32_MAX - digit) / 10)
       return false;
-    parsed = parsed * 10 + digit;
+    parsed = (parsed * 10) + digit;
   }
   *result = (uint32_t)parsed;
   return true;

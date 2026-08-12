@@ -125,27 +125,27 @@ const char *infspecialsabrev[] = {
     "ISTEALTH", "2STEALTH", "MJPACK", "CJPACK",   NULL};
 
 size_t template_section_configuration_count(void) {
-  return sizeof(section_configs) / sizeof(*section_configs) - 1;
+  return (sizeof(section_configs) / sizeof(*section_configs)) - 1;
 }
 
 size_t template_unit_class_count(void) {
-  return sizeof(mech_types) / sizeof(*mech_types) - 1;
+  return (sizeof(mech_types) / sizeof(*mech_types)) - 1;
 }
 
 size_t template_movement_type_count(void) {
-  return sizeof(move_types) / sizeof(*move_types) - 1;
+  return (sizeof(move_types) / sizeof(*move_types)) - 1;
 }
 
 size_t template_critical_fire_mode_count(void) {
-  return sizeof(crit_fire_modes) / sizeof(*crit_fire_modes) - 1;
+  return (sizeof(crit_fire_modes) / sizeof(*crit_fire_modes)) - 1;
 }
 
 size_t template_critical_ammo_mode_count(void) {
-  return sizeof(crit_ammo_modes) / sizeof(*crit_ammo_modes) - 1;
+  return (sizeof(crit_ammo_modes) / sizeof(*crit_ammo_modes)) - 1;
 }
 
 size_t primary_technology_name_count(void) {
-  return sizeof(specials) / sizeof(*specials) - 1;
+  return (sizeof(specials) / sizeof(*specials)) - 1;
 }
 
 const char *primary_technology_name(size_t index) {
@@ -155,7 +155,7 @@ const char *primary_technology_name(size_t index) {
 }
 
 size_t secondary_technology_name_count(void) {
-  return sizeof(specials2) / sizeof(*specials2) - 1;
+  return (sizeof(specials2) / sizeof(*specials2)) - 1;
 }
 
 const char *secondary_technology_name(size_t index) {
@@ -165,7 +165,7 @@ const char *secondary_technology_name(size_t index) {
 }
 
 size_t infantry_technology_name_count(void) {
-  return sizeof(infantry_specials) / sizeof(*infantry_specials) - 1;
+  return (sizeof(infantry_specials) / sizeof(*infantry_specials)) - 1;
 }
 
 const char *infantry_technology_name(size_t index) {
@@ -176,12 +176,12 @@ const char *infantry_technology_name(size_t index) {
 
 char *template_unit_class_name(size_t index) {
   return *(char *const *)checked_storage_at_const(
-      (const void *)mech_types, sizeof(mech_types) / sizeof(*mech_types) - 1,
+      (const void *)mech_types, (sizeof(mech_types) / sizeof(*mech_types)) - 1,
       sizeof(*mech_types), index);
 }
 
 char *template_movement_type_name(size_t index) {
   return *(char *const *)checked_storage_at_const(
-      (const void *)move_types, sizeof(move_types) / sizeof(*move_types) - 1,
+      (const void *)move_types, (sizeof(move_types) / sizeof(*move_types)) - 1,
       sizeof(*move_types), index);
 }

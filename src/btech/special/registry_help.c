@@ -222,7 +222,7 @@ static void help_text_add(const HelpTextRequest *request) {
   while (msg1 && *msg1) {
     msg1 = help_line_add(&(HelpLineRequest){.menu = d,
                                             .message = msg1,
-                                            .width = LEN * 2 - 1,
+                                            .width = (LEN * 2) - 1,
                                             .indentation = first});
     nl1 = help_text_length(msg1);
     if (nl1 == l1)
@@ -233,7 +233,7 @@ static void help_text_add(const HelpTextRequest *request) {
   while (msg2 && *msg2) {
     msg2 = help_line_add(&(HelpLineRequest){.menu = d,
                                             .message = msg2,
-                                            .width = LEN * 2 - TAB,
+                                            .width = (LEN * 2) - TAB,
                                             .indentation = 0 - TAB});
     nl2 = help_text_length(msg2);
     if (nl2 == l2)

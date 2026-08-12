@@ -75,7 +75,7 @@ static void do_scramble(BtechContext *context, char *buffo, int ch, int bth) {
 }
 
 static int relay_signal_improve(int signal, int factor) {
-  return 100 - (100 - signal) / factor;
+  return 100 - ((100 - signal) / factor);
 }
 
 typedef struct CommRelayContext CommRelayContext;

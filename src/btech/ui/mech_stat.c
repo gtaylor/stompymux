@@ -107,7 +107,7 @@ long btech_random_range(BtechContext *context, long low, long high) {
     value = btech_random_u64(&context->random);
   } while (value >= limit);
 
-  return (long)((uint64_t)low + value % width);
+  return (long)((uint64_t)low + (value % width));
 }
 
 int btech_random_range_int(BtechContext *context, int low, int high) {

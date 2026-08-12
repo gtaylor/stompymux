@@ -61,7 +61,7 @@ static PartNameEntry **part_index_slot(PartNameRegistry *registry, int brand,
                                        int id) {
   if (brand < 0 || brand > BRANDCOUNT || id < 0 || id >= NUM_ITEMS)
     abort();
-  size_t index = (size_t)brand * NUM_ITEMS + (size_t)id;
+  size_t index = ((size_t)brand * NUM_ITEMS) + (size_t)id;
   return (PartNameEntry **)checked_storage_at(
       registry->index_sorted, ((size_t)BRANDCOUNT + 1U) * (size_t)NUM_ITEMS,
       sizeof(PartNameEntry *), index);

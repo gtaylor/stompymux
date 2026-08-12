@@ -74,5 +74,5 @@ const BtechCommandDefinition MAPCOMMANDS[] = {
     {0, NULL, NULL, NULL}};
 
 size_t map_command_count(void) {
-  return sizeof(MAPCOMMANDS) / sizeof(*MAPCOMMANDS) - 1;
+  return (sizeof(MAPCOMMANDS) / sizeof(*MAPCOMMANDS)) - 1;
 }

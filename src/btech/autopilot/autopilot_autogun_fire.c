@@ -89,7 +89,7 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
         (fabsf(mech_current_speed(mech)) > 0.0F)) {
 
       maximum_speed = mech_effective_maximum_speed(mech);
-      if (mech_desired_speed(mech) > (2.0F * maximum_speed / 3.0F + 0.1F))
+      if (mech_desired_speed(mech) > ((2.0F * maximum_speed / 3.0F) + 0.1F))
         accumulate_heat += 2;
       else
         accumulate_heat += 1;

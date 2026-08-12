@@ -228,7 +228,7 @@ bool autopilot_slow_down_for_target(const AutopilotApproachRequest *request) {
     ai_set_speed(mech, a, 0);
   } else { /* slowdown */
     ai_set_speed(mech, a,
-                 (0.4F + range / 2.0F) * mech_effective_maximum_speed(mech));
+                 (0.4F + (range / 2.0F)) * mech_effective_maximum_speed(mech));
   }
   return true;
 }

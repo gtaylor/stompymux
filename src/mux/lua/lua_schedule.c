@@ -82,13 +82,13 @@ static int lua_schedule_add_job(LuaRuntime *runtime, LuaModuleRoot root,
   job->name = name_copy;
   job->cron = cron_copy;
   job->due =
-      minute * 60 +
+      (minute * 60) +
       (time_t)(lua_schedule_hash(&(LuaScheduleIdentity){.path = path,
                                                         .name = name,
                                                         .object = object,
                                                         .minute = minute}) %
                55U);
-  job->expires = minute * 60 + 60;
+  job->expires = (minute * 60) + 60;
   return 1;
 }
 

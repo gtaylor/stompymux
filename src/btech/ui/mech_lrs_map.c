@@ -387,7 +387,7 @@ static void show_lrs_map(const LrsMapRequest *request) {
   HexLosMap *losmap = nullptr;
 
   /* x and y hold the viewing center of the map */
-  b_width = X - LRS_DISPLAY_WIDTH / 2;
+  b_width = X - (LRS_DISPLAY_WIDTH / 2);
   b_width = max(b_width, 0);
   e_width = b_width + LRS_DISPLAY_WIDTH;
   if (e_width >= map->map_width) {
@@ -399,7 +399,7 @@ static void show_lrs_map(const LrsMapRequest *request) {
   if (b_width % 2)
     oddcol = 1;
 
-  b_height = Y - DISPLAY_HEIGHT / 2;
+  b_height = Y - (DISPLAY_HEIGHT / 2);
   b_height = max(b_height, 0);
   e_height = b_height + DISPLAY_HEIGHT;
   if (e_height > map->map_height) {

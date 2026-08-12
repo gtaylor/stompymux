@@ -32,7 +32,7 @@ static float mech_motion_jump_speed(const Mech *mech, const BattleMap *map) {
   return speed * 100.0F / (float)EFFECTIVE_GRAVITY;
 }
 static float motion_hypotenuse(float x, float y) {
-  return sqrtf(x * x + y * y);
+  return sqrtf((x * x) + (y * y));
 }
 static void motion_step_delta_set(MechMotionStep *step, MapPolarVector vector) {
   MapRealPosition delta = map_vector_components(&vector);
@@ -94,14 +94,14 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
                             JUMP_APEX_ELEVATION_FLOAT;
       }
       mech_position_real_z_set(mech,
-                               (remaining_jump * mech_motion_vector_z(mech) +
-                                jump_position * mech_jump_end_real_z(mech)) /
-                                       mech_jump_length(mech) +
-                                   midpoint_modifier * (float)ZSCALE);
+                               (((remaining_jump * mech_motion_vector_z(mech)) +
+                                 (jump_position * mech_jump_end_real_z(mech))) /
+                                mech_jump_length(mech)) +
+                                   (midpoint_modifier * (float)ZSCALE));
 #endif
       mech_position_hex_z_set(
-          mech, clamp_float_to_int(mech_position_real_z(mech) / (float)ZSCALE +
-                                   0.5F));
+          mech, clamp_float_to_int(
+                    (mech_position_real_z(mech) / (float)ZSCALE) + 0.5F));
 #ifdef JUMPDEBUG
       snprintf(message_buffer, MBUF_SIZE, "#%d: %d, %d, %d (%d, %d, %d)",
                mech_dbref(mech), mech_position_x(mech), mech_position_y(mech),

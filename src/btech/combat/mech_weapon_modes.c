@@ -562,7 +562,7 @@ static int mech_unjamammo_func(const MultiWeaponSelectionCall *call) {
     return 0;
   }
   if (mech_desired_speed(mech) >
-      2.0F * mech_effective_maximum_speed(mech) / 3.0F + 0.1F) {
+      (2.0F * mech_effective_maximum_speed(mech) / 3.0F) + 0.1F) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "You can't unjam the ammo feed while running!");
     return 0;

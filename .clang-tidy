@@ -25,6 +25,7 @@ Checks: >
   readability-inconsistent-declaration-parameter-name,
   readability-inconsistent-ifelse-braces,
   readability-isolate-declaration,
+  readability-math-missing-parentheses,
   readability-misleading-indentation,
   readability-misplaced-array-index,
   readability-named-parameter,

@@ -90,7 +90,7 @@ Attribute attr_table[] = {{"Alias", A_ALIAS},
                           {nullptr, 0}};
 
 size_t native_attribute_count(void) {
-  return sizeof(attr_table) / sizeof(attr_table[0]) - 1;
+  return (sizeof(attr_table) / sizeof(attr_table[0])) - 1;
 }
 
 Attribute *native_attribute_at(size_t index) {

@@ -118,7 +118,7 @@ void mech_heat_update(Mech *mech) {
 #else
     if (condition.sprinting || condition.evading)
       mech_heat_production_add(mech, 3.0F);
-    else if (mech_desired_speed(mech) > 2.0F * maxspeed / 3.0F + 0.1F)
+    else if (mech_desired_speed(mech) > (2.0F * maxspeed / 3.0F) + 0.1F)
       mech_heat_production_add(mech, 2.0F);
 #endif
     else

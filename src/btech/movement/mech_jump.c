@@ -324,7 +324,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
      value: 2 * 1 + 2 = 4
    */
   const float APEX_CANDIDATE =
-      fminf((float)jps + 1.0F - range / 3.0F, 2.0F * range + 2.0F);
+      fminf((float)jps + 1.0F - (range / 3.0F), (2.0F * range) + 2.0F);
   const int APEX_ELEVATION = (int)APEX_CANDIDATE;
   mech_jump_apex_elevation_set(mech, APEX_ELEVATION);
   if ((tz - sz) > jps) {

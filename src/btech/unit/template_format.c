@@ -471,7 +471,7 @@ int generic_radio_type(int i, int is_clan) {
   if (is_clan || i >= 4)
     f += FREQS * RADIO_RELAY;
   if (i < 3)
-    f -= (3 - i) * 2 - 1; /* 2 or 4 */
+    f -= ((3 - i) * 2) - 1; /* 2 or 4 */
   else
     f += (i - 3) * 3; /* 5 / 8 / 11 */
   return f;

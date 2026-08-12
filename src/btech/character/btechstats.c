@@ -529,8 +529,8 @@ int char_gainxpbycode(const CharacterExperienceChange *change) {
   character_stats_xp_set(&(CharacterStatsExperienceChange){
       .stats = s,
       .code = code,
-      .value = character_stats_xp_get(s, code) % XP_MAX +
-               XP_MAX * figure_xp_bonus(context, player, s, code)});
+      .value = (character_stats_xp_get(s, code) % XP_MAX) +
+               (XP_MAX * figure_xp_bonus(context, player, s, code))});
   character_stats_store(context, player, s, VALUES_SKILLS);
   return 1;
 }
@@ -615,7 +615,7 @@ int char_getattrsave(BtechContext *context, DbRef player, const char *name) {
     return (-1);
   if (val > 9)
     return 0;
-  return (18 - 2 * val);
+  return (18 - (2 * val));
 }
 
 int char_getattrsavesucc(BtechContext *context, DbRef player,

@@ -59,7 +59,7 @@ const char *internals[] = {"ShoulderOrHip",
                            NULL};
 
 size_t template_internal_name_count(void) {
-  return sizeof(internals) / sizeof(*internals) - 1;
+  return (sizeof(internals) / sizeof(*internals)) - 1;
 }
 
 const char *template_internal_name(int index) {
@@ -124,4 +124,5 @@ const int INTERNALSWEIGHT[] = {
 };
 #endif /* BT_PART_WEIGHTS */
 
-const int TEMPLATE_INTERNAL_COUNT = sizeof(internals) / sizeof(*internals) - 1;
+const int TEMPLATE_INTERNAL_COUNT =
+    (sizeof(internals) / sizeof(*internals)) - 1;

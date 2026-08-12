@@ -248,7 +248,7 @@ void mech_spot(DbRef player, void *data, char *buffer) {
     dat->target = target;
     // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
     mech_event_schedule(mech, EVENT_SPOT_LOCK, mech_spot_event,
-                        WEAPON_TICK * ((int)range / 10 + 5), (intptr_t)dat);
+                        WEAPON_TICK * (((int)range / 10) + 5), (intptr_t)dat);
     return;
   }
   if (!los) {

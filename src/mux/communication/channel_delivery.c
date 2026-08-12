@@ -147,7 +147,7 @@ void comsys_process_alias_command(EvaluationContext *evaluation, DbRef player,
   if ((strlen(arg1) + strlen(arg2)) > LBUF_SIZE / 2) {
     const size_t NAME_LENGTH = strlen(arg1);
     const size_t LIMIT =
-        NAME_LENGTH < LBUF_SIZE / 2 ? LBUF_SIZE / 2 - NAME_LENGTH : 0;
+        NAME_LENGTH < LBUF_SIZE / 2 ? (LBUF_SIZE / 2) - NAME_LENGTH : 0;
 
     *(char *)checked_storage_at(arg2, LBUF_SIZE, sizeof(char), LIMIT) = '\0';
   }

@@ -70,7 +70,7 @@ void mech_naval_altitude_check(Mech *mech, int previous_z) {
     }
     const int MECH_Z = mech_position_z(mech);
     mech_position_real_z_set(mech,
-                             ((5.0F * (float)MECH_Z - 4.0F) * ZSCALE) / 5.0F);
+                             (((5.0F * (float)MECH_Z) - 4.0F) * ZSCALE) / 5.0F);
     if (mech_movement_type(mech) == MOVE_SUB && mech_vertical_speed(mech) < 0) {
       mech_vertical_speed_set(mech, 0.0F);
       mech_notify(mech, MECHALL,

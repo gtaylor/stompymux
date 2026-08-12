@@ -277,7 +277,7 @@ oldstyle:
   snprintf(registry->resolved_path, sizeof(registry->resolved_path), "%s/%s",
            mech_path, id);
   fp = fopen(registry->resolved_path, "r");
-  const size_t SUBDIR_COUNT = sizeof(SUBDIRS) / sizeof(*SUBDIRS) - 1;
+  const size_t SUBDIR_COUNT = (sizeof(SUBDIRS) / sizeof(*SUBDIRS)) - 1;
   for (size_t subdir_index = 0; !fp && subdir_index < SUBDIR_COUNT;
        subdir_index++) {
     const char *const *subdir = (const char *const *)checked_storage_at_const(

@@ -72,7 +72,7 @@ bool style_tac_map(MapText *text, const MapColorScheme *colors,
   while (line < disprows) {
     char new_colour;
     const size_t SOURCE_OFFSET =
-        (size_t)line * (size_t)dispcols + (size_t)column;
+        ((size_t)line * (size_t)dispcols) + (size_t)column;
     const unsigned char INPUT =
         (unsigned char)*(const char *)checked_storage_at_const(
             sketch, SKETCH_CAPACITY, sizeof(char), SOURCE_OFFSET);

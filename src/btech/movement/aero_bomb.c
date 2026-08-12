@@ -153,10 +153,10 @@ static float bomb_calculate_destination(Mech *mech, short *x, short *y) {
   float ot;
 
   ot = t =
-      (zspd + sqrtf(zspd * zspd + 2.0F * BOMB_GRAVITY * fz)) / BOMB_GRAVITY;
+      (zspd + sqrtf((zspd * zspd) + (2.0F * BOMB_GRAVITY * fz))) / BOMB_GRAVITY;
   t /= (float)MOVE_TICK;
-  fx = fx + mech_motion_vector_x(mech) * t;
-  fy = fy + mech_motion_vector_y(mech) * t;
+  fx = fx + (mech_motion_vector_x(mech) * t);
+  fy = fy + (mech_motion_vector_y(mech) * t);
   real_coord_to_map_coord(x, y, fx, fy);
   return ot;
 }
@@ -350,8 +350,8 @@ static void bomb_drop(const BombDropRequest *request) {
     ob = max(1, btech_random_range_int(mech_context(mech), 1, ob) / 2);
     di = btech_random_range_int(mech_context(mech), 0, 359);
     dir = (float)di * (float)M_PI / 180.0F;
-    const float SCATTERED_X = (float)x + (float)ob * cosf(dir);
-    const float SCATTERED_Y = (float)y + (float)ob * sinf(dir);
+    const float SCATTERED_X = (float)x + ((float)ob * cosf(dir));
+    const float SCATTERED_Y = (float)y + ((float)ob * sinf(dir));
     const float TRUNCATED_X = truncf(SCATTERED_X);
     const float TRUNCATED_Y = truncf(SCATTERED_Y);
     const int TARGET_X = (int)TRUNCATED_X;

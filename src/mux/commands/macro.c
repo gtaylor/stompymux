@@ -56,7 +56,7 @@ MACENT macro_table[] = {{"add", do_add_macro},       {"clear", do_clear_macro},
                         {"list", do_status_macro},   {"undef", do_undef_macro},
                         {(char *)nullptr, nullptr}};
 static size_t macro_command_count(void) {
-  return sizeof(macro_table) / sizeof(macro_table[0]) - 1;
+  return (sizeof(macro_table) / sizeof(macro_table[0])) - 1;
 }
 static MACENT *macro_command_at(size_t index) {
   return checked_storage_at(macro_table, macro_command_count(),

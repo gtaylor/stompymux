@@ -364,7 +364,7 @@ void mech_ood_initiate(DbRef player, Mech *mech, char *buffer) {
     mech_maybe_move(mech);
   } else {
     mech_cocoon_integrity_set(mech,
-                              mech_calculated_weight(mech) / 5 / 1024 + 1);
+                              (mech_calculated_weight(mech) / 5 / 1024) + 1);
     mech_event_cancel(mech, EVENT_MOVE);
     mech_event_schedule(mech, EVENT_OOD, mech_ood_event, OOD_TICK, 0);
   }

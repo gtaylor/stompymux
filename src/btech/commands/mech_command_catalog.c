@@ -575,5 +575,5 @@ const BtechCommandDefinition MECHCOMMANDS[] = {
     {0, NULL, NULL, NULL}};
 
 size_t mech_command_count(void) {
-  return sizeof(MECHCOMMANDS) / sizeof(*MECHCOMMANDS) - 1;
+  return (sizeof(MECHCOMMANDS) / sizeof(*MECHCOMMANDS)) - 1;
 }

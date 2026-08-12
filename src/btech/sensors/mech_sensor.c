@@ -249,9 +249,9 @@ int mech_sensor_can_see(const MechSensorObservationRequest *request) {
               mech_sensor_minimum_variable_range(mech, sn)) < range) {
         if (mech_sensor_range_as_float(
                 mech_sensor_minimum_variable_range(mech, sn) +
-                (mech_sensor_visibility_modifier(mech) *
-                 (mech_sensor_definition(sn)->maximum_variation + 1)) /
-                    100) < range)
+                ((mech_sensor_visibility_modifier(mech) *
+                  (mech_sensor_definition(sn)->maximum_variation + 1)) /
+                 100)) < range)
           continue;
       }
       j += (i + 1);
@@ -290,8 +290,8 @@ int mech_sensor_can_see(const MechSensorObservationRequest *request) {
           range) {
     if (mech_sensor_range_as_float(
             mech_sensor_minimum_variable_range(mech, sn) +
-            mech_sensor_visibility_modifier(mech) *
-                (mech_sensor_definition(sn)->maximum_variation + 1) / 100) <
+            (mech_sensor_visibility_modifier(mech) *
+             (mech_sensor_definition(sn)->maximum_variation + 1) / 100)) <
         range)
       return 0;
   }

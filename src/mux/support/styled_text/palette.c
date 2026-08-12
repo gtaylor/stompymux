@@ -293,7 +293,7 @@ static bool parse_hex_byte(const char *value, int *result) {
     return false;
   int high = (isdigit)(FIRST) ? FIRST - '0' : (tolower)(FIRST) - 'a' + 10;
   int low = (isdigit)(SECOND) ? SECOND - '0' : (tolower)(SECOND) - 'a' + 10;
-  *result = high * 16 + low;
+  *result = (high * 16) + low;
   return true;
 }
 
@@ -306,7 +306,7 @@ static bool parse_rgb_channel(const char *text, size_t length, size_t *offset,
          (isdigit)((unsigned char)palette_character(text, length, *offset))) {
     if (value > 255)
       return false;
-    value = value * 10 + (palette_character(text, length, *offset) - '0');
+    value = (value * 10) + (palette_character(text, length, *offset) - '0');
     (*offset)++;
     digits++;
   }

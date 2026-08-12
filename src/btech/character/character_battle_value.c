@@ -151,14 +151,14 @@ static double get_pilot_bv_mod(Mech *mech, int weapindx) {
    */
   if (my_g_skill < 0) {
     const int GUNNERY_PENALTY = abs(my_g_skill);
-    base_mod = zero_pilot_base_skill(0) + GUNNERY_PENALTY * 0.20;
+    base_mod = zero_pilot_base_skill(0) + (GUNNERY_PENALTY * 0.20);
   } else if (my_g_skill > 7) {
-    base_mod = zero_pilot_base_skill(7) - my_g_skill * 0.10;
+    base_mod = zero_pilot_base_skill(7) - (my_g_skill * 0.10);
   } else {
     base_mod = zero_pilot_base_skill(my_g_skill);
   }
 
-  return base_mod - my_p_skill * 0.05;
+  return base_mod - (my_p_skill * 0.05);
 }
 
 /*

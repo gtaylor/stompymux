@@ -17,7 +17,7 @@ float map_spatial_range(const MapSpatialSegment *segment) {
   const float DY = segment->start.y - segment->end.y;
   const float DZ = segment->start.z - segment->end.z;
 
-  return sqrtf(DX * DX + DY * DY + DZ * DZ) / (float)SCALEMAP;
+  return sqrtf((DX * DX) + (DY * DY) + (DZ * DZ)) / (float)SCALEMAP;
 }
 
 /* Computes hex range between Cartesian (x0, y0) and (x1, y1).  */
@@ -25,7 +25,7 @@ float map_real_range(const MapRealSegment *segment) {
   const float DX = segment->start.x - segment->end.x;
   const float DY = segment->start.y - segment->end.y;
 
-  return sqrtf(DX * DX + DY * DY) / (float)SCALEMAP;
+  return sqrtf((DX * DX) + (DY * DY)) / (float)SCALEMAP;
 }
 
 /* CONVERSION ROUTINES courtesy Mike :) (Whoever that may be -focus) */
@@ -96,14 +96,14 @@ void real_coord_to_map_coord(short *hex_x, short *hex_y, float cart_x,
   /* Figure out the x-coordinate of the 'repeatable box' we're in. */
   x_count = clamp_float_to_int(cart_x / ROOT3);
   /* And the offset inside the box, from the left edge. */
-  x = cart_x - (float)x_count * ROOT3;
+  x = cart_x - ((float)x_count * ROOT3);
 
   /* The repbox holds two x-columns, we want the real X coordinate. */
   x_count *= 2;
 
   /* Do the same for the y-coordinate; this is easy */
   y_count = clamp_float_to_int(floorf(cart_y / FULL_Y));
-  y = cart_y - (float)y_count * FULL_Y;
+  y = cart_y - ((float)y_count * FULL_Y);
 
   if (x < 2 * ALPHA) {
 
@@ -121,21 +121,21 @@ void real_coord_to_map_coord(short *hex_x, short *hex_y, float cart_x,
     /* Any of areas I, II and III. */
     if (y >= HALF_Y) {
       /* Area I or II */
-      if (2 * ANGLE_ALPHA * (FULL_Y - y) <= x - 2 * ALPHA) {
+      if (2 * ANGLE_ALPHA * (FULL_Y - y) <= x - (2 * ALPHA)) {
         /* Area II, up both */
         x_count++;
         y_count++;
       }
     } else {
       /* Area I or III */
-      if (2 * ANGLE_ALPHA * y <= x - 2 * ALPHA)
+      if (2 * ANGLE_ALPHA * y <= x - (2 * ALPHA))
         /* Area III, up only x */
         x_count++;
     }
   } else if (y >= HALF_Y) {
     /* Area II or IV. Up x at least one, maybe two, and y maybe one. */
     x_count++;
-    if (2.0F * ANGLE_ALPHA * (y - HALF_Y) > (x - 5.0F * ALPHA))
+    if (2.0F * ANGLE_ALPHA * (y - HALF_Y) > (x - (5.0F * ALPHA)))
       /* Area II */
       y_count++;
     else
@@ -166,7 +166,7 @@ void map_coord_to_real_coord(int hex_x, int hex_y, float *cart_x,
                              float *cart_y) {
   /* TODO: Can use some integer math if we're careful about overflow.  */
   /* Use % 2 for theoretical portability to non-2's-complement archs.  */
-  *cart_x = (2.0F + 3.0F * (float)hex_x) * ALPHA;
+  *cart_x = (2.0F + (3.0F * (float)hex_x)) * ALPHA;
   *cart_y = ((hex_x % 2) ? 0.0F : HALF_Y) + ((float)hex_y * FULL_Y);
 }
 
@@ -225,10 +225,10 @@ void navigate_sketch_mechs(const NavigateSketchRequest *request) {
       continue;
 
     fx = ((other)->pd.fx) - corner_fx;
-    column = clamp_float_to_int(fx / NAV_COLUMN_WIDTH + NAV_X_OFFSET);
+    column = clamp_float_to_int((fx / NAV_COLUMN_WIDTH) + NAV_X_OFFSET);
 
     fy = ((other)->pd.fy) - corner_fy;
-    row = clamp_float_to_int(fy / NAV_ROW_HEIGHT + NAV_Y_OFFSET);
+    row = clamp_float_to_int((fy / NAV_ROW_HEIGHT) + NAV_Y_OFFSET);
 
     if (column < 0 || column > NAV_MAX_WIDTH || row < 0 || row > NAV_MAX_HEIGHT)
       continue;
@@ -247,10 +247,10 @@ void navigate_sketch_mechs(const NavigateSketchRequest *request) {
   /* Draw 'mech last so we always see it. */
 
   fx = ((mech)->pd.fx) - corner_fx;
-  column = clamp_float_to_int(fx / NAV_COLUMN_WIDTH + NAV_X_OFFSET);
+  column = clamp_float_to_int((fx / NAV_COLUMN_WIDTH) + NAV_X_OFFSET);
 
   fy = ((mech)->pd.fy) - corner_fy;
-  row = clamp_float_to_int(fy / NAV_ROW_HEIGHT + NAV_Y_OFFSET);
+  row = clamp_float_to_int((fy / NAV_ROW_HEIGHT) + NAV_Y_OFFSET);
 
   if (column < 0 || column > NAV_MAX_WIDTH || row < 0 || row > NAV_MAX_HEIGHT)
     return;

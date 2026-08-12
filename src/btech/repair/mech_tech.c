@@ -81,7 +81,7 @@ int game_lag(BtechContext *context) {
   if (!context->events->tick)
     return 0;
   time_t const ELAPSED = context->clock->now - context->process_start_time;
-  return clamp_intptr_to_int(100 * (intptr_t)ELAPSED / context->events->tick -
+  return clamp_intptr_to_int((100 * (intptr_t)ELAPSED / context->events->tick) -
                              100);
 }
 
@@ -355,7 +355,7 @@ struct LatestTechEventContext {
 static void find_latest_tech_event(MuxEvent *event, void *data) {
   LatestTechEventContext *context = data;
   int offset = event->tick - event->scheduler->tick;
-  long amount = (((long)event->data2) % PLAYERPOS) / 16 - 1;
+  long amount = ((((long)event->data2) % PLAYERPOS) / 16) - 1;
 
   switch (event->type) {
   case EVENT_REPAIR_FIXI:

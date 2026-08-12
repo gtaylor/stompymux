@@ -311,7 +311,7 @@ FlagEntry gen_flags[] = {
     {nullptr, OBJECT_FLAG_NONE, ' ', nullptr}};
 
 static size_t flag_entry_count(void) {
-  return sizeof(gen_flags) / sizeof(*gen_flags) - 1;
+  return (sizeof(gen_flags) / sizeof(*gen_flags)) - 1;
 }
 
 static FlagEntry *flag_entry_at(size_t index) {

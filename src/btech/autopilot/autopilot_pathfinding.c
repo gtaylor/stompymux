@@ -24,7 +24,7 @@
 #include "registry_api.h"
 #include "section_types.h"
 
-static int autopilot_hex_offset(int x, int y) { return x * MAPY + y; }
+static int autopilot_hex_offset(int x, int y) { return (x * MAPY) + y; }
 
 static short autopilot_map_coordinate(int coordinate) {
   assert(coordinate >= SHRT_MIN && coordinate <= SHRT_MAX);
@@ -97,7 +97,7 @@ auto_create_astar_node(const AutopilotPathNodeRequest *request) {
   temp->g_score = request->path_score;
   temp->h_score = request->heuristic_score;
   temp->f_score = request->path_score + request->heuristic_score;
-  temp->hexoffset = request->position.x * MAPY + request->position.y;
+  temp->hexoffset = (request->position.x * MAPY) + request->position.y;
 
   return temp;
 }

@@ -133,8 +133,8 @@ BtechScriptResult fun_btmechfreqs(BtechScriptCall *call) {
                      bv2text(MODE % FREQ_REST, (char[SBUF_SIZE]){0}));
     if (MODE / FREQ_REST) {
       safe_tprintf_str(buff, bufc, "|%c",
-                       *checked_string_suffix(RADIO_COLORSTR,
-                                              (size_t)(MODE / FREQ_REST - 1)));
+                       *checked_string_suffix(
+                           RADIO_COLORSTR, (size_t)((MODE / FREQ_REST) - 1)));
     } else {
       safe_str("|-", buff, bufc);
     }

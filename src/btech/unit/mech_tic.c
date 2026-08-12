@@ -35,7 +35,7 @@
 static const unsigned long *tic_word(const Mech *mech, int tic, int word) {
   if (tic < 0 || word < 0)
     abort();
-  size_t index = (size_t)tic * TICLONGS + (size_t)word;
+  size_t index = ((size_t)tic * TICLONGS) + (size_t)word;
   return checked_storage_at_const(mech->tic,
                                   (size_t)NUM_TICS * (size_t)TICLONGS,
                                   sizeof(unsigned long), index);
@@ -44,7 +44,7 @@ static const unsigned long *tic_word(const Mech *mech, int tic, int word) {
 static unsigned long *tic_word_mutable(Mech *mech, int tic, int word) {
   if (tic < 0 || word < 0)
     abort();
-  size_t index = (size_t)tic * TICLONGS + (size_t)word;
+  size_t index = ((size_t)tic * TICLONGS) + (size_t)word;
   return checked_storage_at(mech->tic, (size_t)NUM_TICS * (size_t)TICLONGS,
                             sizeof(unsigned long), index);
 }
@@ -239,7 +239,7 @@ static int firetic_sub_func(const MultiWeaponSelectionCall *call) {
       if (*tic_word(mech, i, k)) {
         for (j = 0; j < SINGLE_TICLONG_SIZE; j++) {
           if (*tic_word(mech, i, k) & (1UL << (unsigned int)j)) {
-            weapnum = k * SINGLE_TICLONG_SIZE + j;
+            weapnum = (k * SINGLE_TICLONG_SIZE) + j;
             mech_weapon_fire_command(&(WeaponFireCommandRequest){
                 .actor = call->actor,
                 .mech = mech,
@@ -316,7 +316,7 @@ static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
     (void)snprintf(buffer, LBUF_SIZE, "No weapons in tic.");
     return buffer;
   }
-  rtar = i / 2 + (i % 2 ? ((list->weapon_count + 1) / 2) : 0);
+  rtar = (i / 2) + (i % 2 ? ((list->weapon_count + 1) / 2) : 0);
   for (j = 0; j < MAX_WEAPONS_PER_MECH; j++) {
     if (mech_tic_contains_weapon(
             mech, (TicWeaponReference){.tic = list->tic, .weapon = j})) {

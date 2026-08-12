@@ -84,5 +84,5 @@ const BtechCommandDefinition MECHREPCOMMANDS[] = {
     {0, NULL, NULL, NULL}};
 
 size_t repair_command_count(void) {
-  return sizeof(MECHREPCOMMANDS) / sizeof(*MECHREPCOMMANDS) - 1;
+  return (sizeof(MECHREPCOMMANDS) / sizeof(*MECHREPCOMMANDS)) - 1;
 }

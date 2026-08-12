@@ -644,7 +644,7 @@ void critical_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
   foo = (char **)checked_storage_allocate(sizeof(*foo) * (NUM_CRITICALS + 1));
 
   for (i = 0; i < max_crits; i++) {
-    loop = ((i % 2) ? (max_crits / 2) : 0) + i / 2;
+    loop = ((i % 2) ? (max_crits / 2) : 0) + (i / 2);
     BtechTextBuilder line;
     btech_text_builder_initialize(&line, buffer, sizeof(buffer));
     btech_text_builder_append_format(&line, "%2d ", loop + 1);

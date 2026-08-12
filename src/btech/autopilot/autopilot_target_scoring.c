@@ -84,7 +84,7 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
 
   /* Range score calc */
   /* Min range is 0, max range is 30, so score goes from 300 to 0 */
-  range_score = -10.0F * range + 300.0F;
+  range_score = (-10.0F * range) + 300.0F;
 
   /* Get the Speed of the target */
   target_speed = mech_current_speed(target);
@@ -93,7 +93,7 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
   /* Min speed is 0, max is 150 (can go higher tho), and score goes from
    * 300 to 0 (can go negative if the target is faster then 150) */
   /*! \todo {Check to see what happens when the target is backing} */
-  speed_score = -2.0F * target_speed + 300.0F;
+  speed_score = (-2.0F * target_speed) + 300.0F;
 
   /* Get the BV of the target */
   target_bv = mech_battle_value(target);
@@ -133,24 +133,24 @@ int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
 
     /* Just use armor part of the calc */
     damage_score =
-        -3.0F * ((float)total_armor_current / (float)total_armor_original) +
+        (-3.0F * ((float)total_armor_current / (float)total_armor_original)) +
         300.0F;
 
   } else if (total_armor_original == 0) {
 
     /* Just use internal part of the calc */
-    damage_score = -2.0F * ((float)total_internal_current /
-                            (float)total_internal_original) +
+    damage_score = (-2.0F * ((float)total_internal_current /
+                             (float)total_internal_original)) +
                    200.0F;
 
   } else {
 
     /* Use the whole thing */
     damage_score =
-        -3.0F * ((float)total_armor_current / (float)total_armor_original) +
+        (-3.0F * ((float)total_armor_current / (float)total_armor_original)) +
         300.0F -
-        2.0F *
-            ((float)total_internal_current / (float)total_internal_original) +
+        (2.0F *
+         ((float)total_internal_current / (float)total_internal_original)) +
         200.0F;
   }
 

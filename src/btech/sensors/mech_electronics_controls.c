@@ -624,7 +624,7 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
     mech_los_broadcast(
         mech, "tries to swat off an iNarc pod, but misses and hits itself!");
 
-    w_self_damage = (mech_tonnage(mech) + 10 / 2) / 10;
+    w_self_damage = (mech_tonnage(mech) + (10 / 2)) / 10;
 
     if (mech_critical_part_type(mech, w_arm_to_use, 2) !=
             special_equipment_index(LOWER_ACTUATOR) ||

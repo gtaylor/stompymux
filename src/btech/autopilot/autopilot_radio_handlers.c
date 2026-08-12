@@ -87,7 +87,7 @@ void auto_radio_command_report(Autopilot *autopilot, Mech *mech,
   else if (mech_is_fallen(mech))
     strcpy(buffer, "Prone");
   else if (mech_current_speed(mech) >
-           2.0F * mech_effective_maximum_speed(mech) / 3.0F + 0.1F)
+           (2.0F * mech_effective_maximum_speed(mech) / 3.0F) + 0.1F)
     strcpy(buffer, "Running");
   else if (mech_current_speed(mech) > 1.0F)
     strcpy(buffer, "Walking");

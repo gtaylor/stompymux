@@ -163,9 +163,9 @@ void initialize_pc(DbRef player, Mech *mech) {
   for (i = 0; i < NUM_SECTIONS; i++) {
     mech_section_armor_set(mech, i, 0);
     mech_section_original_armor_set(mech, i, 0);
-    mech_section_internal_set(mech, i, (loc_mod(i) * (tot - dam)) / 100 + 1);
+    mech_section_internal_set(mech, i, ((loc_mod(i) * (tot - dam)) / 100) + 1);
     mech_section_original_internal_set(mech, i,
-                                       (loc_mod(i) * (tot - dam)) / 100 + 1);
+                                       ((loc_mod(i) * (tot - dam)) / 100) + 1);
   }
   c = btech_attribute_read(context->database, player, A_PCEQUIP,
                            (char[LBUF_SIZE]){0});
@@ -361,7 +361,7 @@ int mw_ic_bth(Mech *mech) {
                            VALUES_ATTRS | VALUES_ADVS | VALUES_HEALTH, s);
   player_bld = char_getstatvalue(s, "build");
   bruise = char_getstatvalue(s, "bruise");
-  playerhits = 10 * player_bld - bruise;
+  playerhits = (10 * player_bld) - bruise;
   if (char_getstatvalue(s, "pain_resistance") == 1)
     mod = -1;
   if (playerhits >= (8 * player_bld))
@@ -475,11 +475,11 @@ void headhitmwdamage(Mech *mech, Mech *attacker, int dam) {
 
   if (bruise > player_bld * 10) {
     lethaldam = char_getstatvalue(s, "lethal");
-    lethaldam += (bruise - player_bld * 10);
+    lethaldam += (bruise - (player_bld * 10));
     bruise = player_bld * 10;
 
     if (lethaldam >= player_bld * 10) {
-      char_setstatvalue(s, "lethal", player_bld * 10 - 1);
+      char_setstatvalue(s, "lethal", (player_bld * 10) - 1);
       char_setstatvalue(s, "bruise", player_bld * 10);
       character_stats_store(context, player, s, VALUES_HEALTH);
       if (!mech_is_destroyed(mech)) {
@@ -534,7 +534,7 @@ void mwlethaldam(Mech *mech, Mech *attacker, int dam) {
     mech_contents_kill_if_in_character(mech);
     return;
   }
-  char_setstatvalue(s, "bruise", player_bld * 10 - 5);
+  char_setstatvalue(s, "bruise", (player_bld * 10) - 5);
   char_setstatvalue(s, "lethal", lethaldam);
   character_stats_store(context, player, s, VALUES_HEALTH);
   handlemwconc(mech, 1);

@@ -7,7 +7,7 @@
 static AutopilotPathHex *hex_at(AutopilotPathHex *hexes, size_t count,
                                 int height, int x, int y) {
   return checked_storage_at(hexes, count, sizeof(*hexes),
-                            (size_t)(x * height + y));
+                            (size_t)((x * height) + y));
 }
 
 static const AutopilotPathPoint *point_at(const AutopilotPathResult *result,

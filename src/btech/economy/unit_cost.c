@@ -728,25 +728,25 @@ unsigned long long mech_fasa_cost(Mech *mech) {
   if (UNIT_CLASS != CLASS_MECH && UNIT_CLASS != CLASS_BSUIT) {
     switch (MOVEMENT) {
     case MOVE_TRACK:
-      mod = 1.0 + (double)TONS / 100.0;
+      mod = 1.0 + ((double)TONS / 100.0);
       break;
     case MOVE_WHEEL:
-      mod = 1.0 + (double)TONS / 200.0;
+      mod = 1.0 + ((double)TONS / 200.0);
       break;
     case MOVE_HOVER:
-      mod = 1.0 + (double)TONS / 50.0;
+      mod = 1.0 + ((double)TONS / 50.0);
       break;
     case MOVE_VTOL:
-      mod = 1.0 + (double)TONS / 30.0;
+      mod = 1.0 + ((double)TONS / 30.0);
       break;
     case MOVE_HULL:
-      mod = 1.0 + (double)TONS / 200.0;
+      mod = 1.0 + ((double)TONS / 200.0);
       break;
     case MOVE_FOIL:
-      mod = 1.0 + (double)TONS / 75.0;
+      mod = 1.0 + ((double)TONS / 75.0);
       break;
     case MOVE_SUB:
-      mod = 1.0 + (double)TONS / 50.0;
+      mod = 1.0 + ((double)TONS / 50.0);
       break;
     }
   } else if (UNIT_CLASS == CLASS_BSUIT) {
@@ -756,7 +756,7 @@ unsigned long long mech_fasa_cost(Mech *mech) {
   } else {
     // The standard mech size cost modifier. 20 ton mech, for example is Cost *
     // .20
-    mod = 1.0 + (double)TONS / 100.0;
+    mod = 1.0 + ((double)TONS / 100.0);
   }
 
   if (mech_is_omni(mech)) {

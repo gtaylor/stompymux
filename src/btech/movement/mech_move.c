@@ -509,16 +509,16 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
       mv = sv;
     } else {
       if (mv > sv)
-        mv = mv + (mv - sv) / 2;
+        mv = mv + ((mv - sv) / 2);
       else
-        mv = mv + (sv - mv) / 3;
+        mv = mv + ((sv - mv) / 3);
     }
     if (3 * sv < (mech_cached_lugged_weight(mech) + mv)) {
       mspeed = 0.0F;
     } else {
       int const TONNAGE = mech_tonnage(mech);
       int const DENOMINATOR = mech_movement_maximum_int(
-          1024 * TONNAGE + mech_cached_lugged_weight(mech) / 3,
+          (1024 * TONNAGE) + (mech_cached_lugged_weight(mech) / 3),
           mech_movement_maximum_int(1024,
                                     mv + mech_cached_lugged_weight(mech)));
       mspeed = mech_maximum_speed(mech) * (float)TONNAGE * 1024.0F /

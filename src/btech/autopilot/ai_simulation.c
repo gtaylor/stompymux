@@ -69,7 +69,7 @@ int ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location) {
       if (abs(normalized_angle) > (int)offset_value &&
           location->s > maximum_speed * 2.0F / 3.0F)
         offset_value -=
-            offset_value / 2.0F * (3.0F * location->s / maximum_speed - 2.0F);
+            offset_value / 2.0F * ((3.0F * location->s / maximum_speed) - 2.0F);
     }
     int offset = (int)(offset_value * (float)MOVE_MOD);
     if (normalized_angle < 0)
@@ -115,7 +115,7 @@ int ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location) {
       if (difference > 180)
         difference = 360 - difference;
       if (difference) {
-        difference = (difference - 1) / 30 + 2;
+        difference = ((difference - 1) / 30) + 2;
         target_speed = target_speed * (float)(10 - difference) / 10.0F;
       }
     } else if (SLOWDOWN == 1) {

@@ -129,8 +129,8 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                     "You run headlong into the cliff and fall down!");
         mech_los_broadcast(mech, "runs headlong into a cliff and falls down!");
         if (!skid_cliff)
-          mech_fall(mech, (int)(1 + mech_current_speed(mech) * MP_PER_KPH) / 4,
-                    0);
+          mech_fall(mech,
+                    (int)(1 + (mech_current_speed(mech) * MP_PER_KPH)) / 4, 0);
         else
           mech_fall(mech, 1, 0);
       }
@@ -306,7 +306,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
       }
 #endif
       if (mech_current_speed(mech) >
-          2.0F * mech_effective_maximum_speed(mech) / 3.0F + 0.1F) {
+          (2.0F * mech_effective_maximum_speed(mech) / 3.0F) + 0.1F) {
         mech_notify(mech, MECHPILOT,
                     "You struggle to keep control as you run into the water!");
         skillmod = 2;

@@ -131,7 +131,7 @@ void physical_damage_resolve(const PhysicalDamageRequest *request) {
 
     /* Sword attack uses an odd weapon damage amount */
     if (ATTACK_TYPE == PA_SWORD) {
-      damage = (mech_tonnage(mech) + 5) / WEIGHTDMG + 1;
+      damage = ((mech_tonnage(mech) + 5) / WEIGHTDMG) + 1;
     } else {
       /* Round Down to nearest ton -- TW Page 145 */
       damage = mech_tonnage(mech) / WEIGHTDMG;

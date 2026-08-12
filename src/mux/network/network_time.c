@@ -32,8 +32,8 @@ struct timeval timeval_sub(struct timeval now, struct timeval then) {
  */
 
 int msec_diff(struct timeval now, struct timeval then) {
-  return (int)((now.tv_sec - then.tv_sec) * 1000 +
-               (now.tv_usec - then.tv_usec) / 1000);
+  return (int)(((now.tv_sec - then.tv_sec) * 1000) +
+               ((now.tv_usec - then.tv_usec) / 1000));
 }
 
 /*

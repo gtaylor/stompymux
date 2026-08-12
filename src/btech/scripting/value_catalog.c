@@ -715,7 +715,7 @@ GMV xcode_data[] = {
      .type = TYPE_STRING}};
 
 size_t xcode_descriptor_count(void) {
-  return sizeof(xcode_data) / sizeof(*xcode_data) - 1;
+  return (sizeof(xcode_data) / sizeof(*xcode_data)) - 1;
 }
 
 const GMV *xcode_descriptor_at(size_t index) {

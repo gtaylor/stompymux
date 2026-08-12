@@ -439,8 +439,8 @@ static void char_disembark(DbRef player, Mech *mech) {
     mech_los_broadcast(m, tprintf("jumps out of %s... in mid air !",
                                   mech_display_id(mech).text));
     initial_speed =
-        (long)(((mech_current_speed(mech) + mech_vertical_speed(mech)) / MP1) /
-                   2.0F +
+        (long)((((mech_current_speed(mech) + mech_vertical_speed(mech)) / MP1) /
+                2.0F) +
                4.0F);
     mech_event_schedule(m, EVENT_FALL, mech_fall_event, FALL_TICK,
                         -initial_speed);

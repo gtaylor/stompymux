@@ -77,7 +77,7 @@ void mech_ammunition_expenditure_check(
     return;
   /* Okay, we have case of warning here */
   if (mech_is_started(mech)) {
-    if ((sev * 65536 + WEAPINDX) % 65536) {
+    if (((sev * 65536) + WEAPINDX) % 65536) {
       mech_printf(mech, MECHALL,
                   "%sWARNING: Ammo for %s is running low.[reset]",
                   sev ? "[fg=red bold]" : "[fg=yellow bold]",

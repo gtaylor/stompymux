@@ -234,7 +234,7 @@ static bool lua_install_sandbox(LuaRuntime *runtime) {
                                   "loadstring", "load",      "collectgarbage",
                                   "module",     "require",   "getfenv",
                                   "setfenv",    nullptr};
-  const size_t BLOCKED_COUNT = sizeof(blocked) / sizeof(*blocked) - 1;
+  const size_t BLOCKED_COUNT = (sizeof(blocked) / sizeof(*blocked)) - 1;
   size_t index;
 
   luaL_openlibs(runtime->state);

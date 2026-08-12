@@ -312,12 +312,14 @@ static toml_datum_t configuration_toml_table_value(toml_datum_t table,
 
 static const ConfigTomlMapping *configuration_toml_mapping_at(size_t index) {
   return checked_storage_at_const(
-      CONFIG_TOML_MAP, sizeof(CONFIG_TOML_MAP) / sizeof(CONFIG_TOML_MAP[0]) - 1,
+      CONFIG_TOML_MAP,
+      (sizeof(CONFIG_TOML_MAP) / sizeof(CONFIG_TOML_MAP[0])) - 1,
       sizeof(*CONFIG_TOML_MAP), index);
 }
 
 static const ConfigTomlMapping *configuration_toml_map_find(const char *path) {
-  const size_t COUNT = sizeof(CONFIG_TOML_MAP) / sizeof(CONFIG_TOML_MAP[0]) - 1;
+  const size_t COUNT =
+      (sizeof(CONFIG_TOML_MAP) / sizeof(CONFIG_TOML_MAP[0])) - 1;
 
   for (size_t index = 0; index < COUNT; index++) {
     const ConfigTomlMapping *m = configuration_toml_mapping_at(index);

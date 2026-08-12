@@ -335,7 +335,7 @@ static void make_bridges(BattleMap *map) {
 int map_checkmapfile(BattleMap *map, char *mapname) {
   char *openfile;
   FILE *fp;
-  char row[MAPX * 2 + 3];
+  char row[(MAPX * 2) + 3];
   int i = 0;
   int height;
   int width;
@@ -360,7 +360,7 @@ int map_checkmapfile(BattleMap *map, char *mapname) {
   }
   // Scan through the mapfile
   for (i = 0; i < height; i++) {
-    if (feof(fp) || fgets(row, 2 * MAPX + 2, fp) == NULL ||
+    if (feof(fp) || fgets(row, (2 * MAPX) + 2, fp) == NULL ||
         strlen(row) < 2U * (size_t)width)
       break;
   }
@@ -385,7 +385,7 @@ int map_load(BattleMap *map, char *mapname) {
   int i2;
   int i3;
   FILE *fp;
-  char row[MAPX * 2 + 3];
+  char row[(MAPX * 2) + 3];
   int i;
   int j = 0;
   int height;
@@ -420,13 +420,14 @@ int map_load(BattleMap *map, char *mapname) {
   if (map->map == nullptr)
     abort();
   for (i = 0; i < height; i++) {
-    if (feof(fp) || fgets(row, 2 * MAPX + 2, fp) == NULL ||
+    if (feof(fp) || fgets(row, (2 * MAPX) + 2, fp) == NULL ||
         strlen(row) < 2U * (size_t)width) {
       break;
     }
     for (j = 0; j < width; j++) {
       terr = *map_character_const(row, sizeof(row), 2U * (size_t)j);
-      elev = *map_character_const(row, sizeof(row), 2U * (size_t)j + 1U) - '0';
+      elev =
+          *map_character_const(row, sizeof(row), (2U * (size_t)j) + 1U) - '0';
       switch (terr) {
       case FIRE:
         map->flags |= MAPFLAG_FIRES;
@@ -532,7 +533,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
   char *openfile;
   int i;
   int j;
-  char row[MAPX * 2 + 1];
+  char row[(MAPX * 2) + 1];
   char terrain;
   map = (BattleMap *)data;
   if (mech_parseattributes(buffer, args, 1) != 1) {
@@ -599,7 +600,7 @@ void map_savemap(DbRef player, void *data, char *buffer) {
         break;
       }
       *map_character(row, sizeof(row), 2U * (size_t)j) = terrain;
-      *map_character(row, sizeof(row), 2U * (size_t)j + 1U) =
+      *map_character(row, sizeof(row), (2U * (size_t)j) + 1U) =
           map_elevation_get(map, j, i) + '0';
     }
     *map_character(row, sizeof(row), 2U * (size_t)j) = 0;

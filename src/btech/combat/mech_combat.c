@@ -181,7 +181,7 @@ void mech_sixth_sense_check(Mech *mech, Mech *target) {
   d = (mech_real_tonnage(mech) - mech_real_tonnage(target)) / 1024;
   mech_event_schedule(target, EVENT_SS, mech_ss_event,
                       btech_random_range_int(mech_context(mech), 1, 3),
-                      3L * (long)sixth_sense_distance_severity(r) +
+                      (3L * (long)sixth_sense_distance_severity(r)) +
                           (long)sixth_sense_tonnage_severity(d));
 }
 

@@ -301,7 +301,7 @@ void mech_jump_overshoot_restore(Mech *mech, float delta_x, float delta_y) {
 void mech_position_mirror(Mech *target, const Mech *source, int height_offset) {
   target->pd.fx = source->pd.fx;
   target->pd.fy = source->pd.fy;
-  target->pd.fz = source->pd.fz + (float)height_offset * (float)ZSCALE;
+  target->pd.fz = source->pd.fz + ((float)height_offset * (float)ZSCALE);
   target->pd.x = source->pd.x;
   target->pd.y = source->pd.y;
   target->pd.z = clamp_int_to_short(source->pd.z + height_offset);

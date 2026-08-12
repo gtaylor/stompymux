@@ -54,7 +54,7 @@ static void array_sort_sift(const ArraySortRequest *request,
   size_t root = range.left;
   size_t end = range.right;
   while (root < end && root <= (end - 1) / 2) {
-    size_t child = root * 2 + 1;
+    size_t child = (root * 2) + 1;
     if (child < end &&
         array_sort_compare(
             request, (ArraySortIndexes){.left = child, .right = child + 1}) < 0)

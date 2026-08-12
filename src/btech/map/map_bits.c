@@ -16,7 +16,7 @@ static size_t map_bits_byte_count(int hex_count) {
   if (hex_count < 0)
     abort();
   const size_t COUNT = (size_t)hex_count;
-  return COUNT / 4U + (COUNT % 4U ? 1U : 0U);
+  return (COUNT / 4U) + (COUNT % 4U ? 1U : 0U);
 }
 
 static size_t map_bits_byte_index(int x) { return (size_t)x / 4; }

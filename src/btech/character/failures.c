@@ -251,7 +251,7 @@ const char *mech_part_brand_name(const PartBrandRequest *request) {
   i = part_brand_failure_index(request->equipment_type);
   if (i < 0)
     return NULL;
-  return part_brand_at(i * 5 / 6 + request->quality_level - 1)->name;
+  return part_brand_at((i * 5 / 6) + request->quality_level - 1)->name;
 }
 
 static int failure_index_for_critical(const Mech *mech, int section,

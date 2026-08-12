@@ -40,7 +40,7 @@ static int map_base_elevation(BattleMap *map, int x, int y) {
 
 void tactical_sketch_landing_zones(const TacticalSketch *sketch) {
   const int ORIGIN_OFFSET =
-      sketch->top_offset * sketch->display_columns + sketch->left_offset;
+      (sketch->top_offset * sketch->display_columns) + sketch->left_offset;
   const int FIRST_COLUMN_IS_ODD = tactical_column_is_odd(sketch->start_x);
   const int WIDTH =
       minimum_int(sketch->width, sketch->map->map_width - sketch->start_x);
@@ -69,7 +69,7 @@ void tactical_sketch_landing_zones(const TacticalSketch *sketch) {
 
 void tactical_sketch_mines(const TacticalSketch *sketch) {
   const int ORIGIN_OFFSET =
-      sketch->top_offset * sketch->display_columns + sketch->left_offset;
+      (sketch->top_offset * sketch->display_columns) + sketch->left_offset;
   const int FIRST_COLUMN_IS_ODD = tactical_column_is_odd(sketch->start_x);
   const int WIDTH =
       minimum_int(sketch->width, sketch->map->map_width - sketch->start_x);

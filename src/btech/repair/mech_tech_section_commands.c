@@ -83,7 +83,7 @@ static int adjusted_technology_time(BtechContext *context, int base_time,
     return base_time;
   return (base_time * 10) /
          (1000 /
-          (100 - btech_context_technology_time_modifier(context) * roll));
+          (100 - (btech_context_technology_time_modifier(context) * roll)));
 }
 
 static void schedule_section_repair(BtechContext *context, Mech *mech,
@@ -92,7 +92,7 @@ static void schedule_section_repair(BtechContext *context, Mech *mech,
   btech_context_event_schedule(
       context, mech, event_type, callback,
       max(1, player_techtime(context, player) * TECH_TICK),
-      (intptr_t)(location + player * PLAYERPOS));
+      (intptr_t)(location + (player * PLAYERPOS)));
 }
 
 static void take_section_materials(BtechContext *context, Mech *mech,
