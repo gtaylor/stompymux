@@ -126,7 +126,6 @@ void btech_finalize_object_statements(BtechObjectStoreContext *context) {
   sqlite3_finalize(context->tic);
   sqlite3_finalize(context->frequency);
   sqlite3_finalize(context->runtime);
-  sqlite3_finalize(context->runtime_unused);
   sqlite3_finalize(context->unit_aux);
   sqlite3_finalize(context->stagger_damage);
   sqlite3_finalize(context->autopilot_command);
@@ -565,15 +564,6 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
           bind_runtime_int(context->runtime, &runtime_index,
                            snapshot.runtime.last_stagger_check) < 0 ||
           btech_special_step(context->runtime) < 0)
-        context->result = -1;
-    }
-    for (index = 0; context->result == 0 && index < 5; index++) {
-      if (btech_special_bind_int(context->runtime_unused, 1, (DbRef)key) < 0 ||
-          btech_special_bind_int(context->runtime_unused, 2, index) < 0 ||
-          btech_special_bind_int(
-              context->runtime_unused, 3,
-              stored_int(snapshot.runtime.unused, 5, index)) < 0 ||
-          btech_special_step(context->runtime_unused) < 0)
         context->result = -1;
     }
     if (context->result == 0 &&

@@ -311,69 +311,6 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
   return result;
 }
 
-/* Restore every reserved mech_rd integer in its fixed five-slot order. */
-int btech_special_load_mech_runtime_unused(sqlite3 *sqlite,
-                                           BtechContext *context) {
-  sqlite3_stmt *statement;
-  Mech *mech;
-  MechPersistenceSnapshot snapshot;
-  DbRef current_mech;
-  DbRef mech_dbref;
-  int expected_slot;
-  int result;
-  int slot;
-  int step;
-  int value;
-
-  statement = NULL;
-  current_mech = NOTHING;
-  expected_slot = 0;
-  mech = NULL;
-  result = btech_special_prepare_v2(
-               sqlite,
-               "SELECT mech_dbref, slot, value FROM btech_mech_runtime_unused "
-               "ORDER BY mech_dbref, slot;",
-               -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
-  while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-    if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
-        mech_dbref == NOTHING ||
-        btech_special_column_int(statement, 1, &slot) < 0 ||
-        btech_special_column_int(statement, 2, &value) < 0) {
-      result = -1;
-      break;
-    }
-    if (mech_dbref != current_mech) {
-      if (mech && expected_slot != 5) {
-        result = -1;
-        break;
-      }
-      mech = btech_context_get_mech(context, mech_dbref);
-      if (!mech) {
-        result = -1;
-        break;
-      }
-      current_mech = mech_dbref;
-      expected_slot = 0;
-      mech_persistence_snapshot_export(mech, &snapshot);
-    }
-    if (slot != expected_slot || slot >= 5) {
-      result = -1;
-      break;
-    }
-    *runtime_restore_int_slot(snapshot.runtime.unused, 5, slot) = value;
-    mech_persistence_runtime_restore(mech, &snapshot);
-    expected_slot++;
-  }
-  if (result == 0 && step != SQLITE_DONE)
-    result = -1;
-  if (result == 0 && mech && expected_slot != 5)
-    result = -1;
-  sqlite3_finalize(statement);
-  return result;
-}
-
 /* Rebuild stagger history in list order without loading the saved pointer. */
 int btech_special_load_mech_stagger_damage(sqlite3 *sqlite,
                                            BtechContext *context) {

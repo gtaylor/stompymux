@@ -581,13 +581,13 @@ static int check_snapshot(const char *path) {
            "'btech_mech_criticals', 'btech_mech_positions', 'btech_mech_bays', "
            "'btech_mech_turrets', 'btech_mech_c3', 'btech_mech_c3_nodes', "
            "'btech_mech_tics', 'btech_mech_frequencies', 'btech_mech_runtime', "
-           "'btech_mech_runtime_unused', 'btech_mech_unit_aux', "
+           "'btech_mech_unit_aux', "
            "'btech_mech_stagger_damage');",
-           29) == 0;
+           28) == 0;
   ok = ok && query_int(sqlite,
                        "SELECT schema_version FROM btech_persistence_metadata "
                        "WHERE id = 1;",
-                       3) == 0;
+                       4) == 0;
   ok =
       ok && query_int(sqlite,
                       "SELECT count(*) FROM sqlite_master WHERE type = 'table' "
@@ -662,7 +662,6 @@ static const char *const btech_special_writer_tables[] = {
     "btech_mech_tics",
     "btech_mech_frequencies",
     "btech_mech_runtime",
-    "btech_mech_runtime_unused",
     "btech_mech_unit_aux",
     "btech_mech_stagger_damage",
     "btech_autopilot_commands",

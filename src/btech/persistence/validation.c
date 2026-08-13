@@ -135,9 +135,6 @@ static int btech_special_validate_required_rows(sqlite3 *sqlite,
   if (btech_special_require_rows(sqlite, "btech_mech_runtime", counts.mechs) <
       0)
     return -1;
-  if (btech_special_require_rows(sqlite, "btech_mech_runtime_unused",
-                                 counts.mechs * 5) < 0)
-    return -1;
   if (btech_special_require_rows(sqlite, "btech_mech_unit_aux",
                                  counts.mechs * 4) < 0)
     return -1;
@@ -243,10 +240,6 @@ static int btech_special_load_all(sqlite3 *sqlite, BtechContext *context) {
     return -1;
   if (btech_special_load_context_stage(sqlite, context, "mech unit auxiliary",
                                        btech_special_load_mech_unit_aux) < 0)
-    return -1;
-  if (btech_special_load_context_stage(
-          sqlite, context, "mech runtime auxiliary",
-          btech_special_load_mech_runtime_unused) < 0)
     return -1;
   if (btech_special_load_context_stage(sqlite, context, "mech stagger damage",
                                        btech_special_load_mech_stagger_damage) <
