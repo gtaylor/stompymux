@@ -1,7 +1,5 @@
 /* Calculates unit combat base-to-hit values. */
-#include "btconfig.h"
 #include "btech/context.h"
-#include "btech_channel.h"
 #include "btech_event.h"
 #include "btmux_build_config.h"
 #include "equipment_types.h"
@@ -30,64 +28,23 @@
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mux/objects/db.h"
-#include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 #include <math.h>
-#include <stdio.h>
-#include <string.h>
 typedef struct BthTrace {
   int total;
-#ifdef BTH_DEBUG
-  char debug[LBUF_SIZE];
-  char summary[LBUF_SIZE];
-#endif
 } BthTrace;
-static void bth_trace_begin(BthTrace *trace, Mech *attacker, Mech *target,
-                            int initial) {
+static void bth_trace_begin(BthTrace *trace, int initial) {
   trace->total = initial;
-#ifdef BTH_DEBUG
-  (void)snprintf(trace->summary, sizeof(trace->summary), "Base %d", initial);
-  if (target)
-    (void)snprintf(trace->debug, sizeof(trace->debug), "#%ld -> #%ld: Base %d",
-                   mech_dbref(attacker), mech_dbref(target), initial);
-  else
-    (void)snprintf(trace->debug, sizeof(trace->debug), "#%ld -> (hex): Base %d",
-                   mech_dbref(attacker), initial);
-#else
-  (void)attacker;
-  (void)target;
-#endif
 }
 static void bth_trace_add(BthTrace *trace, const char *description,
                           int modifier) {
   if (!modifier)
     return;
-#ifdef BTH_DEBUG
-  char fragment[LBUF_SIZE];
-  (void)snprintf(fragment, sizeof(fragment), ", %s: %s%d", description,
-                 modifier > 0 ? "+" : "", modifier);
-  strncat(trace->debug, fragment,
-          sizeof(trace->debug) - strlen(trace->debug) - 1);
-  strncat(trace->summary, fragment,
-          sizeof(trace->summary) - strlen(trace->summary) - 1);
-#else
   (void)description;
-#endif
   trace->total += modifier;
-}
-static void bth_trace_finish(Mech *mech, const BthTrace *trace) {
-#ifdef BTH_DEBUG
-  btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_BTH_DEBUG, "%s",
-                     tprintf("%s.", trace->debug));
-#else
-  (void)mech;
-  (void)trace;
-#endif
 }
 MechNormalToHitResult
 mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
@@ -118,7 +75,7 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
     t_in_water =
         ((mech_real_terrain_get(mech) == WATER) && (mech_position_z(mech) < 0));
   }
-  bth_trace_begin(&trace, mech, target, find_pilot_gunnery(mech, weapindx));
+  bth_trace_begin(&trace, find_pilot_gunnery(mech, weapindx));
   if (indirect_fire < 1000) {
     spotter = btech_context_get_mech(context, mech_spotter_dbref(mech));
     if (!spotter) {
@@ -462,12 +419,6 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
           .mech = mech,
           .slot = {.section = section, .critical = critical},
           .range_bracket = w_range_bracket}));
-#ifdef BTH_DEBUG
-  if (condition.to_hit_debug)
-    notify_printf(btech_context_evaluation(context), mech_pilot_dbref(mech),
-                  "BTHDebug: %s", trace.summary);
-#endif
-  bth_trace_finish(mech, &trace);
   return (MechNormalToHitResult){.value = trace.total, .c3_reference = c3_ref};
 }
 int mech_artillery_to_hit_calculate(const MechArtilleryToHitRequest *request) {

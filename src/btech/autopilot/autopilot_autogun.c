@@ -1,6 +1,5 @@
 /* Implements autonomous weapon selection and firing. */
 
-#include <stdarg.h>
 #include <stdio.h>
 
 #include "autopilot.h"
@@ -31,18 +30,8 @@ static void format_target_id(char buffer[static LBUF_SIZE],
 
 void autopilot_autogun_log(const Autopilot *autopilot, const char *format,
                            ...) {
-#ifdef DEBUG_AUTOGUN
-  va_list arguments;
-
-  fprintf(stderr, "AI: %ld AUTOGUN ", autopilot->mynum);
-  va_start(arguments, format);
-  vfprintf(stderr, format, arguments);
-  va_end(arguments);
-  fprintf(stderr, "\n");
-#else
   (void)autopilot;
   (void)format;
-#endif
 }
 
 void auto_gun_event(Autopilot *autopilot) {

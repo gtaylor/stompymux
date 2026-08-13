@@ -478,26 +478,13 @@ unsigned long long mech_fasa_cost(Mech *mech) {
                     (bounded(0, numsinks - 10, 500) * sinkcost));
     }
 
-#if defined(COST_DEBUG) && COST_DEBUG
-    btech_channel_send(
-        mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
-        tprintf("Heat Sinks: %d, Cost Per Sink: %d", numsinks, sinkcost));
-#endif
-
     /* Armor */
     int total_armor = 0;
-#if defined(COST_DEBUG) && COST_DEBUG
-    int orig_armor = 0;
-#endif
     int armor_section = 0;
     for (armor_section = 0; armor_section < NUM_SECTIONS; ++armor_section) {
       total_armor += mech_section_original_armor(mech, armor_section);
       total_armor += mech_section_original_rear_armor(mech, armor_section);
     }
-
-#if defined(COST_DEBUG) && COST_DEBUG
-    orig_armor = total_armor;
-#endif
 
     if (TECHNOLOGY & FF_TECH)
       total_armor = total_armor * 50 / ((TECHNOLOGY & CLAN_TECH) ? 60 : 56);
@@ -521,12 +508,6 @@ unsigned long long mech_fasa_cost(Mech *mech) {
       armor_cost_point = 15000;
     else if (TECHNOLOGY_SECONDARY & HVY_FF_ARMOR_TECH)
       armor_cost_point = 25000;
-#if defined(COST_DEBUG) && COST_DEBUG
-    btech_channel_send(
-        mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
-        tprintf("Armor Tons %.1f(%d pts) * Armor Cost Per Point %d", armor_tons,
-                orig_armor, armor_cost_point));
-#endif
     const double ARMOR_PRICE = ARMOR_TONS * (double)armor_cost_point;
     mech_cost_add(mech, &total, "Armor", ARMOR_PRICE);
   } // End Non-BSuit General Calculations
@@ -761,12 +742,6 @@ unsigned long long mech_fasa_cost(Mech *mech) {
   if (mech_is_omni(mech)) {
     mech_cost_add(mech, &total, "OmniMech", total * 0.25);
   }
-
-#if defined(COST_DEBUG) && COST_DEBUG
-  btech_channel_send(
-      mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
-      tprintf("Price Total %.0f * Mod - %f = %.0f", total, mod, total * mod));
-#endif
 
   return (unsigned long long)(total * mod);
 } /* End Function */

@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "btech/context.h"
-#include "btech_channel.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_coordinates.h"
@@ -37,14 +36,11 @@
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 
 #define TARG_LOS_NONE 0
 #define TARG_LOS_CLEAR 1
 #define TARG_LOS_SOMETHING 2
-
-#define DEBUG_C3 0
 
 typedef struct C3ContactLine {
   float sort_range;
@@ -342,7 +338,7 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool t_is_c3) {
 
     /* Get our network range */
     c3_range = mech_network_range_with_members(
-        mech, other_mech, real_range, my_network, network_size, &c3_ref);
+        mech, real_range, other_mech, my_network, network_size, &c3_ref);
 
     /* Figure out if we show the info or not... ie, do we actually 'see' it */
     if ((w_see_target != TARG_LOS_CLEAR) &&
@@ -572,13 +568,14 @@ float mech_network_range(Mech *mech, Mech *mech_target, float real_range,
   mech_network_build_temporary(mech, my_network, &network_size, 1, 1, 0,
                                t_is_c3);
 
-  return mech_network_range_with_members(mech, mech_target, real_range,
+  return mech_network_range_with_members(mech, real_range, mech_target,
                                          my_network, network_size, c3_ref);
 }
 
-float mech_network_range_with_members(Mech *mech, Mech *mech_target,
-                                      float real_range, const DbRef *my_network,
-                                      int network_size, DbRef *c3_ref) {
+float mech_network_range_with_members(Mech *mech, float real_range,
+                                      Mech *mech_target,
+                                      const DbRef *my_network, int network_size,
+                                      DbRef *c3_ref) {
   float c3_range = 0.0;
   float best_range = 0.0;
   int i;
@@ -612,11 +609,6 @@ float mech_network_range_with_members(Mech *mech, Mech *mech_target,
       if (other_mech == mech_target)
         continue;
 
-      mech_network_debug(
-          mech_context(mech),
-          tprintf("C3RANGE-NETWORK (mech): Finding range from %ld to %ld.",
-                  mech_dbref(mech), mech_dbref(mech_target)));
-
       c3_range = mech_range_to(other_mech, mech_target);
       in_los =
           mech_los_check(other_mech, mech_target, mech_position_x(mech_target),
@@ -625,11 +617,6 @@ float mech_network_range_with_members(Mech *mech, Mech *mech_target,
       map_x = mech_target_hex_x(mech);
       map_y = mech_target_hex_y(mech);
       map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-
-      mech_network_debug(
-          mech_context(mech),
-          tprintf("C3RANGE-NETWORK (hex): Finding range from %ld to %d %d.",
-                  mech_dbref(mech), map_x, map_y));
 
       mech_target_hex_z_set(mech, battle_map_hex_elevation(map, map_x, map_y));
       const int TARGET_HEX_Z = mech_target_hex_z(mech);
@@ -655,9 +642,4 @@ float mech_network_range_with_members(Mech *mech, Mech *mech_target,
   }
 
   return best_range;
-}
-
-void mech_network_debug(BtechContext *context, const char *msg) {
-  if (DEBUG_C3)
-    btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s", msg);
 }

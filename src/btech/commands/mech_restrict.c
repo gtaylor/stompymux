@@ -68,10 +68,6 @@ void clear_mech_from_los(Mech *mech) {
   map = btech_context_find_object(mech_context(mech), mech_map_dbref(mech));
   if (!map)
     return;
-#ifdef SENSOR_DEBUG
-  btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_SENSOR, "%s",
-                     tprintf("LOS info for #%d cleared.", mech_dbref(mech)));
-#endif
   for (i = 0; i < battle_map_unit_count(map); i++) {
     battle_map_los_flags_set(map, mech_map_slot(mech), i, 0);
     battle_map_los_flags_set(map, i, mech_map_slot(mech), 0);

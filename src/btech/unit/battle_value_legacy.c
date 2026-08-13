@@ -28,8 +28,6 @@ static float battle_value_skill_multiplier(int gunnery, int piloting) {
       *row, BTECH_BV_SKILL_LIMIT, sizeof(**row), (size_t)PILOT_INDEX);
 }
 
-// NOLINTBEGIN(clang-analyzer-deadcode.DeadStores): values support DEBUG_BV
-// output.
 int calculate_bv(Mech *mech, int gunstat, int pilstat) {
   int defbv = 0;
   int offbv = 0;
@@ -51,10 +49,6 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
   int move;
   int pilskl = pilstat;
   int gunskl = gunstat;
-  int debug1 = 0;
-  int debug2 = 0;
-  int debug3 = 0;
-  int debug4 = 0;
   float maxspeed;
   float mul = 1.00F;
 
@@ -77,11 +71,10 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
     gunskl = find_average_gunnery(mech);
 
   for (i = 0; i < NUM_SECTIONS; i++) {
-    armor += (debug1 = mech_section_armor(mech, i) *
-                       (mechspec & HARDA_TECH ? 200 : 100));
+    armor += mech_section_armor(mech, i) * (mechspec & HARDA_TECH ? 200 : 100);
     if (type == CLASS_MECH && (i == CTORSO || i == LTORSO || i == RTORSO)) {
-      armor += (debug2 = mech_section_rear_armor(mech, i) *
-                         (mechspec & HARDA_TECH ? 200 : 100));
+      armor += mech_section_rear_armor(mech, i) *
+               (mechspec & HARDA_TECH ? 200 : 100);
     }
     if (!mech_is_aerospace_unit(mech)) {
       int internal_multiplier = 100;
@@ -89,21 +82,11 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
         internal_multiplier = 50;
       else if (mechspec & REINFI_TECH)
         internal_multiplier = 200;
-      intern += (debug3 = mech_section_internal(mech, i) * internal_multiplier);
+      intern += mech_section_internal(mech, i) * internal_multiplier;
     } else {
-      intern = (debug3 = (unsigned char)((mech)->ud.si));
+      intern = (unsigned char)((mech)->ud.si);
     }
-#ifdef DEBUG_BV
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("Armoradd : %d ArmorRadd : %d Internadd : %d",
-                               debug1 / 100, debug2 / 100, debug3 / 100));
-//				if(mechspec2 & TORSOCOCKPIT_TECH && i == CTORSO)
-//					btech_channel_send(mech->xcode.context,
-// BTECH_CHANNEL_MECH_DEBUG, // tprintf("TorsoCockpit Armoradd
-//: %d", debug4));
-#endif
 
-    debug1 = debug2 = debug3 = debug4 = 0;
     for (ii = 0; ii < crits_in_loc(mech, i); ii++) {
       temp = mech_critical_part_type(mech, i, ii);
       if (equipment_is_weapon(temp)) {
@@ -119,17 +102,8 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
           const float RECYCLE_MULTIPLIER =
               3000.0F / (float)(RECYCLE_TIME * 100);
 
-          defweapbv += (debug1 = clamp_float_to_int((float)(WEAPON_BV * 100) *
-                                                    RECYCLE_MULTIPLIER));
-
-#ifdef DEBUG_BV
-          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
-                             "%s",
-                             tprintf("DefWeapBVadd (%s) : %d - Total : %d",
-                                     weapon_catalogue_name(weapindx),
-                                     debug1 / 100, defweapbv / 100));
-#endif
-
+          defweapbv +=
+              clamp_float_to_int((float)(WEAPON_BV * 100) * RECYCLE_MULTIPLIER);
         } else {
           const int WEAPON_BV = mech_weapon_battle_value(mech, weapindx);
           const int RECYCLE_TIME = mech_weapon_recycle_time(mech, weapindx);
@@ -138,19 +112,11 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
           const float RECYCLE_MULTIPLIER =
               3000.0F / (float)(RECYCLE_TIME * 100);
 
-          offweapbv +=
-              (debug1 = clamp_float_to_int(
-                   (float)(WEAPON_BV * REAR_MULTIPLIER) * RECYCLE_MULTIPLIER));
+          offweapbv += clamp_float_to_int((float)(WEAPON_BV * REAR_MULTIPLIER) *
+                                          RECYCLE_MULTIPLIER);
           if (weapon_catalogue_type(weapindx) == TMISSILE)
             if (find_artemis_for_weapon(mech, i, ii))
               offweapbv += (mech_weapon_battle_value(mech, weapindx) * 20);
-#ifdef DEBUG_BV
-          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
-                             "%s",
-                             tprintf("OffWeapBVadd (%s) : %d - Total : %d",
-                                     weapon_catalogue_name(weapindx),
-                                     debug1 / 100, offweapbv / 100));
-#endif
         }
         if (type == CLASS_MECH) {
           if (!(mech_critical_fire_mode(mech, i, ii) & REAR_MOUNT)) {
@@ -165,14 +131,6 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
             if (weapon_catalogue_has_special(weapindx, STREAK))
               tempheat = (tempheat / 2);
             mostheat += tempheat;
-#ifdef DEBUG_BV
-            btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
-                               "%s",
-                               tprintf("Tempheatadded (%s) : %d - Total : %d",
-                                       weapon_catalogue_name(weapindx),
-                                       tempheat / 100, mostheat / 100));
-#endif
-            tempheat = 0;
           }
         }
         if (type == CLASS_MECH)
@@ -195,12 +153,6 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
             weapon_catalogue_ammunition_per_ton(weapindx);
         mul *= (float)AMMUNITION / (float)AMMUNITION_PER_TON;
 
-#ifdef DEBUG_BV
-        btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                           tprintf("AmmoBVmul (%s) : %.2f",
-                                   weapon_catalogue_name(weapindx), mul));
-#endif
-
         if (weapon_catalogue_has_special(weapindx, AMS)) {
           const int WEAPON_BV = mech_weapon_battle_value(mech, weapindx);
           const int RECYCLE_TIME = mech_weapon_recycle_time(mech, weapindx);
@@ -208,17 +160,8 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
               3000.0F / (float)(RECYCLE_TIME * 100);
           const int SCALED_WEAPON_BV = (WEAPON_BV / 10) * 100;
 
-          defweapbv += (debug1 = clamp_float_to_int((float)SCALED_WEAPON_BV *
-                                                    mul * RECYCLE_MULTIPLIER));
-
-#ifdef DEBUG_BV
-          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
-                             "%s",
-                             tprintf("AmmoDefWeapBVadd (%s) : %d - Total : %d",
-                                     weapon_catalogue_name(weapindx),
-                                     debug1 / 100, defweapbv / 100));
-#endif
-
+          defweapbv += clamp_float_to_int((float)SCALED_WEAPON_BV * mul *
+                                          RECYCLE_MULTIPLIER);
         } else {
           const int WEAPON_BV = mech_weapon_battle_value(mech, weapindx);
           const int RECYCLE_TIME = mech_weapon_recycle_time(mech, weapindx);
@@ -226,23 +169,8 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
               3000.0F / (float)(RECYCLE_TIME * 100);
           const int SCALED_WEAPON_BV = (WEAPON_BV / 10) * 100;
 
-#ifdef DEBUG_BV
-          btech_channel_send(
-              mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-              tprintf("Abattlebalue (%s) : %d", weapon_catalogue_name(weapindx),
-                      (mech_weapon_battle_value(mech, weapindx) / 10)));
-#endif
-
-          offweapbv += (debug1 = clamp_float_to_int((float)SCALED_WEAPON_BV *
-                                                    mul * RECYCLE_MULTIPLIER));
-
-#ifdef DEBUG_BV
-          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
-                             "%s",
-                             tprintf("AmmoOffWeapBVadd (%s)  : %d - Total : %d",
-                                     weapon_catalogue_name(weapindx),
-                                     debug1 / 100, offweapbv / 100));
-#endif
+          offweapbv += clamp_float_to_int((float)SCALED_WEAPON_BV * mul *
+                                          RECYCLE_MULTIPLIER);
         }
       }
       if ((equipment_is_ammunition(temp) ||
@@ -253,31 +181,17 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
         if (mechspec & CLAN_TECH) {
           if (i == CTORSO || i == HEAD || i == RLEG || i == LLEG) {
 
-#ifdef DEBUG_BV
-            btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
-                               "20 deduct added for ammo");
-#endif
             deduct += 2000;
             continue;
           }
         }
         if (mechspec & (XL_TECH | XXL_TECH | ICE_TECH | LE_TECH)) {
 
-#ifdef DEBUG_BV
-          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
-                             "20/2000 deduct added for ammo");
-#endif
-
           deduct += 2000;
           continue;
         }
         if ((i == CTORSO || i == RLEG || i == LLEG || i == HEAD) &&
             !(mech_section_configuration(mech, i) & CASE_TECH)) {
-
-#ifdef DEBUG_BV
-          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
-                             "20 deduct added for ammo");
-#endif
 
           deduct += 2000;
           continue;
@@ -286,11 +200,6 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
             (!(mech_section_configuration(mech, i) & CASE_TECH) &&
              !(mech_section_configuration(mech, i == RARM ? RTORSO : LTORSO) &
                CASE_TECH))) {
-
-#ifdef DEBUG_BV
-          btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
-                             "20 deduct added for ammo");
-#endif
 
           deduct += 2000;
           continue;
@@ -311,16 +220,8 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
     temp = mostheat - (ACTIVE_HEAT_SINKS * 100);
     if (temp > 0) {
       deduct += temp * 5;
-#ifdef DEBUG_BV
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                         tprintf("Deduct add for heat : %d", (temp * 5) / 100));
-#endif
     }
   }
-#ifdef DEBUG_BV
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("DeductTotal : %d", deduct / 100));
-#endif
 
   if (mechspec & ECM_TECH)
     defweapbv += 6100;
@@ -343,20 +244,8 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
     mul = 1.5F;
   }
 
-#ifdef DEBUG_BV
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("InternMul : %.2f", mul));
-#endif
-
   armor = (armor * (((mech)->ud.type) == CLASS_MECH ? 2 : 1));
   intern = clamp_float_to_int((float)intern * mul);
-  mul = 1.00F;
-
-#ifdef DEBUG_BV
-  btech_channel_send(
-      mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-      tprintf("ArmorEnd : %d IntEnd : %d", armor / 100, intern / 100));
-#endif
 
   maxspeed = mech_effective_maximum_speed(mech);
   if (mechspec & MASC_TECH || mechspec2 & SUPERCHARGER_TECH) {
@@ -404,17 +293,7 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
   if (((mech)->rd.infantry_specials) & FC_INFILTRATOR_STEALTH_TECH)
     mul += 2.0F;
 
-#ifdef DEBUG_BV
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("DefBVMul : %.2f", mul));
-#endif
-
   defbv = (armor + intern + (((mech)->ud.tons) * 100) + defweapbv);
-
-#ifdef DEBUG_BV
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("DefBV Tonnage added : %d", ((mech)->ud.tons)));
-#endif
 
   if ((defbv - deduct) < 1)
     defbv = 1;
@@ -437,27 +316,13 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
   }
   defbv = clamp_float_to_int((float)defbv * mul);
 
-#ifdef DEBUG_BV
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("DefBV : %d", defbv / 100));
-#endif
-
   const int ACTIVE_HEAT_SINKS =
       clamp_float_to_int(mech_active_heat_sinks(mech));
   if ((type == CLASS_MECH || mech_is_aerospace_unit(mech)) &&
       mostheat > ACTIVE_HEAT_SINKS * 100) {
-#ifdef DEBUG_BV
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("Pre-Heat OffWeapBV : %d", offweapbv / 100));
-#endif
     i = ((ACTIVE_HEAT_SINKS / 100) * offweapbv) / mostheat;
     ii = ((offweapbv - i) / 2);
     offweapbv = i + ii;
-
-#ifdef DEBUG_BV
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("Post-Heat OffWeapBV : %d", offweapbv / 100));
-#endif
   }
   /*
   mul = pow(((((mech_effective_maximum_speed(mech) / MP1) + (type == CLASS_AERO
@@ -476,11 +341,6 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
       1.0F;
   mul = powf(SPEED_FACTOR, 1.2F);
 
-#ifdef DEBUG_BV
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("DumbMul : %.2f", mul));
-#endif
-
   if (mechspec2 & OMNIMECH_TECH)
     mul += 0.3F;
 
@@ -492,22 +352,9 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
   }
   offbv = offweapbv;
 
-#ifdef DEBUG_BV
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("OffWeapBVAfter : %d", offweapbv / 100));
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("DefBV : %d OffBV : %d TotalBV : %d", defbv / 100,
-                             offbv / 100, (offbv + defbv) / 100));
-#endif
-
   mul = battle_value_skill_multiplier(gunskl, pilskl);
 
-#ifdef DEBUG_BV
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("SkillMul : %.2f (%d/%d)", mul, gunskl, pilskl));
-#endif
   const int BASE_BATTLE_VALUE = (offbv + defbv) / 100;
   return clamp_float_to_int((float)BASE_BATTLE_VALUE * mul);
 }
-// NOLINTEND(clang-analyzer-deadcode.DeadStores)
 #endif

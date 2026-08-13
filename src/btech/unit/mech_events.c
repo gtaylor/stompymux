@@ -51,8 +51,6 @@
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 
-#undef WEAPON_RECYCLE_DEBUG
-
 void mech_staggercheck_heartbeat(Mech *mech) {
   time_t now = mech->xcode.context->clock->now;
   int cur_stagger_damage = 0;

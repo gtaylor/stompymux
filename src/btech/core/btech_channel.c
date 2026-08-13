@@ -45,8 +45,6 @@ const char *btech_channel_name(BtechChannel channel) {
     return "MechAttacks";
   case BTECH_CHANNEL_MECH_ATTACK_XP:
     return "MechAttackXP";
-  case BTECH_CHANNEL_MECH_BTH_DEBUG:
-    return "MechBTHDebug";
   case BTECH_CHANNEL_MECH_FREQS:
     return "MechFreqs";
   case BTECH_CHANNEL_MECH_PILOT_XP:

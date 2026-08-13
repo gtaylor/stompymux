@@ -102,15 +102,6 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
       mech_position_hex_z_set(
           mech, clamp_float_to_int(
                     (mech_position_real_z(mech) / (float)ZSCALE) + 0.5F));
-#ifdef JUMPDEBUG
-      snprintf(message_buffer, MBUF_SIZE, "#%d: %d, %d, %d (%d, %d, %d)",
-               mech_dbref(mech), mech_position_x(mech), mech_position_y(mech),
-               mech_position_z(mech), (int)mech_position_real_x(mech),
-               (int)mech_position_real_y(mech),
-               (int)mech_position_real_z(mech));
-      btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
-                         message_buffer);
-#endif
       if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_BRIDGE &&
           collision_check(&(MovementCollisionCheck){.mech = mech,
                                                     .mode = JUMP,

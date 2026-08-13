@@ -44,7 +44,6 @@ int find_average_gunnery(Mech *mech) {
   return find_pilot_gunnery(mech, 0);
 }
 
-#undef DEBUG_BV
 float skillmul[BTECH_BV_SKILL_LIMIT][BTECH_BV_SKILL_LIMIT] = {
     {2.05F, 2.00F, 1.95F, 1.90F, 1.85F, 1.80F, 1.75F, 1.70F},
     {1.85F, 1.80F, 1.75F, 1.70F, 1.65F, 1.60F, 1.55F, 1.50F},

@@ -32,7 +32,6 @@ void mech_network_show_status(DbRef player, Mech *mech, bool is_c3);
 int mech_network_visibility(const MechNetworkVisibilityRequest *request);
 float mech_network_range(Mech *mech, Mech *target, float real_range,
                          DbRef *c3_reference, bool is_c3);
-float mech_network_range_with_members(Mech *mech, Mech *target,
-                                      float real_range, const DbRef *network,
+float mech_network_range_with_members(Mech *mech, float real_range,
+                                      Mech *target, const DbRef *network,
                                       int network_size, DbRef *c3_reference);
-void mech_network_debug(BtechContext *context, const char *msg);

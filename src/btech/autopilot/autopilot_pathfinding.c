@@ -1,7 +1,6 @@
 #include <assert.h>
 #include <limits.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -173,23 +172,6 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
   AutopilotPathNode *temp_astar_node;
   AutopilotPathNode *parent_astar_node;
 
-#ifdef DEBUG_ASTAR
-  /* Log File */
-  FILE *logfile;
-  char log_msg[MBUF_SIZE];
-
-  /* Open the logfile */
-  logfile = fopen("astar.log", "a");
-
-  /* Write first message */
-  snprintf(log_msg, MBUF_SIZE,
-           "\nStarting ASTAR Path finding for AI #%d from "
-           "%d, %d to %d, %d\n",
-           autopilot->mynum, mech_position_x(mech), mech_position_y(mech),
-           end_x, end_y);
-  fprintf(logfile, "%s", log_msg);
-#endif
-
   /* Setup the trees */
   open_list_by_score = red_black_tree_init(astar_compare, nullptr);
   open_list_by_xy = red_black_tree_init(astar_compare, nullptr);
@@ -208,15 +190,6 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
 
   if (temp_astar_node == nullptr) {
     /*! \todo {Add code here to break if we can't alloc memory} */
-
-#ifdef DEBUG_ASTAR
-    /* Write Log Message */
-    snprintf(log_msg, MBUF_SIZE,
-             "AI ERROR - Unable to malloc astar node for "
-             "hex %d, %d\n",
-             mech_position_x(mech), mech_position_y(mech));
-    fprintf(logfile, "%s", log_msg);
-#endif
   }
 
   /* Add start hex to open list */
@@ -225,14 +198,6 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
   red_black_tree_insert(open_list_by_xy, astar_key(temp_astar_node->hexoffset),
                         temp_astar_node);
   autopilot_hex_bit_set(&open_list_bitfield, temp_astar_node->hexoffset, true);
-
-#ifdef DEBUG_ASTAR
-  /* Log it */
-  snprintf(log_msg, MBUF_SIZE, "Added hex %d, %d (%d %d) to open list\n",
-           temp_astar_node->x, temp_astar_node->y, temp_astar_node->g_score,
-           temp_astar_node->h_score);
-  fprintf(logfile, "%s", log_msg);
-#endif
 
   /* Now loop till we find path */
   while (!found_path) {
@@ -254,41 +219,17 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
     autopilot_hex_bit_set(&open_list_bitfield, parent_astar_node->hexoffset,
                           false);
 
-#ifdef DEBUG_ASTAR
-    /* Log it */
-    snprintf(log_msg, MBUF_SIZE,
-             "Removed hex %d, %d (%d %d) from open "
-             "list - lowest cost node\n",
-             parent_astar_node->x, parent_astar_node->y,
-             parent_astar_node->g_score, parent_astar_node->h_score);
-    fprintf(logfile, "%s", log_msg);
-#endif
-
     /* Add it to the closed list */
     red_black_tree_insert(closed_list, astar_key(parent_astar_node->hexoffset),
                           parent_astar_node);
     autopilot_hex_bit_set(&closed_list_bitfield, parent_astar_node->hexoffset,
                           true);
 
-#ifdef DEBUG_ASTAR
-    /* Log it */
-    snprintf(log_msg, MBUF_SIZE,
-             "Added hex %d, %d (%d %d) to closed list"
-             " - lowest cost node\n",
-             parent_astar_node->x, parent_astar_node->y,
-             parent_astar_node->g_score, parent_astar_node->h_score);
-    fprintf(logfile, "%s", log_msg);
-#endif
-
     /* Now we check to see if we added the end hex to the closed list.
      * When this happens it means we are done */
     if (autopilot_hex_bit_is_set(&closed_list_bitfield,
                                  autopilot_hex_offset(end_x, end_y))) {
       found_path = 1;
-
-#ifdef DEBUG_ASTAR
-      fprintf(logfile, "Found path for the AI\n");
-#endif
 
       break;
     }
@@ -395,16 +336,6 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
           autopilot_hex_bit_set(&open_list_bitfield, temp_astar_node->hexoffset,
                                 false);
 
-#ifdef DEBUG_ASTAR
-          /* Log it */
-          snprintf(log_msg, MBUF_SIZE,
-                   "Removed hex %d, %d (%d %d) from "
-                   "open list - score recal\n",
-                   temp_astar_node->x, temp_astar_node->y,
-                   temp_astar_node->g_score, temp_astar_node->h_score);
-          fprintf(logfile, "%s", log_msg);
-#endif
-
           /* Recalc score */
           /* H-Score should be the same since the hex doesn't move */
           temp_astar_node->g_score = child_g_score;
@@ -435,15 +366,6 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
 
         if (temp_astar_node == nullptr) {
           /*! \todo {Add code here to break if we can't alloc memory} */
-
-#ifdef DEBUG_ASTAR
-          /* Log it */
-          snprintf(log_msg, MBUF_SIZE,
-                   "AI ERROR - Unable to malloc astar"
-                   " node for hex %d, %d\n",
-                   map_x2, map_y2);
-          fprintf(logfile, "%s", log_msg);
-#endif
         }
       }
 
@@ -458,13 +380,6 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
                                   astar_key(temp_astar_node->f_score))) {
           temp_astar_node->f_score++;
 
-#ifdef DEBUG_ASTAR
-          fprintf(logfile,
-                  "Adjusting score for hex %d, %d - same"
-                  " fscore already exists\n",
-                  temp_astar_node->x, temp_astar_node->y);
-#endif
-
         } else {
           break;
         }
@@ -478,14 +393,6 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
       autopilot_hex_bit_set(&open_list_bitfield, temp_astar_node->hexoffset,
                             true);
 
-#ifdef DEBUG_ASTAR
-      /* Log it */
-      snprintf(log_msg, MBUF_SIZE, "Added hex %d, %d (%d %d) to open list\n",
-               temp_astar_node->x, temp_astar_node->y, temp_astar_node->g_score,
-               temp_astar_node->h_score);
-      fprintf(logfile, "%s", log_msg);
-#endif
-
     } /* End of looking for hexes next to us */
 
   } /* End of looking for path */
@@ -494,11 +401,6 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
 
   /* Lets first see if we found a path */
   if (found_path) {
-
-#ifdef DEBUG_ASTAR
-    /* Log Message */
-    fprintf(logfile, "Building Path from closed list for AI\n");
-#endif
 
     /* Found a path so we need to go through the closed list
      * and generate it */
@@ -514,20 +416,8 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
     astar_path_node = doubly_linked_list_create_node(temp_astar_node);
     doubly_linked_list_insert_beginning(autopilot->astar_path, astar_path_node);
 
-#ifdef DEBUG_ASTAR
-    /* Log it */
-    fprintf(logfile, "Added hex %d, %d to path list\n", temp_astar_node->x,
-            temp_astar_node->y);
-#endif
-
     /* Remove it from closed list */
     red_black_tree_delete(closed_list, astar_key(temp_astar_node->hexoffset));
-
-#ifdef DEBUG_ASTAR
-    /* Log it */
-    fprintf(logfile, "Removed hex %d, %d from closed list - path list work\n",
-            temp_astar_node->x, temp_astar_node->y);
-#endif
 
     /* Check if the end hex is the start hex */
     if (!(temp_astar_node->x == mech_position_x(mech) &&
@@ -562,22 +452,9 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
         doubly_linked_list_insert_beginning(autopilot->astar_path,
                                             astar_path_node);
 
-#ifdef DEBUG_ASTAR
-        /* Log it */
-        fprintf(logfile, "Added hex %d, %d to path list\n",
-                parent_astar_node->x, parent_astar_node->y);
-#endif
-
         /* Remove from closed list */
         red_black_tree_delete(closed_list,
                               astar_key(parent_astar_node->hexoffset));
-
-#ifdef DEBUG_ASTAR
-        /* Log it */
-        fprintf(logfile,
-                "Removed hex %d, %d from closed list - path list work\n",
-                parent_astar_node->x, parent_astar_node->y);
-#endif
 
         /* Make parent new child */
         temp_astar_node = parent_astar_node;
@@ -590,23 +467,12 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
 
   /* Make sure we destroy all the objects we dont need any more */
 
-#ifdef DEBUG_ASTAR
-  /* Log Message */
-  fprintf(logfile, "Destorying the AI lists\n");
-#endif
-
   /* Destroy the open lists */
   red_black_tree_release(open_list_by_score, astar_release, nullptr);
   red_black_tree_destroy(open_list_by_xy);
 
   /* Destroy the closed list */
   red_black_tree_release(closed_list, astar_release, nullptr);
-
-#ifdef DEBUG_ASTAR
-  /* Close Log file */
-  if (fclose(logfile) != 0)
-    return 0;
-#endif
 
   /* End */
   if (found_path) {

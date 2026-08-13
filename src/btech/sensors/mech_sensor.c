@@ -143,30 +143,18 @@ int mech_sensor_to_hit_bonus(const MechSensorToHitRequest *request) {
   if (!(flag & BATTLE_MAP_LOS_SEEN_PRIMARY)) {
     bth2 = 1 + mech_sensor_definition(mech_sensor_index(mech, 1))
                    ->to_hit_bonus(&sensor_request);
-#ifdef SENSOR_BTH_DEBUG
-    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("%d: BTH S+%d", mech_dbref(mech), bth2));
-#endif
     return bth2;
   }
   if (!(flag & BATTLE_MAP_LOS_SEEN_SECONDARY) ||
       (mech_sensor_index(mech, 0) == mech_sensor_index(mech, 1))) {
     bth1 = mech_sensor_definition(mech_sensor_index(mech, 0))
                ->to_hit_bonus(&sensor_request);
-#ifdef SENSOR_BTH_DEBUG
-    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("%d: BTH P+%d", mech_dbref(mech), bth1));
-#endif
     return bth1;
   }
   bth1 = mech_sensor_definition(mech_sensor_index(mech, 0))
              ->to_hit_bonus(&sensor_request);
   bth2 = 1 + mech_sensor_definition(mech_sensor_index(mech, 1))
                  ->to_hit_bonus(&sensor_request);
-#ifdef SENSOR_BTH_DEBUG
-  btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("%d: BTH +%d/+%d", mech_dbref(mech), bth1, bth2));
-#endif
   return min(bth1, bth2);
 }
 
@@ -588,15 +576,6 @@ mech_sensor_visibility_update(const MechSensorVisibilityRequest *request) {
                     "Weapon system reports the lock has been lost.");
         mech_lose_lock(mech);
       }
-#ifdef SENSOR_DEBUG
-      snprintf(
-          buf, strlen(buf), "Notice: #%d lost #%d (Sensor: %d, Flag: %s)",
-          mech_dbref(mech), mech_dbref(target),
-          (f & (BATTLE_MAP_LOS_SEEN_PRIMARY | BATTLE_MAP_LOS_SEEN_SECONDARY)),
-          sensor_flag_text(f).text);
-      btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_SENSOR, "%s",
-                         buf);
-#endif
       mech_possible_contact_count_increment(mech);
     }
     return (unsigned short)f;
@@ -669,15 +648,6 @@ mech_sensor_visibility_update(const MechSensorVisibilityRequest *request) {
       }
       if (mech_team(mech) != mech_team(target))
         mech_event_cancel(target, EVENT_HIDE);
-#ifdef SENSOR_DEBUG
-      snprintf(
-          buf, sizeof(buf), "Notice: #%d saw #%d (Sensor: %d, Flag: %s C:%d)",
-          mech_dbref(mech), mech_dbref(target),
-          (f & (BATTLE_MAP_LOS_SEEN_PRIMARY | BATTLE_MAP_LOS_SEEN_SECONDARY)),
-          sensor_flag_text(f).text, seeanew);
-      btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_SENSOR, "%s",
-                         buf);
-#endif
     } else {
       mech_possible_contact_count_increment(mech);
     }

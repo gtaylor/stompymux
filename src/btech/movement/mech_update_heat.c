@@ -40,11 +40,6 @@ static int mech_heat_sinks_enable(Mech *mech, int numsinks) {
   mech_disabled_heat_sinks_set(mech, disabled - numsinks);
   /* We don't check for water after enabling them, only the next tic. */
   mech_heat_dissipation_add(mech, (float)numsinks);
-#ifdef HEATCUTOFF_DEBUG
-  mech_printf(mech, MECHALL,
-              "[fg=green]%d heatsink%s kick%s into action.[reset]", numsinks,
-              numsinks == 1 ? "" : "s", numsinks == 1 ? "s" : "");
-#endif
 
   return numsinks;
 }
@@ -64,11 +59,6 @@ static int mech_heat_sinks_disable(Mech *mech, int numsinks) {
                                mech_disabled_heat_sink_count(mech) + numsinks);
   /* Submerged heatsinks silently still dissipate some heat. */
   mech_heat_dissipation_add(mech, (float)-numsinks);
-#ifdef HEATCUTOFF_DEBUG
-  mech_printf(mech, MECHALL,
-              "[fg=yellow]%d heatsink%s hum%s into silence.[reset]", numsinks,
-              numsinks == 1 ? "" : "s", numsinks == 1 ? "s" : "");
-#endif
 
   return numsinks;
 }

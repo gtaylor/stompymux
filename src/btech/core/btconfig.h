@@ -16,9 +16,6 @@
 /* Define if you want part-specific weights for cargo */
 #define BT_PART_WEIGHTS
 
-/* Define for heatsink on/off msgs when using heatcutoff */
-/* #define HEATCUTOFF_DEBUG */
-
 /* Define if you want weight-class based 'status' pictures */
 #define WEIGHTVARIABLE_STATUS
 
@@ -73,29 +70,8 @@ constexpr int MINE_TABLE = 2; /* 0 = General, 2 = KICK */
 /* Whether we support C3 or not */
 #define C3_SUPPORT
 
-/* Show BTHs on Debug */
-#define BTH_DEBUG
-
-/* Show some XP calculation messages on Debug */
-#define XP_DEBUG
-
-/* Shows ton of unneccessary debug messages */
-#undef TEMPLATE_DEBUG
-
-/* Show jump coords on Debug */
-#undef JUMPDEBUG
-
-/* Show sensor BTHs on Debug */
-#undef SENSOR_BTH_DEBUG
-
-/* Don't see see/dontsee msgs */
-#undef SENSOR_DEBUG
-
 /* Shows errors whenever need be */
 #define TEMPLATE_VERBOSE_ERRORS
-
-/* Show loading / saving of map stuff specifically */
-#undef VERBOSE_MAP_STUFF
 
 /* Define if buildings should regenerate CF */
 #define BUILDINGS_REPAIR_THEMSELVES
@@ -201,9 +177,6 @@ constexpr int LRS_DISPLAY_HEIGHT2 = 5;
 #define LOCK_TICK 8
 
 constexpr int ECM_RANGE = 6;
-
-/* What kind of evil magic DFM's affect */
-#undef DFM_AFFECT_BTH
 
 constexpr int LITE_RANGE = 30;
 

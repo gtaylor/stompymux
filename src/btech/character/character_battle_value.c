@@ -275,15 +275,6 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
 
     my_battle_value *= my_pilot_bv_mod;
     their_battle_value *= their_pilot_bv_mod;
-
-#ifdef XP_DEBUG
-    btech_channel_send(
-        context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-        tprintf("Using skill modified battle value for mechs %ld and %ld "
-                "with skill mods of %2.2f and %2.2f",
-                mech_dbref(attacker), mech_dbref(wounded), my_pilot_bv_mod,
-                their_pilot_bv_mod));
-#endif
   }
 
   my_speed = new_move_value(attacker) + 1;
