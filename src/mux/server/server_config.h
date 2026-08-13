@@ -217,9 +217,6 @@ struct ServerConfiguration {
   int btech_statengine_obj; /* Object to send stats on hits/crits to. Defaults
                                to -1 (off) */
   double btech_techtime_multiplier; /* Overall repair-time multiplier */
-#ifdef BT_COMPLEXREPAIRS
-  int btech_complexrepair;
-#endif
   int afterlife_dbref;
   int name_spaces;    /* allow player names to have spaces */
   int max_players;    /* Max # of connected players */

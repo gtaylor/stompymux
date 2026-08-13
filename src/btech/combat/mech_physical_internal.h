@@ -11,7 +11,6 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
-#include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "map.h"
 #include "map_terrain.h"

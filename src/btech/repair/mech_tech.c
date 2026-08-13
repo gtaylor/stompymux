@@ -41,9 +41,6 @@
 #include "repair_job.h"
 
 int tech_proper_armor_part(const Mech *mech) {
-#ifdef BT_COMPLEXREPAIRS
-  return ProperArmor(mech);
-#else
   int technology = mech_technology_flags(mech);
   int secondary = mech_technology_flags_secondary(mech);
   int infantry = mech_infantry_technology_flags(mech);
@@ -61,13 +58,9 @@ int tech_proper_armor_part(const Mech *mech) {
   else if (infantry & CS_PURIFIER_STEALTH_TECH)
     armor = PURIFIER_ARMOR;
   return cargo_equipment_index(armor);
-#endif
 }
 
 int tech_proper_internal_part(const Mech *mech) {
-#ifdef BT_COMPLEXREPAIRS
-  return ProperInternal(mech);
-#else
   int technology = mech_technology_flags(mech);
   int internal = S_INTERNAL;
   if (technology & ES_TECH)
@@ -77,7 +70,6 @@ int tech_proper_internal_part(const Mech *mech) {
   else if (technology & COMPI_TECH)
     internal = CO_INTERNAL;
   return cargo_equipment_index(internal);
-#endif
 }
 
 int game_lag(BtechContext *context) {

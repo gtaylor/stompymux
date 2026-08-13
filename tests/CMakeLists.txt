@@ -179,8 +179,11 @@ target_include_directories(btech_los_cache_test PRIVATE
 add_test(NAME btech_los_cache COMMAND btech_los_cache_test)
 set_tests_properties(btech_los_cache PROPERTIES LABELS los)
 
-add_executable(btech_value_helpers_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_value_helpers.c)
-target_link_libraries(btech_value_helpers_test PRIVATE btmux_options)
+add_executable(btech_value_helpers_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_value_helpers.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/template_cargo.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/template_cargo_weights.c)
+target_link_libraries(btech_value_helpers_test PRIVATE btmux_options btmux_checked_storage)
 target_include_directories(btech_value_helpers_test PRIVATE
   "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"

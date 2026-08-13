@@ -2,11 +2,12 @@
 
 #include "btech/context.h"
 #include "btech/core/context_internal.h"
-#include "btmux_build_config.h"
 #include "econ_api.h"
+#include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_internal.h"
 #include "mech_specification_api.h"
+#include "mech_status_types.h"
 #include "mux/objects/db.h"
 
 static int inventory_count = 6;
@@ -15,13 +16,7 @@ static int changed_part;
 static int changed_brand;
 static int changed_count;
 
-int alias_part(Mech *mech, int part, int location);
 int econ_find_items(BtechContext *context, DbRef store, int part, int brand);
-
-int alias_part(Mech *mech, int part, int location) {
-  (void)mech;
-  return part + location;
-}
 
 int econ_find_items(BtechContext *context, DbRef store, int part, int brand) {
   (void)context;
@@ -39,6 +34,12 @@ void economy_inventory_change(const EconomyInventoryChange *change) {
   changed_count = change->quantity_delta;
 }
 
+static bool alias_matches(Mech *mech, int technology, int part, int cargo) {
+  mech_technology_flags_set(mech, technology);
+  return mech_parts_alias(mech, special_equipment_index(part)) ==
+         cargo_equipment_index(cargo);
+}
+
 int main(void) {
   GameObject object_storage[3] = {0};
   GameDatabase database = {.object_storage = object_storage, .size = 2};
@@ -54,6 +55,16 @@ int main(void) {
   }
   mech_class_set(&mech, CLASS_MECH);
   mech_movement_type_set(&mech, MOVE_BIPED);
+  if (!alias_matches(&mech, 0, SHOULDER_OR_HIP, S_ACTUATOR) ||
+      !alias_matches(&mech, XL_TECH, ENGINE, XL_ENGINE) ||
+      !alias_matches(&mech, ICE_TECH, ENGINE, IC_ENGINE) ||
+      !alias_matches(&mech, XXL_TECH, ENGINE, XXL_ENGINE) ||
+      !alias_matches(&mech, CE_TECH, ENGINE, COMP_ENGINE) ||
+      !alias_matches(&mech, LE_TECH, ENGINE, LIGHT_ENGINE) ||
+      !alias_matches(&mech, DOUBLE_HEAT_TECH, HEAT_SINK, DOUBLE_HEAT_SINK) ||
+      !alias_matches(&mech, CLAN_TECH, HEAT_SINK, DOUBLE_HEAT_SINK)) {
+    return 1;
+  }
   game_database_object(&database, 1)->location = 42;
   if (!mech_parts_available(&mech, part, 4, 6) ||
       mech_parts_available(&mech, part, 4, 7)) {
@@ -66,14 +77,9 @@ int main(void) {
     return 1;
   }
 
-  mech_parts_add(&mech, 3, part, 5, 2);
-#ifdef BT_COMPLEXREPAIRS
-  constexpr int expected_part = part + 3;
-#else
-  constexpr int expected_part = part;
-#endif
-  return changed_store == 42 && changed_part == expected_part &&
-                 changed_brand == 5 && changed_count == 2
+  mech_parts_add(&mech, part, 5, 2);
+  return changed_store == 42 && changed_part == part && changed_brand == 5 &&
+                 changed_count == 2
              ? 0
              : 1;
 }

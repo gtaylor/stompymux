@@ -34,8 +34,6 @@ include(CTest)
 set(MUX_SOURCE_DIR "src/mux")
 set(BTECH_SOURCE_DIR "src/btech")
 
-option(BTECH_COMPLEX_REPAIRS "Enable complex repairs" OFF)
-
 option(BTECH_ENABLE_ASAN "Build with AddressSanitizer instrumentation" ON)
 option(BTECH_ENABLE_UBSAN "Build with UndefinedBehaviorSanitizer instrumentation" ON)
 option(BTECH_ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
@@ -145,8 +143,6 @@ unset(CMARK_BUILD_TESTING_SAVED)
 
 set(BTECH_NAME "${PROJECT_NAME}")
 set(BTECH_VERSION_STRING "${BTECH_NAME} ${PROJECT_VERSION}")
-
-set(BT_COMPLEXREPAIRS ${BTECH_COMPLEX_REPAIRS})
 
 configure_file(src/cmake/btmux_build_config.h.in btmux_build_config.h)
 

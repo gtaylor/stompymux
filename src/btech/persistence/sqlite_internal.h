@@ -13,7 +13,6 @@
 #include "autopilot.h"
 #include "btconfig.h"
 #include "btech/persistence.h"
-#include "btmux_build_config.h"
 #include "map.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"

@@ -28,6 +28,14 @@ if [[ -n "$match" ]]; then
   status=1
 fi
 
+match=$(rg -n '\b(BT_COMPLEXREPAIRS|BTECH_COMPLEX_REPAIRS|btech_complexrepair|btech_context_uses_complex_repairs)\b' \
+  src tests CMakeLists.txt -g '!check_btech_architecture.sh' || true)
+if [[ -n "$match" ]]; then
+  echo "$match"
+  echo "removed complex-repair build and runtime switches are not allowed"
+  status=1
+fi
+
 match=$(
   rg -n '#include ".*context_internal\.h"' src/mux --glob '*.[ch]' || true
   rg -n '#include ".*context_internal\.h"' src/btech --glob '*.h' \

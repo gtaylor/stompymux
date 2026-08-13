@@ -28,12 +28,8 @@ DbRef mech_parts_store_dbref(const Mech *mech) {
   return game_object_location(mech->xcode.context->database, mech->mynum);
 }
 
-int mech_parts_alias(const MechPartLocation *location) {
-  Mech *mech = location->mech;
-  const int PART = location->part;
-#ifdef BT_COMPLEXREPAIRS
-  return alias_part(mech, part, location->section);
-#else
+int mech_parts_alias(const Mech *mech, int part) {
+  const int PART = part;
   if (equipment_is_actuator(PART)) {
     return cargo_equipment_index(S_ACTUATOR);
   }
@@ -59,7 +55,6 @@ int mech_parts_alias(const MechPartLocation *location) {
     return cargo_equipment_index(DOUBLE_HEAT_SINK);
   }
   return PART;
-#endif
 }
 
 bool mech_parts_available(Mech *mech, int part, int brand, int count) {
@@ -76,13 +71,11 @@ void mech_parts_take(Mech *mech, int part, int brand, int count) {
   });
 }
 
-void mech_parts_add(Mech *mech, int location, int part, int brand, int count) {
+void mech_parts_add(Mech *mech, int part, int brand, int count) {
   economy_inventory_change(&(EconomyInventoryChange){
       .context = mech->xcode.context,
       .store = mech_parts_store_dbref(mech),
-      .part = {.id = mech_parts_alias(&(MechPartLocation){
-                   .mech = mech, .section = location, .part = part}),
-               .brand = brand},
+      .part = {.id = mech_parts_alias(mech, part), .brand = brand},
       .quantity_delta = count,
   });
 }

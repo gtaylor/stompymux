@@ -200,9 +200,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->btech_techtime_mod = 0;
   context->configuration->btech_techtime_multiplier = 1.0;
   context->configuration->btech_statengine_obj = -1;
-#ifdef BT_COMPLEXREPAIRS
-  context->configuration->btech_complexrepair = 1;
-#endif
   context->configuration->allow_chanlurking = 0;
   context->configuration->afterlife_dbref = 5;
   context->configuration->port = 6250;

@@ -620,8 +620,7 @@ char *critslot_func(const CriticalSlotTextRequest *request) {
   if (type == EMPTY || mech_part_is_structural_placeholder(type))
     return status_text(buffer, "Empty");
   if (flag == 0) {
-    type = mech_parts_alias(
-        &(MechPartLocation){.mech = mech, .section = index, .part = type});
+    type = mech_parts_alias(mech, type);
   }
   (void)snprintf(buffer, MBUF_SIZE, "%s",
                  get_parts_vlong_name(mech_context(mech), type,

@@ -569,14 +569,6 @@ BtechScriptResult fun_btparttype(BtechScriptCall *call) {
   if (equipment_is_special(p)) {
     safe_tprintf_str(buff, bufc, "PART");
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
-#ifdef BT_COMPLEXREPAIRS
-  } else if (context->btech->configuration->btech_complexrepair &&
-             equipment_is_cargo(p) &&
-             cargo_from_equipment_index(p) >= TON_SENSORS_FIRST &&
-             cargo_from_equipment_index(p) <= TON_ENGINE_COMP_LAST) {
-    safe_tprintf_str(buff, bufc, "PART");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
-#endif
   }
   if (equipment_is_cargo(p)) {
     safe_tprintf_str(buff, bufc, "CARG");

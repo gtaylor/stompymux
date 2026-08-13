@@ -136,9 +136,6 @@ static const ConfigurationEntry CONFIGURATION_ENTRY_TEMPLATES[] = {
      CONFIG_LOC(btech_techtime_multiplier), 0},
     {"btech_statengine_obj", cf_int, CA_GOD, CONFIG_LOC(btech_statengine_obj),
      0},
-#ifdef BT_COMPLEXREPAIRS
-    {"btech_complexrepair", cf_int, CA_GOD, CONFIG_LOC(btech_complexrepair), 0},
-#endif
     {"btech_seismic_see_stopped", cf_int, CA_GOD,
      CONFIG_LOC(btech_seismic_see_stopped), 0},
     {"btech_limitedrepairs", cf_int, CA_GOD, CONFIG_LOC(btech_limitedrepairs),

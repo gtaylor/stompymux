@@ -45,23 +45,12 @@ void mux_event_tickmech_removesection(MuxEvent *e) {
   extra = earg / (LOCMAX * POSMAX);
   if (extra == 0)
     return;
-#ifndef BT_COMPLEXREPAIRS
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
-                 tech_proper_internal_part(mech), 0,
+  mech_parts_add(mech, tech_proper_internal_part(mech), 0,
                  (2 * mech_section_internal(mech, loc)) / extra);
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED, tech_proper_armor_part(mech),
-                 0, (2 * mech_section_armor(mech, loc)) / extra);
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
-                 cargo_equipment_index(S_ELECTRONIC), 0,
-                 mech_section_internal(mech, loc) / extra);
-#else
-  mech_parts_add(mech, loc, tech_proper_internal_part(mech), 0,
-                 (2 * mech_section_internal(mech, loc)) / extra);
-  mech_parts_add(mech, loc, tech_proper_armor_part(mech), 0,
+  mech_parts_add(mech, tech_proper_armor_part(mech), 0,
                  (2 * mech_section_armor(mech, loc)) / extra);
-  mech_parts_add(mech, loc, cargo_equipment_index(S_ELECTRONIC), 0,
+  mech_parts_add(mech, cargo_equipment_index(S_ELECTRONIC), 0,
                  mech_section_internal(mech, loc) / extra);
-#endif
   mech_detach(mech, loc);
   armor_string_from_index(loc, buf, mech_class(mech), mech_movement_type(mech));
   do {
@@ -114,14 +103,8 @@ void mux_event_tickmech_removegun(MuxEvent *e) {
 
   armor_string_from_index(loc, buf, mech_class(mech), mech_movement_type(mech));
   if (extra == 2 && (e->function != mech_event_failure_marker)) {
-#ifndef BT_COMPLEXREPAIRS
-    mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
-                   find_ammo_type(mech, loc, pos),
+    mech_parts_add(mech, find_ammo_type(mech, loc, pos),
                    mech_critical_brand(mech, loc, pos), 1);
-#else
-    mech_parts_add(mech, loc, FindAmmoType(mech, loc, pos),
-                   mech_critical_brand(mech, loc, pos), 1);
-#endif
     do {
       int was_destroyed = 0;
 
@@ -165,14 +148,8 @@ void mux_event_tickmech_removepart(MuxEvent *e) {
     do_magic(mech);
   armor_string_from_index(loc, buf, mech_class(mech), mech_movement_type(mech));
   if (extra == 2 && (e->function != mech_event_failure_marker)) {
-#ifndef BT_COMPLEXREPAIRS
-    mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
-                   find_ammo_type(mech, loc, pos),
+    mech_parts_add(mech, find_ammo_type(mech, loc, pos),
                    mech_critical_brand(mech, loc, pos), 1);
-#else
-    mech_parts_add(mech, loc, FindAmmoType(mech, loc, pos),
-                   mech_critical_brand(mech, loc, pos), 1);
-#endif
     do {
       int i = 0;
 
@@ -558,14 +535,8 @@ void mux_event_tickmech_reload(MuxEvent *e) {
   if (extra) {
     mech_critical_data_set(mech, loc, pos, 0);
     if (extra > 1)
-#ifndef BT_COMPLEXREPAIRS
-      mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
-                     find_ammo_type(mech, loc, pos),
+      mech_parts_add(mech, find_ammo_type(mech, loc, pos),
                      mech_critical_brand(mech, loc, pos), 1);
-#else
-      mech_parts_add(mech, loc, FindAmmoType(mech, loc, pos),
-                     mech_critical_brand(mech, loc, pos), 1);
-#endif
   } else {
     mech_fill_part_ammo(mech, loc, pos);
   }

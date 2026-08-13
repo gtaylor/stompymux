@@ -17,7 +17,6 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btechstats_api.h"
-#include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "coolmenu.h"
 #include "econ_api.h"

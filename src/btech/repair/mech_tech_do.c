@@ -24,11 +24,10 @@
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 
-static bool parts_consume_one(DbRef player, Mech *mech, int location, int part,
-                              int brand, int count) {
+static bool parts_consume_one(DbRef player, Mech *mech, int part, int brand,
+                              int count) {
   const MechPartRequirement REQUIREMENT = {
-      .part = mech_parts_alias(
-          &(MechPartLocation){.mech = mech, .section = location, .part = part}),
+      .part = mech_parts_alias(mech, part),
       .brand = brand,
       .count = count,
   };
@@ -302,8 +301,7 @@ int replace_econ(const RepairOperationCall *call) {
   int part = call->selection.part;
   if (equipment_is_ammunition(mech_critical_part_type(mech, loc, part)))
     return 0;
-  if (!parts_consume_one(player, mech, loc,
-                         mech_critical_part_type(mech, loc, part),
+  if (!parts_consume_one(player, mech, mech_critical_part_type(mech, loc, part),
                          mech_critical_brand(mech, loc, part), 1))
     return -1;
   return 0;
@@ -316,7 +314,7 @@ int reload_econ(const RepairOperationCall *call) {
   int part = call->selection.part;
   int ammotype = find_ammo_type(mech, loc, part);
 
-  if (!parts_consume_one(player, mech, loc, ammotype,
+  if (!parts_consume_one(player, mech, ammotype,
                          mech_critical_brand(mech, loc, part), 1))
     return -1;
   return 0;
@@ -325,10 +323,8 @@ int reload_econ(const RepairOperationCall *call) {
 int fixarmor_econ(const RepairOperationCall *call) {
   DbRef player = call->player;
   Mech *mech = call->mech;
-  int loc = call->selection.location;
   int *val = call->amount;
-  if (!parts_consume_one(player, mech, loc, tech_proper_armor_part(mech), 0,
-                         *val))
+  if (!parts_consume_one(player, mech, tech_proper_armor_part(mech), 0, *val))
     return -1;
   return 0;
 }
@@ -336,9 +332,8 @@ int fixarmor_econ(const RepairOperationCall *call) {
 int fixinternal_econ(const RepairOperationCall *call) {
   DbRef player = call->player;
   Mech *mech = call->mech;
-  int loc = call->selection.location;
   int *val = call->amount;
-  if (!parts_consume_one(player, mech, loc, tech_proper_internal_part(mech), 0,
+  if (!parts_consume_one(player, mech, tech_proper_internal_part(mech), 0,
                          *val))
     return -1;
   return 0;
@@ -362,9 +357,8 @@ int repair_econ(const RepairOperationCall *call) {
 int repairenhcrit_econ(const RepairOperationCall *call) {
   DbRef player = call->player;
   Mech *mech = call->mech;
-  int loc = call->selection.location;
-  if (!parts_consume_one(player, mech, loc, cargo_equipment_index(S_ELECTRONIC),
-                         0, 1))
+  if (!parts_consume_one(player, mech, cargo_equipment_index(S_ELECTRONIC), 0,
+                         1))
     return -1;
   return 0;
 }
@@ -373,32 +367,11 @@ int reattach_econ(const RepairOperationCall *call) {
   DbRef player = call->player;
   Mech *mech = call->mech;
   int loc = call->selection.location;
-#ifndef BT_COMPLEXREPAIRS
   if (!parts_consume_two(player, mech, tech_proper_internal_part(mech), 0,
                          mech_section_original_internal(mech, loc),
                          cargo_equipment_index(S_ELECTRONIC), 0,
                          mech_section_original_internal(mech, loc)))
     return -1;
-#else
-  if (btech_context_uses_complex_repairs(mech_context(mech))) {
-    if (mech_class(mech) == CLASS_MECH) {
-      if (!parts_consume_two(player, mech, tech_proper_internal_part(mech), 0,
-                             mech_section_original_internal(mech, loc),
-                             ProperMyomer(mech), 0, 1))
-        return -1;
-    } else {
-      if (!parts_consume_one(player, mech, loc, tech_proper_internal_part(mech),
-                             0, mech_section_original_internal(mech, loc)))
-        return -1;
-    }
-  } else {
-    if (!parts_consume_two(player, mech, tech_proper_internal_part(mech), 0,
-                           mech_section_original_internal(mech, loc),
-                           cargo_equipment_index(S_ELECTRONIC), 0,
-                           mech_section_original_internal(mech, loc)))
-      return -1;
-  }
-#endif
   return 0;
 }
 
@@ -509,14 +482,8 @@ int replaceg_fail(const RepairOperationCall *call) {
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "Despite messing the repair, you manage not to waste the %s.",
                 w ? "weapon" : "part");
-#ifndef BT_COMPLEXREPAIRS
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
-                 find_ammo_type(mech, loc, part),
+  mech_parts_add(mech, find_ammo_type(mech, loc, part),
                  mech_critical_brand(mech, loc, part), 1);
-#else
-  mech_parts_add(mech, loc, FindAmmoType(mech, loc, part),
-                 mech_critical_brand(mech, loc, part), 1);
-#endif
   return -1;
 }
 
@@ -641,18 +608,8 @@ int reattach_fail(const RepairOperationCall *call) {
     tot = 1;
   if (tot == mech_section_original_internal(mech, loc))
     tot = mech_section_original_internal(mech, loc) - 1;
-#ifndef BT_COMPLEXREPAIRS
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
-                 cargo_equipment_index(S_ELECTRONIC), 0, tot);
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
-                 tech_proper_internal_part(mech), 0, tot);
-#else
-  mech_parts_add(mech, loc, cargo_equipment_index(S_ELECTRONIC), 0, tot);
-  mech_parts_add(mech, loc, tech_proper_internal_part(mech), 0, tot);
-  if (btech_context_uses_complex_repairs(mech_context(mech)) &&
-      mech_class(mech) == CLASS_MECH)
-    mech_parts_add(mech, loc, ProperMyomer(mech), 0, 1);
-#endif
+  mech_parts_add(mech, cargo_equipment_index(S_ELECTRONIC), 0, tot);
+  mech_parts_add(mech, tech_proper_internal_part(mech), 0, tot);
   return -1;
 }
 
@@ -669,30 +626,14 @@ int replacesuit_fail(const RepairOperationCall *call) {
       btech_context_evaluation(mech_context(mech)), player,
       "Despite your disastrous failure, you recover %d%% of the materials.",
       w_rand);
-#ifndef BT_COMPLEXREPAIRS
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
-                 cargo_equipment_index(BSUIT_SENSOR), 0,
+  mech_parts_add(mech, cargo_equipment_index(BSUIT_SENSOR), 0,
                  max(((BSUIT_REPAIR_SENSORS_NEEDED * w_rand) / 100), 1));
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
-                 cargo_equipment_index(BSUIT_LIFESUPPORT), 0,
+  mech_parts_add(mech, cargo_equipment_index(BSUIT_LIFESUPPORT), 0,
                  ((BSUIT_REPAIR_LIFESUPPORT_NEEDED * w_rand) / 100));
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
-                 cargo_equipment_index(BSUIT_ELECTRONIC), 0,
+  mech_parts_add(mech, cargo_equipment_index(BSUIT_ELECTRONIC), 0,
                  ((BSUIT_REPAIR_ELECTRONICS_NEEDED * w_rand) / 100));
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
-                 tech_proper_internal_part(mech), 0,
+  mech_parts_add(mech, tech_proper_internal_part(mech), 0,
                  max(((BSUIT_REPAIR_INTERNAL_NEEDED * w_rand) / 100), 1));
-#else
-  int loc = call->selection.location;
-  mech_parts_add(mech, loc, cargo_equipment_index(BSUIT_SENSOR), 0,
-                 MAX(((BSUIT_REPAIR_SENSORS_NEEDED * wRand) / 100), 1));
-  mech_parts_add(mech, loc, cargo_equipment_index(BSUIT_LIFESUPPORT), 0,
-                 ((BSUIT_REPAIR_LIFESUPPORT_NEEDED * wRand) / 100));
-  mech_parts_add(mech, loc, cargo_equipment_index(BSUIT_ELECTRONIC), 0,
-                 ((BSUIT_REPAIR_ELECTRONICS_NEEDED * wRand) / 100));
-  mech_parts_add(mech, loc, tech_proper_internal_part(mech), 0,
-                 MAX(((BSUIT_REPAIR_INTERNAL_NEEDED * wRand) / 100), 1));
-#endif
   return -1;
 }
 
@@ -719,14 +660,7 @@ int reseal_fail(const RepairOperationCall *call) {
     tot = 1;
   if (tot == mech_section_original_internal(mech, loc))
     tot = mech_section_original_internal(mech, loc) - 1;
-#ifndef BT_COMPLEXREPAIRS
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
-                 cargo_equipment_index(S_ELECTRONIC), 0, tot);
-  mech_parts_add(mech, MECH_PART_LOCATION_UNUSED,
-                 tech_proper_internal_part(mech), 0, tot);
-#else
-  mech_parts_add(mech, loc, cargo_equipment_index(S_ELECTRONIC), 0, tot);
-  mech_parts_add(mech, loc, tech_proper_internal_part(mech), 0, tot);
-#endif
+  mech_parts_add(mech, cargo_equipment_index(S_ELECTRONIC), 0, tot);
+  mech_parts_add(mech, tech_proper_internal_part(mech), 0, tot);
   return -1;
 }

@@ -137,7 +137,6 @@ static const ConfigTomlMapping CONFIG_TOML_MAP[] = {
     {"battletech.techtime_multiplier", "btech_techtime_multiplier",
      CFG_KIND_SCALAR},
     {"battletech.statengine_obj", "btech_statengine_obj", CFG_KIND_SCALAR},
-    {"battletech.complexrepair", "btech_complexrepair", CFG_KIND_SCALAR},
     {"battletech.seismic_see_stopped", "btech_seismic_see_stopped",
      CFG_KIND_SCALAR},
     {"battletech.limitedrepairs", "btech_limitedrepairs", CFG_KIND_SCALAR},

@@ -4,12 +4,6 @@
 #pragma once
 
 /*
- * Define if you want the radio OBSERVATORIC units to be more
- * Observation-lounge like: hears everything, and reports more.
- * */
-#define OBSERVATORIC_OL_RADIO
-
-/*
  * This is the maximum amount of parts addable via btaddstores() or the
  * addstuff command. If the limit is hit, set the number of commods to add
  * equal to this define.
