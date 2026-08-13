@@ -168,18 +168,10 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
   mech_fall_heading_apply(mech, heading_offset);
   if (!mech_fall_is_in_water(mech) &&
       mech_real_terrain_get(mech) != BATTLE_TERRAIN_HIGH_WATER) {
-#ifndef REALWEIGHT_DAMAGE
     damage = (levels * (mech_tonnage(mech) + 5)) / 10;
-#else
-    damage = (levels * (mech_real_tonnage(mech) + 5)) / 10;
-#endif /* REALWEIGHT_DAMAGE */
   } else {
-#ifndef REALWEIGHT_DAMAGE
     damage = (levels * (mech_tonnage(mech) + 5)) / 20;
   }
-#else
-    damage = (levels * (mech_real_tonnage(mech) + 5)) / 20;
-#endif /* REALWEIGHT_DAMAGE */
   if (mech_is_under_special_conditions(mech)) {
     map = btech_context_find_object(context, mech_map_dbref(mech));
     if (map && battle_map_uses_special_rules(map))

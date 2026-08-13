@@ -129,11 +129,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
     mech_notify(mech, MECHALL, "You can't thrash if you have no limbs!");
     return;
   }
-#ifndef REALWEIGHT_DAMAGE
   damage = mech_tonnage(mech) / 3;
-#else
-  damage = mech_real_tonnage(mech) / 3;
-#endif /* REALWEIGHT_DAMAGE */
 
   /* Rules say tonnage/3, not tonnage/3 * limbs  Page 151, Total Warfare*/
 

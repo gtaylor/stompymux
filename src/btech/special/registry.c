@@ -500,23 +500,9 @@ void dump_maps(BtechContext *context, DbRef player) {
 }
 
 /***************** INTERNAL ROUTINES *************/
-#ifdef FAST_WHICHSPECIAL
-int btech_context_which_special(BtechContext *context, DbRef key) {
-  BtechSpecialObject *xcode_obj;
-
-  if (!is_good_obj(context->database, key))
-    return -1;
-  if (!is_xcode(context->database, key))
-    return -1;
-  if (!(xcode_obj = red_black_tree_find(context->special_objects, (void *)key)))
-    return -1;
-  return (int)xcode_obj->type;
-}
-#else
 int btech_context_which_special(BtechContext *context, DbRef key) {
   return btech_context_which_special_attribute(context, key);
 }
-#endif
 
 int btech_context_which_special_attribute(BtechContext *context, DbRef key) {
   int i;

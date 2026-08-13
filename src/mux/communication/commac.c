@@ -48,12 +48,6 @@ void purge_commac(ChannelRegistry *registry, GameDatabase *database) {
   struct Commac *d;
   int i;
 
-#ifdef ABORT_PURGE_COMSYS
-  return;
-#endif /*                                                                      \
-        * * ABORT_PURGE_COMSYS                                                 \
-        */
-
   for (i = 0; i < COMMAC_BUCKET_COUNT; i++) {
     c = channel_registry_bucket_at(registry, (size_t)i);
     while (c) {

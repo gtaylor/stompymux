@@ -499,12 +499,6 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
   initialize_pc(player, m);
   mech_pilot_dbref_set(m, player);
   mech_team_set(m, mech_team(mech));
-  /* MUDCONF THIS LATER (and fix not copying digital)
-  #ifdef COPY_CHANS_ON_EJECT
-          memcpy(m->freq, mech->freq, FREQS * sizeof(m->freq[0]));
-          memcpy(m->freqmodes, mech->freqmodes, FREQS *
-  sizeof(m->freqmodes[0])); #else #ifdef RANDOM_CHAN_ON_EJECT
-  */
   mech_radio_frequency_set(m, 0, random() % 1000000);
   mecha_notify(evaluation, player,
                tprintf("Emergency radio channel set to %d.",

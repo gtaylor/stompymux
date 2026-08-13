@@ -48,9 +48,6 @@ struct TelnetSockets {
   uv_loop_t *loop;
   ConnectionRuntime *runtime;
   TelnetListener listener4;
-#ifdef IPV6_SUPPORT
-  TelnetListener listener6;
-#endif
 };
 
 static void descriptor_read_alloc(uv_handle_t *handle, size_t suggested_size,
@@ -134,9 +131,6 @@ TelnetSockets *telnet_sockets_create(uv_loop_t *loop,
   sockets->loop = loop;
   sockets->runtime = runtime;
   sockets->listener4.owner = sockets;
-#ifdef IPV6_SUPPORT
-  sockets->listener6.owner = sockets;
-#endif
   return sockets;
 }
 
@@ -149,12 +143,6 @@ void telnet_sockets_release(TelnetSockets *sockets) {
   if (listener4->initialized &&
       !uv_is_closing((uv_handle_t *)&listener4->handle))
     uv_close((uv_handle_t *)&listener4->handle, listener_closed);
-#ifdef IPV6_SUPPORT
-  TelnetListener *listener6 = &sockets->listener6;
-  if (listener6->initialized &&
-      !uv_is_closing((uv_handle_t *)&listener6->handle))
-    uv_close((uv_handle_t *)&listener6->handle, listener_closed);
-#endif
 }
 
 int telnet_sockets_eradicate_fd(TelnetSockets *sockets, int fd) {
@@ -169,10 +157,8 @@ int telnet_sockets_eradicate_fd(TelnetSockets *sockets, int fd) {
   return 0;
 }
 
-static bool listener_start(TelnetListener *listener, int port, bool ipv6) {
+static bool listener_start(TelnetListener *listener, int port) {
   struct sockaddr_in address4;
-  struct sockaddr_in6 address6;
-  const struct sockaddr *address;
   int status;
 
   status = uv_tcp_init(listener->owner->loop, &listener->handle);
@@ -180,14 +166,9 @@ static bool listener_start(TelnetListener *listener, int port, bool ipv6) {
     goto fail;
   listener->initialized = true;
   listener->handle.data = listener;
-  if (ipv6) {
-    uv_ip6_addr("::", port, &address6);
-    address = (const struct sockaddr *)&address6;
-  } else {
-    uv_ip4_addr("0.0.0.0", port, &address4);
-    address = (const struct sockaddr *)&address4;
-  }
-  status = uv_tcp_bind(&listener->handle, address, ipv6 ? UV_TCP_IPV6ONLY : 0);
+  uv_ip4_addr("0.0.0.0", port, &address4);
+  status =
+      uv_tcp_bind(&listener->handle, (const struct sockaddr *)&address4, 0);
   if (status < 0)
     goto fail_close;
   status =
@@ -208,17 +189,7 @@ fail:
 }
 
 bool telnet_sockets_listen(TelnetSockets *sockets, int port) {
-#ifdef IPV6_SUPPORT
-  if (!listener_start(&sockets->listener4, port, false))
-    return false;
-  if (!listener_start(&sockets->listener6, port, true)) {
-    telnet_sockets_release(sockets);
-    return false;
-  }
-  return true;
-#else
-  return listener_start(&sockets->listener4, port, false);
-#endif
+  return listener_start(&sockets->listener4, port);
 }
 
 static void discarded_connection_closed(uv_handle_t *handle) {
