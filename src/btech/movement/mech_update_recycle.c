@@ -76,11 +76,6 @@ int mech_weapon_recycle_update(Mech *mech) {
         mech_critical_data_set(mech, section, critical, 0);
       if (diff >= mech_critical_data(mech, section, critical)) {
         mech_critical_data_set(mech, section, critical, 0);
-        /* ROCKET_FIRED intentionally selects an empty notification. */
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-zero-length"
-#endif
         const char *weapon_name = checked_string_suffix(
             weapon_catalogue_name(recycle_weapon_at(weapon_types, weapon)), 3);
         if (mech_class(mech) == CLASS_MW)
@@ -90,15 +85,10 @@ int mech_weapon_recycle_update(Mech *mech) {
         else if (mech_critical_temporary_failure(mech, section, critical) != 0)
           mech_printf(mech, MECHSTARTED,
                       "[fg=green]%s is operational again.[reset]", weapon_name);
-        else if (mech_critical_fire_mode(mech, section, critical) &
-                 ROCKET_FIRED)
-          mech_printf(mech, MECHSTARTED, "");
-        else
+        else if (!(mech_critical_fire_mode(mech, section, critical) &
+                   ROCKET_FIRED))
           mech_printf(mech, MECHSTARTED,
                       "[fg=green]%s finished recycling.[reset]", weapon_name);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
         mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
             .mech = mech,
             .slot = {.section = section, .critical = critical},

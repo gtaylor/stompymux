@@ -144,50 +144,37 @@ static void mech_startup_event(MuxEvent *e) {
   int movement_type = mech_movement_type(mech);
   BtechContext *context = mech_context(mech);
 
-  /*
-   * Each *_bootmsgs[] array is a fixed set of string-literal boot messages
-   * indexed by timer; none of them contain printf conversions, just
-   * non-literal styled text.
-   */
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
-#pragma clang diagnostic ignored "-Wformat-security"
-#endif
   if (mech_is_aerospace_unit(mech)) {
-    mech_printf(mech, MECHALL, startup_message(AERO_BOOTMSGS, timer));
+    mech_printf(mech, MECHALL, "%s", startup_message(AERO_BOOTMSGS, timer));
   } else if (unit_class == CLASS_BSUIT) {
-    mech_printf(mech, MECHALL, startup_message(BSUIT_BOOTMSGS, timer));
+    mech_printf(mech, MECHALL, "%s", startup_message(BSUIT_BOOTMSGS, timer));
   } else {
     switch (movement_type) {
     case MOVE_HOVER:
-      mech_printf(mech, MECHALL, startup_message(HOVER_BOOTMSGS, timer));
+      mech_printf(mech, MECHALL, "%s", startup_message(HOVER_BOOTMSGS, timer));
       break;
     case MOVE_TRACK:
-      mech_printf(mech, MECHALL, startup_message(TRACK_BOOTMSGS, timer));
+      mech_printf(mech, MECHALL, "%s", startup_message(TRACK_BOOTMSGS, timer));
       break;
     case MOVE_WHEEL:
-      mech_printf(mech, MECHALL, startup_message(WHEEL_BOOTMSGS, timer));
+      mech_printf(mech, MECHALL, "%s", startup_message(WHEEL_BOOTMSGS, timer));
       break;
     case MOVE_VTOL:
-      mech_printf(mech, MECHALL, startup_message(VTOL_BOOTMSGS, timer));
+      mech_printf(mech, MECHALL, "%s", startup_message(VTOL_BOOTMSGS, timer));
       break;
     case MOVE_BIPED:
-      mech_printf(mech, MECHALL, startup_message(BOOTMSGS, timer));
+      mech_printf(mech, MECHALL, "%s", startup_message(BOOTMSGS, timer));
       break;
     case MOVE_HULL:
     case MOVE_FOIL:
     case MOVE_SUB:
-      mech_printf(mech, MECHALL, startup_message(NAVAL_BOOTMSGS, timer));
+      mech_printf(mech, MECHALL, "%s", startup_message(NAVAL_BOOTMSGS, timer));
       break;
     default:
-      mech_printf(mech, MECHALL, startup_message(BOOTMSGS, timer));
+      mech_printf(mech, MECHALL, "%s", startup_message(BOOTMSGS, timer));
       break;
     }
   }
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
   timer++;
 
   /* Check if the unit is in water and if it should die */

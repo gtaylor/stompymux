@@ -15,6 +15,11 @@ status=0
 architecture_started=$(date +%s%N)
 header_log_root=
 
+if rg -n '\b__clang__\b' src; then
+  echo "src: compiler-specific __clang__ conditionals are not allowed"
+  status=1
+fi
+
 nested_positional_initializer_pattern='\.[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*\{(?![[:space:]]*(?:\.|\[|0[[:space:]]*\}))'
 
 ratchet_expect_match() {

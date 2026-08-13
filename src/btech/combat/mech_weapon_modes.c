@@ -1,6 +1,7 @@
 
 #include "btech/context.h"
 #include "btech_event.h"
+#include "btech_text_builder.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "failures.h"
@@ -21,12 +22,14 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
+#include <stddef.h>
+#include <string.h>
 
 static void mech_toggle_mode_sub(DbRef player, Mech *mech, char *buffer,
                                  int nspecisspec, int nspec, int mode,
@@ -108,12 +111,24 @@ struct ToggleModeContext {
   const char *cannot_message;
 };
 
-/* The mode messages are string-literal arguments supplied by the callers
- * below; their literal-ness is lost when passed through the context. */
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
-#endif
+static void notify_mode_message(Mech *mech, const char *message_template,
+                                int weapon_number) {
+  const char *placeholder = strstr(message_template, "%d");
+  if (placeholder == nullptr) {
+    mech_notify(mech, MECHALL, message_template);
+    return;
+  }
+
+  char message[LBUF_SIZE];
+  BtechTextBuilder output;
+  btech_text_builder_initialize(&output, message, sizeof(message));
+  btech_text_builder_append_count(&output, message_template,
+                                  (size_t)(placeholder - message_template));
+  btech_text_builder_append_format(&output, "%d", weapon_number);
+  btech_text_builder_append(&output, checked_string_suffix(placeholder, 2));
+  mech_notify(mech, MECHALL, message);
+}
+
 static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
   Mech *mech = call->mech;
   const DbRef PLAYER = call->actor;
@@ -216,19 +231,19 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
      */
     if ((toggle->special == RAC) && !toggle->mode) {
       if (!(mech_critical_fire_mode(mech, section, critical) & RAC_MODES)) {
-        mech_notify(mech, MECHALL, tprintf(toggle->off_message, INDEX));
+        notify_mode_message(mech, toggle->off_message, INDEX);
       } else {
         mech_critical_fire_mode_clear(mech, section, critical, FIRE_MODES);
-        mech_notify(mech, MECHALL, tprintf(toggle->on_message, INDEX));
+        notify_mode_message(mech, toggle->on_message, INDEX);
       }
       return 0;
     }
     if ((toggle->special == INARC) && !toggle->mode) {
       if (!(mech_critical_ammo_mode(mech, section, critical) & INARC_MODES)) {
-        mech_notify(mech, MECHALL, tprintf(toggle->off_message, INDEX));
+        notify_mode_message(mech, toggle->off_message, INDEX);
       } else {
         mech_critical_ammo_mode_clear(mech, section, critical, AMMO_MODES);
-        mech_notify(mech, MECHALL, tprintf(toggle->on_message, INDEX));
+        notify_mode_message(mech, toggle->on_message, INDEX);
       }
       return 0;
     }
@@ -238,7 +253,7 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
                                     setting if already there */
           mech_critical_fire_mode_clear(mech, section, critical, toggle->mode);
         }
-        mech_notify(mech, MECHALL, tprintf(toggle->off_message, INDEX));
+        notify_mode_message(mech, toggle->off_message, INDEX);
         return 0;
       }
     } else {
@@ -247,7 +262,7 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
                                       new setting if already there */
           mech_critical_ammo_mode_clear(mech, section, critical, toggle->mode);
         }
-        mech_notify(mech, MECHALL, tprintf(toggle->off_message, INDEX));
+        notify_mode_message(mech, toggle->off_message, INDEX);
         return 0;
       }
     }
@@ -260,7 +275,7 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
       mech_critical_ammo_mode_add(mech, section, critical, toggle->mode);
     }
 
-    mech_notify(mech, MECHALL, tprintf(toggle->on_message, INDEX));
+    notify_mode_message(mech, toggle->on_message, INDEX);
 
     return 0;
   }
@@ -269,10 +284,6 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
                  toggle->cannot_message);
   return 0;
 }
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
-
 static void mech_toggle_mode_sub(DbRef player, Mech *mech, char *buffer,
                                  int nspecisspec, int nspec, int mode,
                                  int t_fire_mode, const char *onmsg,
