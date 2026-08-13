@@ -100,6 +100,8 @@ CONF conftable[] = {
     {"btech_tsm_tow_bonus", cf_int, CA_GOD, CONFIG_LOC(btech_tsm_tow_bonus), 0},
     {"btech_heatcutoff", cf_int, CA_GOD, CONFIG_LOC(btech_heatcutoff), 0},
     {"btech_cost_debug", cf_int, CA_GOD, CONFIG_LOC(btech_cost_debug), 0},
+    {"btech_allow_cargo_commands", cf_bool, CA_GOD,
+     CONFIG_LOC(btech_allow_cargo_commands), 0},
     {"btech_noisy_xpgain", cf_int, CA_GOD, CONFIG_LOC(btech_noisy_xpgain), 0},
     {"btech_xpgain_cap", cf_int, CA_GOD, CONFIG_LOC(btech_xpgain_cap), 0},
     {"btech_transported_unit_death", cf_int, CA_GOD,

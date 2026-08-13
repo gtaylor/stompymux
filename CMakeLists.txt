@@ -36,7 +36,6 @@ set(BTECH_SOURCE_DIR "src/btech")
 
 option(BTECH_COMPLEX_REPAIRS "Enable complex repairs" OFF)
 
-option(BTECH_CARGO_COMMANDS "Enable hardcoded cargo commands" ON)
 option(BTECH_MW3STATS "Enable MW3-like stats and skills" ON)
 option(BTECH_MOVEMENT_MODES "Enable advanced movement modes" ON)
 
@@ -154,7 +153,6 @@ set(BT_COMPLEXREPAIRS ${BTECH_COMPLEX_REPAIRS})
 
 configure_file(src/cmake/btmux_build_config.h.in btmux_build_config.h)
 
-set(BT_CARGO_COMMANDS ${BTECH_CARGO_COMMANDS})
 set(BT_EXILE_MW3STATS ${BTECH_MW3STATS})
 set(BT_MOVEMENT_MODES ${BTECH_MOVEMENT_MODES})
 

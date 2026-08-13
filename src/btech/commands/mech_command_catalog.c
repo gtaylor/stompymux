@@ -528,7 +528,6 @@ const BtechCommandDefinition MECHCOMMANDS[] = {
     {0, "@FIXEXTRA", "@fixes extra stuff, like reseal, ammo feeds, etc",
      btech_command_invoke_tech_fixextra},
 
-#ifdef BT_CARGO_COMMANDS
     /* Cargo */
     {0, "Cargo", "Cargo", nullptr},
 
@@ -539,7 +538,6 @@ const BtechCommandDefinition MECHCOMMANDS[] = {
     {0, "STORES", "Lists stuff in the bay.", btech_command_invoke_mech_stores},
     {0, "UNLOADCARGO <NAME> <COUNT>", "Unloads <COUNT> <NAME>s to the bay.",
      btech_command_invoke_mech_unloadcargo},
-#endif
 
     /* Restricted commands */
     {0, "@Restricted", "@Restricted", nullptr},

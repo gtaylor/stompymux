@@ -64,10 +64,8 @@ static const ConfigTomlMapping CONFIG_TOML_MAP[] = {
     {"lua.state_entry_limit", "lua_state_entry_limit", CFG_KIND_SCALAR},
     {"lua.state_object_limit", "lua_state_object_limit", CFG_KIND_SCALAR},
 
-    /* server */
     {"server.port", "port", CFG_KIND_SCALAR},
     {"server.mud_name", "mud_name", CFG_KIND_SCALAR},
-    /* battletech */
     {"battletech.explode_reactor", "btech_explode_reactor", CFG_KIND_SCALAR},
     {"battletech.explode_time", "btech_explode_time", CFG_KIND_SCALAR},
     {"battletech.explode_ammo", "btech_explode_ammo", CFG_KIND_SCALAR},
@@ -115,6 +113,8 @@ static const ConfigTomlMapping CONFIG_TOML_MAP[] = {
     {"battletech.tsm_tow_bonus", "btech_tsm_tow_bonus", CFG_KIND_SCALAR},
     {"battletech.heatcutoff", "btech_heatcutoff", CFG_KIND_SCALAR},
     {"battletech.cost_debug", "btech_cost_debug", CFG_KIND_SCALAR},
+    {"battletech.allow_cargo_commands", "btech_allow_cargo_commands",
+     CFG_KIND_SCALAR},
     {"battletech.transported_unit_death", "btech_transported_unit_death",
      CFG_KIND_SCALAR},
     {"battletech.mwpickup_action", "btech_mwpickup_action", CFG_KIND_SCALAR},

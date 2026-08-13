@@ -183,6 +183,7 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->btech_heatcutoff = 1;
   context->configuration->btech_sprint_bth = -4;
   context->configuration->btech_cost_debug = 0;
+  context->configuration->btech_allow_cargo_commands = true;
   context->configuration->btech_noisy_xpgain = 0;
   context->configuration->btech_xpgain_cap = 10;
   context->configuration->btech_transported_unit_death = 1;

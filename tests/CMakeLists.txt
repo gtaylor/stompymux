@@ -167,6 +167,20 @@ target_include_directories(btech_value_helpers_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_value_helpers COMMAND btech_value_helpers_test)
 
+add_executable(btech_cargo_command_access_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_cargo_command_access.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/economy/econ_cmds.c)
+target_compile_definitions(btech_cargo_command_access_test PRIVATE BTECH_INTERNAL=1)
+target_compile_options(btech_cargo_command_access_test PRIVATE -ffunction-sections)
+target_link_options(btech_cargo_command_access_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_cargo_command_access_test PRIVATE btmux_options m)
+target_include_directories(btech_cargo_command_access_test PRIVATE
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_cargo_command_access COMMAND btech_cargo_command_access_test)
+
 add_executable(btech_safe_helpers_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_safe_helpers.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/core/btech_text_builder.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)

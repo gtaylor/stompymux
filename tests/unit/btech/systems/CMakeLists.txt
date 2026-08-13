@@ -3,6 +3,7 @@ btmux_label_unit_topic(btech-systems btech
   btech_event
   btech_terrain
   btech_value_helpers
+  btech_cargo_command_access
   btech_safe_helpers
   btech_caller_control
   btech_repair_payload

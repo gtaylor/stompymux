@@ -72,6 +72,7 @@ static int test_scalar_dispatch(void) {
                              "state_entry_limit = 256\n"
                              "state_object_limit = 262144\n"
                              "[battletech]\n"
+                             "allow_cargo_commands = false\n"
                              "techtime_multiplier = 0.5\n"
                              "[mux]\n"
                              "default_thing_lua_parent = \"thing.lua\"\n"
@@ -86,7 +87,7 @@ static int test_scalar_dispatch(void) {
   if (!result.ok)
     return 0;
   configuration_toml_walk(result.toptab, recording_set_fn, &log);
-  ok = log.count == 16 && call_log_find(&log, "port", "5555") &&
+  ok = log.count == 17 && call_log_find(&log, "port", "5555") &&
        call_log_find(&log, "mud_name", "Test") &&
        call_log_find(&log, "dump_interval", "900") &&
        call_log_find(&log, "lua_directory", "scripts") &&
@@ -97,6 +98,7 @@ static int test_scalar_dispatch(void) {
        call_log_find(&log, "fork_dump", "true") &&
        call_log_find(&log, "dump_message", "Saving") &&
        call_log_find(&log, "postdump_message", "Saved") &&
+       call_log_find(&log, "btech_allow_cargo_commands", "false") &&
        call_log_find(&log, "btech_techtime_multiplier", "0.5") &&
        call_log_find(&log, "default_thing_lua_parent", "thing.lua") &&
        call_log_find(&log, "default_room_lua_parent", "room.lua") &&

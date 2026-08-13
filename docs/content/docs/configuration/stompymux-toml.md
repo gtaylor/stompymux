@@ -68,6 +68,14 @@ directives take other shapes:
 An unrecognized key is logged to stderr and skipped rather than aborting the
 whole file; a syntax error in the TOML itself aborts loading.
 
+## BattleTech cargo commands
+
+`battletech.allow_cargo_commands` controls the player-facing `LOADCARGO`,
+`UNLOADCARGO`, `MANIFEST`, and `STORES` commands. It defaults to `true`. When
+set to `false`, the commands remain listed in BTech help but return
+`Permission denied.` without reading or changing cargo. Wizards may change the
+live value with `@admin btech_allow_cargo_commands=<boolean>`.
+
 ## BattleTech repair timing
 
 `battletech.techtime_multiplier` scales the duration of newly scheduled repair

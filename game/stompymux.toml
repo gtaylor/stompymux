@@ -86,6 +86,8 @@ osc8-demo-danger = 'color=white bg=red bold hover.bg=darkred disabled.strikethro
 # -----------------------------------------------
 
 [battletech]
+# Allow players to use LOADCARGO, UNLOADCARGO, MANIFEST, and STORES.
+allow_cargo_commands = true
 # Overall repair-time multiplier, from 0.0 through 10.0. Zero makes newly
 # started repairs complete on the event scheduler's next one-second tick.
 techtime_multiplier = 1.0

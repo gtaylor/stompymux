@@ -351,10 +351,19 @@ static void list_manifest(BtechContext *context, DbRef player, DbRef location,
   }
 }
 
+bool mech_cargo_command_access(BtechContext *context, DbRef player) {
+  if (context->configuration->btech_allow_cargo_commands)
+    return true;
+  mecha_notify(btech_context_evaluation(context), player, "Permission denied.");
+  return false;
+}
+
 void mech_manifest(DbRef player, void *data, char *buffer) {
   BtechSpecialObject *object = data;
   BtechContext *context = object->context;
 
+  if (!mech_cargo_command_access(context, player))
+    return;
   buffer = checked_storage_at(buffer, strlen(buffer) + 1, sizeof(*buffer),
                               strspn(buffer, " \t\r\n\f\v"));
   list_manifest(context, player,
@@ -366,6 +375,8 @@ void mech_stores(DbRef player, void *data, char *buffer) {
   BtechContext *context = mech_context(mech);
   GameDatabase *database = context->database;
 
+  if (!mech_cargo_command_access(context, player))
+    return;
   if (!common_checks(player, mech, MECH_USUAL))
     return;
   if (game_object_location(database, mech_dbref(mech)) !=
@@ -621,6 +632,8 @@ void mech_loadcargo(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BtechContext *context = mech_context(mech);
 
+  if (!mech_cargo_command_access(context, player))
+    return;
   if (!common_checks(player, mech, MECH_USUALO))
     return;
   if (!(mech_technology_flags(mech) & CARGO_TECH)) {
@@ -665,6 +678,8 @@ void mech_unloadcargo(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
   BtechContext *context = mech_context(mech);
 
+  if (!mech_cargo_command_access(context, player))
+    return;
   if (!common_checks(player, mech, MECH_USUALSO))
     return;
   if (!(mech_technology_flags(mech) & CARGO_TECH)) {

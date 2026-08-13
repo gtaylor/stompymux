@@ -188,6 +188,7 @@ struct ServerConfiguration {
   int btech_sprint_bth;       /* BTH to give for attacks against sprinting units
                                  (default is -4)*/
   int btech_cost_debug; /* 1= Send info from btfasabasecost to MechDebugInfo */
+  bool btech_allow_cargo_commands;  /* Allow player cargo commands. */
   int btech_noisy_xpgain;           /* 1 = Send XP Gain info to MechXP */
   int btech_xpgain_cap;             /* Cap for Weapons XP Gain */
   int btech_transported_unit_death; /* 1=Destroy units in a transport

@@ -14,6 +14,7 @@ typedef struct LoadingBayCheck {
   Mech *mech;
 } LoadingBayCheck;
 bool loading_bay_blocks_transfer(const LoadingBayCheck *check);
+bool mech_cargo_command_access(BtechContext *context, DbRef player);
 
 typedef struct EconomyRepairRequest {
   BtechContext *context;
