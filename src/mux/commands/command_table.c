@@ -3,12 +3,12 @@
  */
 
 #include <stdlib.h>
-#include <strings.h>
 
 #include "btech/character/btechstats_api.h"
 #include "btech/context.h" // IWYU pragma: keep
 #include "btech/ui/mech_stat_api.h"
 #include "mux/commands/command.h"
+#include "mux/commands/command_catalog.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_internal.h"
 #include "mux/commands/command_keys.h"
@@ -21,9 +21,7 @@
 #include "mux/help/help_command.h"
 #include "mux/server/configuration_context.h"
 #include "mux/server/game.h"
-#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/hash_table.h"
 #include "mux/support/name_table.h"
 #include "mux/world/database_check.h"
 #include "mux/world/inventory_commands.h"
@@ -39,18 +37,19 @@
  * (typically via a switch alias)
  */
 
-NameTable boot_sw[] = {{"port", 1, CA_WIZARD, BOOT_PORT | SW_MULTIPLE},
-                       {"quiet", 1, CA_WIZARD, BOOT_QUIET | SW_MULTIPLE},
-                       {nullptr, 0, 0, 0}};
+static const NameTable BOOT_SW[] = {
+    {"port", 1, CA_WIZARD, BOOT_PORT | SW_MULTIPLE},
+    {"quiet", 1, CA_WIZARD, BOOT_QUIET | SW_MULTIPLE},
+    {nullptr, 0, 0, 0}};
 
-NameTable attribute_sw[] = {
+static const NameTable ATTRIBUTE_SW[] = {
     {"get", 1, CA_WIZARD, ATTRIBUTE_GET},
     {"examine", 1, CA_WIZARD, ATTRIBUTE_EXAMINE},
     {"set", 1, CA_WIZARD, ATTRIBUTE_SET},
     {nullptr, 0, 0, 0},
 };
 
-NameTable chan_sw[] = {
+static const NameTable CHAN_SW[] = {
     {"boot", 4, CA_PUBLIC, CHAN_BOOT | SW_MULTIPLE},
     {"create", 6, CA_PUBLIC, CHAN_CREATE | SW_MULTIPLE},
     {"destroy", 7, CA_PUBLIC, CHAN_DESTROY | SW_MULTIPLE},
@@ -67,7 +66,7 @@ NameTable chan_sw[] = {
     {nullptr, 0, 0, 0},
 };
 
-NameTable lua_sw[] = {
+static const NameTable LUA_SW[] = {
     {"check", 5, CA_PUBLIC, LUA_COMMAND_CHECK},
     {"parent", 6, CA_PUBLIC, LUA_COMMAND_PARENT},
     {"reload", 6, CA_PUBLIC, LUA_COMMAND_RELOAD},
@@ -76,7 +75,7 @@ NameTable lua_sw[] = {
     {nullptr, 0, 0, 0},
 };
 
-NameTable state_sw[] = {
+static const NameTable STATE_SW[] = {
     {"examine", 7, CA_PUBLIC, STATE_COMMAND_EXAMINE},
     {"set", 3, CA_PUBLIC, STATE_COMMAND_SET},
     {"wipe", 4, CA_PUBLIC, STATE_COMMAND_WIPE},
@@ -85,87 +84,99 @@ NameTable state_sw[] = {
     {nullptr, 0, 0, 0},
 };
 
-NameTable help_sw[] = {
+static const NameTable HELP_SW[] = {
     {"reload", 6, CA_PUBLIC, HELP_COMMAND_RELOAD},
     {nullptr, 0, 0, 0},
 };
 
-NameTable clone_sw[] = {{"inventory", 3, CA_PUBLIC, CLONE_INVENTORY},
-                        {"location", 1, CA_PUBLIC, CLONE_LOCATION},
-                        {nullptr, 0, 0, 0}};
+static const NameTable CLONE_SW[] = {
+    {"inventory", 3, CA_PUBLIC, CLONE_INVENTORY},
+    {"location", 1, CA_PUBLIC, CLONE_LOCATION},
+    {nullptr, 0, 0, 0}};
 
-NameTable destroy_sw[] = {{"override", 8, CA_PUBLIC, DEST_OVERRIDE},
-                          {"recursive", 9, CA_WIZARD, DEST_RECURSIVE},
-                          {nullptr, 0, 0, 0}};
+static const NameTable DESTROY_SW[] = {
+    {"override", 8, CA_PUBLIC, DEST_OVERRIDE},
+    {"recursive", 9, CA_WIZARD, DEST_RECURSIVE},
+    {nullptr, 0, 0, 0}};
 
-NameTable dig_sw[] = {{"teleport", 1, CA_PUBLIC, DIG_TELEPORT},
-                      {nullptr, 0, 0, 0}};
+static const NameTable DIG_SW[] = {{"teleport", 1, CA_PUBLIC, DIG_TELEPORT},
+                                   {nullptr, 0, 0, 0}};
 
-NameTable drop_sw[] = {{"quiet", 1, CA_PUBLIC, DROP_QUIET}, {nullptr, 0, 0, 0}};
+static const NameTable DROP_SW[] = {{"quiet", 1, CA_PUBLIC, DROP_QUIET},
+                                    {nullptr, 0, 0, 0}};
 
-NameTable dump_sw[] = {{"structure", 1, CA_WIZARD, DUMP_STRUCT | SW_MULTIPLE},
-                       {"text", 1, CA_WIZARD, DUMP_TEXT | SW_MULTIPLE},
-                       {"optimize", 1, CA_WIZARD, DUMP_OPTIMIZE | SW_MULTIPLE},
-                       {nullptr, 0, 0, 0}};
+static const NameTable DUMP_SW[] = {
+    {"structure", 1, CA_WIZARD, DUMP_STRUCT | SW_MULTIPLE},
+    {"text", 1, CA_WIZARD, DUMP_TEXT | SW_MULTIPLE},
+    {"optimize", 1, CA_WIZARD, DUMP_OPTIMIZE | SW_MULTIPLE},
+    {nullptr, 0, 0, 0}};
 
-NameTable emit_sw[] = {{"here", 1, CA_PUBLIC, SAY_HERE | SW_MULTIPLE},
-                       {"room", 1, CA_PUBLIC, SAY_ROOM | SW_MULTIPLE},
-                       {nullptr, 0, 0, 0}};
+static const NameTable EMIT_SW[] = {
+    {"here", 1, CA_PUBLIC, SAY_HERE | SW_MULTIPLE},
+    {"room", 1, CA_PUBLIC, SAY_ROOM | SW_MULTIPLE},
+    {nullptr, 0, 0, 0}};
 
-NameTable enter_sw[] = {{"quiet", 1, CA_PUBLIC, MOVE_QUIET},
-                        {nullptr, 0, 0, 0}};
+static const NameTable ENTER_SW[] = {{"quiet", 1, CA_PUBLIC, MOVE_QUIET},
+                                     {nullptr, 0, 0, 0}};
 
-NameTable examine_sw[] = {{"brief", 1, CA_PUBLIC, EXAM_BRIEF},
-                          {"debug", 1, CA_WIZARD, EXAM_DEBUG},
-                          {nullptr, 0, 0, 0}};
+static const NameTable EXAMINE_SW[] = {{"brief", 1, CA_PUBLIC, EXAM_BRIEF},
+                                       {"debug", 1, CA_WIZARD, EXAM_DEBUG},
+                                       {nullptr, 0, 0, 0}};
 
-NameTable femit_sw[] = {{"here", 1, CA_PUBLIC, PEMIT_HERE | SW_MULTIPLE},
-                        {"room", 1, CA_PUBLIC, PEMIT_ROOM | SW_MULTIPLE},
-                        {nullptr, 0, 0, 0}};
+static const NameTable FEMIT_SW[] = {
+    {"here", 1, CA_PUBLIC, PEMIT_HERE | SW_MULTIPLE},
+    {"room", 1, CA_PUBLIC, PEMIT_ROOM | SW_MULTIPLE},
+    {nullptr, 0, 0, 0}};
 
-NameTable fpose_sw[] = {{"default", 1, CA_PUBLIC, 0},
-                        {"nospace", 1, CA_PUBLIC, SAY_NOSPACE},
-                        {nullptr, 0, 0, 0}};
+static const NameTable FPOSE_SW[] = {{"default", 1, CA_PUBLIC, 0},
+                                     {"nospace", 1, CA_PUBLIC, SAY_NOSPACE},
+                                     {nullptr, 0, 0, 0}};
 
-NameTable get_sw[] = {{"quiet", 1, CA_PUBLIC, GET_QUIET}, {nullptr, 0, 0, 0}};
+static const NameTable GET_SW[] = {{"quiet", 1, CA_PUBLIC, GET_QUIET},
+                                   {nullptr, 0, 0, 0}};
 
-NameTable give_sw[] = {{"quiet", 1, CA_WIZARD, GIVE_QUIET}, {nullptr, 0, 0, 0}};
+static const NameTable GIVE_SW[] = {{"quiet", 1, CA_WIZARD, GIVE_QUIET},
+                                    {nullptr, 0, 0, 0}};
 
-NameTable goto_sw[] = {{"quiet", 1, CA_PUBLIC, MOVE_QUIET}, {nullptr, 0, 0, 0}};
+static const NameTable GOTO_SW[] = {{"quiet", 1, CA_PUBLIC, MOVE_QUIET},
+                                    {nullptr, 0, 0, 0}};
 
-NameTable halt_sw[] = {{"all", 1, CA_PUBLIC, HALT_ALL}, {nullptr, 0, 0, 0}};
+static const NameTable HALT_SW[] = {{"all", 1, CA_PUBLIC, HALT_ALL},
+                                    {nullptr, 0, 0, 0}};
 
-NameTable leave_sw[] = {{"quiet", 1, CA_PUBLIC, MOVE_QUIET},
-                        {nullptr, 0, 0, 0}};
+static const NameTable LEAVE_SW[] = {{"quiet", 1, CA_PUBLIC, MOVE_QUIET},
+                                     {nullptr, 0, 0, 0}};
 
-NameTable look_sw[] = {{"outside", 1, CA_PUBLIC, LOOK_OUTSIDE},
-                       {nullptr, 0, 0, 0}};
+static const NameTable LOOK_SW[] = {{"outside", 1, CA_PUBLIC, LOOK_OUTSIDE},
+                                    {nullptr, 0, 0, 0}};
 
-NameTable open_sw[] = {{"inventory", 1, CA_PUBLIC, OPEN_INVENTORY},
-                       {"location", 1, CA_PUBLIC, OPEN_LOCATION},
-                       {nullptr, 0, 0, 0}};
+static const NameTable OPEN_SW[] = {{"inventory", 1, CA_PUBLIC, OPEN_INVENTORY},
+                                    {"location", 1, CA_PUBLIC, OPEN_LOCATION},
+                                    {nullptr, 0, 0, 0}};
 
-NameTable pemit_sw[] = {
+static const NameTable PEMIT_SW[] = {
     {"contents", 1, CA_PUBLIC, PEMIT_CONTENTS | SW_MULTIPLE},
     {"object", 1, CA_PUBLIC, 0},
     {"silent", 1, CA_PUBLIC, 0},
     {"list", 1, CA_PUBLIC, PEMIT_LIST | SW_MULTIPLE},
     {nullptr, 0, 0, 0}};
 
-NameTable pose_sw[] = {{"default", 1, CA_PUBLIC, 0},
-                       {"nospace", 1, CA_PUBLIC, SAY_NOSPACE},
-                       {nullptr, 0, 0, 0}};
+static const NameTable POSE_SW[] = {{"default", 1, CA_PUBLIC, 0},
+                                    {"nospace", 1, CA_PUBLIC, SAY_NOSPACE},
+                                    {nullptr, 0, 0, 0}};
 
-NameTable teleport_sw[] = {{"loud", 1, CA_PUBLIC, TELEPORT_DEFAULT},
-                           {"quiet", 1, CA_PUBLIC, TELEPORT_QUIET},
-                           {nullptr, 0, 0, 0}};
+static const NameTable TELEPORT_SW[] = {
+    {"loud", 1, CA_PUBLIC, TELEPORT_DEFAULT},
+    {"quiet", 1, CA_PUBLIC, TELEPORT_QUIET},
+    {nullptr, 0, 0, 0}};
 
-NameTable wall_sw[] = {{"emit", 1, CA_WIZARD, SAY_WALLEMIT},
-                       {"no_prefix", 1, CA_WIZARD, SAY_NOTAG | SW_MULTIPLE},
-                       {"pose", 1, CA_WIZARD, SAY_WALLPOSE},
-                       {"wizard", 1, CA_WIZARD, SAY_WIZSHOUT | SW_MULTIPLE},
-                       {"admin", 1, CA_ADMIN, SAY_ADMINSHOUT},
-                       {nullptr, 0, 0, 0}};
+static const NameTable WALL_SW[] = {
+    {"emit", 1, CA_WIZARD, SAY_WALLEMIT},
+    {"no_prefix", 1, CA_WIZARD, SAY_NOTAG | SW_MULTIPLE},
+    {"pose", 1, CA_WIZARD, SAY_WALLPOSE},
+    {"wizard", 1, CA_WIZARD, SAY_WIZSHOUT | SW_MULTIPLE},
+    {"admin", 1, CA_ADMIN, SAY_ADMINSHOUT},
+    {nullptr, 0, 0, 0}};
 
 /* ---------------------------------------------------------------------------
  * Command table: Definitions for builtin commands, used to build the command
@@ -175,20 +186,20 @@ NameTable wall_sw[] = {{"emit", 1, CA_WIZARD, SAY_WALLEMIT},
  *	Key (if any)	Calling Seq			Handler
  */
 
-CMDENT command_table[] = {
+static const CommandDefinition COMMAND_TABLE[] = {
     {"@admin", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_admin}},
     {"@attribute",
-     attribute_sw,
+     ATTRIBUTE_SW,
      CA_WIZARD,
      0,
      CS_TWO_ARG,
      {.invoke = do_attribute}},
     {"@alias", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_alias}},
-    {"@boot", boot_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_boot}},
-    {"@chan", chan_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_chan}},
+    {"@boot", BOOT_SW, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_boot}},
+    {"@chan", CHAN_SW, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_chan}},
     {"@chzone", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_chzone}},
     {"@clone",
-     clone_sw,
+     CLONE_SW,
      CA_WIZARD | CA_CONTENTS,
      0,
      CS_TWO_ARG,
@@ -201,21 +212,21 @@ CMDENT command_table[] = {
      {.invoke = do_create}},
     {"@dbck", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dbck}},
     {"@destroy",
-     destroy_sw,
+     DESTROY_SW,
      CA_WIZARD,
      DEST_ONE,
      CS_ONE_ARG,
      {.invoke = do_destroy}},
-    {"@dig", dig_sw, CA_WIZARD, 0, CS_TWO_ARG | CS_ARGV, {.invoke = do_dig}},
+    {"@dig", DIG_SW, CA_WIZARD, 0, CS_TWO_ARG | CS_ARGV, {.invoke = do_dig}},
     {"@disable",
      nullptr,
      CA_WIZARD,
      GLOB_DISABLE,
      CS_ONE_ARG,
      {.invoke = do_global}},
-    {"@dump", dump_sw, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dump}},
+    {"@dump", DUMP_SW, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dump}},
     {"@emit",
-     emit_sw,
+     EMIT_SW,
      CA_WIZARD | CA_LOCATION,
      SAY_EMIT,
      CS_ONE_ARG,
@@ -228,7 +239,7 @@ CMDENT command_table[] = {
      {.invoke = do_global}},
     {"@entrances", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_entrances}},
     {"@femit",
-     femit_sw,
+     FEMIT_SW,
      CA_WIZARD | CA_LOCATION,
      PEMIT_FEMIT,
      CS_TWO_ARG,
@@ -243,7 +254,7 @@ CMDENT command_table[] = {
      CS_TWO_ARG | CS_NO_MACRO,
      {.invoke = do_force}},
     {"@fpose",
-     fpose_sw,
+     FPOSE_SW,
      CA_WIZARD | CA_LOCATION,
      PEMIT_FPOSE,
      CS_TWO_ARG,
@@ -254,11 +265,11 @@ CMDENT command_table[] = {
      PEMIT_FSAY,
      CS_TWO_ARG,
      {.invoke = do_pemit}},
-    {"@halt", halt_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_halt}},
-    {"@help", help_sw, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_help_admin}},
+    {"@halt", HALT_SW, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_halt}},
+    {"@help", HELP_SW, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_help_admin}},
     {"@last", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_last}},
     {"@link", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_link}},
-    {"@lua", lua_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_lua}},
+    {"@lua", LUA_SW, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_lua}},
     {"@list", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_list}},
     {"@log", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_log}},
     {"@name", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_name}},
@@ -274,7 +285,7 @@ CMDENT command_table[] = {
      PEMIT_OEMIT,
      CS_TWO_ARG,
      {.invoke = do_pemit}},
-    {"@open", open_sw, CA_WIZARD, 0, CS_TWO_ARG | CS_ARGV, {.invoke = do_open}},
+    {"@open", OPEN_SW, CA_WIZARD, 0, CS_TWO_ARG | CS_ARGV, {.invoke = do_open}},
     {"@pcreate",
      nullptr,
      CA_WIZARD,
@@ -282,13 +293,13 @@ CMDENT command_table[] = {
      CS_TWO_ARG,
      {.invoke = do_pcreate}},
     {"@pemit",
-     pemit_sw,
+     PEMIT_SW,
      CA_WIZARD,
      PEMIT_PEMIT,
      CS_TWO_ARG,
      {.invoke = do_pemit}},
     {"@npemit",
-     pemit_sw,
+     PEMIT_SW,
      CA_WIZARD,
      PEMIT_PEMIT,
      CS_TWO_ARG | CS_UNPARSE,
@@ -303,10 +314,10 @@ CMDENT command_table[] = {
      {.invoke = do_search}},
     {"@flag", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_flag}},
     {"@shutdown", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_shutdown}},
-    {"@state", state_sw, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_state}},
+    {"@state", STATE_SW, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_state}},
     {"@stats", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_stats}},
     {"@teleport",
-     teleport_sw,
+     TELEPORT_SW,
      CA_WIZARD,
      TELEPORT_DEFAULT,
      CS_TWO_ARG,
@@ -318,7 +329,7 @@ CMDENT command_table[] = {
      0,
      CS_TWO_ARG | CS_STRIP_AROUND | CS_NO_MACRO,
      {.invoke = do_wait}},
-    {"@wall", wall_sw, CA_WIZARD, SAY_SHOUT, CS_ONE_ARG, {.invoke = do_say}},
+    {"@wall", WALL_SW, CA_WIZARD, SAY_SHOUT, CS_ONE_ARG, {.invoke = do_say}},
     {"@session", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_session}},
     {"@telnet", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_telnet}},
     {"@who", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_who}},
@@ -329,16 +340,16 @@ CMDENT command_table[] = {
     {"color", nullptr, 0, 0, CS_ONE_ARG, {.invoke = do_color}},
     {"delcom", nullptr, CA_NO_IC, 0, CS_ONE_ARG, {.invoke = do_delcom}},
     {"drop",
-     drop_sw,
+     DROP_SW,
      CA_CONTENTS | CA_LOCATION,
      0,
      CS_ONE_ARG,
      {.invoke = do_drop}},
-    {"enter", enter_sw, CA_LOCATION, 0, CS_ONE_ARG, {.invoke = do_enter}},
-    {"@examine", examine_sw, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_examine}},
-    {"get", get_sw, CA_LOCATION, 0, CS_ONE_ARG, {.invoke = do_get}},
-    {"give", give_sw, CA_LOCATION, 0, CS_TWO_ARG, {.invoke = do_give}},
-    {"goto", goto_sw, CA_LOCATION, 0, CS_ONE_ARG, {.invoke = do_move}},
+    {"enter", ENTER_SW, CA_LOCATION, 0, CS_ONE_ARG, {.invoke = do_enter}},
+    {"@examine", EXAMINE_SW, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_examine}},
+    {"get", GET_SW, CA_LOCATION, 0, CS_ONE_ARG, {.invoke = do_get}},
+    {"give", GIVE_SW, CA_LOCATION, 0, CS_TWO_ARG, {.invoke = do_give}},
+    {"goto", GOTO_SW, CA_LOCATION, 0, CS_ONE_ARG, {.invoke = do_move}},
     {"help", nullptr, 0, 0, CS_ONE_ARG, {.invoke = do_help}},
     {"inventory",
      nullptr,
@@ -346,10 +357,10 @@ CMDENT command_table[] = {
      LOOK_INVENTORY,
      CS_NO_ARGS,
      {.invoke = do_inventory}},
-    {"leave", leave_sw, CA_LOCATION, 0, CS_NO_ARGS, {.invoke = do_leave}},
-    {"look", look_sw, CA_LOCATION, LOOK_LOOK, CS_ONE_ARG, {.invoke = do_look}},
+    {"leave", LEAVE_SW, CA_LOCATION, 0, CS_NO_ARGS, {.invoke = do_leave}},
+    {"look", LOOK_SW, CA_LOCATION, LOOK_LOOK, CS_ONE_ARG, {.invoke = do_look}},
     {"page", nullptr, 0, 0, CS_TWO_ARG, {.invoke = do_page}},
-    {"pose", pose_sw, CA_LOCATION, SAY_POSE, CS_ONE_ARG, {.invoke = do_say}},
+    {"pose", POSE_SW, CA_LOCATION, SAY_POSE, CS_ONE_ARG, {.invoke = do_say}},
     {"quit", nullptr, 0, 0, CS_NO_ARGS, {.invoke = do_quit}},
     {"say", nullptr, CA_LOCATION, SAY_SAY, CS_ONE_ARG, {.invoke = do_say}},
     {"use", nullptr, 0, 0, CS_ONE_ARG, {.invoke = do_use}},
@@ -389,13 +400,10 @@ CMDENT command_table[] = {
      {.invoke = do_say}},
     {(char *)nullptr, nullptr, 0, 0, 0, {nullptr}}};
 
-size_t command_table_entry_count(void) {
-  return (sizeof(command_table) / sizeof(command_table[0])) - 1;
-}
-
-CMDENT *command_table_entry_at(size_t index) {
-  return checked_storage_at(command_table, command_table_entry_count(),
-                            sizeof(*command_table), index);
+bool command_builtin_catalog_install(CommandRegistry *registry) {
+  return command_catalog_install(
+      registry, COMMAND_TABLE,
+      (sizeof(COMMAND_TABLE) / sizeof(COMMAND_TABLE[0])) - 1);
 }
 
 CMDENT *command_prefix_entry_at(const CommandRegistry *registry, size_t index) {
@@ -403,101 +411,6 @@ CMDENT *command_prefix_entry_at(const CommandRegistry *registry, size_t index) {
       (const void *)registry->prefix_commands,
       sizeof(registry->prefix_commands) / sizeof(*registry->prefix_commands),
       sizeof(*registry->prefix_commands), index);
-}
-
-void command_prefix_entry_set(CommandRegistry *registry, size_t index,
-                              CMDENT *entry) {
-  void **slot = (void **)checked_storage_at(
-      (void *)registry->prefix_commands,
-      sizeof(registry->prefix_commands) / sizeof(*registry->prefix_commands),
-      sizeof(*registry->prefix_commands), index);
-
-  *slot = entry;
-}
-
-void init_cmdtab(CommandRegistry *registry) {
-  hash_table_initialize(&registry->commands, 250 * HASH_FACTOR);
-
-  /*
-   * Load the builtin commands
-   */
-
-  for (size_t index = 0; index < command_table_entry_count(); index++) {
-    CMDENT *cp = command_table_entry_at(index);
-
-    hash_table_add(cp->cmdname, (int *)cp, &registry->commands);
-  }
-
-  set_prefix_cmds(registry);
-
-  registry->goto_command = hash_table_find("goto", &registry->commands);
-}
-
-void command_aliases_destroy(HashTable *commands) {
-  CMDENT **aliases = nullptr;
-  size_t alias_count = 0;
-
-  if (commands == nullptr || commands->tree == nullptr)
-    return;
-  for (char *key = hash_table_first_key(commands); key != nullptr;
-       key = hash_table_next_key(commands)) {
-    CMDENT *command = hash_table_find(key, commands);
-    bool built_in = false;
-
-    for (size_t index = 0; index < command_table_entry_count(); index++) {
-      CMDENT *candidate = command_table_entry_at(index);
-
-      if (command == candidate) {
-        built_in = true;
-        break;
-      }
-    }
-    if (built_in || strcasecmp(key, command->cmdname) != 0)
-      continue;
-    CMDENT **grown = (CMDENT **)realloc((void *)aliases,
-                                        (alias_count + 1) * sizeof(*aliases));
-    if (grown == nullptr)
-      break;
-    aliases = grown;
-    *(CMDENT **)checked_storage_at((void *)aliases, alias_count + 1,
-                                   sizeof(*aliases), alias_count) = command;
-    alias_count++;
-  }
-  for (size_t index = 0; index < alias_count; index++) {
-    CMDENT *alias = *(CMDENT *const *)checked_storage_at_const(
-        (const void *)aliases, alias_count, sizeof(*aliases), index);
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-    free((void *)alias->cmdname);
-#pragma clang diagnostic pop
-    free(alias);
-  }
-  free((void *)aliases);
-}
-
-void set_prefix_cmds(CommandRegistry *registry) {
-  /*
-   * Load the command prefix table.  Note - these commands can never *
-   * * * * * * be typed in by a user because commands are lowercased *
-   * before  * * * * the  * hash table is checked. The names are *
-   * abbreviated to * * * minimise * * name checking time.
-   */
-
-  for (size_t i = 0; i < sizeof(registry->prefix_commands) /
-                             sizeof(*registry->prefix_commands);
-       i++)
-    command_prefix_entry_set(registry, i, nullptr);
-  command_prefix_entry_set(registry, '"',
-                           hash_table_find("\"", &registry->commands));
-  command_prefix_entry_set(registry, ':',
-                           hash_table_find(":", &registry->commands));
-  command_prefix_entry_set(registry, ';',
-                           hash_table_find(";", &registry->commands));
-  command_prefix_entry_set(registry, '\\',
-                           hash_table_find("\\", &registry->commands));
-  command_prefix_entry_set(registry, '#',
-                           hash_table_find("#", &registry->commands));
 }
 
 /*

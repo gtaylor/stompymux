@@ -27,6 +27,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/name_table.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/match.h"
 #include "mux/world/move.h"
@@ -570,7 +571,7 @@ void process_command(CommandContext *context, char *command, char *arguments[],
    * Only check for exits if we may use the goto command
    */
   if (check_access(context->world->database, configuration, PLAYER,
-                   ((CMDENT *)registry->goto_command)->perms)) {
+                   registry->goto_command->perms)) {
     /*
      * Check for an exit name
      */

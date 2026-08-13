@@ -8,22 +8,26 @@
 
 #include "btech/context.h"
 #include "mux/commands/command.h"
+#include "mux/commands/command_catalog.h"
 #include "mux/objects/flags.h"
 #include "mux/server/server_config.h"
 #include "mux/support/hash_table.h"
 
-void command_registry_initialize(CommandRegistry *registry) {
+bool command_registry_initialize(CommandRegistry *registry) {
   assert(registry != nullptr);
   memset(registry, 0, sizeof(*registry));
+  if (!command_builtin_catalog_install(registry) ||
+      !command_macro_catalog_install(registry)) {
+    command_registry_destroy(registry);
+    return false;
+  }
+  return true;
 }
 
 void command_registry_destroy(CommandRegistry *registry) {
   if (registry == nullptr)
     return;
-  command_aliases_destroy(&registry->commands);
-  hash_table_destroy(&registry->commands);
-  hash_table_destroy(&registry->macros);
-  memset(registry, 0, sizeof(*registry));
+  command_catalog_release(registry);
 }
 
 void world_indexes_initialize(WorldIndexes *indexes) {

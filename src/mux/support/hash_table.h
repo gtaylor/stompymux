@@ -11,10 +11,6 @@
 #include "mux/support/red_black_tree.h"
 #include "mux/support/stringutil.h"
 
-typedef struct ConfigurationContext ConfigurationContext;
-
-int cf_ntab_access(const ConfigurationCall *call);
-
 struct HashTable {
   long long checks, scans, max_scan, hits, entries, deletes, nulls;
   RedBlackTree tree;
@@ -42,37 +38,6 @@ int hash_table_replace(char * /*str*/, void * /*hashdata*/,
 void hash_table_replace_all(void * /*old*/, void * /*new*/,
                             HashTable * /*htab*/);
 char *hash_table_info(const char * /*tab_name*/, HashTable * /*htab*/);
-typedef struct ServerConfiguration ServerConfiguration;
-
-typedef struct NameTableInterpretRequest {
-  EvaluationContext *evaluation;
-  const ServerConfiguration *configuration;
-  DbRef player;
-  NameTable *table;
-  int flags;
-  const char *prefix;
-  const char *true_text;
-  const char *false_text;
-} NameTableInterpretRequest;
-
-int name_table_search(GameDatabase * /*database*/,
-                      const ServerConfiguration * /*configuration*/,
-                      DbRef /*player*/, const NameTable * /*ntab*/,
-                      char * /*flagname*/);
-NameTable *name_table_find_entry(GameDatabase * /*database*/,
-                                 const ServerConfiguration * /*configuration*/,
-                                 DbRef /*player*/, NameTable * /*ntab*/,
-                                 char * /*flagname*/);
-void name_table_display(EvaluationContext * /*evaluation*/,
-                        const ServerConfiguration * /*configuration*/,
-                        DbRef /*player*/, NameTable * /*ntab*/,
-                        const char * /*prefix*/, int /*list_if_none*/);
-void name_table_interpret(const NameTableInterpretRequest *request);
-void name_table_list_set(EvaluationContext * /*evaluation*/,
-                         const ServerConfiguration * /*configuration*/,
-                         DbRef /*player*/, NameTable * /*ntab*/,
-                         int /*flagword*/, const char * /*prefix*/,
-                         int /*list_if_none*/);
 void *hash_table_next_entry(HashTable *htab);
 void *hash_table_first_entry(HashTable *htab);
 char *hash_table_first_key(HashTable *htab);

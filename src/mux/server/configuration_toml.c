@@ -34,13 +34,13 @@ typedef enum {
 
 typedef struct {
   const char *toml_path; /* dotted path from the document root */
-  const char *pname;     /* conftable directive name, passed to set_fn */
+  const char *pname;     /* Configuration directive name passed to set_fn. */
   ConfigTomlKind kind;
 } ConfigTomlMapping;
 
 /*
  * ---------------------------------------------------------------------------
- * config_toml_map: one row per directive in configuration.c's conftable[],
+ * config_toml_map: one row per built-in configuration directive,
  * minus "include" (which has no TOML equivalent and is handled by
  * configuration_toml_load() instead). Container tables such as [battletech]
  * or [access] need no row: the walker recurses into any unmapped table.

@@ -2,6 +2,7 @@
 #include "mux/network/mux_event.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/server/configuration_context.h"
+#include "mux/server/configuration_registry.h"
 #include "mux/server/maintenance.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /* mux_server.c - Construction and teardown for the MUX composition root. */
@@ -63,7 +64,10 @@ bool mux_server_create(MuxServer *server) {
                             &server->clock, &server->channels);
   mux_event_scheduler_initialize(&server->events);
   macro_registry_initialize(&server->macros, &server->channels);
-  command_registry_initialize(&server->command_registry);
+  if (!command_registry_initialize(&server->command_registry))
+    goto fail;
+  if (!configuration_registry_initialize(&server->configuration_registry))
+    goto fail;
   world_indexes_initialize(&server->world_indexes);
   access_control_store_initialize(&server->access_control);
   server_log_initialize(&server->log, &server->database, server->configuration);
@@ -117,7 +121,7 @@ bool mux_server_create(MuxServer *server) {
   configuration_context_initialize(
       &server->configuration_context, server->configuration, &server->database,
       &server->log, &server->background_command, &server->command_registry,
-      &server->world_indexes, &server->world);
+      &server->configuration_registry, &server->world_indexes, &server->world);
   server_control_initialize(
       &server->server_control, server->configuration, &server->database,
       &server->log, server->descriptors, server->players, &server->persistence,
@@ -241,6 +245,7 @@ void mux_server_destroy(MuxServer *server) {
   game_database_destroy(&server->database);
   world_indexes_destroy(&server->world_indexes);
   command_registry_destroy(&server->command_registry);
+  configuration_registry_destroy(&server->configuration_registry);
   access_control_store_destroy(&server->access_control);
   styled_text_palette_destroy(server->styled_text_palette);
   server->styled_text_palette = nullptr;

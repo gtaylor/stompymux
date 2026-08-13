@@ -51,7 +51,6 @@ char *macro_string_item(const MacroSet *set, size_t index);
 char **macro_string_slot(MacroSet *set, size_t index);
 char *macro_alias_at(const MacroSet *set, size_t index);
 
-void init_mactab(CommandRegistry *commands);
 typedef struct MacroSetRequest {
   MacroRegistry *registry;
   DbRef player;

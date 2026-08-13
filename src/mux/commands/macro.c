@@ -1,4 +1,5 @@
 #include "mux/commands/macro.h"
+#include "mux/commands/command_catalog.h"
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/communication/channel_registry.h"
@@ -47,33 +48,26 @@ static bool is_valid_macro_index(const MacroRegistry *registry, int index) {
 static void macro_notify(MatchContext *m, DbRef p, const char *text) {
   notify_checked(m->evaluation, p, p, text, MSG_ME_ALL | MSG_F_DOWN);
 }
-MACENT macro_table[] = {{"add", do_add_macro},       {"clear", do_clear_macro},
-                        {"chmod", do_chmod_macro},   {"chown", do_chown_macro},
-                        {"create", do_create_macro}, {"def", do_def_macro},
-                        {"del", do_del_macro},       {"name", do_desc_macro},
-                        {"chslot", do_edit_macro},   {"ex", do_ex_macro},
-                        {"gex", do_gex_macro},       {"glist", do_list_macro},
-                        {"list", do_status_macro},   {"undef", do_undef_macro},
-                        {(char *)nullptr, nullptr}};
+static const MACENT MACRO_TABLE[] = {
+    {"add", do_add_macro},       {"clear", do_clear_macro},
+    {"chmod", do_chmod_macro},   {"chown", do_chown_macro},
+    {"create", do_create_macro}, {"def", do_def_macro},
+    {"del", do_del_macro},       {"name", do_desc_macro},
+    {"chslot", do_edit_macro},   {"ex", do_ex_macro},
+    {"gex", do_gex_macro},       {"glist", do_list_macro},
+    {"list", do_status_macro},   {"undef", do_undef_macro},
+    {(char *)nullptr, nullptr}};
 static size_t macro_command_count(void) {
-  return (sizeof(macro_table) / sizeof(macro_table[0])) - 1;
+  return (sizeof(MACRO_TABLE) / sizeof(MACRO_TABLE[0])) - 1;
 }
-static MACENT *macro_command_at(size_t index) {
-  return checked_storage_at(macro_table, macro_command_count(),
-                            sizeof(*macro_table), index);
-}
-void init_mactab(CommandRegistry *commands) {
-  hash_table_initialize(&commands->macros, 5 * HASH_FACTOR);
-  for (size_t index = 0; index < macro_command_count(); index++) {
-    MACENT *mp = macro_command_at(index);
-    hash_table_add(mp->cmdname, (int *)mp, &commands->macros);
-  }
+bool command_macro_catalog_install(CommandRegistry *registry) {
+  return macro_catalog_install(registry, MACRO_TABLE, macro_command_count());
 }
 int do_macro(MatchContext *match, CommandRegistry *commands,
              MacroRegistry *registry, DbRef player, char *in, char **out) {
   char *s;
   char *cmd;
-  MACENT *mp;
+  const MACENT *mp;
   char *old;
   cmd = checked_mutable_string_suffix(in, 1);
   if (!is_player(match->evaluation->world->database, player)) {
@@ -94,7 +88,7 @@ int do_macro(MatchContext *match, CommandRegistry *commands,
     s = checked_storage_at(cmd, COMMAND_LENGTH + 1, sizeof(char),
                            command_end + 1);
   }
-  mp = (MACENT *)hash_table_find(cmd, &commands->macros);
+  mp = hash_table_find_const(cmd, &commands->macros);
   if (mp != nullptr) {
     (mp->handler)(match, registry, player, s);
     free_lbuf(old);

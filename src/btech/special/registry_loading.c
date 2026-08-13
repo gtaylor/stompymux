@@ -31,7 +31,6 @@
 #include "mux/server/server_config.h"
 #include "mux/support/doubly_linked_list.h"
 #include "mux/support/formatting.h"
-#include "mux/support/hash_table.h"
 #include "registry_api.h"
 #include "special_object.h"
 #include "weapon_settings.h"

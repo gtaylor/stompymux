@@ -4,6 +4,40 @@ set(AUTOPILOT_TEST_INCLUDE_DIRECTORIES
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
 
+add_executable(command_registry_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/server/command_registry.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/commands/command_catalog.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/hash_table.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/red_black_tree.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/red_black_tree_mutation.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_link_libraries(command_registry_test PRIVATE btmux_options)
+target_compile_options(command_registry_test PRIVATE -UNDEBUG)
+target_include_directories(command_registry_test PRIVATE
+  "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME command_registry COMMAND command_registry_test)
+set_tests_properties(command_registry PROPERTIES LABELS "unit;command_registry")
+
+add_executable(configuration_registry_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/server/configuration_registry.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/server/configuration_catalog.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_link_libraries(configuration_registry_test PRIVATE btmux_options)
+target_compile_options(configuration_registry_test PRIVATE -UNDEBUG)
+target_include_directories(configuration_registry_test PRIVATE
+  "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME configuration_registry COMMAND configuration_registry_test)
+set_tests_properties(configuration_registry PROPERTIES
+  LABELS "unit;configuration_registry")
+
+add_test(NAME catalog_startup
+  COMMAND bash
+    "${CMAKE_SOURCE_DIR}/tests/integration/catalog_startup.sh"
+    $<TARGET_FILE:stompymux>)
+set_tests_properties(catalog_startup PROPERTIES
+  LABELS "integration;catalog_registry")
+
 add_executable(autopilot_pathfinding_policy_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/autopilot/autopilot_pathfinding_policy.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/autopilot/autopilot_path_policy.c

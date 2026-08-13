@@ -10,12 +10,14 @@
 #include "btech/context.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_handlers.h"
+#include "mux/commands/command_internal.h"
 #include "mux/commands/macro.h"
 #include "mux/network/connection_runtime.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/configuration_internal.h"
 #include "mux/server/configuration_interpreter.h"
+#include "mux/server/configuration_registry.h"
 #include "mux/server/configuration_toml.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"
@@ -24,7 +26,7 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/hash_table.h"
+#include "mux/support/name_table.h"
 /* default (runtime-resettable) cache parameters */
 
 constexpr int CACHE_DEPTH = 10;
@@ -48,7 +50,7 @@ static void *configuration_resolve_location(ConfigurationContext *context,
   uintptr_t location = entry->location;
 
   if (location == CONFIGURATION_LIST_NAMES_LOCATION)
-    return list_names;
+    return configuration_registry_list_options(context->configuration_registry);
 
   if (location > 0 && location <= sizeof(ServerConfiguration))
     return checked_storage_region(context->configuration,
@@ -391,8 +393,11 @@ int configuration_set(ConfigurationContext *context, char *cp, char *ap,
    * call the handler to parse the argument.
    */
 
-  for (size_t index = 0; index < configuration_entry_count(); index++) {
-    CONF *tp = configuration_entry_at(index);
+  for (size_t index = 0; index < configuration_registry_entry_count(
+                                     context->configuration_registry);
+       index++) {
+    CONF *tp =
+        configuration_registry_entry_at(context->configuration_registry, index);
     if (!strcmp(tp->pname, cp)) {
       if (!context->configuration->is_initializing &&
           !check_access(context->database, context->configuration, player,
@@ -499,17 +504,20 @@ int configuration_read(ConfigurationContext *context, char *fn) {
  * ---------------------------------------------------------------------------
  * * configuration_list_access: List access to config directives.
  */
-void configuration_list_access(EvaluationContext *evaluation, DbRef player) {
+void configuration_list_access(EvaluationContext *evaluation,
+                               const ConfigurationRegistry *registry,
+                               DbRef player) {
   char buff[MBUF_SIZE];
 
-  for (size_t index = 0; index < configuration_entry_count(); index++) {
-    CONF *tp = configuration_entry_at(index);
+  for (size_t index = 0; index < configuration_registry_entry_count(registry);
+       index++) {
+    const CONF *tp = configuration_registry_entry_at_const(registry, index);
     if (is_god(evaluation->world->database, player) ||
         check_access(evaluation->world->database,
                      evaluation->world->configuration, player, tp->flags)) {
       (void)snprintf(buff, MBUF_SIZE, "%s:", tp->pname);
       name_table_list_set(evaluation, evaluation->world->configuration, player,
-                          access_nametab, tp->flags, buff, 1);
+                          ACCESS_NAMETAB, tp->flags, buff, 1);
     }
   }
 }

@@ -2,21 +2,36 @@
 
 #pragma once
 
+#include <stdbool.h>
+#include <stddef.h>
+
 #include "mux/support/hash_table.h"
 
 struct WorldIndexes;       // IWYU pragma: keep
 struct AccessControlStore; // IWYU pragma: keep
 struct CommandRegistry;    // IWYU pragma: keep
+struct Cmdentry;           // IWYU pragma: keep
+struct SwitchClone;        // IWYU pragma: keep
 
 typedef struct SiteData SiteData;
 typedef struct BadnameStruc BADNAME;
 
 typedef struct CommandRegistry CommandRegistry;
+typedef struct Cmdentry CMDENT;
+typedef struct SwitchClone SwitchClone;
 struct CommandRegistry {
   HashTable commands;
-  void *prefix_commands[256];
-  void *goto_command;
+  CMDENT *prefix_commands[256];
+  CMDENT *goto_command;
   HashTable macros;
+  CMDENT *builtins;
+  size_t builtin_count;
+  SwitchClone *switch_clones;
+  size_t switch_clone_count;
+  size_t switch_clone_capacity;
+  CMDENT **switch_aliases;
+  size_t switch_alias_count;
+  size_t switch_alias_capacity;
 };
 
 typedef struct WorldIndexes WorldIndexes;
@@ -33,7 +48,7 @@ struct AccessControlStore {
   BADNAME *bad_names;
 };
 
-void command_registry_initialize(CommandRegistry *registry);
+bool command_registry_initialize(CommandRegistry *registry);
 void command_registry_destroy(CommandRegistry *registry);
 void world_indexes_initialize(WorldIndexes *indexes);
 void world_indexes_destroy(WorldIndexes *indexes);

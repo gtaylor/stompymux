@@ -4,6 +4,7 @@
 
 #include "mux/objects/db.h" // IWYU pragma: keep
 #include "mux/server/platform.h"
+#include "mux/support/name_table.h"
 
 struct ServerLog; // IWYU pragma: keep
 
@@ -15,6 +16,8 @@ typedef struct LogCache LogCache;
 typedef struct EvaluationContext EvaluationContext;
 typedef struct GameDatabase GameDatabase;
 typedef struct ServerConfiguration ServerConfiguration;
+extern const NameTable LOGDATA_NAMETAB[];
+extern const NameTable LOGOPTIONS_NAMETAB[];
 
 typedef struct ServerLog ServerLog;
 struct ServerLog {

@@ -12,6 +12,7 @@ set(STYLED_TEXT_SOURCES
 
 target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/commands/command_table.c
+  ${MUX_MODULE_DIR}/commands/command_catalog.c
   ${MUX_MODULE_DIR}/commands/command_dispatch.c
   ${MUX_MODULE_DIR}/commands/command_configuration.c
   ${MUX_MODULE_DIR}/commands/command_list.c
@@ -84,6 +85,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/persistence/gamedb_sqlite_store.c
   ${MUX_MODULE_DIR}/persistence/persistence_registry.c
   ${MUX_MODULE_DIR}/server/configuration.c
+  ${MUX_MODULE_DIR}/server/configuration_catalog.c
   ${MUX_MODULE_DIR}/server/configuration_values.c
   ${MUX_MODULE_DIR}/server/configuration_registry.c
   ${MUX_MODULE_DIR}/server/configuration_toml.c

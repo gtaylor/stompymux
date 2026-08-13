@@ -15,6 +15,7 @@
 #include "mux/objects/db.h" // IWYU pragma: keep
 #include "mux/persistence/gamedb.h"
 #include "mux/server/configuration_context.h"
+#include "mux/server/configuration_registry.h"
 #include "mux/server/log.h"
 #include "mux/server/maintenance.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
@@ -60,6 +61,7 @@ struct MuxServer {
   PersistenceContext persistence;
   MacroRegistry macros;
   CommandRegistry command_registry;
+  ConfigurationRegistry configuration_registry;
   WorldIndexes world_indexes;
   AccessControlStore access_control;
   WorldContext world;

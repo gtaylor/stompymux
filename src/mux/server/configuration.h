@@ -9,6 +9,7 @@
 #include "mux/server/server_config.h"
 
 typedef struct ConfigurationContext ConfigurationContext;
+typedef struct ConfigurationRegistry ConfigurationRegistry;
 typedef struct EvaluationContext EvaluationContext;
 typedef struct ServerConfiguration ServerConfiguration;
 
@@ -23,7 +24,9 @@ void configuration_log_not_found(ConfigurationContext *context, DbRef player,
 void configuration_log_syntax(ConfigurationContext *context, DbRef player,
                               const char *cmd, const char *template,
                               const char *argument);
-void configuration_list_access(EvaluationContext *evaluation, DbRef player);
+void configuration_list_access(EvaluationContext *evaluation,
+                               const ConfigurationRegistry *registry,
+                               DbRef player);
 int configuration_read(ConfigurationContext *context, char *fn);
 int configuration_set(ConfigurationContext *context, char *cp, char *ap,
                       DbRef player);

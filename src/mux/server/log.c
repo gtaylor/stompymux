@@ -23,28 +23,29 @@
 #include "mux/support/name_table.h"
 #include "mux/support/styled_text/markup.h"
 
-NameTable logdata_nametab[] = {{"flags", 1, 0, LOGOPT_FLAGS},
-                               {"location", 1, 0, LOGOPT_LOC},
-                               {"timestamp", 1, 0, LOGOPT_TIMESTAMP},
-                               {nullptr, 0, 0, 0}};
+const NameTable LOGDATA_NAMETAB[] = {{"flags", 1, 0, LOGOPT_FLAGS},
+                                     {"location", 1, 0, LOGOPT_LOC},
+                                     {"timestamp", 1, 0, LOGOPT_TIMESTAMP},
+                                     {nullptr, 0, 0, 0}};
 
-NameTable logoptions_nametab[] = {{"accounting", 2, 0, LOG_ACCOUNTING},
-                                  {"all_commands", 2, 0, LOG_ALLCOMMANDS},
-                                  {"suspect_commands", 2, 0, LOG_SUSPECTCMDS},
-                                  {"bad_commands", 2, 0, LOG_BADCOMMANDS},
-                                  {"buffer_alloc", 3, 0, LOG_ALLOCATE},
-                                  {"bugs", 3, 0, LOG_BUGS},
-                                  {"checkpoints", 2, 0, LOG_DBSAVES},
-                                  {"config_changes", 2, 0, LOG_CONFIGMODS},
-                                  {"create", 2, 0, LOG_PCREATES},
-                                  {"logins", 1, 0, LOG_LOGIN},
-                                  {"network", 1, 0, LOG_NET},
-                                  {"problems", 1, 0, LOG_PROBLEMS},
-                                  {"security", 2, 0, LOG_SECURITY},
-                                  {"shouts", 2, 0, LOG_SHOUTS},
-                                  {"startup", 2, 0, LOG_STARTUP},
-                                  {"wizard", 1, 0, LOG_WIZARD},
-                                  {nullptr, 0, 0, 0}};
+const NameTable LOGOPTIONS_NAMETAB[] = {
+    {"accounting", 2, 0, LOG_ACCOUNTING},
+    {"all_commands", 2, 0, LOG_ALLCOMMANDS},
+    {"suspect_commands", 2, 0, LOG_SUSPECTCMDS},
+    {"bad_commands", 2, 0, LOG_BADCOMMANDS},
+    {"buffer_alloc", 3, 0, LOG_ALLOCATE},
+    {"bugs", 3, 0, LOG_BUGS},
+    {"checkpoints", 2, 0, LOG_DBSAVES},
+    {"config_changes", 2, 0, LOG_CONFIGMODS},
+    {"create", 2, 0, LOG_PCREATES},
+    {"logins", 1, 0, LOG_LOGIN},
+    {"network", 1, 0, LOG_NET},
+    {"problems", 1, 0, LOG_PROBLEMS},
+    {"security", 2, 0, LOG_SECURITY},
+    {"shouts", 2, 0, LOG_SHOUTS},
+    {"startup", 2, 0, LOG_STARTUP},
+    {"wizard", 1, 0, LOG_WIZARD},
+    {nullptr, 0, 0, 0}};
 
 void server_log_initialize(ServerLog *log, GameDatabase *database,
                            const ServerConfiguration *configuration) {

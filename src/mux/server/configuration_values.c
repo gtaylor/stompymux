@@ -11,6 +11,7 @@
 #include "mux/server/configuration.h"
 #include "mux/server/configuration_internal.h"
 #include "mux/server/configuration_interpreter.h"
+#include "mux/server/configuration_registry.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
@@ -105,6 +106,36 @@ int cf_bootstrap_object(const ConfigurationCall *call) {
   return 0;
 }
 
+int cf_ntab_access(const ConfigurationCall *call) {
+  char *name = call->text;
+  size_t length = strlen(name);
+  size_t offset = 0;
+
+  while (offset < length &&
+         !(isspace)(*(const unsigned char *)checked_storage_at_const(
+             name, length, sizeof(char), offset)))
+    offset++;
+  if (offset < length) {
+    *(char *)checked_storage_at(name, length + 1, sizeof(char), offset) = '\0';
+    offset++;
+  }
+  while (offset < length &&
+         (isspace)(*(const unsigned char *)checked_storage_at_const(
+             name, length, sizeof(char), offset)))
+    offset++;
+  char *access = checked_storage_at(name, length + 1, sizeof(char), offset);
+  NameTable *entry = name_table_find_match(call->value, name);
+  if (entry != nullptr) {
+    ConfigurationCall modify_call = *call;
+    modify_call.value = &entry->perm;
+    modify_call.text = access;
+    return configuration_modify_bits(&modify_call);
+  }
+  configuration_log_not_found(call->context, call->player, call->command,
+                              "Entry", name);
+  return -1;
+}
+
 int cf_int(const ConfigurationCall *call) {
   int *vp = call->value;
   /*
@@ -138,7 +169,7 @@ int cf_techtime_multiplier(const ConfigurationCall *call) {
  * cf_bool: Set boolean parameter.
  */
 
-NameTable bool_names[] = {
+static const NameTable BOOL_NAMES[] = {
     {"true", 1, 0, 1}, {"false", 1, 0, 0}, {"yes", 1, 0, 1},  {"no", 1, 0, 0},
     {"1", 1, 0, 1},    {"0", 1, 0, 0},     {nullptr, 0, 0, 0}};
 
@@ -147,7 +178,7 @@ NameTable bool_names[] = {
 int cf_bool(const ConfigurationCall *call) {
   int *vp = call->value;
   *vp = name_table_search(call->context->database, call->context->configuration,
-                          GOD, bool_names, call->text);
+                          GOD, BOOL_NAMES, call->text);
   if (*vp < 0)
     *vp = (long)0;
   return 0;
@@ -165,7 +196,7 @@ int cf_bool_bit(const ConfigurationCall *call) {
 
   value =
       name_table_search(call->context->database, call->context->configuration,
-                        GOD, bool_names, call->text);
+                        GOD, BOOL_NAMES, call->text);
   if (value > 0)
     *vp |= (int)call->extra;
   else
@@ -274,7 +305,7 @@ int configuration_modify_bits(const ConfigurationCall *call) {
      */
 
     f = name_table_search(context->database, context->configuration, GOD,
-                          (NameTable *)call->extra, sp);
+                          (const NameTable *)call->extra, sp);
     if (f > 0) {
       if (negate)
         *vp &= ~f;
@@ -538,8 +569,11 @@ int cf_cf_access(const ConfigurationCall *call) {
   }
   ap = checked_storage_at(str, length + 1, sizeof(char), offset);
 
-  for (size_t index = 0; index < configuration_entry_count(); index++) {
-    CONF *tp = configuration_entry_at(index);
+  for (size_t index = 0; index < configuration_registry_entry_count(
+                                     context->configuration_registry);
+       index++) {
+    CONF *tp =
+        configuration_registry_entry_at(context->configuration_registry, index);
     if (!strcmp(tp->pname, str)) {
       ConfigurationCall modify_call = *call;
       modify_call.value = &tp->flags;
@@ -551,7 +585,3 @@ int cf_cf_access(const ConfigurationCall *call) {
                               "Config directive", str);
   return -1;
 }
-
-/* ---------------------------------------------------------------------------
- * conftable: Table for parsing the configuration file.
- */

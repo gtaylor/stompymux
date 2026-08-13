@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_catalog.h"
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_internal.h"
@@ -22,14 +23,15 @@
 #include "mux/objects/flags.h"
 #include "mux/objects/powers.h"
 #include "mux/server/configuration.h"
+#include "mux/server/configuration_registry.h"
 #include "mux/server/game.h"
+#include "mux/server/log.h"
 #include "mux/server/maintenance.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
-#include "mux/support/hash_table.h"
 #include "mux/support/name_table.h"
 #include "mux/world/player.h"
 #include "mux/world/world_context.h"
@@ -165,8 +167,11 @@ static void list_cmdtable(EvaluationContext *evaluation,
 
   memcpy(buf, PREFIX, sizeof(PREFIX) - 1);
   used = sizeof(PREFIX) - 1;
-  for (size_t index = 0; index < command_table_entry_count(); index++) {
-    CMDENT *cmdp = command_table_entry_at(index);
+  for (size_t index = 0;
+       index < command_registry_builtin_count(runtime->command_registry);
+       index++) {
+    const CMDENT *cmdp =
+        command_registry_builtin_at_const(runtime->command_registry, index);
 
     if (check_access(evaluation->world->database, configuration, player,
                      cmdp->perms)) {
@@ -430,40 +435,6 @@ static void list_process(EvaluationContext *evaluation,
  * * do_list: List information stored in internal structures.
  */
 
-constexpr int LIST_COMMANDS = 2;
-constexpr int LIST_FLAGS = 4;
-constexpr int LIST_GLOBALS = 6;
-constexpr int LIST_LOGGING = 8;
-constexpr int LIST_DF_FLAGS = 9;
-constexpr int LIST_PERMS = 10;
-constexpr int LIST_OPTIONS = 12;
-constexpr int LIST_CONF_PERMS = 15;
-constexpr int LIST_SITEINFO = 16;
-constexpr int LIST_POWERS = 17;
-constexpr int LIST_SWITCHES = 18;
-constexpr int LIST_PROCESS = 21;
-constexpr int LIST_BADNAMES = 22;
-constexpr int LIST_LOGFILES = 23;
-
-NameTable list_names[] = {{"bad_names", 2, CA_WIZARD, LIST_BADNAMES},
-                          {"commands", 3, CA_PUBLIC, LIST_COMMANDS},
-                          {"config_permissions", 3, CA_GOD, LIST_CONF_PERMS},
-                          {"default_flags", 1, CA_PUBLIC, LIST_DF_FLAGS},
-                          {"flags", 2, CA_PUBLIC, LIST_FLAGS},
-                          {"globals", 1, CA_WIZARD, LIST_GLOBALS},
-                          {"logging", 4, CA_GOD, LIST_LOGGING},
-                          {"options", 1, CA_PUBLIC, LIST_OPTIONS},
-                          {"permissions", 2, CA_WIZARD, LIST_PERMS},
-                          {"powers", 2, CA_WIZARD, LIST_POWERS},
-                          {"process", 2, CA_WIZARD, LIST_PROCESS},
-                          {"site_information", 2, CA_WIZARD, LIST_SITEINFO},
-                          {"switches", 2, CA_PUBLIC, LIST_SWITCHES},
-                          {"logfiles", 4, CA_WIZARD, LIST_LOGFILES},
-                          {nullptr, 0, 0, 0}};
-
-extern NameTable logoptions_nametab[];
-extern NameTable logdata_nametab[];
-
 void do_list(CommandInvocation *invocation) {
   CommandRuntime *runtime = invocation->context->runtime;
   ServerConfiguration *configuration = runtime->world->configuration;
@@ -471,15 +442,19 @@ void do_list(CommandInvocation *invocation) {
   char *arg = invocation->first;
   int flagvalue;
 
+  const ConfigurationRegistry *configuration_registry =
+      runtime->configuration_context->configuration_registry;
+  const NameTable *list_option_table =
+      configuration_registry_list_options_const(configuration_registry);
   flagvalue = name_table_search(runtime->world->database, configuration, PLAYER,
-                                list_names, arg);
+                                list_option_table, arg);
   switch (flagvalue) {
   case LIST_COMMANDS:
     list_cmdtable(&invocation->context->evaluation, runtime, PLAYER);
     break;
   case LIST_SWITCHES:
     command_list_switches(&invocation->context->evaluation, configuration,
-                          PLAYER);
+                          runtime->command_registry, PLAYER);
     break;
   case LIST_OPTIONS:
     list_options(&invocation->context->evaluation, runtime, PLAYER);
@@ -503,7 +478,8 @@ void do_list(CommandInvocation *invocation) {
                         runtime->command_registry, PLAYER);
     break;
   case LIST_CONF_PERMS:
-    configuration_list_access(&invocation->context->evaluation, PLAYER);
+    configuration_list_access(&invocation->context->evaluation,
+                              configuration_registry, PLAYER);
     break;
   case LIST_POWERS:
     display_powertab(&invocation->context->evaluation, PLAYER);
@@ -513,7 +489,7 @@ void do_list(CommandInvocation *invocation) {
         .evaluation = &invocation->context->evaluation,
         .configuration = configuration,
         .player = PLAYER,
-        .table = logoptions_nametab,
+        .table = LOGOPTIONS_NAMETAB,
         .flags = configuration->log_options,
         .prefix = "Events Logged:",
         .true_text = "enabled",
@@ -523,7 +499,7 @@ void do_list(CommandInvocation *invocation) {
         .evaluation = &invocation->context->evaluation,
         .configuration = configuration,
         .player = PLAYER,
-        .table = logdata_nametab,
+        .table = LOGDATA_NAMETAB,
         .flags = configuration->log_info,
         .prefix = "Information Logged:",
         .true_text = "yes",
@@ -543,6 +519,6 @@ void do_list(CommandInvocation *invocation) {
     break;
   default:
     name_table_display(&invocation->context->evaluation, configuration, PLAYER,
-                       list_names, "Unknown option.  Use one of:", 1);
+                       list_option_table, "Unknown option.  Use one of:", 1);
   }
 }
