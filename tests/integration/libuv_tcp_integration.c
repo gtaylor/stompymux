@@ -37,6 +37,14 @@ constexpr unsigned char TELNET_ENVIRON_VAR = 0;
 constexpr unsigned char TELNET_ENVIRON_VALUE = 1;
 constexpr unsigned char TELNET_ENVIRON_ESC = 2;
 constexpr unsigned char TELNET_ENVIRON_USERVAR = 3;
+constexpr unsigned char TELNET_CHARSET = 42;
+constexpr int TEST_IO_TIMEOUT_MS = 10000;
+
+typedef struct TelnetTestClient {
+  int socket_fd;
+  unsigned char received[16384];
+  size_t received_size;
+} TelnetTestClient;
 
 static void *buffer_suffix(void *buffer, size_t capacity, size_t offset) {
   return checked_storage_region(buffer, capacity, offset, capacity - offset);
@@ -302,69 +310,133 @@ static int send_bytes(int socket_fd, const unsigned char *bytes, size_t size) {
     ssize_t result = write(socket_fd, constant_buffer_suffix(bytes, size, sent),
                            size - sent);
 
-    if (result <= 0)
+    if (result < 0 && errno == EINTR)
+      continue;
+    if (result <= 0) {
+      fprintf(stderr, "socket write failed: %s\n",
+              result < 0 ? strerror(errno) : "connection closed");
       return -1;
+    }
     sent += (size_t)result;
   }
   return 0;
 }
 
-static int expect_ttype_request(int socket_fd) {
+static int64_t monotonic_milliseconds(void) {
+  struct timespec now;
+
+  if (clock_gettime(CLOCK_MONOTONIC, &now) < 0)
+    return -1;
+  return ((int64_t)now.tv_sec * 1000) + (now.tv_nsec / 1000000);
+}
+
+static void report_received_bytes(const TelnetTestClient *client) {
+  const size_t DISPLAY_SIZE =
+      client->received_size < 128 ? client->received_size : 128;
+
+  fprintf(stderr, "received %zu byte(s):", client->received_size);
+  for (size_t index = 0; index < DISPLAY_SIZE; index++) {
+    const unsigned char *byte = checked_storage_at_const(
+        client->received, sizeof(client->received), sizeof(*byte), index);
+    fprintf(stderr, " %02x", *byte);
+  }
+  if (DISPLAY_SIZE < client->received_size)
+    fprintf(stderr, " ...");
+  fputc('\n', stderr);
+}
+
+static int wait_for_patterns(TelnetTestClient *client, const char *phase,
+                             const void *first, size_t first_size,
+                             const void *second, size_t second_size) {
+  const int64_t START = monotonic_milliseconds();
+  const int64_t DEADLINE = START < 0 ? -1 : START + TEST_IO_TIMEOUT_MS;
+
+  while (DEADLINE >= 0) {
+    const bool FOUND_FIRST = memmem(client->received, client->received_size,
+                                    first, first_size) != nullptr;
+    const bool FOUND_SECOND =
+        second == nullptr || memmem(client->received, client->received_size,
+                                    second, second_size) != nullptr;
+    if (FOUND_FIRST && FOUND_SECOND) {
+      client->received_size = 0;
+      return 0;
+    }
+
+    const int64_t NOW = monotonic_milliseconds();
+    if (NOW < 0 || NOW >= DEADLINE)
+      break;
+    struct pollfd readable = {.fd = client->socket_fd, .events = POLLIN};
+    int poll_result = poll(&readable, 1, (int)(DEADLINE - NOW));
+    if (poll_result < 0 && errno == EINTR)
+      continue;
+    if (poll_result < 0) {
+      fprintf(stderr, "%s poll failed: %s\n", phase, strerror(errno));
+      report_received_bytes(client);
+      return -1;
+    }
+    if (poll_result == 0)
+      break;
+    if (readable.revents & (POLLERR | POLLNVAL)) {
+      fprintf(stderr, "%s poll failed with revents 0x%x\n", phase,
+              readable.revents);
+      report_received_bytes(client);
+      return -1;
+    }
+    if (client->received_size == sizeof(client->received)) {
+      fprintf(stderr, "%s receive buffer exhausted\n", phase);
+      report_received_bytes(client);
+      return -1;
+    }
+    ssize_t size =
+        read(client->socket_fd,
+             buffer_suffix(client->received, sizeof(client->received),
+                           client->received_size),
+             sizeof(client->received) - client->received_size);
+    if (size < 0 && errno == EINTR)
+      continue;
+    if (size <= 0) {
+      fprintf(stderr, "%s read failed: %s\n", phase,
+              size < 0 ? strerror(errno) : "connection closed");
+      report_received_bytes(client);
+      return -1;
+    }
+    client->received_size += (size_t)size;
+  }
+
+  fprintf(stderr, "%s timed out after %d ms\n", phase, TEST_IO_TIMEOUT_MS);
+  report_received_bytes(client);
+  return -1;
+}
+
+static int wait_for_pattern(TelnetTestClient *client, const char *phase,
+                            const void *pattern, size_t pattern_size) {
+  return wait_for_patterns(client, phase, pattern, pattern_size, nullptr, 0);
+}
+
+static int expect_ttype_request(TelnetTestClient *client) {
   static const unsigned char request[] = {
       TELNET_IAC,        TELNET_SB,  TELNET_TTYPE,
       TELNET_TTYPE_SEND, TELNET_IAC, TELNET_SE,
   };
-  unsigned char received[1024];
-  struct pollfd readable = {.fd = socket_fd, .events = POLLIN};
-
-  for (int attempt = 0; attempt < 10; attempt++) {
-    ssize_t size;
-
-    if (poll(&readable, 1, 500) != 1)
-      continue;
-    size = read(socket_fd, received, sizeof(received));
-    if (size <= 0)
-      return -1;
-    if (memmem(received, (size_t)size, request, sizeof(request)) != nullptr)
-      return 0;
-  }
-  return -1;
+  return wait_for_pattern(client, "TTYPE request", request, sizeof(request));
 }
 
-static int negotiate_utf8(int socket_fd) {
-  static const unsigned char enable[] = {TELNET_IAC, TELNET_DO, 42};
+static int negotiate_utf8(TelnetTestClient *client) {
+  static const unsigned char enable[] = {TELNET_IAC, TELNET_DO, TELNET_CHARSET};
   static const unsigned char request[] = {TELNET_IAC, TELNET_SB, 42,  1,   ';',
                                           'U',        'T',       'F', '-', '8',
                                           TELNET_IAC, TELNET_SE};
   static const unsigned char accepted[] = {
       TELNET_IAC, TELNET_SB, 42,  2,          'U',      'T',
       'F',        '-',       '8', TELNET_IAC, TELNET_SE};
-  unsigned char received[4096];
-  size_t received_size = 0;
-  struct pollfd readable = {.fd = socket_fd, .events = POLLIN};
-
-  if (send_bytes(socket_fd, enable, sizeof(enable)) < 0)
+  if (send_bytes(client->socket_fd, enable, sizeof(enable)) < 0 ||
+      wait_for_pattern(client, "UTF-8 CHARSET request", request,
+                       sizeof(request)) < 0)
     return -1;
-  for (int attempt = 0; attempt < 10; attempt++) {
-    ssize_t size;
-
-    if (poll(&readable, 1, 500) != 1)
-      continue;
-    size = read(socket_fd,
-                buffer_suffix(received, sizeof(received), received_size),
-                sizeof(received) - received_size);
-    if (size <= 0)
-      return -1;
-    received_size += (size_t)size;
-    if (memmem(received, received_size, request, sizeof(request)) != nullptr)
-      return send_bytes(socket_fd, accepted, sizeof(accepted));
-    if (received_size == sizeof(received))
-      return -1;
-  }
-  return -1;
+  return send_bytes(client->socket_fd, accepted, sizeof(accepted));
 }
 
-static int negotiate_new_environ(int socket_fd) {
+static int negotiate_new_environ(TelnetTestClient *client) {
   static const unsigned char enable[] = {TELNET_IAC, TELNET_WILL,
                                          TELNET_NEW_ENVIRON};
   static const unsigned char request[] = {
@@ -733,29 +805,11 @@ static int negotiate_new_environ(int socket_fd) {
       TELNET_IAC,
       TELNET_SE,
   };
-  unsigned char received[4096];
-  size_t received_size = 0;
-  struct pollfd readable = {.fd = socket_fd, .events = POLLIN};
-
-  if (send_bytes(socket_fd, enable, sizeof(enable)) < 0)
+  if (send_bytes(client->socket_fd, enable, sizeof(enable)) < 0 ||
+      wait_for_pattern(client, "NEW-ENVIRON request", request,
+                       sizeof(request)) < 0)
     return -1;
-  for (int attempt = 0; attempt < 10; attempt++) {
-    ssize_t size;
-
-    if (poll(&readable, 1, 500) != 1)
-      continue;
-    size = read(socket_fd,
-                buffer_suffix(received, sizeof(received), received_size),
-                sizeof(received) - received_size);
-    if (size <= 0)
-      return -1;
-    received_size += (size_t)size;
-    if (memmem(received, received_size, request, sizeof(request)) != nullptr)
-      return send_bytes(socket_fd, response, sizeof(response));
-    if (received_size == sizeof(received))
-      return -1;
-  }
-  return -1;
+  return send_bytes(client->socket_fd, response, sizeof(response));
 }
 
 static int send_ttype(int socket_fd, const char *value) {
@@ -776,20 +830,20 @@ static int send_ttype(int socket_fd, const char *value) {
   return send_bytes(socket_fd, response, size);
 }
 
-static int negotiate_mtts(int socket_fd) {
+static int negotiate_mtts(TelnetTestClient *client) {
   static const unsigned char will_ttype[] = {
       TELNET_IAC,
       TELNET_WILL,
       TELNET_TTYPE,
   };
 
-  if (send_bytes(socket_fd, will_ttype, sizeof(will_ttype)) < 0 ||
-      expect_ttype_request(socket_fd) < 0 ||
-      send_ttype(socket_fd, "MUDLET") < 0 ||
-      expect_ttype_request(socket_fd) < 0 ||
-      send_ttype(socket_fd, "XTERM") < 0 ||
-      expect_ttype_request(socket_fd) < 0 ||
-      send_ttype(socket_fd, "MTTS 329") < 0)
+  if (send_bytes(client->socket_fd, will_ttype, sizeof(will_ttype)) < 0 ||
+      expect_ttype_request(client) < 0 ||
+      send_ttype(client->socket_fd, "MUDLET") < 0 ||
+      expect_ttype_request(client) < 0 ||
+      send_ttype(client->socket_fd, "XTERM") < 0 ||
+      expect_ttype_request(client) < 0 ||
+      send_ttype(client->socket_fd, "MTTS 329") < 0)
     return -1;
   return 0;
 }
@@ -1357,9 +1411,8 @@ done:
 /* Start a server, open enough clients to grow its registry, and stop it. */
 int main(int argc, char **argv) {
   char target_config[PATH_MAX];
-  char received[512];
-  struct pollfd readable;
   int socket_fds[TEST_CONNECTION_COUNT];
+  TelnetTestClient primary_client = {.socket_fd = -1};
   pid_t child = -1;
   int port;
   int result = 1;
@@ -1415,21 +1468,28 @@ int main(int argc, char **argv) {
       fprintf(stderr, "connection %zu failed\n", index);
       goto done;
     }
-    readable = (struct pollfd){.fd = *socket_fd, .events = POLLIN};
-    if (poll(&readable, 1, 5000) != 1 ||
-        read(*socket_fd, received, sizeof(received)) <= 0) {
+    TelnetTestClient connection = {.socket_fd = *socket_fd};
+    static const char welcome[] = "This site is under construction!";
+    static const unsigned char charset_offer[] = {TELNET_IAC, TELNET_WILL,
+                                                  TELNET_CHARSET};
+    const void *second = index == 0 ? charset_offer : nullptr;
+    const size_t SECOND_SIZE = index == 0 ? sizeof(charset_offer) : 0;
+    if (wait_for_patterns(&connection, "connection welcome", welcome,
+                          sizeof(welcome) - 1, second, SECOND_SIZE) < 0) {
       fprintf(stderr, "connection %zu welcome failed\n", index);
       goto done;
     }
-    if (index == 0 && negotiate_utf8(*socket_fd) < 0) {
+    if (index == 0)
+      primary_client = connection;
+    if (index == 0 && negotiate_utf8(&primary_client) < 0) {
       fprintf(stderr, "UTF-8 negotiation failed\n");
       goto done;
     }
-    if (index == 0 && negotiate_new_environ(*socket_fd) < 0) {
+    if (index == 0 && negotiate_new_environ(&primary_client) < 0) {
       fprintf(stderr, "NEW-ENVIRON negotiation failed\n");
       goto done;
     }
-    if (index == 0 && negotiate_mtts(*socket_fd) < 0) {
+    if (index == 0 && negotiate_mtts(&primary_client) < 0) {
       fprintf(stderr, "MTTS negotiation failed\n");
       goto done;
     }
