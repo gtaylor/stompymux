@@ -77,9 +77,9 @@ MUX -> include/btech -> integration/commands
 ```
 
 Presentation, persistence, and MUX adapters call domain operations. They do not
-receive mutable layout views. Template discovery, legacy template parsing, and
-template cache ownership are unit responsibilities; repair only supplies the
-player commands that invoke those operations.
+receive mutable layout views. Template discovery, named-field template parsing,
+and template cache ownership are unit responsibilities; repair only supplies
+the player commands that invoke those operations.
 
 ## Public boundary
 

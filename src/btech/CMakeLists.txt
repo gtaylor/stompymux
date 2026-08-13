@@ -303,7 +303,7 @@ set(BTECH_SOURCES
   unit/template_inventory.c
   unit/template_load.c
   unit/template_load_helpers.c
-  unit/template_legacy_load.c
+  unit/template_loader.c
   unit/template_registry.c
   unit/template_save.c)
 

@@ -250,6 +250,18 @@ target_include_directories(btech_lifecycle_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_lifecycle COMMAND btech_lifecycle_test)
 
+add_executable(btech_template_loader_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_template_loader.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/template_loader.c)
+target_compile_definitions(btech_template_loader_test PRIVATE BTECH_INTERNAL=1)
+target_link_libraries(btech_template_loader_test PRIVATE btmux_options)
+target_include_directories(btech_template_loader_test PRIVATE
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_template_loader COMMAND btech_template_loader_test)
+
 add_executable(btech_targeting_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_targeting.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/mech_targeting_state.c)
 target_compile_definitions(btech_targeting_test PRIVATE BTECH_INTERNAL=1)

@@ -126,6 +126,16 @@ if [[ -e src/btech/unit/mech.h ]]; then
   status=1
 fi
 
+if [[ -e src/btech/unit/template_legacy_load.c ]]; then
+  echo "src/btech/unit/template_legacy_load.c: positional template loader is not allowed"
+  status=1
+fi
+
+while IFS= read -r match; do
+  echo "$match: legacy template loading control is not allowed"
+  status=1
+done < <(rg -n 'LOADNEW_LOADS_|template_load_legacy' src/btech -g '*.[ch]' || true)
+
 if [[ -e src/btech/repair/mech_tech.h ]]; then
   echo "src/btech/repair/mech_tech.h: legacy repair macro header is not allowed"
   status=1
