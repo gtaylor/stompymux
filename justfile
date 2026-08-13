@@ -59,6 +59,9 @@ test-integration:
 install:
     cmake --install {{build_dir}} --prefix "$PWD/game"
 
+update-submodules:
+    git submodule update --init --recursive
+
 run:
     cd game && ulimit -c unlimited && exec ./stompymux stompymux.toml
 

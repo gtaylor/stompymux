@@ -4,21 +4,18 @@ description: How to install StompyMUX
 type: docs
 weight: 10
 ---
+## Requirements
+
+- **StompyMUX only builds on Linux**. It has been primarily developed on Ubuntu 24.04 but most quasi-recent distributions should fit the bill.
 
 ## Clone the sources
 
-If you don't already have a copy of the sources, clone the repo:
+Fork and clone the repo and then `cd` into it:
 
 ```shell
+## < Fork here and substitute your fork URLs in the text below >
 git clone git@github.com:gtaylor/stompymux.git
-```
-
-Make sure to `cd` into the repo root and fetch the third party libraries that
-we've vendored:
-
-```
 cd stompymux
-git submodule update --init --recursive
 ```
 
 ## Install dependencies
@@ -26,17 +23,18 @@ git submodule update --init --recursive
 Before compiling the sources and running your own game, you'll need to ensure that the
 following dependencies are present:
 
-* SQLite development headers
-* CMake 4.3 or higher
-* Clang 22 or higher
-* [Just](https://github.com/casey/just) 1.56 or higher
-* If you'd like to make documentation contributes, [install Hugo](https://gohugo.io/installation/)
+- SQLite development headers
+- CMake 4.3 or higher
+- Clang 22 or higher -- see [apt.llvm.org](http://apt.llvm.org) for an APT repo with recent Clang versions for Debiain/Ubuntu
+- [Just](https://github.com/casey/just) 1.56 or higher
+- If you'd like to make documentation contributes, [install Hugo](https://gohugo.io/installation/)
 
 ## Building and running
 
 Use the included `just` task runner:
 
-```
+```shell
+just update-submodules
 just build-and-run
 ```
 
@@ -58,4 +56,5 @@ You're ready to start developing your game!
 The following articles are good reads to get started:
 
 1. [Development Workflows](./development.md)
-1. [Configuration](./configuration/_index.md)
+2. [Configuration](./configuration/_index.md)
+
