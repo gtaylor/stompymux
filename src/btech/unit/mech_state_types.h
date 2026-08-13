@@ -153,7 +153,6 @@ typedef struct {
   int last_stagger_notify; /* The level that we were last notified of a stagger
                             */
   int critstatus2;         /* Starting to fill up. More CritStatus */
-  int unused[5];           /* Space for future expansion */
   float
       xpmod; /* Used to modify XP values per unit. Will default loading to 1 */
   int shots_fired;      /* Record how many shots we fired */

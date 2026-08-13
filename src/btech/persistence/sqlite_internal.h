@@ -71,7 +71,6 @@ struct BtechObjectStoreContext {
   sqlite3_stmt *tic;
   sqlite3_stmt *frequency;
   sqlite3_stmt *runtime;
-  sqlite3_stmt *runtime_unused;
   sqlite3_stmt *unit_aux;
   sqlite3_stmt *stagger_damage;
   sqlite3_stmt *autopilot_command;
@@ -134,8 +133,6 @@ int btech_special_load_mech_tics(sqlite3 *sqlite, BtechContext *context);
 int btech_special_load_mech_frequencies(sqlite3 *sqlite, BtechContext *context);
 int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context);
 int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context);
-int btech_special_load_mech_runtime_unused(sqlite3 *sqlite,
-                                           BtechContext *context);
 int btech_special_load_mech_stagger_damage(sqlite3 *sqlite,
                                            BtechContext *context);
 int btech_special_load_mechrep(sqlite3 *sqlite, BtechContext *context);

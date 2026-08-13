@@ -320,9 +320,6 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
           -1, &objects.runtime, NULL) != SQLITE_OK ||
       btech_special_prepare_v2(
-          sqlite, "INSERT INTO btech_mech_runtime_unused VALUES (?, ?, ?);", -1,
-          &objects.runtime_unused, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
           sqlite, "INSERT INTO btech_mech_unit_aux VALUES (?, ?, ?);", -1,
           &objects.unit_aux, NULL) != SQLITE_OK ||
       btech_special_prepare_v2(
