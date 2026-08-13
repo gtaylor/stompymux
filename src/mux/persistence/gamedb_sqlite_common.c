@@ -18,10 +18,6 @@
 #include "mux/support/checked_storage.h"
 #include "mux/support/utf8.h"
 
-#ifndef O_DIRECTORY
-#define O_DIRECTORY 0
-#endif
-
 void gamedb_log_failure(ServerLog *log, const char *stage, const char *path,
                         sqlite3 *sqlite) {
   const char *detail;

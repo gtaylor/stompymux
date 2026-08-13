@@ -1,7 +1,6 @@
 /* db.c - In-memory game-object and attribute database operations. */
 
 #include <ctype.h>
-#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -29,10 +28,6 @@
 #include "mux/support/validation.h"
 #include "mux/world/object.h"
 #include "mux/world/player.h"
-
-#ifndef O_ACCMODE
-#define O_ACCMODE (O_RDONLY | O_WRONLY | O_RDWR)
-#endif
 
 /*
  * Restart definitions
