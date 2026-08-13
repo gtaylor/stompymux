@@ -12,6 +12,7 @@ set(STYLED_TEXT_SOURCES
 
 target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/commands/command_table.c
+  ${MUX_MODULE_DIR}/commands/command_catalog.c
   ${MUX_MODULE_DIR}/commands/command_dispatch.c
   ${MUX_MODULE_DIR}/commands/command_configuration.c
   ${MUX_MODULE_DIR}/commands/command_list.c

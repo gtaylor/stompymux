@@ -2,6 +2,7 @@
  * command.c - command parser and support routines
  */
 
+#include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,6 +10,7 @@
 
 #include "btech/context.h" // IWYU pragma: keep
 #include "mux/commands/command.h"
+#include "mux/commands/command_catalog.h"
 #include "mux/commands/command_internal.h"
 #include "mux/commands/macro.h" // IWYU pragma: keep
 #include "mux/server/configuration.h"
@@ -35,10 +37,11 @@ NameTable access_nametab[] = {{"god", 2, CA_GOD, CA_GOD},
 
 void command_list_access(EvaluationContext *evaluation,
                          const ServerConfiguration *configuration,
-                         CommandRegistry *registry, DbRef player) {
+                         const CommandRegistry *registry, DbRef player) {
   char buff[SBUF_SIZE];
-  for (size_t index = 0; index < command_table_entry_count(); index++) {
-    CMDENT *cmdp = command_table_entry_at(index);
+  for (size_t index = 0; index < command_registry_builtin_count(registry);
+       index++) {
+    const CMDENT *cmdp = command_registry_builtin_at_const(registry, index);
 
     if (check_access(evaluation->world->database, configuration, player,
                      cmdp->perms)) {
@@ -58,10 +61,11 @@ void command_list_access(EvaluationContext *evaluation,
 
 void command_list_switches(EvaluationContext *evaluation,
                            const ServerConfiguration *configuration,
-                           DbRef player) {
+                           const CommandRegistry *registry, DbRef player) {
   char buff[SBUF_SIZE];
-  for (size_t index = 0; index < command_table_entry_count(); index++) {
-    CMDENT *cmdp = command_table_entry_at(index);
+  for (size_t index = 0; index < command_registry_builtin_count(registry);
+       index++) {
+    const CMDENT *cmdp = command_registry_builtin_at_const(registry, index);
 
     if (cmdp->switches) {
       if (check_access(evaluation->world->database, configuration, player,
@@ -139,16 +143,16 @@ int cf_access(const ConfigurationCall *call) {
  */
 
 int cf_cmd_alias(const ConfigurationCall *call) {
-  void *vp = call->value;
   char *str = call->text;
   ConfigurationContext *context = call->context;
+  CommandRegistry *registry = context->command_registry;
   char *alias;
   char *orig;
   char *ap;
   CMDENT *cmdp;
-  CMDENT *cmd2;
   NameTable *nt;
-  int *hp;
+
+  assert(call->value == &registry->commands);
 
   alias = strtok(str, " \t=,");
   orig = strtok(nullptr, " \t=,");
@@ -182,7 +186,7 @@ int cf_cmd_alias(const ConfigurationCall *call) {
      * Look up the command
      */
 
-    cmdp = (CMDENT *)hash_table_find(orig, (HashTable *)vp);
+    cmdp = hash_table_find(orig, &registry->commands);
     if (cmdp == nullptr) {
       configuration_log_not_found(context, call->player, call->command,
                                   "Command", orig);
@@ -203,23 +207,10 @@ int cf_cmd_alias(const ConfigurationCall *call) {
      * Got it, create the new command table entry
      */
 
-    cmd2 = malloc(sizeof(CMDENT));
-    cmd2->cmdname = strsave(alias);
-    cmd2->switches = cmdp->switches;
-    cmd2->perms = cmdp->perms | nt->perm;
-    cmd2->extra = (cmdp->extra | nt->flag) & ~SW_MULTIPLE;
-    if (!(nt->flag & SW_MULTIPLE))
-      cmd2->extra |= SW_GOT_UNIQUE;
-    cmd2->callseq = cmdp->callseq;
-    cmd2->handler = cmdp->handler;
-    if (hash_table_add(cmd2->cmdname, (int *)cmd2, (HashTable *)vp)) {
-      /* cmd2->cmdname was allocated by strsave() above; freeing it needs
-         to discard the const we otherwise want on CMDENT.cmdname. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-      free((void *)cmd2->cmdname);
-#pragma clang diagnostic pop
-      free(cmd2);
+    if (!command_registry_add_switch_alias(registry, alias, cmdp, nt)) {
+      configuration_log_syntax(context, call->player, call->command,
+                               "Unable to add command alias: ", alias);
+      return -1;
     }
   } else {
 
@@ -227,13 +218,17 @@ int cf_cmd_alias(const ConfigurationCall *call) {
      * A normal (non-switch) alias
      */
 
-    hp = hash_table_find(orig, (HashTable *)vp);
-    if (hp == nullptr) {
+    CMDENT *source = hash_table_find(orig, &registry->commands);
+    if (source == nullptr) {
       configuration_log_not_found(context, call->player, call->command, "Entry",
                                   orig);
       return -1;
     }
-    hash_table_add(alias, hp, (HashTable *)vp);
+    if (!command_registry_add_alias(registry, alias, source)) {
+      configuration_log_syntax(context, call->player, call->command,
+                               "Unable to add command alias: ", alias);
+      return -1;
+    }
   }
   return 0;
 }

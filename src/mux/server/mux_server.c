@@ -63,7 +63,8 @@ bool mux_server_create(MuxServer *server) {
                             &server->clock, &server->channels);
   mux_event_scheduler_initialize(&server->events);
   macro_registry_initialize(&server->macros, &server->channels);
-  command_registry_initialize(&server->command_registry);
+  if (!command_registry_initialize(&server->command_registry))
+    goto fail;
   world_indexes_initialize(&server->world_indexes);
   access_control_store_initialize(&server->access_control);
   server_log_initialize(&server->log, &server->database, server->configuration);

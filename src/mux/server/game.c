@@ -44,8 +44,6 @@
 #include "mux/world/object_spatial.h"
 #include "mux/world/player_cache.h"
 
-extern void init_cmdtab(CommandRegistry *registry);
-
 static void do_dump_optimize(EvaluationContext *evaluation, DbRef player);
 static void init_rlimit(MuxServer *server);
 
@@ -598,8 +596,6 @@ int main(int argc, char *argv[]) {
   server.database.top = -1;
   configuration_initialize(&server.configuration_context);
   init_rlimit(&server);
-  init_cmdtab(&server.command_registry);
-  init_mactab(&server.command_registry);
   init_chantab(&server.channels);
   init_flagtab(&server.world_indexes);
   init_powertab(&server.world_indexes);

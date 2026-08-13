@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 #include "mux/commands/command.h"
+#include "mux/commands/command_catalog.h"
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_internal.h"
@@ -165,8 +166,11 @@ static void list_cmdtable(EvaluationContext *evaluation,
 
   memcpy(buf, PREFIX, sizeof(PREFIX) - 1);
   used = sizeof(PREFIX) - 1;
-  for (size_t index = 0; index < command_table_entry_count(); index++) {
-    CMDENT *cmdp = command_table_entry_at(index);
+  for (size_t index = 0;
+       index < command_registry_builtin_count(runtime->command_registry);
+       index++) {
+    const CMDENT *cmdp =
+        command_registry_builtin_at_const(runtime->command_registry, index);
 
     if (check_access(evaluation->world->database, configuration, player,
                      cmdp->perms)) {
@@ -479,7 +483,7 @@ void do_list(CommandInvocation *invocation) {
     break;
   case LIST_SWITCHES:
     command_list_switches(&invocation->context->evaluation, configuration,
-                          PLAYER);
+                          runtime->command_registry, PLAYER);
     break;
   case LIST_OPTIONS:
     list_options(&invocation->context->evaluation, runtime, PLAYER);

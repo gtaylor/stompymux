@@ -36,7 +36,6 @@ typedef enum {
 int check_access(GameDatabase *database,
                  const ServerConfiguration *configuration, DbRef player,
                  int mask);
-void set_prefix_cmds(CommandRegistry *registry);
 
 /*
  * Commands are dispatched through the uniform typed invocation boundary.
@@ -55,8 +54,6 @@ struct Cmdentry {
   CmdHandler handler;
 };
 
-void init_cmdtab(CommandRegistry *registry);
-void command_aliases_destroy(HashTable *commands);
 int cf_access(const ConfigurationCall *call);
 int cf_cmd_alias(const ConfigurationCall *call);
 
