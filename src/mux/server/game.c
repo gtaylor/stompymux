@@ -28,7 +28,6 @@
 #include "mux/server/configuration.h"
 #include "mux/server/configuration_context.h"
 #include "mux/server/database_bootstrap.h"
-#include "mux/server/diagnostics.h"
 #include "mux/server/file_cache.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"
@@ -499,10 +498,8 @@ void fork_and_dump(ServerControl *control, int key) {
         return;
 
       case 0: /* child */
-        DPRINTK("child database write process starting.");
         server_lifecycle_unbind_signals(control->lifecycle);
         dump_database_internal(control, DUMP_NORMAL);
-        DPRINTK("child database write process finished.");
         /* You generally don't want to run atexit()
          * handlers and that sort of thing.  */
         _exit(0);

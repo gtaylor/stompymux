@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 #include "btech/context.h" // IWYU pragma: keep
-#include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
 #include "mux/server/game.h"
 #include "mux/server/log.h"
@@ -45,7 +44,6 @@ static int logcache_compare(const RedBlackTreeCompareCall *call) {
 
 static int log_cache_close(LogCache *cache, struct LogfileT *log,
                            bool remove_from_cache) {
-  DPRINTK("closing logfile '%s'.", log->filename);
   mux_timer_destroy(log->timer);
   close(log->fd);
   if (remove_from_cache)
@@ -61,7 +59,6 @@ static int log_cache_close(LogCache *cache, struct LogfileT *log,
 static void logcache_expire(MuxTimer *timer, void *arg) {
   struct LogfileT *log = arg;
 
-  DPRINTK("Expiring '%s'.", log->filename);
   log_cache_close(log->cache, log, true);
 }
 
@@ -139,7 +136,6 @@ static int log_cache_open(LogCache *cache, char *filename) {
   }
   mux_timer_start(newlog->timer, (uint64_t)LOGFILE_TIMEOUT * 1000U, 0);
   red_black_tree_insert(cache->files, newlog->filename, newlog);
-  DPRINTK("opened logfile '%s' fd = %d.", filename, fd);
   return 1;
 }
 

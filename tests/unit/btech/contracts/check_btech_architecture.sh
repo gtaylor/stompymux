@@ -149,6 +149,13 @@ while IFS= read -r match; do
 done < <(rg -n '\b(BTECH_MOVEMENT_MODES|BT_MOVEMENT_MODES|BTECH_MW3STATS|BT_EXILE_MW3STATS)\b' \
   CMakeLists.txt src -g 'CMakeLists.txt' -g '*.[ch]' -g '*.in' || true)
 
+while IFS= read -r match; do
+  [[ -z "$match" ]] && continue
+  echo "$match: retired debug or persistence prepare compile indirection is not allowed"
+  status=1
+done < <(rg -n '\b(DPRINTK|dprintk|BTECH_PERSISTENCE_PREPARE_IMPLEMENTATION|SQLITE3_PREPARE_V2)\b|#\s*(ifdef|ifndef)\s+DEBUG\b' \
+  src -g '*.[ch]' || true)
+
 if [[ -e src/btech/sensors/object_spatial.h ||
       -e src/btech/autopilot/spath_api.h ]]; then
   echo "src/btech: retired spatial pathfinding headers are not allowed"

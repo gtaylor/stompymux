@@ -64,7 +64,6 @@ SignalHandlers *signal_handlers_create(uv_loop_t *loop,
   handlers->bus_action = (struct sigaction){
       .sa_sigaction = signal_bus,
       .sa_flags = (int)(SA_SIGINFO | SA_RESETHAND | SA_RESTART)};
-  DPRINTK("creating alternate signal stack.");
   error_code = posix_memalign(&handlers->alternate_stack.ss_sp, ALT_STACK_ALIGN,
                               ALT_STACK_SIZE);
   if (error_code == 0) {
@@ -73,17 +72,9 @@ SignalHandlers *signal_handlers_create(uv_loop_t *loop,
     memset(handlers->alternate_stack.ss_sp, 0, ALT_STACK_SIZE);
     DPERROR(sigaltstack(&handlers->alternate_stack, &handlers->regular_stack) <
             0);
-    DPRINTK("Current stack at 0x%lx with length 0x%lx and flags 0x%x",
-            (unsigned long)handlers->regular_stack.ss_sp,
-            handlers->regular_stack.ss_size, handlers->regular_stack.ss_flags);
-    DPRINTK("Signal stack at 0x%lx with length 0x%lx and flags 0x%x",
-            (unsigned long)handlers->alternate_stack.ss_sp,
-            handlers->alternate_stack.ss_size,
-            handlers->alternate_stack.ss_flags);
     handlers->segv_action.sa_flags |= SA_ONSTACK;
     handlers->bus_action.sa_flags |= SA_ONSTACK;
   } else {
-    DPRINTK("posix_memalign failed with %s", strerror(error_code));
     log_error(
         (LogEntry){.log = handlers->log,
                    .key = LOG_PROBLEMS,
@@ -99,7 +90,6 @@ SignalHandlers *signal_handlers_create(uv_loop_t *loop,
               "coredumps!");
     handlers->alternate_stack.ss_sp = nullptr;
   }
-  DPRINTK("binding signals.");
   uv_signal_init(loop, &handlers->signal_int);
   uv_signal_init(loop, &handlers->signal_term);
   uv_signal_init(loop, &handlers->signal_usr2);
@@ -114,7 +104,6 @@ SignalHandlers *signal_handlers_create(uv_loop_t *loop,
   sigaction(SIGBUS, &handlers->bus_action, nullptr);
   DPERROR(signal(SIGCHLD, SIG_IGN) == SIG_ERR);
   DPERROR(signal(SIGPIPE, SIG_IGN) == SIG_ERR);
-  DPRINTK("done.");
   return handlers;
 }
 
@@ -169,14 +158,12 @@ void signal_handlers_destroy(SignalHandlers *handlers) {
 static void signal_shutdown(uv_signal_t *handle, int signo) {
   SignalHandlers *handlers = uv_handle_get_data((uv_handle_t *)handle);
   if (signo == SIGINT) {
-    DPRINTK("caught SIGINT");
     server_shutdown(
         &(ServerShutdownRequest){.control = handlers->control,
                                  .player = NOTHING,
                                  .options = SHUTDN_EXIT,
                                  .message = "received SIGINT from kernel."});
   } else if (signo == SIGTERM) {
-    DPRINTK("caught SIGTERM");
     server_shutdown(
         &(ServerShutdownRequest){.control = handlers->control,
                                  .player = NOTHING,
@@ -194,7 +181,6 @@ static void signal_shutdown(uv_signal_t *handle, int signo) {
 static void signal_segv(int signo, siginfo_t *siginfo, void *ucontext) {
   SignalHandlers *handlers = active_signal_handlers;
 
-  DPRINTK("caught SIGSEGV");
   if (handlers == nullptr)
     return;
   server_lifecycle_release_sockets(handlers->lifecycle);
@@ -224,7 +210,6 @@ static void signal_segv(int signo, siginfo_t *siginfo, void *ucontext) {
 static void signal_bus(int signo, siginfo_t *siginfo, void *ucontext) {
   SignalHandlers *handlers = active_signal_handlers;
 
-  DPRINTK("caught SIGBUS");
   if (handlers == nullptr)
     return;
   server_lifecycle_release_sockets(handlers->lifecycle);

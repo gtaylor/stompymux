@@ -19,7 +19,6 @@
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
 #include "mux/objects/flags.h"
-#include "mux/server/diagnostics.h"
 #include "registry_api.h"
 
 static int sensor_index_clamp(int sensor) {
@@ -146,11 +145,9 @@ void auto_sensor_event(Autopilot *autopilot) {
   float trng;
 
   if (!is_good_obj(autopilot->xcode.context->database, autopilot->mymechnum)) {
-    DPRINTK("mymechnum is bad!");
     return;
   }
   if (!is_good_obj(autopilot->xcode.context->database, autopilot->mynum)) {
-    DPRINTK("mynum is bad!");
     return;
   }
 
@@ -160,11 +157,9 @@ void auto_sensor_event(Autopilot *autopilot) {
    * an AUTOPILOT Xcode Object */
   /* Basic checks */
   if (!mech) {
-    DPRINTK("mech is bad!");
     return;
   }
   if (!autopilot) {
-    DPRINTK("ai is bad!");
     return;
   }
 

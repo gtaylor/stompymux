@@ -15,7 +15,6 @@
 #include "mech_utils_api.h"
 #include "missile_hit_registry.h"
 #include "mux/objects/flags.h"
-#include "mux/server/diagnostics.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/doubly_linked_list.h"
@@ -286,17 +285,14 @@ void auto_update_profile_event(Autopilot *autopilot) {
     /* most commonly, the mech is a bad memory space.
      * lets not try to access it
      */
-    DPRINTK("ap mymechnum is bad");
     autopilot_gunning_stop(autopilot);
     return;
   }
 
   if (!mech) {
-    DPRINTK("mech is bad!");
     return;
   }
   if (!autopilot) {
-    DPRINTK("ai is bad!");
     return;
   }
   if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech)) ||

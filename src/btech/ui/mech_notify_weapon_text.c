@@ -20,7 +20,6 @@
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
-#include "mux/server/diagnostics.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
@@ -422,11 +421,9 @@ MechDisplayId mech_to_mech_display_id(Mech *see, Mech *mech) {
   MechDisplayId id = {0};
 
   if (!mech) {
-    DPRINTK("bad mech");
     return id;
   }
   if (!see) {
-    DPRINTK("bad see");
     return id;
   }
   BtechContext *context = mech_context(mech);

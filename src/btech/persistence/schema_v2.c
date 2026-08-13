@@ -4,6 +4,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/utf8.h"
+#include "sqlite_internal.h"
 #include <float.h>
 #include <limits.h>
 #include <math.h>
@@ -11,8 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#define BTECH_PERSISTENCE_PREPARE_IMPLEMENTATION
-#include "sqlite_internal.h"
 
 /* Explicit map and repair-event tables are the first BTech SQLite mirror. */
 #pragma GCC diagnostic push
@@ -330,8 +329,6 @@ int btech_special_prepare_v2(sqlite3 *sqlite, const char *sql, int byte_count,
   return sqlite3_prepare_v2(sqlite, sql, byte_count, statement, tail);
 }
 
-#define SQLITE3_PREPARE_V2 btech_special_prepare_v2
-
 int btech_special_exec(sqlite3 *sqlite, const char *sql) {
   char *error = NULL;
   int rc = sqlite3_exec(sqlite, sql, NULL, NULL, &error);
@@ -365,11 +362,11 @@ int btech_special_store_metadata(sqlite3 *sqlite) {
   int result;
 
   statement = NULL;
-  result = SQLITE3_PREPARE_V2(sqlite,
-                              "INSERT INTO btech_persistence_metadata "
-                              "(id, schema_name, schema_version) "
-                              "VALUES (1, 'stompymux-btech', ?);",
-                              -1, &statement, NULL) == SQLITE_OK &&
+  result = btech_special_prepare_v2(sqlite,
+                                    "INSERT INTO btech_persistence_metadata "
+                                    "(id, schema_name, schema_version) "
+                                    "VALUES (1, 'stompymux-btech', ?);",
+                                    -1, &statement, NULL) == SQLITE_OK &&
                    btech_special_bind_int(
                        statement, 1, BTECH_PERSISTENCE_SCHEMA_VERSION) == 0 &&
                    btech_special_step(statement) == 0
@@ -545,11 +542,12 @@ int btech_special_validate_metadata(sqlite3 *sqlite) {
 
   statement = NULL;
   result =
-      SQLITE3_PREPARE_V2(sqlite,
-                         "SELECT count(*) FROM btech_persistence_metadata "
-                         "WHERE id = 1 AND schema_name = 'stompymux-btech' "
-                         "AND schema_version = 3;",
-                         -1, &statement, NULL) == SQLITE_OK &&
+      btech_special_prepare_v2(
+          sqlite,
+          "SELECT count(*) FROM btech_persistence_metadata "
+          "WHERE id = 1 AND schema_name = 'stompymux-btech' "
+          "AND schema_version = 3;",
+          -1, &statement, NULL) == SQLITE_OK &&
               sqlite3_step(statement) == SQLITE_ROW &&
               btech_special_column_int(statement, 0, &matching_rows) == 0 &&
               matching_rows == 1 && sqlite3_step(statement) == SQLITE_DONE

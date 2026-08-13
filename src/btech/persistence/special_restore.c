@@ -41,10 +41,11 @@ int btech_special_load_mechrep(sqlite3 *sqlite, BtechContext *context) {
   int step;
 
   statement = NULL;
-  result = SQLITE3_PREPARE_V2(sqlite,
-                              "SELECT dbref, current_target FROM btech_mechrep "
-                              "ORDER BY dbref;",
-                              -1, &statement, NULL) == SQLITE_OK
+  result = btech_special_prepare_v2(
+               sqlite,
+               "SELECT dbref, current_target FROM btech_mechrep "
+               "ORDER BY dbref;",
+               -1, &statement, NULL) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -83,7 +84,7 @@ int btech_special_load_turrets(sqlite3 *sqlite, BtechContext *context) {
 
   statement = NULL;
   result =
-      SQLITE3_PREPARE_V2(
+      btech_special_prepare_v2(
           sqlite,
           "SELECT dbref, arcs, parent, gunner, target, target_x, target_y, "
           "target_z, lock_mode FROM btech_turrets ORDER BY dbref;",
@@ -141,7 +142,7 @@ int btech_special_load_turret_tics(sqlite3 *sqlite, BtechContext *context) {
   current_turret = NOTHING;
   expected_tic = 0;
   turret = NULL;
-  result = SQLITE3_PREPARE_V2(
+  result = btech_special_prepare_v2(
                sqlite,
                "SELECT turret_dbref, tic_index, value FROM btech_turret_tics "
                "ORDER BY turret_dbref, tic_index;",
@@ -203,9 +204,9 @@ int btech_special_load_autopilots(sqlite3 *sqlite, BtechContext *context) {
   int step;
 
   statement = NULL;
-  result = SQLITE3_PREPARE_V2(sqlite,
-                              "SELECT * FROM btech_autopilots ORDER BY dbref;",
-                              -1, &statement, NULL) == SQLITE_OK
+  result = btech_special_prepare_v2(
+               sqlite, "SELECT * FROM btech_autopilots ORDER BY dbref;", -1,
+               &statement, NULL) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -332,7 +333,7 @@ static int btech_special_load_autopilot_command_args(
     return -1;
   autopilot_argument_list_initialize(&command->arguments, AUTOPILOT_MAX_ARGS);
   statement = NULL;
-  result = SQLITE3_PREPARE_V2(
+  result = btech_special_prepare_v2(
                sqlite,
                "SELECT argument_index, value FROM btech_autopilot_command_args "
                "WHERE autopilot_dbref = ? AND command_position = ? "
@@ -402,7 +403,7 @@ int btech_special_load_autopilot_commands(sqlite3 *sqlite,
   expected_position = 0;
   autopilot = NULL;
   result =
-      SQLITE3_PREPARE_V2(
+      btech_special_prepare_v2(
           sqlite,
           "SELECT autopilot_dbref, position, command_enum, arg_count "
           "FROM btech_autopilot_commands ORDER BY autopilot_dbref, position;",
@@ -475,7 +476,7 @@ int btech_special_load_autopilot_path(sqlite3 *sqlite, BtechContext *context) {
   expected_position = 0;
   autopilot = NULL;
   result =
-      SQLITE3_PREPARE_V2(
+      btech_special_prepare_v2(
           sqlite,
           "SELECT autopilot_dbref, position, x, y, parent_x, parent_y, "
           "g_score, h_score, f_score, hex_offset FROM btech_autopilot_path "

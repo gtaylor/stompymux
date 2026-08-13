@@ -18,7 +18,6 @@
 #include "mux/network/site_access.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
-#include "mux/server/diagnostics.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
@@ -173,7 +172,6 @@ void descriptor_run_command(Descriptor *d, char *command) {
   if (!is_wizard(descriptor_runtime(d)->world->database, d->player)) {
     if (d->quota <= 0) {
       descriptor_queue_string(d, "quota exceed, dropping command.\n");
-      DPRINTK("aborting execution of %s for #%ld.", command, d->player);
       return;
     }
     d->quota--;

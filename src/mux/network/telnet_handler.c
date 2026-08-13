@@ -14,7 +14,6 @@
 #include "mux/network/telnet_environment.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
-#include "mux/server/diagnostics.h"
 #include "mux/server/log.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
@@ -180,8 +179,6 @@ static void telnet_process_data(Descriptor *d, const char *buffer,
         /* Every not-yet-connected descriptor has an active connect flow
          * from the moment it's accepted; reaching here means something
          * went wrong starting it. */
-        DPRINTK("no active flow on unauthenticated %p fd %d, bailing.", d,
-                d->descriptor);
         if (!d->is_dead)
           descriptor_shutdown(d, DESCRIPTOR_SHUTDOWN_QUIT);
         break;

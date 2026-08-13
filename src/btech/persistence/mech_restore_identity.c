@@ -77,7 +77,7 @@ int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
 
   statement = NULL;
   result =
-      SQLITE3_PREPARE_V2(
+      btech_special_prepare_v2(
           sqlite,
           "SELECT dbref, id_0, id_1, brief, map_number, map_dbref, "
           "mech_name, mech_type, unit_era, unit_tro, unit_class, "
@@ -224,7 +224,7 @@ int btech_special_load_mech_sections(sqlite3 *sqlite, BtechContext *context) {
   expected_section = 0;
   mech = NULL;
   result =
-      SQLITE3_PREPARE_V2(
+      btech_special_prepare_v2(
           sqlite,
           "SELECT mech_dbref, section, armor, internal, rear, armor_original, "
           "internal_original, rear_original, base_to_hit, config, recycle, "
@@ -324,15 +324,16 @@ int btech_special_load_mech_criticals(sqlite3 *sqlite, BtechContext *context) {
   current_section = -1;
   expected_slot = 0;
   mech = NULL;
-  result = SQLITE3_PREPARE_V2(sqlite,
-                              "SELECT mech_dbref, section, slot, brand, data, "
-                              "item_type, fire_mode, "
-                              "ammo_mode, damage_flags, desired_ammo_location "
-                              "FROM btech_mech_criticals "
-                              "ORDER BY mech_dbref, section, slot;",
-                              -1, &statement, NULL) == SQLITE_OK
-               ? 0
-               : -1;
+  result =
+      btech_special_prepare_v2(sqlite,
+                               "SELECT mech_dbref, section, slot, brand, data, "
+                               "item_type, fire_mode, "
+                               "ammo_mode, damage_flags, desired_ammo_location "
+                               "FROM btech_mech_criticals "
+                               "ORDER BY mech_dbref, section, slot;",
+                               -1, &statement, NULL) == SQLITE_OK
+          ? 0
+          : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
     if (btech_special_column_long(statement, 0, &mech_dbref) < 0 ||
         mech_dbref == NOTHING ||

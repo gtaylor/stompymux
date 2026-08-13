@@ -47,7 +47,6 @@
 #include <string.h>
 
 #include "mux/network/mux_event.h"
-#include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
 #include "mux/support/checked_storage.h"
 
@@ -279,10 +278,7 @@ int mux_event_last_type(const MuxEventScheduler *scheduler) {
 
 /* Initialize the events */
 
-void mux_event_initialize(MuxEventScheduler *scheduler) {
-  (void)scheduler;
-  DPRINTK("muxevent initializing");
-}
+void mux_event_initialize(MuxEventScheduler *scheduler) { (void)scheduler; }
 
 /* Event removal functions */
 

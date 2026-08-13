@@ -18,13 +18,8 @@ void do_version(CommandInvocation *invocation) {
                  MSG_ME_ALL | MSG_F_DOWN);
 }
 
-const char *mux_version = BTECH_VERSION_STRING
-#ifdef DEBUG
-    " DEBUG"
-#else
-    " RELEASE"
-#endif
-    " built on " MUX_BUILD_DATE;
+const char *mux_version =
+    BTECH_VERSION_STRING " RELEASE built on " MUX_BUILD_DATE;
 
 void init_version(MuxServer *server) {
   strlcpy(server->version, mux_version, sizeof(server->version));

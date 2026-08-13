@@ -7,7 +7,6 @@
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
 #include "mech_update_api.h"
-#include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
 #include "mux/server/maintenance.h"
 #include "mux/server/server_lifecycle.h"
@@ -19,7 +18,6 @@ static void heartbeat_run(MuxTimer *timer, void *arg);
 void btech_heartbeat_start(BtechContext *context) {
   if (context->heartbeat_running)
     return;
-  DPRINTK("hearbeat initialized, 1s timeout.");
   context->heartbeat = mux_timer_create(
       server_lifecycle_loop(context->lifecycle), heartbeat_run, context);
   if (context->heartbeat == nullptr)
@@ -33,7 +31,6 @@ void btech_heartbeat_stop(BtechContext *context) {
     return;
   mux_timer_destroy(context->heartbeat);
   context->heartbeat = nullptr;
-  DPRINTK("heartbeat stopped.\n");
   context->heartbeat_running = false;
 }
 

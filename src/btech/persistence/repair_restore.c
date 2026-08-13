@@ -63,7 +63,7 @@ int btech_special_load_repair_events(sqlite3 *sqlite, BtechContext *context) {
 
   statement = NULL;
   result =
-      SQLITE3_PREPARE_V2(
+      btech_special_prepare_v2(
           sqlite,
           "SELECT mech_dbref, event_type, remaining_ticks, event_data, is_fake "
           "FROM btech_repair_events ORDER BY event_id;",

@@ -243,7 +243,6 @@ void descriptor_retain(Descriptor *descriptor) { descriptor->refcount++; }
 
 /* Destroy descriptor after all references and socket ownership have ended. */
 static void descriptor_free(Descriptor *descriptor) {
-  DPRINTK("%p destructing", descriptor);
   descriptor_clear_input(descriptor);
   descriptor_flow_destroy(descriptor);
   descriptor_telnet_destroy(descriptor);

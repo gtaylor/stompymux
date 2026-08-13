@@ -21,7 +21,6 @@
 #include "mux/network/telnet_socket.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
-#include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
 #include "mux/server/log.h"
 #include "mux/server/platform.h"
@@ -89,19 +88,12 @@ static void server_lifecycle_process_preload(ServerLifecycle *lifecycle) {
 /* Reschedule the queue tick, replenish command quotas, and run queued work. */
 static void server_lifecycle_run_queues(MuxTimer *timer, void *arg) {
   ServerLifecycle *lifecycle = arg;
-  pid_t child;
-  int status = 0;
-
   gettimeofday(&lifecycle->current_time, nullptr);
   lifecycle->last_slice =
       update_quotas(lifecycle->maintenance->configuration,
                     lifecycle->maintenance->descriptors, lifecycle->last_slice,
                     lifecycle->current_time);
-  child = waitpid(-1, &status, WNOHANG);
-  if (child > 0) {
-    DPRINTK("unexpected child %d exited with exit status %d.", child,
-            WEXITSTATUS(status));
-  }
+  (void)waitpid(-1, nullptr, WNOHANG);
   if (lifecycle->maintenance->configuration->command_queue_idle_chunk)
     do_top(lifecycle->maintenance->commands,
            lifecycle->maintenance->configuration->command_queue_idle_chunk);

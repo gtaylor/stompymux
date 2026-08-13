@@ -158,7 +158,3 @@ int btech_persistence_load_economy(sqlite3 *sqlite,
 int btech_persistence_store_economy(sqlite3 *sqlite,
                                     PersistenceContext *persistence,
                                     void *extension_context);
-
-#ifndef BTECH_PERSISTENCE_PREPARE_IMPLEMENTATION
-#define SQLITE3_PREPARE_V2 btech_special_prepare_v2
-#endif

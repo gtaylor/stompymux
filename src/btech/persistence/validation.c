@@ -65,7 +65,8 @@ static int btech_special_table_count(sqlite3 *sqlite, const char *table,
   statement = NULL;
   if (snprintf(sql, sizeof(sql), "SELECT count(*) FROM %s;", table) < 0)
     return -1;
-  result = SQLITE3_PREPARE_V2(sqlite, sql, -1, &statement, NULL) == SQLITE_OK &&
+  result = btech_special_prepare_v2(sqlite, sql, -1, &statement, NULL) ==
+                       SQLITE_OK &&
                    sqlite3_step(statement) == SQLITE_ROW &&
                    btech_special_column_int(statement, 0, count) == 0 &&
                    sqlite3_step(statement) == SQLITE_DONE

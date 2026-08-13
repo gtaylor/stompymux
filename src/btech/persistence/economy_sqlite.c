@@ -48,10 +48,11 @@ static int btech_economy_table_exists(sqlite3 *sqlite, int *exists) {
 
   statement = NULL;
   result = -1;
-  if (SQLITE3_PREPARE_V2(sqlite,
-                         "SELECT 1 FROM sqlite_master WHERE type = 'table' "
-                         "AND name = 'btech_economy_costs';",
-                         -1, &statement, NULL) == SQLITE_OK) {
+  if (btech_special_prepare_v2(
+          sqlite,
+          "SELECT 1 FROM sqlite_master WHERE type = 'table' "
+          "AND name = 'btech_economy_costs';",
+          -1, &statement, NULL) == SQLITE_OK) {
     step = sqlite3_step(statement);
     if (step == SQLITE_ROW || step == SQLITE_DONE) {
       *exists = step == SQLITE_ROW;
@@ -72,8 +73,9 @@ static int btech_economy_table_has_item_name(sqlite3 *sqlite, int *has_name) {
   statement = NULL;
   *has_name = 0;
   result = -1;
-  if (SQLITE3_PREPARE_V2(sqlite, "PRAGMA table_info(btech_economy_costs);", -1,
-                         &statement, NULL) == SQLITE_OK) {
+  if (btech_special_prepare_v2(sqlite,
+                               "PRAGMA table_info(btech_economy_costs);", -1,
+                               &statement, NULL) == SQLITE_OK) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
       column = sqlite3_column_text(statement, 1);
@@ -156,9 +158,9 @@ static int btech_load_costs(sqlite3 *sqlite, BtechContext *btech) {
   statement = NULL;
   result = -1;
   skipped = 0;
-  if (SQLITE3_PREPARE_V2(sqlite,
-                         "SELECT item_name, cost FROM btech_economy_costs;", -1,
-                         &statement, NULL) == SQLITE_OK) {
+  if (btech_special_prepare_v2(
+          sqlite, "SELECT item_name, cost FROM btech_economy_costs;", -1,
+          &statement, NULL) == SQLITE_OK) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
       part_name = sqlite3_column_text(statement, 0);
@@ -252,10 +254,11 @@ int btech_persistence_store_economy(sqlite3 *sqlite,
                                 " item_name TEXT PRIMARY KEY,"
                                 " cost TEXT NOT NULL"
                                 ") WITHOUT ROWID;") < 0 ||
-      SQLITE3_PREPARE_V2(sqlite,
-                         "INSERT INTO btech_economy_costs (item_name, cost) "
-                         "VALUES (?, ?);",
-                         -1, &statement, NULL) != SQLITE_OK)
+      btech_special_prepare_v2(
+          sqlite,
+          "INSERT INTO btech_economy_costs (item_name, cost) "
+          "VALUES (?, ?);",
+          -1, &statement, NULL) != SQLITE_OK)
     return -1;
 
   result = 0;
