@@ -9,7 +9,6 @@
 #include <string.h>
 
 #include "aero_bomb_api.h"
-#include "btconfig.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "command_handlers_api.h"
@@ -28,12 +27,10 @@
 #include "mux/support/formatting.h"
 #include "section_types.h"
 
-#ifdef BT_PART_WEIGHTS
 extern const int INTERNALSWEIGHT[];
 extern const int CARGOWEIGHT[];
 extern const int TEMPLATE_INTERNAL_COUNT;
 extern const int TEMPLATE_CARGO_COUNT;
-#endif
 
 static const int *int_at(const int *values, size_t count, size_t index) {
   return checked_storage_at_const(values, count, sizeof(*values), index);
@@ -69,10 +66,6 @@ int btech_part_weight(int part) {
     return 1024;
   if (equipment_is_bomb(part))
     return 102 * bomb_weight(bomb_from_equipment_index(part));
-#ifndef BT_PART_WEIGHTS
-  else if (equipment_is_special(part) && part <= special_equipment_index(CLAW))
-    return 1024;
-#else
   if (equipment_is_special(
           part)) /* && i <= special_equipment_index(LAMEQUIP) */
     return *int_at(INTERNALSWEIGHT, (size_t)TEMPLATE_INTERNAL_COUNT,
@@ -80,10 +73,8 @@ int btech_part_weight(int part) {
   if (equipment_is_cargo(part))
     return *int_at(CARGOWEIGHT, (size_t)TEMPLATE_CARGO_COUNT,
                    (size_t)cargo_from_equipment_index(part));
-#endif /* BT_PART_WEIGHTS */
-  else
-    /* hmm.. tricky, suppose we'll make things light */
-    return 102;
+  /* hmm.. tricky, suppose we'll make things light */
+  return 102;
 }
 
 struct BtechPartCosts {

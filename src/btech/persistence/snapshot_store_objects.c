@@ -576,16 +576,6 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
           btech_special_step(context->runtime_unused) < 0)
         context->result = -1;
     }
-#ifndef BT_CALCULATE_BV
-    for (index = 0; context->result == 0 && index < 8; index++) {
-      if (btech_special_bind_int(context->unit_aux, 1, (DbRef)key) < 0 ||
-          btech_special_bind_int(context->unit_aux, 2, index) < 0 ||
-          btech_special_bind_int(context->unit_aux, 3,
-                                 snapshot.definition.unused[index]) < 0 ||
-          btech_special_step(context->unit_aux) < 0)
-        context->result = -1;
-    }
-#else
     if (context->result == 0 &&
         (btech_special_bind_int(context->unit_aux, 1, (DbRef)key) < 0 ||
          btech_special_bind_int(context->unit_aux, 2, 0) < 0 ||
@@ -593,7 +583,6 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
                                 snapshot.definition.mechbv_last) < 0 ||
          btech_special_step(context->unit_aux) < 0))
       context->result = -1;
-#endif
     for (index = 0; context->result == 0 && index < 3; index++) {
       if (btech_special_bind_int(context->unit_aux, 1, (DbRef)key) < 0 ||
           btech_special_bind_int(context->unit_aux, 2, 8 + index) < 0 ||

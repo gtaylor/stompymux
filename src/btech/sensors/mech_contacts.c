@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "btconfig.h"
 #include "btech/context.h"
 #include "btech_event.h"
 #include "btmux_build_config.h"
@@ -105,12 +104,10 @@ void show_brief_flags(DbRef player, Mech *mech) {
   notify_printf(
       btech_context_evaluation(mech_context(mech)), player,
       "Brief status for %s:", mech_to_mech_display_id(mech, mech).text);
-#ifdef ADVANCED_LOS
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "    (A)utocontacts: %s",
                 contact_description(AC_DESC, sizeof(AC_DESC) / sizeof(*AC_DESC),
                                     mech_brief_mode(mech) / 4));
-#endif
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "    (C)ontacts:     %s",
                 contact_description(C_DESC, sizeof(C_DESC) / sizeof(*C_DESC),
@@ -146,7 +143,6 @@ void mech_brief(DbRef player, void *data, char *buffer) {
     return;
   }
   switch (ascii_to_upper(c)) {
-#ifdef ADVANCED_LOS
   case 'A':
     if (v < 0 || v > 6) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -159,7 +155,6 @@ void mech_brief(DbRef player, void *data, char *buffer) {
         mech, MECHALL, "Autocontact brevity set to %s.",
         contact_description(AC_DESC, sizeof(AC_DESC) / sizeof(*AC_DESC), v));
     return;
-#endif
   case 'C':
     if (v < 0 || v > 3) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -260,23 +255,17 @@ MechStatusString mech_status_string(Mech *target, int who) {
     else
       status_string_append(&status, &sptr, 'n');
   }
-#ifndef ECM_ON_CONTACTS
-  if (who > 1) {
-#endif
-    if (CONDITION.eccm_enabled || CONDITION.angel_eccm_enabled)
-      status_string_append(&status, &sptr, 'P');
+  if (CONDITION.eccm_enabled || CONDITION.angel_eccm_enabled)
+    status_string_append(&status, &sptr, 'P');
 
-    if (CONDITION.ecm_active || CONDITION.angel_ecm_active)
-      status_string_append(&status, &sptr, 'E');
+  if (CONDITION.ecm_active || CONDITION.angel_ecm_active)
+    status_string_append(&status, &sptr, 'E');
 
-    if (CONDITION.ecm_protected || CONDITION.angel_ecm_protected)
-      status_string_append(&status, &sptr, 'p');
+  if (CONDITION.ecm_protected || CONDITION.angel_ecm_protected)
+    status_string_append(&status, &sptr, 'p');
 
-    if (mech_is_any_ecm_disturbed(target))
-      status_string_append(&status, &sptr, 'e');
-#ifndef ECM_ON_CONTACTS
-  }
-#endif
+  if (mech_is_any_ecm_disturbed(target))
+    status_string_append(&status, &sptr, 'e');
 
   if (CONDITION.spinning)
     status_string_append(&status, &sptr, 'X');
@@ -347,7 +336,6 @@ char mech_contact_status_character(Mech *mech, Mech *mech_target,
   case 5:
     if (mech_has_attached_homing_beacon(mech_target))
       return mech_team(mech_target) == mech_team(mech) ? 'n' : 'N';
-#ifdef ECM_ON_CONTACTS
     if (CONDITION.eccm_enabled || CONDITION.angel_eccm_enabled)
       return 'P';
     if (CONDITION.ecm_active || CONDITION.angel_ecm_active)
@@ -356,7 +344,6 @@ char mech_contact_status_character(Mech *mech, Mech *mech_target,
       return 'p';
     if (mech_is_any_ecm_disturbed(mech_target))
       return 'e';
-#endif
     return ' ';
   }
   return ' ';

@@ -3,7 +3,6 @@
 
 #pragma once
 
-#define HEX_BASED
 #undef APPROXIMATE_ASTAR
 
 /* note the cols should be 2 more than the screen size because if we
@@ -23,11 +22,7 @@ SPATHRESULT *CalculatePath(int x1, int y1, int x2, int y2, int errper);
 
 #ifdef _SPATH_C
 
-#ifdef HEX_BASED
 constexpr int NBCOUNT = 6;
-#else
-constexpr int NBCOUNT = 8;
-#endif
 
 typedef struct NODETYPE {
   int x, y;

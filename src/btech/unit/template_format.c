@@ -137,11 +137,6 @@ typedef struct PartWeaponNameResult {
 
 static PartWeaponNameResult
 part_weapon_name_check(const PartNameRequest *request, int weapon) {
-#ifndef CLAN_SUPPORT
-  (void)request;
-  return (PartWeaponNameResult){
-      .allowed = !weapon_catalogue_has_special(weapon, CLAT)};
-#else
   PartWeaponNameResult result = {.allowed = true};
   if (request->brand) {
     if (!request->configuration->btech_parts ||
@@ -151,16 +146,10 @@ part_weapon_name_check(const PartNameRequest *request, int weapon) {
       result.is_clan = true;
   }
   return result;
-#endif
 }
 
 static size_t part_weapon_short_name_offset(int weapon) {
-#ifdef CLAN_SUPPORT
   return !strncasecmp(weapon_catalogue_name(weapon), "CL.", 2) ? 0 : 3;
-#else
-  (void)weapon;
-  return 3;
-#endif
 }
 
 char *part_name_format(const PartNameRequest *request) {

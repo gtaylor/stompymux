@@ -243,9 +243,6 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
   int slot;
   int step;
   int value;
-#ifndef BT_CALCULATE_BV
-  int index;
-#endif
 
   statement = NULL;
   current_mech = NOTHING;
@@ -269,17 +266,11 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
     }
     if (mech_dbref != current_mech) {
       if (mech) {
-#ifndef BT_CALCULATE_BV
-        for (index = 0; index < 11; index++)
-          if (!*runtime_restore_int_slot(seen, 11, index))
-            result = -1;
-#else
         if (!*runtime_restore_int_slot(seen, 11, 0) ||
             !*runtime_restore_int_slot(seen, 11, 8) ||
             !*runtime_restore_int_slot(seen, 11, 9) ||
             !*runtime_restore_int_slot(seen, 11, 10))
           result = -1;
-#endif
         if (result < 0)
           break;
       }
@@ -292,24 +283,11 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
       memset(seen, 0, sizeof(seen));
       mech_persistence_snapshot_export(mech, &snapshot);
     }
-#ifdef BT_CALCULATE_BV
     if ((slot > 0 && slot < 8) || *runtime_restore_int_slot(seen, 11, slot)) {
-#else
-    if (*runtime_restore_int_slot(seen, 11, slot)) {
-#endif
       result = -1;
       break;
     }
     *runtime_restore_int_slot(seen, 11, slot) = 1;
-#ifndef BT_CALCULATE_BV
-    if (slot < 8)
-      snapshot.definition.unused[slot] = value;
-    else if (value < CHAR_MIN || value > CHAR_MAX)
-      result = -1;
-    else
-      *runtime_restore_char_slot(snapshot.definition.unused_char, 3, slot - 8) =
-          (char)value;
-#else
     if (slot == 0)
       snapshot.definition.mechbv_last = value;
     else if (value < CHAR_MIN || value > CHAR_MAX)
@@ -317,24 +295,17 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
     else
       *runtime_restore_char_slot(snapshot.definition.unused_char, 3, slot - 8) =
           (char)value;
-#endif
     if (result == 0)
       mech_persistence_identity_restore(mech, &snapshot);
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
   if (result == 0 && mech) {
-#ifndef BT_CALCULATE_BV
-    for (index = 0; index < 11; index++)
-      if (!*runtime_restore_int_slot(seen, 11, index))
-        result = -1;
-#else
     if (!*runtime_restore_int_slot(seen, 11, 0) ||
         !*runtime_restore_int_slot(seen, 11, 8) ||
         !*runtime_restore_int_slot(seen, 11, 9) ||
         !*runtime_restore_int_slot(seen, 11, 10))
       result = -1;
-#endif
   }
   sqlite3_finalize(statement);
   return result;

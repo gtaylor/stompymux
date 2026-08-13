@@ -33,7 +33,6 @@ bool template_load_error(FILE *fp, Mech *mech, DbRef player, bool condition,
   if (!condition) {
     return false;
   }
-#ifdef TEMPLATE_VERBOSE_ERRORS
   char message[LBUF_SIZE] = {0};
   va_list args;
   va_start(args, format);
@@ -47,12 +46,6 @@ bool template_load_error(FILE *fp, Mech *mech, DbRef player, bool condition,
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  message);
   }
-#else
-  (void)mech;
-  (void)player;
-  (void)global;
-  (void)format;
-#endif
   if (fp) {
     if (fclose(fp) != 0)
       return true;

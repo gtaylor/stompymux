@@ -222,11 +222,7 @@ void mech_make_stand(Mech *mech) {
 }
 
 void mech_start_seeing(Mech *mech) {
-#ifdef ADVANCED_LOS
   mech_event_schedule(mech, EVENT_PLOS, mech_plos_event, INITIAL_PLOS_TICK, 0);
-#else
-  (void)mech;
-#endif
 }
 
 void mech_continue_flying(Mech *mech) {

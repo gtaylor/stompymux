@@ -86,13 +86,7 @@ static void help_color_initialize(const char *from, char *to) {
   *tp = '\0';
 }
 
-#define ONE_LINE_TEXTS
-
-#ifdef ONE_LINE_TEXTS
 #define M_LEN CM_ONE
-#else
-#define MLen CM_TWO
-#endif
 
 typedef struct HelpLineRequest {
   CoolMenu **menu;
@@ -112,13 +106,6 @@ static const char *help_line_add(const HelpLineRequest *request) {
   size_t text_length;
 
   /* XXX: Not entirely sure what this is for.  */
-#ifndef ONE_LINE_TEXTS
-  if (!msg) {
-    cool_menu_add_with_flags(&c, " ", MLen);
-    *d = c;
-    return NULL;
-  }
-#endif
 
   /*
    * Split off at last space on a line, taking into account initial
@@ -197,26 +184,6 @@ static void help_text_add(const HelpTextRequest *request) {
   int nl1;
   int nl2;
 
-#ifndef ONE_LINE_TEXTS
-
-  msg1 = help_line_add(&(HelpLineRequest){
-      .menu = d, .message = msg1, .width = len, .indentation = initial});
-  msg2 =
-      help_line_add(&(HelpLineRequest){.menu = d,
-                                       .message = msg2,
-                                       .width = initial ? len : len - TAB,
-                                       .indentation = initial ? 0 : 0 - TAB});
-  if (!msg1 && !msg2)
-    return;
-  nl1 = help_text_length(msg1);
-  nl2 = help_text_length(msg2);
-  if (nl1 != l1 || nl2 != l2) /* To prevent infinite loops */
-    help_text_add(&(HelpTextRequest){.menu = d,
-                                     .command = msg1,
-                                     .description = msg2,
-                                     .width = len,
-                                     .initial_indentation = 0});
-#else
   int first = 1;
 
   while (msg1 && *msg1) {
@@ -240,8 +207,6 @@ static void help_text_add(const HelpTextRequest *request) {
       break;
     l2 = nl2;
   }
-
-#endif
 }
 
 typedef struct HelpSection {

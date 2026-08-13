@@ -1,7 +1,6 @@
 
 /* Implements unit line-of-sight calculations. */
 
-#include "btconfig.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "command_handlers_api.h"
@@ -110,10 +109,6 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
   int coordcount;
   LosTrace trace;
 
-#ifndef BT_PARTIAL
-  float partial_z, p_z_inc;
-#endif
-
   /* A Hex target off the map? Don't bother */
   if (!target && !battle_map_coordinate_is_valid(map, X, Y))
     return new_flag + BATTLE_MAP_LOS_BLOCKED;
@@ -195,18 +190,10 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
     z_inc = 0; /* In theory, this should never happen. */
   }
 
-#ifndef BT_PARTIAL
-  partial_z = 0;
-  p_z_inc = (float)1 / coordcount;
-#endif
-
   if (coordcount > 0) { /* not in same hex ; in same hex, you see always */
     for (i = 0; i < coordcount; i++) {
       const LosTracePoint *point = los_trace_point_at(&trace, i);
       pos_z += z_inc;
-#ifndef BT_PARTIAL
-      partial_z += p_z_inc;
-#endif
       if (!battle_map_coordinate_is_valid(map, point->x, point->y))
         continue;
       /* Should be possible to see into water.. perhaps. But not
@@ -293,15 +280,10 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
           new_flag |= BATTLE_MAP_LOS_BLOCKED;
           return new_flag;
         }
-#ifndef BT_PARTIAL
-        else if (dopartials && height_as_float >= (pos_z - partial_z))
-          new_flag |= BATTLE_MAP_LOS_PARTIAL_COVER;
-#endif
       }
     }
   }
   /* Then, we check the hex before target hex */
-#ifdef BT_PARTIAL
 
   if (coordcount >= 2) {
     if (dopartials) {
@@ -316,8 +298,6 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
         new_flag |= BATTLE_MAP_LOS_PARTIAL_COVER;
     }
   }
-
-#endif
 
   water_count = bounded(0, water_count, BATTLE_MAP_LOS_MAX_WATER - 1);
   woods_count = bounded(0, woods_count, BATTLE_MAP_LOS_MAX_WOOD - 1);
@@ -403,43 +383,12 @@ int mech_los_check(Mech *mech, Mech *target, int x, int y, float hex_range) {
   arc = in_weapon_arc(mech, x1, y1);
 
   if (mech && target) {
-#ifndef ADVANCED_LOS
-    const int observer_slot = mech_map_slot(mech);
-    const int target_slot = mech_map_slot(target);
-    losflag = battle_map_los_flags(map, observer_slot, target_slot);
-    MechSensorObservationRequest request = {
-        .observer = mech,
-        .target = target,
-        .los_flags = &losflag,
-        .arc = arc,
-        .range = hex_range,
-        .map_visibility = battle_map_visibility(map),
-        .map_light = battle_map_light(map),
-        .cloud_base = battle_map_cloud_base(map),
-    };
-    if (mech_sensor_can_see(&request)) {
-      battle_map_los_flags_set(
-          map, observer_slot, target_slot,
-          battle_map_los_flags(map, observer_slot, target_slot) |
-              (BATTLE_MAP_LOS_SEEN | BATTLE_MAP_LOS_SEEN_PRIMARY |
-               BATTLE_MAP_LOS_SEEN_SECONDARY));
-      return 1;
-    } else {
-      battle_map_los_flags_set(
-          map, observer_slot, target_slot,
-          battle_map_los_flags(map, observer_slot, target_slot) &
-              ~(BATTLE_MAP_LOS_SEEN | BATTLE_MAP_LOS_SEEN_PRIMARY |
-                BATTLE_MAP_LOS_SEEN_SECONDARY));
-      return 0;
-    }
-#else
     if (battle_map_los_flags(map, mech_map_slot(mech), mech_map_slot(target)) &
         (BATTLE_MAP_LOS_SEEN_PRIMARY | BATTLE_MAP_LOS_SEEN_SECONDARY))
       return battle_map_los_flags(map, mech_map_slot(mech),
                                   mech_map_slot(target)) &
              (BATTLE_MAP_LOS_SEEN_PRIMARY | BATTLE_MAP_LOS_SEEN_SECONDARY |
               BATTLE_MAP_LOS_BLOCKED);
-#endif
     return 0;
   }
   losflag = mech_los_calculate_flags(&(MechLosCalculation){

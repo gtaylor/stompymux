@@ -4,22 +4,6 @@
 #pragma once
 
 /*
- * Define if you want BV calculation functions. This include btgetbv()
- * and btgetbv_ref(), but will also perform damage per time based updates
- * on the mech live to support more balance XP ratio's.
- */
-#define BT_CALCULATE_BV
-
-/* Define if you want Variable Recycle Times for weapons */
-#define BT_USE_VRT
-
-/* Define if you want part-specific weights for cargo */
-#define BT_PART_WEIGHTS
-
-/* Define if you want weight-class based 'status' pictures */
-#define WEIGHTVARIABLE_STATUS
-
-/*
  * Define if you want the radio OBSERVATORIC units to be more
  * Observation-lounge like: hears everything, and reports more.
  * */
@@ -54,37 +38,10 @@ constexpr int PIL_XP_EVERY_N_STEPS = 10;
 constexpr int MINE_MIN = 5;
 constexpr int MINE_TABLE = 2; /* 0 = General, 2 = KICK */
 
-/* Have weird jump code? (undef = basic MUSE one) */
-#define ODDJUMP
-
-/* Whether we want 'BT' partial or not */
-#define BT_PARTIAL
-
-/* unload / load, addstuff / removestuff multiple kinds of items at
-   once */
-#define ECON_ALLOW_MULTIPLE_LOAD_UNLOAD
-
-/* Whether we acknowledge Munchkins exist or not */
-#define CLAN_SUPPORT
-
-/* Whether we support C3 or not */
-#define C3_SUPPORT
-
-/* Shows errors whenever need be */
-#define TEMPLATE_VERBOSE_ERRORS
-
-/* Define if buildings should regenerate CF */
-#define BUILDINGS_REPAIR_THEMSELVES
-#define BUILDINGS_REBUILD_FROM_DESTRUCTION
-
 constexpr int BUILDING_REPAIR_DELAY = 120; /* 1 pt / 1 min */
 
 /* Howlong to wait before rebuilding cf0'd buildings. */
 constexpr int BUILDING_DREBUILD_DELAY = 7200; /* 2 hours */
-
-/* Define if ECM status (ECM active, ECCM active, ECM-disturbed and
- * ECM-protected) should show on contacts (as 'E', 'P', 'e' and 'p') */
-#define ECM_ON_CONTACTS
 
 constexpr int LATERAL_TICK = 6;
 constexpr int HEAT_TICK = 2;
@@ -172,9 +129,7 @@ constexpr int LRS_DISPLAY_WIDTH2 = 35;
 constexpr int LRS_DISPLAY_HEIGHT = 11;
 constexpr int LRS_DISPLAY_HEIGHT2 = 5;
 
-/* Sensor Stuff */
-#define ADVANCED_LOS
-#define LOCK_TICK 8
+constexpr int SENSOR_LOCK_TICK = 8;
 
 constexpr int ECM_RANGE = 6;
 

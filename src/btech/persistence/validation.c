@@ -137,15 +137,9 @@ static int btech_special_validate_required_rows(sqlite3 *sqlite,
   if (btech_special_require_rows(sqlite, "btech_mech_runtime_unused",
                                  counts.mechs * 5) < 0)
     return -1;
-#ifndef BT_CALCULATE_BV
-  if (btech_special_require_rows(sqlite, "btech_mech_unit_aux",
-                                 counts.mechs * 11) < 0)
-    return -1;
-#else
   if (btech_special_require_rows(sqlite, "btech_mech_unit_aux",
                                  counts.mechs * 4) < 0)
     return -1;
-#endif
   if (btech_special_require_rows(sqlite, "btech_turret_tics",
                                  counts.turrets * NUM_TICS) < 0)
     return -1;

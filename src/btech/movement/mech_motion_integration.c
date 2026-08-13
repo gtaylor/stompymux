@@ -43,10 +43,8 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
   float jump_position;
   float target_x;
   float target_y;
-#ifdef ODDJUMP
   float remaining_jump;
   float midpoint_modifier;
-#endif
   char message_buffer[MBUF_SIZE];
   float movement_modifier = battle_map_movement_modifier(map);
   float jump_speed = mech_motion_jump_speed(mech, map);
@@ -64,19 +62,6 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
       jump_position = motion_hypotenuse(
           mech_position_real_x(mech) - mech_motion_vector_x(mech),
           mech_position_real_y(mech) - mech_motion_vector_y(mech));
-#ifndef ODDJUMP
-      float jump_length = mech_jump_length(mech);
-      mech_position_real_z_set(
-          mech,
-          ((4.0F * (float)clamp_float_to_int(jump_speed * MP_PER_KPH) *
-            (float)ZSCALE) /
-           (jump_length * jump_length)) *
-                  jump_position * (jump_length - jump_position) +
-              mech_motion_vector_z(mech) +
-              jump_position *
-                  (mech_jump_end_real_z(mech) - mech_motion_vector_z(mech)) /
-                  (jump_length * HEXLEVEL));
-#else
       remaining_jump = mech_jump_length(mech) - jump_position;
       if (remaining_jump < 0.0F)
         remaining_jump = 0.0F;
@@ -98,7 +83,6 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
                                  (jump_position * mech_jump_end_real_z(mech))) /
                                 mech_jump_length(mech)) +
                                    (midpoint_modifier * (float)ZSCALE));
-#endif
       mech_position_hex_z_set(
           mech, clamp_float_to_int(
                     (mech_position_real_z(mech) / (float)ZSCALE) + 0.5F));
@@ -117,7 +101,6 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
           mech_position_y(mech) == mech_jump_destination_y(mech)) {
         map_coord_to_real_coord(mech_position_x(mech), mech_position_y(mech),
                                 &target_x, &target_y);
-#ifdef ODDJUMP
         if (motion_hypotenuse(target_x - mech_motion_vector_x(mech),
                               target_y - mech_motion_vector_y(mech)) <=
             motion_hypotenuse(
@@ -127,11 +110,6 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
           mech_position_real_xy_set(
               mech, (MapRealPosition){.x = target_x, .y = target_y});
         }
-#else
-        mech_jump_land(mech);
-        mech_position_real_xy_set(
-            mech, (MapRealPosition){.x = target_x, .y = target_y});
-#endif
       }
       if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_ICE) {
         if (step->previous_z < -1 && mech_position_z(mech) >= -1)

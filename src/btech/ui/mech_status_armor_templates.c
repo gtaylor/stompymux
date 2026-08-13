@@ -1,7 +1,5 @@
 #include "mech_status_templates_internal.h"
 
-#include "btconfig.h"
-
 /* Don't indent the entire next section -- it contains ASCII graphics */
 /* *INDENT-OFF* */
 
@@ -46,8 +44,6 @@
  * &S<?><?>      &:0           Aero structural integrity.
  * \n0                         End of script.
  */
-
-#ifdef WEIGHTVARIABLE_STATUS
 
 /*
  Light Bipedal BattleMech:
@@ -146,32 +142,6 @@ const char *const ASSAULTMECHDESC =
     "@5/ @4\\@4|@4|@4/ @6\\\n"
     "6      @5(&+5@5/  @6\\&+6@6)             @5/    @6\\              "
     "@5(&:5@5/  @6\\&:6@6)";
-
-#else /* WEIGHTVARIABLE_STATUS */
-
-/*
-  Bipedal BattleMech:
-         ( 9)                 (**)                  ( 9)
-      /99|99|99\           /99|99|99\            /99|99|99\
-     (99/ || \99)         (   |  |   )          (99/ || \99)
-       /  /\  \               /  \                /  /\  \
-      (99/  \99)             /    \              (99/  \99)
-*/
-
-const char *const mechdesc =
-    "1         FRONT                REAR                INTERNAL\n"
-    "2         @7(&+7@7)                 @7(@7*@7*@7)                  "
-    "@7(&:7@7)\n"
-    "3      @2/&+2!24|&+4!43|&+3@3\\           @2/&-2!24|&-4!34|&-3@3\\        "
-    "    @2/&:2!24|&:4!34|&:3@3\\\n"
-    "4     @0(&+0!05/ !54|!64| !16\\&+1@1)         @0(   !54|  !64|   @1)      "
-    "    @0(&:0!05/ !54|!64| !16\\&:1@1)\n"
-    "5       @5/  @5/@6\\  @6\\               @5/  @6\\                @5/  "
-    "@5/@6\\  @6\\\n"
-    "6      @5(&+5@5/  @6\\&+6@6)             @5/    @6\\              "
-    "@5(&:5@5/  @6\\&:6@6)";
-
-#endif /* WEIGHTVARIABLE_STATUS */
 
 /*
   Quadruped BattleMech:

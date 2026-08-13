@@ -16,7 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef BT_CALCULATE_BV
 static int battle_value_table_get(const int values[64], int index) {
   if (index < 0)
     abort();
@@ -461,4 +460,3 @@ float calculate_offensive_bv(Mech *mech) {
   /* END OFFENSIVE BV */
   return offbv;
 }
-#endif

@@ -18,7 +18,6 @@ static float walking_speed(float maximum_speed) {
   return 2.0F * maximum_speed / 3.0F;
 }
 
-#ifdef BT_CALCULATE_BV
 static float battle_value_skill_multiplier(int gunnery, int piloting) {
   const int GUN_INDEX = battle_value_skill_index(gunnery);
   const int PILOT_INDEX = battle_value_skill_index(piloting);
@@ -357,4 +356,3 @@ int calculate_bv(Mech *mech, int gunstat, int pilstat) {
   const int BASE_BATTLE_VALUE = (offbv + defbv) / 100;
   return clamp_float_to_int((float)BASE_BATTLE_VALUE * mul);
 }
-#endif

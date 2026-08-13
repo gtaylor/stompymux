@@ -71,7 +71,6 @@ BtechScriptResult fun_btgetrealmaxspeed(BtechScriptCall *call) {
 }
 
 BtechScriptResult fun_btgetbv(BtechScriptCall *call) {
-#ifdef BT_CALCULATE_BV
   DbRef it =
       match_thing(&call->evaluation->command->match, call->player,
                   script_function_argument(call->arguments.values,
@@ -97,10 +96,6 @@ BtechScriptResult fun_btgetbv(BtechScriptCall *call) {
   mech_battle_value_set(mech, BATTLE_VALUE);
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%d",
                    BATTLE_VALUE);
-#else
-  safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                   "#-1 BATTLE VALUE SUPPORT DISABLED");
-#endif
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
@@ -121,50 +116,34 @@ static Mech *reference_mech(BtechScriptCall *call) {
 }
 
 BtechScriptResult fun_btgetbv_ref(BtechScriptCall *call) {
-#ifdef BT_CALCULATE_BV
   Mech *mech = reference_mech(call);
   if (!mech)
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   mech_battle_value_set(mech, calculate_bv(mech, 4, 5));
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%d",
                    mech_battle_value(mech));
-#else
-  safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                   "#-1 BATTLE VALUE SUPPORT DISABLED");
-#endif
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
 BtechScriptResult fun_btgetdbv_ref(BtechScriptCall *call) {
-#ifdef BT_CALCULATE_BV
   Mech *mech = reference_mech(call);
   if (!mech)
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%.2f",
                    (double)calculate_defensive_bv(mech));
-#else
-  safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                   "#-1 BATTLE VALUE SUPPORT DISABLED");
-#endif
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
 BtechScriptResult fun_btgetobv_ref(BtechScriptCall *call) {
-#ifdef BT_CALCULATE_BV
   Mech *mech = reference_mech(call);
   if (!mech)
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%.2f",
                    (double)calculate_offensive_bv(mech));
-#else
-  safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                   "#-1 BATTLE VALUE SUPPORT DISABLED");
-#endif
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
 BtechScriptResult fun_btgetbv2_ref(BtechScriptCall *call) {
-#ifdef BT_CALCULATE_BV
   Mech *mech = reference_mech(call);
   if (!mech)
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
@@ -172,9 +151,5 @@ BtechScriptResult fun_btgetbv2_ref(BtechScriptCall *call) {
   const float OFFENSIVE_VALUE = calculate_offensive_bv(mech);
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%.2f",
                    (double)(DEFENSIVE_VALUE + OFFENSIVE_VALUE));
-#else
-  safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                   "#-1 BATTLE VALUE SUPPORT DISABLED");
-#endif
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }

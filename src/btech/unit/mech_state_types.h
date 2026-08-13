@@ -37,14 +37,10 @@ typedef struct {
   float maxspeed;          /* Maxspeed (running) in KPH */
   float template_maxspeed; /* we should read this in */
 
-  int mechbv;     /* Fasa BattleValue of this unit */
-  int cargospace; /* Assigned cargo space * 100 for half and quarter tons */
-#ifndef BT_CALCULATE_BV
-  int unused[8]; /* Space for future expansion */
-#else
+  int mechbv;      /* Fasa BattleValue of this unit */
+  int cargospace;  /* Assigned cargo space * 100 for half and quarter tons */
   int mechbv_last; /* BV caclulation cacher */
-#endif
-  char targcomp; /* Targeting comp mode. */
+  char targcomp;   /* Targeting comp mode. */
   char unused_char[3];
   char carmaxton; /* Max Tonnage variable for carrier sizing */
 } MechDefinitionState;

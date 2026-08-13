@@ -53,12 +53,10 @@ void mech_movement_update(Mech *mech) {
   mech_position_previous_capture(mech);
   mech_position_hex_sync_from_real(mech);
 
-#ifdef ODDJUMP
   if (mech_jump_destination_was_overshot(mech)) {
     mech_jump_land(mech);
     mech_jump_overshoot_restore(mech, step.delta_x, step.delta_y);
   }
-#endif
 
   DbRef previous_map = mech_map_dbref(mech);
   check_edge_of_map(mech);

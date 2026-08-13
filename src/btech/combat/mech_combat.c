@@ -246,10 +246,9 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
     mech_stop_lock(mech);
     mech_targeting_unit_set(mech, targetref);
     mech_sixth_sense_check(mech, target);
-#if LOCK_TICK > 0
     if (!btech_context_overrides_weapon_arcs(context))
-      mech_event_schedule(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
-#endif
+      mech_event_schedule(mech, EVENT_LOCK, mech_lock_event, SENSOR_LOCK_TICK,
+                          0);
     break;
   case 2:
     /* Targetted a square */
@@ -280,10 +279,9 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
                   "Target coordinates set at (X,Y) %d, %d", newx, newy);
     mech_stop_lock(mech);
     mech_targeting_lock_mode_add(mech, LOCK_TARGET);
-#if LOCK_TICK > 0
     if (!btech_context_overrides_weapon_arcs(context))
-      mech_event_schedule(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
-#endif
+      mech_event_schedule(mech, EVENT_LOCK, mech_lock_event, SENSOR_LOCK_TICK,
+                          0);
     break;
   case 3:
     /* Targetted a square w/ special mode (hex / building) */
@@ -358,10 +356,9 @@ void mech_set_target(DbRef player, void *data, char *buffer) {
 
     mech_stop_lock(mech);
     mech_targeting_lock_mode_add(mech, mode);
-#if LOCK_TICK > 0
     if (!btech_context_overrides_weapon_arcs(context))
-      mech_event_schedule(mech, EVENT_LOCK, mech_lock_event, LOCK_TICK, 0);
-#endif
+      mech_event_schedule(mech, EVENT_LOCK, mech_lock_event, SENSOR_LOCK_TICK,
+                          0);
   }
 }
 

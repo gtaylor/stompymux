@@ -50,11 +50,9 @@
 #include "template_api.h"
 #include "weapon_settings.h"
 
-#ifdef BT_PART_WEIGHTS
 /* From template.c */
 extern const int INTERNALSWEIGHT[];
 extern const int CARGOWEIGHT[];
-#endif
 
 #ifdef BT_MOVEMENT_MODES
 #include "failures.h"

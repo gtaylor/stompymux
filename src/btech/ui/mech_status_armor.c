@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "btconfig.h"
 #include "btech_text_builder.h"
 #include "equipment_types.h"
 #include "mech_classification_api.h"
@@ -372,7 +371,6 @@ void print_armor_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
       if (mech_movement_type(mech) == MOVE_QUAD) {
         srcbuf = QUADDESC;
       } else {
-#ifdef WEIGHTVARIABLE_STATUS
         if (mech_tonnage(mech) <= 35)
           srcbuf = LIGHTMECHDESC;
         else if (mech_tonnage(mech) <= 55)
@@ -381,9 +379,6 @@ void print_armor_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
           srcbuf = HEAVYMECHDESC;
         else
           srcbuf = ASSAULTMECHDESC;
-#else  /* WEIGHTVARIABLE_STATUS */
-        srcbuf = mechdesc;
-#endif /* WEIGHTVARIABLE_STATUS */
       }
       break;
 

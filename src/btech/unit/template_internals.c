@@ -1,4 +1,3 @@
-#include "btconfig.h"
 #include "template_internal.h"
 
 #include "mux/support/checked_storage.h"
@@ -71,7 +70,6 @@ const char *template_internal_name(int index) {
   return *name;
 }
 
-#ifdef BT_PART_WEIGHTS
 const int INTERNALSWEIGHT[] = {
     102,  /* ShoulderOrHip */
     102,  /* UpperActuator */
@@ -122,7 +120,6 @@ const int INTERNALSWEIGHT[] = {
     1024, /* Dual_Saw */
     512,  /* Light_BAP */
 };
-#endif /* BT_PART_WEIGHTS */
 
 const int TEMPLATE_INTERNAL_COUNT =
     (sizeof(internals) / sizeof(*internals)) - 1;

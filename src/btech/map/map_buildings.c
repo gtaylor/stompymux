@@ -62,7 +62,6 @@ static void set_building_cf(BattleMap *map, int i1, int i2) {
 }
 
 static void building_regen_event(MuxEvent *e) {
-#ifdef BUILDINGS_REPAIR_THEMSELVES
   BattleMap *map = e->data;
   int cf;
   int max;
@@ -74,11 +73,9 @@ static void building_regen_event(MuxEvent *e) {
   if (cf != max)
     btech_event_schedule(e->scheduler, map, EVENT_BREGEN, building_regen_event,
                          BUILDING_REPAIR_DELAY, 0);
-#endif
 }
 
 static void building_rebuild_event(MuxEvent *e) {
-#ifdef BUILDINGS_REBUILD_FROM_DESTRUCTION
   BattleMap *map = e->data;
   int cf = 0;
   int max = 0;
@@ -88,7 +85,6 @@ static void building_rebuild_event(MuxEvent *e) {
   if (max <= 0)
     return;
   set_building_cf(map, 1, max);
-#endif
 }
 
 void possibly_start_building_regen(BtechContext *context, DbRef obj) {

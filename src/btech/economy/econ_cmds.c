@@ -76,12 +76,10 @@ static int *branded_part_pile_slot(const BrandedPartPileSlot *slot) {
   return part_pile_slot(brand_pile, slot->part.id);
 }
 
-#ifdef BT_PART_WEIGHTS
 /* From template.c */
 
 extern const int INTERNALSWEIGHT[];
 extern const int CARGOWEIGHT[];
-#endif /* BT_PART_WEIGHTS */
 
 /* Also sets the fuel we have ; but I digress */
 
@@ -249,9 +247,7 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
   int i;
 
   char tmpstr[LBUF_SIZE];
-#ifdef BT_PART_WEIGHTS
   int sw = 0;
-#endif /* BT_PART_WEIGHTS */
   CoolMenu *c = NULL;
   int found = 0;
 
@@ -315,15 +311,10 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
                     id, brand));
         continue;
       }
-#ifndef BT_PART_WEIGHTS
-      snprintf(tmpstr, LBUF_SIZE, "%s x%d", display_name.text, x);
-      ch = tmpstr;
-#else
       sw = btech_part_weight(id);
       (void)snprintf(tmpstr, LBUF_SIZE, "%s x%d (%.1ft)", display_name.text, x,
                      (sw * x) / 1024.0);
       ch = tmpstr;
-#endif /* BT_PART_WEIGHTS */
       cool_menu_entry_simple(&c, ch, CM_TWO);
       found++;
     }
@@ -424,10 +415,6 @@ static bool try_part_search(BtechContext *context, const char *pattern,
     request.cursor = MATCH.cursor;
     (*count)++;
   }
-#ifndef ECON_ALLOW_MULTIPLE_LOAD_UNLOAD
-  if (*count > 1)
-    return false;
-#endif
   if (*count > 0) {
     selection->selected = true;
     selection->kind = candidate;

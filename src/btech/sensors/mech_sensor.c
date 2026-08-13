@@ -703,16 +703,9 @@ static void sensor_update_los_pair(BattleMap *map, int observer_index,
       .previous_visibility = was_visible,
   };
 
-#ifdef ADVANCED_LOS
   (void)always_update_sensors;
   flags = mech_sensor_visibility_update(&visibility_request);
   battle_map_los_flags_set(map, observer_index, target_index, flags);
-#else
-  if (always_update_sensors) {
-    flags = mech_sensor_visibility_update(&visibility_request);
-    battle_map_los_flags_set(map, observer_index, target_index, flags);
-  }
-#endif
 }
 
 void mech_sensor_map_los_update(DbRef obj, BattleMap *map) {

@@ -62,7 +62,6 @@ void mech_sensor_visibility_refresh(Mech *mech) {
     battle_map_los_flags_set(map, i, num, los_flags);
 
     /* Then update the SEES flags. */
-#ifdef ADVANCED_LOS
     MechSensorVisibilityRequest request = {
         .observer = seer,
         .los_flags = los_flags,
@@ -77,7 +76,6 @@ void mech_sensor_visibility_refresh(Mech *mech) {
     };
     los_flags = mech_sensor_visibility_update(&request);
     battle_map_los_flags_set(map, i, num, los_flags);
-#endif
   }
 }
 

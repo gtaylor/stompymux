@@ -399,7 +399,6 @@ const BtechCommandDefinition MECHCOMMANDS[] = {
      "Puts out the fires on your vehicle. You must be shut down to do this.",
      btech_command_invoke_vehicle_fire_extinguish},
 
-#ifdef C3_SUPPORT
     /* C3 */
 
     {0, "C3 [ID|-]",
@@ -421,7 +420,6 @@ const BtechCommandDefinition MECHCOMMANDS[] = {
      btech_command_invoke_mech_c3i_targets},
     {0, "C3INETWORK", "Displays information about your C3i network",
      btech_command_invoke_mech_c3i_network},
-#endif
 
     /* Heat stuff */
 
