@@ -1,6 +1,5 @@
 #include "btech/context.h"
 #include "equipment_types.h"
-#include "mech_crew_api.h"
 #include "mech_targeting_api.h"
 #include "mux/server/platform.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
@@ -16,7 +15,6 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
-#include "btmux_build_config.h"
 #include "checked_conversion.h"
 #include "map.h"
 #include "map_conditions_api.h"
@@ -262,32 +260,6 @@ void mech_unconsciousness_extend(Mech *mech, int len) {
   mech_event_schedule(mech, EVENT_RECOVERY, mech_recovery_event, l, 0);
 }
 
-#ifdef BT_MOVEMENT_MODES
-static void mech_sideslip_event(MuxEvent *e) {
-  Mech *mech = (Mech *)e->data;
-  int roll;
-
-  if (!mech || !mech_is_started(mech))
-    return;
-  mech_notify(mech, MECHALL, "You make a skill roll while sideslipping!");
-  if (!made_pilot_skill_roll(mech, has_bool_advantage(mech->xcode.context,
-                                                      mech_pilot_dbref(mech),
-                                                      "maneuvering_ace")
-                                       ? -1
-                                       : 0)) {
-    mech_notify(mech, MECHALL, "You fail and spin out!");
-    mech_los_broadcast(mech, "spins out while sideslipping!");
-    ((mech)->rd.speed) = 0.0;
-    roll = clamp_intptr_to_int(btech_random_range(mech->xcode.context, 0, 5));
-    mech_fall_heading_apply(mech, roll * 60);
-    ((mech)->rd.desired_speed) = 0.0;
-    mech_lateral_movement_set(mech, 0);
-    return;
-  }
-  mech_event_schedule(mech, EVENT_SIDESLIP, mech_sideslip_event, TURN, 0);
-}
-#endif
-
 void mech_lateral_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   intptr_t latmode = (intptr_t)e->data2;
@@ -303,14 +275,6 @@ void mech_lateral_event(MuxEvent *e) {
               "Lateral movement mode change to %s (%d offset) completed.",
               description, offset);
   mech_lateral_movement_set(mech, offset);
-#ifdef BT_MOVEMENT_MODES
-  if (((mech)->ud.move) != MOVE_QUAD) {
-    if (((mech)->rd.lateral) == 0)
-      mech_event_cancel(mech, EVENT_SIDESLIP);
-    else if (!(mech_event_count(mech, EVENT_SIDESLIP)))
-      mech_event_schedule(mech, EVENT_SIDESLIP, mech_sideslip_event, 1, 0);
-  }
-#endif
 }
 
 void mech_move_event(MuxEvent *e) {
@@ -606,86 +570,6 @@ void check_stagger_event(MuxEvent *event) {
    * times out in mech_damage_stagger_check, or can be erased by weapons fire */
   mech->rd.stagger_damage = -10;
 }
-
-#ifdef BT_MOVEMENT_MODES
-void mech_movemode_event(MuxEvent *e) {
-  Mech *mech = (Mech *)e->data;
-  long i = (long)e->data2;
-  int dir = (i & MODE_ON) != 0;
-
-  if (!mech)
-    return;
-
-  if (!mech_is_started(mech) || mech_is_destroyed(mech)) {
-    ((mech)->rd.status2) &= ~(MOVE_MODES);
-    return;
-  }
-  if (dir) {
-    if (i & MODE_EVADE) {
-      ((mech)->rd.status2) |= EVADING;
-      mech_notify(mech, MECHALL,
-                  "You bounce chaotically as you maximize your movement mode "
-                  "to evade!");
-      mech_los_broadcast(
-          mech,
-          "suddenly begins to move erratically performing evasive maneuvers!");
-    } else if (i & MODE_SPRINT) {
-      ((mech)->rd.status2) |= SPRINTING;
-      mech_notify(mech, MECHALL,
-                  "You shimmy side to side as you get more speed from your "
-                  "movement mode.");
-      if ((((mech)->ud.type) == CLASS_MECH) ||
-          (((mech)->ud.type) == CLASS_BSUIT))
-        mech_los_broadcast(mech, "breaks out into a full blown stride as it "
-                                 "sprints over the terrain!");
-      else
-        mech_los_broadcast(mech,
-                           "shifts into high gear as it gains more speed!");
-      if (((mech)->rd.speed) < 0) {
-        mech_notify(mech, MECHALL,
-                    "You stop your backward momemtum while sprinting and come "
-                    "to a stop!");
-        ((mech)->rd.desired_speed) = 0;
-      }
-    } else if (i & MODE_DODGE) {
-      if (mech_recycling_state(mech, CHECK_PHYS) > 0) {
-        mech_notify(mech, MECHALL,
-                    "You cannot enter DODGE mode due to physical useage.");
-        return;
-      }
-      ((mech)->rd.status2) |= DODGING;
-      mech_notify(mech, MECHALL,
-                  "You brace yourself for any oncoming physicals.");
-    }
-  } else {
-    if (i & MODE_EVADE) {
-      ((mech)->rd.status2) &= ~EVADING;
-      mech_notify(
-          mech, MECHALL,
-          "Cockpit movement normalizes as you cease your evasive maneuvers.");
-      mech_los_broadcast(mech, "ceases its evasive behavior and calms down.");
-    } else if (i & MODE_SPRINT) {
-      ((mech)->rd.status2) &= ~SPRINTING;
-      mech_notify(mech, MECHALL,
-                  "You feel less seasick as you leave your sprint mode and "
-                  "resume normal movement.");
-      mech_los_broadcast(mech, "slows down and enters a normal movement mode.");
-    } else if (i & MODE_DODGE) {
-      ((mech)->rd.status2) &= ~DODGING;
-      if (i & MODE_DG_USED)
-        mech_notify(mech, MECHALL,
-                    "Your dodge maneuver has been used and you are no longer "
-                    "braced for physicals.");
-      else
-        mech_notify(mech, MECHALL,
-                    "You loosen up your stance and no longer dodge physicals.");
-    }
-  }
-  if (((mech)->rd.speed) > mech_effective_maximum_speed(mech) ||
-      ((mech)->rd.desired_speed) > mech_effective_maximum_speed(mech))
-    ((mech)->rd.desired_speed) = mech_effective_maximum_speed(mech);
-}
-#endif
 
 int mech_stagger_modifier(Mech *mech) {
   int bth_mod = 0;

@@ -13,8 +13,6 @@
 #include "floatsim.h"
 #include "map_conditions_api.h"
 #include "mech_classification_api.h"
-#include "mech_condition_api.h"
-#include "mech_crew_api.h"
 #include "mech_heat_api.h"
 #include "mech_identity_api.h"
 #include "mech_move_api.h"
@@ -108,19 +106,6 @@ void mech_heading_update(Mech *mech) {
   }
   /*   offset = offset * 2 * MOVE_MOD; - Twice as fast as this;dunno why - */
   offset = clamp_float_to_int((float)offset * (float)MOVE_MOD);
-#ifdef BT_MOVEMENT_MODES
-  MechConditionSummary conditions = mech_condition_summary(mech);
-  if (conditions.tight_turn_mode &&
-      has_bool_advantage(context, mech_pilot_dbref(mech), "maneuvering_ace"))
-    offset = (offset * 3) / 2;
-  if ((conditions.sprinting || conditions.evading) &&
-      !has_bool_advantage(context, mech_pilot_dbref(mech), "maneuvering_ace")) {
-    if (has_bool_advantage(context, mech_pilot_dbref(mech), "speed_demon"))
-      offset = (offset * 2) / 3;
-    else
-      offset = (offset / 2);
-  }
-#endif
   if (mech_is_dropship(mech) && offset >= short_to_float_simulation(10))
     offset = short_to_float_simulation(10);
   mech_heading_rotate_toward_desired(mech, offset);

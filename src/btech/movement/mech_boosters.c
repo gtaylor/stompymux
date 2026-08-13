@@ -41,14 +41,7 @@ static void mech_mascr_event(MuxEvent *e) {
 
 static void mech_masc_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-#ifndef BT_MOVEMENT_MODES
   int needed = 2 * (1 + mech_masc_counter_advance(mech));
-#else
-  MechConditionSummary condition = mech_condition_summary(mech);
-  int needed = (2 * (1 + mech_masc_counter_advance(mech))) +
-               (mech_supercharger_movement_mode_is_enabled(mech) ? 1 : 0) +
-               (condition.sprinting ? 2 : 0);
-#endif
   BtechContext *context = mech_context(mech);
   int roll = btech_random_roll(context);
 
@@ -140,13 +133,7 @@ static void mech_scharger_event(MuxEvent *e) {
 
 static void mech_scharge_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-#ifndef BT_MOVEMENT_MODES
   int needed = 2 * (1 + mech_supercharger_counter_advance(mech));
-#else
-  MechConditionSummary condition = mech_condition_summary(mech);
-  int needed = (2 * (1 + mech_masc_counter_advance(mech))) +
-               (condition.masc_enabled ? 1 : 0) + (condition.sprinting ? 2 : 0);
-#endif
   BtechContext *context = mech_context(mech);
   int roll = btech_random_roll(context);
   int j;

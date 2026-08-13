@@ -477,12 +477,6 @@ void physical_attack_resolve(const PhysicalAttackRequest *request) {
   base_to_hit +=
       ((mech_class(target) == CLASS_BSUIT) && (ATTACK_TYPE == PA_KICK)) ? 3 : 0;
 
-#ifdef BT_MOVEMENT_MODES
-  // A dodging unit is +2, requires maneuvering_ace.
-  if (mech_condition_summary(target).dodging)
-    base_to_hit += 2;
-#endif
-
   // Saws get a +1 BTH.
   if (ATTACK_TYPE == PA_SAW)
     base_to_hit += 1;

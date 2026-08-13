@@ -6,7 +6,6 @@
 #include "map.h"
 #include "map_terrain.h"
 #include "mech_classification_api.h"
-#include "mech_condition_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
@@ -173,14 +172,6 @@ int phys_common_checks(Mech *mech) {
     mech_notify(mech, MECHALL, "You are still trying to stand up!");
     return 0;
   }
-#ifdef BT_MOVEMENT_MODES
-  if (mech_condition_summary(mech).dodging || mech_move_mode_locked(mech)) {
-    mech_notify(
-        mech, MECHALL,
-        "You cannot use physicals while using a special movement mode.");
-    return 0;
-  }
-#endif
   if (!all_limbs_recycled(mech)) {
     return 0;
   }

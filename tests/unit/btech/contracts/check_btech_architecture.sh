@@ -142,6 +142,13 @@ while IFS= read -r match; do
 done < <(rg -n '\b(ADVANCED_LOS|BT_CALCULATE_BV|BT_PARTIAL|BT_PART_WEIGHTS|BT_USE_VRT|BUILDINGS_REBUILD_FROM_DESTRUCTION|BUILDINGS_REPAIR_THEMSELVES|C3_SUPPORT|CLAN_SUPPORT|ECM_ON_CONTACTS|ECON_ALLOW_MULTIPLE_LOAD_UNLOAD|LOCK_TICK|ODDJUMP|TEMPLATE_VERBOSE_ERRORS|WEIGHTVARIABLE_STATUS|HEX_BASED|ONE_LINE_TEXTS)\b' \
   src/btech -g '*.[ch]' || true)
 
+while IFS= read -r match; do
+  [[ -z "$match" ]] && continue
+  echo "$match: retired movement-mode and MW3 stats compile choices are not allowed"
+  status=1
+done < <(rg -n '\b(BTECH_MOVEMENT_MODES|BT_MOVEMENT_MODES|BTECH_MW3STATS|BT_EXILE_MW3STATS)\b' \
+  CMakeLists.txt src -g 'CMakeLists.txt' -g '*.[ch]' -g '*.in' || true)
+
 if [[ -e src/btech/sensors/object_spatial.h ||
       -e src/btech/autopilot/spath_api.h ]]; then
   echo "src/btech: retired spatial pathfinding headers are not allowed"

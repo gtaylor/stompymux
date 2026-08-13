@@ -9,7 +9,6 @@
 #include "btech/context.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
-#include "btmux_build_config.h"
 #include "environment_damage_api.h"
 #include "map.h"
 #include "map_terrain.h"
@@ -152,36 +151,6 @@ void mech_damage_apply(const MechDamageRequest *request) {
 
   if (mech_class(wounded) == CLASS_MW || mech_class(wounded) == CLASS_MECH)
     transfer = 1;
-#ifdef BT_MOVEMENT_MODES
-  if ((damage > 0 || int_damage > 0) &&
-      mech_condition_summary(wounded).sprinting) {
-    mech_sprinting_set(wounded, false);
-    mech_los_broadcast(wounded, "breaks out of its sprint as it takes damage!");
-    mech_notify(wounded, MECHALL,
-                "You lose your sprinting momentum as you take damage!");
-    if (!mech_event_count(wounded, EVENT_MOVEMODE))
-      mech_event_schedule(wounded, EVENT_MOVEMODE, mech_movemode_event, TURN,
-                          MODE_OFF | MODE_SPRINT);
-  }
-
-  if ((damage > 0 || int_damage > 0) &&
-      mech_condition_summary(wounded).hidden) {
-    mech_hidden_set(wounded, false);
-    mech_los_broadcast(wounded, "loses its cover as it takes damage!");
-    mech_notify(wounded, MECHALL, "Your cover is ruined as you take damage!");
-    if (!mech_event_count(wounded, EVENT_MOVEMODE))
-      mech_hidden_set(wounded, false);
-  }
-
-  if ((damage > 0 || int_damage > 0) &&
-      (mech_move_mode_locked(wounded) &&
-       !(mech_event_first_delay(wounded, EVENT_MOVEMODE) &
-         (MODE_EVADE | MODE_DODGE | MODE_OFF)))) {
-    mech_event_cancel(wounded, EVENT_MOVEMODE);
-    mech_notify(wounded, MECHALL,
-                "Your movement mode changes are cancelled as you take damage!");
-  }
-#endif
   if (damage > 0 && int_damage == 0) {
     /* If we're a VTOL and the hitloc is the rotor,
        we'll cut the damage by some value */

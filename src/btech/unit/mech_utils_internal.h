@@ -54,10 +54,6 @@
 extern const int INTERNALSWEIGHT[];
 extern const int CARGOWEIGHT[];
 
-#ifdef BT_MOVEMENT_MODES
-#include "failures.h"
-#endif
-
 static inline int mech_weapon_recycle_time(const Mech *mech, int weapon_index) {
   return btech_weapon_settings_recycle_time(
       &mech->xcode.context->weapon_settings, weapon_index);

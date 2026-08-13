@@ -9,7 +9,6 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
-#include "btmux_build_config.h"
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
@@ -83,13 +82,6 @@ void mech_jump(DbRef player, void *data, char *buffer) {
                  "Your fortified state prevents you from moving.");
     return;
   }
-#ifdef BT_MOVEMENT_MODES
-  if (mech_move_mode_locked(mech)) {
-    mecha_notify(btech_context_evaluation(context), player,
-                 "Movement modes disallow jumping.");
-    return;
-  }
-#endif
   if (mech_class(mech) != CLASS_MECH && mech_class(mech) != CLASS_MW &&
       mech_class(mech) != CLASS_BSUIT && mech_class(mech) != CLASS_VEH_GROUND) {
     mecha_notify(btech_context_evaluation(context), player,

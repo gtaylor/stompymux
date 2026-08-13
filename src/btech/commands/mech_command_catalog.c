@@ -54,20 +54,6 @@ const BtechCommandDefinition MECHCOMMANDS[] = {
      "the desired direction, but requires a pilot roll. Roll BTH is based on "
      "tonnage and speed. Legs must not be recycling.",
      btech_command_invoke_mech_bootlegger},
-#ifdef BT_MOVEMENT_MODES
-    {195, "SPRINT",
-     "Toggles sprinting mode. While sprinting you are easier to hit, cannot "
-     "attack, but can move 2xWalkSpeed.",
-     btech_command_invoke_mech_sprint},
-    {195, "EVADE",
-     "Toggles evasion mode. While evading you are harder to hit, but cannot "
-     "attack.",
-     btech_command_invoke_mech_evade},
-    {1, "DODGE",
-     "Toggles dodge mode on. You must have Dodge_Maneuver advantage. While "
-     "dodging you can counter physical attack rolls. One per turn.",
-     btech_command_invoke_mech_dodge},
-#endif
     /* Radio */
     {0, "Radio", "Radio", nullptr},
     {0, "LISTCHANNELS", "Lists set frequencies + comtitles for them.",

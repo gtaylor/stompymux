@@ -6,7 +6,6 @@
 
 #include "btech/context.h"
 #include "btech_event.h"
-#include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_building_query_api.h"
@@ -270,13 +269,6 @@ MechStatusString mech_status_string(Mech *target, int who) {
   if (CONDITION.spinning)
     status_string_append(&status, &sptr, 'X');
 
-#ifdef BT_MOVEMENT_MODES
-  if (CONDITION.sprinting)
-    status_string_append(&status, &sptr, 'M');
-  if (CONDITION.evading)
-    status_string_append(&status, &sptr, 'm');
-#endif
-
   status_string_append(&status, &sptr, '\0');
   return status;
 }
@@ -295,12 +287,6 @@ char mech_contact_status_character(Mech *mech, Mech *mech_target,
       return 't';
     if (mech_contact_carries_club(mech_target))
       return 'C';
-#ifdef BT_MOVEMENT_MODES
-    if (CONDITION.sprinting)
-      return 'M';
-    if (CONDITION.evading)
-      return 'm';
-#endif
     return ' ';
   case 2:
     if (mech_is_destroyed(mech_target))

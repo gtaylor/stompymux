@@ -135,18 +135,10 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
   case MOVE_WHEEL:
     if (fabsf(mech_current_speed(mech)) <= 0.0F)
       return false;
-#ifndef BT_MOVEMENT_MODES
     motion_step_delta_set(
         step, (MapPolarVector){.magnitude = mech_current_speed(mech) *
                                             (float)MOVE_MOD * movement_modifier,
                                .bearing = mech_heading_degrees(mech)});
-#else
-    motion_step_delta_set(
-        step, (MapPolarVector){.magnitude = mech_current_speed(mech) *
-                                            (float)MOVE_MOD * movement_modifier,
-                               .bearing = mech_lateral_movement(mech) +
-                                          mech_heading_degrees(mech)});
-#endif
     mech_position_real_xy_translate(mech, step->delta_x, step->delta_y);
     step->update_surface = true;
     mech_charge_distance_record(mech, step->delta_x, step->delta_y);
@@ -154,18 +146,10 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
   case MOVE_HOVER:
     if (fabsf(mech_current_speed(mech)) <= 0.0F)
       return false;
-#ifndef BT_MOVEMENT_MODES
     motion_step_delta_set(
         step, (MapPolarVector){.magnitude = mech_current_speed(mech) *
                                             (float)MOVE_MOD * movement_modifier,
                                .bearing = mech_heading_degrees(mech)});
-#else
-    motion_step_delta_set(
-        step, (MapPolarVector){.magnitude = mech_current_speed(mech) *
-                                            (float)MOVE_MOD * movement_modifier,
-                               .bearing = mech_lateral_movement(mech) +
-                                          mech_heading_degrees(mech)});
-#endif
     mech_position_real_xy_translate(mech, step->delta_x, step->delta_y);
     step->update_surface = true;
     mech_charge_distance_record(mech, step->delta_x, step->delta_y);

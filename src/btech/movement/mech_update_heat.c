@@ -102,15 +102,8 @@ void mech_heat_update(Mech *mech) {
   }
 
   if (fabsf(mech_current_speed(mech)) > 0.0F) {
-#ifndef BT_MOVEMENT_MODES
-    if (mech_desired_speed(mech) > 2.0F * maxspeed / 3.0F + 0.1F)
+    if (mech_desired_speed(mech) > (2.0F * maxspeed / 3.0F) + 0.1F)
       mech_heat_production_add(mech, 2.0F);
-#else
-    if (condition.sprinting || condition.evading)
-      mech_heat_production_add(mech, 3.0F);
-    else if (mech_desired_speed(mech) > (2.0F * maxspeed / 3.0F) + 0.1F)
-      mech_heat_production_add(mech, 2.0F);
-#endif
     else
       mech_heat_production_add(mech, 1.0F);
   }

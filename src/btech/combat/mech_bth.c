@@ -1,7 +1,6 @@
 /* Calculates unit combat base-to-hit values. */
 #include "btech/context.h"
 #include "btech_event.h"
-#include "btmux_build_config.h"
 #include "equipment_types.h"
 #include "map.h"
 #include "map_terrain.h"
@@ -401,16 +400,6 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
                                     mech_position_y(target)) == HEAVY_FOREST)
         bth_trace_add(&trace, "Heavy Woods bonus", -2);
     }
-#ifdef BT_MOVEMENT_MODES
-    MechConditionSummary target_condition = mech_condition_summary(target);
-    if (target_condition.sprinting || target_condition.evading) {
-      if (target_condition.sprinting)
-        bth_trace_add(&trace, "SprintingTarget",
-                      btech_context_sprint_to_hit_modifier(context));
-      if (!target_condition.fallen && target_condition.evading)
-        bth_trace_add(&trace, "EvadingTarget", 1);
-    }
-#endif
   }
   /* Check for damage */
   bth_trace_add(

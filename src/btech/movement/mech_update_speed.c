@@ -69,14 +69,8 @@ float mech_terrain_speed(const MechTerrainSpeedRequest *request) {
   case BATTLE_TERRAIN_BRIDGE:
   case BATTLE_TERRAIN_ROAD:
     /* Ground units (wheeled and tracked) get +1 MP moving on paved surface */
-#ifndef BT_MOVEMENT_MODES
     if (mech_movement_type(mech) == MOVE_TRACK ||
         mech_movement_type(mech) == MOVE_WHEEL)
-#else
-    if (!mech_condition_summary(mech).sprinting &&
-        (mech_movement_type(mech) == MOVE_TRACK ||
-         mech_movement_type(mech) == MOVE_WHEEL))
-#endif
       tempspeed = speed_old_increase(tempspeed, MAXSPEED, MP1);
     [[fallthrough]];
   case BATTLE_TERRAIN_ICE:
@@ -178,25 +172,11 @@ void mech_speed_update(Mech *mech) {
       else
         tempspeed = tempspeed * 3.0F / 4.0F;
     }
-#ifdef BT_MOVEMENT_MODES
-    if ((conditions.sprinting || conditions.evading) &&
-        !(has_bool_advantage(context, mech_pilot_dbref(mech), "speed_demon") ||
-          has_bool_advantage(context, mech_pilot_dbref(mech),
-                             "maneuvering_ace")))
-      tempspeed = (tempspeed * 2.0F) / 3.0F;
-#endif
     mech_heading_change_clear(mech);
   }
   if (mech_movement_type(mech) == MOVE_QUAD && mech_lateral_movement(mech)) {
     tempspeed = speed_old_decrease(tempspeed, maxspeed, MP1);
-#ifdef BT_MOVEMENT_MODES
-  } else if (mech_lateral_movement(mech)) {
-    if (has_bool_advantage(context, mech_pilot_dbref(mech), "maneuvering_ace"))
-      tempspeed = speed_old_decrease(tempspeed, maxspeed, MP2);
-    else
-      tempspeed = speed_old_decrease(tempspeed, maxspeed, MP3);
   }
-#endif
   if (tempspeed <= 0.0F)
     tempspeed = 0.0F;
   if (mech_desired_speed(mech) < 0.0F)

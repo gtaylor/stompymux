@@ -2,8 +2,5 @@
 
 #pragma once
 #cmakedefine BT_COMPLEXREPAIRS 1
-#cmakedefine BT_EXILE_MW3STATS 1
-#cmakedefine BT_MOVEMENT_MODES 1
-
 #define BTMUX_NAME "@BTMUX_NAME@"
 #define BTMUX_VERSION_STRING "@BTMUX_VERSION_STRING@"

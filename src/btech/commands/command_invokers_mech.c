@@ -65,7 +65,6 @@ DEFINE_BTECH_COMMAND_INVOKER(mech_detachcables)
 DEFINE_BTECH_COMMAND_INVOKER(mech_dig)
 DEFINE_BTECH_COMMAND_INVOKER(mech_disableweap)
 DEFINE_BTECH_COMMAND_INVOKER(mech_disembark)
-DEFINE_BTECH_COMMAND_INVOKER(mech_dodge)
 void btech_command_invoke_mech_drop(const BtechCommandInvocation *invocation) {
   mech_drop(invocation->actor, invocation->object, invocation->arguments);
 }
@@ -75,7 +74,6 @@ DEFINE_BTECH_COMMAND_INVOKER(mech_embark)
 DEFINE_BTECH_COMMAND_INVOKER(mech_enterbase)
 DEFINE_BTECH_COMMAND_INVOKER(mech_enterbay)
 DEFINE_BTECH_COMMAND_INVOKER(mech_eta)
-DEFINE_BTECH_COMMAND_INVOKER(mech_evade)
 DEFINE_BTECH_COMMAND_INVOKER(mech_explode)
 DEFINE_BTECH_COMMAND_INVOKER(mech_explosive)
 DEFINE_BTECH_COMMAND_INVOKER(mech_findcenter)
@@ -142,7 +140,6 @@ DEFINE_BTECH_COMMAND_INVOKER(mech_sight)
 DEFINE_BTECH_COMMAND_INVOKER(mech_smoke)
 DEFINE_BTECH_COMMAND_INVOKER(mech_speed)
 DEFINE_BTECH_COMMAND_INVOKER(mech_spot)
-DEFINE_BTECH_COMMAND_INVOKER(mech_sprint)
 DEFINE_BTECH_COMMAND_INVOKER(mech_stand)
 void btech_command_invoke_mech_startup(
     const BtechCommandInvocation *invocation) {

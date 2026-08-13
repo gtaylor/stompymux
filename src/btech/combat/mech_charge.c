@@ -296,10 +296,6 @@ void charge_mech(Mech *mech, Mech *target) {
              ? min(0, mech_attacker_movement_modifier(mech) - 1)
              : mech_attacker_movement_modifier(mech));
     mech_base_to_hit += mech_target_movement_modifier(mech, target, 0.0);
-#ifdef BT_MOVEMENT_MODES
-    if (mech_condition_summary(target).dodging)
-      mech_base_to_hit += 2;
-#endif
     /* BTH for second unit */
     targ_base_to_hit = 5;
     targ_base_to_hit += find_pilot_piloting(target) - find_pilot_piloting(mech);
@@ -309,10 +305,6 @@ void charge_mech(Mech *mech, Mech *target) {
              ? min(0, mech_attacker_movement_modifier(target) - 1)
              : mech_attacker_movement_modifier(target));
     targ_base_to_hit += mech_target_movement_modifier(target, mech, 0.0);
-#ifdef BT_MOVEMENT_MODES
-    if (mech_condition_summary(mech).dodging)
-      targ_base_to_hit += 2;
-#endif
     /* Now check to see if its possible for them to even charge */
     if (mech_charge) {
       if (mech_base_to_hit > 12) {
@@ -611,10 +603,6 @@ void charge_mech(Mech *mech, Mech *target) {
            ? min(0, mech_attacker_movement_modifier(mech) - 1)
            : mech_attacker_movement_modifier(mech));
   base_to_hit += mech_target_movement_modifier(mech, target, 0.0);
-#ifdef BT_MOVEMENT_MODES
-  if (mech_condition_summary(target).dodging)
-    base_to_hit += 2;
-#endif
   if (base_to_hit > 12) {
     mech_notify(
         mech, MECHALL,

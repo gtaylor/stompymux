@@ -303,28 +303,6 @@ void mech_show_flags(const MechFlagDisplayRequest *request) {
                          : "[fg=green bold]SWARMING ENEMY UNIT[reset]");
     }
   }
-#ifdef BT_MOVEMENT_MODES
-  if (conditions.dodging) {
-    mech_show_flag(evaluation, PLAYER, SPACES, "[fg=red bold]DODGING[reset]");
-  }
-  if (conditions.evading) {
-    mech_show_flag(evaluation, PLAYER, SPACES, "[fg=red bold]EVADING[reset]");
-  }
-  if (conditions.sprinting) {
-    mech_show_flag(evaluation, PLAYER, SPACES, "[fg=red bold]SPRINTING[reset]");
-  }
-  if (mech_event_count(mech, EVENT_MOVEMODE)) {
-    mech_show_flag(evaluation, PLAYER, SPACES,
-                   "[fg=yellow bold]CHANGING MOVEMENT MODE[reset]");
-  }
-  if (mech_event_count(mech, EVENT_SIDESLIP)) {
-    mech_show_flag(evaluation, PLAYER, SPACES,
-                   "[fg=yellow bold]SIDESLIPPING[reset]");
-  }
-  if (conditions.stunned) {
-    mech_show_flag(evaluation, PLAYER, SPACES, "[fg=red bold]STUNNED[reset]");
-  }
-#endif
   if (LEVEL == 0) { /* our own 'status' */
     if (conditions.ecm_protected) {
       mech_show_flag(evaluation, PLAYER, SPACES,

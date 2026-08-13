@@ -4,7 +4,6 @@
 #include "btconfig.h"
 #include "btech/context.h"
 #include "btech_event.h"
-#include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_terrain.h"
@@ -280,13 +279,6 @@ int bsuit_action_validate(Mech *mech, DbRef player) {
                  "You are already busy with a special attack!");
     return -1;
   }
-#ifdef BT_MOVEMENT_MODES
-  if (mech_move_mode_locked(mech)) {
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                 "Unavailable when performing movement modes - deal.");
-    return -1;
-  }
-#endif
   for (i = 0; i < NUM_BSUIT_MEMBERS; i++) {
     if (!mech_section_is_destroyed(mech, i) &&
         mech_section_recycle_ticks(mech, i)) {

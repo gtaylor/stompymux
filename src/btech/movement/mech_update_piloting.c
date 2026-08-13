@@ -17,7 +17,6 @@
 #include "mech_damage_api.h"
 #include "mech_damage_history_api.h"
 #include "mech_equipment_api.h"
-#include "mech_events.h"
 #include "mech_heat_api.h"
 #include "mech_identity_api.h"
 #include "mech_los_api.h"
@@ -41,7 +40,7 @@ void mech_piloting_update(Mech *mech) {
   BtechContext *context = mech_context(mech);
   int makeroll = 0;
   int grav = 0;
-  float maxspeed;
+  float maxspeed = mech_effective_maximum_speed(mech);
   int temp_tick = btech_context_event_tick(context);
 
   /* Preserve the legacy even-tick alignment before the per-turn checks. */
@@ -50,8 +49,6 @@ void mech_piloting_update(Mech *mech) {
 
   if (temp_tick % TURN == 0 && !mech_is_fallen(mech) &&
       !mech_is_jumping(mech) && !mech_is_out_of_control(mech)) {
-    maxspeed = mech_effective_maximum_speed(mech);
-
     if (!mech_is_started(mech))
       makeroll = 4;
 
@@ -63,17 +60,13 @@ void mech_piloting_update(Mech *mech) {
                 1.5F) *
           MP1;
     }
-#ifndef BT_MOVEMENT_MODES
-    if (mech_is_under_special_conditions(mech) && mech_is_under_gravity(mech))
-#else
-    if (mech_is_under_special_conditions(mech) && mech_is_under_gravity(mech) &&
-        !mech_event_count(mech, EVENT_MOVEMODE)) {
-#endif
+    if (mech_is_under_special_conditions(mech) && mech_is_under_gravity(mech)) {
       if (mech_current_speed(mech) > mech_maximum_speed(mech) &&
           mech_class(mech) == CLASS_MECH) {
         grav = 1;
         makeroll = 1;
       }
+    }
   }
 
   MechConditionSummary condition = mech_condition_summary(mech);
@@ -164,14 +157,13 @@ void mech_piloting_update(Mech *mech) {
       mech_fall(mech, 1, 0);
     }
   }
-}
-if (mech_class(mech) == CLASS_MECH)
-  mech_damage_stagger_check(mech);
-else
-  mech_turn_damage_clear(mech);
-if (temp_tick % TURN == 0 && mech_is_started(mech) &&
-    mech_movement_type(mech) != MOVE_NONE)
-  (void)mech_generic_failure_check(mech, FAILURE_SYSTEM_COMPUTER);
+  if (mech_class(mech) == CLASS_MECH)
+    mech_damage_stagger_check(mech);
+  else
+    mech_turn_damage_clear(mech);
+  if (temp_tick % TURN == 0 && mech_is_started(mech) &&
+      mech_movement_type(mech) != MOVE_NONE)
+    (void)mech_generic_failure_check(mech, FAILURE_SYSTEM_COMPUTER);
 }
 
 void mech_turret_autoturn_update(Mech *mech) {

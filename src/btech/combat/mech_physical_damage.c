@@ -370,15 +370,6 @@ int death_from_above(Mech *mech, Mech *target) {
     return 0;
   }
 
-#ifdef BT_MOVEMENT_MODES
-  if (mech_condition_summary(mech).dodging || mech_move_mode_locked(mech)) {
-    mech_notify(
-        mech, MECHALL,
-        "You cannot use physicals while using a special movement mode.");
-    return 0;
-  }
-#endif
-
   if (mech_section_recycle_ticks(mech, LLEG) ||
       mech_section_recycle_ticks(mech, RLEG)) {
     mech_notify(mech, MECHALL,
@@ -421,11 +412,6 @@ int death_from_above(Mech *mech, Mech *target) {
            : mech_attacker_movement_modifier(mech));
   base_to_hit += mech_target_movement_modifier(mech, target, 0.0);
   base_to_hit += mech_class(target) == CLASS_BSUIT ? 1 : 0;
-
-#ifdef BT_MOVEMENT_MODES
-  if (mech_condition_summary(target).dodging)
-    base_to_hit += 2;
-#endif
 
   if (base_to_hit > 12) {
     mech_notify(

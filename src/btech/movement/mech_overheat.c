@@ -100,9 +100,7 @@ void mech_overheat_handle(Mech *mech) {
   }
 
   avoided = 0;
-#ifdef BT_EXILE_MW3STATS
   if (!is_player(btech_context_database(context), mech_pilot_dbref(mech))) {
-#endif
     if (heat >= 30.0F) {
     } else if (heat >= 26.0F) {
       if (btech_random_roll(context) >= 10)
@@ -117,7 +115,6 @@ void mech_overheat_handle(Mech *mech) {
       if (btech_random_roll(context) >= 4)
         avoided = 1;
     }
-#ifdef BT_EXILE_MW3STATS
   } else {
     avoided = 1;
     if (heat >= 14.0F) {
@@ -142,7 +139,6 @@ void mech_overheat_handle(Mech *mech) {
         accumulate_computer_xp(mech_pilot_dbref(mech), mech, 1);
     }
   }
-#endif
   if (!avoided && mech_is_started(mech)) {
     mech_notify(mech, MECHALL,
                 "[fg=red inverse]Reactor shutting down...[reset]");

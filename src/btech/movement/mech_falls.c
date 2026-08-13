@@ -25,7 +25,6 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_stagger.h"
-#include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
 #include "registry_api.h"
@@ -39,14 +38,6 @@ static bool mech_fall_is_in_water(Mech *mech) {
   return battle_terrain_is_water(mech_real_terrain_get(mech)) &&
          mech_position_z(mech) < 0;
 }
-
-#ifdef BT_MOVEMENT_MODES
-static int mech_fall_movement_mode_delay(const Mech *mech) {
-  return mech_class(mech) == CLASS_BSUIT || mech_class(mech) == CLASS_MW
-             ? TURN / 2
-             : TURN;
-}
-#endif
 
 void mech_fall(Mech *mech, int levels, bool show_message) {
   int roll;
@@ -102,18 +93,6 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
     mech_event_schedule(mech, EVENT_JUMPSTABIL, mech_stabilizing_event,
                         mech_jump_to_hit_recycle(mech), 0);
   }
-#ifdef BT_MOVEMENT_MODES
-  if (mech_event_count(mech, EVENT_MOVEMODE))
-    mech_event_cancel(mech, EVENT_MOVEMODE);
-  if (mech_condition_summary(mech).sprinting)
-    mech_event_schedule(mech, EVENT_MOVEMODE, mech_movemode_event,
-                        mech_fall_movement_mode_delay(mech),
-                        MODE_SPRINT | MODE_OFF);
-  if (mech_condition_summary(mech).evading)
-    mech_event_schedule(mech, EVENT_MOVEMODE, mech_movemode_event,
-                        mech_fall_movement_mode_delay(mech),
-                        MODE_EVADE | MODE_OFF);
-#endif
   if (mech_movement_type(mech) == MOVE_VTOL ||
       mech_movement_type(mech) == MOVE_FLY) {
     mech_vertical_speed_set(mech, 0.0F);

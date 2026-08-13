@@ -10,7 +10,6 @@
 #include <string.h>
 
 #include "btconfig.h"
-#include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "crit_api.h"
 #include "eject_api.h"
@@ -76,13 +75,6 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
                  "You cannot tow while fortified.");
     return;
   }
-#ifdef BT_MOVEMENT_MODES
-  if (mech_move_mode_locked(mech)) {
-    mecha_notify(btech_context_evaluation(context), player,
-                 "You cannot tow currently in this movement mode!");
-    return;
-  }
-#endif
   if (argc != 1) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid number of arguments.");

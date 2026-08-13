@@ -14,7 +14,6 @@
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_crew_api.h"
-#include "mech_events.h"
 #include "mech_events_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
@@ -293,18 +292,6 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
       float walking_speed = 2.0F * mech_effective_maximum_speed(mech) / 3.0F;
       if (mech_desired_speed(mech) > walking_speed)
         mech_desired_speed_set(mech, walking_speed);
-#ifdef BT_MOVEMENT_MODES
-      if (condition.sprinting) {
-        mech_los_broadcast(mech,
-                           "breaks out of its sprint as it enters water!");
-        mech_notify(mech, MECHALL,
-                    "You lose your sprinting momentum as you "
-                    "enter water!");
-        if (!mech_event_count(mech, EVENT_MOVEMODE))
-          mech_event_schedule(mech, EVENT_MOVEMODE, mech_movemode_event, TURN,
-                              MODE_OFF | MODE_SPRINT);
-      }
-#endif
       if (mech_current_speed(mech) >
           (2.0F * mech_effective_maximum_speed(mech) / 3.0F) + 0.1F) {
         mech_notify(mech, MECHPILOT,

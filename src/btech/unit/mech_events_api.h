@@ -21,9 +21,6 @@ void mech_crewstun_event(MuxEvent *event);
 void unstun_crew_event(MuxEvent *event);
 void mech_unjam_ammo_event(MuxEvent *event);
 void check_stagger_event(MuxEvent *event);
-#ifdef BT_MOVEMENT_MODES
-void mech_movemode_event(MuxEvent *event);
-#endif
 int mech_stagger_modifier(Mech *mech);
 int mech_stagger_modifier_at_level(Mech *mech, int stagger_level);
 void mech_staggercheck_heartbeat(Mech *mech);

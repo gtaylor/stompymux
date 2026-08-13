@@ -10,7 +10,6 @@
 #include "btech/context.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
-#include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map_coordinates.h"
@@ -166,13 +165,6 @@ void mech_spot(DbRef player, void *data, char *buffer) {
     return;
   mech_map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   argc = mech_parseattributes(buffer, args, 5);
-#ifdef BT_MOVEMENT_MODES
-  if (mech_move_mode_locked(mech)) {
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                 "You cannot spot while using a special movement mode.");
-    return;
-  }
-#endif
   if (argc != 1) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You may only use mech ID's to set spotter!");

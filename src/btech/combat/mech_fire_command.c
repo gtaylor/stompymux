@@ -8,7 +8,6 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
-#include "btmux_build_config.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "failures.h"
@@ -170,13 +169,6 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
   if (!SIGHT) {
     mech_event_cancel(mech, EVENT_HIDE);
   }
-#ifdef BT_MOVEMENT_MODES
-  if (mech_move_mode_locked(mech)) {
-    mecha_notify(btech_context_evaluation(context), PLAYER,
-                 "You cannot fire while using a special movement mode.");
-    return 0;
-  }
-#endif
   if (mech_spotter_dbref(mech) > 0 &&
       mech_spotter_dbref(mech) == mech_dbref(mech)) {
     mecha_notify(btech_context_evaluation(context), PLAYER,

@@ -28,11 +28,6 @@ void mech_vertical(DbRef player, void *data, char *buffer);
 void mech_thrash(DbRef player, void *data, char *buffer);
 void mech_jump(DbRef player, void *data, char *buffer);
 void mech_hulldown(DbRef player, void *data, char *buffer);
-#ifdef BT_MOVEMENT_MODES
-void mech_sprint(DbRef player, void *data, char *buffer);
-void mech_evade(DbRef player, void *data, char *buffer);
-void mech_dodge(DbRef player, void *data, char *buffer);
-#endif
 int mech_drop_surface_elevation(Mech *mech);
 void mech_drop_surface_set(Mech *mech, bool check_ice);
 int mech_drop_height_above_surface(Mech *mech);
