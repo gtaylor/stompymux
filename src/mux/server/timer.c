@@ -33,14 +33,14 @@ static void timer_callback(MuxTimer *timer, void *arg);
 struct ServerTimer {
   MuxTimer *event;
   MaintenanceContext *maintenance;
-#ifdef BTMUX_PERSISTENCE_TESTING
+#ifdef BTECH_PERSISTENCE_TESTING
   unsigned test_ticks;
 #endif
 };
 
-#ifdef BTMUX_PERSISTENCE_TESTING
+#ifdef BTECH_PERSISTENCE_TESTING
 static void signal_test_tick(void) {
-  const char *value = getenv("BTMUX_TEST_TICK_FD");
+  const char *value = getenv("BTECH_TEST_TICK_FD");
   char *end;
   long descriptor;
 
@@ -53,7 +53,7 @@ static void signal_test_tick(void) {
     return;
   (void)write((int)descriptor, "1", 1);
   close((int)descriptor);
-  unsetenv("BTMUX_TEST_TICK_FD");
+  unsetenv("BTECH_TEST_TICK_FD");
 }
 #endif
 
@@ -66,7 +66,7 @@ ServerTimer *server_timer_create(UvLoopT *loop,
     return nullptr;
   timer->maintenance = maintenance;
   maintenance->clock->now = time(nullptr);
-#ifdef BTMUX_PERSISTENCE_TESTING
+#ifdef BTECH_PERSISTENCE_TESTING
   timer->test_ticks = 0;
 #endif
   maintenance->clock->dump_deadline =
@@ -83,8 +83,8 @@ ServerTimer *server_timer_create(UvLoopT *loop,
       maintenance->configuration->idle_interval + maintenance->clock->now;
   maintenance->clock->metrics_deadline = 15 + maintenance->clock->now;
   timer->event = mux_timer_create(loop, timer_callback, timer);
-#ifdef BTMUX_PERSISTENCE_TESTING
-  if (getenv("BTMUX_TEST_TICK_FD") == nullptr)
+#ifdef BTECH_PERSISTENCE_TESTING
+  if (getenv("BTECH_TEST_TICK_FD") == nullptr)
     initial_timeout = 5000;
 #endif
   if (timer->event == nullptr ||
@@ -224,7 +224,7 @@ static void timer_callback(MuxTimer *timer, void *arg) {
 
   maintenance->clock->tick_pending = true;
   dispatch(maintenance);
-#ifdef BTMUX_PERSISTENCE_TESTING
+#ifdef BTECH_PERSISTENCE_TESTING
   server_timer->test_ticks++;
   if (server_timer->test_ticks >= 11)
     signal_test_tick();

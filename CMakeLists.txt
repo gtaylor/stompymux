@@ -143,8 +143,8 @@ unset(CMAKE_SKIP_INSTALL_RULES)
 set(BUILD_TESTING ${CMARK_BUILD_TESTING_SAVED} CACHE BOOL "" FORCE)
 unset(CMARK_BUILD_TESTING_SAVED)
 
-set(BTMUX_NAME "${PROJECT_NAME}")
-set(BTMUX_VERSION_STRING "${BTMUX_NAME} ${PROJECT_VERSION}")
+set(BTECH_NAME "${PROJECT_NAME}")
+set(BTECH_VERSION_STRING "${BTECH_NAME} ${PROJECT_VERSION}")
 
 set(BT_COMPLEXREPAIRS ${BTECH_COMPLEX_REPAIRS})
 
@@ -205,12 +205,12 @@ add_subdirectory("${BTECH_SOURCE_DIR}")
 add_executable(stompymux)
 include(src/mux/sources.cmake)
 if(BUILD_TESTING)
-  set(BTMUX_INTEGRATION_RUNNER
+  set(BTECH_INTEGRATION_RUNNER
     "${CMAKE_SOURCE_DIR}/tests/integration/run_test.sh")
-  set(BTMUX_GAME_FIXTURE "${CMAKE_SOURCE_DIR}/tests/fixtures/game")
-  set(BTMUX_INTEGRATION_FIXTURES
+  set(BTECH_GAME_FIXTURE "${CMAKE_SOURCE_DIR}/tests/fixtures/game")
+  set(BTECH_INTEGRATION_FIXTURES
     "${CMAKE_SOURCE_DIR}/tests/fixtures/integration")
-  target_compile_definitions(stompymux PRIVATE BTMUX_PERSISTENCE_TESTING=1)
+  target_compile_definitions(stompymux PRIVATE BTECH_PERSISTENCE_TESTING=1)
 endif()
 set(STOMPYMUX_MAX_FRAME_SIZE 65536)
 if(BTECH_ENABLE_ASAN)

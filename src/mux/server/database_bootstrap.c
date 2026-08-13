@@ -208,8 +208,8 @@ int database_bootstrap(EvaluationContext *evaluation,
 
   bootstrap_random_password(god_password);
   bootstrap_random_password(wizard_password);
-#ifdef BTMUX_PERSISTENCE_TESTING
-  const char *test_password = getenv("BTMUX_TEST_GOD_PASSWORD");
+#ifdef BTECH_PERSISTENCE_TESTING
+  const char *test_password = getenv("BTECH_TEST_GOD_PASSWORD");
   if (test_password && *test_password)
     (void)snprintf(god_password, BOOTSTRAP_PASSWORD_SIZE, "%s", test_password);
 #endif

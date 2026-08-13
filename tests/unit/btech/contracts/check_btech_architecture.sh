@@ -948,7 +948,7 @@ for ((header_number = 1; header_number <= header_index; header_number++)); do
   fi
 done
 
-if [[ ${BTMUX_ARCHITECTURE_PROFILE:-0} == 1 ]]; then
+if [[ ${BTECH_ARCHITECTURE_PROFILE:-0} == 1 ]]; then
   architecture_finished=$(date +%s%N)
   echo "architecture profile: scans=$(((scan_finished - architecture_started) / 1000000))ms headers=$(((architecture_finished - scan_finished) / 1000000))ms jobs=$header_jobs" >&2
 fi

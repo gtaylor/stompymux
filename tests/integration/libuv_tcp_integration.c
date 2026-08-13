@@ -1434,7 +1434,7 @@ int main(int argc, char **argv) {
   if (child == 0) {
     if (chdir(directory) < 0)
       _exit(127);
-    if (setenv("BTMUX_TEST_GOD_PASSWORD", "btmuxr0x", 1) < 0)
+    if (setenv("BTECH_TEST_GOD_PASSWORD", "btmuxr0x", 1) < 0)
       _exit(127);
     char *server = process_argument(argv, argc, 1);
     execl(server, server, "stompymux.toml", nullptr);
@@ -1455,7 +1455,7 @@ int main(int argc, char **argv) {
   if (child == 0) {
     if (chdir(directory) < 0)
       _exit(127);
-    if (setenv("BTMUX_TEST_GOD_PASSWORD", "btmuxr0x", 1) < 0)
+    if (setenv("BTECH_TEST_GOD_PASSWORD", "btmuxr0x", 1) < 0)
       _exit(127);
     char *server = process_argument(argv, argc, 1);
     execl(server, server, "stompymux.toml", nullptr);

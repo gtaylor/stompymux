@@ -454,9 +454,9 @@ target_link_libraries(libuv_tcp_integration_test
 target_include_directories(libuv_tcp_integration_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME libuv_tcp_integration
-  COMMAND bash "${BTMUX_INTEGRATION_RUNNER}" libuv-tcp
-    "${BTMUX_GAME_FIXTURE}"
-    "${BTMUX_INTEGRATION_FIXTURES}/libuv_tcp"
+  COMMAND bash "${BTECH_INTEGRATION_RUNNER}" libuv-tcp
+    "${BTECH_GAME_FIXTURE}"
+    "${BTECH_INTEGRATION_FIXTURES}/libuv_tcp"
     $<TARGET_FILE:libuv_tcp_integration_test> $<TARGET_FILE:stompymux>)
 
 add_executable(mux_header_interfaces_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/mux_header_interfaces.c)
@@ -579,14 +579,14 @@ target_include_directories(gamedb_integration_test PRIVATE
 foreach(database_suite IN ITEMS bootstrap persistence recovery-snapshot
                                 recovery-rejection)
   add_test(NAME gamedb_${database_suite}_integration
-    COMMAND bash "${BTMUX_INTEGRATION_RUNNER}" gamedb-${database_suite}
-      "${BTMUX_GAME_FIXTURE}" - $<TARGET_FILE:gamedb_integration_test>
+    COMMAND bash "${BTECH_INTEGRATION_RUNNER}" gamedb-${database_suite}
+      "${BTECH_GAME_FIXTURE}" - $<TARGET_FILE:gamedb_integration_test>
       $<TARGET_FILE:stompymux> ${database_suite})
 endforeach()
 foreach(writer_shard RANGE 0 3)
   add_test(NAME gamedb_recovery-writer-${writer_shard}_integration
-    COMMAND bash "${BTMUX_INTEGRATION_RUNNER}"
-      gamedb-recovery-writer-${writer_shard} "${BTMUX_GAME_FIXTURE}" -
+    COMMAND bash "${BTECH_INTEGRATION_RUNNER}"
+      gamedb-recovery-writer-${writer_shard} "${BTECH_GAME_FIXTURE}" -
       $<TARGET_FILE:gamedb_integration_test> $<TARGET_FILE:stompymux>
       recovery-writer ${writer_shard} 4)
 endforeach()
@@ -597,9 +597,9 @@ target_include_directories(lua_module_smoke_test PRIVATE
   "${LUAJIT_SOURCE_DIR}/src"
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME lua_module_smoke
-  COMMAND bash "${BTMUX_INTEGRATION_RUNNER}" lua-module-smoke
-    "${BTMUX_GAME_FIXTURE}"
-    "${BTMUX_INTEGRATION_FIXTURES}/lua_module_smoke"
+  COMMAND bash "${BTECH_INTEGRATION_RUNNER}" lua-module-smoke
+    "${BTECH_GAME_FIXTURE}"
+    "${BTECH_INTEGRATION_FIXTURES}/lua_module_smoke"
     $<TARGET_FILE:lua_module_smoke_test>)
 
 add_executable(lua_command_access_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/content/lua_command_access.c
@@ -662,9 +662,9 @@ target_include_directories(help_index_integration_test PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME help_index_integration
-  COMMAND bash "${BTMUX_INTEGRATION_RUNNER}" help-index
-    "${BTMUX_GAME_FIXTURE}"
-    "${BTMUX_INTEGRATION_FIXTURES}/help_index"
+  COMMAND bash "${BTECH_INTEGRATION_RUNNER}" help-index
+    "${BTECH_GAME_FIXTURE}"
+    "${BTECH_INTEGRATION_FIXTURES}/help_index"
     $<TARGET_FILE:help_index_integration_test>)
 
 add_executable(configuration_toml_parse_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/server/configuration_toml_parse.c
@@ -677,7 +677,7 @@ add_test(NAME configuration_toml_parse
   COMMAND configuration_toml_parse_test
     "${CMAKE_SOURCE_DIR}/tests/fixtures/unit/configuration_toml")
 
-set(BTMUX_INTEGRATION_TESTS
+set(BTECH_INTEGRATION_TESTS
   gamedb_bootstrap_integration
   gamedb_persistence_integration
   gamedb_recovery-snapshot_integration
@@ -690,7 +690,7 @@ set(BTMUX_INTEGRATION_TESTS
   libtelnet_integration
   libuv_tcp_integration
   lua_module_smoke)
-set_property(TEST ${BTMUX_INTEGRATION_TESTS} APPEND PROPERTY LABELS integration)
+set_property(TEST ${BTECH_INTEGRATION_TESTS} APPEND PROPERTY LABELS integration)
 set_tests_properties(
   btech_architecture PROPERTIES COST 10
   gamedb_recovery-writer-0_integration PROPERTIES COST 2

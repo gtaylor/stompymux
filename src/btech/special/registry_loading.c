@@ -263,9 +263,9 @@ void btech_special_objects_load(BtechContext *context) {
               "Invalid BTech character state in the game database");
     exit(EXIT_FAILURE);
   }
-#ifdef BTMUX_PERSISTENCE_TESTING
+#ifdef BTECH_PERSISTENCE_TESTING
   /* The integration fixture creates its initial SQLite special-state rows. */
-  if (getenv("BTMUX_TEST_BTECH_BOOTSTRAP")) {
+  if (getenv("BTECH_TEST_BTECH_BOOTSTRAP")) {
     btech_heartbeat_start(context);
     return;
   }

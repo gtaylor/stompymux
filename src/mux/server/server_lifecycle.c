@@ -45,14 +45,14 @@ struct ServerLifecycle {
   ServerTimer *timer;
 };
 
-#ifdef BTMUX_PERSISTENCE_TESTING
+#ifdef BTECH_PERSISTENCE_TESTING
 /* Notify the integration test only after the server can handle shutdown. */
 static void server_lifecycle_signal_test_ready(void) {
   const char *value;
   char *end;
   long descriptor;
 
-  value = getenv("BTMUX_TEST_READY_FD");
+  value = getenv("BTECH_TEST_READY_FD");
   if (value == nullptr)
     return;
   errno = 0;
@@ -224,7 +224,7 @@ void server_lifecycle_run(ServerLifecycle *lifecycle, int port) {
   }
   gettimeofday(&lifecycle->last_slice, nullptr);
   gettimeofday(&lifecycle->current_time, nullptr);
-#ifdef BTMUX_PERSISTENCE_TESTING
+#ifdef BTECH_PERSISTENCE_TESTING
   server_lifecycle_signal_test_ready();
 #endif
   uv_run(&lifecycle->event_loop, UV_RUN_DEFAULT);

@@ -18,7 +18,7 @@ void do_version(CommandInvocation *invocation) {
                  MSG_ME_ALL | MSG_F_DOWN);
 }
 
-const char *mux_version = BTMUX_VERSION_STRING
+const char *mux_version = BTECH_VERSION_STRING
 #ifdef DEBUG
     " DEBUG"
 #else

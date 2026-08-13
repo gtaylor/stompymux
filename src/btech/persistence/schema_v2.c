@@ -287,15 +287,15 @@ const char BTECH_SPECIAL_SCHEMA_SQL[] =
  * absent from production builds, and is scoped to an in-progress SQLite
  * extension write so reads and unrelated SQLite users are unaffected.
  */
-#ifdef BTMUX_PERSISTENCE_TESTING
+#ifdef BTECH_PERSISTENCE_TESTING
 static const char *btech_special_test_fault_table;
 static const char *btech_special_test_fault_phase;
 static int btech_special_test_fault_active;
 static int btech_special_test_fault_triggered;
 
 void btech_special_test_reset_fault(void) {
-  btech_special_test_fault_table = getenv("BTMUX_TEST_BTECH_FAIL_TABLE");
-  btech_special_test_fault_phase = getenv("BTMUX_TEST_BTECH_FAIL_PHASE");
+  btech_special_test_fault_table = getenv("BTECH_TEST_BTECH_FAIL_TABLE");
+  btech_special_test_fault_phase = getenv("BTECH_TEST_BTECH_FAIL_PHASE");
   btech_special_test_fault_active =
       btech_special_test_fault_table && btech_special_test_fault_table[0] &&
       btech_special_test_fault_phase && btech_special_test_fault_phase[0];

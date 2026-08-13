@@ -341,7 +341,7 @@ static void telnet_send_mssp(Descriptor *descriptor) {
                         runtime->world->configuration->mud_name);
   telnet_send_mssp_pair(telnet, "PLAYERS", players);
   telnet_send_mssp_pair(telnet, "UPTIME", uptime);
-  telnet_send_mssp_pair(telnet, "CODEBASE", BTMUX_NAME);
+  telnet_send_mssp_pair(telnet, "CODEBASE", BTECH_NAME);
   telnet_send_mssp_pair(telnet, "PORT", port);
   telnet_finish_sb(telnet);
 }

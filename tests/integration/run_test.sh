@@ -16,7 +16,7 @@ game_directory=$(mktemp -d "${artifact_root%/}/btmux-${suite}.XXXXXX") || exit 2
 
 finish() {
   status=$?
-  if (( status == 0 )) && [[ ${BTMUX_KEEP_TEST_DIRS:-0} != 1 ]]; then
+  if (( status == 0 )) && [[ ${BTECH_KEEP_TEST_DIRS:-0} != 1 ]]; then
     rm -rf -- "$game_directory"
   else
     echo "Integration test artifacts retained at: $game_directory" >&2
@@ -32,7 +32,7 @@ if [[ $overlay != - ]]; then
   cp -a "$overlay/." "$game_directory/" || exit 2
 fi
 
-export BTMUX_TEST_GAME_DIR=$game_directory
+export BTECH_TEST_GAME_DIR=$game_directory
 "$@" "$game_directory"
 status=$?
 exit "$status"

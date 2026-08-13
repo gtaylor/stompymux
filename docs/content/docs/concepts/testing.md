@@ -43,5 +43,5 @@ Integration test artifacts retained at: /tmp/btmux-libuv-tcp.ABC123
 ```
 
 That directory contains the generated configuration, database, logs, and
-fixture content from the failed run. Set `BTMUX_KEEP_TEST_DIRS=1` to preserve
+fixture content from the failed run. Set `BTECH_KEEP_TEST_DIRS=1` to preserve
 directories from successful integration runs as well.

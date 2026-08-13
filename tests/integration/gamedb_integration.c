@@ -67,11 +67,11 @@ static pid_t start_server_after(const char *binary_path, const char *config,
       close(tick_pipe[0]);
     snprintf(ready_fd, sizeof(ready_fd), "%d", ready_pipe[1]);
     if ((directory != nullptr && chdir(directory) < 0) ||
-        setenv("BTMUX_TEST_READY_FD", ready_fd, 1) < 0)
+        setenv("BTECH_TEST_READY_FD", ready_fd, 1) < 0)
       _exit(127);
     if (wait_for_tick) {
       snprintf(ready_fd, sizeof(ready_fd), "%d", tick_pipe[1]);
-      if (setenv("BTMUX_TEST_TICK_FD", ready_fd, 1) < 0)
+      if (setenv("BTECH_TEST_TICK_FD", ready_fd, 1) < 0)
         _exit(127);
     }
     (void)make_minimal;
@@ -622,13 +622,13 @@ static int check_btech_writer_fault(const char *binary_path, const char *config,
   int result;
 
   if (stat(database, &before) < 0 ||
-      setenv("BTMUX_TEST_BTECH_FAIL_TABLE", table, 1) < 0 ||
-      setenv("BTMUX_TEST_BTECH_FAIL_PHASE", phase, 1) < 0)
+      setenv("BTECH_TEST_BTECH_FAIL_TABLE", table, 1) < 0 ||
+      setenv("BTECH_TEST_BTECH_FAIL_PHASE", phase, 1) < 0)
     return -1;
   result =
       run_server_in_directory_after(binary_path, config, directory, 0, &status);
-  unsetenv("BTMUX_TEST_BTECH_FAIL_TABLE");
-  unsetenv("BTMUX_TEST_BTECH_FAIL_PHASE");
+  unsetenv("BTECH_TEST_BTECH_FAIL_TABLE");
+  unsetenv("BTECH_TEST_BTECH_FAIL_PHASE");
   if (result < 0 || !WIFEXITED(status) || WEXITSTATUS(status) != 0 ||
       stat(database, &after) < 0 || before.st_dev != after.st_dev ||
       before.st_ino != after.st_ino || before.st_size != after.st_size)
@@ -1592,7 +1592,7 @@ int main(int argc, char *argv[]) {
   if (fclose(file) != 0)
     return 2;
   if (result == 0) {
-    if (setenv("BTMUX_TEST_BTECH_BOOTSTRAP", "1", 1) < 0)
+    if (setenv("BTECH_TEST_BTECH_BOOTSTRAP", "1", 1) < 0)
       return 1;
     result = run_server_in_directory(server, bootstrap_config, directory, 0,
                                      &status) == 0 &&
@@ -1600,7 +1600,7 @@ int main(int argc, char *argv[]) {
                      check_btech_special_snapshot(database) == 0
                  ? 0
                  : 1;
-    unsetenv("BTMUX_TEST_BTECH_BOOTSTRAP");
+    unsetenv("BTECH_TEST_BTECH_BOOTSTRAP");
     if (result != 0) {
       fprintf(stderr, "BTech fixture bootstrap failed: %s (status=%d)\n",
               directory, status);
