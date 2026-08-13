@@ -20,6 +20,25 @@ if rg -n '\b__clang__\b' src; then
   status=1
 fi
 
+match=$(rg -n '\bBTECH_INTERNAL\b' src tests CMakeLists.txt \
+  -g '!check_btech_architecture.sh' || true)
+if [[ -n "$match" ]]; then
+  echo "$match"
+  echo "BTECH_INTERNAL is not allowed; include private dependencies explicitly"
+  status=1
+fi
+
+match=$(
+  rg -n '#include ".*context_internal\.h"' src/mux --glob '*.[ch]' || true
+  rg -n '#include ".*context_internal\.h"' src/btech --glob '*.h' \
+    -g '!core/context_internal.h' || true
+)
+if [[ -n "$match" ]]; then
+  echo "$match"
+  echo "context_internal.h is private to BTech implementation files"
+  status=1
+fi
+
 nested_positional_initializer_pattern='\.[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*\{(?![[:space:]]*(?:\.|\[|0[[:space:]]*\}))'
 
 ratchet_expect_match() {
@@ -907,8 +926,7 @@ if [[ ! $header_jobs =~ ^[1-9][0-9]*$ ]]; then
   exit 2
 fi
 header_flags=(
-  -DBTECH_INTERNAL=1
-  -DBTMUX_PERSISTENCE_TESTING=1
+  -DBTECH_PERSISTENCE_TESTING=1
   -std=gnu23
   -Wall
   -Wextra

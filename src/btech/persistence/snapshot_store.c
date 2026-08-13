@@ -1,6 +1,7 @@
 #include "autopilot.h"
 #include "btech/context.h"
 #include "btech_event.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "map.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"

@@ -4,6 +4,7 @@
 
 #include "btconfig.h"
 #include "btech/context.h"
+#include "btech/core/context_internal.h"
 #include "mech_internal.h"
 
 static Mech *next_unit(Mech *unit, int *evaluations) {

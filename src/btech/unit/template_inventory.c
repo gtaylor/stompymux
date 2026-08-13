@@ -1,4 +1,5 @@
 #include "btech/context.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "coolmenu.h"
 #include "equipment_types.h"
 #include "mech_api_types.h"

@@ -16,6 +16,7 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "coolmenu.h"
 #include "crit_api.h"
 #include "econ_api.h"

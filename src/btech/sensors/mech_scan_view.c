@@ -1,5 +1,6 @@
 #include "btech/context.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "mech_api_types.h"
 #include "mech_classification_api.h"

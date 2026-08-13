@@ -1,6 +1,7 @@
 #include "ai_api.h"
 #include "autopilot.h"
 #include "btech_event.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "mech_events.h"
 #include "mech_tech_events_api.h"
 #include "missile_hit_registry.h"

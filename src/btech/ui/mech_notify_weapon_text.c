@@ -6,6 +6,7 @@
 #include "btech/context.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"

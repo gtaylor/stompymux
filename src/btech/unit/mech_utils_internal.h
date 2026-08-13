@@ -54,15 +54,8 @@
 extern const int INTERNALSWEIGHT[];
 extern const int CARGOWEIGHT[];
 
-static inline int mech_weapon_recycle_time(const Mech *mech, int weapon_index) {
-  return btech_weapon_settings_recycle_time(
-      &mech->xcode.context->weapon_settings, weapon_index);
-}
-
-static inline int mech_weapon_battle_value(const Mech *mech, int weapon_index) {
-  return btech_weapon_settings_battle_value(
-      &mech->xcode.context->weapon_settings, weapon_index);
-}
+int mech_weapon_recycle_time(const Mech *mech, int weapon_index);
+int mech_weapon_battle_value(const Mech *mech, int weapon_index);
 
 enum { BTECH_BV_SKILL_LIMIT = 8 };
 extern float skillmul[BTECH_BV_SKILL_LIMIT][BTECH_BV_SKILL_LIMIT];

@@ -89,6 +89,9 @@ the event scheduler and borrowed services. Public headers separately cover
 context ownership, command dispatch, lifecycle producers, special objects, and
 persistence.
 
+The concrete layout lives in `core/context_internal.h`; implementation files
+include it explicitly when needed, and headers never include it.
+
 Adding a public operation requires an owning domain implementation and a narrow
 header under `include/btech`. Do not expose a concrete domain structure merely
 to avoid writing an operation.

@@ -2,6 +2,7 @@
 #include "btech_channel.h"
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "map_conditions_api.h"
 #include "mech_electronics_api.h"

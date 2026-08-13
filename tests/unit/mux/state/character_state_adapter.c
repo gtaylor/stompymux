@@ -6,6 +6,7 @@
 #include <time.h>
 
 #include "btech/context.h"
+#include "btech/core/context_internal.h"
 #include "btechstats.h"
 #include "btechstats_api.h"
 #include "btechstats_global.h"

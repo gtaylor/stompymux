@@ -169,7 +169,3 @@ time_t btech_context_now(const BtechContext *context);
 void btech_command_scope_enter(BtechCommandScope *scope, BtechContext *context,
                                CommandContext *command);
 void btech_command_scope_leave(BtechCommandScope *scope);
-
-#ifdef BTECH_INTERNAL
-#include "context_internal.h"
-#endif

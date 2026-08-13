@@ -7,6 +7,7 @@
 #include "btech/context.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "map_building_query_api.h"
 #include "map_coordinates.h"

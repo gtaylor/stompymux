@@ -1,3 +1,4 @@
+#include "context_internal.h" // IWYU pragma: keep
 #include "mech_api_types.h"
 #include "mech_status_api.h"
 #include "mech_status_render_internal.h"

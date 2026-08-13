@@ -8,6 +8,7 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "map_terrain.h"    // IWYU pragma: keep
 #include "mech_lifecycle.h" // IWYU pragma: keep

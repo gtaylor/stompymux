@@ -2,6 +2,7 @@
 
 #include "btech/context.h"
 #include "checked_conversion.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "ds_turret_api.h"
 #include "mech_api_types.h"
 #include "mech_combat_api.h"

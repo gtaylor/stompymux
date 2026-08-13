@@ -8,6 +8,7 @@
 #include "autopilot.h"
 #include "btech/context.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "map_bits_api.h"
 #include "map_dynamic_api.h"

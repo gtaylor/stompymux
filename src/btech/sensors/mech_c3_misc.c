@@ -5,6 +5,7 @@
 
 #include "btech/context.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "map_coordinates.h"
 #include "map_los_api.h"

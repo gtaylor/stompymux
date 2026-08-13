@@ -1,4 +1,5 @@
 // NOLINTBEGIN(misc-include-cleaner): Direct dependencies exceed file-size cap.
+#include "context_internal.h" // IWYU pragma: keep
 #include "crit_api.h"
 #include "mech_position_api.h"
 #include "mech_progress_api.h"

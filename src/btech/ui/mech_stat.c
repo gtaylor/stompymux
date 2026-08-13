@@ -9,6 +9,7 @@
 
 #include "btech/context.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "mech_stat_api.h"
 #include "mech_utils_api.h"
 #include "mux/commands/command_context.h" // IWYU pragma: keep

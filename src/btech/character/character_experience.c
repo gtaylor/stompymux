@@ -5,6 +5,7 @@
 #include "btechstats_global.h"
 #include "btechstats_internal.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "mech_classification_api.h"
 #include "mech_crew_api.h"
 #include "mech_identity_api.h"

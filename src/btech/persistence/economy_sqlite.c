@@ -1,4 +1,5 @@
 #include "btech/context.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "missile_hit_registry.h"
 #include "mux/persistence/gamedb.h"
 #include "mux/server/log.h"

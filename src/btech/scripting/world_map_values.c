@@ -1,5 +1,6 @@
 #include "values_internal.h"
 
+#include "context_internal.h" // IWYU pragma: keep
 #include "map.h"
 #include "map_coordinates.h"
 #include "map_obj_api.h"

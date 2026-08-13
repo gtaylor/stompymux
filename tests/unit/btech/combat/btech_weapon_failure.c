@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "btech/context.h"
+#include "btech/core/context_internal.h"
 #include "failures.h"
 #include "failures_api.h"
 #include "mech_combat_api.h"

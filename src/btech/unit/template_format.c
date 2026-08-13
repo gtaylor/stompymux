@@ -1,6 +1,7 @@
 #include "aero_bomb_api.h"
 #include "btech_text_builder.h"
 #include "checked_conversion.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "mech_electronics_api.h"
 #include "mech_equipment_api.h"

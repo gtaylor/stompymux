@@ -8,7 +8,8 @@
 #include "autopilot.h"
 #include "btech/context.h"
 #include "btech_channel.h"
-#include "map_obj_api.h" // IWYU pragma: keep
+#include "context_internal.h" // IWYU pragma: keep
+#include "map_obj_api.h"      // IWYU pragma: keep
 #include "mech_api_types.h"
 #include "mech_events.h"
 #include "mech_events_api.h"

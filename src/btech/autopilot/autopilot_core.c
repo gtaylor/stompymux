@@ -13,6 +13,7 @@
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "coolmenu.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"

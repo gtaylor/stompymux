@@ -18,6 +18,7 @@
 
 #include "btech_event.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "failures.h"
 #include "failures_api.h"

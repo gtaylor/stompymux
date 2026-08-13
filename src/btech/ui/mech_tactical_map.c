@@ -1,5 +1,6 @@
 #include "btconfig.h"
 #include "btech/context.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "ds_bay_api.h"
 #include "map.h"
 #include "map_los.h"

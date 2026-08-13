@@ -1,3 +1,4 @@
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "missile_hit_registry.h"
 #include "mux/server/log.h"

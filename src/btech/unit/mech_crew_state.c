@@ -2,6 +2,7 @@
 
 #include "btech/context.h"
 #include "checked_conversion.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "mech_internal.h"
 #include "mux/server/platform.h"
 

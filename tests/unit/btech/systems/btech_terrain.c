@@ -1,6 +1,7 @@
 #include "map_terrain.h"
 
 #include "btech/context.h"
+#include "btech/core/context_internal.h"
 #include "map.h"
 #include "map_api.h"
 #include "map_coding_api.h"

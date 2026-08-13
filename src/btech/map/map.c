@@ -3,6 +3,7 @@
 #include "btech_channel.h"
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "debug_api.h"
 #include "map_api.h"
 #include "map_conditions_api.h"

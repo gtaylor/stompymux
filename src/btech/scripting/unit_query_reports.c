@@ -1,4 +1,5 @@
 #include "btech_event.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "mech_consistency_api.h"
 #include "mech_status_api.h"
 #include "mech_template_api.h"

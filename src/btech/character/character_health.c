@@ -10,6 +10,7 @@
 #include "btechstats_global.h"
 #include "btechstats_internal.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "mech_combat_misc_api.h"
 #include "mech_crew_api.h"

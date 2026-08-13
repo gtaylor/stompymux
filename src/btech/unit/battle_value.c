@@ -1,5 +1,6 @@
 #include "btech_channel.h"
 #include "checked_conversion.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "mech_equipment_api.h"
 #include "mech_heat_api.h"
@@ -10,6 +11,17 @@
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "section_types.h"
+#include "weapon_settings.h"
+
+int mech_weapon_recycle_time(const Mech *mech, int weapon_index) {
+  return btech_weapon_settings_recycle_time(
+      &mech->xcode.context->weapon_settings, weapon_index);
+}
+
+int mech_weapon_battle_value(const Mech *mech, int weapon_index) {
+  return btech_weapon_settings_battle_value(
+      &mech->xcode.context->weapon_settings, weapon_index);
+}
 #include "weapon_catalogue_api.h"
 
 #include <math.h>

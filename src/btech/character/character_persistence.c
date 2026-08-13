@@ -7,6 +7,7 @@
 #include "btechstats_global.h"
 #include "btechstats_internal.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "coolmenu.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"

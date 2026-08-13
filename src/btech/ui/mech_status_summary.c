@@ -13,6 +13,7 @@
 #include "btechstats_api.h"
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "map_conditions_api.h"
 #include "map_coordinates.h"
 #include "mech_build_api.h"

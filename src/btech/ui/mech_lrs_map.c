@@ -2,6 +2,7 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "map.h"
 #include "map_conditions_api.h"
 #include "map_coordinates.h"

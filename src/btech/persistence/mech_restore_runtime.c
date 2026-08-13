@@ -1,4 +1,5 @@
 #include "ai_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "mech_persistence.h"
 #include "mech_stagger.h"
 #include "missile_hit_registry.h"

@@ -7,6 +7,7 @@
 #include "btech_event.h"
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "coolmenu.h"
 #include "equipment_types.h"
 #include "failures.h"

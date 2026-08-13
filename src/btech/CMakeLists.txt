@@ -309,7 +309,6 @@ set(BTECH_SOURCES
 
 add_library(btech STATIC ${BTECH_SOURCES})
 target_link_libraries(btech PRIVATE btmux_options)
-target_compile_definitions(btech PRIVATE BTECH_INTERNAL=1)
 if(BUILD_TESTING)
   target_compile_definitions(btech PRIVATE BTECH_PERSISTENCE_TESTING=1)
 endif()

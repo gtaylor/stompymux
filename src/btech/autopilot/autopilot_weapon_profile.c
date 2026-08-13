@@ -8,6 +8,7 @@
 #include "autopilot_combat_policy_api.h"
 #include "autopilot_weapon_profile_api.h"
 #include "btech/context.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "mech_api_types.h"
 #include "mech_identity_api.h"

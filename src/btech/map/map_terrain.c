@@ -4,7 +4,8 @@
 
 #include <stdlib.h>
 
-#include "btech/context.h" // IWYU pragma: keep
+#include "btech/context.h"    // IWYU pragma: keep
+#include "context_internal.h" // IWYU pragma: keep
 #include "map.h"
 #include "map_api.h"
 #include "map_coding_api.h"

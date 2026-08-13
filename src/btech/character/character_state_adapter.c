@@ -6,6 +6,7 @@
 #include "btechstats_api.h"
 #include "btechstats_global.h"
 #include "btechstats_internal.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "mux/objects/character_state.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"

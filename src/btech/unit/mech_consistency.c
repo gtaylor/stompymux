@@ -3,6 +3,7 @@
 #include "btech_channel.h"
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "coolmenu.h"
 #include "equipment_types.h"
 #include "mech_consistency_api.h"

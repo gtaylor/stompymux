@@ -2,6 +2,7 @@
 
 #include "btech/context.h"
 #include "btech_event.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "events_api.h"
 #include "map_obj_api.h"
 #include "mux/network/mux_event.h"

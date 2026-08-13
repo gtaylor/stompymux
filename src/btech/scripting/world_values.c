@@ -1,4 +1,5 @@
 #include "btech/context.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "map.h"
 #include "map_coordinates.h"

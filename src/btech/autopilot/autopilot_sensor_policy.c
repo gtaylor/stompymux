@@ -4,6 +4,7 @@
 #include "autopilot_sensor_policy_api.h"
 #include "btconfig.h"
 #include "btech/context.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "map_conditions_api.h"
 #include "map_los_api.h"

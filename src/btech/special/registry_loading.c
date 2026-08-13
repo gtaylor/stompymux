@@ -1,5 +1,6 @@
-#include "btech_event.h" // IWYU pragma: keep
-#include "map.h"         // IWYU pragma: keep
+#include "btech_event.h"      // IWYU pragma: keep
+#include "context_internal.h" // IWYU pragma: keep
+#include "map.h"              // IWYU pragma: keep
 #include "map_terrain.h"
 #include "map_units_api.h"
 #include "mech_parts.h"      // IWYU pragma: keep

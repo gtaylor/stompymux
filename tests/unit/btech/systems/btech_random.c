@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "btech/context.h"
+#include "btech/core/context_internal.h"
 #include "mech_utils_api.h"
 #include "mux/support/checked_storage.h"
 #include "random.h"

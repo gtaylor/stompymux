@@ -6,6 +6,7 @@
 #include "btechstats_api.h"
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "ds_bay_api.h"
 #include "equipment_types.h"
 #include "map.h"

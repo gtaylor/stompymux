@@ -1,6 +1,7 @@
 #include "btech_los_test.h"
 
 #include "btech/context.h"
+#include "btech/core/context_internal.h"
 #include "map.h"
 #include "map_conditions_api.h"
 #include "map_los_types.h"

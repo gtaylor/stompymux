@@ -7,6 +7,7 @@
 #include "mech_status_types.h"
 
 #include "btech/context.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "econ_api.h"
 #include "mech_internal.h"
 #include "mech_lifecycle.h"
