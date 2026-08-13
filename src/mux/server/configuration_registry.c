@@ -3,15 +3,19 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "mux/commands/command.h"             // IWYU pragma: keep
-#include "mux/objects/flags.h"                // IWYU pragma: keep
-#include "mux/server/configuration.h"         // IWYU pragma: keep
+#include "mux/commands/command.h" // IWYU pragma: keep
+#include "mux/commands/command_internal.h"
+#include "mux/objects/flags.h"        // IWYU pragma: keep
+#include "mux/server/configuration.h" // IWYU pragma: keep
+#include "mux/server/configuration_catalog.h"
 #include "mux/server/configuration_context.h" // IWYU pragma: keep
 #include "mux/server/configuration_internal.h"
+#include "mux/server/configuration_registry.h"
+#include "mux/server/log.h"
 #include "mux/server/server_config.h"     // IWYU pragma: keep
 #include "mux/server/server_registries.h" // IWYU pragma: keep
-#include "mux/support/checked_storage.h"
-#include "mux/support/hash_table.h" // IWYU pragma: keep
+#include "mux/support/hash_table.h"       // IWYU pragma: keep
+#include "mux/support/name_table.h"
 
 #define CONFIG_LOC(member) (offsetof(ServerConfiguration, member) + 1)
 #define COMMAND_LOC(member)                                                    \
@@ -20,8 +24,8 @@
   (sizeof(ServerConfiguration) + sizeof(CommandRegistry) +                     \
    sizeof(WorldIndexes) + offsetof(AccessControlStore, member) + 1)
 
-CONF conftable[] = {
-    {"access", cf_access, CA_GOD, 0, (long)access_nametab},
+static const ConfigurationEntry CONFIGURATION_ENTRY_TEMPLATES[] = {
+    {"access", cf_access, CA_GOD, 0, (intptr_t)ACCESS_NAMETAB},
     {"alias", cf_cmd_alias, CA_GOD, COMMAND_LOC(commands), 0},
     {"bad_name", cf_badname, CA_GOD, 0, 0},
     {"badsite_file", cf_string, CA_DISABLED, CONFIG_LOC(site_file), 32},
@@ -155,7 +159,7 @@ CONF conftable[] = {
     {"command_quota_increment", cf_int, CA_GOD,
      CONFIG_LOC(command_quota_increment), 0},
     {"command_quota_max", cf_int, CA_GOD, CONFIG_LOC(command_quota_max), 0},
-    {"config_access", cf_cf_access, CA_GOD, 0, (long)access_nametab},
+    {"config_access", cf_cf_access, CA_GOD, 0, (intptr_t)ACCESS_NAMETAB},
     {"conn_timeout", cf_int, CA_GOD, CONFIG_LOC(conn_timeout), 0},
     {"connect_dir", cf_string, CA_DISABLED, CONFIG_LOC(conn_dir), 32},
     {"connect_file", cf_string, CA_DISABLED, CONFIG_LOC(conn_file), 32},
@@ -183,7 +187,7 @@ CONF conftable[] = {
     {"idle_timeout", cf_int, CA_GOD, CONFIG_LOC(idle_timeout), 0},
     {"initial_size", cf_int, CA_DISABLED, CONFIG_LOC(init_size), 0},
     {"list_access", cf_ntab_access, CA_GOD, CONFIGURATION_LIST_NAMES_LOCATION,
-     (long)access_nametab},
+     (intptr_t)ACCESS_NAMETAB},
     {"lua_directory", cf_string, CA_GOD, CONFIG_LOC(lua.directory),
      sizeof(((ServerConfiguration *)nullptr)->lua.directory)},
     {"lua_memory_limit", cf_int, CA_GOD, CONFIG_LOC(lua.memory_limit), 0},
@@ -216,7 +220,7 @@ CONF conftable[] = {
     {"startup", cf_bool_bit, CA_GOD, CONFIG_LOC(log_options), LOG_STARTUP},
     {"wizard", cf_bool_bit, CA_GOD, CONFIG_LOC(log_options), LOG_WIZARD},
     {"log_options", configuration_modify_bits, CA_GOD, CONFIG_LOC(log_info),
-     (long)logdata_nametab},
+     (intptr_t)LOGDATA_NAMETAB},
     {"map_database", cf_string, CA_GOD, CONFIG_LOC(database.map_db),
      sizeof(((ServerConfiguration *)nullptr)->database.map_db)},
     {"default_thing_lua_parent", cf_string, CA_GOD,
@@ -272,16 +276,40 @@ CONF conftable[] = {
     {"command_quota_interval", cf_int, CA_GOD,
      CONFIG_LOC(command_quota_interval), 0},
     {"trust_site", cf_site, CA_GOD, ACCESS_LOC(suspect_sites), 0},
-    {"player_zone", cf_int, CA_GOD, CONFIG_LOC(player_zone), 0},
-    {nullptr, nullptr, 0, 0, 0}};
+    {"player_zone", cf_int, CA_GOD, CONFIG_LOC(player_zone), 0}};
 
-size_t configuration_entry_count(void) {
-  return (sizeof(conftable) / sizeof(*conftable)) - 1;
-}
+static const NameTable LIST_OPTION_TEMPLATES[] = {
+    {"bad_names", 2, CA_WIZARD, LIST_BADNAMES},
+    {"commands", 3, CA_PUBLIC, LIST_COMMANDS},
+    {"config_permissions", 3, CA_GOD, LIST_CONF_PERMS},
+    {"default_flags", 1, CA_PUBLIC, LIST_DF_FLAGS},
+    {"flags", 2, CA_PUBLIC, LIST_FLAGS},
+    {"globals", 1, CA_WIZARD, LIST_GLOBALS},
+    {"logging", 4, CA_GOD, LIST_LOGGING},
+    {"options", 1, CA_PUBLIC, LIST_OPTIONS},
+    {"permissions", 2, CA_WIZARD, LIST_PERMS},
+    {"powers", 2, CA_WIZARD, LIST_POWERS},
+    {"process", 2, CA_WIZARD, LIST_PROCESS},
+    {"site_information", 2, CA_WIZARD, LIST_SITEINFO},
+    {"switches", 2, CA_PUBLIC, LIST_SWITCHES},
+    {"logfiles", 4, CA_WIZARD, LIST_LOGFILES},
+};
 
-CONF *configuration_entry_at(size_t index) {
-  return checked_storage_at(conftable, configuration_entry_count(),
-                            sizeof(*conftable), index);
+bool configuration_registry_initialize(ConfigurationRegistry *registry) {
+  if (registry == nullptr)
+    return false;
+  const ConfigurationCatalogPolicy POLICY = {
+      .maximum_location = sizeof(ServerConfiguration) +
+                          sizeof(CommandRegistry) + sizeof(WorldIndexes) +
+                          sizeof(AccessControlStore),
+      .list_options_location = CONFIGURATION_LIST_NAMES_LOCATION,
+  };
+  return configuration_catalog_install(
+      registry, CONFIGURATION_ENTRY_TEMPLATES,
+      sizeof(CONFIGURATION_ENTRY_TEMPLATES) /
+          sizeof(*CONFIGURATION_ENTRY_TEMPLATES),
+      LIST_OPTION_TEMPLATES,
+      sizeof(LIST_OPTION_TEMPLATES) / sizeof(*LIST_OPTION_TEMPLATES), POLICY);
 }
 
 /*

@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 #include "mux/server/platform.h"
 
 typedef struct ConfigurationContext ConfigurationContext;
@@ -9,7 +11,7 @@ typedef struct ConfigurationContext ConfigurationContext;
 typedef struct ConfigurationCall {
   void *value;
   char *text;
-  long extra;
+  intptr_t extra;
   DbRef player;
   char *command;
   ConfigurationContext *context;

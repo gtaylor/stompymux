@@ -15,6 +15,7 @@
 #include "mux/commands/macro.h" // IWYU pragma: keep
 #include "mux/server/configuration.h"
 #include "mux/server/configuration_context.h" // IWYU pragma: keep
+#include "mux/server/configuration_internal.h"
 #include "mux/server/configuration_interpreter.h"
 #include "mux/server/mux_server.h"
 #include "mux/server/platform.h"
@@ -24,16 +25,17 @@
 #include "mux/support/name_table.h"
 #include "mux/support/stringutil.h"
 
-NameTable access_nametab[] = {{"god", 2, CA_GOD, CA_GOD},
-                              {"wizard", 3, CA_WIZARD, CA_WIZARD},
-                              {"no_suspect", 5, CA_WIZARD, CA_NO_SUSPECT},
-                              {"queue_enabled", 6, CA_PUBLIC, CA_QUEUE},
-                              {"disabled", 4, CA_GOD, CA_DISABLED},
-                              {"need_location", 6, CA_PUBLIC, CA_LOCATION},
-                              {"need_contents", 6, CA_PUBLIC, CA_CONTENTS},
-                              {"need_player", 6, CA_PUBLIC, CA_PLAYER},
-                              {"dark", 4, CA_GOD, CF_DARK},
-                              {nullptr, 0, 0, 0}};
+const NameTable ACCESS_NAMETAB[] = {
+    {"god", 2, CA_GOD, CA_GOD},
+    {"wizard", 3, CA_WIZARD, CA_WIZARD},
+    {"no_suspect", 5, CA_WIZARD, CA_NO_SUSPECT},
+    {"queue_enabled", 6, CA_PUBLIC, CA_QUEUE},
+    {"disabled", 4, CA_GOD, CA_DISABLED},
+    {"need_location", 6, CA_PUBLIC, CA_LOCATION},
+    {"need_contents", 6, CA_PUBLIC, CA_CONTENTS},
+    {"need_player", 6, CA_PUBLIC, CA_PLAYER},
+    {"dark", 4, CA_GOD, CF_DARK},
+    {nullptr, 0, 0, 0}};
 
 void command_list_access(EvaluationContext *evaluation,
                          const ServerConfiguration *configuration,
@@ -47,7 +49,7 @@ void command_list_access(EvaluationContext *evaluation,
                      cmdp->perms)) {
       if (!(cmdp->perms & CF_DARK)) {
         (void)snprintf(buff, SBUF_SIZE, "%s:", cmdp->cmdname);
-        name_table_list_set(evaluation, configuration, player, access_nametab,
+        name_table_list_set(evaluation, configuration, player, ACCESS_NAMETAB,
                             cmdp->perms, buff, 1);
       }
     }

@@ -6,6 +6,7 @@
 
 typedef struct CommandContext CommandContext;
 typedef struct CommandRegistry CommandRegistry;
+typedef struct ConfigurationRegistry ConfigurationRegistry;
 typedef struct GameDatabase GameDatabase;
 typedef struct ServerConfiguration ServerConfiguration;
 typedef struct ServerLog ServerLog;
@@ -21,6 +22,7 @@ struct ConfigurationContext {
   ServerLog *log;
   CommandContext *command;
   CommandRegistry *command_registry;
+  ConfigurationRegistry *configuration_registry;
   WorldIndexes *world_indexes;
   WorldContext *world;
 };
@@ -28,7 +30,8 @@ struct ConfigurationContext {
 static inline void configuration_context_initialize(
     ConfigurationContext *context, ServerConfiguration *configuration,
     GameDatabase *database, ServerLog *log, CommandContext *command,
-    CommandRegistry *command_registry, WorldIndexes *world_indexes,
+    CommandRegistry *command_registry,
+    ConfigurationRegistry *configuration_registry, WorldIndexes *world_indexes,
     WorldContext *world) {
   *context = (ConfigurationContext){
       .configuration = configuration,
@@ -36,6 +39,7 @@ static inline void configuration_context_initialize(
       .log = log,
       .command = command,
       .command_registry = command_registry,
+      .configuration_registry = configuration_registry,
       .world_indexes = world_indexes,
       .world = world,
   };

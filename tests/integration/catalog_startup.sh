@@ -27,7 +27,7 @@ if ! grep -Fq "Error reading config file '$missing_config'" "$stderr_file"; then
 fi
 
 if grep -Fq "Unable to create MUX server resources." "$stderr_file"; then
-  echo "production command catalog failed to initialize" >&2
+  echo "production catalog failed to initialize" >&2
   cat "$stderr_file" >&2
   exit 1
 fi

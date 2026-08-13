@@ -5,6 +5,9 @@
 #include <stddef.h>
 
 #include "mux/commands/command.h"
+#include "mux/support/name_table.h"
+
+extern const NameTable ACCESS_NAMETAB[];
 
 enum : int {
   SW_MULTIPLE = (int)0x80000000U,

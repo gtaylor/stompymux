@@ -27,6 +27,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/name_table.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/match.h"
 #include "mux/world/move.h"
