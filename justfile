@@ -1,7 +1,12 @@
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 
 build_dir := ".build"
+fuzz_build_dir := ".build-fuzz"
 build_type := env("CMAKE_BUILD_TYPE", "RelWithDebInfo")
+enable_asan := env("BTECH_ENABLE_ASAN", "ON")
+enable_ubsan := env("BTECH_ENABLE_UBSAN", "ON")
+strict_c23 := env("BTMUX_STRICT_C23", "ON")
+build_fuzzers := env("BTMUX_BUILD_FUZZERS", "OFF")
 clang_tidy := env("CLANG_TIDY", "clang-tidy-22")
 run_clang_tidy := env("RUN_CLANG_TIDY", "run-clang-tidy-22")
 clang_format := env("CLANG_FORMAT", "clang-format-22")
@@ -41,7 +46,7 @@ tidy-check:
     {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'
 
 build:
-    cmake -S . -B {{build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    cmake -S . -B {{build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBTECH_ENABLE_ASAN={{enable_asan}} -DBTECH_ENABLE_UBSAN={{enable_ubsan}} -DBTMUX_STRICT_C23={{strict_c23}} -DBTMUX_BUILD_FUZZERS={{build_fuzzers}}
     cmake --build {{build_dir}} -j "$(nproc)"
 
 test:
@@ -55,6 +60,13 @@ test-unit-topic topic:
 
 test-integration:
     ctest --test-dir {{build_dir}} --output-on-failure --no-tests=error -j "$(nproc)" -L '^integration$'
+
+fuzz-build:
+    cmake -S . -B {{fuzz_build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBTMUX_BUILD_FUZZERS=ON -DBTMUX_STRICT_C23=ON -DBTECH_ENABLE_ASAN=ON -DBTECH_ENABLE_UBSAN=ON
+    cmake --build {{fuzz_build_dir}} --target wild_fuzzer -j "$(nproc)"
+
+fuzz-smoke: fuzz-build
+    fuzz_corpus=$(mktemp -d); trap 'rm -rf -- "$fuzz_corpus"' EXIT; cp -a tests/fuzz/corpus/wild/. "$fuzz_corpus"; {{fuzz_build_dir}}/tests/wild_fuzzer -runs=100 "$fuzz_corpus"
 
 install:
     cmake --install {{build_dir}} --prefix "$PWD/game"

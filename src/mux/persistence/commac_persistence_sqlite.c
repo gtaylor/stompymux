@@ -332,27 +332,14 @@ static int commac_load_alias(const CommacAliasLoadRequest *request) {
   struct Commac *commac = request->commac;
   const char *alias = request->alias;
   const char *channel = request->channel;
-  int capacity;
 
-  if (!*alias || strlen(alias) > 5 ||
+  if (!*alias || strlen(alias) > COMMAC_ALIAS_MAX_LENGTH ||
       !utf8_is_printable_ascii(alias, strlen(alias)) || strchr(alias, ' '))
     return -1;
   if (commac->numchannels == commac->maxchannels) {
-    capacity = commac->maxchannels + 10;
-    char *aliases = realloc(commac->alias, (size_t)capacity * 6);
-    char **channels = nullptr;
-
-    if (aliases == nullptr)
+    const size_t CAPACITY = (size_t)commac->maxchannels + 10;
+    if (!commac_reserve_aliases(commac, CAPACITY))
       return -1;
-    channels = (char **)realloc((void *)commac->channels,
-                                sizeof(*commac->channels) * (size_t)capacity);
-    if (channels == nullptr) {
-      commac->alias = aliases;
-      return -1;
-    }
-    commac->alias = aliases;
-    commac->channels = channels;
-    commac->maxchannels = capacity;
   }
   string_copy(commac_alias_at(commac, (size_t)commac->numchannels), alias);
   *commac_channel_slot(commac, (size_t)commac->numchannels) = strdup(channel);

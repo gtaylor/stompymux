@@ -4,23 +4,33 @@
 
 #include <stdlib.h>
 
+#include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 
 constexpr int LBUF_SIZE = 16384;
 constexpr int MBUF_SIZE = 2048;
 constexpr int SBUF_SIZE = 256;
 
-static inline void *alloc_lbuf(const char *s) { return malloc(LBUF_SIZE); }
+[[nodiscard]] static inline void *alloc_lbuf(const char *description) {
+  (void)description;
+  return checked_storage_allocate(LBUF_SIZE);
+}
 static inline void free_lbuf(void *b) {
   if (b)
     free(b);
 }
-static inline void *alloc_mbuf(const char *s) { return malloc(MBUF_SIZE); }
+[[nodiscard]] static inline void *alloc_mbuf(const char *description) {
+  (void)description;
+  return checked_storage_allocate(MBUF_SIZE);
+}
 static inline void free_mbuf(void *b) {
   if (b)
     free(b);
 }
-static inline void *alloc_sbuf(const char *s) { return malloc(SBUF_SIZE); }
+[[nodiscard]] static inline void *alloc_sbuf(const char *description) {
+  (void)description;
+  return checked_storage_allocate(SBUF_SIZE);
+}
 static inline void free_sbuf(void *b) {
   if (b)
     free(b);

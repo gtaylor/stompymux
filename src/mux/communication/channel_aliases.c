@@ -283,40 +283,28 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
     return;
   }
   if (c->numchannels >= c->maxchannels) {
-    const int CAPACITY = c->maxchannels + 10;
-    char *aliases = realloc(c->alias, sizeof(*c->alias) * 6 * (size_t)CAPACITY);
-    char **channels = nullptr;
-
-    if (aliases == nullptr) {
+    const size_t CAPACITY = (size_t)c->maxchannels + 10;
+    if (!commac_reserve_aliases(c, CAPACITY)) {
       raw_notify(evaluation, player, "Unable to add that channel alias.");
       return;
     }
-    channels = (char **)realloc((void *)c->channels,
-                                sizeof(*c->channels) * (size_t)CAPACITY);
-    if (channels == nullptr) {
-      c->alias = aliases;
-      raw_notify(evaluation, player, "Unable to add that channel alias.");
-      return;
-    }
-    c->alias = aliases;
-    c->channels = channels;
-    c->maxchannels = CAPACITY;
   }
   if (where < c->numchannels) {
     memmove(commac_alias_at(c, (size_t)where + 1),
             commac_alias_at(c, (size_t)where),
-            6U * (size_t)(c->numchannels - where));
+            COMMAC_ALIAS_SIZE * (size_t)(c->numchannels - where));
     memmove((void *)commac_channel_slot(c, (size_t)where + 1),
             (const void *)commac_channel_slot(c, (size_t)where),
-            sizeof(c->channels) * (size_t)(c->numchannels - where));
+            sizeof(*c->channels) * (size_t)(c->numchannels - where));
   }
 
   c->numchannels++;
 
   char *alias = commac_alias_at(c, (size_t)where);
 
-  strncpy(alias, arg1, 5);
-  *(char *)checked_storage_at(alias, 6, sizeof(char), 5) = '\0';
+  strncpy(alias, arg1, COMMAC_ALIAS_MAX_LENGTH);
+  *(char *)checked_storage_at(alias, COMMAC_ALIAS_SIZE, sizeof(char),
+                              COMMAC_ALIAS_MAX_LENGTH) = '\0';
   *commac_channel_slot(c, (size_t)where) = strdup(ch->name);
 
   do_joinchannel(evaluation, player, ch);
@@ -355,10 +343,10 @@ void do_delcom(CommandInvocation *invocation) {
       if (i < c->numchannels) {
         memmove(commac_alias_at(c, (size_t)i),
                 commac_alias_at(c, (size_t)i + 1),
-                6U * (size_t)(c->numchannels - i));
+                COMMAC_ALIAS_SIZE * (size_t)(c->numchannels - i));
         memmove((void *)commac_channel_slot(c, (size_t)i),
                 (const void *)commac_channel_slot(c, (size_t)i + 1),
-                sizeof(c->channels) * (size_t)(c->numchannels - i));
+                sizeof(*c->channels) * (size_t)(c->numchannels - i));
       }
       return;
     }

@@ -2,7 +2,6 @@
 
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "btech/special_objects.h"
@@ -504,7 +503,8 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
   initialize_pc(player, m);
   mech_pilot_dbref_set(m, player);
   mech_team_set(m, mech_team(mech));
-  mech_radio_frequency_set(m, 0, random() % 1000000);
+  mech_radio_frequency_set(
+      m, 0, (int)(btech_context_random_i31(mech_context(m)) % 1000000));
   mecha_notifyf(evaluation, player, "Emergency radio channel set to %d.",
                 mech_radio_frequency(m, 0));
   /* #endif

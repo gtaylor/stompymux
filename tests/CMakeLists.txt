@@ -445,6 +445,17 @@ target_include_directories(checked_storage_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME checked_storage COMMAND checked_storage_test)
 
+add_executable(commac_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/commac.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/communication/commac.c)
+target_compile_options(commac_test PRIVATE -ffunction-sections)
+target_link_options(commac_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(commac_test PRIVATE btmux_options)
+target_include_directories(commac_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME commac COMMAND commac_test)
+
 add_executable(btech_persistence_schema_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/contracts/btech_persistence_schema.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/persistence/schema.c)
@@ -554,6 +565,38 @@ target_include_directories(utf8_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME utf8 COMMAND utf8_test)
 
+if(BTMUX_BUILD_FUZZERS)
+  if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
+    message(FATAL_ERROR "BTMUX_BUILD_FUZZERS requires Clang")
+  endif()
+  find_program(BTMUX_FUZZER_CXX_COMPILER NAMES g++ REQUIRED)
+  execute_process(
+    COMMAND "${BTMUX_FUZZER_CXX_COMPILER}" -print-file-name=libstdc++.so
+    OUTPUT_VARIABLE BTMUX_FUZZER_CXX_RUNTIME
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ERROR_IS_FATAL ANY)
+  if(NOT EXISTS "${BTMUX_FUZZER_CXX_RUNTIME}")
+    message(FATAL_ERROR "Unable to locate the libFuzzer C++ runtime dependency")
+  endif()
+  cmake_path(GET BTMUX_FUZZER_CXX_RUNTIME PARENT_PATH
+             BTMUX_FUZZER_CXX_RUNTIME_DIRECTORY)
+  add_executable(wild_fuzzer
+    ${CMAKE_SOURCE_DIR}/tests/fuzz/wild.c
+    ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/wild.c
+    ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+  target_compile_options(wild_fuzzer PRIVATE
+    -ffunction-sections -fsanitize=fuzzer)
+  target_link_options(wild_fuzzer PRIVATE
+    -Wl,--gc-sections -fsanitize=fuzzer)
+  target_link_libraries(wild_fuzzer PRIVATE
+    btmux_options ${BTMUX_FUZZER_CXX_RUNTIME})
+  target_link_directories(wild_fuzzer PRIVATE
+    "${BTMUX_FUZZER_CXX_RUNTIME_DIRECTORY}")
+  target_include_directories(wild_fuzzer PRIVATE
+    "${CMAKE_BINARY_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
+endif()
+
 add_executable(styled_text_test
   ${CMAKE_SOURCE_DIR}/tests/unit/mux/content/styled_text/main.c
   ${CMAKE_SOURCE_DIR}/tests/unit/mux/content/styled_text/markup.c
@@ -584,6 +627,16 @@ target_include_directories(player_account_test PRIVATE
   "${CMAKE_BINARY_DIR}"
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME player_account COMMAND player_account_test)
+
+add_executable(page_recipients_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/state/page_recipients.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/communication/page_recipients.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/objects/player_account.c)
+target_link_libraries(page_recipients_test PRIVATE btmux_options)
+target_include_directories(page_recipients_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME page_recipients COMMAND page_recipients_test)
 
 add_executable(economy_parts_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/state/economy_parts.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/objects/economy_parts.c)

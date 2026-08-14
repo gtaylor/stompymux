@@ -2,7 +2,6 @@
 
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "btech/special_objects.h"
@@ -257,7 +256,8 @@ static void char_eject(DbRef player, Mech *mech) {
   silly_atr_set_in(database, mech_dbref(m), A_PILOTNUM, message_buffer);
   mech_pilot_dbref_set(m, player);
   mech_team_set(m, mech_team(mech));
-  mech_radio_frequency_set(m, 0, random() % 1000000);
+  mech_radio_frequency_set(
+      m, 0, (int)(btech_context_random_i31(mech_context(m)) % 1000000));
   notify_printf(evaluation, player, "Emergency radio channel set to %d.",
                 mech_radio_frequency(m, 0));
   /* #endif
@@ -415,7 +415,8 @@ static void char_disembark(DbRef player, Mech *mech) {
   (void)snprintf(message_buffer, sizeof(message_buffer), "#%ld", player);
   silly_atr_set_in(database, mech_dbref(m), A_PILOTNUM, message_buffer);
   mech_team_set(m, mech_team(mech));
-  mech_radio_frequency_set(m, 0, random() % 1000000);
+  mech_radio_frequency_set(
+      m, 0, (int)(btech_context_random_i31(mech_context(m)) % 1000000));
   notify_printf(evaluation, player, "Emergency radio channel set to %d.",
                 mech_radio_frequency(m, 0));
   /* #endif

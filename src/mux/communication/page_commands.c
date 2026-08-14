@@ -10,6 +10,7 @@
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/communication/access_policy.h"
+#include "mux/communication/page_recipients.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
@@ -69,6 +70,13 @@ typedef struct PageNameListRequest {
   bool dbrefs;
 } PageNameListRequest;
 
+typedef struct PageWorkspace {
+  char plain_message[LBUF_SIZE];
+  char recipient_names[LBUF_SIZE];
+  char formatted_message[LBUF_SIZE];
+  char alias_addition[LBUF_SIZE];
+} PageWorkspace;
+
 static char *dbrefs_to_names(const PageNameListRequest *request) {
   WorldContext *world = request->world;
   DbRef player = request->player;
@@ -108,45 +116,29 @@ static char *dbrefs_to_names(const PageNameListRequest *request) {
 }
 
 void do_page(CommandInvocation *invocation) {
-  char *formatted;
   EvaluationContext *evaluation = &invocation->context->evaluation;
   const ServerConfiguration *configuration =
       invocation->context->world->configuration;
   const DbRef PLAYER = invocation->player;
   char *tname = invocation->first;
   char *message = invocation->second;
-  char plain_message[LBUF_SIZE];
   DbRef target;
   char *p;
-  char *buf1;
-  char *bp;
-  char *buf2;
-  char *bp2;
   char *mp;
   char *str;
-  char targetname[LBUF_SIZE];
-  char alias[LBUF_SIZE];
-  char aladd[LBUF_SIZE];
   int ispose = 0;
   int ismessage = 0;
-  int count = 0;
   int n = 0;
+  size_t delivery_count = 0;
   long aflags = 0;
   char *token_context = nullptr;
-
-  buf1 = alloc_lbuf("page_return_list");
-  bp = buf1;
-
-  buf2 = alloc_lbuf("page_list");
-  bp2 = buf2;
-
-  formatted = alloc_lbuf("page_message");
 
   if ((tname[0] == ':') || (tname[0] == ';') || (message[0] == ':') ||
       (message[0] == ';'))
     ispose = 1;
 
   if (!*message) {
+    char *targetname = alloc_lbuf("page_target_name");
     char *target_cursor = targetname;
     for (size_t index = 0; index < player_account_last_page_count(
                                        evaluation->world->database, PLAYER);
@@ -177,28 +169,34 @@ void do_page(CommandInvocation *invocation) {
         }
       }
 
-      free_lbuf(buf1);
-      free_lbuf(buf2);
-      free_lbuf(formatted);
+      free_lbuf(targetname);
       return;
     }
     string_copy(message, tname);
     string_copy(tname, targetname);
+    free_lbuf(targetname);
     ismessage = 1;
   }
 
+  PageWorkspace *workspace = checked_storage_allocate(sizeof(*workspace));
+  char *plain_message = workspace->plain_message;
+  char *buf1 = workspace->recipient_names;
+  char *formatted = workspace->formatted_message;
+  char *aladd = workspace->alias_addition;
+  char *bp = buf1;
+
   styled_text_strip(evaluation->world->styled_text_palette, message,
-                    plain_message, sizeof(plain_message));
+                    plain_message, LBUF_SIZE);
   message = plain_message;
   mp = message;
 
-  attribute_get_string(evaluation->world->database, alias, PLAYER, A_ALIAS,
+  attribute_get_string(evaluation->world->database, formatted, PLAYER, A_ALIAS,
                        &aflags);
-  if (*alias) {
+  if (*formatted) {
     char *ap = aladd;
 
     safe_str(" (", aladd, &ap);
-    safe_str(alias, aladd, &ap);
+    safe_str(formatted, aladd, &ap);
     safe_chr(')', aladd, &ap);
     *ap = '\0';
   } else {
@@ -210,6 +208,10 @@ void do_page(CommandInvocation *invocation) {
    */
   for (n = 0, str = tname; str; str = next_token(str, ' '), n++)
     ;
+
+  PageRecipientList recipients;
+  if (!page_recipient_list_initialize(&recipients, (size_t)n))
+    goto cleanup_workspace;
 
   target = lookup_player(evaluation->world, PLAYER, tname, 1);
   if (target == NOTHING && n > 1) {
@@ -267,8 +269,9 @@ void do_page(CommandInvocation *invocation) {
           notify_checked(evaluation, target, PLAYER, formatted,
                          MSG_ME_ALL | MSG_F_DOWN);
         }
-        safe_tprintf_str(buf2, &bp2, "%ld ", target);
-        count++;
+        delivery_count++;
+        if (!page_recipient_list_append(&recipients, target))
+          break;
       }
     }
   } else {
@@ -306,7 +309,6 @@ void do_page(CommandInvocation *invocation) {
         notify_checked(evaluation, target, PLAYER, formatted,
                        MSG_ME_ALL | MSG_F_DOWN);
       }
-      safe_tprintf_str(buf2, &bp2, "%ld ", target);
       safe_tprintf_str(buf1, &bp, "%s, ",
                        game_object_name(evaluation->world->database, target));
 
@@ -318,36 +320,18 @@ void do_page(CommandInvocation *invocation) {
       if (NAME_LIST_LENGTH >= 2)
         *(char *)checked_storage_at(buf1, LBUF_SIZE, sizeof(char),
                                     NAME_LIST_LENGTH - 2) = '\0';
-      count++;
+      delivery_count++;
+      /* The single target always fits in the token-sized recipient list. */
+      (void)page_recipient_list_append(&recipients, target);
     }
   }
 
-  if (count == 0) {
-    free_lbuf(buf1);
-    free_lbuf(buf2);
-    free_lbuf(formatted);
-    return;
+  if (delivery_count == 0) {
+    goto cleanup;
   }
-  const size_t REFERENCE_LIST_LENGTH = strlen(buf2);
+  page_recipient_list_store(&recipients, evaluation->world->database, PLAYER);
 
-  if (REFERENCE_LIST_LENGTH > 0)
-    *(char *)checked_storage_at(buf2, LBUF_SIZE, sizeof(char),
-                                REFERENCE_LIST_LENGTH - 1) = '\0';
-  DbRef *recipients = malloc((size_t)count * sizeof(*recipients));
-  if (recipients) {
-    size_t recipient_count = 0;
-    for (char *token = strtok_r(buf2, " ", &token_context);
-         token && recipient_count < (size_t)count;
-         token = strtok_r(nullptr, " ", &token_context))
-      *(DbRef *)checked_storage_at(recipients, (size_t)count,
-                                   sizeof(*recipients), recipient_count++) =
-          parse_dbref(token);
-    player_account_last_page_set(evaluation->world->database, PLAYER,
-                                 recipients, recipient_count);
-    free(recipients);
-  }
-
-  if (count == 1) {
+  if (delivery_count == 1) {
     if (*buf1) {
       if (ispose != 1) {
         notify_printf(evaluation, PLAYER, "You paged %s with '%s'.", buf1, mp);
@@ -388,7 +372,8 @@ void do_page(CommandInvocation *invocation) {
     }
   }
 
-  free_lbuf(buf1);
-  free_lbuf(buf2);
-  free_lbuf(formatted);
+cleanup:
+  page_recipient_list_destroy(&recipients);
+cleanup_workspace:
+  free(workspace);
 }

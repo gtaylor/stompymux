@@ -2,7 +2,10 @@
 
 #include "mux/communication/commac.h"
 
+#include <limits.h>
+#include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <strings.h>
 
 #include "mux/support/checked_storage.h"
@@ -10,8 +13,9 @@
 char *commac_alias_at(const struct Commac *commac, size_t index) {
   if (index >= (size_t)commac->maxchannels)
     abort();
-  return checked_storage_at(commac->alias, (size_t)commac->maxchannels * 6,
-                            sizeof(char), index * 6);
+  return checked_storage_at(commac->alias,
+                            (size_t)commac->maxchannels * COMMAC_ALIAS_SIZE,
+                            sizeof(char), index * COMMAC_ALIAS_SIZE);
 }
 
 char *commac_channel_at(const struct Commac *commac, size_t index) {
@@ -72,7 +76,7 @@ struct Commac *create_new_commac(void) {
   struct Commac *c;
   int i;
 
-  c = (struct Commac *)malloc(sizeof(struct Commac));
+  c = checked_storage_allocate(sizeof(*c));
 
   c->who = -1;
   c->numchannels = 0;
@@ -158,6 +162,35 @@ void destroy_commac(struct Commac *c) {
     free(commac_channel_at(c, (size_t)i));
   free((void *)c->channels);
   free(c);
+}
+
+bool commac_reserve_aliases(struct Commac *commac, size_t capacity) {
+  if (capacity <= (size_t)commac->maxchannels)
+    return true;
+  if (capacity > INT_MAX || capacity > SIZE_MAX / COMMAC_ALIAS_SIZE ||
+      capacity > SIZE_MAX / sizeof(*commac->channels))
+    return false;
+
+  char *aliases = calloc(capacity, COMMAC_ALIAS_SIZE);
+  char **channels = (char **)calloc(capacity, sizeof(*channels));
+  if (aliases == nullptr || channels == nullptr) {
+    free(aliases);
+    free((void *)channels);
+    return false;
+  }
+
+  const size_t COUNT = (size_t)commac->numchannels;
+  if (COUNT > 0) {
+    memcpy(aliases, commac->alias, COUNT * COMMAC_ALIAS_SIZE);
+    memcpy((void *)channels, (const void *)commac->channels,
+           COUNT * sizeof(*channels));
+  }
+  free(commac->alias);
+  free((void *)commac->channels);
+  commac->alias = aliases;
+  commac->channels = channels;
+  commac->maxchannels = (int)capacity;
+  return true;
 }
 
 void sort_com_aliases(struct Commac *c) {

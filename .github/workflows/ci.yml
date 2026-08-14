@@ -15,8 +15,21 @@ concurrency:
 
 jobs:
   build:
+    name: ${{ matrix.configuration.name }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        configuration:
+          - name: Sanitizers
+            build_type: RelWithDebInfo
+            asan: "ON"
+            ubsan: "ON"
+          - name: Release strict C23
+            build_type: Release
+            asan: "OFF"
+            ubsan: "OFF"
 
     steps:
       - name: Check out repository
@@ -29,7 +42,39 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           configFile: .devcontainer/devcontainer.json
+          env: |
+            CMAKE_BUILD_TYPE=${{ matrix.configuration.build_type }}
+            BTECH_ENABLE_ASAN=${{ matrix.configuration.asan }}
+            BTECH_ENABLE_UBSAN=${{ matrix.configuration.ubsan }}
+            BTMUX_STRICT_C23=ON
           push: never
           runCmd: |
+            set -euo pipefail
             just ci
+            grep -Fx "CMAKE_BUILD_TYPE:STRING=$CMAKE_BUILD_TYPE" .build/CMakeCache.txt
+            grep -Fx "BTECH_ENABLE_ASAN:BOOL=$BTECH_ENABLE_ASAN" .build/CMakeCache.txt
+            grep -Fx "BTECH_ENABLE_UBSAN:BOOL=$BTECH_ENABLE_UBSAN" .build/CMakeCache.txt
+            grep -Fx "BTMUX_STRICT_C23:BOOL=$BTMUX_STRICT_C23" .build/CMakeCache.txt
+            git diff --exit-code
+
+  fuzz:
+    name: Fuzz smoke tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Build and run fuzz smoke tests in devcontainer
+        uses: devcontainers/ci@v0.3
+        with:
+          configFile: .devcontainer/devcontainer.json
+          push: never
+          runCmd: |
+            set -euo pipefail
+            just fuzz-smoke
             git diff --exit-code

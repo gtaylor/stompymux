@@ -309,21 +309,42 @@ set(BTECH_SOURCES
   unit/template_registry.c
   unit/template_save.c)
 
-add_library(btech STATIC ${BTECH_SOURCES})
-target_link_libraries(btech PRIVATE btmux_options)
-if(BUILD_TESTING)
-  target_compile_definitions(btech PRIVATE BTECH_PERSISTENCE_TESTING=1)
-endif()
-target_include_directories(btech
-  PUBLIC
-    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-  PRIVATE
+set(BTECH_SUBSYSTEMS
+  autopilot character combat commands core economy integration map movement
+  persistence repair scripting sensors special ui unit)
+set(BTECH_OBJECTS)
+set(BTECH_UNGROUPED_SOURCES ${BTECH_SOURCES})
+
+foreach(subsystem IN LISTS BTECH_SUBSYSTEMS)
+  set(subsystem_sources ${BTECH_SOURCES})
+  list(FILTER subsystem_sources INCLUDE REGEX "^${subsystem}/")
+  list(FILTER BTECH_UNGROUPED_SOURCES EXCLUDE REGEX "^${subsystem}/")
+
+  add_library(btech_${subsystem} OBJECT ${subsystem_sources})
+  target_link_libraries(btech_${subsystem} PRIVATE btmux_options)
+  if(BUILD_TESTING)
+    target_compile_definitions(btech_${subsystem}
+      PRIVATE BTECH_PERSISTENCE_TESTING=1)
+  endif()
+  target_include_directories(btech_${subsystem} PRIVATE
     "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
     "${CMAKE_BINARY_DIR}"
     "${SQLite3_INCLUDE_DIRS}"
     ${BTECH_PRIVATE_INCLUDE_DIRS}
     "${CMAKE_SOURCE_DIR}/src")
-if(BTECH_ENABLE_IWYU)
-  set_property(TARGET btech PROPERTY C_INCLUDE_WHAT_YOU_USE
-               "${BTECH_IWYU_COMMAND}")
+  if(BTECH_ENABLE_IWYU)
+    set_property(TARGET btech_${subsystem} PROPERTY C_INCLUDE_WHAT_YOU_USE
+                 "${BTECH_IWYU_COMMAND}")
+  endif()
+  list(APPEND BTECH_OBJECTS $<TARGET_OBJECTS:btech_${subsystem}>)
+endforeach()
+
+if(BTECH_UNGROUPED_SOURCES)
+  message(FATAL_ERROR
+    "BTech sources must belong to a subsystem: ${BTECH_UNGROUPED_SOURCES}")
 endif()
+
+add_library(btech STATIC ${BTECH_OBJECTS})
+target_link_libraries(btech PRIVATE btmux_options)
+target_include_directories(btech PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>")
