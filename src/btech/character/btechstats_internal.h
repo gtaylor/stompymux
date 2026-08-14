@@ -5,6 +5,7 @@
 
 #include "btech/context.h"
 #include "btechstats.h"
+#include "character_value_settings.h"
 #include "mux/server/platform.h"
 
 int character_value_by_code(const CharacterValueRequest *request);
@@ -17,11 +18,6 @@ int character_xp_to_next_level(BtechContext *context, DbRef target, int code);
 PSTATS *character_stats_create(void);
 const CharacterValue *character_value_definition(int code);
 const char *character_value_type_name(int type);
-typedef struct CharacterValueThreshold {
-  int code;
-  int threshold;
-} CharacterValueThreshold;
-void character_value_xp_threshold_set(const CharacterValueThreshold *value);
 unsigned char character_stats_value_get(const PSTATS *stats, int code);
 typedef struct CharacterStatsValueChange {
   PSTATS *stats;

@@ -32,6 +32,10 @@ Each domain owns both its state and the operations that change that state:
 
 The context-owned gameplay generator is xoshiro256**, seeded once from Linux
 OS entropy during BTech startup. Its runtime state is not persisted.
+Wizard-adjustable character XP thresholds are likewise owned by
+`BtechContext`. Each context starts from the immutable character catalog's
+defaults, and threshold overrides last for that context's lifetime without
+being written to persistence.
 
 Internal command boundaries use the shared MUX `parse_*_checked` helpers for
 numeric input. They reject empty values, overflow, non-finite floating-point

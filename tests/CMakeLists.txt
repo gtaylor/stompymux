@@ -327,6 +327,23 @@ target_include_directories(btech_random_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_random COMMAND btech_random_test)
 
+add_executable(btech_character_value_settings_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/character/character_value_settings.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/character/character_value_catalog.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/character/character_persistence.c)
+target_compile_options(btech_character_value_settings_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_character_value_settings_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(btech_character_value_settings_test PRIVATE btmux_options)
+target_include_directories(btech_character_value_settings_test PRIVATE
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_character_value_settings
+  COMMAND btech_character_value_settings_test)
+
 add_executable(btech_weapon_failure_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/combat/btech_weapon_failure.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/combat/mech_weapon_failure.c)
@@ -709,6 +726,7 @@ function(btmux_label_unit_topic topic umbrella)
 endfunction()
 
 include(unit/btech/autopilot/CMakeLists.txt)
+include(unit/btech/character/CMakeLists.txt)
 include(unit/btech/combat/CMakeLists.txt)
 include(unit/btech/contracts/CMakeLists.txt)
 include(unit/btech/sensors/CMakeLists.txt)

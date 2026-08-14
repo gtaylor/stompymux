@@ -17,6 +17,7 @@
 #include "autopilot_weapon_profile_api.h"
 #include "btech/context.h"
 #include "btechstats_api.h"
+#include "character_value_settings.h"
 #include "map_dynamic_api.h"
 #include "mech_lifecycle.h"
 #include "mech_restrict_api.h"
@@ -234,6 +235,7 @@ void btech_special_objects_load(BtechContext *context) {
   initialize_partname_tables(context);
   if (!btech_weapon_settings_initialize(&context->weapon_settings))
     exit(EXIT_FAILURE);
+  btech_character_value_settings_initialize(&context->character_values);
   if (!missile_hit_registry_initialize(&context->missile_hits, context))
     exit(EXIT_FAILURE);
   /* Loop through the entire database, and if it has the special */

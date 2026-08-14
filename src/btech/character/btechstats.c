@@ -11,6 +11,7 @@
 #include "btechstats_api.h"
 #include "btechstats_global.h"
 #include "btechstats_internal.h"
+#include "character_value_settings.h"
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "context_internal.h" // IWYU pragma: keep
@@ -128,7 +129,7 @@ static int char_getskilltargetbycode_noxp(BtechContext *context, DbRef player,
                                           int code, int modifier);
 
 int figure_xp_bonus(BtechContext *context, DbRef player, PSTATS *s, int code) {
-  int t = character_value_definition(code)->xpthreshold;
+  int t = character_value_xp_threshold(context, code);
   int tx;
   int bon;
   int btar;
@@ -163,7 +164,7 @@ int figure_xp_bonus(BtechContext *context, DbRef player, PSTATS *s, int code) {
 }
 
 int character_xp_to_next_level(BtechContext *context, DbRef target, int code) {
-  int xpthresh = character_value_definition(code)->xpthreshold;
+  int xpthresh = character_value_xp_threshold(context, code);
   int start_skill;
   int target_skill;
   int counter;

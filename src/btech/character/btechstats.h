@@ -10,7 +10,7 @@ typedef struct CharacterValue {
   const char *name;
   char type;
   int flag;
-  int xpthreshold;
+  int default_xp_threshold;
 } CharacterValue;
 
 typedef struct BtechContext BtechContext;
@@ -45,11 +45,6 @@ enum { NUM_CHARVALUES = 119 };
 constexpr int NUM_CHARLEVELS = 5;
 constexpr int NUM_CHARTYPES = 6;
 constexpr int NUM_CHARPACKAGES = 9;
-
-extern const char *btech_charskillflag_names[4];
-extern const char *char_levels[NUM_CHARLEVELS];
-extern const char *char_types[NUM_CHARTYPES];
-extern const char *char_packages[NUM_CHARPACKAGES];
 
 /*
     XP is added only if the player is online AND

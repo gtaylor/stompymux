@@ -1,0 +1,2 @@
+btmux_label_unit_topic(btech-character btech
+  btech_character_value_settings)

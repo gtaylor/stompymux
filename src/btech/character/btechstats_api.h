@@ -96,7 +96,7 @@ typedef struct GunneryExperienceAward {
 void gunnery_experience_award(const GunneryExperienceAward *award);
 void debug_xptop(DbRef player, void *data, const char *buffer);
 void debug_setxplevel(DbRef player, void *data, char *buffer);
-int btthreshold_func(BtechContext *context, char *skillname);
+int btthreshold_func(BtechContext *context, const char *skillname);
 struct chargen_struct *retrieve_chargen_struct(DbRef player);
 int lowest_bit(int num);
 int recursive_add(int lev);

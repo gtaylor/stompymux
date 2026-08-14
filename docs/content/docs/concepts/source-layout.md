@@ -151,7 +151,9 @@ rendering returns an owned `MapText` instead of reusing static sketch and
 colorization buffers. Advanced-economy prices are also owned by that context;
 persistence receives only a short-lived read view of their canonical part
 ranges. Repair-job tables and map-link update counters are caller-owned command
-scratch. Turret, weapon-recycle, and physical-XP overrides are grouped under
-`BtechContext` instead of shared by the process. Keeping that distinction
-explicit prevents unavoidable boundary state from becoming a justification for
-new ambient state.
+scratch. Turret, weapon-recycle, physical-XP, and character XP-threshold
+overrides are grouped under `BtechContext` instead of shared by the process.
+Character definitions retain immutable default thresholds; runtime overrides
+last for the owning context's lifetime and are not persisted. Keeping that
+distinction explicit prevents unavoidable boundary state from becoming a
+justification for new ambient state.

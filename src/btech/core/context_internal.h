@@ -4,6 +4,7 @@
 
 #include "btech/context.h"
 #include "btech/ids.h"
+#include "character_value_settings.h"
 #include "coding_registry.h"
 #include "missile_hit_registry.h"
 #include "mux/support/red_black_tree.h"
@@ -46,6 +47,7 @@ struct BtechContext {
   HashTable *player_value_hashes;
   char **char_value_short_names;
   size_t char_value_count;
+  BtechCharacterValueSettings character_values;
   long cached_target_character;
   int cached_skill;
   int cached_skill_result;

@@ -6,6 +6,7 @@
 #include "btechstats_api.h"
 #include "btechstats_global.h"
 #include "btechstats_internal.h"
+#include "character_value_settings.h"
 #include "command_handlers_api.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "coolmenu.h"
@@ -148,8 +149,8 @@ void debug_setxplevel(DbRef player, void *data, char *buffer) {
                  "That isn't any skill!");
     return;
   }
-  character_value_xp_threshold_set(
-      &(CharacterValueThreshold){.code = code, .threshold = xpt});
+  character_value_xp_threshold_set(&(CharacterValueThreshold){
+      .context = context, .code = code, .threshold = xpt});
   log_error((LogEntry){.log = context->log,
                        .key = LOG_WIZARD,
                        .primary = "WIZ",
@@ -158,7 +159,7 @@ void debug_setxplevel(DbRef player, void *data, char *buffer) {
             player);
 }
 
-int btthreshold_func(BtechContext *context, char *skillname) {
+int btthreshold_func(BtechContext *context, const char *skillname) {
   int code;
 
   if (!skillname || !*skillname)
@@ -168,5 +169,5 @@ int btthreshold_func(BtechContext *context, char *skillname) {
     return -1;
   if (character_value_definition(code)->type != CHAR_SKILL)
     return -1;
-  return character_value_definition(code)->xpthreshold;
+  return character_value_xp_threshold(context, code);
 }

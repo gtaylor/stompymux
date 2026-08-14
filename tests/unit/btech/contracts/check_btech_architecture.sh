@@ -233,6 +233,26 @@ done < <(rg -n '^BtechCommandDefinition [A-Za-z_]+commands\[' src/btech \
   -g '*command_catalog.c' || true)
 
 while IFS= read -r match; do
+  echo "$match: character value catalog must be immutable"
+  status=1
+done < <(rg --pcre2 -n \
+  '^(?:static[[:space:]]+)?(?!const[[:space:]]+)CharacterValue[[:space:]]+[A-Za-z_]+\[' \
+  src/btech/character/character_value_catalog.c || true)
+
+while IFS= read -r match; do
+  echo "$match: runtime code must read context-owned XP thresholds"
+  status=1
+done < <(rg -n 'default_xp_threshold' src/btech -g '*.[ch]' \
+  -g '!character_value_catalog.c' -g '!btechstats.h' || true)
+
+while IFS= read -r match; do
+  echo "$match: XP threshold changes must identify their BtechContext"
+  status=1
+done < <(rg --pcre2 -n -U \
+  'CharacterValueThreshold\)[[:space:]]*\{(?:(?!\.context)[\s\S])*?\}' \
+  src/btech -g '*.c' || true)
+
+while IFS= read -r match; do
   echo "$match: non-unit source includes a private unit layout header"
   status=1
 done < <(rg -n '^#include "(mech_internal|mech_macros)\.h"' src/btech \

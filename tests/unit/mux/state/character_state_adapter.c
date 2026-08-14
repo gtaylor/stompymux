@@ -17,7 +17,18 @@
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 
-struct CharacterValue char_values[NUM_CHARVALUES];
+static const CharacterValue CHARACTER_VALUES[NUM_CHARVALUES] = {
+    [LIVES_NUMBER] = {.name = "Lives", .type = CHAR_VALUE},
+    [6] = {.name = "Bruise", .type = CHAR_VALUE},
+    [7] = {.name = "Lethal", .type = CHAR_VALUE},
+    [26] = {.name = "Toughness", .type = CHAR_ADVANTAGE},
+    [37] = {.name = "Build", .type = CHAR_ATTRIBUTE},
+    [38] = {.name = "Reflexes", .type = CHAR_ATTRIBUTE},
+    [39] = {.name = "Intuition", .type = CHAR_ATTRIBUTE},
+    [40] = {.name = "Learn", .type = CHAR_ATTRIBUTE},
+    [41] = {.name = "Charisma", .type = CHAR_ATTRIBUTE},
+    [99] = {.name = "Running", .type = CHAR_SKILL},
+};
 
 static size_t stats_index(int code) {
   if (code < 0 || code >= NUM_CHARVALUES)
@@ -26,13 +37,8 @@ static size_t stats_index(int code) {
 }
 
 const CharacterValue *character_value_definition(int code) {
-  return checked_storage_at_const(char_values, NUM_CHARVALUES,
-                                  sizeof(*char_values), stats_index(code));
-}
-
-static CharacterValue *character_value_mutable(int code) {
-  return checked_storage_at(char_values, NUM_CHARVALUES, sizeof(*char_values),
-                            stats_index(code));
+  return checked_storage_at_const(CHARACTER_VALUES, NUM_CHARVALUES,
+                                  sizeof(*CHARACTER_VALUES), stats_index(code));
 }
 
 unsigned char character_stats_value_get(const PSTATS *stats, int code) {
@@ -95,29 +101,6 @@ void char_setstatvalue(PSTATS *stats, const char *name, int value) {
         .stats = stats, .code = code, .value = value});
 }
 
-static void initialize_catalog(void) {
-  *character_value_mutable(LIVES_NUMBER) =
-      (struct CharacterValue){.name = "Lives", .type = CHAR_VALUE};
-  *character_value_mutable(6) =
-      (struct CharacterValue){.name = "Bruise", .type = CHAR_VALUE};
-  *character_value_mutable(7) =
-      (struct CharacterValue){.name = "Lethal", .type = CHAR_VALUE};
-  *character_value_mutable(26) =
-      (struct CharacterValue){.name = "Toughness", .type = CHAR_ADVANTAGE};
-  *character_value_mutable(37) =
-      (struct CharacterValue){.name = "Build", .type = CHAR_ATTRIBUTE};
-  *character_value_mutable(38) =
-      (struct CharacterValue){.name = "Reflexes", .type = CHAR_ATTRIBUTE};
-  *character_value_mutable(39) =
-      (struct CharacterValue){.name = "Intuition", .type = CHAR_ATTRIBUTE};
-  *character_value_mutable(40) =
-      (struct CharacterValue){.name = "Learn", .type = CHAR_ATTRIBUTE};
-  *character_value_mutable(41) =
-      (struct CharacterValue){.name = "Charisma", .type = CHAR_ATTRIBUTE};
-  *character_value_mutable(99) =
-      (struct CharacterValue){.name = "Running", .type = CHAR_SKILL};
-}
-
 int main(void) {
   GameObject objects[3] = {0};
   GameDatabase database = {.object_storage = objects, .top = 2, .size = 2};
@@ -128,7 +111,6 @@ int main(void) {
   PSTATS stats;
   PSTATS update = {0};
 
-  initialize_catalog();
   game_object_set_type(&database, 0, OBJECT_TYPE_PLAYER);
   game_object_set_type(&database, 1, OBJECT_TYPE_THING);
 

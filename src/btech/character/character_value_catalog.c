@@ -4,15 +4,14 @@
 #include "btechstats.h"
 #include "btechstats_global.h"
 #include "btechstats_internal.h"
+#include "character_value_settings.h"
+#include "context_internal.h" // IWYU pragma: keep
 #include "mux/support/checked_storage.h"
 
 static const char *const BTECH_CHARVALUETYPE_NAMES[] = {
     "Char_value", "Char_skill", "Char_advantage", "Char_attribute"};
 
-const char *btech_charskillflag_names[] = {"Athletic", "Mental", "Physical",
-                                           "Social"};
-
-static CharacterValue char_values[NUM_CHARVALUES] = {
+static const CharacterValue CHARACTER_VALUES[NUM_CHARVALUES] = {
     {"XP", CHAR_VALUE, 0, 0},
     {"MaxXP", CHAR_VALUE, 0, 0},
     {"Type", CHAR_VALUE, 0, 0},
@@ -156,32 +155,31 @@ static CharacterValue char_values[NUM_CHARVALUES] = {
     {"Zero-G_Operations", CHAR_SKILL, CHAR_PHYSICAL, 50},
 };
 
-const char *char_levels[] = {"Green", "Regular", "Veteran", "Elite",
-                             "Historical"};
-
-const char *char_types[] = {"Inner_Sphere",   "Clan_MechWarrior",
-                            "Clan_Aerospace", "Clan_Elemental",
-                            "Clan_Freebirth", "Clan_Other"};
-
-const char *char_packages[] = {"None",
-                               "Primary_Clan_Warrior",
-                               "Secondary_Clan_Warrior",
-                               "Secondar_Clan_Pilot",
-                               "Clan_Elemental",
-                               "Basic_Academy",
-                               "Advanced_Academy",
-                               "Basic_University",
-                               "Advanced_University"};
-
 static size_t character_value_index(int code) {
   if (code < 0 || code >= NUM_CHARVALUES)
     abort();
   return (size_t)code;
 }
 
+static int *
+character_value_threshold_slot(BtechCharacterValueSettings *settings,
+                               int code) {
+  return checked_storage_at(settings->xp_thresholds, NUM_CHARVALUES,
+                            sizeof(*settings->xp_thresholds),
+                            character_value_index(code));
+}
+
+static const int *
+character_value_threshold_at(const BtechCharacterValueSettings *settings,
+                             int code) {
+  return checked_storage_at_const(settings->xp_thresholds, NUM_CHARVALUES,
+                                  sizeof(*settings->xp_thresholds),
+                                  character_value_index(code));
+}
+
 const CharacterValue *character_value_definition(int code) {
-  return checked_storage_at_const(char_values, NUM_CHARVALUES,
-                                  sizeof(*char_values),
+  return checked_storage_at_const(CHARACTER_VALUES, NUM_CHARVALUES,
+                                  sizeof(*CHARACTER_VALUES),
                                   character_value_index(code));
 }
 
@@ -195,9 +193,26 @@ const char *character_value_type_name(int type) {
   return *name;
 }
 
+void btech_character_value_settings_initialize(
+    BtechCharacterValueSettings *settings) {
+  if (settings->initialized)
+    return;
+  for (int code = 0; code < NUM_CHARVALUES; code++)
+    *character_value_threshold_slot(settings, code) =
+        character_value_definition(code)->default_xp_threshold;
+  settings->initialized = true;
+}
+
+int character_value_xp_threshold(const BtechContext *context, int code) {
+  if (context == nullptr || !context->character_values.initialized)
+    abort();
+  return *character_value_threshold_at(&context->character_values, code);
+}
+
 void character_value_xp_threshold_set(const CharacterValueThreshold *value) {
-  CharacterValue *definition =
-      checked_storage_at(char_values, NUM_CHARVALUES, sizeof(*char_values),
-                         character_value_index(value->code));
-  definition->xpthreshold = value->threshold;
+  if (value == nullptr || value->context == nullptr ||
+      !value->context->character_values.initialized)
+    abort();
+  *character_value_threshold_slot(&value->context->character_values,
+                                  value->code) = value->threshold;
 }
