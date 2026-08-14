@@ -14,14 +14,14 @@ stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-mux-source-size fmt-check build test tidy-check
+ci: check-source-size fmt-check build test tidy-check
 
 agent-checks: ci
 
 checks: ci
 
-check-mux-source-size:
-    status=0; while IFS= read -r -d '' source; do lines=$(awk 'END { print NR }' "$source"); if (( lines > 800 )); then echo "$source: $lines lines (maximum 800)"; status=1; fi; done < <(find src/mux -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0); exit "$status"
+check-source-size:
+    status=0; while IFS= read -r -d '' source; do lines=$(awk 'END { print NR }' "$source"); if (( lines > 800 )); then echo "$source: $lines lines (maximum 800)"; status=1; fi; done < <(find src/mux src/btech -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0); exit "$status"
 
 fmt-c:
     find src -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} -i
@@ -63,10 +63,10 @@ test-integration:
 
 fuzz-build:
     cmake -S . -B {{fuzz_build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBTMUX_BUILD_FUZZERS=ON -DBTMUX_STRICT_C23=ON -DBTECH_ENABLE_ASAN=ON -DBTECH_ENABLE_UBSAN=ON
-    cmake --build {{fuzz_build_dir}} --target wild_fuzzer -j "$(nproc)"
+    cmake --build {{fuzz_build_dir}} --target wild_fuzzer styled_text_fuzzer -j "$(nproc)"
 
 fuzz-smoke: fuzz-build
-    fuzz_corpus=$(mktemp -d); trap 'rm -rf -- "$fuzz_corpus"' EXIT; cp -a tests/fuzz/corpus/wild/. "$fuzz_corpus"; {{fuzz_build_dir}}/tests/wild_fuzzer -runs=100 "$fuzz_corpus"
+    wild_corpus=$(mktemp -d); styled_text_corpus=$(mktemp -d); trap 'rm -rf -- "$wild_corpus" "$styled_text_corpus"' EXIT; cp -a tests/fuzz/corpus/wild/. "$wild_corpus"; cp -a tests/fuzz/corpus/styled_text/. "$styled_text_corpus"; xxd -r -p tests/fuzz/corpus/styled_text_invalid_utf8.hex "$styled_text_corpus/invalid_utf8"; {{fuzz_build_dir}}/tests/wild_fuzzer -runs=100 "$wild_corpus"; {{fuzz_build_dir}}/tests/styled_text_fuzzer -runs=100 "$styled_text_corpus"
 
 install:
     cmake --install {{build_dir}} --prefix "$PWD/game"

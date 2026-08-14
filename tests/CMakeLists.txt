@@ -580,21 +580,31 @@ if(BTMUX_BUILD_FUZZERS)
   endif()
   cmake_path(GET BTMUX_FUZZER_CXX_RUNTIME PARENT_PATH
              BTMUX_FUZZER_CXX_RUNTIME_DIRECTORY)
-  add_executable(wild_fuzzer
+
+  function(btmux_add_fuzzer target)
+    add_executable(${target} ${ARGN})
+    target_compile_options(${target} PRIVATE
+      -ffunction-sections -fsanitize=fuzzer)
+    target_link_options(${target} PRIVATE
+      -Wl,--gc-sections -fsanitize=fuzzer)
+    target_link_libraries(${target} PRIVATE
+      btmux_options ${BTMUX_FUZZER_CXX_RUNTIME})
+    target_link_directories(${target} PRIVATE
+      "${BTMUX_FUZZER_CXX_RUNTIME_DIRECTORY}")
+    target_include_directories(${target} PRIVATE
+      "${CMAKE_BINARY_DIR}"
+      "${CMAKE_SOURCE_DIR}/src")
+  endfunction()
+
+  btmux_add_fuzzer(wild_fuzzer
     ${CMAKE_SOURCE_DIR}/tests/fuzz/wild.c
     ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/wild.c
     ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
-  target_compile_options(wild_fuzzer PRIVATE
-    -ffunction-sections -fsanitize=fuzzer)
-  target_link_options(wild_fuzzer PRIVATE
-    -Wl,--gc-sections -fsanitize=fuzzer)
-  target_link_libraries(wild_fuzzer PRIVATE
-    btmux_options ${BTMUX_FUZZER_CXX_RUNTIME})
-  target_link_directories(wild_fuzzer PRIVATE
-    "${BTMUX_FUZZER_CXX_RUNTIME_DIRECTORY}")
-  target_include_directories(wild_fuzzer PRIVATE
-    "${CMAKE_BINARY_DIR}"
-    "${CMAKE_SOURCE_DIR}/src")
+
+  btmux_add_fuzzer(styled_text_fuzzer
+    ${CMAKE_SOURCE_DIR}/tests/fuzz/styled_text.c
+    ${STYLED_TEXT_SOURCES}
+    ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/utf8.c)
 endif()
 
 add_executable(styled_text_test

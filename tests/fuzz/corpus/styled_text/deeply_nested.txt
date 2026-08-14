@@ -1,0 +1,1 @@
+[bold][italic][underline][fg=brand-blue][send="status"]Nested[/][/][/][/][/]

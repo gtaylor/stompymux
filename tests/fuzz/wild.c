@@ -7,8 +7,10 @@
 
 #include "mux/support/checked_storage.h"
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size);
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
   constexpr size_t INPUT_LIMIT = 4096;
 

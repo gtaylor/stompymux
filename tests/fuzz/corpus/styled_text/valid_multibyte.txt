@@ -1,0 +1,1 @@
+[fg=brand-blue tooltip="Résumé"]café 東京[/]
