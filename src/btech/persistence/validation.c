@@ -4,11 +4,11 @@
 #include "mux/server/log.h"
 #include "mux/server/server_config.h"
 #include "mux/support/red_black_tree.h"
+#include "mux/support/stringutil.h"
 #include "special_object.h"
 #include "sqlite_internal.h"
 #include <errno.h>
 #include <stdio.h>
-#include <string.h>
 
 typedef struct BtechSpecialObjectCounts BtechSpecialObjectCounts;
 struct BtechSpecialObjectCounts {
@@ -285,7 +285,10 @@ int btech_persistence_load_special_state_path(BtechContext *context,
                          .primary = "BTP",
                          .secondary = "FAIL"},
               "Cannot open SQLite BTech state from %s: %s", path,
-              sqlite ? sqlite3_errmsg(sqlite) : strerror(errno));
+              sqlite ? sqlite3_errmsg(sqlite)
+                     : system_error_message(
+                           errno, (char[SYSTEM_ERROR_MESSAGE_SIZE]){0},
+                           SYSTEM_ERROR_MESSAGE_SIZE));
   } else if (btech_special_load_all(sqlite, context) < 0) {
     log_error((LogEntry){.log = context->log,
                          .key = LOG_ALWAYS,

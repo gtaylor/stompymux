@@ -110,19 +110,23 @@ static void do_show_com(const FifoVisit *visit) {
   Chmsg *d = visit->item;
   ComHistoryView *view = visit->context;
   DbRef player = view->player;
-  struct tm *t;
-  int day;
+  struct tm now_time;
+  struct tm message_time;
   char buf[LBUF_SIZE];
 
-  t = localtime(&view->evaluation->runtime->clock->now);
-  day = t->tm_mday;
-  t = localtime(&d->time);
-  if (day == t->tm_mday) {
-    (void)snprintf(buf, sizeof(buf), "[%02d:%02d] %s", t->tm_hour, t->tm_min,
-                   d->msg);
+  const bool NOW_CONVERTED =
+      localtime_r(&view->evaluation->runtime->clock->now, &now_time) != nullptr;
+  const bool MESSAGE_CONVERTED =
+      localtime_r(&d->time, &message_time) != nullptr;
+  if (!MESSAGE_CONVERTED) {
+    (void)snprintf(buf, sizeof(buf), "[??.?? / ??:??] %s", d->msg);
+  } else if (NOW_CONVERTED && now_time.tm_mday == message_time.tm_mday) {
+    (void)snprintf(buf, sizeof(buf), "[%02d:%02d] %s", message_time.tm_hour,
+                   message_time.tm_min, d->msg);
   } else {
     (void)snprintf(buf, sizeof(buf), "[%02d.%02d / %02d:%02d] %s",
-                   t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, d->msg);
+                   message_time.tm_mon + 1, message_time.tm_mday,
+                   message_time.tm_hour, message_time.tm_min, d->msg);
   }
   notify_checked(view->evaluation, player, player, buf,
                  MSG_ME_ALL | MSG_F_DOWN);

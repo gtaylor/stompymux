@@ -3,10 +3,15 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <time.h>
 
 typedef struct ServerConfiguration ServerConfiguration;
 
+enum { SYSTEM_ERROR_MESSAGE_SIZE = 128 };
+
+/** Renders an error number into caller-owned storage. */
+char *system_error_message(int error_number, char *buffer, size_t capacity);
 /** Converts one ASCII lowercase letter to uppercase. */
 char ascii_to_upper(char character);
 /** Converts one ASCII uppercase letter to lowercase. */

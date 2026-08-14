@@ -19,13 +19,14 @@
 
 bool map_read_dimensions(FILE *file, int *width, int *height) {
   char line[64];
+  char *token_context = nullptr;
   if (fgets(line, sizeof(line), file) == nullptr)
     return false;
 
-  char *width_text = strtok(line, " \t\r\n");
-  char *height_text = strtok(nullptr, " \t\r\n");
+  char *width_text = strtok_r(line, " \t\r\n", &token_context);
+  char *height_text = strtok_r(nullptr, " \t\r\n", &token_context);
   return width_text != nullptr && height_text != nullptr &&
-         strtok(nullptr, " \t\r\n") == nullptr &&
+         strtok_r(nullptr, " \t\r\n", &token_context) == nullptr &&
          parse_int_checked(width_text, width) &&
          parse_int_checked(height_text, height);
 }
@@ -35,12 +36,13 @@ bool map_parse_visibility_attribute(const char *attribute, int *visibility,
                                     int *wind_speed, int *cloud_base,
                                     char *message, size_t message_size) {
   char values[LBUF_SIZE];
+  char *token_context = nullptr;
   (void)snprintf(values, sizeof(values), "%s", attribute);
-  char *first = strtok(values, " \t\r\n");
-  char *second = strtok(nullptr, " \t\r\n");
-  char *third = strtok(nullptr, " \t\r\n");
-  char *fourth = strtok(nullptr, " \t\r\n");
-  char *fifth = strtok(nullptr, " \t\r\n");
+  char *first = strtok_r(values, " \t\r\n", &token_context);
+  char *second = strtok_r(nullptr, " \t\r\n", &token_context);
+  char *third = strtok_r(nullptr, " \t\r\n", &token_context);
+  char *fourth = strtok_r(nullptr, " \t\r\n", &token_context);
+  char *fifth = strtok_r(nullptr, " \t\r\n", &token_context);
   if (!first || !second || !third || !fourth ||
       !parse_int_checked(first, visibility) ||
       !parse_int_checked(second, light) ||
@@ -50,12 +52,12 @@ bool map_parse_visibility_attribute(const char *attribute, int *visibility,
   if (!fifth)
     return true;
   if (!parse_int_checked(fifth, cloud_base)) {
-    char *message_rest = strtok(nullptr, "\r\n");
+    char *message_rest = strtok_r(nullptr, "\r\n", &token_context);
     (void)snprintf(message, message_size, "%s%s%s", fifth,
                    message_rest ? " " : "", message_rest ? message_rest : "");
     return true;
   }
-  char *message_text = strtok(nullptr, "\r\n");
+  char *message_text = strtok_r(nullptr, "\r\n", &token_context);
   if (message_text)
     (void)snprintf(message, message_size, "%s", message_text);
   return true;

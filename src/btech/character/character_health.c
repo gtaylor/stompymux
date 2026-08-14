@@ -170,12 +170,13 @@ void initialize_pc(DbRef player, Mech *mech) {
   c = btech_attribute_read(context->database, player, A_PCEQUIP,
                            (char[LBUF_SIZE]){0});
   char equipment[LBUF_SIZE];
+  char *token_context = nullptr;
   (void)snprintf(equipment, sizeof(equipment), "%s", c);
-  char *armor = strtok(equipment, " \t\r\n");
-  char *weapon_one = strtok(nullptr, " \t\r\n");
-  char *weapon_two = strtok(nullptr, " \t\r\n");
-  char *first_ammunition = strtok(nullptr, " \t\r\n");
-  char *second_ammunition = strtok(nullptr, " \t\r\n");
+  char *armor = strtok_r(equipment, " \t\r\n", &token_context);
+  char *weapon_one = strtok_r(nullptr, " \t\r\n", &token_context);
+  char *weapon_two = strtok_r(nullptr, " \t\r\n", &token_context);
+  char *first_ammunition = strtok_r(nullptr, " \t\r\n", &token_context);
+  char *second_ammunition = strtok_r(nullptr, " \t\r\n", &token_context);
   cnt = 0;
   if (armor) {
     if (strlen(armor) >= sizeof(buf1))

@@ -451,6 +451,9 @@ add_test(NAME btech_enum_types COMMAND btech_enum_types_test)
 add_test(NAME btech_architecture
   COMMAND bash "${CMAKE_SOURCE_DIR}/tests/unit/btech/contracts/check_btech_architecture.sh"
                "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}")
+add_test(NAME hidden_libc_state
+  COMMAND bash "${CMAKE_SOURCE_DIR}/tests/unit/btech/contracts/check_hidden_libc_state.sh"
+               "${CMAKE_SOURCE_DIR}")
 
 add_executable(event_timer_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/server/event_timer.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/server/event_timer.c)

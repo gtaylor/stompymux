@@ -11,6 +11,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdio.h>
+#include <sys/socket.h>
 
 #include "mux/network/connection_commands.h"
 #include "mux/network/descriptor.h"
@@ -86,7 +87,8 @@ static void list_sites(EvaluationContext *evaluation, DbRef player,
                        SiteData *site_list, const char *header_txt,
                        int stat_type) {
   char buff[MBUF_SIZE];
-  char buff1[SBUF_SIZE];
+  char address[INET_ADDRSTRLEN];
+  char mask[INET_ADDRSTRLEN];
   const char *str;
   SiteData *this;
 
@@ -98,9 +100,11 @@ static void list_sites(EvaluationContext *evaluation, DbRef player,
   for (this = site_list; this; this = this->next) {
     str = stat_string(
         &(SiteStatusRequest){.type = stat_type, .flag = this->flag});
-    string_copy(buff1, inet_ntoa(this->mask));
-    (void)snprintf(buff, MBUF_SIZE, "%-20s %-20s %s", inet_ntoa(this->address),
-                   buff1, str);
+    if (inet_ntop(AF_INET, &this->address, address, sizeof(address)) == nullptr)
+      string_copy(address, "<invalid>");
+    if (inet_ntop(AF_INET, &this->mask, mask, sizeof(mask)) == nullptr)
+      string_copy(mask, "<invalid>");
+    (void)snprintf(buff, MBUF_SIZE, "%-20s %-20s %s", address, mask, str);
     notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
   }
 }

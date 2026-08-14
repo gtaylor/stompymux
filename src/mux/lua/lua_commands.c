@@ -23,6 +23,7 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 
@@ -288,7 +289,9 @@ static void lua_view_parent_source(EvaluationContext *evaluation, DbRef player,
   stream = fopen(resolved, "rb");
   if (!stream) {
     notify_printf(evaluation, player, "Lua parent unavailable: %s",
-                  strerror(errno));
+                  system_error_message(errno,
+                                       (char[SYSTEM_ERROR_MESSAGE_SIZE]){0},
+                                       SYSTEM_ERROR_MESSAGE_SIZE));
     return;
   }
   if (source == NOTHING)
@@ -312,11 +315,15 @@ static void lua_view_parent_source(EvaluationContext *evaluation, DbRef player,
   }
   if (ferror(stream))
     notify_printf(evaluation, player, "Lua parent read failed: %s",
-                  strerror(errno));
+                  system_error_message(errno,
+                                       (char[SYSTEM_ERROR_MESSAGE_SIZE]){0},
+                                       SYSTEM_ERROR_MESSAGE_SIZE));
   free(line);
   if (fclose(stream) != 0)
     notify_printf(evaluation, player, "Lua parent close failed: %s",
-                  strerror(errno));
+                  system_error_message(errno,
+                                       (char[SYSTEM_ERROR_MESSAGE_SIZE]){0},
+                                       SYSTEM_ERROR_MESSAGE_SIZE));
   notify_checked(evaluation, player, player, "-- End Lua parent --", MSG_ME);
 }
 

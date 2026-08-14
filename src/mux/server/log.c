@@ -64,7 +64,7 @@ bool server_log_is_enabled(const ServerLog *log, int key) {
  * log entry.
  */
 int start_log(ServerLog *log, const char *primary, const char *secondary) {
-  struct tm *tp;
+  struct tm timestamp;
   time_t now;
 
   log->nesting++;
@@ -80,11 +80,14 @@ int start_log(ServerLog *log, const char *primary, const char *secondary) {
       now = time(nullptr);
       if (now == (time_t)-1)
         now = 0;
-      tp = localtime(&now);
-      (void)snprintf(log->timestamp, sizeof(log->timestamp),
-                     "%d%02d%02d.%02d%02d%02d ", tp->tm_year + 1900,
-                     tp->tm_mon + 1, tp->tm_mday, tp->tm_hour, tp->tm_min,
-                     tp->tm_sec);
+      if (localtime_r(&now, &timestamp) == nullptr) {
+        log->timestamp[0] = '\0';
+      } else {
+        (void)snprintf(log->timestamp, sizeof(log->timestamp),
+                       "%d%02d%02d.%02d%02d%02d ", timestamp.tm_year + 1900,
+                       timestamp.tm_mon + 1, timestamp.tm_mday,
+                       timestamp.tm_hour, timestamp.tm_min, timestamp.tm_sec);
+      }
     } else {
       log->timestamp[0] = '\0';
     }

@@ -75,11 +75,13 @@ static char *dbrefs_to_names(const PageNameListRequest *request) {
   bool ismessage = request->dbrefs;
   char *bp;
   char *p;
+  char *token_context = nullptr;
   char oldlist[LBUF_SIZE];
 
   string_copy(oldlist, list);
   bp = namelist;
-  for (p = strtok(oldlist, " "); p != nullptr; p = strtok(nullptr, " ")) {
+  for (p = strtok_r(oldlist, " ", &token_context); p != nullptr;
+       p = strtok_r(nullptr, " ", &token_context)) {
     if (ismessage) {
       DbRef target;
       if (parse_long_checked(p, &target))
@@ -127,6 +129,7 @@ void do_page(CommandInvocation *invocation) {
   int count = 0;
   int n = 0;
   long aflags = 0;
+  char *token_context = nullptr;
 
   buf1 = alloc_lbuf("page_return_list");
   bp = buf1;
@@ -160,8 +163,8 @@ void do_page(CommandInvocation *invocation) {
         notify_checked(evaluation, PLAYER, PLAYER, "You have not paged anyone.",
                        MSG_ME_ALL | MSG_F_DOWN);
       } else {
-        for (p = strtok(targetname, " "); p != nullptr;
-             p = strtok(nullptr, " ")) {
+        for (p = strtok_r(targetname, " ", &token_context); p != nullptr;
+             p = strtok_r(nullptr, " ", &token_context)) {
           if (parse_long_checked(p, &target))
             notify_printf(
                 evaluation, PLAYER, "You last paged %s.",
@@ -209,7 +212,8 @@ void do_page(CommandInvocation *invocation) {
                                                 .list = tname,
                                                 .names = buf1,
                                                 .dbrefs = ismessage});
-    for (p = strtok(tname, " "); p != nullptr; p = strtok(nullptr, " ")) {
+    for (p = strtok_r(tname, " ", &token_context); p != nullptr;
+         p = strtok_r(nullptr, " ", &token_context)) {
 
       /*
        * If it's a memory page, grab the number from the *
@@ -329,8 +333,9 @@ void do_page(CommandInvocation *invocation) {
   DbRef *recipients = malloc((size_t)count * sizeof(*recipients));
   if (recipients) {
     size_t recipient_count = 0;
-    for (char *token = strtok(buf2, " ");
-         token && recipient_count < (size_t)count; token = strtok(nullptr, " "))
+    for (char *token = strtok_r(buf2, " ", &token_context);
+         token && recipient_count < (size_t)count;
+         token = strtok_r(nullptr, " ", &token_context))
       *(DbRef *)checked_storage_at(recipients, (size_t)count,
                                    sizeof(*recipients), recipient_count++) =
           parse_dbref(token);

@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <limits.h>
 #include <math.h>
 #include <stdbool.h>
@@ -24,6 +25,22 @@ static int test_parsing(void) {
       fabsf(float_value - 1.25F) > 0.0001F ||
       parse_float_checked("nan", &float_value) ||
       parse_float_checked("1.0 trailing", &float_value)) {
+    return 1;
+  }
+  return 0;
+}
+
+static int test_system_error_message(void) {
+  char known[128];
+  char unknown[128];
+  char small[1] = {'x'};
+
+  if (system_error_message(EINVAL, known, sizeof(known)) != known ||
+      known[0] == '\0' || known[sizeof(known) - 1] != '\0' ||
+      system_error_message(INT_MAX, unknown, sizeof(unknown)) != unknown ||
+      unknown[0] == '\0' || unknown[sizeof(unknown) - 1] != '\0' ||
+      system_error_message(EINVAL, small, sizeof(small)) != small ||
+      small[0] != '\0') {
     return 1;
   }
   return 0;
@@ -65,5 +82,6 @@ static int test_checked_conversions(void) {
 }
 
 int main(void) {
-  return test_parsing() || test_text_builder() || test_checked_conversions();
+  return test_parsing() || test_system_error_message() ||
+         test_text_builder() || test_checked_conversions();
 }

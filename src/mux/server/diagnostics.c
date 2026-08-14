@@ -4,12 +4,12 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
 
 #include "mux/server/diagnostics.h"
+#include "mux/support/stringutil.h"
 
 static void diagnostics_print_prefix(DiagnosticLocation location) {
   struct timeval tv;
@@ -48,5 +48,7 @@ void diagnostics_perror(DiagnosticLocation location, const char *expression,
                         int saved_errno) {
   diagnostics_print_prefix(location);
   (void)fprintf(stderr, "'%s' failed with '%s'\n", expression,
-                strerror(saved_errno));
+                system_error_message(saved_errno,
+                                     (char[SYSTEM_ERROR_MESSAGE_SIZE]){0},
+                                     SYSTEM_ERROR_MESSAGE_SIZE));
 }

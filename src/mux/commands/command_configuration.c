@@ -153,11 +153,12 @@ int cf_cmd_alias(const ConfigurationCall *call) {
   char *ap;
   CMDENT *cmdp;
   NameTable *nt;
+  char *token_context = nullptr;
 
   assert(call->value == &registry->commands);
 
-  alias = strtok(str, " \t=,");
-  orig = strtok(nullptr, " \t=,");
+  alias = strtok_r(str, " \t=,", &token_context);
+  orig = strtok_r(nullptr, " \t=,", &token_context);
 
   if (!orig) /*
               * * we only got one argument to @alias.

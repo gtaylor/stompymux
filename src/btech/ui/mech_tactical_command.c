@@ -137,16 +137,22 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
   if (!*str) {
     display_height = MAP_DISPLAY_HEIGHT;
     display_width = MAP_DISPLAY_WIDTH;
-  } else if (!parse_int_checked(strtok(str, " \t"), &display_height) ||
-             !parse_int_checked(strtok(nullptr, " \t"), &display_width) ||
-             strtok(nullptr, " \t") != nullptr || display_height > 24 ||
-             display_height < 5 || display_width > 40 || display_width < 5) {
+  } else {
+    char *token_context = nullptr;
+    if (!parse_int_checked(strtok_r(str, " \t", &token_context),
+                           &display_height) ||
+        !parse_int_checked(strtok_r(nullptr, " \t", &token_context),
+                           &display_width) ||
+        strtok_r(nullptr, " \t", &token_context) != nullptr ||
+        display_height > 24 || display_height < 5 || display_width > 40 ||
+        display_width < 5) {
 
-    mecha_notify(evaluation, player,
-                 "Illegal Tacsize attribute. Must be in format "
-                 "'Height Width' . Height : 5-24 Width : 5-40");
-    display_height = MAP_DISPLAY_HEIGHT;
-    display_width = MAP_DISPLAY_WIDTH;
+      mecha_notify(evaluation, player,
+                   "Illegal Tacsize attribute. Must be in format "
+                   "'Height Width' . Height : 5-24 Width : 5-40");
+      display_height = MAP_DISPLAY_HEIGHT;
+      display_width = MAP_DISPLAY_WIDTH;
+    }
   }
 
   /* Everything worked but lets check the mech's tac range

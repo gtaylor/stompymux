@@ -97,7 +97,8 @@ int template_save(const TemplateSaveRequest *request) {
   int inf_x;
   const char *const *locs;
   char *d;
-  char *c = ctime(&mech->xcode.context->clock->now);
+  char timestamp[26];
+  const char *c = ctime_r(&mech->xcode.context->clock->now, timestamp);
 
   if (!mech_computer_quality(mech))
     computer_conversion(mech);
@@ -116,9 +117,13 @@ int template_save(const TemplateSaveRequest *request) {
       fprintf(fp, "Move_Type        { %s }\n",
               template_movement_type_name((size_t)mech->ud.move));
   (void)fprintf(fp, "Tons             { %d }\n", ((mech)->ud.tons));
-  d = strrchr(c, '\n');
-  if (d)
-    *d = 0;
+  if (c == nullptr) {
+    c = "unknown time";
+  } else {
+    d = strrchr(timestamp, '\n');
+    if (d)
+      *d = 0;
+  }
   (void)fprintf(fp, "Comment          { Saved by: %s(#%ld) at %s }\n",
                 game_object_name(mech->xcode.context->database, PLAYER), PLAYER,
                 c);

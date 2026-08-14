@@ -380,6 +380,7 @@ int proper_explodearguments(const char *buffer, char **args, int max) {
 int mech_parseattributes(char *buffer, char **args, int maxargs) {
   int count = 0;
   char *parsed = buffer;
+  char *token_context = nullptr;
   int num_args = 0;
 
   if (maxargs <= 0)
@@ -388,7 +389,7 @@ int mech_parseattributes(char *buffer, char **args, int maxargs) {
   memset((void *)args, 0, sizeof(*args) * ARGUMENT_CAPACITY);
 
   while ((count < maxargs) && parsed) {
-    parsed = strtok(!count ? buffer : NULL, " \t");
+    parsed = strtok_r(!count ? buffer : nullptr, " \t", &token_context);
     *text_slot(args, ARGUMENT_CAPACITY, (size_t)count) = parsed;
     if (parsed)
       num_args++; /* Actual count of arguments */

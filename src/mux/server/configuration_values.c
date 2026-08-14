@@ -252,10 +252,11 @@ int cf_flagalias(const ConfigurationCall *call) {
   char *orig;
   const FlagEntry *flag;
   int success;
+  char *token_context = nullptr;
 
   success = 0;
-  alias = strtok(str, " \t=,");
-  orig = strtok(nullptr, " \t=,");
+  alias = strtok_r(str, " \t=,", &token_context);
+  orig = strtok_r(nullptr, " \t=,", &token_context);
 
   flag = find_flag(context->world_indexes, NOTHING, orig);
   if (flag == nullptr) {
@@ -290,8 +291,9 @@ int configuration_modify_bits(const ConfigurationCall *call) {
    * Walk through the tokens
    */
 
+  char *token_context = nullptr;
   success = failure = 0;
-  sp = strtok(str, " \t");
+  sp = strtok_r(str, " \t", &token_context);
   while (sp != nullptr) {
 
     /*
@@ -325,7 +327,7 @@ int configuration_modify_bits(const ConfigurationCall *call) {
      * Get the next token
      */
 
-    sp = strtok(nullptr, " \t");
+    sp = strtok_r(nullptr, " \t", &token_context);
   }
   return configuration_status_from_counts(
       call, (ConfigurationParseCounts){.success = success, .failure = failure});
@@ -350,8 +352,9 @@ int cf_set_flags(const ConfigurationCall *call) {
    * Walk through the tokens
    */
 
+  char *token_context = nullptr;
   success = failure = 0;
-  sp = strtok(str, " \t");
+  sp = strtok_r(str, " \t", &token_context);
   fset = call->value;
 
   while (sp != nullptr) {
@@ -376,7 +379,7 @@ int cf_set_flags(const ConfigurationCall *call) {
      * Get the next token
      */
 
-    sp = strtok(nullptr, " \t");
+    sp = strtok_r(nullptr, " \t", &token_context);
   }
   if ((success == 0) && (failure == 0)) {
     *fset = (ObjectFlagSet){0};
@@ -416,11 +419,12 @@ int cf_site(const ConfigurationCall *call) {
   char *mask_txt;
   struct in_addr addr_num;
   struct in_addr mask_num;
+  char *token_context = nullptr;
 
-  addr_txt = strtok(str, " \t=,");
+  addr_txt = strtok_r(str, " \t=,", &token_context);
   mask_txt = nullptr;
   if (addr_txt)
-    mask_txt = strtok(nullptr, " \t=,");
+    mask_txt = strtok_r(nullptr, " \t=,", &token_context);
   if (!addr_txt || !*addr_txt || !mask_txt || !*mask_txt) {
     configuration_log_syntax(context, call->player, call->command,
                              "Missing host address or mask.", "");
@@ -486,13 +490,15 @@ int cf_named_color(const ConfigurationCall *call) {
   int red;
   int green;
   int blue;
+  char *token_context = nullptr;
 
-  name = strtok(str, " \t");
-  red_text = strtok(nullptr, " \t");
-  green_text = strtok(nullptr, " \t");
-  blue_text = strtok(nullptr, " \t");
+  name = strtok_r(str, " \t", &token_context);
+  red_text = strtok_r(nullptr, " \t", &token_context);
+  green_text = strtok_r(nullptr, " \t", &token_context);
+  blue_text = strtok_r(nullptr, " \t", &token_context);
   if (name == nullptr || strlen(name) > 60 || red_text == nullptr ||
-      blue_text == nullptr || strtok(nullptr, " \t") != nullptr ||
+      blue_text == nullptr ||
+      strtok_r(nullptr, " \t", &token_context) != nullptr ||
       !parse_int_checked(red_text, &red) ||
       !parse_int_checked(green_text, &green) ||
       !parse_int_checked(blue_text, &blue)) {

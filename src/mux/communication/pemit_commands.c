@@ -21,11 +21,13 @@ void do_pemit_list(EvaluationContext *evaluation, DbRef player, char *list,
   char *p;
   DbRef who;
   int ok_to_do;
+  char *token_context = nullptr;
 
   if (!message || !*message || !list || !*list)
     return;
 
-  for (p = strtok(list, " "); p != nullptr; p = strtok(nullptr, " ")) {
+  for (p = strtok_r(list, " ", &token_context); p != nullptr;
+       p = strtok_r(nullptr, " ", &token_context)) {
 
     ok_to_do = 0;
     init_match(&evaluation->command->match, player, p, OBJECT_TYPE_PLAYER);

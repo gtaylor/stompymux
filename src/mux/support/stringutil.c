@@ -7,6 +7,7 @@
 #include <limits.h>
 #include <math.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -15,6 +16,18 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
+
+char *system_error_message(int error_number, char *buffer, size_t capacity) {
+  if (buffer == nullptr || capacity == 0)
+    return buffer;
+
+  int result = strerror_r(error_number, buffer, capacity);
+  if (result != 0)
+    (void)snprintf(buffer, capacity, "Unknown error %d", error_number);
+  *(char *)checked_storage_at(buffer, capacity, sizeof(char), capacity - 1) =
+      '\0';
+  return buffer;
+}
 
 /** Returns whether a parser stopped at only trailing whitespace. */
 static char checked_character_at(const char *text, size_t length,

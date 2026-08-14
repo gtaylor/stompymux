@@ -290,16 +290,17 @@ int lua_cron_matches(const char *cron, time_t when, char *error,
   int minimums[] = {0, 0, 1, 1, 0};
   int maximums[] = {59, 23, 31, 12, 6};
   int index;
+  char *token_context = nullptr;
 
   if (strlen(cron) >= sizeof(copy))
     goto invalid;
   (void)snprintf(copy, sizeof(copy), "%s", cron);
-  field = strtok(copy, " \t");
+  field = strtok_r(copy, " \t", &token_context);
   for (index = 0; index < 5; index++) {
     if (!field)
       goto invalid;
     *lua_string_slot(fields, 5, (size_t)index) = field;
-    field = strtok(nullptr, " \t");
+    field = strtok_r(nullptr, " \t", &token_context);
   }
   if (field || !gmtime_r(&when, &utc))
     goto invalid;

@@ -1,6 +1,7 @@
 /* signals.c - Process signal registration and server shutdown handlers. */
 
 #include "mux/objects/db.h"
+#include "mux/support/stringutil.h"
 #include <bits/types/siginfo_t.h>
 #include <bits/types/stack_t.h>
 #include <signal.h>
@@ -81,7 +82,8 @@ SignalHandlers *signal_handlers_create(uv_loop_t *loop,
                    .primary = "SIG",
                    .secondary = "ERR"},
         "posix_memalign() failed with error %s, alternate stack not used.",
-        strerror(error_code));
+        system_error_message(error_code, (char[SYSTEM_ERROR_MESSAGE_SIZE]){0},
+                             SYSTEM_ERROR_MESSAGE_SIZE));
     log_error((LogEntry){.log = handlers->log,
                          .key = LOG_PROBLEMS,
                          .primary = "SIG",

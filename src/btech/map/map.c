@@ -180,15 +180,19 @@ void map_view(DbRef player, void *data, char *buffer) {
    * the player, if doesn't exist set the height and width to
    * default params. If it does exist, check the values and
    * make sure they are legit. */
+  char *token_context = nullptr;
   str = btech_attribute_read(mech_map->xcode.context->database, player,
                              A_TACSIZE, (char[LBUF_SIZE]){0});
   if (!*str) {
     display_height = MAP_DISPLAY_HEIGHT;
     display_width = MAP_DISPLAY_WIDTH;
-  } else if (!parse_int_checked(strtok(str, " \t"), &display_height) ||
-             !parse_int_checked(strtok(nullptr, " \t"), &display_width) ||
-             strtok(nullptr, " \t") != nullptr || display_height > 24 ||
-             display_height < 5 || display_width < 5 || display_width > 40) {
+  } else if (!parse_int_checked(strtok_r(str, " \t", &token_context),
+                                &display_height) ||
+             !parse_int_checked(strtok_r(nullptr, " \t", &token_context),
+                                &display_width) ||
+             strtok_r(nullptr, " \t", &token_context) != nullptr ||
+             display_height > 24 || display_height < 5 || display_width < 5 ||
+             display_width > 40) {
     mecha_notify(evaluation, player,
                  "Illegal Tacsize attribute. Must be in format "
                  "'Height Width' . Height : 5-24 Width : 5-40");
@@ -461,12 +465,13 @@ int map_load(BattleMap *map, char *mapname) {
   if (!feof(fp) && fgets(row, sizeof(row), fp) != nullptr) {
     char *separator = strchr(row, ':');
     if (separator != nullptr) {
+      char *token_context = nullptr;
       *separator = '\0';
-      char *grav_text =
-          strtok(checked_mutable_string_suffix(separator, 1), " \t\r\n");
-      char *temp_text = strtok(nullptr, " \t\r\n");
+      char *grav_text = strtok_r(checked_mutable_string_suffix(separator, 1),
+                                 " \t\r\n", &token_context);
+      char *temp_text = strtok_r(nullptr, " \t\r\n", &token_context);
       if (grav_text != nullptr && temp_text != nullptr &&
-          strtok(nullptr, " \t\r\n") == nullptr &&
+          strtok_r(nullptr, " \t\r\n", &token_context) == nullptr &&
           parse_int_checked(row, &i1) && parse_int_checked(grav_text, &i2) &&
           parse_int_checked(temp_text, &i3)) {
         map->flags = i1;

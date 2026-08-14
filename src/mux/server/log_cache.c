@@ -17,6 +17,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/support/red_black_tree.h"
+#include "mux/support/stringutil.h"
 
 /* The LOGFILE_TIMEOUT field describes how long a mux should keep an idle
  * open. LOGFILE_TIMEOUT seconds after the last write, it will close. The
@@ -112,7 +113,9 @@ static int log_cache_open(LogCache *cache, char *filename) {
     (void)fprintf(
         stderr,
         "Failed to open logfile %s because open() failed with code: %d -  %s\n",
-        filename, errno, strerror(errno));
+        filename, errno,
+        system_error_message(errno, (char[SYSTEM_ERROR_MESSAGE_SIZE]){0},
+                             SYSTEM_ERROR_MESSAGE_SIZE));
     return 0;
   }
   if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0) {
@@ -195,7 +198,9 @@ int log_cache_write(LogCache *cache, char *fname, const char *fdata) {
         stderr,
         "System failed to write data to file with error '%s' on logfile "
         "'%s'. Closing.\n",
-        strerror(errno), log->filename);
+        system_error_message(errno, (char[SYSTEM_ERROR_MESSAGE_SIZE]){0},
+                             SYSTEM_ERROR_MESSAGE_SIZE),
+        log->filename);
     log_cache_close(cache, log, true);
   }
   return 1;

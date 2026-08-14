@@ -149,10 +149,11 @@ bool loading_bay_blocks_transfer(const LoadingBayCheck *check) {
                            A_MECHSKILLS, (char[LBUF_SIZE]){0});
   if (c && *c) {
     char values[LBUF_SIZE];
+    char *token_context = nullptr;
     (void)snprintf(values, sizeof(values), "%s", c);
-    char *first = strtok(values, " \t\r\n");
-    char *second = strtok(nullptr, " \t\r\n");
-    char *third = strtok(nullptr, " \t\r\n");
+    char *first = strtok_r(values, " \t\r\n", &token_context);
+    char *second = strtok_r(nullptr, " \t\r\n", &token_context);
+    char *third = strtok_r(nullptr, " \t\r\n", &token_context);
     if (first && second && parse_int_checked(first, &i1) &&
         parse_int_checked(second, &i2) &&
         (!third || parse_int_checked(third, &i3))) {

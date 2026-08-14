@@ -16,13 +16,17 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/stringutil.h"
 #include "mux/support/utf8.h"
 
 void gamedb_log_failure(ServerLog *log, const char *stage, const char *path,
                         sqlite3 *sqlite) {
   const char *detail;
 
-  detail = sqlite ? sqlite3_errmsg(sqlite) : strerror(errno);
+  detail =
+      sqlite ? sqlite3_errmsg(sqlite)
+             : system_error_message(errno, (char[SYSTEM_ERROR_MESSAGE_SIZE]){0},
+                                    SYSTEM_ERROR_MESSAGE_SIZE);
   log_error(
       (LogEntry){
           .log = log, .key = LOG_ALWAYS, .primary = "GDB", .secondary = "FAIL"},

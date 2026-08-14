@@ -167,5 +167,7 @@ treating them as precedent. It contains the POSIX signal bridge and the legacy
 write and threaded through its store contexts. Flow prompts belong to their
 active flows, while connection displays and xcode-reference handlers use
 owner- or caller-provided storage. Flag and power lookup normalizes const input
-into bounded automatic storage. The remaining formatting exception requires a
-dedicated API and call-site migration.
+into bounded automatic storage. Token parsing, local-time formatting, network
+address rendering, and system-error messages likewise use reentrant APIs with
+caller-owned buffers instead of libc scratch state. The remaining formatting
+exception requires a dedicated API and call-site migration.
