@@ -18,7 +18,7 @@ struct SearchCriteria {
   ObjectFlagSet s_fset;
   PowerId s_power;
   DbRef s_zone;
-  char *s_rst_name;
+  const char *s_rst_name;
   long low_bound;
   long high_bound;
 };

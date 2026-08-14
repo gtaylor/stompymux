@@ -274,64 +274,60 @@ int find_rounds_for_weapon(Mech *mech, int weapindx) {
   return found;
 }
 
-const char *quad_locs[NUM_SECTIONS + 1] = {"Front Left Leg",
-                                           "Front Right Leg",
-                                           "Left Torso",
-                                           "Right Torso",
-                                           "Center Torso",
-                                           "Rear Left Leg",
-                                           "Rear Right Leg",
-                                           "Head",
-                                           NULL};
+static const char *const QUAD_LOCATION_NAMES[NUM_SECTIONS + 1] = {
+    "Front Left Leg", "Front Right Leg", "Left Torso",     "Right Torso",
+    "Center Torso",   "Rear Left Leg",   "Rear Right Leg", "Head",
+    nullptr};
 
-const char *mech_locs[NUM_SECTIONS + 1] = {
+static const char *const MECH_LOCATION_NAMES[NUM_SECTIONS + 1] = {
     "Left Arm", "Right Arm", "Left Torso", "Right Torso", "Center Torso",
-    "Left Leg", "Right Leg", "Head",       NULL};
+    "Left Leg", "Right Leg", "Head",       nullptr};
 
-const char *bsuit_locs[NUM_BSUIT_MEMBERS + 1] = {"Suit 1", "Suit 2", "Suit 3",
-                                                 "Suit 4", "Suit 5", "Suit 6",
-                                                 "Suit 7", "Suit 8", NULL};
+static const char *const BATTLE_SUIT_LOCATION_NAMES[NUM_BSUIT_MEMBERS + 1] = {
+    "Suit 1", "Suit 2", "Suit 3", "Suit 4", "Suit 5",
+    "Suit 6", "Suit 7", "Suit 8", nullptr};
 
-const char *veh_locs[NUM_VEH_SECTIONS + 1] = {
+static const char *const VEHICLE_LOCATION_NAMES[NUM_VEH_SECTIONS + 1] = {
     "Left Side", "Right Side", "Front Side", "Aft Side",
-    "Turret",    "Rotor",      NULL};
+    "Turret",    "Rotor",      nullptr};
 
-const char *aero_locs[NUM_AERO_SECTIONS + 1] = {"Nose", "Left Wing",
-                                                "Right Wing", "Aft Side", NULL};
+static const char *const AERO_LOCATION_NAMES[NUM_AERO_SECTIONS + 1] = {
+    "Nose", "Left Wing", "Right Wing", "Aft Side", nullptr};
 
-const char *ds_locs[NUM_DS_SECTIONS + 1] = {
-    "Right Wing", "Left Wing", "Left Rear Wing", "Right Rear Wing", "Aft",
-    "Nose",       NULL};
+static const char *const DROPSHIP_LOCATION_NAMES[NUM_DS_SECTIONS + 1] = {
+    "Right Wing", "Left Wing", "Left Rear Wing", "Right Rear Wing",
+    "Aft",        "Nose",      nullptr};
 
-const char *ds_spher_locs[NUM_DS_SECTIONS + 1] = {"Front Right Side",
-                                                  "Front Left Side",
-                                                  "Rear Left Side",
-                                                  "Rear Right Side",
-                                                  "Aft",
-                                                  "Nose",
-                                                  NULL};
+static const char *const SPHEROID_DROPSHIP_LOCATION_NAMES[NUM_DS_SECTIONS + 1] =
+    {"Front Right Side",
+     "Front Left Side",
+     "Rear Left Side",
+     "Rear Right Side",
+     "Aft",
+     "Nose",
+     nullptr};
 
 const char *const *proper_section_string_from_type(int type, int mtype) {
   switch (type) {
   case CLASS_BSUIT:
-    return bsuit_locs;
+    return BATTLE_SUIT_LOCATION_NAMES;
   case CLASS_MECH:
   case CLASS_MW:
     if (mtype == MOVE_QUAD)
-      return quad_locs;
-    return mech_locs;
+      return QUAD_LOCATION_NAMES;
+    return MECH_LOCATION_NAMES;
   case CLASS_VEH_GROUND:
   case CLASS_VEH_NAVAL:
   case CLASS_VTOL:
-    return veh_locs;
+    return VEHICLE_LOCATION_NAMES;
   case CLASS_AERO:
-    return aero_locs;
+    return AERO_LOCATION_NAMES;
   case CLASS_SPHEROID_DS:
-    return ds_spher_locs;
+    return SPHEROID_DROPSHIP_LOCATION_NAMES;
   case CLASS_DS:
-    return ds_locs;
+    return DROPSHIP_LOCATION_NAMES;
   }
-  return NULL;
+  return nullptr;
 }
 
 size_t unit_section_name_count(const UnitSectionCatalog *catalog) {

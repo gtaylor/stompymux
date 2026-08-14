@@ -11,15 +11,15 @@
 #include "mux/support/checked_storage.h"
 #include "mux/world/object_set.h"
 
-static Attribute *lua_mux_attribute_name(lua_State *state,
-                                         LuaMuxAttribute *handle,
-                                         int argument) {
+static const Attribute *lua_mux_attribute_name(lua_State *state,
+                                               LuaMuxAttribute *handle,
+                                               int argument) {
   size_t length;
   const char *name = luaL_checklstring(state, argument, &length);
 
   if (memchr(name, '\0', length))
     luaL_argerror(state, argument, "invalid attribute name");
-  Attribute *attribute = object_attribute_administrable_by_name(
+  const Attribute *attribute = object_attribute_administrable_by_name(
       handle->package->services->database, name);
   if (!attribute)
     luaL_argerror(state, argument, "attribute is not administrable");
@@ -44,7 +44,7 @@ static int lua_mux_object_attribute(lua_State *state) {
 
 static int lua_mux_attribute_get(lua_State *state) {
   LuaMuxAttribute *handle = lua_mux_check_attribute(state, 1);
-  Attribute *attribute = lua_mux_attribute_name(state, handle, 2);
+  const Attribute *attribute = lua_mux_attribute_name(state, handle, 2);
   const char *value = attribute_get_raw(handle->package->services->database,
                                         handle->object, attribute->number);
 
@@ -57,7 +57,7 @@ static int lua_mux_attribute_get(lua_State *state) {
 
 static int lua_mux_attribute_set(lua_State *state) {
   LuaMuxAttribute *handle = lua_mux_check_attribute(state, 1);
-  Attribute *attribute = lua_mux_attribute_name(state, handle, 2);
+  const Attribute *attribute = lua_mux_attribute_name(state, handle, 2);
   char *text = alloc_lbuf("lua_mux_attribute_set");
   bool set;
 
@@ -90,7 +90,7 @@ static int lua_mux_attribute_entries(lua_State *state) {
 
   lua_newtable(state);
   for (size_t index = 0; index < native_attribute_count(); index++) {
-    Attribute *attribute = native_attribute_at(index);
+    const Attribute *attribute = native_attribute_at(index);
 
     const char *value;
 

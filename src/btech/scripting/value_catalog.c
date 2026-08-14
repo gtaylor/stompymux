@@ -7,7 +7,7 @@
 #include "value_handlers_api.h"
 #include "values_internal.h"
 #include <stddef.h>
-GMV xcode_data[] = {
+static const GMV XCODE_DESCRIPTORS[] = {
     {.gtype = GTYPE_MECH,
      .name = "mapindex",
      .source_kind = GMV_SOURCE_MECH_KEY,
@@ -715,10 +715,10 @@ GMV xcode_data[] = {
      .type = TYPE_STRING}};
 
 size_t xcode_descriptor_count(void) {
-  return (sizeof(xcode_data) / sizeof(*xcode_data)) - 1;
+  return (sizeof(XCODE_DESCRIPTORS) / sizeof(*XCODE_DESCRIPTORS)) - 1;
 }
 
 const GMV *xcode_descriptor_at(size_t index) {
-  return checked_storage_at_const(xcode_data, xcode_descriptor_count(),
-                                  sizeof(*xcode_data), index);
+  return checked_storage_at_const(XCODE_DESCRIPTORS, xcode_descriptor_count(),
+                                  sizeof(*XCODE_DESCRIPTORS), index);
 }

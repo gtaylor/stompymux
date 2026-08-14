@@ -287,7 +287,7 @@ static bool flag_xcode(const FlagChangeRequest *request) {
   return true;
 }
 
-FlagEntry gen_flags[] = {
+static const FlagEntry FLAG_ENTRIES[] = {
     {"ANSI", OBJECT_FLAG_ANSI, 'X', flag_wizard},
     {"AUDIBLE", OBJECT_FLAG_AUDIBLE, 'a', flag_wizard},
     {"AUDITORIUM", OBJECT_FLAG_AUDITORIUM, 'b', flag_wizard},
@@ -311,12 +311,12 @@ FlagEntry gen_flags[] = {
     {nullptr, OBJECT_FLAG_NONE, ' ', nullptr}};
 
 static size_t flag_entry_count(void) {
-  return (sizeof(gen_flags) / sizeof(*gen_flags)) - 1;
+  return (sizeof(FLAG_ENTRIES) / sizeof(*FLAG_ENTRIES)) - 1;
 }
 
-static FlagEntry *flag_entry_at(size_t index) {
-  return checked_storage_at(gen_flags, flag_entry_count(), sizeof(*gen_flags),
-                            index);
+static const FlagEntry *flag_entry_at(size_t index) {
+  return checked_storage_at_const(FLAG_ENTRIES, flag_entry_count(),
+                                  sizeof(*FLAG_ENTRIES), index);
 }
 
 static const ObjectEntry OBJECT_TYPES[8] = {
@@ -359,7 +359,7 @@ void init_flagtab(WorldIndexes *indexes) {
   char buffer[SBUF_SIZE];
   hash_table_initialize(&indexes->flags, 100 * HASH_FACTOR);
   for (size_t index = 0; index < flag_entry_count(); index++) {
-    FlagEntry *flag = flag_entry_at(index);
+    const FlagEntry *flag = flag_entry_at(index);
     size_t name_length = strlen(flag->flagname);
     for (size_t name_index = 0; name_index < name_length; name_index++) {
       const char *input = checked_storage_at_const(flag->flagname, name_length,
@@ -370,7 +370,7 @@ void init_flagtab(WorldIndexes *indexes) {
     }
     *(char *)checked_storage_at(buffer, sizeof(buffer), sizeof(char),
                                 name_length) = '\0';
-    hash_table_add(buffer, (int *)flag, &indexes->flags);
+    hash_table_add_const(buffer, flag, &indexes->flags);
   }
 }
 void display_flagtab(EvaluationContext *evaluation, DbRef player) {
@@ -378,7 +378,7 @@ void display_flagtab(EvaluationContext *evaluation, DbRef player) {
   char *out = buffer;
   safe_str("Flags:", buffer, &out);
   for (size_t index = 0; index < flag_entry_count(); index++) {
-    FlagEntry *flag = flag_entry_at(index);
+    const FlagEntry *flag = flag_entry_at(index);
     safe_chr(' ', buffer, &out);
     safe_str(flag->flagname, buffer, &out);
     safe_chr('(', buffer, &out);
@@ -389,14 +389,14 @@ void display_flagtab(EvaluationContext *evaluation, DbRef player) {
   notify_checked(evaluation, player, player, buffer, MSG_ME_ALL | MSG_F_DOWN);
   free_lbuf(buffer);
 }
-FlagEntry *find_flag(WorldIndexes *indexes, DbRef thing, char *flagname) {
+const FlagEntry *find_flag(WorldIndexes *indexes, DbRef thing, char *flagname) {
   (void)thing;
   for (size_t index = 0; index < strlen(flagname); index++) {
     char *character =
         checked_storage_at(flagname, strlen(flagname), sizeof(char), index);
     *character = ascii_to_lower(*character);
   }
-  return (FlagEntry *)hash_table_find(flagname, &indexes->flags);
+  return hash_table_find_const(flagname, &indexes->flags);
 }
 void flag_set(EvaluationContext *evaluation, WorldIndexes *indexes,
               DbRef target, DbRef player, char *name, int key) {
@@ -426,7 +426,7 @@ void flag_set(EvaluationContext *evaluation, WorldIndexes *indexes,
                    MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
-  FlagEntry *flag = find_flag(indexes, target, name);
+  const FlagEntry *flag = find_flag(indexes, target, name);
   if (!flag) {
     notify_checked(evaluation, player, player, "I don't understand that flag.",
                    MSG_ME_ALL | MSG_F_DOWN);
@@ -458,7 +458,7 @@ char *decode_flags(const DecodeFlagsRequest *request) {
   if (object_type->lett != ' ')
     safe_sb_chr(object_type->lett, buffer, &out);
   for (size_t index = 0; index < flag_entry_count(); index++) {
-    FlagEntry *flag = flag_entry_at(index);
+    const FlagEntry *flag = flag_entry_at(index);
     if (!object_flag_set_has(request->flags, flag->id))
       continue;
     safe_sb_chr(flag->flaglett, buffer, &out);
@@ -474,7 +474,7 @@ char *flag_description(GameDatabase *database, DbRef target) {
               &out);
   safe_mb_str(" Flags:", buffer, &out);
   for (size_t index = 0; index < flag_entry_count(); index++) {
-    FlagEntry *flag = flag_entry_at(index);
+    const FlagEntry *flag = flag_entry_at(index);
     if (game_object_has_flag(&(ObjectFlagRequest){
             .database = database, .object = target, .flag = flag->id})) {
       safe_mb_chr(' ', buffer, &out);
@@ -491,7 +491,7 @@ char *flags_description(GameDatabase *database, DbRef target) {
 
   safe_mb_str("Flags:", buffer, &out);
   for (size_t index = 0; index < flag_entry_count(); index++) {
-    FlagEntry *flag = flag_entry_at(index);
+    const FlagEntry *flag = flag_entry_at(index);
     if (game_object_has_flag(&(ObjectFlagRequest){
             .database = database, .object = target, .flag = flag->id})) {
       safe_mb_chr(' ', buffer, &out);
@@ -552,7 +552,7 @@ bool convert_flags(EvaluationContext *evaluation, DbRef player, char *list,
         handled = true;
       }
     for (size_t index = 0; index < flag_entry_count() && !handled; index++) {
-      FlagEntry *flag = flag_entry_at(index);
+      const FlagEntry *flag = flag_entry_at(index);
       if (flag->flaglett == *character) {
         object_flag_set_set(flags, flag->id, true);
         handled = true;

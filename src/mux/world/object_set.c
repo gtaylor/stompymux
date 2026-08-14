@@ -178,9 +178,9 @@ bool object_attribute_is_administrable(int attribute_number) {
   }
 }
 
-Attribute *object_attribute_administrable_by_name(GameDatabase *database,
-                                                  const char *name) {
-  Attribute *attribute = attribute_by_name(database, name);
+const Attribute *object_attribute_administrable_by_name(GameDatabase *database,
+                                                        const char *name) {
+  const Attribute *attribute = attribute_by_name(database, name);
 
   return attribute && object_attribute_is_administrable(attribute->number)
              ? attribute
@@ -189,7 +189,7 @@ Attribute *object_attribute_administrable_by_name(GameDatabase *database,
 
 static bool object_attribute_command_target(CommandInvocation *invocation,
                                             char *address, DbRef *object,
-                                            Attribute **attribute) {
+                                            const Attribute **attribute) {
   size_t length = strlen(address);
   size_t slash = 0;
   while (slash < length && *(const char *)checked_storage_at_const(
@@ -223,7 +223,7 @@ void do_attribute(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   GameDatabase *database = invocation->context->world->database;
   DbRef object;
-  Attribute *attribute;
+  const Attribute *attribute;
 
   if (invocation->key == 0) {
     raw_notify(evaluation, invocation->player, "@attribute command switches:");
@@ -241,7 +241,7 @@ void do_attribute(CommandInvocation *invocation) {
     if (object == NOTHING)
       return;
     for (size_t index = 0; index < native_attribute_count(); index++) {
-      Attribute *entry = native_attribute_at(index);
+      const Attribute *entry = native_attribute_at(index);
 
       const char *value;
 
@@ -276,7 +276,7 @@ bool object_attribute_set(EvaluationContext *evaluation, DbRef player,
                           DbRef thing, int attrnum, char *attrtext, int key) {
   long aflags;
   int have_xcode;
-  Attribute *attr;
+  const Attribute *attr;
   char *compiled = nullptr;
   char error[256];
 

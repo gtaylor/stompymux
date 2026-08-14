@@ -61,36 +61,37 @@ void game_database_destroy(GameDatabase *database) {
 /*
  * Hardcoded native fields. Dynamic Lua attributes are not registered here.
  */
-Attribute attr_table[] = {{"Alias", A_ALIAS},
-                          {"Buildcoord", A_BUILDCOORD},
-                          {"Buildentrance", A_BUILDENTRANCE},
-                          {"Buildlinks", A_BUILDLINKS},
-                          {"Contactoptions", A_CONTACTOPT},
-                          {"Desc", A_DESC},
-                          {"Destroyer", A_DESTROYER},
-                          {"Faction", A_FACTION},
-                          {"Idesc", A_IDESC},
-                          {"LRSheight", A_LRSHEIGHT},
-                          {"Mapvis", A_MAPVIS},
-                          {"Mechdesc", A_MECHDESC},
-                          {"Mechname", A_MECHNAME},
-                          {"Mechtype", A_MECHTYPE},
-                          {"MechPrefID", A_MECHPREFID},
-                          {"Mechskills", A_MECHSKILLS},
-                          {"Mwtemplate", A_MWTEMPLATE},
-                          {"PCequip", A_PCEQUIP},
-                          {"Pilot", A_PILOTNUM},
-                          {"Tacsize", A_TACSIZE},
-                          {"Xtype", A_XTYPE},
-                          {nullptr, 0}};
+static const Attribute NATIVE_ATTRIBUTES[] = {
+    {"Alias", A_ALIAS},
+    {"Buildcoord", A_BUILDCOORD},
+    {"Buildentrance", A_BUILDENTRANCE},
+    {"Buildlinks", A_BUILDLINKS},
+    {"Contactoptions", A_CONTACTOPT},
+    {"Desc", A_DESC},
+    {"Destroyer", A_DESTROYER},
+    {"Faction", A_FACTION},
+    {"Idesc", A_IDESC},
+    {"LRSheight", A_LRSHEIGHT},
+    {"Mapvis", A_MAPVIS},
+    {"Mechdesc", A_MECHDESC},
+    {"Mechname", A_MECHNAME},
+    {"Mechtype", A_MECHTYPE},
+    {"MechPrefID", A_MECHPREFID},
+    {"Mechskills", A_MECHSKILLS},
+    {"Mwtemplate", A_MWTEMPLATE},
+    {"PCequip", A_PCEQUIP},
+    {"Pilot", A_PILOTNUM},
+    {"Tacsize", A_TACSIZE},
+    {"Xtype", A_XTYPE},
+    {nullptr, 0}};
 
 size_t native_attribute_count(void) {
-  return (sizeof(attr_table) / sizeof(attr_table[0])) - 1;
+  return (sizeof(NATIVE_ATTRIBUTES) / sizeof(NATIVE_ATTRIBUTES[0])) - 1;
 }
 
-Attribute *native_attribute_at(size_t index) {
-  return checked_storage_at(attr_table, native_attribute_count(),
-                            sizeof(*attr_table), index);
+const Attribute *native_attribute_at(size_t index) {
+  return checked_storage_at_const(NATIVE_ATTRIBUTES, native_attribute_count(),
+                                  sizeof(*NATIVE_ATTRIBUTES), index);
 }
 
 static char *set_string(char **ptr, char *new) {
@@ -236,12 +237,12 @@ void object_password_set(GameDatabase *database, DbRef thing, const char *s) {
   player_account_password_hash_set(database, thing, s);
 }
 
-Attribute *attribute_by_name(GameDatabase *database, const char *s) {
+const Attribute *attribute_by_name(GameDatabase *database, const char *s) {
   (void)database;
   if (s == nullptr || *s == '\0')
     return nullptr;
   for (size_t index = 0; index < native_attribute_count(); index++) {
-    Attribute *attribute = native_attribute_at(index);
+    const Attribute *attribute = native_attribute_at(index);
 
     if (strcasecmp(attribute->name, s) == 0)
       return attribute;
@@ -249,10 +250,10 @@ Attribute *attribute_by_name(GameDatabase *database, const char *s) {
   return nullptr;
 }
 
-Attribute *attribute_by_number(GameDatabase *database, int anum) {
+const Attribute *attribute_by_number(GameDatabase *database, int anum) {
   (void)database;
   for (size_t index = 0; index < native_attribute_count(); index++) {
-    Attribute *attribute = native_attribute_at(index);
+    const Attribute *attribute = native_attribute_at(index);
 
     if (attribute->number == anum)
       return attribute;

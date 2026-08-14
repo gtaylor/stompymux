@@ -72,6 +72,8 @@ void *hash_table_find(const char *str, HashTable *htab) {
   ent = red_black_tree_find(htab->tree, (void *)str);
 #pragma clang diagnostic pop
   if (ent) {
+    if (ent->is_const)
+      abort();
     return ent->data.mutable_data;
   }
   return (void *)ent;
@@ -87,7 +89,9 @@ const void *hash_table_find_const(const char *str, HashTable *htab) {
 #pragma clang diagnostic ignored "-Wcast-qual"
   ent = red_black_tree_find(htab->tree, (void *)str);
 #pragma clang diagnostic pop
-  return ent ? ent->data.const_data : nullptr;
+  if (ent == nullptr)
+    return nullptr;
+  return ent->is_const ? ent->data.const_data : ent->data.mutable_data;
 }
 
 /*
@@ -193,6 +197,8 @@ int hash_table_replace(char *str, void *hashdata, HashTable *htab) {
   ent = red_black_tree_find(htab->tree, str);
   if (!ent)
     return 0;
+  if (ent->is_const)
+    abort();
 
   ent->data.mutable_data = hashdata;
   ent->is_const = false;
@@ -210,6 +216,8 @@ static int hashreplall_cb(const RedBlackTreeVisitCall *call) {
   struct StringDictEntry *ent = (struct StringDictEntry *)data;
   struct Hashreplstat *repl = (struct Hashreplstat *)arg;
 
+  if (ent->is_const)
+    return 1;
   if (ent->data.mutable_data == repl->old) {
     ent->data.mutable_data = repl->new;
     ent->is_const = false;
@@ -249,6 +257,8 @@ void *hash_table_first_entry(HashTable *htab) {
 
   ent = red_black_tree_search(htab->tree, SEARCH_FIRST, nullptr);
   if (ent) {
+    if (ent->is_const)
+      abort();
     htab->last = strdup(ent->key);
     return ent->data.mutable_data;
   }
@@ -268,6 +278,8 @@ void *hash_table_next_entry(HashTable *htab) {
   free(htab->last);
 
   if (ent) {
+    if (ent->is_const)
+      abort();
     htab->last = strdup(ent->key);
     return ent->data.mutable_data;
   }

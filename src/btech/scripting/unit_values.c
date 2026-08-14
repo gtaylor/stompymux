@@ -8,6 +8,7 @@
 #include "mux/support/stringutil.h"
 #include "section_types.h"
 #include "template_api.h"
+#include "template_internal.h"
 #include "value_handlers_api.h"
 #include "values_internal.h"
 
@@ -70,7 +71,7 @@ static bool parse_damage_numbers(const char *token, const char *prefix,
          parse_int_checked(checked_string_suffix(third_text, 1), third);
 }
 
-char *mech_getset_ref(int mode, Mech *mech, char *data) {
+const char *mech_getset_ref(int mode, Mech *mech, char *data) {
   if (mode) {
     mech_model_reference_set(mech, data);
     return nullptr;
@@ -82,10 +83,7 @@ char *mech_getset_ref(int mode, Mech *mech, char *data) {
   return reference;
 }
 
-extern char *mech_types[];
-extern char *move_types[];
-
-char *mech_typefunc(int mode, Mech *mech, char *arg) {
+const char *mech_typefunc(int mode, Mech *mech, char *arg) {
   int i;
 
   if (!mode) {
@@ -93,23 +91,25 @@ char *mech_typefunc(int mode, Mech *mech, char *arg) {
     return template_unit_class_name((size_t)UNIT_CLASS);
   }
   /* Should _alter_ mechtype.. weeeel. */
-  i = compare_array(mech_types, template_unit_class_count(), arg);
+  i = compare_const_array(template_unit_class_names(),
+                          template_unit_class_count(), arg);
   if (i >= 0)
     mech_class_set(mech, (UnitClass)i);
   return nullptr;
 }
 
-char *mech_movefunc(int mode, Mech *mech, char *arg) {
+const char *mech_movefunc(int mode, Mech *mech, char *arg) {
   int i;
 
   if (!mode) {
     const MechMovementType MOVEMENT_TYPE = mech_movement_type(mech);
     return template_movement_type_name((size_t)MOVEMENT_TYPE);
   }
-  i = compare_array(move_types, template_movement_type_count(), arg);
+  i = compare_const_array(template_movement_type_names(),
+                          template_movement_type_count(), arg);
   if (i >= 0)
     mech_movement_type_set(mech, (MechMovementType)i);
-  return NULL;
+  return nullptr;
 }
 
 char *mech_tech_timefunc(Mech *mech, char buffer[static LBUF_SIZE]) {

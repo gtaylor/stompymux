@@ -57,7 +57,7 @@ int mech_weapon_recycle_time(const Mech *mech, int weapon_index);
 int mech_weapon_battle_value(const Mech *mech, int weapon_index);
 
 enum { BTECH_BV_SKILL_LIMIT = 8 };
-extern float skillmul[BTECH_BV_SKILL_LIMIT][BTECH_BV_SKILL_LIMIT];
+float battle_value_skill_multiplier(int gunnery, int piloting);
 
 static inline int battle_value_skill_index(int skill) {
   if (skill < 0)

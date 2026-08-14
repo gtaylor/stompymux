@@ -25,8 +25,6 @@
 #include "mux/world/object_set.h"
 #include "mux/world/player.h"
 
-extern NameTable indiv_attraccess_nametab[];
-
 void do_chzone(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;

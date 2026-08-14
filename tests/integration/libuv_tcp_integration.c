@@ -155,6 +155,9 @@ static int write_config(const char *target_path, int port,
               port) < 0 ||
       (add_color_collision && fputs("red = [1, 2, 3]\n", target) < 0) ||
       fputs("\n"
+            "[aliases.flags]\n"
+            "aud = \"audible\"\n"
+            "\n"
             "[osc8.presets]\n"
             "osc8-demo-button = 'color=white bg=green bold "
             "hover.bg=darkgreen'\n"

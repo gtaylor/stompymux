@@ -198,19 +198,19 @@ int template_save(const TemplateSaveRequest *request) {
           BLOODHOUND_PROBE_TECH | TCOMP_TECH);
 
   if (x || x2) {
-    (void)fprintf(
-        fp, "Specials         { %s }\n",
-        template_bit_string_build(&(TemplateBitStringRequest){
-            .sets =
-                (TemplateBitSet[]){{.descriptions = specials,
-                                    .count = primary_technology_name_count(),
-                                    .bits = x},
-                                   {.descriptions = specials2,
-                                    .count = secondary_technology_name_count(),
-                                    .bits = x2}},
-            .set_count = 2,
-            .delimiter = ' ',
-            .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
+    (void)fprintf(fp, "Specials         { %s }\n",
+                  template_bit_string_build(&(TemplateBitStringRequest){
+                      .sets =
+                          (TemplateBitSet[]){
+                              {.descriptions = primary_technology_names(),
+                               .count = primary_technology_name_count(),
+                               .bits = x},
+                              {.descriptions = secondary_technology_names(),
+                               .count = secondary_technology_name_count(),
+                               .bits = x2}},
+                      .set_count = 2,
+                      .delimiter = ' ',
+                      .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
   }
 
   inf_x = ((mech)->rd.infantry_specials);
@@ -219,9 +219,10 @@ int template_save(const TemplateSaveRequest *request) {
     (void)fprintf(
         fp, "InfantrySpecials { %s }\n",
         template_bit_string_build(&(TemplateBitStringRequest){
-            .sets = &(TemplateBitSet){.descriptions = infantry_specials,
-                                      .count = infantry_technology_name_count(),
-                                      .bits = inf_x},
+            .sets =
+                &(TemplateBitSet){.descriptions = infantry_technology_names(),
+                                  .count = infantry_technology_name_count(),
+                                  .bits = inf_x},
             .set_count = 1,
             .delimiter = ' ',
             .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));

@@ -6,6 +6,7 @@
 #include "btech/context.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "coolmenu.h"
@@ -286,15 +287,19 @@ void mech_safety(DbRef player, void *data, char *buffer) {
                                                          : "[fg=green]ON");
 }
 
-#define MECHPREF_FLAG_INVERTED 0x01
-#define MECHPREF_FLAG_NEGATIVE 0x02
+enum MechPreferenceFlag {
+  MECHPREF_FLAG_INVERTED = 0x01,
+  MECHPREF_FLAG_NEGATIVE = 0x02,
+};
 
-static struct mechpref_info {
+typedef struct MechPreference {
   int bit;
   unsigned char flags;
   const char *name;
   const char *msg;
-} mech_preferences[] = {
+} MechPreference;
+
+static const MechPreference MECH_PREFERENCES[] = {
     {MECHPREF_PKILL, MECHPREF_FLAG_INVERTED, "MWSafety",
      "MechWarrior Safeties flipped"},
     {MECHPREF_SLWARN, 0, "SLWarn",
@@ -312,18 +317,20 @@ static struct mechpref_info {
      "BTH Debugging is now"}
 
 };
-#define NUM_MECHPREFERENCES                                                    \
-  (sizeof(mech_preferences) / sizeof(struct mechpref_info))
+static size_t mech_preference_count(void) {
+  return sizeof(MECH_PREFERENCES) / sizeof(*MECH_PREFERENCES);
+}
 
-static struct mechpref_info mech_preference(size_t index) {
-  return *(const struct mechpref_info *)checked_storage_at_const(
-      mech_preferences, NUM_MECHPREFERENCES, sizeof(*mech_preferences), index);
+static MechPreference mech_preference(size_t index) {
+  return *(const MechPreference *)checked_storage_at_const(
+      MECH_PREFERENCES, mech_preference_count(), sizeof(*MECH_PREFERENCES),
+      index);
 }
 
 static char *display_mechpref(void *context, int i,
                               char buffer[static LBUF_SIZE]) {
   Mech *mech = context;
-  struct mechpref_info info = mech_preference((size_t)i);
+  MechPreference info = mech_preference((size_t)i);
   const char *state;
 
   if (((((mech)->rd.mech_prefs) & info.bit) &&
@@ -361,23 +368,24 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
 
     /* Show mechprefs */
     c = sel_col_fun_string_menu_context_k(
-        1, "Mech Preferences", display_mechpref, mech, NUM_MECHPREFERENCES);
+        1, "Mech Preferences", display_mechpref, mech,
+        clamp_size_to_int(mech_preference_count()));
     show_cool_menu(btech_context_evaluation(mech->xcode.context), player, c);
     kill_cool_menu(c);
 
   } else {
 
     size_t i;
-    struct mechpref_info info;
+    MechPreference info;
     const char *newstate;
 
     /* Looking through the different mech preferences to find the
      * one the user wants to change */
-    for (i = 0; i < NUM_MECHPREFERENCES; i++) {
+    for (i = 0; i < mech_preference_count(); i++) {
       if (strcasecmp(args[0], mech_preference(i).name) == 0)
         break;
     }
-    if (i == NUM_MECHPREFERENCES) {
+    if (i == mech_preference_count()) {
       (void)snprintf(buf, LBUF_SIZE, "Unknown MechPreference: %s", args[0]);
       mecha_notify(btech_context_evaluation(mech->xcode.context), player, buf);
       return;

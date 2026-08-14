@@ -78,9 +78,9 @@ static void say_shout(const ShoutRequest *request) {
   }
 }
 
-static const char *announce_msg = "Announcement: ";
-static const char *broadcast_msg = "Broadcast: ";
-static const char *admin_msg = "Admin: ";
+static constexpr char ANNOUNCE_MESSAGE[] = "Announcement: ";
+static constexpr char BROADCAST_MESSAGE[] = "Broadcast: ";
+static constexpr char ADMIN_MESSAGE[] = "Admin: ";
 
 void do_say(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
@@ -216,7 +216,7 @@ void do_say(CommandInvocation *invocation) {
     case ':':
       message[0] = ' ';
       say_shout(&(ShoutRequest){.evaluation = evaluation,
-                                .prefix = announce_msg,
+                                .prefix = ANNOUNCE_MESSAGE,
                                 .flags = say_flags,
                                 .player = PLAYER,
                                 .message = message});
@@ -224,7 +224,7 @@ void do_say(CommandInvocation *invocation) {
     case ';':
       message = checked_mutable_string_suffix(message, 1);
       say_shout(&(ShoutRequest){.evaluation = evaluation,
-                                .prefix = announce_msg,
+                                .prefix = ANNOUNCE_MESSAGE,
                                 .flags = say_flags,
                                 .player = PLAYER,
                                 .message = message});
@@ -240,7 +240,7 @@ void do_say(CommandInvocation *invocation) {
       safe_chr('"', buf2, &bp);
       *bp = '\0';
       say_shout(&(ShoutRequest){.evaluation = evaluation,
-                                .prefix = announce_msg,
+                                .prefix = ANNOUNCE_MESSAGE,
                                 .flags = say_flags,
                                 .player = PLAYER,
                                 .message = buf2});
@@ -262,7 +262,7 @@ void do_say(CommandInvocation *invocation) {
       message[0] = ' ';
       say_shout(&(ShoutRequest){.evaluation = evaluation,
                                 .target = OBJECT_FLAG_WIZARD,
-                                .prefix = broadcast_msg,
+                                .prefix = BROADCAST_MESSAGE,
                                 .flags = say_flags,
                                 .player = PLAYER,
                                 .message = message});
@@ -271,7 +271,7 @@ void do_say(CommandInvocation *invocation) {
       message = checked_mutable_string_suffix(message, 1);
       say_shout(&(ShoutRequest){.evaluation = evaluation,
                                 .target = OBJECT_FLAG_WIZARD,
-                                .prefix = broadcast_msg,
+                                .prefix = BROADCAST_MESSAGE,
                                 .flags = say_flags,
                                 .player = PLAYER,
                                 .message = message});
@@ -288,7 +288,7 @@ void do_say(CommandInvocation *invocation) {
       *bp = '\0';
       say_shout(&(ShoutRequest){.evaluation = evaluation,
                                 .target = OBJECT_FLAG_WIZARD,
-                                .prefix = broadcast_msg,
+                                .prefix = BROADCAST_MESSAGE,
                                 .flags = say_flags,
                                 .player = PLAYER,
                                 .message = buf2});
@@ -310,7 +310,7 @@ void do_say(CommandInvocation *invocation) {
       message[0] = ' ';
       say_shout(&(ShoutRequest){.evaluation = evaluation,
                                 .target = OBJECT_FLAG_WIZARD,
-                                .prefix = admin_msg,
+                                .prefix = ADMIN_MESSAGE,
                                 .flags = say_flags,
                                 .player = PLAYER,
                                 .message = message});
@@ -319,7 +319,7 @@ void do_say(CommandInvocation *invocation) {
       message = checked_mutable_string_suffix(message, 1);
       say_shout(&(ShoutRequest){.evaluation = evaluation,
                                 .target = OBJECT_FLAG_WIZARD,
-                                .prefix = admin_msg,
+                                .prefix = ADMIN_MESSAGE,
                                 .flags = say_flags,
                                 .player = PLAYER,
                                 .message = message});
@@ -336,7 +336,7 @@ void do_say(CommandInvocation *invocation) {
       *bp = '\0';
       say_shout(&(ShoutRequest){.evaluation = evaluation,
                                 .target = OBJECT_FLAG_WIZARD,
-                                .prefix = admin_msg,
+                                .prefix = ADMIN_MESSAGE,
                                 .flags = say_flags,
                                 .player = PLAYER,
                                 .message = buf2});

@@ -19,6 +19,8 @@
 #include "mux/support/formatting.h"
 #include "special_object.h"
 
+static constexpr char TECHNICIAN_WEAPONS_SKILL[] = "technician-weapons";
+
 void character_experience_reduce(const CharacterExperienceReduction *change) {
   BtechContext *context = change->context;
   const DbRef PLAYER = change->character;
@@ -53,14 +55,13 @@ void accumulate_tech_xp(BtechContext *context, DbRef pilot, Mech *mech,
                         int reason) {
   int xp;
   const char *skname;
-  static const char *techw = "technician-weapons";
 
   if (mech) {
     skname = find_tech_skill_name(mech);
     if (!skname)
       return;
   } else {
-    skname = techw;
+    skname = TECHNICIAN_WEAPONS_SKILL;
   }
 
   xp = max(1, reason);
@@ -77,9 +78,7 @@ void accumulate_tech_weapons_xp(BtechContext *context, DbRef pilot, Mech *mech,
                                 int reason) {
   const char *skname;
   int xp;
-  static const char *techw = "technician-weapons";
-
-  skname = techw;
+  skname = TECHNICIAN_WEAPONS_SKILL;
   xp = max(1, reason);
 
   // We emit all tech xp gains to MechTechXP channel.

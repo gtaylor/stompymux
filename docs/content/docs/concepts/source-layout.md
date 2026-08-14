@@ -47,7 +47,10 @@ that uses them. For example, each help article index is an independently
 created `HelpIndex`, while wildcard captures and lock parser/serializer state
 are scoped to a single call. New code should pass these owners or operation
 contexts explicitly instead of adding mutable file-scope state. Immutable
-lookup tables may remain `static const`.
+lookup tables are deeply const, remain private to their implementation file,
+and expose const item accessors or views when another translation unit needs
+them. An AST-based architecture check inventories writable globals and rejects
+new or stale entries in its documented allowlist.
 
 `MuxServer` is the process composition root. It creates and destroys the
 long-lived resources in dependency order:
@@ -157,3 +160,11 @@ Character definitions retain immutable default thresholds; runtime overrides
 last for the owning context's lifetime and are not persisted. Keeping that
 distinction explicit prevents unavoidable boundary state from becoming a
 justification for new ambient state.
+
+The writable-global allowlist records the remaining exceptions rather than
+treating them as precedent. It contains the POSIX signal bridge, test-only
+SQLite writer fault injection, and legacy formatting, connection-display,
+flow-prompt, and xcode-reference scratch buffers. Those scratch buffers are the
+next de-globalization boundary and will move to caller-owned storage. Flag and
+power lookup also still normalizes mutable input strings in place; converting
+those inputs to const belongs to the same caller-owned-buffer round.

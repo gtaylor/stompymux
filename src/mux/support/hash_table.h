@@ -56,4 +56,3 @@ void numeric_hash_table_delete(long /*val*/, HashTable * /*htab*/);
 void numeric_hash_table_flush(HashTable * /*htab*/, int /*size*/);
 int numeric_hash_table_replace(long /*val*/, void * /*hashdata*/,
                                HashTable * /*htab*/);
-extern NameTable powers_nametab[];

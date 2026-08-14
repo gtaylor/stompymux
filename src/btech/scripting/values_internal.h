@@ -92,7 +92,7 @@ typedef union GmvSource {
   MechScriptValueKey mech_key;
   size_t field_offset;
   char *(*string_callback)(int mode, Mech *mech);
-  char *(*bidirectional_callback)(int mode, Mech *mech, char *value);
+  const char *(*bidirectional_callback)(int mode, Mech *mech, char *value);
   char *(*buffered_callback)(Mech *mech, char *buffer);
   char *(*buffered_bidirectional_callback)(
       const GmvBufferedBidirectionalCall *call);
@@ -128,10 +128,9 @@ enum {
   TYPE_LAST_TYPE
 };
 extern const int SCODE_IN_OUT[TYPE_LAST_TYPE];
-extern GMV xcode_data[];
 size_t xcode_descriptor_count(void);
 const GMV *xcode_descriptor_at(size_t index);
 
 int text2bv(const char *text);
 char *bv2text(int i, char *buffer);
-char *mech_getset_ref(int mode, Mech *mech, char *data);
+const char *mech_getset_ref(int mode, Mech *mech, char *data);

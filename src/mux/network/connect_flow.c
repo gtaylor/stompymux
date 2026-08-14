@@ -45,10 +45,11 @@ typedef struct ConnectFlowData {
   char password[LBUF_SIZE];
 } ConnectFlowData;
 
-static const char *connect_fail =
+static constexpr char CONNECT_FAILURE[] =
     "Either that player does not exist, or has a different password.\r\n";
-static const char *create_fail = "Either there is already a player with that "
-                                 "name, or that name is illegal.\r\n";
+static constexpr char CREATE_FAILURE[] =
+    "Either there is already a player with that name, or that name is "
+    "illegal.\r\n";
 
 constexpr int LOGIN_THROTTLE_ENTRIES = 1024;
 
@@ -217,7 +218,7 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
         .player = NOTHING,
         .user = name,
         .file_cache = FC_CONN,
-        .message = connect_fail});
+        .message = CONNECT_FAILURE});
     return CONNECT_RESULT_TERMINATED;
   }
 
@@ -229,7 +230,7 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
       .host = d->addr,
       .username = d->username});
   if (player == NOTHING) {
-    descriptor_queue_string(d, connect_fail);
+    descriptor_queue_string(d, CONNECT_FAILURE);
     STARTLOG(descriptor_log(d), LOG_LOGIN | LOG_SECURITY, "CON", "BAD") {
       buff = alloc_lbuf("connect_flow_attempt_login.LOG.bad");
       (void)snprintf(buff, LBUF_SIZE,
@@ -341,7 +342,7 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
         .player = NOTHING,
         .user = name,
         .file_cache = FC_CONN,
-        .message = create_fail});
+        .message = CREATE_FAILURE});
     return CONNECT_RESULT_TERMINATED;
   }
 
@@ -350,7 +351,7 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
       .name = name,
       .password = password});
   if (player == NOTHING) {
-    descriptor_queue_string(d, create_fail);
+    descriptor_queue_string(d, CREATE_FAILURE);
     STARTLOG(descriptor_log(d), LOG_SECURITY | LOG_PCREATES, "CON", "BAD") {
       char log_buffer[MBUF_SIZE];
       (void)snprintf(log_buffer, sizeof(log_buffer),
@@ -559,7 +560,7 @@ connect_flow_step_create_confirm_password(const FlowStepCall *call) {
   case CONNECT_RESULT_RETRY:
   default:
     outcome.action = FLOW_ACTION_GOTO;
-    outcome.prompt = create_fail;
+    outcome.prompt = CREATE_FAILURE;
     string_copy_trunc(outcome.next_step, "username", FLOW_STEP_NAME_SIZE - 1);
     return outcome;
   }

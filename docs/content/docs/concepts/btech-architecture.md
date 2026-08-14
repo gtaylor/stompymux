@@ -70,6 +70,11 @@ Special-object layouts and lifecycle definitions in
 `special/command_registry.h` invocation contract; immutable command catalogues
 live beside their owning domains.
 
+Fixed scripting, template, battle-value, preference, and location-name
+catalogues are deeply const and file-local. Cross-file consumers use const
+catalog views or checked item operations; writable exported catalogue arrays
+are not part of the internal architecture.
+
 The dependency direction is deliberately shallow:
 
 ```text

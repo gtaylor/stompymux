@@ -43,8 +43,8 @@ typedef struct PowerDescriptionRequest {
 } PowerDescriptionRequest;
 
 extern char *power_description(const PowerDescriptionRequest *request);
-extern POWERENT *find_power(WorldIndexes * /*indexes*/, DbRef /*thing*/,
-                            char * /*powername*/);
+const POWERENT *find_power(WorldIndexes * /*indexes*/, DbRef /*thing*/,
+                           char * /*powername*/);
 extern bool decode_power(EvaluationContext * /*evaluation*/,
                          WorldIndexes * /*indexes*/, DbRef /*player*/,
                          char * /*powername*/, PowerId * /*id*/);

@@ -55,15 +55,26 @@ int find_average_gunnery(Mech *mech) {
   return find_pilot_gunnery(mech, 0);
 }
 
-float skillmul[BTECH_BV_SKILL_LIMIT][BTECH_BV_SKILL_LIMIT] = {
-    {2.05F, 2.00F, 1.95F, 1.90F, 1.85F, 1.80F, 1.75F, 1.70F},
-    {1.85F, 1.80F, 1.75F, 1.70F, 1.65F, 1.60F, 1.55F, 1.50F},
-    {1.65F, 1.60F, 1.55F, 1.50F, 1.45F, 1.40F, 1.35F, 1.30F},
-    {1.45F, 1.40F, 1.35F, 1.30F, 1.25F, 1.20F, 1.15F, 1.10F},
-    {1.25F, 1.20F, 1.15F, 1.10F, 1.05F, 1.00F, 0.95F, 0.90F},
-    {1.15F, 1.10F, 1.05F, 1.00F, 0.95F, 0.90F, 0.85F, 0.80F},
-    {1.05F, 1.00F, 0.95F, 0.90F, 0.85F, 0.80F, 0.75F, 0.70F},
-    {0.95F, 0.90F, 0.85F, 0.80F, 0.75F, 0.70F, 0.65F, 0.60F}};
+static const float
+    SKILL_MULTIPLIERS[BTECH_BV_SKILL_LIMIT][BTECH_BV_SKILL_LIMIT] = {
+        {2.05F, 2.00F, 1.95F, 1.90F, 1.85F, 1.80F, 1.75F, 1.70F},
+        {1.85F, 1.80F, 1.75F, 1.70F, 1.65F, 1.60F, 1.55F, 1.50F},
+        {1.65F, 1.60F, 1.55F, 1.50F, 1.45F, 1.40F, 1.35F, 1.30F},
+        {1.45F, 1.40F, 1.35F, 1.30F, 1.25F, 1.20F, 1.15F, 1.10F},
+        {1.25F, 1.20F, 1.15F, 1.10F, 1.05F, 1.00F, 0.95F, 0.90F},
+        {1.15F, 1.10F, 1.05F, 1.00F, 0.95F, 0.90F, 0.85F, 0.80F},
+        {1.05F, 1.00F, 0.95F, 0.90F, 0.85F, 0.80F, 0.75F, 0.70F},
+        {0.95F, 0.90F, 0.85F, 0.80F, 0.75F, 0.70F, 0.65F, 0.60F}};
+
+float battle_value_skill_multiplier(int gunnery, int piloting) {
+  const int GUN_INDEX = battle_value_skill_index(gunnery);
+  const int PILOT_INDEX = battle_value_skill_index(piloting);
+  const float (*row)[BTECH_BV_SKILL_LIMIT] =
+      checked_storage_at_const(SKILL_MULTIPLIERS, BTECH_BV_SKILL_LIMIT,
+                               sizeof(*SKILL_MULTIPLIERS), (size_t)GUN_INDEX);
+  return *(const float *)checked_storage_at_const(
+      *row, BTECH_BV_SKILL_LIMIT, sizeof(**row), (size_t)PILOT_INDEX);
+}
 
 void calc_add_off_bv(const Mech *mech, float *offbv, const char *desc,
                      float value) {

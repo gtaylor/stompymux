@@ -109,7 +109,7 @@ static void examine_native_attributes(const ExamineObjectRequest *request) {
   bool has_attributes = false;
 
   for (size_t index = 0; index < native_attribute_count(); index++) {
-    Attribute *entry = native_attribute_at(index);
+    const Attribute *entry = native_attribute_at(index);
 
     const char *value;
 

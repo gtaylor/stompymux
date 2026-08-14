@@ -61,12 +61,11 @@ struct AttributeStack {
   AttributeStack *next;
 };
 
-extern Attribute *attribute_by_number(GameDatabase *database, int anum);
-extern Attribute *attribute_by_name(GameDatabase *database, const char *s);
+const Attribute *attribute_by_number(GameDatabase *database, int anum);
+const Attribute *attribute_by_name(GameDatabase *database, const char *s);
 
-extern Attribute attr_table[];
 size_t native_attribute_count(void);
-Attribute *native_attribute_at(size_t index);
+const Attribute *native_attribute_at(size_t index);
 
 constexpr char ATR_INFO_CHAR = '\1'; /* Leadin char for attr control data */
 

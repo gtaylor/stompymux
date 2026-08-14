@@ -227,19 +227,6 @@ done < <(rg -n 'BtechCommandHandler.*void|\(DbRef actor, void \*object' \
   src/btech/special/command_registry.h || true)
 
 while IFS= read -r match; do
-  echo "$match: command catalog must be immutable"
-  status=1
-done < <(rg -n '^BtechCommandDefinition [A-Za-z_]+commands\[' src/btech \
-  -g '*command_catalog.c' || true)
-
-while IFS= read -r match; do
-  echo "$match: character value catalog must be immutable"
-  status=1
-done < <(rg --pcre2 -n \
-  '^(?:static[[:space:]]+)?(?!const[[:space:]]+)CharacterValue[[:space:]]+[A-Za-z_]+\[' \
-  src/btech/character/character_value_catalog.c || true)
-
-while IFS= read -r match; do
   echo "$match: runtime code must read context-owned XP thresholds"
   status=1
 done < <(rg -n 'default_xp_threshold' src/btech -g '*.[ch]' \
@@ -251,6 +238,12 @@ while IFS= read -r match; do
 done < <(rg --pcre2 -n -U \
   'CharacterValueThreshold\)[[:space:]]*\{(?:(?!\.context)[\s\S])*?\}' \
   src/btech -g '*.c' || true)
+
+if ! bash tests/unit/btech/contracts/check_writable_globals.sh \
+  "$root" "$build_root" \
+  tests/unit/btech/contracts/writable_global_allowlist.txt; then
+  status=1
+fi
 
 while IFS= read -r match; do
   echo "$match: non-unit source includes a private unit layout header"

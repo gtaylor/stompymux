@@ -228,13 +228,14 @@ int lua_resolve_path(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
 static int lua_require_module(lua_State *state);
 
 static bool lua_install_sandbox(LuaRuntime *runtime) {
-  static const char *blocked[] = {"io",         "os",        "debug",
-                                  "package",    "coroutine", "jit",
-                                  "ffi",        "dofile",    "loadfile",
-                                  "loadstring", "load",      "collectgarbage",
-                                  "module",     "require",   "getfenv",
-                                  "setfenv",    nullptr};
-  const size_t BLOCKED_COUNT = (sizeof(blocked) / sizeof(*blocked)) - 1;
+  static const char *const BLOCKED_GLOBALS[] = {
+      "io",        "os",         "debug",   "package",
+      "coroutine", "jit",        "ffi",     "dofile",
+      "loadfile",  "loadstring", "load",    "collectgarbage",
+      "module",    "require",    "getfenv", "setfenv",
+      nullptr};
+  const size_t BLOCKED_COUNT =
+      (sizeof(BLOCKED_GLOBALS) / sizeof(*BLOCKED_GLOBALS)) - 1;
   size_t index;
 
   luaL_openlibs(runtime->state);
@@ -242,7 +243,8 @@ static bool lua_install_sandbox(LuaRuntime *runtime) {
     return false;
   for (index = 0; index < BLOCKED_COUNT; index++) {
     const char *name = *(const char *const *)checked_storage_at_const(
-        (const void *)blocked, BLOCKED_COUNT, sizeof(*blocked), index);
+        (const void *)BLOCKED_GLOBALS, BLOCKED_COUNT, sizeof(*BLOCKED_GLOBALS),
+        index);
 
     lua_pushnil(runtime->state);
     lua_setglobal(runtime->state, name);

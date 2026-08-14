@@ -3,70 +3,72 @@
 #include "mux/support/checked_storage.h"
 #include <stddef.h>
 
-const char *internals[] = {"ShoulderOrHip",
-                           "UpperActuator",
-                           "LowerActuator",
-                           "HandOrFootActuator",
-                           "LifeSupport",
-                           "Sensors",
-                           "Cockpit",
-                           "Engine",
-                           "Gyro",
-                           "HeatSink",
-                           "JumpJet",
-                           "CASE",
-                           "FerroFibrous",
-                           "EndoSteel",
-                           "TripleStrengthMyomer",
-                           "TargetingComputer",
-                           "Masc",
-                           "C3Master",
-                           "C3Slave",
-                           "BeagleProbe",
-                           "ArtemisIV",
-                           "Ecm",
-                           "Axe",
-                           "Sword",
-                           "Mace",
-                           "Claw",
-                           "DSAeroDoor",
-                           "DSMechDoor",
-                           "Fuel_Tank",
-                           "TAG",
-                           "DSVehicleDoor",
-                           "DSCargoDoor",
-                           "LAM_Equipment",
-                           "CASE-II",
-                           "StealthArmor",
-                           "NullSig_Device",
-                           "C3i",
-                           "AngelEcm",
-                           "HvyFerroFibrous",
-                           "LtFerroFibrous",
-                           "BloodhoundProbe",
-                           "PurifierArmor",
-                           "KageStealthUnit",
-                           "AchileusStealthUnit",
-                           "InfiltratorStealthUnit",
-                           "InfiltratorIIStealthUnit",
-                           "SuperCharger",
-                           "Dual_Saw",
-                           "Light_BAP",
-                           "SplitCrit_Left",
-                           "SplitCrit_Right",
-                           "Hardpoint",
-                           NULL};
+static const char *const INTERNAL_NAMES[] = {"ShoulderOrHip",
+                                             "UpperActuator",
+                                             "LowerActuator",
+                                             "HandOrFootActuator",
+                                             "LifeSupport",
+                                             "Sensors",
+                                             "Cockpit",
+                                             "Engine",
+                                             "Gyro",
+                                             "HeatSink",
+                                             "JumpJet",
+                                             "CASE",
+                                             "FerroFibrous",
+                                             "EndoSteel",
+                                             "TripleStrengthMyomer",
+                                             "TargetingComputer",
+                                             "Masc",
+                                             "C3Master",
+                                             "C3Slave",
+                                             "BeagleProbe",
+                                             "ArtemisIV",
+                                             "Ecm",
+                                             "Axe",
+                                             "Sword",
+                                             "Mace",
+                                             "Claw",
+                                             "DSAeroDoor",
+                                             "DSMechDoor",
+                                             "Fuel_Tank",
+                                             "TAG",
+                                             "DSVehicleDoor",
+                                             "DSCargoDoor",
+                                             "LAM_Equipment",
+                                             "CASE-II",
+                                             "StealthArmor",
+                                             "NullSig_Device",
+                                             "C3i",
+                                             "AngelEcm",
+                                             "HvyFerroFibrous",
+                                             "LtFerroFibrous",
+                                             "BloodhoundProbe",
+                                             "PurifierArmor",
+                                             "KageStealthUnit",
+                                             "AchileusStealthUnit",
+                                             "InfiltratorStealthUnit",
+                                             "InfiltratorIIStealthUnit",
+                                             "SuperCharger",
+                                             "Dual_Saw",
+                                             "Light_BAP",
+                                             "SplitCrit_Left",
+                                             "SplitCrit_Right",
+                                             "Hardpoint",
+                                             NULL};
 
 size_t template_internal_name_count(void) {
-  return (sizeof(internals) / sizeof(*internals)) - 1;
+  return (sizeof(INTERNAL_NAMES) / sizeof(*INTERNAL_NAMES)) - 1;
 }
+
+const char *const *template_internal_names(void) { return INTERNAL_NAMES; }
 
 const char *template_internal_name(int index) {
   if (index < 0)
     return nullptr;
   const char *const *name = (const char *const *)checked_storage_at_const(
-      (const void *)internals, template_internal_name_count(),
-      sizeof(*internals), (size_t)index);
+      (const void *)INTERNAL_NAMES, template_internal_name_count(),
+      sizeof(*INTERNAL_NAMES), (size_t)index);
   return *name;
 }
 
@@ -122,4 +124,4 @@ const int INTERNALSWEIGHT[] = {
 };
 
 const int TEMPLATE_INTERNAL_COUNT =
-    (sizeof(internals) / sizeof(*internals)) - 1;
+    (sizeof(INTERNAL_NAMES) / sizeof(*INTERNAL_NAMES)) - 1;

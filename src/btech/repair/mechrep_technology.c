@@ -36,6 +36,7 @@
 #include "mechrep_api.h"
 #include "section_types.h"
 #include "template_api.h"
+#include "template_internal.h"
 
 /* Selectors */
 
@@ -208,10 +209,6 @@ void mechrep_raddspecial(DbRef player, void *data, char *buffer) {
                 "Critical slot %s (%d) filled.", location, subsect + 1);
 }
 
-extern const char *specials[];
-extern const char *specials2[];
-extern const char *infantry_specials[];
-
 const char *techstatus_func(Mech *mech) {
   int flags = mech_technology_flags(mech);
   int secondary_flags = mech_technology_flags_secondary(mech);
@@ -219,10 +216,10 @@ const char *techstatus_func(Mech *mech) {
              ? template_bit_string_build(&(TemplateBitStringRequest){
                    .sets =
                        (TemplateBitSet[]){
-                           {.descriptions = specials,
+                           {.descriptions = primary_technology_names(),
                             .count = primary_technology_name_count(),
                             .bits = flags},
-                           {.descriptions = specials2,
+                           {.descriptions = secondary_technology_names(),
                             .count = secondary_technology_name_count(),
                             .bits = secondary_flags}},
                    .set_count = 2,
@@ -378,13 +375,13 @@ void mechrep_rshowtech(DbRef player, void *data, char *buffer) {
 void mechrep_gettechstring(Mech *mech, char *buffer) {
   template_bit_string_build(&(TemplateBitStringRequest){
       .sets =
-          (TemplateBitSet[]){{.descriptions = specials,
+          (TemplateBitSet[]){{.descriptions = primary_technology_names(),
                               .count = primary_technology_name_count(),
                               .bits = mech_technology_flags(mech)},
-                             {.descriptions = specials2,
+                             {.descriptions = secondary_technology_names(),
                               .count = secondary_technology_name_count(),
                               .bits = mech_technology_flags_secondary(mech)},
-                             {.descriptions = infantry_specials,
+                             {.descriptions = infantry_technology_names(),
                               .count = infantry_technology_name_count(),
                               .bits = mech_infantry_technology_flags(mech)}},
       .set_count = 3,
@@ -408,10 +405,10 @@ static void remove_case_technology(Mech *mech) {
 void mechrep_rdeltech(DbRef player, void *data, char *buffer) {
   int nv;
   int nv2;
-  const long PARSED_NV =
-      build_bit_vector(specials, primary_technology_name_count(), buffer);
-  const long PARSED_NV2 =
-      build_bit_vector(specials2, secondary_technology_name_count(), buffer);
+  const long PARSED_NV = build_bit_vector(
+      primary_technology_names(), primary_technology_name_count(), buffer);
+  const long PARSED_NV2 = build_bit_vector(
+      secondary_technology_names(), secondary_technology_name_count(), buffer);
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -507,10 +504,10 @@ void mechrep_rdeltech(DbRef player, void *data, char *buffer) {
 void mechrep_raddtech(DbRef player, void *data, char *buffer) {
   int nv;
   int nv2;
-  const long PARSED_NV =
-      build_bit_vector(specials, primary_technology_name_count(), buffer);
-  const long PARSED_NV2 =
-      build_bit_vector(specials2, secondary_technology_name_count(), buffer);
+  const long PARSED_NV = build_bit_vector(
+      primary_technology_names(), primary_technology_name_count(), buffer);
+  const long PARSED_NV2 = build_bit_vector(
+      secondary_technology_names(), secondary_technology_name_count(), buffer);
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -557,9 +554,10 @@ void mechrep_raddtech(DbRef player, void *data, char *buffer) {
     notify_printf(
         btech_context_evaluation(rep->xcode.context), player, "Set: %s",
         template_bit_string_build(&(TemplateBitStringRequest){
-            .sets = &(TemplateBitSet){.descriptions = specials,
-                                      .count = primary_technology_name_count(),
-                                      .bits = nv},
+            .sets =
+                &(TemplateBitSet){.descriptions = primary_technology_names(),
+                                  .count = primary_technology_name_count(),
+                                  .bits = nv},
             .set_count = 1,
             .delimiter = ' ',
             .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
@@ -569,7 +567,7 @@ void mechrep_raddtech(DbRef player, void *data, char *buffer) {
         btech_context_evaluation(rep->xcode.context), player, "Set: %s",
         template_bit_string_build(&(TemplateBitStringRequest){
             .sets =
-                &(TemplateBitSet){.descriptions = specials2,
+                &(TemplateBitSet){.descriptions = secondary_technology_names(),
                                   .count = secondary_technology_name_count(),
                                   .bits = nv2},
             .set_count = 1,
@@ -589,7 +587,7 @@ void mechrep_rdelinftech(DbRef player, void *data, char *buffer) {
 void mechrep_raddinftech(DbRef player, void *data, char *buffer) {
   int nv;
   const long PARSED_NV = build_bit_vector(
-      infantry_specials, infantry_technology_name_count(), buffer);
+      infantry_technology_names(), infantry_technology_name_count(), buffer);
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -637,9 +635,10 @@ void mechrep_raddinftech(DbRef player, void *data, char *buffer) {
     notify_printf(
         btech_context_evaluation(rep->xcode.context), player, "Set: %s",
         template_bit_string_build(&(TemplateBitStringRequest){
-            .sets = &(TemplateBitSet){.descriptions = infantry_specials,
-                                      .count = infantry_technology_name_count(),
-                                      .bits = nv},
+            .sets =
+                &(TemplateBitSet){.descriptions = infantry_technology_names(),
+                                  .count = infantry_technology_name_count(),
+                                  .bits = nv},
             .set_count = 1,
             .delimiter = ' ',
             .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));

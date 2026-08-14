@@ -1,4 +1,7 @@
 #include <assert.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include "mux/commands/command_catalog.h"
 #include "mux/commands/command_internal.h"
@@ -27,6 +30,29 @@ static void macro_handler(MatchContext *match, MacroRegistry *registry,
 }
 
 static const MACENT MACROS[] = {{"one", macro_handler}, {"two", macro_handler}};
+
+typedef enum ConstHashMisuse {
+  CONST_HASH_MUTABLE_FIND,
+  CONST_HASH_MUTABLE_ITERATION,
+} ConstHashMisuse;
+
+static void assert_const_hash_misuse_aborts(HashTable *table,
+                                            ConstHashMisuse misuse) {
+  const pid_t CHILD = fork();
+  assert(CHILD >= 0);
+  if (CHILD == 0) {
+    if (misuse == CONST_HASH_MUTABLE_FIND)
+      (void)hash_table_find("one", table);
+    else
+      (void)hash_table_first_entry(table);
+    _exit(0);
+  }
+
+  int status;
+  assert(waitpid(CHILD, &status, 0) == CHILD);
+  assert(WIFSIGNALED(status));
+  assert(WTERMSIG(status) == SIGABRT);
+}
 
 int main(void) {
   CommandRegistry first = {0};
@@ -111,6 +137,9 @@ int main(void) {
       macro_catalog_install(&macros, MACROS, sizeof(MACROS) / sizeof(*MACROS)));
   assert(hash_table_find_const("one", &macros.macros) == MACROS);
   assert(hash_table_find_const("missing", &macros.macros) == nullptr);
+  assert_const_hash_misuse_aborts(&macros.macros, CONST_HASH_MUTABLE_FIND);
+  assert_const_hash_misuse_aborts(&macros.macros,
+                                  CONST_HASH_MUTABLE_ITERATION);
   assert(!macro_catalog_install(&macros, MACROS,
                                 sizeof(MACROS) / sizeof(*MACROS)));
   command_catalog_release(&macros);

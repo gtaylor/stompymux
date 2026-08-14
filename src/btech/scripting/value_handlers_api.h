@@ -16,8 +16,8 @@ typedef struct GmvBufferedBidirectionalCall {
 } GmvBufferedBidirectionalCall;
 
 char *mech_i_dfunc(Mech *mech, char buffer[static LBUF_SIZE]);
-char *mech_typefunc(int mode, Mech *mech, char *arg);
-char *mech_movefunc(int mode, Mech *mech, char *arg);
+const char *mech_typefunc(int mode, Mech *mech, char *arg);
+const char *mech_movefunc(int mode, Mech *mech, char *arg);
 char *mech_tech_timefunc(Mech *mech, char buffer[static LBUF_SIZE]);
 void apply_mech_damage(Mech *omech, char *buf);
 char *mech_damagefunc(const GmvBufferedBidirectionalCall *call);

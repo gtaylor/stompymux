@@ -20,7 +20,7 @@ struct BtechLuaEntry {
   BtechScriptFunction *handler;
 };
 
-static BtechLuaEntry btech_lua_entries[] = {
+static const BtechLuaEntry BTECH_LUA_ENTRIES[] = {
     {"add_stores", fun_btaddstores},
     {"armor_status", fun_btarmorstatus},
     {"armor_status_ref", fun_btarmorstatus_ref},
@@ -117,7 +117,12 @@ static void btech_lua_push_list(lua_State *state, const BtechScriptList *list) {
 
 static int btech_lua_invoke(lua_State *state) {
   LuaBtechPackage *package = lua_touserdata(state, lua_upvalueindex(1));
-  BtechLuaEntry *entry = lua_touserdata(state, lua_upvalueindex(2));
+  constexpr size_t ENTRY_COUNT =
+      (sizeof(BTECH_LUA_ENTRIES) / sizeof(BTECH_LUA_ENTRIES[0])) - 1;
+  const lua_Integer ENTRY_INDEX = lua_tointeger(state, lua_upvalueindex(2));
+  const BtechLuaEntry *entry =
+      checked_storage_at_const(BTECH_LUA_ENTRIES, ENTRY_COUNT,
+                               sizeof(*BTECH_LUA_ENTRIES), (size_t)ENTRY_INDEX);
   int argument_count = lua_gettop(state);
   char *arguments[MAX_ARG] = {0};
   char *buffer = alloc_lbuf("btech_lua_invoke");
@@ -187,14 +192,14 @@ static int btech_lua_invoke(lua_State *state) {
 void lua_btech_package_install(lua_State *state, LuaBtechPackage *package) {
   lua_newtable(state);
   constexpr size_t ENTRY_COUNT =
-      (sizeof(btech_lua_entries) / sizeof(btech_lua_entries[0])) - 1;
+      (sizeof(BTECH_LUA_ENTRIES) / sizeof(BTECH_LUA_ENTRIES[0])) - 1;
 
   for (size_t index = 0; index < ENTRY_COUNT; index++) {
-    BtechLuaEntry *entry = checked_storage_at(
-        btech_lua_entries, ENTRY_COUNT, sizeof(*btech_lua_entries), index);
+    const BtechLuaEntry *entry = checked_storage_at_const(
+        BTECH_LUA_ENTRIES, ENTRY_COUNT, sizeof(*BTECH_LUA_ENTRIES), index);
 
     lua_pushlightuserdata(state, package);
-    lua_pushlightuserdata(state, entry);
+    lua_pushinteger(state, (lua_Integer)index);
     lua_pushcclosure(state, btech_lua_invoke, 2);
     lua_setfield(state, -2, entry->name);
   }

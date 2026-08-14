@@ -19,8 +19,8 @@ size_t secondary_technology_name_count(void);
 const char *secondary_technology_name(size_t index);
 size_t infantry_technology_name_count(void);
 const char *infantry_technology_name(size_t index);
-char *template_unit_class_name(size_t index);
-char *template_movement_type_name(size_t index);
+const char *template_unit_class_name(size_t index);
+const char *template_movement_type_name(size_t index);
 size_t template_load_command_count(void);
 size_t template_section_configuration_count(void);
 size_t template_unit_class_count(void);
@@ -30,7 +30,6 @@ size_t template_critical_ammo_mode_count(void);
 
 /* template.c */
 int count_special_items(void);
-int compare_array(char *const list[], size_t count, const char *command);
 int compare_const_array(const char *const list[], size_t count,
                         const char *command);
 typedef struct TemplateTokenRequest {

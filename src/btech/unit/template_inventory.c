@@ -49,7 +49,7 @@ void dump_mech_special_objects(BtechContext *context, DbRef player) {
   c = cool_menu_selection_create(&(CoolMenuSelectionRequest){
       .columns = -1,
       .heading = "MechSpecials available",
-      .strings = internals,
+      .strings = template_internal_names(),
       .string_count = (size_t)TEMPLATE_INTERNAL_COUNT});
   show_cool_menu(btech_context_evaluation(context), player, c);
   kill_cool_menu(c);
@@ -102,7 +102,8 @@ char *techlist_func(Mech *mech, char *buffer) {
   (void)snprintf(
       bufa, SBUF_SIZE, "%s",
       template_bit_string_build(&(TemplateBitStringRequest){
-          .sets = &(TemplateBitSet){.descriptions = specialsabrev,
+          .sets = &(TemplateBitSet){.descriptions =
+                                        primary_technology_abbreviations(),
                                     .count = primary_technology_name_count(),
                                     .bits = ((mech)->rd.specials)},
           .set_count = 1,
@@ -111,7 +112,8 @@ char *techlist_func(Mech *mech, char *buffer) {
   (void)snprintf(
       bufb, SBUF_SIZE, "%s",
       template_bit_string_build(&(TemplateBitStringRequest){
-          .sets = &(TemplateBitSet){.descriptions = specialsabrev2,
+          .sets = &(TemplateBitSet){.descriptions =
+                                        secondary_technology_abbreviations(),
                                     .count = secondary_technology_name_count(),
                                     .bits = ((mech)->rd.specials2)},
           .set_count = 1,
@@ -123,7 +125,8 @@ char *techlist_func(Mech *mech, char *buffer) {
     (void)snprintf(
         bufc, SBUF_SIZE, "%s",
         template_bit_string_build(&(TemplateBitStringRequest){
-            .sets = &(TemplateBitSet){.descriptions = infspecialsabrev,
+            .sets = &(TemplateBitSet){.descriptions =
+                                          infantry_technology_abbreviations(),
                                       .count = infantry_technology_name_count(),
                                       .bits = ((mech)->rd.infantry_specials)},
             .set_count = 1,

@@ -49,16 +49,15 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
   Mech *target;
   int base_to_hit = 4;
   int t_is_mount = 0;
+  char empty_buffer[] = "";
 
   if (!common_checks(player, mech, MECH_USUALO))
     return;
   if (buffer != nullptr)
     buffer = checked_storage_at(buffer, strlen(buffer) + 1, sizeof(char),
                                 strspn(buffer, " \t\r\n\f\v"));
-  if (!buffer) {
-    static char empty_buffer[] = "";
+  if (!buffer)
     buffer = empty_buffer;
-  }
 
   /* Stop swarming... */
   if (!strcmp(buffer, "-")) {

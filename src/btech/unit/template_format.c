@@ -20,19 +20,6 @@
 #include <string.h>
 #include <strings.h>
 
-int compare_array(char *const list[], size_t count, const char *command) {
-  if (!list)
-    return -1;
-  for (size_t index = 0; index < count; index++) {
-    char *const *entry = (char *const *)checked_storage_at_const(
-        (const void *)list, count, sizeof(*list), index);
-    if (!strcasecmp(*entry, command))
-      return clamp_size_to_int(index);
-  }
-
-  return -1;
-}
-
 int compare_const_array(const char *const list[], size_t count,
                         const char *command) {
   if (!list)
@@ -337,10 +324,10 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
             ? template_bit_string_build(&(TemplateBitStringRequest){
                   .sets =
                       (TemplateBitSet[]){
-                          {.descriptions = crit_fire_modes,
+                          {.descriptions = template_critical_fire_mode_names(),
                            .count = template_critical_fire_mode_count(),
                            .bits = w_fire_modes},
-                          {.descriptions = crit_ammo_modes,
+                          {.descriptions = template_critical_ammo_mode_names(),
                            .count = template_critical_ammo_mode_count(),
                            .bits = w_ammo_modes}},
                   .set_count = 2,
@@ -361,10 +348,10 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
             ? template_bit_string_build(&(TemplateBitStringRequest){
                   .sets =
                       (TemplateBitSet[]){
-                          {.descriptions = crit_fire_modes,
+                          {.descriptions = template_critical_fire_mode_names(),
                            .count = template_critical_fire_mode_count(),
                            .bits = mech_critical_fire_mode(mech, x, y)},
-                          {.descriptions = crit_ammo_modes,
+                          {.descriptions = template_critical_ammo_mode_names(),
                            .count = template_critical_ammo_mode_count(),
                            .bits = mech_critical_ammo_mode(mech, x, y)}},
                   .set_count = 2,
@@ -422,16 +409,17 @@ void dump_locations(FILE *fp, Mech *mech, const char *const locdesc[],
     y = mech_section_configuration(mech, x);
     y &= ~CASE_TECH;
     if (y) {
-      (void)fprintf(fp, "  Config           { %s }\n",
-                    template_bit_string_build(&(TemplateBitStringRequest){
-                        .sets =
-                            &(TemplateBitSet){
-                                .descriptions = section_configs,
-                                .count = template_section_configuration_count(),
-                                .bits = y},
-                        .set_count = 1,
-                        .delimiter = ' ',
-                        .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
+      (void)fprintf(
+          fp, "  Config           { %s }\n",
+          template_bit_string_build(&(TemplateBitStringRequest){
+              .sets =
+                  &(TemplateBitSet){
+                      .descriptions = template_section_configuration_names(),
+                      .count = template_section_configuration_count(),
+                      .bits = y},
+              .set_count = 1,
+              .delimiter = ' ',
+              .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
     }
     l = crits_in_loc(mech, x);
     for (y = 0; y < l;)

@@ -22,26 +22,28 @@
 #include "mux/support/hash_table.h"
 #include "mux/support/stringutil.h"
 
-static POWERENT gen_powers[2] = {
+static const POWERENT POWER_ENTRIES[] = {
     {"idle", POWER_IDLE, 0},
     {nullptr, POWER_NONE, 0},
 };
-constexpr size_t GEN_POWER_COUNT = 1;
+static size_t power_entry_count(void) {
+  return (sizeof(POWER_ENTRIES) / sizeof(*POWER_ENTRIES)) - 1;
+}
 
-static POWERENT *power_entry_at(size_t index) {
-  return checked_storage_at(gen_powers, GEN_POWER_COUNT, sizeof(*gen_powers),
-                            index);
+static const POWERENT *power_entry_at(size_t index) {
+  return checked_storage_at_const(POWER_ENTRIES, power_entry_count(),
+                                  sizeof(*POWER_ENTRIES), index);
 }
 
 /**
  * Initialize power hash tables.
  */
 void init_powertab(WorldIndexes *indexes) {
-  POWERENT *fp;
+  const POWERENT *fp;
   char nbuf[SBUF_SIZE];
 
   hash_table_initialize(&indexes->powers, 15 * HASH_FACTOR);
-  for (size_t index = 0; index < GEN_POWER_COUNT; index++) {
+  for (size_t index = 0; index < power_entry_count(); index++) {
     fp = power_entry_at(index);
     size_t length = strlen(fp->powername);
     for (size_t character_index = 0; character_index < length;
@@ -54,7 +56,7 @@ void init_powertab(WorldIndexes *indexes) {
     }
     *(char *)checked_storage_at(nbuf, sizeof(nbuf), sizeof(char), length) =
         '\0';
-    hash_table_add(nbuf, (int *)fp, &indexes->powers);
+    hash_table_add_const(nbuf, fp, &indexes->powers);
   }
 }
 
@@ -64,11 +66,11 @@ void init_powertab(WorldIndexes *indexes) {
 void display_powertab(EvaluationContext *evaluation, DbRef player) {
   char *buf;
   char *bp;
-  POWERENT *fp;
+  const POWERENT *fp;
 
   bp = buf = alloc_lbuf("display_powertab");
   safe_str("Powers:", buf, &bp);
-  for (size_t index = 0; index < GEN_POWER_COUNT; index++) {
+  for (size_t index = 0; index < power_entry_count(); index++) {
     fp = power_entry_at(index);
     if ((fp->listperm & CA_WIZARD) &&
         !is_wizard(evaluation->world->database, player))
@@ -83,7 +85,8 @@ void display_powertab(EvaluationContext *evaluation, DbRef player) {
   free_lbuf(buf);
 }
 
-POWERENT *find_power(WorldIndexes *indexes, DbRef thing, char *powername) {
+const POWERENT *find_power(WorldIndexes *indexes, DbRef thing,
+                           char *powername) {
   (void)thing;
 
   /*
@@ -95,16 +98,16 @@ POWERENT *find_power(WorldIndexes *indexes, DbRef thing, char *powername) {
         checked_storage_at(powername, strlen(powername), sizeof(char), index);
     *character = ascii_to_lower(*character);
   }
-  return (POWERENT *)hash_table_find(powername, &indexes->powers);
+  return hash_table_find_const(powername, &indexes->powers);
 }
 
 bool decode_power(EvaluationContext *evaluation, WorldIndexes *indexes,
                   DbRef player, char *powername, PowerId *id) {
-  POWERENT *pent;
+  const POWERENT *pent;
 
   *id = POWER_NONE;
 
-  pent = (POWERENT *)hash_table_find(powername, &indexes->powers);
+  pent = hash_table_find_const(powername, &indexes->powers);
   if (!pent) {
     notify_printf(evaluation, player, "%s: Power not found.", powername);
     return false;
@@ -119,7 +122,7 @@ bool decode_power(EvaluationContext *evaluation, WorldIndexes *indexes,
  */
 void power_set(EvaluationContext *evaluation, WorldIndexes *indexes,
                DbRef target, DbRef player, char *power, int key) {
-  POWERENT *fp;
+  const POWERENT *fp;
   bool negate;
 
   /*
@@ -198,7 +201,7 @@ char *power_description(const PowerDescriptionRequest *request) {
   DbRef target = request->target;
   char *buff;
   char *bp;
-  POWERENT *fp;
+  const POWERENT *fp;
 
   /*
    * Allocate the return buffer
@@ -212,7 +215,7 @@ char *power_description(const PowerDescriptionRequest *request) {
 
   safe_mb_str("Powers:", buff, &bp);
 
-  for (size_t index = 0; index < GEN_POWER_COUNT; index++) {
+  for (size_t index = 0; index < power_entry_count(); index++) {
     fp = power_entry_at(index);
     if (game_object_has_power(&(ObjectPowerRequest){
             .database = database, .object = target, .power = fp->id})) {

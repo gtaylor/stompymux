@@ -476,14 +476,14 @@ static int lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
     return 0;
   }
   if (root != LUA_ROOT_PACKAGES) {
-    static const char *appearance_names[] = {
+    static const char *const APPEARANCE_NAMES[] = {
         "internal_appearance", "external_appearance", "mech_status"};
     for (size_t index = 0;
-         index < sizeof(appearance_names) / sizeof(*appearance_names);
+         index < sizeof(APPEARANCE_NAMES) / sizeof(*APPEARANCE_NAMES);
          index++) {
       const char *appearance = lua_const_string_item(
-          appearance_names,
-          sizeof(appearance_names) / sizeof(*appearance_names), index);
+          APPEARANCE_NAMES,
+          sizeof(APPEARANCE_NAMES) / sizeof(*APPEARANCE_NAMES), index);
 
       lua_getfield(runtime->state, -1, appearance);
       if (!lua_isnil(runtime->state, -1) &&

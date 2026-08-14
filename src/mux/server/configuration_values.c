@@ -250,16 +250,16 @@ int cf_flagalias(const ConfigurationCall *call) {
   ConfigurationContext *context = call->context;
   char *alias;
   char *orig;
-  int *cp;
+  const FlagEntry *flag;
   int success;
 
   success = 0;
   alias = strtok(str, " \t=,");
   orig = strtok(nullptr, " \t=,");
 
-  cp = hash_table_find(orig, &context->world_indexes->flags);
-  if (cp != nullptr) {
-    hash_table_add(alias, cp, &context->world_indexes->flags);
+  flag = hash_table_find_const(orig, &context->world_indexes->flags);
+  if (flag != nullptr) {
+    hash_table_add_const(alias, flag, &context->world_indexes->flags);
     success++;
   }
   if (!success)
@@ -337,7 +337,7 @@ int cf_set_flags(const ConfigurationCall *call) {
   char *str = call->text;
   ConfigurationContext *context = call->context;
   char *sp;
-  FlagEntry *fp;
+  const FlagEntry *fp;
   ObjectFlagSet *fset;
 
   int success;
@@ -357,7 +357,7 @@ int cf_set_flags(const ConfigurationCall *call) {
      * Set the appropriate bit
      */
 
-    fp = (FlagEntry *)hash_table_find(sp, &context->world_indexes->flags);
+    fp = hash_table_find_const(sp, &context->world_indexes->flags);
     if (fp != nullptr) {
       if (success == 0)
         *fset = (ObjectFlagSet){0};

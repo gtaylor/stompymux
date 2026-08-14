@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
+static constexpr char EMPTY_SEARCH_NAME[] = "";
+
 #include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_helpers.h"
@@ -115,7 +117,7 @@ void do_stats(CommandInvocation *invocation) {
  */
 int search_criteria_setup(EvaluationContext *context, DbRef player,
                           char *searchfor, SearchCriteria *parm) {
-  static char empty[] = "";
+  char empty[] = "";
   char *searchtype;
   int err;
 
@@ -161,7 +163,7 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
     break;
   case 'e':
     if (string_prefix("exits", searchtype)) {
-      parm->s_rst_name = searchfor;
+      parm->s_rst_name = searchfor[0] == '\0' ? EMPTY_SEARCH_NAME : searchfor;
       parm->s_rst_type = OBJECT_TYPE_EXIT;
     } else {
       err = 1;
@@ -184,14 +186,14 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
     break;
   case 'n':
     if (string_prefix("name", searchtype)) {
-      parm->s_rst_name = searchfor;
+      parm->s_rst_name = searchfor[0] == '\0' ? EMPTY_SEARCH_NAME : searchfor;
     } else {
       err = 1;
     }
     break;
   case 'o':
     if (string_prefix("objects", searchtype)) {
-      parm->s_rst_name = searchfor;
+      parm->s_rst_name = searchfor[0] == '\0' ? EMPTY_SEARCH_NAME : searchfor;
       parm->s_rst_type = OBJECT_TYPE_THING;
     } else {
       err = 1;
@@ -199,7 +201,7 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
     break;
   case 'p':
     if (string_prefix("players", searchtype)) {
-      parm->s_rst_name = searchfor;
+      parm->s_rst_name = searchfor[0] == '\0' ? EMPTY_SEARCH_NAME : searchfor;
       parm->s_rst_type = OBJECT_TYPE_PLAYER;
     } else if (string_prefix("power", searchtype)) {
       if (!decode_power(context, context->world->indexes, player, searchfor,
@@ -211,7 +213,7 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
     break;
   case 'r':
     if (string_prefix("rooms", searchtype)) {
-      parm->s_rst_name = searchfor;
+      parm->s_rst_name = searchfor[0] == '\0' ? EMPTY_SEARCH_NAME : searchfor;
       parm->s_rst_type = OBJECT_TYPE_ROOM;
     } else {
       err = 1;
@@ -237,7 +239,7 @@ int search_criteria_setup(EvaluationContext *context, DbRef player,
         return 0;
       }
     } else if (string_prefix("things", searchtype)) {
-      parm->s_rst_name = searchfor;
+      parm->s_rst_name = searchfor[0] == '\0' ? EMPTY_SEARCH_NAME : searchfor;
       parm->s_rst_type = OBJECT_TYPE_THING;
     } else {
       err = 1;

@@ -26,7 +26,7 @@
 #include "mux/support/checked_storage.h"
 
 /* Human-readable labels for DescriptorShutdownReason values. */
-static const char *descriptor_disconnect_reasons[] = {
+static const char *const DESCRIPTOR_DISCONNECT_REASONS[] = {
     "Unspecified",
     "Quit",
     "Inactivity Timeout",
@@ -38,7 +38,7 @@ static const char *descriptor_disconnect_reasons[] = {
     "Too Many Connected Players"};
 
 /* Lua on_disconnect reason strings for DescriptorShutdownReason values. */
-static const char *descriptor_disconnect_messages[] = {
+static const char *const DESCRIPTOR_DISCONNECT_MESSAGES[] = {
     "unknown",  "quit",     "timeout",  "boot",    "netdeath",
     "shutdown", "badlogin", "nologins", "gamefull"};
 
@@ -67,22 +67,22 @@ static Descriptor **descriptor_registry_slot(DescriptorRegistry *registry,
 
 static const char *
 descriptor_shutdown_reason_at(DescriptorShutdownReason reason) {
-  const size_t COUNT = sizeof(descriptor_disconnect_reasons) /
-                       sizeof(*descriptor_disconnect_reasons);
+  const size_t COUNT = sizeof(DESCRIPTOR_DISCONNECT_REASONS) /
+                       sizeof(*DESCRIPTOR_DISCONNECT_REASONS);
 
   return *(const char *const *)checked_storage_at_const(
-      (const void *)descriptor_disconnect_reasons, COUNT,
-      sizeof(*descriptor_disconnect_reasons), (size_t)reason);
+      (const void *)DESCRIPTOR_DISCONNECT_REASONS, COUNT,
+      sizeof(*DESCRIPTOR_DISCONNECT_REASONS), (size_t)reason);
 }
 
 static const char *
 descriptor_shutdown_message_at(DescriptorShutdownReason reason) {
-  const size_t COUNT = sizeof(descriptor_disconnect_messages) /
-                       sizeof(*descriptor_disconnect_messages);
+  const size_t COUNT = sizeof(DESCRIPTOR_DISCONNECT_MESSAGES) /
+                       sizeof(*DESCRIPTOR_DISCONNECT_MESSAGES);
 
   return *(const char *const *)checked_storage_at_const(
-      (const void *)descriptor_disconnect_messages, COUNT,
-      sizeof(*descriptor_disconnect_messages), (size_t)reason);
+      (const void *)DESCRIPTOR_DISCONNECT_MESSAGES, COUNT,
+      sizeof(*DESCRIPTOR_DISCONNECT_MESSAGES), (size_t)reason);
 }
 
 /* Clear buffered input before destroying descriptor. */

@@ -31,8 +31,6 @@
 #include "mux/world/object_set.h"
 #include "mux/world/player.h"
 
-extern NameTable indiv_attraccess_nametab[];
-
 char *builder_compile_object_name(EvaluationContext *evaluation, DbRef player,
                                   const char *name) {
   char *compiled = alloc_lbuf("builder_compile_object_name");

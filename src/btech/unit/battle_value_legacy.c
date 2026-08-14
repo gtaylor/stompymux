@@ -9,7 +9,6 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mech_utils_internal.h"
-#include "mux/support/checked_storage.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 #include <math.h>
@@ -17,15 +16,6 @@
 
 static float walking_speed(float maximum_speed) {
   return 2.0F * maximum_speed / 3.0F;
-}
-
-static float battle_value_skill_multiplier(int gunnery, int piloting) {
-  const int GUN_INDEX = battle_value_skill_index(gunnery);
-  const int PILOT_INDEX = battle_value_skill_index(piloting);
-  const float (*row)[BTECH_BV_SKILL_LIMIT] = checked_storage_at_const(
-      skillmul, BTECH_BV_SKILL_LIMIT, sizeof(*skillmul), (size_t)GUN_INDEX);
-  return *(const float *)checked_storage_at_const(
-      *row, BTECH_BV_SKILL_LIMIT, sizeof(**row), (size_t)PILOT_INDEX);
 }
 
 int calculate_bv(Mech *mech, int gunstat, int pilstat) {

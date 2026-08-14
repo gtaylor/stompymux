@@ -106,8 +106,8 @@ void flag_set(EvaluationContext * /*evaluation*/, WorldIndexes *indexes,
               DbRef /*target*/, DbRef /*player*/, char * /*name*/, int /*key*/);
 char *flag_description(GameDatabase * /*database*/, DbRef target);
 char *flags_description(GameDatabase * /*database*/, DbRef target);
-FlagEntry *find_flag(WorldIndexes * /*indexes*/, DbRef /*thing*/,
-                     char * /*flagname*/);
+const FlagEntry *find_flag(WorldIndexes * /*indexes*/, DbRef /*thing*/,
+                           char * /*flagname*/);
 char *decode_flags(const DecodeFlagsRequest *request);
 char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
                      DbRef player, DbRef target);

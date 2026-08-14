@@ -340,12 +340,13 @@ void lua_examine_object(const LuaExamineObjectRequest *request) {
   module = lua_gettop(state);
   {
     bool found = false;
-    static const char *names[] = {"internal_appearance", "external_appearance",
-                                  "mech_status"};
-    const size_t NAME_COUNT = sizeof(names) / sizeof(*names);
+    static const char *const APPEARANCE_NAMES[] = {
+        "internal_appearance", "external_appearance", "mech_status"};
+    const size_t NAME_COUNT =
+        sizeof(APPEARANCE_NAMES) / sizeof(*APPEARANCE_NAMES);
 
     for (size_t index = 0; index < NAME_COUNT; index++) {
-      const char *name = lua_name_at(names, NAME_COUNT, index);
+      const char *name = lua_name_at(APPEARANCE_NAMES, NAME_COUNT, index);
 
       lua_getfield(state, module, name);
       if (lua_isfunction(state, -1)) {

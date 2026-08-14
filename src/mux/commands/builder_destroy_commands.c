@@ -19,8 +19,6 @@
 #include "mux/world/object.h"
 #include "mux/world/object_set.h"
 
-extern NameTable indiv_attraccess_nametab[];
-
 typedef struct DestroyExitCheck {
   EvaluationContext *evaluation;
   DbRef player;
