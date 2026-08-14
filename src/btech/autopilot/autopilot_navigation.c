@@ -11,8 +11,8 @@
 #include "mech_utils_api.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
+#include <stdio.h>
 
 void ai_init(Autopilot *a, Mech *m) {
 
@@ -30,6 +30,7 @@ void ai_init(Autopilot *a, Mech *m) {
 int artillery_round_flight_time(float fx, float fy, float tx, float ty);
 
 static int mech_snipe_func(const MultiWeaponSelectionCall *call) {
+  char message_buffer[128];
   Mech *mech = call->mech;
   /* Simulate mech movements until flight_time <= now */
   int now = 0;
@@ -48,10 +49,12 @@ static int mech_snipe_func(const MultiWeaponSelectionCall *call) {
         crashed = 1;
     now++;
   }
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", t.x, t.y);
   /* Fire at t.x, t.y */
   if (mech_target_hex_x(mech) != t.x || mech_target_hex_y(mech) != t.y)
-    mech_set_target(call->actor, mech, tprintf("%d %d", t.x, t.y));
-  mech_fireweapon(call->actor, mech, tprintf("%d", call->first));
+    mech_set_target(call->actor, mech, message_buffer);
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%d", call->first);
+  mech_fireweapon(call->actor, mech, message_buffer);
   return 0;
 }
 

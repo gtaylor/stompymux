@@ -7,18 +7,6 @@
 
 #include "mux/support/alloc.h"
 
-char *tprintf(const char *format, ...) {
-  static char buff[LBUF_SIZE];
-  va_list ap;
-
-  va_start(ap, format);
-  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  (void)vsnprintf(buff, LBUF_SIZE, format, ap);
-  va_end(ap);
-  buff[LBUF_SIZE - 1] = '\0';
-  return buff;
-}
-
 void safe_tprintf_str(char *str, char **bp, const char *format, ...) {
   char buff[LBUF_SIZE];
   va_list ap;

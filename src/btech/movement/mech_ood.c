@@ -1,5 +1,6 @@
 /* Implements BattleTech movement mechanics for unit ood. */
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "btconfig.h"
@@ -35,7 +36,6 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -156,10 +156,8 @@ void mech_ood_event(MuxEvent *e) {
 
   mech_notify(mech, MECHPILOT, "You make a piloting skill roll!");
 
-  mech_notify(
-      mech, MECHPILOT,
-
-      tprintf("Modified Pilot Skill: BTH %d\tRoll: %d", roll_needed, roll));
+  mech_printf(mech, MECHPILOT, "Modified Pilot Skill: BTH %d\tRoll: %d",
+              roll_needed, roll);
 
   mof += (roll - roll_needed);
 
@@ -298,6 +296,7 @@ void mech_ood_event(MuxEvent *e) {
 }
 
 void mech_ood_initiate(DbRef player, Mech *mech, char *buffer) {
+  char message_buffer[128];
   char *args[4];
   int x;
   int y;
@@ -331,7 +330,8 @@ void mech_ood_initiate(DbRef player, Mech *mech, char *buffer) {
                  "OOD already in progress!");
     return;
   }
-  mech_rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", x, y);
+  mech_rsetxy(GOD, (void *)mech, message_buffer);
   if (mech_position_x(mech) != x || mech_position_y(mech) != y) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid co-ordinates!");

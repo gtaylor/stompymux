@@ -17,7 +17,6 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/access.h"
 #include "mux/world/object_spatial.h"
@@ -83,6 +82,7 @@ static constexpr char BROADCAST_MESSAGE[] = "Broadcast: ";
 static constexpr char ADMIN_MESSAGE[] = "Admin: ";
 
 void do_say(CommandInvocation *invocation) {
+  char message_buffer[LBUF_SIZE];
   EvaluationContext *evaluation = &invocation->context->evaluation;
   const DbRef PLAYER = invocation->player;
   int key = invocation->key;
@@ -158,31 +158,31 @@ void do_say(CommandInvocation *invocation) {
   switch (key) {
   case SAY_SAY:
     notify_printf(evaluation, PLAYER, "You say \"%s\"", message);
-    notify_excluding(&(ExcludingNotification){
-        .evaluation = evaluation,
-        .location = loc,
-        .sender = PLAYER,
-        .exceptions = {PLAYER},
-        .exception_count = 1,
-        .message = tprintf(
-            "%s says \"%s\"",
-            game_object_name(evaluation->world->database, PLAYER), message)});
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%s says \"%s\"",
+                   game_object_name(evaluation->world->database, PLAYER),
+                   message);
+    notify_excluding(&(ExcludingNotification){.evaluation = evaluation,
+                                              .location = loc,
+                                              .sender = PLAYER,
+                                              .exceptions = {PLAYER},
+                                              .exception_count = 1,
+                                              .message = message_buffer});
     break;
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%s %s",
+                   game_object_name(evaluation->world->database, PLAYER),
+                   message);
   case SAY_POSE:
-    notify_checked(
-        evaluation, loc, PLAYER,
-        tprintf("%s %s", game_object_name(evaluation->world->database, PLAYER),
-                message),
-        MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
-            MSG_S_INSIDE);
+    notify_checked(evaluation, loc, PLAYER, message_buffer,
+                   MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
+                       MSG_S_INSIDE);
     break;
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%s%s",
+                   game_object_name(evaluation->world->database, PLAYER),
+                   message);
   case SAY_POSE_NOSPC:
-    notify_checked(
-        evaluation, loc, PLAYER,
-        tprintf("%s%s", game_object_name(evaluation->world->database, PLAYER),
-                message),
-        MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
-            MSG_S_INSIDE);
+    notify_checked(evaluation, loc, PLAYER, message_buffer,
+                   MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
+                       MSG_S_INSIDE);
     break;
   case SAY_EMIT:
     if ((say_flags & SAY_HERE) || !say_flags) {

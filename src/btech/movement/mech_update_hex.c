@@ -22,7 +22,6 @@
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mine_api.h"
-#include "mux/support/formatting.h"
 #include "section_types.h"
 #include <math.h>
 #include <stdlib.h>
@@ -193,11 +192,10 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                     (elevation > lastelevation
                          ? "You stumble on your rear and fall down."
                          : "You fall on your rear off the small incline."));
-        mech_los_broadcast(
-            mech,
-            tprintf("%s", (elevation > lastelevation
+        mech_los_broadcast(mech,
+                           elevation > lastelevation
                                ? "falls on its back walking up an incline."
-                               : "falls off the back of a small incline.")));
+                               : "falls off the back of a small incline.");
         mech_fall(mech, abs(lastelevation - elevation), 1);
         mech_movement_stop(mech);
         if (elevation > lastelevation) {
@@ -363,11 +361,10 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                     (elevation > lastelevation
                          ? "You stumble on your rear and fall down."
                          : "You fall on your rear off the small incline."));
-        mech_los_broadcast(
-            mech,
-            tprintf("%s", (elevation > lastelevation
+        mech_los_broadcast(mech,
+                           elevation > lastelevation
                                ? "falls on its back walking up an incline."
-                               : "falls off the back of a small incline.")));
+                               : "falls off the back of a small incline.");
         mech_fall(mech, abs(lastelevation - elevation), 1);
         mech_movement_stop(mech);
         if (elevation > lastelevation) {
@@ -610,11 +607,10 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                     (elevation > lastelevation
                          ? "You stumble on your rear and fall down."
                          : "You fall on your rear off the small incline."));
-        mech_los_broadcast(
-            mech,
-            tprintf("%s", (elevation > lastelevation
+        mech_los_broadcast(mech,
+                           elevation > lastelevation
                                ? "falls on its back walking up an incline."
-                               : "falls off the back of a small incline.")));
+                               : "falls off the back of a small incline.");
         mech_fall(mech, abs(lastelevation - elevation), 1);
         mech_movement_stop(mech);
         if (elevation > lastelevation) {
@@ -703,11 +699,10 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                     (elevation > lastelevation
                          ? "You stumble on your rear and fall down."
                          : "You fall on your rear off the small incline."));
-        mech_los_broadcast(
-            mech,
-            tprintf("%s", (elevation > lastelevation
+        mech_los_broadcast(mech,
+                           elevation > lastelevation
                                ? "falls on its back walking up an incline."
-                               : "falls off the back of a small incline.")));
+                               : "falls off the back of a small incline.");
         mech_fall(mech, (abs(lastelevation - elevation) + 1000), 1);
         mech_movement_stop(mech);
         if (elevation > lastelevation) {

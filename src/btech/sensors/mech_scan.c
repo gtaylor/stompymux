@@ -30,7 +30,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -49,6 +48,7 @@ enum {
 };
 
 void mech_scan(DbRef player, void *data, char *buffer) {
+  char message_buffer[LBUF_SIZE];
   Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
@@ -336,9 +336,10 @@ void mech_scan(DbRef player, void *data, char *buffer) {
     if (!mech_is_observer(mech)) {
       mech_printf(temp_mech, MECHSTARTED, "You are being scanned by %s",
                   mech_to_mech_display_id(temp_mech, mech).text);
-      auto_reply(temp_mech,
-                 tprintf("%s just scanned me.",
-                         mech_to_mech_display_id(temp_mech, mech).text));
+      (void)snprintf(message_buffer, sizeof(message_buffer),
+                     "%s just scanned me.",
+                     mech_to_mech_display_id(temp_mech, mech).text);
+      auto_reply(temp_mech, message_buffer);
     }
     return;
   }
@@ -506,6 +507,7 @@ void mech_report(DbRef player, void *data, char *buffer) {
 
 void mech_scan_show_turret_facing(EvaluationContext *evaluation, DbRef player,
                                   Mech *mech) {
+  char message_buffer[128];
   int i;
   int j;
   char buff[MBUF_SIZE] = {0};
@@ -519,11 +521,14 @@ void mech_scan_show_turret_facing(EvaluationContext *evaluation, DbRef player,
       i -= 360;
     j = acceptable_degree(mech_turret_heading_degrees(mech) +
                           mech_heading_degrees(mech));
-    if (mech_movement_type(mech) != MOVE_NONE)
+    if (mech_movement_type(mech) != MOVE_NONE) {
+      (void)snprintf(message_buffer, sizeof(message_buffer),
+                     " (%d offset from heading)", i);
       (void)snprintf(buff, sizeof(buff), "      Turret Facing: %d degrees%s", j,
-                     i ? tprintf(" (%d offset from heading)", i) : "");
-    else
+                     i ? message_buffer : "");
+    } else {
       (void)snprintf(buff, sizeof(buff), "      Turret Facing: %d degrees", j);
+    }
     mecha_notify(evaluation, player, buff);
   }
 }

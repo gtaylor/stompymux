@@ -1,3 +1,5 @@
+#include "mux/support/alloc.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -16,7 +18,6 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "mycool.h"
 #include "registry_api.h"
@@ -33,6 +34,7 @@ static CharacterXpRanking *ranking_at(CharacterXpRanking *rankings,
 }
 
 void debug_xptop(DbRef player, void *data, const char *buffer) {
+  char message_buffer[LBUF_SIZE];
   BtechSpecialObject *debug = data;
   BtechContext *context = debug->context;
   int hm;
@@ -101,15 +103,18 @@ void debug_xptop(DbRef player, void *data, const char *buffer) {
   for (i = 0; i < min(16, count); i++) {
     const CharacterXpRanking *ranking =
         ranking_at(rankings, MAX_PLAYERS_ON, (size_t)i);
-    cool_menu_add(
-        &c, tprintf("%3d. %s", i + 1,
-                    game_object_name(context->database, ranking->player)));
-    cool_menu_add(&c, tprintf("%d (%.3f %%)", ranking->experience,
-                              (100.0 * ranking->experience) / gt));
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%3d. %s", i + 1,
+                   game_object_name(context->database, ranking->player));
+    cool_menu_add(&c, message_buffer);
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%d (%.3f %%)",
+                   ranking->experience, (100.0 * ranking->experience) / gt);
+    cool_menu_add(&c, message_buffer);
   }
   cool_menu_add_line(&c);
   if (gt) {
-    cool_menu_add(&c, tprintf("Grand total: %d points", gt));
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "Grand total: %d points", gt);
+    cool_menu_add(&c, message_buffer);
     cool_menu_add_line(&c);
   }
   show_cool_menu(btech_context_evaluation(context), player, c);

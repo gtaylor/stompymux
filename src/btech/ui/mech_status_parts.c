@@ -31,7 +31,6 @@
 #include "mech_utils_api.h"
 #include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_settings.h"
@@ -263,6 +262,7 @@ static char *wspec_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
 }
 
 void mech_weaponspecs(DbRef player, void *data, const char *buffer) {
+  char message_buffer[LBUF_SIZE];
   Mech *mech = (Mech *)data;
   BtechContext *context = mech_context(mech);
   EvaluationContext *evaluation = btech_context_evaluation(context);
@@ -302,15 +302,16 @@ void mech_weaponspecs(DbRef player, void *data, const char *buffer) {
     return;
   }
   if (strcmp(mech_model_name(mech), mech_model_reference(mech))) {
-    c = sel_col_fun_string_menu_context_k(
-        1,
-        tprintf("Weapons statistics for %s: %s", mech_model_name(mech),
-                mech_model_reference(mech)),
-        wspec_fun, &menu, menu.weapon_count + 1);
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "Weapons statistics for %s: %s", mech_model_name(mech),
+                   mech_model_reference(mech));
+    c = sel_col_fun_string_menu_context_k(1, message_buffer, wspec_fun, &menu,
+                                          menu.weapon_count + 1);
   } else {
-    c = sel_col_fun_string_menu_context_k(
-        1, tprintf("Weapons statistics for %s", mech_model_reference(mech)),
-        wspec_fun, &menu, menu.weapon_count + 1);
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "Weapons statistics for %s", mech_model_reference(mech));
+    c = sel_col_fun_string_menu_context_k(1, message_buffer, wspec_fun, &menu,
+                                          menu.weapon_count + 1);
   }
   show_cool_menu(evaluation, player, c);
   kill_cool_menu(c);

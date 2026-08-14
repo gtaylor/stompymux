@@ -25,7 +25,6 @@
 #include "mech_status_types.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
-#include "mux/support/formatting.h"
 #include "section_types.h"
 
 static bool mech_passes_cliff_check(Mech *mech, bool skid_cliff) {
@@ -207,12 +206,10 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                          ? "You stumble on your rear and fall down."
                          : "You fall on your rear off the small incline."));
 
-        /*! \todo {Get rid of this tprintf} */
-        mech_los_broadcast(
-            mech,
-            tprintf("%s", (elevation > lastelevation
+        mech_los_broadcast(mech,
+                           elevation > lastelevation
                                ? "falls on its back walking up an incline."
-                               : "falls off the back of a small incline.")));
+                               : "falls off the back of a small incline.");
         mech_fall(mech, abs(lastelevation - elevation), 1);
         mech_movement_stop(mech);
         if (elevation > lastelevation) {

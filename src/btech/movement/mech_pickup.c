@@ -35,7 +35,6 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -535,8 +534,8 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
   mech_printf(mech, MECHALL, "You attach %s's tow lines to %s.", tow_mech_name,
               target_name);
 
-  mech_los_broadcast(mech, tprintf("attaches tow cables from %s to %s!",
-                                   tow_mech_name, target_name));
+  mech_los_broadcastf(mech, "attaches tow cables from %s to %s!", tow_mech_name,
+                      target_name);
 
   mech_carried_dbref_set(tow_mech, mech_dbref(target));
   mech_towing_target_prepare(target);
@@ -626,8 +625,8 @@ void mech_detachcables(DbRef player, void *data, char *buffer) {
   mech_event_cancel(target, EVENT_MOVE);
   mech_movement_stop(target);
 
-  mech_los_broadcast(mech, tprintf("detaches %s's tow cables from %s!",
-                                   tow_mech_name, target_name));
+  mech_los_broadcastf(mech, "detaches %s's tow cables from %s!", tow_mech_name,
+                      target_name);
 
   newmap = btech_context_get_map(context, mech_map_dbref(target));
   if (newmap) {

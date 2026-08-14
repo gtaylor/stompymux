@@ -23,7 +23,6 @@
 #include "mux/objects/db.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "repair_job.h"
 
@@ -131,11 +130,11 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
                     : game_object_location(btech_context_database(context),
                                            mech_dbref(mech)),
                 parttype, mech_critical_brand(mech, loc, part)) < 1) {
-    mecha_notify(btech_context_evaluation(context), player,
-                 tprintf("Not enough units of %s in store.",
-                         part_name(context, parttype,
-                                   mech_critical_brand(mech, loc, part))
-                             .text));
+    mecha_notifyf(
+        btech_context_evaluation(context), player,
+        "Not enough units of %s in store.",
+        part_name(context, parttype, mech_critical_brand(mech, loc, part))
+            .text);
     return;
   }
 
@@ -570,11 +569,11 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
                     : game_object_location(btech_context_database(context),
                                            mech_dbref(mech)),
                 parttype, mech_critical_brand(mech, loc, part)) < 1) {
-    mecha_notify(btech_context_evaluation(context), player,
-                 tprintf("Not enough units of %s in store.",
-                         part_name(context, parttype,
-                                   mech_critical_brand(mech, loc, part))
-                             .text));
+    mecha_notifyf(
+        btech_context_evaluation(context), player,
+        "Not enough units of %s in store.",
+        part_name(context, parttype, mech_critical_brand(mech, loc, part))
+            .text);
     return;
   }
 

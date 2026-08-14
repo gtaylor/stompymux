@@ -22,7 +22,6 @@
 #include "mech_utils_api.h"
 #include "mine_api.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "section_types.h"
 #include "template_api.h"
 /* Flooding code. Once we're in water, this is checked
@@ -69,8 +68,8 @@ void mech_flood_section(Mech *mech, int loc, int lev) {
       "[fg=red bold]Water floods into your %s disabling everything that was "
       "there![reset]",
       locbuff);
-  mech_los_broadcast(
-      mech, tprintf("has a gaping hole in %s, and water pours in!", locbuff));
+  mech_los_broadcastf(mech, "has a gaping hole in %s, and water pours in!",
+                      locbuff);
 
   mech_section_flooded_set(mech, loc, true);
   mech_parts_destroy(mech, mech, loc, true, true);

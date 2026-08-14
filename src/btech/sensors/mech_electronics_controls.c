@@ -28,7 +28,6 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -512,9 +511,9 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
   }
 
   if (!mech_section_has_special(mech, w_loc, w_pod_type)) {
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                 tprintf("There are no iNarc %s pods attached to your %s!",
-                         str_pod_type, str_location));
+    mecha_notifyf(btech_context_evaluation(mech_context(mech)), player,
+                  "There are no iNarc %s pods attached to your %s!",
+                  str_pod_type, str_location);
     return;
   }
 

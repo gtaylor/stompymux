@@ -27,7 +27,6 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -333,9 +332,8 @@ void mech_c3_network_add(Mech *mech, Mech *mech_to_add) {
   mech_c3_network_node_set(mech, w_pos, mech_dbref(mech_to_add));
   mech_c3_network_size_set(mech, mech_c3_network_size(mech) + 1);
 
-  mech_notify(mech, MECHALL,
-              tprintf("%s connects to your C3 network.",
-                      mech_to_mech_display_id(mech, mech_to_add).text));
+  mech_printf(mech, MECHALL, "%s connects to your C3 network.",
+              mech_to_mech_display_id(mech, mech_to_add).text);
 
   /* Now let's replicate the new network across the system so that everyone has
    * the same network settings */
@@ -354,11 +352,9 @@ void mech_c3_network_add(Mech *mech, Mech *mech_to_add) {
       other_notify_mech = mech_network_unit(mech, i, 1, 1, 1, 1);
 
       if (other_notify_mech) {
-        mech_notify(
-            other_notify_mech, MECHALL,
-            tprintf(
-                "%s connects to your C3 network.",
-                mech_to_mech_display_id(other_notify_mech, mech_to_add).text));
+        mech_printf(
+            other_notify_mech, MECHALL, "%s connects to your C3 network.",
+            mech_to_mech_display_id(other_notify_mech, mech_to_add).text);
       }
     }
 
@@ -577,9 +573,8 @@ void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
   }
 
   /* Connect us up */
-  mech_notify(mech, MECHALL,
-              tprintf("You connect to %s's C3 network.",
-                      mech_to_mech_display_id(mech, target).text));
+  mech_printf(mech, MECHALL, "You connect to %s's C3 network.",
+              mech_to_mech_display_id(mech, target).text);
 
   mech_c3_network_add(target, mech);
 }

@@ -19,7 +19,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "mycool.h"
 #include "registry_api.h"
@@ -119,10 +118,7 @@ static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
       repair_damage_add(damages, REPLACESUIT, loc);
     return 0;
   }
-  /*
-   * Added by Kipsta
-   * 8/4/99
-   */
+  /* Added by Kipsta, 8/4/99. */
   if (mech_section_is_flooded(mech, loc)) {
     repair_damage_add(damages, RESEAL, loc);
     return 0;
@@ -374,6 +370,7 @@ size_t mech_repair_job_count(Mech *mech) {
   return (size_t)damages.count;
 }
 void show_mechs_damage(DbRef player, void *data, char *buffer) {
+  char message_buffer[LBUF_SIZE];
   Mech *mech = data;
   RepairDamageTable damages_storage = {0};
   RepairDamageTable *damages = &damages_storage;
@@ -413,8 +410,9 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
     return;
   }
   cool_menu_add_line(&c);
-  cool_menu_add_centered(&c,
-                         tprintf("Damage for %s", mech_display_id(mech).text));
+  (void)snprintf(message_buffer, sizeof(message_buffer), "Damage for %s",
+                 mech_display_id(mech).text);
+  cool_menu_add_centered(&c, message_buffer);
   cool_menu_add_line(&c);
   cool_menu_add_text(&c, "   Fix# Time  BTH Loc Description");
   for (i = 0; i < damages->count; i++) {
@@ -641,7 +639,6 @@ static void fix_entry(const RepairDamageTable *damages, DbRef player,
                       Mech *mech, int n) {
   char buf[MBUF_SIZE] = {0};
   char *c;
-  /* whee */
   n--;
   const RepairDamage *damage = repair_damage_const(damages, n);
   ArmorSectionAbbreviation abbreviation = armor_section_abbreviation(

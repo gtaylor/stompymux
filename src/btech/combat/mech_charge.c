@@ -10,6 +10,8 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_targeting_api.h"
+#include "mux/support/alloc.h"
+#include <stdio.h>
 static int charge_forward_arc(Mech *mech, const Mech *target) {
   MechConditionSummary condition = mech_condition_summary(mech);
   mech_torso_twist_set(mech, MECH_TORSO_CENTER);
@@ -50,6 +52,7 @@ static int charge_damage_calculate(const ChargeDamageRequest *request) {
   return (int)DAMAGE;
 }
 void charge_mech(Mech *mech, Mech *target) {
+  char message_buffer[LBUF_SIZE];
   int base_to_hit = 5;
   int roll;
   int hit_group;
@@ -604,9 +607,8 @@ void charge_mech(Mech *mech, Mech *target) {
            : mech_attacker_movement_modifier(mech));
   base_to_hit += mech_target_movement_modifier(mech, target, 0.0);
   if (base_to_hit > 12) {
-    mech_notify(
-        mech, MECHALL,
-        tprintf("Charge: BTH %d\tYou choose not to charge.", base_to_hit));
+    mech_printf(mech, MECHALL, "Charge: BTH %d\tYou choose not to charge.",
+                base_to_hit);
     return;
   }
   /* Roll */
@@ -614,10 +616,10 @@ void charge_mech(Mech *mech, Mech *target) {
   mech_printf(mech, MECHALL, "Charge: BTH %d\tRoll: %d", base_to_hit, roll);
   /* Did the charge work ? */
   if (roll >= base_to_hit) {
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%ss %%s!",
+                   mech_class(mech) == CLASS_MECH ? "charge" : "ram");
     /* OUCH */
-    mech_los_broadcast_unit(
-        mech, target,
-        tprintf("%ss %%s!", mech_class(mech) == CLASS_MECH ? "charge" : "ram"));
+    mech_los_broadcast_unit(mech, target, message_buffer);
     mech_printf(target, MECHSTARTED, "CRASH!!!\n%s %ss into you!",
                 mech_to_mech_display_id(target, mech).text,
                 mech_class(mech) == CLASS_MECH ? "charge" : "ram");

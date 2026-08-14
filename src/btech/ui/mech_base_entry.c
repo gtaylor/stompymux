@@ -36,7 +36,6 @@
 #include "mux/world/move.h"
 #include "registry_api.h"
 
-#include "mux/support/formatting.h"
 #include "section_types.h"
 #include <limits.h>
 #include <math.h>
@@ -45,6 +44,7 @@
 #include <string.h>
 
 static void mech_enter_event(MuxEvent *e) {
+  char message_buffer[128];
   Mech *mech = (Mech *)e->data;
   Mech *tmpm = nullptr;
   MapObject *mapo;
@@ -103,10 +103,9 @@ static void mech_enter_event(MuxEvent *e) {
       1);
   mech_printf(mech, MECHALL, "You enter %s.",
               structure_name(mech_context(mech)->database, mapo).text);
-  mech_los_broadcast(
-      mech, tprintf("has entered %s at %d,%d.",
-                    structure_name(mech_context(mech)->database, mapo).text,
-                    mech_position_x(mech), mech_position_y(mech)));
+  mech_los_broadcastf(mech, "has entered %s at %d,%d.",
+                      structure_name(mech_context(mech)->database, mapo).text,
+                      mech_position_x(mech), mech_position_y(mech));
   mark_for_los_update(mech);
   if (mech_class(mech) == CLASS_MW &&
       !is_in_character(mech_context(mech)->database, mapo->obj)) {
@@ -117,25 +116,28 @@ static void mech_enter_event(MuxEvent *e) {
     tmpm = btech_context_get_mech(mech_context(mech), mech_carried_dbref(mech));
   obj_x = mech_position_x(mech);
   obj_y = mech_position_y(mech);
-  mech_rsetmapindex(GOD, (void *)mech, tprintf("%ld", mapo->obj));
-  mech_rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
-  mech_los_broadcast(
-      mech, tprintf("has entered %s at %d,%d.",
-                    structure_name(mech_context(mech)->database, mapo).text,
-                    obj_x, obj_y));
-  if (tmpm)
-    mech_los_broadcast(
-        tmpm, tprintf("has entered %s at %d,%d.",
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", mapo->obj);
+  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", x, y);
+  mech_rsetxy(GOD, (void *)mech, message_buffer);
+  mech_los_broadcastf(mech, "has entered %s at %d,%d.",
                       structure_name(mech_context(mech)->database, mapo).text,
-                      obj_x, obj_y));
+                      obj_x, obj_y);
+  if (tmpm) {
+    mech_los_broadcastf(tmpm, "has entered %s at %d,%d.",
+                        structure_name(mech_context(mech)->database, mapo).text,
+                        obj_x, obj_y);
+  }
   move_via_teleport(&(ObjectMovementRequest){
       .evaluation = btech_context_evaluation(mech_context(mech)),
       .object = mech_dbref(mech),
       .destination = mapo->obj,
       .cause = 1});
   if (tmpm) {
-    mech_rsetmapindex(GOD, (void *)tmpm, tprintf("%ld", mapo->obj));
-    mech_rsetxy(GOD, (void *)tmpm, tprintf("%d %d", x, y));
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", mapo->obj);
+    mech_rsetmapindex(GOD, (void *)tmpm, message_buffer);
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", x, y);
+    mech_rsetxy(GOD, (void *)tmpm, message_buffer);
     move_via_teleport(&(ObjectMovementRequest){
         .evaluation = btech_context_evaluation(mech_context(mech)),
         .object = mech_dbref(tmpm),

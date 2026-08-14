@@ -41,7 +41,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -77,6 +76,7 @@ void append_status(char *buffer, size_t size, const char *fmt, ...) {
 }
 
 void display_target(EvaluationContext *evaluation, DbRef player, Mech *mech) {
+  char message_buffer[LBUF_SIZE];
   int arc;
   Mech *temp_mech = nullptr;
   char location[50] = {0};
@@ -102,10 +102,10 @@ void display_target(EvaluationContext *evaluation, DbRef player, Mech *mech) {
         mecha_notify(evaluation, player, buff);
         arc = in_weapon_arc(mech, mech_position_real_x(temp_mech),
                             mech_position_real_y(temp_mech));
-        strlcpy(buff,
-                tprintf("Target in %s Weapons Arc",
-                        (arc & TURRETARC) ? "Turret" : get_arc_id(mech, arc)),
-                sizeof(buff));
+        (void)snprintf(message_buffer, sizeof(message_buffer),
+                       "Target in %s Weapons Arc",
+                       (arc & TURRETARC) ? "Turret" : get_arc_id(mech, arc));
+        strlcpy(buff, message_buffer, sizeof(buff));
         if (mech_aim_section(mech) == NUM_SECTIONS ||
             mech_aim_unit_class(mech) != mech_class(temp_mech))
           strcpy(location, "None");
@@ -572,6 +572,7 @@ void print_heat_bar(EvaluationContext *evaluation, DbRef player, Mech *mech) {
 
 void print_info_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
                        int own) {
+  char message_buffer[LBUF_SIZE];
   char buff[256];
   Mech *temp_mech;
   int f;
@@ -607,6 +608,10 @@ void print_info_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
       notify_printf(evaluation, player, "You are moving laterally %s",
                     mech_lateral_description(mech));
     break;
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "%s angle: [fg=green bold]%d[reset]",
+                   mech_desired_angle(mech) >= 0 ? "Climbing" : "Diving",
+                   abs(mech_desired_angle(mech)));
   case CLASS_VEH_GROUND:
   case CLASS_VEH_NAVAL:
   case CLASS_VTOL:
@@ -617,11 +622,7 @@ void print_info_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
         buff, 256, "X, Y, Z:%3d,%3d,%3d  Heat Sinks:          %3d       %s",
         mech_position_x(mech), mech_position_y(mech), mech_position_z(mech),
         displayed_speed(mech_active_heat_sinks(mech)),
-        mech_is_aerospace_unit(mech)
-            ? tprintf("%s angle: [fg=green bold]%d[reset]",
-                      mech_desired_angle(mech) >= 0 ? "Climbing" : "Diving",
-                      abs(mech_desired_angle(mech)))
-            : "");
+        mech_is_aerospace_unit(mech) ? message_buffer : "");
     mecha_notify(evaluation, player, buff);
     if (mech_is_flying_type(mech) || mech_movement_type(mech) == MOVE_SUB) {
       (void)snprintf(

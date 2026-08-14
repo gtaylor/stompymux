@@ -18,7 +18,6 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "special_object.h"
 #include "turret.h"
@@ -312,10 +311,9 @@ void turret_initialize(DbRef player, void *data, char *buffer) {
       is_connected(tur->xcode.context->database, tur->gunner) &&
       game_object_location(tur->xcode.context->database, tur->gunner) ==
           game_object_location(tur->xcode.context->database, player)) {
-    mecha_notify(
-        btech_context_evaluation(tur->xcode.context), player,
-        tprintf("You need %s to leave or disconnect first.",
-                game_object_name(tur->xcode.context->database, tur->gunner)));
+    mecha_notifyf(btech_context_evaluation(tur->xcode.context), player,
+                  "You need %s to leave or disconnect first.",
+                  game_object_name(tur->xcode.context->database, tur->gunner));
     return;
   }
   if (player == tur->gunner) {
@@ -323,14 +321,15 @@ void turret_initialize(DbRef player, void *data, char *buffer) {
                  "You grap firmer hold on the joystick..");
     return;
   }
-  mecha_notify_except(&(MechaNotificationExclusion){
-      .evaluation = btech_context_evaluation(tur->xcode.context),
-      .location = tur->mynum,
-      .actor = NOTHING,
-      .exception = tur->mynum,
-      .message =
-          tprintf("%s initialized as gunner.",
-                  game_object_name(tur->xcode.context->database, player))});
+  mecha_notify_exceptf(
+      &(MechaNotificationExclusion){
+          .evaluation = btech_context_evaluation(tur->xcode.context),
+          .location = tur->mynum,
+          .actor = NOTHING,
+          .exception = tur->mynum,
+      },
+      "%s initialized as gunner.",
+      game_object_name(tur->xcode.context->database, player));
   tur->gunner = player;
 }
 
@@ -343,13 +342,14 @@ void turret_deinitialize(DbRef player, void *data, char *buffer) {
                  "You aren't gunner!");
     return;
   }
-  mecha_notify_except(&(MechaNotificationExclusion){
-      .evaluation = btech_context_evaluation(tur->xcode.context),
-      .location = tur->mynum,
-      .actor = NOTHING,
-      .exception = tur->mynum,
-      .message =
-          tprintf("%s deinitialized as gunner.",
-                  game_object_name(tur->xcode.context->database, player))});
+  mecha_notify_exceptf(
+      &(MechaNotificationExclusion){
+          .evaluation = btech_context_evaluation(tur->xcode.context),
+          .location = tur->mynum,
+          .actor = NOTHING,
+          .exception = tur->mynum,
+      },
+      "%s deinitialized as gunner.",
+      game_object_name(tur->xcode.context->database, player));
   tur->gunner = -1;
 }

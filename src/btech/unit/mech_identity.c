@@ -34,7 +34,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/move.h"
 #include "random.h"
@@ -43,6 +42,7 @@
 #include "weapon_catalogue_api.h"
 #include <math.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 #include <strings.h>
 
@@ -243,6 +243,7 @@ MapRealPosition map_vector_components(const MapPolarVector *vector) {
 }
 
 static int leave_hangar(BattleMap *map, Mech *mech) {
+  char message_buffer[128];
   Mech *car = NULL;
   DbRef mapob;
   MapObject *mapo;
@@ -257,11 +258,13 @@ static int leave_hangar(BattleMap *map, Mech *mech) {
     return 0;
   }
   mech_los_broadcast(mech, "has left the hangar.");
-  mech_rsetmapindex(GOD, (void *)mech,
-                    tprintf("%ld", map->map_object[TYPE_LEAVE]->obj));
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
+                 map->map_object[TYPE_LEAVE]->obj);
+  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
+                 map->map_object[TYPE_LEAVE]->obj);
   if (car)
-    mech_rsetmapindex(GOD, (void *)car,
-                      tprintf("%ld", map->map_object[TYPE_LEAVE]->obj));
+    mech_rsetmapindex(GOD, (void *)car, message_buffer);
   map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   if (mech->mapindex == mapob) {
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
@@ -286,14 +289,15 @@ static int leave_hangar(BattleMap *map, Mech *mech) {
       btech_context_find_object(mech->xcode.context, mech->mapindex), mech, 1);
   mech_printf(mech, MECHALL, "You have left %s.",
               structure_name(mech->xcode.context->database, mapo).text);
-  mech_rsetxy(GOD, (void *)mech, tprintf("%d %d", mapo->x, mapo->y));
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", mapo->x,
+                 mapo->y);
+  mech_rsetxy(GOD, (void *)mech, message_buffer);
   mech_continue_flying(mech);
   if (car)
     mech_position_mirror(car, mech, 0);
-  mech_los_broadcast(
-      mech, tprintf("has left %s at %d,%d.",
-                    structure_name(mech->xcode.context->database, mapo).text,
-                    ((mech)->pd.x), ((mech)->pd.y)));
+  mech_los_broadcastf(mech, "has left %s at %d,%d.",
+                      structure_name(mech->xcode.context->database, mapo).text,
+                      ((mech)->pd.x), ((mech)->pd.y));
   move_via_teleport(&(ObjectMovementRequest){
       .evaluation = btech_context_evaluation(mech->xcode.context),
       .object = mech->mynum,

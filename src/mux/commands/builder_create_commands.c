@@ -19,7 +19,6 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
 #include "mux/support/name_table.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/validation.h"
@@ -174,6 +173,7 @@ static void open_exit(const ExitCreationRequest *request) {
 }
 
 void do_open(CommandInvocation *invocation) {
+  char message_buffer[128];
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   int key = invocation->key;
@@ -211,12 +211,13 @@ void do_open(CommandInvocation *invocation) {
     destnum = parse_linkable_room(evaluation, &invocation->context->match,
                                   player, dest);
     if (destnum != NOTHING) {
+      (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", loc);
       open_exit(&(ExitCreationRequest){
           .evaluation = evaluation,
           .player = player,
           .location = destnum,
           .direction = command_invocation_vector_at(invocation, 1),
-          .destination = tprintf("%ld", loc)});
+          .destination = message_buffer});
     }
   }
 }
@@ -675,6 +676,7 @@ void do_clone(CommandInvocation *invocation) {
  */
 
 void do_pcreate(CommandInvocation *invocation) {
+  char message_buffer[LBUF_SIZE];
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   char *name = invocation->first;
@@ -684,16 +686,17 @@ void do_pcreate(CommandInvocation *invocation) {
   newplayer = create_player(&(PlayerCreationRequest){
       .evaluation = evaluation, .name = name, .password = pass});
   if (newplayer == NOTHING) {
-    notify_checked(evaluation, player, player,
-                   tprintf("Failure creating '%s'", name), MSG_ME);
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "Failure creating '%s'", name);
+    notify_checked(evaluation, player, player, message_buffer, MSG_ME);
     return;
   }
   move_object(evaluation, newplayer,
               invocation->context->world->configuration->start_room);
-  notify_checked(evaluation, player, player,
-                 tprintf("New player '%s' (#%ld) created with password '%s'",
-                         name, newplayer, pass),
-                 MSG_ME);
+  (void)snprintf(message_buffer, sizeof(message_buffer),
+                 "New player '%s' (#%ld) created with password '%s'", name,
+                 newplayer, pass);
+  notify_checked(evaluation, player, player, message_buffer, MSG_ME);
 
   STARTLOG(evaluation->log, LOG_PCREATES | LOG_WIZARD, "WIZ", "PCREA") {
     log_name(evaluation->log, newplayer);

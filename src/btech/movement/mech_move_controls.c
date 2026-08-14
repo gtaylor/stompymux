@@ -39,7 +39,6 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -534,9 +533,9 @@ void mech_vertical(DbRef player, void *data, char *buffer) {
     return;
   }
   if (mech_parseattributes(buffer, args, 1) != 1) {
-    mecha_notify(btech_context_evaluation(context), player,
-                 tprintf("Current vertical speed is %.2f KPH.",
-                         (double)mech_vertical_speed(mech)));
+    mecha_notifyf(btech_context_evaluation(context), player,
+                  "Current vertical speed is %.2f KPH.",
+                  (double)mech_vertical_speed(mech));
     return;
   }
   newspeed = strtof(args[0], nullptr);

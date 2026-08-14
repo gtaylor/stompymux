@@ -42,7 +42,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "special_object.h"
@@ -329,17 +328,17 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
 
 static void list_manifest(BtechContext *context, DbRef player, DbRef location,
                           char *filter) {
+  char message_buffer[LBUF_SIZE];
   if (*filter) {
-    list_matching(context, player,
-                  tprintf("Part listing for %s matching %s",
-                          game_object_name(context->database, location),
-                          filter),
-                  location, filter);
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "Part listing for %s matching %s",
+                   game_object_name(context->database, location), filter);
+    list_matching(context, player, message_buffer, location, filter);
   } else {
-    list_matching(context, player,
-                  tprintf("Part listing for %s",
-                          game_object_name(context->database, location)),
-                  location, nullptr);
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "Part listing for %s",
+                   game_object_name(context->database, location));
+    list_matching(context, player, message_buffer, location, nullptr);
   }
 }
 
@@ -515,16 +514,15 @@ static void manifest_change(const ManifestChangeRequest *change) {
     return;
   }
   if (!selection.selected) {
-    mecha_notify(btech_context_evaluation(context), PLAYER,
-                 tprintf("Nothing matches '%s'!", args[0]));
+    mecha_notifyf(btech_context_evaluation(context), PLAYER,
+                  "Nothing matches '%s'!", args[0]);
     return;
   }
   if (!MORT && count > 20 && PLAYER != GOD) {
-    mecha_notify(
-        btech_context_evaluation(context), PLAYER,
-        tprintf("Wizards can't add more than 20 different objtypes at a "
-                "time. ('%s' matches: %d)",
-                args[0], count));
+    mecha_notifyf(btech_context_evaluation(context), PLAYER,
+                  "Wizards can't add more than 20 different objtypes at a "
+                  "time. ('%s' matches: %d)",
+                  args[0], count);
     return;
   }
   if (MORT) {

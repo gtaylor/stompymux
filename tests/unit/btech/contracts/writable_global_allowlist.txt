@@ -1,6 +1,2 @@
-# Legacy formatting scratch storage requires a dedicated API and call-site
-# conversion round.
-src/mux/support/formatting.c:tprintf:buff
-
 # POSIX sigaction has no user-data field, so this bridges the process signal service.
 src/mux/server/signals.c:<file>:active_signal_handlers

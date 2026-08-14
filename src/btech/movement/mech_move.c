@@ -44,7 +44,6 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -228,10 +227,10 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
     return;
   }
   if (f_mech_speed < f_min_speed) {
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                 tprintf("You are going too slow to perform a bootlegger! The "
-                         "required minimum speed is %4.1f KPH.",
-                         (double)f_min_speed));
+    mecha_notifyf(btech_context_evaluation(mech_context(mech)), player,
+                  "You are going too slow to perform a bootlegger! The "
+                  "required minimum speed is %4.1f KPH.",
+                  (double)f_min_speed);
     return;
   }
 

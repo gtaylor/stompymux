@@ -26,7 +26,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mycool.h"
 #include "registry_api.h"
 #include "repair_job.h"
@@ -175,6 +174,7 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
 }
 
 void tech_repairs(DbRef player, Mech *mech, char *buffer) {
+  char message_buffer[LBUF_SIZE];
   int i;
   CoolMenu *c = nullptr;
   BtechContext *context = mech_context(mech);
@@ -204,10 +204,13 @@ void tech_repairs(DbRef player, Mech *mech, char *buffer) {
     return;
   }
   cool_menu_add_line(&c);
-  cool_menu_add_centered(&c, tprintf("Repairs/Scrapping in progress (%s)",
-                                     mech_display_id(mech).text));
-  cool_menu_add_text(
-      &c, tprintf("%-5s %-4s %s", "Plr", "Time", "Location + Description"));
+  (void)snprintf(message_buffer, sizeof(message_buffer),
+                 "Repairs/Scrapping in progress (%s)",
+                 mech_display_id(mech).text);
+  cool_menu_add_centered(&c, message_buffer);
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%-5s %-4s %s", "Plr",
+                 "Time", "Location + Description");
+  cool_menu_add_text(&c, message_buffer);
   cool_menu_add_line(&c);
   for (i = FIRST_TECH_EVENT; i <= LAST_TECH_EVENT; i++)
     mech_event_visit(mech, i, describe_repairs, (void *)&c);

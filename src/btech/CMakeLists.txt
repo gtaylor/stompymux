@@ -250,6 +250,7 @@ set(BTECH_SOURCES
   ui/mech_base_entry.c
   ui/mech_broadcast.c
   ui/mech_notify.c
+  ui/formatted_notifications.c
   ui/mech_notify_radio.c
   ui/mech_notify_radio_config.c
   ui/mech_notify_weapon_text.c
@@ -299,6 +300,7 @@ set(BTECH_SOURCES
   unit/template_commands.c
   unit/template_flags.c
   unit/template_format.c
+  unit/template_critical_format.c
   unit/template_internals.c
   unit/template_inventory.c
   unit/template_load.c

@@ -1,7 +1,9 @@
 #include "equipment_types.h"
 #include "mech_api_types.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
+#include "mux/support/alloc.h"
 #include <stdint.h>
+#include <stdio.h>
 #include <time.h>
 /* Implements BattleTech movement mechanics for aerospace move. */
 #define MIN_TAKEOFF_SPEED 3
@@ -48,7 +50,6 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -300,6 +301,7 @@ void aero_takeoff(DbRef player, void *data, const char *buffer) {
                       (void *)j ? j : land_data_entry(i)->launchtime);
 }
 void dropship_exhaust_blast(const DropshipExhaustBlastRequest *request) {
+  char message_buffer[LBUF_SIZE];
   Mech *mech = request->dropship;
   const char *hitmsg = request->direct_message;
   const char *hitmsg1 = request->direct_observer_message;
@@ -336,9 +338,9 @@ void dropship_exhaust_blast(const DropshipExhaustBlastRequest *request) {
       case BATTLE_TERRAIN_LIGHT_FOREST:
       case BATTLE_TERRAIN_HEAVY_FOREST:
         if (!find_decorations(map, x1, y1)) {
-          hex_los_broadcast(
-              map, x1, y1,
-              tprintf("[fg=red bold]The trees in $h %s[reset]", treehitmsg));
+          (void)snprintf(message_buffer, sizeof(message_buffer),
+                         "[fg=red bold]The trees in $h %s[reset]", treehitmsg);
+          hex_los_broadcast(map, x1, y1, message_buffer);
           if ((DAMAGE / d) > 100) {
             map_terrain_set(map, x1, y1, BATTLE_TERRAIN_ROUGH);
           } else {

@@ -9,9 +9,9 @@
 #include "mech_partnames_api.h"
 #include "mech_utils_api.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "section_types.h"
 #include "template_api.h"
+#include "template_format_internal.h"
 #include "template_implementation.h"
 #include "weapon_catalogue_api.h"
 #include <limits.h>
@@ -316,6 +316,10 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
   w_ammo_modes = mech_critical_ammo_mode(mech, x, y);
 
   if (equipment_is_weapon(mech_critical_part_type(mech, x, y))) {
+    char brand[16] = {0};
+    if (mech->xcode.context->configuration->btech_parts)
+      (void)snprintf(brand, sizeof(brand), "%d ",
+                     mech_critical_brand(mech, x, y));
     (void)fprintf(
         fp, "    %s		  { %s - %s %s}\n", crit,
         get_parts_vlong_name(mech->xcode.context,
@@ -334,9 +338,7 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
                   .delimiter = '|',
                   .buffer = (char[BTECH_TEXT_CAPACITY]){0}})
             : "-",
-        !mech->xcode.context->configuration->btech_parts
-            ? ""
-            : tprintf("%d ", mech_critical_brand(mech, x, y)));
+        brand);
   } else if (equipment_is_ammunition(mech_critical_part_type(mech, x, y))) {
     (void)fprintf(
         fp, "    %s		  { %s %d %s - }\n", crit,
@@ -363,15 +365,14 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
                   get_parts_vlong_name(mech->xcode.context,
                                        mech_critical_part_type(mech, x, y), 0));
   } else {
+    const TemplateCriticalMetadata METADATA = template_critical_metadata_format(
+        mech_critical_data(mech, x, y),
+        mech->xcode.context->configuration->btech_parts,
+        mech_critical_brand(mech, x, y));
     (void)fprintf(fp, "    %s		  { %s %s - %s}\n", crit,
                   get_parts_vlong_name(mech->xcode.context,
                                        mech_critical_part_type(mech, x, y), 0),
-                  mech_critical_data(mech, x, y)
-                      ? tprintf("%d", mech_critical_data(mech, x, y))
-                      : "-",
-                  !mech->xcode.context->configuration->btech_parts
-                      ? ""
-                      : tprintf("%d ", mech_critical_brand(mech, x, y)));
+                  METADATA.data, METADATA.brand);
   }
   return (y1 - y + 1);
 }

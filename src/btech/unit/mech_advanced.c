@@ -27,7 +27,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "random.h"
 #include "registry_api.h"
@@ -182,8 +181,8 @@ void mech_usebin(DbRef player, Mech *mech, char *buffer) {
   }
 
   if (!parse_int_checked(args[0], &w_weap_num)) {
-    mecha_notify(btech_context_evaluation(mech->xcode.context), player,
-                 tprintf("Invalid value: %s", args[0]));
+    mecha_notifyf(btech_context_evaluation(mech->xcode.context), player,
+                  "Invalid value: %s", args[0]);
     return;
   }
   WeaponNumberLookupResult lookup = weapon_number_find(
@@ -251,10 +250,9 @@ void mech_usebin(DbRef player, Mech *mech, char *buffer) {
   w_cur_loc = mech_critical_desired_ammo_section(mech, w_section, w_crit_slot);
 
   if (w_cur_loc == w_loc) {
-    mecha_notify(
-        btech_context_evaluation(mech->xcode.context), player,
-        tprintf("Prefered ammo source already set to %s for weapon #%d",
-                str_location, w_weap_num));
+    mecha_notifyf(btech_context_evaluation(mech->xcode.context), player,
+                  "Prefered ammo source already set to %s for weapon #%d",
+                  str_location, w_weap_num);
     return;
   }
 

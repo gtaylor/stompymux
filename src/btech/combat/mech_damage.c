@@ -1,5 +1,6 @@
 #include "equipment_types.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
+#include "mux/support/alloc.h"
 /* Implements BattleTech combat mechanics for unit damage. */
 
 #include <stdio.h>
@@ -39,12 +40,12 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "pcombat_api.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 void mech_damage_apply(const MechDamageRequest *request) {
+  char message_buffer[LBUF_SIZE];
   Mech *wounded = request->target;
   Mech *attacker = request->attacker;
   const bool LOS = request->line_of_sight;
@@ -437,21 +438,21 @@ void mech_damage_apply(const MechDamageRequest *request) {
      * and pick the name out from there */
     if (btech_context_stat_engine_dbref(mech_context(wounded)) > 0 &&
         W_WEAP_INDX != -1) {
-      notify_checked(
-          btech_context_evaluation(mech_context(wounded)),
-          btech_context_stat_engine_dbref(mech_context(wounded)), GOD,
-          tprintf("STATHIT|#%ld|#%ld|#%ld|%s|%s|#%ld|#%ld|%d|%s%s|%s|%d|%d",
-                  mech_map_dbref(attacker), mech_pilot_dbref(attacker),
-                  mech_pilot_dbref(wounded), mech_model_reference(attacker),
-                  mech_model_reference(wounded), mech_dbref(attacker),
-                  mech_dbref(wounded), BTH, isrear ? "Rear " : "",
-                  hitloc != -1 ? location_buff : "NONE",
-                  weapon_catalogue_name(W_WEAP_INDX), damage - int_damage,
-                  mech_section_internal(wounded, hitloc) < int_damage
-                      ? int_damage - (int_damage -
-                                      mech_section_internal(wounded, hitloc))
-                      : int_damage),
-          MSG_ME_ALL | MSG_F_DOWN);
+      (void)snprintf(message_buffer, sizeof(message_buffer),
+                     "STATHIT|#%ld|#%ld|#%ld|%s|%s|#%ld|#%ld|%d|%s%s|%s|%d|%d",
+                     mech_map_dbref(attacker), mech_pilot_dbref(attacker),
+                     mech_pilot_dbref(wounded), mech_model_reference(attacker),
+                     mech_model_reference(wounded), mech_dbref(attacker),
+                     mech_dbref(wounded), BTH, isrear ? "Rear " : "",
+                     hitloc != -1 ? location_buff : "NONE",
+                     weapon_catalogue_name(W_WEAP_INDX), damage - int_damage,
+                     mech_section_internal(wounded, hitloc) < int_damage
+                         ? int_damage - (int_damage -
+                                         mech_section_internal(wounded, hitloc))
+                         : int_damage);
+      notify_checked(btech_context_evaluation(mech_context(wounded)),
+                     btech_context_stat_engine_dbref(mech_context(wounded)),
+                     GOD, message_buffer, MSG_ME_ALL | MSG_F_DOWN);
     }
 
     if (int_damage >= 0)

@@ -232,6 +232,30 @@ target_include_directories(btech_caller_control_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_caller_control COMMAND btech_caller_control_test)
 
+add_executable(btech_formatted_notifications_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/ui/btech_formatted_notifications.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/ui/formatted_notifications.c)
+target_link_libraries(btech_formatted_notifications_test PRIVATE btmux_options)
+target_include_directories(btech_formatted_notifications_test PRIVATE
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_formatted_notifications
+  COMMAND btech_formatted_notifications_test)
+
+add_executable(btech_template_critical_format_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/unit/btech_template_critical_format.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/template_critical_format.c)
+target_link_libraries(btech_template_critical_format_test PRIVATE btmux_options)
+target_include_directories(btech_template_critical_format_test PRIVATE
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_template_critical_format
+  COMMAND btech_template_critical_format_test)
+
 add_executable(btech_repair_payload_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_payload.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c)
 target_link_libraries(btech_repair_payload_test PRIVATE btmux_options)

@@ -314,8 +314,8 @@ void list_xcodevalues(EvaluationContext *context, DbRef player) {
                "Xcode attributes accessible thru get/setxcodevalue:");
   for (size_t index = 0; index < xcode_descriptor_count(); ++index) {
     const GMV *descriptor = xcode_descriptor_at(index);
-    mecha_notify(context, player,
-                 tprintf("\t%d\t%s", descriptor->gtype, descriptor->name));
+    mecha_notifyf(context, player, "\t%d\t%s", descriptor->gtype,
+                  descriptor->name);
   }
 }
 BtechScriptResult fun_btdesignex(BtechScriptCall *call) {

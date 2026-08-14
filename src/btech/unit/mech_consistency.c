@@ -20,7 +20,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mycool.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -394,12 +393,14 @@ static float cargo_space_divisor(const Mech *mech) {
 
 static void weight_entry_add(CoolMenu **menu, int interactive, int *total,
                              const char *text, int weight) {
+  char message_buffer[128];
   if (!weight)
     return;
   if (interactive > 0) {
     cool_menu_add(menu, text);
-    cool_menu_add(menu,
-                  tprintf("      %6.2f", (double)((float)weight / 1024.0F)));
+    (void)snprintf(message_buffer, sizeof(message_buffer), "      %6.2f",
+                   (double)((float)weight / 1024.0F));
+    cool_menu_add(menu, message_buffer);
   }
   *total += weight;
 }
@@ -407,16 +408,19 @@ static void weight_entry_add(CoolMenu **menu, int interactive, int *total,
 static void weight_counted_entry_add(CoolMenu **menu, int interactive,
                                      int *total, const char *text, int count,
                                      int weight) {
+  char message_buffer[128];
   if (!weight)
     return;
   if (interactive > 0) {
     cool_menu_add(menu, text);
-    cool_menu_add(
-        menu, tprintf("%5d %6.2f", count, (double)((float)weight / 1024.0F)));
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%5d %6.2f", count,
+                   (double)((float)weight / 1024.0F));
+    cool_menu_add(menu, message_buffer);
   }
   *total += weight;
 }
 int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
+  char message_buffer[LBUF_SIZE];
   PartPile pile;
   int i;
   int j;
@@ -439,8 +443,9 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
   memset(&pile, 0, sizeof(pile));
   if (interactive > 0) {
     cool_menu_add_line(&c);
-    cool_menu_add_centered(
-        &c, tprintf("Weight totals for %s", mech_display_id(mech).text));
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "Weight totals for %s", mech_display_id(mech).text);
+    cool_menu_add_centered(&c, message_buffer);
     cool_menu_add_line(&c);
   }
   const InternalStructureTotals INTERNALS = internal_structure_totals(mech);
@@ -543,8 +548,7 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
                    ((((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size)));
   } else if (interactive > 0) {
     cool_menu_add_centered(
-        &c,
-        tprintf("WARNING: HS count may be off, due to certain odd things."));
+        &c, "WARNING: HS count may be off, due to certain odd things.");
   }
   for (i = 1; i < NUM_ITEMS_M; i++) {
     if (part_pile_get(&pile, i)) {
@@ -566,20 +570,21 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
     }
   }
   if (((mech)->ud.cargospace)) {
-    weight_entry_add(&c, interactive, &total,
-                     tprintf("CargoSpace (%.2ft)",
-                             (double)((float)mech->ud.cargospace / 100.0F)),
+    (void)snprintf(message_buffer, sizeof(message_buffer), "CargoSpace (%.2ft)",
+                   (double)((float)mech->ud.cargospace / 100.0F));
+    weight_entry_add(&c, interactive, &total, message_buffer,
                      clamp_float_to_int(((float)mech->ud.cargospace /
                                          cargo_space_divisor(mech)) *
                                         1024.0F));
   }
   if (interactive > 0) {
     cool_menu_add_line(&c);
-    cool_menu_add_text(
-        &c, tprintf("[fg=green]Total: %s%.1f tons (offset: %.1f)[reset]",
-                    (total / 1024) > ((mech)->ud.tons) ? "[fg=red bold]" : "",
-                    (double)((float)total / 1024.0F),
-                    (double)((float)mech->ud.tons - ((float)total / 1024.0F))));
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "[fg=green]Total: %s%.1f tons (offset: %.1f)[reset]",
+                   (total / 1024) > ((mech)->ud.tons) ? "[fg=red bold]" : "",
+                   (double)((float)total / 1024.0F),
+                   (double)((float)mech->ud.tons - ((float)total / 1024.0F)));
+    cool_menu_add_text(&c, message_buffer);
     cool_menu_add_line(&c);
     show_cool_menu(btech_context_evaluation(mech->xcode.context), player, c);
   }
@@ -599,6 +604,7 @@ static int tank_in_pieces(Mech *mech) {
 }
 
 int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
+  char message_buffer[LBUF_SIZE];
   PartPile pile;
   int i;
   int j;
@@ -624,8 +630,9 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
   ints_tot = INTERNALS.original;
   if (interactive > 0) {
     cool_menu_add_line(&c);
-    cool_menu_add_centered(
-        &c, tprintf("Weight totals for %s", mech_display_id(mech).text));
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "Weight totals for %s", mech_display_id(mech).text);
+    cool_menu_add_centered(&c, message_buffer);
     cool_menu_add_line(&c);
   }
   for (i = 0; i < NUM_SECTIONS; i++) {
@@ -724,9 +731,9 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
     }
   }
   if (((mech)->ud.cargospace)) {
-    weight_entry_add(&c, interactive, &total,
-                     tprintf("CargoSpace (%.2ft)",
-                             (double)((float)mech->ud.cargospace / 100.0F)),
+    (void)snprintf(message_buffer, sizeof(message_buffer), "CargoSpace (%.2ft)",
+                   (double)((float)mech->ud.cargospace / 100.0F));
+    weight_entry_add(&c, interactive, &total, message_buffer,
                      clamp_float_to_int(((float)mech->ud.cargospace /
                                          cargo_space_divisor(mech)) *
                                         1024.0F));
@@ -734,11 +741,12 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
 
   if (interactive > 0) {
     cool_menu_add_line(&c);
-    cool_menu_add_text(
-        &c, tprintf("[fg=green]Total: %s%.1f tons (offset: %.1f)[reset]",
-                    (total / 1024) > ((mech)->ud.tons) ? "[fg=red bold]" : "",
-                    (double)((float)total / 1024.0F),
-                    (double)((float)mech->ud.tons - ((float)total / 1024.0F))));
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "[fg=green]Total: %s%.1f tons (offset: %.1f)[reset]",
+                   (total / 1024) > ((mech)->ud.tons) ? "[fg=red bold]" : "",
+                   (double)((float)total / 1024.0F),
+                   (double)((float)mech->ud.tons - ((float)total / 1024.0F)));
+    cool_menu_add_text(&c, message_buffer);
     cool_menu_add_line(&c);
     show_cool_menu(btech_context_evaluation(mech->xcode.context), player, c);
   }

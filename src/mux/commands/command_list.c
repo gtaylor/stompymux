@@ -31,7 +31,6 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/name_table.h"
 #include "mux/world/player.h"
 #include "mux/world/world_context.h"
@@ -273,26 +272,24 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
   raw_notify(evaluation, player,
              "The '@examine' command lists the flag names for the object's "
              "flags.");
-  raw_notify(
+  notify_printf(
       evaluation, player,
-      tprintf("Players may have at most %d commands in the queue at one time.",
-              configuration->command_queue_limit));
+      "Players may have at most %d commands in the queue at one time.",
+      configuration->command_queue_limit);
   if (!is_wizard(evaluation->world->database, player))
     return;
 
-  raw_notify(
+  notify_printf(
       evaluation, player,
-      tprintf(
-          "%d commands are run from the queue when there is no net activity.",
-          configuration->command_queue_idle_chunk));
-  raw_notify(
+      "%d commands are run from the queue when there is no net activity.",
+      configuration->command_queue_idle_chunk);
+  notify_printf(
       evaluation, player,
-      tprintf("%d commands are run from the queue when there is net activity.",
-              configuration->command_queue_active_chunk));
-  raw_notify(evaluation, player,
-             tprintf("The %s cache is %d entries wide by %d entries deep.",
-                     CACHING, configuration->cache_width,
-                     configuration->cache_depth));
+      "%d commands are run from the queue when there is net activity.",
+      configuration->command_queue_active_chunk);
+  notify_printf(evaluation, player,
+                "The %s cache is %d entries wide by %d entries deep.", CACHING,
+                configuration->cache_width, configuration->cache_depth);
   if (configuration->cache_names)
     raw_notify(evaluation, player, "A seperate name cache is used.");
   if (configuration->cache_trim)
@@ -304,12 +301,11 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
                "Database dumps are performed by a fork()ed process.");
   }
   if (configuration->max_players >= 0)
-    raw_notify(evaluation, player,
-               tprintf("There may be at most %d players logged in at once.",
-                       configuration->max_players));
-  raw_notify(evaluation, player,
-             tprintf("The head of the object freelist is #%ld.",
-                     runtime->world->database->freelist));
+    notify_printf(evaluation, player,
+                  "There may be at most %d players logged in at once.",
+                  configuration->max_players);
+  notify_printf(evaluation, player, "The head of the object freelist is #%ld.",
+                runtime->world->database->freelist);
 
   (void)snprintf(buff, MBUF_SIZE,
                  "Intervals: Dump...%d  Clean...%d  Idlecheck...%d",
@@ -397,37 +393,27 @@ static void list_process(EvaluationContext *evaluation,
    * Go display everything
    */
 
-  raw_notify(
-      evaluation, player,
-      tprintf("Process ID:  %10d        %10d bytes per page", pid, psize));
-  raw_notify(evaluation, player,
-             tprintf("Time used:   %10ld user   %10ld sys",
-                     usage.ru_utime.tv_sec, usage.ru_stime.tv_sec));
+  notify_printf(evaluation, player,
+                "Process ID:  %10d        %10d bytes per page", pid, psize);
+  notify_printf(evaluation, player, "Time used:   %10ld user   %10ld sys",
+                usage.ru_utime.tv_sec, usage.ru_stime.tv_sec);
 
-  /*
-   * raw_notify(evaluation, player,
-   * * tprintf("Resident mem:%10d shared %10d private%10d stack",
-   * * ixrss, idrss, isrss));
-   */
-  raw_notify(evaluation, player,
-             tprintf("Integral mem:%10ld shared %10ld private%10ld stack",
-                     usage.ru_ixrss, usage.ru_idrss, usage.ru_isrss));
-  raw_notify(evaluation, player,
-             tprintf("Max res mem: %10ld pages  %10ld bytes", usage.ru_maxrss,
-                     (usage.ru_maxrss * psize)));
-  raw_notify(evaluation, player,
-             tprintf("Page faults: %10ld hard   %10ld soft   %10ld swapouts",
-                     usage.ru_majflt, usage.ru_minflt, usage.ru_nswap));
-  raw_notify(evaluation, player,
-             tprintf("Disk I/O:    %10ld reads  %10ld writes", usage.ru_inblock,
-                     usage.ru_oublock));
-  raw_notify(evaluation, player,
-             tprintf("Network I/O: %10ld in     %10ld out", usage.ru_msgrcv,
-                     usage.ru_msgsnd));
-  raw_notify(evaluation, player,
-             tprintf("Context swi: %10ld vol    %10ld forced %10ld sigs",
-                     usage.ru_nvcsw, usage.ru_nivcsw, usage.ru_nsignals));
-  raw_notify(evaluation, player, tprintf("Descs avail: %10d", maxfds));
+  notify_printf(evaluation, player,
+                "Integral mem:%10ld shared %10ld private%10ld stack",
+                usage.ru_ixrss, usage.ru_idrss, usage.ru_isrss);
+  notify_printf(evaluation, player, "Max res mem: %10ld pages  %10ld bytes",
+                usage.ru_maxrss, (usage.ru_maxrss * psize));
+  notify_printf(evaluation, player,
+                "Page faults: %10ld hard   %10ld soft   %10ld swapouts",
+                usage.ru_majflt, usage.ru_minflt, usage.ru_nswap);
+  notify_printf(evaluation, player, "Disk I/O:    %10ld reads  %10ld writes",
+                usage.ru_inblock, usage.ru_oublock);
+  notify_printf(evaluation, player, "Network I/O: %10ld in     %10ld out",
+                usage.ru_msgrcv, usage.ru_msgsnd);
+  notify_printf(evaluation, player,
+                "Context swi: %10ld vol    %10ld forced %10ld sigs",
+                usage.ru_nvcsw, usage.ru_nivcsw, usage.ru_nsignals);
+  notify_printf(evaluation, player, "Descs avail: %10d", maxfds);
 }
 
 /*

@@ -385,11 +385,6 @@ void notify_printf(EvaluationContext *evaluation, DbRef player,
   (void)player;
   (void)format;
 }
-char *tprintf(const char *format, ...) {
-  (void)format;
-  static char text[] = "trace";
-  return text;
-}
 void btech_channel_send(BtechContext *value, BtechChannel channel,
                         const char *format, ...) {
   (void)value;

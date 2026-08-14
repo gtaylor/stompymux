@@ -45,7 +45,6 @@
 #include "mux/lua/lua_runtime.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "template_api.h"
@@ -162,18 +161,17 @@ static void mine_explode(const MineExplosion *explosion) {
       case MINE_COMMAND_DETONATION:
         break;
       case MINE_STEP:
-        mech_los_broadcast(
-            mech, tprintf("moves to %d,%d, and triggers a mine!", x, y));
+        mech_los_broadcastf(mech, "moves to %d,%d, and triggers a mine!", x, y);
         mech_printf(mech, MECHALL, "As you move to %d,%d, you trigger a mine!",
                     x, y);
         break;
       case MINE_LAND:
-        mech_los_broadcast(mech, tprintf("triggers a mine!"));
+        mech_los_broadcast(mech, "triggers a mine!");
         mech_notify(mech, MECHALL, "You trigger a mine!");
         break;
       case MINE_DROP:
       case MINE_FALL:
-        mech_los_broadcast(mech, tprintf("triggers a mine!"));
+        mech_los_broadcast(mech, "triggers a mine!");
         mech_notify(mech, MECHALL, "You trigger a mine!");
         break;
       }

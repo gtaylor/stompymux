@@ -27,7 +27,6 @@
 #include "mux/objects/db.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "repair_job.h"
 #include "section_types.h"
@@ -181,18 +180,16 @@ void tech_reattach(DbRef player, void *data, char *buffer) {
                                    cargo_equipment_index(S_ELECTRONIC), 0);
 
   if (internal_stock < mech_section_original_internal(mech, loc)) {
-    mecha_notify(
-        btech_context_evaluation(context), player,
-        tprintf("Not enough %ss in stock. You need %d more.",
-                part_name(context, tech_proper_internal_part(mech), 0).text,
-                mech_section_original_internal(mech, loc) - internal_stock));
+    mecha_notifyf(btech_context_evaluation(context), player,
+                  "Not enough %ss in stock. You need %d more.",
+                  part_name(context, tech_proper_internal_part(mech), 0).text,
+                  mech_section_original_internal(mech, loc) - internal_stock);
     return;
   }
   if (electric_stock < mech_section_original_internal(mech, loc)) {
-    mecha_notify(
-        btech_context_evaluation(context), player,
-        tprintf("Not enough Electrics in stock. You need %d more.",
-                mech_section_original_internal(mech, loc) - electric_stock));
+    mecha_notifyf(btech_context_evaluation(context), player,
+                  "Not enough Electrics in stock. You need %d more.",
+                  mech_section_original_internal(mech, loc) - electric_stock);
     return;
   }
 
@@ -290,19 +287,18 @@ void tech_replacesuit(DbRef player, void *data, char *buffer) {
   w_suits = bsuit_member_count(mech);
 
   if (mech_maximum_battle_suits(mech) <= w_suits) {
-    mecha_notify(
-        btech_context_evaluation(context), player,
-        tprintf("This %s is already full! This %s only consists of %d suits!",
-                bsuit_formation_name_lowercase(mech),
-                bsuit_formation_name_lowercase(mech),
-                mech_maximum_battle_suits(mech)));
+    mecha_notifyf(btech_context_evaluation(context), player,
+                  "This %s is already full! This %s only consists of %d suits!",
+                  bsuit_formation_name_lowercase(mech),
+                  bsuit_formation_name_lowercase(mech),
+                  mech_maximum_battle_suits(mech));
     return;
   }
   if ((loc >= mech_maximum_battle_suits(mech)) || (loc < 0)) {
-    mecha_notify(btech_context_evaluation(context), player,
-                 tprintf("Invalid suit! This %s only consists of %d suits!",
-                         bsuit_formation_name_lowercase(mech),
-                         mech_maximum_battle_suits(mech)));
+    mecha_notifyf(btech_context_evaluation(context), player,
+                  "Invalid suit! This %s only consists of %d suits!",
+                  bsuit_formation_name_lowercase(mech),
+                  mech_maximum_battle_suits(mech));
     return;
   }
 

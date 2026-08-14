@@ -25,7 +25,6 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -611,18 +610,18 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
     *range_separator = '\0';
     if (!parse_int_checked(buffer, &i1) ||
         !parse_int_checked(checked_string_suffix(range_separator, 1), &i2)) {
-      mecha_notify(btech_context_evaluation(mech->xcode.context), PLAYER,
-                   tprintf("Invalid value: %s", buffer));
+      mecha_notifyf(btech_context_evaluation(mech->xcode.context), PLAYER,
+                    "Invalid value: %s", buffer);
       return;
     }
     if (i1 < 0 || i1 >= MAX_WEAPONS_PER_MECH) {
-      mecha_notify(btech_context_evaluation(mech->xcode.context), PLAYER,
-                   tprintf("Invalid first number in range (%d)", i1));
+      mecha_notifyf(btech_context_evaluation(mech->xcode.context), PLAYER,
+                    "Invalid first number in range (%d)", i1);
       return;
     }
     if (i2 < 0 || i2 >= MAX_WEAPONS_PER_MECH) {
-      mecha_notify(btech_context_evaluation(mech->xcode.context), PLAYER,
-                   tprintf("Invalid second number in range (%d)", i2));
+      mecha_notifyf(btech_context_evaluation(mech->xcode.context), PLAYER,
+                    "Invalid second number in range (%d)", i2);
       return;
     }
     if (i1 > i2) {
@@ -632,29 +631,29 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
     }
   } else {
     if (!parse_int_checked(buffer, &i1)) {
-      mecha_notify(btech_context_evaluation(mech->xcode.context), PLAYER,
-                   tprintf("Invalid value: %s", buffer));
+      mecha_notifyf(btech_context_evaluation(mech->xcode.context), PLAYER,
+                    "Invalid value: %s", buffer);
       return;
     }
     if (i1 < 0 || i1 >= MAX_WEAPONS_PER_MECH) {
-      mecha_notify(btech_context_evaluation(mech->xcode.context), PLAYER,
-                   tprintf("Invalid weapon number: %d", i1));
+      mecha_notifyf(btech_context_evaluation(mech->xcode.context), PLAYER,
+                    "Invalid weapon number: %d", i1);
       return;
     }
     i2 = i1;
   }
   if (request->mode / 2) {
     if (i2 >= NUM_TICS) {
-      mecha_notify(btech_context_evaluation(mech->xcode.context), PLAYER,
-                   tprintf("There are only %d tics!", i2));
+      mecha_notifyf(btech_context_evaluation(mech->xcode.context), PLAYER,
+                    "There are only %d tics!", i2);
       return;
     }
   } else {
     WeaponNumberLookupResult lookup = weapon_number_find(
         &(WeaponNumberLookupRequest){.mech = mech, .number = i2});
     if (!lookup.found) {
-      mecha_notify(btech_context_evaluation(mech->xcode.context), PLAYER,
-                   tprintf("Error: the mech doesn't HAVE %d weapons!", i2 + 1));
+      mecha_notifyf(btech_context_evaluation(mech->xcode.context), PLAYER,
+                    "Error: the mech doesn't HAVE %d weapons!", i2 + 1);
       return;
     }
   }

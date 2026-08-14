@@ -145,6 +145,7 @@ static char *trimmed_name(GameDatabase *database, DbRef player,
 }
 
 static void dump_users(Descriptor *e, const char *match) {
+  char message_buffer[LBUF_SIZE];
   CommandRuntime *runtime = descriptor_runtime(e);
   Descriptor *d;
   DescriptorIterator iterator =
@@ -208,23 +209,24 @@ static void dump_users(Descriptor *e, const char *match) {
     *(char *)checked_storage_at(slist, sizeof(slist), sizeof(char),
                                 slist_length) = '\0';
 
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%s@%s", d->username,
+                   d->addr);
     (void)snprintf(
         buf, LBUF_SIZE, "%-16s%10s %5s%-3s#%6ld %7d %-25s\r\n",
         trimmed_name(runtime->world->database, d->player, name_text),
         time_format_1(runtime->clock->now - d->connected_at, connected_text),
         time_format_2(runtime->clock->now - d->last_time, idle_text), flist,
         game_object_location(runtime->world->database, d->player),
-        d->command_count,
-        (d->username[0] != '\0') ? tprintf("%s@%s", d->username, d->addr)
-                                 : d->addr);
+        d->command_count, (d->username[0] != '\0') ? message_buffer : d->addr);
     descriptor_queue_string(e, buf);
   }
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%d",
+                 runtime->world->configuration->max_players);
   (void)snprintf(
       buf, LBUF_SIZE, "%d Player%slogged in, %d record, %s maximum.\r\n", count,
       (count == 1) ? " " : "s ", *descriptor_runtime(e)->record_players,
-      (runtime->world->configuration->max_players == -1)
-          ? "no"
-          : tprintf("%d", runtime->world->configuration->max_players));
+      (runtime->world->configuration->max_players == -1) ? "no"
+                                                         : message_buffer);
 
   descriptor_queue_string(e, buf);
 
@@ -232,6 +234,7 @@ static void dump_users(Descriptor *e, const char *match) {
 }
 
 static void dump_sessions(Descriptor *e, const char *match) {
+  char message_buffer[128];
   CommandRuntime *runtime = descriptor_runtime(e);
   Descriptor *d;
   DescriptorIterator iterator =
@@ -285,12 +288,13 @@ static void dump_sessions(Descriptor *e, const char *match) {
     descriptor_queue_string(e, buf);
   }
 
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%d",
+                 runtime->world->configuration->max_players);
   (void)snprintf(
       buf, LBUF_SIZE, "%d Player%slogged in, %d record, %s maximum.\r\n", count,
       (count == 1) ? " " : "s ", *descriptor_runtime(e)->record_players,
-      (runtime->world->configuration->max_players == -1)
-          ? "no"
-          : tprintf("%d", runtime->world->configuration->max_players));
+      (runtime->world->configuration->max_players == -1) ? "no"
+                                                         : message_buffer);
   descriptor_queue_string(e, buf);
   free_lbuf(buf);
 }

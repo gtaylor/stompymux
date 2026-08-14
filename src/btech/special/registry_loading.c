@@ -8,6 +8,7 @@
 #include "mech_status_api.h" // IWYU pragma: keep
 #include "mux/server/log.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
+#include <stdio.h>
 
 /* Implements loading for BattleTech special objects. */
 
@@ -31,7 +32,6 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/doubly_linked_list.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "special_object.h"
 #include "weapon_settings.h"
@@ -125,6 +125,7 @@ static int load_update2(const RedBlackTreeVisitCall *call) {
 }
 
 static int load_update4(const RedBlackTreeVisitCall *call) {
+  char message_buffer[128];
   void *data = call->data;
   void *arg = call->context;
   BtechSpecialObject *const XCODE_OBJ = data;
@@ -139,11 +140,12 @@ static int load_update4(const RedBlackTreeVisitCall *call) {
       /* Ugly kludge */
       map = btech_context_get_map(
           CONTEXT, game_object_location(CONTEXT->database, mech_dbref(MECH)));
-      if (map)
-        mech_rsetmapindex(
-            GOD, MECH,
-            tprintf("%ld",
-                    game_object_location(CONTEXT->database, mech_dbref(MECH))));
+      if (map) {
+        (void)snprintf(
+            message_buffer, sizeof(message_buffer), "%ld",
+            game_object_location(CONTEXT->database, mech_dbref(MECH)));
+        mech_rsetmapindex(GOD, MECH, message_buffer);
+      }
       map = btech_context_get_map(CONTEXT, mech_map_dbref(MECH));
       if (!map)
         return 1;

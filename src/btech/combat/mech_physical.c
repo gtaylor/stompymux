@@ -17,22 +17,23 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include <stddef.h>
+#include <stdio.h>
 #include <string.h>
 bool physical_arm_check(DbRef player, Mech *mech, const char *verb) {
   BtechContext *context = mech_context(mech);
   if (mech_class(mech) == CLASS_MW || mech_class(mech) == CLASS_BSUIT) {
-    mecha_notify(btech_context_evaluation(context), player,
-                 tprintf("You cannot %s without a 'mech!", verb));
+    mecha_notifyf(btech_context_evaluation(context), player,
+                  "You cannot %s without a 'mech!", verb);
     return false;
   }
   if (mech_class(mech) != CLASS_MECH) {
-    mecha_notify(btech_context_evaluation(context), player,
-                 tprintf("You cannot %s with this vehicle!", verb));
+    mecha_notifyf(btech_context_evaluation(context), player,
+                  "You cannot %s with this vehicle!", verb);
     return false;
   }
   return true;
@@ -40,9 +41,8 @@ bool physical_arm_check(DbRef player, Mech *mech, const char *verb) {
 bool physical_quad_check(DbRef player, Mech *mech, const char *verb) {
   if (mech_class(mech) != CLASS_MECH || !mech_is_quad(mech))
     return true;
-  mecha_notify(
-      btech_context_evaluation(mech_context(mech)), player,
-      tprintf("What are you going to %s with, your front right leg?", verb));
+  mecha_notifyf(btech_context_evaluation(mech_context(mech)), player,
+                "What are you going to %s with, your front right leg?", verb);
   return false;
 }
 static int all_limbs_recycled(Mech *mech) {
@@ -131,16 +131,18 @@ const char *physical_attack_verb(const PhysicalVerbRequest *request) {
   return verb;
 } // end phys_form
 void phys_succeed(Mech *mech, Mech *target, PhysicalAttackType at) {
-  mech_los_broadcast_unit(
-      mech, target,
-      tprintf("%s %%s!", physical_attack_verb(&(PhysicalVerbRequest){
-                             .attack_type = at, .third_person = true})));
+  char message_buffer[LBUF_SIZE];
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%s %%s!",
+                 physical_attack_verb(&(PhysicalVerbRequest){
+                     .attack_type = at, .third_person = true}));
+  mech_los_broadcast_unit(mech, target, message_buffer);
 }
 void phys_fail(Mech *mech, Mech *target, PhysicalAttackType at) {
-  mech_los_broadcast_unit(
-      mech, target,
-      tprintf("attempts to %s %%s!",
-              physical_attack_verb(&(PhysicalVerbRequest){.attack_type = at})));
+  char message_buffer[LBUF_SIZE];
+  (void)snprintf(
+      message_buffer, sizeof(message_buffer), "attempts to %s %%s!",
+      physical_attack_verb(&(PhysicalVerbRequest){.attack_type = at}));
+  mech_los_broadcast_unit(mech, target, message_buffer);
 }
 int have_punch(Mech *mech, int loc) { return 1; }
 int have_axe(Mech *mech, int loc) {

@@ -47,7 +47,6 @@ static int thrashing_limb(int index) {
 #include "mech_utils_api.h"
 #include "mine_api.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "template_api.h"
@@ -112,14 +111,14 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
                             mech_movement_type(mech));
 
     if (mech_section_has_recycling_weapon(mech, temp_loc)) {
-      mecha_notify(btech_context_evaluation(context), player,
-                   tprintf("You have weapons recycling on your %s.", loc_name));
+      mecha_notifyf(btech_context_evaluation(context), player,
+                    "You have weapons recycling on your %s.", loc_name);
       return;
     }
     if (mech_section_recycle_ticks(mech, temp_loc)) {
-      mecha_notify(btech_context_evaluation(context), player,
-                   tprintf("Your %s is still recovering from your last attack.",
-                           loc_name));
+      mecha_notifyf(btech_context_evaluation(context), player,
+                    "Your %s is still recovering from your last attack.",
+                    loc_name);
       return;
     }
   }

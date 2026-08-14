@@ -39,7 +39,6 @@ static void recycle_status_append(char *buffer, size_t capacity,
       checked_storage_region(buffer, capacity, length, capacity - length),
       capacity - length, "%s: %s ", part, status);
 }
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -76,13 +75,18 @@ static int weapon_status_critical(const int *values, int index) {
                                                 sizeof(*values), (size_t)index);
 }
 
-static const char *section_recycle_status(Mech *mech, int section) {
+static char *section_recycle_status(Mech *mech, int section,
+                                    char buffer[static 32]) {
   int recycle = mech_section_recycle_ticks(mech, section);
-  if (mech_section_is_destroyed(mech, section))
-    return "[fg=black bold]*****[reset]";
-  if (recycle > 0)
-    return tprintf("%-5d", (recycle / WEAPON_TICK) + (recycle % WEAPON_TICK));
-  return "[fg=green]Ready[reset]";
+  if (mech_section_is_destroyed(mech, section)) {
+    (void)snprintf(buffer, 32, "%s", "[fg=black bold]*****[reset]");
+  } else if (recycle > 0) {
+    (void)snprintf(buffer, 32, "%-5d",
+                   (recycle / WEAPON_TICK) + (recycle % WEAPON_TICK));
+  } else {
+    (void)snprintf(buffer, 32, "%s", "[fg=green]Ready[reset]");
+  }
+  return buffer;
 }
 
 static const char *ecm_status(bool destroyed, bool enabled, bool active,
@@ -111,21 +115,26 @@ static const char *counter_status_color(int counter) {
   return counter > 0 ? "[fg=yellow bold]" : "[fg=green]";
 }
 
-static const char *
-physical_recycle_status(Mech *mech, int section,
-                        MechPhysicalWeaponType physical_type) {
+static char *physical_recycle_status(Mech *mech, int section,
+                                     MechPhysicalWeaponType physical_type,
+                                     char buffer[static 32]) {
   int recycle = mech_section_recycle_ticks(mech, section);
   if (!can_use_physical(&(PhysicalWeaponRequest){
-          .mech = mech, .section = section, .type = physical_type}))
-    return "[fg=red bold]XX[reset]";
-  if (recycle > 0)
-    return tprintf("%-3d", (recycle / WEAPON_TICK) + (recycle % WEAPON_TICK));
-  return "[fg=green]Rdy[reset]";
+          .mech = mech, .section = section, .type = physical_type})) {
+    (void)snprintf(buffer, 32, "%s", "[fg=red bold]XX[reset]");
+  } else if (recycle > 0) {
+    (void)snprintf(buffer, 32, "%-3d",
+                   (recycle / WEAPON_TICK) + (recycle % WEAPON_TICK));
+  } else {
+    (void)snprintf(buffer, 32, "%s", "[fg=green]Rdy[reset]");
+  }
+  return buffer;
 }
 
 void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
                          DbRef player, bool compact, char *compact_buffer,
                          size_t compact_buffer_size) {
+  char message_buffer[LBUF_SIZE];
   unsigned char weaparray[MAX_WEAPS_SECTION] = {0};
   unsigned char weapdata[MAX_WEAPS_SECTION] = {0};
   int critical[MAX_WEAPS_SECTION] = {0};
@@ -247,16 +256,18 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
           btech_context_get_mech(mech_context(mech), tag_target_dbref);
       const bool RECYCLING = mech_event_count(mech, EVENT_TAG_RECYCLE) != 0;
       const char *status;
-      if (mech_tag_is_destroyed(mech))
+      if (mech_tag_is_destroyed(mech)) {
         status = "[fg=red bold]XX[reset]";
-      else if (!tag_target ||
-               mech_tagged_by_dbref(tag_target) != mech_dbref(mech))
+      } else if (!tag_target ||
+                 mech_tagged_by_dbref(tag_target) != mech_dbref(mech)) {
         status = RECYCLING ? "[fg=yellow bold]Not Rdy[reset]"
                            : "[fg=green]Rdy[reset]";
-      else
-        status =
-            tprintf("%s%s[reset]", RECYCLING ? "[fg=yellow bold]" : "[bold]",
-                    mech_to_mech_display_id(mech, tag_target).text);
+      } else {
+        (void)snprintf(message_buffer, sizeof(message_buffer), "%s%s[reset]",
+                       RECYCLING ? "[fg=yellow bold]" : "[bold]",
+                       mech_to_mech_display_id(mech, tag_target).text);
+        status = message_buffer;
+      }
       append_status(tempbuff, sizeof(tempbuff), "TAG(%s)  ", status);
     }
 
@@ -368,66 +379,76 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     bool is_quad = mech_movement_type(mech) == MOVE_QUAD;
     recycle_status_append(tempbuff, sizeof(tempbuff),
                           is_quad ? "FLLEG" : "LARM",
-                          section_recycle_status(mech, LARM));
+                          section_recycle_status(mech, LARM, (char[32]){0}));
     recycle_status_append(tempbuff, sizeof(tempbuff),
                           is_quad ? "FRLEG" : "RARM",
-                          section_recycle_status(mech, RARM));
+                          section_recycle_status(mech, RARM, (char[32]){0}));
     recycle_status_append(tempbuff, sizeof(tempbuff),
                           is_quad ? "RLLEG" : "LLEG",
-                          section_recycle_status(mech, LLEG));
+                          section_recycle_status(mech, LLEG, (char[32]){0}));
     recycle_status_append(tempbuff, sizeof(tempbuff),
                           is_quad ? "RRLEG" : "RLEG",
-                          section_recycle_status(mech, RLEG));
+                          section_recycle_status(mech, RLEG, (char[32]){0}));
 
     if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = LARM, .type = PHY_AXE}))
-      recycle_status_append(tempbuff, sizeof(tempbuff), "Axe[LA]",
-                            physical_recycle_status(mech, LARM, PHY_AXE));
+      recycle_status_append(
+          tempbuff, sizeof(tempbuff), "Axe[LA]",
+          physical_recycle_status(mech, LARM, PHY_AXE, (char[32]){0}));
 
     if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = RARM, .type = PHY_AXE}))
-      recycle_status_append(tempbuff, sizeof(tempbuff), "Axe[RA]",
-                            physical_recycle_status(mech, RARM, PHY_AXE));
+      recycle_status_append(
+          tempbuff, sizeof(tempbuff), "Axe[RA]",
+          physical_recycle_status(mech, RARM, PHY_AXE, (char[32]){0}));
 
     if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = LARM, .type = PHY_SWORD}))
-      recycle_status_append(tempbuff, sizeof(tempbuff), "Sword[LA]",
-                            physical_recycle_status(mech, LARM, PHY_SWORD));
+      recycle_status_append(
+          tempbuff, sizeof(tempbuff), "Sword[LA]",
+          physical_recycle_status(mech, LARM, PHY_SWORD, (char[32]){0}));
 
     if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = RARM, .type = PHY_SWORD}))
-      recycle_status_append(tempbuff, sizeof(tempbuff), "Sword[RA]",
-                            physical_recycle_status(mech, RARM, PHY_SWORD));
+      recycle_status_append(
+          tempbuff, sizeof(tempbuff), "Sword[RA]",
+          physical_recycle_status(mech, RARM, PHY_SWORD, (char[32]){0}));
 
     if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = LARM, .type = PHY_CLAW}))
-      recycle_status_append(tempbuff, sizeof(tempbuff), "Claw[LA]",
-                            physical_recycle_status(mech, LARM, PHY_CLAW));
+      recycle_status_append(
+          tempbuff, sizeof(tempbuff), "Claw[LA]",
+          physical_recycle_status(mech, LARM, PHY_CLAW, (char[32]){0}));
 
     if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = RARM, .type = PHY_CLAW}))
-      recycle_status_append(tempbuff, sizeof(tempbuff), "Claw[RA]",
-                            physical_recycle_status(mech, RARM, PHY_CLAW));
+      recycle_status_append(
+          tempbuff, sizeof(tempbuff), "Claw[RA]",
+          physical_recycle_status(mech, RARM, PHY_CLAW, (char[32]){0}));
 
     if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = LARM, .type = PHY_MACE}))
-      recycle_status_append(tempbuff, sizeof(tempbuff), "Mace[LA]",
-                            physical_recycle_status(mech, LARM, PHY_MACE));
+      recycle_status_append(
+          tempbuff, sizeof(tempbuff), "Mace[LA]",
+          physical_recycle_status(mech, LARM, PHY_MACE, (char[32]){0}));
 
     if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = RARM, .type = PHY_MACE}))
-      recycle_status_append(tempbuff, sizeof(tempbuff), "Mace[RA]",
-                            physical_recycle_status(mech, RARM, PHY_MACE));
+      recycle_status_append(
+          tempbuff, sizeof(tempbuff), "Mace[RA]",
+          physical_recycle_status(mech, RARM, PHY_MACE, (char[32]){0}));
 
     if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = LARM, .type = PHY_SAW}))
-      recycle_status_append(tempbuff, sizeof(tempbuff), "Saw[LA]",
-                            physical_recycle_status(mech, LARM, PHY_SAW));
+      recycle_status_append(
+          tempbuff, sizeof(tempbuff), "Saw[LA]",
+          physical_recycle_status(mech, LARM, PHY_SAW, (char[32]){0}));
 
     if (has_physical(&(PhysicalWeaponRequest){
             .mech = mech, .section = RARM, .type = PHY_SAW}))
-      recycle_status_append(tempbuff, sizeof(tempbuff), "Saw[RA]",
-                            physical_recycle_status(mech, RARM, PHY_SAW));
+      recycle_status_append(
+          tempbuff, sizeof(tempbuff), "Saw[RA]",
+          physical_recycle_status(mech, RARM, PHY_SAW, (char[32]){0}));
 
     mecha_notify(evaluation, player, tempbuff);
 
@@ -441,7 +462,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
     if (i < NUM_BSUIT_MEMBERS) {
       (void)snprintf(tempbuff, sizeof(tempbuff),
                      "Team status (special attacks): %s",
-                     section_recycle_status(mech, i));
+                     section_recycle_status(mech, i, (char[32]){0}));
       mecha_notify(evaluation, player, tempbuff);
     }
 
@@ -453,7 +474,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
 
     if (mech_section_recycle_ticks(mech, FSIDE)) {
       append_status(tempbuff, sizeof(tempbuff), "Vehicle status (charge): %s",
-                    section_recycle_status(mech, FSIDE));
+                    section_recycle_status(mech, FSIDE, (char[32]){0}));
     }
 
     if (*tempbuff)

@@ -29,6 +29,9 @@ void center_string(char *destination, size_t destination_size,
                    const char *source, int width);
 void init_special_hash(BtechContext *context, int which);
 void mecha_notify(EvaluationContext *evaluation, DbRef player, const char *msg);
+void mecha_notifyf(EvaluationContext *evaluation, DbRef player,
+                   const char *format, ...)
+    __attribute__((format(printf, 3, 4)));
 typedef struct MechaNotificationExclusion {
   EvaluationContext *evaluation;
   DbRef location;
@@ -37,6 +40,9 @@ typedef struct MechaNotificationExclusion {
   const char *message;
 } MechaNotificationExclusion;
 void mecha_notify_except(const MechaNotificationExclusion *notification);
+void mecha_notify_exceptf(const MechaNotificationExclusion *notification,
+                          const char *format, ...)
+    __attribute__((format(printf, 2, 3)));
 void list_chashstats(DbRef player);
 int btech_special_object_type_count(void);
 const char *btech_special_object_type_name(int type);

@@ -16,7 +16,6 @@
 #include "mech_runtime_api.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -49,10 +48,10 @@ void aero_thrust(DbRef player, void *data, char *arg) {
   newspeed = strtof(args[0], nullptr);
   if ((mech_class(mech) == CLASS_AERO || mech_class(mech) == CLASS_DS)) {
     if (newspeed < (MP1 * (float)MIN_TAKEOFF_SPEED / (float)ACCEL_MOD)) {
-      mecha_notify(
+      mecha_notifyf(
           btech_context_evaluation(mech_context(mech)), player,
-          tprintf("Minimum thrust you stay in air with is %.1f kph.",
-                  (double)(MP1 * (float)MIN_TAKEOFF_SPEED / (float)ACCEL_MOD)));
+          "Minimum thrust you stay in air with is %.1f kph.",
+          (double)(MP1 * (float)MIN_TAKEOFF_SPEED / (float)ACCEL_MOD));
       return;
     }
   }
@@ -100,8 +99,8 @@ void aero_vheading(DbRef player, void *data, char *arg, int flag) {
     i = 90 * flag;
   if (abs(i) != 90 && mech_position_z(mech) < ATMO_Z &&
       (mech_class(mech) == CLASS_SPHEROID_DS)) {
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                 tprintf("You can go only up / down at <%d z!", ATMO_Z));
+    mecha_notifyf(btech_context_evaluation(mech_context(mech)), player,
+                  "You can go only up / down at <%d z!", ATMO_Z);
     return;
   }
   if (i >= 0)

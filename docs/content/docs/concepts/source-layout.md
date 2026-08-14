@@ -161,13 +161,13 @@ last for the owning context's lifetime and are not persisted. Keeping that
 distinction explicit prevents unavoidable boundary state from becoming a
 justification for new ambient state.
 
-The writable-global allowlist records the remaining exceptions rather than
-treating them as precedent. It contains the POSIX signal bridge and the legacy
-`tprintf` formatting buffer. SQLite writer fault injection is owned by each snapshot
-write and threaded through its store contexts. Flow prompts belong to their
-active flows, while connection displays and xcode-reference handlers use
+The writable-global allowlist records the remaining exception rather than
+treating it as precedent. It contains only the POSIX signal bridge, whose
+callback interface cannot carry server context. SQLite writer fault injection
+is owned by each snapshot write and threaded through its store contexts. Flow
+prompts belong to their active flows, while connection displays and
+xcode-reference handlers use
 owner- or caller-provided storage. Flag and power lookup normalizes const input
 into bounded automatic storage. Token parsing, local-time formatting, network
-address rendering, and system-error messages likewise use reentrant APIs with
-caller-owned buffers instead of libc scratch state. The remaining formatting
-exception requires a dedicated API and call-site migration.
+address rendering, system-error messages, and transient formatted text likewise
+use reentrant APIs with caller-owned buffers instead of shared scratch state.

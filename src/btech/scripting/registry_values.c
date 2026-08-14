@@ -507,6 +507,7 @@ void set_xcodestuff(DbRef player, void *data, char *buffer) {
 }
 
 void list_xcodestuff(DbRef player, void *data, const char *buffer) {
+  char message_buffer[LBUF_SIZE];
   BtechContext *context = ((BtechSpecialObject *)data)->context;
   int t;
   int flag = CM_TWO;
@@ -521,12 +522,12 @@ void list_xcodestuff(DbRef player, void *data, const char *buffer) {
     return;
   }
   cool_menu_add_line(&c);
-  cool_menu_add_centered(
-      &c,
-      tprintf("Data for %s (%s)",
-              game_object_name(context->database,
-                               game_object_location(context->database, player)),
-              btech_special_object_type_name(t)));
+  (void)snprintf(
+      message_buffer, sizeof(message_buffer), "Data for %s (%s)",
+      game_object_name(context->database,
+                       game_object_location(context->database, player)),
+      btech_special_object_type_name(t));
+  cool_menu_add_centered(&c, message_buffer);
   cool_menu_add_line(&c);
   if (*buffer == '1') {
     flag = CM_ONE;
@@ -553,11 +554,10 @@ void list_xcodestuff(DbRef player, void *data, const char *buffer) {
       const size_t LABEL_LIMIT = (size_t)(se_len / 3);
       *(char *)checked_storage_at(lab, sizeof(lab), sizeof(char), LABEL_LIMIT) =
           '\0';
-      cool_menu_add_with_flags(
-          &c,
-          tprintf("%-*s%*s", se_len / 3, lab, se_len * 2 / 3,
-                  retrieve_value(data, descriptor, (char[LBUF_SIZE]){0})),
-          flag);
+      (void)snprintf(message_buffer, sizeof(message_buffer), "%-*s%*s",
+                     se_len / 3, lab, se_len * 2 / 3,
+                     retrieve_value(data, descriptor, (char[LBUF_SIZE]){0}));
+      cool_menu_add_with_flags(&c, message_buffer, flag);
     }
   }
   cool_menu_add_line(&c);

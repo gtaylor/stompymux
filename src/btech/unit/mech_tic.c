@@ -67,7 +67,6 @@ bool mech_tic_contains_weapon(const Mech *mech, TicWeaponReference reference) {
   const int BIT = reference.weapon % SINGLE_TICLONG_SIZE;
   return *tic_word(mech, reference.tic, WORD) & (1UL << (unsigned int)BIT);
 }
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 
 typedef struct TicSelectionContext TicSelectionContext;
@@ -287,8 +286,6 @@ void firetic_sub(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  /*   mecha_notify(player, tprintf ("Firing all weapons in TIC #%d at default
-   * target!", ticnum)); */
   selection = (TicSelectionContext){
       .tic = ticnum,
       .argument_count = argc,
@@ -355,6 +352,7 @@ static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
 }
 
 void listtic_sub(DbRef player, Mech *mech, char *buffer) {
+  char message_buffer[LBUF_SIZE];
   int ticnum;
   char *args[2];
   int i;
@@ -383,9 +381,10 @@ void listtic_sub(DbRef player, Mech *mech, char *buffer) {
       .tic = ticnum,
       .weapon_count = count,
   };
-  c = sel_col_fun_string_menu_context_k(
-      2, tprintf("TIC #%d listing for %s", ticnum, mech_display_id(mech).text),
-      listtic_fun, &list, max(1, count));
+  (void)snprintf(message_buffer, sizeof(message_buffer),
+                 "TIC #%d listing for %s", ticnum, mech_display_id(mech).text);
+  c = sel_col_fun_string_menu_context_k(2, message_buffer, listtic_fun, &list,
+                                        max(1, count));
   show_cool_menu(btech_context_evaluation(mech->xcode.context), player, c);
   kill_cool_menu(c);
 }

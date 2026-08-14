@@ -1,6 +1,7 @@
 /* action_messages.c - Action messaging and native Lua event dispatch. */
 
 #include "mux/commands/action_messages.h"
+#include <stdio.h>
 
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/db.h"
@@ -8,11 +9,11 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
 #include "mux/world/object_spatial.h"
 
 void notify_action(EvaluationContext *evaluation,
                    const ActionMessageInvocation *invocation) {
+  char message_buffer[LBUF_SIZE];
   LuaMessageInvocation message = invocation->message;
   LuaMessageResult result;
   const char *enactor_message;
@@ -61,16 +62,17 @@ void notify_action(EvaluationContext *evaluation,
     notify_location = is_good_obj(evaluation->world->database, location);
   }
   if (notify_location) {
+    (void)snprintf(
+        message_buffer, sizeof(message_buffer), "%s %s",
+        game_object_name(evaluation->world->database, message.enactor),
+        other_message);
     notify_excluding(&(ExcludingNotification){
         .evaluation = evaluation,
         .location = location,
         .sender = message.enactor,
         .exceptions = {message.enactor, message.object},
         .exception_count = 2,
-        .message = tprintf(
-            "%s %s",
-            game_object_name(evaluation->world->database, message.enactor),
-            other_message)});
+        .message = message_buffer});
   }
   if (invocation->event != LUA_EVENT_NONE) {
     LuaEventInvocation event_invocation = {
@@ -105,6 +107,7 @@ void notify_event(EvaluationContext *evaluation, Descriptor *descriptor,
 }
 
 void notify_lock_failure(const LockFailureNotification *notification) {
+  char message_buffer[LBUF_SIZE];
   EvaluationContext *evaluation = notification->evaluation;
   const LuaLockInvocation *invocation = notification->invocation;
   const LuaLockResult *result = notification->result;
@@ -129,16 +132,17 @@ void notify_lock_failure(const LockFailureNotification *notification) {
     notify_location = is_good_obj(evaluation->world->database, location);
   }
   if (notify_location) {
+    (void)snprintf(
+        message_buffer, sizeof(message_buffer), "%s %s",
+        game_object_name(evaluation->world->database, invocation->enactor),
+        other_message);
     notify_excluding(&(ExcludingNotification){
         .evaluation = evaluation,
         .location = location,
         .sender = invocation->enactor,
         .exceptions = {invocation->enactor, invocation->object},
         .exception_count = 2,
-        .message = tprintf(
-            "%s %s",
-            game_object_name(evaluation->world->database, invocation->enactor),
-            other_message)});
+        .message = message_buffer});
   }
   if (notification->event != LUA_EVENT_NONE) {
     LuaEventInvocation event_invocation = {

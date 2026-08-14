@@ -18,7 +18,6 @@
 #include "mech_utils_api.h"
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "weapon_catalogue_api.h"
 
 #include <math.h>
@@ -137,31 +136,32 @@ static void damage_cf(const BuildingDamageRequest *request) {
     mech_printf(mech, MECHALL,
                 "You hit %s for %d points of damage, destroying it!",
                 structure_name(mech_context(mech)->database, o).text, damage);
-    mecha_notify_except(&(MechaNotificationExclusion){
-        .evaluation = btech_context_evaluation(mech_context(mech)),
-        .location = o->obj,
-        .actor = NOTHING,
-        .exception = o->obj,
-        .message = tprintf(
-            "%s is hit for %d more points of damage, destroying it!",
-            my_to_upper(structure_name(mech_context(mech)->database, o).text),
-            damage)});
-    mech_los_broadcast(
-        mech, tprintf("hits %s, destroying it!",
-                      structure_name(mech_context(mech)->database, o).text));
+    mecha_notify_exceptf(
+        &(MechaNotificationExclusion){
+            .evaluation = btech_context_evaluation(mech_context(mech)),
+            .location = o->obj,
+            .actor = NOTHING,
+            .exception = o->obj,
+        },
+        "%s is hit for %d more points of damage, destroying it!",
+        my_to_upper(structure_name(mech_context(mech)->database, o).text),
+        damage);
+    mech_los_broadcastf(mech, "hits %s, destroying it!",
+                        structure_name(mech_context(mech)->database, o).text);
     start_regen = 2;
   } else {
     mech_printf(mech, MECHALL, "You hit %s for %d points of damage.",
                 structure_name(mech_context(mech)->database, o).text, damage);
-    mecha_notify_except(&(MechaNotificationExclusion){
-        .evaluation = btech_context_evaluation(mech_context(mech)),
-        .location = o->obj,
-        .actor = NOTHING,
-        .exception = o->obj,
-        .message = tprintf(
-            "%s is hit for %d points of damage.",
-            my_to_upper(structure_name(mech_context(mech)->database, o).text),
-            damage)});
+    mecha_notify_exceptf(
+        &(MechaNotificationExclusion){
+            .evaluation = btech_context_evaluation(mech_context(mech)),
+            .location = o->obj,
+            .actor = NOTHING,
+            .exception = o->obj,
+        },
+        "%s is hit for %d points of damage.",
+        my_to_upper(structure_name(mech_context(mech)->database, o).text),
+        damage);
   }
   if (start_regen)
     possibly_start_building_regen(mech_context(mech), o->obj);
@@ -249,10 +249,10 @@ void fire_hex(const TerrainHexEffectRequest *request) {
     return;
   }
   if (request->intentional) {
-    mech_los_broadcast(mech, tprintf("'s shot ignites %d,%d!", X, Y));
+    mech_los_broadcastf(mech, "'s shot ignites %d,%d!", X, Y);
     mech_printf(mech, MECHALL, "You ignite %d,%d.", X, Y);
   } else {
-    mech_los_broadcast(mech, tprintf("'s stray shot ignites %d,%d!", X, Y));
+    mech_los_broadcastf(mech, "'s stray shot ignites %d,%d!", X, Y);
     mech_printf(mech, MECHALL, "You accidentally ignite %d,%d!", X, Y);
   }
   add_decoration(&(MapDecorationRequest){

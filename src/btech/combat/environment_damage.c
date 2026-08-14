@@ -36,7 +36,6 @@
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 void mech_reactor_explode(Mech *wounded, Mech *attacker) {
@@ -292,7 +291,7 @@ int mech_location_breach(Mech *attacker, Mech *mech, int hitloc) {
     return 0;
   armor_string_from_index(hitloc, buf, mech_class(mech),
                           mech_movement_type(mech));
-  mech_notify(mech, MECHALL, tprintf("Your %s has been breached!", buf));
+  mech_printf(mech, MECHALL, "Your %s has been breached!", buf);
   mech_section_breached_set(mech, hitloc, true);
   mech_parts_destroy(attacker, mech, hitloc, true, true);
   return 1;

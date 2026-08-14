@@ -25,7 +25,6 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/name_table.h"
 #include "mux/support/password.h"
 #include "mux/support/stringutil.h"
@@ -320,6 +319,7 @@ void do_newpassword(CommandInvocation *invocation) {
 }
 
 void do_boot(CommandInvocation *invocation) {
+  char message_buffer[LBUF_SIZE];
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   int key = invocation->key;
@@ -376,11 +376,10 @@ void do_boot(CommandInvocation *invocation) {
       log_name(evaluation->log, player);
       ENDLOG(evaluation->log);
     }
-    notify_checked(
-        evaluation, player, player,
-        tprintf("You booted %s off!",
-                game_object_name(invocation->context->world->database, victim)),
-        MSG_ME);
+    (void)snprintf(
+        message_buffer, sizeof(message_buffer), "You booted %s off!",
+        game_object_name(invocation->context->world->database, victim));
+    notify_checked(evaluation, player, player, message_buffer, MSG_ME);
   }
   if (key & BOOT_QUIET) {
     buf = nullptr;
@@ -397,10 +396,9 @@ void do_boot(CommandInvocation *invocation) {
                          !is_god(evaluation->world->database, player), buf);
   else
     count = boot_off(invocation->context->runtime->descriptors, victim, buf);
-  notify_checked(
-      evaluation, player, player,
-      tprintf("%d connection%s closed.", count, (count == 1 ? "" : "s")),
-      MSG_ME);
+  (void)snprintf(message_buffer, sizeof(message_buffer),
+                 "%d connection%s closed.", count, (count == 1 ? "" : "s"));
+  notify_checked(evaluation, player, player, message_buffer, MSG_ME);
   if (buf)
     free_lbuf(buf);
 }

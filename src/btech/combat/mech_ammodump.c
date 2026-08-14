@@ -32,7 +32,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -258,9 +257,8 @@ void mech_dump(DbRef player, void *data, char *buffer) {
             if (mech_critical_data(mech, loc, i))
               count++;
         if (!count) {
-          mech_notify(
-              mech, MECHALL,
-              tprintf("There is no ammunition in %s crit %i!", buf, i + 1));
+          mech_printf(mech, MECHALL, "There is no ammunition in %s crit %i!",
+                      buf, i + 1);
           return;
         }
         type = (((i + 1) << 8) | (loc + 1));
@@ -286,7 +284,7 @@ void mech_dump(DbRef player, void *data, char *buffer) {
           if (mech_critical_data(mech, loc, i))
             count++;
     if (!count) {
-      mech_notify(mech, MECHALL, tprintf("There is no ammunition in %s!", buf));
+      mech_printf(mech, MECHALL, "There is no ammunition in %s!", buf);
       return;
     }
     type = loc + 1;

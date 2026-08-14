@@ -156,12 +156,6 @@ void mech_ecm_check(Mech *obj_mech) {
   t_check_eccm = ((w_friendly_eccm != 0) || (w_friendly_angel_eccm != 0) ||
                   (w_un_friendly_ecm != 0) || (w_un_friendly_angel_ecm != 0));
 
-  /* btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG,
-   * tprintf("Checking unit %d. ECMDelta: %d. ECCMDelta: %d. CheckECM: %d.
-   * CheckECCM:
-   * %d",mech_dbref(objMech),wFriendlyECMDelta,wFriendlyECCMDelta,tCheckECM,tCheckECCM));
-   */
-
   /* Now we do our checks... */
   /* Let's first see if we should just reset our flags... 'cause there's no ECM
    * or ECCM around */

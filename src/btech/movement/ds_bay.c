@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "bsuit_api.h"
@@ -40,7 +41,6 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/world/access.h"
 #include "mux/world/move.h"
 #include "registry_api.h"
@@ -124,13 +124,13 @@ void mech_createbays(DbRef player, void *data, char *buffer) {
     it = match_thing(&btech_context_command(context)->match, player,
                      bay_argument(args, NUM_BAYS + 1, i));
     if (it == NOTHING) {
-      mecha_notify(btech_context_evaluation(context), player,
-                   tprintf("Argument %d is invalid.", i + 1));
+      mecha_notifyf(btech_context_evaluation(context), player,
+                    "Argument %d is invalid.", i + 1);
       return;
     }
     if (!btech_context_is_map(context, it)) {
-      mecha_notify(btech_context_evaluation(context), player,
-                   tprintf("Argument %d is not a map.", i + 1));
+      mecha_notifyf(btech_context_evaluation(context), player,
+                    "Argument %d is not a map.", i + 1);
       return;
     }
     map = btech_context_find_object(context, it);
@@ -233,6 +233,7 @@ static int dropship_find_single_adjacent_bay(Mech *mech, DbRef *ref,
 }
 
 static void mech_enterbay_event(MuxEvent *e) {
+  char message_buffer[128];
   Mech *mech = (Mech *)e->data;
   Mech *ds;
   Mech *tmpm = nullptr;
@@ -264,9 +265,9 @@ static void mech_enterbay_event(MuxEvent *e) {
   bsuit_swarmers_stop(btech_context_find_object(context, mech_map_dbref(mech)),
                       mech, 1);
   mech_notify(mech, MECHALL, "You enter the bay.");
-  mech_los_broadcast(
-      mech, tprintf("has entered %s at %d,%d.", mech_display_id(ds).text,
-                    mech_position_x(mech), mech_position_y(mech)));
+  mech_los_broadcastf(mech, "has entered %s at %d,%d.",
+                      mech_display_id(ds).text, mech_position_x(mech),
+                      mech_position_y(mech));
   mark_for_los_update(mech);
   if (mech_class(mech) == CLASS_MW &&
       !is_in_character(btech_context_database(context), ref)) {
@@ -275,8 +276,10 @@ static void mech_enterbay_event(MuxEvent *e) {
   }
   if (mech_carried_dbref(mech) > 0)
     tmpm = btech_context_get_mech(context, mech_carried_dbref(mech));
-  mech_rsetmapindex(GOD, (void *)mech, tprintf("%ld", ref));
-  mech_rsetxy(GOD, (void *)mech, tprintf("%d %d", x, y));
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", ref);
+  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", x, y);
+  mech_rsetxy(GOD, (void *)mech, message_buffer);
   mech_los_broadcast(mech, "has entered the bay.");
   move_via_teleport(
       &(ObjectMovementRequest){.evaluation = btech_context_evaluation(context),
@@ -284,8 +287,10 @@ static void mech_enterbay_event(MuxEvent *e) {
                                .destination = ref,
                                .cause = 1});
   if (tmpm) {
-    mech_rsetmapindex(GOD, (void *)tmpm, tprintf("%ld", ref));
-    mech_rsetxy(GOD, (void *)tmpm, tprintf("%d %d", x, y));
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", ref);
+    mech_rsetmapindex(GOD, (void *)tmpm, message_buffer);
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", x, y);
+    mech_rsetxy(GOD, (void *)tmpm, message_buffer);
     move_via_teleport(&(ObjectMovementRequest){
         .evaluation = btech_context_evaluation(context),
         .object = mech_dbref(tmpm),
@@ -537,18 +542,23 @@ static void dropship_place_departing_unit(Mech *ds, Mech *mech, DbRef frombay) {
 
 static int dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
                               DbRef frombay) {
+  char message_buffer[128];
   Mech *car = nullptr;
   BtechContext *context = mech_context(mech);
 
   bsuit_swarmers_stop(btech_context_find_object(context, mech_map_dbref(mech)),
                       mech, 1);
   mech_los_broadcast(mech, "has left the bay.");
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
+                 mech_map_dbref(ds));
   /* We escape confines of the bay to open air/land! */
-  mech_rsetmapindex(GOD, (void *)mech, tprintf("%ld", mech_map_dbref(ds)));
+  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
   if (mech_carried_dbref(mech) > 0)
     car = btech_context_get_mech(context, mech_carried_dbref(mech));
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
+                 mech_map_dbref(ds));
   if (car)
-    mech_rsetmapindex(GOD, (void *)car, tprintf("%ld", mech_map_dbref(ds)));
+    mech_rsetmapindex(GOD, (void *)car, message_buffer);
   if (mech_map_dbref(mech) == battle_map_dbref(map)) {
     mech_notify(mech, MECHALL,
                 "Fatal error: Unable to find the map 'ship is on.");
@@ -574,8 +584,7 @@ static int dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
     mech_flood(car);
   }
   mech_los_broadcast_unit(mech, ds, "has left %s's bay.");
-  mech_notify(ds, MECHALL,
-              tprintf("%s has left the bay.", mech_display_id(mech).text));
+  mech_printf(ds, MECHALL, "%s has left the bay.", mech_display_id(mech).text);
   mech_continue_flying(mech);
   if (is_in_character(btech_context_database(context), mech_dbref(mech)) &&
       game_object_location(btech_context_database(context),

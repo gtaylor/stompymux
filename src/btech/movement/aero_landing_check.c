@@ -11,7 +11,6 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 
@@ -57,9 +56,8 @@ void aero_checklz(DbRef player, Mech *mech, char *buffer) {
 
   int issue = aero_landing_zone_check(mech, x, y);
   if (!issue) {
-    mech_notify(
-        mech, MECHALL,
-        tprintf("The hex (%d,%d) looks good enough for a landing.", x, y));
+    mech_printf(mech, MECHALL,
+                "The hex (%d,%d) looks good enough for a landing.", x, y);
     return;
   }
   mech_printf(mech, MECHALL,

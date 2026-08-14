@@ -37,7 +37,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -94,11 +93,10 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
     }
     if (request->sight) {
       if (base_to_hit >= 900) {
-        mech_notify(request->mech, MECHALL,
-                    tprintf("You aim %s at %s%s - Out of range.",
-                            weapon_display_name(request->weapon_index),
-                            mech_to_mech_display_id(request->mech, target).text,
-                            buf2));
+        mech_printf(request->mech, MECHALL,
+                    "You aim %s at %s%s - Out of range.",
+                    weapon_display_name(request->weapon_index),
+                    mech_to_mech_display_id(request->mech, target).text, buf2);
         return;
       }
       mech_c3_track_emit(request->mech, c3_ref, c3_mech);
@@ -113,11 +111,9 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
     }
     if (base_to_hit > 12) {
       if (base_to_hit >= 900) {
-        mech_notify(request->mech, MECHALL,
-                    tprintf("Fire %s at %s%s - Out of range.",
-                            weapon_display_name(request->weapon_index),
-                            mech_to_mech_display_id(request->mech, target).text,
-                            buf2));
+        mech_printf(request->mech, MECHALL, "Fire %s at %s%s - Out of range.",
+                    weapon_display_name(request->weapon_index),
+                    mech_to_mech_display_id(request->mech, target).text, buf2);
         return;
       }
       mech_printf(request->mech, MECHALL,
@@ -767,9 +763,8 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
       if (!made_pilot_skill_roll(request->mech, w_hgrp_skill_mod)) {
         mech_notify(request->mech, MECHALL,
                     "The weapon's recoil knocks you to the ground!");
-        mech_los_broadcast(request->mech,
-                           tprintf("topples over from the %s's recoil!",
-                                   weapon_display_name(request->weapon_index)));
+        mech_los_broadcastf(request->mech, "topples over from the %s's recoil!",
+                            weapon_display_name(request->weapon_index));
         mech_fall(request->mech, 1, 0);
       }
     }

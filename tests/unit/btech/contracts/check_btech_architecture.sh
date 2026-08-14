@@ -940,6 +940,12 @@ if find src/btech/src -type f -print -quit 2>/dev/null | grep -q .; then
   status=1
 fi
 
+if rg -n '\btprintf\b|\bformatted_[0-9]+\b|\(\(void\)snprintf\(' src \
+    --glob '*.{c,h}'; then
+  echo "src: shared or generated formatting compatibility pattern is not allowed"
+  status=1
+fi
+
 header_compiler=${BTECH_HEADER_COMPILER:-clang-22}
 header_jobs=${BTECH_HEADER_JOBS:-$(nproc)}
 if [[ ! $header_jobs =~ ^[1-9][0-9]*$ ]]; then

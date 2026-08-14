@@ -13,11 +13,11 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h" // IWYU pragma: keep
 #include "mux/server/server_control.h"
-#include "mux/support/formatting.h"
 #include "mux/support/name_table.h"
 #include "mux/world/match.h"
 #include "mux/world/object.h"
 #include "mux/world/object_set.h"
+#include <stdio.h>
 
 typedef struct DestroyExitCheck {
   EvaluationContext *evaluation;
@@ -73,6 +73,7 @@ static int can_destroy_player(EvaluationContext *evaluation, DbRef player,
 }
 
 void do_destroy(CommandInvocation *invocation) {
+  char message_buffer[128];
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   int key = invocation->key;
@@ -180,16 +181,18 @@ void do_destroy(CommandInvocation *invocation) {
           c_xcode(evaluation->world->database, thing);
         }
         if (0) {
+          (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", player);
           attribute_add_raw(evaluation->world->database, thing, A_DESTROYER,
-                            tprintf("%ld", player));
+                            message_buffer);
           destroy_player(evaluation, thing);
         } else {
           notify_checked(evaluation, player, player,
                          "The player shakes and begins to crumble.",
                          MSG_ME_ALL | MSG_F_DOWN);
           s_going(evaluation->world->database, thing);
+          (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", player);
           attribute_add_raw(evaluation->world->database, thing, A_DESTROYER,
-                            tprintf("%ld", player));
+                            message_buffer);
         }
       }
     }

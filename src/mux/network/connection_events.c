@@ -32,7 +32,6 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/player.h"
 #include "mux/world/world_context.h"
@@ -95,6 +94,7 @@ typedef struct ConnectionEventScopeRequest {
 
 static void
 dispatch_connection_event_scope(const ConnectionEventScopeRequest *request) {
+  char message_buffer[LBUF_SIZE];
   CommandRuntime *runtime = request->runtime;
   Descriptor *d = request->descriptor;
   DbRef player = request->player;
@@ -122,10 +122,12 @@ dispatch_connection_event_scope(const ConnectionEventScopeRequest *request) {
                                 reason);
     }
     break;
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "Invalid zone #%ld for %s(#%ld) has bad type %d", zone,
+                   game_object_name(runtime->world->database, player), player,
+                   typeof_obj(runtime->world->database, zone));
   default:
-    log_text(tprintf("Invalid zone #%ld for %s(#%ld) has bad type %d", zone,
-                     game_object_name(runtime->world->database, player), player,
-                     typeof_obj(runtime->world->database, zone)));
+    log_text(message_buffer);
     break;
   }
 }

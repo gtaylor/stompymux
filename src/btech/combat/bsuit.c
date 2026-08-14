@@ -28,7 +28,6 @@
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -330,10 +329,9 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
           /* Limb blown off */
           mech_notify(target, MECHALL, "[fg=yellow bold]CRITICAL HIT!![reset]");
 
-          mech_los_broadcast(
-              target,
-              tprintf("'s %s is blown off in a shower of sparks and smoke!",
-                      str_attack_loc));
+          mech_los_broadcastf(
+              target, "'s %s is blown off in a shower of sparks and smoke!",
+              str_attack_loc);
           mech_section_destroy(
               &(SectionDestructionRequest){.wounded = target,
                                            .attacker = mech,

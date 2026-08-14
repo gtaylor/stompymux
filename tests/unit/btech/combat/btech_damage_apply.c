@@ -125,7 +125,7 @@ int mech_cocoon_integrity(const Mech *mech) {
 }
 
 void armor_string_from_index(int index, char *buffer, UnitClass unit_class,
-                          MechMovementType movement_type) {
+                             MechMovementType movement_type) {
   (void)index;
   (void)unit_class;
   (void)movement_type;
@@ -286,7 +286,6 @@ __asm__(
     ".globl mech_pilot_dbref\n.set mech_pilot_dbref, damage_unused_stub\n"
     ".globl mech_model_reference\n.set mech_model_reference, "
     "damage_unused_stub\n"
-    ".globl tprintf\n.set tprintf, damage_unused_stub\n"
     ".globl notify_checked\n.set notify_checked, damage_unused_stub\n"
     ".globl mech_location_breach\n.set mech_location_breach, "
     "damage_unused_stub\n"

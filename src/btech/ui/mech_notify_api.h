@@ -49,6 +49,8 @@ void mech_radio(DbRef player, void *data, char *buffer);
 void mech_broadcast(Mech *mech, Mech *target, BattleMap *mech_map,
                     char *buffer);
 void mech_los_broadcast(Mech *mech, const char *message);
+void mech_los_broadcastf(Mech *mech, const char *format, ...)
+    __attribute__((format(printf, 2, 3)));
 int mech_sees_hex_f(Mech *mech, BattleMap *map, float x, float y, int ix,
                     int iy);
 int mech_sees_hex(Mech *mech, BattleMap *map, int x, int y);

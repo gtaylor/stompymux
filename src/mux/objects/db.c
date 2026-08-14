@@ -1,6 +1,7 @@
 /* db.c - In-memory game-object and attribute database operations. */
 
 #include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -21,7 +22,6 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/utf8.h"
@@ -433,6 +433,7 @@ static void initialize_objects(GameDatabase *database, DbRef first,
 }
 
 void db_grow(GameDatabase *database, DbRef newtop) {
+  char message_buffer[128];
   int newsize;
   int marksize;
   int delta;
@@ -503,12 +504,14 @@ void db_grow(GameDatabase *database, DbRef newtop) {
     newpurenames = (NAME *)malloc((size_t)(newsize + SIZE_HACK) * sizeof(NAME));
 
     if (!newpurenames) {
-      log_simple(
-          (LogEntry){.log = database->log,
-                     .key = LOG_ALWAYS,
-                     .primary = "ALC",
-                     .secondary = "DB"},
-          tprintf("Could not allocate space for %d item name cache.", newsize));
+      (void)snprintf(message_buffer, sizeof(message_buffer),
+                     "Could not allocate space for %d item name cache.",
+                     newsize);
+      log_simple((LogEntry){.log = database->log,
+                            .key = LOG_ALWAYS,
+                            .primary = "ALC",
+                            .secondary = "DB"},
+                 message_buffer);
       abort();
     }
     memset((void *)newpurenames, 0,
@@ -547,12 +550,14 @@ void db_grow(GameDatabase *database, DbRef newtop) {
       (GameObject *)malloc((size_t)(newsize + SIZE_HACK) * sizeof(GameObject));
   if (!newdb) {
 
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "Could not allocate space for %d item struct database.",
+                   newsize);
     log_simple((LogEntry){.log = database->log,
                           .key = LOG_ALWAYS,
                           .primary = "ALC",
                           .secondary = "DB"},
-               tprintf("Could not allocate space for %d item struct database.",
-                       newsize));
+               message_buffer);
     abort();
   }
   database->size = newsize;

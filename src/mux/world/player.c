@@ -24,7 +24,6 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/password.h"
 #include "mux/support/stringutil.h"
@@ -40,6 +39,7 @@
  */
 void record_login(EvaluationContext *evaluation, DbRef player, bool successful,
                   time_t occurred_at, const char *host, const char *username) {
+  char message_buffer[LBUF_SIZE];
   GameDatabase *database = evaluation->world->database;
 
   if (successful) {
@@ -71,11 +71,13 @@ void record_login(EvaluationContext *evaluation, DbRef player, bool successful,
         .outcome = PLAYER_LOGIN_SUCCESS,
         .occurred_at = occurred_at,
         .host = host});
-    if (username && *username)
-      player_account_last_site_set(database, player,
-                                   tprintf("%s@%s", username, host));
-    else
+    if (username && *username) {
+      (void)snprintf(message_buffer, sizeof(message_buffer), "%s@%s", username,
+                     host);
+      player_account_last_site_set(database, player, message_buffer);
+    } else {
       player_account_last_site_set(database, player, host);
+    }
   } else {
     player_account_login_record(&(PlayerLoginRecordChange){
         .account = {.database = database, .player = player},

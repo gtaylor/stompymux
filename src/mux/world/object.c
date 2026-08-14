@@ -3,6 +3,7 @@
  */
 
 #include "mux/world/object.h"
+#include <stdio.h>
 
 #include <stdlib.h>
 #include <time.h>
@@ -19,7 +20,6 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/validation.h"
@@ -223,6 +223,7 @@ void object_apply_default_lua_parent(const ObjectCreationIdentity *identity) {
  */
 DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
                  const char *name) {
+  char message_buffer[128];
   DbRef obj;
   int okname = 0;
   const ObjectFlagSet *default_flags;
@@ -273,12 +274,14 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     }
     free_lbuf(buff);
     break;
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "Bad object type in create_obj: %d.", objtype);
   default:
     log_simple((LogEntry){.log = evaluation->log,
                           .key = LOG_BUGS,
                           .primary = "BUG",
                           .secondary = "OTYPE"},
-               tprintf("Bad object type in create_obj: %d.", objtype));
+               message_buffer);
     return NOTHING;
   }
 
@@ -300,11 +303,13 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
       evaluation->world->database->freelist =
           game_object_link(evaluation->world->database, obj);
     } else {
+      (void)snprintf(message_buffer, sizeof(message_buffer),
+                     "Freelist damaged, bad object #%ld.", obj);
       log_simple((LogEntry){.log = evaluation->log,
                             .key = LOG_PROBLEMS,
                             .primary = "FRL",
                             .secondary = "DAMAG"},
-                 tprintf("Freelist damaged, bad object #%ld.", obj));
+                 message_buffer);
       obj = NOTHING;
       evaluation->world->database->freelist = NOTHING;
     }

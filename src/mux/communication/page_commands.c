@@ -2,6 +2,7 @@
  * speech.c -- Commands which involve speaking
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -26,6 +27,7 @@
 static int page_check(EvaluationContext *evaluation,
                       const ServerConfiguration *configuration, DbRef player,
                       DbRef target) {
+  char message_buffer[LBUF_SIZE];
   if (is_in_character_location(evaluation->world->database, configuration,
                                player) &&
       !is_wizard(evaluation->world->database, target) &&
@@ -35,22 +37,22 @@ static int page_check(EvaluationContext *evaluation,
     return 0;
   }
   if (!is_connected(evaluation->world->database, target)) {
-    notify_checked(
-        evaluation, player, target,
-        tprintf("Sorry, %s is not connected.",
-                game_object_name(evaluation->world->database, target)),
-        MSG_ME_ALL | MSG_F_DOWN);
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "Sorry, %s is not connected.",
+                   game_object_name(evaluation->world->database, target));
+    notify_checked(evaluation, player, target, message_buffer,
+                   MSG_ME_ALL | MSG_F_DOWN);
     return 0;
   }
   if (!is_wizard(evaluation->world->database, player) &&
       is_in_character_location(evaluation->world->database, configuration,
                                target) &&
       !is_wizard(evaluation->world->database, target)) {
-    notify_checked(
-        evaluation, player, target,
-        tprintf("Sorry, %s is not accepting pages.",
-                game_object_name(evaluation->world->database, target)),
-        MSG_ME_ALL | MSG_F_DOWN);
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "Sorry, %s is not accepting pages.",
+                   game_object_name(evaluation->world->database, target));
+    notify_checked(evaluation, player, target, message_buffer,
+                   MSG_ME_ALL | MSG_F_DOWN);
     return 0;
   }
   return 1;
@@ -106,6 +108,7 @@ static char *dbrefs_to_names(const PageNameListRequest *request) {
 }
 
 void do_page(CommandInvocation *invocation) {
+  char *formatted;
   EvaluationContext *evaluation = &invocation->context->evaluation;
   const ServerConfiguration *configuration =
       invocation->context->world->configuration;
@@ -136,6 +139,8 @@ void do_page(CommandInvocation *invocation) {
 
   buf2 = alloc_lbuf("page_list");
   bp2 = buf2;
+
+  formatted = alloc_lbuf("page_message");
 
   if ((tname[0] == ':') || (tname[0] == ';') || (message[0] == ':') ||
       (message[0] == ';'))
@@ -174,6 +179,7 @@ void do_page(CommandInvocation *invocation) {
 
       free_lbuf(buf1);
       free_lbuf(buf2);
+      free_lbuf(formatted);
       return;
     }
     string_copy(message, tname);
@@ -235,32 +241,31 @@ void do_page(CommandInvocation *invocation) {
       } else {
         switch (*message) {
         case ':':
-          notify_checked(
-              evaluation, target, PLAYER,
-              tprintf("From afar, to (%s):%s %s %s", buf1, aladd,
-                      game_object_name(evaluation->world->database, PLAYER),
-                      checked_string_suffix(message, 1)),
-              MSG_ME_ALL | MSG_F_DOWN);
+          (void)snprintf(formatted, LBUF_SIZE, "From afar, to (%s):%s %s %s",
+                         buf1, aladd,
+                         game_object_name(evaluation->world->database, PLAYER),
+                         checked_string_suffix(message, 1));
+          notify_checked(evaluation, target, PLAYER, formatted,
+                         MSG_ME_ALL | MSG_F_DOWN);
           break;
         case ';':
           message = checked_mutable_string_suffix(message, 1);
-          notify_checked(
-              evaluation, target, PLAYER,
-              tprintf("From afar, to (%s):%s %s%s", buf1, aladd,
-                      game_object_name(evaluation->world->database, PLAYER),
-                      message),
-              MSG_ME_ALL | MSG_F_DOWN);
+          (void)snprintf(
+              formatted, LBUF_SIZE, "From afar, to (%s):%s %s%s", buf1, aladd,
+              game_object_name(evaluation->world->database, PLAYER), message);
+          notify_checked(evaluation, target, PLAYER, formatted,
+                         MSG_ME_ALL | MSG_F_DOWN);
           break;
         case '"':
           message = checked_mutable_string_suffix(message, 1);
           [[fallthrough]];
         default:
-          notify_checked(
-              evaluation, target, PLAYER,
-              tprintf("To (%s), %s%s pages you: %s", buf1,
-                      game_object_name(evaluation->world->database, PLAYER),
-                      aladd, message),
-              MSG_ME_ALL | MSG_F_DOWN);
+          (void)snprintf(formatted, LBUF_SIZE, "To (%s), %s%s pages you: %s",
+                         buf1,
+                         game_object_name(evaluation->world->database, PLAYER),
+                         aladd, message);
+          notify_checked(evaluation, target, PLAYER, formatted,
+                         MSG_ME_ALL | MSG_F_DOWN);
         }
         safe_tprintf_str(buf2, &bp2, "%ld ", target);
         count++;
@@ -277,32 +282,29 @@ void do_page(CommandInvocation *invocation) {
 
       switch (*message) {
       case ':':
-        notify_checked(
-            evaluation, target, PLAYER,
-            tprintf("From afar,%s %s %s", aladd,
-                    game_object_name(evaluation->world->database, PLAYER),
-                    checked_string_suffix(message, 1)),
-            MSG_ME_ALL | MSG_F_DOWN);
+        (void)snprintf(formatted, LBUF_SIZE, "From afar,%s %s %s", aladd,
+                       game_object_name(evaluation->world->database, PLAYER),
+                       checked_string_suffix(message, 1));
+        notify_checked(evaluation, target, PLAYER, formatted,
+                       MSG_ME_ALL | MSG_F_DOWN);
         break;
       case ';':
         message = checked_mutable_string_suffix(message, 1);
-        notify_checked(
-            evaluation, target, PLAYER,
-            tprintf("From afar,%s %s%s", aladd,
-                    game_object_name(evaluation->world->database, PLAYER),
-                    message),
-            MSG_ME_ALL | MSG_F_DOWN);
+        (void)snprintf(formatted, LBUF_SIZE, "From afar,%s %s%s", aladd,
+                       game_object_name(evaluation->world->database, PLAYER),
+                       message);
+        notify_checked(evaluation, target, PLAYER, formatted,
+                       MSG_ME_ALL | MSG_F_DOWN);
         break;
       case '"':
         message = checked_mutable_string_suffix(message, 1);
         [[fallthrough]];
       default:
-        notify_checked(
-            evaluation, target, PLAYER,
-            tprintf("%s%s pages: %s",
-                    game_object_name(evaluation->world->database, PLAYER),
-                    aladd, message),
-            MSG_ME_ALL | MSG_F_DOWN);
+        (void)snprintf(formatted, LBUF_SIZE, "%s%s pages: %s",
+                       game_object_name(evaluation->world->database, PLAYER),
+                       aladd, message);
+        notify_checked(evaluation, target, PLAYER, formatted,
+                       MSG_ME_ALL | MSG_F_DOWN);
       }
       safe_tprintf_str(buf2, &bp2, "%ld ", target);
       safe_tprintf_str(buf1, &bp, "%s, ",
@@ -323,6 +325,7 @@ void do_page(CommandInvocation *invocation) {
   if (count == 0) {
     free_lbuf(buf1);
     free_lbuf(buf2);
+    free_lbuf(formatted);
     return;
   }
   const size_t REFERENCE_LIST_LENGTH = strlen(buf2);
@@ -387,4 +390,5 @@ void do_page(CommandInvocation *invocation) {
 
   free_lbuf(buf1);
   free_lbuf(buf2);
+  free_lbuf(formatted);
 }

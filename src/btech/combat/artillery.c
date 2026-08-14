@@ -40,7 +40,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -133,8 +132,8 @@ void artillery_shoot(const ArtilleryShotRequest *request) {
   s->shooter = mech_dbref(mech);
   s->map = mech_map_dbref(mech);
   s->context = mech_context(mech);
-  mech_los_broadcast(mech, tprintf("shoots %s towards the %s!",
-                                   artillery_type(s), artillery_direction(s)));
+  mech_los_broadcastf(mech, "shoots %s towards the %s!", artillery_type(s),
+                      artillery_direction(s));
   map_coord_to_real_coord(s->from_x, s->from_y, &fx, &fy);
   map_coord_to_real_coord(s->to_x, s->to_y, &tx, &ty);
   btech_context_owned_event_schedule(
@@ -579,6 +578,7 @@ void artillery_friendly_adjustment(DbRef mechnum, BattleMap *map, int x,
 }
 
 static void artillery_hit(ArtilleryShot *s) {
+  char message_buffer[LBUF_SIZE];
   /* First, we figure where it exactly hits. Our first-hand information
      is only whether it hits or not, not _where_ it hits */
   float dir;
@@ -612,10 +612,9 @@ static void artillery_hit(ArtilleryShot *s) {
   }
   /* It's time to run for your lives, lil' ones ;-) */
   if (!(s->mode & ARTILLERY_MODES)) {
-    hex_los_broadcast(
-        map, s->to_x, s->to_y,
-        tprintf("%s fire hits $H!",
-                checked_string_suffix(weapon_catalogue_name(s->type), 3)));
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%s fire hits $H!",
+                   checked_string_suffix(weapon_catalogue_name(s->type), 3));
+    hex_los_broadcast(map, s->to_x, s->to_y, message_buffer);
   } else if (s->mode & CLUSTER_MODE) {
     hex_los_broadcast(map, s->to_x, s->to_y,
                       "A rain of small bomblets hits $H's surroundings!");
@@ -623,11 +622,11 @@ static void artillery_hit(ArtilleryShot *s) {
     hex_los_broadcast(map, s->to_x, s->to_y,
                       "A rain of small bomblets hits $H!");
   } else if (s->mode & SMOKE_MODE) {
-    hex_los_broadcast(
-        map, s->to_x, s->to_y,
-        tprintf("A %s %s hits $h, and smoke starts to billow!",
-                checked_string_suffix(weapon_catalogue_name(s->type), 3),
-                checked_string_suffix(artillery_type(s), 2)));
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "A %s %s hits $h, and smoke starts to billow!",
+                   checked_string_suffix(weapon_catalogue_name(s->type), 3),
+                   checked_string_suffix(artillery_type(s), 2));
+    hex_los_broadcast(map, s->to_x, s->to_y, message_buffer);
   }
 
   /* Basic theory:

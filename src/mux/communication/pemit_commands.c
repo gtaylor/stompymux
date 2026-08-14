@@ -2,6 +2,8 @@
  * speech.c -- Commands which involve speaking
  */
 
+#include "mux/support/alloc.h"
+#include <stdio.h>
 #include <string.h>
 
 #include "mux/commands/command_context.h" // IWYU pragma: keep
@@ -11,7 +13,6 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "mux/world/match.h"
 #include "mux/world/object_set.h"
 #include "mux/world/object_spatial.h"
@@ -61,6 +62,7 @@ void do_pemit_list(EvaluationContext *evaluation, DbRef player, char *list,
 }
 
 void do_pemit(CommandInvocation *invocation) {
+  char message_buffer[LBUF_SIZE];
   EvaluationContext *evaluation = &invocation->context->evaluation;
   const DbRef PLAYER = invocation->player;
   int key = invocation->key;
@@ -173,34 +175,32 @@ void do_pemit(CommandInvocation *invocation) {
     case PEMIT_FSAY:
       notify_printf(evaluation, target, "You say \"%s\"", message);
       if (loc != NOTHING) {
-        notify_excluding(&(ExcludingNotification){
-            .evaluation = evaluation,
-            .location = loc,
-            .sender = PLAYER,
-            .exceptions = {target},
-            .exception_count = 1,
-            .message =
-                tprintf("%s says \"%s\"",
-                        game_object_name(evaluation->world->database, target),
-                        message)});
+        (void)snprintf(message_buffer, sizeof(message_buffer), "%s says \"%s\"",
+                       game_object_name(evaluation->world->database, target),
+                       message);
+        notify_excluding(&(ExcludingNotification){.evaluation = evaluation,
+                                                  .location = loc,
+                                                  .sender = PLAYER,
+                                                  .exceptions = {target},
+                                                  .exception_count = 1,
+                                                  .message = message_buffer});
       }
       break;
+      (void)snprintf(message_buffer, sizeof(message_buffer), "%s %s",
+                     game_object_name(evaluation->world->database, target),
+                     message);
     case PEMIT_FPOSE:
-      notify_checked(
-          evaluation, loc, PLAYER,
-          tprintf("%s %s",
-                  game_object_name(evaluation->world->database, target),
-                  message),
-          MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
-              MSG_S_INSIDE);
+      notify_checked(evaluation, loc, PLAYER, message_buffer,
+                     MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
+                         MSG_S_INSIDE);
       break;
+      (void)snprintf(message_buffer, sizeof(message_buffer), "%s%s",
+                     game_object_name(evaluation->world->database, target),
+                     message);
     case PEMIT_FPOSE_NS:
-      notify_checked(
-          evaluation, loc, PLAYER,
-          tprintf("%s%s", game_object_name(evaluation->world->database, target),
-                  message),
-          MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
-              MSG_S_INSIDE);
+      notify_checked(evaluation, loc, PLAYER, message_buffer,
+                     MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
+                         MSG_S_INSIDE);
       break;
     case PEMIT_FEMIT:
       if ((pemit_flags & PEMIT_HERE) || !pemit_flags)

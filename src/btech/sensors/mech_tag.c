@@ -19,7 +19,6 @@
 #include "mech_tag_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 
 #define TAGRECYCLE_TICK 30
@@ -130,9 +129,9 @@ void mech_tag(DbRef player, void *data, char *buffer) {
     return;
   }
   if (range > TAG_LONG) {
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                 tprintf("Out of range! TAG ranges are %d/%d/%d", TAG_SHORT,
-                         TAG_MED, TAG_LONG));
+    mecha_notifyf(btech_context_evaluation(mech_context(mech)), player,
+                  "Out of range! TAG ranges are %d/%d/%d", TAG_SHORT, TAG_MED,
+                  TAG_LONG);
     return;
   }
 

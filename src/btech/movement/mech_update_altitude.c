@@ -21,7 +21,6 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_utils_api.h"
-#include "mux/support/formatting.h"
 #include "section_types.h"
 
 void mech_naval_altitude_check(Mech *mech, int previous_z) {
@@ -46,9 +45,8 @@ void mech_naval_altitude_check(Mech *mech, int previous_z) {
         previous_z < 0) {
       mech_notify(mech, MECHALL,
                   "Your sub has reached surface and stops rising.");
-      mech_los_broadcast(mech,
-                         tprintf("surfaces at %d,%d!", mech_position_x(mech),
-                                 mech_position_y(mech)));
+      mech_los_broadcastf(mech, "surfaces at %d,%d!", mech_position_x(mech),
+                          mech_position_y(mech));
       /* Possible show-up message? */
     }
     mech_position_z_set(mech, 0);

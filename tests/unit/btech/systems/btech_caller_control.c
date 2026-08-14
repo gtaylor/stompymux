@@ -54,12 +54,6 @@ void btech_channel_send(BtechContext *context, BtechChannel channel,
   (void)format;
 }
 
-char *tprintf(const char *format, ...) {
-  static char buffer[1];
-  (void)format;
-  return buffer;
-}
-
 int mech_team(const Mech *mech) {
   (void)mech;
   return 0;

@@ -2,6 +2,7 @@
  * descriptors. */
 
 #include "mux/network/input_flow.h"
+#include <stdio.h>
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -16,7 +17,6 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 
 constexpr int FLOW_MAX_GOTO_CHAIN = 32;
@@ -41,7 +41,10 @@ static unsigned char flow_input_at(const char *input, size_t length,
 }
 
 static void flow_send_prompt(Descriptor *d, const char *prompt) {
-  descriptor_queue_string(d, tprintf("[bold]%s[reset]", prompt ? prompt : ""));
+  char message_buffer[LBUF_SIZE];
+  (void)snprintf(message_buffer, sizeof(message_buffer), "[bold]%s[reset]",
+                 prompt ? prompt : "");
+  descriptor_queue_string(d, message_buffer);
 }
 
 void descriptor_flow_destroy(Descriptor *d) {

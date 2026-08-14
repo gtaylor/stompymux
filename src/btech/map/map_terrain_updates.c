@@ -8,7 +8,6 @@
 #include "mech_notify_api.h"
 #include "mech_position_api.h"
 #include "mech_utils_api.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 
 void update_mechs_terrain(const MapTerrainChange *change) {
@@ -57,10 +56,10 @@ void clear_hex(const TerrainHexEffectRequest *request) {
     return;
   }
   if (request->intentional) {
-    mech_los_broadcast(mech, tprintf("'s shot clears %d,%d!", X, Y));
+    mech_los_broadcastf(mech, "'s shot clears %d,%d!", X, Y);
     mech_printf(mech, MECHALL, "You clear %d,%d.", X, Y);
   } else {
-    mech_los_broadcast(mech, tprintf("'s stray shot clears %d,%d!", X, Y));
+    mech_los_broadcastf(mech, "'s stray shot clears %d,%d!", X, Y);
     mech_printf(mech, MECHALL, "You accidentally clear %d,%d!", X, Y);
   }
 }

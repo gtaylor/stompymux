@@ -48,11 +48,11 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 
 void mech_embark(DbRef player, void *data, char *buffer) {
+  char message_buffer[128];
 
   Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
@@ -183,10 +183,9 @@ void mech_embark(DbRef player, void *data, char *buffer) {
         return;
       }
     }
-    mech_notify(mech, MECHALL,
-                tprintf("You climb into %s.", mech_display_id(target).text));
-    mech_los_broadcast(
-        mech, tprintf("climbs into %s.", mech_display_id(target).text));
+    mech_printf(mech, MECHALL, "You climb into %s.",
+                mech_display_id(target).text);
+    mech_los_broadcastf(mech, "climbs into %s.", mech_display_id(target).text);
     contents_teleport(&(ContentsTeleportRequest){
         .context = mech_context(mech),
         .source = mech_dbref(mech),
@@ -371,22 +370,19 @@ void mech_embark(DbRef player, void *data, char *buffer) {
     }
   }
   if (mech_class(mech) == CLASS_BSUIT) {
-    mech_notify(mech, MECHALL,
-                tprintf("You climb into %s.", mech_display_id(target).text));
-    mech_los_broadcast(
-        mech, tprintf("climbs into %s.", mech_display_id(target).text));
+    mech_printf(mech, MECHALL, "You climb into %s.",
+                mech_display_id(target).text);
+    mech_los_broadcastf(mech, "climbs into %s.", mech_display_id(target).text);
   } else {
-    mech_notify(mech, MECHALL,
-                tprintf("You climb up the entry ramp into %s.",
-                        mech_display_id(target).text));
-    mech_los_broadcast(mech, tprintf("climbs up the entry ramp into %s.",
-                                     mech_display_id(target).text));
+    mech_printf(mech, MECHALL, "You climb up the entry ramp into %s.",
+                mech_display_id(target).text);
+    mech_los_broadcastf(mech, "climbs up the entry ramp into %s.",
+                        mech_display_id(target).text);
     if (towee && mech_carried_dbref(mech) > 0) {
-      mech_notify(towee, MECHALL,
-                  tprintf("You are drug up the entry ramp into %s.",
-                          mech_display_id(target).text));
-      mech_los_broadcast(towee, tprintf("is drug up the entry ramp into %s.",
-                                        mech_display_id(target).text));
+      mech_printf(towee, MECHALL, "You are drug up the entry ramp into %s.",
+                  mech_display_id(target).text);
+      mech_los_broadcastf(towee, "is drug up the entry ramp into %s.",
+                          mech_display_id(target).text);
     }
   }
   mark_for_los_update(mech);
@@ -402,8 +398,10 @@ void mech_embark(DbRef player, void *data, char *buffer) {
    * whatever its towing */
   if (towee && mech_carried_dbref(mech) > 0) {
     mark_for_los_update(towee);
-    mech_rsetmapindex(GOD, (void *)towee, tprintf("%d", (-1)));
-    mech_rsetxy(GOD, (void *)towee, tprintf("%d %d", 0, 0));
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%d", (-1));
+    mech_rsetmapindex(GOD, (void *)towee, message_buffer);
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", 0, 0);
+    mech_rsetxy(GOD, (void *)towee, message_buffer);
     move_via_teleport(
         &(ObjectMovementRequest){.evaluation = evaluation,
                                  .object = mech_dbref(towee),
@@ -415,9 +413,11 @@ void mech_embark(DbRef player, void *data, char *buffer) {
     mech_towed_clear(towee);
   }
 
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%d", (-1));
   /* Now handle the unit itself */
-  mech_rsetmapindex(GOD, (void *)mech, tprintf("%d", (-1)));
-  mech_rsetxy(GOD, (void *)mech, tprintf("%d %d", 0, 0));
+  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", 0, 0);
+  mech_rsetxy(GOD, (void *)mech, message_buffer);
   move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
                                              .object = mech_dbref(mech),
                                              .destination = mech_dbref(target),
@@ -429,6 +429,7 @@ void mech_embark(DbRef player, void *data, char *buffer) {
 }
 
 void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
+  char message_buffer[MBUF_SIZE];
   Mech *m;
   DbRef suit;
   char *d;
@@ -442,10 +443,10 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
                        game_object_location(database, mech_dbref(mech))))
     return;
 
+  (void)snprintf(message_buffer, sizeof(message_buffer), "MechWarrior - %s",
+                 game_object_name(database, player));
   /* Create the MW object */
-  suit = create_obj(
-      evaluation, GOD, OBJECT_TYPE_THING,
-      tprintf("MechWarrior - %s", game_object_name(database, player)));
+  suit = create_obj(evaluation, GOD, OBJECT_TYPE_THING, message_buffer);
   silly_atr_set_in(database, suit, A_XTYPE, "MECH");
   s_xcode(database, suit);
   btech_special_object_flag_changed(mech_context(mech), GOD, suit, 0, 1);
@@ -476,10 +477,14 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
   }
   silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
   mech_team_set(m, mech_team(mech));
-  mech_rsetmapindex(GOD, (void *)m, tprintf("%ld", mech_map_dbref(mech)));
-  mech_rsetxy(GOD, (void *)m,
-              tprintf("%d %d", mech_position_x(mech), mech_position_y(mech)));
-  mech_rsetteam(GOD, (void *)m, tprintf("%d", mech_team(mech)));
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
+                 mech_map_dbref(mech));
+  mech_rsetmapindex(GOD, (void *)m, message_buffer);
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d",
+                 mech_position_x(mech), mech_position_y(mech));
+  mech_rsetxy(GOD, (void *)m, message_buffer);
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%d", mech_team(mech));
+  mech_rsetteam(GOD, (void *)m, message_buffer);
 
   /* Tele the MW to the map and player to the MW */
   move_via_teleport(
@@ -500,9 +505,8 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
   mech_pilot_dbref_set(m, player);
   mech_team_set(m, mech_team(mech));
   mech_radio_frequency_set(m, 0, random() % 1000000);
-  mecha_notify(evaluation, player,
-               tprintf("Emergency radio channel set to %d.",
-                       mech_radio_frequency(m, 0)));
+  mecha_notifyf(evaluation, player, "Emergency radio channel set to %d.",
+                mech_radio_frequency(m, 0));
   /* #endif
   #endif
   */
@@ -511,11 +515,10 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
     mech_los_broadcast(m, "climbs out of one of the destroyed suits!");
     mecha_notify(evaluation, player, "You climb out of the unit!");
   } else {
-    mech_los_broadcast(m,
-                       tprintf("ejected from %s!", mech_display_id(mech).text));
-    mech_ood_initiate(
-        player, m,
-        tprintf("%d %d %d", mech_position_x(m), mech_position_y(m), 150));
+    mech_los_broadcastf(m, "ejected from %s!", mech_display_id(mech).text);
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d %d",
+                   mech_position_x(m), mech_position_y(m), 150);
+    mech_ood_initiate(player, m, message_buffer);
     mecha_notify(evaluation, player, "You eject from the unit!");
   }
 }

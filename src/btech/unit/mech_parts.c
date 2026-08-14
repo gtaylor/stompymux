@@ -17,7 +17,6 @@
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include <stddef.h>
 
@@ -88,14 +87,13 @@ bool mech_parts_consume(Mech *mech, DbRef player,
         requirements, count, sizeof(*requirements), index);
     if (!mech_parts_available(mech, requirement->part, requirement->brand,
                               requirement->count)) {
-      mecha_notify(
+      mecha_notifyf(
           btech_context_evaluation(mech->xcode.context), player,
-          tprintf("Not enough units of %s in store! You need to have at "
-                  "least %d.",
-                  part_name(mech->xcode.context, requirement->part,
-                            requirement->brand)
-                      .text,
-                  requirement->count));
+          "Not enough units of %s in store! You need to have at "
+          "least %d.",
+          part_name(mech->xcode.context, requirement->part, requirement->brand)
+              .text,
+          requirement->count);
       return false;
     }
   }

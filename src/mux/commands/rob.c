@@ -12,10 +12,10 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 #include "mux/world/move.h"
+#include <stdio.h>
 
 /*
  * ---------------------------------------------------------------------------
@@ -31,6 +31,7 @@ typedef struct GiveThingRequest {
 } GiveThingRequest;
 
 static void give_thing(const GiveThingRequest *request) {
+  char message_buffer[LBUF_SIZE];
   EvaluationContext *evaluation = request->evaluation;
   DbRef giver = request->giver;
   DbRef recipient = request->recipient;
@@ -115,17 +116,16 @@ static void give_thing(const GiveThingRequest *request) {
   if (!(key & GIVE_QUIET)) {
     str = alloc_lbuf("do_give.thing.ok");
     string_copy(str, game_object_name(evaluation->world->database, giver));
-    notify_checked(
-        evaluation, recipient, giver,
-        tprintf("%s gave you %s.", str,
-                game_object_name(evaluation->world->database, thing)),
-        MSG_ME_ALL | MSG_F_DOWN);
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%s gave you %s.",
+                   str, game_object_name(evaluation->world->database, thing));
+    notify_checked(evaluation, recipient, giver, message_buffer,
+                   MSG_ME_ALL | MSG_F_DOWN);
     notify_checked(evaluation, giver, giver, "Given.", MSG_ME_ALL | MSG_F_DOWN);
-    notify_checked(
-        evaluation, thing, giver,
-        tprintf("%s gave you to %s.", str,
-                game_object_name(evaluation->world->database, recipient)),
-        MSG_ME_ALL | MSG_F_DOWN);
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%s gave you to %s.",
+                   str,
+                   game_object_name(evaluation->world->database, recipient));
+    notify_checked(evaluation, thing, giver, message_buffer,
+                   MSG_ME_ALL | MSG_F_DOWN);
     free_lbuf(str);
   }
   notify_action(evaluation,

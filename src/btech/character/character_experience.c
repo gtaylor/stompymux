@@ -138,12 +138,6 @@ void piloting_experience_award(const PilotingExperienceAward *award) {
         context, BTECH_CHANNEL_MECH_PILOT_XP, "%s gained %d %s XP",
         game_object_name(mech_context(mech)->database, PILOT), xp, skname);
   }
-  /*
-      if (char_gainxp(context, pilot, skname, xp))
-              btech_channel_send(context, BTECH_CHANNEL_MECH_XP, tprintf("%s
-     gained %d %s XP", game_object_name(mech_context(mech)->database, pilot),
-     xp, skname));
-  */
 }
 
 void accumulate_spot_xp(DbRef pilot, Mech *attacker, Mech *wounded) {

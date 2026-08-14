@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "aero_move_api.h"
@@ -22,7 +23,6 @@
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
 #include "mux/objects/db.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -199,9 +199,11 @@ void autopilot_speed_up_for_target(const AutopilotApproachRequest *request) {
  * bearing of its target
  */
 void update_wanted_heading(Autopilot *a, Mech *mech, int bearing) {
+  char message_buffer[128];
 
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%d", bearing);
   if (mech_desired_heading_degrees(mech) != bearing)
-    mech_heading(a->mynum, mech, tprintf("%d", bearing));
+    mech_heading(a->mynum, mech, message_buffer);
 }
 
 /*

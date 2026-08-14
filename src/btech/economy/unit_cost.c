@@ -663,9 +663,6 @@ unsigned long long mech_fasa_cost(Mech *mech) {
             (unsigned long long)(unsigned char)weapon_catalogue_critical_slots(
                 part - 1);
         indiv_part_cost *= CRITICAL_SLOTS;
-        // btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG,
-        // tprintf("Part#: %s(%d) Crits: %d", MechWeapons[part-1].name, part-1,
-        // MechWeapons[part-1].criticals));
       }
       mech_cost_add(mech, &total, part_name(mech_context(mech), part, 0).text,
                     (double)indiv_part_cost);

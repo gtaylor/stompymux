@@ -27,7 +27,6 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include <stdlib.h>
@@ -414,11 +413,10 @@ int death_from_above(Mech *mech, Mech *target) {
   base_to_hit += mech_class(target) == CLASS_BSUIT ? 1 : 0;
 
   if (base_to_hit > 12) {
-    mech_notify(
+    mech_printf(
         mech, MECHALL,
-        tprintf(
-            "DFA: BTH %d\tYou choose not to attack and land from your jump.",
-            base_to_hit));
+        "DFA: BTH %d\tYou choose not to attack and land from your jump.",
+        base_to_hit);
     return 0;
   }
 

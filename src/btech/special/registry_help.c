@@ -23,7 +23,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "special_object.h"
 
@@ -219,6 +218,7 @@ static HelpSection *help_section(HelpSection *sections, int index) {
 }
 
 void btech_special_object_help(const SpecialObjectHelpRequest *request) {
+  char message_buffer[LBUF_SIZE];
   BtechContext *context = request->context;
   const DbRef PLAYER = request->player;
   const char *type = request->type;
@@ -271,11 +271,13 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
         center_string(
             buf, sizeof(buf),
             command_help_message(ID, help_section(sections, i)->start), 70);
-        cool_menu_add_with_flags(
-            &c, tprintf("%s%s%s", "[fg=green]", buf, "[reset]"), CM_ONE);
+        (void)snprintf(message_buffer, sizeof(message_buffer), "%s%s%s",
+                       "[fg=green]", buf, "[reset]");
+        cool_menu_add_with_flags(&c, message_buffer, CM_ONE);
       } else {
-        cool_menu_add_with_flags(&c, tprintf("%s command listing: ", type),
-                                 CM_ONE | CM_CENTER);
+        (void)snprintf(message_buffer, sizeof(message_buffer),
+                       "%s command listing: ", type);
+        cool_menu_add_with_flags(&c, message_buffer, CM_ONE | CM_CENTER);
       }
       const HelpSection *section = help_section(sections, i);
       for (j = section->start + (count == 1 ? 0 : 1);
@@ -298,7 +300,7 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
     }
     if (!csho) {
       cool_menu_add_text(
-          &c, tprintf("There are no commands you are authorized to use here."));
+          &c, "There are no commands you are authorized to use here.");
     } else {
       cool_menu_add_with_flags(&c, NULL, CM_ONE | CM_LINE);
       if (count > 1)
@@ -343,8 +345,9 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
             center_string(
                 buf, sizeof(buf),
                 command_help_message(ID, help_section(sections, i)->start), 70);
-            cool_menu_add_text(&c,
-                               tprintf("%s%s%s", "[fg=green]", buf, "[reset]"));
+            (void)snprintf(message_buffer, sizeof(message_buffer), "%s%s%s",
+                           "[fg=green]", buf, "[reset]");
+            cool_menu_add_text(&c, message_buffer);
           }
           const HelpSection *section = help_section(sections, i);
           for (j = section->start + (count == 1 ? 0 : 1);

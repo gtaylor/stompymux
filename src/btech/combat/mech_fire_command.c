@@ -42,7 +42,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -148,9 +147,8 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
     for (i = 0; i < NUM_BSUIT_MEMBERS; i++) {
       if (!mech_section_is_destroyed(mech, i) &&
           mech_section_recycle_ticks(mech, i)) {
-        mecha_notify(
-            btech_context_evaluation(context), PLAYER,
-            tprintf("Suit %d is still recovering from attack.", i + 1));
+        mecha_notifyf(btech_context_evaluation(context), PLAYER,
+                      "Suit %d is still recovering from attack.", i + 1);
         return -1;
       }
     }

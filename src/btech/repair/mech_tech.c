@@ -35,7 +35,6 @@
 #include "mux/server/game.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "repair_job.h"
@@ -214,6 +213,7 @@ static void tech_status(const TechStatusRequest *request) {
 }
 
 int tech_addtechtime(const TechTimeAddition *addition) {
+  char message_buffer[128];
   BtechContext *context = addition->context;
   const DbRef PLAYER = addition->player;
   int added_seconds = tech_time_scaled_seconds(context, addition->units);
@@ -233,7 +233,8 @@ int tech_addtechtime(const TechTimeAddition *addition) {
     old = context->clock->now;
   }
   old += added_seconds;
-  silly_atr_set_in(context->database, PLAYER, A_TECHTIME, tprintf("%ld", old));
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", old);
+  silly_atr_set_in(context->database, PLAYER, A_TECHTIME, message_buffer);
   tech_status(&(TechStatusRequest){
       .context = context, .player = PLAYER, .completion = old});
   return clamp_intptr_to_int((intptr_t)(old - context->clock->now));

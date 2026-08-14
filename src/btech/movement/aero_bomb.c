@@ -36,7 +36,6 @@ static const float BOMB_GRAVITY = 1.0F;
 #include "mux/network/mux_event.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mycool.h"
 #include "registry_api.h"
 #include <math.h>
@@ -101,6 +100,7 @@ int bomb_weight(int i) { return bomb_info(i)->weight; }
 const char *bomb_name(int i) { return bomb_info(i)->name; }
 
 static void bomb_list(Mech *mech, DbRef player) {
+  char message_buffer[LBUF_SIZE];
   int bc = 0;
   int fb;
   int i;
@@ -110,8 +110,9 @@ static void bomb_list(Mech *mech, DbRef player) {
   CoolMenu *c = nullptr;
 
   cool_menu_add_line(&c);
-  cool_menu_add_centered(
-      &c, tprintf("Bomb payload for %s:", mech_display_id(mech).text));
+  (void)snprintf(message_buffer, sizeof(message_buffer),
+                 "Bomb payload for %s:", mech_display_id(mech).text);
+  cool_menu_add_centered(&c, message_buffer);
   cool_menu_add_line(&c);
   for (i = 0; i < NUM_SECTIONS; i++) {
     fb = 1;
@@ -125,13 +126,17 @@ static void bomb_list(Mech *mech, DbRef player) {
           fb = 0;
         }
         if (!bc) {
-          cool_menu_add_text(&c, tprintf("#  %-20s %-5s %-5s %s", "Location",
-                                         "Weight", "Power", "Type"));
+          (void)snprintf(message_buffer, sizeof(message_buffer),
+                         "#  %-20s %-5s %-5s %s", "Location", "Weight", "Power",
+                         "Type");
+          cool_menu_add_text(&c, message_buffer);
         }
         const BombInfo *bomb = bomb_info(k);
-        cool_menu_add_text(&c, tprintf("%-2d %-20s %5d %5d %s", bc + 1,
-                                       location, bomb->weight / 10, bomb->aff,
-                                       bomb_kind_name(bomb->type)));
+        (void)snprintf(message_buffer, sizeof(message_buffer),
+                       "%-2d %-20s %5d %5d %s", bc + 1, location,
+                       bomb->weight / 10, bomb->aff,
+                       bomb_kind_name(bomb->type));
+        cool_menu_add_text(&c, message_buffer);
         bc++;
       }
     }

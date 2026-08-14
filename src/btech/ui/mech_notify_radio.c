@@ -30,7 +30,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -344,15 +343,7 @@ static void nonrecursive_commlink(CommRelayContext *relay, int i) {
         dep--; /* We're finished! */
     }
     if (iter_c++ == 100000) {
-      /* Lets not spam MechErrors with this.. */
-      /*
-                              btech_channel_send(mech->xcode.context,
-         BTECH_CHANNEL_MECH_ERRORS, tprintf
-                                                ("#%d: Infinite loop in relay
-         code (?) ; using backup recursive code (num_mechs:%d, maxdepth:%d,
-         nowdepth:%d)", relay->mechs[0]->mynum, relay->node_count, maxdepth,
-         dep));
-      */
+      /* Don't spam MechErrors when falling back to the recursive search. */
       relay->best_depth = 9999;
       for (i = 0; i < relay->node_count; i++)
         relay_visited_set(relay, i, false);
@@ -717,6 +708,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
 }
 
 void mech_radio(DbRef player, void *data, char *buffer) {
+  char message_buffer[LBUF_SIZE];
   int fail = 0;
   char *args[3] = {0};
   int i;
@@ -759,9 +751,10 @@ void mech_radio(DbRef player, void *data, char *buffer) {
                 mech_to_mech_display_id(mech, temp_mech).text, message);
     mech_printf(temp_mech, MECHSTARTED, "%s radios you with, '%s'",
                 mech_to_mech_display_id(temp_mech, mech).text, message);
-    auto_reply(temp_mech,
-               tprintf("%s radio'ed me '%s'",
-                       mech_to_mech_display_id(temp_mech, mech).text, message));
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "%s radio'ed me '%s'",
+                   mech_to_mech_display_id(temp_mech, mech).text, message);
+    auto_reply(temp_mech, message_buffer);
   }
   if (fail) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,

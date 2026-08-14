@@ -11,11 +11,12 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h" // IWYU pragma: keep
-#include "mux/support/formatting.h"
+#include "mux/support/alloc.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 #include "mux/world/move_internal.h"
 #include "mux/world/object_list.h"
+#include <stdio.h>
 
 /*
  * ---------------------------------------------------------------------------
@@ -33,6 +34,7 @@ typedef struct LocationTransition {
 } LocationTransition;
 
 static void process_leave_loc(const LocationTransition *transition) {
+  char message_buffer[LBUF_SIZE];
   EvaluationContext *evaluation = transition->evaluation;
   DbRef thing = transition->object;
   DbRef dest = transition->other_location;
@@ -105,15 +107,14 @@ static void process_leave_loc(const LocationTransition *transition) {
          !is_dark(evaluation->world->database, loc)) ||
         (canhear && !(is_wizard(evaluation->world->database, thing) &&
                       is_dark(evaluation->world->database, thing)))) {
-      notify_excluding(&(ExcludingNotification){
-          .evaluation = evaluation,
-          .location = loc,
-          .sender = thing,
-          .exceptions = {thing, cause},
-          .exception_count = 2,
-          .message =
-              tprintf("%s has left.",
-                      game_object_name(evaluation->world->database, thing))});
+      (void)snprintf(message_buffer, sizeof(message_buffer), "%s has left.",
+                     game_object_name(evaluation->world->database, thing));
+      notify_excluding(&(ExcludingNotification){.evaluation = evaluation,
+                                                .location = loc,
+                                                .sender = thing,
+                                                .exceptions = {thing, cause},
+                                                .exception_count = 2,
+                                                .message = message_buffer});
     }
   }
 }
@@ -124,6 +125,7 @@ static void process_leave_loc(const LocationTransition *transition) {
  * * a place.
  */
 static void process_enter_loc(const LocationTransition *transition) {
+  char message_buffer[LBUF_SIZE];
   EvaluationContext *evaluation = transition->evaluation;
   DbRef thing = transition->object;
   DbRef src = transition->other_location;
@@ -189,15 +191,14 @@ static void process_enter_loc(const LocationTransition *transition) {
   if (!quiet && canhear &&
       !(is_dark(evaluation->world->database, thing) &&
         is_wizard(evaluation->world->database, thing))) {
-    notify_excluding(&(ExcludingNotification){
-        .evaluation = evaluation,
-        .location = loc,
-        .sender = thing,
-        .exceptions = {thing, cause},
-        .exception_count = 2,
-        .message =
-            tprintf("%s has arrived.",
-                    game_object_name(evaluation->world->database, thing))});
+    (void)snprintf(message_buffer, sizeof(message_buffer), "%s has arrived.",
+                   game_object_name(evaluation->world->database, thing));
+    notify_excluding(&(ExcludingNotification){.evaluation = evaluation,
+                                              .location = loc,
+                                              .sender = thing,
+                                              .exceptions = {thing, cause},
+                                              .exception_count = 2,
+                                              .message = message_buffer});
   }
 }
 
