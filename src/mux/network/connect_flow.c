@@ -43,6 +43,7 @@ typedef enum ConnectResult {
 typedef struct ConnectFlowData {
   char name[PLAYER_NAME_LIMIT + 1];
   char password[LBUF_SIZE];
+  char prompt[SBUF_SIZE];
 } ConnectFlowData;
 
 static constexpr char CONNECT_FAILURE[] =
@@ -472,14 +473,13 @@ static FlowOutcome connect_flow_step_confirm_create(const FlowStepCall *call) {
   ConnectFlowData *data = call->flow_data;
   const char *input = call->input;
   FlowOutcome outcome = {0};
-  static char prompt[SBUF_SIZE];
 
   if (input == nullptr) {
-    (void)snprintf(prompt, sizeof(prompt),
+    (void)snprintf(data->prompt, sizeof(data->prompt),
                    "No character named '%s' exists. Create a new one? (Y/n) ",
                    data->name);
     outcome.action = FLOW_ACTION_WAIT;
-    outcome.prompt = prompt;
+    outcome.prompt = data->prompt;
     return outcome;
   }
   if (connect_flow_blank(input) || flow_parse_yesno(input) == FLOW_YESNO_YES) {

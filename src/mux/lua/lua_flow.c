@@ -34,6 +34,7 @@ typedef struct LuaFlowData {
   char path[PATH_MAX];
   LuaFlowField fields[LUA_FLOW_MAX_FIELDS];
   int field_count;
+  char prompt[LBUF_SIZE];
 } LuaFlowData;
 
 static LuaFlowField *lua_flow_field_at(LuaFlowData *data, size_t index) {
@@ -108,7 +109,6 @@ static void lua_flow_encode(LuaRuntime *runtime, lua_State *state,
 }
 
 static FlowOutcome lua_flow_step(const FlowStepCall *call) {
-  static char prompt_buffer[LBUF_SIZE];
   Descriptor *d = call->descriptor;
   LuaFlowData *data = call->flow_data;
   const char *step = call->step;
@@ -216,9 +216,9 @@ static FlowOutcome lua_flow_step(const FlowStepCall *call) {
     lua_getfield(state, result_index, "message");
   }
   if (lua_isstring(state, -1)) {
-    (void)snprintf(prompt_buffer, sizeof(prompt_buffer), "%s",
+    (void)snprintf(data->prompt, sizeof(data->prompt), "%s",
                    lua_tostring(state, -1));
-    outcome.prompt = prompt_buffer;
+    outcome.prompt = data->prompt;
   }
   lua_pop(state, 1);
 

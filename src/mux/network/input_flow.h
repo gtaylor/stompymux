@@ -23,7 +23,9 @@ typedef struct FlowOutcome {
   /*
    * Text to show. For FLOW_ACTION_WAIT, nullptr repeats the last prompt.
    * For FLOW_ACTION_GOTO/DONE/CANCEL, a non-null prompt is sent once as a
-   * message before the transition/teardown; nullptr sends nothing.
+   * message before the transition/teardown; nullptr sends nothing. Borrowed
+   * prompt storage must remain valid until the outcome is synchronously
+   * applied and the text has been queued or copied.
    */
   const char *prompt;
 } FlowOutcome;

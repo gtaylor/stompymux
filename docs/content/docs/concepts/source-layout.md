@@ -162,9 +162,9 @@ distinction explicit prevents unavoidable boundary state from becoming a
 justification for new ambient state.
 
 The writable-global allowlist records the remaining exceptions rather than
-treating them as precedent. It contains the POSIX signal bridge, test-only
-SQLite writer fault injection, and legacy formatting, connection-display,
-flow-prompt, and xcode-reference scratch buffers. Those scratch buffers are the
-next de-globalization boundary and will move to caller-owned storage. Flag and
-power lookup also still normalizes mutable input strings in place; converting
-those inputs to const belongs to the same caller-owned-buffer round.
+treating them as precedent. It contains the POSIX signal bridge and two legacy
+formatting buffers. SQLite writer fault injection is owned by each snapshot
+write and threaded through its store contexts. Flow prompts belong to their
+active flows, while connection displays and xcode-reference handlers use
+owner- or caller-provided storage. The remaining formatting exceptions require
+a dedicated API and call-site migration.

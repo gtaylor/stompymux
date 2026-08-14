@@ -240,6 +240,7 @@ int btech_persistence_store_economy(sqlite3 *sqlite,
   BtechContext *btech = extension_context;
   BtechPartCostSet cost_sets[BTECH_PART_COST_SET_COUNT];
   BtechPartCostSet *cost_set;
+  BtechSpecialWriteContext fault;
   sqlite3_stmt *statement;
   const char *part_name;
   int part;
@@ -251,12 +252,15 @@ int btech_persistence_store_economy(sqlite3 *sqlite,
   int result;
 
   statement = NULL;
+  /* This writer runs as a separate registered extension from the special-state
+   * writer, so it owns an independent fault-injection context. */
+  btech_special_write_context_init(&fault);
   if (btech_sqlite_exec(sqlite, "CREATE TABLE btech_economy_costs ("
                                 " item_name TEXT PRIMARY KEY,"
                                 " cost TEXT NOT NULL"
                                 ") WITHOUT ROWID;") < 0 ||
-      btech_special_prepare_v2(
-          sqlite,
+      btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_economy_costs (item_name, cost) "
           "VALUES (?, ?);",
           -1, &statement, NULL) != SQLITE_OK)
@@ -283,7 +287,7 @@ int btech_persistence_store_economy(sqlite3 *sqlite,
               SQLITE_OK ||
           sqlite3_bind_text(statement, 2, cost, -1, SQLITE_TRANSIENT) !=
               SQLITE_OK ||
-          btech_special_step(statement) < 0) {
+          btech_special_write_step(&fault, statement) < 0) {
         result = -1;
         break;
       }

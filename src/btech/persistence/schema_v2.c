@@ -276,49 +276,49 @@ const char BTECH_SPECIAL_SCHEMA_SQL[] =
     ") WITHOUT ROWID;";
 #pragma GCC diagnostic pop
 
-/*
- * CTest can force one named BTech writer statement to fail. This code is
- * absent from production builds, and is scoped to an in-progress SQLite
- * extension write so reads and unrelated SQLite users are unaffected.
- */
 #ifdef BTECH_PERSISTENCE_TESTING
-static const char *btech_special_test_fault_table;
-static const char *btech_special_test_fault_phase;
-static int btech_special_test_fault_active;
-static int btech_special_test_fault_triggered;
-
-void btech_special_test_reset_fault(void) {
-  btech_special_test_fault_table = getenv("BTECH_TEST_BTECH_FAIL_TABLE");
-  btech_special_test_fault_phase = getenv("BTECH_TEST_BTECH_FAIL_PHASE");
-  btech_special_test_fault_active =
-      btech_special_test_fault_table && btech_special_test_fault_table[0] &&
-      btech_special_test_fault_phase && btech_special_test_fault_phase[0];
-  btech_special_test_fault_triggered = 0;
+/* Arm one snapshot writer's fault context from the test environment. */
+void btech_special_write_context_init(BtechSpecialWriteContext *fault) {
+  fault->table = getenv("BTECH_TEST_BTECH_FAIL_TABLE");
+  fault->phase = getenv("BTECH_TEST_BTECH_FAIL_PHASE");
+  fault->triggered = false;
 }
 
-static int btech_special_test_should_fail(const char *sql, const char *phase) {
-  if (!btech_special_test_fault_active || btech_special_test_fault_triggered ||
-      !sql || strcmp(phase, btech_special_test_fault_phase) ||
-      !strstr(sql, btech_special_test_fault_table))
-    return 0;
-  btech_special_test_fault_triggered = 1;
-  return 1;
+static bool btech_special_should_fail(BtechSpecialWriteContext *fault,
+                                      const char *sql, const char *phase) {
+  if (fault->triggered || fault->table == nullptr || fault->table[0] == '\0' ||
+      fault->phase == nullptr || fault->phase[0] == '\0' || sql == nullptr ||
+      strcmp(phase, fault->phase) || !strstr(sql, fault->table))
+    return false;
+  fault->triggered = true;
+  return true;
 }
 #else
-void btech_special_test_reset_fault(void) {}
+void btech_special_write_context_init(BtechSpecialWriteContext *fault) {
+  fault->disabled = false;
+}
 
-static int btech_special_test_should_fail(const char *sql, const char *phase) {
+static bool btech_special_should_fail(BtechSpecialWriteContext *fault,
+                                      const char *sql, const char *phase) {
+  (void)fault;
   (void)sql;
   (void)phase;
-  return 0;
+  return false;
 }
 #endif
 
-/* Interpose only in this translation unit so prepare failures are testable. */
+/* Restore and validation reads prepare without fault interposition. */
 int btech_special_prepare_v2(sqlite3 *sqlite, const char *sql, int byte_count,
                              sqlite3_stmt **statement, const char **tail) {
-  if (btech_special_test_should_fail(sql, "prepare")) {
-    *statement = NULL;
+  return sqlite3_prepare_v2(sqlite, sql, byte_count, statement, tail);
+}
+
+int btech_special_write_prepare(BtechSpecialWriteContext *fault,
+                                sqlite3 *sqlite, const char *sql,
+                                int byte_count, sqlite3_stmt **statement,
+                                const char **tail) {
+  if (btech_special_should_fail(fault, sql, "prepare")) {
+    *statement = nullptr;
     return SQLITE_ERROR;
   }
   return sqlite3_prepare_v2(sqlite, sql, byte_count, statement, tail);
@@ -333,12 +333,18 @@ int btech_special_exec(sqlite3 *sqlite, const char *sql) {
 }
 
 int btech_special_step(sqlite3_stmt *statement) {
-  if (btech_special_test_should_fail(sqlite3_sql(statement), "step") ||
-      sqlite3_step(statement) != SQLITE_DONE ||
+  if (sqlite3_step(statement) != SQLITE_DONE ||
       sqlite3_reset(statement) != SQLITE_OK)
     return -1;
   sqlite3_clear_bindings(statement);
   return 0;
+}
+
+int btech_special_write_step(BtechSpecialWriteContext *fault,
+                             sqlite3_stmt *statement) {
+  if (btech_special_should_fail(fault, sqlite3_sql(statement), "step"))
+    return -1;
+  return btech_special_step(statement);
 }
 
 int btech_special_bind_int(sqlite3_stmt *statement, int index,
@@ -352,19 +358,20 @@ int btech_special_bind_real(sqlite3_stmt *statement, int index, double value) {
 
 /* Mark the schema version in every snapshot, including snapshots with no BTech
  * objects. */
-int btech_special_store_metadata(sqlite3 *sqlite) {
+int btech_special_store_metadata(BtechSpecialWriteContext *fault,
+                                 sqlite3 *sqlite) {
   sqlite3_stmt *statement;
   int result;
 
   statement = NULL;
-  result = btech_special_prepare_v2(sqlite,
-                                    "INSERT INTO btech_persistence_metadata "
-                                    "(id, schema_name, schema_version) "
-                                    "VALUES (1, 'stompymux-btech', ?);",
-                                    -1, &statement, NULL) == SQLITE_OK &&
+  result = btech_special_write_prepare(fault, sqlite,
+                                       "INSERT INTO btech_persistence_metadata "
+                                       "(id, schema_name, schema_version) "
+                                       "VALUES (1, 'stompymux-btech', ?);",
+                                       -1, &statement, nullptr) == SQLITE_OK &&
                    btech_special_bind_int(
                        statement, 1, BTECH_PERSISTENCE_SCHEMA_VERSION) == 0 &&
-                   btech_special_step(statement) == 0
+                   btech_special_write_step(fault, statement) == 0
                ? 0
                : -1;
   sqlite3_finalize(statement);

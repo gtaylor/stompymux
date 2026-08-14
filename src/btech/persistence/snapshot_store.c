@@ -84,7 +84,7 @@ int btech_store_map(const RedBlackTreeVisitCall *call) {
       btech_special_bind_int(context->map, 21, map->movemod) < 0 ||
       btech_special_bind_int(context->map, 22, map->sensorflags) < 0 ||
       btech_special_bind_int(context->map, 23, map->regen_factor) < 0 ||
-      btech_special_step(context->map) < 0) {
+      btech_special_write_step(context->fault, context->map) < 0) {
     context->result = -1;
     return 0;
   }
@@ -99,7 +99,7 @@ int btech_store_map(const RedBlackTreeVisitCall *call) {
           btech_special_bind_int(context->hex, 3, y) < 0 ||
           btech_special_bind_int(context->hex, 4,
                                  battle_map_encoded_hex(map, x, y)) < 0 ||
-          btech_special_step(context->hex) < 0)
+          btech_special_write_step(context->fault, context->hex) < 0)
         context->result = -1;
     }
   }
@@ -110,7 +110,7 @@ int btech_store_map(const RedBlackTreeVisitCall *call) {
                                battle_map_unit_dbref(map, index)) < 0 ||
         btech_special_bind_int(context->slot, 4,
                                battle_map_unit_flags(map, index)) < 0 ||
-        btech_special_step(context->slot) < 0) {
+        btech_special_write_step(context->fault, context->slot) < 0) {
       context->result = -1;
       break;
     }
@@ -121,7 +121,7 @@ int btech_store_map(const RedBlackTreeVisitCall *call) {
           btech_special_bind_int(context->los, 3, target) < 0 ||
           btech_special_bind_int(
               context->los, 4, battle_map_los_flags(map, index, target)) < 0 ||
-          btech_special_step(context->los) < 0)
+          btech_special_write_step(context->fault, context->los) < 0)
         context->result = -1;
     }
   }
@@ -142,7 +142,7 @@ int btech_store_map(const RedBlackTreeVisitCall *call) {
           btech_special_bind_int(context->object, 8, object->datas) < 0 ||
           btech_special_bind_int(context->object, 9, object->payload.scalar) <
               0 ||
-          btech_special_step(context->object) < 0)
+          btech_special_write_step(context->fault, context->object) < 0)
         context->result = -1;
     }
   }
@@ -161,7 +161,7 @@ int btech_store_map(const RedBlackTreeVisitCall *call) {
             btech_special_bind_int(
                 context->bits, 4,
                 stored_bits_byte(*row, bytes_per_row, byte_index)) < 0 ||
-            btech_special_step(context->bits) < 0)
+            btech_special_write_step(context->fault, context->bits) < 0)
           context->result = -1;
       }
     }
@@ -171,6 +171,7 @@ int btech_store_map(const RedBlackTreeVisitCall *call) {
 
 /* Capture one queued repair event in its durable SQLite representation. */
 typedef struct BtechRepairStoreContext {
+  BtechSpecialWriteContext *fault;
   sqlite3_stmt *statement;
   int type;
   int result;
@@ -193,7 +194,7 @@ static void btech_store_repair_event(MuxEvent *event, void *context_argument) {
                              remaining < 0 ? -remaining : remaining) < 0 ||
       btech_special_bind_int(context->statement, 4, (long)event->data2) < 0 ||
       btech_special_bind_int(context->statement, 5, remaining < 0) < 0 ||
-      btech_special_step(context->statement) < 0)
+      btech_special_write_step(context->fault, context->statement) < 0)
     context->result = -1;
 }
 
@@ -203,45 +204,48 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
                                           void *extension_context) {
   BtechContext *btech = extension_context;
   (void)persistence;
-  BtechMapStoreContext maps = {NULL, NULL, NULL, NULL, NULL, NULL, -1};
+  BtechSpecialWriteContext fault;
+  BtechMapStoreContext maps = {.result = -1};
   BtechObjectStoreContext objects;
   sqlite3_stmt *repairs = NULL;
   BtechRepairStoreContext repair_context;
   int type;
   int result;
 
-  btech_special_test_reset_fault();
+  btech_special_write_context_init(&fault);
+  maps.fault = &fault;
   memset(&objects, 0, sizeof(objects));
+  objects.fault = &fault;
   objects.result = -1;
   if (btech_special_exec(sqlite, BTECH_SPECIAL_SCHEMA_SQL) < 0)
     return -1;
-  if (btech_special_store_metadata(sqlite) < 0)
+  if (btech_special_store_metadata(&fault, sqlite) < 0)
     return -1;
   if (!btech->special_objects)
     return 0;
-  if (btech_special_prepare_v2(
-          sqlite,
+  if (btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_maps VALUES (?, ?, ?, ?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
           -1, &maps.map, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite, "INSERT INTO btech_map_hexes VALUES (?, ?, ?, ?);", -1,
-          &maps.hex, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite, "INSERT INTO btech_map_slots VALUES (?, ?, ?, ?);", -1,
-          &maps.slot, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(sqlite,
-                               "INSERT INTO btech_map_los VALUES (?, ?, ?, ?);",
-                               -1, &maps.los, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite,
+      btech_special_write_prepare(
+          &fault, sqlite, "INSERT INTO btech_map_hexes VALUES (?, ?, ?, ?);",
+          -1, &maps.hex, NULL) != SQLITE_OK ||
+      btech_special_write_prepare(
+          &fault, sqlite, "INSERT INTO btech_map_slots VALUES (?, ?, ?, ?);",
+          -1, &maps.slot, NULL) != SQLITE_OK ||
+      btech_special_write_prepare(
+          &fault, sqlite, "INSERT INTO btech_map_los VALUES (?, ?, ?, ?);", -1,
+          &maps.los, NULL) != SQLITE_OK ||
+      btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_map_objects VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
           -1, &maps.object, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite, "INSERT INTO btech_map_bits VALUES (?, ?, ?, ?);", -1,
+      btech_special_write_prepare(
+          &fault, sqlite, "INSERT INTO btech_map_bits VALUES (?, ?, ?, ?);", -1,
           &maps.bits, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite,
+      btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_repair_events "
           "(mech_dbref, event_type, remaining_ticks, event_data, is_fake) "
           "VALUES (?, ?, ?, ?, ?);",
@@ -255,63 +259,65 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
     sqlite3_finalize(repairs);
     return -1;
   }
-  if (btech_special_prepare_v2(sqlite,
-                               "INSERT INTO btech_mechrep VALUES (?, ?);", -1,
-                               &objects.mechrep, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite,
+  if (btech_special_write_prepare(&fault, sqlite,
+                                  "INSERT INTO btech_mechrep VALUES (?, ?);",
+                                  -1, &objects.mechrep, NULL) != SQLITE_OK ||
+      btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_turrets VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);", -1,
           &objects.turret, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite, "INSERT INTO btech_turret_tics VALUES (?, ?, ?);", -1,
+      btech_special_write_prepare(
+          &fault, sqlite, "INSERT INTO btech_turret_tics VALUES (?, ?, ?);", -1,
           &objects.turret_tic, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite,
+      btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_autopilots VALUES (?, ?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
           -1, &objects.autopilot, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite,
+      btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_mechs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
           -1, &objects.mech, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite,
+      btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_mech_sections VALUES (?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?);",
           -1, &objects.section, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite,
+      btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_mech_criticals VALUES (?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?);",
           -1, &objects.critical, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite,
+      btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_mech_positions VALUES (?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
           -1, &objects.position, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(sqlite,
-                               "INSERT INTO btech_mech_bays VALUES (?, ?, ?);",
-                               -1, &objects.bay, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite, "INSERT INTO btech_mech_turrets VALUES (?, ?, ?);", -1,
-          &objects.mech_turret, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite,
+      btech_special_write_prepare(
+          &fault, sqlite, "INSERT INTO btech_mech_bays VALUES (?, ?, ?);", -1,
+          &objects.bay, NULL) != SQLITE_OK ||
+      btech_special_write_prepare(
+          &fault, sqlite, "INSERT INTO btech_mech_turrets VALUES (?, ?, ?);",
+          -1, &objects.mech_turret, NULL) != SQLITE_OK ||
+      btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_mech_c3 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);", -1,
           &objects.c3, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite, "INSERT INTO btech_mech_c3_nodes VALUES (?, ?, ?, ?);", -1,
+      btech_special_write_prepare(
+          &fault, sqlite,
+          "INSERT INTO btech_mech_c3_nodes VALUES (?, ?, ?, ?);", -1,
           &objects.c3node, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite, "INSERT INTO btech_mech_tics VALUES (?, ?, ?, ?);", -1,
-          &objects.tic, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite, "INSERT INTO btech_mech_frequencies VALUES (?, ?, ?, ?, ?);",
-          -1, &objects.frequency, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite,
+      btech_special_write_prepare(
+          &fault, sqlite, "INSERT INTO btech_mech_tics VALUES (?, ?, ?, ?);",
+          -1, &objects.tic, NULL) != SQLITE_OK ||
+      btech_special_write_prepare(
+          &fault, sqlite,
+          "INSERT INTO btech_mech_frequencies VALUES (?, ?, ?, ?, ?);", -1,
+          &objects.frequency, NULL) != SQLITE_OK ||
+      btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_mech_runtime VALUES ("
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
@@ -319,22 +325,23 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
           -1, &objects.runtime, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite, "INSERT INTO btech_mech_unit_aux VALUES (?, ?, ?);", -1,
-          &objects.unit_aux, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite,
+      btech_special_write_prepare(
+          &fault, sqlite, "INSERT INTO btech_mech_unit_aux VALUES (?, ?, ?);",
+          -1, &objects.unit_aux, NULL) != SQLITE_OK ||
+      btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_mech_stagger_damage VALUES (?, ?, ?, ?, ?, ?);",
           -1, &objects.stagger_damage, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite, "INSERT INTO btech_autopilot_commands VALUES (?, ?, ?, ?);",
-          -1, &objects.autopilot_command, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite,
+      btech_special_write_prepare(
+          &fault, sqlite,
+          "INSERT INTO btech_autopilot_commands VALUES (?, ?, ?, ?);", -1,
+          &objects.autopilot_command, NULL) != SQLITE_OK ||
+      btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_autopilot_command_args VALUES (?, ?, ?, ?);", -1,
           &objects.autopilot_command_arg, NULL) != SQLITE_OK ||
-      btech_special_prepare_v2(
-          sqlite,
+      btech_special_write_prepare(
+          &fault, sqlite,
           "INSERT INTO btech_autopilot_path VALUES (?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?);",
           -1, &objects.autopilot_path, NULL) != SQLITE_OK) {
@@ -355,6 +362,7 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
   red_black_tree_walk(btech->special_objects, WALK_INORDER,
                       btech_store_simple_object, &objects);
   repair_context = (BtechRepairStoreContext){
+      .fault = &fault,
       .statement = repairs,
       .result = 0,
   };

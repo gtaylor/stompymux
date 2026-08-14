@@ -216,7 +216,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
                                snapshot.definition.targcomp) < 0 ||
         btech_special_bind_int(context->mech, 34,
                                snapshot.definition.carmaxton) < 0 ||
-        btech_special_step(context->mech) < 0)
+        btech_special_write_step(context->fault, context->mech) < 0)
       context->result = -1;
     for (index = 0; context->result == 0 && index < NUM_SECTIONS; index++) {
       const struct MechSection *section = stored_section(&snapshot, index);
@@ -234,7 +234,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
           btech_special_bind_int(context->section, 10, section->config) < 0 ||
           btech_special_bind_int(context->section, 11, section->recycle) < 0 ||
           btech_special_bind_int(context->section, 12, section->specials) < 0 ||
-          btech_special_step(context->section) < 0) {
+          btech_special_write_step(context->fault, context->section) < 0) {
         context->result = -1;
         break;
       }
@@ -254,7 +254,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
                                    critical->weap_damage_flags) < 0 ||
             btech_special_bind_int(context->critical, 10,
                                    critical->desired_ammo_loc) < 0 ||
-            btech_special_step(context->critical) < 0)
+            btech_special_write_step(context->fault, context->critical) < 0)
           context->result = -1;
       }
     }
@@ -287,7 +287,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
                                 snapshot.position.stall) < 0 ||
          btech_special_bind_int(context->position, 16,
                                 snapshot.position.pilot) < 0 ||
-         btech_special_step(context->position) < 0))
+         btech_special_write_step(context->fault, context->position) < 0))
       context->result = -1;
     for (index = 0; context->result == 0 && index < NUM_BAYS; index++) {
       if (btech_special_bind_int(context->bay, 1, (DbRef)key) < 0 ||
@@ -295,7 +295,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
           btech_special_bind_int(
               context->bay, 3,
               stored_dbref(snapshot.position.bay, NUM_BAYS, index)) < 0 ||
-          btech_special_step(context->bay) < 0)
+          btech_special_write_step(context->fault, context->bay) < 0)
         context->result = -1;
     }
     for (index = 0; context->result == 0 && index < NUM_TURRETS; index++) {
@@ -304,7 +304,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
           btech_special_bind_int(
               context->mech_turret, 3,
               stored_dbref(snapshot.position.turret, NUM_TURRETS, index)) < 0 ||
-          btech_special_step(context->mech_turret) < 0)
+          btech_special_write_step(context->fault, context->mech_turret) < 0)
         context->result = -1;
     }
     if (context->result == 0 &&
@@ -325,7 +325,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
              0 ||
          btech_special_bind_int(context->c3, 9, snapshot.network.tagged_by) <
              0 ||
-         btech_special_step(context->c3) < 0))
+         btech_special_write_step(context->fault, context->c3) < 0))
       context->result = -1;
     for (index = 0;
          context->result == 0 && index < C3I_NETWORK_SIZE + C3_NETWORK_SIZE;
@@ -343,7 +343,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
           btech_special_bind_int(context->c3node, 2, network) < 0 ||
           btech_special_bind_int(context->c3node, 3, node_index) < 0 ||
           btech_special_bind_int(context->c3node, 4, node) < 0 ||
-          btech_special_step(context->c3node) < 0)
+          btech_special_write_step(context->fault, context->c3node) < 0)
         context->result = -1;
     }
     for (index = 0; context->result == 0 && index < NUM_TICS; index++) {
@@ -353,7 +353,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
             btech_special_bind_int(context->tic, 3, slot) < 0 ||
             bind_unsigned_long(context->tic, 4,
                                stored_tic(&snapshot, index, slot)) < 0 ||
-            btech_special_step(context->tic) < 0)
+            btech_special_write_step(context->fault, context->tic) < 0)
           context->result = -1;
       }
     }
@@ -369,7 +369,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
           sqlite3_bind_text(context->frequency, 5,
                             stored_channel_title(&snapshot, index), -1,
                             SQLITE_TRANSIENT) != SQLITE_OK ||
-          btech_special_step(context->frequency) < 0)
+          btech_special_write_step(context->fault, context->frequency) < 0)
         context->result = -1;
     }
     if (context->result == 0) {
@@ -563,7 +563,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
                            snapshot.runtime.units_killed) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
                            snapshot.runtime.last_stagger_check) < 0 ||
-          btech_special_step(context->runtime) < 0)
+          btech_special_write_step(context->fault, context->runtime) < 0)
         context->result = -1;
     }
     if (context->result == 0 &&
@@ -571,7 +571,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
          btech_special_bind_int(context->unit_aux, 2, 0) < 0 ||
          btech_special_bind_int(context->unit_aux, 3,
                                 snapshot.definition.mechbv_last) < 0 ||
-         btech_special_step(context->unit_aux) < 0))
+         btech_special_write_step(context->fault, context->unit_aux) < 0))
       context->result = -1;
     for (index = 0; context->result == 0 && index < 3; index++) {
       if (btech_special_bind_int(context->unit_aux, 1, (DbRef)key) < 0 ||
@@ -579,7 +579,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
           btech_special_bind_int(
               context->unit_aux, 3,
               stored_char(snapshot.definition.unused_char, 3, index)) < 0 ||
-          btech_special_step(context->unit_aux) < 0)
+          btech_special_write_step(context->fault, context->unit_aux) < 0)
         context->result = -1;
     }
     for (index = 0;
@@ -595,7 +595,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
               0 ||
           btech_special_bind_int(context->stagger_damage, 6, damage.counted) <
               0 ||
-          btech_special_step(context->stagger_damage) < 0)
+          btech_special_write_step(context->fault, context->stagger_damage) < 0)
         context->result = -1;
     }
   } else {

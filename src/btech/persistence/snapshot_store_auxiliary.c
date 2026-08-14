@@ -37,7 +37,7 @@ static void store_repair_facility(BtechObjectStoreContext *context,
   if (btech_special_bind_int(context->mechrep, 1, object_id) < 0 ||
       btech_special_bind_int(context->mechrep, 2, facility->current_target) <
           0 ||
-      btech_special_step(context->mechrep) < 0)
+      btech_special_write_step(context->fault, context->mechrep) < 0)
     context->result = -1;
 }
 
@@ -52,7 +52,7 @@ static void store_turret(BtechObjectStoreContext *context, DbRef object_id,
       btech_special_bind_int(context->turret, 7, turret->targy) < 0 ||
       btech_special_bind_int(context->turret, 8, turret->targz) < 0 ||
       btech_special_bind_int(context->turret, 9, turret->lockmode) < 0 ||
-      btech_special_step(context->turret) < 0)
+      btech_special_write_step(context->fault, context->turret) < 0)
     context->result = -1;
 
   for (int index = 0; context->result == 0 && index < NUM_TICS; ++index) {
@@ -61,7 +61,7 @@ static void store_turret(BtechObjectStoreContext *context, DbRef object_id,
         bind_unsigned_long(context->turret_tic, 3,
                            stored_unsigned_long(turret->tic, NUM_TICS, index)) <
             0 ||
-        btech_special_step(context->turret_tic) < 0)
+        btech_special_write_step(context->fault, context->turret_tic) < 0)
       context->result = -1;
   }
 }
@@ -80,7 +80,8 @@ static void store_autopilot_commands(BtechObjectStoreContext *context,
                                command->command_enum) < 0 ||
         btech_special_bind_int(context->autopilot_command, 4,
                                command->argcount + 1) < 0 ||
-        btech_special_step(context->autopilot_command) < 0) {
+        btech_special_write_step(context->fault, context->autopilot_command) <
+            0) {
       context->result = -1;
       break;
     }
@@ -98,7 +99,8 @@ static void store_autopilot_commands(BtechObjectStoreContext *context,
                                  argument_index) < 0 ||
           sqlite3_bind_text(context->autopilot_command_arg, 4, argument, -1,
                             SQLITE_TRANSIENT) != SQLITE_OK ||
-          btech_special_step(context->autopilot_command_arg) < 0)
+          btech_special_write_step(context->fault,
+                                   context->autopilot_command_arg) < 0)
         context->result = -1;
     }
   }
@@ -126,7 +128,7 @@ static void store_autopilot_path(BtechObjectStoreContext *context,
         btech_special_bind_int(context->autopilot_path, 9, node->f_score) < 0 ||
         btech_special_bind_int(context->autopilot_path, 10, node->hexoffset) <
             0 ||
-        btech_special_step(context->autopilot_path) < 0) {
+        btech_special_write_step(context->fault, context->autopilot_path) < 0) {
       context->result = -1;
       break;
     }
@@ -182,7 +184,8 @@ static void store_autopilot(BtechObjectStoreContext *context, DbRef object_id,
     if (btech_special_bind_int(context->autopilot, (int)index + 2, *value) < 0)
       context->result = -1;
   }
-  if (context->result == 0 && btech_special_step(context->autopilot) < 0)
+  if (context->result == 0 &&
+      btech_special_write_step(context->fault, context->autopilot) < 0)
     context->result = -1;
   store_autopilot_commands(context, object_id, autopilot);
   store_autopilot_path(context, object_id, autopilot);

@@ -42,8 +42,20 @@
 #include "template_api.h"
 #include "turret.h"
 
+/* Fault injection is owned by one in-progress snapshot write. */
+typedef struct BtechSpecialWriteContext {
+#ifdef BTECH_PERSISTENCE_TESTING
+  const char *table;
+  const char *phase;
+  bool triggered;
+#else
+  bool disabled;
+#endif
+} BtechSpecialWriteContext;
+
 typedef struct BtechMapStoreContext BtechMapStoreContext;
 struct BtechMapStoreContext {
+  BtechSpecialWriteContext *fault;
   sqlite3_stmt *map;
   sqlite3_stmt *hex;
   sqlite3_stmt *slot;
@@ -55,6 +67,7 @@ struct BtechMapStoreContext {
 
 typedef struct BtechObjectStoreContext BtechObjectStoreContext;
 struct BtechObjectStoreContext {
+  BtechSpecialWriteContext *fault;
   sqlite3_stmt *mechrep;
   sqlite3_stmt *turret;
   sqlite3_stmt *turret_tic;
@@ -80,15 +93,22 @@ struct BtechObjectStoreContext {
 
 extern const char BTECH_SPECIAL_SCHEMA_SQL[];
 
-void btech_special_test_reset_fault(void);
+void btech_special_write_context_init(BtechSpecialWriteContext *fault);
 int btech_special_prepare_v2(sqlite3 *sqlite, const char *sql, int byte_count,
                              sqlite3_stmt **statement, const char **tail);
+int btech_special_write_prepare(BtechSpecialWriteContext *fault,
+                                sqlite3 *sqlite, const char *sql,
+                                int byte_count, sqlite3_stmt **statement,
+                                const char **tail);
 int btech_special_exec(sqlite3 *sqlite, const char *sql);
 int btech_special_step(sqlite3_stmt *statement);
+int btech_special_write_step(BtechSpecialWriteContext *fault,
+                             sqlite3_stmt *statement);
 int btech_special_bind_int(sqlite3_stmt *statement, int index,
                            sqlite3_int64 value);
 int btech_special_bind_real(sqlite3_stmt *statement, int index, double value);
-int btech_special_store_metadata(sqlite3 *sqlite);
+int btech_special_store_metadata(BtechSpecialWriteContext *fault,
+                                 sqlite3 *sqlite);
 int btech_special_column_int(sqlite3_stmt *statement, int column, int *value);
 int btech_special_column_long(sqlite3_stmt *statement, int column, long *value);
 int btech_special_column_uint(sqlite3_stmt *statement, int column,

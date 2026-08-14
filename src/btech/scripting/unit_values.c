@@ -77,10 +77,7 @@ const char *mech_getset_ref(int mode, Mech *mech, char *data) {
     return nullptr;
   }
 
-  static char reference[LBUF_SIZE];
-  (void)snprintf(reference, sizeof(reference), "%s",
-                 mech_model_reference(mech));
-  return reference;
+  return mech_model_reference(mech);
 }
 
 const char *mech_typefunc(int mode, Mech *mech, char *arg) {

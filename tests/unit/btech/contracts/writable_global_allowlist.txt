@@ -1,18 +1,6 @@
-# Runtime scratch buffers. These move to caller-owned storage in the next round.
-src/btech/scripting/unit_values.c:mech_getset_ref:reference
-src/mux/lua/lua_flow.c:lua_flow_step:prompt_buffer
-src/mux/network/connect_flow.c:connect_flow_step_confirm_create:prompt
-src/mux/network/connection_commands.c:time_format_1:buf
-src/mux/network/connection_commands.c:time_format_2:buf
-src/mux/network/connection_commands.c:trimmed_name:cbuff
+# Legacy formatting scratch storage requires a dedicated call-site migration.
 src/mux/support/formatting.c:safe_tprintf_str:buff
 src/mux/support/formatting.c:tprintf:buff
-
-# Test-only fault injection scoped to an in-progress SQLite snapshot write.
-src/btech/persistence/schema_v2.c:<file>:btech_special_test_fault_active
-src/btech/persistence/schema_v2.c:<file>:btech_special_test_fault_phase
-src/btech/persistence/schema_v2.c:<file>:btech_special_test_fault_table
-src/btech/persistence/schema_v2.c:<file>:btech_special_test_fault_triggered
 
 # POSIX sigaction has no user-data field, so this bridges the process signal service.
 src/mux/server/signals.c:<file>:active_signal_handlers

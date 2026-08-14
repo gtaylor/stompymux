@@ -63,42 +63,45 @@ void make_portlist(DescriptorRegistry *descriptors, DbRef target, char *buff,
  * * timeval_sub: return difference between two times as a timeval
  */
 
-static const char *time_format_1(time_t dt) {
-  register struct tm *delta;
-  static char buf[64];
+enum {
+  CONNECTION_TIME_TEXT_SIZE = 64,
+  CONNECTION_NAME_TEXT_SIZE = 17,
+};
 
-  if (dt < 0)
-    dt = 0;
+static char *time_format_1(time_t duration,
+                           char buffer[static CONNECTION_TIME_TEXT_SIZE]) {
+  long long seconds = duration < 0 ? 0 : (long long)duration;
+  long long days = seconds / 86400;
+  long long hours = (seconds / 3600) % 24;
+  long long minutes = (seconds / 60) % 60;
 
-  delta = gmtime(&dt);
-  if (delta->tm_yday > 0) {
-    (void)snprintf(buf, sizeof(buf), "%dd %02d:%02d", delta->tm_yday,
-                   delta->tm_hour, delta->tm_min);
+  if (days > 0) {
+    (void)snprintf(buffer, CONNECTION_TIME_TEXT_SIZE, "%lldd %02lld:%02lld",
+                   days, hours, minutes);
   } else {
-    (void)snprintf(buf, sizeof(buf), "%02d:%02d", delta->tm_hour,
-                   delta->tm_min);
+    (void)snprintf(buffer, CONNECTION_TIME_TEXT_SIZE, "%02lld:%02lld", hours,
+                   minutes);
   }
-  return buf;
+  return buffer;
 }
 
-static const char *time_format_2(time_t dt) {
-  register struct tm *delta;
-  static char buf[64];
+static char *time_format_2(time_t duration,
+                           char buffer[static CONNECTION_TIME_TEXT_SIZE]) {
+  long long seconds = duration < 0 ? 0 : (long long)duration;
+  long long days = seconds / 86400;
+  long long hours = (seconds / 3600) % 24;
+  long long minutes = (seconds / 60) % 60;
 
-  if (dt < 0)
-    dt = 0;
-
-  delta = gmtime(&dt);
-  if (delta->tm_yday > 0) {
-    (void)snprintf(buf, sizeof(buf), "%dd", delta->tm_yday);
-  } else if (delta->tm_hour > 0) {
-    (void)snprintf(buf, sizeof(buf), "%dh", delta->tm_hour);
-  } else if (delta->tm_min > 0) {
-    (void)snprintf(buf, sizeof(buf), "%dm", delta->tm_min);
+  if (days > 0) {
+    (void)snprintf(buffer, CONNECTION_TIME_TEXT_SIZE, "%lldd", days);
+  } else if (hours > 0) {
+    (void)snprintf(buffer, CONNECTION_TIME_TEXT_SIZE, "%lldh", hours);
+  } else if (minutes > 0) {
+    (void)snprintf(buffer, CONNECTION_TIME_TEXT_SIZE, "%lldm", minutes);
   } else {
-    (void)snprintf(buf, sizeof(buf), "%ds", delta->tm_sec);
+    (void)snprintf(buffer, CONNECTION_TIME_TEXT_SIZE, "%llds", seconds % 60);
   }
-  return buf;
+  return buffer;
 }
 
 int fetch_idle(DescriptorRegistry *descriptors, RuntimeClock *clock,
@@ -133,15 +136,12 @@ int fetch_connect(DescriptorRegistry *descriptors, RuntimeClock *clock,
   return result;
 }
 
-static char *trimmed_name(GameDatabase *database, DbRef player) {
-  static char cbuff[18];
-  char *name = game_object_pure_name(database, player);
-
-  if (strlen(name) <= 16)
-    return name;
-  string_copy_trunc(cbuff, name, 16);
-  cbuff[16] = '\0';
-  return cbuff;
+static char *trimmed_name(GameDatabase *database, DbRef player,
+                          char buffer[static CONNECTION_NAME_TEXT_SIZE]) {
+  string_copy_trunc(buffer, game_object_pure_name(database, player), 16);
+  *(char *)checked_storage_at(buffer, CONNECTION_NAME_TEXT_SIZE, sizeof(char),
+                              16) = '\0';
+  return buffer;
 }
 
 static void dump_users(Descriptor *e, const char *match) {
@@ -174,6 +174,10 @@ static void dump_users(Descriptor *e, const char *match) {
   descriptor_queue_string(e, "     Room    Cmds Host\r\n");
   count = 0;
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
+    char connected_text[CONNECTION_TIME_TEXT_SIZE];
+    char idle_text[CONNECTION_TIME_TEXT_SIZE];
+    char name_text[CONNECTION_NAME_TEXT_SIZE];
+
     if (match &&
         !(string_prefix(
             game_object_pure_name(runtime->world->database, d->player), match)))
@@ -204,15 +208,15 @@ static void dump_users(Descriptor *e, const char *match) {
     *(char *)checked_storage_at(slist, sizeof(slist), sizeof(char),
                                 slist_length) = '\0';
 
-    (void)snprintf(buf, LBUF_SIZE, "%-16s%10s %5s%-3s#%6ld %7d %-25s\r\n",
-                   trimmed_name(runtime->world->database, d->player),
-                   time_format_1(runtime->clock->now - d->connected_at),
-                   time_format_2(runtime->clock->now - d->last_time), flist,
-                   game_object_location(runtime->world->database, d->player),
-                   d->command_count,
-                   (d->username[0] != '\0')
-                       ? tprintf("%s@%s", d->username, d->addr)
-                       : d->addr);
+    (void)snprintf(
+        buf, LBUF_SIZE, "%-16s%10s %5s%-3s#%6ld %7d %-25s\r\n",
+        trimmed_name(runtime->world->database, d->player, name_text),
+        time_format_1(runtime->clock->now - d->connected_at, connected_text),
+        time_format_2(runtime->clock->now - d->last_time, idle_text), flist,
+        game_object_location(runtime->world->database, d->player),
+        d->command_count,
+        (d->username[0] != '\0') ? tprintf("%s@%s", d->username, d->addr)
+                                 : d->addr);
     descriptor_queue_string(e, buf);
   }
   (void)snprintf(
@@ -258,6 +262,10 @@ static void dump_sessions(Descriptor *e, const char *match) {
 
   count = 0;
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
+    char connected_text[CONNECTION_TIME_TEXT_SIZE];
+    char idle_text[CONNECTION_TIME_TEXT_SIZE];
+    char name_text[CONNECTION_NAME_TEXT_SIZE];
+
     if (match &&
         !string_prefix(
             game_object_pure_name(runtime->world->database, d->player), match))
@@ -266,11 +274,12 @@ static void dump_sessions(Descriptor *e, const char *match) {
 
     (void)snprintf(
         buf, LBUF_SIZE, "%-16s%10s %5s%5d%5d%6d%10d%6d%6d%10d\r\n",
-        trimmed_name(runtime->world->database, d->player),
-        time_format_1(runtime->clock->now - d->connected_at),
+        trimmed_name(runtime->world->database, d->player, name_text),
+        time_format_1(runtime->clock->now - d->connected_at, connected_text),
         time_format_2((runtime->clock->now - d->last_time) > HIDDEN_IDLESECS
                           ? (runtime->clock->now - d->last_time)
-                          : 0),
+                          : 0,
+                      idle_text),
         d->descriptor, d->input_size, d->input_lost, d->input_tot,
         d->output_size, d->output_lost, d->output_tot);
     descriptor_queue_string(e, buf);

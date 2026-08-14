@@ -1123,6 +1123,16 @@ static int create_styled_object(int socket_fd) {
       expect_text(socket_fd, " - MONITOR set.") < 0 ||
       send_command(socket_fd, "@flag me=!monitor\r\n") < 0 ||
       expect_text(socket_fd, " - MONITOR cleared.") < 0 ||
+      send_command(socket_fd, "@name me=LongConnectedPlayer\r\n") < 0 ||
+      expect_text(socket_fd, "Name set.") < 0 ||
+      send_command(socket_fd, "@who\r\n") < 0 ||
+      expect_text_without(socket_fd, "LongConnectedPla",
+                          "LongConnectedPlayer") < 0 ||
+      send_command(socket_fd, "@session\r\n") < 0 ||
+      expect_text_without(socket_fd, "LongConnectedPla",
+                          "LongConnectedPlayer") < 0 ||
+      send_command(socket_fd, "@name me=GOD\r\n") < 0 ||
+      expect_text(socket_fd, "Name set.") < 0 ||
       send_command(socket_fd, "@flag/quiet me=monitor\r\n") < 0 ||
       expect_text(socket_fd, "Command @flag does not take switches.") < 0 ||
       send_command(socket_fd, "@set me=monitor\r\n") < 0 ||
