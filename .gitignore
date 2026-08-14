@@ -39,6 +39,8 @@
 /game*/stompymux
 /game*/text/*.indx
 /game*/logs/stompymux.log*
+/game*/logs/superset-run.pid
+/game*/stompymux.local.toml
 /buildnum.data
 
 # /btech/
