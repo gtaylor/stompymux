@@ -234,10 +234,9 @@ static void mine_explode(const MineExplosion *explosion) {
     });
     break;
   case MINE_TRIGGER:
-    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MINE_TRIGGERS, "%s",
-                       tprintf("#%ld %s activated trigger at %d,%d.",
-                               mech_dbref(mech), mech_display_id(mech).text,
-                               o->x, o->y));
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MINE_TRIGGERS,
+                       "#%ld %s activated trigger at %d,%d.", mech_dbref(mech),
+                       mech_display_id(mech).text, o->x, o->y);
 
     // Trigger the unit's AMECHDEST attribute.
     if (mech_dbref(mech) > 0)

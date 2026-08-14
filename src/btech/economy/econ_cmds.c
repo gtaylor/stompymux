@@ -304,12 +304,11 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
       display_name = part_name_long(context, id, brand);
       if (!display_name.valid) {
         btech_channel_send(
-            context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-            tprintf("#%ld in %ld encountered odd thing: %d %d/%d's.", player,
-                    loc,
-                    *branded_part_pile_slot(&(BrandedPartPileSlot){
-                        .pile = &pile, .part = {.id = id, .brand = brand}}),
-                    id, brand));
+            context, BTECH_CHANNEL_MECH_ERRORS,
+            "#%ld in %ld encountered odd thing: %d %d/%d's.", player, loc,
+            *branded_part_pile_slot(&(BrandedPartPileSlot){
+                .pile = &pile, .part = {.id = id, .brand = brand}}),
+            id, brand);
         continue;
       }
       sw = btech_part_weight(id);
@@ -434,10 +433,9 @@ static const char *modify_manifest(BtechContext *context, DbRef player,
       .part = {.id = id, .brand = brand},
       .quantity_delta = amount,
   });
-  btech_channel_send(context, BTECH_CHANNEL_MECH_ECON, "%s",
-                     tprintf("#%ld %s %d %s %s #%ld.", player,
-                             amount > 0 ? "added" : "removed", abs(amount),
-                             name, amount > 0 ? "to" : "from", location));
+  btech_channel_send(context, BTECH_CHANNEL_MECH_ECON, "#%ld %s %d %s %s #%ld.",
+                     player, amount > 0 ? "added" : "removed", abs(amount),
+                     name, amount > 0 ? "to" : "from", location);
   return name;
 }
 
@@ -694,7 +692,7 @@ void mech_rresetstuff(DbRef player, void *data, char *buffer) {
   mecha_notify(btech_context_evaluation(context), player, "Inventory cleaned!");
   economy_parts_clear(context->database,
                       game_object_location(context->database, player));
-  btech_channel_send(context, BTECH_CHANNEL_MECH_ECON, "%s",
-                     tprintf("#%ld reset #%ld's stuff.", player,
-                             game_object_location(context->database, player)));
+  btech_channel_send(context, BTECH_CHANNEL_MECH_ECON,
+                     "#%ld reset #%ld's stuff.", player,
+                     game_object_location(context->database, player));
 }

@@ -453,9 +453,9 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
                            (char[LBUF_SIZE]){0});
   m = btech_context_get_mech(mech_context(mech), suit);
   if (!m) {
-    btech_channel_send(
-        mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("Unable to create special obj for #%ld's ejection.", player));
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+                       "Unable to create special obj for #%ld's ejection.",
+                       player);
     destroy_thing(evaluation, suit);
     mecha_notify(evaluation, player,
                  "Sorry, something serious went wrong, contact a Wizard "
@@ -465,9 +465,9 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
   if (!mech_template_load(
           GOD, m, (!d || !*d || !strcmp(d, "#-1")) ? "MechWarrior" : d)) {
     btech_channel_send(
-        mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("Unable to load mechwarrior template for #%ld's ejection. (%s)",
-                player, (!d || !*d) ? "Default template" : d));
+        mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+        "Unable to load mechwarrior template for #%ld's ejection. (%s)", player,
+        (!d || !*d) ? "Default template" : d);
     destroy_thing(evaluation, suit);
     mecha_notify(evaluation, player,
                  "Sorry, something serious went wrong, contact a Wizard "

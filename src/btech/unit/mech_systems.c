@@ -19,7 +19,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -506,36 +505,34 @@ void channel_emit_kill(Mech *mech, Mech *attacker, const char *reason) {
     ((attacker)->rd.units_killed) = ((attacker)->rd.units_killed) + 1;
 
   if (reason) {
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("#%ld [%s] has been killed by #%ld [%s] (%s)",
-                               mech->mynum, ((mech)->ud.mech_type),
-                               attacker->mynum, ((attacker)->ud.mech_type),
-                               reason));
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEATHS, "%s",
-                       tprintf("#%ld [%s] has been killed by #%ld [%s] (%s)",
-                               mech->mynum, ((mech)->ud.mech_type),
-                               attacker->mynum, ((attacker)->ud.mech_type),
-                               reason));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                       "#%ld [%s] has been killed by #%ld [%s] (%s)",
+                       mech->mynum, ((mech)->ud.mech_type), attacker->mynum,
+                       ((attacker)->ud.mech_type), reason);
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEATHS,
+                       "#%ld [%s] has been killed by #%ld [%s] (%s)",
+                       mech->mynum, ((mech)->ud.mech_type), attacker->mynum,
+                       ((attacker)->ud.mech_type), reason);
   } else {
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("#%ld [%s] has been killed by #%ld [%s]",
-                               mech->mynum, ((mech)->ud.mech_type),
-                               attacker->mynum, ((attacker)->ud.mech_type)));
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEATHS, "%s",
-                       tprintf("#%ld [%s] has been killed by #%ld [%s]",
-                               mech->mynum, ((mech)->ud.mech_type),
-                               attacker->mynum, ((attacker)->ud.mech_type)));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                       "#%ld [%s] has been killed by #%ld [%s]", mech->mynum,
+                       ((mech)->ud.mech_type), attacker->mynum,
+                       ((attacker)->ud.mech_type));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEATHS,
+                       "#%ld [%s] has been killed by #%ld [%s]", mech->mynum,
+                       ((mech)->ud.mech_type), attacker->mynum,
+                       ((attacker)->ud.mech_type));
   }
 
   if (mech_is_dropship(mech)) {
     if (reason) {
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_DS_INFO, "%s",
-                         tprintf("#%ld has been killed by #%ld (%s)",
-                                 mech->mynum, attacker->mynum, reason));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_DS_INFO,
+                         "#%ld has been killed by #%ld (%s)", mech->mynum,
+                         attacker->mynum, reason);
     } else {
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_DS_INFO, "%s",
-                         tprintf("#%ld has been killed by #%ld", mech->mynum,
-                                 attacker->mynum));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_DS_INFO,
+                         "#%ld has been killed by #%ld", mech->mynum,
+                         attacker->mynum);
     }
   }
 

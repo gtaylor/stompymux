@@ -9,7 +9,6 @@
 #include "mech_hitloc_internal.h"
 #include "mech_identity_api.h"
 #include "mech_utils_api.h"
-#include "mux/support/formatting.h"
 #include "section_types.h"
 
 HitLocationResult fasa_mech_hit_location(Mech *mech, int hit_group,
@@ -30,10 +29,10 @@ HitLocationResult fasa_mech_hit_location(Mech *mech, int hit_group,
     case LEFTSIDE:
       switch (roll) {
       case 2:
-        btech_channel_send(context, BTECH_CHANNEL_TAC_INFO, "%s",
-                           tprintf("%ld's luck sucks. It got TACed. "
-                                   "We're in mech_fasa_hit_location()",
-                                   mech_dbref(mech)));
+        btech_channel_send(context, BTECH_CHANNEL_TAC_INFO,
+                           "%ld's luck sucks. It got TACed. "
+                           "We're in mech_fasa_hit_location()",
+                           mech_dbref(mech));
         result.critical = 1;
         return hit_location_result_at(result, LTORSO);
       case 3:
@@ -63,10 +62,10 @@ HitLocationResult fasa_mech_hit_location(Mech *mech, int hit_group,
     case RIGHTSIDE:
       switch (roll) {
       case 2:
-        btech_channel_send(context, BTECH_CHANNEL_TAC_INFO, "%s",
-                           tprintf("%ld's luck sucks. It got TACed. "
-                                   "We're in mech_fasa_hit_location()",
-                                   mech_dbref(mech)));
+        btech_channel_send(context, BTECH_CHANNEL_TAC_INFO,
+                           "%ld's luck sucks. It got TACed. "
+                           "We're in mech_fasa_hit_location()",
+                           mech_dbref(mech));
         result.critical = 1;
         return hit_location_result_at(result, RTORSO);
       case 3:
@@ -97,10 +96,10 @@ HitLocationResult fasa_mech_hit_location(Mech *mech, int hit_group,
     case BACK:
       switch (roll) {
       case 2:
-        btech_channel_send(context, BTECH_CHANNEL_TAC_INFO, "%s",
-                           tprintf("%ld's luck sucks. It got TACed. "
-                                   "We're in mech_fasa_hit_location()",
-                                   mech_dbref(mech)));
+        btech_channel_send(context, BTECH_CHANNEL_TAC_INFO,
+                           "%ld's luck sucks. It got TACed. "
+                           "We're in mech_fasa_hit_location()",
+                           mech_dbref(mech));
         result.critical = 1;
         return hit_location_result_at(result, CTORSO);
       case 3:

@@ -487,10 +487,9 @@ BtechScriptResult fun_btaddstores(BtechScriptCall *call) {
       .part = {.id = id, .brand = brand},
       .quantity_delta = count,
   });
-  btech_channel_send(context->btech, BTECH_CHANNEL_MECH_ECON, "%s",
-                     tprintf("#%ld added %d %s to #%ld", PLAYER, count,
-                             get_parts_vlong_name(context->btech, id, brand),
-                             loc));
+  btech_channel_send(context->btech, BTECH_CHANNEL_MECH_ECON,
+                     "#%ld added %d %s to #%ld", PLAYER, count,
+                     get_parts_vlong_name(context->btech, id, brand), loc);
   safe_tprintf_str(buff, bufc, "1");
 
   return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
@@ -558,12 +557,11 @@ BtechScriptResult fun_btticweaps(BtechScriptCall *call) {
         continue;
       }
       safe_tprintf_str(
-          buff, bufc, "%s",
-          tprintf("%d:%s ", j,
-                  checked_string_suffix(
-                      weapon_catalogue_name(weapon_from_equipment_index(
-                          mech_critical_part_type(mech, section, critical))),
-                      3)));
+          buff, bufc, "%d:%s ", j,
+          checked_string_suffix(
+              weapon_catalogue_name(weapon_from_equipment_index(
+                  mech_critical_part_type(mech, section, critical))),
+              3));
     }
   }
 

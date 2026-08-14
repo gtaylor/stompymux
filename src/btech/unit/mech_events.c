@@ -45,7 +45,6 @@
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -542,8 +541,8 @@ void mech_unjam_ammo_event(MuxEvent *obj_event) {
 void check_stagger_event(MuxEvent *event) {
   Mech *mech = (Mech *)event->data; /* get the mech */
 
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("Triggered stagger check for %ld.", mech->mynum));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                     "Triggered stagger check for %ld.", mech->mynum);
 
   if ((mech_stagger_level(mech) < 1) || mech_is_fallen(mech) ||
       (((mech)->ud.type) != CLASS_MECH)) {

@@ -8,7 +8,6 @@
 #include "mech_utils_api.h"
 #include "mech_utils_internal.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 #include <stddef.h>
@@ -60,11 +59,10 @@ static bool weapon_critical_count_is_valid(Mech *mech, int weapon_index,
   const int EXPECTED = get_weapon_crits(mech, weapon_index);
   if (*critical_count != EXPECTED && EXPECTED < 9) {
     if (report) {
-      btech_channel_send(
-          mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-          tprintf("Error in the numcriticals for weapon on #%ld! "
-                  "(Should be: %d, is: %d)",
-                  mech->mynum, EXPECTED, *critical_count));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                         "Error in the numcriticals for weapon on #%ld! "
+                         "(Should be: %d, is: %d)",
+                         mech->mynum, EXPECTED, *critical_count);
     }
     return false;
   }

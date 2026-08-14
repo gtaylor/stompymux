@@ -158,9 +158,9 @@ PartDisplayName pos_part_name(Mech *mech, int index, int loop) {
   PartDisplayName name;
 
   if (index < 0 || index >= NUM_SECTIONS || loop < 0 || loop >= NUM_CRITICALS) {
-    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-                       tprintf("INVALID: For mech #%ld, %d/%d was requested.",
-                               mech_dbref(mech), index, loop));
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+                       "INVALID: For mech #%ld, %d/%d was requested.",
+                       mech_dbref(mech), index, loop);
     return part_display_name("--?LocationBug?--");
   }
   t = mech_critical_part_type(mech, index, loop);

@@ -17,7 +17,6 @@
 #include "mux/network/mux_event.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 
 void mech_sensor_visibility_refresh(Mech *mech) {
@@ -40,11 +39,11 @@ void mech_sensor_visibility_refresh(Mech *mech) {
     if (!seer)
       continue;
     if (mech_map_dbref(seer) != battle_map_dbref(map)) {
-      btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-                         tprintf("Mech #%ld was on map #%ld but with "
-                                 "incorrect mapindex (%ld)",
-                                 mech_dbref(seer), battle_map_dbref(map),
-                                 mech_map_dbref(seer)));
+      btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+                         "Mech #%ld was on map #%ld but with "
+                         "incorrect mapindex (%ld)",
+                         mech_dbref(seer), battle_map_dbref(map),
+                         mech_map_dbref(seer));
       battle_map_unit_slot_clear(map, i);
       continue;
     }

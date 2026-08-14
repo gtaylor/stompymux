@@ -24,7 +24,6 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "section_types.h"
 
 extern const int INTERNALSWEIGHT[];
@@ -177,8 +176,8 @@ static void mech_cost_add(const Mech *mech, double *total, const char *desc,
                           double value) {
   *total += value;
   if (mech_context(mech)->configuration->btech_cost_debug)
-    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("Addprice - %25s %8.0f", desc, value));
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG,
+                       "Addprice - %25s %8.0f", desc, value);
 }
 
 int mech_engine_heat_sink_capacity(const Mech *mech) {
@@ -345,9 +344,8 @@ unsigned long long mech_fasa_cost(Mech *mech) {
           turret += crit_weight(mech, part);
         if (weapon_catalogue_is_energy(part)) {
           pamp += crit_weight(mech, part);
-          btech_channel_send(
-              mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
-              tprintf("PAmp Weight: %d", crit_weight(mech, part)));
+          btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG,
+                             "PAmp Weight: %d", crit_weight(mech, part));
         }
       }
     }

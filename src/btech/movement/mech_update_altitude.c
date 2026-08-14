@@ -62,11 +62,10 @@ void mech_naval_altitude_check(Mech *mech, int previous_z) {
       z = 0;
     mech_position_hex_z_set(mech, z);
     if (mech_position_surface_elevation(mech) > 0) {
-      btech_channel_send(
-          mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-          tprintf("Oddity: #%ld managed to wind up on '%c' (%d elev.)",
-                  mech_dbref(mech), mech_position_terrain(mech),
-                  mech_position_elevation(mech)));
+      btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+                         "Oddity: #%ld managed to wind up on '%c' (%d elev.)",
+                         mech_dbref(mech), mech_position_terrain(mech),
+                         mech_position_elevation(mech));
     }
     const int MECH_Z = mech_position_z(mech);
     mech_position_real_z_set(mech,

@@ -256,9 +256,9 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
   if (mech_context(attacker)->configuration->btech_xp_bthmod) {
     if (!(BTH >= 3 && BTH <= 12)) {
       if (mech_context(attacker)->configuration->btech_noisy_xpgain)
-        btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
-                           tprintf("#%ld in #%ld 1 noxp #%ld", PILOT,
-                                   mech_dbref(attacker), mech_dbref(wounded)));
+        btech_channel_send(context, BTECH_CHANNEL_MECH_XP,
+                           "#%ld in #%ld 1 noxp #%ld", PILOT,
+                           mech_dbref(attacker), mech_dbref(wounded));
       return; /* sure hits aren't interesting */
     }
     multiplier = 2.0 * multiplier * bth_modifier_value(BTH) / 36.0;
@@ -326,16 +326,15 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
   // Emit XP gain over MechAttackXP
   if (char_gainxp(context, PILOT, skname, xp)) {
     btech_channel_send(
-        context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
-        tprintf("%s gained %d gun XP from feat of %f/100 difficulty "
-                "(%d damage) against %s",
-                game_object_name(mech_context(attacker)->database, PILOT), xp,
-                multiplier, DAMAGE, buf));
+        context, BTECH_CHANNEL_MECH_ATTACK_XP,
+        "%s gained %d gun XP from feat of %f/100 difficulty "
+        "(%d damage) against %s",
+        game_object_name(mech_context(attacker)->database, PILOT), xp,
+        multiplier, DAMAGE, buf);
     if (mech_context(attacker)->configuration->btech_noisy_xpgain)
-      btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
-                         tprintf("#%ld in #%ld %d damage #%ld", PILOT,
-                                 mech_dbref(attacker), DAMAGE,
-                                 mech_dbref(wounded)));
+      btech_channel_send(context, BTECH_CHANNEL_MECH_XP,
+                         "#%ld in #%ld %d damage #%ld", PILOT,
+                         mech_dbref(attacker), DAMAGE, mech_dbref(wounded));
   }
 
 } // end AccumulateGunXP()
@@ -398,12 +397,12 @@ legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
   } else {
     /* Bring this to the attention of the admins */
     btech_channel_send(
-        context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("AccumulateGunXP: Weird tonnage for IC mech #%ld (%s): %d",
-                mech_dbref(attacker),
-                game_object_name(mech_context(attacker)->database,
-                                 mech_dbref(attacker)),
-                (short)mech_tonnage(attacker)));
+        context, BTECH_CHANNEL_MECH_ERRORS,
+        "AccumulateGunXP: Weird tonnage for IC mech #%ld (%s): %d",
+        mech_dbref(attacker),
+        game_object_name(mech_context(attacker)->database,
+                         mech_dbref(attacker)),
+        (short)mech_tonnage(attacker));
     return;
   }
 
@@ -437,11 +436,11 @@ legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
    */
   if (char_gainxp(context, PILOT, skname, xp)) {
     btech_channel_send(
-        context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
-        tprintf("%s gained %d gun XP from feat of %f %% "
-                "difficulty (%d occurences) against %s",
-                game_object_name(mech_context(attacker)->database, PILOT), xp,
-                multiplier, NUM_OCCURENCES, buf));
+        context, BTECH_CHANNEL_MECH_ATTACK_XP,
+        "%s gained %d gun XP from feat of %f %% "
+        "difficulty (%d occurences) against %s",
+        game_object_name(mech_context(attacker)->database, PILOT), xp,
+        multiplier, NUM_OCCURENCES, buf);
   }
 }
 
@@ -635,10 +634,9 @@ BtechScriptResult fun_btsetcharvalue(BtechScriptCall *call) {
                 .context = context, .player = target, .code = targetcode}),
         .override_interval = true});
 
-    btech_channel_send(context, BTECH_CHANNEL_MECH_XP, "%s",
-                       tprintf("%ld set %ld's %s XP to %d", PLAYER, target,
-                               character_value_definition(targetcode)->name,
-                               targetvalue));
+    btech_channel_send(
+        context, BTECH_CHANNEL_MECH_XP, "%ld set %ld's %s XP to %d", PLAYER,
+        target, character_value_definition(targetcode)->name, targetvalue);
     safe_tprintf_str(buff, bufc, "%s's %s XP set to %d.",
                      game_object_name(context->database, target),
                      character_value_definition(targetcode)->name, targetvalue);
@@ -651,10 +649,9 @@ BtechScriptResult fun_btsetcharvalue(BtechScriptCall *call) {
         .target = {.context = context, .player = target, .code = targetcode},
         .amount = targetvalue,
         .override_interval = true});
-    btech_channel_send(
-        context, BTECH_CHANNEL_MECH_XP, "%s",
-        tprintf("#%ld added %d more %s XP to #%ld", PLAYER, targetvalue,
-                character_value_definition(targetcode)->name, target));
+    btech_channel_send(context, BTECH_CHANNEL_MECH_XP,
+                       "#%ld added %d more %s XP to #%ld", PLAYER, targetvalue,
+                       character_value_definition(targetcode)->name, target);
     safe_tprintf_str(buff, bufc, "%s gained %d more %s XP.",
                      game_object_name(context->database, target), targetvalue,
                      character_value_definition(targetcode)->name);

@@ -299,9 +299,9 @@ void mech_dump(DbRef player, void *data, char *buffer) {
   weapindx = find_weapon_index(mech, weapnum);
   if (weapnum < 0)
     btech_channel_send(
-        mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("CHEATER: #%d tried to crash mux with command 'dump %d'!",
-                (int)player, weapnum));
+        mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+        "CHEATER: #%d tried to crash mux with command 'dump %d'!", (int)player,
+        weapnum);
   if (mech_event_count(mech, EVENT_DUMP)) {
     mech_notify(mech, MECHALL, "You're already dumping some ammo!");
     return;

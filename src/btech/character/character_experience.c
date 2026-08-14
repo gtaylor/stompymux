@@ -16,7 +16,6 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "special_object.h"
 
 static constexpr char TECHNICIAN_WEAPONS_SKILL[] = "technician-weapons";
@@ -68,10 +67,10 @@ void accumulate_tech_xp(BtechContext *context, DbRef pilot, Mech *mech,
 
   // We emit all tech XP gains to the MechTechXP channel.
   if (char_gainxp(context, pilot, skname, xp))
-    btech_channel_send(context, BTECH_CHANNEL_MECH_TECH_XP, "%s",
-                       tprintf("%s gained %d %s XP (changing mech #%ld)",
-                               game_object_name(context->database, pilot), xp,
-                               skname, mech ? mech_dbref(mech) : -1));
+    btech_channel_send(context, BTECH_CHANNEL_MECH_TECH_XP,
+                       "%s gained %d %s XP (changing mech #%ld)",
+                       game_object_name(context->database, pilot), xp, skname,
+                       mech ? mech_dbref(mech) : -1);
 }
 
 void accumulate_tech_weapons_xp(BtechContext *context, DbRef pilot, Mech *mech,
@@ -83,10 +82,10 @@ void accumulate_tech_weapons_xp(BtechContext *context, DbRef pilot, Mech *mech,
 
   // We emit all tech xp gains to MechTechXP channel.
   if (char_gainxp(context, pilot, skname, xp))
-    btech_channel_send(context, BTECH_CHANNEL_MECH_TECH_XP, "%s",
-                       tprintf("%s gained %d %s XP (changing mech #%ld)",
-                               game_object_name(context->database, pilot), xp,
-                               skname, mech ? mech_dbref(mech) : -1));
+    btech_channel_send(context, BTECH_CHANNEL_MECH_TECH_XP,
+                       "%s gained %d %s XP (changing mech #%ld)",
+                       game_object_name(context->database, pilot), xp, skname,
+                       mech ? mech_dbref(mech) : -1);
 }
 
 void accumulate_comm_xp(DbRef pilot, Mech *mech) {
@@ -101,11 +100,10 @@ void accumulate_comm_xp(DbRef pilot, Mech *mech) {
   if (!is_connected(mech_context(mech)->database, pilot))
     return;
   if (char_gainxp(context, pilot, "Comm-Conventional", xp)) {
-    btech_channel_send(
-        context, BTECH_CHANNEL_MECH_XP, "%s",
-        tprintf("%s gained %d %s XP (in #%ld)",
-                game_object_name(mech_context(mech)->database, pilot), xp,
-                "Comm-Conventional", mech_dbref(mech)));
+    btech_channel_send(context, BTECH_CHANNEL_MECH_XP,
+                       "%s gained %d %s XP (in #%ld)",
+                       game_object_name(mech_context(mech)->database, pilot),
+                       xp, "Comm-Conventional", mech_dbref(mech));
   }
 }
 
@@ -137,10 +135,8 @@ void piloting_experience_award(const PilotingExperienceAward *award) {
    */
   if (char_gainxp(context, PILOT, skname, xp)) {
     btech_channel_send(
-        context, BTECH_CHANNEL_MECH_PILOT_XP, "%s",
-        tprintf("%s gained %d %s XP",
-                game_object_name(mech_context(mech)->database, PILOT), xp,
-                skname));
+        context, BTECH_CHANNEL_MECH_PILOT_XP, "%s gained %d %s XP",
+        game_object_name(mech_context(mech)->database, PILOT), xp, skname);
   }
   /*
       if (char_gainxp(context, pilot, skname, xp))
@@ -170,9 +166,8 @@ void accumulate_spot_xp(DbRef pilot, Mech *attacker, Mech *wounded) {
     return;
   if (char_gainxp(context, pilot, "Gunnery-Spotting", xp))
     btech_channel_send(
-        context, BTECH_CHANNEL_MECH_XP, "%s",
-        tprintf("%s gained spotting XP",
-                game_object_name(mech_context(attacker)->database, pilot)));
+        context, BTECH_CHANNEL_MECH_XP, "%s gained spotting XP",
+        game_object_name(mech_context(attacker)->database, pilot));
 }
 
 int made_perception_roll(Mech *mech, int modifier) {
@@ -193,10 +188,9 @@ int made_perception_roll(Mech *mech, int modifier) {
       (mech_perception_target(mech) + modifier))
     return 0;
   if (char_gainxp(context, pilot, "Perception", 1))
-    btech_channel_send(
-        context, BTECH_CHANNEL_MECH_XP, "%s",
-        tprintf("%s gained 1 perception XP",
-                game_object_name(mech_context(mech)->database, pilot)));
+    btech_channel_send(context, BTECH_CHANNEL_MECH_XP,
+                       "%s gained 1 perception XP",
+                       game_object_name(mech_context(mech)->database, pilot));
   return 1;
 }
 
@@ -235,9 +229,8 @@ void accumulate_arty_xp(DbRef pilot, Mech *attacker, Mech *wounded) {
    */
   if (char_gainxp(context, pilot, "Gunnery-Artillery", xp))
     btech_channel_send(
-        context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s",
-        tprintf("%s gained %d artillery XP",
-                game_object_name(mech_context(attacker)->database, pilot), xp));
+        context, BTECH_CHANNEL_MECH_ATTACK_XP, "%s gained %d artillery XP",
+        game_object_name(mech_context(attacker)->database, pilot), xp);
 }
 
 void accumulate_computer_xp(DbRef pilot, Mech *mech, int reason) {
@@ -248,11 +241,10 @@ void accumulate_computer_xp(DbRef pilot, Mech *mech, int reason) {
   if (mech && is_in_character(mech_context(mech)->database, mech_dbref(mech)) &&
       is_player(mech_context(mech)->database, pilot)) {
     if (char_gainxp(context, pilot, "computer", max(1, reason))) {
-      btech_channel_send(
-          context, BTECH_CHANNEL_MECH_XP, "%s",
-          tprintf("%s gained %d computer XP (mech #%ld)",
-                  game_object_name(mech_context(mech)->database, pilot), reason,
-                  mech ? mech_dbref(mech) : -1));
+      btech_channel_send(context, BTECH_CHANNEL_MECH_XP,
+                         "%s gained %d computer XP (mech #%ld)",
+                         game_object_name(mech_context(mech)->database, pilot),
+                         reason, mech ? mech_dbref(mech) : -1);
     }
   }
 }

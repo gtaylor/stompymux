@@ -304,11 +304,11 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
 
   w_bth_mod = mech_movement_maximum_int(w_bth_mod, 1);
 
-  btech_channel_send(
-      mech_context(mech), BTECH_CHANNEL_MECH_DEBUG, "%s",
-      tprintf("#%ld attempts to do a bootlegger (mech). Tonnage: %d, "
-              "Speed: %4.1f, BTHMod: %d",
-              mech_dbref(mech), w_mech_tons, (double)f_mech_speed, w_bth_mod));
+  btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_DEBUG,
+                     "#%ld attempts to do a bootlegger (mech). Tonnage: %d, "
+                     "Speed: %4.1f, BTHMod: %d",
+                     mech_dbref(mech), w_mech_tons, (double)f_mech_speed,
+                     w_bth_mod);
 
   if (made_pilot_skill_roll(mech, w_bth_mod)) {
     w_new_heading =

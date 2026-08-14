@@ -208,9 +208,9 @@ static void char_eject(DbRef player, Mech *mech) {
                            (char[LBUF_SIZE]){0});
   m = btech_context_get_mech(mech_context(mech), suit);
   if (!m) {
-    btech_channel_send(
-        mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("Unable to create special obj for #%ld's ejection.", player));
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+                       "Unable to create special obj for #%ld's ejection.",
+                       player);
     destroy_thing(evaluation, suit);
     mecha_notify(evaluation, player,
                  "Sorry, something serious went wrong, contact a Wizard "
@@ -220,9 +220,9 @@ static void char_eject(DbRef player, Mech *mech) {
   if (!mech_template_load(
           GOD, m, (!d || !*d || !strcmp(d, "#-1")) ? "MechWarrior" : d)) {
     btech_channel_send(
-        mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("Unable to load mechwarrior template for #%ld's ejection. (%s)",
-                player, (!d || !*d) ? "Default template" : d));
+        mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+        "Unable to load mechwarrior template for #%ld's ejection. (%s)", player,
+        (!d || !*d) ? "Default template" : d);
     destroy_thing(evaluation, suit);
     mecha_notify(evaluation, player,
                  "Sorry, something serious went wrong, contact a Wizard "
@@ -363,9 +363,8 @@ static void char_disembark(DbRef player, Mech *mech) {
   m = btech_context_get_mech(mech_context(mech), suit);
   if (!m) {
     btech_channel_send(
-        mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("Unable to create special obj for #%ld's disembarkation.",
-                player));
+        mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+        "Unable to create special obj for #%ld's disembarkation.", player);
     destroy_thing(evaluation, suit);
     mecha_notify(evaluation, player,
                  "Sorry, something serious went wrong, contact a Wizard "
@@ -374,10 +373,10 @@ static void char_disembark(DbRef player, Mech *mech) {
   }
   if (!mech_template_load(
           GOD, m, (!d || !*d || !strcmp(d, "#-1")) ? "MechWarrior" : d)) {
-    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-                       tprintf("Unable to load mechwarrior template for #%ld's "
-                               "disembarkation. (%s)",
-                               player, (!d || !*d) ? "Default template" : d));
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+                       "Unable to load mechwarrior template for #%ld's "
+                       "disembarkation. (%s)",
+                       player, (!d || !*d) ? "Default template" : d);
     destroy_thing(evaluation, suit);
     mecha_notify(evaluation, player,
                  "Sorry, something serious went wrong, contact a Wizard "

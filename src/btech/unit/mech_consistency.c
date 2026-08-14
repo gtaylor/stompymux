@@ -314,9 +314,9 @@ int engine_weight(Mech *mech) {
    * correctly. */
   if (((mech)->ud.move) != MOVE_HOVER) {
     btech_channel_send(
-        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("Error in #%ld (%s) : No engine found!", mech->mynum,
-                game_object_name(mech->xcode.context->database, mech->mynum)));
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+        "Error in #%ld (%s) : No engine found!", mech->mynum,
+        game_object_name(mech->xcode.context->database, mech->mynum));
   }
 
   return 0;

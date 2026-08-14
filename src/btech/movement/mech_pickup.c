@@ -301,9 +301,9 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
   mech_speed_correct(mech);
 
   /* Send emit for triggers/debugging */
-  btech_channel_send(
-      context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-      tprintf("#%ld has picked up #%ld", mech_dbref(mech), mech_dbref(target)));
+  btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG,
+                     "#%ld has picked up #%ld", mech_dbref(mech),
+                     mech_dbref(target));
 }
 
 void mech_attachcables(DbRef player, void *data, char *buffer) {
@@ -695,7 +695,7 @@ void mech_dropoff(DbRef player, void *data, const char *buffer) {
     }
   }
   mech_speed_correct(mech);
-  btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("#%ld has dropped off #%ld", mech_dbref(mech),
-                             mech_dbref(target)));
+  btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG,
+                     "#%ld has dropped off #%ld", mech_dbref(mech),
+                     mech_dbref(target));
 }

@@ -29,7 +29,6 @@
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -134,9 +133,8 @@ void battle_map_los_observer_clear(BattleMap *map, int observer_index) {
 int los_map_hex_index(const HexLosMap *map_info, int x, int y) {
   if (x < map_info->startx || x > map_info->startx + map_info->xsize ||
       y < map_info->starty || y > map_info->starty + map_info->ysize) {
-    btech_channel_send(
-        map_info->context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("LOSMap request from out of bounds hex: %d,%d", x, y));
+    btech_channel_send(map_info->context, BTECH_CHANNEL_MECH_ERRORS,
+                       "LOSMap request from out of bounds hex: %d,%d", x, y);
     return 0;
   }
   return ((y - map_info->starty) * map_info->xsize) + (x - map_info->startx);
@@ -676,11 +674,10 @@ bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
   /* Some safeguarding on size */
 
   if (xsz < 1 || ysz < 1 || xsz > MAPLOS_MAXX || ysz > MAPLOS_MAXY) {
-    btech_channel_send(map->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-                       tprintf("xsize (%d vs %d) or ysize (%d vs %d) "
-                               "to CalculateLOSMap too large, for mech #%ld",
-                               xsz, MAPLOS_MAXX, ysz, MAPLOS_MAXY,
-                               mech_dbref(mech)));
+    btech_channel_send(map->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                       "xsize (%d vs %d) or ysize (%d vs %d) "
+                       "to CalculateLOSMap too large, for mech #%ld",
+                       xsz, MAPLOS_MAXX, ysz, MAPLOS_MAXY, mech_dbref(mech));
     return false;
   }
 

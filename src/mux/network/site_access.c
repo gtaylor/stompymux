@@ -136,7 +136,7 @@ void make_ulist(GameDatabase *database, DescriptorRegistry *descriptors,
     if (cp != *bufc)
       safe_chr(' ', buff, bufc);
     safe_chr('#', buff, bufc);
-    safe_str(tprintf("%ld", d->player), buff, bufc);
+    safe_tprintf_str(buff, bufc, "%ld", d->player);
   }
 }
 

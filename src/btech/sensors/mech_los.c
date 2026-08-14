@@ -25,7 +25,6 @@
 #include "mech_utils_api.h"
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -358,16 +357,16 @@ int mech_los_check(Mech *mech, Mech *target, int x, int y, float hex_range) {
   map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   if (!map) {
     mech_notify(mech, MECHPILOT, "You are on an invalid map! Map index reset!");
-    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-                       tprintf("InLineOfSight:invalid map:Mech %ld  Index %ld",
-                               mech_dbref(mech), mech_map_dbref(mech)));
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+                       "InLineOfSight:invalid map:Mech %ld  Index %ld",
+                       mech_dbref(mech), mech_map_dbref(mech));
     mech_map_dbref_set(mech, NOTHING);
     return 0;
   }
   if (!battle_map_coordinate_is_valid(map, x, y)) {
-    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-                       tprintf("x:%d y:%d out of bounds for #%ld (LOS check)",
-                               x, y, mech ? mech_dbref(mech) : -1));
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+                       "x:%d y:%d out of bounds for #%ld (LOS check)", x, y,
+                       mech ? mech_dbref(mech) : -1);
   }
 
   /* Possibly do a quickie check only */

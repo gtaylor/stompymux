@@ -20,7 +20,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -170,9 +169,9 @@ void template_load_finalize(Mech *mech, bool clan_equipment) {
   if (WEIGHT - FRAME_WEIGHT > 40 && mech->ud.type != CLASS_BSUIT &&
       mech->ud.move != MOVE_NONE)
     btech_channel_send(
-        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("Error in %s template: %.1f tons of 'stuff', yet %d ton frame.",
-                mech->ud.mech_type, WEIGHT / 1024.0, FRAME_WEIGHT / 1024));
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+        "Error in %s template: %.1f tons of 'stuff', yet %d ton frame.",
+        mech->ud.mech_type, WEIGHT / 1024.0, FRAME_WEIGHT / 1024);
   update_oweight(mech, WEIGHT);
 
   BattleMap *map = btech_context_get_map(mech->xcode.context, mech->mapindex);

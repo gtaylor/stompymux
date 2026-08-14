@@ -16,7 +16,6 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
-#include "mux/support/formatting.h"
 #include "mux/support/name_table.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
@@ -172,10 +171,8 @@ void do_name(CommandInvocation *invocation) {
     }
     if (is_suspect(evaluation->world->database, thing)) {
       send_channel(
-          evaluation, "Suspect", "%s",
-          tprintf("%s renamed to %s",
-                  game_object_name(invocation->context->world->database, thing),
-                  buff));
+          evaluation, "Suspect", "%s renamed to %s",
+          game_object_name(invocation->context->world->database, thing), buff);
     }
     delete_player_name(
         invocation->context->world, thing,

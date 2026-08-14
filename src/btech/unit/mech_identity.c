@@ -222,9 +222,9 @@ DbRef find_target_dbref_from_map_number(Mech *mech, const char *mapnum) {
     return -1;
   map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   if (!map) {
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-                       tprintf("FTDBREFFMN:invalid map:Mech: %ld  Index: %ld",
-                               mech->mynum, mech->mapindex));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                       "FTDBREFFMN:invalid map:Mech: %ld  Index: %ld",
+                       mech->mynum, mech->mapindex);
     mech->mapindex = -1;
     return -1;
   }
@@ -264,20 +264,19 @@ static int leave_hangar(BattleMap *map, Mech *mech) {
                       tprintf("%ld", map->map_object[TYPE_LEAVE]->obj));
   map = btech_context_get_map(mech->xcode.context, mech->mapindex);
   if (mech->mapindex == mapob) {
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-                       tprintf("#%ld %s attempted to leave, but no target map?",
-                               mech->mynum, mech_display_id(mech).text));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                       "#%ld %s attempted to leave, but no target map?",
+                       mech->mynum, mech_display_id(mech).text);
     mech_notify(mech, MECHALL,
                 "Exit of this map is.. fubared. Please contact a wizard");
     return 0;
   }
   mapo = find_entrance_by_target(map, mapob);
   if (!mapo) {
-    btech_channel_send(
-        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("#%ld %s attempted to leave, but no target place was "
-                "found? setting the mech at 0,0 at %ld.",
-                mech->mynum, mech_display_id(mech).text, mech->mapindex));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                       "#%ld %s attempted to leave, but no target place was "
+                       "found? setting the mech at 0,0 at %ld.",
+                       mech->mynum, mech_display_id(mech).text, mech->mapindex);
     mech_notify(mech, MECHALL,
                 "Weird bug happened during leave. Please contact a wizard. ");
     return 1;
@@ -334,10 +333,9 @@ void check_edge_of_map(Mech *mech) {
   if (!map) {
     mech_notify(mech, MECHPILOT, "You are on an invalid map! Map index reset!");
     mech_shutdown(mech_pilot_dbref(mech), (void *)mech, "");
-    btech_channel_send(
-        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("CheckEdgeofMap:invalid map:Mech: %ld  Index: %ld", mech->mynum,
-                mech->mapindex));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                       "CheckEdgeofMap:invalid map:Mech: %ld  Index: %ld",
+                       mech->mynum, mech->mapindex);
     mech->mapindex = -1;
     return;
   }
@@ -488,10 +486,9 @@ int in_weapon_arc(Mech *mech, float x, float y) {
       res |= TURRETARC;
   }
   if (res == NOARC)
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-                       tprintf("NoArc: #%ld: BearingToTarget:%d Facing:%d",
-                               mech->mynum, bearing_to_target,
-                               mech_heading_degrees(mech)));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                       "NoArc: #%ld: BearingToTarget:%d Facing:%d", mech->mynum,
+                       bearing_to_target, mech_heading_degrees(mech));
   return res;
 }
 
@@ -704,11 +701,11 @@ int mech_pilot_skill_roll_without_experience(
   roll = btech_random_roll(mech->xcode.context);
   roll_needed = mech_pilot_skill_roll_target(mech, mods);
 
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("Attempting to make pilot skill roll. "
-                             "SPilot: %d, mods: %d, MechPilot: %d, BTH: %d",
-                             find_s_pilot_piloting(mech), mods,
-                             mech_pilot_skill_modifier(mech), roll_needed));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                     "Attempting to make pilot skill roll. "
+                     "SPilot: %d, mods: %d, MechPilot: %d, BTH: %d",
+                     find_s_pilot_piloting(mech), mods,
+                     mech_pilot_skill_modifier(mech), roll_needed);
 
   mech_notify(mech, MECHPILOT, "You make a piloting skill roll!");
   mech_printf(mech, MECHPILOT, "Modified Pilot Skill: BTH %d\tRoll: %d",
@@ -733,11 +730,11 @@ int mech_pilot_skill_roll(const PilotSkillRollRequest *request) {
   roll = btech_random_roll(mech->xcode.context);
   roll_needed = mech_pilot_skill_roll_target(mech, mods);
 
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("Attempting to make pilot (noxp) skill roll. "
-                             "SPilot: %d, mods: %d, MechPilot: %d, BTH: %d",
-                             find_s_pilot_piloting(mech), mods,
-                             mech_pilot_skill_modifier(mech), roll_needed));
+  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                     "Attempting to make pilot (noxp) skill roll. "
+                     "SPilot: %d, mods: %d, MechPilot: %d, BTH: %d",
+                     find_s_pilot_piloting(mech), mods,
+                     mech_pilot_skill_modifier(mech), roll_needed);
 
   mech_notify(mech, MECHPILOT, "You make a piloting skill roll!");
   mech_printf(mech, MECHPILOT, "Modified Pilot Skill: BTH %d\tRoll: %d",

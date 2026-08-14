@@ -29,7 +29,6 @@
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 
-#include "mux/support/formatting.h"
 #include "section_types.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -341,9 +340,9 @@ static MapCellText lrs_hex_text(const MapColorScheme *colors, Mech *mech,
                           .previous_color = prevc});
   }
 
-  btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-                     tprintf("Unknown LRS mode, mech #%ld mode 0x%x.",
-                             mech_dbref(mech), mode));
+  btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+                     "Unknown LRS mode, mech #%ld mode 0x%x.", mech_dbref(mech),
+                     mode);
   return map_cell_text('R', prevc, 'Y');
 }
 

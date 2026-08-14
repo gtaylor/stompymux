@@ -31,7 +31,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/player.h"
 #include "registry_api.h"
@@ -219,10 +218,10 @@ void initialize_pc(DbRef player, Mech *mech) {
                                               .cursor = -1});
       if (!match.found) {
         btech_channel_send(
-            context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-            tprintf("Invalid PC weapon #1 for %s(#%ld): %s",
-                    game_object_name(mech_context(mech)->database, player),
-                    player, buf3));
+            context, BTECH_CHANNEL_MECH_ERRORS,
+            "Invalid PC weapon #1 for %s(#%ld): %s",
+            game_object_name(mech_context(mech)->database, player), player,
+            buf3);
         return;
       }
       id = match.part.id;
@@ -253,10 +252,10 @@ void initialize_pc(DbRef player, Mech *mech) {
                                               .cursor = -1});
       if (!match.found) {
         btech_channel_send(
-            context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-            tprintf("Invalid PC weapon #1 for %s(#%ld): %s",
-                    game_object_name(mech_context(mech)->database, player),
-                    player, buf2));
+            context, BTECH_CHANNEL_MECH_ERRORS,
+            "Invalid PC weapon #1 for %s(#%ld): %s",
+            game_object_name(mech_context(mech)->database, player), player,
+            buf2);
         return;
       }
       id = match.part.id;
@@ -280,11 +279,10 @@ void initialize_pc(DbRef player, Mech *mech) {
     [[fallthrough]];
   case 1:
     if (strlen(buf1) != PC_LOCS) {
-      btech_channel_send(
-          context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-          tprintf("Invalid armor string for %s(#%ld): %s",
-                  game_object_name(mech_context(mech)->database, player),
-                  player, buf1));
+      btech_channel_send(context, BTECH_CHANNEL_MECH_ERRORS,
+                         "Invalid armor string for %s(#%ld): %s",
+                         game_object_name(mech_context(mech)->database, player),
+                         player, buf1);
       return;
     }
     for (size_t index = 0; index < strlen(buf1); index++) {
@@ -292,10 +290,10 @@ void initialize_pc(DbRef player, Mech *mech) {
           checked_storage_at_const(buf1, sizeof(buf1), sizeof(char), index);
       if (*armor_character < '0' || *armor_character > '9') {
         btech_channel_send(
-            context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-            tprintf("Invalid armor char for %s(#%ld) in %s (pos %d,%c)",
-                    game_object_name(mech_context(mech)->database, player),
-                    player, buf1, (int)index + 1, *armor_character));
+            context, BTECH_CHANNEL_MECH_ERRORS,
+            "Invalid armor char for %s(#%ld) in %s (pos %d,%c)",
+            game_object_name(mech_context(mech)->database, player), player,
+            buf1, (int)index + 1, *armor_character);
         return;
       }
     }

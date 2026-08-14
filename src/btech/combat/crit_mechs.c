@@ -47,7 +47,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -650,9 +649,8 @@ need to bother with crits if we already have a hip crit here */
     case ARTEMIS_IV:
       weapon_slot = mech_critical_data(wounded, HITLOC, crit_hit);
       if (weapon_slot > NUM_CRITICALS) {
-        btech_channel_send(
-            context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-            tprintf("Artemis IV error on mech %ld", mech_dbref(wounded)));
+        btech_channel_send(context, BTECH_CHANNEL_MECH_ERRORS,
+                           "Artemis IV error on mech %ld", mech_dbref(wounded));
         break;
       }
       mech_critical_ammo_mode_clear(wounded, HITLOC, weapon_slot, ARTEMIS_MODE);

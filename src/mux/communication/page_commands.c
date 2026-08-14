@@ -83,14 +83,13 @@ static char *dbrefs_to_names(const PageNameListRequest *request) {
     if (ismessage) {
       DbRef target;
       if (parse_long_checked(p, &target))
-        safe_str(tprintf("%s, ", game_object_name(world->database, target)),
-                 namelist, &bp);
+        safe_tprintf_str(namelist, &bp, "%s, ",
+                         game_object_name(world->database, target));
     } else {
       if (lookup_player(world, player, p, 1) != NOTHING) {
-        safe_str(tprintf("%s, ",
+        safe_tprintf_str(namelist, &bp, "%s, ",
                          game_object_name(world->database,
-                                          lookup_player(world, player, p, 1))),
-                 namelist, &bp);
+                                          lookup_player(world, player, p, 1)));
       }
     }
   }
@@ -153,7 +152,7 @@ void do_page(CommandInvocation *invocation) {
         continue;
       if (index > 0)
         safe_chr(' ', targetname, &target_cursor);
-      safe_str(tprintf("%ld", recipient.recipient), targetname, &target_cursor);
+      safe_tprintf_str(targetname, &target_cursor, "%ld", recipient.recipient);
     }
     *target_cursor = '\0';
     if (!*tname) {
@@ -259,7 +258,7 @@ void do_page(CommandInvocation *invocation) {
                       aladd, message),
               MSG_ME_ALL | MSG_F_DOWN);
         }
-        safe_str(tprintf("%ld ", target), buf2, &bp2);
+        safe_tprintf_str(buf2, &bp2, "%ld ", target);
         count++;
       }
     }
@@ -301,10 +300,9 @@ void do_page(CommandInvocation *invocation) {
                     aladd, message),
             MSG_ME_ALL | MSG_F_DOWN);
       }
-      safe_str(tprintf("%ld ", target), buf2, &bp2);
-      safe_str(tprintf("%s, ",
-                       game_object_name(evaluation->world->database, target)),
-               buf1, &bp);
+      safe_tprintf_str(buf2, &bp2, "%ld ", target);
+      safe_tprintf_str(buf1, &bp, "%s, ",
+                       game_object_name(evaluation->world->database, target));
 
       /* this is terminating the string above when there is no more to add to
        * the list removing the ", "

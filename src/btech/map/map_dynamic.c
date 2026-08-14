@@ -23,7 +23,6 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 
 static size_t battle_map_slot_capacity(const BattleMap *map) {
@@ -246,10 +245,10 @@ void remove_mech_from_map(BattleMap *map, Mech *mech) {
             ? battle_map_unit_dbref(map, MAP_SLOT)
             : -1;
     btech_channel_send(
-        map->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("Map indexing error for mech #%ld: Map index %d contains "
-                "data for #%ld instead.",
-                mech_dbref(mech), MAP_SLOT, INDEXED_DBREF));
+        map->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+        "Map indexing error for mech #%ld: Map index %d contains "
+        "data for #%ld instead.",
+        mech_dbref(mech), MAP_SLOT, INDEXED_DBREF);
     if (map->mechs_on_map)
       for (loop = 0; (loop < map->first_free) &&
                      (battle_map_unit_dbref(map, loop) != mech_dbref(mech));
@@ -287,9 +286,9 @@ void remove_mech_from_map(BattleMap *map, Mech *mech) {
   }
   mech_seen_count_reset(mech);
   if (mech_is_dropship(mech))
-    btech_channel_send(
-        map->xcode.context, BTECH_CHANNEL_DS_INFO, "%s",
-        tprintf("DS #%ld has left map #%ld", mech_dbref(mech), map->mynum));
+    btech_channel_send(map->xcode.context, BTECH_CHANNEL_DS_INFO,
+                       "DS #%ld has left map #%ld", mech_dbref(mech),
+                       map->mynum);
 }
 
 void add_mech_to_map(BattleMap *newmap, Mech *mech) {
@@ -365,9 +364,9 @@ void add_mech_to_map(BattleMap *newmap, Mech *mech) {
   autopilot_resume_for_mech(mech);
   map_conditions_apply(mech, newmap);
   if (mech_is_dropship(mech))
-    btech_channel_send(mech_context(mech), BTECH_CHANNEL_DS_INFO, "%s",
-                       tprintf("DS #%ld has entered map #%ld", mech_dbref(mech),
-                               newmap->mynum));
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_DS_INFO,
+                       "DS #%ld has entered map #%ld", mech_dbref(mech),
+                       newmap->mynum);
 }
 
 size_t mech_size(const BattleMap *map) {

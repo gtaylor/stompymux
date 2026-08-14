@@ -16,7 +16,6 @@
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
-#include "mux/support/formatting.h"
 #include "section_types.h"
 
 typedef struct HitLocationOutput {
@@ -119,10 +118,9 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 2:
         if (mech_section_is_crittable(mech, LTORSO, (CriticalThreshold){60})) {
           btech_channel_send(
-              context, BTECH_CHANNEL_TAC_INFO, "%s",
-              tprintf(
-                  "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
-                  mech_dbref(mech)));
+              context, BTECH_CHANNEL_TAC_INFO,
+              "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
+              mech_dbref(mech));
           *iscritical = 1;
         }
         return LTORSO;
@@ -154,10 +152,9 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 2:
         if (mech_section_is_crittable(mech, RTORSO, (CriticalThreshold){60})) {
           btech_channel_send(
-              context, BTECH_CHANNEL_TAC_INFO, "%s",
-              tprintf(
-                  "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
-                  mech_dbref(mech)));
+              context, BTECH_CHANNEL_TAC_INFO,
+              "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
+              mech_dbref(mech));
           *iscritical = 1;
         }
         return RTORSO;
@@ -190,10 +187,9 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 2:
         if (mech_section_is_crittable(mech, CTORSO, (CriticalThreshold){60})) {
           btech_channel_send(
-              context, BTECH_CHANNEL_TAC_INFO, "%s",
-              tprintf(
-                  "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
-                  mech_dbref(mech)));
+              context, BTECH_CHANNEL_TAC_INFO,
+              "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
+              mech_dbref(mech));
           *iscritical = 1;
         }
         return CTORSO;

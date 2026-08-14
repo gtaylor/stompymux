@@ -162,16 +162,15 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
                 base_to_hit, buf,
                 mech_condition_summary(target).partial_cover ? "(Partial cover)"
                                                              : "");
-    btech_channel_send(
-        mech_context(request->mech), BTECH_CHANNEL_MECH_ATTACKS, "%s",
-        tprintf("#%li attacks #%li (weapon) (%i/%i)", mech_dbref(request->mech),
-                mech_dbref(target), base_to_hit, roll));
+    btech_channel_send(mech_context(request->mech), BTECH_CHANNEL_MECH_ATTACKS,
+                       "#%li attacks #%li (weapon) (%i/%i)",
+                       mech_dbref(request->mech), mech_dbref(target),
+                       base_to_hit, roll);
     if (mech_condition_summary(target).attack_emissions) {
-      btech_channel_send(mech_context(request->mech),
-                         BTECH_CHANNEL_MECH_ATTACK_EMITS, "%s",
-                         tprintf("#%li attacks #%li (weapon) (%i/%i)",
-                                 mech_dbref(request->mech), mech_dbref(target),
-                                 base_to_hit, roll));
+      btech_channel_send(
+          mech_context(request->mech), BTECH_CHANNEL_MECH_ATTACK_EMITS,
+          "#%li attacks #%li (weapon) (%i/%i)", mech_dbref(request->mech),
+          mech_dbref(target), base_to_hit, roll);
     }
   } else {
     mech_c3_track_emit(request->mech, c3_ref, c3_mech);
@@ -180,11 +179,10 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
                 mech_hex_target_description(request->mech),
                 request->target_hex.x, request->target_hex.y, base_to_hit, buf);
     btech_channel_send(
-        mech_context(request->mech), BTECH_CHANNEL_MECH_ATTACKS, "%s",
-        tprintf("#%li attacks %d,%d (%s) (weapon) (%i/%i)",
-                mech_dbref(request->mech), request->target_hex.x,
-                request->target_hex.y,
-                mech_hex_target_short_name(request->mech), base_to_hit, roll));
+        mech_context(request->mech), BTECH_CHANNEL_MECH_ATTACKS,
+        "#%li attacks %d,%d (%s) (weapon) (%i/%i)", mech_dbref(request->mech),
+        request->target_hex.x, request->target_hex.y,
+        mech_hex_target_short_name(request->mech), base_to_hit, roll);
     {
       Mech *tmpmech;
       int foo;
@@ -203,13 +201,11 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
           if (mech_condition_summary(tmpmech).attack_emissions) {
             btech_channel_send(
                 mech_context(request->mech), BTECH_CHANNEL_MECH_ATTACK_EMITS,
-                "%s",
-                tprintf("#%li attacks %d,%d (%s) (weapon)"
-                        " (%i/%i)",
-                        mech_dbref(request->mech), request->target_hex.x,
-                        request->target_hex.y,
-                        mech_hex_target_short_name(request->mech), base_to_hit,
-                        roll));
+                "#%li attacks %d,%d (%s) (weapon)"
+                " (%i/%i)",
+                mech_dbref(request->mech), request->target_hex.x,
+                request->target_hex.y,
+                mech_hex_target_short_name(request->mech), base_to_hit, roll);
           }
         }
       }

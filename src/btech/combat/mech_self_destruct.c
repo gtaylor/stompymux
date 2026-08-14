@@ -27,7 +27,6 @@
 #include "mech_utils_api.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 
@@ -50,8 +49,8 @@ static void mech_self_destruct_event(MuxEvent *event) {
   }
 
   BtechContext *context = mech_context(mech);
-  btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                     tprintf("#%ld explodes.", mech_dbref(mech)));
+  btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "#%ld explodes.",
+                     mech_dbref(mech));
   if (mech_class(mech) == CLASS_BSUIT) {
     mech_notify(mech, MECHALL,
                 "Your batttle suit triggers it's self-destruction sequence.. "
@@ -74,8 +73,8 @@ static void mech_self_destruct_event(MuxEvent *event) {
     headhitmwdamage(mech, mech, 4);
     mech_position_z_set(mech, mech_position_z(mech) + 6);
   } else if (extra >= 256) {
-    btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("#%ld explodes [ammo]", mech_dbref(mech)));
+    btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG,
+                       "#%ld explodes [ammo]", mech_dbref(mech));
     mech_notify(mech, MECHALL, "All your ammo explodes!");
     for (;;) {
       AmmunitionHazardResult ammunition = destructive_ammunition_find(mech);
@@ -88,8 +87,8 @@ static void mech_self_destruct_event(MuxEvent *event) {
                                         .damage = ammunition.damage});
     }
   } else {
-    btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("#%ld explodes [reactor]", mech_dbref(mech)));
+    btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG,
+                       "#%ld explodes [reactor]", mech_dbref(mech));
     mech_los_broadcast(mech, "suddenly explodes!");
     mech_notify(mech, MECHALL,
                 "Suddenly you feel great heat overcoming your senses.. you "
@@ -150,10 +149,9 @@ void mech_explode(DbRef player, void *data, char *buffer) {
 
     mech_event_cancel(mech, EVENT_EXPLODE);
     mech_notify(mech, MECHALL, "Self-destruction sequence aborted.");
-    btech_channel_send(
-        context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-        tprintf("#%ld in #%ld stopped the self-destruction sequence.", player,
-                mech_dbref(mech)));
+    btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG,
+                       "#%ld in #%ld stopped the self-destruction sequence.",
+                       player, mech_dbref(mech));
     mech_los_broadcast(mech, "regains control over itself.");
     return;
   }
@@ -181,10 +179,9 @@ void mech_explode(DbRef player, void *data, char *buffer) {
                    "There is no 'damaging' ammo on your 'mech!");
       return;
     }
-    btech_channel_send(
-        context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-        tprintf("#%ld in #%ld initiates the ammo explosion sequence.", player,
-                mech_dbref(mech)));
+    btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG,
+                       "#%ld in #%ld initiates the ammo explosion sequence.",
+                       player, mech_dbref(mech));
     mech_los_broadcast(mech, "starts billowing smoke!");
     time /= 2;
   } else {
@@ -205,10 +202,9 @@ void mech_explode(DbRef player, void *data, char *buffer) {
         return;
       }
     }
-    btech_channel_send(
-        context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-        tprintf("#%ld in #%ld initiates the reactor explosion sequence.",
-                player, mech_dbref(mech)));
+    btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG,
+                       "#%ld in #%ld initiates the reactor explosion sequence.",
+                       player, mech_dbref(mech));
     mech_los_broadcast(mech, "loses reactions containment!");
     ammunition = false;
   }

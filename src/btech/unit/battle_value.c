@@ -9,7 +9,6 @@
 #include "mech_utils_api.h"
 #include "mech_utils_internal.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "section_types.h"
 #include "weapon_settings.h"
 
@@ -80,24 +79,24 @@ void calc_add_off_bv(const Mech *mech, float *offbv, const char *desc,
                      float value) {
   *offbv += value;
   if (mech->xcode.context->configuration->btech_cost_debug)
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("AddOffBV %25s %8.2f", desc, (double)value));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                       "AddOffBV %25s %8.2f", desc, (double)value);
 }
 
 void calc_add_def_bv(const Mech *mech, float *defbv, const char *desc,
                      float value) {
   *defbv += value;
   if (mech->xcode.context->configuration->btech_cost_debug)
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("AddDefBV %25s %8.2f", desc, (double)value));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                       "AddDefBV %25s %8.2f", desc, (double)value);
 }
 
 void calc_sub_def_bv(const Mech *mech, float *defbv, const char *desc,
                      float value) {
   *defbv -= value;
   if (mech->xcode.context->configuration->btech_cost_debug)
-    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s",
-                       tprintf("SubDefBV %25s-%8.2f", desc, (double)value));
+    btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
+                       "SubDefBV %25s-%8.2f", desc, (double)value);
 }
 
 /* Calculate Defensive BV 2.0 per Total Warfare Rules */

@@ -20,7 +20,6 @@
 #include "mux/server/diagnostics.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "section_types.h"
 #include "template_api.h"
 #include "template_implementation.h"
@@ -620,9 +619,9 @@ void update_specials(Mech *mech) {
   if ((((mech)->rd.specials) & (XXL_TECH | XL_TECH | LE_TECH)) &&
       (((mech)->rd.specials) & CE_TECH))
     btech_channel_send(
-        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("#%ld apparently is very weird: Compact engine AND XL/XXL?",
-                mech->mynum));
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+        "#%ld apparently is very weird: Compact engine AND XL/XXL?",
+        mech->mynum);
   if (tc_count) {
     ((mech)->rd.specials2) |= TCOMP_TECH;
     for (x = 0; x < NUM_SECTIONS; x++) {
@@ -659,34 +658,31 @@ void update_specials(Mech *mech) {
   if (((mech)->ud.type) == CLASS_MECH) {
     /* Be 'noisy' about some crits/techs */
     if ((ff_count > 0) && (ff_count < (cl ? 7 : 14)))
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-                         tprintf("%s (#%ld) is missing FF Crits %d/%d!",
-                                 ((mech)->ud.mech_type), mech->mynum, ff_count,
-                                 (cl ? 7 : 14)));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                         "%s (#%ld) is missing FF Crits %d/%d!",
+                         ((mech)->ud.mech_type), mech->mynum, ff_count,
+                         (cl ? 7 : 14));
 
     if ((es_count > 0) && (es_count < (cl ? 7 : 14)))
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-                         tprintf("%s (#%ld) is missing ES Crits %d/%d!",
-                                 ((mech)->ud.mech_type), mech->mynum, es_count,
-                                 (cl ? 7 : 14)));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                         "%s (#%ld) is missing ES Crits %d/%d!",
+                         ((mech)->ud.mech_type), mech->mynum, es_count,
+                         (cl ? 7 : 14));
 
     if ((tsm_count > 0) && (tsm_count < 6))
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-                         tprintf("%s (#%ld) is missing TSM Crits %d/6!",
-                                 ((mech)->ud.mech_type), mech->mynum,
-                                 tsm_count));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                         "%s (#%ld) is missing TSM Crits %d/6!",
+                         ((mech)->ud.mech_type), mech->mynum, tsm_count);
 
     if ((wc_hvy_ff > 0) && (wc_hvy_ff < 21))
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-                         tprintf("%s (#%ld) is missing HvyFF Crits %d/21!",
-                                 ((mech)->ud.mech_type), mech->mynum,
-                                 wc_hvy_ff));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                         "%s (#%ld) is missing HvyFF Crits %d/21!",
+                         ((mech)->ud.mech_type), mech->mynum, wc_hvy_ff);
 
     if ((wc_lt_ff > 0) && (wc_lt_ff < 7))
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-                         tprintf("%s (#%ld) is missing LtFF Crits %d/7!",
-                                 ((mech)->ud.mech_type), mech->mynum,
-                                 wc_lt_ff));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                         "%s (#%ld) is missing LtFF Crits %d/7!",
+                         ((mech)->ud.mech_type), mech->mynum, wc_lt_ff);
   }
 
   /*

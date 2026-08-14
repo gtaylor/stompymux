@@ -238,11 +238,10 @@ void do_sub_magic(Mech *mech, int loud) {
 
   if (jjs > maxjjs) {
     if (loud) {
-      btech_channel_send(
-          mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-          tprintf("Error in #%ld (%s): %d JJs, yet %d maximum available "
-                  "(due to walk MPs)?",
-                  mech->mynum, ((mech)->ud.mech_type), jjs, maxjjs));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                         "Error in #%ld (%s): %d JJs, yet %d maximum available "
+                         "(due to walk MPs)?",
+                         mech->mynum, ((mech)->ud.mech_type), jjs, maxjjs);
     }
 
     jjs = maxjjs;
@@ -255,13 +254,13 @@ void do_sub_magic(Mech *mech, int loud) {
         wanths - min(((mech)->ud.numsinks), inthses * hs_eff);
   if (wanths != ((mech)->ud.numsinks) && loud) {
     btech_channel_send(
-        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("Error in #%ld (%s): Set HS: %d. Existing HS: %d. "
-                "Difference: %d. Please %s.",
-                mech->mynum, ((mech)->ud.mech_type), ((mech)->ud.numsinks),
-                wanths, ((mech)->ud.numsinks) - wanths,
-                wanths < ((mech)->ud.numsinks) ? "add the extra HS critical(s)"
-                                               : "fix the template"));
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+        "Error in #%ld (%s): Set HS: %d. Existing HS: %d. "
+        "Difference: %d. Please %s.",
+        mech->mynum, ((mech)->ud.mech_type), ((mech)->ud.numsinks), wanths,
+        ((mech)->ud.numsinks) - wanths,
+        wanths < ((mech)->ud.numsinks) ? "add the extra HS critical(s)"
+                                       : "fix the template");
   } else {
     ((mech)->ud.numsinks) = clamp_int_to_char(wanths);
   }
@@ -270,9 +269,9 @@ void do_sub_magic(Mech *mech, int loud) {
   if (((((mech)->rd.onumsinks) * shs_size / hs_eff) -
        ((((mech)->rd.specials) & ICE_TECH ? 0 : 10) * shs_size)) < 0)
     btech_channel_send(
-        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("Error in #%ld (%s): HS less then max possible in engine!",
-                mech->mynum, ((mech)->ud.mech_type)));
+        mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+        "Error in #%ld (%s): HS less then max possible in engine!", mech->mynum,
+        ((mech)->ud.mech_type));
 }
 
 /* Values to take care of:

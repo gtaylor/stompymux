@@ -19,7 +19,6 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "section_types.h"
 #include <stddef.h>
 
@@ -417,14 +416,14 @@ int mech_section_is_crittable(Mech *mech, int loc,
   /* Are we below the threshold? Okay, then lets give it a 1 in 12 chance to TAC
    */
   if (d < tres) {
-    btech_channel_send(context, BTECH_CHANNEL_TAC_INFO, "%s",
-                       tprintf("%ld was below thresh (d: %d, tres: %d)",
-                               mech_dbref(mech), d, tres));
+    btech_channel_send(context, BTECH_CHANNEL_TAC_INFO,
+                       "%ld was below thresh (d: %d, tres: %d)",
+                       mech_dbref(mech), d, tres);
     if (btech_random_range(context, 1, 12) == 6) {
-      btech_channel_send(context, BTECH_CHANNEL_TAC_INFO, "%s",
-                         tprintf("%ld is pretty unlucky. Needed 6. "
-                                 "Rolled: 6. You're getting tac'd!",
-                                 mech_dbref(mech)));
+      btech_channel_send(context, BTECH_CHANNEL_TAC_INFO,
+                         "%ld is pretty unlucky. Needed 6. "
+                         "Rolled: 6. You're getting tac'd!",
+                         mech_dbref(mech));
       return 1;
     }
   }
@@ -432,10 +431,10 @@ int mech_section_is_crittable(Mech *mech, int loc,
   if (d == 100) {
     if (btech_random_range(context, 1, 71) == 23) {
       btech_channel_send(
-          context, BTECH_CHANNEL_TAC_INFO, "%s",
-          tprintf("%ld has full armor, but you suck. 1-71 and you got a 23? "
-                  "Who the eff are you, MJ?",
-                  mech_dbref(mech)));
+          context, BTECH_CHANNEL_TAC_INFO,
+          "%ld has full armor, but you suck. 1-71 and you got a 23? "
+          "Who the eff are you, MJ?",
+          mech_dbref(mech));
       return 1;
     }
     return 0;

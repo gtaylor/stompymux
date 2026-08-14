@@ -46,7 +46,7 @@ void make_portlist(DescriptorRegistry *descriptors, DbRef target, char *buff,
 
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     if (d->player == target) {
-      safe_str(tprintf("%d ", d->descriptor), buff, bufc);
+      safe_tprintf_str(buff, bufc, "%d ", d->descriptor);
       i = 1;
     }
   }
@@ -356,7 +356,7 @@ static void telnet_append_escaped(char *buffer, char **position,
     else if (byte >= 0x20 && byte <= 0x7e)
       safe_chr((char)byte, buffer, position);
     else
-      safe_str(tprintf("\\x%02X", byte), buffer, position);
+      safe_tprintf_str(buffer, position, "\\x%02X", byte);
   }
 }
 

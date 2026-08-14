@@ -162,10 +162,10 @@ distinction explicit prevents unavoidable boundary state from becoming a
 justification for new ambient state.
 
 The writable-global allowlist records the remaining exceptions rather than
-treating them as precedent. It contains the POSIX signal bridge and two legacy
-formatting buffers. SQLite writer fault injection is owned by each snapshot
+treating them as precedent. It contains the POSIX signal bridge and the legacy
+`tprintf` formatting buffer. SQLite writer fault injection is owned by each snapshot
 write and threaded through its store contexts. Flow prompts belong to their
 active flows, while connection displays and xcode-reference handlers use
 owner- or caller-provided storage. Flag and power lookup normalizes const input
-into bounded automatic storage. The remaining formatting exceptions require a
+into bounded automatic storage. The remaining formatting exception requires a
 dedicated API and call-site migration.

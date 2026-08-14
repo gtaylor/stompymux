@@ -29,7 +29,6 @@
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include <stddef.h>
@@ -531,12 +530,11 @@ void physical_attack_resolve(const PhysicalAttackRequest *request) {
       physical_attack_verb(&(PhysicalVerbRequest){.attack_type = ATTACK_TYPE}));
 
   // We send to MechAttacks channel
-  btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ATTACKS, "%s",
-                     tprintf("#%li attacks #%li (%s) (%i/%i)", mech_dbref(mech),
-                             mech_dbref(target),
-                             physical_attack_verb(&(PhysicalVerbRequest){
-                                 .attack_type = ATTACK_TYPE}),
-                             base_to_hit, roll));
+  btech_channel_send(
+      mech_context(mech), BTECH_CHANNEL_MECH_ATTACKS,
+      "#%li attacks #%li (%s) (%i/%i)", mech_dbref(mech), mech_dbref(target),
+      physical_attack_verb(&(PhysicalVerbRequest){.attack_type = ATTACK_TYPE}),
+      base_to_hit, roll);
 
   // Set the appropriate section(s) to recycle.
   mech_set_recycle_limb(mech, SECT, PHYSICAL_RECYCLE_TIME);

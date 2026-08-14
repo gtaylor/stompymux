@@ -6,6 +6,7 @@
 #include "mech_radio_api.h"
 #include "mech_specification_api.h"
 #include "mech_template_api.h"
+#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "values_internal.h"
@@ -170,7 +171,7 @@ BtechScriptResult fun_btgetweight(BtechScriptCall *call) {
   sw = (float)PART_WEIGHT;
   if (sw <= 0)
     sw = 1024.0F * 100.0F;
-  safe_tprintf_str(buff, bufc, "%s", tprintf("%.3f", (double)(sw / 1024.0F)));
+  safe_tprintf_str(buff, bufc, "%.3f", (double)(sw / 1024.0F));
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 BtechScriptResult fun_btremovestores(BtechScriptCall *call) {

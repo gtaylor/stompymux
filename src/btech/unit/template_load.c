@@ -15,7 +15,6 @@
 #include "mux/objects/attrs.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -123,10 +122,10 @@ int load_template(DbRef player, Mech *mech, char *filename) {
           .file = fp, .line = ptr, .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
       if (strcmp(tmpc, ((mech)->ud.mech_type))) {
         btech_channel_send(
-            mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-            tprintf("Template %s has Reference <-> Filename mismatch : %s <-> "
-                    "%s - It is automatically fixed by saving again.",
-                    filename, tmpc, ((mech)->ud.mech_type)));
+            mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+            "Template %s has Reference <-> Filename mismatch : %s <-> "
+            "%s - It is automatically fixed by saving again.",
+            filename, tmpc, ((mech)->ud.mech_type));
         tmpc = ((mech)->ud.mech_type);
       }
       silly_atr_set_in(mech->xcode.context->database, mech->mynum, A_MECHTYPE,
@@ -427,12 +426,12 @@ int load_template(DbRef player, Mech *mech, char *filename) {
                 full_ammo(mech, section, critical) &&
             ((mech)->ud.type) != CLASS_MW && ((mech)->ud.type) != CLASS_BSUIT) {
           btech_channel_send(
-              mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-              tprintf("Invalid ammo crit for %s in #%ld %s (%d/%d)",
-                      weapon_catalogue_name(ammunition_to_weapon_index(type)),
-                      mech->mynum, filename,
-                      mech_critical_data(mech, section, critical),
-                      full_ammo(mech, section, critical)));
+              mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+              "Invalid ammo crit for %s in #%ld %s (%d/%d)",
+              weapon_catalogue_name(ammunition_to_weapon_index(type)),
+              mech->mynum, filename,
+              mech_critical_data(mech, section, critical),
+              full_ammo(mech, section, critical));
           mech_critical_data_set(mech, section, critical,
                                  full_ammo(mech, section, critical));
         }

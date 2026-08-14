@@ -28,7 +28,6 @@
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "special_object.h"
@@ -351,9 +350,9 @@ int map_checkmapfile(BattleMap *map, char *mapname) {
   }
   if (!map_read_dimensions(fp, &width, &height) || height < 1 ||
       height > MAPY || width < 1 || width > MAPX) {
-    btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
-                       tprintf("Map #%ld: Invalid height and or/width on %s",
-                               map->mynum, mapname));
+    btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS,
+                       "Map #%ld: Invalid height and or/width on %s",
+                       map->mynum, mapname);
     if (fclose(fp) != 0)
       return -2;
     return -2; // Bad Height/Width
@@ -365,11 +364,10 @@ int map_checkmapfile(BattleMap *map, char *mapname) {
       break;
   }
   if (i != height) {
-    btech_channel_send(
-        map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
-        tprintf("Map #%ld: Mapfile possibly corrupt and/or "
-                "height/width flipped. Height != what was read in %s",
-                map->mynum, mapname));
+    btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS,
+                       "Map #%ld: Mapfile possibly corrupt and/or "
+                       "height/width flipped. Height != what was read in %s",
+                       map->mynum, mapname);
     if (fclose(fp) != 0)
       return -3;
     return -3;
@@ -407,9 +405,8 @@ int map_load(BattleMap *map, char *mapname) {
   }
   if (!map_read_dimensions(fp, &width, &height) || height < 1 ||
       height > MAPY || width < 1 || width > MAPX) {
-    btech_channel_send(
-        map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
-        tprintf("Map #%ld: Invalid height and/or width", map->mynum));
+    btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS,
+                       "Map #%ld: Invalid height and/or width", map->mynum);
     if (fclose(fp) != 0)
       return -1;
     return -1;
@@ -442,19 +439,19 @@ int map_load(BattleMap *map, char *mapname) {
         break;
       }
       if (!strcmp(get_terrain_name_base(terr), "Unknown")) {
-        btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
-                           tprintf("Map #%ld: Invalid terrain at %d,%d: '%c'",
-                                   map->mynum, j, i, terr));
+        btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS,
+                           "Map #%ld: Invalid terrain at %d,%d: '%c'",
+                           map->mynum, j, i, terr);
         terr = GRASSLAND;
       }
       map_hex_set(map, j, i, terr, elev);
     }
   }
   if (i != height) {
-    btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS, "%s",
-                       tprintf("Error: EOF reached prematurely. "
-                               "(x%d != %d || y%d != %d)",
-                               j, width, i, height));
+    btech_channel_send(map->xcode.context, BTECH_CHANNEL_MAP_ERRORS,
+                       "Error: EOF reached prematurely. "
+                       "(x%d != %d || y%d != %d)",
+                       j, width, i, height);
     if (fclose(fp) != 0)
       return -2;
     return -2;
@@ -579,9 +576,9 @@ void map_savemap(DbRef player, void *data, char *buffer) {
         } else if (!(map->flags & MAPFLAG_FIRES)) {
           map_terrain_set(map, j, i, ' ');
           btech_channel_send(
-              map->xcode.context, BTECH_CHANNEL_EVENT_INFO, "%s",
-              tprintf("[lost?] fire event noticed on map #%ld (%s) at %d,%d",
-                      map->mynum, map->mapname, j, i));
+              map->xcode.context, BTECH_CHANNEL_EVENT_INFO,
+              "[lost?] fire event noticed on map #%ld (%s) at %d,%d",
+              map->mynum, map->mapname, j, i);
           terrain = '.';
         }
         break;
@@ -592,9 +589,9 @@ void map_savemap(DbRef player, void *data, char *buffer) {
         if (terrain == SMOKE) {
           map_terrain_set(map, j, i, ' ');
           btech_channel_send(
-              map->xcode.context, BTECH_CHANNEL_EVENT_INFO, "%s",
-              tprintf("[lost?] smoke event noticed on map #%ld (%s) at %d,%d",
-                      map->mynum, map->mapname, j, i));
+              map->xcode.context, BTECH_CHANNEL_EVENT_INFO,
+              "[lost?] smoke event noticed on map #%ld (%s) at %d,%d",
+              map->mynum, map->mapname, j, i);
           terrain = '.';
         }
         break;

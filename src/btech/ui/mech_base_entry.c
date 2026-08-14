@@ -224,19 +224,18 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
   if (!newmap) {
     mech_notify(mech, MECHALL, "You sense wrongness in fabric of space..");
     btech_channel_send(
-        mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf("Error: No map existing for mapindex #%d (@ %d,%d of #%ld)",
-                (int)mapo->obj, mapo->x, mapo->y, mech_map_dbref(mech)));
+        mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+        "Error: No map existing for mapindex #%d (@ %d,%d of #%ld)",
+        (int)mapo->obj, mapo->x, mapo->y, mech_map_dbref(mech));
     return;
   }
   MapEntranceResult entrance = find_entrance(newmap, target);
   if (!entrance.found) {
     mech_notify(mech, MECHALL, "You sense wrongness in fabric of space..");
     btech_channel_send(
-        mech_context(mech), BTECH_CHANNEL_MECH_ERRORS, "%s",
-        tprintf(
-            "Error: No entrance existing for mapindex #%d (@ %d,%d of #%ld)",
-            (int)mapo->obj, mapo->x, mapo->y, mech_map_dbref(mech)));
+        mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
+        "Error: No entrance existing for mapindex #%d (@ %d,%d of #%ld)",
+        (int)mapo->obj, mapo->x, mapo->y, mech_map_dbref(mech));
     return;
   }
   if (!lock_test(btech_context_evaluation(mech_context(mech)), player, player,

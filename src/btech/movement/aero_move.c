@@ -172,11 +172,11 @@ static void aero_takeoff_event(MuxEvent *e) {
   mech_los_broadcast(mech, land_data_entry(i)->takeoff_others);
   mech_motion_vector_reset(mech);
   if (mech_is_dropship(mech)) {
-    btech_channel_send(mech_context(mech), BTECH_CHANNEL_DS_INFO, "%s",
-                       tprintf("DS #%ld has lifted off at %d %d "
-                               "on map #%ld",
-                               mech_dbref(mech), mech_position_x(mech),
-                               mech_position_y(mech), battle_map_dbref(map)));
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_DS_INFO,
+                       "DS #%ld has lifted off at %d %d "
+                       "on map #%ld",
+                       mech_dbref(mech), mech_position_x(mech),
+                       mech_position_y(mech), battle_map_dbref(map));
   }
   if (mech_condition_summary(mech).hidden) {
     mech_notify(mech, MECHALL, "You move too much and break your cover!");
@@ -285,11 +285,10 @@ void aero_takeoff(DbRef player, void *data, const char *buffer) {
   dropship_notification_broadcast_if_due(mech,
                                          "starts warming engines for liftoff!");
   if (mech_is_dropship(mech)) {
-    btech_channel_send(
-        mech_context(mech), BTECH_CHANNEL_DS_INFO, "%s",
-        tprintf("DS #%ld has started takeoff at %d %d on map #%ld",
-                mech_dbref(mech), mech_position_x(mech), mech_position_y(mech),
-                battle_map_dbref(map)));
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_DS_INFO,
+                       "DS #%ld has started takeoff at %d %d on map #%ld",
+                       mech_dbref(mech), mech_position_x(mech),
+                       mech_position_y(mech), battle_map_dbref(map));
   }
   if (mech_condition_summary(mech).hidden) {
     mech_notify(mech, MECHALL, "You break your cover to takeoff!");
@@ -463,12 +462,11 @@ void aero_land(DbRef player, void *data, const char *buffer) {
           mech, MECHALL, "Launch aborted by %s.",
           game_object_name(btech_context_database(mech_context(mech)), player));
       if (mech_is_dropship(mech)) {
-        btech_channel_send(mech_context(mech), BTECH_CHANNEL_DS_INFO, "%s",
-                           tprintf("DS #%ld aborted takeoff at %d %d "
-                                   "on map #%ld",
-                                   mech_dbref(mech), mech_position_x(mech),
-                                   mech_position_y(mech),
-                                   battle_map_dbref(map)));
+        btech_channel_send(mech_context(mech), BTECH_CHANNEL_DS_INFO,
+                           "DS #%ld aborted takeoff at %d %d "
+                           "on map #%ld",
+                           mech_dbref(mech), mech_position_x(mech),
+                           mech_position_y(mech), battle_map_dbref(map));
       }
       mech_event_cancel(mech, EVENT_TAKEOFF);
       return;
@@ -530,10 +528,10 @@ void aero_land(DbRef player, void *data, const char *buffer) {
     return;
   }
   if (mech_is_dropship(mech))
-    btech_channel_send(mech_context(mech), BTECH_CHANNEL_DS_INFO, "%s",
-                       tprintf("DS #%ld has landed at %d %d on map #%ld",
-                               mech_dbref(mech), mech_position_x(mech),
-                               mech_position_y(mech), battle_map_dbref(map)));
+    btech_channel_send(mech_context(mech), BTECH_CHANNEL_DS_INFO,
+                       "DS #%ld has landed at %d %d on map #%ld",
+                       mech_dbref(mech), mech_position_x(mech),
+                       mech_position_y(mech), battle_map_dbref(map));
   mech_notify(mech, MECHALL, land_data_entry(i)->landmsg);
   mech_los_broadcast(mech, land_data_entry(i)->landmsg_others);
   mech_position_z_set(mech, mech_position_surface_elevation(mech));

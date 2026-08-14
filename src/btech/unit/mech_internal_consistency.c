@@ -6,7 +6,6 @@
 #include "mech_equipment_api.h"
 #include "mech_internal.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/formatting.h"
 #include "section_types.h"
 #include <stddef.h>
 #include <stdlib.h>
@@ -78,12 +77,11 @@ void vehicle_int_check(Mech *mech, int noisy) {
         mech_section_original_internal(mech, location) == EXPECTED)
       continue;
     if (noisy) {
-      btech_channel_send(
-          mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-          tprintf("Template %s / mech #%ld: Invalid internals in loc %d "
-                  "(should be %d, are %d)",
-                  mech->ud.mech_type, mech->mynum, location, EXPECTED,
-                  mech_section_original_internal(mech, location)));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                         "Template %s / mech #%ld: Invalid internals in loc %d "
+                         "(should be %d, are %d)",
+                         mech->ud.mech_type, mech->mynum, location, EXPECTED,
+                         mech_section_original_internal(mech, location));
     }
     mech_section_original_internal_set(mech, location, EXPECTED);
     mech_section_internal_set(mech, location, EXPECTED);
@@ -104,9 +102,9 @@ void mech_int_check(Mech *mech, int noisy) {
     tonnage_index++;
   if (internal_structure_value((size_t)tonnage_index, 0) < 0) {
     if (noisy)
-      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-                         tprintf("VERY odd tonnage for #%ld: %d.", mech->mynum,
-                                 mech->ud.tons));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                         "VERY odd tonnage for #%ld: %d.", mech->mynum,
+                         mech->ud.tons);
     return;
   }
 
@@ -117,12 +115,11 @@ void mech_int_check(Mech *mech, int noisy) {
     if (mech_section_original_internal(mech, location) == EXPECTED)
       continue;
     if (noisy) {
-      btech_channel_send(
-          mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS, "%s",
-          tprintf("Template %s / mech #%ld: Invalid internals in loc %d "
-                  "(should be %d, are %d)",
-                  mech->ud.mech_type, mech->mynum, location, EXPECTED,
-                  mech_section_original_internal(mech, location)));
+      btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+                         "Template %s / mech #%ld: Invalid internals in loc %d "
+                         "(should be %d, are %d)",
+                         mech->ud.mech_type, mech->mynum, location, EXPECTED,
+                         mech_section_original_internal(mech, location));
     }
     mech_section_original_internal_set(mech, location, EXPECTED);
     mech_section_internal_set(mech, location, EXPECTED);
