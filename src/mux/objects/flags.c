@@ -389,14 +389,45 @@ void display_flagtab(EvaluationContext *evaluation, DbRef player) {
   notify_checked(evaluation, player, player, buffer, MSG_ME_ALL | MSG_F_DOWN);
   free_lbuf(buffer);
 }
-const FlagEntry *find_flag(WorldIndexes *indexes, DbRef thing, char *flagname) {
-  (void)thing;
-  for (size_t index = 0; index < strlen(flagname); index++) {
-    char *character =
-        checked_storage_at(flagname, strlen(flagname), sizeof(char), index);
-    *character = ascii_to_lower(*character);
+static bool flag_normalize_name(const char *name,
+                                char buffer[static SBUF_SIZE]) {
+  if (name == nullptr)
+    return false;
+
+  size_t length = strlen(name);
+  if (length >= SBUF_SIZE)
+    return false;
+  for (size_t index = 0; index < length; index++) {
+    const char *input =
+        checked_storage_at_const(name, length, sizeof(char), index);
+    char *output = checked_storage_at(buffer, SBUF_SIZE, sizeof(char), index);
+    *output = ascii_to_lower(*input);
   }
-  return hash_table_find_const(flagname, &indexes->flags);
+  *(char *)checked_storage_at(buffer, SBUF_SIZE, sizeof(char), length) = '\0';
+  return true;
+}
+
+const FlagEntry *find_flag(WorldIndexes *indexes, DbRef thing,
+                           const char *flagname) {
+  char normalized[SBUF_SIZE];
+
+  (void)thing;
+  if (!flag_normalize_name(flagname, normalized))
+    return nullptr;
+  return hash_table_find_const(normalized, &indexes->flags);
+}
+
+bool flag_alias_add(WorldIndexes *indexes, const char *alias,
+                    const FlagEntry *flag) {
+  char normalized[SBUF_SIZE];
+  const FlagEntry *existing;
+
+  if (flag == nullptr || !flag_normalize_name(alias, normalized))
+    return false;
+  existing = hash_table_find_const(normalized, &indexes->flags);
+  if (existing != nullptr)
+    return existing == flag;
+  return hash_table_add_const(normalized, flag, &indexes->flags) == 0;
 }
 void flag_set(EvaluationContext *evaluation, WorldIndexes *indexes,
               DbRef target, DbRef player, char *name, int key) {

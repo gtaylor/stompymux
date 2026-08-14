@@ -44,10 +44,10 @@ typedef struct PowerDescriptionRequest {
 
 extern char *power_description(const PowerDescriptionRequest *request);
 const POWERENT *find_power(WorldIndexes * /*indexes*/, DbRef /*thing*/,
-                           char * /*powername*/);
+                           const char * /*powername*/);
 extern bool decode_power(EvaluationContext * /*evaluation*/,
                          WorldIndexes * /*indexes*/, DbRef /*player*/,
-                         char * /*powername*/, PowerId * /*id*/);
+                         const char * /*powername*/, PowerId * /*id*/);
 typedef struct ObjectPowerRequest {
   GameDatabase *database;
   DbRef object;

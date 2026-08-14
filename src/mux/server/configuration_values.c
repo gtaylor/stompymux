@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/configuration.h"
 #include "mux/server/configuration_internal.h"
@@ -17,7 +18,6 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/hash_table.h"
 #include "mux/support/name_table.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/palette.h"
@@ -257,14 +257,17 @@ int cf_flagalias(const ConfigurationCall *call) {
   alias = strtok(str, " \t=,");
   orig = strtok(nullptr, " \t=,");
 
-  flag = hash_table_find_const(orig, &context->world_indexes->flags);
-  if (flag != nullptr) {
-    hash_table_add_const(alias, flag, &context->world_indexes->flags);
+  flag = find_flag(context->world_indexes, NOTHING, orig);
+  if (flag == nullptr) {
+    configuration_log_not_found(context, call->player, call->command, "Flag",
+                                orig != nullptr ? orig : "");
+  } else if (!flag_alias_add(context->world_indexes, alias, flag)) {
+    configuration_log_syntax(
+        context, call->player, call->command,
+        "Invalid or conflicting flag alias: ", alias != nullptr ? alias : "");
+  } else {
     success++;
   }
-  if (!success)
-    configuration_log_not_found(context, call->player, call->command, "Flag",
-                                orig);
   return ((success > 0) ? 0 : -1);
 }
 
@@ -357,7 +360,7 @@ int cf_set_flags(const ConfigurationCall *call) {
      * Set the appropriate bit
      */
 
-    fp = hash_table_find_const(sp, &context->world_indexes->flags);
+    fp = find_flag(context->world_indexes, NOTHING, sp);
     if (fp != nullptr) {
       if (success == 0)
         *fset = (ObjectFlagSet){0};

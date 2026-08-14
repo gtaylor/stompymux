@@ -60,8 +60,7 @@ Wizards can use the following native commands to discover and inspect powers:
 
 `@list powers` displays every registered power. `@examine` includes a
 `Powers:` line for the target. `@search power=idle` finds objects with the
-stored `IDLE` power; the power name in this search form must currently be
-lowercase.
+stored `IDLE` power; its power name is case-insensitive, just like `@power`.
 
 The `mux` Lua package does not currently expose direct power getter or setter
 functions. Privileged Lua logic can queue the native `@power` command with

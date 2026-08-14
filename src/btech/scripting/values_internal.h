@@ -133,4 +133,3 @@ const GMV *xcode_descriptor_at(size_t index);
 
 int text2bv(const char *text);
 char *bv2text(int i, char *buffer);
-const char *mech_getset_ref(int mode, Mech *mech, char *data);

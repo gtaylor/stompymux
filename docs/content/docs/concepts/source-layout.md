@@ -166,5 +166,6 @@ treating them as precedent. It contains the POSIX signal bridge and two legacy
 formatting buffers. SQLite writer fault injection is owned by each snapshot
 write and threaded through its store contexts. Flow prompts belong to their
 active flows, while connection displays and xcode-reference handlers use
-owner- or caller-provided storage. The remaining formatting exceptions require
-a dedicated API and call-site migration.
+owner- or caller-provided storage. Flag and power lookup normalizes const input
+into bounded automatic storage. The remaining formatting exceptions require a
+dedicated API and call-site migration.

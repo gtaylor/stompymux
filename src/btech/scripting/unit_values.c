@@ -71,13 +71,16 @@ static bool parse_damage_numbers(const char *token, const char *prefix,
          parse_int_checked(checked_string_suffix(third_text, 1), third);
 }
 
-const char *mech_getset_ref(int mode, Mech *mech, char *data) {
-  if (mode) {
-    mech_model_reference_set(mech, data);
-    return nullptr;
+char *mech_getset_ref(const GmvBufferedBidirectionalCall *call) {
+  if (call->mode) {
+    mech_model_reference_set(call->mech, call->value);
+    call->buffer[0] = '\0';
+    return call->buffer;
   }
 
-  return mech_model_reference(mech);
+  (void)snprintf(call->buffer, LBUF_SIZE, "%s",
+                 mech_model_reference(call->mech));
+  return call->buffer;
 }
 
 const char *mech_typefunc(int mode, Mech *mech, char *arg) {

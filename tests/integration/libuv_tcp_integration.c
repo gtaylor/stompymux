@@ -156,7 +156,7 @@ static int write_config(const char *target_path, int port,
       (add_color_collision && fputs("red = [1, 2, 3]\n", target) < 0) ||
       fputs("\n"
             "[aliases.flags]\n"
-            "aud = \"audible\"\n"
+            "AuD = \"AuDiBlE\"\n"
             "\n"
             "[osc8.presets]\n"
             "osc8-demo-button = 'color=white bg=green bold "
@@ -1123,6 +1123,16 @@ static int create_styled_object(int socket_fd) {
       expect_text(socket_fd, " - MONITOR set.") < 0 ||
       send_command(socket_fd, "@flag me=!monitor\r\n") < 0 ||
       expect_text(socket_fd, " - MONITOR cleared.") < 0 ||
+      send_command(socket_fd, "@flag me=aUd\r\n") < 0 ||
+      expect_text(socket_fd, " - AUDIBLE set.") < 0 ||
+      send_command(socket_fd, "@flag me=!AuD\r\n") < 0 ||
+      expect_text(socket_fd, " - AUDIBLE cleared.") < 0 ||
+      send_command(socket_fd, "@power me=IdLe\r\n") < 0 ||
+      expect_text(socket_fd, "GOD - idle granted.") < 0 ||
+      send_command(socket_fd, "@search power=IDlE\r\n") < 0 ||
+      expect_text(socket_fd, "GOD(#1") < 0 ||
+      send_command(socket_fd, "@power me=!iDlE\r\n") < 0 ||
+      expect_text(socket_fd, "GOD - idle removed.") < 0 ||
       send_command(socket_fd, "@name me=LongConnectedPlayer\r\n") < 0 ||
       expect_text(socket_fd, "Name set.") < 0 ||
       send_command(socket_fd, "@who\r\n") < 0 ||

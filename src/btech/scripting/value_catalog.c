@@ -293,9 +293,9 @@ static const GMV XCODE_DESCRIPTORS[] = {
      .size = 0},
     {.gtype = GTYPE_MECH,
      .name = "mechref",
-     .source_kind = GMV_SOURCE_BIDIRECTIONAL_CALLBACK,
-     .source.bidirectional_callback = mech_getset_ref,
-     .type = TYPE_STRFUNC_BD,
+     .source_kind = GMV_SOURCE_BUFFERED_BIDIRECTIONAL_CALLBACK,
+     .source.buffered_bidirectional_callback = mech_getset_ref,
+     .type = TYPE_STRFUNC_BD_BUF,
      .size = 0},
 
     {.gtype = GTYPE_MECH,

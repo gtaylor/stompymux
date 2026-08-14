@@ -32,9 +32,9 @@ typedef struct LuaFlowData {
   LuaOwner *runtime_owner;
   LuaModuleRoot root;
   char path[PATH_MAX];
+  char prompt[LBUF_SIZE];
   LuaFlowField fields[LUA_FLOW_MAX_FIELDS];
   int field_count;
-  char prompt[LBUF_SIZE];
 } LuaFlowData;
 
 static LuaFlowField *lua_flow_field_at(LuaFlowData *data, size_t index) {
@@ -277,6 +277,7 @@ int lua_runtime_flow_start(void *context, lua_State *state, int descriptor_id,
   data->runtime_owner = runtime->owner;
   data->root = root;
   (void)snprintf(data->path, sizeof(data->path), "%s", module);
+  data->prompt[0] = '\0';
   data->field_count = 0;
 
   descriptor_flow_start(&(FlowStartRequest){.descriptor = d,

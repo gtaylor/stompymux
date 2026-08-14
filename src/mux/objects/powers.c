@@ -85,29 +85,40 @@ void display_powertab(EvaluationContext *evaluation, DbRef player) {
   free_lbuf(buf);
 }
 
-const POWERENT *find_power(WorldIndexes *indexes, DbRef thing,
-                           char *powername) {
-  (void)thing;
+static const POWERENT *power_find_normalized(WorldIndexes *indexes,
+                                             const char *powername) {
+  char normalized[SBUF_SIZE];
 
-  /*
-   * Make sure the power name is valid
-   */
-
-  for (size_t index = 0; index < strlen(powername); index++) {
-    char *character =
-        checked_storage_at(powername, strlen(powername), sizeof(char), index);
-    *character = ascii_to_lower(*character);
+  if (powername == nullptr)
+    return nullptr;
+  size_t length = strlen(powername);
+  if (length >= sizeof(normalized))
+    return nullptr;
+  for (size_t index = 0; index < length; index++) {
+    const char *input =
+        checked_storage_at_const(powername, length, sizeof(char), index);
+    char *output =
+        checked_storage_at(normalized, sizeof(normalized), sizeof(char), index);
+    *output = ascii_to_lower(*input);
   }
-  return hash_table_find_const(powername, &indexes->powers);
+  *(char *)checked_storage_at(normalized, sizeof(normalized), sizeof(char),
+                              length) = '\0';
+  return hash_table_find_const(normalized, &indexes->powers);
+}
+
+const POWERENT *find_power(WorldIndexes *indexes, DbRef thing,
+                           const char *powername) {
+  (void)thing;
+  return power_find_normalized(indexes, powername);
 }
 
 bool decode_power(EvaluationContext *evaluation, WorldIndexes *indexes,
-                  DbRef player, char *powername, PowerId *id) {
+                  DbRef player, const char *powername, PowerId *id) {
   const POWERENT *pent;
 
   *id = POWER_NONE;
 
-  pent = hash_table_find_const(powername, &indexes->powers);
+  pent = power_find_normalized(indexes, powername);
   if (!pent) {
     notify_printf(evaluation, player, "%s: Power not found.", powername);
     return false;

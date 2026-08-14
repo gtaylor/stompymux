@@ -593,6 +593,7 @@ void descriptor_start_connect_flow(Descriptor *d) {
 
   data->name[0] = '\0';
   data->password[0] = '\0';
+  data->prompt[0] = '\0';
   descriptor_flow_start(&(FlowStartRequest){.descriptor = d,
                                             .initial_step = "username",
                                             .step = connect_flow_dispatch,

@@ -1,4 +1,5 @@
-# Legacy formatting scratch storage requires a dedicated call-site migration.
+# Legacy formatting scratch storage requires a dedicated API and call-site
+# conversion round.
 src/mux/support/formatting.c:safe_tprintf_str:buff
 src/mux/support/formatting.c:tprintf:buff
 

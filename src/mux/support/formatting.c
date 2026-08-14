@@ -20,7 +20,7 @@ char *tprintf(const char *format, ...) {
 }
 
 void safe_tprintf_str(char *str, char **bp, const char *format, ...) {
-  static char buff[LBUF_SIZE];
+  char buff[LBUF_SIZE];
   va_list ap;
 
   va_start(ap, format);

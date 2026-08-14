@@ -24,3 +24,4 @@ apply to the target:
 
 Use `@list powers` to list registered powers, `@examine <object>` to inspect a
 target's powers, or `@search power=idle` to find objects with the stored power.
+Power names are case-insensitive in both `@power` and `@search`.

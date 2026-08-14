@@ -50,7 +50,10 @@ directives take other shapes:
   strings. Logging event categories instead use individual booleans such as
   `[logging.topics] security = true` and `all_commands = false`.
 - **Alias directives** (`[aliases.*]`) are tables mapping the alias to its
-  target, e.g. `"@cr" = "@create"`.
+  target, e.g. `"@cr" = "@create"`. Flag aliases and their target flag names
+  are case-insensitive. Repeating an existing identical flag mapping is
+  accepted, while an alias that would rebind an existing name to a different
+  flag is rejected.
 - **Access directives** (`[access.*]`) are tables
   mapping a command or list name to one or more permissions, e.g.
   `"@dig" = ["wizard", "need_location"]`.
