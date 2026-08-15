@@ -72,7 +72,7 @@ static const void *descriptor_field_const(const void *data,
 
 static bool mech_value_write_text(Mech *mech, const GMV *descriptor,
                                   const char *text) {
-  MechScriptValue value = {0};
+  MechScriptValue value = {};
 
   switch (descriptor->type) {
   case TYPE_STRING:
@@ -101,7 +101,7 @@ static bool mech_value_write_text(Mech *mech, const GMV *descriptor,
 
 static char *mech_value_read_text(const Mech *mech, const GMV *descriptor,
                                   char *buffer) {
-  MechScriptValue value = {0};
+  MechScriptValue value = {};
   if (!mech_script_value_read(mech, descriptor->source.mech_key, &value))
     return nullptr;
 
@@ -512,7 +512,7 @@ void list_xcodestuff(DbRef player, void *data, const char *buffer) {
   int t;
   int flag = CM_TWO;
   int se_len = 37;
-  CoolMenu *c = NULL;
+  CoolMenu *c = nullptr;
 
   t = btech_context_which_special(
       context, game_object_location(context->database, player));

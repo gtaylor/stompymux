@@ -326,25 +326,25 @@ CoolMenu *cool_menu_selection_create(const CoolMenuSelectionRequest *request) {
 
 CoolMenu *sel_col_fun_string_menu_k(int columns, char *heading,
                                     char *(*fun)(int), int last) {
-  CoolMenu *c = NULL;
+  CoolMenu *c = nullptr;
   int i;
   char buf[LBUF_SIZE];
   int sick = 0;
 
   (void)string_copy_bounded(buf, sizeof(buf), heading);
   buf[0] = ascii_to_upper(buf[0]);
-  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
   if (fun(0)[0] == '[') {
     cool_menu_entry_normal(&c, fun(0), columns, 1, 0);
     sick = 1;
   }
-  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   if (columns < 0)
     columns = cool_menu_fpw_bit(last, 18);
   for (i = sick; i < last; i++)
     cool_menu_entry_normal(&c, fun(i), columns, i + 1 - sick, 0);
-  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   return c;
 }
 

@@ -31,7 +31,6 @@
 #include "weapon_settings.h"
 #include <errno.h>
 #include <limits.h>
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -185,7 +184,7 @@ BtechScriptResult fun_btsetxy(BtechScriptCall *call) {
   int y;
   int z = 0;
   Mech *mech;
-  Mech *towee = NULL;
+  Mech *towee = nullptr;
   BattleMap *map;
   char buffer[MBUF_SIZE];
   if (NFARGS < 4 || NFARGS > 5) {

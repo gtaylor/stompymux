@@ -516,7 +516,7 @@ static void help_index_reset(HelpIndex *index) {
   for (i = 0; i < index->articles.count; i++)
     help_frontmatter_free(help_article_item(&index->articles, i));
   free(index->articles.items);
-  index->articles = (HelpArticleVector){0};
+  index->articles = (HelpArticleVector){};
 
   for (i = 0; i < index->keyword_count; i++)
     free(help_keyword_item(index, i)->keyword);

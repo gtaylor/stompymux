@@ -81,7 +81,7 @@ const BtechCommandDefinition MECHREPCOMMANDS[] = {
     {0, "SETCARGOSPACE <VAL> <MAXTON>",
      "@Sets cargospace and max cargo tonnage",
      btech_command_invoke_mechrep_setcargospace},
-    {0, NULL, NULL, NULL}};
+    {0, nullptr, nullptr, nullptr}};
 
 size_t repair_command_count(void) {
   return (sizeof(MECHREPCOMMANDS) / sizeof(*MECHREPCOMMANDS)) - 1;

@@ -101,7 +101,7 @@ static const AmmoType AMMO_TYPES[] = {
     {'H', "highexplosive", ATM_HE_MODE, TMISSILE, -1, IDF, DAR},
     {'V', "extendedrange", ATM_ER_MODE, TMISSILE, -1, IDF, DAR},
     {'#', "lrmmode", MML_LRM_MODE, TMISSILE, -1, IDF, DAR},
-    {0, NULL, 0, 0, 0, 0, 0}};
+    {0, nullptr, 0, 0, 0, 0, 0}};
 
 static const AmmoType *ammo_type(int index) {
   if (index < 0)

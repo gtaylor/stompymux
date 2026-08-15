@@ -161,7 +161,7 @@ static const char *const CARGO_NAMES[] = {"Ammo_LBX2",
                                           "Ammo_ATM12_ER",
                                           "Ammo_ATM12_HE",
                                           "SearchLight",
-                                          NULL};
+                                          nullptr};
 
 const int TEMPLATE_CARGO_COUNT =
     (sizeof(CARGO_NAMES) / sizeof(*CARGO_NAMES)) - 1;

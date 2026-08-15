@@ -32,7 +32,7 @@ static const char *const LOAD_COMMAND_NAMES[] = {"Reference",
                                                  "HSEngOverRide",
                                                  "Unit_Era",
                                                  "Unit_TRO",
-                                                 NULL};
+                                                 nullptr};
 
 size_t template_load_command_count(void) {
   return (sizeof(LOAD_COMMAND_NAMES) / sizeof(*LOAD_COMMAND_NAMES)) - 1;

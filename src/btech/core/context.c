@@ -570,5 +570,5 @@ void btech_command_scope_leave(BtechCommandScope *scope) {
   assert(scope->active);
   assert(scope->context->command_scope == scope);
   scope->context->command_scope = scope->previous;
-  *scope = (BtechCommandScope){0};
+  *scope = (BtechCommandScope){};
 }

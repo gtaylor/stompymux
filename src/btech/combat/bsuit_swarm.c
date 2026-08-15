@@ -205,7 +205,7 @@ Mech *bsuit_swarmer_find(Mech *mech) {
   int i;
 
   if (!map)
-    return 0;
+    return nullptr;
 
   for (i = 0; i < battle_map_unit_count(map); i++) {
     if (i != mech_map_slot(mech)) {
@@ -311,7 +311,7 @@ int bsuit_target_find(DbRef player, Mech *mech, Mech **target, char *buffer) {
   float range;
   char target_id[2];
   DbRef targetnum;
-  Mech *t = NULL;
+  Mech *t = nullptr;
 
   argc = mech_parseattributes(buffer, args, 3);
   if (argc > 1) {

@@ -710,7 +710,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
 void mech_radio(DbRef player, void *data, char *buffer) {
   char message_buffer[LBUF_SIZE];
   int fail = 0;
-  char *args[3] = {0};
+  char *args[3] = {};
   int i;
   Mech *mech = (Mech *)data;
   DbRef target;

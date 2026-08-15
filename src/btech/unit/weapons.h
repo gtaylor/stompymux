@@ -304,7 +304,7 @@ const struct WeaponDefinition MECH_WEAPONS[] = {
     {"IS.InfantrySRM", VRT_IS_ISRM, TMISSILE, 1, 1, 0, 2, 4, 6, 0, -1, -1, -1, 1, 2, 100, -1, NONE, 12, 0, 0, 0},
     {"IS.InfantryLRM", VRT_IS_ILRM, TMISSILE, 1, 1, 4, 6, 9, 12, 0, -1, -1, -1, 1, 1, 100, -1, IDF, 22, 0, 0, 0},
 
-    {NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, NONE, 1, 0, 0, 0}
+    {nullptr, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1, NONE, 1, 0, 0, 0}
 
 };
 

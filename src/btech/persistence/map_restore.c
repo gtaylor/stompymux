@@ -110,9 +110,9 @@ static int btech_special_allocate_map_dynamic(BattleMap *map) {
   free((void *)map->lo_sinfo);
   free(map->mechflags);
   free(map->mechs_on_map);
-  map->lo_sinfo = NULL;
-  map->mechflags = NULL;
-  map->mechs_on_map = NULL;
+  map->lo_sinfo = nullptr;
+  map->mechflags = nullptr;
+  map->mechs_on_map = nullptr;
   map->dynamic_size = 0;
   return -1;
 }
@@ -147,7 +147,7 @@ int btech_special_load_map_parents(sqlite3 *sqlite, BtechContext *context) {
   int wind_direction;
   int wind_speed;
 
-  statement = NULL;
+  statement = nullptr;
   result = btech_special_prepare_v2(
                sqlite,
                "SELECT dbref, map_name, width, height, temperature, gravity, "
@@ -155,7 +155,7 @@ int btech_special_load_map_parents(sqlite3 *sqlite, BtechContext *context) {
                "wind_speed, reserved, flags, cf, cf_max, on_map, build_flag, "
                "first_free, moves, move_mod, sensor_flags, regen_factor "
                "FROM btech_maps ORDER BY dbref;",
-               -1, &statement, NULL) == SQLITE_OK
+               -1, &statement, nullptr) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -249,16 +249,16 @@ int btech_special_load_map_hexes(sqlite3 *sqlite, BtechContext *context) {
   int x;
   int y;
 
-  statement = NULL;
+  statement = nullptr;
   current_map = NOTHING;
   expected_x = 0;
   expected_y = 0;
-  map = NULL;
+  map = nullptr;
   result = btech_special_prepare_v2(
                sqlite,
                "SELECT map_dbref, x, y, value FROM btech_map_hexes "
                "ORDER BY map_dbref, y, x;",
-               -1, &statement, NULL) == SQLITE_OK
+               -1, &statement, nullptr) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -316,15 +316,15 @@ int btech_special_load_map_slots(sqlite3 *sqlite, BtechContext *context) {
   int slot;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   current_map = NOTHING;
   expected_slot = 0;
-  map = NULL;
+  map = nullptr;
   result =
       btech_special_prepare_v2(sqlite,
                                "SELECT map_dbref, slot, mech_dbref, mech_flags "
                                "FROM btech_map_slots ORDER BY map_dbref, slot;",
-                               -1, &statement, NULL) == SQLITE_OK
+                               -1, &statement, nullptr) == SQLITE_OK
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -382,17 +382,17 @@ int btech_special_load_map_los(sqlite3 *sqlite, BtechContext *context) {
   int step;
   int target;
 
-  statement = NULL;
+  statement = nullptr;
   current_map = NOTHING;
   expected_source = 0;
   expected_target = 0;
-  map = NULL;
+  map = nullptr;
   result =
       btech_special_prepare_v2(
           sqlite,
           "SELECT map_dbref, source_slot, target_slot, flags "
           "FROM btech_map_los ORDER BY map_dbref, source_slot, target_slot;",
-          -1, &statement, NULL) == SQLITE_OK
+          -1, &statement, nullptr) == SQLITE_OK
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -445,7 +445,7 @@ int btech_special_validate_map_child_counts(sqlite3 *sqlite) {
   int invalid_rows;
   int result;
 
-  statement = NULL;
+  statement = nullptr;
   result =
       btech_special_prepare_v2(
           sqlite,
@@ -457,7 +457,7 @@ int btech_special_validate_map_child_counts(sqlite3 *sqlite) {
           "OR (SELECT count(*) FROM btech_map_los AS los "
           " WHERE los.map_dbref = maps.dbref) != maps.first_free * "
           "maps.first_free;",
-          -1, &statement, NULL) == SQLITE_OK &&
+          -1, &statement, nullptr) == SQLITE_OK &&
               sqlite3_step(statement) == SQLITE_ROW &&
               btech_special_column_int(statement, 0, &invalid_rows) == 0 &&
               invalid_rows == 0 && sqlite3_step(statement) == SQLITE_DONE
@@ -489,19 +489,19 @@ int btech_special_load_map_objects(sqlite3 *sqlite, BtechContext *context) {
   int x;
   int y;
 
-  statement = NULL;
+  statement = nullptr;
   current_map = NOTHING;
   current_object_type = -1;
   object_type = -1;
   expected_ordinal = 0;
-  map = NULL;
-  tail = NULL;
+  map = nullptr;
+  tail = nullptr;
   result = btech_special_prepare_v2(
                sqlite,
                "SELECT map_dbref, object_type, ordinal, x, y, object_dbref, "
                "data_char, data_short, data_int FROM btech_map_objects "
                "ORDER BY map_dbref, object_type, ordinal;",
-               -1, &statement, NULL) == SQLITE_OK
+               -1, &statement, nullptr) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -582,17 +582,17 @@ int btech_special_load_map_bits(sqlite3 *sqlite, BtechContext *context) {
   int byte_index;
   int y;
 
-  statement = NULL;
+  statement = nullptr;
   current_map = NOTHING;
   current_y = -1;
   expected_byte = 0;
-  map = NULL;
-  bits = NULL;
+  map = nullptr;
+  bits = nullptr;
   result = btech_special_prepare_v2(
                sqlite,
                "SELECT map_dbref, y, byte_index, value FROM btech_map_bits "
                "ORDER BY map_dbref, y, byte_index;",
-               -1, &statement, NULL) == SQLITE_OK
+               -1, &statement, nullptr) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {

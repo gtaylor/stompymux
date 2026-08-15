@@ -374,7 +374,7 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
   Mech *mech = data;
   RepairDamageTable damages_storage = {0};
   RepairDamageTable *damages = &damages_storage;
-  CoolMenu *c = NULL;
+  CoolMenu *c = nullptr;
   int i;
   int j;
   int v1;

@@ -34,14 +34,14 @@ int btech_special_load_mech_positions(sqlite3 *sqlite, BtechContext *context) {
   int y;
   int z;
 
-  statement = NULL;
+  statement = nullptr;
   result =
       btech_special_prepare_v2(
           sqlite,
           "SELECT mech_dbref, pilot_status, hexes_walked, facing, x, y, z, "
           "last_x, last_y, fx, fy, fz, team, unusable_arcs, stall, pilot "
           "FROM btech_mech_positions ORDER BY mech_dbref;",
-          -1, &statement, NULL) == SQLITE_OK
+          -1, &statement, nullptr) == SQLITE_OK
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -110,15 +110,15 @@ int btech_special_load_mech_bays(sqlite3 *sqlite, BtechContext *context) {
   int result;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   current_mech = NOTHING;
   expected_bay = 0;
-  mech = NULL;
+  mech = nullptr;
   result = btech_special_prepare_v2(
                sqlite,
                "SELECT mech_dbref, bay_index, bay_dbref FROM btech_mech_bays "
                "ORDER BY mech_dbref, bay_index;",
-               -1, &statement, NULL) == SQLITE_OK
+               -1, &statement, nullptr) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -171,16 +171,16 @@ int btech_special_load_mech_turrets(sqlite3 *sqlite, BtechContext *context) {
   int step;
   int turret_index;
 
-  statement = NULL;
+  statement = nullptr;
   current_mech = NOTHING;
   expected_turret = 0;
-  mech = NULL;
+  mech = nullptr;
   result =
       btech_special_prepare_v2(sqlite,
                                "SELECT mech_dbref, turret_index, turret_dbref "
                                "FROM btech_mech_turrets "
                                "ORDER BY mech_dbref, turret_index;",
-                               -1, &statement, NULL) == SQLITE_OK
+                               -1, &statement, nullptr) == SQLITE_OK
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -238,14 +238,14 @@ int btech_special_load_mech_c3(sqlite3 *sqlite, BtechContext *context) {
   int total_masters;
   int working_masters;
 
-  statement = NULL;
+  statement = nullptr;
   result =
       btech_special_prepare_v2(
           sqlite,
           "SELECT mech_dbref, channel_title, c3i_size, c3_size, total_masters, "
           "working_masters, frequency_mode, tag_target, tagged_by "
           "FROM btech_mech_c3 ORDER BY mech_dbref;",
-          -1, &statement, NULL) == SQLITE_OK
+          -1, &statement, nullptr) == SQLITE_OK
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -306,17 +306,17 @@ int btech_special_load_mech_c3_nodes(sqlite3 *sqlite, BtechContext *context) {
   int result;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   current_mech = NOTHING;
   expected_network = 0;
   expected_node = 0;
-  mech = NULL;
+  mech = nullptr;
   result = btech_special_prepare_v2(
                sqlite,
                "SELECT mech_dbref, network_type, node_index, node_dbref "
                "FROM btech_mech_c3_nodes ORDER BY mech_dbref, network_type, "
                "node_index;",
-               -1, &statement, NULL) == SQLITE_OK
+               -1, &statement, nullptr) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -384,17 +384,17 @@ int btech_special_load_mech_tics(sqlite3 *sqlite, BtechContext *context) {
   int tic_index;
   int word_index;
 
-  statement = NULL;
+  statement = nullptr;
   current_mech = NOTHING;
   expected_tic = 0;
   expected_word = 0;
-  mech = NULL;
+  mech = nullptr;
   result = btech_special_prepare_v2(
                sqlite,
                "SELECT mech_dbref, tic_index, word_index, value "
                "FROM btech_mech_tics "
                "ORDER BY mech_dbref, tic_index, word_index;",
-               -1, &statement, NULL) == SQLITE_OK
+               -1, &statement, nullptr) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -457,16 +457,16 @@ int btech_special_load_mech_frequencies(sqlite3 *sqlite,
   int result;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   current_mech = NOTHING;
   expected_frequency = 0;
-  mech = NULL;
+  mech = nullptr;
   result =
       btech_special_prepare_v2(
           sqlite,
           "SELECT mech_dbref, frequency_index, frequency, mode, title "
           "FROM btech_mech_frequencies ORDER BY mech_dbref, frequency_index;",
-          -1, &statement, NULL) == SQLITE_OK
+          -1, &statement, nullptr) == SQLITE_OK
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {

@@ -247,7 +247,7 @@ void auto_addcommand(DbRef player, void *data, char *buffer) {
 void auto_listcommands(DbRef player, void *data, char *buffer) {
 
   Autopilot *autopilot = (Autopilot *)data;
-  CoolMenu *c = NULL;
+  CoolMenu *c = nullptr;
   char buf[MBUF_SIZE];
   int i;
 
@@ -502,7 +502,7 @@ char *auto_get_command_arg(Autopilot *autopilot, int command_number,
                    command_number, autopilot->mynum);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
-    return NULL;
+    return nullptr;
   }
 
   if (arg_number >= AUTOPILOT_MAX_ARGS) {
@@ -514,7 +514,7 @@ char *auto_get_command_arg(Autopilot *autopilot, int command_number,
                    AUTOPILOT_MAX_ARGS);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
-    return NULL;
+    return nullptr;
   }
 
   temp_command_node = (AutopilotCommand *)doubly_linked_list_get_node(
@@ -532,7 +532,7 @@ char *auto_get_command_arg(Autopilot *autopilot, int command_number,
         arg_number, autopilot->mynum, command_number);
     btech_channel_send(autopilot->xcode.context, BTECH_CHANNEL_MECH_AI, "%s",
                        error_buf);
-    return NULL;
+    return nullptr;
   }
 
   argument = strndup(stored_argument, MBUF_SIZE);
@@ -614,8 +614,8 @@ void auto_newautopilot(DbRef key, void **data,
     autopilot->commands = doubly_linked_list_create_list();
 
     /* Make sure certain things are set NULL */
-    autopilot->astar_path = NULL;
-    autopilot->weaplist = NULL;
+    autopilot->astar_path = nullptr;
+    autopilot->weaplist = nullptr;
 
     autopilot_weapon_profiles_initialize(autopilot);
 
@@ -634,7 +634,7 @@ void auto_newautopilot(DbRef key, void **data,
 
     /* Destroy the list */
     doubly_linked_list_destroy_list(autopilot->commands);
-    autopilot->commands = NULL;
+    autopilot->commands = nullptr;
 
     /* Destroy any astar path list thats on the AI */
     auto_destroy_astar_path(autopilot);
@@ -666,7 +666,7 @@ void auto_heartbeat(Autopilot *autopilot) {
   if (!autopilot->mymech)
     return;
   auto_sensor_event(autopilot);
-  if (autopilot->weaplist == NULL ||
+  if (autopilot->weaplist == nullptr ||
       autopilot->xcode.context->tick % AUTO_PROFILE_TICK == 0)
     auto_update_profile_event(autopilot);
   auto_gun_event(autopilot);

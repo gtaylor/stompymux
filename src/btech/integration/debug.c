@@ -152,7 +152,7 @@ void debug_memory(DbRef player, void *data, const char *buffer) {
   BtechContext *context = debug->context;
   size_t gtotal = 0;
   int type_count = btech_special_object_type_count();
-  DebugMemoryContext memory = {0};
+  DebugMemoryContext memory = {};
 
   memory.stat_count = (size_t)type_count;
   memory.stats = checked_storage_try_allocate_array(memory.stat_count,

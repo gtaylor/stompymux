@@ -9,12 +9,13 @@ strict_c23 := env("BTECH_STRICT_C23", "ON")
 build_fuzzers := env("BTECH_BUILD_FUZZERS", "OFF")
 clang_tidy := env("CLANG_TIDY", "clang-tidy-22")
 run_clang_tidy := env("RUN_CLANG_TIDY", "run-clang-tidy-22")
+clang := env("CLANG", "clang-22")
 clang_format := env("CLANG_FORMAT", "clang-format-22")
 stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-source-size check-typed-constants check-unsafe-apis check-bounded-copy check-allocation-discipline fmt-check build test tidy-check
+ci: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline fmt-check build test tidy-check
 
 agent-checks: ci
 
@@ -28,6 +29,12 @@ check-source-size:
 # cannot name them. This lexical gate also keeps examples in comments current.
 check-typed-constants:
     found=0; status=0; grep -RInE --include='*.h' --include='*.h.in' '^[[:space:]]*#[[:space:]]*define[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+[^[:space:]"]' src || status=$?; if (( status == 0 )); then found=1; elif (( status != 1 )); then exit "$status"; fi; status=0; grep -RInE --include='*.c' '^[[:space:]]*#[[:space:]]*define[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+[^[:space:]"]' src || status=$?; if (( status == 0 )); then found=1; elif (( status != 1 )); then exit "$status"; fi; if (( found )); then echo 'Untyped object-like constant found in guarded sources.' >&2; exit 1; fi
+
+# modernize-use-nullptr catches typed null-pointer constants, including bare 0,
+# but intentionally skips tokens inside macro expansions. Clang's raw lexer
+# closes that gap without mistaking comments or SQL string literals for code.
+check-nullptr:
+    candidates=$(mktemp); tokens=$(mktemp); trap 'rm -f "$candidates" "$tokens"' EXIT; status=0; rg -l -0 --glob '*.[ch]' --glob '*.h.in' '\bNULL\b' src >"$candidates" || status=$?; if (( status != 0 && status != 1 )); then exit "$status"; fi; if [[ ! -s "$candidates" ]]; then exit 0; fi; xargs -0 -r {{clang}} -x c -std=c23 -Xclang -dump-raw-tokens -fsyntax-only <"$candidates" 2>"$tokens"; if grep -F "raw_identifier 'NULL'" "$tokens"; then echo 'NULL identifier found in src/; use nullptr.' >&2; exit 1; fi
 
 # The unbounded string_copy wrapper and strcpy are banned tree-wide; callers
 # use the project's bounded helpers instead.

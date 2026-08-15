@@ -18,7 +18,7 @@ const BtechCommandDefinition AUTOPILOTCOMMANDS[] = {
      btech_command_invoke_auto_jump},
     {0, "EVENTSTATS", "Lists current events for this AI",
      btech_command_invoke_auto_eventstats},
-    {0, NULL, NULL, NULL}};
+    {0, nullptr, nullptr, nullptr}};
 
 size_t autopilot_command_count(void) {
   return (sizeof(AUTOPILOTCOMMANDS) / sizeof(*AUTOPILOTCOMMANDS)) - 1;

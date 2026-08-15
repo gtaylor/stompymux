@@ -78,7 +78,7 @@ Mech *mech_network_temporary_unit(BtechContext *context, int w_idx,
   DbRef ref_other_mech;
 
   if ((w_idx > network_size) || (w_idx < 0))
-    return NULL;
+    return nullptr;
 
   ref_other_mech = c3_network_value(my_network, w_idx);
 
@@ -86,15 +86,15 @@ Mech *mech_network_temporary_unit(BtechContext *context, int w_idx,
     temp_mech = btech_context_get_mech(context, ref_other_mech);
 
     if (!temp_mech)
-      return NULL;
+      return nullptr;
 
     if (mech_is_destroyed(temp_mech))
-      return NULL;
+      return nullptr;
 
     return temp_mech;
   }
 
-  return NULL;
+  return nullptr;
 }
 
 Mech *mech_network_unit(Mech *mech, int w_idx, bool t_check_ecm,
@@ -108,7 +108,7 @@ Mech *mech_network_unit(Mech *mech, int w_idx, bool t_check_ecm,
       t_is_c3 ? mech_c3_network_size(mech) : mech_c3i_network_size(mech);
 
   if ((w_idx >= network_size) || (w_idx < 0))
-    return NULL;
+    return nullptr;
 
   ref_other_mech = t_is_c3 ? mech_c3_network_node(mech, w_idx)
                            : mech_c3i_network_node(mech, w_idx);
@@ -117,47 +117,47 @@ Mech *mech_network_unit(Mech *mech, int w_idx, bool t_check_ecm,
     temp_mech = btech_context_get_mech(mech_context(mech), ref_other_mech);
 
     if (!temp_mech)
-      return NULL;
+      return nullptr;
 
     if (mech_team(temp_mech) != mech_team(mech))
-      return NULL;
+      return nullptr;
 
     if (mech_map_dbref(temp_mech) != mech_map_dbref(mech))
-      return NULL;
+      return nullptr;
 
     if (mech_is_destroyed(temp_mech))
-      return NULL;
+      return nullptr;
 
     if (t_is_c3) {
       if (!mech_has_c3(temp_mech)) /* Sanity check */
-        return NULL;
+        return nullptr;
 
       if (mech_condition_summary(temp_mech).c3_destroyed)
-        return NULL;
+        return nullptr;
     } else {
       if (!mech_has_c3i(temp_mech)) /* Sanity check */
-        return NULL;
+        return nullptr;
 
       if (mech_condition_summary(temp_mech).c3i_destroyed)
-        return NULL;
+        return nullptr;
     }
 
     if (t_check_ecm)
       if (mech_is_any_ecm_disturbed(temp_mech))
-        return NULL;
+        return nullptr;
 
     if (t_check_started)
       if (!mech_is_started(temp_mech))
-        return NULL;
+        return nullptr;
 
     if (t_check_uncon)
       if (mech_pilot_is_unconscious(temp_mech))
-        return NULL;
+        return nullptr;
 
     return temp_mech;
   }
 
-  return NULL;
+  return nullptr;
 }
 
 void mech_network_build_temporary(Mech *mech, DbRef *my_network,

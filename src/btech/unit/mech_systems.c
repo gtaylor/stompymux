@@ -538,9 +538,9 @@ void channel_emit_kill(Mech *mech, Mech *attacker, const char *reason) {
   /* Trigger AMECHDEST.  */
   if (is_good_obj(mech->xcode.context->database, mech->mynum) &&
       is_good_obj(mech->xcode.context->database, attacker->mynum)) {
-    char *reason_copy = NULL;
+    char *reason_copy = nullptr;
 
-    char *args[1] = {NULL};
+    char *args[1] = {};
     int nargs = 0;
 
     if (reason) {
@@ -555,7 +555,7 @@ void channel_emit_kill(Mech *mech, Mech *attacker, const char *reason) {
       }
     }
 
-    notify_event(btech_context_evaluation(attacker->xcode.context), NULL,
+    notify_event(btech_context_evaluation(attacker->xcode.context), nullptr,
                  attacker->mynum, attacker->mynum, mech->mynum,
                  LUA_EVENT_MECH_DESTROYED, args, nargs);
 

@@ -71,7 +71,7 @@ const BtechCommandDefinition TURRETCOMMANDS[] = {
      btech_command_invoke_turret_tacmap},
     {0, "WEAPONSPECS", "Shows the specifications for your weapons",
      btech_command_invoke_turret_weaponspecs},
-    {0, NULL, NULL, NULL}};
+    {0, nullptr, nullptr, nullptr}};
 
 size_t turret_command_count(void) {
   return (sizeof(TURRETCOMMANDS) / sizeof(*TURRETCOMMANDS)) - 1;

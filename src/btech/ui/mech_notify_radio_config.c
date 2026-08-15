@@ -465,7 +465,7 @@ void mech_sendchannel(DbRef player, void *data, char *buffer) {
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   int fail = 0;
   int chn = 0;
-  RadioCommandArguments arguments = {0};
+  RadioCommandArguments arguments = {};
 
   if (!common_checks(player, mech, MECH_USUALS))
     return;

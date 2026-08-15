@@ -40,7 +40,7 @@ static size_t btech_script_list_item_count(const char *output) {
 }
 
 static BtechScriptList btech_script_list_parse(char *output) {
-  BtechScriptList list = {0};
+  BtechScriptList list = {};
   list.count = btech_script_list_item_count(output);
   if (list.count == 0)
     return list;

@@ -261,7 +261,7 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
       ENDLOG(descriptor_log(d));
     }
     d->is_connected = true;
-    d->connected_at = time(0);
+    d->connected_at = time(nullptr);
     d->player = player;
     set_lastsite(d, nullptr);
     announce_connect(player, d);
@@ -376,7 +376,7 @@ static ConnectResult connect_flow_attempt_create(Descriptor *d, char *name,
               configuration->start_room);
 
   d->is_connected = true;
-  d->connected_at = time(0);
+  d->connected_at = time(nullptr);
   d->player = player;
   set_lastsite(d, nullptr);
   announce_connect(player, d);

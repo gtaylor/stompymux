@@ -127,7 +127,7 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
   int mapx = 0;
   int mapy = 0;
   int los = 0;
-  Mech *temp_mech = NULL;
+  Mech *temp_mech = nullptr;
   int section;
   int critical;
   float range = 0;

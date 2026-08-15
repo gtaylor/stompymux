@@ -58,7 +58,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   char target_id[2];
   DbRef target;
   int numargs;
-  Mech *temp_mech = NULL;
+  Mech *temp_mech = nullptr;
   float fx;
   float fy;
   float fz = 0.0;
@@ -368,7 +368,7 @@ void mech_report(DbRef player, void *data, char *buffer) {
   char target_id[2];
   DbRef target;
   int numargs;
-  Mech *temp_mech = NULL;
+  Mech *temp_mech = nullptr;
   float fx;
   float fy;
   float fz = 0.0;

@@ -245,10 +245,10 @@ const char *mech_part_brand_name(const PartBrandRequest *request) {
   int i;
 
   if (!request->quality_level)
-    return NULL;
+    return nullptr;
   i = part_brand_failure_index(request->equipment_type);
   if (i < 0)
-    return NULL;
+    return nullptr;
   return part_brand_at((i * 5 / 6) + request->quality_level - 1)->name;
 }
 

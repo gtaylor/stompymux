@@ -44,7 +44,7 @@ static void (*btech_special_repair_function(int type))(MuxEvent *) {
   case EVENT_REPAIR_REPSUIT:
     return mux_event_tickmech_replacesuit;
   default:
-    return NULL;
+    return nullptr;
   }
 }
 
@@ -62,13 +62,13 @@ int btech_special_load_repair_events(sqlite3 *sqlite, BtechContext *context) {
   int result;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   result =
       btech_special_prepare_v2(
           sqlite,
           "SELECT mech_dbref, event_type, remaining_ticks, event_data, is_fake "
           "FROM btech_repair_events ORDER BY event_id;",
-          -1, &statement, NULL) == SQLITE_OK
+          -1, &statement, nullptr) == SQLITE_OK
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
