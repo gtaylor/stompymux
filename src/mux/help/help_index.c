@@ -123,10 +123,10 @@ static void help_article_vector_push(HelpArticleVector *vector,
     size_t capacity = vector->capacity ? vector->capacity * 2 : 16;
     HelpArticle *items;
 
-    if (capacity < vector->capacity || capacity > SIZE_MAX / sizeof(*items))
+    if (capacity < vector->capacity)
       abort();
-    items = checked_storage_try_reallocate(vector->items,
-                                           capacity * sizeof(*items));
+    items = checked_storage_try_reallocate_array(vector->items, capacity,
+                                                 sizeof(*items));
     if (items == nullptr)
       abort();
     vector->items = items;
@@ -371,10 +371,10 @@ static void help_index_walk_directory(EvaluationContext *evaluation,
       size_t capacity = name_capacity ? name_capacity * 2 : 16;
       char **names;
 
-      if (capacity < name_capacity || capacity > SIZE_MAX / sizeof(*names))
+      if (capacity < name_capacity)
         abort();
-      names = (char **)checked_storage_try_reallocate(
-          (void *)entry_names, capacity * sizeof(*names));
+      names = (char **)checked_storage_try_reallocate_array(
+          (void *)entry_names, capacity, sizeof(*names));
       if (names == nullptr)
         abort();
       entry_names = names;
@@ -446,7 +446,7 @@ static void help_index_build_keywords(EvaluationContext *evaluation,
   if (total_keywords == 0)
     return;
   index->keywords =
-      checked_storage_allocate(total_keywords * sizeof(HelpKeywordEntry));
+      checked_storage_allocate_array(total_keywords, sizeof(HelpKeywordEntry));
 
   for (i = 0; i < index->articles.count; i++) {
     HelpArticle *article = help_article_item(&index->articles, i);

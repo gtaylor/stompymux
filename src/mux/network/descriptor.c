@@ -98,11 +98,10 @@ static bool descriptor_registry_grow(DescriptorRegistry *registry) {
   size_t new_capacity = old_capacity == 0 ? DESCRIPTOR_REGISTRY_INITIAL_CAPACITY
                                           : old_capacity * 2;
 
-  if (new_capacity < old_capacity ||
-      new_capacity > SIZE_MAX / sizeof(*registry->slots))
+  if (new_capacity < old_capacity)
     return false;
-  slots = (Descriptor **)checked_storage_try_reallocate(
-      (void *)registry->slots, new_capacity * sizeof(*registry->slots));
+  slots = (Descriptor **)checked_storage_try_reallocate_array(
+      (void *)registry->slots, new_capacity, sizeof(*registry->slots));
   if (slots == nullptr)
     return false;
   memset(checked_storage_region((void *)slots, new_capacity * sizeof(*slots),

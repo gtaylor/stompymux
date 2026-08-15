@@ -642,7 +642,8 @@ void critical_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
   int count = 0;
   CoolMenu *cm;
 
-  foo = (char **)checked_storage_allocate(sizeof(*foo) * (NUM_CRITICALS + 1));
+  foo =
+      (char **)checked_storage_allocate_array(NUM_CRITICALS + 1, sizeof(*foo));
 
   for (i = 0; i < max_crits; i++) {
     loop = ((i % 2) ? (max_crits / 2) : 0) + (i / 2);

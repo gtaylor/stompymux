@@ -49,8 +49,8 @@ void do_joinchannel(EvaluationContext *evaluation, DbRef player,
     if (ch->num_users >= ch->max_users) {
       const int CAPACITY = ch->max_users + 10;
       struct Comuser **users =
-          (struct Comuser **)checked_storage_try_reallocate(
-              (void *)ch->users, sizeof(*ch->users) * (size_t)CAPACITY);
+          (struct Comuser **)checked_storage_try_reallocate_array(
+              (void *)ch->users, (size_t)CAPACITY, sizeof(*ch->users));
 
       if (users == nullptr) {
         ch->num_users--;

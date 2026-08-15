@@ -52,14 +52,14 @@ static NameTable *registry_switches(CommandRegistry *registry,
                           ? 8
                           : registry->switch_clone_capacity * 2;
     SwitchClone *grown =
-        checked_storage_try_reallocate(records, capacity * sizeof(*grown));
+        checked_storage_try_reallocate_array(records, capacity, sizeof(*grown));
     if (grown == nullptr)
       return nullptr;
     registry->switch_clones = records = grown;
     registry->switch_clone_capacity = capacity;
   }
   size_t count = switch_table_count(source);
-  NameTable *clone = checked_storage_try_allocate(count * sizeof(*clone));
+  NameTable *clone = checked_storage_try_allocate_array(count, sizeof(*clone));
   if (clone == nullptr)
     return nullptr;
   memcpy(clone, source, count * sizeof(*clone));
@@ -177,8 +177,8 @@ bool command_registry_add_switch_alias(CommandRegistry *registry,
     size_t capacity = registry->switch_alias_capacity == 0
                           ? 4
                           : registry->switch_alias_capacity * 2;
-    CommandSwitchAlias *grown = checked_storage_try_reallocate(
-        registry->switch_aliases, capacity * sizeof(*grown));
+    CommandSwitchAlias *grown = checked_storage_try_reallocate_array(
+        registry->switch_aliases, capacity, sizeof(*grown));
     if (grown == nullptr)
       return false;
     registry->switch_aliases = grown;

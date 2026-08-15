@@ -207,7 +207,7 @@ char **make_cool_menu_text(CoolMenu *c, size_t *line_count) {
   int n;
   int rn;
 
-  m = (char **)checked_storage_allocate(sizeof(*m) * (MAX_MENU_LENGTH + 1));
+  m = (char **)checked_storage_allocate_array(MAX_MENU_LENGTH + 1, sizeof(*m));
 
   /* Whole whopping menu is ready to be written at.. */
   while (c) {
@@ -221,7 +221,7 @@ char **make_cool_menu_text(CoolMenu *c, size_t *line_count) {
       c = c->next;
       continue;
     }
-    char *line = checked_storage_allocate(sizeof(*line) * MAX_MENU_WIDTH);
+    char *line = checked_storage_allocate_array(MAX_MENU_WIDTH, sizeof(*line));
     char **line_slot = (char **)checked_storage_at(
         (void *)m, MAX_MENU_LENGTH + 1, sizeof(*m), (size_t)pos);
     *line_slot = line;

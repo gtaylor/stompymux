@@ -263,8 +263,8 @@ bool styled_text_palette_set_rgb(StyledTextPalette *palette, const char *name,
   }
   if (palette->count == palette->capacity) {
     size_t capacity = palette->capacity ? palette->capacity * 2 : 16;
-    CustomNamedColor *colors = checked_storage_try_reallocate(
-        palette->colors, capacity * sizeof(*colors));
+    CustomNamedColor *colors = checked_storage_try_reallocate_array(
+        palette->colors, capacity, sizeof(*colors));
     if (!colors) {
       styled_set_error(error, error_size, "unable to allocate named color");
       return false;

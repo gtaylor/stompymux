@@ -15,7 +15,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-retired-buffer-apis fmt-check build test tidy-check
+ci: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis fmt-check build test tidy-check
 
 agent-checks: ci
 
@@ -46,6 +46,11 @@ check-bounded-copy:
 # nullable for callers that recover. checked_storage.c owns the raw calls.
 check-allocation-discipline:
     status=0; grep -RInE --include='*.c' --include='*.h' --exclude='checked_storage.c' '\b(malloc|calloc|realloc)[[:space:]]*\(' src || status=$?; if (( status == 0 )); then echo 'Raw allocation found in src/; use the checked_storage API.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
+
+# Array allocation sites pass count and element size separately so the checked
+# storage API owns multiplication-overflow handling.
+check-allocation-multiplication:
+    status=0; rg -n -U --glob '*.c' --glob '!**/checked_storage.c' '\bchecked_storage_(try_)?(allocate|reallocate)\([^;]*[[:alnum:]_)]\s*\*\s*[[:alnum:]_(]' src || status=$?; if (( status == 0 )); then echo 'Array-size multiplication found in a scalar checked_storage call; use an array form.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
 
 # Buffer ownership uses one size-agnostic release API and one ownership type.
 check-retired-buffer-apis:

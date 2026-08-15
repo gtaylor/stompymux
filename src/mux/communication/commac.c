@@ -189,8 +189,7 @@ void destroy_commac(struct Commac *c) {
 bool commac_reserve_aliases(struct Commac *commac, size_t capacity) {
   if (capacity <= (size_t)commac->maxchannels)
     return true;
-  if (capacity > INT_MAX || capacity > SIZE_MAX / COMMAC_ALIAS_SIZE ||
-      capacity > SIZE_MAX / sizeof(*commac->channels))
+  if (capacity > INT_MAX)
     return false;
 
   char *aliases =

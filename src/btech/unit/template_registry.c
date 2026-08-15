@@ -129,8 +129,8 @@ static int scan_template_dir(const TemplateDirectoryScanRequest *request) {
       size_t capacity = registry->template_capacity == 0
                             ? 4
                             : registry->template_capacity * 2;
-      TemplateDirectoryEntry *templates = checked_storage_try_reallocate(
-          registry->templates, capacity * sizeof(*templates));
+      TemplateDirectoryEntry *templates = checked_storage_try_reallocate_array(
+          registry->templates, capacity, sizeof(*templates));
 
       if (templates == nullptr) {
         closedir(dir);

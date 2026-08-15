@@ -154,8 +154,8 @@ bool styled_text_palette_set_preset(StyledTextPalette *palette,
   if (palette->preset_count == palette->preset_capacity) {
     size_t capacity =
         palette->preset_capacity ? palette->preset_capacity * 2 : 8;
-    StyledTextPreset *presets = checked_storage_try_reallocate(
-        palette->presets, capacity * sizeof(*presets));
+    StyledTextPreset *presets = checked_storage_try_reallocate_array(
+        palette->presets, capacity, sizeof(*presets));
     if (!presets) {
       styled_set_error(error, error_size, "unable to allocate OSC 8 preset");
       goto fail;

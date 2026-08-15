@@ -185,8 +185,8 @@ bool character_state_value_set(const CharacterStateValueChange *change) {
     char *stored_name = strdup(name);
     if (!stored_name)
       return false;
-    CharacterValueState *grown = checked_storage_try_reallocate(
-        state->values, (state->value_count + 1) * sizeof(*state->values));
+    CharacterValueState *grown = checked_storage_try_reallocate_array(
+        state->values, state->value_count + 1, sizeof(*state->values));
     if (!grown) {
       free(stored_name);
       return false;

@@ -318,9 +318,7 @@ bool player_account_last_page_set(GameDatabase *database, DbRef player,
   if (!account || (count > 0 && !recipients))
     return false;
   if (count > 0) {
-    if (count > SIZE_MAX / sizeof(*copy))
-      return false;
-    copy = checked_storage_try_allocate(count * sizeof(*copy));
+    copy = checked_storage_try_allocate_array(count, sizeof(*copy));
     if (!copy)
       return false;
     memcpy(copy, recipients, count * sizeof(*copy));

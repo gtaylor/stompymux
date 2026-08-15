@@ -363,8 +363,13 @@ static int gamedb_load_player_accounts(PersistenceContext *context,
       sqlite3_finalize(statement);
       return -1;
     }
-    DbRef *grown = checked_storage_try_reallocate(
-        recipients, (recipient_count + 1) * sizeof(*grown));
+    if (recipient_count == SIZE_MAX) {
+      free(recipients);
+      sqlite3_finalize(statement);
+      return -1;
+    }
+    DbRef *grown = checked_storage_try_reallocate_array(
+        recipients, recipient_count + 1, sizeof(*grown));
     if (!grown) {
       free(recipients);
       sqlite3_finalize(statement);

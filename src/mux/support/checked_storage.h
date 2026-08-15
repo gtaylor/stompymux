@@ -26,8 +26,13 @@ typedef bool (*CheckedStorageSentinel)(const void *element);
 [[nodiscard]] void *checked_storage_try_allocate_array(size_t count,
                                                        size_t element_size);
 /* Preserves realloc's contract: on failure the original storage is untouched
- * and still owned by the caller, so never assign over the only pointer. */
+ * and still owned by the caller, so never assign over the only pointer. The
+ * array form rejects count times element_size overflow. Neither form zeroes a
+ * grown region. */
 [[nodiscard]] void *checked_storage_try_reallocate(void *storage, size_t bytes);
+[[nodiscard]] void *checked_storage_try_reallocate_array(void *storage,
+                                                         size_t count,
+                                                         size_t element_size);
 void *checked_storage_at(void *storage, size_t count, size_t element_size,
                          size_t index);
 const void *checked_storage_at_const(const void *storage, size_t count,

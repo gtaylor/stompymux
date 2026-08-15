@@ -114,8 +114,8 @@ bool economy_parts_set_quantity(GameDatabase *database, DbRef object,
   }
   if (parts->count == SIZE_MAX / sizeof(*parts->entries))
     return false;
-  EconomyPartEntry *grown = checked_storage_try_reallocate(
-      parts->entries, (parts->count + 1) * sizeof(*grown));
+  EconomyPartEntry *grown = checked_storage_try_reallocate_array(
+      parts->entries, parts->count + 1, sizeof(*grown));
   if (!grown)
     return false;
   parts->entries = grown;

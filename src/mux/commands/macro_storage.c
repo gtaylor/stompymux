@@ -108,8 +108,8 @@ void do_create_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 
   if (registry->count >= registry->capacity) {
     registry->capacity += 10;
-    MacroSet **sets = (MacroSet **)checked_storage_allocate(
-        sizeof(*sets) * (size_t)registry->capacity);
+    MacroSet **sets = (MacroSet **)checked_storage_allocate_array(
+        (size_t)registry->capacity, sizeof(*sets));
     for (int index = 0; index < registry->count; index++)
       *(MacroSet **)checked_storage_at((void *)sets, (size_t)registry->capacity,
                                        sizeof(*sets), (size_t)index) =

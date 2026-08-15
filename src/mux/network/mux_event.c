@@ -187,8 +187,8 @@ void mux_event_add(const MuxEventRequest *request) {
   /* Event type heads grow with the highest registered type. */
   if (type > scheduler->last_type) {
     int previous_last_type = scheduler->last_type;
-    MuxEvent **heads = (MuxEvent **)checked_storage_try_reallocate(
-        (void *)scheduler->first_by_type, sizeof(*heads) * (size_t)(type + 1));
+    MuxEvent **heads = (MuxEvent **)checked_storage_try_reallocate_array(
+        (void *)scheduler->first_by_type, (size_t)type + 1, sizeof(*heads));
     if (heads == nullptr)
       return;
     scheduler->first_by_type = heads;
