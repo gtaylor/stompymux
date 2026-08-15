@@ -646,6 +646,21 @@ target_include_directories(flag_privileges_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME flag_privileges COMMAND flag_privileges_test)
 
+add_executable(unparse_object_numonly_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/server/unparse_object_numonly.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/objects/flags.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/lbuf_text.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_compile_options(unparse_object_numonly_test PRIVATE -ffunction-sections)
+target_link_options(unparse_object_numonly_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(unparse_object_numonly_test PRIVATE btmux_options)
+target_include_directories(unparse_object_numonly_test PRIVATE
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME unparse_object_numonly COMMAND unparse_object_numonly_test)
+
 add_executable(power_fields_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/server/power_fields.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/objects/power_fields.c)
 target_link_libraries(power_fields_test PRIVATE btmux_options)

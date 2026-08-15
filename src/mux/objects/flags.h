@@ -6,6 +6,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_registries.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/world/world_context.h"
 
 typedef enum ObjectFlag {
@@ -113,7 +114,7 @@ bool flag_alias_add(WorldIndexes *indexes, const char *alias,
 char *decode_flags(const DecodeFlagsRequest *request);
 char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
                      DbRef player, DbRef target);
-char *unparse_object_numonly(GameDatabase *database, DbRef target);
+LbufText unparse_object_numonly(GameDatabase *database, DbRef target);
 bool convert_flags(EvaluationContext * /*evaluation*/, DbRef /*player*/,
                    char * /*list*/, ObjectFlagSet * /*flags*/, long * /*type*/);
 

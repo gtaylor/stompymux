@@ -104,7 +104,7 @@ void report(CommandContext *command) {
  * Notifies the object #target of the message msg, and
  * optionally notify the contents, neighbors, and location also.
  */
-static char *format_forwarded_message(const char *msg, const char *prefix) {
+static LbufText format_forwarded_message(const char *msg, const char *prefix) {
   char *plain = alloc_lbuf("format_forwarded_message");
   char *cursor = plain;
   if (prefix && *prefix) {
@@ -113,7 +113,7 @@ static char *format_forwarded_message(const char *msg, const char *prefix) {
   }
   safe_str(msg, plain, &cursor);
   *cursor = '\0';
-  return plain;
+  return lbuf_text_take(plain);
 }
 
 static char *dflt_from_msg(GameDatabase *database, DbRef sender,
@@ -188,11 +188,11 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
              game_object_exits(evaluation->world->database, target)) {
         recip = game_object_location(evaluation->world->database, obj);
         if (is_audible(evaluation->world->database, obj) && recip != target) {
-          char *distance_message =
+          LbufText distance_message =
               format_forwarded_message(msg, "From a distance,");
-          notify_checked(evaluation, recip, sender, distance_message,
+          notify_checked(evaluation, recip, sender, distance_message.text,
                          MSG_ME | MSG_F_UP | MSG_F_CONTENTS | MSG_S_INSIDE);
-          free_lbuf(distance_message);
+          lbuf_text_release(&distance_message);
         }
       }
     }
@@ -212,7 +212,7 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
       LbufText forwarded = lbuf_text_borrow(msg);
       if (key & MSG_S_INSIDE) {
         tbuff = dflt_from_msg(evaluation->world->database, sender, target);
-        forwarded = lbuf_text_take(format_forwarded_message(msg, tbuff));
+        forwarded = format_forwarded_message(msg, tbuff);
         free_lbuf(tbuff);
       }
 
@@ -224,10 +224,11 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
         if (is_good_obj(evaluation->world->database, recip) &&
             is_audible(evaluation->world->database, obj) &&
             (recip != targetloc) && (recip != target)) {
-          tbuff = format_forwarded_message(forwarded.text, "From a distance,");
-          notify_checked(evaluation, recip, sender, tbuff,
+          LbufText distance_message =
+              format_forwarded_message(forwarded.text, "From a distance,");
+          notify_checked(evaluation, recip, sender, distance_message.text,
                          MSG_ME | MSG_F_UP | MSG_F_CONTENTS | MSG_S_INSIDE);
-          free_lbuf(tbuff);
+          lbuf_text_release(&distance_message);
         }
       }
       lbuf_text_release(&forwarded);
@@ -245,7 +246,7 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
 
       LbufText forwarded = lbuf_text_borrow(msg);
       if (key & MSG_S_OUTSIDE)
-        forwarded = lbuf_text_take(format_forwarded_message(msg, ""));
+        forwarded = format_forwarded_message(msg, "");
       DOLIST(evaluation->world->database, obj,
              game_object_contents(evaluation->world->database, target)) {
         if (obj != target) {
@@ -264,7 +265,7 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
       LbufText forwarded = lbuf_text_borrow(msg);
       if (key & MSG_S_INSIDE) {
         tbuff = dflt_from_msg(evaluation->world->database, sender, target);
-        forwarded = lbuf_text_take(format_forwarded_message(msg, tbuff));
+        forwarded = format_forwarded_message(msg, tbuff);
         free_lbuf(tbuff);
       }
       DOLIST(evaluation->world->database, obj,
@@ -285,7 +286,7 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
       LbufText forwarded = lbuf_text_borrow(msg);
       if (key & MSG_S_INSIDE) {
         tbuff = dflt_from_msg(evaluation->world->database, sender, target);
-        forwarded = lbuf_text_take(format_forwarded_message(msg, tbuff));
+        forwarded = format_forwarded_message(msg, tbuff);
         free_lbuf(tbuff);
       }
       notify_checked(evaluation, targetloc, sender, forwarded.text,

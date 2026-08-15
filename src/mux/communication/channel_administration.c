@@ -312,10 +312,14 @@ void do_chboot(CommandInvocation *invocation) {
   /*
    * We should be in the clear now. :)
    */
-  comsys_channel_printf(
-      evaluation, ch, "[%s] %s boots %s off the channel.", ch->name,
-      unparse_object_numonly(evaluation->world->database, player),
-      unparse_object_numonly(evaluation->world->database, thing));
+  LbufText player_name =
+      unparse_object_numonly(evaluation->world->database, player);
+  LbufText thing_name =
+      unparse_object_numonly(evaluation->world->database, thing);
+  comsys_channel_printf(evaluation, ch, "[%s] %s boots %s off the channel.",
+                        ch->name, player_name.text, thing_name.text);
+  lbuf_text_release(&player_name);
+  lbuf_text_release(&thing_name);
   comsys_delete_channel_alias(evaluation, thing, channel);
 }
 
