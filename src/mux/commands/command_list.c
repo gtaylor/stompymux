@@ -291,8 +291,6 @@ static void list_options(EvaluationContext *evaluation, CommandRuntime *runtime,
   notify_printf(evaluation, player,
                 "The %s cache is %d entries wide by %d entries deep.", CACHING,
                 configuration->cache_width, configuration->cache_depth);
-  if (configuration->cache_names)
-    raw_notify(evaluation, player, "A seperate name cache is used.");
   if (configuration->cache_trim)
     raw_notify(
         evaluation, player,

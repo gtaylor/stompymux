@@ -322,7 +322,6 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->cache_trim = 0;
   context->configuration->cache_depth = CACHE_DEPTH;
   context->configuration->cache_width = CACHE_WIDTH;
-  context->configuration->cache_names = 1;
   (void)string_copy_bounded(context->configuration->lua.directory,
                             sizeof(context->configuration->lua.directory),
                             "lua");

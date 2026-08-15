@@ -89,11 +89,11 @@ void game_object_clear_powers(GameDatabase *database, DbRef object) {
   (void)object;
 }
 
-static int run_for_cache_setting(bool cache_names) {
+static int check_stable_names(void) {
   GameObject objects[3] = {};
   NAME names[3] = {};
   NAME pure_names[3] = {};
-  ServerConfiguration configuration = {.cache_names = cache_names};
+  ServerConfiguration configuration = {};
   GameDatabase database = {
       .object_storage = objects,
       .name_storage = names,
@@ -104,7 +104,6 @@ static int run_for_cache_setting(bool cache_names) {
   };
   int result = 1;
 
-  /* Run both former configurations to document that cache_names is inert. */
   objects[1].native.values[A_NAME] = strdup("{Alpha}");
   objects[2].native.values[A_NAME] = strdup("{Beta}");
   if (!objects[1].native.values[A_NAME] || !objects[2].native.values[A_NAME])
@@ -169,8 +168,7 @@ static int check_grow_and_free(void) {
 }
 
 int main(void) {
-  if (run_for_cache_setting(false) != 0 || run_for_cache_setting(true) != 0 ||
-      check_grow_and_free() != 0) {
+  if (check_stable_names() != 0 || check_grow_and_free() != 0) {
     (void)fprintf(stderr, "object name cache lifetime test failed\n");
     return 1;
   }
