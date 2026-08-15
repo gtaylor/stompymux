@@ -143,6 +143,7 @@ void do_examine(CommandInvocation *invocation) {
   DbRef exit;
   DbRef loc;
   char *buf2;
+  char *description;
 
   /*
    * This command is pointless if the player can't hear.
@@ -181,16 +182,18 @@ void do_examine(CommandInvocation *invocation) {
   notify_printf(
       evaluation, PLAYER, "Type: %s",
       object_type_entry(typeof_obj(evaluation->world->database, thing))->name);
-  buf2 = flags_description(evaluation->world->database, thing);
-  notify_checked(evaluation, PLAYER, PLAYER, buf2, MSG_ME_ALL | MSG_F_DOWN);
-  free_mbuf(buf2);
+  description = flags_description(evaluation->world->database, thing);
+  notify_checked(evaluation, PLAYER, PLAYER, description,
+                 MSG_ME_ALL | MSG_F_DOWN);
+  free_mbuf(description);
 
-  buf2 = power_description(
+  description = power_description(
       &(PowerDescriptionRequest){.database = evaluation->world->database,
                                  .viewer = PLAYER,
                                  .target = thing});
-  notify_checked(evaluation, PLAYER, PLAYER, buf2, MSG_ME_ALL | MSG_F_DOWN);
-  free_mbuf(buf2);
+  notify_checked(evaluation, PLAYER, PLAYER, description,
+                 MSG_ME_ALL | MSG_F_DOWN);
+  free_mbuf(description);
   examine_native_attributes(&(ExamineObjectRequest){
       .evaluation = evaluation, .viewer = PLAYER, .object = thing});
   buf2 = unparse_object(evaluation->world->database, evaluation, PLAYER,
@@ -342,6 +345,7 @@ void do_inventory(CommandInvocation *invocation) {
   const DbRef PLAYER = invocation->player;
   DbRef thing;
   char *buff;
+  char *rendered;
   const char *s;
   char *e;
 
@@ -353,10 +357,11 @@ void do_inventory(CommandInvocation *invocation) {
     notify_checked(evaluation, PLAYER, PLAYER,
                    "You are carrying:", MSG_ME_ALL | MSG_F_DOWN);
     DOLIST(evaluation->world->database, thing, thing) {
-      buff = unparse_object(evaluation->world->database, evaluation, PLAYER,
-                            thing);
-      notify_checked(evaluation, PLAYER, PLAYER, buff, MSG_ME_ALL | MSG_F_DOWN);
-      free_lbuf(buff);
+      rendered = unparse_object(evaluation->world->database, evaluation, PLAYER,
+                                thing);
+      notify_checked(evaluation, PLAYER, PLAYER, rendered,
+                     MSG_ME_ALL | MSG_F_DOWN);
+      free_lbuf(rendered);
     }
   }
 

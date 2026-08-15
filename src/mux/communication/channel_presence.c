@@ -71,7 +71,7 @@ void do_channelwho(CommandInvocation *invocation) {
   struct Comuser *user;
   char channel[100];
   int flag = 0;
-  char *cp;
+  char *option;
   int i;
   char ansibuffer[LBUF_SIZE];
 
@@ -91,9 +91,9 @@ void do_channelwho(CommandInvocation *invocation) {
       return;
     }
     (void)string_copy_bounded(channel, slash_offset + 1, arg1);
-    cp = checked_storage_at(arg1, ARGUMENT_LENGTH + 1, sizeof(char),
-                            slash_offset + 1);
-    if (*cp == 'a')
+    option = checked_storage_at(arg1, ARGUMENT_LENGTH + 1, sizeof(char),
+                                slash_offset + 1);
+    if (*option == 'a')
       flag = 1;
   }
 
@@ -116,17 +116,17 @@ void do_channelwho(CommandInvocation *invocation) {
          ((ch->type & CHANNEL_TRANSPARENT) &&
           !is_dark(evaluation->world->database, user->who)) ||
          is_wizard(evaluation->world->database, player))) {
-      cp = unparse_object(evaluation->world->database, evaluation, player,
-                          user->who);
-      styled_text_strip(evaluation->world->styled_text_palette, cp, ansibuffer,
-                        LBUF_SIZE);
+      char *rendered = unparse_object(evaluation->world->database, evaluation,
+                                      player, user->who);
+      styled_text_strip(evaluation->world->styled_text_palette, rendered,
+                        ansibuffer, LBUF_SIZE);
       notify_printf(evaluation, player, "%-29.29s %-6.6s %-6.6s", ansibuffer,
                     ((user->on) ? "on " : "off"),
                     (typeof_obj(evaluation->world->database, user->who) ==
                      OBJECT_TYPE_PLAYER)
                         ? "yes"
                         : "no ");
-      free_lbuf(cp);
+      free_lbuf(rendered);
     }
   }
   notify_printf(evaluation, player, "-- %s --", ch->name);
