@@ -50,7 +50,7 @@
 #include "mux/support/red_black_tree.h"
 #include "mux/support/stringutil.h"
 #include "registry_internal.h"
-static int remove_from_all_maps_func(const RedBlackTreeVisitCall *call) {
+static bool remove_from_all_maps_func(const RedBlackTreeVisitCall *call) {
   void *key = call->key;
   void *data = call->data;
   void *arg = call->context;
@@ -63,12 +63,12 @@ static int remove_from_all_maps_func(const RedBlackTreeVisitCall *call) {
 
     map = btech_context_get_map(mech_context(MECH), (DbRef)key);
     if (!map)
-      return 1;
+      return true;
     for (i = 0; i < battle_map_unit_count(map); i++)
       if (battle_map_unit_dbref(map, i) == mech_dbref(MECH))
         battle_map_unit_slot_clear(map, i);
   }
-  return 1;
+  return true;
 }
 
 void mech_remove_from_all_maps(Mech *mech) {
@@ -81,7 +81,8 @@ typedef struct RemoveFromAllMapsContext {
   DbRef except_map;
 } RemoveFromAllMapsContext;
 
-static int remove_from_all_maps_except_func(const RedBlackTreeVisitCall *call) {
+static bool
+remove_from_all_maps_except_func(const RedBlackTreeVisitCall *call) {
   void *key = call->key;
   void *data = call->data;
   void *arg = call->context;
@@ -95,15 +96,15 @@ static int remove_from_all_maps_except_func(const RedBlackTreeVisitCall *call) {
     BattleMap *map;
 
     if (key_val == context->except_map)
-      return 1;
+      return true;
     map = btech_context_get_map(mech_context(MECH), key_val);
     if (!map)
-      return 1;
+      return true;
     for (i = 0; i < battle_map_unit_count(map); i++)
       if (battle_map_unit_dbref(map, i) == mech_dbref(MECH))
         battle_map_unit_slot_clear(map, i);
   }
-  return 1;
+  return true;
 }
 
 void mech_remove_from_all_maps_except(Mech *mech, DbRef num) {
@@ -116,16 +117,16 @@ void mech_remove_from_all_maps_except(Mech *mech, DbRef num) {
                       remove_from_all_maps_except_func, &context);
 }
 
-static int load_update2(const RedBlackTreeVisitCall *call) {
+static bool load_update2(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   BtechSpecialObject *const XCODE_OBJ = data;
 
   if (XCODE_OBJ->type == GTYPE_MECH)
     mech_map_consistency_check((void *)XCODE_OBJ);
-  return 1;
+  return true;
 }
 
-static int load_update4(const RedBlackTreeVisitCall *call) {
+static bool load_update4(const RedBlackTreeVisitCall *call) {
   char message_buffer[128];
   void *data = call->data;
   void *arg = call->context;
@@ -149,19 +150,19 @@ static int load_update4(const RedBlackTreeVisitCall *call) {
       }
       map = btech_context_get_map(CONTEXT, mech_map_dbref(MECH));
       if (!map)
-        return 1;
+        return true;
     }
 
     if (!mech_is_started(MECH))
-      return 1;
+      return true;
     mech_start_seeing(MECH);
     mech_update_recycling(MECH);
     mech_maybe_move(MECH);
   }
-  return 1;
+  return true;
 }
 
-static int load_update3(const RedBlackTreeVisitCall *call) {
+static bool load_update3(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   BtechSpecialObject *const XCODE_OBJ = data;
 
@@ -169,13 +170,13 @@ static int load_update3(const RedBlackTreeVisitCall *call) {
     eliminate_empties((BattleMap *)XCODE_OBJ);
     mine_fields_recalculate((BattleMap *)XCODE_OBJ);
   }
-  return 1;
+  return true;
 }
 
 /*
  * Read in autopilot data
  */
-static int load_autopilot_data(const RedBlackTreeVisitCall *call) {
+static bool load_autopilot_data(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   void *arg = call->context;
   BtechSpecialObject *const XCODE_OBJ = data;
@@ -218,7 +219,7 @@ static int load_autopilot_data(const RedBlackTreeVisitCall *call) {
     }
   }
 
-  return 1;
+  return true;
 }
 
 void btech_special_objects_load(BtechContext *context) {
@@ -290,7 +291,7 @@ void btech_special_objects_load(BtechContext *context) {
   btech_heartbeat_start(context);
 }
 
-static int update_special_object_func(const RedBlackTreeVisitCall *call) {
+static bool update_special_object_func(const RedBlackTreeVisitCall *call) {
   void *key = call->key;
   void *data = call->data;
   void *arg = call->context;
@@ -300,11 +301,11 @@ static int update_special_object_func(const RedBlackTreeVisitCall *call) {
   const BtechSpecialObjectDefinition *definition =
       btech_special_object_definition((int)XCODE_OBJ->type);
   if (!definition->update_time)
-    return 1;
+    return true;
   if ((CONTEXT->clock->now % definition->update_time))
-    return 1;
+    return true;
   definition->update((DbRef)key, XCODE_OBJ);
-  return 1;
+  return true;
 }
 
 /* This is called once a second for each special object */

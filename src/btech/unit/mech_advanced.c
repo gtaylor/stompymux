@@ -33,7 +33,7 @@
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 
-static int mech_disableweap_func(const MultiWeaponSelectionCall *call) {
+static bool mech_disableweap_func(const MultiWeaponSelectionCall *call) {
   Mech *mech = call->mech;
   const int INDEX = call->first;
   int section;
@@ -48,26 +48,26 @@ static int mech_disableweap_func(const MultiWeaponSelectionCall *call) {
   if (weaptype == -1) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), call->actor,
                  "The weapons system chirps: 'Illegal Weapon Number!'");
-    return 0;
+    return false;
   }
   if (weaptype == -2) {
     mecha_notify(
         btech_context_evaluation(mech->xcode.context), call->actor,
         "The weapons system chirps: 'That Weapon has been destroyed!'");
-    return 0;
+    return false;
   }
   weaptype = weapon_from_equipment_index(
       mech_critical_part_type(mech, section, critical));
   if (!weapon_catalogue_has_special(weaptype, GAUSS)) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), call->actor,
                  "You can only disable Gauss weapons.");
-    return 0;
+    return false;
   }
   if (mech_weapon_is_recycling_at(mech, section, critical)) {
     mecha_notify(
         btech_context_evaluation(mech->xcode.context), call->actor,
         "The weapon system chirps: 'That weapon is still recharging!'");
-    return 0;
+    return false;
   }
 
   mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
@@ -75,7 +75,7 @@ static int mech_disableweap_func(const MultiWeaponSelectionCall *call) {
       .slot = {.section = section, .critical = critical},
       .failure = FAIL_DESTROYED});
   mech_printf(mech, MECHALL, "You power down weapon %d.", INDEX);
-  return 0;
+  return false;
 }
 
 void mech_disableweap(DbRef player, void *data, char *buffer) {

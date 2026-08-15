@@ -19,7 +19,7 @@ struct StringDictEntry {
   bool is_const;
 };
 
-static int nuke_hash_ent(const RedBlackTreeVisitCall *call);
+static bool nuke_hash_ent(const RedBlackTreeVisitCall *call);
 
 static int hrbtab_compare(const RedBlackTreeCompareCall *call) {
   const void *left = call->lhs;
@@ -143,12 +143,12 @@ void hash_table_delete(const char *str, HashTable *htab) {
  * * hash_table_flush: free all the entries in a hashtable.
  */
 
-static int nuke_hash_ent(const RedBlackTreeVisitCall *call) {
+static bool nuke_hash_ent(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   struct StringDictEntry *ent = (struct StringDictEntry *)data;
   free(ent->key);
   free(ent);
-  return 1;
+  return true;
 }
 
 void hash_table_flush(HashTable *htab, int size) {
@@ -184,19 +184,19 @@ struct Hashreplstat {
   void *new;
 };
 
-static int hashreplall_cb(const RedBlackTreeVisitCall *call) {
+static bool hashreplall_cb(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   void *arg = call->context;
   struct StringDictEntry *ent = (struct StringDictEntry *)data;
   struct Hashreplstat *repl = (struct Hashreplstat *)arg;
 
   if (ent->is_const)
-    return 1;
+    return true;
   if (ent->data.mutable_data == repl->old) {
     ent->data.mutable_data = repl->new;
     ent->is_const = false;
   }
-  return 1;
+  return true;
 }
 
 void hash_table_replace_all(void *old, void *new, HashTable *htab) {

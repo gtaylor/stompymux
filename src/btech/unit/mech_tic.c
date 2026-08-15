@@ -90,7 +90,7 @@ struct ListTicContext {
 
 /*****************************************************************************/
 
-static int cleartic_sub_func(const MultiWeaponSelectionCall *call) {
+static bool cleartic_sub_func(const MultiWeaponSelectionCall *call) {
   int i;
   int j;
   Mech *mech = call->mech;
@@ -101,7 +101,7 @@ static int cleartic_sub_func(const MultiWeaponSelectionCall *call) {
     notify_printf(btech_context_evaluation(mech->xcode.context), call->actor,
                   "TIC #%d cleared!", i);
   }
-  return 0;
+  return false;
 }
 
 void cleartic_sub(DbRef player, Mech *mech, char *buffer) {
@@ -121,7 +121,7 @@ void cleartic_sub(DbRef player, Mech *mech, char *buffer) {
   });
 }
 
-static int addtic_sub_func(const MultiWeaponSelectionCall *call) {
+static bool addtic_sub_func(const MultiWeaponSelectionCall *call) {
   int i;
   Mech *mech = call->mech;
   const TicSelectionContext *selection = call->context;
@@ -137,7 +137,7 @@ static int addtic_sub_func(const MultiWeaponSelectionCall *call) {
   else
     notify_printf(btech_context_evaluation(mech->xcode.context), call->actor,
                   "Weapon #%d added to TIC %d!", call->first, selection->tic);
-  return 0;
+  return false;
 }
 
 void addtic_sub(DbRef player, Mech *mech, char *buffer) {
@@ -167,7 +167,7 @@ void addtic_sub(DbRef player, Mech *mech, char *buffer) {
   });
 }
 
-static int deltic_sub_func(const MultiWeaponSelectionCall *call) {
+static bool deltic_sub_func(const MultiWeaponSelectionCall *call) {
   int i;
   Mech *mech = call->mech;
   const TicSelectionContext *selection = call->context;
@@ -184,7 +184,7 @@ static int deltic_sub_func(const MultiWeaponSelectionCall *call) {
     notify_printf(btech_context_evaluation(mech->xcode.context), call->actor,
                   "Weapon #%d removed from TIC %d!", call->first,
                   selection->tic);
-  return 0;
+  return false;
 }
 
 void deltic_sub(DbRef player, Mech *mech, char *buffer) {
@@ -220,7 +220,7 @@ void deltic_sub(DbRef player, Mech *mech, char *buffer) {
   });
 }
 
-static int firetic_sub_func(const MultiWeaponSelectionCall *call) {
+static bool firetic_sub_func(const MultiWeaponSelectionCall *call) {
   int i;
   int j;
   int k;
@@ -252,10 +252,10 @@ static int firetic_sub_func(const MultiWeaponSelectionCall *call) {
               if (mech_is_started(mech))
                 mech_notify(mech, MECHALL,
                             "That fall causes you to stop your fire!");
-              return 1;
+              return true;
             }
             if (!mech_is_started(mech))
-              return 1;
+              return true;
             count++;
           }
         }
@@ -265,7 +265,7 @@ static int firetic_sub_func(const MultiWeaponSelectionCall *call) {
       notify_printf(btech_context_evaluation(mech->xcode.context), call->actor,
                     "*Click* (the tic contained no weapons)");
   }
-  return 0;
+  return false;
 }
 
 void firetic_sub(DbRef player, Mech *mech, char *buffer) {

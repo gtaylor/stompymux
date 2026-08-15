@@ -2,7 +2,7 @@
 
 #include "autopilot.h"
 
-int auto_targets_callback(const RedBlackTreeVisitCall *call);
+bool auto_targets_callback(const RedBlackTreeVisitCall *call);
 int auto_generic_compare(const RedBlackTreeCompareCall *call);
 typedef struct AutopilotTargetRequest {
   int score;

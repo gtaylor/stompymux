@@ -129,7 +129,7 @@ static void notify_mode_message(Mech *mech, const char *message_template,
   mech_notify(mech, MECHALL, message);
 }
 
-static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
+static bool mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
   Mech *mech = call->mech;
   const DbRef PLAYER = call->actor;
   const int INDEX = call->first;
@@ -147,48 +147,48 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
   if (weaptype == -1) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "The weapons system chirps: 'Illegal Weapon Number!'");
-    return 0;
+    return false;
   }
   if (weaptype == -2) {
     mecha_notify(
         btech_context_evaluation(mech_context(mech)), PLAYER,
         "The weapons system chirps: 'That Weapon has been destroyed!'");
-    return 0;
+    return false;
   }
   if (weaptype == -3) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "The weapon system chirps: 'That weapon is still reloading!'");
-    return 0;
+    return false;
   }
   if (weaptype == -4) {
     mecha_notify(
         btech_context_evaluation(mech_context(mech)), PLAYER,
         "The weapon system chirps: 'That weapon is still recharging!'");
-    return 0;
+    return false;
   }
   if (mech_critical_temporary_failure(mech, section, critical) ==
       FAIL_AMMOJAMMED) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "The ammo feed mechanism for that weapon is jammed! Unable to "
                  "change modes!");
-    return 0;
+    return false;
   }
   if (mech_critical_fire_mode(mech, section, critical) & OS_MODE) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "One-shot weapons' mode cannot be altered!");
-    return 0;
+    return false;
   }
   if (mech_weapon_ammo_feed_is_locked(mech, section, critical)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "That weapon's ammo feed mechanism is damaged!");
-    return 0;
+    return false;
   }
 
   if (toggle->special_kind == 6) {
     if (!find_artemis_for_weapon(mech, section, critical)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                    "You do not have an Artemis system for that weapon.");
-      return 0;
+      return false;
     }
   }
 
@@ -198,7 +198,7 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
   if (weapon_catalogue_is_rocket(weaptype)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "Rocket launchers' mode cannot be altered!");
-    return 0;
+    return false;
   }
 
   const int WEAPON_TYPE = weapon_catalogue_type(weaptype);
@@ -224,7 +224,7 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
         mecha_notify(
             btech_context_evaluation(mech_context(mech)), PLAYER,
             "That weapon has already been set to fire special rounds!");
-        return 0;
+        return false;
       }
     }
     /* Fitz - Group RAC/INARC select: Handle clearing RAC and INARC modes first
@@ -236,7 +236,7 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
         mech_critical_fire_mode_clear(mech, section, critical, FIRE_MODES);
         notify_mode_message(mech, toggle->on_message, INDEX);
       }
-      return 0;
+      return false;
     }
     if ((toggle->special == INARC) && !toggle->mode) {
       if (!(mech_critical_ammo_mode(mech, section, critical) & INARC_MODES)) {
@@ -245,7 +245,7 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
         mech_critical_ammo_mode_clear(mech, section, critical, AMMO_MODES);
         notify_mode_message(mech, toggle->on_message, INDEX);
       }
-      return 0;
+      return false;
     }
     if (toggle->fire_mode) {
       if (mech_critical_fire_mode(mech, section, critical) & toggle->mode) {
@@ -254,7 +254,7 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
           mech_critical_fire_mode_clear(mech, section, critical, toggle->mode);
         }
         notify_mode_message(mech, toggle->off_message, INDEX);
-        return 0;
+        return false;
       }
     } else {
       if (mech_critical_ammo_mode(mech, section, critical) & toggle->mode) {
@@ -263,7 +263,7 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
           mech_critical_ammo_mode_clear(mech, section, critical, toggle->mode);
         }
         notify_mode_message(mech, toggle->off_message, INDEX);
-        return 0;
+        return false;
       }
     }
 
@@ -277,12 +277,12 @@ static int mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
 
     notify_mode_message(mech, toggle->on_message, INDEX);
 
-    return 0;
+    return false;
   }
   if (toggle->special != RAC) /* Keep RAC type weapons on this setting */
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  toggle->cannot_message);
-  return 0;
+  return false;
 }
 static void mech_toggle_mode_sub(DbRef player, Mech *mech, char *buffer,
                                  int nspecisspec, int nspec, int mode,
@@ -535,7 +535,7 @@ void mech_rac(DbRef player, void *data, char *buffer) {
   }
 }
 
-static int mech_unjamammo_func(const MultiWeaponSelectionCall *call) {
+static bool mech_unjamammo_func(const MultiWeaponSelectionCall *call) {
   Mech *mech = call->mech;
   const DbRef PLAYER = call->actor;
   const int INDEX = call->first;
@@ -553,30 +553,30 @@ static int mech_unjamammo_func(const MultiWeaponSelectionCall *call) {
   if (weaptype == -1) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "The weapons system chirps: 'Illegal Weapon Number!'");
-    return 0;
+    return false;
   }
   if (weaptype == -2) {
     mecha_notify(
         btech_context_evaluation(mech_context(mech)), PLAYER,
         "The weapons system chirps: 'That Weapon has been destroyed!'");
-    return 0;
+    return false;
   }
   if (mech_critical_temporary_failure(mech, section, critical) !=
       FAIL_AMMOJAMMED) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "The ammo feed mechanism for that weapon is not jammed.");
-    return 0;
+    return false;
   }
   if (mech_is_jumping(mech)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "You can't unjam the ammo feed while jumping!");
-    return 0;
+    return false;
   }
   if (mech_desired_speed(mech) >
       (2.0F * mech_effective_maximum_speed(mech) / 3.0F) + 0.1F) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "You can't unjam the ammo feed while running!");
-    return 0;
+    return false;
   }
 
   for (i = 0; i < NUM_SECTIONS; i++) {
@@ -585,21 +585,21 @@ static int mech_unjamammo_func(const MultiWeaponSelectionCall *call) {
                               mech_movement_type(mech));
       mech_printf(mech, MECHALL, "You have weapons recycling on your %s.",
                   location);
-      return 0;
+      return false;
     }
   }
 
   if (mech_event_count(mech, EVENT_UNJAM_AMMO)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER,
                  "You are already unjamming a weapon!");
-    return 0;
+    return false;
   }
 
   mech_event_schedule(mech, EVENT_UNJAM_AMMO, mech_unjam_ammo_event, 60,
                       (long)INDEX);
   mech_printf(mech, MECHALL,
               "You begin to shake the jammed ammo loose on weapon #%d", INDEX);
-  return 0;
+  return false;
 }
 void mech_unjamammo(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;

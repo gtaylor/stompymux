@@ -21,7 +21,7 @@ struct BtechSpecialObjectCounts {
 
 /* Count normal BTech instances, excluding DEBUG and other non-persisted types.
  */
-static int btech_special_count_objects(const RedBlackTreeVisitCall *call) {
+static bool btech_special_count_objects(const RedBlackTreeVisitCall *call) {
   void *key = call->key;
   void *data = call->data;
   int depth = call->depth;
@@ -53,7 +53,7 @@ static int btech_special_count_objects(const RedBlackTreeVisitCall *call) {
   default:
     break;
   }
-  return 1;
+  return true;
 }
 
 /* Read a count from one known table name in the fixed BTech schema. */

@@ -8,11 +8,11 @@
 /* mech.physical.c */
 void mech_punch(DbRef player, void *data, char *buffer);
 void mech_club(DbRef player, void *data, char *buffer);
-int have_axe(Mech *mech, int loc);
-int have_sword(Mech *mech, int loc);
-int have_mace(Mech *mech, int loc);
-int have_saw(Mech *mech, int loc);
-int have_claw(Mech *mech, int loc);
+bool have_axe(Mech *mech, int loc);
+bool have_sword(Mech *mech, int loc);
+bool have_mace(Mech *mech, int loc);
+bool have_saw(Mech *mech, int loc);
+bool have_claw(Mech *mech, int loc);
 void mech_saw(DbRef player, void *data, char *buffer);
 void mech_axe(DbRef player, void *data, char *buffer);
 void mech_sword(DbRef player, void *data, char *buffer);

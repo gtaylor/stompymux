@@ -34,7 +34,7 @@ void btech_heartbeat_stop(BtechContext *context) {
   context->heartbeat_running = false;
 }
 
-static int heartbeat_dispatch(const RedBlackTreeVisitCall *call) {
+static bool heartbeat_dispatch(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   BtechSpecialObject *const XCODE_OBJ = data;
 
@@ -57,7 +57,7 @@ static int heartbeat_dispatch(const RedBlackTreeVisitCall *call) {
     break;
   }
 
-  return 1;
+  return true;
 }
 
 static void heartbeat_run(MuxTimer *timer, void *arg) {

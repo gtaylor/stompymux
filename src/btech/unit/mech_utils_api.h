@@ -241,7 +241,7 @@ typedef struct MultiWeaponSelectionCall {
   int last;
   void *context;
 } MultiWeaponSelectionCall;
-typedef int (*MultiWeaponSelectionCallback)(
+typedef bool (*MultiWeaponSelectionCallback)(
     const MultiWeaponSelectionCall *call);
 typedef struct MultiWeaponSelectionRequest {
   Mech *mech;
