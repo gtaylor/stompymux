@@ -342,7 +342,7 @@ void do_inventory(CommandInvocation *invocation) {
   const DbRef PLAYER = invocation->player;
   DbRef thing;
   char *buff;
-  char *s;
+  const char *s;
   char *e;
 
   thing = game_object_contents(evaluation->world->database, PLAYER);
