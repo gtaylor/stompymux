@@ -466,7 +466,7 @@ static void show_lrs_map(const LrsMapRequest *request) {
 
   for (loop = b_height; loop < e_height; loop++) {
     (void)snprintf(topbuff, sizeof(topbuff), "%3d ", loop);
-    strcpy(botbuff, "    ");
+    (void)string_copy_bounded(botbuff, sizeof(botbuff), "    ");
     if (MODE & LRS_MECHMODE)
       while (lrs_mech_at(&mechs, last_mech) &&
              mech_position_y(lrs_mech_at(&mechs, last_mech)) < loop)

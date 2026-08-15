@@ -257,7 +257,7 @@ void list_charvaluestuff(EvaluationContext *evaluation, DbRef player,
       (void)string_append_bounded(buf, sizeof(buf), entry);
       if (!((++found) % 3)) {
         mecha_notify(evaluation, player, buf);
-        strcpy(buf, " ");
+        (void)string_copy_bounded(buf, sizeof(buf), " ");
       }
     }
   }

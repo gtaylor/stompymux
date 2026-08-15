@@ -102,7 +102,8 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
       } else {
         x1 = TARGET_POSITION.position.x;
         y1 = TARGET_POSITION.position.y;
-        strcpy(buff, "Bearing to default target is: ");
+        (void)string_copy_bounded(buff, sizeof(buff),
+                                  "Bearing to default target is: ");
       }
     } else if (argc == 2) {
       /* Bearing to X, Y */
@@ -219,7 +220,8 @@ void mech_range(DbRef player, void *data, char *buffer) {
       z1 = TARGET_POSITION.position.z;
       if (battle_map_is_dark(mech_map) && !temp_mech)
         z1 = scaled_hex_elevation(mech_position_z(mech));
-      strcpy(buff, "Range to default target is: ");
+      (void)string_copy_bounded(buff, sizeof(buff),
+                                "Range to default target is: ");
     } else if (argc == 2) {
       /* Range to X, Y */
       if (!parse_navigation_arguments(args, 2, values)) {
@@ -359,7 +361,8 @@ void mech_vector(DbRef player, void *data, char *buffer) {
       x1 = TARGET_POSITION.position.x;
       y1 = TARGET_POSITION.position.y;
       z1 = TARGET_POSITION.position.z;
-      strcpy(buff, "Vector to default target is: ");
+      (void)string_copy_bounded(buff, sizeof(buff),
+                                "Vector to default target is: ");
     } else if (argc == 2) {
       /* Range to X, Y */
       if (!parse_navigation_arguments(args, 2, values)) {

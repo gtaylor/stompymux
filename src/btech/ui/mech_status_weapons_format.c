@@ -172,7 +172,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       (technology & TRIPLE_MYOMER_TECH) ||
       (technology_secondary & ANGEL_ECM_TECH) || has_tag ||
       (infantry_technology & FC_INFILTRATORII_STEALTH_TECH)) {
-    strcpy(tempbuff, "AdvTech: ");
+    (void)string_copy_bounded(tempbuff, sizeof(tempbuff), "AdvTech: ");
 
     if (technology & ECM_TECH) {
       append_status(tempbuff, sizeof(tempbuff), "ECM(%s)  ",
@@ -290,7 +290,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
   }
 
   if (technology_secondary & CARRIER_TECH) {
-    strcpy(tempbuff, "Carrier: ");
+    (void)string_copy_bounded(tempbuff, sizeof(tempbuff), "Carrier: ");
 
     append_status(
         tempbuff, sizeof(tempbuff), "%d tons free, %d tons max unit size",
@@ -301,7 +301,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
 
   if ((technology & AA_TECH) || (technology & BEAGLE_PROBE_TECH) ||
       (technology_secondary & BLOODHOUND_PROBE_TECH)) {
-    strcpy(tempbuff, "AdvSensors:");
+    (void)string_copy_bounded(tempbuff, sizeof(tempbuff), "AdvSensors:");
 
     if (technology & AA_TECH)
       append_status(tempbuff, sizeof(tempbuff), " Radar");
@@ -322,7 +322,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       (infantry_technology & FC_INFILTRATOR_STEALTH_TECH) ||
       (infantry_technology & FC_INFILTRATORII_STEALTH_TECH)) {
 
-    strcpy(tempbuff, "AdvItems:");
+    (void)string_copy_bounded(tempbuff, sizeof(tempbuff), "AdvItems:");
 
     if (infantry_technology & CS_PURIFIER_STEALTH_TECH)
       append_status(tempbuff, sizeof(tempbuff), " PurifierStealth");
@@ -348,7 +348,7 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
       (infantry_technology & INF_ANTILEG_TECH) ||
       (infantry_technology & CAN_JETTISON_TECH)) {
 
-    strcpy(tempbuff, "Special Actions:");
+    (void)string_copy_bounded(tempbuff, sizeof(tempbuff), "Special Actions:");
 
     if (infantry_technology & INF_MOUNT_TECH)
       append_status(tempbuff, sizeof(tempbuff), " MountFriends");
@@ -367,8 +367,10 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
   }
 
   if (infantry_technology & MUST_JETTISON_TECH) {
-    strcpy(tempbuff, "Requirements: Must jettison backpack before using "
-                     "special abilities or jumping");
+    (void)string_copy_bounded(
+        tempbuff, sizeof(tempbuff),
+        "Requirements: Must jettison backpack before using "
+        "special abilities or jumping");
     mecha_notify(evaluation, player, tempbuff);
     tempbuff[0] = 0;
   }

@@ -2,7 +2,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "bsuit_api.h"
 #include "btech/context.h"
@@ -137,7 +136,7 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
   float enemy_z = 0;
   int ishex = 0;
   int wc_dead_legs = 0;
-  char location[20];
+  char location[UNIT_SECTION_NAME_CAPACITY];
   int mode;
   int i;
   BtechContext *context = mech_context(mech);

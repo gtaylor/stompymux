@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "ai_api.h"
 #include "autopilot.h"
@@ -23,6 +22,7 @@
 #include "mux/network/mux_event.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
@@ -285,22 +285,22 @@ void auto_enter_event(MuxEvent *muxevent) {
 
   case 'n':
   case 'N':
-    strcpy(dir, "n");
+    (void)string_copy_bounded(dir, sizeof(dir), "n");
     break;
   case 's':
   case 'S':
-    strcpy(dir, "s");
+    (void)string_copy_bounded(dir, sizeof(dir), "s");
     break;
   case 'w':
   case 'W':
-    strcpy(dir, "w");
+    (void)string_copy_bounded(dir, sizeof(dir), "w");
     break;
   case 'e':
   case 'E':
-    strcpy(dir, "e");
+    (void)string_copy_bounded(dir, sizeof(dir), "e");
     break;
   default:
-    strcpy(dir, "");
+    dir[0] = '\0';
   }
   free(argument);
 

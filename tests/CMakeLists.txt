@@ -475,6 +475,22 @@ target_include_directories(btech_damage_apply_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_damage_apply COMMAND btech_damage_apply_test)
 
+add_executable(btech_armor_section_names_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/unit/btech_armor_section_names.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/mech_maintenance.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/mech_ammunition.c
+  ${CMAKE_SOURCE_DIR}/src/mux/support/checked_storage.c)
+target_compile_options(btech_armor_section_names_test PRIVATE -ffunction-sections)
+target_link_options(btech_armor_section_names_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_armor_section_names_test PRIVATE btmux_options)
+target_include_directories(btech_armor_section_names_test PRIVATE
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_armor_section_names
+  COMMAND btech_armor_section_names_test)
+
 add_executable(checked_storage_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/checked_storage.c)
 target_link_libraries(checked_storage_test
   PRIVATE btmux_options btmux_checked_storage)
@@ -882,6 +898,7 @@ include(unit/btech/combat/CMakeLists.txt)
 include(unit/btech/contracts/CMakeLists.txt)
 include(unit/btech/sensors/CMakeLists.txt)
 include(unit/btech/systems/CMakeLists.txt)
+include(unit/btech/unit/CMakeLists.txt)
 include(unit/mux/content/CMakeLists.txt)
 include(unit/mux/network/CMakeLists.txt)
 include(unit/mux/server/CMakeLists.txt)

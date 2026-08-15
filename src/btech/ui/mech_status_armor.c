@@ -210,10 +210,10 @@ static ArmorKeyText armor_key_text(int line_key, bool owner) {
     result.text[0] = '\0';
   } else if (line_key == 1) {
     /* Line 1 = "Key".  */
-    strcpy(result.text, "Key");
+    (void)string_copy_bounded(result.text, sizeof(result.text), "Key");
   } else if (line_key > 6) {
     /* Line >6 = empty.  */
-    strcpy(result.text, "   ");
+    (void)string_copy_bounded(result.text, sizeof(result.text), "   ");
   } else {
     /* Line 2-6 = armor level symbols.  */
     /* XXX: Probably safe from buffer overflows.  */

@@ -45,7 +45,7 @@ int mech_weapon_recycle_update(Mech *mech) {
   int criticals[MAX_WEAPS_SECTION];
   unsigned char weapon_types[MAX_WEAPS_SECTION];
   unsigned char weapon_data[MAX_WEAPS_SECTION];
-  char location[20];
+  char location[UNIT_SECTION_NAME_CAPACITY];
   BtechContext *context = mech_context(mech);
   int tick = btech_context_event_tick(context);
   int diff = tick - mech_last_weapon_recycle_tick(mech);

@@ -1,5 +1,3 @@
-#include <string.h>
-
 #include "btconfig.h"
 #include "btech/context.h"
 #include "btech_event.h"
@@ -495,17 +493,17 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
   /* Figure out wot type of pods we want to remove */
   switch (ascii_to_upper(*checked_string_suffix(args[1], 0))) {
   case 'Y':
-    strcpy(str_pod_type, "Haywire");
+    (void)string_copy_bounded(str_pod_type, sizeof(str_pod_type), "Haywire");
     w_pod_type = INARC_HAYWIRE_ATTACHED;
     break;
 
   case 'E':
-    strcpy(str_pod_type, "ECM");
+    (void)string_copy_bounded(str_pod_type, sizeof(str_pod_type), "ECM");
     w_pod_type = INARC_ECM_ATTACHED;
     break;
 
   default:
-    strcpy(str_pod_type, "Homing");
+    (void)string_copy_bounded(str_pod_type, sizeof(str_pod_type), "Homing");
     w_pod_type = INARC_HOMING_ATTACHED;
     break;
   }

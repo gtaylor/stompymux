@@ -22,6 +22,7 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_utils_api.h"
+#include "mux/server/platform.h"
 #include "pcombat_api.h"
 #include "registry_api.h"
 #include "weapon_catalogue_api.h"
@@ -124,12 +125,14 @@ int mech_cocoon_integrity(const Mech *mech) {
   return 0;
 }
 
-void armor_string_from_index(int index, char *buffer, UnitClass unit_class,
+void armor_string_from_index(int index,
+                             char buffer[static UNIT_SECTION_NAME_CAPACITY],
+                             UnitClass unit_class,
                              MechMovementType movement_type) {
   (void)index;
   (void)unit_class;
   (void)movement_type;
-  strcpy(buffer, "Front");
+  (void)string_copy_bounded(buffer, UNIT_SECTION_NAME_CAPACITY, "Front");
 }
 
 MechMovementType mech_movement_type(const Mech *mech) {

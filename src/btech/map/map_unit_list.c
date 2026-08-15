@@ -1,5 +1,3 @@
-#include <string.h>
-
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "map.h"
@@ -43,10 +41,11 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
         temp_mech = btech_context_get_mech(map->xcode.context, UNIT_DBREF);
         if (temp_mech) {
           id = mech_id(temp_mech, false);
-          strcpy(valid, "Valid Data");
+          (void)string_copy_bounded(valid, sizeof(valid), "Valid Data");
         } else {
           id = (MechId){0};
-          strcpy(valid, "Invalid Object Data!  Remove this Mech!");
+          (void)string_copy_bounded(valid, sizeof(valid),
+                                    "Invalid Object Data!  Remove this Mech!");
         }
         notify_printf(btech_context_evaluation(map->xcode.context), player,
                       "Mech DB Number: %ld : [%s]\t%s", UNIT_DBREF, id.text,

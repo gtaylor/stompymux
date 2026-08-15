@@ -347,7 +347,7 @@ void auto_radio_command_heading(Autopilot *autopilot, Mech *mech,
   auto_engage(autopilot->mynum, autopilot, "");
   (void)snprintf(buffer, SBUF_SIZE, "%d", heading);
   mech_heading(autopilot->mynum, mech, buffer);
-  strcpy(buffer, "0");
+  (void)string_copy_bounded(buffer, sizeof(buffer), "0");
   mech_speed(autopilot->mynum, mech, buffer);
   (void)snprintf(buffer, SBUF_SIZE, "stopped and heading changed to %d",
                  heading);

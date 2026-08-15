@@ -436,11 +436,12 @@ static void artillery_hit_hex(const ArtilleryImpact *impact) {
       (void)snprintf(buf2, LBUF_SIZE, "You are hit by fragments!");
   } else {
     if (dam > 2) {
-      strcpy(buf1, "is hit by bomblets!");
-      strcpy(buf2, "You are hit by bomblets!");
+      (void)string_copy_bounded(buf1, sizeof(buf1), "is hit by bomblets!");
+      (void)string_copy_bounded(buf2, sizeof(buf2), "You are hit by bomblets!");
     } else {
-      strcpy(buf1, "is hit by a bomblet!");
-      strcpy(buf2, "You are hit by a bomblet!");
+      (void)string_copy_bounded(buf1, sizeof(buf1), "is hit by a bomblet!");
+      (void)string_copy_bounded(buf2, sizeof(buf2),
+                                "You are hit by a bomblet!");
     }
   }
   BlastHexRequest request = {

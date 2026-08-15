@@ -84,16 +84,16 @@ void auto_radio_command_report(Autopilot *autopilot, Mech *mech,
 
   /* Is the AI moving or something */
   if (mech_is_jumping(mech))
-    strcpy(buffer, "Jumping");
+    (void)string_copy_bounded(buffer, sizeof(buffer), "Jumping");
   else if (mech_is_fallen(mech))
-    strcpy(buffer, "Prone");
+    (void)string_copy_bounded(buffer, sizeof(buffer), "Prone");
   else if (mech_current_speed(mech) >
            (2.0F * mech_effective_maximum_speed(mech) / 3.0F) + 0.1F)
-    strcpy(buffer, "Running");
+    (void)string_copy_bounded(buffer, sizeof(buffer), "Running");
   else if (mech_current_speed(mech) > 1.0F)
-    strcpy(buffer, "Walking");
+    (void)string_copy_bounded(buffer, sizeof(buffer), "Walking");
   else
-    strcpy(buffer, "Standing");
+    (void)string_copy_bounded(buffer, sizeof(buffer), "Standing");
 
   (void)snprintf(mesg, LBUF_SIZE, "%s at %d, %d", buffer, mech_position_x(mech),
                  mech_position_y(mech));
@@ -250,7 +250,7 @@ void auto_radio_command_stop(Autopilot *autopilot, Mech *mech,
 
   char buffer[SBUF_SIZE];
 
-  strcpy(buffer, "0");
+  (void)string_copy_bounded(buffer, sizeof(buffer), "0");
 
   /* Turn chasetarget off */
   auto_set_chasetarget_mode(autopilot, AUTO_CHASETARGET_OFF);

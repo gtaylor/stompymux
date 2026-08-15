@@ -6,7 +6,6 @@
 #include "mech_lifecycle.h"
 #include "weapon_catalogue_api.h"
 #include <stdio.h>
-#include <string.h>
 
 #include "command_handlers_api.h"
 #include "equipment_types.h"
@@ -101,7 +100,7 @@ void mech_missile_apply_hits(const MissileHitsRequest *request) {
         .damage = clear_damage,
         .intentional = true});
 
-    strcpy(buf, "");
+    buf[0] = '\0';
 
     if (weapon_catalogue_is_missile(weapindx))
       (void)snprintf(buf, SBUF_SIZE, "%s%s", "missile",

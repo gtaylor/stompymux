@@ -61,7 +61,7 @@ void physical_attack_resolve(const PhysicalAttackRequest *request) {
   DbRef targetnum;
   int roll;
   int swarming_us;
-  char location[20];
+  char location[UNIT_SECTION_NAME_CAPACITY];
   int iwa;
   int rbase_to_hit;
   int glance = 0;

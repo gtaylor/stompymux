@@ -222,8 +222,16 @@ typedef struct UnitSectionCatalog {
 
 size_t unit_section_name_count(const UnitSectionCatalog *catalog);
 const char *unit_section_name(const UnitSectionCatalog *catalog, size_t index);
-void armor_string_from_index(int index, char *buffer, UnitClass type,
-                             MechMovementType movement_type);
+
+/* Minimum storage a caller must provide to armor_string_from_index. The
+ * longest section name is "Front Right Side" (16 characters), and the
+ * out-of-range marker "Invalid!!" is shorter, so 24 bytes leaves headroom
+ * for new names without revisiting every caller. */
+constexpr size_t UNIT_SECTION_NAME_CAPACITY = 24;
+
+void armor_string_from_index(int index,
+                             char buffer[static UNIT_SECTION_NAME_CAPACITY],
+                             UnitClass type, MechMovementType movement_type);
 int get_weapon_crits(Mech *mech, int weapindx);
 int listmatch(const char *const *values, size_t value_count, const char *match);
 typedef struct MultiWeaponSelectionCall {

@@ -23,7 +23,7 @@
 bool mech_club_location_is_usable(Mech *mech, int section, bool emit_failure) {
   int t_can_grab = 1;
   char buf[100] = {0};
-  char location[20] = {0};
+  char location[UNIT_SECTION_NAME_CAPACITY] = {0};
 
   armor_string_from_index(section, location, mech_class(mech),
                           mech_movement_type(mech));
@@ -68,7 +68,7 @@ void mech_grabclub(DbRef player, void *data, char *buffer) {
   int wc_args = 0;
   int location = 0;
   char *args[1];
-  char locname[20];
+  char locname[UNIT_SECTION_NAME_CAPACITY];
 
   if (!common_checks(player, mech, MECH_USUALO))
     return;

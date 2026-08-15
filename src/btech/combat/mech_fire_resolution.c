@@ -42,7 +42,6 @@
 #include "weapon_catalogue_api.h"
 #include <math.h>
 #include <stdio.h>
-#include <string.h>
 static const char *weapon_display_name(int weapon_index) {
   return checked_string_suffix(weapon_catalogue_name(weapon_index), 3);
 }
@@ -83,7 +82,7 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
     (void)snprintf(buf, sizeof(buf), "Roll: %d ", roll);
   if (target && !request->target_kind) {
     range = mech_range_to(request->mech, target);
-    strcpy(buf2, "");
+    buf2[0] = '\0';
     if (mech_aim_section(request->mech) != NUM_SECTIONS &&
         mech_aim_unit_class(request->mech) == mech_class(target) &&
         !weapon_catalogue_is_missile(request->weapon_index)) {

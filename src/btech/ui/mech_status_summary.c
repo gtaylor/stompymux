@@ -108,7 +108,7 @@ void display_target(EvaluationContext *evaluation, DbRef player, Mech *mech) {
         strlcpy(buff, message_buffer, sizeof(buff));
         if (mech_aim_section(mech) == NUM_SECTIONS ||
             mech_aim_unit_class(mech) != mech_class(temp_mech))
-          strcpy(location, "None");
+          (void)string_copy_bounded(location, sizeof(location), "None");
         else
           armor_string_from_index(mech_aim_section(mech), location,
                                   mech_class(temp_mech),
@@ -294,36 +294,37 @@ void print_generic_status(EvaluationContext *evaluation, DbRef player,
   case CLASS_SPHEROID_DS:
     switch (mech_movement_type(mech)) {
     case MOVE_TRACK:
-      strcpy(move_type, "Tracked");
+      (void)string_copy_bounded(move_type, sizeof(move_type), "Tracked");
       break;
     case MOVE_WHEEL:
-      strcpy(move_type, "Wheeled");
+      (void)string_copy_bounded(move_type, sizeof(move_type), "Wheeled");
       break;
     case MOVE_HOVER:
-      strcpy(move_type, "Hover");
+      (void)string_copy_bounded(move_type, sizeof(move_type), "Hover");
       break;
     case MOVE_VTOL:
-      strcpy(move_type, "VTOL");
+      (void)string_copy_bounded(move_type, sizeof(move_type), "VTOL");
       break;
     case MOVE_FLY:
-      strcpy(move_type, "Flight");
+      (void)string_copy_bounded(move_type, sizeof(move_type), "Flight");
       break;
     case MOVE_HULL:
-      strcpy(move_type, "Displacement Hull");
+      (void)string_copy_bounded(move_type, sizeof(move_type),
+                                "Displacement Hull");
       break;
     case MOVE_SUB:
-      strcpy(move_type, "Submarine");
+      (void)string_copy_bounded(move_type, sizeof(move_type), "Submarine");
       break;
     case MOVE_FOIL:
-      strcpy(move_type, "Hydrofoil");
+      (void)string_copy_bounded(move_type, sizeof(move_type), "Hydrofoil");
       break;
     case MOVE_BIPED:
     case MOVE_QUAD:
     case MOVE_NONE:
-      strcpy(move_type, "Magic");
+      (void)string_copy_bounded(move_type, sizeof(move_type), "Magic");
       break;
     default:
-      strcpy(move_type, "Magic");
+      (void)string_copy_bounded(move_type, sizeof(move_type), "Magic");
       break;
     }
     if (mech_movement_type(mech) != MOVE_NONE) {
