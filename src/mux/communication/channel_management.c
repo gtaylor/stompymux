@@ -21,6 +21,7 @@
 #include "mux/support/checked_storage.h"
 #include "mux/support/fifo.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/support/utf8.h"
 #include "mux/world/player.h"
 
@@ -291,7 +292,7 @@ void do_comlist(CommandInvocation *invocation) {
 static void comlist_description(GameDatabase *database, struct Channel *ch,
                                 char *buffer, size_t buffer_size) {
   long flags;
-  char *description;
+  LbufText description;
 
   if (buffer_size == 0)
     return;
@@ -301,15 +302,15 @@ static void comlist_description(GameDatabase *database, struct Channel *ch,
   }
 
   description = attribute_get(database, ch->chan_obj, A_DESC, &flags);
-  if (!*description) {
+  if (!*description.text) {
     (void)string_copy_bounded(buffer, buffer_size, "No description.");
   } else {
-    const size_t DESCRIPTION_LENGTH = strlen(description);
+    const size_t DESCRIPTION_LENGTH = strlen(description.text);
     size_t output = 0;
 
     while (output < DESCRIPTION_LENGTH && output < buffer_size - 1) {
       const char CHARACTER = *(const char *)checked_storage_at_const(
-          description, DESCRIPTION_LENGTH + 1, sizeof(char), output);
+          description.text, DESCRIPTION_LENGTH + 1, sizeof(char), output);
 
       *(char *)checked_storage_at(buffer, buffer_size, sizeof(char), output) =
           CHARACTER == '\r' || CHARACTER == '\n' ? ' ' : CHARACTER;
@@ -318,5 +319,5 @@ static void comlist_description(GameDatabase *database, struct Channel *ch,
     *(char *)checked_storage_at(buffer, buffer_size, sizeof(char), output) =
         '\0';
   }
-  free_lbuf(description);
+  lbuf_text_release(&description);
 }

@@ -13,6 +13,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/world/world_context.h"
 
 struct GameDatabase; // IWYU pragma: keep
@@ -286,7 +287,8 @@ void attribute_add_raw(GameDatabase *database, DbRef thing, int atr,
 void attribute_add(GameDatabase *database, DbRef thing, int atr,
                    const char *buff, long flags);
 char *attribute_get_raw(GameDatabase *database, DbRef thing, int atr);
-char *attribute_get(GameDatabase *database, DbRef thing, int atr, long *flags);
+LbufText attribute_get(GameDatabase *database, DbRef thing, int atr,
+                       long *flags);
 char *attribute_get_string(GameDatabase *database, DbRef thing, int atr,
                            char *s, size_t size, long *flags);
 int attribute_get_info(GameDatabase *database, DbRef thing, int atr,

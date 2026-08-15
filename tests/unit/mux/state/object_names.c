@@ -17,6 +17,7 @@
 #include "mux/server/log.h"
 #include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/utf8.h"
@@ -167,8 +168,31 @@ static int check_grow_and_free(void) {
          database.pure_name_storage != nullptr || database.markbits != nullptr;
 }
 
+static int check_owned_attribute_text(void) {
+  GameObject objects[2] = {};
+  GameDatabase database = {.object_storage = objects, .top = 1, .size = 1};
+  long flags = -1;
+
+  attribute_add(&database, 0, A_DESC, "description", 0);
+  LbufText present = attribute_get(&database, 0, A_DESC, &flags);
+  LbufText missing = attribute_get(&database, 0, A_IDESC, nullptr);
+  int result = 0;
+
+  if (present.owned == nullptr || strcmp(present.text, "description") != 0 ||
+      flags != 0)
+    result = 1;
+  else if (missing.owned == nullptr || strcmp(missing.text, "") != 0)
+    result = 2;
+
+  lbuf_text_release(&present);
+  lbuf_text_release(&missing);
+  attribute_free(&database, 0);
+  return result;
+}
+
 int main(void) {
-  if (check_stable_names() != 0 || check_grow_and_free() != 0) {
+  if (check_stable_names() != 0 || check_grow_and_free() != 0 ||
+      check_owned_attribute_text() != 0) {
     (void)fprintf(stderr, "object name cache lifetime test failed\n");
     return 1;
   }
