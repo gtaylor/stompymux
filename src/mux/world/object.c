@@ -525,7 +525,7 @@ void destroy_thing(EvaluationContext *evaluation, DbRef thing) {
 void destroy_player(EvaluationContext *evaluation, DbRef victim) {
   DbRef player;
   long aflags;
-  char *buf;
+  LbufText buf;
 
   /*
    * Bye bye...
@@ -545,8 +545,8 @@ void destroy_player(EvaluationContext *evaluation, DbRef victim) {
   delete_player_name(evaluation->world, victim,
                      game_object_name(evaluation->world->database, victim));
   buf = attribute_get(evaluation->world->database, victim, A_ALIAS, &aflags);
-  delete_player_name(evaluation->world, victim, buf);
-  free_lbuf(buf);
+  delete_player_name(evaluation->world, victim, buf.text);
+  lbuf_text_release(&buf);
 
   move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
                                             .object = victim,

@@ -18,6 +18,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
@@ -368,13 +369,13 @@ static void show_a_desc(EvaluationContext *evaluation, DbRef player,
 
 static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
                       int use_idesc) {
-  char *got;
+  LbufText got;
   long aflags;
 
   if ((typeof_obj(evaluation->world->database, loc) != OBJECT_TYPE_ROOM) &&
       use_idesc) {
     got = attribute_get(evaluation->world->database, loc, A_IDESC, &aflags);
-    if (*got) {
+    if (*got.text) {
       notify_action(
           evaluation,
           &(ActionMessageInvocation){
@@ -390,7 +391,7 @@ static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
     } else {
       show_a_desc(evaluation, player, loc);
     }
-    free_lbuf(got);
+    lbuf_text_release(&got);
   } else {
     show_a_desc(evaluation, player, loc);
   }

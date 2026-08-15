@@ -747,6 +747,7 @@ add_test(NAME object_state COMMAND object_state_test)
 add_executable(object_names_test
   ${CMAKE_SOURCE_DIR}/tests/unit/mux/state/object_names.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/objects/db.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/lbuf_text.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
 target_compile_options(object_names_test PRIVATE -ffunction-sections)
 target_link_options(object_names_test PRIVATE -Wl,--gc-sections)

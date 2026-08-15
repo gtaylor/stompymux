@@ -22,6 +22,7 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/utf8.h"
@@ -323,11 +324,13 @@ char *attribute_get_string(GameDatabase *database, DbRef thing, int atr,
   return s;
 }
 
-char *attribute_get(GameDatabase *database, DbRef thing, int atr, long *flags) {
+LbufText attribute_get(GameDatabase *database, DbRef thing, int atr,
+                       long *flags) {
   char *buff;
 
   buff = alloc_lbuf("attribute_get");
-  return attribute_get_string(database, thing, atr, buff, LBUF_SIZE, flags);
+  (void)attribute_get_string(database, thing, atr, buff, LBUF_SIZE, flags);
+  return lbuf_text_take(buff);
 }
 
 int attribute_get_info(GameDatabase *database, DbRef thing, int atr,

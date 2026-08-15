@@ -70,7 +70,7 @@ void do_alias(CommandInvocation *invocation) {
   char *alias = invocation->second;
   DbRef thing;
   long aflags;
-  char *oldalias;
+  LbufText oldalias;
   LbufText trimalias;
 
   thing = match_controlled(&invocation->context->match, player, name);
@@ -108,7 +108,7 @@ void do_alias(CommandInvocation *invocation) {
        * New alias is null, just clear it
        */
 
-      delete_player_name(invocation->context->world, thing, oldalias);
+      delete_player_name(invocation->context->world, thing, oldalias.text);
       attribute_clear(evaluation->world->database, thing, A_ALIAS);
       notify_checked(evaluation, player, player, "Alias removed.", MSG_ME);
     } else if (lookup_player(invocation->context->world, NOTHING,
@@ -131,7 +131,7 @@ void do_alias(CommandInvocation *invocation) {
        * Remove the old name and add the new name
        */
 
-      delete_player_name(invocation->context->world, thing, oldalias);
+      delete_player_name(invocation->context->world, thing, oldalias.text);
       attribute_add(evaluation->world->database, thing, A_ALIAS, trimalias.text,
                     aflags);
       if (add_player_name(invocation->context->world, thing, trimalias.text)) {
@@ -145,7 +145,7 @@ void do_alias(CommandInvocation *invocation) {
       }
     }
     lbuf_text_release(&trimalias);
-    free_lbuf(oldalias);
+    lbuf_text_release(&oldalias);
   } else {
     notify_checked(evaluation, player, player, "Only players may have aliases.",
                    MSG_ME);
