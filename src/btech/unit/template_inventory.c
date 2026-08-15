@@ -85,7 +85,7 @@ void dump_weapons(BtechContext *context, DbRef player) {
   kill_cool_menu(c);
 }
 
-char *techlist_func(Mech *mech, char *buffer) {
+char *techlist_func(Mech *mech, char *buffer, size_t buffer_size) {
   char bufa[SBUF_SIZE];
   char bufb[SBUF_SIZE];
   char bufc[SBUF_SIZE];
@@ -119,7 +119,7 @@ char *techlist_func(Mech *mech, char *buffer) {
           .set_count = 1,
           .delimiter = ' ',
           .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
-  (void)snprintf(buffer, MBUF_SIZE, "%s %s", bufa, bufb);
+  (void)snprintf(buffer, buffer_size, "%s %s", bufa, bufb);
 
   if (((mech)->ud.type) == CLASS_BSUIT) {
     (void)snprintf(
@@ -132,52 +132,52 @@ char *techlist_func(Mech *mech, char *buffer) {
             .set_count = 1,
             .delimiter = ' ',
             .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
-    (void)snprintf(buffer, MBUF_SIZE, "%s %s %s", bufa, bufb, bufc);
+    (void)snprintf(buffer, buffer_size, "%s %s %s", bufa, bufb, bufc);
   } else {
-    (void)snprintf(buffer, MBUF_SIZE, "%s %s", bufa, bufb);
+    (void)snprintf(buffer, buffer_size, "%s %s", bufa, bufb);
   }
 
   if (!(strstr(buffer, "XL") || strstr(buffer, "XXL") ||
         strstr(buffer, "LENG") || strstr(buffer, "ICE") ||
         strstr(buffer, "CENG")) &&
       (((mech)->ud.type) != CLASS_BSUIT))
-    strlcat(buffer, " FUS ", sizeof(buffer));
+    (void)string_append_bounded(buffer, buffer_size, " FUS ");
 
   for (i = 0; i < NUM_SECTIONS; i++) {
     for (ii = 0; ii < NUM_CRITICALS; ii++) {
       part = mech_critical_part_type(mech, i, ii);
       if (part == special_equipment_index(AXE) && !axe) {
         axe = 1;
-        strlcat(buffer, " AXE", sizeof(buffer));
+        (void)string_append_bounded(buffer, buffer_size, " AXE");
       }
       if (part == special_equipment_index(CLAW) && !claw) {
         claw = 1;
-        strlcat(buffer, " CLAW", sizeof(buffer));
+        (void)string_append_bounded(buffer, buffer_size, " CLAW");
       }
       if (part == special_equipment_index(MACE) && !mace) {
         mace = 1;
-        strlcat(buffer, " MACE", sizeof(buffer));
+        (void)string_append_bounded(buffer, buffer_size, " MACE");
       }
       if (part == special_equipment_index(DUAL_SAW) && !saw) {
         saw = 1;
-        strlcat(buffer, " DUAL_SAW", sizeof(buffer));
+        (void)string_append_bounded(buffer, buffer_size, " DUAL_SAW");
       }
       if (part == special_equipment_index(SWORD) && !sword) {
         sword = 1;
-        strlcat(buffer, " SWORD", sizeof(buffer));
+        (void)string_append_bounded(buffer, buffer_size, " SWORD");
       }
       if (mech_section_configuration_has(mech, i, CASE_TECH) && !hascase) {
         hascase = 1;
-        strlcat(buffer, " CASE", sizeof(buffer));
+        (void)string_append_bounded(buffer, buffer_size, " CASE");
       }
     }
   }
 
   if (((mech)->ud.cargospace))
-    strlcat(buffer, " INFC", sizeof(buffer));
+    (void)string_append_bounded(buffer, buffer_size, " INFC");
 
   if (((mech)->ud.type) == CLASS_VTOL)
-    strlcat(buffer, " VTOL", sizeof(buffer));
+    (void)string_append_bounded(buffer, buffer_size, " VTOL");
 
   if (((mech)->ud.type) == CLASS_MECH && ((mech)->ud.move) != MOVE_QUAD) {
     if ((mech_critical_is_operational_special(
@@ -197,10 +197,10 @@ char *techlist_func(Mech *mech, char *buffer) {
                                      .slot = {.section = LARM, .critical = 0},
                                      .special = SHOULDER_OR_HIP})) ||
         ((mech)->rd.specials) & SALVAGE_TECH)
-      strlcat(buffer, " MTOW", sizeof(buffer));
+      (void)string_append_bounded(buffer, buffer_size, " MTOW");
   } else {
     if (((mech)->rd.specials) & SALVAGE_TECH)
-      strlcat(buffer, " MTOW", sizeof(buffer));
+      (void)string_append_bounded(buffer, buffer_size, " MTOW");
   }
 
   return buffer;

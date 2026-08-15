@@ -105,7 +105,7 @@ void display_target(EvaluationContext *evaluation, DbRef player, Mech *mech) {
         (void)snprintf(message_buffer, sizeof(message_buffer),
                        "Target in %s Weapons Arc",
                        (arc & TURRETARC) ? "Turret" : get_arc_id(mech, arc));
-        strlcpy(buff, message_buffer, sizeof(buff));
+        (void)string_copy_bounded(buff, sizeof(buff), message_buffer);
         if (mech_aim_section(mech) == NUM_SECTIONS ||
             mech_aim_unit_class(mech) != mech_class(temp_mech))
           (void)string_copy_bounded(location, sizeof(location), "None");
@@ -115,7 +115,7 @@ void display_target(EvaluationContext *evaluation, DbRef player, Mech *mech) {
                                   mech_movement_type(temp_mech));
         (void)snprintf(buff1, sizeof(buff1), "\t   Aimed Shot Location: %s",
                        location);
-        strlcat(buff, buff1, sizeof(buff));
+        (void)string_append_bounded(buff, sizeof(buff), buff1);
       } else {
         (void)snprintf(buff, sizeof(buff), "Target: NOT in line of sight!\n");
       }
@@ -176,18 +176,18 @@ void print_generic_status(EvaluationContext *evaluation, DbRef player,
   char mech_ref[100] = {0};
   char move_type[50] = {0};
 
-  strlcpy(mech_name,
-          use_model_reference
-              ? mech_model_name(mech)
-              : btech_attribute_read(context->database, mech_dbref(mech),
-                                     A_MECHNAME, (char[LBUF_SIZE]){0}),
-          sizeof(mech_name));
-  strlcpy(mech_ref,
-          use_model_reference
-              ? mech_model_reference(mech)
-              : btech_attribute_read(context->database, mech_dbref(mech),
-                                     A_MECHTYPE, (char[LBUF_SIZE]){0}),
-          sizeof(mech_ref));
+  (void)string_copy_bounded(
+      mech_name, sizeof(mech_name),
+      use_model_reference
+          ? mech_model_name(mech)
+          : btech_attribute_read(context->database, mech_dbref(mech),
+                                 A_MECHNAME, (char[LBUF_SIZE]){0}));
+  (void)string_copy_bounded(
+      mech_ref, sizeof(mech_ref),
+      use_model_reference
+          ? mech_model_reference(mech)
+          : btech_attribute_read(context->database, mech_dbref(mech),
+                                 A_MECHTYPE, (char[LBUF_SIZE]){0}));
 
   switch (mech_class(mech)) {
   case CLASS_MW:

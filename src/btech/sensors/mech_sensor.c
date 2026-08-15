@@ -567,7 +567,7 @@ mech_sensor_visibility_update(const MechSensorVisibilityRequest *request) {
                 get_arc_id(mech, arc));
           }
           if (st & AUTOCON_WARN)
-            strlcat(buf, "[reset]", sizeof(buf));
+            (void)string_append_bounded(buf, sizeof(buf), "[reset]");
           mech_notify(mech, MECHALL, buf);
         }
       }
@@ -642,7 +642,7 @@ mech_sensor_visibility_update(const MechSensorVisibilityRequest *request) {
                            get_arc_id(mech, arc));
           }
           if (st & AUTOCON_WARN)
-            strlcat(buf, "[reset]", sizeof(buf));
+            (void)string_append_bounded(buf, sizeof(buf), "[reset]");
           mech_notify(mech, MECHALL, buf);
         }
       }

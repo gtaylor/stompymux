@@ -1,7 +1,6 @@
 /* Implements BattleTech combat mechanics for unit enhanced criticals. */
 
 #include <stdio.h>
-#include <string.h>
 
 #include "btech/context.h"
 #include "command_handlers_api.h"
@@ -564,13 +563,14 @@ void mech_weapon_status(DbRef player, Mech *mech, char *buffer) {
       (void)snprintf(weapbuff, sizeof(weapbuff), "[%2d] %-29.29s || ",
                      wc_weaps++, weapon_display_name(WEAPON_INDEX));
 
-      strlcat(weapbuff, str_location, sizeof(weapbuff));
+      (void)string_append_bounded(weapbuff, sizeof(weapbuff), str_location);
       w_damaged_slots = 0;
 
       if (mech_critical_is_broken(mech, sec_iter, WEAPON_CRITICAL) ||
           mech_critical_temporary_failure(mech, sec_iter, WEAPON_CRITICAL) ==
               FAIL_DESTROYED) {
-        strlcat(weapbuff, "|| [fg=red bold]DESTROYED[reset]", sizeof(weapbuff));
+        (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+                                    "|| [fg=red bold]DESTROYED[reset]");
       } else {
 
         if (mech_class(mech) == CLASS_MECH)
@@ -578,34 +578,39 @@ void mech_weapon_status(DbRef player, Mech *mech, char *buffer) {
                                                               WEAPON_CRITICAL);
 
         if (mech_critical_is_disabled(mech, sec_iter, WEAPON_CRITICAL)) {
-          strlcat(weapbuff, "|| [fg=red bold]DISABLED[reset]",
-                  sizeof(weapbuff));
+          (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+                                      "|| [fg=red bold]DISABLED[reset]");
         } else if (mech_critical_temporary_failure(mech, sec_iter,
                                                    WEAPON_CRITICAL)) {
           switch (mech_critical_temporary_failure(mech, sec_iter,
                                                   WEAPON_CRITICAL)) {
           case FAIL_JAMMED:
-            strlcat(weapbuff, "|| [fg=yellow]JAMMED[reset]", sizeof(weapbuff));
+            (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+                                        "|| [fg=yellow]JAMMED[reset]");
             break;
           case FAIL_SHORTED:
-            strlcat(weapbuff, "|| [fg=blue]SHORTED[reset]", sizeof(weapbuff));
+            (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+                                        "|| [fg=blue]SHORTED[reset]");
             break;
           case FAIL_EMPTY:
-            strlcat(weapbuff, "|| [fg=cyan]EMPTY[reset]", sizeof(weapbuff));
+            (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+                                        "|| [fg=cyan]EMPTY[reset]");
             break;
           case FAIL_DUD:
-            strlcat(weapbuff, "|| [fg=yellow]DUD[reset]", sizeof(weapbuff));
+            (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+                                        "|| [fg=yellow]DUD[reset]");
             break;
           case FAIL_AMMOJAMMED:
-            strlcat(weapbuff, "|| [fg=yellow]AMMOJAM[reset]", sizeof(weapbuff));
+            (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+                                        "|| [fg=yellow]AMMOJAM[reset]");
             break;
           }
         } else if (w_damaged_slots > 0) {
-          strlcat(weapbuff, "|| [fg=yellow bold]DAMAGED[reset]",
-                  sizeof(weapbuff));
+          (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+                                      "|| [fg=yellow bold]DAMAGED[reset]");
         } else {
-          strlcat(weapbuff, "|| [fg=green bold]OPERATIONAL[reset]",
-                  sizeof(weapbuff));
+          (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+                                      "|| [fg=green bold]OPERATIONAL[reset]");
         }
       }
 

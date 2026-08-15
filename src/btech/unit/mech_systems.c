@@ -24,7 +24,6 @@
 #include "weapon_catalogue_api.h"
 #include <stddef.h>
 #include <stdlib.h>
-#include <string.h>
 
 static float integer_as_float(int value) { return (float)value; }
 
@@ -549,7 +548,7 @@ void channel_emit_kill(Mech *mech, Mech *attacker, const char *reason) {
 
       if (reason_copy) {
         /* Safe because reason is a KILL_TYPE_*. */
-        strlcpy(reason_copy, reason, sizeof(reason_copy));
+        (void)string_copy_bounded(reason_copy, LBUF_SIZE, reason);
 
         args[0] = reason_copy;
         nargs = 1;

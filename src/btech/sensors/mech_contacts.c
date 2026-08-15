@@ -385,12 +385,12 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
       str = btech_attribute_read(mech_context(mech)->database, player,
                                  A_CONTACTOPT, (char[LBUF_SIZE]){0});
       if (!*str) {
-        strlcpy(buff, DEFAULT_CONTACTOPTIONS, sizeof(buff));
+        (void)string_copy_bounded(buff, sizeof(buff), DEFAULT_CONTACTOPTIONS);
       } else {
         (void)string_copy_bounded(buff, CONTACT_OPTIONS_LENGTH_LIMIT + 1, str);
 
         if (strlen(buff) == 0)
-          strlcpy(buff, DEFAULT_CONTACTOPTIONS, sizeof(buff));
+          (void)string_copy_bounded(buff, sizeof(buff), DEFAULT_CONTACTOPTIONS);
       }
     } else {
       (void)string_copy_bounded(buff, CONTACT_OPTIONS_LENGTH_LIMIT + 1,
@@ -498,8 +498,8 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
         in_weapon_arc(mech, mech_position_real_x(temp_mech),
                       mech_position_real_y(temp_mech)));
 
-    strlcpy(move_type, get_move_type_id(mech_movement_type(temp_mech)),
-            sizeof(move_type));
+    (void)string_copy_bounded(move_type, sizeof(move_type),
+                              get_move_type_id(mech_movement_type(temp_mech)));
 
     if (isvb) {
       if (!inlos) {

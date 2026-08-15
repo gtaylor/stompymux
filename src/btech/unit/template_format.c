@@ -8,6 +8,7 @@
 #include "mech_internal.h"
 #include "mech_partnames_api.h"
 #include "mech_utils_api.h"
+#include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "section_types.h"
 #include "template_api.h"
@@ -389,7 +390,7 @@ void dump_locations(FILE *fp, Mech *mech, const char *const locdesc[],
       continue;
     const char *const *location = (const char *const *)checked_storage_at_const(
         (const void *)locdesc, location_count, sizeof(*locdesc), (size_t)x);
-    strlcpy(buf, *location, sizeof(buf));
+    (void)string_copy_bounded(buf, sizeof(buf), *location);
     size_t location_length = strlen(buf);
     for (size_t index = 0; index < location_length; index++) {
       char *character =

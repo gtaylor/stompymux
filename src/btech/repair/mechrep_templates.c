@@ -138,7 +138,7 @@ void mechrep_rsavetemp(DbRef player, void *data, char *buffer) {
                 "Saving %s...", args[0]);
   (void)snprintf(openfile, sizeof(openfile), "%s/",
                  btech_context_mech_template_path(mech_context(mech)));
-  strlcat(openfile, args[0], sizeof(openfile));
+  (void)string_append_bounded(openfile, sizeof(openfile), args[0]);
   fp = fopen(openfile, "w");
   if (!fp) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
@@ -214,7 +214,7 @@ void mechrep_rsavetemp2(DbRef player, void *data, char *buffer) {
                 "Saving %s", args[0]);
   (void)snprintf(openfile, sizeof(openfile), "%s/",
                  btech_context_mech_template_path(mech_context(mech)));
-  strlcat(openfile, args[0], sizeof(openfile));
+  (void)string_append_bounded(openfile, sizeof(openfile), args[0]);
 
   // Just warn on overweight.
   if (mech_weight_sub(GOD, mech, -1) > (mech_tonnage(mech) * 1024))

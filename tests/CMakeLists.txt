@@ -854,7 +854,8 @@ add_test(NAME help_index_integration
     $<TARGET_FILE:help_index_integration_test>)
 
 add_executable(configuration_toml_parse_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/server/configuration_toml_parse.c
-  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/server/configuration_toml.c)
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/server/configuration_toml.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/server/configuration_toml_load.c)
 target_link_libraries(configuration_toml_parse_test PRIVATE btmux_options tomlc17)
 target_include_directories(configuration_toml_parse_test PRIVATE
   "${CMAKE_BINARY_DIR}"

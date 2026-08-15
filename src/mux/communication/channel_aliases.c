@@ -247,7 +247,7 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
     raw_notify(evaluation, player, "Channel name too long.");
     return;
   }
-  strlcpy(channel, arg2, sizeof(channel));
+  (void)string_copy_bounded(channel, sizeof(channel), arg2);
 
   if (strchr(channel, ' ')) {
     raw_notify(evaluation, player, "Channel name cannot contain spaces.");

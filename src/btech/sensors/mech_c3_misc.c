@@ -1,7 +1,6 @@
 /* Implements BattleTech sensor mechanics for unit c3 misc. */
 
 #include <stdio.h>
-#include <string.h>
 
 #include "btech/context.h"
 #include "command_handlers_api.h"
@@ -358,8 +357,8 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool t_is_c3) {
                                     .y = mech_position_real_y(mech)},
                           .end = {.x = mech_position_real_x(other_mech),
                                   .y = mech_position_real_y(other_mech)}});
-    strlcpy(move_type, get_move_type_id(mech_movement_type(other_mech)),
-            sizeof(move_type));
+    (void)string_copy_bounded(move_type, sizeof(move_type),
+                              get_move_type_id(mech_movement_type(other_mech)));
 
     /* Get our weapon arc */
     arc = in_weapon_arc(mech, mech_position_real_x(other_mech),
@@ -469,8 +468,8 @@ void mech_network_show_status(DbRef player, Mech *mech, bool t_is_c3) {
                           .end = {.x = mech_position_real_x(other_mech),
                                   .y = mech_position_real_y(other_mech)}});
 
-    strlcpy(move_type, get_move_type_id(mech_movement_type(other_mech)),
-            sizeof(move_type));
+    (void)string_copy_bounded(move_type, sizeof(move_type),
+                              get_move_type_id(mech_movement_type(other_mech)));
 
     mech_name = btech_attribute_read(mech_context(other_mech)->database,
                                      mech_dbref(other_mech), A_MECHNAME,

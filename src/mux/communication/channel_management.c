@@ -296,13 +296,13 @@ static void comlist_description(GameDatabase *database, struct Channel *ch,
   if (buffer_size == 0)
     return;
   if (ch->chan_obj == NOTHING) {
-    strlcpy(buffer, "No description.", buffer_size);
+    (void)string_copy_bounded(buffer, buffer_size, "No description.");
     return;
   }
 
   description = attribute_get(database, ch->chan_obj, A_DESC, &flags);
   if (!*description) {
-    strlcpy(buffer, "No description.", buffer_size);
+    (void)string_copy_bounded(buffer, buffer_size, "No description.");
   } else {
     const size_t DESCRIPTION_LENGTH = strlen(description);
     size_t output = 0;

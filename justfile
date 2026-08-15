@@ -30,9 +30,8 @@ check-source-size:
 check-header-constants:
     status=0; grep -RInE --include='*.h' --include='*.h.in' '^[[:space:]]*#[[:space:]]*define[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+[^[:space:]"]' src/mux src/btech || status=$?; if (( status == 0 )); then echo 'Untyped object-like header constant found in src/.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
 
-# The unbounded string_copy wrapper is gone and direct strcpy is banned
-# tree-wide. Bounded-copy APIs with distinct return-value contracts are tracked
-# separately.
+# The unbounded string_copy wrapper and strcpy are banned tree-wide; callers
+# use the project's bounded helpers instead.
 check-bounded-copy:
     status=0; grep -RInE --include='*.c' --include='*.h' --include='*.h.in' '\b(string_copy|strcpy)[[:space:]]*\(' src || status=$?; if (( status == 0 )); then echo 'Unbounded copy found in src/; use string_copy_bounded.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
 
@@ -44,7 +43,7 @@ check-allocation-discipline:
 
 # Production code must use the project's checked parsing and copy helpers.
 check-unsafe-apis:
-    status=0; grep -RInE --include='*.c' --include='*.h' --include='*.h.in' '\b(strncpy|strcat|strncat|sprintf|vsprintf|gets|alloca|strtok|atoi)[[:space:]]*\(' src || status=$?; if (( status == 0 )); then echo 'Unsafe API usage found in src/.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
+    status=0; grep -RInE --include='*.c' --include='*.h' --include='*.h.in' '\b(strncpy|strcat|strncat|strlcpy|strlcat|sprintf|vsprintf|gets|alloca|strtok|atoi)[[:space:]]*\(' src || status=$?; if (( status == 0 )); then echo 'Unsafe API usage found in src/.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
 
 fmt-c:
     find src -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} -i

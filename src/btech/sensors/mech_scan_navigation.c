@@ -151,7 +151,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
       const int BEARING = map_bearing(&(MapRealSegment){
           .start = {.x = x0, .y = y0}, .end = {.x = x1, .y = y1}});
       (void)snprintf(trash, sizeof(trash), "%d degrees.", BEARING);
-      strlcat(buff, trash, sizeof(buff));
+      (void)string_append_bounded(buff, sizeof(buff), trash);
       mecha_notify(evaluation, player, buff);
     }
   } else {
@@ -292,7 +292,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
                        buf1, buf2);
       else
         (void)snprintf(trash, sizeof(trash), "%s hexes.", buf1);
-      strlcat(buff, trash, sizeof(buff));
+      (void)string_append_bounded(buff, sizeof(buff), trash);
       mecha_notify(evaluation, player, buff);
     }
   } else {
@@ -473,7 +473,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
                        buf1, buf2);
       else
         (void)snprintf(trash, sizeof(trash), "%s hexes and ", buf1);
-      strlcat(buff, trash, sizeof(buff));
+      (void)string_append_bounded(buff, sizeof(buff), trash);
 
       /* bearing */
       const int BEARING = map_bearing(&(MapRealSegment){
@@ -492,7 +492,7 @@ void mech_vector(DbRef player, void *data, char *buffer) {
                            .start = {.x = x0, .y = y0, .z = z0},
                            .end = {.x = x1, .y = y1, .z = z1}}));
       }
-      strlcat(buff, trash, sizeof(buff));
+      (void)string_append_bounded(buff, sizeof(buff), trash);
 
       mecha_notify(evaluation, player, buff);
     }

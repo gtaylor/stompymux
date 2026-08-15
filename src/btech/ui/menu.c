@@ -304,7 +304,8 @@ CoolMenu *cool_menu_selection_create(const CoolMenuSelectionRequest *request) {
   int columns = request->columns;
   char heading_buffer[LBUF_SIZE];
 
-  strlcpy(heading_buffer, request->heading, sizeof(heading_buffer));
+  (void)string_copy_bounded(heading_buffer, sizeof(heading_buffer),
+                            request->heading);
   heading_buffer[0] = ascii_to_upper(heading_buffer[0]);
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, heading_buffer, CM_ONE | CM_CENTER);
@@ -330,7 +331,7 @@ CoolMenu *sel_col_fun_string_menu_k(int columns, char *heading,
   char buf[LBUF_SIZE];
   int sick = 0;
 
-  strlcpy(buf, heading, sizeof(buf));
+  (void)string_copy_bounded(buf, sizeof(buf), heading);
   buf[0] = ascii_to_upper(buf[0]);
   cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
@@ -357,7 +358,7 @@ CoolMenu *sel_col_fun_string_menu_context_k(int columns, const char *heading,
   char entry[LBUF_SIZE];
   int sick = 0;
 
-  strlcpy(buf, heading, sizeof(buf));
+  (void)string_copy_bounded(buf, sizeof(buf), heading);
   buf[0] = ascii_to_upper(buf[0]);
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);

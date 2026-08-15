@@ -39,7 +39,8 @@ void try_to_find_name(const char *mechref, Mech *mech) {
 
   c = find_mechname_by_mechref(mechref);
   if (c)
-    strlcpy(((mech)->ud.mech_name), c, sizeof(((mech)->ud.mech_name)));
+    (void)string_copy_bounded(((mech)->ud.mech_name),
+                              sizeof(((mech)->ud.mech_name)), c);
 }
 
 int default_fuel_by_type(Mech *mech) {
@@ -315,7 +316,7 @@ int find_section(char *cmd, int type, int mtype) {
   char section[20];
   const char *const *locs;
 
-  strlcpy(section, cmd, sizeof(section));
+  (void)string_copy_bounded(section, sizeof(section), cmd);
   size_t section_length = strlen(section);
   for (size_t index = 0; index < section_length; index++) {
     char *character =

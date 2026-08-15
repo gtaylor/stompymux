@@ -114,7 +114,7 @@ static int scan_template_dir(const TemplateDirectoryScanRequest *request) {
       if (link == nullptr)
         continue;
 
-      strlcpy(link->name, ent->d_name, sizeof(link->name));
+      (void)string_copy_bounded(link->name, sizeof(link->name), ent->d_name);
       link->next = registry->directories;
       registry->directories = link;
       continue;

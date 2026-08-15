@@ -28,7 +28,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 static unsigned char scan_weapon_byte(const unsigned char *values, int index) {
   return *(const unsigned char *)checked_storage_at_const(
@@ -77,16 +76,18 @@ void print_enemy_weapon_status(Mech *mech, DbRef player) {
             weapbuff, sizeof(weapbuff), " %-18.18s [%2d]  ",
             checked_string_suffix(weapon_catalogue_name(WEAPON_INDEX), 3),
             running_sum + ii);
-        strlcat(weapbuff, location, sizeof(weapbuff));
+        (void)string_append_bounded(weapbuff, sizeof(weapbuff), location);
 
         if (mech_critical_is_nonfunctional(mech, loop,
                                            scan_weapon_integer(critical, ii))) {
-          strlcat(weapbuff, "[fg=black bold]*****[reset]", sizeof(weapbuff));
+          (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+                                      "[fg=black bold]*****[reset]");
         } else {
           if (scan_weapon_byte(weapdata, ii)) {
-            strlcat(weapbuff, "-----", sizeof(weapbuff));
+            (void)string_append_bounded(weapbuff, sizeof(weapbuff), "-----");
           } else {
-            strlcat(weapbuff, "[fg=green]Ready[reset]", sizeof(weapbuff));
+            (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+                                        "[fg=green]Ready[reset]");
           }
         }
         mecha_notify(evaluation, player, weapbuff);

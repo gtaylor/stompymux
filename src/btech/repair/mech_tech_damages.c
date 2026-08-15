@@ -423,20 +423,24 @@ void show_mechs_damage(DbRef player, void *data, char *buffer) {
     case REATTACH:
       fix_bth = find_tech_skill(player, mech) + REATTACH_DIFFICULTY;
       fix_time = REATTACH_TIME;
-      strlcpy(buf, repair_need_message(damage->type), sizeof(buf));
+      (void)string_copy_bounded(buf, sizeof(buf),
+                                repair_need_message(damage->type));
       break;
     case DETACH:
       fix_bth = find_tech_skill(player, mech) + REMOVES_DIFFICULTY;
       fix_time = REMOVES_TIME;
-      strlcpy(buf, repair_need_message(damage->type), sizeof(buf));
+      (void)string_copy_bounded(buf, sizeof(buf),
+                                repair_need_message(damage->type));
       break;
     case RESEAL:
       fix_bth = find_tech_skill(player, mech) + RESEAL_DIFFICULTY;
       fix_time = RESEAL_TIME;
-      strlcpy(buf, repair_need_message(damage->type), sizeof(buf));
+      (void)string_copy_bounded(buf, sizeof(buf),
+                                repair_need_message(damage->type));
       break;
     case REPLACESUIT:
-      strlcpy(buf, repair_need_message(damage->type), sizeof(buf));
+      (void)string_copy_bounded(buf, sizeof(buf),
+                                repair_need_message(damage->type));
       fix_time = REPLACESUIT_TIME;
       fix_bth = find_tech_skill(player, mech) + REPLACESUIT_DIFFICULTY;
       break;
