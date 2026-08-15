@@ -105,5 +105,5 @@ int load_template(DbRef player, Mech *mech, char *filename);
 void dump_mech_special_objects(BtechContext *context, DbRef player);
 void dump_weapons(BtechContext *context, DbRef player);
 char *techlist_func(Mech *mech, char *buffer);
-char *payloadlist_func(Mech *mech, char *buffer);
-char *partlist_func(Mech *mech, char *buffer);
+char *payloadlist_func(Mech *mech, char *buffer, size_t buffer_size);
+char *partlist_func(Mech *mech, char *buffer, size_t buffer_size);

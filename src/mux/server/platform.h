@@ -73,6 +73,19 @@ string_copy_bounded(char *destination, size_t size, const char *source) {
   return SOURCE_LENGTH < size;
 }
 
+[[nodiscard]] static inline bool
+string_append_bounded(char *destination, size_t size, const char *source) {
+  /* destination and source must point to NUL-terminated strings. */
+  const size_t DESTINATION_LENGTH = strnlen(destination, size);
+  if (DESTINATION_LENGTH == size)
+    return false;
+
+#pragma clang unsafe_buffer_usage begin
+  return string_copy_bounded(destination + DESTINATION_LENGTH,
+                             size - DESTINATION_LENGTH, source);
+#pragma clang unsafe_buffer_usage end
+}
+
 constexpr int CHANNEL_HISTORY_LEN = 20; /* at max 20 last msgs */
 constexpr int COMMAND_HISTORY_LEN = 10; /* at max 10 last msgs */
 

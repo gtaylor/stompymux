@@ -148,8 +148,8 @@ void unit_parts_list(Mech *mech, char buffer[static LBUF_SIZE]) {
   safe_tprintf_str(buffer, &bp, "%s:%d|", internal_name, mech_intpoints(mech));
 
   safe_tprintf_str(buffer, &bp, "%s|",
-                   payloadlist_func(mech, (char[MBUF_SIZE]){0}));
+                   payloadlist_func(mech, (char[MBUF_SIZE]){0}, MBUF_SIZE));
 
-  safe_str(partlist_func(mech, (char[LBUF_SIZE]){0}), buffer, &bp);
+  safe_str(partlist_func(mech, (char[LBUF_SIZE]){0}, LBUF_SIZE), buffer, &bp);
   *bp = '\0';
 }

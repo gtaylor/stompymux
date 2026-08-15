@@ -254,7 +254,7 @@ void list_charvaluestuff(EvaluationContext *evaluation, DbRef player,
       char entry[25];
       (void)snprintf(entry, sizeof(entry), "%-23s ",
                      character_value_definition(i)->name);
-      strncat(buf, entry, sizeof(buf) - strlen(buf) - 1);
+      (void)string_append_bounded(buf, sizeof(buf), entry);
       if (!((++found) % 3)) {
         mecha_notify(evaluation, player, buf);
         strcpy(buf, " ");
@@ -669,7 +669,7 @@ void init_btechstats(BtechContext *context) {
         continue;
       char fragment[4];
       (void)snprintf(fragment, sizeof(fragment), "%.3s", character);
-      strncat(tmpbuf, fragment, SBUF_SIZE - strlen(tmpbuf) - 1);
+      (void)string_append_bounded(tmpbuf, SBUF_SIZE, fragment);
     }
     if (strlen(tmpbuf) <= 3) {
       (void)snprintf(tmpbuf, SBUF_SIZE, "%.5s", name);

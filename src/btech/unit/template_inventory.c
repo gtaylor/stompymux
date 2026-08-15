@@ -209,7 +209,7 @@ char *techlist_func(Mech *mech, char *buffer) {
 /* Function to return the payload of a unit
  * Used by the btpayload_ref() scode function
  * Dany - 06/2005 */
-char *payloadlist_func(Mech *mech, char *buffer) {
+char *payloadlist_func(Mech *mech, char *buffer, size_t buffer_size) {
 
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
@@ -228,7 +228,7 @@ char *payloadlist_func(Mech *mech, char *buffer) {
   short payload_items_count[INVENTORY_ITEM_CAPACITY];
 
   /* Clear the buffer */
-  (void)snprintf(buffer, MBUF_SIZE, "%s", "");
+  (void)string_copy_bounded(buffer, buffer_size, "");
 
   /* Count each 'unique' item */
   weap_count = 0;
@@ -338,11 +338,11 @@ char *payloadlist_func(Mech *mech, char *buffer) {
 
     /* If we are not at the end, then put a | as a spacer */
     if (put_loop < (weap_count + ammo_count - 1)) {
-      strncat(payloadbuff, "|", sizeof(buffer) - strlen(buffer) - 1);
+      (void)string_append_bounded(payloadbuff, sizeof(payloadbuff), "|");
     }
 
     /* Adding it to the main buffer */
-    strncat(buffer, payloadbuff, sizeof(buffer) - strlen(buffer) - 1);
+    (void)string_append_bounded(buffer, buffer_size, payloadbuff);
 
   } /* End of printing loop */
 
@@ -350,7 +350,7 @@ char *payloadlist_func(Mech *mech, char *buffer) {
 }
 
 // Borrowed from payload_func
-char *partlist_func(Mech *mech, char *buffer) {
+char *partlist_func(Mech *mech, char *buffer, size_t buffer_size) {
 
   int temp_crit;
 
@@ -365,7 +365,7 @@ char *partlist_func(Mech *mech, char *buffer) {
   short partlist_count[INVENTORY_ITEM_CAPACITY];
 
   /* Clear the buffer */
-  (void)snprintf(buffer, LBUF_SIZE, "%s", "");
+  (void)string_copy_bounded(buffer, buffer_size, "");
 
   /* Count each 'unique' item */
   part_count = 0;
@@ -456,11 +456,11 @@ char *partlist_func(Mech *mech, char *buffer) {
 
       /* If we are not at the end, then put a | as a spacer */
       if (put_loop < (part_count - 1)) {
-        strncat(partlistbuff, "|", sizeof(buffer) - strlen(buffer) - 1);
+        (void)string_append_bounded(partlistbuff, sizeof(partlistbuff), "|");
       }
 
       /* Adding it to the main buffer */
-      strncat(buffer, partlistbuff, sizeof(buffer) - strlen(buffer) - 1);
+      (void)string_append_bounded(buffer, buffer_size, partlistbuff);
       break;
     case GYRO:
       const char *gyro_name = "Gyro";
@@ -473,11 +473,11 @@ char *partlist_func(Mech *mech, char *buffer) {
 
       /* If we are not at the end, then put a | as a spacer */
       if (put_loop < (part_count - 1)) {
-        strncat(partlistbuff, "|", sizeof(buffer) - strlen(buffer) - 1);
+        (void)string_append_bounded(partlistbuff, sizeof(partlistbuff), "|");
       }
 
       /* Adding it to the main buffer */
-      strncat(buffer, partlistbuff, sizeof(buffer) - strlen(buffer) - 1);
+      (void)string_append_bounded(buffer, buffer_size, partlistbuff);
       break;
     case HEAT_SINK:
       const char *heat_sink_name = "HeatSink";
@@ -490,11 +490,11 @@ char *partlist_func(Mech *mech, char *buffer) {
 
       /* If we are not at the end, then put a | as a spacer */
       if (put_loop < (part_count - 1)) {
-        strncat(partlistbuff, "|", sizeof(buffer) - strlen(buffer) - 1);
+        (void)string_append_bounded(partlistbuff, sizeof(partlistbuff), "|");
       }
 
       /* Adding it to the main buffer */
-      strncat(buffer, partlistbuff, sizeof(buffer) - strlen(buffer) - 1);
+      (void)string_append_bounded(buffer, buffer_size, partlistbuff);
       break;
     default:
       (void)snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
@@ -507,11 +507,11 @@ char *partlist_func(Mech *mech, char *buffer) {
 
       /* If we are not at the end, then put a | as a spacer */
       if (put_loop < (part_count - 1)) {
-        strncat(partlistbuff, "|", sizeof(buffer) - strlen(buffer) - 1);
+        (void)string_append_bounded(partlistbuff, sizeof(partlistbuff), "|");
       }
 
       /* Adding it to the main buffer */
-      strncat(buffer, partlistbuff, sizeof(buffer) - strlen(buffer) - 1);
+      (void)string_append_bounded(buffer, buffer_size, partlistbuff);
 
       break;
     }
@@ -520,7 +520,7 @@ char *partlist_func(Mech *mech, char *buffer) {
   if (act_count) {
     (void)snprintf(partlistbuff, sizeof(partlistbuff), "|Actuator:%d",
                    act_count);
-    strncat(buffer, partlistbuff, sizeof(buffer) - strlen(buffer) - 1);
+    (void)string_append_bounded(buffer, buffer_size, partlistbuff);
   }
 
   return buffer;

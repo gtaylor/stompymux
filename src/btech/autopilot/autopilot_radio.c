@@ -373,8 +373,8 @@ void auto_radio_command_help(Autopilot *autopilot, Mech *mech,
       break;
     if (previous_name != nullptr && !strcmp(command->name, previous_name))
       continue;
-    strncat(mesg, " ", LBUF_SIZE);
-    strncat(mesg, command->name, LBUF_SIZE);
+    (void)string_append_bounded(mesg, LBUF_SIZE, " ");
+    (void)string_append_bounded(mesg, LBUF_SIZE, command->name);
     previous_name = command->name;
   }
 

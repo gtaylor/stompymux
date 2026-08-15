@@ -57,7 +57,7 @@ void do_show(CommandInvocation *invocation) {
       char entry[80];
       (void)snprintf(entry, sizeof(entry), "%c %s", index > 0 ? ',' : ' ',
                      *help);
-      strncat(buf, entry, sizeof(buf) - strlen(buf) - 1);
+      (void)string_append_bounded(buf, sizeof(buf), entry);
     }
     mecha_notify(&command->evaluation, player, buf);
     return;

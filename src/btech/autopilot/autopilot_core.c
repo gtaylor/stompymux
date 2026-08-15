@@ -66,7 +66,6 @@ static AutoCommandText auto_command_text(const AutopilotCommand *node) {
   AutoCommandText command = {0};
   char *buf = command.text;
   int i;
-  size_t len;
 
   (void)snprintf(buf, sizeof(command.text), "%-10s",
                  autopilot_argument_list_get(&node->arguments, 0));
@@ -76,12 +75,8 @@ static AutoCommandText auto_command_text(const AutopilotCommand *node) {
     const char *argument =
         autopilot_argument_list_get(&node->arguments, (size_t)i);
     if (argument != nullptr) {
-      len = strlen(buf);
-      if (len < sizeof(command.text) - 1)
-        strncat(buf, " ", sizeof(command.text) - len - 1);
-      len = strlen(buf);
-      if (len < sizeof(command.text) - 1)
-        strncat(buf, argument, sizeof(command.text) - len - 1);
+      (void)string_append_bounded(buf, sizeof(command.text), " ");
+      (void)string_append_bounded(buf, sizeof(command.text), argument);
     }
   }
 
