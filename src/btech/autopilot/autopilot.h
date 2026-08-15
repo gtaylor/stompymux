@@ -5,6 +5,7 @@
 
 #include <time.h>
 
+#include "btconfig.h"
 #include "btech_event.h"
 #include "map_coordinates.h"
 #include "mech_events.h"
@@ -18,21 +19,18 @@ typedef struct MuxEvent MuxEvent;
 
 constexpr int AUTOPILOT_MEMORY =
     100; /* Number of command slots available to AI */
-#define AUTOPILOT_MAX_ARGS                                                     \
-  5 /* Max number of arguments for a given AI Command                          \
-       Includes the command as the first argument */
+constexpr int AUTOPILOT_MAX_ARGS =
+    5; /* Max arguments, including the command as the first argument */
 
 /* The various flags for the AI */
-#define AUTOPILOT_AUTOGUN                                                      \
-  1 /* Is autogun enabled, ie: shoot what AI wants to                          \
-     */
+constexpr int AUTOPILOT_AUTOGUN = 1; /* Is autogun enabled */
 constexpr int AUTOPILOT_GUNZOMBIE = 2;
 constexpr int AUTOPILOT_PILZOMBIE = 4;
 constexpr int AUTOPILOT_ROAM = 8;   /* Are we roaming around */
 constexpr int AUTOPILOT_LSENS = 16; /* Should change sensors or user set them */
 constexpr int AUTOPILOT_CHASETARG = 32; /* Should chase the target */
-#define AUTOPILOT_WAS_CHASE_ON                                                 \
-  64 /* Was chasetarg on, for use with movement stuff */
+constexpr int AUTOPILOT_WAS_CHASE_ON =
+    64; /* Was chasetarg on, for use with movement stuff */
 constexpr int AUTOPILOT_SWARMCHARGE = 128;
 constexpr int AUTOPILOT_ASSIGNED_TARGET =
     256; /* We given a specific target ? */
@@ -42,22 +40,20 @@ constexpr int AUTOPILOT_NC_DELAY =
     1; /* Generic command wait time before executing */
 
 constexpr int AUTOPILOT_GOTO_TICK = 4; /* How often to check any GOTO event */
-#define AUTOPILOT_LEAVE_TICK                                                   \
-  6 /* How often to check if we've left                                        \
-       the bay/hangar */
+constexpr int AUTOPILOT_LEAVE_TICK =
+    6; /* How often to check if we've left the bay/hangar */
 constexpr int AUTOPILOT_WAITFOE_TICK = 4;
 constexpr int AUTOPILOT_PURSUE_TICK = 4;
 
 constexpr int AUTOPILOT_FOLLOW_TICK = 4;
-#define AUTOPILOT_FOLLOW_UPDATE_TICK                                           \
-  10 /* When should we update the target hex */
+constexpr int AUTOPILOT_FOLLOW_UPDATE_TICK =
+    10; /* When should we update the target hex */
 
-#define AUTOPILOT_CHASETARG_UPDATE_TICK                                        \
-  30 /* When should we update chasetarg                                        \
-      */
+constexpr int AUTOPILOT_CHASETARG_UPDATE_TICK =
+    30; /* When should we update chasetarg */
 
-#define AUTOPILOT_STARTUP_TICK                                                 \
-  (STARTUP_TIME + AUTOPILOT_NC_DELAY) /* Delay for startup */
+constexpr int AUTOPILOT_STARTUP_TICK =
+    STARTUP_TIME + AUTOPILOT_NC_DELAY; /* Delay for startup */
 
 /* Defines for the autogun/autosensor stuff */
 constexpr int AUTO_GUN_TICK = 1;          /* Every second */
@@ -65,15 +61,13 @@ constexpr float AUTO_GUN_MAX_HEAT = 6.0F; /* Last heat we let heat go to */
 constexpr int AUTO_GUN_MAX_TARGETS = 100; /* Don't really use this one */
 constexpr int AUTO_GUN_MAX_RANGE = 30;    /* Max range to look for targets */
 constexpr int AUTO_GUN_UPDATE_TICK = 30;  /* When to look for a new target */
-#define AUTO_GUN_IDLE_TICK                                                     \
-  10 /* How often to call autogun when in idle mode                            \
-      */
+constexpr int AUTO_GUN_IDLE_TICK =
+    10; /* How often to call autogun when in idle mode */
 constexpr float AUTO_GUN_PHYSICAL_RANGE_MIN =
     3.0F; /* Min range at which to physically attack other targets if our main
              target is beyond this distance */
-#define AUTO_PROFILE_TICK                                                      \
-  180 /* How often to update the weapon profile                                \
-         of the AI */
+constexpr int AUTO_PROFILE_TICK =
+    180; /* How often to update the weapon profile of the AI */
 constexpr int AUTO_PROFILE_MAX_SIZE = 30; /* Size of the profile array */
 constexpr int AUTO_SENSOR_TICK = 30;      /* Every 30 seconds or so */
 
@@ -93,16 +87,12 @@ constexpr int AUTO_ROAM_SPOT = 2; /* Roaming a single area */
 /* Tick values etc.. */
 constexpr int AUTO_ROAM_TICK = 3;           /* How often to update */
 constexpr int AUTO_ROAM_NEW_HEX_TICK = 100; /* How often to pick a new hex */
-#define AUTO_ROAM_MAX_RADIUS                                                   \
-  30 /* Max distance a person can make AI                                      \
-        radius roam */
-#define AUTO_ROAM_MAX_MAP_DISTANCE                                             \
-  50 /* Max distance an AI will try to roam                                    \
-        at a given time if its roaming the                                     \
-        whole map */
-#define AUTO_ROAM_MAX_ITERATIONS                                               \
-  3 /* Max number of times AI will look                                        \
-       for a new roam hex */
+constexpr int AUTO_ROAM_MAX_RADIUS =
+    30; /* Max distance a person can make AI radius roam */
+constexpr int AUTO_ROAM_MAX_MAP_DISTANCE =
+    50; /* Max distance an AI will try to roam at a given time */
+constexpr int AUTO_ROAM_MAX_ITERATIONS =
+    3; /* Max number of times AI will look for a new roam hex */
 
 /*! \todo {Not sure what these are look into it} */
 constexpr int AUTO_GOET = 15;

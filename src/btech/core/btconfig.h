@@ -28,7 +28,8 @@ constexpr int AERO_SECS_THRUST = 30;
 
 constexpr int PIL_XP_EVERY_N_STEPS = 10;
 
-#define MINE_NEXT_MODIFIER (2 / 3)
+/* Preserves legacy integer arithmetic; changing this zero alters gameplay. */
+constexpr int MINE_NEXT_MODIFIER = 2 / 3;
 constexpr int MINE_MIN = 5;
 constexpr int MINE_TABLE = 2; /* 0 = General, 2 = KICK */
 
@@ -49,9 +50,7 @@ constexpr int ARTILLERY_MAPSHEET_SIZE = 20; /* Size of single arty mapsheet */
 constexpr int ARTILLERY_MINIMUM_FLIGHT =
     10; /* How long's the minimum flight time */
 
-#define DROP_TO_STAND_RECYCLE (MOVE_TICK * 12)
-#define JUMP_TO_HIT_RECYCLE                                                    \
-  (JUMP_TICK * 12 / (MechType(mech) == CLASS_BSUIT ? 4 : 1))
+constexpr int DROP_TO_STAND_RECYCLE = MOVE_TICK * 12;
 
 constexpr int INITIAL_PLOS_TICK = 1; /* How many secs after startup */
 constexpr int LOS_TICK = 1;          /* Update LOS tables */
@@ -60,7 +59,7 @@ constexpr int PLOS_TICK = 1;     /* How many seconds interval between checks */
 constexpr int SCHANGE_TICK = 10; /* Sensor change */
 constexpr int SPOT_TICK = 10; /* How oft is the range for spotting checked? */
 
-#define PHYSICAL_RECYCLE_TIME (30 * WEAPON_TICK)
+constexpr int PHYSICAL_RECYCLE_TIME = 30 * WEAPON_TICK;
 constexpr int STARTUP_TIME = 30;
 constexpr int UNCONSCIOUS_TIME =
     30; /* ORIGINAL authors thought it was UNCONCIOUS */
@@ -72,26 +71,23 @@ constexpr int OOD_TICK = 1;
 constexpr int DUMP_TICK =
     30; /* How long does it take to eject 1 ton of ammo? */
 constexpr int DUMP_GRAD_TICK = 1; /* This oft we _maybe_ dump stuff */
-#define DUMP_SPEED (DUMP_TICK / DUMP_GRAD_TICK)
+constexpr int DUMP_SPEED = DUMP_TICK / DUMP_GRAD_TICK;
 constexpr int MASC_TICK = 60;    /* Time for each MASC regen / fail */
 constexpr int SCHARGE_TICK = 60; /* Time for each Supercharger regen / fail */
-#define RANDOM_TICK                                                            \
-  6 /* How many seconds do we want to use same rnd# for                        \
-       BTHs etc */
-#define DS_SPAM_TIME                                                           \
-  10 /* At max, 1 mapemit every 10 secs concerning a                           \
-        single DS */
+constexpr int RANDOM_TICK =
+    6; /* How many seconds do we want to use same rnd# for BTHs etc */
+constexpr int DS_SPAM_TIME =
+    10; /* At max, 1 mapemit every 10 secs concerning a single DS */
 
-#define MAX_BOOM_TIME                                                          \
-  30                        /* Max time between first and last CT int hit for  \
-                               fusion explosion */
-constexpr int BOOM_BTH = 9; /* Roll below this or 'boom' */
+constexpr int MAX_BOOM_TIME = 30; /* Max time between first and last CT int hit
+                                     for fusion explosion */
+constexpr int BOOM_BTH = 9;       /* Roll below this or 'boom' */
 constexpr int MAX_C3_SLAVES = 3;
 
-#define CHARGE_TIMER_LIMIT                                                     \
-  60 /* How long should we let them 'charge' for (in seconds) */
-#define CHARGE_DIST_TRIGGER                                                    \
-  0.6 /* At what range should we trigger the charge (hexes) */
+constexpr int CHARGE_TIMER_LIMIT =
+    60; /* How long should we let them 'charge' for (in seconds) */
+constexpr double CHARGE_DIST_TRIGGER =
+    0.6; /* At what range should we trigger the charge (hexes) */
 
 /* Skills used if pilot's not valid and no default mech skills */
 constexpr int DEFAULT_GUNNERY = 6;

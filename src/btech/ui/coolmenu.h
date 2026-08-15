@@ -43,8 +43,8 @@ constexpr int CM_NOTOG = 0x400;     /* Not really toggleable */
 constexpr int CM_NORIGHT = 0x800;   /* No right-end field */
 constexpr int CM_NOCUT = 0x1000;    /* Turn off cutoff */
 
-#define LETTERFIRST (CM_TOGGLE | CM_NUMBER | CM_STRING)
-#define RIGHTEDGES (CM_TOGGLE | CM_NUMBER)
+constexpr int LETTERFIRST = CM_TOGGLE | CM_NUMBER | CM_STRING;
+constexpr int RIGHTEDGES = CM_TOGGLE | CM_NUMBER;
 
 typedef struct CoolMenu {
   int id;       /* Used for some purposes by external agency */

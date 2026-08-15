@@ -94,17 +94,17 @@ constexpr int NUM_BOMBS = 9;
 
 constexpr int EMPTY = 0;
 constexpr int WEAPON_BASE_INDEX = 1;
-#define AMMO_BASE_INDEX (WEAPON_BASE_INDEX + NUM_WEAPONS) /* 193 */
-#define BOMB_BASE_INDEX (AMMO_BASE_INDEX + NUM_WEAPONS)   /* 385 */
-#define SPECIAL_BASE_INDEX (BOMB_BASE_INDEX + NUM_BOMBS)  /* 394 */
+constexpr int AMMO_BASE_INDEX = WEAPON_BASE_INDEX + NUM_WEAPONS; /* 193 */
+constexpr int BOMB_BASE_INDEX = AMMO_BASE_INDEX + NUM_WEAPONS;   /* 385 */
+constexpr int SPECIAL_BASE_INDEX = BOMB_BASE_INDEX + NUM_BOMBS;  /* 394 */
 constexpr int OSPECIAL_BASE_INDEX = 220;
 constexpr int CARGO_BASE_INDEX = 512;
 
-#define SPECIALCOST_SIZE (CARGO_BASE_INDEX - SPECIAL_BASE_INDEX)
-#define AMMOCOST_SIZE NUM_WEAPONS
-#define WEAPCOST_SIZE NUM_WEAPONS
-#define CARGOCOST_SIZE (NUM_ITEMS - NUM_ITEMS_M)
-#define BOMBCOST_SIZE NUM_BOMBS
+constexpr int SPECIALCOST_SIZE = CARGO_BASE_INDEX - SPECIAL_BASE_INDEX;
+constexpr int AMMOCOST_SIZE = NUM_WEAPONS;
+constexpr int WEAPCOST_SIZE = NUM_WEAPONS;
+constexpr int CARGOCOST_SIZE = NUM_ITEMS - NUM_ITEMS_M;
+constexpr int BOMBCOST_SIZE = NUM_BOMBS;
 
 static inline bool equipment_is_ammunition(int equipment) {
   return equipment >= AMMO_BASE_INDEX && equipment < BOMB_BASE_INDEX;
@@ -459,11 +459,9 @@ constexpr int ATM = 0x00020000;    /* Was Caseless. Now ATM Missile */
 constexpr int DFM = 0x00040000; /* DFM - 2 worst rolls outta 3 for missiles */
 constexpr int ELRM =
     0x00080000; /* ELRM - 2 worst rolls outta 3 for missiles under */
-constexpr int MRM = 0x00100000;   /* MRM - +1 BTH */
-constexpr int CHEAT = 0x00200000; /* Can cause heat or damage */
-#define HVYW                                                                   \
-  0x00400000 /* Clam HeavyWeapons (call 'm so cuz FA$A will undoubtly bring    \
-                more variants to the lasers) */
+constexpr int MRM = 0x00100000;      /* MRM - +1 BTH */
+constexpr int CHEAT = 0x00200000;    /* Can cause heat or damage */
+constexpr int HVYW = 0x00400000;     /* Clan heavy weapons */
 constexpr int RFAC = 0x00800000;     /* Rapid fire ACs */
 constexpr int GMG = 0x01000000;      /* Gattling MGs */
 constexpr int INARC = 0x02000000;    /* iNARC launcher */
@@ -471,11 +469,11 @@ constexpr int RAC = 0x04000000;      /* Rotary AC */
 constexpr int HVYGAUSS = 0x08000000; /* Heavy Gauss */
 constexpr int ROCKET =
     0x10000000; /* Rocket launchers. +1 to hit, one shot wonders */
-#define SPLIT_CRITS                                                            \
-  0x20000000 /* Certain weapons can split crits. Mark them appropriately */
+constexpr int SPLIT_CRITS =
+    0x20000000; /* Certain weapons can split critical slots */
 constexpr int SNUBPPC = 0x40000000; /* Snub-nosed PPC */
 
-#define PCOMBAT (PC_HEAT | PC_IMPA | PC_SHAR)
+constexpr int PCOMBAT = PC_HEAT | PC_IMPA | PC_SHAR;
 
 /* Section #defs... */
 
@@ -522,6 +520,6 @@ constexpr int NUM_DS_SECTIONS = 6;
 constexpr int NUM_TICS = 4;
 constexpr int MAX_WEAPONS_PER_MECH = 96; /* Thanks to crit limits */
 constexpr int SINGLE_TICLONG_SIZE = 32;
-#define TICLONGS (MAX_WEAPONS_PER_MECH / SINGLE_TICLONG_SIZE)
+constexpr int TICLONGS = MAX_WEAPONS_PER_MECH / SINGLE_TICLONG_SIZE;
 
 /* structure for each critical hit section */

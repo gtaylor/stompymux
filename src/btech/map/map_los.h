@@ -20,7 +20,7 @@ constexpr int MAPLOSHEX_SEEN = 1;
 constexpr int MAPLOSHEX_SEETERRAIN = 2;
 constexpr int MAPLOSHEX_SEEELEV = 4;
 constexpr int MAPLOSHEX_LIT = 8;
-#define MAPLOSHEX_SEE (MAPLOSHEX_SEETERRAIN | MAPLOSHEX_SEEELEV)
+constexpr int MAPLOSHEX_SEE = MAPLOSHEX_SEETERRAIN | MAPLOSHEX_SEEELEV;
 
 typedef struct HexLosMap {
   BtechContext *context;
