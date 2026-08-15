@@ -32,7 +32,7 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
   MechPersistenceSnapshot snapshot;
   DbRef mech_dbref;
   int result;
-  int step;
+  int step = SQLITE_DONE;
 
   statement = nullptr;
   result = btech_special_prepare_v2(
@@ -242,7 +242,7 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
   int seen[11];
   int result;
   int slot;
-  int step;
+  int step = SQLITE_DONE;
   int value;
 
   statement = nullptr;
@@ -326,7 +326,7 @@ int btech_special_load_mech_stagger_damage(sqlite3 *sqlite,
   int expected_position;
   int position;
   int result;
-  int step;
+  int step = SQLITE_DONE;
 
   statement = nullptr;
   current_mech = NOTHING;

@@ -33,7 +33,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
   char buf[MAX_STRING_LENGTH];
   int x;
   int y;
-  int value;
+  int value = 0;
   float decimal_value;
   char cmd[MAX_STRING_LENGTH];
   char description_buffer[BTECH_TEXT_CAPACITY];

@@ -27,7 +27,7 @@ ArmorEvaluation armor_evaluate(const ArmorEvaluationRequest *request) {
   const int FLAG = request->flags;
   int armor_value;
   int armor_percent;
-  int armor_denom;
+  int armor_denom = 0;
   int repair_flag = 0;
 
   /*

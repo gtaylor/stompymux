@@ -69,7 +69,7 @@ static int btech_economy_table_has_item_name(sqlite3 *sqlite, int *has_name) {
   sqlite3_stmt *statement;
   const unsigned char *column;
   int result;
-  int step;
+  int step = SQLITE_DONE;
 
   statement = nullptr;
   *has_name = 0;
@@ -154,7 +154,7 @@ static int btech_load_costs(sqlite3 *sqlite, BtechContext *btech) {
   int part;
   int result;
   int skipped;
-  int step;
+  int step = SQLITE_DONE;
 
   statement = nullptr;
   result = -1;

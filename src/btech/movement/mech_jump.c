@@ -62,8 +62,8 @@ void mech_jump(DbRef player, void *data, char *buffer) {
   int argc;
   DbRef target;
   char target_id[2];
-  short mapx;
-  short mapy;
+  short mapx = -1;
+  short mapy = -1;
   int bearing;
   float range = 0.0;
   float realx;

@@ -509,7 +509,7 @@ static void dropship_place_departing_unit(Mech *ds, Mech *mech, DbRef frombay) {
   int i;
   int nx;
   int ny;
-  BattleMap *mech_map;
+  BattleMap *mech_map = nullptr;
 
   for (i = 0; i < NUM_BAYS; i++)
     if (mech_bay_dbref(ds, i) == frombay)

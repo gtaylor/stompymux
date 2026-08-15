@@ -404,8 +404,8 @@ static bool state_parse_quoted_string(const char *text, ObjectStateValue *value,
           '\t';
       break;
     case 'x': {
-      int high;
-      int low;
+      int high = 0;
+      int low = 0;
 
       bool invalid_escape = index + 2 >= LENGTH - 1;
       if (!invalid_escape) {

@@ -71,7 +71,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   DbRef next;
   bool powers[POWER_COUNT];
   int result;
-  int step;
+  int step = SQLITE_DONE;
   DbRef zone;
 
   statement = nullptr;

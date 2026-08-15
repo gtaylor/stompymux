@@ -39,7 +39,7 @@ int btech_special_load_mechrep(sqlite3 *sqlite, BtechContext *context) {
   DbRef object;
   DbRef target;
   int result;
-  int step;
+  int step = SQLITE_DONE;
 
   statement = nullptr;
   result = btech_special_prepare_v2(
@@ -78,7 +78,7 @@ int btech_special_load_turrets(sqlite3 *sqlite, BtechContext *context) {
   int arcs;
   int lock_mode;
   int result;
-  int step;
+  int step = SQLITE_DONE;
   int target_x;
   int target_y;
   int target_z;
@@ -135,7 +135,7 @@ int btech_special_load_turret_tics(sqlite3 *sqlite, BtechContext *context) {
   DbRef turret_dbref;
   int expected_tic;
   int result;
-  int step;
+  int step = SQLITE_DONE;
   int tic_index;
   int value;
 
@@ -202,7 +202,7 @@ int btech_special_load_autopilots(sqlite3 *sqlite, BtechContext *context) {
   DbRef mech_dbref;
   DbRef target;
   int result;
-  int step;
+  int step = SQLITE_DONE;
 
   statement = nullptr;
   result = btech_special_prepare_v2(
@@ -323,7 +323,7 @@ static int btech_special_load_autopilot_command_args(
   int argument_index;
   int length;
   int result;
-  int step;
+  int step = SQLITE_DONE;
 
   definition = btech_special_autopilot_command(COMMAND_ENUM);
   if (!definition || ARGUMENT_COUNT != definition->argcount + 1 ||
@@ -397,7 +397,7 @@ int btech_special_load_autopilot_commands(sqlite3 *sqlite,
   int expected_position;
   int position;
   int result;
-  int step;
+  int step = SQLITE_DONE;
 
   statement = nullptr;
   current_autopilot = NOTHING;
@@ -468,7 +468,7 @@ int btech_special_load_autopilot_path(sqlite3 *sqlite, BtechContext *context) {
   int parent_y;
   int position;
   int result;
-  int step;
+  int step = SQLITE_DONE;
   int x;
   int y;
 

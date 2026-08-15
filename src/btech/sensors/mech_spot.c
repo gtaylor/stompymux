@@ -260,8 +260,8 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
 
   float spot_range;
   float range;
-  float enemy_x;
-  float enemy_y;
+  float enemy_x = 0.0F;
+  float enemy_y = 0.0F;
   float enemy_z = 0;
   int los;
   int mapx = 0;
