@@ -24,7 +24,7 @@ static bool oversized_first_word_is_bounded(void) {
       strnlen(output, LBUF_SIZE) < LBUF_SIZE;
 
   free(input);
-  free_lbuf(output);
+  free_buf(output);
   return bounded;
 }
 

@@ -11,29 +11,22 @@ constexpr int LBUF_SIZE = 16384;
 constexpr int MBUF_SIZE = 2048;
 constexpr int SBUF_SIZE = 256;
 
+static inline void free_buf(void *buffer) {
+  if (buffer)
+    free(buffer);
+}
+
 [[nodiscard]] static inline void *alloc_lbuf(const char *description) {
   (void)description;
   return checked_storage_allocate(LBUF_SIZE);
-}
-static inline void free_lbuf(void *b) {
-  if (b)
-    free(b);
 }
 [[nodiscard]] static inline void *alloc_mbuf(const char *description) {
   (void)description;
   return checked_storage_allocate(MBUF_SIZE);
 }
-static inline void free_mbuf(void *b) {
-  if (b)
-    free(b);
-}
 [[nodiscard]] static inline void *alloc_sbuf(const char *description) {
   (void)description;
   return checked_storage_allocate(SBUF_SIZE);
-}
-static inline void free_sbuf(void *b) {
-  if (b)
-    free(b);
 }
 
 static inline int safe_str(const char *s, char *b, char **p) {

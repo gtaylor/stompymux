@@ -348,7 +348,7 @@ static void process_cmdent(const CommandEntryDispatch *dispatch) {
 
       for (i = 0; i < nargs; i++)
         if (*command_argument_slot(args, MAX_ARG, (size_t)i) != nullptr)
-          free_lbuf(*command_argument_slot(args, MAX_ARG, (size_t)i));
+          free_buf(*command_argument_slot(args, MAX_ARG, (size_t)i));
 
     } else {
 
@@ -442,7 +442,7 @@ void process_command(CommandContext *context, char *command, char *arguments[],
       lcbuf = alloc_lbuf("process_command.LOG.allcmds");
       (void)snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);
-      free_lbuf(lcbuf);
+      free_buf(lcbuf);
       ENDLOG(context->log);
     }
     send_channel(
@@ -455,7 +455,7 @@ void process_command(CommandContext *context, char *command, char *arguments[],
       lcbuf = alloc_lbuf("process_command.LOG.allcmds");
       (void)snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);
-      free_lbuf(lcbuf);
+      free_buf(lcbuf);
       ENDLOG(context->log);
     }
   }
@@ -643,7 +643,7 @@ void process_command(CommandContext *context, char *command, char *arguments[],
                                              .arguments = arg,
                                              .unparsed_command = command});
     }
-    free_lbuf(lcbuf);
+    free_buf(lcbuf);
     goto exit;
   }
   /* Lua handlers observe the original unmatched command. */
@@ -730,7 +730,7 @@ void process_command(CommandContext *context, char *command, char *arguments[],
     match_zone_exit(&context->match);
     exit = last_match_result(&context->match);
     if (exit != NOTHING) {
-      free_lbuf(lcbuf);
+      free_buf(lcbuf);
       move_exit(&context->evaluation, PLAYER, exit, nullptr, 0);
       goto exit;
     }
@@ -740,7 +740,7 @@ void process_command(CommandContext *context, char *command, char *arguments[],
         lua_global_command_match(runtime->lua_owner->runtime,
                                  context->descriptor, PLAYER, CAUSE, command);
   succ = lua_succ;
-  free_lbuf(lcbuf);
+  free_buf(lcbuf);
 
   /*
    * If we still didn't find anything, tell how to get help.
@@ -754,13 +754,13 @@ void process_command(CommandContext *context, char *command, char *arguments[],
       lcbuf = alloc_lbuf("process_commands.LOG.badcmd");
       (void)snprintf(lcbuf, LBUF_SIZE, " entered: '%s'", command);
       log_text(lcbuf);
-      free_lbuf(lcbuf);
+      free_buf(lcbuf);
       ENDLOG(context->log);
     }
   }
 exit:
   context->debug_command = cmdsave;
-  free_lbuf(macro_command);
+  free_buf(macro_command);
 }
 
 /*

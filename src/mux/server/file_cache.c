@@ -97,7 +97,7 @@ static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
   fp = *cp;
   while (fp != nullptr) {
     tfp = fp->hdr.nxt;
-    free_mbuf(fp);
+    free_buf(fp);
     fp = tfp;
   }
   *cp = nullptr;
@@ -163,14 +163,14 @@ static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
     }
     nmax = (int)read(fd, buff, LBUF_SIZE);
   }
-  free_lbuf(buff);
+  free_buf(buff);
   close(fd);
 
   if (!valid_utf8 || !utf8_validator_is_complete(&utf8)) {
     fp = *cp;
     while (fp != nullptr) {
       tfp = fp->hdr.nxt;
-      free_mbuf(fp);
+      free_buf(fp);
       fp = tfp;
     }
     *cp = nullptr;
@@ -188,7 +188,7 @@ static int fcache_read(EvaluationContext *evaluation, FBLOCK **cp,
 
   if (fp->hdr.nchars == 0) {
     *cp = nullptr;
-    free_mbuf(fp);
+    free_buf(fp);
   }
   return tchars;
 }
@@ -199,7 +199,7 @@ static void fcache_clear_entry(FCACHE *entry) {
   while (block != nullptr) {
     FBLOCK *next = block->hdr.nxt;
 
-    free_mbuf(block);
+    free_buf(block);
     block = next;
   }
   entry->fileblock = nullptr;
@@ -318,7 +318,7 @@ void fcache_load(EvaluationContext *evaluation, FileCache *cache,
   if (player != NOTHING) {
     notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
   }
-  free_lbuf(buff);
+  free_buf(buff);
 }
 
 FileCache *file_cache_create(EvaluationContext *evaluation,

@@ -56,7 +56,7 @@ void descriptor_flow_destroy(Descriptor *d) {
   d->flow = nullptr;
   if (flow->destroy != nullptr)
     flow->destroy(flow->flow_data);
-  free_lbuf(flow->last_prompt);
+  free_buf(flow->last_prompt);
   free(flow);
 }
 
@@ -71,7 +71,7 @@ static void flow_apply_outcome(Descriptor *d, FlowOutcome outcome) {
     switch (outcome.action) {
     case FLOW_ACTION_WAIT:
       if (outcome.prompt != nullptr) {
-        free_lbuf(flow->last_prompt);
+        free_buf(flow->last_prompt);
         flow->last_prompt = alloc_lbuf("flow_last_prompt");
         (void)string_copy_bounded(flow->last_prompt, LBUF_SIZE, outcome.prompt);
       }

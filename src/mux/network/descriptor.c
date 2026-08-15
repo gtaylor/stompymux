@@ -331,7 +331,7 @@ void descriptor_shutdown(Descriptor *descriptor,
                              descriptor->player),
         descriptor->addr, descriptor_shutdown_reason_at(reason),
         game_object_name(runtime->world->database, descriptor->player));
-    free_sbuf(flags);
+    free_buf(flags);
 
     descriptor_announce_disconnect(descriptor->player, descriptor,
                                    descriptor_shutdown_message_at(reason));

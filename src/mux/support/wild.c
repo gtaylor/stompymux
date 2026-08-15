@@ -497,7 +497,7 @@ int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
     char **argument = (char **)checked_storage_at((void *)args, (size_t)nargs,
                                                   sizeof(*args), (size_t)i);
     if ((*argument != nullptr) && (!**argument || !value)) {
-      free_lbuf(*argument);
+      free_buf(*argument);
       *argument = nullptr;
     }
   }

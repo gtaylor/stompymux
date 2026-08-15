@@ -8,7 +8,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 
 const char *game_object_name(GameDatabase *database, DbRef thing) {
   (void)database;
@@ -44,15 +44,15 @@ int main(void) {
   game_database_object(&database, 0)->has_dark_flag = true;
   game_database_object(&database, GOD)->type = OBJECT_TYPE_PLAYER;
 
-  LbufText nothing = unparse_object_numonly(&database, NOTHING);
-  LbufText home = unparse_object_numonly(&database, HOME);
-  LbufText invalid = unparse_object_numonly(&database, 3);
-  LbufText valid = unparse_object_numonly(&database, 0);
-  LbufText rendered_nothing = unparse_object(&database, nullptr, 0, NOTHING);
-  LbufText rendered_home = unparse_object(&database, nullptr, 0, HOME);
-  LbufText rendered_invalid = unparse_object(&database, nullptr, 0, 3);
-  LbufText examinable = unparse_object(&database, nullptr, GOD, 0);
-  LbufText hidden_details = unparse_object(&database, nullptr, 0, 0);
+  OwnedText nothing = unparse_object_numonly(&database, NOTHING);
+  OwnedText home = unparse_object_numonly(&database, HOME);
+  OwnedText invalid = unparse_object_numonly(&database, 3);
+  OwnedText valid = unparse_object_numonly(&database, 0);
+  OwnedText rendered_nothing = unparse_object(&database, nullptr, 0, NOTHING);
+  OwnedText rendered_home = unparse_object(&database, nullptr, 0, HOME);
+  OwnedText rendered_invalid = unparse_object(&database, nullptr, 0, 3);
+  OwnedText examinable = unparse_object(&database, nullptr, GOD, 0);
+  OwnedText hidden_details = unparse_object(&database, nullptr, 0, 0);
   int result = 0;
 
   if (nothing.owned == nullptr || strcmp(nothing.text, "*NOTHING*") != 0)
@@ -80,14 +80,14 @@ int main(void) {
            strcmp(hidden_details.text, "Valid") != 0)
     result = 9;
 
-  lbuf_text_release(&nothing);
-  lbuf_text_release(&home);
-  lbuf_text_release(&invalid);
-  lbuf_text_release(&valid);
-  lbuf_text_release(&rendered_nothing);
-  lbuf_text_release(&rendered_home);
-  lbuf_text_release(&rendered_invalid);
-  lbuf_text_release(&examinable);
-  lbuf_text_release(&hidden_details);
+  owned_text_release(&nothing);
+  owned_text_release(&home);
+  owned_text_release(&invalid);
+  owned_text_release(&valid);
+  owned_text_release(&rendered_nothing);
+  owned_text_release(&rendered_home);
+  owned_text_release(&rendered_invalid);
+  owned_text_release(&examinable);
+  owned_text_release(&hidden_details);
   return result;
 }

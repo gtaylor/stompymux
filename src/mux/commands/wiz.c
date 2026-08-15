@@ -315,7 +315,7 @@ void do_newpassword(CommandInvocation *invocation) {
       buf, LBUF_SIZE, "Your password has been changed by %s.",
       game_object_name(invocation->context->world->database, player));
   notify_checked(evaluation, victim, victim, buf, MSG_ME);
-  free_lbuf(buf);
+  free_buf(buf);
 }
 
 void do_boot(CommandInvocation *invocation) {
@@ -400,7 +400,7 @@ void do_boot(CommandInvocation *invocation) {
                  "%d connection%s closed.", count, (count == 1 ? "" : "s"));
   notify_checked(evaluation, player, player, message_buffer, MSG_ME);
   if (buf)
-    free_lbuf(buf);
+    free_buf(buf);
 }
 
 typedef enum GlobalControl {
@@ -458,7 +458,7 @@ void list_global_controls(EvaluationContext *evaluation,
   }
   *bp = '\0';
   notify_checked(evaluation, player, player, buf, MSG_ME_ALL | MSG_F_DOWN);
-  free_lbuf(buf);
+  free_buf(buf);
 }
 
 void do_global(CommandInvocation *invocation) {

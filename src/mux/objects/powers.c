@@ -82,7 +82,7 @@ void display_powertab(EvaluationContext *evaluation, DbRef player) {
   }
   *bp = '\0';
   notify_checked(evaluation, player, player, buf, MSG_ME_ALL | MSG_F_DOWN);
-  free_lbuf(buf);
+  free_buf(buf);
 }
 
 static const POWERENT *power_find_normalized(WorldIndexes *indexes,

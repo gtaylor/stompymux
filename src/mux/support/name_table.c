@@ -121,7 +121,7 @@ void name_table_display(EvaluationContext *evaluation,
   *bp = '\0';
   if (got_one || list_if_none)
     notify_checked(evaluation, player, player, buf, MSG_ME_ALL | MSG_F_DOWN);
-  free_lbuf(buf);
+  free_buf(buf);
 }
 
 /*
@@ -161,7 +161,7 @@ void name_table_interpret(const NameTableInterpretRequest *request) {
   }
   *bp = '\0';
   notify_checked(evaluation, player, player, buf, MSG_ME_ALL | MSG_F_DOWN);
-  free_lbuf(buf);
+  free_buf(buf);
 }
 
 /*
@@ -195,5 +195,5 @@ void name_table_list_set(EvaluationContext *evaluation,
   *bp = '\0';
   if (got_one || list_if_none)
     notify_checked(evaluation, player, player, buf, MSG_ME_ALL | MSG_F_DOWN);
-  free_lbuf(buf);
+  free_buf(buf);
 }

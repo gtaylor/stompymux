@@ -1,42 +1,42 @@
-/* lbuf_text.c -- borrowed and owned LBUF text tests */
+/* owned_text.c -- borrowed and owned text tests */
 
 #include <string.h>
 
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/stringutil.h"
 
 static int check_borrowed_text(void) {
   const char ORIGINAL[] = "borrowed";
-  LbufText text = lbuf_text_borrow(ORIGINAL);
+  OwnedText text = owned_text_borrow(ORIGINAL);
 
   if (text.text != ORIGINAL || text.owned != nullptr)
     return 1;
-  lbuf_text_release(&text);
-  lbuf_text_release(&text);
+  owned_text_release(&text);
+  owned_text_release(&text);
   if (strcmp(ORIGINAL, "borrowed") != 0)
     return 2;
   return text.text == nullptr && text.owned == nullptr ? 0 : 3;
 }
 
 static int check_owned_text(void) {
-  char *owned = alloc_lbuf("lbuf_text_test");
+  char *owned = alloc_lbuf("owned_text_test");
   (void)string_copy_bounded(owned, LBUF_SIZE, "owned");
-  LbufText text = lbuf_text_take(owned);
+  OwnedText text = owned_text_take(owned);
 
   if (text.text != owned || text.owned != owned)
     return 4;
   if (strcmp(text.text, "owned") != 0)
     return 5;
-  lbuf_text_release(&text);
-  lbuf_text_release(&text);
+  owned_text_release(&text);
+  owned_text_release(&text);
   return text.text == nullptr && text.owned == nullptr ? 0 : 6;
 }
 
 static int check_normalized_text(void) {
-  LbufText munged = munge_space("  one\t two  ");
-  LbufText trimmed = trim_spaces("\n three   four\r\n");
+  OwnedText munged = munge_space("  one\t two  ");
+  OwnedText trimmed = trim_spaces("\n three   four\r\n");
   int result = 0;
 
   if (munged.owned == nullptr || strcmp(munged.text, "one two") != 0)
@@ -44,8 +44,8 @@ static int check_normalized_text(void) {
   else if (trimmed.owned == nullptr || strcmp(trimmed.text, "three four") != 0)
     result = 8;
 
-  lbuf_text_release(&munged);
-  lbuf_text_release(&trimmed);
+  owned_text_release(&munged);
+  owned_text_release(&trimmed);
   return result;
 }
 

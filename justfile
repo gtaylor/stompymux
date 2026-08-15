@@ -15,7 +15,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline fmt-check build test tidy-check
+ci: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-retired-buffer-apis fmt-check build test tidy-check
 
 agent-checks: ci
 
@@ -46,6 +46,10 @@ check-bounded-copy:
 # nullable for callers that recover. checked_storage.c owns the raw calls.
 check-allocation-discipline:
     status=0; grep -RInE --include='*.c' --include='*.h' --exclude='checked_storage.c' '\b(malloc|calloc|realloc)[[:space:]]*\(' src || status=$?; if (( status == 0 )); then echo 'Raw allocation found in src/; use the checked_storage API.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
+
+# Buffer ownership uses one size-agnostic release API and one ownership type.
+check-retired-buffer-apis:
+    status=0; grep -RInE --include='*.c' --include='*.h' --include='*.h.in' '\b(free_lbuf|free_mbuf|free_sbuf|LbufText|lbuf_text_[A-Za-z0-9_]*)\b' src || status=$?; if (( status == 0 )); then echo 'Retired buffer ownership API found in src/; use free_buf and OwnedText.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
 
 # Production code must use the project's checked parsing and copy helpers.
 check-unsafe-apis:

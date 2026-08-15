@@ -133,7 +133,7 @@ static void add_entrances(DbRef loc, BattleMap *map, char *data,
       }
     }
   }
-  free_mbuf(buf);
+  free_buf(buf);
 }
 
 static void add_links(DbRef loc, BattleMap *map, char *data,
@@ -183,7 +183,7 @@ static void add_links(DbRef loc, BattleMap *map, char *data,
                                   .stats = stats});
     }
   }
-  free_lbuf(buf);
+  free_buf(buf);
 }
 
 static void recursively_update_links(const MapLinkUpdateRequest *request) {

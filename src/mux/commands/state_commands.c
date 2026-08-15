@@ -22,7 +22,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 
@@ -61,7 +61,7 @@ void state_examine_namespaces(const ObjectStateExamineRequest *request) {
                   namespace_count, namespace_count == 1 ? "" : "s");
 }
 
-static LbufText examine_state_string(const ObjectStateString *string) {
+static OwnedText examine_state_string(const ObjectStateString *string) {
   char *rendered = alloc_lbuf("examine_state_string");
   char *cursor = rendered;
 
@@ -99,18 +99,18 @@ static LbufText examine_state_string(const ObjectStateString *string) {
   }
   safe_chr('"', rendered, &cursor);
   *cursor = '\0';
-  return lbuf_text_take(rendered);
+  return owned_text_take(rendered);
 }
 
 static void examine_state_value(EvaluationContext *evaluation, DbRef player,
                                 const ObjectStateEntryView *entry) {
   switch (entry->value->type) {
   case OBJECT_STATE_STRING: {
-    LbufText rendered = examine_state_string(&entry->value->as.string);
+    OwnedText rendered = examine_state_string(&entry->value->as.string);
 
     notify_printf(evaluation, player, "  %s (string): %s", entry->key,
                   rendered.text);
-    lbuf_text_release(&rendered);
+    owned_text_release(&rendered);
     break;
   }
   case OBJECT_STATE_BOOLEAN:

@@ -21,7 +21,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/validation.h"
@@ -70,8 +70,8 @@ void do_alias(CommandInvocation *invocation) {
   char *alias = invocation->second;
   DbRef thing;
   long aflags;
-  LbufText oldalias;
-  LbufText trimalias;
+  OwnedText oldalias;
+  OwnedText trimalias;
 
   thing = match_controlled(&invocation->context->match, player, name);
   if (thing == NOTHING)
@@ -144,8 +144,8 @@ void do_alias(CommandInvocation *invocation) {
         attribute_clear(evaluation->world->database, thing, A_ALIAS);
       }
     }
-    lbuf_text_release(&trimalias);
-    lbuf_text_release(&oldalias);
+    owned_text_release(&trimalias);
+    owned_text_release(&oldalias);
   } else {
     notify_checked(evaluation, player, player, "Only players may have aliases.",
                    MSG_ME);
@@ -300,7 +300,7 @@ bool object_attribute_set(EvaluationContext *evaluation, DbRef player,
                                compiled, LBUF_SIZE, error, sizeof(error))) {
         notify_printf(evaluation, player, "Invalid styled-text markup: %s.",
                       error);
-        free_lbuf(compiled);
+        free_buf(compiled);
         return false;
       }
     }
@@ -308,7 +308,7 @@ bool object_attribute_set(EvaluationContext *evaluation, DbRef player,
         !btech_special_object_type_can_set(evaluation->btech, thing, attrtext,
                                            error, sizeof(error))) {
       notify_printf(evaluation, player, "%s.", error);
-      free_lbuf(compiled);
+      free_buf(compiled);
       return false;
     }
     have_xcode = is_xcode(evaluation->world->database, thing);
@@ -324,7 +324,7 @@ bool object_attribute_set(EvaluationContext *evaluation, DbRef player,
       notify_printf(evaluation, player, "%s/%s - %s",
                     game_object_name(evaluation->world->database, thing),
                     attr->name, strlen(attrtext) ? "Set." : "Cleared.");
-    free_lbuf(compiled);
+    free_buf(compiled);
     return true;
   }
   notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
@@ -437,8 +437,8 @@ void do_use(CommandInvocation *invocation) {
                       .enactor_default = df_use,
                       .other_default = df_ouse,
                       .event = LUA_EVENT_USE});
-    free_lbuf(df_use);
-    free_lbuf(df_ouse);
+    free_buf(df_use);
+    free_buf(df_ouse);
   } else {
     notify_checked(evaluation, PLAYER, PLAYER,
                    "You can't figure out how to use that.", MSG_ME);

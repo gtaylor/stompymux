@@ -273,7 +273,7 @@ void do_drop(CommandInvocation *invocation) {
                       .enactor_default = "Dropped.",
                       .other_default = buf,
                       .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_DROP});
-    free_lbuf(buf);
+    free_buf(buf);
 
     /*
      * Process droptos

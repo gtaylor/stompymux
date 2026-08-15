@@ -61,7 +61,7 @@ static void help_command_send_suggestions(EvaluationContext *evaluation,
     notify_checked(evaluation, player, player, topic_list,
                    MSG_ME_ALL | MSG_F_DOWN);
   }
-  free_lbuf(topic_list);
+  free_buf(topic_list);
 }
 
 void do_help(CommandInvocation *invocation) {

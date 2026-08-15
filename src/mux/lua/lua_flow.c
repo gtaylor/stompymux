@@ -48,7 +48,7 @@ static void lua_flow_data_clear_fields(LuaFlowData *data) {
   for (index = 0; index < data->field_count; index++) {
     LuaFlowField *field = lua_flow_field_at(data, (size_t)index);
 
-    free_lbuf(field->value);
+    free_buf(field->value);
     field->value = nullptr;
   }
   data->field_count = 0;

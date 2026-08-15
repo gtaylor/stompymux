@@ -17,7 +17,7 @@
 #include "mux/server/log.h"
 #include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/utf8.h"
@@ -174,8 +174,8 @@ static int check_owned_attribute_text(void) {
   long flags = -1;
 
   attribute_add(&database, 0, A_DESC, "description", 0);
-  LbufText present = attribute_get(&database, 0, A_DESC, &flags);
-  LbufText missing = attribute_get(&database, 0, A_IDESC, nullptr);
+  OwnedText present = attribute_get(&database, 0, A_DESC, &flags);
+  OwnedText missing = attribute_get(&database, 0, A_IDESC, nullptr);
   int result = 0;
 
   if (present.owned == nullptr || strcmp(present.text, "description") != 0 ||
@@ -184,8 +184,8 @@ static int check_owned_attribute_text(void) {
   else if (missing.owned == nullptr || strcmp(missing.text, "") != 0)
     result = 2;
 
-  lbuf_text_release(&present);
-  lbuf_text_release(&missing);
+  owned_text_release(&present);
+  owned_text_release(&missing);
   attribute_free(&database, 0);
   return result;
 }

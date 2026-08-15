@@ -129,7 +129,7 @@ DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
     }
     result1 = match_result(match_context);
 
-    free_lbuf(buff);
+    free_buf(buff);
     if (!is_good_obj(match_context->evaluation->world->database, result1)) {
       dflt = promote_dflt(dflt, result1);
       continue;

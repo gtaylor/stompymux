@@ -17,7 +17,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/player.h"
 
@@ -117,8 +117,8 @@ void do_channelwho(CommandInvocation *invocation) {
          ((ch->type & CHANNEL_TRANSPARENT) &&
           !is_dark(evaluation->world->database, user->who)) ||
          is_wizard(evaluation->world->database, player))) {
-      LbufText rendered = unparse_object(evaluation->world->database,
-                                         evaluation, player, user->who);
+      OwnedText rendered = unparse_object(evaluation->world->database,
+                                          evaluation, player, user->who);
       styled_text_strip(evaluation->world->styled_text_palette, rendered.text,
                         ansibuffer, LBUF_SIZE);
       notify_printf(evaluation, player, "%-29.29s %-6.6s %-6.6s", ansibuffer,
@@ -127,7 +127,7 @@ void do_channelwho(CommandInvocation *invocation) {
                      OBJECT_TYPE_PLAYER)
                         ? "yes"
                         : "no ");
-      lbuf_text_release(&rendered);
+      owned_text_release(&rendered);
     }
   }
   notify_printf(evaluation, player, "-- %s --", ch->name);

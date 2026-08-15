@@ -560,7 +560,7 @@ void channel_emit_kill(Mech *mech, Mech *attacker, const char *reason) {
                  LUA_EVENT_MECH_DESTROYED, args, nargs);
 
     if (reason_copy) {
-      free_lbuf(reason_copy);
+      free_buf(reason_copy);
     }
   }
 }

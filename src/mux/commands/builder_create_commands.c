@@ -41,7 +41,7 @@ char *builder_compile_object_name(EvaluationContext *evaluation, DbRef player,
     return compiled;
   }
   notify_printf(evaluation, player, "Invalid styled-text markup: %s.", error);
-  free_lbuf(compiled);
+  free_buf(compiled);
   return nullptr;
 }
 
@@ -124,7 +124,7 @@ static void open_exit(const ExitCreationRequest *request) {
   if (!compiled_direction)
     return;
   exit = create_obj(evaluation, player, OBJECT_TYPE_EXIT, compiled_direction);
-  free_lbuf(compiled_direction);
+  free_buf(compiled_direction);
   if (exit == NOTHING)
     return;
 
@@ -426,7 +426,7 @@ void do_dig(CommandInvocation *invocation) {
   if (!compiled_name)
     return;
   room = create_obj(evaluation, player, OBJECT_TYPE_ROOM, compiled_name);
-  free_lbuf(compiled_name);
+  free_buf(compiled_name);
   if (room == NOTHING)
     return;
 
@@ -485,11 +485,11 @@ void do_create(CommandInvocation *invocation) {
                     clearbuffer, MBUF_SIZE);
   if (!name || !*name || (strlen(clearbuffer) == 0)) {
     notify_checked(evaluation, player, player, "Create what?", MSG_ME);
-    free_lbuf(compiled_name);
+    free_buf(compiled_name);
     return;
   }
   thing = create_obj(evaluation, player, OBJECT_TYPE_THING, compiled_name);
-  free_lbuf(compiled_name);
+  free_buf(compiled_name);
   if (thing == NOTHING)
     return;
 
@@ -567,7 +567,7 @@ void do_clone(CommandInvocation *invocation) {
     if (!ok_name(invocation->context->world->configuration, pure_name)) {
       notify_checked(evaluation, player, player,
                      "That is not a reasonable name.", MSG_ME);
-      free_lbuf(clone_name);
+      free_buf(clone_name);
       return;
     }
   }
@@ -580,7 +580,7 @@ void do_clone(CommandInvocation *invocation) {
         evaluation, player, typeof_obj(evaluation->world->database, thing),
         game_object_name(invocation->context->world->database, thing));
   if (clone == NOTHING) {
-    free_lbuf(clone_name);
+    free_buf(clone_name);
     return;
   }
 
@@ -602,7 +602,7 @@ void do_clone(CommandInvocation *invocation) {
     object_name_set(
         invocation->context->world->database, clone,
         game_object_name(invocation->context->world->database, thing));
-  free_lbuf(clone_name);
+  free_buf(clone_name);
 
   /*
    * Clear out problem flags from the original

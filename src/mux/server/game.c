@@ -39,7 +39,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/password.h"
 #include "mux/world/database_check.h"
 #include "mux/world/object_spatial.h"
@@ -104,7 +104,7 @@ void report(CommandContext *command) {
  * Notifies the object #target of the message msg, and
  * optionally notify the contents, neighbors, and location also.
  */
-static LbufText format_forwarded_message(const char *msg, const char *prefix) {
+static OwnedText format_forwarded_message(const char *msg, const char *prefix) {
   char *plain = alloc_lbuf("format_forwarded_message");
   char *cursor = plain;
   if (prefix && *prefix) {
@@ -113,7 +113,7 @@ static LbufText format_forwarded_message(const char *msg, const char *prefix) {
   }
   safe_str(msg, plain, &cursor);
   *cursor = '\0';
-  return lbuf_text_take(plain);
+  return owned_text_take(plain);
 }
 
 static char *dflt_from_msg(GameDatabase *database, DbRef sender,
@@ -188,11 +188,11 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
              game_object_exits(evaluation->world->database, target)) {
         recip = game_object_location(evaluation->world->database, obj);
         if (is_audible(evaluation->world->database, obj) && recip != target) {
-          LbufText distance_message =
+          OwnedText distance_message =
               format_forwarded_message(msg, "From a distance,");
           notify_checked(evaluation, recip, sender, distance_message.text,
                          MSG_ME | MSG_F_UP | MSG_F_CONTENTS | MSG_S_INSIDE);
-          lbuf_text_release(&distance_message);
+          owned_text_release(&distance_message);
         }
       }
     }
@@ -209,11 +209,11 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
        * *  * * of * the container.
        */
 
-      LbufText forwarded = lbuf_text_borrow(msg);
+      OwnedText forwarded = owned_text_borrow(msg);
       if (key & MSG_S_INSIDE) {
         tbuff = dflt_from_msg(evaluation->world->database, sender, target);
         forwarded = format_forwarded_message(msg, tbuff);
-        free_lbuf(tbuff);
+        free_buf(tbuff);
       }
 
       DOLIST(evaluation->world->database, obj,
@@ -224,14 +224,14 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
         if (is_good_obj(evaluation->world->database, recip) &&
             is_audible(evaluation->world->database, obj) &&
             (recip != targetloc) && (recip != target)) {
-          LbufText distance_message =
+          OwnedText distance_message =
               format_forwarded_message(forwarded.text, "From a distance,");
           notify_checked(evaluation, recip, sender, distance_message.text,
                          MSG_ME | MSG_F_UP | MSG_F_CONTENTS | MSG_S_INSIDE);
-          lbuf_text_release(&distance_message);
+          owned_text_release(&distance_message);
         }
       }
-      lbuf_text_release(&forwarded);
+      owned_text_release(&forwarded);
     }
     /*
      * Deliver message to contents
@@ -244,7 +244,7 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
        * * * MSG_NOPREFIX key.
        */
 
-      LbufText forwarded = lbuf_text_borrow(msg);
+      OwnedText forwarded = owned_text_borrow(msg);
       if (key & MSG_S_OUTSIDE)
         forwarded = format_forwarded_message(msg, "");
       DOLIST(evaluation->world->database, obj,
@@ -254,7 +254,7 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
                          MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE);
         }
       }
-      lbuf_text_release(&forwarded);
+      owned_text_release(&forwarded);
     }
     /*
      * Deliver message to neighbors
@@ -262,11 +262,11 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
 
     if (has_neighbors &&
         ((key & MSG_NBR) || ((key & MSG_NBR_A) && target_audible))) {
-      LbufText forwarded = lbuf_text_borrow(msg);
+      OwnedText forwarded = owned_text_borrow(msg);
       if (key & MSG_S_INSIDE) {
         tbuff = dflt_from_msg(evaluation->world->database, sender, target);
         forwarded = format_forwarded_message(msg, tbuff);
-        free_lbuf(tbuff);
+        free_buf(tbuff);
       }
       DOLIST(evaluation->world->database, obj,
              game_object_contents(evaluation->world->database, targetloc)) {
@@ -275,7 +275,7 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
                          MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE);
         }
       }
-      lbuf_text_release(&forwarded);
+      owned_text_release(&forwarded);
     }
     /*
      * Deliver message to container
@@ -283,22 +283,22 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
 
     if (has_neighbors &&
         ((key & MSG_LOC) || ((key & MSG_LOC_A) && target_audible))) {
-      LbufText forwarded = lbuf_text_borrow(msg);
+      OwnedText forwarded = owned_text_borrow(msg);
       if (key & MSG_S_INSIDE) {
         tbuff = dflt_from_msg(evaluation->world->database, sender, target);
         forwarded = format_forwarded_message(msg, tbuff);
-        free_lbuf(tbuff);
+        free_buf(tbuff);
       }
       notify_checked(evaluation, targetloc, sender, forwarded.text,
                      MSG_ME | MSG_F_UP | MSG_S_INSIDE);
-      lbuf_text_release(&forwarded);
+      owned_text_release(&forwarded);
     }
     break;
   default:
     break;
   }
   if (msg_copy)
-    free_lbuf(msg_copy);
+    free_buf(msg_copy);
   evaluation->notification_nesting--;
 }
 

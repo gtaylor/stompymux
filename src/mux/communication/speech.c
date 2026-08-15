@@ -244,14 +244,14 @@ void do_say(CommandInvocation *invocation) {
                                 .flags = say_flags,
                                 .player = PLAYER,
                                 .message = buf2});
-      free_lbuf(buf2);
+      free_buf(buf2);
     }
     STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "SHOUT") {
       log_name(evaluation->log, PLAYER);
       buf2 = alloc_lbuf("do_say.LOG.shout");
       (void)snprintf(buf2, LBUF_SIZE, " shouts: '%s'", message);
       log_text(buf2);
-      free_lbuf(buf2);
+      free_buf(buf2);
       ENDLOG(evaluation->log);
     }
     break;
@@ -292,14 +292,14 @@ void do_say(CommandInvocation *invocation) {
                                 .flags = say_flags,
                                 .player = PLAYER,
                                 .message = buf2});
-      free_lbuf(buf2);
+      free_buf(buf2);
     }
     STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "BCAST") {
       log_name(evaluation->log, PLAYER);
       buf2 = alloc_lbuf("do_say.LOG.wizshout");
       (void)snprintf(buf2, LBUF_SIZE, " broadcasts: '%s'", message);
       log_text(buf2);
-      free_lbuf(buf2);
+      free_buf(buf2);
       ENDLOG(evaluation->log);
     }
     break;
@@ -340,14 +340,14 @@ void do_say(CommandInvocation *invocation) {
                                 .flags = say_flags,
                                 .player = PLAYER,
                                 .message = buf2});
-      free_lbuf(buf2);
+      free_buf(buf2);
     }
     STARTLOG(evaluation->log, LOG_SHOUTS, "WIZ", "ASHOUT") {
       log_name(evaluation->log, PLAYER);
       buf2 = alloc_lbuf("do_say.LOG.adminshout");
       (void)snprintf(buf2, LBUF_SIZE, " yells: '%s'", message);
       log_text(buf2);
-      free_lbuf(buf2);
+      free_buf(buf2);
       ENDLOG(evaluation->log);
     }
     break;
@@ -366,7 +366,7 @@ void do_say(CommandInvocation *invocation) {
       buf2 = alloc_lbuf("do_say.LOG.wallpose");
       (void)snprintf(buf2, LBUF_SIZE, " WALLposes: '%s'", message);
       log_text(buf2);
-      free_lbuf(buf2);
+      free_buf(buf2);
       ENDLOG(evaluation->log);
     }
     break;
@@ -388,7 +388,7 @@ void do_say(CommandInvocation *invocation) {
       buf2 = alloc_lbuf("do_say.LOG.wizpose");
       (void)snprintf(buf2, LBUF_SIZE, " WIZposes: '%s'", message);
       log_text(buf2);
-      free_lbuf(buf2);
+      free_buf(buf2);
       ENDLOG(evaluation->log);
     }
     break;
@@ -405,7 +405,7 @@ void do_say(CommandInvocation *invocation) {
       buf2 = alloc_lbuf("do_say.LOG.wallemit");
       (void)snprintf(buf2, LBUF_SIZE, " WALLemits: '%s'", message);
       log_text(buf2);
-      free_lbuf(buf2);
+      free_buf(buf2);
       ENDLOG(evaluation->log);
     }
     break;
@@ -422,7 +422,7 @@ void do_say(CommandInvocation *invocation) {
       buf2 = alloc_lbuf("do_say.LOG.wizemit");
       (void)snprintf(buf2, LBUF_SIZE, " WIZemit: '%s'", message);
       log_text(buf2);
-      free_lbuf(buf2);
+      free_buf(buf2);
       ENDLOG(evaluation->log);
     }
     break;

@@ -22,7 +22,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/utf8.h"
 #include "mux/world/player.h"
 
@@ -133,7 +133,7 @@ void comsys_leave_channel(EvaluationContext *evaluation, DbRef player,
 void comsys_show_channel_who(EvaluationContext *evaluation, DbRef player,
                              struct Channel *ch) {
   struct Comuser *user;
-  LbufText buff;
+  OwnedText buff;
 
   raw_notify(evaluation, player, "-- Players --");
   for (user = ch->on_users; user; user = user->on_next) {
@@ -158,11 +158,11 @@ void comsys_show_channel_who(EvaluationContext *evaluation, DbRef player,
         char *c = get_uptime_to_string(i);
 
         notify_printf(evaluation, player, "%s [idle %s]", buff.text, c);
-        free_sbuf(c);
+        free_buf(c);
       } else {
         notify_printf(evaluation, player, "%s", buff.text);
       }
-      lbuf_text_release(&buff);
+      owned_text_release(&buff);
     }
   }
 
@@ -175,7 +175,7 @@ void comsys_show_channel_who(EvaluationContext *evaluation, DbRef player,
       buff = unparse_object(evaluation->world->database, evaluation, player,
                             user->who);
       notify_printf(evaluation, player, "%s", buff.text);
-      lbuf_text_release(&buff);
+      owned_text_release(&buff);
     }
   }
   notify_printf(evaluation, player, "-- %s --", ch->name);
