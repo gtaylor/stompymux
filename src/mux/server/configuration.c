@@ -512,7 +512,7 @@ static int configuration_toml_dispatch_to_set(const char *pname,
  * ---------------------------------------------------------------------------
  * * configuration_read: Read in config parameters from named file
  */
-int configuration_read(ConfigurationContext *context, char *fn) {
+int configuration_read(ConfigurationContext *context, const char *fn) {
   char errbuf[256];
   bool ok;
 

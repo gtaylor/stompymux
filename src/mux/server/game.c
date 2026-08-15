@@ -522,7 +522,7 @@ void do_readcache(CommandInvocation *invocation) {
 
 int main(int argc, char *argv[]) {
   MuxServer server;
-  char *config_file;
+  const char *config_file;
   struct stat database_status;
   bool create_database;
   char god_password[BOOTSTRAP_PASSWORD_SIZE];
@@ -540,12 +540,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  /* config_file also gets assigned a genuinely mutable argv[] entry below,
-     so it can't be const; CONF_FILE is only read as the default here. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  config_file = (char *)CONF_FILE;
-#pragma clang diagnostic pop
+  config_file = CONF_FILE;
   if (argc > 1) {
     config_file = argument_one;
   }
