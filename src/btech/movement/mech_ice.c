@@ -113,7 +113,7 @@ void break_thru_ice(Mech *mech) {
 }
 
 /* CHANCE of dropping thru the ice based on 'mech weight */
-int possibly_drop_thru_ice(Mech *mech) {
+bool possibly_drop_thru_ice(Mech *mech) {
   if ((mech_movement_type(mech) == MOVE_HOVER) ||
       (mech_movement_type(mech) == MOVE_SUB) ||
       (mech_class(mech) == CLASS_BSUIT))
@@ -133,7 +133,7 @@ static void growable_callback(BattleMap *map, int x, int y, void *context) {
     (*water_count)++;
 }
 
-int growable(BattleMap *map, int x, int y) {
+bool growable(BattleMap *map, int x, int y) {
   int water_count = 0;
 
   visit_neighbor_hexes(map, x, y, growable_callback, &water_count);
@@ -152,7 +152,7 @@ static void meltable_callback(BattleMap *map, int x, int y, void *context) {
     (*water_count)++;
 }
 
-int meltable(BattleMap *map, int x, int y) {
+bool meltable(BattleMap *map, int x, int y) {
   int water_count = 0;
 
   visit_neighbor_hexes(map, x, y, meltable_callback, &water_count);

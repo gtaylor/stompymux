@@ -377,7 +377,7 @@ int mw_ic_bth(Mech *mech) {
   return 0;
 }
 
-int handlemwconc(Mech *mech, int initial) {
+bool handlemwconc(Mech *mech, int initial) {
   /* Rule Reference: MechWarrior 2nd Edition RPG, Page 22 (Toughness = Best of
    * 3D6) */
   /* Rule Reference: Old Tactical Handbook, Page 51 (Use MW 2nd Edition) */

@@ -45,7 +45,7 @@ bool physical_quad_check(DbRef player, Mech *mech, const char *verb) {
                 "What are you going to %s with, your front right leg?", verb);
   return false;
 }
-static int all_limbs_recycled(Mech *mech) {
+static bool all_limbs_recycled(Mech *mech) {
   if (mech_section_recycle_ticks(mech, LARM) ||
       mech_section_recycle_ticks(mech, RARM)) {
     mech_notify(mech, MECHALL,
@@ -164,7 +164,7 @@ int have_mace(Mech *mech, int loc) {
   return find_obj(mech, loc, special_equipment_index(MACE)) >=
          (mech_tonnage(mech) / 10);
 }
-int phys_common_checks(Mech *mech) {
+bool phys_common_checks(Mech *mech) {
   if (mech_is_jumping(mech)) {
     mech_notify(mech, MECHALL,
                 "You can't perform physical attacks while in the air!");
@@ -242,7 +242,7 @@ arm_selection_complete:
   return (ArmSelectionResult){
       .using = using, .argument_count = argc, .arguments = args};
 } // end get_arm_args()
-static int punch_check_arm(Mech *mech, int arm) {
+static bool punch_check_arm(Mech *mech, int arm) {
   const char *arm_used = (arm == LARM ? "left" : "right");
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
@@ -414,7 +414,7 @@ void mech_club(DbRef player, void *data, char *buffer) {
       .map = mech_map,
       .section = RARM});
 } // end mech_club()
-static int axe_check_arm(Mech *mech, int arm) {
+static bool axe_check_arm(Mech *mech, int arm) {
   const char *arm_used = (arm == RARM ? "right" : "left");
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
@@ -505,7 +505,7 @@ void mech_axe(DbRef player, void *data, char *buffer) {
     return;
   }
 } // end mech_axe()
-static int saw_check_arm(Mech *mech, int arm) {
+static bool saw_check_arm(Mech *mech, int arm) {
   const char *arm_used = (arm == RARM ? "right" : "left");
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
@@ -646,7 +646,7 @@ void mech_claw(DbRef player, void *data, char *buffer) {
     return;
   }
 } // end mech_claw()
-static int mace_check_arm(Mech *mech, int arm) {
+static bool mace_check_arm(Mech *mech, int arm) {
   const char *arm_used = (arm == RARM ? "right" : "left");
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,

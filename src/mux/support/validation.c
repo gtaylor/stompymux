@@ -34,7 +34,7 @@ static bool ascii_is_alnum(unsigned char byte) {
   return ascii_is_alpha(byte) || (byte >= '0' && byte <= '9');
 }
 
-int is_integer(char *str) {
+bool is_integer(char *str) {
   if (str == nullptr)
     return 0;
   const size_t LENGTH = strlen(str);
@@ -59,7 +59,7 @@ int is_integer(char *str) {
 /**
  * Checks for the presence of a number
  */
-int is_number(const char *str) {
+bool is_number(const char *str) {
   if (str == nullptr)
     return 0;
   const size_t LENGTH = strlen(str);
@@ -88,7 +88,7 @@ int is_number(const char *str) {
   return got_digit && index == LENGTH;
 }
 
-int ok_name(const ServerConfiguration *configuration, const char *name) {
+bool ok_name(const ServerConfiguration *configuration, const char *name) {
   if (name == nullptr || *name == '\0')
     return 0;
 
@@ -124,9 +124,9 @@ int ok_name(const ServerConfiguration *configuration, const char *name) {
           string_compare(configuration, name, "here"));
 }
 
-static int ok_player_name_with_limit(const ServerConfiguration *configuration,
-                                     const char *name, size_t maximum_length,
-                                     bool allow_spaces) {
+static bool ok_player_name_with_limit(const ServerConfiguration *configuration,
+                                      const char *name, size_t maximum_length,
+                                      bool allow_spaces) {
   const char *good_chars;
 
   /*
@@ -164,13 +164,14 @@ static int ok_player_name_with_limit(const ServerConfiguration *configuration,
   return 1;
 }
 
-int ok_stored_player_name(const ServerConfiguration *configuration,
-                          const char *name) {
+bool ok_stored_player_name(const ServerConfiguration *configuration,
+                           const char *name) {
   return ok_player_name_with_limit(configuration, name,
                                    PLAYER_NAME_STORAGE_LIMIT, true);
 }
 
-int ok_player_name(const ServerConfiguration *configuration, const char *name) {
+bool ok_player_name(const ServerConfiguration *configuration,
+                    const char *name) {
   /* An unset limit uses the storage ceiling so zero-initialized test and
    * utility configurations remain permissive. */
   const size_t MAXIMUM_LENGTH =
@@ -182,16 +183,16 @@ int ok_player_name(const ServerConfiguration *configuration, const char *name) {
                                    configuration->name_spaces);
 }
 
-int ok_new_player_name(const ServerConfiguration *configuration,
-                       const char *name) {
+bool ok_new_player_name(const ServerConfiguration *configuration,
+                        const char *name) {
   return name != nullptr && strlen(name) >= 2 &&
          ascii_is_alpha(
              (unsigned char)validation_character(name, strlen(name), 0)) &&
          ok_player_name(configuration, name);
 }
 
-int ok_password(const ServerConfiguration *configuration,
-                const char *password) {
+bool ok_password(const ServerConfiguration *configuration,
+                 const char *password) {
   Utf8DecodeResult decoded;
   size_t length;
   size_t offset = 0;

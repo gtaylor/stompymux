@@ -151,7 +151,7 @@ int crits_in_loc(Mech *mech, int index) {
   return NUM_CRITICALS;
 }
 
-int sect_has_busy_weap(Mech *mech, int sect) {
+bool sect_has_busy_weap(Mech *mech, int sect) {
   int i = 0;
   int count;
   int critical[MAX_WEAPS_SECTION];
@@ -242,7 +242,7 @@ MapRealPosition map_vector_components(const MapPolarVector *vector) {
   return result;
 }
 
-static int leave_hangar(BattleMap *map, Mech *mech) {
+static bool leave_hangar(BattleMap *map, Mech *mech) {
   char message_buffer[128];
   Mech *car = nullptr;
   DbRef mapob;
@@ -673,7 +673,7 @@ int find_tech_skill(DbRef player, Mech *mech) {
   return 18;
 }
 
-int made_pilot_skill_roll(Mech *mech, int mods) {
+bool made_pilot_skill_roll(Mech *mech, int mods) {
   return mech_pilot_skill_roll(&(PilotSkillRollRequest){
       .mech = mech, .modifier = mods, .succeed_when_fallen = true});
 }
@@ -690,7 +690,7 @@ int mech_pilot_skill_roll_target(Mech *mech, int mods) {
   return mods;
 }
 
-int mech_pilot_skill_roll_without_experience(
+bool mech_pilot_skill_roll_without_experience(
     const PilotSkillRollRequest *request) {
   Mech *mech = request->mech;
   int mods = request->modifier;
@@ -720,7 +720,7 @@ int mech_pilot_skill_roll_without_experience(
   return 0;
 }
 
-int mech_pilot_skill_roll(const PilotSkillRollRequest *request) {
+bool mech_pilot_skill_roll(const PilotSkillRollRequest *request) {
   Mech *mech = request->mech;
   int mods = request->modifier;
   int roll;

@@ -113,7 +113,7 @@ void bsuit_swarm_stop(Mech *mech, int intentional) {
   mech_flood(mech);
 }
 
-int bsuit_has_enemy_swarmers(Mech *mech) {
+bool bsuit_has_enemy_swarmers(Mech *mech) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int count = 0;
@@ -144,7 +144,7 @@ int bsuit_has_enemy_swarmers(Mech *mech) {
   return count > 0;
 }
 
-int bsuit_has_friendly_riders(Mech *mech) {
+bool bsuit_has_friendly_riders(Mech *mech) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int count = 0;
@@ -387,7 +387,7 @@ int bsuit_target_find(DbRef player, Mech *mech, Mech **target, char *buffer) {
   return 0;
 }
 
-int bsuit_jettison_validate(Mech *mech) {
+bool bsuit_jettison_validate(Mech *mech) {
   int i;
   int j;
 

@@ -31,7 +31,7 @@ int count_ammo_for_weapon(Mech *mech, int weapindx) {
 }
 
 /* Function taken from 3065. Credit to RebelST) */
-int find_artemis_for_weapon(Mech *mech, int section, int critical) {
+bool find_artemis_for_weapon(Mech *mech, int section, int critical) {
   int critloop;
   int desired;
 

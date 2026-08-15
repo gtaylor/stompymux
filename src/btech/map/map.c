@@ -305,7 +305,7 @@ int water_distance(const WaterDistanceRequest *request) {
   }
   return request->limit;
 }
-static int eligible_bridge_hex(BattleMap *map, int x, int y) {
+static bool eligible_bridge_hex(BattleMap *map, int x, int y) {
   int i;
   int j;
   int k;

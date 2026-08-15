@@ -102,7 +102,7 @@ char *template_bit_string_build(const TemplateBitStringRequest *request) {
   return request->buffer;
 }
 
-static int invalid_vehicle_item(Mech *mech, int x, int y) {
+static bool invalid_vehicle_item(Mech *mech, int x, int y) {
   int t;
 
   t = mech_critical_part_type(mech, x, y);

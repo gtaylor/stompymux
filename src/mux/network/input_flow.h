@@ -52,7 +52,7 @@ typedef struct FlowStartRequest {
   void (*destroy)(void *flow_data);
 } FlowStartRequest;
 
-int descriptor_flow_start(const FlowStartRequest *request);
+bool descriptor_flow_start(const FlowStartRequest *request);
 void descriptor_flow_cancel(Descriptor *descriptor);
 void descriptor_flow_destroy(Descriptor *descriptor);
 void descriptor_flow_handle(Descriptor *descriptor, const char *input);

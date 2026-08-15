@@ -34,9 +34,9 @@
 #include "mux/world/movement_commands.h"
 #include "mux/world/world_context.h"
 
-int check_access(GameDatabase *database,
-                 const ServerConfiguration *configuration, DbRef player,
-                 int mask) {
+bool check_access(GameDatabase *database,
+                  const ServerConfiguration *configuration, DbRef player,
+                  int mask) {
   int succ;
   int fail;
 

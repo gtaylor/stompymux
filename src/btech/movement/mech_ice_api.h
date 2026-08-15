@@ -14,9 +14,9 @@ typedef struct TerrainStructureWeaponImpact {
 /* mech.ice.c */
 void drop_thru_ice(Mech *mech);
 void break_thru_ice(Mech *mech);
-int possibly_drop_thru_ice(Mech *mech);
-int growable(BattleMap *map, int x, int y);
-int meltable(BattleMap *map, int x, int y);
+bool possibly_drop_thru_ice(Mech *mech);
+bool growable(BattleMap *map, int x, int y);
+bool meltable(BattleMap *map, int x, int y);
 void ice_growth(DbRef player, BattleMap *map, int num);
 void ice_melt(DbRef player, BattleMap *map, int num);
 void map_addice(DbRef player, BattleMap *map, char *buffer);

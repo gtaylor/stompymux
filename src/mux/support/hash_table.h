@@ -33,8 +33,8 @@ int hash_table_add_const(const char * /*str*/, const void * /*hashdata*/,
                          HashTable * /*htab*/);
 void hash_table_delete(const char * /*str*/, HashTable * /*htab*/);
 void hash_table_flush(HashTable * /*htab*/, int /*size*/);
-int hash_table_replace(char * /*str*/, void * /*hashdata*/,
-                       HashTable * /*htab*/);
+bool hash_table_replace(char * /*str*/, void * /*hashdata*/,
+                        HashTable * /*htab*/);
 void hash_table_replace_all(void * /*old*/, void * /*new*/,
                             HashTable * /*htab*/);
 void *hash_table_next_entry(HashTable *htab);
@@ -52,5 +52,5 @@ int numeric_hash_table_add(long /*val*/, void * /*hashdata*/,
                            HashTable * /*htab*/);
 void numeric_hash_table_delete(long /*val*/, HashTable * /*htab*/);
 void numeric_hash_table_flush(HashTable * /*htab*/, int /*size*/);
-int numeric_hash_table_replace(long /*val*/, void * /*hashdata*/,
-                               HashTable * /*htab*/);
+bool numeric_hash_table_replace(long /*val*/, void * /*hashdata*/,
+                                HashTable * /*htab*/);

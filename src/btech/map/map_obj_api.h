@@ -77,7 +77,7 @@ void list_mapobjs(DbRef player, BattleMap *map);
 void map_addfire(DbRef player, void *data, char *buffer);
 void map_addsmoke(DbRef player, void *data, char *buffer);
 void map_add_block(DbRef player, void *data, char *buffer);
-int is_blocked_lz(Mech *mech, BattleMap *map, int x, int y);
+bool is_blocked_lz(Mech *mech, BattleMap *map, int x, int y);
 void map_setlinked(DbRef player, void *data, char *buffer);
 int map_objects_delete(const MapObjectLookupRequest *request);
 void map_delobj(DbRef player, void *data, char *buffer);

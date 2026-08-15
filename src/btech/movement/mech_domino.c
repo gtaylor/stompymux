@@ -165,7 +165,7 @@ typedef struct MechDominoRequest {
   int candidate_count;
 } MechDominoRequest;
 
-static int mech_domino_resolve_in_hex(const MechDominoRequest *request) {
+static bool mech_domino_resolve_in_hex(const MechDominoRequest *request) {
   BattleMap *map = request->map;
   Mech *me = request->moving_mech;
   int x = request->position.x;
@@ -337,7 +337,7 @@ static int mech_domino_resolve_in_hex(const MechDominoRequest *request) {
   return 1;
 }
 
-int mech_domino_resolve(Mech *mech, MechDominoMode mode) {
+bool mech_domino_resolve(Mech *mech, MechDominoMode mode) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int cnt;

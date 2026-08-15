@@ -129,8 +129,8 @@ DbRef default_home(WorldContext *world) {
   return world->configuration->start_room;
 }
 
-int can_set_home(EvaluationContext *evaluation, DbRef player, DbRef thing,
-                 DbRef home) {
+bool can_set_home(EvaluationContext *evaluation, DbRef player, DbRef thing,
+                  DbRef home) {
   if (!is_good_obj(evaluation->world->database, player) ||
       !is_good_obj(evaluation->world->database, home) || (thing == home))
     return 0;
@@ -226,7 +226,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
                  const char *name) {
   char message_buffer[128];
   DbRef obj;
-  int okname = 0;
+  bool okname = false;
   const ObjectFlagSet *default_flags;
   time_t tt;
   OwnedText buff;

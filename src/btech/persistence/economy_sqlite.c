@@ -117,8 +117,8 @@ static const char *btech_part_name(const ServerConfiguration *configuration,
 }
 
 /* Resolve an unbranded canonical name without needing runtime name hashes. */
-static int btech_part_from_name(BtechContext *btech, const char *item_name,
-                                int *part) {
+static bool btech_part_from_name(BtechContext *btech, const char *item_name,
+                                 int *part) {
   BtechPartCostSet cost_sets[BTECH_PART_COST_SET_COUNT];
   BtechPartCostSet *cost_set;
   const char *candidate;

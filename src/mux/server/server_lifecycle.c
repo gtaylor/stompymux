@@ -175,7 +175,7 @@ void server_lifecycle_unbind_signals(ServerLifecycle *lifecycle) {
 }
 
 /* Start services required after the database and descriptor state are ready. */
-int server_lifecycle_boot(ServerLifecycle *lifecycle) {
+bool server_lifecycle_boot(ServerLifecycle *lifecycle) {
   char lua_error[LBUF_SIZE];
 
   lifecycle->maintenance->clock->now = time(nullptr);
@@ -241,7 +241,7 @@ void server_lifecycle_close_connections(ServerLifecycle *lifecycle,
     telnet_sockets_close(lifecycle->sockets, emergency, message);
 }
 
-int server_lifecycle_eradicate_fd(ServerLifecycle *lifecycle, int fd) {
+bool server_lifecycle_eradicate_fd(ServerLifecycle *lifecycle, int fd) {
   if (lifecycle == nullptr)
     return 0;
   return telnet_sockets_eradicate_fd(lifecycle->sockets, fd);

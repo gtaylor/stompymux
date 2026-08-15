@@ -45,7 +45,7 @@ DoublyLinkedListNode *doubly_linked_list_create_node(void *data) {
 }
 
 /* Destroy the List - Won't destroy unless the list is empty */
-int doubly_linked_list_destroy_list(DoublyLinkedList *list) {
+bool doubly_linked_list_destroy_list(DoublyLinkedList *list) {
 
   if (!list)
     return 1;

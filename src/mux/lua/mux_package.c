@@ -31,7 +31,7 @@ void lua_mux_package_destroy(LuaMuxPackage *package) {
   object_state_transaction_destroy(&package->state_transaction);
 }
 
-int lua_mux_package_is_checking(LuaMuxPackage *package) {
+bool lua_mux_package_is_checking(LuaMuxPackage *package) {
   return package->is_checking && package->is_checking(package->context);
 }
 

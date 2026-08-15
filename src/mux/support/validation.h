@@ -6,12 +6,13 @@
 
 typedef struct ServerConfiguration ServerConfiguration;
 
-int is_integer(char *string);
-int is_number(const char *string);
-int ok_name(const ServerConfiguration *configuration, const char *name);
-int ok_stored_player_name(const ServerConfiguration *configuration,
-                          const char *name);
-int ok_player_name(const ServerConfiguration *configuration, const char *name);
-int ok_new_player_name(const ServerConfiguration *configuration,
-                       const char *name);
-int ok_password(const ServerConfiguration *configuration, const char *password);
+bool is_integer(char *string);
+bool is_number(const char *string);
+bool ok_name(const ServerConfiguration *configuration, const char *name);
+bool ok_stored_player_name(const ServerConfiguration *configuration,
+                           const char *name);
+bool ok_player_name(const ServerConfiguration *configuration, const char *name);
+bool ok_new_player_name(const ServerConfiguration *configuration,
+                        const char *name);
+bool ok_password(const ServerConfiguration *configuration,
+                 const char *password);

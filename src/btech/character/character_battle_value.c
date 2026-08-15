@@ -92,7 +92,7 @@ static int bth_modifier_value(int bth) {
   }
 }
 
-int has_bool_advantage(BtechContext *context, DbRef player, const char *name) {
+bool has_bool_advantage(BtechContext *context, DbRef player, const char *name) {
   PSTATS stats;
   PSTATS *s = &stats;
   char buf[SBUF_SIZE];

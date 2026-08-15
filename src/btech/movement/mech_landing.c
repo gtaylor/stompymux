@@ -143,8 +143,8 @@ void mech_jump_land(Mech *mech) {
   Mech *target;
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition = mech_condition_summary(mech);
-  int dfa = 0;
-  int done = 0;
+  bool dfa = false;
+  bool done = false;
 
   /*
    * Added check to see if we're actually awake when we try to land
@@ -157,8 +157,8 @@ void mech_jump_land(Mech *mech) {
                 "Your lack of conciousness makes you fall to the ground. Not "
                 "like you can read this anyway.");
     mech_fall(mech, 1, 0);
-    dfa = 1;
-    done = 1;
+    dfa = true;
+    done = true;
   } else {
     /* Handle DFA attack */
     if (condition.dfa_attacking) {
@@ -204,7 +204,7 @@ void mech_jump_land(Mech *mech) {
           mech_notify(mech, MECHALL,
                       "Your missing leg has caused you to fall upon landing!");
           mech_los_broadcast(mech, "lands, unbalanced, and falls down!");
-          dfa = 1;
+          dfa = true;
           mech_fall(mech, 1, 0);
           done = 1;
         }
@@ -217,7 +217,7 @@ void mech_jump_land(Mech *mech) {
                       "Your damaged leg actuators have caused you to fall upon "
                       "landing!");
           mech_los_broadcast(mech, "lands, stumbles, and falls down!");
-          dfa = 1;
+          dfa = true;
           done = 1;
           mech_fall(mech, 1, 0);
         }
@@ -228,7 +228,7 @@ void mech_jump_land(Mech *mech) {
           mech_notify(mech, MECHALL,
                       "Your damaged gyro has caused you to fall upon landing!");
           mech_los_broadcast(mech, "lands, twists awkwardly, and falls down!");
-          dfa = 1;
+          dfa = true;
           done = 1;
           mech_fall(mech, 1, 0);
         }

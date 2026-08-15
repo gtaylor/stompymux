@@ -32,9 +32,9 @@ int char_getskilltargetbycode(BtechContext *context, DbRef player, int code,
 int char_getskilltarget(BtechContext *context, DbRef player, const char *name,
                         int modifier);
 int char_getxpbycode(const CharacterValueRequest *request);
-int char_gainxpbycode(const CharacterExperienceChange *change);
-int char_gainxp(BtechContext *context, DbRef player, const char *skill,
-                int amount);
+bool char_gainxpbycode(const CharacterExperienceChange *change);
+bool char_gainxp(BtechContext *context, DbRef player, const char *skill,
+                 int amount);
 int char_getskillsuccess(const CharacterSkillCheck *check);
 int char_getskillmargsucc(BtechContext *context, DbRef player, const char *name,
                           int modifier);
@@ -57,7 +57,7 @@ DbRef character_lookup(const CharacterLookupRequest *request);
 void initialize_pc(DbRef player, Mech *mech);
 void fix_pilotdamage(Mech *mech, DbRef player);
 int mw_ic_bth(Mech *mech);
-int handlemwconc(Mech *mech, int initial);
+bool handlemwconc(Mech *mech, int initial);
 void headhitmwdamage(Mech *mech, Mech *attacker, int dam);
 void mwlethaldam(Mech *mech, Mech *attacker, int dam);
 typedef struct CharacterExperienceReduction {
@@ -79,10 +79,10 @@ typedef struct PilotingExperienceAward {
 } PilotingExperienceAward;
 void piloting_experience_award(const PilotingExperienceAward *award);
 void accumulate_spot_xp(DbRef pilot, Mech *attacker, Mech *wounded);
-int made_perception_roll(Mech *mech, int modifier);
+bool made_perception_roll(Mech *mech, int modifier);
 void accumulate_arty_xp(DbRef pilot, Mech *attacker, Mech *wounded);
 void accumulate_computer_xp(DbRef pilot, Mech *mech, int reason);
-int has_bool_advantage(BtechContext *context, DbRef player, const char *name);
+bool has_bool_advantage(BtechContext *context, DbRef player, const char *name);
 typedef struct GunneryExperienceAward {
   DbRef pilot;
   Mech *attacker;

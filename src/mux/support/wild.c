@@ -89,7 +89,7 @@ static void wild_capture_character(const WildCharacterCapture *capture_call) {
  * Do a wildcard match, without remembering the wild data.
  * This routine will cause crashes if fed NULLs instead of strings.
  */
-int quick_wild(const char *tstr, const char *dstr) {
+bool quick_wild(const char *tstr, const char *dstr) {
   WildCursor pattern = wild_cursor(tstr);
   WildCursor data = wild_cursor(dstr);
 
@@ -191,8 +191,8 @@ int quick_wild(const char *tstr, const char *dstr) {
  *
  * Captures are stored in the stack-owned context supplied by wild().
  */
-static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
-                 int arg) {
+static bool wild1(WildcardContext *context, const char *tstr, const char *dstr,
+                  int arg) {
   WildCursor pattern = wild_cursor(tstr);
   WildCursor data = wild_cursor(dstr);
   size_t data_capture_offset;
@@ -423,9 +423,9 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
  *
  * Capture recursion is scoped to this invocation.
  */
-int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
+bool wild(const char *tstr, const char *dstr, char *args[], int nargs) {
   int i;
-  int value;
+  bool value;
   WildcardContext context = {.arguments = args, .argument_count = nargs};
   WildCursor pattern = wild_cursor(tstr);
   WildCursor data = wild_cursor(dstr);
@@ -510,7 +510,7 @@ int wild(const char *tstr, const char *dstr, char *args[], int nargs) {
  *
  * This routine will cause crashes if fed NULLs instead of strings.
  */
-int wild_match(const char *tstr, const char *dstr) {
+bool wild_match(const char *tstr, const char *dstr) {
   int target;
   int data;
 

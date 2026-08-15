@@ -94,8 +94,8 @@ void lua_free_modules(char **modules, size_t module_count) {
   free((void *)modules);
 }
 
-static int lua_add_module(char ***modules, size_t *module_count,
-                          const char *path, char *error, size_t error_size) {
+static bool lua_add_module(char ***modules, size_t *module_count,
+                           const char *path, char *error, size_t error_size) {
   char **replacement;
   char *copy;
 
@@ -121,9 +121,9 @@ static int lua_add_module(char ***modules, size_t *module_count,
   return 1;
 }
 
-int lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
-                        const char *relative, char ***modules,
-                        size_t *module_count, char *error, size_t error_size) {
+bool lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
+                         const char *relative, char ***modules,
+                         size_t *module_count, char *error, size_t error_size) {
   char directory[PATH_MAX];
   DIR *stream;
   struct dirent *entry;
@@ -194,14 +194,15 @@ int lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
   return 1;
 }
 
-static int lua_collect_global_modules(LuaRuntime *runtime, const char *relative,
-                                      char *error, size_t error_size) {
+static bool lua_collect_global_modules(LuaRuntime *runtime,
+                                       const char *relative, char *error,
+                                       size_t error_size) {
   return lua_collect_modules(runtime, LUA_ROOT_GLOBAL_LOGIC, relative,
                              &runtime->global_modules,
                              &runtime->global_module_count, error, error_size);
 }
 
-static int lua_cron_parse_number(const char *text, long *value) {
+static bool lua_cron_parse_number(const char *text, long *value) {
   char *end;
   const size_t LENGTH = strlen(text);
 
@@ -470,8 +471,9 @@ static int lua_verify_commands(lua_State *state, int commands, const char *path,
   return 1;
 }
 
-static int lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
-                             const char *path, char *error, size_t error_size) {
+static bool lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
+                              const char *path, char *error,
+                              size_t error_size) {
   int top = lua_gettop(runtime->state);
   int has_commands = 0;
   int has_schedules = 0;
@@ -626,8 +628,8 @@ static int lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
   return 1;
 }
 
-static int lua_load_global_modules(LuaRuntime *runtime, char *error,
-                                   size_t error_size) {
+static bool lua_load_global_modules(LuaRuntime *runtime, char *error,
+                                    size_t error_size) {
   size_t index;
 
   if (!lua_collect_global_modules(runtime, "", error, error_size))
@@ -655,7 +657,7 @@ typedef struct LuaAttachedModuleLoadRequest {
   bool ignore_errors;
 } LuaAttachedModuleLoadRequest;
 
-static int
+static bool
 lua_load_attached_modules(const LuaAttachedModuleLoadRequest *request) {
   LuaRuntime *runtime = request->runtime;
   DbRef object;
@@ -678,8 +680,8 @@ lua_load_attached_modules(const LuaAttachedModuleLoadRequest *request) {
   return 1;
 }
 
-int lua_initialize(LuaOwner *owner, const LuaServices *services, char *error,
-                   size_t error_size) {
+bool lua_initialize(LuaOwner *owner, const LuaServices *services, char *error,
+                    size_t error_size) {
   LuaRuntime *runtime = lua_runtime_create(owner, services, error, error_size);
 
   if (!runtime)
@@ -702,7 +704,7 @@ void lua_shutdown(LuaOwner *owner) {
   owner->runtime = nullptr;
 }
 
-int lua_reload(LuaOwner *owner, char *error, size_t error_size) {
+bool lua_reload(LuaOwner *owner, char *error, size_t error_size) {
   LuaRuntime *replacement =
       lua_runtime_create(owner, owner->runtime->services, error, error_size);
   LuaRuntime *previous;
@@ -721,8 +723,8 @@ int lua_reload(LuaOwner *owner, char *error, size_t error_size) {
   return 1;
 }
 
-int lua_check_one_module(LuaRuntime *runtime, LuaModuleRoot root,
-                         const char *path, char *error, size_t error_size) {
+bool lua_check_one_module(LuaRuntime *runtime, LuaModuleRoot root,
+                          const char *path, char *error, size_t error_size) {
   char detail[LBUF_SIZE];
 
   if (lua_verify_module(runtime, root, path, detail, sizeof(detail)))

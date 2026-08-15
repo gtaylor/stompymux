@@ -221,8 +221,8 @@ void parse_range(GameDatabase *database,
   }
 }
 
-int parse_thing_slash(MatchContext *match_context, DbRef player, char *thing,
-                      char **after, DbRef *it) {
+bool parse_thing_slash(MatchContext *match_context, DbRef player, char *thing,
+                       char **after, DbRef *it) {
   size_t length = strlen(thing);
   size_t offset = 0;
 

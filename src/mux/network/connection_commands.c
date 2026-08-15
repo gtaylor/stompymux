@@ -608,7 +608,7 @@ void do_quit(CommandInvocation *invocation) {
   descriptor_shutdown(descriptor, DESCRIPTOR_SHUTDOWN_QUIT);
 }
 
-int descriptor_command(Descriptor *d, char *command) {
+bool descriptor_command(Descriptor *d, char *command) {
   CommandRuntime *runtime = descriptor_runtime(d);
   CommandContext context;
 

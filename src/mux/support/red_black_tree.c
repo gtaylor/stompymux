@@ -234,8 +234,8 @@ bool red_black_tree_exists(RedBlackTree bt, const void *key) {
   exit(1);
 }
 
-int red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
-                        void *context) {
+bool red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
+                         void *context) {
   RbtreeNode *last;
   RbtreeNode *node;
   int depth = 0;

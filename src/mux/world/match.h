@@ -54,8 +54,8 @@ extern DbRef match_possessed(MatchContext * /*match_context*/, DbRef player,
 extern void parse_range(GameDatabase *database,
                         const ServerConfiguration *configuration, char **name,
                         DbRef *low_bound, DbRef *high_bound);
-extern int parse_thing_slash(MatchContext * /*match_context*/, DbRef player,
-                             char *thing, char **after, DbRef *it);
+extern bool parse_thing_slash(MatchContext * /*match_context*/, DbRef player,
+                              char *thing, char **after, DbRef *it);
 
 #define NOMATCH_MESSAGE "I don't see that here."
 #define AMBIGUOUS_MESSAGE "I don't know which one you mean!"

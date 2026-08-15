@@ -49,7 +49,7 @@ DbRef reverse_list(GameDatabase *database, DbRef list) {
 /**
  * Indicate if thing is in list
  */
-int member(GameDatabase *database, DbRef thing, DbRef list) {
+bool member(GameDatabase *database, DbRef thing, DbRef list) {
   for (; list != NOTHING && game_object_next(database, list) != list;
        list = game_object_next(database, list)) {
     if (list == thing)

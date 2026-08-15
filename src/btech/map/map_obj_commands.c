@@ -168,7 +168,7 @@ void map_add_block(DbRef player, void *data, char *buffer) {
                 "Landingzone-block added to %d,%d (distance: %d)", x, y, str);
 }
 
-int is_blocked_lz(Mech *mech, BattleMap *map, int x, int y) {
+bool is_blocked_lz(Mech *mech, BattleMap *map, int x, int y) {
   MapObject *o;
   float fx;
   float fy;

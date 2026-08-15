@@ -291,8 +291,8 @@ OwnedText attribute_get(GameDatabase *database, DbRef thing, int atr,
                         long *flags);
 char *attribute_get_string(GameDatabase *database, DbRef thing, int atr,
                            char *s, size_t size, long *flags);
-int attribute_get_info(GameDatabase *database, DbRef thing, int atr,
-                       long *flags);
+bool attribute_get_info(GameDatabase *database, DbRef thing, int atr,
+                        long *flags);
 void attribute_free(GameDatabase *database, DbRef thing);
 void toast_player(EvaluationContext *evaluation, DbRef player);
 

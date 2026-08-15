@@ -180,7 +180,7 @@ static int dropship_hex_row_adjustment(int from_x, int to_x) {
   return (from_x % 2 && !(to_x % 2)) ? -1 : 0;
 }
 
-int dropship_bay_in_adjacent_hex(Mech *seer, Mech *ds, int *bayn) {
+bool dropship_bay_in_adjacent_hex(Mech *seer, Mech *ds, int *bayn) {
   int i;
   int t = mech_dropship_bearing_sector(ds);
 
@@ -299,7 +299,7 @@ static void mech_enterbay_event(MuxEvent *e) {
   }
 }
 
-static int dropship_bay_is_open(Mech *mech, Mech *ds, DbRef bayref) {
+static bool dropship_bay_is_open(Mech *mech, Mech *ds, DbRef bayref) {
   int i;
   int j;
 
@@ -540,8 +540,8 @@ static void dropship_place_departing_unit(Mech *ds, Mech *mech, DbRef frombay) {
   mech_position_real_xy_set(mech, (MapRealPosition){.x = real_x, .y = real_y});
 }
 
-static int dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
-                              DbRef frombay) {
+static bool dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
+                               DbRef frombay) {
   char message_buffer[128];
   Mech *car = nullptr;
   BtechContext *context = mech_context(mech);
@@ -600,7 +600,7 @@ static int dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
   return 1;
 }
 
-int dropship_leave(BattleMap *map, Mech *mech) {
+bool dropship_leave(BattleMap *map, Mech *mech) {
   Mech *car;
 
   car =

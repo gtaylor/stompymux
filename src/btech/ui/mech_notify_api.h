@@ -43,7 +43,7 @@ void mech_set_channeltitle(DbRef player, void *data, char *buffer);
 void mech_set_channelmode(DbRef player, void *data, char *buffer);
 void mech_list_freqs(DbRef player, void *data, char *buffer);
 void mech_sendchannel(DbRef player, void *data, char *buffer);
-int common_checks(DbRef player, Mech *mech, int flag);
+bool common_checks(DbRef player, Mech *mech, int flag);
 void sendchannelstuff(Mech *mech, int freq, char *msg);
 void mech_radio(DbRef player, void *data, char *buffer);
 void mech_broadcast(Mech *mech, Mech *target, BattleMap *mech_map,

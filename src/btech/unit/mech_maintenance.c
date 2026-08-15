@@ -475,7 +475,7 @@ void mech_repair_part(Mech *mech, int loc, int pos) {
   }
 }
 
-int no_locations_destroyed(Mech *mech) {
+bool no_locations_destroyed(Mech *mech) {
   int i;
 
   for (i = 0; i < NUM_SECTIONS; i++)

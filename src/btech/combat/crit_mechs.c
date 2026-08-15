@@ -50,7 +50,7 @@
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 
-int mech_critical_effect_apply(const CriticalEffectRequest *request) {
+bool mech_critical_effect_apply(const CriticalEffectRequest *request) {
   Mech *wounded = request->wounded;
   Mech *attacker = request->attacker;
   const int LOS = request->line_of_sight;

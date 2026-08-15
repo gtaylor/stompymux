@@ -54,7 +54,7 @@ DbRef where_room(GameDatabase *database,
  * Check if thing is nearby player (in inventory, in same room, or
  * IS the room.
  */
-int nearby(GameDatabase *database, DbRef player, DbRef thing) {
+bool nearby(GameDatabase *database, DbRef player, DbRef thing) {
   DbRef thing_loc;
   DbRef player_loc;
 

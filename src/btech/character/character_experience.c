@@ -164,7 +164,7 @@ void accumulate_spot_xp(DbRef pilot, Mech *attacker, Mech *wounded) {
         game_object_name(mech_context(attacker)->database, pilot));
 }
 
-int made_perception_roll(Mech *mech, int modifier) {
+bool made_perception_roll(Mech *mech, int modifier) {
   BtechContext *context = mech_context(mech);
   DbRef pilot;
 

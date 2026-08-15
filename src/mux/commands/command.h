@@ -33,9 +33,9 @@ typedef enum {
   STATE_COMMAND_MOVE = 1 << 4,
 } StateCommandKey;
 
-int check_access(GameDatabase *database,
-                 const ServerConfiguration *configuration, DbRef player,
-                 int mask);
+bool check_access(GameDatabase *database,
+                  const ServerConfiguration *configuration, DbRef player,
+                  int mask);
 
 /*
  * Commands are dispatched through the uniform typed invocation boundary.

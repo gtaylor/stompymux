@@ -17,4 +17,4 @@ int fetch_idle(DescriptorRegistry *descriptors, RuntimeClock *clock,
                DbRef target);
 int fetch_connect(DescriptorRegistry *descriptors, RuntimeClock *clock,
                   DbRef target);
-int descriptor_command(Descriptor *descriptor, char *command);
+bool descriptor_command(Descriptor *descriptor, char *command);

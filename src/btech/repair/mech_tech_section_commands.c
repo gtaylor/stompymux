@@ -37,7 +37,7 @@ typedef struct TechCheckContext {
   int part;
 } TechCheckContext;
 
-int invalid_repair_path(Mech *mech, int loc) {
+bool invalid_repair_path(Mech *mech, int loc) {
   if (mech_class(mech) != CLASS_MECH)
     return 0;
   switch (loc) {
@@ -55,7 +55,7 @@ int invalid_repair_path(Mech *mech, int loc) {
   return 0;
 }
 
-int unit_is_fixable(Mech *mech) {
+bool unit_is_fixable(Mech *mech) {
   int i;
 
   for (i = 0; i < NUM_SECTIONS; i++) {

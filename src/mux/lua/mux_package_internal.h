@@ -33,7 +33,7 @@ struct LuaMuxAttribute {
 };
 
 LuaMuxPackage *lua_mux_package_get(lua_State *state);
-int lua_mux_package_is_checking(LuaMuxPackage *package);
+bool lua_mux_package_is_checking(LuaMuxPackage *package);
 void lua_mux_require_runtime(LuaMuxPackage *package, lua_State *state,
                              const char *function);
 DbRef lua_mux_require_object(LuaMuxPackage *package, lua_State *state,

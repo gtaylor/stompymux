@@ -74,15 +74,15 @@ void lua_log_error(LuaRuntime *runtime, DbRef object, const char *kind,
                    const char *error);
 void lua_log_load_error(LuaRuntime *runtime, DbRef object, const char *path,
                         const char *error);
-int lua_valid_relative_path(const char *path);
+bool lua_valid_relative_path(const char *path);
 const char *lua_root_name(LuaModuleRoot root);
-int lua_join_path(char *destination, size_t destination_size, const char *first,
-                  const char *second);
-int lua_resolve_path(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
-                     char *resolved, size_t resolved_size, char *error,
-                     size_t error_size);
-int lua_load_module(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
-                    char *error, size_t error_size);
+bool lua_join_path(char *destination, size_t destination_size,
+                   const char *first, const char *second);
+bool lua_resolve_path(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
+                      char *resolved, size_t resolved_size, char *error,
+                      size_t error_size);
+bool lua_load_module(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
+                     char *error, size_t error_size);
 LuaModuleRoot lua_require_root(lua_State *state, LuaRuntime *runtime);
 LuaRuntime *lua_runtime_create(LuaOwner *owner, const LuaServices *services,
                                char *error, size_t error_size);
@@ -90,13 +90,13 @@ void lua_runtime_destroy(LuaRuntime *runtime);
 
 void lua_free_modules(char **modules, size_t module_count);
 int lua_compare_module_paths(const ArraySortComparison *comparison);
-int lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
-                        const char *relative, char ***modules,
-                        size_t *module_count, char *error, size_t error_size);
+bool lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
+                         const char *relative, char ***modules,
+                         size_t *module_count, char *error, size_t error_size);
 int lua_cron_matches(const char *cron, time_t when, char *error,
                      size_t error_size);
-int lua_check_one_module(LuaRuntime *runtime, LuaModuleRoot root,
-                         const char *path, char *error, size_t error_size);
+bool lua_check_one_module(LuaRuntime *runtime, LuaModuleRoot root,
+                          const char *path, char *error, size_t error_size);
 
 bool lua_event_name_is_known(const char *name);
 bool lua_lock_name_is_known(const char *name);
@@ -105,8 +105,8 @@ void lua_push_context(GameDatabase *database, Descriptor *descriptor,
                       lua_State *state, DbRef object, DbRef player, DbRef cause,
                       const char *command, const char *event, const char *scope,
                       char *args[], int nargs);
-int lua_attached_path(LuaRuntime *runtime, DbRef object, char *path,
-                      size_t path_size, DbRef *source);
+bool lua_attached_path(LuaRuntime *runtime, DbRef object, char *path,
+                       size_t path_size, DbRef *source);
 void do_luaschedule(CommandInvocation *invocation);
 
 int lua_runtime_is_checking(void *context);

@@ -58,4 +58,4 @@ typedef struct BattleMapHexOccupancyRequest {
 } BattleMapHexOccupancyRequest;
 
 int battle_map_mech_count_in_hex(const BattleMapHexOccupancyRequest *request);
-int mech_domino_resolve(Mech *mech, MechDominoMode mode);
+bool mech_domino_resolve(Mech *mech, MechDominoMode mode);

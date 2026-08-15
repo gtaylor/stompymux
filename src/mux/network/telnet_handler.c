@@ -65,7 +65,7 @@ static const telnet_telopt_t TELNET_OPTIONS[] = {
     {-1, 0, 0},
 };
 
-int descriptor_telnet_initialize(Descriptor *d) {
+bool descriptor_telnet_initialize(Descriptor *d) {
   d->telnet_environment = telnet_environment_create();
   if (d->telnet_environment == nullptr) {
     log_error((LogEntry){.log = descriptor_log(d),

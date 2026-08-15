@@ -83,7 +83,7 @@ void numeric_hash_table_flush(HashTable *htab, int size) {
  * * hash_table_replace: replace the data part of a hash entry.
  */
 
-int numeric_hash_table_replace(long val, void *hashdata, HashTable *htab) {
+bool numeric_hash_table_replace(long val, void *hashdata, HashTable *htab) {
 
   red_black_tree_insert(htab->tree, (void *)val, hashdata);
   return 1;

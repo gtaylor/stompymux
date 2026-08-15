@@ -239,7 +239,7 @@ static void mech_sensorchange_event(MuxEvent *e) {
   mark_for_los_update(mech);
 }
 
-int mech_sensor_can_change_to(Mech *mech, int s) {
+bool mech_sensor_can_change_to(Mech *mech, int s) {
   BattleMap *map;
   int i;
 

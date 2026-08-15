@@ -145,16 +145,16 @@ int find_tech_skill(DbRef player, Mech *mech);
 /* Skill rolls */
 long btech_random_range(BtechContext *context, long low, long high);
 int btech_random_range_int(BtechContext *context, int low, int high);
-int made_pilot_skill_roll(Mech *mech, int mods);
+bool made_pilot_skill_roll(Mech *mech, int mods);
 int mech_pilot_skill_roll_target(Mech *mech, int mods);
-int mech_pilot_skill_roll(const PilotSkillRollRequest *request);
-int mech_pilot_skill_roll_without_experience(
+bool mech_pilot_skill_roll(const PilotSkillRollRequest *request);
+bool mech_pilot_skill_roll_without_experience(
     const PilotSkillRollRequest *request);
 int btech_random_roll(BtechContext *context);
 
 /* Section/Crit Functions */
 int crits_in_loc(Mech *mech, int index);
-int sect_has_busy_weap(Mech *mech, int sect);
+bool sect_has_busy_weap(Mech *mech, int sect);
 int find_weapons_advanced(Mech *mech, int index, unsigned char *weaparray,
                           unsigned char *weapdataarray, int *critical,
                           int whine);
@@ -192,7 +192,7 @@ typedef struct AmmunitionLookupRequest {
 CriticalSlotLookupResult
 ammunition_find(const AmmunitionLookupRequest *request);
 int count_ammo_for_weapon(Mech *mech, int weapindx);
-int find_artemis_for_weapon(Mech *mech, int section, int critical);
+bool find_artemis_for_weapon(Mech *mech, int section, int critical);
 int reverse_split_crit_loc(Mech *mech, int sect, int crit);
 int find_split_crits(Mech *mech, int sect, int type, int crit);
 typedef struct SplitCriticalLookup {
@@ -258,7 +258,7 @@ void do_sub_magic(Mech *mech, int loud);
 void do_magic(Mech *mech);
 void do_fixextra(Mech *mech);
 void mech_repair_part(Mech *mech, int loc, int pos);
-int no_locations_destroyed(Mech *mech);
+bool no_locations_destroyed(Mech *mech);
 void mech_re_attach(Mech *mech, int loc);
 void mech_replace_suit(Mech *mech, int loc);
 void mech_re_seal(Mech *mech, int loc);
@@ -267,7 +267,7 @@ void mech_fill_part_ammo(Mech *mech, int loc, int pos);
 
 int count_destroyed_legs(Mech *obj_mech);
 int is_leg_destroyed(Mech *obj_mech, int w_loc);
-int is_mech_leg_less(Mech *obj_mech);
+bool is_mech_leg_less(Mech *obj_mech);
 typedef struct WeaponCriticalSearch {
   Mech *mech;
   CriticalSlotReference weapon;
@@ -276,8 +276,8 @@ typedef struct WeaponCriticalSearch {
   int maximum_criticals;
 } WeaponCriticalSearch;
 int mech_weapon_first_critical(const WeaponCriticalSearch *search);
-int check_all_sections(Mech *mech, int special_to_find);
-int check_section_for_special(Mech *mech, int special_to_find, int w_sec);
+bool check_all_sections(Mech *mech, int special_to_find);
+bool check_section_for_special(Mech *mech, int special_to_find, int w_sec);
 int get_remaining_internal_percent(Mech *mech);
 int get_remaining_armor_percent(Mech *mech);
 int find_obj(Mech *mech, int loc, int type);

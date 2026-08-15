@@ -29,6 +29,6 @@ typedef struct ExitMovementRequest {
 
 void move_via_generic(const ObjectMovementRequest *request);
 void move_via_exit(const ExitMovementRequest *request);
-int move_via_teleport(const ObjectMovementRequest *request);
+bool move_via_teleport(const ObjectMovementRequest *request);
 void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
                const char *failmsg, int hush);

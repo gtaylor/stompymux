@@ -147,7 +147,7 @@ void telnet_sockets_release(TelnetSockets *sockets) {
     uv_close((uv_handle_t *)&listener4->handle, listener_closed);
 }
 
-int telnet_sockets_eradicate_fd(TelnetSockets *sockets, int fd) {
+bool telnet_sockets_eradicate_fd(TelnetSockets *sockets, int fd) {
   Descriptor *descriptor;
   DescriptorIterator iterator =
       descriptor_iterator_all(sockets->runtime->descriptors);

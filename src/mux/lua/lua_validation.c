@@ -56,9 +56,9 @@ static void lua_free_parent_checks(LuaParentCheck *checks, size_t check_count) {
   free(checks);
 }
 
-static int lua_add_parent_check(LuaParentCheck **checks, size_t *check_count,
-                                const char *path, const char *detail,
-                                char *error, size_t error_size) {
+static bool lua_add_parent_check(LuaParentCheck **checks, size_t *check_count,
+                                 const char *path, const char *detail,
+                                 char *error, size_t error_size) {
   LuaParentCheck *replacement;
   char *path_copy;
   char *detail_copy;
@@ -93,10 +93,10 @@ static int lua_add_parent_check(LuaParentCheck **checks, size_t *check_count,
   return 1;
 }
 
-static int lua_check_luaparents(EvaluationContext *evaluation,
-                                LuaRuntime *runtime, DbRef player,
-                                int *has_errors, char *error,
-                                size_t error_size) {
+static bool lua_check_luaparents(EvaluationContext *evaluation,
+                                 LuaRuntime *runtime, DbRef player,
+                                 int *has_errors, char *error,
+                                 size_t error_size) {
   LuaParentCheck *checks = nullptr;
   size_t check_count = 0;
   DbRef object;
@@ -199,8 +199,8 @@ done:
   return result;
 }
 
-int lua_validate_path(LuaRuntime *runtime, const char *path, char *error,
-                      size_t error_size) {
+bool lua_validate_path(LuaRuntime *runtime, const char *path, char *error,
+                       size_t error_size) {
   char resolved[PATH_MAX];
 
   if (!runtime) {
@@ -217,8 +217,8 @@ int lua_validate_path(LuaRuntime *runtime, const char *path, char *error,
                           sizeof(resolved), error, error_size);
 }
 
-int lua_attached_path(LuaRuntime *runtime, DbRef object, char *path,
-                      size_t path_size, DbRef *source) {
+bool lua_attached_path(LuaRuntime *runtime, DbRef object, char *path,
+                       size_t path_size, DbRef *source) {
   const char *value =
       game_object_lua_parent(runtime->services->database, object);
   if (*value) {

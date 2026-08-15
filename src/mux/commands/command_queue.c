@@ -122,7 +122,7 @@ static int objqe_compare(const RedBlackTreeCompareCall *call) {
   return (RIGHT > LEFT) - (RIGHT < LEFT);
 }
 
-int cque_init(CommandQueue *queue) {
+bool cque_init(CommandQueue *queue) {
   queue->object_queues = red_black_tree_init(objqe_compare, nullptr);
   return 1;
 }
@@ -246,8 +246,8 @@ static void wakeup_wait_que(MuxTimer *timer, void *arg) {
  * * que_want: Do we want this queue entry?
  */
 
-static int que_want(GameDatabase *database, BQUE *entry, DbRef ptarg,
-                    DbRef otarg) {
+static bool que_want(GameDatabase *database, BQUE *entry, DbRef ptarg,
+                     DbRef otarg) {
   if ((ptarg != NOTHING) && (ptarg != entry->player))
     return 0;
   if ((otarg != NOTHING) && (otarg != entry->player))

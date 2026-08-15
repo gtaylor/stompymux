@@ -89,7 +89,7 @@ int someone_repairing_s(Mech *mech, int loc, int part, int t) {
       .mech = mech, .location = loc, .part = part, .event_type = t});
 }
 
-int someone_repairing(Mech *mech, int loc, int part) {
+bool someone_repairing(Mech *mech, int loc, int part) {
   const int EVENT_TYPES[] = {EVENT_REPAIR_RELO,      EVENT_REPAIR_REPL,
                              EVENT_REPAIR_REPLG,     EVENT_REPAIR_REPAP,
                              EVENT_REPAIR_REPAG,     EVENT_REPAIR_MOB,
@@ -116,7 +116,7 @@ int someone_fixing_i(Mech *mech, int loc) {
       .mech = mech, .location = loc, .event_type = EVENT_REPAIR_FIXI});
 }
 
-int someone_fixing(Mech *mech, int loc) {
+bool someone_fixing(Mech *mech, int loc) {
   return someone_fixing_a(mech, loc) || someone_fixing_i(mech, loc);
 }
 
@@ -147,7 +147,7 @@ int someone_scrapping_loc(Mech *mech, int loc) {
       .mech = mech, .location = loc, .event_type = EVENT_REPAIR_SCRL});
 }
 
-int someone_scrapping_part(Mech *mech, int loc, int part) {
+bool someone_scrapping_part(Mech *mech, int loc, int part) {
   const int EVENT_TYPES[] = {EVENT_REPAIR_SCRP, EVENT_REPAIR_SCRG,
                              EVENT_REPAIR_UMOB};
   for (size_t index = 0; index < (sizeof(EVENT_TYPES) / sizeof(EVENT_TYPES[0]));
@@ -161,7 +161,7 @@ int someone_scrapping_part(Mech *mech, int loc, int part) {
   return 0;
 }
 
-int can_scrap_loc(Mech *mech, int loc) {
+bool can_scrap_loc(Mech *mech, int loc) {
   TechCheckContext check = {.location = loc % 8};
 
   mech_event_visit(mech, EVENT_REPAIR_REPL, tech_check_loc, &check);
@@ -169,7 +169,7 @@ int can_scrap_loc(Mech *mech, int loc) {
   return !check.matches && !someone_fixing(mech, loc);
 }
 
-int can_scrap_part(Mech *mech, int loc, int part) {
+bool can_scrap_part(Mech *mech, int loc, int part) {
   return !(someone_repairing(mech, loc, part));
 }
 

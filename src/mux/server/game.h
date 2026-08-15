@@ -71,5 +71,5 @@ typedef struct ExcludingNotification {
 void notify_excluding(const ExcludingNotification *notification);
 void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
                     const char *msg, int key);
-int is_hearer(EvaluationContext *evaluation, DbRef thing);
+bool is_hearer(EvaluationContext *evaluation, DbRef thing);
 void report(CommandContext *command);

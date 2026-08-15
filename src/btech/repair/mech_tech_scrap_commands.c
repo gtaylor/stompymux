@@ -268,7 +268,7 @@ static bool invalid_scrap_dependency(Mech *mech, int location) {
          invalid_scrap_path(mech, location);
 }
 
-int invalid_scrap_path(Mech *mech, int loc) {
+bool invalid_scrap_path(Mech *mech, int loc) {
   if (loc < 0)
     return 0;
   if (mech_class(mech) != CLASS_MECH)

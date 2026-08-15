@@ -629,8 +629,8 @@ static void ai_adjust_path_option(const AiPathAdjustment *adjustment) {
                                          .speed = option->speed,
                                          .score = adjustment->score});
 }
-int ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
-                  float dely) {
+bool ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
+                   float dely) {
   int o;
   int b_len;
   int b;

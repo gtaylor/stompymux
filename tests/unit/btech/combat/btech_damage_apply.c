@@ -219,7 +219,8 @@ bool mech_section_is_destroyed(const Mech *mech, int section) {
   return false;
 }
 
-int mech_location_maybe_breach(Mech *source, Mech *wounded, int hit_location) {
+bool mech_location_maybe_breach(Mech *source, Mech *wounded,
+                                int hit_location) {
   (void)source;
   (void)wounded;
   (void)hit_location;

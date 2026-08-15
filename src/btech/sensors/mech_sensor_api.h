@@ -69,7 +69,7 @@ typedef struct MechSensorDescriptionRequest {
 int mech_sensor_to_hit_bonus(const MechSensorToHitRequest *request);
 int mech_sensor_can_see(const MechSensorObservationRequest *request);
 int mech_sensor_driver_base_chance(Mech *mech);
-int mech_sensor_detects(const MechSensorDetectionRequest *request);
+bool mech_sensor_detects(const MechSensorDetectionRequest *request);
 int mech_sensor_detects_now(const MechSensorDetectionRequest *request);
 SensorFlagText sensor_flag_text(int flags);
 unsigned short
@@ -78,7 +78,7 @@ void mech_sensor_map_los_update(DbRef obj, BattleMap *map);
 void mech_sensor_description_append(
     const MechSensorDescriptionRequest *request);
 char *mech_sensor_info(Mech *mech, char buffer[static LBUF_SIZE]);
-int mech_sensor_can_change_to(Mech *mech, int sensor);
+bool mech_sensor_can_change_to(Mech *mech, int sensor);
 void mech_sensors_disable_requiring(Mech *mech, int technology);
 void sensor_light_availability_check(Mech *mech);
 void mech_sensor(DbRef player, void *data, char *buffer);

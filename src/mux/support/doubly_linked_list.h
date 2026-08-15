@@ -23,7 +23,7 @@ DoublyLinkedListNode *doubly_linked_list_create_node(void *data);
 
 /* The different destroy functions
  * destroy_node returns the data */
-int doubly_linked_list_destroy_list(DoublyLinkedList *ddlist);
+bool doubly_linked_list_destroy_list(DoublyLinkedList *ddlist);
 void *doubly_linked_list_destroy_node(
     DoublyLinkedListNode *node); /* Shouldn't include this one but whatever */
 

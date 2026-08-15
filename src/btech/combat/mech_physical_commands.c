@@ -24,7 +24,7 @@
 #include "section_types.h"
 #include <stddef.h>
 
-static int sword_check_arm(Mech *mech, int arm) {
+static bool sword_check_arm(Mech *mech, int arm) {
   const char *arm_used = arm == RARM ? "right" : "left";
 
   if (mech_section_is_destroyed(mech, arm)) {

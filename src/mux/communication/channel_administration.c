@@ -174,7 +174,7 @@ int comsys_test_access(const ChannelAccessRequest *request) {
   return (int)(((long)chan->type & flag_value));
 }
 
-int do_comsystem(EvaluationContext *evaluation, DbRef who, char *cmd) {
+bool do_comsystem(EvaluationContext *evaluation, DbRef who, char *cmd) {
   char *t;
   const char *ch;
   char *alias;

@@ -594,7 +594,7 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
   return max(1, total);
 }
 
-static int tank_in_pieces(Mech *mech) {
+static bool tank_in_pieces(Mech *mech) {
   int i;
 
   for (i = 0; i < NUM_SECTIONS; i++)
