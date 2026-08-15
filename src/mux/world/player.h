@@ -34,8 +34,8 @@ typedef struct PlayerCreationRequest {
 
 DbRef connect_player(const PlayerConnectionRequest *request);
 DbRef create_player(const PlayerCreationRequest *request);
-int add_player_name(WorldContext *world, DbRef player, char *name);
-int delete_player_name(WorldContext *world, DbRef player, char *name);
+int add_player_name(WorldContext *world, DbRef player, const char *name);
+int delete_player_name(WorldContext *world, DbRef player, const char *name);
 DbRef lookup_player(WorldContext *world, DbRef doer, const char *name,
                     int check);
 void load_player_names(WorldContext *world);

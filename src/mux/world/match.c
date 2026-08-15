@@ -274,7 +274,7 @@ void match_here(MatchContext *match_context) {
 }
 
 static void match_list(MatchContext *match_context, DbRef first, int local) {
-  char *namebuf;
+  const char *namebuf;
 
   if (match_context->confidence >= CON_DBREF)
     return;

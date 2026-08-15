@@ -119,7 +119,7 @@ void comsys_leave_channel(EvaluationContext *evaluation, DbRef player,
   notify_printf(evaluation, player, "You have left channel %s.", ch->name);
 
   if ((user->on) && (!is_dark(evaluation->world->database, player))) {
-    char *c = game_object_name(evaluation->world->database, player);
+    const char *c = game_object_name(evaluation->world->database, player);
 
     if (c && *c) {
       comsys_channel_printf(evaluation, ch, "[%s] %s has left this channel.",
@@ -380,7 +380,7 @@ void comsys_delete_channel_alias(EvaluationContext *evaluation, DbRef player,
       if (user->who == player) {
         comsys_disconnect_channel(evaluation, player, channel);
         if (user->on && !is_dark(evaluation->world->database, player)) {
-          char *c = game_object_name(evaluation->world->database, player);
+          const char *c = game_object_name(evaluation->world->database, player);
 
           if (c && *c)
             comsys_channel_printf(evaluation, ch,

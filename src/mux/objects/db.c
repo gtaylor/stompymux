@@ -147,17 +147,14 @@ static char **native_attribute_slot(const NativeAttributeReference *reference) {
  * ---------------------------------------------------------------------------
  * * Name, s_Name: Get or set an object's name.
  */
-char *game_object_name(GameDatabase *database, DbRef thing) {
+const char *game_object_name(GameDatabase *database, DbRef thing) {
   long aflags;
   char *buff;
   char buffer[MBUF_SIZE];
 
   if (database->configuration->cache_names) {
     if (thing > database->top || thing < 0) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-      return (char *)"#-1 INVALID DBREF";
-#pragma clang diagnostic pop
+      return "#-1 INVALID DBREF";
     }
     if (!*pure_name_slot(database, thing)) {
       buff = attribute_get(database, thing, A_NAME, &aflags);
@@ -192,16 +189,13 @@ bool game_object_lua_parent_set(GameDatabase *database, DbRef object,
   return true;
 }
 
-char *game_object_pure_name(GameDatabase *database, DbRef thing) {
+const char *game_object_pure_name(GameDatabase *database, DbRef thing) {
   long aflags;
   char *buff;
 
   if (database->configuration->cache_names) {
     if (thing > database->top || thing < 0) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-      return (char *)"#-1 INVALID DBREF";
-#pragma clang diagnostic pop
+      return "#-1 INVALID DBREF";
     }
     if (!*pure_name_slot(database, thing)) {
       char new[LBUF_SIZE];

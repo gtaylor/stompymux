@@ -254,7 +254,7 @@ void do_last(CommandInvocation *invocation) {
  * add_player_name, delete_player_name, lookup_player:
  * Manage playername->dbref mapping
  */
-int add_player_name(WorldContext *world, DbRef player, char *name) {
+int add_player_name(WorldContext *world, DbRef player, const char *name) {
   int stat;
   DbRef *p;
   char *temp;
@@ -315,7 +315,7 @@ int add_player_name(WorldContext *world, DbRef player, char *name) {
   return stat;
 }
 
-int delete_player_name(WorldContext *world, DbRef player, char *name) {
+int delete_player_name(WorldContext *world, DbRef player, const char *name) {
   DbRef *p;
   char *temp;
   char *tp;
