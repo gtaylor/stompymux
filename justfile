@@ -16,7 +16,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis fmt-check build check-boolean-contracts check-boolean-conversions test tidy-check
+ci: check-source-size check-typed-constants check-enum-underlying-type check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis fmt-check build check-boolean-contracts check-boolean-conversions test tidy-check
 
 agent-checks: ci
 
@@ -30,6 +30,11 @@ check-source-size:
 # cannot name them. This lexical gate also keeps examples in comments current.
 check-typed-constants:
     found=0; status=0; grep -RInE --include='*.h' --include='*.h.in' '^[[:space:]]*#[[:space:]]*define[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+[^[:space:]"]' src || status=$?; if (( status == 0 )); then found=1; elif (( status != 1 )); then exit "$status"; fi; status=0; grep -RInE --include='*.c' '^[[:space:]]*#[[:space:]]*define[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+[^[:space:]"]' src || status=$?; if (( status == 0 )); then found=1; elif (( status != 1 )); then exit "$status"; fi; if (( found )); then echo 'Untyped object-like constant found in guarded sources.' >&2; exit 1; fi
+
+# Named enums use the house-standard signed int representation explicitly.
+# Anonymous enums remain the typed-constant idiom and need no underlying type.
+check-enum-underlying-type:
+    status=0; grep -RInE --include='*.c' --include='*.h' --include='*.h.in' '^[[:space:]]*(typedef[[:space:]]+)?enum[[:space:]]+[A-Za-z_][A-Za-z_0-9]*[[:space:]]*\{' src || status=$?; if (( status == 0 )); then echo 'Named enum without an explicit underlying type found; use : int.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
 
 # modernize-use-nullptr catches typed null-pointer constants, including bare 0,
 # but intentionally skips tokens inside macro expansions. Clang's raw lexer

@@ -23,7 +23,7 @@ typedef struct ServerLifecycle ServerLifecycle;
 typedef struct ServerLog ServerLog;
 typedef struct WorldIndexes WorldIndexes;
 
-typedef enum BtechDamageExperienceMode {
+typedef enum BtechDamageExperienceMode : int {
   BTECH_DAMAGE_XP_GUNNERY,
   BTECH_DAMAGE_XP_PILOTING,
   BTECH_DAMAGE_XP_NONE,

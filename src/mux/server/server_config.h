@@ -26,7 +26,7 @@ typedef struct PersistenceContext PersistenceContext;
 typedef unsigned char Uchar;
 
 typedef struct DatabaseConfiguration DatabaseConfiguration;
-typedef enum BootstrapObjectType {
+typedef enum BootstrapObjectType : int {
   BOOTSTRAP_OBJECT_ROOM,
   BOOTSTRAP_OBJECT_PLAYER,
 } BootstrapObjectType;

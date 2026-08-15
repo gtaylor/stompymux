@@ -34,7 +34,7 @@ typedef struct StyledTextPalette StyledTextPalette;
 typedef void (*LuaCommandVisitor)(void *context, const char *source,
                                   DbRef object, const char *pattern);
 
-typedef enum LuaEventType {
+typedef enum LuaEventType : int {
   LUA_EVENT_NONE,
   LUA_EVENT_SUCCESS,
   LUA_EVENT_FAIL,
@@ -76,7 +76,7 @@ typedef struct LuaEventInvocation {
   const char *reason;
 } LuaEventInvocation;
 
-typedef enum LuaAppearanceType {
+typedef enum LuaAppearanceType : int {
   LUA_APPEARANCE_INTERNAL,
   LUA_APPEARANCE_EXTERNAL,
 } LuaAppearanceType;
@@ -106,7 +106,7 @@ typedef struct LuaMechStatusResult {
   char rendered[LBUF_SIZE];
 } LuaMechStatusResult;
 
-typedef enum LuaLockType {
+typedef enum LuaLockType : int {
   LUA_LOCK_DEFAULT,
   LUA_LOCK_DROP,
   LUA_LOCK_ENTER,
@@ -121,7 +121,7 @@ typedef enum LuaLockType {
   LUA_LOCK_COUNT,
 } LuaLockType;
 
-typedef enum LuaLockOperation {
+typedef enum LuaLockOperation : int {
   LUA_LOCK_OPERATION_MATCH,
   LUA_LOCK_OPERATION_TRAVERSE,
   LUA_LOCK_OPERATION_TAKE,
@@ -166,7 +166,7 @@ typedef struct LuaLockResult {
   char other_message[LBUF_SIZE];
 } LuaLockResult;
 
-typedef enum LuaMessageType {
+typedef enum LuaMessageType : int {
   LUA_MESSAGE_NONE,
   LUA_MESSAGE_SUCCESS,
   LUA_MESSAGE_DROP,
@@ -182,7 +182,7 @@ typedef enum LuaMessageType {
   LUA_MESSAGE_COUNT,
 } LuaMessageType;
 
-typedef enum LuaMessageOperation {
+typedef enum LuaMessageOperation : int {
   LUA_MESSAGE_OPERATION_NONE,
   LUA_MESSAGE_OPERATION_LOOK,
   LUA_MESSAGE_OPERATION_TAKE,

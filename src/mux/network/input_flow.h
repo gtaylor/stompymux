@@ -9,7 +9,7 @@
 
 constexpr int FLOW_STEP_NAME_SIZE = 64;
 
-typedef enum FlowAction {
+typedef enum FlowAction : int {
   FLOW_ACTION_WAIT,   /* Stay on the current step; (re)print its prompt. */
   FLOW_ACTION_GOTO,   /* Move to a named step in the same flow. */
   FLOW_ACTION_DONE,   /* Flow finished successfully; tear down. */
@@ -67,7 +67,7 @@ void flow_render_menu(char *buffer, size_t buffer_size, const char *header,
 int flow_match_menu(const FlowMenuItem *items, int item_count,
                     const char *input);
 
-typedef enum FlowYesNo {
+typedef enum FlowYesNo : int {
   FLOW_YESNO_INVALID = -1,
   FLOW_YESNO_NO = 0,
   FLOW_YESNO_YES = 1,

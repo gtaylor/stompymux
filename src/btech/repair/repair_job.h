@@ -10,12 +10,12 @@
 
 #pragma once
 
-typedef enum RepairStallPolicy {
+typedef enum RepairStallPolicy : int {
   REPAIR_STALL_REQUIRED,
   REPAIR_STALL_CONFIGURED,
 } RepairStallPolicy;
 
-typedef enum RepairCommandStatus {
+typedef enum RepairCommandStatus : int {
   REPAIR_COMMAND_READY,
   REPAIR_COMMAND_MISSING_MECH,
   REPAIR_COMMAND_STARTING,
@@ -43,7 +43,7 @@ typedef struct RepairFacilityCommandContext {
   Mech *mech;
 } RepairFacilityCommandContext;
 
-typedef enum RepairParseStatus {
+typedef enum RepairParseStatus : int {
   REPAIR_PARSE_OK,
   REPAIR_PARSE_INVALID_SECTION,
   REPAIR_PARSE_INVALID_PART,
@@ -66,7 +66,7 @@ typedef struct RepairEventPayload {
   DbRef player;
 } RepairEventPayload;
 
-typedef enum RepairJobResult {
+typedef enum RepairJobResult : int {
   REPAIR_JOB_REJECTED,
   REPAIR_JOB_CALLBACK_ABORTED,
   REPAIR_JOB_SCHEDULED_SUCCESS,

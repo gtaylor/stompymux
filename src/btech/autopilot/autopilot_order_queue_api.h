@@ -6,7 +6,7 @@
 
 #include "autopilot.h"
 
-typedef enum AutopilotOrderResult {
+typedef enum AutopilotOrderResult : int {
   AUTOPILOT_ORDER_OK,
   AUTOPILOT_ORDER_INVALID,
   AUTOPILOT_ORDER_UNSUPPORTED,

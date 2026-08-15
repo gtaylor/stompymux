@@ -34,7 +34,7 @@
 #include "mux/world/player.h"
 #include "mux/world/world_context.h"
 
-typedef enum ConnectResult {
+typedef enum ConnectResult : int {
   CONNECT_RESULT_CONNECTED,
   CONNECT_RESULT_RETRY,
   CONNECT_RESULT_TERMINATED,

@@ -70,7 +70,7 @@ int battle_map_mech_count_in_hex(const BattleMapHexOccupancyRequest *request) {
   return cnt;
 }
 
-typedef enum CollisionDamageTable {
+typedef enum CollisionDamageTable : int {
   COLLISION_DAMAGE_NORMAL,
   COLLISION_DAMAGE_PUNCH,
   COLLISION_DAMAGE_KICK,

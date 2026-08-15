@@ -25,12 +25,12 @@ typedef struct BtechScriptCall {
   BtechScriptArguments command_arguments;
 } BtechScriptCall;
 
-typedef enum BtechScriptStatus {
+typedef enum BtechScriptStatus : int {
   BTECH_SCRIPT_OK,
   BTECH_SCRIPT_ERROR,
 } BtechScriptStatus;
 
-typedef enum BtechScriptValueKind {
+typedef enum BtechScriptValueKind : int {
   BTECH_SCRIPT_TEXT,
   BTECH_SCRIPT_LIST,
   BTECH_SCRIPT_NUMBER,
@@ -38,7 +38,7 @@ typedef enum BtechScriptValueKind {
   BTECH_SCRIPT_MUTATION,
 } BtechScriptValueKind;
 
-typedef enum BtechScriptListItemKind {
+typedef enum BtechScriptListItemKind : int {
   BTECH_SCRIPT_LIST_TEXT,
   BTECH_SCRIPT_LIST_NUMBER,
 } BtechScriptListItemKind;

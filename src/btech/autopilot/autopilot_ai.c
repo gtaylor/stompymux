@@ -36,7 +36,7 @@ enum {
   CFAST_COUNT = 9,
   MAGIC_NUM = -123456,
 };
-typedef enum AiSpeedOption {
+typedef enum AiSpeedOption : int {
   AI_SPEED_NORMAL,
   AI_SPEED_FASTER,
   AI_SPEED_SLOWER,

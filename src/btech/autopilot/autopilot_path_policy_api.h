@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef enum AutopilotPathMobility {
+typedef enum AutopilotPathMobility : int {
   AUTOPILOT_PATH_MECH,
   AUTOPILOT_PATH_TRACKED,
   AUTOPILOT_PATH_WHEELED,
@@ -46,7 +46,7 @@ typedef struct AutopilotPathRequest {
   bool waterproof;
 } AutopilotPathRequest;
 
-typedef enum AutopilotPathStatus {
+typedef enum AutopilotPathStatus : int {
   AUTOPILOT_PATH_FOUND,
   AUTOPILOT_PATH_UNREACHABLE,
   AUTOPILOT_PATH_INVALID,

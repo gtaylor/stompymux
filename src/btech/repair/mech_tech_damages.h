@@ -10,7 +10,7 @@
  * 8/4/99
  */
 
-typedef enum RepairDamageType {
+typedef enum RepairDamageType : int {
   REATTACH,
   REPAIRP,
   REPAIRP_T,

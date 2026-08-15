@@ -443,7 +443,7 @@ static const char *modify_manifest(BtechContext *context, DbRef player,
 /* Handles adding or removing parts/commods from a map or unit's manifest.
  * btaddstores(), addstuff, and removestuff use this.
  */
-typedef enum ManifestChangeDirection {
+typedef enum ManifestChangeDirection : int {
   MANIFEST_REMOVE = -1,
   MANIFEST_ADD = 1,
 } ManifestChangeDirection;

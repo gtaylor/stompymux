@@ -87,7 +87,7 @@ void mech_fireweapon(DbRef player, void *data, char *buffer) {
                                                        .arguments = args});
 }
 
-typedef enum MechWeaponArcCheck {
+typedef enum MechWeaponArcCheck : int {
   MECH_WEAPON_ARC_AVAILABLE,
   MECH_WEAPON_ARC_NOT_CONTROLLED,
   MECH_WEAPON_ARC_OUTSIDE,

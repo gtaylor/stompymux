@@ -12,7 +12,7 @@ typedef struct TechTimeAddition {
   int units;
 } TechTimeAddition;
 
-typedef enum TechPartParseStatus {
+typedef enum TechPartParseStatus : int {
   TECH_PART_PARSE_OK,
   TECH_PART_PARSE_INVALID,
   TECH_PART_PARSE_INVALID_POSITION,

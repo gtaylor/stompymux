@@ -39,7 +39,7 @@ static const float BOMB_GRAVITY = 1.0F;
 #include "registry_api.h"
 #include <math.h>
 
-typedef enum BombKind {
+typedef enum BombKind : int {
   BOMB_KIND_STANDARD,
   BOMB_KIND_INFERNO,
   BOMB_KIND_CLUSTER,

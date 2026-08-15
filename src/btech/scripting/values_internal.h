@@ -78,7 +78,7 @@ static inline char *script_function_argument(char *const arguments[],
                                                   sizeof(*arguments), index);
 }
 
-typedef enum GmvSourceKind {
+typedef enum GmvSourceKind : int {
   GMV_SOURCE_MECH_KEY,
   GMV_SOURCE_FIELD_OFFSET,
   GMV_SOURCE_STRING_CALLBACK,

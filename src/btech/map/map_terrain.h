@@ -9,7 +9,7 @@
 
 typedef struct BattleMap BattleMap;
 
-typedef enum BattleTerrain {
+typedef enum BattleTerrain : int {
   BATTLE_TERRAIN_GRASSLAND = ' ',
   BATTLE_TERRAIN_ROAD = '#',
   BATTLE_TERRAIN_LIGHT_FOREST = '`',

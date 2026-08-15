@@ -10,7 +10,7 @@
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/styled_text/render.h"
 
-typedef enum StyledColorKind {
+typedef enum StyledColorKind : int {
   STYLED_COLOR_DEFAULT,
   STYLED_COLOR_RGB,
 } StyledColorKind;
@@ -36,7 +36,7 @@ typedef struct StyledState {
   bool link_emitted;
 } StyledState;
 
-typedef enum StyledDecoration {
+typedef enum StyledDecoration : int {
   STYLED_DECORATION_UNSET,
   STYLED_DECORATION_FALSE,
   STYLED_DECORATION_TRUE,
@@ -45,7 +45,7 @@ typedef enum StyledDecoration {
   STYLED_DECORATION_DASHED,
 } StyledDecoration;
 
-typedef enum StyledBoolean {
+typedef enum StyledBoolean : int {
   STYLED_BOOLEAN_UNSET,
   STYLED_BOOLEAN_FALSE,
   STYLED_BOOLEAN_TRUE,
@@ -72,7 +72,7 @@ typedef struct StyledLinkStyle {
   StyledLinkProperties states[STYLED_LINK_STATE_COUNT];
 } StyledLinkStyle;
 
-typedef enum StyledLinkKind {
+typedef enum StyledLinkKind : int {
   STYLED_LINK_EXTERNAL,
   STYLED_LINK_SEND,
   STYLED_LINK_PROMPT,
@@ -86,7 +86,7 @@ typedef struct StyledLinkMenuItem {
   bool separator;
 } StyledLinkMenuItem;
 
-typedef enum StyledVisibilityAction {
+typedef enum StyledVisibilityAction : int {
   STYLED_VISIBILITY_ACTION_UNSET,
   STYLED_VISIBILITY_ACTION_CONCEAL,
   STYLED_VISIBILITY_ACTION_REVEAL,

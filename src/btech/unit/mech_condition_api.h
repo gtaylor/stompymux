@@ -78,7 +78,7 @@ typedef struct MechConditionSummary {
   int masc_counter;
 } MechConditionSummary;
 
-typedef enum MechTorsoTwist {
+typedef enum MechTorsoTwist : int {
   MECH_TORSO_CENTER,
   MECH_TORSO_LEFT,
   MECH_TORSO_RIGHT,

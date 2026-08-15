@@ -9,7 +9,7 @@
 
 typedef struct ServerConfiguration ServerConfiguration;
 
-enum CommandParseFlags {
+enum CommandParseFlags : int {
   COMMAND_PARSE_STRIP = 1 << 0,
   COMMAND_PARSE_STRIP_TRAILING = 1 << 1,
   COMMAND_PARSE_STRIP_LEADING = 1 << 2,

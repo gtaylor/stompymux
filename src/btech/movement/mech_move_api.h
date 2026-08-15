@@ -38,13 +38,13 @@ void mech_jump_land(Mech *mech);
 void mech_flood_section(Mech *mech, int loc, int lev);
 void mech_flood(Mech *mech);
 void mech_fall(Mech *mech, int levels, bool show_message);
-typedef enum MechDominoMode {
+typedef enum MechDominoMode : int {
   MECH_DOMINO_GROUND,
   MECH_DOMINO_JUMP,
   MECH_DOMINO_FALL,
 } MechDominoMode;
 
-typedef enum TeamRelationship {
+typedef enum TeamRelationship : int {
   TEAM_RELATIONSHIP_ANY,
   TEAM_RELATIONSHIP_FRIENDLY,
   TEAM_RELATIONSHIP_HOSTILE,

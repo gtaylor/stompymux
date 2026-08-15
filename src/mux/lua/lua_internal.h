@@ -16,7 +16,7 @@
 
 typedef struct CommandInvocation CommandInvocation;
 
-typedef enum LuaModuleRoot {
+typedef enum LuaModuleRoot : int {
   LUA_ROOT_OBJECT_LOGIC,
   LUA_ROOT_GLOBAL_LOGIC,
   LUA_ROOT_PACKAGES,

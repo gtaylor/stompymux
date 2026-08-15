@@ -37,7 +37,7 @@ static int lua_mux_is_printable_ascii(lua_State *state) {
   return 1;
 }
 
-typedef enum LuaStylePropertyKind {
+typedef enum LuaStylePropertyKind : int {
   LUA_STYLE_PROPERTY_STRING,
   LUA_STYLE_PROPERTY_BOOLEAN,
 } LuaStylePropertyKind;
