@@ -209,8 +209,7 @@ void log_name(ServerLog *log, DbRef target) {
   char new[LBUF_SIZE];
 
   if ((log->configuration->log_info & LOGOPT_FLAGS) != 0)
-    tp = lbuf_text_take(
-        unparse_object(log->database, nullptr, (DbRef)GOD, target));
+    tp = unparse_object(log->database, nullptr, (DbRef)GOD, target);
   else
     tp = unparse_object_numonly(log->database, target);
   styled_text_strip(log->database->styled_text_palette, tp.text, new,

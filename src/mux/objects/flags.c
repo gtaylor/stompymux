@@ -547,8 +547,8 @@ LbufText unparse_object_numonly(GameDatabase *database, DbRef target) {
                    game_object_name(database, target), target);
   return lbuf_text_take(buffer);
 }
-char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
-                     DbRef player, DbRef target) {
+LbufText unparse_object(GameDatabase *database, EvaluationContext *evaluation,
+                        DbRef player, DbRef target) {
   (void)evaluation;
   char *buffer = alloc_lbuf("unparse_object");
   if (target == NOTHING) {
@@ -567,7 +567,7 @@ char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
     (void)string_copy_bounded(buffer, LBUF_SIZE,
                               game_object_name(database, target));
   }
-  return buffer;
+  return lbuf_text_take(buffer);
 }
 bool convert_flags(EvaluationContext *evaluation, DbRef player, char *list,
                    ObjectFlagSet *flags, long *type) {
