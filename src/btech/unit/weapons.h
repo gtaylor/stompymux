@@ -308,11 +308,6 @@ const struct WeaponDefinition MECH_WEAPONS[] = {
 
 };
 
-/* Prep work for unifying cluster hit tables */
-#define CLUSTER_HIT_2 {1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2}
-#define CLUSTER_HIT_10 {3, 3, 4, 6, 6, 6, 6, 8, 8, 10, 10}
-#define CLUSTER_HIT_30 {10, 10, 12, 18, 18, 18, 18, 24, 24, 30, 30}
-
 static const MissileHitEntry MISSILE_HIT_DEFINITIONS[] = {{"CL.LB10-XAC", 0, {3, 3, 4, 6, 6, 6, 6, 8, 8, 10, 10}},
                                                           {"CL.LB20-XAC", 0, {6, 6, 9, 12, 12, 12, 12, 16, 16, 20, 20}},
                                                           {"CL.LB2-XAC", 0, {1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2}},
@@ -396,6 +391,6 @@ static const MissileHitEntry MISSILE_HIT_DEFINITIONS[] = {{"CL.LB10-XAC", 0, {3,
                                                           {"IS.InfantryLRM", 0, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}},
                                                           {"NoWeapon", -1, {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}}};
 
-#define NUM_DEF_WEAPONS \
-  (((sizeof(MECH_WEAPONS)) / (sizeof(struct WeaponDefinition))) - 1)
+constexpr int NUM_DEF_WEAPONS =
+    (int)((sizeof(MECH_WEAPONS) / sizeof(struct WeaponDefinition)) - 1);
 // clang-format on

@@ -14,29 +14,26 @@ constexpr int DESTROYED = 0x00000020;     /* (f) */
 constexpr int JUMPING = 0x00000040;       /* (g) Handled in UPDATE */
 constexpr int FALLEN = 0x00000080;        /* (h) */
 constexpr int DFA_ATTACK = 0x00000100;    /* (i) */
-#define PERFORMING_ACTION                                                      \
-  0x00000200 /* (j) Set if the unit is performing some sort of action.         \
-                Controlled by SCode */
+constexpr int PERFORMING_ACTION =
+    0x00000200; /* (j) Unit is performing an action controlled by softcode */
 constexpr int FLIPPED_ARMS = 0x00000400; /* (k) */
-#define AMS_ENABLED                                                            \
-  0x00000800 /* (l) only settable if mech has ANTI-MISSILE_TECH */
-#define EXPLODE_SAFE                                                           \
-  0x00001000 /* (m) Used to prevent a unit from doing EXPLODE AMMO */
+constexpr int AMS_ENABLED =
+    0x00000800; /* (l) Only settable with anti-missile tech */
+constexpr int EXPLODE_SAFE =
+    0x00001000; /* (m) Prevents a unit from exploding ammunition */
 constexpr int UNCONSCIOUS = 0x00002000;   /* (n) Pilot is unconscious */
 constexpr int TOWED = 0x00004000;         /* (o) Someone's towing us */
 constexpr int LOCK_TARGET = 0x00008000;   /* (p) We mean business */
 constexpr int LOCK_BUILDING = 0x00010000; /* (q) Hit building */
-#define LOCK_HEX                                                               \
-  0x00020000 /* (r) Hit hex (clear / ignite, d'pend on weapon)                 \
-              */
+constexpr int LOCK_HEX =
+    0x00020000; /* (r) Hit hex (clear or ignite, depending on weapon) */
 constexpr int LOCK_HEX_IGN = 0x00040000; /* (s) */
 constexpr int LOCK_HEX_CLR = 0x00080000; /* (t) */
 constexpr int MASC_ENABLED = 0x00100000; /* (u) Using MASC */
-#define BLINDED                                                                \
-  0x00200000 /* (v) Pilot has been blinded momentarily by something */
+constexpr int BLINDED = 0x00200000; /* (v) Pilot has been blinded momentarily */
 constexpr int COMBAT_SAFE = 0x00400000; /* (w) Can't be hurt */
-#define AUTOCON_WHEN_SHUTDOWN                                                  \
-  0x00800000                      /* (x) Autocon sees it even when shutdown */
+constexpr int AUTOCON_WHEN_SHUTDOWN =
+    0x00800000;                   /* (x) Autocon sees it even when shutdown */
 constexpr int FIRED = 0x01000000; /* (y) Fired at something */
 constexpr int SCHARGE_ENABLED = 0x02000000;  /* (z) */
 constexpr int HULLDOWN = 0x04000000;         /* (A) */
@@ -46,10 +43,10 @@ constexpr int UNDERTEMPERATURE = 0x20000000; /* (D) */
 constexpr int UNDERVACUUM = 0x40000000;      /* (E) */
 /* UNUSED                     0x80000000     (F) */
 
-#define CONDITIONS                                                             \
-  (UNDERSPECIAL | UNDERGRAVITY | UNDERTEMPERATURE | UNDERVACUUM)
-#define LOCK_MODES                                                             \
-  (LOCK_TARGET | LOCK_BUILDING | LOCK_HEX | LOCK_HEX_IGN | LOCK_HEX_CLR)
+constexpr int CONDITIONS =
+    UNDERSPECIAL | UNDERGRAVITY | UNDERTEMPERATURE | UNDERVACUUM;
+constexpr int LOCK_MODES =
+    LOCK_TARGET | LOCK_BUILDING | LOCK_HEX | LOCK_HEX_IGN | LOCK_HEX_CLR;
 
 /* status2 element */
 
@@ -58,10 +55,8 @@ constexpr int ECM_ENABLED = 0x00000001;     /* (a) Unit ECM is enabled */
 constexpr int ECCM_ENABLED = 0x00000002;    /* (b) Unit ECCM is enabled */
 constexpr int ECM_DISTURBANCE = 0x00000004; /* (c) Unit affected by ECM */
 constexpr int ECM_PROTECTED = 0x00000008;   /* (d) Unit protected by ECM */
-#define ECM_COUNTERED                                                          \
-  0x00000010                             /* (e) ECM countered by ECCM.         \
-                                            This only happens if an enemy ECCM \
-                                            is within range. */
+constexpr int ECM_COUNTERED =
+    0x00000010; /* (e) ECM countered by enemy ECCM within range */
 constexpr int SLITE_ON = 0x00000020;     /* (f) Unit SLITE is enabled */
 constexpr int STH_ARMOR_ON = 0x00000040; /* (g) Unit has steath armor enabled */
 constexpr int NULLSIGSYS_ON = 0x00000080; /* (h) Unit has nullsig enabled */
@@ -77,14 +72,14 @@ constexpr int PER_ECM_ENABLED =
     0x00001000; /* (m) Unit Personal ECM is enabled */
 constexpr int PER_ECCM_ENABLED =
     0x00002000; /* (n) Unit Personal ECCM is enabled */
-#define AUTOTURN_TURRET                                                        \
-  0x00004000 /* (o) Unit Auto-Turret enabled to locked target */
+constexpr int AUTOTURN_TURRET =
+    0x00004000; /* (o) Auto-turret enabled against locked target */
 /* UNUSED                     0x00008000     (p) */
 constexpr int SPRINTING = 0x00010000; /* (q) Unit is Sprinting */
 constexpr int EVADING = 0x00020000;   /* (r) Unit is Evading */
 constexpr int DODGING = 0x00040000;   /* (s) Unit is Dodging */
-#define ATTACKEMIT_MECH                                                        \
-  0x00080000 /* (t) Units attacks sent to MechAttackEmits channel */
+constexpr int ATTACKEMIT_MECH =
+    0x00080000; /* (t) Unit attacks sent to MechAttackEmits channel */
 constexpr int UNIT_MOUNTED =
     0x00100000; /* (u) Unit has been mounted by a suit */
 constexpr int UNIT_MOUNTING =
@@ -102,8 +97,8 @@ constexpr int NO_GUN_XP =
 /* UNUSED                     0x80000000     (F) */
 
 /* Grouping masks */
-#define MOVE_MODES (SPRINTING | EVADING | DODGING)
-#define MOVE_MODES_LOCK (SPRINTING | EVADING)
+constexpr int MOVE_MODES = SPRINTING | EVADING | DODGING;
+constexpr int MOVE_MODES_LOCK = SPRINTING | EVADING;
 
 /* Flags for mode handling */
 constexpr int MODE_EVADE = 0x1;
@@ -116,7 +111,7 @@ constexpr int MODE_DG_USED = 0x20;
 /* MechFullRecycle check flags */
 constexpr int CHECK_WEAPS = 0x1;
 constexpr int CHECK_PHYS = 0x2;
-#define CHECK_BOTH (CHECK_WEAPS | CHECK_PHYS)
+constexpr int CHECK_BOTH = CHECK_WEAPS | CHECK_PHYS;
 
 /* Macros for accessing some parts */
 
@@ -153,18 +148,15 @@ constexpr int INVISIBLE = 0x04000000;    /* (A) Unable to be seen by anyone */
 constexpr int CHEAD = 0x08000000;        /* (B) Altered heading */
 constexpr int OBSERVATORIC = 0x10000000; /* (C) */
 constexpr int BLOODHOUND_DESTROYED = 0x20000000; /* (D) */
-#define MECH_STUNNED                                                           \
-  0x40000000 /* (E) Is the mech stunned (Exile stun code)                      \
-              */
+constexpr int MECH_STUNNED = 0x40000000;         /* (E) Mech is stunned */
 
 /* tankcritstatus element */
 constexpr int TURRET_LOCKED = 0x01;
 constexpr int TURRET_JAMMED = 0x02; /* can be fixed by player */
 constexpr int DUG_IN = 0x04;
 constexpr int DIGGING_IN = 0x08;
-#define CREW_STUNNED                                                           \
-  0x10 /* can't go over cruise speed, make any attacks at all, use radio. IE,  \
-          can't do jack but turn */
+constexpr int CREW_STUNNED =
+    0x10; /* Crew can only turn: no flank speed, attacks, or radio */
 constexpr int TAIL_ROTOR_DESTROYED = 0x20;
 
 /* specials element: used to tell quickly what type of tech the mech has */
@@ -228,9 +220,8 @@ constexpr int OMNIMECH_TECH = 0x10000; /* Is an omni mech */
 constexpr int ARTEMISV_TECH = 0x20000; /* Not yet implemented */
 constexpr int CAMO_TECH = 0x40000;     /* Allows any unit to 'hide' */
 constexpr int CARRIER_TECH = 0x80000;  /* Can be used as a carrier of mechs */
-#define WATERPROOF_TECH                                                        \
-  0x100000 /* Can the unit go underwater without problems                      \
-              for use with tanks */
+constexpr int WATERPROOF_TECH =
+    0x100000; /* Unit can operate underwater without problems */
 constexpr int XLGYRO_TECH = 0x200000;
 constexpr int HDGYRO_TECH = 0x400000;
 constexpr int CGYRO_TECH = 0x800000;
@@ -243,29 +234,18 @@ constexpr int INF_SWARM_TECH =
 constexpr int INF_MOUNT_TECH = 0x02; /* Infantry/BSuits can mount friendlies */
 constexpr int INF_ANTILEG_TECH =
     0x04; /* Infantry/BSuits can make anti-leg attacks */
-#define CS_PURIFIER_STEALTH_TECH                                               \
-  0x08 /* CS Purifier stealth technology. +3 at 0MP, +2 at 1MP, +1 at 2MP, +3  \
-          at 3+MP. */
-#define DC_KAGE_STEALTH_TECH                                                   \
-  0x10 /* DC stealth technology. +3 at med, +6 at long. No BAP. */
-#define FWL_ACHILEUS_STEALTH_TECH                                              \
-  0x20 /* FWL stealth technology. +1 at short, +4 at medium, +7 at long. No    \
-          BAP. */
-#define FC_INFILTRATOR_STEALTH_TECH                                            \
-  0x40 /* FC stealth technology. +3 at med, +6 at long. No BAP. */
-#define FC_INFILTRATORII_STEALTH_TECH                                          \
-  0x80 /* FC stealth II technology. +1 at short, +3 at med, +6 at long. No     \
-          BAP. ECM in same hex. */
-#define MUST_JETTISON_TECH                                                     \
-  0x100 /* Special considerations for some suits. Must jettison backpack       \
-           before they can jump/swarm/anti-leg */
-#define CAN_JETTISON_TECH                                                      \
-  0x200 /* Whether or not the unit can jettison its backpack */
+constexpr int CS_PURIFIER_STEALTH_TECH = 0x08;
+constexpr int DC_KAGE_STEALTH_TECH = 0x10;
+constexpr int FWL_ACHILEUS_STEALTH_TECH = 0x20;
+constexpr int FC_INFILTRATOR_STEALTH_TECH = 0x40;
+constexpr int FC_INFILTRATORII_STEALTH_TECH = 0x80;
+constexpr int MUST_JETTISON_TECH = 0x100;
+constexpr int CAN_JETTISON_TECH = 0x200;
 
-#define STEALTH_TECH                                                           \
-  (CS_PURIFIER_STEALTH_TECH | DC_KAGE_STEALTH_TECH |                           \
-   FWL_ACHILEUS_STEALTH_TECH | FC_INFILTRATOR_STEALTH_TECH |                   \
-   FC_INFILTRATORII_STEALTH_TECH)
+constexpr int STEALTH_TECH = CS_PURIFIER_STEALTH_TECH | DC_KAGE_STEALTH_TECH |
+                             FWL_ACHILEUS_STEALTH_TECH |
+                             FC_INFILTRATOR_STEALTH_TECH |
+                             FC_INFILTRATORII_STEALTH_TECH;
 
 /* TargComp types */
 /*
@@ -366,22 +346,21 @@ constexpr int MECH_PILOT_CON = 0x4;
 constexpr int MECH_MAP = 0x8;
 constexpr int MECH_CONSISTENT = 0x10;
 constexpr int MECH_PILOTONLY = 0x20;
-#define MECH_USUAL                                                             \
-  (MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON | MECH_PILOT | MECH_STARTED)
-#define MECH_USUALS (MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON | MECH_PILOT)
-#define MECH_USUALSP (MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON)
-#define MECH_USUALSM (MECH_CONSISTENT | MECH_PILOT_CON | MECH_PILOT)
-#define MECH_USUALM                                                            \
-  (MECH_CONSISTENT | MECH_PILOT_CON | MECH_PILOT | MECH_STARTED)
-#define MECH_USUALO                                                            \
-  (MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON | MECH_PILOT | MECH_STARTED |   \
-   MECH_PILOTONLY)
-#define MECH_USUALSO                                                           \
-  (MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON | MECH_PILOT | MECH_PILOTONLY)
-#define MECH_USUALSPO                                                          \
-  (MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON | MECH_PILOTONLY)
-#define MECH_USUALSMO                                                          \
-  (MECH_CONSISTENT | MECH_PILOT_CON | MECH_PILOT | MECH_PILOTONLY)
-#define MECH_USUALMO                                                           \
-  (MECH_CONSISTENT | MECH_PILOT_CON | MECH_PILOT | MECH_STARTED |              \
-   MECH_PILOTONLY)
+constexpr int MECH_USUAL =
+    MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON | MECH_PILOT | MECH_STARTED;
+constexpr int MECH_USUALS =
+    MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON | MECH_PILOT;
+constexpr int MECH_USUALSP = MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON;
+constexpr int MECH_USUALSM = MECH_CONSISTENT | MECH_PILOT_CON | MECH_PILOT;
+constexpr int MECH_USUALM =
+    MECH_CONSISTENT | MECH_PILOT_CON | MECH_PILOT | MECH_STARTED;
+constexpr int MECH_USUALO = MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON |
+                            MECH_PILOT | MECH_STARTED | MECH_PILOTONLY;
+constexpr int MECH_USUALSO =
+    MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON | MECH_PILOT | MECH_PILOTONLY;
+constexpr int MECH_USUALSPO =
+    MECH_CONSISTENT | MECH_MAP | MECH_PILOT_CON | MECH_PILOTONLY;
+constexpr int MECH_USUALSMO =
+    MECH_CONSISTENT | MECH_PILOT_CON | MECH_PILOT | MECH_PILOTONLY;
+constexpr int MECH_USUALMO = MECH_CONSISTENT | MECH_PILOT_CON | MECH_PILOT |
+                             MECH_STARTED | MECH_PILOTONLY;

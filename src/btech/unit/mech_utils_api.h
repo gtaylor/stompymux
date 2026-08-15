@@ -43,26 +43,27 @@ constexpr char KILL_TYPE_FLOOD[] = "FLOOD"; /* includes vacuum */
 constexpr char KILL_TYPE_ICE[] = "FLOOD-ICE";
 constexpr char KILL_TYPE_HEAT[] = "HEAT";
 /* Intentional kill types.  */
-#define KILL_TYPE_NORMAL                                                       \
-  "DESTROYED" /* all other kills; includes carrier destruction */
-#define KILL_TYPE_PILOT                                                        \
-  "PILOT" /* Only happens on vehicles. Mainly crew death */
-#define KILL_TYPE_MWDAMAGE                                                     \
-  "MWDAMAGE" /* Failed MW Conc rolls once too many or one too many head hit */
+constexpr char KILL_TYPE_NORMAL[] =
+    "DESTROYED"; /* all other kills; includes carrier destruction */
+constexpr char KILL_TYPE_PILOT[] =
+    "PILOT"; /* Only happens on vehicles. Mainly crew death */
+constexpr char KILL_TYPE_MWDAMAGE[] =
+    "MWDAMAGE"; /* Failed MW Conc rolls once too many or one too many head hit
+                 */
 constexpr char KILL_TYPE_BEHEADED[] = "BEHEADED";
 constexpr char KILL_TYPE_XLENGINE[] = "XLENGINE";
 constexpr char KILL_TYPE_FUELTANK[] = "FUELTANK"; /* Fuel Tank Crit Death */
-#define KILL_TYPE_COCKPIT                                                      \
-  "COCKPIT" /* Alot different than Pilot death. Cockpit Crit death */
+constexpr char KILL_TYPE_COCKPIT[] =
+    "COCKPIT"; /* Alot different than Pilot death. Cockpit Crit death */
 constexpr char KILL_TYPE_POWERPLANT[] =
     "POWERPLANT"; /* Vehicle powerplant crit death */
 constexpr char KILL_TYPE_SCHARGE[] = "SCHARGE"; /* Super Charger overload */
-#define KILL_TYPE_TRANSPORT                                                    \
-  "TRANSPORT" /* The Transport containing the unit died */
+constexpr char KILL_TYPE_TRANSPORT[] =
+    "TRANSPORT"; /* The Transport containing the unit died */
 constexpr char KILL_TYPE_ENGINE[] =
     "ENGINE"; /* Unit engined, standard fusion death */
-#define KILL_TYPE_HEAD_TARGET                                                  \
-  "HEAD-TARGET" /* Head was taken off, using TARGET */
+constexpr char KILL_TYPE_HEAD_TARGET[] =
+    "HEAD-TARGET"; /* Head was taken off, using TARGET */
 
 void channel_emit_kill(Mech *mech, Mech *attacker, const char *reason);
 

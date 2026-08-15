@@ -14,7 +14,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-source-size check-unsafe-apis fmt-check build test tidy-check
+ci: check-source-size check-header-constants check-unsafe-apis fmt-check build test tidy-check
 
 agent-checks: ci
 
@@ -22,6 +22,13 @@ checks: ci
 
 check-source-size:
     status=0; while IFS= read -r -d '' source; do lines=$(awk 'END { print NR }' "$source"); if (( lines > 800 )); then echo "$source: $lines lines (maximum 800)"; status=1; fi; done < <(find src/mux src/btech -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0); exit "$status"
+
+# Object-like constants in src/mux and src/btech headers should be typed C23
+# constexpr objects. String literals remain macros because constexpr pointers
+# cannot name string literals; object-like macros in implementation files are
+# outside this header-focused gate.
+check-header-constants:
+    status=0; grep -RInE --include='*.h' --include='*.h.in' '^[[:space:]]*#[[:space:]]*define[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+[^[:space:]"]' src/mux src/btech || status=$?; if (( status == 0 )); then echo 'Untyped object-like header constant found in src/.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
 
 # Production code must use the project's checked parsing and copy helpers.
 check-unsafe-apis:
