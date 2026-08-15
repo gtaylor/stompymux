@@ -159,7 +159,7 @@ void initialize_pc(DbRef player, Mech *mech) {
   const int MOVEMENT_SCORE = player_bld + char_getstatvalue(s, "reflexes") +
                              char_getstatvalue(s, "running");
   mech_maximum_speed_set(mech, (float)MOVEMENT_SCORE * MP1 / 9.0F);
-#define PC_LOCS 4
+  static constexpr int PC_LOCS = 4;
   for (i = 0; i < NUM_SECTIONS; i++) {
     mech_section_armor_set(mech, i, 0);
     mech_section_original_armor_set(mech, i, 0);

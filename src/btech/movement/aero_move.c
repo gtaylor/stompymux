@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <time.h>
 /* Implements BattleTech movement mechanics for aerospace move. */
-#define MIN_TAKEOFF_SPEED 3
 #include "aero_move_api.h"
 #include "artillery_api.h"
 #include "btconfig.h"
@@ -55,7 +54,10 @@
 #include "section_types.h"
 #include <math.h>
 #include <stdlib.h>
-struct land_data_type {
+
+static constexpr int MIN_TAKEOFF_SPEED = 3;
+
+typedef struct LandDataType {
   UnitClass type;
   double maxvertup;
   double maxvertdown;
@@ -67,9 +69,10 @@ struct land_data_type {
   const char *landmsg_others;
   const char *takeoff;
   const char *takeoff_others;
-}; /*           maxvertup / maxvertdown / minhoriz / maxhoriz / launchv /
-     launchtime */
-static const struct land_data_type land_data[] = {
+} LandDataType; /* maxvertup / maxvertdown / minhoriz / maxhoriz / launchv /
+                   launchtime */
+
+static const LandDataType LAND_DATA[] = {
     {CLASS_VTOL, 10, -60, -15, 15, 5, 0,
      "You bring your VTOL to a safe landing.", "lands.",
      "The rotor whines overhead as you lift off into the sky.", "takes off!"},
@@ -84,11 +87,11 @@ static const struct land_data_type land_data[] = {
      "The DropShip touches down safely.", "touches down, and settles.",
      "The DropShip slowly lurches upwards as engines battle the gravity..",
      "starts climbing up to the sky!"}};
-#define NUM_LAND_TYPES (sizeof(land_data) / sizeof(struct land_data_type))
-static const struct land_data_type *land_data_entry(int index) {
+static constexpr size_t NUM_LAND_TYPES = sizeof(LAND_DATA) / sizeof(*LAND_DATA);
+static const LandDataType *land_data_entry(int index) {
   if (index < 0)
     abort();
-  return checked_storage_at_const(land_data, NUM_LAND_TYPES, sizeof(*land_data),
+  return checked_storage_at_const(LAND_DATA, NUM_LAND_TYPES, sizeof(*LAND_DATA),
                                   (size_t)index);
 }
 static void aero_takeoff_event(MuxEvent *e) {

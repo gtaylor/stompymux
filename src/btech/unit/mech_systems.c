@@ -565,7 +565,7 @@ void channel_emit_kill(Mech *mech, Mech *attacker, const char *reason) {
   }
 }
 
-#define NUM_NEIGHBORS 6
+static constexpr int NUM_NEIGHBORS = 6;
 typedef struct HexOffset {
   int x;
   int y;

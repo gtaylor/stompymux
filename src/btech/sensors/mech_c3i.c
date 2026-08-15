@@ -9,6 +9,7 @@
 #include "equipment_types.h"
 #include "mech_api_types.h"
 #include "mech_c3_misc_api.h"
+#include "mech_c3_network_internal.h"
 #include "mech_c3i_api.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
@@ -27,9 +28,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "registry_api.h"
-
-#define C3_POS_IN_NETWORK (-1)
-#define C3_POS_NO_ROOM (-2)
 
 static DbRef *c3i_network_slot(DbRef *network, int index) {
   return checked_storage_at(network, C3I_NETWORK_SIZE, sizeof(*network),

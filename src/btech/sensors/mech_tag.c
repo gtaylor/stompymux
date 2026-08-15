@@ -21,10 +21,10 @@
 #include "mux/server/platform.h"
 #include "registry_api.h"
 
-#define TAGRECYCLE_TICK 30
-#define TAG_SHORT 5
-#define TAG_MED 10
-#define TAG_LONG 15
+static constexpr int TAGRECYCLE_TICK = 30;
+static constexpr int TAG_SHORT = 5;
+static constexpr int TAG_MED = 10;
+static constexpr int TAG_LONG = 15;
 
 static void tag_recycle_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;

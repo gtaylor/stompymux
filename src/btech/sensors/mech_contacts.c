@@ -171,13 +171,15 @@ void mech_brief(DbRef player, void *data, char *buffer) {
   }
 }
 
-#define SEE_DEAD 0x01
-#define SEE_SHUTDOWN 0x02
-#define SEE_ALLY 0x04
-#define SEE_ENEMA 0x08
-#define SEE_TARGET 0x10
-#define SEE_BUILDINGS 0x20
-#define SEE_NEGNEXT 0x80
+enum ContactVisibility : int {
+  SEE_DEAD = 0x01,
+  SEE_SHUTDOWN = 0x02,
+  SEE_ALLY = 0x04,
+  SEE_ENEMA = 0x08,
+  SEE_TARGET = 0x10,
+  SEE_BUILDINGS = 0x20,
+  SEE_NEGNEXT = 0x80,
+};
 
 char mech_contact_weapon_arc(int arc) {
   if (arc & FORWARDARC)
@@ -692,11 +694,3 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "End Contact List");
 }
-
-#undef SEE_DEAD
-#undef SEE_SHUTDOWN
-#undef SEE_ALLY
-#undef SEE_ENEMA
-#undef SEE_TARGET
-#undef SEE_BUILDINGS
-#undef SEE_NEGNEXT

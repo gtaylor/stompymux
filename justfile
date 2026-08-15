@@ -14,7 +14,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-source-size check-header-constants check-unsafe-apis check-bounded-copy check-allocation-discipline fmt-check build test tidy-check
+ci: check-source-size check-typed-constants check-unsafe-apis check-bounded-copy check-allocation-discipline fmt-check build test tidy-check
 
 agent-checks: ci
 
@@ -23,12 +23,13 @@ checks: ci
 check-source-size:
     status=0; while IFS= read -r -d '' source; do lines=$(awk 'END { print NR }' "$source"); if (( lines > 800 )); then echo "$source: $lines lines (maximum 800)"; status=1; fi; done < <(find src/mux src/btech -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0); exit "$status"
 
-# Object-like constants in src/mux and src/btech headers should be typed C23
-# constexpr objects. String literals remain macros because constexpr pointers
-# cannot name string literals; object-like macros in implementation files are
-# outside this header-focused gate.
-check-header-constants:
-    status=0; grep -RInE --include='*.h' --include='*.h.in' '^[[:space:]]*#[[:space:]]*define[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+[^[:space:]"]' src/mux src/btech || status=$?; if (( status == 0 )); then echo 'Untyped object-like header constant found in src/.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
+# Object-like constants in headers and src/btech implementations should use
+# typed C23 objects or enums. String literals remain macros because constexpr
+# pointers cannot name them. This lexical gate also keeps examples in comments
+# current. The remaining src/mux implementations follow in a separate
+# alias-refactoring tranche.
+check-typed-constants:
+    found=0; status=0; grep -RInE --include='*.h' --include='*.h.in' '^[[:space:]]*#[[:space:]]*define[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+[^[:space:]"]' src/mux src/btech || status=$?; if (( status == 0 )); then found=1; elif (( status != 1 )); then exit "$status"; fi; status=0; grep -RInE --include='*.c' '^[[:space:]]*#[[:space:]]*define[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+[^[:space:]"]' src/btech || status=$?; if (( status == 0 )); then found=1; elif (( status != 1 )); then exit "$status"; fi; if (( found )); then echo 'Untyped object-like constant found in guarded sources.' >&2; exit 1; fi
 
 # The unbounded string_copy wrapper and strcpy are banned tree-wide; callers
 # use the project's bounded helpers instead.

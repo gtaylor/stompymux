@@ -10,6 +10,7 @@
 #include "mech_api_types.h"
 #include "mech_c3_api.h"
 #include "mech_c3_misc_api.h"
+#include "mech_c3_network_internal.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
@@ -40,11 +41,8 @@ static DbRef c3_network_value(const DbRef *network, int index) {
       network, C3_NETWORK_SIZE, sizeof(*network), (size_t)index);
 }
 
-#define C3_POS_IN_NETWORK (-1)
-#define C3_POS_NO_ROOM (-2)
-
-#define C3_MASTER_MECH_SIZE 5
-#define C3_MASTER_OTHER_SIZE 1
+static constexpr int C3_MASTER_MECH_SIZE = 5;
+static constexpr int C3_MASTER_OTHER_SIZE = 1;
 
 static bool mech_has_c3(const Mech *mech) {
   return mech_technology_flags(mech) & (C3_MASTER_TECH | C3_SLAVE_TECH);

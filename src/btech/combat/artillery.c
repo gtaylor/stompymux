@@ -158,9 +158,9 @@ static int blast_arcf(float fx, float fy, Mech *mech) {
   return RIGHTSIDE;
 }
 
-#define TABLE_GEN 0
-#define TABLE_PUNCH 1
-#define TABLE_KICK 2
+static constexpr int TABLE_GEN = 0;
+static constexpr int TABLE_PUNCH = 1;
+static constexpr int TABLE_KICK = 2;
 
 void blast_hit_real_hex(const BlastRealHexRequest *request) {
   BattleMap *map = request->map;
