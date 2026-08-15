@@ -141,8 +141,8 @@ void initialize_pc(DbRef player, Mech *mech) {
   char buf2[MBUF_SIZE];
   char buf3[MBUF_SIZE];
   char buf4[2];
-  int ammo1;
-  int ammo2;
+  int ammo1 = 0;
+  int ammo2 = 0;
   int i;
   int id;
 

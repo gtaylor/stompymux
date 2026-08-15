@@ -27,7 +27,7 @@ int btech_special_load_mech_positions(sqlite3 *sqlite, BtechContext *context) {
   int pilot_status;
   int result;
   int stall;
-  int step;
+  int step = SQLITE_DONE;
   int team;
   int unusable_arcs;
   int x;
@@ -108,7 +108,7 @@ int btech_special_load_mech_bays(sqlite3 *sqlite, BtechContext *context) {
   int bay_index;
   int expected_bay;
   int result;
-  int step;
+  int step = SQLITE_DONE;
 
   statement = nullptr;
   current_mech = NOTHING;
@@ -168,7 +168,7 @@ int btech_special_load_mech_turrets(sqlite3 *sqlite, BtechContext *context) {
   long turret_dbref;
   int expected_turret;
   int result;
-  int step;
+  int step = SQLITE_DONE;
   int turret_index;
 
   statement = nullptr;
@@ -234,7 +234,7 @@ int btech_special_load_mech_c3(sqlite3 *sqlite, BtechContext *context) {
   int c3i_size;
   int frequency_mode;
   int result;
-  int step;
+  int step = SQLITE_DONE;
   int total_masters;
   int working_masters;
 
@@ -304,7 +304,7 @@ int btech_special_load_mech_c3_nodes(sqlite3 *sqlite, BtechContext *context) {
   int network_type;
   int node_index;
   int result;
-  int step;
+  int step = SQLITE_DONE;
 
   statement = nullptr;
   current_mech = NOTHING;
@@ -380,7 +380,7 @@ int btech_special_load_mech_tics(sqlite3 *sqlite, BtechContext *context) {
   int expected_tic;
   int expected_word;
   int result;
-  int step;
+  int step = SQLITE_DONE;
   int tic_index;
   int word_index;
 
@@ -455,7 +455,7 @@ int btech_special_load_mech_frequencies(sqlite3 *sqlite,
   int frequency_index;
   int mode;
   int result;
-  int step;
+  int step = SQLITE_DONE;
 
   statement = nullptr;
   current_mech = NOTHING;

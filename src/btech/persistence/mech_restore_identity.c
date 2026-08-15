@@ -65,7 +65,7 @@ int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
   int result;
   int run_speed;
   int scan_range;
-  int step;
+  int step = SQLITE_DONE;
   int structural_integrity;
   int structural_integrity_original;
   int tactical_range;
@@ -217,7 +217,7 @@ int btech_special_load_mech_sections(sqlite3 *sqlite, BtechContext *context) {
   int result;
   int section_index;
   int specials;
-  int step;
+  int step = SQLITE_DONE;
 
   statement = nullptr;
   current_mech = NOTHING;
@@ -317,7 +317,7 @@ int btech_special_load_mech_criticals(sqlite3 *sqlite, BtechContext *context) {
   int result;
   int section_index;
   int slot;
-  int step;
+  int step = SQLITE_DONE;
 
   statement = nullptr;
   current_mech = NOTHING;

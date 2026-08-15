@@ -376,7 +376,7 @@ static int commac_load_entries(sqlite3 *sqlite,
   long who;
   int slot;
   int result = -1;
-  int step;
+  int step = SQLITE_DONE;
 
   if (sqlite3_prepare_v2(sqlite,
                          "SELECT who, curmac, macro_slot_0, macro_slot_1, "
@@ -452,7 +452,7 @@ static int commac_load_channels(sqlite3 *sqlite, PersistenceContext *context) {
   const char *name;
   long value;
   int result = -1;
-  int step;
+  int step = SQLITE_DONE;
 
   context->channels->count = 0;
   if (sqlite3_prepare_v2(sqlite,
@@ -505,7 +505,7 @@ static int commac_load_users(sqlite3 *sqlite,
   long who;
   long is_on;
   int result = -1;
-  int step;
+  int step = SQLITE_DONE;
 
   if (sqlite3_prepare_v2(
           sqlite,
@@ -571,7 +571,7 @@ static int commac_load_messages(sqlite3 *sqlite,
   const char *text;
   long sent_at;
   int result = -1;
-  int step;
+  int step = SQLITE_DONE;
 
   if (sqlite3_prepare_v2(
           sqlite,
@@ -621,7 +621,7 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
   int expected_set;
   int expected_entry;
   int result = -1;
-  int step;
+  int step = SQLITE_DONE;
 
   context->macros->count = 0;
   context->macros->capacity = 0;

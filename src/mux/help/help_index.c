@@ -137,7 +137,7 @@ static void help_article_vector_push(HelpArticleVector *vector,
 
 static char *help_slurp_file(const char *path, size_t *out_length) {
   FILE *fp;
-  long size;
+  long size = 0;
   char *buffer;
 
   fp = fopen(path, "rb");

@@ -60,7 +60,7 @@ int btech_special_load_repair_events(sqlite3 *sqlite, BtechContext *context) {
   int fake;
   int remaining_ticks;
   int result;
-  int step;
+  int step = SQLITE_DONE;
 
   statement = nullptr;
   result =

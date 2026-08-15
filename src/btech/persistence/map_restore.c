@@ -140,7 +140,7 @@ int btech_special_load_map_parents(sqlite3 *sqlite, BtechContext *context) {
   int reserved;
   int result;
   int sensor_flags;
-  int step;
+  int step = SQLITE_DONE;
   int temperature;
   int visibility;
   int width;
@@ -244,7 +244,7 @@ int btech_special_load_map_hexes(sqlite3 *sqlite, BtechContext *context) {
   int expected_x;
   int expected_y;
   int result;
-  int step;
+  int step = SQLITE_DONE;
   int value;
   int x;
   int y;
@@ -314,7 +314,7 @@ int btech_special_load_map_slots(sqlite3 *sqlite, BtechContext *context) {
   int flags;
   int result;
   int slot;
-  int step;
+  int step = SQLITE_DONE;
 
   statement = nullptr;
   current_map = NOTHING;
@@ -379,7 +379,7 @@ int btech_special_load_map_los(sqlite3 *sqlite, BtechContext *context) {
   int flags;
   int result;
   int source;
-  int step;
+  int step = SQLITE_DONE;
   int target;
 
   statement = nullptr;
@@ -485,7 +485,7 @@ int btech_special_load_map_objects(sqlite3 *sqlite, BtechContext *context) {
   int object_type;
   int ordinal;
   int result;
-  int step;
+  int step = SQLITE_DONE;
   int x;
   int y;
 
@@ -577,7 +577,7 @@ int btech_special_load_map_bits(sqlite3 *sqlite, BtechContext *context) {
   int current_y;
   int expected_byte;
   int result;
-  int step;
+  int step = SQLITE_DONE;
   int value;
   int byte_index;
   int y;

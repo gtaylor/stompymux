@@ -293,8 +293,8 @@ unsigned int red_black_tree_size(RedBlackTree bt) { return bt->size; }
 
 void *red_black_tree_search(RedBlackTree bt, int method, const void *key) {
   RbtreeNode *node;
-  RbtreeNode *last;
-  int compare_result;
+  RbtreeNode *last = nullptr;
+  int compare_result = 0;
   int found = 0;
 
   if (!bt->head) {

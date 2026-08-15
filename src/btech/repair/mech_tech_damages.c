@@ -725,7 +725,7 @@ void tech_fix(DbRef player, void *data, char *buffer) {
   RepairDamageTable *damages = &damages_storage;
   int n;
   int low;
-  int high;
+  int high = 0;
   RepairCommandContext repair_command;
   if (buffer != nullptr)
     buffer = checked_storage_at(buffer, strlen(buffer) + 1, sizeof(*buffer),

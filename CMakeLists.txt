@@ -161,10 +161,12 @@ target_compile_definitions(btmux_compile_options INTERFACE
 # Mark intentionally unused declarations with C23 [[maybe_unused]].
 # Declare externally visible variables in shared headers.
 target_compile_options(btmux_compile_options INTERFACE
-  $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Werror -Wformat=2 -Wshadow
+  $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Werror -Wformat=2
   -Wstrict-prototypes -Wold-style-definition -Wvla -Wmissing-prototypes
   -Wnull-dereference -Wundef -Wredundant-decls -Wmissing-declarations
   -Wmissing-variable-declarations -Wimplicit-int-enum-cast
+  -Wconditional-uninitialized -Wshadow-all -Wenum-enum-conversion
+  -Wcast-function-type-strict -Walloca
   -Wbad-function-cast -Wswitch-enum -Wimplicit-fallthrough -Wunused-macros -Wfloat-equal -Wpedantic
   -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings -Wconversion -Wunsafe-buffer-usage
   -Wsign-conversion>)

@@ -20,7 +20,7 @@ void notify_action(EvaluationContext *evaluation,
   const char *enactor_message;
   const char *other_message;
   OwnedText d;
-  DbRef location;
+  DbRef location = NOTHING;
   long attribute_flags;
 
   if (!message.descriptor && evaluation->command)
@@ -118,7 +118,7 @@ void notify_lock_failure(const LockFailureNotification *notification) {
   const char *other_message = result->has_other_message
                                   ? result->other_message
                                   : notification->other_default;
-  DbRef location;
+  DbRef location = NOTHING;
 
   if (invocation->silent)
     return;

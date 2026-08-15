@@ -34,7 +34,7 @@ void btech_random_seed(BtechRandom *random, uint64_t seed) {
 }
 
 bool btech_random_seed_from_system(BtechRandom *random) {
-  uint64_t seed;
+  uint64_t seed = 0;
   size_t offset = 0;
 
   assert(random != nullptr);

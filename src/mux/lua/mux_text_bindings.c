@@ -61,7 +61,7 @@ typedef struct LuaStyleProperty {
 
 static bool lua_mux_style_open(const LuaStylePropertyRequest *request) {
   lua_State *state = request->state;
-  const char *value;
+  const char *value = nullptr;
   bool enabled;
 
   lua_getfield(state, request->table, request->field);

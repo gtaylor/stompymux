@@ -694,10 +694,10 @@ void map_update(DbRef obj, void *data) {
   Mech *mech;
   char *tmps;
   char changemsg[LBUF_SIZE] = "";
-  int ma;
-  int ml;
-  int wind;
-  int wspeed;
+  int ma = 30;
+  int ml = 2;
+  int wind = 0;
+  int wspeed = 0;
   int cloudbase = 200;
   int oldl;
   int oldv;
