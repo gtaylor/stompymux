@@ -36,6 +36,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
   int value;
   float decimal_value;
   char cmd[MAX_STRING_LENGTH];
+  char description_buffer[BTECH_TEXT_CAPACITY];
   char *ptr;
   char *line2;
   int section = 0;
@@ -119,7 +120,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
     switch (selection) {
     case 0: /* Reference */
       tmpc = template_description_read(&(TemplateDescriptionRead){
-          .file = fp, .line = ptr, .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
+          .file = fp, .line = ptr, .buffer = description_buffer});
       if (strcmp(tmpc, ((mech)->ud.mech_type))) {
         btech_channel_send(
             mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
@@ -137,7 +138,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       break;
     case 1: /* Type */
       tmpc = template_description_read(&(TemplateDescriptionRead){
-          .file = fp, .line = ptr, .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
+          .file = fp, .line = ptr, .buffer = description_buffer});
       type = compare_const_array(template_unit_class_names(),
                                  template_unit_class_count(), tmpc);
       if (template_load_error(fp, mech, player, type == -1, true,
@@ -150,7 +151,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       break;
     case 2: /* Movement Type */
       tmpc = template_description_read(&(TemplateDescriptionRead){
-          .file = fp, .line = ptr, .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
+          .file = fp, .line = ptr, .buffer = description_buffer});
       type = compare_const_array(template_movement_type_names(),
                                  template_movement_type_count(), tmpc);
       if (template_load_error(fp, mech, player, type == -1, true,
@@ -164,9 +165,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       ((mech)->ud.tons) = value;
@@ -175,9 +174,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       mech_tactical_range_set(mech, value);
@@ -186,9 +183,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       mech_long_range_sensor_range_set(mech, value);
@@ -197,9 +192,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       mech_radio_range_set(mech, value);
@@ -208,9 +201,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       mech_scanner_range_set(mech, value);
@@ -219,9 +210,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       ((mech)->ud.numsinks) = clamp_int_to_char(value);
@@ -230,9 +219,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_float(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &decimal_value))
         return -1;
       mech_max_speed_set(mech, decimal_value);
@@ -240,7 +227,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       break;
     case 10: /* Specials */
       tmpc = template_description_read(&(TemplateDescriptionRead){
-          .file = fp, .line = ptr, .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
+          .file = fp, .line = ptr, .buffer = description_buffer});
       if (check_specials_list(primary_technology_names(),
                               primary_technology_name_count(),
                               secondary_technology_names(),
@@ -260,9 +247,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       mech_section_original_armor_set(mech, section, value);
@@ -273,9 +258,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       mech_section_original_internal_set(mech, section, value);
@@ -286,9 +269,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       mech_section_original_rear_armor_set(mech, section, value);
@@ -297,7 +278,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       break;
     case 14: /* Config */
       tmpc = template_description_read(&(TemplateDescriptionRead){
-          .file = fp, .line = ptr, .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
+          .file = fp, .line = ptr, .buffer = description_buffer});
       mech_section_configuration_set(
           mech, section,
           clamp_long_to_int(
@@ -322,7 +303,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       hpos = y - 1;
       critical = lpos;
       line2 = template_description_read(&(TemplateDescriptionRead){
-          .file = fp, .line = ptr, .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
+          .file = fp, .line = ptr, .buffer = description_buffer});
       line2 = template_token_parse(&(TemplateTokenRequest){
           .input = line2, .output = buf, .output_capacity = sizeof(buf)});
       if (!strncasecmp(buf, "CL.", 3))
@@ -490,9 +471,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       mech_computer_quality_set(mech, value);
@@ -501,17 +480,13 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       (void)string_copy_bounded(
           ((mech)->ud.mech_name), sizeof(((mech)->ud.mech_name)),
           template_description_read(&(TemplateDescriptionRead){
-              .file = fp,
-              .line = ptr,
-              .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
+              .file = fp, .line = ptr, .buffer = description_buffer}));
       break;
     case 17: /* Jj's */
       if (!template_read_float(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &decimal_value))
         return -1;
       ((mech)->rd.jumpspeed) = decimal_value;
@@ -520,9 +495,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       mech_radio_quality_set(mech, value);
@@ -531,9 +504,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       ((mech)->ud.si) = ((mech)->ud.si_orig) = clamp_int_to_char(value);
@@ -542,9 +513,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       ((mech)->ud.fuel) = ((mech)->ud.fuel_orig) = value;
@@ -555,9 +524,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       mech_radio_configuration_set(mech, value);
@@ -566,9 +533,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       ((mech)->ud.mechbv) = value;
@@ -577,9 +542,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       ((mech)->ud.cargospace) = value;
@@ -588,16 +551,14 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       ((mech)->rd.maxsuits) = value;
       break;
     case 26: /* Specials */
       tmpc = template_description_read(&(TemplateDescriptionRead){
-          .file = fp, .line = ptr, .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
+          .file = fp, .line = ptr, .buffer = description_buffer});
       if (check_specials_list(infantry_technology_names(),
                               infantry_technology_name_count(), nullptr, 0,
                               tmpc))
@@ -609,9 +570,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       ((mech)->ud.carmaxton) = clamp_int_to_char(value);
@@ -620,16 +579,14 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
+                  .file = fp, .line = ptr, .buffer = description_buffer}),
               &value))
         return -1;
       ((mech)->ud.hsengoverride) = value;
       break;
     case 29:
       tmpc = template_description_read(&(TemplateDescriptionRead){
-          .file = fp, .line = ptr, .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
+          .file = fp, .line = ptr, .buffer = description_buffer});
       if (strlen(tmpc) == 1) /* just the \0 */
         (void)string_copy_bounded(((mech)->ud.unit_era),
                                   sizeof(((mech)->ud.unit_era)), "Undefined");
@@ -639,7 +596,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       break;
     case 30:
       tmpc = template_description_read(&(TemplateDescriptionRead){
-          .file = fp, .line = ptr, .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
+          .file = fp, .line = ptr, .buffer = description_buffer});
       if (strlen(tmpc) == 1) /* just the \0 */
         (void)string_copy_bounded(((mech)->ud.unit_tro),
                                   sizeof(((mech)->ud.unit_tro)), "Undefined");

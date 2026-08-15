@@ -594,8 +594,9 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
        mech_context(mech)->configuration->btech_mw_losmap))
     mode |= LRS_LOSMODE;
 
+  char *attribute_buffer = alloc_lbuf("mech_lrsmap.attribute");
   str = btech_attribute_read(mech_context(mech)->database, player, A_LRSHEIGHT,
-                             (char[LBUF_SIZE]){0});
+                             attribute_buffer);
   if (*str) {
     if (!parse_int_checked(str, &display_height) || display_height < 10 ||
         display_height > 40) {
@@ -604,6 +605,7 @@ void mech_lrsmap(DbRef player, void *data, char *buffer) {
       display_height = LRS_DISPLAY_HEIGHT;
     }
   }
+  free_buf(attribute_buffer);
 
   display_height = min(display_height, 2 * mech_long_range_sensor_range(mech));
   display_height = min(display_height, map->map_height);

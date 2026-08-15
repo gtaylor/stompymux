@@ -190,6 +190,10 @@ add_library(btmux_options INTERFACE)
 target_link_libraries(btmux_options INTERFACE
   btmux_compile_options btmux_checked_storage)
 
+add_library(btech_frame_options INTERFACE)
+target_compile_options(btech_frame_options INTERFACE
+  $<$<COMPILE_LANGUAGE:C>:-Wframe-larger-than=65536>)
+
 set(BTECH_PRIVATE_INCLUDE_DIRS
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/autopilot"
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/character"
@@ -221,7 +225,7 @@ if(BUILD_TESTING)
 endif()
 set(STOMPYMUX_MAX_FRAME_SIZE 65536)
 if(BTECH_ENABLE_ASAN)
-  # ASan redzones inflate unchanged legacy frames beyond their optimized size.
+  # ASan redzones inflate unchanged legacy MUX frames beyond optimized size.
   set(STOMPYMUX_MAX_FRAME_SIZE 98304)
 endif()
 target_compile_options(stompymux PRIVATE

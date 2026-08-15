@@ -143,6 +143,7 @@ static int create_brandname(PartNameRegistry *registry,
   char buf[LBUF_SIZE];
   char buf2[BTECH_TEXT_CAPACITY];
   char buf3[BTECH_TEXT_CAPACITY];
+  char scratch[BTECH_TEXT_CAPACITY];
   char *c;
   const char *brn = nullptr;
   PartNameEntry *p;
@@ -157,11 +158,10 @@ static int create_brandname(PartNameRegistry *registry,
   if (!brn)
     return 0;
   p = checked_storage_allocate(sizeof(*p));
-  c = part_name_format(
-      &(PartNameRequest){.configuration = configuration,
-                         .part = id,
-                         .brand = b,
-                         .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
+  c = part_name_format(&(PartNameRequest){.configuration = configuration,
+                                          .part = id,
+                                          .brand = b,
+                                          .buffer = scratch});
   if (!c) {
     free(p);
     return 0;
@@ -172,12 +172,11 @@ static int create_brandname(PartNameRegistry *registry,
     (void)snprintf(buf, sizeof(buf), "%s", c);
   p->vlongy = strdup(buf);
 
-  c = part_name_format(
-      &(PartNameRequest){.configuration = configuration,
-                         .part = id,
-                         .brand = b,
-                         .short_name = true,
-                         .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
+  c = part_name_format(&(PartNameRequest){.configuration = configuration,
+                                          .part = id,
+                                          .brand = b,
+                                          .short_name = true,
+                                          .buffer = scratch});
   if (!c) {
     free(p->vlongy);
     free(p);
@@ -188,7 +187,7 @@ static int create_brandname(PartNameRegistry *registry,
   else
     (void)snprintf(buf, sizeof(buf), "%s", c);
   p->longy = strdup(buf);
-  c = part_figure_out_shname(id, (char[BTECH_TEXT_CAPACITY]){0});
+  c = part_figure_out_shname(id, scratch);
   if (!c) {
     free(p->longy);
     free(p->vlongy);
@@ -197,8 +196,7 @@ static int create_brandname(PartNameRegistry *registry,
   }
   if (b) {
     (void)string_copy_bounded(buf2, sizeof(buf2), c);
-    (void)string_copy_bounded(
-        buf3, sizeof(buf3), my_shortform(brn, (char[BTECH_TEXT_CAPACITY]){0}));
+    (void)string_copy_bounded(buf3, sizeof(buf3), my_shortform(brn, scratch));
     (void)snprintf(buf, sizeof(buf), "%s.%s", buf3, buf2);
   } else {
     (void)string_copy_bounded(buf, sizeof(buf), c);
@@ -218,10 +216,11 @@ void initialize_partname_tables(BtechContext *context) {
   int c = 0;
   int m;
   int n;
-  char tmpbuf[MBUF_SIZE];
+  char *tmpbuf;
 
   if (registry == nullptr)
     exit(EXIT_FAILURE);
+  tmpbuf = alloc_mbuf("initialize_partname_tables.tmpbuf");
   context->part_names = registry;
   for (j = 0; j <= BRANDCOUNT; j++)
     for (i = 0; i < NUM_ITEMS; i++)
@@ -251,6 +250,7 @@ void initialize_partname_tables(BtechContext *context) {
     lowercase_name(tmpbuf, entry->vlongy);
     hash_table_add(tmpbuf, (void *)(intptr_t)(i + 1), &registry->vlong_hash);
   }
+  free_buf(tmpbuf);
 }
 
 typedef struct PartNameLookup {

@@ -1,6 +1,7 @@
 /* Implements BattleTech sensor mechanics for unit c3 misc. */
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "btech/context.h"
 #include "command_handlers_api.h"
@@ -279,7 +280,8 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool t_is_c3) {
   int w_see_target = TARG_LOS_NONE;
   int w_c3_see_target = TARG_LOS_NONE;
   int t_show_status_info = 0;
-  C3ContactLine contacts[BATTLE_MAP_UNIT_CAPACITY];
+  C3ContactLine *contacts = checked_storage_allocate_array(
+      BATTLE_MAP_UNIT_CAPACITY, sizeof(*contacts));
   int buffindex = 0;
   int network_size;
   DbRef my_network[C3_NETWORK_SIZE];
@@ -433,6 +435,7 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool t_is_c3) {
 
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "End %s Contact List", t_is_c3 ? "C3" : "C3i");
+  free(contacts);
 }
 
 void mech_network_show_status(DbRef player, Mech *mech, bool t_is_c3) {
