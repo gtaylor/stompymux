@@ -96,15 +96,28 @@ int main(void) {
   assert(hash_table_find("go", &first.commands) == first_goto);
   assert(command_registry_add_switch_alias(&first, "gq", first_goto,
                                            &first_goto->switches[0]));
+  assert(command_registry_add_switch_alias(&first, "gqq", first_goto,
+                                           &first_goto->switches[0]));
   CMDENT *switch_alias = hash_table_find("gq", &first.commands);
+  CMDENT *second_switch_alias = hash_table_find("gqq", &first.commands);
   assert(switch_alias != first_goto);
+  assert(second_switch_alias != first_goto);
+  assert(second_switch_alias != switch_alias);
   assert(switch_alias->switches == first_goto->switches);
   assert(switch_alias->perms == (99 | 77));
+  assert(first.switch_alias_count == 2);
+  assert(!command_registry_add_switch_alias(&first, "gq", first_goto,
+                                            &first_goto->switches[0]));
+  assert(first.switch_alias_count == 2);
+  assert(hash_table_find("gq", &first.commands) == switch_alias);
   assert(second.switch_alias_count == 0);
 
   command_catalog_release(&second);
   assert(hash_table_find("gq", &first.commands) == switch_alias);
   command_catalog_release(&first);
+  assert(first.switch_aliases == nullptr);
+  assert(first.switch_alias_count == 0);
+  assert(first.switch_alias_capacity == 0);
   command_catalog_release(&first);
   assert(command_registry_builtin_count(&first) == 0);
 

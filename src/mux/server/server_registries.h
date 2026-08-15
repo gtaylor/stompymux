@@ -19,6 +19,12 @@ typedef struct BadnameStruc BADNAME;
 typedef struct CommandRegistry CommandRegistry;
 typedef struct Cmdentry CMDENT;
 typedef struct SwitchClone SwitchClone;
+typedef struct CommandSwitchAlias CommandSwitchAlias;
+struct CommandSwitchAlias {
+  CMDENT *entry;
+  char *name;
+};
+
 struct CommandRegistry {
   HashTable commands;
   CMDENT *prefix_commands[256];
@@ -29,7 +35,7 @@ struct CommandRegistry {
   SwitchClone *switch_clones;
   size_t switch_clone_count;
   size_t switch_clone_capacity;
-  CMDENT **switch_aliases;
+  CommandSwitchAlias *switch_aliases;
   size_t switch_alias_count;
   size_t switch_alias_capacity;
 };

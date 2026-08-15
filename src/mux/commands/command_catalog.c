@@ -177,8 +177,8 @@ bool command_registry_add_switch_alias(CommandRegistry *registry,
     size_t capacity = registry->switch_alias_capacity == 0
                           ? 4
                           : registry->switch_alias_capacity * 2;
-    CMDENT **grown = (CMDENT **)checked_storage_try_reallocate(
-        (void *)registry->switch_aliases, capacity * sizeof(*grown));
+    CommandSwitchAlias *grown = checked_storage_try_reallocate(
+        registry->switch_aliases, capacity * sizeof(*grown));
     if (grown == nullptr)
       return false;
     registry->switch_aliases = grown;
@@ -202,28 +202,25 @@ bool command_registry_add_switch_alias(CommandRegistry *registry,
     free(entry);
     return false;
   }
-  CMDENT **slot = (CMDENT **)checked_storage_at(
-      (void *)registry->switch_aliases, registry->switch_alias_capacity,
+  CommandSwitchAlias *slot = checked_storage_at(
+      registry->switch_aliases, registry->switch_alias_capacity,
       sizeof(*registry->switch_aliases), registry->switch_alias_count++);
-  *slot = entry;
+  *slot = (CommandSwitchAlias){.entry = entry, .name = name};
   return true;
 }
 
 void command_catalog_release(CommandRegistry *registry) {
   if (registry == nullptr)
     return;
-  CMDENT **aliases = registry->switch_aliases;
-  for (size_t i = 0; i < registry->switch_alias_count; i++) {
-    CMDENT *alias = *(CMDENT **)checked_storage_at(
-        (void *)aliases, registry->switch_alias_count, sizeof(*aliases), i);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-    free((void *)alias->cmdname);
-#pragma clang diagnostic pop
-    free(alias);
-  }
-  free((void *)aliases);
   hash_table_destroy(&registry->commands);
+  CommandSwitchAlias *aliases = registry->switch_aliases;
+  for (size_t i = 0; i < registry->switch_alias_count; i++) {
+    CommandSwitchAlias *alias = checked_storage_at(
+        aliases, registry->switch_alias_count, sizeof(*aliases), i);
+    free(alias->name);
+    free(alias->entry);
+  }
+  free(aliases);
   hash_table_destroy(&registry->macros);
   SwitchClone *records = registry->switch_clones;
   for (size_t i = 0; i < registry->switch_clone_count; i++) {
