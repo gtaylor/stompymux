@@ -289,6 +289,19 @@ target_include_directories(btech_script_descriptors_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_script_descriptors COMMAND btech_script_descriptors_test)
 
+add_executable(btech_techlist_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_techlist.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/template_inventory.c)
+target_compile_options(btech_techlist_test PRIVATE -ffunction-sections)
+target_link_options(btech_techlist_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_techlist_test PRIVATE btmux_options)
+target_include_directories(btech_techlist_test PRIVATE
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_techlist COMMAND btech_techlist_test)
+
 add_executable(btech_lifecycle_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_lifecycle.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/mech_lifecycle.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/mech_crew_state.c
