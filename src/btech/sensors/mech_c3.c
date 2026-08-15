@@ -45,7 +45,7 @@ static constexpr int C3_MASTER_MECH_SIZE = 5;
 static constexpr int C3_MASTER_OTHER_SIZE = 1;
 
 static bool mech_has_c3(const Mech *mech) {
-  return mech_technology_flags(mech) & (C3_MASTER_TECH | C3_SLAVE_TECH);
+  return (mech_technology_flags(mech) & (C3_MASTER_TECH | C3_SLAVE_TECH)) != 0;
 }
 
 int mech_c3_master_slot_count(const Mech *mech) {
@@ -291,7 +291,7 @@ void mech_c3_network_replicate(Mech *mech_src, Mech *mech_dest) {
   int i;
   DbRef other_ref;
 
-  mech_c3_network_clear(mech_dest, 0);
+  mech_c3_network_clear(mech_dest, false);
 
   mech_c3_network_node_set(mech_dest, 0, mech_dbref(mech_src));
   mech_c3_network_size_set(mech_dest, 1);
@@ -338,7 +338,7 @@ void mech_c3_network_add(Mech *mech, Mech *mech_to_add) {
   for (i = 0; i < C3_NETWORK_SIZE; i++) {
     other_ref = mech_c3_network_node(mech, i);
 
-    other_mech = mech_network_unit(mech, i, 0, 0, 0, 1);
+    other_mech = mech_network_unit(mech, i, false, false, false, true);
 
     if (!other_mech)
       continue;
@@ -347,7 +347,7 @@ void mech_c3_network_add(Mech *mech, Mech *mech_to_add) {
       continue;
 
     if (other_ref != mech_dbref(mech_to_add)) {
-      other_notify_mech = mech_network_unit(mech, i, 1, 1, 1, 1);
+      other_notify_mech = mech_network_unit(mech, i, true, true, true, true);
 
       if (other_notify_mech) {
         mech_printf(
@@ -382,7 +382,7 @@ void mech_c3_network_clear(Mech *mech, bool t_clear_from_others) {
   int i;
 
   for (i = 0; i < C3_NETWORK_SIZE; i++) {
-    other_mech = mech_network_unit(mech, i, 0, 0, 0, 1);
+    other_mech = mech_network_unit(mech, i, false, false, false, true);
 
     mech_c3_network_node_set(mech, i, -1);
 
@@ -408,19 +408,19 @@ void mech_c3_network_validate(Mech *mech) {
 
   if (!mech_has_c3(mech) || mech_is_destroyed(mech) ||
       mech_condition_summary(mech).c3_destroyed) {
-    mech_c3_network_clear(mech, 1);
+    mech_c3_network_clear(mech, true);
 
     return;
   }
 
   if (mech_c3_network_size(mech) < 0) {
-    mech_c3_network_clear(mech, 1);
+    mech_c3_network_clear(mech, true);
 
     return;
   }
 
   for (i = 0; i < C3_NETWORK_SIZE; i++) {
-    other_mech = mech_network_unit(mech, i, 0, 0, 0, 1);
+    other_mech = mech_network_unit(mech, i, false, false, false, true);
 
     if (!other_mech)
       continue;
@@ -432,7 +432,7 @@ void mech_c3_network_validate(Mech *mech) {
     network_size++;
   }
 
-  mech_c3_network_clear(mech, 0);
+  mech_c3_network_clear(mech, false);
 
   for (i = 0; i < network_size; i++)
     mech_c3_network_node_set(mech, i, c3_network_value(my_temp_network, i));
@@ -442,7 +442,7 @@ void mech_c3_network_validate(Mech *mech) {
   network_size = mech_c3_network_trim(mech, my_temp_network, network_size);
 
   if (network_size != mech_c3_network_size(mech)) {
-    mech_c3_network_clear(mech, 0);
+    mech_c3_network_clear(mech, false);
 
     for (i = 0; i < network_size; i++)
       mech_c3_network_node_set(mech, i, c3_network_value(my_temp_network, i));
@@ -495,7 +495,7 @@ void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
       return;
     }
 
-    mech_c3_network_clear(mech, 1);
+    mech_c3_network_clear(mech, true);
 
     mech_notify(mech, MECHALL, "You disconnect from the C3 network.");
 
@@ -614,7 +614,7 @@ void mech_c3_message(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  mech_network_send_message(player, mech, buffer, 1);
+  mech_network_send_message(player, mech, buffer, true);
 }
 
 void mech_c3_targets(DbRef player, Mech *mech, char *buffer) {
@@ -645,7 +645,7 @@ void mech_c3_targets(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  mech_network_show_targets(player, mech, 1);
+  mech_network_show_targets(player, mech, true);
 }
 
 void mech_c3_network(DbRef player, Mech *mech, char *buffer) {
@@ -676,5 +676,5 @@ void mech_c3_network(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  mech_network_show_status(player, mech, 1);
+  mech_network_show_status(player, mech, true);
 }

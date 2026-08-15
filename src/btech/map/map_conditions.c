@@ -25,10 +25,10 @@ bool map_read_dimensions(FILE *file, int *width, int *height) {
 
   char *width_text = strtok_r(line, " \t\r\n", &token_context);
   char *height_text = strtok_r(nullptr, " \t\r\n", &token_context);
-  return width_text != nullptr && height_text != nullptr &&
-         strtok_r(nullptr, " \t\r\n", &token_context) == nullptr &&
-         parse_int_checked(width_text, width) &&
-         parse_int_checked(height_text, height);
+  return (width_text != nullptr && height_text != nullptr &&
+          strtok_r(nullptr, " \t\r\n", &token_context) == nullptr &&
+          parse_int_checked(width_text, width) &&
+          parse_int_checked(height_text, height)) != 0;
 }
 
 bool map_parse_visibility_attribute(const char *attribute, int *visibility,
@@ -93,59 +93,59 @@ float battle_map_movement_modifier(const BattleMap *map) {
 }
 
 bool battle_map_sensor_is_disabled(const BattleMap *map, int sensor) {
-  return map->sensorflags & (1 << sensor);
+  return (map->sensorflags & (1 << sensor)) != 0;
 }
 
 bool battle_map_bridges_have_capacity(const BattleMap *map) {
-  return map->flags & MAPFLAG_BRIDGESCS;
+  return (map->flags & MAPFLAG_BRIDGESCS) != 0;
 }
 
 bool battle_map_is_vacuum(const BattleMap *map) {
-  return map->flags & MAPFLAG_VACUUM;
+  return (map->flags & MAPFLAG_VACUUM) != 0;
 }
 
 bool battle_map_disables_bridgification(const BattleMap *map) {
-  return map->flags & MAPFLAG_NOBRIDGIFY;
+  return (map->flags & MAPFLAG_NOBRIDGIFY) != 0;
 }
 
 bool battle_map_disables_friendly_fire(const BattleMap *map) {
-  return map->flags & MAPFLAG_NOFRIENDLYFIRE;
+  return (map->flags & MAPFLAG_NOFRIENDLYFIRE) != 0;
 }
 
 bool battle_map_disables_physicals(const BattleMap *map) {
-  return map->flags & MAPFLAG_NOPHYSICALS;
+  return (map->flags & MAPFLAG_NOPHYSICALS) != 0;
 }
 
 bool battle_map_build_is_complex(const BattleMap *map) {
-  return map->buildflag & BUILDFLAG_CSI;
+  return (map->buildflag & BUILDFLAG_CSI) != 0;
 }
 
 bool battle_map_build_is_complex_structure(const BattleMap *map) {
-  return map->buildflag & BUILDFLAG_CS;
+  return (map->buildflag & BUILDFLAG_CS) != 0;
 }
 
 bool battle_map_build_is_hidden(const BattleMap *map) {
-  return map->buildflag & (BUILDFLAG_DSS | BUILDFLAG_HID);
+  return (map->buildflag & (BUILDFLAG_DSS | BUILDFLAG_HID)) != 0;
 }
 
 bool battle_map_build_is_safe(const BattleMap *map) {
-  return map->buildflag & BUILDFLAG_NOB;
+  return (map->buildflag & BUILDFLAG_NOB) != 0;
 }
 
 bool battle_map_build_is_invisible(const BattleMap *map) {
-  return map->buildflag & BUILDFLAG_HID;
+  return (map->buildflag & BUILDFLAG_HID) != 0;
 }
 
 bool battle_map_build_is_dropship_structure(const BattleMap *map) {
-  return map->buildflag & BUILDFLAG_DSS;
+  return (map->buildflag & BUILDFLAG_DSS) != 0;
 }
 
 bool battle_map_is_dark(const BattleMap *map) {
-  return map->flags & MAPFLAG_DARK;
+  return (map->flags & MAPFLAG_DARK) != 0;
 }
 
 bool battle_map_is_underground(const BattleMap *map) {
-  return map->flags & MAPFLAG_UNDERGROUND;
+  return (map->flags & MAPFLAG_UNDERGROUND) != 0;
 }
 
 void map_setconditions(DbRef player, BattleMap *map, char *buffer) {
@@ -239,12 +239,13 @@ void map_conditions_apply(Mech *mech, BattleMap *map) {
     mech_environment_conditions_set(mech, false, false, false, false);
     return;
   }
-  mech_environment_conditions_set(
-      mech, battle_map_uses_special_rules(map),
-      battle_map_temperature(map) < -30 || battle_map_temperature(map) > 50,
-      battle_map_gravity(map) != 100, battle_map_is_vacuum(map));
+  mech_environment_conditions_set(mech, battle_map_uses_special_rules(map),
+                                  (battle_map_temperature(map) < -30 ||
+                                   battle_map_temperature(map) > 50) != 0,
+                                  battle_map_gravity(map) != 100,
+                                  battle_map_is_vacuum(map));
 }
 
 bool battle_map_uses_special_rules(const BattleMap *map) {
-  return map->flags & MAPFLAG_SPEC;
+  return (map->flags & MAPFLAG_SPEC) != 0;
 }

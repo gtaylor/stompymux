@@ -64,7 +64,8 @@ static unsigned char telnet_environment_byte(const unsigned char *buffer,
 }
 
 static bool telnet_environment_kind_valid(TelnetEnvironmentKind kind) {
-  return kind == TELNET_ENVIRONMENT_VAR || kind == TELNET_ENVIRONMENT_USERVAR;
+  return (kind == TELNET_ENVIRONMENT_VAR ||
+          kind == TELNET_ENVIRONMENT_USERVAR) != 0;
 }
 
 static void telnet_environment_entry_destroy(TelnetEnvironmentEntry *entry) {
@@ -112,9 +113,9 @@ static size_t telnet_environment_find(const TelnetEnvironment *environment,
 bool descriptor_telnet_environment_has(const Descriptor *descriptor,
                                        TelnetEnvironmentKind kind,
                                        const void *name, size_t name_size) {
-  return descriptor != nullptr &&
-         telnet_environment_find(descriptor->telnet_environment, kind, name,
-                                 name_size) != SIZE_MAX;
+  return (descriptor != nullptr &&
+          telnet_environment_find(descriptor->telnet_environment, kind, name,
+                                  name_size) != SIZE_MAX) != 0;
 }
 
 bool descriptor_telnet_environment_get(const Descriptor *descriptor,
@@ -148,10 +149,10 @@ bool descriptor_telnet_environment_value_is_one(const Descriptor *descriptor,
   const void *value;
   size_t value_size;
 
-  return name != nullptr &&
-         descriptor_telnet_environment_get(descriptor, kind, name, strlen(name),
-                                           &value, &value_size) &&
-         value_size == 1 && *(const unsigned char *)value == '1';
+  return (name != nullptr &&
+          descriptor_telnet_environment_get(
+              descriptor, kind, name, strlen(name), &value, &value_size) &&
+          value_size == 1 && *(const unsigned char *)value == '1') != 0;
 }
 
 size_t descriptor_telnet_environment_count(const Descriptor *descriptor) {

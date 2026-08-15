@@ -397,17 +397,17 @@ bool handlemwconc(Mech *mech, int initial) {
 
         // This is here to avoid multi-triggers of AMECHDEST.
         if (!mech_is_destroyed(mech))
-          mech_destroy(mech, mech, 0, KILL_TYPE_MWDAMAGE);
+          mech_destroy(mech, mech, false, KILL_TYPE_MWDAMAGE);
 
         mech_pilot_dbref_set(mech, -1);
         mech_movement_stop(mech);
-        return 0;
+        return false;
       }
     }
     m = pilot_status_roll_needed(bounded(0, mech_pilot_status(mech), 4));
   }
   if (initial && mech_pilot_is_unconscious(mech))
-    return 0;
+    return false;
   if (has_bool_advantage(mech_context(mech), mech_pilot_dbref(mech),
                          "toughness"))
     /*  Gets the saving roll for someone with toughness  */
@@ -431,9 +431,9 @@ bool handlemwconc(Mech *mech, int initial) {
                   "Consciousness slips away from you as you enter a sea of "
                   "darkness...");
     mech_unconsciousness_extend(mech, UNCONSCIOUS_TIME);
-    return 0;
+    return false;
   }
-  return 1;
+  return true;
 }
 
 void headhitmwdamage(Mech *mech, Mech *attacker, int dam) {
@@ -483,7 +483,7 @@ void headhitmwdamage(Mech *mech, Mech *attacker, int dam) {
       char_setstatvalue(s, "bruise", player_bld * 10);
       character_stats_store(context, player, s, VALUES_HEALTH);
       if (!mech_is_destroyed(mech)) {
-        mech_destroy(mech, attacker, 0, KILL_TYPE_MWDAMAGE);
+        mech_destroy(mech, attacker, false, KILL_TYPE_MWDAMAGE);
       }
       mech_contents_kill_if_in_character(mech);
       return;
@@ -529,7 +529,7 @@ void mwlethaldam(Mech *mech, Mech *attacker, int dam) {
     char_setstatvalue(s, "bruise", lethaldam);
     character_stats_store(context, player, s, VALUES_HEALTH);
     if (!mech_is_destroyed(mech)) {
-      mech_destroy(mech, attacker, 0, KILL_TYPE_MWDAMAGE);
+      mech_destroy(mech, attacker, false, KILL_TYPE_MWDAMAGE);
     }
     mech_contents_kill_if_in_character(mech);
     return;

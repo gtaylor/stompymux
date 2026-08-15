@@ -47,21 +47,21 @@ bool can_see(const ObjectVisibilityRequest *request) {
 
   if (is_player(evaluation->world->database, thing) &&
       !is_connected(evaluation->world->database, thing)) {
-    return 0;
+    return false;
   }
   /*
    * You don't see yourself or exits
    */
 
   if ((player == thing) || is_exit(evaluation->world->database, thing)) {
-    return 0;
+    return false;
   }
   /* In visible locations, OBJECT_FLAG_DARK objects remain hidden. In
    * OBJECT_FLAG_DARK locations, only LIGHT objects that are not themselves
    * OBJECT_FLAG_DARK are visible. */
 
   if (request->location_visible)
-    return !is_dark(evaluation->world->database, thing);
-  return is_light(evaluation->world->database, thing) &&
-         !is_dark(evaluation->world->database, thing);
+    return (!is_dark(evaluation->world->database, thing)) != 0;
+  return (is_light(evaluation->world->database, thing) &&
+          !is_dark(evaluation->world->database, thing)) != 0;
 }

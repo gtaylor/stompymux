@@ -107,13 +107,13 @@ bool mech_parts_consume(Mech *mech, DbRef player,
 }
 
 bool mech_section_armor_repairing(Mech *mech, int section) {
-  return someone_fixing_a(mech, section);
+  return someone_fixing_a(mech, section) != 0;
 }
 
 bool mech_section_rear_armor_repairing(Mech *mech, int section) {
-  return someone_fixing_a(mech, section + 8);
+  return someone_fixing_a(mech, section + 8) != 0;
 }
 
 bool mech_section_internals_repairing(Mech *mech, int section) {
-  return someone_fixing_i(mech, section);
+  return someone_fixing_i(mech, section) != 0;
 }

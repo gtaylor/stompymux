@@ -258,8 +258,8 @@ static bool append_sgr(char *output, size_t output_size, size_t *used,
                        int value) {
   char sequence[24];
   int length = snprintf(sequence, sizeof(sequence), "\033[%dm", value);
-  return length > 0 && styled_append_bytes(output, output_size, used, sequence,
-                                           (size_t)length);
+  return (length > 0 && styled_append_bytes(output, output_size, used, sequence,
+                                            (size_t)length)) != 0;
 }
 
 typedef struct SgrRenderRequest {
@@ -405,7 +405,7 @@ static void styled_text_render_ansi(const char *styled,
           available = output_size - OSC8_CLOSE_SIZE;
 
         if (styled_append_bytes(output, available, &used, cursor, length)) {
-          link_open = !is_close;
+          link_open = ((!is_close) != 0);
           cursor_offset += length;
           continue;
         }

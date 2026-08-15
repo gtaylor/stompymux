@@ -94,7 +94,7 @@ bool mech_motion_integrate(Mech *mech, BattleMap *map, MechMotionStep *step) {
           mech_position_z(mech) > 0) {
         mech_notify(mech, MECHALL, "CRASH! You crash into the bridge!");
         mech_los_broadcast(mech, "crashes into the bridge!");
-        mech_fall(mech, 1, 0);
+        mech_fall(mech, 1, false);
         return false;
       }
       if (mech_position_x(mech) == mech_jump_destination_x(mech) &&

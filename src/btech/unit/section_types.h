@@ -187,8 +187,8 @@ typedef enum MechMovementType : int {
   MOVENEMENT_LAST = 10,
 } MechMovementType;
 
-static_assert(CLASS_VEH_NAVAL == 3 && CLASS_LAST == 8);
-static_assert(MOVE_QUAD == 8 && MOVE_SUB == 9 && MOVENEMENT_LAST == 10);
+static_assert((CLASS_VEH_NAVAL == 3 && CLASS_LAST == 8) != 0);
+static_assert((MOVE_QUAD == 8 && MOVE_SUB == 9 && MOVENEMENT_LAST == 10) != 0);
 
 /* Mech Preferences list */
 constexpr int MECHPREF_PKILL = 0x00000001;    /* Kill MWs anyway */

@@ -46,15 +46,15 @@ static bool map_text_end_lines(MapText *text, size_t line) {
 }
 
 static bool ascii_is_lower(unsigned char value) {
-  return value >= 'a' && value <= 'z';
+  return (value >= 'a' && value <= 'z') != 0;
 }
 
 static bool ascii_is_upper(unsigned char value) {
-  return value >= 'A' && value <= 'Z';
+  return (value >= 'A' && value <= 'Z') != 0;
 }
 
 static bool ascii_is_digit(unsigned char value) {
-  return value >= '0' && value <= '9';
+  return (value >= '0' && value <= '9') != 0;
 }
 
 bool style_tac_map(MapText *text, const MapColorScheme *colors,

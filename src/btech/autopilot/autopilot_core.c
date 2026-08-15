@@ -51,7 +51,7 @@
  */
 
 /*! \todo {See if we need this function and remove it if not} */
-bool auto_valid_progline(Autopilot *a, int p) { return 0; }
+bool auto_valid_progline(Autopilot *a, int p) { return false; }
 
 /*
  * Internal function to return a string that

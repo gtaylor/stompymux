@@ -107,15 +107,15 @@ constexpr int CARGOCOST_SIZE = NUM_ITEMS - NUM_ITEMS_M;
 constexpr int BOMBCOST_SIZE = NUM_BOMBS;
 
 static inline bool equipment_is_ammunition(int equipment) {
-  return equipment >= AMMO_BASE_INDEX && equipment < BOMB_BASE_INDEX;
+  return (equipment >= AMMO_BASE_INDEX && equipment < BOMB_BASE_INDEX) != 0;
 }
 
 static inline bool equipment_is_bomb(int equipment) {
-  return equipment >= BOMB_BASE_INDEX && equipment < SPECIAL_BASE_INDEX;
+  return (equipment >= BOMB_BASE_INDEX && equipment < SPECIAL_BASE_INDEX) != 0;
 }
 
 static inline bool equipment_is_special(int equipment) {
-  return equipment >= SPECIAL_BASE_INDEX && equipment < CARGO_BASE_INDEX;
+  return (equipment >= SPECIAL_BASE_INDEX && equipment < CARGO_BASE_INDEX) != 0;
 }
 
 static inline bool equipment_is_cargo(int equipment) {
@@ -123,7 +123,7 @@ static inline bool equipment_is_cargo(int equipment) {
 }
 
 static inline bool equipment_is_weapon(int equipment) {
-  return equipment >= WEAPON_BASE_INDEX && equipment < AMMO_BASE_INDEX;
+  return (equipment >= WEAPON_BASE_INDEX && equipment < AMMO_BASE_INDEX) != 0;
 }
 
 static inline int ammunition_to_weapon_index(int equipment) {
@@ -172,8 +172,8 @@ constexpr int UPPER_ACTUATOR = 1;
 constexpr int LOWER_ACTUATOR = 2;
 constexpr int HAND_OR_FOOT_ACTUATOR = 3;
 static inline bool equipment_is_actuator(int equipment) {
-  return equipment_is_special(equipment) &&
-         equipment <= special_equipment_index(HAND_OR_FOOT_ACTUATOR);
+  return (equipment_is_special(equipment) &&
+          equipment <= special_equipment_index(HAND_OR_FOOT_ACTUATOR)) != 0;
 }
 constexpr int LIFE_SUPPORT = 4;
 constexpr int SENSORS = 5;

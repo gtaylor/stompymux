@@ -471,7 +471,7 @@ static void manifest_change(const ManifestChangeRequest *change) {
   char *args[2];
   const char *c;
   int num;
-  PartSearchSelection selection = {0};
+  PartSearchSelection selection = {};
   int foo = 0;
 
   argc = mech_parseattributes(buffer, args, 2);

@@ -12,8 +12,8 @@
 
 static bool
 configuration_catalog_policy_is_valid(ConfigurationCatalogPolicy policy) {
-  return policy.maximum_location > 0 &&
-         policy.list_options_location > policy.maximum_location;
+  return (policy.maximum_location > 0 &&
+          policy.list_options_location > policy.maximum_location) != 0;
 }
 
 static bool configuration_entries_are_valid(const ConfigurationEntry *templates,

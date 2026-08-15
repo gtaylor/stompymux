@@ -39,7 +39,7 @@ typedef struct TechCheckContext {
 
 bool invalid_repair_path(Mech *mech, int loc) {
   if (mech_class(mech) != CLASS_MECH)
-    return 0;
+    return false;
   switch (loc) {
   case HEAD:
   case LTORSO:
@@ -52,7 +52,7 @@ bool invalid_repair_path(Mech *mech, int loc) {
   case RARM:
     return mech_section_is_destroyed(mech, RTORSO);
   }
-  return 0;
+  return false;
 }
 
 bool unit_is_fixable(Mech *mech) {
@@ -65,15 +65,15 @@ bool unit_is_fixable(Mech *mech) {
       continue;
     if (mech_class(mech) == CLASS_MECH)
       if (i == CTORSO)
-        return 0;
+        return false;
     if (mech_class(mech) == CLASS_VTOL)
       if (i != ROTOR)
-        return 0;
+        return false;
     if (mech_class(mech) == CLASS_VEH_GROUND)
       if (i != TURRET)
-        return 0;
+        return false;
   }
-  return 1;
+  return true;
 }
 
 static int adjusted_technology_time(BtechContext *context, int base_time,

@@ -512,7 +512,7 @@ bool char_gainxpbycode(const CharacterExperienceChange *change) {
   PSTATS *s = &stats;
 
   if (code < 0)
-    return 0;
+    return false;
   character_stats_retrieve(context, player, VALUES_SKILLS | VALUES_ATTRS, s);
   /* allow override of setting xp quickly. useful in chargen situations and only
    * settable via that Regular skill gains still check SK_XP and last used
@@ -522,7 +522,7 @@ bool char_gainxpbycode(const CharacterExperienceChange *change) {
     if (!((context->clock->now >
            (character_stats_last_use_get(s, code) + 30)) ||
           (character_value_definition(code)->flag & SK_XP)))
-      return 0;
+      return false;
   character_stats_last_use_set(&(CharacterStatsLastUseChange){
       .stats = s, .code = code, .value = context->clock->now});
   character_stats_xp_set(&(CharacterStatsExperienceChange){
@@ -535,7 +535,7 @@ bool char_gainxpbycode(const CharacterExperienceChange *change) {
       .value = (character_stats_xp_get(s, code) % XP_MAX) +
                (XP_MAX * figure_xp_bonus(context, player, s, code))});
   character_stats_store(context, player, s, VALUES_SKILLS);
-  return 1;
+  return true;
 }
 
 bool char_gainxp(BtechContext *context, DbRef player, const char *skill,

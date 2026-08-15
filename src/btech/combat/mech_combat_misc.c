@@ -133,7 +133,7 @@ void mech_inferno_hit(Mech *mech, Mech *hit_mech, int missiles, bool los) {
                 "[fg=red bold]You are sprayed with burning jelly![reset]");
   }
   mech_heat_effect_apply(mech, hit_mech, hmod * 30,
-                         1); /* 3min for _each_ missile */
+                         true); /* 3min for _each_ missile */
   mech_inferno_extinguish_in_water(
       hit_mech); /* They could be in -2 standing or -1 prone.. Shooter just
                    wastes his missiles! */
@@ -242,7 +242,7 @@ void mech_destroy(Mech *target, Mech *mech, bool showboom, const char *reason) {
           ctarget, MECHALL,
           "Due to your transport's destruction, your unit has been destroyed!");
       mech_udisembark(a, ctarget, "");
-      mech_destroy(ctarget, mech, 1, KILL_TYPE_TRANSPORT);
+      mech_destroy(ctarget, mech, true, KILL_TYPE_TRANSPORT);
     }
   }
 

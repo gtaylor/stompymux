@@ -113,7 +113,7 @@ static bool login_throttle_allow(LoginThrottle *throttle,
   if (configuration->login_attempt_burst < 1 ||
       configuration->login_attempt_refill < 1 ||
       configuration->login_hash_limit < 1) {
-    return 0;
+    return false;
   }
 
   now = time(nullptr);
@@ -122,7 +122,7 @@ static bool login_throttle_allow(LoginThrottle *throttle,
     throttle->hash_count = 0;
   }
   if (throttle->hash_count >= configuration->login_hash_limit)
-    return 0;
+    return false;
 
   entry = login_throttle_entry(throttle, configuration, address, now);
   elapsed = now - entry->last_refill;
@@ -139,11 +139,11 @@ static bool login_throttle_allow(LoginThrottle *throttle,
         (time_t)(refills * (unsigned int)configuration->login_attempt_refill);
   }
   if (entry->tokens == 0)
-    return 0;
+    return false;
 
   entry->tokens--;
   throttle->hash_count++;
-  return 1;
+  return true;
 }
 
 /* Hide the length of a line that may contain a password from SESSION. */

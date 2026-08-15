@@ -91,9 +91,9 @@ static void map_bits_unset(unsigned char **bits, BattleMap *map, int x, int y,
 
 static bool map_bits_is_set(unsigned char **bits, BattleMap *map, int x, int y,
                             unsigned char value) {
-  return *map_bits_byte(&(MapBitsByteRequest){
-             .bits = bits, .map = map, .position = {.x = x, .y = y}}) &
-         map_bits_mask(x, value);
+  return (*map_bits_byte(&(MapBitsByteRequest){
+              .bits = bits, .map = map, .position = {.x = x, .y = y}}) &
+          map_bits_mask(x, value)) != 0;
 }
 
 /* Okay, now we got code to load / save the bits.. but what will we do with

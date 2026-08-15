@@ -165,10 +165,10 @@ void print_weapon_status(EvaluationContext *evaluation, Mech *mech,
   int technology_secondary = mech_technology_flags_secondary(mech);
   int infantry_technology = mech_infantry_technology_flags(mech);
   MechConditionSummary conditions = mech_condition_summary(mech);
-  bool has_c3_master = technology & C3_MASTER_TECH;
-  bool has_c3_slave = technology & C3_SLAVE_TECH;
-  bool has_c3i = technology_secondary & C3I_TECH;
-  bool has_tag = (technology_secondary & TAG_TECH) || has_c3_master;
+  bool has_c3_master = (technology & C3_MASTER_TECH) != 0;
+  bool has_c3_slave = (technology & C3_SLAVE_TECH) != 0;
+  bool has_c3i = (technology_secondary & C3I_TECH) != 0;
+  bool has_tag = ((technology_secondary & TAG_TECH) || has_c3_master) != 0;
 
   if ((technology & ECM_TECH) || (technology_secondary & STEALTH_ARMOR_TECH) ||
       (technology_secondary & NULLSIGSYS_TECH) || (technology & SLITE_TECH) ||

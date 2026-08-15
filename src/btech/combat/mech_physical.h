@@ -16,7 +16,7 @@ typedef enum PhysicalAttackType : int {
   PA_CLAW = 9,
 } PhysicalAttackType;
 
-static_assert(PA_PUNCH == 1 && PA_CLAW == 9);
+static_assert((PA_PUNCH == 1 && PA_CLAW == 9) != 0);
 
 constexpr int P_LEFT = 1;
 constexpr int P_RIGHT = 2;

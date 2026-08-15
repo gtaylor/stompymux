@@ -208,7 +208,7 @@ static void bomb_hit(BombShot *s) {
   switch (bomb->type) {
   case BOMB_KIND_STANDARD:
     hex_los_broadcast(s->map, s->x, s->y, "A blast rocks the area around $H!");
-    bomb_hit_hexes(s->map, s->x, s->y, 1, 0, DIRECT_DAMAGE, HEAT_DAMAGE,
+    bomb_hit_hexes(s->map, s->x, s->y, 1, false, DIRECT_DAMAGE, HEAT_DAMAGE,
                    "You receive a direct hit!", "receives a direct hit!",
                    "You are hit by shrapnel!", "is hit by shrapnel!");
     break;
@@ -216,7 +216,7 @@ static void bomb_hit(BombShot *s) {
     hex_los_broadcast(
         s->map, s->x, s->y,
         "A fiery blast occurs in $H, spraying flaming gel everywhere!");
-    bomb_hit_hexes(s->map, s->x, s->y, 1, 0, DIRECT_DAMAGE, HEAT_DAMAGE,
+    bomb_hit_hexes(s->map, s->x, s->y, 1, false, DIRECT_DAMAGE, HEAT_DAMAGE,
                    "You receive a direct hit!", "receives a direct hit!",
                    "You are hit by the globs of flaming gel!",
                    "is hit by the globs!");
@@ -225,7 +225,7 @@ static void bomb_hit(BombShot *s) {
     hex_los_broadcast(
         s->map, s->x, s->y,
         "A bomb drops rain of small bomblets in $H's surroundings!");
-    bomb_hit_hexes(s->map, s->x, s->y, 1, 1, DIRECT_DAMAGE, HEAT_DAMAGE,
+    bomb_hit_hexes(s->map, s->x, s->y, 1, true, DIRECT_DAMAGE, HEAT_DAMAGE,
                    "You are hit by ton of small munitions!",
                    "is hit by many small munitions!",
                    "You are hit by some of the small munitions!",

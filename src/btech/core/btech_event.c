@@ -98,8 +98,8 @@ void mech_event_visit(Mech *mech, MechEventType type, MuxEventVisitor visitor,
 }
 
 bool mech_dumping_type(const Mech *mech, intptr_t type) {
-  return mech_event_count_data(mech, EVENT_DUMP, type) ||
-         mech_event_count_data(mech, EVENT_DUMP, 0);
+  return (mech_event_count_data(mech, EVENT_DUMP, type) ||
+          mech_event_count_data(mech, EVENT_DUMP, 0)) != 0;
 }
 
 void mech_stun_crew(Mech *mech) {
@@ -140,6 +140,7 @@ void mech_stop_stagger_check(Mech *mech) {
 }
 
 bool mech_move_mode_locked(const Mech *mech) {
-  return mech_movement_modes_locked(mech) ||
-         (mech_event_count(mech, EVENT_MOVEMODE) && !mech_is_dodging(mech));
+  return (mech_movement_modes_locked(mech) ||
+          (mech_event_count(mech, EVENT_MOVEMODE) && !mech_is_dodging(mech))) !=
+         0;
 }

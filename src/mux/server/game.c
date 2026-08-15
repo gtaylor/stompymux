@@ -603,8 +603,8 @@ int main(int argc, char *argv[]) {
     goto fail;
   }
   create_database =
-      stat(server.configuration->database.gamedb, &database_status) < 0 &&
-      errno == ENOENT;
+      ((stat(server.configuration->database.gamedb, &database_status) < 0 &&
+        errno == ENOENT) != 0);
   if (create_database) {
     if (database_bootstrap(&server.background_command.evaluation, god_password,
                            wizard_password) < 0 ||

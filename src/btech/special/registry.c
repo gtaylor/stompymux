@@ -191,29 +191,29 @@ bool btech_command_allowed_for_mech(Mech *mech, int cmdflag) {
   int i;
 
   if (!cmdflag)
-    return 1;
+    return true;
   if (!mech)
-    return 0;
+    return false;
   i = mech_class_command_flag(mech_class(mech));
   if (!i)
-    return 0;
+    return false;
   if (cmdflag > 0) {
     if (cmdflag & i)
-      return 1;
+      return true;
   } else if (!((0 - cmdflag) & i)) {
-    return 1;
+    return true;
   }
-  return 0;
+  return false;
 }
 
 bool btech_special_command_access(BtechContext *context, DbRef object,
                                   PowerId power) {
-  return is_god(context->database, object) ||
-         is_wizard(context->database, object) ||
-         (power != POWER_NONE && game_object_has_power(&(ObjectPowerRequest){
-                                     .database = context->database,
-                                     .object = object,
-                                     .power = power}));
+  return (is_god(context->database, object) ||
+          is_wizard(context->database, object) ||
+          (power != POWER_NONE && game_object_has_power(&(ObjectPowerRequest){
+                                      .database = context->database,
+                                      .object = object,
+                                      .power = power}))) != 0;
 }
 
 bool handled_command_sub(BtechContext *context, DbRef player, DbRef location,
@@ -236,18 +236,18 @@ bool handled_command_sub(BtechContext *context, DbRef player, DbRef location,
   if (type < 0 || special_data_missing) {
     if (type >= 0 || !is_xcode(context->database, location) ||
         is_zombie(context->database, location))
-      return 0;
+      return false;
     type = btech_context_which_special_attribute(context, location);
     if (type >= 0) {
       if (btech_special_object_data_size(
               btech_special_object_definition(type)) > 0)
-        return 0;
+        return false;
     } else {
-      return 0;
+      return false;
     }
   }
   if (type > BTECH_SPECIAL_OBJECT_COUNT)
-    return 0;
+    return false;
   type_of_object = btech_special_object_definition(type);
   const size_t COMMAND_NAME_LENGTH = strcspn(command, " ");
   tmpc = strstr(command, " ");
@@ -288,7 +288,7 @@ bool handled_command_sub(BtechContext *context, DbRef player, DbRef location,
       mecha_notify(btech_context_evaluation(context), player,
                    "Sorry, that command is restricted!");
     }
-    return 1;
+    return true;
   }
   if (ishelp) {
     btech_special_object_help(&(SpecialObjectHelpRequest){
@@ -299,14 +299,14 @@ bool handled_command_sub(BtechContext *context, DbRef player, DbRef location,
         .location = location,
         .power_needed = type_of_object->power_needed,
         .argument = arguments});
-    return 1;
+    return true;
   }
-  return 0;
+  return false;
 }
 
 static bool okay_hcode(BtechContext *context, DbRef object) {
-  return object >= 0 && is_xcode(context->database, object) &&
-         !is_zombie(context->database, object);
+  return (object >= 0 && is_xcode(context->database, object) &&
+          !is_zombie(context->database, object)) != 0;
 }
 
 /* Main entry point */
@@ -316,20 +316,20 @@ bool btech_command_try_execute(BtechContext *context, DbRef player, DbRef loc,
   DbRef temp;
 
   if (strlen(command) > (LBUF_SIZE - MBUF_SIZE))
-    return 0;
+    return false;
   if (okay_hcode(context, player) &&
       handled_command_sub(context, player, player, command))
-    return 1;
+    return true;
   if (okay_hcode(context, loc) &&
       handled_command_sub(context, player, loc, command))
-    return 1;
+    return true;
   SAFE_DOLIST(context->database, curr, temp,
               game_object_contents(context->database, player)) {
     if (okay_hcode(context, curr))
       if (handled_command_sub(context, player, curr, command))
-        return 1;
+        return true;
   }
-  return 0;
+  return false;
 }
 
 const int GLOBAL_SPECIALS = BTECH_SPECIAL_OBJECT_COUNT;

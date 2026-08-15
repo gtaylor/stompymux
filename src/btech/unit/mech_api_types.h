@@ -40,7 +40,7 @@ typedef enum MineTriggerReason : int {
   MINE_DROP = 4, /* Someone drops to ground in the hex */
 } MineTriggerReason;
 
-static_assert(MINE_STEP == 1 && MINE_DROP == 4);
+static_assert((MINE_STEP == 1 && MINE_DROP == 4) != 0);
 
 constexpr char WSDUMP_MASK_ER[] =
     "%-24s %2d     %2d           %2d  %2d    %2d  %3d  %3d %2d";

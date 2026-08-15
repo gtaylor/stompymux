@@ -599,8 +599,8 @@ static bool tank_in_pieces(Mech *mech) {
 
   for (i = 0; i < NUM_SECTIONS; i++)
     if (mech_section_internal(mech, i))
-      return 0;
-  return 1;
+      return false;
+  return true;
 }
 
 int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {

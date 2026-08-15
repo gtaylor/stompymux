@@ -15,11 +15,11 @@
 #include "script_functions_api.h"
 
 static bool btech_script_output_is_error(const char *output) {
-  return !strncmp(output, "#-", 2) || !strcmp(output, "?");
+  return (!strncmp(output, "#-", 2) || !strcmp(output, "?")) != 0;
 }
 
 static bool btech_script_list_separator(char character) {
-  return character == ' ' || character == '|';
+  return (character == ' ' || character == '|') != 0;
 }
 
 static size_t btech_script_list_item_count(const char *output) {

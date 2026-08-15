@@ -356,11 +356,11 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
       mech_damage_apply(
           &(MechDamageRequest){.target = target,
                                .attacker = mech,
-                               .line_of_sight = 1,
+                               .line_of_sight = true,
                                .attack_pilot = mech_pilot_dbref(mech),
                                .hit_location = w_leg_id,
-                               .rear = 0,
-                               .critical = 1,
+                               .rear = false,
+                               .critical = true,
                                .armor_damage = 4,
                                .internal_damage = 0,
                                .transfer = MECH_DAMAGE_NORMAL,
@@ -368,7 +368,7 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
                                .base_to_hit = 0,
                                .weapon_index = -1,
                                .ammunition_mode = 0,
-                               .ignore_swarmers = 1});
+                               .ignore_swarmers = true});
     }
   } else {
     mech_printf(target, MECHALL,

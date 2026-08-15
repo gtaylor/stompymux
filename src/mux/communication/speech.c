@@ -31,7 +31,7 @@ static bool sp_ok(EvaluationContext *evaluation,
     notify_checked(evaluation, player, player,
                    "Sorry. Gagged players cannot speak.",
                    MSG_ME_ALL | MSG_F_DOWN);
-    return 0;
+    return false;
   }
 
   if (is_auditorium(
@@ -46,10 +46,10 @@ static bool sp_ok(EvaluationContext *evaluation,
           .invocation = &lock,
           .result = &result,
           .enactor_default = "Sorry, you may not speak in this place."});
-      return 0;
+      return false;
     }
   }
-  return 1;
+  return true;
 }
 
 typedef struct ShoutRequest {

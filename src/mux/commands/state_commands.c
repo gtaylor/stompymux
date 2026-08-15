@@ -234,7 +234,7 @@ typedef struct StateWordSplitResult {
 
 static StateWordSplitResult state_split_last_word(char *text) {
   if (!text || !*text)
-    return (StateWordSplitResult){0};
+    return (StateWordSplitResult){};
   const size_t LENGTH = strlen(text);
   size_t end = LENGTH;
   size_t start;
@@ -251,7 +251,7 @@ static StateWordSplitResult state_split_last_word(char *text) {
              text, LENGTH + 1, sizeof(char), start - 1)))
     start--;
   if (start == 0)
-    return (StateWordSplitResult){0};
+    return (StateWordSplitResult){};
   separator = start;
   while (separator > 0 &&
          (isspace)((unsigned char)*(const char *)checked_storage_at_const(
@@ -261,7 +261,7 @@ static StateWordSplitResult state_split_last_word(char *text) {
   char *word_start = checked_storage_at(text, LENGTH + 1, sizeof(char), start);
 
   if (!*text || !*word_start)
-    return (StateWordSplitResult){0};
+    return (StateWordSplitResult){};
   return (StateWordSplitResult){
       .found = true, .prefix = text, .word = word_start};
 }
@@ -457,7 +457,7 @@ static bool state_parse_value(const char *text, ObjectStateValue *value,
   if (!strcmp(text, "true") || !strcmp(text, "false")) {
     *value = (ObjectStateValue){
         .type = OBJECT_STATE_BOOLEAN,
-        .as.boolean = !strcmp(text, "true"),
+        .as.boolean = (!strcmp(text, "true")) != 0,
     };
     return true;
   }

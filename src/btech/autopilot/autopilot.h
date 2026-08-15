@@ -179,7 +179,7 @@ typedef struct Autopilot {
 } Autopilot;
 
 static inline bool autopilot_is_gunning(const Autopilot *autopilot) {
-  return autopilot->flags & AUTOPILOT_AUTOGUN;
+  return (autopilot->flags & AUTOPILOT_AUTOGUN) != 0;
 }
 
 static inline void autopilot_gunning_flag_set(Autopilot *autopilot) {
@@ -213,7 +213,7 @@ static inline void autopilot_gunning_resume(Autopilot *autopilot) {
 void autopilot_resume(Autopilot *autopilot);
 
 static inline bool autopilot_has_assigned_target(const Autopilot *autopilot) {
-  return autopilot->flags & AUTOPILOT_ASSIGNED_TARGET;
+  return (autopilot->flags & AUTOPILOT_ASSIGNED_TARGET) != 0;
 }
 
 static inline void autopilot_assigned_target_set(Autopilot *autopilot,
@@ -225,7 +225,7 @@ static inline void autopilot_assigned_target_set(Autopilot *autopilot,
 }
 
 static inline bool autopilot_is_chasing_target(const Autopilot *autopilot) {
-  return autopilot->flags & AUTOPILOT_CHASETARG;
+  return (autopilot->flags & AUTOPILOT_CHASETARG) != 0;
 }
 
 static inline void autopilot_chasing_target_set(Autopilot *autopilot,
@@ -237,7 +237,7 @@ static inline void autopilot_chasing_target_set(Autopilot *autopilot,
 }
 
 static inline bool autopilot_was_chasing_target(const Autopilot *autopilot) {
-  return autopilot->flags & AUTOPILOT_WAS_CHASE_ON;
+  return (autopilot->flags & AUTOPILOT_WAS_CHASE_ON) != 0;
 }
 
 static inline void autopilot_chasing_target_memory_set(Autopilot *autopilot,

@@ -17,5 +17,5 @@ typedef enum MineType {
 } MineType;
 
 static inline bool mine_type_is_vibrating(int type) {
-  return type == MINE_VIBRA || type == MINE_TRIGGER;
+  return (type == MINE_VIBRA || type == MINE_TRIGGER) != 0;
 }

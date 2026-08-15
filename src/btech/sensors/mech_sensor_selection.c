@@ -63,11 +63,11 @@ void mech_sensors_disable_requiring(Mech *mech, int technology) {
   int primary = mech_sensor_index(mech, 0);
   int secondary = mech_sensor_index(mech, 1);
   bool primary_requires =
-      mech_sensor_definition(primary)->required_special == technology &&
-      mech_sensor_definition(primary)->specials_set == 1;
+      (mech_sensor_definition(primary)->required_special == technology &&
+       mech_sensor_definition(primary)->specials_set == 1) != 0;
   bool secondary_requires =
-      mech_sensor_definition(secondary)->required_special == technology &&
-      mech_sensor_definition(secondary)->specials_set == 1;
+      (mech_sensor_definition(secondary)->required_special == technology &&
+       mech_sensor_definition(secondary)->specials_set == 1) != 0;
 
   if (!primary_requires && !secondary_requires)
     return;
@@ -138,24 +138,26 @@ static void sensor_mode(Mech *mech, const char *msg, DbRef player, int p, int s,
         '\0';
     mecha_notify(btech_context_evaluation(mech_context(mech)), player, msg);
     mecha_notify(btech_context_evaluation(mech_context(mech)), player, buf);
-    notify_printf(
-        btech_context_evaluation(mech_context(mech)), player, "Primary:   %s",
-        sensor_mode_text(&(SensorModeTextRequest){
-                             .mech = mech, .sensor = p, .verbose = verbose})
-            .text);
-    notify_printf(
-        btech_context_evaluation(mech_context(mech)), player, "Secondary: %s",
-        sensor_mode_text(&(SensorModeTextRequest){
-                             .mech = mech, .sensor = s, .verbose = verbose})
-            .text);
-  } else {
     notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                  "%s: %s", msg,
-                  sensor_mode_text(&(SensorModeTextRequest){.mech = mech,
-                                                            .sensor = p,
-                                                            .full_arc = true,
-                                                            .verbose = verbose})
+                  "Primary:   %s",
+                  sensor_mode_text(
+                      &(SensorModeTextRequest){
+                          .mech = mech, .sensor = p, .verbose = verbose != 0})
                       .text);
+    notify_printf(btech_context_evaluation(mech_context(mech)), player,
+                  "Secondary: %s",
+                  sensor_mode_text(
+                      &(SensorModeTextRequest){
+                          .mech = mech, .sensor = s, .verbose = verbose != 0})
+                      .text);
+  } else {
+    notify_printf(
+        btech_context_evaluation(mech_context(mech)), player, "%s: %s", msg,
+        sensor_mode_text(&(SensorModeTextRequest){.mech = mech,
+                                                  .sensor = p,
+                                                  .full_arc = true,
+                                                  .verbose = verbose != 0})
+            .text);
   }
 }
 
@@ -246,7 +248,7 @@ bool mech_sensor_can_change_to(Mech *mech, int s) {
   map = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   if (!map) {
     mech_notify(mech, MECHALL, "Where are you? ;-)");
-    return 0;
+    return false;
   }
   /* < 0, means you you don't have the sensors if you _do_ have the bit
      > 0, means you have the sensors if you have the bit */
@@ -258,7 +260,7 @@ bool mech_sensor_can_change_to(Mech *mech, int s) {
             .signed_capability = i})) {
       mech_printf(mech, MECHALL, "You lack the %s sensors!",
                   mech_sensor_definition(s)->sensor_name);
-      return 0;
+      return false;
     }
   }
 
@@ -267,14 +269,14 @@ bool mech_sensor_can_change_to(Mech *mech, int s) {
     if (!mech_is_destroyed(mech) && mech_is_started(mech))
       mech_printf(mech, MECHALL, "It's now too dark to use %s!",
                   mech_sensor_definition(s)->sensor_name);
-    return 0;
+    return false;
   }
   if (mech_sensor_definition(s)->max_light >= 0 &&
       mech_sensor_definition(s)->max_light < battle_map_light(map)) {
     if (!mech_is_destroyed(mech) && mech_is_started(mech))
       mech_printf(mech, MECHALL, "The light's kinda too bright now to use %s!",
                   mech_sensor_definition(s)->sensor_name);
-    return 0;
+    return false;
   }
 
   switch (mech_sensor_definition(s)->attribute_check) {
@@ -284,13 +286,13 @@ bool mech_sensor_can_change_to(Mech *mech, int s) {
         mech_movement_type(mech) == MOVE_HOVER) {
       mech_printf(mech, MECHALL, "You lack the %s sensors!",
                   mech_sensor_definition(s)->sensor_name);
-      return 0;
+      return false;
     }
 
     break;
   }
 
-  return 1;
+  return true;
 }
 
 void sensor_light_availability_check(Mech *mech) {

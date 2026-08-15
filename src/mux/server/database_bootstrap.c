@@ -40,15 +40,15 @@ static bool bootstrap_require(const DatabaseConfiguration *database,
                               BootstrapObjectType type) {
   const BootstrapObjectConfiguration *object =
       bootstrap_object_find(database, dbref);
-  return object && object->type == type &&
-         (name == nullptr || !strcmp(object->name, name));
+  return (object && object->type == type &&
+          (name == nullptr || !strcmp(object->name, name))) != 0;
 }
 
 bool database_bootstrap_god_is_wizard_player(
     const ServerConfiguration *configuration) {
   const BootstrapObjectConfiguration *god =
       bootstrap_object_find(&configuration->database, GOD);
-  return god && god->type == BOOTSTRAP_OBJECT_PLAYER && god->wizard;
+  return (god && god->type == BOOTSTRAP_OBJECT_PLAYER && god->wizard) != 0;
 }
 
 static bool bootstrap_validate(const ServerConfiguration *configuration) {

@@ -91,7 +91,7 @@ int mech_heading_fixed_difference(const Mech *mech) {
 }
 
 bool mech_heading_changed(const Mech *mech) {
-  return mech->rd.critstatus & CHEAD;
+  return (mech->rd.critstatus & CHEAD) != 0;
 }
 
 int mech_desired_heading_degrees(const Mech *mech) {
@@ -283,9 +283,10 @@ void mech_jump_launch(Mech *mech, const MechJumpLaunch *launch) {
 }
 
 bool mech_jump_destination_was_overshot(const Mech *mech) {
-  return mech_is_jumping(mech) && mech->pd.last_x == mech->rd.goingx &&
-         mech->pd.last_y == mech->rd.goingy &&
-         (mech->pd.x != mech->pd.last_x || mech->pd.y != mech->pd.last_y);
+  return (mech_is_jumping(mech) && mech->pd.last_x == mech->rd.goingx &&
+          mech->pd.last_y == mech->rd.goingy &&
+          (mech->pd.x != mech->pd.last_x || mech->pd.y != mech->pd.last_y)) !=
+         0;
 }
 
 void mech_jump_overshoot_restore(Mech *mech, float delta_x, float delta_y) {
@@ -311,9 +312,9 @@ void mech_position_mirror(Mech *target, const Mech *source, int height_offset) {
 
 void mech_position_land_if_flying(Mech *mech) {
   bool const IS_DROPSHIP =
-      mech->ud.type == CLASS_DS || mech->ud.type == CLASS_SPHEROID_DS;
-  bool const IS_FLYING =
-      mech->ud.type == CLASS_AERO || IS_DROPSHIP || mech->ud.move == MOVE_VTOL;
+      (mech->ud.type == CLASS_DS || mech->ud.type == CLASS_SPHEROID_DS) != 0;
+  bool const IS_FLYING = (mech->ud.type == CLASS_AERO || IS_DROPSHIP ||
+                          mech->ud.move == MOVE_VTOL) != 0;
   if (!(mech->rd.status & LANDED) && IS_FLYING)
     mech->rd.status |= LANDED;
 }

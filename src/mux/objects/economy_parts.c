@@ -56,11 +56,11 @@ economy_parts_entry(const EconomyPartsEntryRequest *request) {
   EconomyPartsState *parts;
 
   if (!is_good_obj(request->database, request->object))
-    return (EconomyPartsEntryResult){0};
+    return (EconomyPartsEntryResult){};
   parts =
       &game_database_object(request->database, request->object)->economy_parts;
   if (request->index >= parts->count)
-    return (EconomyPartsEntryResult){0};
+    return (EconomyPartsEntryResult){};
   const EconomyPartEntry *stored =
       economy_part(parts, parts->count, request->index);
   return (EconomyPartsEntryResult){.found = true,

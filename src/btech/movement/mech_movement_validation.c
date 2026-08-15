@@ -25,11 +25,11 @@ BattleMap *mech_movement_map_validate(Mech *mech) {
         .context = context, .player = pilot, .map = map_dbref});
 
   bool position_is_valid =
-      map &&
-      battle_map_coordinate_is_valid(map, mech_position_x(mech),
-                                     mech_position_y(mech)) &&
-      battle_map_coordinate_is_valid(map, mech_position_previous_x(mech),
-                                     mech_position_previous_y(mech));
+      (map &&
+       battle_map_coordinate_is_valid(map, mech_position_x(mech),
+                                      mech_position_y(mech)) &&
+       battle_map_coordinate_is_valid(map, mech_position_previous_x(mech),
+                                      mech_position_previous_y(mech))) != 0;
   if (position_is_valid)
     return map;
 

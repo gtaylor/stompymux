@@ -131,26 +131,28 @@ float mech_ammunition_slot_multiplier(const Mech *mech, int section,
 }
 
 bool mech_critical_is_disabled(const Mech *mech, int section, int critical) {
-  return mech_critical_fire_mode(mech, section, critical) & DISABLED_MODE;
+  return (mech_critical_fire_mode(mech, section, critical) & DISABLED_MODE) !=
+         0;
 }
 
 bool mech_critical_is_destroyed(const Mech *mech, int section, int critical) {
-  return mech_critical_fire_mode(mech, section, critical) & DESTROYED_MODE;
+  return (mech_critical_fire_mode(mech, section, critical) & DESTROYED_MODE) !=
+         0;
 }
 
 bool mech_critical_is_broken(const Mech *mech, int section, int critical) {
-  return mech_critical_fire_mode(mech, section, critical) &
-         (DESTROYED_MODE | BROKEN_MODE);
+  return (mech_critical_fire_mode(mech, section, critical) &
+          (DESTROYED_MODE | BROKEN_MODE)) != 0;
 }
 
 bool mech_critical_is_damaged(const Mech *mech, int section, int critical) {
-  return mech_critical_fire_mode(mech, section, critical) & DAMAGED_MODE;
+  return (mech_critical_fire_mode(mech, section, critical) & DAMAGED_MODE) != 0;
 }
 
 bool mech_critical_is_nonfunctional(const Mech *mech, int section,
                                     int critical) {
-  return mech_critical_is_disabled(mech, section, critical) ||
-         mech_critical_is_broken(mech, section, critical);
+  return (mech_critical_is_disabled(mech, section, critical) ||
+          mech_critical_is_broken(mech, section, critical)) != 0;
 }
 
 void mech_critical_temporary_failure_set(
@@ -279,19 +281,21 @@ int mech_section_original_internal(const Mech *mech, int section) {
 
 bool mech_section_is_destroyed(const Mech *mech, int section) {
   int unit_class = (unsigned char)mech->ud.type;
-  bool is_dropship = unit_class == CLASS_DS || unit_class == CLASS_SPHEROID_DS;
-  bool is_aerospace = unit_class == CLASS_AERO || is_dropship;
+  bool is_dropship =
+      (unit_class == CLASS_DS || unit_class == CLASS_SPHEROID_DS) != 0;
+  bool is_aerospace = (unit_class == CLASS_AERO || is_dropship) != 0;
   const struct MechSection *section_storage = section_at(mech, section);
-  return section_storage->armor == 0 &&
-         (is_aerospace || section_storage->internal == 0) && !is_dropship;
+  return (section_storage->armor == 0 &&
+          (is_aerospace || section_storage->internal == 0) && !is_dropship) !=
+         0;
 }
 
 bool mech_section_is_flooded(const Mech *mech, int section) {
-  return section_at(mech, section)->config & SECTION_FLOODED;
+  return (section_at(mech, section)->config & SECTION_FLOODED) != 0;
 }
 
 bool mech_section_is_breached(const Mech *mech, int section) {
-  return section_at(mech, section)->config & SECTION_BREACHED;
+  return (section_at(mech, section)->config & SECTION_BREACHED) != 0;
 }
 
 void mech_section_flooded_set(Mech *mech, int section, bool flooded) {
@@ -310,16 +314,17 @@ void mech_section_breached_set(Mech *mech, int section, bool breached) {
 
 bool mech_critical_is_operational_special(const CriticalSpecialCheck *check) {
   const struct CriticalSlot *slot = critical_at(check->mech, check->slot);
-  return slot->type == special_equipment_index(check->special) &&
-         !(slot->firemode & (DISABLED_MODE | DESTROYED_MODE | BROKEN_MODE));
+  return (slot->type == special_equipment_index(check->special) &&
+          !(slot->firemode & (DISABLED_MODE | DESTROYED_MODE | BROKEN_MODE))) !=
+         0;
 }
 
 bool mech_section_carries_club(const Mech *mech, int section) {
-  return section_at(mech, section)->specials & CARRYING_CLUB;
+  return (section_at(mech, section)->specials & CARRYING_CLUB) != 0;
 }
 
 bool mech_section_has_special(const Mech *mech, int section, int special) {
-  return section_at(mech, section)->specials & special;
+  return (section_at(mech, section)->specials & special) != 0;
 }
 
 int mech_section_specials(const Mech *mech, int section) {
@@ -333,7 +338,7 @@ void mech_section_specials_set(Mech *mech, int section, int specials) {
 
 bool mech_section_configuration_has(const Mech *mech, int section,
                                     int configuration) {
-  return section_at(mech, section)->config & configuration;
+  return (section_at(mech, section)->config & configuration) != 0;
 }
 
 int mech_section_configuration(const Mech *mech, int section) {
@@ -391,16 +396,17 @@ bool mech_has_attached_homing_beacon(const Mech *mech) {
 }
 
 bool mech_limbs_are_recycling(const Mech *mech) {
-  return section_at(mech, RARM)->recycle || section_at(mech, LARM)->recycle ||
-         section_at(mech, RLEG)->recycle || section_at(mech, LLEG)->recycle;
+  return (section_at(mech, RARM)->recycle || section_at(mech, LARM)->recycle ||
+          section_at(mech, RLEG)->recycle || section_at(mech, LLEG)->recycle) !=
+         0;
 }
 
 bool mech_weapon_is_recycling_at(const Mech *mech, int section, int critical) {
-  return mech_critical_data(mech, section, critical) > 0 &&
-         equipment_is_weapon(
-             mech_critical_part_type(mech, section, critical)) &&
-         !mech_critical_is_nonfunctional(mech, section, critical) &&
-         !mech_section_is_destroyed(mech, section);
+  return (mech_critical_data(mech, section, critical) > 0 &&
+          equipment_is_weapon(
+              mech_critical_part_type(mech, section, critical)) &&
+          !mech_critical_is_nonfunctional(mech, section, critical) &&
+          !mech_section_is_destroyed(mech, section)) != 0;
 }
 
 bool mech_section_has_recycling_weapon(Mech *mech, int section) {
@@ -446,12 +452,12 @@ int mech_section_critical_count(Mech *mech, int section) {
 }
 
 bool mech_part_is_structural_placeholder(int part_type) {
-  return part_type == special_equipment_index(ENDO_STEEL) ||
-         part_type == special_equipment_index(FERRO_FIBROUS) ||
-         part_type == special_equipment_index(TRIPLE_STRENGTH_MYOMER) ||
-         part_type == special_equipment_index(STEALTH_ARMOR) ||
-         part_type == special_equipment_index(HVY_FERRO_FIBROUS) ||
-         part_type == special_equipment_index(LT_FERRO_FIBROUS);
+  return (part_type == special_equipment_index(ENDO_STEEL) ||
+          part_type == special_equipment_index(FERRO_FIBROUS) ||
+          part_type == special_equipment_index(TRIPLE_STRENGTH_MYOMER) ||
+          part_type == special_equipment_index(STEALTH_ARMOR) ||
+          part_type == special_equipment_index(HVY_FERRO_FIBROUS) ||
+          part_type == special_equipment_index(LT_FERRO_FIBROUS)) != 0;
 }
 
 void mech_section_armor_set(Mech *mech, int section, int armor) {

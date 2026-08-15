@@ -22,11 +22,11 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
       switch (roll) {
       case 2:
         hitloc = ROTOR;
-        result.critical = 1;
+        result.critical = true;
         mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 3:
-        result.critical = 1;
+        result.critical = true;
         break;
       case 4:
       case 5:
@@ -50,7 +50,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
         break;
       case 12:
         hitloc = ROTOR;
-        result.critical = 1;
+        result.critical = true;
         mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       }
@@ -60,11 +60,11 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
       switch (roll) {
       case 2:
         hitloc = ROTOR;
-        result.critical = 1;
+        result.critical = true;
         mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 3:
-        result.critical = 1;
+        result.critical = true;
         break;
       case 4:
       case 5:
@@ -87,7 +87,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
         break;
       case 12:
         hitloc = ROTOR;
-        result.critical = 1;
+        result.critical = true;
         mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       }
@@ -100,7 +100,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
       switch (roll) {
       case 2:
         hitloc = ROTOR;
-        result.critical = 1;
+        result.critical = true;
         mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 3:
@@ -125,7 +125,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
         break;
       case 12:
         hitloc = ROTOR;
-        result.critical = 1;
+        result.critical = true;
         mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       }
@@ -140,7 +140,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
       case 2:
         hitloc = LSIDE;
         if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
-          result.critical = 1;
+          result.critical = true;
         break;
       case 3:
       case 4:
@@ -160,14 +160,14 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
           if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
-            result.critical = 1;
+            result.critical = true;
         } else {
           hitloc = LSIDE;
         }
         break;
       case 12:
         hitloc = LSIDE;
-        result.critical = 1;
+        result.critical = true;
         break;
       }
       break;
@@ -178,7 +178,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
       case 12:
         hitloc = RSIDE;
         if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
-          result.critical = 1;
+          result.critical = true;
         break;
       case 3:
       case 4:
@@ -198,7 +198,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
           if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
-            result.critical = 1;
+            result.critical = true;
         } else {
           hitloc = RSIDE;
         }
@@ -214,7 +214,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
       case 12:
         hitloc = side;
         if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
-          result.critical = 1;
+          result.critical = true;
         break;
       case 3:
         hitloc = side;
@@ -240,7 +240,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
-          result.critical = 1;
+          result.critical = true;
         } else {
           hitloc = side;
         }

@@ -38,7 +38,7 @@ void mech_ammunition_explode(const AmmunitionExplosionRequest *request) {
   if (!attacker)
     return;
   if (ammunition_mode & INFERNO_MODE) {
-    mech_inferno_hit(mech, mech, damage / 4, 0);
+    mech_inferno_hit(mech, mech, damage / 4, false);
     if (btech_context_inferno_penalty_enabled(context))
       mech_weapon_heat_add(mech, 30.0);
     damage = damage / 2;
@@ -46,11 +46,11 @@ void mech_ammunition_explode(const AmmunitionExplosionRequest *request) {
   if (mech_class(mech) == CLASS_BSUIT) {
     mech_damage_apply(&(MechDamageRequest){.target = mech,
                                            .attacker = attacker,
-                                           .line_of_sight = 0,
+                                           .line_of_sight = false,
                                            .attack_pilot = -1,
                                            .hit_location = AMMUNITION_SECTION,
-                                           .rear = 0,
-                                           .critical = 0,
+                                           .rear = false,
+                                           .critical = false,
                                            .armor_damage = damage,
                                            .internal_damage = 0,
                                            .transfer = MECH_DAMAGE_NORMAL,
@@ -58,16 +58,16 @@ void mech_ammunition_explode(const AmmunitionExplosionRequest *request) {
                                            .base_to_hit = 0,
                                            .weapon_index = -1,
                                            .ammunition_mode = 0,
-                                           .ignore_swarmers = 0});
+                                           .ignore_swarmers = false});
   } else {
     mech_damage_apply(
         &(MechDamageRequest){.target = mech,
                              .attacker = attacker,
-                             .line_of_sight = 0,
+                             .line_of_sight = false,
                              .attack_pilot = -1,
                              .hit_location = AMMUNITION_SECTION,
-                             .rear = 0,
-                             .critical = 0,
+                             .rear = false,
+                             .critical = false,
                              .armor_damage = 0,
                              .internal_damage = damage,
                              .transfer = MECH_DAMAGE_FORCE_TRANSFER,
@@ -75,7 +75,7 @@ void mech_ammunition_explode(const AmmunitionExplosionRequest *request) {
                              .base_to_hit = 0,
                              .weapon_index = -1,
                              .ammunition_mode = 0,
-                             .ignore_swarmers = 0});
+                             .ignore_swarmers = false});
   }
 
   if (mech_class(mech) != CLASS_BSUIT) {

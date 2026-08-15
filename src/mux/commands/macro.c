@@ -44,7 +44,7 @@ static int commac_macro_item(const struct Commac *commac, size_t index) {
       sizeof(*commac->macros), index);
 }
 static bool is_valid_macro_index(const MacroRegistry *registry, int index) {
-  return index >= 0 && index < registry->count;
+  return (index >= 0 && index < registry->count) != 0;
 }
 static void macro_notify(MatchContext *m, DbRef p, const char *text) {
   notify_checked(m->evaluation, p, p, text, MSG_ME_ALL | MSG_F_DOWN);

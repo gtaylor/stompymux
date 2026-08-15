@@ -197,7 +197,7 @@ static void mech_startup_event(MuxEvent *e) {
       else
         mech_los_broadcast(mech,
                            "emits some bubbles as its engines are flooded.");
-      mech_destroy(mech, mech, 0, KILL_TYPE_FLOOD);
+      mech_destroy(mech, mech, false, KILL_TYPE_FLOOD);
       return;
     }
   }
@@ -219,10 +219,10 @@ static void mech_startup_event(MuxEvent *e) {
   mech_vertical_speed_set(mech, 0.0F);
   mech_sixth_sense_set(
       mech,
-      mech_pilot_dbref(mech) > 0 &&
-              is_player(btech_context_database(context), mech_pilot_dbref(mech))
-          ? char_getvalue(context, mech_pilot_dbref(mech), "Sixth_Sense")
-          : 0);
+      (mech_pilot_dbref(mech) > 0 && is_player(btech_context_database(context),
+                                               mech_pilot_dbref(mech))
+           ? char_getvalue(context, mech_pilot_dbref(mech), "Sixth_Sense")
+           : 0) != 0);
   if (mech_is_flying_type(mech)) {
     char terrain = mech_real_terrain_get(mech);
     int elevation = mech_position_elevation_magnitude(mech);
@@ -443,7 +443,7 @@ void mech_shutdown(DbRef player, void *data, const char *buffer) {
       mech_los_broadcast(mech,
                          "tumbles end over end and comes to a crashing halt!");
     }
-    mech_fall(mech, 1, 0);
+    mech_fall(mech, 1, false);
     mech_domino_resolve(mech, MECH_DOMINO_FALL);
   }
   mech_power_down(mech);

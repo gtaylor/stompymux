@@ -65,7 +65,7 @@ void mech_land(DbRef player, void *data, char *buffer) {
       mech_notify(mech, MECHALL, "You don't quite make it.");
       mech_los_broadcast(mech,
                          "attempts a landing, but crashes to the ground!");
-      mech_fall(mech, 1, 0);
+      mech_fall(mech, 1, false);
       mech_jump_complete(mech);
       mech_maybe_move(mech);
     }
@@ -76,10 +76,10 @@ void mech_land(DbRef player, void *data, char *buffer) {
 }
 
 static bool mech_is_over_water(const Mech *mech) {
-  return mech_movement_type(mech) == MOVE_HOVER ||
-         mech_class(mech) == CLASS_MW ||
-         mech_movement_type(mech) == MOVE_FOIL ||
-         mech_movement_type(mech) == MOVE_HULL;
+  return (mech_movement_type(mech) == MOVE_HOVER ||
+          mech_class(mech) == CLASS_MW ||
+          mech_movement_type(mech) == MOVE_FOIL ||
+          mech_movement_type(mech) == MOVE_HULL) != 0;
 }
 
 int mech_lower_surface_elevation(Mech *mech) {
@@ -156,7 +156,7 @@ void mech_jump_land(Mech *mech) {
     mech_notify(mech, MECHALL,
                 "Your lack of conciousness makes you fall to the ground. Not "
                 "like you can read this anyway.");
-    mech_fall(mech, 1, 0);
+    mech_fall(mech, 1, false);
     dfa = true;
     done = true;
   } else {
@@ -190,7 +190,7 @@ void mech_jump_land(Mech *mech) {
         mech_notify(mech, MECHALL,
                     "... something you apparently can't handle!");
         mech_los_broadcast(mech, "lands, staggers, and falls down!");
-        mech_fall(mech, 1, 0);
+        mech_fall(mech, 1, false);
         return;
       }
     }
@@ -205,8 +205,8 @@ void mech_jump_land(Mech *mech) {
                       "Your missing leg has caused you to fall upon landing!");
           mech_los_broadcast(mech, "lands, unbalanced, and falls down!");
           dfa = true;
-          mech_fall(mech, 1, 0);
-          done = 1;
+          mech_fall(mech, 1, false);
+          done = true;
         }
       } else if (mech_section_base_to_hit(mech, RLEG) ||
                  mech_section_base_to_hit(mech, LLEG)) {
@@ -218,8 +218,8 @@ void mech_jump_land(Mech *mech) {
                       "landing!");
           mech_los_broadcast(mech, "lands, stumbles, and falls down!");
           dfa = true;
-          done = 1;
-          mech_fall(mech, 1, 0);
+          done = true;
+          mech_fall(mech, 1, false);
         }
       } else if (mech_has_damaged_gyro(mech)) {
         mech_notify(mech, MECHPILOT,
@@ -229,8 +229,8 @@ void mech_jump_land(Mech *mech) {
                       "Your damaged gyro has caused you to fall upon landing!");
           mech_los_broadcast(mech, "lands, twists awkwardly, and falls down!");
           dfa = true;
-          done = 1;
-          mech_fall(mech, 1, 0);
+          done = true;
+          mech_fall(mech, 1, false);
         }
       }
     }
@@ -249,7 +249,7 @@ void mech_jump_land(Mech *mech) {
       mech_los_broadcast(mech,
                          "lands and crashes to the ground from the weight "
                          "of the battlesuits!");
-      mech_fall(mech, 1, 0);
+      mech_fall(mech, 1, false);
     }
   }
 

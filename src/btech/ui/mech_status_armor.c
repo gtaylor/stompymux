@@ -315,7 +315,9 @@ static void armor_template_commit(BtechTextBuilder *destination,
   *saved_position = source_position;
 }
 
-static bool ascii_is_digit(char value) { return value >= '0' && value <= '9'; }
+static bool ascii_is_digit(char value) {
+  return (value >= '0' && value <= '9') != 0;
+}
 
 static int ascii_digit_value(int value) { return value - '0'; }
 
@@ -451,7 +453,7 @@ void print_armor_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
         saved_source_position = source_position + 1;
 
         ArmorKeyText key =
-            armor_key_text(ascii_digit_value(SOURCE_CHARACTER), owner);
+            armor_key_text(ascii_digit_value(SOURCE_CHARACTER), owner != 0);
         btech_text_builder_append(&destination, key.text);
       }
 

@@ -149,15 +149,15 @@ int battle_map_height(const BattleMap *map) { return map->map_height; }
 DbRef battle_map_parent_dbref(const BattleMap *map) { return map->onmap; }
 
 bool battle_map_blocks_friendly_fire(const BattleMap *map) {
-  return map->flags & MAPFLAG_NOFRIENDLYFIRE;
+  return (map->flags & MAPFLAG_NOFRIENDLYFIRE) != 0;
 }
 
 bool battle_map_blocks_physical_attacks(const BattleMap *map) {
-  return map->flags & MAPFLAG_NOPHYSICALS;
+  return (map->flags & MAPFLAG_NOPHYSICALS) != 0;
 }
 
 bool battle_map_is_combat_safe(const BattleMap *map) {
-  return map->buildflag & BUILDFLAG_CSI;
+  return (map->buildflag & BUILDFLAG_CSI) != 0;
 }
 
 void battle_map_parent_dbref_set(BattleMap *map, DbRef parent) {

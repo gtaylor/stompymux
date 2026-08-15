@@ -529,7 +529,7 @@ static bool lua_lock_parse_result(lua_State *state, LuaLockResult *result) {
   int table;
 
   if (lua_isboolean(state, -1)) {
-    result->passes = lua_toboolean(state, -1);
+    result->passes = (lua_toboolean(state, -1) != 0);
     return true;
   }
   if (!lua_istable(state, -1))
@@ -538,9 +538,9 @@ static bool lua_lock_parse_result(lua_State *state, LuaLockResult *result) {
   lua_pushnil(state);
   while (lua_next(state, table) != 0) {
     const char *key = lua_tostring(state, -2);
-    bool valid = lua_type(state, -2) == LUA_TSTRING && key &&
-                 (!strcmp(key, "passes") || !strcmp(key, "enactor_message") ||
-                  !strcmp(key, "other_message"));
+    bool valid = (lua_type(state, -2) == LUA_TSTRING && key &&
+                  (!strcmp(key, "passes") || !strcmp(key, "enactor_message") ||
+                   !strcmp(key, "other_message"))) != 0;
 
     lua_pop(state, 1);
     if (!valid) {
@@ -553,14 +553,14 @@ static bool lua_lock_parse_result(lua_State *state, LuaLockResult *result) {
     lua_pop(state, 1);
     return false;
   }
-  result->passes = lua_toboolean(state, -1);
+  result->passes = (lua_toboolean(state, -1) != 0);
   lua_pop(state, 1);
-  return lua_result_copy_message(state, table, "enactor_message",
-                                 &result->has_enactor_message,
-                                 result->enactor_message) &&
-         lua_result_copy_message(state, table, "other_message",
-                                 &result->has_other_message,
-                                 result->other_message);
+  return (lua_result_copy_message(state, table, "enactor_message",
+                                  &result->has_enactor_message,
+                                  result->enactor_message) &&
+          lua_result_copy_message(state, table, "other_message",
+                                  &result->has_other_message,
+                                  result->other_message)) != 0;
 }
 
 void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
@@ -642,10 +642,10 @@ void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
 
 static bool lua_message_parse_result(lua_State *state, LuaMessageType type,
                                      LuaMessageResult *result) {
-  const bool ALLOW_ENACTOR = type != LUA_MESSAGE_DESCRIBE &&
-                             type != LUA_MESSAGE_ENTER_SOURCE &&
-                             type != LUA_MESSAGE_LEAVE_DESTINATION &&
-                             type != LUA_MESSAGE_TELEPORT_SOURCE;
+  const bool ALLOW_ENACTOR =
+      (type != LUA_MESSAGE_DESCRIBE && type != LUA_MESSAGE_ENTER_SOURCE &&
+       type != LUA_MESSAGE_LEAVE_DESTINATION &&
+       type != LUA_MESSAGE_TELEPORT_SOURCE) != 0;
   int table;
 
   if (!lua_istable(state, -1))
@@ -654,9 +654,9 @@ static bool lua_message_parse_result(lua_State *state, LuaMessageType type,
   lua_pushnil(state);
   while (lua_next(state, table) != 0) {
     const char *key = lua_tostring(state, -2);
-    const bool VALID = lua_type(state, -2) == LUA_TSTRING && key &&
-                       ((!strcmp(key, "enactor_message") && ALLOW_ENACTOR) ||
-                        !strcmp(key, "other_message"));
+    const bool VALID = (lua_type(state, -2) == LUA_TSTRING && key &&
+                        ((!strcmp(key, "enactor_message") && ALLOW_ENACTOR) ||
+                         !strcmp(key, "other_message"))) != 0;
 
     lua_pop(state, 1);
     if (!VALID) {
@@ -664,13 +664,13 @@ static bool lua_message_parse_result(lua_State *state, LuaMessageType type,
       return false;
     }
   }
-  return (!ALLOW_ENACTOR ||
-          lua_result_copy_message(state, table, "enactor_message",
-                                  &result->has_enactor_message,
-                                  result->enactor_message)) &&
-         lua_result_copy_message(state, table, "other_message",
-                                 &result->has_other_message,
-                                 result->other_message);
+  return ((!ALLOW_ENACTOR ||
+           lua_result_copy_message(state, table, "enactor_message",
+                                   &result->has_enactor_message,
+                                   result->enactor_message)) &&
+          lua_result_copy_message(state, table, "other_message",
+                                  &result->has_other_message,
+                                  result->other_message)) != 0;
 }
 
 void lua_message_evaluate(LuaRuntime *runtime,

@@ -248,10 +248,11 @@ static void look_contents(const LookContext *look, const char *contents_name,
 
   DOLIST(evaluation->world->database, thing,
          game_object_contents(evaluation->world->database, loc)) {
-    if (can_see(&(ObjectVisibilityRequest){.evaluation = evaluation,
-                                           .viewer = player,
-                                           .object = thing,
-                                           .location_visible = can_see_loc})) {
+    if (can_see(
+            &(ObjectVisibilityRequest){.evaluation = evaluation,
+                                       .viewer = player,
+                                       .object = thing,
+                                       .location_visible = can_see_loc != 0})) {
 
       /*
        * something exists!  show him everything
@@ -261,11 +262,11 @@ static void look_contents(const LookContext *look, const char *contents_name,
                      MSG_ME_ALL | MSG_F_DOWN);
       DOLIST(evaluation->world->database, thing,
              game_object_contents(evaluation->world->database, loc)) {
-        if (can_see(
-                &(ObjectVisibilityRequest){.evaluation = evaluation,
-                                           .viewer = player,
-                                           .object = thing,
-                                           .location_visible = can_see_loc})) {
+        if (can_see(&(ObjectVisibilityRequest){.evaluation = evaluation,
+                                               .viewer = player,
+                                               .object = thing,
+                                               .location_visible =
+                                                   can_see_loc != 0})) {
           buff = unparse_object(evaluation->world->database, evaluation, player,
                                 thing);
           notify_checked(evaluation, player, player, buff.text,

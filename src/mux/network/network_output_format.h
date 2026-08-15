@@ -22,7 +22,7 @@ network_output_format_line_v(char *buffer, size_t size, const char *format,
       vsnprintf( // NOLINT(clang-analyzer-security.VAList)
           buffer, FORMAT_SIZE, format, arguments);
   const bool FORMAT_FITS =
-      FORMATTED_LENGTH >= 0 && (size_t)FORMATTED_LENGTH < FORMAT_SIZE;
+      (FORMATTED_LENGTH >= 0 && (size_t)FORMATTED_LENGTH < FORMAT_SIZE) != 0;
   const bool SUFFIX_FITS = string_append_bounded(buffer, size, "\r\n");
-  return FORMAT_FITS && SUFFIX_FITS;
+  return (FORMAT_FITS && SUFFIX_FITS) != 0;
 }

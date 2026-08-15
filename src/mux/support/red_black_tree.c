@@ -201,7 +201,7 @@ bool red_black_tree_exists(RedBlackTree bt, const void *key) {
   RbtreeNode *node;
   int compare_result;
   if (!bt->head) {
-    return 0;
+    return false;
   }
   node = bt->head;
   while (node != nullptr) {
@@ -211,20 +211,20 @@ bool red_black_tree_exists(RedBlackTree bt, const void *key) {
         .context = bt->context,
     });
     if (compare_result == 0) {
-      return 1;
+      return true;
     }
     if (compare_result < 0) {
       // Go Left
       if (node->left != nullptr) {
         node = node->left;
       } else {
-        return 0;
+        return false;
       }
     } else {
       if (node->right != nullptr) {
         node = node->right;
       } else {
-        return 0;
+        return false;
       }
     }
   }
@@ -240,7 +240,7 @@ bool red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
   RbtreeNode *node;
   int depth = 0;
   if (!bt || !bt->head)
-    return 1;
+    return true;
   last = nullptr;
   node = bt->head;
   while (node != nullptr) {
@@ -250,7 +250,7 @@ bool red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
                                               .data = node->data,
                                               .depth = depth,
                                               .context = context}))
-          return 0;
+          return false;
       }
       if (node->left != nullptr) {
         depth++;
@@ -265,7 +265,7 @@ bool red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
                                               .data = node->data,
                                               .depth = depth,
                                               .context = context}))
-          return 0;
+          return false;
       }
       if (node->right != nullptr) {
         depth++;
@@ -279,14 +279,14 @@ bool red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
                                             .data = node->data,
                                             .depth = depth,
                                             .context = context}))
-        return 0;
+        return false;
     }
     depth--;
     last = node;
     node = node->parent;
   }
 
-  return 1;
+  return true;
 }
 
 unsigned int red_black_tree_size(RedBlackTree bt) { return bt->size; }

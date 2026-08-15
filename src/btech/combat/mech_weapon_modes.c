@@ -49,7 +49,7 @@ void mech_ams(DbRef player, void *data, char *buffer) {
                  "This mech is not equipped with AMS");
     return;
   }
-  bool enabled = !mech_condition_summary(mech).ams_enabled;
+  bool enabled = (!mech_condition_summary(mech).ams_enabled) != 0;
   mech_ams_enabled_set(mech, enabled);
   mech_notify(mech, MECHALL,
               enabled ? "Anti-Missile System turned ON"

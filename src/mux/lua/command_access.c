@@ -41,8 +41,9 @@ bool lua_command_access_allows(const LuaCommandAccessRequest *request) {
   case LUA_COMMAND_ACCESS_PUBLIC:
     return true;
   case LUA_COMMAND_ACCESS_WIZARD:
-    return is_god(database, player) || (player >= 0 && player < database->top &&
-                                        is_wizard(database, player));
+    return (is_god(database, player) ||
+            (player >= 0 && player < database->top &&
+             is_wizard(database, player))) != 0;
   case LUA_COMMAND_ACCESS_GOD:
     return is_god(database, player);
   case LUA_COMMAND_ACCESS_COUNT:
@@ -65,7 +66,7 @@ bool lua_command_entry_read(lua_State *state, int entry, GameDatabase *database,
   *pattern = lua_tostring(state, -1);
   lua_pop(state, 1);
   lua_getfield(state, entry, "handler");
-  valid = *pattern != nullptr && lua_isfunction(state, -1);
+  valid = ((*pattern != nullptr && lua_isfunction(state, -1)) != 0);
   lua_pop(state, 1);
   return valid;
 }

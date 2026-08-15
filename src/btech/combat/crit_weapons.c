@@ -119,11 +119,11 @@ bool mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
       mech_damage_apply(&(MechDamageRequest){
           .target = wounded,
           .attacker = attacker,
-          .line_of_sight = 0,
+          .line_of_sight = false,
           .attack_pilot = -1,
           .hit_location = HITLOC,
-          .rear = 0,
-          .critical = 0,
+          .rear = false,
+          .critical = false,
           .armor_damage = 0,
           .internal_damage = weapon_catalogue_explosion_damage(WEAPON_INDEX),
           .transfer = MECH_DAMAGE_NORMAL,
@@ -131,7 +131,7 @@ bool mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
           .base_to_hit = 7,
           .weapon_index = -1,
           .ammunition_mode = 0,
-          .ignore_swarmers = 1});
+          .ignore_swarmers = true});
     }
     /* Rule Reference: BMR Revised, Page 16-17 (Ammo Explosion=2 Bruise) */
     /* Rule Reference: Total Warfare, Page 41 (Ammo Explosion=2 Bruise) */
@@ -149,7 +149,7 @@ bool mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
       else
         headhitmwdamage(wounded, wounded, 2);
     }
-    return 1;
+    return true;
   }
   if (weapon_catalogue_is_anti_missile(
           weapon_from_equipment_index(CRIT_TYPE))) { /* Have to shut down
@@ -210,11 +210,11 @@ bool mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
       if (attacker) {
         mech_damage_apply(&(MechDamageRequest){.target = wounded,
                                                .attacker = attacker,
-                                               .line_of_sight = 0,
+                                               .line_of_sight = false,
                                                .attack_pilot = -1,
                                                .hit_location = HITLOC,
-                                               .rear = 0,
-                                               .critical = 0,
+                                               .rear = false,
+                                               .critical = false,
                                                .armor_damage = 0,
                                                .internal_damage = damage,
                                                .transfer = MECH_DAMAGE_NORMAL,
@@ -222,10 +222,10 @@ bool mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
                                                .base_to_hit = 7,
                                                .weapon_index = -1,
                                                .ammunition_mode = 0,
-                                               .ignore_swarmers = 1});
+                                               .ignore_swarmers = true});
       }
 
-      return 1;
+      return true;
     }
   } else if ((mech_critical_ammo_mode(wounded, HITLOC, w_first_crit) &
               AC_INCENDIARY_MODE) &&
@@ -267,11 +267,11 @@ bool mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
         mech_damage_apply(&(MechDamageRequest){
             .target = wounded,
             .attacker = attacker,
-            .line_of_sight = 0,
+            .line_of_sight = false,
             .attack_pilot = -1,
             .hit_location = HITLOC,
-            .rear = 0,
-            .critical = 0,
+            .rear = false,
+            .critical = false,
             .armor_damage = 0,
             .internal_damage = weapon_catalogue_damage(WEAPON_INDEX),
             .transfer = MECH_DAMAGE_NORMAL,
@@ -279,14 +279,14 @@ bool mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
             .base_to_hit = 7,
             .weapon_index = -1,
             .ammunition_mode = 0,
-            .ignore_swarmers = 1});
+            .ignore_swarmers = true});
 
-        return 1;
+        return true;
       }
     }
   }
 
-  return 0;
+  return false;
 }
 
 void mech_main_weapon_jam(Mech *mech) {
@@ -669,11 +669,11 @@ void mech_ammunition_critical_apply(const AmmunitionCriticalRequest *request) {
 
   mech_damage_apply(&(MechDamageRequest){.target = obj_mech,
                                          .attacker = obj_attacker,
-                                         .line_of_sight = 0,
+                                         .line_of_sight = false,
                                          .attack_pilot = -1,
                                          .hit_location = W_LOC,
-                                         .rear = 0,
-                                         .critical = 0,
+                                         .rear = false,
+                                         .critical = false,
                                          .armor_damage = 0,
                                          .internal_damage = w_total_ammo_damage,
                                          .transfer = MECH_DAMAGE_NORMAL,
@@ -681,5 +681,5 @@ void mech_ammunition_critical_apply(const AmmunitionCriticalRequest *request) {
                                          .base_to_hit = 0,
                                          .weapon_index = -1,
                                          .ammunition_mode = 0,
-                                         .ignore_swarmers = 1});
+                                         .ignore_swarmers = true});
 }

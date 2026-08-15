@@ -108,13 +108,13 @@ bool start_log(ServerLog *log, const char *primary, const char *secondary) {
      */
 
     if (log->nesting == 1)
-      return 1;
+      return true;
     (void)fprintf(stderr, "Recursive logging request.\r\n");
     [[fallthrough]];
   default:
     log->nesting--;
   }
-  return 0;
+  return false;
 }
 
 /**

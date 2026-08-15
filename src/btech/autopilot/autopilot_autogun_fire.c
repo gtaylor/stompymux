@@ -103,34 +103,35 @@ void autopilot_autogun_fire(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
       const int WEAPON_HEAT = weapon_catalogue_heat(weapon->weapon_db_number);
       const bool STINGER_COMPATIBLE =
-          !(mech_critical_ammo_mode(mech, weapon->section, weapon->critical) &
-            STINGER_MODE) ||
-          target == nullptr || mech_is_jumping(target) ||
-          mech_is_out_of_control(target) ||
-          (mech_is_flying_type(target) && !mech_is_landed(target));
+          (!(mech_critical_ammo_mode(mech, weapon->section, weapon->critical) &
+             STINGER_MODE) ||
+           target == nullptr || mech_is_jumping(target) ||
+           mech_is_out_of_control(target) ||
+           (mech_is_flying_type(target) && !mech_is_landed(target))) != 0;
       const bool AMMUNITION_REQUIRED =
           weapon_catalogue_ammunition_per_ton(weapon->weapon_db_number) > 0;
-      const AutopilotWeaponDecision ELIGIBILITY =
-          autopilot_weapon_evaluate(&(AutopilotWeaponSituation){
-              .functional = !mech_weapon_is_nonfunctional_at(
+      const AutopilotWeaponDecision ELIGIBILITY = autopilot_weapon_evaluate(&(
+          AutopilotWeaponSituation){
+          .functional =
+              (!mech_weapon_is_nonfunctional_at(
                   mech, weapon->section, weapon->critical,
-                  weapon_from_equipment_index(weapon->weapon_db_number)),
-              .recycling = mech_weapon_is_recycling_at(mech, weapon->section,
-                                                       weapon->critical),
-              .defensive =
-                  weapon_catalogue_is_anti_missile(weapon->weapon_db_number),
-              .ammunition_required = AMMUNITION_REQUIRED,
-              .ammunition =
-                  AMMUNITION_REQUIRED
-                      ? count_ammo_for_weapon(mech, weapon->weapon_db_number)
-                      : 0,
-              .ammunition_compatible = STINGER_COMPATIBLE,
-              .in_arc = true,
-              .heat_limited = mech_class(mech) == CLASS_MECH,
-              .projected_heat = accumulate_heat,
-              .heat_dissipation = mech_heat_dissipation(mech),
-              .weapon_heat = WEAPON_HEAT,
-              .maximum_heat = AUTO_GUN_MAX_HEAT});
+                  weapon_from_equipment_index(weapon->weapon_db_number))) != 0,
+          .recycling = mech_weapon_is_recycling_at(mech, weapon->section,
+                                                   weapon->critical),
+          .defensive =
+              weapon_catalogue_is_anti_missile(weapon->weapon_db_number),
+          .ammunition_required = AMMUNITION_REQUIRED,
+          .ammunition =
+              AMMUNITION_REQUIRED
+                  ? count_ammo_for_weapon(mech, weapon->weapon_db_number)
+                  : 0,
+          .ammunition_compatible = STINGER_COMPATIBLE,
+          .in_arc = true,
+          .heat_limited = mech_class(mech) == CLASS_MECH,
+          .projected_heat = accumulate_heat,
+          .heat_dissipation = mech_heat_dissipation(mech),
+          .weapon_heat = WEAPON_HEAT,
+          .maximum_heat = AUTO_GUN_MAX_HEAT});
       if (!ELIGIBILITY.fire) {
         weapon = autopilot_weapon_profile_previous(weapon_profile, weapon,
                                                    PROFILE_RANGE);

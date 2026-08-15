@@ -315,7 +315,7 @@ bool object_attribute_set(EvaluationContext *evaluation, DbRef player,
     attribute_add(evaluation->world->database, thing, attrnum, attrtext,
                   aflags);
     btech_special_object_flag_changed(
-        evaluation->btech, player, thing, have_xcode,
+        evaluation->btech, player, thing, have_xcode != 0,
         is_xcode(evaluation->world->database, thing));
     if (attrnum == A_XTYPE)
       btech_special_object_type_register(&(BtechSpecialObjectAction){

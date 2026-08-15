@@ -64,12 +64,12 @@ styled_tag_close_offset(const StyledTagCloseRequest *request) {
     } else if (quoted && CHARACTER == '\\') {
       escaped = true;
     } else if (CHARACTER == '"') {
-      quoted = !quoted;
+      quoted = ((!quoted) != 0);
     } else if (!quoted && CHARACTER == ']') {
       return (StyledTagCloseResult){.found = true, .offset = index};
     }
   }
-  return (StyledTagCloseResult){0};
+  return (StyledTagCloseResult){};
 }
 
 const char *styled_find_tag_close(const char *start) {
@@ -135,7 +135,7 @@ static bool apply_tag(const StyledTextPalette *palette, const char *tag,
       return false;
     }
     restored = *styled_stack_slot(stack, --*stack_size);
-    bool closed_link = state->has_link && !restored.has_link;
+    bool closed_link = (state->has_link && !restored.has_link) != 0;
     if (state->link_emitted && !restored.link_emitted) {
       if (!styled_emit_link_close(output, output_size, used))
         return false;
@@ -260,8 +260,9 @@ static bool apply_tag(const StyledTextPalette *palette, const char *tag,
     if (enabled && effective->disabled == STYLED_BOOLEAN_TRUE &&
         (!options || !options->osc_hyperlinks_disabled))
       enabled = false;
-    include_base = enabled && options && options->osc_hyperlinks_style_basic &&
-                   styled_link_properties_present(&serialized->style.base);
+    include_base =
+        ((enabled && options && options->osc_hyperlinks_style_basic &&
+          styled_link_properties_present(&serialized->style.base)) != 0);
     if (enabled && options && options->osc_hyperlinks_style_states) {
       for (size_t index = 0; index < STYLED_LINK_STATE_COUNT; index++) {
         if (styled_link_properties_present(
@@ -271,34 +272,38 @@ static bool apply_tag(const StyledTextPalette *palette, const char *tag,
         }
       }
     }
-    include_tooltip = enabled && options && options->osc_hyperlinks_tooltip &&
-                      serialized->tooltip;
-    include_menu = enabled && options && options->osc_hyperlinks_menu &&
-                   styled_link_menu_has_enabled_action(serialized, options);
-    include_title = enabled && options && options->osc_hyperlinks_menu &&
-                    serialized->title &&
-                    styled_link_menu_has_enabled_action(effective, options);
+    include_tooltip = ((enabled && options && options->osc_hyperlinks_tooltip &&
+                        serialized->tooltip) != 0);
+    include_menu =
+        ((enabled && options && options->osc_hyperlinks_menu &&
+          styled_link_menu_has_enabled_action(serialized, options)) != 0);
+    include_title =
+        ((enabled && options && options->osc_hyperlinks_menu &&
+          serialized->title &&
+          styled_link_menu_has_enabled_action(effective, options)) != 0);
     include_title_style =
-        include_title && options->osc_hyperlinks_style_basic &&
-        serialized->title &&
-        styled_link_properties_present(&serialized->title_style);
+        ((include_title && options->osc_hyperlinks_style_basic &&
+          serialized->title &&
+          styled_link_properties_present(&serialized->title_style)) != 0);
     include_visibility =
-        enabled && options && options->osc_hyperlinks_visibility &&
-        styled_link_visibility_present(&serialized->visibility);
-    include_selection = enabled && options &&
-                        options->osc_hyperlinks_selection &&
-                        styled_link_selection_present(&serialized->selection);
-    include_spoiler = enabled && options && options->osc_hyperlinks_spoiler &&
-                      serialized->spoiler != STYLED_BOOLEAN_UNSET;
-    include_disabled = enabled && options && options->osc_hyperlinks_disabled &&
-                       serialized->disabled != STYLED_BOOLEAN_UNSET;
-    append_config = include_base || include_states || include_tooltip ||
-                    include_menu || include_title || include_visibility ||
-                    include_selection || include_spoiler || include_disabled;
-    reserve_config = enabled && link_kind == STYLED_LINK_EXTERNAL &&
-                     styled_config_capability_advertised(options);
-    reserve_preset = enabled && link_kind == STYLED_LINK_EXTERNAL && options &&
-                     options->osc_hyperlinks_presets;
+        ((enabled && options && options->osc_hyperlinks_visibility &&
+          styled_link_visibility_present(&serialized->visibility)) != 0);
+    include_selection =
+        ((enabled && options && options->osc_hyperlinks_selection &&
+          styled_link_selection_present(&serialized->selection)) != 0);
+    include_spoiler = ((enabled && options && options->osc_hyperlinks_spoiler &&
+                        serialized->spoiler != STYLED_BOOLEAN_UNSET) != 0);
+    include_disabled =
+        ((enabled && options && options->osc_hyperlinks_disabled &&
+          serialized->disabled != STYLED_BOOLEAN_UNSET) != 0);
+    append_config =
+        ((include_base || include_states || include_tooltip || include_menu ||
+          include_title || include_visibility || include_selection ||
+          include_spoiler || include_disabled) != 0);
+    reserve_config = ((enabled && link_kind == STYLED_LINK_EXTERNAL &&
+                       styled_config_capability_advertised(options)) != 0);
+    reserve_preset = ((enabled && link_kind == STYLED_LINK_EXTERNAL &&
+                       options && options->osc_hyperlinks_presets) != 0);
     if (!include_base)
       styled_link_fallback_apply(&effective->style.base, &updated);
     if (append_config || reserve_config || reserve_preset || preset_name) {

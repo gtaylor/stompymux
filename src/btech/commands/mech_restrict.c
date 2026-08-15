@@ -189,7 +189,7 @@ void mech_rsetmapindex(DbRef player, void *data, char *buffer) {
       return;
     mech_targeting_tag_clear(mech);
     mech_c3i_network_clear(mech, 1);
-    mech_c3_network_clear(mech, 1);
+    mech_c3_network_clear(mech, true);
     remove_mech_from_map(oldmap, mech);
   }
 
@@ -319,7 +319,7 @@ void newfreemech(DbRef key, void **data,
   switch (selector) {
   case SPECIAL_ALLOC:
     mech_identity_initialize(new, key);
-    mech_template_clear(new, 1);
+    mech_template_clear(new, true);
     for (i = 0; i < NUM_SECTIONS; i++)
       fill_default_criticals(new, i);
     break;

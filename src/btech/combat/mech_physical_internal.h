@@ -35,6 +35,8 @@ int have_punch(Mech *mech, int location);
 bool physical_arm_check(DbRef player, Mech *mech, const char *verb);
 bool physical_quad_check(DbRef player, Mech *mech, const char *verb);
 bool phys_common_checks(Mech *mech);
+// Implementations retain this callback's int contract and must be exempted by
+// name in check-boolean-contracts when added.
 typedef int (*PhysicalEquipmentCheck)(Mech *mech, int location);
 
 typedef struct ArmSelectionRequest {

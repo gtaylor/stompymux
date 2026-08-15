@@ -133,31 +133,34 @@ void mech_destroy_and_place(Mech *mech) {
 }
 
 bool mech_has_pilot(const Mech *mech) {
-  return mech_pilot_dbref(mech) > 0 &&
-         game_object_location(mech->xcode.context->database,
-                              mech_pilot_dbref(mech)) == mech->mynum;
+  return (mech_pilot_dbref(mech) > 0 &&
+          game_object_location(mech->xcode.context->database,
+                               mech_pilot_dbref(mech)) == mech->mynum) != 0;
 }
 
 bool mech_has_active_pilot(const Mech *mech) {
-  return mech_has_pilot(mech) &&
-         (is_connected(mech->xcode.context->database, mech_pilot_dbref(mech)) ||
-          !is_player(mech->xcode.context->database, mech_pilot_dbref(mech)));
+  return (mech_has_pilot(mech) && (is_connected(mech->xcode.context->database,
+                                                mech_pilot_dbref(mech)) ||
+                                   !is_player(mech->xcode.context->database,
+                                              mech_pilot_dbref(mech)))) != 0;
 }
 
 bool mech_has_gunner(const Mech *mech) {
-  return (mech->xcode.context->combat_overrides.pilot &&
-          mech_gunner_dbref(mech) > 0) ||
-         (!mech->xcode.context->combat_overrides.pilot && mech_has_pilot(mech));
+  return ((mech->xcode.context->combat_overrides.pilot &&
+           mech_gunner_dbref(mech) > 0) ||
+          (!mech->xcode.context->combat_overrides.pilot &&
+           mech_has_pilot(mech))) != 0;
 }
 
 bool mech_has_active_gunner(const Mech *mech) {
   if (!mech->xcode.context->combat_overrides.pilot) {
     return mech_has_active_pilot(mech);
   }
-  return mech_gunner_dbref(mech) > 0 &&
-         (is_connected(mech->xcode.context->database,
-                       mech_gunner_dbref(mech)) ||
-          !is_player(mech->xcode.context->database, mech_gunner_dbref(mech)));
+  return (mech_gunner_dbref(mech) > 0 &&
+          (is_connected(mech->xcode.context->database,
+                        mech_gunner_dbref(mech)) ||
+           !is_player(mech->xcode.context->database,
+                      mech_gunner_dbref(mech)))) != 0;
 }
 
 void mech_max_speed_set(Mech *mech, float speed) {
@@ -175,7 +178,8 @@ void mech_max_speed_divide(Mech *mech, float divisor) {
 }
 
 bool mech_can_jump(const Mech *mech) {
-  return !mech_event_count(mech, EVENT_JUMPSTABIL) && !mech_is_jumping(mech);
+  return (!mech_event_count(mech, EVENT_JUMPSTABIL) &&
+          !mech_is_jumping(mech)) != 0;
 }
 
 void mech_maybe_move(Mech *mech) {
@@ -260,9 +264,9 @@ void mech_communications_clear(Mech *mech) {
 }
 
 bool mech_aero_has_free_fuel(const Mech *mech) {
-  return ((mech)->ud.type) == CLASS_VTOL &&
-         mech->xcode.context->configuration->btech_nofusionvtolfuel &&
-         !(((mech)->rd.specials) & ICE_TECH);
+  return (((mech)->ud.type) == CLASS_VTOL &&
+          mech->xcode.context->configuration->btech_nofusionvtolfuel &&
+          !(((mech)->rd.specials) & ICE_TECH)) != 0;
 }
 
 size_t mech_storage_size(void) { return sizeof(Mech); }

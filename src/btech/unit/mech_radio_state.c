@@ -7,7 +7,7 @@
 #include "mux/support/checked_storage.h"
 
 static bool mech_radio_channel_valid(int channel) {
-  return channel >= 0 && channel < FREQS;
+  return (channel >= 0 && channel < FREQS) != 0;
 }
 
 static int *mech_radio_int_slot(int *values, int channel) {

@@ -104,8 +104,8 @@ typedef enum MechEventType : int {
   EVENT_SIDESLIP = 80,
 } MechEventType;
 
-static_assert(EVENT_MOVE == 1 && EVENT_AMMOWARN == 22);
-static_assert(FIRST_AUTO_EVENT == 23 && LAST_AUTO_EVENT == 32);
-static_assert(FIRST_TECH_EVENT == 43 && LAST_TECH_EVENT == 58);
-static_assert(EVENT_CHANGING_HULLDOWN == 74 && EVENT_SCHARGE_FAIL == 76);
+static_assert((EVENT_MOVE == 1 && EVENT_AMMOWARN == 22) != 0);
+static_assert((FIRST_AUTO_EVENT == 23 && LAST_AUTO_EVENT == 32) != 0);
+static_assert((FIRST_TECH_EVENT == 43 && LAST_TECH_EVENT == 58) != 0);
+static_assert((EVENT_CHANGING_HULLDOWN == 74 && EVENT_SCHARGE_FAIL == 76) != 0);
 static_assert(EVENT_SIDESLIP == 80);

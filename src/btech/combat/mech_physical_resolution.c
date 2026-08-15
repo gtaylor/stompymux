@@ -626,7 +626,7 @@ void physical_attack_resolve(const PhysicalAttackRequest *request) {
       // We fail the piloting skill roll and flop on our face.
       if (!made_pilot_skill_roll(mech, fail_roll)) {
         mech_notify(mech, MECHALL, "You lose your balance and fall down!");
-        mech_fall(mech, 1, 1);
+        mech_fall(mech, 1, true);
       } // end if() - Miss/fall.
     } // end if() - Miss kick/club and risk falling.
   } // end if() - Physical failure handling.

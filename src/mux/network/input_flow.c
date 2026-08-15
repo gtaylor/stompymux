@@ -113,7 +113,7 @@ bool descriptor_flow_start(const FlowStartRequest *request) {
   FlowOutcome outcome;
 
   if (d->flow != nullptr)
-    return 0;
+    return false;
 
   flow = checked_storage_allocate(sizeof(InputFlow));
   flow->step_fn = request->step;
@@ -127,7 +127,7 @@ bool descriptor_flow_start(const FlowStartRequest *request) {
   outcome = request->step(&(FlowStepCall){
       .descriptor = d, .flow_data = request->flow_data, .step = flow->step});
   flow_apply_outcome(d, outcome);
-  return 1;
+  return true;
 }
 
 void descriptor_flow_handle(Descriptor *d, const char *input) {

@@ -38,11 +38,11 @@ void physical_damage_apply(Mech *target, Mech *attacker, int cause_pilot,
   btech_context_damage_experience_mode_set(context, BTECH_DAMAGE_XP_PILOTING);
   mech_damage_apply(&(MechDamageRequest){.target = target,
                                          .attacker = attacker,
-                                         .line_of_sight = cause_pilot,
+                                         .line_of_sight = cause_pilot != 0,
                                          .attack_pilot = pilot,
                                          .hit_location = hit_location,
-                                         .rear = rear,
-                                         .critical = critical,
+                                         .rear = rear != 0,
+                                         .critical = critical != 0,
                                          .armor_damage = damage,
                                          .internal_damage = glancing,
                                          .transfer = MECH_DAMAGE_NORMAL,
@@ -50,7 +50,7 @@ void physical_damage_apply(Mech *target, Mech *attacker, int cause_pilot,
                                          .base_to_hit = 0,
                                          .weapon_index = -1,
                                          .ammunition_mode = 0,
-                                         .ignore_swarmers = 0});
+                                         .ignore_swarmers = false});
   btech_context_damage_experience_mode_set(context, BTECH_DAMAGE_XP_GUNNERY);
 }
 
@@ -63,11 +63,11 @@ void physical_damage_apply_without_experience(Mech *target, Mech *attacker,
   btech_context_damage_experience_mode_set(context, BTECH_DAMAGE_XP_NONE);
   mech_damage_apply(&(MechDamageRequest){.target = target,
                                          .attacker = attacker,
-                                         .line_of_sight = cause_pilot,
+                                         .line_of_sight = cause_pilot != 0,
                                          .attack_pilot = pilot,
                                          .hit_location = hit_location,
-                                         .rear = rear,
-                                         .critical = critical,
+                                         .rear = rear != 0,
+                                         .critical = critical != 0,
                                          .armor_damage = damage,
                                          .internal_damage = glancing,
                                          .transfer = MECH_DAMAGE_NORMAL,
@@ -75,7 +75,7 @@ void physical_damage_apply_without_experience(Mech *target, Mech *attacker,
                                          .base_to_hit = 0,
                                          .weapon_index = -1,
                                          .ammunition_mode = 0,
-                                         .ignore_swarmers = 0});
+                                         .ignore_swarmers = false});
   btech_context_damage_experience_mode_set(context, BTECH_DAMAGE_XP_GUNNERY);
 }
 
@@ -92,7 +92,7 @@ void physical_trip(Mech *mech, Mech *target) {
     mech_notify(target, MECHSTARTED, "You are tripped and fall to the ground!");
     mech_los_broadcast(target, "trips up and falls down!");
 
-    mech_fall(target, 1, 0);
+    mech_fall(target, 1, false);
   } else {
     mech_los_broadcast(target, "manages to stay upright!");
   }
@@ -304,7 +304,7 @@ void physical_damage_resolve(const PhysicalDamageRequest *request) {
         !mech_condition_summary(target).fallen) {
       mech_notify(target, MECHSTARTED, "The kick knocks you to the ground!");
       mech_los_broadcast(target, "stumbles and falls down!");
-      mech_fall(target, 1, 0);
+      mech_fall(target, 1, false);
     }
   }
 
@@ -360,32 +360,32 @@ bool death_from_above(Mech *mech, Mech *target) {
                               mech_movement_type(mech));
       mech_printf(mech, MECHALL, "You have weapons recycling on your %s.",
                   location);
-      return 0;
+      return false;
     }
   }
   // Our target is no longer on the map.
   if ((mech_map_dbref(mech) != mech_map_dbref(target))) {
     mech_notify(mech, MECHALL, "Your target is no longer valid.");
-    return 0;
+    return false;
   }
 
   if (mech_section_recycle_ticks(mech, LLEG) ||
       mech_section_recycle_ticks(mech, RLEG)) {
     mech_notify(mech, MECHALL,
                 "Your legs are still recovering from your last attack.");
-    return 0;
+    return false;
   }
   if (mech_section_recycle_ticks(mech, RARM) ||
       mech_section_recycle_ticks(mech, LARM)) {
     mech_notify(mech, MECHALL,
                 "Your arms are still recovering from your last attack.");
-    return 0;
+    return false;
   }
 
   if (mech_is_jumping(target)) {
     mech_notify(mech, MECHALL,
                 "Your target is airborne, you cannot land on it.");
-    return 0;
+    return false;
   }
 
   if ((mech_class(target) == CLASS_VTOL) ||
@@ -393,14 +393,14 @@ bool death_from_above(Mech *mech, Mech *target) {
     if (!mech_is_landed(target)) {
       mech_notify(mech, MECHALL,
                   "Your target is airborne, you cannot land on it.");
-      return 0;
+      return false;
     }
   }
 
   if ((mech_team(mech) == mech_team(target)) &&
       battle_map_blocks_friendly_fire(map)) {
     mech_notify(mech, MECHALL, "Friendly DFA? I don't think so....");
-    return 0;
+    return false;
   }
   if (btech_context_physical_attacks_use_pilot_skill(context))
     base_to_hit = find_pilot_piloting(mech);
@@ -417,7 +417,7 @@ bool death_from_above(Mech *mech, Mech *target) {
         mech, MECHALL,
         "DFA: BTH %d\tYou choose not to attack and land from your jump.",
         base_to_hit);
-    return 0;
+    return false;
   }
 
   roll = btech_random_roll(context);
@@ -490,14 +490,14 @@ bool death_from_above(Mech *mech, Mech *target) {
         mech_notify(mech, MECHALL,
                     "Your piloting skill fails and you fall over!!");
         mech_los_broadcast(mech, "stumbles and falls down!");
-        mech_fall(mech, 1, 0);
+        mech_fall(mech, 1, false);
       }
       if (mech_class(target) == CLASS_MECH &&
           !made_pilot_skill_roll(target, 2)) {
         mech_notify(target, MECHSTARTED,
                     "Your piloting skill fails and you fall over!!");
         mech_los_broadcast(target, "stumbles and falls down!");
-        mech_fall(target, 1, 0);
+        mech_fall(target, 1, false);
       }
     }
 
@@ -544,7 +544,7 @@ bool death_from_above(Mech *mech, Mech *target) {
     mech_set_recycle_limb(mech, physical_charge_section(i),
                           PHYSICAL_RECYCLE_TIME);
 
-  return 1;
+  return true;
 } // end DeathFromAbove()
 
 /*

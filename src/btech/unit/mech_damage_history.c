@@ -7,7 +7,7 @@
 MechDamageHistory mech_damage_history(const Mech *mech) {
   return (MechDamageHistory){
       .turn_damage = mech->rd.turndamage,
-      .staggered_last_turn = mech->rd.staggerstamp,
+      .staggered_last_turn = mech->rd.staggerstamp != 0,
       .stagger_stamp = mech->rd.staggerstamp - 1,
   };
 }

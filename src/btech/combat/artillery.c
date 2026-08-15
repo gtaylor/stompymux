@@ -242,11 +242,11 @@ void blast_hit_real_hex(const BlastRealHexRequest *request) {
 
         mech_damage_apply(&(MechDamageRequest){.target = temp_mech,
                                                .attacker = temp_mech,
-                                               .line_of_sight = 0,
+                                               .line_of_sight = false,
                                                .attack_pilot = -1,
                                                .hit_location = hitloc,
-                                               .rear = isrear,
-                                               .critical = iscritical,
+                                               .rear = isrear != 0,
+                                               .critical = iscritical != 0,
                                                .armor_damage = ndam,
                                                .internal_damage = 0,
                                                .transfer = MECH_DAMAGE_NORMAL,
@@ -254,7 +254,7 @@ void blast_hit_real_hex(const BlastRealHexRequest *request) {
                                                .base_to_hit = 0,
                                                .weapon_index = -1,
                                                .ammunition_mode = 0,
-                                               .ignore_swarmers = 0});
+                                               .ignore_swarmers = false});
       }
       mech_heat_effect_apply(nullptr, temp_mech, request->damage.heat, false);
     }

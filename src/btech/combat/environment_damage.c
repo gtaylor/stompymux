@@ -173,7 +173,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
             mech_notify(wounded, MECHALL,
                         "Losing your last Jump Jet you fall from the sky!!!!!");
             mech_los_broadcast(wounded, "falls from the sky!");
-            mech_fall(wounded, (int)(oldjs * MP_PER_KPH), 0);
+            mech_fall(wounded, (int)(oldjs * MP_PER_KPH), false);
             mech_domino_resolve(wounded, MECH_DOMINO_FALL);
           }
           break;
@@ -209,11 +209,11 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
             if (mech_class(wounded) == CLASS_MECH &&
                 (hitloc == LTORSO || hitloc == RTORSO) &&
                 (mech_technology_flags(wounded) & XL_TECH))
-              mech_destroy(wounded, attacker, 1,
+              mech_destroy(wounded, attacker, true,
                            (wounded == attacker) ? KILL_TYPE_SELF_DESTRUCT
                                                  : KILL_TYPE_XLENGINE);
             else
-              mech_destroy(wounded, attacker, 1,
+              mech_destroy(wounded, attacker, true,
                            (wounded == attacker) ? KILL_TYPE_SELF_DESTRUCT
                                                  : KILL_TYPE_NORMAL);
           }
@@ -242,7 +242,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
   if (breach)
     if (mech_class(wounded) == CLASS_VEH_GROUND ||
         mech_class(wounded) == CLASS_VEH_NAVAL)
-      mech_destroy(wounded, attacker, 0, KILL_TYPE_NORMAL);
+      mech_destroy(wounded, attacker, false, KILL_TYPE_NORMAL);
   if (mech_class(wounded) == CLASS_MECH || mech_class(wounded) == CLASS_MW) {
     if (breach && hitloc == HEAD) {
       if (mech_is_under_vacuum(wounded))
@@ -251,7 +251,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
         mech_notify(wounded, MECHALL, "Water floods into your cockpit!");
 
       mech_contents_kill_if_in_character(wounded);
-      mech_destroy(wounded, attacker, 0, KILL_TYPE_FLOOD);
+      mech_destroy(wounded, attacker, false, KILL_TYPE_FLOOD);
       return;
     }
     if (!mech_is_quad(wounded))
@@ -269,11 +269,11 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
                     "You realize remaining standing is no longer an option and "
                     "crash to the ground!");
         mech_los_broadcast(wounded, "crashes to the ground!");
-        mech_fall(wounded, 1, 0);
+        mech_fall(wounded, 1, false);
       } else if (!made_pilot_skill_roll(wounded, 0)) {
         mech_notify(wounded, MECHALL, "You lose your balance and fall down!");
         mech_los_broadcast(wounded, "loses balance and falls down!");
-        mech_fall(wounded, 1, 0);
+        mech_fall(wounded, 1, false);
       }
     }
   }
@@ -283,24 +283,24 @@ bool mech_location_breach(Mech *attacker, Mech *mech, int hitloc) {
   char buf[SBUF_SIZE];
 
   if (!mech_is_under_special_conditions(mech))
-    return 0;
+    return false;
   if (!mech_is_under_vacuum(mech))
-    return 0;
+    return false;
   if (mech_section_is_destroyed(mech, hitloc) ||
       mech_section_is_breached(mech, hitloc))
-    return 0;
+    return false;
   armor_string_from_index(hitloc, buf, mech_class(mech),
                           mech_movement_type(mech));
   mech_printf(mech, MECHALL, "Your %s has been breached!", buf);
   mech_section_breached_set(mech, hitloc, true);
   mech_parts_destroy(attacker, mech, hitloc, true, true);
-  return 1;
+  return true;
 }
 
 bool mech_location_maybe_breach(Mech *attacker, Mech *mech, int hitloc) {
   if (!mech_is_under_special_conditions(mech))
-    return 0;
+    return false;
   if (btech_random_roll(mech_context(mech)) < 10)
-    return 0;
+    return false;
   return mech_location_breach(attacker, mech, hitloc);
 }

@@ -74,7 +74,7 @@ bool descriptor_telnet_initialize(Descriptor *d) {
                          .secondary = "ERROR"},
               "Unable to allocate Telnet environment for descriptor %d.",
               d->descriptor);
-    return 0;
+    return false;
   }
   d->telnet =
       telnet_init(TELNET_OPTIONS, telnet_event_handler, TELNET_FLAG_NVT_EOL, d);
@@ -87,7 +87,7 @@ bool descriptor_telnet_initialize(Descriptor *d) {
               d->descriptor);
     telnet_environment_destroy(d->telnet_environment);
     d->telnet_environment = nullptr;
-    return 0;
+    return false;
   }
 
   (void)snprintf(d->terminal_type, sizeof(d->terminal_type), "%s", "vt100");
@@ -107,7 +107,7 @@ bool descriptor_telnet_initialize(Descriptor *d) {
   telnet_negotiate(d->telnet, TELNET_WILL, TELNET_TELOPT_COMPRESS2);
   telnet_negotiate(d->telnet, TELNET_WILL, TELNET_CHARSET_OPTION);
   telnet_negotiate(d->telnet, TELNET_WILL, TELNET_GMCP_OPTION);
-  return 1;
+  return true;
 }
 
 void descriptor_telnet_destroy(Descriptor *d) {
@@ -123,7 +123,7 @@ void descriptor_telnet_receive(Descriptor *d, const char *buffer, size_t size) {
 }
 
 void descriptor_telnet_set_echo(Descriptor *d, int echo) {
-  d->is_echo_suppressed = !echo;
+  d->is_echo_suppressed = ((!echo) != 0);
   telnet_negotiate(d->telnet, echo ? TELNET_WONT : TELNET_WILL,
                    TELNET_TELOPT_ECHO);
 }
@@ -142,8 +142,8 @@ static int telnet_connected_count(CommandRuntime *runtime) {
 static bool telnet_charset_is_utf8(const char *buffer, size_t size) {
   static const char UTF8[] = "UTF-8";
 
-  return size == sizeof(UTF8) - 1 &&
-         strncasecmp(buffer, UTF8, sizeof(UTF8) - 1) == 0;
+  return (size == sizeof(UTF8) - 1 &&
+          strncasecmp(buffer, UTF8, sizeof(UTF8) - 1) == 0) != 0;
 }
 
 static void telnet_handle_terminal_type(Descriptor *d, const char *name) {

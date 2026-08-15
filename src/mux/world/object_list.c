@@ -53,7 +53,7 @@ bool member(GameDatabase *database, DbRef thing, DbRef list) {
   for (; list != NOTHING && game_object_next(database, list) != list;
        list = game_object_next(database, list)) {
     if (list == thing)
-      return 1;
+      return true;
   }
-  return 0;
+  return false;
 }

@@ -74,7 +74,7 @@ static bool lua_mux_style_open(const LuaStylePropertyRequest *request) {
       lua_pop(state, 1);
       return false;
     }
-    enabled = lua_toboolean(state, -1);
+    enabled = (lua_toboolean(state, -1) != 0);
     lua_pop(state, 1);
     if (!enabled)
       return true;

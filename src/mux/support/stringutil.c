@@ -422,6 +422,7 @@ int safe_copy_str(const char *src, char *buff, char **bufp, int max) {
 /**
  * Copies src and advances bufp when its offset is below max. Returns zero on
  * success or one when no space remains; it does not add a terminator.
+ * The integer return preserves this status convention and its failure polarity.
  */
 int safe_copy_chr(char src, char *buff, char **bufp, int max) {
   if (buff == nullptr || bufp == nullptr || *bufp == nullptr || max < 0)

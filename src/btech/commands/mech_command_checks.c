@@ -14,7 +14,7 @@
 
 bool common_checks(DbRef player, Mech *mech, int flags) {
   if (mech == nullptr)
-    return 0;
+    return false;
 
   BtechContext *context = mech_context(mech);
   EvaluationContext *evaluation = btech_context_evaluation(context);
@@ -24,12 +24,12 @@ bool common_checks(DbRef player, Mech *mech, int flags) {
     if (mech_is_destroyed(mech)) {
       mecha_notify(btech_context_evaluation(context), player,
                    "You are destroyed!");
-      return 0;
+      return false;
     }
     if (!mech_is_started(mech)) {
       mecha_notify(btech_context_evaluation(context), player,
                    "Reactor is not online!");
-      return 0;
+      return false;
     }
   }
 
@@ -37,7 +37,7 @@ bool common_checks(DbRef player, Mech *mech, int flags) {
     if (mech_is_blinded(mech)) {
       mecha_notify(btech_context_evaluation(context), player,
                    "You are momentarily blinded!");
-      return 0;
+      return false;
     }
   }
 
@@ -46,7 +46,7 @@ bool common_checks(DbRef player, Mech *mech, int flags) {
         (!mech_is_started(mech) || player == mech_pilot_dbref(mech))) {
       mecha_notify(btech_context_evaluation(context), player,
                    "You are unconscious....zzzzzzz");
-      return 0;
+      return false;
     }
   }
 
@@ -56,7 +56,7 @@ bool common_checks(DbRef player, Mech *mech, int flags) {
         mech_pilot_dbref(mech) != player) {
       mecha_notify(btech_context_evaluation(context), player,
                    "Now now, only the pilot can push that button.");
-      return 0;
+      return false;
     }
   }
 
@@ -64,15 +64,15 @@ bool common_checks(DbRef player, Mech *mech, int flags) {
     if (mech_map_dbref(mech) < 0) {
       mecha_notify(btech_context_evaluation(context), player,
                    "You are on no map!");
-      return 0;
+      return false;
     }
     if (btech_context_get_map(context, mech_map_dbref(mech)) == nullptr) {
       mecha_notify(evaluation, player,
                    "You are on an invalid map! Map index reset!");
       mech_shutdown(player, mech, "");
       mech_map_dbref_set(mech, -1);
-      return 0;
+      return false;
     }
   }
-  return 1;
+  return true;
 }

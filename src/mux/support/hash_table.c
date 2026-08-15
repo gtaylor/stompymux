@@ -170,13 +170,13 @@ bool hash_table_replace(char *str, void *hashdata, HashTable *htab) {
 
   ent = red_black_tree_find(htab->tree, str);
   if (!ent)
-    return 0;
+    return false;
   if (ent->is_const)
     abort();
 
   ent->data.mutable_data = hashdata;
   ent->is_const = false;
-  return 1;
+  return true;
 }
 
 struct Hashreplstat {

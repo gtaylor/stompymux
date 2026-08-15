@@ -40,7 +40,7 @@ static DbRef c3i_network_value(const DbRef *network, int index) {
 }
 
 static bool mech_has_c3i(const Mech *mech) {
-  return mech_technology_flags_secondary(mech) & C3I_TECH;
+  return (mech_technology_flags_secondary(mech) & C3I_TECH) != 0;
 }
 
 int mech_c3i_free_network_position(const MechNetworkLink *link) {
@@ -114,7 +114,7 @@ void mech_c3i_network_add(Mech *mech, Mech *mech_to_add) {
   for (i = 0; i < C3I_NETWORK_SIZE; i++) {
     other_ref = mech_c3i_network_node(mech, i);
 
-    other_mech = mech_network_unit(mech, i, 0, 0, 0, 0);
+    other_mech = mech_network_unit(mech, i, false, false, false, false);
 
     if (!other_mech)
       continue;
@@ -123,7 +123,7 @@ void mech_c3i_network_add(Mech *mech, Mech *mech_to_add) {
       continue;
 
     if (other_ref != mech_dbref(mech_to_add)) {
-      other_notify_mech = mech_network_unit(mech, i, 1, 1, 1, 0);
+      other_notify_mech = mech_network_unit(mech, i, true, true, true, false);
 
       if (other_notify_mech) {
         mech_printf(
@@ -158,7 +158,7 @@ void mech_c3i_network_clear(Mech *mech, int t_clear_from_others) {
   int i;
 
   for (i = 0; i < C3I_NETWORK_SIZE; i++) {
-    other_mech = mech_network_unit(mech, i, 0, 0, 0, 0);
+    other_mech = mech_network_unit(mech, i, false, false, false, false);
 
     mech_c3i_network_node_set(mech, i, -1);
 
@@ -196,7 +196,7 @@ void mech_c3i_network_validate(Mech *mech) {
   }
 
   for (i = 0; i < C3I_NETWORK_SIZE; i++) {
-    other_mech = mech_network_unit(mech, i, 0, 0, 0, 0);
+    other_mech = mech_network_unit(mech, i, false, false, false, false);
 
     if (!other_mech)
       continue;
@@ -368,7 +368,7 @@ void mech_c3i_message(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  mech_network_send_message(player, mech, buffer, 0);
+  mech_network_send_message(player, mech, buffer, false);
 }
 
 void mech_c3i_targets(DbRef player, Mech *mech, char *buffer) {
@@ -399,7 +399,7 @@ void mech_c3i_targets(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  mech_network_show_targets(player, mech, 0);
+  mech_network_show_targets(player, mech, false);
 }
 
 void mech_c3i_network(DbRef player, Mech *mech, char *buffer) {
@@ -430,5 +430,5 @@ void mech_c3i_network(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  mech_network_show_status(player, mech, 0);
+  mech_network_show_status(player, mech, false);
 }

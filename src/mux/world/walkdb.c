@@ -155,7 +155,7 @@ bool search_criteria_setup(EvaluationContext *context, DbRef player,
   parm->s_rst_name = nullptr;
   parm->s_rst_type = OBJECT_TYPE_NOTYPE;
   parm->s_zone = NOTHING;
-  parm->s_fset = (ObjectFlagSet){0};
+  parm->s_fset = (ObjectFlagSet){};
   parm->s_power = POWER_NONE;
 
   switch (searchtype[0]) {
@@ -181,7 +181,7 @@ bool search_criteria_setup(EvaluationContext *context, DbRef player,
 
       if (!convert_flags(context, player, searchfor, &parm->s_fset,
                          &parm->s_rst_type))
-        return 0;
+        return false;
     } else {
       err = 1;
     }
@@ -208,7 +208,7 @@ bool search_criteria_setup(EvaluationContext *context, DbRef player,
     } else if (string_prefix("power", searchtype)) {
       if (!decode_power(context, context->world->indexes, player, searchfor,
                         &parm->s_power))
-        return 0;
+        return false;
     } else {
       err = 1;
     }
@@ -238,7 +238,7 @@ bool search_criteria_setup(EvaluationContext *context, DbRef player,
         parm->s_rst_type = OBJECT_TYPE_PLAYER;
       } else {
         notify_printf(context, player, "%s: unknown type", searchfor);
-        return 0;
+        return false;
       }
     } else if (string_prefix("things", searchtype)) {
       parm->s_rst_name = searchfor[0] == '\0' ? EMPTY_SEARCH_NAME : searchfor;
@@ -251,7 +251,7 @@ bool search_criteria_setup(EvaluationContext *context, DbRef player,
     if (string_prefix("zone", searchtype)) {
       parm->s_zone = match_thing(&context->command->match, player, searchfor);
       if (!is_good_obj(context->world->database, parm->s_zone))
-        return 0;
+        return false;
     } else {
       err = 1;
     }
@@ -262,9 +262,9 @@ bool search_criteria_setup(EvaluationContext *context, DbRef player,
 
   if (err) {
     notify_printf(context, player, "%s: unknown class", searchtype);
-    return 0;
+    return false;
   }
-  return 1;
+  return true;
 }
 
 void search_criteria_perform(const SearchExecutionRequest *request) {

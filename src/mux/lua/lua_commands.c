@@ -177,14 +177,14 @@ bool lua_global_command_match(LuaRuntime *runtime, Descriptor *descriptor,
   size_t index;
 
   if (!runtime)
-    return 0;
+    return false;
   for (index = 0; index < runtime->global_module_count; index++) {
     if (lua_module_command_match(runtime, descriptor, LUA_ROOT_GLOBAL_LOGIC,
                                  lua_global_module_at(runtime, index), NOTHING,
                                  player, cause, command, 1))
-      return 1;
+      return true;
   }
-  return 0;
+  return false;
 }
 
 size_t lua_visit_global_commands(LuaRuntime *runtime, DbRef player,

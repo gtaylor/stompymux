@@ -31,7 +31,7 @@ static bool sword_check_arm(Mech *mech, int arm) {
     mech_printf(mech, MECHALL,
                 "Your %s arm is destroyed, you can't use a sword with it.",
                 arm_used);
-    return 0;
+    return false;
   }
   if (!mech_critical_is_operational_special(
           &(CriticalSpecialCheck){.mech = mech,
@@ -41,7 +41,7 @@ static bool sword_check_arm(Mech *mech, int arm) {
         mech, MECHALL,
         "Your %s shoulder is destroyed, you can't use a sword with that arm.",
         arm_used);
-    return 0;
+    return false;
   }
   if (!mech_critical_is_operational_special(
           &(CriticalSpecialCheck){.mech = mech,
@@ -51,9 +51,9 @@ static bool sword_check_arm(Mech *mech, int arm) {
         mech, MECHALL,
         "Your %s hand is destroyed, you can't use a sword with that arm.",
         arm_used);
-    return 0;
+    return false;
   }
-  return 1;
+  return true;
 }
 
 void mech_sword(DbRef player, void *data, char *buffer) {

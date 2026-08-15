@@ -718,7 +718,8 @@ bool styled_link_directives_parse(
       return false;
     }
   }
-  return validate_complete
-             ? styled_link_config_valid(config, error, error_size)
-             : styled_link_preset_config_valid(config, error, error_size);
+  return (validate_complete
+              ? styled_link_config_valid(config, error, error_size)
+              : styled_link_preset_config_valid(config, error, error_size)) !=
+         0;
 }

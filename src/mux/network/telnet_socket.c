@@ -156,7 +156,7 @@ bool telnet_sockets_eradicate_fd(TelnetSockets *sockets, int fd) {
     if (fd == 0 || descriptor->descriptor == fd)
       descriptor_shutdown(descriptor, DESCRIPTOR_SHUTDOWN_SOCKDIED);
   }
-  return 0;
+  return false;
 }
 
 static bool listener_start(TelnetListener *listener, int port) {

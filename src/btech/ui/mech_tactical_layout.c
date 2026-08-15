@@ -182,10 +182,11 @@ void tactical_map_sketch(char *buffer, size_t buffer_capacity, BattleMap *map,
       }
 
       const int BASE_OFFSET =
-          MAP_ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
-                                  .position = {.x = x, .y = y},
-                                  .display_columns = display_columns,
-                                  .first_column_is_odd = first_column_is_odd});
+          MAP_ORIGIN_OFFSET +
+          tactical_hex_offset(&(TacticalHexOffsetRequest){
+              .position = {.x = x, .y = y},
+              .display_columns = display_columns,
+              .first_column_is_odd = first_column_is_odd != 0});
       *tactical_canvas_at(&canvas, BASE_OFFSET) = top_character;
       *tactical_canvas_at(&canvas, BASE_OFFSET + 1) = top_character;
       *tactical_canvas_at(&canvas, BASE_OFFSET + display_columns) =

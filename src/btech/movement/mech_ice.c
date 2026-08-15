@@ -52,12 +52,12 @@ static void swim_except(BattleMap *map, Mech *mech, int x, int y,
         (isbridge &&
          mech_position_z(t) == mech_position_elevation_magnitude(t))) {
       mech_los_broadcast(t, msg);
-      mech_fall(t, mech_position_elevation_magnitude(t) + isbridge, 0);
+      mech_fall(t, mech_position_elevation_magnitude(t) + isbridge, false);
       if (mech_class(t) == CLASS_VEH_GROUND && !mech_is_destroyed(t)) {
         mech_notify(t, MECHALL, "Water renders your vehicle inoperable.");
         mech_los_broadcast(t,
                            "fizzles and pops as water renders it inoperable.");
-        mech_destroy(t, t, 0, KILL_TYPE_FLOOD);
+        mech_destroy(t, t, false, KILL_TYPE_FLOOD);
       }
     }
   }
@@ -88,7 +88,7 @@ void drop_thru_ice(Mech *mech) {
             "goes swimming!");
   if (mech_movement_type(mech) != MOVE_FOIL) {
     if (mech_position_elevation_magnitude(mech) > 0)
-      mech_fall(mech, mech_position_elevation_magnitude(mech), 0);
+      mech_fall(mech, mech_position_elevation_magnitude(mech), false);
   }
   if (mech_position_elevation_magnitude(mech) > 0 &&
       mech_class(mech) == CLASS_VEH_GROUND && !mech_is_destroyed(mech) &&
@@ -96,7 +96,7 @@ void drop_thru_ice(Mech *mech) {
     mech_notify(mech, MECHALL, "Water renders your vehicle inoperable.");
     mech_los_broadcast(mech,
                        "fizzles and pops as water renders it inoperable.");
-    mech_destroy(mech, mech, 0, KILL_TYPE_ICE);
+    mech_destroy(mech, mech, false, KILL_TYPE_ICE);
   }
 }
 
@@ -117,11 +117,11 @@ bool possibly_drop_thru_ice(Mech *mech) {
   if ((mech_movement_type(mech) == MOVE_HOVER) ||
       (mech_movement_type(mech) == MOVE_SUB) ||
       (mech_class(mech) == CLASS_BSUIT))
-    return 0;
+    return false;
   if (btech_random_range(mech_context(mech), 1, 6) != 1)
-    return 0;
+    return false;
   drop_thru_ice(mech);
-  return 1;
+  return true;
 }
 
 static void growable_callback(BattleMap *map, int x, int y, void *context) {
@@ -138,11 +138,9 @@ bool growable(BattleMap *map, int x, int y) {
 
   visit_neighbor_hexes(map, x, y, growable_callback, &water_count);
 
-  if (water_count <= 4 &&
-      (water_count < 2 ||
-       (btech_random_range(battle_map_context(map), 1, 6) > water_count)))
-    return 1;
-  return 0;
+  return (water_count <= 4 &&
+          (water_count < 2 || (btech_random_range(battle_map_context(map), 1,
+                                                  6) > water_count))) != 0;
 }
 
 static void meltable_callback(BattleMap *map, int x, int y, void *context) {
@@ -157,9 +155,8 @@ bool meltable(BattleMap *map, int x, int y) {
 
   visit_neighbor_hexes(map, x, y, meltable_callback, &water_count);
 
-  if (water_count > 4 && btech_random_range(battle_map_context(map), 1, 3) > 1)
-    return 0;
-  return 1;
+  return (water_count <= 4 ||
+          btech_random_range(battle_map_context(map), 1, 3) <= 1) != 0;
 }
 
 void ice_growth(DbRef player, BattleMap *map, int num) {

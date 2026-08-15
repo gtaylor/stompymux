@@ -202,10 +202,10 @@ bool do_comsystem(EvaluationContext *evaluation, DbRef who, char *cmd) {
   if (ch && *ch) {
     comsys_process_alias_command(evaluation, who, ch, t);
     free_buf(alias);
-    return 0;
+    return false;
   }
   free_buf(alias);
-  return 1;
+  return true;
 }
 
 void do_cemit(CommandInvocation *invocation) {

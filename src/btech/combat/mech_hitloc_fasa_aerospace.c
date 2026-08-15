@@ -228,7 +228,7 @@ HitLocationResult fasa_aerospace_hit_location(Mech *mech, int hit_group,
         return hit_location_result_at(result, DS_NOSE);
       case 12:
         if (mech_section_is_crittable(mech, side, (CriticalThreshold){60}))
-          result.critical = 1;
+          result.critical = true;
         return hit_location_result_at(result, side);
       }
       break;
@@ -237,7 +237,7 @@ HitLocationResult fasa_aerospace_hit_location(Mech *mech, int hit_group,
       case 2:
       case 12:
         if (mech_section_is_crittable(mech, DS_AFT, (CriticalThreshold){60}))
-          result.critical = 1;
+          result.critical = true;
         return hit_location_result_at(result, DS_AFT);
       case 3:
       case 11:

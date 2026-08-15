@@ -11,86 +11,89 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
   const int STATUS2 = mech->rd.status2;
   const int CRITICAL_STATUS = mech->rd.critstatus;
   const int TANK_CRITICAL_STATUS = mech->rd.tankcritstatus;
-  const bool ECM_IS_COUNTERED = STATUS2 & ECM_COUNTERED;
-  const bool ECM_ACTIVE = (STATUS2 & ECM_ENABLED) && !ECM_IS_COUNTERED;
+  const bool ECM_IS_COUNTERED = (STATUS2 & ECM_COUNTERED) != 0;
+  const bool ECM_ACTIVE = ((STATUS2 & ECM_ENABLED) && !ECM_IS_COUNTERED) != 0;
   const bool PERSONAL_ECM_ACTIVE =
-      (STATUS2 & PER_ECM_ENABLED) && !ECM_IS_COUNTERED;
+      ((STATUS2 & PER_ECM_ENABLED) && !ECM_IS_COUNTERED) != 0;
   const bool ANGEL_ECM_ACTIVE =
-      (STATUS2 & ANGEL_ECM_ENABLED) && !ECM_IS_COUNTERED;
+      ((STATUS2 & ANGEL_ECM_ENABLED) && !ECM_IS_COUNTERED) != 0;
 
   return (MechConditionSummary){
-      .combat_safe = STATUS & COMBAT_SAFE,
-      .partial_cover = STATUS & PARTIAL_COVER,
-      .fallen = STATUS & FALLEN,
-      .fortified = STATUS2 & FORTIFIED,
-      .weapons_hold = STATUS2 & WEAPONS_HOLD,
-      .hull_down = STATUS & HULLDOWN,
-      .dug_in = TANK_CRITICAL_STATUS & DUG_IN,
-      .digging = TANK_CRITICAL_STATUS & DIGGING_IN,
+      .combat_safe = (STATUS & COMBAT_SAFE) != 0,
+      .partial_cover = (STATUS & PARTIAL_COVER) != 0,
+      .fallen = (STATUS & FALLEN) != 0,
+      .fortified = (STATUS2 & FORTIFIED) != 0,
+      .weapons_hold = (STATUS2 & WEAPONS_HOLD) != 0,
+      .hull_down = (STATUS & HULLDOWN) != 0,
+      .dug_in = (TANK_CRITICAL_STATUS & DUG_IN) != 0,
+      .digging = (TANK_CRITICAL_STATUS & DIGGING_IN) != 0,
       .staggering = mech->rd.stagger_damage / 20 > 0,
-      .searchlight_destroyed = CRITICAL_STATUS & SLITE_DEST,
-      .searchlight_on = STATUS2 & SLITE_ON,
-      .illuminated = CRITICAL_STATUS & SLITE_LIT,
-      .hidden = CRITICAL_STATUS & HIDDEN,
-      .dodging = STATUS2 & DODGING,
-      .evading = STATUS2 & EVADING,
-      .sprinting = STATUS2 & SPRINTING,
-      .stunned = (TANK_CRITICAL_STATUS & CREW_STUNNED) ||
-                 (CRITICAL_STATUS & MECH_STUNNED),
-      .performing_action = STATUS & PERFORMING_ACTION,
-      .auto_fall = mech->rd.mech_prefs & MECHPREF_AUTOFALL,
-      .to_hit_debug = mech->rd.mech_prefs & MECHPREF_BTHDEBUG,
-      .ecm_disturbed = STATUS2 & ECM_DISTURBANCE,
+      .searchlight_destroyed = (CRITICAL_STATUS & SLITE_DEST) != 0,
+      .searchlight_on = (STATUS2 & SLITE_ON) != 0,
+      .illuminated = (CRITICAL_STATUS & SLITE_LIT) != 0,
+      .hidden = (CRITICAL_STATUS & HIDDEN) != 0,
+      .dodging = (STATUS2 & DODGING) != 0,
+      .evading = (STATUS2 & EVADING) != 0,
+      .sprinting = (STATUS2 & SPRINTING) != 0,
+      .stunned = ((TANK_CRITICAL_STATUS & CREW_STUNNED) ||
+                  (CRITICAL_STATUS & MECH_STUNNED)) != 0,
+      .performing_action = (STATUS & PERFORMING_ACTION) != 0,
+      .auto_fall = (mech->rd.mech_prefs & MECHPREF_AUTOFALL) != 0,
+      .to_hit_debug = (mech->rd.mech_prefs & MECHPREF_BTHDEBUG) != 0,
+      .ecm_disturbed = (STATUS2 & ECM_DISTURBANCE) != 0,
       .ecm_protected =
-          (STATUS2 & ECM_PROTECTED) || ECM_ACTIVE || PERSONAL_ECM_ACTIVE,
+          ((STATUS2 & ECM_PROTECTED) || ECM_ACTIVE || PERSONAL_ECM_ACTIVE) != 0,
       .angel_ecm_protected =
-          (STATUS2 & ANGEL_ECM_PROTECTED) || ANGEL_ECM_ACTIVE,
-      .angel_ecm_disturbed = STATUS2 & ANGEL_ECM_DISTURBED,
+          ((STATUS2 & ANGEL_ECM_PROTECTED) || ANGEL_ECM_ACTIVE) != 0,
+      .angel_ecm_disturbed = (STATUS2 & ANGEL_ECM_DISTURBED) != 0,
       .ecm_countered = ECM_IS_COUNTERED,
-      .ecm_destroyed = CRITICAL_STATUS & ECM_DESTROYED,
-      .ecm_enabled = STATUS2 & ECM_ENABLED,
+      .ecm_destroyed = (CRITICAL_STATUS & ECM_DESTROYED) != 0,
+      .ecm_enabled = (STATUS2 & ECM_ENABLED) != 0,
       .ecm_active = ECM_ACTIVE,
-      .eccm_enabled = STATUS2 & ECCM_ENABLED,
-      .angel_ecm_destroyed = CRITICAL_STATUS & ANGEL_ECM_DESTROYED,
-      .angel_ecm_enabled = STATUS2 & ANGEL_ECM_ENABLED,
+      .eccm_enabled = (STATUS2 & ECCM_ENABLED) != 0,
+      .angel_ecm_destroyed = (CRITICAL_STATUS & ANGEL_ECM_DESTROYED) != 0,
+      .angel_ecm_enabled = (STATUS2 & ANGEL_ECM_ENABLED) != 0,
       .angel_ecm_active = ANGEL_ECM_ACTIVE,
-      .angel_eccm_enabled = STATUS2 & ANGEL_ECCM_ENABLED,
-      .personal_ecm_enabled = STATUS2 & PER_ECM_ENABLED,
+      .angel_eccm_enabled = (STATUS2 & ANGEL_ECCM_ENABLED) != 0,
+      .personal_ecm_enabled = (STATUS2 & PER_ECM_ENABLED) != 0,
       .personal_ecm_active = PERSONAL_ECM_ACTIVE,
-      .personal_eccm_enabled = STATUS2 & PER_ECCM_ENABLED,
-      .stealth_armor_active = STATUS2 & STH_ARMOR_ON,
-      .null_signature_active = STATUS2 & NULLSIGSYS_ON,
-      .null_signature_destroyed = CRITICAL_STATUS & NSS_DESTROYED,
-      .c3_destroyed = CRITICAL_STATUS & C3_DESTROYED,
-      .c3i_destroyed = CRITICAL_STATUS & C3I_DESTROYED,
-      .sensors_damaged = CRITICAL_STATUS & SENSORS_DAMAGED,
-      .beagle_probe_destroyed = CRITICAL_STATUS & BEAGLE_DESTROYED,
-      .bloodhound_probe_destroyed = CRITICAL_STATUS & BLOODHOUND_DESTROYED,
+      .personal_eccm_enabled = (STATUS2 & PER_ECCM_ENABLED) != 0,
+      .stealth_armor_active = (STATUS2 & STH_ARMOR_ON) != 0,
+      .null_signature_active = (STATUS2 & NULLSIGSYS_ON) != 0,
+      .null_signature_destroyed = (CRITICAL_STATUS & NSS_DESTROYED) != 0,
+      .c3_destroyed = (CRITICAL_STATUS & C3_DESTROYED) != 0,
+      .c3i_destroyed = (CRITICAL_STATUS & C3I_DESTROYED) != 0,
+      .sensors_damaged = (CRITICAL_STATUS & SENSORS_DAMAGED) != 0,
+      .beagle_probe_destroyed = (CRITICAL_STATUS & BEAGLE_DESTROYED) != 0,
+      .bloodhound_probe_destroyed =
+          (CRITICAL_STATUS & BLOODHOUND_DESTROYED) != 0,
       .light_beagle_probe_destroyed =
-          mech->rd.critstatus2 & LIGHT_BAP_DESTROYED,
-      .turret_auto_turn = STATUS2 & AUTOTURN_TURRET,
-      .arms_flipped = STATUS & FLIPPED_ARMS,
-      .targeting_computer_destroyed = CRITICAL_STATUS & TC_DESTROYED,
-      .ams_enabled = STATUS & AMS_ENABLED,
-      .supercharger_enabled = STATUS & SCHARGE_ENABLED,
-      .masc_enabled = STATUS & MASC_ENABLED,
-      .player_killer = mech->rd.mech_prefs & MECHPREF_PKILL,
-      .friendly_fire_safety = mech->rd.mech_prefs & MECHPREF_NOFRIENDLYFIRE,
-      .attack_emissions = STATUS2 & ATTACKEMIT_MECH,
+          (mech->rd.critstatus2 & LIGHT_BAP_DESTROYED) != 0,
+      .turret_auto_turn = (STATUS2 & AUTOTURN_TURRET) != 0,
+      .arms_flipped = (STATUS & FLIPPED_ARMS) != 0,
+      .targeting_computer_destroyed = (CRITICAL_STATUS & TC_DESTROYED) != 0,
+      .ams_enabled = (STATUS & AMS_ENABLED) != 0,
+      .supercharger_enabled = (STATUS & SCHARGE_ENABLED) != 0,
+      .masc_enabled = (STATUS & MASC_ENABLED) != 0,
+      .player_killer = (mech->rd.mech_prefs & MECHPREF_PKILL) != 0,
+      .friendly_fire_safety =
+          (mech->rd.mech_prefs & MECHPREF_NOFRIENDLYFIRE) != 0,
+      .attack_emissions = (STATUS2 & ATTACKEMIT_MECH) != 0,
       .unit_target_lock = (STATUS & LOCK_MODES) == LOCK_TARGET,
-      .tight_turn_mode = mech->rd.mech_prefs & MECHPREF_TURNMODE,
-      .dfa_attacking = STATUS & DFA_ATTACK,
-      .turret_jammed = TANK_CRITICAL_STATUS & TURRET_JAMMED,
-      .turret_locked = TANK_CRITICAL_STATUS & TURRET_LOCKED,
-      .tail_rotor_destroyed = TANK_CRITICAL_STATUS & TAIL_ROTOR_DESTROYED,
-      .hip_damaged = CRITICAL_STATUS & HIP_DAMAGED,
-      .hip_destroyed = CRITICAL_STATUS & HIP_DESTROYED,
-      .gyro_damaged = CRITICAL_STATUS & GYRO_DAMAGED,
-      .hardened_gyro_damaged = mech->rd.critstatus2 & HDGYRO_DAMAGED,
-      .torso_right = STATUS & TORSO_RIGHT,
-      .torso_left = STATUS & TORSO_LEFT,
-      .spinning = CRITICAL_STATUS & SPINNING,
-      .self_destruct_safe = STATUS & EXPLODE_SAFE,
+      .tight_turn_mode = (mech->rd.mech_prefs & MECHPREF_TURNMODE) != 0,
+      .dfa_attacking = (STATUS & DFA_ATTACK) != 0,
+      .turret_jammed = (TANK_CRITICAL_STATUS & TURRET_JAMMED) != 0,
+      .turret_locked = (TANK_CRITICAL_STATUS & TURRET_LOCKED) != 0,
+      .tail_rotor_destroyed =
+          (TANK_CRITICAL_STATUS & TAIL_ROTOR_DESTROYED) != 0,
+      .hip_damaged = (CRITICAL_STATUS & HIP_DAMAGED) != 0,
+      .hip_destroyed = (CRITICAL_STATUS & HIP_DESTROYED) != 0,
+      .gyro_damaged = (CRITICAL_STATUS & GYRO_DAMAGED) != 0,
+      .hardened_gyro_damaged = (mech->rd.critstatus2 & HDGYRO_DAMAGED) != 0,
+      .torso_right = (STATUS & TORSO_RIGHT) != 0,
+      .torso_left = (STATUS & TORSO_LEFT) != 0,
+      .spinning = (CRITICAL_STATUS & SPINNING) != 0,
+      .self_destruct_safe = (STATUS & EXPLODE_SAFE) != 0,
       .swarm_target = mech->rd.swarming,
       .supercharger_counter = mech->rd.scharge_value,
       .masc_counter = mech->rd.masc_value,
@@ -98,7 +101,7 @@ MechConditionSummary mech_condition_summary(const Mech *mech) {
 }
 
 bool mech_supercharger_movement_mode_is_enabled(const Mech *mech) {
-  return mech->rd.status2 & SCHARGE_ENABLED;
+  return (mech->rd.status2 & SCHARGE_ENABLED) != 0;
 }
 
 typedef struct MechConditionModeToggle {
@@ -223,7 +226,7 @@ void mech_swarmed_by_set(Mech *mech, DbRef swarmer) {
 }
 
 bool mech_is_mounting(const Mech *mech) {
-  return mech->rd.status2 & UNIT_MOUNTING;
+  return (mech->rd.status2 & UNIT_MOUNTING) != 0;
 }
 
 void mech_mounting_set(Mech *mech, bool mounting) {
@@ -234,7 +237,7 @@ void mech_mounting_set(Mech *mech, bool mounting) {
 }
 
 bool mech_is_mounted(const Mech *mech) {
-  return mech->rd.status2 & UNIT_MOUNTED;
+  return (mech->rd.status2 & UNIT_MOUNTED) != 0;
 }
 
 void mech_mounted_set(Mech *mech, bool mounted) {
@@ -442,9 +445,9 @@ bool mech_section_is_underwater(const Mech *mech, int section) {
     return false;
   if (mech->pd.z < -1 || (mech->rd.status & FALLEN))
     return true;
-  return section == LLEG || section == RLEG ||
-         (mech->ud.type == CLASS_MECH && mech->ud.move == MOVE_QUAD &&
-          (section == LARM || section == RARM));
+  return (section == LLEG || section == RLEG ||
+          (mech->ud.type == CLASS_MECH && mech->ud.move == MOVE_QUAD &&
+           (section == LARM || section == RARM))) != 0;
 }
 
 void mech_stunned_set(Mech *mech, bool stunned) {

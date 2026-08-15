@@ -50,15 +50,15 @@ static bool all_limbs_recycled(Mech *mech) {
       mech_section_recycle_ticks(mech, RARM)) {
     mech_notify(mech, MECHALL,
                 "You still have arms recovering from another attack.");
-    return 0;
+    return false;
   }
   if (mech_section_recycle_ticks(mech, RLEG) ||
       mech_section_recycle_ticks(mech, LLEG)) {
     mech_notify(mech, MECHALL,
                 "Your legs are still recovering from your last attack.");
-    return 0;
+    return false;
   }
-  return 1;
+  return true;
 } // end all_limbs_recycled()
 const char *physical_attack_verb(const PhysicalVerbRequest *request) {
   const PhysicalAttackType ATTACK_TYPE = request->attack_type;
@@ -168,16 +168,16 @@ bool phys_common_checks(Mech *mech) {
   if (mech_is_jumping(mech)) {
     mech_notify(mech, MECHALL,
                 "You can't perform physical attacks while in the air!");
-    return 0;
+    return false;
   }
   if (mech_event_count(mech, EVENT_STAND)) {
     mech_notify(mech, MECHALL, "You are still trying to stand up!");
-    return 0;
+    return false;
   }
   if (!all_limbs_recycled(mech)) {
-    return 0;
+    return false;
   }
-  return 1;
+  return true;
 } // end phys_common_checks()
 ArmSelectionResult physical_arm_select(const ArmSelectionRequest *request) {
   int using = request->using;
@@ -247,7 +247,7 @@ static bool punch_check_arm(Mech *mech, int arm) {
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
                 "Your %s arm is destroyed, you can't punch with it.", arm_used);
-    return 0;
+    return false;
   }
   if (!mech_critical_is_operational_special(
           &(CriticalSpecialCheck){.mech = mech,
@@ -256,16 +256,16 @@ static bool punch_check_arm(Mech *mech, int arm) {
     mech_printf(mech, MECHALL,
                 "Your %s shoulder is destroyed, you can't punch with that arm.",
                 arm_used);
-    return 0;
+    return false;
   }
   if (mech_section_carries_club(mech, arm)) {
     mech_printf(
         mech, MECHALL,
         "You're carrying a club in your %s arm and can't punch with it.",
         arm_used);
-    return 0;
+    return false;
   }
-  return 1;
+  return true;
 } // end checkArm()
 void mech_punch(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
@@ -419,7 +419,7 @@ static bool axe_check_arm(Mech *mech, int arm) {
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
                 "Your %s arm is destroyed, you can't axe with it", arm_used);
-    return 0;
+    return false;
   }
   if (!mech_critical_is_operational_special(
           &(CriticalSpecialCheck){.mech = mech,
@@ -428,7 +428,7 @@ static bool axe_check_arm(Mech *mech, int arm) {
     mech_printf(mech, MECHALL,
                 "Your %s shoulder is destroyed, you can't axe with that arm.",
                 arm_used);
-    return 0;
+    return false;
   }
   if (!mech_critical_is_operational_special(
           &(CriticalSpecialCheck){.mech = mech,
@@ -437,9 +437,9 @@ static bool axe_check_arm(Mech *mech, int arm) {
     mech_printf(mech, MECHALL,
                 "Your %s hand is destroyed, you can't axe with that arm.",
                 arm_used);
-    return 0;
+    return false;
   }
-  return 1;
+  return true;
 } // end axe_checkArm()
 void mech_axe(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
@@ -510,7 +510,7 @@ static bool saw_check_arm(Mech *mech, int arm) {
   if (mech_section_is_destroyed(mech, arm)) {
     mech_printf(mech, MECHALL,
                 "Your %s arm is destroyed, you can't saw with it", arm_used);
-    return 0;
+    return false;
   }
   if (!mech_critical_is_operational_special(
           &(CriticalSpecialCheck){.mech = mech,
@@ -519,9 +519,9 @@ static bool saw_check_arm(Mech *mech, int arm) {
     mech_printf(mech, MECHALL,
                 "Your %s shoulder is destroyed, you can't saw with that arm.",
                 arm_used);
-    return 0;
+    return false;
   }
-  return 1;
+  return true;
 } // end saw_checkArm()
 void mech_saw(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
@@ -652,7 +652,7 @@ static bool mace_check_arm(Mech *mech, int arm) {
     mech_printf(mech, MECHALL,
                 "Your %s arm is destroyed, you can't use a mace with it.",
                 arm_used);
-    return 0;
+    return false;
   }
   if (!mech_critical_is_operational_special(
           &(CriticalSpecialCheck){.mech = mech,
@@ -662,7 +662,7 @@ static bool mace_check_arm(Mech *mech, int arm) {
         mech, MECHALL,
         "Your %s shoulder is destroyed, you can't use a mace with that arm.",
         arm_used);
-    return 0;
+    return false;
   }
   if (!mech_critical_is_operational_special(
           &(CriticalSpecialCheck){.mech = mech,
@@ -672,9 +672,9 @@ static bool mace_check_arm(Mech *mech, int arm) {
         mech, MECHALL,
         "Your %s hand is destroyed, you can't use a mace with that arm.",
         arm_used);
-    return 0;
+    return false;
   }
-  return 1;
+  return true;
 } // end mace_checkArm()
 void mech_mace(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;

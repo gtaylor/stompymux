@@ -134,8 +134,8 @@ void do_teleport(CommandInvocation *invocation) {
      */
 
     bool permitted =
-        is_controls(evaluation->world->database, player, destination) ||
-        is_wizard(evaluation->world->database, player);
+        (is_controls(evaluation->world->database, player, destination) ||
+         is_wizard(evaluation->world->database, player)) != 0;
 
     if (permitted) {
       permitted = lock_test(evaluation, victim, player, player, destination,
@@ -151,7 +151,7 @@ void do_teleport(CommandInvocation *invocation) {
           .cause = player,
           .subject = player,
       };
-      result = (LuaLockResult){0};
+      result = (LuaLockResult){};
     }
     if (!permitted) {
 

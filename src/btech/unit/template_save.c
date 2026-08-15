@@ -405,7 +405,7 @@ bool check_specials_list(const char *const special_list[], size_t count,
   char buf[30];
 
   if (!strcasecmp(line, "-"))
-    return 0;
+    return false;
 
   while (*line) {
     line = template_token_parse(&(TemplateTokenRequest){
@@ -418,10 +418,10 @@ bool check_specials_list(const char *const special_list[], size_t count,
       w_spec2_check = compare_const_array(special_list2, count2, buf);
 
     if ((w_spec_check == -1) && (w_spec2_check == -1))
-      return 0;
+      return false;
   }
 
-  return 1;
+  return true;
 }
 
 int weapon_i_from_string(char *data) {

@@ -191,12 +191,10 @@ bool dropship_bay_in_adjacent_hex(Mech *seer, Mech *ds, int *bayn) {
                 dropship_hex_row_adjustment(mech_position_x(ds), bay_x);
     if (bay_x == mech_position_x(seer) && bay_y == mech_position_y(seer)) {
       *bayn = dropship_bay_number(ds, ((i - t + 6) % 6));
-      if (*bayn >= 0)
-        return 1;
-      return 0;
+      return *bayn >= 0;
     }
   }
-  return 0;
+  return false;
 }
 
 static int dropship_find_single_adjacent_bay(Mech *mech, DbRef *ref,
@@ -315,13 +313,13 @@ static bool dropship_bay_is_open(Mech *mech, Mech *ds, DbRef bayref) {
                 mech_critical_part_type(ds, dropship_direction_section(j), i) ==
                     special_equipment_index(DS_MECHDOOR))) &&
               !mech_critical_is_destroyed(ds, dropship_direction_section(j), i))
-            return 1;
+            return true;
         }
-        return 0;
+        return false;
       }
     }
   }
-  return 0;
+  return false;
 }
 
 typedef struct DropshipBayEntryRequest {
@@ -337,13 +335,13 @@ static bool dropship_bay_is_enterable(const DropshipBayEntryRequest *request) {
   for (i = 0; i < NUM_BAYS; i++) {
     if (mech_bay_dbref(ds, i) > 0) {
       if (mech_bay_dbref(ds, i) == BAYREF)
-        return btech_context_event_data_count(mech_context(ds),
-                                              EVENT_ENTER_HANGAR, BAYREF) > 0
-                   ? 0
-                   : 1;
+        return (btech_context_event_data_count(mech_context(ds),
+                                               EVENT_ENTER_HANGAR, BAYREF) > 0
+                    ? 0
+                    : 1) != 0;
     }
   }
-  return 0;
+  return false;
 }
 
 /* ID / Number, both optional (this _will_ be painful) */
@@ -562,7 +560,7 @@ static bool dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
   if (mech_map_dbref(mech) == battle_map_dbref(map)) {
     mech_notify(mech, MECHALL,
                 "Fatal error: Unable to find the map 'ship is on.");
-    return 0;
+    return false;
   }
   move_via_teleport(
       &(ObjectMovementRequest){.evaluation = btech_context_evaluation(context),
@@ -597,7 +595,7 @@ static bool dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
                 "initiated.[reset]");
     mech_shutdown(GOD, (void *)mech, "");
   }
-  return 1;
+  return true;
 }
 
 bool dropship_leave(BattleMap *map, Mech *mech) {
@@ -607,20 +605,20 @@ bool dropship_leave(BattleMap *map, Mech *mech) {
       btech_context_get_mech(mech_context(mech), battle_map_parent_dbref(map));
   if (!car) {
     mech_notify(mech, MECHALL, "Invalid : No parent object?");
-    return 0;
+    return false;
   }
   if (!dropship_bay_is_open(mech, car, battle_map_dbref(map))) {
     mech_notify(mech, MECHALL, "The door has been jammed!");
-    return 0;
+    return false;
   }
   if (!mech_is_landed(car) && !mech_is_flying_type(mech)) {
     mech_notify(mech, MECHALL, "The 'ship is still airborne!");
-    return 0;
+    return false;
   }
   if (is_zombie(btech_context_database(mech_context(car)), mech_dbref(car))) {
     mech_notify(mech, MECHALL,
                 "You don't feel leaving right now would be prudent..");
-    return 0;
+    return false;
   }
   return dropship_leave_bay(map, car, mech, battle_map_dbref(map));
 }

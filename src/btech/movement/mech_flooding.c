@@ -29,8 +29,8 @@
    depth changes and/or we fall) */
 
 static bool mech_is_in_water(Mech *mech) {
-  return battle_terrain_is_water(mech_real_terrain_get(mech)) &&
-         mech_position_z(mech) < 0;
+  return (battle_terrain_is_water(mech_real_terrain_get(mech)) &&
+          mech_position_z(mech) < 0) != 0;
 }
 
 void mech_flood_section(Mech *mech, int loc, int lev) {
@@ -104,7 +104,7 @@ void mech_flood(Mech *mech) {
               "and sinks to the bottom.");
 
     mech_contents_kill_if_in_character(mech);
-    mech_destroy(mech, mech, 0, KILL_TYPE_FLOOD);
+    mech_destroy(mech, mech, false, KILL_TYPE_FLOOD);
     return;
   }
 

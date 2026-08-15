@@ -64,7 +64,7 @@ void mech_heat_sink_count_add(Mech *mech, int count) {
 }
 
 bool mech_has_double_heat_sinks(const Mech *mech) {
-  return mech->rd.specials & (CLAN_TECH | DOUBLE_HEAT_TECH);
+  return (mech->rd.specials & (CLAN_TECH | DOUBLE_HEAT_TECH)) != 0;
 }
 
 int mech_heat_sink_critical_size(const Mech *mech) {
@@ -184,12 +184,13 @@ void mech_maximum_speed_set(Mech *mech, float speed) {
 }
 
 bool mech_is_flying_type(const Mech *mech) {
-  return mech->ud.type == CLASS_AERO || mech->ud.type == CLASS_DS ||
-         mech->ud.type == CLASS_SPHEROID_DS || mech->ud.move == MOVE_VTOL;
+  return (mech->ud.type == CLASS_AERO || mech->ud.type == CLASS_DS ||
+          mech->ud.type == CLASS_SPHEROID_DS || mech->ud.move == MOVE_VTOL) !=
+         0;
 }
 
 bool mech_is_omni(const Mech *mech) {
-  return mech->rd.specials2 & OMNIMECH_TECH;
+  return (mech->rd.specials2 & OMNIMECH_TECH) != 0;
 }
 
 int mech_fuel(const Mech *mech) { return mech->ud.fuel; }
@@ -226,7 +227,7 @@ void mech_cargo_weight_set(Mech *mech, int weight) {
 }
 
 bool mech_has_sixth_sense(const Mech *mech) {
-  return mech->rd.specials & SS_ABILITY;
+  return (mech->rd.specials & SS_ABILITY) != 0;
 }
 
 void mech_sixth_sense_set(Mech *mech, bool enabled) {
@@ -250,11 +251,11 @@ int mech_carried_cargo_weight(const Mech *mech) {
 }
 
 bool mech_load_cache_is_valid(const Mech *mech) {
-  return mech->rd.critstatus & LOAD_OK;
+  return (mech->rd.critstatus & LOAD_OK) != 0;
 }
 
 bool mech_weight_cache_is_valid(const Mech *mech) {
-  return mech->rd.critstatus & OWEIGHT_OK;
+  return (mech->rd.critstatus & OWEIGHT_OK) != 0;
 }
 
 void mech_weight_cache_invalidate(Mech *mech) {
@@ -262,7 +263,7 @@ void mech_weight_cache_invalidate(Mech *mech) {
 }
 
 bool mech_speed_cache_is_valid(const Mech *mech) {
-  return mech->rd.critstatus & SPEED_OK;
+  return (mech->rd.critstatus & SPEED_OK) != 0;
 }
 
 void mech_load_cache_invalidate(Mech *mech) { mech->rd.critstatus &= ~LOAD_OK; }

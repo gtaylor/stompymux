@@ -107,8 +107,8 @@ void mech_explode(DbRef player, void *data, char *buffer) {
 
   if (!common_checks(player, mech, MECH_USUALO))
     return;
-  override = strstr(buffer, "override") != nullptr &&
-             is_wizard(btech_context_database(context), player);
+  override = ((strstr(buffer, "override") != nullptr &&
+               is_wizard(btech_context_database(context), player)) != 0);
   int argument_count = mech_parseattributes(buffer, args, 2);
   if (argument_count < 1) {
     mecha_notify(btech_context_evaluation(context), player,

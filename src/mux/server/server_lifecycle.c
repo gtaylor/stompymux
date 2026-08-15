@@ -187,7 +187,7 @@ bool server_lifecycle_boot(ServerLifecycle *lifecycle) {
                          .primary = "INI",
                          .secondary = "LUA"},
               "Unable to initialize Lua: %s", lua_error);
-    return 0;
+    return false;
   }
   server_lifecycle_process_preload(lifecycle);
   lifecycle->timer =
@@ -243,7 +243,7 @@ void server_lifecycle_close_connections(ServerLifecycle *lifecycle,
 
 bool server_lifecycle_eradicate_fd(ServerLifecycle *lifecycle, int fd) {
   if (lifecycle == nullptr)
-    return 0;
+    return false;
   return telnet_sockets_eradicate_fd(lifecycle->sockets, fd);
 }
 

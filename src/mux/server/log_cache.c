@@ -55,7 +55,7 @@ static bool log_cache_close(LogCache *cache, struct LogfileT *log,
   log->filename = nullptr;
   log->fd = -1;
   free(log);
-  return 1;
+  return true;
 }
 
 static void logcache_expire(MuxTimer *timer, void *arg) {
@@ -106,7 +106,7 @@ static bool log_cache_open(LogCache *cache, char *filename) {
     (void)fprintf(stderr,
                   "Serious braindamage, logcache_open() called for already "
                   "open logfile.\n");
-    return 0;
+    return false;
   }
 
   fd = open(filename, O_RDWR | O_APPEND | O_CREAT, 0644);
@@ -117,7 +117,7 @@ static bool log_cache_open(LogCache *cache, char *filename) {
         filename, errno,
         system_error_message(errno, (char[SYSTEM_ERROR_MESSAGE_SIZE]){0},
                              SYSTEM_ERROR_MESSAGE_SIZE));
-    return 0;
+    return false;
   }
   if (fcntl(fd, F_SETFD, FD_CLOEXEC) < 0) {
     log_perror(
@@ -136,11 +136,11 @@ static bool log_cache_open(LogCache *cache, char *filename) {
     close(newlog->fd);
     free(newlog->filename);
     free(newlog);
-    return 0;
+    return false;
   }
   mux_timer_start(newlog->timer, (uint64_t)LOGFILE_TIMEOUT * 1000U, 0);
   red_black_tree_insert(cache->files, newlog->filename, newlog);
-  return 1;
+  return true;
 }
 
 LogCache *log_cache_create(UvLoopT *loop, ServerLog *log) {
@@ -184,11 +184,11 @@ bool log_cache_write(LogCache *cache, char *fname, const char *fdata) {
 
   if (!log) {
     if (!log_cache_open(cache, fname)) {
-      return 0;
+      return false;
     }
     log = red_black_tree_find(cache->files, fname);
     if (!log) {
-      return 0;
+      return false;
     }
   }
 
@@ -204,5 +204,5 @@ bool log_cache_write(LogCache *cache, char *fname, const char *fdata) {
         log->filename);
     log_cache_close(cache, log, true);
   }
-  return 1;
+  return true;
 }

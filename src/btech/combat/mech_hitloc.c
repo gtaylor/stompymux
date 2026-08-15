@@ -399,15 +399,15 @@ bool mech_section_is_crittable(Mech *mech, int loc,
   BtechContext *context = mech_context(mech);
 
   if (mech_technology_flags(mech) & CRITPROOF_TECH)
-    return 0;
+    return false;
   /* Towers and Stationary Objectives should not crit */
   if (mech_movement_type(mech) == MOVE_NONE)
-    return 0;
+    return false;
   if (!mech_section_original_armor(mech, loc))
-    return 1;
+    return true;
   if (mech_class(mech) != CLASS_MECH &&
       btech_context_vehicle_critical_mode(context) <= 1)
-    return 0;
+    return false;
 
   /* Calculate percentage of armor remaining */
   d = (100 * mech_section_armor(mech, loc)) /
@@ -424,7 +424,7 @@ bool mech_section_is_crittable(Mech *mech, int loc,
                          "%ld is pretty unlucky. Needed 6. "
                          "Rolled: 6. You're getting tac'd!",
                          mech_dbref(mech));
-      return 1;
+      return true;
     }
   }
   /* Full Up Armor? Okay, 1 in 71 chance for that 'lucky' TAC */
@@ -435,9 +435,9 @@ bool mech_section_is_crittable(Mech *mech, int loc,
           "%ld has full armor, but you suck. 1-71 and you got a 23? "
           "Who the eff are you, MJ?",
           mech_dbref(mech));
-      return 1;
+      return true;
     }
-    return 0;
+    return false;
   }
   /* WTF is this? Seriously?  This would mean, if the thres was 40%...
    * Anything below 70% is a 1 in 11 chance? That's stupid. Lets just make the
@@ -445,5 +445,5 @@ bool mech_section_is_crittable(Mech *mech, int loc,
   //	if(d < (100 - ((100 - tres) / 2)))
   //		if(btech_random_range(context, 1, 11) == 6)
   //			return 1;
-  return 0;
+  return false;
 }

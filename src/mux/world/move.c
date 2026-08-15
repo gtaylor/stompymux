@@ -75,7 +75,7 @@ static void process_leave_loc(const LocationTransition *transition) {
                                 .cause = cause,
                                 .source = loc,
                                 .destination = dest,
-                                .silent = quiet},
+                                .silent = quiet != 0},
                     .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_LEAVE});
 
   /*
@@ -163,7 +163,7 @@ static void process_enter_loc(const LocationTransition *transition) {
                                 .cause = cause,
                                 .source = src,
                                 .destination = loc,
-                                .silent = quiet},
+                                .silent = quiet != 0},
                     .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_ENTER});
 
   /*
@@ -372,7 +372,7 @@ void move_via_exit(const ExitMovementRequest *request) {
                                 .cause = cause,
                                 .source = src,
                                 .destination = dest,
-                                .silent = quiet},
+                                .silent = quiet != 0},
                     .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_SUCCESS});
   process_leave_loc(&(LocationTransition){.evaluation = evaluation,
                                           .object = thing,
@@ -395,7 +395,7 @@ void move_via_exit(const ExitMovementRequest *request) {
                                 .cause = cause,
                                 .source = src,
                                 .destination = dest,
-                                .silent = quiet},
+                                .silent = quiet != 0},
                     .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_DROP});
 
   notify_action(evaluation,
@@ -457,7 +457,7 @@ bool move_via_teleport(const ObjectMovementRequest *request) {
                                        .result = &result,
                                        .enactor_default = failmsg,
                                        .event = LUA_EVENT_TELEPORT_OUT_FAIL});
-        return 0;
+        return false;
       }
       if (is_room(evaluation->world->database, curr))
         break;
@@ -513,7 +513,7 @@ bool move_via_teleport(const ObjectMovementRequest *request) {
                                           .cause = NOTHING,
                                           .can_hear = canhear,
                                           .hush = hush});
-  return 1;
+  return true;
 }
 
 /*
@@ -531,9 +531,9 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
   loc = game_object_location(evaluation->world->database, exit);
   if (loc == HOME)
     loc = game_object_link(evaluation->world->database, player);
-  silent = (is_wizard(evaluation->world->database, player) &&
-            is_dark(evaluation->world->database, player)) ||
-           (hush & HUSH_EXIT);
+  silent = (((is_wizard(evaluation->world->database, player) &&
+              is_dark(evaluation->world->database, player)) ||
+             (hush & HUSH_EXIT)) != 0);
   lock = (LuaLockInvocation){
       .type = LUA_LOCK_DEFAULT,
       .operation = LUA_LOCK_OPERATION_TRAVERSE,
@@ -544,7 +544,7 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
       .subject = player,
       .silent = silent,
   };
-  result = (LuaLockResult){0};
+  result = (LuaLockResult){};
   if (is_good_obj(evaluation->world->database, loc) &&
       lock_test(evaluation, player, player, player, exit, LUA_LOCK_DEFAULT,
                 LUA_LOCK_OPERATION_TRAVERSE, silent, &lock, &result)) {

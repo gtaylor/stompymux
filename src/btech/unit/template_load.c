@@ -102,7 +102,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       /* Initial premise: we will have a mech type before we get to this */
       section = find_section(cmd, ((mech)->ud.type), ((mech)->ud.move));
       if (template_load_error(
-              fp, mech, player, section == -1 && !ok_count, false,
+              fp, mech, player, (section == -1 && !ok_count) != 0, false,
               "New template loading system: %s is invalid template file.",
               filename)) {
         return -1;
@@ -313,7 +313,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
                                               .pattern = buf,
                                               .kind = PART_MATCH_VERY_LONG,
                                               .cursor = -1});
-      if (template_load_error(fp, mech, player, !match.found, true,
+      if (template_load_error(fp, mech, player, (!match.found) != 0, true,
                               "Unable to find %s", buf)) {
         return -1;
       }
@@ -350,8 +350,8 @@ int load_template(DbRef player, Mech *mech, char *filename) {
             template_critical_ammo_mode_names(),
             template_critical_ammo_mode_count(), buf));
         if (template_load_error(
-                fp, mech, player, w_fire_modes < 0 && w_ammo_modes < 0, true,
-                "Error while loading: Invalid crit modes for weapon: %s.",
+                fp, mech, player, (w_fire_modes < 0 && w_ammo_modes < 0) != 0,
+                true, "Error while loading: Invalid crit modes for weapon: %s.",
                 buf)) {
           return -1;
         }
@@ -388,8 +388,9 @@ int load_template(DbRef player, Mech *mech, char *filename) {
             template_critical_ammo_mode_names(),
             template_critical_ammo_mode_count(), buf));
         if (template_load_error(
-                fp, mech, player, w_fire_modes < 0 && w_ammo_modes < 0, true,
-                "Error while loading: Invalid crit modes for ammo: %s.", buf)) {
+                fp, mech, player, (w_fire_modes < 0 && w_ammo_modes < 0) != 0,
+                true, "Error while loading: Invalid crit modes for ammo: %s.",
+                buf)) {
           return -1;
         }
         if (w_fire_modes < 0)

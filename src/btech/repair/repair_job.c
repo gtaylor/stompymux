@@ -41,8 +41,8 @@ repair_command_context_initialize(DbRef player, void *data,
     return REPAIR_COMMAND_STARTED;
 
   bool stall_required =
-      stall_policy == REPAIR_STALL_REQUIRED ||
-      btech_context_limits_repairs_to_stalls(command->context);
+      (stall_policy == REPAIR_STALL_REQUIRED ||
+       btech_context_limits_repairs_to_stalls(command->context)) != 0;
   if (stall_required && !command->is_dropship &&
       mech_repair_stall_dbref(command->mech) <= 0 &&
       !repair_player_is_wizard(command))
@@ -243,10 +243,11 @@ RepairJobResult repair_part_job_execute(RepairCommandContext *command,
     return REPAIR_JOB_REJECTED;
   mecha_notify(command->evaluation, command->player, job->message);
   bool failed =
-      job->weapon_roll
-          ? tech_weapon_roll(command->player, command->mech, job->difficulty) <
-                0
-          : tech_roll(command->player, command->mech, job->difficulty) < 0;
+      (job->weapon_roll
+           ? tech_weapon_roll(command->player, command->mech, job->difficulty) <
+                 0
+           : tech_roll(command->player, command->mech, job->difficulty) < 0) !=
+      0;
   if (failed) {
     if (job->failure(&CALL) < 0)
       return repair_job_schedule(command, job->time, 3, job->event_type,
@@ -372,6 +373,7 @@ repair_section_amount_job_execute(RepairCommandContext *command, int location,
 
 int repair_part_type_difficulty(int part_type) {
   (void)part_type;
+  // Difficulty is numeric even though every part currently has the same value.
   return 1;
 }
 

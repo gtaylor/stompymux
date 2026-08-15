@@ -202,7 +202,7 @@ bool mux_server_load_content(MuxServer *server) {
                         server->configuration->help_dir, NOTHING);
   server->command_runtime.files = server->files;
   server->command_runtime.help = server->help;
-  return server->files != nullptr && server->help != nullptr;
+  return (server->files != nullptr && server->help != nullptr) != 0;
 }
 
 void mux_server_destroy(MuxServer *server) {

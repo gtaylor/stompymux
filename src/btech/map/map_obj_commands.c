@@ -188,9 +188,9 @@ bool is_blocked_lz(Mech *mech, BattleMap *map, int x, int y) {
             .start = {.x = fx, .y = fy},
             .end = {.x = tx, .y = ty},
         }) <= (float)o->payload.scalar)
-      return 1;
+      return true;
   }
-  return 0;
+  return false;
 }
 
 void map_setlinked(DbRef player, void *data, char *buffer) {

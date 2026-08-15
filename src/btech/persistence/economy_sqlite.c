@@ -139,11 +139,11 @@ static bool btech_part_from_name(BtechContext *btech, const char *item_name,
           btech_part_name(btech->configuration, candidate_part, candidate_name);
       if (candidate && !strcmp(item_name, candidate)) {
         *part = candidate_part;
-        return 1;
+        return true;
       }
     }
   }
-  return 0;
+  return false;
 }
 
 /* Restore sparse named prices, leaving omitted parts at the zero default. */

@@ -170,7 +170,7 @@ bool is_in_weapon_arc(const WeaponArcRequest *request) {
     }
     break;
   }
-  return wantarc && (wantarc & weaponarc);
+  return (wantarc && (wantarc & weaponarc)) != 0;
 }
 
 int get_weapon_crits(Mech *mech, int weapindx) {
@@ -481,8 +481,8 @@ bool no_locations_destroyed(Mech *mech) {
   for (i = 0; i < NUM_SECTIONS; i++)
     if (mech_section_original_internal(mech, i) &&
         mech_section_is_destroyed(mech, i))
-      return 0;
-  return 1;
+      return false;
+  return true;
 }
 
 void mech_re_attach(Mech *mech, int loc) {

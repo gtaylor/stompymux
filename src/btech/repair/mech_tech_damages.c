@@ -116,12 +116,12 @@ static bool check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
       repair_damage_add(damages, REATTACH, loc);
     else
       repair_damage_add(damages, REPLACESUIT, loc);
-    return 0;
+    return false;
   }
   /* Added by Kipsta, 8/4/99. */
   if (mech_section_is_flooded(mech, loc)) {
     repair_damage_add(damages, RESEAL, loc);
-    return 0;
+    return false;
   }
   a = mech_section_internal(mech, loc);
   b = mech_section_original_internal(mech, loc);
@@ -178,7 +178,7 @@ static bool check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
     if (equipment_is_weapon(b))
       a += get_weapon_crits(mech, weapon_from_equipment_index(b)) - 1;
   }
-  return 1;
+  return true;
 }
 static bool check_for_scrappage(RepairDamageTable *damages, Mech *mech,
                                 int loc) {
@@ -186,10 +186,10 @@ static bool check_for_scrappage(RepairDamageTable *damages, Mech *mech,
   int b;
   int ret = 1;
   if (mech_section_is_destroyed(mech, loc))
-    return 1;
+    return true;
   if (someone_scrapping_loc(mech, loc)) {
     repair_damage_add(damages, DETACH, loc);
-    return 1;
+    return true;
   }
   for (a = 0; a < NUM_CRITICALS; a++) {
     b = mech_critical_part_type(mech, loc, a);
@@ -214,7 +214,7 @@ static bool check_for_scrappage(RepairDamageTable *damages, Mech *mech,
   }
   if (ret && !invalid_scrap_path(mech, loc))
     repair_damage_add(damages, DETACH, loc);
-  return 0;
+  return false;
 }
 static void make_scrap_table(RepairDamageTable *damages, Mech *mech) {
   int i = 4;
@@ -764,8 +764,8 @@ void tech_fix(DbRef player, void *data, char *buffer) {
     char *range_end = checked_storage_at(buffer, buffer_length + 1,
                                          sizeof(*buffer), range_offset + 1);
     *range_separator = '\0';
-    bool valid_range =
-        parse_int_checked(buffer, &low) && parse_int_checked(range_end, &high);
+    bool valid_range = (parse_int_checked(buffer, &low) &&
+                        parse_int_checked(range_end, &high)) != 0;
     *range_separator = '-';
     if (!valid_range) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,

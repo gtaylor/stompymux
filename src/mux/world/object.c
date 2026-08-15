@@ -133,21 +133,21 @@ bool can_set_home(EvaluationContext *evaluation, DbRef player, DbRef thing,
                   DbRef home) {
   if (!is_good_obj(evaluation->world->database, player) ||
       !is_good_obj(evaluation->world->database, home) || (thing == home))
-    return 0;
+    return false;
 
   switch (typeof_obj(evaluation->world->database, home)) {
   case OBJECT_TYPE_PLAYER:
   case OBJECT_TYPE_ROOM:
   case OBJECT_TYPE_THING:
     if (is_going(evaluation->world->database, home))
-      return 0;
+      return false;
     if (is_controls(evaluation->world->database, player, home))
-      return 1;
+      return true;
     break;
   default:
     break;
   }
-  return 0;
+  return false;
 }
 
 DbRef new_home(EvaluationContext *evaluation, DbRef player) {
@@ -448,7 +448,7 @@ void empty_obj(EvaluationContext *evaluation, DbRef obj) {
     if (game_object_location(evaluation->world->database, targ) != obj) {
       object_log_header_error(
           evaluation, targ, obj,
-          game_object_location(evaluation->world->database, targ), 1,
+          game_object_location(evaluation->world->database, targ), true,
           "Location",
           "indicates object really in another location during "
           "cleanup of GOING location.  Flush terminated.");
@@ -481,7 +481,8 @@ void empty_obj(EvaluationContext *evaluation, DbRef obj) {
     if (game_object_exits(evaluation->world->database, targ) != obj) {
       object_log_header_error(
           evaluation, targ, obj,
-          game_object_exits(evaluation->world->database, targ), 1, "Location",
+          game_object_exits(evaluation->world->database, targ), true,
+          "Location",
           "indicates exit really in another location during cleanup "
           "of GOING location.  Flush terminated.");
       break;

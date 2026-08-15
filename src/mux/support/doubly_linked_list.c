@@ -48,16 +48,16 @@ DoublyLinkedListNode *doubly_linked_list_create_node(void *data) {
 bool doubly_linked_list_destroy_list(DoublyLinkedList *list) {
 
   if (!list)
-    return 1;
+    return true;
 
   /* Check the size */
   if (list->size != 0) {
-    return 0;
+    return false;
   }
   list->head = nullptr;
   list->tail = nullptr;
   free(list);
-  return 1;
+  return true;
 }
 
 /* Destroy a Node - Returns the data in the node */

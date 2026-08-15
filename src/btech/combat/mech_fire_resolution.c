@@ -293,11 +293,11 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
         mech_damage_apply(&(MechDamageRequest){
             .target = request->mech,
             .attacker = request->mech,
-            .line_of_sight = 0,
+            .line_of_sight = false,
             .attack_pilot = -1,
             .hit_location = request->weapon.section,
-            .rear = 0,
-            .critical = 1,
+            .rear = false,
+            .critical = true,
             .armor_damage = 0,
             .internal_damage = weapon_catalogue_damage(request->weapon_index),
             .transfer = MECH_DAMAGE_NORMAL,
@@ -305,7 +305,7 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
             .base_to_hit = 0,
             .weapon_index = -1,
             .ammunition_mode = 0,
-            .ignore_swarmers = 1});
+            .ignore_swarmers = true});
         mech_ammunition_decrement(&(AmmunitionDecrementRequest){
             .mech = request->mech,
             .weapon_index = request->weapon_index,
@@ -348,11 +348,11 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
       mech_damage_apply(&(MechDamageRequest){
           .target = request->mech,
           .attacker = request->mech,
-          .line_of_sight = 0,
+          .line_of_sight = false,
           .attack_pilot = -1,
           .hit_location = request->weapon.section,
-          .rear = 0,
-          .critical = 0,
+          .rear = false,
+          .critical = false,
           .armor_damage = 0,
           .internal_damage = weapon_catalogue_damage(request->weapon_index),
           .transfer = MECH_DAMAGE_NORMAL,
@@ -360,7 +360,7 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
           .base_to_hit = 0,
           .weapon_index = -1,
           .ammunition_mode = 0,
-          .ignore_swarmers = 1});
+          .ignore_swarmers = true});
       mech_ammunition_decrement(&(AmmunitionDecrementRequest){
           .mech = request->mech,
           .weapon_index = request->weapon_index,
@@ -481,11 +481,11 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
     mech_damage_apply(&(MechDamageRequest){
         .target = request->mech,
         .attacker = request->mech,
-        .line_of_sight = 0,
+        .line_of_sight = false,
         .attack_pilot = -1,
         .hit_location = request->weapon.section,
-        .rear = 0,
-        .critical = 0,
+        .rear = false,
+        .critical = false,
         .armor_damage = 0,
         .internal_damage = weapon_catalogue_damage(request->weapon_index),
         .transfer = MECH_DAMAGE_NORMAL,
@@ -493,7 +493,7 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
         .base_to_hit = 0,
         .weapon_index = -1,
         .ammunition_mode = 0,
-        .ignore_swarmers = 1});
+        .ignore_swarmers = true});
     return;
   }
   if (mech_weapon_critical_can_jam(
@@ -585,7 +585,7 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
           .line_of_sight = request->line_of_sight,
           .failure_type = type,
           .failure_modifier = modifier,
-          .hit = (roll >= rbase_to_hit) && range_ok,
+          .hit = ((roll >= rbase_to_hit) && range_ok) != 0,
           .base_to_hit = base_to_hit,
           .gatling_shots = w_gattling_shots,
           .swarm_attack = swarm_attack,
@@ -764,7 +764,7 @@ void mech_weapon_fire(const WeaponFireRequest *request) {
                     "The weapon's recoil knocks you to the ground!");
         mech_los_broadcastf(request->mech, "topples over from the %s's recoil!",
                             weapon_display_name(request->weapon_index));
-        mech_fall(request->mech, 1, 0);
+        mech_fall(request->mech, 1, false);
       }
     }
   }

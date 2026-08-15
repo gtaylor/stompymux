@@ -100,9 +100,7 @@ bool has_bool_advantage(BtechContext *context, DbRef player, const char *name) {
   (void)string_copy_bounded(buf, sizeof(buf), name);
   character_stats_retrieve(context, player,
                            VALUES_ATTRS | VALUES_ADVS | VALUES_HEALTH, s);
-  if (char_getstatvalue(s, buf) == 1)
-    return 1;
-  return 0;
+  return char_getstatvalue(s, buf) == 1;
 }
 
 static int ton_value(const Mech *mech) {

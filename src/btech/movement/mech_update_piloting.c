@@ -85,11 +85,11 @@ void mech_piloting_update(Mech *mech) {
         if (!mech_section_is_destroyed(mech, LARM)) {
           mech_damage_apply(&(MechDamageRequest){.target = mech,
                                                  .attacker = mech,
-                                                 .line_of_sight = 0,
+                                                 .line_of_sight = false,
                                                  .attack_pilot = -1,
                                                  .hit_location = LARM,
-                                                 .rear = 0,
-                                                 .critical = 0,
+                                                 .rear = false,
+                                                 .critical = false,
                                                  .armor_damage = 0,
                                                  .internal_damage = dam,
                                                  .transfer = MECH_DAMAGE_NORMAL,
@@ -97,16 +97,16 @@ void mech_piloting_update(Mech *mech) {
                                                  .base_to_hit = 0,
                                                  .weapon_index = -1,
                                                  .ammunition_mode = 0,
-                                                 .ignore_swarmers = 1});
+                                                 .ignore_swarmers = true});
         }
         if (!mech_section_is_destroyed(mech, RARM)) {
           mech_damage_apply(&(MechDamageRequest){.target = mech,
                                                  .attacker = mech,
-                                                 .line_of_sight = 0,
+                                                 .line_of_sight = false,
                                                  .attack_pilot = -1,
                                                  .hit_location = RARM,
-                                                 .rear = 0,
-                                                 .critical = 0,
+                                                 .rear = false,
+                                                 .critical = false,
                                                  .armor_damage = 0,
                                                  .internal_damage = dam,
                                                  .transfer = MECH_DAMAGE_NORMAL,
@@ -114,17 +114,17 @@ void mech_piloting_update(Mech *mech) {
                                                  .base_to_hit = 0,
                                                  .weapon_index = -1,
                                                  .ammunition_mode = 0,
-                                                 .ignore_swarmers = 1});
+                                                 .ignore_swarmers = true});
         }
       }
       if (!mech_section_is_destroyed(mech, LLEG)) {
         mech_damage_apply(&(MechDamageRequest){.target = mech,
                                                .attacker = mech,
-                                               .line_of_sight = 0,
+                                               .line_of_sight = false,
                                                .attack_pilot = -1,
                                                .hit_location = LLEG,
-                                               .rear = 0,
-                                               .critical = 0,
+                                               .rear = false,
+                                               .critical = false,
                                                .armor_damage = 0,
                                                .internal_damage = dam,
                                                .transfer = MECH_DAMAGE_NORMAL,
@@ -132,16 +132,16 @@ void mech_piloting_update(Mech *mech) {
                                                .base_to_hit = 0,
                                                .weapon_index = -1,
                                                .ammunition_mode = 0,
-                                               .ignore_swarmers = 1});
+                                               .ignore_swarmers = true});
       }
       if (!mech_section_is_destroyed(mech, RLEG)) {
         mech_damage_apply(&(MechDamageRequest){.target = mech,
                                                .attacker = mech,
-                                               .line_of_sight = 0,
+                                               .line_of_sight = false,
                                                .attack_pilot = -1,
                                                .hit_location = RLEG,
-                                               .rear = 0,
-                                               .critical = 0,
+                                               .rear = false,
+                                               .critical = false,
                                                .armor_damage = 0,
                                                .internal_damage = dam,
                                                .transfer = MECH_DAMAGE_NORMAL,
@@ -149,12 +149,12 @@ void mech_piloting_update(Mech *mech) {
                                                .base_to_hit = 0,
                                                .weapon_index = -1,
                                                .ammunition_mode = 0,
-                                               .ignore_swarmers = 1});
+                                               .ignore_swarmers = true});
       }
     } else {
       mech_notify(mech, MECHALL, "Your damaged mech falls as you try to run!");
       mech_los_broadcast(mech, "falls down.");
-      mech_fall(mech, 1, 0);
+      mech_fall(mech, 1, false);
     }
   }
   if (mech_class(mech) == CLASS_MECH)

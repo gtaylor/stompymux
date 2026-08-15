@@ -88,12 +88,12 @@ void bsuit_swarm_stop(Mech *mech, int intentional) {
       mech_damage_apply(&(MechDamageRequest){
           .target = mech,
           .attacker = mech,
-          .line_of_sight = 1,
+          .line_of_sight = true,
           .attack_pilot = -1,
           .hit_location = btech_random_range_int(mech_context(mech), 0,
                                                  NUM_BSUIT_MEMBERS - 1),
-          .rear = 0,
-          .critical = 0,
+          .rear = false,
+          .critical = false,
           .armor_damage = 11,
           .internal_damage = 0,
           .transfer = MECH_DAMAGE_NORMAL,
@@ -101,7 +101,7 @@ void bsuit_swarm_stop(Mech *mech, int intentional) {
           .base_to_hit = 0,
           .weapon_index = -1,
           .ammunition_mode = 0,
-          .ignore_swarmers = 1});
+          .ignore_swarmers = true});
 
       bsuit_recycle_start(mech, RECYCLE_FALL_STOPSWARM);
     }
@@ -120,7 +120,7 @@ bool bsuit_has_enemy_swarmers(Mech *mech) {
   int i;
 
   if (!map)
-    return 0;
+    return false;
 
   for (i = 0; i < battle_map_unit_count(map); i++) {
     if (i != mech_map_slot(mech)) {
@@ -151,7 +151,7 @@ bool bsuit_has_friendly_riders(Mech *mech) {
   int i;
 
   if (!map)
-    return 0;
+    return false;
 
   for (i = 0; i < battle_map_unit_count(map); i++) {
     if (i != mech_map_slot(mech)) {
@@ -392,7 +392,7 @@ bool bsuit_jettison_validate(Mech *mech) {
   int j;
 
   if (!(mech_infantry_technology_flags(mech) & MUST_JETTISON_TECH))
-    return 0;
+    return false;
 
   for (i = 0; i < NUM_BSUIT_MEMBERS; i++) {
     for (j = 0; j < NUM_CRITICALS; j++) {
@@ -403,10 +403,10 @@ bool bsuit_jettison_validate(Mech *mech) {
                     "backpack!",
                     i + 1);
 
-        return 1;
+        return true;
       }
     }
   }
 
-  return 0;
+  return false;
 }

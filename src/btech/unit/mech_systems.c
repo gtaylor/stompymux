@@ -111,7 +111,7 @@ bool is_mech_leg_less(Mech *obj_mech) {
   int wc_max_legs = 0;
 
   if (((obj_mech)->ud.type) != CLASS_MECH)
-    return 0;
+    return false;
 
   if (mech_is_quad(obj_mech))
     wc_max_legs = 4;
@@ -119,9 +119,9 @@ bool is_mech_leg_less(Mech *obj_mech) {
     wc_max_legs = 2;
 
   if (count_destroyed_legs(obj_mech) >= wc_max_legs)
-    return 1;
+    return true;
 
-  return 0;
+  return false;
 }
 
 int mech_weapon_first_critical(const WeaponCriticalSearch *search) {
@@ -184,20 +184,20 @@ bool check_all_sections(Mech *mech, int special_to_find) {
 
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (check_section_for_special(mech, special_to_find, i))
-      return 1;
+      return true;
   }
 
-  return 0;
+  return false;
 }
 
 bool check_section_for_special(Mech *mech, int special_to_find, int w_sec) {
   if (mech_section_is_destroyed(mech, w_sec))
-    return 0;
+    return false;
 
   if (mech_section_has_special(mech, w_sec, special_to_find))
-    return 1;
+    return true;
 
-  return 0;
+  return false;
 }
 
 int get_remaining_internal_percent(Mech *mech) {

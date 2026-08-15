@@ -588,7 +588,7 @@ void restore_match_state(MatchContext *match_context, MSTATE *mstate) {
 void init_match(MatchContext *match_context, DbRef player, const char *name,
                 int type) {
   match_context->confidence = -1;
-  match_context->count = match_context->check_keys = 0;
+  match_context->count = match_context->check_keys = false;
   match_context->pref_type = type;
   match_context->match = NOTHING;
   match_context->player = player;
@@ -599,5 +599,5 @@ void init_match(MatchContext *match_context, DbRef player, const char *name,
 void init_match_check_keys(MatchContext *match_context, DbRef player,
                            const char *name, int type) {
   init_match(match_context, player, name, type);
-  match_context->check_keys = 1;
+  match_context->check_keys = true;
 }

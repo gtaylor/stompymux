@@ -51,21 +51,22 @@ void mech_stand_empty(DbRef player, void *data) {
 }
 
 static bool mech_control_requires_water(const Mech *mech) {
-  return mech_movement_type(mech) == MOVE_HULL ||
-         mech_movement_type(mech) == MOVE_FOIL;
+  return (mech_movement_type(mech) == MOVE_HULL ||
+          mech_movement_type(mech) == MOVE_FOIL) != 0;
 }
 
 static bool mech_control_is_on_water(Mech *mech) {
-  return battle_terrain_is_water(mech_real_terrain_get(mech)) &&
-         mech_position_z(mech) <= 0;
+  return (battle_terrain_is_water(mech_real_terrain_get(mech)) &&
+          mech_position_z(mech) <= 0) != 0;
 }
 
 static bool mech_control_is_rolling(const Mech *mech) {
-  return mech_class(mech) == CLASS_AERO || mech_class(mech) == CLASS_DS;
+  return (mech_class(mech) == CLASS_AERO || mech_class(mech) == CLASS_DS) != 0;
 }
 
 static bool mech_control_is_flying(const Mech *mech) {
-  return mech_is_aerospace_unit(mech) || mech_movement_type(mech) == MOVE_VTOL;
+  return (mech_is_aerospace_unit(mech) ||
+          mech_movement_type(mech) == MOVE_VTOL) != 0;
 }
 
 static float mech_control_walking_speed(float maximum_speed) {

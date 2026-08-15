@@ -716,7 +716,7 @@ bool ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
                                 .score = b_score});
       }
     }
-    return 1; /* We want to keep fighting near foes */
+    return true; /* We want to keep fighting near foes */
   }
   if (!((EVENT_TICK / AUTOPILOT_GOTO_TICK) %
         4)) { /* Just every fourth tick, i.e. 12sec */
@@ -766,11 +766,11 @@ bool ai_check_path(Mech *m, Autopilot *a, float dx, float dy, float delx,
     }
   }
   if (b_len >= MIN_SAFE)
-    return 1;
+    return true;
   /* Slow down + stop - no sense in dying needlessly */
   ai_stop(m, a);
   btech_channel_send(a->xcode.context, BTECH_CHANNEL_MECH_AI, "%s state: panic",
                      ai_info(m, a).text);
   ai_send_message(a, m, "PANIC! Unable to comply with order.");
-  return 0;
+  return false;
 }

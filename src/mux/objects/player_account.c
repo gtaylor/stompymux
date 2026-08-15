@@ -107,14 +107,15 @@ const char *player_account_password_hash(GameDatabase *database, DbRef player) {
 bool player_account_password_hash_set(GameDatabase *database, DbRef player,
                                       const char *hash) {
   PlayerAccountState *account = player_account_require(database, player);
-  return account && account_replace_string(&account->password_hash, hash);
+  return (account && account_replace_string(&account->password_hash, hash)) !=
+         0;
 }
 
 PlayerLastLoginResult player_account_last_login(PlayerAccountRef reference) {
   PlayerAccountState *account =
       player_account(reference.database, reference.player);
   if (!account || !account->has_last_login)
-    return (PlayerLastLoginResult){0};
+    return (PlayerLastLoginResult){};
   return (PlayerLastLoginResult){.found = true,
                                  .occurred_at = account->last_login};
 }
@@ -137,7 +138,7 @@ const char *player_account_last_site(GameDatabase *database, DbRef player) {
 bool player_account_last_site_set(GameDatabase *database, DbRef player,
                                   const char *site) {
   PlayerAccountState *account = player_account_require(database, player);
-  return account && account_replace_string(&account->last_site, site);
+  return (account && account_replace_string(&account->last_site, site)) != 0;
 }
 
 int64_t player_account_successful_login_count(GameDatabase *database,
@@ -249,10 +250,10 @@ player_account_login_history(const PlayerLoginHistoryRequest *request) {
 
   if (!account || (request->outcome != PLAYER_LOGIN_SUCCESS &&
                    request->outcome != PLAYER_LOGIN_FAILURE))
-    return (PlayerLoginHistoryResult){0};
+    return (PlayerLoginHistoryResult){};
   records = history(account, request->outcome, &count, &limit);
   if (request->position >= *count)
-    return (PlayerLoginHistoryResult){0};
+    return (PlayerLoginHistoryResult){};
   const PlayerLoginRecord *stored =
       login_record(records, limit, request->position);
   return (PlayerLoginHistoryResult){
@@ -302,7 +303,7 @@ player_account_last_page_recipient(const PlayerPageRecipientRequest *request) {
   PlayerAccountState *account =
       player_account(request->account.database, request->account.player);
   if (!account || request->position >= account->last_page_count)
-    return (PlayerPageRecipientResult){0};
+    return (PlayerPageRecipientResult){};
   return (PlayerPageRecipientResult){
       .found = true,
       .recipient = *(const DbRef *)checked_storage_at_const(
@@ -332,6 +333,6 @@ bool player_account_last_page_set(GameDatabase *database, DbRef player,
 bool player_account_format_timestamp_utc(time_t when, char *buffer,
                                          size_t buffer_size) {
   struct tm utc;
-  return buffer && buffer_size > 0 && gmtime_r(&when, &utc) &&
-         strftime(buffer, buffer_size, "%Y-%m-%dT%H:%M:%SZ", &utc) > 0;
+  return (buffer && buffer_size > 0 && gmtime_r(&when, &utc) &&
+          strftime(buffer, buffer_size, "%Y-%m-%dT%H:%M:%SZ", &utc) > 0) != 0;
 }

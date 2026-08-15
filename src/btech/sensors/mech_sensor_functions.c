@@ -22,20 +22,20 @@
 #include <math.h>
 
 static bool mech_sensor_target_is_small(const Mech *target) {
-  return target &&
-         (mech_class(target) == CLASS_BSUIT || mech_class(target) == CLASS_MW);
+  return (target && (mech_class(target) == CLASS_BSUIT ||
+                     mech_class(target) == CLASS_MW)) != 0;
 }
 
 static float sensor_range_limit(int range) { return (float)range; }
 
 static bool terrain_is_water(char terrain) {
-  return terrain == BATTLE_TERRAIN_ICE || terrain == BATTLE_TERRAIN_WATER ||
-         terrain == BATTLE_TERRAIN_BRIDGE;
+  return (terrain == BATTLE_TERRAIN_ICE || terrain == BATTLE_TERRAIN_WATER ||
+          terrain == BATTLE_TERRAIN_BRIDGE) != 0;
 }
 
 static bool mech_sensor_is_lit(const Mech *mech) {
   MechConditionSummary condition = mech_condition_summary(mech);
-  return condition.illuminated || mech_searchlight_active(mech);
+  return (condition.illuminated || mech_searchlight_active(mech)) != 0;
 }
 
 static int mech_sensor_base_elevation(Mech *mech) {

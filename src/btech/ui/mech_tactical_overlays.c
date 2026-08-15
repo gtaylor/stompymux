@@ -22,7 +22,9 @@ static char *tactical_canvas_at(char *canvas, int offset) {
                             (size_t)offset);
 }
 
-static bool ascii_is_digit(char value) { return value >= '0' && value <= '9'; }
+static bool ascii_is_digit(char value) {
+  return (value >= '0' && value <= '9') != 0;
+}
 
 static int minimum_int(int left, int right) {
   return left < right ? left : right;
@@ -55,7 +57,7 @@ void tactical_sketch_landing_zones(const TacticalSketch *sketch) {
           ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                               .position = {.x = x, .y = y},
                               .display_columns = sketch->display_columns,
-                              .first_column_is_odd = FIRST_COLUMN_IS_ODD,
+                              .first_column_is_odd = FIRST_COLUMN_IS_ODD != 0,
                           });
       char safe_marker = sketch->color ? '\241' : 'X';
       char unsafe_marker = sketch->color ? '\240' : 'O';
@@ -84,7 +86,7 @@ void tactical_sketch_mines(const TacticalSketch *sketch) {
           ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                               .position = {.x = x, .y = y},
                               .display_columns = sketch->display_columns,
-                              .first_column_is_odd = FIRST_COLUMN_IS_ODD,
+                              .first_column_is_odd = FIRST_COLUMN_IS_ODD != 0,
                           });
       const char ELEVATION = *tactical_canvas_at(
           sketch->canvas, BASE_OFFSET + sketch->display_columns + 1);
