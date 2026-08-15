@@ -67,39 +67,6 @@ void send_channel_v(const ChannelMessageTarget *target, const char *format,
   comsys_send_channel_message(evaluation, ch, buf);
 }
 
-char *comsys_channel_from_alias(EvaluationContext *evaluation, DbRef player,
-                                char *alias) {
-  struct Commac *c;
-  int first;
-  int last;
-  int current = 0;
-  int dir;
-
-  c = get_commac(evaluation->runtime->channels, player);
-
-  first = 0;
-  last = c->numchannels - 1;
-  dir = 1;
-
-  while (dir && (first <= last)) {
-    current = (first + last) / 2;
-    dir = strcasecmp(alias, commac_alias_at(c, (size_t)current));
-    if (dir < 0)
-      last = current - 1;
-    else
-      first = current + 1;
-  }
-
-  if (!dir)
-    return commac_channel_at(c, (size_t)current);
-  /* This function's other branch returns a genuinely mutable char *
-   from c->channels[]; the return type can't be const. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  return (char *)"";
-#pragma clang diagnostic pop
-}
-
 typedef struct ComHistoryView ComHistoryView;
 struct ComHistoryView {
   EvaluationContext *evaluation;
@@ -144,7 +111,7 @@ static void do_comlast(EvaluationContext *evaluation, DbRef player,
 }
 
 void comsys_process_alias_command(EvaluationContext *evaluation, DbRef player,
-                                  char *arg1, char *arg2) {
+                                  const char *arg1, char *arg2) {
   struct Channel *ch;
   struct Comuser *user;
 
