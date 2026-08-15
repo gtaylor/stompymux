@@ -118,8 +118,6 @@ static void astar_release(const RedBlackTreeReleaseCall *call) {
   [[maybe_unused]] void *key = call->key;
   void *data = call->data;
   [[maybe_unused]] void *arg = call->context;
-  (void)key;
-  (void)arg;
   free(data);
 }
 

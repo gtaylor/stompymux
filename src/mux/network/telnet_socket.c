@@ -205,7 +205,8 @@ static void discard_connection(Descriptor *descriptor) {
   uv_close((uv_handle_t *)descriptor->socket, discarded_connection_closed);
 }
 
-static void descriptor_read_alloc(uv_handle_t *handle, size_t suggested_size,
+static void descriptor_read_alloc(uv_handle_t *handle [[maybe_unused]],
+                                  size_t suggested_size [[maybe_unused]],
                                   uv_buf_t *buffer) {
   buffer->base = checked_storage_try_allocate(LBUF_SIZE);
   buffer->len = buffer->base == nullptr ? 0 : LBUF_SIZE;

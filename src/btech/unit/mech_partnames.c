@@ -365,7 +365,7 @@ PartMatchResult part_name_lookup(const PartNameLookupRequest *request) {
   });
 }
 
-void list_forms(DbRef player, void *data, char *buffer) {
+void list_forms(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   BtechSpecialObject *debug = data;
   PartNameRegistry *registry = debug->context->part_names;
   int i;

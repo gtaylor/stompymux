@@ -371,7 +371,7 @@ void mech_c3i_message(DbRef player, Mech *mech, char *buffer) {
   mech_network_send_message(player, mech, buffer, false);
 }
 
-void mech_c3i_targets(DbRef player, Mech *mech, char *buffer) {
+void mech_c3i_targets(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
 
@@ -402,7 +402,7 @@ void mech_c3i_targets(DbRef player, Mech *mech, char *buffer) {
   mech_network_show_targets(player, mech, false);
 }
 
-void mech_c3i_network(DbRef player, Mech *mech, char *buffer) {
+void mech_c3i_network(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
 

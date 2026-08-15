@@ -38,11 +38,11 @@ typedef struct BthTrace {
 static void bth_trace_begin(BthTrace *trace, int initial) {
   trace->total = initial;
 }
-static void bth_trace_add(BthTrace *trace, const char *description,
+static void bth_trace_add(BthTrace *trace,
+                          const char *description [[maybe_unused]],
                           int modifier) {
   if (!modifier)
     return;
-  (void)description;
   trace->total += modifier;
 }
 MechNormalToHitResult

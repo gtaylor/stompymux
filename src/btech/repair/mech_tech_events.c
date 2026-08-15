@@ -554,14 +554,14 @@ void mux_event_tickmech_reload(MuxEvent *e) {
   } while (0);
 }
 
-void mux_event_tickmech_mountbomb(MuxEvent *e) {
+void mux_event_tickmech_mountbomb(MuxEvent *e [[maybe_unused]]) {
 
   /*    MECH *mech = (MECH *) e->data; */
 
   /*    int earg = (int) (e->data2) % PLAYERPOS; */
 }
 
-void mux_event_tickmech_umountbomb(MuxEvent *e) {
+void mux_event_tickmech_umountbomb(MuxEvent *e [[maybe_unused]]) {
 
   /*    MECH *mech = (MECH *) e->data; */
 

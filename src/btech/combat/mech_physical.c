@@ -144,7 +144,9 @@ void phys_fail(Mech *mech, Mech *target, PhysicalAttackType at) {
       physical_attack_verb(&(PhysicalVerbRequest){.attack_type = at}));
   mech_los_broadcast_unit(mech, target, message_buffer);
 }
-bool have_punch(Mech *mech, int loc) { return true; }
+bool have_punch(Mech *mech [[maybe_unused]], int loc [[maybe_unused]]) {
+  return true;
+}
 bool have_axe(Mech *mech, int loc) {
   return find_obj(mech, loc, special_equipment_index(AXE)) >=
          (mech_tonnage(mech) / 15);

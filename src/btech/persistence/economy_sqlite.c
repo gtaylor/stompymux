@@ -195,10 +195,10 @@ static int btech_load_costs(sqlite3 *sqlite, BtechContext *btech) {
 
 /* Restore economy prices from the SQLite game database. */
 int btech_persistence_load_economy(sqlite3 *sqlite,
-                                   PersistenceContext *persistence,
+                                   PersistenceContext *persistence
+                                   [[maybe_unused]],
                                    void *extension_context) {
   BtechContext *btech = extension_context;
-  (void)persistence;
   int exists;
   int has_item_name;
 
@@ -234,9 +234,9 @@ int btech_persistence_load_economy(sqlite3 *sqlite,
 /* Write non-default advanced-economy prices in the core snapshot transaction.
  */
 int btech_persistence_store_economy(sqlite3 *sqlite,
-                                    PersistenceContext *persistence,
+                                    PersistenceContext *persistence
+                                    [[maybe_unused]],
                                     void *extension_context) {
-  (void)persistence;
   BtechContext *btech = extension_context;
   BtechPartCostSet cost_sets[BTECH_PART_COST_SET_COUNT];
   BtechPartCostSet *cost_set;

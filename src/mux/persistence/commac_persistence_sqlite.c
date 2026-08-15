@@ -287,8 +287,7 @@ static int commac_store_macros(sqlite3 *sqlite,
 
 static int commac_persistence_store(sqlite3 *sqlite,
                                     PersistenceContext *context,
-                                    void *extension_context) {
-  (void)extension_context;
+                                    void *extension_context [[maybe_unused]]) {
   return commac_sqlite_exec(sqlite, COMMAC_SCHEMA_SQL) < 0 ||
                  commac_store_entries(context->channels, context->database,
                                       sqlite) < 0 ||
@@ -742,8 +741,7 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
 
 /* SQLite is now authoritative for all commac, comsys, and macro state. */
 static int commac_persistence_load(sqlite3 *sqlite, PersistenceContext *context,
-                                   void *extension_context) {
-  (void)extension_context;
+                                   void *extension_context [[maybe_unused]]) {
   return commac_load_entries(sqlite, context) < 0 ||
                  commac_load_channels(sqlite, context) < 0 ||
                  commac_load_users(sqlite, context) < 0 ||

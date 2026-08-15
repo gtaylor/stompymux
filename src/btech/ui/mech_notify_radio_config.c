@@ -435,7 +435,7 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
                 nm & FREQ_DIGITAL ? "digital" : "analog", buf);
 }
 
-void mech_list_freqs(DbRef player, void *data, char *buffer) {
+void mech_list_freqs(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   int i;
   Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));

@@ -16,16 +16,16 @@ static inline void free_buf(void *buffer) {
     free(buffer);
 }
 
-[[nodiscard]] static inline void *alloc_lbuf(const char *description) {
-  (void)description;
+[[nodiscard]] static inline void *alloc_lbuf(const char *description
+                                             [[maybe_unused]]) {
   return checked_storage_allocate(LBUF_SIZE);
 }
-[[nodiscard]] static inline void *alloc_mbuf(const char *description) {
-  (void)description;
+[[nodiscard]] static inline void *alloc_mbuf(const char *description
+                                             [[maybe_unused]]) {
   return checked_storage_allocate(MBUF_SIZE);
 }
-[[nodiscard]] static inline void *alloc_sbuf(const char *description) {
-  (void)description;
+[[nodiscard]] static inline void *alloc_sbuf(const char *description
+                                             [[maybe_unused]]) {
   return checked_storage_allocate(SBUF_SIZE);
 }
 

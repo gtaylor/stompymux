@@ -537,7 +537,7 @@ float mech_effective_maximum_speed(Mech *mech) {
   return mech_cargo_maximum_speed(mech, mech_maximum_speed(mech));
 }
 
-void mech_drop(DbRef player, void *data, const char *buffer) {
+void mech_drop(DbRef player, void *data, const char *buffer [[maybe_unused]]) {
   Mech *mech = (Mech *)data;
   float s1;
   int w_drop_levels = 0;

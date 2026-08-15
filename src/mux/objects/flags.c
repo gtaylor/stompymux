@@ -410,11 +410,10 @@ static bool flag_normalize_name(const char *name,
   return true;
 }
 
-const FlagEntry *find_flag(WorldIndexes *indexes, DbRef thing,
+const FlagEntry *find_flag(WorldIndexes *indexes, DbRef thing [[maybe_unused]],
                            const char *flagname) {
   char normalized[SBUF_SIZE];
 
-  (void)thing;
   if (!flag_normalize_name(flagname, normalized))
     return nullptr;
   return hash_table_find_const(normalized, &indexes->flags);
@@ -549,9 +548,9 @@ OwnedText unparse_object_numonly(GameDatabase *database, DbRef target) {
                    game_object_name(database, target), target);
   return owned_text_take(buffer);
 }
-OwnedText unparse_object(GameDatabase *database, EvaluationContext *evaluation,
+OwnedText unparse_object(GameDatabase *database,
+                         EvaluationContext *evaluation [[maybe_unused]],
                          DbRef player, DbRef target) {
-  (void)evaluation;
   char *buffer = alloc_lbuf("unparse_object");
   if (target == NOTHING) {
     (void)string_copy_bounded(buffer, LBUF_SIZE, "*NOTHING*");

@@ -45,13 +45,9 @@ struct Mech {
 static bool seismic_stopped;
 
 BtechContext *mech_context(const Mech *mech) { return mech->context; }
-DbRef mech_map_dbref(const Mech *mech) {
-  (void)mech;
-  return 1;
-}
-BattleMap *btech_context_get_map(BtechContext *context, DbRef dbref) {
-  (void)context;
-  (void)dbref;
+DbRef mech_map_dbref(const Mech *mech [[maybe_unused]]) { return 1; }
+BattleMap *btech_context_get_map(BtechContext *context [[maybe_unused]],
+                                 DbRef dbref [[maybe_unused]]) {
   return nullptr;
 }
 UnitClass mech_class(const Mech *mech) { return mech->unit_class; }
@@ -73,8 +69,8 @@ int bridge_w_elevation(Mech *mech) { return mech->elevation; }
 bool mech_is_any_ecm_disturbed(const Mech *mech) {
   return mech->condition.ecm_disturbed || mech->condition.angel_ecm_disturbed;
 }
-bool btech_context_seismic_detects_stopped_units(const BtechContext *context) {
-  (void)context;
+bool btech_context_seismic_detects_stopped_units(const BtechContext *context
+                                                 [[maybe_unused]]) {
   return seismic_stopped;
 }
 bool mech_is_started(const Mech *mech) { return mech->started; }
@@ -90,18 +86,15 @@ int mech_real_tonnage(const Mech *mech) { return mech->tonnage; }
 bool mech_is_flying_type(const Mech *mech) {
   return mech->movement == MOVE_FLY || mech->movement == MOVE_VTOL;
 }
-int m_number(Mech *mech, int low, int high) {
-  (void)mech;
-  (void)high;
+int m_number(Mech *mech [[maybe_unused]], int low, int high [[maybe_unused]]) {
   return low;
 }
 bool battle_map_sensor_is_disabled(const BattleMap *map, int sensor) {
   return (map->sensorflags & (1 << sensor)) != 0;
 }
-float mech_los_actual_elevation(BattleMap *map, int x, int y, Mech *mech) {
-  (void)map;
-  (void)x;
-  (void)y;
+float mech_los_actual_elevation(BattleMap *map [[maybe_unused]],
+                                int x [[maybe_unused]], int y [[maybe_unused]],
+                                Mech *mech) {
   return (float)mech->z + 0.5F;
 }
 
@@ -189,8 +182,9 @@ static void test_optical_and_em_contacts(LosTestState *state, Mech *observer,
                  electrom_csee(&request));
 }
 
-static void test_seismic(LosTestState *state, BtechContext *context,
-                         Mech *observer, Mech *target, BattleMap *map) {
+static void test_seismic(LosTestState *state,
+                         BtechContext *context [[maybe_unused]], Mech *observer,
+                         Mech *target, BattleMap *map) {
   SensorContactRequest request = contact(observer, target, map, 0, 3.0F);
   target->speed = 11.0F;
   los_expect_true(state, "seismic sees moving ground unit",

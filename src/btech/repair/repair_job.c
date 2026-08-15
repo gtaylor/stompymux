@@ -371,8 +371,7 @@ repair_section_amount_job_execute(RepairCommandContext *command, int location,
   return REPAIR_JOB_SCHEDULED_SUCCESS;
 }
 
-int repair_part_type_difficulty(int part_type) {
-  (void)part_type;
+int repair_part_type_difficulty(int part_type [[maybe_unused]]) {
   // Difficulty is numeric even though every part currently has the same value.
   return 1;
 }

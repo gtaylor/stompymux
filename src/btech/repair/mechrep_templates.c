@@ -71,7 +71,7 @@ void mechrep_rloadnew(DbRef player, void *data, char *buffer) {
                "Unable to read that template.");
 }
 
-void mechrep_rrestore(DbRef player, void *data, char *buffer) {
+void mechrep_rrestore(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   char *c;
 
   RepairFacilityCommandContext repair_command;

@@ -193,7 +193,7 @@ bool is_blocked_lz(Mech *mech, BattleMap *map, int x, int y) {
   return false;
 }
 
-void map_setlinked(DbRef player, void *data, char *buffer) {
+void map_setlinked(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   BattleMap *map = (BattleMap *)data;
   MapObject foo;
 

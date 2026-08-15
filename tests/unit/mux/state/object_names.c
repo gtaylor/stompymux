@@ -28,9 +28,8 @@ size_t utf8_copy_truncated(char *destination, size_t destination_size,
   return strlen(destination);
 }
 
-void styled_text_strip(const StyledTextPalette *palette, const char *styled,
-                       char *output, size_t output_size) {
-  (void)palette;
+void styled_text_strip(const StyledTextPalette *palette [[maybe_unused]],
+                       const char *styled, char *output, size_t output_size) {
   if (output_size == 0)
     return;
   const size_t LENGTH = strlen(styled);
@@ -51,44 +50,29 @@ void styled_text_strip(const StyledTextPalette *palette, const char *styled,
   (void)string_copy_bounded(output, output_size, styled);
 }
 
-void object_state_clear(GameDatabase *database, DbRef object) {
-  (void)database;
-  (void)object;
-}
+void object_state_clear(GameDatabase *database [[maybe_unused]],
+                        DbRef object [[maybe_unused]]) {}
 
-void player_account_clear(GameDatabase *database, DbRef player) {
-  (void)database;
-  (void)player;
-}
+void player_account_clear(GameDatabase *database [[maybe_unused]],
+                          DbRef player [[maybe_unused]]) {}
 
-void character_state_clear(GameDatabase *database, DbRef player) {
-  (void)database;
-  (void)player;
-}
+void character_state_clear(GameDatabase *database [[maybe_unused]],
+                           DbRef player [[maybe_unused]]) {}
 
-void economy_parts_clear(GameDatabase *database, DbRef object) {
-  (void)database;
-  (void)object;
-}
+void economy_parts_clear(GameDatabase *database [[maybe_unused]],
+                         DbRef object [[maybe_unused]]) {}
 
-void log_simple(LogEntry entry, const char *message) {
-  (void)entry;
-  (void)message;
-}
+void log_simple(LogEntry entry [[maybe_unused]],
+                const char *message [[maybe_unused]]) {}
 
-void game_object_clear_flags(GameDatabase *database, DbRef object) {
-  (void)database;
-  (void)object;
-}
+void game_object_clear_flags(GameDatabase *database [[maybe_unused]],
+                             DbRef object [[maybe_unused]]) {}
 
-void game_object_set_flag(const ObjectFlagChangeRequest *request) {
-  (void)request;
-}
+void game_object_set_flag(const ObjectFlagChangeRequest *request
+                          [[maybe_unused]]) {}
 
-void game_object_clear_powers(GameDatabase *database, DbRef object) {
-  (void)database;
-  (void)object;
-}
+void game_object_clear_powers(GameDatabase *database [[maybe_unused]],
+                              DbRef object [[maybe_unused]]) {}
 
 static int check_stable_names(void) {
   GameObject objects[3] = {};

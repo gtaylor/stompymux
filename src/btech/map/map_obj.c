@@ -195,7 +195,7 @@ void del_mapobjs(BattleMap *map) {
 }
 
 MapObject *add_mapobj(BattleMap *map, MapObject **to, MapObject *from,
-                      int flag) {
+                      int flag [[maybe_unused]]) {
   MapObject *realto;
 
   map->flags |= MAPFLAG_MAPO;

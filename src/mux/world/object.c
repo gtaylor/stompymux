@@ -560,7 +560,8 @@ void destroy_player(EvaluationContext *evaluation, DbRef victim) {
 /**
  * Purges a OBJECT_FLAG_GOING object.
  */
-void object_purge_going(EvaluationContext *evaluation, bool full_check) {
+void object_purge_going(EvaluationContext *evaluation,
+                        bool full_check [[maybe_unused]]) {
   DbRef i;
 
   DO_WHOLE_DB(evaluation->world->database, i) {

@@ -23,8 +23,8 @@ static int notification_count;
 static BtechContext context;
 
 PartFailureResult
-mech_weapon_failure_check(const MechWeaponFailureRequest *request) {
-  (void)request;
+mech_weapon_failure_check(const MechWeaponFailureRequest *request
+                          [[maybe_unused]]) {
   return next_failure;
 }
 
@@ -33,35 +33,33 @@ void mech_ammunition_decrement(const AmmunitionDecrementRequest *request) {
   last_decrement = *request;
 }
 
-bool mech_section_is_underwater(const Mech *mech, int section) {
-  (void)mech;
-  (void)section;
+bool mech_section_is_underwater(const Mech *mech [[maybe_unused]],
+                                int section [[maybe_unused]]) {
   return underwater;
 }
 
-BtechContext *mech_context(const Mech *mech) {
-  (void)mech;
+BtechContext *mech_context(const Mech *mech [[maybe_unused]]) {
   return &context;
 }
 
-bool btech_context_uses_extended_weapon_ranges(const BtechContext *value) {
-  (void)value;
+bool btech_context_uses_extended_weapon_ranges(const BtechContext *value
+                                               [[maybe_unused]]) {
   return extended_ranges;
 }
 
-int weapon_catalogue_effective_range(int weapon_index, bool extended) {
-  (void)weapon_index;
+int weapon_catalogue_effective_range(int weapon_index [[maybe_unused]],
+                                     bool extended) {
   return normal_range + (extended ? 3 : 0);
 }
 
-int weapon_catalogue_effective_water_range(int weapon_index, bool extended) {
-  (void)weapon_index;
+int weapon_catalogue_effective_water_range(int weapon_index [[maybe_unused]],
+                                           bool extended) {
   return water_range + (extended ? 2 : 0);
 }
 
-void mech_notify(Mech *mech, MechNotifyAudience audience, const char *buffer) {
-  (void)mech;
-  (void)audience;
+void mech_notify(Mech *mech [[maybe_unused]],
+                 MechNotifyAudience audience [[maybe_unused]],
+                 const char *buffer) {
   if (strstr(buffer, "falls short") != nullptr)
     ++notification_count;
 }

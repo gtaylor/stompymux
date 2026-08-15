@@ -23,7 +23,7 @@ static bool read_access(lua_State *state, const char *value,
   return valid && access == expected;
 }
 
-static int command_handler(lua_State *state) { return 0; }
+static int command_handler(lua_State *state [[maybe_unused]]) { return 0; }
 
 static bool read_entry(lua_State *state, GameDatabase *database, DbRef player,
                        const char *access, bool include_pattern,

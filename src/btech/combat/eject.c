@@ -272,7 +272,7 @@ static void char_eject(DbRef player, Mech *mech) {
   }
 }
 
-void mech_eject(DbRef player, void *data, char *buffer) {
+void mech_eject(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   Mech *mech = (Mech *)data;
 
   if (!common_checks(player, mech, MECH_USUALS))
@@ -448,7 +448,7 @@ static void char_disembark(DbRef player, Mech *mech) {
 /**
  * Handle the disembarking of pilots from units.
  */
-void mech_disembark(DbRef player, void *data, char *buffer) {
+void mech_disembark(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   Mech *mech = (Mech *)data;
 
   if (!common_checks(player, mech, MECH_USUALS))
@@ -504,7 +504,8 @@ void mech_disembark(DbRef player, void *data, char *buffer) {
 /**
  * Handle the disembarking of units from within carriers.
  */
-void mech_udisembark(DbRef player, void *data, const char *buffer) {
+void mech_udisembark(DbRef player, void *data,
+                     const char *buffer [[maybe_unused]]) {
   char message_buffer[128];
 
   Mech *mech = (Mech *)data; /* The disembarking unit */

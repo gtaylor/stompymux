@@ -9,13 +9,11 @@
 
 static char syntax_expectation[128];
 
-void configuration_log_syntax(ConfigurationContext *context, DbRef player,
-                              const char *command, const char *expectation,
-                              const char *value) {
-  (void)context;
-  (void)player;
-  (void)command;
-  (void)value;
+void configuration_log_syntax(ConfigurationContext *context [[maybe_unused]],
+                              DbRef player [[maybe_unused]],
+                              const char *command [[maybe_unused]],
+                              const char *expectation,
+                              const char *value [[maybe_unused]]) {
   (void)snprintf(syntax_expectation, sizeof(syntax_expectation), "%s",
                  expectation);
 }

@@ -158,8 +158,9 @@ add_library(btmux_compile_options INTERFACE)
 target_compile_definitions(btmux_compile_options INTERFACE
   _DEFAULT_SOURCE=1
   _POSIX_C_SOURCE=200809L)
+# Mark intentionally unused declarations with C23 [[maybe_unused]].
 target_compile_options(btmux_compile_options INTERFACE
-  $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Wno-unused-parameter -Werror -Wformat=2 -Wshadow
+  $<$<COMPILE_LANGUAGE:C>:-Wall -Wextra -Werror -Wformat=2 -Wshadow
   -Wstrict-prototypes -Wold-style-definition -Wvla -Wmissing-prototypes
   -Wnull-dereference -Wundef -Wredundant-decls -Wmissing-declarations
   -Wbad-function-cast -Wswitch-enum -Wimplicit-fallthrough -Wunused-macros -Wfloat-equal -Wpedantic

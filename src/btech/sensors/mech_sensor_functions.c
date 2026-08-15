@@ -140,8 +140,7 @@ int radar_see(const SensorVisibilityRequest *request) {
   return (int)(chance > 90 ? 90 : chance);
 }
 
-int bap_see(const SensorVisibilityRequest *request) {
-  (void)request;
+int bap_see(const SensorVisibilityRequest *request [[maybe_unused]]) {
   return 101;
 }
 

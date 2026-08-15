@@ -218,7 +218,7 @@ static void dispatch(MaintenanceContext *maintenance) {
   maintenance->command->debug_command = cmdsave;
 }
 
-static void timer_callback(MuxTimer *timer, void *arg) {
+static void timer_callback(MuxTimer *timer [[maybe_unused]], void *arg) {
   ServerTimer *server_timer = arg;
   MaintenanceContext *maintenance = server_timer->maintenance;
 

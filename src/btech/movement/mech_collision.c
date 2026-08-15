@@ -26,10 +26,7 @@ static int mech_elevation_change_limit(const Mech *mech) {
   return movement_type == MOVE_BIPED || movement_type == MOVE_QUAD ? 2 : 1;
 }
 
-int bridge_w_elevation(Mech *mech) {
-  (void)mech;
-  return -1;
-}
+int bridge_w_elevation(Mech *mech [[maybe_unused]]) { return -1; }
 
 void bridge_set_elevation(Mech *mech) {
   int upper_elevation = mech_upper_surface_elevation(mech);

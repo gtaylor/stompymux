@@ -20,31 +20,26 @@ static int compare_ints(const RedBlackTreeCompareCall *call) {
   const int a = *(const int *)left;
   const int b = *(const int *)right;
 
-  (void)context;
   return (a > b) - (a < b);
 }
 
 static bool collect_walk(const RedBlackTreeVisitCall *call) {
-  void *key = call->key;
+  void *key [[maybe_unused]] = call->key;
   void *data = call->data;
-  int depth = call->depth;
+  int depth [[maybe_unused]] = call->depth;
   void *context = call->context;
   WalkResult *result = context;
 
-  (void)key;
-  (void)depth;
   *int_slot(result->values, 16, result->count++) = *(int *)data;
   return 1;
 }
 
 static void count_release(const RedBlackTreeReleaseCall *call) {
-  void *key = call->key;
-  void *data = call->data;
+  void *key [[maybe_unused]] = call->key;
+  void *data [[maybe_unused]] = call->data;
   void *context = call->context;
   size_t *count = context;
 
-  (void)key;
-  (void)data;
   (*count)++;
 }
 

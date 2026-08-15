@@ -19,54 +19,38 @@ EvaluationContext *btech_context_evaluation(BtechContext *context) {
   return (EvaluationContext *)context;
 }
 
-BattleMap *btech_context_get_map(BtechContext *context, DbRef dbref) {
-  (void)context;
-  (void)dbref;
+BattleMap *btech_context_get_map(BtechContext *context [[maybe_unused]],
+                                 DbRef dbref [[maybe_unused]]) {
   return nullptr;
 }
 
-void *btech_context_find_object(BtechContext *context, DbRef dbref) {
-  (void)context;
-  (void)dbref;
+void *btech_context_find_object(BtechContext *context [[maybe_unused]],
+                                DbRef dbref [[maybe_unused]]) {
   return nullptr;
 }
 
-void mecha_notify(EvaluationContext *evaluation, DbRef player,
-                  const char *message) {
-  (void)evaluation;
-  (void)player;
-  (void)message;
+void mecha_notify(EvaluationContext *evaluation [[maybe_unused]],
+                  DbRef player [[maybe_unused]],
+                  const char *message [[maybe_unused]]) {
   rejected_notifications++;
 }
 
-void notify_printf(EvaluationContext *evaluation, DbRef player,
-                   const char *format, ...) {
-  (void)evaluation;
-  (void)player;
-  (void)format;
+void notify_printf(EvaluationContext *evaluation [[maybe_unused]],
+                   DbRef player [[maybe_unused]],
+                   const char *format [[maybe_unused]], ...) {
   accepted_notifications++;
 }
 
-void btech_channel_send(BtechContext *context, BtechChannel channel,
-                        const char *format, ...) {
-  (void)context;
-  (void)channel;
-  (void)format;
-}
+void btech_channel_send(BtechContext *context [[maybe_unused]],
+                        BtechChannel channel [[maybe_unused]],
+                        const char *format [[maybe_unused]], ...) {}
 
-int mech_team(const Mech *mech) {
-  (void)mech;
-  return 0;
-}
+int mech_team(const Mech *mech [[maybe_unused]]) { return 0; }
 
-int battle_map_unit_count(const BattleMap *map) {
-  (void)map;
-  return 0;
-}
+int battle_map_unit_count(const BattleMap *map [[maybe_unused]]) { return 0; }
 
-DbRef battle_map_unit_dbref(const BattleMap *map, int index) {
-  (void)map;
-  (void)index;
+DbRef battle_map_unit_dbref(const BattleMap *map [[maybe_unused]],
+                            int index [[maybe_unused]]) {
   return NOTHING;
 }
 

@@ -228,7 +228,7 @@ enum ContentsStyle : int {
 };
 
 static void look_contents(const LookContext *look, const char *contents_name,
-                          int style) {
+                          int style [[maybe_unused]]) {
   EvaluationContext *evaluation = look->evaluation;
   DbRef player = look->viewer;
   DbRef loc = look->location;

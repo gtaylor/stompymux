@@ -14,7 +14,7 @@
 #include "registry_api.h"
 #include <stdio.h>
 
-void ai_init(Autopilot *a, Mech *m) {
+void ai_init(Autopilot *a, Mech *m [[maybe_unused]]) {
 
   /* XXX Analyze our unit type ; set basic combat tactic */
   a->auto_cmode = 1; /* CHARGE! */

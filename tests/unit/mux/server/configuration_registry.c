@@ -6,8 +6,7 @@
 #include "mux/server/configuration_registry.h"
 #include "mux/support/checked_storage.h"
 
-static int fixture_interpreter(const ConfigurationCall *call) {
-  (void)call;
+static int fixture_interpreter(const ConfigurationCall *call [[maybe_unused]]) {
   return 0;
 }
 

@@ -291,8 +291,8 @@ static int lua_mux_state_tostring(lua_State *state) {
   return 1;
 }
 
-void lua_mux_install_state_bindings(lua_State *state, LuaMuxPackage *package) {
-  (void)package;
+void lua_mux_install_state_bindings(lua_State *state,
+                                    LuaMuxPackage *package [[maybe_unused]]) {
   luaL_getmetatable(state, LUA_MUX_OBJECT_METATABLE);
   lua_pushcfunction(state, lua_mux_object_state);
   lua_setfield(state, -2, "state");

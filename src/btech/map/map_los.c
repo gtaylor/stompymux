@@ -427,8 +427,8 @@ static void trace_slitelos(const SliteTraceRequest *request) {
   }
 }
 
-static void litemark_callback(BattleMap *map, int x, int y, void *context) {
-  (void)map;
+static void litemark_callback(BattleMap *map [[maybe_unused]], int x, int y,
+                              void *context) {
   set_sliteinfo(context, x, y, MAPLOSHEX_LIT);
 }
 

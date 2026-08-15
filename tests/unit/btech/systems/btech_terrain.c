@@ -22,48 +22,39 @@ static char *encoded_value(char values[256], int index) {
   return checked_storage_at(values, 256, sizeof(*values), (size_t)index);
 }
 
-int map_coding_get_index(MapCodingRegistry *registry, char terrain,
-                         char elevation) {
-  (void)registry;
+int map_coding_get_index(MapCodingRegistry *registry [[maybe_unused]],
+                         char terrain, char elevation) {
   int encoding = next_encoding++;
   *encoded_value(encoded_terrain, encoding) = terrain;
   *encoded_value(encoded_elevation, encoding) = elevation;
   return encoding;
 }
 
-char map_coding_get_elevation(const MapCodingRegistry *registry, int index) {
-  (void)registry;
+char map_coding_get_elevation(const MapCodingRegistry *registry
+                              [[maybe_unused]],
+                              int index) {
   return *encoded_value(encoded_elevation, index);
 }
 
-char map_coding_get_terrain(const MapCodingRegistry *registry, int index) {
-  (void)registry;
+char map_coding_get_terrain(const MapCodingRegistry *registry [[maybe_unused]],
+                            int index) {
   return *encoded_value(encoded_terrain, index);
 }
 
 void update_mechs_terrain(const MapTerrainChange *change) {
-  BattleMap *map = change->map;
-  const int x = change->position.x;
-  const int y = change->position.y;
-  const int terrain = change->terrain;
-  (void)map;
-  (void)x;
-  (void)y;
-  (void)terrain;
+  BattleMap *map [[maybe_unused]] = change->map;
+  const int x [[maybe_unused]] = change->position.x;
+  const int y [[maybe_unused]] = change->position.y;
+  const int terrain [[maybe_unused]] = change->terrain;
   terrain_updates++;
 }
 
-int map_underlying_terrain(BattleMap *map, int x, int y) {
-  (void)map;
-  (void)x;
-  (void)y;
+int map_underlying_terrain(BattleMap *map [[maybe_unused]],
+                           int x [[maybe_unused]], int y [[maybe_unused]]) {
   return HEAVY_FOREST;
 }
 
-int mech_underlying_terrain(Mech *mech) {
-  (void)mech;
-  return ROUGH;
-}
+int mech_underlying_terrain(Mech *mech [[maybe_unused]]) { return ROUGH; }
 
 BtechContext *mech_context(const Mech *mech) { return mech->xcode.context; }
 DbRef mech_map_dbref(const Mech *mech) { return mech->mapindex; }

@@ -182,7 +182,8 @@ static void signal_shutdown(uv_signal_t *handle, int signo) {
   }
 }
 
-static void signal_segv(int signo, siginfo_t *siginfo, void *ucontext) {
+static void signal_segv(int signo [[maybe_unused]], siginfo_t *siginfo,
+                        void *ucontext [[maybe_unused]]) {
   SignalHandlers *handlers = active_signal_handlers;
 
   if (handlers == nullptr)
@@ -211,7 +212,8 @@ static void signal_segv(int signo, siginfo_t *siginfo, void *ucontext) {
   report(handlers->command);
 }
 
-static void signal_bus(int signo, siginfo_t *siginfo, void *ucontext) {
+static void signal_bus(int signo [[maybe_unused]], siginfo_t *siginfo,
+                       void *ucontext [[maybe_unused]]) {
   SignalHandlers *handlers = active_signal_handlers;
 
   if (handlers == nullptr)

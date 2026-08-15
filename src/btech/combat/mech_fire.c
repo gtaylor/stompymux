@@ -157,7 +157,8 @@ void vehicle_fire_extinguish_event(MuxEvent *e) {
   mech_los_broadcast(obj_mech, "is no longer engulfed in flames.");
 }
 
-void vehicle_fire_extinguish(DbRef player, Mech *mech, char *buffer) {
+void vehicle_fire_extinguish(DbRef player, Mech *mech,
+                             char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALS))
     return;
 

@@ -18,11 +18,9 @@ static int changed_count;
 
 int econ_find_items(BtechContext *context, DbRef store, int part, int brand);
 
-int econ_find_items(BtechContext *context, DbRef store, int part, int brand) {
-  (void)context;
-  (void)store;
-  (void)part;
-  (void)brand;
+int econ_find_items(BtechContext *context [[maybe_unused]],
+                    DbRef store [[maybe_unused]], int part [[maybe_unused]],
+                    int brand [[maybe_unused]]) {
   return inventory_count;
 }
 

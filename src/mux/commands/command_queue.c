@@ -221,7 +221,7 @@ static void cque_enqueue(CommandQueue *queue, DbRef player, BQUE *cmd) {
   }
 }
 
-static void wakeup_wait_que(MuxTimer *timer, void *arg) {
+static void wakeup_wait_que(MuxTimer *timer [[maybe_unused]], void *arg) {
   BQUE *pending = (BQUE *)arg;
   CommandQueue *queue = pending->queue;
   BQUE *point;
@@ -246,8 +246,8 @@ static void wakeup_wait_que(MuxTimer *timer, void *arg) {
  * * que_want: Do we want this queue entry?
  */
 
-static bool que_want(GameDatabase *database, BQUE *entry, DbRef ptarg,
-                     DbRef otarg) {
+static bool que_want(GameDatabase *database [[maybe_unused]], BQUE *entry,
+                     DbRef ptarg, DbRef otarg) {
   if ((ptarg != NOTHING) && (ptarg != entry->player))
     return false;
   if ((otarg != NOTHING) && (otarg != entry->player))

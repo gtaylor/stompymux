@@ -659,7 +659,9 @@ mech_sensor_visibility_update(const MechSensorVisibilityRequest *request) {
 
 static void sensor_update_los_pair(BattleMap *map, int observer_index,
                                    int target_index, Mech *observer,
-                                   Mech *target, bool always_update_sensors) {
+                                   Mech *target,
+                                   bool always_update_sensors
+                                   [[maybe_unused]]) {
   float range = mech_range_to(observer, target);
 
   if (mech_electronic_warfare_is_enabled(observer) && range < ECM_RANGE)
@@ -705,13 +707,11 @@ static void sensor_update_los_pair(BattleMap *map, int observer_index,
       .previous_visibility = was_visible,
   };
 
-  (void)always_update_sensors;
   flags = mech_sensor_visibility_update(&visibility_request);
   battle_map_los_flags_set(map, observer_index, target_index, flags);
 }
 
-void mech_sensor_map_los_update(DbRef obj, BattleMap *map) {
-  (void)obj;
+void mech_sensor_map_los_update(DbRef obj [[maybe_unused]], BattleMap *map) {
   int unit_count = battle_map_unit_count(map);
 
   for (int i = 0; i < unit_count; i++) {

@@ -135,7 +135,8 @@ char get_weapon_ammo_mode_letter_model_mode(int model, unsigned int mode) {
   return ' ';
 }
 
-char get_weapon_fire_mode_letter_model_mode(int model, int mode) {
+char get_weapon_fire_mode_letter_model_mode(int model [[maybe_unused]],
+                                            int mode) {
   if (!(mode & FIRE_MODES))
     return ' ';
   if (mode & HOTLOAD_MODE)

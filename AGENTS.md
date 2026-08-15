@@ -24,6 +24,9 @@
 - Obey the C code naming conventions below.
 - Avoid source files longer than 800 lines long.
 - Avoid transitive includes and clean them up where possible.
+- Mark intentionally unused declarations with `[[maybe_unused]]`; either valid
+  C23 placement is accepted, but keep placement consistent within a declaration
+  list.
 - Timestamps stored in SQLite should always be in UTC.
 
 ## C code naming conventions

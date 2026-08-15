@@ -108,8 +108,8 @@ bool parse_coord(BattleMap *map, int dir, char *data, int *x, int *y) {
   return true;
 }
 
-static void add_entrances(DbRef loc, BattleMap *map, char *data,
-                          MapLinkUpdateStats *stats) {
+static void add_entrances(DbRef loc [[maybe_unused]], BattleMap *map,
+                          char *data, MapLinkUpdateStats *stats) {
   char *buf;
   char *args[4];
   int x;
@@ -234,7 +234,7 @@ void recursively_updatelinks(BtechContext *context, DbRef from, DbRef loc) {
       .context = context, .source = from, .location = loc});
 }
 
-void map_updatelinks(DbRef player, void *data, char *buffer) {
+void map_updatelinks(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   BattleMap *map = data;
   MapLinkUpdateStats stats = {0};
   DbRef ourloc;

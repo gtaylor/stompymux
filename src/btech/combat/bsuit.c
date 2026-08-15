@@ -387,7 +387,8 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
   bsuit_recycle_start(mech, RECYCLE_ATTACKLEG);
 }
 
-void bsuit_pack_jettison(DbRef player, void *data, char *buffer) {
+void bsuit_pack_jettison(DbRef player, void *data,
+                         char *buffer [[maybe_unused]]) {
   Mech *mech = data;
   int wc_jettisoned = 0;
   int wc_suits = 0;

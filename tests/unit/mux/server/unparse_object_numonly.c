@@ -10,32 +10,24 @@
 #include "mux/server/platform.h"
 #include "mux/support/owned_text.h"
 
-const char *game_object_name(GameDatabase *database, DbRef thing) {
-  (void)database;
-  (void)thing;
+const char *game_object_name(GameDatabase *database [[maybe_unused]],
+                             DbRef thing [[maybe_unused]]) {
   return "Valid";
 }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
-void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
-                    const char *msg, int key) {
-  (void)evaluation;
-  (void)target;
-  (void)sender;
-  (void)msg;
-  (void)key;
-}
+void notify_checked(EvaluationContext *evaluation [[maybe_unused]],
+                    DbRef target [[maybe_unused]],
+                    DbRef sender [[maybe_unused]],
+                    const char *msg [[maybe_unused]],
+                    int key [[maybe_unused]]) {}
 
-void btech_special_object_flag_changed(BtechContext *context,
-                                       BtechObjectId player, // NOLINT
-                                       BtechObjectId object, bool from,
-                                       bool to) {
-  (void)context;
-  (void)player;
-  (void)object;
-  (void)from;
-  (void)to;
-}
+void btech_special_object_flag_changed(BtechContext *context [[maybe_unused]],
+                                       BtechObjectId player
+                                       [[maybe_unused]], // NOLINT
+                                       BtechObjectId object [[maybe_unused]],
+                                       bool from [[maybe_unused]],
+                                       bool to [[maybe_unused]]) {}
 
 int main(void) {
   GameObject objects[3] = {};
@@ -55,11 +47,11 @@ int main(void) {
   OwnedText hidden_details = unparse_object(&database, nullptr, 0, 0);
   ObjectFlagSet flags = {};
   object_flag_set_set(&flags, OBJECT_FLAG_DARK, true);
-  OwnedText decoded = decode_flags(
-      &(DecodeFlagsRequest){.database = &database,
-                            .player = GOD,
-                            .object_type = OBJECT_TYPE_THING,
-                            .flags = &flags});
+  OwnedText decoded =
+      decode_flags(&(DecodeFlagsRequest){.database = &database,
+                                         .player = GOD,
+                                         .object_type = OBJECT_TYPE_THING,
+                                         .flags = &flags});
   int result = 0;
 
   if (nothing.owned == nullptr || strcmp(nothing.text, "*NOTHING*") != 0)

@@ -30,7 +30,8 @@
 #include "mux/server/platform.h"
 #include "section_types.h"
 
-void mech_cargo_infantry_critical_apply(Mech *obj_mech, int w_loc) {
+void mech_cargo_infantry_critical_apply(Mech *obj_mech,
+                                        int w_loc [[maybe_unused]]) {
   /*
    * If there's infantry in the unit, the infantry takes
    * damage as if the weapon that caused the crit hit them.

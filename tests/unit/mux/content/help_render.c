@@ -12,10 +12,9 @@
 static const HelpArticle *test_articles;
 static size_t test_article_count;
 
-char *help_index_read_body(const HelpIndex *index, const HelpArticle *article,
+char *help_index_read_body(const HelpIndex *index [[maybe_unused]],
+                           const HelpArticle *article [[maybe_unused]],
                            size_t *out_length) {
-  (void)index;
-  (void)article;
   char *body = malloc(1);
 
   body[0] = '\0';
@@ -24,26 +23,22 @@ char *help_index_read_body(const HelpIndex *index, const HelpArticle *article,
   return body;
 }
 
-size_t help_index_article_count(const HelpIndex *index) {
-  (void)index;
+size_t help_index_article_count(const HelpIndex *index [[maybe_unused]]) {
   return test_article_count;
 }
 
-const HelpArticle *help_index_article_at(const HelpIndex *index,
+const HelpArticle *help_index_article_at(const HelpIndex *index
+                                         [[maybe_unused]],
                                          size_t article_index) {
-  (void)index;
   return checked_storage_at_const(test_articles, test_article_count,
                                   sizeof(*test_articles), article_index);
 }
 
-void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
-                    const char *message, int key) {
-  (void)evaluation;
-  (void)target;
-  (void)sender;
-  (void)message;
-  (void)key;
-}
+void notify_checked(EvaluationContext *evaluation [[maybe_unused]],
+                    DbRef target [[maybe_unused]],
+                    DbRef sender [[maybe_unused]],
+                    const char *message [[maybe_unused]],
+                    int key [[maybe_unused]]) {}
 
 static int help_render_test_expect(const char *markdown, const char *expected) {
   HelpTextBuffer buffer;

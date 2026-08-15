@@ -769,7 +769,7 @@ int mech_weight_sub(DbRef player, Mech *mech, int interactive) {
   return 1;
 }
 
-void mech_weight(DbRef player, void *data, char *buffer) {
+void mech_weight(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   Mech *mech = (Mech *)data;
 
   mech_weight_sub(player, mech, 1);

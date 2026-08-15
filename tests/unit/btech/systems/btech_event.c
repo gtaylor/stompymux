@@ -6,8 +6,7 @@
 
 static int callback_count;
 
-static void event_callback(MuxEvent *event) {
-  (void)event;
+static void event_callback(MuxEvent *event [[maybe_unused]]) {
   callback_count++;
 }
 

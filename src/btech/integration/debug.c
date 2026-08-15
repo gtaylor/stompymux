@@ -62,7 +62,7 @@ void debug_list(DbRef player, void *data, char *buffer) {
     dump_maps(debug->context, player);
 }
 
-void debug_savedb(DbRef player, void *data, char *buffer) {
+void debug_savedb(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   BtechSpecialObject *debug = data;
 
   if (gamedb_dump(debug->context->persistence, DUMP_NORMAL) < 0)

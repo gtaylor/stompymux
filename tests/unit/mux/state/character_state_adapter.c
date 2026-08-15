@@ -85,8 +85,8 @@ bool is_good_obj(GameDatabase *database, DbRef object) {
          game_object_type(database, object) != OBJECT_TYPE_GARBAGE;
 }
 
-int char_getvaluecode(BtechContext *context, const char *name) {
-  (void)context;
+int char_getvaluecode(BtechContext *context [[maybe_unused]],
+                      const char *name) {
   for (int code = 0; code < NUM_CHARVALUES; code++)
     if (character_value_definition(code)->name &&
         strcasecmp(character_value_definition(code)->name, name) == 0)

@@ -17,7 +17,8 @@
 
 #include <stdlib.h>
 
-static Mech *matched_mech(BtechScriptCall *call, BtechScriptValueKind kind) {
+static Mech *matched_mech(BtechScriptCall *call,
+                          BtechScriptValueKind kind [[maybe_unused]]) {
   const DbRef OBJECT =
       match_thing(&call->evaluation->command->match, call->player,
                   script_function_argument(call->arguments.values,
@@ -32,7 +33,6 @@ static Mech *matched_mech(BtechScriptCall *call, BtechScriptValueKind kind) {
   Mech *mech = btech_context_find_object(call->evaluation->btech, OBJECT);
   if (!mech)
     safe_tprintf_str(call->output.buffer, &call->output.cursor, "#-1");
-  (void)kind;
   return mech;
 }
 

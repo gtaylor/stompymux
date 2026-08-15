@@ -222,8 +222,8 @@ void object_password_set(GameDatabase *database, DbRef thing, const char *s) {
   player_account_password_hash_set(database, thing, s);
 }
 
-const Attribute *attribute_by_name(GameDatabase *database, const char *s) {
-  (void)database;
+const Attribute *attribute_by_name(GameDatabase *database [[maybe_unused]],
+                                   const char *s) {
   if (s == nullptr || *s == '\0')
     return nullptr;
   for (size_t index = 0; index < native_attribute_count(); index++) {
@@ -235,8 +235,8 @@ const Attribute *attribute_by_name(GameDatabase *database, const char *s) {
   return nullptr;
 }
 
-const Attribute *attribute_by_number(GameDatabase *database, int anum) {
-  (void)database;
+const Attribute *attribute_by_number(GameDatabase *database [[maybe_unused]],
+                                     int anum) {
   for (size_t index = 0; index < native_attribute_count(); index++) {
     const Attribute *attribute = native_attribute_at(index);
 
@@ -291,8 +291,7 @@ void attribute_add_raw(GameDatabase *database, DbRef thing, int atr,
 }
 
 void attribute_add(GameDatabase *database, DbRef thing, int atr,
-                   const char *buff, long flags) {
-  (void)flags;
+                   const char *buff, long flags [[maybe_unused]]) {
   attribute_add_raw(database, thing, atr, buff);
 }
 

@@ -42,7 +42,8 @@ static const char *const MY_COLOR_STRINGS[] = {"", "[fg=green bold]",
                                                "[fg=yellow bold]", "[fg=red]"};
 static const char *const MY_MESSAGE_STRINGS[] = {
     "ERROR[reset]", "low.[reset]", "critical![reset]", "BREACHED![reset]"};
-static inline const char *my_serious_color_str(Mech *mech, int index) {
+static inline const char *my_serious_color_str(Mech *mech [[maybe_unused]],
+                                               int index) {
   const char *const *value = (const char *const *)checked_storage_at_const(
       (const void *)MY_COLOR_STRINGS,
       sizeof(MY_COLOR_STRINGS) / sizeof(*MY_COLOR_STRINGS),
@@ -50,7 +51,8 @@ static inline const char *my_serious_color_str(Mech *mech, int index) {
   return *value;
 }
 
-static inline const char *my_serious_str(Mech *mech, int index) {
+static inline const char *my_serious_str(Mech *mech [[maybe_unused]],
+                                         int index) {
   const char *const *value = (const char *const *)checked_storage_at_const(
       (const void *)MY_MESSAGE_STRINGS,
       sizeof(MY_MESSAGE_STRINGS) / sizeof(*MY_MESSAGE_STRINGS),

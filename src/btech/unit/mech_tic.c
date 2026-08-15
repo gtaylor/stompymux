@@ -449,7 +449,7 @@ static void heat_cutoff_event(MuxEvent *e) {
   }
 }
 
-void heat_cutoff(DbRef player, void *data, char *buffer) {
+void heat_cutoff(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   Mech *mech = (Mech *)data;
 
   if (mech->xcode.context->configuration->btech_heatcutoff < 1) {

@@ -30,8 +30,8 @@
 
 struct sockaddr_storage;
 
-int site_data_check(struct sockaddr_storage *saddr, int address_length,
-                    SiteData *site_list) {
+int site_data_check(struct sockaddr_storage *saddr,
+                    int address_length [[maybe_unused]], SiteData *site_list) {
   SiteData *this;
   for (this = site_list; this; this = this->next) {
     if ((((struct sockaddr_in *)saddr)->sin_addr.s_addr & this->mask.s_addr) ==

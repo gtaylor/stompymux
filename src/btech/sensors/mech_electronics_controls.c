@@ -56,7 +56,7 @@ mech_electronic_mode_toggle(const MechElectronicModeRequest *request) {
                   : request->offline_message);
 }
 
-void mech_ecm(DbRef player, Mech *mech, char *buffer) {
+void mech_ecm(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
   if (mech_condition_summary(mech).ecm_destroyed) {
@@ -75,7 +75,7 @@ void mech_ecm(DbRef player, Mech *mech, char *buffer) {
   mark_for_los_update(mech);
 }
 
-void mech_eccm(DbRef player, Mech *mech, char *buffer) {
+void mech_eccm(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
   if (mech_condition_summary(mech).ecm_destroyed) {
@@ -95,7 +95,7 @@ void mech_eccm(DbRef player, Mech *mech, char *buffer) {
   mark_for_los_update(mech);
 }
 
-void mech_perecm(DbRef player, Mech *mech, char *buffer) {
+void mech_perecm(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
   mech_electronic_mode_toggle(&(MechElectronicModeRequest){
@@ -111,7 +111,7 @@ void mech_perecm(DbRef player, Mech *mech, char *buffer) {
   mark_for_los_update(mech);
 }
 
-void mech_pereccm(DbRef player, Mech *mech, char *buffer) {
+void mech_pereccm(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
   mech_electronic_mode_toggle(&(MechElectronicModeRequest){
@@ -128,7 +128,7 @@ void mech_pereccm(DbRef player, Mech *mech, char *buffer) {
   mark_for_los_update(mech);
 }
 
-void mech_angelecm(DbRef player, Mech *mech, char *buffer) {
+void mech_angelecm(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
   if (mech_condition_summary(mech).angel_ecm_destroyed) {
@@ -148,7 +148,7 @@ void mech_angelecm(DbRef player, Mech *mech, char *buffer) {
   mark_for_los_update(mech);
 }
 
-void mech_angeleccm(DbRef player, Mech *mech, char *buffer) {
+void mech_angeleccm(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
   if (mech_condition_summary(mech).angel_ecm_destroyed) {
@@ -199,7 +199,7 @@ static void mech_searchlight_change_event(MuxEvent *e) {
   mark_for_los_update(mech);
 }
 
-void mech_slite(DbRef player, Mech *mech, char *buffer) {
+void mech_slite(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
 
@@ -261,7 +261,8 @@ static void mech_stealth_armor_change_event(MuxEvent *e) {
   }
 }
 
-void mech_stealtharmor(DbRef player, Mech *mech, char *buffer) {
+void mech_stealtharmor(DbRef player, Mech *mech,
+                       char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
 
@@ -324,7 +325,7 @@ static void mech_null_signature_change_event(MuxEvent *e) {
   }
 }
 
-void mech_nullsig(DbRef player, Mech *mech, char *buffer) {
+void mech_nullsig(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
 
@@ -364,7 +365,7 @@ void mech_nullsig(DbRef player, Mech *mech, char *buffer) {
   }
 }
 
-void show_narc_pods(DbRef player, Mech *mech, char *buffer) {
+void show_narc_pods(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   char location[50];
   int i;
 
@@ -682,7 +683,8 @@ static void mech_inarc_pods_tank_remove_event(MuxEvent *e) {
   }
 }
 
-void remove_inarc_pods_tank(DbRef player, Mech *mech, char *buffer) {
+void remove_inarc_pods_tank(DbRef player, Mech *mech,
+                            char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALSO))
     return;
 

@@ -300,9 +300,6 @@ void btech_special_write_context_init(BtechSpecialWriteContext *fault) {
 
 static bool btech_special_should_fail(BtechSpecialWriteContext *fault,
                                       const char *sql, const char *phase) {
-  (void)fault;
-  (void)sql;
-  (void)phase;
   return false;
 }
 #endif

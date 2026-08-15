@@ -63,7 +63,8 @@ void newfreemechrep(DbRef key, void **data,
 
 /* With cap R means restricted command */
 
-void mechrep_rresetcrits(DbRef player, void *data, char *buffer) {
+void mechrep_rresetcrits(DbRef player, void *data,
+                         char *buffer [[maybe_unused]]) {
   int i;
 
   RepairFacilityCommandContext repair_command;

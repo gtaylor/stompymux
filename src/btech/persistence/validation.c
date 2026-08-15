@@ -22,15 +22,13 @@ struct BtechSpecialObjectCounts {
 /* Count normal BTech instances, excluding DEBUG and other non-persisted types.
  */
 static bool btech_special_count_objects(const RedBlackTreeVisitCall *call) {
-  void *key = call->key;
+  void *key [[maybe_unused]] = call->key;
   void *data = call->data;
-  int depth = call->depth;
+  int depth [[maybe_unused]] = call->depth;
   void *argument = call->context;
   BtechSpecialObjectCounts *counts = argument;
   BtechSpecialObject *xcode = data;
 
-  (void)key;
-  (void)depth;
   switch (xcode->type) {
   case GTYPE_MAP:
     counts->maps++;

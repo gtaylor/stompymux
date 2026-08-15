@@ -173,7 +173,7 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
   cool_menu_entry_very_simple(menu, buf2);
 }
 
-void tech_repairs(DbRef player, Mech *mech, char *buffer) {
+void tech_repairs(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   char message_buffer[LBUF_SIZE];
   int i;
   CoolMenu *c = nullptr;

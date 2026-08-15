@@ -415,52 +415,33 @@ int reseal_econ(const RepairOperationCall *call) {
 
 /* Replace success is just that ; success, therefore the fake
    functions here */
-int replacep_succ(const RepairOperationCall *call) {
-  (void)call;
+int replacep_succ(const RepairOperationCall *call [[maybe_unused]]) {
   return 0;
 }
-int replaceg_succ(const RepairOperationCall *call) {
-  (void)call;
+int replaceg_succ(const RepairOperationCall *call [[maybe_unused]]) {
   return 0;
 }
-int reload_succ(const RepairOperationCall *call) {
-  (void)call;
+int reload_succ(const RepairOperationCall *call [[maybe_unused]]) { return 0; }
+int fixinternal_succ(const RepairOperationCall *call [[maybe_unused]]) {
   return 0;
 }
-int fixinternal_succ(const RepairOperationCall *call) {
-  (void)call;
+int fixarmor_succ(const RepairOperationCall *call [[maybe_unused]]) {
   return 0;
 }
-int fixarmor_succ(const RepairOperationCall *call) {
-  (void)call;
+int reattach_succ(const RepairOperationCall *call [[maybe_unused]]) {
   return 0;
 }
-int reattach_succ(const RepairOperationCall *call) {
-  (void)call;
-  return 0;
-}
-int reseal_succ(const RepairOperationCall *call) {
-  (void)call;
-  return 0;
-}
-int replacesuit_succ(const RepairOperationCall *call) {
-  (void)call;
+int reseal_succ(const RepairOperationCall *call [[maybe_unused]]) { return 0; }
+int replacesuit_succ(const RepairOperationCall *call [[maybe_unused]]) {
   return 0;
 }
 
 /* Repairs _Should_ have some averse effects */
-int repairg_succ(const RepairOperationCall *call) {
-  (void)call;
+int repairg_succ(const RepairOperationCall *call [[maybe_unused]]) { return 0; }
+int repairenhcrit_succ(const RepairOperationCall *call [[maybe_unused]]) {
   return 0;
 }
-int repairenhcrit_succ(const RepairOperationCall *call) {
-  (void)call;
-  return 0;
-}
-int repairp_succ(const RepairOperationCall *call) {
-  (void)call;
-  return 0;
-}
+int repairp_succ(const RepairOperationCall *call [[maybe_unused]]) { return 0; }
 
 /* -------------------------------------------- Failures */
 

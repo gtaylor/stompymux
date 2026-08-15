@@ -7,8 +7,8 @@
 #include "btechstats_internal.h"
 #include "character_value_settings.h"
 
-int char_getvaluecode(BtechContext *context, const char *name) {
-  (void)context;
+int char_getvaluecode(BtechContext *context [[maybe_unused]],
+                      const char *name) {
   for (int code = 0; code < NUM_CHARVALUES; code++) {
     const CharacterValue *definition = character_value_definition(code);
     if (strcmp(definition->name, name) == 0)

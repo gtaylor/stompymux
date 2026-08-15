@@ -142,7 +142,7 @@ int find_main_weapon(Mech *mech, int (*callback)(Mech *, int, int, int, int)) {
   return 0;
 }
 
-void mech_auto_turret(DbRef player, Mech *mech, char *buffer) {
+void mech_auto_turret(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALSO))
     return;
 

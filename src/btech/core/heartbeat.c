@@ -60,7 +60,7 @@ static bool heartbeat_dispatch(const RedBlackTreeVisitCall *call) {
   return true;
 }
 
-static void heartbeat_run(MuxTimer *timer, void *arg) {
+static void heartbeat_run(MuxTimer *timer [[maybe_unused]], void *arg) {
   BtechContext *context = arg;
 
   red_black_tree_walk(context->special_objects, WALK_INORDER,

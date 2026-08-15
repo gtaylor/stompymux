@@ -16,17 +16,18 @@ static BtechContext *test_context;
 static int communications_clear_count;
 static int template_parse_count;
 
-BtechContext *mech_context(const Mech *mech) {
-  (void)mech;
+BtechContext *mech_context(const Mech *mech [[maybe_unused]]) {
   return test_context;
 }
 
-const char *btech_context_mech_template_path(const BtechContext *context) {
+const char *btech_context_mech_template_path(const BtechContext *context
+                                             [[maybe_unused]]) {
   assert(context == test_context);
   return "test-templates";
 }
 
-char *mech_template_resolve_path(BtechContext *context, const char *mech_path,
+char *mech_template_resolve_path(BtechContext *context [[maybe_unused]],
+                                 const char *mech_path [[maybe_unused]],
                                  const char *id) {
   static char modern_path[] = "test-templates/modern";
   static char legacy_path[] = "test-templates/legacy";
@@ -40,9 +41,8 @@ char *mech_template_resolve_path(BtechContext *context, const char *mech_path,
   return nullptr;
 }
 
-int load_template(DbRef player, Mech *mech, char *filename) {
-  (void)player;
-  (void)mech;
+int load_template(DbRef player [[maybe_unused]], Mech *mech [[maybe_unused]],
+                  char *filename) {
   template_parse_count++;
   return strcmp(filename, "test-templates/modern") == 0 ? 0 : -1;
 }
@@ -52,34 +52,27 @@ void mech_template_state_reset(Mech *mech) {
   memset(&mech->ud, 0, sizeof(mech->ud));
 }
 
-void mech_communications_clear(Mech *mech) {
-  (void)mech;
+void mech_communications_clear(Mech *mech [[maybe_unused]]) {
   communications_clear_count++;
 }
 
-void mech_spotter_dbref_set(Mech *mech, DbRef spotter) {
-  (void)mech;
-  (void)spotter;
-}
+void mech_spotter_dbref_set(Mech *mech [[maybe_unused]],
+                            DbRef spotter [[maybe_unused]]) {}
 
 void mech_targeting_target_clear(Mech *mech) { (void)mech; }
 
 void mech_charge_reset(Mech *mech) { (void)mech; }
 
-void mech_dfa_target_dbref_set(Mech *mech, DbRef target) {
-  (void)mech;
-  (void)target;
-}
+void mech_dfa_target_dbref_set(Mech *mech [[maybe_unused]],
+                               DbRef target [[maybe_unused]]) {}
 
-void mech_pilot_dbref_set(Mech *mech, DbRef pilot) {
-  (void)mech;
-  (void)pilot;
-}
+void mech_pilot_dbref_set(Mech *mech [[maybe_unused]],
+                          DbRef pilot [[maybe_unused]]) {}
 
 void mech_targeting_aim_reset(Mech *mech) { (void)mech; }
 
-void mech_event_cancel(Mech *mech, MechEventType type) {
-  (void)mech;
+void mech_event_cancel(Mech *mech [[maybe_unused]],
+                       MechEventType type [[maybe_unused]]) {
   assert(type == EVENT_VEHICLEBURN);
 }
 

@@ -83,35 +83,20 @@ static void turret_targeting_scope_leave(TurretTargetingScope *scope,
   btech_context_combat_arcs_override_set(tur->xcode.context, 0);
 }
 
-void turret_addtic(DbRef player, void *data, const char *buffer) {
-  (void)player;
-  (void)data;
-  (void)buffer;
-}
+void turret_addtic(DbRef player [[maybe_unused]], void *data [[maybe_unused]],
+                   const char *buffer [[maybe_unused]]) {}
 
-void turret_deltic(DbRef player, void *data, const char *buffer) {
-  (void)player;
-  (void)data;
-  (void)buffer;
-}
+void turret_deltic(DbRef player [[maybe_unused]], void *data [[maybe_unused]],
+                   const char *buffer [[maybe_unused]]) {}
 
-void turret_listtic(DbRef player, void *data, const char *buffer) {
-  (void)player;
-  (void)data;
-  (void)buffer;
-}
+void turret_listtic(DbRef player [[maybe_unused]], void *data [[maybe_unused]],
+                    const char *buffer [[maybe_unused]]) {}
 
-void turret_cleartic(DbRef player, void *data, const char *buffer) {
-  (void)player;
-  (void)data;
-  (void)buffer;
-}
+void turret_cleartic(DbRef player [[maybe_unused]], void *data [[maybe_unused]],
+                     const char *buffer [[maybe_unused]]) {}
 
-void turret_firetic(DbRef player, void *data, const char *buffer) {
-  (void)player;
-  (void)data;
-  (void)buffer;
-}
+void turret_firetic(DbRef player [[maybe_unused]], void *data [[maybe_unused]],
+                    const char *buffer [[maybe_unused]]) {}
 
 void turret_bearing(DbRef player, void *data, char *buffer) {
   Turret *tur = data;
@@ -303,7 +288,8 @@ void turret_lifecycle_update(DbRef key, void **data,
   }
 }
 
-void turret_initialize(DbRef player, void *data, char *buffer) {
+void turret_initialize(DbRef player, void *data,
+                       char *buffer [[maybe_unused]]) {
   Turret *tur = data;
   if (turret_parent_mech(player, tur, false) == nullptr)
     return;
@@ -333,7 +319,8 @@ void turret_initialize(DbRef player, void *data, char *buffer) {
   tur->gunner = player;
 }
 
-void turret_deinitialize(DbRef player, void *data, char *buffer) {
+void turret_deinitialize(DbRef player, void *data,
+                         char *buffer [[maybe_unused]]) {
   Turret *tur = data;
   if (turret_parent_mech(player, tur, false) == nullptr)
     return;

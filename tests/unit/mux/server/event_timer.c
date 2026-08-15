@@ -3,13 +3,14 @@
 
 static int callback_count;
 
-static void repeating_callback(MuxTimer *timer, void *data) {
+static void repeating_callback(MuxTimer *timer, void *data [[maybe_unused]]) {
   callback_count++;
   if (callback_count == 3)
     mux_timer_destroy(timer);
 }
 
-static void cancelled_callback(MuxTimer *timer, void *data) {
+static void cancelled_callback(MuxTimer *timer [[maybe_unused]],
+                               void *data [[maybe_unused]]) {
   callback_count++;
 }
 

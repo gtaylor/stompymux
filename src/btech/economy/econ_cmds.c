@@ -224,7 +224,7 @@ void economy_manifest_repair(const EconomyRepairRequest *request) {
                 "Items in new: %d. Unique items in new: %d.", items, kinds);
 }
 
-void mech_rfixstuff(DbRef player, void *data, char *buffer) {
+void mech_rfixstuff(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   BtechSpecialObject *object = data;
   BtechContext *context = object->context;
 
@@ -685,7 +685,7 @@ void mech_unloadcargo(DbRef player, void *data, char *buffer) {
   mech_speed_correct(mech);
 }
 
-void mech_rresetstuff(DbRef player, void *data, char *buffer) {
+void mech_rresetstuff(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   BtechSpecialObject *object = data;
   BtechContext *context = object->context;
 

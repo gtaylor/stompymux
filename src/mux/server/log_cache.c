@@ -58,7 +58,7 @@ static bool log_cache_close(LogCache *cache, struct LogfileT *log,
   return true;
 }
 
-static void logcache_expire(MuxTimer *timer, void *arg) {
+static void logcache_expire(MuxTimer *timer [[maybe_unused]], void *arg) {
   struct LogfileT *log = arg;
 
   log_cache_close(log->cache, log, true);
