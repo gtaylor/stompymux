@@ -130,7 +130,7 @@ static const char *help_line_add(const HelpLineRequest *request) {
 
   *d = c;
   const char *remainder = checked_string_suffix(msg, break_offset);
-  return *remainder ? remainder : NULL;
+  return *remainder ? remainder : nullptr;
 }
 
 static int help_text_length(const char *text) {
@@ -203,11 +203,11 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
   char *arg = request->argument;
   int i;
   int j;
-  Mech *mech = NULL;
+  Mech *mech = nullptr;
   HelpSection sections[100];
   int count = 0;
   int csho = 0;
-  CoolMenu *c = NULL;
+  CoolMenu *c = nullptr;
   char buf[LBUF_SIZE];
   int dc;
 
@@ -239,7 +239,7 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
     help_section(sections, 0)->length = i;
     count = 1;
   }
-  cool_menu_add_with_flags(&c, NULL, CM_ONE | CM_LINE);
+  cool_menu_add_with_flags(&c, nullptr, CM_ONE | CM_LINE);
   if (!arg || !*arg) {
     for (i = 0; i < count; i++) {
       if (count > 1) {
@@ -277,7 +277,7 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
       cool_menu_add_text(
           &c, "There are no commands you are authorized to use here.");
     } else {
-      cool_menu_add_with_flags(&c, NULL, CM_ONE | CM_LINE);
+      cool_menu_add_with_flags(&c, nullptr, CM_ONE | CM_LINE);
       if (count > 1)
         cool_menu_add_text(&c,
                            "Additional info available with 'HELP SUBTOPIC'");
@@ -346,7 +346,7 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
       }
     }
   }
-  cool_menu_add_with_flags(&c, NULL, CM_ONE | CM_LINE);
+  cool_menu_add_with_flags(&c, nullptr, CM_ONE | CM_LINE);
   show_cool_menu(btech_context_evaluation(context), PLAYER, c);
   kill_cool_menu(c);
 }

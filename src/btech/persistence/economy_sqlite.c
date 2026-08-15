@@ -34,8 +34,8 @@ static int btech_sqlite_exec(sqlite3 *sqlite, const char *sql) {
   char *error;
   int rc;
 
-  error = NULL;
-  rc = sqlite3_exec(sqlite, sql, NULL, NULL, &error);
+  error = nullptr;
+  rc = sqlite3_exec(sqlite, sql, nullptr, nullptr, &error);
   if (error)
     sqlite3_free(error);
   return rc == SQLITE_OK ? 0 : -1;
@@ -47,13 +47,13 @@ static int btech_economy_table_exists(sqlite3 *sqlite, int *exists) {
   int step;
   int result;
 
-  statement = NULL;
+  statement = nullptr;
   result = -1;
   if (btech_special_prepare_v2(
           sqlite,
           "SELECT 1 FROM sqlite_master WHERE type = 'table' "
           "AND name = 'btech_economy_costs';",
-          -1, &statement, NULL) == SQLITE_OK) {
+          -1, &statement, nullptr) == SQLITE_OK) {
     step = sqlite3_step(statement);
     if (step == SQLITE_ROW || step == SQLITE_DONE) {
       *exists = step == SQLITE_ROW;
@@ -71,12 +71,12 @@ static int btech_economy_table_has_item_name(sqlite3 *sqlite, int *has_name) {
   int result;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   *has_name = 0;
   result = -1;
   if (btech_special_prepare_v2(sqlite,
                                "PRAGMA table_info(btech_economy_costs);", -1,
-                               &statement, NULL) == SQLITE_OK) {
+                               &statement, nullptr) == SQLITE_OK) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
       column = sqlite3_column_text(statement, 1);
@@ -156,12 +156,12 @@ static int btech_load_costs(sqlite3 *sqlite, BtechContext *btech) {
   int skipped;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   result = -1;
   skipped = 0;
   if (btech_special_prepare_v2(
           sqlite, "SELECT item_name, cost FROM btech_economy_costs;", -1,
-          &statement, NULL) == SQLITE_OK) {
+          &statement, nullptr) == SQLITE_OK) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
       part_name = sqlite3_column_text(statement, 0);
@@ -251,7 +251,7 @@ int btech_persistence_store_economy(sqlite3 *sqlite,
   int length;
   int result;
 
-  statement = NULL;
+  statement = nullptr;
   /* This writer runs as a separate registered extension from the special-state
    * writer, so it owns an independent fault-injection context. */
   btech_special_write_context_init(&fault);
@@ -263,7 +263,7 @@ int btech_persistence_store_economy(sqlite3 *sqlite,
           &fault, sqlite,
           "INSERT INTO btech_economy_costs (item_name, cost) "
           "VALUES (?, ?);",
-          -1, &statement, NULL) != SQLITE_OK)
+          -1, &statement, nullptr) != SQLITE_OK)
     return -1;
 
   result = 0;

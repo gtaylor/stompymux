@@ -158,7 +158,7 @@ void mech_rsetmapindex(DbRef player, void *data, char *buffer) {
   int nargs;
   int notdone = 0;
   int loop;
-  BattleMap *newmap = NULL;
+  BattleMap *newmap = nullptr;
   BattleMap *oldmap;
   Mech *temp_mech;
   char targ[2];
@@ -350,7 +350,7 @@ void newfreemech(DbRef key, void **data,
 
         /* Destroy the list */
         doubly_linked_list_destroy_list(autopilot->commands);
-        autopilot->commands = NULL;
+        autopilot->commands = nullptr;
 
         /* Destroy any astar path list thats on the AI */
         auto_destroy_astar_path(autopilot);

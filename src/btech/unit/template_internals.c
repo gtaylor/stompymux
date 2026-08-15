@@ -55,7 +55,7 @@ static const char *const INTERNAL_NAMES[] = {"ShoulderOrHip",
                                              "SplitCrit_Left",
                                              "SplitCrit_Right",
                                              "Hardpoint",
-                                             NULL};
+                                             nullptr};
 
 size_t template_internal_name_count(void) {
   return (sizeof(INTERNAL_NAMES) / sizeof(*INTERNAL_NAMES)) - 1;

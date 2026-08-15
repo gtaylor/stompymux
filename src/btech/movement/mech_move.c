@@ -642,7 +642,7 @@ void mech_drop(DbRef player, void *data, const char *buffer) {
 
 void mech_stand(DbRef player, void *data, char *buffer) {
   Mech *mech = (Mech *)data;
-  char *args[2] = {0};
+  char *args[2] = {};
   int wc_dead_legs = 0;
   int t_needs_p_skill = 1;
   int t_do_stand = 1;

@@ -398,7 +398,7 @@ static const CommandDefinition COMMAND_TABLE[] = {
      SAY_PREFIX,
      CS_ONE_ARG | CS_LEADIN,
      {.invoke = do_say}},
-    {(char *)nullptr, nullptr, 0, 0, 0, {nullptr}}};
+    {nullptr, nullptr, 0, 0, 0, {}}};
 
 bool command_builtin_catalog_install(CommandRegistry *registry) {
   return command_catalog_install(

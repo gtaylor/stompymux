@@ -10,7 +10,7 @@
 #include "mux/support/checked_storage.h"
 
 bool page_recipient_list_initialize(PageRecipientList *list, size_t capacity) {
-  *list = (PageRecipientList){0};
+  *list = (PageRecipientList){};
   if (capacity > SIZE_MAX / sizeof(*list->recipients))
     return false;
 
@@ -25,7 +25,7 @@ bool page_recipient_list_initialize(PageRecipientList *list, size_t capacity) {
 
 void page_recipient_list_destroy(PageRecipientList *list) {
   free(list->recipients);
-  *list = (PageRecipientList){0};
+  *list = (PageRecipientList){};
 }
 
 bool page_recipient_list_append(PageRecipientList *list, DbRef recipient) {

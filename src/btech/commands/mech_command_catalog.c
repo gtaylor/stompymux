@@ -554,7 +554,7 @@ const BtechCommandDefinition MECHCOMMANDS[] = {
      btech_command_invoke_mech_rsetteam},
     {0, "SETXY <X> <Y>", "@Sets the x & y value of the mech.",
      btech_command_invoke_mech_rsetxy},
-    {0, NULL, NULL, NULL}};
+    {0, nullptr, nullptr, nullptr}};
 
 size_t mech_command_count(void) {
   return (sizeof(MECHCOMMANDS) / sizeof(*MECHCOMMANDS)) - 1;

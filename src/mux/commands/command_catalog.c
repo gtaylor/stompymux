@@ -89,7 +89,7 @@ const CMDENT *command_registry_builtin_at_const(const CommandRegistry *registry,
 }
 
 static bool command_catalog_is_empty(const CommandRegistry *registry) {
-  static CMDENT *const EMPTY_PREFIX_COMMANDS[256] = {nullptr};
+  static CMDENT *const EMPTY_PREFIX_COMMANDS[256] = {};
   return registry->commands.tree == nullptr && registry->builtins == nullptr &&
          registry->builtin_count == 0 && registry->switch_clones == nullptr &&
          registry->switch_clone_count == 0 &&

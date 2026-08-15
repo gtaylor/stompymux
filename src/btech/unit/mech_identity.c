@@ -244,7 +244,7 @@ MapRealPosition map_vector_components(const MapPolarVector *vector) {
 
 static int leave_hangar(BattleMap *map, Mech *mech) {
   char message_buffer[128];
-  Mech *car = NULL;
+  Mech *car = nullptr;
   DbRef mapob;
   MapObject *mapo;
 
@@ -549,7 +549,7 @@ const char *find_gunnery_skill_name(Mech *mech, int weapindx) {
       return "Gunnery-Flamer";
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 const char *find_piloting_skill_name(Mech *mech) {
@@ -602,7 +602,7 @@ const char *find_piloting_skill_name(Mech *mech) {
       return "Piloting-Wheeled";
     }
   }
-  return NULL;
+  return nullptr;
 }
 
 int find_pilot_piloting(Mech *mech) {
@@ -661,7 +661,7 @@ const char *find_tech_skill_name(Mech *mech) {
   case CLASS_DS:
     return "Technician-Aerospace";
   }
-  return NULL;
+  return nullptr;
 }
 
 int find_tech_skill(DbRef player, Mech *mech) {

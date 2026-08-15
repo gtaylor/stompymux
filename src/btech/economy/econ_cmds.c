@@ -249,14 +249,14 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
 
   char tmpstr[LBUF_SIZE];
   int sw = 0;
-  CoolMenu *c = NULL;
+  CoolMenu *c = nullptr;
   int found = 0;
 
   memset(&pile, 0, sizeof(pile));
   memset(&matching_pile, 0, sizeof(matching_pile));
-  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, header, CM_ONE | CM_CENTER);
-  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   /* Then, we go on a mad rampage ;-) */
   for (size_t index = 0; index < economy_parts_entry_count(database, loc);
        index++) {
@@ -321,7 +321,7 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
   }
   if (!found)
     cool_menu_entry_simple(&c, "None", CM_ONE);
-  cool_menu_entry_simple(&c, NULL, CM_ONE | CM_LINE);
+  cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   show_cool_menu(btech_context_evaluation(context), player, c);
   kill_cool_menu(c);
 }

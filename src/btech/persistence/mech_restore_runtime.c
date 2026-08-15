@@ -34,10 +34,10 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
   int result;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   result = btech_special_prepare_v2(
                sqlite, "SELECT * FROM btech_mech_runtime ORDER BY mech_dbref;",
-               -1, &statement, NULL) == SQLITE_OK
+               -1, &statement, nullptr) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -245,15 +245,15 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
   int step;
   int value;
 
-  statement = NULL;
+  statement = nullptr;
   current_mech = NOTHING;
-  mech = NULL;
+  mech = nullptr;
   memset(seen, 0, sizeof(seen));
   result = btech_special_prepare_v2(
                sqlite,
                "SELECT mech_dbref, slot, value FROM btech_mech_unit_aux "
                "ORDER BY mech_dbref, slot;",
-               -1, &statement, NULL) == SQLITE_OK
+               -1, &statement, nullptr) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -328,16 +328,16 @@ int btech_special_load_mech_stagger_damage(sqlite3 *sqlite,
   int result;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   current_mech = NOTHING;
   expected_position = 0;
-  mech = NULL;
+  mech = nullptr;
   result = btech_special_prepare_v2(
                sqlite,
                "SELECT mech_dbref, position, amount, occurred_at, "
                "attacker_dbref, counted "
                "FROM btech_mech_stagger_damage ORDER BY mech_dbref, position;",
-               -1, &statement, NULL) == SQLITE_OK
+               -1, &statement, nullptr) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {

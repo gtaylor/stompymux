@@ -75,7 +75,7 @@ int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
   int walk_speed;
   int brief;
 
-  statement = NULL;
+  statement = nullptr;
   result =
       btech_special_prepare_v2(
           sqlite,
@@ -87,7 +87,7 @@ int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
           "fuel, fuel_original, tons, walk_speed, run_speed, max_speed, "
           "template_max_speed, battle_value, cargo_space, targeting_computer, "
           "carrier_max_tons FROM btech_mechs ORDER BY dbref;",
-          -1, &statement, NULL) == SQLITE_OK
+          -1, &statement, nullptr) == SQLITE_OK
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -219,10 +219,10 @@ int btech_special_load_mech_sections(sqlite3 *sqlite, BtechContext *context) {
   int specials;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   current_mech = NOTHING;
   expected_section = 0;
-  mech = NULL;
+  mech = nullptr;
   result =
       btech_special_prepare_v2(
           sqlite,
@@ -230,7 +230,7 @@ int btech_special_load_mech_sections(sqlite3 *sqlite, BtechContext *context) {
           "internal_original, rear_original, base_to_hit, config, recycle, "
           "specials "
           "FROM btech_mech_sections ORDER BY mech_dbref, section;",
-          -1, &statement, NULL) == SQLITE_OK
+          -1, &statement, nullptr) == SQLITE_OK
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -319,11 +319,11 @@ int btech_special_load_mech_criticals(sqlite3 *sqlite, BtechContext *context) {
   int slot;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   current_mech = NOTHING;
   current_section = -1;
   expected_slot = 0;
-  mech = NULL;
+  mech = nullptr;
   result =
       btech_special_prepare_v2(sqlite,
                                "SELECT mech_dbref, section, slot, brand, data, "
@@ -331,7 +331,7 @@ int btech_special_load_mech_criticals(sqlite3 *sqlite, BtechContext *context) {
                                "ammo_mode, damage_flags, desired_ammo_location "
                                "FROM btech_mech_criticals "
                                "ORDER BY mech_dbref, section, slot;",
-                               -1, &statement, NULL) == SQLITE_OK
+                               -1, &statement, nullptr) == SQLITE_OK
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {

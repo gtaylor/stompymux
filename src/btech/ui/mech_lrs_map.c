@@ -381,7 +381,7 @@ static void show_lrs_map(const LrsMapRequest *request) {
   char midbuff[LBUF_SIZE] = "    ";
   char trash1[16]; /* temp var to hold the map coordinate label */
   short oddcol = 0;
-  LrsMechList mechs = {0};
+  LrsMechList mechs = {};
   int last_mech = 0;
   char prevct = 0;
   char prevcb = 0;

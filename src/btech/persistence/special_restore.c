@@ -28,7 +28,7 @@ static void *btech_special_object(BtechContext *context, DbRef object,
                                   BtechSpecialObjectType type) {
   if (!is_good_obj(context->database, object) ||
       btech_context_which_special(context, object) != (int)type)
-    return NULL;
+    return nullptr;
   return btech_context_find_object(context, object);
 }
 
@@ -41,12 +41,12 @@ int btech_special_load_mechrep(sqlite3 *sqlite, BtechContext *context) {
   int result;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   result = btech_special_prepare_v2(
                sqlite,
                "SELECT dbref, current_target FROM btech_mechrep "
                "ORDER BY dbref;",
-               -1, &statement, NULL) == SQLITE_OK
+               -1, &statement, nullptr) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -83,13 +83,13 @@ int btech_special_load_turrets(sqlite3 *sqlite, BtechContext *context) {
   int target_y;
   int target_z;
 
-  statement = NULL;
+  statement = nullptr;
   result =
       btech_special_prepare_v2(
           sqlite,
           "SELECT dbref, arcs, parent, gunner, target, target_x, target_y, "
           "target_z, lock_mode FROM btech_turrets ORDER BY dbref;",
-          -1, &statement, NULL) == SQLITE_OK
+          -1, &statement, nullptr) == SQLITE_OK
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -139,15 +139,15 @@ int btech_special_load_turret_tics(sqlite3 *sqlite, BtechContext *context) {
   int tic_index;
   int value;
 
-  statement = NULL;
+  statement = nullptr;
   current_turret = NOTHING;
   expected_tic = 0;
-  turret = NULL;
+  turret = nullptr;
   result = btech_special_prepare_v2(
                sqlite,
                "SELECT turret_dbref, tic_index, value FROM btech_turret_tics "
                "ORDER BY turret_dbref, tic_index;",
-               -1, &statement, NULL) == SQLITE_OK
+               -1, &statement, nullptr) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -204,10 +204,10 @@ int btech_special_load_autopilots(sqlite3 *sqlite, BtechContext *context) {
   int result;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   result = btech_special_prepare_v2(
                sqlite, "SELECT * FROM btech_autopilots ORDER BY dbref;", -1,
-               &statement, NULL) == SQLITE_OK
+               &statement, nullptr) == SQLITE_OK
                ? 0
                : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -294,7 +294,7 @@ btech_special_autopilot_command(int command_enum) {
     if (definition->name && definition->command_enum == command_enum)
       return definition;
   }
-  return NULL;
+  return nullptr;
 }
 
 /* Load one command's ordered text arguments and derive its callback locally. */
@@ -333,13 +333,13 @@ static int btech_special_load_autopilot_command_args(
   if (!command)
     return -1;
   autopilot_argument_list_initialize(&command->arguments, AUTOPILOT_MAX_ARGS);
-  statement = NULL;
+  statement = nullptr;
   result = btech_special_prepare_v2(
                sqlite,
                "SELECT argument_index, value FROM btech_autopilot_command_args "
                "WHERE autopilot_dbref = ? AND command_position = ? "
                "ORDER BY argument_index;",
-               -1, &statement, NULL) == SQLITE_OK &&
+               -1, &statement, nullptr) == SQLITE_OK &&
                    btech_special_bind_int(statement, 1, AUTOPILOT_DBREF) == 0 &&
                    btech_special_bind_int(statement, 2, POSITION) == 0
                ? 0
@@ -399,16 +399,16 @@ int btech_special_load_autopilot_commands(sqlite3 *sqlite,
   int result;
   int step;
 
-  statement = NULL;
+  statement = nullptr;
   current_autopilot = NOTHING;
   expected_position = 0;
-  autopilot = NULL;
+  autopilot = nullptr;
   result =
       btech_special_prepare_v2(
           sqlite,
           "SELECT autopilot_dbref, position, command_enum, arg_count "
           "FROM btech_autopilot_commands ORDER BY autopilot_dbref, position;",
-          -1, &statement, NULL) == SQLITE_OK
+          -1, &statement, nullptr) == SQLITE_OK
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
@@ -472,17 +472,17 @@ int btech_special_load_autopilot_path(sqlite3 *sqlite, BtechContext *context) {
   int x;
   int y;
 
-  statement = NULL;
+  statement = nullptr;
   current_autopilot = NOTHING;
   expected_position = 0;
-  autopilot = NULL;
+  autopilot = nullptr;
   result =
       btech_special_prepare_v2(
           sqlite,
           "SELECT autopilot_dbref, position, x, y, parent_x, parent_y, "
           "g_score, h_score, f_score, hex_offset FROM btech_autopilot_path "
           "ORDER BY autopilot_dbref, position;",
-          -1, &statement, NULL) == SQLITE_OK
+          -1, &statement, nullptr) == SQLITE_OK
           ? 0
           : -1;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {

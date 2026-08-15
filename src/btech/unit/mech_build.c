@@ -48,7 +48,7 @@ missile_hit_entry_const(const MissileHitRegistry *registry, size_t index) {
 }
 
 bool btech_weapon_settings_initialize(BtechWeaponSettings *settings) {
-  *settings = (BtechWeaponSettings){0};
+  *settings = (BtechWeaponSettings){};
   settings->values = checked_storage_try_allocate_array(
       DEFAULT_WEAPON_COUNT, sizeof(*settings->values));
   if (settings->values == nullptr)
@@ -67,7 +67,7 @@ void btech_weapon_settings_destroy(BtechWeaponSettings *settings) {
   if (settings == nullptr)
     return;
   free(settings->values);
-  *settings = (BtechWeaponSettings){0};
+  *settings = (BtechWeaponSettings){};
 }
 
 static bool btech_weapon_settings_contains(const BtechWeaponSettings *settings,
@@ -111,7 +111,7 @@ bool missile_hit_registry_initialize(MissileHitRegistry *registry,
   const size_t DEFINITION_COUNT =
       (sizeof(MISSILE_HIT_DEFINITIONS) / sizeof(*MISSILE_HIT_DEFINITIONS)) - 1;
 
-  *registry = (MissileHitRegistry){0};
+  *registry = (MissileHitRegistry){};
   registry->entries = checked_storage_try_allocate_array(
       DEFINITION_COUNT, sizeof(*registry->entries));
   if (registry->entries == nullptr)
@@ -140,7 +140,7 @@ void missile_hit_registry_destroy(MissileHitRegistry *registry) {
   if (registry == nullptr)
     return;
   free(registry->entries);
-  *registry = (MissileHitRegistry){0};
+  *registry = (MissileHitRegistry){};
 }
 
 const MissileHitEntry *

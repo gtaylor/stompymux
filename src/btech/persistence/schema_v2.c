@@ -325,8 +325,8 @@ int btech_special_write_prepare(BtechSpecialWriteContext *fault,
 }
 
 int btech_special_exec(sqlite3 *sqlite, const char *sql) {
-  char *error = NULL;
-  int rc = sqlite3_exec(sqlite, sql, NULL, NULL, &error);
+  char *error = nullptr;
+  int rc = sqlite3_exec(sqlite, sql, nullptr, nullptr, &error);
 
   sqlite3_free(error);
   return rc == SQLITE_OK ? 0 : -1;
@@ -363,7 +363,7 @@ int btech_special_store_metadata(BtechSpecialWriteContext *fault,
   sqlite3_stmt *statement;
   int result;
 
-  statement = NULL;
+  statement = nullptr;
   result = btech_special_write_prepare(fault, sqlite,
                                        "INSERT INTO btech_persistence_metadata "
                                        "(id, schema_name, schema_version) "
@@ -542,14 +542,14 @@ int btech_special_validate_metadata(sqlite3 *sqlite) {
   int matching_rows;
   int result;
 
-  statement = NULL;
+  statement = nullptr;
   result =
       btech_special_prepare_v2(
           sqlite,
           "SELECT count(*) FROM btech_persistence_metadata "
           "WHERE id = 1 AND schema_name = 'stompymux-btech' "
           "AND schema_version = 4;",
-          -1, &statement, NULL) == SQLITE_OK &&
+          -1, &statement, nullptr) == SQLITE_OK &&
               sqlite3_step(statement) == SQLITE_ROW &&
               btech_special_column_int(statement, 0, &matching_rows) == 0 &&
               matching_rows == 1 && sqlite3_step(statement) == SQLITE_DONE

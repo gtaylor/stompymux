@@ -207,7 +207,7 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
   BtechSpecialWriteContext fault;
   BtechMapStoreContext maps = {.result = -1};
   BtechObjectStoreContext objects;
-  sqlite3_stmt *repairs = NULL;
+  sqlite3_stmt *repairs = nullptr;
   BtechRepairStoreContext repair_context;
   int type;
   int result;
@@ -227,29 +227,29 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
           &fault, sqlite,
           "INSERT INTO btech_maps VALUES (?, ?, ?, ?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
-          -1, &maps.map, NULL) != SQLITE_OK ||
+          -1, &maps.map, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite, "INSERT INTO btech_map_hexes VALUES (?, ?, ?, ?);",
-          -1, &maps.hex, NULL) != SQLITE_OK ||
+          -1, &maps.hex, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite, "INSERT INTO btech_map_slots VALUES (?, ?, ?, ?);",
-          -1, &maps.slot, NULL) != SQLITE_OK ||
+          -1, &maps.slot, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite, "INSERT INTO btech_map_los VALUES (?, ?, ?, ?);", -1,
-          &maps.los, NULL) != SQLITE_OK ||
+          &maps.los, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_map_objects VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
-          -1, &maps.object, NULL) != SQLITE_OK ||
+          -1, &maps.object, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite, "INSERT INTO btech_map_bits VALUES (?, ?, ?, ?);", -1,
-          &maps.bits, NULL) != SQLITE_OK ||
+          &maps.bits, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_repair_events "
           "(mech_dbref, event_type, remaining_ticks, event_data, is_fake) "
           "VALUES (?, ?, ?, ?, ?);",
-          -1, &repairs, NULL) != SQLITE_OK) {
+          -1, &repairs, nullptr) != SQLITE_OK) {
     sqlite3_finalize(maps.map);
     sqlite3_finalize(maps.hex);
     sqlite3_finalize(maps.slot);
@@ -261,61 +261,61 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
   }
   if (btech_special_write_prepare(&fault, sqlite,
                                   "INSERT INTO btech_mechrep VALUES (?, ?);",
-                                  -1, &objects.mechrep, NULL) != SQLITE_OK ||
+                                  -1, &objects.mechrep, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_turrets VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);", -1,
-          &objects.turret, NULL) != SQLITE_OK ||
+          &objects.turret, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite, "INSERT INTO btech_turret_tics VALUES (?, ?, ?);", -1,
-          &objects.turret_tic, NULL) != SQLITE_OK ||
+          &objects.turret_tic, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_autopilots VALUES (?, ?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
-          -1, &objects.autopilot, NULL) != SQLITE_OK ||
+          -1, &objects.autopilot, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_mechs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
-          -1, &objects.mech, NULL) != SQLITE_OK ||
+          -1, &objects.mech, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_mech_sections VALUES (?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?);",
-          -1, &objects.section, NULL) != SQLITE_OK ||
+          -1, &objects.section, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_mech_criticals VALUES (?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?);",
-          -1, &objects.critical, NULL) != SQLITE_OK ||
+          -1, &objects.critical, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_mech_positions VALUES (?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
-          -1, &objects.position, NULL) != SQLITE_OK ||
+          -1, &objects.position, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite, "INSERT INTO btech_mech_bays VALUES (?, ?, ?);", -1,
-          &objects.bay, NULL) != SQLITE_OK ||
+          &objects.bay, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite, "INSERT INTO btech_mech_turrets VALUES (?, ?, ?);",
-          -1, &objects.mech_turret, NULL) != SQLITE_OK ||
+          -1, &objects.mech_turret, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_mech_c3 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);", -1,
-          &objects.c3, NULL) != SQLITE_OK ||
+          &objects.c3, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_mech_c3_nodes VALUES (?, ?, ?, ?);", -1,
-          &objects.c3node, NULL) != SQLITE_OK ||
+          &objects.c3node, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite, "INSERT INTO btech_mech_tics VALUES (?, ?, ?, ?);",
-          -1, &objects.tic, NULL) != SQLITE_OK ||
+          -1, &objects.tic, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_mech_frequencies VALUES (?, ?, ?, ?, ?);", -1,
-          &objects.frequency, NULL) != SQLITE_OK ||
+          &objects.frequency, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_mech_runtime VALUES ("
@@ -324,27 +324,27 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
-          -1, &objects.runtime, NULL) != SQLITE_OK ||
+          -1, &objects.runtime, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite, "INSERT INTO btech_mech_unit_aux VALUES (?, ?, ?);",
-          -1, &objects.unit_aux, NULL) != SQLITE_OK ||
+          -1, &objects.unit_aux, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_mech_stagger_damage VALUES (?, ?, ?, ?, ?, ?);",
-          -1, &objects.stagger_damage, NULL) != SQLITE_OK ||
+          -1, &objects.stagger_damage, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_autopilot_commands VALUES (?, ?, ?, ?);", -1,
-          &objects.autopilot_command, NULL) != SQLITE_OK ||
+          &objects.autopilot_command, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_autopilot_command_args VALUES (?, ?, ?, ?);", -1,
-          &objects.autopilot_command_arg, NULL) != SQLITE_OK ||
+          &objects.autopilot_command_arg, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_autopilot_path VALUES (?, ?, ?, ?, "
           "?, ?, ?, ?, ?, ?);",
-          -1, &objects.autopilot_path, NULL) != SQLITE_OK) {
+          -1, &objects.autopilot_path, nullptr) != SQLITE_OK) {
     sqlite3_finalize(maps.map);
     sqlite3_finalize(maps.hex);
     sqlite3_finalize(maps.slot);

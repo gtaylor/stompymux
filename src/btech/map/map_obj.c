@@ -78,7 +78,7 @@ MapObject *find_entrance_by_target(BattleMap *map, DbRef target) {
   for (tmp = first_mapobj(map, TYPE_BUILD); tmp; tmp = next_mapobj(tmp))
     if (tmp->obj == target)
       return tmp;
-  return NULL;
+  return nullptr;
 }
 
 MapObject *find_entrance_by_xy(BattleMap *map, int x, int y) {
@@ -87,7 +87,7 @@ MapObject *find_entrance_by_xy(BattleMap *map, int x, int y) {
   for (tmp = first_mapobj(map, TYPE_BUILD); tmp; tmp = next_mapobj(tmp))
     if (tmp->x == x && tmp->y == y)
       return tmp;
-  return NULL;
+  return nullptr;
 }
 
 MapObject *find_mapobj(const MapObjectLookupRequest *request) {
@@ -105,7 +105,7 @@ MapObject *find_mapobj(const MapObjectLookupRequest *request) {
         if (tmp->x == request->position.x && tmp->y == request->position.y)
           return tmp;
   }
-  return NULL;
+  return nullptr;
 }
 
 char find_decorations(BattleMap *map, int x, int y) {

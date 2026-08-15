@@ -198,7 +198,7 @@ BtechScriptResult fun_btid2db(BtechScriptCall *call) {
   /* script_function_argument(fargs, nfargs, 0) = mech
      script_function_argument(fargs, nfargs, 1) = target ID */
   Mech *target;
-  Mech *mech = NULL;
+  Mech *mech = nullptr;
   DbRef mechnum;
 
   if (!is_wizard(context->world->database, PLAYER)) {

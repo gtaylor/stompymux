@@ -430,7 +430,7 @@ int mech_weight_sub_mech(DbRef player, Mech *mech, int interactive) {
   int armor = 0;
   int armor_o;
   int total = 0;
-  CoolMenu *c = NULL;
+  CoolMenu *c = nullptr;
   int shs_size;
   int hs_eff;
   char buf[MBUF_SIZE];
@@ -615,7 +615,7 @@ int mech_weight_sub_veh(DbRef player, Mech *mech, int interactive) {
   int armor = 0;
   int armor_o;
   int total = 0;
-  CoolMenu *c = NULL;
+  CoolMenu *c = nullptr;
   int shs_size;
   int hs_eff;
   char buf[MBUF_SIZE];

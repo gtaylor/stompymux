@@ -43,7 +43,7 @@ void debug_xptop(DbRef player, void *data, const char *buffer) {
   CharacterXpRanking rankings[MAX_PLAYERS_ON];
   int count = 0;
   int gt = 0;
-  CoolMenu *c = NULL;
+  CoolMenu *c = nullptr;
   PSTATS stats;
   PSTATS *s = &stats;
 

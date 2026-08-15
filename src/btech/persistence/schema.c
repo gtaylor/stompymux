@@ -28,7 +28,7 @@ static void btech_table_names_destroy(BtechTableNames *names) {
   for (size_t index = 0; index < names->count; index++)
     free(btech_table_name(names, index));
   free((void *)names->items);
-  *names = (BtechTableNames){0};
+  *names = (BtechTableNames){};
 }
 
 static int btech_table_names_load(sqlite3 *database, BtechTableNames *names) {
@@ -90,7 +90,7 @@ int btech_persistence_reset_schema_path(const char *path) {
     return -1;
 
   sqlite3 *database = nullptr;
-  BtechTableNames names = {0};
+  BtechTableNames names = {};
   int result = -1;
   if (sqlite3_open_v2(path, &database, SQLITE_OPEN_READWRITE, nullptr) !=
           SQLITE_OK ||

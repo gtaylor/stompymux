@@ -544,9 +544,9 @@ void aero_land(DbRef player, void *data, const char *buffer) {
   mech_current_speed_set(mech, 0.0F);
   mech_vertical_speed_set(mech, 0.0F);
   mech_motion_vector_reset(mech);
-  notify_event(btech_context_evaluation(mech_context(mech)), NULL,
+  notify_event(btech_context_evaluation(mech_context(mech)), nullptr,
                mech_dbref(mech), mech_dbref(mech), mech_dbref(mech),
-               LUA_EVENT_AERO_LAND, (char **)NULL, 0);
+               LUA_EVENT_AERO_LAND, nullptr, 0);
   mine_field_trigger(mech, MINE_LAND);
 }
 void aero_control_effect(Mech *mech) {

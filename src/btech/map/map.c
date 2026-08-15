@@ -84,7 +84,7 @@ static char *map_filename(const BattleMap *map, const char *mapname) {
   pathlen = strlen(map_path) + strlen("/") + strlen(mapname) + 1;
   path = checked_storage_try_allocate(pathlen);
   if (!path)
-    return NULL;
+    return nullptr;
   (void)snprintf(path, pathlen, "%s/%s", map_path, mapname);
   return path;
 }
@@ -364,7 +364,7 @@ int map_checkmapfile(BattleMap *map, char *mapname) {
   }
   // Scan through the mapfile
   for (i = 0; i < height; i++) {
-    if (feof(fp) || fgets(row, (2 * MAPX) + 2, fp) == NULL ||
+    if (feof(fp) || fgets(row, (2 * MAPX) + 2, fp) == nullptr ||
         strlen(row) < 2U * (size_t)width)
       break;
   }
@@ -422,7 +422,7 @@ int map_load(BattleMap *map, char *mapname) {
   if (map->map == nullptr)
     abort();
   for (i = 0; i < height; i++) {
-    if (feof(fp) || fgets(row, (2 * MAPX) + 2, fp) == NULL ||
+    if (feof(fp) || fgets(row, (2 * MAPX) + 2, fp) == nullptr ||
         strlen(row) < 2U * (size_t)width) {
       break;
     }

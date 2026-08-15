@@ -185,7 +185,7 @@ static int load_autopilot_data(const RedBlackTreeVisitCall *call) {
     Autopilot *const AUTOPILOT = (Autopilot *)XCODE_OBJ;
 
     /* Commands and A* paths are restored before these derived caches. */
-    AUTOPILOT->weaplist = NULL;
+    AUTOPILOT->weaplist = nullptr;
     autopilot_weapon_profiles_initialize(AUTOPILOT);
 
     if (AUTOPILOT->mymechnum)

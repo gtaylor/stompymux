@@ -309,9 +309,9 @@ int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
   int position;
 
   argc = mech_parseattributes(buffer, args, 3);
-  if (argc < 1 || argc > (2 + (brand != NULL)))
+  if (argc < 1 || argc > (2 + (brand != nullptr)))
     return -1;
-  if (argc == (2 + (brand != NULL)) ||
+  if (argc == (2 + (brand != nullptr)) ||
       (brand && argc == 2 && parse_int_checked(args[1], &position) &&
        position != 0)) {
     *loc = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
@@ -339,7 +339,7 @@ int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
   t = mech_critical_part_type(mech, *loc, *pos);
   char **last_argument_slot = (char **)checked_storage_at(
       (void *)args, (size_t)argc, sizeof(*args), (size_t)(argc - 1));
-  if (brand != NULL && argc > 1 &&
+  if (brand != nullptr && argc > 1 &&
       (!parse_int_checked(*last_argument_slot, &position) || position == 0)) {
     PartMatchResult match =
         part_match_next(&(PartMatchRequest){.context = mech_context(mech),
@@ -353,7 +353,7 @@ int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand) {
     if (pi != t)
       return -3;
     *brand = pb;
-  } else if (brand != NULL) {
+  } else if (brand != nullptr) {
     *brand = mech_critical_brand(mech, *loc, *pos);
   }
   return 0;

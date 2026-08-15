@@ -218,7 +218,7 @@ bool btech_special_command_access(BtechContext *context, DbRef object,
 
 int handled_command_sub(BtechContext *context, DbRef player, DbRef location,
                         char *command) {
-  BtechSpecialObject *xcode_obj = NULL;
+  BtechSpecialObject *xcode_obj = nullptr;
 
   const BtechSpecialObjectDefinition *type_of_object;
   int type;
@@ -335,7 +335,7 @@ bool btech_command_try_execute(BtechContext *context, DbRef player, DbRef loc,
 const int GLOBAL_SPECIALS = BTECH_SPECIAL_OBJECT_COUNT;
 
 void *new_special_object(BtechContext *context, DbRef id, int type) {
-  BtechSpecialObject *xcode_obj = NULL;
+  BtechSpecialObject *xcode_obj = nullptr;
   if (type < 0 || type >= BTECH_SPECIAL_OBJECT_COUNT)
     return nullptr;
   size_t data_size =
@@ -488,7 +488,7 @@ void btech_context_release_owned_state(BtechContext *context) {
   btech_weapon_settings_destroy(&context->weapon_settings);
   mech_template_registry_destroy(context);
   mech_reference_cache_destroy(context);
-  *context = (BtechContext){0};
+  *context = (BtechContext){};
 }
 
 void dump_mechs(BtechContext *context, DbRef player) {
@@ -670,9 +670,9 @@ BattleMap *btech_context_get_map(BtechContext *context, DbRef d) {
 
   xcode_obj = red_black_tree_find(context->special_objects, (void *)d);
   if (!xcode_obj)
-    return NULL;
+    return nullptr;
   if (xcode_obj->type != GTYPE_MAP)
-    return NULL;
+    return nullptr;
   return (BattleMap *)xcode_obj;
 }
 
@@ -680,13 +680,13 @@ Mech *btech_context_get_mech(BtechContext *context, DbRef d) {
   BtechSpecialObject *xcode_obj;
 
   if (!(is_good_obj(context->database, d)))
-    return NULL;
+    return nullptr;
   if (!(is_xcode(context->database, d)))
-    return NULL;
+    return nullptr;
   xcode_obj = red_black_tree_find(context->special_objects, (void *)d);
   if (!xcode_obj)
-    return NULL;
+    return nullptr;
   if (xcode_obj->type != GTYPE_MECH)
-    return NULL;
+    return nullptr;
   return (Mech *)xcode_obj;
 }

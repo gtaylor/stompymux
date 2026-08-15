@@ -529,7 +529,7 @@ void do_search(CommandInvocation *invocation) {
   object_list_destroy(&results);
 }
 
-void object_list_initialize(ObjectList *list) { *list = (ObjectList){0}; }
+void object_list_initialize(ObjectList *list) { *list = (ObjectList){}; }
 
 void object_list_destroy(ObjectList *list) {
   ObjectListBlock *block = list->head;

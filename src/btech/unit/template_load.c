@@ -89,7 +89,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
     } else {
       (void)string_copy_bounded(cmd, sizeof(cmd), line);
       line[0] = '\0';
-      ptr = NULL;
+      ptr = nullptr;
     }
     if (!strncasecmp(cmd, "CRIT_", 5)) {
       selection = 9999;

@@ -27,31 +27,21 @@ static const char *const CRITICAL_FIRE_MODE_NAMES[] = {
     "OneShot",   "OneShot_Used",   "UltraMode",       "RapidFire",
     "Gattling",  "Rotary_TwoShot", "Rotary_FourShot", "Rotary_SixShot",
     "Heat",      "BackPack",       "Jettisoned",      "OmniBase",
-    NULL};
+    nullptr};
 
-static const char *const CRITICAL_AMMO_MODE_NAMES[] = {"LBX/Cluster",
-                                                       "Artemis/Mine",
-                                                       "Narc/Smoke",
-                                                       "Cluster",
-                                                       "Mine",
-                                                       "Smoke",
-                                                       "Inferno",
-                                                       "Swarm",
-                                                       "Swarm1",
-                                                       "iNarc_Explosive",
-                                                       "iNarc_Haywire",
-                                                       "iNarc_ECM",
-                                                       "iNarc_Nemesis",
-                                                       "AP",
-                                                       "Flechette",
-                                                       "Incendiary",
-                                                       "Precision",
-                                                       "Stinger",
-                                                       "Caseless",
-                                                       "Sguided",
-                                                       "ExtendedRange",
-                                                       "HighExplosive",
-                                                       NULL};
+static const char *const CRITICAL_AMMO_MODE_NAMES[] = {
+    "LBX/Cluster",   "Artemis/Mine",
+    "Narc/Smoke",    "Cluster",
+    "Mine",          "Smoke",
+    "Inferno",       "Swarm",
+    "Swarm1",        "iNarc_Explosive",
+    "iNarc_Haywire", "iNarc_ECM",
+    "iNarc_Nemesis", "AP",
+    "Flechette",     "Incendiary",
+    "Precision",     "Stinger",
+    "Caseless",      "Sguided",
+    "ExtendedRange", "HighExplosive",
+    nullptr};
 
 /* 'specials' is *full* */
 static const char *const PRIMARY_TECHNOLOGY_NAMES[] = {
@@ -86,13 +76,13 @@ static const char *const PRIMARY_TECHNOLOGY_NAMES[] = {
     "CompositeInternal_Tech",
     "HardenedArmor_Tech",
     "CritProof_Tech",
-    NULL};
+    nullptr};
 
 static const char *const PRIMARY_TECHNOLOGY_ABBREVIATIONS[] = {
     "TSM",  "CLAMS", "ISAMS", "DHS",  "MASC", "CLTECH", "FA",  "C3M",
     "C3S",  "AIV",   "ECM",   "BAP",  "SAL",  "CAR",    "SL",  "LBAP",
     "AA",   "NOSEN", "SS",    "FF",   "ES",   "XL",     "ICE", "SHS",
-    "LENG", "XXL",   "CENG",  "RINT", "CINT", "HARM",   "CP",  NULL};
+    "LENG", "XXL",   "CENG",  "RINT", "CINT", "HARM",   "CP",  nullptr};
 /* 'specials' is *full* */
 
 static const char *const SECONDARY_TECHNOLOGY_NAMES[] = {
@@ -104,13 +94,13 @@ static const char *const SECONDARY_TECHNOLOGY_NAMES[] = {
     "TAG_Tech",           "OmniMech_Tech",        "ArtemisV_Tech",
     "Camo_Tech",          "Carrier_Tech",         "Waterproof_Tech",
     "XLGyro_Tech",        "HDGyro_Tech",          "CompactGyro_Tech",
-    "TargComp_Tech",      "SmallCockpit_Tech",    NULL};
+    "TargComp_Tech",      "SmallCockpit_Tech",    nullptr};
 
 static const char *const SECONDARY_TECHNOLOGY_ABBREVIATIONS[] = {
     "STHA",   "HFF",    "LRARM", "REACTARM", "NULL",   "C3I",  "SCHARGE",
     "IJJ",    "MJJ",    "CHS",   "LHS",      "BLP",    "AECM", "WDOG",
     "LFF",    "TAG",    "OMNI",  "AV",       "CAMO",   "CART", "WPRF",
-    "XLGYRO", "HDGYRO", "CGYRO", "TCOMP",    "SMCPIT", NULL};
+    "XLGYRO", "HDGYRO", "CGYRO", "TCOMP",    "SMCPIT", nullptr};
 
 static const char *const INFANTRY_TECHNOLOGY_NAMES[] = {
     "Swarm_Attack_Tech",
@@ -123,11 +113,11 @@ static const char *const INFANTRY_TECHNOLOGY_NAMES[] = {
     "FC_InfiltratorII_Stealth_Tech",
     "Must_Jettison_Pack_Tech",
     "Can_Jettison_Pack_Tech",
-    NULL};
+    nullptr};
 
 static const char *const INFANTRY_TECHNOLOGY_ABBREVIATIONS[] = {
     "SWARM",    "MFRIEND",  "ALEG",   "PSTEALTH", "KSTEALTH", "ASTEALTH",
-    "ISTEALTH", "2STEALTH", "MJPACK", "CJPACK",   NULL};
+    "ISTEALTH", "2STEALTH", "MJPACK", "CJPACK",   nullptr};
 
 size_t template_section_configuration_count(void) {
   return (sizeof(SECTION_CONFIGURATION_NAMES) /

@@ -124,7 +124,7 @@ static int btech_lua_invoke(lua_State *state) {
       checked_storage_at_const(BTECH_LUA_ENTRIES, ENTRY_COUNT,
                                sizeof(*BTECH_LUA_ENTRIES), (size_t)ENTRY_INDEX);
   int argument_count = lua_gettop(state);
-  char *arguments[MAX_ARG] = {0};
+  char *arguments[MAX_ARG] = {};
   char *buffer = alloc_lbuf("btech_lua_invoke");
   char *cursor = buffer;
 

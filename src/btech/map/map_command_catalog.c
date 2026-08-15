@@ -71,7 +71,7 @@ const BtechCommandDefinition MAPCOMMANDS[] = {
      btech_command_invoke_mech_rremovestuff},
     {0, "CLEARSTUFF", "@Removes all stuff from map",
      btech_command_invoke_mech_rresetstuff},
-    {0, NULL, NULL, NULL}};
+    {0, nullptr, nullptr, nullptr}};
 
 size_t map_command_count(void) {
   return (sizeof(MAPCOMMANDS) / sizeof(*MAPCOMMANDS)) - 1;

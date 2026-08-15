@@ -63,10 +63,10 @@ static int btech_special_table_count(sqlite3 *sqlite, const char *table,
   char sql[128];
   int result;
 
-  statement = NULL;
+  statement = nullptr;
   if (snprintf(sql, sizeof(sql), "SELECT count(*) FROM %s;", table) < 0)
     return -1;
-  result = btech_special_prepare_v2(sqlite, sql, -1, &statement, NULL) ==
+  result = btech_special_prepare_v2(sqlite, sql, -1, &statement, nullptr) ==
                        SQLITE_OK &&
                    sqlite3_step(statement) == SQLITE_ROW &&
                    btech_special_column_int(statement, 0, count) == 0 &&
@@ -277,9 +277,10 @@ int btech_persistence_load_special_state_path(BtechContext *context,
   sqlite3 *sqlite;
   int result;
 
-  sqlite = NULL;
+  sqlite = nullptr;
   result = -1;
-  if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK) {
+  if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, nullptr) !=
+      SQLITE_OK) {
     log_error((LogEntry){.log = context->log,
                          .key = LOG_ALWAYS,
                          .primary = "BTP",

@@ -203,7 +203,7 @@ static void template_registry_reset(MechTemplateRegistry *registry) {
     p = np;
   }
 
-  *registry = (MechTemplateRegistry){0};
+  *registry = (MechTemplateRegistry){};
 }
 
 static const char *const SUBDIRS[] = {
