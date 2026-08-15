@@ -91,10 +91,12 @@ void game_object_clear_powers(GameDatabase *database, DbRef object) {
 
 static int run_for_cache_setting(bool cache_names) {
   GameObject objects[3] = {};
+  NAME names[3] = {};
   NAME pure_names[3] = {};
   ServerConfiguration configuration = {.cache_names = cache_names};
   GameDatabase database = {
       .object_storage = objects,
+      .name_storage = names,
       .pure_name_storage = pure_names,
       .top = 2,
       .size = 2,
@@ -108,13 +110,19 @@ static int run_for_cache_setting(bool cache_names) {
   if (!objects[1].native.values[A_NAME] || !objects[2].native.values[A_NAME])
     goto cleanup;
 
+  const char *raw_alpha = game_object_name(&database, 0);
+  const char *raw_beta = game_object_name(&database, 1);
+  if (strcmp(raw_alpha, "{Alpha}") != 0 || strcmp(raw_beta, "{Beta}") != 0 ||
+      raw_alpha != game_object_name(&database, 0) ||
+      raw_beta != game_object_name(&database, 1))
+    goto cleanup;
+
   const char *alpha = game_object_pure_name(&database, 0);
   if (strcmp(alpha, "Alpha") != 0 ||
       alpha != game_object_pure_name(&database, 0))
     goto cleanup;
 
-  if (strcmp(game_object_name(&database, 1), "{Beta}") != 0 ||
-      strcmp(alpha, "Alpha") != 0)
+  if (strcmp(raw_alpha, "{Alpha}") != 0 || strcmp(alpha, "Alpha") != 0)
     goto cleanup;
 
   object_name_set(&database, 0, "{Renamed}");
@@ -130,6 +138,8 @@ static int run_for_cache_setting(bool cache_names) {
 cleanup:
   free(objects[1].native.values[A_NAME]);
   free(objects[2].native.values[A_NAME]);
+  free(names[1]);
+  free(names[2]);
   free(pure_names[1]);
   free(pure_names[2]);
   return result;
@@ -154,6 +164,7 @@ static int check_grow_and_free(void) {
 
   db_free(&database);
   return database.object_storage != nullptr ||
+         database.name_storage != nullptr ||
          database.pure_name_storage != nullptr || database.markbits != nullptr;
 }
 

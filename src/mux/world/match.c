@@ -283,12 +283,6 @@ static void match_list(MatchContext *match_context, DbRef first, int local) {
       promote_match(match_context, (MatchCandidate){first, CON_DBREF | local});
       return;
     }
-    /*
-     * Warning: make sure there are no other calls to game_object_name() in
-     * promote_match or its called subroutines; they
-     * would overwrite game_object_name()'s static buffer which is
-     * needed by string_match().
-     */
     namebuf = game_object_pure_name(match_context->evaluation->world->database,
                                     first);
 
