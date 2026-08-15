@@ -36,6 +36,13 @@ static int tech_int_at(const int *values, size_t count, size_t index) {
   return *value;
 }
 
+static MechEventType tech_event_type_at(const MechEventType *values,
+                                        size_t count, size_t index) {
+  const MechEventType *value =
+      checked_storage_at_const(values, count, sizeof(*values), index);
+  return *value;
+}
+
 static void tech_check_locpart(MuxEvent *e, void *data) {
   TechCheckContext *context = data;
   int loc;
@@ -62,13 +69,13 @@ typedef struct TechEventPartQuery {
   Mech *mech;
   int location;
   int part;
-  int event_type;
+  MechEventType event_type;
 } TechEventPartQuery;
 
 typedef struct TechEventLocationQuery {
   Mech *mech;
   int location;
-  int event_type;
+  MechEventType event_type;
 } TechEventLocationQuery;
 
 static int tech_event_part_count(const TechEventPartQuery *query) {
@@ -84,22 +91,23 @@ static int tech_event_location_count(const TechEventLocationQuery *query) {
 }
 
 /* Replace/reload */
-int someone_repairing_s(Mech *mech, int loc, int part, int t) {
+int someone_repairing_s(Mech *mech, int loc, int part, MechEventType type) {
   return tech_event_part_count(&(TechEventPartQuery){
-      .mech = mech, .location = loc, .part = part, .event_type = t});
+      .mech = mech, .location = loc, .part = part, .event_type = type});
 }
 
 bool someone_repairing(Mech *mech, int loc, int part) {
-  const int EVENT_TYPES[] = {EVENT_REPAIR_RELO,      EVENT_REPAIR_REPL,
-                             EVENT_REPAIR_REPLG,     EVENT_REPAIR_REPAP,
-                             EVENT_REPAIR_REPAG,     EVENT_REPAIR_MOB,
-                             EVENT_REPAIR_REPENHCRIT};
+  const MechEventType EVENT_TYPES[] = {
+      EVENT_REPAIR_RELO,      EVENT_REPAIR_REPL,  EVENT_REPAIR_REPLG,
+      EVENT_REPAIR_REPAP,     EVENT_REPAIR_REPAG, EVENT_REPAIR_MOB,
+      EVENT_REPAIR_REPENHCRIT};
   for (size_t index = 0; index < (sizeof(EVENT_TYPES) / sizeof(EVENT_TYPES[0]));
        index++) {
     if (someone_repairing_s(
             mech, loc, part,
-            tech_int_at(EVENT_TYPES, sizeof(EVENT_TYPES) / sizeof(*EVENT_TYPES),
-                        index)))
+            tech_event_type_at(EVENT_TYPES,
+                               sizeof(EVENT_TYPES) / sizeof(*EVENT_TYPES),
+                               index)))
       return true;
   }
   return false;
@@ -148,14 +156,15 @@ int someone_scrapping_loc(Mech *mech, int loc) {
 }
 
 bool someone_scrapping_part(Mech *mech, int loc, int part) {
-  const int EVENT_TYPES[] = {EVENT_REPAIR_SCRP, EVENT_REPAIR_SCRG,
-                             EVENT_REPAIR_UMOB};
+  const MechEventType EVENT_TYPES[] = {EVENT_REPAIR_SCRP, EVENT_REPAIR_SCRG,
+                                       EVENT_REPAIR_UMOB};
   for (size_t index = 0; index < (sizeof(EVENT_TYPES) / sizeof(EVENT_TYPES[0]));
        index++) {
     if (someone_repairing_s(
             mech, loc, part,
-            tech_int_at(EVENT_TYPES, sizeof(EVENT_TYPES) / sizeof(*EVENT_TYPES),
-                        index)))
+            tech_event_type_at(EVENT_TYPES,
+                               sizeof(EVENT_TYPES) / sizeof(*EVENT_TYPES),
+                               index)))
       return true;
   }
   return false;

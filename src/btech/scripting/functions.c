@@ -118,7 +118,7 @@ BtechScriptResult btech_script_result_finish(BtechScriptCall *call,
 void btech_script_result_destroy(BtechScriptResult *result) {
   if (result->status == BTECH_SCRIPT_OK && result->kind == BTECH_SCRIPT_LIST)
     free(result->value.list.items);
-  *result = (BtechScriptResult){0};
+  *result = (BtechScriptResult){};
 }
 
 char *btech_attribute_read(GameDatabase *database, DbRef id, int flag,

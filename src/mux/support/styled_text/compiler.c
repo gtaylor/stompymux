@@ -152,7 +152,7 @@ static bool apply_tag(const StyledTextPalette *palette, const char *tag,
     if (state->link_emitted &&
         !styled_emit_link_close(output, output_size, used))
       return false;
-    *state = (StyledState){0};
+    *state = (StyledState){};
     *stack_size = 0;
     return styled_emit_state(state, output, output_size, used);
   }
@@ -168,8 +168,8 @@ static bool apply_tag(const StyledTextPalette *palette, const char *tag,
     char uri[OSC8_URI_LIMIT + 1];
     char rendered_uri[OSC8_URI_LIMIT + 1];
     const char *directives;
-    StyledLinkConfig config = {0};
-    StyledLinkConfig effective_config = {0};
+    StyledLinkConfig config = {};
+    StyledLinkConfig effective_config = {};
     const StyledLinkConfig *effective = &config;
     const StyledLinkConfig *serialized = &config;
     const StyledTextPreset *preset = nullptr;
@@ -407,7 +407,7 @@ bool styled_text_compile(const StyledTextPalette *palette, const char *markup,
       .osc_hyperlinks_disabled = true,
       .osc_hyperlinks_selection = true,
   };
-  StyledState state = {0};
+  StyledState state = {};
   StyledState stack[STYLE_STACK_LIMIT];
   size_t stack_size = 0;
   size_t used = 0;
@@ -520,7 +520,7 @@ void styled_text_compile_permissive(const StyledTextPalette *palette,
                                     const char *input, char *output,
                                     size_t output_size,
                                     const StyledTextRenderOptions *options) {
-  StyledState state = {0};
+  StyledState state = {};
   StyledState stack[STYLE_STACK_LIMIT];
   size_t stack_size = 0;
   size_t used = 0;
@@ -609,8 +609,8 @@ void styled_text_compile_permissive(const StyledTextPalette *palette,
 
 void styled_text_truncate(const StyledTextPalette *palette, const char *styled,
                           size_t width, char *output, size_t output_size) {
-  static const StyledTextRenderOptions OPTIONS = {0};
-  StyledState state = {0};
+  static const StyledTextRenderOptions OPTIONS = {};
+  StyledState state = {};
   StyledState stack[STYLE_STACK_LIMIT];
   size_t stack_size = 0;
   size_t used = 0;

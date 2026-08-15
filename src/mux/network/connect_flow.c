@@ -409,7 +409,7 @@ static FlowOutcome connect_flow_step_username(const FlowStepCall *call) {
   Descriptor *d = call->descriptor;
   ConnectFlowData *data = call->flow_data;
   const char *input = call->input;
-  FlowOutcome outcome = {0};
+  FlowOutcome outcome = {};
 
   if (input == nullptr) {
     outcome.action = FLOW_ACTION_WAIT;
@@ -457,7 +457,7 @@ static FlowOutcome connect_flow_step_password(const FlowStepCall *call) {
   Descriptor *d = call->descriptor;
   ConnectFlowData *data = call->flow_data;
   const char *input = call->input;
-  FlowOutcome outcome = {0};
+  FlowOutcome outcome = {};
 
   if (input == nullptr) {
     descriptor_telnet_set_echo(d, 0);
@@ -488,7 +488,7 @@ static FlowOutcome connect_flow_step_password(const FlowStepCall *call) {
 static FlowOutcome connect_flow_step_confirm_create(const FlowStepCall *call) {
   ConnectFlowData *data = call->flow_data;
   const char *input = call->input;
-  FlowOutcome outcome = {0};
+  FlowOutcome outcome = {};
 
   if (input == nullptr) {
     (void)snprintf(data->prompt, sizeof(data->prompt),
@@ -519,7 +519,7 @@ static FlowOutcome connect_flow_step_create_password(const FlowStepCall *call) {
   Descriptor *d = call->descriptor;
   ConnectFlowData *data = call->flow_data;
   const char *input = call->input;
-  FlowOutcome outcome = {0};
+  FlowOutcome outcome = {};
 
   if (input == nullptr) {
     /* Echo is already suppressed if we got here via a retype mismatch;
@@ -545,7 +545,7 @@ connect_flow_step_create_confirm_password(const FlowStepCall *call) {
   Descriptor *d = call->descriptor;
   ConnectFlowData *data = call->flow_data;
   const char *input = call->input;
-  FlowOutcome outcome = {0};
+  FlowOutcome outcome = {};
 
   if (input == nullptr) {
     descriptor_telnet_set_echo(d, 0);

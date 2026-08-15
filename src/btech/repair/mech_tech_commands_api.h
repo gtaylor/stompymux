@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "btech_event.h"
 #include "mux/server/platform.h"
 
 typedef struct RepairCriticalSelection {
@@ -11,7 +12,7 @@ typedef struct RepairCriticalSelection {
 } RepairCriticalSelection;
 
 /* mech.tech.commands.c */
-int someone_repairing_s(Mech *mech, int loc, int part, int t);
+int someone_repairing_s(Mech *mech, int loc, int part, MechEventType type);
 bool someone_repairing(Mech *mech, int loc, int part);
 int someone_replacing_suit(Mech *mech, int loc);
 int someone_fixing_a(Mech *mech, int loc);

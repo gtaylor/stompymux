@@ -108,7 +108,7 @@ int styled_text_osc8_tests(void) {
       .osc_hyperlinks_prompt = true,
       .osc_hyperlinks_selection = true,
   };
-  const StyledTextRenderOptions no_links = {0};
+  const StyledTextRenderOptions no_links = {};
   const StyledTextRenderOptions no_link_ansi = {
       .color_depth = TERMINAL_COLOR_ANSI_16,
   };

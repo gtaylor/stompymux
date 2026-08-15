@@ -270,7 +270,7 @@ static void mine_explode(const MineExplosion *explosion) {
    and eliminate it */
 
 static void possible_mine_explosion(Mech *mech, BattleMap *map, int x, int y,
-                                    int reason) {
+                                    MineTriggerReason reason) {
   MapObject *o;
   MapObject *o2;
   int mdis = (mech_real_tonnage(mech) - 20) / 10;

@@ -278,7 +278,7 @@ static void test_to_hit_signatures(LosTestState *state, Mech *observer,
 int main(void) {
   LosTestState state = {0};
   BtechContext context = {0};
-  BattleMap map = {0};
+  BattleMap map = {};
   Mech observer = make_unit(&context, &map);
   Mech target = make_unit(&context, &map);
   test_visibility_ranges(&state, &target, &map);

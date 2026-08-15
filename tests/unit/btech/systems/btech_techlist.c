@@ -50,7 +50,7 @@ bool mech_section_configuration_has(const Mech *mech [[maybe_unused]],
 }
 
 int main(void) {
-  Mech mech = {0};
+  Mech mech = {};
   char buffer[MBUF_SIZE];
 
   /* Avoid the biped towing checks so this test isolates tech-list appends. */

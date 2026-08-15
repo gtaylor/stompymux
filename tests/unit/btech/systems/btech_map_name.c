@@ -5,7 +5,7 @@
 #include <string.h>
 
 static bool maximum_length_name_is_terminated(void) {
-  BattleMap map = {0};
+  BattleMap map = {};
   const char *name = "abcdefghijklmnopqrstuvwxyz1234";
 
   memset(map.mapname, 0xAA, sizeof(map.mapname));

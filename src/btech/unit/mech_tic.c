@@ -31,6 +31,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
+#include "section_types.h"
 #include "weapon_catalogue_api.h"
 
 static const unsigned long *tic_word(const Mech *mech, int tic, int word) {
@@ -333,9 +334,10 @@ static char *listtic_fun(void *context, int i, char buffer[static LBUF_SIZE]) {
         (void)snprintf(
             buffer, LBUF_SIZE, "#%2d %3s %-16s %s", j,
             armor_section_abbreviation(
-                &(ArmorSectionReference){.unit_class = ((mech)->ud.type),
-                                         .movement_type = ((mech)->ud.move),
-                                         .location = section})
+                &(ArmorSectionReference){
+                    .unit_class = (UnitClass)((mech)->ud.type),
+                    .movement_type = (MechMovementType)((mech)->ud.move),
+                    .location = section})
                 .text,
             checked_string_suffix(
                 weapon_catalogue_name(weapon_from_equipment_index(

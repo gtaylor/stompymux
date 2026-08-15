@@ -239,5 +239,5 @@ void autopilot_path_result_destroy(AutopilotPathResult *result) {
   if (result == nullptr)
     return;
   free(result->points);
-  *result = (AutopilotPathResult){0};
+  *result = (AutopilotPathResult){};
 }
