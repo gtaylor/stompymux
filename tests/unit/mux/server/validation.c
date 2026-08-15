@@ -13,6 +13,7 @@ int string_compare(const ServerConfiguration *configuration, const char *first,
 
 int main(void) {
   ServerConfiguration configuration = {0};
+  configuration.player_name_length_limit = 30;
   configuration.player_password_length_limit = 64;
   if (!ok_new_player_name(&configuration, "Alice") ||
       !ok_new_player_name(&configuration, "A1") ||
@@ -23,6 +24,21 @@ int main(void) {
       ok_new_player_name(&configuration, "_a") ||
       ok_new_player_name(&configuration, "A\033[31m") ||
       ok_new_player_name(&configuration, "Jos\xc3\xa9"))
+    return 1;
+  if (!ok_new_player_name(&configuration, "abcdefghijklmnopqrstuvwxyz1234") ||
+      ok_new_player_name(&configuration, "abcdefghijklmnopqrstuvwxyz12345"))
+    return 1;
+  configuration.player_name_length_limit = 2;
+  if (ok_player_name(&configuration, "ExistingPlayer") ||
+      !ok_stored_player_name(&configuration, "ExistingPlayer"))
+    return 1;
+  configuration.player_name_length_limit = 30;
+  configuration.name_spaces = 0;
+  if (ok_player_name(&configuration, "Existing Player") ||
+      !ok_stored_player_name(&configuration, "Existing Player"))
+    return 1;
+  configuration.player_name_length_limit = 0;
+  if (!ok_player_name(&configuration, "ZeroInitializedConfiguration"))
     return 1;
   if (!ok_name(&configuration, "Caf\xc3\xa9") ||
       !ok_name(&configuration, "\xf0\x9f\x9a\x80 Launch Bay") ||

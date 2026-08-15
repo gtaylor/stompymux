@@ -90,10 +90,11 @@ static void lua_flow_encode(LuaRuntime *runtime, lua_State *state,
         data->field_count < LUA_FLOW_MAX_FIELDS) {
       LuaFlowField *field = lua_flow_field_at(data, (size_t)data->field_count);
 
-      string_copy_trunc(field->key, lua_tostring(state, -2),
-                        LUA_FLOW_KEY_SIZE - 1);
+      (void)string_copy_bounded(field->key, sizeof(field->key),
+                                lua_tostring(state, -2));
       field->value = alloc_lbuf("lua_flow_field");
-      string_copy_trunc(field->value, lua_tostring(state, -1), LBUF_SIZE - 1);
+      (void)string_copy_bounded(field->value, LBUF_SIZE,
+                                lua_tostring(state, -1));
       data->field_count++;
     } else if (lua_type(state, -2) == LUA_TSTRING) {
       log_error((LogEntry){.log = runtime->services->log,
@@ -206,8 +207,8 @@ static FlowOutcome lua_flow_step(const FlowStepCall *call) {
 
   lua_getfield(state, result_index, "step");
   if (lua_isstring(state, -1))
-    string_copy_trunc(outcome.next_step, lua_tostring(state, -1),
-                      FLOW_STEP_NAME_SIZE - 1);
+    (void)string_copy_bounded(outcome.next_step, sizeof(outcome.next_step),
+                              lua_tostring(state, -1));
   lua_pop(state, 1);
 
   lua_getfield(state, result_index, "prompt");

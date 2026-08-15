@@ -124,7 +124,9 @@ int ok_name(const ServerConfiguration *configuration, const char *name) {
           string_compare(configuration, name, "here"));
 }
 
-int ok_player_name(const ServerConfiguration *configuration, const char *name) {
+static int ok_player_name_with_limit(const ServerConfiguration *configuration,
+                                     const char *name, size_t maximum_length,
+                                     bool allow_spaces) {
   const char *good_chars;
 
   /*
@@ -139,10 +141,10 @@ int ok_player_name(const ServerConfiguration *configuration, const char *name) {
    * Not too long and a good name for a thing
    */
 
-  if (!ok_name(configuration, name) || (strlen(name) >= PLAYER_NAME_LIMIT))
+  if (!ok_name(configuration, name) || strlen(name) > maximum_length)
     return 0;
 
-  if (configuration->name_spaces)
+  if (allow_spaces)
     good_chars = " `$_-.,'";
   else
     good_chars = "`$_-.,'";
@@ -160,6 +162,24 @@ int ok_player_name(const ServerConfiguration *configuration, const char *name) {
       return 0;
   }
   return 1;
+}
+
+int ok_stored_player_name(const ServerConfiguration *configuration,
+                          const char *name) {
+  return ok_player_name_with_limit(configuration, name,
+                                   PLAYER_NAME_STORAGE_LIMIT, true);
+}
+
+int ok_player_name(const ServerConfiguration *configuration, const char *name) {
+  /* An unset limit uses the storage ceiling so zero-initialized test and
+   * utility configurations remain permissive. */
+  const size_t MAXIMUM_LENGTH =
+      configuration->player_name_length_limit > 0
+          ? (size_t)configuration->player_name_length_limit
+          : PLAYER_NAME_STORAGE_LIMIT;
+
+  return ok_player_name_with_limit(configuration, name, MAXIMUM_LENGTH,
+                                   configuration->name_spaces);
 }
 
 int ok_new_player_name(const ServerConfiguration *configuration,

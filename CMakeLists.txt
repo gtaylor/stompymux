@@ -38,8 +38,8 @@ option(BTECH_ENABLE_ASAN "Build with AddressSanitizer instrumentation" ON)
 option(BTECH_ENABLE_UBSAN "Build with UndefinedBehaviorSanitizer instrumentation" ON)
 option(BTECH_ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
 option(BTECH_ENABLE_IWYU "Run Include What You Use during project compilation" OFF)
-option(BTMUX_STRICT_C23 "Disable compiler-specific C extensions for first-party code" ON)
-option(BTMUX_BUILD_FUZZERS "Build first-party libFuzzer targets" OFF)
+option(BTECH_STRICT_C23 "Disable compiler-specific C extensions for first-party code" ON)
+option(BTECH_BUILD_FUZZERS "Build first-party libFuzzer targets" OFF)
 
 if(BTECH_ENABLE_CLANG_TIDY)
   # Needs to understand C23 `constexpr`, which landed in Clang 19.
@@ -176,7 +176,7 @@ endif()
 
 # Third-party targets above retain their upstream dialect settings. Targets
 # created from this point forward are first-party code and tests.
-if(BTMUX_STRICT_C23)
+if(BTECH_STRICT_C23)
   set(CMAKE_C_EXTENSIONS OFF)
 endif()
 

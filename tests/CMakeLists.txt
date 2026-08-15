@@ -31,6 +31,19 @@ add_test(NAME configuration_registry COMMAND configuration_registry_test)
 set_tests_properties(configuration_registry PROPERTIES
   LABELS "unit;configuration_registry")
 
+add_executable(configuration_values_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/server/configuration_values.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/server/configuration_values.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+target_compile_options(configuration_values_test PRIVATE -ffunction-sections)
+target_link_options(configuration_values_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(configuration_values_test PRIVATE btmux_options)
+target_include_directories(configuration_values_test PRIVATE
+  "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME configuration_values COMMAND configuration_values_test)
+set_tests_properties(configuration_values PROPERTIES
+  LABELS "unit;mux-server;configuration_values")
+
 add_test(NAME catalog_startup
   COMMAND bash
     "${CMAKE_SOURCE_DIR}/tests/integration/catalog_startup.sh"
@@ -445,6 +458,14 @@ target_include_directories(checked_storage_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME checked_storage COMMAND checked_storage_test)
 
+add_executable(string_copy_bounded_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/string_copy_bounded.c)
+target_link_libraries(string_copy_bounded_test PRIVATE btmux_options)
+target_include_directories(string_copy_bounded_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME string_copy_bounded COMMAND string_copy_bounded_test)
+
 add_executable(commac_test
   ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/commac.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/communication/commac.c)
@@ -565,21 +586,21 @@ target_include_directories(utf8_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME utf8 COMMAND utf8_test)
 
-if(BTMUX_BUILD_FUZZERS)
+if(BTECH_BUILD_FUZZERS)
   if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
-    message(FATAL_ERROR "BTMUX_BUILD_FUZZERS requires Clang")
+    message(FATAL_ERROR "BTECH_BUILD_FUZZERS requires Clang")
   endif()
-  find_program(BTMUX_FUZZER_CXX_COMPILER NAMES g++ REQUIRED)
+  find_program(BTECH_FUZZER_CXX_COMPILER NAMES g++ REQUIRED)
   execute_process(
-    COMMAND "${BTMUX_FUZZER_CXX_COMPILER}" -print-file-name=libstdc++.so
-    OUTPUT_VARIABLE BTMUX_FUZZER_CXX_RUNTIME
+    COMMAND "${BTECH_FUZZER_CXX_COMPILER}" -print-file-name=libstdc++.so
+    OUTPUT_VARIABLE BTECH_FUZZER_CXX_RUNTIME
     OUTPUT_STRIP_TRAILING_WHITESPACE
     COMMAND_ERROR_IS_FATAL ANY)
-  if(NOT EXISTS "${BTMUX_FUZZER_CXX_RUNTIME}")
+  if(NOT EXISTS "${BTECH_FUZZER_CXX_RUNTIME}")
     message(FATAL_ERROR "Unable to locate the libFuzzer C++ runtime dependency")
   endif()
-  cmake_path(GET BTMUX_FUZZER_CXX_RUNTIME PARENT_PATH
-             BTMUX_FUZZER_CXX_RUNTIME_DIRECTORY)
+  cmake_path(GET BTECH_FUZZER_CXX_RUNTIME PARENT_PATH
+             BTECH_FUZZER_CXX_RUNTIME_DIRECTORY)
 
   function(btmux_add_fuzzer target)
     add_executable(${target} ${ARGN})
@@ -588,9 +609,9 @@ if(BTMUX_BUILD_FUZZERS)
     target_link_options(${target} PRIVATE
       -Wl,--gc-sections -fsanitize=fuzzer)
     target_link_libraries(${target} PRIVATE
-      btmux_options ${BTMUX_FUZZER_CXX_RUNTIME})
+      btmux_options ${BTECH_FUZZER_CXX_RUNTIME})
     target_link_directories(${target} PRIVATE
-      "${BTMUX_FUZZER_CXX_RUNTIME_DIRECTORY}")
+      "${BTECH_FUZZER_CXX_RUNTIME_DIRECTORY}")
     target_include_directories(${target} PRIVATE
       "${CMAKE_BINARY_DIR}"
       "${CMAKE_SOURCE_DIR}/src")

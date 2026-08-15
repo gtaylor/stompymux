@@ -149,6 +149,24 @@ int cf_int(const ConfigurationCall *call) {
   return -1;
 }
 
+int cf_player_name_length_limit(const ConfigurationCall *call) {
+  char expectation[96];
+  int *value = call->value;
+  int parsed;
+
+  if (parse_int_checked(call->text, &parsed) && parsed >= 2 &&
+      parsed <= (int)PLAYER_NAME_STORAGE_LIMIT) {
+    *value = parsed;
+    return 0;
+  }
+  (void)snprintf(
+      expectation, sizeof(expectation),
+      "Expected an integer from 2 through %zu: ", PLAYER_NAME_STORAGE_LIMIT);
+  configuration_log_syntax(call->context, call->player, call->command,
+                           expectation, call->text);
+  return -1;
+}
+
 int cf_techtime_multiplier(const ConfigurationCall *call) {
   double *value = call->value;
   float parsed;

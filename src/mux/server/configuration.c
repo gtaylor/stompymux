@@ -227,6 +227,7 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->conn_timeout = 120;
   context->configuration->idle_interval = 60;
   context->configuration->retry_limit = 3;
+  context->configuration->player_name_length_limit = 30;
   context->configuration->player_password_length_limit = 64;
   context->configuration->password_hash_opslimit = 3;
   context->configuration->password_hash_memlimit = 12 * 1024 * 1024;

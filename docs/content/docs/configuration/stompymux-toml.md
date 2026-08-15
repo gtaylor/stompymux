@@ -30,7 +30,7 @@ anything pulled in through `include`.
 | `[sites]` | Site ACLs: `forbid`, `suspect`, `trust`, `permit` arrays of `{ address, mask }` tables. |
 | `[access.*]` | Permission tables for commands, lists, and configuration directives. |
 | `[aliases.*]` | Command and flag alias tables. |
-| `[names]` | `bad`/`good` player-name lists. |
+| `[names]` | Player-name length limit and `bad`/`good` player-name lists. |
 | `[logging]` | The `log_options` formatting array and a `[logging.topics]` table of event-category booleans. |
 
 Lua callbacks run with LuaJIT compilation enabled. Consequently, `[lua]` has no
@@ -70,6 +70,18 @@ directives take other shapes:
 
 An unrecognized key is logged to stderr and skipped rather than aborting the
 whole file; a syntax error in the TOML itself aborts loading.
+
+## Player names
+
+`names.maximum_length` sets the maximum length accepted when registering a
+new player. It defaults to `30` and accepts values from `2` through `255`.
+Existing players whose names exceed a newly lowered limit can still log in,
+but new registrations and player renames must satisfy the configured limit.
+Likewise, disabling `mux.player_name_spaces` does not invalidate existing
+players or aliases containing spaces, but prevents future names from using
+spaces.
+The interactive registration flow reports the configured maximum instead of
+silently truncating an overlong name.
 
 ## BattleTech cargo commands
 

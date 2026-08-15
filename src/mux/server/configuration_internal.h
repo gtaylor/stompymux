@@ -19,6 +19,7 @@ int configuration_status_from_counts(const ConfigurationCall *call,
                                      ConfigurationParseCounts counts);
 
 int cf_int(const ConfigurationCall *call);
+int cf_player_name_length_limit(const ConfigurationCall *call);
 int cf_techtime_multiplier(const ConfigurationCall *call);
 int cf_bool(const ConfigurationCall *call);
 int cf_bool_bit(const ConfigurationCall *call);

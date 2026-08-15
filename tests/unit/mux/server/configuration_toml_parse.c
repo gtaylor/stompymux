@@ -78,7 +78,9 @@ static int test_scalar_dispatch(void) {
                              "default_thing_lua_parent = \"thing.lua\"\n"
                              "default_room_lua_parent = \"room.lua\"\n"
                              "default_exit_lua_parent = \"exit.lua\"\n"
-                             "default_player_lua_parent = \"player.lua\"\n";
+                             "default_player_lua_parent = \"player.lua\"\n"
+                             "[names]\n"
+                             "maximum_length = 30\n";
   toml_result_t result;
   CallLog log = {0};
   int ok;
@@ -87,7 +89,7 @@ static int test_scalar_dispatch(void) {
   if (!result.ok)
     return 0;
   configuration_toml_walk(result.toptab, recording_set_fn, &log);
-  ok = log.count == 17 && call_log_find(&log, "port", "5555") &&
+  ok = log.count == 18 && call_log_find(&log, "port", "5555") &&
        call_log_find(&log, "mud_name", "Test") &&
        call_log_find(&log, "dump_interval", "900") &&
        call_log_find(&log, "lua_directory", "scripts") &&
@@ -103,7 +105,8 @@ static int test_scalar_dispatch(void) {
        call_log_find(&log, "default_thing_lua_parent", "thing.lua") &&
        call_log_find(&log, "default_room_lua_parent", "room.lua") &&
        call_log_find(&log, "default_exit_lua_parent", "exit.lua") &&
-       call_log_find(&log, "default_player_lua_parent", "player.lua");
+       call_log_find(&log, "default_player_lua_parent", "player.lua") &&
+       call_log_find(&log, "player_name_length_limit", "30");
   toml_free(result);
   return ok;
 }

@@ -46,7 +46,7 @@ jobs:
             CMAKE_BUILD_TYPE=${{ matrix.configuration.build_type }}
             BTECH_ENABLE_ASAN=${{ matrix.configuration.asan }}
             BTECH_ENABLE_UBSAN=${{ matrix.configuration.ubsan }}
-            BTMUX_STRICT_C23=ON
+            BTECH_STRICT_C23=ON
           push: never
           runCmd: |
             set -euo pipefail
@@ -54,7 +54,7 @@ jobs:
             grep -Fx "CMAKE_BUILD_TYPE:STRING=$CMAKE_BUILD_TYPE" .build/CMakeCache.txt
             grep -Fx "BTECH_ENABLE_ASAN:BOOL=$BTECH_ENABLE_ASAN" .build/CMakeCache.txt
             grep -Fx "BTECH_ENABLE_UBSAN:BOOL=$BTECH_ENABLE_UBSAN" .build/CMakeCache.txt
-            grep -Fx "BTMUX_STRICT_C23:BOOL=$BTMUX_STRICT_C23" .build/CMakeCache.txt
+            grep -Fx "BTECH_STRICT_C23:BOOL=$BTECH_STRICT_C23" .build/CMakeCache.txt
             git diff --exit-code
 
   fuzz:

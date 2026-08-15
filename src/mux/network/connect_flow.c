@@ -41,7 +41,7 @@ typedef enum ConnectResult {
 } ConnectResult;
 
 typedef struct ConnectFlowData {
-  char name[PLAYER_NAME_LIMIT + 1];
+  char name[PLAYER_NAME_STORAGE_LIMIT + 1];
   char password[LBUF_SIZE];
   char prompt[SBUF_SIZE];
 } ConnectFlowData;
@@ -421,19 +421,34 @@ static FlowOutcome connect_flow_step_username(const FlowStepCall *call) {
     outcome.prompt = "Who are you? ";
     return outcome;
   }
-  string_copy_trunc(data->name, input, sizeof(data->name) - 1);
+  if (!string_copy_bounded(data->name, sizeof(data->name), input)) {
+    outcome.action = FLOW_ACTION_WAIT;
+    outcome.prompt = "That username exceeds the server's supported length.\r\n"
+                     "Who are you? ";
+    return outcome;
+  }
   outcome.action = FLOW_ACTION_GOTO;
   if (lookup_player(descriptor_runtime(d)->world, NOTHING, data->name, 0) !=
       NOTHING) {
-    string_copy_trunc(outcome.next_step, "password", FLOW_STEP_NAME_SIZE - 1);
+    (void)string_copy_bounded(outcome.next_step, sizeof(outcome.next_step),
+                              "password");
+  } else if (strlen(data->name) >
+             (size_t)descriptor_runtime(d)
+                 ->world->configuration->player_name_length_limit) {
+    (void)snprintf(
+        data->prompt, sizeof(data->prompt),
+        "New usernames may be at most %d characters long.\r\nWho are you? ",
+        descriptor_runtime(d)->world->configuration->player_name_length_limit);
+    outcome.action = FLOW_ACTION_WAIT;
+    outcome.prompt = data->prompt;
   } else if (!ok_new_player_name(descriptor_runtime(d)->world->configuration,
                                  data->name)) {
     outcome.action = FLOW_ACTION_WAIT;
     outcome.prompt = "New usernames must start with a letter and be at least "
                      "two characters long.\r\nWho are you? ";
   } else {
-    string_copy_trunc(outcome.next_step, "confirm_create",
-                      FLOW_STEP_NAME_SIZE - 1);
+    (void)string_copy_bounded(outcome.next_step, sizeof(outcome.next_step),
+                              "confirm_create");
   }
   return outcome;
 }
@@ -452,7 +467,7 @@ static FlowOutcome connect_flow_step_password(const FlowStepCall *call) {
   }
   descriptor_telnet_set_echo(d, 1);
   connect_flow_hide_input_length(d, input);
-  string_copy_trunc(data->password, input, sizeof(data->password) - 1);
+  (void)string_copy_bounded(data->password, sizeof(data->password), input);
 
   switch (connect_flow_attempt_login(d, data->name, data->password)) {
   case CONNECT_RESULT_CONNECTED:
@@ -464,7 +479,8 @@ static FlowOutcome connect_flow_step_password(const FlowStepCall *call) {
   case CONNECT_RESULT_RETRY:
   default:
     outcome.action = FLOW_ACTION_GOTO;
-    string_copy_trunc(outcome.next_step, "username", FLOW_STEP_NAME_SIZE - 1);
+    (void)string_copy_bounded(outcome.next_step, sizeof(outcome.next_step),
+                              "username");
     return outcome;
   }
 }
@@ -484,13 +500,14 @@ static FlowOutcome connect_flow_step_confirm_create(const FlowStepCall *call) {
   }
   if (connect_flow_blank(input) || flow_parse_yesno(input) == FLOW_YESNO_YES) {
     outcome.action = FLOW_ACTION_GOTO;
-    string_copy_trunc(outcome.next_step, "create_password",
-                      FLOW_STEP_NAME_SIZE - 1);
+    (void)string_copy_bounded(outcome.next_step, sizeof(outcome.next_step),
+                              "create_password");
     return outcome;
   }
   if (flow_parse_yesno(input) == FLOW_YESNO_NO) {
     outcome.action = FLOW_ACTION_GOTO;
-    string_copy_trunc(outcome.next_step, "username", FLOW_STEP_NAME_SIZE - 1);
+    (void)string_copy_bounded(outcome.next_step, sizeof(outcome.next_step),
+                              "username");
     return outcome;
   }
   outcome.action = FLOW_ACTION_WAIT;
@@ -516,10 +533,10 @@ static FlowOutcome connect_flow_step_create_password(const FlowStepCall *call) {
     return outcome;
   }
   connect_flow_hide_input_length(d, input);
-  string_copy_trunc(data->password, input, sizeof(data->password) - 1);
+  (void)string_copy_bounded(data->password, sizeof(data->password), input);
   outcome.action = FLOW_ACTION_GOTO;
-  string_copy_trunc(outcome.next_step, "create_confirm_password",
-                    FLOW_STEP_NAME_SIZE - 1);
+  (void)string_copy_bounded(outcome.next_step, sizeof(outcome.next_step),
+                            "create_confirm_password");
   return outcome;
 }
 
@@ -542,8 +559,8 @@ connect_flow_step_create_confirm_password(const FlowStepCall *call) {
      * suppressed rather than restoring and immediately re-suppressing it. */
     outcome.action = FLOW_ACTION_GOTO;
     outcome.prompt = "Passwords did not match.\r\n";
-    string_copy_trunc(outcome.next_step, "create_password",
-                      FLOW_STEP_NAME_SIZE - 1);
+    (void)string_copy_bounded(outcome.next_step, sizeof(outcome.next_step),
+                              "create_password");
     return outcome;
   }
 
@@ -561,7 +578,8 @@ connect_flow_step_create_confirm_password(const FlowStepCall *call) {
   default:
     outcome.action = FLOW_ACTION_GOTO;
     outcome.prompt = CREATE_FAILURE;
-    string_copy_trunc(outcome.next_step, "username", FLOW_STEP_NAME_SIZE - 1);
+    (void)string_copy_bounded(outcome.next_step, sizeof(outcome.next_step),
+                              "username");
     return outcome;
   }
 }

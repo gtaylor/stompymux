@@ -949,6 +949,23 @@ static int set_nonascii_player_alias(const char *path, int invalid) {
   return result;
 }
 
+static int set_spaced_player_alias(const char *path, bool enabled) {
+  sqlite3 *sqlite = NULL;
+  const char *statement =
+      enabled ? "UPDATE player_state SET alias = 'Existing Player' WHERE "
+                "object_dbref = 1;"
+              : "UPDATE player_state SET alias = NULL WHERE object_dbref = 1;";
+  int result =
+      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
+                  SQLITE_OK &&
+              sqlite3_exec(sqlite, statement, NULL, NULL, NULL) == SQLITE_OK
+          ? 0
+          : -1;
+
+  sqlite3_close(sqlite);
+  return result;
+}
+
 static int set_invalid_character_value_name(const char *path, int invalid) {
   sqlite3 *sqlite = NULL;
   const char *statement =
@@ -1442,6 +1459,7 @@ int main(int argc, char *argv[]) {
   char config[PATH_MAX];
   char bootstrap_config[PATH_MAX];
   char invalid_god_config[PATH_MAX];
+  char name_limit_config[PATH_MAX];
   char sqlite_read_config[PATH_MAX];
   char missing_config[PATH_MAX];
   char sqlite_directory[PATH_MAX];
@@ -1503,6 +1521,8 @@ int main(int argc, char *argv[]) {
                directory) < 0 ||
       snprintf(invalid_god_config, sizeof(invalid_god_config),
                "%s/invalid-god.conf", directory) < 0 ||
+      snprintf(name_limit_config, sizeof(name_limit_config),
+               "%s/name-limit.conf", directory) < 0 ||
       snprintf(sqlite_read_config, sizeof(sqlite_read_config),
                "%s/sqlite-read.conf", directory) < 0 ||
       snprintf(sqlite_directory, sizeof(sqlite_directory), "%s/sqlite",
@@ -1558,7 +1578,6 @@ int main(int argc, char *argv[]) {
   if (result == 0 && (run_server(server, invalid_god_config, 0, &status) < 0 ||
                       !WIFEXITED(status) || WEXITSTATUS(status) == 0))
     result = 1;
-
   if (strcmp(suite, "bootstrap") == 0) {
     file = fopen(missing_config, "w");
     if (!file)
@@ -1574,6 +1593,22 @@ int main(int argc, char *argv[]) {
   if (strcmp(suite, "persistence") != 0 && !recovery_snapshot &&
       !recovery_writer && !recovery_rejection)
     return 2;
+
+  if (strcmp(suite, "persistence") == 0) {
+    file = fopen(name_limit_config, "w");
+    if (file == nullptr)
+      return 2;
+    fprintf(file, "[database]\ngame_database = \"%s\"\n", database);
+    fprintf(file, "[names]\nmaximum_length = 2\n");
+    fprintf(file, "[mux]\nplayer_name_spaces = false\n");
+    fprintf(file, "[server]\nport = 0\n");
+    if (fclose(file) != 0 || set_spaced_player_alias(database, true) < 0 ||
+        (result == 0 &&
+         (run_server(server, name_limit_config, 0, &status) < 0 ||
+          !WIFEXITED(status) || WEXITSTATUS(status) == 2)) ||
+        set_spaced_player_alias(database, false) < 0)
+      result = 1;
+  }
 
   if (result == 0 && seed_commac_snapshot(database) < 0)
     result = 1;

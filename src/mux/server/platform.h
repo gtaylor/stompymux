@@ -47,8 +47,10 @@ typedef void (*GenericFnPtr)(void);
 
 /* Compile time options */
 
-constexpr int PLAYER_NAME_LIMIT = 22; /* Max length for player names */
-constexpr int MAX_ARG = 100;          /* max # args from command processor */
+/* Fixed storage ceiling for player names. The configured registration limit
+ * may be lower, but must not exceed this value. */
+constexpr size_t PLAYER_NAME_STORAGE_LIMIT = 255;
+constexpr int MAX_ARG = 100; /* max # args from command processor */
 
 constexpr int HASH_FACTOR = 16; /* How much hashing you want. */
 
@@ -56,8 +58,19 @@ constexpr int OUTPUT_BLOCK_SIZE = 16384;
 static inline char *string_copy(char *dst, const char *src) {
   return strcpy(dst, src); // NOLINT(clang-analyzer-security.insecureAPI.strcpy)
 }
-static inline char *string_copy_trunc(char *dst, const char *src, size_t n) {
-  return strncpy(dst, src, n);
+[[nodiscard]] static inline bool
+string_copy_bounded(char *destination, size_t size, const char *source) {
+  /* source must point to a NUL-terminated string. */
+  if (size == 0)
+    return false;
+
+  const size_t SOURCE_LENGTH = strnlen(source, size);
+  const size_t COPY_LENGTH = SOURCE_LENGTH < size ? SOURCE_LENGTH : size - 1;
+  memcpy(destination, source, COPY_LENGTH);
+#pragma clang unsafe_buffer_usage begin
+  destination[COPY_LENGTH] = '\0';
+#pragma clang unsafe_buffer_usage end
+  return SOURCE_LENGTH < size;
 }
 
 constexpr int CHANNEL_HISTORY_LEN = 20; /* at max 20 last msgs */

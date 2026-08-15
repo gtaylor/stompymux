@@ -227,6 +227,8 @@ struct ServerConfiguration {
   int conn_timeout;   /* Allow this long to connect before booting */
   int idle_interval;  /* when to check for idle users */
   int retry_limit;    /* close conn after this many bad logins */
+  /* Maximum new player name length; zero falls back to the storage limit. */
+  int player_name_length_limit;
   int player_password_length_limit; /* Maximum length of a player password */
   int password_hash_opslimit;       /* Argon2id CPU cost */
   int password_hash_memlimit;       /* Argon2id memory cost in bytes */

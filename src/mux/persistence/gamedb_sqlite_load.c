@@ -111,7 +111,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
          type != OBJECT_TYPE_GARBAGE) ||
         !utf8_validate(name, strlen(name)) ||
         (type == OBJECT_TYPE_PLAYER &&
-         !ok_player_name(context->configuration, name))) {
+         !ok_stored_player_name(context->configuration, name))) {
       result = -1;
     } else {
       for (ObjectFlag flag = OBJECT_FLAG_ANSI;
@@ -199,7 +199,7 @@ static int gamedb_load_native_state(PersistenceContext *context,
           !is_good_obj(context->database, object) ||
           gamedb_column_text(statement, 1, &value, LBUF_SIZE) < 0 ||
           (column->field == A_ALIAS &&
-           !ok_player_name(context->configuration, value))) {
+           !ok_stored_player_name(context->configuration, value))) {
         sqlite3_finalize(statement);
         return -1;
       }

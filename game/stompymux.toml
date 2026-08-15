@@ -223,6 +223,8 @@ login_hash_limit = 5
 # -----------------------------------------------
 
 [names]
+# Maximum number of characters in a newly registered player name.
+maximum_length = 30
 # Disallow player names matching wildcard patterns. For example:
 # bad = ["Admin*", "*wizard*"]
 

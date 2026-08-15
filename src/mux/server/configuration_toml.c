@@ -218,6 +218,7 @@ static const ConfigTomlMapping CONFIG_TOML_MAP[] = {
     {"mux.player_zone", "player_zone", CFG_KIND_SCALAR},
 
     /* security */
+    {"names.maximum_length", "player_name_length_limit", CFG_KIND_SCALAR},
     {"security.player_password_length_limit", "player_password_length_limit",
      CFG_KIND_SCALAR},
     {"security.password_hash_opslimit", "password_hash_opslimit",

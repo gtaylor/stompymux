@@ -1365,7 +1365,9 @@ static int create_styled_object(int socket_fd) {
 }
 
 static int exercise_plain_osc_fallback(int socket_fd) {
-  if (send_command(socket_fd, "GOD\r\n") < 0 ||
+  if (send_command(socket_fd, "abcdefghijklmnopqrstuvwxyz12345\r\n") < 0 ||
+      expect_text(socket_fd, "New usernames may be at most ") < 0 ||
+      send_command(socket_fd, "GOD\r\n") < 0 ||
       expect_text(socket_fd, "Password:") < 0 ||
       send_command(socket_fd, "btmuxr0x\r\n") < 0 ||
       expect_text(socket_fd, "Connected.") < 0 ||

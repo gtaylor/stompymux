@@ -138,9 +138,8 @@ int fetch_connect(DescriptorRegistry *descriptors, RuntimeClock *clock,
 
 static char *trimmed_name(GameDatabase *database, DbRef player,
                           char buffer[static CONNECTION_NAME_TEXT_SIZE]) {
-  string_copy_trunc(buffer, game_object_pure_name(database, player), 16);
-  *(char *)checked_storage_at(buffer, CONNECTION_NAME_TEXT_SIZE, sizeof(char),
-                              16) = '\0';
+  (void)string_copy_bounded(buffer, CONNECTION_NAME_TEXT_SIZE,
+                            game_object_pure_name(database, player));
   return buffer;
 }
 

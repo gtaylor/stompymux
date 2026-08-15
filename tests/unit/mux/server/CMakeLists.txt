@@ -4,4 +4,5 @@ btmux_label_unit_topic(mux-server mux
   power_fields
   password_hash
   validation
+  configuration_values
   configuration_toml_parse)

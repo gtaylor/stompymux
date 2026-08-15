@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/resource.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -60,6 +61,11 @@ static int expect_failure(FailureCase failure, const char *message) {
   if (child < 0)
     return 1;
   if (child == 0) {
+    const struct rlimit CORE_LIMIT = {.rlim_cur = 0, .rlim_max = 0};
+    if (setrlimit(RLIMIT_CORE, &CORE_LIMIT) != 0) {
+      perror("setrlimit");
+      _exit(4);
+    }
     (void)close(descriptors[0]);
     if (dup2(descriptors[1], STDERR_FILENO) < 0)
       _exit(3);

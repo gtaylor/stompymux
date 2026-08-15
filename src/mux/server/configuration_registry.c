@@ -245,6 +245,8 @@ static const ConfigurationEntry CONFIGURATION_ENTRY_TEMPLATES[] = {
     {"permit_site", cf_site, CA_GOD, ACCESS_LOC(access_sites), 0},
     {"default_player_flags", cf_set_flags, CA_GOD,
      CONFIG_LOC(default_player_flags), 0},
+    {"player_name_length_limit", cf_player_name_length_limit, CA_GOD,
+     CONFIG_LOC(player_name_length_limit), 0},
     {"player_password_length_limit", cf_int, CA_GOD,
      CONFIG_LOC(player_password_length_limit), 0},
     {"player_name_spaces", cf_bool, CA_GOD, CONFIG_LOC(name_spaces), 0},

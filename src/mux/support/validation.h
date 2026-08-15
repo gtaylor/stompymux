@@ -9,6 +9,8 @@ typedef struct ServerConfiguration ServerConfiguration;
 int is_integer(char *string);
 int is_number(const char *string);
 int ok_name(const ServerConfiguration *configuration, const char *name);
+int ok_stored_player_name(const ServerConfiguration *configuration,
+                          const char *name);
 int ok_player_name(const ServerConfiguration *configuration, const char *name);
 int ok_new_player_name(const ServerConfiguration *configuration,
                        const char *name);

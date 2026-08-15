@@ -73,7 +73,7 @@ static void flow_apply_outcome(Descriptor *d, FlowOutcome outcome) {
       if (outcome.prompt != nullptr) {
         free_lbuf(flow->last_prompt);
         flow->last_prompt = alloc_lbuf("flow_last_prompt");
-        string_copy_trunc(flow->last_prompt, outcome.prompt, LBUF_SIZE - 1);
+        (void)string_copy_bounded(flow->last_prompt, LBUF_SIZE, outcome.prompt);
       }
       flow_send_prompt(d, flow->last_prompt);
       return;
@@ -91,7 +91,8 @@ static void flow_apply_outcome(Descriptor *d, FlowOutcome outcome) {
         descriptor_flow_destroy(d);
         return;
       }
-      string_copy_trunc(flow->step, outcome.next_step, FLOW_STEP_NAME_SIZE - 1);
+      (void)string_copy_bounded(flow->step, sizeof(flow->step),
+                                outcome.next_step);
       outcome = flow->step_fn(&(FlowStepCall){
           .descriptor = d, .flow_data = flow->flow_data, .step = flow->step});
       continue;
@@ -119,7 +120,8 @@ int descriptor_flow_start(const FlowStartRequest *request) {
   flow->flow_data = request->flow_data;
   flow->destroy = request->destroy;
   flow->last_prompt = nullptr;
-  string_copy_trunc(flow->step, request->initial_step, FLOW_STEP_NAME_SIZE - 1);
+  (void)string_copy_bounded(flow->step, sizeof(flow->step),
+                            request->initial_step);
   d->flow = flow;
 
   outcome = request->step(&(FlowStepCall){

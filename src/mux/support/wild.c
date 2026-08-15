@@ -253,9 +253,7 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
 
   if (!*wild_cursor_suffix(&pattern, 1)) {
     char *capture = wild_argument_at(context, arg);
-    string_copy_trunc(capture, wild_cursor_suffix(&data, 0), LBUF_SIZE - 1);
-    *(char *)checked_storage_at(capture, LBUF_SIZE, sizeof(char),
-                                LBUF_SIZE - 1) = '\0';
+    (void)string_copy_bounded(capture, LBUF_SIZE, wild_cursor_suffix(&data, 0));
     return 1;
   }
   /*
@@ -380,11 +378,13 @@ static int wild1(WildcardContext *context, const char *tstr, const char *dstr,
       size_t capture_length =
           data.offset - data_capture_offset - (size_t)numextra;
       char *capture = wild_argument_at(context, argpos);
-      string_copy_trunc(capture,
-                        checked_string_suffix(data.text, data_capture_offset),
-                        capture_length);
-      *(char *)checked_storage_at(capture, LBUF_SIZE, sizeof(char),
-                                  capture_length) = '\0';
+      /* Malformed or unexpectedly large input should yield a bounded capture,
+       * not turn a wildcard match into a process-wide abort. */
+      const size_t CAPTURE_SIZE =
+          capture_length < LBUF_SIZE ? capture_length + 1 : LBUF_SIZE;
+      (void)string_copy_bounded(
+          capture, CAPTURE_SIZE,
+          checked_string_suffix(data.text, data_capture_offset));
       data_capture_offset = data.offset - (size_t)numextra;
       argpos++;
 

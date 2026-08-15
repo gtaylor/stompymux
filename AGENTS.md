@@ -42,7 +42,8 @@ When writing C code, use the following naming conventions:
 - The `tests/fixtures` directory contains a freestanding collection of files required for unit and integration tests.
 - The `tests/fixtures/game` directory is a minimal game directory for the maximal cases.
 - Avoid hardcoded sleeps where possible. Prefer watches and other techniques to keep our test suite time low.
-- `tests` directory structure doesn't have to exactly match the source structure, but keep test suites grouped into topical subdirectories.
+- Death-test children must set both the soft (`rlim_cur`) and hard (`rlim_max`) `RLIMIT_CORE` limits to zero before triggering the expected fatal condition, so intentional failures do not generate core dumps or kernel coredump noise.
+- `tests` directory structure doesn't have to exactly match the source structure, but keep test suites grouped into topical subdirectories.
 
 ## Development workflows
 

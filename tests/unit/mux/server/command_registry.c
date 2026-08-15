@@ -1,5 +1,7 @@
 #include <assert.h>
 #include <signal.h>
+#include <stdio.h>
+#include <sys/resource.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -41,6 +43,11 @@ static void assert_const_hash_misuse_aborts(HashTable *table,
   const pid_t CHILD = fork();
   assert(CHILD >= 0);
   if (CHILD == 0) {
+    const struct rlimit CORE_LIMIT = {.rlim_cur = 0, .rlim_max = 0};
+    if (setrlimit(RLIMIT_CORE, &CORE_LIMIT) != 0) {
+      perror("setrlimit");
+      _exit(3);
+    }
     if (misuse == CONST_HASH_MUTABLE_FIND)
       (void)hash_table_find("one", table);
     else
@@ -138,8 +145,7 @@ int main(void) {
   assert(hash_table_find_const("one", &macros.macros) == MACROS);
   assert(hash_table_find_const("missing", &macros.macros) == nullptr);
   assert_const_hash_misuse_aborts(&macros.macros, CONST_HASH_MUTABLE_FIND);
-  assert_const_hash_misuse_aborts(&macros.macros,
-                                  CONST_HASH_MUTABLE_ITERATION);
+  assert_const_hash_misuse_aborts(&macros.macros, CONST_HASH_MUTABLE_ITERATION);
   assert(!macro_catalog_install(&macros, MACROS,
                                 sizeof(MACROS) / sizeof(*MACROS)));
   command_catalog_release(&macros);
