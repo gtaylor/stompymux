@@ -103,11 +103,11 @@ void auto_radio_command_report(Autopilot *autopilot, Mech *mech,
     (void)snprintf(buffer, MBUF_SIZE, ", headed %d speed %.2f",
                    mech_heading_degrees(mech),
                    (double)mech_current_speed(mech));
-    strncat(mesg, buffer, LBUF_SIZE);
+    (void)string_append_bounded(mesg, LBUF_SIZE, buffer);
   } else {
     (void)snprintf(buffer, MBUF_SIZE, ", headed %d",
                    mech_heading_degrees(mech));
-    strncat(mesg, buffer, LBUF_SIZE);
+    (void)string_append_bounded(mesg, LBUF_SIZE, buffer);
   }
 
   /* Is the AI targeting something */
@@ -123,7 +123,7 @@ void auto_radio_command_report(Autopilot *autopilot, Mech *mech,
                                     mech_range_to(mech, target))
                          ? ""
                          : "(not in LOS)");
-      strncat(mesg, buffer, LBUF_SIZE);
+      (void)string_append_bounded(mesg, LBUF_SIZE, buffer);
     }
   }
 

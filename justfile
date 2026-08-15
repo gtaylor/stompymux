@@ -32,7 +32,7 @@ check-header-constants:
 
 # Production code must use the project's checked parsing and copy helpers.
 check-unsafe-apis:
-    status=0; grep -RInE '\b(strncpy|strcat|sprintf|vsprintf|gets|alloca|strtok|atoi)[[:space:]]*\(' src || status=$?; if (( status == 0 )); then echo 'Unsafe API usage found in src/.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
+    status=0; grep -RInE '\b(strncpy|strcat|strncat|sprintf|vsprintf|gets|alloca|strtok|atoi)[[:space:]]*\(' src || status=$?; if (( status == 0 )); then echo 'Unsafe API usage found in src/.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
 
 fmt-c:
     find src -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} -i

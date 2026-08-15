@@ -490,6 +490,22 @@ target_include_directories(string_copy_bounded_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME string_copy_bounded COMMAND string_copy_bounded_test)
 
+add_executable(string_append_bounded_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/string_append_bounded.c)
+target_link_libraries(string_append_bounded_test PRIVATE btmux_options)
+target_include_directories(string_append_bounded_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME string_append_bounded COMMAND string_append_bounded_test)
+
+add_executable(network_output_format_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/network/network_output_format.c)
+target_link_libraries(network_output_format_test PRIVATE btmux_options)
+target_include_directories(network_output_format_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME network_output_format COMMAND network_output_format_test)
+
 add_executable(commac_test
   ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/commac.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/communication/commac.c)

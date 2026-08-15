@@ -15,6 +15,7 @@
 #include "mux/commands/command_runtime.h" // IWYU pragma: keep
 #include "mux/network/descriptor.h"
 #include "mux/network/network_output.h"
+#include "mux/network/network_output_format.h"
 #include "mux/network/telnet_environment.h"
 #include "mux/network/telnet_socket.h"
 #include "mux/objects/flags.h"
@@ -64,16 +65,9 @@ void notify_printf(EvaluationContext *evaluation, DbRef player,
       descriptor_iterator_player(evaluation->runtime->descriptors, player);
   char buffer[LBUF_SIZE];
   va_list ap;
-  memset(buffer, 0, LBUF_SIZE);
-
   va_start(ap, format);
-
-  // NOLINTNEXTLINE(clang-analyzer-security.VAList)
-  (void)vsnprintf(buffer, LBUF_SIZE - 1, format, ap);
+  (void)network_output_format_line_v(buffer, sizeof(buffer), format, ap);
   va_end(ap);
-
-  strncat(buffer, "\r\n", LBUF_SIZE - 1);
-  buffer[LBUF_SIZE - 1] = '\0';
 
   while ((d = descriptor_iterator_next(&iterator)) != nullptr) {
     descriptor_queue_string(d, buffer);

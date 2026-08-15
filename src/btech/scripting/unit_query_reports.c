@@ -113,7 +113,7 @@ BtechScriptResult fun_btpayload_ref(BtechScriptCall *call) {
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
 
-  infostr = payloadlist_func(mech, (char[MBUF_SIZE]){0});
+  infostr = payloadlist_func(mech, (char[MBUF_SIZE]){0}, MBUF_SIZE);
   safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1");
 
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
