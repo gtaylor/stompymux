@@ -14,7 +14,7 @@
 
 /* Use this when the unit is CRITPROOF because the other
  * hitlocation functions are screwy */
-int mech_critproof_hit_location(Mech *mech, int hit_group, int *iscritical) {
+int mech_critproof_hit_location(Mech *mech, int hit_group, bool *iscritical) {
   int roll;
   int hitloc = 0;
   int side;
@@ -24,7 +24,7 @@ int mech_critproof_hit_location(Mech *mech, int hit_group, int *iscritical) {
   roll = btech_random_roll(context);
 
   /* Since we're crit proof set this to 0 */
-  *iscritical = 0;
+  *iscritical = false;
 
   if (condition.combat_safe)
     return 0;

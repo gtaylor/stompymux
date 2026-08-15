@@ -89,8 +89,8 @@ static void collision_apply_damage(const CollisionDamageRequest *request) {
   int dam = request->damage;
   CollisionDamageTable table = request->table;
   int hit_group;
-  int isrear;
-  int iscrit = 0;
+  bool isrear;
+  bool iscrit = false;
   int hitloc = 0;
   int i;
   int sp = (dam - 1) / 5;
@@ -132,8 +132,8 @@ static void collision_apply_damage(const CollisionDamageRequest *request) {
         .line_of_sight = ((att == mech) ? 0 : 1) != 0,
         .attack_pilot = (att == mech) ? -1 : mech_pilot_dbref(att),
         .hit_location = hitloc,
-        .rear = isrear != 0,
-        .critical = iscrit != 0,
+        .rear = isrear,
+        .critical = iscrit,
         .armor_damage = dam > 5 ? 5 : dam,
         .internal_damage = 0,
         .transfer = MECH_DAMAGE_NORMAL,

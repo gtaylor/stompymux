@@ -51,8 +51,8 @@ static Mech **swarm_target_slot(Mech **targets, size_t count, size_t index) {
 void mech_missile_apply_hits(const MissileHitsRequest *request) {
   Mech *mech = request->attacker;
   Mech *target = request->target;
-  int isrear = request->rear;
-  int iscritical = request->critical;
+  bool isrear = request->rear;
+  bool iscritical = request->critical;
   int weapindx = request->weapon.weapon_index;
   int fire_mode = request->fire_mode;
   int ammo_mode = request->ammunition_mode;
@@ -142,8 +142,8 @@ void mech_missile_apply_hits(const MissileHitsRequest *request) {
           .line_of_sight = request->los != 0,
           .attack_pilot = mech_gunner_dbref(mech),
           .hit_location = hitloc,
-          .rear = isrear != 0,
-          .critical = iscritical != 0,
+          .rear = isrear,
+          .critical = iscritical,
           .armor_damage =
               personal_combat_damage_to_unit(&(PersonalCombatDamageConversion){
                   .target = target,
@@ -264,15 +264,15 @@ int mech_missile_hit_target(const MissileAttackRequest *request) {
   int base_to_hit = request->base_to_hit;
   int roll = request->roll;
   int incoming = request->incoming;
-  int isrear = 0;
-  int iscritical = 0;
+  bool isrear = false;
+  bool iscritical = false;
   int ams_shotdown = 0;
   int hit;
   int w_narc_type = 0;
   int ammo_mode = mech_critical_ammo_mode(mech, w_section, w_crit_slot);
   int t_is_inferno = (ammo_mode & INFERNO_MODE);
   int w_narc_hit_loc = 0;
-  int t_is_rear = 0;
+  bool t_is_rear = false;
   char str_loc_name[30];
   int missileindex = 0;
   /* Check to see if we're a NARC or iNARC launcher firing homing missiles */
@@ -359,10 +359,10 @@ int mech_missile_hit_target(const MissileAttackRequest *request) {
 
           mech_printf(hit_mech, MECHALL,
                       "A NARC Beacon has been attached to your %s%s!",
-                      str_loc_name, t_is_rear == 1 ? " (Rear)" : "");
+                      str_loc_name, t_is_rear ? " (Rear)" : "");
           mech_printf(mech, MECHALL,
                       "Your NARC Beacon attaches to the target's %s%s!",
-                      str_loc_name, t_is_rear == 1 ? " (Rear)" : "");
+                      str_loc_name, t_is_rear ? " (Rear)" : "");
         }
       } else {
         mech_notify(mech, MECHALL,
@@ -450,8 +450,8 @@ int mech_missile_hit_target(const MissileAttackRequest *request) {
         .attacker = mech,
         .target = hit_mech,
         .target_hex = request->target_hex,
-        .rear = isrear != 0,
-        .critical = iscritical != 0,
+        .rear = isrear,
+        .critical = iscritical,
         .weapon = request->weapon,
         .fire_mode = mech_critical_fire_mode(mech, w_section, w_crit_slot),
         .ammunition_mode =

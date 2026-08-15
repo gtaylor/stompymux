@@ -39,5 +39,5 @@ HitLocationResult fasa_aerospace_hit_location(Mech *mech, int hit_group,
 HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
                                                HitLocationResult result,
                                                int roll);
-int mech_critproof_hit_location(Mech *mech, int hit_group, int *iscritical);
+int mech_critproof_hit_location(Mech *mech, int hit_group, bool *iscritical);
 HitLocationResult find_swarm_hit_location(BtechContext *context);
