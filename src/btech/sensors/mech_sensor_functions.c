@@ -149,90 +149,91 @@ int blood_see(const SensorVisibilityRequest *request) {
   return bap_see(request);
 }
 
-int vislight_csee(const SensorContactRequest *request) {
-  return !battle_map_sensor_is_disabled(request->map, SENSOR_VIS) &&
-         !(request->flags & (BATTLE_MAP_LOS_BLOCKED | BATTLE_MAP_LOS_FIRE |
-                             BATTLE_MAP_LOS_SMOKE)) &&
-         battle_map_los_wood_count(request->flags) < 3 &&
-         (!request->target || mech_position_z(request->target) >= 0 ||
-          mech_los_actual_elevation(
-              btech_context_get_map(mech_context(request->target),
-                                    mech_map_dbref(request->target)),
-              mech_position_x(request->target),
-              mech_position_y(request->target), request->target) >= 0.0F ||
-          battle_map_los_water_count(request->flags) < 6);
+bool vislight_csee(const SensorContactRequest *request) {
+  return (!battle_map_sensor_is_disabled(request->map, SENSOR_VIS) &&
+          !(request->flags & (BATTLE_MAP_LOS_BLOCKED | BATTLE_MAP_LOS_FIRE |
+                              BATTLE_MAP_LOS_SMOKE)) &&
+          battle_map_los_wood_count(request->flags) < 3 &&
+          (!request->target || mech_position_z(request->target) >= 0 ||
+           mech_los_actual_elevation(
+               btech_context_get_map(mech_context(request->target),
+                                     mech_map_dbref(request->target)),
+               mech_position_x(request->target),
+               mech_position_y(request->target), request->target) >= 0.0F ||
+           battle_map_los_water_count(request->flags) < 6)) != 0;
 }
 
-int liteamp_csee(const SensorContactRequest *request) {
-  return !battle_map_sensor_is_disabled(request->map, SENSOR_LA) &&
-         !(request->flags & (BATTLE_MAP_LOS_BLOCKED | BATTLE_MAP_LOS_FIRE |
-                             BATTLE_MAP_LOS_SMOKE)) &&
-         (!request->target || !mech_sensor_is_lit(request->target)) &&
-         battle_map_los_wood_count(request->flags) < 2 &&
-         !battle_map_los_water_count(request->flags);
+bool liteamp_csee(const SensorContactRequest *request) {
+  return (!battle_map_sensor_is_disabled(request->map, SENSOR_LA) &&
+          !(request->flags & (BATTLE_MAP_LOS_BLOCKED | BATTLE_MAP_LOS_FIRE |
+                              BATTLE_MAP_LOS_SMOKE)) &&
+          (!request->target || !mech_sensor_is_lit(request->target)) &&
+          battle_map_los_wood_count(request->flags) < 2 &&
+          !battle_map_los_water_count(request->flags)) != 0;
 }
 
-int infrared_csee(const SensorContactRequest *request) {
-  return !battle_map_sensor_is_disabled(request->map, SENSOR_IR) &&
-         !(request->flags & (BATTLE_MAP_LOS_BLOCKED | BATTLE_MAP_LOS_FIRE)) &&
-         battle_map_los_wood_count(request->flags) < 6 &&
-         (!request->target || !mech_sensor_target_is_small(request->target));
+bool infrared_csee(const SensorContactRequest *request) {
+  return (!battle_map_sensor_is_disabled(request->map, SENSOR_IR) &&
+          !(request->flags & (BATTLE_MAP_LOS_BLOCKED | BATTLE_MAP_LOS_FIRE)) &&
+          battle_map_los_wood_count(request->flags) < 6 &&
+          (!request->target ||
+           !mech_sensor_target_is_small(request->target))) != 0;
 }
 
-int electrom_csee(const SensorContactRequest *request) {
-  return !battle_map_sensor_is_disabled(request->map, SENSOR_EM) &&
-         !(request->flags &
-           (BATTLE_MAP_LOS_BLOCKED | BATTLE_MAP_LOS_MOUNTAIN)) &&
-         battle_map_los_wood_count(request->flags) < 8 &&
-         !mech_is_any_ecm_disturbed(request->observer) &&
-         (!request->target || mech_class(request->target) != CLASS_MW);
+bool electrom_csee(const SensorContactRequest *request) {
+  return (!battle_map_sensor_is_disabled(request->map, SENSOR_EM) &&
+          !(request->flags &
+            (BATTLE_MAP_LOS_BLOCKED | BATTLE_MAP_LOS_MOUNTAIN)) &&
+          battle_map_los_wood_count(request->flags) < 8 &&
+          !mech_is_any_ecm_disturbed(request->observer) &&
+          (!request->target || mech_class(request->target) != CLASS_MW)) != 0;
 }
 
-int seismic_csee(const SensorContactRequest *request) {
-  return !battle_map_sensor_is_disabled(request->map, SENSOR_SE) &&
-         request->target && !mech_is_jumping(request->observer) &&
-         (btech_context_seismic_detects_stopped_units(
-              mech_context(request->observer)) ||
-          fabsf(mech_current_speed(request->target)) > MP1) &&
-         ((mech_movement_type(request->observer) != MOVE_VTOL ||
-           mech_is_landed(request->observer)) &&
-          (mech_movement_type(request->observer) != MOVE_FLY ||
-           mech_is_landed(request->observer))) &&
-         mech_is_started(request->target) &&
-         !mech_is_jumping(request->target) &&
-         mech_class(request->target) != CLASS_BSUIT &&
-         mech_class(request->target) != CLASS_MW &&
-         mech_movement_type(request->target) != MOVE_HOVER &&
-         (mech_movement_type(request->target) != MOVE_VTOL ||
-          mech_is_landed(request->target)) &&
-         (mech_movement_type(request->target) != MOVE_FLY ||
-          mech_is_landed(request->target)) &&
-         mech_movement_type(request->target) != MOVE_NONE;
+bool seismic_csee(const SensorContactRequest *request) {
+  return (!battle_map_sensor_is_disabled(request->map, SENSOR_SE) &&
+          request->target && !mech_is_jumping(request->observer) &&
+          (btech_context_seismic_detects_stopped_units(
+               mech_context(request->observer)) ||
+           fabsf(mech_current_speed(request->target)) > MP1) &&
+          ((mech_movement_type(request->observer) != MOVE_VTOL ||
+            mech_is_landed(request->observer)) &&
+           (mech_movement_type(request->observer) != MOVE_FLY ||
+            mech_is_landed(request->observer))) &&
+          mech_is_started(request->target) &&
+          !mech_is_jumping(request->target) &&
+          mech_class(request->target) != CLASS_BSUIT &&
+          mech_class(request->target) != CLASS_MW &&
+          mech_movement_type(request->target) != MOVE_HOVER &&
+          (mech_movement_type(request->target) != MOVE_VTOL ||
+           mech_is_landed(request->target)) &&
+          (mech_movement_type(request->target) != MOVE_FLY ||
+           mech_is_landed(request->target)) &&
+          mech_movement_type(request->target) != MOVE_NONE) != 0;
 }
 
-int radar_csee(const SensorContactRequest *request) {
+bool radar_csee(const SensorContactRequest *request) {
   if (battle_map_sensor_is_disabled(request->map, SENSOR_RA) ||
       !request->target || mech_position_z(request->target) <= 2 ||
       (request->flags & BATTLE_MAP_LOS_BLOCKED) ||
       mech_sensor_elevation_above_surface(request->target) <= 1)
-    return 0;
+    return false;
   const int TARGET_Z = mech_position_z(request->target);
   const float TARGET_Z_SQUARED = (float)TARGET_Z * (float)TARGET_Z;
-  return TARGET_Z >= 10 || request->range < TARGET_Z_SQUARED;
+  return (TARGET_Z >= 10 || request->range < TARGET_Z_SQUARED) != 0;
 }
 
-int bap_csee(const SensorContactRequest *request) {
-  return !battle_map_sensor_is_disabled(request->map, SENSOR_BAP) &&
-         !mech_is_any_ecm_disturbed(request->observer) && request->target &&
-         !mech_condition_summary(request->target).angel_ecm_protected &&
-         !mech_condition_summary(request->target).stealth_armor_active &&
-         !mech_condition_summary(request->target).null_signature_active;
+bool bap_csee(const SensorContactRequest *request) {
+  return (!battle_map_sensor_is_disabled(request->map, SENSOR_BAP) &&
+          !mech_is_any_ecm_disturbed(request->observer) && request->target &&
+          !mech_condition_summary(request->target).angel_ecm_protected &&
+          !mech_condition_summary(request->target).stealth_armor_active &&
+          !mech_condition_summary(request->target).null_signature_active) != 0;
 }
 
-int blood_csee(const SensorContactRequest *request) {
-  return !battle_map_sensor_is_disabled(request->map, SENSOR_BHAP) &&
-         !mech_is_any_ecm_disturbed(request->observer) && request->target &&
-         !mech_condition_summary(request->target).angel_ecm_protected;
+bool blood_csee(const SensorContactRequest *request) {
+  return (!battle_map_sensor_is_disabled(request->map, SENSOR_BHAP) &&
+          !mech_is_any_ecm_disturbed(request->observer) && request->target &&
+          !mech_condition_summary(request->target).angel_ecm_protected) != 0;
 }
 
 int vislight_tohit(const SensorToHitRequest *request) {

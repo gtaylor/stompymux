@@ -135,7 +135,7 @@ void btech_finalize_object_statements(BtechObjectStoreContext *context) {
 
 /* Replace the default map grid with a validated grid owned by this MAP. */
 
-int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
+bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
   void *key = call->key;
   void *data = call->data;
   int depth = call->depth;
@@ -151,7 +151,7 @@ int btech_store_simple_object(const RedBlackTreeVisitCall *call) {
 
   (void)depth;
   if (context->result < 0)
-    return 0;
+    return false;
   if (xcode->type == GTYPE_MECH) {
     mech = (Mech *)xcode;
     mech_persistence_snapshot_export(mech, &snapshot);

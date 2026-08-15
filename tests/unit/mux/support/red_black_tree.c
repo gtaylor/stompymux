@@ -24,7 +24,7 @@ static int compare_ints(const RedBlackTreeCompareCall *call) {
   return (a > b) - (a < b);
 }
 
-static int collect_walk(const RedBlackTreeVisitCall *call) {
+static bool collect_walk(const RedBlackTreeVisitCall *call) {
   void *key = call->key;
   void *data = call->data;
   int depth = call->depth;

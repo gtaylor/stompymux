@@ -144,23 +144,23 @@ void phys_fail(Mech *mech, Mech *target, PhysicalAttackType at) {
       physical_attack_verb(&(PhysicalVerbRequest){.attack_type = at}));
   mech_los_broadcast_unit(mech, target, message_buffer);
 }
-int have_punch(Mech *mech, int loc) { return 1; }
-int have_axe(Mech *mech, int loc) {
+bool have_punch(Mech *mech, int loc) { return true; }
+bool have_axe(Mech *mech, int loc) {
   return find_obj(mech, loc, special_equipment_index(AXE)) >=
          (mech_tonnage(mech) / 15);
 }
-int have_claw(Mech *mech, int loc) {
+bool have_claw(Mech *mech, int loc) {
   return find_obj(mech, loc, special_equipment_index(CLAW)) >=
          (mech_tonnage(mech) / 15);
 }
-int have_saw(Mech *mech, int loc) {
+bool have_saw(Mech *mech, int loc) {
   return find_obj(mech, loc, special_equipment_index(DUAL_SAW)) >= 7;
 }
-int have_sword(Mech *mech, int loc) {
+bool have_sword(Mech *mech, int loc) {
   return find_obj(mech, loc, special_equipment_index(SWORD)) >=
          ((mech_tonnage(mech) + 15) / 20);
 }
-int have_mace(Mech *mech, int loc) {
+bool have_mace(Mech *mech, int loc) {
   return find_obj(mech, loc, special_equipment_index(MACE)) >=
          (mech_tonnage(mech) / 10);
 }

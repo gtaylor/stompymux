@@ -37,7 +37,7 @@ static unsigned char stored_bits_byte(const unsigned char *row, int count,
   return *value;
 }
 
-int btech_store_map(const RedBlackTreeVisitCall *call) {
+bool btech_store_map(const RedBlackTreeVisitCall *call) {
   void *key = call->key;
   void *data = call->data;
   int depth = call->depth;
@@ -86,11 +86,11 @@ int btech_store_map(const RedBlackTreeVisitCall *call) {
       btech_special_bind_int(context->map, 23, map->regen_factor) < 0 ||
       btech_special_write_step(context->fault, context->map) < 0) {
     context->result = -1;
-    return 0;
+    return false;
   }
   if (!map->map) {
     context->result = -1;
-    return 0;
+    return false;
   }
   for (y = 0; context->result == 0 && y < map->map_height; y++) {
     for (x = 0; context->result == 0 && x < map->map_width; x++) {

@@ -69,7 +69,7 @@ typedef struct LogCacheListContext {
   DbRef player;
 } LogCacheListContext;
 
-static int logcache_list(const RedBlackTreeVisitCall *call) {
+static bool logcache_list(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
   void *arg = call->context;
   struct LogfileT *log = (struct LogfileT *)data;
@@ -77,7 +77,7 @@ static int logcache_list(const RedBlackTreeVisitCall *call) {
   notify_printf(context->evaluation, context->player, "%-40s%llu",
                 log->filename,
                 (unsigned long long)(mux_timer_due_in(log->timer) / 1000));
-  return 1;
+  return true;
 }
 
 void log_cache_list(EvaluationContext *evaluation, const LogCache *cache,

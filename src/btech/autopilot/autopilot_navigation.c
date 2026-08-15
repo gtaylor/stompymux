@@ -29,7 +29,7 @@ void ai_init(Autopilot *a, Mech *m) {
 
 int artillery_round_flight_time(float fx, float fy, float tx, float ty);
 
-static int mech_snipe_func(const MultiWeaponSelectionCall *call) {
+static bool mech_snipe_func(const MultiWeaponSelectionCall *call) {
   char message_buffer[128];
   Mech *mech = call->mech;
   /* Simulate mech movements until flight_time <= now */
@@ -55,7 +55,7 @@ static int mech_snipe_func(const MultiWeaponSelectionCall *call) {
     mech_set_target(call->actor, mech, message_buffer);
   (void)snprintf(message_buffer, sizeof(message_buffer), "%d", call->first);
   mech_fireweapon(call->actor, mech, message_buffer);
-  return 0;
+  return false;
 }
 
 void mech_snipe(DbRef player, Mech *mech, char *buffer) {

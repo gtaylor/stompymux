@@ -162,8 +162,8 @@ int btech_special_load_autopilot_commands(sqlite3 *sqlite,
                                           BtechContext *context);
 int btech_special_load_autopilot_path(sqlite3 *sqlite, BtechContext *context);
 
-int btech_store_simple_object(const RedBlackTreeVisitCall *call);
-int btech_store_map(const RedBlackTreeVisitCall *call);
+bool btech_store_simple_object(const RedBlackTreeVisitCall *call);
+bool btech_store_map(const RedBlackTreeVisitCall *call);
 void btech_finalize_object_statements(BtechObjectStoreContext *context);
 int btech_persistence_store_special_state(sqlite3 *sqlite,
                                           PersistenceContext *persistence,

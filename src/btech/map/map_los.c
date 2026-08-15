@@ -216,7 +216,7 @@ typedef struct SensorObstructionRequest {
   int los_flag;
 } SensorObstructionRequest;
 
-static int
+static bool
 mech_los_sees_through_obstruction(const SensorObstructionRequest *request) {
   int sn = mech_sensor_index(request->mech, request->sensor);
   int fake_losflag = request->count * request->los_flag;
@@ -226,12 +226,11 @@ mech_los_sees_through_obstruction(const SensorObstructionRequest *request) {
       .range = 1,
       .flags = fake_losflag,
   };
-  int res = mech_sensor_definition(sn)->can_see(&contact);
-
-  return res;
+  return mech_sensor_definition(sn)->can_see(&contact);
 }
 
-static int mech_los_sees_over_mountain(Mech *mech, BattleMap *map, int sensor) {
+static bool mech_los_sees_over_mountain(Mech *mech, BattleMap *map,
+                                        int sensor) {
   int sn = mech_sensor_index(mech, sensor);
   int fake_losflag = BATTLE_MAP_LOS_MOUNTAIN;
 

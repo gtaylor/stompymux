@@ -173,7 +173,7 @@ void auto_destroy_weaplist(Autopilot *autopilot) {
 /*
  * Callback function to destroy target list
  */
-int auto_targets_callback(const RedBlackTreeVisitCall *call) {
+bool auto_targets_callback(const RedBlackTreeVisitCall *call) {
   void *data = call->data;
 
   AutopilotTarget *temp;
@@ -181,7 +181,7 @@ int auto_targets_callback(const RedBlackTreeVisitCall *call) {
   temp = (AutopilotTarget *)data;
   auto_destroy_target_node(temp);
 
-  return 1;
+  return true;
 }
 
 /*

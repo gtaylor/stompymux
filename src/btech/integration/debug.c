@@ -95,7 +95,7 @@ static DebugMemoryStat *debug_memory_stat(DebugMemoryContext *memory,
   return checked_storage_at(memory->stats, memory->stat_count,
                             sizeof(*memory->stats), (size_t)type);
 }
-static int debug_check_stuff(const RedBlackTreeVisitCall *call) {
+static bool debug_check_stuff(const RedBlackTreeVisitCall *call) {
   void *key = call->key;
   void *data = call->data;
   void *arg = call->context;
@@ -144,7 +144,7 @@ static int debug_check_stuff(const RedBlackTreeVisitCall *call) {
                                       : 0);
   }
 
-  return 1;
+  return true;
 }
 
 void debug_memory(DbRef player, void *data, const char *buffer) {

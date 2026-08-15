@@ -60,7 +60,7 @@ typedef struct SensorDefinition {
 
   /* Do we really see 'em? Mainly checks for various things that
      vary between diff. sensors (and also seechancefunc > 0) */
-  int (*can_see)(const SensorContactRequest *request);
+  bool (*can_see)(const SensorContactRequest *request);
 
   /* Chance of actually hitting someone */
   int (*to_hit_bonus)(const SensorToHitRequest *request);
@@ -88,14 +88,14 @@ int radar_see(const SensorVisibilityRequest *request);
 int bap_see(const SensorVisibilityRequest *request);
 int blood_see(const SensorVisibilityRequest *request);
 
-int vislight_csee(const SensorContactRequest *request);
-int liteamp_csee(const SensorContactRequest *request);
-int infrared_csee(const SensorContactRequest *request);
-int electrom_csee(const SensorContactRequest *request);
-int seismic_csee(const SensorContactRequest *request);
-int radar_csee(const SensorContactRequest *request);
-int bap_csee(const SensorContactRequest *request);
-int blood_csee(const SensorContactRequest *request);
+bool vislight_csee(const SensorContactRequest *request);
+bool liteamp_csee(const SensorContactRequest *request);
+bool infrared_csee(const SensorContactRequest *request);
+bool electrom_csee(const SensorContactRequest *request);
+bool seismic_csee(const SensorContactRequest *request);
+bool radar_csee(const SensorContactRequest *request);
+bool bap_csee(const SensorContactRequest *request);
+bool blood_csee(const SensorContactRequest *request);
 
 int vislight_tohit(const SensorToHitRequest *request);
 int liteamp_tohit(const SensorToHitRequest *request);

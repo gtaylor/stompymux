@@ -62,7 +62,7 @@ typedef struct RedBlackTreeReleaseCall {
 } RedBlackTreeReleaseCall;
 
 typedef int (*RedBlackTreeCompare)(const RedBlackTreeCompareCall *call);
-typedef int (*RedBlackTreeVisitor)(const RedBlackTreeVisitCall *call);
+typedef bool (*RedBlackTreeVisitor)(const RedBlackTreeVisitCall *call);
 typedef void (*RedBlackTreeRelease)(const RedBlackTreeReleaseCall *call);
 
 RedBlackTree red_black_tree_init(RedBlackTreeCompare compare, void *context);
