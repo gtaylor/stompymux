@@ -152,16 +152,14 @@ const char *game_object_name(GameDatabase *database, DbRef thing) {
   char *buff;
   char buffer[MBUF_SIZE];
 
-  if (database->configuration->cache_names) {
-    if (thing > database->top || thing < 0) {
-      return "#-1 INVALID DBREF";
-    }
-    if (!*pure_name_slot(database, thing)) {
-      buff = attribute_get(database, thing, A_NAME, &aflags);
-      styled_text_strip(database->styled_text_palette, buff, buffer, MBUF_SIZE);
-      set_string(pure_name_slot(database, thing), buffer);
-      free_lbuf(buff);
-    }
+  if (thing >= database->top || thing < 0) {
+    return "#-1 INVALID DBREF";
+  }
+  if (!*pure_name_slot(database, thing)) {
+    buff = attribute_get(database, thing, A_NAME, &aflags);
+    styled_text_strip(database->styled_text_palette, buff, buffer, MBUF_SIZE);
+    set_string(pure_name_slot(database, thing), buffer);
+    free_lbuf(buff);
   }
 
   attribute_get_string(database, thing, A_NAME, database->name_buffer,
@@ -193,27 +191,18 @@ const char *game_object_pure_name(GameDatabase *database, DbRef thing) {
   long aflags;
   char *buff;
 
-  if (database->configuration->cache_names) {
-    if (thing > database->top || thing < 0) {
-      return "#-1 INVALID DBREF";
-    }
-    if (!*pure_name_slot(database, thing)) {
-      char new[LBUF_SIZE];
-
-      buff = attribute_get(database, thing, A_NAME, &aflags);
-      styled_text_strip(database->styled_text_palette, buff, new, sizeof(new));
-      set_string(pure_name_slot(database, thing), new);
-      free_lbuf(buff);
-    }
-    return *pure_name_slot(database, thing);
+  if (thing >= database->top || thing < 0) {
+    return "#-1 INVALID DBREF";
   }
+  if (!*pure_name_slot(database, thing)) {
+    char new[LBUF_SIZE];
 
-  attribute_get_string(database, thing, A_NAME, database->name_buffer,
-                       sizeof(database->name_buffer), &aflags);
-  styled_text_strip(database->styled_text_palette, database->name_buffer,
-                    database->pure_name_buffer,
-                    sizeof(database->pure_name_buffer));
-  return database->pure_name_buffer;
+    buff = attribute_get(database, thing, A_NAME, &aflags);
+    styled_text_strip(database->styled_text_palette, buff, new, sizeof(new));
+    set_string(pure_name_slot(database, thing), new);
+    free_lbuf(buff);
+  }
+  return *pure_name_slot(database, thing);
 }
 
 void object_name_set(GameDatabase *database, DbRef thing, const char *s) {
@@ -223,10 +212,8 @@ void object_name_set(GameDatabase *database, DbRef thing, const char *s) {
   utf8_copy_truncated(stored, sizeof(stored), s);
   attribute_add_raw(database, thing, A_NAME, stored);
 
-  if (database->configuration->cache_names) {
-    styled_text_strip(database->styled_text_palette, stored, new, sizeof(new));
-    set_string(pure_name_slot(database, thing), new);
-  }
+  styled_text_strip(database->styled_text_palette, stored, new, sizeof(new));
+  set_string(pure_name_slot(database, thing), new);
 }
 
 void object_password_set(GameDatabase *database, DbRef thing, const char *s) {
@@ -467,8 +454,7 @@ void db_grow(GameDatabase *database, DbRef newtop) {
 
   if (newtop <= database->size) {
     for (i = database->top; i < newtop; i++) {
-      if (database->configuration->cache_names)
-        *pure_name_slot(database, i) = nullptr;
+      *pure_name_slot(database, i) = nullptr;
     }
     initialize_objects(database, database->top, newtop);
     database->top = (int)newtop;
@@ -496,49 +482,45 @@ void db_grow(GameDatabase *database, DbRef newtop) {
    * Grow the name tables
    */
 
-  if (database->configuration->cache_names) {
-    newpurenames = (NAME *)checked_storage_try_allocate(
-        (size_t)(newsize + SIZE_HACK) * sizeof(NAME));
+  newpurenames = (NAME *)checked_storage_try_allocate(
+      (size_t)(newsize + SIZE_HACK) * sizeof(NAME));
 
-    if (!newpurenames) {
-      (void)snprintf(message_buffer, sizeof(message_buffer),
-                     "Could not allocate space for %d item name cache.",
-                     newsize);
-      log_simple((LogEntry){.log = database->log,
-                            .key = LOG_ALWAYS,
-                            .primary = "ALC",
-                            .secondary = "DB"},
-                 message_buffer);
-      abort();
-    }
-    memset((void *)newpurenames, 0,
-           (size_t)(newsize + SIZE_HACK) * sizeof(NAME));
-
-    if (database->pure_name_storage) {
-
-      /*
-       * An old name cache exists.  Copy it.
-       */
-
-      memmove((void *)newpurenames, (const void *)database->pure_name_storage,
-              (size_t)(newtop + SIZE_HACK) * sizeof(NAME));
-      cp = (char *)database->pure_name_storage;
-      free(cp);
-    } else {
-
-      /*
-       * Creating a brand new struct database.  Fill in the
-       * 'reserved' area in case it gets referenced.
-       */
-
-      database->pure_name_storage = newpurenames;
-      for (i = 0; i < SIZE_HACK; i++) {
-        *pure_name_slot(database, i - SIZE_HACK) = nullptr;
-      }
-    }
-    database->pure_name_storage = newpurenames;
-    newpurenames = nullptr;
+  if (!newpurenames) {
+    (void)snprintf(message_buffer, sizeof(message_buffer),
+                   "Could not allocate space for %d item name cache.", newsize);
+    log_simple((LogEntry){.log = database->log,
+                          .key = LOG_ALWAYS,
+                          .primary = "ALC",
+                          .secondary = "DB"},
+               message_buffer);
+    abort();
   }
+  memset((void *)newpurenames, 0, (size_t)(newsize + SIZE_HACK) * sizeof(NAME));
+
+  if (database->pure_name_storage) {
+
+    /*
+     * An old name cache exists.  Copy it.
+     */
+
+    memmove((void *)newpurenames, (const void *)database->pure_name_storage,
+            (size_t)(database->size + SIZE_HACK) * sizeof(NAME));
+    cp = (char *)database->pure_name_storage;
+    free(cp);
+  } else {
+
+    /*
+     * Creating a brand new struct database.  Fill in the
+     * 'reserved' area in case it gets referenced.
+     */
+
+    database->pure_name_storage = newpurenames;
+    for (i = 0; i < SIZE_HACK; i++) {
+      *pure_name_slot(database, i - SIZE_HACK) = nullptr;
+    }
+  }
+  database->pure_name_storage = newpurenames;
+  newpurenames = nullptr;
   /*
    * Grow the database->objects array
    */
@@ -597,9 +579,7 @@ void db_grow(GameDatabase *database, DbRef newtop) {
   newdb = nullptr;
 
   for (i = database->top; i < newtop; i++) {
-    if (database->configuration->cache_names) {
-      *pure_name_slot(database, i) = nullptr;
-    }
+    *pure_name_slot(database, i) = nullptr;
   }
   initialize_objects(database, database->top, newtop);
   database->top = (int)newtop;
