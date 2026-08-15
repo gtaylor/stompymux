@@ -70,11 +70,11 @@ float map_real_range(const MapRealSegment *segment) {
 /* Doubles for added accuracy; most calculations are doubles internally
    anyway, so we suffer little to no performance hit. */
 
-#define ROOT3 558.5864F         /* sqrt(3) * SCALEMAP */
-#define ALPHA 93.09773F         /* ROOT3 / 6 */
-#define ANGLE_ALPHA 0.28867513F /* sqrt(3) / 6 */
-#define FULL_Y ((float)SCALEMAP)
-#define HALF_Y (0.5F * FULL_Y)
+static constexpr float ROOT3 = 558.5864F;         /* sqrt(3) * SCALEMAP */
+static constexpr float ALPHA = 93.09773F;         /* ROOT3 / 6 */
+static constexpr float ANGLE_ALPHA = 0.28867513F; /* sqrt(3) / 6 */
+static constexpr float FULL_Y = (float)SCALEMAP;
+static constexpr float HALF_Y = 0.5F * FULL_Y;
 
 void real_coord_to_map_coord(short *hex_x, short *hex_y, float cart_x,
                              float cart_y) {
@@ -186,12 +186,12 @@ void map_coord_to_real_coord(int hex_x, int hex_y, float *cart_x,
 
  */
 
-#define NAV_ROW_HEIGHT (FULL_Y / 9.0F)
-#define NAV_COLUMN_WIDTH (4.0F * ALPHA / 21.0F)
-#define NAV_Y_OFFSET 2
-#define NAV_X_OFFSET 4
-#define NAV_MAX_HEIGHT (2 + 9 + 2)
-#define NAV_MAX_WIDTH (4 + 21 + 2)
+static constexpr float NAV_ROW_HEIGHT = FULL_Y / 9.0F;
+static constexpr float NAV_COLUMN_WIDTH = 4.0F * ALPHA / 21.0F;
+static constexpr int NAV_Y_OFFSET = 2;
+static constexpr int NAV_X_OFFSET = 4;
+static constexpr int NAV_MAX_HEIGHT = 2 + 9 + 2;
+static constexpr int NAV_MAX_WIDTH = 4 + 21 + 2;
 
 void navigate_sketch_mechs(const NavigateSketchRequest *request) {
   Mech *mech = request->mech;

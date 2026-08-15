@@ -464,12 +464,12 @@ char *armorstatus_func(const MechStatusTextRequest *request) {
 
    Weapon number is the number of the weapon in this particular 'mech.
    Long weapon name is 'agra.mediumlaser' and such.
-   Weapon type is as defined in mech.h:
-           #define TBEAM      0
-           #define TMISSILE   1
-           #define TARTILLERY 2
-           #define TAMMO      3
-           #define THAND      4
+   Weapon type is as defined in equipment_types.h:
+            constexpr int TBEAM = 0;
+            constexpr int TMISSILE = 1;
+            constexpr int TARTILLERY = 2;
+            constexpr int TAMMO = 3;
+            constexpr int THAND = 4;
    Weapon status is:
         0 - weapon operational
         1 - weapon (temporarily) glitched

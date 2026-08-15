@@ -28,7 +28,7 @@
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 
-#define TMP_TERR '1'
+static constexpr char TMP_TERR = '1';
 
 static void swim_except(BattleMap *map, Mech *mech, int x, int y,
                         const char *msg, int isbridge) {

@@ -375,10 +375,10 @@ int reattach_econ(const RepairOperationCall *call) {
   return 0;
 }
 
-#define BSUIT_REPAIR_INTERNAL_NEEDED 10
-#define BSUIT_REPAIR_SENSORS_NEEDED 2
-#define BSUIT_REPAIR_LIFESUPPORT_NEEDED 2
-#define BSUIT_REPAIR_ELECTRONICS_NEEDED 10
+static constexpr int BSUIT_REPAIR_INTERNAL_NEEDED = 10;
+static constexpr int BSUIT_REPAIR_SENSORS_NEEDED = 2;
+static constexpr int BSUIT_REPAIR_LIFESUPPORT_NEEDED = 2;
+static constexpr int BSUIT_REPAIR_ELECTRONICS_NEEDED = 10;
 
 int replacesuit_econ(const RepairOperationCall *call) {
   DbRef player = call->player;

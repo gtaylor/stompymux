@@ -413,7 +413,7 @@ static int wind_y_odd(const WindOffsetRequest *request) {
   return 0;
 }
 
-#define NUM_SPREAD_HEX 4
+static constexpr int NUM_SPREAD_HEX = 4;
 
 typedef MapHexPosition SpreadHex;
 

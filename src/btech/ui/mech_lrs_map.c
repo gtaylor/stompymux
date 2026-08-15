@@ -279,12 +279,14 @@ static MapCellText lrs_elevation_text(const LrsCellRequest *request) {
   return map_cell_text(newc, request->previous_color, c);
 }
 
-#define LRS_TERRAINMODE 1
-#define LRS_ELEVMODE 2
-#define LRS_MECHMODE 4
-#define LRS_LOSMODE 8
-#define LRS_COLORMODE 16
-#define LRS_ELEVCOLORMODE 32
+enum LongRangeScanMode : int {
+  LRS_TERRAINMODE = 1,
+  LRS_ELEVMODE = 2,
+  LRS_MECHMODE = 4,
+  LRS_LOSMODE = 8,
+  LRS_COLORMODE = 16,
+  LRS_ELEVCOLORMODE = 32,
+};
 
 static MapCellText lrs_hex_text(const MapColorScheme *colors, Mech *mech,
                                 BattleMap *map, int x, int y, char *prevc,

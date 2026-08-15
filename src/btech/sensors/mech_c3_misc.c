@@ -38,9 +38,11 @@
 #include "mux/support/checked_storage.h"
 #include "registry_api.h"
 
-#define TARG_LOS_NONE 0
-#define TARG_LOS_CLEAR 1
-#define TARG_LOS_SOMETHING 2
+enum TargetLineOfSight : int {
+  TARG_LOS_NONE = 0,
+  TARG_LOS_CLEAR = 1,
+  TARG_LOS_SOMETHING = 2,
+};
 
 typedef struct C3ContactLine {
   float sort_range;

@@ -62,8 +62,6 @@ void center_string(char *destination, size_t destination_size,
                  destination_size - padding, "%s", source);
 }
 
-#define M_LEN CM_ONE
-
 typedef struct HelpLineRequest {
   CoolMenu **menu;
   const char *message;
@@ -124,7 +122,7 @@ static const char *help_line_add(const HelpLineRequest *request) {
         '\0';
   }
 
-  cool_menu_add_with_flags(&c, buf, M_LEN);
+  cool_menu_add_with_flags(&c, buf, CM_ONE);
 
   /* Move pointer to start of next line.  */
   if (*checked_string_suffix(msg, break_offset) == ' ')

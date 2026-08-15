@@ -427,14 +427,14 @@ void print_short_info(EvaluationContext *evaluation, DbRef player, Mech *mech) {
   display_target(evaluation, player, mech);
 }
 
-#define HEAT_LEVEL_BGREEN 7
-#define HEAT_LEVEL_LYELLOW 13
-#define HEAT_LEVEL_BYELLOW 16
-#define HEAT_LEVEL_LRED 18
-#define HEAT_LEVEL_BRED 24
-#define HEAT_LEVEL_TOP 40
+static constexpr int HEAT_LEVEL_BGREEN = 7;
+static constexpr int HEAT_LEVEL_LYELLOW = 13;
+static constexpr int HEAT_LEVEL_BYELLOW = 16;
+static constexpr int HEAT_LEVEL_LRED = 18;
+static constexpr int HEAT_LEVEL_BRED = 24;
+static constexpr int HEAT_LEVEL_TOP = 40;
 
-#define HEAT_LEVEL_NONE 27
+static constexpr int HEAT_LEVEL_NONE = 27;
 
 static char heat_fill_character(const char *fill, char state) {
   if (state < 0)

@@ -310,7 +310,7 @@ void physical_damage_resolve(const PhysicalDamageRequest *request) {
 
 } // end PhysicalDamage()
 
-#define DFA_SECTIONS 6
+static constexpr int DFA_SECTIONS = 6;
 /* Rules make no distinction about Torso not needing recycled  We'll let Head
  * slide for now */
 

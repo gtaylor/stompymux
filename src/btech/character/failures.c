@@ -89,16 +89,22 @@ static const PartBrand BRANDS[] = {
     {"Iriad", 5, 101, 40},
 };
 
-#define REQ_HEAT 1
-#define REQ_TARGET 2
-#define REQ_TAC 3
-#define REQ_LRS 4
-#define REQ_SCANNERS 5
-#define REQ_COMPUTER 6
-#define REQ_RADIO 7
+static constexpr int REQ_HEAT = 1;
+static constexpr int REQ_TARGET = 2;
+static constexpr int REQ_TAC = 3;
+static constexpr int REQ_LRS = 4;
+static constexpr int REQ_SCANNERS = 5;
+static constexpr int REQ_COMPUTER = 6;
+static constexpr int REQ_RADIO = 7;
+
+static constexpr int ENERGY_INDEX = 0;
+static constexpr int AC_INDEX = 6;
+static constexpr int MISSILE_INDEX = 12;
+static constexpr int FLAMMER_INDEX = 18;
+static constexpr int COMPUTER_INDEX = 24;
+static constexpr int RADIO_INDEX = 30;
 
 static const PartFailure FAILURES[] = {
-#define ENERGY_INDEX 0
     /* Energy Weapons - 0 */
 
     {"[fg=red bold]Your weapon fails to charge properly![reset]", 15,
@@ -116,9 +122,7 @@ static const PartFailure FAILURES[] = {
     {"[fg=red bold]Weapon melts down![reset]", 0, failure_weapon_spike,
      FAIL_SHORTED, 0},
 
-/* Autocannons - 6 */
-#define AC_INDEX 6
-
+    /* Autocannons - 6 */
     {"[fg=red bold]Round misfires! .. and spirals off![reset]", 0,
      failure_weapon_dud, FAIL_NONE, 0},
     {"[fg=red bold]Round not fired!  Dud![reset]", 0, failure_weapon_dud,
@@ -134,9 +138,7 @@ static const PartFailure FAILURES[] = {
     {"[fg=red bold]Round not fired!  STUCK in chamber![reset]", 0,
      failure_weapon_dud, FAIL_DUD, 0},
 
-/* Missiles - 12 */
-#define MISSILE_INDEX 12
-
+    /* Missiles - 12 */
     {"[fg=red bold]Rack jams, attemping to clear![reset]", 0,
      failure_weapon_jammed, FAIL_JAMMED, 0},
     {"[fg=red bold]Some of your missiles veer off course![reset]", 20,
@@ -150,9 +152,7 @@ static const PartFailure FAILURES[] = {
     {"[fg=red bold]Weapon power spikes.. Electronics fused!![reset]", 0,
      failure_weapon_spike, FAIL_SHORTED, 0},
 
-/* Flamer - 18 */
-#define FLAMMER_INDEX 18
-
+    /* Flamer - 18 */
     {"[fg=red bold]Gel line clogs, sending pressure through it now![reset]", 0,
      failure_weapon_jammed, FAIL_JAMMED, 0},
     {"[fg=red bold]Electric ignition shorts out! Restarting![reset]", 0,
@@ -169,9 +169,7 @@ static const PartFailure FAILURES[] = {
     {"[fg=red bold]Fuel canisters explode!  No fuel left to burn![reset]", 0,
      failure_weapon_spike, FAIL_EMPTY, 0},
 
-/* Computer - 24 */
-#define COMPUTER_INDEX 24
-
+    /* Computer - 24 */
     {"[fg=red bold]Computer Glitch!  Target lost, please reacquire![reset]", 0,
      failure_computer_target, FAIL_NONE, REQ_TARGET},
     {"[fg=red bold]Tactical shorts out! Fixing .. Please stand by.[reset]", 1,
@@ -190,8 +188,7 @@ static const PartFailure FAILURES[] = {
      "down![reset]",
      0, failure_computer_shutdown, FAIL_NONE, REQ_COMPUTER},
 
-/* Radio - 30 */
-#define RADIO_INDEX 30
+    /* Radio - 30 */
     {"none", 50, failure_radio_static, FAIL_NONE, 0},
     {"none", 70, failure_radio_static, FAIL_NONE, 0},
     {"[fg=red bold]Your readouts register a power loss in your radio![reset]",

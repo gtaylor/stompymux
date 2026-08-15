@@ -458,9 +458,11 @@ SensorFlagText sensor_flag_text(int flags) {
   return text;
 }
 
-#define AUTOCON_LONG 0x01
-#define AUTOCON_WARN 0x02
-#define AUTOCON_SHORT 0x04
+enum AutoContactMode : int {
+  AUTOCON_LONG = 0x01,
+  AUTOCON_WARN = 0x02,
+  AUTOCON_SHORT = 0x04,
+};
 
 static int valid_to_notice(Mech *mech, Mech *targ, int los) {
   int bf = (mech_brief_mode(mech) / 4);

@@ -27,8 +27,8 @@
 #include "registry_api.h"
 #include "section_types.h"
 
-#define VEHICLEBURN_TICK 60
-#define VEHICLE_EXTINGUISH_TICK 120
+static constexpr int VEHICLEBURN_TICK = 60;
+static constexpr int VEHICLE_EXTINGUISH_TICK = 120;
 
 static void inferno_end_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;

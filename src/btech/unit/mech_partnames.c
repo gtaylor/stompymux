@@ -40,7 +40,6 @@ void list_hashstat(DbRef player, const char *tab_name, HashTable *htab);
    Index = ID + NUM_ITEMS * brand
  */
 
-#define BRANDCOUNT 5
 struct PartNameRegistry {
   PartNameEntry *index_sorted[BRANDCOUNT + 1][NUM_ITEMS];
   PartNameEntry **short_sorted;
