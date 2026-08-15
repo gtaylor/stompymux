@@ -435,6 +435,14 @@ static void build_channel_message(char *buf, const char *color,
                                    close_bracket, message);
 }
 
+typedef struct RadioSendWorkspace {
+  char buf[LBUF_SIZE];
+  char buf2[LBUF_SIZE];
+  char buf3[LBUF_SIZE];
+  char ai_buf[LBUF_SIZE];
+  char faction_buffer[LBUF_SIZE];
+} RadioSendWorkspace;
+
 void sendchannelstuff(Mech *mech, int freq, char *msg) {
   /* The _smart_ code :-) */
   int loop;
@@ -445,18 +453,26 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
   Mech *temp_mech;
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  char buf[LBUF_SIZE];
-  char buf2[LBUF_SIZE];
-  char buf3[LBUF_SIZE];
+  char *buf;
+  char *buf2;
+  char *buf3;
   char color_code[32];
   bool obs = false;
   CommRelayContext *relay;
+  RadioSendWorkspace *workspace;
 
-  char ai_buf[LBUF_SIZE];
+  char *ai_buf;
+  char *faction_buffer;
 
   /* Radio failure checks were intentionally removed from message delivery. */
   if (!mech_radio_range(mech))
     return;
+  workspace = checked_storage_allocate(sizeof(*workspace));
+  buf = workspace->buf;
+  buf2 = workspace->buf2;
+  buf3 = workspace->buf3;
+  ai_buf = workspace->ai_buf;
+  faction_buffer = workspace->faction_buffer;
   relay = checked_storage_allocate_array(1, sizeof(*relay));
 
   /* Loop through all the units on the map */
@@ -569,16 +585,14 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
           build_observer_channel_message(
               buf, color_code, '[', ']', (char)('A' + i), bearing,
               btech_attribute_read(btech_context_database(mech_context(mech)),
-                                   mech_dbref(mech), A_FACTION,
-                                   (char[LBUF_SIZE]){0}),
+                                   mech_dbref(mech), A_FACTION, faction_buffer),
               mech_id(mech, false).text, mech_radio_frequency(mech, freq),
               mech_radio_title(mech, freq), buf2);
         } else {
           build_observer_channel_message(
               buf, color_code, '(', ')', (char)('A' + i), bearing,
               btech_attribute_read(btech_context_database(mech_context(mech)),
-                                   mech_dbref(mech), A_FACTION,
-                                   (char[LBUF_SIZE]){0}),
+                                   mech_dbref(mech), A_FACTION, faction_buffer),
               mech_id(mech, false).text, mech_radio_frequency(mech, freq),
               mech_radio_title(mech, freq), buf2);
         }
@@ -705,6 +719,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
     }
   } /* End of looping through all the units on the map */
   free(relay);
+  free(workspace);
 }
 
 void mech_radio(DbRef player, void *data, char *buffer) {

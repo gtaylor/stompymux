@@ -247,7 +247,7 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
   int x;
   int i;
 
-  char tmpstr[LBUF_SIZE];
+  char *tmpstr = alloc_lbuf("list_matching.tmpstr");
   int sw = 0;
   CoolMenu *c = nullptr;
   int found = 0;
@@ -324,6 +324,7 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   show_cool_menu(btech_context_evaluation(context), player, c);
   kill_cool_menu(c);
+  free_buf(tmpstr);
 }
 
 static void list_manifest(BtechContext *context, DbRef player, DbRef location,

@@ -142,8 +142,10 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
   int found_path = 0;
 
   /* Our bit arrays */
-  AutopilotHexBitSet closed_list_bitfield = {0};
-  AutopilotHexBitSet open_list_bitfield = {0};
+  AutopilotHexBitSet *closed_list_bitfield =
+      checked_storage_allocate(sizeof(*closed_list_bitfield));
+  AutopilotHexBitSet *open_list_bitfield =
+      checked_storage_allocate(sizeof(*open_list_bitfield));
 
   float x1;
   float y1;
@@ -197,7 +199,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
                         temp_astar_node);
   red_black_tree_insert(open_list_by_xy, astar_key(temp_astar_node->hexoffset),
                         temp_astar_node);
-  autopilot_hex_bit_set(&open_list_bitfield, temp_astar_node->hexoffset, true);
+  autopilot_hex_bit_set(open_list_bitfield, temp_astar_node->hexoffset, true);
 
   /* Now loop till we find path */
   while (!found_path) {
@@ -216,18 +218,18 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
                           astar_key(parent_astar_node->f_score));
     red_black_tree_delete(open_list_by_xy,
                           astar_key(parent_astar_node->hexoffset));
-    autopilot_hex_bit_set(&open_list_bitfield, parent_astar_node->hexoffset,
+    autopilot_hex_bit_set(open_list_bitfield, parent_astar_node->hexoffset,
                           false);
 
     /* Add it to the closed list */
     red_black_tree_insert(closed_list, astar_key(parent_astar_node->hexoffset),
                           parent_astar_node);
-    autopilot_hex_bit_set(&closed_list_bitfield, parent_astar_node->hexoffset,
+    autopilot_hex_bit_set(closed_list_bitfield, parent_astar_node->hexoffset,
                           true);
 
     /* Now we check to see if we added the end hex to the closed list.
      * When this happens it means we are done */
-    if (autopilot_hex_bit_is_set(&closed_list_bitfield,
+    if (autopilot_hex_bit_is_set(closed_list_bitfield,
                                  autopilot_hex_offset(end_x, end_y))) {
       found_path = 1;
 
@@ -267,7 +269,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
 
       /* Check to see if its in the closed list
        * if so just ignore it */
-      if (autopilot_hex_bit_is_set(&closed_list_bitfield, hexoffset))
+      if (autopilot_hex_bit_is_set(closed_list_bitfield, hexoffset))
         continue;
 
       const int FRIENDLY_UNITS =
@@ -314,7 +316,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
       child_h_score = (int)ESTIMATED_COST;
 
       /* Is it already on the openlist */
-      if (autopilot_hex_bit_is_set(&open_list_bitfield, hexoffset)) {
+      if (autopilot_hex_bit_is_set(open_list_bitfield, hexoffset)) {
 
         /* Ok need to compare the scores and if necessary recalc
          * and change stuff */
@@ -333,7 +335,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
                                 astar_key(temp_astar_node->f_score));
           red_black_tree_delete(open_list_by_xy,
                                 astar_key(temp_astar_node->hexoffset));
-          autopilot_hex_bit_set(&open_list_bitfield, temp_astar_node->hexoffset,
+          autopilot_hex_bit_set(open_list_bitfield, temp_astar_node->hexoffset,
                                 false);
 
           /* Recalc score */
@@ -390,7 +392,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
       red_black_tree_insert(open_list_by_xy,
                             astar_key(temp_astar_node->hexoffset),
                             temp_astar_node);
-      autopilot_hex_bit_set(&open_list_bitfield, temp_astar_node->hexoffset,
+      autopilot_hex_bit_set(open_list_bitfield, temp_astar_node->hexoffset,
                             true);
 
     } /* End of looking for hexes next to us */
@@ -475,10 +477,9 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
   red_black_tree_release(closed_list, astar_release, nullptr);
 
   /* End */
-  if (found_path) {
-    return 1;
-  }
-  return 0;
+  free(closed_list_bitfield);
+  free(open_list_bitfield);
+  return found_path ? 1 : 0;
 }
 
 void auto_destroy_astar_path(Autopilot *autopilot) {

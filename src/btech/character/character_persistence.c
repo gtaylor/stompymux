@@ -40,14 +40,13 @@ void debug_xptop(DbRef player, void *data, const char *buffer) {
   int hm;
   int i;
   int j;
-  CharacterXpRanking rankings[MAX_PLAYERS_ON];
+  CharacterXpRanking *rankings;
   int count = 0;
   int gt = 0;
   CoolMenu *c = nullptr;
   PSTATS stats;
   PSTATS *s = &stats;
 
-  memset(rankings, 0, sizeof(rankings));
   const char *skill_name = buffer;
   if (skill_name != nullptr)
     skill_name =
@@ -68,6 +67,7 @@ void debug_xptop(DbRef player, void *data, const char *buffer) {
                  "Only skills have XP (for now at least)");
     return;
   }
+  rankings = checked_storage_allocate_array(MAX_PLAYERS_ON, sizeof(*rankings));
   DO_WHOLE_DB(context->database, i) {
     if (!is_player(context->database, i))
       continue;
@@ -119,6 +119,7 @@ void debug_xptop(DbRef player, void *data, const char *buffer) {
   }
   show_cool_menu(btech_context_evaluation(context), player, c);
   kill_cool_menu(c);
+  free(rankings);
 }
 
 void debug_setxplevel(DbRef player, void *data, char *buffer) {

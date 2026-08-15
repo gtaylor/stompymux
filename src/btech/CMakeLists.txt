@@ -323,7 +323,8 @@ foreach(subsystem IN LISTS BTECH_SUBSYSTEMS)
   list(FILTER BTECH_UNGROUPED_SOURCES EXCLUDE REGEX "^${subsystem}/")
 
   add_library(btech_${subsystem} OBJECT ${subsystem_sources})
-  target_link_libraries(btech_${subsystem} PRIVATE btmux_options)
+  target_link_libraries(btech_${subsystem} PRIVATE btmux_options
+    btech_frame_options)
   if(BUILD_TESTING)
     target_compile_definitions(btech_${subsystem}
       PRIVATE BTECH_PERSISTENCE_TESTING=1)

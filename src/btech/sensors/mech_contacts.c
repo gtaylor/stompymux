@@ -354,7 +354,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
   int buffindex = 0;
   char *args[1];
   char buff[100];
-  ContactLine contacts[BATTLE_MAP_UNIT_CAPACITY];
+  ContactLine *contacts;
   float range;
   float fx;
   float fy;
@@ -372,11 +372,15 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
   int isvb;
   int inlos;
   char new[LBUF_SIZE];
+  char *attribute_buffer;
   LuaLockInvocation lock;
   LuaLockResult lock_result;
 
   if (!common_checks(player, mech, MECH_USUAL))
     return;
+  contacts = checked_storage_allocate_array(BATTLE_MAP_UNIT_CAPACITY,
+                                            sizeof(*contacts));
+  attribute_buffer = alloc_lbuf("mech_contacts.attribute");
   argc = mech_parseattributes(buffer, args, 1);
 
   isvb = (mech_brief_mode(mech) % 4);
@@ -385,7 +389,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
         *(char **)checked_storage_at((void *)args, 1, sizeof(*args), 0);
     if (*argument == '+') {
       str = btech_attribute_read(mech_context(mech)->database, player,
-                                 A_CONTACTOPT, (char[LBUF_SIZE]){0});
+                                 A_CONTACTOPT, attribute_buffer);
       if (!*str) {
         (void)string_copy_bounded(buff, sizeof(buff), DEFAULT_CONTACTOPTIONS);
       } else {
@@ -485,7 +489,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
       } else {
         mech_name = btech_attribute_read(mech_context(temp_mech)->database,
                                          mech_dbref(temp_mech), A_MECHNAME,
-                                         (char[LBUF_SIZE]){0});
+                                         attribute_buffer);
         inlos = 1;
       }
     } else {
@@ -635,7 +639,7 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
 
       mech_name =
           btech_attribute_read(mech_context(mech)->database, BUILDING_DBREF,
-                               A_MECHNAME, (char[LBUF_SIZE]){0});
+                               A_MECHNAME, attribute_buffer);
       if (!mech_name || !*mech_name) {
         styled_text_strip(
             mech_context(mech)->database->styled_text_palette,
@@ -693,4 +697,6 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
   if (isvb <= 2)
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "End Contact List");
+  free_buf(attribute_buffer);
+  free(contacts);
 }
