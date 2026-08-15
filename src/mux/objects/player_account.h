@@ -12,7 +12,7 @@
 typedef struct GameDatabase GameDatabase;
 typedef struct PlayerAccountState PlayerAccountState;
 
-typedef enum PlayerLoginOutcome {
+typedef enum PlayerLoginOutcome : int {
   PLAYER_LOGIN_SUCCESS,
   PLAYER_LOGIN_FAILURE,
 } PlayerLoginOutcome;

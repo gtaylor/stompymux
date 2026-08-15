@@ -7,7 +7,7 @@
 #include "failures.h"
 #include "mech_api_types.h"
 
-typedef enum FailureSystem {
+typedef enum FailureSystem : int {
   FAILURE_SYSTEM_COMPUTER,
   FAILURE_SYSTEM_RADIO,
 } FailureSystem;

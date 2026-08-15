@@ -76,7 +76,7 @@ constexpr DbRef AMBIGUOUS = -2; /* multiple possibilities, for matchers */
 constexpr DbRef HOME = -3;      /* virtual room, represents mover's home */
 constexpr DbRef NOPERM = -4;    /* Error status, no permission */
 
-typedef enum ObjectType {
+typedef enum ObjectType : int {
   OBJECT_TYPE_ROOM = 0,
   OBJECT_TYPE_THING = 1,
   OBJECT_TYPE_EXIT = 2,

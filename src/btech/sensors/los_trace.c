@@ -147,7 +147,7 @@ static constexpr float DEG30 = 0.5235988F;
 static constexpr float ROOT3 = 1.7320508F;
 static constexpr float TRACESCALEMAP = 1.0F;
 
-typedef enum HexDirection {
+typedef enum HexDirection : int {
   HEX_NORTH,
   HEX_NORTHEAST,
   HEX_SOUTHEAST,

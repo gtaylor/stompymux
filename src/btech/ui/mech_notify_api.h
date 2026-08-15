@@ -9,7 +9,7 @@
 typedef struct BattleMap BattleMap;
 typedef struct EvaluationContext EvaluationContext;
 
-typedef enum MechNotifyAudience {
+typedef enum MechNotifyAudience : int {
   MECHPILOT,
   MECHSTARTED,
   MECHALL,

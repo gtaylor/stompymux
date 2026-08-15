@@ -4,7 +4,7 @@
 
 #include <stdbool.h>
 
-typedef enum AutopilotWeaponSkipReason {
+typedef enum AutopilotWeaponSkipReason : int {
   AUTOPILOT_WEAPON_READY,
   AUTOPILOT_WEAPON_NONFUNCTIONAL,
   AUTOPILOT_WEAPON_RECYCLING,
@@ -46,7 +46,7 @@ typedef struct AutopilotWeaponScoreSituation {
   int heat;
 } AutopilotWeaponScoreSituation;
 
-typedef enum AutopilotPhysicalSide {
+typedef enum AutopilotPhysicalSide : int {
   AUTOPILOT_PHYSICAL_NONE,
   AUTOPILOT_PHYSICAL_RIGHT,
   AUTOPILOT_PHYSICAL_LEFT,

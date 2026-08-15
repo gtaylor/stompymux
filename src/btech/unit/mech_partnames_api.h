@@ -16,7 +16,7 @@ typedef struct PartReference {
   int brand;
 } PartReference;
 
-typedef enum PartMatchKind {
+typedef enum PartMatchKind : int {
   PART_MATCH_SHORT,
   PART_MATCH_LONG,
   PART_MATCH_VERY_LONG,
@@ -52,7 +52,7 @@ PartMatchResult part_name_lookup(const PartNameLookupRequest *request);
 size_t part_name_count(const BtechContext *context);
 const PartNameEntry *part_name_at(const BtechContext *context, size_t index);
 void list_forms(DbRef player, void *data, char *buffer);
-typedef enum PartNameDescriptionFormat {
+typedef enum PartNameDescriptionFormat : int {
   PART_NAME_DESCRIPTION_SHORT,
   PART_NAME_DESCRIPTION_LONG,
   PART_NAME_DESCRIPTION_VERY_LONG,

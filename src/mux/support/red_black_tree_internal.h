@@ -4,7 +4,7 @@
 
 #include "mux/support/red_black_tree.h"
 
-typedef enum RedBlackTreeColor {
+typedef enum RedBlackTreeColor : int {
   RED_BLACK_TREE_RED,
   RED_BLACK_TREE_BLACK,
 } RedBlackTreeColor;

@@ -1,6 +1,6 @@
 #pragma once
 
-typedef enum BattleMapLosFlag {
+typedef enum BattleMapLosFlag : int {
   BATTLE_MAP_LOS_SEEN = 0x0001,
   BATTLE_MAP_LOS_SEEN_PRIMARY = 0x0002,
   BATTLE_MAP_LOS_SEEN_SECONDARY = 0x0004,

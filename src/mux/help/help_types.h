@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef enum HelpIndexStyle {
+typedef enum HelpIndexStyle : int {
   HELP_INDEX_STYLE_LIST_WITH_DESCRIPTION,
   HELP_INDEX_STYLE_COLUMNAR,
 } HelpIndexStyle;

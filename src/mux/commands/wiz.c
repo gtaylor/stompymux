@@ -403,7 +403,7 @@ void do_boot(CommandInvocation *invocation) {
     free_buf(buf);
 }
 
-typedef enum GlobalControl {
+typedef enum GlobalControl : int {
   GLOBAL_CONTROL_CHECKPOINTING,
   GLOBAL_CONTROL_CLEANING,
   GLOBAL_CONTROL_IDLE_CHECKING,

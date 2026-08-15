@@ -13,7 +13,7 @@ typedef struct PartDisplayName {
   bool valid;
 } PartDisplayName;
 
-typedef enum MechPhysicalWeaponType {
+typedef enum MechPhysicalWeaponType : int {
   PHY_AXE = 1,
   PHY_SWORD,
   PHY_MACE,

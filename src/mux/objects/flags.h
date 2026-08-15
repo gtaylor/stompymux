@@ -9,7 +9,7 @@
 #include "mux/support/owned_text.h"
 #include "mux/world/world_context.h"
 
-typedef enum ObjectFlag {
+typedef enum ObjectFlag : int {
   OBJECT_FLAG_NONE,
   OBJECT_FLAG_ANSI,
   OBJECT_FLAG_AUDIBLE,

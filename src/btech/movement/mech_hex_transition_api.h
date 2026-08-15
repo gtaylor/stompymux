@@ -6,7 +6,7 @@
 
 typedef struct BattleMap BattleMap;
 
-typedef enum MovementCollisionMode {
+typedef enum MovementCollisionMode : int {
   JUMP,
   WALK_WALL,
   WALK_DROP,

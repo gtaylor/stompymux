@@ -9,7 +9,7 @@
 typedef struct Descriptor Descriptor;
 typedef struct TelnetEnvironment TelnetEnvironment;
 
-typedef enum TelnetEnvironmentKind {
+typedef enum TelnetEnvironmentKind : int {
   TELNET_ENVIRONMENT_VAR = 0,
   TELNET_ENVIRONMENT_USERVAR = 3,
 } TelnetEnvironmentKind;

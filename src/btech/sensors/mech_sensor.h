@@ -106,7 +106,7 @@ int radar_tohit(const SensorToHitRequest *request);
 int bap_tohit(const SensorToHitRequest *request);
 int blood_tohit(const SensorToHitRequest *request);
 
-typedef enum SensorType {
+typedef enum SensorType : int {
   SENSOR_VIS = 0,
   SENSOR_LA = 1,
   SENSOR_IR = 2,
@@ -118,7 +118,7 @@ typedef enum SensorType {
   NUM_SENSORS = 9,
 } SensorType;
 
-typedef enum SensorAttribute {
+typedef enum SensorAttribute : int {
   SENSOR_ATTR_NONE,
   SENSOR_ATTR_SEISMIC,
 } SensorAttribute;

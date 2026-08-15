@@ -5,7 +5,7 @@
 
 #include <stdbool.h>
 
-typedef enum MineType {
+typedef enum MineType : int {
   MINE_STANDARD = 1,
   MINE_INFERNO = 2,
   MINE_COMMAND = 3,

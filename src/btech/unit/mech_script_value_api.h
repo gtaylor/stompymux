@@ -6,7 +6,7 @@
 
 #include "mux/objects/db.h"
 
-typedef enum MechScriptValueKey {
+typedef enum MechScriptValueKey : int {
   MECH_SCRIPT_MAP_DBREF,
   MECH_SCRIPT_NAME,
   MECH_SCRIPT_MAXIMUM_SPEED,

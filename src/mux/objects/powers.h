@@ -12,7 +12,7 @@
 
 typedef struct WorldContext WorldContext;
 
-typedef enum PowerId {
+typedef enum PowerId : int {
   POWER_NONE,
   POWER_IDLE,
   POWER_COUNT,

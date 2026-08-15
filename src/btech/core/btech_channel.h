@@ -6,7 +6,7 @@
 
 typedef struct BtechContext BtechContext;
 
-typedef enum BtechChannel {
+typedef enum BtechChannel : int {
   BTECH_CHANNEL_SCEN_ERRORS,
   BTECH_CHANNEL_SCEN_STATUS,
   BTECH_CHANNEL_MECH_AI,

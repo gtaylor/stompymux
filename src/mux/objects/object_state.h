@@ -11,7 +11,7 @@
 typedef struct GameDatabase GameDatabase;
 typedef struct ObjectStateCollection ObjectStateCollection;
 
-typedef enum ObjectStateType {
+typedef enum ObjectStateType : int {
   OBJECT_STATE_STRING = 1,
   OBJECT_STATE_BOOLEAN,
   OBJECT_STATE_INTEGER,

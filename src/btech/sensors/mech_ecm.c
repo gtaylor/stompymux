@@ -16,7 +16,7 @@
 #include "mech_utils_api.h"
 #include "registry_api.h"
 
-typedef enum MechEcmNotification {
+typedef enum MechEcmNotification : int {
   MECH_ECM_NOTIFY_DISTURBED,
   MECH_ECM_NOTIFY_UNDISTURBED,
   MECH_ECM_NOTIFY_COUNTERED,

@@ -285,7 +285,7 @@ void mech_safety(DbRef player, void *data, char *buffer) {
                                                          : "[fg=green]ON");
 }
 
-enum MechPreferenceFlag {
+enum MechPreferenceFlag : int {
   MECHPREF_FLAG_INVERTED = 0x01,
   MECHPREF_FLAG_NEGATIVE = 0x02,
 };

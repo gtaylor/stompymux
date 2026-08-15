@@ -28,7 +28,7 @@ struct ConfigurationRegistry {
   size_t list_option_count;
 };
 
-typedef enum ConfigurationListOption {
+typedef enum ConfigurationListOption : int {
   LIST_COMMANDS = 2,
   LIST_FLAGS = 4,
   LIST_GLOBALS = 6,

@@ -7,7 +7,7 @@
 
 typedef struct lua_State LuaState;
 
-typedef enum LuaCommandAccess {
+typedef enum LuaCommandAccess : int {
   LUA_COMMAND_ACCESS_PUBLIC,
   LUA_COMMAND_ACCESS_WIZARD,
   LUA_COMMAND_ACCESS_GOD,

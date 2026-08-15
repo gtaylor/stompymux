@@ -7,7 +7,7 @@
 
 #include "mux/support/styled_text/palette.h"
 
-typedef enum TerminalColorDepth {
+typedef enum TerminalColorDepth : int {
   TERMINAL_COLOR_NONE,
   TERMINAL_COLOR_ANSI_16,
   TERMINAL_COLOR_ANSI_256,

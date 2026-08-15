@@ -14,7 +14,7 @@
 // IWYU pragma: no_include "uv.h"
 
 /* Reasons passed to descriptor_shutdown(). */
-typedef enum DescriptorShutdownReason {
+typedef enum DescriptorShutdownReason : int {
   DESCRIPTOR_SHUTDOWN_QUIT = 1,       /* User quit */
   DESCRIPTOR_SHUTDOWN_TIMEOUT = 2,    /* Inactivity timeout */
   DESCRIPTOR_SHUTDOWN_BOOT = 3,       /* Victim of @boot or @destroy */
@@ -145,7 +145,7 @@ typedef struct Descriptor {
 } Descriptor;
 
 /* Kinds of descriptor selected by a DescriptorIterator. */
-typedef enum DescriptorIteratorKind {
+typedef enum DescriptorIteratorKind : int {
   /* Select every descriptor, including descriptors that are closing. */
   DESCRIPTOR_ITERATOR_ALL,
   /* Select authenticated descriptors that are not closing. */

@@ -50,7 +50,7 @@ struct PartNameRegistry {
   HashTable vlong_hash;
 };
 
-typedef enum PartNameField {
+typedef enum PartNameField : int {
   PART_NAME_SHORT,
   PART_NAME_LONG,
   PART_NAME_VERY_LONG,
@@ -460,7 +460,7 @@ BtechScriptResult fun_btpartmatch(BtechScriptCall *call) {
 }
 
 /* Categories accepted by btpartslist(), based on the canonical part ID. */
-typedef enum BtPartCategory {
+typedef enum BtPartCategory : int {
   BT_PART_CATEGORY_AMMO,
   BT_PART_CATEGORY_WEAPON,
   BT_PART_CATEGORY_BOMB,
