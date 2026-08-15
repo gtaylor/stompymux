@@ -71,7 +71,7 @@ static bool telnet_environment_kind_valid(TelnetEnvironmentKind kind) {
 static void telnet_environment_entry_destroy(TelnetEnvironmentEntry *entry) {
   free(entry->name);
   free(entry->value);
-  *entry = (TelnetEnvironmentEntry){0};
+  *entry = (TelnetEnvironmentEntry){};
 }
 
 TelnetEnvironment *telnet_environment_create(void) {
@@ -293,7 +293,7 @@ static bool telnet_environment_remove(TelnetEnvironment *environment,
             (environment->count - index - 1) * sizeof(*environment->entries));
   environment->count--;
   *telnet_environment_entry_at(environment, environment->count) =
-      (TelnetEnvironmentEntry){0};
+      (TelnetEnvironmentEntry){};
   return true;
 }
 
@@ -383,7 +383,7 @@ telnet_environment_clone(const TelnetEnvironment *environment) {
 
 bool telnet_environment_receive(TelnetEnvironment *environment,
                                 const char *buffer, size_t size) {
-  TelnetEnvironmentUpdate updates[TELNET_ENVIRONMENT_MAX_ENTRIES] = {0};
+  TelnetEnvironmentUpdate updates[TELNET_ENVIRONMENT_MAX_ENTRIES] = {};
   TelnetEnvironment *updated;
   size_t update_count;
   bool result = true;

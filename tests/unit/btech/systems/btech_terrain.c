@@ -65,12 +65,12 @@ BattleMap *btech_context_get_map(BtechContext *context, DbRef dbref) {
 }
 
 int main(void) {
-  BtechContext context = {0};
+  BtechContext context = {};
   unsigned char row[2] = {0};
   unsigned char *rows[] = {row};
   BattleMap map = {
       .xcode.context = &context, .map_width = 2, .map_height = 1, .map = rows};
-  Mech mech = {0};
+  Mech mech = {};
   mech.xcode.context = &context;
   mech.mapindex = 1;
   mech.pd.x = 0;

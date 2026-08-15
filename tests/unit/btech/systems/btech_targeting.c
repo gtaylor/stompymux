@@ -9,7 +9,7 @@ static Mech *next_unit(Mech *unit, int *evaluations) {
 }
 
 int main(void) {
-  Mech mech = {0};
+  Mech mech = {};
   MechTargetingOverride override;
   DbRef target;
   int target_x;

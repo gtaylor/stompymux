@@ -175,7 +175,7 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
 
 void tech_repairs(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   char message_buffer[LBUF_SIZE];
-  int i;
+  MechEventType i;
   CoolMenu *c = nullptr;
   BtechContext *context = mech_context(mech);
   bool is_wizard_player = is_wizard(btech_context_database(context), player);

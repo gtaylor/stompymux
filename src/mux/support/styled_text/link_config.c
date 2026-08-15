@@ -34,7 +34,7 @@ void styled_link_config_destroy(StyledLinkConfig *config) {
     free(item->action);
   }
   free(config->menu);
-  *config = (StyledLinkConfig){0};
+  *config = (StyledLinkConfig){};
 }
 
 bool styled_link_visibility_present(const StyledLinkVisibility *visibility) {
@@ -244,7 +244,7 @@ bool styled_link_config_merge(StyledLinkConfig *base,
     base->menu_count = 0;
     StyledLinkConfig menu_source = {.menu = overlay->menu,
                                     .menu_count = overlay->menu_count};
-    StyledLinkConfig menu_copy = {0};
+    StyledLinkConfig menu_copy = {};
     if (!styled_link_config_copy(&menu_copy, &menu_source))
       return false;
     base->menu = menu_copy.menu;

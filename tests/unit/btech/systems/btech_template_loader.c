@@ -82,7 +82,7 @@ static void reset_observations(void) {
 }
 
 int main(void) {
-  Mech mech = {0};
+  Mech mech = {};
 
   test_context = mech.xcode.context;
 

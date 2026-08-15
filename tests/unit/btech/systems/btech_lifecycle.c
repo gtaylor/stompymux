@@ -15,7 +15,7 @@ void mech_speed_correct(Mech *mech [[maybe_unused]]) { speed_corrections++; }
 void mark_for_los_update(Mech *mech [[maybe_unused]]) { los_updates++; }
 
 int main(void) {
-  Mech mech = {0};
+  Mech mech = {};
 
   ((&mech)->rd.critstatus) = SPEED_OK;
   mech_max_speed_set(&mech, 12.0F);

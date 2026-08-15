@@ -136,7 +136,7 @@ void descriptor_queue_write(Descriptor *d, const char *b, int n) {
 
 void descriptor_queue_string(Descriptor *d, const char *s) {
   char rendered[LBUF_SIZE];
-  StyledTextRenderOptions options = {0};
+  StyledTextRenderOptions options = {};
 
   if (is_ansi(descriptor_runtime(d)->world->database, d->player)) {
     if (d->has_color_override)

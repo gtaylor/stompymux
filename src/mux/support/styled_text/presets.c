@@ -109,8 +109,8 @@ bool styled_text_palette_set_preset(StyledTextPalette *palette,
       .osc_hyperlinks_disabled = true,
       .osc_hyperlinks_selection = true,
   };
-  StyledLinkConfig config = {0};
-  StyledState unused = {0};
+  StyledLinkConfig config = {};
+  StyledState unused = {};
   char uri[OSC8_URI_LIMIT + 1];
   char candidate_name[61];
   size_t position = 0;

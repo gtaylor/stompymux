@@ -253,7 +253,7 @@ int tech_time_scaled_seconds(BtechContext *context, int units) {
 }
 
 TechPartParseResult tech_part_parse(const TechPartParseRequest *request) {
-  TechPartParseResult result = {0};
+  TechPartParseResult result = {};
   Mech *mech = request->mech;
   char *args[5];
   int l;
@@ -383,7 +383,7 @@ static void find_latest_tech_event(MuxEvent *event, void *data) {
 
 int figure_latest_tech_event(Mech *mech) {
   LatestTechEventContext latest = {0};
-  for (int type = FIRST_TECH_EVENT; type <= LAST_TECH_EVENT; type++)
+  for (MechEventType type = FIRST_TECH_EVENT; type <= LAST_TECH_EVENT; type++)
     mech_event_visit(mech, type, find_latest_tech_event, &latest);
   return latest.latest;
 }

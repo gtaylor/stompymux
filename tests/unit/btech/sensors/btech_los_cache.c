@@ -44,7 +44,7 @@ static void map_los_destroy(BattleMap *map) {
 
 int main(void) {
   LosTestState state = {0};
-  BattleMap map = {0};
+  BattleMap map = {};
   Mech first = {.slot = 0};
   Mech second = {.slot = 1};
   map_los_allocate(&map, 3);

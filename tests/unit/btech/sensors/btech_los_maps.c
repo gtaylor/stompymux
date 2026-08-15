@@ -81,7 +81,7 @@ static bool fixture_load(MapFixture *fixture, const char *path) {
 static void fixture_destroy(MapFixture *fixture) {
   free(fixture->terrain);
   free(fixture->elevation);
-  *fixture = (MapFixture){0};
+  *fixture = (MapFixture){};
 }
 
 static bool points_are_adjacent(const LosTracePoint *left,
@@ -108,7 +108,7 @@ static void check_corridor(LosTestState *state, MapFixture *fixture, int ax,
 }
 
 static void check_map(LosTestState *state, const char *path) {
-  MapFixture fixture = {0};
+  MapFixture fixture = {};
   los_expect_true(state, "production map loads", fixture_load(&fixture, path));
   if (!fixture.terrain || !fixture.elevation) {
     fixture_destroy(&fixture);

@@ -227,7 +227,8 @@ void mech_usebin(DbRef player, Mech *mech, char *buffer) {
   }
 
   w_loc =
-      armor_section_from_string(((mech)->ud.type), ((mech)->ud.move), args[1]);
+      armor_section_from_string((UnitClass)((mech)->ud.type),
+                                (MechMovementType)((mech)->ud.move), args[1]);
 
   if (w_loc == -1) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
@@ -245,8 +246,8 @@ void mech_usebin(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
-  armor_string_from_index(w_loc, str_location, ((mech)->ud.type),
-                          ((mech)->ud.move));
+  armor_string_from_index(w_loc, str_location, (UnitClass)((mech)->ud.type),
+                          (MechMovementType)((mech)->ud.move));
   w_cur_loc = mech_critical_desired_ammo_section(mech, w_section, w_crit_slot);
 
   if (w_cur_loc == w_loc) {
