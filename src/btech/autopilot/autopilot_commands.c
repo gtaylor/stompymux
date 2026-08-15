@@ -62,7 +62,7 @@ static bool auto_command_prepare_unit(Autopilot *autopilot, Mech *mech) {
  * that can be given to the AI.  These use a
  * large enum that is located in autopilot.h
  */
-const AutopilotCommandDefinition ACOM[AUTO_NUM_COMMANDS + 1] = {
+static const AutopilotCommandDefinition ACOM[AUTO_NUM_COMMANDS + 1] = {
     {"chasetarget", 1, GOAL_CHASETARGET,
      nullptr}, /* Extension of follow, for chasetarget */
     {"dumbfollow", 1, GOAL_DUMBFOLLOW, nullptr},

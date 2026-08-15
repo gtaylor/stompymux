@@ -49,10 +49,6 @@
 #include "template_api.h"
 #include "weapon_settings.h"
 
-/* From template.c */
-extern const int INTERNALSWEIGHT[];
-extern const int CARGOWEIGHT[];
-
 int mech_weapon_recycle_time(const Mech *mech, int weapon_index);
 int mech_weapon_battle_value(const Mech *mech, int weapon_index);
 

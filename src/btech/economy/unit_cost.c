@@ -25,11 +25,7 @@
 #include "mech_utils_api.h"
 #include "mux/support/checked_storage.h"
 #include "section_types.h"
-
-extern const int INTERNALSWEIGHT[];
-extern const int CARGOWEIGHT[];
-extern const int TEMPLATE_INTERNAL_COUNT;
-extern const int TEMPLATE_CARGO_COUNT;
+#include "template_internal.h"
 
 static const int *int_at(const int *values, size_t count, size_t index) {
   return checked_storage_at_const(values, count, sizeof(*values), index);

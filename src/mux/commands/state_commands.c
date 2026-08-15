@@ -26,8 +26,6 @@
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 
-extern void ufun(char *, char *, int, int, int, DbRef, DbRef);
-
 void state_examine_namespaces(const ObjectStateExamineRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
   DbRef player = request->viewer;

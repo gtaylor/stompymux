@@ -332,8 +332,6 @@ bool btech_command_try_execute(BtechContext *context, DbRef player, DbRef loc,
   return false;
 }
 
-const int GLOBAL_SPECIALS = BTECH_SPECIAL_OBJECT_COUNT;
-
 void *new_special_object(BtechContext *context, DbRef id, int type) {
   BtechSpecialObject *xcode_obj = nullptr;
   if (type < 0 || type >= BTECH_SPECIAL_OBJECT_COUNT)

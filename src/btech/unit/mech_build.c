@@ -20,8 +20,6 @@
 #include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
 
-extern const int DEFAULT_WEAPON_COUNT;
-
 // clang-format off: table rows intentionally remain one logical row each.
 static const MissileHitEntry MISSILE_HIT_DEFINITIONS[] = {{"CL.LB10-XAC", 0, {3, 3, 4, 6, 6, 6, 6, 8, 8, 10, 10}},
                                                           {"CL.LB20-XAC", 0, {6, 6, 9, 12, 12, 12, 12, 16, 16, 20, 20}},

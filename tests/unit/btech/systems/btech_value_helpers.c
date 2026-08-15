@@ -2,12 +2,9 @@
 #include "floatsim.h"
 #include "mech_partnames.h"
 #include "mux/support/checked_storage.h"
+#include "template_internal.h"
 
 #include <string.h>
-
-extern const int CARGOWEIGHT[];
-extern const int TEMPLATE_CARGO_COUNT;
-const char *template_cargo_name(int index);
 
 static int next_equipment(int *evaluations, int equipment) {
   ++*evaluations;

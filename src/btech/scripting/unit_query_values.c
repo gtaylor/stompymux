@@ -99,7 +99,6 @@ BtechScriptResult fun_btloadmech(BtechScriptCall *call) {
   }
   return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 }
-extern const char RADIO_COLORSTR[];
 BtechScriptResult fun_btmechfreqs(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;

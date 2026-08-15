@@ -2,6 +2,8 @@
 
 #include "mech_api_types.h"
 
+extern const char RADIO_COLORSTR[];
+
 int mech_radio_frequency(const Mech *mech, int channel);
 int mech_radio_mode(const Mech *mech, int channel);
 int mech_radio_channel_count(const Mech *mech);
