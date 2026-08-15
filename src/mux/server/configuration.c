@@ -353,7 +353,7 @@ void configuration_log_not_found(ConfigurationContext *context, DbRef player,
     (void)snprintf(buff, LBUF_SIZE, "%s %s not found", thingname, thing);
     notify_checked(&context->command->evaluation, player, player, buff,
                    MSG_ME_ALL | MSG_F_DOWN);
-    free_lbuf(buff);
+    free_buf(buff);
   }
 }
 
@@ -468,7 +468,7 @@ int configuration_set(ConfigurationContext *context, const char *cp,
                   game_object_name(context->database, player), cp,
                   log_arguments, status);
       }
-      free_lbuf(log_arguments);
+      free_buf(log_arguments);
       return i;
     }
   }

@@ -25,7 +25,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/password.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/validation.h"
@@ -138,7 +138,7 @@ DbRef create_player(const PlayerCreationRequest *request) {
   WorldContext *world = evaluation->world;
   DbRef player;
   char hashed_password[crypto_pwhash_STRBYTES];
-  LbufText pbuf;
+  OwnedText pbuf;
 
   /*
    * Make sure the password is OK.  Name is checked in create_obj
@@ -149,11 +149,11 @@ DbRef create_player(const PlayerCreationRequest *request) {
 
   pbuf = trim_spaces(password);
   if (!ok_password(world->configuration, pbuf.text)) {
-    lbuf_text_release(&pbuf);
+    owned_text_release(&pbuf);
     return NOTHING;
   }
   if (!password_hash(world->configuration, pbuf.text, hashed_password)) {
-    lbuf_text_release(&pbuf);
+    owned_text_release(&pbuf);
     return NOTHING;
   }
   /*
@@ -163,7 +163,7 @@ DbRef create_player(const PlayerCreationRequest *request) {
   player = create_obj(evaluation, NOTHING, OBJECT_TYPE_PLAYER, name);
   if (player == NOTHING) {
     sodium_memzero(hashed_password, sizeof(hashed_password));
-    lbuf_text_release(&pbuf);
+    owned_text_release(&pbuf);
     return NOTHING;
   }
   /*
@@ -179,7 +179,7 @@ DbRef create_player(const PlayerCreationRequest *request) {
                            ? world->configuration->start_home
                            : world->configuration->start_room);
   sodium_memzero(hashed_password, sizeof(hashed_password));
-  lbuf_text_release(&pbuf);
+  owned_text_release(&pbuf);
   return player;
 }
 
@@ -285,12 +285,12 @@ int add_player_name(WorldContext *world, DbRef player, const char *name) {
      */
 
     if (*p == AMBIGUOUS) {
-      free_lbuf(temp);
+      free_buf(temp);
       return 0;
     }
     if (is_good_obj(world->database, *p) &&
         (typeof_obj(world->database, *p) == OBJECT_TYPE_PLAYER)) {
-      free_lbuf(temp);
+      free_buf(temp);
       if (*p == player) {
         return 1;
       }
@@ -304,13 +304,13 @@ int add_player_name(WorldContext *world, DbRef player, const char *name) {
 
     *p = player;
     stat = hash_table_replace(temp, p, &world->indexes->players);
-    free_lbuf(temp);
+    free_buf(temp);
   } else {
     p = checked_storage_allocate(sizeof(DbRef));
 
     *p = player;
     stat = hash_table_add(temp, p, &world->indexes->players);
-    free_lbuf(temp);
+    free_buf(temp);
     stat = (stat < 0) ? 0 : 1;
   }
   return stat;
@@ -332,12 +332,12 @@ int delete_player_name(WorldContext *world, DbRef player, const char *name) {
 
   p = (long *)hash_table_find(temp, &world->indexes->players);
   if (!p || (*p == NOTHING) || ((player != NOTHING) && (*p != player))) {
-    free_lbuf(temp);
+    free_buf(temp);
     return 0;
   }
   free(p);
   hash_table_delete(temp, &world->indexes->players);
-  free_lbuf(temp);
+  free_buf(temp);
   return 1;
 }
 
@@ -372,7 +372,7 @@ DbRef lookup_player(WorldContext *world, DbRef doer, const char *name,
     *character = ascii_to_lower(*character);
   }
   p = (long *)hash_table_find(temp, &world->indexes->players);
-  free_lbuf(temp);
+  free_buf(temp);
   if (!p) {
     if (check_who) {
       thing =
@@ -410,7 +410,7 @@ void load_player_names(WorldContext *world) {
         add_player_name(world, i, alias);
     }
   }
-  free_lbuf(alias);
+  free_buf(alias);
 }
 
 /**
@@ -492,5 +492,5 @@ void badname_list(EvaluationContext *evaluation, WorldContext *world,
    */
 
   notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
-  free_lbuf(buff);
+  free_buf(buff);
 }

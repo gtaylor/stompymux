@@ -21,7 +21,7 @@
 #include "mux/support/checked_storage.h"
 #include "mux/support/fifo.h"
 #include "mux/support/hash_table.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/utf8.h"
 #include "mux/world/player.h"
 
@@ -292,7 +292,7 @@ void do_comlist(CommandInvocation *invocation) {
 static void comlist_description(GameDatabase *database, struct Channel *ch,
                                 char *buffer, size_t buffer_size) {
   long flags;
-  LbufText description;
+  OwnedText description;
 
   if (buffer_size == 0)
     return;
@@ -319,5 +319,5 @@ static void comlist_description(GameDatabase *database, struct Channel *ch,
     *(char *)checked_storage_at(buffer, buffer_size, sizeof(char), output) =
         '\0';
   }
-  lbuf_text_release(&description);
+  owned_text_release(&description);
 }

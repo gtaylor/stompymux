@@ -55,18 +55,18 @@ add_test(NAME configuration_interpreter COMMAND configuration_interpreter_test)
 set_tests_properties(configuration_interpreter PROPERTIES
   LABELS "unit;mux-server;configuration_interpreter")
 
-add_executable(lbuf_text_test
-  ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/lbuf_text.c
-  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/lbuf_text.c
+add_executable(owned_text_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/owned_text.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/owned_text.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
-target_compile_options(lbuf_text_test PRIVATE -ffunction-sections)
-target_link_options(lbuf_text_test PRIVATE -Wl,--gc-sections)
-target_link_libraries(lbuf_text_test PRIVATE btmux_options)
-target_include_directories(lbuf_text_test PRIVATE
+target_compile_options(owned_text_test PRIVATE -ffunction-sections)
+target_link_options(owned_text_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(owned_text_test PRIVATE btmux_options)
+target_include_directories(owned_text_test PRIVATE
   "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/src")
-add_test(NAME lbuf_text COMMAND lbuf_text_test)
-set_tests_properties(lbuf_text PROPERTIES LABELS "unit;mux-support;lbuf_text")
+add_test(NAME owned_text COMMAND owned_text_test)
+set_tests_properties(owned_text PROPERTIES LABELS "unit;mux-support;owned_text")
 
 add_test(NAME catalog_startup
   COMMAND bash
@@ -649,7 +649,7 @@ add_test(NAME flag_privileges COMMAND flag_privileges_test)
 add_executable(unparse_object_numonly_test
   ${CMAKE_SOURCE_DIR}/tests/unit/mux/server/unparse_object_numonly.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/objects/flags.c
-  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/lbuf_text.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/owned_text.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
 target_compile_options(unparse_object_numonly_test PRIVATE -ffunction-sections)
@@ -763,7 +763,7 @@ add_test(NAME object_state COMMAND object_state_test)
 add_executable(object_names_test
   ${CMAKE_SOURCE_DIR}/tests/unit/mux/state/object_names.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/objects/db.c
-  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/lbuf_text.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/owned_text.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
 target_compile_options(object_names_test PRIVATE -ffunction-sections)
 target_link_options(object_names_test PRIVATE -Wl,--gc-sections)

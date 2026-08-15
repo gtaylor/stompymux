@@ -18,7 +18,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
@@ -217,9 +217,9 @@ static void look_exits(const LookContext *look, const char *exit_name) {
     *e = 0;
     notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
   }
-  free_lbuf(buff);
-  free_lbuf(buff1);
-  free_lbuf(command);
+  free_buf(buff);
+  free_buf(buff1);
+  free_buf(command);
 }
 
 enum ContentsStyle : int {
@@ -234,7 +234,7 @@ static void look_contents(const LookContext *look, const char *contents_name,
   DbRef loc = look->location;
   DbRef thing;
   int can_see_loc;
-  LbufText buff;
+  OwnedText buff;
 
   /*
    * check to see if he can see the location
@@ -270,7 +270,7 @@ static void look_contents(const LookContext *look, const char *contents_name,
                                 thing);
           notify_checked(evaluation, player, player, buff.text,
                          MSG_ME_ALL | MSG_F_DOWN);
-          lbuf_text_release(&buff);
+          owned_text_release(&buff);
         }
       }
       break; /*
@@ -314,7 +314,7 @@ static bool look_custom_appearance(EvaluationContext *evaluation, DbRef player,
 static bool look_simple(EvaluationContext *evaluation, DbRef player,
                         DbRef thing) {
   int pattr;
-  LbufText buff;
+  OwnedText buff;
 
   /*
    * Only makes sense for things that can hear
@@ -335,7 +335,7 @@ static bool look_simple(EvaluationContext *evaluation, DbRef player,
         unparse_object(evaluation->world->database, evaluation, player, thing);
     notify_checked(evaluation, player, player, buff.text,
                    MSG_ME_ALL | MSG_F_DOWN);
-    lbuf_text_release(&buff);
+    owned_text_release(&buff);
   }
   pattr = A_DESC;
   notify_action(evaluation,
@@ -370,7 +370,7 @@ static void show_a_desc(EvaluationContext *evaluation, DbRef player,
 
 static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
                       int use_idesc) {
-  LbufText got;
+  OwnedText got;
   long aflags;
 
   if ((typeof_obj(evaluation->world->database, loc) != OBJECT_TYPE_ROOM) &&
@@ -392,7 +392,7 @@ static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
     } else {
       show_a_desc(evaluation, player, loc);
     }
-    lbuf_text_release(&got);
+    owned_text_release(&got);
   } else {
     show_a_desc(evaluation, player, loc);
   }
@@ -403,7 +403,7 @@ void look_in(const LookRequest *request) {
   DbRef player = request->viewer;
   DbRef loc = request->location;
   int key = request->key;
-  LbufText buff;
+  OwnedText buff;
   bool custom;
   LuaLockInvocation lock;
   LuaLockResult result;
@@ -423,7 +423,7 @@ void look_in(const LookRequest *request) {
     buff = unparse_object(evaluation->world->database, evaluation, player, loc);
     notify_checked(evaluation, player, player, buff.text,
                    MSG_ME_ALL | MSG_F_DOWN);
-    lbuf_text_release(&buff);
+    owned_text_release(&buff);
 
     show_desc(evaluation, player, loc,
               loc == game_object_location(evaluation->world->database, player));

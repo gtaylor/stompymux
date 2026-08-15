@@ -15,7 +15,7 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/stringutil.h"
 
 char *system_error_message(int error_number, char *buffer, size_t capacity) {
@@ -187,10 +187,10 @@ char *upcasestr(char *s) {
   return s;
 }
 
-static LbufText normalize_spaces(const char *string) {
+static OwnedText normalize_spaces(const char *string) {
   char *buffer = alloc_lbuf("normalize_spaces");
   if (buffer == nullptr)
-    return (LbufText){};
+    return (OwnedText){};
 
   size_t output_index = 0;
   bool pending_space = false;
@@ -214,20 +214,20 @@ static LbufText normalize_spaces(const char *string) {
     }
   }
   *checked_character_slot(buffer, LBUF_SIZE, output_index) = '\0';
-  return lbuf_text_take(buffer);
+  return owned_text_take(buffer);
 }
 
 /**
  * Returns owned lbuf text with whitespace runs compressed to single spaces and
  * leading and trailing whitespace removed.
  */
-LbufText munge_space(const char *string) { return normalize_spaces(string); }
+OwnedText munge_space(const char *string) { return normalize_spaces(string); }
 
 /**
  * Returns owned lbuf text with leading and trailing whitespace removed and
  * internal whitespace runs compressed.
  */
-LbufText trim_spaces(const char *string) { return normalize_spaces(string); }
+OwnedText trim_spaces(const char *string) { return normalize_spaces(string); }
 
 /**
  * Replaces the next targ in a mutable string with a terminator, returns the

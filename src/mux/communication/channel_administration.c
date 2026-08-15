@@ -20,7 +20,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 #include "mux/world/player.h"
@@ -201,10 +201,10 @@ int do_comsystem(EvaluationContext *evaluation, DbRef who, char *cmd) {
   ch = commac_channel_for_alias(commac, alias);
   if (ch && *ch) {
     comsys_process_alias_command(evaluation, who, ch, t);
-    free_lbuf(alias);
+    free_buf(alias);
     return 0;
   }
-  free_lbuf(alias);
+  free_buf(alias);
   return 1;
 }
 
@@ -312,14 +312,14 @@ void do_chboot(CommandInvocation *invocation) {
   /*
    * We should be in the clear now. :)
    */
-  LbufText player_name =
+  OwnedText player_name =
       unparse_object_numonly(evaluation->world->database, player);
-  LbufText thing_name =
+  OwnedText thing_name =
       unparse_object_numonly(evaluation->world->database, thing);
   comsys_channel_printf(evaluation, ch, "[%s] %s boots %s off the channel.",
                         ch->name, player_name.text, thing_name.text);
-  lbuf_text_release(&player_name);
-  lbuf_text_release(&thing_name);
+  owned_text_release(&player_name);
+  owned_text_release(&thing_name);
   comsys_delete_channel_alias(evaluation, thing, channel);
 }
 
@@ -330,7 +330,7 @@ void do_channel_object(CommandInvocation *invocation) {
   char *object = invocation->second;
   struct Channel *ch;
   DbRef thing;
-  LbufText buff;
+  OwnedText buff;
 
   init_match(&evaluation->command->match, player, object, OBJECT_TYPE_NOTYPE);
   match_everything(&evaluation->command->match, 0);
@@ -355,7 +355,7 @@ void do_channel_object(CommandInvocation *invocation) {
   notify_printf(evaluation, player,
                 "Channel %s is now using %s as channel object.", ch->name,
                 buff.text);
-  lbuf_text_release(&buff);
+  owned_text_release(&buff);
 }
 
 void do_chanlist(CommandInvocation *invocation) {
@@ -366,7 +366,7 @@ void do_chanlist(CommandInvocation *invocation) {
   long flags;
   char temp[MBUF_SIZE];
   char buf[MBUF_SIZE];
-  LbufText atrstr;
+  OwnedText atrstr;
 
   flags = 0;
 
@@ -394,7 +394,7 @@ void do_chanlist(CommandInvocation *invocation) {
       else
         (void)snprintf(buf, MBUF_SIZE, "%-54.54s", atrstr.text);
 
-      lbuf_text_release(&atrstr);
+      owned_text_release(&atrstr);
       (void)snprintf(temp, MBUF_SIZE, "%c%c %-13.13s %-60.60s",
                      (ch->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
                      (ch->type & (CHANNEL_LOUD)) ? 'L' : '-', ch->name, buf);
@@ -412,7 +412,7 @@ void do_chanstatus(CommandInvocation *invocation) {
   char *chan = invocation->first;
   struct Channel *ch;
   long flags;
-  LbufText atrstr;
+  OwnedText atrstr;
 
   if (key & CSTATUS_FULL) {
     struct Channel *selected_channel;
@@ -462,7 +462,7 @@ void do_chanstatus(CommandInvocation *invocation) {
   else
     (void)snprintf(buf, MBUF_SIZE, "%-54.54s", atrstr.text);
 
-  lbuf_text_release(&atrstr);
+  owned_text_release(&atrstr);
   (void)snprintf(temp, MBUF_SIZE, "%c%c %-13.13s %-60.60s",
                  (ch->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
                  (ch->type & (CHANNEL_LOUD)) ? 'L' : '-', ch->name, buf);

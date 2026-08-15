@@ -190,7 +190,7 @@ static void list_cmdtable(EvaluationContext *evaluation,
   *(char *)checked_storage_at(buf, LBUF_SIZE, sizeof(char), used) = '\0';
 
   notify_checked(evaluation, player, player, buf, MSG_ME_ALL | MSG_F_DOWN);
-  free_lbuf(buf);
+  free_buf(buf);
 
   notify_checked(evaluation, player, player, "Global commands:", MSG_ME);
   count = lua_visit_global_commands(runtime->lua_owner->runtime, player,
@@ -244,11 +244,11 @@ static void list_df_flags(EvaluationContext *evaluation,
       "Default flags: Players...%s Rooms...%s Exits...%s Things...%s", playerb,
       roomb, exitb, thingb);
   raw_notify(evaluation, player, buff);
-  free_lbuf(buff);
-  free_sbuf(playerb);
-  free_sbuf(roomb);
-  free_sbuf(exitb);
-  free_sbuf(thingb);
+  free_buf(buff);
+  free_buf(playerb);
+  free_buf(roomb);
+  free_buf(exitb);
+  free_buf(thingb);
 }
 
 /*

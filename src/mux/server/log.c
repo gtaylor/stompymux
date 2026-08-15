@@ -20,8 +20,8 @@
 #include "mux/server/server_config.h"
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
-#include "mux/support/lbuf_text.h"
 #include "mux/support/name_table.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/styled_text/markup.h"
 
 const NameTable LOGDATA_NAMETAB[] = {{"flags", 1, 0, LOGOPT_FLAGS},
@@ -205,7 +205,7 @@ void log_number(int num) { (void)fprintf(stderr, "%d", num); }
  * Writes the name, db number, and flags of an object to the log.
  */
 void log_name(ServerLog *log, DbRef target) {
-  LbufText tp;
+  OwnedText tp;
   char new[LBUF_SIZE];
 
   if ((log->configuration->log_info & LOGOPT_FLAGS) != 0)
@@ -215,7 +215,7 @@ void log_name(ServerLog *log, DbRef target) {
   styled_text_strip(log->database->styled_text_palette, tp.text, new,
                     sizeof(new));
   (void)fprintf(stderr, "%s", new);
-  lbuf_text_release(&tp);
+  owned_text_release(&tp);
 }
 
 /**

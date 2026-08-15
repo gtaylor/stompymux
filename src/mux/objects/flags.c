@@ -18,7 +18,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/stringutil.h"
 
 static bool *object_flag_value_at(ObjectFlagSet *flags, ObjectFlag flag) {
@@ -388,7 +388,7 @@ void display_flagtab(EvaluationContext *evaluation, DbRef player) {
   }
   *out = '\0';
   notify_checked(evaluation, player, player, buffer, MSG_ME_ALL | MSG_F_DOWN);
-  free_lbuf(buffer);
+  free_buf(buffer);
 }
 static bool flag_normalize_name(const char *name,
                                 char buffer[static SBUF_SIZE]) {
@@ -534,7 +534,7 @@ char *flags_description(GameDatabase *database, DbRef target) {
   return buffer;
 }
 
-LbufText unparse_object_numonly(GameDatabase *database, DbRef target) {
+OwnedText unparse_object_numonly(GameDatabase *database, DbRef target) {
   char *buffer = alloc_lbuf("unparse_object_numonly");
   if (target == NOTHING)
     (void)string_copy_bounded(buffer, LBUF_SIZE, "*NOTHING*");
@@ -545,10 +545,10 @@ LbufText unparse_object_numonly(GameDatabase *database, DbRef target) {
   else
     (void)snprintf(buffer, LBUF_SIZE, "%s(#%ld)",
                    game_object_name(database, target), target);
-  return lbuf_text_take(buffer);
+  return owned_text_take(buffer);
 }
-LbufText unparse_object(GameDatabase *database, EvaluationContext *evaluation,
-                        DbRef player, DbRef target) {
+OwnedText unparse_object(GameDatabase *database, EvaluationContext *evaluation,
+                         DbRef player, DbRef target) {
   (void)evaluation;
   char *buffer = alloc_lbuf("unparse_object");
   if (target == NOTHING) {
@@ -562,12 +562,12 @@ LbufText unparse_object(GameDatabase *database, EvaluationContext *evaluation,
     (void)snprintf(buffer, LBUF_SIZE, "%s(#%ld%s%s)",
                    game_object_name(database, target), target,
                    *flags ? ":" : "", flags);
-    free_sbuf(flags);
+    free_buf(flags);
   } else {
     (void)string_copy_bounded(buffer, LBUF_SIZE,
                               game_object_name(database, target));
   }
-  return lbuf_text_take(buffer);
+  return owned_text_take(buffer);
 }
 bool convert_flags(EvaluationContext *evaluation, DbRef player, char *list,
                    ObjectFlagSet *flags, long *type) {

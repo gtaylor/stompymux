@@ -129,12 +129,12 @@ static int btech_lua_invoke(lua_State *state) {
   char *cursor = buffer;
 
   if (package->is_checking && package->is_checking(package->context)) {
-    free_lbuf(buffer);
+    free_buf(buffer);
     return luaL_error(state, "btech.%s is unavailable during @lua/check",
                       entry->name);
   }
   if (argument_count > MAX_ARG) {
-    free_lbuf(buffer);
+    free_buf(buffer);
     return luaL_error(state, "too many arguments");
   }
   for (int index = 0; index < argument_count; index++) {
@@ -158,13 +158,13 @@ static int btech_lua_invoke(lua_State *state) {
   };
   BtechScriptResult result = entry->handler(&call);
   for (int index = 0; index < argument_count; index++)
-    free_lbuf(*(char *const *)checked_storage_at_const(
+    free_buf(*(char *const *)checked_storage_at_const(
         (const void *)arguments, MAX_ARG, sizeof(*arguments), (size_t)index));
   if (result.status == BTECH_SCRIPT_ERROR) {
     char error[LBUF_SIZE];
     (void)snprintf(error, sizeof(error), "%s", result.value.text);
     btech_script_result_destroy(&result);
-    free_lbuf(buffer);
+    free_buf(buffer);
     return luaL_error(state, "%s", error);
   }
   switch (result.kind) {
@@ -185,7 +185,7 @@ static int btech_lua_invoke(lua_State *state) {
     break;
   }
   btech_script_result_destroy(&result);
-  free_lbuf(buffer);
+  free_buf(buffer);
   return 1;
 }
 

@@ -19,11 +19,11 @@ static int lua_mux_markup(lua_State *state) {
 
   if (!styled_text_compile(package->services->styled_text_palette, markup,
                            output, LBUF_SIZE, error, sizeof(error))) {
-    free_lbuf(output);
+    free_buf(output);
     return luaL_error(state, "invalid styled-text markup: %s", error);
   }
   lua_pushstring(state, markup);
-  free_lbuf(output);
+  free_buf(output);
   return 1;
 }
 
@@ -136,7 +136,7 @@ static int lua_mux_style(lua_State *state) {
                                        .markup = markup,
                                        .cursor = &cursor,
                                        .open_count = &open_count})) {
-      free_lbuf(markup);
+      free_buf(markup);
       return luaL_error(state, "style fields have invalid types");
     }
   }
@@ -148,13 +148,13 @@ static int lua_mux_style(lua_State *state) {
   validated = alloc_lbuf("lua_mux_style.validated");
   if (!styled_text_compile(package->services->styled_text_palette, markup,
                            validated, LBUF_SIZE, error, sizeof(error))) {
-    free_lbuf(markup);
-    free_lbuf(validated);
+    free_buf(markup);
+    free_buf(validated);
     return luaL_error(state, "invalid style: %s", error);
   }
   lua_pushstring(state, markup);
-  free_lbuf(markup);
-  free_lbuf(validated);
+  free_buf(markup);
+  free_buf(validated);
   return 1;
 }
 
@@ -166,7 +166,7 @@ static int lua_mux_strip_style(lua_State *state) {
   styled_text_strip(package->services->styled_text_palette, value, output,
                     LBUF_SIZE);
   lua_pushstring(state, output);
-  free_lbuf(output);
+  free_buf(output);
   return 1;
 }
 
@@ -191,7 +191,7 @@ static int lua_mux_truncate_text(lua_State *state) {
   styled_text_truncate(package->services->styled_text_palette, value,
                        (size_t)width, output, LBUF_SIZE);
   lua_pushstring(state, output);
-  free_lbuf(output);
+  free_buf(output);
   return 1;
 }
 

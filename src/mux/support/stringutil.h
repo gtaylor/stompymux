@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <time.h>
 
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 
 typedef struct ServerConfiguration ServerConfiguration;
 
@@ -19,9 +19,9 @@ char ascii_to_upper(char character);
 /** Converts one ASCII uppercase letter to lowercase. */
 char ascii_to_lower(char character);
 /** Returns owned lbuf text with whitespace normalized. */
-LbufText munge_space(const char *string);
+OwnedText munge_space(const char *string);
 /** Returns owned lbuf text containing trimmed, normalized text. */
-LbufText trim_spaces(const char *string);
+OwnedText trim_spaces(const char *string);
 /** Splits a mutable string at targ and advances the caller's cursor. */
 char *grabto(char **str, char targ);
 /** Compares strings case-insensitively using the configured space policy. */

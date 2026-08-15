@@ -22,7 +22,7 @@ static constexpr char EMPTY_SEARCH_NAME[] = "";
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/match.h"
 #include "mux/world/search.h"
@@ -39,7 +39,7 @@ void do_find(CommandInvocation *invocation) {
   DbRef i;
   DbRef low_bound;
   DbRef high_bound;
-  LbufText buff;
+  OwnedText buff;
 
   parse_range(world->database, world->configuration, &name, &low_bound,
               &high_bound);
@@ -52,7 +52,7 @@ void do_find(CommandInvocation *invocation) {
       buff = unparse_object(evaluation->world->database, evaluation, player, i);
       notify_checked(evaluation, player, player, buff.text,
                      MSG_ME_ALL | MSG_F_DOWN);
-      lbuf_text_release(&buff);
+      owned_text_release(&buff);
     }
   }
   notify_checked(evaluation, player, player, "***End of List***",
@@ -343,7 +343,7 @@ void do_search(CommandInvocation *invocation) {
   int tcount;
   int pcount;
   int gcount;
-  LbufText buff;
+  OwnedText buff;
   char *outbuf;
   char *bp;
   DbRef thing;
@@ -383,7 +383,7 @@ void do_search(CommandInvocation *invocation) {
                             thing);
       notify_checked(evaluation, player, player, buff.text,
                      MSG_ME_ALL | MSG_F_DOWN);
-      lbuf_text_release(&buff);
+      owned_text_release(&buff);
       rcount++;
     }
   }
@@ -410,19 +410,19 @@ void do_search(CommandInvocation *invocation) {
       buff = unparse_object(evaluation->world->database, evaluation, player,
                             thing);
       safe_str(buff.text, outbuf, &bp);
-      lbuf_text_release(&buff);
+      owned_text_release(&buff);
 
       safe_str(" [from ", outbuf, &bp);
       buff =
           unparse_object(evaluation->world->database, evaluation, player, from);
       safe_str(((from == NOTHING) ? "NOWHERE" : buff.text), outbuf, &bp);
-      lbuf_text_release(&buff);
+      owned_text_release(&buff);
 
       safe_str(" to ", outbuf, &bp);
       buff =
           unparse_object(evaluation->world->database, evaluation, player, to);
       safe_str(((to == NOTHING) ? "NOWHERE" : buff.text), outbuf, &bp);
-      lbuf_text_release(&buff);
+      owned_text_release(&buff);
 
       safe_chr(']', outbuf, &bp);
       *bp = '\0';
@@ -451,7 +451,7 @@ void do_search(CommandInvocation *invocation) {
                             thing);
       notify_checked(evaluation, player, player, buff.text,
                      MSG_ME_ALL | MSG_F_DOWN);
-      lbuf_text_release(&buff);
+      owned_text_release(&buff);
       tcount++;
     }
   }
@@ -475,7 +475,7 @@ void do_search(CommandInvocation *invocation) {
                             thing);
       notify_checked(evaluation, player, player, buff.text,
                      MSG_ME_ALL | MSG_F_DOWN);
-      lbuf_text_release(&buff);
+      owned_text_release(&buff);
       gcount++;
     }
   }
@@ -499,14 +499,14 @@ void do_search(CommandInvocation *invocation) {
       buff = unparse_object(evaluation->world->database, evaluation, player,
                             thing);
       safe_str(buff.text, outbuf, &bp);
-      lbuf_text_release(&buff);
+      owned_text_release(&buff);
       if (searchparm.s_wizard) {
         safe_str(" [location: ", outbuf, &bp);
         buff = unparse_object(
             evaluation->world->database, evaluation, player,
             game_object_location(evaluation->world->database, thing));
         safe_str(buff.text, outbuf, &bp);
-        lbuf_text_release(&buff);
+        owned_text_release(&buff);
         safe_chr(']', outbuf, &bp);
       }
       *bp = '\0';
@@ -530,7 +530,7 @@ void do_search(CommandInvocation *invocation) {
         rcount, ecount, tcount, pcount, gcount);
     notify_checked(evaluation, player, player, outbuf, MSG_ME_ALL | MSG_F_DOWN);
   }
-  free_lbuf(outbuf);
+  free_buf(outbuf);
   object_list_destroy(&results);
 }
 
@@ -540,7 +540,7 @@ void object_list_destroy(ObjectList *list) {
   ObjectListBlock *block = list->head;
   while (block != nullptr) {
     ObjectListBlock *next = block->next;
-    free_lbuf(block);
+    free_buf(block);
     block = next;
   }
   object_list_initialize(list);

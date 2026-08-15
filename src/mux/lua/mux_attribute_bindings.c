@@ -69,7 +69,7 @@ static int lua_mux_attribute_set(lua_State *state) {
     const char *value = luaL_checklstring(state, 3, &length);
 
     if (length >= LBUF_SIZE || memchr(value, '\0', length)) {
-      free_lbuf(text);
+      free_buf(text);
       return luaL_argerror(state, 3, "invalid attribute value");
     }
     memcpy(text, value, length);
@@ -78,7 +78,7 @@ static int lua_mux_attribute_set(lua_State *state) {
   set = object_attribute_set(
       &handle->package->services->background_command->evaluation, GOD,
       handle->object, attribute->number, text, SET_QUIET);
-  free_lbuf(text);
+  free_buf(text);
   if (!set)
     return luaL_error(state, "unable to set attribute");
   return 0;

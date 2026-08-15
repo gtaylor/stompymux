@@ -20,7 +20,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/validation.h"
@@ -229,7 +229,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
   int okname = 0;
   const ObjectFlagSet *default_flags;
   time_t tt;
-  LbufText buff;
+  OwnedText buff;
   char pure_name[LBUF_SIZE];
 
   styled_text_strip(evaluation->world->styled_text_palette, name, pure_name,
@@ -251,7 +251,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     if (!badname_check(evaluation->world, buff.text)) {
       notify_checked(evaluation, player, player, "That name is not allowed.",
                      MSG_ME_ALL | MSG_F_DOWN);
-      lbuf_text_release(&buff);
+      owned_text_release(&buff);
       return NOTHING;
     }
     if (*buff.text) {
@@ -260,7 +260,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
         notify_checked(evaluation, player, player,
                        "That's a silly name for a player.",
                        MSG_ME_ALL | MSG_F_DOWN);
-        lbuf_text_release(&buff);
+        owned_text_release(&buff);
         return NOTHING;
       }
     }
@@ -270,11 +270,11 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
       if (!okname) {
         notify_printf(evaluation, player, "The name %s is already taken.",
                       name);
-        lbuf_text_release(&buff);
+        owned_text_release(&buff);
         return NOTHING;
       }
     }
-    lbuf_text_release(&buff);
+    owned_text_release(&buff);
     break;
   default:
     (void)snprintf(message_buffer, sizeof(message_buffer),
@@ -355,7 +355,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
   unmark(evaluation->world->database, obj);
   buff = munge_space(name);
   object_name_set(evaluation->world->database, obj, buff.text);
-  lbuf_text_release(&buff);
+  owned_text_release(&buff);
 
   if (objtype == OBJECT_TYPE_PLAYER) {
     tt = time(nullptr);
@@ -414,7 +414,7 @@ void destroy_obj(const ObjectDestructionRequest *request) {
   for (sp = game_object_stack(evaluation->world->database, obj); sp != nullptr;
        sp = next) {
     next = sp->next;
-    free_lbuf(sp->data);
+    free_buf(sp->data);
     free(sp);
   }
 
@@ -525,7 +525,7 @@ void destroy_thing(EvaluationContext *evaluation, DbRef thing) {
 void destroy_player(EvaluationContext *evaluation, DbRef victim) {
   DbRef player;
   long aflags;
-  LbufText buf;
+  OwnedText buf;
 
   /*
    * Bye bye...
@@ -546,7 +546,7 @@ void destroy_player(EvaluationContext *evaluation, DbRef victim) {
                      game_object_name(evaluation->world->database, victim));
   buf = attribute_get(evaluation->world->database, victim, A_ALIAS, &aflags);
   delete_player_name(evaluation->world, victim, buf.text);
-  lbuf_text_release(&buf);
+  owned_text_release(&buf);
 
   move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
                                             .object = victim,

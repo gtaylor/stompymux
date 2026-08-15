@@ -238,7 +238,7 @@ static ConnectResult connect_flow_attempt_login(Descriptor *d, char *name,
                      "[%d/%s] Failed login attempt to player '%.3800s'",
                      d->descriptor, d->addr, name);
       log_text(buff);
-      free_lbuf(buff);
+      free_buf(buff);
       ENDLOG(descriptor_log(d));
     }
     if (--(d->retries_left) <= 0) {

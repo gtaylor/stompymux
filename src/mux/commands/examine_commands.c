@@ -19,7 +19,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
@@ -49,7 +49,7 @@ static void examine_notify_markup(const ExamineMarkupRequest *request) {
     notify_printf(evaluation, player, "%s: %s", request->label, markup);
   else
     notify_checked(evaluation, player, player, markup, MSG_ME_ALL | MSG_F_DOWN);
-  free_lbuf(markup);
+  free_buf(markup);
 }
 
 static void examine_notify_indented(EvaluationContext *evaluation, DbRef player,
@@ -58,7 +58,7 @@ static void examine_notify_indented(EvaluationContext *evaluation, DbRef player,
 
   (void)snprintf(buffer, LBUF_SIZE, "  %s", text);
   notify_checked(evaluation, player, player, buffer, MSG_ME_ALL | MSG_F_DOWN);
-  free_lbuf(buffer);
+  free_buf(buffer);
 }
 
 static void debug_examine(EvaluationContext *evaluation, DbRef player,
@@ -85,13 +85,13 @@ static void debug_examine(EvaluationContext *evaluation, DbRef player,
                 game_object_zone(evaluation->world->database, thing));
   buf = flag_description(evaluation->world->database, thing);
   notify_printf(evaluation, player, "Flags   = %s", buf);
-  free_mbuf(buf);
+  free_buf(buf);
   buf = power_description(
       &(PowerDescriptionRequest){.database = evaluation->world->database,
                                  .viewer = player,
                                  .target = thing});
   notify_printf(evaluation, player, "Powers  = %s", buf);
-  free_mbuf(buf);
+  free_buf(buf);
   notify_printf(evaluation, player, "Lua state entries: %zu",
                 object_state_count(evaluation->world->database, thing));
 }
@@ -143,7 +143,7 @@ void do_examine(CommandInvocation *invocation) {
   DbRef content;
   DbRef exit;
   DbRef loc;
-  LbufText buf2;
+  OwnedText buf2;
   char *description;
 
   /*
@@ -179,14 +179,14 @@ void do_examine(CommandInvocation *invocation) {
   buf2 = unparse_object(evaluation->world->database, evaluation, PLAYER, thing);
   examine_notify_markup(&(ExamineMarkupRequest){
       .evaluation = evaluation, .viewer = PLAYER, .styled = buf2.text});
-  lbuf_text_release(&buf2);
+  owned_text_release(&buf2);
   notify_printf(
       evaluation, PLAYER, "Type: %s",
       object_type_entry(typeof_obj(evaluation->world->database, thing))->name);
   description = flags_description(evaluation->world->database, thing);
   notify_checked(evaluation, PLAYER, PLAYER, description,
                  MSG_ME_ALL | MSG_F_DOWN);
-  free_mbuf(description);
+  free_buf(description);
 
   description = power_description(
       &(PowerDescriptionRequest){.database = evaluation->world->database,
@@ -194,13 +194,13 @@ void do_examine(CommandInvocation *invocation) {
                                  .target = thing});
   notify_checked(evaluation, PLAYER, PLAYER, description,
                  MSG_ME_ALL | MSG_F_DOWN);
-  free_mbuf(description);
+  free_buf(description);
   examine_native_attributes(&(ExamineObjectRequest){
       .evaluation = evaluation, .viewer = PLAYER, .object = thing});
   buf2 = unparse_object(evaluation->world->database, evaluation, PLAYER,
                         game_object_zone(evaluation->world->database, thing));
   notify_printf(evaluation, PLAYER, "Zone: %s", buf2.text);
-  lbuf_text_release(&buf2);
+  owned_text_release(&buf2);
   lua_examine_object(&(LuaExamineObjectRequest){
       .runtime = invocation->context->runtime->lua_owner->runtime,
       .evaluation = evaluation,
@@ -225,7 +225,7 @@ void do_examine(CommandInvocation *invocation) {
       buf2 = unparse_object(evaluation->world->database, evaluation, PLAYER,
                             content);
       examine_notify_indented(evaluation, PLAYER, buf2.text);
-      lbuf_text_release(&buf2);
+      owned_text_release(&buf2);
     }
   }
   /*
@@ -247,7 +247,7 @@ void do_examine(CommandInvocation *invocation) {
         buf2 = unparse_object(evaluation->world->database, evaluation, PLAYER,
                               exit);
         examine_notify_indented(evaluation, PLAYER, buf2.text);
-        lbuf_text_release(&buf2);
+        owned_text_release(&buf2);
       }
     } else {
       notify_checked(evaluation, PLAYER, PLAYER, "No exits.",
@@ -263,7 +263,7 @@ void do_examine(CommandInvocation *invocation) {
           evaluation->world->database, evaluation, PLAYER,
           game_object_location(evaluation->world->database, thing));
       notify_printf(evaluation, PLAYER, "Dropped objects go to: %s", buf2.text);
-      lbuf_text_release(&buf2);
+      owned_text_release(&buf2);
     }
     break;
   case OBJECT_TYPE_THING:
@@ -281,7 +281,7 @@ void do_examine(CommandInvocation *invocation) {
         buf2 = unparse_object(evaluation->world->database, evaluation, PLAYER,
                               exit);
         examine_notify_indented(evaluation, PLAYER, buf2.text);
-        lbuf_text_release(&buf2);
+        owned_text_release(&buf2);
       }
     } else {
       notify_checked(evaluation, PLAYER, PLAYER, "No exits.",
@@ -295,7 +295,7 @@ void do_examine(CommandInvocation *invocation) {
     loc = game_object_link(evaluation->world->database, thing);
     buf2 = unparse_object(evaluation->world->database, evaluation, PLAYER, loc);
     notify_printf(evaluation, PLAYER, "Home: %s", buf2.text);
-    lbuf_text_release(&buf2);
+    owned_text_release(&buf2);
 
     /*
      * print location if player can link to it
@@ -306,7 +306,7 @@ void do_examine(CommandInvocation *invocation) {
       buf2 =
           unparse_object(evaluation->world->database, evaluation, PLAYER, loc);
       notify_printf(evaluation, PLAYER, "Location: %s", buf2.text);
-      lbuf_text_release(&buf2);
+      owned_text_release(&buf2);
     }
     break;
   case OBJECT_TYPE_EXIT:
@@ -314,7 +314,7 @@ void do_examine(CommandInvocation *invocation) {
         unparse_object(evaluation->world->database, evaluation, PLAYER,
                        game_object_exits(evaluation->world->database, thing));
     notify_printf(evaluation, PLAYER, "Source: %s", buf2.text);
-    lbuf_text_release(&buf2);
+    owned_text_release(&buf2);
 
     /*
      * print destination
@@ -332,7 +332,7 @@ void do_examine(CommandInvocation *invocation) {
           evaluation->world->database, evaluation, PLAYER,
           game_object_location(evaluation->world->database, thing));
       notify_printf(evaluation, PLAYER, "Destination: %s", buf2.text);
-      lbuf_text_release(&buf2);
+      owned_text_release(&buf2);
       break;
     }
     break;
@@ -346,7 +346,7 @@ void do_inventory(CommandInvocation *invocation) {
   const DbRef PLAYER = invocation->player;
   DbRef thing;
   char *buff;
-  LbufText rendered;
+  OwnedText rendered;
   const char *s;
   char *e;
 
@@ -362,7 +362,7 @@ void do_inventory(CommandInvocation *invocation) {
                                 thing);
       notify_checked(evaluation, PLAYER, PLAYER, rendered.text,
                      MSG_ME_ALL | MSG_F_DOWN);
-      lbuf_text_release(&rendered);
+      owned_text_release(&rendered);
     }
   }
 
@@ -390,7 +390,7 @@ void do_inventory(CommandInvocation *invocation) {
     }
     *e = 0;
     notify_checked(evaluation, PLAYER, PLAYER, buff, MSG_ME_ALL | MSG_F_DOWN);
-    free_lbuf(buff);
+    free_buf(buff);
   }
 }
 
@@ -401,7 +401,7 @@ void do_entrances(CommandInvocation *invocation) {
   char *name = invocation->first;
   DbRef thing;
   DbRef i;
-  LbufText exit;
+  OwnedText exit;
   char *message;
   int control_thing;
   int count;
@@ -439,7 +439,7 @@ void do_entrances(CommandInvocation *invocation) {
                              game_object_exits(evaluation->world->database, i));
           notify_printf(evaluation, PLAYER, "%s (%s)", exit.text,
                         game_object_name(evaluation->world->database, i));
-          lbuf_text_release(&exit);
+          owned_text_release(&exit);
           count++;
         }
         break;
@@ -448,7 +448,7 @@ void do_entrances(CommandInvocation *invocation) {
           exit = unparse_object(evaluation->world->database, evaluation, PLAYER,
                                 i);
           notify_printf(evaluation, PLAYER, "%s [dropto]", exit.text);
-          lbuf_text_release(&exit);
+          owned_text_release(&exit);
           count++;
         }
         break;
@@ -458,7 +458,7 @@ void do_entrances(CommandInvocation *invocation) {
           exit = unparse_object(evaluation->world->database, evaluation, PLAYER,
                                 i);
           notify_printf(evaluation, PLAYER, "%s [home]", exit.text);
-          lbuf_text_release(&exit);
+          owned_text_release(&exit);
           count++;
         }
         break;
@@ -467,7 +467,7 @@ void do_entrances(CommandInvocation *invocation) {
       }
     }
   }
-  free_lbuf(message);
+  free_buf(message);
   notify_printf(evaluation, PLAYER, "%d entrance%s found.", count,
                 (count == 1) ? "" : "s");
 }

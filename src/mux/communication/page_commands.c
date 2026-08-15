@@ -170,7 +170,7 @@ void do_page(CommandInvocation *invocation) {
         }
       }
 
-      free_lbuf(targetname);
+      free_buf(targetname);
       return;
     }
     /* The typed text is the message and the recipients come from the saved
@@ -381,5 +381,5 @@ cleanup:
   page_recipient_list_destroy(&recipients);
 cleanup_workspace:
   free(workspace);
-  free_lbuf(owned_tname);
+  free_buf(owned_tname);
 }

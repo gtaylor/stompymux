@@ -110,7 +110,7 @@ UptimeText uptime_text(int seconds) {
 
   allocated = get_uptime_to_string(seconds);
   (void)snprintf(uptime.text, sizeof(uptime.text), "%s", allocated);
-  free_sbuf(allocated);
+  free_buf(allocated);
   return uptime;
 }
 
@@ -283,7 +283,7 @@ int char_getvaluecode(BtechContext *context, const char *name) {
   ip = hash_table_find(tmpbuf, character_value_hash(context, 0));
   if (!ip)
     ip = hash_table_find(tmpbuf, character_value_hash(context, 1));
-  free_sbuf(tmpbuf);
+  free_buf(tmpbuf);
   return (int)(intptr_t)ip - 1;
 }
 
@@ -679,7 +679,7 @@ void init_btechstats(BtechContext *context) {
     hash_table_add(tmpbuf, (int *)(intptr_t)(i + 1),
                    character_value_hash(context, 1));
   }
-  free_sbuf(tmpbuf);
+  free_buf(tmpbuf);
 }
 
 void btech_stats_destroy(BtechContext *context) {

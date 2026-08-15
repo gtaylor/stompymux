@@ -189,7 +189,7 @@ void announce_connect(DbRef player, Descriptor *d) {
   DbRef temp = command->enactor;
   command->enactor = player;
   notify_checked(&command->evaluation, player, player, buf, key);
-  free_lbuf(buf);
+  free_buf(buf);
   if (is_suspect(runtime->world->database, player)) {
     send_channel(&command->evaluation, "Suspect", "%s has connected.",
                  game_object_name(runtime->world->database, player));

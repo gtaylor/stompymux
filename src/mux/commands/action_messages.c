@@ -9,7 +9,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
-#include "mux/support/lbuf_text.h"
+#include "mux/support/owned_text.h"
 #include "mux/world/object_spatial.h"
 
 void notify_action(EvaluationContext *evaluation,
@@ -19,7 +19,7 @@ void notify_action(EvaluationContext *evaluation,
   LuaMessageResult result;
   const char *enactor_message;
   const char *other_message;
-  LbufText d;
+  OwnedText d;
   DbRef location;
   long attribute_flags;
 
@@ -46,7 +46,7 @@ void notify_action(EvaluationContext *evaluation,
       notify_checked(evaluation, message.enactor, message.enactor,
                      enactor_message, MSG_ME_ALL | MSG_F_DOWN);
     }
-    lbuf_text_release(&d);
+    owned_text_release(&d);
   } else if (enactor_message && *enactor_message) {
     notify_checked(evaluation, message.enactor, message.enactor,
                    enactor_message, MSG_ME_ALL | MSG_F_DOWN);

@@ -229,7 +229,7 @@ static void dump_users(Descriptor *e, const char *match) {
 
   descriptor_queue_string(e, buf);
 
-  free_lbuf(buf);
+  free_buf(buf);
 }
 
 static void dump_sessions(Descriptor *e, const char *match) {
@@ -295,7 +295,7 @@ static void dump_sessions(Descriptor *e, const char *match) {
       (runtime->world->configuration->max_players == -1) ? "no"
                                                          : message_buffer);
   descriptor_queue_string(e, buf);
-  free_lbuf(buf);
+  free_buf(buf);
 }
 
 void do_who(CommandInvocation *invocation) {
@@ -383,7 +383,7 @@ static void dump_telnet_environment(EvaluationContext *evaluation, DbRef viewer,
   if (count == 0) {
     notify_checked(evaluation, viewer, viewer, "    Variables: (none)",
                    MSG_ME_ALL | MSG_F_DOWN);
-    free_lbuf(buffer);
+    free_buf(buffer);
     return;
   }
   if (count > sizeof(entries) / sizeof(entries[0]))
@@ -431,7 +431,7 @@ static void dump_telnet_environment(EvaluationContext *evaluation, DbRef viewer,
       first_chunk = false;
     } while (value_position < entry->value_size);
   }
-  free_lbuf(buffer);
+  free_buf(buffer);
 }
 
 static void dump_telnet_descriptor(EvaluationContext *evaluation, DbRef viewer,
@@ -496,8 +496,8 @@ static void dump_telnet_descriptor(EvaluationContext *evaluation, DbRef viewer,
                  "  ECHO:", MSG_ME_ALL | MSG_F_DOWN);
   notify_printf(evaluation, viewer, "    Client echo: %s",
                 descriptor->is_echo_suppressed ? "suppressed" : "enabled");
-  free_lbuf(terminal);
-  free_lbuf(client);
+  free_buf(terminal);
+  free_buf(client);
 }
 
 void do_telnet(CommandInvocation *invocation) {

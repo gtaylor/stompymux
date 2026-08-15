@@ -87,7 +87,7 @@ static void give_thing(const GiveThingRequest *request) {
                                    .result = &result,
                                    .enactor_default = str,
                                    .event = LUA_EVENT_GIVE_FAIL});
-    free_lbuf(str);
+    free_buf(str);
     return;
   }
   if (!lock_test(evaluation, giver, giver, thing, recipient, LUA_LOCK_RECEIVE,
@@ -106,7 +106,7 @@ static void give_thing(const GiveThingRequest *request) {
                                    .result = &result,
                                    .enactor_default = str,
                                    .event = LUA_EVENT_GIVE_RECEIVE_FAIL});
-    free_lbuf(str);
+    free_buf(str);
     return;
   }
   move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
@@ -127,7 +127,7 @@ static void give_thing(const GiveThingRequest *request) {
                    game_object_name(evaluation->world->database, recipient));
     notify_checked(evaluation, thing, giver, message_buffer,
                    MSG_ME_ALL | MSG_F_DOWN);
-    free_lbuf(str);
+    free_buf(str);
   }
   notify_action(evaluation,
                 &(ActionMessageInvocation){
