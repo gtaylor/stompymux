@@ -147,8 +147,8 @@ struct DatabaseMarkBuffer {
 
 struct GameDatabase {
   GameObject *object_storage;
+  NAME *name_storage;
   NAME *pure_name_storage;
-  char name_buffer[MBUF_SIZE];
   int top;
   int size;
   int minimum_size;

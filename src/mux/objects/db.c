@@ -117,14 +117,20 @@ static char *set_string(char **ptr, char *new) {
   return (*ptr);
 }
 
-static NAME *pure_name_slot(GameDatabase *database, DbRef object) {
-  if (database == nullptr || database->size < 0 || object < -1 ||
-      object >= database->size) {
+static NAME *name_cache_slot(NAME *storage, int size, DbRef object) {
+  if (storage == nullptr || size < 0 || object < -1 || object >= size) {
     abort();
   }
-  return (NAME *)checked_storage_at((void *)database->pure_name_storage,
-                                    (size_t)database->size + 1, sizeof(NAME),
-                                    (size_t)(object + 1));
+  return (NAME *)checked_storage_at((void *)storage, (size_t)size + 1,
+                                    sizeof(NAME), (size_t)(object + 1));
+}
+
+static NAME *name_slot(GameDatabase *database, DbRef object) {
+  return name_cache_slot(database->name_storage, database->size, object);
+}
+
+static NAME *pure_name_slot(GameDatabase *database, DbRef object) {
+  return name_cache_slot(database->pure_name_storage, database->size, object);
 }
 
 typedef struct NativeAttributeReference {
@@ -149,22 +155,25 @@ static char **native_attribute_slot(const NativeAttributeReference *reference) {
  */
 const char *game_object_name(GameDatabase *database, DbRef thing) {
   long aflags;
-  char *buff;
-  char buffer[MBUF_SIZE];
 
   if (thing >= database->top || thing < 0) {
     return "#-1 INVALID DBREF";
   }
-  if (!*pure_name_slot(database, thing)) {
-    buff = attribute_get(database, thing, A_NAME, &aflags);
-    styled_text_strip(database->styled_text_palette, buff, buffer, MBUF_SIZE);
-    set_string(pure_name_slot(database, thing), buffer);
-    free_lbuf(buff);
-  }
+  if (!*name_slot(database, thing)) {
+    char name[MBUF_SIZE];
 
-  attribute_get_string(database, thing, A_NAME, database->name_buffer,
-                       sizeof(database->name_buffer), &aflags);
-  return database->name_buffer;
+    attribute_get_string(database, thing, A_NAME, name, sizeof(name), &aflags);
+    set_string(name_slot(database, thing), name);
+  }
+  if (!*pure_name_slot(database, thing)) {
+    char pure_name[MBUF_SIZE];
+
+    styled_text_strip(database->styled_text_palette,
+                      *name_slot(database, thing), pure_name,
+                      sizeof(pure_name));
+    set_string(pure_name_slot(database, thing), pure_name);
+  }
+  return *name_slot(database, thing);
 }
 
 const char *game_object_lua_parent(GameDatabase *database, DbRef object) {
@@ -188,20 +197,11 @@ bool game_object_lua_parent_set(GameDatabase *database, DbRef object,
 }
 
 const char *game_object_pure_name(GameDatabase *database, DbRef thing) {
-  long aflags;
-  char *buff;
-
   if (thing >= database->top || thing < 0) {
     return "#-1 INVALID DBREF";
   }
-  if (!*pure_name_slot(database, thing)) {
-    char new[LBUF_SIZE];
-
-    buff = attribute_get(database, thing, A_NAME, &aflags);
-    styled_text_strip(database->styled_text_palette, buff, new, sizeof(new));
-    set_string(pure_name_slot(database, thing), new);
-    free_lbuf(buff);
-  }
+  if (!*pure_name_slot(database, thing))
+    (void)game_object_name(database, thing);
   return *pure_name_slot(database, thing);
 }
 
@@ -212,6 +212,7 @@ void object_name_set(GameDatabase *database, DbRef thing, const char *s) {
   utf8_copy_truncated(stored, sizeof(stored), s);
   attribute_add_raw(database, thing, A_NAME, stored);
 
+  set_string(name_slot(database, thing), stored);
   styled_text_strip(database->styled_text_palette, stored, new, sizeof(new));
   set_string(pure_name_slot(database, thing), new);
 }
@@ -393,6 +394,39 @@ void attribute_copy(const AttributeCopyRequest *request) {
 // So mistaken refs to #-1 won't die.
 constexpr int SIZE_HACK = 1;
 
+typedef struct NameCacheResizeRequest {
+  GameDatabase *database;
+  NAME *storage;
+  int old_size;
+  int new_size;
+} NameCacheResizeRequest;
+
+static NAME *name_cache_resize(const NameCacheResizeRequest *request) {
+  NAME *resized = (NAME *)checked_storage_try_allocate(
+      (size_t)(request->new_size + SIZE_HACK) * sizeof(NAME));
+
+  if (!resized) {
+    char message[128];
+    (void)snprintf(message, sizeof(message),
+                   "Could not allocate space for %d item name cache.",
+                   request->new_size);
+    log_simple((LogEntry){.log = request->database->log,
+                          .key = LOG_ALWAYS,
+                          .primary = "ALC",
+                          .secondary = "DB"},
+               message);
+    abort();
+  }
+  memset((void *)resized, 0,
+         (size_t)(request->new_size + SIZE_HACK) * sizeof(NAME));
+  if (request->storage) {
+    memmove((void *)resized, (const void *)request->storage,
+            (size_t)(request->old_size + SIZE_HACK) * sizeof(NAME));
+    free((void *)request->storage);
+  }
+  return resized;
+}
+
 static void initialize_objects(GameDatabase *database, DbRef first,
                                DbRef last) {
   DbRef thing;
@@ -423,7 +457,6 @@ void db_grow(GameDatabase *database, DbRef newtop) {
   int i;
   DatabaseMarkBuffer *newmarkbuf;
   GameObject *newdb;
-  NAME *newpurenames;
 
   char *cp;
 
@@ -454,6 +487,7 @@ void db_grow(GameDatabase *database, DbRef newtop) {
 
   if (newtop <= database->size) {
     for (i = database->top; i < newtop; i++) {
+      *name_slot(database, i) = nullptr;
       *pure_name_slot(database, i) = nullptr;
     }
     initialize_objects(database, database->top, newtop);
@@ -482,45 +516,18 @@ void db_grow(GameDatabase *database, DbRef newtop) {
    * Grow the name tables
    */
 
-  newpurenames = (NAME *)checked_storage_try_allocate(
-      (size_t)(newsize + SIZE_HACK) * sizeof(NAME));
-
-  if (!newpurenames) {
-    (void)snprintf(message_buffer, sizeof(message_buffer),
-                   "Could not allocate space for %d item name cache.", newsize);
-    log_simple((LogEntry){.log = database->log,
-                          .key = LOG_ALWAYS,
-                          .primary = "ALC",
-                          .secondary = "DB"},
-               message_buffer);
-    abort();
-  }
-  memset((void *)newpurenames, 0, (size_t)(newsize + SIZE_HACK) * sizeof(NAME));
-
-  if (database->pure_name_storage) {
-
-    /*
-     * An old name cache exists.  Copy it.
-     */
-
-    memmove((void *)newpurenames, (const void *)database->pure_name_storage,
-            (size_t)(database->size + SIZE_HACK) * sizeof(NAME));
-    cp = (char *)database->pure_name_storage;
-    free(cp);
-  } else {
-
-    /*
-     * Creating a brand new struct database.  Fill in the
-     * 'reserved' area in case it gets referenced.
-     */
-
-    database->pure_name_storage = newpurenames;
-    for (i = 0; i < SIZE_HACK; i++) {
-      *pure_name_slot(database, i - SIZE_HACK) = nullptr;
-    }
-  }
-  database->pure_name_storage = newpurenames;
-  newpurenames = nullptr;
+  database->name_storage = name_cache_resize(&(NameCacheResizeRequest){
+      .database = database,
+      .storage = database->name_storage,
+      .old_size = database->size,
+      .new_size = newsize,
+  });
+  database->pure_name_storage = name_cache_resize(&(NameCacheResizeRequest){
+      .database = database,
+      .storage = database->pure_name_storage,
+      .old_size = database->size,
+      .new_size = newsize,
+  });
   /*
    * Grow the database->objects array
    */
@@ -579,6 +586,7 @@ void db_grow(GameDatabase *database, DbRef newtop) {
   newdb = nullptr;
 
   for (i = database->top; i < newtop; i++) {
+    *name_slot(database, i) = nullptr;
     *pure_name_slot(database, i) = nullptr;
   }
   initialize_objects(database, database->top, newtop);
@@ -615,6 +623,12 @@ void db_free(GameDatabase *database) {
       free(*pure_name_slot(database, object));
     free((void *)database->pure_name_storage);
     database->pure_name_storage = nullptr;
+  }
+  if (database->name_storage != nullptr) {
+    for (DbRef object = 0; object < database->top; object++)
+      free(*name_slot(database, object));
+    free((void *)database->name_storage);
+    database->name_storage = nullptr;
   }
   free(database->markbits);
   database->markbits = nullptr;
