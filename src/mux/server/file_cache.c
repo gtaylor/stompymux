@@ -324,7 +324,7 @@ void fcache_load(EvaluationContext *evaluation, FileCache *cache,
 FileCache *file_cache_create(EvaluationContext *evaluation,
                              const ServerConfiguration *configuration,
                              DescriptorRegistry *descriptors) {
-  FileCache *cache = calloc(1, sizeof(*cache));
+  FileCache *cache = checked_storage_try_allocate_array(1, sizeof(*cache));
 
   if (cache == nullptr)
     return nullptr;

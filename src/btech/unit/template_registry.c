@@ -109,7 +109,8 @@ static int scan_template_dir(const TemplateDirectoryScanRequest *request) {
 
     if (parent == nullptr && S_ISDIR(sb.st_mode) && ent->d_name[0] != '.' &&
         strlen(ent->d_name) <= CACHE_MAXNAME) {
-      TemplateDirectory *link = calloc(1, sizeof(*link));
+      TemplateDirectory *link =
+          checked_storage_try_allocate_array(1, sizeof(*link));
       if (link == nullptr)
         continue;
 
@@ -128,8 +129,8 @@ static int scan_template_dir(const TemplateDirectoryScanRequest *request) {
       size_t capacity = registry->template_capacity == 0
                             ? 4
                             : registry->template_capacity * 2;
-      TemplateDirectoryEntry *templates =
-          realloc(registry->templates, capacity * sizeof(*templates));
+      TemplateDirectoryEntry *templates = checked_storage_try_reallocate(
+          registry->templates, capacity * sizeof(*templates));
 
       if (templates == nullptr) {
         closedir(dir);
@@ -218,7 +219,7 @@ char *mech_template_resolve_path(BtechContext *context, const char *mech_path,
   int i = 0; /* this int has double use... ugly, but effective */
 
   if (registry == nullptr) {
-    registry = calloc(1, sizeof(*registry));
+    registry = checked_storage_try_allocate_array(1, sizeof(*registry));
     if (registry == nullptr)
       return nullptr;
     btech_context_mech_template_registry_set(context, registry);

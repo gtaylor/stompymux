@@ -90,16 +90,12 @@ static char *help_join_path(const char *base, const char *name) {
   if (base_length > SIZE_MAX - name_length - 2)
     return nullptr;
   capacity = base_length + name_length + 2;
-  joined = malloc(capacity);
+  joined = checked_storage_try_allocate(capacity);
   if (joined == nullptr)
     return nullptr;
 
-  memcpy(joined, base, base_length);
-  *(char *)checked_storage_at(joined, capacity, sizeof(char), base_length) =
-      '/';
-  memcpy(checked_storage_region(joined, capacity, base_length + 1,
-                                name_length + 1),
-         name, name_length + 1);
+  /* capacity accounts for both names, the separator, and the terminator. */
+  (void)snprintf(joined, capacity, "%s/%s", base, name);
   return joined;
 }
 
@@ -129,7 +125,8 @@ static void help_article_vector_push(HelpArticleVector *vector,
 
     if (capacity < vector->capacity || capacity > SIZE_MAX / sizeof(*items))
       abort();
-    items = realloc(vector->items, capacity * sizeof(*items));
+    items = checked_storage_try_reallocate(vector->items,
+                                           capacity * sizeof(*items));
     if (items == nullptr)
       abort();
     vector->items = items;
@@ -158,7 +155,7 @@ static char *help_slurp_file(const char *path, size_t *out_length) {
       return nullptr;
     return nullptr;
   }
-  buffer = malloc((size_t)size + 1);
+  buffer = checked_storage_try_allocate((size_t)size + 1);
   if (!buffer) {
     if (fclose(fp) != 0)
       return nullptr;
@@ -376,7 +373,8 @@ static void help_index_walk_directory(EvaluationContext *evaluation,
 
       if (capacity < name_capacity || capacity > SIZE_MAX / sizeof(*names))
         abort();
-      names = (char **)realloc((void *)entry_names, capacity * sizeof(*names));
+      names = (char **)checked_storage_try_reallocate(
+          (void *)entry_names, capacity * sizeof(*names));
       if (names == nullptr)
         abort();
       entry_names = names;
@@ -447,7 +445,8 @@ static void help_index_build_keywords(EvaluationContext *evaluation,
     total_keywords += help_article_item(&index->articles, i)->keywords.count;
   if (total_keywords == 0)
     return;
-  index->keywords = malloc(total_keywords * sizeof(HelpKeywordEntry));
+  index->keywords =
+      checked_storage_allocate(total_keywords * sizeof(HelpKeywordEntry));
 
   for (i = 0; i < index->articles.count; i++) {
     HelpArticle *article = help_article_item(&index->articles, i);
@@ -571,7 +570,7 @@ static void help_index_rebuild(EvaluationContext *evaluation, HelpIndex *index,
 
 HelpIndex *help_index_create(EvaluationContext *evaluation, ServerLog *log,
                              const char *root_directory, DbRef player) {
-  HelpIndex *index = calloc(1, sizeof(*index));
+  HelpIndex *index = checked_storage_try_allocate_array(1, sizeof(*index));
 
   if (index == nullptr)
     return nullptr;
@@ -686,7 +685,7 @@ char *help_index_read_body(const HelpIndex *index, const HelpArticle *article,
     return nullptr;
   }
   body_length = strlen(body_start);
-  body = malloc(body_length + 1);
+  body = checked_storage_allocate(body_length + 1);
   memcpy(body, body_start, body_length + 1);
   free(content);
   if (out_length)

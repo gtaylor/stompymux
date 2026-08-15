@@ -83,7 +83,7 @@ static AutopilotPathNode *
 auto_create_astar_node(const AutopilotPathNodeRequest *request) {
 
   AutopilotPathNode *temp;
-  temp = malloc(sizeof(AutopilotPathNode));
+  temp = checked_storage_try_allocate(sizeof(AutopilotPathNode));
   if (temp == nullptr)
     return nullptr;
 

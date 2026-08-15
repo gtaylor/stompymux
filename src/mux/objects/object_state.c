@@ -165,7 +165,7 @@ static bool object_state_value_copy(ObjectStateValue *destination,
   *destination = *source;
   if (source->type != OBJECT_STATE_STRING)
     return true;
-  char *data = malloc(source->as.string.length + 1);
+  char *data = checked_storage_try_allocate(source->as.string.length + 1);
   if (!data)
     return false;
   if (source->as.string.length > 0)
@@ -191,13 +191,15 @@ static void object_state_collection_destroy(ObjectStateCollection *collection) {
 
 static ObjectStateCollection *
 object_state_collection_clone(const ObjectStateCollection *source) {
-  ObjectStateCollection *copy = calloc(1, sizeof(*copy));
+  ObjectStateCollection *copy =
+      checked_storage_try_allocate_array(1, sizeof(*copy));
 
   if (!copy)
     return nullptr;
   if (!source || source->count == 0)
     return copy;
-  copy->entries = calloc(source->count, sizeof(*copy->entries));
+  copy->entries =
+      checked_storage_try_allocate_array(source->count, sizeof(*copy->entries));
   if (!copy->entries) {
     free(copy);
     return nullptr;
@@ -328,8 +330,8 @@ static bool object_state_collection_set(GameDatabase *database,
   }
   if (collection->count == collection->capacity) {
     size_t capacity = collection->capacity == 0 ? 8 : collection->capacity * 2;
-    ObjectStateEntry *entries =
-        realloc(collection->entries, capacity * sizeof(*entries));
+    ObjectStateEntry *entries = checked_storage_try_reallocate(
+        collection->entries, capacity * sizeof(*entries));
     if (!entries) {
       object_state_value_destroy(&value_copy);
       object_state_error(error, error_size, "out of memory");
@@ -388,7 +390,8 @@ object_state_collection_require(GameDatabase *database, DbRef object) {
   GameObject *game_object = game_database_object(database, object);
 
   if (!game_object->state)
-    game_object->state = calloc(1, sizeof(*game_object->state));
+    game_object->state =
+        checked_storage_try_allocate_array(1, sizeof(*game_object->state));
   return game_object->state;
 }
 
@@ -538,7 +541,8 @@ object_state_transaction_require(ObjectStateTransaction *transaction,
     size_t capacity = transaction->object_capacity == 0
                           ? 4
                           : transaction->object_capacity * 2;
-    objects = realloc(transaction->objects, capacity * sizeof(*objects));
+    objects = checked_storage_try_reallocate(transaction->objects,
+                                             capacity * sizeof(*objects));
     if (!objects) {
       object_state_error(error, error_size, "out of memory");
       return nullptr;

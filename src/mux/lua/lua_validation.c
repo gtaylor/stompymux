@@ -70,7 +70,8 @@ static int lua_add_parent_check(LuaParentCheck **checks, size_t *check_count,
     lua_set_error(error, error_size, "out of memory");
     return 0;
   }
-  replacement = realloc(*checks, (*check_count + 1) * sizeof(*replacement));
+  replacement = checked_storage_try_reallocate(
+      *checks, (*check_count + 1) * sizeof(*replacement));
   if (!replacement) {
     free(path_copy);
     free(detail_copy);

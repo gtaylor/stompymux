@@ -8,6 +8,7 @@
 #include <strings.h>
 
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/red_black_tree.h"
 
@@ -110,7 +111,7 @@ int hash_table_add(const char *str, void *hashdata, HashTable *htab) {
     return (-1);
 #pragma clang diagnostic pop
 
-  ent = malloc(sizeof(struct StringDictEntry));
+  ent = checked_storage_allocate(sizeof(struct StringDictEntry));
   ent->key = strdup(str);
   ent->data.mutable_data = hashdata;
   ent->is_const = false;
@@ -131,7 +132,7 @@ int hash_table_add_const(const char *str, const void *hashdata,
     return -1;
 #pragma clang diagnostic pop
 
-  ent = malloc(sizeof(struct StringDictEntry));
+  ent = checked_storage_allocate(sizeof(struct StringDictEntry));
   ent->key = strdup(str);
   ent->data.const_data = hashdata;
   ent->is_const = true;

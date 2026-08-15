@@ -95,7 +95,7 @@ auto_create_weapon_node(const AutopilotWeaponRequest *request) {
 
   AutopilotWeapon *temp;
 
-  temp = malloc(sizeof(AutopilotWeapon));
+  temp = checked_storage_try_allocate(sizeof(AutopilotWeapon));
 
   if (temp == nullptr) {
     return nullptr;
@@ -124,7 +124,7 @@ auto_create_target_node(const AutopilotTargetRequest *request) {
 
   AutopilotTarget *temp;
 
-  temp = malloc(sizeof(AutopilotTarget));
+  temp = checked_storage_try_allocate(sizeof(AutopilotTarget));
 
   if (temp == nullptr) {
     return nullptr;

@@ -86,7 +86,7 @@ static void help_text_buffer_append(HelpTextBuffer *buffer, const char *text,
       }
       capacity *= 2;
     }
-    char *data = realloc(buffer->data, capacity);
+    char *data = checked_storage_try_reallocate(buffer->data, capacity);
 
     if (data == nullptr)
       abort();
@@ -235,7 +235,8 @@ static void help_render_index_section(const HelpIndex *index,
 
   if (total == 0)
     return;
-  entries = (const HelpArticle **)malloc(total * sizeof(const HelpArticle *));
+  entries = (const HelpArticle **)checked_storage_allocate(
+      total * sizeof(const HelpArticle *));
   for (i = 0; i < total; i++) {
     const HelpArticle *candidate = help_index_article_at(index, i);
 

@@ -6,6 +6,7 @@
 #include "mech_internal.h"
 #include "mech_state_types.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 
 static constexpr int STAGGER_WINDOW_SECONDS = 60;
 
@@ -20,7 +21,7 @@ bool mech_stagger_damage_append(const StaggerDamageApplication *application) {
 
   while (*link)
     link = &(*link)->next;
-  record = calloc(1, sizeof(*record));
+  record = checked_storage_try_allocate_array(1, sizeof(*record));
   if (!record)
     return false;
   record->amount = application->amount;

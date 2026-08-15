@@ -5,6 +5,7 @@
 #include <uv.h>
 
 #include "mux/server/event_timer.h"
+#include "mux/support/checked_storage.h"
 
 struct MuxTimer {
   uv_timer_t handle;
@@ -22,7 +23,7 @@ static void mux_timer_free(uv_handle_t *handle) { free(handle->data); }
 
 MuxTimer *mux_timer_create(uv_loop_t *loop, MuxTimerCallback callback,
                            void *data) {
-  MuxTimer *timer = calloc(1, sizeof(*timer));
+  MuxTimer *timer = checked_storage_try_allocate_array(1, sizeof(*timer));
 
   if (timer == nullptr)
     return nullptr;

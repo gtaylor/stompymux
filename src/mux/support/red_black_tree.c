@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mux/support/checked_storage.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/support/red_black_tree_internal.h"
 
@@ -15,7 +16,7 @@
 RedBlackTree red_black_tree_init(RedBlackTreeCompare compare, void *context) {
   RedBlackTree temp;
 
-  temp = malloc(sizeof(struct RedBlackTreeHead));
+  temp = checked_storage_try_allocate(sizeof(struct RedBlackTreeHead));
   if (temp == nullptr)
     return nullptr;
   memset(temp, 0, sizeof(struct RedBlackTreeHead));

@@ -348,7 +348,7 @@ static char *configuration_toml_join_strings(toml_datum_t array,
     if (element.type == TOML_STRING)
       total += strlen(element.u.s) + seplen;
   }
-  out = malloc(total);
+  out = checked_storage_allocate(total);
   *(char *)checked_storage_at(out, total, sizeof(char), 0) = '\0';
   for (size_t i = 0; i < configuration_toml_array_count(array); i++) {
     toml_datum_t element = configuration_toml_array_item(array, i);
@@ -443,7 +443,7 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
       if (element.type != TOML_STRING)
         continue;
       len = strlen(key) + 1 + strlen(element.u.s) + 1;
-      args = malloc(len);
+      args = checked_storage_allocate(len);
       (void)snprintf(args, len, "%s %s", key, element.u.s);
       set_fn(m->pname, args, ctx);
       free(args);
@@ -466,11 +466,11 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
         (void)fprintf(stderr, "configuration_toml: '%s.%s' expected a string\n",
                       path, key);
         len = strlen(key) + 2;
-        args = malloc(len);
+        args = checked_storage_allocate(len);
         (void)snprintf(args, len, "%s ", key);
       } else {
         len = strlen(key) + 1 + strlen(element.u.s) + 1;
-        args = malloc(len);
+        args = checked_storage_allocate(len);
         (void)snprintf(args, len, "%s %s", key, element.u.s);
       }
       set_fn(m->pname, args, ctx);
@@ -503,7 +503,7 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
         continue;
       }
       len = strlen(key) + 1 + strlen(perms) + 1;
-      args = malloc(len);
+      args = checked_storage_allocate(len);
       (void)snprintf(args, len, "%s %s", key, perms);
       set_fn(m->pname, args, ctx);
       free(args);
@@ -550,7 +550,7 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
         continue;
       }
       len = strlen(key) + 96;
-      args = malloc(len);
+      args = checked_storage_try_allocate(len);
       if (!args)
         continue;
       (void)snprintf(args, len, "%s %lld %lld %lld", key,
@@ -590,7 +590,7 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
         continue;
       }
       len = strlen(address.u.s) + 1 + strlen(mask.u.s) + 1;
-      args = malloc(len);
+      args = checked_storage_allocate(len);
       (void)snprintf(args, len, "%s %s", address.u.s, mask.u.s);
       set_fn(m->pname, args, ctx);
       free(args);
@@ -623,7 +623,7 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
           wizard.type == TOML_BOOLEAN && wizard.u.boolean ? "true" : "false";
       size_t len = strlen(key) + strlen(type.u.s) + strlen(wizard_text) +
                    strlen(name.u.s) + 4;
-      args = malloc(len);
+      args = checked_storage_allocate(len);
       (void)snprintf(args, len, "%s %s %s %s", key, type.u.s, wizard_text,
                      name.u.s);
       set_fn(m->pname, args, ctx);

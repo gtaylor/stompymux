@@ -103,8 +103,8 @@ static int lua_add_module(char ***modules, size_t *module_count,
     lua_set_error(error, error_size, "out of memory");
     return 0;
   }
-  replacement = (char **)realloc((void *)*modules,
-                                 (*module_count + 1) * sizeof(*replacement));
+  replacement = (char **)checked_storage_try_reallocate(
+      (void *)*modules, (*module_count + 1) * sizeof(*replacement));
   if (!replacement) {
     free(copy);
     lua_set_error(error, error_size, "out of memory");

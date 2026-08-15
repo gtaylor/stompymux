@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mux/support/checked_storage.h"
 #include "mux/support/styled_text/internal.h"
 
 bool styled_link_text_replace(char **destination, const char *value,
@@ -159,7 +160,8 @@ bool styled_link_config_copy(StyledLinkConfig *destination,
       !copy_link_text(&destination->preset, source->preset))
     goto fail;
   if (source->menu_count > 0) {
-    destination->menu = calloc(source->menu_count, sizeof(*destination->menu));
+    destination->menu = checked_storage_try_allocate_array(
+        source->menu_count, sizeof(*destination->menu));
     if (!destination->menu)
       goto fail;
     destination->menu_count = source->menu_count;

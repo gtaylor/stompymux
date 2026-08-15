@@ -49,7 +49,8 @@ missile_hit_entry_const(const MissileHitRegistry *registry, size_t index) {
 
 bool btech_weapon_settings_initialize(BtechWeaponSettings *settings) {
   *settings = (BtechWeaponSettings){0};
-  settings->values = calloc(DEFAULT_WEAPON_COUNT, sizeof(*settings->values));
+  settings->values = checked_storage_try_allocate_array(
+      DEFAULT_WEAPON_COUNT, sizeof(*settings->values));
   if (settings->values == nullptr)
     return false;
   settings->count = DEFAULT_WEAPON_COUNT;
@@ -111,7 +112,8 @@ bool missile_hit_registry_initialize(MissileHitRegistry *registry,
       (sizeof(MISSILE_HIT_DEFINITIONS) / sizeof(*MISSILE_HIT_DEFINITIONS)) - 1;
 
   *registry = (MissileHitRegistry){0};
-  registry->entries = calloc(DEFINITION_COUNT, sizeof(*registry->entries));
+  registry->entries = checked_storage_try_allocate_array(
+      DEFINITION_COUNT, sizeof(*registry->entries));
   if (registry->entries == nullptr)
     return false;
   registry->count = DEFINITION_COUNT;

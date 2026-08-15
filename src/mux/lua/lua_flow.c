@@ -274,7 +274,7 @@ int lua_runtime_flow_start(void *context, lua_State *state, int descriptor_id,
                                   sizeof(error)))
     return luaL_error(state, "%s", error);
 
-  data = malloc(sizeof(LuaFlowData));
+  data = checked_storage_allocate(sizeof(LuaFlowData));
   data->runtime_owner = runtime->owner;
   data->root = root;
   (void)snprintf(data->path, sizeof(data->path), "%s", module);

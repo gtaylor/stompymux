@@ -342,7 +342,8 @@ void *new_special_object(BtechContext *context, DbRef id, int type) {
       btech_special_object_data_size(btech_special_object_definition(type));
 
   if (data_size) {
-    xcode_obj = (BtechSpecialObject *)calloc(1, data_size);
+    xcode_obj =
+        (BtechSpecialObject *)checked_storage_try_allocate_array(1, data_size);
     if (!xcode_obj) {
       printf("Unable to calloc\n");
       exit(1);

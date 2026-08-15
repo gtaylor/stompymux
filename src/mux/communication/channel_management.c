@@ -157,7 +157,8 @@ void do_createchannel(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "You do not have permission to do that.");
     return;
   }
-  newchannel = (struct Channel *)malloc(sizeof(struct Channel));
+  newchannel =
+      (struct Channel *)checked_storage_allocate(sizeof(struct Channel));
 
   (void)string_copy_bounded(newchannel->name, sizeof(newchannel->name),
                             channel);

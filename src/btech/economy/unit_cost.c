@@ -102,7 +102,8 @@ static BtechPartCostSet *part_cost_set_at(BtechPartCostSet *sets,
 }
 
 void btech_part_costs_initialize(BtechContext *context) {
-  context->part_costs = calloc(1, sizeof(*context->part_costs));
+  context->part_costs =
+      checked_storage_try_allocate_array(1, sizeof(*context->part_costs));
   if (context->part_costs == nullptr)
     exit(EXIT_FAILURE);
 }

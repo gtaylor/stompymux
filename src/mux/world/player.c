@@ -303,13 +303,13 @@ int add_player_name(WorldContext *world, DbRef player, char *name) {
      * It's an alias (or an incorrect entry).  Clobber it
      */
     free(p);
-    p = malloc(sizeof(DbRef));
+    p = checked_storage_allocate(sizeof(DbRef));
 
     *p = player;
     stat = hash_table_replace(temp, p, &world->indexes->players);
     free_lbuf(temp);
   } else {
-    p = malloc(sizeof(DbRef));
+    p = checked_storage_allocate(sizeof(DbRef));
 
     *p = player;
     stat = hash_table_add(temp, p, &world->indexes->players);
@@ -426,8 +426,8 @@ void badname_add(WorldContext *world, char *bad_name) {
    * Make a new node and link it in at the top
    */
 
-  bp = (BADNAME *)malloc(sizeof(BADNAME));
-  bp->name = malloc(strlen(bad_name) + 1);
+  bp = (BADNAME *)checked_storage_allocate(sizeof(BADNAME));
+  bp->name = checked_storage_allocate(strlen(bad_name) + 1);
   bp->next = world->access_control->bad_names;
   world->access_control->bad_names = bp;
   (void)string_copy_bounded(bp->name, strlen(bad_name) + 1, bad_name);

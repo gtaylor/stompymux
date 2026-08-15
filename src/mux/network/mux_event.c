@@ -194,7 +194,7 @@ void mux_event_add(const MuxEventRequest *request) {
   /* Event type heads grow with the highest registered type. */
   if (type > LAST_MUXEVENT_TYPE) {
     int previous_last_type = LAST_MUXEVENT_TYPE;
-    MuxEvent **heads = (MuxEvent **)realloc(
+    MuxEvent **heads = (MuxEvent **)checked_storage_try_reallocate(
         (void *)scheduler->first_by_type, sizeof(*heads) * (size_t)(type + 1));
     if (heads == nullptr)
       return;
@@ -207,7 +207,7 @@ void mux_event_add(const MuxEventRequest *request) {
     e = MUX_EVENT_FREE_LIST;
     MUX_EVENT_FREE_LIST = MUX_EVENT_FREE_LIST->next;
   } else {
-    e = malloc(sizeof(MuxEvent));
+    e = checked_storage_try_allocate(sizeof(MuxEvent));
     if (e == nullptr)
       return;
     memset(e, 0, sizeof(MuxEvent));

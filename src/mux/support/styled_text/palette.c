@@ -180,7 +180,7 @@ static char palette_character(const char *text, size_t length, size_t index) {
 }
 
 StyledTextPalette *styled_text_palette_create(void) {
-  return calloc(1, sizeof(StyledTextPalette));
+  return checked_storage_try_allocate_array(1, sizeof(StyledTextPalette));
 }
 
 void styled_text_palette_destroy(StyledTextPalette *palette) {
@@ -263,8 +263,8 @@ bool styled_text_palette_set_rgb(StyledTextPalette *palette, const char *name,
   }
   if (palette->count == palette->capacity) {
     size_t capacity = palette->capacity ? palette->capacity * 2 : 16;
-    CustomNamedColor *colors =
-        realloc(palette->colors, capacity * sizeof(*colors));
+    CustomNamedColor *colors = checked_storage_try_reallocate(
+        palette->colors, capacity * sizeof(*colors));
     if (!colors) {
       styled_set_error(error, error_size, "unable to allocate named color");
       return false;

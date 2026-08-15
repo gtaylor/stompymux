@@ -417,7 +417,7 @@ char *strsave(const char *s) {
   if (s == nullptr)
     return nullptr;
   const size_t SIZE = strlen(s) + 1;
-  char *copy = malloc(SIZE);
+  char *copy = checked_storage_try_allocate(SIZE);
   if (copy != nullptr)
     memcpy(copy, s, SIZE);
   return copy;

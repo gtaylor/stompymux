@@ -155,7 +155,8 @@ void debug_memory(DbRef player, void *data, const char *buffer) {
   DebugMemoryContext memory = {0};
 
   memory.stat_count = (size_t)type_count;
-  memory.stats = calloc(memory.stat_count, sizeof(*memory.stats));
+  memory.stats = checked_storage_try_allocate_array(memory.stat_count,
+                                                    sizeof(*memory.stats));
   if (memory.stats == nullptr)
     abort();
   const char *request = buffer;

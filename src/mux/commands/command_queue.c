@@ -27,6 +27,7 @@
 #include "mux/server/server_config.h" // IWYU pragma: keep
 #include "mux/server/server_control.h"
 #include "mux/server/server_lifecycle.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/validation.h"
@@ -70,7 +71,7 @@ static void command_queue_free_object(const RedBlackTreeReleaseCall *call) {
 
 CommandQueue *
 command_queue_create(const CommandQueueDependencies *dependencies) {
-  CommandQueue *queue = calloc(1, sizeof(*queue));
+  CommandQueue *queue = checked_storage_try_allocate_array(1, sizeof(*queue));
 
   if (queue == nullptr || dependencies == nullptr) {
     free(queue);
@@ -136,7 +137,7 @@ static OBJQE *cque_find(CommandQueue *queue, DbRef player) {
   tmp = red_black_tree_find(queue->object_queues, (void *)player);
 
   if (!tmp && is_good_obj(queue->world->database, player)) {
-    tmp = malloc(sizeof(OBJQE));
+    tmp = checked_storage_allocate(sizeof(OBJQE));
     tmp->obj = player;
     tmp->cque = nullptr;
     tmp->ctail = nullptr;
@@ -431,7 +432,7 @@ static BQUE *setup_que(const QueuedCommandRequest *request) {
    * Create the qeue entry and load the save string
    */
 
-  tmp = malloc(sizeof(BQUE));
+  tmp = checked_storage_allocate(sizeof(BQUE));
   memset(tmp, 0, sizeof(BQUE));
   tmp->text = strdup(command ? command : "");
   tmp->comm = tmp->text;

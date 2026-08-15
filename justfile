@@ -14,7 +14,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-source-size check-header-constants check-unsafe-apis check-mux-bounded-copy fmt-check build test tidy-check
+ci: check-source-size check-header-constants check-unsafe-apis check-mux-bounded-copy check-allocation-discipline fmt-check build test tidy-check
 
 agent-checks: ci
 
@@ -35,6 +35,12 @@ check-header-constants:
 # literal-only strcpy surface and is widened into this gate once retired.
 check-mux-bounded-copy:
     status=0; grep -RInE '\b(string_copy|strcpy)[[:space:]]*\(' src/mux || status=$?; if (( status == 0 )); then echo 'Unbounded copy found in src/mux; use string_copy_bounded.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
+
+# Allocation goes through the checked_storage family so each site states its
+# OOM policy: checked_storage_allocate* fails fast, checked_storage_try_* is
+# nullable for callers that recover. checked_storage.c owns the raw calls.
+check-allocation-discipline:
+    status=0; grep -RInE --include='*.c' --include='*.h' --exclude='checked_storage.c' '\b(malloc|calloc|realloc)[[:space:]]*\(' src || status=$?; if (( status == 0 )); then echo 'Raw allocation found in src/; use the checked_storage API.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
 
 # Production code must use the project's checked parsing and copy helpers.
 check-unsafe-apis:

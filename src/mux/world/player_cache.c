@@ -8,6 +8,7 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/world/player_cache.h"
 
@@ -29,7 +30,7 @@ static int compare_pcache(const RedBlackTreeCompareCall *call) {
 
 PlayerCache *player_cache_create(const ServerConfiguration *configuration,
                                  GameDatabase *database) {
-  PlayerCache *cache = calloc(1, sizeof(*cache));
+  PlayerCache *cache = checked_storage_try_allocate_array(1, sizeof(*cache));
 
   if (cache == nullptr)
     return nullptr;
@@ -68,7 +69,7 @@ PCACHE *pcache_find(PlayerCache *cache, DbRef player) {
     pp->cflags |= PF_REF;
     return pp;
   }
-  pp = malloc(sizeof(PCACHE));
+  pp = checked_storage_allocate(sizeof(PCACHE));
   pp->queue = 0;
   pp->cflags = PF_REF;
   pp->player = player;

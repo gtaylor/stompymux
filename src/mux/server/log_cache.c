@@ -16,6 +16,7 @@
 #include "mux/server/log_cache.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_lifecycle.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/support/stringutil.h"
 
@@ -126,7 +127,7 @@ static int log_cache_open(LogCache *cache, char *filename) {
                           .failing_object = "fcntl(fd, F_SETFD, FD_CLOEXEC)"});
   }
 
-  newlog = malloc(sizeof(struct LogfileT));
+  newlog = checked_storage_allocate(sizeof(struct LogfileT));
   newlog->cache = cache;
   newlog->fd = fd;
   newlog->filename = strdup(filename);
@@ -143,7 +144,7 @@ static int log_cache_open(LogCache *cache, char *filename) {
 }
 
 LogCache *log_cache_create(UvLoopT *loop, ServerLog *log) {
-  LogCache *cache = calloc(1, sizeof(*cache));
+  LogCache *cache = checked_storage_try_allocate_array(1, sizeof(*cache));
 
   if (cache == nullptr)
     return nullptr;

@@ -462,7 +462,7 @@ int cf_site(const ConfigurationCall *call) {
    * Parse the access entry and allocate space for it
    */
 
-  site = malloc(sizeof(SiteData));
+  site = checked_storage_allocate(sizeof(SiteData));
 
   /*
    * Initialize the site entry

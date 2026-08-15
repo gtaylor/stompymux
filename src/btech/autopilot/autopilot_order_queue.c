@@ -7,6 +7,7 @@
 
 #include "autopilot.h"
 #include "autopilot_argument_list_api.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/doubly_linked_list.h"
 
 bool autopilot_order_is_supported(int command_enum) {
@@ -76,7 +77,8 @@ autopilot_order_enqueue(Autopilot *autopilot,
       return AUTOPILOT_ORDER_INVALID;
   }
 
-  AutopilotCommand *command = calloc(1, sizeof(*command));
+  AutopilotCommand *command =
+      checked_storage_try_allocate_array(1, sizeof(*command));
   if (command == nullptr)
     return AUTOPILOT_ORDER_NO_MEMORY;
   autopilot_argument_list_initialize(&command->arguments, AUTOPILOT_MAX_ARGS);

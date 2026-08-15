@@ -20,6 +20,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "repair_job.h"
@@ -705,7 +706,7 @@ Mech *load_refmech(BtechContext *context, const char *reference) {
   MechReferenceCache *cache = context->reference_mech_cache;
 
   if (cache == nullptr) {
-    cache = calloc(1, sizeof(*cache));
+    cache = checked_storage_try_allocate_array(1, sizeof(*cache));
     if (cache == nullptr)
       return nullptr;
     cache->mech = mech_temporary_create(context);

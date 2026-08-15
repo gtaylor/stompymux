@@ -38,6 +38,7 @@
 #include "mux/network/mux_event.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/support/checked_storage.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "special_object.h"
@@ -267,7 +268,7 @@ bool mech_aero_has_free_fuel(const Mech *mech) {
 size_t mech_storage_size(void) { return sizeof(Mech); }
 
 Mech *mech_temporary_create(BtechContext *context) {
-  Mech *mech = calloc(1, sizeof(*mech));
+  Mech *mech = checked_storage_try_allocate_array(1, sizeof(*mech));
   if (mech == nullptr)
     return nullptr;
   mech->xcode = (BtechSpecialObject){
@@ -281,7 +282,7 @@ Mech *mech_temporary_create(BtechContext *context) {
 Mech *mech_temporary_clone(const Mech *source) {
   if (source == nullptr)
     return nullptr;
-  Mech *mech = malloc(sizeof(*mech));
+  Mech *mech = checked_storage_try_allocate(sizeof(*mech));
   if (mech != nullptr)
     memcpy(mech, source, sizeof(*mech));
   return mech;

@@ -73,9 +73,10 @@ bool configuration_catalog_install(ConfigurationRegistry *registry,
       !list_options_are_valid(list_option_templates, list_option_count))
     return false;
 
-  ConfigurationEntry *entries = calloc(entry_count, sizeof(*entries));
-  NameTable *list_options =
-      calloc(list_option_count + 1, sizeof(*list_options));
+  ConfigurationEntry *entries =
+      checked_storage_try_allocate_array(entry_count, sizeof(*entries));
+  NameTable *list_options = checked_storage_try_allocate_array(
+      list_option_count + 1, sizeof(*list_options));
   if (entries == nullptr || list_options == nullptr) {
     free(list_options);
     free(entries);

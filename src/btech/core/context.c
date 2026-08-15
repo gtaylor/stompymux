@@ -30,7 +30,8 @@ static int integer_value(const int *values, size_t count, size_t index) {
 BtechContext *btech_context_create(const BtechDependencies *dependencies) {
   if (dependencies == nullptr)
     return nullptr;
-  BtechContext *context = calloc(1, sizeof(*context));
+  BtechContext *context =
+      checked_storage_try_allocate_array(1, sizeof(*context));
   if (context == nullptr)
     return nullptr;
   *context = (BtechContext){

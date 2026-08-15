@@ -44,7 +44,8 @@ static BtechScriptList btech_script_list_parse(char *output) {
   list.count = btech_script_list_item_count(output);
   if (list.count == 0)
     return list;
-  list.items = calloc(list.count, sizeof(*list.items));
+  list.items =
+      checked_storage_try_allocate_array(list.count, sizeof(*list.items));
   if (list.items == nullptr) {
     list.count = 0;
     return list;

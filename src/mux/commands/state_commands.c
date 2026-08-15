@@ -365,7 +365,7 @@ static bool state_parse_quoted_string(const char *text, ObjectStateValue *value,
     (void)snprintf(error, error_size, "unterminated quoted string");
     return false;
   }
-  decoded = malloc(LENGTH);
+  decoded = checked_storage_try_allocate(LENGTH);
   if (!decoded) {
     (void)snprintf(error, error_size, "out of memory");
     return false;

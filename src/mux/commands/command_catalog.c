@@ -51,14 +51,15 @@ static NameTable *registry_switches(CommandRegistry *registry,
     size_t capacity = registry->switch_clone_capacity == 0
                           ? 8
                           : registry->switch_clone_capacity * 2;
-    SwitchClone *grown = realloc(records, capacity * sizeof(*grown));
+    SwitchClone *grown =
+        checked_storage_try_reallocate(records, capacity * sizeof(*grown));
     if (grown == nullptr)
       return nullptr;
     registry->switch_clones = records = grown;
     registry->switch_clone_capacity = capacity;
   }
   size_t count = switch_table_count(source);
-  NameTable *clone = malloc(count * sizeof(*clone));
+  NameTable *clone = checked_storage_try_allocate(count * sizeof(*clone));
   if (clone == nullptr)
     return nullptr;
   memcpy(clone, source, count * sizeof(*clone));
@@ -108,7 +109,8 @@ bool command_catalog_install(CommandRegistry *registry,
   if (registry == nullptr || definitions == nullptr ||
       !command_catalog_is_empty(registry))
     return false;
-  registry->builtins = calloc(count, sizeof(CMDENT));
+  registry->builtins =
+      checked_storage_try_allocate_array(count, sizeof(CMDENT));
   if (count != 0 && registry->builtins == nullptr)
     return false;
   hash_table_initialize(&registry->commands, 250 * HASH_FACTOR);
@@ -175,14 +177,14 @@ bool command_registry_add_switch_alias(CommandRegistry *registry,
     size_t capacity = registry->switch_alias_capacity == 0
                           ? 4
                           : registry->switch_alias_capacity * 2;
-    CMDENT **grown = (CMDENT **)realloc((void *)registry->switch_aliases,
-                                        capacity * sizeof(*grown));
+    CMDENT **grown = (CMDENT **)checked_storage_try_reallocate(
+        (void *)registry->switch_aliases, capacity * sizeof(*grown));
     if (grown == nullptr)
       return false;
     registry->switch_aliases = grown;
     registry->switch_alias_capacity = capacity;
   }
-  CMDENT *entry = malloc(sizeof(*entry));
+  CMDENT *entry = checked_storage_try_allocate(sizeof(*entry));
   char *name = strsave(alias);
   if (entry == nullptr || name == nullptr) {
     free(entry);
