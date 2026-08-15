@@ -7,6 +7,7 @@
 #include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/commands/command_helpers.h"
 #include "mux/communication/channel_registry.h"
+#include "mux/communication/commac.h"
 #include "mux/communication/comsys.h"
 #include "mux/communication/comsys_internal.h"
 #include "mux/lua/lua_runtime.h"
@@ -174,7 +175,7 @@ int comsys_test_access(const ChannelAccessRequest *request) {
 
 int do_comsystem(EvaluationContext *evaluation, DbRef who, char *cmd) {
   char *t;
-  char *ch;
+  const char *ch;
   char *alias;
 
   alias = alloc_lbuf("do_comsystem");
@@ -195,7 +196,8 @@ int do_comsystem(EvaluationContext *evaluation, DbRef who, char *cmd) {
   t = checked_storage_at(cmd, LENGTH + 1, sizeof(char),
                          offset < LENGTH ? offset + 1 : offset);
 
-  ch = comsys_channel_from_alias(evaluation, who, alias);
+  struct Commac *commac = get_commac(evaluation->runtime->channels, who);
+  ch = commac_channel_for_alias(commac, alias);
   if (ch && *ch) {
     comsys_process_alias_command(evaluation, who, ch, t);
     free_lbuf(alias);

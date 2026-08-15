@@ -41,6 +41,9 @@ void add_commac(ChannelRegistry *registry, struct Commac *c);
 void del_commac(ChannelRegistry *registry, DbRef who);
 char *commac_alias_at(const struct Commac *commac, size_t index);
 char *commac_channel_at(const struct Commac *commac, size_t index);
+/* Alias entries must be sorted case-insensitively before lookup. */
+const char *commac_channel_for_alias(const struct Commac *commac,
+                                     const char *alias);
 char **commac_channel_slot(struct Commac *commac, size_t index);
 int commac_macro_at(const struct Commac *commac, size_t index);
 void commac_macro_set(struct Commac *commac, size_t index, int value);

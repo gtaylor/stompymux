@@ -5,7 +5,7 @@
 #include "mux/communication/comsys.h"
 
 void comsys_process_alias_command(EvaluationContext *evaluation, DbRef player,
-                                  char *arg1, char *arg2);
+                                  const char *arg1, char *arg2);
 void comsys_channel_printf(EvaluationContext *evaluation,
                            struct Channel *channel, const char *messfmt, ...)
     __attribute__((format(printf, 3, 4)));
@@ -25,8 +25,6 @@ typedef struct ChannelAccessRequest {
 int comsys_test_access(const ChannelAccessRequest *request);
 void comsys_disconnect_channel(EvaluationContext *evaluation, DbRef player,
                                char *channel);
-char *comsys_channel_from_alias(EvaluationContext *evaluation, DbRef player,
-                                char *alias);
 void comsys_send_channel_message(EvaluationContext *evaluation,
                                  struct Channel *channel, char *message);
 void comsys_list_channels(EvaluationContext *evaluation, DbRef player);

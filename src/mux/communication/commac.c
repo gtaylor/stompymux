@@ -24,6 +24,28 @@ char *commac_channel_at(const struct Commac *commac, size_t index) {
       sizeof(*commac->channels), index);
 }
 
+const char *commac_channel_for_alias(const struct Commac *commac,
+                                     const char *alias) {
+  if (commac == nullptr)
+    return nullptr;
+
+  int first = 0;
+  int last = commac->numchannels - 1;
+  int current = 0;
+  int direction = 1;
+
+  while (direction != 0 && first <= last) {
+    current = (first + last) / 2;
+    direction = strcasecmp(alias, commac_alias_at(commac, (size_t)current));
+    if (direction < 0)
+      last = current - 1;
+    else
+      first = current + 1;
+  }
+
+  return direction == 0 ? commac_channel_at(commac, (size_t)current) : nullptr;
+}
+
 char **commac_channel_slot(struct Commac *commac, size_t index) {
   return (char **)checked_storage_at((void *)commac->channels,
                                      (size_t)commac->maxchannels,
