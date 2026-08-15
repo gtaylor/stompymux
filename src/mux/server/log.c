@@ -20,6 +20,7 @@
 #include "mux/server/server_config.h"
 #include "mux/server/server_control.h"
 #include "mux/support/alloc.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/support/name_table.h"
 #include "mux/support/styled_text/markup.h"
 
@@ -204,16 +205,18 @@ void log_number(int num) { (void)fprintf(stderr, "%d", num); }
  * Writes the name, db number, and flags of an object to the log.
  */
 void log_name(ServerLog *log, DbRef target) {
-  char *tp;
+  LbufText tp;
   char new[LBUF_SIZE];
 
   if ((log->configuration->log_info & LOGOPT_FLAGS) != 0)
-    tp = unparse_object(log->database, nullptr, (DbRef)GOD, target);
+    tp = lbuf_text_take(
+        unparse_object(log->database, nullptr, (DbRef)GOD, target));
   else
     tp = unparse_object_numonly(log->database, target);
-  styled_text_strip(log->database->styled_text_palette, tp, new, sizeof(new));
+  styled_text_strip(log->database->styled_text_palette, tp.text, new,
+                    sizeof(new));
   (void)fprintf(stderr, "%s", new);
-  free_lbuf(tp);
+  lbuf_text_release(&tp);
 }
 
 /**

@@ -18,6 +18,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/support/stringutil.h"
 
 static bool *object_flag_value_at(ObjectFlagSet *flags, ObjectFlag flag) {
@@ -533,7 +534,7 @@ char *flags_description(GameDatabase *database, DbRef target) {
   return buffer;
 }
 
-char *unparse_object_numonly(GameDatabase *database, DbRef target) {
+LbufText unparse_object_numonly(GameDatabase *database, DbRef target) {
   char *buffer = alloc_lbuf("unparse_object_numonly");
   if (target == NOTHING)
     (void)string_copy_bounded(buffer, LBUF_SIZE, "*NOTHING*");
@@ -544,7 +545,7 @@ char *unparse_object_numonly(GameDatabase *database, DbRef target) {
   else
     (void)snprintf(buffer, LBUF_SIZE, "%s(#%ld)",
                    game_object_name(database, target), target);
-  return buffer;
+  return lbuf_text_take(buffer);
 }
 char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
                      DbRef player, DbRef target) {
