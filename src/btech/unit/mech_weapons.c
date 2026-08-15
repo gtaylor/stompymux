@@ -10,11 +10,10 @@
 #include "mux/support/checked_storage.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
+#include "weapon_catalogue_internal.h"
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-
-extern const int DEFAULT_WEAPON_COUNT;
 
 static const struct WeaponDefinition *weapon_catalogue_entry(int weapon_index) {
   if (weapon_index < 0)

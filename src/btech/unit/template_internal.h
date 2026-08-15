@@ -26,6 +26,7 @@ const char *const *secondary_technology_names(void);
 const char *const *secondary_technology_abbreviations(void);
 const char *const *infantry_technology_names(void);
 const char *const *infantry_technology_abbreviations(void);
-extern const int DEFAULT_WEAPON_COUNT;
 extern const int TEMPLATE_INTERNAL_COUNT;
 extern const int TEMPLATE_CARGO_COUNT;
+extern const int INTERNALSWEIGHT[];
+extern const int CARGOWEIGHT[];

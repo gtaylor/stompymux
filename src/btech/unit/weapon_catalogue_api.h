@@ -4,6 +4,8 @@
 
 typedef struct Mech Mech;
 
+extern const int DEFAULT_WEAPON_COUNT;
+
 typedef struct WeaponRangeProfile {
   int minimum;
   int short_range;

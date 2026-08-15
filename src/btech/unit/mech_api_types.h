@@ -26,8 +26,6 @@ typedef struct MechNetworkLink {
   Mech *member;
 } MechNetworkLink;
 
-extern const struct WeaponDefinition MECH_WEAPONS[];
-
 constexpr int TELE_ALL = 1;  /* Tele all, not just mortals */
 constexpr int TELE_LOUD = 4; /* Loudly teleport */
 constexpr int TELE_XP = 8;   /* Lose 1/3 XP */

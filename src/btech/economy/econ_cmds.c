@@ -45,6 +45,7 @@
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "special_object.h"
+#include "template_internal.h"
 #include "unit_cost_api.h"
 
 typedef struct PartPile {
@@ -75,11 +76,6 @@ static int *branded_part_pile_slot(const BrandedPartPileSlot *slot) {
                          sizeof(*slot->pile->brands), (size_t)slot->part.brand);
   return part_pile_slot(brand_pile, slot->part.id);
 }
-
-/* From template.c */
-
-extern const int INTERNALSWEIGHT[];
-extern const int CARGOWEIGHT[];
 
 /* Also sets the fuel we have ; but I digress */
 

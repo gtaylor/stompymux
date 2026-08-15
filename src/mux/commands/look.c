@@ -24,8 +24,6 @@
 #include "mux/world/match.h"
 #include "mux/world/object_spatial.h"
 
-extern void ufun(char *, char *, int, int, int, DbRef, DbRef);
-
 static void look_append_quoted_target(const char *target, char *buffer,
                                       char **cursor) {
   const size_t LENGTH = strlen(target);

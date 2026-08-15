@@ -1,6 +1,8 @@
 /* Defines the built-in weapon catalogue. */
 
 #include "equipment_types.h"
+#include "weapon_catalogue_api.h"
+#include "weapon_catalogue_internal.h"
 #include "weapons_vrt.h"
 
 // clang-format off: catalogue rows intentionally remain one logical row each.

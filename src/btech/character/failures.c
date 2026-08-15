@@ -36,8 +36,6 @@
 #include "weapon_catalogue_api.h"
 #include "weapon_settings.h"
 
-extern const int DEFAULT_WEAPON_COUNT;
-
 static PartFailureResult failure_radio_static(const PartFailureCall *call);
 static PartFailureResult failure_radio_short(const PartFailureCall *call);
 static PartFailureResult failure_radio_range(const PartFailureCall *call);

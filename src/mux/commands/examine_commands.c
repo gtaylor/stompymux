@@ -28,8 +28,6 @@
 #include <stdio.h>
 #include <string.h>
 
-extern void ufun(char *, char *, int, int, int, DbRef, DbRef);
-
 typedef struct ExamineMarkupRequest {
   EvaluationContext *evaluation;
   DbRef viewer;
