@@ -23,6 +23,17 @@ static ObjectStateValue string_value(const char *value) {
   };
 }
 
+static bool state_string_equals(GameDatabase *database, DbRef object,
+                                const char *name_space, const char *key,
+                                const char *expected) {
+  const ObjectStateValue *value =
+      object_state_get(database, object, name_space, key);
+  const size_t EXPECTED_LENGTH = strlen(expected);
+  return value && value->type == OBJECT_STATE_STRING &&
+         value->as.string.length == EXPECTED_LENGTH &&
+         memcmp(value->as.string.data, expected, EXPECTED_LENGTH) == 0;
+}
+
 static int check_committed_values(GameDatabase *database) {
   const ObjectStateValue *empty = object_state_get(database, 0, "bank", "memo");
   const ObjectStateValue *balance =
@@ -112,6 +123,65 @@ int main(void) {
     return 1;
   object_state_transaction_finish(&transaction, false);
   if (!check_committed_values(&database))
+    return 1;
+
+  char middle_text[] = "middle";
+  ObjectStateValue middle = string_value(middle_text);
+  ObjectStateValue alpha = string_value("alpha");
+  ObjectStateValue omega = string_value("omega");
+  if (!object_state_set(&database, 0, "owned", "middle", &middle, error,
+                        sizeof(error)) ||
+      !object_state_set(&database, 0, "owned", "alpha", &alpha, error,
+                        sizeof(error)) ||
+      !object_state_set(&database, 0, "owned", "omega", &omega, error,
+                        sizeof(error)))
+    return 1;
+  middle_text[0] = 'X';
+  if (!state_string_equals(&database, 0, "owned", "middle", "middle") ||
+      !state_string_equals(&database, 0, "owned", "alpha", "alpha") ||
+      !state_string_equals(&database, 0, "owned", "omega", "omega"))
+    return 1;
+
+  if (!object_state_copy(&database, 1, 0))
+    return 1;
+  ObjectStateValue updated = string_value("updated");
+  if (!object_state_set(&database, 0, "owned", "middle", &updated, error,
+                        sizeof(error)) ||
+      !object_state_delete(&database, 0, "owned", "alpha"))
+    return 1;
+  if (!state_string_equals(&database, 0, "owned", "middle", "updated") ||
+      object_state_get(&database, 0, "owned", "alpha") != nullptr ||
+      !state_string_equals(&database, 1, "owned", "middle", "middle") ||
+      !state_string_equals(&database, 1, "owned", "alpha", "alpha"))
+    return 1;
+
+  if (!object_state_transaction_begin(&transaction, &database))
+    return 1;
+  ObjectStateValue rolled_back = string_value("rolledback");
+  if (!object_state_transaction_set(&transaction, 0, "owned", "omega",
+                                    &rolled_back, error, sizeof(error)))
+    return 1;
+  object_state_transaction_finish(&transaction, false);
+  if (!state_string_equals(&database, 0, "owned", "omega", "omega"))
+    return 1;
+
+  object_state_clear(&database, 1);
+  configuration.lua.state_object_limit = 32;
+  ObjectStateValue six_bytes = string_value("123456");
+  ObjectStateValue one_byte = string_value("x");
+  if (!object_state_set(&database, 1, "quota", "first", &six_bytes, error,
+                        sizeof(error)) ||
+      object_state_set(&database, 1, "quota", "second", &six_bytes, error,
+                       sizeof(error)) ||
+      !strstr(error, "exceeds 32 bytes"))
+    return 1;
+  if (!object_state_set(&database, 1, "quota", "first", &one_byte, error,
+                        sizeof(error)) ||
+      !object_state_set(&database, 1, "quota", "second", &six_bytes, error,
+                        sizeof(error)) ||
+      !object_state_delete(&database, 1, "quota", "first") ||
+      !object_state_set(&database, 1, "quota", "third", &one_byte, error,
+                        sizeof(error)))
     return 1;
 
   ObjectStateValue too_large = string_value("0123456789abcdefg");

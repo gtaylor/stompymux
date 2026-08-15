@@ -22,10 +22,16 @@ constexpr size_t OBJECT_STATE_DEFAULT_ENTRY_LIMIT = 1024;
 constexpr size_t OBJECT_STATE_DEFAULT_OBJECT_LIMIT = (size_t)(1024 * 1024);
 
 typedef struct ObjectStateEntry ObjectStateEntry;
+typedef struct ObjectStateOwnedValue ObjectStateOwnedValue;
+struct ObjectStateOwnedValue {
+  ObjectStateValue view;
+  char *owned;
+};
+
 struct ObjectStateEntry {
   char *name_space;
   char *key;
-  ObjectStateValue value;
+  ObjectStateOwnedValue value;
 };
 
 struct ObjectStateCollection {
@@ -150,21 +156,19 @@ static size_t object_state_entry_bytes(const char *name_space, const char *key,
          object_state_value_bytes(value);
 }
 
-static void object_state_value_destroy(ObjectStateValue *value) {
-  if (value->type == OBJECT_STATE_STRING) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-    free((char *)value->as.string.data);
-#pragma clang diagnostic pop
-  }
-  memset(value, 0, sizeof(*value));
+static void object_state_owned_value_release(ObjectStateOwnedValue *value) {
+  free(value->owned);
+  *value = (ObjectStateOwnedValue){};
 }
 
-static bool object_state_value_copy(ObjectStateValue *destination,
-                                    const ObjectStateValue *source) {
-  *destination = *source;
-  if (source->type != OBJECT_STATE_STRING)
+static bool object_state_owned_value_copy(ObjectStateOwnedValue *destination,
+                                          const ObjectStateValue *source) {
+  /* Publish neither the borrowed view nor ownership until copying succeeds. */
+  *destination = (ObjectStateOwnedValue){};
+  if (source->type != OBJECT_STATE_STRING) {
+    destination->view = *source;
     return true;
+  }
   char *data = checked_storage_try_allocate(source->as.string.length + 1);
   if (!data)
     return false;
@@ -172,7 +176,9 @@ static bool object_state_value_copy(ObjectStateValue *destination,
     memcpy(data, source->as.string.data, source->as.string.length);
   *(char *)checked_storage_at(data, source->as.string.length + 1, sizeof(char),
                               source->as.string.length) = '\0';
-  destination->as.string.data = data;
+  destination->view = *source;
+  destination->view.as.string.data = data;
+  destination->owned = data;
   return true;
 }
 
@@ -183,7 +189,7 @@ static void object_state_collection_destroy(ObjectStateCollection *collection) {
     ObjectStateEntry *entry = object_state_entry_slot(collection, index);
     free(entry->name_space);
     free(entry->key);
-    object_state_value_destroy(&entry->value);
+    object_state_owned_value_release(&entry->value);
   }
   free(collection->entries);
   free(collection);
@@ -212,7 +218,8 @@ object_state_collection_clone(const ObjectStateCollection *source) {
     destination->name_space = strdup(entry->name_space);
     destination->key = strdup(entry->key);
     if (!destination->name_space || !destination->key ||
-        !object_state_value_copy(&destination->value, &entry->value)) {
+        !object_state_owned_value_copy(&destination->value,
+                                       &entry->value.view)) {
       copy->count = index + 1;
       object_state_collection_destroy(copy);
       return nullptr;
@@ -268,7 +275,7 @@ static bool object_state_collection_set(GameDatabase *database,
   size_t index;
   size_t old_bytes = 0;
   size_t new_bytes;
-  ObjectStateValue value_copy;
+  ObjectStateOwnedValue value_copy;
 
   if (!collection || (collection->count > 0 && !collection->entries)) {
     object_state_error(error, error_size, "invalid object state collection");
@@ -301,8 +308,8 @@ static bool object_state_collection_set(GameDatabase *database,
   }
   if (found) {
     const ObjectStateEntry *entry = object_state_entry_const(collection, index);
-    old_bytes =
-        object_state_entry_bytes(entry->name_space, entry->key, &entry->value);
+    old_bytes = object_state_entry_bytes(entry->name_space, entry->key,
+                                         &entry->value.view);
   }
   if (!found && collection->count >= object_state_entry_limit(database)) {
     object_state_error(error, error_size, "object state exceeds %zu entries",
@@ -316,14 +323,13 @@ static bool object_state_collection_set(GameDatabase *database,
                        object_state_object_limit(database));
     return false;
   }
-  memset(&value_copy, 0, sizeof(value_copy));
-  if (!object_state_value_copy(&value_copy, value)) {
+  if (!object_state_owned_value_copy(&value_copy, value)) {
     object_state_error(error, error_size, "out of memory");
     return false;
   }
   if (found) {
     ObjectStateEntry *entry = object_state_entry_slot(collection, index);
-    object_state_value_destroy(&entry->value);
+    object_state_owned_value_release(&entry->value);
     entry->value = value_copy;
     collection->bytes = collection->bytes - old_bytes + new_bytes;
     return true;
@@ -333,7 +339,7 @@ static bool object_state_collection_set(GameDatabase *database,
     ObjectStateEntry *entries = checked_storage_try_reallocate(
         collection->entries, capacity * sizeof(*entries));
     if (!entries) {
-      object_state_value_destroy(&value_copy);
+      object_state_owned_value_release(&value_copy);
       object_state_error(error, error_size, "out of memory");
       return false;
     }
@@ -345,7 +351,7 @@ static bool object_state_collection_set(GameDatabase *database,
   if (!namespace_copy || !key_copy) {
     free(namespace_copy);
     free(key_copy);
-    object_state_value_destroy(&value_copy);
+    object_state_owned_value_release(&value_copy);
     object_state_error(error, error_size, "out of memory");
     return false;
   }
@@ -372,11 +378,11 @@ static bool object_state_collection_delete(ObjectStateCollection *collection,
   if (!found)
     return false;
   ObjectStateEntry *entry = object_state_entry_slot(collection, index);
-  collection->bytes -=
-      object_state_entry_bytes(entry->name_space, entry->key, &entry->value);
+  collection->bytes -= object_state_entry_bytes(entry->name_space, entry->key,
+                                                &entry->value.view);
   free(entry->name_space);
   free(entry->key);
-  object_state_value_destroy(&entry->value);
+  object_state_owned_value_release(&entry->value);
   collection->count--;
   if (index < collection->count)
     memmove(object_state_entry_slot(collection, index),
@@ -408,7 +414,8 @@ const ObjectStateValue *object_state_get(GameDatabase *database, DbRef object,
   if (!collection)
     return nullptr;
   index = object_state_find(collection, name_space, key, &found);
-  return found ? &object_state_entry_slot(collection, index)->value : nullptr;
+  return found ? &object_state_entry_slot(collection, index)->value.view
+               : nullptr;
 }
 
 bool object_state_set(GameDatabase *database, DbRef object,
@@ -463,7 +470,7 @@ object_state_entry(const ObjectStateEntryRequest *request) {
   return (ObjectStateEntryResult){.found = true,
                                   .entry = {.name_space = stored->name_space,
                                             .key = stored->key,
-                                            .value = &stored->value}};
+                                            .value = &stored->value.view}};
 }
 
 void object_state_clear(GameDatabase *database, DbRef object) {
@@ -574,7 +581,7 @@ object_state_transaction_get(ObjectStateTransaction *transaction, DbRef object,
   if (!target)
     return object_state_get(transaction->database, object, name_space, key);
   index = object_state_find(target->collection, name_space, key, &found);
-  return found ? &object_state_entry_slot(target->collection, index)->value
+  return found ? &object_state_entry_slot(target->collection, index)->value.view
                : nullptr;
 }
 
@@ -641,7 +648,7 @@ bool object_state_transaction_entry(ObjectStateTransaction *transaction,
     *entry = (ObjectStateEntryView){
         .name_space = candidate->name_space,
         .key = candidate->key,
-        .value = &candidate->value,
+        .value = &candidate->value.view,
     };
     return true;
   }
