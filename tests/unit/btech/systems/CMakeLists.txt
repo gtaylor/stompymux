@@ -10,6 +10,7 @@ btmux_label_unit_topic(btech-systems btech
   btech_caller_control
   btech_repair_payload
   btech_script_descriptors
+  btech_techlist
   btech_lifecycle
   btech_targeting
   btech_operator_systems
