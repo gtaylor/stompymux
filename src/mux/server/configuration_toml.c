@@ -167,7 +167,6 @@ static const ConfigTomlMapping CONFIG_TOML_MAP[] = {
     {"mux.badsite_file", "badsite_file", CFG_KIND_SCALAR},
     {"mux.allow_chanlurking", "allow_chanlurking", CFG_KIND_SCALAR},
     {"mux.cache_depth", "cache_depth", CFG_KIND_SCALAR},
-    {"mux.cache_names", "cache_names", CFG_KIND_SCALAR},
     {"mux.cache_trim", "cache_trim", CFG_KIND_SCALAR},
     {"mux.cache_width", "cache_width", CFG_KIND_SCALAR},
     {"mux.check_interval", "check_interval", CFG_KIND_SCALAR},

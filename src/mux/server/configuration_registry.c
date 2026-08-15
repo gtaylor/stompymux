@@ -148,7 +148,6 @@ static const ConfigurationEntry CONFIGURATION_ENTRY_TEMPLATES[] = {
     {"btech_dig_only_fs", cf_int, CA_GOD, CONFIG_LOC(btech_dig_only_fs), 0},
     {"btech_digbonus", cf_int, CA_GOD, CONFIG_LOC(btech_digbonus), 0},
     {"cache_depth", cf_int, CA_DISABLED, CONFIG_LOC(cache_depth), 0},
-    {"cache_names", cf_bool, CA_DISABLED, CONFIG_LOC(cache_names), 0},
     {"cache_trim", cf_bool, CA_GOD, CONFIG_LOC(cache_trim), 0},
     {"cache_width", cf_int, CA_DISABLED, CONFIG_LOC(cache_width), 0},
     {"check_interval", cf_int, CA_GOD, CONFIG_LOC(check_interval), 0},

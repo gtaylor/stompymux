@@ -320,7 +320,8 @@ static int test_nested_container_recursion(void) {
 }
 
 static int test_unmapped_key_skipped(void) {
-  static const char toml[] = "[server]\nport = 5555\nbogus_directive = 1\n";
+  static const char toml[] = "[server]\nport = 5555\nbogus_directive = 1\n"
+                             "[mux]\ncache_names = true\n";
   toml_result_t result;
   CallLog log = {0};
   int ok;

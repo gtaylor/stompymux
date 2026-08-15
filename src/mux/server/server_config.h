@@ -69,7 +69,6 @@ struct ServerConfiguration {
   int cache_steal_dirty;          /* Should cache code write dirty attrs */
   int cache_depth;                /* Number of entries in each cache cell */
   int cache_width;                /* Number of cache cells */
-  int cache_names;                /* Should object names be cached separately */
   DatabaseConfiguration database; /* Database configuration */
   LuaConfiguration lua;           /* Lua runtime configuration */
   char config_file[128];          /* name of configuration file */
