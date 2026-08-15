@@ -46,6 +46,7 @@
 #include "registry_api.h"
 
 static const char DEFAULT_CONTACTOPTIONS[] = "!db";
+constexpr size_t CONTACT_OPTIONS_LENGTH_LIMIT = 49;
 
 static bool mech_contact_is_friend(Mech *observer, Mech *target) {
   return mech_team(observer) == mech_team(target) &&
@@ -386,15 +387,14 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
       if (!*str) {
         strlcpy(buff, DEFAULT_CONTACTOPTIONS, sizeof(buff));
       } else {
-        strncpy(buff, str, 50);
-        buff[49] = 0;
+        (void)string_copy_bounded(buff, CONTACT_OPTIONS_LENGTH_LIMIT + 1, str);
 
         if (strlen(buff) == 0)
           strlcpy(buff, DEFAULT_CONTACTOPTIONS, sizeof(buff));
       }
     } else {
-      strncpy(buff, argument, 50);
-      buff[49] = 0;
+      (void)string_copy_bounded(buff, CONTACT_OPTIONS_LENGTH_LIMIT + 1,
+                                argument);
     }
 
     if (isvb == 1)
@@ -635,9 +635,6 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
           btech_attribute_read(mech_context(mech)->database, BUILDING_DBREF,
                                A_MECHNAME, (char[LBUF_SIZE]){0});
       if (!mech_name || !*mech_name) {
-        strncpy(new,
-                game_object_name(mech_context(mech)->database, BUILDING_DBREF),
-                LBUF_SIZE - 1);
         styled_text_strip(
             mech_context(mech)->database->styled_text_palette,
             game_object_name(mech_context(mech)->database, BUILDING_DBREF), new,

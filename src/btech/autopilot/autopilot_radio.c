@@ -252,7 +252,7 @@ void auto_radio_command_enterbase(Autopilot *autopilot, Mech *mech,
     (void)snprintf(mesg, LBUF_SIZE, "entering base (%s side)",
                    autopilot_argument_list_get(args, 1));
   } else {
-    strncpy(buffer, "enterbase n", SBUF_SIZE);
+    (void)string_copy_bounded(buffer, SBUF_SIZE, "enterbase n");
     (void)snprintf(mesg, LBUF_SIZE, "entering base");
   }
 

@@ -5,11 +5,10 @@
 #include "mech_script_value_api.h"
 #include "mech_targeting_api.h"
 
-#include <string.h>
-
 #include "checked_conversion.h"
 #include "mech_internal.h"
 #include "mech_stagger.h"
+#include "mux/server/platform.h"
 
 bool mech_script_value_read(const Mech *mech, MechScriptValueKey key,
                             MechScriptValue *value) {
@@ -269,19 +268,19 @@ bool mech_script_value_write(Mech *mech, MechScriptValueKey key,
     mech_map_dbref_set(mech, value.dbref);
     return true;
   case MECH_SCRIPT_NAME:
-    strncpy(((mech)->ud.mech_name), value.string, 31 - 1);
-    ((mech)->ud.mech_name)[31 - 1] = '\0';
+    (void)string_copy_bounded(mech->ud.mech_name, sizeof(mech->ud.mech_name),
+                              value.string);
     return true;
   case MECH_SCRIPT_MAXIMUM_SPEED:
     ((mech)->ud.maxspeed) = value.floating;
     return true;
   case MECH_SCRIPT_ERA:
-    strncpy(((mech)->ud.unit_era), value.string, 25 - 1);
-    ((mech)->ud.unit_era)[25 - 1] = '\0';
+    (void)string_copy_bounded(mech->ud.unit_era, sizeof(mech->ud.unit_era),
+                              value.string);
     return true;
   case MECH_SCRIPT_TRO:
-    strncpy(((mech)->ud.unit_tro), value.string, 25 - 1);
-    ((mech)->ud.unit_tro)[25 - 1] = '\0';
+    (void)string_copy_bounded(mech->ud.unit_tro, sizeof(mech->ud.unit_tro),
+                              value.string);
     return true;
   case MECH_SCRIPT_TEMPLATE_SPEED:
     ((mech)->ud.template_maxspeed) = value.floating;

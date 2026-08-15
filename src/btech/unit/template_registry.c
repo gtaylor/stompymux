@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include "btech/context.h"
+#include "mux/server/platform.h"
 #include "mux/support/array_sort.h"
 #include "mux/support/checked_storage.h"
 
@@ -236,8 +237,7 @@ redo:
     if (registry->templates == nullptr || registry->template_count == 0) {
       return nullptr;
     }
-    strncpy(key.name, id, CACHE_MAXNAME);
-    key.name[CACHE_MAXNAME] = '\0';
+    (void)string_copy_bounded(key.name, sizeof(key.name), id);
 
     ArraySearchResult search = array_search(
         &(ArraySearchRequest){.key = &key,

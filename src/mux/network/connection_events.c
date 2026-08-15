@@ -9,11 +9,9 @@
  * portions of the descriptor data structure are not used.
  */
 
+#include <sodium/randombytes.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
-
-#include <sodium/randombytes.h>
 
 #include "mux/commands/command_context.h"
 #include "mux/commands/look.h"
@@ -54,8 +52,7 @@ void set_lastsite(Descriptor *d, char *lastsite) {
 
   if (d->player) {
     if (lastsite) {
-      strncpy(buf, lastsite, LBUF_SIZE - 1);
-      buf[LBUF_SIZE - 1] = '\0';
+      (void)string_copy_bounded(buf, sizeof(buf), lastsite);
     } else {
       (void)snprintf(
           buf, sizeof(buf), "%s",

@@ -364,6 +364,30 @@ target_include_directories(btech_random_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_random COMMAND btech_random_test)
 
+add_executable(btech_map_name_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_map_name.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map/map_name_state.c)
+target_link_libraries(btech_map_name_test PRIVATE btmux_options)
+target_include_directories(btech_map_name_test PRIVATE
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_map_name COMMAND btech_map_name_test)
+
+add_executable(btech_registry_help_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_registry_help.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/special/registry_help_color.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+target_link_libraries(btech_registry_help_test PRIVATE btmux_options)
+target_include_directories(btech_registry_help_test PRIVATE
+  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_registry_help COMMAND btech_registry_help_test)
+
 add_executable(btech_character_value_settings_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/character/character_value_settings.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/character/character_value_catalog.c

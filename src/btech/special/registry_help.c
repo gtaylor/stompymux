@@ -24,6 +24,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "registry_api.h"
+#include "registry_help_internal.h"
 #include "special_object.h"
 
 /*** #include all the prototype here! ****/
@@ -59,30 +60,6 @@ void center_string(char *destination, size_t destination_size,
   (void)snprintf(checked_storage_region(destination, destination_size, padding,
                                         destination_size - padding),
                  destination_size - padding, "%s", source);
-}
-
-static void help_color_initialize(const char *from, char *to) {
-  char buf[LBUF_SIZE];
-  char *tp = to;
-
-  const size_t FIRST_WORD_LENGTH = strcspn(from, " ");
-  if (*checked_string_suffix(from, FIRST_WORD_LENGTH) != '\0') {
-
-    strncpy(buf, from, FIRST_WORD_LENGTH);
-    *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char),
-                                FIRST_WORD_LENGTH) = '\0';
-    safe_str("[fg=blue bold]", to, &tp);
-    safe_str(buf, to, &tp);
-    safe_str("[reset] ", to, &tp);
-    safe_str(checked_string_suffix(from, FIRST_WORD_LENGTH + 1), to, &tp);
-
-    /*      from[i]=' '; */
-  } else {
-    safe_str("[fg=cyan]", to, &tp);
-    safe_str(from, to, &tp);
-    safe_str("[reset]", to, &tp);
-  }
-  *tp = '\0';
 }
 
 #define M_LEN CM_ONE
@@ -129,7 +106,7 @@ static const char *help_line_add(const HelpLineRequest *request) {
 
   if (INITIAL > 0) {
     /* Colorize header line.  */
-    help_color_initialize(msg, buf);
+    registry_help_color_initialize(msg, buf);
   } else if (INITIAL < 0) {
     /* Write indented line.  */
     const size_t INDENTATION = (size_t)(-INITIAL);

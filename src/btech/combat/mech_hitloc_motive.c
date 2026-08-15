@@ -14,12 +14,12 @@
 #include "mech_notify_api.h"
 #include "mech_specification_api.h"
 #include "mech_utils_api.h"
+#include "mux/server/platform.h"
 #include "section_types.h"
 
 /* Do L3 FASA motive system crits */
 void mech_motive_system_hit(Mech *mech, int w_roll_mod) {
   int w_roll;
-  const char MAX_LEN = 64;
   char str_vhl_type_name[64];
 
   w_roll = btech_random_roll(mech_context(mech)) + w_roll_mod;
@@ -44,7 +44,8 @@ void mech_motive_system_hit(Mech *mech, int w_roll_mod) {
     w_roll += 4;
     break;
   case MOVE_SUB:
-    strncpy(str_vhl_type_name, "submarine", MAX_LEN);
+    (void)string_copy_bounded(str_vhl_type_name, sizeof(str_vhl_type_name),
+                              "submarine");
     break;
   case MOVE_BIPED:
   case MOVE_VTOL:
@@ -52,8 +53,8 @@ void mech_motive_system_hit(Mech *mech, int w_roll_mod) {
   case MOVE_QUAD:
   case MOVE_NONE:
   default:
-    strncpy(str_vhl_type_name, "weird unidentifiable toy (warn a wizard!)",
-            MAX_LEN);
+    (void)string_copy_bounded(str_vhl_type_name, sizeof(str_vhl_type_name),
+                              "weird unidentifiable toy (warn a wizard!)");
     break;
   }
 

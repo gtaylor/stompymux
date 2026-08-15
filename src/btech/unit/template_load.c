@@ -59,8 +59,8 @@ int load_template(DbRef player, Mech *mech, char *filename) {
   } else {
     ptr = checked_mutable_string_suffix(ptr, 1);
   }
-  strncpy(((mech)->ud.mech_type), ptr, 25);
-  ((mech)->ud.mech_type)[24] = '\0';
+  (void)string_copy_bounded(mech->ud.mech_type, sizeof(mech->ud.mech_type),
+                            ptr);
   silly_atr_set_in(mech->xcode.context->database, mech->mynum, A_MECHTYPE,
                    ((mech)->ud.mech_type));
   mech_radio_configuration_set(mech, 0);

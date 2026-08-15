@@ -83,18 +83,14 @@ void do_channelwho(CommandInvocation *invocation) {
              arg1, ARGUMENT_LENGTH + 1, sizeof(char), slash_offset) != '/')
     slash_offset++;
   if (slash_offset == ARGUMENT_LENGTH) {
-    strncpy(channel, arg1, 100);
-    *(char *)checked_storage_at(channel, sizeof(channel), sizeof(char), 99) =
-        '\0';
+    (void)string_copy_bounded(channel, sizeof(channel), arg1);
   } else {
     /* channelname/all */
     if (slash_offset >= sizeof(channel)) {
       raw_notify(evaluation, player, "Channel name too long.");
       return;
     }
-    strncpy(channel, arg1, slash_offset);
-    *(char *)checked_storage_at(channel, sizeof(channel), sizeof(char),
-                                slash_offset) = '\0';
+    (void)string_copy_bounded(channel, slash_offset + 1, arg1);
     cp = checked_storage_at(arg1, ARGUMENT_LENGTH + 1, sizeof(char),
                             slash_offset + 1);
     if (*cp == 'a')

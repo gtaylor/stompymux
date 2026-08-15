@@ -159,8 +159,8 @@ void do_createchannel(CommandInvocation *invocation) {
   }
   newchannel = (struct Channel *)malloc(sizeof(struct Channel));
 
-  strncpy(newchannel->name, channel, CHAN_NAME_LEN - 1);
-  newchannel->name[CHAN_NAME_LEN - 1] = '\0';
+  (void)string_copy_bounded(newchannel->name, sizeof(newchannel->name),
+                            channel);
   newchannel->last_messages = nullptr;
   newchannel->type = 127;
   newchannel->num_users = 0;

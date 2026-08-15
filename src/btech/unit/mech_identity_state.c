@@ -36,8 +36,8 @@ const char *mech_model_reference(const Mech *mech) {
 }
 
 void mech_model_reference_set(Mech *mech, const char *reference) {
-  strncpy(mech->ud.mech_type, reference, sizeof(mech->ud.mech_type) - 1);
-  mech->ud.mech_type[sizeof(mech->ud.mech_type) - 1] = '\0';
+  (void)string_copy_bounded(mech->ud.mech_type, sizeof(mech->ud.mech_type),
+                            reference);
 }
 
 void mech_map_dbref_set(Mech *mech, DbRef map_dbref) {

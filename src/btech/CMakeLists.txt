@@ -109,6 +109,7 @@ set(BTECH_SOURCES
   integration/debug.c
   integration/debug_command_catalog.c
   map/map.c
+  map/map_name_state.c
   map/map_unit_list.c
   map/map_command_catalog.c
   map/map_bits.c
@@ -240,6 +241,7 @@ set(BTECH_SOURCES
   special/registry.c
   special/registry_loading.c
   special/registry_help.c
+  special/registry_help_color.c
   ui/mech_maps.c
   ui/mech_lrs_map.c
   ui/mech_tactical_map.c

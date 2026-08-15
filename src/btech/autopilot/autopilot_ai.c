@@ -548,7 +548,7 @@ static int ai_opponents(Autopilot *a, Mech *m) {
 static void ai_stop(Mech *mech, Autopilot *a) {
   char buf[128] = {0};
   if (mech_desired_speed(mech) > 0.1F) {
-    strncpy(buf, "stop", 128);
+    (void)string_copy_bounded(buf, sizeof(buf), "stop");
     mech_speed(a->mynum, mech, buf);
   }
 }

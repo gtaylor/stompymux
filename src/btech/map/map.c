@@ -8,6 +8,7 @@
 #include "map_api.h"
 #include "map_conditions_api.h"
 #include "map_dynamic_api.h"
+#include "map_name_api.h"
 #include "map_obj_api.h"
 #include "map_terrain.h"
 #include "map_units_api.h"
@@ -484,7 +485,7 @@ int map_load(BattleMap *map, char *mapname) {
   map->map_width = clamp_int_to_short(width);
   if (!battle_map_disables_bridgification(map))
     make_bridges(map);
-  strncpy(map->mapname, mapname, MAP_NAME_SIZE);
+  battle_map_name_set(map, mapname);
   if (fclose(fp) != 0)
     return -1;
   return 0;

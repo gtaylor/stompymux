@@ -14,7 +14,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-source-size fmt-check build test tidy-check
+ci: check-source-size check-unsafe-apis fmt-check build test tidy-check
 
 agent-checks: ci
 
@@ -22,6 +22,10 @@ checks: ci
 
 check-source-size:
     status=0; while IFS= read -r -d '' source; do lines=$(awk 'END { print NR }' "$source"); if (( lines > 800 )); then echo "$source: $lines lines (maximum 800)"; status=1; fi; done < <(find src/mux src/btech -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0); exit "$status"
+
+# Production code must use the project's checked parsing and copy helpers.
+check-unsafe-apis:
+    status=0; grep -RInE '\b(strncpy|strcat|sprintf|vsprintf|gets|alloca|strtok|atoi)[[:space:]]*\(' src || status=$?; if (( status == 0 )); then echo 'Unsafe API usage found in src/.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
 
 fmt-c:
     find src -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} -i

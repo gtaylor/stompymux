@@ -302,9 +302,7 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
 
   char *alias = commac_alias_at(c, (size_t)where);
 
-  strncpy(alias, arg1, COMMAC_ALIAS_MAX_LENGTH);
-  *(char *)checked_storage_at(alias, COMMAC_ALIAS_SIZE, sizeof(char),
-                              COMMAC_ALIAS_MAX_LENGTH) = '\0';
+  (void)string_copy_bounded(alias, COMMAC_ALIAS_SIZE, arg1);
   *commac_channel_slot(c, (size_t)where) = strdup(ch->name);
 
   do_joinchannel(evaluation, player, ch);
