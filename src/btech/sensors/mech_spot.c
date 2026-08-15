@@ -284,7 +284,7 @@ int mech_spot_fire(DbRef player, Mech *mech, BattleMap *mech_map, int weaponnum,
   }
 
   if (mech_spotter_dbref(spotter) != mech_dbref(spotter)) {
-    mech_notify(mech, MECHALL, "You do not have a spotter!");
+    mech_notify(mech, MECHPILOT, "You do not have a spotter!");
     mech_spotter_dbref_set(mech, -1);
     return 1;
   }
