@@ -48,6 +48,13 @@ void *checked_storage_try_reallocate(void *storage, size_t bytes) {
   return realloc(storage, bytes == 0 ? 1 : bytes);
 }
 
+void *checked_storage_try_reallocate_array(void *storage, size_t count,
+                                           size_t element_size) {
+  if (element_size != 0 && count > SIZE_MAX / element_size)
+    return nullptr;
+  return checked_storage_try_reallocate(storage, count * element_size);
+}
+
 void *checked_storage_allocate(size_t bytes) {
   void *storage = checked_storage_try_allocate(bytes);
 

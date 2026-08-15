@@ -595,9 +595,10 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   }
   if (m->macro_count >= m->macro_capacity) {
     m->macro_capacity += 10;
-    na = checked_storage_allocate(MACRO_ALIAS_SIZE * (size_t)m->macro_capacity);
-    ns = (char **)checked_storage_allocate(sizeof(char *) *
-                                           (size_t)m->macro_capacity);
+    na = checked_storage_allocate_array((size_t)m->macro_capacity,
+                                        MACRO_ALIAS_SIZE);
+    ns = (char **)checked_storage_allocate_array((size_t)m->macro_capacity,
+                                                 sizeof(char *));
     for (i = 0; i < m->macro_count; i++) {
       (void)string_copy_bounded(
           checked_storage_at(na, (size_t)m->macro_capacity * MACRO_ALIAS_SIZE,

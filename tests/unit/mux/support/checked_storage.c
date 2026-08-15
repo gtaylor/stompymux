@@ -209,6 +209,36 @@ static bool reallocate_preserves_contents(void) {
   return PRESERVED && NONNULL;
 }
 
+static bool array_reallocate_preserves_contract(void) {
+  char *storage = checked_storage_try_allocate_array(4, sizeof(*storage));
+
+  if (storage == nullptr)
+    return false;
+  storage[0] = 'a';
+  if (checked_storage_try_reallocate_array(storage, SIZE_MAX, 2) != nullptr ||
+      storage[0] != 'a') {
+    free(storage);
+    return false;
+  }
+  char *grown = checked_storage_try_reallocate_array(storage, 64, sizeof(char));
+  if (grown == nullptr) {
+    free(storage);
+    return false;
+  }
+  const bool PRESERVED = grown[0] == 'a';
+  char *empty_count =
+      checked_storage_try_reallocate_array(grown, 0, sizeof(char));
+  if (empty_count == nullptr) {
+    free(grown);
+    return false;
+  }
+  char *empty_element =
+      checked_storage_try_reallocate_array(empty_count, 4, 0);
+  const bool NONNULL = empty_element != nullptr;
+  free(empty_element != nullptr ? empty_element : empty_count);
+  return PRESERVED && NONNULL;
+}
+
 int main(void) {
   int failures = 0;
   if (expect_failure(FAILURE_NULL_STORAGE, "null storage")) {
@@ -258,6 +288,10 @@ int main(void) {
   }
   if (!reallocate_preserves_contents()) {
     fprintf(stderr, "reallocation lost contents or returned nullptr\n");
+    ++failures;
+  }
+  if (!array_reallocate_preserves_contract()) {
+    fprintf(stderr, "array reallocation contract failed\n");
     ++failures;
   }
   return failures != 0;

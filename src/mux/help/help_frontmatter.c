@@ -32,7 +32,8 @@ static bool help_frontmatter_copy_string_list(toml_datum_t array,
   if (array.type != TOML_ARRAY || array.u.arr.size <= 0)
     return false;
   out->count = (size_t)array.u.arr.size;
-  out->items = (char **)checked_storage_allocate(out->count * sizeof(char *));
+  out->items =
+      (char **)checked_storage_allocate_array(out->count, sizeof(char *));
   for (i = 0; i < out->count; i++) {
     toml_datum_t element = *(const toml_datum_t *)checked_storage_at_const(
         array.u.arr.elem, out->count, sizeof(*array.u.arr.elem), i);

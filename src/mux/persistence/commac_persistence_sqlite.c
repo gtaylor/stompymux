@@ -534,9 +534,9 @@ static int commac_load_users(sqlite3 *sqlite,
       if (channel->num_users == channel->max_users) {
         const int CAPACITY = channel->max_users + 10;
         struct Comuser **users =
-            (struct Comuser **)checked_storage_try_reallocate(
-                (void *)channel->users,
-                sizeof(*channel->users) * (size_t)CAPACITY);
+            (struct Comuser **)checked_storage_try_reallocate_array(
+                (void *)channel->users, (size_t)CAPACITY,
+                sizeof(*channel->users));
 
         if (users == nullptr) {
           free(user);
@@ -643,10 +643,9 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
         result = -1;
         break;
       }
-      MacroSet **grown_sets = (MacroSet **)checked_storage_try_reallocate(
-          (void *)context->macros->sets,
-          sizeof(*context->macros->sets) *
-              (size_t)(context->macros->count + 1));
+      MacroSet **grown_sets = (MacroSet **)checked_storage_try_reallocate_array(
+          (void *)context->macros->sets, (size_t)context->macros->count + 1,
+          sizeof(*context->macros->sets));
       if (grown_sets == nullptr) {
         result = -1;
         break;
@@ -696,17 +695,17 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
         result = -1;
         break;
       }
-      char *aliases = checked_storage_try_reallocate(
-          macro->alias, (size_t)(macro->macro_count + 1) * 5);
+      char *aliases = checked_storage_try_reallocate_array(
+          macro->alias, (size_t)macro->macro_count + 1, MACRO_ALIAS_SIZE);
       char **strings = nullptr;
 
       if (aliases == nullptr) {
         result = -1;
         break;
       }
-      strings = (char **)checked_storage_try_reallocate(
-          (void *)macro->string,
-          sizeof(*macro->string) * (size_t)(macro->macro_count + 1));
+      strings = (char **)checked_storage_try_reallocate_array(
+          (void *)macro->string, (size_t)macro->macro_count + 1,
+          sizeof(*macro->string));
       if (strings == nullptr) {
         macro->alias = aliases;
         result = -1;

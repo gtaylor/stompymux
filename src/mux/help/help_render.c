@@ -235,8 +235,8 @@ static void help_render_index_section(const HelpIndex *index,
 
   if (total == 0)
     return;
-  entries = (const HelpArticle **)checked_storage_allocate(
-      total * sizeof(const HelpArticle *));
+  entries = (const HelpArticle **)checked_storage_allocate_array(
+      total, sizeof(const HelpArticle *));
   for (i = 0; i < total; i++) {
     const HelpArticle *candidate = help_index_article_at(index, i);
 

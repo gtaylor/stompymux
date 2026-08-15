@@ -226,12 +226,12 @@ void initialize_partname_tables(BtechContext *context) {
   for (j = 0; j <= BRANDCOUNT; j++)
     for (i = 0; i < NUM_ITEMS; i++)
       c += create_brandname(registry, configuration, i, j);
-  registry->short_sorted = (PartNameEntry **)checked_storage_allocate(
-      sizeof(*registry->short_sorted) * (size_t)c);
-  registry->long_sorted = (PartNameEntry **)checked_storage_allocate(
-      sizeof(*registry->long_sorted) * (size_t)c);
-  registry->vlong_sorted = (PartNameEntry **)checked_storage_allocate(
-      sizeof(*registry->vlong_sorted) * (size_t)c);
+  registry->short_sorted = (PartNameEntry **)checked_storage_allocate_array(
+      (size_t)c, sizeof(*registry->short_sorted));
+  registry->long_sorted = (PartNameEntry **)checked_storage_allocate_array(
+      (size_t)c, sizeof(*registry->long_sorted));
+  registry->vlong_sorted = (PartNameEntry **)checked_storage_allocate_array(
+      (size_t)c, sizeof(*registry->vlong_sorted));
   registry->object_count = c;
   /* bubble-sort 'em and insert to array */
   i = 0;

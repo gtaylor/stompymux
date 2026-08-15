@@ -405,8 +405,11 @@ typedef struct NameCacheResizeRequest {
 } NameCacheResizeRequest;
 
 static NAME *name_cache_resize(const NameCacheResizeRequest *request) {
-  NAME *resized = (NAME *)checked_storage_try_allocate(
-      (size_t)(request->new_size + SIZE_HACK) * sizeof(NAME));
+  NAME *resized =
+      request->new_size < 0
+          ? nullptr
+          : (NAME *)checked_storage_try_allocate_array(
+                (size_t)request->new_size + SIZE_HACK, sizeof(NAME));
 
   if (!resized) {
     char message[128];
@@ -535,8 +538,9 @@ void db_grow(GameDatabase *database, DbRef newtop) {
    * Grow the database->objects array
    */
 
-  newdb = (GameObject *)checked_storage_try_allocate(
-      (size_t)(newsize + SIZE_HACK) * sizeof(GameObject));
+  newdb = newsize < 0 ? nullptr
+                      : (GameObject *)checked_storage_try_allocate_array(
+                            (size_t)newsize + SIZE_HACK, sizeof(GameObject));
   if (!newdb) {
 
     (void)snprintf(message_buffer, sizeof(message_buffer),

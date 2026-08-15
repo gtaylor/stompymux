@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <linux/limits.h>
 #include <lua.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -62,6 +63,10 @@ static int lua_add_parent_check(LuaParentCheck **checks, size_t *check_count,
   char *path_copy;
   char *detail_copy;
 
+  if (*check_count == SIZE_MAX) {
+    lua_set_error(error, error_size, "out of memory");
+    return 0;
+  }
   path_copy = strdup(path);
   detail_copy = strdup(detail);
   if (!path_copy || !detail_copy) {
@@ -70,8 +75,8 @@ static int lua_add_parent_check(LuaParentCheck **checks, size_t *check_count,
     lua_set_error(error, error_size, "out of memory");
     return 0;
   }
-  replacement = checked_storage_try_reallocate(
-      *checks, (*check_count + 1) * sizeof(*replacement));
+  replacement = checked_storage_try_reallocate_array(*checks, *check_count + 1,
+                                                     sizeof(*replacement));
   if (!replacement) {
     free(path_copy);
     free(detail_copy);

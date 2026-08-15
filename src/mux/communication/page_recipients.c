@@ -11,13 +11,11 @@
 
 bool page_recipient_list_initialize(PageRecipientList *list, size_t capacity) {
   *list = (PageRecipientList){};
-  if (capacity > SIZE_MAX / sizeof(*list->recipients))
+  list->recipients = capacity > 0 ? checked_storage_try_allocate_array(
+                                        capacity, sizeof(*list->recipients))
+                                  : nullptr;
+  if (capacity > 0 && list->recipients == nullptr)
     return false;
-
-  list->recipients =
-      capacity > 0
-          ? checked_storage_allocate(capacity * sizeof(*list->recipients))
-          : nullptr;
   list->count = 0;
   list->capacity = capacity;
   return true;

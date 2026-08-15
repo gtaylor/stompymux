@@ -336,8 +336,8 @@ static bool object_state_collection_set(GameDatabase *database,
   }
   if (collection->count == collection->capacity) {
     size_t capacity = collection->capacity == 0 ? 8 : collection->capacity * 2;
-    ObjectStateEntry *entries = checked_storage_try_reallocate(
-        collection->entries, capacity * sizeof(*entries));
+    ObjectStateEntry *entries = checked_storage_try_reallocate_array(
+        collection->entries, capacity, sizeof(*entries));
     if (!entries) {
       object_state_owned_value_release(&value_copy);
       object_state_error(error, error_size, "out of memory");
@@ -548,8 +548,8 @@ object_state_transaction_require(ObjectStateTransaction *transaction,
     size_t capacity = transaction->object_capacity == 0
                           ? 4
                           : transaction->object_capacity * 2;
-    objects = checked_storage_try_reallocate(transaction->objects,
-                                             capacity * sizeof(*objects));
+    objects = checked_storage_try_reallocate_array(transaction->objects,
+                                                   capacity, sizeof(*objects));
     if (!objects) {
       object_state_error(error, error_size, "out of memory");
       return nullptr;

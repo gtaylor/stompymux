@@ -6,6 +6,7 @@
 #include <limits.h>
 #include <linux/limits.h>
 #include <lua.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -98,13 +99,17 @@ static int lua_add_module(char ***modules, size_t *module_count,
   char **replacement;
   char *copy;
 
+  if (*module_count == SIZE_MAX) {
+    lua_set_error(error, error_size, "out of memory");
+    return 0;
+  }
   copy = strdup(path);
   if (!copy) {
     lua_set_error(error, error_size, "out of memory");
     return 0;
   }
-  replacement = (char **)checked_storage_try_reallocate(
-      (void *)*modules, (*module_count + 1) * sizeof(*replacement));
+  replacement = (char **)checked_storage_try_reallocate_array(
+      (void *)*modules, *module_count + 1, sizeof(*replacement));
   if (!replacement) {
     free(copy);
     lua_set_error(error, error_size, "out of memory");

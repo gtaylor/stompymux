@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <linux/limits.h>
 #include <lua.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -53,6 +54,9 @@ static int lua_schedule_add_job(LuaRuntime *runtime, LuaModuleRoot root,
                                 const char *cron, DbRef object, time_t minute) {
   LuaScheduleJob *jobs;
   LuaScheduleJob *job;
+  if (runtime->schedule_job_count == SIZE_MAX)
+    return 0;
+
   char *path_copy = strdup(path);
   char *name_copy = strdup(name);
   char *cron_copy = strdup(cron);
@@ -64,9 +68,8 @@ static int lua_schedule_add_job(LuaRuntime *runtime, LuaModuleRoot root,
     return 0;
   }
 
-  jobs = checked_storage_try_reallocate(runtime->schedule_jobs,
-                                        (runtime->schedule_job_count + 1) *
-                                            sizeof(*jobs));
+  jobs = checked_storage_try_reallocate_array(
+      runtime->schedule_jobs, runtime->schedule_job_count + 1, sizeof(*jobs));
   if (!jobs) {
     free(path_copy);
     free(name_copy);
@@ -425,15 +428,17 @@ void do_luaschedule(CommandInvocation *invocation) {
         }
       }
       if (index == path_count) {
-        char **new_paths = (char **)checked_storage_try_reallocate(
-            (void *)paths, (path_count + 1) * sizeof(*paths));
+        if (path_count == SIZE_MAX)
+          break;
+        char **new_paths = (char **)checked_storage_try_reallocate_array(
+            (void *)paths, path_count + 1, sizeof(*paths));
         size_t *new_counts;
 
         if (!new_paths)
           break;
         paths = new_paths;
-        new_counts = checked_storage_try_reallocate(
-            counts, (path_count + 1) * sizeof(*counts));
+        new_counts = checked_storage_try_reallocate_array(
+            counts, path_count + 1, sizeof(*counts));
         if (!new_counts)
           break;
         counts = new_counts;

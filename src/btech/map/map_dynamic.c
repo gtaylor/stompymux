@@ -84,7 +84,8 @@ battle_map_los_cell(const BattleMapLosCellRequest *request) {
 }
 
 static void *resize_storage(void *storage, size_t count, size_t item_size) {
-  void *resized = checked_storage_try_reallocate(storage, count * item_size);
+  void *resized =
+      checked_storage_try_reallocate_array(storage, count, item_size);
   if (resized == nullptr && count > 0)
     abort();
   return resized;
