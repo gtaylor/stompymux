@@ -234,7 +234,7 @@ static void look_contents(const LookContext *look, const char *contents_name,
   DbRef loc = look->location;
   DbRef thing;
   int can_see_loc;
-  char *buff;
+  LbufText buff;
 
   /*
    * check to see if he can see the location
@@ -268,9 +268,9 @@ static void look_contents(const LookContext *look, const char *contents_name,
                                            .location_visible = can_see_loc})) {
           buff = unparse_object(evaluation->world->database, evaluation, player,
                                 thing);
-          notify_checked(evaluation, player, player, buff,
+          notify_checked(evaluation, player, player, buff.text,
                          MSG_ME_ALL | MSG_F_DOWN);
-          free_lbuf(buff);
+          lbuf_text_release(&buff);
         }
       }
       break; /*
@@ -314,7 +314,7 @@ static bool look_custom_appearance(EvaluationContext *evaluation, DbRef player,
 static bool look_simple(EvaluationContext *evaluation, DbRef player,
                         DbRef thing) {
   int pattr;
-  char *buff;
+  LbufText buff;
 
   /*
    * Only makes sense for things that can hear
@@ -333,8 +333,9 @@ static bool look_simple(EvaluationContext *evaluation, DbRef player,
   if (is_examinable(evaluation->world->database, player, thing)) {
     buff =
         unparse_object(evaluation->world->database, evaluation, player, thing);
-    notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
-    free_lbuf(buff);
+    notify_checked(evaluation, player, player, buff.text,
+                   MSG_ME_ALL | MSG_F_DOWN);
+    lbuf_text_release(&buff);
   }
   pattr = A_DESC;
   notify_action(evaluation,
@@ -402,7 +403,7 @@ void look_in(const LookRequest *request) {
   DbRef player = request->viewer;
   DbRef loc = request->location;
   int key = request->key;
-  char *buff;
+  LbufText buff;
   bool custom;
   LuaLockInvocation lock;
   LuaLockResult result;
@@ -420,8 +421,9 @@ void look_in(const LookRequest *request) {
   custom = look_custom_appearance(evaluation, player, loc);
   if (!custom) {
     buff = unparse_object(evaluation->world->database, evaluation, player, loc);
-    notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
-    free_lbuf(buff);
+    notify_checked(evaluation, player, player, buff.text,
+                   MSG_ME_ALL | MSG_F_DOWN);
+    lbuf_text_release(&buff);
 
     show_desc(evaluation, player, loc,
               loc == game_object_location(evaluation->world->database, player));

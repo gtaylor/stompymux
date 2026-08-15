@@ -112,8 +112,8 @@ const FlagEntry *find_flag(WorldIndexes * /*indexes*/, DbRef /*thing*/,
 bool flag_alias_add(WorldIndexes *indexes, const char *alias,
                     const FlagEntry *flag);
 char *decode_flags(const DecodeFlagsRequest *request);
-char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
-                     DbRef player, DbRef target);
+LbufText unparse_object(GameDatabase *database, EvaluationContext *evaluation,
+                        DbRef player, DbRef target);
 LbufText unparse_object_numonly(GameDatabase *database, DbRef target);
 bool convert_flags(EvaluationContext * /*evaluation*/, DbRef /*player*/,
                    char * /*list*/, ObjectFlagSet * /*flags*/, long * /*type*/);

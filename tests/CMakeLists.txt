@@ -650,6 +650,7 @@ add_executable(unparse_object_numonly_test
   ${CMAKE_SOURCE_DIR}/tests/unit/mux/server/unparse_object_numonly.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/objects/flags.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/lbuf_text.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
 target_compile_options(unparse_object_numonly_test PRIVATE -ffunction-sections)
 target_link_options(unparse_object_numonly_test PRIVATE -Wl,--gc-sections)

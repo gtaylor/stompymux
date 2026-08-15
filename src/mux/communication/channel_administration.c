@@ -330,7 +330,7 @@ void do_channel_object(CommandInvocation *invocation) {
   char *object = invocation->second;
   struct Channel *ch;
   DbRef thing;
-  char *buff;
+  LbufText buff;
 
   init_match(&evaluation->command->match, player, object, OBJECT_TYPE_NOTYPE);
   match_everything(&evaluation->command->match, 0);
@@ -354,8 +354,8 @@ void do_channel_object(CommandInvocation *invocation) {
   buff = unparse_object(evaluation->world->database, evaluation, player, thing);
   notify_printf(evaluation, player,
                 "Channel %s is now using %s as channel object.", ch->name,
-                buff);
-  free_lbuf(buff);
+                buff.text);
+  lbuf_text_release(&buff);
 }
 
 void do_chanlist(CommandInvocation *invocation) {

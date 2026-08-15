@@ -14,6 +14,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/utf8.h"
 #include "mux/support/validation.h"
@@ -116,7 +117,7 @@ void do_list_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   int i;
   int notified = 0;
   MacroSet *m;
-  char *unparse;
+  LbufText unparse;
   for (i = 0; i < registry->count; i++) {
     m = macro_registry_item(registry, (size_t)i);
     if (can_read_macros(match->evaluation->world->database, player, m)) {
@@ -129,10 +130,10 @@ void do_list_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
       unparse = unparse_object(match->evaluation->world->database,
                                match->evaluation, player, m->player);
       notify_printf(match->evaluation, player, "%-4d %-35.35s %-24.24s  %c%c%c",
-                    i, m->desc, unparse, m->status & MACRO_L ? 'L' : '-',
+                    i, m->desc, unparse.text, m->status & MACRO_L ? 'L' : '-',
                     m->status & MACRO_R ? 'R' : '-',
                     m->status & MACRO_W ? 'W' : '-');
-      free_lbuf(unparse);
+      lbuf_text_release(&unparse);
     }
   }
   if (!notified)
@@ -345,7 +346,7 @@ void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   int i;
   struct Commac *c;
   MacroSet *m;
-  char *unparse;
+  LbufText unparse;
   c = get_commac(registry->channels, player);
   macro_notify(match, player,
                "#: Num  Description                         Owner            "
@@ -361,9 +362,9 @@ void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                                  match->evaluation, player, m->player);
         notify_printf(
             match->evaluation, player, "%d: %-4d %-35.35s %-24.24s  %c%c%c", i,
-            MACRO_INDEX, m->desc, unparse, m->status & MACRO_L ? 'L' : '-',
+            MACRO_INDEX, m->desc, unparse.text, m->status & MACRO_L ? 'L' : '-',
             m->status & MACRO_R ? 'R' : '-', m->status & MACRO_W ? 'W' : '-');
-        free_lbuf(unparse);
+        lbuf_text_release(&unparse);
       }
     } else {
       notify_printf(match->evaluation, player, "%d:", i);
@@ -402,7 +403,7 @@ void do_chown_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     char *cmd) {
   MacroSet *m;
   DbRef thing;
-  char *unparse;
+  LbufText unparse;
   m = get_macro_set(
       &(MacroSetRequest){.registry = registry, .player = player, .slot = -1});
   thing = match_thing(match, player, cmd);
@@ -422,8 +423,8 @@ void do_chown_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   unparse = unparse_object(match->evaluation->world->database,
                            match->evaluation, player, thing);
   notify_printf(match->evaluation, player, "MACRO: Macro %s chowned to %s.",
-                m->desc, unparse);
-  free_lbuf(unparse);
+                m->desc, unparse.text);
+  lbuf_text_release(&unparse);
 }
 void clear_macro_set(MacroRegistry *registry, int set) {
   MacroSet *m;
