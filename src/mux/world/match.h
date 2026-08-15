@@ -23,9 +23,9 @@ typedef struct ServerConfiguration ServerConfiguration;
  */
 
 extern void init_match(MatchContext * /*match_context*/, DbRef /*player*/,
-                       char * /*name*/, int /*type*/);
+                       const char * /*name*/, int /*type*/);
 extern void init_match_check_keys(MatchContext * /*match_context*/,
-                                  DbRef /*player*/, char * /*name*/,
+                                  DbRef /*player*/, const char * /*name*/,
                                   int /*type*/);
 extern void match_player(MatchContext * /*match_context*/);
 extern void match_absolute(MatchContext * /*match_context*/);

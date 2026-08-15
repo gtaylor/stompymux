@@ -222,7 +222,7 @@ char *game_object_pure_name(GameDatabase *database, DbRef thing) {
   return database->pure_name_buffer;
 }
 
-void object_name_set(GameDatabase *database, DbRef thing, char *s) {
+void object_name_set(GameDatabase *database, DbRef thing, const char *s) {
   char stored[MBUF_SIZE];
   char new[MBUF_SIZE];
 

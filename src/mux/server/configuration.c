@@ -419,10 +419,10 @@ int configuration_status_from_counts(const ConfigurationCall *call,
  * * cf_int: Set integer parameter.
  */
 
-int configuration_set(ConfigurationContext *context, char *cp, char *ap,
-                      DbRef player) {
+int configuration_set(ConfigurationContext *context, const char *cp,
+                      const char *ap, DbRef player) {
   int i;
-  char *buff = nullptr;
+  char *log_arguments = nullptr;
 
   /*
    * Search the config parameter table for the command. If we find it,
@@ -442,17 +442,17 @@ int configuration_set(ConfigurationContext *context, char *cp, char *ap,
                        "Permission denied.", MSG_ME_ALL | MSG_F_DOWN);
         return (-1);
       }
-      buff = alloc_lbuf("configuration_set");
-      (void)string_copy_bounded(buff, LBUF_SIZE, ap);
+      log_arguments = alloc_lbuf("configuration_set.log_arguments");
+      (void)string_copy_bounded(log_arguments, LBUF_SIZE, ap);
       ConfigurationCall call = {
           .value = configuration_resolve_location(context, tp),
-          .text = ap,
           .extra = tp->extra,
           .player = player,
           .command = cp,
           .context = context,
       };
-      i = tp->interpreter(&call);
+      i = configuration_interpreter_invoke_with_mutable_text(tp->interpreter,
+                                                             &call, ap);
       if (!context->configuration->is_initializing) {
         const char *status = "Strange";
         if (i == 0)
@@ -466,10 +466,10 @@ int configuration_set(ConfigurationContext *context, char *cp, char *ap,
                              .primary = "CFG",
                              .secondary = "UPDAT"},
                   "%s entered config directive: %s with args '%s'. Status: %s",
-                  game_object_name(context->database, player), cp, buff,
-                  status);
+                  game_object_name(context->database, player), cp,
+                  log_arguments, status);
       }
-      free_lbuf(buff);
+      free_lbuf(log_arguments);
       return i;
     }
   }
@@ -505,12 +505,7 @@ void do_admin(CommandInvocation *invocation) {
 static int configuration_toml_dispatch_to_set(const char *pname,
                                               const char *args, void *ctx) {
   ConfigurationContext *context = ctx;
-  /* configuration_set()'s (char *, char *) signature isn't const-correct;
-     it only reads these strings. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  return configuration_set(context, (char *)pname, (char *)args, 0);
-#pragma clang diagnostic pop
+  return configuration_set(context, pname, args, 0);
 }
 
 /*

@@ -559,13 +559,9 @@ void process_command(CommandContext *context, char *command, char *arguments[],
    */
 
   if (string_compare(configuration, command, "home") == 0) {
-    /* do_move()'s parameter isn't const-correct; "home" is only read. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
     move_command(&(MoveCommandRequest){.evaluation = &context->evaluation,
                                        .player = PLAYER,
-                                       .direction = (char *)"home"});
-#pragma clang diagnostic pop
+                                       .direction = "home"});
     goto exit;
   }
 

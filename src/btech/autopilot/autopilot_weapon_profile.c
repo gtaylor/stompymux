@@ -188,14 +188,14 @@ int auto_targets_callback(const RedBlackTreeVisitCall *call) {
  * RedBlackTree generic compare function
  */
 int auto_generic_compare(const RedBlackTreeCompareCall *call) {
-  void *a = call->lhs;
-  void *b = call->rhs;
+  const void *a = call->lhs;
+  const void *b = call->rhs;
 
-  int *one;
-  int *two;
+  const int *one;
+  const int *two;
 
-  one = (int *)a;
-  two = (int *)b;
+  one = a;
+  two = b;
 
   return (*one - *two);
 }

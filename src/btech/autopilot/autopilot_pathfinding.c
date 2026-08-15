@@ -107,8 +107,8 @@ auto_create_astar_node(const AutopilotPathNodeRequest *request) {
  * Returns 1 if it found a path and 0 if it doesn't
  */
 static int astar_compare(const RedBlackTreeCompareCall *call) {
-  void *left_key = call->lhs;
-  void *right_key = call->rhs;
+  const void *left_key = call->lhs;
+  const void *right_key = call->rhs;
   const intptr_t LEFT = (intptr_t)left_key;
   const intptr_t RIGHT = (intptr_t)right_key;
 

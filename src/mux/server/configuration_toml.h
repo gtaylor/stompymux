@@ -7,7 +7,7 @@
 #include "tomlc17.h"
 
 /* Callback invoked once per resolved (directive, argument-string) pair.
- * Mirrors configuration_set()'s (char *, char *, DbRef) contract minus the
+ * Mirrors configuration_set()'s string-and-DbRef contract minus the
  * player argument, so production code can forward straight into it. */
 typedef int (*ConfigDirectiveSetFn)(const char *pname, const char *args,
                                     void *ctx);

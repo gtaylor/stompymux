@@ -168,13 +168,9 @@ DbRef create_player(const PlayerCreationRequest *request) {
   /*
    * initialize everything
    */
-  /* comsys_add_alias()'s parameter isn't const-correct; "pub" is only read. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
   if (*world->configuration->public_channel)
-    comsys_add_alias(evaluation, player, (char *)"pub",
+    comsys_add_alias(evaluation, player, "pub",
                      world->configuration->public_channel);
-#pragma clang diagnostic pop
 
   object_password_set(world->database, player, hashed_password);
   game_object_set_link(world->database, player,

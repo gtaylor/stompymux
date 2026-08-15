@@ -14,11 +14,11 @@ static int *int_slot(int *values, size_t count, size_t index) {
 }
 
 static int compare_ints(const RedBlackTreeCompareCall *call) {
-  void *left = call->lhs;
-  void *right = call->rhs;
+  const void *left = call->lhs;
+  const void *right = call->rhs;
   [[maybe_unused]] void *context = call->context;
-  const int a = *(int *)left;
-  const int b = *(int *)right;
+  const int a = *(const int *)left;
+  const int b = *(const int *)right;
 
   (void)context;
   return (a > b) - (a < b);

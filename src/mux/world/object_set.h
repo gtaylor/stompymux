@@ -12,8 +12,9 @@ typedef struct ObjectList ObjectList;
 typedef struct MatchContext MatchContext;
 typedef struct WorldIndexes WorldIndexes;
 
-DbRef match_controlled(MatchContext *match, DbRef player, char *name);
-DbRef match_controlled_quiet(MatchContext *match, DbRef player, char *name);
+DbRef match_controlled(MatchContext *match, DbRef player, const char *name);
+DbRef match_controlled_quiet(MatchContext *match, DbRef player,
+                             const char *name);
 
 bool object_attribute_is_administrable(int attribute_number);
 const Attribute *object_attribute_administrable_by_name(GameDatabase *database,

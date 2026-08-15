@@ -24,8 +24,8 @@ struct StringDictEntry {
 static int nuke_hash_ent(const RedBlackTreeVisitCall *call);
 
 static int hrbtab_compare(const RedBlackTreeCompareCall *call) {
-  void *left = call->lhs;
-  void *right = call->rhs;
+  const void *left = call->lhs;
+  const void *right = call->rhs;
   return strcasecmp(left, right);
 }
 
@@ -66,12 +66,7 @@ void *hash_table_find(const char *str, HashTable *htab) {
   struct StringDictEntry *ent;
 
   htab->checks++;
-  /* red_black_tree's key parameter isn't const-correct; str is only used
-     as a lookup key here, never mutated. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  ent = red_black_tree_find(htab->tree, (void *)str);
-#pragma clang diagnostic pop
+  ent = red_black_tree_find(htab->tree, str);
   if (ent) {
     if (ent->is_const)
       abort();
@@ -84,12 +79,7 @@ const void *hash_table_find_const(const char *str, HashTable *htab) {
   struct StringDictEntry *ent;
 
   htab->checks++;
-  /* red_black_tree's key parameter isn't const-correct; str is only used
-     as a lookup key here, never mutated. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  ent = red_black_tree_find(htab->tree, (void *)str);
-#pragma clang diagnostic pop
+  ent = red_black_tree_find(htab->tree, str);
   if (ent == nullptr)
     return nullptr;
   return ent->is_const ? ent->data.const_data : ent->data.mutable_data;
@@ -103,13 +93,8 @@ const void *hash_table_find_const(const char *str, HashTable *htab) {
 int hash_table_add(const char *str, void *hashdata, HashTable *htab) {
   struct StringDictEntry *ent;
 
-  /* red_black_tree's key parameter isn't const-correct; str is only used
-     as a lookup key here, never mutated. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  if (red_black_tree_exists(htab->tree, (void *)str))
+  if (red_black_tree_exists(htab->tree, str))
     return (-1);
-#pragma clang diagnostic pop
 
   ent = checked_storage_allocate(sizeof(struct StringDictEntry));
   ent->key = strdup(str);
@@ -124,13 +109,8 @@ int hash_table_add_const(const char *str, const void *hashdata,
                          HashTable *htab) {
   struct StringDictEntry *ent;
 
-  /* red_black_tree's key parameter isn't const-correct; str is only used
-     as a lookup key here, never mutated. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  if (red_black_tree_exists(htab->tree, (void *)str))
+  if (red_black_tree_exists(htab->tree, str))
     return -1;
-#pragma clang diagnostic pop
 
   ent = checked_storage_allocate(sizeof(struct StringDictEntry));
   ent->key = strdup(str);
@@ -148,15 +128,10 @@ int hash_table_add_const(const char *str, const void *hashdata,
 void hash_table_delete(const char *str, HashTable *htab) {
   struct StringDictEntry *ent = nullptr;
 
-  /* red_black_tree's key parameter isn't const-correct; str is only used
-     as a lookup key here, never mutated. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  if (!red_black_tree_exists(htab->tree, (void *)str)) {
+  if (!red_black_tree_exists(htab->tree, str)) {
     return;
   }
-  ent = red_black_tree_delete(htab->tree, (void *)str);
-#pragma clang diagnostic pop
+  ent = red_black_tree_delete(htab->tree, str);
 
   if (ent) {
     if (ent->key)

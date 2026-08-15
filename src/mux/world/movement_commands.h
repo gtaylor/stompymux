@@ -15,7 +15,7 @@ typedef struct MoveCommandRequest {
   EvaluationContext *evaluation;
   DbRef player;
   int key;
-  char *direction;
+  const char *direction;
 } MoveCommandRequest;
 
 void move_command(const MoveCommandRequest *request);

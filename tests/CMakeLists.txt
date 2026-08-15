@@ -44,6 +44,17 @@ add_test(NAME configuration_values COMMAND configuration_values_test)
 set_tests_properties(configuration_values PROPERTIES
   LABELS "unit;mux-server;configuration_values")
 
+add_executable(configuration_interpreter_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/server/configuration_interpreter.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/server/configuration_interpreter.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_link_libraries(configuration_interpreter_test PRIVATE btmux_options)
+target_include_directories(configuration_interpreter_test PRIVATE
+  "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME configuration_interpreter COMMAND configuration_interpreter_test)
+set_tests_properties(configuration_interpreter PROPERTIES
+  LABELS "unit;mux-server;configuration_interpreter")
+
 add_test(NAME catalog_startup
   COMMAND bash
     "${CMAKE_SOURCE_DIR}/tests/integration/catalog_startup.sh"
