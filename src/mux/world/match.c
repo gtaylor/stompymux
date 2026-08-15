@@ -13,7 +13,6 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
@@ -535,6 +534,10 @@ DbRef noisy_match_result(MatchContext *match_context) {
 }
 
 void save_match_state(MatchContext *match_context, MSTATE *mstate) {
+  /* The snapshot must be distinct because its normalized buffer saves text
+   * that may alias match_context->normalized. */
+  if (mstate == match_context)
+    abort();
   mstate->confidence = MD.confidence;
   mstate->count = MD.count;
   mstate->pref_type = MD.pref_type;
@@ -542,11 +545,14 @@ void save_match_state(MatchContext *match_context, MSTATE *mstate) {
   mstate->absolute_form = MD.absolute_form;
   mstate->match = MD.match;
   mstate->player = MD.player;
-  mstate->string = alloc_lbuf("save_match_state");
-  string_copy(mstate->string, MD.string);
+  mstate->string = MD.string;
+  (void)string_copy_bounded(mstate->normalized, sizeof(mstate->normalized),
+                            MD.string);
 }
 
 void restore_match_state(MatchContext *match_context, MSTATE *mstate) {
+  if (mstate == match_context)
+    abort();
   MD.confidence = mstate->confidence;
   MD.count = mstate->count;
   MD.pref_type = mstate->pref_type;
@@ -554,8 +560,10 @@ void restore_match_state(MatchContext *match_context, MSTATE *mstate) {
   MD.absolute_form = mstate->absolute_form;
   MD.match = mstate->match;
   MD.player = mstate->player;
-  string_copy(MD.string, mstate->string);
-  free_lbuf(mstate->string);
+  MD.string = mstate->string;
+  /* Restore into the same borrowed buffer that supplied the saved text. */
+  (void)string_copy_bounded(MD.string, strlen(mstate->normalized) + 1,
+                            mstate->normalized);
 }
 
 void init_match(MatchContext *match_context, DbRef player, char *name,

@@ -113,7 +113,7 @@ static char *set_string(char **ptr, char *new) {
                               * Check with GAC about this
                               */
   *ptr = (char *)malloc(strlen(new) + 1);
-  string_copy(*ptr, new);
+  (void)string_copy_bounded(*ptr, strlen(new) + 1, new);
   return (*ptr);
 }
 
@@ -167,7 +167,8 @@ char *game_object_name(GameDatabase *database, DbRef thing) {
     }
   }
 
-  attribute_get_string(database, database->name_buffer, thing, A_NAME, &aflags);
+  attribute_get_string(database, thing, A_NAME, database->name_buffer,
+                       sizeof(database->name_buffer), &aflags);
   return database->name_buffer;
 }
 
@@ -213,7 +214,8 @@ char *game_object_pure_name(GameDatabase *database, DbRef thing) {
     return *pure_name_slot(database, thing);
   }
 
-  attribute_get_string(database, database->name_buffer, thing, A_NAME, &aflags);
+  attribute_get_string(database, thing, A_NAME, database->name_buffer,
+                       sizeof(database->name_buffer), &aflags);
   styled_text_strip(database->styled_text_palette, database->name_buffer,
                     database->pure_name_buffer,
                     sizeof(database->pure_name_buffer));
@@ -324,8 +326,8 @@ char *attribute_get_raw(GameDatabase *database, DbRef thing, int atr) {
       .database = database, .object = thing, .attribute = atr});
 }
 
-char *attribute_get_string(GameDatabase *database, char *s, DbRef thing,
-                           int atr, long *flags) {
+char *attribute_get_string(GameDatabase *database, DbRef thing, int atr,
+                           char *s, size_t size, long *flags) {
   char *buff;
 
   buff = attribute_get_raw(database, thing, atr);
@@ -334,7 +336,7 @@ char *attribute_get_string(GameDatabase *database, char *s, DbRef thing,
   if (!buff) {
     *s = '\0';
   } else {
-    string_copy(s, buff);
+    (void)string_copy_bounded(s, size, buff);
   }
   return s;
 }
@@ -343,7 +345,7 @@ char *attribute_get(GameDatabase *database, DbRef thing, int atr, long *flags) {
   char *buff;
 
   buff = alloc_lbuf("attribute_get");
-  return attribute_get_string(database, buff, thing, atr, flags);
+  return attribute_get_string(database, thing, atr, buff, LBUF_SIZE, flags);
 }
 
 int attribute_get_info(GameDatabase *database, DbRef thing, int atr,

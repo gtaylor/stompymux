@@ -274,7 +274,8 @@ static ArmorFieldText armor_field_text(Mech *mech, const int LOC,
 }
 
 static bool get_lua_status_template(EvaluationContext *evaluation, DbRef player,
-                                    Mech *mech, char *result) {
+                                    Mech *mech, char *result,
+                                    size_t result_size) {
   LuaMechStatusResult status;
   lua_mech_status_evaluate(
       evaluation->runtime->lua_owner->runtime,
@@ -288,7 +289,7 @@ static bool get_lua_status_template(EvaluationContext *evaluation, DbRef player,
       &status);
   if (!status.defined)
     return false;
-  string_copy(result, status.rendered);
+  (void)string_copy_bounded(result, result_size, status.rendered);
   return true;
 }
 
@@ -357,7 +358,8 @@ void print_armor_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
     break;
   }
 
-  if (get_lua_status_template(evaluation, player, mech, tmpbuf)) {
+  if (get_lua_status_template(evaluation, player, mech, tmpbuf,
+                              sizeof(tmpbuf))) {
     /* Use custom template.  */
     srcbuf = tmpbuf;
   } else {

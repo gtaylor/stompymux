@@ -14,7 +14,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-source-size check-header-constants check-unsafe-apis fmt-check build test tidy-check
+ci: check-source-size check-header-constants check-unsafe-apis check-mux-bounded-copy fmt-check build test tidy-check
 
 agent-checks: ci
 
@@ -29,6 +29,12 @@ check-source-size:
 # outside this header-focused gate.
 check-header-constants:
     status=0; grep -RInE --include='*.h' --include='*.h.in' '^[[:space:]]*#[[:space:]]*define[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]+[^[:space:]"]' src/mux src/btech || status=$?; if (( status == 0 )); then echo 'Untyped object-like header constant found in src/.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
+
+# src/mux copies through string_copy_bounded only. The unbounded string_copy
+# wrapper is gone and direct strcpy is banned here; src/btech still carries a
+# literal-only strcpy surface and is widened into this gate once retired.
+check-mux-bounded-copy:
+    status=0; grep -RInE '\b(string_copy|strcpy)[[:space:]]*\(' src/mux || status=$?; if (( status == 0 )); then echo 'Unbounded copy found in src/mux; use string_copy_bounded.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
 
 # Production code must use the project's checked parsing and copy helpers.
 check-unsafe-apis:

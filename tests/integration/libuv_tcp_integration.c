@@ -1151,6 +1151,10 @@ static int create_styled_object(int socket_fd) {
       expect_text_without(socket_fd, "You say \"PublicPlain\"", "\033[") < 0 ||
       send_command(socket_fd, "page GOD=[fg=red]PrivatePlain[/]\r\n") < 0 ||
       expect_text_without(socket_fd, "PrivatePlain", "\033[") < 0 ||
+      /* A bare "page <text>" replays the saved last-page list, which must
+       * not write back into the command line buffers. */
+      send_command(socket_fd, "page RepeatToLastTarget\r\n") < 0 ||
+      expect_text(socket_fd, "You paged GOD with 'RepeatToLastTarget'.") < 0 ||
       send_command(socket_fd, "@chan/create StyledTest\r\n") < 0 ||
       expect_text(socket_fd, "Channel StyledTest created.") < 0 ||
       send_command(socket_fd, "addcom st=StyledTest\r\n") < 0 ||

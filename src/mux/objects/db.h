@@ -288,8 +288,8 @@ void attribute_add(GameDatabase *database, DbRef thing, int atr,
                    const char *buff, long flags);
 char *attribute_get_raw(GameDatabase *database, DbRef thing, int atr);
 char *attribute_get(GameDatabase *database, DbRef thing, int atr, long *flags);
-char *attribute_get_string(GameDatabase *database, char *s, DbRef thing,
-                           int atr, long *flags);
+char *attribute_get_string(GameDatabase *database, DbRef thing, int atr,
+                           char *s, size_t size, long *flags);
 int attribute_get_info(GameDatabase *database, DbRef thing, int atr,
                        long *flags);
 void attribute_free(GameDatabase *database, DbRef thing);
