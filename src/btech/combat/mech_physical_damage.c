@@ -112,11 +112,11 @@ void physical_damage_resolve(const PhysicalDamageRequest *request) {
   int hitloc = 0;
   int damage;
   int hitgroup = 0;
-  int isrear;
-  int iscritical;
+  bool isrear;
+  bool iscritical;
 
-  isrear = 0;
-  iscritical = 0;
+  isrear = false;
+  iscritical = false;
 
   /* Two types of physical attack weapons - Those affected by TSM
    * and those not - Right now just saw but can add more to the list via
@@ -168,7 +168,7 @@ void physical_damage_resolve(const PhysicalDamageRequest *request) {
 
     hitgroup = mech_hit_group(mech, target);
     if (hitgroup == BACK) {
-      isrear = 1;
+      isrear = true;
     }
 
     if (mech_class(mech) == CLASS_MECH) {
@@ -220,7 +220,7 @@ void physical_damage_resolve(const PhysicalDamageRequest *request) {
 
     hitgroup = mech_hit_group(mech, target);
     if (hitgroup == BACK) {
-      isrear = 1;
+      isrear = true;
     }
 
     if (mech_class(mech) == CLASS_MECH) {
@@ -267,7 +267,7 @@ void physical_damage_resolve(const PhysicalDamageRequest *request) {
 
       hitgroup = mech_hit_group(mech, target);
       if (hitgroup == BACK) {
-        isrear = 1;
+        isrear = true;
       }
 
       if (mech_position_elevation(mech) > mech_position_elevation(target)) {
@@ -341,13 +341,13 @@ bool death_from_above(Mech *mech, Mech *target) {
   int roll;
   int hit_group;
   int hitloc;
-  int isrear = 0;
-  int iscritical = 0;
+  bool isrear = false;
+  bool iscritical = false;
   int target_damage;
   int mech_damage;
   int spread;
   int i;
-  int tmpi;
+  bool tmpi;
   char location[50];
   BtechContext *context = mech_context(mech);
   BattleMap *map = btech_context_get_map(context, mech_map_dbref(mech));
@@ -435,7 +435,7 @@ bool death_from_above(Mech *mech, Mech *target) {
 
     hit_group = mech_hit_group(mech, target);
     if (hit_group == BACK)
-      isrear = 1;
+      isrear = true;
 
     target_damage = (3 * mech_real_tonnage(mech)) / 10;
 

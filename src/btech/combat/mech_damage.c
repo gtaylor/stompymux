@@ -51,8 +51,8 @@ void mech_damage_apply(const MechDamageRequest *request) {
   const bool LOS = request->line_of_sight;
   const DbRef ATTACK_PILOT = request->attack_pilot;
   int hitloc = request->hit_location;
-  int isrear = request->rear;
-  int iscritical = request->critical;
+  bool isrear = request->rear;
+  bool iscritical = request->critical;
   int damage = request->armor_damage;
   int int_damage = request->internal_damage;
   const int CAUSE = request->cause;
@@ -219,7 +219,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
       if (hitloc == FSIDE)
         hitloc = BSIDE;
       *rear_message = '\0';
-      isrear = 0;
+      isrear = false;
     }
   } else {
     *rear_message = '\0';
@@ -246,8 +246,8 @@ void mech_damage_apply(const MechDamageRequest *request) {
           .line_of_sight = LOS,
           .attack_pilot = ATTACK_PILOT,
           .hit_location = hitloc,
-          .rear = isrear != 0,
-          .critical = iscritical != 0,
+          .rear = isrear,
+          .critical = iscritical,
           .armor_damage = damage,
           .transfer = MECH_DAMAGE_TRANSFER_CONTINUATION,
           .cause = CAUSE,
@@ -412,8 +412,8 @@ void mech_damage_apply(const MechDamageRequest *request) {
         &(ArmorDamageRequest){.wounded = wounded,
                               .attacker = attacker,
                               .line_of_sight = LOS,
-                              .rear = isrear != 0,
-                              .critical = iscritical != 0,
+                              .rear = isrear,
+                              .critical = iscritical,
                               .section = hitloc,
                               .damage = damage,
                               .critical_hits = &crits,
@@ -481,8 +481,8 @@ void mech_damage_apply(const MechDamageRequest *request) {
             .line_of_sight = LOS,
             .attack_pilot = ATTACK_PILOT,
             .hit_location = hitloc,
-            .rear = isrear != 0,
-            .critical = iscritical != 0,
+            .rear = isrear,
+            .critical = iscritical,
             .armor_damage = int_damage,
             .transfer = MECH_DAMAGE_TRANSFER_CONTINUATION,
             .cause = CAUSE,
@@ -506,8 +506,8 @@ void mech_damage_apply(const MechDamageRequest *request) {
             &(ArmorDamageRequest){.wounded = wounded,
                                   .attacker = attacker,
                                   .line_of_sight = LOS,
-                                  .rear = isrear != 0,
-                                  .critical = iscritical != 0,
+                                  .rear = isrear,
+                                  .critical = iscritical,
                                   .section = hitloc,
                                   .damage = int_damage,
                                   .critical_hits = &crits,
@@ -536,8 +536,8 @@ void mech_damage_apply(const MechDamageRequest *request) {
                 .line_of_sight = LOS,
                 .attack_pilot = ATTACK_PILOT,
                 .hit_location = hitloc,
-                .rear = isrear != 0,
-                .critical = iscritical != 0,
+                .rear = isrear,
+                .critical = iscritical,
                 .internal_damage = int_damage,
                 .transfer = MECH_DAMAGE_TRANSFER_CONTINUATION,
                 .cause = CAUSE,
@@ -553,8 +553,8 @@ void mech_damage_apply(const MechDamageRequest *request) {
                 .line_of_sight = LOS,
                 .attack_pilot = ATTACK_PILOT,
                 .hit_location = hitloc,
-                .rear = isrear != 0,
-                .critical = iscritical != 0,
+                .rear = isrear,
+                .critical = iscritical,
                 .armor_damage = int_damage,
                 .transfer = MECH_DAMAGE_TRANSFER_CONTINUATION,
                 .cause = CAUSE,

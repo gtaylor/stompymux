@@ -457,16 +457,16 @@ bool mech_damage_apply_clusters(const DamageClusterRequest *request) {
 
   int hitloc = 1;
   int this_time;
-  int isrear = 0;
-  int dummy = 0;
-  int *dummy1 = &dummy;
-  int *dummy2 = &dummy;
+  bool isrear = false;
+  bool dummy = false;
+  bool *dummy1 = &dummy;
+  bool *dummy2 = &dummy;
 
   if (DIRECTION < 8) {
     hitloc = DIRECTION;
   } else if (DIRECTION < 16) {
     hitloc = DIRECTION - 8;
-    isrear = 1;
+    isrear = true;
   } else if (DIRECTION > 21) {
     return false;
   }
@@ -477,7 +477,7 @@ bool mech_damage_apply_clusters(const DamageClusterRequest *request) {
     mech_los_broadcast(mech, mechbroadcast);
   while (totaldam) {
     if (DIRECTION > 18)
-      isrear = 1;
+      isrear = true;
     if (DIRECTION > 15)
       hitloc =
           mech_hit_location(mech, ((DIRECTION - 1) & 3) + 1, dummy1, dummy2);
@@ -487,7 +487,7 @@ bool mech_damage_apply_clusters(const DamageClusterRequest *request) {
                                            .line_of_sight = false,
                                            .attack_pilot = -1,
                                            .hit_location = hitloc,
-                                           .rear = isrear != 0,
+                                           .rear = isrear,
                                            .critical = ISCRITICAL,
                                            .armor_damage = this_time,
                                            .internal_damage = 0,

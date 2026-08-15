@@ -24,17 +24,18 @@ typedef struct CriticalThreshold {
 
 bool mech_section_is_crittable(Mech *mech, int loc,
                                CriticalThreshold threshold);
-int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear);
+int mech_hit_location(Mech *mech, int hit_group, bool *iscritical,
+                      bool *isrear);
 HitLocationResult mech_fasa_hit_location(Mech *mech, int hit_group,
                                          HitLocationResult result);
 void mech_motive_system_hit(Mech *mech, int w_roll_mod);
 HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hit_group,
                                                      HitLocationResult result);
-int mech_narc_hit_location(Mech *mech, Mech *hit_mech, int *t_is_rear_hit);
-int mech_target_hit_location(Mech *mech, Mech *target, int *isrear,
-                             int *iscritical);
-int mech_targeting_computer_hit_location(Mech *mech, Mech *target, int *isrear,
-                                         int *iscritical);
-int mech_aimed_hit_location(Mech *mech, Mech *target, int *isrear,
-                            int *iscritical);
+int mech_narc_hit_location(Mech *mech, Mech *hit_mech, bool *t_is_rear_hit);
+int mech_target_hit_location(Mech *mech, Mech *target, bool *isrear,
+                             bool *iscritical);
+int mech_targeting_computer_hit_location(Mech *mech, Mech *target, bool *isrear,
+                                         bool *iscritical);
+int mech_aimed_hit_location(Mech *mech, Mech *target, bool *isrear,
+                            bool *iscritical);
 int mech_hit_group(Mech *mech, Mech *target);

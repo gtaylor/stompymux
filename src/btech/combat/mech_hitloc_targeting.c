@@ -193,16 +193,16 @@ int mech_hit_group(Mech *mech, Mech *target) {
   }
 }
 
-int mech_target_hit_location(Mech *mech, Mech *target, int *isrear,
-                             int *iscritical) {
+int mech_target_hit_location(Mech *mech, Mech *target, bool *isrear,
+                             bool *iscritical) {
 
   int hit_group;
 
-  *iscritical = 0;
+  *iscritical = false;
   hit_group = mech_hit_group(mech, target);
 
   if (hit_group == BACK) {
-    *isrear = 1;
+    *isrear = true;
   }
 
   if (mech_class(target) == CLASS_MECH && mech_has_partial_cover(target)) {
@@ -226,9 +226,9 @@ int mech_target_hit_location(Mech *mech, Mech *target, int *isrear,
   return mech_hit_location(target, hit_group, iscritical, isrear);
 }
 
-int mech_narc_hit_location(Mech *mech, Mech *hit_mech, int *t_is_rear_hit) {
-  int t_is_rear = 0;
-  int t_is_critical = 0;
+int mech_narc_hit_location(Mech *mech, Mech *hit_mech, bool *t_is_rear_hit) {
+  bool t_is_rear = false;
+  bool t_is_critical = false;
   int w_hit_loc =
       mech_target_hit_location(mech, hit_mech, &t_is_rear, &t_is_critical);
 
@@ -238,10 +238,10 @@ int mech_narc_hit_location(Mech *mech, Mech *hit_mech, int *t_is_rear_hit) {
       return -1;
   }
 
-  *t_is_rear_hit = 0;
+  *t_is_rear_hit = false;
   if (t_is_rear) {
     if (mech_class(hit_mech) == CLASS_MECH)
-      *t_is_rear_hit = 1;
+      *t_is_rear_hit = true;
     else if (w_hit_loc == FSIDE)
       w_hit_loc = BSIDE;
   }
@@ -249,15 +249,15 @@ int mech_narc_hit_location(Mech *mech, Mech *hit_mech, int *t_is_rear_hit) {
   return w_hit_loc;
 }
 
-int mech_targeting_computer_hit_location(Mech *mech, Mech *target, int *isrear,
-                                         int *iscritical) {
+int mech_targeting_computer_hit_location(Mech *mech, Mech *target, bool *isrear,
+                                         bool *iscritical) {
   int hit_group;
 
-  *isrear = 0;
-  *iscritical = 0;
+  *isrear = false;
+  *iscritical = false;
   hit_group = mech_hit_group(mech, target);
   if (hit_group == BACK)
-    *isrear = 1;
+    *isrear = true;
   if (mech_aim_unit_class(mech) == mech_class(target) &&
       btech_random_range(mech_context(mech), 1, 6) >= 3) {
     switch (mech_class(target)) {
@@ -352,15 +352,15 @@ int mech_targeting_computer_hit_location(Mech *mech, Mech *target, int *isrear,
   return mech_hit_location(target, hit_group, iscritical, isrear);
 }
 
-int mech_aimed_hit_location(Mech *mech, Mech *target, int *isrear,
-                            int *iscritical) {
+int mech_aimed_hit_location(Mech *mech, Mech *target, bool *isrear,
+                            bool *iscritical) {
   int hit_group;
 
-  *isrear = 0;
-  *iscritical = 0;
+  *isrear = false;
+  *iscritical = false;
   hit_group = mech_hit_group(mech, target);
   if (hit_group == BACK)
-    *isrear = 1;
+    *isrear = true;
   if (mech_class(target) == CLASS_MECH || mech_class(target) == CLASS_MW) {
     switch (mech_aim_section(mech)) {
     case RARM:

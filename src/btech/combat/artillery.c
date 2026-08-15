@@ -166,8 +166,8 @@ void blast_hit_real_hex(const BlastRealHexRequest *request) {
   BattleMap *map = request->map;
   Mech *temp_mech;
   int loop;
-  int isrear = 0;
-  int iscritical = 0;
+  bool isrear = false;
+  bool iscritical = false;
   int hitloc;
   int damleft;
   int arc;
@@ -210,7 +210,7 @@ void blast_hit_real_hex(const BlastRealHexRequest *request) {
       arc = blast_arcf(request->source.x, request->source.y, temp_mech);
 
       if (arc == BACK)
-        isrear = 1;
+        isrear = true;
       damleft = request->damage.total;
 
       while (damleft > 0) {
@@ -245,8 +245,8 @@ void blast_hit_real_hex(const BlastRealHexRequest *request) {
                                                .line_of_sight = false,
                                                .attack_pilot = -1,
                                                .hit_location = hitloc,
-                                               .rear = isrear != 0,
-                                               .critical = iscritical != 0,
+                                               .rear = isrear,
+                                               .critical = iscritical,
                                                .armor_damage = ndam,
                                                .internal_damage = 0,
                                                .transfer = MECH_DAMAGE_NORMAL,

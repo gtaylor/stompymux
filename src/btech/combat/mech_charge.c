@@ -57,8 +57,8 @@ void charge_mech(Mech *mech, Mech *target) {
   int roll;
   int hit_group;
   int hitloc;
-  int isrear = 0;
-  int iscritical = 0;
+  bool isrear = false;
+  bool iscritical = false;
   int target_damage;
   int mech_damage;
   int received_damage;
@@ -625,10 +625,7 @@ void charge_mech(Mech *mech, Mech *target) {
                 mech_class(mech) == CLASS_MECH ? "charge" : "ram");
     mech_notify(mech, MECHALL, "SMASH!!! You crash into your target!");
     hit_group = mech_hit_group(mech, target);
-    if (hit_group == BACK)
-      isrear = 1;
-    else
-      isrear = 0;
+    isrear = (hit_group == BACK);
     /* Record the damage then dish it out */
     inflicted_damage = target_damage;
     spread = target_damage / 5;

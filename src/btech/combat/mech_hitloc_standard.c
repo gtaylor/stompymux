@@ -19,8 +19,8 @@
 #include "section_types.h"
 
 typedef struct HitLocationOutput {
-  int *critical;
-  int *rear;
+  bool *critical;
+  bool *rear;
 } HitLocationOutput;
 
 static int hit_location_export(HitLocationResult result,
@@ -30,7 +30,8 @@ static int hit_location_export(HitLocationResult result,
   return result.location;
 }
 
-int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
+int mech_hit_location(Mech *mech, int hit_group, bool *iscritical,
+                      bool *isrear) {
   int roll;
   int hitloc = 0;
   int side;
@@ -126,7 +127,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
               context, BTECH_CHANNEL_TAC_INFO,
               "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
               mech_dbref(mech));
-          *iscritical = 1;
+          *iscritical = true;
         }
         return LTORSO;
       case 3:
@@ -160,7 +161,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
               context, BTECH_CHANNEL_TAC_INFO,
               "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
               mech_dbref(mech));
-          *iscritical = 1;
+          *iscritical = true;
         }
         return RTORSO;
       case 3:
@@ -195,7 +196,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
               context, BTECH_CHANNEL_TAC_INFO,
               "%ld's luck sucks. It got TACed. We're in FindHitLocation()",
               mech_dbref(mech));
-          *iscritical = 1;
+          *iscritical = true;
         }
         return CTORSO;
       case 3:
@@ -228,7 +229,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 2:
       case 12:
         if (mech_section_is_crittable(mech, LSIDE, (CriticalThreshold){40}))
-          *iscritical = 1;
+          *iscritical = true;
         return LSIDE;
       case 3:
       case 4:
@@ -243,7 +244,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           if (mech_section_is_crittable(mech, TURRET, (CriticalThreshold){50}))
-            *iscritical = 1;
+            *iscritical = true;
           return TURRET;
         } else {
           return LSIDE;
@@ -255,7 +256,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 2:
       case 12:
         if (mech_section_is_crittable(mech, RSIDE, (CriticalThreshold){40}))
-          *iscritical = 1;
+          *iscritical = true;
         return RSIDE;
       case 3:
       case 4:
@@ -270,7 +271,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           if (mech_section_is_crittable(mech, TURRET, (CriticalThreshold){50}))
-            *iscritical = 1;
+            *iscritical = true;
           return TURRET;
         } else {
           return RSIDE;
@@ -286,7 +287,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 2:
       case 12:
         if (mech_section_is_crittable(mech, FSIDE, (CriticalThreshold){40}))
-          *iscritical = 1;
+          *iscritical = true;
         return side;
       case 3:
       case 4:
@@ -301,7 +302,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           if (mech_section_is_crittable(mech, TURRET, (CriticalThreshold){50}))
-            *iscritical = 1;
+            *iscritical = true;
           return TURRET;
         } else {
           return side;
@@ -339,7 +340,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 2:
       case 12:
         if (mech_section_is_crittable(mech, AERO_AFT, (CriticalThreshold){99}))
-          *iscritical = 1;
+          *iscritical = true;
         return AERO_AFT;
       case 3:
       case 11:
@@ -366,7 +367,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 2:
       case 12:
         if (mech_section_is_crittable(mech, AERO_AFT, (CriticalThreshold){90}))
-          *iscritical = 1;
+          *iscritical = true;
         return AERO_AFT;
       case 3:
       case 11:
@@ -437,7 +438,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
         return DS_NOSE;
       case 12:
         if (mech_section_is_crittable(mech, side, (CriticalThreshold){60}))
-          *iscritical = 1;
+          *iscritical = true;
         return side;
       }
       break;
@@ -446,7 +447,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 2:
       case 12:
         if (mech_section_is_crittable(mech, DS_AFT, (CriticalThreshold){60}))
-          *iscritical = 1;
+          *iscritical = true;
         return DS_AFT;
       case 3:
       case 11:
@@ -477,7 +478,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
         hitloc = ROTOR;
-        *iscritical = 1;
+        *iscritical = true;
         mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 3:
@@ -499,7 +500,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
         break;
       case 12:
         hitloc = ROTOR;
-        *iscritical = 1;
+        *iscritical = true;
         mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       }
@@ -509,7 +510,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
         hitloc = ROTOR;
-        *iscritical = 1;
+        *iscritical = true;
         mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 3:
@@ -531,7 +532,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
         break;
       case 12:
         hitloc = ROTOR;
-        *iscritical = 1;
+        *iscritical = true;
         mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       }
@@ -543,7 +544,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       switch (roll) {
       case 2:
         hitloc = ROTOR;
-        *iscritical = 1;
+        *iscritical = true;
         mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 3:
@@ -565,7 +566,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
         break;
       case 12:
         hitloc = ROTOR;
-        *iscritical = 1;
+        *iscritical = true;
         mech_vtol_rotor_damaged_critical_apply(mech);
         break;
       }
@@ -579,7 +580,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 2:
         hitloc = LSIDE;
         if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
-          *iscritical = 1;
+          *iscritical = true;
         break;
       case 3:
       case 4:
@@ -599,14 +600,14 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
           if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
-            *iscritical = 1;
+            *iscritical = true;
         } else {
           hitloc = LSIDE;
         }
         break;
       case 12:
         hitloc = LSIDE;
-        *iscritical = 1;
+        *iscritical = true;
         break;
       }
       break;
@@ -617,7 +618,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 12:
         hitloc = RSIDE;
         if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
-          *iscritical = 1;
+          *iscritical = true;
         break;
       case 3:
       case 4:
@@ -637,7 +638,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
           if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
-            *iscritical = 1;
+            *iscritical = true;
         } else {
           hitloc = RSIDE;
         }
@@ -652,7 +653,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 12:
         hitloc = FSIDE;
         if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
-          *iscritical = 1;
+          *iscritical = true;
         break;
       case 3:
         hitloc = FSIDE;
@@ -678,7 +679,7 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
-          *iscritical = 1;
+          *iscritical = true;
         } else {
           hitloc = FSIDE;
         }

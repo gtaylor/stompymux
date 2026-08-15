@@ -207,8 +207,8 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
   const int W_GATTLING_SHOTS = request->gatling_shots;
   const bool T_IS_SWARM_ATTACK = request->swarm_attack;
   const int PLAYER_ROLL = request->player_roll;
-  int isrear = 0;
-  int iscritical = 0;
+  bool isrear = false;
+  bool iscritical = false;
   int hitloc = 0;
   int roll;
   int aim_hit = 0;
@@ -337,8 +337,8 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
           .line_of_sight = LOS != 0,
           .attack_pilot = mech_gunner_dbref(mech),
           .hit_location = hitloc,
-          .rear = isrear != 0,
-          .critical = iscritical != 0,
+          .rear = isrear,
+          .critical = iscritical,
           .armor_damage =
               personal_combat_damage_to_unit(&(PersonalCombatDamageConversion){
                   .target = hit_mech,
@@ -479,8 +479,8 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
         .attacker = mech,
         .target = hit_mech,
         .target_hex = {.x = HIT_X, .y = HIT_Y},
-        .rear = isrear != 0,
-        .critical = iscritical != 0,
+        .rear = isrear,
+        .critical = iscritical,
         .weapon = {.weapon_index = WEAPINDX,
                    .section = W_SECTION,
                    .critical = W_CRIT_SLOT},
@@ -508,8 +508,8 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
                                  .line_of_sight = LOS != 0,
                                  .attack_pilot = mech_gunner_dbref(mech),
                                  .hit_location = hitloc,
-                                 .rear = isrear != 0,
-                                 .critical = iscritical != 0,
+                                 .rear = isrear,
+                                 .critical = iscritical,
                                  .armor_damage = personal_combat_damage_to_unit(
                                      &(PersonalCombatDamageConversion){
                                          .target = hit_mech,

@@ -45,9 +45,9 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
   int i;
   int hitloc;
   int hit_group = 0;
-  int isrear = 0;
+  bool isrear = false;
   int damage;
-  int iscritical = 0;
+  bool iscritical = false;
   int heading_offset = 0;
   BattleMap *map;
   BtechContext *context = mech_context(mech);
@@ -143,7 +143,7 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
     break;
   }
   if (hit_group == BACK)
-    isrear = 1;
+    isrear = true;
   mech_fall_heading_apply(mech, heading_offset);
   if (!mech_fall_is_in_water(mech) &&
       mech_real_terrain_get(mech) != BATTLE_TERRAIN_HIGH_WATER) {
@@ -173,8 +173,8 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
                                .line_of_sight = false,
                                .attack_pilot = -1,
                                .hit_location = hitloc,
-                               .rear = isrear != 0,
-                               .critical = iscritical != 0,
+                               .rear = isrear,
+                               .critical = iscritical,
                                .armor_damage = 5,
                                .internal_damage = 0,
                                .transfer = MECH_DAMAGE_FORCE_TRANSFER,
@@ -194,8 +194,8 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
                                .line_of_sight = false,
                                .attack_pilot = -1,
                                .hit_location = hitloc,
-                               .rear = isrear != 0,
-                               .critical = iscritical != 0,
+                               .rear = isrear,
+                               .critical = iscritical,
                                .armor_damage = (damage % 5),
                                .internal_damage = 0,
                                .transfer = MECH_DAMAGE_FORCE_TRANSFER,
