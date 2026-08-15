@@ -112,6 +112,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/support/name_table.c
   ${MUX_MODULE_DIR}/support/numeric_hash_table.c
   ${MUX_MODULE_DIR}/support/hash_table.c
+  ${MUX_MODULE_DIR}/support/lbuf_text.c
   ${MUX_MODULE_DIR}/support/array_sort.c
   ${MUX_MODULE_DIR}/support/red_black_tree.c
   ${MUX_MODULE_DIR}/support/red_black_tree_mutation.c

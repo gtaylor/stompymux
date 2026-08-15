@@ -39,6 +39,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/support/password.h"
 #include "mux/world/database_check.h"
 #include "mux/world/object_spatial.h"
@@ -135,7 +136,6 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
                     const char *msg, int key) {
   char *msg_copy;
   char *tbuff;
-  char *buff;
   DbRef targetloc;
   DbRef recip;
   DbRef obj;
@@ -188,10 +188,11 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
              game_object_exits(evaluation->world->database, target)) {
         recip = game_object_location(evaluation->world->database, obj);
         if (is_audible(evaluation->world->database, obj) && recip != target) {
-          buff = format_forwarded_message(msg, "From a distance,");
-          notify_checked(evaluation, recip, sender, buff,
+          char *distance_message =
+              format_forwarded_message(msg, "From a distance,");
+          notify_checked(evaluation, recip, sender, distance_message,
                          MSG_ME | MSG_F_UP | MSG_F_CONTENTS | MSG_S_INSIDE);
-          free_lbuf(buff);
+          free_lbuf(distance_message);
         }
       }
     }
@@ -208,18 +209,11 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
        * *  * * of * the container.
        */
 
+      LbufText forwarded = lbuf_text_borrow(msg);
       if (key & MSG_S_INSIDE) {
         tbuff = dflt_from_msg(evaluation->world->database, sender, target);
-        buff = format_forwarded_message(msg, tbuff);
+        forwarded = lbuf_text_take(format_forwarded_message(msg, tbuff));
         free_lbuf(tbuff);
-      } else {
-        /* buff aliases the read-only msg here; only freed in the
-         * branch above where it holds an allocated formatted message.
-         */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-        buff = (char *)msg;
-#pragma clang diagnostic pop
       }
 
       DOLIST(evaluation->world->database, obj,
@@ -230,15 +224,13 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
         if (is_good_obj(evaluation->world->database, recip) &&
             is_audible(evaluation->world->database, obj) &&
             (recip != targetloc) && (recip != target)) {
-          tbuff = format_forwarded_message(buff, "From a distance,");
+          tbuff = format_forwarded_message(forwarded.text, "From a distance,");
           notify_checked(evaluation, recip, sender, tbuff,
                          MSG_ME | MSG_F_UP | MSG_F_CONTENTS | MSG_S_INSIDE);
           free_lbuf(tbuff);
         }
       }
-      if (key & MSG_S_INSIDE) {
-        free_lbuf(buff);
-      }
+      lbuf_text_release(&forwarded);
     }
     /*
      * Deliver message to contents
@@ -251,26 +243,17 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
        * * * MSG_NOPREFIX key.
        */
 
-      if (key & MSG_S_OUTSIDE) {
-        buff = format_forwarded_message(msg, "");
-      } else {
-        /* buff aliases the read-only msg here; only freed in the
-         * branch above where it holds an allocated formatted message.
-         */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-        buff = (char *)msg;
-#pragma clang diagnostic pop
-      }
+      LbufText forwarded = lbuf_text_borrow(msg);
+      if (key & MSG_S_OUTSIDE)
+        forwarded = lbuf_text_take(format_forwarded_message(msg, ""));
       DOLIST(evaluation->world->database, obj,
              game_object_contents(evaluation->world->database, target)) {
         if (obj != target) {
-          notify_checked(evaluation, obj, sender, buff,
+          notify_checked(evaluation, obj, sender, forwarded.text,
                          MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE);
         }
       }
-      if (key & MSG_S_OUTSIDE)
-        free_lbuf(buff);
+      lbuf_text_release(&forwarded);
     }
     /*
      * Deliver message to neighbors
@@ -278,29 +261,20 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
 
     if (has_neighbors &&
         ((key & MSG_NBR) || ((key & MSG_NBR_A) && target_audible))) {
+      LbufText forwarded = lbuf_text_borrow(msg);
       if (key & MSG_S_INSIDE) {
         tbuff = dflt_from_msg(evaluation->world->database, sender, target);
-        buff = format_forwarded_message(msg, tbuff);
+        forwarded = lbuf_text_take(format_forwarded_message(msg, tbuff));
         free_lbuf(tbuff);
-      } else {
-        /* buff aliases the read-only msg here; only freed in the
-         * branch above where it holds an allocated formatted message.
-         */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-        buff = (char *)msg;
-#pragma clang diagnostic pop
       }
       DOLIST(evaluation->world->database, obj,
              game_object_contents(evaluation->world->database, targetloc)) {
         if ((obj != target) && (obj != targetloc)) {
-          notify_checked(evaluation, obj, sender, buff,
+          notify_checked(evaluation, obj, sender, forwarded.text,
                          MSG_ME | MSG_F_DOWN | MSG_S_OUTSIDE);
         }
       }
-      if (key & MSG_S_INSIDE) {
-        free_lbuf(buff);
-      }
+      lbuf_text_release(&forwarded);
     }
     /*
      * Deliver message to container
@@ -308,24 +282,15 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
 
     if (has_neighbors &&
         ((key & MSG_LOC) || ((key & MSG_LOC_A) && target_audible))) {
+      LbufText forwarded = lbuf_text_borrow(msg);
       if (key & MSG_S_INSIDE) {
         tbuff = dflt_from_msg(evaluation->world->database, sender, target);
-        buff = format_forwarded_message(msg, tbuff);
+        forwarded = lbuf_text_take(format_forwarded_message(msg, tbuff));
         free_lbuf(tbuff);
-      } else {
-        /* buff aliases the read-only msg here; only freed in the
-         * branch above where it holds an allocated formatted message.
-         */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-        buff = (char *)msg;
-#pragma clang diagnostic pop
       }
-      notify_checked(evaluation, targetloc, sender, buff,
+      notify_checked(evaluation, targetloc, sender, forwarded.text,
                      MSG_ME | MSG_F_UP | MSG_S_INSIDE);
-      if (key & MSG_S_INSIDE) {
-        free_lbuf(buff);
-      }
+      lbuf_text_release(&forwarded);
     }
     break;
   default:

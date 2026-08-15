@@ -55,6 +55,16 @@ add_test(NAME configuration_interpreter COMMAND configuration_interpreter_test)
 set_tests_properties(configuration_interpreter PROPERTIES
   LABELS "unit;mux-server;configuration_interpreter")
 
+add_executable(lbuf_text_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/lbuf_text.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/lbuf_text.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_link_libraries(lbuf_text_test PRIVATE btmux_options)
+target_include_directories(lbuf_text_test PRIVATE
+  "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME lbuf_text COMMAND lbuf_text_test)
+set_tests_properties(lbuf_text PROPERTIES LABELS "unit;mux-support;lbuf_text")
+
 add_test(NAME catalog_startup
   COMMAND bash
     "${CMAKE_SOURCE_DIR}/tests/integration/catalog_startup.sh"
