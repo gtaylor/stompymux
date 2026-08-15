@@ -107,7 +107,7 @@ static void flow_apply_outcome(Descriptor *d, FlowOutcome outcome) {
   }
 }
 
-int descriptor_flow_start(const FlowStartRequest *request) {
+bool descriptor_flow_start(const FlowStartRequest *request) {
   Descriptor *d = request->descriptor;
   InputFlow *flow;
   FlowOutcome outcome;

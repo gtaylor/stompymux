@@ -23,7 +23,7 @@
 #include "section_types.h"
 #include <stdint.h>
 
-static int completely_intact_int(Mech *mech) {
+static bool completely_intact(Mech *mech) {
   int i;
 
   for (i = 0; i < NUM_SECTIONS; i++)
@@ -226,7 +226,7 @@ void mux_event_tickmech_repairarmor(MuxEvent *e) {
       } while (0);
     }
 
-    if (mech_class(mech) != CLASS_MECH && completely_intact_int(mech))
+    if (mech_class(mech) != CLASS_MECH && completely_intact(mech))
       do_magic(mech);
     return;
   }
@@ -268,7 +268,7 @@ void mux_event_tickmech_repairinternal(MuxEvent *e) {
       if (i)
         mech_destroyed_set(mech, true);
     } while (0);
-    if (mech_class(mech) != CLASS_MECH && completely_intact_int(mech))
+    if (mech_class(mech) != CLASS_MECH && completely_intact(mech))
       do_magic(mech);
     return;
   }
@@ -290,7 +290,7 @@ void mux_event_tickmech_reattach(MuxEvent *e) {
   mech_re_attach(mech, earg);
   armor_string_from_index(earg, buf, mech_class(mech),
                           mech_movement_type(mech));
-  if (completely_intact_int(mech))
+  if (completely_intact(mech))
     do_magic(mech);
   do {
     int was_destroyed = 0;

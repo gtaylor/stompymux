@@ -34,7 +34,7 @@
 int have_punch(Mech *mech, int location);
 bool physical_arm_check(DbRef player, Mech *mech, const char *verb);
 bool physical_quad_check(DbRef player, Mech *mech, const char *verb);
-int phys_common_checks(Mech *mech);
+bool phys_common_checks(Mech *mech);
 typedef int (*PhysicalEquipmentCheck)(Mech *mech, int location);
 
 typedef struct ArmSelectionRequest {

@@ -49,9 +49,10 @@ static unsigned long lua_schedule_hash(const LuaScheduleIdentity *identity) {
   return hash;
 }
 
-static int lua_schedule_add_job(LuaRuntime *runtime, LuaModuleRoot root,
-                                const char *path, const char *name,
-                                const char *cron, DbRef object, time_t minute) {
+static bool lua_schedule_add_job(LuaRuntime *runtime, LuaModuleRoot root,
+                                 const char *path, const char *name,
+                                 const char *cron, DbRef object,
+                                 time_t minute) {
   LuaScheduleJob *jobs;
   LuaScheduleJob *job;
   if (runtime->schedule_job_count == SIZE_MAX)
@@ -268,9 +269,9 @@ void lua_schedule_tick(LuaRuntime *runtime, time_t now) {
   }
 }
 
-static int lua_schedule_count(LuaRuntime *runtime, LuaModuleRoot root,
-                              const char *path, int *count, char *error,
-                              size_t error_size) {
+static bool lua_schedule_count(LuaRuntime *runtime, LuaModuleRoot root,
+                               const char *path, int *count, char *error,
+                               size_t error_size) {
   lua_State *state = runtime->state;
   int top = lua_gettop(state);
 

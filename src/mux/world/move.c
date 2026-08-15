@@ -302,7 +302,7 @@ void move_via_generic(const ObjectMovementRequest *request) {
   DbRef cause = request->cause;
   int hush = request->hush;
   DbRef src;
-  int canhear;
+  bool canhear;
 
   if (dest == HOME)
     dest = game_object_link(evaluation->world->database, thing);
@@ -346,7 +346,7 @@ void move_via_exit(const ExitMovementRequest *request) {
   DbRef exit = request->exit;
   int hush = request->movement.hush;
   DbRef src;
-  int canhear;
+  bool canhear;
   int darkwiz;
   int quiet;
 
@@ -422,7 +422,7 @@ void move_via_exit(const ExitMovementRequest *request) {
  * * divestiture + dropto check.
  */
 
-int move_via_teleport(const ObjectMovementRequest *request) {
+bool move_via_teleport(const ObjectMovementRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
   DbRef thing = request->object;
   DbRef dest = request->destination;
@@ -430,7 +430,7 @@ int move_via_teleport(const ObjectMovementRequest *request) {
   int hush = request->hush;
   DbRef src;
   DbRef curr;
-  int canhear;
+  bool canhear;
   int count;
   const char *failmsg;
   LuaLockInvocation lock;

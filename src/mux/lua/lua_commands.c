@@ -172,8 +172,8 @@ int lua_command_match(LuaRuntime *runtime, Descriptor *descriptor, DbRef thing,
                                   path, thing, player, cause, command, 0);
 }
 
-int lua_global_command_match(LuaRuntime *runtime, Descriptor *descriptor,
-                             DbRef player, DbRef cause, const char *command) {
+bool lua_global_command_match(LuaRuntime *runtime, Descriptor *descriptor,
+                              DbRef player, DbRef cause, const char *command) {
   size_t index;
 
   if (!runtime)

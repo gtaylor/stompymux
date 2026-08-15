@@ -107,7 +107,7 @@ int is_leg_destroyed(Mech *obj_mech, int w_loc) {
           mech_section_is_flooded(obj_mech, w_loc));
 }
 
-int is_mech_leg_less(Mech *obj_mech) {
+bool is_mech_leg_less(Mech *obj_mech) {
   int wc_max_legs = 0;
 
   if (((obj_mech)->ud.type) != CLASS_MECH)
@@ -179,7 +179,7 @@ int mech_weapon_first_critical(const WeaponCriticalSearch *search) {
   return w_first_crit;
 }
 
-int check_all_sections(Mech *mech, int special_to_find) {
+bool check_all_sections(Mech *mech, int special_to_find) {
   int i;
 
   for (i = 0; i < NUM_SECTIONS; i++) {
@@ -190,7 +190,7 @@ int check_all_sections(Mech *mech, int special_to_find) {
   return 0;
 }
 
-int check_section_for_special(Mech *mech, int special_to_find, int w_sec) {
+bool check_section_for_special(Mech *mech, int special_to_find, int w_sec) {
   if (mech_section_is_destroyed(mech, w_sec))
     return 0;
 

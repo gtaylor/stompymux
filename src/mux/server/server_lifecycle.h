@@ -21,11 +21,11 @@ void server_lifecycle_destroy(ServerLifecycle *lifecycle);
 UvLoopT *server_lifecycle_loop(ServerLifecycle *lifecycle);
 void server_lifecycle_prepare(ServerLifecycle *lifecycle);
 void server_lifecycle_unbind_signals(ServerLifecycle *lifecycle);
-int server_lifecycle_boot(ServerLifecycle *lifecycle);
+bool server_lifecycle_boot(ServerLifecycle *lifecycle);
 void server_lifecycle_run(ServerLifecycle *lifecycle, int port);
 void server_lifecycle_stop(ServerLifecycle *lifecycle);
 void server_lifecycle_release_sockets(ServerLifecycle *lifecycle);
 void server_lifecycle_close_connections(ServerLifecycle *lifecycle,
                                         bool emergency, const char *message);
-int server_lifecycle_eradicate_fd(ServerLifecycle *lifecycle, int fd);
+bool server_lifecycle_eradicate_fd(ServerLifecycle *lifecycle, int fd);
 void server_lifecycle_shutdown(ServerLifecycle *lifecycle);

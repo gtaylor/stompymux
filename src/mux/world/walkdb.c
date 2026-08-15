@@ -117,8 +117,8 @@ void do_stats(CommandInvocation *invocation) {
  * Walk the db reporting various things (or setting/clearing
  * mark bits)
  */
-int search_criteria_setup(EvaluationContext *context, DbRef player,
-                          char *searchfor, SearchCriteria *parm) {
+bool search_criteria_setup(EvaluationContext *context, DbRef player,
+                           char *searchfor, SearchCriteria *parm) {
   char empty[] = "";
   char *searchtype;
   int err;

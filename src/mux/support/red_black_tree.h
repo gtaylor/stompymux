@@ -76,8 +76,8 @@ void *red_black_tree_delete(RedBlackTree /*bt*/, const void * /*key*/);
 void red_black_tree_release(RedBlackTree bt, RedBlackTreeRelease release,
                             void *context);
 
-int red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
-                        void *context);
+bool red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
+                         void *context);
 unsigned int red_black_tree_size(RedBlackTree /*bt*/);
 void *red_black_tree_search(RedBlackTree /*bt*/, int /*method*/,
                             const void * /*key*/);

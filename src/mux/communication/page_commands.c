@@ -25,9 +25,9 @@
 #include "mux/world/match.h"
 #include "mux/world/player.h"
 
-static int page_check(EvaluationContext *evaluation,
-                      const ServerConfiguration *configuration, DbRef player,
-                      DbRef target) {
+static bool page_check(EvaluationContext *evaluation,
+                       const ServerConfiguration *configuration, DbRef player,
+                       DbRef target) {
   char message_buffer[LBUF_SIZE];
   if (is_in_character_location(evaluation->world->database, configuration,
                                player) &&

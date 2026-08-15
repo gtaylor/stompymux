@@ -64,7 +64,7 @@ bool server_log_is_enabled(const ServerLog *log, int key) {
  * See if it's is OK to log something, and if so, start writing the
  * log entry.
  */
-int start_log(ServerLog *log, const char *primary, const char *secondary) {
+bool start_log(ServerLog *log, const char *primary, const char *secondary) {
   struct tm timestamp;
   time_t now;
 

@@ -54,7 +54,7 @@ static const char *weapon_display_name(int weapon_index) {
   return checked_string_suffix(weapon_catalogue_name(weapon_index), 3);
 }
 
-int mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
+bool mech_weapon_critical_handle(const WeaponCriticalRequest *request) {
   Mech *attacker = request->attacker;
   Mech *wounded = request->wounded;
   const int HITLOC = request->slot.section;

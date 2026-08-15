@@ -334,7 +334,7 @@ int mech_sensor_driver_base_chance(Mech *mech) {
   return 64 + i; /* Padded a bit */
 }
 
-int mech_sensor_detects(const MechSensorDetectionRequest *request) {
+bool mech_sensor_detects(const MechSensorDetectionRequest *request) {
   Mech *mech = request->observer;
   Mech *target = request->target;
   int f = request->los_flags;

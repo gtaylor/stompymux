@@ -21,6 +21,6 @@ bool telnet_sockets_listen(TelnetSockets *sockets, int port);
 
 void telnet_sockets_close(TelnetSockets *sockets, bool emergency,
                           const char *message);
-int telnet_sockets_eradicate_fd(TelnetSockets *sockets, int fd);
+bool telnet_sockets_eradicate_fd(TelnetSockets *sockets, int fd);
 void descriptor_write(Descriptor *d, const char *buffer, size_t size);
 void descriptor_write_raw(Descriptor *d, const char *buffer, size_t size);

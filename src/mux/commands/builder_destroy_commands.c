@@ -47,8 +47,9 @@ static bool can_destroy_exit(const DestroyExitCheck *check) {
  * * the database.
  */
 
-static int destroyable(GameDatabase *database,
-                       const ServerConfiguration *configuration, DbRef victim) {
+static bool destroyable(GameDatabase *database,
+                        const ServerConfiguration *configuration,
+                        DbRef victim) {
   if ((victim == configuration->default_home) ||
       (victim == configuration->start_home) ||
       (victim == configuration->start_room) || (victim == (DbRef)0) ||
@@ -57,8 +58,8 @@ static int destroyable(GameDatabase *database,
   return 1;
 }
 
-static int can_destroy_player(EvaluationContext *evaluation, DbRef player,
-                              DbRef victim) {
+static bool can_destroy_player(EvaluationContext *evaluation, DbRef player,
+                               DbRef victim) {
   if (!is_wizard(evaluation->world->database, player)) {
     notify_checked(evaluation, player, player, "Sorry, no suicide allowed.",
                    MSG_ME);

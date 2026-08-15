@@ -17,4 +17,4 @@ LogCache *log_cache_create(UvLoopT *loop, ServerLog *log);
 void log_cache_destroy(LogCache *cache);
 void log_cache_list(EvaluationContext *evaluation, const LogCache *cache,
                     DbRef player);
-int log_cache_write(LogCache *cache, char *fname, const char *data);
+bool log_cache_write(LogCache *cache, char *fname, const char *data);

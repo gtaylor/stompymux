@@ -15,7 +15,7 @@ typedef struct WeaponCriticalRequest {
   int part_type;
 } WeaponCriticalRequest;
 
-int mech_weapon_critical_handle(const WeaponCriticalRequest *request);
+bool mech_weapon_critical_handle(const WeaponCriticalRequest *request);
 
 typedef struct VehicleCriticalRequest {
   Mech *wounded;
@@ -81,7 +81,7 @@ typedef struct CriticalEffectRequest {
   int part_data;
 } CriticalEffectRequest;
 
-int mech_critical_effect_apply(const CriticalEffectRequest *request);
+bool mech_critical_effect_apply(const CriticalEffectRequest *request);
 typedef struct CriticalHitDispatch {
   Mech *wounded;
   Mech *attacker;

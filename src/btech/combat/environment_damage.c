@@ -279,7 +279,7 @@ void mech_parts_destroy(Mech *attacker, Mech *wounded, int hitloc, bool breach,
   }
 }
 
-int mech_location_breach(Mech *attacker, Mech *mech, int hitloc) {
+bool mech_location_breach(Mech *attacker, Mech *mech, int hitloc) {
   char buf[SBUF_SIZE];
 
   if (!mech_is_under_special_conditions(mech))
@@ -297,7 +297,7 @@ int mech_location_breach(Mech *attacker, Mech *mech, int hitloc) {
   return 1;
 }
 
-int mech_location_maybe_breach(Mech *attacker, Mech *mech, int hitloc) {
+bool mech_location_maybe_breach(Mech *attacker, Mech *mech, int hitloc) {
   if (!mech_is_under_special_conditions(mech))
     return 0;
   if (btech_random_roll(mech_context(mech)) < 10)

@@ -305,7 +305,7 @@ typedef struct SearchlightReachRequest {
   int elevation;
 } SearchlightReachRequest;
 
-static int mech_searchlight_reaches(const SearchlightReachRequest *request) {
+static bool mech_searchlight_reaches(const SearchlightReachRequest *request) {
   Mech *mech = request->mech;
   float fx;
   float fy;
@@ -328,7 +328,7 @@ static int mech_searchlight_reaches(const SearchlightReachRequest *request) {
   return range < MAXVIS;
 }
 
-static int mech_sensor_sees_terrain(Mech *mech, int sn) {
+static bool mech_sensor_sees_terrain(Mech *mech, int sn) {
   return mech_sensor_index(mech, sn) < 4;
 }
 

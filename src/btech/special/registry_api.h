@@ -11,8 +11,8 @@ typedef struct BtechContext BtechContext;
 typedef struct EvaluationContext EvaluationContext;
 
 /* registry.c */
-int handled_command_sub(BtechContext *context, DbRef player, DbRef location,
-                        char *command);
+bool handled_command_sub(BtechContext *context, DbRef player, DbRef location,
+                         char *command);
 bool btech_command_try_execute(BtechContext *context, DbRef player, DbRef loc,
                                char *command);
 void mech_remove_from_all_maps(Mech *mech);

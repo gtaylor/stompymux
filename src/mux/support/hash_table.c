@@ -165,7 +165,7 @@ void hash_table_flush(HashTable *htab, int size) {
  * * hash_table_replace: replace the data part of a hash entry.
  */
 
-int hash_table_replace(char *str, void *hashdata, HashTable *htab) {
+bool hash_table_replace(char *str, void *hashdata, HashTable *htab) {
   struct StringDictEntry *ent;
 
   ent = red_black_tree_find(htab->tree, str);

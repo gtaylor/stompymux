@@ -255,14 +255,14 @@ lua_services_initialize(LuaServices *services,
   };
 }
 
-int lua_initialize(LuaOwner *owner, const LuaServices *services, char *error,
-                   size_t error_size);
+bool lua_initialize(LuaOwner *owner, const LuaServices *services, char *error,
+                    size_t error_size);
 void lua_shutdown(LuaOwner *owner);
-int lua_reload(LuaOwner *owner, char *error, size_t error_size);
+bool lua_reload(LuaOwner *owner, char *error, size_t error_size);
 int lua_check(EvaluationContext *evaluation, LuaRuntime *source, DbRef player,
               char *error, size_t error_size);
-int lua_validate_path(LuaRuntime *runtime, const char *path, char *error,
-                      size_t error_size);
+bool lua_validate_path(LuaRuntime *runtime, const char *path, char *error,
+                       size_t error_size);
 typedef struct LuaExamineObjectRequest {
   LuaRuntime *runtime;
   EvaluationContext *evaluation;
@@ -282,8 +282,8 @@ void lua_mech_status_evaluate(LuaRuntime *runtime,
 int lua_list_command_match(LuaRuntime *runtime, Descriptor *descriptor,
                            DbRef first, DbRef player, DbRef cause,
                            const char *command);
-int lua_global_command_match(LuaRuntime *runtime, Descriptor *descriptor,
-                             DbRef player, DbRef cause, const char *command);
+bool lua_global_command_match(LuaRuntime *runtime, Descriptor *descriptor,
+                              DbRef player, DbRef cause, const char *command);
 size_t lua_visit_global_commands(LuaRuntime *runtime, DbRef player,
                                  LuaCommandVisitor visitor, void *context);
 size_t lua_visit_object_commands(LuaRuntime *runtime, DbRef object,

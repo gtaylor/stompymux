@@ -23,7 +23,7 @@ void aero_heading_update(Mech *mech);
 double length_hypotenuse(double x, double y);
 double my_sqrtm(double x, double y);
 void aero_speed_update(Mech *mech);
-int aero_fuel_check(Mech *mech);
+bool aero_fuel_check(Mech *mech);
 void aero_update(Mech *mech);
 void aero_thrust(DbRef player, void *data, char *arg);
 void aero_vheading(DbRef player, void *data, char *arg, int flag);

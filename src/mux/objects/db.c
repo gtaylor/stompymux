@@ -333,8 +333,8 @@ OwnedText attribute_get(GameDatabase *database, DbRef thing, int atr,
   return owned_text_take(buff);
 }
 
-int attribute_get_info(GameDatabase *database, DbRef thing, int atr,
-                       long *flags) {
+bool attribute_get_info(GameDatabase *database, DbRef thing, int atr,
+                        long *flags) {
   char *buff;
 
   buff = attribute_get_raw(database, thing, atr);

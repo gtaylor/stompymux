@@ -12,7 +12,7 @@
 #include "mux/server/platform.h"
 #include "registry_api.h"
 
-int common_checks(DbRef player, Mech *mech, int flags) {
+bool common_checks(DbRef player, Mech *mech, int flags) {
   if (mech == nullptr)
     return 0;
 

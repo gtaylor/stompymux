@@ -10,8 +10,8 @@ typedef struct WorldContext WorldContext;
 
 DbRef start_home(WorldContext *world);
 DbRef default_home(WorldContext *world);
-int can_set_home(EvaluationContext *evaluation, DbRef player, DbRef thing,
-                 DbRef home);
+bool can_set_home(EvaluationContext *evaluation, DbRef player, DbRef thing,
+                  DbRef home);
 DbRef new_home(EvaluationContext *evaluation, DbRef player);
 typedef struct CloneHomeRequest {
   EvaluationContext *evaluation;

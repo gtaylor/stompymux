@@ -35,8 +35,8 @@ struct DatabaseStatistics {
   int s_garbage;
 };
 
-extern int search_criteria_setup(EvaluationContext *context, DbRef player,
-                                 char *search, SearchCriteria *parm);
+extern bool search_criteria_setup(EvaluationContext *context, DbRef player,
+                                  char *search, SearchCriteria *parm);
 typedef struct SearchExecutionRequest {
   EvaluationContext *evaluation;
   SearchCriteria *criteria;

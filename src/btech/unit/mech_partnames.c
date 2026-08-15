@@ -137,9 +137,9 @@ static void insert_sorted_brandname(PartNameRegistry *registry, int count,
                      PART_NAME_VERY_LONG);
 }
 
-static int create_brandname(PartNameRegistry *registry,
-                            const ServerConfiguration *configuration, int id,
-                            int b) {
+static bool create_brandname(PartNameRegistry *registry,
+                             const ServerConfiguration *configuration, int id,
+                             int b) {
   char buf[LBUF_SIZE];
   char buf2[BTECH_TEXT_CAPACITY];
   char buf3[BTECH_TEXT_CAPACITY];
@@ -224,7 +224,7 @@ void initialize_partname_tables(BtechContext *context) {
   context->part_names = registry;
   for (j = 0; j <= BRANDCOUNT; j++)
     for (i = 0; i < NUM_ITEMS; i++)
-      c += create_brandname(registry, configuration, i, j);
+      c += create_brandname(registry, configuration, i, j) ? 1 : 0;
   registry->short_sorted = (PartNameEntry **)checked_storage_allocate_array(
       (size_t)c, sizeof(*registry->short_sorted));
   registry->long_sorted = (PartNameEntry **)checked_storage_allocate_array(

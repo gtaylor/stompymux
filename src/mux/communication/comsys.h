@@ -103,7 +103,7 @@ void do_comconnect(EvaluationContext *evaluation, DbRef player, Descriptor *d);
 void do_channel_membership_flags(CommandInvocation *invocation);
 void do_channel_object(CommandInvocation *invocation);
 void do_channel_flags(CommandInvocation *invocation);
-int do_comsystem(EvaluationContext *evaluation, DbRef who, char *cmd);
+bool do_comsystem(EvaluationContext *evaluation, DbRef who, char *cmd);
 void do_cemit(CommandInvocation *invocation);
 void do_chboot(CommandInvocation *invocation);
 void do_chanstatus(CommandInvocation *invocation);

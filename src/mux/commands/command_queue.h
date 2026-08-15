@@ -70,7 +70,7 @@ command_queue_create(const CommandQueueDependencies *dependencies);
 void command_queue_set_lifecycle(CommandQueue *queue,
                                  ServerLifecycle *lifecycle);
 void command_queue_destroy(CommandQueue *queue);
-int cque_init(CommandQueue *queue);
+bool cque_init(CommandQueue *queue);
 int halt_que(CommandQueue *queue, DbRef player, DbRef object);
 typedef struct QueuedCommandRequest {
   CommandQueue *queue;

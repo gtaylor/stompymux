@@ -44,8 +44,8 @@ static int logcache_compare(const RedBlackTreeCompareCall *call) {
   return strcmp(vleft, vright);
 }
 
-static int log_cache_close(LogCache *cache, struct LogfileT *log,
-                           bool remove_from_cache) {
+static bool log_cache_close(LogCache *cache, struct LogfileT *log,
+                            bool remove_from_cache) {
   mux_timer_destroy(log->timer);
   close(log->fd);
   if (remove_from_cache)
@@ -98,7 +98,7 @@ void log_cache_list(EvaluationContext *evaluation, const LogCache *cache,
   red_black_tree_walk(cache->files, WALK_INORDER, logcache_list, &context);
 }
 
-static int log_cache_open(LogCache *cache, char *filename) {
+static bool log_cache_open(LogCache *cache, char *filename) {
   int fd;
   struct LogfileT *newlog;
 
@@ -174,7 +174,7 @@ void log_cache_destroy(LogCache *cache) {
   free(cache);
 }
 
-int log_cache_write(LogCache *cache, char *fname, const char *fdata) {
+bool log_cache_write(LogCache *cache, char *fname, const char *fdata) {
   struct LogfileT *log;
   int len;
 

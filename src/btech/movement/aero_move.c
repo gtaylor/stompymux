@@ -668,7 +668,7 @@ void aero_speed_update(Mech *mech) {
     mech_heading_set(mech, mech_desired_heading_degrees(mech));
   mech_motion_vector_set(mech, (MapSpatialPosition){.x = nx, .y = ny, .z = nz});
 }
-int aero_fuel_check(Mech *mech) {
+bool aero_fuel_check(Mech *mech) {
   int fuelcost = 1;
   /* We don't do anything particularly nasty to shutdown things */
   if (!mech_is_started(mech))

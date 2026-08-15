@@ -122,7 +122,7 @@ void lua_log_load_error(LuaRuntime *runtime, DbRef object, const char *path,
             error ? error : "unknown Lua error");
 }
 
-int lua_valid_relative_path(const char *path) {
+bool lua_valid_relative_path(const char *path) {
   size_t path_length;
   size_t part_offset;
 
@@ -173,8 +173,8 @@ const char *lua_root_name(LuaModuleRoot root) {
   }
 }
 
-int lua_join_path(char *destination, size_t destination_size, const char *first,
-                  const char *second) {
+bool lua_join_path(char *destination, size_t destination_size,
+                   const char *first, const char *second) {
   size_t first_length = strlen(first);
   size_t second_length = strlen(second);
 
@@ -189,9 +189,9 @@ int lua_join_path(char *destination, size_t destination_size, const char *first,
   return 1;
 }
 
-int lua_resolve_path(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
-                     char *resolved, size_t resolved_size, char *error,
-                     size_t error_size) {
+bool lua_resolve_path(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
+                      char *resolved, size_t resolved_size, char *error,
+                      size_t error_size) {
   char candidate[PATH_MAX];
   size_t root_length;
 
@@ -268,8 +268,8 @@ static bool lua_install_sandbox(LuaRuntime *runtime) {
   return true;
 }
 
-int lua_load_module(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
-                    char *error, size_t error_size) {
+bool lua_load_module(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
+                     char *error, size_t error_size) {
   lua_State *state = runtime->state;
   char resolved[PATH_MAX];
   char key[PATH_MAX];

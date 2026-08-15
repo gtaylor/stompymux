@@ -21,7 +21,7 @@
  * (by terrain, water hexes or more than 2 'points' of wood) and in
  * range, the target is lit.
  */
-static int mech_lites_target(Mech *mech, Mech *target) {
+static bool mech_lites_target(Mech *mech, Mech *target) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 

@@ -8,7 +8,7 @@
 
 typedef struct ServerConfiguration ServerConfiguration;
 
-int password_initialize(void);
-int password_hash(const ServerConfiguration *configuration,
-                  const char *password, char hash[crypto_pwhash_STRBYTES]);
-int password_verify(const char *password, const char *hash);
+bool password_initialize(void);
+bool password_hash(const ServerConfiguration *configuration,
+                   const char *password, char hash[crypto_pwhash_STRBYTES]);
+bool password_verify(const char *password, const char *hash);

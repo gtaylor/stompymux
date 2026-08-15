@@ -91,7 +91,7 @@ void record_login(EvaluationContext *evaluation, DbRef player, bool successful,
 /**
  * Test a password to see if it is correct.
  */
-int check_pass(WorldContext *world, DbRef player, const char *password) {
+bool check_pass(WorldContext *world, DbRef player, const char *password) {
   if (strlen(password) >
       (size_t)world->configuration->player_password_length_limit)
     return 0;
@@ -316,7 +316,7 @@ int add_player_name(WorldContext *world, DbRef player, const char *name) {
   return stat;
 }
 
-int delete_player_name(WorldContext *world, DbRef player, const char *name) {
+bool delete_player_name(WorldContext *world, DbRef player, const char *name) {
   DbRef *p;
   char *temp;
   char *tp;
@@ -452,7 +452,7 @@ void badname_remove(WorldContext *world, char *bad_name) {
   }
 }
 
-int badname_check(WorldContext *world, const char *bad_name) {
+bool badname_check(WorldContext *world, const char *bad_name) {
   BADNAME *bp;
 
   /*

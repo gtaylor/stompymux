@@ -6,7 +6,7 @@
 
 #include "mux/network/telnet_environment.h"
 
-int descriptor_telnet_initialize(Descriptor *d);
+bool descriptor_telnet_initialize(Descriptor *d);
 void descriptor_telnet_destroy(Descriptor *d);
 void descriptor_telnet_receive(Descriptor *d, const char *buffer, size_t size);
 void descriptor_telnet_set_echo(Descriptor *d, int echo);

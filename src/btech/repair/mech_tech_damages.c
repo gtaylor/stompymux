@@ -108,7 +108,7 @@ static void repair_damage_add_detail(RepairDamageTable *damages, int type,
 static int clan_modified_time(const Mech *mech, int time) {
   return max(1, time / ((mech_technology_flags(mech) & CLAN_TECH) ? 2 : 1));
 }
-static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
+static bool check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
   int a;
   int b;
   if (mech_section_is_destroyed(mech, loc)) {
@@ -180,8 +180,8 @@ static int check_for_damage(RepairDamageTable *damages, Mech *mech, int loc) {
   }
   return 1;
 }
-static int check_for_scrappage(RepairDamageTable *damages, Mech *mech,
-                               int loc) {
+static bool check_for_scrappage(RepairDamageTable *damages, Mech *mech,
+                                int loc) {
   int a;
   int b;
   int ret = 1;
@@ -221,11 +221,11 @@ static void make_scrap_table(RepairDamageTable *damages, Mech *mech) {
   damages->count = 0;
   if (mech_class(mech) == CLASS_MECH) {
     if (check_for_scrappage(damages, mech, RARM))
-      i -= check_for_scrappage(damages, mech, RTORSO);
+      i -= check_for_scrappage(damages, mech, RTORSO) ? 1 : 0;
     if (check_for_scrappage(damages, mech, LARM))
-      i -= check_for_scrappage(damages, mech, LTORSO);
-    i -= check_for_scrappage(damages, mech, RLEG);
-    i -= check_for_scrappage(damages, mech, LLEG);
+      i -= check_for_scrappage(damages, mech, LTORSO) ? 1 : 0;
+    i -= check_for_scrappage(damages, mech, RLEG) ? 1 : 0;
+    i -= check_for_scrappage(damages, mech, LLEG) ? 1 : 0;
     if (!i)
       check_for_scrappage(damages, mech, CTORSO);
     check_for_scrappage(damages, mech, HEAD);

@@ -19,5 +19,5 @@ typedef struct LocationSimulation {
   int dh;
 } LocationSimulation;
 
-int ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location);
+bool ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location);
 void location_simulation_initialize(LocationSimulation *location, Mech *mech);

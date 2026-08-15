@@ -187,7 +187,7 @@ static int mech_class_command_flag(int unit_class) {
   }
 }
 
-int btech_command_allowed_for_mech(Mech *mech, int cmdflag) {
+bool btech_command_allowed_for_mech(Mech *mech, int cmdflag) {
   int i;
 
   if (!cmdflag)
@@ -216,8 +216,8 @@ bool btech_special_command_access(BtechContext *context, DbRef object,
                                      .power = power}));
 }
 
-int handled_command_sub(BtechContext *context, DbRef player, DbRef location,
-                        char *command) {
+bool handled_command_sub(BtechContext *context, DbRef player, DbRef location,
+                         char *command) {
   BtechSpecialObject *xcode_obj = nullptr;
 
   const BtechSpecialObjectDefinition *type_of_object;

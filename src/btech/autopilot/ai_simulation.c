@@ -45,7 +45,7 @@ static int ai_map_elevation(BattleMap *map, int x, int y) {
              : ELEVATION;
 }
 
-int ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location) {
+bool ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location) {
   if (map == nullptr)
     return 0;
 

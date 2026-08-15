@@ -336,7 +336,7 @@ int physical_charge_section(int index) {
 /*
  * Executed at the end of a DFA
  */
-int death_from_above(Mech *mech, Mech *target) {
+bool death_from_above(Mech *mech, Mech *target) {
   int base_to_hit = 5;
   int roll;
   int hit_group;

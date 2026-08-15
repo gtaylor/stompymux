@@ -392,8 +392,8 @@ HitLocationResult find_swarm_hit_location(BtechContext *context) {
  * Determines whether a section can receive a critical hit.
  * tres = armor percentage threshhold
  */
-int mech_section_is_crittable(Mech *mech, int loc,
-                              CriticalThreshold threshold) {
+bool mech_section_is_crittable(Mech *mech, int loc,
+                               CriticalThreshold threshold) {
   int d;
   int tres = threshold.armor_percent;
   BtechContext *context = mech_context(mech);

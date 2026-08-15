@@ -102,9 +102,9 @@ login_throttle_entry(LoginThrottle *throttle,
   return oldest;
 }
 
-static int login_throttle_allow(LoginThrottle *throttle,
-                                const ServerConfiguration *configuration,
-                                const char *address) {
+static bool login_throttle_allow(LoginThrottle *throttle,
+                                 const ServerConfiguration *configuration,
+                                 const char *address) {
   LoginThrottleEntry *entry;
   time_t now;
   time_t elapsed;
@@ -390,7 +390,7 @@ static void connect_flow_data_free(void *flow_data) {
   free(data);
 }
 
-static int connect_flow_blank(const char *input) {
+static bool connect_flow_blank(const char *input) {
   size_t length = strlen(input);
   size_t offset = 0;
 

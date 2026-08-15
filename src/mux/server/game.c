@@ -514,7 +514,7 @@ static int load_game(MuxServer *server) {
   return (0);
 }
 
-int is_hearer(EvaluationContext *evaluation, DbRef thing) {
+bool is_hearer(EvaluationContext *evaluation, DbRef thing) {
   return is_connected(evaluation->world->database, thing);
 }
 

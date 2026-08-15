@@ -397,9 +397,9 @@ long build_bit_vector_no_err(const char *const list[], size_t count,
   return bv;
 }
 
-int check_specials_list(const char *const special_list[], size_t count,
-                        const char *const special_list2[], size_t count2,
-                        char *line) {
+bool check_specials_list(const char *const special_list[], size_t count,
+                         const char *const special_list2[], size_t count2,
+                         char *line) {
   int w_spec_check = -1;
   int w_spec2_check = -1;
   char buf[30];

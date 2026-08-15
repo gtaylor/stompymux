@@ -8,10 +8,10 @@
 #include "mux/support/alloc.h"
 #include "mux/support/password.h"
 
-int password_initialize(void) { return sodium_init() >= 0; }
+bool password_initialize(void) { return sodium_init() >= 0; }
 
-int password_hash(const ServerConfiguration *configuration,
-                  const char *password, char hash[crypto_pwhash_STRBYTES]) {
+bool password_hash(const ServerConfiguration *configuration,
+                   const char *password, char hash[crypto_pwhash_STRBYTES]) {
   size_t password_length;
 
   password_length = strnlen(password, LBUF_SIZE);
@@ -27,7 +27,7 @@ int password_hash(const ServerConfiguration *configuration,
              crypto_pwhash_ALG_ARGON2ID13) == 0;
 }
 
-int password_verify(const char *password, const char *hash) {
+bool password_verify(const char *password, const char *hash) {
   size_t password_length;
 
   password_length = strnlen(password, LBUF_SIZE);

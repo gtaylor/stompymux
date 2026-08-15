@@ -504,7 +504,7 @@ int char_getxpbycode(const CharacterValueRequest *request) {
   return character_stats_xp_get(s, request->code) % XP_MAX;
 }
 
-int char_gainxpbycode(const CharacterExperienceChange *change) {
+bool char_gainxpbycode(const CharacterExperienceChange *change) {
   BtechContext *context = change->target.context;
   DbRef player = change->target.player;
   int code = change->target.code;
@@ -538,8 +538,8 @@ int char_gainxpbycode(const CharacterExperienceChange *change) {
   return 1;
 }
 
-int char_gainxp(BtechContext *context, DbRef player, const char *skill,
-                int amount) {
+bool char_gainxp(BtechContext *context, DbRef player, const char *skill,
+                 int amount) {
   return char_gainxpbycode(&(CharacterExperienceChange){
       .target = {.context = context,
                  .player = player,
