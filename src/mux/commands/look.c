@@ -221,8 +221,10 @@ static void look_exits(const LookContext *look, const char *exit_name) {
   free_lbuf(command);
 }
 
-#define CONTENTS_LOCAL 0
-#define CONTENTS_NESTED 1
+enum ContentsStyle : int {
+  CONTENTS_LOCAL = 0,
+  CONTENTS_NESTED = 1,
+};
 
 static void look_contents(const LookContext *look, const char *contents_name,
                           int style) {

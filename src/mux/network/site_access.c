@@ -47,8 +47,8 @@ int site_data_check(struct sockaddr_storage *saddr, int address_length,
  * * list_sites: Display information in a site list
  */
 
-#define S_SUSPECT 1
-#define S_ACCESS 2
+static constexpr int S_SUSPECT = 1;
+static constexpr int S_ACCESS = 2;
 
 typedef struct SiteStatusRequest {
   int type;
