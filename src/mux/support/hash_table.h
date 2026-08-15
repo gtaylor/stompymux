@@ -37,7 +37,6 @@ int hash_table_replace(char * /*str*/, void * /*hashdata*/,
                        HashTable * /*htab*/);
 void hash_table_replace_all(void * /*old*/, void * /*new*/,
                             HashTable * /*htab*/);
-char *hash_table_info(const char * /*tab_name*/, HashTable * /*htab*/);
 void *hash_table_next_entry(HashTable *htab);
 void *hash_table_first_entry(HashTable *htab);
 char *hash_table_first_key(HashTable *htab);
@@ -48,7 +47,6 @@ void numeric_hash_table_destroy(HashTable * /*htab*/);
 void numeric_hash_table_reset(HashTable * /*htab*/);
 void *numeric_hash_table_next_entry(HashTable *htab);
 void *numeric_hash_table_first_entry(HashTable *htab);
-char *numeric_hash_table_info(const char *, HashTable *);
 void *numeric_hash_table_find(long /*val*/, HashTable * /*htab*/);
 int numeric_hash_table_add(long /*val*/, void * /*hashdata*/,
                            HashTable * /*htab*/);

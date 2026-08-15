@@ -10,3 +10,12 @@ void owned_text_release(OwnedText *text) {
   free_buf(text->owned);
   *text = (OwnedText){};
 }
+
+char *owned_text_relinquish(OwnedText *text) {
+  if (text == nullptr)
+    return nullptr;
+  char *owned = text->owned;
+  text->text = nullptr;
+  text->owned = nullptr;
+  return owned;
+}

@@ -105,13 +105,13 @@ void init_flagtab(WorldIndexes *indexes);
 void display_flagtab(EvaluationContext * /*evaluation*/, DbRef /*player*/);
 void flag_set(EvaluationContext * /*evaluation*/, WorldIndexes *indexes,
               DbRef /*target*/, DbRef /*player*/, char * /*name*/, int /*key*/);
-char *flag_description(GameDatabase * /*database*/, DbRef target);
-char *flags_description(GameDatabase * /*database*/, DbRef target);
+OwnedText flag_description(GameDatabase * /*database*/, DbRef target);
+OwnedText flags_description(GameDatabase * /*database*/, DbRef target);
 const FlagEntry *find_flag(WorldIndexes * /*indexes*/, DbRef /*thing*/,
                            const char * /*flagname*/);
 bool flag_alias_add(WorldIndexes *indexes, const char *alias,
                     const FlagEntry *flag);
-char *decode_flags(const DecodeFlagsRequest *request);
+OwnedText decode_flags(const DecodeFlagsRequest *request);
 OwnedText unparse_object(GameDatabase *database, EvaluationContext *evaluation,
                          DbRef player, DbRef target);
 OwnedText unparse_object_numonly(GameDatabase *database, DbRef target);
@@ -302,7 +302,8 @@ static inline void c_connected(GameDatabase *database, DbRef x) {
   game_object_set_flag(&(ObjectFlagChangeRequest){
       .database = database, .object = x, .flag = OBJECT_FLAG_CONNECTED});
 }
-static inline char *unparse_flags(GameDatabase *database, DbRef p, DbRef t) {
+static inline OwnedText unparse_flags(GameDatabase *database, DbRef p,
+                                      DbRef t) {
   ObjectFlagSet flags = {0};
   game_object_flags_copy(database, t, &flags);
   return decode_flags(

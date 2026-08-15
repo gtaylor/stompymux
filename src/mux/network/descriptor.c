@@ -1,6 +1,6 @@
 #include "mux/commands/command_context.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
-#include "mux/support/alloc.h"
+#include "mux/support/owned_text.h"
 #include "mux/world/world_context.h"
 /* Descriptor lifecycle, traversal, and shutdown implementations. */
 
@@ -305,7 +305,7 @@ void descriptor_shutdown(Descriptor *descriptor,
   descriptor->is_dead = true;
   uv_read_stop((uv_stream_t *)descriptor->socket);
   if (descriptor->is_connected) {
-    char *flags;
+    OwnedText flags;
 
     fcache_dump(runtime->files, descriptor, FC_QUIT);
     log_error((LogEntry){.log = descriptor_log(descriptor),
@@ -324,14 +324,14 @@ void descriptor_shutdown(Descriptor *descriptor,
                    .key = LOG_ACCOUNTING,
                    .primary = "DIS",
                    .secondary = "ACCT"},
-        "%ld %s %d %ld %ld [%s] <%s> %s", descriptor->player, flags,
+        "%ld %s %d %ld %ld [%s] <%s> %s", descriptor->player, flags.text,
         descriptor->command_count,
         runtime->clock->now - descriptor->connected_at,
         game_object_location(descriptor_runtime(descriptor)->world->database,
                              descriptor->player),
         descriptor->addr, descriptor_shutdown_reason_at(reason),
         game_object_name(runtime->world->database, descriptor->player));
-    free_buf(flags);
+    owned_text_release(&flags);
 
     descriptor_announce_disconnect(descriptor->player, descriptor,
                                    descriptor_shutdown_message_at(reason));

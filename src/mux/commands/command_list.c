@@ -32,6 +32,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/name_table.h"
+#include "mux/support/owned_text.h"
 #include "mux/world/player.h"
 #include "mux/world/world_context.h"
 
@@ -212,10 +213,10 @@ static void list_cmdtable(EvaluationContext *evaluation,
 static void list_df_flags(EvaluationContext *evaluation,
                           const ServerConfiguration *configuration,
                           DbRef player) {
-  char *playerb;
-  char *roomb;
-  char *thingb;
-  char *exitb;
+  OwnedText playerb;
+  OwnedText roomb;
+  OwnedText thingb;
+  OwnedText exitb;
   char *buff;
 
   playerb = decode_flags(
@@ -241,14 +242,14 @@ static void list_df_flags(EvaluationContext *evaluation,
   buff = alloc_lbuf("list_df_flags");
   (void)snprintf(
       buff, LBUF_SIZE,
-      "Default flags: Players...%s Rooms...%s Exits...%s Things...%s", playerb,
-      roomb, exitb, thingb);
+      "Default flags: Players...%s Rooms...%s Exits...%s Things...%s",
+      playerb.text, roomb.text, exitb.text, thingb.text);
   raw_notify(evaluation, player, buff);
   free_buf(buff);
-  free_buf(playerb);
-  free_buf(roomb);
-  free_buf(exitb);
-  free_buf(thingb);
+  owned_text_release(&playerb);
+  owned_text_release(&roomb);
+  owned_text_release(&exitb);
+  owned_text_release(&thingb);
 }
 
 /*

@@ -34,4 +34,4 @@ typedef struct CommandArgumentListRequest {
 } CommandArgumentListRequest;
 
 char *parse_to(const CommandParseRequest *request);
-char *parse_arglist(const CommandArgumentListRequest *request);
+void parse_arglist(const CommandArgumentListRequest *request);

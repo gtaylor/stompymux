@@ -478,13 +478,13 @@ void flag_set(EvaluationContext *evaluation, WorldIndexes *indexes,
                   game_object_name(evaluation->world->database, target),
                   flag->flagname, clear ? "cleared." : "set.");
 }
-char *decode_flags(const DecodeFlagsRequest *request) {
+OwnedText decode_flags(const DecodeFlagsRequest *request) {
   char *buffer = alloc_sbuf("decode_flags");
   char *out = buffer;
   *out = '\0';
   if (!is_good_obj(request->database, request->player)) {
     (void)string_copy_bounded(buffer, SBUF_SIZE, "#-2 ERROR");
-    return buffer;
+    return owned_text_take(buffer);
   }
   const ObjectEntry *object_type = object_type_entry(request->object_type);
   if (object_type->lett != ' ')
@@ -496,9 +496,9 @@ char *decode_flags(const DecodeFlagsRequest *request) {
     safe_sb_chr(flag->flaglett, buffer, &out);
   }
   *out = '\0';
-  return buffer;
+  return owned_text_take(buffer);
 }
-char *flag_description(GameDatabase *database, DbRef target) {
+OwnedText flag_description(GameDatabase *database, DbRef target) {
   char *buffer = alloc_mbuf("flag_description");
   char *out = buffer;
   safe_mb_str("Type: ", buffer, &out);
@@ -514,10 +514,10 @@ char *flag_description(GameDatabase *database, DbRef target) {
     }
   }
   *out = '\0';
-  return buffer;
+  return owned_text_take(buffer);
 }
 
-char *flags_description(GameDatabase *database, DbRef target) {
+OwnedText flags_description(GameDatabase *database, DbRef target) {
   char *buffer = alloc_mbuf("flags_description");
   char *out = buffer;
 
@@ -531,7 +531,7 @@ char *flags_description(GameDatabase *database, DbRef target) {
     }
   }
   *out = '\0';
-  return buffer;
+  return owned_text_take(buffer);
 }
 
 OwnedText unparse_object_numonly(GameDatabase *database, DbRef target) {
@@ -558,11 +558,11 @@ OwnedText unparse_object(GameDatabase *database, EvaluationContext *evaluation,
   } else if (!is_good_obj(database, target)) {
     (void)snprintf(buffer, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
   } else if (is_examinable(database, player, target)) {
-    char *flags = unparse_flags(database, player, target);
+    OwnedText flags = unparse_flags(database, player, target);
     (void)snprintf(buffer, LBUF_SIZE, "%s(#%ld%s%s)",
                    game_object_name(database, target), target,
-                   *flags ? ":" : "", flags);
-    free_buf(flags);
+                   *flags.text ? ":" : "", flags.text);
+    owned_text_release(&flags);
   } else {
     (void)string_copy_bounded(buffer, LBUF_SIZE,
                               game_object_name(database, target));

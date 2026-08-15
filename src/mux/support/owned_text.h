@@ -16,3 +16,4 @@ static inline OwnedText owned_text_take(char *text) {
 }
 
 void owned_text_release(OwnedText *text);
+char *owned_text_relinquish(OwnedText *text);

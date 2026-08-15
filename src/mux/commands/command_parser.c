@@ -159,14 +159,14 @@ char *parse_to(const CommandParseRequest *request) {
   return result;
 }
 
-char *parse_arglist(const CommandArgumentListRequest *request) {
+void parse_arglist(const CommandArgumentListRequest *request) {
   char **arguments = request->arguments;
   size_t max_arguments = request->maximum_arguments;
   for (size_t i = 0; i < max_arguments; i++)
     *(char **)checked_storage_at((void *)arguments, max_arguments,
                                  sizeof(*arguments), i) = nullptr;
   if (request->source == nullptr)
-    return nullptr;
+    return;
 
   char *remainder = request->source;
   char *list =
@@ -186,5 +186,4 @@ char *parse_arglist(const CommandArgumentListRequest *request) {
     *slot = alloc_lbuf("parse_arglist");
     (void)string_copy_bounded(*slot, LBUF_SIZE, argument);
   }
-  return remainder;
 }

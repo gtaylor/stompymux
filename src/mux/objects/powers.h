@@ -7,6 +7,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_registries.h"
+#include "mux/support/owned_text.h"
 #include "mux/world/world_context.h"
 
 typedef struct WorldContext WorldContext;
@@ -42,7 +43,7 @@ typedef struct PowerDescriptionRequest {
   DbRef target;
 } PowerDescriptionRequest;
 
-extern char *power_description(const PowerDescriptionRequest *request);
+OwnedText power_description(const PowerDescriptionRequest *request);
 const POWERENT *find_power(WorldIndexes * /*indexes*/, DbRef /*thing*/,
                            const char * /*powername*/);
 extern bool decode_power(EvaluationContext * /*evaluation*/,

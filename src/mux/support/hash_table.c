@@ -2,12 +2,10 @@
  * htab.c - table hashing routines
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
-#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/red_black_tree.h"
@@ -205,20 +203,6 @@ void hash_table_replace_all(void *old, void *new, HashTable *htab) {
   struct Hashreplstat repl = {old, new};
 
   red_black_tree_walk(htab->tree, WALK_INORDER, hashreplall_cb, &repl);
-}
-
-/*
- * ---------------------------------------------------------------------------
- * * hash_table_info: return an mbuf with hashing stats
- */
-
-char *hash_table_info(const char *tab_name, HashTable *htab) {
-  char *buff;
-
-  buff = alloc_mbuf("hash_table_info");
-  (void)snprintf(buff, MBUF_SIZE, "%-15s %8d", tab_name,
-                 red_black_tree_size(htab->tree));
-  return buff;
 }
 
 /*

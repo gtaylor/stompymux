@@ -20,6 +20,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/stringutil.h"
 
 static const POWERENT POWER_ENTRIES[] = {
@@ -206,7 +207,7 @@ void power_set(EvaluationContext *evaluation, WorldIndexes *indexes,
 /**
  * Return an mbuf containing the type and powers on thing.
  */
-char *power_description(const PowerDescriptionRequest *request) {
+OwnedText power_description(const PowerDescriptionRequest *request) {
   GameDatabase *database = request->database;
   DbRef player = request->viewer;
   DbRef target = request->target;
@@ -244,5 +245,5 @@ char *power_description(const PowerDescriptionRequest *request) {
    */
 
   *bp = '\0';
-  return buff;
+  return owned_text_take(buff);
 }

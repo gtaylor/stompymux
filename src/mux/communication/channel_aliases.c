@@ -19,7 +19,6 @@
 #include "mux/persistence/gamedb.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/owned_text.h"
@@ -155,10 +154,10 @@ void comsys_show_channel_who(EvaluationContext *evaluation, DbRef player,
       buff = unparse_object(evaluation->world->database, evaluation, player,
                             user->who);
       if (i > 30) {
-        char *c = get_uptime_to_string(i);
+        OwnedText c = get_uptime_to_string(i);
 
-        notify_printf(evaluation, player, "%s [idle %s]", buff.text, c);
-        free_buf(c);
+        notify_printf(evaluation, player, "%s [idle %s]", buff.text, c.text);
+        owned_text_release(&c);
       } else {
         notify_printf(evaluation, player, "%s", buff.text);
       }

@@ -116,8 +116,8 @@ static OwnedText format_forwarded_message(const char *msg, const char *prefix) {
   return owned_text_take(plain);
 }
 
-static char *dflt_from_msg(GameDatabase *database, DbRef sender,
-                           DbRef sendloc) {
+static OwnedText dflt_from_msg(GameDatabase *database, DbRef sender,
+                               DbRef sendloc) {
   char *tp;
   char *tbuff;
 
@@ -129,13 +129,12 @@ static char *dflt_from_msg(GameDatabase *database, DbRef sender,
     safe_str(game_object_name(database, sender), tbuff, &tp);
   safe_chr(',', tbuff, &tp);
   *tp = '\0';
-  return tbuff;
+  return owned_text_take(tbuff);
 }
 
 void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
                     const char *msg, int key) {
   char *msg_copy;
-  char *tbuff;
   DbRef targetloc;
   DbRef recip;
   DbRef obj;
@@ -211,9 +210,10 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
 
       OwnedText forwarded = owned_text_borrow(msg);
       if (key & MSG_S_INSIDE) {
-        tbuff = dflt_from_msg(evaluation->world->database, sender, target);
-        forwarded = format_forwarded_message(msg, tbuff);
-        free_buf(tbuff);
+        OwnedText prefix =
+            dflt_from_msg(evaluation->world->database, sender, target);
+        forwarded = format_forwarded_message(msg, prefix.text);
+        owned_text_release(&prefix);
       }
 
       DOLIST(evaluation->world->database, obj,
@@ -264,9 +264,10 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
         ((key & MSG_NBR) || ((key & MSG_NBR_A) && target_audible))) {
       OwnedText forwarded = owned_text_borrow(msg);
       if (key & MSG_S_INSIDE) {
-        tbuff = dflt_from_msg(evaluation->world->database, sender, target);
-        forwarded = format_forwarded_message(msg, tbuff);
-        free_buf(tbuff);
+        OwnedText prefix =
+            dflt_from_msg(evaluation->world->database, sender, target);
+        forwarded = format_forwarded_message(msg, prefix.text);
+        owned_text_release(&prefix);
       }
       DOLIST(evaluation->world->database, obj,
              game_object_contents(evaluation->world->database, targetloc)) {
@@ -285,9 +286,10 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
         ((key & MSG_LOC) || ((key & MSG_LOC_A) && target_audible))) {
       OwnedText forwarded = owned_text_borrow(msg);
       if (key & MSG_S_INSIDE) {
-        tbuff = dflt_from_msg(evaluation->world->database, sender, target);
-        forwarded = format_forwarded_message(msg, tbuff);
-        free_buf(tbuff);
+        OwnedText prefix =
+            dflt_from_msg(evaluation->world->database, sender, target);
+        forwarded = format_forwarded_message(msg, prefix.text);
+        owned_text_release(&prefix);
       }
       notify_checked(evaluation, targetloc, sender, forwarded.text,
                      MSG_ME | MSG_F_UP | MSG_S_INSIDE);

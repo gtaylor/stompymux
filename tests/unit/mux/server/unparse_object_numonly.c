@@ -53,6 +53,13 @@ int main(void) {
   OwnedText rendered_invalid = unparse_object(&database, nullptr, 0, 3);
   OwnedText examinable = unparse_object(&database, nullptr, GOD, 0);
   OwnedText hidden_details = unparse_object(&database, nullptr, 0, 0);
+  ObjectFlagSet flags = {};
+  object_flag_set_set(&flags, OBJECT_FLAG_DARK, true);
+  OwnedText decoded = decode_flags(
+      &(DecodeFlagsRequest){.database = &database,
+                            .player = GOD,
+                            .object_type = OBJECT_TYPE_THING,
+                            .flags = &flags});
   int result = 0;
 
   if (nothing.owned == nullptr || strcmp(nothing.text, "*NOTHING*") != 0)
@@ -79,6 +86,8 @@ int main(void) {
   else if (hidden_details.owned == nullptr ||
            strcmp(hidden_details.text, "Valid") != 0)
     result = 9;
+  else if (decoded.owned == nullptr || strcmp(decoded.text, "D") != 0)
+    result = 10;
 
   owned_text_release(&nothing);
   owned_text_release(&home);
@@ -89,5 +98,6 @@ int main(void) {
   owned_text_release(&rendered_invalid);
   owned_text_release(&examinable);
   owned_text_release(&hidden_details);
+  owned_text_release(&decoded);
   return result;
 }

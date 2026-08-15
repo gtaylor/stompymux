@@ -104,19 +104,19 @@ void do_name(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   char *name = invocation->first;
-  char *newname = invocation->second;
+  const char *newname = invocation->second;
   DbRef thing;
   OwnedText buff;
   char new[LBUF_SIZE];
-  char *compiled_name;
+  OwnedText compiled_name;
 
   thing = match_controlled(&invocation->context->match, player, name);
   if (thing == NOTHING)
     return;
   compiled_name = builder_compile_object_name(evaluation, player, newname);
-  if (!compiled_name)
+  if (!compiled_name.text)
     return;
-  newname = compiled_name;
+  newname = compiled_name.text;
 
   /*
    * check for bad name
@@ -126,7 +126,7 @@ void do_name(CommandInvocation *invocation) {
   if (*newname == '\0' || strlen(new) == 0) {
     notify_checked(evaluation, player, player, "Give it what new name?",
                    MSG_ME);
-    free_buf(compiled_name);
+    owned_text_release(&compiled_name);
     return;
   }
   /*
@@ -142,7 +142,7 @@ void do_name(CommandInvocation *invocation) {
       notify_checked(evaluation, player, player, "You can't use that name.",
                      MSG_ME);
       owned_text_release(&buff);
-      free_buf(compiled_name);
+      owned_text_release(&compiled_name);
       return;
     }
     if (string_compare(invocation->context->world->configuration, buff.text,
@@ -158,7 +158,7 @@ void do_name(CommandInvocation *invocation) {
       notify_checked(evaluation, player, player, "That name is already in use.",
                      MSG_ME);
       owned_text_release(&buff);
-      free_buf(compiled_name);
+      owned_text_release(&compiled_name);
       return;
     }
 
@@ -186,7 +186,7 @@ void do_name(CommandInvocation *invocation) {
         game_object_pure_name(invocation->context->world->database, thing));
     notify_checked(evaluation, player, player, "Name set.", MSG_ME);
     owned_text_release(&buff);
-    free_buf(compiled_name);
+    owned_text_release(&compiled_name);
     return;
   }
   styled_text_strip(evaluation->world->styled_text_palette, newname, new,
@@ -194,7 +194,7 @@ void do_name(CommandInvocation *invocation) {
   if (!ok_name(invocation->context->world->configuration, new)) {
     notify_checked(evaluation, player, player, "That is not a reasonable name.",
                    MSG_ME);
-    free_buf(compiled_name);
+    owned_text_release(&compiled_name);
     return;
   }
   /*
@@ -203,7 +203,7 @@ void do_name(CommandInvocation *invocation) {
   object_name_set(invocation->context->world->database, thing, newname);
   notify_checked(evaluation, player, player, "Name set.", MSG_ME);
 
-  free_buf(compiled_name);
+  owned_text_release(&compiled_name);
 }
 /*
  * ---------------------------------------------------------------------------

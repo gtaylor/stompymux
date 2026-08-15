@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include "mux/support/owned_text.h"
+
 #include <stddef.h>
 
 #include "mux/commands/command_context.h"
@@ -104,4 +106,4 @@ typedef struct MacroExpansionRequest {
   char *arguments;
 } MacroExpansionRequest;
 
-char *do_process_macro(const MacroExpansionRequest *request);
+OwnedText do_process_macro(const MacroExpansionRequest *request);
