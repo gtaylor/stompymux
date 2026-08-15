@@ -741,6 +741,18 @@ target_include_directories(object_state_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME object_state COMMAND object_state_test)
 
+add_executable(object_names_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/state/object_names.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/objects/db.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_compile_options(object_names_test PRIVATE -ffunction-sections)
+target_link_options(object_names_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(object_names_test PRIVATE btmux_options)
+target_include_directories(object_names_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME object_names COMMAND object_names_test)
+
 add_executable(player_account_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/state/player_account.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/objects/player_account.c)
 target_link_libraries(player_account_test PRIVATE btmux_options)

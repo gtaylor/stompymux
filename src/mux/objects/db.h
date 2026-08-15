@@ -149,7 +149,6 @@ struct GameDatabase {
   GameObject *object_storage;
   NAME *pure_name_storage;
   char name_buffer[MBUF_SIZE];
-  char pure_name_buffer[LBUF_SIZE];
   int top;
   int size;
   int minimum_size;
