@@ -33,7 +33,7 @@ constexpr int CACHE_DEPTH = 10;
 constexpr int CACHE_WIDTH = 20;
 
 ServerConfiguration *server_configuration_create(void) {
-  return calloc(1, sizeof(ServerConfiguration));
+  return checked_storage_try_allocate_array(1, sizeof(ServerConfiguration));
 }
 
 void server_configuration_destroy(ServerConfiguration *configuration) {

@@ -74,7 +74,7 @@ static void telnet_environment_entry_destroy(TelnetEnvironmentEntry *entry) {
 }
 
 TelnetEnvironment *telnet_environment_create(void) {
-  return calloc(1, sizeof(TelnetEnvironment));
+  return checked_storage_try_allocate_array(1, sizeof(TelnetEnvironment));
 }
 
 void telnet_environment_clear(TelnetEnvironment *environment) {
@@ -216,7 +216,7 @@ static bool telnet_environment_parse_bytes(const unsigned char *buffer,
     if (*bytes_size == maximum)
       return false;
     if (*bytes == nullptr) {
-      *bytes = malloc(maximum);
+      *bytes = checked_storage_try_allocate(maximum);
       if (*bytes == nullptr)
         return false;
     }
@@ -224,7 +224,7 @@ static bool telnet_environment_parse_bytes(const unsigned char *buffer,
                                          (*bytes_size)++) = byte;
   }
   if (*bytes_size != 0 && *bytes_size != maximum) {
-    shrunk = realloc(*bytes, *bytes_size);
+    shrunk = checked_storage_try_reallocate(*bytes, *bytes_size);
     if (shrunk != nullptr)
       *bytes = shrunk;
   }
@@ -317,7 +317,7 @@ static bool telnet_environment_set(TelnetEnvironment *environment,
   if (new_total > TELNET_ENVIRONMENT_MAX_TOTAL_SIZE)
     return false;
   if (update->value == nullptr) {
-    update->value = calloc(1, 1);
+    update->value = checked_storage_try_allocate_array(1, 1);
     if (update->value == nullptr)
       return false;
   }
@@ -350,9 +350,10 @@ telnet_environment_clone(const TelnetEnvironment *environment) {
         telnet_environment_entry_at_const(environment, index);
     TelnetEnvironmentUpdate update = {
         .kind = source->kind,
-        .name = malloc(source->name_size),
+        .name = checked_storage_try_allocate(source->name_size),
         .name_size = source->name_size,
-        .value = malloc(source->value_size == 0 ? 1 : source->value_size),
+        .value = checked_storage_try_allocate(
+            source->value_size == 0 ? 1 : source->value_size),
         .value_size = source->value_size,
         .has_value = true,
     };

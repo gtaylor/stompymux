@@ -59,7 +59,7 @@ static void signal_test_tick(void) {
 
 ServerTimer *server_timer_create(UvLoopT *loop,
                                  MaintenanceContext *maintenance) {
-  ServerTimer *timer = calloc(1, sizeof(*timer));
+  ServerTimer *timer = checked_storage_try_allocate_array(1, sizeof(*timer));
   uint64_t initial_timeout = 100;
 
   if (timer == nullptr)

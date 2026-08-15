@@ -82,7 +82,7 @@ static char *map_filename(const BattleMap *map, const char *mapname) {
   char *path;
   size_t pathlen;
   pathlen = strlen(map_path) + strlen("/") + strlen(mapname) + 1;
-  path = malloc(pathlen);
+  path = checked_storage_try_allocate(pathlen);
   if (!path)
     return NULL;
   (void)snprintf(path, pathlen, "%s/%s", map_path, mapname);

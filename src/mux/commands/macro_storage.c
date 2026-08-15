@@ -108,8 +108,8 @@ void do_create_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 
   if (registry->count >= registry->capacity) {
     registry->capacity += 10;
-    MacroSet **sets =
-        (MacroSet **)malloc(sizeof(*sets) * (size_t)registry->capacity);
+    MacroSet **sets = (MacroSet **)checked_storage_allocate(
+        sizeof(*sets) * (size_t)registry->capacity);
     for (int index = 0; index < registry->count; index++)
       *(MacroSet **)checked_storage_at((void *)sets, (size_t)registry->capacity,
                                        sizeof(*sets), (size_t)index) =
@@ -119,7 +119,7 @@ void do_create_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   }
 
   const int SET = registry->count++;
-  MacroSet *created = malloc(sizeof(*created));
+  MacroSet *created = checked_storage_allocate(sizeof(*created));
   *macro_registry_slot(registry, (size_t)SET) = created;
   created->player = macro_player_storage_value(player);
   created->status = 0;
@@ -127,7 +127,7 @@ void do_create_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   created->macro_capacity = 0;
   created->alias = nullptr;
   created->string = nullptr;
-  created->desc = malloc(strlen(description) + 1);
+  created->desc = checked_storage_allocate(strlen(description) + 1);
   (void)string_copy_bounded(created->desc, strlen(description) + 1,
                             description);
   commac->curmac = first;

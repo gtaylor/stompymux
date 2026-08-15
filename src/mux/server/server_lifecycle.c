@@ -29,6 +29,7 @@
 #include "mux/server/signals.h"
 #include "mux/server/timer.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 
 struct ServerLifecycle {
   uv_loop_t event_loop;
@@ -125,7 +126,8 @@ static void server_lifecycle_drain_writes(MuxTimer *timer, void *arg) {
 }
 
 ServerLifecycle *server_lifecycle_create(MaintenanceContext *maintenance) {
-  ServerLifecycle *lifecycle = calloc(1, sizeof(*lifecycle));
+  ServerLifecycle *lifecycle =
+      checked_storage_try_allocate_array(1, sizeof(*lifecycle));
 
   if (lifecycle == nullptr)
     return nullptr;

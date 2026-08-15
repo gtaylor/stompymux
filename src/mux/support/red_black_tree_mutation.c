@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mux/support/checked_storage.h"
 #include "mux/support/red_black_tree.h"
 #include "mux/support/red_black_tree_internal.h"
 
@@ -21,7 +22,7 @@ typedef struct RedBlackTreeNodeAllocation {
 static RbtreeNode *
 red_black_tree_allocate(const RedBlackTreeNodeAllocation *allocation) {
   RbtreeNode *temp;
-  temp = malloc(sizeof(struct RedBlackTreeNode));
+  temp = checked_storage_try_allocate(sizeof(struct RedBlackTreeNode));
   if (temp == nullptr)
     red_black_tree_fail("unable to allocate a node");
   memset(temp, 0, sizeof(struct RedBlackTreeNode));

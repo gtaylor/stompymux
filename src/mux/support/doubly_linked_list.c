@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mux/support/checked_storage.h"
 #include "mux/support/doubly_linked_list.h"
 
 /* Create the List */
@@ -12,7 +13,7 @@ DoublyLinkedList *doubly_linked_list_create_list() {
 
   DoublyLinkedList *temp;
 
-  temp = malloc(sizeof(DoublyLinkedList));
+  temp = checked_storage_try_allocate(sizeof(DoublyLinkedList));
   if (temp == nullptr) {
     return nullptr;
   }
@@ -30,7 +31,7 @@ DoublyLinkedListNode *doubly_linked_list_create_node(void *data) {
 
   DoublyLinkedListNode *temp;
 
-  temp = malloc(sizeof(DoublyLinkedListNode));
+  temp = checked_storage_try_allocate(sizeof(DoublyLinkedListNode));
   if (temp == nullptr) {
     return nullptr;
   }

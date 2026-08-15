@@ -207,7 +207,7 @@ void do_desc_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
       &(MacroSetRequest){.registry = registry, .player = player, .slot = -1});
   if (m) {
     free(m->desc);
-    m->desc = malloc(strlen(s) + 1);
+    m->desc = checked_storage_allocate(strlen(s) + 1);
     (void)string_copy_bounded(m->desc, strlen(s) + 1, s);
     notify_printf(match->evaluation, player,
                   "MACRO: Current slot description to %s.", s);
@@ -593,8 +593,9 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   }
   if (m->macro_count >= m->macro_capacity) {
     m->macro_capacity += 10;
-    na = malloc(MACRO_ALIAS_SIZE * (size_t)m->macro_capacity);
-    ns = (char **)malloc(sizeof(char *) * (size_t)m->macro_capacity);
+    na = checked_storage_allocate(MACRO_ALIAS_SIZE * (size_t)m->macro_capacity);
+    ns = (char **)checked_storage_allocate(sizeof(char *) *
+                                           (size_t)m->macro_capacity);
     for (i = 0; i < m->macro_count; i++) {
       (void)string_copy_bounded(
           checked_storage_at(na, (size_t)m->macro_capacity * MACRO_ALIAS_SIZE,
@@ -618,7 +619,8 @@ void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   where = j;
   (void)string_copy_bounded(macro_alias_at(m, (size_t)where), MACRO_ALIAS_SIZE,
                             alias);
-  *macro_string_slot(m, (size_t)where) = malloc(strlen(s) + 1);
+  *macro_string_slot(m, (size_t)where) =
+      checked_storage_allocate(strlen(s) + 1);
   (void)string_copy_bounded(macro_string_item(m, (size_t)where), strlen(s) + 1,
                             s);
   (void)snprintf(buffer, sizeof(buffer), "MACRO: Macro %s:%s defined.", alias,

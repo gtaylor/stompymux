@@ -21,13 +21,46 @@ checked_storage_fail(const char *operation, const char *reason,
   abort();
 }
 
+[[noreturn]] static void checked_storage_allocation_fail(const char *reason,
+                                                         size_t count,
+                                                         size_t element_size) {
+  (void)fprintf(stderr,
+                "checked_storage: allocation failed: %s "
+                "(count=%zu element_size=%zu)\n",
+                reason, count, element_size);
+  (void)fflush(stderr);
+  exit(EXIT_FAILURE);
+}
+
+void *checked_storage_try_allocate(size_t bytes) {
+  /* A zero-sized request yields a unique one-byte allocation so callers can
+   * treat nullptr as failure without special-casing an empty request. */
+  return calloc(1, bytes == 0 ? 1 : bytes);
+}
+
+void *checked_storage_try_allocate_array(size_t count, size_t element_size) {
+  if (element_size != 0 && count > SIZE_MAX / element_size)
+    return nullptr;
+  return checked_storage_try_allocate(count * element_size);
+}
+
+void *checked_storage_try_reallocate(void *storage, size_t bytes) {
+  return realloc(storage, bytes == 0 ? 1 : bytes);
+}
+
 void *checked_storage_allocate(size_t bytes) {
-  void *storage = calloc(1, bytes);
-  if (storage == nullptr) {
-    (void)fputs("Unable to allocate storage\n", stderr);
-    exit(EXIT_FAILURE);
-  }
+  void *storage = checked_storage_try_allocate(bytes);
+
+  if (storage == nullptr)
+    checked_storage_allocation_fail("out of memory", 1, bytes);
   return storage;
+}
+
+void *checked_storage_allocate_array(size_t count, size_t element_size) {
+  if (element_size != 0 && count > SIZE_MAX / element_size)
+    checked_storage_allocation_fail("element count overflows", count,
+                                    element_size);
+  return checked_storage_allocate(count * element_size);
 }
 
 static size_t checked_storage_offset(const void *storage, size_t count,

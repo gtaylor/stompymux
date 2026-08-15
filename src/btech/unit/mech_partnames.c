@@ -212,7 +212,8 @@ static int create_brandname(PartNameRegistry *registry,
 
 void initialize_partname_tables(BtechContext *context) {
   const ServerConfiguration *configuration = context->configuration;
-  PartNameRegistry *registry = calloc(1, sizeof(*registry));
+  PartNameRegistry *registry =
+      checked_storage_try_allocate_array(1, sizeof(*registry));
   int i;
   int j;
   int c = 0;

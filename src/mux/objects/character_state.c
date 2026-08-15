@@ -52,7 +52,7 @@ static CharacterState *state_create(GameDatabase *database, DbRef player) {
   state = game_database_object(database, player)->character;
   if (state)
     return state;
-  state = calloc(1, sizeof(*state));
+  state = checked_storage_try_allocate_array(1, sizeof(*state));
   if (!state)
     return nullptr;
   state->fixed = DEFAULT_FIXED_STATE;
@@ -185,7 +185,7 @@ bool character_state_value_set(const CharacterStateValueChange *change) {
     char *stored_name = strdup(name);
     if (!stored_name)
       return false;
-    CharacterValueState *grown = realloc(
+    CharacterValueState *grown = checked_storage_try_reallocate(
         state->values, (state->value_count + 1) * sizeof(*state->values));
     if (!grown) {
       free(stored_name);

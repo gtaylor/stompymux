@@ -49,8 +49,8 @@ static int btech_table_names_load(sqlite3 *database, BtechTableNames *names) {
       result = -1;
       break;
     }
-    char **items = (char **)realloc((void *)names->items,
-                                    (names->count + 1) * sizeof(*items));
+    char **items = (char **)checked_storage_try_reallocate(
+        (void *)names->items, (names->count + 1) * sizeof(*items));
     if (items == nullptr) {
       result = -1;
       break;

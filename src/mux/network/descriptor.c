@@ -101,8 +101,8 @@ static bool descriptor_registry_grow(DescriptorRegistry *registry) {
   if (new_capacity < old_capacity ||
       new_capacity > SIZE_MAX / sizeof(*registry->slots))
     return false;
-  slots = (Descriptor **)realloc((void *)registry->slots,
-                                 new_capacity * sizeof(*registry->slots));
+  slots = (Descriptor **)checked_storage_try_reallocate(
+      (void *)registry->slots, new_capacity * sizeof(*registry->slots));
   if (slots == nullptr)
     return false;
   memset(checked_storage_region((void *)slots, new_capacity * sizeof(*slots),
@@ -117,7 +117,8 @@ static bool descriptor_registry_grow(DescriptorRegistry *registry) {
 DescriptorRegistry *descriptor_registry_create(CommandRuntime *runtime,
                                                BtechContext *btech,
                                                ServerLog *log) {
-  DescriptorRegistry *registry = calloc(1, sizeof(*registry));
+  DescriptorRegistry *registry =
+      checked_storage_try_allocate_array(1, sizeof(*registry));
   if (registry != nullptr) {
     registry->runtime = runtime;
     registry->btech = btech;

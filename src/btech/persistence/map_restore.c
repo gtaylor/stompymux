@@ -87,15 +87,17 @@ static int btech_special_allocate_map_dynamic(BattleMap *map) {
     return 0;
   }
   allocation_count = (size_t)map->first_free;
-  map->mechs_on_map = calloc(allocation_count, sizeof(*map->mechs_on_map));
-  map->mechflags = calloc(allocation_count, sizeof(*map->mechflags));
-  map->lo_sinfo =
-      (unsigned short **)calloc(allocation_count, sizeof(*map->lo_sinfo));
+  map->mechs_on_map = checked_storage_try_allocate_array(
+      allocation_count, sizeof(*map->mechs_on_map));
+  map->mechflags = checked_storage_try_allocate_array(allocation_count,
+                                                      sizeof(*map->mechflags));
+  map->lo_sinfo = (unsigned short **)checked_storage_try_allocate_array(
+      allocation_count, sizeof(*map->lo_sinfo));
   for (index = 0; map->mechs_on_map && map->mechflags && map->lo_sinfo &&
                   index < map->first_free;
        index++) {
     unsigned short **row = restore_los_row(map, allocation_count, index);
-    *row = calloc(allocation_count, sizeof(**row));
+    *row = checked_storage_try_allocate_array(allocation_count, sizeof(**row));
   }
   if (map->mechs_on_map && map->mechflags && map->lo_sinfo &&
       index == map->first_free) {
@@ -613,7 +615,8 @@ int btech_special_load_map_bits(sqlite3 *sqlite, BtechContext *context) {
         result = -1;
         break;
       }
-      bits = (unsigned char **)calloc((size_t)map->map_height, sizeof(*bits));
+      bits = (unsigned char **)checked_storage_try_allocate_array(
+          (size_t)map->map_height, sizeof(*bits));
       if (!bits) {
         result = -1;
         break;
@@ -643,7 +646,8 @@ int btech_special_load_map_bits(sqlite3 *sqlite, BtechContext *context) {
         break;
       }
       unsigned char **row = restore_bits_row(bits, map->map_height, y);
-      *row = calloc((size_t)bytes_per_row, sizeof(**row));
+      *row =
+          checked_storage_allocate_array((size_t)bytes_per_row, sizeof(**row));
       if (!*row) {
         result = -1;
         break;

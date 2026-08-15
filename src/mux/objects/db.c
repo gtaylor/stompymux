@@ -112,7 +112,7 @@ static char *set_string(char **ptr, char *new) {
     return (*ptr = nullptr); /*
                               * Check with GAC about this
                               */
-  *ptr = (char *)malloc(strlen(new) + 1);
+  *ptr = (char *)checked_storage_allocate(strlen(new) + 1);
   (void)string_copy_bounded(*ptr, strlen(new) + 1, new);
   return (*ptr);
 }
@@ -503,7 +503,8 @@ void db_grow(GameDatabase *database, DbRef newtop) {
    */
 
   if (database->configuration->cache_names) {
-    newpurenames = (NAME *)malloc((size_t)(newsize + SIZE_HACK) * sizeof(NAME));
+    newpurenames = (NAME *)checked_storage_try_allocate(
+        (size_t)(newsize + SIZE_HACK) * sizeof(NAME));
 
     if (!newpurenames) {
       (void)snprintf(message_buffer, sizeof(message_buffer),
@@ -548,8 +549,8 @@ void db_grow(GameDatabase *database, DbRef newtop) {
    * Grow the database->objects array
    */
 
-  newdb =
-      (GameObject *)malloc((size_t)(newsize + SIZE_HACK) * sizeof(GameObject));
+  newdb = (GameObject *)checked_storage_try_allocate(
+      (size_t)(newsize + SIZE_HACK) * sizeof(GameObject));
   if (!newdb) {
 
     (void)snprintf(message_buffer, sizeof(message_buffer),
@@ -614,7 +615,7 @@ void db_grow(GameDatabase *database, DbRef newtop) {
    */
 
   marksize = (newsize + 7) >> 3;
-  newmarkbuf = (DatabaseMarkBuffer *)malloc((size_t)marksize);
+  newmarkbuf = (DatabaseMarkBuffer *)checked_storage_allocate((size_t)marksize);
   memset(newmarkbuf, 0, (size_t)marksize);
   if (database->markbits) {
     marksize = (int)((newtop + 7) >> 3);

@@ -2,6 +2,7 @@
 /* Implements a generic first-in, first-out queue. */
 
 #include "mux/support/fifo.h"
+#include "mux/support/checked_storage.h"
 
 #include <stdlib.h>
 
@@ -10,7 +11,7 @@
 
 static void check_fifo(Fifo **foo) {
   if (PFOO == nullptr) {
-    PFOO = malloc(sizeof(Fifo));
+    PFOO = checked_storage_allocate(sizeof(Fifo));
     PFOO->first = nullptr;
     PFOO->last = nullptr;
     PFOO->count = 0;
@@ -53,7 +54,7 @@ void fifo_push(Fifo **foo, void *data) {
   FifoEntry *tmp;
 
   check_fifo(foo);
-  tmp = malloc(sizeof(FifoEntry));
+  tmp = checked_storage_allocate(sizeof(FifoEntry));
   tmp->data = data;
   tmp->next = PFOO->first;
   tmp->prev = nullptr;

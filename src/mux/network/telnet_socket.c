@@ -25,6 +25,7 @@
 #include "mux/server/server_config.h"
 #include "mux/server/server_lifecycle.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/utf8.h"
 #include "mux/world/world_context.h"
 #include "uv/unix.h"
@@ -83,7 +84,7 @@ void descriptor_write_raw(Descriptor *descriptor, const char *buffer,
 
   if (size == 0 || descriptor->is_socket_closing)
     return;
-  write = malloc(sizeof(*write) + size);
+  write = checked_storage_try_allocate(sizeof(*write) + size);
   if (write == nullptr) {
     descriptor->output_lost += (int)size;
     return;
@@ -124,7 +125,8 @@ static void listener_closed(uv_handle_t *handle) {
 
 TelnetSockets *telnet_sockets_create(uv_loop_t *loop,
                                      ConnectionRuntime *runtime) {
-  TelnetSockets *sockets = calloc(1, sizeof(*sockets));
+  TelnetSockets *sockets =
+      checked_storage_try_allocate_array(1, sizeof(*sockets));
 
   if (sockets == nullptr)
     return nullptr;
@@ -205,7 +207,7 @@ static void discard_connection(Descriptor *descriptor) {
 
 static void descriptor_read_alloc(uv_handle_t *handle, size_t suggested_size,
                                   uv_buf_t *buffer) {
-  buffer->base = malloc(LBUF_SIZE);
+  buffer->base = checked_storage_try_allocate(LBUF_SIZE);
   buffer->len = buffer->base == nullptr ? 0 : LBUF_SIZE;
 }
 
@@ -257,10 +259,11 @@ static void accept_new_connection(uv_stream_t *server, int status) {
 
   if (status < 0)
     return;
-  descriptor = calloc(1, sizeof(*descriptor));
+  descriptor = checked_storage_try_allocate_array(1, sizeof(*descriptor));
   if (descriptor == nullptr)
     return;
-  descriptor->socket = malloc(sizeof(*descriptor->socket));
+  descriptor->socket =
+      checked_storage_try_allocate(sizeof(*descriptor->socket));
   if (descriptor->socket == nullptr) {
     free(descriptor);
     return;

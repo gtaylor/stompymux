@@ -101,7 +101,8 @@ static size_t list_reachable_object_lua_commands(CommandRuntime *runtime,
       .database = database,
       .player = player,
   };
-  bool *visited = calloc((size_t)database->top, sizeof(*visited));
+  bool *visited = checked_storage_try_allocate_array((size_t)database->top,
+                                                     sizeof(*visited));
   size_t count = 0;
 
   if (!visited)

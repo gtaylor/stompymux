@@ -171,8 +171,10 @@ bool commac_reserve_aliases(struct Commac *commac, size_t capacity) {
       capacity > SIZE_MAX / sizeof(*commac->channels))
     return false;
 
-  char *aliases = calloc(capacity, COMMAC_ALIAS_SIZE);
-  char **channels = (char **)calloc(capacity, sizeof(*channels));
+  char *aliases =
+      checked_storage_try_allocate_array(capacity, COMMAC_ALIAS_SIZE);
+  char **channels =
+      (char **)checked_storage_try_allocate_array(capacity, sizeof(*channels));
   if (aliases == nullptr || channels == nullptr) {
     free(aliases);
     free((void *)channels);

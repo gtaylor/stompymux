@@ -20,7 +20,7 @@ static char *help_frontmatter_dup(const char *s) {
   char *copy;
 
   length = strlen(s);
-  copy = malloc(length + 1);
+  copy = checked_storage_allocate(length + 1);
   memcpy(copy, s, length + 1);
   return copy;
 }
@@ -32,7 +32,7 @@ static bool help_frontmatter_copy_string_list(toml_datum_t array,
   if (array.type != TOML_ARRAY || array.u.arr.size <= 0)
     return false;
   out->count = (size_t)array.u.arr.size;
-  out->items = (char **)malloc(out->count * sizeof(char *));
+  out->items = (char **)checked_storage_allocate(out->count * sizeof(char *));
   for (i = 0; i < out->count; i++) {
     toml_datum_t element = *(const toml_datum_t *)checked_storage_at_const(
         array.u.arr.elem, out->count, sizeof(*array.u.arr.elem), i);
@@ -57,7 +57,7 @@ bool help_frontmatter_parse(const char *text, size_t length, HelpArticle *out,
   /* toml_parse requires text[length] == '\0'; `text` usually points into a
    * larger buffer (the article's frontmatter span), so make an isolated
    * NUL-terminated copy first. */
-  nul_terminated = malloc(length + 1);
+  nul_terminated = checked_storage_allocate(length + 1);
   memcpy(nul_terminated, text, length);
   *(char *)checked_storage_at(nul_terminated, length + 1, sizeof(char),
                               length) = '\0';

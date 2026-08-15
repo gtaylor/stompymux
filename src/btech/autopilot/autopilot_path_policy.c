@@ -137,10 +137,10 @@ AutopilotPathResult autopilot_path_find(const AutopilotPathRequest *request) {
   }
 
   const size_t COUNT = (size_t)request->width * (size_t)request->height;
-  int *scores = malloc(COUNT * sizeof(*scores));
-  size_t *parents = malloc(COUNT * sizeof(*parents));
-  bool *open = calloc(COUNT, sizeof(*open));
-  bool *closed = calloc(COUNT, sizeof(*closed));
+  int *scores = checked_storage_try_allocate(COUNT * sizeof(*scores));
+  size_t *parents = checked_storage_try_allocate(COUNT * sizeof(*parents));
+  bool *open = checked_storage_try_allocate_array(COUNT, sizeof(*open));
+  bool *closed = checked_storage_try_allocate_array(COUNT, sizeof(*closed));
   if (scores == nullptr || parents == nullptr || open == nullptr ||
       closed == nullptr) {
     free(scores);
@@ -210,7 +210,8 @@ AutopilotPathResult autopilot_path_find(const AutopilotPathRequest *request) {
     for (size_t cursor = GOAL; cursor != START;
          cursor = *path_parent(parents, COUNT, cursor))
       length++;
-    result.points = malloc(length * sizeof(*result.points));
+    result.points =
+        checked_storage_try_allocate(length * sizeof(*result.points));
     if (result.points == nullptr) {
       result.status = AUTOPILOT_PATH_NO_MEMORY;
     } else {

@@ -115,7 +115,7 @@ int descriptor_flow_start(const FlowStartRequest *request) {
   if (d->flow != nullptr)
     return 0;
 
-  flow = malloc(sizeof(InputFlow));
+  flow = checked_storage_allocate(sizeof(InputFlow));
   flow->step_fn = request->step;
   flow->flow_data = request->flow_data;
   flow->destroy = request->destroy;

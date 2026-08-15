@@ -66,7 +66,8 @@ static void create_if_neccessary(unsigned char **foo, BattleMap *map, int y) {
 
   unsigned char **row_slot = map_bits_row_slot(foo, map->map_height, y);
   if (!*row_slot) {
-    *row_slot = calloc(map_bits_byte_count(xs), sizeof(**foo));
+    *row_slot = checked_storage_try_allocate_array(map_bits_byte_count(xs),
+                                                   sizeof(**foo));
     if (*row_slot == nullptr)
       abort();
   }
@@ -107,7 +108,8 @@ static unsigned char **grab_us_an_array(BattleMap *map) {
 
   MapObject **bits_object = map_object_slot(map, TYPE_BITS);
   if (!*bits_object) {
-    foo = (unsigned char **)calloc(YS, sizeof(*foo));
+    foo =
+        (unsigned char **)checked_storage_try_allocate_array(YS, sizeof(*foo));
     if (foo == nullptr && YS > 0)
       abort();
 

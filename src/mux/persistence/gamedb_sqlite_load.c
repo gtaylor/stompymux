@@ -219,7 +219,8 @@ static int gamedb_load_native_state(PersistenceContext *context,
 static int gamedb_load_player_accounts(PersistenceContext *context,
                                        sqlite3 *sqlite) {
   sqlite3_stmt *statement = nullptr;
-  bool *seen = calloc((size_t)context->database->top, sizeof(*seen));
+  bool *seen = checked_storage_try_allocate_array(
+      (size_t)context->database->top, sizeof(*seen));
   DbRef object;
   int step;
 
@@ -371,7 +372,8 @@ static int gamedb_load_player_accounts(PersistenceContext *context,
       sqlite3_finalize(statement);
       return -1;
     }
-    DbRef *grown = realloc(recipients, (recipient_count + 1) * sizeof(*grown));
+    DbRef *grown = checked_storage_try_reallocate(
+        recipients, (recipient_count + 1) * sizeof(*grown));
     if (!grown) {
       free(recipients);
       sqlite3_finalize(statement);

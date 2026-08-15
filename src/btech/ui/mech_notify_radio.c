@@ -457,7 +457,7 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
   /* Radio failure checks were intentionally removed from message delivery. */
   if (!mech_radio_range(mech))
     return;
-  relay = calloc(1, sizeof(*relay));
+  relay = checked_storage_allocate_array(1, sizeof(*relay));
 
   /* Loop through all the units on the map */
   for (loop = 0; loop < battle_map_unit_count(mech_map); loop++) {

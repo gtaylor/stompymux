@@ -1,6 +1,7 @@
 /* signals.c - Process signal registration and server shutdown handlers. */
 
 #include "mux/objects/db.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include <bits/types/siginfo_t.h>
 #include <bits/types/stack_t.h>
@@ -48,7 +49,8 @@ constexpr size_t ALT_STACK_ALIGN = 0x1000;
 
 SignalHandlers *signal_handlers_create(uv_loop_t *loop,
                                        ServerControl *control) {
-  SignalHandlers *handlers = calloc(1, sizeof(*handlers));
+  SignalHandlers *handlers =
+      checked_storage_try_allocate_array(1, sizeof(*handlers));
   int error_code;
 
   if (handlers == nullptr)

@@ -329,7 +329,7 @@ static int btech_special_load_autopilot_command_args(
   if (!definition || ARGUMENT_COUNT != definition->argcount + 1 ||
       ARGUMENT_COUNT < 1 || ARGUMENT_COUNT > AUTOPILOT_MAX_ARGS)
     return -1;
-  command = calloc(1, sizeof(*command));
+  command = checked_storage_try_allocate_array(1, sizeof(*command));
   if (!command)
     return -1;
   autopilot_argument_list_initialize(&command->arguments, AUTOPILOT_MAX_ARGS);
@@ -521,7 +521,7 @@ int btech_special_load_autopilot_path(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
-    path_node = calloc(1, sizeof(*path_node));
+    path_node = checked_storage_try_allocate_array(1, sizeof(*path_node));
     if (!path_node) {
       result = -1;
       break;

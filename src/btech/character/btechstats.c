@@ -644,10 +644,10 @@ int char_getattrsavesucc(BtechContext *context, DbRef player,
 void init_btechstats(BtechContext *context) {
   char *tmpbuf;
 
-  context->player_value_hashes =
-      calloc(2, sizeof(*context->player_value_hashes));
-  context->char_value_short_names =
-      (char **)calloc(NUM_CHARVALUES, sizeof(*context->char_value_short_names));
+  context->player_value_hashes = checked_storage_try_allocate_array(
+      2, sizeof(*context->player_value_hashes));
+  context->char_value_short_names = (char **)checked_storage_try_allocate_array(
+      NUM_CHARVALUES, sizeof(*context->char_value_short_names));
   if (context->player_value_hashes == nullptr ||
       context->char_value_short_names == nullptr)
     exit(EXIT_FAILURE);

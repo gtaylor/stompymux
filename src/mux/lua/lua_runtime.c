@@ -408,7 +408,7 @@ LuaRuntime *lua_runtime_create(LuaOwner *owner, const LuaServices *services,
     lua_set_error(error, error_size, "Lua state limits must be positive");
     return nullptr;
   }
-  runtime = calloc(1, sizeof(*runtime));
+  runtime = checked_storage_try_allocate_array(1, sizeof(*runtime));
   if (!runtime) {
     lua_set_error(error, error_size, "out of memory");
     return nullptr;

@@ -338,11 +338,13 @@ static void sketch_tac_cliffs(const TacticalSketch *sketch) {
 }
 static MapText *map_text_allocate(size_t buffer_capacity,
                                   size_t line_capacity) {
-  MapText *text = calloc(1, sizeof(*text));
+  MapText *text = checked_storage_try_allocate_array(1, sizeof(*text));
   if (text == nullptr)
     return nullptr;
-  text->buffer = calloc(buffer_capacity, sizeof(*text->buffer));
-  text->lines = (char **)calloc(line_capacity, sizeof(*text->lines));
+  text->buffer = checked_storage_try_allocate_array(buffer_capacity,
+                                                    sizeof(*text->buffer));
+  text->lines = (char **)checked_storage_try_allocate_array(
+      line_capacity, sizeof(*text->lines));
   if (text->buffer == nullptr || text->lines == nullptr) {
     map_text_destroy(text);
     return nullptr;
@@ -457,7 +459,8 @@ MapText *map_text_create(const MapTextRequest *request) {
     }
   }
 
-  sketch_buf = calloc(MAP_SKETCH_CAPACITY, sizeof(*sketch_buf));
+  sketch_buf = checked_storage_try_allocate_array(MAP_SKETCH_CAPACITY,
+                                                  sizeof(*sketch_buf));
   if (sketch_buf == nullptr)
     return nullptr;
 

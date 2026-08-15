@@ -68,7 +68,7 @@ struct LoginThrottle {
 };
 
 LoginThrottle *login_throttle_create(void) {
-  return calloc(1, sizeof(LoginThrottle));
+  return checked_storage_try_allocate_array(1, sizeof(LoginThrottle));
 }
 
 static LoginThrottleEntry *login_throttle_entry_at(LoginThrottle *throttle,
@@ -607,7 +607,7 @@ static FlowOutcome connect_flow_dispatch(const FlowStepCall *call) {
 }
 
 void descriptor_start_connect_flow(Descriptor *d) {
-  ConnectFlowData *data = malloc(sizeof(ConnectFlowData));
+  ConnectFlowData *data = checked_storage_allocate(sizeof(ConnectFlowData));
 
   data->name[0] = '\0';
   data->password[0] = '\0';

@@ -161,13 +161,14 @@ void map_hex_set(BattleMap *map, int x, int y, char terrain, char elevation) {
 unsigned char **battle_map_grid_create(int width, int height) {
   if (width < 0 || height < 0)
     return nullptr;
-  unsigned char **grid =
-      (unsigned char **)calloc((size_t)height, sizeof(*grid));
+  unsigned char **grid = (unsigned char **)checked_storage_try_allocate_array(
+      (size_t)height, sizeof(*grid));
   if (grid == nullptr && height > 0)
     return nullptr;
   for (int y = 0; y < height; y++) {
     unsigned char **row_slot = map_grid_row_slot(grid, height, y);
-    *row_slot = calloc((size_t)width, sizeof(**grid));
+    *row_slot =
+        checked_storage_try_allocate_array((size_t)width, sizeof(**grid));
     if (*row_slot == nullptr && width > 0) {
       battle_map_grid_destroy(grid, height);
       return nullptr;

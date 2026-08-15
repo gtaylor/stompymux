@@ -329,8 +329,8 @@ static StyledLinkMenuItem *styled_link_menu_item(StyledLinkConfig *config,
                                                  size_t error_size) {
   if (index >= config->menu_count) {
     size_t new_count = index + 1;
-    StyledLinkMenuItem *menu =
-        realloc(config->menu, new_count * sizeof(*config->menu));
+    StyledLinkMenuItem *menu = checked_storage_try_reallocate(
+        config->menu, new_count * sizeof(*config->menu));
 
     if (!menu) {
       styled_set_error(error, error_size,

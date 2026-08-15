@@ -64,8 +64,9 @@ static int lua_schedule_add_job(LuaRuntime *runtime, LuaModuleRoot root,
     return 0;
   }
 
-  jobs = realloc(runtime->schedule_jobs,
-                 (runtime->schedule_job_count + 1) * sizeof(*jobs));
+  jobs = checked_storage_try_reallocate(runtime->schedule_jobs,
+                                        (runtime->schedule_job_count + 1) *
+                                            sizeof(*jobs));
   if (!jobs) {
     free(path_copy);
     free(name_copy);
@@ -424,14 +425,15 @@ void do_luaschedule(CommandInvocation *invocation) {
         }
       }
       if (index == path_count) {
-        char **new_paths =
-            (char **)realloc((void *)paths, (path_count + 1) * sizeof(*paths));
+        char **new_paths = (char **)checked_storage_try_reallocate(
+            (void *)paths, (path_count + 1) * sizeof(*paths));
         size_t *new_counts;
 
         if (!new_paths)
           break;
         paths = new_paths;
-        new_counts = realloc(counts, (path_count + 1) * sizeof(*counts));
+        new_counts = checked_storage_try_reallocate(
+            counts, (path_count + 1) * sizeof(*counts));
         if (!new_counts)
           break;
         counts = new_counts;

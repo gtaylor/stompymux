@@ -31,6 +31,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/doubly_linked_list.h"
 #include "registry_api.h"
 #include "special_object.h"
@@ -226,8 +227,8 @@ void btech_special_objects_load(BtechContext *context) {
   int type;
 
   btech_registry_tree_initialize(context);
-  context->special_commands =
-      calloc(BTECH_SPECIAL_OBJECT_COUNT, sizeof(*context->special_commands));
+  context->special_commands = checked_storage_try_allocate_array(
+      BTECH_SPECIAL_OBJECT_COUNT, sizeof(*context->special_commands));
   if (context->special_commands == nullptr)
     exit(EXIT_FAILURE);
   context->special_command_count = BTECH_SPECIAL_OBJECT_COUNT;

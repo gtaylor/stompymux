@@ -15,6 +15,7 @@
 #include "mux/persistence/gamedb.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/fifo.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/utf8.h"
@@ -461,7 +462,7 @@ static int commac_load_channels(sqlite3 *sqlite, PersistenceContext *context) {
                          -1, &statement, nullptr) == SQLITE_OK) {
     result = 0;
     while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-      channel = calloc(1, sizeof(*channel));
+      channel = checked_storage_try_allocate_array(1, sizeof(*channel));
       if (!channel ||
           commac_column_text(statement, 0, &name, CHAN_NAME_LEN - 1) < 0 ||
           !*name || !utf8_is_printable_ascii(name, strlen(name)) ||
@@ -525,15 +526,17 @@ static int commac_load_users(sqlite3 *sqlite,
         result = -1;
         break;
       }
-      user = calloc(1, sizeof(*user));
+      user = checked_storage_try_allocate_array(1, sizeof(*user));
       if (!user) {
         result = -1;
         break;
       }
       if (channel->num_users == channel->max_users) {
         const int CAPACITY = channel->max_users + 10;
-        struct Comuser **users = (struct Comuser **)realloc(
-            (void *)channel->users, sizeof(*channel->users) * (size_t)CAPACITY);
+        struct Comuser **users =
+            (struct Comuser **)checked_storage_try_reallocate(
+                (void *)channel->users,
+                sizeof(*channel->users) * (size_t)CAPACITY);
 
         if (users == nullptr) {
           free(user);
@@ -588,7 +591,7 @@ static int commac_load_messages(sqlite3 *sqlite,
         result = -1;
         break;
       }
-      message = malloc(sizeof(*message));
+      message = checked_storage_try_allocate(sizeof(*message));
       if (!message) {
         result = -1;
         break;
@@ -640,16 +643,16 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
         result = -1;
         break;
       }
-      MacroSet **grown_sets =
-          (MacroSet **)realloc((void *)context->macros->sets,
-                               sizeof(*context->macros->sets) *
-                                   (size_t)(context->macros->count + 1));
+      MacroSet **grown_sets = (MacroSet **)checked_storage_try_reallocate(
+          (void *)context->macros->sets,
+          sizeof(*context->macros->sets) *
+              (size_t)(context->macros->count + 1));
       if (grown_sets == nullptr) {
         result = -1;
         break;
       }
       context->macros->sets = grown_sets;
-      macro = calloc(1, sizeof(*macro));
+      macro = checked_storage_try_allocate_array(1, sizeof(*macro));
       if (!macro) {
         result = -1;
         break;
@@ -693,17 +696,17 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
         result = -1;
         break;
       }
-      char *aliases =
-          realloc(macro->alias, (size_t)(macro->macro_count + 1) * 5);
+      char *aliases = checked_storage_try_reallocate(
+          macro->alias, (size_t)(macro->macro_count + 1) * 5);
       char **strings = nullptr;
 
       if (aliases == nullptr) {
         result = -1;
         break;
       }
-      strings = (char **)realloc((void *)macro->string,
-                                 sizeof(*macro->string) *
-                                     (size_t)(macro->macro_count + 1));
+      strings = (char **)checked_storage_try_reallocate(
+          (void *)macro->string,
+          sizeof(*macro->string) * (size_t)(macro->macro_count + 1));
       if (strings == nullptr) {
         macro->alias = aliases;
         result = -1;

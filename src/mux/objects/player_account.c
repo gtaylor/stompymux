@@ -57,7 +57,7 @@ static PlayerAccountState *player_account_require(GameDatabase *database,
   if (!is_good_obj(database, player) ||
       typeof_obj(database, player) != OBJECT_TYPE_PLAYER)
     return nullptr;
-  account = calloc(1, sizeof(*account));
+  account = checked_storage_try_allocate_array(1, sizeof(*account));
   if (account)
     game_database_object(database, player)->account = account;
   return account;
@@ -320,7 +320,7 @@ bool player_account_last_page_set(GameDatabase *database, DbRef player,
   if (count > 0) {
     if (count > SIZE_MAX / sizeof(*copy))
       return false;
-    copy = malloc(count * sizeof(*copy));
+    copy = checked_storage_try_allocate(count * sizeof(*copy));
     if (!copy)
       return false;
     memcpy(copy, recipients, count * sizeof(*copy));
