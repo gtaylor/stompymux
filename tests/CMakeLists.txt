@@ -68,6 +68,23 @@ target_include_directories(owned_text_test PRIVATE
 add_test(NAME owned_text COMMAND owned_text_test)
 set_tests_properties(owned_text PROPERTIES LABELS "unit;mux-support;owned_text")
 
+add_executable(builder_compile_object_name_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/commands/builder_compile_object_name.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/commands/builder_create_commands.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/owned_text.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_compile_options(builder_compile_object_name_test PRIVATE
+  -ffunction-sections)
+target_link_options(builder_compile_object_name_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(builder_compile_object_name_test PRIVATE btmux_options)
+target_include_directories(builder_compile_object_name_test PRIVATE
+  "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME builder_compile_object_name COMMAND builder_compile_object_name_test)
+set_tests_properties(builder_compile_object_name PROPERTIES
+  LABELS "unit;mux-commands;builder_compile_object_name")
+
 add_test(NAME catalog_startup
   COMMAND bash
     "${CMAKE_SOURCE_DIR}/tests/integration/catalog_startup.sh"

@@ -3,8 +3,9 @@
 #pragma once
 
 #include "mux/objects/db.h"
+#include "mux/support/owned_text.h"
 
 typedef struct EvaluationContext EvaluationContext;
 
-char *builder_compile_object_name(EvaluationContext *evaluation, DbRef player,
-                                  const char *name);
+OwnedText builder_compile_object_name(EvaluationContext *evaluation,
+                                      DbRef player, const char *name);

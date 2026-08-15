@@ -20,6 +20,7 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/name_table.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/validation.h"
 #include "mux/world/access.h"
@@ -30,19 +31,19 @@
 #include "mux/world/object_set.h"
 #include "mux/world/player.h"
 
-char *builder_compile_object_name(EvaluationContext *evaluation, DbRef player,
-                                  const char *name) {
+OwnedText builder_compile_object_name(EvaluationContext *evaluation,
+                                      DbRef player, const char *name) {
   char *compiled = alloc_lbuf("builder_compile_object_name");
   char error[256];
 
   if (styled_text_compile(evaluation->world->styled_text_palette, name,
                           compiled, LBUF_SIZE, error, sizeof(error))) {
     (void)string_copy_bounded(compiled, LBUF_SIZE, name);
-    return compiled;
+    return owned_text_take(compiled);
   }
   notify_printf(evaluation, player, "Invalid styled-text markup: %s.", error);
   free_buf(compiled);
-  return nullptr;
+  return (OwnedText){};
 }
 
 /*
@@ -106,7 +107,7 @@ static void open_exit(const ExitCreationRequest *request) {
   DbRef exit;
   LuaLockInvocation lock;
   LuaLockResult result;
-  char *compiled_direction;
+  OwnedText compiled_direction;
 
   if (!is_good_obj(evaluation->world->database, loc))
     return;
@@ -121,10 +122,11 @@ static void open_exit(const ExitCreationRequest *request) {
   }
   compiled_direction =
       builder_compile_object_name(evaluation, player, direction);
-  if (!compiled_direction)
+  if (!compiled_direction.text)
     return;
-  exit = create_obj(evaluation, player, OBJECT_TYPE_EXIT, compiled_direction);
-  free_buf(compiled_direction);
+  exit =
+      create_obj(evaluation, player, OBJECT_TYPE_EXIT, compiled_direction.text);
+  owned_text_release(&compiled_direction);
   if (exit == NOTHING)
     return;
 
@@ -412,7 +414,7 @@ void do_dig(CommandInvocation *invocation) {
   int nargs = invocation->vector_count;
   DbRef room;
   char buff[SBUF_SIZE];
-  char *compiled_name;
+  OwnedText compiled_name;
 
   /*
    * we don't need to know player's location!  hooray!
@@ -423,10 +425,10 @@ void do_dig(CommandInvocation *invocation) {
     return;
   }
   compiled_name = builder_compile_object_name(evaluation, player, name);
-  if (!compiled_name)
+  if (!compiled_name.text)
     return;
-  room = create_obj(evaluation, player, OBJECT_TYPE_ROOM, compiled_name);
-  free_buf(compiled_name);
+  room = create_obj(evaluation, player, OBJECT_TYPE_ROOM, compiled_name.text);
+  owned_text_release(&compiled_name);
   if (room == NOTHING)
     return;
 
@@ -475,21 +477,21 @@ void do_create(CommandInvocation *invocation) {
   char *coststr = invocation->second;
   DbRef thing;
   char clearbuffer[MBUF_SIZE];
-  char *compiled_name;
+  OwnedText compiled_name;
 
   (void)coststr;
   compiled_name = builder_compile_object_name(evaluation, player, name);
-  if (!compiled_name)
+  if (!compiled_name.text)
     return;
-  styled_text_strip(evaluation->world->styled_text_palette, compiled_name,
+  styled_text_strip(evaluation->world->styled_text_palette, compiled_name.text,
                     clearbuffer, MBUF_SIZE);
   if (!name || !*name || (strlen(clearbuffer) == 0)) {
     notify_checked(evaluation, player, player, "Create what?", MSG_ME);
-    free_buf(compiled_name);
+    owned_text_release(&compiled_name);
     return;
   }
-  thing = create_obj(evaluation, player, OBJECT_TYPE_THING, compiled_name);
-  free_buf(compiled_name);
+  thing = create_obj(evaluation, player, OBJECT_TYPE_THING, compiled_name.text);
+  owned_text_release(&compiled_name);
   if (thing == NOTHING)
     return;
 
@@ -515,7 +517,7 @@ void do_clone(CommandInvocation *invocation) {
   int key = invocation->key;
   char *name = invocation->first;
   char *arg2 = invocation->second;
-  char *clone_name = nullptr;
+  OwnedText clone_name = {};
   char pure_name[LBUF_SIZE];
   DbRef clone;
   DbRef thing;
@@ -560,27 +562,27 @@ void do_clone(CommandInvocation *invocation) {
 
   if (arg2 && *arg2) {
     clone_name = builder_compile_object_name(evaluation, player, arg2);
-    if (!clone_name)
+    if (!clone_name.text)
       return;
-    styled_text_strip(evaluation->world->styled_text_palette, clone_name,
+    styled_text_strip(evaluation->world->styled_text_palette, clone_name.text,
                       pure_name, sizeof(pure_name));
     if (!ok_name(invocation->context->world->configuration, pure_name)) {
       notify_checked(evaluation, player, player,
                      "That is not a reasonable name.", MSG_ME);
-      free_buf(clone_name);
+      owned_text_release(&clone_name);
       return;
     }
   }
-  if (clone_name)
-    clone =
-        create_obj(evaluation, player,
-                   typeof_obj(evaluation->world->database, thing), clone_name);
+  if (clone_name.text)
+    clone = create_obj(evaluation, player,
+                       typeof_obj(evaluation->world->database, thing),
+                       clone_name.text);
   else
     clone = create_obj(
         evaluation, player, typeof_obj(evaluation->world->database, thing),
         game_object_name(invocation->context->world->database, thing));
   if (clone == NOTHING) {
-    free_buf(clone_name);
+    owned_text_release(&clone_name);
     return;
   }
 
@@ -596,13 +598,14 @@ void do_clone(CommandInvocation *invocation) {
    * Reset the name, since we cleared the attributes
    */
 
-  if (clone_name)
-    object_name_set(invocation->context->world->database, clone, clone_name);
+  if (clone_name.text)
+    object_name_set(invocation->context->world->database, clone,
+                    clone_name.text);
   else
     object_name_set(
         invocation->context->world->database, clone,
         game_object_name(invocation->context->world->database, thing));
-  free_buf(clone_name);
+  owned_text_release(&clone_name);
 
   /*
    * Clear out problem flags from the original

@@ -63,7 +63,7 @@ static void examine_notify_indented(EvaluationContext *evaluation, DbRef player,
 
 static void debug_examine(EvaluationContext *evaluation, DbRef player,
                           DbRef thing) {
-  char *buf;
+  OwnedText buf;
 
   notify_printf(evaluation, player, "Number  = %ld", thing);
   if (!is_good_obj(evaluation->world->database, thing))
@@ -84,14 +84,14 @@ static void debug_examine(EvaluationContext *evaluation, DbRef player,
   notify_printf(evaluation, player, "Zone    = %ld",
                 game_object_zone(evaluation->world->database, thing));
   buf = flag_description(evaluation->world->database, thing);
-  notify_printf(evaluation, player, "Flags   = %s", buf);
-  free_buf(buf);
+  notify_printf(evaluation, player, "Flags   = %s", buf.text);
+  owned_text_release(&buf);
   buf = power_description(
       &(PowerDescriptionRequest){.database = evaluation->world->database,
                                  .viewer = player,
                                  .target = thing});
-  notify_printf(evaluation, player, "Powers  = %s", buf);
-  free_buf(buf);
+  notify_printf(evaluation, player, "Powers  = %s", buf.text);
+  owned_text_release(&buf);
   notify_printf(evaluation, player, "Lua state entries: %zu",
                 object_state_count(evaluation->world->database, thing));
 }
@@ -144,7 +144,7 @@ void do_examine(CommandInvocation *invocation) {
   DbRef exit;
   DbRef loc;
   OwnedText buf2;
-  char *description;
+  OwnedText description;
 
   /*
    * This command is pointless if the player can't hear.
@@ -184,17 +184,17 @@ void do_examine(CommandInvocation *invocation) {
       evaluation, PLAYER, "Type: %s",
       object_type_entry(typeof_obj(evaluation->world->database, thing))->name);
   description = flags_description(evaluation->world->database, thing);
-  notify_checked(evaluation, PLAYER, PLAYER, description,
+  notify_checked(evaluation, PLAYER, PLAYER, description.text,
                  MSG_ME_ALL | MSG_F_DOWN);
-  free_buf(description);
+  owned_text_release(&description);
 
   description = power_description(
       &(PowerDescriptionRequest){.database = evaluation->world->database,
                                  .viewer = PLAYER,
                                  .target = thing});
-  notify_checked(evaluation, PLAYER, PLAYER, description,
+  notify_checked(evaluation, PLAYER, PLAYER, description.text,
                  MSG_ME_ALL | MSG_F_DOWN);
-  free_buf(description);
+  owned_text_release(&description);
   examine_native_attributes(&(ExamineObjectRequest){
       .evaluation = evaluation, .viewer = PLAYER, .object = thing});
   buf2 = unparse_object(evaluation->world->database, evaluation, PLAYER,

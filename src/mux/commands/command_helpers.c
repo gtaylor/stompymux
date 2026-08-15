@@ -12,6 +12,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/match.h"
 
@@ -98,11 +99,11 @@ static int *uptime_value_slot(int *values, size_t count, size_t index) {
   return checked_storage_at(values, count, sizeof(*values), index);
 }
 
-char *get_uptime_to_string(int uptime) {
+OwnedText get_uptime_to_string(int uptime) {
   char *result = alloc_sbuf("get_uptime_to_string");
   if (uptime <= 0) {
     (void)string_copy_bounded(result, SBUF_SIZE, "#-1 INVALID VALUE");
-    return result;
+    return owned_text_take(result);
   }
 
   int remaining = uptime;
@@ -137,7 +138,7 @@ char *get_uptime_to_string(int uptime) {
     else if (populated == 1)
       (void)string_append_bounded(result, SBUF_SIZE, " and ");
   }
-  return result;
+  return owned_text_take(result);
 }
 
 int xlate(char *argument) {

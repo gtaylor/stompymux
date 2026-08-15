@@ -22,6 +22,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/owned_text.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include "special_object.h"
@@ -106,11 +107,11 @@ static void lowercase_copy(char *destination, size_t capacity,
 
 UptimeText uptime_text(int seconds) {
   UptimeText uptime;
-  char *allocated;
+  OwnedText allocated;
 
   allocated = get_uptime_to_string(seconds);
-  (void)snprintf(uptime.text, sizeof(uptime.text), "%s", allocated);
-  free_buf(allocated);
+  (void)snprintf(uptime.text, sizeof(uptime.text), "%s", allocated.text);
+  owned_text_release(&allocated);
   return uptime;
 }
 

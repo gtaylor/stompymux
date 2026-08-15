@@ -95,8 +95,9 @@ int do_macro(MatchContext *match, CommandRegistry *commands,
     free_buf(old);
     return 0;
   }
-  *out = do_process_macro(&(MacroExpansionRequest){
+  OwnedText expansion = do_process_macro(&(MacroExpansionRequest){
       .registry = registry, .player = player, .input = in, .arguments = s});
+  *out = owned_text_relinquish(&expansion);
   if (*out) {
     free_buf(old);
     return 1;
@@ -655,7 +656,7 @@ void do_undef_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   }
   macro_notify(match, player, "MACRO: That macro is not in this set.");
 }
-char *do_process_macro(const MacroExpansionRequest *request) {
+OwnedText do_process_macro(const MacroExpansionRequest *request) {
   MacroRegistry *registry = request->registry;
   DbRef player = request->player;
   char *in = request->input;
@@ -724,11 +725,11 @@ char *do_process_macro(const MacroExpansionRequest *request) {
           }
           *(char *)checked_storage_at(buff, LBUF_SIZE, sizeof(char),
                                       output_offset) = 0;
-          return buff;
+          return owned_text_take(buff);
         }
       }
     }
   }
   free_buf(buff);
-  return nullptr;
+  return (OwnedText){};
 }

@@ -49,6 +49,20 @@ static int check_normalized_text(void) {
   return result;
 }
 
+static int check_relinquished_text(void) {
+  char *owned = alloc_lbuf("owned_text_relinquish_test");
+  OwnedText text = owned_text_take(owned);
+  char *relinquished = owned_text_relinquish(&text);
+
+  if (relinquished != owned || text.text != nullptr || text.owned != nullptr)
+    return 9;
+  if (owned_text_relinquish(nullptr) != nullptr)
+    return 10;
+  free_buf(relinquished);
+  owned_text_release(&text);
+  return 0;
+}
+
 int main(void) {
   const int BORROWED_RESULT = check_borrowed_text();
   if (BORROWED_RESULT != 0)
@@ -56,5 +70,8 @@ int main(void) {
   const int OWNED_RESULT = check_owned_text();
   if (OWNED_RESULT != 0)
     return OWNED_RESULT;
-  return check_normalized_text();
+  const int NORMALIZED_RESULT = check_normalized_text();
+  if (NORMALIZED_RESULT != 0)
+    return NORMALIZED_RESULT;
+  return check_relinquished_text();
 }
