@@ -7,7 +7,6 @@
 #include "map_terrain.h"
 #include "mech_lifecycle.h"
 #include <math.h>
-#include <string.h>
 
 #include "btconfig.h"
 #include "command_handlers_api.h"
@@ -523,9 +522,12 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
     return;
   }
 
-  strlcpy(mech_name, mech_display_id(mech).text, sizeof(mech_name));
-  strlcpy(tow_mech_name, mech_display_id(tow_mech).text, sizeof(tow_mech_name));
-  strlcpy(target_name, mech_display_id(target).text, sizeof(target_name));
+  (void)string_copy_bounded(mech_name, sizeof(mech_name),
+                            mech_display_id(mech).text);
+  (void)string_copy_bounded(tow_mech_name, sizeof(tow_mech_name),
+                            mech_display_id(tow_mech).text);
+  (void)string_copy_bounded(target_name, sizeof(target_name),
+                            mech_display_id(target).text);
 
   mech_printf(target, MECHALL, "%s attaches tow lines from %s to you.",
               mech_name, tow_mech_name);
@@ -612,9 +614,12 @@ void mech_detachcables(DbRef player, void *data, char *buffer) {
   }
   mech_towed_set(target, false);
 
-  strlcpy(mech_name, mech_display_id(mech).text, sizeof(mech_name));
-  strlcpy(tow_mech_name, mech_display_id(tow_mech).text, sizeof(tow_mech_name));
-  strlcpy(target_name, mech_display_id(target).text, sizeof(target_name));
+  (void)string_copy_bounded(mech_name, sizeof(mech_name),
+                            mech_display_id(mech).text);
+  (void)string_copy_bounded(tow_mech_name, sizeof(tow_mech_name),
+                            mech_display_id(tow_mech).text);
+  (void)string_copy_bounded(target_name, sizeof(target_name),
+                            mech_display_id(target).text);
 
   mech_printf(mech, MECHALL, "You detach %s's tow lines from %s.",
               tow_mech_name, target_name);

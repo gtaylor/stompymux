@@ -120,7 +120,7 @@ static void add_entrances(DbRef loc, BattleMap *map, char *data,
 
   buf = alloc_mbuf("add_entrances");
 
-  strlcpy(buf, data, MBUF_SIZE);
+  (void)string_copy_bounded(buf, MBUF_SIZE, data);
   if (mech_parseattributes(buf, args, 4) == 4) {
     for (i = 0; i < 4; i++) {
       if ((parse_coord(map, i, link_argument(args, 4, i), &x, &y))) {
@@ -152,7 +152,7 @@ static void add_links(DbRef loc, BattleMap *map, char *data,
 
   buf = alloc_lbuf("add_links");
 
-  strlcpy(buf, data, LBUF_SIZE);
+  (void)string_copy_bounded(buf, LBUF_SIZE, data);
   found = mech_parseattributes(buf, args, 500);
   if (found > 0) {
     for (i = 0; i < found; i++) {

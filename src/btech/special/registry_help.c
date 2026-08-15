@@ -265,7 +265,7 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
             btech_special_command_access(context, PLAYER, POWERNEEDED)) {
           if (ID != GTYPE_MECH ||
               btech_command_allowed_for_mech(mech, command->flag)) {
-            strlcpy(buf, command->name, sizeof(buf));
+            (void)string_copy_bounded(buf, sizeof(buf), command->name);
             const size_t NAME_LENGTH = strcspn(buf, " ");
             *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char),
                                         NAME_LENGTH) = '\0';

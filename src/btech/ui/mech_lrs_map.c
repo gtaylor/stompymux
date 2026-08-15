@@ -493,16 +493,16 @@ static void show_lrs_map(const LrsMapRequest *request) {
                       lrs_hex_text(colors, mech, map, i, loop, &prevct, MODE,
                                    &mechs, last_mech, losmap)
                           .text);
-      strlcat(botbuff, " ", sizeof(botbuff));
+      (void)string_append_bounded(botbuff, sizeof(botbuff), " ");
     }
 
     if (MODE & (LRS_COLORMODE | LRS_ELEVCOLORMODE)) {
       if (prevct) {
-        strlcat(topbuff, "[reset]", sizeof(topbuff));
+        (void)string_append_bounded(topbuff, sizeof(topbuff), "[reset]");
         prevct = 0;
       }
       if (prevcb) {
-        strlcat(botbuff, "[reset]", sizeof(botbuff));
+        (void)string_append_bounded(botbuff, sizeof(botbuff), "[reset]");
         prevcb = 0;
       }
     }

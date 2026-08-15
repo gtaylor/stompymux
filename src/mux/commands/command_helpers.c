@@ -101,7 +101,7 @@ static int *uptime_value_slot(int *values, size_t count, size_t index) {
 char *get_uptime_to_string(int uptime) {
   char *result = alloc_sbuf("get_uptime_to_string");
   if (uptime <= 0) {
-    strlcpy(result, "#-1 INVALID VALUE", SBUF_SIZE);
+    (void)string_copy_bounded(result, SBUF_SIZE, "#-1 INVALID VALUE");
     return result;
   }
 
@@ -133,9 +133,9 @@ char *get_uptime_to_string(int uptime) {
         checked_storage_region(result, SBUF_SIZE, used, SBUF_SIZE - used),
         SBUF_SIZE - used, "%d %s%s", VALUE, unit->name, VALUE == 1 ? "" : "s");
     if (populated > 1)
-      strlcat(result, ", ", SBUF_SIZE);
+      (void)string_append_bounded(result, SBUF_SIZE, ", ");
     else if (populated == 1)
-      strlcat(result, " and ", SBUF_SIZE);
+      (void)string_append_bounded(result, SBUF_SIZE, " and ");
   }
   return result;
 }

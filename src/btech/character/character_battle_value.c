@@ -1,6 +1,5 @@
 #include <math.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "btech/context.h"
 #include "btech_channel.h"
@@ -98,7 +97,7 @@ int has_bool_advantage(BtechContext *context, DbRef player, const char *name) {
   PSTATS *s = &stats;
   char buf[SBUF_SIZE];
 
-  strlcpy(buf, name, sizeof(buf));
+  (void)string_copy_bounded(buf, sizeof(buf), name);
   character_stats_retrieve(context, player,
                            VALUES_ATTRS | VALUES_ADVS | VALUES_HEALTH, s);
   if (char_getstatvalue(s, buf) == 1)
@@ -318,10 +317,9 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
   xp = bounded(1, (int)(multiplier * (double)DAMAGE / 100.0),
                mech_context(attacker)->configuration->btech_xpgain_cap);
 
-  strlcpy(
-      buf,
-      game_object_name(mech_context(attacker)->database, mech_dbref(wounded)),
-      sizeof(buf));
+  (void)string_copy_bounded(
+      buf, sizeof(buf),
+      game_object_name(mech_context(attacker)->database, mech_dbref(wounded)));
 
   // Emit XP gain over MechAttackXP
   if (char_gainxp(context, PILOT, skname, xp)) {
@@ -427,10 +425,9 @@ legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
 
   xp = bounded(1, (int)(multiplier * NUM_OCCURENCES) / 100,
                50); /*Hardcoded limit */
-  strlcpy(
-      buf,
-      game_object_name(mech_context(attacker)->database, mech_dbref(wounded)),
-      sizeof(buf));
+  (void)string_copy_bounded(
+      buf, sizeof(buf),
+      game_object_name(mech_context(attacker)->database, mech_dbref(wounded)));
   /* Switching to Exile method of tracking xp, where we split
    * Attacking and Piloting xp into two different channels
    */

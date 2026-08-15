@@ -712,7 +712,7 @@ char *do_process_macro(const MacroExpansionRequest *request) {
               char *destination = checked_storage_at(
                   buff, LBUF_SIZE, sizeof(char), output_offset);
               const size_t REMAINING = LBUF_SIZE - output_offset;
-              strlcpy(destination, s, REMAINING);
+              (void)string_copy_bounded(destination, REMAINING, s);
               output_offset += strlen(destination);
               replacement_offset++;
             } else {

@@ -51,7 +51,7 @@ BtechScriptResult fun_bttechlist(BtechScriptCall *call) {
     safe_tprintf_str(buff, bufc, "#-1");
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
-  infostr = techlist_func(mech, (char[MBUF_SIZE]){0});
+  infostr = techlist_func(mech, (char[MBUF_SIZE]){0}, MBUF_SIZE);
   safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : " ");
 
   return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
@@ -80,7 +80,7 @@ BtechScriptResult fun_bttechlist_ref(BtechScriptCall *call) {
     return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
   }
 
-  infostr = techlist_func(mech, (char[MBUF_SIZE]){0});
+  infostr = techlist_func(mech, (char[MBUF_SIZE]){0}, MBUF_SIZE);
   safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1");
 
   return btech_script_result_finish(call, BTECH_SCRIPT_LIST);

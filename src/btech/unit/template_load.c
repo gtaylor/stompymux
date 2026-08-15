@@ -87,7 +87,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       ptr = checked_mutable_string_suffix(ptr, 1);
       ptr = checked_mutable_string_suffix(ptr, strspn(ptr, " \t\n\v\f\r"));
     } else {
-      strlcpy(cmd, line, sizeof(cmd));
+      (void)string_copy_bounded(cmd, sizeof(cmd), line);
       line[0] = '\0';
       ptr = NULL;
     }
@@ -130,7 +130,10 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       }
       silly_atr_set_in(mech->xcode.context->database, mech->mynum, A_MECHTYPE,
                        tmpc);
-      strlcpy(((mech)->ud.mech_type), tmpc, sizeof(((mech)->ud.mech_type)));
+      if (tmpc != ((mech)->ud.mech_type)) {
+        (void)string_copy_bounded(((mech)->ud.mech_type),
+                                  sizeof(((mech)->ud.mech_type)), tmpc);
+      }
       break;
     case 1: /* Type */
       tmpc = template_description_read(&(TemplateDescriptionRead){
@@ -495,12 +498,12 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       mech_computer_quality_set(mech, value);
       break;
     case 16: /* Name of the mech */
-      strlcpy(((mech)->ud.mech_name),
-              template_description_read(&(TemplateDescriptionRead){
-                  .file = fp,
-                  .line = ptr,
-                  .buffer = (char[BTECH_TEXT_CAPACITY]){0}}),
-              sizeof(((mech)->ud.mech_name)));
+      (void)string_copy_bounded(
+          ((mech)->ud.mech_name), sizeof(((mech)->ud.mech_name)),
+          template_description_read(&(TemplateDescriptionRead){
+              .file = fp,
+              .line = ptr,
+              .buffer = (char[BTECH_TEXT_CAPACITY]){0}}));
       break;
     case 17: /* Jj's */
       if (!template_read_float(
@@ -631,7 +634,8 @@ int load_template(DbRef player, Mech *mech, char *filename) {
         (void)string_copy_bounded(((mech)->ud.unit_era),
                                   sizeof(((mech)->ud.unit_era)), "Undefined");
       else
-        strlcpy(((mech)->ud.unit_era), tmpc, sizeof(((mech)->ud.unit_era)));
+        (void)string_copy_bounded(((mech)->ud.unit_era),
+                                  sizeof(((mech)->ud.unit_era)), tmpc);
       break;
     case 30:
       tmpc = template_description_read(&(TemplateDescriptionRead){
@@ -640,7 +644,8 @@ int load_template(DbRef player, Mech *mech, char *filename) {
         (void)string_copy_bounded(((mech)->ud.unit_tro),
                                   sizeof(((mech)->ud.unit_tro)), "Undefined");
       else
-        strlcpy(((mech)->ud.unit_tro), tmpc, sizeof(((mech)->ud.unit_tro)));
+        (void)string_copy_bounded(((mech)->ud.unit_tro),
+                                  sizeof(((mech)->ud.unit_tro)), tmpc);
       break;
     }
   }
