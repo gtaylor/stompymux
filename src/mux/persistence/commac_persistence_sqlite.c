@@ -341,7 +341,9 @@ static int commac_load_alias(const CommacAliasLoadRequest *request) {
     if (!commac_reserve_aliases(commac, CAPACITY))
       return -1;
   }
-  string_copy(commac_alias_at(commac, (size_t)commac->numchannels), alias);
+  (void)string_copy_bounded(
+      commac_alias_at(commac, (size_t)commac->numchannels), COMMAC_ALIAS_SIZE,
+      alias);
   *commac_channel_slot(commac, (size_t)commac->numchannels) = strdup(channel);
   commac->numchannels++;
   return 0;
@@ -468,7 +470,7 @@ static int commac_load_channels(sqlite3 *sqlite, PersistenceContext *context) {
         result = -1;
         break;
       }
-      string_copy(channel->name, name);
+      (void)string_copy_bounded(channel->name, sizeof(channel->name), name);
       channel->type = (int)value;
       if (commac_column_int(statement, 2, &value) < 0)
         result = -1;
@@ -710,7 +712,9 @@ static int commac_load_macros(sqlite3 *sqlite, PersistenceContext *context) {
       macro->alias = aliases;
       macro->string = strings;
       macro->macro_capacity = macro->macro_count + 1;
-      string_copy(macro_alias_at(macro, (size_t)macro->macro_count), alias);
+      (void)string_copy_bounded(
+          macro_alias_at(macro, (size_t)macro->macro_count), MACRO_ALIAS_SIZE,
+          alias);
       *macro_string_slot(macro, (size_t)macro->macro_count) = strdup(expansion);
       macro->macro_count++;
     }

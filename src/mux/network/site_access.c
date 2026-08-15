@@ -101,9 +101,9 @@ static void list_sites(EvaluationContext *evaluation, DbRef player,
     str = stat_string(
         &(SiteStatusRequest){.type = stat_type, .flag = this->flag});
     if (inet_ntop(AF_INET, &this->address, address, sizeof(address)) == nullptr)
-      string_copy(address, "<invalid>");
+      (void)string_copy_bounded(address, sizeof(address), "<invalid>");
     if (inet_ntop(AF_INET, &this->mask, mask, sizeof(mask)) == nullptr)
-      string_copy(mask, "<invalid>");
+      (void)string_copy_bounded(mask, sizeof(mask), "<invalid>");
     (void)snprintf(buff, MBUF_SIZE, "%-20s %-20s %s", address, mask, str);
     notify_checked(evaluation, player, player, buff, MSG_ME_ALL | MSG_F_DOWN);
   }

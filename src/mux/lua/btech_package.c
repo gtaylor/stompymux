@@ -147,7 +147,7 @@ static int btech_lua_invoke(lua_State *state) {
         (void *)arguments, MAX_ARG, sizeof(*arguments), (size_t)index);
 
     *slot = alloc_lbuf("btech_lua_argument");
-    string_copy(*slot, value);
+    (void)string_copy_bounded(*slot, LBUF_SIZE, value);
   }
   BtechScriptCall call = {
       .evaluation = &package->services->background_command->evaluation,

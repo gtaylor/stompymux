@@ -254,7 +254,7 @@ int cf_string(const ConfigurationCall *call) {
     }
     retval = 1;
   }
-  string_copy(destination, str);
+  (void)string_copy_bounded(destination, (size_t)call->extra, str);
   return retval;
 }
 

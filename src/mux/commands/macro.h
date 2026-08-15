@@ -15,6 +15,9 @@ struct MacroRegistry; // IWYU pragma: keep
 enum : int { MACRO_L = 1, MACRO_R = 2, MACRO_W = 4 };
 constexpr int MAX_SLOTS = 5; /* Number of macro slots a person can have. */
 
+/* Storage reserved for one macro alias, including its terminator. */
+constexpr size_t MACRO_ALIAS_SIZE = 5;
+
 typedef struct MacroRegistry MacroRegistry;
 typedef struct ChannelRegistry ChannelRegistry;
 typedef struct Macroentry MACENT;

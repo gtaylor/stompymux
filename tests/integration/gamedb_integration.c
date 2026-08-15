@@ -1460,6 +1460,7 @@ int main(int argc, char *argv[]) {
   char bootstrap_config[PATH_MAX];
   char invalid_god_config[PATH_MAX];
   char name_limit_config[PATH_MAX];
+  char long_path_config[PATH_MAX];
   char sqlite_read_config[PATH_MAX];
   char missing_config[PATH_MAX];
   char sqlite_directory[PATH_MAX];
@@ -1607,6 +1608,25 @@ int main(int argc, char *argv[]) {
          (run_server(server, name_limit_config, 0, &status) < 0 ||
           !WIFEXITED(status) || WEXITSTATUS(status) == 2)) ||
         set_spaced_player_alias(database, false) < 0)
+      result = 1;
+
+    /* A configuration path longer than ServerConfiguration::config_file must
+     * be reported and rejected instead of silently recorded truncated. */
+    char long_name[160];
+    memset(long_name, 'c', sizeof(long_name) - 1);
+    long_name[sizeof(long_name) - 1] = '\0';
+    if (snprintf(long_path_config, sizeof(long_path_config), "%s/%s.conf",
+                 directory, long_name) < 0)
+      return 2;
+    file = fopen(long_path_config, "w");
+    if (file == nullptr)
+      return 2;
+    fprintf(file, "[database]\ngame_database = \"%s\"\n", database);
+    fprintf(file, "[server]\nport = 0\n");
+    if (fclose(file) != 0 ||
+        (result == 0 &&
+         (run_server(server, long_path_config, 0, &status) < 0 ||
+          !WIFEXITED(status) || WEXITSTATUS(status) != 2)))
       result = 1;
   }
 

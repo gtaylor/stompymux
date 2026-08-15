@@ -161,7 +161,7 @@ void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
   }
   if (key & MSG_ME) {
     msg_copy = alloc_lbuf("notify_checked");
-    string_copy(msg_copy, msg);
+    (void)string_copy_bounded(msg_copy, LBUF_SIZE, msg);
   } else {
     msg_copy = nullptr;
   }

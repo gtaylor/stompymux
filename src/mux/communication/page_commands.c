@@ -88,7 +88,7 @@ static char *dbrefs_to_names(const PageNameListRequest *request) {
   char *token_context = nullptr;
   char oldlist[LBUF_SIZE];
 
-  string_copy(oldlist, list);
+  (void)string_copy_bounded(oldlist, sizeof(oldlist), list);
   bp = namelist;
   for (p = strtok_r(oldlist, " ", &token_context); p != nullptr;
        p = strtok_r(nullptr, " ", &token_context)) {
@@ -132,6 +132,7 @@ void do_page(CommandInvocation *invocation) {
   size_t delivery_count = 0;
   long aflags = 0;
   char *token_context = nullptr;
+  char *owned_tname = nullptr;
 
   if ((tname[0] == ':') || (tname[0] == ';') || (message[0] == ':') ||
       (message[0] == ';'))
@@ -172,9 +173,13 @@ void do_page(CommandInvocation *invocation) {
       free_lbuf(targetname);
       return;
     }
-    string_copy(message, tname);
-    string_copy(tname, targetname);
-    free_lbuf(targetname);
+    /* The typed text is the message and the recipients come from the saved
+     * last-page list. Rebind rather than writing into the caller's argument
+     * buffers, which are sub-pointers into the command line and carry no
+     * independent capacity. */
+    message = tname;
+    tname = targetname;
+    owned_tname = targetname;
     ismessage = 1;
   }
 
@@ -190,8 +195,8 @@ void do_page(CommandInvocation *invocation) {
   message = plain_message;
   mp = message;
 
-  attribute_get_string(evaluation->world->database, formatted, PLAYER, A_ALIAS,
-                       &aflags);
+  attribute_get_string(evaluation->world->database, PLAYER, A_ALIAS, formatted,
+                       LBUF_SIZE, &aflags);
   if (*formatted) {
     char *ap = aladd;
 
@@ -376,4 +381,5 @@ cleanup:
   page_recipient_list_destroy(&recipients);
 cleanup_workspace:
   free(workspace);
+  free_lbuf(owned_tname);
 }

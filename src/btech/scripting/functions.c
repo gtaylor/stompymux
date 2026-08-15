@@ -124,7 +124,7 @@ char *btech_attribute_read(GameDatabase *database, DbRef id, int flag,
                            char buffer[static LBUF_SIZE]) {
   long flags;
 
-  return attribute_get_string(database, buffer, id, flag, &flags);
+  return attribute_get_string(database, id, flag, buffer, LBUF_SIZE, &flags);
 }
 
 void silly_atr_set_in(GameDatabase *database, DbRef id, int flag,

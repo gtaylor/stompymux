@@ -407,7 +407,8 @@ void load_player_names(WorldContext *world) {
   alias = alloc_lbuf("load_player_names");
   DO_WHOLE_DB(world->database, i) {
     if (typeof_obj(world->database, i) == OBJECT_TYPE_PLAYER) {
-      alias = attribute_get_string(world->database, alias, i, A_ALIAS, &aflags);
+      alias = attribute_get_string(world->database, i, A_ALIAS, alias,
+                                   LBUF_SIZE, &aflags);
       if (*alias)
         add_player_name(world, i, alias);
     }
@@ -429,7 +430,7 @@ void badname_add(WorldContext *world, char *bad_name) {
   bp->name = malloc(strlen(bad_name) + 1);
   bp->next = world->access_control->bad_names;
   world->access_control->bad_names = bp;
-  string_copy(bp->name, bad_name);
+  (void)string_copy_bounded(bp->name, strlen(bad_name) + 1, bad_name);
 }
 
 void badname_remove(WorldContext *world, char *bad_name) {

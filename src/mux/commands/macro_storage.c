@@ -46,8 +46,9 @@ char **macro_string_slot(MacroSet *set, size_t index) {
 char *macro_alias_at(const MacroSet *set, size_t index) {
   if (index >= (size_t)set->macro_capacity)
     abort();
-  return checked_storage_at(set->alias, (size_t)set->macro_capacity * 5,
-                            sizeof(char), index * 5);
+  return checked_storage_at(set->alias,
+                            (size_t)set->macro_capacity * MACRO_ALIAS_SIZE,
+                            sizeof(char), index * MACRO_ALIAS_SIZE);
 }
 
 void macro_registry_initialize(MacroRegistry *registry,
@@ -127,7 +128,8 @@ void do_create_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   created->alias = nullptr;
   created->string = nullptr;
   created->desc = malloc(strlen(description) + 1);
-  string_copy(created->desc, description);
+  (void)string_copy_bounded(created->desc, strlen(description) + 1,
+                            description);
   commac->curmac = first;
   commac_macro_set(commac, (size_t)first, SET);
 

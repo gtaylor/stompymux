@@ -184,7 +184,7 @@ char *parse_arglist(const CommandArgumentListRequest *request) {
                                               sizeof(*arguments), i);
 
     *slot = alloc_lbuf("parse_arglist");
-    string_copy(*slot, argument);
+    (void)string_copy_bounded(*slot, LBUF_SIZE, argument);
   }
   return remainder;
 }

@@ -482,7 +482,7 @@ char *decode_flags(const DecodeFlagsRequest *request) {
   char *out = buffer;
   *out = '\0';
   if (!is_good_obj(request->database, request->player)) {
-    string_copy(buffer, "#-2 ERROR");
+    (void)string_copy_bounded(buffer, SBUF_SIZE, "#-2 ERROR");
     return buffer;
   }
   const ObjectEntry *object_type = object_type_entry(request->object_type);
@@ -536,9 +536,9 @@ char *flags_description(GameDatabase *database, DbRef target) {
 char *unparse_object_numonly(GameDatabase *database, DbRef target) {
   char *buffer = alloc_lbuf("unparse_object_numonly");
   if (target == NOTHING)
-    string_copy(buffer, "*NOTHING*");
+    (void)string_copy_bounded(buffer, LBUF_SIZE, "*NOTHING*");
   else if (target == HOME)
-    string_copy(buffer, "*HOME*");
+    (void)string_copy_bounded(buffer, LBUF_SIZE, "*HOME*");
   else if (!is_good_obj(database, target))
     (void)snprintf(buffer, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
   else
@@ -551,9 +551,9 @@ char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
   (void)evaluation;
   char *buffer = alloc_lbuf("unparse_object");
   if (target == NOTHING) {
-    string_copy(buffer, "*NOTHING*");
+    (void)string_copy_bounded(buffer, LBUF_SIZE, "*NOTHING*");
   } else if (target == HOME) {
-    string_copy(buffer, "*HOME*");
+    (void)string_copy_bounded(buffer, LBUF_SIZE, "*HOME*");
   } else if (!is_good_obj(database, target)) {
     (void)snprintf(buffer, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
   } else if (is_examinable(database, player, target)) {
@@ -563,7 +563,8 @@ char *unparse_object(GameDatabase *database, EvaluationContext *evaluation,
                    *flags ? ":" : "", flags);
     free_sbuf(flags);
   } else {
-    string_copy(buffer, game_object_name(database, target));
+    (void)string_copy_bounded(buffer, LBUF_SIZE,
+                              game_object_name(database, target));
   }
   return buffer;
 }

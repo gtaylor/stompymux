@@ -400,6 +400,7 @@ void process_command(CommandContext *context, char *command, char *arguments[],
   DbRef exit = 0;
   CMDENT *cmdp = nullptr;
   char *macroout = nullptr;
+  char *macro_command = nullptr;
   int macerr = 0;
 
   /*
@@ -419,7 +420,6 @@ void process_command(CommandContext *context, char *command, char *arguments[],
                          .primary = "CMD",
                          .secondary = "PLYR"},
               "Bad player in process_command: %ld", PLAYER);
-    context->debug_command = cmdsave;
     goto exit;
   }
 
@@ -433,7 +433,6 @@ void process_command(CommandContext *context, char *command, char *arguments[],
          INTERACTIVE))) {
     notify_printf(&context->evaluation, PLAYER,
                   "Attempt to execute command by halted object #%ld", PLAYER);
-    context->debug_command = cmdsave;
     goto exit;
   }
 
@@ -528,7 +527,6 @@ void process_command(CommandContext *context, char *command, char *arguments[],
                                            .cause = CAUSE,
                                            .arguments = command,
                                            .unparsed_command = command});
-    context->debug_command = cmdsave;
     goto exit;
   }
   if ((*command == '.') && INTERACTIVE) {
@@ -537,8 +535,13 @@ void process_command(CommandContext *context, char *command, char *arguments[],
     if (!macerr)
       goto exit;
     if (macerr == 1) {
-      string_copy(command, macroout);
-      free_lbuf(macroout);
+      /* Take ownership of the expansion instead of overwriting the caller's
+       * command buffer, which is a sub-pointer into the command line with no
+       * capacity we can rely on. */
+      macro_command = macroout;
+      command = macro_command;
+      command_length = strlen(command);
+      context->debug_command = command;
     }
   } else {
     macerr = 0;
@@ -563,7 +566,6 @@ void process_command(CommandContext *context, char *command, char *arguments[],
                                        .player = PLAYER,
                                        .direction = (char *)"home"});
 #pragma clang diagnostic pop
-    context->debug_command = cmdsave;
     goto exit;
   }
 
@@ -581,7 +583,6 @@ void process_command(CommandContext *context, char *command, char *arguments[],
     if (exit != NOTHING) {
       move_exit(&context->evaluation, PLAYER, exit, "You can't go that way.",
                 0);
-      context->debug_command = cmdsave;
       goto exit;
     }
   }
@@ -647,7 +648,6 @@ void process_command(CommandContext *context, char *command, char *arguments[],
                                              .unparsed_command = command});
     }
     free_lbuf(lcbuf);
-    context->debug_command = cmdsave;
     goto exit;
   }
   /* Lua handlers observe the original unmatched command. */
@@ -736,7 +736,6 @@ void process_command(CommandContext *context, char *command, char *arguments[],
     if (exit != NOTHING) {
       free_lbuf(lcbuf);
       move_exit(&context->evaluation, PLAYER, exit, nullptr, 0);
-      context->debug_command = cmdsave;
       goto exit;
     }
   }
@@ -763,10 +762,9 @@ void process_command(CommandContext *context, char *command, char *arguments[],
       ENDLOG(context->log);
     }
   }
-  context->debug_command = cmdsave;
-
 exit:
-  return;
+  context->debug_command = cmdsave;
+  free_lbuf(macro_command);
 }
 
 /*

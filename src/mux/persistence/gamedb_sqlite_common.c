@@ -164,10 +164,10 @@ int gamedb_fsync_directory(const char *path) {
 
   if (strlen(path) >= sizeof(directory))
     return -1;
-  string_copy(directory, path);
+  (void)string_copy_bounded(directory, sizeof(directory), path);
   slash = strrchr(directory, '/');
   if (!slash)
-    string_copy(directory, ".");
+    (void)string_copy_bounded(directory, sizeof(directory), ".");
   else if (slash == directory)
     *(char *)checked_storage_at(directory, sizeof(directory), sizeof(char), 1) =
         '\0';

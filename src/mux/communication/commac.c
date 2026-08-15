@@ -207,9 +207,9 @@ void sort_com_aliases(struct Commac *c) {
       char *right_alias = commac_alias_at(c, (size_t)i + 1);
 
       if (strcasecmp(left_alias, right_alias) > 0) {
-        string_copy(buffer, left_alias);
-        string_copy(left_alias, right_alias);
-        string_copy(right_alias, buffer);
+        (void)string_copy_bounded(buffer, sizeof(buffer), left_alias);
+        (void)string_copy_bounded(left_alias, COMMAC_ALIAS_SIZE, right_alias);
+        (void)string_copy_bounded(right_alias, COMMAC_ALIAS_SIZE, buffer);
         s = commac_channel_at(c, (size_t)i);
         *commac_channel_slot(c, (size_t)i) =
             commac_channel_at(c, (size_t)i + 1);

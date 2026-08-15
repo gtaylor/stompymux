@@ -94,9 +94,15 @@ static void *configuration_resolve_location(ConfigurationContext *context,
  */
 
 void configuration_initialize(ConfigurationContext *context) {
-  string_copy(context->configuration->database.gamedb, "");
-  string_copy(context->configuration->database.mech_db, "mechs");
-  string_copy(context->configuration->database.map_db, "maps");
+  (void)string_copy_bounded(context->configuration->database.gamedb,
+                            sizeof(context->configuration->database.gamedb),
+                            "");
+  (void)string_copy_bounded(context->configuration->database.mech_db,
+                            sizeof(context->configuration->database.mech_db),
+                            "mechs");
+  (void)string_copy_bounded(context->configuration->database.map_db,
+                            sizeof(context->configuration->database.map_db),
+                            "maps");
   context->configuration->database.bootstrap_objects[0] =
       (BootstrapObjectConfiguration){
           .dbref = 0, .type = BOOTSTRAP_OBJECT_ROOM, .name = "Limbo"};
@@ -204,18 +210,38 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->afterlife_dbref = 5;
   context->configuration->port = 6250;
   context->configuration->init_size = 1000;
-  string_copy(context->configuration->conn_file, "text/connect.txt");
-  string_copy(context->configuration->conn_dir, "");
-  string_copy(context->configuration->quit_file, "text/quit.txt");
-  string_copy(context->configuration->down_file, "text/down.txt");
-  string_copy(context->configuration->full_file, "text/full.txt");
-  string_copy(context->configuration->site_file, "text/badsite.txt");
-  string_copy(context->configuration->help_dir, "help");
-  string_copy(context->configuration->down_msg, "");
-  string_copy(context->configuration->full_msg, "");
-  string_copy(context->configuration->database.dump_msg, "");
-  string_copy(context->configuration->database.postdump_msg, "");
-  string_copy(context->configuration->public_channel, "Public");
+  (void)string_copy_bounded(context->configuration->conn_file,
+                            sizeof(context->configuration->conn_file),
+                            "text/connect.txt");
+  (void)string_copy_bounded(context->configuration->conn_dir,
+                            sizeof(context->configuration->conn_dir), "");
+  (void)string_copy_bounded(context->configuration->quit_file,
+                            sizeof(context->configuration->quit_file),
+                            "text/quit.txt");
+  (void)string_copy_bounded(context->configuration->down_file,
+                            sizeof(context->configuration->down_file),
+                            "text/down.txt");
+  (void)string_copy_bounded(context->configuration->full_file,
+                            sizeof(context->configuration->full_file),
+                            "text/full.txt");
+  (void)string_copy_bounded(context->configuration->site_file,
+                            sizeof(context->configuration->site_file),
+                            "text/badsite.txt");
+  (void)string_copy_bounded(context->configuration->help_dir,
+                            sizeof(context->configuration->help_dir), "help");
+  (void)string_copy_bounded(context->configuration->down_msg,
+                            sizeof(context->configuration->down_msg), "");
+  (void)string_copy_bounded(context->configuration->full_msg,
+                            sizeof(context->configuration->full_msg), "");
+  (void)string_copy_bounded(context->configuration->database.dump_msg,
+                            sizeof(context->configuration->database.dump_msg),
+                            "");
+  (void)string_copy_bounded(
+      context->configuration->database.postdump_msg,
+      sizeof(context->configuration->database.postdump_msg), "");
+  (void)string_copy_bounded(context->configuration->public_channel,
+                            sizeof(context->configuration->public_channel),
+                            "Public");
   context->configuration->name_spaces = 1;
   context->configuration->database.fork_dump = 1;
   context->configuration->max_players = -1;
@@ -245,14 +271,22 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->start_room = 4;
   context->configuration->start_home = 4;
   context->configuration->default_home = 0;
-  string_copy(context->configuration->default_thing_lua_parent,
-              "default_thing.lua");
-  string_copy(context->configuration->default_room_lua_parent,
-              "default_room.lua");
-  string_copy(context->configuration->default_exit_lua_parent,
-              "default_exit.lua");
-  string_copy(context->configuration->default_player_lua_parent,
-              "default_player.lua");
+  (void)string_copy_bounded(
+      context->configuration->default_thing_lua_parent,
+      sizeof(context->configuration->default_thing_lua_parent),
+      "default_thing.lua");
+  (void)string_copy_bounded(
+      context->configuration->default_room_lua_parent,
+      sizeof(context->configuration->default_room_lua_parent),
+      "default_room.lua");
+  (void)string_copy_bounded(
+      context->configuration->default_exit_lua_parent,
+      sizeof(context->configuration->default_exit_lua_parent),
+      "default_exit.lua");
+  (void)string_copy_bounded(
+      context->configuration->default_player_lua_parent,
+      sizeof(context->configuration->default_player_lua_parent),
+      "default_player.lua");
   context->configuration->default_player_flags =
       (ObjectFlagSet){.values = {
                           [OBJECT_FLAG_ANSI] = true,
@@ -267,7 +301,9 @@ void configuration_initialize(ConfigurationContext *context) {
                           [OBJECT_FLAG_NO_COMMAND] = true,
                       }};
   context->configuration->default_thing_flags = (ObjectFlagSet){0};
-  string_copy(context->configuration->mud_name, "StompyMUX");
+  (void)string_copy_bounded(context->configuration->mud_name,
+                            sizeof(context->configuration->mud_name),
+                            "StompyMUX");
   context->configuration->command_quota_interval = 100;
   context->configuration->command_quota_max = 100;
   context->configuration->command_quota_increment = 5;
@@ -287,7 +323,9 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->cache_depth = CACHE_DEPTH;
   context->configuration->cache_width = CACHE_WIDTH;
   context->configuration->cache_names = 1;
-  string_copy(context->configuration->lua.directory, "lua");
+  (void)string_copy_bounded(context->configuration->lua.directory,
+                            sizeof(context->configuration->lua.directory),
+                            "lua");
   context->configuration->lua.memory_limit = 64 * 1024 * 1024;
   context->configuration->lua.state_value_limit = 64 * 1024;
   context->configuration->lua.state_entry_limit = 1024;
@@ -405,7 +443,7 @@ int configuration_set(ConfigurationContext *context, char *cp, char *ap,
         return (-1);
       }
       buff = alloc_lbuf("configuration_set");
-      string_copy(buff, ap);
+      (void)string_copy_bounded(buff, LBUF_SIZE, ap);
       ConfigurationCall call = {
           .value = configuration_resolve_location(context, tp),
           .text = ap,
@@ -483,7 +521,14 @@ int configuration_read(ConfigurationContext *context, char *fn) {
   char errbuf[256];
   bool ok;
 
-  string_copy(context->configuration->config_file, fn);
+  if (!string_copy_bounded(context->configuration->config_file,
+                           sizeof(context->configuration->config_file), fn)) {
+    (void)fprintf(stderr,
+                  "Error reading config file '%s': path exceeds %zu "
+                  "characters\n",
+                  fn, sizeof(context->configuration->config_file) - 1);
+    return -1;
+  }
   context->fatal_error = false;
   context->configuration->is_initializing = true;
   ok = configuration_toml_load(fn, configuration_toml_dispatch_to_set, context,

@@ -115,7 +115,8 @@ static void give_thing(const GiveThingRequest *request) {
                                             .cause = giver});
   if (!(key & GIVE_QUIET)) {
     str = alloc_lbuf("do_give.thing.ok");
-    string_copy(str, game_object_name(evaluation->world->database, giver));
+    (void)string_copy_bounded(
+        str, LBUF_SIZE, game_object_name(evaluation->world->database, giver));
     (void)snprintf(message_buffer, sizeof(message_buffer), "%s gave you %s.",
                    str, game_object_name(evaluation->world->database, thing));
     notify_checked(evaluation, recipient, giver, message_buffer,
