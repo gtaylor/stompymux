@@ -161,10 +161,8 @@ void display_target(EvaluationContext *evaluation, DbRef player, Mech *mech) {
   }
 }
 
-void show_miscbrands(Mech *mech, DbRef player) {
-  (void)mech;
-  (void)player;
-}
+void show_miscbrands(Mech *mech [[maybe_unused]],
+                     DbRef player [[maybe_unused]]) {}
 
 void print_generic_status(EvaluationContext *evaluation, DbRef player,
                           Mech *mech, bool use_model_reference) {
@@ -572,7 +570,7 @@ void print_heat_bar(EvaluationContext *evaluation, DbRef player, Mech *mech) {
 }
 
 void print_info_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
-                       int own) {
+                       int own [[maybe_unused]]) {
   char message_buffer[LBUF_SIZE];
   char buff[256];
   Mech *temp_mech;

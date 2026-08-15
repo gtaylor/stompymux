@@ -22,13 +22,11 @@ static char *cell(char values[TEST_HEIGHT][TEST_WIDTH], int x, int y) {
 int battle_map_width(const BattleMap *map) { return map->map_width; }
 int battle_map_height(const BattleMap *map) { return map->map_height; }
 
-char map_elevation_get(const BattleMap *map, int x, int y) {
-  (void)map;
+char map_elevation_get(const BattleMap *map [[maybe_unused]], int x, int y) {
   return *cell(elevation, x, y);
 }
 
-char map_real_terrain_get(BattleMap *map, int x, int y) {
-  (void)map;
+char map_real_terrain_get(BattleMap *map [[maybe_unused]], int x, int y) {
   return *cell(terrain, x, y);
 }
 

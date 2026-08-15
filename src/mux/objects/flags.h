@@ -132,7 +132,9 @@ constexpr DbRef GOD = 1;
 static inline int typeof_obj(GameDatabase *database, DbRef x) {
   return (int)(unsigned)game_database_object(database, x)->type;
 }
-static inline bool is_god(GameDatabase *database, DbRef x) { return x == GOD; }
+static inline bool is_god(GameDatabase *database [[maybe_unused]], DbRef x) {
+  return x == GOD;
+}
 static inline bool is_player(GameDatabase *database, DbRef x) {
   return typeof_obj(database, x) == OBJECT_TYPE_PLAYER;
 }

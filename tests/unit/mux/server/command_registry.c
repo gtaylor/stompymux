@@ -23,13 +23,10 @@ static const CommandDefinition DEFINITIONS[] = {
     {"#", nullptr, 0, 0, 0, {nullptr}},
 };
 
-static void macro_handler(MatchContext *match, MacroRegistry *registry,
-                          DbRef player, char *arguments) {
-  (void)match;
-  (void)registry;
-  (void)player;
-  (void)arguments;
-}
+static void macro_handler(MatchContext *match [[maybe_unused]],
+                          MacroRegistry *registry [[maybe_unused]],
+                          DbRef player [[maybe_unused]],
+                          char *arguments [[maybe_unused]]) {}
 
 static const MACENT MACROS[] = {{"one", macro_handler}, {"two", macro_handler}};
 

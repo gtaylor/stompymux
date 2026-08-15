@@ -15,10 +15,8 @@
 void notify_printf(EvaluationContext *evaluation, DbRef player,
                    const char *format, ...);
 
-void log_error(LogEntry entry, const char *format, ...) {
-  (void)entry;
-  (void)format;
-}
+void log_error(LogEntry entry [[maybe_unused]],
+               const char *format [[maybe_unused]], ...) {}
 
 static const char *test_string_item(const char *const *items, size_t count,
                                     size_t index) {
@@ -32,12 +30,9 @@ static const char *test_help_string_item(const HelpStringList *list,
                                                   sizeof(*list->items), index);
 }
 
-void notify_printf(EvaluationContext *evaluation, DbRef player,
-                   const char *format, ...) {
-  (void)evaluation;
-  (void)player;
-  (void)format;
-}
+void notify_printf(EvaluationContext *evaluation [[maybe_unused]],
+                   DbRef player [[maybe_unused]],
+                   const char *format [[maybe_unused]], ...) {}
 
 static int help_index_test_find_by_path(const HelpIndex *index,
                                         const char *relative_path,

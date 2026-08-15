@@ -47,14 +47,16 @@ typedef struct LuaCommandListContext {
 } LuaCommandListContext;
 
 static void list_global_lua_command(void *data, const char *source,
-                                    DbRef object, const char *pattern) {
+                                    DbRef object [[maybe_unused]],
+                                    const char *pattern) {
   LuaCommandListContext *context = data;
 
   notify_printf(context->evaluation, context->player, "  %s: %s", source,
                 pattern);
 }
 
-static void list_object_lua_command(void *data, const char *source,
+static void list_object_lua_command(void *data,
+                                    const char *source [[maybe_unused]],
                                     DbRef object, const char *pattern) {
   LuaCommandListContext *context = data;
 

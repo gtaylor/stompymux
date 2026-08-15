@@ -425,7 +425,7 @@ int aero_landing_zone_check(Mech *mech, int x, int y) {
     return BLOCKED_LZ;
   return NO_ERROR;
 }
-void aero_land(DbRef player, void *data, const char *buffer) {
+void aero_land(DbRef player, void *data, const char *buffer [[maybe_unused]]) {
   Mech *mech = (Mech *)data;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));

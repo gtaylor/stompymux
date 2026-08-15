@@ -28,11 +28,8 @@ static void format_target_id(char buffer[static LBUF_SIZE],
   (void)snprintf(buffer, LBUF_SIZE, "%c%c", id.first, id.second);
 }
 
-void autopilot_autogun_log(const Autopilot *autopilot, const char *format,
-                           ...) {
-  (void)autopilot;
-  (void)format;
-}
+void autopilot_autogun_log(const Autopilot *autopilot [[maybe_unused]],
+                           const char *format [[maybe_unused]], ...) {}
 
 void auto_gun_event(Autopilot *autopilot) {
   Mech *mech = (Mech *)autopilot->mymech; /* Its Mech */

@@ -309,8 +309,7 @@ void mech_repair_jobs_format(Mech *mech, char *buffer, size_t buffer_size) {
     return;
   for (i = 0; i < damages->count; i++) {
     const RepairDamage *damage = repair_damage_const(damages, i);
-    /* Ok... i think we want: */
-    /* repairnum|location|typenum|data|fixing? */
+    /* Desired format: repairnum|location|typenum|data|fixing? */
     if (i)
       append_damage(buffer, buffer_size, ",");
     append_damage(
@@ -369,7 +368,8 @@ size_t mech_repair_job_count(Mech *mech) {
     make_scrap_table(&damages, mech);
   return (size_t)damages.count;
 }
-void show_mechs_damage(DbRef player, void *data, char *buffer) {
+void show_mechs_damage(DbRef player, void *data,
+                       char *buffer [[maybe_unused]]) {
   char message_buffer[LBUF_SIZE];
   Mech *mech = data;
   RepairDamageTable damages_storage = {0};

@@ -28,7 +28,8 @@ BtechScriptResult fun_btthreshold(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
-static Mech *damage_target(BtechScriptCall *call, BtechScriptValueKind kind) {
+static Mech *damage_target(BtechScriptCall *call,
+                           BtechScriptValueKind kind [[maybe_unused]]) {
   if (!is_wizard(call->evaluation->world->database, call->player)) {
     safe_tprintf_str(call->output.buffer, &call->output.cursor,
                      "#-1 PERMISSION DENIED");
@@ -49,7 +50,6 @@ static Mech *damage_target(BtechScriptCall *call, BtechScriptValueKind kind) {
   if (!mech)
     safe_tprintf_str(call->output.buffer, &call->output.cursor,
                      "#-1 UNABLE TO GET MECHDATA");
-  (void)kind;
   return mech;
 }
 

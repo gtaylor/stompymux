@@ -20,8 +20,7 @@ typedef enum FailureCase {
   FAILURE_MISSING_SENTINEL,
 } FailureCase;
 
-static bool never_sentinel(const void *element) {
-  (void)element;
+static bool never_sentinel(const void *element [[maybe_unused]]) {
   return false;
 }
 
@@ -104,7 +103,6 @@ static int expect_failure(FailureCase failure, const char *message) {
   }
   return 0;
 }
-
 
 /* The allocation family reports overflow by exiting rather than aborting, so
  * it needs its own expectation of the child's termination mode. */
@@ -232,8 +230,7 @@ static bool array_reallocate_preserves_contract(void) {
     free(grown);
     return false;
   }
-  char *empty_element =
-      checked_storage_try_reallocate_array(empty_count, 4, 0);
+  char *empty_element = checked_storage_try_reallocate_array(empty_count, 4, 0);
   const bool NONNULL = empty_element != nullptr;
   free(empty_element != nullptr ? empty_element : empty_count);
   return PRESERVED && NONNULL;

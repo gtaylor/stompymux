@@ -15,7 +15,7 @@ static int nhrbtab_compare(const RedBlackTreeCompareCall *call) {
   return (RIGHT > LEFT) - (RIGHT < LEFT);
 }
 
-void numeric_hash_table_initialize(HashTable *htab, int size) {
+void numeric_hash_table_initialize(HashTable *htab, int size [[maybe_unused]]) {
   memset(htab, 0, sizeof(HashTable));
   htab->tree = red_black_tree_init(nhrbtab_compare, nullptr);
   htab->last = nullptr;
@@ -72,7 +72,7 @@ void numeric_hash_table_delete(long val, HashTable *htab) {
  * * hash_table_flush: free all the entries in a hashtable.
  */
 
-void numeric_hash_table_flush(HashTable *htab, int size) {
+void numeric_hash_table_flush(HashTable *htab, int size [[maybe_unused]]) {
   red_black_tree_destroy(htab->tree);
   htab->tree = red_black_tree_init(nhrbtab_compare, nullptr);
   htab->last = nullptr;

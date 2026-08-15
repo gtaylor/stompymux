@@ -50,25 +50,21 @@ bool battle_map_coordinate_is_valid(const BattleMap *map, int x, int y) {
   return x >= 0 && y >= 0 && x < map->map_width && y < map->map_height;
 }
 
-char map_elevation_get(const BattleMap *map, int x, int y) {
-  (void)map;
+char map_elevation_get(const BattleMap *map [[maybe_unused]], int x, int y) {
   return *cell(elevation, x, y);
 }
 
-int battle_map_hex_elevation(BattleMap *map, int x, int y) {
+int battle_map_hex_elevation(BattleMap *map [[maybe_unused]], int x, int y) {
   int value = *cell(elevation, x, y);
   char value_terrain = *cell(real_terrain, x, y);
-  (void)map;
   return value_terrain == WATER || value_terrain == ICE ? -value : value;
 }
 
-char map_terrain_get(const BattleMap *map, int x, int y) {
-  (void)map;
+char map_terrain_get(const BattleMap *map [[maybe_unused]], int x, int y) {
   return *cell(terrain, x, y);
 }
 
-char map_real_terrain_get(BattleMap *map, int x, int y) {
-  (void)map;
+char map_real_terrain_get(BattleMap *map [[maybe_unused]], int x, int y) {
   return *cell(real_terrain, x, y);
 }
 

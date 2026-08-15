@@ -62,337 +62,223 @@ static int effective_range;
 static int effective_water_range;
 static bool extended_ranges;
 
-int mech_critical_fire_mode(const Mech *mech, int section, int critical) {
-  (void)mech;
-  (void)section;
-  (void)critical;
+int mech_critical_fire_mode(const Mech *mech [[maybe_unused]],
+                            int section [[maybe_unused]],
+                            int critical [[maybe_unused]]) {
   return fire_mode;
 }
-int mech_critical_ammo_mode(const Mech *mech, int section, int critical) {
-  (void)mech;
-  (void)section;
-  (void)critical;
+int mech_critical_ammo_mode(const Mech *mech [[maybe_unused]],
+                            int section [[maybe_unused]],
+                            int critical [[maybe_unused]]) {
   return ammunition_mode;
 }
-BtechContext *mech_context(const Mech *mech) {
-  (void)mech;
+BtechContext *mech_context(const Mech *mech [[maybe_unused]]) {
   return context;
 }
-MechConditionSummary mech_condition_summary(const Mech *mech) {
-  (void)mech;
+MechConditionSummary mech_condition_summary(const Mech *mech [[maybe_unused]]) {
   return (MechConditionSummary){0};
 }
-char mech_real_terrain_get(Mech *mech) {
-  (void)mech;
+char mech_real_terrain_get(Mech *mech [[maybe_unused]]) {
   return attacker_terrain;
 }
-int mech_position_z(const Mech *mech) {
-  (void)mech;
-  return attacker_z;
-}
-int find_pilot_gunnery(Mech *mech, int weapon_index) {
-  (void)mech;
-  (void)weapon_index;
+int mech_position_z(const Mech *mech [[maybe_unused]]) { return attacker_z; }
+int find_pilot_gunnery(Mech *mech [[maybe_unused]],
+                       int weapon_index [[maybe_unused]]) {
   return gunnery;
 }
-DbRef mech_spotter_dbref(const Mech *mech) {
-  (void)mech;
+DbRef mech_spotter_dbref(const Mech *mech [[maybe_unused]]) {
   return spotter_dbref;
 }
-Mech *btech_context_get_mech(BtechContext *value, DbRef dbref) {
-  (void)value;
+Mech *btech_context_get_mech(BtechContext *value [[maybe_unused]],
+                             DbRef dbref) {
   return dbref == 20 ? &spotter : nullptr;
 }
-void mech_notify(Mech *mech, MechNotifyAudience audience, const char *message) {
-  (void)mech;
-  (void)audience;
-  (void)message;
-}
-int find_pilot_spotting(Mech *mech) {
-  (void)mech;
-  return spotting;
-}
-bool mech_is_aerospace_unit(const Mech *mech) {
-  (void)mech;
-  return false;
-}
-bool mech_is_landed(const Mech *mech) {
-  (void)mech;
-  return true;
-}
-UnitClass mech_class(const Mech *mech) {
-  (void)mech;
-  return CLASS_MECH;
-}
-int mech_base_to_hit_modifier(const Mech *mech) {
-  (void)mech;
+void mech_notify(Mech *mech [[maybe_unused]],
+                 MechNotifyAudience audience [[maybe_unused]],
+                 const char *message [[maybe_unused]]) {}
+int find_pilot_spotting(Mech *mech [[maybe_unused]]) { return spotting; }
+bool mech_is_aerospace_unit(const Mech *mech [[maybe_unused]]) { return false; }
+bool mech_is_landed(const Mech *mech [[maybe_unused]]) { return true; }
+UnitClass mech_class(const Mech *mech [[maybe_unused]]) { return CLASS_MECH; }
+int mech_base_to_hit_modifier(const Mech *mech [[maybe_unused]]) {
   return base_modifier;
 }
-int mech_section_base_to_hit(const Mech *mech, int section) {
-  (void)mech;
-  (void)section;
+int mech_section_base_to_hit(const Mech *mech [[maybe_unused]],
+                             int section [[maybe_unused]]) {
   return section_modifier;
 }
-WeaponRangeProfile weapon_catalogue_ranges(int weapon_index) {
-  (void)weapon_index;
+WeaponRangeProfile weapon_catalogue_ranges(int weapon_index [[maybe_unused]]) {
   return ranges;
 }
-bool btech_context_uses_extended_weapon_ranges(const BtechContext *value) {
-  (void)value;
+bool btech_context_uses_extended_weapon_ranges(const BtechContext *value
+                                               [[maybe_unused]]) {
   return extended_ranges;
 }
-int weapon_catalogue_effective_range(int weapon_index, bool extended) {
-  (void)weapon_index;
+int weapon_catalogue_effective_range(int weapon_index [[maybe_unused]],
+                                     bool extended) {
   return effective_range + (extended ? 5 : 0);
 }
-bool weapon_catalogue_is_hot_loaded(int weapon_index, int mode) {
-  (void)weapon_index;
-  (void)mode;
+bool weapon_catalogue_is_hot_loaded(int weapon_index [[maybe_unused]],
+                                    int mode [[maybe_unused]]) {
   return false;
 }
-bool btech_context_hotload_uses_half_modifier(const BtechContext *value) {
-  (void)value;
+bool btech_context_hotload_uses_half_modifier(const BtechContext *value
+                                              [[maybe_unused]]) {
   return false;
 }
-int mech_technology_flags(const Mech *mech) {
-  (void)mech;
+int mech_technology_flags(const Mech *mech [[maybe_unused]]) {
   return technology_flags;
 }
-bool mech_is_any_ecm_disturbed(const Mech *mech) {
-  (void)mech;
+bool mech_is_any_ecm_disturbed(const Mech *mech [[maybe_unused]]) {
   return false;
 }
-int mech_c3_network_size(const Mech *mech) {
-  (void)mech;
-  return c3_size;
-}
-float mech_network_range(Mech *mech, Mech *target_mech, float real_range,
-                         DbRef *reference, bool is_c3) {
-  (void)mech;
-  (void)target_mech;
-  (void)real_range;
-  (void)is_c3;
+int mech_c3_network_size(const Mech *mech [[maybe_unused]]) { return c3_size; }
+float mech_network_range(Mech *mech [[maybe_unused]],
+                         Mech *target_mech [[maybe_unused]],
+                         float real_range [[maybe_unused]], DbRef *reference,
+                         bool is_c3 [[maybe_unused]]) {
   *reference = c3_reference;
   return network_range;
 }
-int mech_technology_flags_secondary(const Mech *mech) {
-  (void)mech;
+int mech_technology_flags_secondary(const Mech *mech [[maybe_unused]]) {
   return 0;
 }
-int mech_c3i_network_size(const Mech *mech) {
-  (void)mech;
-  return 0;
-}
-TargetingComputerType mech_targeting_computer_type(const Mech *mech) {
-  (void)mech;
+int mech_c3i_network_size(const Mech *mech [[maybe_unused]]) { return 0; }
+TargetingComputerType mech_targeting_computer_type(const Mech *mech
+                                                   [[maybe_unused]]) {
   return TARGCOMP_NORMAL;
 }
-bool weapon_catalogue_is_personal_combat(int weapon_index) {
-  (void)weapon_index;
+bool weapon_catalogue_is_personal_combat(int weapon_index [[maybe_unused]]) {
   return false;
 }
-bool mech_section_is_underwater(const Mech *mech, int section) {
-  (void)mech;
-  (void)section;
+bool mech_section_is_underwater(const Mech *mech [[maybe_unused]],
+                                int section [[maybe_unused]]) {
   return underwater;
 }
-int mech_infantry_technology_flags(const Mech *mech) {
-  (void)mech;
+int mech_infantry_technology_flags(const Mech *mech [[maybe_unused]]) {
   return 0;
 }
-bool mech_section_configuration_has(const Mech *mech, int section,
-                                    int configuration) {
-  (void)mech;
-  (void)section;
-  (void)configuration;
+bool mech_section_configuration_has(const Mech *mech [[maybe_unused]],
+                                    int section [[maybe_unused]],
+                                    int configuration [[maybe_unused]]) {
   return false;
 }
-int mech_attacker_movement_modifier(Mech *mech) {
-  (void)mech;
+int mech_attacker_movement_modifier(Mech *mech [[maybe_unused]]) {
   return attacker_movement;
 }
-int mech_overheat_to_hit_modifier(const Mech *mech) {
-  (void)mech;
+int mech_overheat_to_hit_modifier(const Mech *mech [[maybe_unused]]) {
   return heat_modifier;
 }
-bool mech_has_section_special(const Mech *mech, int special) {
-  (void)mech;
-  (void)special;
+bool mech_has_section_special(const Mech *mech [[maybe_unused]],
+                              int special [[maybe_unused]]) {
   return false;
 }
-bool weapon_catalogue_is_narc(int weapon_index) {
-  (void)weapon_index;
+bool weapon_catalogue_is_narc(int weapon_index [[maybe_unused]]) {
   return false;
 }
-bool weapon_catalogue_is_pulse(int weapon_index) {
-  (void)weapon_index;
+bool weapon_catalogue_is_pulse(int weapon_index [[maybe_unused]]) {
   return false;
 }
-bool weapon_catalogue_is_mrm(int weapon_index) {
-  (void)weapon_index;
+bool weapon_catalogue_is_mrm(int weapon_index [[maybe_unused]]) {
   return false;
 }
-bool weapon_catalogue_is_heavy(int weapon_index) {
-  (void)weapon_index;
+bool weapon_catalogue_is_heavy(int weapon_index [[maybe_unused]]) {
   return false;
 }
-bool mech_is_flying_type(const Mech *mech) {
-  (void)mech;
+bool mech_is_flying_type(const Mech *mech [[maybe_unused]]) { return false; }
+bool mech_is_out_of_control(const Mech *mech [[maybe_unused]]) { return false; }
+bool mech_is_jumping(const Mech *mech [[maybe_unused]]) { return false; }
+bool weapon_catalogue_is_rocket(int weapon_index [[maybe_unused]]) {
   return false;
 }
-bool mech_is_out_of_control(const Mech *mech) {
-  (void)mech;
+float mech_current_speed(const Mech *mech [[maybe_unused]]) { return 0.0F; }
+float mech_vertical_speed(const Mech *mech [[maybe_unused]]) { return 0.0F; }
+bool btech_context_overrides_weapon_arcs(const BtechContext *value
+                                         [[maybe_unused]]) {
   return false;
 }
-bool mech_is_jumping(const Mech *mech) {
-  (void)mech;
-  return false;
-}
-bool weapon_catalogue_is_rocket(int weapon_index) {
-  (void)weapon_index;
-  return false;
-}
-float mech_current_speed(const Mech *mech) {
-  (void)mech;
-  return 0.0F;
-}
-float mech_vertical_speed(const Mech *mech) {
-  (void)mech;
-  return 0.0F;
-}
-bool btech_context_overrides_weapon_arcs(const BtechContext *value) {
-  (void)value;
-  return false;
-}
-DbRef mech_target_dbref(const Mech *mech) {
-  (void)mech;
-  return 11;
-}
+DbRef mech_target_dbref(const Mech *mech [[maybe_unused]]) { return 11; }
 DbRef mech_dbref(const Mech *mech) { return mech == &target ? 11 : 10; }
-int mech_event_count(const Mech *mech, MechEventType type) {
-  (void)mech;
-  (void)type;
+int mech_event_count(const Mech *mech [[maybe_unused]],
+                     MechEventType type [[maybe_unused]]) {
   return 0;
 }
-MechTargetPositionResult mech_target_position(const Mech *mech) {
-  (void)mech;
+MechTargetPositionResult mech_target_position(const Mech *mech
+                                              [[maybe_unused]]) {
   return (MechTargetPositionResult){0};
 }
-int in_weapon_arc(Mech *mech, float x, float y) {
-  (void)mech;
-  (void)x;
-  (void)y;
+int in_weapon_arc(Mech *mech [[maybe_unused]], float x [[maybe_unused]],
+                  float y [[maybe_unused]]) {
   return FORWARDARC;
 }
-bool mech_targets_hex_or_building(const Mech *mech) {
-  (void)mech;
+bool mech_targets_hex_or_building(const Mech *mech [[maybe_unused]]) {
   return false;
 }
-int mech_cocoon_integrity(const Mech *mech) {
-  (void)mech;
-  return 0;
-}
-bool btech_context_dig_bonus_requires_front(const BtechContext *value) {
-  (void)value;
+int mech_cocoon_integrity(const Mech *mech [[maybe_unused]]) { return 0; }
+bool btech_context_dig_bonus_requires_front(const BtechContext *value
+                                            [[maybe_unused]]) {
   return false;
 }
-int mech_hit_group(Mech *mech, Mech *target_mech) {
-  (void)mech;
-  (void)target_mech;
+int mech_hit_group(Mech *mech [[maybe_unused]],
+                   Mech *target_mech [[maybe_unused]]) {
   return FRONT;
 }
-int btech_context_dig_bonus(const BtechContext *value) {
-  (void)value;
+int btech_context_dig_bonus(const BtechContext *value [[maybe_unused]]) {
   return 0;
 }
-bool mech_is_dropship(const Mech *mech) {
-  (void)mech;
-  return false;
-}
-bool weapon_catalogue_is_missile(int weapon_index) {
-  (void)weapon_index;
+bool mech_is_dropship(const Mech *mech [[maybe_unused]]) { return false; }
+bool weapon_catalogue_is_missile(int weapon_index [[maybe_unused]]) {
   return true;
 }
-int mech_aim_section(const Mech *mech) {
-  (void)mech;
-  return NUM_SECTIONS;
-}
-bool mech_is_immobile(const Mech *mech) {
-  (void)mech;
-  return false;
-}
-int mech_target_movement_modifier(Mech *mech, Mech *target_mech, float range) {
-  (void)mech;
-  (void)target_mech;
-  (void)range;
+int mech_aim_section(const Mech *mech [[maybe_unused]]) { return NUM_SECTIONS; }
+bool mech_is_immobile(const Mech *mech [[maybe_unused]]) { return false; }
+int mech_target_movement_modifier(Mech *mech [[maybe_unused]],
+                                  Mech *target_mech [[maybe_unused]],
+                                  float range [[maybe_unused]]) {
   return target_movement;
 }
-DbRef mech_tagged_by_dbref(const Mech *mech) {
-  (void)mech;
+DbRef mech_tagged_by_dbref(const Mech *mech [[maybe_unused]]) {
   return NOTHING;
 }
-int mech_team(const Mech *mech) {
-  (void)mech;
-  return 1;
-}
-int mech_los_terrain_modifier(const MechLosTerrainRequest *request) {
-  (void)request;
+int mech_team(const Mech *mech [[maybe_unused]]) { return 1; }
+int mech_los_terrain_modifier(const MechLosTerrainRequest *request
+                              [[maybe_unused]]) {
   return terrain_modifier;
 }
-bool btech_context_woods_modify_damage(const BtechContext *value) {
-  (void)value;
+bool btech_context_woods_modify_damage(const BtechContext *value
+                                       [[maybe_unused]]) {
   return false;
 }
-int mech_position_x(const Mech *mech) {
-  (void)mech;
-  return 0;
-}
-int mech_position_y(const Mech *mech) {
-  (void)mech;
-  return 0;
-}
-char map_real_terrain_get(BattleMap *map, int x, int y) {
-  (void)map;
-  (void)x;
-  (void)y;
+int mech_position_x(const Mech *mech [[maybe_unused]]) { return 0; }
+int mech_position_y(const Mech *mech [[maybe_unused]]) { return 0; }
+char map_real_terrain_get(BattleMap *map [[maybe_unused]],
+                          int x [[maybe_unused]], int y [[maybe_unused]]) {
   return GRASSLAND;
 }
-char map_elevation_get(const BattleMap *map, int x, int y) {
-  (void)map;
-  (void)x;
-  (void)y;
+char map_elevation_get(const BattleMap *map [[maybe_unused]],
+                       int x [[maybe_unused]], int y [[maybe_unused]]) {
   return 0;
 }
-int btech_context_sprint_to_hit_modifier(const BtechContext *value) {
-  (void)value;
+int btech_context_sprint_to_hit_modifier(const BtechContext *value
+                                         [[maybe_unused]]) {
   return 0;
 }
 int mech_weapon_critical_to_hit_modifier(
-    const WeaponCriticalToHitRequest *request) {
-  (void)request;
+    const WeaponCriticalToHitRequest *request [[maybe_unused]]) {
   return 0;
 }
 EvaluationContext *btech_context_evaluation(BtechContext *value) {
   return (EvaluationContext *)value;
 }
-DbRef mech_pilot_dbref(const Mech *mech) {
-  (void)mech;
-  return 10;
-}
-void notify_printf(EvaluationContext *evaluation, DbRef player,
-                   const char *format, ...) {
-  (void)evaluation;
-  (void)player;
-  (void)format;
-}
-void btech_channel_send(BtechContext *value, BtechChannel channel,
-                        const char *format, ...) {
-  (void)value;
-  (void)channel;
-  (void)format;
-}
-int weapon_catalogue_effective_water_range(int weapon_index, bool extended) {
-  (void)weapon_index;
+DbRef mech_pilot_dbref(const Mech *mech [[maybe_unused]]) { return 10; }
+void notify_printf(EvaluationContext *evaluation [[maybe_unused]],
+                   DbRef player [[maybe_unused]],
+                   const char *format [[maybe_unused]], ...) {}
+void btech_channel_send(BtechContext *value [[maybe_unused]],
+                        BtechChannel channel [[maybe_unused]],
+                        const char *format [[maybe_unused]], ...) {}
+int weapon_catalogue_effective_water_range(int weapon_index [[maybe_unused]],
+                                           bool extended) {
   return effective_water_range + (extended ? 2 : 0);
 }
 

@@ -127,7 +127,7 @@ static void mine_damage_mechs(const MineDamageRequest *mine) {
   blast_hit_area(&request);
 }
 
-static void update_mine(BattleMap *map, MapObject *mine) {
+static void update_mine(BattleMap *map [[maybe_unused]], MapObject *mine) {
   int i;
 
   i = mine->datas;

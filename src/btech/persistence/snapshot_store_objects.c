@@ -138,7 +138,7 @@ void btech_finalize_object_statements(BtechObjectStoreContext *context) {
 bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
   void *key = call->key;
   void *data = call->data;
-  int depth = call->depth;
+  int depth [[maybe_unused]] = call->depth;
   void *argument = call->context;
   BtechObjectStoreContext *context = argument;
   BtechSpecialObject *xcode = data;
@@ -149,7 +149,6 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
   int runtime_index;
   MechStaggerDamageSnapshot damage;
 
-  (void)depth;
   if (context->result < 0)
     return false;
   if (xcode->type == GTYPE_MECH) {

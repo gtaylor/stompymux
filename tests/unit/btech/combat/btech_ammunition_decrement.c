@@ -30,62 +30,53 @@ static CriticalSlotLookupResult second_lookup;
 static int lookup_count;
 static int lookup_index;
 
-bool weapon_catalogue_is_energy(int weapon_index) {
-  (void)weapon_index;
+bool weapon_catalogue_is_energy(int weapon_index [[maybe_unused]]) {
   return energy;
 }
 
-bool weapon_catalogue_is_hand_to_hand(int weapon_index) {
-  (void)weapon_index;
+bool weapon_catalogue_is_hand_to_hand(int weapon_index [[maybe_unused]]) {
   return hand_to_hand;
 }
 
-bool weapon_catalogue_is_only_rocket(int weapon_index) {
-  (void)weapon_index;
+bool weapon_catalogue_is_only_rocket(int weapon_index [[maybe_unused]]) {
   return rocket;
 }
 
-bool weapon_catalogue_is_rotary_autocannon(int weapon_index) {
-  (void)weapon_index;
+bool weapon_catalogue_is_rotary_autocannon(int weapon_index [[maybe_unused]]) {
   return rotary;
 }
 
-int get_weapon_crits(Mech *value, int weapon_index) {
-  (void)value;
-  (void)weapon_index;
+int get_weapon_crits(Mech *value [[maybe_unused]],
+                     int weapon_index [[maybe_unused]]) {
   return 3;
 }
 
-int mech_weapon_first_critical(const WeaponCriticalSearch *search) {
-  (void)search;
+int mech_weapon_first_critical(const WeaponCriticalSearch *search
+                               [[maybe_unused]]) {
   return 2;
 }
 
-int mech_critical_part_type(const Mech *value, int section, int critical) {
-  (void)value;
-  (void)section;
-  (void)critical;
+int mech_critical_part_type(const Mech *value [[maybe_unused]],
+                            int section [[maybe_unused]],
+                            int critical [[maybe_unused]]) {
   return 17;
 }
 
-int mech_critical_fire_mode(const Mech *value, int section, int critical) {
-  (void)value;
-  (void)section;
-  (void)critical;
+int mech_critical_fire_mode(const Mech *value [[maybe_unused]],
+                            int section [[maybe_unused]],
+                            int critical [[maybe_unused]]) {
   return fire_mode;
 }
 
-void mech_critical_fire_mode_add(Mech *value, int section, int critical,
-                                 int mode) {
-  (void)value;
-  (void)section;
-  (void)critical;
+void mech_critical_fire_mode_add(Mech *value [[maybe_unused]],
+                                 int section [[maybe_unused]],
+                                 int critical [[maybe_unused]], int mode) {
   ++mode_adds;
   last_added_mode = mode;
 }
 
-int mech_critical_data(const Mech *value, int section, int critical) {
-  (void)value;
+int mech_critical_data(const Mech *value [[maybe_unused]], int section,
+                       int critical) {
   ++data_reads;
   if (section == 2 && critical == 3)
     return rounds_2_3;
@@ -98,8 +89,8 @@ int mech_critical_data(const Mech *value, int section, int critical) {
   return 0;
 }
 
-void mech_critical_data_set(Mech *value, int section, int critical, int data) {
-  (void)value;
+void mech_critical_data_set(Mech *value [[maybe_unused]], int section,
+                            int critical, int data) {
   ++data_writes;
   if (section == 2 && critical == 3)
     rounds_2_3 = data;
@@ -111,24 +102,21 @@ void mech_critical_data_set(Mech *value, int section, int critical, int data) {
     rounds_5_6 = data;
 }
 
-void mech_ammunition_expenditure_check(
-    const AmmunitionExpenditureCheck *check) {
-  (void)check;
+void mech_ammunition_expenditure_check(const AmmunitionExpenditureCheck *check
+                                       [[maybe_unused]]) {
   ++expenditure_checks;
 }
 
-CriticalSlotLookupResult
-ammunition_find(const AmmunitionLookupRequest *request) {
-  (void)request;
+CriticalSlotLookupResult ammunition_find(const AmmunitionLookupRequest *request
+                                         [[maybe_unused]]) {
   if (lookup_index >= lookup_count)
     return (CriticalSlotLookupResult){0};
   ++lookup_index;
   return lookup_index == 1 ? first_lookup : second_lookup;
 }
 
-int count_ammo_for_weapon(Mech *value, int weapon_index) {
-  (void)value;
-  (void)weapon_index;
+int count_ammo_for_weapon(Mech *value [[maybe_unused]],
+                          int weapon_index [[maybe_unused]]) {
   return ammunition_count;
 }
 

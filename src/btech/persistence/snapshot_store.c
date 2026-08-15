@@ -40,7 +40,7 @@ static unsigned char stored_bits_byte(const unsigned char *row, int count,
 bool btech_store_map(const RedBlackTreeVisitCall *call) {
   void *key = call->key;
   void *data = call->data;
-  int depth = call->depth;
+  int depth [[maybe_unused]] = call->depth;
   void *argument = call->context;
   BtechMapStoreContext *context = argument;
   BtechSpecialObject *xcode = data;
@@ -56,7 +56,6 @@ bool btech_store_map(const RedBlackTreeVisitCall *call) {
   MapObject *object;
   unsigned char **bits;
 
-  (void)depth;
   if (context->result < 0 || xcode->type != GTYPE_MAP)
     return context->result == 0;
   map = (BattleMap *)xcode;
@@ -200,10 +199,10 @@ static void btech_store_repair_event(MuxEvent *event, void *context_argument) {
 
 /* Store map dynamic state and repair queues in the SQLite snapshot. */
 int btech_persistence_store_special_state(sqlite3 *sqlite,
-                                          PersistenceContext *persistence,
+                                          PersistenceContext *persistence
+                                          [[maybe_unused]],
                                           void *extension_context) {
   BtechContext *btech = extension_context;
-  (void)persistence;
   BtechSpecialWriteContext fault;
   BtechMapStoreContext maps = {.result = -1};
   BtechObjectStoreContext objects;

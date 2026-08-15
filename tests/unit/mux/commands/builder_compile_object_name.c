@@ -12,23 +12,19 @@
 
 static bool notified;
 
-bool styled_text_compile(const StyledTextPalette *palette, const char *markup,
-                         char *output, size_t output_size, char *error,
+bool styled_text_compile(const StyledTextPalette *palette [[maybe_unused]],
+                         const char *markup, char *output [[maybe_unused]],
+                         size_t output_size [[maybe_unused]], char *error,
                          size_t error_size) {
-  (void)palette;
-  (void)output;
-  (void)output_size;
   if (strcmp(markup, "invalid") != 0)
     return true;
   (void)string_copy_bounded(error, error_size, "bad markup");
   return false;
 }
 
-void notify_printf(EvaluationContext *evaluation, DbRef player,
-                   const char *format, ...) {
-  (void)evaluation;
-  (void)player;
-  (void)format;
+void notify_printf(EvaluationContext *evaluation [[maybe_unused]],
+                   DbRef player [[maybe_unused]],
+                   const char *format [[maybe_unused]], ...) {
   notified = true;
 }
 

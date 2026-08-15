@@ -30,52 +30,45 @@ static int lookup_count;
 static int lookup_index;
 static AmmunitionLookupRequest last_lookup;
 
-int weapon_catalogue_type(int weapon_index) {
-  (void)weapon_index;
+int weapon_catalogue_type(int weapon_index [[maybe_unused]]) {
   return weapon_type;
 }
 
-long weapon_catalogue_specials(int weapon_index) {
-  (void)weapon_index;
+long weapon_catalogue_specials(int weapon_index [[maybe_unused]]) {
   return weapon_specials;
 }
 
-bool weapon_catalogue_has_special(int weapon_index, int special) {
-  (void)weapon_index;
+bool weapon_catalogue_has_special(int weapon_index [[maybe_unused]],
+                                  int special) {
   return special == RAC && rac;
 }
 
-bool weapon_catalogue_is_artillery(int weapon_index) {
-  (void)weapon_index;
+bool weapon_catalogue_is_artillery(int weapon_index [[maybe_unused]]) {
   return artillery;
 }
 
-int mech_critical_fire_mode(const Mech *value, int section, int critical) {
-  (void)value;
-  (void)section;
-  (void)critical;
+int mech_critical_fire_mode(const Mech *value [[maybe_unused]],
+                            int section [[maybe_unused]],
+                            int critical [[maybe_unused]]) {
   return fire_mode;
 }
 
-int mech_critical_ammo_mode(const Mech *value, int section, int critical) {
-  (void)value;
-  (void)section;
-  (void)critical;
+int mech_critical_ammo_mode(const Mech *value [[maybe_unused]],
+                            int section [[maybe_unused]],
+                            int critical [[maybe_unused]]) {
   return ammunition_mode;
 }
 
-void mech_critical_fire_mode_clear(Mech *value, int section, int critical,
-                                   int mode) {
-  (void)value;
-  (void)section;
-  (void)critical;
+void mech_critical_fire_mode_clear(Mech *value [[maybe_unused]],
+                                   int section [[maybe_unused]],
+                                   int critical [[maybe_unused]], int mode) {
   ++mode_clear_count;
   last_cleared_mode = mode;
   fire_mode &= ~mode;
 }
 
-int mech_critical_data(const Mech *value, int section, int critical) {
-  (void)value;
+int mech_critical_data(const Mech *value [[maybe_unused]], int section,
+                       int critical) {
   if (section == 3 && critical == 4)
     return primary_rounds;
   if (section == 5 && critical == 6)
@@ -83,17 +76,16 @@ int mech_critical_data(const Mech *value, int section, int critical) {
   return 0;
 }
 
-void mech_critical_data_set(Mech *value, int section, int critical, int data) {
-  (void)value;
+void mech_critical_data_set(Mech *value [[maybe_unused]], int section,
+                            int critical, int data) {
   if (section == 3 && critical == 4)
     primary_rounds = data;
   else if (section == 5 && critical == 6)
     secondary_rounds = data;
 }
 
-int count_ammo_for_weapon(Mech *value, int weapon_index) {
-  (void)value;
-  (void)weapon_index;
+int count_ammo_for_weapon(Mech *value [[maybe_unused]],
+                          int weapon_index [[maybe_unused]]) {
   return ammunition_count;
 }
 
@@ -106,20 +98,15 @@ ammunition_find(const AmmunitionLookupRequest *request) {
   return lookup_index == 1 ? first_lookup : second_lookup;
 }
 
-DbRef mech_gunner_dbref(const Mech *value) {
-  (void)value;
-  return 42;
-}
+DbRef mech_gunner_dbref(const Mech *value [[maybe_unused]]) { return 42; }
 
 EvaluationContext *btech_context_evaluation(BtechContext *context) {
   return (EvaluationContext *)context;
 }
 
-void mecha_notify(EvaluationContext *evaluation, DbRef player,
-                  const char *message) {
-  (void)evaluation;
-  (void)player;
-  (void)message;
+void mecha_notify(EvaluationContext *evaluation [[maybe_unused]],
+                  DbRef player [[maybe_unused]],
+                  const char *message [[maybe_unused]]) {
   ++notification_count;
 }
 

@@ -410,7 +410,7 @@ void tech_reseal(DbRef player, void *data, char *buffer) {
   (void)repair_section_job_execute(&repair_command, loc, &job);
 }
 
-void tech_fixextra(DbRef player, void *data, char *buffer) {
+void tech_fixextra(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   RepairCommandContext repair_command;
   Mech *mech;
   EvaluationContext *evaluation;
@@ -430,7 +430,7 @@ void tech_fixextra(DbRef player, void *data, char *buffer) {
   do_fixextra(mech);
 }
 
-void tech_magic(DbRef player, void *data, char *buffer) {
+void tech_magic(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   RepairCommandContext repair_command;
   Mech *mech;
   EvaluationContext *evaluation;

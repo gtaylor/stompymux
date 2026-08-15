@@ -190,8 +190,8 @@ bool lua_join_path(char *destination, size_t destination_size,
 }
 
 bool lua_resolve_path(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
-                      char *resolved, size_t resolved_size, char *error,
-                      size_t error_size) {
+                      char *resolved, size_t resolved_size [[maybe_unused]],
+                      char *error, size_t error_size) {
   char candidate[PATH_MAX];
   size_t root_length;
 
@@ -221,7 +221,6 @@ bool lua_resolve_path(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
                   lua_root_name(root));
     return false;
   }
-  (void)resolved_size;
   return true;
 }
 

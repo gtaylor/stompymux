@@ -16,8 +16,8 @@
 #include "mech_specification_api.h"
 #include "mech_utils_api.h"
 
-int auto_calc_target_score(Autopilot *autopilot, Mech *mech, Mech *target,
-                           BattleMap *map) {
+int auto_calc_target_score(Autopilot *autopilot [[maybe_unused]], Mech *mech,
+                           Mech *target, BattleMap *map) {
 
   int target_score;
   float range;

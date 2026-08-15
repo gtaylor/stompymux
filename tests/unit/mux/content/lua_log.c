@@ -21,54 +21,37 @@ bool log_to_file(const ArbitraryLogRequest *request) {
   return write_result;
 }
 
-bool object_state_transaction_begin(ObjectStateTransaction *transaction,
-                                    GameDatabase *database) {
-  (void)transaction;
-  (void)database;
+bool object_state_transaction_begin(ObjectStateTransaction *transaction
+                                    [[maybe_unused]],
+                                    GameDatabase *database [[maybe_unused]]) {
   return true;
 }
 
-void object_state_transaction_finish(ObjectStateTransaction *transaction,
-                                     bool commit) {
-  (void)transaction;
-  (void)commit;
-}
+void object_state_transaction_finish(ObjectStateTransaction *transaction
+                                     [[maybe_unused]],
+                                     bool commit [[maybe_unused]]) {}
 
 void object_state_transaction_initialize(ObjectStateTransaction *transaction) {
   memset(transaction, 0, sizeof(*transaction));
 }
 
-void object_state_transaction_destroy(ObjectStateTransaction *transaction) {
-  (void)transaction;
-}
+void object_state_transaction_destroy(ObjectStateTransaction *transaction
+                                      [[maybe_unused]]) {}
 
-void lua_mux_install_object_bindings(lua_State *state, LuaMuxPackage *package) {
-  (void)state;
-  (void)package;
-}
-void lua_mux_install_state_bindings(lua_State *state, LuaMuxPackage *package) {
-  (void)state;
-  (void)package;
-}
-void lua_mux_install_attribute_bindings(lua_State *state,
-                                        LuaMuxPackage *package) {
-  (void)state;
-  (void)package;
-}
-void lua_mux_install_text_bindings(lua_State *state, LuaMuxPackage *package) {
-  (void)state;
-  (void)package;
-}
-void lua_mux_install_connection_bindings(lua_State *state,
-                                         LuaMuxPackage *package) {
-  (void)state;
-  (void)package;
-}
+void lua_mux_install_object_bindings(lua_State *state [[maybe_unused]],
+                                     LuaMuxPackage *package [[maybe_unused]]) {}
+void lua_mux_install_state_bindings(lua_State *state [[maybe_unused]],
+                                    LuaMuxPackage *package [[maybe_unused]]) {}
+void lua_mux_install_attribute_bindings(lua_State *state [[maybe_unused]],
+                                        LuaMuxPackage *package
+                                        [[maybe_unused]]) {}
+void lua_mux_install_text_bindings(lua_State *state [[maybe_unused]],
+                                   LuaMuxPackage *package [[maybe_unused]]) {}
+void lua_mux_install_connection_bindings(lua_State *state [[maybe_unused]],
+                                         LuaMuxPackage *package
+                                         [[maybe_unused]]) {}
 
-static int is_checking(void *context) {
-  (void)context;
-  return checking;
-}
+static int is_checking(void *context [[maybe_unused]]) { return checking; }
 
 static bool run(lua_State *state, const char *script, bool expected) {
   if (luaL_loadstring(state, script) || lua_pcall(state, 0, 1, 0)) {

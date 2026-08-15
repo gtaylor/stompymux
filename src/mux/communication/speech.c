@@ -22,7 +22,8 @@
 #include "mux/world/object_spatial.h"
 
 static bool sp_ok(EvaluationContext *evaluation,
-                  const ServerConfiguration *configuration, DbRef player) {
+                  const ServerConfiguration *configuration [[maybe_unused]],
+                  DbRef player) {
   LuaLockInvocation lock;
   LuaLockResult result;
 

@@ -114,7 +114,7 @@ int do_macro(MatchContext *match, CommandRegistry *commands,
    */
 }
 void do_list_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
-                   char *s) {
+                   char *s [[maybe_unused]]) {
   int i;
   int notified = 0;
   MacroSet *m;
@@ -177,7 +177,6 @@ void do_add_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
 }
 void do_del_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                   char *s) {
-  (void)registry;
   struct Commac *c;
   int set;
   c = get_commac(registry->channels, player);
@@ -343,7 +342,7 @@ void do_edit_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
   }
 }
 void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
-                     char *s) {
+                     char *s [[maybe_unused]]) {
   int i;
   struct Commac *c;
   MacroSet *m;
@@ -464,7 +463,7 @@ void clear_macro_set(MacroRegistry *registry, int set) {
   }
 }
 void do_clear_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
-                    char *s) {
+                    char *s [[maybe_unused]]) {
   int set;
   MacroSet *m;
   struct Commac *c;

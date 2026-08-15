@@ -4,16 +4,14 @@ typedef struct DescriptorFixture {
   int value;
 } DescriptorFixture;
 
-static char *read_string(int mode, Mech *mech) {
-  (void)mode;
-  (void)mech;
+static char *read_string(int mode [[maybe_unused]],
+                         Mech *mech [[maybe_unused]]) {
   static char value[] = "string";
 
   return value;
 }
 
-static char *read_buffered(Mech *mech, char *buffer) {
-  (void)mech;
+static char *read_buffered(Mech *mech [[maybe_unused]], char *buffer) {
   strcpy(buffer, "buffered");
   return buffer;
 }

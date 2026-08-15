@@ -119,7 +119,8 @@ void mech_heat_effect_apply(Mech *mech, Mech *temp_mech, int heatdam,
 }
 
 /* Burn.. burn in hell! ;> */
-void mech_inferno_hit(Mech *mech, Mech *hit_mech, int missiles, bool los) {
+void mech_inferno_hit(Mech *mech, Mech *hit_mech, int missiles,
+                      bool los [[maybe_unused]]) {
   int hmod = (missiles + 1) / 2;
 
   if (mech_is_jellied(hit_mech) ||

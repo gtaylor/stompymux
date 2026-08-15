@@ -48,119 +48,87 @@ static int breach_checks;
 static ArmorDamageRequest last_armor_request;
 static InternalDamageRequest last_internal_request;
 
-BtechContext *mech_context(const Mech *mech) {
-  (void)mech;
+BtechContext *mech_context(const Mech *mech [[maybe_unused]]) {
   return context;
 }
 
-int btech_random_roll(BtechContext *value) {
-  (void)value;
-  return 12;
-}
+int btech_random_roll(BtechContext *value [[maybe_unused]]) { return 12; }
 
-DbRef mech_map_dbref(const Mech *mech) {
-  (void)mech;
-  return 1;
-}
+DbRef mech_map_dbref(const Mech *mech [[maybe_unused]]) { return 1; }
 
-BattleMap *btech_context_get_map(BtechContext *value, DbRef dbref) {
-  (void)value;
-  (void)dbref;
+BattleMap *btech_context_get_map(BtechContext *value [[maybe_unused]],
+                                 DbRef dbref [[maybe_unused]]) {
   return combat_map;
 }
 
-bool battle_map_is_combat_safe(const BattleMap *map) {
-  (void)map;
+bool battle_map_is_combat_safe(const BattleMap *map [[maybe_unused]]) {
   return combat_safe;
 }
 
-MechConditionSummary mech_condition_summary(const Mech *mech) {
-  (void)mech;
+MechConditionSummary mech_condition_summary(const Mech *mech [[maybe_unused]]) {
   return (MechConditionSummary){0};
 }
 
-void mech_notify(Mech *mech, MechNotifyAudience audience, const char *message) {
-  (void)mech;
-  (void)audience;
-  (void)message;
+void mech_notify(Mech *mech [[maybe_unused]],
+                 MechNotifyAudience audience [[maybe_unused]],
+                 const char *message [[maybe_unused]]) {
   ++notification_count;
 }
 
-int bsuit_swarmer_count(Mech *mech) {
-  (void)mech;
-  return 0;
-}
+int bsuit_swarmer_count(Mech *mech [[maybe_unused]]) { return 0; }
 
 DbRef mech_dbref(const Mech *mech) { return mech == &target ? 12 : 11; }
 
-UnitClass mech_class(const Mech *mech) {
-  (void)mech;
+UnitClass mech_class(const Mech *mech [[maybe_unused]]) {
   return fixture_class;
 }
 
-bool mech_is_aerospace_unit(const Mech *mech) {
-  (void)mech;
-  return false;
-}
+bool mech_is_aerospace_unit(const Mech *mech [[maybe_unused]]) { return false; }
 
-int mech_section_internal(const Mech *mech, int section) {
-  (void)mech;
+int mech_section_internal(const Mech *mech [[maybe_unused]], int section) {
   return section == depleted_section ? 0 : internal;
 }
 
-int mech_section_armor(const Mech *mech, int section) {
-  (void)mech;
-  (void)section;
+int mech_section_armor(const Mech *mech [[maybe_unused]],
+                       int section [[maybe_unused]]) {
   return armor;
 }
 
-int mech_hit_location_transfer(Mech *mech, int hit_location) {
-  (void)mech;
-  (void)hit_location;
+int mech_hit_location_transfer(Mech *mech [[maybe_unused]],
+                               int hit_location [[maybe_unused]]) {
   return transfer_location;
 }
 
-int mech_cocoon_integrity(const Mech *mech) {
-  (void)mech;
-  return 0;
-}
+int mech_cocoon_integrity(const Mech *mech [[maybe_unused]]) { return 0; }
 
-void armor_string_from_index(int index,
+void armor_string_from_index(int index [[maybe_unused]],
                              char buffer[static UNIT_SECTION_NAME_CAPACITY],
-                             UnitClass unit_class,
-                             MechMovementType movement_type) {
-  (void)index;
-  (void)unit_class;
-  (void)movement_type;
+                             UnitClass unit_class [[maybe_unused]],
+                             MechMovementType movement_type [[maybe_unused]]) {
   (void)string_copy_bounded(buffer, UNIT_SECTION_NAME_CAPACITY, "Front");
 }
 
-MechMovementType mech_movement_type(const Mech *mech) {
-  (void)mech;
+MechMovementType mech_movement_type(const Mech *mech [[maybe_unused]]) {
   return MOVE_TRACK;
 }
 
-void mech_damage_inflicted_add(Mech *mech, int damage) {
-  (void)mech;
+void mech_damage_inflicted_add(Mech *mech [[maybe_unused]], int damage) {
   attacker_damage += damage;
 }
 
-void mech_damage_taken_add(Mech *mech, int damage) {
-  (void)mech;
+void mech_damage_taken_add(Mech *mech [[maybe_unused]], int damage) {
   target_damage += damage;
 }
 
-void mech_printf(Mech *mech, MechNotifyAudience audience, const char *format,
-                 ...) {
-  (void)mech;
-  (void)audience;
-  (void)format;
+void mech_printf(Mech *mech [[maybe_unused]],
+                 MechNotifyAudience audience [[maybe_unused]],
+                 const char *format [[maybe_unused]], ...) {
   ++notification_count;
 }
 
 BtechDamageExperienceMode
-btech_context_damage_experience_mode(const BtechContext *value) {
-  (void)value;
+btech_context_damage_experience_mode(const BtechContext *value
+                                     [[maybe_unused]]) {
   return BTECH_DAMAGE_XP_NONE;
 }
 
@@ -169,18 +137,13 @@ int unit_damage_to_personal_combat(
   return conversion->damage;
 }
 
-int mech_technology_flags(const Mech *mech) {
-  (void)mech;
-  return 0;
-}
+int mech_technology_flags(const Mech *mech [[maybe_unused]]) { return 0; }
 
-int btech_context_stagger_mode(const BtechContext *value) {
-  (void)value;
+int btech_context_stagger_mode(const BtechContext *value [[maybe_unused]]) {
   return false;
 }
 
-void mech_turn_damage_add(Mech *mech, int damage) {
-  (void)mech;
+void mech_turn_damage_add(Mech *mech [[maybe_unused]], int damage) {
   turn_damage += damage;
 }
 
@@ -196,45 +159,34 @@ int cause_internaldamage(const InternalDamageRequest *request) {
   return 0;
 }
 
-BtechObjectId btech_context_stat_engine_dbref(const BtechContext *value) {
-  (void)value;
+BtechObjectId btech_context_stat_engine_dbref(const BtechContext *value
+                                              [[maybe_unused]]) {
   return 0;
 }
 
-int mech_position_z(const Mech *mech) {
-  (void)mech;
-  return 0;
-}
+int mech_position_z(const Mech *mech [[maybe_unused]]) { return 0; }
 
-void mech_flood_section(Mech *mech, int section, int elevation) {
-  (void)mech;
-  (void)section;
-  (void)elevation;
+void mech_flood_section(Mech *mech [[maybe_unused]],
+                        int section [[maybe_unused]],
+                        int elevation [[maybe_unused]]) {
   ++flood_count;
 }
 
-bool mech_section_is_destroyed(const Mech *mech, int section) {
-  (void)mech;
-  (void)section;
+bool mech_section_is_destroyed(const Mech *mech [[maybe_unused]],
+                               int section [[maybe_unused]]) {
   return false;
 }
 
-bool mech_location_maybe_breach(Mech *source, Mech *wounded,
-                                int hit_location) {
-  (void)source;
-  (void)wounded;
-  (void)hit_location;
+bool mech_location_maybe_breach(Mech *source [[maybe_unused]],
+                                Mech *wounded [[maybe_unused]],
+                                int hit_location [[maybe_unused]]) {
   ++breach_checks;
   return 0;
 }
 
-DbRef mech_carried_dbref(const Mech *mech) {
-  (void)mech;
-  return NOTHING;
-}
+DbRef mech_carried_dbref(const Mech *mech [[maybe_unused]]) { return NOTHING; }
 
-const char *weapon_catalogue_name(int weapon_index) {
-  (void)weapon_index;
+const char *weapon_catalogue_name(int weapon_index [[maybe_unused]]) {
   return "IS.Autocannon";
 }
 

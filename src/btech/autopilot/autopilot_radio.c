@@ -45,7 +45,8 @@ void autopilot_radio_clear_commands(Autopilot *autopilot, char *buffer) {
   }
 }
 
-void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech,
+void auto_radio_command_autogun(Autopilot *autopilot,
+                                Mech *mech [[maybe_unused]],
                                 AutopilotArgumentList *args, int argc,
                                 char *mesg) {
 
@@ -119,9 +120,10 @@ void auto_radio_command_autogun(Autopilot *autopilot, Mech *mech,
 /*
  * Tell the AI to chase whatever its targeting
  */
-void auto_radio_command_chasetarg(Autopilot *autopilot, Mech *mech,
-                                  AutopilotArgumentList *args, int argc,
-                                  char *mesg) {
+void auto_radio_command_chasetarg(Autopilot *autopilot,
+                                  Mech *mech [[maybe_unused]],
+                                  AutopilotArgumentList *args,
+                                  int argc [[maybe_unused]], char *mesg) {
 
   if (strcmp(autopilot_argument_list_get(args, 1), "on") == 0) {
 
@@ -143,8 +145,8 @@ void auto_radio_command_chasetarg(Autopilot *autopilot, Mech *mech,
  * Radio command to force AI to [dumbly] follow a given target
  */
 void auto_radio_command_dfollow(Autopilot *autopilot, Mech *mech,
-                                AutopilotArgumentList *args, int argc,
-                                char *mesg) {
+                                AutopilotArgumentList *args,
+                                int argc [[maybe_unused]], char *mesg) {
 
   DbRef targetref;
   char buffer[SBUF_SIZE];
@@ -169,9 +171,9 @@ void auto_radio_command_dfollow(Autopilot *autopilot, Mech *mech,
 /*
  * Radio command to force AI to [dumbly] goto a given hex
  */
-void auto_radio_command_dgoto(Autopilot *autopilot, Mech *mech,
-                              AutopilotArgumentList *args, int argc,
-                              char *mesg) {
+void auto_radio_command_dgoto(Autopilot *autopilot, Mech *mech [[maybe_unused]],
+                              AutopilotArgumentList *args,
+                              int argc [[maybe_unused]], char *mesg) {
 
   int x;
   int y;
@@ -197,9 +199,10 @@ void auto_radio_command_dgoto(Autopilot *autopilot, Mech *mech,
 /*
  * Radio command to force AI to drop whatever its carrying
  */
-void auto_radio_command_dropoff(Autopilot *autopilot, Mech *mech,
-                                AutopilotArgumentList *args, int argc,
-                                char *mesg) {
+void auto_radio_command_dropoff(Autopilot *autopilot,
+                                Mech *mech [[maybe_unused]],
+                                AutopilotArgumentList *args [[maybe_unused]],
+                                int argc [[maybe_unused]], char *mesg) {
 
   char buffer[SBUF_SIZE];
 
@@ -215,8 +218,8 @@ void auto_radio_command_dropoff(Autopilot *autopilot, Mech *mech,
  * Radio command to force AI to embark a carrier
  */
 void auto_radio_command_embark(Autopilot *autopilot, Mech *mech,
-                               AutopilotArgumentList *args, int argc,
-                               char *mesg) {
+                               AutopilotArgumentList *args,
+                               int argc [[maybe_unused]], char *mesg) {
 
   DbRef targetref;
   char buffer[SBUF_SIZE];
@@ -239,7 +242,8 @@ void auto_radio_command_embark(Autopilot *autopilot, Mech *mech,
 /*
  * Radio command to force AI to enterbase
  */
-void auto_radio_command_enterbase(Autopilot *autopilot, Mech *mech,
+void auto_radio_command_enterbase(Autopilot *autopilot,
+                                  Mech *mech [[maybe_unused]],
                                   AutopilotArgumentList *args, int argc,
                                   char *mesg) {
 
@@ -264,8 +268,8 @@ void auto_radio_command_enterbase(Autopilot *autopilot, Mech *mech,
  * New smart follow system based on A*'s goto
  */
 void auto_radio_command_follow(Autopilot *autopilot, Mech *mech,
-                               AutopilotArgumentList *args, int argc,
-                               char *mesg) {
+                               AutopilotArgumentList *args,
+                               int argc [[maybe_unused]], char *mesg) {
 
   char buffer[SBUF_SIZE];
   DbRef targetref;
@@ -291,8 +295,8 @@ void auto_radio_command_follow(Autopilot *autopilot, Mech *mech,
  * Smart goto system based on Astar path finding
  */
 void auto_radio_command_goto(Autopilot *autopilot, Mech *mech,
-                             AutopilotArgumentList *args, int argc,
-                             char *mesg) {
+                             AutopilotArgumentList *args,
+                             int argc [[maybe_unused]], char *mesg) {
 
   int x;
   int y;
@@ -332,8 +336,8 @@ void auto_radio_command_goto(Autopilot *autopilot, Mech *mech,
  * Radio command to alter an AI's heading
  */
 void auto_radio_command_heading(Autopilot *autopilot, Mech *mech,
-                                AutopilotArgumentList *args, int argc,
-                                char *mesg) {
+                                AutopilotArgumentList *args,
+                                int argc [[maybe_unused]], char *mesg) {
 
   int heading;
   char buffer[SBUF_SIZE];
@@ -356,9 +360,9 @@ void auto_radio_command_heading(Autopilot *autopilot, Mech *mech,
 /*
  * Help message, lists the various commands for the AI
  */
-void auto_radio_command_help(Autopilot *autopilot, Mech *mech,
-                             AutopilotArgumentList *args, int argc,
-                             char *mesg) {
+void auto_radio_command_help(Autopilot *autopilot [[maybe_unused]], Mech *mech,
+                             AutopilotArgumentList *args [[maybe_unused]],
+                             int argc [[maybe_unused]], char *mesg) {
 
   int i;
 
@@ -385,8 +389,8 @@ void auto_radio_command_help(Autopilot *autopilot, Mech *mech,
  * Radio command to force AI to try and hide itself
  */
 void auto_radio_command_hide(Autopilot *autopilot, Mech *mech,
-                             AutopilotArgumentList *args, int argc,
-                             char *mesg) {
+                             AutopilotArgumentList *args [[maybe_unused]],
+                             int argc [[maybe_unused]], char *mesg) {
 
   if ((mech_technology_flags_secondary(mech) & CAMO_TECH)
           ? 0
@@ -461,9 +465,10 @@ void auto_radio_command_jumpjet(Autopilot *autopilot, Mech *mech,
 /*
  * Radio command to force AI to leavebase
  */
-void auto_radio_command_leavebase(Autopilot *autopilot, Mech *mech,
-                                  AutopilotArgumentList *args, int argc,
-                                  char *mesg) {
+void auto_radio_command_leavebase(Autopilot *autopilot,
+                                  Mech *mech [[maybe_unused]],
+                                  AutopilotArgumentList *args,
+                                  int argc [[maybe_unused]], char *mesg) {
 
   char buffer[SBUF_SIZE];
   int direction;
@@ -489,9 +494,9 @@ void auto_radio_command_leavebase(Autopilot *autopilot, Mech *mech,
 /*
  * Old goto system - will phase out
  */
-void auto_radio_command_ogoto(Autopilot *autopilot, Mech *mech,
-                              AutopilotArgumentList *args, int argc,
-                              char *mesg) {
+void auto_radio_command_ogoto(Autopilot *autopilot, Mech *mech [[maybe_unused]],
+                              AutopilotArgumentList *args,
+                              int argc [[maybe_unused]], char *mesg) {
 
   int x;
   int y;
@@ -518,8 +523,8 @@ void auto_radio_command_ogoto(Autopilot *autopilot, Mech *mech,
  * Radio command to force AI to pickup a target
  */
 void auto_radio_command_pickup(Autopilot *autopilot, Mech *mech,
-                               AutopilotArgumentList *args, int argc,
-                               char *mesg) {
+                               AutopilotArgumentList *args,
+                               int argc [[maybe_unused]], char *mesg) {
 
   DbRef targetref;
   char buffer[SBUF_SIZE];

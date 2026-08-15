@@ -88,7 +88,7 @@ static char *map_filename(const BattleMap *map, const char *mapname) {
   (void)snprintf(path, pathlen, "%s/%s", map_path, mapname);
   return path;
 }
-void debug_fixmap(DbRef player, void *data, char *buffer) {
+void debug_fixmap(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   BattleMap *m = (BattleMap *)data;
   GameDatabase *database;
   int i;
@@ -681,8 +681,8 @@ void map_setmapsize(DbRef player, void *data, char *buffer) {
                  "Size set.");
   }
 }
-void map_clearmechs(DbRef player, void *data, const char *buffer) {
-  (void)buffer;
+void map_clearmechs(DbRef player, void *data,
+                    const char *buffer [[maybe_unused]]) {
   BattleMap *map;
   map = (BattleMap *)data;
   if (map != nullptr)

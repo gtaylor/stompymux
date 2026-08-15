@@ -55,8 +55,8 @@ static int count_following_with(CoolMenu *c, int num) {
   return count;
 }
 
-static void display_line(BtechTextBuilder *output, int *len, CoolMenu *m) {
-  (void)m;
+static void display_line(BtechTextBuilder *output, int *len,
+                         CoolMenu *m [[maybe_unused]]) {
 
   btech_text_builder_append(output, "[fg=blue]");
   for (int i = 0; i < *len; i++)

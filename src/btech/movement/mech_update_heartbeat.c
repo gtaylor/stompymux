@@ -24,7 +24,7 @@ static int mech_visibility_clamp(int visibility) {
   return visibility;
 }
 
-void mech_update(DbRef key, void *data) {
+void mech_update(DbRef key [[maybe_unused]], void *data) {
   Mech *mech = data;
 
   if (!mech)

@@ -411,7 +411,7 @@ void aero_move_event(MuxEvent *e) {
   }
 }
 
-void mech_event_failure_marker(MuxEvent *event) {}
+void mech_event_failure_marker(MuxEvent *event [[maybe_unused]]) {}
 
 /*
  * Exile Stun Code Event

@@ -87,7 +87,8 @@ static void server_lifecycle_process_preload(ServerLifecycle *lifecycle) {
 }
 
 /* Reschedule the queue tick, replenish command quotas, and run queued work. */
-static void server_lifecycle_run_queues(MuxTimer *timer, void *arg) {
+static void server_lifecycle_run_queues(MuxTimer *timer [[maybe_unused]],
+                                        void *arg) {
   ServerLifecycle *lifecycle = arg;
   gettimeofday(&lifecycle->current_time, nullptr);
   lifecycle->last_slice =
@@ -100,12 +101,14 @@ static void server_lifecycle_run_queues(MuxTimer *timer, void *arg) {
            lifecycle->maintenance->configuration->command_queue_idle_chunk);
 }
 
-static void server_lifecycle_close_timers(uv_handle_t *handle, void *arg) {
+static void server_lifecycle_close_timers(uv_handle_t *handle,
+                                          void *arg [[maybe_unused]]) {
   if (uv_handle_get_type(handle) == UV_TIMER && !uv_is_closing(handle))
     mux_timer_destroy(handle->data);
 }
 
-static void server_lifecycle_drain_writes(MuxTimer *timer, void *arg) {
+static void server_lifecycle_drain_writes(MuxTimer *timer [[maybe_unused]],
+                                          void *arg) {
   ServerLifecycle *lifecycle = arg;
   Descriptor *descriptor;
   DescriptorIterator iterator;

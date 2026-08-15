@@ -37,9 +37,10 @@
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 
-void auto_radio_command_position(Autopilot *autopilot, Mech *mech,
-                                 AutopilotArgumentList *args, int argc,
-                                 char *mesg) {
+void auto_radio_command_position(Autopilot *autopilot,
+                                 Mech *mech [[maybe_unused]],
+                                 AutopilotArgumentList *args,
+                                 int argc [[maybe_unused]], char *mesg) {
 
   int x;
   int y;
@@ -64,8 +65,8 @@ void auto_radio_command_position(Autopilot *autopilot, Mech *mech,
  * Radio command to force AI to go prone
  */
 void auto_radio_command_prone(Autopilot *autopilot, Mech *mech,
-                              AutopilotArgumentList *args, int argc,
-                              char *mesg) {
+                              AutopilotArgumentList *args [[maybe_unused]],
+                              int argc [[maybe_unused]], char *mesg) {
 
   mech_drop(autopilot->mynum, mech, "");
   (void)snprintf(mesg, LBUF_SIZE, "hitting the deck");
@@ -75,9 +76,10 @@ void auto_radio_command_prone(Autopilot *autopilot, Mech *mech,
  * Radio command so the AI can report its status
  */
 /*! \todo {Add something that tells more info then this} */
-void auto_radio_command_report(Autopilot *autopilot, Mech *mech,
-                               AutopilotArgumentList *args, int argc,
-                               char *mesg) {
+void auto_radio_command_report(Autopilot *autopilot [[maybe_unused]],
+                               Mech *mech,
+                               AutopilotArgumentList *args [[maybe_unused]],
+                               int argc [[maybe_unused]], char *mesg) {
 
   char buffer[MBUF_SIZE];
   Mech *target;
@@ -135,8 +137,8 @@ void auto_radio_command_report(Autopilot *autopilot, Mech *mech,
  * Radio command to reset the AI's internal flags what not
  */
 void auto_radio_command_reset(Autopilot *autopilot, Mech *mech,
-                              AutopilotArgumentList *args, int argc,
-                              char *mesg) {
+                              AutopilotArgumentList *args [[maybe_unused]],
+                              int argc [[maybe_unused]], char *mesg) {
 
   auto_disengage(autopilot->mynum, autopilot, "");
   auto_delcommand(autopilot->mynum, autopilot, "-1");
@@ -180,8 +182,8 @@ void auto_radio_command_sensor(Autopilot *autopilot, Mech *mech,
  * Radio command to force AI to shutdown
  */
 void auto_radio_command_shutdown(Autopilot *autopilot, Mech *mech,
-                                 AutopilotArgumentList *args, int argc,
-                                 char *mesg) {
+                                 AutopilotArgumentList *args [[maybe_unused]],
+                                 int argc [[maybe_unused]], char *mesg) {
 
   mech_shutdown(autopilot->mynum, mech, "");
   (void)snprintf(mesg, LBUF_SIZE, "shutting down");
@@ -190,9 +192,9 @@ void auto_radio_command_shutdown(Autopilot *autopilot, Mech *mech,
 /*
  * Radio command to alter the speed of an AI (% of speed)
  */
-void auto_radio_command_speed(Autopilot *autopilot, Mech *mech,
-                              AutopilotArgumentList *args, int argc,
-                              char *mesg) {
+void auto_radio_command_speed(Autopilot *autopilot, Mech *mech [[maybe_unused]],
+                              AutopilotArgumentList *args,
+                              int argc [[maybe_unused]], char *mesg) {
 
   int speed = 100;
 
@@ -214,8 +216,8 @@ void auto_radio_command_speed(Autopilot *autopilot, Mech *mech,
  * Radio Command to force AI to stand
  */
 void auto_radio_command_stand(Autopilot *autopilot, Mech *mech,
-                              AutopilotArgumentList *args, int argc,
-                              char *mesg) {
+                              AutopilotArgumentList *args [[maybe_unused]],
+                              int argc [[maybe_unused]], char *mesg) {
 
   mech_stand_empty(autopilot->mynum, mech);
   (void)snprintf(mesg, LBUF_SIZE, "standing up");
@@ -245,8 +247,8 @@ void auto_radio_command_startup(Autopilot *autopilot, Mech *mech,
  * Radio command to stop the AI
  */
 void auto_radio_command_stop(Autopilot *autopilot, Mech *mech,
-                             AutopilotArgumentList *args, int argc,
-                             char *mesg) {
+                             AutopilotArgumentList *args [[maybe_unused]],
+                             int argc [[maybe_unused]], char *mesg) {
 
   char buffer[SBUF_SIZE];
 
@@ -265,9 +267,10 @@ void auto_radio_command_stop(Autopilot *autopilot, Mech *mech,
 /*
  * Command for the old goto, will phase it out
  */
-void auto_radio_command_sweight(Autopilot *autopilot, Mech *mech,
-                                AutopilotArgumentList *args, int argc,
-                                char *mesg) {
+void auto_radio_command_sweight(Autopilot *autopilot,
+                                Mech *mech [[maybe_unused]],
+                                AutopilotArgumentList *args,
+                                int argc [[maybe_unused]], char *mesg) {
 
   int x;
   int y;
@@ -291,8 +294,8 @@ void auto_radio_command_sweight(Autopilot *autopilot, Mech *mech,
  * Tell the AI to target a specific unit
  */
 void auto_radio_command_target(Autopilot *autopilot, Mech *mech,
-                               AutopilotArgumentList *args, int argc,
-                               char *mesg) {
+                               AutopilotArgumentList *args,
+                               int argc [[maybe_unused]], char *mesg) {
 
   DbRef targetref;
 

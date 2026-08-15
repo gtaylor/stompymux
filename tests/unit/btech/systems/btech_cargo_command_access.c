@@ -9,15 +9,13 @@
 
 static char notification[64];
 
-EvaluationContext *btech_context_evaluation(BtechContext *context) {
-  (void)context;
+EvaluationContext *btech_context_evaluation(BtechContext *context
+                                            [[maybe_unused]]) {
   return nullptr;
 }
 
-void mecha_notify(EvaluationContext *evaluation, DbRef player,
-                  const char *message) {
-  (void)evaluation;
-  (void)player;
+void mecha_notify(EvaluationContext *evaluation [[maybe_unused]],
+                  DbRef player [[maybe_unused]], const char *message) {
   snprintf(notification, sizeof(notification), "%s", message);
 }
 

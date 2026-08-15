@@ -10,15 +10,9 @@
 static int speed_corrections;
 static int los_updates;
 
-void mech_speed_correct(Mech *mech) {
-  (void)mech;
-  speed_corrections++;
-}
+void mech_speed_correct(Mech *mech [[maybe_unused]]) { speed_corrections++; }
 
-void mark_for_los_update(Mech *mech) {
-  (void)mech;
-  los_updates++;
-}
+void mark_for_los_update(Mech *mech [[maybe_unused]]) { los_updates++; }
 
 int main(void) {
   Mech mech = {0};

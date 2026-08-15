@@ -5,9 +5,8 @@
 #include "mux/server/server_config.h"
 #include "mux/support/validation.h"
 
-int string_compare(const ServerConfiguration *configuration, const char *first,
-                   const char *second) {
-  (void)configuration;
+int string_compare(const ServerConfiguration *configuration [[maybe_unused]],
+                   const char *first, const char *second) {
   return strcmp(first, second);
 }
 

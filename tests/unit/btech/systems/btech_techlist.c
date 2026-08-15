@@ -33,21 +33,19 @@ char *template_bit_string_build(const TemplateBitStringRequest *request) {
   return request->buffer;
 }
 
-int mech_critical_part_type(const Mech *mech, int section, int critical) {
-  (void)mech;
+int mech_critical_part_type(const Mech *mech [[maybe_unused]], int section,
+                            int critical) {
   return section == 0 && critical == 0 ? special_equipment_index(AXE) : 0;
 }
 
-bool mech_critical_is_operational_special(const CriticalSpecialCheck *check) {
-  (void)check;
+bool mech_critical_is_operational_special(const CriticalSpecialCheck *check
+                                          [[maybe_unused]]) {
   return false;
 }
 
-bool mech_section_configuration_has(const Mech *mech, int section,
-                                    int configuration) {
-  (void)mech;
-  (void)section;
-  (void)configuration;
+bool mech_section_configuration_has(const Mech *mech [[maybe_unused]],
+                                    int section [[maybe_unused]],
+                                    int configuration [[maybe_unused]]) {
   return false;
 }
 

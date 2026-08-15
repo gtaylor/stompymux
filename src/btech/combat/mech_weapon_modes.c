@@ -37,7 +37,7 @@ static void mech_toggle_mode_sub(DbRef player, Mech *mech, char *buffer,
                                  const char *offmsg, const char *cant);
 
 /* Toggles ECM on / off */
-void mech_ams(DbRef player, void *data, char *buffer) {
+void mech_ams(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   Mech *mech = (Mech *)data;
   BtechContext *context = mech_context(mech);
 
@@ -56,7 +56,7 @@ void mech_ams(DbRef player, void *data, char *buffer) {
                       : "Anti-Missile System turned OFF");
 }
 
-void mech_fliparms(DbRef player, void *data, char *buffer) {
+void mech_fliparms(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   Mech *mech = (Mech *)data;
   BtechContext *context = mech_context(mech);
 

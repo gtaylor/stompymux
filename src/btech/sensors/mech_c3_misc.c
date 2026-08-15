@@ -223,8 +223,8 @@ void mech_network_build_temporary(Mech *mech, DbRef *my_network,
   *network_size = temp_network_size;
 }
 
-void mech_network_send_message(DbRef player, Mech *mech, const char *msg,
-                               bool t_is_c3) {
+void mech_network_send_message(DbRef player [[maybe_unused]], Mech *mech,
+                               const char *msg, bool t_is_c3) {
   int i;
   Mech *other_mech;
   MechDisplayId display_id = mech_display_id(mech);

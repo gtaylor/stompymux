@@ -474,12 +474,10 @@ void do_create(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   char *name = invocation->first;
-  char *coststr = invocation->second;
   DbRef thing;
   char clearbuffer[MBUF_SIZE];
   OwnedText compiled_name;
 
-  (void)coststr;
   compiled_name = builder_compile_object_name(evaluation, player, name);
   if (!compiled_name.text)
     return;
@@ -522,7 +520,6 @@ void do_clone(CommandInvocation *invocation) {
   DbRef clone;
   DbRef thing;
   DbRef loc;
-  Flag rmv_flags;
 
   if ((key & CLONE_INVENTORY) ||
       !has_location(evaluation->world->database, player))
@@ -611,7 +608,6 @@ void do_clone(CommandInvocation *invocation) {
    * Clear out problem flags from the original
    */
 
-  (void)rmv_flags;
   game_object_set_flag(
       &(ObjectFlagChangeRequest){.database = evaluation->world->database,
                                  .object = clone,

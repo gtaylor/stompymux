@@ -27,7 +27,7 @@ static int hrbtab_compare(const RedBlackTreeCompareCall *call) {
   return strcasecmp(left, right);
 }
 
-void hash_table_initialize(HashTable *htab, int size) {
+void hash_table_initialize(HashTable *htab, int size [[maybe_unused]]) {
   memset(htab, 0, sizeof(HashTable));
   htab->tree = red_black_tree_init(hrbtab_compare, nullptr);
   htab->last = nullptr;
@@ -151,7 +151,7 @@ static bool nuke_hash_ent(const RedBlackTreeVisitCall *call) {
   return true;
 }
 
-void hash_table_flush(HashTable *htab, int size) {
+void hash_table_flush(HashTable *htab, int size [[maybe_unused]]) {
   red_black_tree_walk(htab->tree, WALK_POSTORDER, nuke_hash_ent, nullptr);
   red_black_tree_destroy(htab->tree);
   htab->tree = red_black_tree_init(hrbtab_compare, nullptr);

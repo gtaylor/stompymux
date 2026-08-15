@@ -31,7 +31,7 @@
 #include "registry_api.h"
 #include "section_types.h"
 
-void auto_command_roam(Autopilot *autopilot, Mech *mech) {
+void auto_command_roam(Autopilot *autopilot, Mech *mech [[maybe_unused]]) {
 
   char *argument;
   char error_buf[MBUF_SIZE];

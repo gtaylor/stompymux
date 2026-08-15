@@ -236,7 +236,8 @@ static bool bit_vector_to_flags(long value, int *flags) {
   return true;
 }
 
-void mechrep_rshowtech(DbRef player, void *data, char *buffer) {
+void mechrep_rshowtech(DbRef player, void *data,
+                       char *buffer [[maybe_unused]]) {
   int i;
   int flags;
   int secondary_flags;
@@ -577,7 +578,8 @@ void mechrep_raddtech(DbRef player, void *data, char *buffer) {
   }
 }
 
-void mechrep_rdelinftech(DbRef player, void *data, char *buffer) {
+void mechrep_rdelinftech(DbRef player, void *data,
+                         char *buffer [[maybe_unused]]) {
   Mech *mech = (Mech *)data;
 
   mech_infantry_technology_flags_set(mech, 0);

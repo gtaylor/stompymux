@@ -620,7 +620,7 @@ bool btech_special_object_type_can_set(BtechContext *context, DbRef object,
 void btech_special_object_type_register(
     const BtechSpecialObjectAction *action) {
   BtechContext *context = action->context;
-  const DbRef PLAYER = action->actor;
+  const DbRef PLAYER [[maybe_unused]] = action->actor;
   const DbRef OBJECT = action->object;
   int type;
 
@@ -631,7 +631,6 @@ void btech_special_object_type_register(
   if (type >= 0 &&
       btech_special_object_data_size(btech_special_object_definition(type)) > 0)
     new_special_object(context, OBJECT, type);
-  (void)PLAYER;
 }
 
 #undef notify

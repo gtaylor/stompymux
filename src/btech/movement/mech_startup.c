@@ -363,7 +363,8 @@ void mech_startup(DbRef player, void *data, const char *buffer) {
       (long)(unit_class == CLASS_MW ? BOOT_MESSAGE_COUNT - 1 : n));
 }
 
-void mech_shutdown(DbRef player, void *data, const char *buffer) {
+void mech_shutdown(DbRef player, void *data,
+                   const char *buffer [[maybe_unused]]) {
   Mech *mech = (Mech *)data;
   int unit_class = mech_class(mech);
   int movement_type = mech_movement_type(mech);

@@ -23,7 +23,7 @@ void update_mechs_terrain(const MapTerrainChange *change) {
   }
 }
 
-int map_sizefun(void *data, int flag) {
+int map_sizefun(void *data, int flag [[maybe_unused]]) {
   BattleMap *map = (BattleMap *)data;
   int size = 0;
   if (!map)

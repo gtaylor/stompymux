@@ -384,8 +384,9 @@ static void process_cmdent(const CommandEntryDispatch *dispatch) {
  * * process_command: Execute a command.
  */
 
-void process_command(CommandContext *context, char *command, char *arguments[],
-                     int argument_count) {
+void process_command(CommandContext *context, char *command,
+                     char *arguments [[maybe_unused]][],
+                     int argument_count [[maybe_unused]]) {
   CommandRuntime *runtime = context->runtime;
   ServerConfiguration *configuration = runtime->world->configuration;
   CommandRegistry *registry = runtime->command_registry;

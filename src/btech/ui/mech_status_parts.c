@@ -261,7 +261,8 @@ static char *wspec_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
   return buffer;
 }
 
-void mech_weaponspecs(DbRef player, void *data, const char *buffer) {
+void mech_weaponspecs(DbRef player, void *data,
+                      const char *buffer [[maybe_unused]]) {
   char message_buffer[LBUF_SIZE];
   Mech *mech = (Mech *)data;
   BtechContext *context = mech_context(mech);

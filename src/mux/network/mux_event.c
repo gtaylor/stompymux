@@ -158,7 +158,7 @@ static void mux_event_type_list_remove(MuxEvent *e) {
   for ((var) = scheduler->events; var; (var) = (var)->next_in_main)            \
     if (!is_zombie(var))
 
-static void mux_event_wakeup(MuxTimer *timer, void *arg) {
+static void mux_event_wakeup(MuxTimer *timer [[maybe_unused]], void *arg) {
   MuxEvent *e = (MuxEvent *)arg;
 
   if (is_zombie(e)) {
@@ -370,7 +370,8 @@ int mux_event_count_type_data_data(MuxEventScheduler *scheduler, int type,
   return count;
 }
 
-int mux_event_count_data(MuxEventScheduler *scheduler, int type, void *data) {
+int mux_event_count_data(MuxEventScheduler *scheduler,
+                         int type [[maybe_unused]], void *data) {
   MuxEvent *e;
   int count = 0;
 

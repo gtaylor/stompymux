@@ -107,9 +107,8 @@ static const POWERENT *power_find_normalized(WorldIndexes *indexes,
   return hash_table_find_const(normalized, &indexes->powers);
 }
 
-const POWERENT *find_power(WorldIndexes *indexes, DbRef thing,
+const POWERENT *find_power(WorldIndexes *indexes, DbRef thing [[maybe_unused]],
                            const char *powername) {
-  (void)thing;
   return power_find_normalized(indexes, powername);
 }
 

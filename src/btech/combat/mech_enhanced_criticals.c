@@ -521,7 +521,8 @@ void mech_weapon_critical_apply(const WeaponCriticalApplication *application) {
   }
 }
 
-void mech_weapon_status(DbRef player, Mech *mech, char *buffer) {
+void mech_weapon_status(DbRef player, Mech *mech,
+                        char *buffer [[maybe_unused]]) {
   int sec_iter = 0;
   int weap_iter = 0;
   int w_weaps_in_sec = 0;

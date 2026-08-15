@@ -39,7 +39,8 @@ static int wait_for_child(pid_t child, int *status, int timeout_ms) {
 
 /* Start a child and wait until it is ready or rejects its configuration. */
 static pid_t start_server_after(const char *binary_path, const char *config,
-                                const char *directory, int make_minimal,
+                                const char *directory,
+                                int make_minimal [[maybe_unused]],
                                 bool wait_for_tick, int *status, bool *exited) {
   char ready_fd[32];
   char ready_signal;
@@ -74,7 +75,6 @@ static pid_t start_server_after(const char *binary_path, const char *config,
       if (setenv("BTECH_TEST_TICK_FD", ready_fd, 1) < 0)
         _exit(127);
     }
-    (void)make_minimal;
     execl(binary_path, binary_path, config, NULL);
     _exit(127);
   }
@@ -1624,9 +1624,8 @@ int main(int argc, char *argv[]) {
     fprintf(file, "[database]\ngame_database = \"%s\"\n", database);
     fprintf(file, "[server]\nport = 0\n");
     if (fclose(file) != 0 ||
-        (result == 0 &&
-         (run_server(server, long_path_config, 0, &status) < 0 ||
-          !WIFEXITED(status) || WEXITSTATUS(status) != 2)))
+        (result == 0 && (run_server(server, long_path_config, 0, &status) < 0 ||
+                         !WIFEXITED(status) || WEXITSTATUS(status) != 2)))
       result = 1;
   }
 

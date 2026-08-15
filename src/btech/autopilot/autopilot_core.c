@@ -51,7 +51,10 @@
  */
 
 /*! \todo {See if we need this function and remove it if not} */
-bool auto_valid_progline(Autopilot *a, int p) { return false; }
+bool auto_valid_progline(Autopilot *a [[maybe_unused]],
+                         int p [[maybe_unused]]) {
+  return false;
+}
 
 /*
  * Internal function to return a string that
@@ -149,7 +152,7 @@ void auto_delcommand(DbRef player, void *data, const char *buffer) {
  * Jump to a specific command location in the AI's
  * command list
  */
-void auto_jump(DbRef player, void *data, char *buffer) {
+void auto_jump(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   Autopilot *autopilot = data;
   mecha_notify(btech_context_evaluation(autopilot->xcode.context), player,
                "jump has been temporarly disabled till I can figure out"
@@ -244,7 +247,8 @@ void auto_addcommand(DbRef player, void *data, char *buffer) {
 /*
  * Lists the various settings and commands currently on the AI
  */
-void auto_listcommands(DbRef player, void *data, char *buffer) {
+void auto_listcommands(DbRef player, void *data,
+                       char *buffer [[maybe_unused]]) {
 
   Autopilot *autopilot = (Autopilot *)data;
   CoolMenu *c = nullptr;
@@ -296,7 +300,7 @@ void auto_listcommands(DbRef player, void *data, char *buffer) {
   kill_cool_menu(c);
 }
 
-void auto_eventstats(DbRef player, void *data, char *buffer) {
+void auto_eventstats(DbRef player, void *data, char *buffer [[maybe_unused]]) {
 
   Autopilot *autopilot = (Autopilot *)data;
   int i;
@@ -384,7 +388,7 @@ void auto_set_comtitle(Autopilot *autopilot, Mech *mech) {
  * Set default parameters for the AI
  */
 /*! \todo {Make this smarter and check some of these} */
-void auto_init(Autopilot *autopilot, Mech *mech) {
+void auto_init(Autopilot *autopilot, Mech *mech [[maybe_unused]]) {
 
   autopilot->ofsx = 0;       /* Positional - angle */
   autopilot->ofsy = 0;       /* Positional - distance */
@@ -412,7 +416,8 @@ void auto_init(Autopilot *autopilot, Mech *mech) {
  * Setup all the flags and variables to current, then
  * start the AI's first command.
  */
-void auto_engage(DbRef player, void *data, const char *buffer) {
+void auto_engage(DbRef player, void *data,
+                 const char *buffer [[maybe_unused]]) {
 
   Autopilot *autopilot = (Autopilot *)data;
   Mech *mech;
@@ -456,7 +461,8 @@ void auto_engage(DbRef player, void *data, const char *buffer) {
 /*
  * Turn off the autopilot
  */
-void auto_disengage(DbRef player, void *data, const char *buffer) {
+void auto_disengage(DbRef player, void *data,
+                    const char *buffer [[maybe_unused]]) {
 
   Autopilot *autopilot = (Autopilot *)data;
 

@@ -108,8 +108,8 @@ void auto_reply(Mech *mech, const char *buf) {
 /*
  * Parse an AI radio command
  */
-void auto_parse_command(Autopilot *autopilot, Mech *mech, int chn,
-                        char *buffer) {
+void auto_parse_command(Autopilot *autopilot, Mech *mech,
+                        int chn [[maybe_unused]], char *buffer) {
 
   int argc;
   int cmd;

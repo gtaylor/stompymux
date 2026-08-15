@@ -46,7 +46,7 @@ static void navigate_plot(const NavigatePlotCall *call) {
   *cell = call->marker;
 }
 
-void mech_findcenter(DbRef player, void *data, char *buffer) {
+void mech_findcenter(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   Mech *mech = (Mech *)data;
   float fx;
   float fy;

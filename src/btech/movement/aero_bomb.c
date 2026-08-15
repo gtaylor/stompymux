@@ -165,7 +165,7 @@ static float bomb_calculate_destination(Mech *mech, short *x, short *y) {
   return ot;
 }
 
-static void bomb_aim(Mech *mech, DbRef player) {
+static void bomb_aim(Mech *mech, DbRef player [[maybe_unused]]) {
   float t; /* The time of impact */
   char toi[LBUF_SIZE];
   short x;
