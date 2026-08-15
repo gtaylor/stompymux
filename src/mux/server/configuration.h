@@ -27,7 +27,7 @@ void configuration_log_syntax(ConfigurationContext *context, DbRef player,
 void configuration_list_access(EvaluationContext *evaluation,
                                const ConfigurationRegistry *registry,
                                DbRef player);
-int configuration_read(ConfigurationContext *context, char *fn);
+int configuration_read(ConfigurationContext *context, const char *fn);
 int configuration_set(ConfigurationContext *context, const char *cp,
                       const char *ap, DbRef player);
 int configuration_modify_bits(const ConfigurationCall *call);
