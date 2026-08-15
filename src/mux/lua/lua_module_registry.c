@@ -101,24 +101,24 @@ static bool lua_add_module(char ***modules, size_t *module_count,
 
   if (*module_count == SIZE_MAX) {
     lua_set_error(error, error_size, "out of memory");
-    return 0;
+    return false;
   }
   copy = strdup(path);
   if (!copy) {
     lua_set_error(error, error_size, "out of memory");
-    return 0;
+    return false;
   }
   replacement = (char **)checked_storage_try_reallocate_array(
       (void *)*modules, *module_count + 1, sizeof(*replacement));
   if (!replacement) {
     free(copy);
     lua_set_error(error, error_size, "out of memory");
-    return 0;
+    return false;
   }
   *modules = replacement;
   *lua_module_slot(*modules, *module_count + 1, *module_count) = copy;
   (*module_count)++;
-  return 1;
+  return true;
 }
 
 bool lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
@@ -132,7 +132,7 @@ bool lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
     if (!lua_join_path(directory, sizeof(directory),
                        lua_runtime_root(runtime, root), relative)) {
       lua_set_error(error, error_size, "Lua module path is too long");
-      return 0;
+      return false;
     }
   } else {
     (void)snprintf(directory, sizeof(directory), "%s",
@@ -142,7 +142,7 @@ bool lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
   if (!stream) {
     lua_set_error(error, error_size, "unable to read Lua %s directory",
                   lua_root_name(root));
-    return 0;
+    return false;
   }
   while ((entry = readdir(stream))) {
     char child_relative[PATH_MAX];
@@ -157,7 +157,7 @@ bool lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
                          entry->d_name)) {
         lua_set_error(error, error_size, "Lua module path is too long");
         closedir(stream);
-        return 0;
+        return false;
       }
     } else {
       (void)snprintf(child_relative, sizeof(child_relative), "%s",
@@ -167,7 +167,7 @@ bool lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
                        lua_runtime_root(runtime, root), child_relative)) {
       lua_set_error(error, error_size, "Lua module path is too long");
       closedir(stream);
-      return 0;
+      return false;
     }
     if (stat(child_path, &status) < 0)
       continue;
@@ -175,7 +175,7 @@ bool lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
       if (!lua_collect_modules(runtime, root, child_relative, modules,
                                module_count, error, error_size)) {
         closedir(stream);
-        return 0;
+        return false;
       }
       continue;
     }
@@ -187,11 +187,11 @@ bool lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
     if (!lua_add_module(modules, module_count, child_relative, error,
                         error_size)) {
       closedir(stream);
-      return 0;
+      return false;
     }
   }
   closedir(stream);
-  return 1;
+  return true;
 }
 
 static bool lua_collect_global_modules(LuaRuntime *runtime,
@@ -207,11 +207,11 @@ static bool lua_cron_parse_number(const char *text, long *value) {
   const size_t LENGTH = strlen(text);
 
   if (!*text)
-    return 0;
+    return false;
   for (size_t index = 0; index < LENGTH; index++) {
     if (!(isdigit)((unsigned char)*(const char *)checked_storage_at_const(
             text, LENGTH + 1, sizeof(char), index)))
-      return 0;
+      return false;
   }
   errno = 0;
   *value = strtol(text, &end, 10);
@@ -242,7 +242,7 @@ lua_cron_field_matches(const LuaCronFieldRequest *request) {
   if (strlen(field) >= sizeof(copy))
     return (LuaCronFieldResult){.match = -1};
   (void)snprintf(copy, sizeof(copy), "%s", field);
-  bool wildcard = !strcmp(field, "*");
+  bool wildcard = (!strcmp(field, "*")) != 0;
   part = copy;
   while (part) {
     char *next = lua_split_at(part, ',');
@@ -481,7 +481,7 @@ static bool lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
 
   if (!lua_load_module(runtime, root, path, error, error_size)) {
     lua_settop(runtime->state, top);
-    return 0;
+    return false;
   }
   if (root != LUA_ROOT_PACKAGES) {
     static const char *const APPEARANCE_NAMES[] = {
@@ -501,7 +501,7 @@ static bool lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
                       "%s in %s must be a function in an object module",
                       appearance, path);
         lua_settop(runtime->state, top);
-        return 0;
+        return false;
       }
       lua_pop(runtime->state, 1);
     }
@@ -511,13 +511,13 @@ static bool lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
         lua_set_error(error, error_size, "commands in %s must be a table",
                       path);
         lua_settop(runtime->state, top);
-        return 0;
+        return false;
       }
       has_commands = lua_objlen(runtime->state, -1) > 0;
       if (!lua_verify_commands(runtime->state, lua_gettop(runtime->state), path,
                                error, error_size)) {
         lua_settop(runtime->state, top);
-        return 0;
+        return false;
       }
     }
     lua_pop(runtime->state, 1);
@@ -527,17 +527,17 @@ static bool lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
         lua_set_error(error, error_size,
                       "events in %s are only valid in object modules", path);
         lua_settop(runtime->state, top);
-        return 0;
+        return false;
       }
       if (!lua_istable(runtime->state, -1)) {
         lua_set_error(error, error_size, "events in %s must be a table", path);
         lua_settop(runtime->state, top);
-        return 0;
+        return false;
       }
       if (!lua_verify_events(runtime->state, lua_gettop(runtime->state), path,
                              error, error_size)) {
         lua_settop(runtime->state, top);
-        return 0;
+        return false;
       }
     }
     lua_pop(runtime->state, 1);
@@ -547,17 +547,17 @@ static bool lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
         lua_set_error(error, error_size,
                       "locks in %s are only valid in object modules", path);
         lua_settop(runtime->state, top);
-        return 0;
+        return false;
       }
       if (!lua_istable(runtime->state, -1)) {
         lua_set_error(error, error_size, "locks in %s must be a table", path);
         lua_settop(runtime->state, top);
-        return 0;
+        return false;
       }
       if (!lua_verify_locks(runtime->state, lua_gettop(runtime->state), path,
                             error, error_size)) {
         lua_settop(runtime->state, top);
-        return 0;
+        return false;
       }
     }
     lua_pop(runtime->state, 1);
@@ -567,18 +567,18 @@ static bool lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
         lua_set_error(error, error_size,
                       "messages in %s are only valid in object modules", path);
         lua_settop(runtime->state, top);
-        return 0;
+        return false;
       }
       if (!lua_istable(runtime->state, -1)) {
         lua_set_error(error, error_size, "messages in %s must be a table",
                       path);
         lua_settop(runtime->state, top);
-        return 0;
+        return false;
       }
       if (!lua_verify_messages(runtime->state, lua_gettop(runtime->state), path,
                                error, error_size)) {
         lua_settop(runtime->state, top);
-        return 0;
+        return false;
       }
     }
     lua_pop(runtime->state, 1);
@@ -588,7 +588,7 @@ static bool lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
           !lua_verify_schedules(runtime->state, lua_gettop(runtime->state),
                                 path, error, error_size)) {
         lua_settop(runtime->state, top);
-        return 0;
+        return false;
       }
       has_schedules = lua_objlen(runtime->state, -1) > 0;
     }
@@ -598,7 +598,7 @@ static bool lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
       if (!lua_istable(runtime->state, -1)) {
         lua_set_error(error, error_size, "flows in %s must be a table", path);
         lua_settop(runtime->state, top);
-        return 0;
+        return false;
       }
       lua_pushnil(runtime->state);
       while (lua_next(runtime->state, -2) != 0) {
@@ -607,7 +607,7 @@ static bool lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
           lua_set_error(error, error_size,
                         "flows in %s must map step names to functions", path);
           lua_settop(runtime->state, top);
-          return 0;
+          return false;
         }
         has_flows = 1;
         lua_pop(runtime->state, 1);
@@ -622,10 +622,10 @@ static bool lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
         "global logic module %s must export commands, schedules, or flows",
         path);
     lua_settop(runtime->state, top);
-    return 0;
+    return false;
   }
   lua_settop(runtime->state, top);
-  return 1;
+  return true;
 }
 
 static bool lua_load_global_modules(LuaRuntime *runtime, char *error,
@@ -633,7 +633,7 @@ static bool lua_load_global_modules(LuaRuntime *runtime, char *error,
   size_t index;
 
   if (!lua_collect_global_modules(runtime, "", error, error_size))
-    return 0;
+    return false;
   if (runtime->global_module_count > 1) {
     array_sort(
         &(ArraySortRequest){.items = (void *)runtime->global_modules,
@@ -645,9 +645,9 @@ static bool lua_load_global_modules(LuaRuntime *runtime, char *error,
     if (!lua_verify_module(runtime, LUA_ROOT_GLOBAL_LOGIC,
                            lua_global_module_at(runtime, index), error,
                            error_size))
-      return 0;
+      return false;
   }
-  return 1;
+  return true;
 }
 
 typedef struct LuaAttachedModuleLoadRequest {
@@ -674,10 +674,10 @@ lua_load_attached_modules(const LuaAttachedModuleLoadRequest *request) {
         lua_log_load_error(runtime, object, path, request->error);
         continue;
       }
-      return 0;
+      return false;
     }
   }
-  return 1;
+  return true;
 }
 
 bool lua_initialize(LuaOwner *owner, const LuaServices *services, char *error,
@@ -685,7 +685,7 @@ bool lua_initialize(LuaOwner *owner, const LuaServices *services, char *error,
   LuaRuntime *runtime = lua_runtime_create(owner, services, error, error_size);
 
   if (!runtime)
-    return 0;
+    return false;
   if (!lua_load_attached_modules(
           &(LuaAttachedModuleLoadRequest){.runtime = runtime,
                                           .error = error,
@@ -693,10 +693,10 @@ bool lua_initialize(LuaOwner *owner, const LuaServices *services, char *error,
                                           .ignore_errors = true}) ||
       !lua_load_global_modules(runtime, error, error_size)) {
     lua_runtime_destroy(runtime);
-    return 0;
+    return false;
   }
   owner->runtime = runtime;
-  return 1;
+  return true;
 }
 
 void lua_shutdown(LuaOwner *owner) {
@@ -710,17 +710,17 @@ bool lua_reload(LuaOwner *owner, char *error, size_t error_size) {
   LuaRuntime *previous;
 
   if (!replacement)
-    return 0;
+    return false;
   if (!lua_load_attached_modules(&(LuaAttachedModuleLoadRequest){
           .runtime = replacement, .error = error, .error_size = error_size}) ||
       !lua_load_global_modules(replacement, error, error_size)) {
     lua_runtime_destroy(replacement);
-    return 0;
+    return false;
   }
   previous = owner->runtime;
   owner->runtime = replacement;
   lua_runtime_destroy(previous);
-  return 1;
+  return true;
 }
 
 bool lua_check_one_module(LuaRuntime *runtime, LuaModuleRoot root,
@@ -728,10 +728,10 @@ bool lua_check_one_module(LuaRuntime *runtime, LuaModuleRoot root,
   char detail[LBUF_SIZE];
 
   if (lua_verify_module(runtime, root, path, detail, sizeof(detail)))
-    return 1;
+    return true;
   lua_set_error(error, error_size, "%s/%s: %s", lua_root_name(root), path,
                 detail);
-  return 0;
+  return false;
 }
 
 typedef struct LuaParentCheckT LuaParentCheck;

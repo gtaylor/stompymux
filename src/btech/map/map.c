@@ -322,9 +322,9 @@ static bool eligible_bridge_hex(BattleMap *map, int x, int y) {
       continue;
     if ((i - j) > 3)
       continue;
-    return 1;
+    return true;
   }
-  return 0;
+  return false;
 }
 /* Convert some of the roads to bridges */
 static void make_bridges(BattleMap *map) {
@@ -708,12 +708,12 @@ void map_update(DbRef obj, void *data) {
     oldl = (unsigned char)map->maplight;
     oldv = (unsigned char)map->mapvis;
     bool valid_map_visibility =
-        (tmps = btech_attribute_read(map->xcode.context->database, obj,
-                                     A_MAPVIS, (char[LBUF_SIZE]){0})) !=
-            nullptr &&
-        map_parse_visibility_attribute(tmps, &ma, &ml, &wind, &wspeed,
-                                       &cloudbase, changemsg,
-                                       sizeof(changemsg));
+        ((tmps = btech_attribute_read(map->xcode.context->database, obj,
+                                      A_MAPVIS, (char[LBUF_SIZE]){0})) !=
+             nullptr &&
+         map_parse_visibility_attribute(tmps, &ma, &ml, &wind, &wspeed,
+                                        &cloudbase, changemsg,
+                                        sizeof(changemsg))) != 0;
     if (!valid_map_visibility) {
       ma = 30;
       ml = 2;

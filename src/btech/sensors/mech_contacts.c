@@ -49,8 +49,8 @@ static const char DEFAULT_CONTACTOPTIONS[] = "!db";
 constexpr size_t CONTACT_OPTIONS_LENGTH_LIMIT = 49;
 
 static bool mech_contact_is_friend(Mech *observer, Mech *target) {
-  return mech_team(observer) == mech_team(target) &&
-         mech_los_check_unblocked(observer, target, 0, 0, 0);
+  return (mech_team(observer) == mech_team(target) &&
+          mech_los_check_unblocked(observer, target, 0, 0, 0)) != 0;
 }
 
 static int mech_contact_heading(const Mech *mech) {
@@ -59,8 +59,8 @@ static int mech_contact_heading(const Mech *mech) {
 }
 
 static bool mech_contact_carries_club(const Mech *mech) {
-  return mech_section_carries_club(mech, RARM) ||
-         mech_section_carries_club(mech, LARM);
+  return (mech_section_carries_club(mech, RARM) ||
+          mech_section_carries_club(mech, LARM)) != 0;
 }
 
 static const char *const AC_DESC[] = {

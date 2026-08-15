@@ -65,7 +65,8 @@ static void tic_weapon_remove(Mech *mech, TicWeaponReference reference) {
 bool mech_tic_contains_weapon(const Mech *mech, TicWeaponReference reference) {
   const int WORD = reference.weapon / SINGLE_TICLONG_SIZE;
   const int BIT = reference.weapon % SINGLE_TICLONG_SIZE;
-  return *tic_word(mech, reference.tic, WORD) & (1UL << (unsigned int)BIT);
+  return (*tic_word(mech, reference.tic, WORD) & (1UL << (unsigned int)BIT)) !=
+         0U;
 }
 #include "registry_api.h"
 

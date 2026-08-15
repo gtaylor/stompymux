@@ -405,13 +405,13 @@ void charge_mech(Mech *mech, Mech *target) {
       if (mech_class(mech) == CLASS_MECH && !made_pilot_skill_roll(mech, 2)) {
         mech_notify(mech, MECHALL,
                     "Your piloting skill fails and you fall over!!");
-        mech_fall(mech, 1, 1);
+        mech_fall(mech, 1, true);
       }
       /* Make the second unit roll for receiving the charge if it is a mech */
       if (mech_class(mech) == CLASS_MECH && !made_pilot_skill_roll(target, 2)) {
         mech_notify(target, MECHALL,
                     "Your piloting skill fails and you fall over!!");
-        mech_fall(target, 1, 1);
+        mech_fall(target, 1, true);
       }
     }
     /* Ok the second unit made its roll */
@@ -478,13 +478,13 @@ void charge_mech(Mech *mech, Mech *target) {
       if (mech_class(mech) == CLASS_MECH && !made_pilot_skill_roll(mech, 2)) {
         mech_notify(mech, MECHALL,
                     "Your piloting skill fails and you fall over!!");
-        mech_fall(mech, 1, 1);
+        mech_fall(mech, 1, true);
       }
       if (mech_class(target) == CLASS_MECH &&
           !made_pilot_skill_roll(target, 2)) {
         mech_notify(target, MECHALL,
                     "Your piloting skill fails and you fall over!!");
-        mech_fall(target, 1, 1);
+        mech_fall(target, 1, true);
       }
     }
     /* Cycle the sections so they can't make another attack for a while */
@@ -673,13 +673,13 @@ void charge_mech(Mech *mech, Mech *target) {
     if (mech_class(mech) == CLASS_MECH && !made_pilot_skill_roll(mech, 2)) {
       mech_notify(mech, MECHALL,
                   "Your piloting skill fails and you fall over!!");
-      mech_fall(mech, 1, 1);
+      mech_fall(mech, 1, true);
     }
     /* Force piloting roll for target if they are in a mech */
     if (mech_class(target) == CLASS_MECH && !made_pilot_skill_roll(target, 2)) {
       mech_notify(target, MECHSTARTED,
                   "Your piloting skill fails and you fall over!!");
-      mech_fall(target, 1, 1);
+      mech_fall(target, 1, true);
     }
     /* Stop him */
     mech_current_speed_set(mech, 0);

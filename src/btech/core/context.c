@@ -113,7 +113,7 @@ BtechObjectId btech_context_afterlife_dbref(const BtechContext *context) {
 
 bool btech_context_in_character_enabled(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_ic;
+  return context->configuration->btech_ic != 0;
 }
 
 int btech_context_experience_loss(const BtechContext *context) {
@@ -124,22 +124,22 @@ int btech_context_experience_loss(const BtechContext *context) {
 bool btech_context_mechwarrior_experience_loss_enabled(
     const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_xploss_for_mw;
+  return context->configuration->btech_xploss_for_mw != 0;
 }
 
 bool btech_context_transported_unit_death_enabled(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_transported_unit_death;
+  return context->configuration->btech_transported_unit_death != 0;
 }
 
 bool btech_context_vtol_ice_fire_enabled(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_vtol_ice_causes_fire;
+  return context->configuration->btech_vtol_ice_causes_fire != 0;
 }
 
 bool btech_context_combat_arcs_enabled(const BtechContext *context) {
   assert(context != nullptr);
-  return context->combat_overrides.arcs;
+  return context->combat_overrides.arcs != 0;
 }
 
 void btech_context_combat_arcs_override_set(BtechContext *context, int arcs) {
@@ -155,38 +155,38 @@ void btech_context_combat_pilot_override_set(BtechContext *context,
 
 bool btech_context_seismic_detects_stopped_units(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_seismic_see_stopped;
+  return context->configuration->btech_seismic_see_stopped != 0;
 }
 
 bool btech_context_inferno_penalty_enabled(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_inferno_penalty;
+  return context->configuration->btech_inferno_penalty != 0;
 }
 
 bool btech_context_uses_fasa_turning(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_fasaturn;
+  return context->configuration->btech_fasaturn != 0;
 }
 
 bool btech_context_uses_extended_movement_modifiers(
     const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_extendedmovemod;
+  return context->configuration->btech_extendedmovemod != 0;
 }
 
 bool btech_context_uses_extended_weapon_ranges(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_erange;
+  return context->configuration->btech_erange != 0;
 }
 
 bool btech_context_hotload_uses_half_modifier(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_hotloadaddshalfbthmod;
+  return context->configuration->btech_hotloadaddshalfbthmod != 0;
 }
 
 bool btech_context_overrides_weapon_arcs(const BtechContext *context) {
   assert(context != nullptr);
-  return context->combat_overrides.arcs;
+  return context->combat_overrides.arcs != 0;
 }
 
 int btech_context_weapon_arc_override(const BtechContext *context) {
@@ -196,12 +196,12 @@ int btech_context_weapon_arc_override(const BtechContext *context) {
 
 bool btech_context_idf_requires_spotter(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_idf_requires_spotter;
+  return context->configuration->btech_idf_requires_spotter != 0;
 }
 
 bool btech_context_dig_bonus_requires_front(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_dig_only_fs;
+  return context->configuration->btech_dig_only_fs != 0;
 }
 
 int btech_context_dig_bonus(const BtechContext *context) {
@@ -211,17 +211,17 @@ int btech_context_dig_bonus(const BtechContext *context) {
 
 bool btech_context_range_modifies_damage(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_moddamagewithrange;
+  return context->configuration->btech_moddamagewithrange != 0;
 }
 
 bool btech_context_woods_modify_damage(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_moddamagewithwoods;
+  return context->configuration->btech_moddamagewithwoods != 0;
 }
 
 bool btech_context_glancing_blows_enabled(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_glancing_blows;
+  return context->configuration->btech_glancing_blows != 0;
 }
 
 int btech_context_glancing_blow_mode(const BtechContext *context) {
@@ -259,18 +259,18 @@ BtechObjectId btech_context_used_mech_store_dbref(const BtechContext *context) {
 bool btech_context_mechwarrior_pickup_triggers_actions(
     const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_mwpickup_action;
+  return context->configuration->btech_mwpickup_action != 0;
 }
 
 bool btech_context_physical_attacks_use_pilot_skill(
     const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_phys_use_pskill;
+  return context->configuration->btech_phys_use_pskill != 0;
 }
 
 bool btech_context_limits_repairs_to_stalls(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_limitedrepairs;
+  return context->configuration->btech_limitedrepairs != 0;
 }
 
 double btech_context_technology_time_multiplier(const BtechContext *context) {
@@ -285,7 +285,7 @@ int btech_context_maximum_technology_time(const BtechContext *context) {
 
 bool btech_context_uses_variable_technology_time(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_variable_techtime;
+  return context->configuration->btech_variable_techtime != 0;
 }
 
 int btech_context_technology_time_modifier(const BtechContext *context) {
@@ -300,43 +300,43 @@ int btech_context_sprint_to_hit_modifier(const BtechContext *context) {
 
 bool btech_context_uses_skid_cliff_rules(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_skidcliff;
+  return context->configuration->btech_skidcliff != 0;
 }
 
 bool btech_context_uses_roll_on_backwalk(const BtechContext *context) {
-  return context && context->configuration &&
-         context->configuration->btech_roll_on_backwalk;
+  return (context && context->configuration &&
+          context->configuration->btech_roll_on_backwalk) != 0;
 }
 
 bool btech_context_uses_new_terrain_rules(const BtechContext *context) {
-  return context && context->configuration &&
-         context->configuration->btech_newterrain;
+  return (context && context->configuration &&
+          context->configuration->btech_newterrain) != 0;
 }
 
 bool btech_context_uses_advanced_vehicle_fire(const BtechContext *context) {
-  return context && context->configuration &&
-         context->configuration->btech_fasaadvvhlfire;
+  return (context && context->configuration &&
+          context->configuration->btech_fasaadvvhlfire) != 0;
 }
 
 bool btech_context_uses_advanced_vehicle_criticals(
     const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_fasaadvvhlcrit;
+  return context->configuration->btech_fasaadvvhlcrit != 0;
 }
 
 bool btech_context_uses_advanced_vtol_criticals(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_fasaadvvtolcrit;
+  return context->configuration->btech_fasaadvvtolcrit != 0;
 }
 
 bool btech_context_uses_fasa_criticals(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_fasacrit;
+  return context->configuration->btech_fasacrit != 0;
 }
 
 bool btech_context_uses_exile_stun_code(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_exile_stun_code;
+  return context->configuration->btech_exile_stun_code != 0;
 }
 
 int btech_context_exile_stun_mode(const BtechContext *context) {
@@ -361,22 +361,22 @@ int btech_context_vehicle_critical_mode(const BtechContext *context) {
 
 bool btech_context_uses_tank_friendly_criticals(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_tankfriendly;
+  return context->configuration->btech_tankfriendly != 0;
 }
 
 bool btech_context_uses_tank_critical_shielding(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_tankshield;
+  return context->configuration->btech_tankshield != 0;
 }
 
 bool btech_context_uses_tsm_sprint_bonus(const BtechContext *context) {
-  return context && context->configuration &&
-         context->configuration->btech_tsm_sprint_bonus;
+  return (context && context->configuration &&
+          context->configuration->btech_tsm_sprint_bonus) != 0;
 }
 
 bool btech_context_uses_tsm_tow_bonus(const BtechContext *context) {
-  return context && context->configuration &&
-         context->configuration->btech_tsm_tow_bonus;
+  return (context && context->configuration &&
+          context->configuration->btech_tsm_tow_bonus) != 0;
 }
 
 int btech_context_stand_careful_modifier(const BtechContext *context) {
@@ -398,18 +398,18 @@ int btech_context_self_destruct_time(const BtechContext *context) {
 
 bool btech_context_self_destruct_can_stop(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_explode_stop;
+  return context->configuration->btech_explode_stop != 0;
 }
 
 bool btech_context_self_destruct_ammunition_enabled(
     const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_explode_ammo;
+  return context->configuration->btech_explode_ammo != 0;
 }
 
 bool btech_context_self_destruct_reactor_enabled(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_explode_reactor;
+  return context->configuration->btech_explode_reactor != 0;
 }
 
 int btech_context_reactor_explosion_mode(const BtechContext *context) {
@@ -419,23 +419,23 @@ int btech_context_reactor_explosion_mode(const BtechContext *context) {
 
 bool btech_context_stackpole_enabled(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_stackpole;
+  return context->configuration->btech_stackpole != 0;
 }
 
 bool btech_context_requires_backwalk_rolls(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_roll_on_backwalk;
+  return context->configuration->btech_roll_on_backwalk != 0;
 }
 
 bool btech_context_uses_new_charge_rules(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_newcharge;
+  return context->configuration->btech_newcharge != 0;
 }
 
 bool btech_context_uses_technology_level_three_charge_rules(
     const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_tl3_charge;
+  return context->configuration->btech_tl3_charge != 0;
 }
 
 int btech_context_movement_slowdown_mode(const BtechContext *context) {
@@ -465,7 +465,7 @@ int btech_context_stagger_interval(const BtechContext *context) {
 
 bool btech_context_stagger_uses_tonnage(const BtechContext *context) {
   assert(context != nullptr);
-  return context->configuration->btech_newstaggertons;
+  return context->configuration->btech_newstaggertons != 0;
 }
 
 int btech_context_event_tick(const BtechContext *context) {

@@ -29,7 +29,7 @@ HitLocationResult fasa_ground_hit_location(Mech *mech, int hit_group,
       switch (roll) {
       case 2:
         /* A Roll on Determining Critical Hits Table */
-        result.critical = 1;
+        result.critical = true;
         return hit_location_result_at(result, LSIDE);
       case 3:
         if (btech_context_uses_tank_friendly_criticals(context)) {
@@ -157,14 +157,14 @@ HitLocationResult fasa_ground_hit_location(Mech *mech, int hit_group,
         }
       case 12:
         /* A Roll on Determining Critical Hits Table */
-        result.critical = 1;
+        result.critical = true;
         return hit_location_result_at(result, LSIDE);
       }
       break;
     case RIGHTSIDE:
       switch (roll) {
       case 2:
-        result.critical = 1;
+        result.critical = true;
         return hit_location_result_at(result, RSIDE);
       case 3:
         if (btech_context_uses_tank_friendly_criticals(context)) {
@@ -299,7 +299,7 @@ HitLocationResult fasa_ground_hit_location(Mech *mech, int hit_group,
         }
       case 12:
         /* A Roll on Determining Critical Hits Table */
-        result.critical = 1;
+        result.critical = true;
         return hit_location_result_at(result, RSIDE);
       }
       break;
@@ -310,7 +310,7 @@ HitLocationResult fasa_ground_hit_location(Mech *mech, int hit_group,
       switch (roll) {
       case 2:
         /* A Roll on Determining Critical Hits Table */
-        result.critical = 1;
+        result.critical = true;
         return hit_location_result_at(result, side);
       case 3:
         if (btech_context_uses_tank_critical_shielding(context)) {
@@ -437,7 +437,7 @@ HitLocationResult fasa_ground_hit_location(Mech *mech, int hit_group,
         return hit_location_result_at(
             result, (mech_section_internal(mech, TURRET)) ? TURRET : side);
       case 11:
-        result.critical = 1;
+        result.critical = true;
         /* Lock turret into place */
         if (mech_section_internal(mech, TURRET)) {
           if (!condition.turret_locked) {
@@ -454,7 +454,7 @@ HitLocationResult fasa_ground_hit_location(Mech *mech, int hit_group,
         if (mech_section_is_crittable(
                 mech, (mech_section_internal(mech, TURRET)) ? TURRET : side,
                 (CriticalThreshold){btech_context_critical_level(context)}))
-          result.critical = 1;
+          result.critical = true;
         return hit_location_result_at(
             result, (mech_section_internal(mech, TURRET)) ? TURRET : side);
       }

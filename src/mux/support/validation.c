@@ -27,16 +27,16 @@ static bool validation_is_digit(char character) {
 }
 
 static bool ascii_is_alpha(unsigned char byte) {
-  return (byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z');
+  return ((byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z')) != 0;
 }
 
 static bool ascii_is_alnum(unsigned char byte) {
-  return ascii_is_alpha(byte) || (byte >= '0' && byte <= '9');
+  return (ascii_is_alpha(byte) || (byte >= '0' && byte <= '9')) != 0;
 }
 
 bool is_integer(char *str) {
   if (str == nullptr)
-    return 0;
+    return false;
   const size_t LENGTH = strlen(str);
   size_t index = 0;
   while (index < LENGTH &&
@@ -46,7 +46,7 @@ bool is_integer(char *str) {
     index++;
   if (index >= LENGTH ||
       !validation_is_digit(validation_character(str, LENGTH, index)))
-    return 0;
+    return false;
   while (index < LENGTH &&
          validation_is_digit(validation_character(str, LENGTH, index)))
     index++;
@@ -61,7 +61,7 @@ bool is_integer(char *str) {
  */
 bool is_number(const char *str) {
   if (str == nullptr)
-    return 0;
+    return false;
   const size_t LENGTH = strlen(str);
   size_t index = 0;
   bool got_digit = false;
@@ -85,32 +85,32 @@ bool is_number(const char *str) {
   while (index < LENGTH &&
          validation_is_space(validation_character(str, LENGTH, index)))
     index++;
-  return got_digit && index == LENGTH;
+  return (got_digit && index == LENGTH) != 0;
 }
 
 bool ok_name(const ServerConfiguration *configuration, const char *name) {
   if (name == nullptr || *name == '\0')
-    return 0;
+    return false;
 
   const size_t LENGTH = strlen(name);
 
   /* Disallow leading spaces */
 
   if (*name == ' ')
-    return 0;
+    return false;
 
   /*
    * Only printable characters
    */
 
   if (!utf8_validate_printable(name, strlen(name)))
-    return 0;
+    return false;
 
   /*
    * Disallow trailing spaces
    */
   if (validation_character(name, LENGTH, LENGTH - 1) == ' ')
-    return 0;
+    return false;
 
   /*
    * Exclude names that start with or contain certain magic cookies
@@ -121,7 +121,7 @@ bool ok_name(const ServerConfiguration *configuration, const char *name) {
           !index(name, AND_TOKEN) && !index(name, OR_TOKEN) &&
           string_compare(configuration, name, "me") &&
           string_compare(configuration, name, "home") &&
-          string_compare(configuration, name, "here"));
+          string_compare(configuration, name, "here")) != 0;
 }
 
 static bool ok_player_name_with_limit(const ServerConfiguration *configuration,
@@ -135,14 +135,14 @@ static bool ok_player_name_with_limit(const ServerConfiguration *configuration,
 
   if (name == nullptr || !utf8_is_printable_ascii(name, strlen(name)) ||
       *name == ' ')
-    return 0;
+    return false;
 
   /*
    * Not too long and a good name for a thing
    */
 
   if (!ok_name(configuration, name) || strlen(name) > maximum_length)
-    return 0;
+    return false;
 
   if (allow_spaces)
     good_chars = " `$_-.,'";
@@ -159,9 +159,9 @@ static bool ok_player_name_with_limit(const ServerConfiguration *configuration,
     if (ascii_is_alnum((unsigned char)CHARACTER))
       continue;
     if (!strchr(good_chars, CHARACTER))
-      return 0;
+      return false;
   }
-  return 1;
+  return true;
 }
 
 bool ok_stored_player_name(const ServerConfiguration *configuration,
@@ -180,15 +180,15 @@ bool ok_player_name(const ServerConfiguration *configuration,
           : PLAYER_NAME_STORAGE_LIMIT;
 
   return ok_player_name_with_limit(configuration, name, MAXIMUM_LENGTH,
-                                   configuration->name_spaces);
+                                   configuration->name_spaces != 0);
 }
 
 bool ok_new_player_name(const ServerConfiguration *configuration,
                         const char *name) {
-  return name != nullptr && strlen(name) >= 2 &&
-         ascii_is_alpha(
-             (unsigned char)validation_character(name, strlen(name), 0)) &&
-         ok_player_name(configuration, name);
+  return (name != nullptr && strlen(name) >= 2 &&
+          ascii_is_alpha(
+              (unsigned char)validation_character(name, strlen(name), 0)) &&
+          ok_player_name(configuration, name)) != 0;
 }
 
 bool ok_password(const ServerConfiguration *configuration,
@@ -201,14 +201,14 @@ bool ok_password(const ServerConfiguration *configuration,
   if (*password == '\0' ||
       length > (size_t)configuration->player_password_length_limit ||
       !utf8_validate_printable(password, length))
-    return 0;
+    return false;
 
   while (offset < length) {
     if (!utf8_decode(checked_storage_region_const(password, length, offset,
                                                   length - offset),
                      length - offset, &decoded) ||
         decoded.codepoint == ' ') {
-      return 0;
+      return false;
     }
     offset += decoded.length;
   }
@@ -216,9 +216,6 @@ bool ok_password(const ServerConfiguration *configuration,
   /*
    * Needed.  Change it if you like, but be sure yours is the same.
    */
-  if (length == 13 && validation_character(password, length, 0) == 'X' &&
-      validation_character(password, length, 1) == 'X')
-    return 0;
-
-  return 1;
+  return (length != 13 || validation_character(password, length, 0) != 'X' ||
+          validation_character(password, length, 1) != 'X') != 0;
 }

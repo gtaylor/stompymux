@@ -131,7 +131,7 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
                                  .weapon_index = weapindx,
                                  .physical_range = range,
                                  .network_range = mech_network_range(
-                                     mech, target, range, &c3_ref, 1),
+                                     mech, target, range, &c3_ref, true),
                                  .fire_mode = w_ammo_mode});
       w_range_bracket = range_result.bracket;
       rbth = range_result.modifier;
@@ -146,7 +146,7 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
                                  .weapon_index = weapindx,
                                  .physical_range = range,
                                  .network_range = mech_network_range(
-                                     mech, target, range, &c3_ref, 0),
+                                     mech, target, range, &c3_ref, false),
                                  .fire_mode = w_ammo_mode});
       w_range_bracket = range_result.bracket;
       rbth = range_result.modifier;

@@ -129,11 +129,11 @@ static void collision_apply_damage(const CollisionDamageRequest *request) {
     mech_damage_apply(&(MechDamageRequest){
         .target = mech,
         .attacker = att,
-        .line_of_sight = (att == mech) ? 0 : 1,
+        .line_of_sight = ((att == mech) ? 0 : 1) != 0,
         .attack_pilot = (att == mech) ? -1 : mech_pilot_dbref(att),
         .hit_location = hitloc,
-        .rear = isrear,
-        .critical = iscrit,
+        .rear = isrear != 0,
+        .critical = iscrit != 0,
         .armor_damage = dam > 5 ? 5 : dam,
         .internal_damage = 0,
         .transfer = MECH_DAMAGE_NORMAL,
@@ -141,7 +141,7 @@ static void collision_apply_damage(const CollisionDamageRequest *request) {
         .base_to_hit = 0,
         .weapon_index = -1,
         .ammunition_mode = 0,
-        .ignore_swarmers = 0});
+        .ignore_swarmers = false});
     dam -= 5;
   }
 }
@@ -211,7 +211,7 @@ static bool mech_domino_resolve_in_hex(const MechDominoRequest *request) {
     }
   }
   if (i == battle_map_unit_count(map))
-    return 0;
+    return false;
   /* Now we got a mech we hit, accidentally or otherwise */
   /* Next, we figure out what'll happen */
 
@@ -244,7 +244,7 @@ static bool mech_domino_resolve_in_hex(const MechDominoRequest *request) {
   if (td > 10)
     td = 10 + ((td - 10) / 3);
   if (td <= 1) /* No point in 1pt hits */
-    return 0;
+    return false;
   switch (mode) {
   case MECH_DOMINO_JUMP:
   case MECH_DOMINO_FALL:
@@ -286,9 +286,9 @@ static bool mech_domino_resolve_in_hex(const MechDominoRequest *request) {
       mech_los_broadcast_unit(me, mech, "nearly lands on %s!");
       if (!made_pilot_skill_roll(
               me, cnt + (mech_adjusted_jump_speed_mp(me, map) / 2)))
-        mech_fall(me, 1, mech_adjusted_jump_speed_mp(me, map) / 2);
+        mech_fall(me, 1, (mech_adjusted_jump_speed_mp(me, map) / 2) != 0);
     }
-    return 1;
+    return true;
   case MECH_DOMINO_GROUND:
   default:
     break;
@@ -330,11 +330,11 @@ static bool mech_domino_resolve_in_hex(const MechDominoRequest *request) {
                 mech_to_mech_display_id(mech, me).text);
     mech_los_broadcast_unit(me, mech, "nearly bumps into %s!");
     if (!made_pilot_skill_roll(me, cnt))
-      mech_fall(me, 1, 0);
+      mech_fall(me, 1, false);
     mech_movement_stop(me);
   }
   mech_charge_reset(me);
-  return 1;
+  return true;
 }
 
 bool mech_domino_resolve(Mech *mech, MechDominoMode mode) {
@@ -344,17 +344,17 @@ bool mech_domino_resolve(Mech *mech, MechDominoMode mode) {
   int fcnt;
 
   if (!map)
-    return 0;
+    return false;
   if (mech_class(mech) != CLASS_MECH)
-    return 0;
+    return false;
   if (btech_context_stacking_mode(mech_context(mech)) == 0)
-    return 0;
+    return false;
   MapHexPosition position = {.x = mech_position_x(mech),
                              .y = mech_position_y(mech)};
   cnt = battle_map_mech_count_in_hex(&(BattleMapHexOccupancyRequest){
       .map = map, .position = position, .relationship = TEAM_RELATIONSHIP_ANY});
   if (cnt <= 2)
-    return 0;
+    return false;
   /* Possible nastiness */
   fcnt = battle_map_mech_count_in_hex(&(BattleMapHexOccupancyRequest){
       .map = map,
@@ -379,5 +379,5 @@ bool mech_domino_resolve(Mech *mech, MechDominoMode mode) {
                              .mode = mode,
                              .candidate_count = cnt - fcnt});
   }
-  return 0;
+  return false;
 }

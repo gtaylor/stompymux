@@ -30,7 +30,7 @@ void mech_damage_stagger_check(Mech *wounded) {
       if (!made_pilot_skill_roll(wounded, 1)) {
         mech_notify(wounded, MECHALL, "You fall over from all the damage!");
         mech_los_broadcast(wounded, "falls down, staggered by the damage!");
-        mech_fall(wounded, 1, 0);
+        mech_fall(wounded, 1, false);
       }
     }
     mech_turn_damage_clear(wounded);

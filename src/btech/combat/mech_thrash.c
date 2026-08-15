@@ -170,12 +170,12 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
           mech_damage_apply(&(MechDamageRequest){
               .target = target,
               .attacker = mech,
-              .line_of_sight = 1,
+              .line_of_sight = true,
               .attack_pilot = mech_pilot_dbref(mech),
               .hit_location =
                   btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1),
-              .rear = 0,
-              .critical = 0,
+              .rear = false,
+              .critical = false,
               .armor_damage = 5,
               .internal_damage = 0,
               .transfer = MECH_DAMAGE_NORMAL,
@@ -183,18 +183,18 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
               .base_to_hit = 0,
               .weapon_index = -1,
               .ammunition_mode = 0,
-              .ignore_swarmers = 1});
+              .ignore_swarmers = true});
           temp_damage -= 5;
         } else {
           mech_damage_apply(&(MechDamageRequest){
               .target = target,
               .attacker = mech,
-              .line_of_sight = 1,
+              .line_of_sight = true,
               .attack_pilot = mech_pilot_dbref(mech),
               .hit_location =
                   btech_random_range_int(context, 0, NUM_BSUIT_MEMBERS - 1),
-              .rear = 0,
-              .critical = 0,
+              .rear = false,
+              .critical = false,
               .armor_damage = temp_damage,
               .internal_damage = 0,
               .transfer = MECH_DAMAGE_NORMAL,
@@ -202,7 +202,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
               .base_to_hit = 0,
               .weapon_index = -1,
               .ammunition_mode = 0,
-              .ignore_swarmers = 1});
+              .ignore_swarmers = true});
           temp_damage = 0;
         }
       }
@@ -216,7 +216,7 @@ void mech_thrash(DbRef player, void *data, char *buffer) {
    * yourself */
 
   if (!mech_pilot_skill_roll(&(PilotSkillRollRequest){.mech = mech})) {
-    mech_fall(mech, 1, 1);
+    mech_fall(mech, 1, true);
   }
 
   for (i = 0; i < 4; i++) {

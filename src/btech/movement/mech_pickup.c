@@ -38,8 +38,8 @@
 #include "section_types.h"
 
 static bool mech_carries_club(const Mech *mech) {
-  return mech_section_carries_club(mech, RARM) ||
-         mech_section_carries_club(mech, LARM);
+  return (mech_section_carries_club(mech, RARM) ||
+          mech_section_carries_club(mech, LARM)) != 0;
 }
 
 static void mech_towing_target_prepare(Mech *target) {

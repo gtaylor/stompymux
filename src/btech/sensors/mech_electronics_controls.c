@@ -636,11 +636,11 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
     mech_damage_apply(
         &(MechDamageRequest){.target = mech,
                              .attacker = mech,
-                             .line_of_sight = 1,
+                             .line_of_sight = true,
                              .attack_pilot = mech_pilot_dbref(mech),
                              .hit_location = w_loc,
-                             .rear = 0,
-                             .critical = 0,
+                             .rear = false,
+                             .critical = false,
                              .armor_damage = w_self_damage,
                              .internal_damage = 0,
                              .transfer = MECH_DAMAGE_NORMAL,
@@ -648,7 +648,7 @@ void remove_inarc_pods_mech(DbRef player, Mech *mech, char *buffer) {
                              .base_to_hit = 0,
                              .weapon_index = -1,
                              .ammunition_mode = 0,
-                             .ignore_swarmers = 0});
+                             .ignore_swarmers = false});
   } else {
     mech_section_special_remove(mech, w_loc, w_pod_type);
 

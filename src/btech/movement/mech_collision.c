@@ -15,8 +15,8 @@
 
 static bool mech_moves_over_water(const Mech *mech) {
   int movement_type = mech_movement_type(mech);
-  return movement_type == MOVE_HOVER || mech_class(mech) == CLASS_MW ||
-         movement_type == MOVE_FOIL || movement_type == MOVE_HULL;
+  return (movement_type == MOVE_HOVER || mech_class(mech) == CLASS_MW ||
+          movement_type == MOVE_FOIL || movement_type == MOVE_HULL) != 0;
 }
 
 static int mech_elevation_change_limit(const Mech *mech) {

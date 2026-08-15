@@ -256,7 +256,8 @@ static bool object_state_value_is_valid(const ObjectStateValue *value) {
     return false;
   switch (value->type) {
   case OBJECT_STATE_STRING:
-    return value->as.string.data != nullptr || value->as.string.length == 0;
+    return (value->as.string.data != nullptr || value->as.string.length == 0) !=
+           0;
   case OBJECT_STATE_BOOLEAN:
   case OBJECT_STATE_INTEGER:
     return true;
@@ -462,10 +463,10 @@ object_state_entry(const ObjectStateEntryRequest *request) {
   ObjectStateCollection *collection;
 
   if (!is_good_obj(database, object))
-    return (ObjectStateEntryResult){0};
+    return (ObjectStateEntryResult){};
   collection = game_database_object(database, object)->state;
   if (!collection || index >= collection->count)
-    return (ObjectStateEntryResult){0};
+    return (ObjectStateEntryResult){};
   const ObjectStateEntry *stored = object_state_entry_const(collection, index);
   return (ObjectStateEntryResult){.found = true,
                                   .entry = {.name_space = stored->name_space,
@@ -593,9 +594,9 @@ bool object_state_transaction_set(ObjectStateTransaction *transaction,
   ObjectStateTransactionObject *target =
       object_state_transaction_require(transaction, object, error, error_size);
 
-  return target &&
-         object_state_collection_set(transaction->database, target->collection,
-                                     name_space, key, value, error, error_size);
+  return (target && object_state_collection_set(
+                        transaction->database, target->collection, name_space,
+                        key, value, error, error_size)) != 0;
 }
 
 bool object_state_transaction_delete(ObjectStateTransaction *transaction,
@@ -604,8 +605,8 @@ bool object_state_transaction_delete(ObjectStateTransaction *transaction,
   ObjectStateTransactionObject *target =
       object_state_transaction_require(transaction, object, nullptr, 0);
 
-  return target &&
-         object_state_collection_delete(target->collection, name_space, key);
+  return (target && object_state_collection_delete(target->collection,
+                                                   name_space, key)) != 0;
 }
 
 size_t object_state_transaction_count(ObjectStateTransaction *transaction,

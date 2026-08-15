@@ -111,7 +111,7 @@ bool mech_critical_effect_apply(const CriticalEffectRequest *request) {
                   "You have no ammunition left in that location, lucky you!");
       mech_critical_destroy(wounded, HITLOC, crit_hit);
     }
-    return 1;
+    return true;
   }
 
   if (mech_critical_is_broken(wounded, HITLOC, crit_hit) &&
@@ -130,7 +130,7 @@ bool mech_critical_effect_apply(const CriticalEffectRequest *request) {
         checked_string_suffix(
             weapon_catalogue_name(weapon_from_equipment_index(CRIT_TYPE)), 3));
     mech_critical_destroy(wounded, HITLOC, crit_hit + 1);
-    return 1;
+    return true;
   }
 
   if (mech_critical_is_nonfunctional(wounded, HITLOC, crit_hit)) {
@@ -257,7 +257,7 @@ bool mech_critical_effect_apply(const CriticalEffectRequest *request) {
                   part_buf);
     }
     mech_critical_destroy(wounded, HITLOC, crit_hit);
-    return 1;
+    return true;
   }
 
   if (equipment_is_weapon(CRIT_TYPE)) {
@@ -266,13 +266,13 @@ bool mech_critical_effect_apply(const CriticalEffectRequest *request) {
             .wounded = wounded,
             .slot = {.section = HITLOC, .critical = crit_hit},
             .part_type = CRIT_TYPE})) {
-      return 1;
+      return true;
     }
 
     mech_weapon_critical_apply(&(WeaponCriticalApplication){
         .mech = mech, .slot = {.section = HITLOC, .critical = crit_hit}});
 
-    return 1;
+    return true;
   }
 
   if (equipment_is_special(CRIT_TYPE)) {
@@ -288,7 +288,7 @@ bool mech_critical_effect_apply(const CriticalEffectRequest *request) {
                   "Your cockpit is destroyed, your blood boils, and your body "
                   "is fried! [fg=yellow]You're dead![reset]");
       if (!mech_is_destroyed(wounded)) {
-        mech_destroy(wounded, attacker, 0, KILL_TYPE_COCKPIT);
+        mech_destroy(wounded, attacker, false, KILL_TYPE_COCKPIT);
       }
 
       if (LOS && attacker)
@@ -393,7 +393,7 @@ bool mech_critical_effect_apply(const CriticalEffectRequest *request) {
         mech_notify(wounded, MECHALL,
                     "Losing your last jump jet, you fall from the sky!");
         mech_los_broadcast(wounded, "falls from the sky!");
-        mech_fall(wounded, 1, 0);
+        mech_fall(wounded, 1, false);
         mech_domino_resolve(wounded, MECH_DOMINO_FALL);
       }
       break;
@@ -413,9 +413,9 @@ bool mech_critical_effect_apply(const CriticalEffectRequest *request) {
         if (wounded != attacker && !mech_is_destroyed(wounded) && attacker)
           mech_notify(attacker, MECHALL, "You destroy the engine!");
         if (unit_is_fixable(mech))
-          mech_destroy(wounded, attacker, 1, KILL_TYPE_ENGINE);
+          mech_destroy(wounded, attacker, true, KILL_TYPE_ENGINE);
         else
-          mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
+          mech_destroy(wounded, attacker, true, KILL_TYPE_NORMAL);
       }
       break;
     case TARGETING_COMPUTER:
@@ -455,11 +455,12 @@ bool mech_critical_effect_apply(const CriticalEffectRequest *request) {
               mech_notify(wounded, MECHALL,
                           "You lose your balance and fall down!");
               mech_los_broadcast(wounded, "stumbles and falls down.");
-              mech_fall(wounded, 1, 0);
+              mech_fall(wounded, 1, false);
             } else {
               mech_notify(wounded, MECHALL, "You fall from the sky!");
               mech_los_broadcast(wounded, "falls from the sky!");
-              mech_fall(wounded, mech_jump_speed_mp_for_map(wounded, map), 0);
+              mech_fall(wounded, mech_jump_speed_mp_for_map(wounded, map),
+                        false);
               mech_domino_resolve(wounded, MECH_DOMINO_FALL);
             }
           }
@@ -473,13 +474,13 @@ bool mech_critical_effect_apply(const CriticalEffectRequest *request) {
               !mech_is_jumping(wounded) && !mech_is_out_of_control(wounded)) {
             mech_notify(wounded, MECHALL, "You fall and you can't get up!");
             mech_los_broadcast(wounded, "is knocked over!");
-            mech_fall(wounded, 1, 0);
+            mech_fall(wounded, 1, false);
           } else if (!mech_condition_summary(wounded).fallen &&
                      (mech_is_jumping(wounded) ||
                       mech_is_out_of_control(wounded))) {
             mech_notify(wounded, MECHALL, "You fall from the sky!");
             mech_los_broadcast(wounded, "falls from the sky!");
-            mech_fall(wounded, mech_jump_speed_mp_for_map(wounded, map), 0);
+            mech_fall(wounded, mech_jump_speed_mp_for_map(wounded, map), false);
             mech_domino_resolve(wounded, MECH_DOMINO_FALL);
           }
         }
@@ -518,7 +519,7 @@ bool mech_critical_effect_apply(const CriticalEffectRequest *request) {
             !made_pilot_skill_roll(wounded, 0)) {
           mech_notify(wounded, MECHALL, "You lose your balance and fall down!");
           mech_los_broadcast(wounded, "stumbles and falls down!");
-          mech_fall(wounded, 1, 0);
+          mech_fall(wounded, 1, false);
         }
       }
       break;
@@ -574,7 +575,7 @@ need to bother with crits if we already have a hip crit here */
             mech_notify(wounded, MECHALL,
                         "You lose your balance and fall down!");
             mech_los_broadcast(wounded, "stumbles and falls down!");
-            mech_fall(wounded, 1, 0);
+            mech_fall(wounded, 1, false);
           }
         }
       }
@@ -705,5 +706,5 @@ need to bother with crits if we already have a hip crit here */
       mech_critical_destroy(wounded, HITLOC, crit_hit);
   }
 
-  return 1;
+  return true;
 }

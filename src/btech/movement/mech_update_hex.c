@@ -115,11 +115,12 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         if (!skid_cliff) {
           mech_notify(mech, MECHALL, "You smash into a cliff!");
           mech_los_broadcast(mech, "crashes to a cliff!");
-          mech_fall(mech, (int)(mech_current_speed(mech) * MP_PER_KPH / 4), 0);
+          mech_fall(mech, (int)(mech_current_speed(mech) * MP_PER_KPH / 4),
+                    false);
         } else {
           mech_notify(mech, MECHALL, "You skid to a violent halt!");
           mech_los_broadcast(mech, "goes into a skid!");
-          mech_fall(mech, 0, 0);
+          mech_fall(mech, 0, false);
         }
       }
       mech_position_rollback(
@@ -153,14 +154,14 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                     "You drive off the cliff and fall to the ground below.");
         mech_los_broadcast(mech,
                            "drives off a cliff and falls to the ground below.");
-        mech_fall(mech, lastelevation - elevation, 0);
+        mech_fall(mech, lastelevation - elevation, false);
         mech_domino_resolve(mech, MECH_DOMINO_FALL);
         if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_WATER &&
             !(mech_technology_flags_secondary(mech) & WATERPROOF_TECH)) {
           mech_notify(
               mech, MECHALL,
               "You drive into the water and your vehicle becomes inoperable.");
-          mech_destroy(mech, mech, 0, KILL_TYPE_FLOOD);
+          mech_destroy(mech, mech, false, KILL_TYPE_FLOOD);
         }
         return;
       }
@@ -196,7 +197,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                            elevation > lastelevation
                                ? "falls on its back walking up an incline."
                                : "falls off the back of a small incline.");
-        mech_fall(mech, abs(lastelevation - elevation), 1);
+        mech_fall(mech, abs(lastelevation - elevation), true);
         mech_movement_stop(mech);
         if (elevation > lastelevation) {
           mech_position_rollback(
@@ -225,7 +226,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         mech_notify(
             mech, MECHALL,
             "You drive into the water and your vehicle becomes inoperable.");
-        mech_destroy(mech, mech, 0, KILL_TYPE_FLOOD);
+        mech_destroy(mech, mech, false, KILL_TYPE_FLOOD);
         return;
       }
       mech_position_rollback(
@@ -255,7 +256,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
           mech_fall(mech,
                     mech_hex_maximum_int(
                         1, clamp_float_to_int(sqrtf(f / MP1 / 2.0F))),
-                    0);
+                    false);
         }
       }
     }
@@ -284,11 +285,12 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         if (!skid_cliff) {
           mech_notify(mech, MECHALL, "You smash into a cliff!");
           mech_los_broadcast(mech, "crashes to a cliff!");
-          mech_fall(mech, (int)(mech_current_speed(mech) * MP_PER_KPH / 4), 0);
+          mech_fall(mech, (int)(mech_current_speed(mech) * MP_PER_KPH / 4),
+                    false);
         } else {
           mech_notify(mech, MECHALL, "You skid to a violent halt!");
           mech_los_broadcast(mech, "skids to a halt!");
-          mech_fall(mech, 0, 0);
+          mech_fall(mech, 0, false);
         }
       }
       mech_position_rollback(
@@ -322,14 +324,14 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                     "You drive off the cliff and fall to the ground below.");
         mech_los_broadcast(mech,
                            "drives off a cliff and falls to the ground below.");
-        mech_fall(mech, lastelevation - elevation, 0);
+        mech_fall(mech, lastelevation - elevation, false);
         mech_domino_resolve(mech, MECH_DOMINO_FALL);
         if (mech_real_terrain_get(mech) == BATTLE_TERRAIN_WATER &&
             !(mech_technology_flags_secondary(mech) & WATERPROOF_TECH)) {
           mech_notify(
               mech, MECHALL,
               "You drive into the water and your vehicle becomes inoperable.");
-          mech_destroy(mech, mech, 0, KILL_TYPE_FLOOD);
+          mech_destroy(mech, mech, false, KILL_TYPE_FLOOD);
         }
         return;
       }
@@ -365,7 +367,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                            elevation > lastelevation
                                ? "falls on its back walking up an incline."
                                : "falls off the back of a small incline.");
-        mech_fall(mech, abs(lastelevation - elevation), 1);
+        mech_fall(mech, abs(lastelevation - elevation), true);
         mech_movement_stop(mech);
         if (elevation > lastelevation) {
           mech_position_rollback(
@@ -393,7 +395,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         mech_notify(
             mech, MECHALL,
             "You drive into the water and your vehicle becomes inoperable.");
-        mech_destroy(mech, mech, 0, KILL_TYPE_FLOOD);
+        mech_destroy(mech, mech, false, KILL_TYPE_FLOOD);
         return;
       }
       mech_position_rollback(
@@ -425,7 +427,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
           mech_fall(mech,
                     mech_hex_maximum_int(
                         1, clamp_float_to_int(sqrtf(f / MP1 / 2.0F))),
-                    0);
+                    false);
         }
       } else if ((tt == BATTLE_TERRAIN_ROUGH) &&
                  fabsf(mech_current_speed(mech)) > MP1) {
@@ -444,7 +446,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
           mech_fall(mech,
                     mech_hex_maximum_int(
                         1, clamp_float_to_int(sqrtf(f / MP1 / 2.0F))),
-                    0);
+                    false);
         }
       }
     }
@@ -480,7 +482,8 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       } else {
         mech_notify(mech, MECHALL, "You smash into the ground!");
         mech_los_broadcast(mech, "smashes aground!");
-        mech_fall(mech, (int)(mech_current_speed(mech) * MP_PER_KPH / 4), 0);
+        mech_fall(mech, (int)(mech_current_speed(mech) * MP_PER_KPH / 4),
+                  false);
       }
       mech_movement_stop(mech);
       mech_vertical_speed_set(mech, 0.0F);
@@ -503,11 +506,12 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         if (!skid_cliff) {
           mech_notify(mech, MECHALL, "You smash into a cliff!");
           mech_los_broadcast(mech, "smashes into a cliff!");
-          mech_fall(mech, (int)(mech_current_speed(mech) * MP_PER_KPH / 4), 0);
+          mech_fall(mech, (int)(mech_current_speed(mech) * MP_PER_KPH / 4),
+                    false);
         } else {
           mech_notify(mech, MECHALL, "You skid to a violent halt!");
           mech_los_broadcast(mech, "skids to a halt!");
-          mech_fall(mech, 0, 0);
+          mech_fall(mech, 0, false);
         }
       }
       mech_position_rollback(
@@ -541,7 +545,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                     "You drive off the cliff and fall to the ground below.");
         mech_los_broadcast(mech,
                            "drives off a cliff and falls to the ground below.");
-        mech_fall(mech, lastelevation - elevation, 0);
+        mech_fall(mech, lastelevation - elevation, false);
         return;
       }
       mech_position_rollback(
@@ -576,7 +580,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                     "You drive right into the underside of the bridge.");
         mech_los_broadcast(mech,
                            "drives right into the underside of the bridge.");
-        mech_fall(mech, 1, 0);
+        mech_fall(mech, 1, false);
       }
       mech_position_rollback(
           &(MechPositionRollback){.mech = mech,
@@ -611,7 +615,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                            elevation > lastelevation
                                ? "falls on its back walking up an incline."
                                : "falls off the back of a small incline.");
-        mech_fall(mech, abs(lastelevation - elevation), 1);
+        mech_fall(mech, abs(lastelevation - elevation), true);
         mech_movement_stop(mech);
         if (elevation > lastelevation) {
           mech_position_rollback(
@@ -641,7 +645,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
         mech_fall(
             mech,
             mech_hex_maximum_int(1, clamp_float_to_int(sqrtf(f / MP1 / 2.0F))),
-            0);
+            false);
       }
     }
     /* Slow the unit down if its made an elevation change */
@@ -672,7 +676,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
       } else {
         mech_notify(mech, MECHALL, "Eww.. You've a bad feeling about this.");
         mech_los_broadcast(mech, "crashes!");
-        mech_fall(mech, 1, 0);
+        mech_fall(mech, 1, false);
       }
       mech_movement_stop(mech);
       return;
@@ -703,7 +707,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                            elevation > lastelevation
                                ? "falls on its back walking up an incline."
                                : "falls off the back of a small incline.");
-        mech_fall(mech, (abs(lastelevation - elevation) + 1000), 1);
+        mech_fall(mech, (abs(lastelevation - elevation) + 1000), true);
         mech_movement_stop(mech);
         if (elevation > lastelevation) {
           mech_position_rollback(
@@ -740,7 +744,7 @@ void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
                     "You crash into the obstacle and fall from the sky!");
         mech_los_broadcast(mech,
                            "crashes into an obstacle and falls from the sky!");
-        mech_fall(mech, mech_drop_height_above_surface(mech) + 1, 0);
+        mech_fall(mech, mech_drop_height_above_surface(mech) + 1, false);
         mech_domino_resolve(mech, MECH_DOMINO_FALL);
       }
     }

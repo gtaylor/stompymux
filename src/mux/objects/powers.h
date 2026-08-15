@@ -66,7 +66,7 @@ extern void game_object_clear_powers(GameDatabase * /*database*/,
                                      DbRef /*object*/);
 
 static inline bool can_idle(GameDatabase *database, DbRef c) {
-  return game_object_has_power(&(ObjectPowerRequest){
-             .database = database, .object = c, .power = POWER_IDLE}) ||
-         is_wizard(database, c);
+  return (game_object_has_power(&(ObjectPowerRequest){
+              .database = database, .object = c, .power = POWER_IDLE}) ||
+          is_wizard(database, c)) != 0;
 }

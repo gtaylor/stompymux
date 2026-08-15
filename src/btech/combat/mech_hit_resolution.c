@@ -334,11 +334,11 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
       mech_damage_apply(&(MechDamageRequest){
           .target = hit_mech,
           .attacker = mech,
-          .line_of_sight = LOS,
+          .line_of_sight = LOS != 0,
           .attack_pilot = mech_gunner_dbref(mech),
           .hit_location = hitloc,
-          .rear = isrear,
-          .critical = iscritical,
+          .rear = isrear != 0,
+          .critical = iscritical != 0,
           .armor_damage =
               personal_combat_damage_to_unit(&(PersonalCombatDamageConversion){
                   .target = hit_mech,
@@ -393,7 +393,7 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
       missile_fake_name = "IS.SRM-6";
   }
   maximum_missile_hits =
-      missile_hit_count(mech, WEAPINDX, missile_fake_name, t_is_rac, 10);
+      missile_hit_count(mech, WEAPINDX, missile_fake_name, t_is_rac != 0, 10);
   if (maximum_missile_hits == 0)
     return;
 
@@ -415,8 +415,8 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
                           ? maximum_missile_hits * MODIFIER / 100
                           : maximum_missile_hits,
           .friend_or_foe =
-              mech_critical_ammo_mode(mech, W_SECTION, W_CRIT_SLOT) &
-              SWARM1_MODE,
+              (mech_critical_ammo_mode(mech, W_SECTION, W_CRIT_SLOT) &
+               SWARM1_MODE) != 0,
           .swarm_attack = T_IS_SWARM_ATTACK,
           .player_roll = PLAYER_ROLL,
       });
@@ -448,8 +448,8 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
       .weapon = {.weapon_index = WEAPINDX,
                  .section = W_SECTION,
                  .critical = W_CRIT_SLOT},
-      .glancing = btech_context_glancing_blows_enabled(mech_context(mech)) &&
-                  PLAYER_ROLL == BTH,
+      .glancing = (btech_context_glancing_blows_enabled(mech_context(mech)) &&
+                   PLAYER_ROLL == BTH) != 0,
   });
   /* This is how we'll handle glancing. Any roll < 2 is considering just one
    * missile hit, full damage */
@@ -457,7 +457,7 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
     num_missiles_hit = 1;
   else
     num_missiles_hit = missile_hit_count(mech, WEAPINDX, missile_fake_name,
-                                         t_is_rac, missileindex);
+                                         t_is_rac != 0, missileindex);
 
   /*
    * Check for non-missile, multiple hit weapons, like LBXs, RACs, RFACs and
@@ -479,8 +479,8 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
         .attacker = mech,
         .target = hit_mech,
         .target_hex = {.x = HIT_X, .y = HIT_Y},
-        .rear = isrear,
-        .critical = iscritical,
+        .rear = isrear != 0,
+        .critical = iscritical != 0,
         .weapon = {.weapon_index = WEAPINDX,
                    .section = W_SECTION,
                    .critical = W_CRIT_SLOT},
@@ -505,11 +505,11 @@ void mech_hit_resolve(const HitResolutionRequest *request) {
         mech_damage_apply(
             &(MechDamageRequest){.target = hit_mech,
                                  .attacker = mech,
-                                 .line_of_sight = LOS,
+                                 .line_of_sight = LOS != 0,
                                  .attack_pilot = mech_gunner_dbref(mech),
                                  .hit_location = hitloc,
-                                 .rear = isrear,
-                                 .critical = iscritical,
+                                 .rear = isrear != 0,
+                                 .critical = iscritical != 0,
                                  .armor_damage = personal_combat_damage_to_unit(
                                      &(PersonalCombatDamageConversion){
                                          .target = hit_mech,

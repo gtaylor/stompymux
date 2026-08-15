@@ -36,9 +36,9 @@ static bool can_destroy_exit(const DestroyExitCheck *check) {
       (loc != player) && !is_wizard(evaluation->world->database, player)) {
     notify_checked(evaluation, player, player,
                    "You can not destroy exits in another room.", MSG_ME);
-    return 0;
+    return false;
   }
-  return 1;
+  return true;
 }
 
 /*
@@ -50,12 +50,10 @@ static bool can_destroy_exit(const DestroyExitCheck *check) {
 static bool destroyable(GameDatabase *database,
                         const ServerConfiguration *configuration,
                         DbRef victim) {
-  if ((victim == configuration->default_home) ||
-      (victim == configuration->start_home) ||
-      (victim == configuration->start_room) || (victim == (DbRef)0) ||
-      is_god(database, victim))
-    return 0;
-  return 1;
+  return (victim != configuration->default_home &&
+          victim != configuration->start_home &&
+          victim != configuration->start_room && victim != (DbRef)0 &&
+          !is_god(database, victim)) != 0;
 }
 
 static bool can_destroy_player(EvaluationContext *evaluation, DbRef player,
@@ -63,14 +61,14 @@ static bool can_destroy_player(EvaluationContext *evaluation, DbRef player,
   if (!is_wizard(evaluation->world->database, player)) {
     notify_checked(evaluation, player, player, "Sorry, no suicide allowed.",
                    MSG_ME);
-    return 0;
+    return false;
   }
   if (is_wizard(evaluation->world->database, victim)) {
     notify_checked(evaluation, player, player, "You may not destroy Wizards!",
                    MSG_ME);
-    return 0;
+    return false;
   }
-  return 1;
+  return true;
 }
 
 void do_destroy(CommandInvocation *invocation) {

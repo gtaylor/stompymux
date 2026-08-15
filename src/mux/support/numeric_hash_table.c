@@ -86,5 +86,5 @@ void numeric_hash_table_flush(HashTable *htab, int size) {
 bool numeric_hash_table_replace(long val, void *hashdata, HashTable *htab) {
 
   red_black_tree_insert(htab->tree, (void *)val, hashdata);
-  return 1;
+  return true;
 }

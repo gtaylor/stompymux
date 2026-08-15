@@ -48,8 +48,8 @@ static RadioCommandCursor radio_command_cursor(char *text) {
 }
 
 static bool ascii_is_space(char value) {
-  return value == ' ' || value == '\t' || value == '\n' || value == '\r' ||
-         value == '\f' || value == '\v';
+  return (value == ' ' || value == '\t' || value == '\n' || value == '\r' ||
+          value == '\f' || value == '\v') != 0;
 }
 
 static char radio_cursor_current(const RadioCommandCursor *cursor) {

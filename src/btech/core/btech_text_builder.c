@@ -21,9 +21,9 @@ void btech_text_builder_initialize(BtechTextBuilder *builder, char *text,
 }
 
 bool btech_text_builder_append(BtechTextBuilder *builder, const char *text) {
-  return text != nullptr
-             ? btech_text_builder_append_count(builder, text, strlen(text))
-             : false;
+  return (text != nullptr
+              ? btech_text_builder_append_count(builder, text, strlen(text))
+              : false) != 0;
 }
 
 bool btech_text_builder_append_count(BtechTextBuilder *builder,
@@ -48,7 +48,7 @@ bool btech_text_builder_append_count(BtechTextBuilder *builder,
                               builder->length) = '\0';
   if (COPIED != length)
     builder->truncated = true;
-  return !builder->truncated;
+  return (!builder->truncated) != 0;
 }
 
 bool btech_text_builder_append_character(BtechTextBuilder *builder,

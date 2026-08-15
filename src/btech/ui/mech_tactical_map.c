@@ -51,14 +51,17 @@ static const TacticalDirection *tactical_direction(int direction) {
 }
 
 static bool ascii_is_alpha(char value) {
-  return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z');
+  return ((value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')) !=
+         0;
 }
 
-static bool ascii_is_digit(char value) { return value >= '0' && value <= '9'; }
+static bool ascii_is_digit(char value) {
+  return (value >= '0' && value <= '9') != 0;
+}
 
 static bool mech_seems_friendly(Mech *mech, Mech *other) {
-  return mech_team(mech) == mech_team(other) &&
-         mech_los_check_unblocked(mech, other, 0, 0, 0);
+  return (mech_team(mech) == mech_team(other) &&
+          mech_los_check_unblocked(mech, other, 0, 0, 0)) != 0;
 }
 
 static int minimum_int(int left, int right) {
@@ -118,7 +121,7 @@ static void sketch_tac_ownmech(const TacticalSketch *sketch) {
       ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                           .position = {.x = x, .y = y},
                           .display_columns = dispcols,
-                          .first_column_is_odd = oddcol1});
+                          .first_column_is_odd = oddcol1 != 0});
   *tactical_canvas_at(buf, BASE_OFFSET) = '*';
 }
 
@@ -181,7 +184,7 @@ static void sketch_tac_mechs(const TacticalSketch *sketch) {
         ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                             .position = {.x = x, .y = y},
                             .display_columns = dispcols,
-                            .first_column_is_odd = oddcol1});
+                            .first_column_is_odd = oddcol1 != 0});
     if (!(mech_technology_flags_secondary(mech) & CARRIER_TECH) &&
         mech_is_dropship(mech) &&
         ((mech_position_z(mech) >= ORBIT_Z && mech != player_mech) ||
@@ -211,7 +214,7 @@ static void sketch_tac_mechs(const TacticalSketch *sketch) {
             ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                                 .position = {.x = tx, .y = ty},
                                 .display_columns = dispcols,
-                                .first_column_is_odd = oddcol1});
+                                .first_column_is_odd = oddcol1 != 0});
         if (dropship_bay_number(mech, (dir - ts + 6) % 6) >= 0) {
           sketch_tac_ds(buf, base_offset, dispcols, '@');
         } else {
@@ -225,7 +228,7 @@ static void sketch_tac_mechs(const TacticalSketch *sketch) {
           ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                               .position = {.x = x, .y = y},
                               .display_columns = dispcols,
-                              .first_column_is_odd = oddcol1});
+                              .first_column_is_odd = oddcol1 != 0});
       if (docolour) {
         /*
          * Colour hack: 'X' would be confused with
@@ -292,7 +295,7 @@ static void sketch_tac_cliffs(const TacticalSketch *sketch) {
           ORIGIN_OFFSET + tactical_hex_offset(&(TacticalHexOffsetRequest){
                               .position = {.x = x, .y = y},
                               .display_columns = dispcols,
-                              .first_column_is_odd = oddcol1});
+                              .first_column_is_odd = oddcol1 != 0});
       char c;
 
       /*
@@ -468,8 +471,8 @@ MapText *map_text_create(const MapTextRequest *request) {
    * Create a sketch tac map including terrain and elevation.
    */
   tactical_map_sketch(sketch_buf, MAP_SKETCH_CAPACITY, map, mech, sx, sy, wx,
-                      wy, dispcols, top_offset, left_offset, docolour,
-                      request->calculate_los, dounderlying);
+                      wy, dispcols, top_offset, left_offset, docolour != 0,
+                      request->calculate_los, dounderlying != 0);
   TacticalSketch sketch = {
       .canvas = sketch_buf,
       .map = map,
@@ -481,7 +484,7 @@ MapText *map_text_create(const MapTextRequest *request) {
       .display_columns = dispcols,
       .top_offset = top_offset,
       .left_offset = left_offset,
-      .color = docolour,
+      .color = docolour != 0,
       .labels = labels,
   };
 

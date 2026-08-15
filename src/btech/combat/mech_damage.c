@@ -233,10 +233,11 @@ void mech_damage_apply(const MechDamageRequest *request) {
     bool transfer_succeeded = false;
     if (transfer) {
       hitloc = mech_hit_location_transfer(wounded, hitloc);
-      transfer_succeeded = hitloc >= 0 && (mech_class(wounded) == CLASS_MECH ||
-                                           mech_class(wounded) == CLASS_MW ||
-                                           mech_class(wounded) == CLASS_BSUIT ||
-                                           mech_is_aerospace_unit(wounded));
+      transfer_succeeded =
+          ((hitloc >= 0 && (mech_class(wounded) == CLASS_MECH ||
+                            mech_class(wounded) == CLASS_MW ||
+                            mech_class(wounded) == CLASS_BSUIT ||
+                            mech_is_aerospace_unit(wounded))) != 0);
     }
     if (transfer_succeeded) {
       mech_damage_apply(&(MechDamageRequest){
@@ -366,7 +367,8 @@ void mech_damage_apply(const MechDamageRequest *request) {
         mech_los_broadcast_unit(attacker, wounded, "shoots %s from the sky!");
       }
       mech_destroy(wounded, attacker,
-                   !(!mech_is_landed(wounded) && mech_is_started(wounded)),
+                   (!(!mech_is_landed(wounded) && mech_is_started(wounded))) !=
+                       0,
                    KILL_TYPE_NORMAL);
     }
     return;
@@ -490,7 +492,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
             .ignore_swarmers = T_IGNORE_SWARMERS,
         });
       } else {
-        mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
+        mech_destroy(wounded, attacker, true, KILL_TYPE_NORMAL);
         return;
       }
     }
@@ -563,7 +565,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
             });
           }
         } else {
-          mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
+          mech_destroy(wounded, attacker, true, KILL_TYPE_NORMAL);
           return;
         }
       }

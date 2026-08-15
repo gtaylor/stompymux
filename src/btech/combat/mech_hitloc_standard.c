@@ -49,7 +49,8 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       return hit_location_export(
           mech_advanced_vehicle_hit_location(
               mech, hit_group,
-              (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
+              (HitLocationResult){.critical = (*iscritical) != 0,
+                                  .rear = (*isrear) != 0}),
           (HitLocationOutput){iscritical, isrear});
     } else if (mech_technology_flags(mech) & CRITPROOF_TECH) {
       return mech_critproof_hit_location(mech, hit_group, iscritical);
@@ -57,7 +58,8 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       return hit_location_export(
           mech_fasa_hit_location(
               mech, hit_group,
-              (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
+              (HitLocationResult){.critical = (*iscritical) != 0,
+                                  .rear = (*isrear) != 0}),
           (HitLocationOutput){iscritical, isrear});
     }
     break;
@@ -66,7 +68,8 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       return hit_location_export(
           mech_advanced_vehicle_hit_location(
               mech, hit_group,
-              (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
+              (HitLocationResult){.critical = (*iscritical) != 0,
+                                  .rear = (*isrear) != 0}),
           (HitLocationOutput){iscritical, isrear});
     } else if (mech_technology_flags(mech) & CRITPROOF_TECH) {
       return mech_critproof_hit_location(mech, hit_group, iscritical);
@@ -74,7 +77,8 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       return hit_location_export(
           mech_fasa_hit_location(
               mech, hit_group,
-              (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
+              (HitLocationResult){.critical = (*iscritical) != 0,
+                                  .rear = (*isrear) != 0}),
           (HitLocationOutput){iscritical, isrear});
     }
     break;
@@ -92,7 +96,8 @@ int mech_hit_location(Mech *mech, int hit_group, int *iscritical, int *isrear) {
       return hit_location_export(
           mech_fasa_hit_location(
               mech, hit_group,
-              (HitLocationResult){.critical = *iscritical, .rear = *isrear}),
+              (HitLocationResult){.critical = (*iscritical) != 0,
+                                  .rear = (*isrear) != 0}),
           (HitLocationOutput){iscritical, isrear});
     }
     break;

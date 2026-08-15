@@ -127,7 +127,7 @@ void mech_fasa_vehicle_critical_handle(const VehicleCriticalRequest *request) {
     /* Crew Killed */
     mech_notify(wounded, MECHALL,
                 "Your armor is pierced and you are killed instantly!");
-    mech_destroy(wounded, attacker, 0, KILL_TYPE_PILOT);
+    mech_destroy(wounded, attacker, false, KILL_TYPE_PILOT);
     mech_contents_kill_if_in_character(wounded);
     break;
   case 4:
@@ -135,7 +135,7 @@ void mech_fasa_vehicle_critical_handle(const VehicleCriticalRequest *request) {
     mech_notify(wounded, MECHALL, "Your fuel tank explodes in a ball of fire!");
     if (wounded != attacker)
       mech_los_broadcast(wounded, "'s fule tank explodes in a ball of fire!");
-    mech_destroy(wounded, attacker, 1, KILL_TYPE_FUELTANK);
+    mech_destroy(wounded, attacker, true, KILL_TYPE_FUELTANK);
     mech_explosion_apply(wounded, attacker);
     break;
   case 5:
@@ -143,7 +143,7 @@ void mech_fasa_vehicle_critical_handle(const VehicleCriticalRequest *request) {
     mech_notify(wounded, MECHALL, "Your power plant explodes!");
     if (wounded != attacker)
       mech_los_broadcast(wounded, "'s power plant suddenly explodes!");
-    mech_destroy(wounded, attacker, 1, KILL_TYPE_POWERPLANT);
+    mech_destroy(wounded, attacker, true, KILL_TYPE_POWERPLANT);
     if (!mech_section_configuration_has(wounded, BSIDE, CASE_TECH))
       mech_explosion_apply(wounded, attacker);
     else
@@ -270,7 +270,7 @@ void mech_vehicle_critical_handle(const VehicleCriticalRequest *request) {
     /* Crew Killed */
     mech_notify(wounded, MECHALL,
                 "Your armor is pierced and you are killed instantly!");
-    mech_destroy(wounded, attacker, 0, KILL_TYPE_PILOT);
+    mech_destroy(wounded, attacker, false, KILL_TYPE_PILOT);
     mech_contents_kill_if_in_character(wounded);
     break;
   case 4:
@@ -278,7 +278,7 @@ void mech_vehicle_critical_handle(const VehicleCriticalRequest *request) {
     mech_notify(wounded, MECHALL, "Your fuel tank explodes in a ball of fire!");
     if (wounded != attacker)
       mech_los_broadcast(wounded, "'s fuel tank explodes in a ball of fire!");
-    mech_destroy(wounded, attacker, 1, KILL_TYPE_FUELTANK);
+    mech_destroy(wounded, attacker, true, KILL_TYPE_FUELTANK);
     mech_explosion_apply(wounded, attacker);
     break;
   case 5:
@@ -286,7 +286,7 @@ void mech_vehicle_critical_handle(const VehicleCriticalRequest *request) {
     mech_notify(wounded, MECHALL, "Your power plant explodes!");
     if (wounded != attacker)
       mech_los_broadcast(wounded, "'s power plant suddenly explodes!");
-    mech_destroy(wounded, attacker, 1, KILL_TYPE_POWERPLANT);
+    mech_destroy(wounded, attacker, true, KILL_TYPE_POWERPLANT);
     mech_explosion_apply(wounded, attacker);
     break;
   }

@@ -32,7 +32,7 @@ void lua_mux_package_destroy(LuaMuxPackage *package) {
 }
 
 bool lua_mux_package_is_checking(LuaMuxPackage *package) {
-  return package->is_checking && package->is_checking(package->context);
+  return (package->is_checking && package->is_checking(package->context)) != 0;
 }
 
 void lua_mux_require_runtime(LuaMuxPackage *package, lua_State *state,

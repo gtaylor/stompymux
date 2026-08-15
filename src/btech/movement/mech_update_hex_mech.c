@@ -94,7 +94,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                       "sky![reset]");
           mech_los_broadcast(
               mech, "crashes into an obstacle and falls from the sky!");
-          mech_fall(mech, ed, 0);
+          mech_fall(mech, ed, false);
           mech_domino_resolve(mech, MECH_DOMINO_FALL);
         }
       }
@@ -128,9 +128,10 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
         mech_los_broadcast(mech, "runs headlong into a cliff and falls down!");
         if (!skid_cliff)
           mech_fall(mech,
-                    (int)(1 + (mech_current_speed(mech) * MP_PER_KPH)) / 4, 0);
+                    (int)(1 + (mech_current_speed(mech) * MP_PER_KPH)) / 4,
+                    false);
         else
-          mech_fall(mech, 1, 0);
+          mech_fall(mech, 1, false);
       }
       mech_movement_stop(mech);
       mech_position_z_set(mech, lastelevation);
@@ -171,7 +172,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                     "You run off the cliff and fall to the ground below.");
         mech_los_broadcast(mech,
                            "runs off a cliff and falls to the ground below!");
-        mech_fall(mech, lastelevation - elevation, 0);
+        mech_fall(mech, lastelevation - elevation, false);
         mech_movement_stop(mech);
       }
       mech_movement_stop(mech);
@@ -210,7 +211,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
                            elevation > lastelevation
                                ? "falls on its back walking up an incline."
                                : "falls off the back of a small incline.");
-        mech_fall(mech, abs(lastelevation - elevation), 1);
+        mech_fall(mech, abs(lastelevation - elevation), true);
         mech_movement_stop(mech);
         if (elevation > lastelevation) {
           mech_position_rollback(
@@ -316,7 +317,7 @@ mech_hex_transition_resolve(const HexMechTransitionInput *input) {
               &(PilotSkillRollRequest){.mech = mech, .modifier = skillmod})) {
         mech_notify(mech, MECHALL, "You slip in the water and fall down");
         mech_los_broadcast(mech, "slips in the water and falls down!");
-        mech_fall(mech, 1, dammod);
+        mech_fall(mech, 1, dammod != 0);
         done = 1;
       }
     }

@@ -246,8 +246,8 @@ static char *wspec_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
           weapon_catalogue_heat(j), weapon_catalogue_damage(j), RANGES.minimum,
           RANGES.short_range, RANGES.medium_range,
           weapon_catalogue_effective_range(j, false),
-          weapon_catalogue_effective_range(j,
-                                           menu->configuration->btech_erange),
+          weapon_catalogue_effective_range(
+              j, menu->configuration->btech_erange != 0),
           btech_weapon_settings_recycle_time(menu->weapon_settings, j));
     } else {
       (void)snprintf(

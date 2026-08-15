@@ -35,7 +35,7 @@ static bool page_check(EvaluationContext *evaluation,
       !is_wizard(evaluation->world->database, player)) {
     notify_checked(evaluation, player, player, "Permission denied.",
                    MSG_ME_ALL | MSG_F_DOWN);
-    return 0;
+    return false;
   }
   if (!is_connected(evaluation->world->database, target)) {
     (void)snprintf(message_buffer, sizeof(message_buffer),
@@ -43,7 +43,7 @@ static bool page_check(EvaluationContext *evaluation,
                    game_object_name(evaluation->world->database, target));
     notify_checked(evaluation, player, target, message_buffer,
                    MSG_ME_ALL | MSG_F_DOWN);
-    return 0;
+    return false;
   }
   if (!is_wizard(evaluation->world->database, player) &&
       is_in_character_location(evaluation->world->database, configuration,
@@ -54,9 +54,9 @@ static bool page_check(EvaluationContext *evaluation,
                    game_object_name(evaluation->world->database, target));
     notify_checked(evaluation, player, target, message_buffer,
                    MSG_ME_ALL | MSG_F_DOWN);
-    return 0;
+    return false;
   }
-  return 1;
+  return true;
 }
 
 /*
@@ -224,7 +224,7 @@ void do_page(CommandInvocation *invocation) {
                                                 .player = PLAYER,
                                                 .list = tname,
                                                 .names = buf1,
-                                                .dbrefs = ismessage});
+                                                .dbrefs = ismessage != 0});
     for (p = strtok_r(tname, " ", &token_context); p != nullptr;
          p = strtok_r(nullptr, " ", &token_context)) {
 

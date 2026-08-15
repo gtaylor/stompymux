@@ -163,9 +163,9 @@ bool sect_has_busy_weap(Mech *mech, int sect) {
     const int *critical_index = checked_storage_at_const(
         critical, MAX_WEAPS_SECTION, sizeof(*critical), (size_t)i);
     if (mech_weapon_is_recycling_at(mech, sect, *critical_index))
-      return 1;
+      return true;
   }
-  return 0;
+  return false;
 }
 
 BattleMap *valid_map(const MapValidationRequest *request) {
@@ -255,7 +255,7 @@ static bool leave_hangar(BattleMap *map, Mech *mech) {
     car = btech_context_get_mech(mech->xcode.context, ((mech)->rd.carrying));
   if (!map->cf) {
     mech_notify(mech, MECHALL, "The entrance is still filled with rubble!");
-    return 0;
+    return false;
   }
   mech_los_broadcast(mech, "has left the hangar.");
   (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
@@ -272,7 +272,7 @@ static bool leave_hangar(BattleMap *map, Mech *mech) {
                        mech->mynum, mech_display_id(mech).text);
     mech_notify(mech, MECHALL,
                 "Exit of this map is.. fubared. Please contact a wizard");
-    return 0;
+    return false;
   }
   mapo = find_entrance_by_target(map, mapob);
   if (!mapo) {
@@ -282,7 +282,7 @@ static bool leave_hangar(BattleMap *map, Mech *mech) {
                        mech->mynum, mech_display_id(mech).text, mech->mapindex);
     mech_notify(mech, MECHALL,
                 "Weird bug happened during leave. Please contact a wizard. ");
-    return 1;
+    return true;
   }
 
   bsuit_swarmers_stop(
@@ -324,7 +324,7 @@ static bool leave_hangar(BattleMap *map, Mech *mech) {
   auto_cal_mapindex(mech->xcode.context, mech);
   if (((mech)->rd.speed) > mech_effective_maximum_speed(mech))
     ((mech)->rd.speed) = mech_effective_maximum_speed(mech);
-  return 1;
+  return true;
 }
 
 void check_edge_of_map(Mech *mech) {
@@ -698,10 +698,10 @@ bool mech_pilot_skill_roll_without_experience(
   int roll_needed;
 
   if (mech_is_fallen(mech) && request->succeed_when_fallen)
-    return 1;
+    return true;
   if (mech_pilot_is_unconscious(mech) || !mech_is_started(mech) ||
       mech_is_blinded(mech))
-    return 0;
+    return false;
   roll = btech_random_roll(mech->xcode.context);
   roll_needed = mech_pilot_skill_roll_target(mech, mods);
 
@@ -714,10 +714,7 @@ bool mech_pilot_skill_roll_without_experience(
   mech_notify(mech, MECHPILOT, "You make a piloting skill roll!");
   mech_printf(mech, MECHPILOT, "Modified Pilot Skill: BTH %d\tRoll: %d",
               roll_needed, roll);
-  if (roll >= roll_needed) {
-    return 1;
-  }
-  return 0;
+  return roll >= roll_needed;
 }
 
 bool mech_pilot_skill_roll(const PilotSkillRollRequest *request) {
@@ -727,10 +724,10 @@ bool mech_pilot_skill_roll(const PilotSkillRollRequest *request) {
   int roll_needed;
 
   if (mech_is_fallen(mech) && request->succeed_when_fallen)
-    return 1;
+    return true;
   if (mech_pilot_is_unconscious(mech) || !mech_is_started(mech) ||
       mech_is_blinded(mech))
-    return 0;
+    return false;
   roll = btech_random_roll(mech->xcode.context);
   roll_needed = mech_pilot_skill_roll_target(mech, mods);
 
@@ -752,9 +749,9 @@ bool mech_pilot_skill_roll(const PilotSkillRollRequest *request) {
           .unconditional = true,
       });
     }
-    return 1;
+    return true;
   }
-  return 0;
+  return false;
 }
 
 MapRealPosition map_project_position(const MapProjection *projection) {

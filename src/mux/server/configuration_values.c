@@ -384,7 +384,7 @@ int cf_set_flags(const ConfigurationCall *call) {
     fp = find_flag(context->world_indexes, NOTHING, sp);
     if (fp != nullptr) {
       if (success == 0)
-        *fset = (ObjectFlagSet){0};
+        *fset = (ObjectFlagSet){};
       object_flag_set_set(fset, fp->id, true);
       success++;
     } else {
@@ -400,7 +400,7 @@ int cf_set_flags(const ConfigurationCall *call) {
     sp = strtok_r(nullptr, " \t", &token_context);
   }
   if ((success == 0) && (failure == 0)) {
-    *fset = (ObjectFlagSet){0};
+    *fset = (ObjectFlagSet){};
     return 0;
   }
   if (success > 0)

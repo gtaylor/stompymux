@@ -90,17 +90,17 @@ const CMDENT *command_registry_builtin_at_const(const CommandRegistry *registry,
 
 static bool command_catalog_is_empty(const CommandRegistry *registry) {
   static CMDENT *const EMPTY_PREFIX_COMMANDS[256] = {};
-  return registry->commands.tree == nullptr && registry->builtins == nullptr &&
-         registry->builtin_count == 0 && registry->switch_clones == nullptr &&
-         registry->switch_clone_count == 0 &&
-         registry->switch_clone_capacity == 0 &&
-         registry->switch_aliases == nullptr &&
-         registry->switch_alias_count == 0 &&
-         registry->switch_alias_capacity == 0 &&
-         registry->goto_command == nullptr &&
-         memcmp((const void *)registry->prefix_commands,
-                (const void *)EMPTY_PREFIX_COMMANDS,
-                sizeof(registry->prefix_commands)) == 0;
+  return (registry->commands.tree == nullptr && registry->builtins == nullptr &&
+          registry->builtin_count == 0 && registry->switch_clones == nullptr &&
+          registry->switch_clone_count == 0 &&
+          registry->switch_clone_capacity == 0 &&
+          registry->switch_aliases == nullptr &&
+          registry->switch_alias_count == 0 &&
+          registry->switch_alias_capacity == 0 &&
+          registry->goto_command == nullptr &&
+          memcmp((const void *)registry->prefix_commands,
+                 (const void *)EMPTY_PREFIX_COMMANDS,
+                 sizeof(registry->prefix_commands)) == 0) != 0;
 }
 
 bool command_catalog_install(CommandRegistry *registry,

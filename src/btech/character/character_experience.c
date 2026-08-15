@@ -169,23 +169,23 @@ bool made_perception_roll(Mech *mech, int modifier) {
   DbRef pilot;
 
   if (!is_in_character(mech_context(mech)->database, mech_dbref(mech)))
-    return 0;
+    return false;
   if (!mech_has_active_gunner(mech))
-    return 0;
+    return false;
   pilot = mech_pilot_dbref(mech);
   if (pilot <= 0)
-    return 0;
+    return false;
   if (!mech_perception_target(mech))
     mech_perception_target_set(
         mech, char_getskilltarget(context, pilot, "Perception", 2));
   if (btech_random_roll(mech_context(mech)) <
       (mech_perception_target(mech) + modifier))
-    return 0;
+    return false;
   if (char_gainxp(context, pilot, "Perception", 1))
     btech_channel_send(context, BTECH_CHANNEL_MECH_XP,
                        "%s gained 1 perception XP",
                        game_object_name(mech_context(mech)->database, pilot));
-  return 1;
+  return true;
 }
 
 void accumulate_arty_xp(DbRef pilot, Mech *attacker, Mech *wounded) {

@@ -89,16 +89,16 @@ static int los_map_index_y(const HexLosMap *los_map, int index) {
 
 bool battle_map_unit_is_seen(const BattleMap *map, const Mech *observer,
                              const Mech *target) {
-  return *battle_map_los_cell_const(map, mech_map_slot(observer),
-                                    mech_map_slot(target)) &
-         BATTLE_MAP_LOS_SEEN;
+  return (*battle_map_los_cell_const(map, mech_map_slot(observer),
+                                     mech_map_slot(target)) &
+          BATTLE_MAP_LOS_SEEN) != 0;
 }
 
 bool battle_map_unit_los_is_blocked(const BattleMap *map, const Mech *observer,
                                     const Mech *target) {
-  return *battle_map_los_cell_const(map, mech_map_slot(observer),
-                                    mech_map_slot(target)) &
-         BATTLE_MAP_LOS_BLOCKED;
+  return (*battle_map_los_cell_const(map, mech_map_slot(observer),
+                                     mech_map_slot(target)) &
+          BATTLE_MAP_LOS_BLOCKED) != 0;
 }
 
 int battle_map_unit_los_wood_count(const BattleMap *map, const Mech *observer,
@@ -316,7 +316,7 @@ static bool mech_searchlight_reaches(const SearchlightReachRequest *request) {
   map_coord_to_real_coord(request->position.x, request->position.y, &fx, &fy);
   arc = in_weapon_arc(mech, fx, fy);
   if (!(arc & (FORWARDARC | TURRETARC))) {
-    return 0;
+    return false;
   }
 
   range = map_spatial_range(&(MapSpatialSegment){
@@ -739,7 +739,7 @@ bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
                               .map = map,
                               .mech = mech,
                               .index = index,
-                              .trace_water = underterrain || bothworlds,
+                              .trace_water = (underterrain || bothworlds) != 0,
                               .start_height = start_height,
                               .trace = &trace});
   }
@@ -751,7 +751,7 @@ bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
                               .map = map,
                               .mech = mech,
                               .index = index,
-                              .trace_water = underterrain || bothworlds,
+                              .trace_water = (underterrain || bothworlds) != 0,
                               .start_height = start_height,
                               .trace = &trace});
   }
@@ -763,7 +763,7 @@ bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
                               .map = map,
                               .mech = mech,
                               .index = index,
-                              .trace_water = underterrain || bothworlds,
+                              .trace_water = (underterrain || bothworlds) != 0,
                               .start_height = start_height,
                               .trace = &trace});
   }
@@ -775,7 +775,7 @@ bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
                               .map = map,
                               .mech = mech,
                               .index = index,
-                              .trace_water = underterrain || bothworlds,
+                              .trace_water = (underterrain || bothworlds) != 0,
                               .start_height = start_height,
                               .trace = &trace});
   }
@@ -787,7 +787,7 @@ bool los_map_calculate(HexLosMap *los_map, BattleMap *map, Mech *mech, int sx,
                               .map = map,
                               .mech = mech,
                               .index = index,
-                              .trace_water = underterrain || bothworlds,
+                              .trace_water = (underterrain || bothworlds) != 0,
                               .start_height = start_height,
                               .trace = &trace});
   }

@@ -84,7 +84,7 @@ void array_sort(const ArraySortRequest *request) {
 ArraySearchResult array_search(const ArraySearchRequest *request) {
   if (!request || !request->key || !request->items || !request->compare ||
       request->item_size == 0)
-    return (ArraySearchResult){0};
+    return (ArraySearchResult){};
 
   size_t first = 0;
   size_t remaining = request->count;
@@ -105,5 +105,5 @@ ArraySearchResult array_search(const ArraySearchRequest *request) {
       remaining -= offset + 1;
     }
   }
-  return (ArraySearchResult){0};
+  return (ArraySearchResult){};
 }

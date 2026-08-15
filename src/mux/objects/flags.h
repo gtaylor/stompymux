@@ -224,27 +224,27 @@ static inline bool is_wizard(GameDatabase *database, DbRef x) {
 }
 
 static inline bool is_connected(GameDatabase *database, DbRef x) {
-  return game_object_has_flag(
-             &(ObjectFlagRequest){.database = database,
-                                  .object = x,
-                                  .flag = OBJECT_FLAG_CONNECTED}) &&
-         is_player(database, x);
+  return (game_object_has_flag(
+              &(ObjectFlagRequest){.database = database,
+                                   .object = x,
+                                   .flag = OBJECT_FLAG_CONNECTED}) &&
+          is_player(database, x)) != 0;
 }
 static inline bool is_alive(GameDatabase *database, DbRef x) {
   return is_player(database, x);
 }
 static inline bool is_dark(GameDatabase *database, DbRef x) {
-  return game_object_has_flag(&(ObjectFlagRequest){
-             .database = database, .object = x, .flag = OBJECT_FLAG_DARK}) &&
-         (is_wizard(database, x) || !is_alive(database, x));
+  return (game_object_has_flag(&(ObjectFlagRequest){
+              .database = database, .object = x, .flag = OBJECT_FLAG_DARK}) &&
+          (is_wizard(database, x) || !is_alive(database, x))) != 0;
 }
 
 bool is_safe(GameDatabase * /*database*/, DbRef object);
 static inline bool is_examinable(GameDatabase *database, DbRef player,
                                  DbRef target) {
-  return target >= 0 && target < database->top &&
-         typeof_obj(database, target) != OBJECT_TYPE_GARBAGE &&
-         (is_god(database, player) || is_wizard(database, player));
+  return (target >= 0 && target < database->top &&
+          typeof_obj(database, target) != OBJECT_TYPE_GARBAGE &&
+          (is_god(database, player) || is_wizard(database, player))) != 0;
 }
 static inline bool is_controls(GameDatabase *database, DbRef player,
                                DbRef target) {
@@ -255,8 +255,8 @@ static inline bool is_controls(GameDatabase *database, DbRef player,
     return true;
   if (player == target)
     return is_wizard(database, player);
-  return is_wizard(database, player) && !is_wizard(database, target) &&
-         !is_god(database, target);
+  return (is_wizard(database, player) && !is_wizard(database, target) &&
+          !is_god(database, target)) != 0;
 }
 
 void mark(GameDatabase * /*database*/, DbRef /*x*/);
@@ -304,7 +304,7 @@ static inline void c_connected(GameDatabase *database, DbRef x) {
 }
 static inline OwnedText unparse_flags(GameDatabase *database, DbRef p,
                                       DbRef t) {
-  ObjectFlagSet flags = {0};
+  ObjectFlagSet flags = {};
   game_object_flags_copy(database, t, &flags);
   return decode_flags(
       &(DecodeFlagsRequest){.database = database,

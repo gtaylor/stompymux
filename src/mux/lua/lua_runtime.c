@@ -127,11 +127,11 @@ bool lua_valid_relative_path(const char *path) {
   size_t part_offset;
 
   if (!path || !*path)
-    return 0;
+    return false;
   path_length = strlen(path);
   if (lua_text_at(path, path_length, 0) == '/' || path_length < 5 ||
       strcmp(checked_string_suffix(path, path_length - 4), ".lua") != 0)
-    return 0;
+    return false;
   for (part_offset = 0; part_offset < path_length;) {
     size_t length = 0;
     size_t index;
@@ -143,20 +143,20 @@ bool lua_valid_relative_path(const char *path) {
         (length == 1 && lua_text_at(path, path_length, part_offset) == '.') ||
         (length == 2 && lua_text_at(path, path_length, part_offset) == '.' &&
          lua_text_at(path, path_length, part_offset + 1) == '.'))
-      return 0;
+      return false;
     for (index = 0; index < length; index++) {
       unsigned char character =
           (unsigned char)lua_text_at(path, path_length, part_offset + index);
 
       if (!(isalnum)(character) && character != '_' && character != '-' &&
           character != '.')
-        return 0;
+        return false;
     }
     part_offset += length;
     if (part_offset < path_length)
       part_offset++;
   }
-  return 1;
+  return true;
 }
 
 const char *lua_root_name(LuaModuleRoot root) {
@@ -180,13 +180,13 @@ bool lua_join_path(char *destination, size_t destination_size,
 
   if (!destination_size || first_length >= destination_size ||
       second_length >= destination_size - first_length - 1)
-    return 0;
+    return false;
   memcpy(destination, first, first_length + 1);
   *lua_text_slot(destination, destination_size, first_length) = '/';
   memcpy(checked_storage_region(destination, destination_size, first_length + 1,
                                 second_length + 1),
          second, second_length + 1);
-  return 1;
+  return true;
 }
 
 bool lua_resolve_path(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
@@ -197,21 +197,21 @@ bool lua_resolve_path(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
 
   if (root < LUA_ROOT_OBJECT_LOGIC || root >= LUA_ROOT_COUNT) {
     lua_set_error(error, error_size, "Lua module root is invalid");
-    return 0;
+    return false;
   }
   if (!lua_valid_relative_path(path)) {
     lua_set_error(error, error_size, "Lua paths must be relative .lua files");
-    return 0;
+    return false;
   }
   const char *root_path = lua_runtime_root_at(runtime, root);
 
   if (!lua_join_path(candidate, sizeof(candidate), root_path, path)) {
     lua_set_error(error, error_size, "Lua path is too long");
-    return 0;
+    return false;
   }
   if (!realpath(candidate, resolved)) {
     lua_set_error(error, error_size, "Lua file %s is unavailable", path);
-    return 0;
+    return false;
   }
   root_length = strlen(root_path);
   if (strncmp(resolved, root_path, root_length) != 0 ||
@@ -219,10 +219,10 @@ bool lua_resolve_path(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
        lua_text_at(resolved, strlen(resolved) + 1, root_length) != '/')) {
     lua_set_error(error, error_size, "Lua path escapes %s",
                   lua_root_name(root));
-    return 0;
+    return false;
   }
   (void)resolved_size;
-  return 1;
+  return true;
 }
 
 static int lua_require_module(lua_State *state);
@@ -278,16 +278,16 @@ bool lua_load_module(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
 
   if (!lua_resolve_path(runtime, root, path, resolved, sizeof(resolved), error,
                         error_size))
-    return 0;
+    return false;
   if (snprintf(key, sizeof(key), "%s", resolved) >= (int)sizeof(key)) {
     lua_set_error(error, error_size, "Lua path is too long");
-    return 0;
+    return false;
   }
   lua_getfield(state, LUA_REGISTRYINDEX, LUA_MODULES_KEY);
   lua_getfield(state, -1, key);
   if (lua_istable(state, -1)) {
     lua_remove(state, -2);
-    return 1;
+    return true;
   }
   lua_pop(state, 1);
   (void)snprintf(runtime->module, sizeof(runtime->module), "%s", key);
@@ -309,17 +309,17 @@ bool lua_load_module(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
   if (status) {
     lua_set_error(error, error_size, "%s", lua_tostring(state, -1));
     lua_pop(state, 2);
-    return 0;
+    return false;
   }
   if (!lua_istable(state, -1)) {
     lua_set_error(error, error_size, "%s must return a table", path);
     lua_pop(state, 2);
-    return 0;
+    return false;
   }
   lua_pushvalue(state, -1);
   lua_setfield(state, -3, key);
   lua_remove(state, -2);
-  return 1;
+  return true;
 }
 
 LuaModuleRoot lua_require_root(lua_State *state, LuaRuntime *runtime) {

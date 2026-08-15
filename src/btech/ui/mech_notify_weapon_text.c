@@ -381,8 +381,8 @@ void mech_show_flags(const MechFlagDisplayRequest *request) {
 
 const char *get_arc_id(Mech *mech, int arc) {
   int unit_class = mech_class(mech);
-  bool mechlike = unit_class == CLASS_MECH || unit_class == CLASS_MW ||
-                  unit_class == CLASS_BSUIT;
+  bool mechlike = (unit_class == CLASS_MECH || unit_class == CLASS_MW ||
+                   unit_class == CLASS_BSUIT) != 0;
 
   if (arc & FORWARDARC)
     return "Forward";
@@ -412,7 +412,7 @@ MechDisplayId mech_to_mech_display_id_base(Mech *see, Mech *mech, int inlos) {
 
   (void)snprintf(
       id.text, sizeof(id.text), "%s [%s]", mname,
-      mech_id(mech, inlos && mech_team(see) == mech_team(mech)).text);
+      mech_id(mech, (inlos && mech_team(see) == mech_team(mech)) != 0).text);
   return id;
 }
 
@@ -442,7 +442,7 @@ MechDisplayId mech_to_mech_display_id(Mech *see, Mech *mech) {
   }
 
   (void)snprintf(id.text, sizeof(id.text), "%s [%s]", mname,
-                 mech_id(mech, team).text);
+                 mech_id(mech, team != 0).text);
   return id;
 }
 

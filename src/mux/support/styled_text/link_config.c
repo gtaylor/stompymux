@@ -38,20 +38,20 @@ void styled_link_config_destroy(StyledLinkConfig *config) {
 }
 
 bool styled_link_visibility_present(const StyledLinkVisibility *visibility) {
-  return visibility->action != STYLED_VISIBILITY_ACTION_UNSET ||
-         visibility->has_delay || visibility->has_output_delay ||
-         visibility->expire_input != STYLED_BOOLEAN_UNSET ||
-         visibility->expire_prompt != STYLED_BOOLEAN_UNSET ||
-         visibility->expire_output != STYLED_BOOLEAN_UNSET ||
-         visibility->wholeline != STYLED_BOOLEAN_UNSET;
+  return (visibility->action != STYLED_VISIBILITY_ACTION_UNSET ||
+          visibility->has_delay || visibility->has_output_delay ||
+          visibility->expire_input != STYLED_BOOLEAN_UNSET ||
+          visibility->expire_prompt != STYLED_BOOLEAN_UNSET ||
+          visibility->expire_output != STYLED_BOOLEAN_UNSET ||
+          visibility->wholeline != STYLED_BOOLEAN_UNSET) != 0;
 }
 
 bool styled_link_selection_present(const StyledLinkSelection *selection) {
-  return selection->group || selection->value ||
-         selection->toggle != STYLED_BOOLEAN_UNSET ||
-         selection->selected != STYLED_BOOLEAN_UNSET ||
-         selection->exclusive != STYLED_BOOLEAN_UNSET ||
-         selection->disabled != STYLED_BOOLEAN_UNSET;
+  return (selection->group || selection->value ||
+          selection->toggle != STYLED_BOOLEAN_UNSET ||
+          selection->selected != STYLED_BOOLEAN_UNSET ||
+          selection->exclusive != STYLED_BOOLEAN_UNSET ||
+          selection->disabled != STYLED_BOOLEAN_UNSET) != 0;
 }
 
 bool styled_link_config_valid(const StyledLinkConfig *config, char *error,
@@ -88,13 +88,13 @@ bool styled_link_config_valid(const StyledLinkConfig *config, char *error,
     styled_set_error(error, error_size, "OSC 8 visibility requires an action");
     return false;
   }
-  bool have_expire = visibility->expire_input != STYLED_BOOLEAN_UNSET ||
-                     visibility->expire_prompt != STYLED_BOOLEAN_UNSET ||
-                     visibility->expire_output != STYLED_BOOLEAN_UNSET ||
-                     visibility->has_output_delay;
-  bool enabled_expire = visibility->expire_input == STYLED_BOOLEAN_TRUE ||
-                        visibility->expire_prompt == STYLED_BOOLEAN_TRUE ||
-                        visibility->expire_output == STYLED_BOOLEAN_TRUE;
+  bool have_expire = (visibility->expire_input != STYLED_BOOLEAN_UNSET ||
+                      visibility->expire_prompt != STYLED_BOOLEAN_UNSET ||
+                      visibility->expire_output != STYLED_BOOLEAN_UNSET ||
+                      visibility->has_output_delay) != 0;
+  bool enabled_expire = (visibility->expire_input == STYLED_BOOLEAN_TRUE ||
+                         visibility->expire_prompt == STYLED_BOOLEAN_TRUE ||
+                         visibility->expire_output == STYLED_BOOLEAN_TRUE) != 0;
   if (have_expire && !enabled_expire) {
     styled_set_error(error, error_size,
                      "OSC 8 visibility expire requires an enabled trigger");
@@ -308,13 +308,13 @@ void styled_link_fallback_apply(const StyledLinkProperties *properties,
 }
 
 bool styled_link_properties_present(const StyledLinkProperties *properties) {
-  return properties->has_foreground || properties->has_background ||
-         properties->has_decoration_color ||
-         properties->bold != STYLED_BOOLEAN_UNSET ||
-         properties->italic != STYLED_BOOLEAN_UNSET ||
-         properties->underline != STYLED_DECORATION_UNSET ||
-         properties->overline != STYLED_DECORATION_UNSET ||
-         properties->strikethrough != STYLED_DECORATION_UNSET;
+  return (properties->has_foreground || properties->has_background ||
+          properties->has_decoration_color ||
+          properties->bold != STYLED_BOOLEAN_UNSET ||
+          properties->italic != STYLED_BOOLEAN_UNSET ||
+          properties->underline != STYLED_DECORATION_UNSET ||
+          properties->overline != STYLED_DECORATION_UNSET ||
+          properties->strikethrough != STYLED_DECORATION_UNSET) != 0;
 }
 
 bool styled_link_config_present(const StyledLinkConfig *config) {

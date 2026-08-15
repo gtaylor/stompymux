@@ -25,11 +25,11 @@
 static inline char fixcase(char a) { return ascii_to_lower(a); }
 
 static inline bool is_equal(char a, char b) {
-  return (a == b) || (fixcase(a) == fixcase(b));
+  return ((a == b) || (fixcase(a) == fixcase(b))) != 0;
 }
 
 static inline bool is_notequal(char a, char b) {
-  return (a != b) && (fixcase(a) != fixcase(b));
+  return ((a != b) && (fixcase(a) != fixcase(b))) != 0;
 }
 
 typedef struct WildcardContext WildcardContext;
@@ -101,7 +101,7 @@ bool quick_wild(const char *tstr, const char *dstr) {
        * * * * of data.
        */
       if (!wild_cursor_current(&data))
-        return 0;
+        return false;
       break;
     case '\\':
       /*
@@ -120,9 +120,9 @@ bool quick_wild(const char *tstr, const char *dstr) {
        */
       if (is_notequal(wild_cursor_current(&data),
                       wild_cursor_current(&pattern)))
-        return 0;
+        return false;
       if (!wild_cursor_current(&data))
-        return 1;
+        return true;
     }
     wild_cursor_advance(&pattern);
     wild_cursor_advance(&data);
@@ -139,7 +139,7 @@ bool quick_wild(const char *tstr, const char *dstr) {
    */
 
   if (!wild_cursor_current(&pattern))
-    return 1;
+    return true;
 
   /*
    * Skip over wildcards.
@@ -149,7 +149,7 @@ bool quick_wild(const char *tstr, const char *dstr) {
          wild_cursor_current(&pattern) == '*') {
     if (wild_cursor_current(&pattern) == '?') {
       if (!wild_cursor_current(&data))
-        return 0;
+        return false;
       wild_cursor_advance(&data);
     }
     wild_cursor_advance(&pattern);
@@ -167,7 +167,7 @@ bool quick_wild(const char *tstr, const char *dstr) {
    */
 
   if (!wild_cursor_current(&pattern))
-    return 1;
+    return true;
 
   /*
    * Scan for possible matches.
@@ -177,10 +177,10 @@ bool quick_wild(const char *tstr, const char *dstr) {
     if (is_equal(wild_cursor_current(&data), wild_cursor_current(&pattern)) &&
         quick_wild(wild_cursor_suffix(&pattern, 1),
                    wild_cursor_suffix(&data, 1)))
-      return 1;
+      return true;
     wild_cursor_advance(&data);
   }
-  return 0;
+  return false;
 }
 
 /**
@@ -207,7 +207,7 @@ static bool wild1(WildcardContext *context, const char *tstr, const char *dstr,
        * * * * of data.
        */
       if (!wild_cursor_current(&data))
-        return 0;
+        return false;
       wild_capture_character(
           &(WildCharacterCapture){.context = context,
                                   .argument = arg,
@@ -239,9 +239,9 @@ static bool wild1(WildcardContext *context, const char *tstr, const char *dstr,
        */
       if (is_notequal(wild_cursor_current(&data),
                       wild_cursor_current(&pattern)))
-        return 0;
+        return false;
       if (!wild_cursor_current(&data))
-        return 1;
+        return true;
     }
     wild_cursor_advance(&pattern);
     wild_cursor_advance(&data);
@@ -254,7 +254,7 @@ static bool wild1(WildcardContext *context, const char *tstr, const char *dstr,
   if (!*wild_cursor_suffix(&pattern, 1)) {
     char *capture = wild_argument_at(context, arg);
     (void)string_copy_bounded(capture, LBUF_SIZE, wild_cursor_suffix(&data, 0));
-    return 1;
+    return true;
   }
   /*
    * Remember current position for filling in the '*' return.
@@ -321,7 +321,7 @@ static bool wild1(WildcardContext *context, const char *tstr, const char *dstr,
     numextra = 0;
     while (wild_cursor_current(&pattern) == '?') {
       if (!wild_cursor_current(&data))
-        return 0;
+        return false;
       wild_cursor_advance(&pattern);
       wild_cursor_advance(&data);
       arg++;
@@ -350,7 +350,7 @@ static bool wild1(WildcardContext *context, const char *tstr, const char *dstr,
       while (is_notequal(wild_cursor_current(&data),
                          wild_cursor_current(&pattern))) {
         if (!wild_cursor_current(&data))
-          return 0;
+          return false;
         wild_cursor_advance(&data);
       }
     } else {
@@ -394,7 +394,7 @@ static bool wild1(WildcardContext *context, const char *tstr, const char *dstr,
 
       while (numextra) {
         if (argpos >= context->argument_count)
-          return 1;
+          return true;
         char character = *(const char *)checked_storage_at_const(
             data.text, data.length, sizeof(char), data_capture_offset);
         wild_capture_character(&(WildCharacterCapture){
@@ -408,7 +408,7 @@ static bool wild1(WildcardContext *context, const char *tstr, const char *dstr,
        * It's done!
        */
 
-      return 1;
+      return true;
     }
     wild_cursor_advance(&data);
   }
@@ -447,9 +447,9 @@ bool wild(const char *tstr, const char *dstr, char *args[], int nargs) {
     if (wild_cursor_current(&pattern) == '\\')
       wild_cursor_advance(&pattern);
     if (is_notequal(wild_cursor_current(&data), wild_cursor_current(&pattern)))
-      return 0;
+      return false;
     if (!wild_cursor_current(&data))
-      return 1;
+      return true;
     wild_cursor_advance(&pattern);
     wild_cursor_advance(&data);
   }
@@ -484,10 +484,10 @@ bool wild(const char *tstr, const char *dstr, char *args[], int nargs) {
    * Do the match.
    */
 
-  value = nargs ? wild1(&context, wild_cursor_suffix(&pattern, 0),
-                        wild_cursor_suffix(&data, 0), 0)
-                : quick_wild(wild_cursor_suffix(&pattern, 0),
-                             wild_cursor_suffix(&data, 0));
+  value = ((nargs ? wild1(&context, wild_cursor_suffix(&pattern, 0),
+                          wild_cursor_suffix(&data, 0), 0)
+                  : quick_wild(wild_cursor_suffix(&pattern, 0),
+                               wild_cursor_suffix(&data, 0))) != 0);
 
   /*
    * Clean out any fake match data left by wild1.

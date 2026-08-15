@@ -105,7 +105,7 @@ static void mech_discard_event(MuxEvent *e) {
                                 .destination = NOTHING},
                     .event = LUA_EVENT_LEAVE});
   c_xcode(database, i);
-  btech_special_object_flag_changed(mech_context(mech), GOD, i, 1, 0);
+  btech_special_object_flag_changed(mech_context(mech), GOD, i, true, false);
   s_going(database, i);
   s_dark(database, i);
   s_zombie(database, i);
@@ -202,7 +202,7 @@ static void char_eject(DbRef player, Mech *mech) {
   suit = create_obj(evaluation, GOD, OBJECT_TYPE_THING, message_buffer);
   silly_atr_set_in(database, suit, A_XTYPE, "MECH");
   s_xcode(database, suit);
-  btech_special_object_flag_changed(mech_context(mech), GOD, suit, 0, 1);
+  btech_special_object_flag_changed(mech_context(mech), GOD, suit, false, true);
   d = btech_attribute_read(database, player, A_MWTEMPLATE,
                            (char[LBUF_SIZE]){0});
   m = btech_context_get_mech(mech_context(mech), suit);
@@ -268,7 +268,7 @@ static void char_eject(DbRef player, Mech *mech) {
     mech_critical_destroy(mech, HEAD, 2);
   }
   if (!mech_is_destroyed(mech)) {
-    mech_destroy(mech, mech, 0, KILL_TYPE_EJECT);
+    mech_destroy(mech, mech, false, KILL_TYPE_EJECT);
   }
 }
 
@@ -361,7 +361,7 @@ static void char_disembark(DbRef player, Mech *mech) {
   suit = create_obj(evaluation, GOD, OBJECT_TYPE_THING, message_buffer);
   silly_atr_set_in(database, suit, A_XTYPE, "MECH");
   s_xcode(database, suit);
-  btech_special_object_flag_changed(mech_context(mech), GOD, suit, 0, 1);
+  btech_special_object_flag_changed(mech_context(mech), GOD, suit, false, true);
   d = btech_attribute_read(database, player, A_MWTEMPLATE,
                            (char[LBUF_SIZE]){0});
   m = btech_context_get_mech(mech_context(mech), suit);
@@ -608,7 +608,7 @@ void mech_udisembark(DbRef player, void *data, const char *buffer) {
               is_player(database, mech_pilot_dbref(mech)))
                  ? char_getvalue(mech_context(mech), mech_pilot_dbref(mech),
                                  "Sixth_Sense")
-                 : 0));
+                 : 0) != 0);
   mech_communication_skill_set(mech, DEFAULT_COMM);
 
   if (is_player(database, mech_pilot_dbref(mech))) {
@@ -662,7 +662,7 @@ void mech_udisembark(DbRef player, void *data, const char *buffer) {
                             mech_display_id(target).text);
         mecha_notify(evaluation, player,
                      "You smash open the door and break out.");
-        mech_fall(mech, 4, 0);
+        mech_fall(mech, 4, false);
       } else {
         /* All is well. */
         mech_los_broadcastf(mech, "emerges from the ramp out of %s!",

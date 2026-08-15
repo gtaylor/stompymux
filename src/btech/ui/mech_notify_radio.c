@@ -692,14 +692,14 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
             .message = buf2,
             .base_to_hit = mech_communication_skill(temp_mech),
             .awarded_experience = &isxp,
-            .under_ecm = (mech_is_any_ecm_disturbed(mech) ||
-                          mech_is_any_ecm_disturbed(temp_mech)
-                          /*
-                             || sfail_type == FAIL_STATIC ||
-                             rfail_type == FAIL_STATIC
-                           */
-                          ) &&
-                         mech != temp_mech});
+            .under_ecm = ((mech_is_any_ecm_disturbed(mech) ||
+                           mech_is_any_ecm_disturbed(temp_mech)
+                           /*
+                              || sfail_type == FAIL_STATIC ||
+                              rfail_type == FAIL_STATIC
+                            */
+                           ) &&
+                          mech != temp_mech) != 0});
         if (!obs)
           build_channel_message(buf, color_code, '(', ')', (char)('A' + i),
                                 bearing, buf3);

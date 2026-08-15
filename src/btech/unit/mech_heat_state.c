@@ -18,8 +18,8 @@ float mech_active_heat_sinks(const Mech *mech) {
 }
 
 bool mech_uses_heat(const Mech *mech) {
-  return mech->ud.type == CLASS_MECH || mech->ud.type == CLASS_AERO ||
-         mech->ud.type == CLASS_DS || mech->ud.type == CLASS_SPHEROID_DS;
+  return (mech->ud.type == CLASS_MECH || mech->ud.type == CLASS_AERO ||
+          mech->ud.type == CLASS_DS || mech->ud.type == CLASS_SPHEROID_DS) != 0;
 }
 
 float mech_added_heat(const Mech *mech) { return mech->rd.plus_heat; }
@@ -37,11 +37,11 @@ void mech_engine_heat_set(Mech *mech, int heat) {
 void mech_engine_heat_add(Mech *mech, int heat) { mech->rd.engineheat += heat; }
 
 bool mech_heat_cutoff_is_enabled(const Mech *mech) {
-  return mech->rd.critstatus & HEATCUTOFF;
+  return (mech->rd.critstatus & HEATCUTOFF) != 0;
 }
 
 bool mech_life_support_is_destroyed(const Mech *mech) {
-  return mech->rd.critstatus & LIFE_SUPPORT_DESTROYED;
+  return (mech->rd.critstatus & LIFE_SUPPORT_DESTROYED) != 0;
 }
 
 void mech_heat_production_set(Mech *mech, float heat) {

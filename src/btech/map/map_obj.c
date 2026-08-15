@@ -61,7 +61,7 @@ MapEntranceResult find_entrance(BattleMap *map, char direction) {
       };
     }
   }
-  return (MapEntranceResult){0};
+  return (MapEntranceResult){};
 }
 
 StructureName structure_name(GameDatabase *database, MapObject *mapo) {

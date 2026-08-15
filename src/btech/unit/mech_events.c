@@ -110,7 +110,7 @@ void mech_staggercheck_heartbeat(Mech *mech) {
       mech_notify(mech, MECHALL,
                   "You loose the battle with gravity and tumble over!!");
       mech_los_broadcast(mech, "tumbles over, staggered by the damage!");
-      mech_fall(mech, 1, 0);
+      mech_fall(mech, 1, false);
     }
   }
 }
@@ -186,7 +186,7 @@ void mech_fall_event(MuxEvent *e) {
   fallen_elev = factoral(clamp_intptr_to_int((intptr_t)fall_distance));
   mech_notify(mech, MECHALL, "You hit the ground!");
   mech_los_broadcast(mech, "hits the ground!");
-  mech_fall(mech, fallen_elev, 0);
+  mech_fall(mech, fallen_elev, false);
   ((mech)->rd.status) &= ~JUMPING;
 }
 
@@ -559,7 +559,7 @@ void check_stagger_event(MuxEvent *event) {
     mech_notify(mech, MECHALL,
                 "You loose the battle with gravity and tumble over!!");
     mech_los_broadcast(mech, "tumbles over, staggered by the damage!");
-    mech_fall(mech, 1, 0);
+    mech_fall(mech, 1, false);
   }
 
   mech_stop_stagger_check(mech);

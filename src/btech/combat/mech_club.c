@@ -57,7 +57,7 @@ bool mech_club_location_is_usable(Mech *mech, int section, bool emit_failure) {
   if (!t_can_grab && emit_failure)
     mech_notify(mech, MECHALL, buf);
 
-  return t_can_grab;
+  return t_can_grab != 0;
 }
 
 /*

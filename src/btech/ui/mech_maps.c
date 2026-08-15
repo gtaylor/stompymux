@@ -89,7 +89,7 @@ tactical_arguments_parse(const TacticalArgumentParseRequest *request) {
   const size_t FIRST_ARGUMENT = request->first_argument;
   const int ARGC = request->argument_count;
   const int MAXRANGE = request->maximum_range;
-  TacticalArgumentParseResult result = {0};
+  TacticalArgumentParseResult result = {};
   int bearing;
   float range;
   float fx;
@@ -265,7 +265,7 @@ void mech_navigate(DbRef player, void *data, char *buffer) {
       .width = 5,
       .height = 5,
       .labels = 4,
-      .calculate_los = dolos,
+      .calculate_los = dolos != 0,
   };
   map_text = map_text_create(&request);
   if (map_text == nullptr) {

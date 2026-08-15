@@ -189,7 +189,7 @@ void mech_ood_event(MuxEvent *e) {
 
                          "touches down on the ground, twists, and falls down!");
 
-      mech_fall(mech, (abs(mof) * (para ? 1 : 2)), 1);
+      mech_fall(mech, (abs(mof) * (para ? 1 : 2)), true);
 
     } else if (unit_class == CLASS_BSUIT) {
 
@@ -216,11 +216,11 @@ void mech_ood_event(MuxEvent *e) {
           mech_damage_apply(
               &(MechDamageRequest){.target = mech,
                                    .attacker = mech,
-                                   .line_of_sight = 0,
+                                   .line_of_sight = false,
                                    .attack_pilot = -1,
                                    .hit_location = i,
-                                   .rear = 0,
-                                   .critical = 0,
+                                   .rear = false,
+                                   .critical = false,
                                    .armor_damage = dam,
                                    .internal_damage = 0,
                                    .transfer = MECH_DAMAGE_FORCE_TRANSFER,
@@ -228,13 +228,13 @@ void mech_ood_event(MuxEvent *e) {
                                    .base_to_hit = 0,
                                    .weapon_index = 0,
                                    .ammunition_mode = 0,
-                                   .ignore_swarmers = 0});
+                                   .ignore_swarmers = false});
 
           mech_flood(mech);
         }
       }
 
-      mech_fall(mech, 0, 1);
+      mech_fall(mech, 0, true);
 
     } else {
 
@@ -244,7 +244,7 @@ void mech_ood_event(MuxEvent *e) {
 
       mech_los_broadcast(mech, "crashes at the ground!");
 
-      mech_fall(mech, (abs(mof) * (para ? 1 : 3)), 1);
+      mech_fall(mech, (abs(mof) * (para ? 1 : 3)), true);
     }
 
   } else if (!para) {
@@ -291,7 +291,7 @@ void mech_ood_event(MuxEvent *e) {
     else
       mech_los_broadcast(mech,
                          "emits some bubbles as its engines are flooded.");
-    mech_destroy(mech, mech, 0, KILL_TYPE_FLOOD);
+    mech_destroy(mech, mech, false, KILL_TYPE_FLOOD);
   }
 }
 

@@ -112,7 +112,7 @@ int search_light_in_range(Mech *mech, BattleMap *map) {
                            FORWARDARC) != 0;
       return autopilot_searchlight_classify(
           mech_searchlight_active(target), IN_ARC,
-          IN_ARC && battle_map_unit_los_is_blocked(map, target, mech));
+          (IN_ARC && battle_map_unit_los_is_blocked(map, target, mech)) != 0);
     }
   }
   return 0;
@@ -126,8 +126,9 @@ int pref_vis_sens(Mech *mech, BattleMap *map, int slite, Mech *target) {
     return SENSOR_VIS;
 
   return autopilot_visual_sensor_select(
-      mech_searchlight_active(mech) || mech_condition_summary(mech).illuminated,
-      target != nullptr && mech_condition_summary(target).illuminated,
+      (mech_searchlight_active(mech) ||
+       mech_condition_summary(mech).illuminated) != 0,
+      (target != nullptr && mech_condition_summary(target).illuminated) != 0,
       battle_map_light(map), slite);
 }
 
@@ -207,17 +208,17 @@ void auto_sensor_event(Autopilot *autopilot) {
   prefvis = pref_vis_sens(mech, map, slite, target);
 
   trng = target != nullptr ? mech_range_to(mech, target) : 0.0F;
-  const AutopilotSensorSelection SELECTION =
-      autopilot_sensor_select(&(AutopilotSensorSituation){
-          .has_target = target != nullptr,
-          .target_range = (int)trng,
-          .target_tonnage = target != nullptr ? mech_tonnage(target) : 0,
-          .target_flying = target != nullptr && mech_is_flying_type(target),
-          .target_landed = target == nullptr || mech_is_landed(target),
-          .has_beagle_probe = mech_has_operational_beagle_probe(mech),
-          .has_bloodhound_probe = mech_has_operational_bloodhound_probe(mech),
-          .preferred_visual_sensor = prefvis,
-          .effective_visibility = rvis});
+  const AutopilotSensorSelection SELECTION = autopilot_sensor_select(&(
+      AutopilotSensorSituation){
+      .has_target = target != nullptr,
+      .target_range = (int)trng,
+      .target_tonnage = target != nullptr ? mech_tonnage(target) : 0,
+      .target_flying = (target != nullptr && mech_is_flying_type(target)) != 0,
+      .target_landed = (target == nullptr || mech_is_landed(target)) != 0,
+      .has_beagle_probe = mech_has_operational_beagle_probe(mech),
+      .has_bloodhound_probe = mech_has_operational_bloodhound_probe(mech),
+      .preferred_visual_sensor = prefvis,
+      .effective_visibility = rvis});
   wanted_s[0] = SELECTION.primary;
   wanted_s[1] = SELECTION.secondary;
 

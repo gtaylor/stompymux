@@ -41,7 +41,7 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
     } else if (targ != NOTHING) {
       object_log_header_error(
           evaluation, i, game_object_location(evaluation->world->database, i),
-          targ, 1, "Zone", "is invalid. Cleared.");
+          targ, true, "Zone", "is invalid. Cleared.");
       game_object_set_zone(evaluation->world->database, i, NOTHING);
     }
     switch (typeof_obj(evaluation->world->database, i)) {
@@ -64,7 +64,7 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
       } else if (targ != NOTHING) {
         object_log_header_error(
             evaluation, i, game_object_location(evaluation->world->database, i),
-            targ, 1, "Home", "is invalid.  Cleared.");
+            targ, true, "Home", "is invalid.  Cleared.");
         game_object_set_link(evaluation->world->database, i,
                              new_home(evaluation, i));
       }
@@ -108,7 +108,7 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
           game_object_set_location(evaluation->world->database, i, NOTHING);
         }
       } else if ((targ != NOTHING) && (targ != HOME)) {
-        object_log_header_error(evaluation, i, NOTHING, targ, 1, "Dropto",
+        object_log_header_error(evaluation, i, NOTHING, targ, true, "Dropto",
                                 "is invalid.  Cleared.");
         game_object_set_location(evaluation->world->database, i, NOTHING);
       }
@@ -121,7 +121,7 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
         if (game_object_next(evaluation->world->database, i) != NOTHING) {
           object_log_header_error(
               evaluation, i, NOTHING,
-              game_object_next(evaluation->world->database, i), 1,
+              game_object_next(evaluation->world->database, i), true,
               "Next pointer", "should be NOTHING.  Reset.");
           game_object_set_next(evaluation->world->database, i, NOTHING);
         }
@@ -132,7 +132,7 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
         if (game_object_link(evaluation->world->database, i) != NOTHING) {
           object_log_header_error(
               evaluation, i, NOTHING,
-              game_object_link(evaluation->world->database, i), 1,
+              game_object_link(evaluation->world->database, i), true,
               "Link pointer ", "should be NOTHING.  Reset.");
           game_object_set_link(evaluation->world->database, i, NOTHING);
         }
@@ -156,13 +156,14 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
       } else if (targ != NOTHING) {
         object_log_header_error(
             evaluation, i, game_object_exits(evaluation->world->database, i),
-            targ, 1, "Destination", "is invalid.  Exit destroyed.");
+            targ, true, "Destination", "is invalid.  Exit destroyed.");
         s_going(evaluation->world->database, i);
       } else {
         if (!has_contents(evaluation->world->database, targ)) {
           object_log_header_error(
               evaluation, i, game_object_exits(evaluation->world->database, i),
-              targ, 1, "Destination", "is not a valid type.  Exit destroyed.");
+              targ, true, "Destination",
+              "is not a valid type.  Exit destroyed.");
           s_going(evaluation->world->database, i);
         }
       }
@@ -186,7 +187,7 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
         if (game_object_contents(evaluation->world->database, i) != NOTHING) {
           object_log_header_error(
               evaluation, i, game_object_exits(evaluation->world->database, i),
-              game_object_contents(evaluation->world->database, i), 1,
+              game_object_contents(evaluation->world->database, i), true,
               "Contents", "should be NOTHING.  Reset.");
           game_object_set_contents(evaluation->world->database, i, NOTHING);
         }
@@ -197,7 +198,7 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
         if (game_object_link(evaluation->world->database, i) != NOTHING) {
           object_log_header_error(
               evaluation, i, game_object_exits(evaluation->world->database, i),
-              game_object_link(evaluation->world->database, i), 1, "Link",
+              game_object_link(evaluation->world->database, i), true, "Link",
               "should be NOTHING.  Reset.");
           game_object_set_link(evaluation->world->database, i, NOTHING);
         }
@@ -420,7 +421,7 @@ static void check_loc_exits(EvaluationContext *evaluation, DbRef loc,
          * Not in the other list, assume in ours
          */
 
-        object_log_header_error(evaluation, exit, loc, exitloc, 1,
+        object_log_header_error(evaluation, exit, loc, exitloc, true,
                                 "Not on chain for location", "Reset.");
         game_object_set_exits(evaluation->world->database, exit, loc);
       }
@@ -518,8 +519,8 @@ static void check_misplaced_obj(EvaluationContext *evaluation, DbRef *obj,
 
     object_log_header_error(
         evaluation, *obj, loc,
-        game_object_contents(evaluation->world->database, *obj), 1, "Location",
-        "is invalid.  Reset.");
+        game_object_contents(evaluation->world->database, *obj), true,
+        "Location", "is invalid.  Reset.");
     game_object_set_contents(evaluation->world->database, *obj, loc);
   }
 }

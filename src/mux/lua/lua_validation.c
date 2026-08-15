@@ -65,7 +65,7 @@ static bool lua_add_parent_check(LuaParentCheck **checks, size_t *check_count,
 
   if (*check_count == SIZE_MAX) {
     lua_set_error(error, error_size, "out of memory");
-    return 0;
+    return false;
   }
   path_copy = strdup(path);
   detail_copy = strdup(detail);
@@ -73,7 +73,7 @@ static bool lua_add_parent_check(LuaParentCheck **checks, size_t *check_count,
     free(path_copy);
     free(detail_copy);
     lua_set_error(error, error_size, "out of memory");
-    return 0;
+    return false;
   }
   replacement = checked_storage_try_reallocate_array(*checks, *check_count + 1,
                                                      sizeof(*replacement));
@@ -81,7 +81,7 @@ static bool lua_add_parent_check(LuaParentCheck **checks, size_t *check_count,
     free(path_copy);
     free(detail_copy);
     lua_set_error(error, error_size, "out of memory");
-    return 0;
+    return false;
   }
   *checks = replacement;
   (*check_count)++;
@@ -90,7 +90,7 @@ static bool lua_add_parent_check(LuaParentCheck **checks, size_t *check_count,
   check->path = path_copy;
   check->error = detail_copy;
   check->object_count = 1;
-  return 1;
+  return true;
 }
 
 static bool lua_check_luaparents(EvaluationContext *evaluation,
@@ -126,7 +126,7 @@ static bool lua_check_luaparents(EvaluationContext *evaluation,
         !lua_add_parent_check(&checks, &check_count, path, detail, error,
                               error_size)) {
       lua_free_parent_checks(checks, check_count);
-      return 0;
+      return false;
     }
   }
   for (index = 0; index < check_count; index++) {
@@ -139,7 +139,7 @@ static bool lua_check_luaparents(EvaluationContext *evaluation,
   }
   *has_errors = check_count > 0;
   lua_free_parent_checks(checks, check_count);
-  return 1;
+  return true;
 }
 
 int lua_check(EvaluationContext *evaluation, LuaRuntime *source, DbRef player,
@@ -205,13 +205,13 @@ bool lua_validate_path(LuaRuntime *runtime, const char *path, char *error,
 
   if (!runtime) {
     lua_set_error(error, error_size, "Lua is not initialized");
-    return 0;
+    return false;
   }
   if (!strncmp(path, "object_logic/", 13) ||
       !strncmp(path, "global_logic/", 13) || !strncmp(path, "packages/", 9)) {
     lua_set_error(error, error_size,
                   "Lua parent paths are relative to object_logic");
-    return 0;
+    return false;
   }
   return lua_resolve_path(runtime, LUA_ROOT_OBJECT_LOGIC, path, resolved,
                           sizeof(resolved), error, error_size);
@@ -225,9 +225,9 @@ bool lua_attached_path(LuaRuntime *runtime, DbRef object, char *path,
     (void)snprintf(path, path_size, "%s", value);
     if (source)
       *source = object;
-    return 1;
+    return true;
   }
-  return 0;
+  return false;
 }
 
 typedef struct LuaExamineContext {

@@ -120,32 +120,34 @@ UnitClass mech_aim_unit_class(const Mech *mech) {
 }
 
 bool mech_targets_building(const Mech *mech) {
-  return mech->rd.status & LOCK_BUILDING;
+  return (mech->rd.status & LOCK_BUILDING) != 0;
 }
 
-bool mech_targets_hex(const Mech *mech) { return mech->rd.status & LOCK_HEX; }
+bool mech_targets_hex(const Mech *mech) {
+  return (mech->rd.status & LOCK_HEX) != 0;
+}
 
 bool mech_targets_hex_for_ignition(const Mech *mech) {
-  return mech->rd.status & LOCK_HEX_IGN;
+  return (mech->rd.status & LOCK_HEX_IGN) != 0;
 }
 
 bool mech_targets_hex_for_clearing(const Mech *mech) {
-  return mech->rd.status & LOCK_HEX_CLR;
+  return (mech->rd.status & LOCK_HEX_CLR) != 0;
 }
 
 bool mech_targets_hex_or_building(const Mech *mech) {
-  return mech->rd.status &
-         (LOCK_HEX | LOCK_BUILDING | LOCK_HEX_IGN | LOCK_HEX_CLR);
+  return (mech->rd.status &
+          (LOCK_HEX | LOCK_BUILDING | LOCK_HEX_IGN | LOCK_HEX_CLR)) != 0;
 }
 
 void mech_targeting_tag_clear(Mech *mech) { mech->sd.tag_target = -1; }
 
 bool mech_targeting_has_lock_on(const Mech *mech, DbRef target) {
-  return (mech->rd.status & LOCK_TARGET) && mech->rd.target == target;
+  return ((mech->rd.status & LOCK_TARGET) && mech->rd.target == target) != 0;
 }
 
 bool mech_targeting_lock_modes_active(const Mech *mech) {
-  return mech->rd.status & LOCK_MODES;
+  return (mech->rd.status & LOCK_MODES) != 0;
 }
 
 bool mech_targeting_has_specific_aim(const Mech *mech) {
@@ -153,10 +155,12 @@ bool mech_targeting_has_specific_aim(const Mech *mech) {
 }
 
 bool mech_movement_modes_locked(const Mech *mech) {
-  return mech->rd.status2 & MOVE_MODES_LOCK;
+  return (mech->rd.status2 & MOVE_MODES_LOCK) != 0;
 }
 
-bool mech_is_dodging(const Mech *mech) { return mech->rd.status2 & DODGING; }
+bool mech_is_dodging(const Mech *mech) {
+  return (mech->rd.status2 & DODGING) != 0;
+}
 
 void mech_digging_clear(Mech *mech) { mech->rd.tankcritstatus &= ~DIGGING_IN; }
 

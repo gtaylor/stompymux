@@ -123,10 +123,10 @@ void do_enter_internal(EvaluationContext *evaluation, DbRef player, DbRef thing,
     notify_checked(evaluation, player, player, "You can't enter yourself!",
                    MSG_ME_ALL | MSG_F_DOWN);
   } else if (lock_test(evaluation, player, player, player, thing,
-                       LUA_LOCK_ENTER, LUA_LOCK_OPERATION_ENTER, quiet, &lock,
-                       &result) &&
+                       LUA_LOCK_ENTER, LUA_LOCK_OPERATION_ENTER, quiet != 0,
+                       &lock, &result) &&
              lock_test(evaluation, player, player, player, loc, LUA_LOCK_LEAVE,
-                       LUA_LOCK_OPERATION_ENTER, quiet, &lock, &result)) {
+                       LUA_LOCK_OPERATION_ENTER, quiet != 0, &lock, &result)) {
     oattr = quiet ? HUSH_ENTER : 0;
     move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
                                               .object = player,
@@ -197,11 +197,11 @@ void do_leave(CommandInvocation *invocation) {
       is_controls(evaluation->world->database, player, loc))
     quiet = HUSH_LEAVE;
   if (lock_test(evaluation, player, invocation->cause, player, loc,
-                LUA_LOCK_LEAVE, LUA_LOCK_OPERATION_LEAVE, quiet, &lock,
+                LUA_LOCK_LEAVE, LUA_LOCK_OPERATION_LEAVE, quiet != 0, &lock,
                 &result) &&
       lock_test(evaluation, player, invocation->cause, player,
                 game_object_location(evaluation->world->database, loc),
-                LUA_LOCK_ENTER, LUA_LOCK_OPERATION_LEAVE, quiet, &lock,
+                LUA_LOCK_ENTER, LUA_LOCK_OPERATION_LEAVE, quiet != 0, &lock,
                 &result)) {
     move_via_generic(&(ObjectMovementRequest){
         .evaluation = evaluation,

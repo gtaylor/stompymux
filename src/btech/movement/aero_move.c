@@ -672,9 +672,9 @@ bool aero_fuel_check(Mech *mech) {
   int fuelcost = 1;
   /* We don't do anything particularly nasty to shutdown things */
   if (!mech_is_started(mech))
-    return 0;
+    return false;
   if (mech_aero_has_free_fuel(mech))
-    return 0;
+    return false;
   if (fabsf(mech_current_speed(mech)) > mech_effective_maximum_speed(mech)) {
     if (mech_position_z(mech) < ATMO_Z) {
       const float FUEL_RATIO =
@@ -684,27 +684,27 @@ bool aero_fuel_check(Mech *mech) {
   } else if (fabsf(mech_current_speed(mech)) < MP1 &&
              fabsf(mech_vertical_speed(mech)) < MP2) {
     if (btech_random_range_int(mech_context(mech), 0, 1) == 0)
-      return 0; /* Approximately half of the time free */
+      return false; /* Approximately half of the time free */
   }
   if (mech_fuel(mech) > 0) {
     if (mech_fuel(mech) <= fuelcost)
       mech_fuel_set(mech, 0);
     else
       mech_fuel_decrement(mech, fuelcost);
-    return 0;
+    return false;
   }
   /* DropShips do not need crash ; they switch to (VERY SLOW) secondary
      power source. */
   if (mech_is_dropship(mech)) {
     if (mech_fuel(mech) < 0)
-      return 0;
+      return false;
     mech_fuel_decrement(mech, 1);
     mech_notify(mech, MECHALL,
                 "As the fuel runs out, the engines switch to backup power.");
-    return 0;
+    return false;
   }
   if (mech_fuel(mech) < 0)
-    return 1;
+    return true;
   /* Now, the true nastiness begins ;) */
   mech_fuel_decrement(mech, 1);
   if (!(mech_fuel(mech) % 100) && mech_fuel(mech) >= mech_original_fuel(mech))
@@ -727,7 +727,7 @@ bool aero_fuel_check(Mech *mech) {
     mech_notify(mech, MECHALL, "You start free-fall.. Enjoy the ride!");
     mech_event_schedule(mech, EVENT_FALL, mech_fall_event, FALL_TICK, -1);
   }
-  return 1;
+  return true;
 }
 void aero_update(Mech *mech) {
   if (mech_is_destroyed(mech))

@@ -94,9 +94,9 @@ void record_login(EvaluationContext *evaluation, DbRef player, bool successful,
 bool check_pass(WorldContext *world, DbRef player, const char *password) {
   if (strlen(password) >
       (size_t)world->configuration->player_password_length_limit)
-    return 0;
+    return false;
   const char *target = player_account_password_hash(world->database, player);
-  return *target && password_verify(password, target);
+  return (*target && password_verify(password, target)) != 0;
 }
 
 /**
@@ -333,12 +333,12 @@ bool delete_player_name(WorldContext *world, DbRef player, const char *name) {
   p = (long *)hash_table_find(temp, &world->indexes->players);
   if (!p || (*p == NOTHING) || ((player != NOTHING) && (*p != player))) {
     free_buf(temp);
-    return 0;
+    return false;
   }
   free(p);
   hash_table_delete(temp, &world->indexes->players);
   free_buf(temp);
-  return 1;
+  return true;
 }
 
 DbRef lookup_player(WorldContext *world, DbRef doer, const char *name,
@@ -464,9 +464,9 @@ bool badname_check(WorldContext *world, const char *bad_name) {
 
   for (bp = world->access_control->bad_names; bp; bp = bp->next) {
     if (quick_wild(bp->name, bad_name))
-      return 0;
+      return false;
   }
-  return 1;
+  return true;
 }
 
 void badname_list(EvaluationContext *evaluation, WorldContext *world,

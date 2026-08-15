@@ -139,11 +139,11 @@ void mech_missile_apply_hits(const MissileHitsRequest *request) {
       mech_damage_apply(&(MechDamageRequest){
           .target = target,
           .attacker = mech,
-          .line_of_sight = request->los,
+          .line_of_sight = request->los != 0,
           .attack_pilot = mech_gunner_dbref(mech),
           .hit_location = hitloc,
-          .rear = isrear,
-          .critical = iscritical,
+          .rear = isrear != 0,
+          .critical = iscritical != 0,
           .armor_damage =
               personal_combat_damage_to_unit(&(PersonalCombatDamageConversion){
                   .target = target,
@@ -382,8 +382,8 @@ int mech_missile_hit_target(const MissileAttackRequest *request) {
       .attacker = mech,
       .target = hit_mech,
       .weapon = request->weapon,
-      .glancing = btech_context_glancing_blows_enabled(mech_context(mech)) &&
-                  request->player_roll == base_to_hit,
+      .glancing = (btech_context_glancing_blows_enabled(mech_context(mech)) &&
+                   request->player_roll == base_to_hit) != 0,
   };
   missileindex = mech_missile_hit_index(&index_request);
   if (missileindex < 0) {
@@ -429,7 +429,7 @@ int mech_missile_hit_target(const MissileAttackRequest *request) {
 
   if (t_is_inferno) {
     if (hit_mech) {
-      mech_inferno_hit(mech, hit_mech, hit, los);
+      mech_inferno_hit(mech, hit_mech, hit, los != 0);
     } else {
       mech_terrain_hex_hit(&(TerrainWeaponHitRequest){
           .attacker = mech,
@@ -450,8 +450,8 @@ int mech_missile_hit_target(const MissileAttackRequest *request) {
         .attacker = mech,
         .target = hit_mech,
         .target_hex = request->target_hex,
-        .rear = isrear,
-        .critical = iscritical,
+        .rear = isrear != 0,
+        .critical = iscritical != 0,
         .weapon = request->weapon,
         .fire_mode = mech_critical_fire_mode(mech, w_section, w_crit_slot),
         .ammunition_mode =
@@ -613,7 +613,7 @@ int mech_ams_intercept(const AmsInterceptRequest *request) {
 }
 
 AmsDefenseResult mech_ams_locate_defenses(Mech *target) {
-  AmsDefenseResult result = {0};
+  AmsDefenseResult result = {};
   int am_ssect;
   int am_scrit;
   int i;

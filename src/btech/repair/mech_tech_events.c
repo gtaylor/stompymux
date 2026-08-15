@@ -29,8 +29,8 @@ static bool completely_intact(Mech *mech) {
   for (i = 0; i < NUM_SECTIONS; i++)
     if (!mech_section_internal(mech, i) &&
         mech_section_original_internal(mech, i))
-      return 0;
-  return 1;
+      return false;
+  return true;
 }
 
 void mux_event_tickmech_removesection(MuxEvent *e) {

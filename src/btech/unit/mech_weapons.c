@@ -105,11 +105,11 @@ bool weapon_catalogue_is_acid(int weapon_index) {
 }
 
 bool weapon_catalogue_supports_indirect_fire(int weapon_index) {
-  return weapon_catalogue_entry(weapon_index)->special & IDF;
+  return (weapon_catalogue_entry(weapon_index)->special & IDF) != 0;
 }
 
 bool weapon_catalogue_is_anti_missile(int weapon_index) {
-  return weapon_catalogue_entry(weapon_index)->special & AMS;
+  return (weapon_catalogue_entry(weapon_index)->special & AMS) != 0;
 }
 
 bool weapon_catalogue_is_personal_combat(int weapon_index) {
@@ -183,39 +183,41 @@ bool weapon_catalogue_is_snub_ppc(int weapon_index) {
 bool weapon_catalogue_can_ignite_terrain(int weapon_index) {
   const char *name =
       checked_string_suffix(weapon_catalogue_name(weapon_index), 3);
-  return strcmp(name, "ERSmallLaser") && strcmp(name, "SmallLaser") &&
-         strcmp(name, "SmallPulseLaser") && strcmp(name, "X-SmallPulseLaser") &&
-         strcmp(name, "ERSmallPulseLaser") && strcmp(name, "HeavySmallLaser") &&
-         strcmp(name, "GaussRifle") && strcmp(name, "LightGaussRifle") &&
-         strcmp(name, "HeavyGaussRifle") && strcmp(name, "MagshotGaussRifle") &&
-         strcmp(name, "MachineGun") && strcmp(name, "LightMachineGun") &&
-         strcmp(name, "HeavyMachineGun") && strcmp(name, "StreakSRM-2") &&
-         strcmp(name, "SRM-2") && strcmp(name, "NarcBeacon") &&
-         strcmp(name, "iNarcBeacon");
+  return (strcmp(name, "ERSmallLaser") && strcmp(name, "SmallLaser") &&
+          strcmp(name, "SmallPulseLaser") &&
+          strcmp(name, "X-SmallPulseLaser") &&
+          strcmp(name, "ERSmallPulseLaser") &&
+          strcmp(name, "HeavySmallLaser") && strcmp(name, "GaussRifle") &&
+          strcmp(name, "LightGaussRifle") && strcmp(name, "HeavyGaussRifle") &&
+          strcmp(name, "MagshotGaussRifle") && strcmp(name, "MachineGun") &&
+          strcmp(name, "LightMachineGun") && strcmp(name, "HeavyMachineGun") &&
+          strcmp(name, "StreakSRM-2") && strcmp(name, "SRM-2") &&
+          strcmp(name, "NarcBeacon") && strcmp(name, "iNarcBeacon")) != 0;
 }
 
 bool weapon_catalogue_can_clear_terrain(int weapon_index) {
   const char *name =
       checked_string_suffix(weapon_catalogue_name(weapon_index), 3);
-  return strcmp(name, "ERSmallLaser") && strcmp(name, "SmallLaser") &&
-         strcmp(name, "SmallPulseLaser") && strcmp(name, "X-SmallPulseLaser") &&
-         strcmp(name, "ERSmallPulseLaser") && strcmp(name, "HeavySmallLaser") &&
-         strcmp(name, "MachineGun") && strcmp(name, "LightMachineGun") &&
-         strcmp(name, "HeavyMachineGun") && strcmp(name, "AC/2") &&
-         strcmp(name, "UltraAC/2") && strcmp(name, "CaselessAC/2") &&
-         strcmp(name, "HyperAC/2") && strcmp(name, "LightAC/2") &&
-         strcmp(name, "RotaryAC/2") && strcmp(name, "LB2-XAC") &&
-         strcmp(name, "AC/5") && strcmp(name, "UltraAC/5") &&
-         strcmp(name, "CaselessAC/5") && strcmp(name, "HyperAC/5") &&
-         strcmp(name, "LightAC/5") && strcmp(name, "RotaryAC/5") &&
-         strcmp(name, "LB5-XAC") && strcmp(name, "StreakSRM-2") &&
-         strcmp(name, "SRM-2");
+  return (strcmp(name, "ERSmallLaser") && strcmp(name, "SmallLaser") &&
+          strcmp(name, "SmallPulseLaser") &&
+          strcmp(name, "X-SmallPulseLaser") &&
+          strcmp(name, "ERSmallPulseLaser") &&
+          strcmp(name, "HeavySmallLaser") && strcmp(name, "MachineGun") &&
+          strcmp(name, "LightMachineGun") && strcmp(name, "HeavyMachineGun") &&
+          strcmp(name, "AC/2") && strcmp(name, "UltraAC/2") &&
+          strcmp(name, "CaselessAC/2") && strcmp(name, "HyperAC/2") &&
+          strcmp(name, "LightAC/2") && strcmp(name, "RotaryAC/2") &&
+          strcmp(name, "LB2-XAC") && strcmp(name, "AC/5") &&
+          strcmp(name, "UltraAC/5") && strcmp(name, "CaselessAC/5") &&
+          strcmp(name, "HyperAC/5") && strcmp(name, "LightAC/5") &&
+          strcmp(name, "RotaryAC/5") && strcmp(name, "LB5-XAC") &&
+          strcmp(name, "StreakSRM-2") && strcmp(name, "SRM-2")) != 0;
 }
 
 bool weapon_catalogue_is_terrain_flamer(int weapon_index) {
   const char *name =
       checked_string_suffix(weapon_catalogue_name(weapon_index), 3);
-  return !strcmp(name, "Flamer") || !strcmp(name, "HeavyFlamer");
+  return (!strcmp(name, "Flamer") || !strcmp(name, "HeavyFlamer")) != 0;
 }
 
 int weapon_catalogue_personal_combat_flags(int weapon_index) {
@@ -240,15 +242,16 @@ bool equipment_can_use_targeting_computer(int equipment_index) {
   const char *name = strchr(weapon->name, '.');
   if (name == nullptr)
     return false;
-  return (weapon->type == TBEAM || weapon->type == TAMMO) &&
-         strcmp(name, ".Flamer") && strcmp(name, ".MachineGun") &&
-         strcmp(name, ".LightMachineGun") && strcmp(name, ".HeavyMachineGun") &&
-         !(weapon->special & PCOMBAT);
+  return ((weapon->type == TBEAM || weapon->type == TAMMO) &&
+          strcmp(name, ".Flamer") && strcmp(name, ".MachineGun") &&
+          strcmp(name, ".LightMachineGun") &&
+          strcmp(name, ".HeavyMachineGun") && !(weapon->special & PCOMBAT)) !=
+         0;
 }
 
 bool weapon_catalogue_is_hot_loaded(int weapon_index, int fire_mode) {
-  return (fire_mode & HOTLOAD_MODE) &&
-         (weapon_catalogue_entry(weapon_index)->special & IDF);
+  return ((fire_mode & HOTLOAD_MODE) &&
+          (weapon_catalogue_entry(weapon_index)->special & IDF)) != 0;
 }
 
 const char *weapon_catalogue_name(int weapon_index) {
@@ -372,7 +375,8 @@ int find_weapons_advanced(Mech *mech, int index, unsigned char *weaparray,
       }
       if (!num_crits || temp != lastweap ||
           (num_crits == get_weapon_crits(mech, temp))) {
-        if (!weapon_critical_count_is_valid(mech, lastweap, &num_crits, whine))
+        if (!weapon_critical_count_is_valid(mech, lastweap, &num_crits,
+                                            whine != 0))
           return -1;
         *weapon_byte_slot(weaparray, weapcount) =
             clamp_int_to_unsigned_char(temp);
@@ -386,11 +390,11 @@ int find_weapons_advanced(Mech *mech, int index, unsigned char *weaparray,
         num_crits++;
       }
     } else if (!weapon_critical_count_is_valid(mech, lastweap, &num_crits,
-                                               whine)) {
+                                               whine != 0)) {
       return -1;
     }
   }
-  if (!weapon_critical_count_is_valid(mech, lastweap, &num_crits, whine))
+  if (!weapon_critical_count_is_valid(mech, lastweap, &num_crits, whine != 0))
     return -1;
   return (weapcount);
 }
@@ -712,5 +716,5 @@ ammunition_find(const AmmunitionLookupRequest *request) {
     }
   }
 
-  return (CriticalSlotLookupResult){0};
+  return (CriticalSlotLookupResult){};
 }

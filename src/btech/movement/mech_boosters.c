@@ -66,7 +66,7 @@ static void mech_masc_event(MuxEvent *e) {
     mech_notify(mech, MECHALL,
                 "Your leg actuators freeze suddenly, and you fall!");
     mech_los_broadcast(mech, "stops and falls in mid-step!");
-    mech_fall(mech, 1, 0);
+    mech_fall(mech, 1, false);
   } else {
     mech_notify(mech, MECHALL, "Your leg actuators freeze suddenly!");
     if (mech_current_speed(mech) > 0.0F)
@@ -195,7 +195,7 @@ static void mech_scharge_event(MuxEvent *e) {
         } else if (mech_engine_heat(mech) < 15) {
           mech_engine_heat_set(mech, 15);
           mech_notify(mech, MECHALL, "Your engine is destroyed!!");
-          mech_destroy(mech, mech, 1, KILL_TYPE_SCHARGE);
+          mech_destroy(mech, mech, true, KILL_TYPE_SCHARGE);
         }
         count--;
       }

@@ -179,7 +179,7 @@ BtechScriptResult fun_btmakepilotroll(BtechScriptCall *call) {
   if (made_pilot_skill_roll(mech, rollmod)) {
     safe_tprintf_str(buff, bufc, "1");
   } else {
-    mech_fall(mech, dammod, 1);
+    mech_fall(mech, dammod, true);
     safe_tprintf_str(buff, bufc, "0");
   }
 

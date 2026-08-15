@@ -72,8 +72,8 @@ void btech_weapon_settings_destroy(BtechWeaponSettings *settings) {
 
 static bool btech_weapon_settings_contains(const BtechWeaponSettings *settings,
                                            int weapon_index) {
-  return settings != nullptr && weapon_index >= 0 &&
-         (size_t)weapon_index < settings->count;
+  return (settings != nullptr && weapon_index >= 0 &&
+          (size_t)weapon_index < settings->count) != 0;
 }
 
 int btech_weapon_settings_recycle_time(const BtechWeaponSettings *settings,

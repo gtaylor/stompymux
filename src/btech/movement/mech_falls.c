@@ -35,8 +35,8 @@ static int mech_jump_to_hit_recycle(const Mech *mech) {
 }
 
 static bool mech_fall_is_in_water(Mech *mech) {
-  return battle_terrain_is_water(mech_real_terrain_get(mech)) &&
-         mech_position_z(mech) < 0;
+  return (battle_terrain_is_water(mech_real_terrain_get(mech)) &&
+          mech_position_z(mech) < 0) != 0;
 }
 
 void mech_fall(Mech *mech, int levels, bool show_message) {
@@ -170,11 +170,11 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
       mech_damage_apply(
           &(MechDamageRequest){.target = mech,
                                .attacker = mech,
-                               .line_of_sight = 0,
+                               .line_of_sight = false,
                                .attack_pilot = -1,
                                .hit_location = hitloc,
-                               .rear = isrear,
-                               .critical = iscritical,
+                               .rear = isrear != 0,
+                               .critical = iscritical != 0,
                                .armor_damage = 5,
                                .internal_damage = 0,
                                .transfer = MECH_DAMAGE_FORCE_TRANSFER,
@@ -182,7 +182,7 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
                                .base_to_hit = 0,
                                .weapon_index = -1,
                                .ammunition_mode = 0,
-                               .ignore_swarmers = 0});
+                               .ignore_swarmers = false});
       mech_flood(mech);
       mech_inferno_extinguish_in_water(mech);
     }
@@ -191,11 +191,11 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
       mech_damage_apply(
           &(MechDamageRequest){.target = mech,
                                .attacker = mech,
-                               .line_of_sight = 0,
+                               .line_of_sight = false,
                                .attack_pilot = -1,
                                .hit_location = hitloc,
-                               .rear = isrear,
-                               .critical = iscritical,
+                               .rear = isrear != 0,
+                               .critical = iscritical != 0,
                                .armor_damage = (damage % 5),
                                .internal_damage = 0,
                                .transfer = MECH_DAMAGE_FORCE_TRANSFER,
@@ -203,7 +203,7 @@ void mech_fall(Mech *mech, int levels, bool show_message) {
                                .base_to_hit = 0,
                                .weapon_index = -1,
                                .ammunition_mode = 0,
-                               .ignore_swarmers = 0});
+                               .ignore_swarmers = false});
       mech_flood(mech);
       mech_inferno_extinguish_in_water(mech);
     }

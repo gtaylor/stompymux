@@ -137,8 +137,8 @@ static bool help_url_is_external(const char *url) {
   for (size_t index = 0; index < length; index++) {
     unsigned char byte = (unsigned char)help_text_character(url, length, index);
     bool unreserved =
-        (byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z') ||
-        (byte >= '0' && byte <= '9') || strchr("-._~", byte) != nullptr;
+        ((byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z') ||
+         (byte >= '0' && byte <= '9') || strchr("-._~", byte) != nullptr) != 0;
 
     if (byte == '%' && index + 2 < length &&
         (isxdigit)((unsigned char)help_text_character(url, length,

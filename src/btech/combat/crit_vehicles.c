@@ -84,7 +84,7 @@ void mech_vehicle_engine_critical_apply(Mech *obj_mech, Mech *obj_attacker) {
         mech_notify(obj_attacker, MECHALL,
                     "You knock the VTOL out of the sky!");
         mech_los_broadcast(obj_mech, "falls from the sky!");
-        mech_fall(obj_mech, mech_position_elevation_magnitude(obj_mech), 0);
+        mech_fall(obj_mech, mech_position_elevation_magnitude(obj_mech), false);
       }
     }
   } else {
@@ -115,7 +115,7 @@ void mech_vehicle_fuel_tank_critical_apply(Mech *obj_mech, Mech *obj_attacker) {
   mech_position_real_z_sync(obj_mech);
   mech_current_speed_set(obj_mech, 0.0);
   mech_vertical_speed_set(obj_mech, 0.0);
-  mech_destroy(obj_mech, obj_attacker, 1, KILL_TYPE_FUELTANK);
+  mech_destroy(obj_mech, obj_attacker, true, KILL_TYPE_FUELTANK);
   mech_explosion_apply(obj_mech, obj_attacker);
 }
 
@@ -182,7 +182,7 @@ void mech_vehicle_crew_killed_critical_apply(Mech *obj_mech,
       obj_mech, MECHALL,
       "[fg=red bold]The shot ricochets around the crew compartment, instantly "
       "killing everyone![reset]");
-  mech_destroy(obj_mech, obj_attacker, 0, KILL_TYPE_PILOT);
+  mech_destroy(obj_mech, obj_attacker, false, KILL_TYPE_PILOT);
   mech_contents_kill_if_in_character(obj_mech);
 
   if (fabsf(mech_current_speed(obj_mech)) > 0.0F)
@@ -614,7 +614,7 @@ void mech_vtol_critical_handle(const VehicleCriticalRequest *request) {
       mech_notify(attacker, MECHALL, "You knock the VTOL out of the sky!");
       mech_los_broadcast(wounded, "falls down from the sky!");
     }
-    mech_destroy(wounded, attacker, 0, KILL_TYPE_COCKPIT);
+    mech_destroy(wounded, attacker, false, KILL_TYPE_COCKPIT);
     mech_contents_kill_if_in_character(wounded);
     break;
   case 1:
@@ -643,7 +643,7 @@ void mech_vtol_critical_handle(const VehicleCriticalRequest *request) {
         mech_notify(wounded, MECHALL, "The ground rushes up to meet you!");
         mech_notify(attacker, MECHALL, "You knock the VTOL out of the sky!");
         mech_los_broadcast(wounded, "falls from the sky!");
-        mech_fall(wounded, mech_position_elevation_magnitude(wounded), 0);
+        mech_fall(wounded, mech_position_elevation_magnitude(wounded), false);
       }
     }
     mech_max_speed_set(wounded, 0.0);
@@ -656,7 +656,7 @@ void mech_vtol_critical_handle(const VehicleCriticalRequest *request) {
       mech_los_broadcast(wounded, "falls from the sky!");
     }
 
-    mech_destroy(wounded, attacker, 0, KILL_TYPE_COCKPIT);
+    mech_destroy(wounded, attacker, false, KILL_TYPE_COCKPIT);
 
     mech_contents_kill_if_in_character(wounded);
     break;
@@ -669,7 +669,7 @@ void mech_vtol_critical_handle(const VehicleCriticalRequest *request) {
     mech_position_real_z_sync(wounded);
     mech_current_speed_set(wounded, 0.0);
     mech_vertical_speed_set(wounded, 0.0);
-    mech_destroy(wounded, attacker, 1, KILL_TYPE_FUELTANK);
+    mech_destroy(wounded, attacker, true, KILL_TYPE_FUELTANK);
     mech_explosion_apply(wounded, attacker);
     break;
   case 5:
@@ -680,7 +680,7 @@ void mech_vtol_critical_handle(const VehicleCriticalRequest *request) {
     mech_position_real_z_sync(wounded);
     mech_current_speed_set(wounded, 0.0);
     mech_vertical_speed_set(wounded, 0.0);
-    mech_destroy(wounded, attacker, 1, KILL_TYPE_POWERPLANT);
+    mech_destroy(wounded, attacker, true, KILL_TYPE_POWERPLANT);
     if (!mech_section_configuration_has(wounded, BSIDE, CASE_TECH))
       mech_explosion_apply(wounded, attacker);
     else

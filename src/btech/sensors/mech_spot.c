@@ -55,9 +55,9 @@ static float scaled_hex_elevation(int elevation) {
 
 static bool mech_is_in_water(Mech *mech) {
   const char TERRAIN = mech_real_terrain_get(mech);
-  return (TERRAIN == BATTLE_TERRAIN_ICE || TERRAIN == BATTLE_TERRAIN_WATER ||
-          TERRAIN == BATTLE_TERRAIN_BRIDGE) &&
-         mech_position_z(mech) < 0;
+  return ((TERRAIN == BATTLE_TERRAIN_ICE || TERRAIN == BATTLE_TERRAIN_WATER ||
+           TERRAIN == BATTLE_TERRAIN_BRIDGE) &&
+          mech_position_z(mech) < 0) != 0;
 }
 
 bool mech_spot_has_artillery(Mech *mech) {
@@ -69,9 +69,9 @@ bool mech_spot_has_artillery(Mech *mech) {
         &(WeaponNumberLookupRequest){.mech = mech, .number = weapnum});
     weaptype = lookup.value;
     if (weapon_catalogue_is_artillery(weaptype))
-      return 1;
+      return true;
   }
-  return 0;
+  return false;
 }
 
 static void mech_check_range(MuxEvent *e) {

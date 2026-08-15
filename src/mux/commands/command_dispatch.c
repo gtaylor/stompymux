@@ -41,9 +41,9 @@ bool check_access(GameDatabase *database,
   int fail;
 
   if (mask & CA_DISABLED)
-    return 0;
+    return false;
   if (is_god(database, player) || configuration->is_initializing)
-    return 1;
+    return true;
 
   succ = fail = 0;
   if (mask & CA_GOD)
@@ -63,7 +63,7 @@ bool check_access(GameDatabase *database,
   if (succ > 0)
     fail = 0;
   if (fail > 0)
-    return 0;
+    return false;
 
   /*
    * Check for forbidden flags.
@@ -74,11 +74,13 @@ bool check_access(GameDatabase *database,
        (!configuration->btech_ooc_comsys && (mask & CA_NO_IC) &&
         is_in_character_location(database, configuration, player)) ||
        ((mask & CA_NO_IC) && is_gagged(database, player))))
-    return 0;
-  return 1;
+    return false;
+  return true;
 }
 
-static inline bool is_protected(CMDENT *cmdp, int x) { return cmdp->perms & x; }
+static inline bool is_protected(CMDENT *cmdp, int x) {
+  return (cmdp->perms & x) != 0;
+}
 
 static char **command_argument_slot(char **arguments, size_t capacity,
                                     size_t index) {

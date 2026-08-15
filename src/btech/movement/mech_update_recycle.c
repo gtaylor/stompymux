@@ -37,8 +37,8 @@ static int recycle_weapon_at(const unsigned char *values, int index) {
 
 static bool mech_section_recycles(const Mech *mech) {
   int unit_class = mech_class(mech);
-  return unit_class == CLASS_MECH || unit_class == CLASS_BSUIT ||
-         unit_class == CLASS_VEH_GROUND || unit_class == CLASS_VTOL;
+  return (unit_class == CLASS_MECH || unit_class == CLASS_BSUIT ||
+          unit_class == CLASS_VEH_GROUND || unit_class == CLASS_VTOL) != 0;
 }
 
 int mech_weapon_recycle_update(Mech *mech) {

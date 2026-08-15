@@ -96,17 +96,17 @@ size_t styled_output_size(const StyledState *state, size_t output_size) {
 }
 
 bool styled_format_equal(const StyledState *left, const StyledState *right) {
-  return left->foreground.kind == right->foreground.kind &&
-         left->foreground.red == right->foreground.red &&
-         left->foreground.green == right->foreground.green &&
-         left->foreground.blue == right->foreground.blue &&
-         left->background.kind == right->background.kind &&
-         left->background.red == right->background.red &&
-         left->background.green == right->background.green &&
-         left->background.blue == right->background.blue &&
-         left->bold == right->bold && left->italic == right->italic &&
-         left->blink == right->blink && left->underline == right->underline &&
-         left->overline == right->overline &&
-         left->strikethrough == right->strikethrough &&
-         left->inverse == right->inverse;
+  return (left->foreground.kind == right->foreground.kind &&
+          left->foreground.red == right->foreground.red &&
+          left->foreground.green == right->foreground.green &&
+          left->foreground.blue == right->foreground.blue &&
+          left->background.kind == right->background.kind &&
+          left->background.red == right->background.red &&
+          left->background.green == right->background.green &&
+          left->background.blue == right->background.blue &&
+          left->bold == right->bold && left->italic == right->italic &&
+          left->blink == right->blink && left->underline == right->underline &&
+          left->overline == right->overline &&
+          left->strikethrough == right->strikethrough &&
+          left->inverse == right->inverse) != 0;
 }

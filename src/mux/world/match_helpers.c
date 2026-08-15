@@ -240,7 +240,7 @@ bool parse_thing_slash(MatchContext *match_context, DbRef player, char *thing,
   if (offset == length) {
     *after = nullptr;
     *it = NOTHING;
-    return 0;
+    return false;
   }
   *(char *)checked_storage_at(thing, length + 1, sizeof(char), offset) = '\0';
   *after = checked_storage_at(thing, length + 1, sizeof(char), offset + 1);

@@ -175,8 +175,8 @@ void game_object_flags_copy(GameDatabase *database, DbRef object,
 }
 
 bool object_flag_set_has(const ObjectFlagSet *flags, ObjectFlag flag) {
-  return flag > OBJECT_FLAG_NONE && flag < OBJECT_FLAG_COUNT &&
-         *object_flag_value_at_const(flags, flag);
+  return (flag > OBJECT_FLAG_NONE && flag < OBJECT_FLAG_COUNT &&
+          *object_flag_value_at_const(flags, flag)) != 0;
 }
 
 void object_flag_set_set(ObjectFlagSet *flags, ObjectFlag flag, bool value) {
@@ -185,26 +185,28 @@ void object_flag_set_set(ObjectFlagSet *flags, ObjectFlag flag, bool value) {
 }
 
 bool is_good_obj(GameDatabase *database, DbRef x) {
-  return x >= 0 && x < database->top &&
-         typeof_obj(database, x) != OBJECT_TYPE_INVALID &&
-         typeof_obj(database, x) != OBJECT_TYPE_NOTYPE;
+  return (x >= 0 && x < database->top &&
+          typeof_obj(database, x) != OBJECT_TYPE_INVALID &&
+          typeof_obj(database, x) != OBJECT_TYPE_NOTYPE) != 0;
 }
 
 bool is_safe(GameDatabase *database, DbRef object) {
-  return is_player(database, object) ||
-         game_object_has_flag(&(ObjectFlagRequest){
-             .database = database, .object = object, .flag = OBJECT_FLAG_SAFE});
+  return (is_player(database, object) ||
+          game_object_has_flag(
+              &(ObjectFlagRequest){.database = database,
+                                   .object = object,
+                                   .flag = OBJECT_FLAG_SAFE})) != 0;
 }
 
 bool can_link_exit(GameDatabase *database, DbRef player, DbRef target) {
-  return is_exit(database, target) &&
-         (game_object_location(database, target) == NOTHING ||
-          is_controls(database, player, target));
+  return (is_exit(database, target) &&
+          (game_object_location(database, target) == NOTHING ||
+           is_controls(database, player, target))) != 0;
 }
 
 bool is_linkable(GameDatabase *database, DbRef player, DbRef target) {
-  return is_good_obj(database, target) && has_contents(database, target) &&
-         is_controls(database, player, target);
+  return (is_good_obj(database, target) && has_contents(database, target) &&
+          is_controls(database, player, target)) != 0;
 }
 
 void mark(GameDatabase *database, DbRef x) {
@@ -239,17 +241,17 @@ static bool flag_any(const FlagChangeRequest *request) {
       .database = request->evaluation->world->database,
       .object = request->target,
       .flag = request->flag,
-      .value = !request->clear});
+      .value = (!request->clear) != 0});
   return true;
 }
 static bool flag_god(const FlagChangeRequest *request) {
-  return is_god(request->evaluation->world->database, request->player) &&
-         flag_any(request);
+  return (is_god(request->evaluation->world->database, request->player) &&
+          flag_any(request)) != 0;
 }
 static bool flag_wizard(const FlagChangeRequest *request) {
-  return (is_wizard(request->evaluation->world->database, request->player) ||
-          is_god(request->evaluation->world->database, request->player)) &&
-         flag_any(request);
+  return ((is_wizard(request->evaluation->world->database, request->player) ||
+           is_god(request->evaluation->world->database, request->player)) &&
+          flag_any(request)) != 0;
 }
 static bool flag_wizard_bit(const FlagChangeRequest *request) {
   if (!is_god(request->evaluation->world->database, request->player))
@@ -267,8 +269,8 @@ static bool flag_going(const FlagChangeRequest *request) {
       request->clear &&
       !is_player(request->evaluation->world->database, request->target))
     return flag_any(request);
-  return is_god(request->evaluation->world->database, request->player) &&
-         flag_any(request);
+  return (is_god(request->evaluation->world->database, request->player) &&
+          flag_any(request)) != 0;
 }
 
 static bool flag_xcode(const FlagChangeRequest *request) {
@@ -571,7 +573,7 @@ OwnedText unparse_object(GameDatabase *database, EvaluationContext *evaluation,
 }
 bool convert_flags(EvaluationContext *evaluation, DbRef player, char *list,
                    ObjectFlagSet *flags, long *type) {
-  *flags = (ObjectFlagSet){0};
+  *flags = (ObjectFlagSet){};
   *type = OBJECT_TYPE_NOTYPE;
   size_t list_length = strlen(list);
   for (size_t character_index = 0; character_index < list_length;

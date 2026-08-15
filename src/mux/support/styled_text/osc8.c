@@ -24,9 +24,9 @@ static void osc8_write(char *text, size_t capacity, size_t index, char value) {
 }
 
 static bool uri_unreserved(unsigned char byte) {
-  return (byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z') ||
-         (byte >= '0' && byte <= '9') || byte == '-' || byte == '.' ||
-         byte == '_' || byte == '~';
+  return ((byte >= 'A' && byte <= 'Z') || (byte >= 'a' && byte <= 'z') ||
+          (byte >= '0' && byte <= '9') || byte == '-' || byte == '.' ||
+          byte == '_' || byte == '~') != 0;
 }
 
 static bool uri_reserved(unsigned char byte) {
@@ -180,13 +180,15 @@ bool styled_link_enabled(StyledLinkKind kind,
 
 bool styled_config_capability_advertised(
     const StyledTextRenderOptions *options) {
-  return options &&
-         (options->osc_hyperlinks_style_basic ||
-          options->osc_hyperlinks_style_states ||
-          options->osc_hyperlinks_tooltip || options->osc_hyperlinks_menu ||
-          options->osc_hyperlinks_visibility ||
-          options->osc_hyperlinks_spoiler || options->osc_hyperlinks_disabled ||
-          options->osc_hyperlinks_selection || options->osc_hyperlinks_compact);
+  return (options &&
+          (options->osc_hyperlinks_style_basic ||
+           options->osc_hyperlinks_style_states ||
+           options->osc_hyperlinks_tooltip || options->osc_hyperlinks_menu ||
+           options->osc_hyperlinks_visibility ||
+           options->osc_hyperlinks_spoiler ||
+           options->osc_hyperlinks_disabled ||
+           options->osc_hyperlinks_selection ||
+           options->osc_hyperlinks_compact)) != 0;
 }
 
 bool styled_emit_link_open(const char *uri, char *output, size_t output_size,
@@ -197,9 +199,9 @@ bool styled_emit_link_open(const char *uri, char *output, size_t output_size,
 
   if (*used + length + OSC8_CLOSE_SIZE >= output_size)
     return false;
-  return styled_append_string(output, output_size, used, PREFIX) &&
-         styled_append_string(output, output_size, used, uri) &&
-         styled_append_string(output, output_size, used, SUFFIX);
+  return (styled_append_string(output, output_size, used, PREFIX) &&
+          styled_append_string(output, output_size, used, uri) &&
+          styled_append_string(output, output_size, used, SUFFIX)) != 0;
 }
 
 bool styled_emit_link_close(char *output, size_t output_size, size_t *used) {
@@ -221,8 +223,9 @@ static bool append_json_color(char *json, size_t json_size, size_t *used,
   char property[96];
   int length = snprintf(property, sizeof(property), "\"%s\":\"#%02x%02x%02x\"",
                         name, color->red, color->green, color->blue);
-  return length > 0 && append_json_separator(json, json_size, used, first) &&
-         styled_append_bytes(json, json_size, used, property, (size_t)length);
+  return (length > 0 && append_json_separator(json, json_size, used, first) &&
+          styled_append_bytes(json, json_size, used, property,
+                              (size_t)length)) != 0;
 }
 
 static bool append_json_boolean(char *json, size_t json_size, size_t *used,
@@ -231,8 +234,9 @@ static bool append_json_boolean(char *json, size_t json_size, size_t *used,
   char property[64];
   int length = snprintf(property, sizeof(property), "\"%s\":%s", name,
                         value == STYLED_BOOLEAN_TRUE ? "true" : "false");
-  return length > 0 && append_json_separator(json, json_size, used, first) &&
-         styled_append_bytes(json, json_size, used, property, (size_t)length);
+  return (length > 0 && append_json_separator(json, json_size, used, first) &&
+          styled_append_bytes(json, json_size, used, property,
+                              (size_t)length)) != 0;
 }
 
 static const char *decoration_json_value(StyledDecoration decoration) {
@@ -263,8 +267,9 @@ static bool append_json_decoration(char *json, size_t json_size, size_t *used,
   if (!value)
     return false;
   length = snprintf(property, sizeof(property), "\"%s\":%s", name, value);
-  return length > 0 && append_json_separator(json, json_size, used, first) &&
-         styled_append_bytes(json, json_size, used, property, (size_t)length);
+  return (length > 0 && append_json_separator(json, json_size, used, first) &&
+          styled_append_bytes(json, json_size, used, property,
+                              (size_t)length)) != 0;
 }
 
 static bool append_json_properties(char *json, size_t json_size, size_t *used,
@@ -387,7 +392,7 @@ static bool append_json_style(char *json, size_t json_size, size_t *used,
         return false;
     }
   }
-  return !first && styled_append_string(json, json_size, used, "}");
+  return (!first && styled_append_string(json, json_size, used, "}")) != 0;
 }
 
 bool styled_link_menu_has_enabled_action(
@@ -454,7 +459,7 @@ static bool append_json_menu(char *json, size_t json_size, size_t *used,
       return false;
     have_action = true;
   }
-  return have_action && styled_append_string(json, json_size, used, "]");
+  return (have_action && styled_append_string(json, json_size, used, "]")) != 0;
 }
 
 static bool append_json_title(char *json, size_t json_size, size_t *used,
@@ -482,8 +487,9 @@ static bool append_json_uint32(char *json, size_t json_size, size_t *used,
   char property[64];
   int length = snprintf(property, sizeof(property), "\"%s\":%u", name, value);
 
-  return length > 0 && append_json_separator(json, json_size, used, first) &&
-         styled_append_bytes(json, json_size, used, property, (size_t)length);
+  return (length > 0 && append_json_separator(json, json_size, used, first) &&
+          styled_append_bytes(json, json_size, used, property,
+                              (size_t)length)) != 0;
 }
 
 static bool append_json_visibility(char *json, size_t json_size, size_t *used,
@@ -520,10 +526,10 @@ static bool append_json_visibility(char *json, size_t json_size, size_t *used,
       !append_json_uint32(json, json_size, used, &first, "delay",
                           visibility->delay))
     return false;
-  bool have_expire = visibility->expire_input != STYLED_BOOLEAN_UNSET ||
-                     visibility->expire_prompt != STYLED_BOOLEAN_UNSET ||
-                     visibility->expire_output != STYLED_BOOLEAN_UNSET ||
-                     visibility->has_output_delay;
+  bool have_expire = (visibility->expire_input != STYLED_BOOLEAN_UNSET ||
+                      visibility->expire_prompt != STYLED_BOOLEAN_UNSET ||
+                      visibility->expire_output != STYLED_BOOLEAN_UNSET ||
+                      visibility->has_output_delay) != 0;
   if (have_expire) {
     if (!append_json_separator(json, json_size, used, &first) ||
         !styled_append_string(json, json_size, used, "\"expire\":{"))
@@ -603,7 +609,7 @@ static bool build_config_json(const StyledLinkConfig *config, bool include_base,
                               char *json, size_t json_size) {
   size_t used = 0;
   bool first = true;
-  bool compact = options && options->osc_hyperlinks_compact;
+  bool compact = (options && options->osc_hyperlinks_compact) != 0;
 
   json[0] = '\0';
   if (!styled_append_string(json, json_size, &used, "{"))

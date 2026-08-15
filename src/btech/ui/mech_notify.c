@@ -116,8 +116,8 @@ void hex_los_broadcast(BattleMap *mech_map, int x, int y, const char *message) {
               const char PLACEHOLDER =
                   *checked_string_suffix(message, input + 1);
               if (PLACEHOLDER == 'h' || PLACEHOLDER == 'H') {
-                const bool CURRENT_HEX = x == mech_position_x(temp_mech) &&
-                                         y == mech_position_y(temp_mech);
+                const bool CURRENT_HEX = (x == mech_position_x(temp_mech) &&
+                                          y == mech_position_y(temp_mech)) != 0;
                 if (PLACEHOLDER == 'h') {
                   if (CURRENT_HEX)
                     btech_text_builder_append(&output, "your hex");

@@ -70,11 +70,11 @@ static void fixed_state_to_stats(BtechContext *context,
 }
 
 static bool selected_variable_value(int code, int modes) {
-  return ((modes & VALUES_SKILLS) &&
-          character_value_definition(code)->type == CHAR_SKILL) ||
-         ((modes & VALUES_ADVS) &&
-          (character_value_definition(code)->type == CHAR_ADVANTAGE ||
-           code == LIVES_NUMBER));
+  return (((modes & VALUES_SKILLS) &&
+           character_value_definition(code)->type == CHAR_SKILL) ||
+          ((modes & VALUES_ADVS) &&
+           (character_value_definition(code)->type == CHAR_ADVANTAGE ||
+            code == LIVES_NUMBER))) != 0;
 }
 
 static void store_variable_values(BtechContext *context, DbRef player,

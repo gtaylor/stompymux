@@ -63,8 +63,9 @@ static bool parse_coordinate_pair(char *text, int *x, int *y) {
   if (separator == nullptr)
     return false;
   *separator = '\0';
-  const bool PARSED = parse_int_checked(text, x) &&
-                      parse_int_checked(checked_string_suffix(separator, 1), y);
+  const bool PARSED =
+      (parse_int_checked(text, x) &&
+       parse_int_checked(checked_string_suffix(separator, 1), y)) != 0;
   *separator = ',';
   return PARSED;
 }

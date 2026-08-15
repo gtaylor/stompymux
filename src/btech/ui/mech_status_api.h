@@ -64,7 +64,7 @@ typedef struct PhysicalWeaponRequest {
   MechPhysicalWeaponType type;
 } PhysicalWeaponRequest;
 
-static_assert(ARMOR_LEVEL_GREAT == 0 && ARMOR_LEVEL_REPAIRING == 5);
+static_assert((ARMOR_LEVEL_GREAT == 0 && ARMOR_LEVEL_REPAIRING == 5) != 0);
 
 /* mech.status.c */
 void display_target(EvaluationContext *evaluation, DbRef player, Mech *mech);

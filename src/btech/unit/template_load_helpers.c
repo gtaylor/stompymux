@@ -82,7 +82,7 @@ bool template_parse_critical_range(char *command, int *first, int *last) {
   } else {
     *last = *first;
   }
-  return *first > 0 && *last >= *first;
+  return (*first > 0 && *last >= *first) != 0;
 }
 
 void template_load_finalize(Mech *mech, bool clan_equipment) {

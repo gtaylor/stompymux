@@ -300,7 +300,7 @@ void configuration_initialize(ConfigurationContext *context) {
       (ObjectFlagSet){.values = {
                           [OBJECT_FLAG_NO_COMMAND] = true,
                       }};
-  context->configuration->default_thing_flags = (ObjectFlagSet){0};
+  context->configuration->default_thing_flags = (ObjectFlagSet){};
   (void)string_copy_bounded(context->configuration->mud_name,
                             sizeof(context->configuration->mud_name),
                             "StompyMUX");

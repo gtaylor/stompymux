@@ -25,9 +25,9 @@ bool styled_text_preset_name_valid(const char *name) {
     const unsigned char CHARACTER =
         (unsigned char)*(const char *)checked_storage_at_const(
             name, length + 1, sizeof(char), index);
-    bool alphanumeric = (CHARACTER >= 'A' && CHARACTER <= 'Z') ||
-                        (CHARACTER >= 'a' && CHARACTER <= 'z') ||
-                        (CHARACTER >= '0' && CHARACTER <= '9');
+    bool alphanumeric = ((CHARACTER >= 'A' && CHARACTER <= 'Z') ||
+                         (CHARACTER >= 'a' && CHARACTER <= 'z') ||
+                         (CHARACTER >= '0' && CHARACTER <= '9')) != 0;
     if (!alphanumeric && CHARACTER != '.' && CHARACTER != '_' &&
         CHARACTER != '~' && CHARACTER != '-')
       return false;
@@ -53,36 +53,41 @@ static bool styled_text_preset_uri(const StyledTextPreset *preset,
                                    const StyledTextRenderOptions *options,
                                    char *uri, size_t uri_size) {
   const StyledLinkConfig *config = &preset->config;
-  bool include_base = options && options->osc_hyperlinks_style_basic &&
-                      styled_link_properties_present(&config->style.base);
-  bool include_states = options && options->osc_hyperlinks_style_states &&
-                        styled_link_has_states(config);
+  bool include_base =
+      (options && options->osc_hyperlinks_style_basic &&
+       styled_link_properties_present(&config->style.base)) != 0;
+  bool include_states = (options && options->osc_hyperlinks_style_states &&
+                         styled_link_has_states(config)) != 0;
   bool include_tooltip =
-      options && options->osc_hyperlinks_tooltip && config->tooltip;
-  bool include_menu = options && options->osc_hyperlinks_menu &&
-                      styled_link_menu_has_enabled_action(config, options);
-  bool include_title = options && options->osc_hyperlinks_menu && config->title;
+      (options && options->osc_hyperlinks_tooltip && config->tooltip) != 0;
+  bool include_menu =
+      (options && options->osc_hyperlinks_menu &&
+       styled_link_menu_has_enabled_action(config, options)) != 0;
+  bool include_title =
+      (options && options->osc_hyperlinks_menu && config->title) != 0;
   bool include_title_style =
-      include_title && options->osc_hyperlinks_style_basic &&
-      styled_link_properties_present(&config->title_style);
-  bool include_visibility = options && options->osc_hyperlinks_visibility &&
-                            styled_link_visibility_present(&config->visibility);
-  bool include_selection = options && options->osc_hyperlinks_selection &&
-                           styled_link_selection_present(&config->selection);
-  bool include_spoiler = options && options->osc_hyperlinks_spoiler &&
-                         config->spoiler != STYLED_BOOLEAN_UNSET;
-  bool include_disabled = options && options->osc_hyperlinks_disabled &&
-                          config->disabled != STYLED_BOOLEAN_UNSET;
+      (include_title && options->osc_hyperlinks_style_basic &&
+       styled_link_properties_present(&config->title_style)) != 0;
+  bool include_visibility =
+      (options && options->osc_hyperlinks_visibility &&
+       styled_link_visibility_present(&config->visibility)) != 0;
+  bool include_selection =
+      (options && options->osc_hyperlinks_selection &&
+       styled_link_selection_present(&config->selection)) != 0;
+  bool include_spoiler = (options && options->osc_hyperlinks_spoiler &&
+                          config->spoiler != STYLED_BOOLEAN_UNSET) != 0;
+  bool include_disabled = (options && options->osc_hyperlinks_disabled &&
+                           config->disabled != STYLED_BOOLEAN_UNSET) != 0;
   char base[80];
   int length = snprintf(base, sizeof(base), "preset:%s", preset->name);
 
-  return length > 0 && (size_t)length < sizeof(base) &&
-         styled_build_configured_uri(
-             base, config, include_base, include_states, include_tooltip,
-             include_menu, include_title, include_title_style,
-             include_visibility, include_selection, include_spoiler,
-             include_disabled, nullptr, true, false, false, options, uri,
-             uri_size);
+  return (length > 0 && (size_t)length < sizeof(base) &&
+          styled_build_configured_uri(
+              base, config, include_base, include_states, include_tooltip,
+              include_menu, include_title, include_title_style,
+              include_visibility, include_selection, include_spoiler,
+              include_disabled, nullptr, true, false, false, options, uri,
+              uri_size)) != 0;
 }
 
 bool styled_text_palette_set_preset(StyledTextPalette *palette,
@@ -204,6 +209,6 @@ bool styled_text_palette_render_preset(const StyledTextPalette *palette,
       !styled_text_preset_uri(styled_palette_preset_const(palette, index),
                               options, uri, sizeof(uri)))
     return false;
-  return styled_emit_link_open(uri, output, output_size, &used) &&
-         styled_emit_link_close(output, output_size, &used);
+  return (styled_emit_link_open(uri, output, output_size, &used) &&
+          styled_emit_link_close(output, output_size, &used)) != 0;
 }

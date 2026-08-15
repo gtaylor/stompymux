@@ -75,7 +75,7 @@ static bool lua_mux_read_state_value(lua_State *state, int argument,
     return true;
   case LUA_TBOOLEAN:
     value->type = OBJECT_STATE_BOOLEAN;
-    value->as.boolean = lua_toboolean(state, argument);
+    value->as.boolean = (lua_toboolean(state, argument) != 0);
     return true;
   case LUA_TNUMBER: {
     lua_Number number = lua_tonumber(state, argument);

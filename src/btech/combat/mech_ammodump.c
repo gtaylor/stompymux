@@ -500,11 +500,11 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int w_hit_loc) {
       mech_damage_apply(
           &(MechDamageRequest){.target = mech,
                                .attacker = attacker,
-                               .line_of_sight = 0,
+                               .line_of_sight = false,
                                .attack_pilot = -1,
                                .hit_location = w_hit_loc,
-                               .rear = 1,
-                               .critical = 0,
+                               .rear = true,
+                               .critical = false,
                                .armor_damage = w_blow_damage,
                                .internal_damage = 0,
                                .transfer = MECH_DAMAGE_FORCE_TRANSFER,
@@ -512,7 +512,7 @@ void mech_ammunition_dump_explode(Mech *mech, Mech *attacker, int w_hit_loc) {
                                .base_to_hit = 0,
                                .weapon_index = -1,
                                .ammunition_mode = 0,
-                               .ignore_swarmers = 1});
+                               .ignore_swarmers = true});
       /*
        * Decrement the ammo one round
        */

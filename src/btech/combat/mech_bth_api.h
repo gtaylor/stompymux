@@ -74,4 +74,4 @@ mech_c3_range_to_hit_calculate(const C3RangeToHitRequest *request);
 int mech_attacker_movement_modifier(Mech *mech);
 int mech_target_movement_modifier(Mech *mech, Mech *target, float range);
 
-static_assert(RANGE_SHORT == 0 && RANGE_NOWATER == 5);
+static_assert((RANGE_SHORT == 0 && RANGE_NOWATER == 5) != 0);

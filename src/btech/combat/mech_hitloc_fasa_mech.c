@@ -33,7 +33,7 @@ HitLocationResult fasa_mech_hit_location(Mech *mech, int hit_group,
                            "%ld's luck sucks. It got TACed. "
                            "We're in mech_fasa_hit_location()",
                            mech_dbref(mech));
-        result.critical = 1;
+        result.critical = true;
         return hit_location_result_at(result, LTORSO);
       case 3:
         return hit_location_result_at(result, LLEG);
@@ -66,7 +66,7 @@ HitLocationResult fasa_mech_hit_location(Mech *mech, int hit_group,
                            "%ld's luck sucks. It got TACed. "
                            "We're in mech_fasa_hit_location()",
                            mech_dbref(mech));
-        result.critical = 1;
+        result.critical = true;
         return hit_location_result_at(result, RTORSO);
       case 3:
         return hit_location_result_at(result, RLEG);
@@ -100,7 +100,7 @@ HitLocationResult fasa_mech_hit_location(Mech *mech, int hit_group,
                            "%ld's luck sucks. It got TACed. "
                            "We're in mech_fasa_hit_location()",
                            mech_dbref(mech));
-        result.critical = 1;
+        result.critical = true;
         return hit_location_result_at(result, CTORSO);
       case 3:
       case 4:

@@ -40,8 +40,8 @@ static const CharacterFixedState DEFAULT_FIXED_STATE = {
 };
 
 static bool valid_player(GameDatabase *database, DbRef player) {
-  return is_good_obj(database, player) &&
-         game_object_type(database, player) == OBJECT_TYPE_PLAYER;
+  return (is_good_obj(database, player) &&
+          game_object_type(database, player) == OBJECT_TYPE_PLAYER) != 0;
 }
 
 static CharacterState *state_create(GameDatabase *database, DbRef player) {
@@ -76,8 +76,8 @@ void character_state_clear(GameDatabase *database, DbRef player) {
 }
 
 bool character_state_exists(GameDatabase *database, DbRef player) {
-  return valid_player(database, player) &&
-         game_database_object(database, player)->character != nullptr;
+  return (valid_player(database, player) &&
+          game_database_object(database, player)->character != nullptr) != 0;
 }
 
 bool character_state_fixed_get(GameDatabase *database, DbRef player,
@@ -127,10 +127,10 @@ character_state_value_entry(const CharacterStateEntryRequest *request) {
   CharacterState *state;
 
   if (!valid_player(database, player))
-    return (CharacterStateEntryResult){0};
+    return (CharacterStateEntryResult){};
   state = game_database_object(database, player)->character;
   if (!state || index >= state->value_count)
-    return (CharacterStateEntryResult){0};
+    return (CharacterStateEntryResult){};
   const CharacterValueState *stored =
       character_value(state->values, state->value_count, index);
   return (CharacterStateEntryResult){.found = true,

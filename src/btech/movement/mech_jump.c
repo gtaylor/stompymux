@@ -176,7 +176,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
       mech_los_broadcast(
           mech,
           "engages jumpjets, rolls to the side and slams into the ground!");
-      mech_fall(mech, 1, 0);
+      mech_fall(mech, 1, false);
       return;
     }
   }
@@ -304,7 +304,7 @@ void mech_jump(DbRef player, void *data, char *buffer) {
                  "That target is out of range!");
     return;
   }
-  dfa_attack = mech_class(mech) != CLASS_BSUIT && temp_mech;
+  dfa_attack = ((mech_class(mech) != CLASS_BSUIT && temp_mech) != 0);
   if (dfa_attack)
     mech_dfa_attacking_set(mech, true);
   /* New idea: JumpTop = (JP + 1 - range / 3) - in another words,

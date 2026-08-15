@@ -37,18 +37,18 @@
 /* -------------------------------------------------------------------- */
 
 static bool terrain_is_water(int terrain) {
-  return terrain == BATTLE_TERRAIN_ICE || terrain == BATTLE_TERRAIN_WATER ||
-         terrain == BATTLE_TERRAIN_BRIDGE;
+  return (terrain == BATTLE_TERRAIN_ICE || terrain == BATTLE_TERRAIN_WATER ||
+          terrain == BATTLE_TERRAIN_BRIDGE) != 0;
 }
 
 static bool mech_is_in_water(Mech *mech) {
-  return terrain_is_water(mech_real_terrain_get(mech)) &&
-         mech_position_z(mech) < 0;
+  return (terrain_is_water(mech_real_terrain_get(mech)) &&
+          mech_position_z(mech) < 0) != 0;
 }
 
 static bool mech_is_water_beast(const Mech *mech) {
-  return mech_movement_type(mech) == MOVE_HULL ||
-         mech_movement_type(mech) == MOVE_FOIL;
+  return (mech_movement_type(mech) == MOVE_HULL ||
+          mech_movement_type(mech) == MOVE_FOIL) != 0;
 }
 
 static float mech_los_position_z(const Mech *mech) {
@@ -320,7 +320,7 @@ int mech_los_terrain_modifier(const MechLosTerrainRequest *request) {
   if (mech && target) {
     const int FLAGS =
         battle_map_los_flags(map, mech_map_slot(mech), mech_map_slot(target));
-    mech_partial_cover_set(target, FLAGS & BATTLE_MAP_LOS_PARTIAL_COVER);
+    mech_partial_cover_set(target, (FLAGS & BATTLE_MAP_LOS_PARTIAL_COVER) != 0);
 
     MechSensorToHitRequest sensor_request = {
         .observer = mech,

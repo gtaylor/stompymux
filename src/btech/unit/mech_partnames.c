@@ -156,7 +156,7 @@ static bool create_brandname(PartNameRegistry *registry,
     brn = mech_part_brand_name(&request);
   }
   if (!brn)
-    return 0;
+    return false;
   p = checked_storage_allocate(sizeof(*p));
   c = part_name_format(&(PartNameRequest){.configuration = configuration,
                                           .part = id,
@@ -164,7 +164,7 @@ static bool create_brandname(PartNameRegistry *registry,
                                           .buffer = scratch});
   if (!c) {
     free(p);
-    return 0;
+    return false;
   }
   if (b)
     (void)snprintf(buf, sizeof(buf), "%s.%s", brn, c);
@@ -180,7 +180,7 @@ static bool create_brandname(PartNameRegistry *registry,
   if (!c) {
     free(p->vlongy);
     free(p);
-    return 0;
+    return false;
   }
   if (b)
     (void)snprintf(buf, sizeof(buf), "%s.%s", brn, c);
@@ -192,7 +192,7 @@ static bool create_brandname(PartNameRegistry *registry,
     free(p->longy);
     free(p->vlongy);
     free(p);
-    return 0;
+    return false;
   }
   if (b) {
     (void)string_copy_bounded(buf2, sizeof(buf2), c);
@@ -204,7 +204,7 @@ static bool create_brandname(PartNameRegistry *registry,
   p->shorty = strdup(buf);
   p->index = packed_part(id, b);
   *part_index_slot(registry, b, id) = p;
-  return 1;
+  return true;
 }
 
 void initialize_partname_tables(BtechContext *context) {
@@ -299,7 +299,7 @@ static PartMatchResult part_match_exact(const PartMatchRequest *request,
   void *match;
 
   if (request->cursor >= 0)
-    return (PartMatchResult){0};
+    return (PartMatchResult){};
   lowercase_name(tmpbuf, request->pattern);
   match = hash_table_find(tmpbuf, table);
   if (match) {
@@ -312,7 +312,7 @@ static PartMatchResult part_match_exact(const PartMatchRequest *request,
                                .part = {.id = packed_part_id(p->index),
                                         .brand = packed_part_brand(p->index)}};
   }
-  return (PartMatchResult){0};
+  return (PartMatchResult){};
 }
 
 static PartMatchResult part_match_long(const PartMatchRequest *request) {
@@ -329,7 +329,7 @@ static PartMatchResult part_match_long(const PartMatchRequest *request) {
                                .part = {.id = packed_part_id(p->index),
                                         .brand = packed_part_brand(p->index)}};
   }
-  return (PartMatchResult){0};
+  return (PartMatchResult){};
 }
 
 PartMatchResult part_match_next(const PartMatchRequest *request) {
@@ -344,7 +344,7 @@ PartMatchResult part_match_next(const PartMatchRequest *request) {
     return part_match_exact(request, &registry->vlong_hash,
                             registry->short_sorted);
   }
-  return (PartMatchResult){0};
+  return (PartMatchResult){};
 }
 
 PartMatchResult part_name_lookup(const PartNameLookupRequest *request) {
@@ -505,9 +505,9 @@ static bool btpartslist_matches(const PartCategoryRequest *request) {
   case BT_PART_CATEGORY_CARGO:
     return equipment_is_cargo(request->part);
   case BT_PART_CATEGORY_INVALID:
-    return 0;
+    return false;
   default:
-    return 0;
+    return false;
   }
 }
 

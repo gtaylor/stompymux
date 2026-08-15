@@ -342,7 +342,7 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
     if (w_fall_levels > 2)
       mech_los_broadcast(mech, "tumbles over and over and over!");
 
-    mech_fall(mech, w_fall_levels, 1);
+    mech_fall(mech, w_fall_levels, true);
   }
 }
 
@@ -621,7 +621,7 @@ void mech_drop(DbRef player, void *data, const char *buffer) {
             btech_context_find_object(mech_context(mech), mech_map_dbref(mech)),
             mech, 0);
 
-      mech_fall(mech, w_drop_levels, 1);
+      mech_fall(mech, w_drop_levels, true);
     }
   } else {
     mech_notify(mech, MECHALL, "You drop to the ground prone!");
@@ -768,7 +768,7 @@ void mech_stand(DbRef player, void *data, char *buffer) {
             .mech = mech, .modifier = standcarefulmod})) {
       mech_notify(mech, MECHALL,
                   "You fail your attempt to stand and fall back on the ground");
-      mech_fall(mech, 1, 1);
+      mech_fall(mech, 1, true);
       mechstandtime =
           ((mech_class(mech) == CLASS_MW) ? DROP_TO_STAND_RECYCLE / 3
                                           : mech_stand_time(mech));

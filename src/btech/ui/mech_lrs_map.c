@@ -68,8 +68,8 @@ static void lrs_text_append(char *buffer, size_t capacity, const char *format,
 }
 
 static bool mech_seems_friendly(Mech *mech, Mech *other) {
-  return mech_team(mech) == mech_team(other) &&
-         mech_los_check_unblocked(mech, other, 0, 0, 0);
+  return (mech_team(mech) == mech_team(other) &&
+          mech_los_check_unblocked(mech, other, 0, 0, 0)) != 0;
 }
 
 char get_lrs_mech_char(Mech *mech, Mech *other) {
@@ -159,7 +159,7 @@ char map_terrain_color_char(const TerrainColorRequest *request) {
 }
 
 const char *map_color_markup(char color) {
-  bool bold = color >= 'A' && color <= 'Z';
+  bool bold = (color >= 'A' && color <= 'Z') != 0;
   const char NORMALIZED = bold ? (char)(color + ('a' - 'A')) : color;
 
   switch (NORMALIZED) {

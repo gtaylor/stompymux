@@ -275,7 +275,7 @@ void mech_section_destroy(const SectionDestructionRequest *request) {
     if (bsuit_member_count(wounded) > 0)
       goto skip_nuke;
     else if (!mech_is_destroyed(wounded))
-      mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
+      mech_destroy(wounded, attacker, true, KILL_TYPE_NORMAL);
   } else {
     for (i = 0; i < NUM_SECTIONS; i++)
       if (mech_section_original_internal(wounded, i) &&
@@ -330,12 +330,12 @@ skip_nuke:
       if (!mech_is_destroyed(wounded)) {
         if (HITLOC == HEAD) {
           if (attacker && mech_aim_section(attacker) == HEAD) {
-            mech_destroy(wounded, attacker, 1, KILL_TYPE_HEAD_TARGET);
+            mech_destroy(wounded, attacker, true, KILL_TYPE_HEAD_TARGET);
           } else {
-            mech_destroy(wounded, attacker, 1, KILL_TYPE_BEHEADED);
+            mech_destroy(wounded, attacker, true, KILL_TYPE_BEHEADED);
           }
         } else {
-          mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
+          mech_destroy(wounded, attacker, true, KILL_TYPE_NORMAL);
         }
       }
       /* If it's the head or a MW's CT, kill the contents if IC */
@@ -362,7 +362,7 @@ skip_nuke:
     /* With one exception.. */
     if (HITLOC == COCKPIT && mech_class(wounded) == CLASS_AERO) {
       if (!mech_is_destroyed(wounded))
-        mech_destroy(wounded, attacker, 0, KILL_TYPE_COCKPIT);
+        mech_destroy(wounded, attacker, false, KILL_TYPE_COCKPIT);
       mech_communications_clear(wounded);
       mech_contents_kill_if_in_character(wounded);
     }
@@ -407,7 +407,7 @@ skip_nuke:
 
   if (t_kill_mech) {
     if (!mech_is_destroyed(wounded))
-      mech_destroy(wounded, attacker, 1, KILL_TYPE_NORMAL);
+      mech_destroy(wounded, attacker, true, KILL_TYPE_NORMAL);
   }
 }
 
@@ -484,10 +484,10 @@ bool mech_damage_apply_clusters(const DamageClusterRequest *request) {
     this_time = min(CLUSTERSIZE, totaldam);
     mech_damage_apply(&(MechDamageRequest){.target = mech,
                                            .attacker = mech,
-                                           .line_of_sight = 0,
+                                           .line_of_sight = false,
                                            .attack_pilot = -1,
                                            .hit_location = hitloc,
-                                           .rear = isrear,
+                                           .rear = isrear != 0,
                                            .critical = ISCRITICAL,
                                            .armor_damage = this_time,
                                            .internal_damage = 0,
@@ -496,7 +496,7 @@ bool mech_damage_apply_clusters(const DamageClusterRequest *request) {
                                            .base_to_hit = 0,
                                            .weapon_index = -1,
                                            .ammunition_mode = 0,
-                                           .ignore_swarmers = 1});
+                                           .ignore_swarmers = true});
     totaldam -= this_time;
   }
   return true;
@@ -559,8 +559,8 @@ void mech_damage(DbRef player, Mech *mech, char *buffer) {
       .attacker = mech,
       .target = mech,
       .target_hex = {.x = -1, .y = -1},
-      .rear = isrear,
-      .critical = iscritical,
+      .rear = isrear != 0,
+      .critical = iscritical != 0,
       .weapon = {.weapon_index = 0},
       .fire_mode = -1,
       .ammunition_mode = -1,
@@ -616,11 +616,11 @@ void mech_damage_section(DbRef player, Mech *mech, char *buffer) {
   }
   mech_damage_apply(&(MechDamageRequest){.target = mech,
                                          .attacker = mech,
-                                         .line_of_sight = 0,
+                                         .line_of_sight = false,
                                          .attack_pilot = -1,
                                          .hit_location = section,
-                                         .rear = isrear,
-                                         .critical = iscritical,
+                                         .rear = isrear != 0,
+                                         .critical = iscritical != 0,
                                          .armor_damage = damage,
                                          .internal_damage = 0,
                                          .transfer = MECH_DAMAGE_NORMAL,
@@ -628,5 +628,5 @@ void mech_damage_section(DbRef player, Mech *mech, char *buffer) {
                                          .base_to_hit = 0,
                                          .weapon_index = -1,
                                          .ammunition_mode = 0,
-                                         .ignore_swarmers = 1});
+                                         .ignore_swarmers = true});
 }

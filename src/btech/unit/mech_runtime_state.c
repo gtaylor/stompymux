@@ -6,9 +6,13 @@
 #include "section_types.h"
 #include <time.h>
 
-bool mech_is_started(const Mech *mech) { return mech->rd.status & STARTED; }
+bool mech_is_started(const Mech *mech) {
+  return (mech->rd.status & STARTED) != 0;
+}
 
-bool mech_is_destroyed(const Mech *mech) { return mech->rd.status & DESTROYED; }
+bool mech_is_destroyed(const Mech *mech) {
+  return (mech->rd.status & DESTROYED) != 0;
+}
 
 void mech_destroyed_set(Mech *mech, bool destroyed) {
   if (destroyed)
@@ -17,36 +21,42 @@ void mech_destroyed_set(Mech *mech, bool destroyed) {
     mech->rd.status &= ~DESTROYED;
 }
 
-bool mech_is_landed(const Mech *mech) { return mech->rd.status & LANDED; }
+bool mech_is_landed(const Mech *mech) {
+  return (mech->rd.status & LANDED) != 0;
+}
 
-bool mech_is_jumping(const Mech *mech) { return mech->rd.status & JUMPING; }
+bool mech_is_jumping(const Mech *mech) {
+  return (mech->rd.status & JUMPING) != 0;
+}
 
-bool mech_is_out_of_control(const Mech *mech) { return mech->rd.cocoon; }
+bool mech_is_out_of_control(const Mech *mech) { return mech->rd.cocoon != 0; }
 
-bool mech_is_blinded(const Mech *mech) { return mech->rd.status & BLINDED; }
+bool mech_is_blinded(const Mech *mech) {
+  return (mech->rd.status & BLINDED) != 0;
+}
 
 bool mech_has_fired_recently(const Mech *mech) {
-  return mech->rd.status & FIRED;
+  return (mech->rd.status & FIRED) != 0;
 }
 
 bool mech_is_invisible(const Mech *mech) {
-  return mech->rd.critstatus & INVISIBLE;
+  return (mech->rd.critstatus & INVISIBLE) != 0;
 }
 
 bool mech_autocon_when_shutdown(const Mech *mech) {
-  return mech->rd.status & AUTOCON_WHEN_SHUTDOWN;
+  return (mech->rd.status & AUTOCON_WHEN_SHUTDOWN) != 0;
 }
 
 bool mech_autocon_include_shutdown_targets(const Mech *mech) {
-  return mech->rd.mech_prefs & MECHPREF_AUTOCON_SD;
+  return (mech->rd.mech_prefs & MECHPREF_AUTOCON_SD) != 0;
 }
 
 bool mech_armor_warning_enabled(const Mech *mech) {
-  return !(mech->rd.mech_prefs & MECHPREF_NOARMORWARN);
+  return (!(mech->rd.mech_prefs & MECHPREF_NOARMORWARN)) != 0;
 }
 
 bool mech_ammunition_warning_enabled(const Mech *mech) {
-  return !(mech->rd.mech_prefs & MECHPREF_NOAMMOWARN);
+  return (!(mech->rd.mech_prefs & MECHPREF_NOAMMOWARN)) != 0;
 }
 
 void mech_blinded_set(Mech *mech, bool blinded) {
@@ -64,7 +74,7 @@ void mech_fired_recently_set(Mech *mech, bool fired) {
 }
 
 bool mech_suppresses_gunnery_experience(const Mech *mech) {
-  return mech->rd.status2 & NO_GUN_XP;
+  return (mech->rd.status2 & NO_GUN_XP) != 0;
 }
 
 bool mech_player_character_initialization_begin(Mech *mech) {
@@ -75,39 +85,39 @@ bool mech_player_character_initialization_begin(Mech *mech) {
 }
 
 bool mech_pilot_is_unconscious(const Mech *mech) {
-  return mech->rd.status & UNCONSCIOUS;
+  return (mech->rd.status & UNCONSCIOUS) != 0;
 }
 
 bool mech_is_observer(const Mech *mech) {
-  return mech->rd.critstatus & OBSERVATORIC;
+  return (mech->rd.critstatus & OBSERVATORIC) != 0;
 }
 
 bool mech_is_under_gravity(const Mech *mech) {
-  return mech->rd.status & UNDERGRAVITY;
+  return (mech->rd.status & UNDERGRAVITY) != 0;
 }
 
 bool mech_is_under_special_conditions(const Mech *mech) {
-  return mech->rd.status & UNDERSPECIAL;
+  return (mech->rd.status & UNDERSPECIAL) != 0;
 }
 
 bool mech_is_under_vacuum(const Mech *mech) {
-  return mech->rd.status & UNDERVACUUM;
+  return (mech->rd.status & UNDERVACUUM) != 0;
 }
 
 bool mech_is_immobile(const Mech *mech) {
-  return !(mech->rd.status & STARTED) || (mech->rd.status & UNCONSCIOUS) ||
-         (mech->rd.status2 & FORTIFIED) || (mech->rd.status & BLINDED) ||
-         mech->ud.move == MOVE_NONE ||
-         ((mech->rd.status & FALLEN) && mech->ud.type != CLASS_MECH &&
-          mech->ud.type != CLASS_MW);
+  return (!(mech->rd.status & STARTED) || (mech->rd.status & UNCONSCIOUS) ||
+          (mech->rd.status2 & FORTIFIED) || (mech->rd.status & BLINDED) ||
+          mech->ud.move == MOVE_NONE ||
+          ((mech->rd.status & FALLEN) && mech->ud.type != CLASS_MECH &&
+           mech->ud.type != CLASS_MW)) != 0;
 }
 
 bool mech_has_destroyed_gyro(const Mech *mech) {
-  return mech->rd.critstatus & GYRO_DESTROYED;
+  return (mech->rd.critstatus & GYRO_DESTROYED) != 0;
 }
 
 bool mech_has_damaged_gyro(const Mech *mech) {
-  return mech->rd.critstatus & (GYRO_DAMAGED | GYRO_DESTROYED);
+  return (mech->rd.critstatus & (GYRO_DAMAGED | GYRO_DESTROYED)) != 0;
 }
 
 int mech_cocoon_integrity(const Mech *mech) { return mech->rd.cocoon; }
@@ -168,9 +178,11 @@ void mech_carried_dbref_set(Mech *mech, DbRef carried) {
   mech->rd.critstatus &= ~LOAD_OK;
 }
 
-bool mech_is_towed(const Mech *mech) { return mech->rd.status & TOWED; }
+bool mech_is_towed(const Mech *mech) { return (mech->rd.status & TOWED) != 0; }
 
-bool mech_is_towable(const Mech *mech) { return mech->rd.critstatus & TOWABLE; }
+bool mech_is_towable(const Mech *mech) {
+  return (mech->rd.critstatus & TOWABLE) != 0;
+}
 
 void mech_towed_set(Mech *mech, bool towed) {
   if (towed)

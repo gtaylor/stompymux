@@ -48,8 +48,8 @@ void mux_timer_stop(MuxTimer *timer) {
 }
 
 bool mux_timer_is_active(const MuxTimer *timer) {
-  return timer != nullptr &&
-         uv_is_active((const uv_handle_t *)&timer->handle) != 0;
+  return (timer != nullptr &&
+          uv_is_active((const uv_handle_t *)&timer->handle) != 0) != 0;
 }
 
 uint64_t mux_timer_due_in(const MuxTimer *timer) {

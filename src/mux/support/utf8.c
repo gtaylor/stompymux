@@ -28,7 +28,7 @@ static void utf8_write_byte(char *text, size_t capacity, size_t index,
 }
 
 static bool utf8_is_continuation(unsigned char byte) {
-  return byte >= 0x80 && byte <= 0xbf;
+  return (byte >= 0x80 && byte <= 0xbf) != 0;
 }
 
 bool utf8_decode(const char *text, size_t length, Utf8DecodeResult *result) {

@@ -621,7 +621,7 @@ bool descriptor_command(Descriptor *d, char *command) {
                                           .enactor = d->player,
                                           .descriptor = d,
                                           .interactive = true}))
-    return 0;
+    return false;
   context.debug_command = "< descriptor_command >";
 
   /* The IDLE command is used to keep players behind badly configured NATs
@@ -631,7 +631,7 @@ bool descriptor_command(Descriptor *d, char *command) {
   if (!strcasecmp(command, "IDLE") && d->is_connected) {
     context.debug_command = "idle";
     command_context_destroy(&context);
-    return 1;
+    return true;
   }
 
   d->last_time = runtime->clock->now;
@@ -641,7 +641,7 @@ bool descriptor_command(Descriptor *d, char *command) {
   process_command(&context, command, (char **)nullptr, 0);
   btech_command_scope_leave(&btech_scope);
   command_context_destroy(&context);
-  return 1;
+  return true;
 }
 
 /*

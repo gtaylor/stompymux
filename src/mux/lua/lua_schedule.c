@@ -56,7 +56,7 @@ static bool lua_schedule_add_job(LuaRuntime *runtime, LuaModuleRoot root,
   LuaScheduleJob *jobs;
   LuaScheduleJob *job;
   if (runtime->schedule_job_count == SIZE_MAX)
-    return 0;
+    return false;
 
   char *path_copy = strdup(path);
   char *name_copy = strdup(name);
@@ -66,7 +66,7 @@ static bool lua_schedule_add_job(LuaRuntime *runtime, LuaModuleRoot root,
     free(path_copy);
     free(name_copy);
     free(cron_copy);
-    return 0;
+    return false;
   }
 
   jobs = checked_storage_try_reallocate_array(
@@ -75,7 +75,7 @@ static bool lua_schedule_add_job(LuaRuntime *runtime, LuaModuleRoot root,
     free(path_copy);
     free(name_copy);
     free(cron_copy);
-    return 0;
+    return false;
   }
   runtime->schedule_jobs = jobs;
   runtime->schedule_job_count++;
@@ -94,7 +94,7 @@ static bool lua_schedule_add_job(LuaRuntime *runtime, LuaModuleRoot root,
                                                         .minute = minute}) %
                55U);
   job->expires = (minute * 60) + 60;
-  return 1;
+  return true;
 }
 
 static void lua_schedule_collect_module(LuaRuntime *runtime, LuaModuleRoot root,
@@ -277,12 +277,12 @@ static bool lua_schedule_count(LuaRuntime *runtime, LuaModuleRoot root,
 
   if (!lua_load_module(runtime, root, path, error, error_size)) {
     lua_settop(state, top);
-    return 0;
+    return false;
   }
   lua_getfield(state, -1, "schedules");
   *count = lua_istable(state, -1) ? (int)lua_objlen(state, -1) : 0;
   lua_settop(state, top);
-  return 1;
+  return true;
 }
 
 static void lua_schedule_show_module(EvaluationContext *evaluation,

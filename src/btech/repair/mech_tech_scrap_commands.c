@@ -264,26 +264,26 @@ void tech_removepart(DbRef player, void *data, char *buffer) {
 }
 
 static bool invalid_scrap_dependency(Mech *mech, int location) {
-  return !mech_section_is_destroyed(mech, location) ||
-         invalid_scrap_path(mech, location);
+  return (!mech_section_is_destroyed(mech, location) ||
+          invalid_scrap_path(mech, location)) != 0;
 }
 
 bool invalid_scrap_path(Mech *mech, int loc) {
   if (loc < 0)
-    return 0;
+    return false;
   if (mech_class(mech) != CLASS_MECH)
-    return 0;
+    return false;
   switch (loc) {
   case CTORSO:
-    return invalid_scrap_dependency(mech, HEAD) ||
-           invalid_scrap_dependency(mech, LTORSO) ||
-           invalid_scrap_dependency(mech, RTORSO);
+    return (invalid_scrap_dependency(mech, HEAD) ||
+            invalid_scrap_dependency(mech, LTORSO) ||
+            invalid_scrap_dependency(mech, RTORSO)) != 0;
   case LTORSO:
     return invalid_scrap_dependency(mech, LARM);
   case RTORSO:
     return invalid_scrap_dependency(mech, RARM);
   }
-  return 0;
+  return false;
 }
 
 void tech_removesection(DbRef player, void *data, char *buffer) {

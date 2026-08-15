@@ -40,7 +40,7 @@ bool find_artemis_for_weapon(Mech *mech, int section, int critical) {
     if (mech_critical_part_type(mech, section, critloop) == desired &&
         !mech_critical_is_nonfunctional(mech, section, critloop)) {
       if (mech_critical_data(mech, section, critloop) == (critical + 1))
-        return 1;
+        return true;
     }
   }
   if (((mech)->ud.type) == CLASS_MECH &&
@@ -49,7 +49,7 @@ bool find_artemis_for_weapon(Mech *mech, int section, int critical) {
       if (mech_critical_part_type(mech, HEAD, critloop) == desired &&
           !mech_critical_is_nonfunctional(mech, HEAD, critloop)) {
         if (mech_critical_data(mech, HEAD, critloop) == (critical + 1))
-          return 1;
+          return true;
       }
     }
   } else if (((mech)->ud.type) == CLASS_VEH_GROUND &&
@@ -58,11 +58,11 @@ bool find_artemis_for_weapon(Mech *mech, int section, int critical) {
       if (mech_critical_part_type(mech, BSIDE, critloop) == desired &&
           !mech_critical_is_nonfunctional(mech, BSIDE, critloop)) {
         if (mech_critical_data(mech, BSIDE, critloop) == (critical + 1))
-          return 1;
+          return true;
       }
     }
   }
-  return 0;
+  return false;
 }
 
 int reverse_split_crit_loc(Mech *mech, int sect, int crit) {
@@ -103,7 +103,7 @@ SplitCriticalLookup split_critical_find(Mech *mech,
                                         CriticalSlotReference source) {
   int sect = source.section;
   int data = source.critical;
-  SplitCriticalLookup result = {0};
+  SplitCriticalLookup result = {};
   switch (sect) {
   case RARM: // right arm goes to right torso
     result.part_type = special_equipment_index(SPLIT_CRIT_RIGHT);

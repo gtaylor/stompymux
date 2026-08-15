@@ -114,9 +114,9 @@ static bool invalid_vehicle_item(Mech *mech, int x, int y) {
   case SPECIAL_BASE_INDEX + ENGINE:
   case SPECIAL_BASE_INDEX + GYRO:
   case SPECIAL_BASE_INDEX + JUMP_JET:
-    return 1;
+    return true;
   }
-  return 0;
+  return false;
 }
 
 typedef struct PartWeaponNameResult {
@@ -130,7 +130,7 @@ part_weapon_name_check(const PartNameRequest *request, int weapon) {
   if (request->brand) {
     if (!request->configuration->btech_parts ||
         weapon_catalogue_has_special(weapon, CLAT))
-      return (PartWeaponNameResult){0};
+      return (PartWeaponNameResult){};
     if (weapon_catalogue_has_special(weapon, CLAT))
       result.is_clan = true;
   }
@@ -368,7 +368,7 @@ static int dump_item(FILE *fp, Mech *mech, int x, int y) {
   } else {
     const TemplateCriticalMetadata METADATA = template_critical_metadata_format(
         mech_critical_data(mech, x, y),
-        mech->xcode.context->configuration->btech_parts,
+        mech->xcode.context->configuration->btech_parts != 0,
         mech_critical_brand(mech, x, y));
     (void)fprintf(fp, "    %s		  { %s %s - %s}\n", crit,
                   get_parts_vlong_name(mech->xcode.context,

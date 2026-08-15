@@ -108,8 +108,8 @@ static int mech_sensor_minimum_variable_range(const Mech *mech, int sensor) {
 }
 
 static bool mech_sensor_sees_in_all_directions(const Mech *mech) {
-  return mech_movement_type(mech) == MOVE_NONE ||
-         mech_class(mech) == CLASS_BSUIT;
+  return (mech_movement_type(mech) == MOVE_NONE ||
+          mech_class(mech) == CLASS_BSUIT) != 0;
 }
 
 int mech_sensor_to_hit_bonus(const MechSensorToHitRequest *request) {
@@ -365,7 +365,7 @@ bool mech_sensor_detects(const MechSensorDetectionRequest *request) {
   int ch2 = mech_sensor_definition(snum)->see_chance(&visibility);
 
   if (!ch2 || !mech_sensor_definition(snum)->can_see(&contact))
-    return 0;
+    return false;
   if (target && mech_is_dropship(target))
     chance = chance * 4;
   if (target && mech_condition_summary(target).hidden &&
@@ -373,11 +373,11 @@ bool mech_sensor_detects(const MechSensorDetectionRequest *request) {
 
     if (mech_sensor_definition(snum)->match_letter[0] == 'B' &&
         mech_is_stealth_infantry(target) && !mech_is_purifier_infantry(target))
-      return 0;
+      return false;
 
     if (ch2 <= 100) {
       if (range > 5)
-        return 0;
+        return false;
       chance = chance / 4;
     }
   }
@@ -391,9 +391,9 @@ bool mech_sensor_detects(const MechSensorDetectionRequest *request) {
         mech_team(mech) != mech_team(target))
       if (!btech_random_range(mech_context(mech), 0, 5))
         made_perception_roll(mech, -2);
-    return 1;
+    return true;
   }
-  return 0;
+  return false;
 }
 
 /* Main idea: If primary & secondary scanner differ,

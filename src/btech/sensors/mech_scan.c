@@ -543,12 +543,12 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
   mech_name = btech_attribute_read(
       btech_context_database(mech_context(temp_mech)), mech_dbref(temp_mech),
       A_MECHNAME, (char[LBUF_SIZE]){0});
-  (void)snprintf(
-      buff, sizeof(buff), "[%s]  %-25.25s Tonnage: %d",
-      mech_id(temp_mech, mech_team(mech) == mech_team(temp_mech) &&
-                             mech_los_check_unblocked(mech, temp_mech, 0, 0, 0))
-          .text,
-      mech_name, mech_tonnage(temp_mech));
+  (void)snprintf(buff, sizeof(buff), "[%s]  %-25.25s Tonnage: %d",
+                 mech_id(temp_mech, (mech_team(mech) == mech_team(temp_mech) &&
+                                     mech_los_check_unblocked(mech, temp_mech,
+                                                              0, 0, 0)) != 0)
+                     .text,
+                 mech_name, mech_tonnage(temp_mech));
   mecha_notify(evaluation, player, buff);
   bearing = map_bearing(
       &(MapRealSegment){.start = {.x = mech_position_real_x(mech),

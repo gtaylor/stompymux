@@ -26,18 +26,18 @@ static bool mech_lites_target(Mech *mech, Mech *target) {
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   if (!mech_searchlight_active(mech))
-    return 0;
+    return false;
   if (mech_range_to(mech, target) > LITE_RANGE)
-    return 0;
+    return false;
   if (!(in_weapon_arc(mech, mech_position_real_x(target),
                       mech_position_real_y(target)) &
         FORWARDARC))
-    return 0;
+    return false;
   if (battle_map_unit_los_is_blocked(map, mech, target) ||
       battle_map_unit_los_wood_count(map, mech, target) > 2 ||
       battle_map_unit_los_water_count(map, mech, target) != 0)
-    return 0;
-  return 1;
+    return false;
+  return true;
 }
 
 void cause_lite(Mech *mech, Mech *temp_mech) {

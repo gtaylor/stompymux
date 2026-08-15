@@ -21,9 +21,13 @@ void mech_sensors_set(Mech *mech, int primary, int secondary) {
   mech->rd.sensor[1] = clamp_int_to_char(secondary);
 }
 
-bool mech_is_fallen(const Mech *mech) { return mech->rd.status & FALLEN; }
+bool mech_is_fallen(const Mech *mech) {
+  return (mech->rd.status & FALLEN) != 0;
+}
 
-bool mech_is_jellied(const Mech *mech) { return mech->rd.critstatus & JELLIED; }
+bool mech_is_jellied(const Mech *mech) {
+  return (mech->rd.critstatus & JELLIED) != 0;
+}
 
 void mech_jellied_set(Mech *mech, bool jellied) {
   if (jellied)
@@ -37,46 +41,46 @@ void mech_sensor_visibility_modifier_set(Mech *mech, int modifier) {
 }
 
 bool mech_searchlight_active(const Mech *mech) {
-  return mech->rd.status2 & SLITE_ON;
+  return (mech->rd.status2 & SLITE_ON) != 0;
 }
 
 bool mech_has_searchlight(const Mech *mech) {
-  return mech->rd.specials & SLITE_TECH;
+  return (mech->rd.specials & SLITE_TECH) != 0;
 }
 
 bool mech_has_operational_beagle_probe(const Mech *mech) {
-  return (mech->rd.specials & BEAGLE_PROBE_TECH) &&
-         !(mech->rd.critstatus & BEAGLE_DESTROYED);
+  return ((mech->rd.specials & BEAGLE_PROBE_TECH) &&
+          !(mech->rd.critstatus & BEAGLE_DESTROYED)) != 0;
 }
 
 bool mech_has_operational_bloodhound_probe(const Mech *mech) {
-  return (mech->rd.specials2 & BLOODHOUND_PROBE_TECH) &&
-         !(mech->rd.critstatus & BLOODHOUND_DESTROYED);
+  return ((mech->rd.specials2 & BLOODHOUND_PROBE_TECH) &&
+          !(mech->rd.critstatus & BLOODHOUND_DESTROYED)) != 0;
 }
 
 bool mech_is_clairvoyant(const Mech *mech) {
-  return mech->rd.critstatus & CLAIRVOYANT;
+  return (mech->rd.critstatus & CLAIRVOYANT) != 0;
 }
 
 bool mech_is_ecm_disturbed(const Mech *mech) {
-  return mech->rd.status2 & ECM_DISTURBANCE;
+  return (mech->rd.status2 & ECM_DISTURBANCE) != 0;
 }
 
 bool mech_is_any_ecm_disturbed(const Mech *mech) {
-  return mech->rd.status2 & (ECM_DISTURBANCE | ANGEL_ECM_DISTURBED);
+  return (mech->rd.status2 & (ECM_DISTURBANCE | ANGEL_ECM_DISTURBED)) != 0;
 }
 
 bool mech_electronic_warfare_is_enabled(const Mech *mech) {
-  return mech->rd.status2 &
-         (ECM_ENABLED | ECCM_ENABLED | ANGEL_ECM_ENABLED | ANGEL_ECCM_ENABLED);
+  return (mech->rd.status2 & (ECM_ENABLED | ECCM_ENABLED | ANGEL_ECM_ENABLED |
+                              ANGEL_ECCM_ENABLED)) != 0;
 }
 
 bool mech_is_stealth_infantry(const Mech *mech) {
-  return mech->rd.infantry_specials & STEALTH_TECH;
+  return (mech->rd.infantry_specials & STEALTH_TECH) != 0;
 }
 
 bool mech_is_purifier_infantry(const Mech *mech) {
-  return mech->rd.infantry_specials & CS_PURIFIER_STEALTH_TECH;
+  return (mech->rd.infantry_specials & CS_PURIFIER_STEALTH_TECH) != 0;
 }
 
 int mech_sensor_visibility_modifier(const Mech *mech) {
@@ -84,35 +88,36 @@ int mech_sensor_visibility_modifier(const Mech *mech) {
 }
 
 bool mech_has_tag_system(const Mech *mech) {
-  return (mech->rd.specials2 & TAG_TECH) ||
-         (mech->rd.specials & C3_MASTER_TECH);
+  return ((mech->rd.specials2 & TAG_TECH) ||
+          (mech->rd.specials & C3_MASTER_TECH)) != 0;
 }
 
 bool mech_tag_system_is_destroyed(const Mech *mech) {
-  return ((mech->rd.specials2 & TAG_TECH) &&
-          (mech->rd.critstatus & TAG_DESTROYED)) ||
-         ((mech->rd.specials & C3_MASTER_TECH) &&
-          (mech->rd.critstatus & C3_DESTROYED));
+  return (((mech->rd.specials2 & TAG_TECH) &&
+           (mech->rd.critstatus & TAG_DESTROYED)) ||
+          ((mech->rd.specials & C3_MASTER_TECH) &&
+           (mech->rd.critstatus & C3_DESTROYED))) != 0;
 }
 
 bool mech_has_working_ecm_suite(const Mech *mech) {
-  return ((mech->rd.specials & ECM_TECH) &&
-          !(mech->rd.critstatus & ECM_DESTROYED)) ||
-         ((mech->rd.specials2 & ANGEL_ECM_TECH) &&
-          !(mech->rd.critstatus & ANGEL_ECM_DESTROYED)) ||
-         (mech->rd.infantry_specials & FC_INFILTRATORII_STEALTH_TECH);
+  return (((mech->rd.specials & ECM_TECH) &&
+           !(mech->rd.critstatus & ECM_DESTROYED)) ||
+          ((mech->rd.specials2 & ANGEL_ECM_TECH) &&
+           !(mech->rd.critstatus & ANGEL_ECM_DESTROYED)) ||
+          (mech->rd.infantry_specials & FC_INFILTRATORII_STEALTH_TECH)) != 0;
 }
 
 bool mech_supports_sensor_requirement(const SensorCapabilityRequest *request) {
   const int CAPABILITY = abs(request->signed_capability);
-  const bool EQUIPPED = request->capability_set == 1
-                            ? (request->mech->rd.specials & CAPABILITY) != 0
-                            : (request->mech->rd.specials2 & CAPABILITY) != 0;
-  return request->signed_capability > 0 ? EQUIPPED : !EQUIPPED;
+  const bool EQUIPPED =
+      (request->capability_set == 1
+           ? (request->mech->rd.specials & CAPABILITY) != 0
+           : (request->mech->rd.specials2 & CAPABILITY) != 0) != 0;
+  return (request->signed_capability > 0 ? EQUIPPED : !EQUIPPED) != 0;
 }
 
 bool mech_searchlight_warning_enabled(const Mech *mech) {
-  return mech->rd.mech_prefs & MECHPREF_SLWARN;
+  return (mech->rd.mech_prefs & MECHPREF_SLWARN) != 0;
 }
 
 void mech_illumination_set(Mech *mech, bool illuminated) {

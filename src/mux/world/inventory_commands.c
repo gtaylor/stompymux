@@ -88,7 +88,7 @@ void do_get(CommandInvocation *invocation) {
       notify_checked(evaluation, player, player, "You cannot get yourself!",
                      MSG_ME_ALL | MSG_F_DOWN);
     } else if (lock_test(evaluation, player, invocation->cause, player, thing,
-                         LUA_LOCK_DEFAULT, LUA_LOCK_OPERATION_TAKE, quiet,
+                         LUA_LOCK_DEFAULT, LUA_LOCK_OPERATION_TAKE, quiet != 0,
                          &lock, &result)) {
       if (thingloc !=
           game_object_location(evaluation->world->database, player)) {
@@ -112,7 +112,7 @@ void do_get(CommandInvocation *invocation) {
                           .cause = invocation->cause,
                           .source = thingloc,
                           .destination = player,
-                          .silent = quiet},
+                          .silent = quiet != 0},
               .enactor_default = "Taken.",
               .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_SUCCESS});
     } else {
@@ -269,7 +269,7 @@ void do_drop(CommandInvocation *invocation) {
                                   .cause = invocation->cause,
                                   .source = player,
                                   .destination = loc,
-                                  .silent = quiet},
+                                  .silent = quiet != 0},
                       .enactor_default = "Dropped.",
                       .other_default = buf,
                       .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_DROP});

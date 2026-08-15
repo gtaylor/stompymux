@@ -73,11 +73,11 @@ static void vehicle_burn_event(MuxEvent *obj_event) {
               str_loc_name);
   mech_damage_apply(&(MechDamageRequest){.target = obj_mech,
                                          .attacker = obj_mech,
-                                         .line_of_sight = 0,
+                                         .line_of_sight = false,
                                          .attack_pilot = -1,
                                          .hit_location = W_LOC,
-                                         .rear = 0,
-                                         .critical = 0,
+                                         .rear = false,
+                                         .critical = false,
                                          .armor_damage = w_dam_roll,
                                          .internal_damage = 0,
                                          .transfer = MECH_DAMAGE_NORMAL,
@@ -85,7 +85,7 @@ static void vehicle_burn_event(MuxEvent *obj_event) {
                                          .base_to_hit = 0,
                                          .weapon_index = -1,
                                          .ammunition_mode = 0,
-                                         .ignore_swarmers = 1});
+                                         .ignore_swarmers = true});
 
   /*
    * Only continue the event if the damage was greater than one
@@ -123,11 +123,11 @@ void vehicle_fire_start(Mech *obj_mech, Mech *obj_attacker) {
 
       mech_damage_apply(&(MechDamageRequest){.target = obj_mech,
                                              .attacker = obj_attacker,
-                                             .line_of_sight = 0,
+                                             .line_of_sight = false,
                                              .attack_pilot = -1,
                                              .hit_location = w_iter,
-                                             .rear = 0,
-                                             .critical = 0,
+                                             .rear = false,
+                                             .critical = false,
                                              .armor_damage = w_damage,
                                              .internal_damage = 0,
                                              .transfer = MECH_DAMAGE_NORMAL,
@@ -135,7 +135,7 @@ void vehicle_fire_start(Mech *obj_mech, Mech *obj_attacker) {
                                              .base_to_hit = 0,
                                              .weapon_index = -1,
                                              .ammunition_mode = 0,
-                                             .ignore_swarmers = 1});
+                                             .ignore_swarmers = true});
       mech_event_schedule(obj_mech, EVENT_VEHICLEBURN, vehicle_burn_event,
                           VEHICLEBURN_TICK, w_iter);
     }
@@ -281,11 +281,11 @@ void vehicle_fire_check(Mech *obj_mech, int from_hex_fire) {
       if (mech_section_internal(obj_mech, w_iter)) {
         mech_damage_apply(&(MechDamageRequest){.target = obj_mech,
                                                .attacker = obj_mech,
-                                               .line_of_sight = 0,
+                                               .line_of_sight = false,
                                                .attack_pilot = -1,
                                                .hit_location = w_iter,
-                                               .rear = 0,
-                                               .critical = 0,
+                                               .rear = false,
+                                               .critical = false,
                                                .armor_damage = w_damage,
                                                .internal_damage = 0,
                                                .transfer = MECH_DAMAGE_NORMAL,
@@ -293,7 +293,7 @@ void vehicle_fire_check(Mech *obj_mech, int from_hex_fire) {
                                                .base_to_hit = 0,
                                                .weapon_index = -1,
                                                .ammunition_mode = 0,
-                                               .ignore_swarmers = 1});
+                                               .ignore_swarmers = true});
       }
     }
     break;

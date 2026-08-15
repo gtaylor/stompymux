@@ -59,14 +59,12 @@ bool nearby(GameDatabase *database, DbRef player, DbRef thing) {
   DbRef player_loc;
 
   if (!is_good_obj(database, player) || !is_good_obj(database, thing))
-    return 0;
+    return false;
   thing_loc = where_is(database, thing);
   if (thing_loc == player)
-    return 1;
+    return true;
   player_loc = where_is(database, player);
-  if ((thing_loc == player_loc) || (thing == player_loc))
-    return 1;
-  return 0;
+  return ((thing_loc == player_loc) || (thing == player_loc)) != 0;
 }
 
 /**
@@ -78,16 +76,16 @@ bool exit_visible(const ExitVisibilityRequest *request) {
   DbRef player = request->viewer;
   int key = request->options;
   if (key & VE_LOC_XAM) // Exam exit's loc
-    return 1;
+    return true;
   if (is_examinable(evaluation->world->database, player, exit)) // Exam exit
-    return 1;
+    return true;
   if (is_light(evaluation->world->database, exit)) // Exit is light
-    return 1;
+    return true;
   if (key & VE_LOC_DARK)
-    return 0;                                     // Dark loc or base
+    return false;                                 // Dark loc or base
   if (is_dark(evaluation->world->database, exit)) // Dark exit
-    return 0;
-  return 1; // Default
+    return false;
+  return true; // Default
 }
 
 /**
@@ -98,10 +96,10 @@ bool exit_displayable(const ExitVisibilityRequest *request) {
   DbRef exit = request->exit;
   int key = request->options;
   if (is_dark(database, exit)) // Dark exit
-    return 0;
+    return false;
   if (is_light(database, exit)) // Light exit
-    return 1;
+    return true;
   if (key & VE_LOC_DARK)
-    return 0; // Dark loc or base
-  return 1;   // Default
+    return false; // Dark loc or base
+  return true;    // Default
 }

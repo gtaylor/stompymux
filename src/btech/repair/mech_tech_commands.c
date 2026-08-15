@@ -100,9 +100,9 @@ bool someone_repairing(Mech *mech, int loc, int part) {
             mech, loc, part,
             tech_int_at(EVENT_TYPES, sizeof(EVENT_TYPES) / sizeof(*EVENT_TYPES),
                         index)))
-      return 1;
+      return true;
   }
-  return 0;
+  return false;
 }
 
 /* Fixinternal/armor */
@@ -117,7 +117,7 @@ int someone_fixing_i(Mech *mech, int loc) {
 }
 
 bool someone_fixing(Mech *mech, int loc) {
-  return someone_fixing_a(mech, loc) || someone_fixing_i(mech, loc);
+  return (someone_fixing_a(mech, loc) || someone_fixing_i(mech, loc)) != 0;
 }
 
 /* Reattach */
@@ -156,9 +156,9 @@ bool someone_scrapping_part(Mech *mech, int loc, int part) {
             mech, loc, part,
             tech_int_at(EVENT_TYPES, sizeof(EVENT_TYPES) / sizeof(*EVENT_TYPES),
                         index)))
-      return 1;
+      return true;
   }
-  return 0;
+  return false;
 }
 
 bool can_scrap_loc(Mech *mech, int loc) {
@@ -166,11 +166,11 @@ bool can_scrap_loc(Mech *mech, int loc) {
 
   mech_event_visit(mech, EVENT_REPAIR_REPL, tech_check_loc, &check);
   mech_event_visit(mech, EVENT_REPAIR_RELO, tech_check_loc, &check);
-  return !check.matches && !someone_fixing(mech, loc);
+  return (!check.matches && !someone_fixing(mech, loc)) != 0;
 }
 
 bool can_scrap_part(Mech *mech, int loc, int part) {
-  return !(someone_repairing(mech, loc, part));
+  return (!(someone_repairing(mech, loc, part))) != 0;
 }
 
 bool valid_gun_pos(const RepairCriticalSelection *selection) {

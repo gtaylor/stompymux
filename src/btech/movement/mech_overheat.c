@@ -152,13 +152,13 @@ void mech_overheat_handle(Mech *mech) {
       mech_notify(mech, MECHALL, "[bold]You fall from the sky![reset]");
       mech_los_broadcast(mech, "falls from the sky!");
       mech_map = btech_context_get_map(context, mech_map_dbref(mech));
-      mech_fall(mech, mech_jump_speed_mp(mech, mech_map), 0);
+      mech_fall(mech, mech_jump_speed_mp(mech, mech_map), false);
       mech_domino_resolve(mech, MECH_DOMINO_FALL);
     } else {
       mech_los_broadcast(mech, "stops in mid-motion!");
       if ((fabsf(mech_current_speed(mech)) > MP1) && !mech_is_fallen(mech) &&
           !made_pilot_skill_roll(mech, 3))
-        mech_fall(mech, 0, 1);
+        mech_fall(mech, 0, true);
     }
     mech_power_down(mech);
     mech_event_cancel(mech, EVENT_MOVE);

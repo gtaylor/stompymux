@@ -28,7 +28,8 @@ static char *tactical_command_argument(char *const *arguments, size_t index) {
 }
 
 static bool ascii_is_alpha(char value) {
-  return (value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z');
+  return ((value >= 'A' && value <= 'Z') || (value >= 'a' && value <= 'z')) !=
+         0;
 }
 
 void mech_tacmap(DbRef player, void *data, char *buffer) {
@@ -180,7 +181,7 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
       .width = display_width,
       .height = display_height,
       .labels = flags,
-      .calculate_los = dohexlos,
+      .calculate_los = dohexlos != 0,
   };
   map_text = map_text_create(&request);
   if (map_text == nullptr) {

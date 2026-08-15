@@ -82,8 +82,8 @@ WeaponFirePreparation weapon_fire_prepare(const WeaponFireRequest *request,
                 "You're too busy holding on for dear life!");
     return result;
   }
-  result.swarm_attack = SWARM_TARGET > 0 && result.target != nullptr &&
-                        SWARM_TARGET == mech_dbref(result.target);
+  result.swarm_attack = ((SWARM_TARGET > 0 && result.target != nullptr &&
+                          SWARM_TARGET == mech_dbref(result.target)) != 0);
 
   int gatling_shots = 0;
   if (FIRE_MODE & GATTLING_MODE)
@@ -126,7 +126,7 @@ WeaponFirePreparation weapon_fire_prepare(const WeaponFireRequest *request,
         &(MechArtilleryToHitRequest){.attacker = request->mech,
                                      .section = request->weapon.section,
                                      .weapon_index = request->weapon_index,
-                                     .indirect = !request->line_of_sight,
+                                     .indirect = (!request->line_of_sight) != 0,
                                      .range = range});
   }
   if (result.swarm_attack)

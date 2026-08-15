@@ -49,7 +49,7 @@ static bool configuration_toml_load_merged(const char *path, int depth,
                                            size_t errbuf_size) {
   toml_result_t self;
   toml_datum_t include_array;
-  toml_result_t acc = {0};
+  toml_result_t acc = {};
   bool have_acc = false;
   char base_dir[512];
 

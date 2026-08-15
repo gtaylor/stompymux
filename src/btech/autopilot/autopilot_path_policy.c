@@ -11,8 +11,8 @@
 
 static bool path_point_is_valid(const AutopilotPathRequest *request,
                                 AutopilotPathPoint point) {
-  return point.x >= 0 && point.y >= 0 && point.x < request->width &&
-         point.y < request->height;
+  return (point.x >= 0 && point.y >= 0 && point.x < request->width &&
+          point.y < request->height) != 0;
 }
 
 static size_t path_offset(const AutopilotPathRequest *request,
@@ -54,18 +54,18 @@ autopilot_path_step_evaluate(const AutopilotPathStepRequest *request) {
   AutopilotPathStepResult result = {.traversable = true, .cost = 100};
   const int ELEVATION_CHANGE =
       abs(request->from.elevation - request->to.elevation);
-  const bool GROUND_VEHICLE = request->mobility == AUTOPILOT_PATH_TRACKED ||
-                              request->mobility == AUTOPILOT_PATH_WHEELED ||
-                              request->mobility == AUTOPILOT_PATH_HOVER;
+  const bool GROUND_VEHICLE = (request->mobility == AUTOPILOT_PATH_TRACKED ||
+                               request->mobility == AUTOPILOT_PATH_WHEELED ||
+                               request->mobility == AUTOPILOT_PATH_HOVER) != 0;
 
   if ((request->mobility == AUTOPILOT_PATH_MECH && ELEVATION_CHANGE > 2) ||
       (GROUND_VEHICLE && ELEVATION_CHANGE > 1))
-    return (AutopilotPathStepResult){0};
+    return (AutopilotPathStepResult){};
 
   switch (request->to.terrain) {
   case BATTLE_TERRAIN_LIGHT_FOREST:
     if (GROUND_VEHICLE && request->mobility != AUTOPILOT_PATH_TRACKED)
-      return (AutopilotPathStepResult){0};
+      return (AutopilotPathStepResult){};
     result.cost += 50;
     break;
   case BATTLE_TERRAIN_ROUGH:
@@ -73,7 +73,7 @@ autopilot_path_step_evaluate(const AutopilotPathStepRequest *request) {
     break;
   case BATTLE_TERRAIN_HEAVY_FOREST:
     if (GROUND_VEHICLE)
-      return (AutopilotPathStepResult){0};
+      return (AutopilotPathStepResult){};
     result.cost += 100;
     break;
   case BATTLE_TERRAIN_MOUNTAINS:
@@ -83,7 +83,7 @@ autopilot_path_step_evaluate(const AutopilotPathStepRequest *request) {
   case BATTLE_TERRAIN_HIGH_WATER:
     if (GROUND_VEHICLE && request->mobility != AUTOPILOT_PATH_HOVER &&
         !request->waterproof)
-      return (AutopilotPathStepResult){0};
+      return (AutopilotPathStepResult){};
     result.cost += 200;
     break;
   default:

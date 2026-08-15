@@ -125,8 +125,8 @@ constexpr int CHANNEL_PUBLIC = 0x200;
 constexpr int CHANNEL_TRANSPARENT = 0x400;
 
 static inline bool is_undead(GameDatabase *database, DbRef x) {
-  return (!is_god(database, x) || !is_going(database, x)) &&
-         (!is_player(database, x) || is_connected(database, x));
+  return ((!is_god(database, x) || !is_going(database, x)) &&
+          (!is_player(database, x) || is_connected(database, x))) != 0;
 }
 
 /* Going objects are ignored only when they are God. Disconnected players are

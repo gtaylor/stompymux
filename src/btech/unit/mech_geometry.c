@@ -264,7 +264,7 @@ void navigate_sketch_mechs(const NavigateSketchRequest *request) {
 }
 
 MechTargetPositionResult mech_target_position(const Mech *mech) {
-  MechTargetPositionResult result = {0};
+  MechTargetPositionResult result = {};
   Mech *temp_mech;
 
   if (mech_target_dbref(mech) != -1) {

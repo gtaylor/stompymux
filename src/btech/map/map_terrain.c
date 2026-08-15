@@ -136,17 +136,17 @@ int battle_map_hex_elevation(BattleMap *map, int x, int y) {
 }
 
 bool battle_map_coordinate_is_valid(const BattleMap *map, int x, int y) {
-  return x >= 0 && x < map->map_width && y >= 0 && y < map->map_height;
+  return (x >= 0 && x < map->map_width && y >= 0 && y < map->map_height) != 0;
 }
 
 bool battle_terrain_is_water(char terrain) {
-  return terrain == BATTLE_TERRAIN_ICE || terrain == BATTLE_TERRAIN_WATER ||
-         terrain == BATTLE_TERRAIN_BRIDGE;
+  return (terrain == BATTLE_TERRAIN_ICE || terrain == BATTLE_TERRAIN_WATER ||
+          terrain == BATTLE_TERRAIN_BRIDGE) != 0;
 }
 
 bool battle_terrain_is_forest(char terrain) {
-  return terrain == BATTLE_TERRAIN_LIGHT_FOREST ||
-         terrain == BATTLE_TERRAIN_HEAVY_FOREST;
+  return (terrain == BATTLE_TERRAIN_LIGHT_FOREST ||
+          terrain == BATTLE_TERRAIN_HEAVY_FOREST) != 0;
 }
 
 void map_hex_set(BattleMap *map, int x, int y, char terrain, char elevation) {

@@ -197,7 +197,7 @@ void power_set(EvaluationContext *evaluation, WorldIndexes *indexes,
       &(ObjectPowerChange){.target = {.database = evaluation->world->database,
                                       .object = target,
                                       .power = fp->id},
-                           .value = !negate});
+                           .value = (!negate) != 0});
   if (!(key & SET_QUIET))
     notify_printf(evaluation, player, "%s - %s %s",
                   game_object_name(evaluation->world->database, target),

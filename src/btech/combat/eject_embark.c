@@ -448,7 +448,7 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
   suit = create_obj(evaluation, GOD, OBJECT_TYPE_THING, message_buffer);
   silly_atr_set_in(database, suit, A_XTYPE, "MECH");
   s_xcode(database, suit);
-  btech_special_object_flag_changed(mech_context(mech), GOD, suit, 0, 1);
+  btech_special_object_flag_changed(mech_context(mech), GOD, suit, false, true);
   d = btech_attribute_read(database, player, A_MWTEMPLATE,
                            (char[LBUF_SIZE]){0});
   m = btech_context_get_mech(mech_context(mech), suit);

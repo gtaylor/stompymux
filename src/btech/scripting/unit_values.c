@@ -55,9 +55,9 @@ static bool parse_damage_numbers(const char *token, const char *prefix,
   *second_text = '\0';
   second_text = checked_mutable_string_suffix(second_text, 1);
   if (!has_third)
-    return parse_int_checked(checked_string_suffix(text, PREFIX_LENGTH),
-                             first) &&
-           parse_int_checked(second_text, second);
+    return (parse_int_checked(checked_string_suffix(text, PREFIX_LENGTH),
+                              first) &&
+            parse_int_checked(second_text, second)) != 0;
 
   char *third_text = strchr(second_text, '(');
   char *last = (char *)checked_storage_at(text, sizeof(text), sizeof(*text),
@@ -66,9 +66,10 @@ static bool parse_damage_numbers(const char *token, const char *prefix,
     return false;
   *third_text = '\0';
   *last = '\0';
-  return parse_int_checked(checked_string_suffix(text, PREFIX_LENGTH), first) &&
-         parse_int_checked(second_text, second) &&
-         parse_int_checked(checked_string_suffix(third_text, 1), third);
+  return (parse_int_checked(checked_string_suffix(text, PREFIX_LENGTH),
+                            first) &&
+          parse_int_checked(second_text, second) &&
+          parse_int_checked(checked_string_suffix(third_text, 1), third)) != 0;
 }
 
 char *mech_getset_ref(const GmvBufferedBidirectionalCall *call) {

@@ -31,10 +31,10 @@ static short simulation_map_coordinate(int coordinate) {
 }
 
 static bool ai_section_is_floodable(Mech *mech, int section) {
-  return mech_section_internal(mech, section) &&
-         (!mech_section_armor(mech, section) ||
-          (!mech_section_rear_armor(mech, section) &&
-           mech_section_original_rear_armor(mech, section)));
+  return (mech_section_internal(mech, section) &&
+          (!mech_section_armor(mech, section) ||
+           (!mech_section_rear_armor(mech, section) &&
+            mech_section_original_rear_armor(mech, section)))) != 0;
 }
 
 static int ai_map_elevation(BattleMap *map, int x, int y) {
@@ -47,7 +47,7 @@ static int ai_map_elevation(BattleMap *map, int x, int y) {
 
 bool ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location) {
   if (map == nullptr)
-    return 0;
+    return false;
 
   float maximum_speed = mech_effective_maximum_speed(mech);
   bool heading_changed = false;
@@ -152,20 +152,20 @@ bool ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location) {
                           location->fy);
   if (bounded(0, location->x, battle_map_width(map) - 1) != location->x ||
       bounded(0, location->y, battle_map_height(map) - 1) != location->y)
-    return 1;
+    return true;
   if (location->lx == location->x && location->ly == location->y)
-    return 0;
+    return false;
 
   const int OLD_ELEVATION = location->e;
   switch (map_real_terrain_get(map, location->x, location->y)) {
   case BATTLE_TERRAIN_HEAVY_FOREST:
     if (mech_class(mech) != CLASS_MECH)
-      return 1;
+      return true;
     break;
   case BATTLE_TERRAIN_WATER:
     if (mech_movement_type(mech) == MOVE_TRACK ||
         mech_movement_type(mech) == MOVE_WHEEL)
-      return 1;
+      return true;
     if (mech_class(mech) == CLASS_MECH) {
       const int ELEVATION = ai_map_elevation(map, location->x, location->y);
       if (ELEVATION == -1) {
@@ -174,17 +174,17 @@ bool ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location) {
             (mech_movement_type(mech) == MOVE_QUAD &&
              (ai_section_is_floodable(mech, LARM) ||
               ai_section_is_floodable(mech, RARM))))
-          return 1;
+          return true;
       } else if (ELEVATION < -1) {
         for (int section = 0; section < NUM_SECTIONS; section++) {
           if (ai_section_is_floodable(mech, section))
-            return 1;
+            return true;
         }
       }
     }
     break;
   case BATTLE_TERRAIN_HIGH_WATER:
-    return 1;
+    return true;
   }
 
   location->e = ai_map_elevation(map, location->x, location->y);
@@ -193,11 +193,11 @@ bool ai_crash(BattleMap *map, Mech *mech, LocationSimulation *location) {
   location->t =
       (unsigned char)map_real_terrain_get(map, location->x, location->y);
   if (mech_class(mech) == CLASS_MECH && (abs(location->e - OLD_ELEVATION) > 2))
-    return 1;
+    return true;
   if (mech_class(mech) == CLASS_VEH_GROUND &&
       (abs(location->e - OLD_ELEVATION) > 1))
-    return 1;
-  return 0;
+    return true;
+  return false;
 }
 
 void location_simulation_initialize(LocationSimulation *location, Mech *mech) {

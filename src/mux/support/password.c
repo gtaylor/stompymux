@@ -18,7 +18,7 @@ bool password_hash(const ServerConfiguration *configuration,
   if (password_length >= LBUF_SIZE ||
       configuration->password_hash_opslimit < 1 ||
       configuration->password_hash_memlimit < 1024 * 1024) {
-    return 0;
+    return false;
   }
   return crypto_pwhash_str_alg(
              hash, password, (unsigned long long)password_length,
@@ -32,7 +32,7 @@ bool password_verify(const char *password, const char *hash) {
 
   password_length = strnlen(password, LBUF_SIZE);
   if (password_length >= LBUF_SIZE)
-    return 0;
+    return false;
   return crypto_pwhash_str_verify(hash, password,
                                   (unsigned long long)password_length) == 0;
 }
