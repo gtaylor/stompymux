@@ -28,7 +28,7 @@
 #include "mux/world/match.h"
 #include "mux/world/player.h"
 
-DbRef match_controlled(MatchContext *match, DbRef player, char *name) {
+DbRef match_controlled(MatchContext *match, DbRef player, const char *name) {
   DbRef mat;
 
   init_match(match, player, name, OBJECT_TYPE_NOTYPE);
@@ -43,7 +43,8 @@ DbRef match_controlled(MatchContext *match, DbRef player, char *name) {
   return (mat);
 }
 
-DbRef match_controlled_quiet(MatchContext *match, DbRef player, char *name) {
+DbRef match_controlled_quiet(MatchContext *match, DbRef player,
+                             const char *name) {
   DbRef mat;
 
   init_match(match, player, name, OBJECT_TYPE_NOTYPE);

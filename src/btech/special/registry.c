@@ -141,8 +141,8 @@ void list_hashstat(DbRef player, const char *tab_name, HashTable *htab);
 /*************PERSONAL PROTOS*****************/
 
 static int compare_dbrefs(const RedBlackTreeCompareCall *call) {
-  void *key1 = call->lhs;
-  void *key2 = call->rhs;
+  const void *key1 = call->lhs;
+  const void *key2 = call->rhs;
   const DbRef KEY1_VAL = (DbRef)key1;
   const DbRef KEY2_VAL = (DbRef)key2;
 

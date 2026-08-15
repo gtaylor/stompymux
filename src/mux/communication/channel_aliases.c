@@ -220,8 +220,8 @@ struct Comuser *select_user(struct Channel *ch, DbRef player) {
   return nullptr;
 }
 
-void comsys_add_alias(EvaluationContext *evaluation, DbRef player, char *arg1,
-                      char *arg2) {
+void comsys_add_alias(EvaluationContext *evaluation, DbRef player,
+                      const char *arg1, const char *arg2) {
   char channel[200];
   struct Channel *ch;
   int where;

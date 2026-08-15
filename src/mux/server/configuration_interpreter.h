@@ -13,8 +13,12 @@ typedef struct ConfigurationCall {
   char *text;
   intptr_t extra;
   DbRef player;
-  char *command;
+  const char *command;
   ConfigurationContext *context;
 } ConfigurationCall;
 
 typedef int (*ConfigurationInterpreter)(const ConfigurationCall *call);
+
+int configuration_interpreter_invoke_with_mutable_text(
+    ConfigurationInterpreter interpreter, ConfigurationCall *call,
+    const char *text);

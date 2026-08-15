@@ -109,10 +109,7 @@ bootstrap_initialize_object(EvaluationContext *evaluation,
       evaluation->world->configuration, configuration->type);
 
   attribute_free(database, configuration->dbref);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  object_name_set(database, configuration->dbref, (char *)configuration->name);
-#pragma clang diagnostic pop
+  object_name_set(database, configuration->dbref, configuration->name);
   game_object_set_type(database, configuration->dbref, type);
   game_object_set_location(database, configuration->dbref, NOTHING);
   game_object_set_zone(database, configuration->dbref, NOTHING);

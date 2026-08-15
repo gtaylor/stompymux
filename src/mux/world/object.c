@@ -394,12 +394,7 @@ void destroy_obj(const ObjectDestructionRequest *request) {
                    MSG_ME_ALL | MSG_F_DOWN);
 
   attribute_free(evaluation->world->database, obj);
-  /* object_name_set()'s parameter isn't const-correct; "Garbage" is only
-     read (copied) here. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-  object_name_set(evaluation->world->database, obj, (char *)"Garbage");
-#pragma clang diagnostic pop
+  object_name_set(evaluation->world->database, obj, "Garbage");
   game_object_set_type(evaluation->world->database, obj, OBJECT_TYPE_GARBAGE);
   game_object_clear_flags(evaluation->world->database, obj);
   s_going(evaluation->world->database, obj);

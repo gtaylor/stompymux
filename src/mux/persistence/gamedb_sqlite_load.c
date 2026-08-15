@@ -132,12 +132,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       }
       if (result != 0)
         continue;
-      /* object_name_set()'s parameter isn't const-correct; name is only
-         read (copied) here, never mutated. */
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-      object_name_set(context->database, object, (char *)name);
-#pragma clang diagnostic pop
+      object_name_set(context->database, object, name);
       game_object_set_location(context->database, object, location);
       game_object_set_zone(context->database, object, zone);
       game_object_set_contents(context->database, object, contents);
@@ -203,11 +198,7 @@ static int gamedb_load_native_state(PersistenceContext *context,
         sqlite3_finalize(statement);
         return -1;
       }
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-      attribute_add_raw(context->database, object, column->field,
-                        (char *)value);
-#pragma clang diagnostic pop
+      attribute_add_raw(context->database, object, column->field, value);
     }
     sqlite3_finalize(statement);
     if (step != SQLITE_DONE)

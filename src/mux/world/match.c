@@ -104,7 +104,8 @@ static void promote_match(MatchContext *match_context,
  * * names are being matched.  It also removes inital and terminal spaces.
  */
 
-static char *munge_space_for_match(MatchContext *match_context, char *name) {
+static char *munge_space_for_match(MatchContext *match_context,
+                                   const char *name) {
   size_t input = 0;
   size_t output = 0;
   size_t length = strlen(name);
@@ -590,7 +591,7 @@ void restore_match_state(MatchContext *match_context, MSTATE *mstate) {
                             strlen(mstate->normalized) + 1, mstate->normalized);
 }
 
-void init_match(MatchContext *match_context, DbRef player, char *name,
+void init_match(MatchContext *match_context, DbRef player, const char *name,
                 int type) {
   match_context->confidence = -1;
   match_context->count = match_context->check_keys = 0;
@@ -602,7 +603,7 @@ void init_match(MatchContext *match_context, DbRef player, char *name,
 }
 
 void init_match_check_keys(MatchContext *match_context, DbRef player,
-                           char *name, int type) {
+                           const char *name, int type) {
   init_match(match_context, player, name, type);
   match_context->check_keys = 1;
 }

@@ -7,8 +7,8 @@
 #include "mux/support/red_black_tree.h"
 
 static int nhrbtab_compare(const RedBlackTreeCompareCall *call) {
-  void *left_key = call->lhs;
-  void *right_key = call->rhs;
+  const void *left_key = call->lhs;
+  const void *right_key = call->rhs;
   const DbRef LEFT = (DbRef)left_key;
   const DbRef RIGHT = (DbRef)right_key;
 

@@ -29,7 +29,7 @@ void move_command(const MoveCommandRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
   DbRef player = request->player;
   int key = request->key;
-  char *direction = request->direction;
+  const char *direction = request->direction;
   DbRef exit;
   DbRef loc;
   int i;

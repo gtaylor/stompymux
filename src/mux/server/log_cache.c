@@ -39,9 +39,9 @@ struct LogCache {
 };
 
 static int logcache_compare(const RedBlackTreeCompareCall *call) {
-  void *vleft = call->lhs;
-  void *vright = call->rhs;
-  return strcmp((char *)vleft, (char *)vright);
+  const void *vleft = call->lhs;
+  const void *vright = call->rhs;
+  return strcmp(vleft, vright);
 }
 
 static int log_cache_close(LogCache *cache, struct LogfileT *log,

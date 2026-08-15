@@ -159,7 +159,7 @@ void red_black_tree_destroy(RedBlackTree bt) {
   free(bt);
 }
 
-void *red_black_tree_find(RedBlackTree bt, void *key) {
+void *red_black_tree_find(RedBlackTree bt, const void *key) {
   RbtreeNode *node;
   int compare_result;
 
@@ -197,7 +197,7 @@ void *red_black_tree_find(RedBlackTree bt, void *key) {
   exit(1);
 }
 
-bool red_black_tree_exists(RedBlackTree bt, void *key) {
+bool red_black_tree_exists(RedBlackTree bt, const void *key) {
   RbtreeNode *node;
   int compare_result;
   if (!bt->head) {
@@ -291,7 +291,7 @@ int red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
 
 unsigned int red_black_tree_size(RedBlackTree bt) { return bt->size; }
 
-void *red_black_tree_search(RedBlackTree bt, int method, void *key) {
+void *red_black_tree_search(RedBlackTree bt, int method, const void *key) {
   RbtreeNode *node;
   RbtreeNode *last;
   int compare_result;

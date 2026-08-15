@@ -43,8 +43,8 @@ enum : int {
 typedef struct RedBlackTreeHead *RedBlackTree;
 
 typedef struct RedBlackTreeCompareCall {
-  void *lhs;
-  void *rhs;
+  const void *lhs;
+  const void *rhs;
   void *context;
 } RedBlackTreeCompareCall;
 
@@ -70,9 +70,9 @@ void red_black_tree_destroy(RedBlackTree /*bt*/);
 
 void red_black_tree_insert(RedBlackTree /*bt*/, void * /*key*/,
                            void * /*data*/);
-void *red_black_tree_find(RedBlackTree /*bt*/, void * /*key*/);
-bool red_black_tree_exists(RedBlackTree /*bt*/, void * /*key*/);
-void *red_black_tree_delete(RedBlackTree /*bt*/, void * /*key*/);
+void *red_black_tree_find(RedBlackTree /*bt*/, const void * /*key*/);
+bool red_black_tree_exists(RedBlackTree /*bt*/, const void * /*key*/);
+void *red_black_tree_delete(RedBlackTree /*bt*/, const void * /*key*/);
 void red_black_tree_release(RedBlackTree bt, RedBlackTreeRelease release,
                             void *context);
 
@@ -80,5 +80,5 @@ int red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
                         void *context);
 unsigned int red_black_tree_size(RedBlackTree /*bt*/);
 void *red_black_tree_search(RedBlackTree /*bt*/, int /*method*/,
-                            void * /*key*/);
+                            const void * /*key*/);
 void *red_black_tree_index(RedBlackTree /*bt*/, int /*index*/);

@@ -87,6 +87,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/persistence/persistence_registry.c
   ${MUX_MODULE_DIR}/server/configuration.c
   ${MUX_MODULE_DIR}/server/configuration_catalog.c
+  ${MUX_MODULE_DIR}/server/configuration_interpreter.c
   ${MUX_MODULE_DIR}/server/configuration_values.c
   ${MUX_MODULE_DIR}/server/configuration_registry.c
   ${MUX_MODULE_DIR}/server/configuration_toml.c

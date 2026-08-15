@@ -417,7 +417,7 @@ done:
   }
 }
 
-void *red_black_tree_delete(RedBlackTree bt, void *key) {
+void *red_black_tree_delete(RedBlackTree bt, const void *key) {
   RbtreeNode *node = nullptr;
   RbtreeNode *child = nullptr;
   RbtreeNode *tail;

@@ -28,6 +28,6 @@ void configuration_list_access(EvaluationContext *evaluation,
                                const ConfigurationRegistry *registry,
                                DbRef player);
 int configuration_read(ConfigurationContext *context, char *fn);
-int configuration_set(ConfigurationContext *context, char *cp, char *ap,
-                      DbRef player);
+int configuration_set(ConfigurationContext *context, const char *cp,
+                      const char *ap, DbRef player);
 int configuration_modify_bits(const ConfigurationCall *call);
