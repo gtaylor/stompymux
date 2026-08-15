@@ -5,16 +5,17 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/lbuf_text.h"
+#include "mux/support/stringutil.h"
 
 static int check_borrowed_text(void) {
-  const char original[] = "borrowed";
-  LbufText text = lbuf_text_borrow(original);
+  const char ORIGINAL[] = "borrowed";
+  LbufText text = lbuf_text_borrow(ORIGINAL);
 
-  if (text.text != original || text.owned != nullptr)
+  if (text.text != ORIGINAL || text.owned != nullptr)
     return 1;
   lbuf_text_release(&text);
   lbuf_text_release(&text);
-  if (strcmp(original, "borrowed") != 0)
+  if (strcmp(ORIGINAL, "borrowed") != 0)
     return 2;
   return text.text == nullptr && text.owned == nullptr ? 0 : 3;
 }
@@ -33,9 +34,27 @@ static int check_owned_text(void) {
   return text.text == nullptr && text.owned == nullptr ? 0 : 6;
 }
 
+static int check_normalized_text(void) {
+  LbufText munged = munge_space("  one\t two  ");
+  LbufText trimmed = trim_spaces("\n three   four\r\n");
+  int result = 0;
+
+  if (munged.owned == nullptr || strcmp(munged.text, "one two") != 0)
+    result = 7;
+  else if (trimmed.owned == nullptr || strcmp(trimmed.text, "three four") != 0)
+    result = 8;
+
+  lbuf_text_release(&munged);
+  lbuf_text_release(&trimmed);
+  return result;
+}
+
 int main(void) {
   const int BORROWED_RESULT = check_borrowed_text();
   if (BORROWED_RESULT != 0)
     return BORROWED_RESULT;
-  return check_owned_text();
+  const int OWNED_RESULT = check_owned_text();
+  if (OWNED_RESULT != 0)
+    return OWNED_RESULT;
+  return check_normalized_text();
 }

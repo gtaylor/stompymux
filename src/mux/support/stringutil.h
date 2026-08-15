@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <time.h>
 
+#include "mux/support/lbuf_text.h"
+
 typedef struct ServerConfiguration ServerConfiguration;
 
 enum { SYSTEM_ERROR_MESSAGE_SIZE = 128 };
@@ -16,10 +18,10 @@ char *system_error_message(int error_number, char *buffer, size_t capacity);
 char ascii_to_upper(char character);
 /** Converts one ASCII uppercase letter to lowercase. */
 char ascii_to_lower(char character);
-/** Allocates an lbuf containing the text with whitespace normalized. */
-char *munge_space(const char *string);
-/** Allocates an lbuf containing trimmed, normalized text. */
-char *trim_spaces(const char *string);
+/** Returns owned lbuf text with whitespace normalized. */
+LbufText munge_space(const char *string);
+/** Returns owned lbuf text containing trimmed, normalized text. */
+LbufText trim_spaces(const char *string);
 /** Splits a mutable string at targ and advances the caller's cursor. */
 char *grabto(char **str, char targ);
 /** Compares strings case-insensitively using the configured space policy. */
@@ -31,8 +33,6 @@ int string_prefix(const char *string, const char *prefix);
 const char *string_match(const char *src, const char *sub);
 /** Returns a copy of str with dollar signs converted to spaces. */
 char *dollar_to_space(const char *str);
-/** Allocates an lbuf with every occurrence of old replaced by new. */
-char *replace_string(const char *old, const char *new, const char *string);
 /** Tests whether str is a sufficiently long abbreviation of target. */
 int minmatch(const char *str, const char *target, int min);
 /** Duplicates a string with malloc; the caller must free the result. */

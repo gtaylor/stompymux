@@ -15,6 +15,7 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/support/stringutil.h"
 
 char *system_error_message(int error_number, char *buffer, size_t capacity) {
@@ -186,10 +187,10 @@ char *upcasestr(char *s) {
   return s;
 }
 
-static char *normalize_spaces(const char *string) {
+static LbufText normalize_spaces(const char *string) {
   char *buffer = alloc_lbuf("normalize_spaces");
   if (buffer == nullptr)
-    return nullptr;
+    return (LbufText){};
 
   size_t output_index = 0;
   bool pending_space = false;
@@ -213,20 +214,20 @@ static char *normalize_spaces(const char *string) {
     }
   }
   *checked_character_slot(buffer, LBUF_SIZE, output_index) = '\0';
-  return buffer;
+  return lbuf_text_take(buffer);
 }
 
 /**
- * Allocates an lbuf with whitespace runs compressed to single spaces and
- * leading and trailing whitespace removed. The caller must free the lbuf.
+ * Returns owned lbuf text with whitespace runs compressed to single spaces and
+ * leading and trailing whitespace removed.
  */
-char *munge_space(const char *string) { return normalize_spaces(string); }
+LbufText munge_space(const char *string) { return normalize_spaces(string); }
 
 /**
- * Allocates an lbuf with leading and trailing whitespace removed and internal
- * whitespace runs compressed. The caller must free the lbuf.
+ * Returns owned lbuf text with leading and trailing whitespace removed and
+ * internal whitespace runs compressed.
  */
-char *trim_spaces(const char *string) { return normalize_spaces(string); }
+LbufText trim_spaces(const char *string) { return normalize_spaces(string); }
 
 /**
  * Replaces the next targ in a mutable string with a terminator, returns the
@@ -355,39 +356,6 @@ const char *string_match(const char *src, const char *sub) {
       index++;
   }
   return nullptr;
-}
-
-/**
- * Allocates an lbuf containing string with every occurrence of old replaced
- * by new. The caller must free the returned lbuf.
- */
-char *replace_string(const char *old, const char *new, const char *string) {
-  if (old == nullptr || new == nullptr || string == nullptr)
-    return nullptr;
-
-  const size_t OLD_LENGTH = strlen(old);
-  const size_t STRING_LENGTH = strlen(string);
-  char *result = alloc_lbuf("replace_string");
-  if (result == nullptr)
-    return nullptr;
-  char *output = result;
-
-  size_t index = 0;
-  while (index < STRING_LENGTH) {
-    const bool MATCHES =
-        OLD_LENGTH > 0 && OLD_LENGTH <= STRING_LENGTH - index &&
-        memcmp(old, checked_string_suffix(string, index), OLD_LENGTH) == 0;
-    if (MATCHES) {
-      safe_str(new, result, &output);
-      index += OLD_LENGTH;
-    } else {
-      safe_chr(checked_character_at(string, STRING_LENGTH + 1, index), result,
-               &output);
-      index++;
-    }
-  }
-  *output = '\0';
-  return result;
 }
 
 /**

@@ -16,6 +16,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/support/name_table.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
@@ -105,7 +106,7 @@ void do_name(CommandInvocation *invocation) {
   char *name = invocation->first;
   char *newname = invocation->second;
   DbRef thing;
-  char *buff;
+  LbufText buff;
   char new[LBUF_SIZE];
   char *compiled_name;
 
@@ -136,18 +137,18 @@ void do_name(CommandInvocation *invocation) {
     styled_text_strip(evaluation->world->styled_text_palette, newname, new,
                       sizeof(new));
     buff = trim_spaces(new);
-    if (!ok_player_name(invocation->context->world->configuration, buff) ||
-        !badname_check(invocation->context->world, buff)) {
+    if (!ok_player_name(invocation->context->world->configuration, buff.text) ||
+        !badname_check(invocation->context->world, buff.text)) {
       notify_checked(evaluation, player, player, "You can't use that name.",
                      MSG_ME);
-      free_lbuf(buff);
+      lbuf_text_release(&buff);
       free_lbuf(compiled_name);
       return;
     }
-    if (string_compare(invocation->context->world->configuration, buff,
+    if (string_compare(invocation->context->world->configuration, buff.text,
                        game_object_pure_name(
                            invocation->context->world->database, thing)) &&
-        (lookup_player(invocation->context->world, NOTHING, buff, 0) !=
+        (lookup_player(invocation->context->world, NOTHING, buff.text, 0) !=
          NOTHING)) {
 
       /*
@@ -156,7 +157,7 @@ void do_name(CommandInvocation *invocation) {
 
       notify_checked(evaluation, player, player, "That name is already in use.",
                      MSG_ME);
-      free_lbuf(buff);
+      lbuf_text_release(&buff);
       free_lbuf(compiled_name);
       return;
     }
@@ -166,13 +167,14 @@ void do_name(CommandInvocation *invocation) {
      */
     STARTLOG(evaluation->log, LOG_SECURITY, "SEC", "CNAME") {
       log_name(evaluation->log, thing), log_text(" renamed to ");
-      log_text(buff);
+      log_text(buff.text);
       ENDLOG(evaluation->log);
     }
     if (is_suspect(evaluation->world->database, thing)) {
       send_channel(
           evaluation, "Suspect", "%s renamed to %s",
-          game_object_name(invocation->context->world->database, thing), buff);
+          game_object_name(invocation->context->world->database, thing),
+          buff.text);
     }
     delete_player_name(
         invocation->context->world, thing,
@@ -183,7 +185,7 @@ void do_name(CommandInvocation *invocation) {
         invocation->context->world, thing,
         game_object_pure_name(invocation->context->world->database, thing));
     notify_checked(evaluation, player, player, "Name set.", MSG_ME);
-    free_lbuf(buff);
+    lbuf_text_release(&buff);
     free_lbuf(compiled_name);
     return;
   }

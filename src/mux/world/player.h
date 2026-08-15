@@ -41,7 +41,7 @@ DbRef lookup_player(WorldContext *world, DbRef doer, const char *name,
 void load_player_names(WorldContext *world);
 void badname_add(WorldContext *world, char *name);
 void badname_remove(WorldContext *world, char *name);
-int badname_check(WorldContext *world, char *name);
+int badname_check(WorldContext *world, const char *name);
 void badname_list(EvaluationContext *evaluation, WorldContext *world,
                   DbRef player, const char *prefix);
 void do_last(CommandInvocation *invocation);

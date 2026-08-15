@@ -21,6 +21,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/validation.h"
@@ -70,7 +71,7 @@ void do_alias(CommandInvocation *invocation) {
   DbRef thing;
   long aflags;
   char *oldalias;
-  char *trimalias;
+  LbufText trimalias;
 
   thing = match_controlled(&invocation->context->match, player, name);
   if (thing == NOTHING)
@@ -101,7 +102,7 @@ void do_alias(CommandInvocation *invocation) {
        */
 
       notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
-    } else if (!*trimalias) {
+    } else if (!*trimalias.text) {
 
       /*
        * New alias is null, just clear it
@@ -110,8 +111,8 @@ void do_alias(CommandInvocation *invocation) {
       delete_player_name(invocation->context->world, thing, oldalias);
       attribute_clear(evaluation->world->database, thing, A_ALIAS);
       notify_checked(evaluation, player, player, "Alias removed.", MSG_ME);
-    } else if (lookup_player(invocation->context->world, NOTHING, trimalias,
-                             0) != NOTHING) {
+    } else if (lookup_player(invocation->context->world, NOTHING,
+                             trimalias.text, 0) != NOTHING) {
 
       /*
        * Make sure new alias isn't already in use
@@ -119,9 +120,9 @@ void do_alias(CommandInvocation *invocation) {
 
       notify_checked(evaluation, player, player, "That name is already in use.",
                      MSG_ME);
-    } else if (!(badname_check(invocation->context->world, trimalias) &&
+    } else if (!(badname_check(invocation->context->world, trimalias.text) &&
                  ok_player_name(invocation->context->world->configuration,
-                                trimalias))) {
+                                trimalias.text))) {
       notify_checked(evaluation, player, player,
                      "That's a silly name for a player!", MSG_ME);
     } else {
@@ -131,9 +132,9 @@ void do_alias(CommandInvocation *invocation) {
        */
 
       delete_player_name(invocation->context->world, thing, oldalias);
-      attribute_add(evaluation->world->database, thing, A_ALIAS, trimalias,
+      attribute_add(evaluation->world->database, thing, A_ALIAS, trimalias.text,
                     aflags);
-      if (add_player_name(invocation->context->world, thing, trimalias)) {
+      if (add_player_name(invocation->context->world, thing, trimalias.text)) {
         notify_checked(evaluation, player, player, "Alias set.", MSG_ME);
       } else {
         notify_checked(
@@ -143,7 +144,7 @@ void do_alias(CommandInvocation *invocation) {
         attribute_clear(evaluation->world->database, thing, A_ALIAS);
       }
     }
-    free_lbuf(trimalias);
+    lbuf_text_release(&trimalias);
     free_lbuf(oldalias);
   } else {
     notify_checked(evaluation, player, player, "Only players may have aliases.",

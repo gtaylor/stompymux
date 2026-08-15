@@ -20,6 +20,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/validation.h"
@@ -228,7 +229,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
   int okname = 0;
   const ObjectFlagSet *default_flags;
   time_t tt;
-  char *buff;
+  LbufText buff;
   char pure_name[LBUF_SIZE];
 
   styled_text_strip(evaluation->world->styled_text_palette, name, pure_name,
@@ -247,36 +248,37 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
   case OBJECT_TYPE_PLAYER:
     default_flags = &evaluation->world->configuration->default_player_flags;
     buff = munge_space(pure_name);
-    if (!badname_check(evaluation->world, buff)) {
+    if (!badname_check(evaluation->world, buff.text)) {
       notify_checked(evaluation, player, player, "That name is not allowed.",
                      MSG_ME_ALL | MSG_F_DOWN);
-      free_lbuf(buff);
+      lbuf_text_release(&buff);
       return NOTHING;
     }
-    if (*buff) {
-      okname = ok_player_name(evaluation->world->configuration, buff);
+    if (*buff.text) {
+      okname = ok_player_name(evaluation->world->configuration, buff.text);
       if (!okname) {
         notify_checked(evaluation, player, player,
                        "That's a silly name for a player.",
                        MSG_ME_ALL | MSG_F_DOWN);
-        free_lbuf(buff);
+        lbuf_text_release(&buff);
         return NOTHING;
       }
     }
     if (okname) {
-      okname = (lookup_player(evaluation->world, NOTHING, buff, 0) == NOTHING);
+      okname =
+          (lookup_player(evaluation->world, NOTHING, buff.text, 0) == NOTHING);
       if (!okname) {
         notify_printf(evaluation, player, "The name %s is already taken.",
                       name);
-        free_lbuf(buff);
+        lbuf_text_release(&buff);
         return NOTHING;
       }
     }
-    free_lbuf(buff);
+    lbuf_text_release(&buff);
     break;
+  default:
     (void)snprintf(message_buffer, sizeof(message_buffer),
                    "Bad object type in create_obj: %d.", objtype);
-  default:
     log_simple((LogEntry){.log = evaluation->log,
                           .key = LOG_BUGS,
                           .primary = "BUG",
@@ -352,8 +354,8 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
   }
   unmark(evaluation->world->database, obj);
   buff = munge_space(name);
-  object_name_set(evaluation->world->database, obj, buff);
-  free_lbuf(buff);
+  object_name_set(evaluation->world->database, obj, buff.text);
+  lbuf_text_release(&buff);
 
   if (objtype == OBJECT_TYPE_PLAYER) {
     tt = time(nullptr);

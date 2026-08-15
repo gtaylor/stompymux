@@ -25,6 +25,7 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
+#include "mux/support/lbuf_text.h"
 #include "mux/support/password.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/validation.h"
@@ -137,7 +138,7 @@ DbRef create_player(const PlayerCreationRequest *request) {
   WorldContext *world = evaluation->world;
   DbRef player;
   char hashed_password[crypto_pwhash_STRBYTES];
-  char *pbuf;
+  LbufText pbuf;
 
   /*
    * Make sure the password is OK.  Name is checked in create_obj
@@ -147,12 +148,12 @@ DbRef create_player(const PlayerCreationRequest *request) {
     return NOTHING;
 
   pbuf = trim_spaces(password);
-  if (!ok_password(world->configuration, pbuf)) {
-    free_lbuf(pbuf);
+  if (!ok_password(world->configuration, pbuf.text)) {
+    lbuf_text_release(&pbuf);
     return NOTHING;
   }
-  if (!password_hash(world->configuration, pbuf, hashed_password)) {
-    free_lbuf(pbuf);
+  if (!password_hash(world->configuration, pbuf.text, hashed_password)) {
+    lbuf_text_release(&pbuf);
     return NOTHING;
   }
   /*
@@ -162,7 +163,7 @@ DbRef create_player(const PlayerCreationRequest *request) {
   player = create_obj(evaluation, NOTHING, OBJECT_TYPE_PLAYER, name);
   if (player == NOTHING) {
     sodium_memzero(hashed_password, sizeof(hashed_password));
-    free_lbuf(pbuf);
+    lbuf_text_release(&pbuf);
     return NOTHING;
   }
   /*
@@ -178,7 +179,7 @@ DbRef create_player(const PlayerCreationRequest *request) {
                            ? world->configuration->start_home
                            : world->configuration->start_room);
   sodium_memzero(hashed_password, sizeof(hashed_password));
-  free_lbuf(pbuf);
+  lbuf_text_release(&pbuf);
   return player;
 }
 
@@ -451,7 +452,7 @@ void badname_remove(WorldContext *world, char *bad_name) {
   }
 }
 
-int badname_check(WorldContext *world, char *bad_name) {
+int badname_check(WorldContext *world, const char *bad_name) {
   BADNAME *bp;
 
   /*

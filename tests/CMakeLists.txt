@@ -58,7 +58,10 @@ set_tests_properties(configuration_interpreter PROPERTIES
 add_executable(lbuf_text_test
   ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/lbuf_text.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/lbuf_text.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_compile_options(lbuf_text_test PRIVATE -ffunction-sections)
+target_link_options(lbuf_text_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(lbuf_text_test PRIVATE btmux_options)
 target_include_directories(lbuf_text_test PRIVATE
   "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/src")
