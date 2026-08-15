@@ -3,7 +3,6 @@
 #include "equipment_types.h"
 #include "mux/server/platform.h"
 #include "mux/support/stringutil.h"
-#include <string.h>
 static const float BOMB_GRAVITY = 1.0F;
 
 #include <stdio.h>
@@ -106,7 +105,7 @@ static void bomb_list(Mech *mech, DbRef player) {
   int i;
   int j;
   int k;
-  char location[20];
+  char location[UNIT_SECTION_NAME_CAPACITY];
   CoolMenu *c = nullptr;
 
   cool_menu_add_line(&c);

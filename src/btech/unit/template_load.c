@@ -88,7 +88,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       ptr = checked_mutable_string_suffix(ptr, strspn(ptr, " \t\n\v\f\r"));
     } else {
       strlcpy(cmd, line, sizeof(cmd));
-      strcpy(line, "");
+      line[0] = '\0';
       ptr = NULL;
     }
     if (!strncasecmp(cmd, "CRIT_", 5)) {
@@ -628,7 +628,8 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       tmpc = template_description_read(&(TemplateDescriptionRead){
           .file = fp, .line = ptr, .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
       if (strlen(tmpc) == 1) /* just the \0 */
-        strcpy(((mech)->ud.unit_era), "Undefined");
+        (void)string_copy_bounded(((mech)->ud.unit_era),
+                                  sizeof(((mech)->ud.unit_era)), "Undefined");
       else
         strlcpy(((mech)->ud.unit_era), tmpc, sizeof(((mech)->ud.unit_era)));
       break;
@@ -636,7 +637,8 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       tmpc = template_description_read(&(TemplateDescriptionRead){
           .file = fp, .line = ptr, .buffer = (char[BTECH_TEXT_CAPACITY]){0}});
       if (strlen(tmpc) == 1) /* just the \0 */
-        strcpy(((mech)->ud.unit_tro), "Undefined");
+        (void)string_copy_bounded(((mech)->ud.unit_tro),
+                                  sizeof(((mech)->ud.unit_tro)), "Undefined");
       else
         strlcpy(((mech)->ud.unit_tro), tmpc, sizeof(((mech)->ud.unit_tro)));
       break;

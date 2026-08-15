@@ -36,18 +36,20 @@
 #include <string.h>
 #include <strings.h>
 
-void armor_string_from_index(int index, char *buffer, UnitClass type,
-                             MechMovementType movement_type) {
+void armor_string_from_index(int index,
+                             char buffer[static UNIT_SECTION_NAME_CAPACITY],
+                             UnitClass type, MechMovementType movement_type) {
   const UnitSectionCatalog CATALOG = {.unit_type = type,
                                       .movement_type = movement_type};
-  size_t location_count = unit_section_name_count(&CATALOG);
-  if (index >= 0 && (size_t)index < location_count) {
-    // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.strcpy)
-    strcpy(buffer, unit_section_name(&CATALOG, (size_t)index));
-    return;
+  const size_t LOCATION_COUNT = unit_section_name_count(&CATALOG);
+  if (index >= 0 && (size_t)index < LOCATION_COUNT) {
+    const char *const NAME = unit_section_name(&CATALOG, (size_t)index);
+    if (NAME != nullptr) {
+      (void)string_copy_bounded(buffer, UNIT_SECTION_NAME_CAPACITY, NAME);
+      return;
+    }
   }
-  // NOLINTNEXTLINE(clang-analyzer-security.insecureAPI.strcpy)
-  strcpy(buffer, "Invalid!!");
+  (void)string_copy_bounded(buffer, UNIT_SECTION_NAME_CAPACITY, "Invalid!!");
 }
 
 bool is_in_weapon_arc(const WeaponArcRequest *request) {

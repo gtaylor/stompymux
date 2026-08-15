@@ -1,7 +1,6 @@
 /* Implements BattleTech combat mechanics for unit hitloc motive. */
 
 #include <math.h>
-#include <string.h>
 
 #include "crit_api.h"
 #include "equipment_types.h"
@@ -26,21 +25,26 @@ void mech_motive_system_hit(Mech *mech, int w_roll_mod) {
 
   switch (mech_movement_type(mech)) {
   case MOVE_TRACK:
-    strcpy(str_vhl_type_name, "tank");
+    (void)string_copy_bounded(str_vhl_type_name, sizeof(str_vhl_type_name),
+                              "tank");
     break;
   case MOVE_WHEEL:
-    strcpy(str_vhl_type_name, "vehicle");
+    (void)string_copy_bounded(str_vhl_type_name, sizeof(str_vhl_type_name),
+                              "vehicle");
     w_roll += 2;
     break;
   case MOVE_HOVER:
-    strcpy(str_vhl_type_name, "hovercraft");
+    (void)string_copy_bounded(str_vhl_type_name, sizeof(str_vhl_type_name),
+                              "hovercraft");
     w_roll += 4;
     break;
   case MOVE_HULL:
-    strcpy(str_vhl_type_name, "ship");
+    (void)string_copy_bounded(str_vhl_type_name, sizeof(str_vhl_type_name),
+                              "ship");
     break;
   case MOVE_FOIL:
-    strcpy(str_vhl_type_name, "hydrofoil");
+    (void)string_copy_bounded(str_vhl_type_name, sizeof(str_vhl_type_name),
+                              "hydrofoil");
     w_roll += 4;
     break;
   case MOVE_SUB:

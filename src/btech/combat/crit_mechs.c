@@ -1,7 +1,6 @@
 /* Resolves critical hits for BattleMechs. */
 
 #include <stdio.h>
-#include <string.h>
 
 #include "btech/context.h"
 #include "btech_channel.h"
@@ -138,100 +137,111 @@ int mech_critical_effect_apply(const CriticalEffectRequest *request) {
     if (equipment_is_special(CRIT_TYPE)) {
       switch (special_from_equipment_index(CRIT_TYPE)) {
       case LIFE_SUPPORT:
-        strcpy(part_buf, "life support");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "life support");
         break;
       case COCKPIT:
-        strcpy(part_buf, "cockpit");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "cockpit");
         break;
       case SENSORS:
-        strcpy(part_buf, "sensors");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "sensors");
         break;
       case HEAT_SINK:
-        strcpy(part_buf, "heatsink");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "heatsink");
         break;
       case JUMP_JET:
-        strcpy(part_buf, "jump jet");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "jump jet");
         break;
       case ENGINE:
-        strcpy(part_buf, "engine");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "engine");
         break;
       case TARGETING_COMPUTER:
-        strcpy(part_buf, "targeting computer");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf),
+                                  "targeting computer");
         break;
       case GYRO:
-        strcpy(part_buf, "gyro");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "gyro");
         break;
       case SHOULDER_OR_HIP:
         if (t_loc_is_arm)
-          strcpy(part_buf, "shoulder");
+          (void)string_copy_bounded(part_buf, sizeof(part_buf), "shoulder");
         else
-          strcpy(part_buf, "hip");
+          (void)string_copy_bounded(part_buf, sizeof(part_buf), "hip");
         break;
       case LOWER_ACTUATOR:
       case UPPER_ACTUATOR:
       case HAND_OR_FOOT_ACTUATOR:
         if (t_loc_is_arm) {
           if (special_from_equipment_index(CRIT_TYPE) == HAND_OR_FOOT_ACTUATOR)
-            strcpy(part_buf, "hand actuator");
+            (void)string_copy_bounded(part_buf, sizeof(part_buf),
+                                      "hand actuator");
           else
-            strcpy(part_buf, "arm actuator");
+            (void)string_copy_bounded(part_buf, sizeof(part_buf),
+                                      "arm actuator");
         } else {
           if (special_from_equipment_index(CRIT_TYPE) == HAND_OR_FOOT_ACTUATOR)
-            strcpy(part_buf, "foot actuator");
+            (void)string_copy_bounded(part_buf, sizeof(part_buf),
+                                      "foot actuator");
           else
-            strcpy(part_buf, "arm actuator");
+            (void)string_copy_bounded(part_buf, sizeof(part_buf),
+                                      "arm actuator");
         }
         break;
       case C3_MASTER:
-        strcpy(part_buf, "C3 system");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "C3 system");
         break;
       case C3_SLAVE:
-        strcpy(part_buf, "C3 system");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "C3 system");
         break;
       case C3I:
-        strcpy(part_buf, "C3i system");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "C3i system");
         break;
       case TAG:
-        strcpy(part_buf, "TAG system");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "TAG system");
         break;
       case ECM:
-        strcpy(part_buf, "ECM system");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "ECM system");
         break;
       case ANGELECM:
-        strcpy(part_buf, "Angel ECM system");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf),
+                                  "Angel ECM system");
         break;
       case BEAGLE_PROBE:
-        strcpy(part_buf, "Beagle Active Probe");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf),
+                                  "Beagle Active Probe");
         break;
       case BLOODHOUND_PROBE:
-        strcpy(part_buf, "Bloodhound Active Probe");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf),
+                                  "Bloodhound Active Probe");
         break;
       case LIGHT_BAP:
-        strcpy(part_buf, "Light Beagle Active Probe");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf),
+                                  "Light Beagle Active Probe");
         break;
       case ARTEMIS_IV:
-        strcpy(part_buf, "ArtemisIV system");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf),
+                                  "ArtemisIV system");
         break;
       case AXE:
-        strcpy(part_buf, "axe");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "axe");
         break;
       case SWORD:
-        strcpy(part_buf, "sword");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "sword");
         break;
       case MACE:
-        strcpy(part_buf, "mace");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "mace");
         break;
       case DUAL_SAW:
-        strcpy(part_buf, "dual saw");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "dual saw");
         break;
       case DS_AERODOOR:
-        strcpy(part_buf, "aero doors");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "aero doors");
         break;
       case DS_MECHDOOR:
-        strcpy(part_buf, "mech doors");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf), "mech doors");
         break;
       case NULL_SIGNATURE_SYSTEM:
-        strcpy(part_buf, "Null Signature System");
+        (void)string_copy_bounded(part_buf, sizeof(part_buf),
+                                  "Null Signature System");
         break;
       } // end switch() - Part Names
     } // end if()

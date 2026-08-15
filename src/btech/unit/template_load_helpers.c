@@ -88,9 +88,11 @@ bool template_parse_critical_range(char *command, int *first, int *last) {
 void template_load_finalize(Mech *mech, bool clan_equipment) {
   mech->rd.erat = mech_calculated_engine_rating(mech);
   if (strlen(mech->ud.unit_era) == 0)
-    strcpy(mech->ud.unit_era, "Undefined");
+    (void)string_copy_bounded(mech->ud.unit_era, sizeof(mech->ud.unit_era),
+                              "Undefined");
   if (strlen(mech->ud.unit_tro) == 0)
-    strcpy(mech->ud.unit_tro, "Undefined");
+    (void)string_copy_bounded(mech->ud.unit_tro, sizeof(mech->ud.unit_tro),
+                              "Undefined");
 
   if (!(mech->rd.specials & ICE_TECH) && !mech->ud.numsinks)
     mech->ud.numsinks = DEFAULT_HEATSINKS;

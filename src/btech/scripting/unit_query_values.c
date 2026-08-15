@@ -6,6 +6,7 @@
 #include "mech_radio_api.h"
 #include "mech_specification_api.h"
 #include "mech_template_api.h"
+#include "mux/server/platform.h"
 #include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
@@ -239,14 +240,14 @@ BtechScriptResult fun_bttechtime(BtechScriptCall *call) {
     if (!parse_time_checked(olds, &old))
       old = context->btech->clock->now;
     if (old < context->btech->clock->now) {
-      strcpy(buf, "00:00.00");
+      (void)string_copy_bounded(buf, sizeof(buf), "00:00.00");
     } else {
       old -= context->btech->clock->now;
       (void)snprintf(buf, MBUF_SIZE, "%02ld:%02d.%02d", (long)(old / 3600),
                      (int)((old / 60) % 60), (int)(old % 60));
     }
   } else {
-    strcpy(buf, "00:00.00");
+    (void)string_copy_bounded(buf, sizeof(buf), "00:00.00");
   }
   mecha_notify(context, PLAYER, buf);
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);

@@ -60,7 +60,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
   const int W_WEAP_INDX = request->weapon_index;
   const int W_AMMO_MODE = request->ammunition_mode;
   const bool T_IGNORE_SWARMERS = request->ignore_swarmers;
-  char location_buff[20];
+  char location_buff[UNIT_SECTION_NAME_CAPACITY];
   char notification_buff[80];
   char rear_message[10];
   int transfer = request->transfer != MECH_DAMAGE_NORMAL;
@@ -210,7 +210,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
       t_snap_tow_lines = 1;
 
     if (mech_class(wounded) == CLASS_MECH) {
-      strcpy(rear_message, "(Rear)");
+      (void)string_copy_bounded(rear_message, sizeof(rear_message), "(Rear)");
       if (mech_event_count(wounded, EVENT_DUMP) &&
           ((hitloc == CTORSO) || (hitloc == LTORSO) || (hitloc == RTORSO)) &&
           (CAUSE >= 0))

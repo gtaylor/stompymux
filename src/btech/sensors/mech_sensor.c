@@ -548,7 +548,7 @@ mech_sensor_visibility_update(const MechSensorVisibilityRequest *request) {
         st = valid_to_notice(mech, target, wlf);
         if (st && seeanew < 3) {
           if (st & AUTOCON_WARN)
-            strcpy(buf, "[fg=yellow]");
+            (void)string_copy_bounded(buf, sizeof(buf), "[fg=yellow]");
           else
             buf[0] = 0;
           if (st & AUTOCON_SHORT) {
@@ -623,7 +623,7 @@ mech_sensor_visibility_update(const MechSensorVisibilityRequest *request) {
         st = valid_to_notice(mech, target, -1);
         if (st && seeanew < 2) {
           if (st & AUTOCON_WARN)
-            strcpy(buf, "[fg=red]");
+            (void)string_copy_bounded(buf, sizeof(buf), "[fg=red]");
           else
             buf[0] = 0;
           if (st & AUTOCON_SHORT) {

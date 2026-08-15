@@ -7,7 +7,6 @@
  */
 
 #include <stdio.h>
-#include <string.h>
 
 #include "btech_api.h"
 #include "btechstats_api.h"
@@ -49,7 +48,7 @@ void do_show(CommandInvocation *invocation) {
   }
 
   if (!arg1 || !*arg1) {
-    strcpy(buf, "Valid arguments:");
+    (void)string_copy_bounded(buf, sizeof(buf), "Valid arguments:");
     const size_t HELP_COUNT = (sizeof(CMDS_HELP) / sizeof(*CMDS_HELP)) - 1;
     for (size_t index = 0; index < HELP_COUNT; index++) {
       const char *const *help = (const char *const *)checked_storage_at_const(

@@ -53,7 +53,7 @@
 
 void mechrep_raddspecial(DbRef player, void *data, char *buffer) {
   char *args[4];
-  char location[20];
+  char location[UNIT_SECTION_NAME_CAPACITY];
   int argc;
   int index;
   int itemcode;
@@ -242,7 +242,7 @@ void mechrep_rshowtech(DbRef player, void *data, char *buffer) {
   int secondary_flags;
   int infantry_flags;
   char *techstring;
-  char location[20];
+  char location[UNIT_SECTION_NAME_CAPACITY];
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
