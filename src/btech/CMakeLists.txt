@@ -271,6 +271,7 @@ set(BTECH_SOURCES
   unit/battle_value.c
   unit/battle_value_legacy.c
   unit/mech_build.c
+  unit/weapons_catalogue.c
   unit/mech_classification_state.c
   unit/mech_condition_state.c
   unit/mech_crew_state.c
