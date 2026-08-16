@@ -158,8 +158,7 @@ static bool mech_is_running_at_desired_speed(const Mech *mech) {
          ((2.0F * mech_maximum_speed(mech) / 3.0F) + 0.1F);
 }
 
-void mech_dump(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_dump(DbRef player, Mech *mech, char *buffer) {
   int argc;
   char *args[2];
   int weapnum;

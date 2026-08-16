@@ -114,16 +114,13 @@ const char *mech_lateral_description(Mech *mech) {
   return lateral_mode(i)->full;
 }
 
-void mech_lateral(DbRef player, void *data, const char *buffer) {
-
+void mech_lateral(DbRef player, Mech *mech, const char *buffer) {
   /* Rule Reference: BMR Revised, Page 82 (Quad Lateral) */
   /* Rule Reference: MaxTech Revised, Page 46 (All Units w/ Maneuvering Ace) */
   /* Rule Reference: MaxTech Revised, Page 29 (VTOL/Hover Lateral) */
   /* Rule Reference: Total Warfare, Page 50 (Quad Lateral) */
   /* Rule Reference: Total Warfare, Page 67 (VTOL/Hover Lateral, though doesn't
    * say intentional) */
-
-  Mech *mech = (Mech *)data;
   long i;
 
   if (!common_checks(player, mech, MECH_USUALO))
@@ -171,9 +168,7 @@ void mech_lateral(DbRef player, void *data, const char *buffer) {
   mech_event_schedule(mech, EVENT_LATERAL, mech_lateral_event, LATERAL_TICK, i);
 }
 
-void mech_turnmode(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_turnmode(DbRef player, Mech *mech, char *buffer) {
   if (!mech_has_pilot(mech) || mech_pilot_dbref(mech) != player) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You're not the pilot!");
@@ -200,8 +195,7 @@ void mech_turnmode(DbRef player, void *data, char *buffer) {
                                                            : "NORMAL");
 }
 
-void mech_bootlegger(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_bootlegger(DbRef player, Mech *mech, char *buffer) {
   float f_min_speed = (4 * MP1);
   int w_bth_mod = 0;
   int w_fall_levels = 0;
@@ -346,8 +340,7 @@ void mech_bootlegger(DbRef player, void *data, char *buffer) {
   }
 }
 
-void mech_eta(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_eta(DbRef player, Mech *mech, char *buffer) {
   int argc;
   int eta_x;
   int eta_y;
@@ -432,7 +425,6 @@ float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
    * when BT_MOVMENT_MODES is enabled} */
   if (mech_load_cache_is_valid(mech) && mech_weight_cache_is_valid(mech) &&
       mech_speed_cache_is_valid(mech)) {
-
     mspeed = mech_cached_maximum_speed(mech);
     /* Is masc and/or scharge and/or sprinting on */
     if (conditions.masc_enabled || conditions.supercharger_enabled ||
@@ -537,8 +529,7 @@ float mech_effective_maximum_speed(Mech *mech) {
   return mech_cargo_maximum_speed(mech, mech_maximum_speed(mech));
 }
 
-void mech_drop(DbRef player, void *data, const char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
+void mech_drop(DbRef player, Mech *mech, const char *buffer [[maybe_unused]]) {
   float s1;
   int w_drop_levels = 0;
   int w_drop_bth = 0;
@@ -640,8 +631,7 @@ void mech_drop(DbRef player, void *data, const char *buffer [[maybe_unused]]) {
   mine_field_trigger(mech, MINE_STEP);
 }
 
-void mech_stand(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_stand(DbRef player, Mech *mech, char *buffer) {
   char *args[2] = {};
   int wc_dead_legs = 0;
   int t_needs_p_skill = 1;

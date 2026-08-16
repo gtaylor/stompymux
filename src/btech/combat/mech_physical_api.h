@@ -6,23 +6,23 @@
 #include "mux/server/platform.h"
 
 /* mech.physical.c */
-void mech_punch(DbRef player, void *data, char *buffer);
-void mech_club(DbRef player, void *data, char *buffer);
+void mech_punch(DbRef player, Mech *mech, char *buffer);
+void mech_club(DbRef player, Mech *mech, char *buffer);
 bool have_axe(Mech *mech, int loc);
 bool have_sword(Mech *mech, int loc);
 bool have_mace(Mech *mech, int loc);
 bool have_saw(Mech *mech, int loc);
 bool have_claw(Mech *mech, int loc);
-void mech_saw(DbRef player, void *data, char *buffer);
-void mech_axe(DbRef player, void *data, char *buffer);
-void mech_sword(DbRef player, void *data, char *buffer);
-void mech_mace(DbRef player, void *data, char *buffer);
-void mech_claw(DbRef player, void *data, char *buffer);
-void mech_kick(DbRef player, void *data, char *buffer);
-void mech_trip(DbRef player, void *data, char *buffer);
+void mech_saw(DbRef player, Mech *mech, char *buffer);
+void mech_axe(DbRef player, Mech *mech, char *buffer);
+void mech_sword(DbRef player, Mech *mech, char *buffer);
+void mech_mace(DbRef player, Mech *mech, char *buffer);
+void mech_claw(DbRef player, Mech *mech, char *buffer);
+void mech_kick(DbRef player, Mech *mech, char *buffer);
+void mech_trip(DbRef player, Mech *mech, char *buffer);
 void mech_kickortrip(DbRef player, void *data, char *buffer,
                      PhysicalAttackType attack_type);
-void mech_charge(DbRef player, void *data, char *buffer);
+void mech_charge(DbRef player, Mech *mech, char *buffer);
 typedef struct PhysicalVerbRequest {
   PhysicalAttackType attack_type;
   bool third_person;
@@ -57,4 +57,4 @@ void physical_damage_resolve(const PhysicalDamageRequest *request);
 bool death_from_above(Mech *mech, Mech *target);
 void charge_mech(Mech *mech, Mech *target);
 bool mech_club_location_is_usable(Mech *mech, int section, bool emit_failure);
-void mech_grabclub(DbRef player, void *data, char *buffer);
+void mech_grabclub(DbRef player, Mech *mech, char *buffer);

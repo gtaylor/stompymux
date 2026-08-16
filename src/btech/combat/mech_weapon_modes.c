@@ -37,8 +37,7 @@ static void mech_toggle_mode_sub(DbRef player, Mech *mech, char *buffer,
                                  const char *offmsg, const char *cant);
 
 /* Toggles ECM on / off */
-void mech_ams(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
+void mech_ams(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   BtechContext *context = mech_context(mech);
 
   if (!common_checks(player, mech, MECH_USUALMO))
@@ -56,8 +55,7 @@ void mech_ams(DbRef player, void *data, char *buffer [[maybe_unused]]) {
                       : "Anti-Missile System turned OFF");
 }
 
-void mech_fliparms(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
+void mech_fliparms(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   BtechContext *context = mech_context(mech);
 
   if (!common_checks(player, mech, MECH_USUALMO))
@@ -216,7 +214,6 @@ static bool mech_toggle_mode_sub_func(const MultiWeaponSelectionCall *call) {
       (toggle->special_kind <= 0 && toggle->special &&
        (WEAPON_TYPE == toggle->special &&
         !weapon_catalogue_is_narc(weaptype)))) {
-
     if (toggle->special_kind == 0 && (toggle->special & TARTILLERY)) {
       if ((mech_critical_ammo_mode(mech, section, critical) &
            ARTILLERY_MODES) &&
@@ -314,9 +311,7 @@ static void mech_toggle_mode_sub(DbRef player, Mech *mech, char *buffer,
   });
 }
 
-void mech_flamerheat(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_flamerheat(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 1, CHEAT, HEAT_MODE, 1,
@@ -325,9 +320,7 @@ void mech_flamerheat(DbRef player, void *data, char *buffer) {
                        "That weapon cannot be set HEAT!");
 }
 
-void mech_ultra(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_ultra(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 1, ULTRA, ULTRA_MODE, 1,
@@ -336,8 +329,7 @@ void mech_ultra(DbRef player, void *data, char *buffer) {
                        "That weapon cannot be set ULTRA!");
 }
 
-void mech_inarc_ammo_toggle(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_inarc_ammo_toggle(DbRef player, Mech *mech, char *buffer) {
   int wc_args = 0;
   char *args[2];
 
@@ -390,9 +382,7 @@ void mech_inarc_ammo_toggle(DbRef player, void *data, char *buffer) {
   }
 }
 
-void mech_explosive(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_explosive(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
 
@@ -402,9 +392,7 @@ void mech_explosive(DbRef player, void *data, char *buffer) {
                        "That weapon cannot be set to fire explosive rounds!");
 }
 
-void mech_lbx(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_lbx(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 1, LBX, LBX_MODE, 0,
@@ -413,9 +401,7 @@ void mech_lbx(DbRef player, void *data, char *buffer) {
                        "That weapon cannot be set LBX!");
 }
 
-void mech_armorpiercing(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_armorpiercing(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 1, RFAC, AC_AP_MODE, 0,
@@ -424,8 +410,7 @@ void mech_armorpiercing(DbRef player, void *data, char *buffer) {
                        "That weapon cannot fire AP rounds!");
 }
 
-void mech_caseless(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_caseless(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 1, RFAC, AC_CASELESS_MODE, 0,
@@ -434,9 +419,7 @@ void mech_caseless(DbRef player, void *data, char *buffer) {
                        "That weapon cannot fire CASELESS rounds!");
 }
 
-void mech_flechette(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_flechette(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 1, RFAC, AC_FLECHETTE_MODE, 0,
@@ -445,9 +428,7 @@ void mech_flechette(DbRef player, void *data, char *buffer) {
                        "That weapon cannot fire Flechette rounds!");
 }
 
-void mech_incendiary(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_incendiary(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 1, RFAC, AC_INCENDIARY_MODE, 0,
@@ -456,9 +437,7 @@ void mech_incendiary(DbRef player, void *data, char *buffer) {
                        "That weapon cannot fire Incendiary rounds!");
 }
 
-void mech_precision(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_precision(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 1, RFAC, AC_PRECISION_MODE, 0,
@@ -467,9 +446,7 @@ void mech_precision(DbRef player, void *data, char *buffer) {
                        "That weapon cannot fire Precision rounds!");
 }
 
-void mech_rapidfire(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_rapidfire(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 1, RFAC, RFAC_MODE, 1,
@@ -478,9 +455,7 @@ void mech_rapidfire(DbRef player, void *data, char *buffer) {
                        "That weapon cannot be set to do rapid fire!");
 }
 
-void mech_stinger(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_stinger(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 2, 0, STINGER_MODE, 0,
@@ -489,8 +464,7 @@ void mech_stinger(DbRef player, void *data, char *buffer) {
                        "That weapon cannot be set STINGER!");
 }
 
-void mech_rac(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_rac(DbRef player, Mech *mech, char *buffer) {
   int wc_args = 0;
   char *args[2];
 
@@ -601,8 +575,7 @@ static bool mech_unjamammo_func(const MultiWeaponSelectionCall *call) {
               "You begin to shake the jammed ammo loose on weapon #%d", INDEX);
   return false;
 }
-void mech_unjamammo(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_unjamammo(DbRef player, Mech *mech, char *buffer) {
   char *args[1];
 
   if (!common_checks(player, mech, MECH_USUALMO))
@@ -621,9 +594,7 @@ void mech_unjamammo(DbRef player, void *data, char *buffer) {
   });
 }
 
-void mech_gattling(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_gattling(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 1, GMG, GATTLING_MODE, 1,
@@ -632,9 +603,7 @@ void mech_gattling(DbRef player, void *data, char *buffer) {
                        "That weapon cannot be set to do gattling fire!");
 }
 
-void mech_artemis(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_artemis(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(
@@ -644,9 +613,7 @@ void mech_artemis(DbRef player, void *data, char *buffer) {
       "That weapon cannot be set ARTEMIS!");
 }
 
-void mech_narc(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_narc(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(
@@ -656,9 +623,7 @@ void mech_narc(DbRef player, void *data, char *buffer) {
       "That weapon cannot be set NARC!");
 }
 
-void mech_swarm(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_swarm(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 2, 0, SWARM_MODE, 0,
@@ -667,9 +632,7 @@ void mech_swarm(DbRef player, void *data, char *buffer) {
                        "That weapon cannot be set to fire Swarm missiles!");
 }
 
-void mech_sguided(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_sguided(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 2, 0, SGUIDED_MODE, 0,
@@ -678,9 +641,7 @@ void mech_sguided(DbRef player, void *data, char *buffer) {
                        "That weapon cannot be set to fire Sguided missiles!");
 }
 
-void mech_atmrange(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_atmrange(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(
@@ -690,9 +651,7 @@ void mech_atmrange(DbRef player, void *data, char *buffer) {
       "That weapon cannot be set to fire Extended Range missiles!");
 }
 
-void mech_atmexplosive(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_atmexplosive(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(
@@ -702,9 +661,7 @@ void mech_atmexplosive(DbRef player, void *data, char *buffer) {
       "That weapon cannot be set to fire High Explosive missiles!");
 }
 
-void mech_swarm1(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_swarm1(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 2, 0, SWARM1_MODE, 0,
@@ -713,9 +670,7 @@ void mech_swarm1(DbRef player, void *data, char *buffer) {
                        "That weapon cannot be set to fire Swarm1 missiles!");
 }
 
-void mech_inferno(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_inferno(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 4, 0, INFERNO_MODE, 0,
@@ -724,8 +679,7 @@ void mech_inferno(DbRef player, void *data, char *buffer) {
                        "That weapon cannot be set to fire Inferno missiles!");
 }
 
-void mech_hotload(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_hotload(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 1, IDF, HOTLOAD_MODE, 1,
@@ -734,9 +688,7 @@ void mech_hotload(DbRef player, void *data, char *buffer) {
                        "That weapon can not be hotloaded!");
 }
 
-void mech_cluster(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_cluster(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 0, TARTILLERY, CLUSTER_MODE, 0,
@@ -745,9 +697,7 @@ void mech_cluster(DbRef player, void *data, char *buffer) {
                        "Invalid weapon type!");
 }
 
-void mech_smoke(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_smoke(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 4, 0, SMOKE_MODE, 0,
@@ -756,9 +706,7 @@ void mech_smoke(DbRef player, void *data, char *buffer) {
                        "Invalid weapon type!");
 }
 
-void mech_mine(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_mine(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALMO))
     return;
   mech_toggle_mode_sub(player, mech, buffer, 4, 0, MINE_MODE, 0,

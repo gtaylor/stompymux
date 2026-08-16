@@ -43,8 +43,7 @@
 constexpr int RECYCLE_SWARM = PHYSICAL_RECYCLE_TIME / 3;
 constexpr int RECYCLE_ATTACKLEG = PHYSICAL_RECYCLE_TIME / 2;
 
-void bsuit_swarm(DbRef player, void *data, char *buffer) {
-  Mech *mech = data;
+void bsuit_swarm(DbRef player, Mech *mech, char *buffer) {
   Mech *target;
   int base_to_hit = 4;
   int t_is_mount = 0;
@@ -180,8 +179,7 @@ void bsuit_swarm(DbRef player, void *data, char *buffer) {
   bsuit_recycle_start(mech, RECYCLE_SWARM);
 }
 
-void bsuit_attackleg(DbRef player, void *data, char *buffer) {
-  Mech *mech = data;
+void bsuit_attackleg(DbRef player, Mech *mech, char *buffer) {
   Mech *target;
   int base_to_hit = 0;
   int w_leg_temp = -1;
@@ -387,9 +385,8 @@ void bsuit_attackleg(DbRef player, void *data, char *buffer) {
   bsuit_recycle_start(mech, RECYCLE_ATTACKLEG);
 }
 
-void bsuit_pack_jettison(DbRef player, void *data,
+void bsuit_pack_jettison(DbRef player, Mech *mech,
                          char *buffer [[maybe_unused]]) {
-  Mech *mech = data;
   int wc_jettisoned = 0;
   int wc_suits = 0;
   int i;

@@ -202,8 +202,7 @@ bool valid_gun_pos(const RepairCriticalSelection *selection) {
   return false;
 }
 
-void tech_checkstatus(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
+void tech_checkstatus(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   BtechContext *context = mech_context(mech);
   EvaluationContext *evaluation = btech_context_evaluation(context);
   int i = figure_latest_tech_event(mech);

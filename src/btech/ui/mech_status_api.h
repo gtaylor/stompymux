@@ -76,12 +76,12 @@ void print_heat_bar(EvaluationContext *evaluation, DbRef player, Mech *mech);
 void print_info_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
                        int own);
 void print_short_info(EvaluationContext *evaluation, DbRef player, Mech *mech);
-void mech_status(DbRef player, void *data, const char *buffer);
-void mech_critstatus(DbRef player, void *data, char *buffer);
+void mech_status(DbRef player, Mech *mech, const char *buffer);
+void mech_critstatus(DbRef player, Mech *mech, char *buffer);
 PartDisplayName part_name(BtechContext *context, int type, int brand);
 PartDisplayName part_name_long(BtechContext *context, int type, int brand);
 PartDisplayName pos_part_name(Mech *mech, int index, int loop);
-void mech_weaponspecs(DbRef player, void *data, const char *buffer);
+void mech_weaponspecs(DbRef player, Mech *mech, const char *buffer);
 typedef struct MechStatusTextRequest {
   Mech *mech;
   const char *argument;

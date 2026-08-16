@@ -55,8 +55,7 @@ static void mech_towing_target_prepare(Mech *target) {
   mech_dug_in_set(target, false);
 }
 
-void mech_pickup(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_pickup(DbRef player, Mech *mech, char *buffer) {
   Mech *target;
   DbRef target_num;
   int argc;
@@ -304,8 +303,7 @@ void mech_pickup(DbRef player, void *data, char *buffer) {
                      mech_dbref(target));
 }
 
-void mech_attachcables(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_attachcables(DbRef player, Mech *mech, char *buffer) {
   Mech *tow_mech;
   Mech *target;
   DbRef tow_mech_num;
@@ -549,8 +547,7 @@ void mech_attachcables(DbRef player, void *data, char *buffer) {
   mech_speed_correct(tow_mech);
 }
 
-void mech_detachcables(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_detachcables(DbRef player, Mech *mech, char *buffer) {
   Mech *tow_mech;
   Mech *target;
   DbRef tow_mech_num;
@@ -643,9 +640,8 @@ void mech_detachcables(DbRef player, void *data, char *buffer) {
   mech_speed_correct(tow_mech);
 }
 
-void mech_dropoff(DbRef player, void *data,
+void mech_dropoff(DbRef player, Mech *mech,
                   const char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
   Mech *target;
   BattleMap *newmap;
   DbRef a_ref;

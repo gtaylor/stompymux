@@ -14,7 +14,7 @@
 #include "registry_api.h"
 #include "repair_job.h"
 
-void tech_fixarmor(DbRef player, void *data, char *buffer) {
+void tech_fixarmor(DbRef player, Mech *facility, char *buffer) {
   int ochange;
 
   RepairCommandContext repair_command;
@@ -26,7 +26,7 @@ void tech_fixarmor(DbRef player, void *data, char *buffer) {
   int change;
 
   RepairCommandStatus repair_status = repair_command_context_initialize(
-      player, data, REPAIR_STALL_CONFIGURED, &repair_command);
+      player, facility, REPAIR_STALL_CONFIGURED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
     if (repair_command.evaluation)
       mecha_notify(repair_command.evaluation, player,
@@ -104,7 +104,7 @@ void tech_fixarmor(DbRef player, void *data, char *buffer) {
   (void)repair_section_amount_job_execute(&repair_command, loc, &change, &job);
 }
 
-void tech_fixinternal(DbRef player, void *data, char *buffer) {
+void tech_fixinternal(DbRef player, Mech *facility, char *buffer) {
   RepairCommandContext repair_command;
   Mech *mech;
   BtechContext *context;
@@ -115,7 +115,7 @@ void tech_fixinternal(DbRef player, void *data, char *buffer) {
   int ochange;
 
   RepairCommandStatus repair_status = repair_command_context_initialize(
-      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+      player, facility, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
     if (repair_command.evaluation)
       mecha_notify(repair_command.evaluation, player,

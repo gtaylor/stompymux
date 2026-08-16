@@ -244,7 +244,6 @@ static void scramble_message(const RadioScrambleRequest *request) {
   if ((!DIGMODE && (RANGE >= SEND_RANGE || RANGE >= RECEIVE_RANGE)) ||
       UNDER_ECM) {
     if (!DIGMODE) {
-
       mr = max(RECVRRANGE, (SENDRANGE + RECVRRANGE) / 2);
       if (SEND_RANGE < RANGE) {
         const float SIGNAL = 100.0F * SEND_RANGE / fmaxf(1.0F, RANGE);
@@ -722,12 +721,11 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
   free(workspace);
 }
 
-void mech_radio(DbRef player, void *data, char *buffer) {
+void mech_radio(DbRef player, Mech *mech, char *buffer) {
   char message_buffer[LBUF_SIZE];
   int fail = 0;
   char *args[3] = {};
   int i;
-  Mech *mech = (Mech *)data;
   DbRef target;
   Mech *temp_mech;
 

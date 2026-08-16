@@ -52,8 +52,7 @@ static const char *fire_argument(char *const *arguments, size_t index) {
   return *argument;
 }
 
-void mech_fireweapon(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_fireweapon(DbRef player, Mech *mech, char *buffer) {
   BattleMap *mech_map;
   char *args[5];
   int argc;
@@ -194,7 +193,6 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
   mode = mech_critical_fire_mode(mech, section, critical);
 
   if (!SIGHT) {
-
     /* Exile Stun Code Check */
     if (conditions.stunned) {
       mecha_notify(
@@ -227,7 +225,6 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
     /* New fancy message for when they try and fire a weapon and the section
      * is busy */
     if (weaptype == -5) {
-
       /* Get the section name and print the message */
       armor_string_from_index(section, location, mech_class(mech),
                               mech_movement_type(mech));
@@ -245,7 +242,6 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
     }
 
     if (conditions.fallen && mech_class(mech) == CLASS_MECH) {
-
       /* if a quad has 3 of 4 legs dead, it can't fire at all while prone */
       wc_dead_legs = count_destroyed_legs(mech);
       if (mech_is_quad(mech)) {
@@ -354,13 +350,11 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
   }
 
   switch (ARGC) {
-
     /* Fire at default target */
   case 1:
 
     /* If its a coolant gun in heat mode we should shot our mech */
     if (weapon_catalogue_is_coolant(weaptype) && (mode & HEAT_MODE)) {
-
       /* Setting our mech as the target and the other parameters
        * as well */
       temp_mech = mech;
@@ -390,7 +384,6 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
       enemy_z = TARGET_POSITION.position.z;
 
       if (mech_target_dbref(mech) != -1) {
-
         temp_mech = btech_context_get_mech(context, mech_target_dbref(mech));
         if (!temp_mech) {
           mecha_notify(btech_context_evaluation(context), PLAYER,
@@ -432,12 +425,10 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
         ishex = 1;
         if (!SIGHT && !weapon_catalogue_is_artillery(weaptype) &&
             conditions.unit_target_lock) {
-
           /* look for enemies in the default hex cause they may have moved */
           temp_mech = find_mech_in_hex(mech, mech_map, mech_target_hex_x(mech),
                                        mech_target_hex_y(mech), 0);
           if (temp_mech) {
-
             enemy_x = mech_position_real_x(temp_mech);
             enemy_y = mech_position_real_y(temp_mech);
             enemy_z = mech_position_real_z(temp_mech);

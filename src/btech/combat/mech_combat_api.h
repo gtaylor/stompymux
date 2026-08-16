@@ -26,10 +26,10 @@ typedef struct TerrainWeaponEffectRequest {
 } TerrainWeaponEffectRequest;
 
 /* mech.combat.c */
-void mech_target(DbRef player, void *data, char *buffer);
+void mech_target(DbRef player, Mech *mech, char *buffer);
 void mech_sixth_sense_check(Mech *mech, Mech *target);
-void mech_set_target(DbRef player, void *data, char *buffer);
-void mech_fireweapon(DbRef player, void *data, char *buffer);
+void mech_set_target(DbRef player, Mech *mech, char *buffer);
+void mech_fireweapon(DbRef player, Mech *mech, char *buffer);
 typedef struct WeaponFireCommandRequest {
   DbRef actor;
   Mech *mech;

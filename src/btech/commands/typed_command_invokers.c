@@ -11,15 +11,14 @@
 #include "mech_fire_api.h"
 #include "mech_ice_api.h"
 #include "mech_tech_repairs_api.h"
-#include "registry_api.h"
+#include "special_object.h"
 
 #define DEFINE_MECH_COMMAND_INVOKER(invoker, handler)                          \
   void btech_command_invoke_##invoker(                                         \
       const BtechCommandInvocation *invocation) {                              \
-    handler(                                                                   \
-        invocation->actor,                                                     \
-        btech_context_get_mech(invocation->context, invocation->object_id),    \
-        invocation->arguments);                                                \
+    handler(invocation->actor,                                                 \
+            btech_special_object_as_mech(invocation->object),                  \
+            invocation->arguments);                                            \
   }
 
 DEFINE_MECH_COMMAND_INVOKER(aero_climb, aero_climb)
@@ -59,7 +58,7 @@ DEFINE_MECH_COMMAND_INVOKER(mech_snipe, mech_snipe)
   void btech_command_invoke_##handler(                                         \
       const BtechCommandInvocation *invocation) {                              \
     handler(invocation->actor,                                                 \
-            btech_context_get_map(invocation->context, invocation->object_id), \
+            btech_special_object_as_map(invocation->object),                   \
             invocation->arguments);                                            \
   }
 

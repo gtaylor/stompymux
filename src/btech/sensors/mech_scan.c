@@ -47,9 +47,8 @@ enum {
   SHOW_WEAPONS = 4,
 };
 
-void mech_scan(DbRef player, void *data, char *buffer) {
+void mech_scan(DbRef player, Mech *mech, char *buffer) {
   char message_buffer[LBUF_SIZE];
-  Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[4];
@@ -358,8 +357,7 @@ void mech_scan(DbRef player, void *data, char *buffer) {
   }
 }
 
-void mech_report(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_report(DbRef player, Mech *mech, char *buffer) {
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[3];

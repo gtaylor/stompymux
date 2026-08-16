@@ -269,8 +269,7 @@ static bool punch_check_arm(Mech *mech, int arm) {
   }
   return true;
 } // end checkArm()
-void mech_punch(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_punch(DbRef player, Mech *mech, char *buffer) {
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
@@ -329,8 +328,7 @@ void mech_punch(DbRef player, void *data, char *buffer) {
     }
   }
 } // end mech_punch()
-void mech_club(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_club(DbRef player, Mech *mech, char *buffer) {
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *args[5];
@@ -443,8 +441,7 @@ static bool axe_check_arm(Mech *mech, int arm) {
   }
   return true;
 } // end axe_checkArm()
-void mech_axe(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_axe(DbRef player, Mech *mech, char *buffer) {
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
@@ -525,8 +522,7 @@ static bool saw_check_arm(Mech *mech, int arm) {
   }
   return true;
 } // end saw_checkArm()
-void mech_saw(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_saw(DbRef player, Mech *mech, char *buffer) {
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
@@ -587,8 +583,7 @@ void mech_saw(DbRef player, void *data, char *buffer) {
     return;
   }
 } // end mech_saw()
-void mech_claw(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_claw(DbRef player, Mech *mech, char *buffer) {
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
@@ -678,8 +673,7 @@ static bool mace_check_arm(Mech *mech, int arm) {
   }
   return true;
 } // end mace_checkArm()
-void mech_mace(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_mace(DbRef player, Mech *mech, char *buffer) {
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];

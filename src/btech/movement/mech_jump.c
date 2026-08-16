@@ -52,8 +52,7 @@ static int mech_adjusted_jump_speed_mp(const Mech *mech, const BattleMap *map) {
   return (int)(speed * MP_PER_KPH);
 }
 
-void mech_jump(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_jump(DbRef player, Mech *mech, char *buffer) {
   Mech *temp_mech = nullptr;
   BattleMap *mech_map;
   BtechContext *context = mech_context(mech);

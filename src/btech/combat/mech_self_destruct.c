@@ -97,8 +97,7 @@ static void mech_self_destruct_event(MuxEvent *event) {
   }
 }
 
-void mech_explode(DbRef player, void *data, char *buffer) {
-  Mech *mech = data;
+void mech_explode(DbRef player, Mech *mech, char *buffer) {
   BtechContext *context = mech_context(mech);
   char *args[3];
   long time = btech_context_self_destruct_time(context);

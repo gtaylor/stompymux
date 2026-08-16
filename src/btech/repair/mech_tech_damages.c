@@ -368,10 +368,9 @@ size_t mech_repair_job_count(Mech *mech) {
     make_scrap_table(&damages, mech);
   return (size_t)damages.count;
 }
-void show_mechs_damage(DbRef player, void *data,
+void show_mechs_damage(DbRef player, Mech *mech,
                        char *buffer [[maybe_unused]]) {
   char message_buffer[LBUF_SIZE];
-  Mech *mech = data;
   RepairDamageTable damages_storage = {0};
   RepairDamageTable *damages = &damages_storage;
   CoolMenu *c = nullptr;
@@ -387,7 +386,7 @@ void show_mechs_damage(DbRef player, void *data,
   int extra_hard = 1;
   RepairCommandContext repair_command;
   RepairCommandStatus repair_status = repair_command_context_initialize(
-      player, data, REPAIR_STALL_CONFIGURED, &repair_command);
+      player, mech, REPAIR_STALL_CONFIGURED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
     if (repair_command.evaluation)
       mecha_notify(repair_command.evaluation, player,
@@ -719,8 +718,7 @@ static void fix_entry(const RepairDamageTable *damages, DbRef player,
     break;
   }
 }
-void tech_fix(DbRef player, void *data, char *buffer) {
-  Mech *mech = data;
+void tech_fix(DbRef player, Mech *mech, char *buffer) {
   RepairDamageTable damages_storage = {0};
   RepairDamageTable *damages = &damages_storage;
   int n;
@@ -734,7 +732,7 @@ void tech_fix(DbRef player, void *data, char *buffer) {
   if (!buffer)
     buffer = empty_buffer;
   RepairCommandStatus repair_status = repair_command_context_initialize(
-      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+      player, mech, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
     if (repair_command.evaluation)
       mecha_notify(repair_command.evaluation, player,

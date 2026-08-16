@@ -32,8 +32,7 @@ static bool ascii_is_alpha(char value) {
          0;
 }
 
-void mech_tacmap(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_tacmap(DbRef player, Mech *mech, char *buffer) {
   int argc;
   int x;
   int y;
@@ -73,7 +72,6 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
   char *first = argc > 0 ? tactical_command_argument(args_vec, 0) : nullptr;
   if (first != nullptr && ascii_is_alpha(*first) &&
       *checked_string_suffix(first, 1) == '\0') {
-
     switch (ascii_to_lower(*first)) {
     case 'c':
       flags |= 8; /* Show cliffs */
@@ -147,7 +145,6 @@ void mech_tacmap(DbRef player, void *data, char *buffer) {
         strtok_r(nullptr, " \t", &token_context) != nullptr ||
         display_height > 24 || display_height < 5 || display_width > 40 ||
         display_width < 5) {
-
       mecha_notify(evaluation, player,
                    "Illegal Tacsize attribute. Must be in format "
                    "'Height Width' . Height : 5-24 Width : 5-40");

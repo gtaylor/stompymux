@@ -56,8 +56,7 @@ static bool sword_check_arm(Mech *mech, int arm) {
   return true;
 }
 
-void mech_sword(DbRef player, void *data, char *buffer) {
-  Mech *mech = data;
+void mech_sword(DbRef player, Mech *mech, char *buffer) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argument_list[5];
@@ -115,15 +114,15 @@ void mech_sword(DbRef player, void *data, char *buffer) {
     mech_notify(mech, MECHALL, "You have no sword to chop people with!");
 }
 
-void mech_trip(DbRef player, void *data, char *buffer) {
-  mech_kickortrip(player, data, buffer, PA_TRIP);
+void mech_trip(DbRef player, Mech *mech, char *buffer) {
+  mech_kickortrip(player, mech, buffer, PA_TRIP);
 } // end mech_trip()
 
 /**
  * Mech kick command hook.
  */
-void mech_kick(DbRef player, void *data, char *buffer) {
-  mech_kickortrip(player, data, buffer, PA_KICK);
+void mech_kick(DbRef player, Mech *mech, char *buffer) {
+  mech_kickortrip(player, mech, buffer, PA_KICK);
 } // end mech_trip()
 
 /**
@@ -131,7 +130,7 @@ void mech_kick(DbRef player, void *data, char *buffer) {
  */
 void mech_kickortrip(DbRef player, void *data, char *buffer,
                      PhysicalAttackType attack_type) {
-  Mech *mech = (Mech *)data;
+  Mech *mech = data;
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char *argl[5];
@@ -240,8 +239,7 @@ void mech_kickortrip(DbRef player, void *data, char *buffer,
 /**
  * Mech/tank charge routines
  */
-void mech_charge(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_charge(DbRef player, Mech *mech, char *buffer) {
   Mech *target;
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));

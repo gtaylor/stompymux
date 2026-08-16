@@ -215,8 +215,7 @@ void mech_c3i_network_validate(Mech *mech) {
   mech_c3i_network_size_set(mech, network_size);
 }
 
-void mech_c3i_join_leave(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_c3i_join_leave(DbRef player, Mech *mech, char *buffer) {
   Mech *target;
   char *args[2];
   DbRef ref_target;

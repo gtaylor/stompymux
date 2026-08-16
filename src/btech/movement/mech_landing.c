@@ -42,15 +42,14 @@ static int mech_jump_to_hit_recycle(const Mech *mech) {
   return JUMP_TICK * 12 / (mech_class(mech) == CLASS_BSUIT ? 4 : 1);
 }
 
-void mech_land(DbRef player, void *data, char *buffer) {
-  Mech *mech = data;
+void mech_land(DbRef player, Mech *mech, char *buffer) {
   BtechContext *context = mech_context(mech);
 
   if (!common_checks(player, mech, MECH_USUAL))
     return;
   if (mech_class(mech) != CLASS_MECH && mech_class(mech) != CLASS_MW &&
       mech_class(mech) != CLASS_BSUIT && mech_class(mech) != CLASS_VEH_GROUND) {
-    aero_land(player, data, buffer);
+    aero_land(player, mech, buffer);
     return;
   }
   if (mech_is_jumping(mech)) {

@@ -392,33 +392,25 @@ void listtic_sub(DbRef player, Mech *mech, char *buffer) {
   kill_cool_menu(c);
 }
 
-void mech_cleartic(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_cleartic(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALSM))
     return;
   cleartic_sub(player, mech, buffer);
 }
 
-void mech_addtic(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_addtic(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALSM))
     return;
   addtic_sub(player, mech, buffer);
 }
 
-void mech_deltic(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_deltic(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALSM))
     return;
   deltic_sub(player, mech, buffer);
 }
 
-void mech_firetic(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_firetic(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALO))
     return;
   if (mech_condition_summary(mech).weapons_hold) {
@@ -429,9 +421,7 @@ void mech_firetic(DbRef player, void *data, char *buffer) {
   firetic_sub(player, mech, buffer);
 }
 
-void mech_listtic(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_listtic(DbRef player, Mech *mech, char *buffer) {
   if (!common_checks(player, mech, MECH_USUALSM))
     return;
   listtic_sub(player, mech, buffer);
@@ -451,9 +441,7 @@ static void heat_cutoff_event(MuxEvent *e) {
   }
 }
 
-void heat_cutoff(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
-
+void heat_cutoff(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   if (mech->xcode.context->configuration->btech_heatcutoff < 1) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "This command has been disabled.");

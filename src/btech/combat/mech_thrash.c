@@ -62,8 +62,7 @@ static int thrashing_limb(int index) {
  * - Make pskill roll or take damage as if 1 level fall
  */
 
-void mech_thrash(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
+void mech_thrash(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   Mech *target;
   BtechContext *context = mech_context(mech);
   BattleMap *map = btech_context_get_map(context, mech_map_dbref(mech));

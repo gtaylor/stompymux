@@ -24,7 +24,7 @@ void mech_c3_network_add(Mech *mech, Mech *mech_to_add);
 void mech_c3_network_remove_reference(DbRef ref_to_clear, Mech *mech);
 void mech_c3_network_clear(Mech *mech, bool clear_from_others);
 void mech_c3_network_validate(Mech *mech);
-void mech_c3_join_leave(DbRef player, void *data, char *buffer);
+void mech_c3_join_leave(DbRef player, Mech *mech, char *buffer);
 void mech_c3_message(DbRef player, Mech *mech, char *buffer);
 void mech_c3_targets(DbRef player, Mech *mech, char *buffer);
 void mech_c3_network(DbRef player, Mech *mech, char *buffer);

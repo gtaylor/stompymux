@@ -339,8 +339,7 @@ static int set_sensor(Mech *mech, char ps, char ss) {
   return 0;
 }
 
-void mech_sensor(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_sensor(DbRef player, Mech *mech, char *buffer) {
   char *args[3];
   int argc;
 

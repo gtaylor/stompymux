@@ -67,8 +67,7 @@ inhibitor removes min range roll 2d6 for feed back check and refer to chart
 below. If failure, mech takes 10 points of internal damage to loc of PPC Target
 distance Avoid feedback on: 1 10+ 2 6+ 3 3+
 */
-void mech_target(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_target(DbRef player, Mech *mech, char *buffer) {
   BtechContext *context = mech_context(mech);
   Mech *target;
   char *args[5];
@@ -185,8 +184,7 @@ void mech_sixth_sense_check(Mech *mech, Mech *target) {
                           (long)sixth_sense_tonnage_severity(d));
 }
 
-void mech_set_target(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_set_target(DbRef player, Mech *mech, char *buffer) {
   Mech *target;
   BtechContext *context = mech_context(mech);
   BattleMap *mech_map;

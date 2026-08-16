@@ -112,7 +112,6 @@ int mech_c3_working_master_count(Mech *mech) {
       t = mech_critical_part_type(mech, x, y);
       if (t) {
         if (special_from_equipment_index(t) == C3_MASTER) {
-
           wc_slots++;
 
           if (!mech_critical_is_nonfunctional(mech, x, y)) {
@@ -148,13 +147,11 @@ int mech_c3_total_master_count(Mech *mech) {
       t = mech_critical_part_type(mech, x, y);
       if (t) {
         if (special_from_equipment_index(t) == C3_MASTER) {
-
           wc_slots++;
         }
       }
 
       if (wc_slots == mech_c3_master_slot_count(mech)) {
-
         wc_slots = 0;
         wc_masters++;
       }
@@ -451,8 +448,7 @@ void mech_c3_network_validate(Mech *mech) {
   }
 }
 
-void mech_c3_join_leave(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_c3_join_leave(DbRef player, Mech *mech, char *buffer) {
   Mech *target;
   char *args[2];
   DbRef ref_target;

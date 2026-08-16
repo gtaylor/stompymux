@@ -11,7 +11,7 @@
 #include "mech_api_types.h"
 #include "mux/server/platform.h"
 
-void mech_tag(DbRef player, void *data, char *buffer);
+void mech_tag(DbRef player, Mech *mech, char *buffer);
 bool mech_tag_is_destroyed(const Mech *mech);
 void mech_tag_stop(Mech *mech);
 void mech_tag_check(Mech *mech);

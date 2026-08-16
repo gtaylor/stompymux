@@ -220,8 +220,8 @@ void economy_manifest_repair(const EconomyRepairRequest *request) {
                 "Items in new: %d. Unique items in new: %d.", items, kinds);
 }
 
-void mech_rfixstuff(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  BtechSpecialObject *object = data;
+void mech_rfixstuff(DbRef player, BtechSpecialObject *object,
+                    char *buffer [[maybe_unused]]) {
   BtechContext *context = object->context;
 
   economy_manifest_repair(&(EconomyRepairRequest){
@@ -346,8 +346,7 @@ bool mech_cargo_command_access(BtechContext *context, DbRef player) {
   return false;
 }
 
-void mech_manifest(DbRef player, void *data, char *buffer) {
-  BtechSpecialObject *object = data;
+void mech_manifest(DbRef player, BtechSpecialObject *object, char *buffer) {
   BtechContext *context = object->context;
 
   if (!mech_cargo_command_access(context, player))
@@ -358,8 +357,7 @@ void mech_manifest(DbRef player, void *data, char *buffer) {
                 game_object_location(context->database, player), buffer);
 }
 
-void mech_stores(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_stores(DbRef player, Mech *mech, char *buffer) {
   BtechContext *context = mech_context(mech);
   GameDatabase *database = context->database;
 
@@ -580,8 +578,7 @@ static void manifest_change(const ManifestChangeRequest *change) {
   }
 }
 
-void mech_raddstuff(DbRef player, void *data, char *buffer) {
-  BtechSpecialObject *object = data;
+void mech_raddstuff(DbRef player, BtechSpecialObject *object, char *buffer) {
   BtechContext *context = object->context;
 
   manifest_change(&(ManifestChangeRequest){
@@ -595,8 +592,7 @@ void mech_raddstuff(DbRef player, void *data, char *buffer) {
   });
 }
 
-void mech_rremovestuff(DbRef player, void *data, char *buffer) {
-  BtechSpecialObject *object = data;
+void mech_rremovestuff(DbRef player, BtechSpecialObject *object, char *buffer) {
   BtechContext *context = object->context;
 
   manifest_change(&(ManifestChangeRequest){
@@ -610,8 +606,7 @@ void mech_rremovestuff(DbRef player, void *data, char *buffer) {
   });
 }
 
-void mech_loadcargo(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_loadcargo(DbRef player, Mech *mech, char *buffer) {
   BtechContext *context = mech_context(mech);
 
   if (!mech_cargo_command_access(context, player))
@@ -656,8 +651,7 @@ void mech_loadcargo(DbRef player, void *data, char *buffer) {
   mech_speed_correct(mech);
 }
 
-void mech_unloadcargo(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_unloadcargo(DbRef player, Mech *mech, char *buffer) {
   BtechContext *context = mech_context(mech);
 
   if (!mech_cargo_command_access(context, player))
@@ -681,8 +675,8 @@ void mech_unloadcargo(DbRef player, void *data, char *buffer) {
   mech_speed_correct(mech);
 }
 
-void mech_rresetstuff(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  BtechSpecialObject *object = data;
+void mech_rresetstuff(DbRef player, BtechSpecialObject *object,
+                      char *buffer [[maybe_unused]]) {
   BtechContext *context = object->context;
 
   mecha_notify(btech_context_evaluation(context), player, "Inventory cleaned!");

@@ -5,4 +5,4 @@
 
 int bomb_weight(int i);
 const char *bomb_name(int i);
-void mech_bomb(DbRef player, void *data, char *buffer);
+void mech_bomb(DbRef player, Mech *mech, char *buffer);

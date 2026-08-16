@@ -35,7 +35,7 @@ typedef struct TechCheckContext {
   int location;
   int part;
 } TechCheckContext;
-void tech_replacegun(DbRef player, void *data, char *buffer) {
+void tech_replacegun(DbRef player, Mech *facility, char *buffer) {
   int brand = 0;
   int ob = 0;
 
@@ -53,7 +53,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
   int loc;
   int part;
   RepairCommandStatus repair_status = repair_command_context_initialize(
-      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+      player, facility, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
     if (repair_command.evaluation)
       mecha_notify(repair_command.evaluation, player,
@@ -258,7 +258,7 @@ void tech_replacegun(DbRef player, void *data, char *buffer) {
         .mech = mech, .slot = {.section = loc, .critical = part}, .brand = ob});
 }
 
-void tech_repairgun(DbRef player, void *data, char *buffer) {
+void tech_repairgun(DbRef player, Mech *facility, char *buffer) {
   int extra_hard = 0;
 
   RepairCommandContext repair_command;
@@ -268,7 +268,7 @@ void tech_repairgun(DbRef player, void *data, char *buffer) {
   int loc;
   int part;
   RepairCommandStatus repair_status = repair_command_context_initialize(
-      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+      player, facility, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
     if (repair_command.evaluation)
       mecha_notify(repair_command.evaluation, player,
@@ -452,7 +452,7 @@ void tech_fixenhcrit(DbRef player, void *data, char *buffer) {
   (void)repair_part_job_execute(&repair_command, loc, part, &job);
 }
 
-void tech_replacepart(DbRef player, void *data, char *buffer) {
+void tech_replacepart(DbRef player, Mech *facility, char *buffer) {
   RepairCommandContext repair_command;
   Mech *mech;
   BtechContext *context;
@@ -462,7 +462,7 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
   int t;
 
   RepairCommandStatus repair_status = repair_command_context_initialize(
-      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+      player, facility, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
     if (repair_command.evaluation)
       mecha_notify(repair_command.evaluation, player,
@@ -683,7 +683,7 @@ void tech_replacepart(DbRef player, void *data, char *buffer) {
   }
 }
 
-void tech_repairpart(DbRef player, void *data, char *buffer) {
+void tech_repairpart(DbRef player, Mech *facility, char *buffer) {
   RepairCommandContext repair_command;
   Mech *mech;
   BtechContext *context;
@@ -692,7 +692,7 @@ void tech_repairpart(DbRef player, void *data, char *buffer) {
   int t;
 
   RepairCommandStatus repair_status = repair_command_context_initialize(
-      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+      player, facility, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
     if (repair_command.evaluation)
       mecha_notify(repair_command.evaluation, player,
