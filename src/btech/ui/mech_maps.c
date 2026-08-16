@@ -46,8 +46,7 @@ static void navigate_plot(const NavigatePlotCall *call) {
   *cell = call->marker;
 }
 
-void mech_findcenter(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
+void mech_findcenter(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   float fx;
   float fy;
   int x;
@@ -211,8 +210,7 @@ void map_color_scheme_load(MapColorScheme *colors) {
   memcpy(colors->values, DEFAULT_COLOR_SCHEME, NUM_COLOR_IDX);
 }
 
-void mech_navigate(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_navigate(DbRef player, Mech *mech, char *buffer) {
   char mybuff[NAVIGATE_LINES][MBUF_SIZE];
   NavigateCanvas canvas = {.lines = mybuff};
   BattleMap *mech_map;

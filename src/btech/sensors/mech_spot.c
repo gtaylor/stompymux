@@ -149,8 +149,7 @@ void mech_spot_clear_fire_adjustments(BattleMap *map, DbRef mech) {
   }
 }
 
-void mech_spot(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_spot(DbRef player, Mech *mech, char *buffer) {
   Mech *target;
   char *args[5];
   char target_id[3];

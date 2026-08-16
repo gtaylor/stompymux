@@ -514,8 +514,7 @@ static void show_lrs_map(const LrsMapRequest *request) {
   }
 }
 
-void mech_lrsmap(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_lrsmap(DbRef player, Mech *mech, char *buffer) {
   MapColorScheme colors;
   BattleMap *map;
   int argc;

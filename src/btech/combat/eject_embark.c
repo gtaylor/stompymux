@@ -56,9 +56,7 @@ static void destroy_failed_suit(BtechContext *context,
   destroy_thing(evaluation, suit);
 }
 
-void mech_embark(DbRef player, void *data, char *buffer) {
-
-  Mech *mech = (Mech *)data;
+void mech_embark(DbRef player, Mech *mech, char *buffer) {
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   Mech *target;
   Mech *towee = nullptr;
@@ -136,7 +134,6 @@ void mech_embark(DbRef player, void *data, char *buffer) {
                    mech_dbref(target), LUA_LOCK_ENTER,
                    LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock,
                    &lock_result)) {
-
       /* Trigger FAIL & AFAIL */
       memset(fail_mesg, 0, sizeof(fail_mesg));
       (void)snprintf(fail_mesg, SBUF_SIZE, "That unit's bay doors are locked.");
@@ -152,7 +149,6 @@ void mech_embark(DbRef player, void *data, char *buffer) {
     }
 
     if (!lock_result.defined) {
-
       /* Check their teams */
       if (mech_team(mech) != mech_team(target)) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -294,7 +290,6 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   if (!lock_test(evaluation, player, player, mech_dbref(mech),
                  mech_dbref(target), LUA_LOCK_ENTER,
                  LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, &lock_result)) {
-
     /* Trigger FAIL & AFAIL */
     memset(fail_mesg, 0, sizeof(fail_mesg));
     (void)snprintf(fail_mesg, SBUF_SIZE, "That unit's bay doors are locked.");
@@ -309,7 +304,6 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   }
 
   if (!lock_result.defined) {
-
     /* Check their teams */
     if (mech_team(mech) != mech_team(target)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -336,7 +330,6 @@ void mech_embark(DbRef player, void *data, char *buffer) {
    * but their sections are still cycling (or weapons) */
   tmp = mech_recycling_state(mech, CHECK_BOTH);
   if (tmp) {
-
     if (tmp == 1) {
       mecha_notify(evaluation, player, "You have weapons recycling!");
     } else if (tmp == 2) {

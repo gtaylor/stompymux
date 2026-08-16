@@ -1,39 +1,52 @@
 #include "command_invokers.h"
 
+#include "aero_bomb_api.h"
 #include "aero_move_api.h"
 #include "bsuit_api.h"
 #include "command_registry.h"
+#include "ds_bay_api.h"
+#include "econ_cmds_api.h"
 #include "eject_api.h"
+#include "mech_advanced_api.h"
+#include "mech_ammodump_api.h"
+#include "mech_c3_api.h"
+#include "mech_c3i_api.h"
+#include "mech_combat_api.h"
+#include "mech_consistency_api.h"
+#include "mech_contacts_api.h"
+#include "mech_los_api.h"
+#include "mech_maps_api.h"
 #include "mech_move_api.h"
+#include "mech_notify_api.h"
+#include "mech_ood_api.h"
+#include "mech_physical_api.h"
+#include "mech_pickup_api.h"
+#include "mech_restrict_api.h"
+#include "mech_scan_api.h"
+#include "mech_sensor_api.h"
+#include "mech_spot_api.h"
 #include "mech_startup_api.h"
-#include "mux/server/platform.h"
+#include "mech_status_api.h"
+#include "mech_tag_api.h"
+#include "mech_tech_commands_api.h"
+#include "mech_tech_damages_api.h"
+#include "mech_tic_api.h"
+#include "special_object.h"
 
 #define DEFINE_BTECH_COMMAND_INVOKER(handler)                                  \
-  void handler(DbRef player, void *data, char *buffer);                        \
   void btech_command_invoke_##handler(                                         \
       const BtechCommandInvocation *invocation) {                              \
-    handler(invocation->actor, invocation->object, invocation->arguments);     \
+    handler(invocation->actor,                                                 \
+            btech_special_object_as_mech(invocation->object),                  \
+            invocation->arguments);                                            \
   }
-void btech_command_invoke_aero_takeoff(
-    const BtechCommandInvocation *invocation) {
-  aero_takeoff(invocation->actor, invocation->object, invocation->arguments);
-}
-void btech_command_invoke_aero_thrust(
-    const BtechCommandInvocation *invocation) {
-  aero_thrust(invocation->actor, invocation->object, invocation->arguments);
-}
+DEFINE_BTECH_COMMAND_INVOKER(aero_takeoff)
+DEFINE_BTECH_COMMAND_INVOKER(aero_thrust)
 DEFINE_BTECH_COMMAND_INVOKER(bsuit_attackleg)
-void btech_command_invoke_bsuit_hide(const BtechCommandInvocation *invocation) {
-  bsuit_hide(invocation->actor, invocation->object, invocation->arguments);
-}
+DEFINE_BTECH_COMMAND_INVOKER(bsuit_hide)
 DEFINE_BTECH_COMMAND_INVOKER(bsuit_pack_jettison)
 DEFINE_BTECH_COMMAND_INVOKER(bsuit_swarm)
 DEFINE_BTECH_COMMAND_INVOKER(heat_cutoff)
-DEFINE_BTECH_COMMAND_INVOKER(list_xcodestuff)
-DEFINE_BTECH_COMMAND_INVOKER(mech_raddstuff)
-DEFINE_BTECH_COMMAND_INVOKER(mech_rfixstuff)
-DEFINE_BTECH_COMMAND_INVOKER(mech_rremovestuff)
-DEFINE_BTECH_COMMAND_INVOKER(mech_rresetstuff)
 DEFINE_BTECH_COMMAND_INVOKER(mech_rsetmapindex)
 DEFINE_BTECH_COMMAND_INVOKER(mech_rsetteam)
 DEFINE_BTECH_COMMAND_INVOKER(mech_rsetxy)
@@ -65,9 +78,7 @@ DEFINE_BTECH_COMMAND_INVOKER(mech_detachcables)
 DEFINE_BTECH_COMMAND_INVOKER(mech_dig)
 DEFINE_BTECH_COMMAND_INVOKER(mech_disableweap)
 DEFINE_BTECH_COMMAND_INVOKER(mech_disembark)
-void btech_command_invoke_mech_drop(const BtechCommandInvocation *invocation) {
-  mech_drop(invocation->actor, invocation->object, invocation->arguments);
-}
+DEFINE_BTECH_COMMAND_INVOKER(mech_drop)
 DEFINE_BTECH_COMMAND_INVOKER(mech_dropoff)
 DEFINE_BTECH_COMMAND_INVOKER(mech_dump)
 DEFINE_BTECH_COMMAND_INVOKER(mech_embark)
@@ -94,10 +105,7 @@ DEFINE_BTECH_COMMAND_INVOKER(mech_inferno)
 DEFINE_BTECH_COMMAND_INVOKER(mech_jump)
 DEFINE_BTECH_COMMAND_INVOKER(mech_kick)
 DEFINE_BTECH_COMMAND_INVOKER(mech_land)
-void btech_command_invoke_mech_lateral(
-    const BtechCommandInvocation *invocation) {
-  mech_lateral(invocation->actor, invocation->object, invocation->arguments);
-}
+DEFINE_BTECH_COMMAND_INVOKER(mech_lateral)
 DEFINE_BTECH_COMMAND_INVOKER(mech_lbx)
 DEFINE_BTECH_COMMAND_INVOKER(mech_list_freqs)
 DEFINE_BTECH_COMMAND_INVOKER(mech_listtic)
@@ -105,7 +113,6 @@ DEFINE_BTECH_COMMAND_INVOKER(mech_loadcargo)
 DEFINE_BTECH_COMMAND_INVOKER(mech_losemit)
 DEFINE_BTECH_COMMAND_INVOKER(mech_lrsmap)
 DEFINE_BTECH_COMMAND_INVOKER(mech_mace)
-DEFINE_BTECH_COMMAND_INVOKER(mech_manifest)
 DEFINE_BTECH_COMMAND_INVOKER(mech_masc)
 DEFINE_BTECH_COMMAND_INVOKER(mech_mechprefs)
 DEFINE_BTECH_COMMAND_INVOKER(mech_mine)
@@ -132,19 +139,13 @@ DEFINE_BTECH_COMMAND_INVOKER(mech_set_channelmode)
 DEFINE_BTECH_COMMAND_INVOKER(mech_set_channeltitle)
 DEFINE_BTECH_COMMAND_INVOKER(mech_set_target)
 DEFINE_BTECH_COMMAND_INVOKER(mech_sguided)
-void btech_command_invoke_mech_shutdown(
-    const BtechCommandInvocation *invocation) {
-  mech_shutdown(invocation->actor, invocation->object, invocation->arguments);
-}
+DEFINE_BTECH_COMMAND_INVOKER(mech_shutdown)
 DEFINE_BTECH_COMMAND_INVOKER(mech_sight)
 DEFINE_BTECH_COMMAND_INVOKER(mech_smoke)
 DEFINE_BTECH_COMMAND_INVOKER(mech_speed)
 DEFINE_BTECH_COMMAND_INVOKER(mech_spot)
 DEFINE_BTECH_COMMAND_INVOKER(mech_stand)
-void btech_command_invoke_mech_startup(
-    const BtechCommandInvocation *invocation) {
-  mech_startup(invocation->actor, invocation->object, invocation->arguments);
-}
+DEFINE_BTECH_COMMAND_INVOKER(mech_startup)
 DEFINE_BTECH_COMMAND_INVOKER(mech_status)
 DEFINE_BTECH_COMMAND_INVOKER(mech_stores)
 DEFINE_BTECH_COMMAND_INVOKER(mech_swarm)
@@ -157,10 +158,7 @@ DEFINE_BTECH_COMMAND_INVOKER(mech_thrash)
 DEFINE_BTECH_COMMAND_INVOKER(mech_trip)
 DEFINE_BTECH_COMMAND_INVOKER(mech_turnmode)
 DEFINE_BTECH_COMMAND_INVOKER(mech_turret)
-void btech_command_invoke_mech_udisembark(
-    const BtechCommandInvocation *invocation) {
-  mech_udisembark(invocation->actor, invocation->object, invocation->arguments);
-}
+DEFINE_BTECH_COMMAND_INVOKER(mech_udisembark)
 DEFINE_BTECH_COMMAND_INVOKER(mech_ultra)
 DEFINE_BTECH_COMMAND_INVOKER(mech_unjamammo)
 DEFINE_BTECH_COMMAND_INVOKER(mech_unloadcargo)
@@ -169,7 +167,6 @@ DEFINE_BTECH_COMMAND_INVOKER(mech_vertical)
 DEFINE_BTECH_COMMAND_INVOKER(mech_view)
 DEFINE_BTECH_COMMAND_INVOKER(mech_weaponspecs)
 DEFINE_BTECH_COMMAND_INVOKER(mech_weight)
-DEFINE_BTECH_COMMAND_INVOKER(set_xcodestuff)
 DEFINE_BTECH_COMMAND_INVOKER(show_mechs_damage)
 DEFINE_BTECH_COMMAND_INVOKER(tech_checkstatus)
 DEFINE_BTECH_COMMAND_INVOKER(tech_fix)

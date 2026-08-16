@@ -100,10 +100,9 @@ static void radio_command_arguments_destroy(RadioCommandArguments *arguments) {
     free(radio_command_argument(arguments, index));
 }
 
-void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
+void mech_set_channelfreq(DbRef player, Mech *mech, char *buffer) {
   int chn = -1;
   int freq;
-  Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   Mech *t;
   // map pointer is NULL if in a carrier. Careful.
@@ -194,9 +193,8 @@ void mech_set_channelfreq(DbRef player, void *data, char *buffer) {
   }
 }
 
-void mech_set_channeltitle(DbRef player, void *data, char *buffer) {
+void mech_set_channeltitle(DbRef player, Mech *mech, char *buffer) {
   int chn = -1;
-  Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   RadioCommandCursor input = radio_command_cursor(buffer);
 
@@ -306,11 +304,10 @@ void radio_color_code(const RadioColorRequest *request) {
   }
 }
 
-void mech_set_channelmode(DbRef player, void *data, char *buffer) {
+void mech_set_channelmode(DbRef player, Mech *mech, char *buffer) {
   int chn = -1;
   int nm = 0;
   int i;
-  Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   char buf[SBUF_SIZE] = {0};
   RadioCommandCursor input = radio_command_cursor(buffer);
@@ -435,9 +432,8 @@ void mech_set_channelmode(DbRef player, void *data, char *buffer) {
                 nm & FREQ_DIGITAL ? "digital" : "analog", buf);
 }
 
-void mech_list_freqs(DbRef player, void *data, char *buffer [[maybe_unused]]) {
+void mech_list_freqs(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   int i;
-  Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
 
   /* UH, this is code that _pretends_ it works :-) */
@@ -459,9 +455,8 @@ void mech_list_freqs(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   }
 }
 
-void mech_sendchannel(DbRef player, void *data, char *buffer) {
+void mech_sendchannel(DbRef player, Mech *mech, char *buffer) {
   /* Basically, this is sorta routine 'sendchannel <letter>=message' code */
-  Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   int fail = 0;
   int chn = 0;

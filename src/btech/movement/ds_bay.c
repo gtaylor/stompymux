@@ -105,12 +105,11 @@ static int dropship_direction_y(int direction) {
   }
 }
 
-void mech_createbays(DbRef player, void *data, char *buffer) {
+void mech_createbays(DbRef player, Mech *ds, char *buffer) {
   char *args[NUM_BAYS + 1];
   int argc;
   DbRef it;
   int i;
-  Mech *ds = (Mech *)data;
   BattleMap *map;
   BtechContext *context = mech_context(ds);
 
@@ -185,7 +184,6 @@ bool dropship_bay_in_adjacent_hex(Mech *seer, Mech *ds, int *bayn) {
   int t = mech_dropship_bearing_sector(ds);
 
   for (i = t; i < (t + 6); i++) {
-
     int bay_x = mech_position_x(ds) + dropship_direction_x(i);
     int bay_y = mech_position_y(ds) + dropship_direction_y(i) +
                 dropship_hex_row_adjustment(mech_position_x(ds), bay_x);
@@ -367,12 +365,11 @@ static bool dropship_bay_is_enterable(const DropshipBayEntryRequest *request) {
 
 /* ID / Number, both optional (this _will_ be painful) */
 
-void mech_enterbay(DbRef player, void *data, char *buffer) {
+void mech_enterbay(DbRef player, Mech *mech, char *buffer) {
   char *args[3];
   int argc;
   DbRef ref = -1;
   int bayn = -1;
-  Mech *mech = data;
   Mech *ds;
   BattleMap *map;
   LuaLockInvocation lock;

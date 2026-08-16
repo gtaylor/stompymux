@@ -115,8 +115,7 @@ void show_brief_flags(DbRef player, Mech *mech) {
                                     mech_brief_mode(mech) % 4));
 }
 
-void mech_brief(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_brief(DbRef player, Mech *mech, char *buffer) {
   char c;
   int v;
 
@@ -339,8 +338,7 @@ char mech_contact_status_character(Mech *mech, Mech *mech_target,
   return ' ';
 }
 
-void mech_contacts(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_contacts(DbRef player, Mech *mech, char *buffer) {
   Mech *temp_mech;
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
@@ -414,7 +412,6 @@ void mech_contacts(DbRef player, void *data, char *buffer) {
         break;
 
       if (C == 'd') {
-
         (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_DEAD)
                                  : (see_what |= SEE_DEAD);
       } else if (C == 's') {

@@ -293,7 +293,7 @@ static void char_eject(DbRef player, Mech *mech) {
 }
 
 void mech_eject(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
+  Mech *mech = data;
 
   if (!common_checks(player, mech, MECH_USUALS))
     return;
@@ -463,9 +463,7 @@ static void char_disembark(DbRef player, Mech *mech) {
 /**
  * Handle the disembarking of pilots from units.
  */
-void mech_disembark(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
-
+void mech_disembark(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   if (!common_checks(player, mech, MECH_USUALS))
     return;
   if (!((mech_class(mech) == CLASS_MECH) || (mech_class(mech) == CLASS_VTOL) ||
@@ -519,11 +517,10 @@ void mech_disembark(DbRef player, void *data, char *buffer [[maybe_unused]]) {
 /**
  * Handle the disembarking of units from within carriers.
  */
-void mech_udisembark(DbRef player, void *data,
+void mech_udisembark(DbRef player, Mech *mech,
                      const char *buffer [[maybe_unused]]) {
   char message_buffer[128];
 
-  Mech *mech = (Mech *)data; /* The disembarking unit */
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   GameDatabase *database = btech_context_database(mech_context(mech));
   Mech *target;
@@ -674,7 +671,6 @@ void mech_udisembark(DbRef player, void *data,
                                                        mech_position_x(mech),
                                                        mech_position_y(mech)) &&
       mech_position_z(mech) > 0) {
-
     mecha_notify(evaluation, player,
                  "You open the hatch and drop out of the unit....");
     mech_los_broadcastf(mech,

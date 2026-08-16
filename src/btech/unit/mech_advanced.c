@@ -78,8 +78,7 @@ static bool mech_disableweap_func(const MultiWeaponSelectionCall *call) {
   return false;
 }
 
-void mech_disableweap(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_disableweap(DbRef player, Mech *mech, char *buffer) {
   char *args[1];
 
   if (!common_checks(player, mech, MECH_USUALO))
@@ -262,9 +261,7 @@ void mech_usebin(DbRef player, Mech *mech, char *buffer) {
   mech_critical_desired_ammo_section_set(mech, w_section, w_crit_slot, w_loc);
 }
 
-void mech_safety(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
-
+void mech_safety(DbRef player, Mech *mech, char *buffer) {
   if (((mech)->ud.type) == CLASS_MW) {
     mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                  "Your weapons dont have safeties.");
@@ -351,8 +348,7 @@ static char *display_mechpref(void *context, int i,
   return buffer;
 }
 
-void mech_mechprefs(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_mechprefs(DbRef player, Mech *mech, char *buffer) {
   int nargs;
   char *args[3];
   char buf[LBUF_SIZE];
@@ -364,7 +360,6 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
 
   /* Default, no arguments passed */
   if (!nargs) {
-
     /* Show mechprefs */
     c = sel_col_fun_string_menu_context_k(
         1, "Mech Preferences", display_mechpref, mech,
@@ -395,11 +390,9 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
 
     /* Did they provide a ON or OFF flag */
     if (nargs == 2) {
-
       /* Check to make sure its either ON or OFF */
       if ((strcasecmp(args[1], "ON") != 0) &&
           (strcasecmp(args[1], "OFF") != 0)) {
-
         /* Insert notify here */
         mecha_notify(btech_context_evaluation(mech->xcode.context), player,
                      "Only accept ON or OFF as valid extra "
@@ -409,7 +402,6 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
 
       /* Set the value to what they want */
       if (strcasecmp(args[1], "ON") == 0) {
-
         /* Set the bit */
         if (info.flags & MECHPREF_FLAG_INVERTED) {
           ((mech)->rd.mech_prefs) &= ~(info.bit);
@@ -443,7 +435,6 @@ void mech_mechprefs(DbRef player, void *data, char *buffer) {
          (info.flags & MECHPREF_FLAG_INVERTED)) ||
         (!(((mech)->rd.mech_prefs) & info.bit) &&
          !(info.flags & MECHPREF_FLAG_INVERTED))) {
-
       if (info.flags & MECHPREF_FLAG_NEGATIVE)
         newstate = "[fg=green bold]OFF[reset]";
       else

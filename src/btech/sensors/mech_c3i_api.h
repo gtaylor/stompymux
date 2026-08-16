@@ -10,7 +10,7 @@
 
 typedef struct Mech Mech;
 
-void mech_c3i_join_leave(DbRef player, void *data, char *buffer);
+void mech_c3i_join_leave(DbRef player, Mech *mech, char *buffer);
 void mech_c3i_message(DbRef player, Mech *mech, char *buffer);
 void mech_c3i_targets(DbRef player, Mech *mech, char *buffer);
 void mech_c3i_network(DbRef player, Mech *mech, char *buffer);

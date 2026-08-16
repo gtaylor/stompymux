@@ -78,8 +78,7 @@ static bool mech_control_is_running(float speed, float maximum_speed) {
 }
 
 /* Facing related */
-void mech_heading(DbRef player, void *data, char *buffer) {
-  Mech *mech = data;
+void mech_heading(DbRef player, Mech *mech, char *buffer) {
   BtechContext *context = mech_context(mech);
   char *args[1];
   int newheading;
@@ -151,8 +150,7 @@ void mech_heading(DbRef player, void *data, char *buffer) {
   }
 }
 
-void mech_turret(DbRef player, void *data, char *buffer) {
-  Mech *mech = data;
+void mech_turret(DbRef player, Mech *mech, char *buffer) {
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition = mech_condition_summary(mech);
   char *args[1];
@@ -196,8 +194,7 @@ void mech_turret(DbRef player, void *data, char *buffer) {
   mark_for_los_update(mech);
 }
 
-void mech_rotatetorso(DbRef player, void *data, char *buffer) {
-  Mech *mech = data;
+void mech_rotatetorso(DbRef player, Mech *mech, char *buffer) {
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition = mech_condition_summary(mech);
   char *args[2];
@@ -282,8 +279,7 @@ static const struct MechSpeedName *speed_table_entry(int index) {
                                   (size_t)index);
 }
 
-void mech_speed(DbRef player, void *data, char *buffer) {
-  Mech *mech = data;
+void mech_speed(DbRef player, Mech *mech, char *buffer) {
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition = mech_condition_summary(mech);
   char *args[1];
@@ -390,7 +386,6 @@ void mech_speed(DbRef player, void *data, char *buffer) {
   newspeed = strtof(*speed_argument_slot, nullptr);
 
   if (newspeed < 0.1F) {
-
     /* Possibly a string speed instead? */
     for (i = 0; speed_table_entry(i)->name; i++) {
       if (!strcasecmp(speed_table_entry(i)->name, *speed_argument_slot)) {
@@ -505,8 +500,7 @@ void mech_speed(DbRef player, void *data, char *buffer) {
   mech_printf(mech, MECHALL, "Desired speed changed to %d KPH.", (int)newspeed);
 }
 
-void mech_vertical(DbRef player, void *data, char *buffer) {
-  Mech *mech = data;
+void mech_vertical(DbRef player, Mech *mech, char *buffer) {
   BtechContext *context = mech_context(mech);
   char *args[1];
   char buff[50] = {0};

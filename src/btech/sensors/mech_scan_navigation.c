@@ -53,8 +53,7 @@ static bool parse_navigation_arguments(char *arguments[], size_t count,
   return true;
 }
 
-void mech_bearing(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_bearing(DbRef player, Mech *mech, char *buffer) {
   Mech *temp_mech = nullptr;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
@@ -159,8 +158,7 @@ void mech_bearing(DbRef player, void *data, char *buffer) {
   }
 }
 
-void mech_range(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_range(DbRef player, Mech *mech, char *buffer) {
   Mech *temp_mech = nullptr;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
@@ -300,8 +298,7 @@ void mech_range(DbRef player, void *data, char *buffer) {
   }
 }
 
-void mech_vector(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_vector(DbRef player, Mech *mech, char *buffer) {
   Mech *temp_mech = nullptr;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;

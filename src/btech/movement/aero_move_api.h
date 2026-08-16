@@ -5,7 +5,7 @@
 #include "mux/server/platform.h"
 
 /* aero.move.c */
-void aero_takeoff(DbRef player, void *data, const char *buffer);
+void aero_takeoff(DbRef player, Mech *mech, const char *buffer);
 typedef struct DropshipExhaustBlastRequest {
   Mech *dropship;
   const char *direct_message;
@@ -25,7 +25,7 @@ double my_sqrtm(double x, double y);
 void aero_speed_update(Mech *mech);
 bool aero_fuel_check(Mech *mech);
 void aero_update(Mech *mech);
-void aero_thrust(DbRef player, void *data, char *arg);
+void aero_thrust(DbRef player, Mech *mech, char *arg);
 void aero_vheading(DbRef player, void *data, char *arg, int flag);
 void aero_climb(DbRef player, Mech *mech, char *arg);
 void aero_dive(DbRef player, Mech *mech, char *arg);

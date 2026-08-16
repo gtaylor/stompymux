@@ -100,8 +100,7 @@ static void mech_hide_event(MuxEvent *e) {
   }
 }
 
-void bsuit_hide(DbRef player, void *data, const char *buffer [[maybe_unused]]) {
-  Mech *mech = data;
+void bsuit_hide(DbRef player, Mech *mech, const char *buffer [[maybe_unused]]) {
   BtechContext *context = mech_context(mech);
   BattleMap *map = btech_context_find_object(context, mech_map_dbref(mech));
   int terrain;

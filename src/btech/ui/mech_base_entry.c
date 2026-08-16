@@ -171,8 +171,7 @@ static void mech_enter_event(MuxEvent *e) {
   auto_cal_mapindex(mech_context(mech), mech);
 }
 
-void mech_enterbase(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_enterbase(DbRef player, Mech *mech, char *buffer) {
   BattleMap *map;
   BattleMap *newmap;
   MapObject *mapo;
@@ -268,7 +267,6 @@ void mech_enterbase(DbRef player, void *data, char *buffer) {
                  mech_dbref(mech), newmap->mynum, LUA_LOCK_ENTER,
                  LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, &lock_result) &&
       (battle_map_build_is_safe(newmap) || newmap->cf >= (newmap->cfmax / 2))) {
-
     /* Trigger FAIL & AFAIL */
     memset(fail_mesg, 0, sizeof(fail_mesg));
     (void)snprintf(fail_mesg, SBUF_SIZE, "The hangar is locked.");

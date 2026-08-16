@@ -97,8 +97,7 @@ void print_enemy_weapon_status(Mech *mech, DbRef player) {
   }
 }
 
-void mech_sight(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_sight(DbRef player, Mech *mech, char *buffer) {
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   BattleMap *mech_map;
   char *args[5];
@@ -128,8 +127,7 @@ void mech_sight(DbRef player, void *data, char *buffer) {
   }
 }
 
-void mech_view(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_view(DbRef player, Mech *mech, char *buffer) {
   Mech *target;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   DbRef targetnum;

@@ -36,8 +36,7 @@
 #include "section_types.h"
 #include "weapon_settings.h"
 
-void mech_critstatus(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_critstatus(DbRef player, Mech *mech, char *buffer) {
   BtechContext *context = mech_context(mech);
   EvaluationContext *evaluation = btech_context_evaluation(context);
   char *args[1];
@@ -262,10 +261,9 @@ static char *wspec_fun(void *data, int i, char buffer[static LBUF_SIZE]) {
   return buffer;
 }
 
-void mech_weaponspecs(DbRef player, void *data,
+void mech_weaponspecs(DbRef player, Mech *mech,
                       const char *buffer [[maybe_unused]]) {
   char message_buffer[LBUF_SIZE];
-  Mech *mech = (Mech *)data;
   BtechContext *context = mech_context(mech);
   EvaluationContext *evaluation = btech_context_evaluation(context);
   int loop;

@@ -34,7 +34,7 @@ typedef struct TechCheckContext {
   int location;
   int part;
 } TechCheckContext;
-void tech_removegun(DbRef player, void *data, char *buffer) {
+void tech_removegun(DbRef player, Mech *facility, char *buffer) {
   RepairCommandContext repair_command;
   Mech *mech;
   BtechContext *context;
@@ -43,7 +43,7 @@ void tech_removegun(DbRef player, void *data, char *buffer) {
   int part;
   int mod = 2;
   RepairCommandStatus repair_status = repair_command_context_initialize(
-      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+      player, facility, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
     if (repair_command.evaluation)
       mecha_notify(repair_command.evaluation, player,
@@ -145,7 +145,7 @@ void tech_removegun(DbRef player, void *data, char *buffer) {
           .location = loc, .position = part, .extra = mod, .player = player}});
 }
 
-void tech_removepart(DbRef player, void *data, char *buffer) {
+void tech_removepart(DbRef player, Mech *facility, char *buffer) {
   RepairCommandContext repair_command;
   Mech *mech;
   BtechContext *context;
@@ -155,7 +155,7 @@ void tech_removepart(DbRef player, void *data, char *buffer) {
   int t;
   int mod = 2;
   RepairCommandStatus repair_status = repair_command_context_initialize(
-      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+      player, facility, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
     if (repair_command.evaluation)
       mecha_notify(repair_command.evaluation, player,
@@ -286,7 +286,7 @@ bool invalid_scrap_path(Mech *mech, int loc) {
   return false;
 }
 
-void tech_removesection(DbRef player, void *data, char *buffer) {
+void tech_removesection(DbRef player, Mech *facility, char *buffer) {
   RepairCommandContext repair_command;
   Mech *mech;
   BtechContext *context;
@@ -294,7 +294,7 @@ void tech_removesection(DbRef player, void *data, char *buffer) {
   int loc;
   int mod = 2;
   RepairCommandStatus repair_status = repair_command_context_initialize(
-      player, data, REPAIR_STALL_REQUIRED, &repair_command);
+      player, facility, REPAIR_STALL_REQUIRED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
     if (repair_command.evaluation)
       mecha_notify(repair_command.evaluation, player,

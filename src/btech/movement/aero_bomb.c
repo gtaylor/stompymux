@@ -379,8 +379,7 @@ static void bomb_drop(const BombDropRequest *request) {
                                bomb_hit_event, DELAY, 0);
 }
 
-void mech_bomb(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_bomb(DbRef player, Mech *mech, char *buffer) {
   char *args[3];
   int argc;
   int bn;

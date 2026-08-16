@@ -616,6 +616,35 @@ target_include_directories(btech_enum_types_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_enum_types COMMAND btech_enum_types_test)
 
+add_executable(btech_special_object_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/contracts/btech_special_object.c)
+target_link_libraries(btech_special_object_test PRIVATE btmux_options)
+target_compile_options(btech_special_object_test PRIVATE -UNDEBUG)
+target_include_directories(btech_special_object_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_special_object COMMAND btech_special_object_test)
+set_tests_properties(btech_special_object PROPERTIES
+  LABELS "unit;btech-contracts")
+
+add_executable(btech_special_object_invoker_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/contracts/btech_special_object_invoker.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/commands/command_invokers_other.c)
+target_compile_options(btech_special_object_invoker_test PRIVATE
+  -UNDEBUG -ffunction-sections)
+target_link_options(btech_special_object_invoker_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(btech_special_object_invoker_test PRIVATE btmux_options)
+target_include_directories(btech_special_object_invoker_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_special_object_invoker
+  COMMAND btech_special_object_invoker_test)
+set_tests_properties(btech_special_object_invoker PROPERTIES
+  LABELS "unit;btech-contracts")
+
 add_test(NAME btech_architecture
   COMMAND bash "${CMAKE_SOURCE_DIR}/tests/unit/btech/contracts/check_btech_architecture.sh"
                "${CMAKE_SOURCE_DIR}" "${CMAKE_BINARY_DIR}")

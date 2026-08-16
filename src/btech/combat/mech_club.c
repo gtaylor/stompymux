@@ -63,8 +63,7 @@ bool mech_club_location_is_usable(Mech *mech, int section, bool emit_failure) {
 /*
  * Handles the grabbing of a club.
  */
-void mech_grabclub(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_grabclub(DbRef player, Mech *mech, char *buffer) {
   int wc_args = 0;
   int location = 0;
   char *args[1];

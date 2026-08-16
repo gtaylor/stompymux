@@ -190,10 +190,10 @@ static int mech_class_command_flag(int unit_class) {
 bool btech_command_allowed_for_mech(Mech *mech, int cmdflag) {
   int i;
 
-  if (!cmdflag)
-    return true;
   if (!mech)
     return false;
+  if (!cmdflag)
+    return true;
   i = mech_class_command_flag(mech_class(mech));
   if (!i)
     return false;
@@ -270,8 +270,8 @@ bool handled_command_sub(BtechContext *context, DbRef player, DbRef location,
   char *arguments = checked_storage_at(command, strlen(command) + 1,
                                        sizeof(char), ARGUMENT_OFFSET);
   if (cmd && (type != GTYPE_MECH ||
-              (type == GTYPE_MECH && btech_command_allowed_for_mech(
-                                         ((Mech *)xcode_obj), cmd->flag)))) {
+              btech_command_allowed_for_mech(
+                  btech_special_object_as_mech(xcode_obj), cmd->flag))) {
     if (*cmd->helpmsg != '@' ||
         btech_special_command_access(context, player,
                                      type_of_object->power_needed)) {

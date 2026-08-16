@@ -302,15 +302,14 @@ static char *retrieve_value(void *data, const GMV *descriptor, char *buffer) {
   switch (descriptor->type) {
   case TYPE_STRFUNC:
     (void)snprintf(buffer, LBUF_SIZE, "%s",
-                   descriptor->source.string_callback(0, (Mech *)data));
+                   descriptor->source.string_callback(0, data));
     break;
   case TYPE_STRFUNC_BD:
-    (void)snprintf(
-        buffer, LBUF_SIZE, "%s",
-        descriptor->source.bidirectional_callback(0, (Mech *)data, nullptr));
+    (void)snprintf(buffer, LBUF_SIZE, "%s",
+                   descriptor->source.bidirectional_callback(0, data, nullptr));
     break;
   case TYPE_STRFUNC_BUF:
-    descriptor->source.buffered_callback((Mech *)data, buffer);
+    descriptor->source.buffered_callback(data, buffer);
     break;
   case TYPE_STRFUNC_BD_BUF:
     descriptor->source.buffered_bidirectional_callback(
@@ -451,8 +450,8 @@ BtechScriptResult fun_btgetxcodevalue_ref(BtechScriptCall *call) {
   return btech_script_error(call, "#-1");
 }
 
-void set_xcodestuff(DbRef player, void *data, char *buffer) {
-  BtechContext *context = ((BtechSpecialObject *)data)->context;
+void set_xcodestuff(DbRef player, BtechSpecialObject *object, char *buffer) {
+  BtechContext *context = object->context;
   char *args[2];
   int t;
 
@@ -481,17 +480,18 @@ void set_xcodestuff(DbRef player, void *data, char *buffer) {
     free_text_items(args, 2);
     return;
   }
-  void *object = btech_context_find_object(
+  void *target_object = btech_context_find_object(
       context, game_object_location(context->database, player));
-  if (!descriptor_write_text(object, descriptor, value))
+  if (!descriptor_write_text(target_object, descriptor, value))
     mecha_notify(btech_context_evaluation(context), player,
                  "Error: Unable to set that xcode value.");
   free_text_items(args, 2);
 }
 
-void list_xcodestuff(DbRef player, void *data, const char *buffer) {
+void list_xcodestuff(DbRef player, BtechSpecialObject *object,
+                     const char *buffer) {
   char message_buffer[LBUF_SIZE];
-  BtechContext *context = ((BtechSpecialObject *)data)->context;
+  BtechContext *context = object->context;
   int t;
   int flag = CM_TWO;
   int se_len = 37;
@@ -539,7 +539,7 @@ void list_xcodestuff(DbRef player, void *data, const char *buffer) {
           '\0';
       (void)snprintf(message_buffer, sizeof(message_buffer), "%-*s%*s",
                      se_len / 3, lab, se_len * 2 / 3,
-                     retrieve_value(data, descriptor, (char[LBUF_SIZE]){0}));
+                     retrieve_value(object, descriptor, (char[LBUF_SIZE]){0}));
       cool_menu_add_with_flags(&c, message_buffer, flag);
     }
   }

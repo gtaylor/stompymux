@@ -46,8 +46,8 @@ mech_map_index_set_batch(const MechMapSetBatchRequest *request);
 [[nodiscard]] bool
 mech_map_position_is_valid(const MechMapPositionRequest *request);
 [[nodiscard]] bool mech_position_set(const MechPositionSetRequest *request);
-void mech_rsetxy(DbRef player, void *data, char *buffer);
-void mech_rsetmapindex(DbRef player, void *data, char *buffer);
-void mech_rsetteam(DbRef player, void *data, char *buffer);
+void mech_rsetxy(DbRef player, Mech *mech, char *buffer);
+void mech_rsetmapindex(DbRef player, Mech *mech, char *buffer);
+void mech_rsetteam(DbRef player, Mech *mech, char *buffer);
 void newfreemech(DbRef key, void **data,
                  BtechSpecialLifecycleOperation selector);

@@ -53,8 +53,7 @@ static void tag_recycle_event(MuxEvent *e) {
               "[fg=green]Your TAG system has achieved a stable lock.[reset]");
 }
 
-void mech_tag(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_tag(DbRef player, Mech *mech, char *buffer) {
   Mech *target;
   char *args[2];
   DbRef ref_target;

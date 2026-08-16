@@ -61,8 +61,7 @@ static void mech_hulldown_event(MuxEvent *e) {
   }
 }
 
-void mech_hulldown(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_hulldown(DbRef player, Mech *mech, char *buffer) {
   char *args[1];
   int argc;
   BtechContext *context = mech_context(mech);

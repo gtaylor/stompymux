@@ -18,10 +18,8 @@
 #include "repair_job.h"
 #include "section_types.h"
 
-void tech_toggletype(DbRef player, void *data, char *buffer) {
+void tech_toggletype(DbRef player, Mech *mech, char *buffer) {
   int atype;
-
-  Mech *mech = data;
   BtechContext *context = mech_context(mech);
   int loc;
   int part;
@@ -75,7 +73,7 @@ void tech_toggletype(DbRef player, void *data, char *buffer) {
   mech_notify(mech, MECHALL, "Ammo toggled.");
 }
 
-void tech_reload(DbRef player, void *data, char *buffer) {
+void tech_reload(DbRef player, Mech *facility, char *buffer) {
   int atype;
 
   RepairCommandContext repair_command;
@@ -86,7 +84,7 @@ void tech_reload(DbRef player, void *data, char *buffer) {
   int t;
   int change;
   RepairCommandStatus repair_status = repair_command_context_initialize(
-      player, data, REPAIR_STALL_CONFIGURED, &repair_command);
+      player, facility, REPAIR_STALL_CONFIGURED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
     if (repair_command.evaluation)
       mecha_notify(repair_command.evaluation, player,
@@ -178,7 +176,7 @@ void tech_reload(DbRef player, void *data, char *buffer) {
                                        &job);
 }
 
-void tech_unload(DbRef player, void *data, char *buffer) {
+void tech_unload(DbRef player, Mech *facility, char *buffer) {
   RepairCommandContext repair_command;
   Mech *mech;
   BtechContext *context;
@@ -190,7 +188,7 @@ void tech_unload(DbRef player, void *data, char *buffer) {
   int mod = 2;
 
   RepairCommandStatus repair_status = repair_command_context_initialize(
-      player, data, REPAIR_STALL_CONFIGURED, &repair_command);
+      player, facility, REPAIR_STALL_CONFIGURED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
     if (repair_command.evaluation)
       mecha_notify(repair_command.evaluation, player,

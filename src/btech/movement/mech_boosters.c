@@ -91,8 +91,7 @@ static void mech_masc_event(MuxEvent *e) {
   mech_max_speed_set(mech, 0.0);
 }
 
-void mech_masc(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
+void mech_masc(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   BtechContext *context = mech_context(mech);
 
   if (!common_checks(player, mech, MECH_USUALMO))
@@ -212,8 +211,7 @@ static void mech_scharge_event(MuxEvent *e) {
   }
 }
 
-void mech_scharge(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
+void mech_scharge(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   BtechContext *context = mech_context(mech);
 
   if (!common_checks(player, mech, MECH_USUALMO))
@@ -260,8 +258,7 @@ static void mech_dig_event(MuxEvent *e) {
               "available now.");
 }
 
-void mech_dig(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
+void mech_dig(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition;
   char terrain;
@@ -344,8 +341,7 @@ static void mech_unjam_turret_event(MuxEvent *e) {
   mech_notify(mech, MECHALL, "You manage to unjam your turret!");
 }
 
-void mech_fixturret(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
+void mech_fixturret(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   BtechContext *context = mech_context(mech);
   MechConditionSummary condition;
 

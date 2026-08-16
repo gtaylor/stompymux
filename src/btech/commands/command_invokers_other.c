@@ -2,7 +2,9 @@
 
 #include "autopilot.h"
 #include "command_registry.h"
+#include "econ_cmds_api.h"
 #include "mux/server/platform.h"
+#include "value_handlers_api.h"
 
 #define DEFINE_BTECH_COMMAND_INVOKER(handler)                                  \
   void handler(DbRef player, void *data, char *buffer);                        \
@@ -11,6 +13,10 @@
     handler(invocation->actor, invocation->object, invocation->arguments);     \
   }
 DEFINE_BTECH_COMMAND_INVOKER(list_forms)
+void btech_command_invoke_list_xcodestuff(
+    const BtechCommandInvocation *invocation) {
+  list_xcodestuff(invocation->actor, invocation->object, invocation->arguments);
+}
 DEFINE_BTECH_COMMAND_INVOKER(auto_addcommand)
 void btech_command_invoke_auto_delcommand(
     const BtechCommandInvocation *invocation) {
@@ -50,6 +56,28 @@ DEFINE_BTECH_COMMAND_INVOKER(map_setlinked)
 DEFINE_BTECH_COMMAND_INVOKER(map_setmapsize)
 DEFINE_BTECH_COMMAND_INVOKER(map_updatelinks)
 DEFINE_BTECH_COMMAND_INVOKER(map_view)
+void btech_command_invoke_mech_manifest(
+    const BtechCommandInvocation *invocation) {
+  mech_manifest(invocation->actor, invocation->object, invocation->arguments);
+}
+void btech_command_invoke_mech_raddstuff(
+    const BtechCommandInvocation *invocation) {
+  mech_raddstuff(invocation->actor, invocation->object, invocation->arguments);
+}
+void btech_command_invoke_mech_rfixstuff(
+    const BtechCommandInvocation *invocation) {
+  mech_rfixstuff(invocation->actor, invocation->object, invocation->arguments);
+}
+void btech_command_invoke_mech_rremovestuff(
+    const BtechCommandInvocation *invocation) {
+  mech_rremovestuff(invocation->actor, invocation->object,
+                    invocation->arguments);
+}
+void btech_command_invoke_mech_rresetstuff(
+    const BtechCommandInvocation *invocation) {
+  mech_rresetstuff(invocation->actor, invocation->object,
+                   invocation->arguments);
+}
 DEFINE_BTECH_COMMAND_INVOKER(mechrep_raddinftech)
 DEFINE_BTECH_COMMAND_INVOKER(mechrep_raddspecial)
 DEFINE_BTECH_COMMAND_INVOKER(mechrep_raddtech)
@@ -82,6 +110,10 @@ DEFINE_BTECH_COMMAND_INVOKER(mechrep_rsettype)
 DEFINE_BTECH_COMMAND_INVOKER(mechrep_rshowtech)
 DEFINE_BTECH_COMMAND_INVOKER(mechrep_setcargospace)
 DEFINE_BTECH_COMMAND_INVOKER(mine_command_add)
+void btech_command_invoke_set_xcodestuff(
+    const BtechCommandInvocation *invocation) {
+  set_xcodestuff(invocation->actor, invocation->object, invocation->arguments);
+}
 DEFINE_BTECH_COMMAND_INVOKER(turret_addtic)
 DEFINE_BTECH_COMMAND_INVOKER(turret_bearing)
 DEFINE_BTECH_COMMAND_INVOKER(turret_cleartic)

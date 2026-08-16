@@ -180,14 +180,12 @@ static void mech_startup_event(MuxEvent *e) {
   /* Check if the unit is in water and if it should die */
   /* Make sure it checks pretty early in the startup */
   if (timer >= 2) {
-
     if (battle_terrain_is_water(mech_real_terrain_get(mech)) &&
         mech_position_z(mech) < 0 &&
         (unit_class == CLASS_VEH_GROUND || unit_class == CLASS_VTOL ||
          unit_class == CLASS_BSUIT || unit_class == CLASS_AERO ||
          unit_class == CLASS_DS) &&
         !(mech_technology_flags_secondary(mech) & WATERPROOF_TECH)) {
-
       mech_notify(mech, MECHALL,
                   "Water floods your engine and your unit "
                   "becomes inoperable.");
@@ -256,8 +254,7 @@ static void mech_startup_event(MuxEvent *e) {
   autopilot_resume_for_mech(mech);
 }
 
-void mech_startup(DbRef player, void *data, const char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_startup(DbRef player, Mech *mech, const char *buffer) {
   int n;
   int unit_class = mech_class(mech);
   BtechContext *context = mech_context(mech);
@@ -363,9 +360,8 @@ void mech_startup(DbRef player, void *data, const char *buffer) {
       (long)(unit_class == CLASS_MW ? BOOT_MESSAGE_COUNT - 1 : n));
 }
 
-void mech_shutdown(DbRef player, void *data,
+void mech_shutdown(DbRef player, Mech *mech,
                    const char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
   int unit_class = mech_class(mech);
   int movement_type = mech_movement_type(mech);
   BtechContext *context = mech_context(mech);

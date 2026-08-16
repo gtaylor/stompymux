@@ -136,8 +136,7 @@ bool mech_position_set(const MechPositionSetRequest *request) {
   return true;
 }
 
-void mech_rsetxy(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_rsetxy(DbRef player, Mech *mech, char *buffer) {
   char *args[3];
   int x;
   int y;
@@ -347,8 +346,7 @@ mech_map_index_set_batch(const MechMapSetBatchRequest *request) {
 }
 
 /* Team/Map commands */
-void mech_rsetmapindex(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_rsetmapindex(DbRef player, Mech *mech, char *buffer) {
   char *args[2];
   DbRef map;
   const int ARGUMENT_COUNT = mech_parseattributes(buffer, args, 2);
@@ -401,8 +399,7 @@ void mech_rsetmapindex(DbRef player, void *data, char *buffer) {
                 mech_unit_id(mech).second);
 }
 
-void mech_rsetteam(DbRef player, void *data, char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_rsetteam(DbRef player, Mech *mech, char *buffer) {
   char *args[1];
   int team;
   BattleMap *newmap;
@@ -467,7 +464,6 @@ void newfreemech(DbRef key, void **data,
         auto_stop_pilot(autopilot);
         /* Go through the list and remove any leftover nodes */
         while (doubly_linked_list_size(autopilot->commands)) {
-
           /* Remove the first node on the list and get the data
            * from it */
           temp = (AutopilotCommand *)doubly_linked_list_remove(

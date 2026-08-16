@@ -197,8 +197,7 @@ static void aero_takeoff_event(MuxEvent *e) {
   mech_continue_flying(mech);
   mech_maybe_move(mech);
 }
-void aero_takeoff(DbRef player, void *data, const char *buffer) {
-  Mech *mech = (Mech *)data;
+void aero_takeoff(DbRef player, Mech *mech, const char *buffer) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int i;
@@ -426,7 +425,7 @@ int aero_landing_zone_check(Mech *mech, int x, int y) {
   return NO_ERROR;
 }
 void aero_land(DbRef player, void *data, const char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
+  Mech *mech = data;
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int i;

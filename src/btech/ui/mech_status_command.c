@@ -29,8 +29,7 @@ static char status_option_character(const char *options, size_t length,
 }
 
 /* Status commands! */
-void mech_status(DbRef player, void *data, const char *buffer) {
-  Mech *mech = (Mech *)data;
+void mech_status(DbRef player, Mech *mech, const char *buffer) {
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   int doweap = 0;
   int doinfo = 0;
