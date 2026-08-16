@@ -659,7 +659,7 @@ need to bother with crits if we already have a hip crit here */
       break;
     case ARTEMIS_IV:
       weapon_slot = mech_critical_data(wounded, HITLOC, crit_hit);
-      if (weapon_slot > NUM_CRITICALS) {
+      if (weapon_slot < 0 || weapon_slot >= NUM_CRITICALS) {
         btech_channel_send(context, BTECH_CHANNEL_MECH_ERRORS,
                            "Artemis IV error on mech %ld", mech_dbref(wounded));
         break;

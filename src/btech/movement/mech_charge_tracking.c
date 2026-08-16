@@ -15,9 +15,9 @@
 
 void mech_charge_timeout_update(Mech *mech) {
   if (!btech_context_uses_new_charge_rules(mech_context(mech)) ||
-      mech_charge_target_dbref(mech) <= 0)
+      mech_charge_target_dbref(mech) < 0)
     return;
-  if (mech_charge_timer_advance(mech) <= CHARGE_TIMER_LIMIT)
+  if (mech_charge_timer_advance(mech) < CHARGE_TIMER_LIMIT)
     return;
 
   mech_notify(mech, MECHALL, "Charge timed out, charge reset.");
@@ -26,12 +26,14 @@ void mech_charge_timeout_update(Mech *mech) {
 
 void mech_charge_distance_record(Mech *mech, float delta_x, float delta_y) {
   if (!btech_context_uses_new_charge_rules(mech_context(mech)) ||
-      mech_charge_target_dbref(mech) <= 0)
+      mech_charge_target_dbref(mech) < 0)
     return;
 
   float x_scale = 1.0F / (float)SCALEMAP;
   float distance = sqrtf((x_scale * x_scale * delta_x * delta_x) +
                          ((float)YSCALE2 * delta_y * delta_y));
+  if (!isfinite(distance))
+    return;
   mech_charge_distance_add(mech, distance);
 }
 

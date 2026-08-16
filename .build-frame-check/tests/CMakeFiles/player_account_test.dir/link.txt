@@ -1,1 +1,0 @@
-/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/player_account_test.dir/link.d CMakeFiles/player_account_test.dir/unit/mux/state/player_account.c.o CMakeFiles/player_account_test.dir/__/src/mux/objects/player_account.c.o -o player_account_test  ../libbtmux_checked_storage.a

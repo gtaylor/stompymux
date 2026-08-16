@@ -187,7 +187,7 @@ void mech_fall_event(MuxEvent *e) {
   mech_notify(mech, MECHALL, "You hit the ground!");
   mech_los_broadcast(mech, "hits the ground!");
   mech_fall(mech, fallen_elev, false);
-  ((mech)->rd.status) &= ~JUMPING;
+  mech_status_clear(&mech->rd.status, MECH_STATUS_JUMPING);
 }
 
 /* This is just a 'toy' event */
@@ -236,7 +236,7 @@ void mech_recovery_event(MuxEvent *e) {
   if (mech_is_destroyed(mech) || !mech_pilot_is_unconscious(mech))
     return;
   if (handlemwconc(mech, 0)) {
-    ((mech)->rd.status) &= ~UNCONSCIOUS;
+    mech_status_clear(&mech->rd.status, MECH_STATUS_UNCONSCIOUS);
     mech_notify(mech, MECHALL, "The pilot regains consciousness!");
     return;
   }
@@ -248,7 +248,7 @@ void mech_unconsciousness_extend(Mech *mech, int len) {
   if (mech_is_destroyed(mech))
     return;
   if (!mech_event_count(mech, EVENT_RECOVERY)) {
-    ((mech)->rd.status) |= UNCONSCIOUS;
+    mech_status_set(&mech->rd.status, MECH_STATUS_UNCONSCIOUS);
     mech_event_schedule(mech, EVENT_RECOVERY, mech_recovery_event, len, 0);
     return;
   }
@@ -422,8 +422,10 @@ void mech_crewstun_event(MuxEvent *e) {
   if (!mech)
     return;
   if (!mech_is_started(mech) || mech_is_destroyed(mech)) {
-    if (((mech)->rd.critstatus) & MECH_STUNNED)
-      ((mech)->rd.critstatus) &= ~MECH_STUNNED;
+    if (mech_crit_status_has(mech->rd.critstatus,
+                             MECH_CRIT_STATUS_MECH_STUNNED))
+      mech_crit_status_clear(&mech->rd.critstatus,
+                             MECH_CRIT_STATUS_MECH_STUNNED);
     return;
   }
   if (((mech)->ud.type) != CLASS_MECH)
@@ -435,8 +437,8 @@ void mech_crewstun_event(MuxEvent *e) {
         mech, MECHALL,
         "[fg=green bold]You recover from your stunning experience![reset]");
 
-  if (((mech)->rd.critstatus) & MECH_STUNNED)
-    ((mech)->rd.critstatus) &= ~MECH_STUNNED;
+  if (mech_crit_status_has(mech->rd.critstatus, MECH_CRIT_STATUS_MECH_STUNNED))
+    mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_MECH_STUNNED);
 }
 
 void unstun_crew_event(MuxEvent *e) {
@@ -449,7 +451,8 @@ void unstun_crew_event(MuxEvent *e) {
   mech_notify(
       mech, MECHALL,
       "Your head clears and you're able to control your vehicle again.");
-  ((mech)->rd.tankcritstatus) &= ~CREW_STUNNED;
+  mech_tank_crit_status_clear(&mech->rd.tankcritstatus,
+                              MECH_TANK_CRIT_STATUS_CREW_STUNNED);
 }
 
 void mech_unjam_ammo_event(MuxEvent *obj_event) {

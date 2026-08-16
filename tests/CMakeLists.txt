@@ -598,6 +598,56 @@ target_include_directories(btech_damage_apply_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_damage_apply COMMAND btech_damage_apply_test)
 
+add_executable(btech_hit_location_tables_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/combat/btech_hit_location_tables.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/combat/mech_hitloc_standard.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/combat/mech_hitloc_advanced.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/combat/mech_hitloc_critproof.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/combat/mech_hitloc_fasa_mech.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/combat/mech_hitloc_fasa_vtol_naval.c)
+target_compile_options(btech_hit_location_tables_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_hit_location_tables_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(btech_hit_location_tables_test PRIVATE btmux_options)
+target_include_directories(btech_hit_location_tables_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_hit_location_tables COMMAND btech_hit_location_tables_test)
+
+add_executable(btech_enhanced_critical_ranges_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/combat/btech_enhanced_critical_ranges.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/combat/mech_enhanced_criticals.c)
+target_compile_options(btech_enhanced_critical_ranges_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_enhanced_critical_ranges_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(btech_enhanced_critical_ranges_test PRIVATE
+  btmux_options)
+target_include_directories(btech_enhanced_critical_ranges_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_enhanced_critical_ranges
+  COMMAND btech_enhanced_critical_ranges_test)
+
+add_executable(btech_missile_hit_lookup_bounds_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/core/btech_missile_hit_lookup_bounds.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/core/context.c)
+target_compile_options(btech_missile_hit_lookup_bounds_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_missile_hit_lookup_bounds_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(btech_missile_hit_lookup_bounds_test PRIVATE
+  btmux_options)
+target_include_directories(btech_missile_hit_lookup_bounds_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_missile_hit_lookup_bounds
+  COMMAND btech_missile_hit_lookup_bounds_test)
+
 add_executable(btech_armor_section_names_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/unit/btech_armor_section_names.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/mech_maintenance.c
@@ -1151,6 +1201,7 @@ include(unit/btech/autopilot/CMakeLists.txt)
 include(unit/btech/character/CMakeLists.txt)
 include(unit/btech/combat/CMakeLists.txt)
 include(unit/btech/contracts/CMakeLists.txt)
+include(unit/btech/movement/CMakeLists.txt)
 include(unit/btech/sensors/CMakeLists.txt)
 include(unit/btech/systems/CMakeLists.txt)
 include(unit/btech/unit/CMakeLists.txt)

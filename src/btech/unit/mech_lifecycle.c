@@ -44,7 +44,7 @@
 #include "special_object.h"
 
 void mech_power_up(Mech *mech) {
-  ((mech)->rd.status) |= STARTED;
+  mech_status_set(&mech->rd.status, MECH_STATUS_STARTED);
   ((mech)->rd.turndamage) = 0;
   mech_update_recycling(mech);
   ((mech)->rd.num_seen) = 0;
@@ -55,20 +55,26 @@ void mech_power_down(Mech *mech) {
   if (!mech_is_destroyed(mech)) {
     mech_update_recycling(mech);
     ((mech)->rd.speed) = 0.0;
-    ((mech)->rd.critstatus) &= ~HEATCUTOFF;
-    ((mech)->rd.status) &= ~(STARTED | MASC_ENABLED);
-    ((mech)->rd.status2) &= ~(
-        ECM_ENABLED | ECCM_ENABLED | PER_ECM_ENABLED | PER_ECCM_ENABLED |
-        ANGEL_ECM_ENABLED | ANGEL_ECCM_ENABLED | NULLSIGSYS_ON | STH_ARMOR_ON);
+    mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_HEATCUTOFF);
+    mech_status_clear(&mech->rd.status, (MechStatus)(MECH_STATUS_STARTED |
+                                                     MECH_STATUS_MASC_ENABLED));
+    mech_status2_clear(
+        &mech->rd.status2,
+        (MechStatus2)(MECH_STATUS2_ECM_ENABLED | MECH_STATUS2_ECCM_ENABLED |
+                      MECH_STATUS2_PER_ECM_ENABLED |
+                      MECH_STATUS2_PER_ECCM_ENABLED |
+                      MECH_STATUS2_ANGEL_ECM_ENABLED |
+                      MECH_STATUS2_ANGEL_ECCM_ENABLED |
+                      MECH_STATUS2_NULLSIGSYS_ON | MECH_STATUS2_STH_ARMOR_ON));
     ((mech)->rd.desired_speed) = 0.0;
   }
   mech_pilot_dbref_set(mech, -1);
   mech_target_dbref_set(mech, -1);
   mech_event_cancel(mech, EVENT_STARTUP);
-  ((mech)->rd.status2) &= ~SLITE_ON;
-  ((mech)->rd.critstatus) &= ~SLITE_LIT;
+  mech_status2_clear(&mech->rd.status2, MECH_STATUS2_SLITE_ON);
+  mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_SLITE_LIT);
   mech_event_cancel(mech, EVENT_MOVEMODE);
-  ((mech)->rd.status2) &= ~MOVE_MODES;
+  mech_status2_clear(&mech->rd.status2, MECH_STATUS2_MOVE_MODES);
   mech_event_cancel(mech, EVENT_JUMP);
   mech_event_cancel(mech, EVENT_MOVE);
   ((mech)->rd.masc_value) = 0;
@@ -92,18 +98,19 @@ void mech_power_down(Mech *mech) {
 
 void mech_mark_destroyed(Mech *mech) {
   if (mech_pilot_is_unconscious(mech)) {
-    ((mech)->rd.status) &= ~(BLINDED | UNCONSCIOUS);
+    mech_status_clear(&mech->rd.status, (MechStatus)(MECH_STATUS_BLINDED |
+                                                     MECH_STATUS_UNCONSCIOUS));
     mech_notify(mech, MECHALL,
                 "The mech was destroyed while pilot was unconscious!");
   }
-  ((mech)->rd.status) &= ~BLINDED;
+  mech_status_clear(&mech->rd.status, MECH_STATUS_BLINDED);
   mech_power_down(mech);
   mech_event_cancel(mech, EVENT_VEHICLEBURN);
   mech_stop_stagger_check(mech);
   mech_stagger_tracking_reset(mech);
-  ((mech)->rd.critstatus) &= ~JELLIED;
-  ((mech)->rd.status) |= DESTROYED;
-  ((mech)->rd.critstatus) &= ~MECH_STUNNED;
+  mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_JELLIED);
+  mech_status_set(&mech->rd.status, MECH_STATUS_DESTROYED);
+  mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_MECH_STUNNED);
   bsuit_swarmers_stop(
       btech_context_get_map(mech->xcode.context, mech->mapindex), mech, 1);
   mech_events_cancel_all(mech);
@@ -165,7 +172,7 @@ bool mech_has_active_gunner(const Mech *mech) {
 
 void mech_max_speed_set(Mech *mech, float speed) {
   ((mech)->ud.maxspeed) = speed;
-  ((mech)->rd.critstatus) &= ~SPEED_OK;
+  mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_SPEED_OK);
   mech_speed_correct(mech);
 }
 
@@ -210,20 +217,22 @@ void mech_set_recycle_limb(Mech *mech, int section, int value) {
 }
 
 void mech_make_fall(Mech *mech) {
-  ((mech)->rd.status) |= FALLEN;
-  ((mech)->rd.status) &= ~(TORSO_RIGHT | TORSO_LEFT | FLIPPED_ARMS);
+  mech_status_set(&mech->rd.status, MECH_STATUS_FALLEN);
+  mech_status_clear(&mech->rd.status, (MechStatus)(MECH_STATUS_TORSO_RIGHT |
+                                                   MECH_STATUS_TORSO_LEFT |
+                                                   MECH_STATUS_FLIPPED_ARMS));
   mark_for_los_update(mech);
   mech_flood(mech);
   mech_event_cancel(mech, EVENT_STAND);
   mech_event_cancel(mech, EVENT_CHANGING_HULLDOWN);
-  ((mech)->rd.status) &= ~HULLDOWN;
+  mech_status_clear(&mech->rd.status, MECH_STATUS_HULLDOWN);
   if (btech_context_stagger_mode(mech_context(mech))) {
     mech_stagger_damage_clear(mech);
   }
 }
 
 void mech_make_stand(Mech *mech) {
-  ((mech)->rd.status) &= ~FALLEN;
+  mech_status_clear(&mech->rd.status, MECH_STATUS_FALLEN);
   mark_for_los_update(mech);
 }
 
@@ -233,7 +242,7 @@ void mech_start_seeing(Mech *mech) {
 
 void mech_continue_flying(Mech *mech) {
   if (mech_is_aerospace_unit(mech) || ((mech)->ud.move) == MOVE_VTOL) {
-    ((mech)->rd.status) &= ~LANDED;
+    mech_status_clear(&mech->rd.status, MECH_STATUS_LANDED);
     ((mech)->pd.z) += 1;
     ((mech)->pd.fz) = (float)ZSCALE * ((mech)->pd.z);
     mech_event_cancel(mech, EVENT_MOVE);

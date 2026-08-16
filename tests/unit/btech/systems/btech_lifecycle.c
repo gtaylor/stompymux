@@ -17,16 +17,17 @@ void mark_for_los_update(Mech *mech [[maybe_unused]]) { los_updates++; }
 int main(void) {
   Mech mech = {};
 
-  ((&mech)->rd.critstatus) = SPEED_OK;
+  ((&mech)->rd.critstatus) = MECH_CRIT_STATUS_SPEED_OK;
   mech_max_speed_set(&mech, 12.0F);
   mech_max_speed_lower(&mech, 3.0F);
   mech_max_speed_divide(&mech, 3.0F);
-  if (((&mech)->ud.maxspeed) != 3.0F || (((&mech)->rd.critstatus) & SPEED_OK) ||
+  if (((&mech)->ud.maxspeed) != 3.0F ||
+      mech_crit_status_has(mech.rd.critstatus, MECH_CRIT_STATUS_SPEED_OK) ||
       speed_corrections != 3) {
     return 1;
   }
 
-  ((&mech)->rd.status) = FALLEN;
+  ((&mech)->rd.status) = MECH_STATUS_FALLEN;
   mech_make_stand(&mech);
   return !mech_is_fallen(&mech) && los_updates == 1 ? 0 : 1;
 }

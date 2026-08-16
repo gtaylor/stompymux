@@ -1,1 +1,0 @@
-/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/mux_header_interfaces_test.dir/link.d CMakeFiles/mux_header_interfaces_test.dir/unit/mux/support/mux_header_interfaces.c.o -o mux_header_interfaces_test  ../libsodium/src/libsodium/.libs/libsodium.a ../libbtmux_checked_storage.a

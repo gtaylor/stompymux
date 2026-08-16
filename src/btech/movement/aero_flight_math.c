@@ -12,23 +12,21 @@ void aero_heading_update(Mech *mech) {
     mech_heading_update(mech);
 }
 
-double length_hypotenuse(double x, double y) {
-  if (x < 0)
-    x = -x;
-  if (y < 0)
-    y = -y;
-  return sqrt((x * x) + (y * y));
-}
+double length_hypotenuse(double x, double y) { return hypot(x, y); }
 
 double my_sqrtm(double x, double y) {
-  if (x < 0)
-    x = -x;
-  if (y < 0)
-    y = -y;
+  x = fabs(x);
+  y = fabs(y);
   if (y > x) {
     double swap = y;
     y = x;
     x = swap;
   }
-  return sqrt((x * x) - (y * y));
+  if (x == 0.0)
+    return 0.0;
+  if (isfinite(x) && isfinite(y) && !(y < x))
+    return 0.0;
+  if (y <= x / 2.0)
+    return x * sqrt(1.0 - ((y / x) * (y / x)));
+  return sqrt(x - y) * sqrt(x + y);
 }

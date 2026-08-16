@@ -37,11 +37,12 @@ void mech_engine_heat_set(Mech *mech, int heat) {
 void mech_engine_heat_add(Mech *mech, int heat) { mech->rd.engineheat += heat; }
 
 bool mech_heat_cutoff_is_enabled(const Mech *mech) {
-  return (mech->rd.critstatus & HEATCUTOFF) != 0;
+  return mech_crit_status_has(mech->rd.critstatus, MECH_CRIT_STATUS_HEATCUTOFF);
 }
 
 bool mech_life_support_is_destroyed(const Mech *mech) {
-  return (mech->rd.critstatus & LIFE_SUPPORT_DESTROYED) != 0;
+  return mech_crit_status_has(mech->rd.critstatus,
+                              MECH_CRIT_STATUS_LIFE_SUPPORT_DESTROYED);
 }
 
 void mech_heat_production_set(Mech *mech, float heat) {

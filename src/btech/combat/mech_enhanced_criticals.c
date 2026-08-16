@@ -107,7 +107,7 @@ int mech_weapon_critical_to_hit_modifier(
     if (split_lookup.found) {
       nloc = split_lookup.slot.section;
       ncrit = split_lookup.slot.critical;
-      for (i = ncrit; i < (w_weap_size - count); i++) {
+      for (i = ncrit; i < ncrit + (w_weap_size - count); i++) {
         if (mech_critical_damage_flags(mech, nloc, i) & WEAP_DAM_MODERATE)
           w_ret_mod++;
         if ((mech_critical_damage_flags(mech, nloc, i) &
@@ -151,7 +151,7 @@ int mech_weapon_critical_heat_modifier(Mech *mech, int section, int critical) {
     if (split_lookup.found) {
       nloc = split_lookup.slot.section;
       ncrit = split_lookup.slot.critical;
-      for (i = ncrit; i < (w_weap_size - count); i++) {
+      for (i = ncrit; i < ncrit + (w_weap_size - count); i++) {
         if (mech_critical_damage_flags(mech, nloc, i) & WEAP_DAM_EN_CRYSTAL)
           w_ret_mod++;
       }
@@ -194,7 +194,7 @@ int mech_weapon_critical_damage_penalty(Mech *mech, int section, int critical) {
     if (split_lookup.found) {
       nloc = split_lookup.slot.section;
       ncrit = split_lookup.slot.critical;
-      for (i = ncrit; i < (w_weap_size - count); i++) {
+      for (i = ncrit; i < ncrit + (w_weap_size - count); i++) {
         if (mech_critical_damage_flags(mech, nloc, i) & WEAP_DAM_EN_FOCUS)
           w_ret_mod++;
       }
@@ -239,7 +239,7 @@ bool mech_weapon_critical_can_explode(const WeaponCriticalRoll *request) {
     if (split_lookup.found) {
       nloc = split_lookup.slot.section;
       ncrit = split_lookup.slot.critical;
-      for (i = ncrit; i < (w_weap_size - count); i++) {
+      for (i = ncrit; i < ncrit + (w_weap_size - count); i++) {
         if (mech_critical_damage_flags(mech, nloc, i) &
             (WEAP_DAM_EN_CRYSTAL | WEAP_DAM_BALL_AMMO | WEAP_DAM_MSL_AMMO))
           w_explosion_check++;
@@ -287,7 +287,7 @@ bool mech_weapon_critical_can_jam(const WeaponCriticalRoll *request) {
     if (split_lookup.found) {
       nloc = split_lookup.slot.section;
       ncrit = split_lookup.slot.critical;
-      for (i = ncrit; i < (w_weap_size - count); i++) {
+      for (i = ncrit; i < ncrit + (w_weap_size - count); i++) {
         if (mech_critical_damage_flags(mech, nloc, i) & WEAP_DAM_BALL_BARREL)
           w_jam_check++;
       }
@@ -330,7 +330,7 @@ bool mech_weapon_ammo_feed_is_locked(Mech *mech, int section, int critical) {
     if (split_lookup.found) {
       nloc = split_lookup.slot.section;
       ncrit = split_lookup.slot.critical;
-      for (i = ncrit; i < (w_weap_size - count); i++) {
+      for (i = ncrit; i < ncrit + (w_weap_size - count); i++) {
         if (mech_critical_damage_flags(mech, nloc, i) &
             (WEAP_DAM_BALL_AMMO | WEAP_DAM_MSL_AMMO))
           return true;
@@ -374,7 +374,7 @@ int mech_weapon_damaged_slot_count(Mech *mech, int section, int w_first_crit,
     if (split_lookup.found) {
       nloc = split_lookup.slot.section;
       ncrit = split_lookup.slot.critical;
-      for (i = ncrit; i < (w_weap_size - count); i++) {
+      for (i = ncrit; i < ncrit + (w_weap_size - count); i++) {
         if (mech_critical_is_damaged(mech, nloc, i))
           w_crits_damaged++;
       }
@@ -673,6 +673,7 @@ static void mech_weapon_damage_info_show(DbRef player, Mech *mech, int section,
     } else if (mech_critical_is_disabled(mech, section, i)) {
       non_operational.disabled++;
     }
+    count++;
   }
 
   if (count < w_weap_size && mech_class(mech) == CLASS_MECH) {
@@ -681,7 +682,7 @@ static void mech_weapon_damage_info_show(DbRef player, Mech *mech, int section,
     if (split_lookup.found) {
       nloc = split_lookup.slot.section;
       ncrit = split_lookup.slot.critical;
-      for (i = ncrit; i < (w_weap_size - count); i++) {
+      for (i = ncrit; i < ncrit + (w_weap_size - count); i++) {
         if (mech_critical_is_damaged(mech, nloc, i)) {
           t_has_damaged_part = 1;
           damflag = mech_critical_damage_flags(mech, nloc, i);

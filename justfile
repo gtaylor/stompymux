@@ -17,7 +17,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-source-size check-typed-constants check-enum-underlying-type check-nullptr check-unsafe-apis check-bounded-copy check-checked-suffix-order check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis fmt-check build frame-check check-boolean-contracts check-boolean-conversions test tidy-check
+ci: check-source-size check-typed-constants check-enum-underlying-type check-status-accessors check-nullptr check-unsafe-apis check-bounded-copy check-checked-suffix-order check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis fmt-check build frame-check check-boolean-contracts check-boolean-conversions test tidy-check
 
 agent-checks: ci
 
@@ -36,6 +36,15 @@ check-typed-constants:
 # Anonymous enums remain the typed-constant idiom and need no underlying type.
 check-enum-underlying-type:
     status=0; grep -RInE --include='*.c' --include='*.h' --include='*.h.in' '^[[:space:]]*(typedef[[:space:]]+)?enum[[:space:]]+[A-Za-z_][A-Za-z_0-9]*[[:space:]]*\{' src || status=$?; if (( status == 0 )); then echo 'Named enum without an explicit underlying type found; use : int.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
+
+# Persisted unit status words are typed enums. Raw bitwise operations on those
+# fields must go through the status-specific accessors so masks cannot cross
+# status-word boundaries accidentally. The matcher also catches local aliases
+# that retain one of the six status enum types, while ignoring enum constants.
+# It keys on operand type, so an explicit cast of both operands to int is a
+# deliberate blind spot; that loud escape hatch remains review-visible.
+check-status-accessors:
+    mapfile -d '' -t sources < <(find src/mux src/btech tests -type f -name '*.c' -print0); output=$(mktemp); trap 'rm -f "$output"' EXIT; matcher='match binaryOperator(isExpansionInMainFile(), hasAnyOperatorName("&", "|", "^"), hasEitherOperand(ignoringParenImpCasts(anyOf(memberExpr(hasType(qualType(hasDeclaration(namedDecl(hasAnyName("MechStatus", "MechStatus2", "MechSpecialsStatus", "MechCritStatus", "MechTankCritStatus", "MechCritStatus2")))))), declRefExpr(to(varDecl(hasType(qualType(hasDeclaration(namedDecl(hasAnyName("MechStatus", "MechStatus2", "MechSpecialsStatus", "MechCritStatus", "MechTankCritStatus", "MechCritStatus2")))))))))))).bind("op")'; status=0; {{clang_query}} -p {{build_dir}} "${sources[@]}" -c "$matcher" >"$output" 2>&1 || status=$?; if (( status != 0 )); then cat "$output" >&2; exit "$status"; fi; if rg -q 'Match #' "$output"; then rg -n 'Match #|: note: "op" binds here$' "$output" >&2; echo 'Raw bitwise operation on a persisted unit status word; use its status-specific accessor.' >&2; exit 1; fi
 
 # modernize-use-nullptr catches typed null-pointer constants, including bare 0,
 # but intentionally skips tokens inside macro expansions. Clang's raw lexer
@@ -117,8 +126,9 @@ build:
 # Compile with real code generation and fail if any production frame crosses
 # the current 32 KiB ratchet. Keep this separate from the instrumented build:
 # sanitizer redzones change frame sizes and are not the metric being gated.
+# --fresh prevents a cache copied from another worktree from poisoning CI.
 frame-check:
-    cmake -S . -B {{frame_check_build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBTECH_ENABLE_ASAN=OFF -DBTECH_ENABLE_UBSAN=OFF -DBTECH_STRICT_C23=ON -DBTECH_BUILD_FUZZERS=OFF -DBTECH_ENABLE_FRAME_SIZE_GATE=ON
+    cmake --fresh -S . -B {{frame_check_build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBTECH_ENABLE_ASAN=OFF -DBTECH_ENABLE_UBSAN=OFF -DBTECH_STRICT_C23=ON -DBTECH_BUILD_FUZZERS=OFF -DBTECH_ENABLE_FRAME_SIZE_GATE=ON
     cmake --build {{frame_check_build_dir}} -j "$(nproc)"
 
 test:

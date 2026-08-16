@@ -472,20 +472,21 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
                             snapshot.runtime.desired_speed) < 0 ||
           bind_runtime_real(context->runtime, &runtime_index,
                             snapshot.runtime.jumpspeed) < 0 ||
+          /* Persist status enums as the legacy SQLite integer bit patterns. */
           bind_runtime_int(context->runtime, &runtime_index,
-                           snapshot.runtime.critstatus) < 0 ||
+                           (int)snapshot.runtime.critstatus) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
-                           snapshot.runtime.status) < 0 ||
+                           (int)snapshot.runtime.status) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
-                           snapshot.runtime.status2) < 0 ||
+                           (int)snapshot.runtime.status2) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
                            snapshot.runtime.specials) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
                            snapshot.runtime.specials2) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
-                           snapshot.runtime.specialsstatus) < 0 ||
+                           (int)snapshot.runtime.specialsstatus) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
-                           snapshot.runtime.tankcritstatus) < 0 ||
+                           (int)snapshot.runtime.tankcritstatus) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
                            snapshot.runtime.last_weapon_recycle) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
@@ -545,7 +546,7 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
           bind_runtime_int(context->runtime, &runtime_index,
                            snapshot.runtime.last_stagger_notify) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
-                           snapshot.runtime.critstatus2) < 0 ||
+                           (int)snapshot.runtime.critstatus2) < 0 ||
           bind_runtime_real(context->runtime, &runtime_index,
                             snapshot.runtime.xpmod) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,

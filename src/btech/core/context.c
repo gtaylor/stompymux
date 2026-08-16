@@ -27,6 +27,14 @@ static int integer_value(const int *values, size_t count, size_t index) {
                                                 index);
 }
 
+static size_t missile_hit_roll_index(int roll) {
+  if (roll < 0)
+    return 0;
+  if (roll >= BTECH_MISSILE_HIT_ROLL_COUNT)
+    return BTECH_MISSILE_HIT_ROLL_COUNT - 1;
+  return (size_t)roll;
+}
+
 BtechContext *btech_context_create(const BtechDependencies *dependencies) {
   if (dependencies == nullptr)
     return nullptr;
@@ -511,7 +519,7 @@ int btech_context_missile_hit_count(const MissileHitLookup *lookup) {
       missile_hit_registry_find_weapon(&context->missile_hits, lookup->weapon);
   return entry
              ? integer_value(entry->num_missiles, BTECH_MISSILE_HIT_ROLL_COUNT,
-                             (size_t)lookup->roll)
+                             missile_hit_roll_index(lookup->roll))
              : 0;
 }
 
@@ -527,9 +535,10 @@ int btech_context_missile_hit_count_by_name(const BtechContext *context,
   assert(context != nullptr);
   const MissileHitEntry *entry =
       missile_hit_registry_find_name(&context->missile_hits, name);
-  return entry ? integer_value(entry->num_missiles,
-                               BTECH_MISSILE_HIT_ROLL_COUNT, (size_t)roll_index)
-               : 0;
+  return entry
+             ? integer_value(entry->num_missiles, BTECH_MISSILE_HIT_ROLL_COUNT,
+                             missile_hit_roll_index(roll_index))
+             : 0;
 }
 
 int btech_context_weapon_recycle_time(const BtechContext *context,

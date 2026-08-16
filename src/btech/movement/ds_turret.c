@@ -14,6 +14,7 @@
 #include "mech_move_api.h"
 #include "mech_scan_api.h"
 #include "mech_status_api.h"
+#include "mech_status_types.h"
 #include "mech_targeting_api.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
@@ -59,14 +60,14 @@ static void turret_targeting_scope_enter(TurretTargetingScope *scope,
                                          Turret *tur, Mech *mech) {
   if (tur->gunner > 0)
     btech_context_combat_pilot_override_set(tur->xcode.context, tur->gunner);
-  mech_targeting_override_begin(
-      &(MechTargetingOverrideBegin){.mech = mech,
-                                    .override = &scope->targeting,
-                                    .state = {.target = tur->target,
-                                              .target_x = tur->targx,
-                                              .target_y = tur->targy,
-                                              .target_z = tur->targz,
-                                              .lock_modes = tur->lockmode}});
+  mech_targeting_override_begin(&(MechTargetingOverrideBegin){
+      .mech = mech,
+      .override = &scope->targeting,
+      .state = {.target = tur->target,
+                .target_x = tur->targx,
+                .target_y = tur->targy,
+                .target_z = tur->targz,
+                .lock_modes = (MechStatus)tur->lockmode}});
   btech_context_combat_arcs_override_set(tur->xcode.context, tur->arcs);
 }
 

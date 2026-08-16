@@ -477,9 +477,9 @@ int in_weapon_arc(Mech *mech, float x, float y) {
   relat = mech_heading_degrees(mech) - bearing_to_target;
   if (((mech)->ud.type) == CLASS_MECH || ((mech)->ud.type) == CLASS_MW ||
       ((mech)->ud.type) == CLASS_BSUIT) {
-    if (((mech)->rd.status) & TORSO_RIGHT)
+    if (mech_status_has(mech->rd.status, MECH_STATUS_TORSO_RIGHT))
       relat += 59;
-    else if (((mech)->rd.status) & TORSO_LEFT)
+    else if (mech_status_has(mech->rd.status, MECH_STATUS_TORSO_LEFT))
       relat -= 59;
   }
   relat = acceptable_degree(relat);

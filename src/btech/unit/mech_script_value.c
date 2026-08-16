@@ -3,6 +3,7 @@
 #include "mech_identity_api.h"
 #include "mech_network_api.h"
 #include "mech_script_value_api.h"
+#include "mech_status_types.h"
 #include "mech_targeting_api.h"
 
 #include "checked_conversion.h"
@@ -316,19 +317,19 @@ bool mech_script_value_write(Mech *mech, MechScriptValueKey key,
     ((mech)->pd.stall) = value.integer;
     return true;
   case MECH_SCRIPT_STATUS:
-    ((mech)->rd.status) = value.integer;
+    ((mech)->rd.status) = (MechStatus)value.integer;
     return true;
   case MECH_SCRIPT_STATUS_SECONDARY:
-    ((mech)->rd.status2) = value.integer;
+    ((mech)->rd.status2) = (MechStatus2)value.integer;
     return true;
   case MECH_SCRIPT_CRITICAL_STATUS:
-    ((mech)->rd.critstatus) = value.integer;
+    ((mech)->rd.critstatus) = (MechCritStatus)value.integer;
     return true;
   case MECH_SCRIPT_CRITICAL_STATUS_SECONDARY:
-    ((mech)->rd.critstatus2) = value.integer;
+    ((mech)->rd.critstatus2) = (MechCritStatus2)value.integer;
     return true;
   case MECH_SCRIPT_VEHICLE_CRITICAL_STATUS:
-    ((mech)->rd.tankcritstatus) = value.integer;
+    ((mech)->rd.tankcritstatus) = (MechTankCritStatus)value.integer;
     return true;
   case MECH_SCRIPT_TARGET_DBREF:
     mech_target_dbref_set(mech, value.dbref);

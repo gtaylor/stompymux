@@ -7,44 +7,44 @@
 #include <time.h>
 
 bool mech_is_started(const Mech *mech) {
-  return (mech->rd.status & STARTED) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_STARTED);
 }
 
 bool mech_is_destroyed(const Mech *mech) {
-  return (mech->rd.status & DESTROYED) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_DESTROYED);
 }
 
 void mech_destroyed_set(Mech *mech, bool destroyed) {
   if (destroyed)
-    mech->rd.status |= DESTROYED;
+    mech_status_set(&mech->rd.status, MECH_STATUS_DESTROYED);
   else
-    mech->rd.status &= ~DESTROYED;
+    mech_status_clear(&mech->rd.status, MECH_STATUS_DESTROYED);
 }
 
 bool mech_is_landed(const Mech *mech) {
-  return (mech->rd.status & LANDED) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_LANDED);
 }
 
 bool mech_is_jumping(const Mech *mech) {
-  return (mech->rd.status & JUMPING) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_JUMPING);
 }
 
 bool mech_is_out_of_control(const Mech *mech) { return mech->rd.cocoon != 0; }
 
 bool mech_is_blinded(const Mech *mech) {
-  return (mech->rd.status & BLINDED) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_BLINDED);
 }
 
 bool mech_has_fired_recently(const Mech *mech) {
-  return (mech->rd.status & FIRED) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_FIRED);
 }
 
 bool mech_is_invisible(const Mech *mech) {
-  return (mech->rd.critstatus & INVISIBLE) != 0;
+  return mech_crit_status_has(mech->rd.critstatus, MECH_CRIT_STATUS_INVISIBLE);
 }
 
 bool mech_autocon_when_shutdown(const Mech *mech) {
-  return (mech->rd.status & AUTOCON_WHEN_SHUTDOWN) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_AUTOCON_WHEN_SHUTDOWN);
 }
 
 bool mech_autocon_include_shutdown_targets(const Mech *mech) {
@@ -61,63 +61,71 @@ bool mech_ammunition_warning_enabled(const Mech *mech) {
 
 void mech_blinded_set(Mech *mech, bool blinded) {
   if (blinded)
-    mech->rd.status |= BLINDED;
+    mech_status_set(&mech->rd.status, MECH_STATUS_BLINDED);
   else
-    mech->rd.status &= ~BLINDED;
+    mech_status_clear(&mech->rd.status, MECH_STATUS_BLINDED);
 }
 
 void mech_fired_recently_set(Mech *mech, bool fired) {
   if (fired)
-    mech->rd.status |= FIRED;
+    mech_status_set(&mech->rd.status, MECH_STATUS_FIRED);
   else
-    mech->rd.status &= ~FIRED;
+    mech_status_clear(&mech->rd.status, MECH_STATUS_FIRED);
 }
 
 bool mech_suppresses_gunnery_experience(const Mech *mech) {
-  return (mech->rd.status2 & NO_GUN_XP) != 0;
+  return mech_status2_has(mech->rd.status2, MECH_STATUS2_NO_GUN_XP);
 }
 
 bool mech_player_character_initialization_begin(Mech *mech) {
-  if (mech->ud.type != CLASS_MW || (mech->rd.critstatus & PC_INITIALIZED))
+  if (mech->ud.type != CLASS_MW ||
+      mech_crit_status_has(mech->rd.critstatus,
+                           MECH_CRIT_STATUS_PC_INITIALIZED))
     return false;
-  mech->rd.critstatus |= PC_INITIALIZED;
+  mech_crit_status_set(&mech->rd.critstatus, MECH_CRIT_STATUS_PC_INITIALIZED);
   return true;
 }
 
 bool mech_pilot_is_unconscious(const Mech *mech) {
-  return (mech->rd.status & UNCONSCIOUS) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_UNCONSCIOUS);
 }
 
 bool mech_is_observer(const Mech *mech) {
-  return (mech->rd.critstatus & OBSERVATORIC) != 0;
+  return mech_crit_status_has(mech->rd.critstatus,
+                              MECH_CRIT_STATUS_OBSERVATORIC);
 }
 
 bool mech_is_under_gravity(const Mech *mech) {
-  return (mech->rd.status & UNDERGRAVITY) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_UNDERGRAVITY);
 }
 
 bool mech_is_under_special_conditions(const Mech *mech) {
-  return (mech->rd.status & UNDERSPECIAL) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_UNDERSPECIAL);
 }
 
 bool mech_is_under_vacuum(const Mech *mech) {
-  return (mech->rd.status & UNDERVACUUM) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_UNDERVACUUM);
 }
 
 bool mech_is_immobile(const Mech *mech) {
-  return (!(mech->rd.status & STARTED) || (mech->rd.status & UNCONSCIOUS) ||
-          (mech->rd.status2 & FORTIFIED) || (mech->rd.status & BLINDED) ||
+  return (!mech_status_has(mech->rd.status, MECH_STATUS_STARTED) ||
+          mech_status_has(mech->rd.status, MECH_STATUS_UNCONSCIOUS) ||
+          mech_status2_has(mech->rd.status2, MECH_STATUS2_FORTIFIED) ||
+          mech_status_has(mech->rd.status, MECH_STATUS_BLINDED) ||
           mech->ud.move == MOVE_NONE ||
-          ((mech->rd.status & FALLEN) && mech->ud.type != CLASS_MECH &&
-           mech->ud.type != CLASS_MW)) != 0;
+          (mech_status_has(mech->rd.status, MECH_STATUS_FALLEN) &&
+           mech->ud.type != CLASS_MECH && mech->ud.type != CLASS_MW)) != 0;
 }
 
 bool mech_has_destroyed_gyro(const Mech *mech) {
-  return (mech->rd.critstatus & GYRO_DESTROYED) != 0;
+  return mech_crit_status_has(mech->rd.critstatus,
+                              MECH_CRIT_STATUS_GYRO_DESTROYED);
 }
 
 bool mech_has_damaged_gyro(const Mech *mech) {
-  return (mech->rd.critstatus & (GYRO_DAMAGED | GYRO_DESTROYED)) != 0;
+  return mech_crit_status_has(
+      mech->rd.critstatus, (MechCritStatus)(MECH_CRIT_STATUS_GYRO_DAMAGED |
+                                            MECH_CRIT_STATUS_GYRO_DESTROYED));
 }
 
 int mech_cocoon_integrity(const Mech *mech) { return mech->rd.cocoon; }
@@ -134,9 +142,9 @@ void mech_cocoon_integrity_set(Mech *mech, int integrity) {
 
 void mech_landed_set(Mech *mech, bool landed) {
   if (landed)
-    mech->rd.status |= LANDED;
+    mech_status_set(&mech->rd.status, MECH_STATUS_LANDED);
   else
-    mech->rd.status &= ~LANDED;
+    mech_status_clear(&mech->rd.status, MECH_STATUS_LANDED);
 }
 
 void mech_last_startup_set(Mech *mech, int timestamp) {
@@ -175,47 +183,55 @@ DbRef mech_carried_dbref(const Mech *mech) { return mech->rd.carrying; }
 
 void mech_carried_dbref_set(Mech *mech, DbRef carried) {
   mech->rd.carrying = carried;
-  mech->rd.critstatus &= ~LOAD_OK;
+  mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_LOAD_OK);
 }
 
-bool mech_is_towed(const Mech *mech) { return (mech->rd.status & TOWED) != 0; }
+bool mech_is_towed(const Mech *mech) {
+  return mech_status_has(mech->rd.status, MECH_STATUS_TOWED);
+}
 
 bool mech_is_towable(const Mech *mech) {
-  return (mech->rd.critstatus & TOWABLE) != 0;
+  return mech_crit_status_has(mech->rd.critstatus, MECH_CRIT_STATUS_TOWABLE);
 }
 
 void mech_towed_set(Mech *mech, bool towed) {
   if (towed)
-    mech->rd.status |= TOWED;
+    mech_status_set(&mech->rd.status, MECH_STATUS_TOWED);
   else
-    mech->rd.status &= ~TOWED;
+    mech_status_clear(&mech->rd.status, MECH_STATUS_TOWED);
 }
 
-void mech_towed_clear(Mech *mech) { mech->rd.status &= ~TOWED; }
+void mech_towed_clear(Mech *mech) {
+  mech_status_clear(&mech->rd.status, MECH_STATUS_TOWED);
+}
 
 void mech_environment_conditions_set(Mech *mech, bool special, bool temperature,
                                      bool gravity, bool vacuum) {
-  mech->rd.status &= ~CONDITIONS;
+  mech_status_clear(&mech->rd.status, MECH_STATUS_CONDITIONS);
   if (!special)
     return;
-  mech->rd.status |= UNDERSPECIAL;
+  mech_status_set(&mech->rd.status, MECH_STATUS_UNDERSPECIAL);
   if (temperature)
-    mech->rd.status |= UNDERTEMPERATURE;
+    mech_status_set(&mech->rd.status, MECH_STATUS_UNDERTEMPERATURE);
   if (gravity)
-    mech->rd.status |= UNDERGRAVITY;
+    mech_status_set(&mech->rd.status, MECH_STATUS_UNDERGRAVITY);
   if (vacuum)
-    mech->rd.status |= UNDERVACUUM;
+    mech_status_set(&mech->rd.status, MECH_STATUS_UNDERVACUUM);
 }
 
 void mech_jump_complete(Mech *mech) {
-  mech->rd.status &= ~(JUMPING | DFA_ATTACK);
+  mech_status_clear(&mech->rd.status,
+                    (MechStatus)(MECH_STATUS_JUMPING | MECH_STATUS_DFA_ATTACK));
   mech->rd.dfatarget = -1;
   mech->rd.goingx = 0;
   mech->rd.goingy = 0;
   mech->rd.speed = 0.0F;
 }
 
-void mech_jump_abort(Mech *mech) { mech->rd.status &= ~(JUMPING | DFA_ATTACK); }
+void mech_jump_abort(Mech *mech) {
+  mech_status_clear(&mech->rd.status,
+                    (MechStatus)(MECH_STATUS_JUMPING | MECH_STATUS_DFA_ATTACK));
+}
 
 time_t mech_spin_start_tick(const Mech *mech) { return mech->rd.sspin; }
 
