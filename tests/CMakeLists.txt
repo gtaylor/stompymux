@@ -785,6 +785,18 @@ target_include_directories(player_account_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME player_account COMMAND player_account_test)
 
+add_executable(player_cache_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/world/player_cache.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/world/player_cache.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/red_black_tree.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/red_black_tree_mutation.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_link_libraries(player_cache_test PRIVATE btmux_options)
+target_include_directories(player_cache_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME player_cache COMMAND player_cache_test)
+
 add_executable(page_recipients_test
   ${CMAKE_SOURCE_DIR}/tests/unit/mux/state/page_recipients.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/communication/page_recipients.c

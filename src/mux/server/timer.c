@@ -146,7 +146,7 @@ static void dispatch(MaintenanceContext *maintenance) {
     maintenance->command->debug_command = "< dbck >";
     database_check(&(DatabaseCheckRequest){
         .evaluation = &maintenance->command->evaluation, .player = NOTHING});
-    pcache_trim(maintenance->players);
+    player_cache_trim(maintenance->players);
   }
   /*
    * Database dump routines
