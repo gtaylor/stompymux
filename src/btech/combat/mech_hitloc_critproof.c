@@ -181,7 +181,7 @@ int mech_critproof_hit_location(Mech *mech, int hit_group, bool *iscritical) {
       case 2:
         return side;
       case 12:
-        return side;
+        return (mech_section_internal(mech, TURRET)) ? TURRET : side;
       case 3:
       case 4:
       case 5:

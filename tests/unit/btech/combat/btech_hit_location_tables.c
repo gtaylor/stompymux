@@ -384,6 +384,21 @@ static int test_ground_and_naval_tables(void) {
       check_critproof_table(RIGHT, RIGHTSIDE, "crit-proof right naval vehicle"))
     return 1;
 
+  fixture_roll = 12;
+  bool left_critical = false;
+  bool right_critical = false;
+  bool isrear = false;
+  (void)mech_hit_location(&fixture_mech, LEFTSIDE, &left_critical, &isrear);
+  (void)mech_hit_location(&fixture_mech, RIGHTSIDE, &right_critical, &isrear);
+  if (left_critical || right_critical)
+    return 1;
+  fixture_crittable = true;
+  left_critical = false;
+  right_critical = false;
+  (void)mech_hit_location(&fixture_mech, LEFTSIDE, &left_critical, &isrear);
+  (void)mech_hit_location(&fixture_mech, RIGHTSIDE, &right_critical, &isrear);
+  if (!left_critical || !right_critical)
+    return 1;
   fixture_crittable = false;
 
   /* The standard and crit-proof paths retain the pre-advanced VTOL table:
@@ -411,10 +426,10 @@ static int test_ground_and_naval_tables(void) {
 
   static const int TURRETED_FRONT[11] = {FSIDE,  FSIDE,  FSIDE, FSIDE,
                                          FSIDE,  FSIDE,  FSIDE, FSIDE,
-                                         TURRET, TURRET, FSIDE};
+                                         TURRET, TURRET, TURRET};
   static const int TURRETED_REAR[11] = {BSIDE,  BSIDE,  BSIDE, BSIDE,
                                         BSIDE,  BSIDE,  BSIDE, BSIDE,
-                                        TURRET, TURRET, BSIDE};
+                                        TURRET, TURRET, TURRET};
   static const int TURRETED_LEFT[11] = {LSIDE,  LSIDE,  LSIDE, LSIDE,
                                         LSIDE,  LSIDE,  LSIDE, LSIDE,
                                         TURRET, TURRET, LSIDE};
@@ -436,6 +451,11 @@ static int test_ground_and_naval_tables(void) {
                             "crit-proof turreted front vehicle") ||
       check_critproof_table(TURRETED_REAR, BACK,
                             "crit-proof turreted rear vehicle"))
+    return 1;
+
+  fixture_class = CLASS_VEH_NAVAL;
+  if (check_standard_table(TURRETED_FRONT, FRONT,
+                           "standard turreted front naval vehicle"))
     return 1;
   return 0;
 }
@@ -511,14 +531,32 @@ static int test_fasa_tables(void) {
         return 1;
     }
   }
+  fixture_roll = 12;
+  fixture_crittable = false;
+  if (fasa_vtol_naval_hit_location(&fixture_mech, LEFTSIDE,
+                                   (HitLocationResult){0}, fixture_roll)
+          .critical ||
+      fasa_vtol_naval_hit_location(&fixture_mech, RIGHTSIDE,
+                                   (HitLocationResult){0}, fixture_roll)
+          .critical)
+    return 1;
+  fixture_crittable = true;
+  if (!fasa_vtol_naval_hit_location(&fixture_mech, LEFTSIDE,
+                                    (HitLocationResult){0}, fixture_roll)
+           .critical ||
+      !fasa_vtol_naval_hit_location(&fixture_mech, RIGHTSIDE,
+                                    (HitLocationResult){0}, fixture_roll)
+           .critical)
+    return 1;
+  fixture_crittable = false;
   fixture_turret_internal = true;
   static const int TURRETED_LEFT[11] = {
       LSIDE, LSIDE, LSIDE,  LSIDE,  LSIDE, LSIDE,
       LSIDE, LSIDE, TURRET, TURRET, LSIDE,
   };
   static const int TURRETED_FRONT[11] = {
-      FSIDE, FSIDE, FSIDE,  FSIDE,  FSIDE, FSIDE,
-      FSIDE, FSIDE, TURRET, TURRET, FSIDE,
+      FSIDE, FSIDE, FSIDE,  FSIDE,  FSIDE,  FSIDE,
+      FSIDE, FSIDE, TURRET, TURRET, TURRET,
   };
   for (int index = 0; index < 11; ++index) {
     fixture_roll = index + 2;

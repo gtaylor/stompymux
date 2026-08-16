@@ -172,7 +172,8 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
         break;
       case 12:
         hitloc = LSIDE;
-        result.critical = true;
+        if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
+          result.critical = true;
         break;
       }
       break;
@@ -217,10 +218,20 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
       side = (hit_group == FRONT ? FSIDE : BSIDE);
       switch (roll) {
       case 2:
-      case 12:
         hitloc = side;
         if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
           result.critical = true;
+        break;
+      case 12:
+        if (mech_section_internal(mech, TURRET)) {
+          hitloc = TURRET;
+          if (mech_section_is_crittable(mech, TURRET, (CriticalThreshold){50}))
+            result.critical = true;
+        } else {
+          hitloc = side;
+          if (mech_section_is_crittable(mech, side, (CriticalThreshold){40}))
+            result.critical = true;
+        }
         break;
       case 3:
       case 4:
