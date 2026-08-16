@@ -1,5 +1,4 @@
 #include "ai_api.h"
-#include "btech_channel.h"
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
@@ -14,7 +13,6 @@
 #include "mux/support/formatting.h"
 #include "section_types.h"
 #include "template_api.h"
-#include <stdio.h>
 
 int mech_recycling_state(Mech *mech, int num) {
   int i;
@@ -33,7 +31,6 @@ int mech_recycling_state(Mech *mech, int num) {
 int heat_factor(Mech *mech) {
 
   int factor = 0;
-  char buf[LBUF_SIZE];
 
   if (((mech)->ud.type) != CLASS_MECH) {
     factor = (((((mech)->rd.specials) & ICE_TECH)) ? -1 : 21);
@@ -46,11 +43,6 @@ int heat_factor(Mech *mech) {
            mech_condition_summary(mech).stealth_armor_active)
               ? -1
               : factor);
-
-  (void)snprintf(buf, LBUF_SIZE,
-                 "HeatFactor : Invalid heat factor calculation on #%ld.",
-                 mech->mynum);
-  btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG, "%s", buf);
 }
 
 /* Function to determine if a weapon is functional or not

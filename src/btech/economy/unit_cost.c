@@ -663,10 +663,10 @@ unsigned long long mech_fasa_cost(Mech *mech) {
       if (equipment_is_weapon(part))
         continue;
 
-      const unsigned long long indiv_part_cost =
+      const unsigned long long INDIV_PART_COST =
           btech_part_cost_get(mech_context(mech), part);
       mech_cost_add(mech, &total, part_name(mech_context(mech), part, 0).text,
-                    (double)indiv_part_cost);
+                    (double)INDIV_PART_COST);
     }
   }
   /* We have to account for some other stuff that doesn't divide equally here */

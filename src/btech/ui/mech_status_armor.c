@@ -329,6 +329,7 @@ void print_armor_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
   BtsState current_state = BTS_START_OF_LINE;
   int tmp_value1 = 0;
   int tmp_value2 = 0;
+  int tmp_flag;
   int flag;
 
   char tmpbuf[8192];
@@ -484,8 +485,6 @@ void print_armor_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
 
     case BTS_SUBSTITUTE_ARMOR: /* armor status substitution */
       switch (source_position - saved_source_position) {
-        int tmp_flag;
-
       case 1: /* optional width digit or type flag */
         switch (SOURCE_CHARACTER) {
         case '&':
