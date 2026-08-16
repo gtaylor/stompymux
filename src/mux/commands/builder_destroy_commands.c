@@ -137,14 +137,10 @@ void do_destroy(CommandInvocation *invocation) {
               .context = evaluation->btech, .actor = player, .object = thing});
           c_xcode(evaluation->world->database, thing);
         }
-        if (0) {
-          destroy_exit(evaluation, thing);
-        } else {
-          notify_checked(evaluation, player, player,
-                         "The exit shakes and begins to crumble.",
-                         MSG_ME_ALL | MSG_F_DOWN);
-          s_going(evaluation->world->database, thing);
-        }
+        notify_checked(evaluation, player, player,
+                       "The exit shakes and begins to crumble.",
+                       MSG_ME_ALL | MSG_F_DOWN);
+        s_going(evaluation->world->database, thing);
       }
     }
     break;
@@ -158,14 +154,10 @@ void do_destroy(CommandInvocation *invocation) {
             .context = evaluation->btech, .actor = player, .object = thing});
         c_xcode(evaluation->world->database, thing);
       }
-      if (0) {
-        destroy_thing(evaluation, thing);
-      } else {
-        notify_checked(evaluation, player, player,
-                       "The object shakes and begins to crumble.",
-                       MSG_ME_ALL | MSG_F_DOWN);
-        s_going(evaluation->world->database, thing);
-      }
+      notify_checked(evaluation, player, player,
+                     "The object shakes and begins to crumble.",
+                     MSG_ME_ALL | MSG_F_DOWN);
+      s_going(evaluation->world->database, thing);
     }
     break;
   case OBJECT_TYPE_PLAYER:
@@ -179,20 +171,13 @@ void do_destroy(CommandInvocation *invocation) {
               .context = evaluation->btech, .actor = player, .object = thing});
           c_xcode(evaluation->world->database, thing);
         }
-        if (0) {
-          (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", player);
-          attribute_add_raw(evaluation->world->database, thing, A_DESTROYER,
-                            message_buffer);
-          destroy_player(evaluation, thing);
-        } else {
-          notify_checked(evaluation, player, player,
-                         "The player shakes and begins to crumble.",
-                         MSG_ME_ALL | MSG_F_DOWN);
-          s_going(evaluation->world->database, thing);
-          (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", player);
-          attribute_add_raw(evaluation->world->database, thing, A_DESTROYER,
-                            message_buffer);
-        }
+        notify_checked(evaluation, player, player,
+                       "The player shakes and begins to crumble.",
+                       MSG_ME_ALL | MSG_F_DOWN);
+        s_going(evaluation->world->database, thing);
+        (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", player);
+        attribute_add_raw(evaluation->world->database, thing, A_DESTROYER,
+                          message_buffer);
       }
     }
     break;
@@ -201,16 +186,10 @@ void do_destroy(CommandInvocation *invocation) {
       notify_checked(evaluation, player, player,
                      "No sense beating a dead room.", MSG_ME);
     } else {
-      if (0) {
-        empty_obj(evaluation, thing);
-        destroy_obj(&(ObjectDestructionRequest){
-            .evaluation = evaluation, .player = NOTHING, .object = thing});
-      } else {
-        notify_checked(evaluation, thing, player,
-                       "The room shakes and begins to crumble.",
-                       MSG_ME_ALL | MSG_NBR_EXITS | MSG_F_UP | MSG_F_CONTENTS);
-        s_going(evaluation->world->database, thing);
-      }
+      notify_checked(evaluation, thing, player,
+                     "The room shakes and begins to crumble.",
+                     MSG_ME_ALL | MSG_NBR_EXITS | MSG_F_UP | MSG_F_CONTENTS);
+      s_going(evaluation->world->database, thing);
     }
     break;
   default:
