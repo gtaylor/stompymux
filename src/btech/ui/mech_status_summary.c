@@ -607,21 +607,24 @@ void print_info_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
       notify_printf(evaluation, player, "You are moving laterally %s",
                     mech_lateral_description(mech));
     break;
-    (void)snprintf(message_buffer, sizeof(message_buffer),
-                   "%s angle: [fg=green bold]%d[reset]",
-                   mech_desired_angle(mech) >= 0 ? "Climbing" : "Diving",
-                   abs(mech_desired_angle(mech)));
   case CLASS_VEH_GROUND:
   case CLASS_VEH_NAVAL:
   case CLASS_VTOL:
   case CLASS_AERO:
   case CLASS_DS:
   case CLASS_SPHEROID_DS:
+    if (mech_is_aerospace_unit(mech)) {
+      (void)snprintf(message_buffer, sizeof(message_buffer),
+                     "%s angle: [fg=green bold]%d[reset]",
+                     mech_desired_angle(mech) >= 0 ? "Climbing" : "Diving",
+                     abs(mech_desired_angle(mech)));
+    } else {
+      message_buffer[0] = '\0';
+    }
     (void)snprintf(
         buff, 256, "X, Y, Z:%3d,%3d,%3d  Heat Sinks:          %3d       %s",
         mech_position_x(mech), mech_position_y(mech), mech_position_z(mech),
-        displayed_speed(mech_active_heat_sinks(mech)),
-        mech_is_aerospace_unit(mech) ? message_buffer : "");
+        displayed_speed(mech_active_heat_sinks(mech)), message_buffer);
     mecha_notify(evaluation, player, buff);
     if (mech_is_flying_type(mech) || mech_movement_type(mech) == MOVE_SUB) {
       (void)snprintf(

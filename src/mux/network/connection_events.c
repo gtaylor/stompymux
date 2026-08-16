@@ -119,11 +119,11 @@ dispatch_connection_event_scope(const ConnectionEventScopeRequest *request) {
                                 reason);
     }
     break;
+  default:
     (void)snprintf(message_buffer, sizeof(message_buffer),
                    "Invalid zone #%ld for %s(#%ld) has bad type %d", zone,
                    game_object_name(runtime->world->database, player), player,
                    typeof_obj(runtime->world->database, zone));
-  default:
     log_text(message_buffer);
     break;
   }
