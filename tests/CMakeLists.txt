@@ -295,6 +295,23 @@ target_include_directories(btech_template_critical_format_test PRIVATE
 add_test(NAME btech_template_critical_format
   COMMAND btech_template_critical_format_test)
 
+add_executable(btech_template_critical_range_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/unit/btech_template_critical_range.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/template_load_helpers.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+target_compile_options(btech_template_critical_range_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_template_critical_range_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(btech_template_critical_range_test PRIVATE btmux_options)
+target_include_directories(btech_template_critical_range_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_template_critical_range
+  COMMAND btech_template_critical_range_test)
+
 add_executable(btech_repair_payload_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_payload.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c)
 target_link_libraries(btech_repair_payload_test PRIVATE btmux_options)
@@ -326,6 +343,22 @@ target_include_directories(btech_script_results_test PRIVATE
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_script_results COMMAND btech_script_results_test)
+
+add_executable(btech_damage_number_parser_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/unit/btech_damage_number_parser.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/scripting/unit_values.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+target_compile_options(btech_damage_number_parser_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_damage_number_parser_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(btech_damage_number_parser_test PRIVATE btmux_options)
+target_include_directories(btech_damage_number_parser_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_damage_number_parser COMMAND btech_damage_number_parser_test)
 
 add_executable(btech_techlist_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_techlist.c
@@ -430,6 +463,22 @@ target_include_directories(btech_map_name_test PRIVATE
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_map_name COMMAND btech_map_name_test)
+
+add_executable(btech_map_load_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_map_load.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map/map.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map/map_name_state.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+target_compile_options(btech_map_load_test PRIVATE -ffunction-sections)
+target_link_options(btech_map_load_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_map_load_test PRIVATE btmux_options)
+target_include_directories(btech_map_load_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_map_load COMMAND btech_map_load_test
+  "${CMAKE_SOURCE_DIR}/tests/fixtures/unit/map_load/environment.map")
 
 add_executable(btech_map_links_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_map_links.c
@@ -562,6 +611,23 @@ target_include_directories(btech_armor_section_names_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_armor_section_names
   COMMAND btech_armor_section_names_test)
+
+add_executable(btech_maintenance_selection_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/unit/btech_maintenance_selection.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/mech_maintenance.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+target_compile_options(btech_maintenance_selection_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_maintenance_selection_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(btech_maintenance_selection_test PRIVATE btmux_options)
+target_include_directories(btech_maintenance_selection_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_maintenance_selection
+  COMMAND btech_maintenance_selection_test)
 
 add_executable(checked_storage_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/checked_storage.c)
 target_link_libraries(checked_storage_test
