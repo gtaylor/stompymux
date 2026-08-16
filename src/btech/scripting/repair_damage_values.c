@@ -15,16 +15,18 @@
 
 BtechScriptResult fun_btthreshold(BtechScriptCall *call) {
   if (!is_wizard(call->evaluation->world->database, call->player)) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   const int THRESHOLD =
       btthreshold_func(call->evaluation->btech,
                        script_function_argument(call->arguments.values,
                                                 (int)call->arguments.count, 0));
-  safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                   THRESHOLD < 0 ? "#%d ERROR" : "%d", THRESHOLD);
+  if (THRESHOLD < 0) {
+    safe_tprintf_str(call->output.buffer, &call->output.cursor, "#%d ERROR",
+                     THRESHOLD);
+    return btech_script_error_output(call);
+  }
+  safe_tprintf_str(call->output.buffer, &call->output.cursor, "%d", THRESHOLD);
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
@@ -56,7 +58,7 @@ static Mech *damage_target(BtechScriptCall *call,
 BtechScriptResult fun_btdamagemech(BtechScriptCall *call) {
   Mech *mech = damage_target(call, BTECH_SCRIPT_MUTATION);
   if (!mech)
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error_output(call);
   int total_damage;
   int cluster_size;
   int direction;
@@ -66,34 +68,26 @@ BtechScriptResult fun_btdamagemech(BtechScriptCall *call) {
                                                   1),
                          &total_damage) ||
       total_damage < 1 || total_damage > 1000) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 INVALID 2ND ARG");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID 2ND ARG");
   }
   if (!parse_int_checked(script_function_argument(call->arguments.values,
                                                   (int)call->arguments.count,
                                                   2),
                          &cluster_size) ||
       cluster_size < 1) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 INVALID 3RD ARG");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID 3RD ARG");
   }
   if (!parse_int_checked(script_function_argument(call->arguments.values,
                                                   (int)call->arguments.count,
                                                   3),
                          &direction)) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 INVALID 4TH ARG");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID 4TH ARG");
   }
   if (!parse_int_checked(script_function_argument(call->arguments.values,
                                                   (int)call->arguments.count,
                                                   4),
                          &force_critical)) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 INVALID 5TH ARG");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID 5TH ARG");
   }
   const int RESULT = mech_damage_apply_clusters(&(DamageClusterRequest){
       .mech = mech,
@@ -113,9 +107,10 @@ BtechScriptResult fun_btdamagemech(BtechScriptCall *call) {
 BtechScriptResult fun_bttechstatus(BtechScriptCall *call) {
   Mech *mech = damage_target(call, BTECH_SCRIPT_TEXT);
   if (!mech)
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error_output(call);
   const char *status = techstatus_func(mech);
-  safe_tprintf_str(call->output.buffer, &call->output.cursor, "%s",
-                   status ? status : "#-1 ERROR");
+  if (status == nullptr)
+    return btech_script_error(call, "#-1 ERROR");
+  safe_tprintf_str(call->output.buffer, &call->output.cursor, "%s", status);
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }

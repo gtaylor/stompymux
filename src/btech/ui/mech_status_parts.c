@@ -15,6 +15,7 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_text_builder.h"
+#include "btech_text_result.h"
 #include "command_handlers_api.h"
 #include "coolmenu.h"
 #include "equipment_types.h"
@@ -318,12 +319,13 @@ void mech_weaponspecs(DbRef player, void *data,
   kill_cool_menu(c);
 }
 
-static char *status_text(char buffer[static MBUF_SIZE], const char *text) {
+static BtechTextResult status_text(char buffer[static MBUF_SIZE],
+                                   const char *text, bool success) {
   (void)snprintf(buffer, MBUF_SIZE, "%s", text);
-  return buffer;
+  return (BtechTextResult){.text = buffer, .success = success};
 }
 
-char *sectstatus_func(const MechStatusTextRequest *request) {
+BtechTextResult sectstatus_func(const MechStatusTextRequest *request) {
   Mech *mech = request->mech;
   const char *arg = request->argument;
   char *buffer = request->buffer;
@@ -335,22 +337,22 @@ char *sectstatus_func(const MechStatusTextRequest *request) {
   int index;
 
   if (!arg || !*arg)
-    return status_text(buffer, "#-1 INVALID SECTION");
+    return status_text(buffer, "#-1 INVALID SECTION", false);
 
   index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
                                     arg);
   if (index == -1)
-    return status_text(buffer, "#-1 INVALID SECTION");
+    return status_text(buffer, "#-1 INVALID SECTION", false);
 
   (void)snprintf(buffer, MBUF_SIZE, "%d",
                  mech_section_is_flooded(mech, index)
                      ? -1
                      : !mech_section_is_destroyed(mech, index));
 
-  return buffer;
+  return (BtechTextResult){.text = buffer, .success = true};
 }
 
-char *critstatus_func(const MechStatusTextRequest *request) {
+BtechTextResult critstatus_func(const MechStatusTextRequest *request) {
   Mech *mech = request->mech;
   const char *arg = request->argument;
   char *buffer = request->buffer;
@@ -361,12 +363,12 @@ char *critstatus_func(const MechStatusTextRequest *request) {
   int type;
 
   if (!arg || !*arg)
-    return status_text(buffer, "#-1 INVALID SECTION");
+    return status_text(buffer, "#-1 INVALID SECTION", false);
 
   index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
                                     arg);
   if (index == -1 || !mech_section_original_internal(mech, index))
-    return status_text(buffer, "#-1 INVALID SECTION");
+    return status_text(buffer, "#-1 INVALID SECTION", false);
 
   buffer[0] = '\0';
   max_crits = crits_in_loc(mech, index);
@@ -400,10 +402,10 @@ char *critstatus_func(const MechStatusTextRequest *request) {
       category = 5;
     append_status(buffer, MBUF_SIZE, "|%d", category);
   }
-  return buffer;
+  return (BtechTextResult){.text = buffer, .success = true};
 }
 
-char *armorstatus_func(const MechStatusTextRequest *request) {
+BtechTextResult armorstatus_func(const MechStatusTextRequest *request) {
   Mech *mech = request->mech;
   const char *arg = request->argument;
   char *buffer = request->buffer;
@@ -416,7 +418,7 @@ char *armorstatus_func(const MechStatusTextRequest *request) {
   int totint;
 
   if (!arg || !*arg)
-    return status_text(buffer, "#-1 INVALID SECTION");
+    return status_text(buffer, "#-1 INVALID SECTION", false);
 
   if (strcmp(arg, "all") == 0) {
     locs = proper_section_string_from_type(mech_class(mech),
@@ -437,13 +439,13 @@ char *armorstatus_func(const MechStatusTextRequest *request) {
     buffer[0] = '\0';
     (void)snprintf(buffer, MBUF_SIZE, "%d/%d|%d/%d", curarm, totarm, curint,
                    totint);
-    return buffer;
+    return (BtechTextResult){.text = buffer, .success = true};
   }
 
   index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
                                     arg);
   if (index == -1 || !mech_section_original_internal(mech, index))
-    return status_text(buffer, "#-1 INVALID SECTION");
+    return status_text(buffer, "#-1 INVALID SECTION", false);
 
   buffer[0] = '\0';
   (void)snprintf(buffer, MBUF_SIZE, "%d/%d|%d/%d|%d/%d",
@@ -453,7 +455,7 @@ char *armorstatus_func(const MechStatusTextRequest *request) {
                  mech_section_original_internal(mech, index),
                  mech_section_rear_armor(mech, index),
                  mech_section_original_rear_armor(mech, index));
-  return buffer;
+  return (BtechTextResult){.text = buffer, .success = true};
 }
 
 /* weaponstatus_func. Returns a string containing:
@@ -477,7 +479,7 @@ char *armorstatus_func(const MechStatusTextRequest *request) {
         2 - weapon destroyed/flooded
 */
 
-char *weaponstatus_func(const MechStatusTextRequest *request) {
+BtechTextResult weaponstatus_func(const MechStatusTextRequest *request) {
   Mech *mech = request->mech;
   const char *arg = request->argument;
   char *buffer = request->buffer;
@@ -494,12 +496,12 @@ char *weaponstatus_func(const MechStatusTextRequest *request) {
   if (!arg) {
     sect = -1;
   } else if (!*arg) {
-    return status_text(buffer, "#-1 INVALID SECTION");
+    return status_text(buffer, "#-1 INVALID SECTION", false);
   } else {
     sect = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
                                      arg);
     if (sect == -1 || !mech_section_original_internal(mech, sect))
-      return status_text(buffer, "#-1 INVALID SECTION");
+      return status_text(buffer, "#-1 INVALID SECTION", false);
   }
 
   buffer[0] = '\0';
@@ -529,10 +531,10 @@ char *weaponstatus_func(const MechStatusTextRequest *request) {
                  0));
     }
   }
-  return buffer;
+  return (BtechTextResult){.text = buffer, .success = true};
 }
 
-char *critslot_func(const CriticalSlotTextRequest *request) {
+BtechTextResult critslot_func(const CriticalSlotTextRequest *request) {
   Mech *mech = request->mech;
   const char *buf_section = request->section;
   const char *buf_critnum = request->critical;
@@ -546,12 +548,12 @@ char *critslot_func(const CriticalSlotTextRequest *request) {
   index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
                                     buf_section);
   if (index == -1)
-    return status_text(buffer, "#-1 INVALID SECTION");
+    return status_text(buffer, "#-1 INVALID SECTION", false);
   if (!mech_section_original_internal(mech, index))
-    return status_text(buffer, "#-1 INVALID SECTION");
+    return status_text(buffer, "#-1 INVALID SECTION", false);
   if (!parse_int_checked(buf_critnum, &crit) || crit < 1 ||
       crit > crits_in_loc(mech, index))
-    return status_text(buffer, "#-1 INVALID CRITICAL");
+    return status_text(buffer, "#-1 INVALID CRITICAL", false);
   crit--;
   if (!buf_flag)
     flag = 0;
@@ -576,30 +578,30 @@ char *critslot_func(const CriticalSlotTextRequest *request) {
 
   if (flag == 1) {
     if (mech_critical_is_disabled(mech, index, crit))
-      return status_text(buffer, "Disabled");
+      return status_text(buffer, "Disabled", true);
     if (mech_critical_is_destroyed(mech, index, crit))
-      return status_text(buffer, "Destroyed");
-    return status_text(buffer, "Operational");
+      return status_text(buffer, "Destroyed", true);
+    return status_text(buffer, "Operational", true);
   }
   if (flag == 2) {
     (void)snprintf(buffer, MBUF_SIZE, "%d",
                    mech_critical_data(mech, index, crit));
-    return buffer;
+    return (BtechTextResult){.text = buffer, .success = true};
   }
   if (flag == 3) {
     if (!equipment_is_ammunition(type))
-      return status_text(buffer, "#-1 NOT AMMO");
+      return status_text(buffer, "#-1 NOT AMMO", false);
     (void)snprintf(buffer, MBUF_SIZE, "%d", full_ammo(mech, index, crit));
-    return buffer;
+    return (BtechTextResult){.text = buffer, .success = true};
   }
   if (flag == 4) {
     if (!equipment_is_ammunition(type))
-      return status_text(buffer, "#-1 NOT AMMO");
+      return status_text(buffer, "#-1 NOT AMMO", false);
     type = find_ammo_type(mech, index, crit);
   } else if (flag == 5) {
     int weapindex;
     if (!equipment_is_weapon(type))
-      return status_text(buffer, "#-1 NOT AMMO OR WEAPON");
+      return status_text(buffer, "#-1 NOT AMMO OR WEAPON", false);
     const int AMMO_MODE = mech_critical_ammo_mode(mech, index, crit);
     weapindex = weapon_from_equipment_index(type);
     (void)snprintf(buffer, MBUF_SIZE, "%c%c",
@@ -608,26 +610,26 @@ char *critslot_func(const CriticalSlotTextRequest *request) {
                    AMMO_MODE < 0 ? ' '
                                  : get_weapon_ammo_mode_letter_model_mode(
                                        weapindex, (unsigned int)AMMO_MODE));
-    return buffer;
+    return (BtechTextResult){.text = buffer, .success = true};
 
   } else if (flag == 6) {
     if (!equipment_is_ammunition(type))
-      return status_text(buffer, "#-1 NOT AMMO");
+      return status_text(buffer, "#-1 NOT AMMO", false);
     (void)snprintf(
         buffer, MBUF_SIZE, "%d",
         mech_critical_fire_mode(mech, index, crit) & HALFTON_MODE ? 1 : 0);
-    return buffer;
+    return (BtechTextResult){.text = buffer, .success = true};
   }
 
   if (type == EMPTY || mech_part_is_structural_placeholder(type))
-    return status_text(buffer, "Empty");
+    return status_text(buffer, "Empty", true);
   if (flag == 0) {
     type = mech_parts_alias(mech, type);
   }
   (void)snprintf(buffer, MBUF_SIZE, "%s",
                  get_parts_vlong_name(mech_context(mech), type,
                                       mech_critical_brand(mech, index, crit)));
-  return buffer;
+  return (BtechTextResult){.text = buffer, .success = true};
 }
 
 void critical_status(EvaluationContext *evaluation, DbRef player, Mech *mech,

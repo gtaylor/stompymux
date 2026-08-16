@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "btech_text_result.h"
 #include "mux/server/platform.h"
 
 #include <stdbool.h>
@@ -63,4 +64,4 @@ typedef struct PartNameDescriptionRequest {
   int packed_part;
   PartNameDescriptionFormat format;
 } PartNameDescriptionRequest;
-const char *partname_func(const PartNameDescriptionRequest *request);
+BtechTextResult partname_func(const PartNameDescriptionRequest *request);

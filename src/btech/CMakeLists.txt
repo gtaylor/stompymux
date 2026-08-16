@@ -207,6 +207,7 @@ set(BTECH_SOURCES
   repair/mechrep_construction.c
   repair/mechrep_technology.c
   scripting/functions.c
+  scripting/script_results.c
   scripting/special_command_catalog.c
   scripting/los_store_values.c
   scripting/registry_values.c

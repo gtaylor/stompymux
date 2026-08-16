@@ -1,4 +1,5 @@
 #include "ai_api.h"
+#include "btech_text_result.h"
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
@@ -139,9 +140,13 @@ void unit_parts_list(Mech *mech, char buffer[static LBUF_SIZE]) {
 
   safe_tprintf_str(buffer, &bp, "%s:%d|", internal_name, mech_intpoints(mech));
 
-  safe_tprintf_str(buffer, &bp, "%s|",
-                   payloadlist_func(mech, (char[MBUF_SIZE]){0}, MBUF_SIZE));
+  const BtechTextResult PAYLOAD =
+      payloadlist_func(mech, (char[MBUF_SIZE]){0}, MBUF_SIZE);
+  /* This formatter has no error channel, so preserve helper error text. */
+  safe_tprintf_str(buffer, &bp, "%s|", PAYLOAD.text);
 
-  safe_str(partlist_func(mech, (char[LBUF_SIZE]){0}, LBUF_SIZE), buffer, &bp);
+  const BtechTextResult PARTS =
+      partlist_func(mech, (char[LBUF_SIZE]){0}, LBUF_SIZE);
+  safe_str(PARTS.text, buffer, &bp);
   *bp = '\0';
 }

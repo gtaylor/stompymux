@@ -1,4 +1,5 @@
 #include "btech/context.h"
+#include "btech_text_result.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "coolmenu.h"
 #include "equipment_types.h"
@@ -85,7 +86,7 @@ void dump_weapons(BtechContext *context, DbRef player) {
   kill_cool_menu(c);
 }
 
-char *techlist_func(Mech *mech, char *buffer, size_t buffer_size) {
+BtechTextResult techlist_func(Mech *mech, char *buffer, size_t buffer_size) {
   char bufa[SBUF_SIZE];
   char bufb[SBUF_SIZE];
   char bufc[SBUF_SIZE];
@@ -203,13 +204,13 @@ char *techlist_func(Mech *mech, char *buffer, size_t buffer_size) {
       (void)string_append_bounded(buffer, buffer_size, " MTOW");
   }
 
-  return buffer;
+  return (BtechTextResult){.text = buffer, .success = true};
 }
 
 /* Function to return the payload of a unit
  * Used by the btpayload_ref() scode function
  * Dany - 06/2005 */
-char *payloadlist_func(Mech *mech, char *buffer, size_t buffer_size) {
+BtechTextResult payloadlist_func(Mech *mech, char *buffer, size_t buffer_size) {
 
   unsigned char weaparray[MAX_WEAPS_SECTION];
   unsigned char weapdata[MAX_WEAPS_SECTION];
@@ -326,14 +327,17 @@ char *payloadlist_func(Mech *mech, char *buffer, size_t buffer_size) {
           weapon_catalogue_name(*inventory_item_slot(payload_items, put_loop)),
           *inventory_count_slot(payload_items_count, put_loop));
     } else {
-      (void)snprintf(
-          payloadbuff, sizeof(payloadbuff), "%s:%d",
-          partname_func(&(PartNameDescriptionRequest){
-              .context = mech->xcode.context,
-              .packed_part = *inventory_item_slot(payload_items, put_loop),
-              .format = PART_NAME_DESCRIPTION_VERY_LONG,
-          }),
-          *inventory_count_slot(payload_items_count, put_loop));
+      const BtechTextResult NAME = partname_func(&(PartNameDescriptionRequest){
+          .context = mech->xcode.context,
+          .packed_part = *inventory_item_slot(payload_items, put_loop),
+          .format = PART_NAME_DESCRIPTION_VERY_LONG,
+      });
+      if (!NAME.success) {
+        (void)string_copy_bounded(buffer, buffer_size, NAME.text);
+        return (BtechTextResult){.text = buffer, .success = false};
+      }
+      (void)snprintf(payloadbuff, sizeof(payloadbuff), "%s:%d", NAME.text,
+                     *inventory_count_slot(payload_items_count, put_loop));
     }
 
     /* If we are not at the end, then put a | as a spacer */
@@ -346,11 +350,11 @@ char *payloadlist_func(Mech *mech, char *buffer, size_t buffer_size) {
 
   } /* End of printing loop */
 
-  return buffer;
+  return (BtechTextResult){.text = buffer, .success = true};
 }
 
 // Borrowed from payload_func
-char *partlist_func(Mech *mech, char *buffer, size_t buffer_size) {
+BtechTextResult partlist_func(Mech *mech, char *buffer, size_t buffer_size) {
 
   int temp_crit;
 
@@ -497,12 +501,16 @@ char *partlist_func(Mech *mech, char *buffer, size_t buffer_size) {
       (void)string_append_bounded(buffer, buffer_size, partlistbuff);
       break;
     default:
-      (void)snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d",
-                     partname_func(&(PartNameDescriptionRequest){
-                         .context = mech->xcode.context,
-                         .packed_part = part,
-                         .format = PART_NAME_DESCRIPTION_VERY_LONG,
-                     }),
+      const BtechTextResult NAME = partname_func(&(PartNameDescriptionRequest){
+          .context = mech->xcode.context,
+          .packed_part = part,
+          .format = PART_NAME_DESCRIPTION_VERY_LONG,
+      });
+      if (!NAME.success) {
+        (void)string_copy_bounded(buffer, buffer_size, NAME.text);
+        return (BtechTextResult){.text = buffer, .success = false};
+      }
+      (void)snprintf(partlistbuff, sizeof(partlistbuff), "%s:%d", NAME.text,
                      count_for_part);
 
       /* If we are not at the end, then put a | as a spacer */
@@ -523,5 +531,5 @@ char *partlist_func(Mech *mech, char *buffer, size_t buffer_size) {
     (void)string_append_bounded(buffer, buffer_size, partlistbuff);
   }
 
-  return buffer;
+  return (BtechTextResult){.text = buffer, .success = true};
 }

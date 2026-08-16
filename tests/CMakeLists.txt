@@ -313,6 +313,20 @@ target_include_directories(btech_script_descriptors_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_script_descriptors COMMAND btech_script_descriptors_test)
 
+add_executable(btech_script_results_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_script_results.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/scripting/script_results.c
+  ${CMAKE_SOURCE_DIR}/src/mux/support/checked_storage.c
+  ${CMAKE_SOURCE_DIR}/src/mux/support/stringutil.c)
+target_compile_options(btech_script_results_test PRIVATE -ffunction-sections)
+target_link_options(btech_script_results_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_script_results_test PRIVATE btmux_options)
+target_include_directories(btech_script_results_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_script_results COMMAND btech_script_results_test)
+
 add_executable(btech_techlist_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_techlist.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/template_inventory.c)

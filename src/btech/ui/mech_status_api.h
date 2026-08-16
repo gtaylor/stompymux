@@ -1,5 +1,6 @@
 /* Declares the BattleTech unit status API. */
 
+#include "btech_text_result.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 
@@ -95,11 +96,11 @@ typedef struct CriticalSlotTextRequest {
   char *buffer;
 } CriticalSlotTextRequest;
 
-char *critstatus_func(const MechStatusTextRequest *request);
-char *sectstatus_func(const MechStatusTextRequest *request);
-char *armorstatus_func(const MechStatusTextRequest *request);
-char *weaponstatus_func(const MechStatusTextRequest *request);
-char *critslot_func(const CriticalSlotTextRequest *request);
+BtechTextResult critstatus_func(const MechStatusTextRequest *request);
+BtechTextResult sectstatus_func(const MechStatusTextRequest *request);
+BtechTextResult armorstatus_func(const MechStatusTextRequest *request);
+BtechTextResult weaponstatus_func(const MechStatusTextRequest *request);
+BtechTextResult critslot_func(const CriticalSlotTextRequest *request);
 void critical_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
                      int index);
 const char *evaluate_ammo_amount(int now, int max);

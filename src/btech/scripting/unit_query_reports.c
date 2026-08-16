@@ -1,4 +1,5 @@
 #include "btech_event.h"
+#include "btech_text_result.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "mech_consistency_api.h"
 #include "mech_status_api.h"
@@ -30,29 +31,27 @@ BtechScriptResult fun_bttechlist(BtechScriptCall *call) {
   [[maybe_unused]] const DbRef PLAYER = call->player;
   DbRef it;
   Mech *mech;
-  char *infostr;
+  BtechTextResult info;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   it = match_thing(&context->command->match, PLAYER,
                    script_function_argument(fargs, NFARGS, 0));
   if (it == NOTHING || !is_examinable(context->world->database, PLAYER, it)) {
-    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 NOT A MECH");
   }
   if (!btech_context_is_mech(context->btech, it)) {
-    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 NOT A MECH");
   }
   mech = btech_context_find_object(context->btech, it);
   if (!mech) {
-    safe_tprintf_str(buff, bufc, "#-1");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1");
   }
-  infostr = techlist_func(mech, (char[MBUF_SIZE]){0}, MBUF_SIZE);
-  safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : " ");
+  info = techlist_func(mech, (char[MBUF_SIZE]){0}, MBUF_SIZE);
+  if (!info.success)
+    return btech_script_error(call, info.text);
+  safe_tprintf_str(buff, bufc, "%s", info.text);
 
   return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }
@@ -67,21 +66,21 @@ BtechScriptResult fun_bttechlist_ref(BtechScriptCall *call) {
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
   [[maybe_unused]] const DbRef PLAYER = call->player;
   Mech *mech;
-  char *infostr;
+  BtechTextResult info;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   mech =
       load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (mech == nullptr) {
-    safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 NO SUCH MECH");
   }
 
-  infostr = techlist_func(mech, (char[MBUF_SIZE]){0}, MBUF_SIZE);
-  safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1");
+  info = techlist_func(mech, (char[MBUF_SIZE]){0}, MBUF_SIZE);
+  if (!info.success)
+    return btech_script_error(call, info.text);
+  safe_tprintf_str(buff, bufc, "%s", info.text);
 
   return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }
@@ -100,21 +99,21 @@ BtechScriptResult fun_btpayload_ref(BtechScriptCall *call) {
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
   [[maybe_unused]] const DbRef PLAYER = call->player;
   Mech *mech;
-  char *infostr;
+  BtechTextResult info;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   mech =
       load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (mech == nullptr) {
-    safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 NO SUCH MECH");
   }
 
-  infostr = payloadlist_func(mech, (char[MBUF_SIZE]){0}, MBUF_SIZE);
-  safe_tprintf_str(buff, bufc, "%s", infostr ? infostr : "#-1");
+  info = payloadlist_func(mech, (char[MBUF_SIZE]){0}, MBUF_SIZE);
+  if (!info.success)
+    return btech_script_error(call, info.text);
+  safe_tprintf_str(buff, bufc, "%s", info.text);
 
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
@@ -132,22 +131,19 @@ BtechScriptResult fun_btshowstatus_ref(BtechScriptCall *call) {
   Mech *mech;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   mech =
       load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (mech == nullptr) {
-    safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 NO SUCH MECH");
   }
   outplayer = match_thing(&context->command->match, PLAYER,
                           script_function_argument(fargs, NFARGS, 1));
   if (outplayer == NOTHING ||
       !is_examinable(context->world->database, PLAYER, outplayer) ||
       !is_player(context->btech->database, outplayer)) {
-    safe_tprintf_str(buff, bufc, "#-1");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1");
   }
 
   mech_status(outplayer, (void *)mech, "R");
@@ -169,22 +165,19 @@ BtechScriptResult fun_btshowwspecs_ref(BtechScriptCall *call) {
   Mech *mech;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   mech =
       load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (mech == nullptr) {
-    safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 NO SUCH MECH");
   }
   outplayer = match_thing(&context->command->match, PLAYER,
                           script_function_argument(fargs, NFARGS, 1));
   if (outplayer == NOTHING ||
       !is_examinable(context->world->database, PLAYER, outplayer) ||
       !is_player(context->btech->database, outplayer)) {
-    safe_tprintf_str(buff, bufc, "#-1");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1");
   }
 
   mech_weaponspecs(outplayer, (void *)mech, "");
@@ -206,22 +199,19 @@ BtechScriptResult fun_btshowcritstatus_ref(BtechScriptCall *call) {
   Mech *mech;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   mech =
       load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (mech == nullptr) {
-    safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 NO SUCH MECH");
   }
   outplayer = match_thing(&context->command->match, PLAYER,
                           script_function_argument(fargs, NFARGS, 1));
   if (outplayer == NOTHING ||
       !is_examinable(context->world->database, PLAYER, outplayer) ||
       !is_player(context->btech->database, outplayer)) {
-    safe_tprintf_str(buff, bufc, "#-1");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1");
   }
 
   mech_critstatus(outplayer, (void *)mech,
@@ -244,24 +234,20 @@ BtechScriptResult fun_btengrate(BtechScriptCall *call) {
   Mech *mech;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   mechdb = match_thing(&context->command->match, PLAYER,
                        script_function_argument(fargs, NFARGS, 0));
   if (mechdb == NOTHING ||
       !is_examinable(context->world->database, PLAYER, mechdb)) {
-    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 NOT A MECH");
   }
   if (!btech_context_is_mech(context->btech, mechdb)) {
-    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 NOT A MECH");
   }
   mech = btech_context_get_mech(context->btech, mechdb);
   if (!mech) {
-    safe_tprintf_str(buff, bufc, "#-1");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1");
   }
 
   safe_tprintf_str(buff, bufc, "%d %d", mech_engine_rating(mech),
@@ -282,14 +268,12 @@ BtechScriptResult fun_btengrate_ref(BtechScriptCall *call) {
   Mech *mech;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   mech =
       load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (!mech) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID REF");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 INVALID REF");
   }
 
   safe_tprintf_str(buff, bufc, "%d %d", mech_engine_rating(mech),
@@ -310,14 +294,12 @@ BtechScriptResult fun_btfasabasecost_ref(BtechScriptCall *call) {
   Mech *mech;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   mech =
       load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (!mech) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID REF");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 INVALID REF");
   }
 
   safe_tprintf_str(buff, bufc, "%llu", mech_fasa_cost(mech));
@@ -338,14 +320,12 @@ BtechScriptResult fun_btunitpartslist_ref(BtechScriptCall *call) {
   char parts[LBUF_SIZE];
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   mech =
       load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (!mech) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID REF");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 INVALID REF");
   }
 
   unit_parts_list(mech, parts);
@@ -369,24 +349,20 @@ BtechScriptResult fun_btunitpartslist(BtechScriptCall *call) {
   char parts[LBUF_SIZE];
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   mechdb = match_thing(&context->command->match, PLAYER,
                        script_function_argument(fargs, NFARGS, 0));
   if (mechdb == NOTHING ||
       !is_examinable(context->world->database, PLAYER, mechdb)) {
-    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 NOT A MECH");
   }
   if (!btech_context_is_mech(context->btech, mechdb)) {
-    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 NOT A MECH");
   }
   mech = btech_context_get_mech(context->btech, mechdb);
   if (!mech) {
-    safe_tprintf_str(buff, bufc, "#-1");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1");
   }
 
   unit_parts_list(mech, parts);

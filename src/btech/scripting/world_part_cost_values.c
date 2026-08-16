@@ -25,15 +25,11 @@ static PartMatchResult cost_part_match(BtechScriptCall *call) {
 
 BtechScriptResult fun_btgetpartcost(BtechScriptCall *call) {
   if (!is_wizard(call->evaluation->world->database, call->player)) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   const PartMatchResult MATCH = cost_part_match(call);
   if (!MATCH.found) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 INVALID PART NAME");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 INVALID PART NAME");
   }
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%llu",
                    btech_part_cost_get(call->evaluation->btech, MATCH.part.id));
@@ -42,15 +38,11 @@ BtechScriptResult fun_btgetpartcost(BtechScriptCall *call) {
 
 BtechScriptResult fun_btsetpartcost(BtechScriptCall *call) {
   if (!is_wizard(call->evaluation->world->database, call->player)) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   const PartMatchResult MATCH = cost_part_match(call);
   if (!MATCH.found) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 INVALID PART NAME");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID PART NAME");
   }
   const char *cost_text = script_function_argument(
       call->arguments.values, (int)call->arguments.count, 1);
@@ -58,9 +50,7 @@ BtechScriptResult fun_btsetpartcost(BtechScriptCall *call) {
   errno = 0;
   const unsigned long long COST = strtoull(cost_text, &cost_end, 10);
   if (errno == ERANGE || cost_end == cost_text || *cost_end != '\0') {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 COST ERROR");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 COST ERROR");
   }
   btech_part_cost_set(call->evaluation->btech, MATCH.part.id, COST);
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%llu", COST);

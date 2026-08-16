@@ -463,23 +463,19 @@ BtechScriptResult fun_btgetcharvalue(BtechScriptCall *call) {
       .name = function_argument(fargs, NFARGS, 0),
   });
   if (target == NOTHING) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 INVALID TARGET");
   }
   if (!is_wizard(context->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED!");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 PERMISSION DENIED!");
   }
   const char *value_name = function_argument(fargs, NFARGS, 1);
   if (!parse_int_checked(value_name, &targetcode))
     targetcode = char_getvaluecode(context, value_name);
   if (targetcode < 0 || targetcode >= NUM_CHARVALUES) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 INVALID VALUE");
   }
   if (!parse_int_checked(function_argument(fargs, NFARGS, 2), &flaggo)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID FLAG");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 INVALID FLAG");
   }
   if (character_value_definition(targetcode)->type == CHAR_SKILL &&
       flaggo == 4) {
@@ -541,31 +537,26 @@ BtechScriptResult fun_btsetcharvalue(BtechScriptCall *call) {
       .name = function_argument(fargs, NFARGS, 0),
   });
   if (target == NOTHING) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID TARGET");
   }
   if (!is_wizard(context->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED!");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 PERMISSION DENIED!");
   }
   const char *value_name = function_argument(fargs, NFARGS, 1);
   if (!parse_int_checked(value_name, &targetcode))
     targetcode = char_getvaluecode(context, value_name);
   if (targetcode < 0 || targetcode >= NUM_CHARVALUES) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID VALUE");
   }
   if (!parse_int_checked(function_argument(fargs, NFARGS, 2), &targetvalue) ||
       !parse_int_checked(function_argument(fargs, NFARGS, 3), &flaggo)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID VALUE");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID VALUE");
   }
 
   /* We supposedly have everything at hand.. */
   if (flaggo) {
     if (character_value_definition(targetcode)->type != CHAR_SKILL) {
-      safe_tprintf_str(buff, bufc, "#-1 ONLY SKILLS CAN HAVE FLAG");
-      return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+      return btech_script_error(call, "#-1 ONLY SKILLS CAN HAVE FLAG");
     }
   }
   switch (flaggo) {
@@ -690,7 +681,7 @@ BtechScriptResult fun_btcharlist(BtechScriptCall *call) {
                                      nullptr};
 
   if (!argument_count_in_range("BTCHARLIST", NFARGS, 1, 2, buff, bufc))
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error_output(call);
 
   if (NFARGS == 2) {
     target = character_lookup(&(CharacterLookupRequest){
@@ -699,8 +690,8 @@ BtechScriptResult fun_btcharlist(BtechScriptCall *call) {
         .name = function_argument(fargs, NFARGS, 1),
     });
     if (target == NOTHING) {
-      safe_str("#-1 FUNCTION (BTCHARLIST) INVALID TARGET", buff, bufc);
-      return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+      return btech_script_error(call,
+                                "#-1 FUNCTION (BTCHARLIST) INVALID TARGET");
     }
   }
 
@@ -715,8 +706,7 @@ BtechScriptResult fun_btcharlist(BtechScriptCall *call) {
     type = CHAR_ATTRIBUTE;
     break;
   default:
-    safe_str("#-1 FUNCTION (BTCHARLIST) INVALID VALUE", buff, bufc);
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 FUNCTION (BTCHARLIST) INVALID VALUE");
   }
 
   for (i = 0; i < NUM_CHARVALUES; ++i) {

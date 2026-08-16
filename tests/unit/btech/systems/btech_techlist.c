@@ -56,8 +56,9 @@ int main(void) {
   /* Avoid the biped towing checks so this test isolates tech-list appends. */
   mech.ud.type = CLASS_MECH;
   mech.ud.move = MOVE_QUAD;
-  if (techlist_func(&mech, buffer, sizeof(buffer)) != buffer) {
-    fputs("techlist_func returned a different buffer\n", stderr);
+  const BtechTextResult RESULT = techlist_func(&mech, buffer, sizeof(buffer));
+  if (!RESULT.success || RESULT.text != buffer) {
+    fputs("techlist_func returned an invalid result\n", stderr);
     return 1;
   }
   if (strstr(buffer, " AXE") == nullptr) {
