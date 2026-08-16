@@ -587,6 +587,15 @@ target_include_directories(commac_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME commac COMMAND commac_test)
 
+add_executable(speech_format_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/communication/speech_format.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/communication/speech_format.c)
+target_link_libraries(speech_format_test PRIVATE btmux_options)
+target_include_directories(speech_format_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME speech_format COMMAND speech_format_test)
+
 add_executable(btech_persistence_schema_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/contracts/btech_persistence_schema.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/persistence/schema.c)

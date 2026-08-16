@@ -37,6 +37,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/communication/channel_presence.c
   ${MUX_MODULE_DIR}/communication/channel_administration.c
   ${MUX_MODULE_DIR}/communication/speech.c
+  ${MUX_MODULE_DIR}/communication/speech_format.c
   ${MUX_MODULE_DIR}/communication/page_recipients.c
   ${MUX_MODULE_DIR}/communication/page_commands.c
   ${MUX_MODULE_DIR}/communication/pemit_commands.c
