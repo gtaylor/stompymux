@@ -26,7 +26,8 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
         mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 3:
-        result.critical = true;
+        hitloc = ROTOR;
+        mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 4:
       case 5:
@@ -64,7 +65,8 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
         mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 3:
-        result.critical = true;
+        hitloc = ROTOR;
+        mech_vtol_rotor_destroyed_critical_apply(mech, nullptr, 1);
         break;
       case 4:
       case 5:
@@ -145,6 +147,9 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
       case 3:
       case 4:
       case 5:
+      case 6:
+      case 7:
+      case 8:
         hitloc = LSIDE;
         break;
       case 9:
@@ -186,6 +191,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
       case 6:
       case 7:
       case 8:
+      case 9:
         hitloc = RSIDE;
         break;
       case 10:
@@ -217,11 +223,7 @@ HitLocationResult fasa_vtol_naval_hit_location(Mech *mech, int hit_group,
           result.critical = true;
         break;
       case 3:
-        hitloc = side;
-        break;
       case 4:
-        hitloc = side;
-        break;
       case 5:
         hitloc = side;
         break;
