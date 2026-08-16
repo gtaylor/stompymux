@@ -143,10 +143,12 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
        ((mech_movement_type(mech) == MOVE_HOVER) &&
         (mech_position_z(mech) == 0)));
   underwater = mech_is_in_water(mech) && (pos_z < 0.0F);
+  const bool TARGET_IS_ICE_SURFACE =
+      (!target && !underwater &&
+       map_real_terrain_get(map, X, Y) == BATTLE_TERRAIN_ICE) != 0;
 
   /* Ice hex targeting special case */
-  if (!target && !underwater &&
-      map_real_terrain_get(map, X, Y) == BATTLE_TERRAIN_ICE)
+  if (TARGET_IS_ICE_SURFACE)
     end_z = 0.0;
 
   if (target) {
@@ -275,7 +277,8 @@ int mech_los_calculate_flags(const MechLosCalculation *calculation) {
           }
         }
         /* make this the new 'current hex' */
-        if (HEIGHT_AS_FLOAT >= pos_z && terrain != BATTLE_TERRAIN_BRIDGE) {
+        if (HEIGHT_AS_FLOAT >= pos_z && terrain != BATTLE_TERRAIN_BRIDGE &&
+            !(TARGET_IS_ICE_SURFACE && i == coordcount - 1)) {
           new_flag |= BATTLE_MAP_LOS_BLOCKED;
           return new_flag;
         }

@@ -34,6 +34,9 @@ btech.hex_line_of_sight( unit, x, y )
 
 This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error.
 
+An overwater observer can trace LOS to an ice target hex at the ice surface;
+ice still contributes its normal water-terrain effect to the LOS result.
+
 ## See Also
 
 - [`btech`](../)

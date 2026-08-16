@@ -131,8 +131,8 @@ void battle_map_los_observer_clear(BattleMap *map, int observer_index) {
 }
 
 int los_map_hex_index(const HexLosMap *map_info, int x, int y) {
-  if (x < map_info->startx || x > map_info->startx + map_info->xsize ||
-      y < map_info->starty || y > map_info->starty + map_info->ysize) {
+  if (x < map_info->startx || x >= map_info->startx + map_info->xsize ||
+      y < map_info->starty || y >= map_info->starty + map_info->ysize) {
     btech_channel_send(map_info->context, BTECH_CHANNEL_MECH_ERRORS,
                        "LOSMap request from out of bounds hex: %d,%d", x, y);
     return 0;
@@ -508,14 +508,14 @@ static void trace_maphexlos(const MapHexTraceRequest *request) {
   HexLosMap *los_map = request->los_map;
   BattleMap *map = request->map;
   Mech *mech = request->mech;
-  SensorTraceState states[MAX_SENSORS] = {
-      {.trace_water = request->trace_water,
-       .minimum_angle = default_minimum_angle(mech, 0),
-       .block_angle = default_minimum_angle(mech, 0)},
-      {.trace_water = request->trace_water,
-       .minimum_angle = default_minimum_angle(mech, 1),
-       .block_angle = default_minimum_angle(mech, 1)},
-  };
+  SensorTraceState states[MAX_SENSORS];
+  for (int sensor = 0; sensor < MAX_SENSORS; ++sensor) {
+    const float MINIMUM_ANGLE = default_minimum_angle(mech, sensor);
+    *sensor_trace_state(states, sensor) =
+        (SensorTraceState){.trace_water = request->trace_water,
+                           .minimum_angle = MINIMUM_ANGLE,
+                           .block_angle = MINIMUM_ANGLE};
+  }
   int trace_range = 0;
 
   int trace_coordnum =

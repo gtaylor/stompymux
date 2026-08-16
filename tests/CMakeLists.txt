@@ -171,6 +171,7 @@ add_test(NAME btech_los_trace COMMAND btech_los_trace_test)
 set_tests_properties(btech_los_trace PROPERTIES LABELS los)
 
 add_executable(btech_los_geometry_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/sensors/btech_los_geometry.c
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/sensors/btech_los_fixture.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/sensors/los_trace.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/sensors/mech_los.c)
 target_compile_options(btech_los_geometry_test PRIVATE -ffunction-sections)
@@ -183,6 +184,37 @@ target_include_directories(btech_los_geometry_test PRIVATE
   "${CMAKE_SOURCE_DIR}/tests")
 add_test(NAME btech_los_geometry COMMAND btech_los_geometry_test)
 set_tests_properties(btech_los_geometry PROPERTIES LABELS los)
+
+add_executable(btech_los_terrain_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/sensors/btech_los_terrain.c
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/sensors/btech_los_fixture.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/sensors/los_trace.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/sensors/mech_los.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map/map_los.c)
+target_compile_options(btech_los_terrain_test PRIVATE -ffunction-sections)
+target_link_options(btech_los_terrain_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_los_terrain_test PRIVATE btmux_options m)
+target_include_directories(btech_los_terrain_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src"
+  "${CMAKE_SOURCE_DIR}/tests")
+add_test(NAME btech_los_terrain COMMAND btech_los_terrain_test)
+set_tests_properties(btech_los_terrain PROPERTIES LABELS los)
+
+add_executable(btech_los_hexmap_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/sensors/btech_los_hexmap.c
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/sensors/btech_los_fixture.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/sensors/los_trace.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map/map_los.c)
+target_compile_options(btech_los_hexmap_test PRIVATE -ffunction-sections)
+target_link_options(btech_los_hexmap_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_los_hexmap_test PRIVATE btmux_options m)
+target_include_directories(btech_los_hexmap_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src"
+  "${CMAKE_SOURCE_DIR}/tests")
+add_test(NAME btech_los_hexmap COMMAND btech_los_hexmap_test)
+set_tests_properties(btech_los_hexmap PROPERTIES LABELS los)
 
 add_executable(btech_los_sensors_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/sensors/btech_los_sensors.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/sensors/mech_sensor_functions.c

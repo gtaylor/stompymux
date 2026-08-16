@@ -3,13 +3,17 @@ title = "Line-of-sight testing"
 weight = 35
 +++
 
-The line-of-sight (LOS) regression suite is split into four CTest targets so a
+The line-of-sight (LOS) regression suite is split into seven CTest targets so a
 failure identifies the affected layer:
 
 * `btech_los_trace` checks hex traversal, tie-breaking, and bounded exhaustive
   path invariants.
 * `btech_los_geometry` checks unit eye heights, interpolated elevation,
   partial cover, terrain flags, range, altitude, and the water/air interface.
+* `btech_los_terrain` checks water, ice, terrain-count, and cached-LOS wrapper
+  behavior on a synthetic map.
+* `btech_los_hexmap` checks terrain-aware LOS-map tracing, lighting, and
+  map-hex bounds handling.
 * `btech_los_sensors` checks sensor range and contact rules, ECM and signature
   systems, seismic movement, radar clearance, and sensor to-hit modifiers.
 * `btech_los_maps` traces representative corridors on flat, mountainous, and
@@ -21,7 +25,8 @@ Run only this suite with:
 
 ```sh
 cmake --build .build --target btech_los_trace_test btech_los_geometry_test \
-  btech_los_sensors_test btech_los_maps_test btech_los_cache_test
+  btech_los_terrain_test btech_los_hexmap_test btech_los_sensors_test \
+  btech_los_maps_test btech_los_cache_test
 ctest --test-dir .build -L los --output-on-failure
 ```
 

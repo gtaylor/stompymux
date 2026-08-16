@@ -1,204 +1,119 @@
+/*
+ * mech_los_actual_elevation geometry scenarios, covering mech_los.c:
+ * - all eye-height branches for map hexes and unit classes (59-77)
+ * - terrain, range, partial-cover, and water-world LOS calculations
+ */
+
+#include "btech_los_fixture.h"
 #include "btech_los_test.h"
 
-#include "map.h"
-#include "map_conditions_api.h"
 #include "map_los_types.h"
 #include "map_terrain.h"
-#include "map_units_api.h"
-#include "mech_classification_api.h"
-#include "mech_condition_api.h"
 #include "mech_los_api.h"
-#include "mech_position_api.h"
-#include "mech_sensor_state_api.h"
-#include "mech_specification_api.h"
-#include "mux/support/checked_storage.h"
 
 #include <math.h>
 
-enum { TEST_WIDTH = 9, TEST_HEIGHT = 9 };
-
-struct Mech {
-  int x;
-  int y;
-  int z;
-  int technology;
-  UnitClass unit_class;
-  MechMovementType movement;
-  char terrain;
-  bool fallen;
-  bool dropship;
-  MechConditionSummary condition;
-};
-
-static char terrain[TEST_HEIGHT][TEST_WIDTH];
-static char real_terrain[TEST_HEIGHT][TEST_WIDTH];
-static char elevation[TEST_HEIGHT][TEST_WIDTH];
-
-int bounded(int lower, int value, int upper);
-
-static char *cell(char values[TEST_HEIGHT][TEST_WIDTH], int x, int y) {
-  char (*row)[TEST_WIDTH] =
-      checked_storage_at(values, TEST_HEIGHT, sizeof(*values), (size_t)y);
-  return checked_storage_at(*row, TEST_WIDTH, sizeof(**row), (size_t)x);
-}
-
-int battle_map_width(const BattleMap *map) { return map->map_width; }
-int battle_map_height(const BattleMap *map) { return map->map_height; }
-int battle_map_maximum_visibility(const BattleMap *map) { return map->maxvis; }
-
-bool battle_map_coordinate_is_valid(const BattleMap *map, int x, int y) {
-  return x >= 0 && y >= 0 && x < map->map_width && y < map->map_height;
-}
-
-char map_elevation_get(const BattleMap *map [[maybe_unused]], int x, int y) {
-  return *cell(elevation, x, y);
-}
-
-int battle_map_hex_elevation(BattleMap *map [[maybe_unused]], int x, int y) {
-  int value = *cell(elevation, x, y);
-  char value_terrain = *cell(real_terrain, x, y);
-  return value_terrain == WATER || value_terrain == ICE ? -value : value;
-}
-
-char map_terrain_get(const BattleMap *map [[maybe_unused]], int x, int y) {
-  return *cell(terrain, x, y);
-}
-
-char map_real_terrain_get(BattleMap *map [[maybe_unused]], int x, int y) {
-  return *cell(real_terrain, x, y);
-}
-
-int mech_position_x(const Mech *mech) { return mech->x; }
-int mech_position_y(const Mech *mech) { return mech->y; }
-int mech_position_z(const Mech *mech) { return mech->z; }
-int mech_technology_flags(const Mech *mech) { return mech->technology; }
-UnitClass mech_class(const Mech *mech) { return mech->unit_class; }
-MechMovementType mech_movement_type(const Mech *mech) { return mech->movement; }
-bool mech_is_fallen(const Mech *mech) { return mech->fallen; }
-bool mech_is_dropship(const Mech *mech) { return mech->dropship; }
-char mech_real_terrain_get(Mech *mech) { return mech->terrain; }
-MechConditionSummary mech_condition_summary(const Mech *mech) {
-  return mech->condition;
-}
-
-int bounded(int lower, int value, int upper) {
-  if (value < lower)
-    return lower;
-  return value > upper ? upper : value;
-}
-
-static void reset_map(BattleMap *map) {
-  *map = (BattleMap){
-      .map_width = TEST_WIDTH, .map_height = TEST_HEIGHT, .maxvis = 60};
-  for (int y = 0; y < TEST_HEIGHT; ++y) {
-    for (int x = 0; x < TEST_WIDTH; ++x) {
-      *cell(terrain, x, y) = GRASSLAND;
-      *cell(real_terrain, x, y) = GRASSLAND;
-      *cell(elevation, x, y) = 0;
-    }
-  }
-}
-
-static Mech make_mech(int x, int y, int z) {
-  return (Mech){.x = x,
-                .y = y,
-                .z = z,
-                .unit_class = CLASS_MECH,
-                .movement = MOVE_BIPED,
-                .terrain = GRASSLAND};
-}
-
-static int flags_between(BattleMap *map, Mech *observer, Mech *target) {
-  return mech_los_calculate_flags(&(MechLosCalculation){
-      .observer = observer,
-      .target = target,
-      .map = map,
-      .target_hex = {.x = target->x, .y = target->y},
-      .hex_range = 2.0F,
-  });
-}
-
 static void test_unit_heights(LosTestState *state, BattleMap *map) {
-  Mech unit = make_mech(0, 0, 3);
+  los_fixture_set_hex(0, 0, GRASSLAND, GRASSLAND, 3);
+  Mech unit = los_fixture_make_mech(0, 0, 3);
+  /* Null-map fallback at mech_los.c:61-62. */
+  los_expect_true(state, "null map elevation is zero",
+                  fabsf(mech_los_actual_elevation(nullptr, 0, 0, &unit)) <
+                      0.001F);
+  /* Hex-target elevation at mech_los.c:63-66. */
+  los_expect_true(state, "hex target elevation includes surface offset",
+                  fabsf(mech_los_actual_elevation(map, 0, 0, nullptr) - 3.1F) <
+                      0.001F);
+  /* Standing mech eye height at mech_los.c:67-68. */
   los_expect_true(state, "standing mech height",
                   fabsf(mech_los_actual_elevation(map, 0, 0, &unit) - 4.5F) <
                       0.001F);
   unit.fallen = true;
+  /* Fallen mech default height at mech_los.c:76-77. */
   los_expect_true(state, "fallen mech height",
                   fabsf(mech_los_actual_elevation(map, 0, 0, &unit) - 3.5F) <
                       0.001F);
   unit.unit_class = CLASS_VEH_GROUND;
   unit.movement = MOVE_NONE;
+  /* Emplacement eye height at mech_los.c:69-70. */
   los_expect_true(state, "emplacement height",
                   fabsf(mech_los_actual_elevation(map, 0, 0, &unit) - 4.5F) <
                       0.001F);
   unit.movement = MOVE_TRACK;
   unit.condition.dug_in = true;
+  /* Dug-in eye height at mech_los.c:74-75. */
   los_expect_true(state, "dug-in height",
                   fabsf(mech_los_actual_elevation(map, 0, 0, &unit) - 3.1F) <
                       0.001F);
   unit.condition.dug_in = false;
   unit.dropship = true;
   unit.unit_class = CLASS_DS;
+  /* Aerodyne DropShip eye height at mech_los.c:71-73. */
   los_expect_true(state, "dropship height",
                   fabsf(mech_los_actual_elevation(map, 0, 0, &unit) - 5.5F) <
+                      0.001F);
+  unit.unit_class = CLASS_SPHEROID_DS;
+  /* Spheroid DropShip eye height at mech_los.c:71-73. */
+  los_expect_true(state, "spheroid dropship height",
+                  fabsf(mech_los_actual_elevation(map, 0, 0, &unit) - 7.5F) <
+                      0.001F);
+  unit.dropship = false;
+  unit.unit_class = CLASS_VEH_GROUND;
+  /* Default vehicle eye height at mech_los.c:76-77. */
+  los_expect_true(state, "default vehicle height",
+                  fabsf(mech_los_actual_elevation(map, 0, 0, &unit) - 3.5F) <
                       0.001F);
 }
 
 static void test_elevation_and_partial_cover(LosTestState *state,
                                              BattleMap *map) {
-  Mech observer = make_mech(2, 2, 0);
-  Mech target = make_mech(2, 4, 0);
-  int flags = flags_between(map, &observer, &target);
+  Mech observer = los_fixture_make_mech(2, 2, 0);
+  Mech target = los_fixture_make_mech(2, 4, 0);
+  int flags = los_fixture_flags(map, &observer, &target);
   los_expect_true(state, "clear terrain is not blocked",
                   !(flags & BATTLE_MAP_LOS_BLOCKED));
 
-  *cell(elevation, 2, 3) = 2;
-  flags = flags_between(map, &observer, &target);
+  los_fixture_set_hex(2, 3, GRASSLAND, GRASSLAND, 2);
+  flags = los_fixture_flags(map, &observer, &target);
   los_expect_true(state, "ridge blocks sight line",
                   flags & BATTLE_MAP_LOS_BLOCKED);
-  *cell(elevation, 2, 3) = 1;
-  flags = flags_between(map, &observer, &target);
+  los_fixture_set_hex(2, 3, GRASSLAND, GRASSLAND, 1);
+  flags = los_fixture_flags(map, &observer, &target);
   los_expect_true(state, "one-level ridge grants partial cover",
                   !(flags & BATTLE_MAP_LOS_BLOCKED) &&
                       (flags & BATTLE_MAP_LOS_PARTIAL_COVER));
   target.fallen = true;
-  flags = flags_between(map, &observer, &target);
+  flags = los_fixture_flags(map, &observer, &target);
   los_expect_true(state, "fallen target cannot receive partial cover",
                   !(flags & BATTLE_MAP_LOS_PARTIAL_COVER));
 }
 
 static void test_terrain_flags(LosTestState *state, BattleMap *map) {
-  Mech observer = make_mech(2, 2, 0);
-  Mech target = make_mech(2, 6, 0);
-  *cell(terrain, 2, 3) = LIGHT_FOREST;
-  *cell(real_terrain, 2, 3) = LIGHT_FOREST;
-  *cell(terrain, 2, 4) = HEAVY_FOREST;
-  *cell(real_terrain, 2, 4) = HEAVY_FOREST;
-  int flags = flags_between(map, &observer, &target);
+  Mech observer = los_fixture_make_mech(2, 2, 0);
+  Mech target = los_fixture_make_mech(2, 6, 0);
+  los_fixture_set_hex(2, 3, LIGHT_FOREST, LIGHT_FOREST, 0);
+  los_fixture_set_hex(2, 4, HEAVY_FOREST, HEAVY_FOREST, 0);
+  int flags = los_fixture_flags(map, &observer, &target);
   los_expect_int(state, "woods points accumulate", 3,
                  battle_map_los_wood_count(flags));
 
-  *cell(terrain, 2, 3) = SMOKE;
-  *cell(real_terrain, 2, 3) = GRASSLAND;
-  *cell(terrain, 2, 4) = FIRE;
-  *cell(real_terrain, 2, 4) = GRASSLAND;
-  flags = flags_between(map, &observer, &target);
+  los_fixture_set_hex(2, 3, SMOKE, GRASSLAND, 0);
+  los_fixture_set_hex(2, 4, FIRE, GRASSLAND, 0);
+  flags = los_fixture_flags(map, &observer, &target);
   los_expect_true(state, "smoke is recorded", flags & BATTLE_MAP_LOS_SMOKE);
   los_expect_true(state, "fire is recorded", flags & BATTLE_MAP_LOS_FIRE);
 
-  *cell(terrain, 2, 3) = MOUNTAINS;
-  *cell(real_terrain, 2, 3) = MOUNTAINS;
-  *cell(terrain, 2, 4) = GRASSLAND;
-  flags = flags_between(map, &observer, &target);
+  los_fixture_set_hex(2, 3, MOUNTAINS, MOUNTAINS, 0);
+  los_fixture_set_hex(2, 4, GRASSLAND, GRASSLAND, 0);
+  flags = los_fixture_flags(map, &observer, &target);
   los_expect_true(state, "mountains are recorded",
                   flags & BATTLE_MAP_LOS_MOUNTAIN);
 }
 
 static void test_range_and_vertical_worlds(LosTestState *state,
                                            BattleMap *map) {
-  Mech observer = make_mech(2, 2, 0);
-  Mech target = make_mech(2, 4, 0);
+  Mech observer = los_fixture_make_mech(2, 2, 0);
+  Mech target = los_fixture_make_mech(2, 4, 0);
   int flags = mech_los_calculate_flags(&(MechLosCalculation){
       .observer = &observer,
       .target = &target,
@@ -211,21 +126,21 @@ static void test_range_and_vertical_worlds(LosTestState *state,
 
   observer.z = 11;
   target.z = 12;
-  *cell(elevation, 2, 3) = 9;
-  flags = flags_between(map, &observer, &target);
+  los_fixture_set_hex(2, 3, GRASSLAND, GRASSLAND, 9);
+  flags = los_fixture_flags(map, &observer, &target);
   los_expect_true(state, "high-altitude units bypass ground terrain",
                   !(flags & BATTLE_MAP_LOS_BLOCKED));
 
-  reset_map(map);
-  observer = make_mech(2, 2, -2);
-  target = make_mech(2, 4, 0);
+  los_fixture_reset(map);
+  observer = los_fixture_make_mech(2, 2, -2);
+  target = los_fixture_make_mech(2, 4, 0);
   observer.terrain = WATER;
   target.terrain = WATER;
-  flags = flags_between(map, &observer, &target);
+  flags = los_fixture_flags(map, &observer, &target);
   los_expect_true(state, "water-air interface blocks submerged observer",
                   flags & BATTLE_MAP_LOS_BLOCKED);
   observer.z = -1;
-  flags = flags_between(map, &observer, &target);
+  flags = los_fixture_flags(map, &observer, &target);
   los_expect_true(state, "half-submerged mech sees both worlds",
                   !(flags & BATTLE_MAP_LOS_BLOCKED));
 }
@@ -233,13 +148,13 @@ static void test_range_and_vertical_worlds(LosTestState *state,
 int main(void) {
   BattleMap map;
   LosTestState state = {0};
-  reset_map(&map);
+  los_fixture_reset(&map);
   test_unit_heights(&state, &map);
-  reset_map(&map);
+  los_fixture_reset(&map);
   test_elevation_and_partial_cover(&state, &map);
-  reset_map(&map);
+  los_fixture_reset(&map);
   test_terrain_flags(&state, &map);
-  reset_map(&map);
+  los_fixture_reset(&map);
   test_range_and_vertical_worlds(&state, &map);
   return los_test_result(&state);
 }
