@@ -231,7 +231,6 @@ static int dropship_find_single_adjacent_bay(Mech *mech, DbRef *ref,
 }
 
 static void mech_enterbay_event(MuxEvent *e) {
-  char message_buffer[128];
   Mech *mech = (Mech *)e->data;
   Mech *ds;
   Mech *tmpm = nullptr;
@@ -274,6 +273,13 @@ static void mech_enterbay_event(MuxEvent *e) {
   }
   if (mech_carried_dbref(mech) > 0)
     tmpm = btech_context_get_mech(context, mech_carried_dbref(mech));
+  Mech *const UNITS[] = {mech, tmpm};
+  const MechMapSetBatchRequest MAP_PLACEMENT = {
+      .mechs = UNITS, .count = tmpm ? 2 : 1, .map = ref};
+  if (mech_map_index_preflight_batch(&MAP_PLACEMENT) != MECH_MAP_SET_OK) {
+    mech_notify(mech, MECHALL, "Unable to enter: unit placement failed.");
+    return;
+  }
   const ObjectMovementRequest MOVEMENTS[] = {
       {.evaluation = btech_context_evaluation(context),
        .object = mech_dbref(mech),
@@ -296,16 +302,19 @@ static void mech_enterbay_event(MuxEvent *e) {
                       mech_display_id(ds).text, mech_position_x(mech),
                       mech_position_y(mech));
   mark_for_los_update(mech);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", ref);
-  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", x, y);
-  mech_rsetxy(GOD, (void *)mech, message_buffer);
+  if (mech_map_index_set_batch(&MAP_PLACEMENT) != MECH_MAP_SET_OK ||
+      !mech_position_set(
+          &(MechPositionSetRequest){.mech = mech, .x = x, .y = y})) {
+    mech_notify(mech, MECHALL, "Unable to enter: unit placement failed.");
+    return;
+  }
   mech_los_broadcast(mech, "has entered the bay.");
   if (tmpm) {
-    (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", ref);
-    mech_rsetmapindex(GOD, (void *)tmpm, message_buffer);
-    (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", x, y);
-    mech_rsetxy(GOD, (void *)tmpm, message_buffer);
+    if (!mech_position_set(
+            &(MechPositionSetRequest){.mech = tmpm, .x = x, .y = y})) {
+      mech_notify(tmpm, MECHALL, "Unable to enter: unit placement failed.");
+      return;
+    }
   }
 }
 
@@ -552,7 +561,6 @@ static void dropship_place_departing_unit(Mech *ds, Mech *mech, DbRef frombay) {
 
 static bool dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
                                DbRef frombay) {
-  char message_buffer[128];
   Mech *car = nullptr;
   BtechContext *context = mech_context(mech);
   const DbRef DESTINATION = mech_map_dbref(ds);
@@ -562,6 +570,13 @@ static bool dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
   if (DESTINATION == battle_map_dbref(map)) {
     mech_notify(mech, MECHALL,
                 "Fatal error: Unable to find the map 'ship is on.");
+    return false;
+  }
+  Mech *const UNITS[] = {mech, car};
+  const MechMapSetBatchRequest MAP_PLACEMENT = {
+      .mechs = UNITS, .count = car ? 2 : 1, .map = DESTINATION};
+  if (mech_map_index_preflight_batch(&MAP_PLACEMENT) != MECH_MAP_SET_OK) {
+    mech_notify(mech, MECHALL, "Unable to leave: unit placement failed.");
     return false;
   }
   const ObjectMovementRequest MOVEMENTS[] = {
@@ -583,11 +598,11 @@ static bool dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
   bsuit_swarmers_stop(btech_context_find_object(context, mech_map_dbref(mech)),
                       mech, 1);
   mech_los_broadcast(mech, "has left the bay.");
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", DESTINATION);
   /* We escape confines of the bay to open air/land! */
-  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
-  if (car)
-    mech_rsetmapindex(GOD, (void *)car, message_buffer);
+  if (mech_map_index_set_batch(&MAP_PLACEMENT) != MECH_MAP_SET_OK) {
+    mech_notify(mech, MECHALL, "Unable to leave: unit placement failed.");
+    return false;
+  }
   mech_notify(mech, MECHALL, "You have left the bay.");
   dropship_place_departing_unit(ds, mech, frombay);
   if (car) {

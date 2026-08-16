@@ -19,7 +19,6 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
 #include "mux/support/formatting.h"
 #include "mux/support/stringutil.h"
 #include "part_cost_api.h"
@@ -31,7 +30,6 @@
 #include "weapon_settings.h"
 #include <errno.h>
 #include <limits.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -186,7 +184,6 @@ BtechScriptResult fun_btsetxy(BtechScriptCall *call) {
   Mech *mech;
   Mech *towee = nullptr;
   BattleMap *map;
-  char buffer[MBUF_SIZE];
   if (NFARGS < 4 || NFARGS > 5) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID ARGUMENT");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
@@ -250,18 +247,21 @@ BtechScriptResult fun_btsetxy(BtechScriptCall *call) {
   }
   if (mech_carried_dbref(mech) > 0)
     towee = btech_context_get_mech(context->btech, mech_carried_dbref(mech));
-  (void)snprintf(buffer, MBUF_SIZE, "%ld", mapdb);
-  mech_rsetmapindex(GOD, (void *)mech, buffer);
-  if (towee)
-    mech_rsetmapindex(GOD, (void *)towee, buffer);
-  if (NFARGS == 5) {
-    (void)snprintf(buffer, MBUF_SIZE, "%d %d %d", x, y, z);
-  } else {
-    (void)snprintf(buffer, MBUF_SIZE, "%d %d", x, y);
+  Mech *const UNITS[] = {mech, towee};
+  const MechMapSetBatchRequest MAP_PLACEMENT = {
+      .mechs = UNITS, .count = towee ? 2 : 1, .map = mapdb};
+  if (mech_map_index_set_batch(&MAP_PLACEMENT) != MECH_MAP_SET_OK) {
+    safe_tprintf_str(buff, bufc, "#-1 MAP PLACEMENT FAILED");
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
-  mech_rsetxy(GOD, (void *)mech, buffer);
-  if (towee)
-    mech_rsetxy(GOD, (void *)towee, buffer);
+  if (!mech_position_set(&(MechPositionSetRequest){
+          .mech = mech, .x = x, .y = y, .z = z, .has_z = NFARGS == 5}) ||
+      (towee != nullptr &&
+       !mech_position_set(&(MechPositionSetRequest){
+           .mech = towee, .x = x, .y = y, .z = z, .has_z = NFARGS == 5}))) {
+    safe_tprintf_str(buff, bufc, "#-1 POSITION PLACEMENT FAILED");
+    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+  }
   safe_tprintf_str(buff, bufc, "1");
   return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 }

@@ -50,8 +50,13 @@
 #include "registry_api.h"
 #include "section_types.h"
 
+static void destroy_failed_suit(BtechContext *context,
+                                EvaluationContext *evaluation, DbRef suit) {
+  btech_special_object_flag_changed(context, GOD, suit, true, false);
+  destroy_thing(evaluation, suit);
+}
+
 void mech_embark(DbRef player, void *data, char *buffer) {
-  char message_buffer[128];
 
   Mech *mech = (Mech *)data;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
@@ -425,21 +430,21 @@ void mech_embark(DbRef player, void *data, char *buffer) {
    * whatever its towing */
   if (towee && mech_carried_dbref(mech) > 0) {
     mark_for_los_update(towee);
-    (void)snprintf(message_buffer, sizeof(message_buffer), "%d", (-1));
-    mech_rsetmapindex(GOD, (void *)towee, message_buffer);
-    (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", 0, 0);
-    mech_rsetxy(GOD, (void *)towee, message_buffer);
+    if (mech_map_index_set(towee, -1, nullptr) != MECH_MAP_SET_OK) {
+      mech_notify(mech, MECHALL, "Unable to embark: unit placement failed.");
+      return;
+    }
     mech_cargo_space_remove(target, mech_tonnage(towee) * 100);
     mech_power_down(towee);
     mech_carried_dbref_set(mech, -1);
     mech_towed_clear(towee);
   }
 
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%d", (-1));
   /* Now handle the unit itself */
-  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", 0, 0);
-  mech_rsetxy(GOD, (void *)mech, message_buffer);
+  if (mech_map_index_set(mech, -1, nullptr) != MECH_MAP_SET_OK) {
+    mech_notify(mech, MECHALL, "Unable to embark: unit placement failed.");
+    return;
+  }
   mech_cargo_space_remove(target, mech_tonnage(mech) * 100);
   mech_power_down(mech);
 
@@ -475,7 +480,7 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
                        "Unable to create special obj for #%ld's ejection.",
                        player);
-    destroy_thing(evaluation, suit);
+    destroy_failed_suit(mech_context(mech), evaluation, suit);
     mecha_notify(evaluation, player,
                  "Sorry, something serious went wrong, contact a Wizard "
                  "(can't create RS object)");
@@ -487,10 +492,20 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
         mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
         "Unable to load mechwarrior template for #%ld's ejection. (%s)", player,
         (!d || !*d) ? "Default template" : d);
-    destroy_thing(evaluation, suit);
+    destroy_failed_suit(mech_context(mech), evaluation, suit);
     mecha_notify(evaluation, player,
                  "Sorry, something serious went wrong, contact a Wizard "
                  "(can't load MWTemplate)");
+    return;
+  }
+  silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
+  mech_team_set(m, mech_team(mech));
+  if (mech_map_index_set(m, mech_map_dbref(mech), nullptr) != MECH_MAP_SET_OK ||
+      !mech_position_set(&(MechPositionSetRequest){
+          .mech = m, .x = mech_position_x(mech), .y = mech_position_y(mech)})) {
+    destroy_failed_suit(mech_context(mech), evaluation, suit);
+    mecha_notify(evaluation, player,
+                 "Unable to eject because unit placement failed.");
     return;
   }
   const ObjectMovementRequest MOVEMENTS[] = {
@@ -508,22 +523,11 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
   if (!move_via_teleport_batch(&(ObjectTeleportBatchRequest){
           .movements = MOVEMENTS,
           .count = sizeof(MOVEMENTS) / sizeof(*MOVEMENTS)})) {
-    destroy_thing(evaluation, suit);
+    destroy_failed_suit(mech_context(mech), evaluation, suit);
     mecha_notify(evaluation, player,
                  "Unable to eject because teleportation was denied.");
     return;
   }
-  silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
-  mech_team_set(m, mech_team(mech));
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
-                 mech_map_dbref(mech));
-  mech_rsetmapindex(GOD, (void *)m, message_buffer);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d",
-                 mech_position_x(mech), mech_position_y(mech));
-  mech_rsetxy(GOD, (void *)m, message_buffer);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%d", mech_team(mech));
-  mech_rsetteam(GOD, (void *)m, message_buffer);
-
   /* Init the sucker */
   s_in_character(database, suit);
   initialize_pc(player, m);

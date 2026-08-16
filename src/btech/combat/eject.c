@@ -136,6 +136,12 @@ static bool move_player_into_unit(EvaluationContext *evaluation, DbRef player,
       .movements = MOVEMENTS, .count = sizeof(MOVEMENTS) / sizeof(*MOVEMENTS)});
 }
 
+static void destroy_failed_suit(BtechContext *context,
+                                EvaluationContext *evaluation, DbRef suit) {
+  btech_special_object_flag_changed(context, GOD, suit, true, false);
+  destroy_thing(evaluation, suit);
+}
+
 void discard_mw(Mech *mech) {
   if (is_in_character(btech_context_database(mech_context(mech)),
                       mech_dbref(mech)))
@@ -229,7 +235,7 @@ static void char_eject(DbRef player, Mech *mech) {
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
                        "Unable to create special obj for #%ld's ejection.",
                        player);
-    destroy_thing(evaluation, suit);
+    destroy_failed_suit(mech_context(mech), evaluation, suit);
     mecha_notify(evaluation, player,
                  "Sorry, something serious went wrong, contact a Wizard "
                  "(can't create RS object)");
@@ -241,28 +247,28 @@ static void char_eject(DbRef player, Mech *mech) {
         mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
         "Unable to load mechwarrior template for #%ld's ejection. (%s)", player,
         (!d || !*d) ? "Default template" : d);
-    destroy_thing(evaluation, suit);
+    destroy_failed_suit(mech_context(mech), evaluation, suit);
     mecha_notify(evaluation, player,
                  "Sorry, something serious went wrong, contact a Wizard "
                  "(can't load MWTemplate)");
     return;
   }
+  silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
+  mech_team_set(m, mech_team(mech));
+  if (mech_map_index_set(m, mech_map_dbref(mech), nullptr) != MECH_MAP_SET_OK ||
+      !mech_position_set(&(MechPositionSetRequest){
+          .mech = m, .x = mech_position_x(mech), .y = mech_position_y(mech)})) {
+    destroy_failed_suit(mech_context(mech), evaluation, suit);
+    mecha_notify(evaluation, player,
+                 "Unable to eject because unit placement failed.");
+    return;
+  }
   if (!move_player_into_unit(evaluation, player, suit, mech_map_dbref(mech))) {
-    destroy_thing(evaluation, suit);
+    destroy_failed_suit(mech_context(mech), evaluation, suit);
     mecha_notify(evaluation, player,
                  "Unable to eject because teleportation was denied.");
     return;
   }
-  silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
-  mech_team_set(m, mech_team(mech));
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
-                 mech_map_dbref(mech));
-  mech_rsetmapindex(GOD, (void *)m, message_buffer);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d",
-                 mech_position_x(mech), mech_position_y(mech));
-  mech_rsetxy(GOD, (void *)m, message_buffer);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%d", mech_team(mech));
-  mech_rsetteam(GOD, (void *)m, message_buffer);
   mech_los_broadcastf(m, "ejected from %s!", mech_display_id(mech).text);
   s_in_character(database, suit);
   initialize_pc(player, m);
@@ -383,7 +389,7 @@ static void char_disembark(DbRef player, Mech *mech) {
     btech_channel_send(
         mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
         "Unable to create special obj for #%ld's disembarkation.", player);
-    destroy_thing(evaluation, suit);
+    destroy_failed_suit(mech_context(mech), evaluation, suit);
     mecha_notify(evaluation, player,
                  "Sorry, something serious went wrong, contact a Wizard "
                  "(can't create RS object)");
@@ -395,29 +401,29 @@ static void char_disembark(DbRef player, Mech *mech) {
                        "Unable to load mechwarrior template for #%ld's "
                        "disembarkation. (%s)",
                        player, (!d || !*d) ? "Default template" : d);
-    destroy_thing(evaluation, suit);
+    destroy_failed_suit(mech_context(mech), evaluation, suit);
     mecha_notify(evaluation, player,
                  "Sorry, something serious went wrong, contact a Wizard "
                  "(can't load MWTemplate)");
     return;
   }
+  silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
+  mech_team_set(m, mech_team(mech));
+  if (mech_map_index_set(m, mech_map_dbref(mech), nullptr) != MECH_MAP_SET_OK ||
+      !mech_position_set(&(MechPositionSetRequest){
+          .mech = m, .x = mech_position_x(mech), .y = mech_position_y(mech)})) {
+    destroy_failed_suit(mech_context(mech), evaluation, suit);
+    mecha_notify(evaluation, player,
+                 "Unable to disembark because unit placement failed.");
+    return;
+  }
   if (!move_player_into_unit(evaluation, player, suit, mech_map_dbref(mech))) {
-    destroy_thing(evaluation, suit);
+    destroy_failed_suit(mech_context(mech), evaluation, suit);
     mecha_notify(evaluation, player,
                  "Unable to disembark because teleportation was denied.");
     return;
   }
-  silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
-  mech_team_set(m, mech_team(mech));
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
-                 mech_map_dbref(mech));
-  mech_rsetmapindex(GOD, (void *)m, message_buffer);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d",
-                 mech_position_x(mech), mech_position_y(mech));
-  mech_rsetxy(GOD, (void *)m, message_buffer);
   mech_position_hex_z_set(m, mech_position_z(mech));
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%d", mech_team(mech));
-  mech_rsetteam(GOD, (void *)m, message_buffer);
   s_in_character(database, suit);
   initialize_pc(player, m);
   mech_pilot_dbref_set(m, player);
@@ -585,6 +591,19 @@ void mech_udisembark(DbRef player, void *data,
                  "Major map error possible. Prolly should contact a wizard.");
     return;
   }
+  Mech *const UNITS[] = {mech};
+  const MechMapSetBatchRequest MAP_PLACEMENT = {
+      .mechs = UNITS, .count = 1, .map = DESTINATION};
+  if (mech_map_index_preflight_batch(&MAP_PLACEMENT) != MECH_MAP_SET_OK ||
+      !mech_map_position_is_valid(
+          &(MechMapPositionRequest){.context = mech_context(mech),
+                                    .map = DESTINATION,
+                                    .x = mech_position_x(target),
+                                    .y = mech_position_y(target)})) {
+    mecha_notify(evaluation, player,
+                 "Unable to disembark because unit placement failed.");
+    return;
+  }
   /* Teleport loudly so native enter events and other messages run. */
   if (!move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
                                                   .object = mech_dbref(mech),
@@ -596,11 +615,15 @@ void mech_udisembark(DbRef player, void *data,
   }
 
   /* Carry out the BattleTech side of the disembarking. */
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", DESTINATION);
-  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d",
-                 mech_position_x(target), mech_position_y(target));
-  mech_rsetxy(GOD, (void *)mech, message_buffer);
+  if (mech_map_index_set_batch(&MAP_PLACEMENT) != MECH_MAP_SET_OK ||
+      !mech_position_set(
+          &(MechPositionSetRequest){.mech = mech,
+                                    .x = mech_position_x(target),
+                                    .y = mech_position_y(target)})) {
+    mecha_notify(evaluation, player,
+                 "Unable to disembark because unit placement failed.");
+    return;
+  }
   mech_position_z_set(mech, mech_position_z(target));
   const int ELEVATION = mech_position_z(mech);
   mech_position_real_z_set(mech, ZSCALE * (float)ELEVATION);
