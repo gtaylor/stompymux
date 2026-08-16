@@ -331,7 +331,6 @@ foreach(subsystem IN LISTS BTECH_SUBSYSTEMS)
       PRIVATE BTECH_PERSISTENCE_TESTING=1)
   endif()
   target_include_directories(btech_${subsystem} PRIVATE
-    "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
     "${CMAKE_BINARY_DIR}"
     "${SQLite3_INCLUDE_DIRS}"
     ${BTECH_PRIVATE_INCLUDE_DIRS}

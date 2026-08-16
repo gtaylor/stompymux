@@ -148,9 +148,6 @@ set(BTECH_VERSION_STRING "${BTECH_NAME} ${PROJECT_VERSION}")
 
 configure_file(src/cmake/btmux_build_config.h.in btmux_build_config.h)
 
-configure_file(src/cmake/btmux_build_config.h.in
-               "${BTECH_SOURCE_DIR}/btmux_build_config.h")
-
 string(TIMESTAMP MUX_BUILD_DATE "%a %b %d %H:%M:%S %Z %Y")
 configure_file(src/cmake/version.h.in "${CMAKE_BINARY_DIR}/mux/server/version.h" @ONLY)
 
@@ -168,7 +165,7 @@ target_compile_options(btmux_compile_options INTERFACE
   -Wconditional-uninitialized -Wshadow-all -Wenum-enum-conversion
   -Wcast-function-type-strict -Walloca
   -Wunreachable-code-break -Wunreachable-code-return -Wextra-semi-stmt
-  -Wformat-signedness -Wcomma
+  -Wformat-signedness -Wcomma -Wshadow-header
   -Wbad-function-cast -Wswitch-enum -Wimplicit-fallthrough -Wunused-macros -Wfloat-equal -Wpedantic
   -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings -Wconversion -Wunsafe-buffer-usage
   -Wsign-conversion>)

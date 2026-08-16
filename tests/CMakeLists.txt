@@ -1,5 +1,4 @@
 set(AUTOPILOT_TEST_INCLUDE_DIRECTORIES
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -135,7 +134,6 @@ add_executable(btech_channel_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/b
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/core/btech_channel.c)
 target_link_libraries(btech_channel_test PRIVATE btmux_options)
 target_include_directories(btech_channel_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -147,7 +145,6 @@ add_executable(btech_event_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/bte
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/server/event_timer.c)
 target_link_libraries(btech_event_test PRIVATE btmux_options uv_a)
 target_include_directories(btech_event_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -157,7 +154,6 @@ add_executable(btech_terrain_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/b
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map/map_terrain.c)
 target_link_libraries(btech_terrain_test PRIVATE btmux_options)
 target_include_directories(btech_terrain_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -167,7 +163,6 @@ add_executable(btech_los_trace_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/sensors
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/sensors/los_trace.c)
 target_link_libraries(btech_los_trace_test PRIVATE btmux_options m)
 target_include_directories(btech_los_trace_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src"
@@ -182,7 +177,6 @@ target_compile_options(btech_los_geometry_test PRIVATE -ffunction-sections)
 target_link_options(btech_los_geometry_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_los_geometry_test PRIVATE btmux_options m)
 target_include_directories(btech_los_geometry_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src"
@@ -196,7 +190,6 @@ target_compile_options(btech_los_sensors_test PRIVATE -ffunction-sections)
 target_link_options(btech_los_sensors_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_los_sensors_test PRIVATE btmux_options m)
 target_include_directories(btech_los_sensors_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src"
@@ -208,7 +201,6 @@ add_executable(btech_los_maps_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/sensors/
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/sensors/los_trace.c)
 target_link_libraries(btech_los_maps_test PRIVATE btmux_options m)
 target_include_directories(btech_los_maps_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src"
@@ -225,7 +217,6 @@ target_compile_options(btech_los_cache_test PRIVATE -ffunction-sections)
 target_link_options(btech_los_cache_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_los_cache_test PRIVATE btmux_options m)
 target_include_directories(btech_los_cache_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src"
@@ -239,7 +230,6 @@ add_executable(btech_value_helpers_test
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/template_cargo_weights.c)
 target_link_libraries(btech_value_helpers_test PRIVATE btmux_options btmux_checked_storage)
 target_include_directories(btech_value_helpers_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -252,7 +242,6 @@ target_compile_options(btech_cargo_command_access_test PRIVATE -ffunction-sectio
 target_link_options(btech_cargo_command_access_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_cargo_command_access_test PRIVATE btmux_options m)
 target_include_directories(btech_cargo_command_access_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -265,7 +254,6 @@ target_compile_options(btech_safe_helpers_test PRIVATE -ffunction-sections)
 target_link_options(btech_safe_helpers_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_safe_helpers_test PRIVATE btmux_options)
 target_include_directories(btech_safe_helpers_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -280,7 +268,6 @@ target_compile_options(btech_caller_control_test PRIVATE -ffunction-sections)
 target_link_options(btech_caller_control_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_caller_control_test PRIVATE btmux_options)
 target_include_directories(btech_caller_control_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -291,7 +278,6 @@ add_executable(btech_formatted_notifications_test
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/ui/formatted_notifications.c)
 target_link_libraries(btech_formatted_notifications_test PRIVATE btmux_options)
 target_include_directories(btech_formatted_notifications_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -303,7 +289,6 @@ add_executable(btech_template_critical_format_test
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/template_critical_format.c)
 target_link_libraries(btech_template_critical_format_test PRIVATE btmux_options)
 target_include_directories(btech_template_critical_format_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -314,7 +299,6 @@ add_executable(btech_repair_payload_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/sy
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c)
 target_link_libraries(btech_repair_payload_test PRIVATE btmux_options)
 target_include_directories(btech_repair_payload_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -324,7 +308,6 @@ add_executable(btech_script_descriptors_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_script_descriptors.c)
 target_link_libraries(btech_script_descriptors_test PRIVATE btmux_options)
 target_include_directories(btech_script_descriptors_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -337,7 +320,6 @@ target_compile_options(btech_techlist_test PRIVATE -ffunction-sections)
 target_link_options(btech_techlist_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_techlist_test PRIVATE btmux_options)
 target_include_directories(btech_techlist_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -352,7 +334,6 @@ target_compile_options(btech_lifecycle_test PRIVATE -ffunction-sections)
 target_link_options(btech_lifecycle_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_lifecycle_test PRIVATE btmux_options)
 target_include_directories(btech_lifecycle_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -363,7 +344,6 @@ add_executable(btech_template_loader_test
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/template_loader.c)
 target_link_libraries(btech_template_loader_test PRIVATE btmux_options)
 target_include_directories(btech_template_loader_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -373,7 +353,6 @@ add_executable(btech_targeting_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/mech_targeting_state.c)
 target_link_libraries(btech_targeting_test PRIVATE btmux_options)
 target_include_directories(btech_targeting_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -385,7 +364,6 @@ add_executable(btech_operator_systems_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/mech_network_state.c)
 target_link_libraries(btech_operator_systems_test PRIVATE btmux_options)
 target_include_directories(btech_operator_systems_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -399,7 +377,6 @@ target_compile_options(btech_parts_test PRIVATE -ffunction-sections)
 target_link_options(btech_parts_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_parts_test PRIVATE btmux_options)
 target_include_directories(btech_parts_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -412,7 +389,6 @@ target_compile_options(btech_random_test PRIVATE -ffunction-sections)
 target_link_options(btech_random_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_random_test PRIVATE btmux_options)
 target_include_directories(btech_random_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -423,7 +399,6 @@ add_executable(btech_map_name_test
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map/map_name_state.c)
 target_link_libraries(btech_map_name_test PRIVATE btmux_options)
 target_include_directories(btech_map_name_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -436,7 +411,6 @@ add_executable(btech_registry_help_test
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
 target_link_libraries(btech_registry_help_test PRIVATE btmux_options)
 target_include_directories(btech_registry_help_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -452,7 +426,6 @@ target_link_options(btech_character_value_settings_test PRIVATE
   -Wl,--gc-sections)
 target_link_libraries(btech_character_value_settings_test PRIVATE btmux_options)
 target_include_directories(btech_character_value_settings_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -464,7 +437,6 @@ add_executable(btech_weapon_failure_test
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/combat/mech_weapon_failure.c)
 target_link_libraries(btech_weapon_failure_test PRIVATE btmux_options)
 target_include_directories(btech_weapon_failure_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -479,7 +451,6 @@ target_link_options(btech_ammunition_decrement_test
   PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_ammunition_decrement_test PRIVATE btmux_options)
 target_include_directories(btech_ammunition_decrement_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -495,7 +466,6 @@ target_link_options(btech_ammunition_check_test
   PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_ammunition_check_test PRIVATE btmux_options)
 target_include_directories(btech_ammunition_check_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -508,7 +478,6 @@ target_compile_options(btech_normal_to_hit_test PRIVATE -ffunction-sections)
 target_link_options(btech_normal_to_hit_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_normal_to_hit_test PRIVATE btmux_options m)
 target_include_directories(btech_normal_to_hit_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -523,7 +492,6 @@ target_compile_options(btech_damage_apply_test PRIVATE
 target_link_options(btech_damage_apply_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_damage_apply_test PRIVATE btmux_options)
 target_include_directories(btech_damage_apply_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -538,7 +506,6 @@ target_compile_options(btech_armor_section_names_test PRIVATE -ffunction-section
 target_link_options(btech_armor_section_names_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_armor_section_names_test PRIVATE btmux_options)
 target_include_directories(btech_armor_section_names_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -617,7 +584,6 @@ add_test(NAME btech_header_interfaces COMMAND btech_header_interfaces_test)
 add_executable(btech_enum_types_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/contracts/btech_enum_types.c)
 target_link_libraries(btech_enum_types_test PRIVATE btmux_options)
 target_include_directories(btech_enum_types_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -682,7 +648,6 @@ target_compile_options(unparse_object_numonly_test PRIVATE -ffunction-sections)
 target_link_options(unparse_object_numonly_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(unparse_object_numonly_test PRIVATE btmux_options)
 target_include_directories(unparse_object_numonly_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
@@ -844,7 +809,6 @@ target_link_options(character_state_adapter_test
   PRIVATE -Wl,--gc-sections)
 target_link_libraries(character_state_adapter_test PRIVATE btmux_options)
 target_include_directories(character_state_adapter_test PRIVATE
-  "${CMAKE_BINARY_DIR}/${BTECH_SOURCE_DIR}"
   "${CMAKE_BINARY_DIR}"
   ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
