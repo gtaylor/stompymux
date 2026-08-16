@@ -12,6 +12,7 @@ btmux_label_unit_topic(btech-systems btech
   btech_script_descriptors
   btech_techlist
   btech_lifecycle
+  btech_map_links
   btech_targeting
   btech_operator_systems
   btech_parts

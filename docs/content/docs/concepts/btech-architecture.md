@@ -46,6 +46,12 @@ destination and records truncation instead of writing past its capacity.
 Map files are read and written as plain text. Compressed map files are not
 supported, and BTech file handling never invokes a shell command.
 
+`UPDATELINKS` treats `BUILDLINKS` as a graph traversal. A command-scoped
+visited set ensures that each map is processed once, so cyclic or repeated
+links cannot recursively re-enter a map. A depth limit remains as a secondary
+safety backstop. The command reports link descents skipped by either guard;
+deep acyclic link chains below that limit are processed completely.
+
 Autopilot runtime events are adapters around deterministic policy operations.
 Path transitions and route construction, weapon eligibility and heat budgets,
 physical-side selection, sensor selection, and queued-order ownership can be
