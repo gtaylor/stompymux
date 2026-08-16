@@ -9,6 +9,7 @@
 #include "mech_identity_api.h"
 #include "mech_internal.h"
 #include "mech_lifecycle.h"
+#include "mech_status_types.h"
 #include "mech_targeting_api.h"
 #include "mux/server/platform.h"
 #include "template_api.h"
@@ -22,7 +23,7 @@ void mech_template_clear(Mech *mech, bool clear_communications) {
   mech->rd.swarming = -1;
   mech->rd.swarmedby = -1;
   mech_dfa_target_dbref_set(mech, -1);
-  mech->rd.status = 0;
+  mech->rd.status = MECH_STATUS_NONE;
   mech_pilot_dbref_set(mech, -1);
   mech_targeting_aim_reset(mech);
   mech_event_cancel(mech, EVENT_VEHICLEBURN);

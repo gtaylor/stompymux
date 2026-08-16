@@ -3,102 +3,164 @@
 #pragma once
 
 #include "section_types.h"
-/* status element... */
+/* The persisted status words keep their four-byte integer representation. */
 
-constexpr int LANDED = 0x00000001;        /* (a) For VTOL use only */
-constexpr int TORSO_RIGHT = 0x00000002;   /* (b) Torso heading -= 60 degrees */
-constexpr int TORSO_LEFT = 0x00000004;    /* (c) Torso heading += 60 degrees */
-constexpr int STARTED = 0x00000008;       /* (d) Mech is warmed up */
-constexpr int PARTIAL_COVER = 0x00000010; /* (e) */
-constexpr int DESTROYED = 0x00000020;     /* (f) */
-constexpr int JUMPING = 0x00000040;       /* (g) Handled in UPDATE */
-constexpr int FALLEN = 0x00000080;        /* (h) */
-constexpr int DFA_ATTACK = 0x00000100;    /* (i) */
-constexpr int PERFORMING_ACTION =
-    0x00000200; /* (j) Unit is performing an action controlled by softcode */
-constexpr int FLIPPED_ARMS = 0x00000400; /* (k) */
-constexpr int AMS_ENABLED =
-    0x00000800; /* (l) Only settable with anti-missile tech */
-constexpr int EXPLODE_SAFE =
-    0x00001000; /* (m) Prevents a unit from exploding ammunition */
-constexpr int UNCONSCIOUS = 0x00002000;   /* (n) Pilot is unconscious */
-constexpr int TOWED = 0x00004000;         /* (o) Someone's towing us */
-constexpr int LOCK_TARGET = 0x00008000;   /* (p) We mean business */
-constexpr int LOCK_BUILDING = 0x00010000; /* (q) Hit building */
-constexpr int LOCK_HEX =
-    0x00020000; /* (r) Hit hex (clear or ignite, depending on weapon) */
-constexpr int LOCK_HEX_IGN = 0x00040000; /* (s) */
-constexpr int LOCK_HEX_CLR = 0x00080000; /* (t) */
-constexpr int MASC_ENABLED = 0x00100000; /* (u) Using MASC */
-constexpr int BLINDED = 0x00200000; /* (v) Pilot has been blinded momentarily */
-constexpr int COMBAT_SAFE = 0x00400000; /* (w) Can't be hurt */
-constexpr int AUTOCON_WHEN_SHUTDOWN =
-    0x00800000;                   /* (x) Autocon sees it even when shutdown */
-constexpr int FIRED = 0x01000000; /* (y) Fired at something */
-constexpr int SCHARGE_ENABLED = 0x02000000;  /* (z) */
-constexpr int HULLDOWN = 0x04000000;         /* (A) */
-constexpr int UNDERSPECIAL = 0x08000000;     /* (B) */
-constexpr int UNDERGRAVITY = 0x10000000;     /* (C) */
-constexpr int UNDERTEMPERATURE = 0x20000000; /* (D) */
-constexpr int UNDERVACUUM = 0x40000000;      /* (E) */
-/* UNUSED                     0x80000000     (F) */
+typedef enum MechStatus : int {
+  MECH_STATUS_NONE = 0,
+  MECH_STATUS_LANDED = 0x00000001,        /* (a) For VTOL use only */
+  MECH_STATUS_TORSO_RIGHT = 0x00000002,   /* (b) Torso heading -= 60 degrees */
+  MECH_STATUS_TORSO_LEFT = 0x00000004,    /* (c) Torso heading += 60 degrees */
+  MECH_STATUS_STARTED = 0x00000008,       /* (d) Mech is warmed up */
+  MECH_STATUS_PARTIAL_COVER = 0x00000010, /* (e) */
+  MECH_STATUS_DESTROYED = 0x00000020,     /* (f) */
+  MECH_STATUS_JUMPING = 0x00000040,       /* (g) Handled in UPDATE */
+  MECH_STATUS_FALLEN = 0x00000080,        /* (h) */
+  MECH_STATUS_DFA_ATTACK = 0x00000100,    /* (i) */
+  MECH_STATUS_PERFORMING_ACTION =
+      0x00000200, /* (j) Unit is performing an action controlled by softcode */
+  MECH_STATUS_FLIPPED_ARMS = 0x00000400, /* (k) */
+  MECH_STATUS_AMS_ENABLED =
+      0x00000800, /* (l) Only settable with anti-missile tech */
+  MECH_STATUS_EXPLODE_SAFE =
+      0x00001000, /* (m) Prevents a unit from exploding ammunition */
+  MECH_STATUS_UNCONSCIOUS = 0x00002000,   /* (n) Pilot is unconscious */
+  MECH_STATUS_TOWED = 0x00004000,         /* (o) Someone's towing us */
+  MECH_STATUS_LOCK_TARGET = 0x00008000,   /* (p) We mean business */
+  MECH_STATUS_LOCK_BUILDING = 0x00010000, /* (q) Hit building */
+  MECH_STATUS_LOCK_HEX =
+      0x00020000, /* (r) Hit hex (clear or ignite, depending on weapon) */
+  MECH_STATUS_LOCK_HEX_IGN = 0x00040000, /* (s) */
+  MECH_STATUS_LOCK_HEX_CLR = 0x00080000, /* (t) */
+  MECH_STATUS_MASC_ENABLED = 0x00100000, /* (u) Using MASC */
+  MECH_STATUS_BLINDED = 0x00200000, /* (v) Pilot has been blinded momentarily */
+  MECH_STATUS_COMBAT_SAFE = 0x00400000, /* (w) Can't be hurt */
+  MECH_STATUS_AUTOCON_WHEN_SHUTDOWN =
+      0x00800000,                 /* (x) Autocon sees it even when shutdown */
+  MECH_STATUS_FIRED = 0x01000000, /* (y) Fired at something */
+  MECH_STATUS_SCHARGE_ENABLED = 0x02000000,  /* (z) */
+  MECH_STATUS_HULLDOWN = 0x04000000,         /* (A) */
+  MECH_STATUS_UNDERSPECIAL = 0x08000000,     /* (B) */
+  MECH_STATUS_UNDERGRAVITY = 0x10000000,     /* (C) */
+  MECH_STATUS_UNDERTEMPERATURE = 0x20000000, /* (D) */
+  MECH_STATUS_UNDERVACUUM = 0x40000000,      /* (E) */
+  /* UNUSED                     0x80000000     (F) */
+  MECH_STATUS_CONDITIONS = MECH_STATUS_UNDERSPECIAL | MECH_STATUS_UNDERGRAVITY |
+                           MECH_STATUS_UNDERTEMPERATURE |
+                           MECH_STATUS_UNDERVACUUM,
+  MECH_STATUS_LOCK_MODES = MECH_STATUS_LOCK_TARGET | MECH_STATUS_LOCK_BUILDING |
+                           MECH_STATUS_LOCK_HEX | MECH_STATUS_LOCK_HEX_IGN |
+                           MECH_STATUS_LOCK_HEX_CLR,
+} MechStatus;
 
-constexpr int CONDITIONS =
-    UNDERSPECIAL | UNDERGRAVITY | UNDERTEMPERATURE | UNDERVACUUM;
-constexpr int LOCK_MODES =
-    LOCK_TARGET | LOCK_BUILDING | LOCK_HEX | LOCK_HEX_IGN | LOCK_HEX_CLR;
+typedef enum MechStatus2 : int {
+  MECH_STATUS2_NONE = 0,
+  MECH_STATUS2_ECM_ENABLED = 0x00000001,     /* (a) Unit ECM is enabled */
+  MECH_STATUS2_ECCM_ENABLED = 0x00000002,    /* (b) Unit ECCM is enabled */
+  MECH_STATUS2_ECM_DISTURBANCE = 0x00000004, /* (c) Unit affected by ECM */
+  MECH_STATUS2_ECM_PROTECTED = 0x00000008,   /* (d) Unit protected by ECM */
+  MECH_STATUS2_ECM_COUNTERED =
+      0x00000010, /* (e) ECM countered by enemy ECCM within range */
+  MECH_STATUS2_SLITE_ON = 0x00000020, /* (f) Unit SLITE is enabled */
+  MECH_STATUS2_STH_ARMOR_ON =
+      0x00000040, /* (g) Unit has steath armor enabled */
+  MECH_STATUS2_NULLSIGSYS_ON = 0x00000080, /* (h) Unit has nullsig enabled */
+  MECH_STATUS2_ANGEL_ECM_ENABLED =
+      0x00000100, /* (i) Unit Angel ECM is enabled */
+  MECH_STATUS2_ANGEL_ECCM_ENABLED =
+      0x00000200, /* (j) Unit Angel ECCM is enabled */
+  MECH_STATUS2_ANGEL_ECM_PROTECTED =
+      0x00000400, /* (k) Unit protected by Angel ECM */
+  MECH_STATUS2_ANGEL_ECM_DISTURBED =
+      0x00000800, /* (l) Unit affected by Angel ECM */
+  MECH_STATUS2_PER_ECM_ENABLED =
+      0x00001000, /* (m) Unit Personal ECM is enabled */
+  MECH_STATUS2_PER_ECCM_ENABLED =
+      0x00002000, /* (n) Unit Personal ECCM is enabled */
+  MECH_STATUS2_AUTOTURN_TURRET =
+      0x00004000, /* (o) Auto-turret enabled against locked target */
+  /* UNUSED                     0x00008000     (p) */
+  MECH_STATUS2_SPRINTING = 0x00010000, /* (q) Unit is Sprinting */
+  MECH_STATUS2_EVADING = 0x00020000,   /* (r) Unit is Evading */
+  MECH_STATUS2_DODGING = 0x00040000,   /* (s) Unit is Dodging */
+  MECH_STATUS2_ATTACKEMIT_MECH =
+      0x00080000, /* (t) Unit attacks sent to MechAttackEmits channel */
+  MECH_STATUS2_UNIT_MOUNTED =
+      0x00100000, /* (u) Unit has been mounted by a suit */
+  MECH_STATUS2_UNIT_MOUNTING =
+      0x00200000,                      /* (v) Unit is mounting another unit */
+  MECH_STATUS2_FORTIFIED = 0x00400000, /* (w) */
+  MECH_STATUS2_WEAPONS_HOLD = 0x00800000, /* (x) Unit is unable to fire */
+  MECH_STATUS2_NO_GUN_XP =
+      0x01000000, /* (y) Don't give gun xp if we fire at this */
+  /* This bit is used by the existing supercharger movement state. */
+  MECH_STATUS2_SCHARGE_ENABLED = 0x02000000,
+  /* UNUSED                     0x04000000     (A) */
+  /* UNUSED                     0x08000000     (B) */
+  /* UNUSED                     0x10000000     (C) */
+  /* UNUSED                     0x20000000     (D) */
+  /* UNUSED                     0x40000000     (E) */
+  /* UNUSED                     0x80000000     (F) */
+  MECH_STATUS2_MOVE_MODES =
+      MECH_STATUS2_SPRINTING | MECH_STATUS2_EVADING | MECH_STATUS2_DODGING,
+  MECH_STATUS2_MOVE_MODES_LOCK = MECH_STATUS2_SPRINTING | MECH_STATUS2_EVADING,
+} MechStatus2;
 
-/* status2 element */
+typedef enum MechSpecialsStatus : int {
+  MECH_SPECIALS_STATUS_NONE = 0,
+} MechSpecialsStatus;
 
-/* Specials status element */
-constexpr int ECM_ENABLED = 0x00000001;     /* (a) Unit ECM is enabled */
-constexpr int ECCM_ENABLED = 0x00000002;    /* (b) Unit ECCM is enabled */
-constexpr int ECM_DISTURBANCE = 0x00000004; /* (c) Unit affected by ECM */
-constexpr int ECM_PROTECTED = 0x00000008;   /* (d) Unit protected by ECM */
-constexpr int ECM_COUNTERED =
-    0x00000010; /* (e) ECM countered by enemy ECCM within range */
-constexpr int SLITE_ON = 0x00000020;     /* (f) Unit SLITE is enabled */
-constexpr int STH_ARMOR_ON = 0x00000040; /* (g) Unit has steath armor enabled */
-constexpr int NULLSIGSYS_ON = 0x00000080; /* (h) Unit has nullsig enabled */
-constexpr int ANGEL_ECM_ENABLED =
-    0x00000100; /* (i) Unit Angel ECM is enabled */
-constexpr int ANGEL_ECCM_ENABLED =
-    0x00000200; /* (j) Unit Angel ECCM is enabled */
-constexpr int ANGEL_ECM_PROTECTED =
-    0x00000400; /* (k) Unit protected by Angel ECM */
-constexpr int ANGEL_ECM_DISTURBED =
-    0x00000800; /* (l) Unit affected by Angel ECM */
-constexpr int PER_ECM_ENABLED =
-    0x00001000; /* (m) Unit Personal ECM is enabled */
-constexpr int PER_ECCM_ENABLED =
-    0x00002000; /* (n) Unit Personal ECCM is enabled */
-constexpr int AUTOTURN_TURRET =
-    0x00004000; /* (o) Auto-turret enabled against locked target */
-/* UNUSED                     0x00008000     (p) */
-constexpr int SPRINTING = 0x00010000; /* (q) Unit is Sprinting */
-constexpr int EVADING = 0x00020000;   /* (r) Unit is Evading */
-constexpr int DODGING = 0x00040000;   /* (s) Unit is Dodging */
-constexpr int ATTACKEMIT_MECH =
-    0x00080000; /* (t) Unit attacks sent to MechAttackEmits channel */
-constexpr int UNIT_MOUNTED =
-    0x00100000; /* (u) Unit has been mounted by a suit */
-constexpr int UNIT_MOUNTING =
-    0x00200000;                          /* (v) Unit is mounting another unit */
-constexpr int FORTIFIED = 0x00400000;    /* (w) */
-constexpr int WEAPONS_HOLD = 0x00800000; /* (x) Unit is unable to fire */
-constexpr int NO_GUN_XP =
-    0x01000000; /* (y) Don't give gun xp if we fire at this */
-/* UNUSED                     0x02000000     (z) */
-/* UNUSED                     0x04000000     (A) */
-/* UNUSED                     0x08000000     (B) */
-/* UNUSED                     0x10000000     (C) */
-/* UNUSED                     0x20000000     (D) */
-/* UNUSED                     0x40000000     (E) */
-/* UNUSED                     0x80000000     (F) */
+static inline bool mech_status_has(MechStatus status, MechStatus mask) {
+  return (((int)status & (int)mask) != 0);
+}
 
-/* Grouping masks */
-constexpr int MOVE_MODES = SPRINTING | EVADING | DODGING;
-constexpr int MOVE_MODES_LOCK = SPRINTING | EVADING;
+static inline MechStatus mech_status_mask(MechStatus status, MechStatus mask) {
+  return (MechStatus)((int)status & (int)mask);
+}
+
+static inline void mech_status_set(MechStatus *status, MechStatus mask) {
+  *status = (MechStatus)((int)*status | (int)mask);
+}
+
+static inline void mech_status_clear(MechStatus *status, MechStatus mask) {
+  *status = (MechStatus)((int)*status & ~(int)mask);
+}
+
+static inline bool mech_status2_has(MechStatus2 status, MechStatus2 mask) {
+  return (((int)status & (int)mask) != 0);
+}
+
+static inline MechStatus2 mech_status2_mask(MechStatus2 status,
+                                            MechStatus2 mask) {
+  return (MechStatus2)((int)status & (int)mask);
+}
+
+static inline void mech_status2_set(MechStatus2 *status, MechStatus2 mask) {
+  *status = (MechStatus2)((int)*status | (int)mask);
+}
+
+static inline void mech_status2_clear(MechStatus2 *status, MechStatus2 mask) {
+  *status = (MechStatus2)((int)*status & ~(int)mask);
+}
+
+static inline bool mech_specials_status_has(MechSpecialsStatus status,
+                                            MechSpecialsStatus mask) {
+  return (((int)status & (int)mask) != 0);
+}
+
+static inline MechSpecialsStatus
+mech_specials_status_mask(MechSpecialsStatus status, MechSpecialsStatus mask) {
+  return (MechSpecialsStatus)((int)status & (int)mask);
+}
+
+static inline void mech_specials_status_set(MechSpecialsStatus *status,
+                                            MechSpecialsStatus mask) {
+  *status = (MechSpecialsStatus)((int)*status | (int)mask);
+}
+
+static inline void mech_specials_status_clear(MechSpecialsStatus *status,
+                                              MechSpecialsStatus mask) {
+  *status = (MechSpecialsStatus)((int)*status & ~(int)mask);
+}
 
 /* Flags for mode handling */
 constexpr int MODE_EVADE = 0x1;
@@ -115,49 +177,120 @@ constexpr int CHECK_BOTH = CHECK_WEAPS | CHECK_PHYS;
 
 /* Macros for accessing some parts */
 
-/* critstatus element */
-constexpr int GYRO_DESTROYED = 0x00000001;         /* (a) */
-constexpr int SENSORS_DAMAGED = 0x00000002;        /* (b) */
-constexpr int TAG_DESTROYED = 0x00000004;          /* (c) */
-constexpr int HIDDEN = 0x00000008;                 /* (d) */
-constexpr int GYRO_DAMAGED = 0x00000010;           /* (e) */
-constexpr int HIP_DAMAGED = 0x00000020;            /* (f) */
-constexpr int LIFE_SUPPORT_DESTROYED = 0x00000040; /* (g) */
-constexpr int ANGEL_ECM_DESTROYED = 0x00000080;    /* (h) */
-constexpr int C3I_DESTROYED = 0x00000100;          /* (i) */
-constexpr int NSS_DESTROYED = 0x00000200;          /* (j) */
-constexpr int SLITE_DEST = 0x00000400;             /* (k) */
-constexpr int SLITE_LIT = 0x00000800;              /* (l) */
-constexpr int LOAD_OK = 0x00001000;          /* (m) Carried load recalculated */
-constexpr int OWEIGHT_OK = 0x00002000;       /* (n) Own weight recalculated */
-constexpr int SPEED_OK = 0x00004000;         /* (o) Total speed recalculated */
-constexpr int HEATCUTOFF = 0x00008000;       /* (p) */
-constexpr int TOWABLE = 0x00010000;          /* (q) */
-constexpr int HIP_DESTROYED = 0x00020000;    /* (r) */
-constexpr int TC_DESTROYED = 0x00040000;     /* (s) */
-constexpr int C3_DESTROYED = 0x00080000;     /* (t) */
-constexpr int ECM_DESTROYED = 0x00100000;    /* (u) */
-constexpr int BEAGLE_DESTROYED = 0x00200000; /* (v) */
-constexpr int JELLIED = 0x00400000;          /* (w) Got inferno gel on us */
-constexpr int PC_INITIALIZED =
-    0x00800000;                      /* (x) PC-initialization done already */
-constexpr int SPINNING = 0x01000000; /* (y) */
-constexpr int CLAIRVOYANT =
-    0x02000000; /* (z) See everything, regardless of blocked */
-constexpr int INVISIBLE = 0x04000000;    /* (A) Unable to be seen by anyone */
-constexpr int CHEAD = 0x08000000;        /* (B) Altered heading */
-constexpr int OBSERVATORIC = 0x10000000; /* (C) */
-constexpr int BLOODHOUND_DESTROYED = 0x20000000; /* (D) */
-constexpr int MECH_STUNNED = 0x40000000;         /* (E) Mech is stunned */
+typedef enum MechCritStatus : int {
+  MECH_CRIT_STATUS_NONE = 0,
+  MECH_CRIT_STATUS_GYRO_DESTROYED = 0x00000001,         /* (a) */
+  MECH_CRIT_STATUS_SENSORS_DAMAGED = 0x00000002,        /* (b) */
+  MECH_CRIT_STATUS_TAG_DESTROYED = 0x00000004,          /* (c) */
+  MECH_CRIT_STATUS_HIDDEN = 0x00000008,                 /* (d) */
+  MECH_CRIT_STATUS_GYRO_DAMAGED = 0x00000010,           /* (e) */
+  MECH_CRIT_STATUS_HIP_DAMAGED = 0x00000020,            /* (f) */
+  MECH_CRIT_STATUS_LIFE_SUPPORT_DESTROYED = 0x00000040, /* (g) */
+  MECH_CRIT_STATUS_ANGEL_ECM_DESTROYED = 0x00000080,    /* (h) */
+  MECH_CRIT_STATUS_C3I_DESTROYED = 0x00000100,          /* (i) */
+  MECH_CRIT_STATUS_NSS_DESTROYED = 0x00000200,          /* (j) */
+  MECH_CRIT_STATUS_SLITE_DEST = 0x00000400,             /* (k) */
+  MECH_CRIT_STATUS_SLITE_LIT = 0x00000800,              /* (l) */
+  MECH_CRIT_STATUS_LOAD_OK = 0x00001000,    /* (m) Carried load recalculated */
+  MECH_CRIT_STATUS_OWEIGHT_OK = 0x00002000, /* (n) Own weight recalculated */
+  MECH_CRIT_STATUS_SPEED_OK = 0x00004000,   /* (o) Total speed recalculated */
+  MECH_CRIT_STATUS_HEATCUTOFF = 0x00008000, /* (p) */
+  MECH_CRIT_STATUS_TOWABLE = 0x00010000,    /* (q) */
+  MECH_CRIT_STATUS_HIP_DESTROYED = 0x00020000,    /* (r) */
+  MECH_CRIT_STATUS_TC_DESTROYED = 0x00040000,     /* (s) */
+  MECH_CRIT_STATUS_C3_DESTROYED = 0x00080000,     /* (t) */
+  MECH_CRIT_STATUS_ECM_DESTROYED = 0x00100000,    /* (u) */
+  MECH_CRIT_STATUS_BEAGLE_DESTROYED = 0x00200000, /* (v) */
+  MECH_CRIT_STATUS_JELLIED = 0x00400000, /* (w) Got inferno gel on us */
+  MECH_CRIT_STATUS_PC_INITIALIZED =
+      0x00800000, /* (x) PC-initialization done already */
+  MECH_CRIT_STATUS_SPINNING = 0x01000000, /* (y) */
+  MECH_CRIT_STATUS_CLAIRVOYANT =
+      0x02000000, /* (z) See everything, regardless of blocked */
+  MECH_CRIT_STATUS_INVISIBLE = 0x04000000, /* (A) Unable to be seen by anyone */
+  MECH_CRIT_STATUS_CHEAD = 0x08000000,     /* (B) Altered heading */
+  MECH_CRIT_STATUS_OBSERVATORIC = 0x10000000,         /* (C) */
+  MECH_CRIT_STATUS_BLOODHOUND_DESTROYED = 0x20000000, /* (D) */
+  MECH_CRIT_STATUS_MECH_STUNNED = 0x40000000,         /* (E) Mech is stunned */
+} MechCritStatus;
 
-/* tankcritstatus element */
-constexpr int TURRET_LOCKED = 0x01;
-constexpr int TURRET_JAMMED = 0x02; /* can be fixed by player */
-constexpr int DUG_IN = 0x04;
-constexpr int DIGGING_IN = 0x08;
-constexpr int CREW_STUNNED =
-    0x10; /* Crew can only turn: no flank speed, attacks, or radio */
-constexpr int TAIL_ROTOR_DESTROYED = 0x20;
+typedef enum MechTankCritStatus : int {
+  MECH_TANK_CRIT_STATUS_NONE = 0,
+  MECH_TANK_CRIT_STATUS_TURRET_LOCKED = 0x01,
+  MECH_TANK_CRIT_STATUS_TURRET_JAMMED = 0x02, /* can be fixed by player */
+  MECH_TANK_CRIT_STATUS_DUG_IN = 0x04,
+  MECH_TANK_CRIT_STATUS_DIGGING_IN = 0x08,
+  MECH_TANK_CRIT_STATUS_CREW_STUNNED =
+      0x10, /* Crew can only turn: no flank speed, attacks, or radio */
+  MECH_TANK_CRIT_STATUS_TAIL_ROTOR_DESTROYED = 0x20,
+} MechTankCritStatus;
+
+typedef enum MechCritStatus2 : int {
+  MECH_CRIT_STATUS2_NONE = 0,
+  MECH_CRIT_STATUS2_HDGYRO_DAMAGED = 0x01, /* (a) HDGYRO is damaged */
+  MECH_CRIT_STATUS2_LIGHT_BAP_DESTROYED =
+      0x02, /* (b) LIGHT_BAP Sensor Destroyed */
+} MechCritStatus2;
+
+static inline bool mech_crit_status_has(MechCritStatus status,
+                                        MechCritStatus mask) {
+  return (((int)status & (int)mask) != 0);
+}
+
+static inline MechCritStatus mech_crit_status_mask(MechCritStatus status,
+                                                   MechCritStatus mask) {
+  return (MechCritStatus)((int)status & (int)mask);
+}
+
+static inline void mech_crit_status_set(MechCritStatus *status,
+                                        MechCritStatus mask) {
+  *status = (MechCritStatus)((int)*status | (int)mask);
+}
+
+static inline void mech_crit_status_clear(MechCritStatus *status,
+                                          MechCritStatus mask) {
+  *status = (MechCritStatus)((int)*status & ~(int)mask);
+}
+
+static inline bool mech_tank_crit_status_has(MechTankCritStatus status,
+                                             MechTankCritStatus mask) {
+  return (((int)status & (int)mask) != 0);
+}
+
+static inline MechTankCritStatus
+mech_tank_crit_status_mask(MechTankCritStatus status, MechTankCritStatus mask) {
+  return (MechTankCritStatus)((int)status & (int)mask);
+}
+
+static inline void mech_tank_crit_status_set(MechTankCritStatus *status,
+                                             MechTankCritStatus mask) {
+  *status = (MechTankCritStatus)((int)*status | (int)mask);
+}
+
+static inline void mech_tank_crit_status_clear(MechTankCritStatus *status,
+                                               MechTankCritStatus mask) {
+  *status = (MechTankCritStatus)((int)*status & ~(int)mask);
+}
+
+static inline bool mech_crit_status2_has(MechCritStatus2 status,
+                                         MechCritStatus2 mask) {
+  return (((int)status & (int)mask) != 0);
+}
+
+static inline MechCritStatus2 mech_crit_status2_mask(MechCritStatus2 status,
+                                                     MechCritStatus2 mask) {
+  return (MechCritStatus2)((int)status & (int)mask);
+}
+
+static inline void mech_crit_status2_set(MechCritStatus2 *status,
+                                         MechCritStatus2 mask) {
+  *status = (MechCritStatus2)((int)*status | (int)mask);
+}
+
+static inline void mech_crit_status2_clear(MechCritStatus2 *status,
+                                           MechCritStatus2 mask) {
+  *status = (MechCritStatus2)((int)*status & ~(int)mask);
+}
 
 /* specials element: used to tell quickly what type of tech the mech has */
 constexpr int TRIPLE_MYOMER_TECH = 0x01;
@@ -192,10 +325,6 @@ constexpr int COMPI_TECH = 0x10000000;
 constexpr int HARDA_TECH = 0x20000000;
 constexpr int CRITPROOF_TECH = 0x40000000;
 /* 0x80000000 can not be used. */
-
-/*critstatus2 element */
-constexpr int HDGYRO_DAMAGED = 0x01;      /* (a) HDGYRO is damaged */
-constexpr int LIGHT_BAP_DESTROYED = 0x02; /* (b) LIGHT_BAP Sensor Destroyed */
 
 /* specials2 element: used to tell quickly what type of tech the mech has */
 constexpr int STEALTH_ARMOR_TECH = 0x01; /* Stealth armor */

@@ -433,11 +433,11 @@ static void heat_cutoff_event(MuxEvent *e) {
   if (e->data2) {
     mech_notify(mech, MECHALL,
                 "[fg=yellow]Heat dissipation cutoff engaged![reset]");
-    ((mech)->rd.critstatus) |= HEATCUTOFF;
+    mech_crit_status_set(&mech->rd.critstatus, MECH_CRIT_STATUS_HEATCUTOFF);
   } else {
     mech_notify(mech, MECHALL,
                 "[fg=green]Heat dissipation cutoff disengaged![reset]");
-    ((mech)->rd.critstatus) &= ~(HEATCUTOFF);
+    mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_HEATCUTOFF);
   }
 }
 

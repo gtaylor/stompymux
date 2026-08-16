@@ -21,10 +21,10 @@ int main(void) {
   mech_target_dbref_set(next_unit(&mech, &evaluations), 7);
   if (evaluations != 1 || mech.rd.target != 7)
     return 1;
-  mech.rd.status = LOCK_HEX;
+  mech.rd.status = MECH_STATUS_LOCK_HEX;
   mech.rd.targx = 8;
   mech_target_dbref_set(&mech, 9);
-  if (mech.rd.status != LOCK_HEX || mech.rd.targx != 8)
+  if (mech.rd.status != MECH_STATUS_LOCK_HEX || mech.rd.targx != 8)
     return 2;
 
   mech_targeting_aim_set(
@@ -40,25 +40,27 @@ int main(void) {
       mech_targeting_computer_type(&mech) != TARGCOMP_AA)
     return 3;
 
-  mech.rd.status = STARTED | LOCK_TARGET;
+  mech.rd.status = (MechStatus)(MECH_STATUS_STARTED | MECH_STATUS_LOCK_TARGET);
   mech.rd.target = 11;
   mech.rd.targx = 12;
   mech.rd.targy = 13;
   mech.rd.targz = 14;
 
-  mech_targeting_override_begin(
-      &(MechTargetingOverrideBegin){.mech = &mech,
-                                    .override = &override,
-                                    .state = {.target = 21,
-                                              .target_x = 22,
-                                              .target_y = 23,
-                                              .target_z = 24,
-                                              .lock_modes = LOCK_HEX}});
-  if (mech.rd.status != (STARTED | LOCK_HEX) || mech.rd.target != 21 ||
-      mech.rd.targx != 22 || mech.rd.targy != 23 || mech.rd.targz != 24)
+  mech_targeting_override_begin(&(MechTargetingOverrideBegin){
+      .mech = &mech,
+      .override = &override,
+      .state = {.target = 21,
+                .target_x = 22,
+                .target_y = 23,
+                .target_z = 24,
+                .lock_modes = MECH_STATUS_LOCK_HEX}});
+  if (mech.rd.status !=
+          (MechStatus)(MECH_STATUS_STARTED | MECH_STATUS_LOCK_HEX) ||
+      mech.rd.target != 21 || mech.rd.targx != 22 || mech.rd.targy != 23 ||
+      mech.rd.targz != 24)
     return 4;
 
-  mech.rd.status = FIRED | LOCK_BUILDING;
+  mech.rd.status = (MechStatus)(MECH_STATUS_FIRED | MECH_STATUS_LOCK_BUILDING);
   mech.rd.target = 31;
   mech.rd.targx = 32;
   mech.rd.targy = 33;
@@ -71,10 +73,12 @@ int main(void) {
   lock_modes = state.lock_modes;
 
   if (target != 31 || target_x != 32 || target_y != 33 || target_z != 34 ||
-      lock_modes != LOCK_BUILDING)
+      lock_modes != MECH_STATUS_LOCK_BUILDING)
     return 5;
-  if (mech.rd.status != (STARTED | LOCK_TARGET) || mech.rd.target != 11 ||
-      mech.rd.targx != 12 || mech.rd.targy != 13 || mech.rd.targz != 14)
+  if (mech.rd.status !=
+          (MechStatus)(MECH_STATUS_STARTED | MECH_STATUS_LOCK_TARGET) ||
+      mech.rd.target != 11 || mech.rd.targx != 12 || mech.rd.targy != 13 ||
+      mech.rd.targz != 14)
     return 6;
 
   mech.rd.chgtarget = 41;

@@ -4,6 +4,7 @@
 
 #include <time.h>
 
+#include "mech_status_types.h"
 #include "mux/objects/db.h"
 #include "section_types.h"
 typedef struct {
@@ -105,14 +106,16 @@ typedef struct {
   float desired_speed;    /* Desired speed in KPH */
   float jumpspeed;        /* Jumping distance or current height in km */
 
-  int critstatus;     /* see key below */
-  int status;         /* see key below */
-  int status2;        /* see key below */
-  int specials;       /* see key below */
-  int specials2;      /* More tech specials */
-  int specialsstatus; /* status element specials, like ECM, etc... */
-  int tankcritstatus; /* status element for crits that are specific to vehicles.
-                         see key below */
+  MechCritStatus critstatus; /* see mech_status_types.h */
+  MechStatus status;         /* see mech_status_types.h */
+  MechStatus2 status2;       /* see mech_status_types.h */
+  int specials;              /* see key below */
+  int specials2;             /* More tech specials */
+  MechSpecialsStatus
+      specialsstatus; /* status element specials, like ECM, etc... */
+  MechTankCritStatus
+      tankcritstatus; /* status element for crits that are specific to vehicles.
+                         see mech_status_types.h */
 
   time_t last_weapon_recycle; /* This updated only on 'as needed' basis ;
                                  basically, all weapon recycling events
@@ -152,7 +155,7 @@ typedef struct {
   int stagger_damage;      /* Damage for Stagger MkII */
   int last_stagger_notify; /* The level that we were last notified of a stagger
                             */
-  int critstatus2;         /* Starting to fill up. More CritStatus */
+  MechCritStatus2 critstatus2; /* Starting to fill up. More CritStatus */
   float
       xpmod; /* Used to modify XP values per unit. Will default loading to 1 */
   int shots_fired;      /* Record how many shots we fired */

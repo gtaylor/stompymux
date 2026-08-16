@@ -195,7 +195,7 @@ void mech_set_target(DbRef player, Mech *mech, char *buffer) {
   int newx;
   int newy;
   DbRef targetref;
-  int mode;
+  MechStatus mode;
 
   if (!common_checks(player, mech, MECH_USUALO))
     return;
@@ -276,7 +276,7 @@ void mech_set_target(DbRef player, Mech *mech, char *buffer) {
     notify_printf(btech_context_evaluation(context), player,
                   "Target coordinates set at (X,Y) %d, %d", newx, newy);
     mech_stop_lock(mech);
-    mech_targeting_lock_mode_add(mech, LOCK_TARGET);
+    mech_targeting_lock_mode_add(mech, MECH_STATUS_LOCK_TARGET);
     if (!btech_context_overrides_weapon_arcs(context))
       mech_event_schedule(mech, EVENT_LOCK, mech_lock_event, SENSOR_LOCK_TICK,
                           0);
@@ -297,16 +297,16 @@ void mech_set_target(DbRef player, Mech *mech, char *buffer) {
     }
     switch (ascii_to_upper(*checked_string_suffix(args[2], 0))) {
     case 'B':
-      mode = LOCK_BUILDING;
+      mode = MECH_STATUS_LOCK_BUILDING;
       break;
     case 'I':
-      mode = LOCK_HEX_IGN;
+      mode = MECH_STATUS_LOCK_HEX_IGN;
       break;
     case 'C':
-      mode = LOCK_HEX_CLR;
+      mode = MECH_STATUS_LOCK_HEX_CLR;
       break;
     case 'H':
-      mode = LOCK_HEX;
+      mode = MECH_STATUS_LOCK_HEX;
       break;
     default:
       mecha_notify(btech_context_evaluation(context), player,
@@ -329,18 +329,18 @@ void mech_set_target(DbRef player, Mech *mech, char *buffer) {
     if (mech_spotter_dbref(mech) == mech_dbref(mech))
       mech_spot_clear_fire_adjustments(mech_map, mech_dbref(mech));
     mech_target_hex_z_set(mech, battle_map_hex_elevation(mech_map, newx, newy));
-    switch (mode) {
-    case LOCK_HEX:
+    switch ((int)mode) {
+    case MECH_STATUS_LOCK_HEX:
       notify_printf(btech_context_evaluation(context), player,
                     "Target coordinates set to hex at (X,Y) %d, %d", newx,
                     newy);
       break;
-    case LOCK_HEX_CLR:
+    case MECH_STATUS_LOCK_HEX_CLR:
       notify_printf(btech_context_evaluation(context), player,
                     "Target coordinates set to clearing hex at (X,Y) %d, %d",
                     newx, newy);
       break;
-    case LOCK_HEX_IGN:
+    case MECH_STATUS_LOCK_HEX_IGN:
       notify_printf(btech_context_evaluation(context), player,
                     "Target coordinates set to igniting hex at (X,Y) %d, %d",
                     newx, newy);

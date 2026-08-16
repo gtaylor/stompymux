@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mech_api_types.h"
+#include "mech_status_types.h"
 #include "section_types.h"
 
 #include <stdbool.h>
@@ -29,7 +30,7 @@ void mech_targeting_aim_set(Mech *mech, MechAimSelection selection);
 void mech_targeting_target_clear(Mech *mech);
 void mech_targeting_unit_set(Mech *mech, DbRef target);
 void mech_targeting_hex_xy_set(Mech *mech, int x, int y);
-void mech_targeting_lock_mode_add(Mech *mech, int lock_mode);
+void mech_targeting_lock_mode_add(Mech *mech, MechStatus lock_mode);
 DbRef mech_target_dbref(const Mech *mech);
 void mech_target_dbref_set(Mech *mech, DbRef target);
 DbRef mech_charge_target_dbref(const Mech *mech);
@@ -70,7 +71,7 @@ typedef struct MechTargetingState {
   int target_x;
   int target_y;
   int target_z;
-  int lock_modes;
+  MechStatus lock_modes;
 } MechTargetingState;
 
 typedef struct MechTargetingOverrideBegin {
