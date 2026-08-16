@@ -14,6 +14,7 @@
 #include "mux/lua/command_access.h"
 #include "mux/lua/lua_internal.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/lua/lua_test_runner.h"
 #include "mux/network/network_output.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
@@ -419,6 +420,98 @@ static void do_luareload(CommandInvocation *invocation) {
   free_buf(error);
 }
 
+static const char *lua_test_failure_name(LuaTestFailureKind kind) {
+  switch (kind) {
+  case LUA_TEST_FAILURE_ASSERTION:
+    return "assertion failed";
+  case LUA_TEST_FAILURE_RUNTIME:
+    return "test errored";
+  case LUA_TEST_FAILURE_BEFORE_ALL:
+    return "before_all failed";
+  case LUA_TEST_FAILURE_BEFORE_EACH:
+    return "before_each failed";
+  case LUA_TEST_FAILURE_AFTER_EACH:
+    return "after_each failed";
+  case LUA_TEST_FAILURE_AFTER_ALL:
+    return "after_all failed";
+  case LUA_TEST_FAILURE_LOAD:
+    return "module load failed";
+  case LUA_TEST_FAILURE_DEFINITION:
+    return "suite definition failed";
+  }
+  return "test failed";
+}
+
+static void do_luatest(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  LuaRuntime *runtime = invocation->context->runtime->lua_owner->runtime;
+  LuaTestRunResult *result;
+  bool run_unit = (invocation->key & LUA_COMMAND_TEST_UNIT) != 0;
+  bool run_integration = (invocation->key & LUA_COMMAND_TEST_INTEGRATION) != 0;
+  bool verbose = (invocation->key & LUA_COMMAND_TEST_VERBOSE) != 0;
+
+  if (!runtime) {
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "Lua is not initialized.", MSG_ME);
+    return;
+  }
+  result = checked_storage_try_allocate_array(1, sizeof(*result));
+  if (!result) {
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "Lua tests could not allocate a result.", MSG_ME);
+    return;
+  }
+  if (!run_unit && !run_integration) {
+    run_unit = true;
+    run_integration = true;
+  }
+  if (!lua_tests_run(&(LuaTestRunRequest){.services = runtime->services,
+                                          .filter = invocation->first,
+                                          .run_unit = run_unit,
+                                          .run_integration = run_integration},
+                     result)) {
+    notify_printf(evaluation, invocation->player,
+                  "Lua tests could not start: %s",
+                  result->error[0] ? result->error : "unknown error");
+    free(result);
+    return;
+  }
+  for (size_t index = 0; index < result->failure_count; index++) {
+    const LuaTestFailure *failure =
+        checked_storage_at_const(result->failures, result->failure_count,
+                                 sizeof(*result->failures), index);
+
+    notify_printf(evaluation, invocation->player, "%s:%s: %s: %s",
+                  failure->module_path, failure->test_name,
+                  lua_test_failure_name(failure->kind), failure->message);
+    if (failure->kind == LUA_TEST_FAILURE_ASSERTION)
+      notify_printf(evaluation, invocation->player,
+                    "  expected: %s\n  actual: %s", failure->expected,
+                    failure->actual);
+    raw_notify(evaluation, invocation->player, failure->traceback);
+  }
+  if (result->failures_truncated)
+    notify_checked(evaluation, invocation->player, invocation->player,
+                   "Additional Lua test failures were omitted.", MSG_ME);
+  if (verbose) {
+    for (size_t index = 0; index < result->pass_count; index++) {
+      const LuaTestPass *pass = checked_storage_at_const(
+          result->passes, result->pass_count, sizeof(*result->passes), index);
+
+      notify_printf(evaluation, invocation->player, "%s:%s", pass->module_path,
+                    pass->test_name);
+    }
+    if (result->passes_truncated)
+      notify_checked(evaluation, invocation->player, invocation->player,
+                     "Additional passing Lua tests were omitted.", MSG_ME);
+  }
+  notify_printf(evaluation, invocation->player,
+                "%zu passed, %zu failed, %zu errored, %zu skipped in %.2fs.",
+                result->passed, result->failed, result->errored,
+                result->skipped, result->elapsed_seconds);
+  free(result);
+}
+
 void do_lua(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
 
@@ -434,6 +527,8 @@ void do_lua(CommandInvocation *invocation) {
     raw_notify(evaluation, invocation->player,
                "  /schedule  Inspect active Lua schedules.");
     raw_notify(evaluation, invocation->player,
+               "  /test      Run isolated Lua test suites.");
+    raw_notify(evaluation, invocation->player,
                "  /viewparent Display an object Lua parent's source.");
     return;
   case LUA_COMMAND_CHECK:
@@ -447,6 +542,18 @@ void do_lua(CommandInvocation *invocation) {
     return;
   case LUA_COMMAND_SCHEDULE:
     do_luaschedule(invocation);
+    return;
+  case LUA_COMMAND_TEST:
+  case LUA_COMMAND_TEST | LUA_COMMAND_TEST_UNIT:
+  case LUA_COMMAND_TEST | LUA_COMMAND_TEST_INTEGRATION:
+  case LUA_COMMAND_TEST | LUA_COMMAND_TEST_UNIT | LUA_COMMAND_TEST_INTEGRATION:
+  case LUA_COMMAND_TEST | LUA_COMMAND_TEST_VERBOSE:
+  case LUA_COMMAND_TEST | LUA_COMMAND_TEST_UNIT | LUA_COMMAND_TEST_VERBOSE:
+  case LUA_COMMAND_TEST | LUA_COMMAND_TEST_INTEGRATION |
+      LUA_COMMAND_TEST_VERBOSE:
+  case LUA_COMMAND_TEST | LUA_COMMAND_TEST_UNIT | LUA_COMMAND_TEST_INTEGRATION |
+      LUA_COMMAND_TEST_VERBOSE:
+    do_luatest(invocation);
     return;
   case LUA_COMMAND_VIEWPARENT:
     do_luaviewparent(invocation);

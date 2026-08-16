@@ -20,6 +20,7 @@ typedef enum LuaModuleRoot : int {
   LUA_ROOT_OBJECT_LOGIC,
   LUA_ROOT_GLOBAL_LOGIC,
   LUA_ROOT_PACKAGES,
+  LUA_ROOT_TESTS,
   LUA_ROOT_COUNT,
 } LuaModuleRoot;
 
@@ -59,6 +60,7 @@ char *lua_runtime_root_slot(LuaRuntime *runtime, LuaModuleRoot root);
 LuaScheduleJob *lua_schedule_job_at(LuaRuntime *runtime, size_t index);
 
 extern const char LUA_MODULES_KEY[];
+extern const char LUA_TRACEBACK_KEY[];
 extern const char *const LUA_EVENT_NAMES[LUA_EVENT_COUNT];
 extern const char *const LUA_LOCK_NAMES[LUA_LOCK_COUNT];
 extern const char *const LUA_LOCK_OPERATION_NAMES[LUA_LOCK_OPERATION_COUNT];

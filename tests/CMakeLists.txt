@@ -1003,6 +1003,33 @@ add_test(NAME lua_module_smoke
     "${BTECH_INTEGRATION_FIXTURES}/lua_module_smoke"
     $<TARGET_FILE:lua_module_smoke_test>)
 
+set(LUA_TEST_RUNNER_FIXTURE "${CMAKE_CURRENT_BINARY_DIR}/lua_test_runner_fixture")
+file(MAKE_DIRECTORY "${LUA_TEST_RUNNER_FIXTURE}/lua/packages")
+configure_file("${CMAKE_SOURCE_DIR}/game/lua/packages/testing.lua"
+  "${LUA_TEST_RUNNER_FIXTURE}/lua/packages/testing.lua" COPYONLY)
+file(COPY "${BTECH_INTEGRATION_FIXTURES}/lua_test_runner/lua/tests"
+  DESTINATION "${LUA_TEST_RUNNER_FIXTURE}/lua")
+
+add_executable(lua_test_runner_integration_test
+  ${CMAKE_SOURCE_DIR}/tests/integration/lua_test_runner_integration.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_test_runner.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_runtime.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_module_registry.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/array_sort.c)
+target_compile_options(lua_test_runner_integration_test PRIVATE -ffunction-sections)
+target_link_options(lua_test_runner_integration_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(lua_test_runner_integration_test PRIVATE
+  btmux_options btmux_checked_storage luajit m)
+target_include_directories(lua_test_runner_integration_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  "${CMAKE_SOURCE_DIR}/src"
+  "${LUAJIT_SOURCE_DIR}/src")
+add_test(NAME lua_test_runner_integration
+  COMMAND bash "${BTECH_INTEGRATION_RUNNER}" lua-test-runner
+    "${BTECH_GAME_FIXTURE}"
+    "${LUA_TEST_RUNNER_FIXTURE}"
+    $<TARGET_FILE:lua_test_runner_integration_test>)
+
 add_executable(lua_command_access_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/content/lua_command_access.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/command_access.c)
 target_link_libraries(lua_command_access_test PRIVATE btmux_options luajit m)

@@ -27,6 +27,7 @@
 #include "mux/support/checked_storage.h"
 
 const char LUA_MODULES_KEY[] = "btmux.lua.modules";
+const char LUA_TRACEBACK_KEY[] = "btmux.lua.traceback";
 
 const char *lua_global_module_at(const LuaRuntime *runtime, size_t index) {
   return *(char *const *)checked_storage_at_const(
@@ -171,6 +172,8 @@ const char *lua_root_name(LuaModuleRoot root) {
     return "global_logic";
   case LUA_ROOT_PACKAGES:
     return "packages";
+  case LUA_ROOT_TESTS:
+    return "tests";
   case LUA_ROOT_COUNT:
   default:
     return "unknown";
@@ -242,6 +245,10 @@ static bool lua_install_sandbox(LuaRuntime *runtime) {
   size_t index;
 
   luaL_openlibs(runtime->state);
+  lua_getglobal(runtime->state, "debug");
+  lua_getfield(runtime->state, -1, "traceback");
+  lua_setfield(runtime->state, LUA_REGISTRYINDEX, LUA_TRACEBACK_KEY);
+  lua_pop(runtime->state, 1);
   if (!luaJIT_setmode(runtime->state, 0, LUAJIT_MODE_ENGINE | LUAJIT_MODE_ON))
     return false;
   for (index = 0; index < BLOCKED_COUNT; index++) {
