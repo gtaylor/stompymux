@@ -2,6 +2,7 @@
 #include "context_internal.h" // IWYU pragma: keep
 #include "mech_persistence.h"
 #include "mech_stagger.h"
+#include "mech_status_types.h"
 #include "missile_hit_registry.h"
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
@@ -32,6 +33,12 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
   MechPersistenceSnapshot snapshot;
   DbRef mech_dbref;
   int result;
+  int persisted_critstatus;
+  int persisted_status;
+  int persisted_status2;
+  int persisted_specialsstatus;
+  int persisted_tankcritstatus;
+  int persisted_critstatus2;
   int step = SQLITE_DONE;
 
   statement = nullptr;
@@ -143,19 +150,17 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
                                   &snapshot.runtime.desired_speed) < 0 ||
         btech_special_column_real(statement, 49, &snapshot.runtime.jumpspeed) <
             0 ||
-        btech_special_column_int(statement, 50, &snapshot.runtime.critstatus) <
-            0 ||
-        btech_special_column_int(statement, 51, &snapshot.runtime.status) < 0 ||
-        btech_special_column_int(statement, 52, &snapshot.runtime.status2) <
-            0 ||
+        btech_special_column_int(statement, 50, &persisted_critstatus) < 0 ||
+        btech_special_column_int(statement, 51, &persisted_status) < 0 ||
+        btech_special_column_int(statement, 52, &persisted_status2) < 0 ||
         btech_special_column_int(statement, 53, &snapshot.runtime.specials) <
             0 ||
         btech_special_column_int(statement, 54, &snapshot.runtime.specials2) <
             0 ||
-        btech_special_column_int(statement, 55,
-                                 &snapshot.runtime.specialsstatus) < 0 ||
-        btech_special_column_int(statement, 56,
-                                 &snapshot.runtime.tankcritstatus) < 0 ||
+        btech_special_column_int(statement, 55, &persisted_specialsstatus) <
+            0 ||
+        btech_special_column_int(statement, 56, &persisted_tankcritstatus) <
+            0 ||
         btech_special_column_time(statement, 57,
                                   &snapshot.runtime.last_weapon_recycle) < 0 ||
         btech_special_column_int(statement, 58,
@@ -205,8 +210,7 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
                                  &snapshot.runtime.stagger_damage) < 0 ||
         btech_special_column_int(statement, 85,
                                  &snapshot.runtime.last_stagger_notify) < 0 ||
-        btech_special_column_int(statement, 86, &snapshot.runtime.critstatus2) <
-            0 ||
+        btech_special_column_int(statement, 86, &persisted_critstatus2) < 0 ||
         btech_special_column_real(statement, 87, &snapshot.runtime.xpmod) < 0 ||
         btech_special_column_int(statement, 88, &snapshot.runtime.shots_fired) <
             0 ||
@@ -221,10 +225,20 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context) {
         btech_special_column_int(statement, 93,
                                  &snapshot.runtime.units_killed) < 0 ||
         btech_special_column_time(statement, 94,
-                                  &snapshot.runtime.last_stagger_check) < 0)
+                                  &snapshot.runtime.last_stagger_check) < 0) {
       result = -1;
-    else
+    } else {
+      /* SQLite keeps these legacy status words as plain int bit patterns. */
+      snapshot.runtime.critstatus = (MechCritStatus)persisted_critstatus;
+      snapshot.runtime.status = (MechStatus)persisted_status;
+      snapshot.runtime.status2 = (MechStatus2)persisted_status2;
+      snapshot.runtime.specialsstatus =
+          (MechSpecialsStatus)persisted_specialsstatus;
+      snapshot.runtime.tankcritstatus =
+          (MechTankCritStatus)persisted_tankcritstatus;
+      snapshot.runtime.critstatus2 = (MechCritStatus2)persisted_critstatus2;
       mech_persistence_runtime_restore(mech, &snapshot);
+    }
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;

@@ -65,10 +65,12 @@ bool is_in_weapon_arc(const WeaponArcRequest *request) {
   if (((mech)->ud.type) == CLASS_MECH &&
       (SECTION == LLEG || SECTION == RLEG ||
        (mech_is_quad(mech) && (SECTION == LARM || SECTION == RARM)))) {
-    int ts = ((mech)->rd.status) & (TORSO_LEFT | TORSO_RIGHT);
-    ((mech)->rd.status) &= ~(ts);
+    const MechStatus TS = mech_status_mask(
+        mech->rd.status,
+        (MechStatus)(MECH_STATUS_TORSO_LEFT | MECH_STATUS_TORSO_RIGHT));
+    mech_status_clear(&mech->rd.status, TS);
     weaponarc = in_weapon_arc(mech, X, Y);
-    ((mech)->rd.status) |= ts;
+    mech_status_set(&mech->rd.status, TS);
   } else {
     weaponarc = in_weapon_arc(mech, X, Y);
   }
@@ -79,11 +81,13 @@ bool is_in_weapon_arc(const WeaponArcRequest *request) {
   case CLASS_MW:
     if (mech_critical_fire_mode(mech, SECTION, CRITICAL) & REAR_MOUNT)
       wantarc = REARARC;
-    else if (SECTION == LARM && (((mech)->rd.status) & FLIPPED_ARMS))
+    else if (SECTION == LARM &&
+             mech_status_has(mech->rd.status, MECH_STATUS_FLIPPED_ARMS))
       wantarc = REARARC | LSIDEARC;
     else if (SECTION == LARM)
       wantarc = FORWARDARC | LSIDEARC;
-    else if (SECTION == RARM && (((mech)->rd.status) & FLIPPED_ARMS))
+    else if (SECTION == RARM &&
+             mech_status_has(mech->rd.status, MECH_STATUS_FLIPPED_ARMS))
       wantarc = REARARC | RSIDEARC;
     else if (SECTION == RARM)
       wantarc = FORWARDARC | RSIDEARC;
@@ -323,12 +327,16 @@ void do_magic(Mech *mech) {
   int i;
   int j;
   int t;
-  int mask = 0;
-  int tank_crit_mask = 0;
+  MechCritStatus mask = MECH_CRIT_STATUS_NONE;
+  MechTankCritStatus tank_crit_mask = MECH_TANK_CRIT_STATUS_NONE;
 
-  if (((mech)->ud.type) != CLASS_MECH)
+  if (((mech)->ud.type) != CLASS_MECH) {
     tank_crit_mask =
-        (TURRET_LOCKED | TURRET_JAMMED | TAIL_ROTOR_DESTROYED | CREW_STUNNED);
+        (MechTankCritStatus)(MECH_TANK_CRIT_STATUS_TURRET_LOCKED |
+                             MECH_TANK_CRIT_STATUS_TURRET_JAMMED |
+                             MECH_TANK_CRIT_STATUS_TAIL_ROTOR_DESTROYED |
+                             MECH_TANK_CRIT_STATUS_CREW_STUNNED);
+  }
 
   /* stop the burning */
   mech_event_cancel(mech, EVENT_VEHICLEBURN);
@@ -408,12 +416,17 @@ void do_magic(Mech *mech) {
   mech_tactical_range_set(mech, mech_tactical_range(&opp));
   mech_scanner_range_set(mech, mech_scanner_range(&opp));
   mech_base_to_hit_modifier_set(mech, mech_base_to_hit_modifier(&opp));
-  ((mech)->rd.critstatus) &= mask;
-  ((mech)->rd.critstatus) |= ((&opp)->rd.critstatus) & (~mask);
+  mech_crit_status_clear(&mech->rd.critstatus, (MechCritStatus) ~(int)mask);
+  mech_crit_status_set(
+      &mech->rd.critstatus,
+      mech_crit_status_mask(opp.rd.critstatus, (MechCritStatus) ~(int)mask));
 
-  ((mech)->rd.tankcritstatus) &= tank_crit_mask;
-  ((mech)->rd.tankcritstatus) |=
-      ((&opp)->rd.tankcritstatus) & (~tank_crit_mask);
+  mech_tank_crit_status_clear(&mech->rd.tankcritstatus,
+                              (MechTankCritStatus) ~(int)tank_crit_mask);
+  mech_tank_crit_status_set(
+      &mech->rd.tankcritstatus,
+      mech_tank_crit_status_mask(opp.rd.tankcritstatus,
+                                 (MechTankCritStatus) ~(int)tank_crit_mask));
 
   for (i = 0; i < NUM_SECTIONS; i++) {
     mech_section_base_to_hit_set(mech, i, mech_section_base_to_hit(&opp, i));
@@ -426,9 +439,9 @@ void do_magic(Mech *mech) {
 
   /* Case of undestroying */
   if (!mech_is_destroyed(&opp) && mech_is_destroyed(mech))
-    ((mech)->rd.status) &= ~DESTROYED;
+    mech_status_clear(&mech->rd.status, MECH_STATUS_DESTROYED);
   else if (mech_is_destroyed(&opp) && !mech_is_destroyed(mech))
-    ((mech)->rd.status) |= DESTROYED;
+    mech_status_set(&mech->rd.status, MECH_STATUS_DESTROYED);
   if (!mech_is_destroyed(mech) && ((mech)->ud.type) != CLASS_MECH)
     mech_fallen_set(mech, mech_is_fallen(&opp));
   update_specials(mech);
@@ -495,7 +508,7 @@ void mech_re_attach(Mech *mech, int loc) {
     mech_section_internal_set(mech, loc, 1);
   if (((mech)->ud.type) != CLASS_MECH) {
     if (no_locations_destroyed(mech) && mech_is_dropship(mech))
-      ((mech)->rd.status) &= ~DESTROYED;
+      mech_status_clear(&mech->rd.status, MECH_STATUS_DESTROYED);
     return;
   }
 }

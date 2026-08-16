@@ -223,7 +223,7 @@ void mech_maximum_fuel_set(Mech *mech, int fuel) { mech->rd.maxfuel = fuel; }
 
 void mech_cargo_weight_set(Mech *mech, int weight) {
   mech->rd.cargo_weight = weight;
-  mech->rd.critstatus &= ~LOAD_OK;
+  mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_LOAD_OK);
 }
 
 bool mech_has_sixth_sense(const Mech *mech) {
@@ -251,22 +251,24 @@ int mech_carried_cargo_weight(const Mech *mech) {
 }
 
 bool mech_load_cache_is_valid(const Mech *mech) {
-  return (mech->rd.critstatus & LOAD_OK) != 0;
+  return mech_crit_status_has(mech->rd.critstatus, MECH_CRIT_STATUS_LOAD_OK);
 }
 
 bool mech_weight_cache_is_valid(const Mech *mech) {
-  return (mech->rd.critstatus & OWEIGHT_OK) != 0;
+  return mech_crit_status_has(mech->rd.critstatus, MECH_CRIT_STATUS_OWEIGHT_OK);
 }
 
 void mech_weight_cache_invalidate(Mech *mech) {
-  mech->rd.critstatus &= ~OWEIGHT_OK;
+  mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_OWEIGHT_OK);
 }
 
 bool mech_speed_cache_is_valid(const Mech *mech) {
-  return (mech->rd.critstatus & SPEED_OK) != 0;
+  return mech_crit_status_has(mech->rd.critstatus, MECH_CRIT_STATUS_SPEED_OK);
 }
 
-void mech_load_cache_invalidate(Mech *mech) { mech->rd.critstatus &= ~LOAD_OK; }
+void mech_load_cache_invalidate(Mech *mech) {
+  mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_LOAD_OK);
+}
 
 int mech_cached_calculated_weight(const Mech *mech) { return mech->rd.row; }
 
@@ -278,7 +280,7 @@ int mech_cached_lugged_weight(const Mech *mech) { return mech->rd.rcw; }
 
 void mech_load_cache_record(Mech *mech, int lugged_weight) {
   mech->rd.rcw = lugged_weight;
-  mech->rd.critstatus |= LOAD_OK;
+  mech_crit_status_set(&mech->rd.critstatus, MECH_CRIT_STATUS_LOAD_OK);
 }
 
 float mech_cached_maximum_speed(const Mech *mech) { return mech->rd.rspd; }
@@ -286,5 +288,5 @@ float mech_cached_maximum_speed(const Mech *mech) { return mech->rd.rspd; }
 void mech_speed_cache_record(const MechSpeedCacheRecord *record) {
   record->mech->rd.rspd = record->maximum_speed;
   record->mech->rd.wxf = record->walking_xp_factor;
-  record->mech->rd.critstatus |= SPEED_OK;
+  mech_crit_status_set(&record->mech->rd.critstatus, MECH_CRIT_STATUS_SPEED_OK);
 }

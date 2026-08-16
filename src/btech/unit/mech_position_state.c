@@ -91,7 +91,7 @@ int mech_heading_fixed_difference(const Mech *mech) {
 }
 
 bool mech_heading_changed(const Mech *mech) {
-  return (mech->rd.critstatus & CHEAD) != 0;
+  return mech_crit_status_has(mech->rd.critstatus, MECH_CRIT_STATUS_CHEAD);
 }
 
 int mech_desired_heading_degrees(const Mech *mech) {
@@ -206,11 +206,13 @@ void mech_heading_rotate_toward_desired(Mech *mech, int fixed_offset) {
           clamp_int_to_short(short_to_float_simulation(mech->rd.desiredfacing));
   }
 
-  mech->rd.critstatus |= CHEAD;
+  mech_crit_status_set(&mech->rd.critstatus, MECH_CRIT_STATUS_CHEAD);
   mark_for_los_update(mech);
 }
 
-void mech_heading_change_clear(Mech *mech) { mech->rd.critstatus &= ~CHEAD; }
+void mech_heading_change_clear(Mech *mech) {
+  mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_CHEAD);
+}
 
 void mech_turret_heading_absolute_set(Mech *mech, int heading) {
   mech->rd.turretfacing = clamp_int_to_short(
@@ -269,7 +271,7 @@ void mech_jump_apex_elevation_set(Mech *mech, int elevation) {
 void mech_jump_launch(Mech *mech, const MechJumpLaunch *launch) {
   mech->rd.cocoon = 0;
   mech->rd.jumpheading = clamp_int_to_short(launch->heading);
-  mech->rd.status |= JUMPING;
+  mech_status_set(&mech->rd.status, MECH_STATUS_JUMPING);
   mech->rd.startfx = mech->pd.fx;
   mech->rd.startfy = mech->pd.fy;
   mech->rd.startfz = mech->pd.fz;
@@ -315,8 +317,8 @@ void mech_position_land_if_flying(Mech *mech) {
       (mech->ud.type == CLASS_DS || mech->ud.type == CLASS_SPHEROID_DS) != 0;
   bool const IS_FLYING = (mech->ud.type == CLASS_AERO || IS_DROPSHIP ||
                           mech->ud.move == MOVE_VTOL) != 0;
-  if (!(mech->rd.status & LANDED) && IS_FLYING)
-    mech->rd.status |= LANDED;
+  if (!mech_status_has(mech->rd.status, MECH_STATUS_LANDED) && IS_FLYING)
+    mech_status_set(&mech->rd.status, MECH_STATUS_LANDED);
 }
 
 void mech_position_rollback(const MechPositionRollback *rollback) {

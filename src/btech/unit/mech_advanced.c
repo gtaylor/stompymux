@@ -152,12 +152,14 @@ void mech_auto_turret(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
   }
 
   mech_printf(mech, MECHALL, "Automatic turret turning is now %s",
-              (((mech)->rd.status2) & AUTOTURN_TURRET) ? "OFF" : "ON");
+              mech_status2_has(mech->rd.status2, MECH_STATUS2_AUTOTURN_TURRET)
+                  ? "OFF"
+                  : "ON");
 
-  if (((mech)->rd.status2) & AUTOTURN_TURRET)
-    ((mech)->rd.status2) &= ~AUTOTURN_TURRET;
+  if (mech_status2_has(mech->rd.status2, MECH_STATUS2_AUTOTURN_TURRET))
+    mech_status2_clear(&mech->rd.status2, MECH_STATUS2_AUTOTURN_TURRET);
   else
-    ((mech)->rd.status2) |= AUTOTURN_TURRET;
+    mech_status2_set(&mech->rd.status2, MECH_STATUS2_AUTOTURN_TURRET);
 }
 
 void mech_usebin(DbRef player, Mech *mech, char *buffer) {

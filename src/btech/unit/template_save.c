@@ -772,14 +772,15 @@ void update_specials(Mech *mech) {
       ((mech)->rd.specials) |= C3_MASTER_TECH;
 
     if (mech_c3_working_masters(mech) == 0)
-      ((mech)->rd.critstatus) |= C3_DESTROYED;
+      mech_crit_status_set(&mech->rd.critstatus, MECH_CRIT_STATUS_C3_DESTROYED);
     else
-      ((mech)->rd.critstatus) &= ~C3_DESTROYED;
+      mech_crit_status_clear(&mech->rd.critstatus,
+                             MECH_CRIT_STATUS_C3_DESTROYED);
   }
 }
 
 int update_oweight(Mech *mech, int value) {
-  ((mech)->rd.critstatus) |= OWEIGHT_OK;
+  mech_crit_status_set(&mech->rd.critstatus, MECH_CRIT_STATUS_OWEIGHT_OK);
 
   /* Check to prevent silliness */
   if (!mech->xcode.context->configuration->btech_dynspeed ||
@@ -790,7 +791,7 @@ int update_oweight(Mech *mech, int value) {
 }
 
 int mech_calculated_weight(Mech *mech) {
-  if (((mech)->rd.critstatus) & OWEIGHT_OK)
+  if (mech_crit_status_has(mech->rd.critstatus, MECH_CRIT_STATUS_OWEIGHT_OK))
     return ((mech)->rd.row);
   return update_oweight(mech, mech_weight_sub(GOD, mech, -1));
 }

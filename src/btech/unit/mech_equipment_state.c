@@ -462,12 +462,12 @@ bool mech_part_is_structural_placeholder(int part_type) {
 
 void mech_section_armor_set(Mech *mech, int section, int armor) {
   section_at_mutable(mech, section)->armor = clamp_int_to_unsigned_char(armor);
-  mech->rd.critstatus &= ~OWEIGHT_OK;
+  mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_OWEIGHT_OK);
 }
 
 void mech_section_rear_armor_set(Mech *mech, int section, int armor) {
   section_at_mutable(mech, section)->rear = clamp_int_to_unsigned_char(armor);
-  mech->rd.critstatus &= ~OWEIGHT_OK;
+  mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_OWEIGHT_OK);
 }
 
 void mech_section_original_armor_set(Mech *mech, int section, int armor) {
@@ -483,7 +483,7 @@ void mech_section_original_rear_armor_set(Mech *mech, int section, int armor) {
 void mech_section_internal_set(Mech *mech, int section, int internal) {
   section_at_mutable(mech, section)->internal =
       clamp_int_to_unsigned_char(internal);
-  mech->rd.critstatus &= ~OWEIGHT_OK;
+  mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_OWEIGHT_OK);
 }
 
 void mech_section_original_internal_set(Mech *mech, int section, int internal) {

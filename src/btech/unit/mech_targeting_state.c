@@ -14,14 +14,14 @@ typedef struct MechTargetingOverrideStorage {
   int target_x;
   int target_y;
   int target_z;
-  int status;
+  MechStatus status;
 } MechTargetingOverrideStorage;
 
 static_assert(sizeof(MechTargetingOverrideStorage) <=
               sizeof(MechTargetingOverride));
 
 void mech_targeting_lock_modes_clear(Mech *mech) {
-  mech->rd.status &= ~LOCK_MODES;
+  mech_status_clear(&mech->rd.status, MECH_STATUS_LOCK_MODES);
 }
 
 void mech_targeting_aim_reset(Mech *mech) { mech->rd.aim = NUM_SECTIONS; }
@@ -39,7 +39,7 @@ void mech_targeting_target_clear(Mech *mech) {
 
 void mech_targeting_unit_set(Mech *mech, DbRef target) {
   mech->rd.target = target;
-  mech->rd.status |= LOCK_TARGET;
+  mech_status_set(&mech->rd.status, MECH_STATUS_LOCK_TARGET);
 }
 
 void mech_targeting_hex_xy_set(Mech *mech, int x, int y) {
@@ -49,8 +49,8 @@ void mech_targeting_hex_xy_set(Mech *mech, int x, int y) {
   mech->rd.fire_adjustment = 0;
 }
 
-void mech_targeting_lock_mode_add(Mech *mech, int lock_mode) {
-  mech->rd.status |= lock_mode;
+void mech_targeting_lock_mode_add(Mech *mech, MechStatus lock_mode) {
+  mech_status_set(&mech->rd.status, lock_mode);
 }
 
 DbRef mech_target_dbref(const Mech *mech) { return mech->rd.target; }
@@ -120,34 +120,37 @@ UnitClass mech_aim_unit_class(const Mech *mech) {
 }
 
 bool mech_targets_building(const Mech *mech) {
-  return (mech->rd.status & LOCK_BUILDING) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_LOCK_BUILDING);
 }
 
 bool mech_targets_hex(const Mech *mech) {
-  return (mech->rd.status & LOCK_HEX) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_LOCK_HEX);
 }
 
 bool mech_targets_hex_for_ignition(const Mech *mech) {
-  return (mech->rd.status & LOCK_HEX_IGN) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_LOCK_HEX_IGN);
 }
 
 bool mech_targets_hex_for_clearing(const Mech *mech) {
-  return (mech->rd.status & LOCK_HEX_CLR) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_LOCK_HEX_CLR);
 }
 
 bool mech_targets_hex_or_building(const Mech *mech) {
-  return (mech->rd.status &
-          (LOCK_HEX | LOCK_BUILDING | LOCK_HEX_IGN | LOCK_HEX_CLR)) != 0;
+  return mech_status_has(
+      mech->rd.status,
+      (MechStatus)(MECH_STATUS_LOCK_HEX | MECH_STATUS_LOCK_BUILDING |
+                   MECH_STATUS_LOCK_HEX_IGN | MECH_STATUS_LOCK_HEX_CLR));
 }
 
 void mech_targeting_tag_clear(Mech *mech) { mech->sd.tag_target = -1; }
 
 bool mech_targeting_has_lock_on(const Mech *mech, DbRef target) {
-  return ((mech->rd.status & LOCK_TARGET) && mech->rd.target == target) != 0;
+  return (mech_status_has(mech->rd.status, MECH_STATUS_LOCK_TARGET) &&
+          mech->rd.target == target) != 0;
 }
 
 bool mech_targeting_lock_modes_active(const Mech *mech) {
-  return (mech->rd.status & LOCK_MODES) != 0;
+  return mech_status_has(mech->rd.status, MECH_STATUS_LOCK_MODES);
 }
 
 bool mech_targeting_has_specific_aim(const Mech *mech) {
@@ -155,14 +158,17 @@ bool mech_targeting_has_specific_aim(const Mech *mech) {
 }
 
 bool mech_movement_modes_locked(const Mech *mech) {
-  return (mech->rd.status2 & MOVE_MODES_LOCK) != 0;
+  return mech_status2_has(mech->rd.status2, MECH_STATUS2_MOVE_MODES_LOCK);
 }
 
 bool mech_is_dodging(const Mech *mech) {
-  return (mech->rd.status2 & DODGING) != 0;
+  return mech_status2_has(mech->rd.status2, MECH_STATUS2_DODGING);
 }
 
-void mech_digging_clear(Mech *mech) { mech->rd.tankcritstatus &= ~DIGGING_IN; }
+void mech_digging_clear(Mech *mech) {
+  mech_tank_crit_status_clear(&mech->rd.tankcritstatus,
+                              MECH_TANK_CRIT_STATUS_DIGGING_IN);
+}
 
 void mech_targeting_override_begin(const MechTargetingOverrideBegin *request) {
   Mech *mech = request->mech;
@@ -175,7 +181,8 @@ void mech_targeting_override_begin(const MechTargetingOverrideBegin *request) {
   };
   *request->override = (MechTargetingOverride){0};
   memcpy(request->override, &STORAGE, sizeof(STORAGE));
-  mech->rd.status = (mech->rd.status & ~LOCK_MODES) | request->state.lock_modes;
+  mech_status_clear(&mech->rd.status, MECH_STATUS_LOCK_MODES);
+  mech_status_set(&mech->rd.status, request->state.lock_modes);
   mech->rd.target = request->state.target;
   mech->rd.targx = clamp_int_to_short(request->state.target_x);
   mech->rd.targy = clamp_int_to_short(request->state.target_y);
@@ -187,11 +194,12 @@ mech_targeting_override_end(Mech *mech, const MechTargetingOverride *override) {
   MechTargetingOverrideStorage storage;
 
   memcpy(&storage, override, sizeof(storage));
-  MechTargetingState result = {.target = mech->rd.target,
-                               .target_x = mech->rd.targx,
-                               .target_y = mech->rd.targy,
-                               .target_z = mech->rd.targz,
-                               .lock_modes = mech->rd.status & LOCK_MODES};
+  MechTargetingState result = {
+      .target = mech->rd.target,
+      .target_x = mech->rd.targx,
+      .target_y = mech->rd.targy,
+      .target_z = mech->rd.targz,
+      .lock_modes = mech_status_mask(mech->rd.status, MECH_STATUS_LOCK_MODES)};
   mech->rd.status = storage.status;
   mech->rd.target = storage.target;
   mech->rd.targx = clamp_int_to_short(storage.target_x);
