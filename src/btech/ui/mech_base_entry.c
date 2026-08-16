@@ -27,6 +27,7 @@
 #include "mech_utils_api.h"
 #include "mux/commands/action_messages.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
@@ -98,6 +99,39 @@ static void mech_enter_event(MuxEvent *e) {
     return;
   }
 
+  if (mech_class(mech) == CLASS_MW &&
+      !is_in_character(mech_context(mech)->database, mapo->obj)) {
+    bsuit_swarmers_stop(
+        btech_context_find_object(mech_context(mech), mech_map_dbref(mech)),
+        mech, 1);
+    mech_printf(mech, MECHALL, "You enter %s.",
+                structure_name(mech_context(mech)->database, mapo).text);
+    mech_los_broadcastf(mech, "has entered %s at %d,%d.",
+                        structure_name(mech_context(mech)->database, mapo).text,
+                        mech_position_x(mech), mech_position_y(mech));
+    mark_for_los_update(mech);
+    enter_mw_bay(mech, mapo->obj);
+    return;
+  }
+  if (mech_carried_dbref(mech) > 0)
+    tmpm = btech_context_get_mech(mech_context(mech), mech_carried_dbref(mech));
+  obj_x = mech_position_x(mech);
+  obj_y = mech_position_y(mech);
+  const ObjectMovementRequest MOVEMENTS[] = {
+      {.evaluation = btech_context_evaluation(mech_context(mech)),
+       .object = mech_dbref(mech),
+       .destination = mapo->obj,
+       .cause = 1},
+      {.evaluation = btech_context_evaluation(mech_context(mech)),
+       .object = tmpm ? mech_dbref(tmpm) : NOTHING,
+       .destination = mapo->obj,
+       .cause = 1},
+  };
+  if (!move_via_teleport_batch(&(ObjectTeleportBatchRequest){
+          .movements = MOVEMENTS, .count = tmpm ? 2 : 1})) {
+    mech_notify(mech, MECHALL, "Unable to enter: teleportation was denied.");
+    return;
+  }
   bsuit_swarmers_stop(
       btech_context_find_object(mech_context(mech), mech_map_dbref(mech)), mech,
       1);
@@ -107,15 +141,6 @@ static void mech_enter_event(MuxEvent *e) {
                       structure_name(mech_context(mech)->database, mapo).text,
                       mech_position_x(mech), mech_position_y(mech));
   mark_for_los_update(mech);
-  if (mech_class(mech) == CLASS_MW &&
-      !is_in_character(mech_context(mech)->database, mapo->obj)) {
-    enter_mw_bay(mech, mapo->obj);
-    return;
-  }
-  if (mech_carried_dbref(mech) > 0)
-    tmpm = btech_context_get_mech(mech_context(mech), mech_carried_dbref(mech));
-  obj_x = mech_position_x(mech);
-  obj_y = mech_position_y(mech);
   (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", mapo->obj);
   mech_rsetmapindex(GOD, (void *)mech, message_buffer);
   (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", x, y);
@@ -128,21 +153,11 @@ static void mech_enter_event(MuxEvent *e) {
                         structure_name(mech_context(mech)->database, mapo).text,
                         obj_x, obj_y);
   }
-  move_via_teleport(&(ObjectMovementRequest){
-      .evaluation = btech_context_evaluation(mech_context(mech)),
-      .object = mech_dbref(mech),
-      .destination = mapo->obj,
-      .cause = 1});
   if (tmpm) {
     (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", mapo->obj);
     mech_rsetmapindex(GOD, (void *)tmpm, message_buffer);
     (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", x, y);
     mech_rsetxy(GOD, (void *)tmpm, message_buffer);
-    move_via_teleport(&(ObjectMovementRequest){
-        .evaluation = btech_context_evaluation(mech_context(mech)),
-        .object = mech_dbref(tmpm),
-        .destination = mapo->obj,
-        .cause = 1});
   }
   auto_cal_mapindex(mech_context(mech), mech);
 }

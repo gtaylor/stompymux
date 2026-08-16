@@ -67,20 +67,21 @@ int contents_teleport(const ContentsTeleportRequest *request) {
   SAFE_DOLIST(database, i, tmpnext,
               game_object_contents(database, request->source))
   if ((request->options & TELE_ALL) || !is_wizard(database, i)) {
-    if (request->options & TELE_XP && !is_wizard(database, i)) {
-      character_experience_reduce(&(CharacterExperienceReduction){
-          .context = request->context,
-          .character = i,
-          .per_mille = btech_context_experience_loss(request->context),
-      });
+    if (move_via_teleport(&(ObjectMovementRequest){
+            .evaluation = evaluation,
+            .object = i,
+            .destination = request->destination,
+            .cause = 1,
+            .hush = request->options & TELE_LOUD ? 0 : 7})) {
+      if (request->options & TELE_XP && !is_wizard(database, i)) {
+        character_experience_reduce(&(CharacterExperienceReduction){
+            .context = request->context,
+            .character = i,
+            .per_mille = btech_context_experience_loss(request->context),
+        });
+      }
+      count++;
     }
-    move_via_teleport(
-        &(ObjectMovementRequest){.evaluation = evaluation,
-                                 .object = i,
-                                 .destination = request->destination,
-                                 .cause = 1,
-                                 .hush = request->options & TELE_LOUD ? 0 : 7});
-    count++;
   }
   return count;
 }
@@ -109,12 +110,30 @@ static void mech_discard_event(MuxEvent *e) {
   s_going(database, i);
   s_dark(database, i);
   s_zombie(database, i);
-  move_via_teleport(&(ObjectMovementRequest){
+  (void)move_via_teleport(&(ObjectMovementRequest){
       .evaluation = evaluation,
       .object = i,
       .destination = btech_context_used_mech_store_dbref(mech_context(mech)),
       .cause = 1,
       .hush = 7});
+}
+
+static bool move_player_into_unit(EvaluationContext *evaluation, DbRef player,
+                                  DbRef unit, DbRef destination) {
+  const ObjectMovementRequest MOVEMENTS[] = {
+      {.evaluation = evaluation,
+       .object = unit,
+       .destination = destination,
+       .cause = 1,
+       .hush = 7},
+      {.evaluation = evaluation,
+       .object = player,
+       .destination = unit,
+       .cause = 1,
+       .hush = 7},
+  };
+  return move_via_teleport_batch(&(ObjectTeleportBatchRequest){
+      .movements = MOVEMENTS, .count = sizeof(MOVEMENTS) / sizeof(*MOVEMENTS)});
 }
 
 void discard_mw(Mech *mech) {
@@ -228,6 +247,12 @@ static void char_eject(DbRef player, Mech *mech) {
                  "(can't load MWTemplate)");
     return;
   }
+  if (!move_player_into_unit(evaluation, player, suit, mech_map_dbref(mech))) {
+    destroy_thing(evaluation, suit);
+    mecha_notify(evaluation, player,
+                 "Unable to eject because teleportation was denied.");
+    return;
+  }
   silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
   mech_team_set(m, mech_team(mech));
   (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
@@ -238,17 +263,6 @@ static void char_eject(DbRef player, Mech *mech) {
   mech_rsetxy(GOD, (void *)m, message_buffer);
   (void)snprintf(message_buffer, sizeof(message_buffer), "%d", mech_team(mech));
   mech_rsetteam(GOD, (void *)m, message_buffer);
-  move_via_teleport(
-      &(ObjectMovementRequest){.evaluation = evaluation,
-                               .object = suit,
-                               .destination = mech_map_dbref(mech),
-                               .cause = 1,
-                               .hush = 7});
-  move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
-                                             .object = player,
-                                             .destination = suit,
-                                             .cause = 1,
-                                             .hush = 7});
   mech_los_broadcastf(m, "ejected from %s!", mech_display_id(mech).text);
   s_in_character(database, suit);
   initialize_pc(player, m);
@@ -387,6 +401,12 @@ static void char_disembark(DbRef player, Mech *mech) {
                  "(can't load MWTemplate)");
     return;
   }
+  if (!move_player_into_unit(evaluation, player, suit, mech_map_dbref(mech))) {
+    destroy_thing(evaluation, suit);
+    mecha_notify(evaluation, player,
+                 "Unable to disembark because teleportation was denied.");
+    return;
+  }
   silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
   mech_team_set(m, mech_team(mech));
   (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
@@ -398,17 +418,6 @@ static void char_disembark(DbRef player, Mech *mech) {
   mech_position_hex_z_set(m, mech_position_z(mech));
   (void)snprintf(message_buffer, sizeof(message_buffer), "%d", mech_team(mech));
   mech_rsetteam(GOD, (void *)m, message_buffer);
-  move_via_teleport(
-      &(ObjectMovementRequest){.evaluation = evaluation,
-                               .object = suit,
-                               .destination = mech_map_dbref(mech),
-                               .cause = 1,
-                               .hush = 7});
-  move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
-                                             .object = player,
-                                             .destination = suit,
-                                             .cause = 1,
-                                             .hush = 7});
   s_in_character(database, suit);
   initialize_pc(player, m);
   mech_pilot_dbref_set(m, player);
@@ -569,9 +578,25 @@ void mech_udisembark(DbRef player, void *data,
     return;
   }
 
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%d",
-                 (int)mech_map_dbref(target));
-  /* Carry out the disembarking. */
+  const DbRef DESTINATION = mech_map_dbref(target);
+  mymap = btech_context_get_map(mech_context(mech), DESTINATION);
+  if (!mymap) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                 "Major map error possible. Prolly should contact a wizard.");
+    return;
+  }
+  /* Teleport loudly so native enter events and other messages run. */
+  if (!move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
+                                                  .object = mech_dbref(mech),
+                                                  .destination = DESTINATION,
+                                                  .cause = 1})) {
+    mecha_notify(evaluation, player,
+                 "Unable to disembark because teleportation was denied.");
+    return;
+  }
+
+  /* Carry out the BattleTech side of the disembarking. */
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", DESTINATION);
   mech_rsetmapindex(GOD, (void *)mech, message_buffer);
   (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d",
                  mech_position_x(target), mech_position_y(target));
@@ -579,20 +604,6 @@ void mech_udisembark(DbRef player, void *data,
   mech_position_z_set(mech, mech_position_z(target));
   const int ELEVATION = mech_position_z(mech);
   mech_position_real_z_set(mech, ZSCALE * (float)ELEVATION);
-  mymap = btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
-  if (!mymap) {
-    mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                 "Major map error possible. Prolly should contact a wizard.");
-    return;
-  }
-
-  /* Teleport loudly so native enter events and other messages run. */
-  move_via_teleport(
-      &(ObjectMovementRequest){.evaluation = evaluation,
-                               .object = mech_dbref(mech),
-                               .destination = mech_map_dbref(mech),
-                               .cause = 1});
-
   /* If we make it safely, start the invoker's unit up once it's on the map. */
   if (!mech_is_destroyed(mech) &&
       game_object_location(database, player) == mech_dbref(mech)) {

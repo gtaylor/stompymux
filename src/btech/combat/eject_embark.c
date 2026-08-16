@@ -368,6 +368,34 @@ void mech_embark(DbRef player, void *data, char *buffer) {
       return;
     }
   }
+  const bool HAS_TOWEE =
+      (towee != nullptr && mech_carried_dbref(mech) > 0) != 0;
+  bool moved;
+  if (HAS_TOWEE) {
+    const ObjectMovementRequest MOVEMENTS[] = {
+        {.evaluation = evaluation,
+         .object = mech_dbref(towee),
+         .destination = mech_dbref(target),
+         .cause = 1},
+        {.evaluation = evaluation,
+         .object = mech_dbref(mech),
+         .destination = mech_dbref(target),
+         .cause = 1},
+    };
+    moved = move_via_teleport_batch(&(ObjectTeleportBatchRequest){
+        .movements = MOVEMENTS,
+        .count = sizeof(MOVEMENTS) / sizeof(*MOVEMENTS)});
+  } else {
+    moved = move_via_teleport(
+        &(ObjectMovementRequest){.evaluation = evaluation,
+                                 .object = mech_dbref(mech),
+                                 .destination = mech_dbref(target),
+                                 .cause = 1});
+  }
+  if (!moved) {
+    mech_notify(mech, MECHALL, "Unable to embark: teleportation was denied.");
+    return;
+  }
   if (mech_class(mech) == CLASS_BSUIT) {
     mech_printf(mech, MECHALL, "You climb into %s.",
                 mech_display_id(target).text);
@@ -401,11 +429,6 @@ void mech_embark(DbRef player, void *data, char *buffer) {
     mech_rsetmapindex(GOD, (void *)towee, message_buffer);
     (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", 0, 0);
     mech_rsetxy(GOD, (void *)towee, message_buffer);
-    move_via_teleport(
-        &(ObjectMovementRequest){.evaluation = evaluation,
-                                 .object = mech_dbref(towee),
-                                 .destination = mech_dbref(target),
-                                 .cause = 1});
     mech_cargo_space_remove(target, mech_tonnage(towee) * 100);
     mech_power_down(towee);
     mech_carried_dbref_set(mech, -1);
@@ -417,10 +440,6 @@ void mech_embark(DbRef player, void *data, char *buffer) {
   mech_rsetmapindex(GOD, (void *)mech, message_buffer);
   (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", 0, 0);
   mech_rsetxy(GOD, (void *)mech, message_buffer);
-  move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
-                                             .object = mech_dbref(mech),
-                                             .destination = mech_dbref(target),
-                                             .cause = 1});
   mech_cargo_space_remove(target, mech_tonnage(mech) * 100);
   mech_power_down(mech);
 
@@ -474,6 +493,26 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
                  "(can't load MWTemplate)");
     return;
   }
+  const ObjectMovementRequest MOVEMENTS[] = {
+      {.evaluation = evaluation,
+       .object = suit,
+       .destination = mech_map_dbref(mech),
+       .cause = 1,
+       .hush = 7},
+      {.evaluation = evaluation,
+       .object = player,
+       .destination = suit,
+       .cause = 1,
+       .hush = 7},
+  };
+  if (!move_via_teleport_batch(&(ObjectTeleportBatchRequest){
+          .movements = MOVEMENTS,
+          .count = sizeof(MOVEMENTS) / sizeof(*MOVEMENTS)})) {
+    destroy_thing(evaluation, suit);
+    mecha_notify(evaluation, player,
+                 "Unable to eject because teleportation was denied.");
+    return;
+  }
   silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
   mech_team_set(m, mech_team(mech));
   (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
@@ -484,19 +523,6 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
   mech_rsetxy(GOD, (void *)m, message_buffer);
   (void)snprintf(message_buffer, sizeof(message_buffer), "%d", mech_team(mech));
   mech_rsetteam(GOD, (void *)m, message_buffer);
-
-  /* Tele the MW to the map and player to the MW */
-  move_via_teleport(
-      &(ObjectMovementRequest){.evaluation = evaluation,
-                               .object = suit,
-                               .destination = mech_map_dbref(mech),
-                               .cause = 1,
-                               .hush = 7});
-  move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
-                                             .object = player,
-                                             .destination = suit,
-                                             .cause = 1,
-                                             .hush = 7});
 
   /* Init the sucker */
   s_in_character(database, suit);

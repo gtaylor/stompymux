@@ -260,6 +260,35 @@ static void mech_enterbay_event(MuxEvent *e) {
     return;
   /* whee */
   ref = mech_bay_dbref(ds, bayn);
+  if (mech_class(mech) == CLASS_MW &&
+      !is_in_character(btech_context_database(context), ref)) {
+    bsuit_swarmers_stop(
+        btech_context_find_object(context, mech_map_dbref(mech)), mech, 1);
+    mech_notify(mech, MECHALL, "You enter the bay.");
+    mech_los_broadcastf(mech, "has entered %s at %d,%d.",
+                        mech_display_id(ds).text, mech_position_x(mech),
+                        mech_position_y(mech));
+    mark_for_los_update(mech);
+    enter_mw_bay(mech, ref);
+    return;
+  }
+  if (mech_carried_dbref(mech) > 0)
+    tmpm = btech_context_get_mech(context, mech_carried_dbref(mech));
+  const ObjectMovementRequest MOVEMENTS[] = {
+      {.evaluation = btech_context_evaluation(context),
+       .object = mech_dbref(mech),
+       .destination = ref,
+       .cause = 1},
+      {.evaluation = btech_context_evaluation(context),
+       .object = tmpm ? mech_dbref(tmpm) : NOTHING,
+       .destination = ref,
+       .cause = 1},
+  };
+  if (!move_via_teleport_batch(&(ObjectTeleportBatchRequest){
+          .movements = MOVEMENTS, .count = tmpm ? 2 : 1})) {
+    mech_notify(mech, MECHALL, "Unable to enter: teleportation was denied.");
+    return;
+  }
   bsuit_swarmers_stop(btech_context_find_object(context, mech_map_dbref(mech)),
                       mech, 1);
   mech_notify(mech, MECHALL, "You enter the bay.");
@@ -267,33 +296,16 @@ static void mech_enterbay_event(MuxEvent *e) {
                       mech_display_id(ds).text, mech_position_x(mech),
                       mech_position_y(mech));
   mark_for_los_update(mech);
-  if (mech_class(mech) == CLASS_MW &&
-      !is_in_character(btech_context_database(context), ref)) {
-    enter_mw_bay(mech, ref);
-    return;
-  }
-  if (mech_carried_dbref(mech) > 0)
-    tmpm = btech_context_get_mech(context, mech_carried_dbref(mech));
   (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", ref);
   mech_rsetmapindex(GOD, (void *)mech, message_buffer);
   (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", x, y);
   mech_rsetxy(GOD, (void *)mech, message_buffer);
   mech_los_broadcast(mech, "has entered the bay.");
-  move_via_teleport(
-      &(ObjectMovementRequest){.evaluation = btech_context_evaluation(context),
-                               .object = mech_dbref(mech),
-                               .destination = ref,
-                               .cause = 1});
   if (tmpm) {
     (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", ref);
     mech_rsetmapindex(GOD, (void *)tmpm, message_buffer);
     (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", x, y);
     mech_rsetxy(GOD, (void *)tmpm, message_buffer);
-    move_via_teleport(&(ObjectMovementRequest){
-        .evaluation = btech_context_evaluation(context),
-        .object = mech_dbref(tmpm),
-        .destination = ref,
-        .cause = 1});
   }
 }
 
@@ -543,37 +555,39 @@ static bool dropship_leave_bay(BattleMap *map, Mech *ds, Mech *mech,
   char message_buffer[128];
   Mech *car = nullptr;
   BtechContext *context = mech_context(mech);
+  const DbRef DESTINATION = mech_map_dbref(ds);
 
-  bsuit_swarmers_stop(btech_context_find_object(context, mech_map_dbref(mech)),
-                      mech, 1);
-  mech_los_broadcast(mech, "has left the bay.");
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
-                 mech_map_dbref(ds));
-  /* We escape confines of the bay to open air/land! */
-  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
   if (mech_carried_dbref(mech) > 0)
     car = btech_context_get_mech(context, mech_carried_dbref(mech));
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
-                 mech_map_dbref(ds));
-  if (car)
-    mech_rsetmapindex(GOD, (void *)car, message_buffer);
-  if (mech_map_dbref(mech) == battle_map_dbref(map)) {
+  if (DESTINATION == battle_map_dbref(map)) {
     mech_notify(mech, MECHALL,
                 "Fatal error: Unable to find the map 'ship is on.");
     return false;
   }
-  move_via_teleport(
-      &(ObjectMovementRequest){.evaluation = btech_context_evaluation(context),
-                               .object = mech_dbref(mech),
-                               .destination = mech_map_dbref(mech),
-                               .cause = 1});
-  if (car) {
-    move_via_teleport(&(ObjectMovementRequest){
-        .evaluation = btech_context_evaluation(context),
-        .object = mech_dbref(car),
-        .destination = mech_map_dbref(mech),
-        .cause = 1});
+  const ObjectMovementRequest MOVEMENTS[] = {
+      {.evaluation = btech_context_evaluation(context),
+       .object = mech_dbref(mech),
+       .destination = DESTINATION,
+       .cause = 1},
+      {.evaluation = btech_context_evaluation(context),
+       .object = car ? mech_dbref(car) : NOTHING,
+       .destination = DESTINATION,
+       .cause = 1},
+  };
+  if (!move_via_teleport_batch(&(ObjectTeleportBatchRequest){
+          .movements = MOVEMENTS, .count = car ? 2 : 1})) {
+    mech_notify(mech, MECHALL,
+                "Unable to leave the bay: teleportation was denied.");
+    return false;
   }
+  bsuit_swarmers_stop(btech_context_find_object(context, mech_map_dbref(mech)),
+                      mech, 1);
+  mech_los_broadcast(mech, "has left the bay.");
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", DESTINATION);
+  /* We escape confines of the bay to open air/land! */
+  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
+  if (car)
+    mech_rsetmapindex(GOD, (void *)car, message_buffer);
   mech_notify(mech, MECHALL, "You have left the bay.");
   dropship_place_departing_unit(ds, mech, frombay);
   if (car) {
