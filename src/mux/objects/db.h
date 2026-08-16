@@ -263,7 +263,8 @@ extern void al_destroy(DbRef);
 extern void al_store(void);
 extern void db_grow(GameDatabase *database, DbRef newtop);
 extern void db_free(GameDatabase *database);
-void object_password_set(GameDatabase *database, DbRef thing, const char *s);
+[[nodiscard]] bool object_password_set(GameDatabase *database, DbRef thing,
+                                       const char *s);
 void object_name_set(GameDatabase *database, DbRef thing, const char *s);
 const char *game_object_name(GameDatabase *database, DbRef thing);
 const char *game_object_pure_name(GameDatabase *database, DbRef thing);

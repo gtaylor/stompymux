@@ -79,6 +79,42 @@ static int check_utc_format(void) {
              : -1;
 }
 
+static int check_invalid_player_rejections(GameDatabase *database,
+                                           DbRef player) {
+  const PlayerAccountRef account = {.database = database, .player = player};
+  const DbRef recipient = 42;
+
+  return !player_account_last_login_set(
+             &(PlayerLastLoginChange){.account = account, .occurred_at = 1}) &&
+                 !player_account_last_site_set(database, player, "invalid") &&
+                 !player_account_login_counts_set(
+                     &(PlayerLoginCountsChange){.account = account,
+                                                .successful = 1,
+                                                .failed = 1,
+                                                .unreported_failed = 1}) &&
+                 !player_account_login_record(
+                     &(PlayerLoginRecordChange){.account = account,
+                                                .outcome = PLAYER_LOGIN_SUCCESS,
+                                                .occurred_at = 1,
+                                                .host = "invalid"}) &&
+                 !player_account_login_history_set(&(PlayerLoginHistoryChange){
+                     .target = {.account = account,
+                                .outcome = PLAYER_LOGIN_SUCCESS},
+                     .occurred_at = 1,
+                     .host = "invalid"}) &&
+                 !player_account_last_page_set(database, player, &recipient,
+                                               1) &&
+                 !player_account_last_login(account).found &&
+                 *player_account_last_site(database, player) == '\0' &&
+                 player_account_successful_login_count(database, player) == 0 &&
+                 player_account_login_history_count((PlayerLoginHistoryRequest){
+                     .account = account, .outcome = PLAYER_LOGIN_SUCCESS}) ==
+                     0 &&
+                 player_account_last_page_count(database, player) == 0
+             ? 0
+             : -1;
+}
+
 int main(void) {
   GameObject objects[3] = {0};
   GameDatabase database = {.object_storage = objects, .top = 2, .size = 2};
@@ -89,6 +125,8 @@ int main(void) {
   if (!player_account_password_hash_set(&database, 0, "hash") ||
       strcmp(player_account_password_hash(&database, 0), "hash") != 0 ||
       player_account_password_hash_set(&database, 1, "invalid") ||
+      check_invalid_player_rejections(&database, 1) < 0 ||
+      check_invalid_player_rejections(&database, 2) < 0 ||
       player_account_login_record(&(PlayerLoginRecordChange){
           .account = {.database = &database, .player = 0},
           .outcome = (PlayerLoginOutcome)99,

@@ -58,7 +58,8 @@ void set_lastsite(Descriptor *d, char *lastsite) {
           buf, sizeof(buf), "%s",
           player_account_last_site(runtime->world->database, d->player));
     }
-    player_account_last_site_set(runtime->world->database, d->player, buf);
+    (void)player_account_last_site_set(runtime->world->database, d->player,
+                                       buf);
   }
 }
 

@@ -87,32 +87,40 @@ enum {
 void player_account_clear(GameDatabase *database, DbRef player);
 
 const char *player_account_password_hash(GameDatabase *database, DbRef player);
-bool player_account_password_hash_set(GameDatabase *database, DbRef player,
-                                      const char *hash);
+[[nodiscard]] bool player_account_password_hash_set(GameDatabase *database,
+                                                    DbRef player,
+                                                    const char *hash);
 
 PlayerLastLoginResult player_account_last_login(PlayerAccountRef reference);
-bool player_account_last_login_set(const PlayerLastLoginChange *change);
+[[nodiscard]] bool
+player_account_last_login_set(const PlayerLastLoginChange *change);
 const char *player_account_last_site(GameDatabase *database, DbRef player);
-bool player_account_last_site_set(GameDatabase *database, DbRef player,
-                                  const char *site);
+[[nodiscard]] bool player_account_last_site_set(GameDatabase *database,
+                                                DbRef player, const char *site);
 
 int64_t player_account_successful_login_count(GameDatabase *database,
                                               DbRef player);
 int64_t player_account_failed_login_count(GameDatabase *database, DbRef player);
 int64_t player_account_unreported_failed_login_count(GameDatabase *database,
                                                      DbRef player);
-bool player_account_login_counts_set(const PlayerLoginCountsChange *change);
-bool player_account_login_record(const PlayerLoginRecordChange *change);
+[[nodiscard]] bool
+player_account_login_counts_set(const PlayerLoginCountsChange *change);
+[[nodiscard]] bool
+player_account_login_record(const PlayerLoginRecordChange *change);
 size_t player_account_login_history_count(PlayerLoginHistoryRequest request);
 PlayerLoginHistoryResult
 player_account_login_history(const PlayerLoginHistoryRequest *request);
-bool player_account_login_history_set(const PlayerLoginHistoryChange *change);
+[[nodiscard]] bool
+player_account_login_history_set(const PlayerLoginHistoryChange *change);
 
 size_t player_account_last_page_count(GameDatabase *database, DbRef player);
 PlayerPageRecipientResult
 player_account_last_page_recipient(const PlayerPageRecipientRequest *request);
-bool player_account_last_page_set(GameDatabase *database, DbRef player,
-                                  const DbRef *recipients, size_t count);
+[[nodiscard]] bool player_account_last_page_set(GameDatabase *database,
+                                                DbRef player,
+                                                const DbRef *recipients,
+                                                size_t count);
 
-bool player_account_format_timestamp_utc(time_t when, char *buffer,
-                                         size_t buffer_size);
+[[nodiscard]] bool player_account_format_timestamp_utc(time_t when,
+                                                       char *buffer,
+                                                       size_t buffer_size);

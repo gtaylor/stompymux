@@ -301,7 +301,13 @@ void do_newpassword(CommandInvocation *invocation) {
                    MSG_ME);
     return;
   }
-  object_password_set(evaluation->world->database, victim, hashed_password);
+  if (!object_password_set(evaluation->world->database, victim,
+                           hashed_password)) {
+    sodium_memzero(hashed_password, sizeof(hashed_password));
+    notify_checked(evaluation, player, player, "Unable to change password.",
+                   MSG_ME);
+    return;
+  }
   sodium_memzero(hashed_password, sizeof(hashed_password));
   STARTLOG(evaluation->log, LOG_WIZARD, "WIZ", "PASS") {
     log_name(evaluation->log, player);

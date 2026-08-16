@@ -218,8 +218,8 @@ void object_name_set(GameDatabase *database, DbRef thing, const char *s) {
   set_string(pure_name_slot(database, thing), new);
 }
 
-void object_password_set(GameDatabase *database, DbRef thing, const char *s) {
-  player_account_password_hash_set(database, thing, s);
+bool object_password_set(GameDatabase *database, DbRef thing, const char *s) {
+  return player_account_password_hash_set(database, thing, s);
 }
 
 const Attribute *attribute_by_name(GameDatabase *database [[maybe_unused]],
