@@ -283,7 +283,7 @@ char *mech_damagefunc(const GmvBufferedBidirectionalCall *call) {
     apply_mech_damage(mech, arg);
     (void)snprintf(buffer, LBUF_SIZE, "?");
     return buffer;
-  };
+  }
   buffer[0] = '\0';
   for (i = 0; i < NUM_SECTIONS; i++) {
     if (mech_section_original_internal(mech, i)) {
@@ -405,7 +405,7 @@ int text2bv(const char *text) {
       if (index >= TEXT_LENGTH)
         break;
       current = *checked_string_suffix(text, index);
-    };
+    }
     if ((current >= 'a' && current <= 'z') ||
         (current >= 'A' && current <= 'Z')) {
       int k = bitvector_character_bit(current);

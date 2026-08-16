@@ -61,7 +61,7 @@ BtechScriptResult fun_btloadmap(BtechScriptCall *call) {
   map_clearmechs(PLAYER, (void *)map, "");
   del_mapobjs(map);
   safe_str("1", buff, bufc);
-  return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+  return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 BtechScriptResult fun_btloadmech(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
@@ -249,7 +249,7 @@ BtechScriptResult fun_bttechtime(BtechScriptCall *call) {
     (void)string_copy_bounded(buf, sizeof(buf), "00:00.00");
   }
   mecha_notify(context, PLAYER, buf);
-  return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+  return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 }
 BtechScriptResult fun_btcritslot(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
@@ -621,6 +621,5 @@ BtechScriptResult fun_btgetrange(BtechScriptCall *call) {
     safe_tprintf_str(buff, bufc, "#-1 INVALID ARGUMENTS");
     return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
   }
-  return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 // NOLINTEND(misc-include-cleaner)

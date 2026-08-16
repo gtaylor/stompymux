@@ -167,6 +167,8 @@ target_compile_options(btmux_compile_options INTERFACE
   -Wmissing-variable-declarations -Wimplicit-int-enum-cast
   -Wconditional-uninitialized -Wshadow-all -Wenum-enum-conversion
   -Wcast-function-type-strict -Walloca
+  -Wunreachable-code-break -Wunreachable-code-return -Wextra-semi-stmt
+  -Wformat-signedness -Wcomma
   -Wbad-function-cast -Wswitch-enum -Wimplicit-fallthrough -Wunused-macros -Wfloat-equal -Wpedantic
   -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings -Wconversion -Wunsafe-buffer-usage
   -Wsign-conversion>)

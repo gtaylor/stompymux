@@ -427,8 +427,6 @@ BtechScriptResult fun_btgetxcodevalue(BtechScriptCall *call) {
   }
   safe_tprintf_str(buff, bufc, "#-1");
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
-
-  return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
 
 BtechScriptResult fun_btgetxcodevalue_ref(BtechScriptCall *call) {
@@ -463,8 +461,6 @@ BtechScriptResult fun_btgetxcodevalue_ref(BtechScriptCall *call) {
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
   safe_tprintf_str(buff, bufc, "#-1");
-  return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
-
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
 
@@ -532,11 +528,11 @@ void list_xcodestuff(DbRef player, void *data, const char *buffer) {
   if (*buffer == '1') {
     flag = CM_ONE;
     se_len = se_len * 2;
-  };
+  }
   if (*buffer == '4') {
     flag = CM_FOUR;
     se_len = se_len / 2;
-  };
+  }
   const char *filter = buffer;
   if (*filter == '1' || *filter == '4')
     filter = checked_string_suffix(filter, 1);

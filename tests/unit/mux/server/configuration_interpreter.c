@@ -12,7 +12,7 @@ static int mutate_text(const ConfigurationCall *call) {
 }
 
 int main(void) {
-  const char original[] = "unchanged";
+  char original[] = "unchanged";
   ConfigurationCall call = {};
 
   if (configuration_interpreter_invoke_with_mutable_text(mutate_text, &call,

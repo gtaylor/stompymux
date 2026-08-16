@@ -37,12 +37,6 @@
    (game_object_exits(database, i) == NOTHING) &&                              \
    (game_object_next(database, i) == NOTHING))
 
-#define ZAP_LOC(database, i)                                                   \
-  {                                                                            \
-    game_object_set_location(database, i, NOTHING);                            \
-    game_object_set_next(database, i, NOTHING);                                \
-  }
-
 /**
  * object_log_pointer_error, object_log_header_error, Log_simple_damage: Write
  * errors to the log file.
@@ -454,7 +448,8 @@ void empty_obj(EvaluationContext *evaluation, DbRef obj) {
           "cleanup of GOING location.  Flush terminated.");
       break;
     }
-    ZAP_LOC(evaluation->world->database, targ);
+    game_object_set_location(evaluation->world->database, targ, NOTHING);
+    game_object_set_next(evaluation->world->database, targ, NOTHING);
     if (game_object_link(evaluation->world->database, targ) == obj) {
       game_object_set_link(evaluation->world->database, targ,
                            new_home(evaluation, targ));

@@ -405,7 +405,6 @@ BtechScriptResult fun_btmapunits(BtechScriptCall *call) {
     break;
   }
   return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
-  return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }
 BtechScriptResult fun_btmapemit(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
@@ -524,7 +523,6 @@ BtechScriptResult fun_btmapemit(BtechScriptCall *call) {
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
   return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
-  return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 }
 BtechScriptResult fun_btparttype(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
@@ -574,7 +572,5 @@ BtechScriptResult fun_btparttype(BtechScriptCall *call) {
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
   safe_tprintf_str(buff, bufc, "OTHER");
-  return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
-
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }

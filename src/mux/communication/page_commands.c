@@ -243,9 +243,7 @@ void do_page(CommandInvocation *invocation) {
 
       if (target == NOTHING) {
         notify_printf(evaluation, PLAYER, "I don't recognize \"%s\".", p);
-      } else if (!page_check(evaluation, configuration, PLAYER, target)) {
-        ;
-      } else {
+      } else if (page_check(evaluation, configuration, PLAYER, target)) {
         switch (*message) {
         case ':':
           (void)snprintf(formatted, LBUF_SIZE, "From afar, to (%s):%s %s %s",
@@ -284,9 +282,7 @@ void do_page(CommandInvocation *invocation) {
       target = NOTHING;
     if (target == NOTHING) {
       notify_printf(evaluation, PLAYER, "I don't recognize \"%s\".", tname);
-    } else if (!page_check(evaluation, configuration, PLAYER, target)) {
-      ;
-    } else {
+    } else if (page_check(evaluation, configuration, PLAYER, target)) {
 
       switch (*message) {
       case ':':

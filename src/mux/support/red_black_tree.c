@@ -65,8 +65,6 @@ RbtreeNode *red_black_tree_find_successor_node(RbtreeNode *node) {
     parent = child->parent;
   }
   return parent;
-
-  return nullptr;
 }
 
 static RbtreeNode *red_black_tree_find_predecessor_node(RbtreeNode *node) {
@@ -87,8 +85,6 @@ static RbtreeNode *red_black_tree_find_predecessor_node(RbtreeNode *node) {
     parent = parent->parent;
   }
   return parent;
-
-  return nullptr;
 }
 
 void red_black_tree_release(RedBlackTree bt, RedBlackTreeRelease release,

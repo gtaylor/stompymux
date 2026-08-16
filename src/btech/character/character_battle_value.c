@@ -741,6 +741,4 @@ BtechScriptResult fun_btcharlist(BtechScriptCall *call) {
     }
   }
   return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
-
-  return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }
