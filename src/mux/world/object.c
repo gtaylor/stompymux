@@ -355,7 +355,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     tt = time(nullptr);
     if (tt == (time_t)-1)
       tt = 0;
-    player_account_last_login_set(&(PlayerLastLoginChange){
+    (void)player_account_last_login_set(&(PlayerLastLoginChange){
         .account = {.database = evaluation->world->database, .player = obj},
         .occurred_at = tt});
 

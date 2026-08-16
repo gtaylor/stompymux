@@ -20,6 +20,7 @@
 #include "mux/objects/flags.h"
 #include "mux/objects/player_account.h"
 #include "mux/server/game.h"
+#include "mux/server/log.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
@@ -67,24 +68,42 @@ void record_login(EvaluationContext *evaluation, DbRef player, bool successful,
                       latest_failure.record.host, timestamp);
       notify_checked(evaluation, player, player, "", MSG_ME_ALL | MSG_F_DOWN);
     }
-    player_account_login_record(&(PlayerLoginRecordChange){
-        .account = {.database = database, .player = player},
-        .outcome = PLAYER_LOGIN_SUCCESS,
-        .occurred_at = occurred_at,
-        .host = host});
+    if (!player_account_login_record(&(PlayerLoginRecordChange){
+            .account = {.database = database, .player = player},
+            .outcome = PLAYER_LOGIN_SUCCESS,
+            .occurred_at = occurred_at,
+            .host = host})) {
+      log_error((LogEntry){.log = evaluation->log,
+                           .key = LOG_ALWAYS,
+                           .primary = "CON",
+                           .secondary = "ACCT"},
+                "Failed to record successful login for #%ld.", player);
+    }
+    const char *site = host;
     if (username && *username) {
       (void)snprintf(message_buffer, sizeof(message_buffer), "%s@%s", username,
                      host);
-      player_account_last_site_set(database, player, message_buffer);
-    } else {
-      player_account_last_site_set(database, player, host);
+      site = message_buffer;
+    }
+    if (!player_account_last_site_set(database, player, site)) {
+      log_error((LogEntry){.log = evaluation->log,
+                           .key = LOG_ALWAYS,
+                           .primary = "CON",
+                           .secondary = "ACCT"},
+                "Failed to record last site for #%ld.", player);
     }
   } else {
-    player_account_login_record(&(PlayerLoginRecordChange){
-        .account = {.database = database, .player = player},
-        .outcome = PLAYER_LOGIN_FAILURE,
-        .occurred_at = occurred_at,
-        .host = host});
+    if (!player_account_login_record(&(PlayerLoginRecordChange){
+            .account = {.database = database, .player = player},
+            .outcome = PLAYER_LOGIN_FAILURE,
+            .occurred_at = occurred_at,
+            .host = host})) {
+      log_error((LogEntry){.log = evaluation->log,
+                           .key = LOG_ALWAYS,
+                           .primary = "CON",
+                           .secondary = "ACCT"},
+                "Failed to record failed login for #%ld.", player);
+    }
   }
 }
 
@@ -122,9 +141,15 @@ DbRef connect_player(const PlayerConnectionRequest *request) {
   tt = time(nullptr);
   if (tt == (time_t)-1)
     tt = 0;
-  player_account_last_login_set(&(PlayerLastLoginChange){
-      .account = {.database = world->database, .player = player},
-      .occurred_at = tt});
+  if (!player_account_last_login_set(&(PlayerLastLoginChange){
+          .account = {.database = world->database, .player = player},
+          .occurred_at = tt})) {
+    log_error((LogEntry){.log = evaluation->log,
+                         .key = LOG_ALWAYS,
+                         .primary = "CON",
+                         .secondary = "ACCT"},
+              "Failed to record last login for #%ld.", player);
+  }
   return player;
 }
 
@@ -169,11 +194,17 @@ DbRef create_player(const PlayerCreationRequest *request) {
   /*
    * initialize everything
    */
+  if (!object_password_set(world->database, player, hashed_password)) {
+    sodium_memzero(hashed_password, sizeof(hashed_password));
+    owned_text_release(&pbuf);
+    (void)delete_player_name(world, player,
+                             game_object_pure_name(world->database, player));
+    s_going(world->database, player);
+    return NOTHING;
+  }
   if (*world->configuration->public_channel)
     comsys_add_alias(evaluation, player, "pub",
                      world->configuration->public_channel);
-
-  object_password_set(world->database, player, hashed_password);
   game_object_set_link(world->database, player,
                        world->configuration->start_home != NOTHING
                            ? world->configuration->start_home
