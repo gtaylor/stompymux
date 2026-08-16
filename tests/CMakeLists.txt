@@ -887,6 +887,18 @@ target_include_directories(lua_log_test PRIVATE
   "${LUAJIT_SOURCE_DIR}/src")
 add_test(NAME lua_log COMMAND lua_log_test)
 
+add_executable(lua_pcall_checked_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/lua/lua_pcall_checked.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_runtime.c)
+target_compile_options(lua_pcall_checked_test PRIVATE -ffunction-sections)
+target_link_options(lua_pcall_checked_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(lua_pcall_checked_test PRIVATE btmux_options luajit m)
+target_include_directories(lua_pcall_checked_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  "${CMAKE_SOURCE_DIR}/src"
+  "${LUAJIT_SOURCE_DIR}/src")
+add_test(NAME lua_pcall_checked COMMAND lua_pcall_checked_test)
+
 add_executable(libtelnet_integration_test ${CMAKE_SOURCE_DIR}/tests/integration/libtelnet_integration.c)
 target_link_libraries(libtelnet_integration_test
   PRIVATE btmux_options libtelnet)
