@@ -40,5 +40,15 @@ int main(void) {
   if (uv_run(&loop, UV_RUN_DEFAULT) != 0 || callback_count != 0 ||
       uv_loop_close(&loop) < 0)
     return 1;
+
+  if (uv_loop_init(&loop) < 0)
+    return 1;
+  timer = mux_timer_create(&loop, cancelled_callback, nullptr);
+  if (timer == nullptr)
+    return 1;
+  mux_timer_destroy(timer);
+  if (mux_timer_start(timer, 1, 0) || uv_run(&loop, UV_RUN_DEFAULT) != 0 ||
+      uv_loop_close(&loop) < 0)
+    return 1;
   return 0;
 }

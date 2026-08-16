@@ -220,7 +220,11 @@ void mux_event_add(const MuxEventRequest *request) {
     free(e);
     return;
   }
-  mux_timer_start(e->timer, (uint64_t)time * 1000, 0);
+  if (!mux_timer_start(e->timer, (uint64_t)time * 1000, 0)) {
+    mux_timer_destroy(e->timer);
+    free(e);
+    return;
+  }
 
   mux_event_main_list_add(scheduler, e);
   mux_event_type_list_add(scheduler, type, e);

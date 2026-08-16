@@ -22,6 +22,7 @@
 #include "mux/server/diagnostics.h"
 #include "mux/server/event_timer.h"
 #include "mux/server/game.h"
+#include "mux/server/log.h"
 #include "mux/server/maintenance.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h" // IWYU pragma: keep
@@ -173,52 +174,69 @@ static BQUE *cque_deque(CommandQueue *queue, DbRef player) {
   return cmd;
 }
 
+static void cque_enqueue_ready(CommandQueue *queue, DbRef player, BQUE *cmd) {
+  OBJQE *tmp;
+
+  cmd->waittime = 0;
+  cmd->next = nullptr;
+  tmp = cque_find(queue, player);
+
+  DASSERT(tmp);
+
+  if (!tmp->ctail) {
+    tmp->cque = tmp->ctail = cmd;
+  } else {
+    tmp->ctail->next = cmd;
+    tmp->ctail = cmd;
+  }
+
+  if (!tmp->queued) {
+    if (!queue->head) {
+      queue->head = queue->tail = tmp;
+      tmp->next = nullptr;
+    } else {
+      queue->tail->next = tmp;
+      queue->tail = tmp;
+      queue->tail->next = nullptr;
+    }
+    tmp->queued = 1;
+  }
+}
+
 static void cque_enqueue(CommandQueue *queue, DbRef player, BQUE *cmd) {
   BQUE *point;
   BQUE *trail;
-  OBJQE *tmp;
 
   cmd->next = nullptr;
 
   if (cmd->waittime <= queue->clock->now) {
-    cmd->waittime = 0;
-    tmp = cque_find(queue, player);
-
-    DASSERT(tmp);
-
-    if (!tmp->ctail) {
-      tmp->cque = tmp->ctail = cmd;
-      cmd->next = nullptr;
-    } else {
-      tmp->ctail->next = cmd;
-      tmp->ctail = cmd;
-      tmp->ctail->next = nullptr;
-    }
-
-    if (!tmp->queued) {
-      if (!queue->head) {
-        queue->head = queue->tail = tmp;
-        tmp->next = nullptr;
-      } else {
-        queue->tail->next = tmp;
-        queue->tail = tmp;
-        queue->tail->next = nullptr;
-      }
-      tmp->queued = 1;
-    }
-  } else {
-    mux_timer_start(cmd->timer,
-                    (uint64_t)(cmd->waittime - queue->clock->now) * 1000, 0);
-    for (point = queue->wait, trail = nullptr;
-         point && point->waittime <= cmd->waittime; point = point->next) {
-      trail = point;
-    }
-    cmd->next = point;
-    if (trail != nullptr)
-      trail->next = cmd;
-    else
-      queue->wait = cmd;
+    cque_enqueue_ready(queue, player, cmd);
+    return;
   }
+
+  if (!mux_timer_start(cmd->timer,
+                       (uint64_t)(cmd->waittime - queue->clock->now) * 1000,
+                       0)) {
+    log_error((LogEntry){.log = queue->log,
+                         .key = LOG_ALWAYS,
+                         .primary = "QUEUE",
+                         .secondary = "TIMER"},
+              "Failed to schedule a delayed command for #%ld; running it "
+              "immediately.",
+              player);
+    cque_enqueue_ready(queue, player, cmd);
+    return;
+  }
+
+  for (point = queue->wait, trail = nullptr;
+       point && point->waittime <= cmd->waittime; point = point->next) {
+    trail = point;
+  }
+  cmd->next = point;
+  if (trail != nullptr)
+    trail->next = cmd;
+  else
+    queue->wait = cmd;
 }
 
 static void wakeup_wait_que(MuxTimer *timer [[maybe_unused]], void *arg) {
