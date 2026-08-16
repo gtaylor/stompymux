@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include "mux/objects/db.h" // IWYU pragma: keep
 #include "mux/server/platform.h"
 #include "mux/support/name_table.h"
 
