@@ -257,16 +257,10 @@ static bool leave_hangar(BattleMap *map, Mech *mech) {
     mech_notify(mech, MECHALL, "The entrance is still filled with rubble!");
     return false;
   }
-  mech_los_broadcast(mech, "has left the hangar.");
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
-                 map->map_object[TYPE_LEAVE]->obj);
-  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld",
-                 map->map_object[TYPE_LEAVE]->obj);
-  if (car)
-    mech_rsetmapindex(GOD, (void *)car, message_buffer);
-  map = btech_context_get_map(mech->xcode.context, mech->mapindex);
-  if (mech->mapindex == mapob) {
+  const DbRef DESTINATION = map->map_object[TYPE_LEAVE]->obj;
+  BattleMap *destination_map =
+      btech_context_get_map(mech->xcode.context, DESTINATION);
+  if (DESTINATION == mapob || !destination_map) {
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
                        "#%ld %s attempted to leave, but no target map?",
                        mech->mynum, mech_display_id(mech).text);
@@ -274,16 +268,38 @@ static bool leave_hangar(BattleMap *map, Mech *mech) {
                 "Exit of this map is.. fubared. Please contact a wizard");
     return false;
   }
-  mapo = find_entrance_by_target(map, mapob);
+  mapo = find_entrance_by_target(destination_map, mapob);
   if (!mapo) {
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
                        "#%ld %s attempted to leave, but no target place was "
                        "found? setting the mech at 0,0 at %ld.",
-                       mech->mynum, mech_display_id(mech).text, mech->mapindex);
+                       mech->mynum, mech_display_id(mech).text, DESTINATION);
     mech_notify(mech, MECHALL,
                 "Weird bug happened during leave. Please contact a wizard. ");
     return true;
   }
+  const ObjectMovementRequest MOVEMENTS[] = {
+      {.evaluation = btech_context_evaluation(mech->xcode.context),
+       .object = mech->mynum,
+       .destination = DESTINATION,
+       .cause = 1},
+      {.evaluation = btech_context_evaluation(mech->xcode.context),
+       .object = car ? car->mynum : NOTHING,
+       .destination = DESTINATION,
+       .cause = 1},
+  };
+  if (!move_via_teleport_batch(&(ObjectTeleportBatchRequest){
+          .movements = MOVEMENTS, .count = car ? 2 : 1})) {
+    mech_notify(mech, MECHALL,
+                "Unable to leave the hangar: teleportation was denied.");
+    return false;
+  }
+
+  mech_los_broadcast(mech, "has left the hangar.");
+  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", DESTINATION);
+  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
+  if (car)
+    mech_rsetmapindex(GOD, (void *)car, message_buffer);
 
   bsuit_swarmers_stop(
       btech_context_find_object(mech->xcode.context, mech->mapindex), mech, 1);
@@ -298,18 +314,6 @@ static bool leave_hangar(BattleMap *map, Mech *mech) {
   mech_los_broadcastf(mech, "has left %s at %d,%d.",
                       structure_name(mech->xcode.context->database, mapo).text,
                       ((mech)->pd.x), ((mech)->pd.y));
-  move_via_teleport(&(ObjectMovementRequest){
-      .evaluation = btech_context_evaluation(mech->xcode.context),
-      .object = mech->mynum,
-      .destination = mech->mapindex,
-      .cause = 1});
-  if (car) {
-    move_via_teleport(&(ObjectMovementRequest){
-        .evaluation = btech_context_evaluation(mech->xcode.context),
-        .object = car->mynum,
-        .destination = mech->mapindex,
-        .cause = 1});
-  }
   if (is_in_character(mech->xcode.context->database, mech->mynum) &&
       game_object_location(mech->xcode.context->database,
                            mech_pilot_dbref(mech)) != mech->mynum) {

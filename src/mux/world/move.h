@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <stddef.h>
+
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_invocation.h"
 #include "mux/server/platform.h"
@@ -27,8 +29,16 @@ typedef struct ExitMovementRequest {
   DbRef exit;
 } ExitMovementRequest;
 
+/* Authorization uses every object's original source chain before any move. */
+typedef struct ObjectTeleportBatchRequest {
+  const ObjectMovementRequest *movements;
+  size_t count;
+} ObjectTeleportBatchRequest;
+
 void move_via_generic(const ObjectMovementRequest *request);
 void move_via_exit(const ExitMovementRequest *request);
-bool move_via_teleport(const ObjectMovementRequest *request);
+[[nodiscard]] bool move_via_teleport(const ObjectMovementRequest *request);
+[[nodiscard]] bool
+move_via_teleport_batch(const ObjectTeleportBatchRequest *request);
 void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
                const char *failmsg, int hush);

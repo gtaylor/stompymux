@@ -12,6 +12,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h" // IWYU pragma: keep
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 #include "mux/world/move_internal.h"
@@ -422,22 +423,19 @@ void move_via_exit(const ExitMovementRequest *request) {
  * * divestiture + dropto check.
  */
 
-bool move_via_teleport(const ObjectMovementRequest *request) {
+static bool teleport_is_allowed(const ObjectMovementRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
   DbRef thing = request->object;
   DbRef dest = request->destination;
   DbRef cause = request->cause;
-  int hush = request->hush;
-  DbRef src;
   DbRef curr;
-  bool canhear;
   int count;
   const char *failmsg;
   LuaLockInvocation lock;
   LuaLockResult result;
   const ServerConfiguration *configuration = evaluation->world->configuration;
 
-  src = game_object_location(evaluation->world->database, thing);
+  DbRef src = game_object_location(evaluation->world->database, thing);
   if ((dest != HOME) && is_good_obj(evaluation->world->database, src)) {
     curr = src;
     for (count = configuration->ntfy_nest_lim; count > 0; count--) {
@@ -464,9 +462,20 @@ bool move_via_teleport(const ObjectMovementRequest *request) {
       curr = game_object_location(evaluation->world->database, curr);
     }
   }
+  return true;
+}
+
+static void teleport_commit(const ObjectMovementRequest *request) {
+  EvaluationContext *evaluation = request->evaluation;
+  DbRef thing = request->object;
+  DbRef dest = request->destination;
+  DbRef cause = request->cause;
+  int hush = request->hush;
+  DbRef src = game_object_location(evaluation->world->database, thing);
+
   if (dest == HOME)
     dest = game_object_link(evaluation->world->database, thing);
-  canhear = is_hearer(evaluation, thing);
+  bool canhear = is_hearer(evaluation, thing);
   if (!(hush & HUSH_LEAVE)) {
     notify_action(evaluation,
                   &(ActionMessageInvocation){
@@ -513,6 +522,27 @@ bool move_via_teleport(const ObjectMovementRequest *request) {
                                           .cause = NOTHING,
                                           .can_hear = canhear,
                                           .hush = hush});
+}
+
+bool move_via_teleport(const ObjectMovementRequest *request) {
+  if (!teleport_is_allowed(request))
+    return false;
+  teleport_commit(request);
+  return true;
+}
+
+bool move_via_teleport_batch(const ObjectTeleportBatchRequest *request) {
+  for (size_t index = 0; index < request->count; index++) {
+    const ObjectMovementRequest *movement = checked_storage_at_const(
+        request->movements, request->count, sizeof(*request->movements), index);
+    if (!teleport_is_allowed(movement))
+      return false;
+  }
+  for (size_t index = 0; index < request->count; index++) {
+    const ObjectMovementRequest *movement = checked_storage_at_const(
+        request->movements, request->count, sizeof(*request->movements), index);
+    teleport_commit(movement);
+  }
   return true;
 }
 
