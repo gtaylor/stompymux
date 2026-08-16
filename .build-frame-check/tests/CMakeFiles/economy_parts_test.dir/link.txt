@@ -1,1 +1,0 @@
-/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/economy_parts_test.dir/link.d CMakeFiles/economy_parts_test.dir/unit/mux/state/economy_parts.c.o CMakeFiles/economy_parts_test.dir/__/src/mux/objects/economy_parts.c.o -o economy_parts_test  ../libbtmux_checked_storage.a

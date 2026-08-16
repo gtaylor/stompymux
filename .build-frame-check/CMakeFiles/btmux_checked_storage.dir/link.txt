@@ -1,2 +1,0 @@
-/usr/bin/llvm-ar-22 qc libbtmux_checked_storage.a CMakeFiles/btmux_checked_storage.dir/src/mux/support/checked_storage.c.o
-/usr/bin/llvm-ranlib-22 libbtmux_checked_storage.a

@@ -1,1 +1,0 @@
-/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Wl,--gc-sections -Xlinker --dependency-file=CMakeFiles/btech_unit_cost_test.dir/link.d CMakeFiles/btech_unit_cost_test.dir/unit/btech/economy/btech_unit_cost.c.o CMakeFiles/btech_unit_cost_test.dir/__/src/btech/economy/unit_cost.c.o -o btech_unit_cost_test  ../libbtmux_checked_storage.a

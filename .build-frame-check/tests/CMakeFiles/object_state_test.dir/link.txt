@@ -1,1 +1,0 @@
-/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/object_state_test.dir/link.d CMakeFiles/object_state_test.dir/unit/mux/state/object_state.c.o CMakeFiles/object_state_test.dir/__/src/mux/objects/object_state.c.o -o object_state_test  -lm ../libbtmux_checked_storage.a
