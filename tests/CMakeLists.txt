@@ -382,6 +382,19 @@ target_include_directories(btech_parts_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_parts COMMAND btech_parts_test)
 
+add_executable(btech_unit_cost_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/economy/btech_unit_cost.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/economy/unit_cost.c)
+target_compile_options(btech_unit_cost_test PRIVATE -ffunction-sections)
+target_link_options(btech_unit_cost_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_unit_cost_test PRIVATE btmux_options)
+target_include_directories(btech_unit_cost_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_unit_cost COMMAND btech_unit_cost_test)
+set_tests_properties(btech_unit_cost PROPERTIES LABELS "unit;btech-economy")
+
 add_executable(btech_random_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_random.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/core/random_xoshiro.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/ui/mech_stat.c)
