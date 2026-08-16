@@ -107,11 +107,31 @@ static void server_lifecycle_close_timers(uv_handle_t *handle,
     mux_timer_destroy(handle->data);
 }
 
+static void
+server_lifecycle_force_close_descriptors(ServerLifecycle *lifecycle) {
+  DescriptorIterator iterator =
+      descriptor_iterator_all(lifecycle->maintenance->descriptors);
+  Descriptor *descriptor;
+
+  while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr)
+    descriptor_force_close(descriptor);
+}
+
+static void server_lifecycle_abort_write_drain(ServerLifecycle *lifecycle,
+                                               const char *reason) {
+  log_error((LogEntry){.log = lifecycle->maintenance->log,
+                       .key = LOG_ALWAYS,
+                       .primary = "INI",
+                       .secondary = "EVENT"},
+            "%s; closing connections immediately.", reason);
+  server_lifecycle_force_close_descriptors(lifecycle);
+  mux_timer_destroy(lifecycle->shutdown_timer);
+  lifecycle->shutdown_timer = nullptr;
+}
+
 static void server_lifecycle_drain_writes(MuxTimer *timer [[maybe_unused]],
                                           void *arg) {
   ServerLifecycle *lifecycle = arg;
-  Descriptor *descriptor;
-  DescriptorIterator iterator;
   bool deadline_reached;
 
   deadline_reached =
@@ -119,11 +139,8 @@ static void server_lifecycle_drain_writes(MuxTimer *timer [[maybe_unused]],
   if (descriptor_count(lifecycle->maintenance->descriptors) != 0 &&
       !deadline_reached)
     return;
-  if (deadline_reached) {
-    iterator = descriptor_iterator_all(lifecycle->maintenance->descriptors);
-    while ((descriptor = descriptor_iterator_next(&iterator)) != nullptr)
-      descriptor_force_close(descriptor);
-  }
+  if (deadline_reached)
+    server_lifecycle_force_close_descriptors(lifecycle);
   mux_timer_destroy(lifecycle->shutdown_timer);
   lifecycle->shutdown_timer = nullptr;
 }
@@ -273,8 +290,12 @@ void server_lifecycle_shutdown(ServerLifecycle *lifecycle) {
       lifecycle->shutdown_started_at = uv_hrtime();
       lifecycle->shutdown_timer = mux_timer_create(
           &lifecycle->event_loop, server_lifecycle_drain_writes, lifecycle);
-      if (lifecycle->shutdown_timer != nullptr)
-        mux_timer_start(lifecycle->shutdown_timer, 10, 10);
+      if (lifecycle->shutdown_timer == nullptr)
+        server_lifecycle_abort_write_drain(
+            lifecycle, "Unable to create shutdown drain timer");
+      else if (!mux_timer_start(lifecycle->shutdown_timer, 10, 10))
+        server_lifecycle_abort_write_drain(
+            lifecycle, "Unable to start shutdown drain timer");
     }
     uv_run(&lifecycle->event_loop, UV_RUN_DEFAULT);
     status = uv_loop_close(&lifecycle->event_loop);

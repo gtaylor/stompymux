@@ -138,7 +138,10 @@ static bool log_cache_open(LogCache *cache, char *filename) {
     free(newlog);
     return false;
   }
-  mux_timer_start(newlog->timer, (uint64_t)LOGFILE_TIMEOUT * 1000U, 0);
+  if (!mux_timer_start(newlog->timer, (uint64_t)LOGFILE_TIMEOUT * 1000U, 0)) {
+    log_cache_close(cache, newlog, false);
+    return false;
+  }
   red_black_tree_insert(cache->files, newlog->filename, newlog);
   return true;
 }
@@ -192,7 +195,10 @@ bool log_cache_write(LogCache *cache, char *fname, const char *fdata) {
     }
   }
 
-  mux_timer_start(log->timer, (uint64_t)LOGFILE_TIMEOUT * 1000U, 0);
+  if (!mux_timer_start(log->timer, (uint64_t)LOGFILE_TIMEOUT * 1000U, 0)) {
+    log_cache_close(cache, log, true);
+    return false;
+  }
 
   if (write(log->fd, fdata, (size_t)len) < 0) {
     (void)fprintf(

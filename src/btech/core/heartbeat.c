@@ -22,7 +22,11 @@ void btech_heartbeat_start(BtechContext *context) {
       server_lifecycle_loop(context->lifecycle), heartbeat_run, context);
   if (context->heartbeat == nullptr)
     return;
-  mux_timer_start(context->heartbeat, 1000, 1000);
+  if (!mux_timer_start(context->heartbeat, 1000, 1000)) {
+    mux_timer_destroy(context->heartbeat);
+    context->heartbeat = nullptr;
+    return;
+  }
   context->heartbeat_running = true;
 }
 
