@@ -1,1 +1,0 @@
-/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/btech_header_interfaces_test.dir/link.d CMakeFiles/btech_header_interfaces_test.dir/unit/btech/contracts/btech_header_interfaces.c.o -o btech_header_interfaces_test  ../libbtmux_checked_storage.a

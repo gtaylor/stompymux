@@ -1,1 +1,0 @@
-/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/speech_format_test.dir/link.d CMakeFiles/speech_format_test.dir/unit/mux/communication/speech_format.c.o CMakeFiles/speech_format_test.dir/__/src/mux/communication/speech_format.c.o -o speech_format_test  ../libbtmux_checked_storage.a

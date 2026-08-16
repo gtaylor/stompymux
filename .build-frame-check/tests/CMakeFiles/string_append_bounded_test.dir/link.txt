@@ -1,1 +1,0 @@
-/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/string_append_bounded_test.dir/link.d CMakeFiles/string_append_bounded_test.dir/unit/mux/support/string_append_bounded.c.o -o string_append_bounded_test  ../libbtmux_checked_storage.a

@@ -1,1 +1,0 @@
-/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/libtelnet_integration_test.dir/link.d CMakeFiles/libtelnet_integration_test.dir/integration/libtelnet_integration.c.o -o libtelnet_integration_test  ../liblibtelnet.a ../libbtmux_checked_storage.a /usr/lib/x86_64-linux-gnu/libz.so
