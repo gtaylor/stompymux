@@ -12,9 +12,17 @@
 #include "mux/support/red_black_tree.h"
 #include "mux/world/player_cache.h"
 
+typedef struct PlayerCacheEntry PlayerCacheEntry;
+struct PlayerCacheEntry {
+  DbRef player;
+  int queue;
+  bool recently_referenced;
+  PlayerCacheEntry *next;
+};
+
 struct PlayerCache {
   RedBlackTree tree;
-  PCACHE *head;
+  PlayerCacheEntry *head;
   const ServerConfiguration *configuration;
   GameDatabase *database;
 };
@@ -45,7 +53,7 @@ PlayerCache *player_cache_create(const ServerConfiguration *configuration,
 }
 
 void player_cache_destroy(PlayerCache *cache) {
-  PCACHE *entry;
+  PlayerCacheEntry *entry;
 
   if (cache == nullptr)
     return;
@@ -57,51 +65,53 @@ void player_cache_destroy(PlayerCache *cache) {
   free(cache);
 }
 
-PCACHE *pcache_find(PlayerCache *cache, DbRef player) {
-  PCACHE *pp;
+size_t player_cache_size(const PlayerCache *cache) {
+  return (size_t)red_black_tree_size(cache->tree);
+}
+
+static PlayerCacheEntry *player_cache_find(PlayerCache *cache, DbRef player) {
+  PlayerCacheEntry *entry;
 
   if (!is_good_obj(cache->database, player) ||
       !is_player(cache->database, player))
     return nullptr;
 
-  pp = (PCACHE *)red_black_tree_find(cache->tree, (void *)player);
-  if (pp) {
-    pp->cflags |= PF_REF;
-    return pp;
+  entry = red_black_tree_find(cache->tree, (void *)player);
+  if (entry) {
+    entry->recently_referenced = true;
+    return entry;
   }
-  pp = checked_storage_allocate(sizeof(PCACHE));
-  pp->queue = 0;
-  pp->cflags = PF_REF;
-  pp->player = player;
-  pp->next = cache->head;
-  cache->head = pp;
-  red_black_tree_insert(cache->tree, (void *)player, (void *)pp);
-  return pp;
+  entry = checked_storage_allocate(sizeof(*entry));
+  entry->player = player;
+  entry->queue = 0;
+  entry->recently_referenced = true;
+  entry->next = cache->head;
+  cache->head = entry;
+  red_black_tree_insert(cache->tree, (void *)player, entry);
+  return entry;
 }
 
-void pcache_trim(PlayerCache *cache) {
-  PCACHE *pp;
-  PCACHE *pplast;
-  PCACHE *ppnext;
-  return;
+void player_cache_trim(PlayerCache *cache) {
+  PlayerCacheEntry *entry;
+  PlayerCacheEntry *previous;
+  PlayerCacheEntry *next;
 
-  pp = cache->head;
-  pplast = nullptr;
-  while (pp) {
-    if (!(pp->cflags & PF_DEAD) && (pp->queue || (pp->cflags & PF_REF))) {
-      pp->cflags &= ~PF_REF;
-      pplast = pp;
-      pp = pp->next;
+  entry = cache->head;
+  previous = nullptr;
+  while (entry) {
+    if (entry->queue != 0 || entry->recently_referenced) {
+      entry->recently_referenced = false;
+      previous = entry;
+      entry = entry->next;
     } else {
-      ppnext = pp->next;
-      if (pplast)
-        pplast->next = ppnext;
+      next = entry->next;
+      if (previous)
+        previous->next = next;
       else
-        cache->head = ppnext;
-      if (!(pp->cflags & PF_DEAD))
-        red_black_tree_delete(cache->tree, (void *)pp->player);
-      free(pp);
-      pp = ppnext;
+        cache->head = next;
+      red_black_tree_delete(cache->tree, (void *)entry->player);
+      free(entry);
+      entry = next;
     }
   }
 }
@@ -109,13 +119,13 @@ void pcache_trim(PlayerCache *cache) {
 int queue_adjust(const PlayerQueueAdjustment *adjustment) {
   PlayerCache *cache = adjustment->cache;
   DbRef player = adjustment->player;
-  PCACHE *pp;
+  PlayerCacheEntry *entry;
 
   if (is_player(cache->database, player)) {
-    pp = pcache_find(cache, player);
-    if (pp)
-      pp->queue += adjustment->delta;
-    return pp->queue;
+    entry = player_cache_find(cache, player);
+    if (entry)
+      entry->queue += adjustment->delta;
+    return entry ? entry->queue : 0;
   }
   return 0;
 }
@@ -123,12 +133,12 @@ int queue_adjust(const PlayerQueueAdjustment *adjustment) {
 void queue_set(const PlayerQueueAssignment *assignment) {
   PlayerCache *cache = assignment->cache;
   DbRef player = assignment->player;
-  PCACHE *pp;
+  PlayerCacheEntry *entry;
 
   if (is_player(cache->database, player)) {
-    pp = pcache_find(cache, player);
-    if (pp)
-      pp->queue = assignment->value;
+    entry = player_cache_find(cache, player);
+    if (entry)
+      entry->queue = assignment->value;
   }
 }
 
