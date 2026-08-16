@@ -34,7 +34,7 @@ static int maximum_int(int first, int second) {
 
 int bounded(int, int, int);
 
-static int number_of_entries(CoolMenu *c) {
+static int menu_column_count(CoolMenu *c) {
   if (c->flags & CM_ONE)
     return 1;
   if (c->flags & CM_TWO)
@@ -47,10 +47,11 @@ static int number_of_entries(CoolMenu *c) {
   return 1;
 }
 
-static int count_following_with(CoolMenu *c, int num) {
+static int menu_row_entry_count(CoolMenu *c, int column_count) {
   int count = 0;
 
-  for (; c && number_of_entries(c) >= num && count < num; c = c->next)
+  for (; c && menu_column_count(c) >= column_count && count < column_count;
+       c = c->next)
     count++;
   return count;
 }
@@ -189,52 +190,66 @@ static void display_entry(BtechTextBuilder *output, int maxlen, CoolMenu *c) {
   }
 }
 
-static void display_entries(CoolMenu *c, int wnum, int num, char *text) {
-  int i;
-  int single_length = (MENU_CHAR_WIDTH / wnum);
-  BtechTextBuilder output;
-  btech_text_builder_initialize(&output, text, MAX_MENU_WIDTH);
+typedef struct MenuDisplayEntriesRequest {
+  CoolMenu *first_entry;
+  int column_count;
+  int row_entry_count;
+  char *text;
+} MenuDisplayEntriesRequest;
 
-  for (i = 0; i < num; i++) {
-    display_entry(&output, single_length, c);
-    c = c->next;
+static void display_entries(const MenuDisplayEntriesRequest *request) {
+  int i;
+  CoolMenu *entry = request->first_entry;
+  int single_length = MENU_CHAR_WIDTH / request->column_count;
+  BtechTextBuilder output;
+  btech_text_builder_initialize(&output, request->text, MAX_MENU_WIDTH);
+
+  for (i = 0; i < request->row_entry_count; i++) {
+    display_entry(&output, single_length, entry);
+    entry = entry->next;
   }
 }
 
 char **make_cool_menu_text(CoolMenu *c, size_t *line_count) {
-  char **m;
-  int pos = 0;
-  int n;
-  int rn;
+  char **lines;
+  int line_index = 0;
+  int column_count;
+  int row_entry_count;
 
-  m = (char **)checked_storage_allocate_array(MAX_MENU_LENGTH + 1, sizeof(*m));
+  lines = (char **)checked_storage_allocate_array(MAX_MENU_LENGTH + 1,
+                                                  sizeof(*lines));
 
   /* Whole whopping menu is ready to be written at.. */
   while (c) {
-    n = number_of_entries(c);
-    if (!n) {
+    column_count = menu_column_count(c);
+    if (!column_count) {
       c = c->next;
       continue;
     }
-    rn = count_following_with(c, n);
-    if (!rn) {
+    row_entry_count = menu_row_entry_count(c, column_count);
+    if (!row_entry_count) {
       c = c->next;
       continue;
     }
     char *line = checked_storage_allocate_array(MAX_MENU_WIDTH, sizeof(*line));
     char **line_slot = (char **)checked_storage_at(
-        (void *)m, MAX_MENU_LENGTH + 1, sizeof(*m), (size_t)pos);
+        (void *)lines, MAX_MENU_LENGTH + 1, sizeof(*lines), (size_t)line_index);
     *line_slot = line;
 
-    display_entries(c, n, rn, line);
-    pos++;
-    while (rn > 0 && c) {
-      rn--;
+    display_entries(&(MenuDisplayEntriesRequest){
+        .first_entry = c,
+        .column_count = column_count,
+        .row_entry_count = row_entry_count,
+        .text = line,
+    });
+    line_index++;
+    while (row_entry_count > 0 && c) {
+      row_entry_count--;
       c = c->next;
     }
   }
-  *line_count = (size_t)pos;
-  return m;
+  *line_count = (size_t)line_index;
+  return lines;
 }
 
 void cool_menu_entry_add(const CoolMenuEntryRequest *request) {
