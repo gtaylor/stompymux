@@ -57,6 +57,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/lua_runtime.c
   ${MUX_MODULE_DIR}/lua/lua_module_registry.c
   ${MUX_MODULE_DIR}/lua/lua_validation.c
+  ${MUX_MODULE_DIR}/lua/lua_test_runner.c
   ${MUX_MODULE_DIR}/lua/lua_callbacks.c
   ${MUX_MODULE_DIR}/lua/lua_schedule.c
   ${MUX_MODULE_DIR}/lua/lua_commands.c

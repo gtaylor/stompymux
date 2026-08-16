@@ -23,6 +23,10 @@ typedef enum {
   LUA_COMMAND_RELOAD = 1 << 2,
   LUA_COMMAND_SCHEDULE = 1 << 3,
   LUA_COMMAND_VIEWPARENT = 1 << 4,
+  LUA_COMMAND_TEST = 1 << 5,
+  LUA_COMMAND_TEST_UNIT = 1 << 6,
+  LUA_COMMAND_TEST_INTEGRATION = 1 << 7,
+  LUA_COMMAND_TEST_VERBOSE = 1 << 8,
 } LuaCommandKey;
 
 typedef enum {

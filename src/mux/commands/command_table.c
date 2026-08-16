@@ -71,6 +71,10 @@ static const NameTable LUA_SW[] = {
     {"parent", 6, CA_PUBLIC, LUA_COMMAND_PARENT},
     {"reload", 6, CA_PUBLIC, LUA_COMMAND_RELOAD},
     {"schedule", 8, CA_PUBLIC, LUA_COMMAND_SCHEDULE},
+    {"test", 4, CA_PUBLIC, LUA_COMMAND_TEST | SW_MULTIPLE},
+    {"unit", 4, CA_PUBLIC, LUA_COMMAND_TEST_UNIT | SW_MULTIPLE},
+    {"integration", 11, CA_PUBLIC, LUA_COMMAND_TEST_INTEGRATION | SW_MULTIPLE},
+    {"verbose", 7, CA_PUBLIC, LUA_COMMAND_TEST_VERBOSE | SW_MULTIPLE},
     {"viewparent", 10, CA_PUBLIC, LUA_COMMAND_VIEWPARENT},
     {nullptr, 0, 0, 0},
 };

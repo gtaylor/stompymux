@@ -18,6 +18,9 @@ indexed below.
 Lua modules are the supported way to define programmable commands. Attribute
 values beginning with `$` are not matched as commands.
 
+`@lua/test` runs fully mutable Lua tests against the currently loaded database.
+Run it only with a scratch database, never production data.
+
 Lua command entries may set `access = "wizard"` or `access = "god"` alongside
 their `pattern` and `handler`. Omitting `access`, or setting it to `"public"`,
 allows everyone. Unauthorized entries are skipped silently so later command
