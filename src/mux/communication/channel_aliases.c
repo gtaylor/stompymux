@@ -169,8 +169,7 @@ void comsys_show_channel_who(EvaluationContext *evaluation, DbRef player,
   for (user = ch->on_users; user; user = user->on_next) {
     if (typeof_obj(evaluation->world->database, user->who) !=
             OBJECT_TYPE_PLAYER &&
-        user->on && user->on &&
-        !is_going(evaluation->world->database, user->who)) {
+        user->on && !is_going(evaluation->world->database, user->who)) {
       buff = unparse_object(evaluation->world->database, evaluation, player,
                             user->who);
       notify_printf(evaluation, player, "%s", buff.text);
