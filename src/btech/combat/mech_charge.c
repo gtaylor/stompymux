@@ -52,7 +52,6 @@ static int charge_damage_calculate(const ChargeDamageRequest *request) {
   return (int)DAMAGE;
 }
 void charge_mech(Mech *mech, Mech *target) {
-  char message_buffer[LBUF_SIZE];
   int base_to_hit = 5;
   int roll;
   int hit_group;
@@ -75,7 +74,6 @@ void charge_mech(Mech *mech, Mech *target) {
   char location[50];
   int iwa;
   BtechContext *context = mech_context(mech);
-  char emit_buff[LBUF_SIZE];
   if (mech_charge_target_dbref(target) == mech_dbref(mech)) {
     mech_charge = 1;
     target_charge = 1;
@@ -394,6 +392,7 @@ void charge_mech(Mech *mech, Mech *target) {
       mech_current_speed_set(mech, 0);
       mech_desired_speed_set(mech, 0);
       /* Emit the damage for debugging purposes */
+      char *emit_buff = alloc_lbuf("charge_mech.emit");
       (void)snprintf(emit_buff, LBUF_SIZE,
                      "#%li charges #%li (%i/%i) Distance:"
                      " %.2f DI: %i DR: %i",
@@ -401,6 +400,7 @@ void charge_mech(Mech *mech, Mech *target) {
                      mech_roll, (double)mech_charge_distance(mech),
                      inflicted_damage, received_damage);
       btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s", emit_buff);
+      free_buf(emit_buff);
       /* Make the first unit roll for doing the charge if it is a mech */
       if (mech_class(mech) == CLASS_MECH && !made_pilot_skill_roll(mech, 2)) {
         mech_notify(mech, MECHALL,
@@ -468,6 +468,7 @@ void charge_mech(Mech *mech, Mech *target) {
       mech_current_speed_set(target, 0);
       mech_desired_speed_set(target, 0);
       /* Emit the damage for debugging purposes */
+      char *emit_buff = alloc_lbuf("charge_mech.emit");
       (void)snprintf(emit_buff, LBUF_SIZE,
                      "#%li charges #%li (%i/%i) Distance:"
                      " %.2f DI: %i DR: %i",
@@ -475,6 +476,7 @@ void charge_mech(Mech *mech, Mech *target) {
                      targ_roll, (double)mech_charge_distance(target),
                      inflicted_damage, received_damage);
       btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s", emit_buff);
+      free_buf(emit_buff);
       if (mech_class(mech) == CLASS_MECH && !made_pilot_skill_roll(mech, 2)) {
         mech_notify(mech, MECHALL,
                     "Your piloting skill fails and you fall over!!");
@@ -616,10 +618,12 @@ void charge_mech(Mech *mech, Mech *target) {
   mech_printf(mech, MECHALL, "Charge: BTH %d\tRoll: %d", base_to_hit, roll);
   /* Did the charge work ? */
   if (roll >= base_to_hit) {
-    (void)snprintf(message_buffer, sizeof(message_buffer), "%ss %%s!",
+    char *message_buffer = alloc_lbuf("charge_mech.message");
+    (void)snprintf(message_buffer, LBUF_SIZE, "%ss %%s!",
                    mech_class(mech) == CLASS_MECH ? "charge" : "ram");
     /* OUCH */
     mech_los_broadcast_unit(mech, target, message_buffer);
+    free_buf(message_buffer);
     mech_printf(target, MECHSTARTED, "CRASH!!!\n%s %ss into you!",
                 mech_to_mech_display_id(target, mech).text,
                 mech_class(mech) == CLASS_MECH ? "charge" : "ram");
@@ -682,6 +686,7 @@ void charge_mech(Mech *mech, Mech *target) {
     mech_current_speed_set(mech, 0);
     mech_desired_speed_set(mech, 0);
     /* Emit the damage for debugging purposes */
+    char *emit_buff = alloc_lbuf("charge_mech.emit");
     (void)snprintf(emit_buff, LBUF_SIZE,
                    "#%li charges #%li (%i/%i) Distance:"
                    " %.2f DI: %i DR: %i",
@@ -689,6 +694,7 @@ void charge_mech(Mech *mech, Mech *target) {
                    (double)mech_charge_distance(mech), inflicted_damage,
                    received_damage);
     btech_channel_send(context, BTECH_CHANNEL_MECH_DEBUG, "%s", emit_buff);
+    free_buf(emit_buff);
   }
   /* Cycle the sections so they can't make another attack for a while */
   if (mech_class(mech) == CLASS_MECH) {

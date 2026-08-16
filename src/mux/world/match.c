@@ -13,6 +13,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
@@ -33,12 +34,57 @@ typedef struct MatchCandidate {
   int confidence;
 } MatchCandidate;
 
+typedef struct MatchStateSnapshot {
+  int confidence;
+  int count;
+  int pref_type;
+  bool check_keys;
+  DbRef absolute_form;
+  DbRef match;
+  DbRef player;
+  char *string;
+  char *normalized;
+} MatchStateSnapshot;
+
+static MatchStateSnapshot match_state_snapshot(MatchContext *match_context) {
+  char *normalized = alloc_lbuf("promote_match.normalized");
+
+  (void)string_copy_bounded(normalized, LBUF_SIZE, match_context->string);
+  return (MatchStateSnapshot){
+      .confidence = match_context->confidence,
+      .count = match_context->count,
+      .pref_type = match_context->pref_type,
+      .check_keys = match_context->check_keys,
+      .absolute_form = match_context->absolute_form,
+      .match = match_context->match,
+      .player = match_context->player,
+      .string = match_context->string,
+      .normalized = normalized,
+  };
+}
+
+static void match_state_restore(MatchContext *match_context,
+                                MatchStateSnapshot *snapshot) {
+  match_context->confidence = snapshot->confidence;
+  match_context->count = snapshot->count;
+  match_context->pref_type = snapshot->pref_type;
+  match_context->check_keys = snapshot->check_keys;
+  match_context->absolute_form = snapshot->absolute_form;
+  match_context->match = snapshot->match;
+  match_context->player = snapshot->player;
+  match_context->string = snapshot->string;
+  (void)string_copy_bounded(match_context->string,
+                            strlen(snapshot->normalized) + 1,
+                            snapshot->normalized);
+  free_buf(snapshot->normalized);
+}
+
 static void promote_match(MatchContext *match_context,
                           MatchCandidate candidate) {
   DbRef what = candidate.object;
   int confidence = candidate.confidence;
   LuaLockInvocation lock;
-  LuaLockResult result;
+  LuaLockResult *result;
   /*
    * Check for type and locks, if requested
    */
@@ -50,16 +96,17 @@ static void promote_match(MatchContext *match_context,
       confidence |= CON_TYPE;
   }
   if (match_context->check_keys) {
-    MSTATE save_md;
+    MatchStateSnapshot save_md = match_state_snapshot(match_context);
+    result = checked_storage_allocate(sizeof(*result));
 
-    save_match_state(match_context, &save_md);
     if (is_good_obj(match_context->evaluation->world->database, what) &&
         lock_test(match_context->evaluation, match_context->player,
                   match_context->player, match_context->player, what,
                   LUA_LOCK_DEFAULT, LUA_LOCK_OPERATION_MATCH, true, &lock,
-                  &result))
+                  result))
       confidence |= CON_LOCK;
-    restore_match_state(match_context, &save_md);
+    match_state_restore(match_context, &save_md);
+    free_buf(result);
   }
   /*
    * If nothing matched, take it
@@ -550,39 +597,6 @@ DbRef match_status(EvaluationContext *evaluation, DbRef player, DbRef match) {
 DbRef noisy_match_result(MatchContext *match_context) {
   return match_status(match_context->evaluation, match_context->player,
                       match_result(match_context));
-}
-
-void save_match_state(MatchContext *match_context, MSTATE *mstate) {
-  /* The snapshot must be distinct because its normalized buffer saves text
-   * that may alias match_context->normalized. */
-  if (mstate == match_context)
-    abort();
-  mstate->confidence = match_context->confidence;
-  mstate->count = match_context->count;
-  mstate->pref_type = match_context->pref_type;
-  mstate->check_keys = match_context->check_keys;
-  mstate->absolute_form = match_context->absolute_form;
-  mstate->match = match_context->match;
-  mstate->player = match_context->player;
-  mstate->string = match_context->string;
-  (void)string_copy_bounded(mstate->normalized, sizeof(mstate->normalized),
-                            match_context->string);
-}
-
-void restore_match_state(MatchContext *match_context, MSTATE *mstate) {
-  if (mstate == match_context)
-    abort();
-  match_context->confidence = mstate->confidence;
-  match_context->count = mstate->count;
-  match_context->pref_type = mstate->pref_type;
-  match_context->check_keys = mstate->check_keys;
-  match_context->absolute_form = mstate->absolute_form;
-  match_context->match = mstate->match;
-  match_context->player = mstate->player;
-  match_context->string = mstate->string;
-  /* Restore into the same borrowed buffer that supplied the saved text. */
-  (void)string_copy_bounded(match_context->string,
-                            strlen(mstate->normalized) + 1, mstate->normalized);
 }
 
 void init_match(MatchContext *match_context, DbRef player, const char *name,

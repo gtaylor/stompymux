@@ -1,0 +1,1 @@
+/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/gamedb_integration_test.dir/link.d CMakeFiles/gamedb_integration_test.dir/integration/gamedb_integration.c.o -o gamedb_integration_test  /usr/lib/x86_64-linux-gnu/libsqlite3.so ../libbtmux_checked_storage.a

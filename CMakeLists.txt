@@ -40,6 +40,7 @@ option(BTECH_ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
 option(BTECH_ENABLE_IWYU "Run Include What You Use during project compilation" OFF)
 option(BTECH_STRICT_C23 "Disable compiler-specific C extensions for first-party code" ON)
 option(BTECH_BUILD_FUZZERS "Build first-party libFuzzer targets" OFF)
+option(BTECH_ENABLE_FRAME_SIZE_GATE "Fail production builds on oversized stack frames" OFF)
 
 if(BTECH_ENABLE_CLANG_TIDY)
   # Needs to understand C23 `constexpr`, which landed in Clang 19.
@@ -195,8 +196,16 @@ target_link_libraries(btmux_options INTERFACE
   btmux_compile_options btmux_checked_storage)
 
 add_library(btech_frame_options INTERFACE)
-target_compile_options(btech_frame_options INTERFACE
-  $<$<COMPILE_LANGUAGE:C>:-Wframe-larger-than=65536>)
+if(BTECH_ENABLE_FRAME_SIZE_GATE)
+  # Ratchet this toward 16 KiB: 169 functions remain above 8 KiB, including
+  # 154 above 16 KiB. The bulk are one LBUF_SIZE local just over 16 KiB, so
+  # the next sweep is well-defined.
+  target_compile_options(btech_frame_options INTERFACE
+    $<$<COMPILE_LANGUAGE:C>:-Wframe-larger-than=32768 -Werror=frame-larger-than>)
+else()
+  target_compile_options(btech_frame_options INTERFACE
+    $<$<COMPILE_LANGUAGE:C>:-Wframe-larger-than=65536>)
+endif()
 
 set(BTECH_PRIVATE_INCLUDE_DIRS
   "${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/autopilot"
@@ -228,12 +237,18 @@ if(BUILD_TESTING)
   target_compile_definitions(stompymux PRIVATE BTECH_PERSISTENCE_TESTING=1)
 endif()
 set(STOMPYMUX_MAX_FRAME_SIZE 65536)
-if(BTECH_ENABLE_ASAN)
+if(BTECH_ENABLE_FRAME_SIZE_GATE)
+  set(STOMPYMUX_MAX_FRAME_SIZE 32768)
+elseif(BTECH_ENABLE_ASAN)
   # ASan redzones inflate unchanged legacy MUX frames beyond optimized size.
   set(STOMPYMUX_MAX_FRAME_SIZE 98304)
 endif()
 target_compile_options(stompymux PRIVATE
   $<$<COMPILE_LANGUAGE:C>:-Wframe-larger-than=${STOMPYMUX_MAX_FRAME_SIZE}>)
+if(BTECH_ENABLE_FRAME_SIZE_GATE)
+  target_compile_options(stompymux PRIVATE
+    $<$<COMPILE_LANGUAGE:C>:-Werror=frame-larger-than>)
+endif()
 target_link_libraries(stompymux PRIVATE btmux_options btech luajit libtelnet uv_a SQLite3::SQLite3 libsodium tomlc17 cmark m)
 target_include_directories(stompymux PRIVATE
   "${CMAKE_BINARY_DIR}"

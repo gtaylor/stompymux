@@ -369,11 +369,11 @@ CoolMenu *sel_col_fun_string_menu_context_k(int columns, const char *heading,
                                             void *context, int last) {
   CoolMenu *c = nullptr;
   int i;
-  char buf[LBUF_SIZE];
-  char entry[LBUF_SIZE];
+  char *buf = alloc_lbuf("sel_col_fun_string_menu_context.heading");
+  char *entry = alloc_lbuf("sel_col_fun_string_menu_context.entry");
   int sick = 0;
 
-  (void)string_copy_bounded(buf, sizeof(buf), heading);
+  (void)string_copy_bounded(buf, LBUF_SIZE, heading);
   buf[0] = ascii_to_upper(buf[0]);
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, buf, CM_ONE | CM_CENTER);
@@ -390,6 +390,8 @@ CoolMenu *sel_col_fun_string_menu_context_k(int columns, const char *heading,
     cool_menu_entry_normal(&c, entry, columns, i + 1 - sick, 0);
   }
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
+  free_buf(entry);
+  free_buf(buf);
   return c;
 }
 

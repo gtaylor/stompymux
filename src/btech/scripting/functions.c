@@ -165,41 +165,43 @@ int silly_parseattributes(char *buffer, char **args, int max) {
   const size_t ARGUMENT_CAPACITY = (size_t)max;
   memset((void *)args, 0, sizeof(*args) * ARGUMENT_CAPACITY);
 
-  char expanded[LBUF_SIZE];
+  char *expanded = alloc_lbuf("silly_parseattributes.expanded");
+  char *remainder = alloc_lbuf("silly_parseattributes.remainder");
   size_t output = 0;
   const size_t INPUT_LENGTH = strlen(buffer);
   for (size_t input = 0; input < INPUT_LENGTH; ++input) {
     const char VALUE = *checked_string_suffix(buffer, input);
     const size_t NEEDED = VALUE == '=' ? 3 : 1;
-    if (output + NEEDED >= sizeof(expanded))
+    if (output + NEEDED >= LBUF_SIZE) {
+      free_buf(remainder);
+      free_buf(expanded);
       return 0;
+    }
     if (VALUE == '=') {
-      *(char *)checked_storage_at(expanded, sizeof(expanded), sizeof(char),
-                                  output++) = ' ';
-      *(char *)checked_storage_at(expanded, sizeof(expanded), sizeof(char),
-                                  output++) = '=';
-      *(char *)checked_storage_at(expanded, sizeof(expanded), sizeof(char),
-                                  output++) = ' ';
+      *(char *)checked_storage_at(expanded, LBUF_SIZE, sizeof(char), output++) =
+          ' ';
+      *(char *)checked_storage_at(expanded, LBUF_SIZE, sizeof(char), output++) =
+          '=';
+      *(char *)checked_storage_at(expanded, LBUF_SIZE, sizeof(char), output++) =
+          ' ';
     } else {
-      *(char *)checked_storage_at(expanded, sizeof(expanded), sizeof(char),
-                                  output++) = VALUE;
+      *(char *)checked_storage_at(expanded, LBUF_SIZE, sizeof(char), output++) =
+          VALUE;
     }
   }
-  *(char *)checked_storage_at(expanded, sizeof(expanded), sizeof(char),
-                              output) = '\0';
+  *(char *)checked_storage_at(expanded, LBUF_SIZE, sizeof(char), output) = '\0';
 
   char *save_pointer = nullptr;
   char *parsed = strtok_r(expanded, " \t", &save_pointer);
   size_t count = 0;
   while (parsed != nullptr && count < ARGUMENT_CAPACITY) {
     if (count == ARGUMENT_CAPACITY - 1) {
-      char remainder[LBUF_SIZE];
-      (void)snprintf(remainder, sizeof(remainder), "%s", parsed);
+      (void)snprintf(remainder, LBUF_SIZE, "%s", parsed);
       while ((parsed = strtok_r(nullptr, " \t", &save_pointer)) != nullptr) {
         const size_t USED = strlen(remainder);
-        (void)snprintf(checked_storage_at(remainder, sizeof(remainder),
-                                          sizeof(char), USED),
-                       sizeof(remainder) - USED, " %s", parsed);
+        (void)snprintf(
+            checked_storage_at(remainder, LBUF_SIZE, sizeof(char), USED),
+            LBUF_SIZE - USED, " %s", parsed);
       }
       *text_slot(args, ARGUMENT_CAPACITY, count) = strdup(remainder);
     } else {
@@ -208,6 +210,8 @@ int silly_parseattributes(char *buffer, char **args, int max) {
     }
     ++count;
   }
+  free_buf(remainder);
+  free_buf(expanded);
   return (int)count;
 }
 

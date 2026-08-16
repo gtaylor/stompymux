@@ -136,16 +136,17 @@ void mech_cargo_weight_recalculate(Mech *mech) {
 bool loading_bay_blocks_transfer(const LoadingBayCheck *check) {
   Mech *mech = check->mech;
   char *c;
+  char *attribute_buffer = alloc_lbuf("loading_bay_blocks_transfer.attribute");
+  char *values = alloc_lbuf("loading_bay_blocks_transfer.values");
   int i1;
   int i2;
   int i3 = 0;
 
   c = btech_attribute_read(mech_context(mech)->database, check->cargo_bay,
-                           A_MECHSKILLS, (char[LBUF_SIZE]){0});
+                           A_MECHSKILLS, attribute_buffer);
   if (c && *c) {
-    char values[LBUF_SIZE];
     char *token_context = nullptr;
-    (void)snprintf(values, sizeof(values), "%s", c);
+    (void)snprintf(values, LBUF_SIZE, "%s", c);
     char *first = strtok_r(values, " \t\r\n", &token_context);
     char *second = strtok_r(nullptr, " \t\r\n", &token_context);
     char *third = strtok_r(nullptr, " \t\r\n", &token_context);
@@ -159,10 +160,14 @@ bool loading_bay_blocks_transfer(const LoadingBayCheck *check) {
           notify_printf(btech_context_evaluation(mech_context(mech)),
                         check->actor, "Try looking around %d,%d instead.", i1,
                         i2);
+        free_buf(values);
+        free_buf(attribute_buffer);
         return true;
       }
     }
   }
+  free_buf(values);
+  free_buf(attribute_buffer);
   return false;
 }
 
@@ -234,8 +239,9 @@ void mech_rfixstuff(DbRef player, BtechSpecialObject *object,
 void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
                    const char *buf) {
   GameDatabase *database = context->database;
-  BrandedPartPile pile;
-  BrandedPartPile matching_pile;
+  BrandedPartPile *pile = checked_storage_allocate(sizeof(*pile));
+  BrandedPartPile *matching_pile =
+      checked_storage_allocate(sizeof(*matching_pile));
   char *ch;
   PartDisplayName display_name;
   int id;
@@ -248,8 +254,6 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
   CoolMenu *c = nullptr;
   int found = 0;
 
-  memset(&pile, 0, sizeof(pile));
-  memset(&matching_pile, 0, sizeof(matching_pile));
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
   cool_menu_entry_simple(&c, header, CM_ONE | CM_CENTER);
   cool_menu_entry_simple(&c, nullptr, CM_ONE | CM_LINE);
@@ -264,7 +268,7 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
     if (result.found && entry.part_id >= 0 && entry.part_id < NUM_ITEMS &&
         entry.brand_id >= 0 && entry.brand_id <= BRANDCOUNT)
       *branded_part_pile_slot(&(BrandedPartPileSlot){
-          .pile = &pile,
+          .pile = pile,
           .part = {.id = entry.part_id, .brand = entry.brand_id},
       }) += entry.quantity;
   }
@@ -282,9 +286,9 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
         break;
       request.cursor = MATCH.cursor;
       *branded_part_pile_slot(
-          &(BrandedPartPileSlot){.pile = &matching_pile, .part = MATCH.part}) =
+          &(BrandedPartPileSlot){.pile = matching_pile, .part = MATCH.part}) =
           *branded_part_pile_slot(
-              &(BrandedPartPileSlot){.pile = &pile, .part = MATCH.part});
+              &(BrandedPartPileSlot){.pile = pile, .part = MATCH.part});
     }
   }
   for (i = 0; i < (int)part_name_count(context); i++) {
@@ -293,9 +297,9 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
     id = packed_part_id(part_name->index);
     brand = packed_part_brand(part_name->index);
     x = buf ? *branded_part_pile_slot(&(BrandedPartPileSlot){
-                  .pile = &matching_pile, .part = {.id = id, .brand = brand}})
+                  .pile = matching_pile, .part = {.id = id, .brand = brand}})
             : *branded_part_pile_slot(&(BrandedPartPileSlot){
-                  .pile = &pile, .part = {.id = id, .brand = brand}});
+                  .pile = pile, .part = {.id = id, .brand = brand}});
     if (x) {
       display_name = part_name_long(context, id, brand);
       if (!display_name.valid) {
@@ -303,7 +307,7 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
             context, BTECH_CHANNEL_MECH_ERRORS,
             "#%ld in %ld encountered odd thing: %d %d/%d's.", player, loc,
             *branded_part_pile_slot(&(BrandedPartPileSlot){
-                .pile = &pile, .part = {.id = id, .brand = brand}}),
+                .pile = pile, .part = {.id = id, .brand = brand}}),
             id, brand);
         continue;
       }
@@ -321,6 +325,8 @@ void list_matching(BtechContext *context, DbRef player, char *header, DbRef loc,
   show_cool_menu(btech_context_evaluation(context), player, c);
   kill_cool_menu(c);
   free_buf(tmpstr);
+  free_buf(matching_pile);
+  free_buf(pile);
 }
 
 static void list_manifest(BtechContext *context, DbRef player, DbRef location,

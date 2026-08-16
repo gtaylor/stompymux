@@ -12,6 +12,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/formatting.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
@@ -36,7 +37,6 @@ void do_get(CommandInvocation *invocation) {
   const char *failmsg;
   int quiet;
   LuaLockInvocation lock;
-  LuaLockResult result;
 
   playerloc = game_object_location(evaluation->world->database, player);
   if (!is_good_obj(evaluation->world->database, playerloc))
@@ -87,44 +87,50 @@ void do_get(CommandInvocation *invocation) {
     if (thing == player) {
       notify_checked(evaluation, player, player, "You cannot get yourself!",
                      MSG_ME_ALL | MSG_F_DOWN);
-    } else if (lock_test(evaluation, player, invocation->cause, player, thing,
-                         LUA_LOCK_DEFAULT, LUA_LOCK_OPERATION_TAKE, quiet != 0,
-                         &lock, &result)) {
-      if (thingloc !=
-          game_object_location(evaluation->world->database, player)) {
-        notify_printf(evaluation, thingloc, "%s was taken from you.",
-                      game_object_name(evaluation->world->database, thing));
-      }
-      move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
-                                                .object = thing,
-                                                .destination = player,
-                                                .cause = player});
-      notify_checked(evaluation, thing, thing, "Taken.",
-                     MSG_ME_ALL | MSG_F_DOWN);
-      notify_action(
-          evaluation,
-          &(ActionMessageInvocation){
-              .message = {.type = LUA_MESSAGE_SUCCESS,
-                          .operation = LUA_MESSAGE_OPERATION_TAKE,
-                          .descriptor = invocation->context->descriptor,
-                          .object = thing,
-                          .enactor = player,
-                          .cause = invocation->cause,
-                          .source = thingloc,
-                          .destination = player,
-                          .silent = quiet != 0},
-              .enactor_default = "Taken.",
-              .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_SUCCESS});
     } else {
-      if (thingloc != game_object_location(evaluation->world->database, player))
-        failmsg = "You can't take that from there.";
-      else
-        failmsg = "You can't pick that up.";
-      notify_lock_failure(&(LockFailureNotification){.evaluation = evaluation,
-                                                     .invocation = &lock,
-                                                     .result = &result,
-                                                     .enactor_default = failmsg,
-                                                     .event = LUA_EVENT_FAIL});
+      LuaLockResult *result = checked_storage_allocate(sizeof(*result));
+      if (lock_test(evaluation, player, invocation->cause, player, thing,
+                    LUA_LOCK_DEFAULT, LUA_LOCK_OPERATION_TAKE, quiet != 0,
+                    &lock, result)) {
+        if (thingloc !=
+            game_object_location(evaluation->world->database, player)) {
+          notify_printf(evaluation, thingloc, "%s was taken from you.",
+                        game_object_name(evaluation->world->database, thing));
+        }
+        move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
+                                                  .object = thing,
+                                                  .destination = player,
+                                                  .cause = player});
+        notify_checked(evaluation, thing, thing, "Taken.",
+                       MSG_ME_ALL | MSG_F_DOWN);
+        notify_action(
+            evaluation,
+            &(ActionMessageInvocation){
+                .message = {.type = LUA_MESSAGE_SUCCESS,
+                            .operation = LUA_MESSAGE_OPERATION_TAKE,
+                            .descriptor = invocation->context->descriptor,
+                            .object = thing,
+                            .enactor = player,
+                            .cause = invocation->cause,
+                            .source = thingloc,
+                            .destination = player,
+                            .silent = quiet != 0},
+                .enactor_default = "Taken.",
+                .event = quiet ? LUA_EVENT_NONE : LUA_EVENT_SUCCESS});
+      } else {
+        if (thingloc !=
+            game_object_location(evaluation->world->database, player))
+          failmsg = "You can't take that from there.";
+        else
+          failmsg = "You can't pick that up.";
+        notify_lock_failure(
+            &(LockFailureNotification){.evaluation = evaluation,
+                                       .invocation = &lock,
+                                       .result = result,
+                                       .enactor_default = failmsg,
+                                       .event = LUA_EVENT_FAIL});
+      }
+      free_buf(result);
     }
     break;
   case OBJECT_TYPE_EXIT:
@@ -191,7 +197,6 @@ void do_drop(CommandInvocation *invocation) {
   char *bp;
   int quiet;
   LuaLockInvocation lock;
-  LuaLockResult result;
 
   loc = game_object_location(evaluation->world->database, player);
   if (!is_good_obj(evaluation->world->database, loc))
@@ -229,15 +234,17 @@ void do_drop(CommandInvocation *invocation) {
                      MSG_ME_ALL | MSG_F_DOWN);
       return;
     }
+    LuaLockResult *result = checked_storage_allocate(sizeof(*result));
     if (!lock_test(evaluation, player, invocation->cause, player, thing,
                    LUA_LOCK_DROP, LUA_LOCK_OPERATION_DROP, false, &lock,
-                   &result)) {
+                   result)) {
       notify_lock_failure(
           &(LockFailureNotification){.evaluation = evaluation,
                                      .invocation = &lock,
-                                     .result = &result,
+                                     .result = result,
                                      .enactor_default = "You can't drop that.",
                                      .event = LUA_EVENT_DROP_FAIL});
+      free_buf(result);
       return;
     }
     /*
@@ -280,6 +287,7 @@ void do_drop(CommandInvocation *invocation) {
      */
 
     process_dropped_dropto(evaluation, thing, player);
+    free_buf(result);
 
     break;
   case OBJECT_TYPE_EXIT:

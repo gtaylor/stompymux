@@ -19,6 +19,7 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/name_table.h"
 #include "mux/support/owned_text.h"
 #include "mux/support/styled_text/markup.h"
@@ -106,7 +107,6 @@ static void open_exit(const ExitCreationRequest *request) {
   char *linkto = request->destination;
   DbRef exit;
   LuaLockInvocation lock;
-  LuaLockResult result;
   OwnedText compiled_direction;
 
   if (!is_good_obj(evaluation->world->database, loc))
@@ -160,17 +160,20 @@ static void open_exit(const ExitCreationRequest *request) {
      * Make sure the player passes the link lock
      */
 
+    LuaLockResult *result = checked_storage_allocate(sizeof(*result));
     if (!lock_test(evaluation, player, player, player, loc, LUA_LOCK_LINK,
-                   LUA_LOCK_OPERATION_LINK, false, &lock, &result)) {
+                   LUA_LOCK_OPERATION_LINK, false, &lock, result)) {
       notify_lock_failure(&(LockFailureNotification){
           .evaluation = evaluation,
           .invocation = &lock,
-          .result = &result,
+          .result = result,
           .enactor_default = "You can't link to there."});
+      free_buf(result);
       return;
     }
     game_object_set_location(evaluation->world->database, exit, loc);
     notify_checked(evaluation, player, player, "Linked.", MSG_ME);
+    free_buf(result);
   }
 }
 
@@ -233,7 +236,6 @@ void do_open(CommandInvocation *invocation) {
 static void link_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
                       DbRef dest) {
   LuaLockInvocation lock;
-  LuaLockResult result;
 
   /*
    * Make sure we can link there
@@ -244,15 +246,18 @@ static void link_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
       notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
       return;
     }
+    LuaLockResult *result = checked_storage_allocate(sizeof(*result));
     if (!lock_test(evaluation, player, player, player, dest, LUA_LOCK_LINK,
-                   LUA_LOCK_OPERATION_LINK, false, &lock, &result)) {
+                   LUA_LOCK_OPERATION_LINK, false, &lock, result)) {
       notify_lock_failure(
           &(LockFailureNotification){.evaluation = evaluation,
                                      .invocation = &lock,
-                                     .result = &result,
+                                     .result = result,
                                      .enactor_default = "Permission denied."});
+      free_buf(result);
       return;
     }
+    free_buf(result);
   }
   /*
    * Exit must be unlinked or controlled by you
@@ -279,7 +284,6 @@ void do_link(CommandInvocation *invocation) {
   DbRef thing;
   DbRef room;
   LuaLockInvocation lock;
-  LuaLockResult result;
 
   /*
    * Find the thing to link
@@ -302,6 +306,7 @@ void do_link(CommandInvocation *invocation) {
     do_unlink(&unlink_invocation);
     return;
   }
+  LuaLockResult *result = checked_storage_allocate(sizeof(*result));
   switch (typeof_obj(evaluation->world->database, thing)) {
   case OBJECT_TYPE_EXIT:
 
@@ -339,11 +344,11 @@ void do_link(CommandInvocation *invocation) {
       notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     } else if (!lock_test(evaluation, player, invocation->cause, player, room,
                           LUA_LOCK_LINK, LUA_LOCK_OPERATION_SET_HOME, false,
-                          &lock, &result)) {
+                          &lock, result)) {
       notify_lock_failure(
           &(LockFailureNotification){.evaluation = evaluation,
                                      .invocation = &lock,
-                                     .result = &result,
+                                     .result = result,
                                      .enactor_default = "Permission denied."});
     } else if (room == HOME) {
       notify_checked(evaluation, player, player, "Can't set home to home.",
@@ -376,11 +381,11 @@ void do_link(CommandInvocation *invocation) {
     } else if ((room != HOME) &&
                !lock_test(evaluation, player, invocation->cause, player, room,
                           LUA_LOCK_LINK, LUA_LOCK_OPERATION_LINK, false, &lock,
-                          &result)) {
+                          result)) {
       notify_lock_failure(
           &(LockFailureNotification){.evaluation = evaluation,
                                      .invocation = &lock,
-                                     .result = &result,
+                                     .result = result,
                                      .enactor_default = "Permission denied."});
     } else {
       game_object_set_location(evaluation->world->database, thing, room);
@@ -398,6 +403,7 @@ void do_link(CommandInvocation *invocation) {
               "Strange object type: object #%ld = %d", thing,
               typeof_obj(evaluation->world->database, thing));
   }
+  free_buf(result);
 }
 
 /*

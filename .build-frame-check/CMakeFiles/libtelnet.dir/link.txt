@@ -1,0 +1,2 @@
+/usr/bin/llvm-ar-22 qc liblibtelnet.a CMakeFiles/libtelnet.dir/third_party/libtelnet/libtelnet.c.o
+/usr/bin/llvm-ranlib-22 liblibtelnet.a

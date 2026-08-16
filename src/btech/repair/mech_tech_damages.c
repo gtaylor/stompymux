@@ -370,16 +370,13 @@ size_t mech_repair_job_count(Mech *mech) {
 }
 void show_mechs_damage(DbRef player, Mech *mech,
                        char *buffer [[maybe_unused]]) {
-  char message_buffer[LBUF_SIZE];
   RepairDamageTable damages_storage = {0};
   RepairDamageTable *damages = &damages_storage;
   CoolMenu *c = nullptr;
   int i;
-  int j;
-  int v1;
-  int v2;
   char buf[MBUF_SIZE] = {0};
-  char buf2[LBUF_SIZE] = {0};
+  char *message_buffer;
+  char *buf2;
   char buf3[MBUF_SIZE] = {0};
   int fix_time = 0;
   int fix_bth = 0;
@@ -408,16 +405,18 @@ void show_mechs_damage(DbRef player, Mech *mech,
                  "It's in pristine condition!");
     return;
   }
+  message_buffer = alloc_lbuf("show_mechs_damage.message");
+  buf2 = alloc_lbuf("show_mechs_damage.entry");
   cool_menu_add_line(&c);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "Damage for %s",
+  (void)snprintf(message_buffer, LBUF_SIZE, "Damage for %s",
                  mech_display_id(mech).text);
   cool_menu_add_centered(&c, message_buffer);
   cool_menu_add_line(&c);
   cool_menu_add_text(&c, "   Fix# Time  BTH Loc Description");
   for (i = 0; i < damages->count; i++) {
     const RepairDamage *damage = repair_damage_const(damages, i);
-    v1 = damage->location;
-    v2 = damage->detail;
+    int v1 = damage->location;
+    int v2 = damage->detail;
     switch (damage->type) {
     case REATTACH:
       fix_bth = find_tech_skill(player, mech) + REATTACH_DIFFICULTY;
@@ -610,14 +609,14 @@ void show_mechs_damage(DbRef player, Mech *mech,
                                              : FIXARMOR_TIME * damage->detail;
       break;
     }
-    j = is_under_repair(damages, mech, i);
+    int j = is_under_repair(damages, mech, i);
     if (j) {
       (void)snprintf(buf3, sizeof(buf3), "%4s %4s", "N/A", "N/A");
     } else {
       (void)snprintf(buf3, sizeof(buf3), "%4d %4d", fix_time, fix_bth);
     }
     (void)snprintf(
-        buf2, sizeof(buf2), "[bold]%s%3s %3d %9s %3s %s[reset]%s",
+        buf2, LBUF_SIZE, "[bold]%s%3s %3d %9s %3s %s[reset]%s",
         j ? "[fg=green]" : "[fg=yellow]", j ? "(*)" : "", i + 1, buf3,
         armor_section_abbreviation(
             &(ArmorSectionReference){.unit_class = mech_class(mech),
@@ -637,6 +636,8 @@ void show_mechs_damage(DbRef player, Mech *mech,
   cool_menu_add_line(&c);
   show_cool_menu(btech_context_evaluation(mech_context(mech)), player, c);
   kill_cool_menu(c);
+  free_buf(buf2);
+  free_buf(message_buffer);
 }
 static void fix_entry(const RepairDamageTable *damages, DbRef player,
                       Mech *mech, int n) {

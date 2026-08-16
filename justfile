@@ -7,6 +7,7 @@ enable_asan := env("BTECH_ENABLE_ASAN", "ON")
 enable_ubsan := env("BTECH_ENABLE_UBSAN", "ON")
 strict_c23 := env("BTECH_STRICT_C23", "ON")
 build_fuzzers := env("BTECH_BUILD_FUZZERS", "OFF")
+frame_check_build_dir := ".build-frame-check"
 clang_tidy := env("CLANG_TIDY", "clang-tidy-22")
 run_clang_tidy := env("RUN_CLANG_TIDY", "run-clang-tidy-22")
 clang_query := env("CLANG_QUERY", "clang-query-22")
@@ -16,7 +17,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-source-size check-typed-constants check-enum-underlying-type check-nullptr check-unsafe-apis check-bounded-copy check-checked-suffix-order check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis fmt-check build check-boolean-contracts check-boolean-conversions test tidy-check
+ci: check-source-size check-typed-constants check-enum-underlying-type check-nullptr check-unsafe-apis check-bounded-copy check-checked-suffix-order check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis fmt-check build frame-check check-boolean-contracts check-boolean-conversions test tidy-check
 
 agent-checks: ci
 
@@ -112,6 +113,13 @@ tidy-check:
 build:
     cmake -S . -B {{build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBTECH_ENABLE_ASAN={{enable_asan}} -DBTECH_ENABLE_UBSAN={{enable_ubsan}} -DBTECH_STRICT_C23={{strict_c23}} -DBTECH_BUILD_FUZZERS={{build_fuzzers}}
     cmake --build {{build_dir}} -j "$(nproc)"
+
+# Compile with real code generation and fail if any production frame crosses
+# the current 32 KiB ratchet. Keep this separate from the instrumented build:
+# sanitizer redzones change frame sizes and are not the metric being gated.
+frame-check:
+    cmake -S . -B {{frame_check_build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBTECH_ENABLE_ASAN=OFF -DBTECH_ENABLE_UBSAN=OFF -DBTECH_STRICT_C23=ON -DBTECH_BUILD_FUZZERS=OFF -DBTECH_ENABLE_FRAME_SIZE_GATE=ON
+    cmake --build {{frame_check_build_dir}} -j "$(nproc)"
 
 test:
     ctest --test-dir {{build_dir}} --output-on-failure -j "$(nproc)"

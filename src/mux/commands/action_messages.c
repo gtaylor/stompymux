@@ -9,28 +9,29 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/owned_text.h"
 #include "mux/world/object_spatial.h"
 
 void notify_action(EvaluationContext *evaluation,
                    const ActionMessageInvocation *invocation) {
-  char message_buffer[LBUF_SIZE];
   LuaMessageInvocation message = invocation->message;
-  LuaMessageResult result;
+  LuaMessageResult *result = checked_storage_allocate(sizeof(*result));
   const char *enactor_message;
   const char *other_message;
   OwnedText d;
   DbRef location = NOTHING;
   long attribute_flags;
+  char *message_buffer = alloc_lbuf("notify_action.message");
 
   if (!message.descriptor && evaluation->command)
     message.descriptor = evaluation->command->descriptor;
   lua_message_evaluate(evaluation->runtime->lua_owner->runtime, &message,
-                       &result);
-  enactor_message = result.has_enactor_message ? result.enactor_message
-                                               : invocation->enactor_default;
-  other_message = result.has_other_message ? result.other_message
-                                           : invocation->other_default;
+                       result);
+  enactor_message = result->has_enactor_message ? result->enactor_message
+                                                : invocation->enactor_default;
+  other_message = result->has_other_message ? result->other_message
+                                            : invocation->other_default;
 
   /*
    * message to player
@@ -64,7 +65,7 @@ void notify_action(EvaluationContext *evaluation,
   }
   if (notify_location) {
     (void)snprintf(
-        message_buffer, sizeof(message_buffer), "%s %s",
+        message_buffer, LBUF_SIZE, "%s %s",
         game_object_name(evaluation->world->database, message.enactor),
         other_message);
     notify_excluding(&(ExcludingNotification){
@@ -89,6 +90,8 @@ void notify_action(EvaluationContext *evaluation,
     lua_event_dispatch(evaluation->runtime->lua_owner->runtime,
                        &event_invocation);
   }
+  free_buf(message_buffer);
+  free_buf(result);
 }
 
 void notify_event(EvaluationContext *evaluation, Descriptor *descriptor,

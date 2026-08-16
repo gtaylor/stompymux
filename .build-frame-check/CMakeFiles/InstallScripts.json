@@ -1,0 +1,9 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/gtaylor/.superset/worktrees/d12de685-be56-4175-aa65-177ea75e68e8/stack-frame-reduction/.build-frame-check/cmake_install.cmake",
+		"/home/gtaylor/.superset/worktrees/d12de685-be56-4175-aa65-177ea75e68e8/stack-frame-reduction/.build-frame-check/src/btech/cmake_install.cmake",
+		"/home/gtaylor/.superset/worktrees/d12de685-be56-4175-aa65-177ea75e68e8/stack-frame-reduction/.build-frame-check/tests/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

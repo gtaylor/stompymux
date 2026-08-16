@@ -693,7 +693,8 @@ void map_update(DbRef obj, void *data) {
   BattleMap *map = ((BattleMap *)data);
   Mech *mech;
   char *tmps;
-  char changemsg[LBUF_SIZE] = "";
+  char *changemsg = alloc_lbuf("map_update.change");
+  char *attribute_buffer = alloc_lbuf("map_update.attribute");
   int ma = 30;
   int ml = 2;
   int wind = 0;
@@ -709,11 +710,9 @@ void map_update(DbRef obj, void *data) {
     oldv = (unsigned char)map->mapvis;
     bool valid_map_visibility =
         ((tmps = btech_attribute_read(map->xcode.context->database, obj,
-                                      A_MAPVIS, (char[LBUF_SIZE]){0})) !=
-             nullptr &&
+                                      A_MAPVIS, attribute_buffer)) != nullptr &&
          map_parse_visibility_attribute(tmps, &ma, &ml, &wind, &wspeed,
-                                        &cloudbase, changemsg,
-                                        sizeof(changemsg))) != 0;
+                                        &cloudbase, changemsg, LBUF_SIZE)) != 0;
     if (!valid_map_visibility) {
       ma = 30;
       ml = 2;
@@ -743,6 +742,8 @@ void map_update(DbRef obj, void *data) {
     }
   }
   mech_sensor_map_los_update(obj, map);
+  free_buf(attribute_buffer);
+  free_buf(changemsg);
   /* Fire/Smoke are event-driven -> nothing related to them done here */
 }
 void initialize_map_empty(BattleMap *new, DbRef key) {

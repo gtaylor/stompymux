@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 typedef struct LosTestState {
   int failures;
@@ -20,6 +21,15 @@ static inline void los_expect_int(LosTestState *state, const char *name,
 static inline void los_expect_true(LosTestState *state, const char *name,
                                    bool actual) {
   los_expect_int(state, name, 1, actual ? 1 : 0);
+}
+
+static inline void los_expect_string(LosTestState *state, const char *name,
+                                     const char *expected, const char *actual) {
+  ++state->checks;
+  if (strcmp(expected, actual) == 0)
+    return;
+  ++state->failures;
+  (void)fprintf(stderr, "%s: expected %s, got %s\n", name, expected, actual);
 }
 
 /* Known divergences must be reviewed when behavior reaches the intended value.

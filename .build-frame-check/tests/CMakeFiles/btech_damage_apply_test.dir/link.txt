@@ -1,0 +1,1 @@
+/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Wl,--gc-sections -Xlinker --dependency-file=CMakeFiles/btech_damage_apply_test.dir/link.d CMakeFiles/btech_damage_apply_test.dir/unit/btech/combat/btech_damage_apply.c.o CMakeFiles/btech_damage_apply_test.dir/__/src/btech/combat/mech_damage.c.o -o btech_damage_apply_test  ../libbtmux_checked_storage.a

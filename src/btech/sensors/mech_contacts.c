@@ -369,16 +369,17 @@ void mech_contacts(DbRef player, Mech *mech, char *buffer) {
   int losflag;
   int isvb;
   int inlos;
-  char new[LBUF_SIZE];
+  char *new;
   char *attribute_buffer;
   LuaLockInvocation lock;
-  LuaLockResult lock_result;
 
   if (!common_checks(player, mech, MECH_USUAL))
     return;
   contacts = checked_storage_allocate_array(BATTLE_MAP_UNIT_CAPACITY,
                                             sizeof(*contacts));
   attribute_buffer = alloc_lbuf("mech_contacts.attribute");
+  new = alloc_lbuf("mech_contacts.new");
+  LuaLockResult *lock_result = checked_storage_allocate(sizeof(*lock_result));
   argc = mech_parseattributes(buffer, args, 1);
 
   isvb = (mech_brief_mode(mech) % 4);
@@ -625,7 +626,7 @@ void mech_contacts(DbRef player, Mech *mech, char *buffer) {
       j = !lock_test(btech_context_evaluation(mech_context(mech)), player,
                      player, mech_dbref(mech), battle_map_dbref(tmp_map),
                      LUA_LOCK_ENTER, LUA_LOCK_OPERATION_BTECH_CONTACT, true,
-                     &lock, &lock_result);
+                     &lock, lock_result);
       if (j && battle_map_building_is_hidden(tmp_map))
         continue;
       bearing = map_bearing(
@@ -695,5 +696,7 @@ void mech_contacts(DbRef player, Mech *mech, char *buffer) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "End Contact List");
   free_buf(attribute_buffer);
+  free_buf(new);
+  free_buf(lock_result);
   free(contacts);
 }

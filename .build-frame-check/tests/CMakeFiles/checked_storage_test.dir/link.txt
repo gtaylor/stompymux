@@ -1,0 +1,1 @@
+/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/checked_storage_test.dir/link.d CMakeFiles/checked_storage_test.dir/unit/mux/support/checked_storage.c.o -o checked_storage_test  ../libbtmux_checked_storage.a

@@ -1,0 +1,1 @@
+/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/utf8_test.dir/link.d CMakeFiles/utf8_test.dir/unit/mux/support/utf8.c.o CMakeFiles/utf8_test.dir/__/src/mux/support/utf8.c.o -o utf8_test  ../libbtmux_checked_storage.a

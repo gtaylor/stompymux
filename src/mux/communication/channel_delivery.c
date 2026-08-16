@@ -46,14 +46,17 @@ void send_channel_v(const ChannelMessageTarget *target, const char *format,
   EvaluationContext *evaluation = target->evaluation;
   const char *chan = target->channel;
   struct Channel *ch;
-  char buf[LBUF_SIZE];
-  char data[LBUF_SIZE];
-  char *bp = buf;
+  char *buf;
+  char *data;
+  char *bp;
   char *newline;
 
   ch = select_channel(evaluation->runtime->channels, chan);
   if (!ch)
     return;
+  buf = alloc_lbuf("send_channel_v.message");
+  data = alloc_lbuf("send_channel_v.data");
+  bp = buf;
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   (void)vsnprintf(data, LBUF_SIZE, format, arguments);
 
@@ -65,6 +68,8 @@ void send_channel_v(const ChannelMessageTarget *target, const char *format,
   while ((newline = strchr(buf, '\n')))
     *newline = ' ';
   comsys_send_channel_message(evaluation, ch, buf);
+  free_buf(data);
+  free_buf(buf);
 }
 
 typedef struct ComHistoryView ComHistoryView;

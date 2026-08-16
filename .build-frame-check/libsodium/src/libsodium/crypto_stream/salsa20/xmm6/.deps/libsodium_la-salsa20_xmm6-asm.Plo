@@ -1,0 +1,8 @@
+crypto_stream/salsa20/xmm6/libsodium_la-salsa20_xmm6-asm.lo: \
+ /home/gtaylor/.superset/worktrees/d12de685-be56-4175-aa65-177ea75e68e8/stack-frame-reduction/third_party/libsodium/src/libsodium/crypto_stream/salsa20/xmm6/salsa20_xmm6-asm.S \
+ /usr/include/stdc-predef.h \
+ /home/gtaylor/.superset/worktrees/d12de685-be56-4175-aa65-177ea75e68e8/stack-frame-reduction/third_party/libsodium/src/libsodium/include/sodium/private/asm_cet.h \
+ /usr/lib/gcc/x86_64-linux-gnu/13/include/cet.h
+/usr/include/stdc-predef.h:
+/home/gtaylor/.superset/worktrees/d12de685-be56-4175-aa65-177ea75e68e8/stack-frame-reduction/third_party/libsodium/src/libsodium/include/sodium/private/asm_cet.h:
+/usr/lib/gcc/x86_64-linux-gnu/13/include/cet.h:

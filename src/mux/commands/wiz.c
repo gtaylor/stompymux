@@ -51,7 +51,6 @@ void do_teleport(CommandInvocation *invocation) {
   char *to;
   int hush = 0;
   LuaLockInvocation lock;
-  LuaLockResult result;
 
   /*
    * get victim
@@ -128,6 +127,7 @@ void do_teleport(CommandInvocation *invocation) {
   }
 
   if (has_contents(evaluation->world->database, destination)) {
+    LuaLockResult *result = checked_storage_allocate(sizeof(*result));
 
     /*
      * You must control the destination and pass its TELEPORT lock.
@@ -140,7 +140,7 @@ void do_teleport(CommandInvocation *invocation) {
     if (permitted) {
       permitted = lock_test(evaluation, victim, player, player, destination,
                             LUA_LOCK_TELEPORT, LUA_LOCK_OPERATION_TELEPORT,
-                            false, &lock, &result);
+                            false, &lock, result);
     } else {
       lock = (LuaLockInvocation){
           .type = LUA_LOCK_TELEPORT,
@@ -151,7 +151,7 @@ void do_teleport(CommandInvocation *invocation) {
           .cause = player,
           .subject = player,
       };
-      result = (LuaLockResult){};
+      *result = (LuaLockResult){};
     }
     if (!permitted) {
 
@@ -165,9 +165,10 @@ void do_teleport(CommandInvocation *invocation) {
       notify_lock_failure(&(LockFailureNotification){
           .evaluation = evaluation,
           .invocation = &lock,
-          .result = &result,
+          .result = result,
           .enactor_default = "You can't teleport there!",
           .event = LUA_EVENT_TELEPORT_DESTINATION_FAIL});
+      free_buf(result);
       return;
     }
     /*
@@ -202,6 +203,7 @@ void do_teleport(CommandInvocation *invocation) {
       if (player != victim)
         notify_checked(evaluation, player, player, "Teleported.", MSG_ME);
     }
+    free_buf(result);
   } else if (is_exit(evaluation->world->database, destination)) {
     if (game_object_exits(evaluation->world->database, destination) ==
         game_object_location(evaluation->world->database, victim)) {

@@ -58,7 +58,6 @@ static void mech_enter_event(MuxEvent *e) {
   int obj_x;
   int obj_y;
   LuaLockInvocation lock;
-  LuaLockResult lock_result;
 
   if (TARGET_VALUE < CHAR_MIN || TARGET_VALUE > CHAR_MAX)
     return;
@@ -85,17 +84,18 @@ static void mech_enter_event(MuxEvent *e) {
     return;
   x = entrance.position.x;
   y = entrance.position.y;
+  LuaLockResult *lock_result = checked_storage_allocate(sizeof(*lock_result));
 
   if (!lock_test(btech_context_evaluation(mech_context(mech)), mech_dbref(mech),
                  mech_dbref(mech), mech_dbref(mech), newmap->mynum,
                  LUA_LOCK_ENTER, LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock,
-                 &lock_result) &&
+                 lock_result) &&
       (battle_map_build_is_safe(newmap) || newmap->cf >= (newmap->cfmax / 2))) {
-    const char *msg = lock_result.has_enactor_message
-                          ? lock_result.enactor_message
+    const char *msg = lock_result->has_enactor_message
+                          ? lock_result->enactor_message
                           : "The hangar is locked.";
     mech_notify(mech, MECHALL, msg);
-    return;
+    goto cleanup;
   }
 
   if (mech_class(mech) == CLASS_MW &&
@@ -110,7 +110,7 @@ static void mech_enter_event(MuxEvent *e) {
                         mech_position_x(mech), mech_position_y(mech));
     mark_for_los_update(mech);
     enter_mw_bay(mech, mapo->obj);
-    return;
+    goto cleanup;
   }
   if (mech_carried_dbref(mech) > 0)
     tmpm = btech_context_get_mech(mech_context(mech), mech_carried_dbref(mech));
@@ -119,7 +119,7 @@ static void mech_enter_event(MuxEvent *e) {
       .mechs = UNITS, .count = tmpm ? 2 : 1, .map = mapo->obj};
   if (mech_map_index_preflight_batch(&MAP_PLACEMENT) != MECH_MAP_SET_OK) {
     mech_notify(mech, MECHALL, "Unable to enter: unit placement failed.");
-    return;
+    goto cleanup;
   }
   obj_x = mech_position_x(mech);
   obj_y = mech_position_y(mech);
@@ -136,7 +136,7 @@ static void mech_enter_event(MuxEvent *e) {
   if (!move_via_teleport_batch(&(ObjectTeleportBatchRequest){
           .movements = MOVEMENTS, .count = tmpm ? 2 : 1})) {
     mech_notify(mech, MECHALL, "Unable to enter: teleportation was denied.");
-    return;
+    goto cleanup;
   }
   bsuit_swarmers_stop(
       btech_context_find_object(mech_context(mech), mech_map_dbref(mech)), mech,
@@ -151,7 +151,7 @@ static void mech_enter_event(MuxEvent *e) {
       !mech_position_set(
           &(MechPositionSetRequest){.mech = mech, .x = x, .y = y})) {
     mech_notify(mech, MECHALL, "Unable to enter: unit placement failed.");
-    return;
+    goto cleanup;
   }
   mech_los_broadcastf(mech, "has entered %s at %d,%d.",
                       structure_name(mech_context(mech)->database, mapo).text,
@@ -165,10 +165,13 @@ static void mech_enter_event(MuxEvent *e) {
     if (!mech_position_set(
             &(MechPositionSetRequest){.mech = tmpm, .x = x, .y = y})) {
       mech_notify(tmpm, MECHALL, "Unable to enter: unit placement failed.");
-      return;
+      goto cleanup;
     }
   }
   auto_cal_mapindex(mech_context(mech), mech);
+
+cleanup:
+  free_buf(lock_result);
 }
 
 void mech_enterbase(DbRef player, Mech *mech, char *buffer) {
@@ -182,7 +185,6 @@ void mech_enterbase(DbRef player, Mech *mech, char *buffer) {
 
   char fail_mesg[SBUF_SIZE];
   LuaLockInvocation lock;
-  LuaLockResult lock_result;
 
   argc = mech_parseattributes(buffer, args, 2);
   if (argc > 1) {
@@ -263,9 +265,10 @@ void mech_enterbase(DbRef player, Mech *mech, char *buffer) {
         (int)mapo->obj, mapo->x, mapo->y, mech_map_dbref(mech));
     return;
   }
+  LuaLockResult *lock_result = checked_storage_allocate(sizeof(*lock_result));
   if (!lock_test(btech_context_evaluation(mech_context(mech)), player, player,
                  mech_dbref(mech), newmap->mynum, LUA_LOCK_ENTER,
-                 LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, &lock_result) &&
+                 LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, lock_result) &&
       (battle_map_build_is_safe(newmap) || newmap->cf >= (newmap->cfmax / 2))) {
     /* Trigger FAIL & AFAIL */
     memset(fail_mesg, 0, sizeof(fail_mesg));
@@ -274,21 +277,24 @@ void mech_enterbase(DbRef player, Mech *mech, char *buffer) {
     notify_lock_failure(&(LockFailureNotification){
         .evaluation = btech_context_evaluation(mech_context(mech)),
         .invocation = &lock,
-        .result = &lock_result,
+        .result = lock_result,
         .enactor_default = fail_mesg,
         .event = LUA_EVENT_FAIL});
 
-    return;
+    goto cleanup;
   }
 
   if (mech_event_count(mech, EVENT_ENTER_HANGAR)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You are already entering the hangar!");
-    return;
+    goto cleanup;
   }
   /* XXX Check for other mechs in the hex possibly doing this as well (ick) */
   hex_los_broadcast(map, mech_position_x(mech), mech_position_y(mech),
                     "The doors at $h start to open..");
   mech_event_schedule(mech, EVENT_ENTER_HANGAR, mech_enter_event, 18,
                       (long)target);
+
+cleanup:
+  free_buf(lock_result);
 }

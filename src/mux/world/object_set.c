@@ -382,7 +382,6 @@ void do_use(CommandInvocation *invocation) {
   DbRef thing;
   int doit;
   LuaLockInvocation lock;
-  LuaLockResult result;
 
   init_match(&invocation->context->match, PLAYER, object, OBJECT_TYPE_NOTYPE);
   match_neighbor(&invocation->context->match);
@@ -401,14 +400,16 @@ void do_use(CommandInvocation *invocation) {
    * Make sure player can use it
    */
 
+  LuaLockResult *result = checked_storage_allocate(sizeof(*result));
   if (!lock_test(evaluation, PLAYER, invocation->cause, PLAYER, thing,
-                 LUA_LOCK_USE, LUA_LOCK_OPERATION_USE, false, &lock, &result)) {
+                 LUA_LOCK_USE, LUA_LOCK_OPERATION_USE, false, &lock, result)) {
     notify_lock_failure(&(LockFailureNotification){
         .evaluation = evaluation,
         .invocation = &lock,
-        .result = &result,
+        .result = result,
         .enactor_default = "You can't figure out how to use that.",
         .event = LUA_EVENT_USE_FAIL});
+    free_buf(result);
     return;
   }
   doit = 0;
@@ -443,4 +444,5 @@ void do_use(CommandInvocation *invocation) {
     notify_checked(evaluation, PLAYER, PLAYER,
                    "You can't figure out how to use that.", MSG_ME);
   }
+  free_buf(result);
 }

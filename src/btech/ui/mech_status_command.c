@@ -39,8 +39,6 @@ void mech_status(DbRef player, Mech *mech, const char *buffer) {
   int i;
   int usex = 0;
   bool weird = false;
-  char buf[LBUF_SIZE] = {0};
-  char weird_buffer[LBUF_SIZE] = {0};
 
   if (!common_checks(player, mech, MECH_USUALSM))
     return;
@@ -113,17 +111,19 @@ void mech_status(DbRef player, Mech *mech, const char *buffer) {
     print_short_info(evaluation, player, mech);
     return;
   }
+  char *buf = alloc_lbuf("mech_status.buffer");
+  char *weird_buffer = alloc_lbuf("mech_status.weird");
 
   // Really weird status display.
   if (weird) {
-    (void)snprintf(buf, sizeof(buf), "%s %s %d %d/%d/%d %d ",
+    (void)snprintf(buf, LBUF_SIZE, "%s %s %d %d/%d/%d %d ",
                    mech_model_reference(mech), mech_model_name(mech),
                    mech_tonnage(mech),
                    displayed_speed(mech_maximum_speed(mech) / MP1) * 2 / 3,
                    displayed_speed(mech_maximum_speed(mech) / MP1),
                    displayed_speed(mech_jump_speed(mech) / MP1),
                    displayed_speed(mech_active_heat_sinks(mech)));
-    memcpy(weird_buffer, buf, sizeof(weird_buffer));
+    memcpy(weird_buffer, buf, LBUF_SIZE);
 
   } else if (!doheat || (doarmor | doinfo | doweap)) {
     print_generic_status(evaluation, player, mech, usex != 0);
@@ -138,12 +138,12 @@ void mech_status(DbRef player, Mech *mech, const char *buffer) {
       for (i = 0; i < NUM_SECTIONS; i++) {
         if (mech_section_original_armor(mech, i)) {
           if (mech_section_original_rear_armor(mech, i)) {
-            append_status(buf, sizeof(buf), "%d|%d|%d ",
+            append_status(buf, LBUF_SIZE, "%d|%d|%d ",
                           mech_section_original_armor(mech, i),
                           mech_section_original_internal(mech, i),
                           mech_section_original_rear_armor(mech, i));
           } else {
-            append_status(buf, sizeof(buf), "%d|%d ",
+            append_status(buf, LBUF_SIZE, "%d|%d ",
                           mech_section_original_armor(mech, i),
                           mech_section_original_internal(mech, i));
           }
@@ -171,4 +171,6 @@ void mech_status(DbRef player, Mech *mech, const char *buffer) {
   // Really strange, short status info.
   if (weird)
     mecha_notify(evaluation, player, weird_buffer);
+  free_buf(weird_buffer);
+  free_buf(buf);
 }

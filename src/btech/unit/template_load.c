@@ -14,6 +14,7 @@
 #include "mech_utils_api.h"
 #include "mux/objects/attrs.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
@@ -28,15 +29,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-int load_template(DbRef player, Mech *mech, char *filename) {
+typedef struct TemplateLoadScratch {
   char line[MAX_STRING_LENGTH];
   char buf[MAX_STRING_LENGTH];
+  char cmd[MAX_STRING_LENGTH];
+  char description_buffer[BTECH_TEXT_CAPACITY];
+} TemplateLoadScratch;
+
+static int load_template_internal(DbRef player, Mech *mech, char *filename,
+                                  TemplateLoadScratch *scratch) {
+  char *line = scratch->line;
+  char *buf = scratch->buf;
   int x;
   int y;
   int value = 0;
   float decimal_value;
-  char cmd[MAX_STRING_LENGTH];
-  char description_buffer[BTECH_TEXT_CAPACITY];
+  char *cmd = scratch->cmd;
+  char *description_buffer = scratch->description_buffer;
   char *ptr;
   char *line2;
   int section = 0;
@@ -68,7 +77,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
   while (fgets(line, 512, fp)) {
     size_t line_length = strlen(line);
     if (line_length > 0) {
-      char *last = checked_storage_at(line, sizeof(line), sizeof(*line),
+      char *last = checked_storage_at(line, MAX_STRING_LENGTH, sizeof(*line),
                                       line_length - 1);
       if (*last == '\n')
         *last = '\0';
@@ -82,13 +91,13 @@ int load_template(DbRef player, Mech *mech, char *filename) {
     if (ptr) {
       size_t command_length = (size_t)(ptr - line);
       memcpy(cmd, line, command_length);
-      char *terminator =
-          checked_storage_at(cmd, sizeof(cmd), sizeof(*cmd), command_length);
+      char *terminator = checked_storage_at(cmd, MAX_STRING_LENGTH,
+                                            sizeof(*cmd), command_length);
       *terminator = '\0';
       ptr = checked_mutable_string_suffix(ptr, 1);
       ptr = checked_mutable_string_suffix(ptr, strspn(ptr, " \t\n\v\f\r"));
     } else {
-      (void)string_copy_bounded(cmd, sizeof(cmd), line);
+      (void)string_copy_bounded(cmd, MAX_STRING_LENGTH, line);
       line[0] = '\0';
       ptr = nullptr;
     }
@@ -305,7 +314,7 @@ int load_template(DbRef player, Mech *mech, char *filename) {
       line2 = template_description_read(&(TemplateDescriptionRead){
           .file = fp, .line = ptr, .buffer = description_buffer});
       line2 = template_token_parse(&(TemplateTokenRequest){
-          .input = line2, .output = buf, .output_capacity = sizeof(buf)});
+          .input = line2, .output = buf, .output_capacity = MAX_STRING_LENGTH});
       if (!strncasecmp(buf, "CL.", 3))
         is_clan = 1;
       PartMatchResult match =
@@ -338,10 +347,14 @@ int load_template(DbRef player, Mech *mech, char *filename) {
             ((mech)->rd.specials) |= IS_ANTI_MISSILE_TECH;
         }
         mech_critical_data_set(mech, section, critical, 0);
-        line2 = template_token_parse(&(TemplateTokenRequest){
-            .input = line2, .output = buf, .output_capacity = sizeof(buf)});
-        line2 = template_token_parse(&(TemplateTokenRequest){
-            .input = line2, .output = buf, .output_capacity = sizeof(buf)});
+        line2 = template_token_parse(
+            &(TemplateTokenRequest){.input = line2,
+                                    .output = buf,
+                                    .output_capacity = MAX_STRING_LENGTH});
+        line2 = template_token_parse(
+            &(TemplateTokenRequest){.input = line2,
+                                    .output = buf,
+                                    .output_capacity = MAX_STRING_LENGTH});
         /*              wAmmoModes = BuildBitVector(crit_ammo_modes, buf); */
         w_fire_modes = clamp_long_to_int(build_bit_vector_with_delim(
             template_critical_fire_mode_names(),
@@ -361,8 +374,10 @@ int load_template(DbRef player, Mech *mech, char *filename) {
           w_ammo_modes = 0;
         mech_critical_fire_mode_set(mech, section, critical, w_fire_modes);
         mech_critical_ammo_mode_set(mech, section, critical, w_ammo_modes);
-        template_token_parse(&(TemplateTokenRequest){
-            .input = line2, .output = buf, .output_capacity = sizeof(buf)});
+        template_token_parse(
+            &(TemplateTokenRequest){.input = line2,
+                                    .output = buf,
+                                    .output_capacity = MAX_STRING_LENGTH});
         if (mech->xcode.context->configuration->btech_parts &&
             !template_read_int(fp, mech, player, buf, &value))
           return -1;
@@ -372,13 +387,17 @@ int load_template(DbRef player, Mech *mech, char *filename) {
               .slot = {.section = section, .critical = critical},
               .brand = value});
       } else if (equipment_is_ammunition(type)) {
-        template_token_parse(&(TemplateTokenRequest){
-            .input = line2, .output = buf, .output_capacity = sizeof(buf)});
+        template_token_parse(
+            &(TemplateTokenRequest){.input = line2,
+                                    .output = buf,
+                                    .output_capacity = MAX_STRING_LENGTH});
         if (!template_read_int(fp, mech, player, buf, &value))
           return -1;
         mech_critical_data_set(mech, section, critical, value);
-        template_token_parse(&(TemplateTokenRequest){
-            .input = line2, .output = buf, .output_capacity = sizeof(buf)});
+        template_token_parse(
+            &(TemplateTokenRequest){.input = line2,
+                                    .output = buf,
+                                    .output_capacity = MAX_STRING_LENGTH});
         /*              wFireModes = BuildBitVector(crit_fire_modes, buf); */
         /*              wAmmoModes = BuildBitVector(crit_ammo_modes, buf); */
         w_fire_modes = clamp_long_to_int(build_bit_vector_with_delim(
@@ -421,10 +440,10 @@ int load_template(DbRef player, Mech *mech, char *filename) {
                                  full_ammo(mech, section, critical));
         }
       } else {
-        if (template_token_parse(
-                &(TemplateTokenRequest){.input = line2,
-                                        .output = buf,
-                                        .output_capacity = sizeof(buf)})) {
+        if (template_token_parse(&(TemplateTokenRequest){
+                .input = line2,
+                .output = buf,
+                .output_capacity = MAX_STRING_LENGTH})) {
           if (!template_read_int(fp, mech, player, buf, &value))
             return -1;
           mech_critical_data_set(mech, section, critical, value);
@@ -433,14 +452,14 @@ int load_template(DbRef player, Mech *mech, char *filename) {
         }
         mech_critical_fire_mode_set(mech, section, critical, 0);
         mech_critical_ammo_mode_set(mech, section, critical, 0);
-        if (template_token_parse(
-                &(TemplateTokenRequest){.input = line2,
-                                        .output = buf,
-                                        .output_capacity = sizeof(buf)})) {
-          if (template_token_parse(
-                  &(TemplateTokenRequest){.input = line2,
-                                          .output = buf,
-                                          .output_capacity = sizeof(buf)})) {
+        if (template_token_parse(&(TemplateTokenRequest){
+                .input = line2,
+                .output = buf,
+                .output_capacity = MAX_STRING_LENGTH})) {
+          if (template_token_parse(&(TemplateTokenRequest){
+                  .input = line2,
+                  .output = buf,
+                  .output_capacity = MAX_STRING_LENGTH})) {
             if (mech->xcode.context->configuration->btech_parts) {
               if (!template_read_int(fp, mech, player, buf, &value))
                 return -1;
@@ -611,4 +630,11 @@ int load_template(DbRef player, Mech *mech, char *filename) {
     return -1;
   template_load_finalize(mech, is_clan != 0);
   return 0;
+}
+
+int load_template(DbRef player, Mech *mech, char *filename) {
+  TemplateLoadScratch *scratch = checked_storage_allocate(sizeof(*scratch));
+  int result = load_template_internal(player, mech, filename, scratch);
+  free_buf(scratch);
+  return result;
 }

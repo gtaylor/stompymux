@@ -176,14 +176,16 @@ void mech_los_broadcast_unit(Mech *mech, Mech *target, const char *message) {
   int i;
   int a;
   int b;
-  char oddbuff[LBUF_SIZE];
-  char oddbuff2[LBUF_SIZE];
+  char *oddbuff;
+  char *oddbuff2;
   Mech *temp_mech;
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
 
   if (!mech_map)
     return;
+  oddbuff = alloc_lbuf("mech_los_broadcast_unit.message");
+  oddbuff2 = alloc_lbuf("mech_los_broadcast_unit.broadcast");
   mech_sensor_visibility_refresh(mech);
   mech_sensor_visibility_refresh(target);
   for (i = 0; i < battle_map_unit_count(mech_map); i++) {
@@ -201,12 +203,12 @@ void mech_los_broadcast_unit(Mech *mech, Mech *target, const char *message) {
         if (a || b) {
           format_mech_los_message(&(MechLosMessageFormat){
               .buffer = oddbuff,
-              .buffer_size = sizeof(oddbuff),
+              .buffer_size = LBUF_SIZE,
               .message = message,
               .target_name = b ? mech_to_mech_display_id(temp_mech, target).text
                                : "someone"});
           BtechTextBuilder output;
-          btech_text_builder_initialize(&output, oddbuff2, sizeof(oddbuff2));
+          btech_text_builder_initialize(&output, oddbuff2, LBUF_SIZE);
           btech_text_builder_append(
               &output,
               a ? mech_to_mech_display_id(temp_mech, mech).text : "Someone");
@@ -218,6 +220,8 @@ void mech_los_broadcast_unit(Mech *mech, Mech *target, const char *message) {
       }
     }
   }
+  free_buf(oddbuff2);
+  free_buf(oddbuff);
 }
 
 void map_broadcast(BattleMap *map, char *message) {

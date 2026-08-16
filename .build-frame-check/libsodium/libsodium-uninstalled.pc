@@ -1,0 +1,7 @@
+Name: libsodium
+Version: 1.0.20
+Description: A modern and easy-to-use crypto library
+
+Libs: -L${pcfiledir}/src/libsodium -lsodium
+Libs.private: -lpthread -pthread 
+Cflags: -I${pcfiledir}/src/libsodium/include -I/home/gtaylor/.superset/worktrees/d12de685-be56-4175-aa65-177ea75e68e8/stack-frame-reduction/third_party/libsodium/src/libsodium/include -I/home/gtaylor/.superset/worktrees/d12de685-be56-4175-aa65-177ea75e68e8/stack-frame-reduction/third_party/libsodium/src/libsodium/include/sodium

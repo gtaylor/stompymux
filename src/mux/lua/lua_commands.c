@@ -242,7 +242,6 @@ static void do_luaparent(CommandInvocation *invocation) {
   char *target = invocation->first;
   char *path = invocation->second;
   DbRef thing;
-  char error[LBUF_SIZE];
 
   init_match(&invocation->context->match, player, target, OBJECT_TYPE_NOTYPE);
   match_everything(&invocation->context->match, 0);
@@ -255,35 +254,40 @@ static void do_luaparent(CommandInvocation *invocation) {
                    "Lua parent cleared.", MSG_ME);
     return;
   }
+  char *error = alloc_lbuf("do_luaparent.error");
   if (!lua_validate_path(invocation->context->runtime->lua_owner->runtime, path,
-                         error, sizeof(error))) {
+                         error, LBUF_SIZE)) {
     notify_printf(&invocation->context->evaluation, player,
                   "Lua parent not set: %s", error);
+    free_buf(error);
     return;
   }
   if (!game_object_lua_parent_set(invocation->context->world->database, thing,
                                   path)) {
     notify_checked(&invocation->context->evaluation, player, player,
                    "Lua parent not set: out of memory.", MSG_ME);
+    free_buf(error);
     return;
   }
   notify_checked(&invocation->context->evaluation, player, player,
                  "Lua parent set.", MSG_ME);
+  free_buf(error);
 }
 
 static void lua_view_parent_source(EvaluationContext *evaluation, DbRef player,
                                    LuaRuntime *runtime, const char *path,
                                    DbRef source) {
   char resolved[PATH_MAX];
-  char error[LBUF_SIZE];
+  char *error = alloc_lbuf("lua_view_parent_source.error");
   char *line = nullptr;
   size_t capacity = 0;
   ssize_t length;
   FILE *stream;
 
   if (!lua_resolve_path(runtime, LUA_ROOT_OBJECT_LOGIC, path, resolved,
-                        sizeof(resolved), error, sizeof(error))) {
+                        sizeof(resolved), error, LBUF_SIZE)) {
     notify_printf(evaluation, player, "Lua parent unavailable: %s", error);
+    free_buf(error);
     return;
   }
   stream = fopen(resolved, "rb");
@@ -292,6 +296,7 @@ static void lua_view_parent_source(EvaluationContext *evaluation, DbRef player,
                   system_error_message(errno,
                                        (char[SYSTEM_ERROR_MESSAGE_SIZE]){0},
                                        SYSTEM_ERROR_MESSAGE_SIZE));
+    free_buf(error);
     return;
   }
   if (source == NOTHING)
@@ -325,6 +330,7 @@ static void lua_view_parent_source(EvaluationContext *evaluation, DbRef player,
                                        (char[SYSTEM_ERROR_MESSAGE_SIZE]){0},
                                        SYSTEM_ERROR_MESSAGE_SIZE));
   notify_checked(evaluation, player, player, "-- End Lua parent --", MSG_ME);
+  free_buf(error);
 }
 
 static void do_luaviewparent(CommandInvocation *invocation) {
@@ -334,7 +340,6 @@ static void do_luaviewparent(CommandInvocation *invocation) {
   LuaRuntime *runtime = invocation->context->runtime->lua_owner->runtime;
   DbRef source = NOTHING;
   char path[PATH_MAX];
-  char error[LBUF_SIZE];
 
   if (!runtime) {
     notify_checked(evaluation, player, player, "Lua is not initialized.",
@@ -361,11 +366,14 @@ static void do_luaviewparent(CommandInvocation *invocation) {
       return;
     }
   } else {
-    if (!lua_validate_path(runtime, argument, error, sizeof(error))) {
+    char *error = alloc_lbuf("do_luaviewparent.error");
+    if (!lua_validate_path(runtime, argument, error, LBUF_SIZE)) {
       notify_printf(evaluation, player, "Lua parent unavailable: %s", error);
+      free_buf(error);
       return;
     }
     (void)snprintf(path, sizeof(path), "%s", argument);
+    free_buf(error);
   }
   lua_view_parent_source(evaluation, player, runtime, path, source);
 }
@@ -373,24 +381,25 @@ static void do_luaviewparent(CommandInvocation *invocation) {
 static void do_luacheck(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   LuaRuntime *runtime = invocation->context->runtime->lua_owner->runtime;
-  char error[LBUF_SIZE];
+  char *error = alloc_lbuf("do_luacheck.error");
 
   if (!lua_check(&invocation->context->evaluation, runtime, player, error,
-                 sizeof(error))) {
+                 LBUF_SIZE)) {
     notify_printf(&invocation->context->evaluation, player,
                   "Lua check failed: %s", error);
+    free_buf(error);
     return;
   }
   notify_checked(&invocation->context->evaluation, player, player,
                  "All Lua module checks passed.", MSG_ME);
+  free_buf(error);
 }
 
 static void do_luareload(CommandInvocation *invocation) {
   DbRef player = invocation->player;
-  char error[LBUF_SIZE];
+  char *error = alloc_lbuf("do_luareload.error");
 
-  if (!lua_reload(invocation->context->runtime->lua_owner, error,
-                  sizeof(error))) {
+  if (!lua_reload(invocation->context->runtime->lua_owner, error, LBUF_SIZE)) {
     log_error((LogEntry){.log = invocation->context->runtime->lua_owner->runtime
                                     ->services->log,
                          .key = LOG_PROBLEMS,
@@ -402,10 +411,12 @@ static void do_luareload(CommandInvocation *invocation) {
                            .player = player,
                            .message = "Lua reload failed: "});
     raw_notify(&invocation->context->evaluation, player, error);
+    free_buf(error);
     return;
   }
   notify_checked(&invocation->context->evaluation, player, player,
                  "Lua reloaded.", MSG_ME);
+  free_buf(error);
 }
 
 void do_lua(CommandInvocation *invocation) {

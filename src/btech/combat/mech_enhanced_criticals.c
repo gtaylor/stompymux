@@ -531,12 +531,14 @@ void mech_weapon_status(DbRef player, Mech *mech,
   unsigned char weaparray[MAX_WEAPS_SECTION] = {0};
   unsigned char weapdata[MAX_WEAPS_SECTION] = {0};
   int critical[MAX_WEAPS_SECTION] = {0};
-  char tempbuff[LBUF_SIZE] = {0};
+  char *tempbuff;
   char str_location[80] = {0};
-  char weapbuff[LBUF_SIZE] = {0};
+  char *weapbuff;
 
   if (!common_checks(player, mech, MECH_USUALSP))
     return;
+  tempbuff = alloc_lbuf("mech_weapon_status.temp");
+  weapbuff = alloc_lbuf("mech_weapon_status.weapon");
 
   mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                "=========================WEAPON SYSTEMS "
@@ -561,16 +563,16 @@ void mech_weapon_status(DbRef player, Mech *mech,
           weapon_status_index(weaparray, (size_t)weap_iter);
       const int WEAPON_CRITICAL =
           weapon_status_critical(critical, (size_t)weap_iter);
-      (void)snprintf(weapbuff, sizeof(weapbuff), "[%2d] %-29.29s || ",
-                     wc_weaps++, weapon_display_name(WEAPON_INDEX));
+      (void)snprintf(weapbuff, LBUF_SIZE, "[%2d] %-29.29s || ", wc_weaps++,
+                     weapon_display_name(WEAPON_INDEX));
 
-      (void)string_append_bounded(weapbuff, sizeof(weapbuff), str_location);
+      (void)string_append_bounded(weapbuff, LBUF_SIZE, str_location);
       w_damaged_slots = 0;
 
       if (mech_critical_is_broken(mech, sec_iter, WEAPON_CRITICAL) ||
           mech_critical_temporary_failure(mech, sec_iter, WEAPON_CRITICAL) ==
               FAIL_DESTROYED) {
-        (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+        (void)string_append_bounded(weapbuff, LBUF_SIZE,
                                     "|| [fg=red bold]DESTROYED[reset]");
       } else {
 
@@ -579,38 +581,38 @@ void mech_weapon_status(DbRef player, Mech *mech,
                                                               WEAPON_CRITICAL);
 
         if (mech_critical_is_disabled(mech, sec_iter, WEAPON_CRITICAL)) {
-          (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+          (void)string_append_bounded(weapbuff, LBUF_SIZE,
                                       "|| [fg=red bold]DISABLED[reset]");
         } else if (mech_critical_temporary_failure(mech, sec_iter,
                                                    WEAPON_CRITICAL)) {
           switch (mech_critical_temporary_failure(mech, sec_iter,
                                                   WEAPON_CRITICAL)) {
           case FAIL_JAMMED:
-            (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+            (void)string_append_bounded(weapbuff, LBUF_SIZE,
                                         "|| [fg=yellow]JAMMED[reset]");
             break;
           case FAIL_SHORTED:
-            (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+            (void)string_append_bounded(weapbuff, LBUF_SIZE,
                                         "|| [fg=blue]SHORTED[reset]");
             break;
           case FAIL_EMPTY:
-            (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+            (void)string_append_bounded(weapbuff, LBUF_SIZE,
                                         "|| [fg=cyan]EMPTY[reset]");
             break;
           case FAIL_DUD:
-            (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+            (void)string_append_bounded(weapbuff, LBUF_SIZE,
                                         "|| [fg=yellow]DUD[reset]");
             break;
           case FAIL_AMMOJAMMED:
-            (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+            (void)string_append_bounded(weapbuff, LBUF_SIZE,
                                         "|| [fg=yellow]AMMOJAM[reset]");
             break;
           }
         } else if (w_damaged_slots > 0) {
-          (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+          (void)string_append_bounded(weapbuff, LBUF_SIZE,
                                       "|| [fg=yellow bold]DAMAGED[reset]");
         } else {
-          (void)string_append_bounded(weapbuff, sizeof(weapbuff),
+          (void)string_append_bounded(weapbuff, LBUF_SIZE,
                                       "|| [fg=green bold]OPERATIONAL[reset]");
         }
       }
@@ -621,6 +623,8 @@ void mech_weapon_status(DbRef player, Mech *mech,
       mech_weapon_damage_info_show(player, mech, sec_iter, WEAPON_CRITICAL);
     }
   }
+  free_buf(weapbuff);
+  free_buf(tempbuff);
 }
 
 static void mech_weapon_damage_info_show(DbRef player, Mech *mech, int section,

@@ -14,6 +14,7 @@
 #include "mux/commands/action_messages.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/checked_storage.h"
 #include "mux/world/access.h"
 #include "mux/world/move.h"
 #include "mux/world/object.h"
@@ -66,7 +67,7 @@ void mech_embark(DbRef player, Mech *mech, char *buffer) {
   char *args[4];
   char fail_mesg[SBUF_SIZE];
   LuaLockInvocation lock;
-  LuaLockResult lock_result;
+  LuaLockResult *lock_result = nullptr;
 
   if (player != GOD)
     if (!common_checks(player, mech, MECH_USUAL))
@@ -130,10 +131,10 @@ void mech_embark(DbRef player, Mech *mech, char *buffer) {
       return;
     }
 
+    lock_result = checked_storage_allocate(sizeof(*lock_result));
     if (!lock_test(evaluation, player, player, mech_dbref(mech),
                    mech_dbref(target), LUA_LOCK_ENTER,
-                   LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock,
-                   &lock_result)) {
+                   LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, lock_result)) {
       /* Trigger FAIL & AFAIL */
       memset(fail_mesg, 0, sizeof(fail_mesg));
       (void)snprintf(fail_mesg, SBUF_SIZE, "That unit's bay doors are locked.");
@@ -141,26 +142,26 @@ void mech_embark(DbRef player, Mech *mech, char *buffer) {
       notify_lock_failure(
           &(LockFailureNotification){.evaluation = evaluation,
                                      .invocation = &lock,
-                                     .result = &lock_result,
+                                     .result = lock_result,
                                      .enactor_default = fail_mesg,
                                      .event = LUA_EVENT_FAIL});
 
-      return;
+      goto cleanup_mw;
     }
 
-    if (!lock_result.defined) {
+    if (!lock_result->defined) {
       /* Check their teams */
       if (mech_team(mech) != mech_team(target)) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "Locked. Damn !");
-        return;
+        goto cleanup_mw;
       }
     }
 
     if (fabsf(mech_current_speed(target)) > 15.0F) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Are you suicidal ? That thing is moving too fast !");
-      return;
+      goto cleanup_mw;
     }
 
     if (mech_class(target) == CLASS_MECH) {
@@ -168,19 +169,19 @@ void mech_embark(DbRef player, Mech *mech, char *buffer) {
         mecha_notify(
             btech_context_evaluation(mech_context(mech)), player,
             "Okay, just climb up to-- Wait... where did the head go??");
-        return;
+        goto cleanup_mw;
       }
       if (mech_critical_is_destroyed(target, HEAD, 2)) {
         mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                      "Okay, just climb up and open-- "
                      "WTF ? Someone stole the cockpit!");
-        return;
+        goto cleanup_mw;
       }
       if (mech_critical_is_nonfunctional(target, HEAD, 2)) {
         mecha_notify(
             btech_context_evaluation(mech_context(mech)), player,
             "Okay, just climb up and open-- hey, this door won't budge!");
-        return;
+        goto cleanup_mw;
       }
     }
     mech_printf(mech, MECHALL, "You climb into %s.",
@@ -193,6 +194,8 @@ void mech_embark(DbRef player, Mech *mech, char *buffer) {
         .options = TELE_ALL,
     });
     discard_mw(mech);
+  cleanup_mw:
+    free_buf(lock_result);
     return;
   }
   /* What heppens with a Bsuit squad? */
@@ -287,35 +290,36 @@ void mech_embark(DbRef player, Mech *mech, char *buffer) {
     return;
   }
 
+  lock_result = checked_storage_allocate(sizeof(*lock_result));
   if (!lock_test(evaluation, player, player, mech_dbref(mech),
                  mech_dbref(target), LUA_LOCK_ENTER,
-                 LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, &lock_result)) {
+                 LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, lock_result)) {
     /* Trigger FAIL & AFAIL */
     memset(fail_mesg, 0, sizeof(fail_mesg));
     (void)snprintf(fail_mesg, SBUF_SIZE, "That unit's bay doors are locked.");
 
     notify_lock_failure(&(LockFailureNotification){.evaluation = evaluation,
                                                    .invocation = &lock,
-                                                   .result = &lock_result,
+                                                   .result = lock_result,
                                                    .enactor_default = fail_mesg,
                                                    .event = LUA_EVENT_FAIL});
 
-    return;
+    goto cleanup_embark;
   }
 
-  if (!lock_result.defined) {
+  if (!lock_result->defined) {
     /* Check their teams */
     if (mech_team(mech) != mech_team(target)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Locked. Damn !");
-      return;
+      goto cleanup_embark;
     }
   }
 
   if (fabsf(mech_current_speed(target)) > 0.0F) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Are you suicidal ? That thing is moving too fast !");
-    return;
+    goto cleanup_embark;
   }
   if (!is_in_character(btech_context_database(mech_context(mech)),
                        mech_dbref(mech)) ||
@@ -323,7 +327,7 @@ void mech_embark(DbRef player, Mech *mech, char *buffer) {
                        mech_dbref(target))) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You don't really see a way to get in there.");
-    return;
+    goto cleanup_embark;
   }
 
   /* New message system for when someone tries to embark
@@ -338,13 +342,13 @@ void mech_embark(DbRef player, Mech *mech, char *buffer) {
     } else {
       mecha_notify(evaluation, player, "error");
     }
-    return;
+    goto cleanup_embark;
   }
 
   if ((mech_tonnage(mech) * 100) > mech_cargo_space(target)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "Not enough cargospace for you!");
-    return;
+    goto cleanup_embark;
   }
   if (mech_carried_dbref(mech) > 0) {
     towee =
@@ -352,18 +356,18 @@ void mech_embark(DbRef player, Mech *mech, char *buffer) {
     if (!towee) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Internal error caused by towed unit! Contact a wizard!");
-      return;
+      goto cleanup_embark;
     }
     if (mech_tonnage(towee) > mech_carrier_maximum_tonnage(target)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Your towed unit is  too large for that class of carrier.");
-      return;
+      goto cleanup_embark;
     }
     if (((mech_tonnage(mech) + mech_tonnage(towee)) * 100) >
         mech_cargo_space(target)) {
       mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                    "Not enough cargospace for you and your towed unit!");
-      return;
+      goto cleanup_embark;
     }
   }
   const bool HAS_TOWEE =
@@ -392,7 +396,7 @@ void mech_embark(DbRef player, Mech *mech, char *buffer) {
   }
   if (!moved) {
     mech_notify(mech, MECHALL, "Unable to embark: teleportation was denied.");
-    return;
+    goto cleanup_embark;
   }
   if (mech_class(mech) == CLASS_BSUIT) {
     mech_printf(mech, MECHALL, "You climb into %s.",
@@ -425,7 +429,7 @@ void mech_embark(DbRef player, Mech *mech, char *buffer) {
     mark_for_los_update(towee);
     if (mech_map_index_set(towee, -1, nullptr) != MECH_MAP_SET_OK) {
       mech_notify(mech, MECHALL, "Unable to embark: unit placement failed.");
-      return;
+      goto cleanup_embark;
     }
     mech_cargo_space_remove(target, mech_tonnage(towee) * 100);
     mech_power_down(towee);
@@ -436,12 +440,14 @@ void mech_embark(DbRef player, Mech *mech, char *buffer) {
   /* Now handle the unit itself */
   if (mech_map_index_set(mech, -1, nullptr) != MECH_MAP_SET_OK) {
     mech_notify(mech, MECHALL, "Unable to embark: unit placement failed.");
-    return;
+    goto cleanup_embark;
   }
   mech_cargo_space_remove(target, mech_tonnage(mech) * 100);
   mech_power_down(mech);
 
   mech_speed_correct(target);
+cleanup_embark:
+  free_buf(lock_result);
 }
 
 void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {

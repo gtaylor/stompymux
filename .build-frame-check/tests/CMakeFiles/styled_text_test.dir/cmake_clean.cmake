@@ -1,0 +1,40 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/styled_text_test.dir/link.d"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/compiler.c.o"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/compiler.c.o.d"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/link_config.c.o"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/link_config.c.o.d"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/link_directives.c.o"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/link_directives.c.o.d"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/osc8.c.o"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/osc8.c.o.d"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/output.c.o"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/output.c.o.d"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/palette.c.o"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/palette.c.o.d"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/presets.c.o"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/presets.c.o.d"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/renderer.c.o"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/styled_text/renderer.c.o.d"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/utf8.c.o"
+  "CMakeFiles/styled_text_test.dir/__/src/mux/support/utf8.c.o.d"
+  "CMakeFiles/styled_text_test.dir/unit/mux/content/styled_text/main.c.o"
+  "CMakeFiles/styled_text_test.dir/unit/mux/content/styled_text/main.c.o.d"
+  "CMakeFiles/styled_text_test.dir/unit/mux/content/styled_text/markup.c.o"
+  "CMakeFiles/styled_text_test.dir/unit/mux/content/styled_text/markup.c.o.d"
+  "CMakeFiles/styled_text_test.dir/unit/mux/content/styled_text/osc8.c.o"
+  "CMakeFiles/styled_text_test.dir/unit/mux/content/styled_text/osc8.c.o.d"
+  "CMakeFiles/styled_text_test.dir/unit/mux/content/styled_text/presets.c.o"
+  "CMakeFiles/styled_text_test.dir/unit/mux/content/styled_text/presets.c.o.d"
+  "CMakeFiles/styled_text_test.dir/unit/mux/content/styled_text/terminal.c.o"
+  "CMakeFiles/styled_text_test.dir/unit/mux/content/styled_text/terminal.c.o.d"
+  "CMakeFiles/styled_text_test.dir/unit/mux/content/styled_text/test_support.c.o"
+  "CMakeFiles/styled_text_test.dir/unit/mux/content/styled_text/test_support.c.o.d"
+  "styled_text_test"
+  "styled_text_test.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang C)
+  include(CMakeFiles/styled_text_test.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

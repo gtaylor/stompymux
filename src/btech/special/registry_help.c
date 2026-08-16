@@ -193,7 +193,7 @@ static HelpSection *help_section(HelpSection *sections, int index) {
 }
 
 void btech_special_object_help(const SpecialObjectHelpRequest *request) {
-  char message_buffer[LBUF_SIZE];
+  char *message_buffer = alloc_lbuf("btech_special_object_help.message");
   BtechContext *context = request->context;
   const DbRef PLAYER = request->player;
   const char *type = request->type;
@@ -208,7 +208,7 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
   int count = 0;
   int csho = 0;
   CoolMenu *c = nullptr;
-  char buf[LBUF_SIZE];
+  char *buf = alloc_lbuf("btech_special_object_help.buf");
   int dc;
 
   if (ID == GTYPE_MECH)
@@ -244,14 +244,13 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
     for (i = 0; i < count; i++) {
       if (count > 1) {
         center_string(
-            buf, sizeof(buf),
+            buf, LBUF_SIZE,
             command_help_message(ID, help_section(sections, i)->start), 70);
-        (void)snprintf(message_buffer, sizeof(message_buffer), "%s%s%s",
-                       "[fg=green]", buf, "[reset]");
+        (void)snprintf(message_buffer, LBUF_SIZE, "%s%s%s", "[fg=green]", buf,
+                       "[reset]");
         cool_menu_add_with_flags(&c, message_buffer, CM_ONE);
       } else {
-        (void)snprintf(message_buffer, sizeof(message_buffer),
-                       "%s command listing: ", type);
+        (void)snprintf(message_buffer, LBUF_SIZE, "%s command listing: ", type);
         cool_menu_add_with_flags(&c, message_buffer, CM_ONE | CM_CENTER);
       }
       const HelpSection *section = help_section(sections, i);
@@ -263,9 +262,9 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
             btech_special_command_access(context, PLAYER, POWERNEEDED)) {
           if (ID != GTYPE_MECH ||
               btech_command_allowed_for_mech(mech, command->flag)) {
-            (void)string_copy_bounded(buf, sizeof(buf), command->name);
+            (void)string_copy_bounded(buf, LBUF_SIZE, command->name);
             const size_t NAME_LENGTH = strcspn(buf, " ");
-            *(char *)checked_storage_at(buf, sizeof(buf), sizeof(char),
+            *(char *)checked_storage_at(buf, LBUF_SIZE, sizeof(char),
                                         NAME_LENGTH) = '\0';
             cool_menu_add_with_flags(&c, buf, CM_FOUR);
             csho++;
@@ -318,10 +317,10 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
         if (dc == -1 || i == dc) {
           if (count > 1) {
             center_string(
-                buf, sizeof(buf),
+                buf, LBUF_SIZE,
                 command_help_message(ID, help_section(sections, i)->start), 70);
-            (void)snprintf(message_buffer, sizeof(message_buffer), "%s%s%s",
-                           "[fg=green]", buf, "[reset]");
+            (void)snprintf(message_buffer, LBUF_SIZE, "%s%s%s", "[fg=green]",
+                           buf, "[reset]");
             cool_menu_add_text(&c, message_buffer);
           }
           const HelpSection *section = help_section(sections, i);
@@ -349,4 +348,6 @@ void btech_special_object_help(const SpecialObjectHelpRequest *request) {
   cool_menu_add_with_flags(&c, nullptr, CM_ONE | CM_LINE);
   show_cool_menu(btech_context_evaluation(context), PLAYER, c);
   kill_cool_menu(c);
+  free_buf(buf);
+  free_buf(message_buffer);
 }

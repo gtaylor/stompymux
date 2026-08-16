@@ -141,7 +141,6 @@ static void insert_sorted_brandname(PartNameRegistry *registry, int count,
 static bool create_brandname(PartNameRegistry *registry,
                              const ServerConfiguration *configuration, int id,
                              int b) {
-  char buf[LBUF_SIZE];
   char buf2[BTECH_TEXT_CAPACITY];
   char buf3[BTECH_TEXT_CAPACITY];
   char scratch[BTECH_TEXT_CAPACITY];
@@ -158,6 +157,7 @@ static bool create_brandname(PartNameRegistry *registry,
   }
   if (!brn)
     return false;
+  char *buf = alloc_lbuf("create_brandname");
   p = checked_storage_allocate(sizeof(*p));
   c = part_name_format(&(PartNameRequest){.configuration = configuration,
                                           .part = id,
@@ -165,12 +165,13 @@ static bool create_brandname(PartNameRegistry *registry,
                                           .buffer = scratch});
   if (!c) {
     free(p);
+    free_buf(buf);
     return false;
   }
   if (b)
-    (void)snprintf(buf, sizeof(buf), "%s.%s", brn, c);
+    (void)snprintf(buf, LBUF_SIZE, "%s.%s", brn, c);
   else
-    (void)snprintf(buf, sizeof(buf), "%s", c);
+    (void)snprintf(buf, LBUF_SIZE, "%s", c);
   p->vlongy = strdup(buf);
 
   c = part_name_format(&(PartNameRequest){.configuration = configuration,
@@ -181,30 +182,33 @@ static bool create_brandname(PartNameRegistry *registry,
   if (!c) {
     free(p->vlongy);
     free(p);
+    free_buf(buf);
     return false;
   }
   if (b)
-    (void)snprintf(buf, sizeof(buf), "%s.%s", brn, c);
+    (void)snprintf(buf, LBUF_SIZE, "%s.%s", brn, c);
   else
-    (void)snprintf(buf, sizeof(buf), "%s", c);
+    (void)snprintf(buf, LBUF_SIZE, "%s", c);
   p->longy = strdup(buf);
   c = part_figure_out_shname(id, scratch);
   if (!c) {
     free(p->longy);
     free(p->vlongy);
     free(p);
+    free_buf(buf);
     return false;
   }
   if (b) {
     (void)string_copy_bounded(buf2, sizeof(buf2), c);
     (void)string_copy_bounded(buf3, sizeof(buf3), my_shortform(brn, scratch));
-    (void)snprintf(buf, sizeof(buf), "%s.%s", buf3, buf2);
+    (void)snprintf(buf, LBUF_SIZE, "%s.%s", buf3, buf2);
   } else {
-    (void)string_copy_bounded(buf, sizeof(buf), c);
+    (void)string_copy_bounded(buf, LBUF_SIZE, c);
   }
   p->shorty = strdup(buf);
   p->index = packed_part(id, b);
   *part_index_slot(registry, b, id) = p;
+  free_buf(buf);
   return true;
 }
 

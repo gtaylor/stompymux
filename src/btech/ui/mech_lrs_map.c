@@ -376,9 +376,9 @@ static void show_lrs_map(const LrsMapRequest *request) {
   Mech *o_mech;
 
   /* These buffers hold styled map cells and their coordinate labels. */
-  char topbuff[LBUF_SIZE] = "    ";
-  char botbuff[LBUF_SIZE] = "    ";
-  char midbuff[LBUF_SIZE] = "    ";
+  char *topbuff = alloc_lbuf("show_lrs_map.top");
+  char *botbuff = alloc_lbuf("show_lrs_map.bottom");
+  char *midbuff = alloc_lbuf("show_lrs_map.middle");
   char trash1[16]; /* temp var to hold the map coordinate label */
   short oddcol = 0;
   LrsMechList mechs = {};
@@ -387,6 +387,10 @@ static void show_lrs_map(const LrsMapRequest *request) {
   char prevcb = 0;
   HexLosMap los_map_storage;
   HexLosMap *losmap = nullptr;
+
+  (void)string_copy_bounded(topbuff, LBUF_SIZE, "    ");
+  (void)string_copy_bounded(botbuff, LBUF_SIZE, "    ");
+  (void)string_copy_bounded(midbuff, LBUF_SIZE, "    ");
 
   /* x and y hold the viewing center of the map */
   b_width = X - (LRS_DISPLAY_WIDTH / 2);
@@ -413,10 +417,10 @@ static void show_lrs_map(const LrsMapRequest *request) {
   /* Display the top labels */
   for (i = b_width; i <= e_width; i++) {
     (void)snprintf(trash1, sizeof(trash1), "%3d", i);
-    lrs_text_append(topbuff, sizeof(topbuff), "%c", *trash1);
-    lrs_text_append(midbuff, sizeof(midbuff), "%c",
+    lrs_text_append(topbuff, LBUF_SIZE, "%c", *trash1);
+    lrs_text_append(midbuff, LBUF_SIZE, "%c",
                     *checked_string_suffix(trash1, 1));
-    lrs_text_append(botbuff, sizeof(botbuff), "%c",
+    lrs_text_append(botbuff, LBUF_SIZE, "%c",
                     *checked_string_suffix(trash1, 2));
   }
   mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER, topbuff);
@@ -467,51 +471,54 @@ static void show_lrs_map(const LrsMapRequest *request) {
     losmap = &los_map_storage;
 
   for (loop = b_height; loop < e_height; loop++) {
-    (void)snprintf(topbuff, sizeof(topbuff), "%3d ", loop);
-    (void)string_copy_bounded(botbuff, sizeof(botbuff), "    ");
+    (void)snprintf(topbuff, LBUF_SIZE, "%3d ", loop);
+    (void)string_copy_bounded(botbuff, LBUF_SIZE, "    ");
     if (MODE & LRS_MECHMODE)
       while (lrs_mech_at(&mechs, last_mech) &&
              mech_position_y(lrs_mech_at(&mechs, last_mech)) < loop)
         last_mech++;
 
     for (i = b_width; i < e_width; i += 2) {
-      lrs_text_append(topbuff, sizeof(topbuff), oddcol ? "%s " : " %s",
+      lrs_text_append(topbuff, LBUF_SIZE, oddcol ? "%s " : " %s",
                       lrs_hex_text(colors, mech, map, i + !oddcol, loop,
                                    &prevct, MODE, &mechs, last_mech, losmap)
                           .text);
 
-      lrs_text_append(botbuff, sizeof(botbuff), oddcol ? " %s" : "%s ",
+      lrs_text_append(botbuff, LBUF_SIZE, oddcol ? " %s" : "%s ",
                       lrs_hex_text(colors, mech, map, i + oddcol, loop, &prevcb,
                                    MODE, &mechs, last_mech, losmap)
                           .text);
     }
     if (i == e_width && !oddcol) {
-      lrs_text_append(botbuff, sizeof(botbuff), "%s",
+      lrs_text_append(botbuff, LBUF_SIZE, "%s",
                       lrs_hex_text(colors, mech, map, i, loop, &prevcb, MODE,
                                    &mechs, last_mech, losmap)
                           .text);
     } else if (i == e_width) {
-      lrs_text_append(topbuff, sizeof(topbuff), "%s",
+      lrs_text_append(topbuff, LBUF_SIZE, "%s",
                       lrs_hex_text(colors, mech, map, i, loop, &prevct, MODE,
                                    &mechs, last_mech, losmap)
                           .text);
-      (void)string_append_bounded(botbuff, sizeof(botbuff), " ");
+      (void)string_append_bounded(botbuff, LBUF_SIZE, " ");
     }
 
     if (MODE & (LRS_COLORMODE | LRS_ELEVCOLORMODE)) {
       if (prevct) {
-        (void)string_append_bounded(topbuff, sizeof(topbuff), "[reset]");
+        (void)string_append_bounded(topbuff, LBUF_SIZE, "[reset]");
         prevct = 0;
       }
       if (prevcb) {
-        (void)string_append_bounded(botbuff, sizeof(botbuff), "[reset]");
+        (void)string_append_bounded(botbuff, LBUF_SIZE, "[reset]");
         prevcb = 0;
       }
     }
-    lrs_text_append(botbuff, sizeof(botbuff), " %-3d", loop);
+    lrs_text_append(botbuff, LBUF_SIZE, " %-3d", loop);
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER, topbuff);
     mecha_notify(btech_context_evaluation(mech_context(mech)), PLAYER, botbuff);
   }
+  free_buf(midbuff);
+  free_buf(botbuff);
+  free_buf(topbuff);
 }
 
 void mech_lrsmap(DbRef player, Mech *mech, char *buffer) {

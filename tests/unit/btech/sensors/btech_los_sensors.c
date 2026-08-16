@@ -1,6 +1,7 @@
 #include "btech_los_test.h"
 
 #include "btech/context.h"
+#include "btech_event.h"
 #include "btech/core/context_internal.h"
 #include "map.h"
 #include "map_conditions_api.h"
@@ -8,6 +9,8 @@
 #include "map_terrain.h"
 #include "mech_classification_api.h"
 #include "mech_condition_api.h"
+#include "mech_contacts_api.h"
+#include "mech_equipment_api.h"
 #include "mech_heat_api.h"
 #include "mech_identity_api.h"
 #include "mech_los_api.h"
@@ -40,6 +43,18 @@ struct Mech {
   bool landed;
   bool jumping;
   bool fired;
+  bool destroyed;
+  bool out_of_control;
+  bool jellied;
+  bool towed;
+  DbRef carried;
+  bool carries_club;
+  bool homing_beacon;
+  int team;
+  int startup_events;
+  int stand_events;
+  int changing_hulldown_events;
+  int vehicle_burn_events;
 };
 
 static bool seismic_stopped;
@@ -74,8 +89,12 @@ bool btech_context_seismic_detects_stopped_units(const BtechContext *context
   return seismic_stopped;
 }
 bool mech_is_started(const Mech *mech) { return mech->started; }
+bool mech_is_destroyed(const Mech *mech) { return mech->destroyed; }
 bool mech_is_landed(const Mech *mech) { return mech->landed; }
 bool mech_is_jumping(const Mech *mech) { return mech->jumping; }
+bool mech_is_out_of_control(const Mech *mech) { return mech->out_of_control; }
+bool mech_is_fallen(const Mech *mech) { return mech->condition.fallen; }
+bool mech_is_jellied(const Mech *mech) { return mech->jellied; }
 bool mech_has_fired_recently(const Mech *mech) { return mech->fired; }
 float mech_current_speed(const Mech *mech) { return mech->speed; }
 float mech_excess_heat(const Mech *mech) { return mech->excess_heat; }
@@ -83,6 +102,27 @@ float mech_heat_production(const Mech *mech) { return mech->heat_production; }
 float mech_heat_dissipation(const Mech *mech) { return mech->heat_dissipation; }
 int mech_tonnage(const Mech *mech) { return mech->tonnage; }
 int mech_real_tonnage(const Mech *mech) { return mech->tonnage; }
+int mech_team(const Mech *mech) { return mech->team; }
+DbRef mech_carried_dbref(const Mech *mech) { return mech->carried; }
+bool mech_is_towed(const Mech *mech) { return mech->towed; }
+bool mech_section_carries_club(const Mech *mech [[maybe_unused]],
+                               int section [[maybe_unused]]) {
+  return mech->carries_club;
+}
+bool mech_has_attached_homing_beacon(const Mech *mech) {
+  return mech->homing_beacon;
+}
+int mech_event_count(const Mech *mech, MechEventType type) {
+  if (type == EVENT_STARTUP)
+    return mech->startup_events;
+  if (type == EVENT_STAND)
+    return mech->stand_events;
+  if (type == EVENT_CHANGING_HULLDOWN)
+    return mech->changing_hulldown_events;
+  if (type == EVENT_VEHICLEBURN)
+    return mech->vehicle_burn_events;
+  return 0;
+}
 bool mech_is_flying_type(const Mech *mech) {
   return mech->movement == MOVE_FLY || mech->movement == MOVE_VTOL;
 }
@@ -275,6 +315,31 @@ static void test_to_hit_signatures(LosTestState *state, Mech *observer,
                  vislight_tohit(&request));
 }
 
+static void test_contact_status_format(LosTestState *state, Mech *target) {
+  target->destroyed = true;
+  target->startup_events = 1;
+  target->condition.hull_down = true;
+  target->towed = true;
+  target->jumping = true;
+  target->out_of_control = true;
+  target->excess_heat = 1.0F;
+  target->jellied = true;
+  target->condition.searchlight_on = true;
+  target->condition.illuminated = true;
+  target->condition.swarm_target = 1;
+  target->carries_club = true;
+  target->homing_beacon = true;
+  target->condition.eccm_enabled = true;
+  target->condition.ecm_active = true;
+  target->condition.ecm_protected = true;
+  target->condition.ecm_disturbed = true;
+  target->condition.spinning = true;
+
+  MechStatusString status = mech_status_string(target, 1);
+  los_expect_string(state, "contact status format", "DsHTJO+ILlWCNPEpeX",
+                    status.text);
+}
+
 int main(void) {
   LosTestState state = {0};
   BtechContext context = {0};
@@ -287,5 +352,7 @@ int main(void) {
   test_radar_and_probes(&state, &observer, &target, &map);
   target = make_unit(&context, &map);
   test_to_hit_signatures(&state, &observer, &target, &map);
+  target = make_unit(&context, &map);
+  test_contact_status_format(&state, &target);
   return los_test_result(&state);
 }

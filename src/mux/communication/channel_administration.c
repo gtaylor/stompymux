@@ -125,10 +125,10 @@ int comsys_test_access(const ChannelAccessRequest *request) {
   struct Channel *chan = request->channel;
   long flag_value = request->access;
   LuaLockInvocation lock;
-  LuaLockResult result;
 
   if (is_wizard(evaluation->world->database, player))
     return (1);
+  LuaLockResult *result = checked_storage_allocate(sizeof(*result));
 
   /*
    * Channel objects allow custom locks for channels.  The normal
@@ -145,22 +145,28 @@ int comsys_test_access(const ChannelAccessRequest *request) {
       !((chan->chan_obj == NOTHING) || (chan->chan_obj == 0))) {
     if (lock_test(evaluation, player, player, player, chan->chan_obj,
                   LUA_LOCK_DEFAULT, LUA_LOCK_OPERATION_CHANNEL_JOIN, true,
-                  &lock, &result))
+                  &lock, result)) {
+      free_buf(result);
       return (1);
+    }
   }
   if ((flag_value & CHANNEL_TRANSMIT) &&
       !((chan->chan_obj == NOTHING) || (chan->chan_obj == 0))) {
     if (lock_test(evaluation, player, player, player, chan->chan_obj,
                   LUA_LOCK_USE, LUA_LOCK_OPERATION_CHANNEL_TRANSMIT, true,
-                  &lock, &result))
+                  &lock, result)) {
+      free_buf(result);
       return (1);
+    }
   }
   if ((flag_value & CHANNEL_RECIEVE) &&
       !((chan->chan_obj == NOTHING) || (chan->chan_obj == 0))) {
     if (lock_test(evaluation, player, player, player, chan->chan_obj,
                   LUA_LOCK_ENTER, LUA_LOCK_OPERATION_CHANNEL_RECEIVE, true,
-                  &lock, &result))
+                  &lock, result)) {
+      free_buf(result);
       return (1);
+    }
   }
   if (typeof_obj(evaluation->world->database, player) == OBJECT_TYPE_PLAYER)
     flag_value *= CHANNEL_PL_MULT;
@@ -171,7 +177,9 @@ int comsys_test_access(const ChannelAccessRequest *request) {
                        * just to be paranoid.
                        */
 
-  return (int)(((long)chan->type & flag_value));
+  const int ACCESS = (int)(((long)chan->type & flag_value));
+  free_buf(result);
+  return ACCESS;
 }
 
 bool do_comsystem(EvaluationContext *evaluation, DbRef who, char *cmd) {

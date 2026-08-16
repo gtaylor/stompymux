@@ -12,6 +12,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 #include "mux/world/move.h"
@@ -31,7 +32,6 @@ typedef struct GiveThingRequest {
 } GiveThingRequest;
 
 static void give_thing(const GiveThingRequest *request) {
-  char message_buffer[LBUF_SIZE];
   EvaluationContext *evaluation = request->evaluation;
   DbRef giver = request->giver;
   DbRef recipient = request->recipient;
@@ -42,7 +42,6 @@ static void give_thing(const GiveThingRequest *request) {
   char *str;
   char *sp;
   LuaLockInvocation lock;
-  LuaLockResult result;
 
   init_match(match, giver, what, OBJECT_TYPE_THING);
   match_possession(match);
@@ -73,8 +72,9 @@ static void give_thing(const GiveThingRequest *request) {
                    MSG_ME_ALL | MSG_F_DOWN);
     return;
   }
+  LuaLockResult *result = checked_storage_allocate(sizeof(*result));
   if (!lock_test(evaluation, giver, giver, giver, thing, LUA_LOCK_GIVE,
-                 LUA_LOCK_OPERATION_GIVE, false, &lock, &result)) {
+                 LUA_LOCK_OPERATION_GIVE, false, &lock, result)) {
     sp = str = alloc_lbuf("do_give.gfail");
     safe_str("You can't give ", str, &sp);
     safe_str(game_object_name(evaluation->world->database, thing), str, &sp);
@@ -84,14 +84,15 @@ static void give_thing(const GiveThingRequest *request) {
     notify_lock_failure(
         &(LockFailureNotification){.evaluation = evaluation,
                                    .invocation = &lock,
-                                   .result = &result,
+                                   .result = result,
                                    .enactor_default = str,
                                    .event = LUA_EVENT_GIVE_FAIL});
     free_buf(str);
+    free_buf(result);
     return;
   }
   if (!lock_test(evaluation, giver, giver, thing, recipient, LUA_LOCK_RECEIVE,
-                 LUA_LOCK_OPERATION_RECEIVE, false, &lock, &result)) {
+                 LUA_LOCK_OPERATION_RECEIVE, false, &lock, result)) {
     sp = str = alloc_lbuf("do_give.rfail");
     safe_str(game_object_name(evaluation->world->database, recipient), str,
              &sp);
@@ -103,10 +104,11 @@ static void give_thing(const GiveThingRequest *request) {
     notify_lock_failure(
         &(LockFailureNotification){.evaluation = evaluation,
                                    .invocation = &lock,
-                                   .result = &result,
+                                   .result = result,
                                    .enactor_default = str,
                                    .event = LUA_EVENT_GIVE_RECEIVE_FAIL});
     free_buf(str);
+    free_buf(result);
     return;
   }
   move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
@@ -114,20 +116,21 @@ static void give_thing(const GiveThingRequest *request) {
                                             .destination = recipient,
                                             .cause = giver});
   if (!(key & GIVE_QUIET)) {
+    char *message_buffer = alloc_lbuf("do_give.message");
     str = alloc_lbuf("do_give.thing.ok");
     (void)string_copy_bounded(
         str, LBUF_SIZE, game_object_name(evaluation->world->database, giver));
-    (void)snprintf(message_buffer, sizeof(message_buffer), "%s gave you %s.",
-                   str, game_object_name(evaluation->world->database, thing));
+    (void)snprintf(message_buffer, LBUF_SIZE, "%s gave you %s.", str,
+                   game_object_name(evaluation->world->database, thing));
     notify_checked(evaluation, recipient, giver, message_buffer,
                    MSG_ME_ALL | MSG_F_DOWN);
     notify_checked(evaluation, giver, giver, "Given.", MSG_ME_ALL | MSG_F_DOWN);
-    (void)snprintf(message_buffer, sizeof(message_buffer), "%s gave you to %s.",
-                   str,
+    (void)snprintf(message_buffer, LBUF_SIZE, "%s gave you to %s.", str,
                    game_object_name(evaluation->world->database, recipient));
     notify_checked(evaluation, thing, giver, message_buffer,
                    MSG_ME_ALL | MSG_F_DOWN);
     free_buf(str);
+    free_buf(message_buffer);
   }
   notify_action(evaluation,
                 &(ActionMessageInvocation){
@@ -149,6 +152,7 @@ static void give_thing(const GiveThingRequest *request) {
                                 .source = NOTHING,
                                 .destination = NOTHING},
                     .event = LUA_EVENT_SUCCESS});
+  free_buf(result);
 }
 
 void do_give(CommandInvocation *invocation) {

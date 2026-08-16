@@ -1,0 +1,1 @@
+/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/btech_channel_test.dir/link.d CMakeFiles/btech_channel_test.dir/unit/btech/systems/btech_channel.c.o CMakeFiles/btech_channel_test.dir/__/src/btech/core/btech_channel.c.o -o btech_channel_test  ../libbtmux_checked_storage.a
