@@ -3,12 +3,12 @@
  */
 
 #include "mux/support/alloc.h"
-#include <stdio.h>
 #include <string.h>
 
 #include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/commands/command_handlers.h"
 #include "mux/communication/speech.h"
+#include "mux/communication/speech_format.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
@@ -175,9 +175,9 @@ void do_pemit(CommandInvocation *invocation) {
     case PEMIT_FSAY:
       notify_printf(evaluation, target, "You say \"%s\"", message);
       if (loc != NOTHING) {
-        (void)snprintf(message_buffer, sizeof(message_buffer), "%s says \"%s\"",
-                       game_object_name(evaluation->world->database, target),
-                       message);
+        speech_format_say(message_buffer,
+                          game_object_name(evaluation->world->database, target),
+                          message);
         notify_excluding(&(ExcludingNotification){.evaluation = evaluation,
                                                   .location = loc,
                                                   .sender = PLAYER,
@@ -186,18 +186,18 @@ void do_pemit(CommandInvocation *invocation) {
                                                   .message = message_buffer});
       }
       break;
-      (void)snprintf(message_buffer, sizeof(message_buffer), "%s %s",
-                     game_object_name(evaluation->world->database, target),
-                     message);
     case PEMIT_FPOSE:
+      speech_format_pose(message_buffer,
+                         game_object_name(evaluation->world->database, target),
+                         message, true);
       notify_checked(evaluation, loc, PLAYER, message_buffer,
                      MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
                          MSG_S_INSIDE);
       break;
-      (void)snprintf(message_buffer, sizeof(message_buffer), "%s%s",
-                     game_object_name(evaluation->world->database, target),
-                     message);
     case PEMIT_FPOSE_NS:
+      speech_format_pose(message_buffer,
+                         game_object_name(evaluation->world->database, target),
+                         message, false);
       notify_checked(evaluation, loc, PLAYER, message_buffer,
                      MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
                          MSG_S_INSIDE);

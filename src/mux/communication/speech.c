@@ -7,6 +7,7 @@
 #include "mux/commands/action_messages.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/communication/speech.h"
+#include "mux/communication/speech_format.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/network/network_output.h"
 #include "mux/objects/db.h"
@@ -159,9 +160,9 @@ void do_say(CommandInvocation *invocation) {
   switch (key) {
   case SAY_SAY:
     notify_printf(evaluation, PLAYER, "You say \"%s\"", message);
-    (void)snprintf(message_buffer, sizeof(message_buffer), "%s says \"%s\"",
-                   game_object_name(evaluation->world->database, PLAYER),
-                   message);
+    speech_format_say(message_buffer,
+                      game_object_name(evaluation->world->database, PLAYER),
+                      message);
     notify_excluding(&(ExcludingNotification){.evaluation = evaluation,
                                               .location = loc,
                                               .sender = PLAYER,
@@ -169,18 +170,18 @@ void do_say(CommandInvocation *invocation) {
                                               .exception_count = 1,
                                               .message = message_buffer});
     break;
-    (void)snprintf(message_buffer, sizeof(message_buffer), "%s %s",
-                   game_object_name(evaluation->world->database, PLAYER),
-                   message);
   case SAY_POSE:
+    speech_format_pose(message_buffer,
+                       game_object_name(evaluation->world->database, PLAYER),
+                       message, true);
     notify_checked(evaluation, loc, PLAYER, message_buffer,
                    MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
                        MSG_S_INSIDE);
     break;
-    (void)snprintf(message_buffer, sizeof(message_buffer), "%s%s",
-                   game_object_name(evaluation->world->database, PLAYER),
-                   message);
   case SAY_POSE_NOSPC:
+    speech_format_pose(message_buffer,
+                       game_object_name(evaluation->world->database, PLAYER),
+                       message, false);
     notify_checked(evaluation, loc, PLAYER, message_buffer,
                    MSG_ME_ALL | MSG_NBR_EXITS_A | MSG_F_UP | MSG_F_CONTENTS |
                        MSG_S_INSIDE);
