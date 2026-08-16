@@ -116,8 +116,6 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech,
   AutopilotArgumentList args;
   AutopilotArgumentList command_args;
   char mech_id[3];
-  char message[LBUF_SIZE];
-  char reply[LBUF_SIZE];
   int i;
 
   /* Basic checks */
@@ -174,11 +172,16 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech,
     radio_command = autopilot_radio_command_at(i + 1);
   }
 
+  char *message = alloc_lbuf("auto_parse_command.message");
+  char *reply = alloc_lbuf("auto_parse_command.reply");
+
   /* Did we find a command */
   if (cmd < 0) {
 
     (void)snprintf(message, LBUF_SIZE, "Unable to comprehend the command.");
     auto_reply(mech, message);
+    free_buf(reply);
+    free_buf(message);
 
     autopilot_argument_list_destroy(&args);
     autopilot_argument_list_destroy(&command_args);
@@ -186,8 +189,8 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech,
   }
 
   /* Zero the buffer */
-  memset(message, 0, sizeof(message));
-  memset(reply, 0, sizeof(reply));
+  memset(message, 0, LBUF_SIZE);
+  memset(reply, 0, LBUF_SIZE);
 
   /* Call the radio command function */
   radio_command->handler(autopilot, mech, &command_args, argc, message);
@@ -195,6 +198,8 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech,
   /* If its a silent command there is no reply */
   if (radio_command->silent) {
 
+    free_buf(reply);
+    free_buf(message);
     autopilot_argument_list_destroy(&args);
     autopilot_argument_list_destroy(&command_args);
     return;
@@ -263,4 +268,6 @@ void auto_parse_command(Autopilot *autopilot, Mech *mech,
 
   autopilot_argument_list_destroy(&args);
   autopilot_argument_list_destroy(&command_args);
+  free_buf(reply);
+  free_buf(message);
 }

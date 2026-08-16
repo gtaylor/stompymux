@@ -167,11 +167,12 @@ void initialize_pc(DbRef player, Mech *mech) {
     mech_section_original_internal_set(mech, i,
                                        ((loc_mod(i) * (tot - dam)) / 100) + 1);
   }
+  char *attribute_buffer = alloc_lbuf("initialize_pc.attribute");
+  char *equipment = alloc_lbuf("initialize_pc.equipment");
   c = btech_attribute_read(context->database, player, A_PCEQUIP,
-                           (char[LBUF_SIZE]){0});
-  char equipment[LBUF_SIZE];
+                           attribute_buffer);
   char *token_context = nullptr;
-  (void)snprintf(equipment, sizeof(equipment), "%s", c);
+  (void)snprintf(equipment, LBUF_SIZE, "%s", c);
   char *armor = strtok_r(equipment, " \t\r\n", &token_context);
   char *weapon_one = strtok_r(nullptr, " \t\r\n", &token_context);
   char *weapon_two = strtok_r(nullptr, " \t\r\n", &token_context);
@@ -180,30 +181,30 @@ void initialize_pc(DbRef player, Mech *mech) {
   cnt = 0;
   if (armor) {
     if (strlen(armor) >= sizeof(buf1))
-      return;
+      goto cleanup;
     (void)snprintf(buf1, sizeof(buf1), "%s", armor);
     cnt = 1;
   }
   if (weapon_one) {
     if (strlen(weapon_one) >= sizeof(buf2))
-      return;
+      goto cleanup;
     (void)snprintf(buf2, sizeof(buf2), "%s", weapon_one);
     cnt = 2;
   }
   if (weapon_two) {
     if (strlen(weapon_two) >= sizeof(buf3))
-      return;
+      goto cleanup;
     (void)snprintf(buf3, sizeof(buf3), "%s", weapon_two);
     cnt = 3;
   }
   if (first_ammunition) {
     if (!parse_int_checked(first_ammunition, &ammo1))
-      return;
+      goto cleanup;
     cnt = 4;
   }
   if (second_ammunition) {
     if (!parse_int_checked(second_ammunition, &ammo2))
-      return;
+      goto cleanup;
     cnt = 5;
   }
 
@@ -223,7 +224,7 @@ void initialize_pc(DbRef player, Mech *mech) {
             "Invalid PC weapon #1 for %s(#%ld): %s",
             game_object_name(mech_context(mech)->database, player), player,
             buf3);
-        return;
+        goto cleanup;
       }
       id = match.part.id;
       if (equipment_is_weapon(id)) {
@@ -257,7 +258,7 @@ void initialize_pc(DbRef player, Mech *mech) {
             "Invalid PC weapon #1 for %s(#%ld): %s",
             game_object_name(mech_context(mech)->database, player), player,
             buf2);
-        return;
+        goto cleanup;
       }
       id = match.part.id;
       if (equipment_is_weapon(id)) {
@@ -284,7 +285,7 @@ void initialize_pc(DbRef player, Mech *mech) {
                          "Invalid armor string for %s(#%ld): %s",
                          game_object_name(mech_context(mech)->database, player),
                          player, buf1);
-      return;
+      goto cleanup;
     }
     for (size_t index = 0; index < strlen(buf1); index++) {
       const char *armor_character =
@@ -295,7 +296,7 @@ void initialize_pc(DbRef player, Mech *mech) {
             "Invalid armor char for %s(#%ld) in %s (pos %d,%c)",
             game_object_name(mech_context(mech)->database, player), player,
             buf1, (int)index + 1, *armor_character);
-        return;
+        goto cleanup;
       }
     }
     for (size_t index = 0; index < strlen(buf1); index++) {
@@ -305,6 +306,9 @@ void initialize_pc(DbRef player, Mech *mech) {
                              *armor_character - '0');
     }
   }
+cleanup:
+  free_buf(equipment);
+  free_buf(attribute_buffer);
 }
 
 void fix_pilotdamage(Mech *mech, DbRef player) {

@@ -1,0 +1,2 @@
+/usr/bin/llvm-ar-22 qc libtomlc17.a CMakeFiles/tomlc17.dir/third_party/tomlc17/src/tomlc17.c.o
+/usr/bin/llvm-ranlib-22 libtomlc17.a

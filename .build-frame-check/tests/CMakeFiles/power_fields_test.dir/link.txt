@@ -1,0 +1,1 @@
+/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/power_fields_test.dir/link.d CMakeFiles/power_fields_test.dir/unit/mux/server/power_fields.c.o CMakeFiles/power_fields_test.dir/__/src/mux/objects/power_fields.c.o -o power_fields_test  ../libbtmux_checked_storage.a

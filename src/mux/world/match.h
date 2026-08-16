@@ -10,7 +10,6 @@
 #include "mux/server/server_control.h"
 #include "mux/world/access.h"
 
-typedef MatchContext MSTATE;
 typedef struct ServerConfiguration ServerConfiguration;
 
 /* Match functions
@@ -44,10 +43,6 @@ extern DbRef last_match_result(MatchContext * /*match_context*/);
 extern DbRef match_status(EvaluationContext * /*evaluation*/, DbRef /*player*/,
                           DbRef /*match*/);
 extern DbRef noisy_match_result(MatchContext * /*match_context*/);
-extern void save_match_state(MatchContext * /*match_context*/,
-                             MSTATE * /*mstate*/);
-extern void restore_match_state(MatchContext * /*match_context*/,
-                                MSTATE * /*mstate*/);
 extern void match_zone_exit(MatchContext * /*match_context*/);
 extern DbRef match_possessed(MatchContext * /*match_context*/, DbRef player,
                              DbRef thing, char *target, DbRef dflt);

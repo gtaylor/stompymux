@@ -292,7 +292,7 @@ int lua_runtime_flow_start(void *context, lua_State *state, int descriptor_id,
 int lua_runtime_exit_enter_lock_passes(void *context, DbRef exit,
                                        DbRef enactor) {
   LuaRuntime *runtime = context;
-  LuaLockResult result;
+  LuaLockResult *result = checked_storage_allocate(sizeof(*result));
 
   lua_lock_evaluate(runtime,
                     &(LuaLockInvocation){
@@ -304,6 +304,8 @@ int lua_runtime_exit_enter_lock_passes(void *context, DbRef exit,
                         .subject = enactor,
                         .silent = true,
                     },
-                    &result);
-  return result.passes;
+                    result);
+  const bool PASSES = result->passes;
+  free_buf(result);
+  return PASSES;
 }

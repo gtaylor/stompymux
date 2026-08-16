@@ -432,16 +432,17 @@ static bool teleport_is_allowed(const ObjectMovementRequest *request) {
   int count;
   const char *failmsg;
   LuaLockInvocation lock;
-  LuaLockResult result;
+  LuaLockResult *result = nullptr;
   const ServerConfiguration *configuration = evaluation->world->configuration;
 
   DbRef src = game_object_location(evaluation->world->database, thing);
   if ((dest != HOME) && is_good_obj(evaluation->world->database, src)) {
+    result = checked_storage_allocate(sizeof(*result));
     curr = src;
     for (count = configuration->ntfy_nest_lim; count > 0; count--) {
       if (!lock_test(evaluation, thing, cause, thing, curr,
                      LUA_LOCK_TELEPORT_OUT, LUA_LOCK_OPERATION_TELEPORT_OUT,
-                     false, &lock, &result)) {
+                     false, &lock, result)) {
         if ((thing == cause) || (cause == NOTHING)) {
           failmsg = "You can't teleport out!";
         } else {
@@ -452,15 +453,17 @@ static bool teleport_is_allowed(const ObjectMovementRequest *request) {
         notify_lock_failure(
             &(LockFailureNotification){.evaluation = evaluation,
                                        .invocation = &lock,
-                                       .result = &result,
+                                       .result = result,
                                        .enactor_default = failmsg,
                                        .event = LUA_EVENT_TELEPORT_OUT_FAIL});
+        free_buf(result);
         return false;
       }
       if (is_room(evaluation->world->database, curr))
         break;
       curr = game_object_location(evaluation->world->database, curr);
     }
+    free_buf(result);
   }
   return true;
 }
@@ -556,7 +559,6 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
   DbRef loc;
   bool silent;
   LuaLockInvocation lock;
-  LuaLockResult result;
 
   loc = game_object_location(evaluation->world->database, exit);
   if (loc == HOME)
@@ -574,10 +576,10 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
       .subject = player,
       .silent = silent,
   };
-  result = (LuaLockResult){};
+  LuaLockResult *result = checked_storage_allocate(sizeof(*result));
   if (is_good_obj(evaluation->world->database, loc) &&
       lock_test(evaluation, player, player, player, exit, LUA_LOCK_DEFAULT,
-                LUA_LOCK_OPERATION_TRAVERSE, silent, &lock, &result)) {
+                LUA_LOCK_OPERATION_TRAVERSE, silent, &lock, result)) {
     switch (typeof_obj(evaluation->world->database, loc)) {
     case OBJECT_TYPE_ROOM:
       move_via_exit(
@@ -593,6 +595,7 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
       if (is_going(evaluation->world->database, loc)) {
         notify_checked(evaluation, player, player, "You can't go that way.",
                        MSG_ME_ALL | MSG_F_DOWN);
+        free_buf(result);
         return;
       }
       move_via_exit(
@@ -606,6 +609,7 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
     case OBJECT_TYPE_EXIT:
       notify_checked(evaluation, player, player, "You can't go that way.",
                      MSG_ME_ALL | MSG_F_DOWN);
+      free_buf(result);
       return;
     default:
       break;
@@ -613,10 +617,11 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
   } else {
     notify_lock_failure(&(LockFailureNotification){.evaluation = evaluation,
                                                    .invocation = &lock,
-                                                   .result = &result,
+                                                   .result = result,
                                                    .enactor_default = failmsg,
                                                    .event = LUA_EVENT_FAIL});
   }
+  free_buf(result);
 }
 
 /*

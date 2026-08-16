@@ -1,0 +1,1 @@
+/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/event_timer_test.dir/link.d CMakeFiles/event_timer_test.dir/unit/mux/server/event_timer.c.o CMakeFiles/event_timer_test.dir/__/src/mux/server/event_timer.c.o -o event_timer_test  ../libuv/libuv.a ../libbtmux_checked_storage.a -lpthread -ldl -lrt -lm

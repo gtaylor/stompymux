@@ -1,0 +1,1 @@
+/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/libuv_tcp_integration_test.dir/link.d CMakeFiles/libuv_tcp_integration_test.dir/integration/libuv_tcp_integration.c.o -o libuv_tcp_integration_test  /usr/lib/x86_64-linux-gnu/libsqlite3.so ../libbtmux_checked_storage.a

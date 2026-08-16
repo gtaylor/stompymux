@@ -40,6 +40,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/world/access.h"
 #include "mux/world/move.h"
@@ -373,7 +374,6 @@ void mech_enterbay(DbRef player, Mech *mech, char *buffer) {
   Mech *ds;
   BattleMap *map;
   LuaLockInvocation lock;
-  LuaLockResult lock_result;
   BtechContext *context = mech_context(mech);
 
   if (!common_checks(player, mech, MECH_USUAL))
@@ -495,13 +495,15 @@ void mech_enterbay(DbRef player, Mech *mech, char *buffer) {
                  "You are already entering the hangar!");
     return;
   }
+  LuaLockResult *lock_result = checked_storage_allocate(sizeof(*lock_result));
   if (!lock_test(btech_context_evaluation(context), player, player,
                  mech_dbref(mech), ref, LUA_LOCK_ENTER,
-                 LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, &lock_result)) {
-    const char *msg = lock_result.has_enactor_message
-                          ? lock_result.enactor_message
+                 LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, lock_result)) {
+    const char *msg = lock_result->has_enactor_message
+                          ? lock_result->enactor_message
                           : "You are unable to enter the bay!";
     mecha_notify(btech_context_evaluation(context), player, msg);
+    free_buf(lock_result);
     return;
   }
   if (!dropship_bay_is_enterable(&(DropshipBayEntryRequest){
@@ -510,17 +512,20 @@ void mech_enterbay(DbRef player, Mech *mech, char *buffer) {
       })) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone else is using the door at the moment.");
+    free_buf(lock_result);
     return;
   }
   map = btech_context_get_map(context, mech_map_dbref(mech));
   if (!map) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You sense a wrongness in fabric of space.");
+    free_buf(lock_result);
     return;
   }
   hex_los_broadcast(map, mech_position_x(mech), mech_position_y(mech),
                     "The bay doors at $h start to open..");
   mech_event_schedule(mech, EVENT_ENTER_HANGAR, mech_enterbay_event, 12, ref);
+  free_buf(lock_result);
 }
 
 static void dropship_place_departing_unit(Mech *ds, Mech *mech, DbRef frombay) {

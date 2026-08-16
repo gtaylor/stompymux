@@ -174,12 +174,13 @@ static void tech_status(const TechStatusRequest *request) {
   const DbRef PLAYER = request->player;
   time_t dat = request->completion;
   char buf[MBUF_SIZE] = {0};
+  char *attribute_buffer = alloc_lbuf("tech_status.attribute");
   char *olds;
   int un;
 
   if (dat <= 0) {
     olds = btech_attribute_read(context->database, PLAYER, A_TECHTIME,
-                                (char[LBUF_SIZE]){0});
+                                attribute_buffer);
     if (olds) {
       if (!parse_time_checked(olds, &dat))
         dat = context->clock->now;
@@ -210,6 +211,7 @@ static void tech_status(const TechStatusRequest *request) {
     }
     mecha_notify(btech_context_evaluation(context), PLAYER, buf);
   }
+  free_buf(attribute_buffer);
 }
 
 int tech_addtechtime(const TechTimeAddition *addition) {
@@ -221,8 +223,9 @@ int tech_addtechtime(const TechTimeAddition *addition) {
     return 1;
 
   time_t old;
+  char *attribute_buffer = alloc_lbuf("tech_addtechtime.attribute");
   char *olds = btech_attribute_read(context->database, PLAYER, A_TECHTIME,
-                                    (char[LBUF_SIZE]){0});
+                                    attribute_buffer);
 
   if (olds) {
     if (!parse_time_checked(olds, &old))
@@ -237,6 +240,7 @@ int tech_addtechtime(const TechTimeAddition *addition) {
   silly_atr_set_in(context->database, PLAYER, A_TECHTIME, message_buffer);
   tech_status(&(TechStatusRequest){
       .context = context, .player = PLAYER, .completion = old});
+  free_buf(attribute_buffer);
   return clamp_intptr_to_int((intptr_t)(old - context->clock->now));
 }
 

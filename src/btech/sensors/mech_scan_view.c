@@ -159,13 +159,15 @@ void mech_view(DbRef player, Mech *mech, char *buffer) {
           "That target isn't seen well enough by the scannfers for viewing!");
       return;
     }
+    char *description_buffer = alloc_lbuf("mech_view.description");
     target_desc =
         btech_attribute_read(mech_context(target)->database, mech_dbref(target),
-                             A_MECHDESC, (char[LBUF_SIZE]){0});
+                             A_MECHDESC, description_buffer);
     if (*target_desc)
       mecha_notify(evaluation, player, target_desc);
     else
       mecha_notify(evaluation, player, "That target has no markings.");
+    free_buf(description_buffer);
   } else if (argc == 1) { /* ID number */
     target_id[0] = args[0][0];
     target_id[1] = *checked_string_suffix(*args, 1);
@@ -192,13 +194,15 @@ void mech_view(DbRef player, Mech *mech, char *buffer) {
       return;
     }
 
+    char *description_buffer = alloc_lbuf("mech_view.description");
     target_desc =
         btech_attribute_read(mech_context(target)->database, mech_dbref(target),
-                             A_MECHDESC, (char[LBUF_SIZE]){0});
+                             A_MECHDESC, description_buffer);
     if (*target_desc)
       mecha_notify(evaluation, player, target_desc);
     else
       mecha_notify(evaluation, player, "That target has no markings.");
+    free_buf(description_buffer);
   } else {
     mecha_notify(evaluation, player,
                  "Invalid number of arguments to function.");

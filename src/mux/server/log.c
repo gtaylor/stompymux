@@ -159,13 +159,15 @@ void log_simple(LogEntry entry, const char *message) {
 }
 
 void log_error(LogEntry entry, const char *format, ...) {
-  char buffer[LBUF_SIZE];
-  char stripped_buffer[LBUF_SIZE];
+  char *buffer;
+  char *stripped_buffer;
   va_list ap;
   ServerLog *log = entry.log;
 
   if (!(entry.key & log->configuration->log_options))
     return;
+  buffer = alloc_lbuf("log_error.buffer");
+  stripped_buffer = alloc_lbuf("log_error.stripped");
 
   if (log->configuration->log_info & LOGOPT_TIMESTAMP) {
     time_t now;
@@ -192,8 +194,10 @@ void log_error(LogEntry entry, const char *format, ...) {
   va_end(ap);
 
   styled_text_strip(log->database->styled_text_palette, buffer, stripped_buffer,
-                    sizeof(stripped_buffer));
+                    LBUF_SIZE);
   (void)fprintf(stderr, "%s\n", stripped_buffer);
+  free_buf(stripped_buffer);
+  free_buf(buffer);
 }
 
 /*

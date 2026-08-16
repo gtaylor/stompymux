@@ -26,7 +26,7 @@ static bool sp_ok(EvaluationContext *evaluation,
                   const ServerConfiguration *configuration [[maybe_unused]],
                   DbRef player) {
   LuaLockInvocation lock;
-  LuaLockResult result;
+  LuaLockResult *result;
 
   if (is_gagged(evaluation->world->database, player) &&
       (!(is_wizard(evaluation->world->database, player)))) {
@@ -39,17 +39,20 @@ static bool sp_ok(EvaluationContext *evaluation,
   if (is_auditorium(
           evaluation->world->database,
           game_object_location(evaluation->world->database, player))) {
+    result = checked_storage_allocate(sizeof(*result));
     if (!lock_test(evaluation, player, player, player,
                    game_object_location(evaluation->world->database, player),
                    LUA_LOCK_SPEECH, LUA_LOCK_OPERATION_SPEAK, false, &lock,
-                   &result)) {
+                   result)) {
       notify_lock_failure(&(LockFailureNotification){
           .evaluation = evaluation,
           .invocation = &lock,
-          .result = &result,
+          .result = result,
           .enactor_default = "Sorry, you may not speak in this place."});
+      free_buf(result);
       return false;
     }
+    free_buf(result);
   }
   return true;
 }
@@ -84,12 +87,12 @@ static constexpr char BROADCAST_MESSAGE[] = "Broadcast: ";
 static constexpr char ADMIN_MESSAGE[] = "Admin: ";
 
 void do_say(CommandInvocation *invocation) {
-  char message_buffer[LBUF_SIZE];
   EvaluationContext *evaluation = &invocation->context->evaluation;
   const DbRef PLAYER = invocation->player;
   int key = invocation->key;
   char *message = invocation->first;
-  char plain_message[LBUF_SIZE];
+  char *message_buffer;
+  char *plain_message;
   DbRef loc;
   char *buf2;
   char *bp;
@@ -153,8 +156,10 @@ void do_say(CommandInvocation *invocation) {
    * Send the message on its way
    */
 
+  plain_message = alloc_lbuf("do_say.plain_message");
+  message_buffer = alloc_lbuf("do_say.message");
   styled_text_strip(evaluation->world->styled_text_palette, message,
-                    plain_message, sizeof(plain_message));
+                    plain_message, LBUF_SIZE);
   message = plain_message;
 
   switch (key) {
@@ -195,7 +200,7 @@ void do_say(CommandInvocation *invocation) {
     if (say_flags & SAY_ROOM) {
       if ((typeof_obj(evaluation->world->database, loc) == OBJECT_TYPE_ROOM) &&
           (say_flags & SAY_HERE)) {
-        return;
+        goto cleanup;
       }
       depth = 0;
       while (
@@ -204,7 +209,7 @@ void do_say(CommandInvocation *invocation) {
         loc = game_object_location(evaluation->world->database, loc);
         if ((loc == NOTHING) ||
             (loc == game_object_location(evaluation->world->database, loc)))
-          return;
+          goto cleanup;
       }
       if (typeof_obj(evaluation->world->database, loc) == OBJECT_TYPE_ROOM) {
         notify_checked(evaluation, loc, PLAYER, message,
@@ -431,6 +436,9 @@ void do_say(CommandInvocation *invocation) {
   default:
     break;
   }
+cleanup:
+  free_buf(message_buffer);
+  free_buf(plain_message);
 }
 
 /*

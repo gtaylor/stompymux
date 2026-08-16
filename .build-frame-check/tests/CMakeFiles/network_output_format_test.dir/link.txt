@@ -1,0 +1,1 @@
+/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/network_output_format_test.dir/link.d CMakeFiles/network_output_format_test.dir/unit/mux/network/network_output_format.c.o -o network_output_format_test  ../libbtmux_checked_storage.a

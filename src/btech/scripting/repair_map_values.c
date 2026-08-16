@@ -362,7 +362,6 @@ BtechScriptResult fun_btdamages(BtechScriptCall *call) {
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
   [[maybe_unused]] const DbRef PLAYER = call->player;
   DbRef it;
-  char damage_jobs[LBUF_SIZE * 2];
   Mech *mech;
   if (!is_wizard(context->world->database, PLAYER)) {
     return btech_script_error(call, "#-1 PERMISSION DENIED");
@@ -379,8 +378,10 @@ BtechScriptResult fun_btdamages(BtechScriptCall *call) {
   if (!mech) {
     return btech_script_error(call, "#-1");
   }
-  mech_repair_jobs_format(mech, damage_jobs, sizeof(damage_jobs));
+  char *damage_jobs = checked_storage_allocate_array(2, LBUF_SIZE);
+  mech_repair_jobs_format(mech, damage_jobs, (size_t)LBUF_SIZE * 2);
   safe_tprintf_str(buff, bufc, "%s", damage_jobs);
+  free_buf(damage_jobs);
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
 BtechScriptResult fun_btcritstatus(BtechScriptCall *call) {

@@ -13,6 +13,7 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
@@ -117,29 +118,31 @@ void do_enter_internal(EvaluationContext *evaluation, DbRef player, DbRef thing,
   DbRef loc = game_object_location(evaluation->world->database, player);
   int oattr;
   LuaLockInvocation lock;
-  LuaLockResult result;
 
   if (player == thing) {
     notify_checked(evaluation, player, player, "You can't enter yourself!",
                    MSG_ME_ALL | MSG_F_DOWN);
-  } else if (lock_test(evaluation, player, player, player, thing,
-                       LUA_LOCK_ENTER, LUA_LOCK_OPERATION_ENTER, quiet != 0,
-                       &lock, &result) &&
-             lock_test(evaluation, player, player, player, loc, LUA_LOCK_LEAVE,
-                       LUA_LOCK_OPERATION_ENTER, quiet != 0, &lock, &result)) {
-    oattr = quiet ? HUSH_ENTER : 0;
-    move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
-                                              .object = player,
-                                              .destination = thing,
-                                              .cause = NOTHING,
-                                              .hush = oattr});
   } else {
-    notify_lock_failure(
-        &(LockFailureNotification){.evaluation = evaluation,
-                                   .invocation = &lock,
-                                   .result = &result,
-                                   .enactor_default = "You can't enter that.",
-                                   .event = LUA_EVENT_ENTER_FAIL});
+    LuaLockResult *result = checked_storage_allocate(sizeof(*result));
+    if (lock_test(evaluation, player, player, player, thing, LUA_LOCK_ENTER,
+                  LUA_LOCK_OPERATION_ENTER, quiet != 0, &lock, result) &&
+        lock_test(evaluation, player, player, player, loc, LUA_LOCK_LEAVE,
+                  LUA_LOCK_OPERATION_ENTER, quiet != 0, &lock, result)) {
+      oattr = quiet ? HUSH_ENTER : 0;
+      move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
+                                                .object = player,
+                                                .destination = thing,
+                                                .cause = NOTHING,
+                                                .hush = oattr});
+    } else {
+      notify_lock_failure(
+          &(LockFailureNotification){.evaluation = evaluation,
+                                     .invocation = &lock,
+                                     .result = result,
+                                     .enactor_default = "You can't enter that.",
+                                     .event = LUA_EVENT_ENTER_FAIL});
+    }
+    free_buf(result);
   }
 }
 
@@ -181,7 +184,6 @@ void do_leave(CommandInvocation *invocation) {
   DbRef loc;
   int quiet;
   LuaLockInvocation lock;
-  LuaLockResult result;
 
   loc = game_object_location(evaluation->world->database, player);
 
@@ -196,13 +198,14 @@ void do_leave(CommandInvocation *invocation) {
   if ((key & MOVE_QUIET) &&
       is_controls(evaluation->world->database, player, loc))
     quiet = HUSH_LEAVE;
+  LuaLockResult *result = checked_storage_allocate(sizeof(*result));
   if (lock_test(evaluation, player, invocation->cause, player, loc,
                 LUA_LOCK_LEAVE, LUA_LOCK_OPERATION_LEAVE, quiet != 0, &lock,
-                &result) &&
+                result) &&
       lock_test(evaluation, player, invocation->cause, player,
                 game_object_location(evaluation->world->database, loc),
                 LUA_LOCK_ENTER, LUA_LOCK_OPERATION_LEAVE, quiet != 0, &lock,
-                &result)) {
+                result)) {
     move_via_generic(&(ObjectMovementRequest){
         .evaluation = evaluation,
         .object = player,
@@ -213,8 +216,9 @@ void do_leave(CommandInvocation *invocation) {
     notify_lock_failure(
         &(LockFailureNotification){.evaluation = evaluation,
                                    .invocation = &lock,
-                                   .result = &result,
+                                   .result = result,
                                    .enactor_default = "You can't leave.",
                                    .event = LUA_EVENT_LEAVE_FAIL});
   }
+  free_buf(result);
 }

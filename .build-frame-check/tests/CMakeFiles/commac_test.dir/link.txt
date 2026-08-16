@@ -1,0 +1,1 @@
+/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Wl,--gc-sections -Xlinker --dependency-file=CMakeFiles/commac_test.dir/link.d CMakeFiles/commac_test.dir/unit/mux/support/commac.c.o CMakeFiles/commac_test.dir/__/src/mux/communication/commac.c.o -o commac_test  ../libbtmux_checked_storage.a

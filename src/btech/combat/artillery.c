@@ -403,8 +403,6 @@ static void artillery_hit_hex(const ArtilleryImpact *impact) {
   int dam = impact->damage;
   int tx = impact->position.x;
   int ty = impact->position.y;
-  char buf1[LBUF_SIZE];
-  char buf2[LBUF_SIZE];
 
   /* Safety check -- shouldn't happen */
   if (tx < 0 || tx >= map->map_width || ty < 0 || ty >= map->map_height)
@@ -425,6 +423,8 @@ static void artillery_hit_hex(const ArtilleryImpact *impact) {
     mine_field_add(map, tx, ty, dam);
     return;
   }
+  char *buf1 = alloc_lbuf("artillery_hit_hex.observers");
+  char *buf2 = alloc_lbuf("artillery_hit_hex.target");
   if (!(mode & CLUSTER_MODE)) {
     if (impact->direct)
       (void)snprintf(buf1, LBUF_SIZE, "receives a direct hit!");
@@ -436,12 +436,11 @@ static void artillery_hit_hex(const ArtilleryImpact *impact) {
       (void)snprintf(buf2, LBUF_SIZE, "You are hit by fragments!");
   } else {
     if (dam > 2) {
-      (void)string_copy_bounded(buf1, sizeof(buf1), "is hit by bomblets!");
-      (void)string_copy_bounded(buf2, sizeof(buf2), "You are hit by bomblets!");
+      (void)string_copy_bounded(buf1, LBUF_SIZE, "is hit by bomblets!");
+      (void)string_copy_bounded(buf2, LBUF_SIZE, "You are hit by bomblets!");
     } else {
-      (void)string_copy_bounded(buf1, sizeof(buf1), "is hit by a bomblet!");
-      (void)string_copy_bounded(buf2, sizeof(buf2),
-                                "You are hit by a bomblet!");
+      (void)string_copy_bounded(buf1, LBUF_SIZE, "is hit by a bomblet!");
+      (void)string_copy_bounded(buf2, LBUF_SIZE, "You are hit by a bomblet!");
     }
   }
   BlastHexRequest request = {
@@ -454,6 +453,8 @@ static void artillery_hit_hex(const ArtilleryImpact *impact) {
       .safety = {.above = 10, .below = 4},
   };
   blast_hit_hex(&request);
+  free_buf(buf2);
+  free_buf(buf1);
 }
 
 typedef struct ArtilleryNeighborHit ArtilleryNeighborHit;

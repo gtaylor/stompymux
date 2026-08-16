@@ -1,0 +1,1 @@
+/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/btech_enum_types_test.dir/link.d CMakeFiles/btech_enum_types_test.dir/unit/btech/contracts/btech_enum_types.c.o -o btech_enum_types_test  ../libbtmux_checked_storage.a

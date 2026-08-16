@@ -405,7 +405,6 @@ void look_in(const LookRequest *request) {
   OwnedText buff;
   bool custom;
   LuaLockInvocation lock;
-  LuaLockResult result;
 
   /*
    * Only makes sense for things that can hear
@@ -433,8 +432,9 @@ void look_in(const LookRequest *request) {
    */
 
   if (typeof_obj(evaluation->world->database, loc) == OBJECT_TYPE_ROOM) {
+    LuaLockResult *result = checked_storage_allocate(sizeof(*result));
     if (lock_test(evaluation, player, player, player, loc, LUA_LOCK_DEFAULT,
-                  LUA_LOCK_OPERATION_LOOK, false, &lock, &result)) {
+                  LUA_LOCK_OPERATION_LOOK, false, &lock, result)) {
       notify_action(evaluation,
                     &(ActionMessageInvocation){
                         .message = {.type = LUA_MESSAGE_SUCCESS,
@@ -448,9 +448,10 @@ void look_in(const LookRequest *request) {
     } else {
       notify_lock_failure(&(LockFailureNotification){.evaluation = evaluation,
                                                      .invocation = &lock,
-                                                     .result = &result,
+                                                     .result = result,
                                                      .event = LUA_EVENT_FAIL});
     }
+    free_buf(result);
   }
   if (custom)
     return;

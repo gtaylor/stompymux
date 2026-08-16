@@ -1,0 +1,1 @@
+/usr/bin/clang-22 -O2 -g -DNDEBUG -Wno-gcc-install-dir-libstdcxx -Xlinker --dependency-file=CMakeFiles/cmark_exe.dir/link.d CMakeFiles/cmark_exe.dir/main.c.o -o cmark  libcmark.a

@@ -185,7 +185,8 @@ add_test(NAME btech_los_geometry COMMAND btech_los_geometry_test)
 set_tests_properties(btech_los_geometry PROPERTIES LABELS los)
 
 add_executable(btech_los_sensors_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/sensors/btech_los_sensors.c
-  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/sensors/mech_sensor_functions.c)
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/sensors/mech_sensor_functions.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/sensors/mech_contacts.c)
 target_compile_options(btech_los_sensors_test PRIVATE -ffunction-sections)
 target_link_options(btech_los_sensors_test PRIVATE -Wl,--gc-sections)
 target_link_libraries(btech_los_sensors_test PRIVATE btmux_options m)
