@@ -8,8 +8,6 @@
 #include "mech_status_api.h" // IWYU pragma: keep
 #include "mux/server/log.h"
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
-#include <stdio.h>
-
 /* Implements loading for BattleTech special objects. */
 
 #include <stdlib.h>
@@ -17,6 +15,7 @@
 
 #include "autopilot_weapon_profile_api.h"
 #include "btech/context.h"
+#include "btech_channel.h"
 #include "btechstats_api.h"
 #include "character_value_settings.h"
 #include "map_dynamic_api.h"
@@ -127,7 +126,6 @@ static bool load_update2(const RedBlackTreeVisitCall *call) {
 }
 
 static bool load_update4(const RedBlackTreeVisitCall *call) {
-  char message_buffer[128];
   void *data = call->data;
   void *arg = call->context;
   BtechSpecialObject *const XCODE_OBJ = data;
@@ -143,10 +141,16 @@ static bool load_update4(const RedBlackTreeVisitCall *call) {
       map = btech_context_get_map(
           CONTEXT, game_object_location(CONTEXT->database, mech_dbref(MECH)));
       if (map) {
-        (void)snprintf(
-            message_buffer, sizeof(message_buffer), "%ld",
-            game_object_location(CONTEXT->database, mech_dbref(MECH)));
-        mech_rsetmapindex(GOD, MECH, message_buffer);
+        if (mech_map_index_set(
+                MECH, game_object_location(CONTEXT->database, mech_dbref(MECH)),
+                nullptr) != MECH_MAP_SET_OK) {
+          btech_channel_send(
+              CONTEXT, BTECH_CHANNEL_MECH_ERRORS,
+              "Unable to restore unit #%ld to map #%ld during registry load.",
+              mech_dbref(MECH),
+              game_object_location(CONTEXT->database, mech_dbref(MECH)));
+          return true;
+        }
       }
       map = btech_context_get_map(CONTEXT, mech_map_dbref(MECH));
       if (!map)

@@ -243,7 +243,6 @@ MapRealPosition map_vector_components(const MapPolarVector *vector) {
 }
 
 static bool leave_hangar(BattleMap *map, Mech *mech) {
-  char message_buffer[128];
   Mech *car = nullptr;
   DbRef mapob;
   MapObject *mapo;
@@ -278,6 +277,13 @@ static bool leave_hangar(BattleMap *map, Mech *mech) {
                 "Weird bug happened during leave. Please contact a wizard. ");
     return true;
   }
+  Mech *const UNITS[] = {mech, car};
+  const MechMapSetBatchRequest MAP_PLACEMENT = {
+      .mechs = UNITS, .count = car ? 2 : 1, .map = DESTINATION};
+  if (mech_map_index_preflight_batch(&MAP_PLACEMENT) != MECH_MAP_SET_OK) {
+    mech_notify(mech, MECHALL, "Unable to leave: unit placement failed.");
+    return false;
+  }
   const ObjectMovementRequest MOVEMENTS[] = {
       {.evaluation = btech_context_evaluation(mech->xcode.context),
        .object = mech->mynum,
@@ -296,18 +302,20 @@ static bool leave_hangar(BattleMap *map, Mech *mech) {
   }
 
   mech_los_broadcast(mech, "has left the hangar.");
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", DESTINATION);
-  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
-  if (car)
-    mech_rsetmapindex(GOD, (void *)car, message_buffer);
+  if (mech_map_index_set_batch(&MAP_PLACEMENT) != MECH_MAP_SET_OK) {
+    mech_notify(mech, MECHALL, "Unable to leave: unit placement failed.");
+    return false;
+  }
 
   bsuit_swarmers_stop(
       btech_context_find_object(mech->xcode.context, mech->mapindex), mech, 1);
   mech_printf(mech, MECHALL, "You have left %s.",
               structure_name(mech->xcode.context->database, mapo).text);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", mapo->x,
-                 mapo->y);
-  mech_rsetxy(GOD, (void *)mech, message_buffer);
+  if (!mech_position_set(&(MechPositionSetRequest){
+          .mech = mech, .x = mapo->x, .y = mapo->y})) {
+    mech_notify(mech, MECHALL, "Unable to leave: unit placement failed.");
+    return false;
+  }
   mech_continue_flying(mech);
   if (car)
     mech_position_mirror(car, mech, 0);

@@ -45,7 +45,6 @@
 #include <string.h>
 
 static void mech_enter_event(MuxEvent *e) {
-  char message_buffer[128];
   Mech *mech = (Mech *)e->data;
   Mech *tmpm = nullptr;
   MapObject *mapo;
@@ -115,6 +114,13 @@ static void mech_enter_event(MuxEvent *e) {
   }
   if (mech_carried_dbref(mech) > 0)
     tmpm = btech_context_get_mech(mech_context(mech), mech_carried_dbref(mech));
+  Mech *const UNITS[] = {mech, tmpm};
+  const MechMapSetBatchRequest MAP_PLACEMENT = {
+      .mechs = UNITS, .count = tmpm ? 2 : 1, .map = mapo->obj};
+  if (mech_map_index_preflight_batch(&MAP_PLACEMENT) != MECH_MAP_SET_OK) {
+    mech_notify(mech, MECHALL, "Unable to enter: unit placement failed.");
+    return;
+  }
   obj_x = mech_position_x(mech);
   obj_y = mech_position_y(mech);
   const ObjectMovementRequest MOVEMENTS[] = {
@@ -141,10 +147,12 @@ static void mech_enter_event(MuxEvent *e) {
                       structure_name(mech_context(mech)->database, mapo).text,
                       mech_position_x(mech), mech_position_y(mech));
   mark_for_los_update(mech);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", mapo->obj);
-  mech_rsetmapindex(GOD, (void *)mech, message_buffer);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", x, y);
-  mech_rsetxy(GOD, (void *)mech, message_buffer);
+  if (mech_map_index_set_batch(&MAP_PLACEMENT) != MECH_MAP_SET_OK ||
+      !mech_position_set(
+          &(MechPositionSetRequest){.mech = mech, .x = x, .y = y})) {
+    mech_notify(mech, MECHALL, "Unable to enter: unit placement failed.");
+    return;
+  }
   mech_los_broadcastf(mech, "has entered %s at %d,%d.",
                       structure_name(mech_context(mech)->database, mapo).text,
                       obj_x, obj_y);
@@ -154,10 +162,11 @@ static void mech_enter_event(MuxEvent *e) {
                         obj_x, obj_y);
   }
   if (tmpm) {
-    (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", mapo->obj);
-    mech_rsetmapindex(GOD, (void *)tmpm, message_buffer);
-    (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", x, y);
-    mech_rsetxy(GOD, (void *)tmpm, message_buffer);
+    if (!mech_position_set(
+            &(MechPositionSetRequest){.mech = tmpm, .x = x, .y = y})) {
+      mech_notify(tmpm, MECHALL, "Unable to enter: unit placement failed.");
+      return;
+    }
   }
   auto_cal_mapindex(mech_context(mech), mech);
 }

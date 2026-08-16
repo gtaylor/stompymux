@@ -1,6 +1,5 @@
 /* Implements BattleTech movement mechanics for unit ood. */
 
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "btconfig.h"
@@ -296,7 +295,6 @@ void mech_ood_event(MuxEvent *e) {
 }
 
 void mech_ood_initiate(DbRef player, Mech *mech, char *buffer) {
-  char message_buffer[128];
   char *args[4];
   int x;
   int y;
@@ -330,9 +328,8 @@ void mech_ood_initiate(DbRef player, Mech *mech, char *buffer) {
                  "OOD already in progress!");
     return;
   }
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%d %d", x, y);
-  mech_rsetxy(GOD, (void *)mech, message_buffer);
-  if (mech_position_x(mech) != x || mech_position_y(mech) != y) {
+  if (!mech_position_set(
+          &(MechPositionSetRequest){.mech = mech, .x = x, .y = y})) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Invalid co-ordinates!");
     return;
