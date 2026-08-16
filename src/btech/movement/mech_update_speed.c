@@ -24,6 +24,8 @@
 
 static float speed_heat_decrease(float speed, float maximum_speed,
                                  float penalty) {
+  if (maximum_speed <= 0.0F)
+    return speed;
   return speed *
          (ceilf((rintf((maximum_speed / 1.5F) / MP1) - (penalty / MP1)) *
                 1.5F) *
@@ -33,6 +35,8 @@ static float speed_heat_decrease(float speed, float maximum_speed,
 
 static float speed_old_decrease(float speed, float maximum_speed,
                                 float penalty) {
+  if (maximum_speed <= 0.0F)
+    return speed;
   return speed * (maximum_speed - penalty) / maximum_speed;
 }
 
