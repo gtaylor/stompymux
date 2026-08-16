@@ -431,6 +431,30 @@ target_include_directories(btech_map_name_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_map_name COMMAND btech_map_name_test)
 
+add_executable(btech_map_links_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_map_links.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map/map_links.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/red_black_tree.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/red_black_tree_mutation.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+target_compile_options(btech_map_links_test PRIVATE -ffunction-sections)
+target_link_options(btech_map_links_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_map_links_test PRIVATE btmux_options m)
+target_include_directories(btech_map_links_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_map_links COMMAND btech_map_links_test
+  "${CMAKE_SOURCE_DIR}/tests/fixtures/unit/map_links/two-map-cycle.links"
+  "${CMAKE_SOURCE_DIR}/tests/fixtures/unit/map_links/long-cycle.links"
+  "${CMAKE_SOURCE_DIR}/tests/fixtures/unit/map_links/diamond.links"
+  "${CMAKE_SOURCE_DIR}/tests/fixtures/unit/map_links/multi-link-cycle.links"
+  "${CMAKE_SOURCE_DIR}/tests/fixtures/unit/map_links/many-links.links"
+  "${CMAKE_SOURCE_DIR}/tests/fixtures/unit/map_links/deep-acyclic.links"
+  "${CMAKE_SOURCE_DIR}/tests/fixtures/unit/map_links/deep-chain.links"
+  "${CMAKE_SOURCE_DIR}/tests/fixtures/unit/map_links/self-link.links")
+
 add_executable(btech_registry_help_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_registry_help.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/special/registry_help_color.c

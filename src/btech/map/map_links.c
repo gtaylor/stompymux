@@ -13,6 +13,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/support/red_black_tree.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include <stddef.h>
@@ -24,13 +25,27 @@ typedef struct MapLinkUpdateStats {
   int builds;
   int leaves;
   int entrances;
+  int skipped_links;
 } MapLinkUpdateStats;
+
+typedef struct MapLinkTraversalState {
+  /*
+   * This set belongs to the whole command, not one recursion path. A map
+   * reachable from multiple parents is processed once, so its first parent
+   * owns the surviving LEAVE exit; unwinding a path would re-expand dense
+   * DAGs and restore the old repeated-work behavior.
+   */
+  RedBlackTree visited;
+  char *attribute_buffer;
+} MapLinkTraversalState;
 
 typedef struct MapLinkUpdateRequest {
   BtechContext *context;
   DbRef source;
   DbRef location;
   MapLinkUpdateStats *stats;
+  MapLinkTraversalState *traversal;
+  size_t depth;
 } MapLinkUpdateRequest;
 
 typedef struct MapDirection {
@@ -40,6 +55,11 @@ typedef struct MapDirection {
 
 static const MapDirection DIRECTION_TABLE[4] = {
     {1, 0, 'n'}, {2, 1, 'e'}, {1, 2, 's'}, {0, 1, 'w'}};
+
+enum {
+  MAP_LINK_ARGUMENT_CAPACITY = 500,
+  MAP_LINK_MAX_DEPTH = 1024,
+};
 
 static const MapDirection *direction_entry(int direction) {
   if (direction < 0)
@@ -58,14 +78,43 @@ static char *link_argument(char **arguments, size_t count, int index) {
 
 static void recursively_update_links(const MapLinkUpdateRequest *request);
 
+static int compare_dbrefs(const RedBlackTreeCompareCall *call) {
+  const DbRef LEFT = (DbRef)call->lhs;
+  const DbRef RIGHT = (DbRef)call->rhs;
+
+  if (LEFT < RIGHT)
+    return -1;
+  if (LEFT > RIGHT)
+    return 1;
+  return 0;
+}
+
+static void map_link_update_skip(MapLinkUpdateStats *stats) {
+  if (stats != nullptr)
+    stats->skipped_links++;
+}
+
+static bool map_link_update_visit(const MapLinkUpdateRequest *request) {
+  if (request->depth >= MAP_LINK_MAX_DEPTH ||
+      red_black_tree_exists(request->traversal->visited,
+                            (void *)request->location)) {
+    map_link_update_skip(request->stats);
+    return false;
+  }
+  red_black_tree_insert(request->traversal->visited, (void *)request->location,
+                        request->traversal);
+  return true;
+}
+
 static bool parse_coordinate_pair(char *text, int *x, int *y) {
   char *separator = strchr(text, ',');
   if (separator == nullptr)
     return false;
+  const size_t SEPARATOR_OFFSET = (size_t)(separator - text);
+  char *second = checked_mutable_string_suffix(text, SEPARATOR_OFFSET + 1);
   *separator = '\0';
   const bool PARSED =
-      (parse_int_checked(text, x) &&
-       parse_int_checked(checked_string_suffix(separator, 1), y)) != 0;
+      (parse_int_checked(text, x) && parse_int_checked(second, y)) != 0;
   *separator = ',';
   return PARSED;
 }
@@ -137,10 +186,10 @@ static void add_entrances(DbRef loc [[maybe_unused]], BattleMap *map,
   free_buf(buf);
 }
 
-static void add_links(DbRef loc, BattleMap *map, char *data,
-                      MapLinkUpdateStats *stats) {
+static void add_links(const MapLinkUpdateRequest *request, BattleMap *map,
+                      char *data) {
   char *buf;
-  char *args[500];
+  char **args;
   int i;
   int found;
   int targ;
@@ -152,18 +201,23 @@ static void add_links(DbRef loc, BattleMap *map, char *data,
   memset(&foo, 0, sizeof(MapObject));
 
   buf = alloc_lbuf("add_links");
+  args = (char **)checked_storage_allocate_array(MAP_LINK_ARGUMENT_CAPACITY,
+                                                 sizeof(*args));
 
   (void)string_copy_bounded(buf, LBUF_SIZE, data);
-  found = mech_parseattributes(buf, args, 500);
+  found = mech_parseattributes(buf, args, MAP_LINK_ARGUMENT_CAPACITY);
   if (found > 0) {
     for (i = 0; i < found; i++) {
-      if (!parse_int_checked(link_argument(args, 500, i), &targ))
+      if (!parse_int_checked(link_argument(args, MAP_LINK_ARGUMENT_CAPACITY, i),
+                             &targ))
         continue;
       if (targ < 0 || !btech_context_find_object(map->xcode.context, targ) ||
-          targ == loc)
+          targ == request->location) {
         continue;
-      tmps = btech_attribute_read(map->xcode.context->database, targ,
-                                  A_BUILDCOORD, (char[LBUF_SIZE]){0});
+      }
+      tmps =
+          btech_attribute_read(map->xcode.context->database, targ, A_BUILDCOORD,
+                               request->traversal->attribute_buffer);
       if (!tmps)
         continue;
       if (!parse_coordinate_pair(tmps, &x, &y))
@@ -175,15 +229,16 @@ static void add_links(DbRef loc, BattleMap *map, char *data,
       foo.y = clamp_int_to_short(y);
       foo.obj = targ;
       add_mapobj_to_type(map, TYPE_BUILD, &foo, 1);
-      if (stats != nullptr)
-        stats->builds++;
-      recursively_update_links(
-          &(MapLinkUpdateRequest){.context = map->xcode.context,
-                                  .source = loc,
-                                  .location = targ,
-                                  .stats = stats});
+      if (request->stats != nullptr)
+        request->stats->builds++;
+      MapLinkUpdateRequest nested = *request;
+      nested.source = request->location;
+      nested.location = targ;
+      nested.depth++;
+      recursively_update_links(&nested);
     }
   }
+  free((void *)args);
   free_buf(buf);
 }
 
@@ -196,6 +251,8 @@ static void recursively_update_links(const MapLinkUpdateRequest *request) {
   MapObject foo;
   char *tmps;
 
+  if (!map_link_update_visit(request))
+    return;
   memset(&foo, 0, sizeof(MapObject));
   map = btech_context_get_map(context, LOC);
   if (!map)
@@ -213,7 +270,7 @@ static void recursively_update_links(const MapLinkUpdateRequest *request) {
     /* Places you can enter this place from.. it's more or less
        directly taken from BUILDENTRANCE */
     tmps = btech_attribute_read(context->database, LOC, A_BUILDENTRANCE,
-                                (char[LBUF_SIZE]){0});
+                                request->traversal->attribute_buffer);
     if (tmps) {
       /* number number number number
          or
@@ -224,14 +281,33 @@ static void recursively_update_links(const MapLinkUpdateRequest *request) {
   }
   del_mapobjst(map, TYPE_BUILD);
   tmps = btech_attribute_read(context->database, LOC, A_BUILDLINKS,
-                              (char[LBUF_SIZE]){0});
+                              request->traversal->attribute_buffer);
   if (tmps)
-    add_links(LOC, map, tmps, stats);
+    add_links(request, map, tmps);
+}
+
+static void update_links(BtechContext *context, DbRef source, DbRef location,
+                         MapLinkUpdateStats *stats) {
+  MapLinkTraversalState traversal = {
+      .visited = red_black_tree_init(compare_dbrefs, nullptr),
+      .attribute_buffer = alloc_lbuf("update_links.attribute_buffer"),
+  };
+  if (traversal.visited == nullptr)
+    abort();
+
+  recursively_update_links(&(MapLinkUpdateRequest){
+      .context = context,
+      .source = source,
+      .location = location,
+      .stats = stats,
+      .traversal = &traversal,
+  });
+  free_buf(traversal.attribute_buffer);
+  red_black_tree_destroy(traversal.visited);
 }
 
 void recursively_updatelinks(BtechContext *context, DbRef from, DbRef loc) {
-  recursively_update_links(&(MapLinkUpdateRequest){
-      .context = context, .source = from, .location = loc});
+  update_links(context, from, loc, nullptr);
 }
 
 void map_updatelinks(DbRef player, void *data, char *buffer [[maybe_unused]]) {
@@ -240,14 +316,12 @@ void map_updatelinks(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   DbRef ourloc;
 
   ourloc = game_object_location(map->xcode.context->database, player);
-  recursively_update_links(
-      &(MapLinkUpdateRequest){.context = map->xcode.context,
-                              .source = NOTHING,
-                              .location = ourloc,
-                              .stats = &stats});
+  update_links(map->xcode.context, NOTHING, ourloc, &stats);
   notify_printf(btech_context_evaluation(map->xcode.context), player,
-                "Updated %d BUILD objs, %d LEAVE objs, %d ENTRANCE objs.",
-                stats.builds, stats.leaves, stats.entrances);
+                "Updated %d BUILD objs, %d LEAVE objs, %d ENTRANCE objs; "
+                "skipped %d link descents.",
+                stats.builds, stats.leaves, stats.entrances,
+                stats.skipped_links);
 }
 
 int map_linked(BtechContext *context, DbRef map_object) {

@@ -56,7 +56,8 @@ const BtechCommandDefinition MAPCOMMANDS[] = {
     {0, "DELOBJ [[TYPE] | [X] [Y] | [TYPE] [X] [Y]]",
      "@Deletes objects of either type or at x/y",
      btech_command_invoke_map_delobj},
-    {0, "UPDATELINKS", "@Updates CodeLinks from the database objs (recursive)",
+    {0, "UPDATELINKS",
+     "@Updates CodeLinks recursively and reports skipped descents",
      btech_command_invoke_map_updatelinks},
 
     /* Cargo things */
