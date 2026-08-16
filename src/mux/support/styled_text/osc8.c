@@ -221,8 +221,9 @@ static bool append_json_color(char *json, size_t json_size, size_t *used,
                               bool *first, const char *name,
                               const StyledColor *color) {
   char property[96];
-  int length = snprintf(property, sizeof(property), "\"%s\":\"#%02x%02x%02x\"",
-                        name, color->red, color->green, color->blue);
+  int length =
+      snprintf(property, sizeof(property), "\"%s\":\"#%02hhx%02hhx%02hhx\"",
+               name, color->red, color->green, color->blue);
   return (length > 0 && append_json_separator(json, json_size, used, first) &&
           styled_append_bytes(json, json_size, used, property,
                               (size_t)length)) != 0;

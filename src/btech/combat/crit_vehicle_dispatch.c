@@ -208,7 +208,6 @@ void mech_vehicle_critical_handle(const VehicleCriticalRequest *request) {
         mech_max_speed_lower(wounded, MP1);
       }
       return;
-      break;
     case 5:
       if (!condition.fallen) {
         mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");
@@ -246,7 +245,6 @@ void mech_vehicle_critical_handle(const VehicleCriticalRequest *request) {
         mech_make_fall(wounded);
       }
       return;
-      break;
     }
   }
   mech_notify(wounded, MECHALL, "[fg=yellow bold]CRITICAL HIT![reset]");

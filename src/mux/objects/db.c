@@ -515,7 +515,6 @@ void db_grow(GameDatabase *database, DbRef newtop) {
 
   if (newsize < database->minimum_size)
     newsize = database->minimum_size + delta;
-  ;
 
   /*
    * Grow the name tables

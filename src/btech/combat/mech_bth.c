@@ -87,7 +87,7 @@ mech_normal_to_hit_calculate(const MechNormalToHitRequest *request) {
   if (mech_is_aerospace_unit(mech) && target &&
       !mech_is_aerospace_unit(target) && !mech_is_landed(mech)) {
     bth_trace_add(&trace, "Aero strafing", 2);
-  };
+  }
   /* MW need +2 added per FASA */
   if (target && mech_class(target) == CLASS_MW)
     bth_trace_add(&trace, "MechWarrior", 2);

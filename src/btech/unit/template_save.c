@@ -113,10 +113,10 @@ int template_save(const TemplateSaveRequest *request) {
   (void)fprintf(fp, "Reference        { %s }\n", reference);
   (void)fprintf(fp, "Type             { %s }\n",
                 template_unit_class_name((size_t)mech->ud.type));
-  fprintf(fp, "Unit_Era         { %s }\n", ((mech)->ud.unit_era)),
-      fprintf(fp, "Unit_TRO         { %s }\n", ((mech)->ud.unit_tro)),
-      fprintf(fp, "Move_Type        { %s }\n",
-              template_movement_type_name((size_t)mech->ud.move));
+  fprintf(fp, "Unit_Era         { %s }\n", ((mech)->ud.unit_era));
+  fprintf(fp, "Unit_TRO         { %s }\n", ((mech)->ud.unit_tro));
+  fprintf(fp, "Move_Type        { %s }\n",
+          template_movement_type_name((size_t)mech->ud.move));
   (void)fprintf(fp, "Tons             { %d }\n", ((mech)->ud.tons));
   if (c == nullptr) {
     c = "unknown time";

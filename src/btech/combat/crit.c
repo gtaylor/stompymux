@@ -289,7 +289,6 @@ void mech_actuator_criticals_normalize(Mech *obj_mech) {
       case 4:
         mech_max_speed_set(obj_mech, 0.0);
         mech_make_fall(obj_mech);
-        ;
         break;
       }
     } else {

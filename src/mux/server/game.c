@@ -469,7 +469,6 @@ void fork_and_dump(ServerControl *control, int key) {
         /* You generally don't want to run atexit()
          * handlers and that sort of thing.  */
         _exit(0);
-        break;
 
       default: /* parent */
         break;
@@ -490,7 +489,7 @@ static int load_game(MuxServer *server) {
     log_text("Loading: ");
     log_text(server->configuration->database.gamedb);
     ENDLOG(&server->log);
-  };
+  }
   if (gamedb_load(&server->persistence,
                   server->configuration->database.gamedb) < 0) {
     STARTLOG(&server->log, LOG_ALWAYS, "INI", "FATAL") {

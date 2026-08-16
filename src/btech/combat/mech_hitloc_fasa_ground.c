@@ -133,7 +133,6 @@ HitLocationResult fasa_ground_hit_location(Mech *mech, int hit_group,
           mech_max_speed_lower(mech, MP1);
         }
         return hit_location_result_at(result, LSIDE);
-        break;
       case 6:
       case 7:
       case 8:

@@ -15,12 +15,6 @@
 #include "mux/world/object.h"
 #include "mux/world/object_internal.h"
 
-#define ZAP_LOC(database, i)                                                   \
-  {                                                                            \
-    game_object_set_location(database, i, NOTHING);                            \
-    game_object_set_next(database, i, NOTHING);                                \
-  }
-
 /**
  * Look for references to OBJECT_FLAG_GOING or illegal objects.
  */
@@ -82,7 +76,8 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
                                   .reference = targ,
                                   .reference_type = "Location",
                                   .error_type = "is invalid.  Moved to home."});
-        ZAP_LOC(evaluation->world->database, i);
+        game_object_set_location(evaluation->world->database, i, NOTHING);
+        game_object_set_next(evaluation->world->database, i, NOTHING);
         move_object(evaluation, i, HOME);
       }
       /*
@@ -674,7 +669,8 @@ static void check_contents_chains(EvaluationContext *evaluation,
     object_log_simple_error(
         evaluation, i, game_object_location(evaluation->world->database, i),
         "Orphaned object, moved home.");
-    ZAP_LOC(evaluation->world->database, i);
+    game_object_set_location(evaluation->world->database, i, NOTHING);
+    game_object_set_next(evaluation->world->database, i, NOTHING);
     move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
                                               .object = i,
                                               .destination = HOME,

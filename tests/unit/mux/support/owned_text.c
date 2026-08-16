@@ -8,7 +8,7 @@
 #include "mux/support/stringutil.h"
 
 static int check_borrowed_text(void) {
-  const char ORIGINAL[] = "borrowed";
+  char ORIGINAL[] = "borrowed";
   OwnedText text = owned_text_borrow(ORIGINAL);
 
   if (text.text != ORIGINAL || text.owned != nullptr)

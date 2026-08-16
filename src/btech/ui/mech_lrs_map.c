@@ -343,7 +343,7 @@ static MapCellText lrs_hex_text(const MapColorScheme *colors, Mech *mech,
   }
 
   btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
-                     "Unknown LRS mode, mech #%ld mode 0x%x.", mech_dbref(mech),
+                     "Unknown LRS mode, mech #%ld mode %d.", mech_dbref(mech),
                      mode);
   return map_cell_text('R', prevc, 'Y');
 }

@@ -61,11 +61,9 @@ void map_listmechs(DbRef player, void *data, char *buffer) {
       notify_printf(btech_context_evaluation(map->xcode.context), player,
                     "%d is first free slot, according to db.", map->first_free);
     return;
-    break;
   case OBJS:
     list_mapobjs(player, map);
     return;
-    break;
   }
   notify_printf(btech_context_evaluation(map->xcode.context), player,
                 "Invalid argument (%s)!", *argument_slot);

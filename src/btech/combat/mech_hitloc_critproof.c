@@ -171,7 +171,6 @@ int mech_critproof_hit_location(Mech *mech, int hit_group, bool *iscritical) {
         } else {
           return RSIDE;
         }
-        break;
       }
       break;
 

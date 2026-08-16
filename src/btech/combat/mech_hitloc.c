@@ -324,15 +324,12 @@ int mech_hit_location_transfer(Mech *mech, int hitloc) {
     case RARM:
     case RLEG:
       return RTORSO;
-      break;
     case LARM:
     case LLEG:
       return LTORSO;
-      break;
     case RTORSO:
     case LTORSO:
       return CTORSO;
-      break;
     }
     break;
   case CLASS_VEH_GROUND:

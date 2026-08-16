@@ -161,8 +161,6 @@ int mech_hit_group(Mech *mech, Mech *target) {
     } else {
       return RIGHTSIDE;
     }
-    break;
-
   case CLASS_SPHEROID_DS:
   case CLASS_AERO:
   case CLASS_MW:
@@ -189,7 +187,6 @@ int mech_hit_group(Mech *mech, Mech *target) {
     } else {
       return RIGHTSIDE;
     }
-    break;
   }
 }
 
@@ -342,7 +339,6 @@ int mech_targeting_computer_hit_location(Mech *mech, Mech *target, bool *isrear,
         break;
       case TURRET:
         return (TURRET);
-        break;
       }
       break;
     }
@@ -414,7 +410,6 @@ int mech_aimed_hit_location(Mech *mech, Mech *target, bool *isrear,
       break;
     case TURRET:
       return (TURRET);
-      break;
     }
   }
 
