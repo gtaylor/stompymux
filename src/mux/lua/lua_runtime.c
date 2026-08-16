@@ -76,12 +76,14 @@ void lua_set_error(char *error, size_t error_size, const char *format, ...) {
 }
 
 int lua_pcall_checked(LuaRuntime *runtime, int arguments, int results) {
+  const int CALL_BASE = lua_gettop(runtime->state) - arguments - 1;
   int status;
 
   status = lua_pcall(runtime->state, arguments, results, 0);
   if (!status &&
       (size_t)lua_gc(runtime->state, LUA_GCCOUNT, 0) * 1024U >
           (size_t)runtime->services->configuration->lua.memory_limit) {
+    lua_settop(runtime->state, CALL_BASE);
     lua_pushstring(runtime->state, "Lua memory limit exceeded");
     return LUA_ERRMEM;
   }
@@ -90,9 +92,11 @@ int lua_pcall_checked(LuaRuntime *runtime, int arguments, int results) {
 
 int lua_callback_pcall_checked(LuaRuntime *runtime, int arguments,
                                int results) {
+  const int CALL_BASE = lua_gettop(runtime->state) - arguments - 1;
   int status;
 
   if (!lua_mux_package_transaction_begin(&runtime->mux_package)) {
+    lua_settop(runtime->state, CALL_BASE);
     lua_pushliteral(runtime->state, "unable to start object state transaction");
     return LUA_ERRRUN;
   }
