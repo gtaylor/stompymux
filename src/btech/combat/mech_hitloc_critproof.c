@@ -179,6 +179,7 @@ int mech_critproof_hit_location(Mech *mech, int hit_group, bool *iscritical) {
       side = (hit_group == FRONT ? FSIDE : BSIDE);
       switch (roll) {
       case 2:
+        return side;
       case 12:
         return side;
       case 3:
@@ -431,6 +432,9 @@ int mech_critproof_hit_location(Mech *mech, int hit_group, bool *iscritical) {
       case 3:
       case 4:
       case 5:
+      case 6:
+      case 7:
+      case 8:
         hitloc = LSIDE;
         break;
       case 9:
@@ -467,6 +471,7 @@ int mech_critproof_hit_location(Mech *mech, int hit_group, bool *iscritical) {
       case 6:
       case 7:
       case 8:
+      case 9:
         hitloc = RSIDE;
         break;
       case 10:
@@ -487,37 +492,34 @@ int mech_critproof_hit_location(Mech *mech, int hit_group, bool *iscritical) {
 
     case FRONT:
     case BACK:
+      side = (hit_group == FRONT ? FSIDE : BSIDE);
       switch (roll) {
       case 2:
+        hitloc = side;
+        break;
       case 12:
-        hitloc = FSIDE;
+        hitloc = side;
         break;
       case 3:
-        hitloc = FSIDE;
-        break;
       case 4:
-        hitloc = FSIDE;
-        break;
       case 5:
-        hitloc = FSIDE;
-        break;
       case 6:
       case 7:
       case 8:
       case 9:
-        hitloc = FSIDE;
+        hitloc = side;
         break;
       case 10:
         if (mech_section_internal(mech, TURRET))
           hitloc = TURRET;
         else
-          hitloc = FSIDE;
+          hitloc = side;
         break;
       case 11:
         if (mech_section_internal(mech, TURRET)) {
           hitloc = TURRET;
         } else {
-          hitloc = FSIDE;
+          hitloc = side;
         }
         break;
       }

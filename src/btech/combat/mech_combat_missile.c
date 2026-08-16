@@ -5,8 +5,10 @@
 #include "mech_api_types.h"
 #include "mech_lifecycle.h"
 #include "weapon_catalogue_api.h"
+#include <stdint.h>
 #include <stdio.h>
 
+#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "map.h"
@@ -60,15 +62,18 @@ void mech_missile_apply_hits(const MissileHitsRequest *request) {
   int damage = request->damage_per_missile;
   int orig_num_missiles = num_missiles_hit;
   int this_time;
-  int this_damage;
-  int total_damage = 0;
-  int clear_damage = 0;
+  int64_t this_damage;
+  int64_t total_damage = 0;
+  int64_t clear_damage = 0;
   int hitloc;
   BattleMap *mech_map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   char buf[SBUF_SIZE];
 
-  total_damage = num_missiles_hit * damage;
+  if (num_missiles_hit <= 0 || damage <= 0 || request->salvo_size <= 0)
+    return;
+
+  total_damage = (int64_t)num_missiles_hit * damage;
 
   if (target && btech_context_woods_modify_damage(mech_context(mech)) &&
       battle_terrain_is_forest(map_real_terrain_get(
@@ -89,7 +94,7 @@ void mech_missile_apply_hits(const MissileHitsRequest *request) {
     if (total_damage <= 0)
       num_missiles_hit = 0;
     else
-      num_missiles_hit = total_damage / damage;
+      num_missiles_hit = (int)(total_damage / damage);
 
     mech_terrain_possibly_ignite_or_clear(&(TerrainWeaponEffectRequest){
         .mech = mech,
@@ -97,7 +102,7 @@ void mech_missile_apply_hits(const MissileHitsRequest *request) {
                      .y = mech_position_y(target)},
         .weapon_index = weapindx,
         .ammunition_mode = ammo_mode,
-        .damage = clear_damage,
+        .damage = clamp_intptr_to_int((intptr_t)clear_damage),
         .intentional = true});
 
     buf[0] = '\0';
@@ -131,7 +136,7 @@ void mech_missile_apply_hits(const MissileHitsRequest *request) {
 
   while (num_missiles_hit) {
     this_time = min(request->salvo_size, num_missiles_hit);
-    this_damage = this_time * damage;
+    this_damage = (int64_t)this_time * damage;
 
     if (target) {
       hitloc = mech_target_hit_location(mech, target, &isrear, &iscritical);
@@ -148,7 +153,7 @@ void mech_missile_apply_hits(const MissileHitsRequest *request) {
               personal_combat_damage_to_unit(&(PersonalCombatDamageConversion){
                   .target = target,
                   .weapon_index = weapindx,
-                  .damage = this_damage,
+                  .damage = clamp_intptr_to_int((intptr_t)this_damage),
               }),
           .internal_damage = 0,
           .transfer = MECH_DAMAGE_NORMAL,
@@ -158,13 +163,13 @@ void mech_missile_apply_hits(const MissileHitsRequest *request) {
           .ammunition_mode = ammo_mode,
           .ignore_swarmers = request->swarm_attack});
     } else {
-      mech_terrain_hex_hit(
-          &(TerrainWeaponHitRequest){.attacker = mech,
-                                     .position = request->target_hex,
-                                     .weapon_index = weapindx,
-                                     .ammunition_mode = ammo_mode,
-                                     .damage = this_damage,
-                                     .hit = true});
+      mech_terrain_hex_hit(&(TerrainWeaponHitRequest){
+          .attacker = mech,
+          .position = request->target_hex,
+          .weapon_index = weapindx,
+          .ammunition_mode = ammo_mode,
+          .damage = clamp_intptr_to_int((intptr_t)this_damage),
+          .hit = true});
     }
 
     num_missiles_hit -= this_time;

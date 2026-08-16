@@ -64,8 +64,11 @@ HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hit_group,
         break;
       case 6:
       case 7:
+        hitloc = side;
+        break;
       case 8:
         hitloc = side;
+        result.critical = true;
         break;
       case 9:
         hitloc = BSIDE;
@@ -139,16 +142,21 @@ HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hit_group,
         result.critical = true;
         break;
       case 3:
-      case 4:
         hitloc = side;
+        break;
+      case 4:
+        hitloc = hit_location_or_fallback(mech, TURRET, ROTOR);
         break;
       case 5:
         hitloc = FSIDE;
         break;
       case 6:
       case 7:
+        hitloc = side;
+        break;
       case 8:
         hitloc = side;
+        result.critical = true;
         break;
       case 9:
         hitloc = BSIDE;
@@ -177,7 +185,7 @@ HitLocationResult mech_advanced_vehicle_hit_location(Mech *mech, int hit_group,
         hitloc = side;
         break;
       case 4:
-        hitloc = side;
+        hitloc = hit_location_or_fallback(mech, TURRET, ROTOR);
         break;
       case 5:
         hitloc = (hit_group == FRONT ? RSIDE : LSIDE);
