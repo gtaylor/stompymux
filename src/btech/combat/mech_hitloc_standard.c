@@ -288,6 +288,11 @@ int mech_hit_location(Mech *mech, int hit_group, bool *iscritical,
           *iscritical = true;
         return side;
       case 12:
+        if (mech_section_internal(mech, TURRET)) {
+          if (mech_section_is_crittable(mech, TURRET, (CriticalThreshold){50}))
+            *iscritical = true;
+          return TURRET;
+        }
         if (mech_section_is_crittable(mech, side, (CriticalThreshold){40}))
           *iscritical = true;
         return side;
@@ -612,7 +617,8 @@ int mech_hit_location(Mech *mech, int hit_group, bool *iscritical,
         break;
       case 12:
         hitloc = LSIDE;
-        *iscritical = true;
+        if (mech_section_is_crittable(mech, hitloc, (CriticalThreshold){40}))
+          *iscritical = true;
         break;
       }
       break;
@@ -662,9 +668,15 @@ int mech_hit_location(Mech *mech, int hit_group, bool *iscritical,
           *iscritical = true;
         break;
       case 12:
-        hitloc = side;
-        if (mech_section_is_crittable(mech, side, (CriticalThreshold){40}))
-          *iscritical = true;
+        if (mech_section_internal(mech, TURRET)) {
+          hitloc = TURRET;
+          if (mech_section_is_crittable(mech, TURRET, (CriticalThreshold){50}))
+            *iscritical = true;
+        } else {
+          hitloc = side;
+          if (mech_section_is_crittable(mech, side, (CriticalThreshold){40}))
+            *iscritical = true;
+        }
         break;
       case 3:
         hitloc = side;
