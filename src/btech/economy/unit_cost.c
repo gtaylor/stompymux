@@ -4,6 +4,7 @@
 #include "weapon_catalogue_api.h"
 
 #include <math.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,7 +32,11 @@ static const int *int_at(const int *values, size_t count, size_t index) {
   return checked_storage_at_const(values, count, sizeof(*values), index);
 }
 
-static int *mutable_int_at(int *values, size_t count, size_t index) {
+static const bool *bool_at(const bool *values, size_t count, size_t index) {
+  return checked_storage_at_const(values, count, sizeof(*values), index);
+}
+
+static bool *mutable_bool_at(bool *values, size_t count, size_t index) {
   return checked_storage_at(values, count, sizeof(*values), index);
 }
 
@@ -242,7 +247,7 @@ unsigned long long mech_fasa_cost(Mech *mech) {
   unsigned int modearray[8 * MAX_WEAPS_SECTION];
   int engine_size = 0;
   int has_sword = 0;
-  int clan_case_sections[NUM_SECTIONS];
+  bool clan_case_sections[NUM_SECTIONS] = {};
 
   if (!mech)
     return 0;
@@ -601,7 +606,7 @@ unsigned long long mech_fasa_cost(Mech *mech) {
         case CASE:
           mech_cost_add(mech, &total, "Int Case", 50000);
           continue;
-        case CASEII:
+        case CASE_II:
           mech_cost_add(mech, &total, "Int CaseII", 175000);
           continue;
         case AXE:
@@ -640,27 +645,26 @@ unsigned long long mech_fasa_cost(Mech *mech) {
         case TARGETING_COMPUTER:
           mech_cost_add(mech, &total, "TargComp", 10000);
           continue;
+        case SPLIT_CRIT_LEFT:
+        case SPLIT_CRIT_RIGHT:
+        case HARDPOINT:
+          continue;
 
         default:
           break;
         }
       }
-      if (equipment_is_ammunition(part))
+      if (equipment_is_ammunition(part)) {
         /* Need Something in here to do CASE for CLAN mechs */
         if ((TECHNOLOGY & CLAN_TECH))
-          *mutable_int_at(clan_case_sections, NUM_SECTIONS, (size_t)i) = 1;
-      continue;
+          *mutable_bool_at(clan_case_sections, NUM_SECTIONS, (size_t)i) = true;
+        continue;
+      }
       if (equipment_is_weapon(part))
         continue;
 
-      unsigned long long indiv_part_cost =
+      const unsigned long long indiv_part_cost =
           btech_part_cost_get(mech_context(mech), part);
-      if (UNIT_CLASS != CLASS_MECH && equipment_is_weapon(part)) {
-        const unsigned long long CRITICAL_SLOTS =
-            (unsigned long long)(unsigned char)weapon_catalogue_critical_slots(
-                part - 1);
-        indiv_part_cost *= CRITICAL_SLOTS;
-      }
       mech_cost_add(mech, &total, part_name(mech_context(mech), part, 0).text,
                     (double)indiv_part_cost);
     }
@@ -683,7 +687,7 @@ unsigned long long mech_fasa_cost(Mech *mech) {
   /* Clan Case */
   if ((TECHNOLOGY & CLAN_TECH)) {
     for (i = 0; i < NUM_SECTIONS; i++) {
-      if (*int_at(clan_case_sections, NUM_SECTIONS, (size_t)i) == 1)
+      if (*bool_at(clan_case_sections, NUM_SECTIONS, (size_t)i))
         mech_cost_add(mech, &total, "Clan CASE Section", 50000);
     }
   }
