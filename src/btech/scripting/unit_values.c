@@ -34,9 +34,8 @@ char *mech_i_dfunc(Mech *mech, char buffer[static LBUF_SIZE]) {
   return buffer;
 }
 
-static bool parse_damage_numbers(const char *token, const char *prefix,
-                                 bool has_third, int *first, int *second,
-                                 int *third) {
+bool parse_damage_numbers(const char *token, const char *prefix, bool has_third,
+                          int *first, int *second, int *third) {
   const size_t TOKEN_LENGTH = strcspn(token, " ,");
   const size_t PREFIX_LENGTH = strlen(prefix);
   if (TOKEN_LENGTH >= 64 || TOKEN_LENGTH <= PREFIX_LENGTH ||
@@ -52,8 +51,9 @@ static bool parse_damage_numbers(const char *token, const char *prefix,
       strchr(checked_mutable_string_suffix(text, PREFIX_LENGTH), '/');
   if (second_text == nullptr)
     return false;
+  char *second_value = checked_mutable_string_suffix(second_text, 1);
   *second_text = '\0';
-  second_text = checked_mutable_string_suffix(second_text, 1);
+  second_text = second_value;
   if (!has_third)
     return (parse_int_checked(checked_string_suffix(text, PREFIX_LENGTH),
                               first) &&
@@ -64,12 +64,13 @@ static bool parse_damage_numbers(const char *token, const char *prefix,
                                           TOKEN_LENGTH - 1);
   if (third_text == nullptr || *last != ')')
     return false;
+  const char *third_value = checked_string_suffix(third_text, 1);
   *third_text = '\0';
   *last = '\0';
   return (parse_int_checked(checked_string_suffix(text, PREFIX_LENGTH),
                             first) &&
           parse_int_checked(second_text, second) &&
-          parse_int_checked(checked_string_suffix(third_text, 1), third)) != 0;
+          parse_int_checked(third_value, third)) != 0;
 }
 
 char *mech_getset_ref(const GmvBufferedBidirectionalCall *call) {

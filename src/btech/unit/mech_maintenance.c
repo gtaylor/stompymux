@@ -604,14 +604,15 @@ void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
     buffer = empty_buffer;
   c = strstr(buffer, ",");
   if (c) {
+    char *next = checked_mutable_string_suffix(c, 1);
     *c = 0;
-    c = checked_mutable_string_suffix(c, 1);
+    c = next;
   }
   char *range_separator = strchr(buffer, '-');
   if (range_separator != nullptr) {
+    const char *range_end = checked_string_suffix(range_separator, 1);
     *range_separator = '\0';
-    if (!parse_int_checked(buffer, &i1) ||
-        !parse_int_checked(checked_string_suffix(range_separator, 1), &i2)) {
+    if (!parse_int_checked(buffer, &i1) || !parse_int_checked(range_end, &i2)) {
       mecha_notifyf(btech_context_evaluation(mech->xcode.context), PLAYER,
                     "Invalid value: %s", buffer);
       return;

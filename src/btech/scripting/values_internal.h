@@ -133,3 +133,5 @@ const GMV *xcode_descriptor_at(size_t index);
 
 int text2bv(const char *text);
 char *bv2text(int i, char *buffer);
+bool parse_damage_numbers(const char *token, const char *prefix, bool has_third,
+                          int *first, int *second, int *third);

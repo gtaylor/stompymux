@@ -16,7 +16,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-source-size check-typed-constants check-enum-underlying-type check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis fmt-check build check-boolean-contracts check-boolean-conversions test tidy-check
+ci: check-source-size check-typed-constants check-enum-underlying-type check-nullptr check-unsafe-apis check-bounded-copy check-checked-suffix-order check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis fmt-check build check-boolean-contracts check-boolean-conversions test tidy-check
 
 agent-checks: ci
 
@@ -46,6 +46,15 @@ check-nullptr:
 # use the project's bounded helpers instead.
 check-bounded-copy:
     status=0; grep -RInE --include='*.c' --include='*.h' --include='*.h.in' '\b(string_copy|strcpy)[[:space:]]*\(' src || status=$?; if (( status == 0 )); then echo 'Unbounded copy found in src/; use string_copy_bounded.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
+
+# This is a straight-line source-order guard for the capture-after-write form
+# of the checked-suffix bug. Clang's AST identifies the same pointer variable
+# and both direct dereference and subscript writes; local arrays are excluded.
+# The source-location pass is intentionally not control-flow analysis: writes
+# in loops or mutually exclusive branches can be missed or conservatively
+# reported.
+check-checked-suffix-order:
+    mapfile -d '' -t sources < <(find src/mux src/btech -type f -name '*.c' -print0); output=$(mktemp); violations=$(mktemp); trap 'rm -f "$output" "$violations"' EXIT; matcher='match callExpr(isExpansionInMainFile(), callee(functionDecl(hasAnyName("checked_string_suffix", "checked_mutable_string_suffix"))), hasArgument(0, declRefExpr(to(varDecl(hasType(pointerType())).bind("pointer")))), hasAncestor(functionDecl(isExpansionInMainFile(), hasBody(compoundStmt(hasDescendant(binaryOperator(isAssignmentOperator(), hasRHS(ignoringParenImpCasts(anyOf(characterLiteral(equals(0)), integerLiteral(equals(0))))), hasLHS(anyOf(unaryOperator(hasOperatorName("*"), hasUnaryOperand(ignoringParenImpCasts(declRefExpr(to(equalsBoundNode("pointer")))))), arraySubscriptExpr(hasBase(ignoringParenImpCasts(declRefExpr(to(equalsBoundNode("pointer"))))))))).bind("write")))))))'; status=0; {{clang_query}} -p {{build_dir}} "${sources[@]}" -c "$matcher" >"$output" 2>&1 || status=$?; if (( status != 0 )); then cat "$output" >&2; exit "$status"; fi; awk -F: 'function reset() { write_file=""; write_line=0; write_col=0; root_file=""; root_line=0; root_col=0 } function check() { if (write_file != "" && root_file == write_file && (write_line < root_line || (write_line == root_line && write_col < root_col))) print write_file ":" write_line ":" write_col " writes NUL before checked suffix at " root_file ":" root_line ":" root_col } /^Match #[0-9]+:/ { check(); reset() } /: note: "write" binds here$/ { write_file=$1; write_line=$(NF-3)+0; write_col=$(NF-2)+0; check() } /: note: "root" binds here$/ { root_file=$1; root_line=$(NF-3)+0; root_col=$(NF-2)+0; check() } END { check() }' "$output" >"$violations"; if [[ -s "$violations" ]]; then cat "$violations" >&2; echo 'NUL write precedes a checked suffix of the same pointer; capture the suffix first.' >&2; exit 1; fi
 
 # Allocation goes through the checked_storage family so each site states its
 # OOM policy: checked_storage_allocate* fails fast, checked_storage_try_* is

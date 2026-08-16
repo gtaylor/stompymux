@@ -72,9 +72,10 @@ bool template_parse_critical_range(char *command, int *first, int *last) {
   char *range = checked_mutable_string_suffix(command, 5);
   char *separator = strchr(range, '-');
   if (separator != nullptr) {
+    const char *last_text = checked_string_suffix(separator, 1);
     *separator = '\0';
     if (!parse_int_checked(range, first) ||
-        !parse_int_checked(checked_string_suffix(separator, 1), last)) {
+        !parse_int_checked(last_text, last)) {
       return false;
     }
   } else if (!parse_int_checked(range, first)) {

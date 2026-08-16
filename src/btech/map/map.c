@@ -467,9 +467,9 @@ int map_load(BattleMap *map, char *mapname) {
     char *separator = strchr(row, ':');
     if (separator != nullptr) {
       char *token_context = nullptr;
+      char *grav_text = checked_mutable_string_suffix(separator, 1);
       *separator = '\0';
-      char *grav_text = strtok_r(checked_mutable_string_suffix(separator, 1),
-                                 " \t\r\n", &token_context);
+      grav_text = strtok_r(grav_text, " \t\r\n", &token_context);
       char *temp_text = strtok_r(nullptr, " \t\r\n", &token_context);
       if (grav_text != nullptr && temp_text != nullptr &&
           strtok_r(nullptr, " \t\r\n", &token_context) == nullptr &&
