@@ -11,6 +11,7 @@
 #include <strings.h>
 
 #include "btech/context.h"
+#include "btech_text_result.h"
 #include "checked_conversion.h"
 #include "failures_api.h"
 #include "mech_partnames.h"
@@ -401,16 +402,13 @@ BtechScriptResult fun_btpartmatch(BtechScriptCall *call) {
   int part_count = 0;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   if (!fargs[0]) {
-    safe_tprintf_str(buff, bufc, "#-1 NEED PARTNAME");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 NEED PARTNAME");
   }
   if (strlen(fargs[0]) >= MBUF_SIZE) {
-    safe_tprintf_str(buff, bufc, "#-1 PARTNAME TOO LONG");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 PARTNAME TOO LONG");
   }
 
   PartMatchRequest request = {
@@ -454,8 +452,7 @@ BtechScriptResult fun_btpartmatch(BtechScriptCall *call) {
   }
 
   if (part_count == 0)
-    safe_tprintf_str(buff, bufc, "#-1 INVALID PARTNAME");
-
+    return btech_script_error(call, "#-1 INVALID PARTNAME");
   return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }
 
@@ -522,8 +519,7 @@ BtechScriptResult fun_btpartscategorylist(BtechScriptCall *call) {
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
   [[maybe_unused]] const DbRef PLAYER = call->player;
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   safe_str("ammo|weapon|bomb|special|cargo", buff, bufc);
 
@@ -553,20 +549,16 @@ BtechScriptResult fun_btpartslist(BtechScriptCall *call) {
   PartNameRegistry *registry = context->btech->part_names;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   if (NFARGS != 1) {
-    safe_tprintf_str(buff, bufc, "#-1 EXPECTS ONE CATEGORY ARGUMENT");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 EXPECTS ONE CATEGORY ARGUMENT");
   }
 
   category = btpartslist_category(fargs[0]);
   if (category == BT_PART_CATEGORY_INVALID) {
-    safe_tprintf_str(
-        buff, bufc,
-        "#-1 CATEGORY MUST BE AMMO, WEAPON, BOMB, SPECIAL, OR CARGO");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(
+        call, "#-1 CATEGORY MUST BE AMMO, WEAPON, BOMB, SPECIAL, OR CARGO");
   }
 
   listed = 0;
@@ -581,9 +573,7 @@ BtechScriptResult fun_btpartslist(BtechScriptCall *call) {
     used = (size_t)(*bufc - buff);
     needed = strlen(part_name->longy) + (listed ? 1 : 0);
     if (used + needed >= LBUF_SIZE) {
-      *bufc = buff;
-      safe_str("#-1 LIST TOO LONG FOR THIS CATEGORY", buff, bufc);
-      return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+      return btech_script_error(call, "#-1 LIST TOO LONG FOR THIS CATEGORY");
     }
     if (listed)
       safe_str("|", buff, bufc);
@@ -592,7 +582,7 @@ BtechScriptResult fun_btpartslist(BtechScriptCall *call) {
   }
 
   if (!listed)
-    safe_str("#-1 NO PARTS IN CATEGORY", buff, bufc);
+    return btech_script_error(call, "#-1 NO PARTS IN CATEGORY");
 
   return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }
@@ -612,21 +602,17 @@ BtechScriptResult fun_btpartname(BtechScriptCall *call) {
 
   int index;
   char *cptr;
-  const char *infostr;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   if (!fargs[0]) {
-    safe_tprintf_str(buff, bufc, "#-1 NEED PARTNAME");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 NEED PARTNAME");
   }
   long parsed_index = strtol(fargs[0], &cptr, 10);
   index = clamp_intptr_to_int(parsed_index);
   if (cptr == fargs[0]) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID PART NUMBER");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 INVALID PART NUMBER");
   }
 
   char *const *name_type_slot = (char *const *)checked_storage_at_const(
@@ -647,17 +633,21 @@ BtechScriptResult fun_btpartname(BtechScriptCall *call) {
     format = PART_NAME_DESCRIPTION_VERY_LONG;
     break;
   default:
-    safe_tprintf_str(buff, bufc, "#-1 INVALID NAME TYPE");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 INVALID NAME TYPE");
   }
-  infostr = partname_func(&(PartNameDescriptionRequest){
-      .context = context->btech, .packed_part = index, .format = format});
-  safe_tprintf_str(buff, bufc, "%s", infostr);
+  const BtechTextResult RESULT = partname_func(&(PartNameDescriptionRequest){
+      .context = context->btech,
+      .packed_part = index,
+      .format = format,
+  });
+  if (!RESULT.success)
+    return btech_script_error(call, RESULT.text);
+  safe_tprintf_str(buff, bufc, "%s", RESULT.text);
 
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
 
-const char *partname_func(const PartNameDescriptionRequest *request) {
+BtechTextResult partname_func(const PartNameDescriptionRequest *request) {
   BtechContext *context = request->context;
   const int INDEX = request->packed_part;
   PartNameRegistry *registry = context->part_names;
@@ -668,21 +658,23 @@ const char *partname_func(const PartNameDescriptionRequest *request) {
   id = packed_part_id(INDEX);
   brand = packed_part_brand(INDEX);
   if (brand < 0 || brand > BRANDCOUNT || id < 0 || id >= NUM_ITEMS)
-    return "#-1 INVALID PART NUMBER";
+    return (BtechTextResult){.text = "#-1 INVALID PART NUMBER",
+                             .success = false};
 
   p = part_index_entry(registry, brand, id);
   if (!p)
-    return "#-1 INVALID PART NUMBER";
+    return (BtechTextResult){.text = "#-1 INVALID PART NUMBER",
+                             .success = false};
 
   switch (request->format) {
   case PART_NAME_DESCRIPTION_SHORT:
-    return p->shorty;
+    return (BtechTextResult){.text = p->shorty, .success = true};
   case PART_NAME_DESCRIPTION_LONG:
-    return p->longy;
+    return (BtechTextResult){.text = p->longy, .success = true};
   case PART_NAME_DESCRIPTION_VERY_LONG:
-    return p->vlongy;
+    return (BtechTextResult){.text = p->vlongy, .success = true};
   }
-  return "#-1 INVALID NAME TYPE";
+  return (BtechTextResult){.text = "#-1 INVALID NAME TYPE", .success = false};
 }
 
 size_t part_name_count(const BtechContext *context) {

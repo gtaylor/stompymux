@@ -70,6 +70,10 @@ typedef struct BtechScriptResult {
 
 BtechScriptResult btech_script_result_finish(BtechScriptCall *call,
                                              BtechScriptValueKind kind);
+[[nodiscard]] BtechScriptResult btech_script_error(BtechScriptCall *call,
+                                                   const char *message);
+[[nodiscard]] BtechScriptResult
+btech_script_error_output(BtechScriptCall *call);
 void btech_script_result_destroy(BtechScriptResult *result);
 
 typedef BtechScriptResult BtechScriptFunction(BtechScriptCall *call);

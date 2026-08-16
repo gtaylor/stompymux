@@ -47,22 +47,18 @@ BtechScriptResult fun_btupdatelinks(BtechScriptCall *call) {
   DbRef it;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   it = match_thing(&context->command->match, PLAYER,
                    script_function_argument(fargs, NFARGS, 0));
   if (it == NOTHING || !is_examinable(context->world->database, PLAYER, it)) {
-    safe_tprintf_str(buff, bufc, "#-1 CANT FIND");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 CANT FIND");
   }
   if (!btech_context_is_map(context->btech, it)) {
-    safe_tprintf_str(buff, bufc, "#-1 NOT A MAP");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 NOT A MAP");
   }
   if (!btech_context_find_object(context->btech, it)) {
-    safe_tprintf_str(buff, bufc, "#-1 UNABLE TO GET MAPDATA");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 UNABLE TO GET MAPDATA");
   }
   recursively_updatelinks(context->btech, NOTHING, it);
 
@@ -90,37 +86,31 @@ BtechScriptResult fun_bthexemit(BtechScriptCall *call) {
   DbRef mapnum;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
 
   if (msg != nullptr)
     msg = checked_string_suffix(msg, strspn(msg, " \t\r\n\f\v"));
   if (msg == nullptr || *msg == '\0') {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MESSAGE");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID MESSAGE");
   }
 
   mapnum = match_thing(&context->command->match, PLAYER,
                        script_function_argument(fargs, NFARGS, 0));
   if (mapnum < 0) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MAP");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID MAP");
   }
   map = btech_context_get_map(context->btech, mapnum);
   if (!map) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MAP");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID MAP");
   }
 
   if (!parse_int_checked(script_function_argument(fargs, NFARGS, 1), &x) ||
       !parse_int_checked(script_function_argument(fargs, NFARGS, 2), &y)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID COORDINATES");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID COORDINATES");
   }
   if (x < 0 || x > map->map_width || y < 0 || y > map->map_height) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID COORDINATES");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID COORDINATES");
   }
   hex_los_broadcast(map, x, y, msg);
   safe_tprintf_str(buff, bufc, "1");
@@ -148,32 +138,27 @@ BtechScriptResult fun_btmakepilotroll(BtechScriptCall *call) {
   DbRef mechnum;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
 
   mechnum = match_thing(&context->command->match, PLAYER,
                         script_function_argument(fargs, NFARGS, 0));
   if (mechnum == NOTHING ||
       !is_examinable(context->world->database, PLAYER, mechnum)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID MECH");
   }
   if (!btech_context_is_mech(context->btech, mechnum)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID MECH");
   }
   mech = btech_context_find_object(context->btech, mechnum);
   if (!mech) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID MECH");
   }
 
   if (!parse_int_checked(script_function_argument(fargs, NFARGS, 1),
                          &rollmod) ||
       !parse_int_checked(script_function_argument(fargs, NFARGS, 2), &dammod)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MODIFIER");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID MODIFIER");
   }
 
   if (made_pilot_skill_roll(mech, rollmod)) {
@@ -202,25 +187,21 @@ BtechScriptResult fun_btid2db(BtechScriptCall *call) {
   DbRef mechnum;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   mechnum = match_thing(&context->command->match, PLAYER,
                         script_function_argument(fargs, NFARGS, 0));
   if (mechnum == NOTHING ||
       !is_examinable(context->world->database, PLAYER, mechnum)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MECH/MAP");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 INVALID MECH/MAP");
   }
   if (strlen(script_function_argument(fargs, NFARGS, 1)) != 2) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID TARGETID");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 INVALID TARGETID");
   }
   if (btech_context_is_mech(context->btech, mechnum)) {
     mech = btech_context_get_mech(context->btech, mechnum);
     if (!mech) {
-      safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-      return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+      return btech_script_error(call, "#-1 INVALID MECH");
     }
     mechnum = find_target_dbref_from_map_number(
         mech, script_function_argument(fargs, NFARGS, 1));
@@ -228,29 +209,24 @@ BtechScriptResult fun_btid2db(BtechScriptCall *call) {
     BattleMap *map;
     map = btech_context_get_map(context->btech, mechnum);
     if (!map) {
-      safe_tprintf_str(buff, bufc, "#-1 INVALID MAP");
-      return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+      return btech_script_error(call, "#-1 INVALID MAP");
     }
     mechnum = find_mech_on_map(map, script_function_argument(fargs, NFARGS, 1));
   } else {
-    safe_str("#-1 INVALID MECH/MAP", buff, bufc);
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 INVALID MECH/MAP");
   }
   if (mechnum < 0) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID TARGETID");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 INVALID TARGETID");
   }
   if (mech) {
     target = btech_context_get_mech(context->btech, mechnum);
     if (!target) {
-      safe_tprintf_str(buff, bufc, "#-1 INVALID TARGETID");
-      return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+      return btech_script_error(call, "#-1 INVALID TARGETID");
     }
     if (!mech_los_check_unblocked(mech, target, mech_position_x(target),
                                   mech_position_y(target),
                                   mech_range_to(mech, target))) {
-      safe_tprintf_str(buff, bufc, "#-1 INVALID TARGETID");
-      return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+      return btech_script_error(call, "#-1 INVALID TARGETID");
     }
   }
   safe_tprintf_str(buff, bufc, "#%ld", mechnum);
@@ -281,39 +257,32 @@ BtechScriptResult fun_bthexlos(BtechScriptCall *call) {
   float fy;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   mechnum = match_thing(&context->command->match, PLAYER,
                         script_function_argument(fargs, NFARGS, 0));
   if (mechnum == NOTHING ||
       !is_examinable(context->world->database, PLAYER, mechnum)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID MECH");
   }
   if (!btech_context_is_mech(context->btech, mechnum)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID MECH");
   }
   mech = btech_context_get_mech(context->btech, mechnum);
   if (!mech) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID MECH");
   }
   map = btech_context_get_map(context->btech, mech_map_dbref(mech));
   if (!map) {
-    safe_tprintf_str(buff, bufc, "#-1 INTERNAL ERROR");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INTERNAL ERROR");
   }
 
   if (!parse_int_checked(script_function_argument(fargs, NFARGS, 1), &x) ||
       !parse_int_checked(script_function_argument(fargs, NFARGS, 2), &y)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID COORDINATES");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID COORDINATES");
   }
   if (x < 0 || x > map->map_width || y < 0 || y > map->map_height) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID COORDINATES");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID COORDINATES");
   }
   map_coord_to_real_coord(x, y, &fx, &fy);
   if (mech_los_check_unblocked(mech, nullptr, x, y,
@@ -347,41 +316,34 @@ BtechScriptResult fun_btlosm2m(BtechScriptCall *call) {
   Mech *target;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   mechnum = match_thing(&context->command->match, PLAYER,
                         script_function_argument(fargs, NFARGS, 0));
   if (mechnum == NOTHING ||
       !is_examinable(context->world->database, PLAYER, mechnum)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID MECH");
   }
   if (!btech_context_is_mech(context->btech, mechnum)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID MECH");
   }
   mech = btech_context_get_mech(context->btech, mechnum);
   if (!mech) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID MECH");
   }
 
   mechnum = match_thing(&context->command->match, PLAYER,
                         script_function_argument(fargs, NFARGS, 1));
   if (mechnum == NOTHING ||
       !is_examinable(context->world->database, PLAYER, mechnum)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID MECH");
   }
   if (!btech_context_is_mech(context->btech, mechnum)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID MECH");
   }
   target = btech_context_get_mech(context->btech, mechnum);
   if (!target) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID MECH");
   }
 
   if (mech_los_check(mech, target, mech_position_x(mech), mech_position_y(mech),
@@ -424,33 +386,28 @@ BtechScriptResult fun_btaddstores(BtechScriptCall *call) {
   int count;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
 
   loc = match_thing(&context->command->match, PLAYER,
                     script_function_argument(fargs, NFARGS, 0));
   if (!is_good_obj(context->btech->database, loc)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID TARGET");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID TARGET");
   }
 
   char *part_name = script_function_argument(fargs, NFARGS, 1);
   if (part_name == nullptr) {
-    safe_tprintf_str(buff, bufc, "#-1 NEED PARTNAME");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 NEED PARTNAME");
   }
 
   if (strlen(part_name) >= MBUF_SIZE) {
-    safe_tprintf_str(buff, bufc, "#-1 PARTNAME TOO LONG");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 PARTNAME TOO LONG");
   }
 
   /* Add a limit to the number of parts you can add at once to prevent reaching
    * the integer limits. */
   if (!parse_int_checked(script_function_argument(fargs, NFARGS, 2), &count)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID COUNT");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 INVALID COUNT");
   }
   if (count > ADDSTORES_MAX) {
     count = ADDSTORES_MAX;
@@ -518,31 +475,25 @@ BtechScriptResult fun_btticweaps(BtechScriptCall *call) {
   it = match_thing(&context->command->match, PLAYER,
                    script_function_argument(fargs, NFARGS, 0));
   if (it == NOTHING || !is_examinable(context->world->database, PLAYER, it)) {
-    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 NOT A MECH");
   }
   if (!btech_context_is_mech(context->btech, it)) {
-    safe_tprintf_str(buff, bufc, "#-1 NOT A MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 NOT A MECH");
   }
   mech = btech_context_find_object(context->btech, it);
   if (!mech) {
-    safe_tprintf_str(buff, bufc, "#-1");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1");
   }
   const char FIRST_CHARACTER = *script_function_argument(fargs, NFARGS, 1);
   if (FIRST_CHARACTER < '0' || FIRST_CHARACTER > '9') {
-    safe_tprintf_str(buff, bufc, "#-1 TIC MUST BE NUMERIC");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 TIC MUST BE NUMERIC");
   }
 
   if (!parse_int_checked(script_function_argument(fargs, NFARGS, 1), &ticnum)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID TIC NUMBER");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 INVALID TIC NUMBER");
   }
   if (!(ticnum >= 0 && ticnum < NUM_TICS)) {
-    safe_tprintf_str(buff, bufc, "#-1 INVALID TIC NUMBER");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 INVALID TIC NUMBER");
   }
 
   for (j = 0; j < MAX_WEAPONS_PER_MECH; j++) {

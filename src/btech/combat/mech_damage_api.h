@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include "btech_text_result.h"
 #include "mech_api_types.h"
 #include "mux/server/platform.h"
 
@@ -91,7 +92,8 @@ typedef struct ArmorStatusSetRequest {
   const char *value;
 } ArmorStatusSetRequest;
 
-const char *mech_armor_status_set_value(const ArmorStatusSetRequest *request);
+BtechTextResult
+mech_armor_status_set_value(const ArmorStatusSetRequest *request);
 
 typedef struct DamageClusterRequest {
   Mech *mech;

@@ -227,8 +227,7 @@ BtechScriptResult fun_zmechs(BtechScriptCall *call) {
 
   if (!is_controls(context->world->database, PLAYER, it) &&
       !is_wizard(context->btech->database, PLAYER)) {
-    safe_str("#-1 NO PERMISSION TO USE", buff, bufc);
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 NO PERMISSION TO USE");
   }
   for (i = 0; i < context->btech->database->top; i++) {
     if (typeof_obj(context->btech->database, i) == OBJECT_TYPE_THING) {
@@ -275,18 +274,15 @@ BtechScriptResult fun_btsetxcodevalue(BtechScriptCall *call) {
   it = match_thing(&context->command->match, PLAYER,
                    script_function_argument(fargs, NFARGS, 0));
   if (it == NOTHING || !is_examinable(context->world->database, PLAYER, it)) {
-    safe_tprintf_str(buff, bufc, "#-1");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1");
   }
   spec = btech_context_which_special(context->btech, it);
   foo = btech_context_find_object(context->btech, it);
   if (!foo) {
-    safe_tprintf_str(buff, bufc, "#-1");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1");
   }
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   const GMV *descriptor =
       find_descriptor(script_function_argument(fargs, NFARGS, 1), spec, 2);
@@ -296,9 +292,7 @@ BtechScriptResult fun_btsetxcodevalue(BtechScriptCall *call) {
     safe_tprintf_str(buff, bufc, "1");
     return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
   }
-  safe_tprintf_str(buff, bufc, "#-1");
-
-  return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+  return btech_script_error(call, "#-1");
 }
 
 static char *retrieve_value(void *data, const GMV *descriptor, char *buffer) {
@@ -405,18 +399,15 @@ BtechScriptResult fun_btgetxcodevalue(BtechScriptCall *call) {
   it = match_thing(&context->command->match, PLAYER,
                    script_function_argument(fargs, NFARGS, 0));
   if (it == NOTHING || !is_examinable(context->world->database, PLAYER, it)) {
-    safe_tprintf_str(buff, bufc, "#-1");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1");
   }
   spec = btech_context_which_special(context->btech, it);
   foo = btech_context_find_object(context->btech, it);
   if (!foo) {
-    safe_tprintf_str(buff, bufc, "#-1");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1");
   }
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   const GMV *descriptor =
       find_descriptor(script_function_argument(fargs, NFARGS, 1), spec, 1);
@@ -425,8 +416,7 @@ BtechScriptResult fun_btgetxcodevalue(BtechScriptCall *call) {
                      retrieve_value(foo, descriptor, (char[LBUF_SIZE]){0}));
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
-  safe_tprintf_str(buff, bufc, "#-1");
-  return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+  return btech_script_error(call, "#-1");
 }
 
 BtechScriptResult fun_btgetxcodevalue_ref(BtechScriptCall *call) {
@@ -444,14 +434,12 @@ BtechScriptResult fun_btgetxcodevalue_ref(BtechScriptCall *call) {
   Mech *foo;
 
   if (!is_wizard(context->world->database, PLAYER)) {
-    safe_tprintf_str(buff, bufc, "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   foo =
       load_refmech(context->btech, script_function_argument(fargs, NFARGS, 0));
   if (!foo) {
-    safe_tprintf_str(buff, bufc, "#-1 NO SUCH MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+    return btech_script_error(call, "#-1 NO SUCH MECH");
   }
   const GMV *descriptor = find_descriptor(
       script_function_argument(fargs, NFARGS, 1), GTYPE_MECH, 1);
@@ -460,8 +448,7 @@ BtechScriptResult fun_btgetxcodevalue_ref(BtechScriptCall *call) {
                      retrieve_value(foo, descriptor, (char[LBUF_SIZE]){0}));
     return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
   }
-  safe_tprintf_str(buff, bufc, "#-1");
-  return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+  return btech_script_error(call, "#-1");
 }
 
 void set_xcodestuff(DbRef player, void *data, char *buffer) {

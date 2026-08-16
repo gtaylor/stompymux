@@ -24,9 +24,7 @@
 
 BtechScriptResult fun_btunitfixable(BtechScriptCall *call) {
   if (!is_wizard(call->evaluation->world->database, call->player)) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   const DbRef MECH_ID =
       match_thing(&call->evaluation->command->match, call->player,
@@ -34,9 +32,7 @@ BtechScriptResult fun_btunitfixable(BtechScriptCall *call) {
                                            (int)call->arguments.count, 0));
   Mech *mech = btech_context_get_mech(call->evaluation->btech, MECH_ID);
   if (!is_good_obj(call->evaluation->btech->database, MECH_ID) || !mech) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 INVALID TARGET");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID TARGET");
   }
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%d",
                    unit_is_fixable(mech));
@@ -46,9 +42,7 @@ BtechScriptResult fun_btunitfixable(BtechScriptCall *call) {
 BtechScriptResult fun_btlistblz(BtechScriptCall *call) {
   char buffer[MBUF_SIZE] = {'\0'};
   if (!is_wizard(call->evaluation->world->database, call->player)) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   const DbRef MAP_ID =
       match_thing(&call->evaluation->command->match, call->player,
@@ -56,9 +50,7 @@ BtechScriptResult fun_btlistblz(BtechScriptCall *call) {
                                            (int)call->arguments.count, 0));
   BattleMap *map = btech_context_get_map(call->evaluation->btech, MAP_ID);
   if (!is_good_obj(call->evaluation->btech->database, MAP_ID) || !map) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 INVALID MAP");
-    return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
+    return btech_script_error(call, "#-1 INVALID MAP");
   }
   int count = 0;
   size_t used = 0;
@@ -79,9 +71,7 @@ BtechScriptResult fun_btlistblz(BtechScriptCall *call) {
 
 BtechScriptResult fun_bthexinblz(BtechScriptCall *call) {
   if (!is_wizard(call->evaluation->world->database, call->player)) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   const DbRef MAP_ID =
       match_thing(&call->evaluation->command->match, call->player,
@@ -89,9 +79,7 @@ BtechScriptResult fun_bthexinblz(BtechScriptCall *call) {
                                            (int)call->arguments.count, 0));
   BattleMap *map = btech_context_get_map(call->evaluation->btech, MAP_ID);
   if (!is_good_obj(call->evaluation->btech->database, MAP_ID) || !map) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 INVALID MAP");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID MAP");
   }
   int x;
   int y;
@@ -104,9 +92,7 @@ BtechScriptResult fun_bthexinblz(BtechScriptCall *call) {
                                                   2),
                          &y) ||
       x < 0 || y < 0 || x > map->map_width || y > map->map_height) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 INVALID COORDS");
-    return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
+    return btech_script_error(call, "#-1 INVALID COORDS");
   }
   float source_x;
   float source_y;

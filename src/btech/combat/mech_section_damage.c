@@ -7,6 +7,7 @@
 #include "bsuit_api.h"
 #include "btech/context.h"
 #include "btech_event.h"
+#include "btech_text_result.h"
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "crit_api.h"
@@ -411,7 +412,8 @@ skip_nuke:
   }
 }
 
-const char *mech_armor_status_set_value(const ArmorStatusSetRequest *request) {
+BtechTextResult
+mech_armor_status_set_value(const ArmorStatusSetRequest *request) {
   Mech *mech = request->mech;
   const char *sectstr = request->section;
   const char *typestr = request->armor_type;
@@ -421,15 +423,16 @@ const char *mech_armor_status_set_value(const ArmorStatusSetRequest *request) {
   int value;
 
   if (!sectstr || !*sectstr)
-    return "#-1 INVALID SECTION";
+    return (BtechTextResult){.text = "#-1 INVALID SECTION", .success = false};
   index = armor_section_from_string(mech_class(mech), mech_movement_type(mech),
                                     sectstr);
   if (index == -1 || !mech_section_original_internal(mech, index))
-    return "#-1 INVALID SECTION";
+    return (BtechTextResult){.text = "#-1 INVALID SECTION", .success = false};
   if (!parse_int_checked(valuestr, &value) || value < 0 || value > 255)
-    return "#-1 INVALID ARMORVALUE";
+    return (BtechTextResult){.text = "#-1 INVALID ARMORVALUE",
+                             .success = false};
   if (!parse_int_checked(typestr, &type))
-    return "#-1 INVALID TYPE";
+    return (BtechTextResult){.text = "#-1 INVALID TYPE", .success = false};
   switch (type) {
   case 0:
     mech_section_armor_set(mech, index, value);
@@ -441,9 +444,9 @@ const char *mech_armor_status_set_value(const ArmorStatusSetRequest *request) {
     mech_section_rear_armor_set(mech, index, value);
     break;
   default:
-    return "#-1 INVALID ARMORTYPE";
+    return (BtechTextResult){.text = "#-1 INVALID ARMORTYPE", .success = false};
   }
-  return "1";
+  return (BtechTextResult){.text = "1", .success = true};
 }
 
 bool mech_damage_apply_clusters(const DamageClusterRequest *request) {

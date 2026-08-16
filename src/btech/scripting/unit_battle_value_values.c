@@ -17,8 +17,7 @@
 
 #include <stdlib.h>
 
-static Mech *matched_mech(BtechScriptCall *call,
-                          BtechScriptValueKind kind [[maybe_unused]]) {
+static Mech *matched_mech(BtechScriptCall *call) {
   const DbRef OBJECT =
       match_thing(&call->evaluation->command->match, call->player,
                   script_function_argument(call->arguments.values,
@@ -37,13 +36,11 @@ static Mech *matched_mech(BtechScriptCall *call,
 }
 
 BtechScriptResult fun_btsetmaxspeed(BtechScriptCall *call) {
-  Mech *mech = matched_mech(call, BTECH_SCRIPT_MUTATION);
+  Mech *mech = matched_mech(call);
   if (!mech)
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error_output(call);
   if (!is_wizard(call->evaluation->world->database, call->player)) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   const float MAXIMUM_SPEED =
       strtof(script_function_argument(call->arguments.values,
@@ -56,13 +53,11 @@ BtechScriptResult fun_btsetmaxspeed(BtechScriptCall *call) {
 }
 
 BtechScriptResult fun_btgetrealmaxspeed(BtechScriptCall *call) {
-  Mech *mech = matched_mech(call, BTECH_SCRIPT_NUMBER);
+  Mech *mech = matched_mech(call);
   if (!mech)
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error_output(call);
   if (!is_wizard(call->evaluation->world->database, call->player)) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   const float SPEED = mech_cargo_maximum_speed(mech, mech_maximum_speed(mech));
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%f",
@@ -78,19 +73,14 @@ BtechScriptResult fun_btgetbv(BtechScriptCall *call) {
   if (it == NOTHING ||
       !is_examinable(call->evaluation->world->database, call->player, it) ||
       !btech_context_is_mech(call->evaluation->btech, it)) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 NOT A MECH");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 NOT A MECH");
   }
   Mech *mech = btech_context_find_object(call->evaluation->btech, it);
   if (!mech) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor, "#-1");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1");
   }
   if (!is_wizard(call->evaluation->world->database, call->player)) {
-    safe_tprintf_str(call->output.buffer, &call->output.cursor,
-                     "#-1 PERMISSION DENIED");
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
   }
   const int BATTLE_VALUE = calculate_bv(mech, 100, 100);
   mech_battle_value_set(mech, BATTLE_VALUE);
@@ -118,7 +108,7 @@ static Mech *reference_mech(BtechScriptCall *call) {
 BtechScriptResult fun_btgetbv_ref(BtechScriptCall *call) {
   Mech *mech = reference_mech(call);
   if (!mech)
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error_output(call);
   mech_battle_value_set(mech, calculate_bv(mech, 4, 5));
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%d",
                    mech_battle_value(mech));
@@ -128,7 +118,7 @@ BtechScriptResult fun_btgetbv_ref(BtechScriptCall *call) {
 BtechScriptResult fun_btgetdbv_ref(BtechScriptCall *call) {
   Mech *mech = reference_mech(call);
   if (!mech)
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error_output(call);
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%.2f",
                    (double)calculate_defensive_bv(mech));
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
@@ -137,7 +127,7 @@ BtechScriptResult fun_btgetdbv_ref(BtechScriptCall *call) {
 BtechScriptResult fun_btgetobv_ref(BtechScriptCall *call) {
   Mech *mech = reference_mech(call);
   if (!mech)
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error_output(call);
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%.2f",
                    (double)calculate_offensive_bv(mech));
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
@@ -146,7 +136,7 @@ BtechScriptResult fun_btgetobv_ref(BtechScriptCall *call) {
 BtechScriptResult fun_btgetbv2_ref(BtechScriptCall *call) {
   Mech *mech = reference_mech(call);
   if (!mech)
-    return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
+    return btech_script_error_output(call);
   const float DEFENSIVE_VALUE = calculate_defensive_bv(mech);
   const float OFFENSIVE_VALUE = calculate_offensive_bv(mech);
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%.2f",

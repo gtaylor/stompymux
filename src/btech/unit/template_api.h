@@ -1,5 +1,6 @@
 /* Declares the BattleTech template API. */
 
+#include "btech_text_result.h"
 #include "mux/server/platform.h"
 
 #include <stddef.h>
@@ -104,6 +105,6 @@ int mech_calculated_weight(Mech *mech);
 int load_template(DbRef player, Mech *mech, char *filename);
 void dump_mech_special_objects(BtechContext *context, DbRef player);
 void dump_weapons(BtechContext *context, DbRef player);
-char *techlist_func(Mech *mech, char *buffer, size_t buffer_size);
-char *payloadlist_func(Mech *mech, char *buffer, size_t buffer_size);
-char *partlist_func(Mech *mech, char *buffer, size_t buffer_size);
+BtechTextResult techlist_func(Mech *mech, char *buffer, size_t buffer_size);
+BtechTextResult payloadlist_func(Mech *mech, char *buffer, size_t buffer_size);
+BtechTextResult partlist_func(Mech *mech, char *buffer, size_t buffer_size);
