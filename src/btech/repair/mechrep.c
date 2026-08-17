@@ -1,18 +1,17 @@
 /* Implements BattleTech repair mechanics for mechrep. */
 
+#include <limits.h>
+#include <math.h>
 #include <stdarg.h>
-#include <stdlib.h>
 
 #include "btconfig.h"
 #include "btech/context.h"
-#include "btech_channel.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "map_terrain.h"    // IWYU pragma: keep
 #include "mech_lifecycle.h" // IWYU pragma: keep
-#include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
@@ -183,8 +182,7 @@ void mechrep_rsettarget(DbRef player, void *data, char *buffer) {
   case 1:
     newmech = match_thing(&btech_context_command(rep->xcode.context)->match,
                           player, args[0]);
-    if (!(is_good_obj(rep->xcode.context->database, newmech) &&
-          is_xcode(rep->xcode.context->database, newmech))) {
+    if (!btech_context_is_mech(rep->xcode.context, newmech)) {
       mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                    "That is not a BattleMech or Vehicle!");
       return;
@@ -284,25 +282,37 @@ void mechrep_rsettype(DbRef player, void *data, char *buffer) {
 
 static bool parse_repair_float(RepairFacility *rep, DbRef player, char *buffer,
                                const char *name, float *value) {
-  char *args[1];
-  if (mech_parseattributes(buffer, args, 1) != 1) {
+  char *args[2];
+  if (mech_parseattributes(buffer, args, 2) != 1 ||
+      !parse_float_checked(args[0], value)) {
     notify_printf(btech_context_evaluation(rep->xcode.context), player,
-                  "Invalid number of arguments to Set%s!", name);
+                  "Invalid value for Set%s!", name);
     return false;
   }
-  *value = strtof(args[0], nullptr);
   return true;
 }
 
 static bool parse_repair_int(RepairFacility *rep, DbRef player, char *buffer,
                              const char *name, int *value) {
-  char *args[1];
-  if (mech_parseattributes(buffer, args, 1) != 1) {
+  char *args[2];
+  if (mech_parseattributes(buffer, args, 2) != 1 ||
+      !parse_int_checked(args[0], value)) {
     notify_printf(btech_context_evaluation(rep->xcode.context), player,
-                  "Invalid number of arguments to Set%s!", name);
+                  "Invalid value for Set%s!", name);
     return false;
   }
-  return parse_int_checked(args[0], value);
+  return true;
+}
+
+static bool validate_repair_int_range(RepairFacility *rep, DbRef player,
+                                      const char *name, int value, int minimum,
+                                      int maximum) {
+  if (value >= minimum && value <= maximum)
+    return true;
+
+  notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                "Invalid value for Set%s!", name);
+  return false;
 }
 
 static void notify_repair_float(RepairFacility *rep, DbRef player,
@@ -334,6 +344,11 @@ void mechrep_rsetspeed(DbRef player, void *data, char *buffer) {
   if (!parse_repair_float(rep, player, buffer, "Maxspeed", &value))
     return;
   value *= KPH_PER_MP;
+  if (value < 0.0F || !isfinite(value)) {
+    notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                  "Invalid value for SetMaxspeed!");
+    return;
+  }
   mech_maximum_speed_set(mech, value);
   notify_repair_float(rep, player, "Maxspeed", mech_maximum_speed(mech));
 }
@@ -355,6 +370,11 @@ void mechrep_rsetjumpspeed(DbRef player, void *data, char *buffer) {
   if (!parse_repair_float(rep, player, buffer, "Jumpspeed", &value))
     return;
   value *= KPH_PER_MP;
+  if (value < 0.0F || !isfinite(value)) {
+    notify_printf(btech_context_evaluation(rep->xcode.context), player,
+                  "Invalid value for SetJumpspeed!");
+    return;
+  }
   mech_jump_speed_set(mech, value);
   notify_repair_float(rep, player, "Jumpspeed", mech_jump_speed(mech));
 }
@@ -375,6 +395,8 @@ void mechrep_rsetheatsinks(DbRef player, void *data, char *buffer) {
   Mech *mech = repair_command.mech;
   if (!parse_repair_int(rep, player, buffer, "Heatsinks", &value))
     return;
+  if (!validate_repair_int_range(rep, player, "Heatsinks", value, 0, CHAR_MAX))
+    return;
   mech_heat_sink_count_set(mech, value);
   notify_repair_int(rep, player, "Heatsinks", mech_heat_sink_count(mech));
 }
@@ -394,6 +416,8 @@ void mechrep_rsetlrsrange(DbRef player, void *data, char *buffer) {
   RepairFacility *rep = repair_command.facility;
   Mech *mech = repair_command.mech;
   if (!parse_repair_int(rep, player, buffer, "LRSrange", &value))
+    return;
+  if (!validate_repair_int_range(rep, player, "LRSrange", value, 0, CHAR_MAX))
     return;
   mech_long_range_sensor_range_set(mech, value);
   notify_repair_int(rep, player, "LRSrange",
@@ -416,6 +440,8 @@ void mechrep_rsettacrange(DbRef player, void *data, char *buffer) {
   Mech *mech = repair_command.mech;
   if (!parse_repair_int(rep, player, buffer, "TACrange", &value))
     return;
+  if (!validate_repair_int_range(rep, player, "TACrange", value, 0, CHAR_MAX))
+    return;
   mech_tactical_range_set(mech, value);
   notify_repair_int(rep, player, "TACrange", mech_tactical_range(mech));
 }
@@ -435,6 +461,8 @@ void mechrep_rsetscanrange(DbRef player, void *data, char *buffer) {
   RepairFacility *rep = repair_command.facility;
   Mech *mech = repair_command.mech;
   if (!parse_repair_int(rep, player, buffer, "SCANrange", &value))
+    return;
+  if (!validate_repair_int_range(rep, player, "SCANrange", value, 0, CHAR_MAX))
     return;
   mech_scanner_range_set(mech, value);
   notify_repair_int(rep, player, "SCANrange", mech_scanner_range(mech));
@@ -456,6 +484,8 @@ void mechrep_rsetradiorange(DbRef player, void *data, char *buffer) {
   Mech *mech = repair_command.mech;
   if (!parse_repair_int(rep, player, buffer, "RADIOrange", &value))
     return;
+  if (!validate_repair_int_range(rep, player, "RADIOrange", value, 0, SHRT_MAX))
+    return;
   mech_radio_range_set(mech, value);
   notify_repair_int(rep, player, "RADIOrange", mech_radio_range(mech));
 }
@@ -475,6 +505,8 @@ void mechrep_rsettons(DbRef player, void *data, char *buffer) {
   RepairFacility *rep = repair_command.facility;
   Mech *mech = repair_command.mech;
   if (!parse_repair_int(rep, player, buffer, "Tons", &value))
+    return;
+  if (!validate_repair_int_range(rep, player, "Tons", value, 1, INT_MAX))
     return;
   mech_tonnage_set(mech, value);
   notify_repair_int(rep, player, "Tons", mech_tonnage(mech));

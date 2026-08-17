@@ -55,11 +55,15 @@ int btech_special_load_mechrep(sqlite3 *sqlite, BtechContext *context) {
       continue;
     }
     mechrep = btech_special_object(context, object, GTYPE_MECHREP);
-    if (!mechrep || btech_special_column_dbref(context->database, statement, 1,
-                                               &target) < 0)
+    if (!mechrep || btech_special_column_long(statement, 1, &target) < 0 ||
+        target < NOTHING) {
       result = -1;
-    else
+    } else {
+      if (target != NOTHING &&
+          btech_special_object(context, target, GTYPE_MECH) == nullptr)
+        target = NOTHING;
       mechrep->current_target = target;
+    }
   }
   if (result == 0 && step != SQLITE_DONE)
     result = -1;

@@ -10,6 +10,27 @@ btmux_label_unit_topic(btech-systems btech
   btech_safe_helpers
   btech_caller_control
   btech_repair_payload
+  btech_repair_job
+  btech_repair_operations
+  btech_repair_events
+  btech_repair_damage_planner
+  btech_repair_command_guards
+  btech_repair_reporting
+  btech_repair_ammo_commands
+  btech_repair_structure_commands
+  btech_repair_section_commands
+  btech_repair_scrap_commands
+  btech_repair_part_commands
+  btech_repair_restore
+  btech_repair_persistence_lifecycle
+  btech_repair_timing
+  btech_mechrep_target_restore
+  btech_mechrep_admin
+  btech_mechrep_armor_setter
+  btech_mechrep_repair_command
+  btech_template_specials
+  btech_mechrep_numeric_setters
+  btech_mechrep_templates
   btech_script_descriptors
   btech_techlist
   btech_lifecycle

@@ -6,6 +6,7 @@
 #include "command_handlers_api.h"
 #include "econ_api.h"
 #include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mech_classification_api.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
@@ -22,11 +23,52 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "registry_api.h"
+#include "repair_gun_layout.h"
 #include "repair_job.h"
 #include "section_types.h"
 
 static int clan_modified_time(const Mech *mech, int time) {
   return max(1, time / ((mech_technology_flags(mech) & CLAN_TECH) ? 2 : 1));
+}
+
+static bool gun_slot_has_scrap_conflict(Mech *mech,
+                                        CriticalSlotReference selection,
+                                        const RepairGunLayout *layout,
+                                        bool repair_conflict) {
+  for (int slot = selection.critical;
+       slot < selection.critical + layout->local_count; slot++) {
+    if (repair_conflict ? !can_scrap_part(mech, selection.section, slot)
+                        : someone_scrapping_part(mech, selection.section, slot))
+      return true;
+  }
+  if (layout->local_count >= layout->size)
+    return false;
+  for (int slot = layout->split.slot.critical;
+       slot < layout->split.slot.critical + layout->size - layout->local_count;
+       slot++) {
+    if (repair_conflict
+            ? !can_scrap_part(mech, layout->split.slot.section, slot)
+            : someone_scrapping_part(mech, layout->split.slot.section, slot))
+      return true;
+  }
+  return false;
+}
+
+static bool gun_scrap_layout_available(Mech *mech,
+                                       CriticalSlotReference selection,
+                                       const RepairGunLayout *layout) {
+  for (int slot = selection.critical;
+       slot < selection.critical + layout->local_count; slot++)
+    if (mech_critical_is_destroyed(mech, selection.section, slot))
+      return false;
+  if (layout->local_count >= layout->size)
+    return true;
+  for (int slot = layout->split.slot.critical;
+       slot < layout->split.slot.critical + layout->size - layout->local_count;
+       slot++)
+    if (mech_critical_is_destroyed(mech, layout->split.slot.section, slot))
+      return false;
+  return true;
 }
 
 typedef struct TechCheckContext {
@@ -78,17 +120,36 @@ void tech_removegun(DbRef player, Mech *facility, char *buffer) {
                  "You can't remove middle of a gun!");
     return;
   }
-  if (someone_scrapping_part(mech, loc, part)) {
+  CriticalSlotReference gun_slot = {.section = loc, .critical = part};
+  RepairGunLayout layout;
+  /* Scrapping preserves legacy permissiveness: only coordinates are required.
+   */
+  if (!repair_gun_layout_find(mech, loc, part, REPAIR_GUN_LAYOUT_NONE,
+                              &layout) ||
+      !gun_scrap_layout_available(mech, gun_slot, &layout)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "That gun's critical layout is invalid!");
+    return;
+  }
+  if (gun_slot_has_scrap_conflict(mech, gun_slot, &layout, false)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's scrapping it already!");
     return;
   }
-  if (!can_scrap_part(mech, loc, part)) {
+  if (gun_slot_has_scrap_conflict(mech, gun_slot, &layout, true)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's tinkering with it already!");
     return;
   }
   if (someone_scrapping_loc(mech, loc)) {
+    mecha_notify(
+        btech_context_evaluation(context), player,
+        "Someone's scrapping that section - no additional removals are "
+        "possible!");
+    return;
+  }
+  if (layout.local_count < layout.size &&
+      someone_scrapping_loc(mech, layout.split.slot.section)) {
     mecha_notify(
         btech_context_evaluation(context), player,
         "Someone's scrapping that section - no additional removals are "
@@ -115,6 +176,7 @@ void tech_removegun(DbRef player, Mech *facility, char *buffer) {
               mech, get_weapon_crits(
                         mech, weapon_from_equipment_index(
                                   mech_critical_part_type(mech, loc, part))));
+      mod = 3;
       repair_event_schedule_with_techtime(
           &(RepairWorkSchedule){.command = &repair_command,
                                 .work_time = time,

@@ -76,20 +76,12 @@ bool unit_is_fixable(Mech *mech) {
   return true;
 }
 
-static int adjusted_technology_time(BtechContext *context, int base_time,
-                                    int roll) {
-  if (!roll || !btech_context_uses_variable_technology_time(context))
-    return base_time;
-  return (base_time * 10) /
-         (1000 /
-          (100 - (btech_context_technology_time_modifier(context) * roll)));
-}
-
 static void schedule_section_repair(BtechContext *context, Mech *mech,
                                     DbRef player, int location, int event_type,
                                     MuxEventCallback callback, int delay) {
   btech_context_event_schedule(context, mech, event_type, callback, delay,
-                               (intptr_t)(location + (player * PLAYERPOS)));
+                               repair_event_payload_pack((RepairEventPayload){
+                                   .location = location, .player = player}));
 }
 
 static void take_section_materials(BtechContext *context, Mech *mech,
@@ -222,7 +214,7 @@ void tech_reattach(DbRef player, Mech *facility, char *buffer) {
       if (roll == 0)
         fixtime = fail_fixtime;
       else
-        fixtime = adjusted_technology_time(context, fail_fixtime, roll);
+        fixtime = tech_adjusted_time_for_roll(context, fail_fixtime, roll);
       if (fail_fixtime - fixtime)
         notify_printf(
             evaluation, player, "Your skill manages to save %d minute%s",
@@ -237,7 +229,7 @@ void tech_reattach(DbRef player, Mech *facility, char *buffer) {
     if (roll == 0)
       fixtime = base_fixtime;
     else
-      fixtime = adjusted_technology_time(context, base_fixtime, roll);
+      fixtime = tech_adjusted_time_for_roll(context, base_fixtime, roll);
     if (base_fixtime - fixtime)
       notify_printf(
           evaluation, player, "Your skill manages to save %d minute%s",
@@ -386,6 +378,11 @@ void tech_reseal(DbRef player, Mech *facility, char *buffer) {
   if (someone_resealing(mech, loc)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's sealing that section already!");
+    return;
+  }
+  if (someone_scrapping_loc(mech, loc)) {
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Someone's scrapping that section - no repairs are possible!");
     return;
   }
   if (player_techtime(context, player) >=

@@ -1,7 +1,6 @@
 /* Implements BattleTech repair mechanics for unit tech events. */
 
 #include "btech_event.h"
-#include "checked_conversion.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
 #include "mech_api_types.h"
@@ -14,14 +13,34 @@
 #include "mech_specification_api.h"
 #include "mech_status_api.h"
 #include "mech_tech_api.h"
+#include "mech_tech_commands_api.h"
 #include "mech_tech_do_api.h"
 #include "mech_tech_events_api.h"
 #include "mech_utils_api.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
+#include "repair_gun_layout.h"
 #include "repair_job.h"
 #include "section_types.h"
 #include <stdint.h>
+
+static bool repair_section_location_valid(int location) {
+  return (location >= 0 && location < NUM_SECTIONS) != 0;
+}
+
+static bool repair_armor_location_valid(int location) {
+  return (location >= 0 && location < (NUM_SECTIONS * 2)) != 0;
+}
+
+static bool repair_critical_location_valid(Mech *mech, int location,
+                                           int position) {
+  return (repair_section_location_valid(location) && position >= 0 &&
+          position < mech_section_critical_count(mech, location)) != 0;
+}
+
+static RepairEventPayload repair_event_payload(const MuxEvent *event) {
+  return repair_event_payload_unpack((intptr_t)event->data2);
+}
 
 static bool completely_intact(Mech *mech) {
   int i;
@@ -35,15 +54,14 @@ static bool completely_intact(Mech *mech) {
 
 void mux_event_tickmech_removesection(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
   char buf[MBUF_SIZE];
-  int loc;
-  int extra;
+  RepairEventPayload payload = repair_event_payload(e);
+  int loc = payload.location;
+  int extra = payload.extra;
 
   /* changed Special2I to Special on AddPartsM statements */
-  loc = earg % LOCMAX;
-  extra = earg / (LOCMAX * POSMAX);
-  if (extra == 0)
+  if (!repair_section_location_valid(loc) || (extra != 2 && extra != 3) ||
+      mech_section_is_destroyed(mech, loc))
     return;
   mech_parts_add(mech, tech_proper_internal_part(mech), 0,
                  (2 * mech_section_internal(mech, loc)) / extra);
@@ -67,35 +85,65 @@ void mux_event_tickmech_removesection(MuxEvent *e) {
 
 void mux_event_tickmech_removegun(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long earg = (long)(e->data2) % PLAYERPOS;
-  int loc;
-  int pos;
+  RepairEventPayload payload = repair_event_payload(e);
+  int loc = payload.location;
+  int pos = payload.position;
   int i;
-  int extra;
+  int extra = payload.extra;
   char buf[MBUF_SIZE];
   int count = 0;
-  int nloc;
-  int ncrit;
+  int nloc = -1;
+  int ncrit = -1;
   int size;
+  int local_count;
+  SplitCriticalLookup split_lookup = {.found = false};
 
-  RepairEventPayload payload = repair_event_payload_unpack(earg);
-  loc = payload.location;
-  pos = payload.position;
-  extra = payload.extra;
+  if (!repair_critical_location_valid(mech, loc, pos) ||
+      (extra != 2 && extra != 3) ||
+      !equipment_is_weapon(mech_critical_part_type(mech, loc, pos)) ||
+      mech_critical_is_destroyed(mech, loc, pos) ||
+      mech_section_is_destroyed(mech, loc) ||
+      mech_section_is_flooded(mech, loc) ||
+      !valid_gun_pos(&(RepairCriticalSelection){
+          .mech = mech, .location = loc, .position = pos}))
+    return;
 
   size = get_weapon_crits(mech, weapon_from_equipment_index(
                                     mech_critical_part_type(mech, loc, pos)));
-  for (i = pos; i < min(NUM_CRITICALS, pos + size); i++) {
+  local_count = min(mech_section_critical_count(mech, loc) - pos, size);
+  if (local_count < size) {
+    if (mech_class(mech) != CLASS_MECH)
+      return;
+    split_lookup = split_critical_find(mech, (CriticalSlotReference){loc, pos});
+    nloc = split_lookup.slot.section;
+    ncrit = split_lookup.slot.critical;
+    if (!split_lookup.found || !repair_section_location_valid(nloc) ||
+        ncrit < 0 || mech_section_is_destroyed(mech, nloc) ||
+        mech_section_is_flooded(mech, nloc) ||
+        ncrit + (size - local_count) > mech_section_critical_count(mech, nloc))
+      return;
+  }
+  for (i = pos; i < pos + local_count; i++)
+    if (mech_critical_is_destroyed(mech, loc, i))
+      return;
+  if (local_count < size)
+    for (i = ncrit; i < ncrit + (size - local_count); i++)
+      if (mech_critical_is_destroyed(mech, nloc, i))
+        return;
+  for (i = pos; i < min(mech_section_critical_count(mech, loc), pos + size);
+       i++) {
     mech_critical_destroy(mech, loc, i);
     count++;
   }
   if (count < size && mech_class(mech) == CLASS_MECH) { // got split crits
-    SplitCriticalLookup split_lookup =
-        split_critical_find(mech, (CriticalSlotReference){loc, pos});
     if (split_lookup.found) {
       nloc = split_lookup.slot.section;
       ncrit = split_lookup.slot.critical;
-      for (i = ncrit; i < (size - count); i++) {
+      if (!repair_section_location_valid(nloc) || ncrit < 0)
+        return;
+      for (i = ncrit; i < min(mech_section_critical_count(mech, nloc),
+                              ncrit + (size - count));
+           i++) {
         mech_critical_destroy(mech, nloc, i);
       }
     }
@@ -133,16 +181,21 @@ void mux_event_tickmech_removegun(MuxEvent *e) {
 
 void mux_event_tickmech_removepart(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long earg = (long)(e->data2) % PLAYERPOS;
-  int loc;
-  int pos;
-  int extra;
+  RepairEventPayload payload = repair_event_payload(e);
+  int loc = payload.location;
+  int pos = payload.position;
+  int extra = payload.extra;
   char buf[MBUF_SIZE];
 
-  RepairEventPayload payload = repair_event_payload_unpack(earg);
-  loc = payload.location;
-  pos = payload.position;
-  extra = payload.extra;
+  int part_type = repair_critical_location_valid(mech, loc, pos)
+                      ? mech_critical_part_type(mech, loc, pos)
+                      : EMPTY;
+  if (!repair_critical_location_valid(mech, loc, pos) ||
+      (extra != 2 && extra != 3) || part_type == EMPTY ||
+      equipment_is_weapon(part_type) ||
+      mech_part_is_structural_placeholder(part_type) ||
+      mech_critical_is_destroyed(mech, loc, pos))
+    return;
   mech_critical_destroy(mech, loc, pos);
   if (mech_class(mech) == CLASS_MECH)
     do_magic(mech);
@@ -176,19 +229,44 @@ void mux_event_tickmech_removepart(MuxEvent *e) {
   }
 }
 
+void mux_event_tickmech_scrap_failure(MuxEvent *event) {
+  if (!event)
+    return;
+  switch (event->type) {
+  case EVENT_REPAIR_SCRG:
+    mux_event_tickmech_removegun(event);
+    break;
+  case EVENT_REPAIR_SCRP:
+    mux_event_tickmech_removepart(event);
+    break;
+  default:
+    break;
+  }
+}
+
 void mux_event_tickmech_repairarmor(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
-  int loc = earg % 16;
-  int amount = (earg / 16) % 256;
-  DbRef player = (DbRef)((intptr_t)e->data2 / PLAYERPOS);
+  RepairEventPayload payload = repair_event_payload(e);
+  int loc = payload.location;
+  int amount = repair_fix_event_amount(payload);
+  DbRef player = payload.player;
   char buf[MBUF_SIZE];
 
-  if (loc >= 8) {
+  if (!repair_armor_location_valid(loc) || amount <= 0)
+    return;
+  int section = loc % NUM_SECTIONS;
+  int current = loc >= NUM_SECTIONS ? mech_section_rear_armor(mech, section)
+                                    : mech_section_armor(mech, section);
+  int original = loc >= NUM_SECTIONS
+                     ? mech_section_original_rear_armor(mech, section)
+                     : mech_section_original_armor(mech, section);
+  if (current >= original)
+    return;
+  if (loc >= NUM_SECTIONS) {
     mech_section_rear_armor_set(
-        mech, loc % 8,
-        min(mech_section_rear_armor(mech, loc % 8) + 1,
-            mech_section_original_rear_armor(mech, loc % 8)));
+        mech, section,
+        min(mech_section_rear_armor(mech, section) + 1,
+            mech_section_original_rear_armor(mech, section)));
   } else {
     mech_section_armor_set(mech, loc,
                            min(mech_section_armor(mech, loc) + 1,
@@ -197,10 +275,12 @@ void mux_event_tickmech_repairarmor(MuxEvent *e) {
   amount--;
   if (amount < 0)
     return;
-  if (amount <= 0) {
-    armor_string_from_index(loc % 8, buf, mech_class(mech),
+  current = loc >= NUM_SECTIONS ? mech_section_rear_armor(mech, section)
+                                : mech_section_armor(mech, section);
+  if (amount <= 0 || current >= original) {
+    armor_string_from_index(section, buf, mech_class(mech),
                             mech_movement_type(mech));
-    if (loc >= 8) {
+    if (loc >= NUM_SECTIONS) {
       do {
         int i = 0;
 
@@ -230,22 +310,30 @@ void mux_event_tickmech_repairarmor(MuxEvent *e) {
       do_magic(mech);
     return;
   }
-  repair_event_schedule_minutes(&(RepairEventSchedule){
-      .mech = mech,
-      .delay = FIXARMOR_TIME,
-      .event_type = EVENT_REPAIR_FIX,
-      .callback = mux_event_tickmech_repairarmor,
-      .payload = {.location = loc, .position = amount, .player = player}});
+  RepairEventPayload next_payload = {.location = loc, .player = player};
+  if (!repair_fix_event_payload_with_amount(&next_payload, amount))
+    return;
+  repair_event_schedule_minutes(
+      &(RepairEventSchedule){.mech = mech,
+                             .delay = FIXARMOR_TIME,
+                             .event_type = EVENT_REPAIR_FIX,
+                             .callback = mux_event_tickmech_repairarmor,
+                             .payload = next_payload});
 }
 
 void mux_event_tickmech_repairinternal(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
-  int loc = earg % 16;
-  int amount = (earg / 16) % 256;
-  DbRef player = (DbRef)((intptr_t)e->data2 / PLAYERPOS);
+  RepairEventPayload payload = repair_event_payload(e);
+  int loc = payload.location;
+  int amount = repair_fix_event_amount(payload);
+  DbRef player = payload.player;
   char buf[MBUF_SIZE];
 
+  if (!repair_section_location_valid(loc) || amount <= 0)
+    return;
+  if (mech_section_internal(mech, loc) >=
+      mech_section_original_internal(mech, loc))
+    return;
   mech_section_internal_set(mech, loc, mech_section_internal(mech, loc) + 1);
   if (mech_section_internal(mech, loc) >
       mech_section_original_internal(mech, loc))
@@ -254,7 +342,8 @@ void mux_event_tickmech_repairinternal(MuxEvent *e) {
   amount--;
   if (amount < 0)
     return;
-  if (amount <= 0) {
+  if (amount <= 0 || mech_section_internal(mech, loc) >=
+                         mech_section_original_internal(mech, loc)) {
     armor_string_from_index(loc, buf, mech_class(mech),
                             mech_movement_type(mech));
     do {
@@ -272,23 +361,30 @@ void mux_event_tickmech_repairinternal(MuxEvent *e) {
       do_magic(mech);
     return;
   }
-  repair_event_schedule_minutes(&(RepairEventSchedule){
-      .mech = mech,
-      .delay = FIXINTERNAL_TIME,
-      .event_type = EVENT_REPAIR_FIXI,
-      .callback = mux_event_tickmech_repairinternal,
-      .payload = {.location = loc, .position = amount, .player = player}});
+  RepairEventPayload next_payload = {.location = loc, .player = player};
+  if (!repair_fix_event_payload_with_amount(&next_payload, amount))
+    return;
+  repair_event_schedule_minutes(
+      &(RepairEventSchedule){.mech = mech,
+                             .delay = FIXINTERNAL_TIME,
+                             .event_type = EVENT_REPAIR_FIXI,
+                             .callback = mux_event_tickmech_repairinternal,
+                             .payload = next_payload});
 }
 
 void mux_event_tickmech_reattach(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
+  RepairEventPayload payload = repair_event_payload(e);
+  int location = payload.location;
   char buf[MBUF_SIZE];
 
+  if (!repair_section_location_valid(location) ||
+      !mech_section_is_destroyed(mech, location))
+    return;
   /* Basically: Unset the limb destroyed, without doing a thing to
-     damaged parts */
-  mech_re_attach(mech, earg);
-  armor_string_from_index(earg, buf, mech_class(mech),
+   damaged parts */
+  mech_re_attach(mech, location);
+  armor_string_from_index(location, buf, mech_class(mech),
                           mech_movement_type(mech));
   if (completely_intact(mech))
     do_magic(mech);
@@ -306,12 +402,18 @@ void mux_event_tickmech_reattach(MuxEvent *e) {
 
 void mux_event_tickmech_replacesuit(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
+  RepairEventPayload payload = repair_event_payload(e);
+  int location = payload.location;
   char buf[MBUF_SIZE];
 
-  armor_string_from_index(earg, buf, mech_class(mech),
+  if (mech_class(mech) != CLASS_BSUIT ||
+      !repair_section_location_valid(location) ||
+      location >= mech_maximum_battle_suits(mech) ||
+      !mech_section_is_destroyed(mech, location))
+    return;
+  armor_string_from_index(location, buf, mech_class(mech),
                           mech_movement_type(mech));
-  mech_replace_suit(mech, earg);
+  mech_replace_suit(mech, location);
   do_magic(mech);
 
   mech_printf(mech, MECHALL, "%s has been replaced.", buf);
@@ -324,36 +426,40 @@ void mux_event_tickmech_replacesuit(MuxEvent *e) {
 
 void mux_event_tickmech_reseal(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
+  RepairEventPayload payload = repair_event_payload(e);
+  int location = payload.location;
   char buf[MBUF_SIZE];
 
-  mech_re_seal(mech, earg);
-  armor_string_from_index(earg, buf, mech_class(mech),
+  if (!repair_section_location_valid(location) ||
+      mech_section_is_destroyed(mech, location) ||
+      !mech_section_is_flooded(mech, location))
+    return;
+  mech_re_seal(mech, location);
+  armor_string_from_index(location, buf, mech_class(mech),
                           mech_movement_type(mech));
   mech_printf(mech, MECHALL, "%s has been resealed.", buf);
 }
 
 void mux_event_tickmech_replacegun(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  int earg = clamp_intptr_to_int((intptr_t)e->data2) % PLAYERPOS;
-  int loc;
-  int pos;
+  RepairEventPayload payload = repair_event_payload(e);
+  int loc = payload.location;
+  int pos = payload.position;
   int i;
-  int brand;
+  int brand = payload.extra;
   char buf[MBUF_SIZE];
-  int count = 0;
-  int nloc;
-  int ncrit;
-  int size;
+  RepairGunLayout layout;
 
-  RepairEventPayload payload = repair_event_payload_unpack(earg);
-  loc = payload.location;
-  pos = payload.position;
-  brand = payload.extra;
+  if (!repair_gun_layout_find(mech, loc, pos,
+                              REPAIR_GUN_LAYOUT_REQUIRE_WEAPON |
+                                  REPAIR_GUN_LAYOUT_REQUIRE_GUN_START |
+                                  REPAIR_GUN_LAYOUT_REQUIRE_CONTIGUOUS |
+                                  REPAIR_GUN_LAYOUT_REQUIRE_INTACT_SECTIONS,
+                              &layout) ||
+      !mech_critical_is_nonfunctional(mech, loc, pos))
+    return;
 
-  size = get_weapon_crits(mech, weapon_from_equipment_index(
-                                    mech_critical_part_type(mech, loc, pos)));
-  for (i = pos; i < min(NUM_CRITICALS, pos + size); i++) {
+  for (i = pos; i < pos + layout.local_count; i++) {
     mech_repair_part(mech, loc, i);
     mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
         .mech = mech, .slot = {.section = loc, .critical = i}, .failure = 0});
@@ -363,26 +469,21 @@ void mux_event_tickmech_replacegun(MuxEvent *e) {
                                   .slot = {.section = loc, .critical = i},
                                   .brand = brand});
     }
-    count++;
   }
-  if (count < size && mech_class(mech) == CLASS_MECH) { // got split crits
-    SplitCriticalLookup split_lookup =
-        split_critical_find(mech, (CriticalSlotReference){loc, pos});
-    if (split_lookup.found) {
-      nloc = split_lookup.slot.section;
-      ncrit = split_lookup.slot.critical;
-      for (i = ncrit; i < (size - count); i++) {
-        mech_repair_part(mech, nloc, i);
-        mech_critical_temporary_failure_set(
-            &(CriticalSlotFailureSet){.mech = mech,
-                                      .slot = {.section = nloc, .critical = i},
-                                      .failure = 0});
-        if (brand) {
-          mech_critical_brand_set(
-              &(CriticalSlotBrandSet){.mech = mech,
-                                      .slot = {.section = nloc, .critical = i},
-                                      .brand = brand});
-        }
+  if (layout.local_count < layout.size) {
+    for (i = layout.split.slot.critical;
+         i < layout.split.slot.critical + layout.size - layout.local_count;
+         i++) {
+      mech_repair_part(mech, layout.split.slot.section, i);
+      mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+          .mech = mech,
+          .slot = {.section = layout.split.slot.section, .critical = i},
+          .failure = 0});
+      if (brand) {
+        mech_critical_brand_set(&(CriticalSlotBrandSet){
+            .mech = mech,
+            .slot = {.section = layout.split.slot.section, .critical = i},
+            .brand = brand});
       }
     }
   }
@@ -403,41 +504,36 @@ void mux_event_tickmech_replacegun(MuxEvent *e) {
 
 void mux_event_tickmech_repairgun(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long earg = (long)(e->data2) % PLAYERPOS;
-  int loc;
-  int pos;
+  RepairEventPayload payload = repair_event_payload(e);
+  int loc = payload.location;
+  int pos = payload.position;
   int i;
   char buf[MBUF_SIZE];
-  int count = 0;
-  int nloc;
-  int ncrit;
-  int size;
+  RepairGunLayout layout;
 
-  RepairEventPayload payload = repair_event_payload_unpack(earg);
-  loc = payload.location;
-  pos = payload.position;
+  if (!repair_gun_layout_find(mech, loc, pos,
+                              REPAIR_GUN_LAYOUT_REQUIRE_WEAPON |
+                                  REPAIR_GUN_LAYOUT_REQUIRE_GUN_START |
+                                  REPAIR_GUN_LAYOUT_REQUIRE_CONTIGUOUS |
+                                  REPAIR_GUN_LAYOUT_REQUIRE_INTACT_SECTIONS,
+                              &layout) ||
+      !mech_critical_is_nonfunctional(mech, loc, pos))
+    return;
 
-  size = get_weapon_crits(mech, weapon_from_equipment_index(
-                                    mech_critical_part_type(mech, loc, pos)));
-  for (i = pos; i < min(NUM_CRITICALS, pos + size); i++) {
+  for (i = pos; i < pos + layout.local_count; i++) {
     mech_repair_part(mech, loc, i);
     mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
         .mech = mech, .slot = {.section = loc, .critical = i}, .failure = 0});
-    count++;
   }
-  if (count < size && mech_class(mech) == CLASS_MECH) { // got split crits
-    SplitCriticalLookup split_lookup =
-        split_critical_find(mech, (CriticalSlotReference){loc, pos});
-    if (split_lookup.found) {
-      nloc = split_lookup.slot.section;
-      ncrit = split_lookup.slot.critical;
-      for (i = ncrit; i < (size - count); i++) {
-        mech_repair_part(mech, nloc, i);
-        mech_critical_temporary_failure_set(
-            &(CriticalSlotFailureSet){.mech = mech,
-                                      .slot = {.section = nloc, .critical = i},
-                                      .failure = 0});
-      }
+  if (layout.local_count < layout.size) {
+    for (i = layout.split.slot.critical;
+         i < layout.split.slot.critical + layout.size - layout.local_count;
+         i++) {
+      mech_repair_part(mech, layout.split.slot.section, i);
+      mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+          .mech = mech,
+          .slot = {.section = layout.split.slot.section, .critical = i},
+          .failure = 0});
     }
   }
 
@@ -457,22 +553,20 @@ void mux_event_tickmech_repairgun(MuxEvent *e) {
 
 void mux_event_tickmech_repairenhcrit(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long earg = (long)(e->data2) % PLAYERPOS;
-  int loc;
-  int pos;
+  RepairEventPayload payload = repair_event_payload(e);
+  int loc = payload.location;
+  int pos = payload.position;
   char buf[MBUF_SIZE];
   int w_crit_type;
   int w_weap_size;
   int w_first_crit;
 
-  RepairEventPayload payload = repair_event_payload_unpack(earg);
-  loc = payload.location;
-  pos = payload.position;
-  armor_string_from_index(loc, buf, mech_class(mech), mech_movement_type(mech));
-  mech_printf(mech, MECHALL, "%s on %s has been repaired.",
-              pos_part_name(mech, loc, pos).text, buf);
-  mech_critical_damage_repair(mech, loc, pos);
-
+  if (!repair_critical_location_valid(mech, loc, pos) ||
+      !equipment_is_weapon(mech_critical_part_type(mech, loc, pos)) ||
+      !mech_critical_is_damaged(mech, loc, pos) ||
+      mech_section_is_destroyed(mech, loc) ||
+      mech_section_is_flooded(mech, loc))
+    return;
   /* Get the crit type */
   w_crit_type = mech_critical_part_type(mech, loc, pos);
 
@@ -489,22 +583,34 @@ void mux_event_tickmech_repairenhcrit(MuxEvent *e) {
       .maximum_criticals = w_weap_size,
   });
 
+  if (!repair_critical_location_valid(mech, loc, w_first_crit))
+    return;
+  armor_string_from_index(loc, buf, mech_class(mech), mech_movement_type(mech));
+  mech_critical_damage_repair(mech, loc, pos);
   mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
       .mech = mech,
       .slot = {.section = loc, .critical = w_first_crit},
       .failure = 0});
+  mech_printf(mech, MECHALL, "%s on %s has been repaired.",
+              pos_part_name(mech, loc, pos).text, buf);
 }
 
 void mux_event_tickmech_repairpart(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long earg = (long)(e->data2) % PLAYERPOS;
-  int loc;
-  int pos;
+  RepairEventPayload payload = repair_event_payload(e);
+  int loc = payload.location;
+  int pos = payload.position;
   char buf[MBUF_SIZE];
 
-  RepairEventPayload payload = repair_event_payload_unpack(earg);
-  loc = payload.location;
-  pos = payload.position;
+  if (!repair_critical_location_valid(mech, loc, pos) ||
+      mech_section_is_destroyed(mech, loc) ||
+      mech_section_is_flooded(mech, loc))
+    return;
+  int part_type = mech_critical_part_type(mech, loc, pos);
+  if (part_type == EMPTY || equipment_is_weapon(part_type) ||
+      mech_part_is_structural_placeholder(part_type) ||
+      !mech_critical_is_nonfunctional(mech, loc, pos))
+    return;
   mech_repair_part(mech, loc, pos);
   armor_string_from_index(loc, buf, mech_class(mech), mech_movement_type(mech));
   do {
@@ -522,16 +628,22 @@ void mux_event_tickmech_repairpart(MuxEvent *e) {
 
 void mux_event_tickmech_reload(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long earg = (long)(e->data2) % PLAYERPOS;
-  int loc;
-  int pos;
-  int extra;
+  RepairEventPayload payload = repair_event_payload(e);
+  int loc = payload.location;
+  int pos = payload.position;
+  int extra = payload.extra;
   char buf[MBUF_SIZE];
 
-  RepairEventPayload payload = repair_event_payload_unpack(earg);
-  loc = payload.location;
-  pos = payload.position;
-  extra = payload.extra;
+  if (!repair_critical_location_valid(mech, loc, pos) ||
+      !equipment_is_ammunition(mech_critical_part_type(mech, loc, pos)) ||
+      mech_section_is_destroyed(mech, loc) ||
+      mech_section_is_flooded(mech, loc) ||
+      mech_critical_is_nonfunctional(mech, loc, pos) || extra < 0 || extra > 2)
+    return;
+  int current = mech_critical_data(mech, loc, pos);
+  if ((extra != 0 && current <= 0) ||
+      (extra == 0 && current >= full_ammo(mech, loc, pos)))
+    return;
   if (extra) {
     mech_critical_data_set(mech, loc, pos, 0);
     if (extra > 1)

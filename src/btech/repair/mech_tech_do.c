@@ -10,6 +10,7 @@
 #include "btech/context.h"
 #include "checked_conversion.h"
 #include "command_handlers_api.h"
+#include "mech_api_types.h"
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
 #include "mech_lifecycle.h"
@@ -38,8 +39,12 @@ static bool parts_consume_two(DbRef player, Mech *mech, int first_part,
                               int first_brand, int first_count, int second_part,
                               int second_brand, int second_count) {
   const MechPartRequirement REQUIREMENTS[] = {
-      {.part = first_part, .brand = first_brand, .count = first_count},
-      {.part = second_part, .brand = second_brand, .count = second_count},
+      {.part = mech_parts_alias(mech, first_part),
+       .brand = first_brand,
+       .count = first_count},
+      {.part = mech_parts_alias(mech, second_part),
+       .brand = second_brand,
+       .count = second_count},
   };
   return mech_parts_consume(mech, player, REQUIREMENTS,
                             sizeof(REQUIREMENTS) / sizeof(REQUIREMENTS[0]));
@@ -53,10 +58,18 @@ static bool parts_consume_four(DbRef player, Mech *mech, int first_part,
                                int fourth_part, int fourth_brand,
                                int fourth_count) {
   const MechPartRequirement REQUIREMENTS[] = {
-      {.part = first_part, .brand = first_brand, .count = first_count},
-      {.part = second_part, .brand = second_brand, .count = second_count},
-      {.part = third_part, .brand = third_brand, .count = third_count},
-      {.part = fourth_part, .brand = fourth_brand, .count = fourth_count},
+      {.part = mech_parts_alias(mech, first_part),
+       .brand = first_brand,
+       .count = first_count},
+      {.part = mech_parts_alias(mech, second_part),
+       .brand = second_brand,
+       .count = second_count},
+      {.part = mech_parts_alias(mech, third_part),
+       .brand = third_brand,
+       .count = third_count},
+      {.part = mech_parts_alias(mech, fourth_part),
+       .brand = fourth_brand,
+       .count = fourth_count},
   };
   return mech_parts_consume(mech, player, REQUIREMENTS,
                             sizeof(REQUIREMENTS) / sizeof(REQUIREMENTS[0]));
@@ -479,10 +492,23 @@ int repairg_fail(const RepairOperationCall *call) {
     if (get_weapon_crits(mech, weapon_from_equipment_index(
                                    mech_critical_part_type(mech, loc, part))) >
         4) {
-      mech_critical_destroy(mech, loc, part + 1);
-      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                   "You muck around, trashing the gun in the process.");
-      return -1;
+      if (part + 1 < mech_section_critical_count(mech, loc)) {
+        mech_critical_destroy(mech, loc, part + 1);
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "You muck around, trashing the gun in the process.");
+        return -1;
+      }
+      SplitCriticalLookup split =
+          split_critical_find(mech, (CriticalSlotReference){loc, part});
+      if (split.found && split.slot.section >= 0 &&
+          split.slot.section < NUM_SECTIONS && split.slot.critical >= 0 &&
+          split.slot.critical <
+              mech_section_critical_count(mech, split.slot.section)) {
+        mech_critical_destroy(mech, split.slot.section, split.slot.critical);
+        mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+                     "You muck around, trashing the gun in the process.");
+        return -1;
+      }
     }
   }
   mecha_notify(btech_context_evaluation(mech_context(mech)), player,
@@ -528,13 +554,15 @@ int fixarmor_fail(const RepairOperationCall *call) {
   int tot = 0;
   int should = *val;
 
+  if (should <= 0)
+    return 0;
   if (tech_roll(player, mech, FIXARMOR_DIFFICULTY) >= 0)
     tot += 50;
   tot += btech_random_range(mech_context(mech), 5, 44);
   tot = (tot * should) / 100;
   if (tot == 0)
     tot = 1;
-  if (tot == should)
+  if (tot == should && should > 1)
     tot = should - 1;
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "Your armor patching isn't exactly perfect.. "
@@ -551,13 +579,15 @@ int fixinternal_fail(const RepairOperationCall *call) {
   int tot = 0;
   int should = *val;
 
-  if (tech_roll(player, mech, FIXARMOR_DIFFICULTY) >= 0)
+  if (should <= 0)
+    return 0;
+  if (tech_roll(player, mech, FIXINTERNAL_DIFFICULTY) >= 0)
     tot += 50;
   tot += btech_random_range(mech_context(mech), 5, 44);
   tot = (tot * should) / 100;
   if (tot == 0)
     tot = 1;
-  if (tot == should)
+  if (tot == should && should > 1)
     tot = should - 1;
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "Your internal patching isn't exactly perfect.. You managed to "
@@ -599,7 +629,7 @@ int replacesuit_fail(const RepairOperationCall *call) {
   Mech *mech = call->mech;
   int w_rand = 0;
 
-  if (tech_roll(player, mech, REATTACH_DIFFICULTY) >= 0)
+  if (tech_roll(player, mech, REPLACESUIT_DIFFICULTY) >= 0)
     return 0;
 
   w_rand = btech_random_range_int(mech_context(mech), 5, 94);

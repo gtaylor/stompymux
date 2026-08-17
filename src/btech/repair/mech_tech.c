@@ -256,6 +256,23 @@ int tech_time_scaled_seconds(BtechContext *context, int units) {
   return max(1, (int)llround(seconds));
 }
 
+int tech_adjusted_time_for_roll(BtechContext *context, int base_units,
+                                int roll) {
+  if (base_units <= 0 || roll <= 0 ||
+      !btech_context_uses_variable_technology_time(context))
+    return base_units;
+  int64_t reduction =
+      (int64_t)btech_context_technology_time_modifier(context) * roll;
+  if (reduction < 0)
+    reduction = 0;
+  if (reduction > 100)
+    reduction = 100;
+  int64_t units = ((int64_t)base_units * (100 - reduction)) / 100;
+  if (units <= 0)
+    return 1;
+  return units > INT_MAX ? INT_MAX : (int)units;
+}
+
 TechPartParseResult tech_part_parse(const TechPartParseRequest *request) {
   TechPartParseResult result = {};
   Mech *mech = request->mech;
@@ -371,15 +388,21 @@ struct LatestTechEventContext {
 static void find_latest_tech_event(MuxEvent *event, void *data) {
   LatestTechEventContext *context = data;
   int offset = event->tick - event->scheduler->tick;
-  long amount = ((((long)event->data2) % PLAYERPOS) / 16) - 1;
+  RepairEventPayload payload =
+      repair_event_payload_unpack((intptr_t)event->data2);
+  int amount = repair_fix_event_amount(payload);
 
-  switch (event->type) {
-  case EVENT_REPAIR_FIXI:
-    offset += amount * FIXINTERNAL_TIME * TECH_TICK;
-    break;
-  case EVENT_REPAIR_FIX:
-    offset += amount * FIXARMOR_TIME * TECH_TICK;
-    break;
+  if (event->function != mech_event_failure_marker) {
+    switch (event->type) {
+    case EVENT_REPAIR_FIXI:
+      if (amount > 0)
+        offset += (amount - 1) * FIXINTERNAL_TIME * TECH_TICK;
+      break;
+    case EVENT_REPAIR_FIX:
+      if (amount > 0)
+        offset += (amount - 1) * FIXARMOR_TIME * TECH_TICK;
+      break;
+    }
   }
   if (offset > context->latest)
     context->latest = offset;

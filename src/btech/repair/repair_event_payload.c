@@ -18,3 +18,16 @@ RepairEventPayload repair_event_payload_unpack(intptr_t encoded) {
       .player = encoded / PLAYERPOS,
   };
 }
+
+int repair_fix_event_amount(RepairEventPayload payload) {
+  return payload.position + ((payload.extra % POSMAX) * POSMAX);
+}
+
+bool repair_fix_event_payload_with_amount(RepairEventPayload *payload,
+                                          int amount) {
+  if (amount <= 0 || amount > REPAIR_FIX_AMOUNT_MAX)
+    return false;
+  payload->position = amount % POSMAX;
+  payload->extra = amount / POSMAX;
+  return true;
+}

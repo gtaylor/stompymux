@@ -118,10 +118,24 @@ void mechrep_raddspecial(DbRef player, void *data, char *buffer) {
   } else {
     newdata = 0;
   }
-  mech_critical_part_type_set(mech, index, subsect,
-                              itemcode < 0 ? 0
-                                           : special_equipment_index(itemcode));
-  mech_critical_data_set(mech, index, subsect, newdata);
+  mech_critical_configure(&(CriticalSlotConfiguration){
+      .mech = mech,
+      .slot = {.section = index, .critical = subsect},
+      .part_type = itemcode < 0 ? EMPTY : special_equipment_index(itemcode),
+      .data = newdata,
+  });
+  mech_critical_damage_flags_set(mech, index, subsect, 0);
+  mech_critical_temporary_failure_set(&(CriticalSlotFailureSet){
+      .mech = mech,
+      .slot = {.section = index, .critical = subsect},
+      .failure = 0,
+  });
+  mech_critical_brand_set(&(CriticalSlotBrandSet){
+      .mech = mech,
+      .slot = {.section = index, .critical = subsect},
+      .brand = 0,
+  });
+  mech_critical_desired_ammo_section_set(mech, index, subsect, -1);
   switch (itemcode) {
   case CASE:
     mech_section_configuration_add(
@@ -580,10 +594,28 @@ void mechrep_raddtech(DbRef player, void *data, char *buffer) {
 
 void mechrep_rdelinftech(DbRef player, void *data,
                          char *buffer [[maybe_unused]]) {
-  Mech *mech = (Mech *)data;
+  RepairFacilityCommandContext repair_command;
+  RepairCommandStatus repair_status =
+      repair_facility_command_context_initialize(player, data, true,
+                                                 &repair_command);
+  if (repair_status != REPAIR_COMMAND_READY) {
+    if (repair_command.evaluation)
+      mecha_notify(repair_command.evaluation, player,
+                   repair_command_status_message(repair_status));
+    return;
+  }
+  RepairFacility *rep = repair_command.facility;
+  Mech *mech = repair_command.mech;
+
+  if (mech_class(mech) != CLASS_BSUIT) {
+    mecha_notify(
+        btech_context_evaluation(rep->xcode.context), player,
+        "That is not a valid target for infantry technologies. Try a Suit!");
+    return;
+  }
 
   mech_infantry_technology_flags_set(mech, 0);
-  mecha_notify(btech_context_evaluation(mech_context(mech)), player,
+  mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                "Advanced Infantry Technology Deleted");
 }
 
@@ -649,7 +681,7 @@ void mechrep_raddinftech(DbRef player, void *data, char *buffer) {
 }
 
 void mechrep_setcargospace(DbRef player, void *data, char *buffer) {
-  char *args[2];
+  char *args[3];
   int argc;
   int cargo;
   int max;
@@ -666,7 +698,7 @@ void mechrep_setcargospace(DbRef player, void *data, char *buffer) {
   }
   RepairFacility *rep = repair_command.facility;
   Mech *mech = repair_command.mech;
-  argc = mech_parseattributes(buffer, args, 2);
+  argc = mech_parseattributes(buffer, args, 3);
   if (argc != 2) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Invalid number of arguements!");
@@ -683,15 +715,22 @@ void mechrep_setcargospace(DbRef player, void *data, char *buffer) {
                  "Doesn't that seem excessive?");
     return;
   }
-  cargo *= 50;
-  mech_cargo_space_set(mech, cargo);
 
   if (!parse_int_checked(args[1], &max)) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Invalid maximum tonnage!");
     return;
   }
+
+  if (cargo > INT_MAX / 50) {
+    mecha_notify(btech_context_evaluation(rep->xcode.context), player,
+                 "Doesn't that seem excessive?");
+    return;
+  }
+
+  cargo *= 50;
   max = (bounded(1, max, 100));
+  mech_cargo_space_set(mech, cargo);
   mech_carrier_maximum_tonnage_set(mech, max);
 
   notify_printf(btech_context_evaluation(rep->xcode.context), player,
@@ -721,7 +760,7 @@ Mech *load_refmech(BtechContext *context, const char *reference) {
 
   if (!strcmp(cache->reference, reference))
     return cache->mech;
-  if (mech_template_load(GOD, cache->mech, reference) < 1) {
+  if (!mech_template_load(GOD, cache->mech, reference)) {
     cache->reference[0] = '\0';
     return nullptr;
   }

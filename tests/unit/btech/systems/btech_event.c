@@ -51,8 +51,11 @@ int main(void) {
     return 1;
   }
 
-  uv_run(&loop, UV_RUN_DEFAULT);
+  /* Destroy must cancel an active timer before freeing its callback data. */
+  btech_event_schedule(&scheduler, &object, 10, event_callback, 1, 0);
+
   mux_event_scheduler_destroy(&scheduler);
+  uv_run(&loop, UV_RUN_DEFAULT);
   if (callback_count != 0 || uv_loop_close(&loop) < 0) {
     return 1;
   }

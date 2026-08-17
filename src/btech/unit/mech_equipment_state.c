@@ -457,7 +457,9 @@ bool mech_part_is_structural_placeholder(int part_type) {
           part_type == special_equipment_index(TRIPLE_STRENGTH_MYOMER) ||
           part_type == special_equipment_index(STEALTH_ARMOR) ||
           part_type == special_equipment_index(HVY_FERRO_FIBROUS) ||
-          part_type == special_equipment_index(LT_FERRO_FIBROUS)) != 0;
+          part_type == special_equipment_index(LT_FERRO_FIBROUS) ||
+          part_type == special_equipment_index(SPLIT_CRIT_LEFT) ||
+          part_type == special_equipment_index(SPLIT_CRIT_RIGHT)) != 0;
 }
 
 void mech_section_armor_set(Mech *mech, int section, int armor) {

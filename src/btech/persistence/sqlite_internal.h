@@ -140,6 +140,21 @@ int btech_special_validate_map_child_counts(sqlite3 *sqlite);
 int btech_special_load_map_objects(sqlite3 *sqlite, BtechContext *context);
 int btech_special_load_map_bits(sqlite3 *sqlite, BtechContext *context);
 int btech_special_load_repair_events(sqlite3 *sqlite, BtechContext *context);
+MuxEventCallback btech_special_repair_function_for_type(int type);
+typedef enum BtechRepairEventClassification : int {
+  BTECH_REPAIR_EVENT_INVALID,
+  BTECH_REPAIR_EVENT_STALE,
+  BTECH_REPAIR_EVENT_ACTIONABLE,
+} BtechRepairEventClassification;
+BtechRepairEventClassification
+btech_special_repair_event_classify(Mech *mech, int event_type,
+                                    intptr_t event_data, bool fake);
+bool btech_special_repair_events_conflict(int first_type, intptr_t first_data,
+                                          int second_type,
+                                          intptr_t second_data);
+int btech_special_store_repair_events(BtechSpecialWriteContext *fault,
+                                      sqlite3_stmt *statement,
+                                      BtechContext *context);
 int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context);
 int btech_special_load_mech_sections(sqlite3 *sqlite, BtechContext *context);
 int btech_special_load_mech_criticals(sqlite3 *sqlite, BtechContext *context);
