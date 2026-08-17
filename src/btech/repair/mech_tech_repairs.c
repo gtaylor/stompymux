@@ -2,14 +2,17 @@
 /* Implements unit repair procedures. */
 
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "btech/context.h"
 #include "btech_event.h"
 #include "coolmenu.h"
+#include "equipment_types.h"
 #include "mech_build_api.h"
 #include "mech_classification_api.h"
+#include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
@@ -28,10 +31,31 @@
 #include "mux/support/checked_storage.h"
 #include "mycool.h"
 #include "registry_api.h"
+#include "repair_event_validation.h"
 #include "repair_job.h"
 
 static void repair_append(char *buffer, size_t capacity, const char *format,
                           ...) __attribute__((format(printf, 3, 4)));
+
+static bool repair_event_has_section(int type) {
+  return (type != EVENT_REPAIR_MOB && type != EVENT_REPAIR_UMOB) != 0;
+}
+
+static bool repair_event_targets_critical(int type) {
+  switch (type) {
+  case EVENT_REPAIR_REPL:
+  case EVENT_REPAIR_REPAP:
+  case EVENT_REPAIR_REPLG:
+  case EVENT_REPAIR_REPAG:
+  case EVENT_REPAIR_REPENHCRIT:
+  case EVENT_REPAIR_RELO:
+  case EVENT_REPAIR_SCRP:
+  case EVENT_REPAIR_SCRG:
+    return true;
+  default:
+    return false;
+  }
+}
 
 static void repair_append(char *buffer, size_t capacity, const char *format,
                           ...) {
@@ -51,31 +75,42 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
   CoolMenu **menu = (CoolMenu **)menu_context;
   int type = (unsigned char)e->type;
   Mech *mech = (Mech *)e->data;
-  long earg = ((long)e->data2) % PLAYERPOS;
-  DbRef player = ((long)e->data2) / PLAYERPOS;
-  int loc;
-  int pos;
-  int extra;
+  intptr_t encoded = (intptr_t)e->data2;
   char buf[MBUF_SIZE] = {0};
   char buf2[LBUF_SIZE] = {0};
-  int fail = (e->function == mech_event_failure_marker);
+  bool fail = (e->function == mech_event_failure_marker) != 0;
   BtechContext *context = mech_context(mech);
 
-  RepairEventPayload payload = repair_event_payload_unpack(earg);
-  loc = payload.location;
-  pos = payload.position;
-  extra = payload.extra;
-  (void)snprintf(
-      buf, sizeof(buf), "%s%s",
-      armor_section_abbreviation(
-          &(ArmorSectionReference){.unit_class = mech_class(mech),
-                                   .movement_type = mech_movement_type(mech),
-                                   .location = loc % 8})
-          .text,
-      loc >= 8 ? "(R)" : "");
-  (void)snprintf(buf2, sizeof(buf2), "%-5ld ", player);
+  RepairEventPayload payload = repair_event_payload_unpack(encoded);
+  int loc = payload.location;
+  int pos = payload.position;
+  int amount = repair_fix_event_amount(payload);
+  int extra = payload.extra;
+  int minutes_remaining = 0;
+  if (e->scheduler != nullptr)
+    minutes_remaining = (e->tick - e->scheduler->tick) / 60;
+  (void)snprintf(buf2, sizeof(buf2), "%-5ld ", payload.player);
   repair_append(buf2, sizeof(buf2), "%-4d ",
-                game_lag_time(context, (e->tick - e->scheduler->tick) / 60));
+                game_lag_time(context, minutes_remaining));
+  if (!repair_event_payload_structurally_valid(type, payload, fail) ||
+      (repair_event_targets_critical(type) &&
+       (payload.position < 0 ||
+        payload.position >=
+            mech_section_critical_count(mech, payload.location)))) {
+    repair_append(buf2, sizeof(buf2), "Invalid repair event data");
+    cool_menu_entry_very_simple(menu, buf2);
+    return;
+  }
+  if (repair_event_has_section(type)) {
+    (void)snprintf(
+        buf, sizeof(buf), "%s%s",
+        armor_section_abbreviation(
+            &(ArmorSectionReference){.unit_class = mech_class(mech),
+                                     .movement_type = mech_movement_type(mech),
+                                     .location = loc % NUM_SECTIONS})
+            .text,
+        loc >= NUM_SECTIONS ? "(R)" : "");
+  }
   switch (type) {
   case EVENT_REPAIR_REPL:
     repair_append(buf2, sizeof(buf2), "%5s:%-2d Replacement of %s", buf,
@@ -105,7 +140,8 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
       repair_append(buf2, sizeof(buf2), "%5s:%-2d Failed armor repair", buf, 0);
     else
       repair_append(buf2, sizeof(buf2),
-                    "%5s:%-2d Repair of armor - possibly next point", buf, pos);
+                    "%5s:%-2d Repair of armor - possibly next point", buf,
+                    amount);
     break;
   case EVENT_REPAIR_FIXI:
     if (fail)
@@ -114,7 +150,7 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
     else
       repair_append(buf2, sizeof(buf2),
                     "%5s:%-2d Repair of internals - possibly next point", buf,
-                    pos);
+                    amount);
     break;
   case EVENT_REPAIR_SCRL:
     repair_append(buf2, sizeof(buf2), "%5s Removal", buf);
@@ -146,14 +182,12 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
       repair_append(buf2, sizeof(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_MOB:
-    repair_append(buf2, sizeof(buf2), "%5s:%-2d Mounting of %s", buf, pos + 1,
-                  pos_part_name(mech, loc, pos).text);
+    repair_append(buf2, sizeof(buf2), "Mounting of a bomb");
     if (fail)
       repair_append(buf2, sizeof(buf2), " (Failure)");
     break;
   case EVENT_REPAIR_UMOB:
-    repair_append(buf2, sizeof(buf2), "%5s:%-2d Removing of %s", buf, pos + 1,
-                  pos_part_name(mech, loc, pos).text);
+    repair_append(buf2, sizeof(buf2), "Removing of a bomb");
     if (fail)
       repair_append(buf2, sizeof(buf2), " (Failure)");
     break;

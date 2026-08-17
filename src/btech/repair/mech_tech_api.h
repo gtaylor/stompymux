@@ -41,6 +41,8 @@ int tech_roll(DbRef player, Mech *mech, int diff);
 int tech_weapon_roll(DbRef player, Mech *mech, int diff);
 int tech_addtechtime(const TechTimeAddition *addition);
 int tech_time_scaled_seconds(BtechContext *context, int units);
+int tech_adjusted_time_for_roll(BtechContext *context, int base_units,
+                                int roll);
 TechPartParseResult tech_part_parse(const TechPartParseRequest *request);
 int tech_parsegun(Mech *mech, char *buffer, int *loc, int *pos, int *brand);
 int figure_latest_tech_event(Mech *mech);

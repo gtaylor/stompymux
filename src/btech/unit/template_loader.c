@@ -4,6 +4,7 @@
 
 #include "btech/context.h"
 #include "btech_event.h"
+#include "command_handlers_api.h"
 #include "mech_crew_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
@@ -11,6 +12,7 @@
 #include "mech_lifecycle.h"
 #include "mech_status_types.h"
 #include "mech_targeting_api.h"
+#include "mux/objects/attrs.h"
 #include "mux/server/platform.h"
 #include "template_api.h"
 
@@ -31,15 +33,26 @@ void mech_template_clear(Mech *mech, bool clear_communications) {
     mech_communications_clear(mech);
 }
 
-int mech_template_load(DbRef player, Mech *mech, const char *id) {
+bool mech_template_load(DbRef player, Mech *mech, const char *id) {
   bool clear_communications = strcmp(mech->ud.mech_type, id) != 0;
   char *filename = mech_template_resolve_path(
       mech_context(mech), btech_context_mech_template_path(mech_context(mech)),
       id);
+  Mech staged;
 
-  mech_template_clear(mech, clear_communications);
   if (filename == nullptr)
-    return 0;
+    return false;
 
-  return load_template(player, mech, filename) >= 0 ? 1 : 0;
+  /* Template loading only mutates embedded state; it must not publish staged.
+   */
+  staged = *mech;
+  mech_template_clear(&staged, clear_communications);
+  if (load_template(player, &staged, filename) < 0)
+    return false;
+
+  *mech = staged;
+  silly_atr_set_in(btech_context_database(mech_context(mech)), mech->mynum,
+                   A_MECHTYPE, mech->ud.mech_type);
+  mech_event_cancel(mech, EVENT_VEHICLEBURN);
+  return true;
 }

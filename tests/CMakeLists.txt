@@ -354,6 +354,358 @@ target_include_directories(btech_repair_payload_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_repair_payload COMMAND btech_repair_payload_test)
 
+add_executable(btech_repair_job_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_job.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_job.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c)
+target_compile_options(btech_repair_job_test PRIVATE -ffunction-sections)
+target_link_options(btech_repair_job_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_repair_job_test PRIVATE btmux_options)
+target_include_directories(btech_repair_job_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_repair_job COMMAND btech_repair_job_test)
+
+add_executable(btech_repair_operations_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_operations.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mech_tech_do.c)
+target_compile_options(btech_repair_operations_test PRIVATE -ffunction-sections)
+target_link_options(btech_repair_operations_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_repair_operations_test PRIVATE btmux_options)
+target_include_directories(btech_repair_operations_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_repair_operations COMMAND btech_repair_operations_test)
+
+add_executable(btech_repair_events_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_events.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mech_tech_events.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_gun_layout.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_job.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c)
+target_compile_options(btech_repair_events_test PRIVATE -ffunction-sections)
+target_link_options(btech_repair_events_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_repair_events_test PRIVATE btmux_options)
+target_include_directories(btech_repair_events_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_repair_events COMMAND btech_repair_events_test)
+
+add_executable(btech_repair_damage_planner_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_damage_planner.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mech_tech_damages.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+target_compile_options(btech_repair_damage_planner_test PRIVATE -ffunction-sections)
+target_link_options(btech_repair_damage_planner_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_repair_damage_planner_test PRIVATE btmux_options)
+target_include_directories(btech_repair_damage_planner_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_repair_damage_planner COMMAND btech_repair_damage_planner_test)
+
+add_executable(btech_repair_command_guards_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_command_guards.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mech_tech_commands.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_gun_layout.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_compile_options(btech_repair_command_guards_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_repair_command_guards_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_repair_command_guards_test PRIVATE btmux_options)
+target_include_directories(btech_repair_command_guards_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_repair_command_guards COMMAND btech_repair_command_guards_test)
+
+add_executable(btech_repair_reporting_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_reporting.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mech_tech_repairs.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_validation.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c)
+target_compile_options(btech_repair_reporting_test PRIVATE -ffunction-sections)
+target_link_options(btech_repair_reporting_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_repair_reporting_test PRIVATE btmux_options)
+target_include_directories(btech_repair_reporting_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_repair_reporting COMMAND btech_repair_reporting_test)
+
+add_executable(btech_repair_ammo_commands_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_ammo_commands.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mech_tech_ammo_commands.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_job.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c)
+target_compile_options(btech_repair_ammo_commands_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_repair_ammo_commands_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_repair_ammo_commands_test PRIVATE btmux_options)
+target_include_directories(btech_repair_ammo_commands_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_repair_ammo_commands
+  COMMAND btech_repair_ammo_commands_test)
+set_tests_properties(btech_repair_ammo_commands PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_repair_structure_commands_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_structure_commands.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mech_tech_structure_commands.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_job.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c)
+target_compile_options(btech_repair_structure_commands_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_repair_structure_commands_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_repair_structure_commands_test PRIVATE btmux_options)
+target_include_directories(btech_repair_structure_commands_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_repair_structure_commands
+  COMMAND btech_repair_structure_commands_test)
+set_tests_properties(btech_repair_structure_commands PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_repair_section_commands_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_section_commands.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mech_tech_section_commands.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mech_tech_do.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_job.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c)
+target_compile_options(btech_repair_section_commands_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_repair_section_commands_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_repair_section_commands_test PRIVATE btmux_options)
+target_include_directories(btech_repair_section_commands_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_repair_section_commands
+  COMMAND btech_repair_section_commands_test)
+set_tests_properties(btech_repair_section_commands PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_repair_scrap_commands_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_scrap_commands.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mech_tech_scrap_commands.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_gun_layout.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_job.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_compile_options(btech_repair_scrap_commands_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_repair_scrap_commands_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_repair_scrap_commands_test PRIVATE btmux_options)
+target_include_directories(btech_repair_scrap_commands_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_repair_scrap_commands
+  COMMAND btech_repair_scrap_commands_test)
+set_tests_properties(btech_repair_scrap_commands PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_repair_part_commands_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_part_commands.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mech_tech_part_commands.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_gun_layout.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_job.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c)
+target_compile_options(btech_repair_part_commands_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_repair_part_commands_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_repair_part_commands_test PRIVATE btmux_options m)
+target_include_directories(btech_repair_part_commands_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_repair_part_commands
+  COMMAND btech_repair_part_commands_test)
+set_tests_properties(btech_repair_part_commands PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_repair_restore_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_restore.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/persistence/repair_restore.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/persistence/snapshot_store.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_validation.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_gun_layout.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c)
+target_compile_options(btech_repair_restore_test PRIVATE -ffunction-sections)
+target_link_options(btech_repair_restore_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_repair_restore_test PRIVATE btmux_options SQLite3::SQLite3)
+target_include_directories(btech_repair_restore_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_repair_restore COMMAND btech_repair_restore_test)
+set_tests_properties(btech_repair_restore PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_repair_persistence_lifecycle_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_persistence_lifecycle.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/persistence/snapshot_store.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c)
+target_compile_options(btech_repair_persistence_lifecycle_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_repair_persistence_lifecycle_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(btech_repair_persistence_lifecycle_test PRIVATE
+  btmux_options SQLite3::SQLite3)
+target_include_directories(btech_repair_persistence_lifecycle_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_repair_persistence_lifecycle
+  COMMAND btech_repair_persistence_lifecycle_test)
+set_tests_properties(btech_repair_persistence_lifecycle PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_repair_timing_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_repair_timing.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mech_tech.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/repair_event_payload.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_compile_options(btech_repair_timing_test PRIVATE -ffunction-sections)
+target_link_options(btech_repair_timing_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_repair_timing_test PRIVATE btmux_options)
+target_include_directories(btech_repair_timing_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_repair_timing COMMAND btech_repair_timing_test)
+set_tests_properties(btech_repair_timing PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_mechrep_target_restore_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_mechrep_target_restore.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/persistence/special_restore.c)
+target_compile_options(btech_mechrep_target_restore_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_mechrep_target_restore_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(btech_mechrep_target_restore_test PRIVATE
+  btmux_options SQLite3::SQLite3)
+target_include_directories(btech_mechrep_target_restore_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_mechrep_target_restore
+  COMMAND btech_mechrep_target_restore_test)
+set_tests_properties(btech_mechrep_target_restore PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_mechrep_admin_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_mechrep_admin.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mechrep_construction.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mechrep_technology.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+target_compile_options(btech_mechrep_admin_test PRIVATE -ffunction-sections)
+target_link_options(btech_mechrep_admin_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_mechrep_admin_test PRIVATE btmux_options)
+target_include_directories(btech_mechrep_admin_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_mechrep_admin COMMAND btech_mechrep_admin_test)
+set_tests_properties(btech_mechrep_admin PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_mechrep_armor_setter_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_mechrep_armor_setter.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mechrep_construction.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+target_compile_options(btech_mechrep_armor_setter_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_mechrep_armor_setter_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(btech_mechrep_armor_setter_test PRIVATE btmux_options)
+target_include_directories(btech_mechrep_armor_setter_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_mechrep_armor_setter
+  COMMAND btech_mechrep_armor_setter_test)
+set_tests_properties(btech_mechrep_armor_setter PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_mechrep_repair_command_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_mechrep_repair_command.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mechrep_construction.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+target_compile_options(btech_mechrep_repair_command_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_mechrep_repair_command_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(btech_mechrep_repair_command_test PRIVATE btmux_options)
+target_include_directories(btech_mechrep_repair_command_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_mechrep_repair_command
+  COMMAND btech_mechrep_repair_command_test)
+set_tests_properties(btech_mechrep_repair_command PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_template_specials_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_template_specials.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/template_save.c)
+target_compile_options(btech_template_specials_test PRIVATE -ffunction-sections)
+target_link_options(btech_template_specials_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_template_specials_test PRIVATE btmux_options)
+target_include_directories(btech_template_specials_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_template_specials COMMAND btech_template_specials_test)
+set_tests_properties(btech_template_specials PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_mechrep_numeric_setters_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_mechrep_numeric_setters.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mechrep.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+target_compile_options(btech_mechrep_numeric_setters_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_mechrep_numeric_setters_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(btech_mechrep_numeric_setters_test PRIVATE btmux_options)
+target_include_directories(btech_mechrep_numeric_setters_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_mechrep_numeric_setters
+  COMMAND btech_mechrep_numeric_setters_test)
+set_tests_properties(btech_mechrep_numeric_setters PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_mechrep_templates_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_mechrep_templates.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mechrep_templates.c)
+target_compile_options(btech_mechrep_templates_test PRIVATE
+  -ffunction-sections)
+target_link_options(btech_mechrep_templates_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_mechrep_templates_test PRIVATE btmux_options)
+target_include_directories(btech_mechrep_templates_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_mechrep_templates COMMAND btech_mechrep_templates_test)
+set_tests_properties(btech_mechrep_templates PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
 add_executable(btech_script_descriptors_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_script_descriptors.c)
 target_link_libraries(btech_script_descriptors_test PRIVATE btmux_options)
@@ -853,6 +1205,17 @@ add_test(NAME libuv_tcp_integration
     "${BTECH_INTEGRATION_FIXTURES}/libuv_tcp"
     $<TARGET_FILE:libuv_tcp_integration_test> $<TARGET_FILE:stompymux>)
 
+add_executable(repair_tcp_integration_test
+  ${CMAKE_SOURCE_DIR}/tests/integration/repair_tcp_integration.c)
+target_link_libraries(repair_tcp_integration_test
+  PRIVATE btmux_options SQLite3::SQLite3)
+target_include_directories(repair_tcp_integration_test PRIVATE
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME repair_tcp_integration
+  COMMAND bash "${BTECH_INTEGRATION_RUNNER}" repair-tcp
+    "${BTECH_GAME_FIXTURE}" - $<TARGET_FILE:repair_tcp_integration_test>
+    $<TARGET_FILE:stompymux>)
+
 add_executable(mux_header_interfaces_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/mux_header_interfaces.c)
 target_link_libraries(mux_header_interfaces_test PRIVATE btmux_options libsodium)
 target_include_directories(mux_header_interfaces_test PRIVATE
@@ -1212,6 +1575,7 @@ set(BTECH_INTEGRATION_TESTS
   help_index_integration
   libtelnet_integration
   libuv_tcp_integration
+  repair_tcp_integration
   lua_module_smoke)
 set_property(TEST ${BTECH_INTEGRATION_TESTS} APPEND PROPERTY LABELS integration)
 set_tests_properties(

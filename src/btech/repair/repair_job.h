@@ -155,6 +155,9 @@ bool repair_command_parse_gun(RepairCommandContext *command, char *buffer,
 
 intptr_t repair_event_payload_pack(RepairEventPayload payload);
 RepairEventPayload repair_event_payload_unpack(intptr_t encoded);
+int repair_fix_event_amount(RepairEventPayload payload);
+bool repair_fix_event_payload_with_amount(RepairEventPayload *payload,
+                                          int amount);
 typedef struct RepairEventSchedule {
   Mech *mech;
   int delay;
@@ -235,3 +238,4 @@ constexpr int LOCMAX = 16;
 constexpr int POSMAX = 16;
 constexpr int EXTMAX = 256;
 constexpr int PLAYERPOS = LOCMAX * POSMAX * EXTMAX;
+constexpr int REPAIR_FIX_AMOUNT_MAX = EXTMAX - 1;

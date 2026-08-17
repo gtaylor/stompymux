@@ -214,6 +214,9 @@ void mux_server_destroy(MuxServer *server) {
   /* Release the log timer while its libuv loop is still live. */
   log_cache_destroy(server->log.cache);
   server->log.cache = nullptr;
+  /* Cancel queued callbacks while their libuv loop and borrowed data are
+     still alive. Shutdown below drains the resulting close handles. */
+  mux_event_scheduler_destroy(&server->events);
   /* Stop libuv producers and drain pending handles before their borrowed
      registries and queues are released below. */
   server_lifecycle_shutdown(server->lifecycle);
@@ -230,7 +233,6 @@ void mux_server_destroy(MuxServer *server) {
   server->commands = nullptr;
   btech_context_destroy(server->btech);
   server->btech = nullptr;
-  mux_event_scheduler_destroy(&server->events);
   macro_registry_destroy(&server->macros);
   channel_registry_destroy(&server->channels);
   descriptor_registry_destroy(server->descriptors);

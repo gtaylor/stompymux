@@ -1,6 +1,7 @@
 /* Implements BattleTech repair mechanics for unit tech structure commands. */
 
 #include "btech/context.h"
+#include "equipment_types.h"
 #include "mech_equipment_api.h"
 #include "mech_events.h"
 #include "mech_parts.h"
@@ -42,30 +43,31 @@ void tech_fixarmor(DbRef player, Mech *facility, char *buffer) {
     return;
   }
   loc = PARSED.location;
-  if (loc >= 8) {
-    from = mech_section_rear_armor(mech, loc % 8);
-    to = mech_section_original_rear_armor(mech, loc % 8);
+  if (loc >= NUM_SECTIONS) {
+    from = mech_section_rear_armor(mech, loc % NUM_SECTIONS);
+    to = mech_section_original_rear_armor(mech, loc % NUM_SECTIONS);
   } else {
     from = mech_section_armor(mech, loc);
     to = mech_section_original_armor(mech, loc);
   }
-  if (mech_section_is_destroyed(mech, loc % 8)) {
+  if (mech_section_is_destroyed(mech, loc % NUM_SECTIONS)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That part's blown off! Use reattach first!");
     return;
   }
-  if (mech_section_is_flooded(mech, loc % 8)) {
+  if (mech_section_is_flooded(mech, loc % NUM_SECTIONS)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That location has been flooded! Use reseal first!");
     return;
   }
-  if (someone_fixing_a(mech, loc) || someone_fixing_i(mech, loc % 8)) {
+  if (someone_fixing_a(mech, loc) ||
+      someone_fixing_i(mech, loc % NUM_SECTIONS)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's repairing that section already!");
     return;
   }
-  if (mech_section_internal(mech, loc % 8) !=
-      mech_section_original_internal(mech, loc % 8)) {
+  if (mech_section_internal(mech, loc % NUM_SECTIONS) !=
+      mech_section_original_internal(mech, loc % NUM_SECTIONS)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "The internals need to be fixed first!");
     return;
@@ -76,7 +78,7 @@ void tech_fixarmor(DbRef player, Mech *facility, char *buffer) {
     return;
   }
   from = to < from ? to : from;
-  if (from == to) {
+  if (from >= to) {
     mecha_notify(btech_context_evaluation(context), player,
                  "The location doesn't need armor repair!");
     return;
@@ -131,7 +133,7 @@ void tech_fixinternal(DbRef player, Mech *facility, char *buffer) {
   loc = selection.location;
   from = mech_section_internal(mech, loc);
   to = mech_section_original_internal(mech, loc);
-  if (from == to) {
+  if (from >= to) {
     mecha_notify(btech_context_evaluation(context), player,
                  "The location doesn't need internals' repair!");
     return;
@@ -147,7 +149,8 @@ void tech_fixinternal(DbRef player, Mech *facility, char *buffer) {
                  "That location has been flooded! Use reseal first!");
     return;
   }
-  if (someone_fixing(mech, loc)) {
+  if (someone_fixing_i(mech, loc) || someone_fixing_a(mech, loc) ||
+      someone_fixing_a(mech, loc + NUM_SECTIONS)) {
     mecha_notify(btech_context_evaluation(context), player,
                  "Someone's repairing that section already!");
     return;
@@ -169,7 +172,7 @@ void tech_fixinternal(DbRef player, Mech *facility, char *buffer) {
       .difficulty = FIXINTERNAL_DIFFICULTY,
       .failure_time = FIXINTERNAL_TIME * ochange,
       .unit_time = FIXINTERNAL_TIME,
-      .failure_event_type = EVENT_REPAIR_FIX,
+      .failure_event_type = EVENT_REPAIR_FIXI,
       .event_type = EVENT_REPAIR_FIXI,
       .event_callback = mux_event_tickmech_repairinternal,
       .message = "You start fixing the internals..",

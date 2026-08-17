@@ -59,7 +59,7 @@ void mechrep_rloadnew(DbRef player, void *data, char *buffer) {
   RepairFacility *rep = repair_command.facility;
   Mech *mech = repair_command.mech;
   if (mech_parseattributes(buffer, args, 1) == 1) {
-    if (mech_template_load(player, mech, args[0]) == 1) {
+    if (mech_template_load(player, mech, args[0])) {
       mech_events_cancel_all(mech);
       clear_mech_from_los(mech);
       mecha_notify(btech_context_evaluation(rep->xcode.context), player,
@@ -93,7 +93,9 @@ void mechrep_rrestore(DbRef player, void *data, char *buffer [[maybe_unused]]) {
                  "Sorry, I don't know what type of mech this is");
     return;
   }
-  if (mech_template_load(player, mech, c) == 1) {
+  if (mech_template_load(player, mech, c)) {
+    mech_events_cancel_all(mech);
+    clear_mech_from_los(mech);
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Restoration complete!");
     return;

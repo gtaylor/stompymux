@@ -81,8 +81,10 @@ void tech_reload(DbRef player, Mech *facility, char *buffer) {
   BtechContext *context;
   int loc;
   int part;
-  int t;
+  int t = 0;
   int change;
+  int previous_ammo_mode;
+  int previous_data;
   RepairCommandStatus repair_status = repair_command_context_initialize(
       player, facility, REPAIR_STALL_CONFIGURED, &repair_command);
   if (repair_status != REPAIR_COMMAND_READY) {
@@ -148,10 +150,6 @@ void tech_reload(DbRef player, Mech *facility, char *buffer) {
                    "That is invalid ammo type for this weapon!");
       return;
     }
-    mech_critical_data_set(mech, loc, part, 0);
-    mech_critical_ammo_mode_set(
-        mech, loc, part,
-        (mech_critical_ammo_mode(mech, loc, part) & ~AMMO_MODES) | t);
   }
   change = 0;
 
@@ -160,6 +158,14 @@ void tech_reload(DbRef player, Mech *facility, char *buffer) {
     mecha_notify(btech_context_evaluation(context), player,
                  "You're too tired to do that!");
     return;
+  }
+
+  previous_ammo_mode = mech_critical_ammo_mode(mech, loc, part);
+  previous_data = mech_critical_data(mech, loc, part);
+  if (atype) {
+    mech_critical_data_set(mech, loc, part, 0);
+    mech_critical_ammo_mode_set(mech, loc, part,
+                                (previous_ammo_mode & ~AMMO_MODES) | t);
   }
 
   RepairPartAmountJob job = {
@@ -172,8 +178,13 @@ void tech_reload(DbRef player, Mech *facility, char *buffer) {
       .failure = reload_fail,
       .success = reload_succ,
   };
-  (void)repair_part_amount_job_execute(&repair_command, loc, part, &change,
-                                       &job);
+  RepairJobResult result =
+      repair_part_amount_job_execute(&repair_command, loc, part, &change, &job);
+  if (atype && (result == REPAIR_JOB_REJECTED ||
+                result == REPAIR_JOB_CALLBACK_ABORTED)) {
+    mech_critical_data_set(mech, loc, part, previous_data);
+    mech_critical_ammo_mode_set(mech, loc, part, previous_ammo_mode);
+  }
 }
 
 void tech_unload(DbRef player, Mech *facility, char *buffer) {

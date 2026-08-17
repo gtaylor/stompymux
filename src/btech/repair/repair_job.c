@@ -264,6 +264,8 @@ RepairJobResult repair_part_amount_job_execute(RepairCommandContext *command,
                                                int location, int part,
                                                int *amount,
                                                const RepairPartAmountJob *job) {
+  if (*amount < 0)
+    return REPAIR_JOB_REJECTED;
   const RepairOperationCall CALL = {
       .player = command->player,
       .mech = command->mech,
@@ -280,6 +282,7 @@ RepairJobResult repair_part_amount_job_execute(RepairCommandContext *command,
           &(RepairWorkSchedule){.command = command,
                                 .work_time = job->time,
                                 .multiplier = 3,
+                                .amount = *amount,
                                 .event_type = job->event_type,
                                 .callback = mech_event_failure_marker,
                                 .payload = {.location = location,
@@ -295,6 +298,7 @@ RepairJobResult repair_part_amount_job_execute(RepairCommandContext *command,
       &(RepairWorkSchedule){.command = command,
                             .work_time = job->time,
                             .multiplier = failed ? 3 : 2,
+                            .amount = *amount,
                             .event_type = job->event_type,
                             .callback = job->event_callback,
                             .payload = {.location = location,
@@ -332,6 +336,8 @@ RepairJobResult
 repair_section_amount_job_execute(RepairCommandContext *command, int location,
                                   int *amount,
                                   const RepairSectionAmountJob *job) {
+  if (*amount <= 0 || *amount > REPAIR_FIX_AMOUNT_MAX)
+    return REPAIR_JOB_REJECTED;
   const RepairOperationCall CALL = {
       .player = command->player,
       .mech = command->mech,
@@ -358,8 +364,10 @@ repair_section_amount_job_execute(RepairCommandContext *command, int location,
   } else if (job->success(&CALL) < 0) {
     return REPAIR_JOB_CALLBACK_ABORTED;
   }
-  RepairEventPayload payload = {
-      .location = location, .position = *amount, .player = command->player};
+  RepairEventPayload payload = {.location = location,
+                                .player = command->player};
+  if (!repair_fix_event_payload_with_amount(&payload, *amount))
+    return REPAIR_JOB_REJECTED;
   repair_event_schedule_with_techtime(
       &(RepairWorkSchedule){.command = command,
                             .work_time = job->unit_time * *amount,

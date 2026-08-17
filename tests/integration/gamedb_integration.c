@@ -1035,6 +1035,50 @@ static int seed_economy_parts(const char *path) {
   return result;
 }
 
+/* A bad persisted repair event must reject startup before it can be queued. */
+static int check_repair_event_rejection(const char *server, const char *config,
+                                        const char *directory,
+                                        const char *database, int event_type,
+                                        int remaining_ticks, long event_data,
+                                        int is_fake, int mech_dbref,
+                                        int *status) {
+  sqlite3 *sqlite = nullptr;
+  sqlite3_stmt *statement = nullptr;
+  int result = -1;
+
+  if (sqlite3_open_v2(database, &sqlite, SQLITE_OPEN_READWRITE, nullptr) !=
+          SQLITE_OK ||
+      sqlite3_prepare_v2(
+          sqlite,
+          "INSERT INTO btech_repair_events "
+          "(mech_dbref, event_type, remaining_ticks, event_data, is_fake) "
+          "VALUES (?, ?, ?, ?, ?);",
+          -1, &statement, nullptr) != SQLITE_OK ||
+      sqlite3_bind_int(statement, 1, mech_dbref) != SQLITE_OK ||
+      sqlite3_bind_int(statement, 2, event_type) != SQLITE_OK ||
+      sqlite3_bind_int(statement, 3, remaining_ticks) != SQLITE_OK ||
+      sqlite3_bind_int64(statement, 4, event_data) != SQLITE_OK ||
+      sqlite3_bind_int(statement, 5, is_fake) != SQLITE_OK ||
+      sqlite3_step(statement) != SQLITE_DONE)
+    goto done;
+  sqlite3_finalize(statement);
+  statement = nullptr;
+  if (run_server_in_directory(server, config, directory, 0, status) < 0 ||
+      !WIFEXITED(*status) || WEXITSTATUS(*status) == 0)
+    goto done;
+  if (sqlite3_exec(sqlite,
+                   "DELETE FROM btech_repair_events WHERE event_id = "
+                   "(SELECT max(event_id) FROM btech_repair_events);",
+                   nullptr, nullptr, nullptr) != SQLITE_OK)
+    goto done;
+  result = 0;
+
+done:
+  sqlite3_finalize(statement);
+  sqlite3_close(sqlite);
+  return result;
+}
+
 static int check_economy_parts(const char *path) {
   sqlite3 *sqlite = NULL;
   int result;
@@ -1811,6 +1855,24 @@ int main(int argc, char *argv[]) {
   }
   if (recovery_writer)
     return result;
+
+  if (recovery_rejection && result == 0 &&
+      (check_repair_event_rejection(server, sqlite_read_config, directory,
+                                    database, 999, 1, 0, 0, 3, &status) < 0 ||
+       check_repair_event_rejection(server, sqlite_read_config, directory,
+                                    database, 47, 0, 0, 0, 3, &status) < 0 ||
+       check_repair_event_rejection(server, sqlite_read_config, directory,
+                                    database, 47, 1, 0, 0, 3, &status) < 0 ||
+       check_repair_event_rejection(server, sqlite_read_config, directory,
+                                    database, 47, 1, 16, 1, 3, &status) < 0 ||
+       check_repair_event_rejection(server, sqlite_read_config, directory,
+                                    database, 47, 1, 0, 0, 999, &status) < 0)) {
+    fprintf(stderr,
+            "Invalid BTech repair-event fixture unexpectedly started: "
+            "%s\n",
+            directory);
+    return 1;
+  }
 
   if (result == 0 && (set_invalid_power_value(database, 2) < 0 ||
                       run_server_in_directory(server, sqlite_read_config,

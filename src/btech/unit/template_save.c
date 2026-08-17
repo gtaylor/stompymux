@@ -29,9 +29,24 @@
 #include <string.h>
 #include <strings.h>
 #include <time.h>
-
 static int *template_integer_slot(int *values, size_t count, int index) {
   return checked_storage_at(values, count, sizeof(*values), (size_t)index);
+}
+
+static void template_c3_master_state_update(Mech *mech, int c3_master_count) {
+  mech_c3_total_masters_set(mech, 0);
+  mech_c3_working_masters_set(mech, 0);
+  mech_crit_status_clear(&mech->rd.critstatus, MECH_CRIT_STATUS_C3_DESTROYED);
+  if (c3_master_count <= 0) {
+    mech->rd.specials &= ~C3_MASTER_TECH;
+    return;
+  }
+  mech_c3_total_masters_set(mech, mech_c3_total_master_count(mech));
+  mech_c3_working_masters_set(mech, mech_c3_working_master_count(mech));
+  if (mech_c3_total_masters(mech) > 0)
+    ((mech)->rd.specials) |= C3_MASTER_TECH;
+  if (mech_c3_working_masters(mech) == 0)
+    mech_crit_status_set(&mech->rd.critstatus, MECH_CRIT_STATUS_C3_DESTROYED);
 }
 
 void try_to_find_name(const char *mechref, Mech *mech) {
@@ -764,19 +779,7 @@ void update_specials(Mech *mech) {
   }
 
   /* New C3 Master code */
-  if (c3_master_count > 0) {
-    mech_c3_total_masters_set(mech, mech_c3_total_master_count(mech));
-    mech_c3_working_masters_set(mech, mech_c3_working_master_count(mech));
-
-    if (mech_c3_total_masters(mech) > 0)
-      ((mech)->rd.specials) |= C3_MASTER_TECH;
-
-    if (mech_c3_working_masters(mech) == 0)
-      mech_crit_status_set(&mech->rd.critstatus, MECH_CRIT_STATUS_C3_DESTROYED);
-    else
-      mech_crit_status_clear(&mech->rd.critstatus,
-                             MECH_CRIT_STATUS_C3_DESTROYED);
-  }
+  template_c3_master_state_update(mech, c3_master_count);
 }
 
 int update_oweight(Mech *mech, int value) {

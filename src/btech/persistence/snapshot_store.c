@@ -17,6 +17,7 @@
 #include "mech_identity_api.h"
 #include "mux/support/checked_storage.h"
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -172,9 +173,24 @@ bool btech_store_map(const RedBlackTreeVisitCall *call) {
 typedef struct BtechRepairStoreContext {
   BtechSpecialWriteContext *fault;
   sqlite3_stmt *statement;
+  BtechContext *btech;
+  struct BtechStoredRepairEvent *events;
+  size_t event_count;
   int type;
   int result;
 } BtechRepairStoreContext;
+
+typedef struct BtechStoredRepairEvent {
+  Mech *mech;
+  intptr_t event_data;
+  int event_type;
+} BtechStoredRepairEvent;
+
+static BtechStoredRepairEvent *
+btech_stored_repair_event_at(BtechStoredRepairEvent events[], size_t count,
+                             size_t index) {
+  return checked_storage_at(events, count, sizeof(*events), index);
+}
 
 static void btech_store_repair_event(MuxEvent *event, void *context_argument) {
   BtechRepairStoreContext *context = context_argument;
@@ -183,18 +199,88 @@ static void btech_store_repair_event(MuxEvent *event, void *context_argument) {
 
   if (context->result < 0 || !mech)
     return;
+  MuxEventCallback expected =
+      btech_special_repair_function_for_type(context->type);
+  if (!expected || (event->function != expected &&
+                    event->function != mech_event_failure_marker)) {
+    context->result = -1;
+    return;
+  }
+  /* Mech identity owns the canonical DbRef; avoid a registry walk per event. */
+  DbRef mech_dbref_value = mech_dbref(mech);
+  BtechRepairEventClassification classification =
+      btech_special_repair_event_classify(
+          mech, context->type, (intptr_t)event->data2,
+          event->function == mech_event_failure_marker);
+  if (classification == BTECH_REPAIR_EVENT_INVALID) {
+    context->result = -1;
+    return;
+  }
+  if (classification == BTECH_REPAIR_EVENT_STALE)
+    return;
+  for (size_t index = 0; index < context->event_count; index++) {
+    BtechStoredRepairEvent *stored = btech_stored_repair_event_at(
+        context->events, context->event_count, index);
+    if (stored->mech == mech && btech_special_repair_events_conflict(
+                                    stored->event_type, stored->event_data,
+                                    context->type, (intptr_t)event->data2)) {
+      context->result = -1;
+      return;
+    }
+  }
+  BtechStoredRepairEvent *grown = checked_storage_try_reallocate_array(
+      context->events, context->event_count + 1, sizeof(*context->events));
+  if (!grown) {
+    context->result = -1;
+    return;
+  }
+  context->events = grown;
+  *btech_stored_repair_event_at(context->events, context->event_count + 1,
+                                context->event_count) =
+      (BtechStoredRepairEvent){.mech = mech,
+                               .event_data = (intptr_t)event->data2,
+                               .event_type = context->type};
+  context->event_count++;
   if (remaining < 1)
     remaining = 1;
   if (event->function == mech_event_failure_marker)
     remaining = -remaining;
-  if (btech_special_bind_int(context->statement, 1, mech_dbref(mech)) < 0 ||
+  if (btech_special_bind_int(context->statement, 1, mech_dbref_value) < 0 ||
       btech_special_bind_int(context->statement, 2, context->type) < 0 ||
       btech_special_bind_int(context->statement, 3,
                              remaining < 0 ? -remaining : remaining) < 0 ||
-      btech_special_bind_int(context->statement, 4, (long)event->data2) < 0 ||
+      btech_special_bind_int(context->statement, 4, (intptr_t)event->data2) <
+          0 ||
       btech_special_bind_int(context->statement, 5, remaining < 0) < 0 ||
       btech_special_write_step(context->fault, context->statement) < 0)
     context->result = -1;
+}
+
+/* Preserve scheduler insertion order so equal-deadline callbacks keep their
+ * original ordering after a restart. The main list is newest-first. */
+int btech_special_store_repair_events(BtechSpecialWriteContext *fault,
+                                      sqlite3_stmt *statement,
+                                      BtechContext *context) {
+  BtechRepairStoreContext repair_context = {
+      .fault = fault,
+      .statement = statement,
+      .btech = context,
+      .result = 0,
+  };
+  MuxEvent *event = context->events ? context->events->events : nullptr;
+
+  while (event && event->next_in_main)
+    event = event->next_in_main;
+  for (; event && repair_context.result == 0; event = event->prev_in_main) {
+    int type = (unsigned char)event->type;
+    if ((event->flags & FLAG_ZOMBIE) || type < FIRST_TECH_EVENT ||
+        type > LAST_TECH_EVENT)
+      continue;
+    repair_context.type = type;
+    btech_store_repair_event(event, &repair_context);
+  }
+  free(repair_context.events);
+  return repair_context.result;
 }
 
 /* Store map dynamic state and repair queues in the SQLite snapshot. */
@@ -207,8 +293,6 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
   BtechMapStoreContext maps = {.result = -1};
   BtechObjectStoreContext objects;
   sqlite3_stmt *repairs = nullptr;
-  BtechRepairStoreContext repair_context;
-  int type;
   int result;
 
   btech_special_write_context_init(&fault);
@@ -360,20 +444,8 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
   objects.result = 0;
   red_black_tree_walk(btech->special_objects, WALK_INORDER,
                       btech_store_simple_object, &objects);
-  repair_context = (BtechRepairStoreContext){
-      .fault = &fault,
-      .statement = repairs,
-      .result = 0,
-  };
-  for (type = FIRST_TECH_EVENT;
-       type <= LAST_TECH_EVENT && repair_context.result == 0; type++) {
-    repair_context.type = type;
-    mux_event_visit_type(btech->events, type, btech_store_repair_event,
-                         &repair_context);
-  }
-  result = maps.result < 0 || objects.result < 0 || repair_context.result < 0
-               ? -1
-               : 0;
+  int repair_result = btech_special_store_repair_events(&fault, repairs, btech);
+  result = maps.result < 0 || objects.result < 0 || repair_result < 0 ? -1 : 0;
   sqlite3_finalize(maps.map);
   sqlite3_finalize(maps.hex);
   sqlite3_finalize(maps.slot);

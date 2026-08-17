@@ -200,6 +200,8 @@ set(BTECH_SOURCES
   repair/mech_tech_do.c
   repair/mech_tech_events.c
   repair/mech_tech_repairs.c
+  repair/repair_event_validation.c
+  repair/repair_gun_layout.c
   repair/repair_job.c
   repair/repair_event_payload.c
   repair/mechrep.c

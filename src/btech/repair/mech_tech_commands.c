@@ -1,5 +1,6 @@
 /* Implements BattleTech repair mechanics for unit tech commands. */
 
+#include <stdint.h>
 #include <string.h>
 
 #include "btech/context.h"
@@ -8,6 +9,7 @@
 #include "command_handlers_api.h"
 #include "econ_api.h"
 #include "equipment_types.h"
+#include "mech_api_types.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
 #include "mech_notify_api.h"
@@ -22,6 +24,7 @@
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
 #include "registry_api.h"
+#include "repair_gun_layout.h"
 #include "repair_job.h"
 
 typedef struct TechCheckContext {
@@ -45,23 +48,37 @@ static MechEventType tech_event_type_at(const MechEventType *values,
 
 static void tech_check_locpart(MuxEvent *e, void *data) {
   TechCheckContext *context = data;
-  int loc;
-  int pos;
-  long l = (long)e->data2;
+  intptr_t event_data = (intptr_t)e->data2;
 
-  RepairEventPayload payload = repair_event_payload_unpack(l);
-  loc = payload.location;
-  pos = payload.position;
-  if (loc == context->location && pos == context->part)
+  RepairEventPayload payload = repair_event_payload_unpack(event_data);
+  if (payload.location == context->location &&
+      payload.position == context->part)
     context->matches++;
 }
 
 static void tech_check_loc(MuxEvent *e, void *data) {
   TechCheckContext *context = data;
-  long loc;
+  RepairEventPayload payload = repair_event_payload_unpack((intptr_t)e->data2);
 
-  loc = (((long)e->data2) % 16);
-  if (loc == context->location)
+  if (payload.location == context->location)
+    context->matches++;
+}
+
+static void tech_check_scrap_gun_footprint(MuxEvent *event, void *data) {
+  TechCheckContext *context = data;
+  Mech *mech = event->data;
+  RepairEventPayload payload =
+      repair_event_payload_unpack((intptr_t)event->data2);
+  if (payload.location == context->location) {
+    context->matches++;
+    return;
+  }
+  RepairGunLayout layout;
+  if (mech &&
+      repair_gun_layout_find(mech, payload.location, payload.position,
+                             REPAIR_GUN_LAYOUT_REQUIRE_WEAPON, &layout) &&
+      layout.local_count < layout.size &&
+      layout.split.slot.section == context->location)
     context->matches++;
 }
 
@@ -152,7 +169,10 @@ int someone_resealing(Mech *mech, int loc) {
 
 int someone_scrapping_loc(Mech *mech, int loc) {
   return tech_event_location_count(&(TechEventLocationQuery){
-      .mech = mech, .location = loc, .event_type = EVENT_REPAIR_SCRL});
+      .mech = mech,
+      .location = loc % NUM_SECTIONS,
+      .event_type = EVENT_REPAIR_SCRL,
+  });
 }
 
 bool someone_scrapping_part(Mech *mech, int loc, int part) {
@@ -171,11 +191,30 @@ bool someone_scrapping_part(Mech *mech, int loc, int part) {
 }
 
 bool can_scrap_loc(Mech *mech, int loc) {
-  TechCheckContext check = {.location = loc % 8};
+  const MechEventType EVENT_TYPES[] = {
+      EVENT_REPAIR_REPL,       EVENT_REPAIR_REPAP,   EVENT_REPAIR_MOB,
+      EVENT_REPAIR_REPENHCRIT, EVENT_REPAIR_RELO,    EVENT_REPAIR_FIXI,
+      EVENT_REPAIR_REAT,       EVENT_REPAIR_REPSUIT, EVENT_REPAIR_RESE,
+      EVENT_REPAIR_SCRP,       EVENT_REPAIR_UMOB,
+  };
+  TechCheckContext check = {.location = loc % NUM_SECTIONS};
 
-  mech_event_visit(mech, EVENT_REPAIR_REPL, tech_check_loc, &check);
-  mech_event_visit(mech, EVENT_REPAIR_RELO, tech_check_loc, &check);
-  return (!check.matches && !someone_fixing(mech, loc)) != 0;
+  for (size_t index = 0; index < (sizeof(EVENT_TYPES) / sizeof(EVENT_TYPES[0]));
+       index++) {
+    mech_event_visit(
+        mech,
+        tech_event_type_at(EVENT_TYPES,
+                           sizeof(EVENT_TYPES) / sizeof(*EVENT_TYPES), index),
+        tech_check_loc, &check);
+  }
+  mech_event_visit(mech, EVENT_REPAIR_SCRG, tech_check_scrap_gun_footprint,
+                   &check);
+  mech_event_visit(mech, EVENT_REPAIR_REPLG, tech_check_scrap_gun_footprint,
+                   &check);
+  mech_event_visit(mech, EVENT_REPAIR_REPAG, tech_check_scrap_gun_footprint,
+                   &check);
+  return (check.matches == 0 && !someone_fixing_a(mech, check.location) &&
+          !someone_fixing_a(mech, check.location + NUM_SECTIONS)) != 0;
 }
 
 bool can_scrap_part(Mech *mech, int loc, int part) {

@@ -5,6 +5,7 @@ typedef struct MuxEvent MuxEvent;
 void mux_event_tickmech_removesection(MuxEvent *event);
 void mux_event_tickmech_removegun(MuxEvent *event);
 void mux_event_tickmech_removepart(MuxEvent *event);
+void mux_event_tickmech_scrap_failure(MuxEvent *event);
 void mux_event_tickmech_repairarmor(MuxEvent *event);
 void mux_event_tickmech_repairinternal(MuxEvent *event);
 void mux_event_tickmech_reattach(MuxEvent *event);

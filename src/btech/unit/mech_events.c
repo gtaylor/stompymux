@@ -42,6 +42,7 @@
 #include "mech_specification_api.h"
 #include "mech_stagger.h"
 #include "mech_status_types.h"
+#include "mech_tech_events_api.h"
 #include "mech_update_api.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
@@ -411,7 +412,9 @@ void aero_move_event(MuxEvent *e) {
   }
 }
 
-void mech_event_failure_marker(MuxEvent *event [[maybe_unused]]) {}
+void mech_event_failure_marker(MuxEvent *event) {
+  mux_event_tickmech_scrap_failure(event);
+}
 
 /*
  * Exile Stun Code Event

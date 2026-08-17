@@ -1,7 +1,6 @@
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "checked_conversion.h"
-#include "command_handlers_api.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "map_conditions_api.h"
@@ -12,7 +11,6 @@
 #include "mech_partnames_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
-#include "mux/objects/attrs.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
@@ -71,8 +69,6 @@ static int load_template_internal(DbRef player, Mech *mech, char *filename,
   }
   (void)string_copy_bounded(mech->ud.mech_type, sizeof(mech->ud.mech_type),
                             ptr);
-  silly_atr_set_in(mech->xcode.context->database, mech->mynum, A_MECHTYPE,
-                   ((mech)->ud.mech_type));
   mech_radio_configuration_set(mech, 0);
   while (fgets(line, 512, fp)) {
     size_t line_length = strlen(line);
@@ -138,8 +134,6 @@ static int load_template_internal(DbRef player, Mech *mech, char *filename,
             filename, tmpc, ((mech)->ud.mech_type));
         tmpc = ((mech)->ud.mech_type);
       }
-      silly_atr_set_in(mech->xcode.context->database, mech->mynum, A_MECHTYPE,
-                       tmpc);
       if (tmpc != ((mech)->ud.mech_type)) {
         (void)string_copy_bounded(((mech)->ud.mech_type),
                                   sizeof(((mech)->ud.mech_type)), tmpc);

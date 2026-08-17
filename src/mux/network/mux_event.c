@@ -67,6 +67,8 @@ void mux_event_scheduler_destroy(MuxEventScheduler *scheduler) {
     return;
   for (event = scheduler->events; event != nullptr; event = next) {
     next = event->next_in_main;
+    mux_timer_destroy(event->timer);
+    event->timer = nullptr;
     if (event->flags & FLAG_FREE_DATA)
       free(event->data);
     if (event->flags & FLAG_FREE_DATA2)
