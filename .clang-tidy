@@ -57,6 +57,8 @@ Checks: >
 WarningsAsErrors: '*'
 HeaderFilterRegex: '^.*/src/(mux|btech)/.*'
 CheckOptions:
+  readability-implicit-bool-conversion.AllowIntegerConditions: true
+  readability-implicit-bool-conversion.AllowPointerConditions: true
   readability-braces-around-statements.ShortStatementLines: 5
   readability-identifier-naming.ConstantCase: UPPER_CASE
   readability-identifier-naming.EnumCase: CamelCase
