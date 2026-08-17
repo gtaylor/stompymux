@@ -12,7 +12,8 @@ ast_policy_checker_build_dir := ".build-ast-policy-checker"
 clang_tidy := env("CLANG_TIDY", "clang-tidy-22")
 run_clang_tidy := env("RUN_CLANG_TIDY", "run-clang-tidy-22")
 clang := env("CLANG", "clang-22")
-cxx := env("CXX", "g++")
+clangxx := env("CLANGXX", "clang++-22")
+gxx := env("GXX", "g++")
 llvm_config := env("LLVM_CONFIG", "llvm-config-22")
 clang_format := env("CLANG_FORMAT", "clang-format-22")
 stylua := env("STYLUA", "stylua")
@@ -94,7 +95,7 @@ check-boolean-contracts: build ast-policy-checker-build
     mapfile -d '' -t sources < <(find src/mux src/btech -type f -name '*.c' -print0); output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{ast_policy_checker_build_dir}}/ast-policy-checker -p {{build_dir}} --checks=boolean-contracts "${sources[@]}" >"$output" 2>&1 || status=$?; if (( status != 0 )); then rg -v '^\[[0-9]+/[0-9]+\]' "$output" >&2 || true; exit "$status"; fi
 
 ast-policy-checker-build:
-    llvm_cmake_dir="$({{llvm_config}} --cmakedir)"; cmake -S tools/ast_policy_checker -B {{ast_policy_checker_build_dir}} -DCMAKE_CXX_COMPILER={{cxx}} -DLLVM_DIR="$llvm_cmake_dir" -DClang_DIR="${llvm_cmake_dir%/llvm}/clang"
+    llvm_cmake_dir="$({{llvm_config}} --cmakedir)"; gcc_install_dir="$({{gxx}} -print-file-name=libstdc++.so)"; gcc_install_dir="${gcc_install_dir%/*}"; cmake -S tools/ast_policy_checker -B {{ast_policy_checker_build_dir}} -DCMAKE_CXX_COMPILER={{clangxx}} -DCMAKE_CXX_FLAGS="--gcc-install-dir=$gcc_install_dir -Wno-gcc-install-dir-libstdcxx" -DLLVM_DIR="$llvm_cmake_dir" -DClang_DIR="${llvm_cmake_dir%/llvm}/clang"
     cmake --build {{ast_policy_checker_build_dir}} -j "$(nproc)"
 
 check-ast-policies: build ast-policy-checker-build

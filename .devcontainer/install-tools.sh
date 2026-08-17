@@ -25,7 +25,7 @@ echo 'deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main' \
 
 "${SUDO[@]}" apt-get update
 "${SUDO[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-  build-essential clang-22 clang-format-22 clang-tidy-22 clang-tools-22 \
+  build-essential g++ clang-22 clang-format-22 clang-tidy-22 clang-tools-22 \
   libclang-22-dev libclang-rt-22-dev llvm-22-dev clangd-22 libsqlite3-dev \
   ripgrep sqlite3 unzip xxd
 
