@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-test:
     name: ${{ matrix.configuration.name }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -50,7 +50,38 @@ jobs:
           push: never
           runCmd: |
             set -euo pipefail
-            just ci
+            just ci-build-test
+            grep -Fx "CMAKE_BUILD_TYPE:STRING=$CMAKE_BUILD_TYPE" .build/CMakeCache.txt
+            grep -Fx "BTECH_ENABLE_ASAN:BOOL=$BTECH_ENABLE_ASAN" .build/CMakeCache.txt
+            grep -Fx "BTECH_ENABLE_UBSAN:BOOL=$BTECH_ENABLE_UBSAN" .build/CMakeCache.txt
+            grep -Fx "BTECH_STRICT_C23:BOOL=$BTECH_STRICT_C23" .build/CMakeCache.txt
+            git diff --exit-code
+
+  analysis:
+    name: Analysis
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Analyze in devcontainer
+        uses: devcontainers/ci@v0.3
+        with:
+          configFile: .devcontainer/devcontainer.json
+          env: |
+            CMAKE_BUILD_TYPE=Release
+            BTECH_ENABLE_ASAN=OFF
+            BTECH_ENABLE_UBSAN=OFF
+            BTECH_STRICT_C23=ON
+          push: never
+          runCmd: |
+            set -euo pipefail
+            just ci-analysis
             grep -Fx "CMAKE_BUILD_TYPE:STRING=$CMAKE_BUILD_TYPE" .build/CMakeCache.txt
             grep -Fx "BTECH_ENABLE_ASAN:BOOL=$BTECH_ENABLE_ASAN" .build/CMakeCache.txt
             grep -Fx "BTECH_ENABLE_UBSAN:BOOL=$BTECH_ENABLE_UBSAN" .build/CMakeCache.txt

@@ -19,7 +19,11 @@ stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis fmt-check build frame-check check-ast-policies test tidy-check
+ci: ci-build-test ci-analysis
+
+ci-build-test: build test
+
+ci-analysis: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis fmt-check build frame-check check-ast-policies tidy-check
 
 agent-checks: ci
 
