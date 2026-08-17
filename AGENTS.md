@@ -51,7 +51,8 @@ When writing C code, use the following naming conventions:
 ## Development workflows
 
 - We use the `just` command runner
-- When making changes, run `just agent-checks` to validate end to end.
+- When making changes, run `just build test` to validate end to end.
+- Before handing back to the user or filing a pull request, run `just agent-checks`. This is much slower than `just test` but also much more comprehensive.
 - Make sure that updates to behaviors are reflected in `game/help/`, and `docs/`.
 - Check the various `game/*.conf` and `game/*.config` files when making changes to mudconfs, configs, and settings.
 - If making DB schema changes, offer to update the game's database at `game/data/stompymux.db`. If a `stompymux` process is running, direct me to shutdown the game before making changes or instability could occur.

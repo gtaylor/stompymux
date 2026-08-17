@@ -8,16 +8,18 @@ enable_ubsan := env("BTECH_ENABLE_UBSAN", "ON")
 strict_c23 := env("BTECH_STRICT_C23", "ON")
 build_fuzzers := env("BTECH_BUILD_FUZZERS", "OFF")
 frame_check_build_dir := ".build-frame-check"
+ast_policy_checker_build_dir := ".build-ast-policy-checker"
 clang_tidy := env("CLANG_TIDY", "clang-tidy-22")
 run_clang_tidy := env("RUN_CLANG_TIDY", "run-clang-tidy-22")
-clang_query := env("CLANG_QUERY", "clang-query-22")
 clang := env("CLANG", "clang-22")
+cxx := env("CXX", "g++")
+llvm_config := env("LLVM_CONFIG", "llvm-config-22")
 clang_format := env("CLANG_FORMAT", "clang-format-22")
 stylua := env("STYLUA", "stylua")
 
 default: checks install
 
-ci: check-source-size check-typed-constants check-enum-underlying-type check-status-accessors check-nullptr check-unsafe-apis check-bounded-copy check-checked-suffix-order check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis fmt-check build frame-check check-boolean-contracts check-boolean-conversions test tidy-check
+ci: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis fmt-check build frame-check check-ast-policies test tidy-check
 
 agent-checks: ci
 
@@ -34,8 +36,8 @@ check-typed-constants:
 
 # Named enums use the house-standard signed int representation explicitly.
 # Anonymous enums remain the typed-constant idiom and need no underlying type.
-check-enum-underlying-type:
-    status=0; grep -RInE --include='*.c' --include='*.h' --include='*.h.in' '^[[:space:]]*(typedef[[:space:]]+)?enum[[:space:]]+[A-Za-z_][A-Za-z_0-9]*[[:space:]]*\{' src || status=$?; if (( status == 0 )); then echo 'Named enum without an explicit underlying type found; use : int.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
+check-enum-underlying-type: build ast-policy-checker-build
+    mapfile -d '' -t sources < <(find src/mux src/btech -type f -name '*.c' -print0); output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{ast_policy_checker_build_dir}}/ast-policy-checker -p {{build_dir}} --checks=enum-underlying-type "${sources[@]}" >"$output" 2>&1 || status=$?; if (( status != 0 )); then rg -v '^\[[0-9]+/[0-9]+\]' "$output" >&2 || true; exit "$status"; fi
 
 # Persisted unit status words are typed enums. Raw bitwise operations on those
 # fields must go through the status-specific accessors so masks cannot cross
@@ -43,8 +45,8 @@ check-enum-underlying-type:
 # that retain one of the six status enum types, while ignoring enum constants.
 # It keys on operand type, so an explicit cast of both operands to int is a
 # deliberate blind spot; that loud escape hatch remains review-visible.
-check-status-accessors:
-    mapfile -d '' -t sources < <(find src/mux src/btech tests -type f -name '*.c' -print0); output=$(mktemp); trap 'rm -f "$output"' EXIT; matcher='match binaryOperator(isExpansionInMainFile(), hasAnyOperatorName("&", "|", "^"), hasEitherOperand(ignoringParenImpCasts(anyOf(memberExpr(hasType(qualType(hasDeclaration(namedDecl(hasAnyName("MechStatus", "MechStatus2", "MechSpecialsStatus", "MechCritStatus", "MechTankCritStatus", "MechCritStatus2")))))), declRefExpr(to(varDecl(hasType(qualType(hasDeclaration(namedDecl(hasAnyName("MechStatus", "MechStatus2", "MechSpecialsStatus", "MechCritStatus", "MechTankCritStatus", "MechCritStatus2")))))))))))).bind("op")'; status=0; {{clang_query}} -p {{build_dir}} "${sources[@]}" -c "$matcher" >"$output" 2>&1 || status=$?; if (( status != 0 )); then cat "$output" >&2; exit "$status"; fi; if rg -q 'Match #' "$output"; then rg -n 'Match #|: note: "op" binds here$' "$output" >&2; echo 'Raw bitwise operation on a persisted unit status word; use its status-specific accessor.' >&2; exit 1; fi
+check-status-accessors: build ast-policy-checker-build
+    mapfile -d '' -t sources < <(find src/mux src/btech tests -path tests/fixtures -prune -o -type f -name '*.c' -print0); output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{ast_policy_checker_build_dir}}/ast-policy-checker -p {{build_dir}} --checks=status-accessors "${sources[@]}" >"$output" 2>&1 || status=$?; if (( status != 0 )); then rg -v '^\[[0-9]+/[0-9]+\]' "$output" >&2 || true; exit "$status"; fi
 
 # modernize-use-nullptr catches typed null-pointer constants, including bare 0,
 # but intentionally skips tokens inside macro expansions. Clang's raw lexer
@@ -63,8 +65,8 @@ check-bounded-copy:
 # The source-location pass is intentionally not control-flow analysis: writes
 # in loops or mutually exclusive branches can be missed or conservatively
 # reported.
-check-checked-suffix-order:
-    mapfile -d '' -t sources < <(find src/mux src/btech -type f -name '*.c' -print0); output=$(mktemp); violations=$(mktemp); trap 'rm -f "$output" "$violations"' EXIT; matcher='match callExpr(isExpansionInMainFile(), callee(functionDecl(hasAnyName("checked_string_suffix", "checked_mutable_string_suffix"))), hasArgument(0, declRefExpr(to(varDecl(hasType(pointerType())).bind("pointer")))), hasAncestor(functionDecl(isExpansionInMainFile(), hasBody(compoundStmt(hasDescendant(binaryOperator(isAssignmentOperator(), hasRHS(ignoringParenImpCasts(anyOf(characterLiteral(equals(0)), integerLiteral(equals(0))))), hasLHS(anyOf(unaryOperator(hasOperatorName("*"), hasUnaryOperand(ignoringParenImpCasts(declRefExpr(to(equalsBoundNode("pointer")))))), arraySubscriptExpr(hasBase(ignoringParenImpCasts(declRefExpr(to(equalsBoundNode("pointer"))))))))).bind("write")))))))'; status=0; {{clang_query}} -p {{build_dir}} "${sources[@]}" -c "$matcher" >"$output" 2>&1 || status=$?; if (( status != 0 )); then cat "$output" >&2; exit "$status"; fi; awk -F: 'function reset() { write_file=""; write_line=0; write_col=0; root_file=""; root_line=0; root_col=0 } function check() { if (write_file != "" && root_file == write_file && (write_line < root_line || (write_line == root_line && write_col < root_col))) print write_file ":" write_line ":" write_col " writes NUL before checked suffix at " root_file ":" root_line ":" root_col } /^Match #[0-9]+:/ { check(); reset() } /: note: "write" binds here$/ { write_file=$1; write_line=$(NF-3)+0; write_col=$(NF-2)+0; check() } /: note: "root" binds here$/ { root_file=$1; root_line=$(NF-3)+0; root_col=$(NF-2)+0; check() } END { check() }' "$output" >"$violations"; if [[ -s "$violations" ]]; then cat "$violations" >&2; echo 'NUL write precedes a checked suffix of the same pointer; capture the suffix first.' >&2; exit 1; fi
+check-checked-suffix-order: build ast-policy-checker-build
+    mapfile -d '' -t sources < <(find src/mux src/btech -type f -name '*.c' -print0); output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{ast_policy_checker_build_dir}}/ast-policy-checker -p {{build_dir}} --checks=checked-suffix-order "${sources[@]}" >"$output" 2>&1 || status=$?; if (( status != 0 )); then rg -v '^\[[0-9]+/[0-9]+\]' "$output" >&2 || true; exit "$status"; fi
 
 # Allocation goes through the checked_storage family so each site states its
 # OOM policy: checked_storage_allocate* fails fast, checked_storage_try_* is
@@ -88,8 +90,16 @@ check-unsafe-apis:
 # Predicate implementations use bool contracts. Callback/status interfaces and
 # the two documented non-predicates retain int because their values have wider
 # semantics than true/false.
-check-boolean-contracts:
-    mapfile -d '' -t sources < <(find src/mux src/btech -type f -name '*.c' -print0); output=$(mktemp); trap 'rm -f "$output"' EXIT; matcher='match functionDecl(isExpansionInMainFile(), hasBody(stmt()), returns(asString("int")), unless(hasAnyName("repair_part_type_difficulty", "safe_copy_chr", "lua_runtime_exit_enter_lock_passes")), unless(hasAnyParameter(hasType(pointerType(pointee(typedefType(hasDeclaration(typedefDecl(hasAnyName("RepairOperationCall", "ConfigurationCall"))))))))), unless(hasAnyParameter(hasType(pointerType(pointee(hasDeclaration(namedDecl(hasName("lua_State")))))))), hasDescendant(returnStmt()), unless(hasDescendant(returnStmt(hasReturnValue(ignoringImpCasts(unless(anyOf(integerLiteral(anyOf(equals(0), equals(1))), binaryOperator(hasAnyOperatorName("&&", "||", "==", "!=", "<", ">", "<=", ">=")), unaryOperator(hasOperatorName("!")), expr(hasType(booleanType()))))))))))'; status=0; {{clang_query}} -p {{build_dir}} "${sources[@]}" -c "$matcher" >"$output" 2>&1 || status=$?; if (( status != 0 )); then cat "$output" >&2; exit "$status"; fi; if rg -q 'Match #' "$output"; then rg -n 'Match #|binds here' "$output" >&2; echo 'Integer-returning predicate found; use a bool contract or document an exemption.' >&2; exit 1; fi
+check-boolean-contracts: build ast-policy-checker-build
+    mapfile -d '' -t sources < <(find src/mux src/btech -type f -name '*.c' -print0); output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{ast_policy_checker_build_dir}}/ast-policy-checker -p {{build_dir}} --checks=boolean-contracts "${sources[@]}" >"$output" 2>&1 || status=$?; if (( status != 0 )); then rg -v '^\[[0-9]+/[0-9]+\]' "$output" >&2 || true; exit "$status"; fi
+
+ast-policy-checker-build:
+    llvm_cmake_dir="$({{llvm_config}} --cmakedir)"; cmake -S tools/ast_policy_checker -B {{ast_policy_checker_build_dir}} -DCMAKE_CXX_COMPILER={{cxx}} -DLLVM_DIR="$llvm_cmake_dir" -DClang_DIR="${llvm_cmake_dir%/llvm}/clang"
+    cmake --build {{ast_policy_checker_build_dir}} -j "$(nproc)"
+
+check-ast-policies: build ast-policy-checker-build
+    mapfile -d '' -t sources < <(find src/mux src/btech tests -path tests/fixtures -prune -o -type f -name '*.c' -print0); output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{ast_policy_checker_build_dir}}/ast-policy-checker -p {{build_dir}} --checks=all "${sources[@]}" >"$output" 2>&1 || status=$?; if (( status != 0 )); then rg -v '^\[[0-9]+/[0-9]+\]' "$output" >&2 || true; exit "$status"; fi
+    ctest --test-dir {{ast_policy_checker_build_dir}} --output-on-failure
 
 # readability-implicit-bool-conversion also proposes noisy casts in the other
 # direction. Enforce only conversions into bool, matching the policy recorded
@@ -98,7 +108,7 @@ check-boolean-conversions:
     output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -p {{build_dir}} -j "$(nproc)" -checks='-*,readability-implicit-bool-conversion' -config="{Checks: '-*,readability-implicit-bool-conversion', WarningsAsErrors: '', HeaderFilterRegex: '^.*/src/(mux|btech)/.*', CheckOptions: {readability-implicit-bool-conversion.AllowIntegerConditions: 'true', readability-implicit-bool-conversion.AllowPointerConditions: 'true'}}" '^.*/src/(mux|btech)/.*[.]c$' >"$output" 2>&1 || status=$?; if (( status != 0 )); then cat "$output" >&2; exit "$status"; fi; if rg -n -- "-> 'bool'" "$output"; then echo 'Implicit conversion into bool found; make the conversion explicit.' >&2; exit 1; fi
 
 fmt-c:
-    find src -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} -i
+    find src tools/ast_policy_checker -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} -i
 
 fmt-lua:
     {{stylua}} --glob '**/*.lua' -- game/lua
@@ -106,7 +116,7 @@ fmt-lua:
 fmt: fmt-c fmt-lua
 
 fmt-check-c:
-    find src -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} --dry-run --Werror
+    find src tools/ast_policy_checker -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} --dry-run --Werror
 
 fmt-check-lua:
     {{stylua}} --check --glob '**/*.lua' -- game/lua
@@ -117,7 +127,7 @@ tidy:
     {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -fix -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'
 
 tidy-check:
-    {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'
+    output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -p {{build_dir}} -j "$(nproc)" -checks='readability-implicit-bool-conversion' -warnings-as-errors='*,-readability-implicit-bool-conversion' '^.*/src/(mux|btech)/.*[.]c$' >"$output" 2>&1 || status=$?; if (( status != 0 )); then cat "$output" >&2; exit "$status"; fi; if rg -n -- "-> 'bool'" "$output"; then echo 'Implicit conversion into bool found; make the conversion explicit.' >&2; exit 1; fi
 
 build:
     cmake -S . -B {{build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBTECH_ENABLE_ASAN={{enable_asan}} -DBTECH_ENABLE_UBSAN={{enable_ubsan}} -DBTECH_STRICT_C23={{strict_c23}} -DBTECH_BUILD_FUZZERS={{build_fuzzers}}
