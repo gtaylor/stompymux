@@ -7,7 +7,10 @@
  * - map fire, jelly, and searchlight lighting (415-420,441,454,461)
  * - searchlight range/arc limits and weather-dependent sensor range,
  *   including lit out-of-range hexes (278,280,307,589,631)
- * - map-hex boundary reads report an error without aliasing another row (133)
+ * - per-sensor terrain obstruction callbacks and even-column neighbor parity
+ *   (222-249,441-459)
+ * - map-hex boundary reads return the error cell without aliasing another row
+ *   (133)
  * - searchlight unit-class height behavior (147-167)
  */
 
@@ -35,7 +38,7 @@ static void test_map_hex_bounds(LosTestState *state) {
       .starty = 20,
       .xsize = 2,
       .ysize = 2,
-      .map = {MAPLOSHEX_LIT, MAPLOSHEX_SEE, MAPLOSHEX_NOLOS,
+      .map = {MAPLOSHEX_LIT, MAPLOSHEX_SEE, MAPLOSHEX_SEEELEV,
               MAPLOSHEX_SEETERRAIN},
   };
   /* Non-zero-origin map indexing at map_los.c:133-145. */
@@ -44,7 +47,7 @@ static void test_map_hex_bounds(LosTestState *state) {
   los_expect_int(state, "top-right hex reads the second map cell",
                  MAPLOSHEX_SEE, los_map_flag(&los_map, 11, 20));
   los_expect_int(state, "bottom-left hex reads the third map cell",
-                 MAPLOSHEX_NOLOS, los_map_flag(&los_map, 10, 21));
+                 MAPLOSHEX_SEEELEV, los_map_flag(&los_map, 10, 21));
   los_expect_int(state, "bottom-right hex reads the fourth map cell",
                  MAPLOSHEX_SEETERRAIN, los_map_flag(&los_map, 11, 21));
 
@@ -153,8 +156,8 @@ static void test_flat_map_range(LosTestState *state) {
   los_expect_true(state, "flat map range calculation succeeds", calculated);
   los_expect_true(state, "flat map sees inside sensor range",
                   hex_has(&los_map, 2, 0, MAPLOSHEX_SEE));
-  los_expect_true(state, "flat map hides the sensor range boundary",
-                  !hex_has(&los_map, 3, 0, MAPLOSHEX_SEE));
+  los_expect_true(state, "flat map sees within the hex-metric sensor range",
+                  hex_has(&los_map, 3, 0, MAPLOSHEX_SEE));
 }
 
 static void test_ridge_occlusion(LosTestState *state) {
@@ -236,6 +239,23 @@ static void test_mountain_and_water_blocks(LosTestState *state) {
                   !hex_has(&los_map, 2, 4, MAPLOSHEX_SEE));
 }
 
+static void test_sensor_specific_obstruction_limits(LosTestState *state) {
+  BattleMap map;
+  HexLosMap los_map;
+  los_fixture_reset(&map);
+  los_fixture_sensor_set(0, 60, true, 99, 99, false);
+  los_fixture_sensor_set(1, 60, true, 99, 99, true);
+  Mech observer = los_fixture_make_mech(2, 2, 0);
+  los_fixture_set_hex(2, 3, MOUNTAINS, MOUNTAINS, 0);
+  const bool calculated = calculate(&los_map, &map, &observer, 2, 2, 1, 4);
+
+  /* Sensor-specific mountain callback dispatch at map_los.c:228-249,655-660. */
+  los_expect_true(state, "per-sensor obstruction map calculation succeeds",
+                  calculated);
+  los_expect_true(state, "second sensor uses its own mountain limit",
+                  hex_has(&los_map, 2, 4, MAPLOSHEX_SEE));
+}
+
 static void test_water_world_setup(LosTestState *state) {
   BattleMap map;
   HexLosMap los_map;
@@ -287,6 +307,8 @@ static void test_litemark_map(LosTestState *state) {
                   hex_has(&los_map, 4, 4, MAPLOSHEX_LIT));
   los_expect_true(state, "fire map object lights neighboring hexes",
                   hex_has(&los_map, 4, 3, MAPLOSHEX_LIT));
+  los_expect_true(state, "fire uses even-column neighbor parity",
+                  hex_has(&los_map, 5, 5, MAPLOSHEX_LIT));
 
   los_fixture_reset(&map);
   observer = los_fixture_make_mech(2, 2, 0);
@@ -348,11 +370,11 @@ static void test_searchlight_tracing(LosTestState *state) {
   searchlight.dbref = 13;
   searchlight.searchlight = true;
   los_fixture_map_unit_set(0, &searchlight);
-  calculate(&los_map, &map, &observer, 0, 0, MAPLOS_MAXX, 1);
+  calculate(&los_map, &map, &observer, 0, 0, MAPLOS_MAXX, 31);
 
   /* Searchlight 60-range cutoff at map_los.c:307-327. */
-  los_expect_true(state, "searchlight does not light range 61",
-                  !hex_has(&los_map, 61, 0, MAPLOSHEX_LIT));
+  los_expect_true(state, "searchlight does not light beyond range 60",
+                  !hex_has(&los_map, 61, 30, MAPLOSHEX_LIT));
 
   los_fixture_reset(&map);
   observer = los_fixture_make_mech(0, 0, 0);
@@ -482,6 +504,7 @@ int main(void) {
   test_ridge_occlusion(&state);
   test_woods_obstruction(&state);
   test_mountain_and_water_blocks(&state);
+  test_sensor_specific_obstruction_limits(&state);
   test_water_world_setup(&state);
   test_litemark_map(&state);
   test_searchlight_tracing(&state);

@@ -1,8 +1,8 @@
 /*
  * mech_los_calculate_flags terrain scenarios, covering mech_los.c:
  * - bridge and water blocking behavior (211, 278)
- * - high-water and ice water accounting, including hex-target ice handling
- *   and submerged ice blocking (148, 251)
+ * - high-water and ice water accounting, including hex-target ice handling,
+ *   intervening ridge blocking, and submerged ice blocking (148, 251, 280)
  * - submerged paths, sea floors, and water-air transitions (177, 211, 219)
  * - underwater range penalties (307-310) and water/woods saturation (301-304)
  * - AA-tech visibility for each endpoint (116-123)
@@ -87,6 +87,19 @@ static void test_high_water_and_ice(LosTestState *state) {
   /* Submerged ice blocking at mech_los.c:251-254. */
   los_expect_true(state, "ice blocks when the sight line is below its surface",
                   submerged_ice_flags & BATTLE_MAP_LOS_BLOCKED);
+}
+
+static void test_ice_target_preserves_intervening_ridge(LosTestState *state) {
+  BattleMap map;
+  los_fixture_reset(&map);
+  Mech observer = los_fixture_make_mech(2, 2, 0);
+  los_fixture_set_hex(2, 3, GRASSLAND, GRASSLAND, 3);
+  los_fixture_set_hex(2, 4, ICE, ICE, 0);
+  const int flags = los_fixture_flags_to_hex(&map, &observer, 2, 4, 2.0F);
+
+  /* Ice-target final-point exemption at mech_los.c:280 excludes only target. */
+  los_expect_true(state, "ridge before an ice target blocks LOS",
+                  flags & BATTLE_MAP_LOS_BLOCKED);
 }
 
 static void test_submerged_paths(LosTestState *state) {
@@ -349,9 +362,9 @@ static void test_los_cache_accessors(LosTestState *state) {
   Mech target = los_fixture_make_mech(2, 4, 0);
   observer.map_slot = 0;
   target.map_slot = 1;
-  const unsigned short FLAGS =
-      BATTLE_MAP_LOS_SEEN | BATTLE_MAP_LOS_BLOCKED + BATTLE_MAP_LOS_WOOD * 3 +
-                                BATTLE_MAP_LOS_WATER * 4;
+  const unsigned short FLAGS = BATTLE_MAP_LOS_SEEN | BATTLE_MAP_LOS_BLOCKED |
+                               (BATTLE_MAP_LOS_WOOD * 3) |
+                               (BATTLE_MAP_LOS_WATER * 4);
   battle_map_los_flags_set(&map, observer.map_slot, target.map_slot, FLAGS);
 
   /* Cached seen flag accessor at map_los.c:90-95. */
@@ -442,6 +455,7 @@ int main(void) {
   LosTestState state = {0};
   test_bridge_and_water_blocking(&state);
   test_high_water_and_ice(&state);
+  test_ice_target_preserves_intervening_ridge(&state);
   test_submerged_paths(&state);
   test_underwater_penalties(&state);
   test_terrain_count_saturation(&state);

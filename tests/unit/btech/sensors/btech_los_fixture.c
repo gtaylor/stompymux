@@ -2,6 +2,7 @@
 
 #include "btech_channel.h"
 #include "command_handlers_api.h"
+#include "equipment_types.h"
 #include "map_conditions_api.h"
 #include "map_los.h"
 #include "map_los_types.h"
@@ -37,6 +38,10 @@ static int sensor_wood_limits[NUM_SENSORS];
 static int sensor_water_limits[NUM_SENSORS];
 static bool sensor_sees_mountains[NUM_SENSORS];
 
+static constexpr float ALPHA = 93.09773F;
+static constexpr float FULL_Y = (float)SCALEMAP;
+static constexpr float HALF_Y = 0.5F * FULL_Y;
+
 static SensorDefinition *sensor_at(int sensor) {
   return checked_storage_at(sensors, NUM_SENSORS, sizeof(*sensors),
                             (size_t)sensor);
@@ -62,24 +67,78 @@ static Mech **map_unit_at(int index) {
                             sizeof(*map_units), (size_t)index);
 }
 
-static bool fixture_sensor_can_see(const SensorContactRequest *request) {
-  const int sensor = mech_sensor_index(request->observer, 0);
-  if (request->flags == BATTLE_MAP_LOS_MOUNTAIN)
-    return *sensor_mountain_at(sensor);
-  if (request->flags >= BATTLE_MAP_LOS_WATER)
-    return battle_map_los_water_count(request->flags) <=
-           *sensor_water_limit_at(sensor);
-  if (request->flags >= BATTLE_MAP_LOS_WOOD)
-    return battle_map_los_wood_count(request->flags) <=
-           *sensor_wood_limit_at(sensor);
+static bool fixture_sensor_can_see(const SensorContactRequest *request,
+                                   int sensor) {
+  if ((request->flags & BATTLE_MAP_LOS_MOUNTAIN) &&
+      !*sensor_mountain_at(sensor))
+    return false;
+  if (battle_map_los_water_count(request->flags) >
+      *sensor_water_limit_at(sensor))
+    return false;
+  if (battle_map_los_wood_count(request->flags) > *sensor_wood_limit_at(sensor))
+    return false;
   return true;
+}
+
+static bool fixture_sensor_0_can_see(const SensorContactRequest *request) {
+  return fixture_sensor_can_see(request, 0);
+}
+
+static bool fixture_sensor_1_can_see(const SensorContactRequest *request) {
+  return fixture_sensor_can_see(request, 1);
+}
+
+static bool fixture_sensor_2_can_see(const SensorContactRequest *request) {
+  return fixture_sensor_can_see(request, 2);
+}
+
+static bool fixture_sensor_3_can_see(const SensorContactRequest *request) {
+  return fixture_sensor_can_see(request, 3);
+}
+
+static bool fixture_sensor_4_can_see(const SensorContactRequest *request) {
+  return fixture_sensor_can_see(request, 4);
+}
+
+static bool fixture_sensor_5_can_see(const SensorContactRequest *request) {
+  return fixture_sensor_can_see(request, 5);
+}
+
+static bool fixture_sensor_6_can_see(const SensorContactRequest *request) {
+  return fixture_sensor_can_see(request, 6);
+}
+
+static bool fixture_sensor_7_can_see(const SensorContactRequest *request) {
+  return fixture_sensor_can_see(request, 7);
+}
+
+static bool fixture_sensor_8_can_see(const SensorContactRequest *request) {
+  return fixture_sensor_can_see(request, 8);
+}
+
+typedef bool (*SensorCanSeeCallback)(const SensorContactRequest *request);
+
+static const SensorCanSeeCallback SENSOR_CAN_SEE_CALLBACKS[NUM_SENSORS] = {
+    fixture_sensor_0_can_see, fixture_sensor_1_can_see,
+    fixture_sensor_2_can_see, fixture_sensor_3_can_see,
+    fixture_sensor_4_can_see, fixture_sensor_5_can_see,
+    fixture_sensor_6_can_see, fixture_sensor_7_can_see,
+    fixture_sensor_8_can_see,
+};
+
+static SensorCanSeeCallback sensor_can_see_callback_at(int sensor) {
+  const SensorCanSeeCallback *callback = checked_storage_at_const(
+      SENSOR_CAN_SEE_CALLBACKS, NUM_SENSORS, sizeof(*SENSOR_CAN_SEE_CALLBACKS),
+      (size_t)sensor);
+  return *callback;
 }
 
 static void reset_sensors(void) {
   for (int sensor = 0; sensor < NUM_SENSORS; ++sensor) {
-    *sensor_at(sensor) = (SensorDefinition){.full_vision = 1,
-                                            .maximum_visibility = 60,
-                                            .can_see = fixture_sensor_can_see};
+    *sensor_at(sensor) =
+        (SensorDefinition){.full_vision = 1,
+                           .maximum_visibility = 60,
+                           .can_see = sensor_can_see_callback_at(sensor)};
     *sensor_wood_limit_at(sensor) = 99;
     *sensor_water_limit_at(sensor) = 99;
     *sensor_mountain_at(sensor) = true;
@@ -176,8 +235,25 @@ int mech_sensor_can_see(const MechSensorObservationRequest *request
   return sensor_can_see_result;
 }
 
-float mech_position_real_x(const Mech *mech) { return (float)mech->x; }
-float mech_position_real_y(const Mech *mech) { return (float)mech->y; }
+static void fixture_map_coord_to_real_coord(int hex_x, int hex_y, float *cart_x,
+                                            float *cart_y) {
+  *cart_x = (2.0F + (3.0F * (float)hex_x)) * ALPHA;
+  *cart_y = ((hex_x % 2) ? 0.0F : HALF_Y) + ((float)hex_y * FULL_Y);
+}
+
+float mech_position_real_x(const Mech *mech) {
+  float cart_x;
+  float cart_y;
+  fixture_map_coord_to_real_coord(mech->x, mech->y, &cart_x, &cart_y);
+  return cart_x;
+}
+
+float mech_position_real_y(const Mech *mech) {
+  float cart_x;
+  float cart_y;
+  fixture_map_coord_to_real_coord(mech->x, mech->y, &cart_x, &cart_y);
+  return cart_y;
+}
 float mech_position_real_z(const Mech *mech) { return (float)mech->z * ZSCALE; }
 
 const SensorDefinition *mech_sensor_definition(int sensor) {
@@ -191,29 +267,32 @@ int in_weapon_arc(Mech *mech, float x [[maybe_unused]],
 
 void map_coord_to_real_coord(int hex_x, int hex_y, float *cart_x,
                              float *cart_y) {
-  *cart_x = (float)hex_x;
-  *cart_y = (float)hex_y;
+  fixture_map_coord_to_real_coord(hex_x, hex_y, cart_x, cart_y);
 }
 
 float map_spatial_range(const MapSpatialSegment *segment) {
   const float delta_x = segment->end.x - segment->start.x;
   const float delta_y = segment->end.y - segment->start.y;
-  const float delta_z = (segment->end.z - segment->start.z) / ZSCALE;
-  return sqrtf((delta_x * delta_x) + (delta_y * delta_y) + (delta_z * delta_z));
+  const float delta_z = segment->end.z - segment->start.z;
+  return sqrtf((delta_x * delta_x) + (delta_y * delta_y) +
+               (delta_z * delta_z)) /
+         (float)SCALEMAP;
 }
 
 void visit_neighbor_hexes(BattleMap *map, int x, int y,
                           NeighborHexCallback callback, void *context) {
-  const MapHexPosition neighbors[] = {
-      {.x = x, .y = y - 1}, {.x = x + 1, .y = y - 1}, {.x = x + 1, .y = y},
-      {.x = x, .y = y + 1}, {.x = x - 1, .y = y},     {.x = x - 1, .y = y - 1}};
-  for (size_t index = 0; index < sizeof(neighbors) / sizeof(*neighbors);
-       ++index) {
-    const MapHexPosition *neighbor = checked_storage_at_const(
-        neighbors, sizeof(neighbors) / sizeof(*neighbors), sizeof(*neighbors),
-        index);
-    if (battle_map_coordinate_is_valid(map, neighbor->x, neighbor->y))
-      callback(map, neighbor->x, neighbor->y, context);
+  const MapHexPosition offsets[] = {{.x = 0, .y = -1}, {.x = 1, .y = 0},
+                                    {.x = 1, .y = 1},  {.x = 0, .y = 1},
+                                    {.x = -1, .y = 1}, {.x = -1, .y = 0}};
+  for (size_t index = 0; index < sizeof(offsets) / sizeof(*offsets); ++index) {
+    const MapHexPosition *offset = checked_storage_at_const(
+        offsets, sizeof(offsets) / sizeof(*offsets), sizeof(*offsets), index);
+    const int neighbor_x = x + offset->x;
+    int neighbor_y = y + offset->y;
+    if (x % 2 && !(neighbor_x % 2))
+      --neighbor_y;
+    if (battle_map_coordinate_is_valid(map, neighbor_x, neighbor_y))
+      callback(map, neighbor_x, neighbor_y, context);
   }
 }
 
