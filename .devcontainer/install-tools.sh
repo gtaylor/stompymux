@@ -25,9 +25,9 @@ echo 'deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main' \
 
 "${SUDO[@]}" apt-get update
 "${SUDO[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-  build-essential g++ clang-22 clang-format-22 clang-tidy-22 clang-tools-22 \
-  libclang-22-dev libclang-rt-22-dev llvm-22-dev clangd-22 libsqlite3-dev \
-  ripgrep sqlite3 unzip xxd
+  build-essential gcc-14 g++-14 clang-22 clang-format-22 clang-tidy-22 \
+  clang-tools-22 libclang-22-dev libclang-rt-22-dev llvm-22-dev clangd-22 \
+  libsqlite3-dev ripgrep sqlite3 unzip xxd
 
 CMAKE_ARCHIVE="cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz"
 curl --location --proto '=https' --tlsv1.2 --fail --silent --show-error \
