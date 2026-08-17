@@ -20,6 +20,7 @@
 
 enum {
   TEST_TIMEOUT_MS = 15000,
+  SERVER_READY_TIMEOUT_MS = 5000,
   TEST_PROCESS_TIMEOUT_SECONDS = 60,
   COMMAND_POLL_MS = 100,
   COMMAND_INTERVAL_MS = 250,
@@ -136,16 +137,73 @@ static int stop_server(pid_t *child) {
 
 static pid_t start_server(const char *server, const char *directory,
                           bool bootstrap) {
+  char ready_descriptor[32];
+  char ready_signal;
+  int ready_pipe[2];
+  struct pollfd ready;
+  int status;
+
+  if (pipe(ready_pipe) < 0) {
+    perror("repair TCP readiness pipe");
+    return -1;
+  }
   pid_t child = fork();
 
-  if (child != 0)
-    return child;
-  if (chdir(directory) < 0 ||
-      setenv("BTECH_TEST_GOD_PASSWORD", "btmuxr0x", 1) < 0 ||
-      (bootstrap && setenv("BTECH_TEST_BTECH_BOOTSTRAP", "1", 1) < 0))
+  if (child < 0) {
+    perror("repair TCP fork");
+    close(ready_pipe[0]);
+    close(ready_pipe[1]);
+    return -1;
+  }
+  if (child == 0) {
+    close(ready_pipe[0]);
+    snprintf(ready_descriptor, sizeof(ready_descriptor), "%d", ready_pipe[1]);
+    if (chdir(directory) < 0 ||
+        setenv("BTECH_TEST_READY_FD", ready_descriptor, 1) < 0 ||
+        setenv("BTECH_TEST_GOD_PASSWORD", "btmuxr0x", 1) < 0 ||
+        (bootstrap && setenv("BTECH_TEST_BTECH_BOOTSTRAP", "1", 1) < 0))
+      _exit(127);
+    execl(server, server, "stompymux.toml", nullptr);
     _exit(127);
-  execl(server, server, "stompymux.toml", nullptr);
-  _exit(127);
+  }
+
+  close(ready_pipe[1]);
+  ready = (struct pollfd){.fd = ready_pipe[0], .events = POLLIN};
+  for (int elapsed = 0; elapsed < SERVER_READY_TIMEOUT_MS; elapsed += 25) {
+    pid_t waited = waitpid(child, &status, WNOHANG);
+
+    if (waited == child) {
+      fprintf(stderr, "repair TCP server exited before readiness: status=%d\n",
+              status);
+      close(ready_pipe[0]);
+      return -1;
+    }
+    if (waited < 0) {
+      perror("repair TCP readiness waitpid");
+      close(ready_pipe[0]);
+      return -1;
+    }
+    int polled = poll(&ready, 1, 25);
+    if (polled < 0 && errno == EINTR)
+      continue;
+    if (polled < 0) {
+      perror("repair TCP readiness poll");
+      break;
+    }
+    if (polled == 1 && (ready.revents & POLLIN) &&
+        read(ready_pipe[0], &ready_signal, sizeof(ready_signal)) ==
+            sizeof(ready_signal)) {
+      close(ready_pipe[0]);
+      return child;
+    }
+    if (polled == 1 && (ready.revents & (POLLERR | POLLHUP | POLLNVAL)))
+      break;
+  }
+  fprintf(stderr, "repair TCP server did not become ready\n");
+  close(ready_pipe[0]);
+  kill(child, SIGKILL);
+  waitpid(child, &status, 0);
+  return -1;
 }
 
 static int send_text(int socket_fd, const char *text) {
@@ -459,18 +517,12 @@ int main(int argc, char **argv) {
 
   fprintf(stderr, "repair TCP phase: bootstrap database\n");
   child = start_server(server, directory, false);
-  if (child < 0 || (client = connect_when_ready(port)) < 0 ||
-      close(client) < 0 || stop_server(&child) < 0 ||
-      seed_special_mech(database) < 0)
+  if (child < 0 || stop_server(&child) < 0 || seed_special_mech(database) < 0)
     goto done;
-  client = -1;
   fprintf(stderr, "repair TCP phase: bootstrap BTech state\n");
   child = start_server(server, directory, true);
-  if (child < 0 || (client = connect_when_ready(port)) < 0 ||
-      close(client) < 0 || stop_server(&child) < 0 ||
-      seed_repair_state(database) < 0)
+  if (child < 0 || stop_server(&child) < 0 || seed_repair_state(database) < 0)
     goto done;
-  client = -1;
   fprintf(stderr, "repair TCP phase: schedule and persist two-point repair\n");
   child = start_server(server, directory, false);
   if (child < 0 || (client = connect_when_ready(port)) < 0 ||
