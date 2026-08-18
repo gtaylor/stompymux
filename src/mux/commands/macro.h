@@ -1,5 +1,6 @@
-/* macro.h - Player macro storage and macro-command declarations. */
-
+/** @file
+ * Player macro storage and macro-command declarations.
+ */
 #pragma once
 
 #include "mux/support/owned_text.h"
@@ -47,13 +48,33 @@ struct MacroRegistry {
 };
 typedef struct CommandRegistry CommandRegistry;
 
+/** Initializes macro registry. @param[out] registry Registry to use. @param[in]
+ * channels Channels. */
+
 void macro_registry_initialize(MacroRegistry *registry,
                                ChannelRegistry *channels);
+/** Destroys macro registry. @param[in,out] registry Registry to use. */
+
 void macro_registry_destroy(MacroRegistry *registry);
+/** Executes macro registry item. @param[in] registry Registry to use.
+ * @param[in] index Zero-based index. */
+
 MacroSet *macro_registry_item(const MacroRegistry *registry, size_t index);
+/** Executes macro registry slot. @param[in,out] registry Registry to use.
+ * @param[in] index Zero-based index. */
+
 MacroSet **macro_registry_slot(MacroRegistry *registry, size_t index);
+/** Executes macro string item. @param[in] set Set. @param[in] index Zero-based
+ * index. */
+
 char *macro_string_item(const MacroSet *set, size_t index);
+/** Executes macro string slot. @param[in,out] set Set. @param[in] index
+ * Zero-based index. */
+
 char **macro_string_slot(MacroSet *set, size_t index);
+/** Returns macro alias at. @param[in] set Set. @param[in] index Zero-based
+ * index. */
+
 char *macro_alias_at(const MacroSet *set, size_t index);
 
 typedef struct MacroSetRequest {
@@ -62,41 +83,112 @@ typedef struct MacroSetRequest {
   int slot;
 } MacroSetRequest;
 
+/** Returns macro set. @param[in] request Request. */
+
 MacroSet *get_macro_set(const MacroSetRequest *request);
+/** Reports whether can write macros. @param[in] player Player object.
+ * @param[in,out] set Set. */
+
 int can_write_macros(DbRef player, MacroSet *set);
+/** Reports whether can read macros. @param[in] database Game database.
+ * @param[in] player Player object. @param[in] set Set. */
+
 int can_read_macros(GameDatabase *database, DbRef player, MacroSet *set);
+
+/** Sets clear macro. @param[in,out] registry Registry to use. @param[in] set
+ * Set. */
 
 void clear_macro_set(MacroRegistry *registry, int set);
 
+/** Handles the macro command. @param[in,out] match Match. @param[in,out]
+ * commands Commands. @param[in,out] registry Registry to use. @param[in] player
+ * Player object. @param[in,out] in In. @param[in,out] out Out. */
+
 int do_macro(MatchContext *match, CommandRegistry *commands,
              MacroRegistry *registry, DbRef player, char *in, char **out);
+/** Handles the add macro command. @param[in,out] match Match. @param[in,out]
+ * registry Registry to use. @param[in] player Player object. @param[in,out] s
+ * String or object to process. */
+
 void do_add_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                   char *s);
 
+/** Handles the chown macro command. @param[in,out] match Match. @param[in,out]
+ * registry Registry to use. @param[in] player Player object. @param[in,out] cmd
+ * Cmd. */
+
 void do_chown_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     char *cmd);
+/** Handles the clear macro command. @param[in,out] match Match. @param[in]
+ * registry Registry to use. @param[in] player Player object. @param[in] s
+ * String or object to process. */
+
 void do_clear_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     char *s);
+/** Handles the chmod macro command. @param[in,out] match Match. @param[in,out]
+ * registry Registry to use. @param[in] player Player object. @param[in,out] s
+ * String or object to process. */
+
 void do_chmod_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     char *s);
+/** Handles the create macro command. @param[in] match Match. @param[in]
+ * registry Registry to use. @param[in] player Player object. @param[in]
+ * description Description. */
+
 void do_create_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                      char *description);
+/** Handles the def macro command. @param[in,out] match Match. @param[in,out]
+ * registry Registry to use. @param[in] player Player object. @param[in,out] cmd
+ * Cmd. */
+
 void do_def_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                   char *cmd);
+/** Handles the del macro command. @param[in,out] match Match. @param[in,out]
+ * registry Registry to use. @param[in] player Player object. @param[in,out] s
+ * String or object to process. */
+
 void do_del_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                   char *s);
+/** Handles the desc macro command. @param[in,out] match Match. @param[in,out]
+ * registry Registry to use. @param[in] player Player object. @param[in,out] s
+ * String or object to process. */
+
 void do_desc_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                    char *s);
+/** Handles the edit macro command. @param[in,out] match Match. @param[in,out]
+ * registry Registry to use. @param[in] player Player object. @param[in,out] s
+ * String or object to process. */
+
 void do_edit_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                    char *s);
+/** Handles the ex macro command. @param[in,out] match Match. @param[in,out]
+ * registry Registry to use. @param[in] player Player object. @param[in,out] s
+ * String or object to process. */
+
 void do_ex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                  char *s);
+/** Handles the list macro command. @param[in,out] match Match. @param[in,out]
+ * registry Registry to use. @param[in] player Player object. @param[in,out] s
+ * String or object to process. */
+
 void do_list_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                    char *s);
+/** Handles the status macro command. @param[in,out] match Match. @param[in,out]
+ * registry Registry to use. @param[in] player Player object. @param[in,out] s
+ * String or object to process. */
+
 void do_status_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                      char *s);
+/** Handles the undef macro command. @param[in,out] match Match. @param[in,out]
+ * registry Registry to use. @param[in] player Player object. @param[in,out] cmd
+ * Cmd. */
+
 void do_undef_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                     char *cmd);
+/** Handles the gex macro command. @param[in,out] match Match. @param[in,out]
+ * registry Registry to use. @param[in] player Player object. @param[in,out] s
+ * String or object to process. */
+
 void do_gex_macro(MatchContext *match, MacroRegistry *registry, DbRef player,
                   char *s);
 typedef struct MacroExpansionRequest {
@@ -105,5 +197,7 @@ typedef struct MacroExpansionRequest {
   char *input;
   char *arguments;
 } MacroExpansionRequest;
+
+/** Handles the process macro command. @param[in] request Request. */
 
 OwnedText do_process_macro(const MacroExpansionRequest *request);

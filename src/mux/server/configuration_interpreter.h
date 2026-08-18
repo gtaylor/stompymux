@@ -1,5 +1,6 @@
-/* Defines a typed configuration-value interpreter invocation. */
-
+/** @file
+ * Defines a typed configuration-value interpreter invocation.
+ */
 #pragma once
 
 #include <stdint.h>
@@ -18,6 +19,10 @@ typedef struct ConfigurationCall {
 } ConfigurationCall;
 
 typedef int (*ConfigurationInterpreter)(const ConfigurationCall *call);
+
+/** Executes configuration interpreter invoke with mutable text. @param[in]
+ * interpreter Interpreter. @param[in,out] call Call. @param[in] text Text to
+ * process. */
 
 int configuration_interpreter_invoke_with_mutable_text(
     ConfigurationInterpreter interpreter, ConfigurationCall *call,

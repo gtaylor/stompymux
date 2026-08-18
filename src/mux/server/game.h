@@ -1,5 +1,6 @@
-/* game.h - Core notifications, database dumps, and shutdown interface. */
-
+/** @file
+ * Core notifications, database dumps, and shutdown interface.
+ */
 #pragma once
 
 #include "mux/network/network_output.h" // IWYU pragma: export
@@ -47,6 +48,9 @@ constexpr int SHUTDN_EXIT = 2;     /* Exit from shutdown code. */
 constexpr int SHUTDN_COREDUMP = 4; /* Produce a coredump. */
 constexpr int SHUTDN_KILLED = 8;   /* Preserve a killed snapshot. */
 
+/** Handles the shutdown command. @param[in,out] invocation Command invocation.
+ */
+
 void do_shutdown(CommandInvocation *invocation);
 typedef struct ServerShutdownRequest {
   ServerControl *control;
@@ -55,9 +59,19 @@ typedef struct ServerShutdownRequest {
   const char *message;
 } ServerShutdownRequest;
 
+/** Executes server shutdown. @param[in] request Request. */
+
 void server_shutdown(const ServerShutdownRequest *request);
+/** Executes dump database internal. @param[in,out] control Control. @param[in]
+ * dump_type Dump type. */
+
 int dump_database_internal(ServerControl *control, int dump_type);
+/** Executes dump database. @param[in,out] control Control. */
+
 void dump_database(ServerControl *control);
+/** Executes fork and dump. @param[in,out] control Control. @param[in] key
+ * Lookup key or command flags. */
+
 void fork_and_dump(ServerControl *control, int key);
 typedef struct ExcludingNotification {
   EvaluationContext *evaluation;
@@ -68,8 +82,19 @@ typedef struct ExcludingNotification {
   const char *message;
 } ExcludingNotification;
 
+/** Sends notify excluding. @param[in] notification Notification. */
+
 void notify_excluding(const ExcludingNotification *notification);
+/** Sends notify checked. @param[in,out] evaluation Expression evaluation
+ * context. @param[in] target Target object or value. @param[in] sender Sender.
+ * @param[in] msg Msg. @param[in] key Lookup key or command flags. */
+
 void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
                     const char *msg, int key);
+/** Reports whether is hearer. @param[in] evaluation Expression evaluation
+ * context. @param[in] thing Thing. */
+
 bool is_hearer(EvaluationContext *evaluation, DbRef thing);
+/** Executes report. @param[in,out] command Command text or descriptor. */
+
 void report(CommandContext *command);

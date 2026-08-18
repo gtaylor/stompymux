@@ -1,5 +1,6 @@
-/* Shared wall-clock and resource-sampling state. */
-
+/** @file
+ * Shared wall-clock and resource-sampling state.
+ */
 #pragma once
 
 #include <time.h>

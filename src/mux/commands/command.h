@@ -1,5 +1,6 @@
-/* command.h - Command parsing, dispatch, and command-handler declarations. */
-
+/** @file
+ * Command parsing, dispatch, and command-handler declarations.
+ */
 #include "mux/server/platform.h"
 
 #pragma once
@@ -37,6 +38,10 @@ typedef enum {
   STATE_COMMAND_MOVE = 1 << 4,
 } StateCommandKey;
 
+/** Reports whether check access. @param[in] database Game database. @param[in]
+ * configuration Server configuration. @param[in] player Player object.
+ * @param[in] mask Mask. */
+
 bool check_access(GameDatabase *database,
                   const ServerConfiguration *configuration, DbRef player,
                   int mask);
@@ -58,7 +63,11 @@ struct Cmdentry {
   CmdHandler handler;
 };
 
+/** Executes cf access. @param[in] call Call. */
+
 int cf_access(const ConfigurationCall *call);
+/** Executes cf cmd alias. @param[in] call Call. */
+
 int cf_cmd_alias(const ConfigurationCall *call);
 
 /* Command handler call conventions */
@@ -104,6 +113,10 @@ constexpr int CA_PLAYER = 0x40000000;   /* Invoker must be a player */
 // signedness conversions; C23 guarantees the top-bit pattern converts to
 // INT_MIN deterministically.
 constexpr int CF_DARK = (int)0x80000000U; /* Command doesn't show up in list */
+
+/** Executes process command. @param[in,out] context Operation context.
+ * @param[in,out] command Command text or descriptor. @param[in,out] arguments
+ * Argument list. @param[in] argument_count Number of argument entries. */
 
 void process_command(CommandContext *context, char *command, char *arguments[],
                      int argument_count);

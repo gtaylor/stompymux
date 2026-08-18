@@ -1,5 +1,6 @@
-/* array_sort.h - Typed invocation interface for sorting contiguous arrays. */
-
+/** @file
+ * Typed invocation interface for sorting contiguous arrays.
+ */
 #pragma once
 
 #include <stddef.h>
@@ -34,5 +35,9 @@ typedef struct ArraySearchResult {
   size_t index;
 } ArraySearchResult;
 
+/** Executes array sort. @param[in] request Request. */
+
 void array_sort(const ArraySortRequest *request);
+/** Executes array search. @param[in] request Request. */
+
 ArraySearchResult array_search(const ArraySearchRequest *request);

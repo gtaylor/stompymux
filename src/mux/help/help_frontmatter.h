@@ -1,5 +1,6 @@
-/* help_frontmatter.h - TOML frontmatter parsing for help articles. */
-
+/** @file
+ * TOML frontmatter parsing for help articles.
+ */
 #pragma once
 
 #include <stddef.h>
@@ -19,7 +20,14 @@
  * non-fatal warning the caller may choose to log, otherwise `error[0]` is
  * '\0'.
  */
+/** Parses help frontmatter. @param[in] text Text to process. @param[in] length
+ * Text or storage length. @param[out] out Out. @param[out] error Storage
+ * receiving an error description. @param[in] error_size Size of error in bytes.
+ */
+
 bool help_frontmatter_parse(const char *text, size_t length, HelpArticle *out,
                             char *error, size_t error_size);
+
+/** Releases help frontmatter. @param[in,out] article Article. */
 
 void help_frontmatter_free(HelpArticle *article);

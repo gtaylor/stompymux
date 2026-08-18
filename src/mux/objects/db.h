@@ -1,6 +1,6 @@
-
-/* db.h - In-memory game-object, attribute, and lock data model. */
-
+/** @file
+ * In-memory game-object, attribute, and lock data model.
+ */
 #pragma once
 
 #include <stddef.h>
@@ -62,10 +62,20 @@ struct AttributeStack {
   AttributeStack *next;
 };
 
+/** Executes attribute by number. @param[in,out] database Game database.
+ * @param[in] anum Anum. */
+
 const Attribute *attribute_by_number(GameDatabase *database, int anum);
+/** Executes attribute by name. @param[in] database Game database. @param[in] s
+ * String or object to process. */
+
 const Attribute *attribute_by_name(GameDatabase *database, const char *s);
 
+/** Counts native attribute. */
+
 size_t native_attribute_count(void);
+/** Returns native attribute at. @param[in] index Zero-based index. */
+
 const Attribute *native_attribute_at(size_t index);
 
 constexpr char ATR_INFO_CHAR = '\1'; /* Leadin char for attr control data */
@@ -165,14 +175,26 @@ struct GameDatabase {
   StyledTextPalette *styled_text_palette;
 };
 
+/** Initializes game database. @param[out] database Game database. */
+
 void game_database_initialize(GameDatabase *database);
+/** Executes game database bind services. @param[in,out] database Game database.
+ * @param[in,out] configuration Server configuration. @param[in,out] indexes
+ * Indexes. @param[in,out] descriptors Descriptors. @param[in,out] players
+ * Players. @param[in,out] log Server log. @param[in,out] palette Palette. */
+
 void game_database_bind_services(GameDatabase *database,
                                  ServerConfiguration *configuration,
                                  WorldIndexes *indexes,
                                  DescriptorRegistry *descriptors,
                                  PlayerCache *players, ServerLog *log,
                                  StyledTextPalette *palette);
+/** Destroys game database. @param[in,out] database Game database. */
+
 void game_database_destroy(GameDatabase *database);
+
+/** Executes game database object. @param[in,out] database Game database.
+ * @param[in] object Game object. */
 
 static inline GameObject *game_database_object(GameDatabase *database,
                                                DbRef object) {
@@ -185,10 +207,16 @@ static inline GameObject *game_database_object(GameDatabase *database,
                             (size_t)(object + 1));
 }
 
+/** Executes game object generation. @param[in,out] database Game database.
+ * @param[in] object Game object. */
+
 static inline uint64_t game_object_generation(GameDatabase *database,
                                               DbRef object) {
   return game_database_object(database, object)->generation;
 }
+
+/** Executes game object renew generation. @param[in,out] database Game
+ * database. @param[in] object Game object. */
 
 static inline void game_object_renew_generation(GameDatabase *database,
                                                 DbRef object) {
@@ -196,84 +224,175 @@ static inline void game_object_renew_generation(GameDatabase *database,
       ++database->generation_counter;
 }
 
+/** Executes game object location. @param[in,out] database Game database.
+ * @param[in] object Game object. */
+
 static inline DbRef game_object_location(GameDatabase *database, DbRef object) {
   return game_database_object(database, object)->location;
 }
+/** Executes game object zone. @param[in,out] database Game database. @param[in]
+ * object Game object. */
+
 static inline DbRef game_object_zone(GameDatabase *database, DbRef object) {
   return game_database_object(database, object)->zone;
 }
+/** Executes game object contents. @param[in,out] database Game database.
+ * @param[in] object Game object. */
+
 static inline DbRef game_object_contents(GameDatabase *database, DbRef object) {
   return game_database_object(database, object)->contents;
 }
+/** Executes game object exits. @param[in,out] database Game database.
+ * @param[in] object Game object. */
+
 static inline DbRef game_object_exits(GameDatabase *database, DbRef object) {
   return game_database_object(database, object)->exits;
 }
+/** Executes game object next. @param[in,out] database Game database. @param[in]
+ * object Game object. */
+
 static inline DbRef game_object_next(GameDatabase *database, DbRef object) {
   return game_database_object(database, object)->next;
 }
+/** Executes game object link. @param[in,out] database Game database. @param[in]
+ * object Game object. */
+
 static inline DbRef game_object_link(GameDatabase *database, DbRef object) {
   return game_database_object(database, object)->link;
 }
+/** Executes game object type. @param[in] database Game database. @param[in]
+ * object Game object. */
+
 static inline ObjectType game_object_type(GameDatabase *database,
                                           DbRef object) {
   return game_database_object(database, object)->type;
 }
+/** Executes game object stack. @param[in,out] database Game database.
+ * @param[in] object Game object. */
+
 static inline AttributeStack *game_object_stack(GameDatabase *database,
                                                 DbRef object) {
   return game_database_object(database, object)->stackhead;
 }
 
+/** Sets location on game object. @param[in,out] database Game database.
+ * @param[in] object Game object. @param[in] value Value to use. */
+
 static inline void game_object_set_location(GameDatabase *database,
                                             DbRef object, DbRef value) {
   game_database_object(database, object)->location = value;
 }
+/** Sets zone on game object. @param[in,out] database Game database. @param[in]
+ * object Game object. @param[in] value Value to use. */
+
 static inline void game_object_set_zone(GameDatabase *database, DbRef object,
                                         DbRef value) {
   game_database_object(database, object)->zone = value;
 }
+/** Sets contents on game object. @param[in,out] database Game database.
+ * @param[in] object Game object. @param[in] value Value to use. */
+
 static inline void game_object_set_contents(GameDatabase *database,
                                             DbRef object, DbRef value) {
   game_database_object(database, object)->contents = value;
 }
+/** Sets exits on game object. @param[in,out] database Game database. @param[in]
+ * object Game object. @param[in] value Value to use. */
+
 static inline void game_object_set_exits(GameDatabase *database, DbRef object,
                                          DbRef value) {
   game_database_object(database, object)->exits = value;
 }
+/** Sets next on game object. @param[in,out] database Game database. @param[in]
+ * object Game object. @param[in] value Value to use. */
+
 static inline void game_object_set_next(GameDatabase *database, DbRef object,
                                         DbRef value) {
   game_database_object(database, object)->next = value;
 }
+/** Sets link on game object. @param[in,out] database Game database. @param[in]
+ * object Game object. @param[in] value Value to use. */
+
 static inline void game_object_set_link(GameDatabase *database, DbRef object,
                                         DbRef value) {
   game_database_object(database, object)->link = value;
 }
+/** Sets type on game object. @param[in] database Game database. @param[in]
+ * object Game object. @param[in] value Value to use. */
+
 static inline void game_object_set_type(GameDatabase *database, DbRef object,
                                         ObjectType value) {
   game_database_object(database, object)->type = value;
 }
+/** Sets stack on game object. @param[in,out] database Game database. @param[in]
+ * object Game object. @param[in,out] value Value to use. */
+
 static inline void game_object_set_stack(GameDatabase *database, DbRef object,
                                          AttributeStack *value) {
   game_database_object(database, object)->stackhead = value;
 }
 
-extern DbRef parse_dbref(const char * /*s*/);
-extern void al_add(DbRef, int);
-extern void al_delete(DbRef, int);
-extern void al_destroy(DbRef);
+/** Parses dbref. @param[in] s String or object to process. */
+
+extern DbRef parse_dbref(const char *s);
+/** Adds al. @param[in] object Game object. @param[in] attribute_number
+ * Attribute number. */
+
+extern void al_add(DbRef object, int attribute_number);
+/** Executes al delete. @param[in] object Game object. @param[in]
+ * attribute_number Attribute number. */
+
+extern void al_delete(DbRef object, int attribute_number);
+/** Destroys al. @param[in] object Game object. */
+
+extern void al_destroy(DbRef object);
+/** Executes al store. */
+
 extern void al_store(void);
+/** Executes db grow. @param[in,out] database Game database. @param[in] newtop
+ * Newtop. */
+
 extern void db_grow(GameDatabase *database, DbRef newtop);
+/** Releases db. @param[in,out] database Game database. */
+
 extern void db_free(GameDatabase *database);
+/** Sets object password. @param[in,out] database Game database. @param[in]
+ * thing Thing. @param[in] s String or object to process. */
+
 [[nodiscard]] bool object_password_set(GameDatabase *database, DbRef thing,
                                        const char *s);
+/** Sets object name. @param[in,out] database Game database. @param[in] thing
+ * Thing. @param[in] s String or object to process. */
+
 void object_name_set(GameDatabase *database, DbRef thing, const char *s);
+/** Executes game object name. @param[in] database Game database. @param[in]
+ * thing Thing. */
+
 const char *game_object_name(GameDatabase *database, DbRef thing);
+/** Executes game object pure name. @param[in] database Game database.
+ * @param[in] thing Thing. */
+
 const char *game_object_pure_name(GameDatabase *database, DbRef thing);
+/** Executes game object lua parent. @param[in,out] database Game database.
+ * @param[in] object Game object. */
+
 const char *game_object_lua_parent(GameDatabase *database, DbRef object);
+/** Sets game object lua parent. @param[in,out] database Game database.
+ * @param[in] object Game object. @param[in] path Filesystem path. */
+
 bool game_object_lua_parent_set(GameDatabase *database, DbRef object,
                                 const char *path);
+/** Executes init min db. */
+
 void init_min_db(void);
+/** Pushes attribute stack. */
+
 void attribute_stack_push(void);
+/** Pops attribute stack. */
+
 void attribute_stack_pop(void);
+/** Executes init gdbm db. @param[in,out] path Filesystem path. */
+
 int init_gdbm_db(char *path);
 typedef struct AttributeCopyRequest {
   EvaluationContext *evaluation;
@@ -281,20 +400,53 @@ typedef struct AttributeCopyRequest {
   DbRef destination;
 } AttributeCopyRequest;
 
+/** Executes attribute copy. @param[in] request Request. */
+
 void attribute_copy(const AttributeCopyRequest *request);
+/** Clears attribute. @param[in,out] database Game database. @param[in] thing
+ * Thing. @param[in] atr Atr. */
+
 void attribute_clear(GameDatabase *database, DbRef thing, int atr);
+/** Adds raw to attribute. @param[in,out] database Game database. @param[in]
+ * thing Thing. @param[in] atr Atr. @param[in] buff Caller-owned output storage.
+ */
+
 void attribute_add_raw(GameDatabase *database, DbRef thing, int atr,
                        const char *buff);
+/** Adds attribute. @param[in,out] database Game database. @param[in] thing
+ * Thing. @param[in] atr Atr. @param[in] buff Caller-owned output storage.
+ * @param[in] flags Flags. */
+
 void attribute_add(GameDatabase *database, DbRef thing, int atr,
                    const char *buff, long flags);
+/** Returns raw from attribute. @param[in,out] database Game database.
+ * @param[in] thing Thing. @param[in] atr Atr. */
+
 char *attribute_get_raw(GameDatabase *database, DbRef thing, int atr);
+/** Returns attribute. @param[in] database Game database. @param[in] thing
+ * Thing. @param[in] atr Atr. @param[in] flags Flags. */
+
 OwnedText attribute_get(GameDatabase *database, DbRef thing, int atr,
                         long *flags);
+/** Returns string from attribute. @param[in,out] database Game database.
+ * @param[in] thing Thing. @param[in] atr Atr. @param[in,out] s String or object
+ * to process. @param[in] size Storage size in bytes. @param[in,out] flags
+ * Flags. */
+
 char *attribute_get_string(GameDatabase *database, DbRef thing, int atr,
                            char *s, size_t size, long *flags);
+/** Returns info from attribute. @param[in,out] database Game database.
+ * @param[in] thing Thing. @param[in] atr Atr. @param[in,out] flags Flags. */
+
 bool attribute_get_info(GameDatabase *database, DbRef thing, int atr,
                         long *flags);
+/** Releases attribute. @param[in,out] database Game database. @param[in] thing
+ * Thing. */
+
 void attribute_free(GameDatabase *database, DbRef thing);
+/** Executes toast player. @param[in,out] evaluation Expression evaluation
+ * context. @param[in] player Player object. */
+
 void toast_player(EvaluationContext *evaluation, DbRef player);
 
 #define DOLIST(database, thing, list)                                          \

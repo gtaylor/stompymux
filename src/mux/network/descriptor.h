@@ -1,5 +1,6 @@
-/* Descriptor state and lifecycle interfaces for active client connections. */
-
+/** @file
+ * Descriptor state and lifecycle interfaces for active client connections.
+ */
 #pragma once
 
 #include <time.h>
@@ -166,34 +167,75 @@ typedef struct DescriptorIterator {
   DbRef player;
 } DescriptorIterator;
 
+/** Creates descriptor registry. @param[in] runtime Runtime services. @param[in]
+ * btech Btech. @param[in] log Server log. */
+
 DescriptorRegistry *descriptor_registry_create(CommandRuntime *runtime,
                                                BtechContext *btech,
                                                ServerLog *log);
+/** Executes descriptor runtime. @param[in,out] descriptor Network descriptor.
+ */
+
 CommandRuntime *descriptor_runtime(Descriptor *descriptor);
+/** Executes descriptor btech. @param[in,out] descriptor Network descriptor. */
+
 BtechContext *descriptor_btech(Descriptor *descriptor);
+/** Executes descriptor log. @param[in,out] descriptor Network descriptor. */
+
 ServerLog *descriptor_log(Descriptor *descriptor);
+/** Destroys descriptor registry. @param[in,out] registry Registry to use. */
+
 void descriptor_registry_destroy(DescriptorRegistry *registry);
 /* Add descriptor to the flat registry and retain its active reference. */
+/** Executes descriptor register. @param[in,out] registry Registry to use.
+ * @param[in,out] descriptor Network descriptor. */
+
 bool descriptor_register(DescriptorRegistry *registry, Descriptor *descriptor);
 /* Return the number of descriptors in the flat registry. */
+/** Counts descriptor. @param[in] registry Registry to use. */
+
 size_t descriptor_count(const DescriptorRegistry *registry);
 /* Start an iterator over every registered descriptor. */
+/** Executes descriptor iterator all. @param[in,out] registry Registry to use.
+ */
+
 DescriptorIterator descriptor_iterator_all(DescriptorRegistry *registry);
 /* Start an iterator over live authenticated descriptors. */
+/** Executes descriptor iterator connected. @param[in,out] registry Registry to
+ * use. */
+
 DescriptorIterator descriptor_iterator_connected(DescriptorRegistry *registry);
 /* Start an iterator over live authenticated descriptors for player. */
+/** Executes descriptor iterator player. @param[in,out] registry Registry to
+ * use. @param[in] player Player object. */
+
 DescriptorIterator descriptor_iterator_player(DescriptorRegistry *registry,
                                               DbRef player);
 /* Return the next descriptor selected by iterator, or nullptr at the end. */
+/** Executes descriptor iterator next. @param[in,out] iterator Iterator. */
+
 Descriptor *descriptor_iterator_next(DescriptorIterator *iterator);
 /* Retain descriptor against destruction. */
+/** Executes descriptor retain. @param[in,out] descriptor Network descriptor. */
+
 void descriptor_retain(Descriptor *descriptor);
 /* Release a retained descriptor and destroy it when no references remain. */
+/** Executes descriptor release. @param[in,out] descriptor Network descriptor.
+ */
+
 void descriptor_release(Descriptor *descriptor);
 /* Find an authenticated descriptor by its socket descriptor. */
+/** Finds descriptor find by fd. @param[in,out] registry Registry to use.
+ * @param[in] fd Fd. */
+
 Descriptor *descriptor_find_by_fd(DescriptorRegistry *registry, int fd);
 /* Mark descriptor disconnected and perform its shutdown lifecycle. */
+/** Executes descriptor shutdown. @param[in,out] descriptor Network descriptor.
+ * @param[in] reason Reason. */
+
 void descriptor_shutdown(Descriptor *descriptor,
                          DescriptorShutdownReason reason);
 /* Force libuv to cancel pending I/O and close this descriptor. */
+/** Closes descriptor force. @param[in,out] descriptor Network descriptor. */
+
 void descriptor_force_close(Descriptor *descriptor);

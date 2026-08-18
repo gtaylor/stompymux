@@ -1,5 +1,6 @@
-/* lua_test_runner.h - Isolated Lua suite runner. */
-
+/** @file
+ * Isolated Lua suite runner.
+ */
 #pragma once
 
 #include <limits.h>
@@ -66,5 +67,8 @@ typedef struct LuaTestRunResult {
   size_t pass_count;
   bool passes_truncated;
 } LuaTestRunResult;
+
+/** Executes lua tests run. @param[in] request Request. @param[out] result
+ * Result. */
 
 bool lua_tests_run(const LuaTestRunRequest *request, LuaTestRunResult *result);

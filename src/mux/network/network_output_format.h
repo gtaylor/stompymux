@@ -1,11 +1,16 @@
-/* Bounded formatting helpers for player notification lines. */
-
+/** @file
+ * Bounded formatting helpers for player notification lines.
+ */
 #pragma once
 
 #include "mux/server/platform.h"
 
 #include <stdarg.h>
 #include <stdio.h>
+
+/** Executes network output format line v. @param[out] buffer Caller-owned
+ * output storage. @param[in] size Storage size in bytes. @param[in] format
+ * Format. @param[in,out] arguments Argument list. */
 
 [[nodiscard, gnu::format(printf, 3, 0)]] static inline bool
 network_output_format_line_v(char *buffer, size_t size, const char *format,

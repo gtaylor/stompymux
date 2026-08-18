@@ -1,5 +1,6 @@
-/* speech.h - Player speech and private-message command declarations. */
-
+/** @file
+ * Player speech and private-message command declarations.
+ */
 #pragma once
 
 #include "mux/commands/command_context.h"
@@ -37,6 +38,10 @@ constexpr int SAY_ADMINSHOUT = 15; /* Emit to administrators. */
 constexpr int SAY_NOTAG = 32;      /* Do not add broadcast prefix. */
 constexpr int SAY_HERE = 64;       /* Output to current location. */
 constexpr int SAY_ROOM = 128;      /* Output to containing room. */
+
+/** Handles the pemit list command. @param[in,out] evaluation Expression
+ * evaluation context. @param[in] player Player object. @param[in,out] list
+ * List. @param[in] message Message. */
 
 void do_pemit_list(EvaluationContext *evaluation, DbRef player, char *list,
                    const char *message);

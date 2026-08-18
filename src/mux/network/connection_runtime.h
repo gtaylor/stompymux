@@ -1,5 +1,6 @@
-/* connection_runtime.h - Borrowed services for accepting client sockets. */
-
+/** @file
+ * Borrowed services for accepting client sockets.
+ */
 #pragma once
 
 typedef struct AccessControlStore AccessControlStore;
@@ -20,6 +21,11 @@ struct ConnectionRuntime {
   /* Stable owner slot: content loading replaces the cache stored here. */
   FileCache **files_owner;
 };
+
+/** Initializes connection runtime. @param[out] runtime Runtime services.
+ * @param[in] configuration Server configuration. @param[in] clock Clock.
+ * @param[in] descriptors Descriptors. @param[in] log Server log. @param[in]
+ * access_control Access control. @param[in,out] files_owner Files owner. */
 
 static inline void connection_runtime_initialize(
     ConnectionRuntime *runtime, const ServerConfiguration *configuration,

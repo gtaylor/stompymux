@@ -1,5 +1,6 @@
-/* Stable error codes raised by C-exposed Lua APIs. */
-
+/** @file
+ * Stable error codes raised by C-exposed Lua APIs.
+ */
 #pragma once
 
 typedef enum LuaErrorCode : int {

@@ -1,5 +1,6 @@
-/* Game-database consistency check interface. */
-
+/** @file
+ * Game-database consistency check interface.
+ */
 #pragma once
 
 #include "mux/commands/command_context.h"
@@ -17,5 +18,9 @@ typedef struct DatabaseCheckRequest {
   int options;
 } DatabaseCheckRequest;
 
+/** Executes database check. @param[in] request Request. */
+
 void database_check(const DatabaseCheckRequest *request);
+/** Handles the dbck command. @param[in,out] invocation Command invocation. */
+
 void do_dbck(CommandInvocation *invocation);

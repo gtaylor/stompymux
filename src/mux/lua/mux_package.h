@@ -1,5 +1,6 @@
-/* mux_package.h - Built-in Lua mux package. */
-
+/** @file
+ * Built-in Lua mux package.
+ */
 #pragma once
 
 #include <lua.h>
@@ -28,7 +29,18 @@ struct LuaMuxPackage {
   ObjectStateTransaction state_transaction;
 };
 
+/** Executes lua mux package install. @param[in,out] state State to inspect or
+ * update. @param[in,out] package Package. */
+
 void lua_mux_package_install(lua_State *state, LuaMuxPackage *package);
+/** Executes lua mux package transaction begin. @param[in,out] package Package.
+ */
+
 bool lua_mux_package_transaction_begin(LuaMuxPackage *package);
+/** Executes lua mux package transaction finish. @param[in,out] package Package.
+ * @param[in] commit Commit. */
+
 void lua_mux_package_transaction_finish(LuaMuxPackage *package, bool commit);
+/** Destroys lua mux package. @param[in,out] package Package. */
+
 void lua_mux_package_destroy(LuaMuxPackage *package);

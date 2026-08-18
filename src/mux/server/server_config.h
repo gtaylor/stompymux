@@ -1,5 +1,6 @@
-/* server_config.h - Runtime configuration, access, and logging constants. */
-
+/** @file
+ * Runtime configuration, access, and logging constants.
+ */
 #pragma once
 
 #include <netinet/in.h>

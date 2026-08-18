@@ -1,5 +1,6 @@
-/* file_cache.h - Cached text-file loading and display declarations. */
-
+/** @file
+ * Cached text-file loading and display declarations.
+ */
 #pragma once
 
 #include "mux/lua/lua_runtime.h"
@@ -24,9 +25,15 @@ enum : int {
 
 /* File cache routines */
 
+/** Creates file cache. @param[in] evaluation Expression evaluation context.
+ * @param[in] configuration Server configuration. @param[in] descriptors
+ * Descriptors. */
+
 FileCache *file_cache_create(EvaluationContext *evaluation,
                              const ServerConfiguration *configuration,
                              DescriptorRegistry *descriptors);
+/** Destroys file cache. @param[in,out] cache Cache. */
+
 void file_cache_destroy(FileCache *cache);
 typedef struct FileCacheRawDumpRequest {
   const FileCache *cache;
@@ -34,8 +41,21 @@ typedef struct FileCacheRawDumpRequest {
   int entry;
 } FileCacheRawDumpRequest;
 
+/** Executes fcache rawdump. @param[in] request Request. */
+
 void fcache_rawdump(const FileCacheRawDumpRequest *request);
+/** Executes fcache dump. @param[in] cache Cache. @param[in,out] descriptor
+ * Network descriptor. @param[in] num Num. */
+
 void fcache_dump(const FileCache *cache, Descriptor *descriptor, int num);
+/** Executes fcache dump conn. @param[in] cache Cache. @param[in,out] descriptor
+ * Network descriptor. @param[in] num Num. */
+
 void fcache_dump_conn(const FileCache *cache, Descriptor *descriptor, int num);
+/** Executes fcache load. @param[in,out] evaluation Expression evaluation
+ * context. @param[in,out] cache Cache. @param[in] player Player object. */
+
 void fcache_load(EvaluationContext *evaluation, FileCache *cache, DbRef player);
+/** Counts file cache connection. @param[in] cache Cache. */
+
 int file_cache_connection_count(const FileCache *cache);

@@ -1,5 +1,6 @@
-/* command_keys.h - Shared native command invocation keys. */
-
+/** @file
+ * Shared native command invocation keys.
+ */
 #pragma once
 
 constexpr int BOOT_QUIET = 1; /* Inhibit boot message to victim. */

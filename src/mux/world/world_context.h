@@ -1,5 +1,6 @@
-/* world_context.h - Explicit dependencies for world and object operations. */
-
+/** @file
+ * Explicit dependencies for world and object operations.
+ */
 #pragma once
 
 typedef struct AccessControlStore AccessControlStore;
@@ -19,6 +20,11 @@ struct WorldContext {
   DescriptorRegistry *descriptors;
   StyledTextPalette *styled_text_palette;
 };
+
+/** Initializes world context. @param[out] world World. @param[in] database Game
+ * database. @param[in] configuration Server configuration. @param[in] indexes
+ * Indexes. @param[in] access_control Access control. @param[in] descriptors
+ * Descriptors. @param[in] palette Palette. */
 
 static inline void world_context_initialize(WorldContext *world,
                                             GameDatabase *database,

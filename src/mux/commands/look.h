@@ -1,5 +1,6 @@
-/* look.h - Object look and inventory display helper interface. */
-
+/** @file
+ * Object look and inventory display helper interface.
+ */
 #pragma once
 
 #include "mux/commands/command_context.h"
@@ -20,5 +21,7 @@ typedef struct LookRequest {
   DbRef location;
   int key;
 } LookRequest;
+
+/** Executes look in. @param[in] request Request. */
 
 void look_in(const LookRequest *request);

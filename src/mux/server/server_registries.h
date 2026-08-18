@@ -1,5 +1,6 @@
-/* server_registries.h - Cohesive command, world, and access indexes. */
-
+/** @file
+ * Cohesive command, world, and access indexes.
+ */
 #pragma once
 
 #include <stdbool.h>
@@ -54,9 +55,21 @@ struct AccessControlStore {
   BADNAME *bad_names;
 };
 
+/** Initializes command registry. @param[out] registry Registry to use. */
+
 bool command_registry_initialize(CommandRegistry *registry);
+/** Destroys command registry. @param[in,out] registry Registry to use. */
+
 void command_registry_destroy(CommandRegistry *registry);
+/** Initializes world indexes. @param[out] indexes Indexes. */
+
 void world_indexes_initialize(WorldIndexes *indexes);
+/** Destroys world indexes. @param[in,out] indexes Indexes. */
+
 void world_indexes_destroy(WorldIndexes *indexes);
+/** Initializes access control store. @param[out] store Store. */
+
 void access_control_store_initialize(AccessControlStore *store);
+/** Destroys access control store. @param[in,out] store Store. */
+
 void access_control_store_destroy(AccessControlStore *store);

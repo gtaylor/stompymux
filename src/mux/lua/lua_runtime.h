@@ -1,5 +1,6 @@
-/* lua_runtime.h - Lua runtime lifecycle and MUX callback declarations. */
-
+/** @file
+ * Lua runtime lifecycle and MUX callback declarations.
+ */
 #pragma once
 
 #include <stddef.h>
@@ -235,6 +236,13 @@ struct LuaOwner {
   LuaRuntime *runtime;
 };
 
+/** Initializes lua services. @param[out] services Services. @param[in]
+ * configuration Server configuration. @param[in] database Game database.
+ * @param[in] descriptors Descriptors. @param[in] commands Commands. @param[in]
+ * clock Clock. @param[in] background_command Background command. @param[in] log
+ * Server log. @param[in] record_players Record players. @param[in] palette
+ * Palette. */
+
 static inline void
 lua_services_initialize(LuaServices *services,
                         const ServerConfiguration *configuration,
@@ -255,12 +263,31 @@ lua_services_initialize(LuaServices *services,
   };
 }
 
+/** Initializes lua. @param[out] owner Owning runtime object. @param[in]
+ * services Services. @param[out] error Storage receiving an error description.
+ * @param[in] error_size Size of error in bytes. */
+
 bool lua_initialize(LuaOwner *owner, const LuaServices *services, char *error,
                     size_t error_size);
+/** Executes lua shutdown. @param[in,out] owner Owning runtime object. */
+
 void lua_shutdown(LuaOwner *owner);
+/** Executes lua reload. @param[in,out] owner Owning runtime object. @param[out]
+ * error Storage receiving an error description. @param[in] error_size Size of
+ * error in bytes. */
+
 bool lua_reload(LuaOwner *owner, char *error, size_t error_size);
+/** Executes lua check. @param[in] evaluation Expression evaluation context.
+ * @param[in] source Source value. @param[in] player Player object. @param[out]
+ * error Storage receiving an error description. @param[in] error_size Size of
+ * error in bytes. */
+
 int lua_check(EvaluationContext *evaluation, LuaRuntime *source, DbRef player,
               char *error, size_t error_size);
+/** Executes lua validate path. @param[in,out] runtime Runtime services.
+ * @param[in] path Filesystem path. @param[out] error Storage receiving an error
+ * description. @param[in] error_size Size of error in bytes. */
+
 bool lua_validate_path(LuaRuntime *runtime, const char *path, char *error,
                        size_t error_size);
 typedef struct LuaExamineObjectRequest {
@@ -270,39 +297,101 @@ typedef struct LuaExamineObjectRequest {
   DbRef object;
 } LuaExamineObjectRequest;
 
+/** Executes lua examine object. @param[in] request Request. */
+
 void lua_examine_object(const LuaExamineObjectRequest *request);
+/** Executes lua command match. @param[in,out] runtime Runtime services.
+ * @param[in,out] descriptor Network descriptor. @param[in] thing Thing.
+ * @param[in] player Player object. @param[in] cause Object that caused the
+ * operation. @param[in] command Command text or descriptor. */
+
 int lua_command_match(LuaRuntime *runtime, Descriptor *descriptor, DbRef thing,
                       DbRef player, DbRef cause, const char *command);
+/** Executes lua appearance evaluate. @param[in,out] runtime Runtime services.
+ * @param[in] invocation Command invocation. @param[out] result Result. */
+
 void lua_appearance_evaluate(LuaRuntime *runtime,
                              const LuaAppearanceInvocation *invocation,
                              LuaAppearanceResult *result);
+/** Executes lua mech status evaluate. @param[in,out] runtime Runtime services.
+ * @param[in] invocation Command invocation. @param[out] result Result. */
+
 void lua_mech_status_evaluate(LuaRuntime *runtime,
                               const LuaMechStatusInvocation *invocation,
                               LuaMechStatusResult *result);
+/** Executes lua list command match. @param[in,out] runtime Runtime services.
+ * @param[in,out] descriptor Network descriptor. @param[in] first First.
+ * @param[in] player Player object. @param[in] cause Object that caused the
+ * operation. @param[in] command Command text or descriptor. */
+
 int lua_list_command_match(LuaRuntime *runtime, Descriptor *descriptor,
                            DbRef first, DbRef player, DbRef cause,
                            const char *command);
+/** Executes lua global command match. @param[in,out] runtime Runtime services.
+ * @param[in,out] descriptor Network descriptor. @param[in] player Player
+ * object. @param[in] cause Object that caused the operation. @param[in] command
+ * Command text or descriptor. */
+
 bool lua_global_command_match(LuaRuntime *runtime, Descriptor *descriptor,
                               DbRef player, DbRef cause, const char *command);
+/** Executes lua visit global commands. @param[in,out] runtime Runtime services.
+ * @param[in] player Player object. @param[in] visitor Visitor. @param[in,out]
+ * context Operation context. */
+
 size_t lua_visit_global_commands(LuaRuntime *runtime, DbRef player,
                                  LuaCommandVisitor visitor, void *context);
+/** Executes lua visit object commands. @param[in,out] runtime Runtime services.
+ * @param[in] object Game object. @param[in] player Player object. @param[in]
+ * visitor Visitor. @param[in,out] context Operation context. */
+
 size_t lua_visit_object_commands(LuaRuntime *runtime, DbRef object,
                                  DbRef player, LuaCommandVisitor visitor,
                                  void *context);
+/** Executes lua event name. @param[in] event Event. */
+
 const char *lua_event_name(LuaEventType event);
+/** Executes lua event defined. @param[in,out] runtime Runtime services.
+ * @param[in] object Game object. @param[in] event Event. */
+
 bool lua_event_defined(LuaRuntime *runtime, DbRef object, LuaEventType event);
+/** Executes lua event dispatch. @param[in,out] runtime Runtime services.
+ * @param[in] invocation Command invocation. */
+
 bool lua_event_dispatch(LuaRuntime *runtime,
                         const LuaEventInvocation *invocation);
+/** Executes lua lock name. @param[in] lock Lock. */
+
 const char *lua_lock_name(LuaLockType lock);
+/** Executes lua lock operation name. @param[in] operation Operation. */
+
 const char *lua_lock_operation_name(LuaLockOperation operation);
+/** Executes lua lock defined. @param[in,out] runtime Runtime services.
+ * @param[in] object Game object. @param[in] lock Lock. */
+
 bool lua_lock_defined(LuaRuntime *runtime, DbRef object, LuaLockType lock);
+/** Executes lua lock evaluate. @param[in,out] runtime Runtime services.
+ * @param[in] invocation Command invocation. @param[out] result Result. */
+
 void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
                        LuaLockResult *result);
+/** Executes lua message name. @param[in] message Message. */
+
 const char *lua_message_name(LuaMessageType message);
+/** Executes lua message operation name. @param[in] operation Operation. */
+
 const char *lua_message_operation_name(LuaMessageOperation operation);
+/** Executes lua message defined. @param[in,out] runtime Runtime services.
+ * @param[in] object Game object. @param[in] message Message. */
+
 bool lua_message_defined(LuaRuntime *runtime, DbRef object,
                          LuaMessageType message);
+/** Executes lua message evaluate. @param[in,out] runtime Runtime services.
+ * @param[in] invocation Command invocation. @param[out] result Result. */
+
 void lua_message_evaluate(LuaRuntime *runtime,
                           const LuaMessageInvocation *invocation,
                           LuaMessageResult *result);
+/** Executes lua schedule tick. @param[in,out] runtime Runtime services.
+ * @param[in] now Now. */
+
 void lua_schedule_tick(LuaRuntime *runtime, time_t now);

@@ -1,6 +1,6 @@
-/* command_queue.h - Command queue data structures and scheduling entry points.
+/** @file
+ * Command queue data structures and scheduling entry points.
  */
-
 #pragma once
 
 #include "mux/network/mux_event.h" // IWYU pragma: keep
@@ -65,12 +65,24 @@ struct Objqe {
   int queued;
 };
 
+/** Creates command queue. @param[in] dependencies Dependencies. */
+
 CommandQueue *
 command_queue_create(const CommandQueueDependencies *dependencies);
+/** Sets lifecycle on command queue. @param[in,out] queue Queue. @param[in,out]
+ * lifecycle Lifecycle. */
+
 void command_queue_set_lifecycle(CommandQueue *queue,
                                  ServerLifecycle *lifecycle);
+/** Destroys command queue. @param[in,out] queue Queue. */
+
 void command_queue_destroy(CommandQueue *queue);
+/** Executes cque init. @param[out] queue Queue. */
+
 bool cque_init(CommandQueue *queue);
+/** Executes halt que. @param[in,out] queue Queue. @param[in] player Player
+ * object. @param[in] object Game object. */
+
 int halt_que(CommandQueue *queue, DbRef player, DbRef object);
 typedef struct QueuedCommandRequest {
   CommandQueue *queue;
@@ -80,7 +92,16 @@ typedef struct QueuedCommandRequest {
   char *command;
 } QueuedCommandRequest;
 
+/** Executes wait que. @param[in] request Request. */
+
 void wait_que(const QueuedCommandRequest *request);
+/** Executes que next. @param[in,out] queue Queue. */
+
 int que_next(CommandQueue *queue);
+/** Handles the top command. @param[in,out] queue Queue. @param[in] ncmds Ncmds.
+ */
+
 int do_top(CommandQueue *queue, int ncmds);
+/** Executes recover queue deposits. @param[in,out] queue Queue. */
+
 void recover_queue_deposits(CommandQueue *queue);

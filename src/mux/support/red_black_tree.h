@@ -1,3 +1,6 @@
+/** @file
+ * Public MUX support interface for red black tree.
+ */
 /*
  * red_black_tree.h
  *
@@ -65,20 +68,49 @@ typedef int (*RedBlackTreeCompare)(const RedBlackTreeCompareCall *call);
 typedef bool (*RedBlackTreeVisitor)(const RedBlackTreeVisitCall *call);
 typedef void (*RedBlackTreeRelease)(const RedBlackTreeReleaseCall *call);
 
-RedBlackTree red_black_tree_init(RedBlackTreeCompare compare, void *context);
-void red_black_tree_destroy(RedBlackTree /*bt*/);
+/** Executes red black tree init. @param[in] compare Compare. @param[in] context
+ * Operation context. */
 
-void red_black_tree_insert(RedBlackTree /*bt*/, void * /*key*/,
-                           void * /*data*/);
-void *red_black_tree_find(RedBlackTree /*bt*/, const void * /*key*/);
-bool red_black_tree_exists(RedBlackTree /*bt*/, const void * /*key*/);
-void *red_black_tree_delete(RedBlackTree /*bt*/, const void * /*key*/);
+RedBlackTree red_black_tree_init(RedBlackTreeCompare compare, void *context);
+/** Destroys red black tree. @param[in] bt Bt. */
+
+void red_black_tree_destroy(RedBlackTree bt);
+
+/** Executes red black tree insert. @param[in] bt Bt. @param[in,out] key Lookup
+ * key or command flags. @param[in,out] data Caller-provided data. */
+
+void red_black_tree_insert(RedBlackTree bt, void *key, void *data);
+/** Finds red black tree find. @param[in] bt Bt. @param[in] key Lookup key or
+ * command flags. */
+
+void *red_black_tree_find(RedBlackTree bt, const void *key);
+/** Executes red black tree exists. @param[in] bt Bt. @param[in] key Lookup key
+ * or command flags. */
+
+bool red_black_tree_exists(RedBlackTree bt, const void *key);
+/** Executes red black tree delete. @param[in] bt Bt. @param[in] key Lookup key
+ * or command flags. */
+
+void *red_black_tree_delete(RedBlackTree bt, const void *key);
+/** Executes red black tree release. @param[in] bt Bt. @param[in] release
+ * Release. @param[in] context Operation context. */
+
 void red_black_tree_release(RedBlackTree bt, RedBlackTreeRelease release,
                             void *context);
 
+/** Executes red black tree walk. @param[in] bt Bt. @param[in] how How.
+ * @param[in] visitor Visitor. @param[in,out] context Operation context. */
+
 bool red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,
                          void *context);
-unsigned int red_black_tree_size(RedBlackTree /*bt*/);
-void *red_black_tree_search(RedBlackTree /*bt*/, int /*method*/,
-                            const void * /*key*/);
-void *red_black_tree_index(RedBlackTree /*bt*/, int /*index*/);
+/** Executes red black tree size. @param[in] bt Bt. */
+
+unsigned int red_black_tree_size(RedBlackTree bt);
+/** Executes red black tree search. @param[in] bt Bt. @param[in] method Method.
+ * @param[in] key Lookup key or command flags. */
+
+void *red_black_tree_search(RedBlackTree bt, int method, const void *key);
+/** Executes red black tree index. @param[in] bt Bt. @param[in] index Zero-based
+ * index. */
+
+void *red_black_tree_index(RedBlackTree bt, int index);

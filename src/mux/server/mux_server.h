@@ -1,5 +1,6 @@
-/* mux_server.h - Process composition root for owned MUX subsystems. */
-
+/** @file
+ * Process composition root for owned MUX subsystems.
+ */
 #pragma once
 
 #include <time.h>
@@ -75,7 +76,15 @@ struct MuxServer {
   LuaOwner lua;
 };
 
+/** Creates mux server. @param[in] server Server. */
+
 bool mux_server_create(MuxServer *server);
+/** Loads content into mux server. @param[in,out] server Server. */
+
 bool mux_server_load_content(MuxServer *server);
+/** Destroys mux server. @param[in,out] server Server. */
+
 void mux_server_destroy(MuxServer *server);
+/** Initializes runtime clock. @param[out] clock Clock. */
+
 void runtime_clock_initialize(RuntimeClock *clock);

@@ -1,5 +1,6 @@
-/* command_runtime.h - Borrowed services available during command execution. */
-
+/** @file
+ * Borrowed services available during command execution.
+ */
 #pragma once
 
 #include <time.h>

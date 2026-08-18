@@ -1,5 +1,6 @@
-/* server_control.h - Borrowed process-control and persistence services. */
-
+/** @file
+ * Borrowed process-control and persistence services.
+ */
 #pragma once
 
 typedef struct DescriptorRegistry DescriptorRegistry;
@@ -25,6 +26,12 @@ struct ServerControl {
   CommandContext *command;
   BtechContext *btech;
 };
+
+/** Initializes server control. @param[out] control Control. @param[in]
+ * configuration Server configuration. @param[in] database Game database.
+ * @param[in] log Server log. @param[in] descriptors Descriptors. @param[in]
+ * players Players. @param[in] persistence Persistence. @param[in] command
+ * Command text or descriptor. @param[in] btech Btech. */
 
 static inline void server_control_initialize(
     ServerControl *control, ServerConfiguration *configuration,

@@ -1,5 +1,6 @@
-/* diagnostics.h - Timestamped stderr tracing and always-on assertions. */
-
+/** @file
+ * Timestamped stderr tracing and always-on assertions.
+ */
 #pragma once
 
 #include <errno.h>
@@ -10,10 +11,19 @@ typedef struct DiagnosticLocation {
   const char *function;
 } DiagnosticLocation;
 
+/** Executes diagnostics log. @param[in] location Location. @param[in] format
+ * Format. */
+
 void diagnostics_log(DiagnosticLocation location, const char *format, ...)
     __attribute__((format(printf, 2, 3)));
+/** Executes diagnostics assert failed. @param[in] location Location. @param[in]
+ * expression Expression. */
+
 [[noreturn]] void diagnostics_assert_failed(DiagnosticLocation location,
                                             const char *expression);
+/** Executes diagnostics perror. @param[in] location Location. @param[in]
+ * expression Expression. @param[in] saved_errno Saved errno. */
+
 void diagnostics_perror(DiagnosticLocation location, const char *expression,
                         int saved_errno);
 

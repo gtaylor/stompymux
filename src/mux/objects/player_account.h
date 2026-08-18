@@ -1,5 +1,6 @@
-/* player_account.h - Typed player account state. */
-
+/** @file
+ * Typed player account state.
+ */
 #pragma once
 
 #include <stdbool.h>
@@ -84,42 +85,93 @@ enum {
   PLAYER_FAILURE_HISTORY_LIMIT = 3,
 };
 
+/** Clears player account. @param[in,out] database Game database. @param[in]
+ * player Player object. */
+
 void player_account_clear(GameDatabase *database, DbRef player);
 
+/** Executes player account password hash. @param[in,out] database Game
+ * database. @param[in] player Player object. */
+
 const char *player_account_password_hash(GameDatabase *database, DbRef player);
+/** Sets player account password hash. @param[in,out] database Game database.
+ * @param[in] player Player object. @param[in] hash Hash. */
+
 [[nodiscard]] bool player_account_password_hash_set(GameDatabase *database,
                                                     DbRef player,
                                                     const char *hash);
 
+/** Executes player account last login. @param[in] reference Reference. */
+
 PlayerLastLoginResult player_account_last_login(PlayerAccountRef reference);
+/** Sets player account last login. @param[in] change Change. */
+
 [[nodiscard]] bool
 player_account_last_login_set(const PlayerLastLoginChange *change);
+/** Executes player account last site. @param[in,out] database Game database.
+ * @param[in] player Player object. */
+
 const char *player_account_last_site(GameDatabase *database, DbRef player);
+/** Sets player account last site. @param[in,out] database Game database.
+ * @param[in] player Player object. @param[in] site Site. */
+
 [[nodiscard]] bool player_account_last_site_set(GameDatabase *database,
                                                 DbRef player, const char *site);
 
+/** Counts player account successful login. @param[in] database Game database.
+ * @param[in] player Player object. */
+
 int64_t player_account_successful_login_count(GameDatabase *database,
                                               DbRef player);
+/** Counts player account failed login. @param[in] database Game database.
+ * @param[in] player Player object. */
+
 int64_t player_account_failed_login_count(GameDatabase *database, DbRef player);
+/** Counts player account unreported failed login. @param[in] database Game
+ * database. @param[in] player Player object. */
+
 int64_t player_account_unreported_failed_login_count(GameDatabase *database,
                                                      DbRef player);
+/** Sets player account login counts. @param[in] change Change. */
+
 [[nodiscard]] bool
 player_account_login_counts_set(const PlayerLoginCountsChange *change);
+/** Executes player account login record. @param[in] change Change. */
+
 [[nodiscard]] bool
 player_account_login_record(const PlayerLoginRecordChange *change);
+/** Counts player account login history. @param[in] request Request. */
+
 size_t player_account_login_history_count(PlayerLoginHistoryRequest request);
+/** Executes player account login history. @param[in] request Request. */
+
 PlayerLoginHistoryResult
 player_account_login_history(const PlayerLoginHistoryRequest *request);
+/** Sets player account login history. @param[in] change Change. */
+
 [[nodiscard]] bool
 player_account_login_history_set(const PlayerLoginHistoryChange *change);
 
+/** Counts player account last page. @param[in] database Game database.
+ * @param[in] player Player object. */
+
 size_t player_account_last_page_count(GameDatabase *database, DbRef player);
+/** Executes player account last page recipient. @param[in] request Request. */
+
 PlayerPageRecipientResult
 player_account_last_page_recipient(const PlayerPageRecipientRequest *request);
+/** Sets player account last page. @param[in,out] database Game database.
+ * @param[in] player Player object. @param[in] recipients Recipients. @param[in]
+ * count Number of elements. */
+
 [[nodiscard]] bool player_account_last_page_set(GameDatabase *database,
                                                 DbRef player,
                                                 const DbRef *recipients,
                                                 size_t count);
+
+/** Executes player account format timestamp utc. @param[in] when When.
+ * @param[out] buffer Caller-owned output storage. @param[in] buffer_size Size
+ * of buffer in bytes. */
 
 [[nodiscard]] bool player_account_format_timestamp_utc(time_t when,
                                                        char *buffer,

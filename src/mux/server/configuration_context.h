@@ -1,5 +1,6 @@
-/* configuration_context.h - Borrowed services used by configuration parsing. */
-
+/** @file
+ * Borrowed services used by configuration parsing.
+ */
 #pragma once
 
 #include <stdbool.h>
@@ -26,6 +27,13 @@ struct ConfigurationContext {
   WorldIndexes *world_indexes;
   WorldContext *world;
 };
+
+/** Initializes configuration context. @param[out] context Operation context.
+ * @param[in] configuration Server configuration. @param[in] database Game
+ * database. @param[in] log Server log. @param[in] command Command text or
+ * descriptor. @param[in] command_registry Command registry. @param[in]
+ * configuration_registry Configuration registry. @param[in] world_indexes World
+ * indexes. @param[in] world World. */
 
 static inline void configuration_context_initialize(
     ConfigurationContext *context, ServerConfiguration *configuration,

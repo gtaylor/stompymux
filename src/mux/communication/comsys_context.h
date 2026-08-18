@@ -1,5 +1,6 @@
-/* comsys_context.h - Long-lived channel system dependencies. */
-
+/** @file
+ * Long-lived channel system dependencies.
+ */
 #pragma once
 
 typedef struct ChannelRegistry ChannelRegistry;
@@ -13,6 +14,10 @@ struct ComsysContext {
   RuntimeClock *clock;
   ChannelRegistry *channels;
 };
+
+/** Initializes comsys context. @param[out] context Operation context.
+ * @param[in] configuration Server configuration. @param[in] clock Clock.
+ * @param[in] channels Channels. */
 
 void comsys_context_initialize(ComsysContext *context,
                                const ServerConfiguration *configuration,

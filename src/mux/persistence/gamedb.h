@@ -1,5 +1,6 @@
-/* gamedb.h -- SQLite-backed game-database persistence */
-
+/** @file
+ * - SQLite-backed game-database persistence.
+ */
 #pragma once
 
 #include <sqlite3.h>
@@ -53,10 +54,19 @@ struct PersistenceContext {
   size_t extension_count;
 };
 
+/** Initializes persistence context. @param[out] context Operation context.
+ * @param[in] configuration Server configuration. @param[in] database Game
+ * database. @param[in] channels Channels. @param[in] macros Macros. @param[in]
+ * now Now. @param[in] record_players Record players. @param[in] world World.
+ * @param[in] log Server log. */
+
 void persistence_context_initialize(
     PersistenceContext *context, const ServerConfiguration *configuration,
     GameDatabase *database, ChannelRegistry *channels, MacroRegistry *macros,
     time_t *now, int *record_players, WorldContext *world, ServerLog *log);
+/** Returns persistence extension at. @param[in] context Operation context.
+ * @param[in] index Zero-based index. */
+
 PersistenceSqliteExtension *
 persistence_extension_at(PersistenceContext *context, size_t index);
 
@@ -68,6 +78,11 @@ persistence_extension_at(PersistenceContext *context, size_t index);
  * on success and -1 if the registration is invalid or the extension limit is
  * reached.
  */
+/** Executes persistence register sqlite extension. @param[in,out] context
+ * Operation context. @param[in] name Name to use. @param[in] load Load.
+ * @param[in] store Store. @param[in,out] extension_context Extension context.
+ */
+
 int persistence_register_sqlite_extension(PersistenceContext *context,
                                           const char *name,
                                           PersistenceSqliteLoad load,
@@ -80,9 +95,14 @@ int persistence_register_sqlite_extension(PersistenceContext *context,
  * target, so a failed dump leaves the prior database available. Returns 0 on
  * success and -1 after logging a failure.
  */
+/** Executes gamedb dump. @param[in,out] context Operation context. @param[in]
+ * dump_type Dump type. */
+
 int gamedb_dump(PersistenceContext *context, int dump_type);
 
 /* Persist a new normal snapshot without replacing an existing path. */
+/** Creates gamedb. @param[in] context Operation context. */
+
 int gamedb_create(PersistenceContext *context);
 
 /*
@@ -90,4 +110,7 @@ int gamedb_create(PersistenceContext *context);
  * initialize the attribute and hash-table subsystems first. Returns 0 on
  * success and -1 after logging a validation or SQLite error.
  */
+/** Executes gamedb load. @param[in,out] context Operation context. @param[in]
+ * path Filesystem path. */
+
 int gamedb_load(PersistenceContext *context, const char *path);

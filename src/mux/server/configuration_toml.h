@@ -1,5 +1,6 @@
-/* configuration_toml.h - TOML configuration file loading and dispatch. */
-
+/** @file
+ * TOML configuration file loading and dispatch.
+ */
 #pragma once
 
 #include <stddef.h>
@@ -18,6 +19,9 @@ typedef int (*ConfigDirectiveSetFn)(const char *pname, const char *args,
  * configuration_toml_load(), not here). Unrecognized keys and value-type
  * mismatches are reported to stderr and skipped; they never abort the
  * walk. Returns false only if `root` itself is not a table. */
+/** Executes configuration toml walk. @param[in] root Root. @param[in] set_fn
+ * Set fn. @param[in,out] ctx Ctx. */
+
 bool configuration_toml_walk(toml_datum_t root, ConfigDirectiveSetFn set_fn,
                              void *ctx);
 
@@ -27,5 +31,9 @@ bool configuration_toml_walk(toml_datum_t root, ConfigDirectiveSetFn set_fn,
  * pulled in via include), then walks the merged document via
  * configuration_toml_walk(). Returns false with a message written into
  * errbuf on I/O failure, malformed TOML, or excessive include depth. */
+/** Executes configuration toml load. @param[in] path Filesystem path.
+ * @param[in] set_fn Set fn. @param[in,out] ctx Ctx. @param[in,out] errbuf
+ * Errbuf. @param[in] errbuf_size Size of errbuf in bytes. */
+
 bool configuration_toml_load(const char *path, ConfigDirectiveSetFn set_fn,
                              void *ctx, char *errbuf, size_t errbuf_size);

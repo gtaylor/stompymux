@@ -1,5 +1,6 @@
-/* platform.h - Build configuration, platform types, and compile-time limits */
-
+/** @file
+ * Build configuration, platform types, and compile-time limits.
+ */
 #pragma once
 
 #include "btmux_build_config.h"
@@ -56,6 +57,9 @@ constexpr int HASH_FACTOR = 16; /* How much hashing you want. */
 
 constexpr int OUTPUT_BLOCK_SIZE = 16384;
 
+/** Copies bounded for string. @param[out] destination Destination storage.
+ * @param[in] size Storage size in bytes. @param[in] source Source value. */
+
 [[nodiscard]] static inline bool
 string_copy_bounded(char *destination, size_t size, const char *source) {
   /* source must point to a NUL-terminated string. */
@@ -70,6 +74,10 @@ string_copy_bounded(char *destination, size_t size, const char *source) {
 #pragma clang unsafe_buffer_usage end
   return SOURCE_LENGTH < size;
 }
+
+/** Executes string append bounded. @param[in,out] destination Destination
+ * storage. @param[in] size Storage size in bytes. @param[in] source Source
+ * value. */
 
 [[nodiscard]] static inline bool
 string_append_bounded(char *destination, size_t size, const char *source) {

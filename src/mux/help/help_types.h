@@ -1,5 +1,6 @@
-/* help_types.h - Shared data structures for the markdown help system. */
-
+/** @file
+ * Shared data structures for the markdown help system.
+ */
 #pragma once
 
 #include <stdbool.h>

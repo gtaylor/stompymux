@@ -1,5 +1,6 @@
-/* command_context.h - State scoped to one command execution. */
-
+/** @file
+ * State scoped to one command execution.
+ */
 #pragma once
 
 #include "mux/commands/command_runtime.h"
@@ -69,7 +70,14 @@ typedef struct CommandContextInitialization {
   bool interactive;
 } CommandContextInitialization;
 
+/** Initializes command context. @param[in] initialization Initialization. */
+
 bool command_context_initialize(
     const CommandContextInitialization *initialization);
+/** Destroys command context. @param[in,out] context Operation context. */
+
 void command_context_destroy(CommandContext *context);
+/** Executes command context reset limits. @param[in,out] context Operation
+ * context. */
+
 void command_context_reset_limits(CommandContext *context);

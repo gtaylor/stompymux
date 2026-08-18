@@ -1,5 +1,6 @@
-/* maintenance.h - Dependencies for periodic process maintenance. */
-
+/** @file
+ * Dependencies for periodic process maintenance.
+ */
 #pragma once
 
 typedef struct CommandContext CommandContext;
@@ -34,6 +35,14 @@ struct MaintenanceContext {
   /* Stable owner: reload replaces the runtime stored in this wrapper. */
   LuaOwner *lua;
 };
+
+/** Initializes maintenance context. @param[out] context Operation context.
+ * @param[in] control Control. @param[in] connections Connections. @param[in]
+ * configuration Server configuration. @param[in] database Game database.
+ * @param[in] log Server log. @param[in] clock Clock. @param[in] descriptors
+ * Descriptors. @param[in] commands Commands. @param[in] players Players.
+ * @param[in] command Command text or descriptor. @param[in] btech Btech.
+ * @param[in] lua_services Lua services. @param[in] lua Lua. */
 
 void maintenance_context_initialize(
     MaintenanceContext *context, ServerControl *control,

@@ -28,6 +28,7 @@
   C23 placement is accepted, but keep placement consistent within a declaration
   list.
 - Timestamps stored in SQLite should always be in UTC.
+- Exported modules should include Doxygen-style comments in their header files.
 
 ## C code naming conventions
 

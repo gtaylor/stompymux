@@ -1,5 +1,6 @@
-/* command_parser.h - Literal native-command argument parsing. */
-
+/** @file
+ * Literal native-command argument parsing.
+ */
 #pragma once
 
 #include <stddef.h>
@@ -33,5 +34,9 @@ typedef struct CommandArgumentListRequest {
   size_t maximum_arguments;
 } CommandArgumentListRequest;
 
+/** Parses to. @param[in] request Request. */
+
 char *parse_to(const CommandParseRequest *request);
+/** Parses arglist. @param[in] request Request. */
+
 void parse_arglist(const CommandArgumentListRequest *request);

@@ -1,6 +1,6 @@
-/* command_invocation.h - Typed boundary between parsing and command handlers.
+/** @file
+ * Typed boundary between parsing and command handlers.
  */
-
 #pragma once
 
 #include <stddef.h>
@@ -45,21 +45,45 @@ typedef void (*CommandTwoVectorsHandler)(DbRef player, DbRef cause, int key,
                                          char **command_arguments,
                                          int command_argument_count);
 
+/** Returns command invocation vector at. @param[in] invocation Command
+ * invocation. @param[in] index Zero-based index. */
+
 char *command_invocation_vector_at(const CommandInvocation *invocation,
                                    size_t index);
 
+/** Executes command invocation call no arguments. @param[in] handler Handler.
+ * @param[in,out] invocation Command invocation. */
+
 void command_invocation_call_no_arguments(CommandNoArgumentsHandler handler,
                                           CommandInvocation *invocation);
+/** Executes command invocation call unparsed. @param[in] handler Handler.
+ * @param[in,out] invocation Command invocation. */
+
 void command_invocation_call_unparsed(CommandUnparsedHandler handler,
                                       CommandInvocation *invocation);
+/** Executes command invocation call one argument. @param[in] handler Handler.
+ * @param[in,out] invocation Command invocation. */
+
 void command_invocation_call_one_argument(CommandOneArgumentHandler handler,
                                           CommandInvocation *invocation);
+/** Executes command invocation call vector. @param[in] handler Handler.
+ * @param[in,out] invocation Command invocation. */
+
 void command_invocation_call_vector(CommandVectorHandler handler,
                                     CommandInvocation *invocation);
+/** Executes command invocation call two arguments. @param[in] handler Handler.
+ * @param[in,out] invocation Command invocation. */
+
 void command_invocation_call_two_arguments(CommandTwoArgumentsHandler handler,
                                            CommandInvocation *invocation);
+/** Executes command invocation call two arguments vector. @param[in] handler
+ * Handler. @param[in,out] invocation Command invocation. */
+
 void command_invocation_call_two_arguments_vector(
     CommandTwoArgumentsVectorHandler handler, CommandInvocation *invocation);
+/** Executes command invocation call two vectors. @param[in] handler Handler.
+ * @param[in,out] invocation Command invocation. */
+
 void command_invocation_call_two_vectors(CommandTwoVectorsHandler handler,
                                          CommandInvocation *invocation);
 

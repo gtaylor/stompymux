@@ -1,5 +1,6 @@
-/* attrs.h - Attribute definitions */
-
+/** @file
+ * Attribute definitions.
+ */
 #include "mux/server/platform.h"
 
 #pragma once

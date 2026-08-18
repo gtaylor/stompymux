@@ -1,5 +1,6 @@
-/* Server-owned mutable configuration catalog state. */
-
+/** @file
+ * Server-owned mutable configuration catalog state.
+ */
 #pragma once
 
 #include <stdbool.h>
@@ -45,15 +46,33 @@ typedef enum ConfigurationListOption : int {
   LIST_LOGFILES = 23,
 } ConfigurationListOption;
 
+/** Initializes configuration registry. @param[out] registry Registry to use. */
+
 bool configuration_registry_initialize(ConfigurationRegistry *registry);
+/** Destroys configuration registry. @param[in,out] registry Registry to use. */
+
 void configuration_registry_destroy(ConfigurationRegistry *registry);
+/** Counts configuration registry entry. @param[in] registry Registry to use. */
+
 size_t
 configuration_registry_entry_count(const ConfigurationRegistry *registry);
+/** Returns configuration registry entry at. @param[in] registry Registry to
+ * use. @param[in] index Zero-based index. */
+
 ConfigurationEntry *
 configuration_registry_entry_at(ConfigurationRegistry *registry, size_t index);
+/** Returns configuration registry entry at. @param[in] registry Registry to
+ * use. @param[in] index Zero-based index. */
+
 const ConfigurationEntry *
 configuration_registry_entry_at_const(const ConfigurationRegistry *registry,
                                       size_t index);
+/** Executes configuration registry list options. @param[in,out] registry
+ * Registry to use. */
+
 NameTable *configuration_registry_list_options(ConfigurationRegistry *registry);
+/** Executes configuration registry list options const. @param[in] registry
+ * Registry to use. */
+
 const NameTable *configuration_registry_list_options_const(
     const ConfigurationRegistry *registry);

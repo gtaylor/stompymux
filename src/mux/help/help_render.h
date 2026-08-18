@@ -1,5 +1,6 @@
-/* help_render.h - Renders help articles to plain text for display. */
-
+/** @file
+ * Renders help articles to plain text for display.
+ */
 #pragma once
 
 #include "mux/commands/command_runtime.h"
@@ -17,7 +18,13 @@ typedef struct HelpTextBuffer {
   size_t capacity;
 } HelpTextBuffer;
 
+/** Executes help text buffer init. @param[out] buffer Caller-owned output
+ * storage. */
+
 void help_text_buffer_init(HelpTextBuffer *buffer);
+/** Releases help text buffer. @param[in,out] buffer Caller-owned output
+ * storage. */
+
 void help_text_buffer_free(HelpTextBuffer *buffer);
 
 /*
@@ -28,6 +35,9 @@ void help_text_buffer_free(HelpTextBuffer *buffer);
  * help index; used both by
  * help_article_render_body and directly by unit tests.
  */
+/** Executes help render markdown. @param[in] markdown Markdown. @param[in]
+ * length Text or storage length. @param[out] out Out. */
+
 void help_render_markdown(const char *markdown, size_t length,
                           HelpTextBuffer *out);
 
@@ -37,10 +47,18 @@ void help_render_markdown(const char *markdown, size_t length,
  * matching articles is appended, with wizard_only articles omitted unless
  * viewer_is_wizard is true.
  */
+/** Executes help article render body. @param[in] index Zero-based index.
+ * @param[in] article Article. @param[in] viewer_is_wizard Viewer is wizard.
+ * @param[out] out Out. */
+
 void help_article_render_body(const HelpIndex *index,
                               const HelpArticle *article, bool viewer_is_wizard,
                               HelpTextBuffer *out);
 
 /* Splits buffer->data on '\n' and calls notify_checked() once per line. */
+/** Executes help render send. @param[in,out] evaluation Expression evaluation
+ * context. @param[in] player Player object. @param[in] buffer Caller-owned
+ * output storage. */
+
 void help_render_send(EvaluationContext *evaluation, DbRef player,
                       const HelpTextBuffer *buffer);

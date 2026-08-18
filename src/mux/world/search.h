@@ -1,5 +1,6 @@
-/* search.h - Search criteria and database-statistics data structures. */
-
+/** @file
+ * Search criteria and database-statistics data structures.
+ */
 #pragma once
 
 #include "mux/objects/db.h"
@@ -35,6 +36,10 @@ struct DatabaseStatistics {
   int s_garbage;
 };
 
+/** Executes search criteria setup. @param[in] context Operation context.
+ * @param[in] player Player object. @param[in] search Search. @param[in] parm
+ * Parm. */
+
 extern bool search_criteria_setup(EvaluationContext *context, DbRef player,
                                   char *search, SearchCriteria *parm);
 typedef struct SearchExecutionRequest {
@@ -43,6 +48,11 @@ typedef struct SearchExecutionRequest {
   ObjectList *results;
 } SearchExecutionRequest;
 
+/** Executes search criteria perform. @param[in] request Request. */
+
 extern void search_criteria_perform(const SearchExecutionRequest *request);
-extern void database_statistics_get(GameDatabase * /*database*/,
-                                    DatabaseStatistics * /*info*/);
+/** Returns database statistics. @param[in] database Game database. @param[in]
+ * info Info. */
+
+extern void database_statistics_get(GameDatabase *database,
+                                    DatabaseStatistics *info);
