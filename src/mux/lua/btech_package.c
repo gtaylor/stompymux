@@ -8,6 +8,8 @@
 
 #include "btech/scripting/script_functions_api.h"
 #include "mux/lua/btech_package.h"
+#include "mux/lua/lua_error.h"
+#include "mux/lua/lua_error_codes.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
@@ -130,12 +132,14 @@ static int btech_lua_invoke(lua_State *state) {
 
   if (package->is_checking && package->is_checking(package->context)) {
     free_buf(buffer);
-    return luaL_error(state, "btech.%s is unavailable during @lua/check",
-                      entry->name);
+    return lua_error_raise(state, LUA_ERROR_CODE_BTECH_UNAVAILABLE,
+                           "btech.%s is unavailable during @lua/check",
+                           entry->name);
   }
   if (argument_count > MAX_ARG) {
     free_buf(buffer);
-    return luaL_error(state, "too many arguments");
+    return lua_error_raise(state, LUA_ERROR_CODE_ARG_INVALID,
+                           "too many arguments");
   }
   for (int index = 0; index < argument_count; index++) {
     const char *value;
@@ -165,7 +169,7 @@ static int btech_lua_invoke(lua_State *state) {
     (void)snprintf(error, sizeof(error), "%s", result.value.text);
     btech_script_result_destroy(&result);
     free_buf(buffer);
-    return luaL_error(state, "%s", error);
+    return lua_error_raise(state, LUA_ERROR_CODE_BTECH_FAILED, "%s", error);
   }
   switch (result.kind) {
   case BTECH_SCRIPT_NUMBER:
@@ -203,5 +207,13 @@ void lua_btech_package_install(lua_State *state, LuaBtechPackage *package) {
     lua_pushcclosure(state, btech_lua_invoke, 2);
     lua_setfield(state, -2, entry->name);
   }
+  lua_newtable(state);
+  if (!lua_error_push_code_tree(state, "btech")) {
+    (void)lua_error_raise(state, LUA_ERROR_CODE_INTERNAL,
+                          "native btech error code tree is unavailable");
+    return;
+  }
+  lua_setfield(state, -2, "codes");
+  lua_setfield(state, -2, "error");
   lua_setglobal(state, "btech");
 }

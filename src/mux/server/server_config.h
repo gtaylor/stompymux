@@ -54,12 +54,19 @@ struct DatabaseConfiguration {
 };
 
 typedef struct LuaConfiguration LuaConfiguration;
+typedef enum LuaErrorReporting : int {
+  LUA_ERROR_REPORTING_OFF,
+  LUA_ERROR_REPORTING_WIZARDS,
+  LUA_ERROR_REPORTING_ALL,
+} LuaErrorReporting;
+
 struct LuaConfiguration {
   char directory[128];    /* Lua module root, relative to game directory */
   int memory_limit;       /* Lua VM memory cap in bytes */
   int state_value_limit;  /* Maximum bytes in one persistent string value */
   int state_entry_limit;  /* Maximum persistent state entries per object */
   int state_object_limit; /* Maximum persistent state bytes per object */
+  LuaErrorReporting error_reporting; /* Player-facing Lua error detail */
 };
 
 typedef struct ServerConfiguration ServerConfiguration;

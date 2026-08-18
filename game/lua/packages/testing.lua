@@ -1,5 +1,7 @@
 local testing = {}
 
+testing.error = { codes = mux.error.code_tree("testing") }
+
 local function display(value)
   if value == nil then
     return "nil"
@@ -8,12 +10,14 @@ local function display(value)
 end
 
 local function failure(message, expected, actual)
-  error({
-    kind = "assertion",
-    message = message,
-    expected = expected,
-    actual = actual,
-  }, 0)
+  error(
+    mux.error.new({
+      code = testing.error.codes.assertion,
+      message = message,
+      detail = { expected = expected, actual = actual },
+    }),
+    0
+  )
 end
 
 local expect = {}
@@ -83,14 +87,51 @@ function expect.near(actual, expected, tolerance)
 end
 
 function expect.error_matches(callback, pattern)
-  local ok, message = pcall(callback)
+  local ok, err = pcall(callback)
 
   if ok then
     failure("expected function to raise an error matching " .. display(pattern), pattern, nil)
   end
-  if not string.find(tostring(message), pattern) then
-    failure("error did not match " .. display(pattern) .. ": " .. tostring(message), pattern, message)
+  local message = type(err) == "table" and err.message or tostring(err)
+  if not string.find(message or tostring(err), pattern) then
+    failure("error did not match " .. display(pattern) .. ": " .. tostring(err), pattern, err)
   end
+end
+
+function expect.raises(callback)
+  local ok, err = pcall(callback)
+
+  if ok then
+    failure("expected function to raise an error", "an error", nil)
+  end
+  if type(err) ~= "table" or type(err.code) ~= "string" then
+    err = mux.error.wrap(err, testing.error.codes.runtime, tostring(err))
+  end
+  return err
+end
+
+function expect.raises_code(callback, code)
+  local err = expect.raises(callback)
+
+  if not mux.error.is(err, code) then
+    failure("expected error code " .. display(code) .. ", got " .. display(err.code), code, err.code)
+  end
+  return err
+end
+
+function expect.no_error(callback)
+  local ok, err = pcall(callback)
+
+  if not ok then
+    failure("expected function not to raise an error: " .. tostring(err), nil, err)
+  end
+end
+
+function expect.is_error(value, code)
+  if not mux.error.is(value, code) then
+    failure("expected an error matching " .. display(code), code, value)
+  end
+  return value
 end
 
 function testing.test(name, callback)

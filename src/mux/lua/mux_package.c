@@ -4,6 +4,8 @@
 #include <lua.h>
 #include <string.h>
 
+#include "mux/lua/lua_error.h"
+#include "mux/lua/lua_error_codes.h"
 #include "mux/lua/mux_package.h"
 #include "mux/lua/mux_package_internal.h"
 #include "mux/objects/flags.h"
@@ -38,7 +40,8 @@ bool lua_mux_package_is_checking(LuaMuxPackage *package) {
 void lua_mux_require_runtime(LuaMuxPackage *package, lua_State *state,
                              const char *function) {
   if (lua_mux_package_is_checking(package))
-    luaL_error(state, "mux.%s is unavailable during @lua/check", function);
+    lua_error_raise(state, LUA_ERROR_CODE_CHECKING_UNAVAILABLE,
+                    "mux.%s is unavailable during @lua/check", function);
 }
 
 static int lua_mux_log(lua_State *state) {
@@ -50,9 +53,11 @@ static int lua_mux_log(lua_State *state) {
 
   lua_mux_require_runtime(package, state, "log");
   if (strlen(filename) != filename_length)
-    return luaL_argerror(state, 1, "filename contains an embedded NUL byte");
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_ARG_INVALID,
+                         "filename contains an embedded NUL byte");
   if (strlen(message) != message_length)
-    return luaL_argerror(state, 2, "message contains an embedded NUL byte");
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                         "message contains an embedded NUL byte");
   lua_pushboolean(
       state,
       log_to_file(&(ArbitraryLogRequest){
@@ -74,5 +79,6 @@ void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   lua_mux_install_attribute_bindings(state, package);
   lua_mux_install_text_bindings(state, package);
   lua_mux_install_connection_bindings(state, package);
+  lua_mux_install_error_bindings(state, package);
   lua_setglobal(state, "mux");
 }

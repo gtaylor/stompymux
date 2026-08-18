@@ -1458,6 +1458,8 @@ file(COPY "${BTECH_INTEGRATION_FIXTURES}/lua_test_runner/lua/tests"
 add_executable(lua_test_runner_integration_test
   ${CMAKE_SOURCE_DIR}/tests/integration/lua_test_runner_integration.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_test_runner.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_error.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/mux_error_bindings.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_runtime.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_module_registry.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/array_sort.c)
@@ -1485,7 +1487,9 @@ target_include_directories(lua_command_access_test PRIVATE
 add_test(NAME lua_command_access COMMAND lua_command_access_test)
 
 add_executable(lua_log_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/content/lua_log.c
-  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/mux_package.c)
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/mux_package.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_error.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/mux_error_bindings.c)
 target_link_libraries(lua_log_test PRIVATE btmux_options luajit m)
 target_include_directories(lua_log_test PRIVATE
   "${CMAKE_BINARY_DIR}"
@@ -1504,6 +1508,16 @@ target_include_directories(lua_pcall_checked_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src"
   "${LUAJIT_SOURCE_DIR}/src")
 add_test(NAME lua_pcall_checked COMMAND lua_pcall_checked_test)
+
+add_executable(lua_error_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/lua/lua_error.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_error.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/mux_error_bindings.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_link_libraries(lua_error_test PRIVATE btmux_options luajit m)
+target_include_directories(lua_error_test PRIVATE
+  "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}/src" "${LUAJIT_SOURCE_DIR}/src")
+add_test(NAME lua_error COMMAND lua_error_test)
 
 add_executable(libtelnet_integration_test ${CMAKE_SOURCE_DIR}/tests/integration/libtelnet_integration.c)
 target_link_libraries(libtelnet_integration_test

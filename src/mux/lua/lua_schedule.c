@@ -8,6 +8,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "mux/lua/lua_error.h"
 #include "mux/lua/lua_internal.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/db.h"
@@ -191,21 +192,25 @@ static void lua_schedule_run_job(LuaRuntime *runtime, LuaScheduleJob *job) {
       status = lua_callback_pcall_checked(runtime, 1, 0);
       runtime->current_root = previous_root;
       if (status) {
+        char *description = alloc_lbuf("lua_schedule_tick.error");
+
+        lua_error_describe(state, -1, description, LBUF_SIZE);
         if (job->root == LUA_ROOT_OBJECT_LOGIC) {
           log_error((LogEntry){.log = runtime->services->log,
                                .key = LOG_PROBLEMS,
                                .primary = "LUA",
                                .secondary = "SCHEDULE"},
                     "object #%ld module %s schedule %s: %s", job->object,
-                    job->path, job->name, lua_tostring(state, -1));
+                    job->path, job->name, description);
         } else {
           log_error((LogEntry){.log = runtime->services->log,
                                .key = LOG_PROBLEMS,
                                .primary = "LUA",
                                .secondary = "SCHEDULE"},
                     "global module %s schedule %s: %s", job->path, job->name,
-                    lua_tostring(state, -1));
+                    description);
         }
+        free_buf(description);
       }
     } else {
       lua_pop(state, 1);

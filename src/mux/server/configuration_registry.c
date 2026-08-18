@@ -187,6 +187,8 @@ static const ConfigurationEntry CONFIGURATION_ENTRY_TEMPLATES[] = {
     {"lua_directory", cf_string, CA_GOD, CONFIG_LOC(lua.directory),
      sizeof(((ServerConfiguration *)nullptr)->lua.directory)},
     {"lua_memory_limit", cf_int, CA_GOD, CONFIG_LOC(lua.memory_limit), 0},
+    {"lua_error_reporting", cf_lua_error_reporting, CA_GOD,
+     CONFIG_LOC(lua.error_reporting), 0},
     {"lua_state_value_limit", cf_int, CA_GOD, CONFIG_LOC(lua.state_value_limit),
      0},
     {"lua_state_entry_limit", cf_int, CA_GOD, CONFIG_LOC(lua.state_entry_limit),

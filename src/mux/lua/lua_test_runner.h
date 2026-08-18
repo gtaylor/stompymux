@@ -40,6 +40,7 @@ typedef struct LuaTestFailure {
   LuaTestFailureKind kind;
   char module_path[LUA_TEST_MODULE_PATH_SIZE];
   char test_name[LUA_TEST_NAME_SIZE];
+  char code[LUA_TEST_VALUE_SIZE];
   char message[LUA_TEST_MESSAGE_SIZE];
   char expected[LUA_TEST_VALUE_SIZE];
   char actual[LUA_TEST_VALUE_SIZE];

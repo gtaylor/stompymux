@@ -34,3 +34,4 @@ int cf_bootstrap_objects_clear(const ConfigurationCall *call);
 int cf_bootstrap_object(const ConfigurationCall *call);
 int cf_cf_access(const ConfigurationCall *call);
 int cf_ntab_access(const ConfigurationCall *call);
+int cf_lua_error_reporting(const ConfigurationCall *call);

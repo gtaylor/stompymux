@@ -6,6 +6,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "mux/lua/lua_error.h"
+#include "mux/lua/lua_error_codes.h"
 #include "mux/lua/mux_package.h"
 #include "mux/lua/mux_package_internal.h"
 #include "mux/objects/object_state.h"
@@ -21,7 +23,8 @@ static int lua_mux_object_state(lua_State *state) {
   if (length >= sizeof(handle->name_space) ||
       memchr(name_space, '\0', length) ||
       !object_state_name_is_valid(name_space))
-    return luaL_argerror(state, 2, "invalid state namespace");
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_STATE_INVALID,
+                         "invalid state namespace");
   handle = lua_newuserdata(state, sizeof(*handle));
   *handle = (LuaMuxState){
       .package = object->package,
@@ -60,7 +63,8 @@ static const char *lua_mux_state_key(lua_State *state, int argument) {
 
   if (length > 255 || memchr(key, '\0', length) ||
       !object_state_name_is_valid(key))
-    luaL_argerror(state, argument, "invalid state key");
+    lua_error_arg(state, argument, LUA_ERROR_CODE_STATE_INVALID,
+                  "invalid state key");
   return key;
 }
 
@@ -147,12 +151,14 @@ static int lua_mux_state_set(lua_State *state) {
     return 0;
   }
   if (!lua_mux_read_state_value(state, 3, &value))
-    return luaL_argerror(
-        state, 3, "state values must be strings, booleans, or finite numbers");
+    return lua_error_arg(
+        state, 3, LUA_ERROR_CODE_STATE_INVALID,
+        "state values must be strings, booleans, or finite numbers");
   if (!object_state_transaction_set(&handle->package->state_transaction,
                                     handle->object, handle->name_space, key,
                                     &value, error, sizeof(error)))
-    return luaL_error(state, "%s", error);
+    return lua_error_raise(state, LUA_ERROR_CODE_STATE_VALUE_TOO_LARGE, "%s",
+                           error);
   return 0;
 }
 
@@ -181,7 +187,8 @@ static int lua_mux_state_keys(lua_State *state) {
   size_t count;
 
   if (!transaction->depth)
-    return luaL_error(state, "state enumeration requires an active callback");
+    return lua_error_raise(state, LUA_ERROR_CODE_STATE_UNAVAILABLE,
+                           "state enumeration requires an active callback");
   count = object_state_transaction_count(transaction, handle->object,
                                          handle->name_space);
 
@@ -191,7 +198,8 @@ static int lua_mux_state_keys(lua_State *state) {
 
     if (!object_state_transaction_entry(transaction, handle->object,
                                         handle->name_space, index, &entry))
-      return luaL_error(state, "state changed during enumeration");
+      return lua_error_raise(state, LUA_ERROR_CODE_STATE_UNAVAILABLE,
+                             "state changed during enumeration");
     lua_pushstring(state, entry.key);
     lua_rawseti(state, -2, (int)index + 1);
   }
@@ -204,7 +212,8 @@ static int lua_mux_state_entries(lua_State *state) {
   size_t count;
 
   if (!transaction->depth)
-    return luaL_error(state, "state enumeration requires an active callback");
+    return lua_error_raise(state, LUA_ERROR_CODE_STATE_UNAVAILABLE,
+                           "state enumeration requires an active callback");
   count = object_state_transaction_count(transaction, handle->object,
                                          handle->name_space);
 
@@ -214,7 +223,8 @@ static int lua_mux_state_entries(lua_State *state) {
 
     if (!object_state_transaction_entry(transaction, handle->object,
                                         handle->name_space, index, &entry))
-      return luaL_error(state, "state changed during enumeration");
+      return lua_error_raise(state, LUA_ERROR_CODE_STATE_UNAVAILABLE,
+                             "state changed during enumeration");
     lua_createtable(state, 0, 2);
     lua_pushstring(state, entry.key);
     lua_setfield(state, -2, "key");
@@ -264,19 +274,22 @@ static int lua_mux_state_set_many(lua_State *state) {
     char error[256];
 
     if (lua_type(state, -2) != LUA_TSTRING)
-      return luaL_error(state, "state update keys must be strings");
+      return lua_error_raise(state, LUA_ERROR_CODE_STATE_INVALID,
+                             "state update keys must be strings");
     key = lua_mux_state_key(state, -2);
     if (lua_isnil(state, -1)) {
       object_state_transaction_delete(&handle->package->state_transaction,
                                       handle->object, handle->name_space, key);
     } else {
       if (!lua_mux_read_state_value(state, -1, &value))
-        return luaL_error(
-            state, "state values must be strings, booleans, or finite numbers");
+        return lua_error_raise(
+            state, LUA_ERROR_CODE_STATE_INVALID,
+            "state values must be strings, booleans, or finite numbers");
       if (!object_state_transaction_set(&handle->package->state_transaction,
                                         handle->object, handle->name_space, key,
                                         &value, error, sizeof(error)))
-        return luaL_error(state, "%s", error);
+        return lua_error_raise(state, LUA_ERROR_CODE_STATE_VALUE_TOO_LARGE,
+                               "%s", error);
     }
     lua_pop(state, 1);
   }
