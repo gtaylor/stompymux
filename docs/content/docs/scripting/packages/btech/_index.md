@@ -14,11 +14,12 @@ server authority.
 
 Arguments use Lua strings, numbers, and booleans; object arguments are native
 dbrefs rather than [`Object`](../mux/type-object/) handles. Invalid objects,
-arguments, or legacy error results raise Lua errors. Successful results are
-converted to the type documented for each function. Mutation-only operations
-return `true`. List operations split the legacy result on whitespace and
-`|`, convert numeric tokens (including `#123`) to Lua numbers, and return a
-flat array.
+arguments, or legacy error results raise structured Lua errors. Generic
+failures use `mux.error.codes`; BattleTech-subsystem failures use
+`btech.error.codes`. Successful results are converted to the type documented
+for each function. Mutation-only operations return `true`. List operations
+split the legacy result on whitespace and `|`, convert numeric tokens (including
+`#123`) to Lua numbers, and return a flat array.
 
 ## Functions
 
@@ -129,3 +130,9 @@ flat array.
 | [`btech.lag`](lag/) | Returns the current BattleTech event lag. |
 | [`btech.mech_frequencies`](mech-frequencies/) | Lists the configured radio channels of a live unit. |
 | [`btech.zone_mechs`](zone-mechs/) | Lists live unit objects assigned to a zone. |
+
+## Errors
+
+| Function | Description |
+| --- | --- |
+| [`btech.error`](../btech-error/) | Checked BattleTech error-code symbols. |

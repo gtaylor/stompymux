@@ -48,6 +48,12 @@ context to identify the object and enactor that triggered them.
 | --- | --- |
 | [`mux.log`](log/) | Appends a message to a named file under `game/logs/`. |
 
+### Errors
+
+| Function | Description |
+| --- | --- |
+| [`mux.error`](../mux-error/) | Creates, raises, and inspects structured Lua errors. |
+
 ## Types
 
 | Type | Description |

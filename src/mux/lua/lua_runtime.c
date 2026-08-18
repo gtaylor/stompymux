@@ -16,9 +16,13 @@
 #include <sys/stat.h>
 
 #include "mux/lua/btech_package.h"
+#include "mux/lua/lua_error.h"
+#include "mux/lua/lua_error_codes.h"
 #include "mux/lua/lua_internal.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/lua/mux_package.h"
+#include "mux/network/network_output.h"
+#include "mux/objects/flags.h"
 #include "mux/server/log.h"
 #include "mux/server/maintenance.h"
 #include "mux/server/platform.h"
@@ -27,7 +31,6 @@
 #include "mux/support/checked_storage.h"
 
 const char LUA_MODULES_KEY[] = "btmux.lua.modules";
-const char LUA_TRACEBACK_KEY[] = "btmux.lua.traceback";
 
 const char *lua_global_module_at(const LuaRuntime *runtime, size_t index) {
   return *(char *const *)checked_storage_at_const(
@@ -116,6 +119,39 @@ void lua_log_error(LuaRuntime *runtime, DbRef object, const char *kind,
             runtime->module[0] ? runtime->module : "<unknown>",
             error ? error : "unknown Lua error");
 }
+
+// NOLINTBEGIN(bugprone-easily-swappable-parameters): distinct callback roles.
+void lua_log_error_value(LuaRuntime *runtime, DbRef object, DbRef enactor,
+                         const char *kind, lua_State *state, int index) {
+  char description[LBUF_SIZE];
+  char code[256];
+  char secondary[320];
+  LuaErrorReporting reporting =
+      runtime->services->configuration->lua.error_reporting;
+  bool detailed = (bool)(reporting == LUA_ERROR_REPORTING_ALL);
+  const char *notification = "A script error occurred.";
+
+  if (!detailed && reporting == LUA_ERROR_REPORTING_WIZARDS && enactor >= 0)
+    detailed = is_wizard(runtime->services->database, enactor);
+
+  lua_error_describe(state, index, description, sizeof(description));
+  if (!lua_error_field(state, index, "code", code, sizeof(code)))
+    (void)snprintf(code, sizeof(code), "%s",
+                   lua_error_code_name(LUA_ERROR_CODE_RUNTIME));
+  (void)snprintf(secondary, sizeof(secondary), "%s/%s", kind, code);
+  log_error((LogEntry){.log = runtime->services->log,
+                       .key = LOG_PROBLEMS,
+                       .primary = "LUA",
+                       .secondary = secondary},
+            "object #%ld module %s: %s", object,
+            runtime->module[0] ? runtime->module : "<unknown>", description);
+  if (detailed)
+    notification = description;
+  if (enactor >= 0 && reporting != LUA_ERROR_REPORTING_OFF)
+    raw_notify(&runtime->services->background_command->evaluation, enactor,
+               notification);
+}
+// NOLINTEND(bugprone-easily-swappable-parameters)
 
 void lua_log_load_error(LuaRuntime *runtime, DbRef object, const char *path,
                         const char *error) {
@@ -366,16 +402,19 @@ static int lua_require_module(lua_State *state) {
   name_length = strlen(name);
   if (!name_length || lua_text_at(name, name_length, 0) == '.' ||
       lua_text_at(name, name_length, name_length - 1) == '.')
-    return luaL_error(state, "invalid module name");
+    return lua_error_raise(state, LUA_ERROR_CODE_MODULE_INVALID,
+                           "invalid module name");
   for (index = 0; index < name_length; index++) {
     unsigned char character =
         (unsigned char)lua_text_at(name, name_length, index);
 
     if (!(isalnum)(character) && character != '_' && character != '.')
-      return luaL_error(state, "invalid module name");
+      return lua_error_raise(state, LUA_ERROR_CODE_MODULE_INVALID,
+                             "invalid module name");
   }
   if (snprintf(path, sizeof(path), "%s.lua", name) >= (int)sizeof(path))
-    return luaL_error(state, "module name is too long");
+    return lua_error_raise(state, LUA_ERROR_CODE_MODULE_INVALID,
+                           "module name is too long");
   for (index = 0; index < strlen(path); index++) {
     char *character = lua_text_slot(path, sizeof(path), index);
 
@@ -388,7 +427,8 @@ static int lua_require_module(lua_State *state) {
   if (lua_resolve_path(runtime, root, path, resolved, sizeof(resolved), error,
                        sizeof(error))) {
     if (!lua_load_module(runtime, root, path, error, sizeof(error)))
-      return luaL_error(state, "%s", error);
+      return lua_error_raise(state, LUA_ERROR_CODE_MODULE_UNAVAILABLE, "%s",
+                             error);
     return 1;
   }
   if (root != LUA_ROOT_PACKAGES &&
@@ -396,10 +436,12 @@ static int lua_require_module(lua_State *state) {
                        sizeof(resolved), error, sizeof(error))) {
     if (!lua_load_module(runtime, LUA_ROOT_PACKAGES, path, error,
                          sizeof(error)))
-      return luaL_error(state, "%s", error);
+      return lua_error_raise(state, LUA_ERROR_CODE_MODULE_UNAVAILABLE, "%s",
+                             error);
     return 1;
   }
-  return luaL_error(state, "Lua module %s is unavailable", name);
+  return lua_error_raise(state, LUA_ERROR_CODE_MODULE_UNAVAILABLE,
+                         "Lua module %s is unavailable", name);
 }
 
 LuaRuntime *lua_runtime_create(LuaOwner *owner, const LuaServices *services,

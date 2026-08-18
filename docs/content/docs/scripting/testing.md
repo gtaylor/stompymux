@@ -55,6 +55,16 @@ earlier hook fails. A failed `before_all` errors every test in that suite and
 still permits `after_all` to run.
 
 `expect` provides `equal`, `not_equal`, `truthy`, `falsy`, `is_nil`,
-`contains`, `near`, and `error_matches`. Assertion errors keep expected and
-actual values structured, so the runner can report them differently from Lua
-runtime errors.
+`contains`, `near`, `error_matches`, `raises`, `raises_code`, `no_error`, and
+`is_error`. `raises` returns the structured error so tests can inspect its
+code and detail. Assertion errors keep expected and actual values structured,
+so the runner can report them differently from Lua runtime errors. See the
+[`mux.error` reference](packages/mux-error/) for error fields and matching.
+
+## Testing error codes
+
+The `testing` package exposes `testing.error.codes.assertion` and
+`testing.error.codes.runtime`, with string values `testing.assertion` and
+`testing.runtime`. They are checked symbols for assertions and normalized
+runtime failures respectively. The raising and inspection functions remain on
+`mux.error`.

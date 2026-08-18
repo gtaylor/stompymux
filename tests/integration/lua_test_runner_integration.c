@@ -8,16 +8,18 @@
 #include <lua.h>
 
 #include "mux/lua/btech_package.h"
+#include "mux/lua/lua_error.h"
 #include "mux/lua/lua_internal.h"
 #include "mux/lua/lua_test_runner.h"
 #include "mux/lua/mux_package.h"
+#include "mux/lua/mux_package_internal.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"
 
-void lua_mux_package_install(lua_State *state, LuaMuxPackage *package
-                             [[maybe_unused]]) {
+void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   lua_newtable(state);
+  lua_mux_install_error_bindings(state, package);
   lua_setglobal(state, "mux");
 }
 
@@ -26,6 +28,14 @@ void lua_mux_package_destroy(LuaMuxPackage *package [[maybe_unused]]) {}
 void lua_btech_package_install(lua_State *state,
                                LuaBtechPackage *package [[maybe_unused]]) {
   lua_newtable(state);
+  lua_newtable(state);
+  if (!lua_error_push_code_tree(state, "btech")) {
+    (void)lua_error_raise(state, LUA_ERROR_CODE_INTERNAL,
+                          "native btech error code tree is unavailable");
+    return;
+  }
+  lua_setfield(state, -2, "codes");
+  lua_setfield(state, -2, "error");
   lua_setglobal(state, "btech");
 }
 
@@ -61,8 +71,8 @@ int main(int argc, char *argv[]) {
 
   if (argc != 2)
     return 2;
-  game_directory = *(char *const *)checked_storage_at_const(
-      argv, (size_t)argc, sizeof(*argv), 1);
+  game_directory = *(char *const *)checked_storage_at_const(argv, (size_t)argc,
+                                                            sizeof(*argv), 1);
   if (snprintf(directory, sizeof(directory), "%s/lua", game_directory) >=
       (int)sizeof(directory))
     return 2;
@@ -75,9 +85,9 @@ int main(int argc, char *argv[]) {
   result = checked_storage_try_allocate_array(1, sizeof(*result));
   if (!result)
     return 2;
-  if (!lua_tests_run(&(LuaTestRunRequest){.services = &services,
-                                           .run_unit = true},
-                     result))
+  if (!lua_tests_run(
+          &(LuaTestRunRequest){.services = &services, .run_unit = true},
+          result))
     goto done;
   if (result->passed != 1 || result->failed != 1 || result->errored != 6 ||
       result->skipped != 0 || result->failure_count != 7)
@@ -94,6 +104,10 @@ int main(int argc, char *argv[]) {
   if (strcmp(test_failure_at(result, 0)->message,
              "expected expected, got actual"))
     goto done;
+  if (strcmp(test_failure_at(result, 0)->code, "testing.assertion"))
+    goto done;
+  if (!strstr(test_failure_at(result, 6)->message, "runtime exploded"))
+    goto done;
   if (!test_failure_at(result, 0)->traceback[0] ||
       !test_failure_at(result, 4)->traceback[0])
     goto done;
@@ -102,8 +116,8 @@ int main(int argc, char *argv[]) {
       strcmp(result->passes[0].test_name, "works"))
     goto done;
   if (!lua_tests_run(&(LuaTestRunRequest){.services = &services,
-                                           .filter = "unit/passing.lua:works",
-                                           .run_unit = true},
+                                          .filter = "unit/passing.lua:works",
+                                          .run_unit = true},
                      result))
     goto done;
   if (result->passed != 1 || result->failed != 0 || result->errored != 0 ||

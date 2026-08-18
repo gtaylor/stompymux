@@ -149,6 +149,23 @@ int cf_int(const ConfigurationCall *call) {
   return -1;
 }
 
+int cf_lua_error_reporting(const ConfigurationCall *call) {
+  LuaErrorReporting *value = call->value;
+
+  if (!strcmp(call->text, "off")) {
+    *value = LUA_ERROR_REPORTING_OFF;
+  } else if (!strcmp(call->text, "wizards")) {
+    *value = LUA_ERROR_REPORTING_WIZARDS;
+  } else if (!strcmp(call->text, "all")) {
+    *value = LUA_ERROR_REPORTING_ALL;
+  } else {
+    configuration_log_syntax(call->context, call->player, call->command,
+                             "Expected off, wizards, or all: ", call->text);
+    return -1;
+  }
+  return 0;
+}
+
 int cf_player_name_length_limit(const ConfigurationCall *call) {
   char expectation[96];
   int *value = call->value;

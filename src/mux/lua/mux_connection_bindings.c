@@ -5,6 +5,8 @@
 #include <lua.h>
 #include <string.h>
 
+#include "mux/lua/lua_error.h"
+#include "mux/lua/lua_error_codes.h"
 #include "mux/lua/mux_package.h"
 #include "mux/lua/mux_package_internal.h"
 #include "mux/network/descriptor.h"
@@ -22,11 +24,14 @@ static int lua_mux_notify(lua_State *state) {
   const char *message = luaL_checklstring(state, 2, &length);
 
   if (lua_mux_package_is_checking(package))
-    return luaL_error(state, "mux.notify is unavailable during @lua/check");
+    return lua_error_raise(state, LUA_ERROR_CODE_CHECKING_UNAVAILABLE,
+                           "mux.notify is unavailable during @lua/check");
   if (strlen(message) != length)
-    return luaL_argerror(state, 2, "message contains an embedded NUL byte");
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_CONNECTION_INVALID,
+                         "message contains an embedded NUL byte");
   if (!utf8_validate(message, length))
-    return luaL_argerror(state, 2, "message is not valid UTF-8");
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_CONNECTION_INVALID,
+                         "message is not valid UTF-8");
   object = lua_mux_require_object(package, state, 1);
   notify_checked(&package->services->background_command->evaluation, object,
                  object, message, MSG_ME_ALL | MSG_F_DOWN);
@@ -84,7 +89,8 @@ static Descriptor *lua_mux_require_descriptor(LuaMuxPackage *package,
   descriptor =
       descriptor_find_by_fd(package->services->descriptors, descriptor_id);
   if (descriptor == nullptr)
-    luaL_argerror(state, argument, "no such descriptor");
+    lua_error_arg(state, argument, LUA_ERROR_CODE_CONNECTION_INVALID,
+                  "no such descriptor");
   return descriptor;
 }
 
@@ -96,7 +102,8 @@ static TelnetEnvironmentKind lua_mux_telnet_environment_kind(lua_State *state,
     return TELNET_ENVIRONMENT_VAR;
   if (!strcmp(kind, "uservar"))
     return TELNET_ENVIRONMENT_USERVAR;
-  luaL_argerror(state, argument, "kind must be 'var' or 'uservar'");
+  lua_error_arg(state, argument, LUA_ERROR_CODE_CONNECTION_INVALID,
+                "kind must be 'var' or 'uservar'");
   return TELNET_ENVIRONMENT_VAR;
 }
 
@@ -136,9 +143,11 @@ static int lua_mux_flow_start(lua_State *state) {
   const char *first_step = luaL_checkstring(state, 3);
 
   if (lua_mux_package_is_checking(package))
-    return luaL_error(state, "mux.flow_start is unavailable during @lua/check");
+    return lua_error_raise(state, LUA_ERROR_CODE_CHECKING_UNAVAILABLE,
+                           "mux.flow_start is unavailable during @lua/check");
   if (!package->flow_start)
-    return luaL_error(state, "mux.flow_start is unavailable");
+    return lua_error_raise(state, LUA_ERROR_CODE_CONNECTION_UNAVAILABLE,
+                           "mux.flow_start is unavailable");
   return package->flow_start(package->context, state, descriptor_id, module,
                              first_step);
 }

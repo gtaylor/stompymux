@@ -55,6 +55,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/help/help_render.c
   ${MUX_MODULE_DIR}/lua/command_access.c
   ${MUX_MODULE_DIR}/lua/lua_runtime.c
+  ${MUX_MODULE_DIR}/lua/lua_error.c
   ${MUX_MODULE_DIR}/lua/lua_module_registry.c
   ${MUX_MODULE_DIR}/lua/lua_validation.c
   ${MUX_MODULE_DIR}/lua/lua_test_runner.c
@@ -64,6 +65,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/lua_flow.c
   ${MUX_MODULE_DIR}/lua/btech_package.c
   ${MUX_MODULE_DIR}/lua/mux_package.c
+  ${MUX_MODULE_DIR}/lua/mux_error_bindings.c
   ${MUX_MODULE_DIR}/lua/mux_object_bindings.c
   ${MUX_MODULE_DIR}/lua/mux_attribute_bindings.c
   ${MUX_MODULE_DIR}/lua/mux_text_bindings.c

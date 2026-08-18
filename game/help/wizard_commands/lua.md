@@ -25,3 +25,6 @@ Lua command entries may set `access = "wizard"` or `access = "god"` alongside
 their `pattern` and `handler`. Omitting `access`, or setting it to `"public"`,
 allows everyone. Unauthorized entries are skipped silently so later command
 entries may still match.
+Lua callback reporting is configured with `lua_error_reporting`: `off`,
+`wizards` (the default), or `all`. Errors are always logged; this setting only
+controls player-visible reporting.

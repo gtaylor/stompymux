@@ -46,6 +46,8 @@ state_value_limit = 65536
 state_entry_limit = 1024
 # Maximum total persistent Lua state bytes on one object.
 state_object_limit = 1048576
+# Player-facing Lua callback errors: off, wizards, or all.
+error_reporting = "wizards"
 
 # -----------------------------------------------
 #  Important Directives (Look these over!)

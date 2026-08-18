@@ -1,6 +1,5 @@
 /* lua.c - Lua runtime initialization and MUX integration. */
 
-#include <lauxlib.h>
 #include <limits.h>
 #include <linux/limits.h>
 #include <lua.h>
@@ -8,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mux/lua/lua_error.h"
+#include "mux/lua/lua_error_codes.h"
 #include "mux/lua/lua_internal.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/network/descriptor.h"
@@ -168,7 +169,7 @@ static FlowOutcome lua_flow_step(const FlowStepCall *call) {
   status = lua_callback_pcall_checked(runtime, 1, 1);
   runtime->current_root = previous_root;
   if (status) {
-    lua_log_error(runtime, d->player, "FLOW", lua_tostring(state, -1));
+    lua_log_error_value(runtime, d->player, d->player, "FLOW", state, -1);
     lua_settop(state, top);
     outcome.prompt = "A script error interrupted this flow.\r\n";
     return outcome;
@@ -265,14 +266,16 @@ int lua_runtime_flow_start(void *context, lua_State *state, int descriptor_id,
 
   d = descriptor_find_by_fd(runtime->services->descriptors, descriptor_id);
   if (!d)
-    return luaL_error(state, "no such descriptor");
+    return lua_error_raise(state, LUA_ERROR_CODE_CONNECTION_INVALID,
+                           "no such descriptor");
   if (d->flow != nullptr)
-    return luaL_error(state, "descriptor already has an active flow");
+    return lua_error_raise(state, LUA_ERROR_CODE_CONNECTION_UNAVAILABLE,
+                           "descriptor already has an active flow");
 
   root = lua_require_root(state, runtime);
   if (!lua_verify_module_has_flow(runtime, root, module, first_step, error,
                                   sizeof(error)))
-    return luaL_error(state, "%s", error);
+    return lua_error_raise(state, LUA_ERROR_CODE_MODULE_INVALID, "%s", error);
 
   data = checked_storage_allocate(sizeof(LuaFlowData));
   data->runtime_owner = runtime->owner;

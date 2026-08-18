@@ -61,6 +61,7 @@ static const ConfigTomlMapping CONFIG_TOML_MAP[] = {
     /* lua */
     {"lua.directory", "lua_directory", CFG_KIND_SCALAR},
     {"lua.memory_limit", "lua_memory_limit", CFG_KIND_SCALAR},
+    {"lua.error_reporting", "lua_error_reporting", CFG_KIND_SCALAR},
     {"lua.state_value_limit", "lua_state_value_limit", CFG_KIND_SCALAR},
     {"lua.state_entry_limit", "lua_state_entry_limit", CFG_KIND_SCALAR},
     {"lua.state_object_limit", "lua_state_object_limit", CFG_KIND_SCALAR},

@@ -274,8 +274,8 @@ void lua_appearance_evaluate(LuaRuntime *runtime,
     runtime->current_root = previous_root;
   }
   if (status) {
-    lua_log_error(runtime, invocation->object, "APPEARANCE",
-                  lua_tostring(state, -1));
+    lua_log_error_value(runtime, invocation->object, invocation->enactor,
+                        "APPEARANCE", state, -1);
   } else if (!lua_isnil(state, -1)) {
     if (lua_type(state, -1) != LUA_TSTRING) {
       lua_log_error(runtime, invocation->object, "APPEARANCE",
@@ -334,8 +334,8 @@ void lua_mech_status_evaluate(LuaRuntime *runtime,
   int status = lua_callback_pcall_checked(runtime, 1, 1);
   runtime->current_root = previous_root;
   if (status) {
-    lua_log_error(runtime, invocation->object, "MECH_STATUS",
-                  lua_tostring(state, -1));
+    lua_log_error_value(runtime, invocation->object, invocation->enactor,
+                        "MECH_STATUS", state, -1);
   } else if (!lua_isnil(state, -1)) {
     if (lua_type(state, -1) != LUA_TSTRING) {
       lua_log_error(runtime, invocation->object, "MECH_STATUS",
@@ -491,8 +491,8 @@ bool lua_event_dispatch(LuaRuntime *runtime,
     runtime->current_root = previous_root;
   }
   if (status)
-    lua_log_error(runtime, invocation->object, "EVENT",
-                  lua_tostring(state, -1));
+    lua_log_error_value(runtime, invocation->object, invocation->enactor,
+                        "EVENT", state, -1);
   lua_settop(state, top);
   return true;
 }
@@ -629,7 +629,8 @@ void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
     runtime->current_root = previous_root;
   }
   if (status) {
-    lua_log_error(runtime, invocation->object, "LOCK", lua_tostring(state, -1));
+    lua_log_error_value(runtime, invocation->object, invocation->enactor,
+                        "LOCK", state, -1);
   } else if (!lua_lock_parse_result(state, result)) {
     lua_log_error(runtime, invocation->object, "LOCK",
                   "lock handler must return a boolean or a valid result table");
@@ -740,8 +741,8 @@ void lua_message_evaluate(LuaRuntime *runtime,
     runtime->current_root = previous_root;
   }
   if (status) {
-    lua_log_error(runtime, invocation->object, "MESSAGE",
-                  lua_tostring(state, -1));
+    lua_log_error_value(runtime, invocation->object, invocation->enactor,
+                        "MESSAGE", state, -1);
   } else if (!lua_message_parse_result(state, invocation->type, result)) {
     lua_log_error(runtime, invocation->object, "MESSAGE",
                   "message provider must return a valid result table");

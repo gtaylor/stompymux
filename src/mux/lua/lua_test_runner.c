@@ -9,6 +9,8 @@
 #include <string.h>
 #include <time.h> // IWYU pragma: keep
 
+#include "mux/lua/lua_error.h"
+#include "mux/lua/lua_error_codes.h"
 #include "mux/lua/lua_internal.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/server/platform.h"
@@ -67,25 +69,15 @@ static void lua_test_add_pass(LuaTestRunResult *result, const char *module_path,
 
 static void lua_test_copy_value(lua_State *state, int index, char *destination,
                                 size_t destination_size) {
-  const char *value = lua_tostring(state, index);
-
-  if (value)
-    (void)string_copy_bounded(destination, destination_size, value);
-  else
-    (void)string_copy_bounded(destination, destination_size,
-                              luaL_typename(state, index));
+  lua_error_describe(state, index, destination, destination_size);
 }
 
 static bool lua_test_error_is_assertion(lua_State *state, int error) {
   bool assertion = false;
 
   lua_getfield(state, error, "error");
-  if (lua_istable(state, -1)) {
-    lua_getfield(state, -1, "kind");
-    assertion = (lua_isstring(state, -1) != 0 &&
-                 !strcmp(lua_tostring(state, -1), "assertion")) != 0;
-    lua_pop(state, 1);
-  }
+  assertion = lua_error_is(
+      state, -1, lua_error_code_name(LUA_ERROR_CODE_TESTING_ASSERTION));
   lua_pop(state, 1);
   return assertion;
 }
@@ -110,20 +102,28 @@ static void lua_test_add_failure(LuaTestRunResult *result,
                             test_name);
   lua_getfield(state, error, "error");
   if (lua_istable(state, -1)) {
-    lua_getfield(state, -1, "message");
-    lua_test_copy_value(state, -1, failure->message, sizeof(failure->message));
-    lua_pop(state, 1);
+    (void)lua_error_field(state, -1, "code", failure->code,
+                          sizeof(failure->code));
+    if (!lua_error_field(state, -1, "message", failure->message,
+                         sizeof(failure->message)))
+      lua_test_copy_value(state, -1, failure->message,
+                          sizeof(failure->message));
     if (kind == LUA_TEST_FAILURE_ASSERTION) {
-      lua_getfield(state, -1, "expected");
-      lua_test_copy_value(state, -1, failure->expected,
-                          sizeof(failure->expected));
-      lua_pop(state, 1);
-      lua_getfield(state, -1, "actual");
-      lua_test_copy_value(state, -1, failure->actual, sizeof(failure->actual));
+      lua_getfield(state, -1, "detail");
+      if (lua_istable(state, -1)) {
+        lua_getfield(state, -1, "expected");
+        lua_test_copy_value(state, -1, failure->expected,
+                            sizeof(failure->expected));
+        lua_pop(state, 1);
+        lua_getfield(state, -1, "actual");
+        lua_test_copy_value(state, -1, failure->actual,
+                            sizeof(failure->actual));
+        lua_pop(state, 1);
+      }
       lua_pop(state, 1);
     }
   } else {
-    lua_test_copy_value(state, -1, failure->message, sizeof(failure->message));
+    lua_error_describe(state, -1, failure->message, sizeof(failure->message));
   }
   lua_pop(state, 1);
   lua_getfield(state, error, "traceback");

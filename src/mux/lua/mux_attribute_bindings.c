@@ -3,6 +3,8 @@
 #include <string.h>
 
 #include "mux/commands/command_keys.h"
+#include "mux/lua/lua_error.h"
+#include "mux/lua/lua_error_codes.h"
 #include "mux/lua/mux_package.h"
 #include "mux/lua/mux_package_internal.h"
 #include "mux/objects/db.h"
@@ -18,11 +20,13 @@ static const Attribute *lua_mux_attribute_name(lua_State *state,
   const char *name = luaL_checklstring(state, argument, &length);
 
   if (memchr(name, '\0', length))
-    luaL_argerror(state, argument, "invalid attribute name");
+    lua_error_arg(state, argument, LUA_ERROR_CODE_ATTRIBUTE_INVALID,
+                  "invalid attribute name");
   const Attribute *attribute = object_attribute_administrable_by_name(
       handle->package->services->database, name);
   if (!attribute)
-    luaL_argerror(state, argument, "attribute is not administrable");
+    lua_error_arg(state, argument, LUA_ERROR_CODE_ATTRIBUTE_INVALID,
+                  "attribute is not administrable");
   return attribute;
 }
 
@@ -70,7 +74,8 @@ static int lua_mux_attribute_set(lua_State *state) {
 
     if (length >= LBUF_SIZE || memchr(value, '\0', length)) {
       free_buf(text);
-      return luaL_argerror(state, 3, "invalid attribute value");
+      return lua_error_arg(state, 3, LUA_ERROR_CODE_ATTRIBUTE_INVALID,
+                           "invalid attribute value");
     }
     memcpy(text, value, length);
     *(char *)checked_storage_at(text, LBUF_SIZE, sizeof(char), length) = '\0';
@@ -80,7 +85,8 @@ static int lua_mux_attribute_set(lua_State *state) {
       handle->object, attribute->number, text, SET_QUIET);
   free_buf(text);
   if (!set)
-    return luaL_error(state, "unable to set attribute");
+    return lua_error_raise(state, LUA_ERROR_CODE_ATTRIBUTE_INVALID,
+                           "unable to set attribute");
   return 0;
 }
 

@@ -329,6 +329,7 @@ void configuration_initialize(ConfigurationContext *context) {
   context->configuration->lua.state_value_limit = 64 * 1024;
   context->configuration->lua.state_entry_limit = 1024;
   context->configuration->lua.state_object_limit = 1024 * 1024;
+  context->configuration->lua.error_reporting = LUA_ERROR_REPORTING_WIZARDS;
 
   context->configuration->player_zone = 0;
 }

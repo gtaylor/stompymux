@@ -11,6 +11,9 @@ cd "$workspace"
 echo "==> Initializing submodules"
 git submodule update --init --recursive
 
+echo "==> Installing documentation dependencies"
+npm --prefix docs install
+
 # game/data is gitignored, so a new worktree starts with no game database and
 # the server bootstraps a fresh world on first start. That is the safe default:
 # a branch that changes the schema will refuse to load the root checkout's

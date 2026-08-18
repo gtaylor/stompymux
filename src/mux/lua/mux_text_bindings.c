@@ -4,6 +4,8 @@
 #include <lua.h>
 #include <string.h>
 
+#include "mux/lua/lua_error.h"
+#include "mux/lua/lua_error_codes.h"
 #include "mux/lua/mux_package.h"
 #include "mux/lua/mux_package_internal.h"
 #include "mux/support/alloc.h"
@@ -20,7 +22,8 @@ static int lua_mux_markup(lua_State *state) {
   if (!styled_text_compile(package->services->styled_text_palette, markup,
                            output, LBUF_SIZE, error, sizeof(error))) {
     free_buf(output);
-    return luaL_error(state, "invalid styled-text markup: %s", error);
+    return lua_error_raise(state, LUA_ERROR_CODE_TEXT_INVALID,
+                           "invalid styled-text markup: %s", error);
   }
   lua_pushstring(state, markup);
   free_buf(output);
@@ -111,7 +114,8 @@ static int lua_mux_style(lua_State *state) {
   size_t open_count = 0;
 
   if (strlen(value) != text_length)
-    return luaL_argerror(state, 1, "value contains an embedded NUL byte");
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_TEXT_INVALID,
+                         "value contains an embedded NUL byte");
   luaL_checktype(state, 2, LUA_TTABLE);
   markup = alloc_lbuf("lua_mux_style.markup");
   cursor = markup;
@@ -137,7 +141,8 @@ static int lua_mux_style(lua_State *state) {
                                        .cursor = &cursor,
                                        .open_count = &open_count})) {
       free_buf(markup);
-      return luaL_error(state, "style fields have invalid types");
+      return lua_error_raise(state, LUA_ERROR_CODE_TEXT_INVALID,
+                             "style fields have invalid types");
     }
   }
   safe_str(value, markup, &cursor);
@@ -150,7 +155,8 @@ static int lua_mux_style(lua_State *state) {
                            validated, LBUF_SIZE, error, sizeof(error))) {
     free_buf(markup);
     free_buf(validated);
-    return luaL_error(state, "invalid style: %s", error);
+    return lua_error_raise(state, LUA_ERROR_CODE_TEXT_INVALID,
+                           "invalid style: %s", error);
   }
   lua_pushstring(state, markup);
   free_buf(markup);
@@ -186,7 +192,8 @@ static int lua_mux_truncate_text(lua_State *state) {
   char *output;
 
   if (width < 0)
-    return luaL_argerror(state, 2, "width must not be negative");
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_TEXT_INVALID,
+                         "width must not be negative");
   output = alloc_lbuf("lua_mux_truncate_text");
   styled_text_truncate(package->services->styled_text_palette, value,
                        (size_t)width, output, LBUF_SIZE);

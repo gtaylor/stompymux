@@ -60,7 +60,6 @@ char *lua_runtime_root_slot(LuaRuntime *runtime, LuaModuleRoot root);
 LuaScheduleJob *lua_schedule_job_at(LuaRuntime *runtime, size_t index);
 
 extern const char LUA_MODULES_KEY[];
-extern const char LUA_TRACEBACK_KEY[];
 extern const char *const LUA_EVENT_NAMES[LUA_EVENT_COUNT];
 extern const char *const LUA_LOCK_NAMES[LUA_LOCK_COUNT];
 extern const char *const LUA_LOCK_OPERATION_NAMES[LUA_LOCK_OPERATION_COUNT];
@@ -74,6 +73,10 @@ int lua_pcall_checked(LuaRuntime *runtime, int arguments, int results);
 int lua_callback_pcall_checked(LuaRuntime *runtime, int arguments, int results);
 void lua_log_error(LuaRuntime *runtime, DbRef object, const char *kind,
                    const char *error);
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters): distinct callback
+// roles.
+void lua_log_error_value(LuaRuntime *runtime, DbRef object, DbRef enactor,
+                         const char *kind, lua_State *state, int index);
 void lua_log_load_error(LuaRuntime *runtime, DbRef object, const char *path,
                         const char *error);
 bool lua_valid_relative_path(const char *path);

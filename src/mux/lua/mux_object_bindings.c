@@ -4,6 +4,8 @@
 #include <lua.h>
 #include <string.h>
 
+#include "mux/lua/lua_error.h"
+#include "mux/lua/lua_error_codes.h"
 #include "mux/lua/mux_package.h"
 #include "mux/lua/mux_package_internal.h"
 #include "mux/objects/attrs.h"
@@ -22,18 +24,21 @@ DbRef lua_mux_require_object(LuaMuxPackage *package, lua_State *state,
 
   if (handle) {
     if (handle->package != package)
-      luaL_argerror(state, argument, "object belongs to another Lua runtime");
+      lua_error_arg(state, argument, LUA_ERROR_CODE_OBJECT_INVALID,
+                    "object belongs to another Lua runtime");
     if (!is_good_obj(package->services->database, handle->object) ||
         game_object_generation(package->services->database, handle->object) !=
             handle->generation)
-      luaL_argerror(state, argument, "object no longer exists");
+      lua_error_arg(state, argument, LUA_ERROR_CODE_OBJECT_INVALID,
+                    "object no longer exists");
     object = handle->object;
   } else {
     object = (DbRef)luaL_checkinteger(state, argument);
   }
 
   if (!is_good_obj(package->services->database, object))
-    luaL_argerror(state, argument, "invalid object");
+    lua_error_arg(state, argument, LUA_ERROR_CODE_OBJECT_INVALID,
+                  "invalid object");
   return object;
 }
 
@@ -58,7 +63,8 @@ LuaMuxObject *lua_mux_check_object_handle(lua_State *state, int argument) {
   if (!is_good_obj(handle->package->services->database, handle->object) ||
       game_object_generation(handle->package->services->database,
                              handle->object) != handle->generation)
-    luaL_argerror(state, argument, "object no longer exists");
+    lua_error_arg(state, argument, LUA_ERROR_CODE_OBJECT_INVALID,
+                  "object no longer exists");
   return handle;
 }
 
@@ -69,7 +75,8 @@ LuaMuxState *lua_mux_check_state(lua_State *state, int argument) {
   if (!is_good_obj(handle->package->services->database, handle->object) ||
       game_object_generation(handle->package->services->database,
                              handle->object) != handle->generation)
-    luaL_argerror(state, argument, "object no longer exists");
+    lua_error_arg(state, argument, LUA_ERROR_CODE_OBJECT_INVALID,
+                  "object no longer exists");
   return handle;
 }
 
@@ -80,7 +87,8 @@ LuaMuxAttribute *lua_mux_check_attribute(lua_State *state, int argument) {
   if (!is_good_obj(handle->package->services->database, handle->object) ||
       game_object_generation(handle->package->services->database,
                              handle->object) != handle->generation)
-    luaL_argerror(state, argument, "object no longer exists");
+    lua_error_arg(state, argument, LUA_ERROR_CODE_OBJECT_INVALID,
+                  "object no longer exists");
   return handle;
 }
 
@@ -114,7 +122,8 @@ static int lua_mux_contents(lua_State *state) {
   lua_mux_require_runtime(package, state, "contents");
   object = lua_mux_require_object(package, state, 1);
   if (!has_contents(package->services->database, object))
-    return luaL_argerror(state, 1, "object cannot contain other objects");
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "object cannot contain other objects");
   lua_newtable(state);
   DOLIST(package->services->database, member,
          game_object_contents(package->services->database, object)) {
@@ -137,11 +146,13 @@ static int lua_mux_contents_visible(lua_State *state) {
   viewer = lua_mux_require_object(package, state, 2);
   member = lua_mux_require_object(package, state, 3);
   if (!has_contents(package->services->database, container))
-    return luaL_argerror(state, 1, "object cannot contain other objects");
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "object cannot contain other objects");
   if (!lua_mux_list_contains(
           package->services->database,
           game_object_contents(package->services->database, container), member))
-    return luaL_argerror(state, 3, "object is not directly contained");
+    return lua_error_arg(state, 3, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "object is not directly contained");
   evaluation = &package->services->background_command->evaluation;
   can_see_location = ((!is_dark(package->services->database, container)) != 0);
   lua_pushboolean(state, can_see(&(ObjectVisibilityRequest){
@@ -161,7 +172,8 @@ static int lua_mux_exits(lua_State *state) {
   lua_mux_require_runtime(package, state, "exits");
   object = lua_mux_require_object(package, state, 1);
   if (!has_exits(package->services->database, object))
-    return luaL_argerror(state, 1, "object cannot have exits");
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "object cannot have exits");
   lua_newtable(state);
   DOLIST(package->services->database, exit,
          game_object_exits(package->services->database, object)) {
@@ -183,13 +195,16 @@ static int lua_mux_exits_visible(lua_State *state) {
   viewer = lua_mux_require_object(package, state, 2);
   exit = lua_mux_require_object(package, state, 3);
   if (!has_exits(package->services->database, location))
-    return luaL_argerror(state, 1, "object cannot have exits");
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "object cannot have exits");
   if (!is_exit(package->services->database, exit))
-    return luaL_argerror(state, 3, "object is not an exit");
+    return lua_error_arg(state, 3, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "object is not an exit");
   if (!lua_mux_list_contains(
           package->services->database,
           game_object_exits(package->services->database, location), exit))
-    return luaL_argerror(state, 3, "exit is not directly attached");
+    return lua_error_arg(state, 3, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "exit is not directly attached");
   if (is_dark(package->services->database, location))
     key |= VE_LOC_DARK;
   lua_pushboolean(state, exit_displayable(&(ExitVisibilityRequest){
@@ -205,13 +220,15 @@ static int lua_mux_exit_enter_lock_passes(lua_State *state) {
   DbRef exit;
   DbRef enactor;
 
-  lua_mux_require_runtime(package, state, "exit_enter_lock_passes");
+  lua_mux_require_runtime(package, state, "object:enter_lock_passes");
   exit = lua_mux_require_object(package, state, 1);
   enactor = lua_mux_require_object(package, state, 2);
   if (!is_exit(package->services->database, exit))
-    return luaL_argerror(state, 1, "object is not an exit");
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "object is not an exit");
   if (!package->exit_enter_lock_passes)
-    return luaL_error(state, "mux.exit_enter_lock_passes is unavailable");
+    return lua_error_raise(state, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
+                           "object:enter_lock_passes is unavailable");
   lua_pushboolean(
       state, package->exit_enter_lock_passes(package->context, exit, enactor));
   return 1;
