@@ -324,7 +324,7 @@ static int ascii_digit_value(int value) { return value - '0'; }
 void print_armor_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
                         int owner) {
   const char *srcbuf;
-  char destbuf[LBUF_SIZE];
+  char *destbuf = alloc_lbuf("print_armor_status.destination");
 
   BtsState current_state = BTS_START_OF_LINE;
   int tmp_value1 = 0;
@@ -432,7 +432,7 @@ void print_armor_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
 
   /* Perform substitution on template.  */
   BtechTextBuilder destination;
-  btech_text_builder_initialize(&destination, destbuf, sizeof(destbuf));
+  btech_text_builder_initialize(&destination, destbuf, LBUF_SIZE);
   size_t saved_source_position = 0;
   const size_t SOURCE_LENGTH = strlen(srcbuf);
   for (size_t source_position = 0; source_position < SOURCE_LENGTH;
@@ -664,6 +664,7 @@ void print_armor_status(EvaluationContext *evaluation, DbRef player, Mech *mech,
 
   /* Send formatted status.  */
   mecha_notify(evaluation, player, destbuf);
+  free_buf(destbuf);
 }
 
 /*

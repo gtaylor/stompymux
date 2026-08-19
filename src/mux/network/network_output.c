@@ -135,7 +135,6 @@ void descriptor_queue_write(Descriptor *d, const char *b, int n) {
 }
 
 void descriptor_queue_string(Descriptor *d, const char *s) {
-  char rendered[LBUF_SIZE];
   StyledTextRenderOptions options = {};
 
   if (is_ansi(descriptor_runtime(d)->world->database, d->player)) {
@@ -186,6 +185,7 @@ void descriptor_queue_string(Descriptor *d, const char *s) {
         descriptor_queue_write(d, definition, (int)strlen(definition));
     }
   }
+  char rendered[LBUF_SIZE];
   styled_text_render_with_options(
       descriptor_runtime(d)->world->styled_text_palette, s, &options, rendered,
       sizeof(rendered));

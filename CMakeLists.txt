@@ -36,6 +36,7 @@ set(BTECH_SOURCE_DIR "src/btech")
 
 option(BTECH_ENABLE_ASAN "Build with AddressSanitizer instrumentation" ON)
 option(BTECH_ENABLE_UBSAN "Build with UndefinedBehaviorSanitizer instrumentation" ON)
+option(BTECH_ENABLE_HARDENING "Build first-party targets with production hardening" ON)
 option(BTECH_ENABLE_CLANG_TIDY "Run clang-tidy during compilation" OFF)
 option(BTECH_ENABLE_IWYU "Run Include What You Use during project compilation" OFF)
 option(BTECH_STRICT_C23 "Disable compiler-specific C extensions for first-party code" ON)
@@ -170,6 +171,18 @@ target_compile_options(btmux_compile_options INTERFACE
   -Wbad-function-cast -Wswitch-enum -Wimplicit-fallthrough -Wunused-macros -Wfloat-equal -Wpedantic
   -Wcast-align -Wdouble-promotion -Wcast-qual -Wwrite-strings -Wconversion -Wunsafe-buffer-usage
   -Wsign-conversion>)
+if(BTECH_ENABLE_HARDENING)
+  # Clang does not provide GCC's -fhardened umbrella option. Keep this aligned
+  # with its C-relevant protections so MUX and BTech receive the same baseline.
+  target_compile_definitions(btmux_compile_options INTERFACE
+    _FORTIFY_SOURCE=3)
+  target_compile_options(btmux_compile_options INTERFACE
+    $<$<COMPILE_LANGUAGE:C>:-ftrivial-auto-var-init=zero
+    -fstack-protector-strong -fstack-clash-protection
+    -fcf-protection=full -fPIE>)
+  target_link_options(btmux_compile_options INTERFACE
+    -pie LINKER:-z,relro,-z,now)
+endif()
 if(BTECH_ENABLE_ASAN)
   target_compile_options(btmux_compile_options INTERFACE -fsanitize=address)
   target_link_options(btmux_compile_options INTERFACE -fsanitize=address)

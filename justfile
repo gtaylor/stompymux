@@ -5,6 +5,7 @@ fuzz_build_dir := ".build-fuzz"
 build_type := env("CMAKE_BUILD_TYPE", "RelWithDebInfo")
 enable_asan := env("BTECH_ENABLE_ASAN", "ON")
 enable_ubsan := env("BTECH_ENABLE_UBSAN", "ON")
+enable_hardening := env("BTECH_ENABLE_HARDENING", "ON")
 strict_c23 := env("BTECH_STRICT_C23", "ON")
 build_fuzzers := env("BTECH_BUILD_FUZZERS", "OFF")
 frame_check_build_dir := ".build-frame-check"
@@ -134,7 +135,7 @@ tidy-check:
     output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -p {{build_dir}} -j "$(nproc)" -checks='readability-implicit-bool-conversion' -warnings-as-errors='*,-readability-implicit-bool-conversion' '^.*/src/(mux|btech)/.*[.]c$' >"$output" 2>&1 || status=$?; if (( status != 0 )); then cat "$output" >&2; exit "$status"; fi; if rg -n -- "-> 'bool'" "$output"; then echo 'Implicit conversion into bool found; make the conversion explicit.' >&2; exit 1; fi
 
 build:
-    cmake -S . -B {{build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBTECH_ENABLE_ASAN={{enable_asan}} -DBTECH_ENABLE_UBSAN={{enable_ubsan}} -DBTECH_STRICT_C23={{strict_c23}} -DBTECH_BUILD_FUZZERS={{build_fuzzers}}
+    cmake -S . -B {{build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBTECH_ENABLE_ASAN={{enable_asan}} -DBTECH_ENABLE_UBSAN={{enable_ubsan}} -DBTECH_ENABLE_HARDENING={{enable_hardening}} -DBTECH_STRICT_C23={{strict_c23}} -DBTECH_BUILD_FUZZERS={{build_fuzzers}}
     cmake --build {{build_dir}} -j "$(nproc)"
 
 # Compile with real code generation and fail if any production frame crosses
