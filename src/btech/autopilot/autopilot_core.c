@@ -50,12 +50,6 @@
  * of the AI
  */
 
-/*! \todo {See if we need this function and remove it if not} */
-bool auto_valid_progline(Autopilot *a [[maybe_unused]],
-                         int p [[maybe_unused]]) {
-  return false;
-}
-
 /*
  * Internal function to return a string that
  * displays a command from a command_node
