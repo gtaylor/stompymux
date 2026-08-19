@@ -61,3 +61,14 @@ AutopilotPhysicalSide autopilot_physical_choose_leg(bool right_available,
     return AUTOPILOT_PHYSICAL_RIGHT;
   return AUTOPILOT_PHYSICAL_LEFT;
 }
+
+AutopilotPhysicalSide autopilot_physical_choose_punch(bool right_available,
+                                                      bool left_available) {
+  if (right_available && left_available)
+    return AUTOPILOT_PHYSICAL_BOTH;
+  if (right_available)
+    return AUTOPILOT_PHYSICAL_RIGHT;
+  if (left_available)
+    return AUTOPILOT_PHYSICAL_LEFT;
+  return AUTOPILOT_PHYSICAL_NONE;
+}

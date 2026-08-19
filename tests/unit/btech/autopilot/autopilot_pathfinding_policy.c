@@ -49,7 +49,17 @@ static int test_step_policy(void) {
   request.waterproof = false;
   request.to.friendly_units = 3;
   result = autopilot_path_step_evaluate(&request);
-  return !result.traversable || result.cost != 450;
+  if (!result.traversable || result.cost != 450)
+    return 8;
+  request.mobility = AUTOPILOT_PATH_OTHER;
+  request.waterproof = false;
+  request.to.friendly_units = 0;
+  result = autopilot_path_step_evaluate(&request);
+  if (!result.traversable || result.cost != 300)
+    return 9;
+  request.to.terrain = BATTLE_TERRAIN_MOUNTAINS;
+  result = autopilot_path_step_evaluate(&request);
+  return !result.traversable || result.cost != 200;
 }
 
 static int test_paths(void) {
@@ -98,7 +108,37 @@ static int test_paths(void) {
 
   request.start.x = -1;
   first = autopilot_path_find(&request);
-  return first.status != AUTOPILOT_PATH_INVALID;
+  if (first.status != AUTOPILOT_PATH_INVALID)
+    return 6;
+  request.start.x = 0;
+
+  /* Goals off either edge of the grid are rejected, not clamped. */
+  request.goal = (AutopilotPathPoint){.x = WIDTH, .y = 2};
+  if (autopilot_path_find(&request).status != AUTOPILOT_PATH_INVALID)
+    return 7;
+  request.goal = (AutopilotPathPoint){.x = 4, .y = -1};
+  if (autopilot_path_find(&request).status != AUTOPILOT_PATH_INVALID)
+    return 8;
+  request.goal = (AutopilotPathPoint){.x = 4, .y = HEIGHT};
+  if (autopilot_path_find(&request).status != AUTOPILOT_PATH_INVALID)
+    return 9;
+  request.goal = (AutopilotPathPoint){.x = 4, .y = 2};
+
+  /* Degenerate dimensions are rejected before any hex is read. */
+  request.width = 0;
+  if (autopilot_path_find(&request).status != AUTOPILOT_PATH_INVALID)
+    return 10;
+  request.width = WIDTH;
+  request.height = -1;
+  if (autopilot_path_find(&request).status != AUTOPILOT_PATH_INVALID)
+    return 11;
+  request.height = HEIGHT;
+
+  request.hexes = nullptr;
+  first = autopilot_path_find(&request);
+  if (first.status != AUTOPILOT_PATH_INVALID)
+    return 12;
+  return autopilot_path_find(nullptr).status != AUTOPILOT_PATH_INVALID;
 }
 
 int main(void) { return test_step_policy() || test_paths(); }

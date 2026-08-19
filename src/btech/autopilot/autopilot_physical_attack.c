@@ -304,15 +304,16 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
         /* Now kick depending on which one would be better
          * to kick with */
-        if (autopilot_physical_choose_leg(
-                (!section_hasbusyweap[2]) != 0, rleg_bth,
-                (!section_hasbusyweap[3]) != 0,
-                lleg_bth) == AUTOPILOT_PHYSICAL_RIGHT) {
+        const AutopilotPhysicalSide KICK = autopilot_physical_choose_leg(
+            (!section_hasbusyweap[2]) != 0, rleg_bth,
+            (!section_hasbusyweap[3]) != 0, lleg_bth);
+        if (KICK == AUTOPILOT_PHYSICAL_RIGHT) {
           format_physical_command(buffer, 'r', physical_target);
-        } else {
+        } else if (KICK == AUTOPILOT_PHYSICAL_LEFT) {
           format_physical_command(buffer, 'l', physical_target);
         }
-        mech_kick(autopilot->mynum, mech, buffer);
+        if (KICK != AUTOPILOT_PHYSICAL_NONE)
+          mech_kick(autopilot->mynum, mech, buffer);
       }
 
       /* Finally try to punch */
@@ -338,16 +339,19 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
           is_larm_ready = true;
         }
 
-        if (is_rarm_ready && is_larm_ready) {
+        const AutopilotPhysicalSide PUNCH =
+            autopilot_physical_choose_punch(is_rarm_ready, is_larm_ready);
+        if (PUNCH == AUTOPILOT_PHYSICAL_BOTH) {
           format_physical_command(buffer, 'b', physical_target);
-        } else if (is_rarm_ready) {
+        } else if (PUNCH == AUTOPILOT_PHYSICAL_RIGHT) {
           format_physical_command(buffer, 'r', physical_target);
-        } else {
+        } else if (PUNCH == AUTOPILOT_PHYSICAL_LEFT) {
           format_physical_command(buffer, 'l', physical_target);
         }
 
         /* Now punch */
-        mech_punch(autopilot->mynum, mech, buffer);
+        if (PUNCH != AUTOPILOT_PHYSICAL_NONE)
+          mech_punch(autopilot->mynum, mech, buffer);
       }
 
     } else if ((mech_class(mech) == CLASS_MECH) &&
@@ -440,15 +444,16 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
 
         /* Now kick depending on which one would be better
          * to kick with */
-        if (autopilot_physical_choose_leg(
-                (!section_hasbusyweap[0]) != 0, rleg_bth,
-                (!section_hasbusyweap[1]) != 0,
-                lleg_bth) == AUTOPILOT_PHYSICAL_RIGHT) {
+        const AutopilotPhysicalSide KICK = autopilot_physical_choose_leg(
+            (!section_hasbusyweap[0]) != 0, rleg_bth,
+            (!section_hasbusyweap[1]) != 0, lleg_bth);
+        if (KICK == AUTOPILOT_PHYSICAL_RIGHT) {
           format_physical_command(buffer, 'r', physical_target);
-        } else {
+        } else if (KICK == AUTOPILOT_PHYSICAL_LEFT) {
           format_physical_command(buffer, 'l', physical_target);
         }
-        mech_kick(autopilot->mynum, mech, buffer);
+        if (KICK != AUTOPILOT_PHYSICAL_NONE)
+          mech_kick(autopilot->mynum, mech, buffer);
       }
 
     } else if (mech_class(mech) == CLASS_BSUIT) {

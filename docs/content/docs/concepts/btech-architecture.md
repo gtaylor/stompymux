@@ -54,12 +54,26 @@ deep acyclic link chains below that limit are processed completely.
 
 Autopilot runtime events are adapters around deterministic policy operations.
 Path transitions and route construction, weapon eligibility and heat budgets,
-physical-side selection, sensor selection, and queued-order ownership can be
-tested without a live event scheduler. The adapters gather `Mech` and
-`BattleMap` state, apply the policy result through the normal domain APIs, and
-retain responsibility for notifications and event scheduling. Queued orders
-are bounded, owning values; unsupported definitions and malformed argument
-lists are rejected before the queue changes.
+physical-side selection, sensor selection, approach and cruise speed control,
+and queued-order ownership can be tested without a live event scheduler. The
+adapters gather `Mech` and `BattleMap` state, apply the policy result through
+the normal domain APIs, and retain responsibility for notifications and event
+scheduling. Queued orders are bounded, owning values; unsupported definitions
+and malformed argument lists are rejected before the queue changes. Physical
+side selection can report that no arm or leg is usable, and the adapters issue
+no punch or kick at all in that case rather than falling back to a side.
+
+Movement policy answers two questions for a unit travelling to a hex. The
+approach decision picks between holding course, stopping to correct the
+bearing, stopping on the goal, and slowing proportionally to the remaining
+range. The cruise decision only says whether to accelerate; the speed ratio is
+a second, terrain-dependent step, so the adapter reads map terrain once
+acceleration is actually wanted rather than on every tick. Both compare the
+target bearing against the unit's heading as a wrapped separation in
+[0, 180] degrees, so a bearing and a heading either side of north read as
+neighbours. Earlier releases subtracted the two raw compass values, which made
+that pairing look like a 340 degree error and stopped units to re-turn a few
+degrees before north.
 
 Concrete `Mech`, `BattleMap`, `Autopilot`, and runtime-context layouts are
 private. Cross-domain interfaces use forward declarations, database object

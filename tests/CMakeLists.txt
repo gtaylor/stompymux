@@ -130,6 +130,61 @@ target_include_directories(autopilot_order_queue_test PRIVATE
   ${AUTOPILOT_TEST_INCLUDE_DIRECTORIES})
 add_test(NAME autopilot_order_queue COMMAND autopilot_order_queue_test)
 
+add_executable(autopilot_movement_policy_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/autopilot/autopilot_movement_policy.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/autopilot/autopilot_movement_policy.c)
+target_link_libraries(autopilot_movement_policy_test PRIVATE btmux_options)
+target_include_directories(autopilot_movement_policy_test PRIVATE
+  ${AUTOPILOT_TEST_INCLUDE_DIRECTORIES})
+add_test(NAME autopilot_movement_policy COMMAND autopilot_movement_policy_test)
+
+add_executable(autopilot_engagement_sequence_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/autopilot/autopilot_engagement_sequence.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/autopilot/autopilot_path_policy.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/autopilot/autopilot_sensor_policy.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/autopilot/autopilot_combat_policy.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/autopilot/autopilot_movement_policy.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_compile_options(autopilot_engagement_sequence_test PRIVATE
+  -ffunction-sections)
+target_link_options(autopilot_engagement_sequence_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(autopilot_engagement_sequence_test PRIVATE btmux_options)
+target_include_directories(autopilot_engagement_sequence_test PRIVATE
+  ${AUTOPILOT_TEST_INCLUDE_DIRECTORIES})
+add_test(NAME autopilot_engagement_sequence
+  COMMAND autopilot_engagement_sequence_test)
+
+# The approach adapters are exercised against a map loaded from the game
+# fixture with the production loader, so only the Mech accessors and the two
+# movement commands they call are harnessed by the test itself.
+add_executable(autopilot_approach_integration_test
+  ${CMAKE_SOURCE_DIR}/tests/integration/autopilot_approach_integration.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/autopilot/autopilot_command_dispatch.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/autopilot/autopilot_movement_policy.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map/map.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map/map_terrain.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map/map_coding.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map/map_conditions.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map/map_buildings.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/map/map_name_state.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/ui/mech_maps.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+target_compile_options(autopilot_approach_integration_test PRIVATE
+  -ffunction-sections)
+target_link_options(autopilot_approach_integration_test PRIVATE
+  -Wl,--gc-sections)
+target_link_libraries(autopilot_approach_integration_test PRIVATE
+  btmux_options m)
+target_include_directories(autopilot_approach_integration_test PRIVATE
+  ${AUTOPILOT_TEST_INCLUDE_DIRECTORIES})
+add_test(NAME autopilot_approach_integration
+  COMMAND bash "${BTECH_INTEGRATION_RUNNER}" autopilot-approach
+    "${BTECH_GAME_FIXTURE}" - $<TARGET_FILE:autopilot_approach_integration_test>)
+set_tests_properties(autopilot_approach_integration PROPERTIES
+  LABELS "integration;btech-autopilot;autopilot_approach")
+
 add_executable(btech_channel_test ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_channel.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/core/btech_channel.c)
 target_link_libraries(btech_channel_test PRIVATE btmux_options)

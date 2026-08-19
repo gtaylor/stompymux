@@ -1,11 +1,11 @@
 #include <math.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "aero_move_api.h"
 #include "ai_api.h"
 #include "autopilot.h"
 #include "autopilot_api.h"
+#include "autopilot_movement_policy_api.h"
 #include "btech/context.h"
 #include "btech_event.h"
 #include "equipment_types.h"
@@ -180,18 +180,21 @@ void autopilot_speed_up_for_target(const AutopilotApproachRequest *request) {
   if (!map)
     return;
 
-  if (BEARING < 0 || fabsf(mech_desired_speed(mech)) < 2.0F) {
-    if (BEARING < 0 || abs(BEARING - mech_heading_degrees(mech)) <= 30) {
-      if (mech_position_x(mech) != TX || mech_position_y(mech) != TY) {
-        if (map_real_terrain_get(map, mech_position_x(mech),
-                                 mech_position_y(mech)) == BATTLE_TERRAIN_WATER)
-          ai_set_speed(mech, a,
-                       2.0F * mech_effective_maximum_speed(mech) / 3.0F);
-        else
-          ai_set_speed(mech, a, mech_effective_maximum_speed(mech));
-      }
-    }
-  }
+  if (!autopilot_cruise_should_accelerate(&(AutopilotCruiseSituation){
+          .at_target =
+              (mech_position_x(mech) == TX && mech_position_y(mech) == TY) != 0,
+          .bearing = BEARING,
+          .heading = mech_heading_degrees(mech),
+          .desired_speed = fabsf(mech_desired_speed(mech))}))
+    return;
+
+  /* Only units that are actually accelerating pay for the terrain lookup. */
+  const bool IN_WATER =
+      map_real_terrain_get(map, mech_position_x(mech), mech_position_y(mech)) ==
+      BATTLE_TERRAIN_WATER;
+  ai_set_speed(mech, a,
+               autopilot_cruise_speed_ratio(IN_WATER) *
+                   mech_effective_maximum_speed(mech));
 }
 
 /*
@@ -218,19 +221,24 @@ bool autopilot_slow_down_for_target(const AutopilotApproachRequest *request) {
   const int TX = request->target.x;
   const int TY = request->target.y;
 
-  if (range < 0)
-    range = 0;
-  if (range > 2.0F)
+  const AutopilotApproachDecision DECISION =
+      autopilot_approach_evaluate(&(AutopilotApproachSituation){
+          .range = range,
+          .bearing = BEARING,
+          .heading = mech_heading_degrees(mech),
+          .at_target = (TX == mech_position_x(mech) &&
+                        TY == mech_position_y(mech)) != 0});
+  if (DECISION.action == AUTOPILOT_APPROACH_KEEP_MOVING)
     return false;
-  if (abs(BEARING - mech_heading_degrees(mech)) > 30) {
+  if (DECISION.action == AUTOPILOT_APPROACH_TURN_AND_STOP) {
     /* Fix the bearing as well */
     ai_set_speed(mech, a, 0);
     update_wanted_heading(a, mech, BEARING);
-  } else if (TX == mech_position_x(mech) && TY == mech_position_y(mech)) {
+  } else if (DECISION.action == AUTOPILOT_APPROACH_STOP) {
     ai_set_speed(mech, a, 0);
   } else { /* slowdown */
     ai_set_speed(mech, a,
-                 (0.4F + (range / 2.0F)) * mech_effective_maximum_speed(mech));
+                 DECISION.speed_ratio * mech_effective_maximum_speed(mech));
   }
   return true;
 }

@@ -50,12 +50,17 @@ typedef enum AutopilotPhysicalSide : int {
   AUTOPILOT_PHYSICAL_NONE,
   AUTOPILOT_PHYSICAL_RIGHT,
   AUTOPILOT_PHYSICAL_LEFT,
+  AUTOPILOT_PHYSICAL_BOTH,
 } AutopilotPhysicalSide;
 
 AutopilotWeaponDecision
 autopilot_weapon_evaluate(const AutopilotWeaponSituation *situation);
 int autopilot_weapon_score(const AutopilotWeaponScoreSituation *situation);
+/** Choose the least-impaired leg for a kick. */
 AutopilotPhysicalSide autopilot_physical_choose_leg(bool right_available,
                                                     int right_penalty,
                                                     bool left_available,
                                                     int left_penalty);
+/** Choose the arm or arms available for a punch. */
+AutopilotPhysicalSide autopilot_physical_choose_punch(bool right_available,
+                                                      bool left_available);

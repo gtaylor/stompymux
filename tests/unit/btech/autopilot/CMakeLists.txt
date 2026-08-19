@@ -2,4 +2,6 @@ btmux_label_unit_topic(btech-autopilot btech
   autopilot_pathfinding_policy
   autopilot_combat_policy
   autopilot_sensor_policy
-  autopilot_order_queue)
+  autopilot_order_queue
+  autopilot_movement_policy
+  autopilot_engagement_sequence)

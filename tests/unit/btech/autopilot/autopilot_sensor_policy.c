@@ -17,6 +17,7 @@ int main(void) {
     return 1;
   if (autopilot_visual_sensor_select(false, false, 1, 0) != SENSOR_LA ||
       autopilot_visual_sensor_select(false, false, 1, 3) != SENSOR_VIS ||
+      autopilot_visual_sensor_select(false, false, 2, 5) != SENSOR_VIS ||
       autopilot_visual_sensor_select(true, false, 0, 0) != SENSOR_VIS ||
       autopilot_visual_sensor_select(false, true, 0, 0) != SENSOR_VIS)
     return 2;
@@ -50,5 +51,17 @@ int main(void) {
     return 8;
   situation.has_bloodhound_probe = false;
   situation.effective_visibility = 15;
-  return !selection_is(situation, SENSOR_LA, SENSOR_EM);
+  if (!selection_is(situation, SENSOR_LA, SENSOR_EM))
+    return 9;
+  situation.effective_visibility = 16;
+  if (!selection_is(situation, SENSOR_LA, SENSOR_LA))
+    return 10;
+  situation.target_landed = true;
+  if (!selection_is(situation, SENSOR_LA, SENSOR_LA))
+    return 11;
+  situation.target_landed = false;
+  situation.target_range = 3;
+  situation.has_beagle_probe = true;
+  situation.has_bloodhound_probe = true;
+  return !selection_is(situation, SENSOR_BAP, SENSOR_BAP);
 }
