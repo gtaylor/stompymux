@@ -6,7 +6,7 @@ return {
     {
       pattern = "^global%-hello$",
       handler = function(ctx)
-        mux.notify(ctx.enactor, "Hello, world, from a global Lua command!")
+        mux.world.pemit(ctx.enactor, "Hello, world, from a global Lua command!")
         return true
       end,
     },

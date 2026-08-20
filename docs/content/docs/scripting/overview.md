@@ -41,7 +41,7 @@ entries; object modules may also provide `events`, `locks`, successful action
 pattern syntax, access behavior, and the handler context table.
 
 A module's `flows` table holds named step functions that
-[`mux.flow_start`](packages/mux/flow-start/)
+[`mux.session.flow_start`](packages/mux/session/flow-start/)
 can drive as a multi-step conversation on a connected player's own
 descriptor - the interactive counterpart to `commands` for menus, prompts,
 and confirmations. See [Interactive flows](flows/).
@@ -66,7 +66,7 @@ exposed.
 ## The `mux` API
 
 The `mux` table is the server interface exposed to Lua modules. Use
-`mux.object(dbref)` for object properties, containment, locks, and typed
+`mux.world.object(dbref)` for object properties, containment, locks, and typed
 persistent state. Styled text, notifications, queued commands, connection
 summaries, and interactive flows remain top-level `mux` operations. Queued
 commands execute as `#1` after the current handler completes. See the

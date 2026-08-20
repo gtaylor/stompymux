@@ -1,5 +1,5 @@
 ---
-title: telnet.environment_has
+title: environment_has
 type: docs
 toc_hide: false
 ---

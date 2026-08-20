@@ -38,18 +38,15 @@ void object_state_transaction_initialize(ObjectStateTransaction *transaction) {
 void object_state_transaction_destroy(ObjectStateTransaction *transaction
                                       [[maybe_unused]]) {}
 
-void lua_mux_install_object_bindings(lua_State *state [[maybe_unused]],
-                                     LuaMuxPackage *package [[maybe_unused]]) {}
-void lua_mux_install_state_bindings(lua_State *state [[maybe_unused]],
+void lua_mux_install_world_bindings(lua_State *state [[maybe_unused]],
                                     LuaMuxPackage *package [[maybe_unused]]) {}
-void lua_mux_install_attribute_bindings(lua_State *state [[maybe_unused]],
-                                        LuaMuxPackage *package
-                                        [[maybe_unused]]) {}
+void lua_mux_install_session_bindings(lua_State *state [[maybe_unused]],
+                                      LuaMuxPackage *package [[maybe_unused]]) {
+}
 void lua_mux_install_text_bindings(lua_State *state [[maybe_unused]],
                                    LuaMuxPackage *package [[maybe_unused]]) {}
-void lua_mux_install_connection_bindings(lua_State *state [[maybe_unused]],
-                                         LuaMuxPackage *package
-                                         [[maybe_unused]]) {}
+void lua_mux_install_telnet_bindings(lua_State *state [[maybe_unused]],
+                                     LuaMuxPackage *package [[maybe_unused]]) {}
 
 static int is_checking(void *context [[maybe_unused]]) { return checking; }
 

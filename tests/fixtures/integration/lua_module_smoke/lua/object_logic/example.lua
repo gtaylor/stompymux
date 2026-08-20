@@ -5,14 +5,14 @@ ObjectAppearances = require("object_appearances")
 -- ## Command definitions ## --
 
 local function hello_command(ctx, name)
-  mux.notify(ctx.enactor, "Hello " .. (name ~= "" and name or "there") .. "!")
+  mux.world.pemit(ctx.enactor, "Hello " .. (name ~= "" and name or "there") .. "!")
   return true
 end
 
 -- ## Event definitions ## --
 
 local function at_enter(ctx)
-  mux.notify(ctx.enactor, "You trigger the Lua enter event.")
+  mux.world.pemit(ctx.enactor, "You trigger the Lua enter event.")
 end
 
 return {
@@ -51,7 +51,7 @@ return {
       name = "hourly_notice",
       cron = "0 * * * *",
       handler = function(ctx)
-        mux.notify(ctx.object, "The Lua schedule has fired.")
+        mux.world.pemit(ctx.object, "The Lua schedule has fired.")
       end,
     },
   },

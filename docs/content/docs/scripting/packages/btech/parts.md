@@ -32,7 +32,7 @@ btech.parts( category )
 local btech = require("btech")
 
 for _, name in ipairs(btech.parts("weapon")) do
-  mux.notify(ctx.enactor, name)
+  mux.world.pemit(ctx.enactor, name)
 end
 ```
 

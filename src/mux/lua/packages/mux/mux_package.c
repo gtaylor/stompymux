@@ -94,11 +94,10 @@ void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_log, 1);
   lua_setfield(state, -2, "log");
-  lua_mux_install_object_bindings(state, package);
-  lua_mux_install_state_bindings(state, package);
-  lua_mux_install_attribute_bindings(state, package);
+  lua_mux_install_world_bindings(state, package);
+  lua_mux_install_session_bindings(state, package);
   lua_mux_install_text_bindings(state, package);
-  lua_mux_install_connection_bindings(state, package);
+  lua_mux_install_telnet_bindings(state, package);
   lua_mux_install_error_bindings(state, package);
   lua_setglobal(state, "mux");
 }

@@ -80,7 +80,7 @@ return {
     {
       pattern = "^hello$",
       handler = function(ctx)
-        mux.notify(ctx.enactor, "Hello, world!")
+        mux.world.pemit(ctx.enactor, "Hello, world!")
         return true
       end,
     },

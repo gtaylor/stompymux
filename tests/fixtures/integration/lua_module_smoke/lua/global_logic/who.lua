@@ -40,14 +40,14 @@ return {
       pattern = "^[Ww][Hh][Oo](.*)$",
       handler = function(ctx, query)
         local prefix = query:match("^%s*(.-)%s*$"):lower()
-        local players = mux.connected_players()
+        local players = mux.session.connected_players()
         local count = 0
 
-        mux.notify(ctx.enactor, "Player Name         On For  Idle ")
+        mux.world.pemit(ctx.enactor, "Player Name         On For  Idle ")
         for _, player in ipairs(players) do
           if has_prefix(player.name, prefix) then
             count = count + 1
-            mux.notify(
+            mux.world.pemit(
               ctx.enactor,
               string.format(
                 "%-16s%10s %5s",
@@ -59,10 +59,10 @@ return {
           end
         end
 
-        local summary = mux.who_summary()
+        local summary = mux.session.who_summary()
         local maximum = summary.maximum and tostring(summary.maximum) or "no"
         if summary.hidden > 0 then
-          mux.notify(
+          mux.world.pemit(
             ctx.enactor,
             string.format(
               "%d Visible Player%slogged in, (%d %s hidden), %d record, %s maximum.",
@@ -75,7 +75,7 @@ return {
             )
           )
         else
-          mux.notify(
+          mux.world.pemit(
             ctx.enactor,
             string.format(
               "%d Player%slogged in, %d record, %s maximum.",

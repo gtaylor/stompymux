@@ -16,7 +16,7 @@ return {
       pattern = "^say%s+(.+)$",
       access = "wizard",
       handler = function(ctx, message)
-        mux.notify(ctx.enactor, "You said: " .. message)
+        mux.world.pemit(ctx.enactor, "You said: " .. message)
         return true
       end,
     },
@@ -97,7 +97,7 @@ Every command handler receives a context table as its first argument.
 Use `ctx.enactor` for player-facing notifications. An object module may use
 `ctx.object` with the [`mux` package](packages/mux/) to store persistent state.
 Global handlers must not assume an object is present. Use `ctx.descriptor`
-with [`mux.flow_start`](packages/mux/flow-start/)
+with [`mux.session.flow_start`](packages/mux/session/flow-start/)
 to start an [interactive flow](flows/) on the connection that issued the
 command.
 

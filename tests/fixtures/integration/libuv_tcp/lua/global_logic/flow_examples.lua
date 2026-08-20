@@ -11,10 +11,10 @@ return {
         local starters = { confirm = "confirm", menu = "menu", signup = "signup_name" }
         local first_step = starters[choice]
         if not first_step then
-          mux.notify(ctx.enactor, "Usage: flow-demo confirm|menu|signup")
+          mux.world.pemit(ctx.enactor, "Usage: flow-demo confirm|menu|signup")
           return true
         end
-        mux.flow_start(ctx.descriptor, "flow_examples.lua", first_step)
+        mux.session.flow_start(ctx.descriptor, "flow_examples.lua", first_step)
         return true
       end,
     },

@@ -376,11 +376,9 @@ function mux_error.namespace(prefix, names) end
 ---@see mux.error.codes.arg.invalid
 function mux_error.code_tree(root) end
 
----The native MUX host API.
----@class MuxPackage
----@field error MuxErrorPackage
----@field telnet MuxTelnetPackage Telnet protocol state and capabilities.
-mux = {}
+---World database object access.
+---@class MuxWorldPackage
+local mux_world = {}
 
 ---Creates a validated object handle from a dbref or existing handle.
 ---@param dbref DbRef|Object
@@ -389,7 +387,83 @@ mux = {}
 ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
 ---@see mux.error.codes.unavailable.checking
 ---@see mux.error.codes.object.invalid
-function mux.object(dbref) end
+function mux_world.object(dbref) end
+
+---Live connection queries and interactive flows.
+---@class MuxSessionPackage
+local mux_session = {}
+
+---Lists connected players visible to the ordinary WHO command.
+---@return Connection[] players
+function mux_session.connected_players() end
+
+---Returns the non-privileged WHO summary.
+---@return WhoSummary summary
+function mux_session.who_summary() end
+
+---Attaches an interactive flow to a descriptor and displays its first prompt.
+---@param descriptor integer
+---@param module string Require-style module path.
+---@param first_step string Key in the module's `flows` table.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.connection.unavailable`](lua://mux.error.codes.connection.unavailable).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.connection.unavailable
+function mux_session.flow_start(descriptor, module, first_step) end
+
+---Styled-text validation, construction, inspection, and transformation.
+---@class MuxTextPackage
+local mux_text = {}
+
+---Validates styled-text markup and returns it unchanged.
+---@param value string
+---@return string markup
+---
+---Raises [`mux.error.codes.text.invalid`](lua://mux.error.codes.text.invalid).
+---@see mux.error.codes.text.invalid
+function mux_text.markup(value) end
+
+---Tests whether every byte is printable ASCII (0x20 through 0x7e).
+---@param value string
+---@return boolean printable
+function mux_text.is_printable_ascii(value) end
+
+---Wraps text in markup described by the supplied style options.
+---@param value string
+---@param options StyleOptions
+---@return string styled
+---
+---Raises [`mux.error.codes.text.invalid`](lua://mux.error.codes.text.invalid).
+---@see mux.error.codes.text.invalid
+function mux_text.style(value, options) end
+
+---Removes styled-text markup and ANSI styling.
+---@param value string
+---@return string plain
+function mux_text.strip_style(value) end
+
+---Measures visible byte width, excluding markup and ANSI styling.
+---@param value string
+---@return integer width
+function mux_text.width(value) end
+
+---Safely truncates styled text to a non-negative visible byte width.
+---@param value string
+---@param width integer
+---@return string truncated
+---
+---Raises [`mux.error.codes.text.invalid`](lua://mux.error.codes.text.invalid).
+---@see mux.error.codes.text.invalid
+function mux_text.truncate(value, width) end
+
+---The native MUX host API.
+---@class MuxPackage
+---@field error MuxErrorPackage
+---@field session MuxSessionPackage Live connections and interactive flows.
+---@field telnet MuxTelnetPackage Telnet protocol state and capabilities.
+---@field text MuxTextPackage Styled-text utilities.
+---@field world MuxWorldPackage World database object access.
+mux = {}
 
 ---Appends a newline-terminated message to a permitted file under `game/logs`.
 ---@param filename string
@@ -409,68 +483,12 @@ function mux.log(filename, message) end
 ---@see mux.error.codes.unavailable.checking
 ---@see mux.error.codes.connection.invalid
 ---@see mux.error.codes.object.invalid
-function mux.notify(object, message) end
-
----Lists connected players visible to the ordinary WHO command.
----@return Connection[] players
-function mux.connected_players() end
-
----Returns the non-privileged WHO summary.
----@return WhoSummary summary
-function mux.who_summary() end
-
----Attaches an interactive flow to a descriptor and displays its first prompt.
----@param descriptor integer
----@param module string Require-style module path.
----@param first_step string Key in the module's `flows` table.
----
----Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.connection.unavailable`](lua://mux.error.codes.connection.unavailable).
----@see mux.error.codes.unavailable.checking
----@see mux.error.codes.connection.unavailable
-function mux.flow_start(descriptor, module, first_step) end
-
----Validates styled-text markup and returns it unchanged.
----@param value string
----@return string markup
----
----Raises [`mux.error.codes.text.invalid`](lua://mux.error.codes.text.invalid).
----@see mux.error.codes.text.invalid
-function mux.markup(value) end
-
----Tests whether every byte is printable ASCII (0x20 through 0x7e).
----@param value string
----@return boolean printable
-function mux.is_printable_ascii(value) end
-
----Wraps text in markup described by the supplied style options.
----@param value string
----@param options StyleOptions
----@return string styled
----
----Raises [`mux.error.codes.text.invalid`](lua://mux.error.codes.text.invalid).
----@see mux.error.codes.text.invalid
-function mux.style(value, options) end
-
----Removes styled-text markup and ANSI styling.
----@param value string
----@return string plain
-function mux.strip_style(value) end
-
----Measures visible byte width, excluding markup and ANSI styling.
----@param value string
----@return number width
-function mux.text_width(value) end
-
----Safely truncates styled text to a non-negative visible byte width.
----@param value string
----@param width number
----@return string truncated
----
----Raises [`mux.error.codes.text.invalid`](lua://mux.error.codes.text.invalid).
----@see mux.error.codes.text.invalid
-function mux.truncate_text(value, width) end
+function mux_world.pemit(object, message) end
 
 mux.error = mux_error
+mux.session = mux_session
 mux.telnet = mux_telnet
+mux.text = mux_text
+mux.world = mux_world
 
 return mux

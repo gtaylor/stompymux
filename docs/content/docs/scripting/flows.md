@@ -5,7 +5,7 @@ type: docs
 weight: 25
 ---
 
-Start an interactive flow for a user through the `mux.flow_start` Lua function
+Start an interactive flow for a user through the `mux.session.flow_start` Lua function
 and a module's `flows` table. A flow drives a connected player's own
 descriptor through a menu, a confirmation, or a multi-step form, one line of
 input at a time, without the player prefixing every line with a command.
@@ -16,7 +16,7 @@ return {
     {
       pattern = "^delete%-character$",
       handler = function(ctx)
-        mux.flow_start(ctx.descriptor, "confirm_delete.lua", "confirm")
+        mux.session.flow_start(ctx.descriptor, "confirm_delete.lua", "confirm")
         return true
       end,
     },
@@ -37,7 +37,7 @@ return {
 
 ## Starting a flow
 
-`mux.flow_start(descriptor, module, first_step)` attaches a flow to the given
+`mux.session.flow_start(descriptor, module, first_step)` attaches a flow to the given
 descriptor and immediately shows its first prompt. `descriptor` is
 `ctx.descriptor` from the command or event that is starting the flow -
 flows are always driven from a live connection, never from a queued or

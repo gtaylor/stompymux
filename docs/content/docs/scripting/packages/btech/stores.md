@@ -53,7 +53,7 @@ btech.stores( target )
 local btech = require("btech")
 local quantity = btech.stores(bay_dbref, "IS.AC/10")[1]
 
-mux.notify(ctx.enactor, "Available: " .. quantity)
+mux.world.pemit(ctx.enactor, "Available: " .. quantity)
 ```
 
 ## Notes

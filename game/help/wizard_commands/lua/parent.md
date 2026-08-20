@@ -30,7 +30,7 @@ the configured default.
 An object module may export `internal_appearance(ctx)` and
 `external_appearance(ctx)`. Returning a string replaces the complete native
 `look` appearance; returning `nil` uses the native appearance. Rooms always use
-the internal function. Use `mux.object(ctx.object)` and the handle's properties,
+the internal function. Use `mux.world.object(ctx.object)` and the handle's properties,
 `contents`, `contents_visible`, `exits`, `exits_visible`, and
 `enter_lock_passes` methods when assembling custom output.
 There is no native opacity flag; use `external_appearance` to control what an

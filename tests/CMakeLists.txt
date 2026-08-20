@@ -1514,7 +1514,7 @@ add_executable(lua_test_runner_integration_test
   ${CMAKE_SOURCE_DIR}/tests/integration/lua_test_runner_integration.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_test_runner.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_error.c
-  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/packages/mux/mux_error_bindings.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/packages/mux/error/mux_error_bindings.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_runtime.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_module_registry.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/array_sort.c)
@@ -1544,7 +1544,7 @@ add_test(NAME lua_command_access COMMAND lua_command_access_test)
 add_executable(lua_log_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/content/lua_log.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/packages/mux/mux_package.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_error.c
-  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/packages/mux/mux_error_bindings.c)
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/packages/mux/error/mux_error_bindings.c)
 target_link_libraries(lua_log_test PRIVATE btmux_options luajit m)
 target_include_directories(lua_log_test PRIVATE
   "${CMAKE_BINARY_DIR}"
@@ -1567,7 +1567,7 @@ add_test(NAME lua_pcall_checked COMMAND lua_pcall_checked_test)
 add_executable(lua_error_test
   ${CMAKE_SOURCE_DIR}/tests/unit/mux/lua/lua_error.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_error.c
-  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/packages/mux/mux_error_bindings.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/packages/mux/error/mux_error_bindings.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
 target_link_libraries(lua_error_test PRIVATE btmux_options luajit m)
 target_include_directories(lua_error_test PRIVATE

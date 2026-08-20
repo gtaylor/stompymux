@@ -22,7 +22,7 @@ local ok, err = mux.error.pcall(function()
   )
 end)
 if not ok and err:is(mux.error.codes.state) then
-  mux.notify(ctx.enactor, err.message)
+  mux.world.pemit(ctx.enactor, err.message)
 end
 ```
 

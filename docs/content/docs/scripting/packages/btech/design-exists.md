@@ -30,7 +30,7 @@ btech.design_exists( reference )
 local btech = require("btech")
 
 if btech.design_exists("AS7-D") then
-  mux.notify(ctx.enactor, "The design is available.")
+  mux.world.pemit(ctx.enactor, "The design is available.")
 end
 ```
 

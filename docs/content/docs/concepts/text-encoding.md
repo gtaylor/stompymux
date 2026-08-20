@@ -27,4 +27,4 @@ case-insensitive matching for ASCII letters and exact-byte matching for other
 characters; the server does not perform Unicode normalization or case folding.
 
 Lua code can apply the same byte-level printable-ASCII test with
-`mux.is_printable_ascii(value)`.
+`mux.text.is_printable_ascii(value)`.

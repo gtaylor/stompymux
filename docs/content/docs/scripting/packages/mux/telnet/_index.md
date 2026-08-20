@@ -15,8 +15,8 @@ connections. Client-provided names and values are untrusted input.
 
 | Function | Description |
 | --- | --- |
-| [`mux.telnet.environment_get`](environment-get/) | Gets a NEW-ENVIRON variable. |
-| [`mux.telnet.environment_has`](environment-has/) | Tests whether a NEW-ENVIRON variable is defined. |
+| [`environment_get`](environment-get/) | Gets a NEW-ENVIRON variable. |
+| [`environment_has`](environment-has/) | Tests whether a NEW-ENVIRON variable is defined. |
 
 ## See Also
 

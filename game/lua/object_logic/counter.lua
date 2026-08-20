@@ -5,11 +5,11 @@ return {
     {
       pattern = "^count$",
       handler = function(ctx)
-        local state = mux.object(ctx.object):state("counter")
+        local state = mux.world.object(ctx.object):state("counter")
         local count = state:get("count", 0) + 1
 
         state:set("count", count)
-        mux.notify(ctx.enactor, "This object has been used " .. count .. " times.")
+        mux.world.pemit(ctx.enactor, "This object has been used " .. count .. " times.")
         return true
       end,
     },

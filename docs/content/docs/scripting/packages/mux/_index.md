@@ -16,52 +16,14 @@ by the game server rather than loaded with `require`.
 | --- | --- |
 | [`mux.error`](error/) | Structured errors, checked error codes, and error-handling helpers. |
 | [`mux.telnet`](telnet/) | Telnet protocol state and capabilities. |
-
-## Types
-
-The `mux` module provides several Lua types that are core to most scripting.
-
-| Type | Description |
-| --- | --- |
-| [`Object`](type-object/) | A validated handle for a native database object. |
-| [`Attribute`](type-attribute/) | Access to an object's supported native attributes. |
-| [`State`](type-state/) | Typed, persistent state in one object namespace. |
+| [`mux.session`](session/) | Interactive flows and active player-session information. |
+| [`mux.text`](text/) | Styled-text validation, formatting, and measurement helpers. |
+| [`mux.world`](world/) | Database objects and their persistent state. |
 
 ## Functions
 
-The `mux` module provides functions for common in-game operations, excluding the btech
-economy and combat functionality (which is addressed through the [btech](../btech/) module).
-
-### Objects and state
-
-| Function | Description |
-| --- | --- |
-| [`mux.object`](object/) | Creates a validated handle for a database object. |
-
-### Styled text
-
-StompyMUX supports a rich set of facilities for styling text. Colors, decorations, clickable
-links, and more. See [Styled Text](../../../concepts/styled-text/) for an overview.
-
-| Function | Description |
-| --- | --- |
-| [`mux.is_printable_ascii`](is-printable-ascii/) | Tests whether a string contains only printable ASCII bytes. |
-| [`mux.markup`](markup/) | Validates styled-text markup. |
-| [`mux.style`](style/) | Applies styles described by an options table. |
-| [`mux.strip_style`](strip-style/) | Removes markup and ANSI styling. |
-| [`mux.text_width`](text-width/) | Returns the visible byte width of styled text. |
-| [`mux.truncate_text`](truncate-text/) | Truncates styled text to a visible width. |
-
-### Connections and flows
-
-| Function | Description |
-| --- | --- |
-| [`mux.notify`](notify/) | Sends a message to an object. |
-| [`mux.connected_players`](connected-players/) | Lists player connections visible to the normal `who` command. |
-| [`mux.who_summary`](who-summary/) | Returns the non-privileged WHO summary. |
-| [`mux.flow_start`](flow-start/) | Starts an interactive flow on a descriptor. |
-
-### Server operations
+The root `mux` module provides functions for common in-game operations that do
+not yet belong to a larger subpackage.
 
 | Function | Description |
 | --- | --- |

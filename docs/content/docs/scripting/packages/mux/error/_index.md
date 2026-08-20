@@ -21,19 +21,19 @@ instead, so the caller can decide whether and how to handle the `Error`.
 
 | Function | Description |
 | --- | --- |
-| [`mux.error.new`](new/) | Creates a structured error value. |
-| [`mux.error.raise`](raise/) | Raises a structured error. |
-| [`mux.error.wrap`](wrap/) | Adds a structured error around a cause. |
-| [`mux.error.check`](check/) | Returns a truthy value or raises a supplied error. |
-| [`mux.error.pcall`](pcall/) | Calls a function and returns normalized failures. |
-| [`mux.error.is`](is/) | Tests an error value against a code or code namespace. |
-| [`mux.error.code_tree`](code-tree/) | Returns the checked tree for a native code namespace root. |
+| [`new`](new/) | Creates a structured error value. |
+| [`raise`](raise/) | Raises a structured error. |
+| [`wrap`](wrap/) | Adds a structured error around a cause. |
+| [`check`](check/) | Returns a truthy value or raises a supplied error. |
+| [`pcall`](pcall/) | Calls a function and returns normalized failures. |
+| [`is`](is/) | Tests an error value against a code or code namespace. |
+| [`code_tree`](code-tree/) | Returns the checked tree for a native code namespace root. |
 
 ### Defining codes
 
 | Function | Description |
 | --- | --- |
-| [`mux.error.namespace`](namespace/) | Builds checked symbols for author-defined error codes. |
+| [`namespace`](namespace/) | Builds checked symbols for author-defined error codes. |
 
 ## Types
 
