@@ -92,6 +92,22 @@ LuaMuxAttribute *lua_mux_check_attribute(lua_State *state, int argument) {
   return handle;
 }
 
+/**
+ * Creates a validated handle for a native database object.
+ *
+ * @par Lua name `mux.object`
+ * @par Lua signature `mux.object( dbref )`
+ * @par Lua parameters - `dbref` (`integer|Object`) A live database reference or
+ * an existing object handle.
+ * @par Lua returns - `object` (`Object`): A handle for the referenced object.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale or invalid dbref/handle.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_object(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   DbRef object;
@@ -113,6 +129,23 @@ static bool lua_mux_list_contains(GameDatabase *database, DbRef first,
   return false;
 }
 
+/**
+ * Returns the objects directly contained by this object.
+ *
+ * @par Lua name `object:contents`
+ * @par Lua signature `object:contents( )`
+ * @par Lua parameters - None.
+ * @par Lua returns - `contents` (`table`): An array of Object handles in native
+ * database order.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid handle or an object that
+ * cannot contain objects.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_contents(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   DbRef object;
@@ -133,6 +166,25 @@ static int lua_mux_contents(lua_State *state) {
   return 1;
 }
 
+/**
+ * Tests whether a directly contained object is visible to a viewer.
+ *
+ * @par Lua name `object:contents_visible`
+ * @par Lua signature `object:contents_visible( viewer, member )`
+ * @par Lua parameters - `viewer` (`number|Object`) The object viewing the
+ * container.
+ * - `member` (`number|Object`) An object directly contained by the receiver.
+ * @par Lua returns - `visible` (`boolean`): Whether native look rules expose
+ * the member.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_OBJECT_INVALID` for invalid handles, a non-container, or a
+ * member not directly contained.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_contents_visible(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   EvaluationContext *evaluation;
@@ -163,6 +215,23 @@ static int lua_mux_contents_visible(lua_State *state) {
   return 1;
 }
 
+/**
+ * Returns the exits directly attached to this object.
+ *
+ * @par Lua name `object:exits`
+ * @par Lua signature `object:exits( )`
+ * @par Lua parameters - None.
+ * @par Lua returns - `exits` (`table`): An array of Object handles in native
+ * database order.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid handle or an object that
+ * cannot have exits.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_exits(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   DbRef object;
@@ -183,6 +252,25 @@ static int lua_mux_exits(lua_State *state) {
   return 1;
 }
 
+/**
+ * Tests whether a directly attached exit is visible to a viewer.
+ *
+ * @par Lua name `object:exits_visible`
+ * @par Lua signature `object:exits_visible( viewer, exit )`
+ * @par Lua parameters - `viewer` (`number|Object`) The object viewing the
+ * location.
+ * - `exit` (`number|Object`) An exit directly attached to the receiver.
+ * @par Lua returns - `visible` (`boolean`): Whether native exit-display rules
+ * expose the exit.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_OBJECT_INVALID` for invalid handles, an invalid
+ * location/exit, or an exit not directly attached.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_exits_visible(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   DbRef location;
@@ -215,6 +303,24 @@ static int lua_mux_exits_visible(lua_State *state) {
   return 1;
 }
 
+/**
+ * Tests whether an enactor passes this exit's default traversal lock.
+ *
+ * @par Lua name `exit:enter_lock_passes`
+ * @par Lua signature `exit:enter_lock_passes( enactor )`
+ * @par Lua parameters - `enactor` (`number|Object`) The object attempting
+ * traversal.
+ * @par Lua returns - `passes` (`boolean`): Whether the lock passes.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_OBJECT_INVALID` for invalid handles or a receiver that is
+ * not an exit.
+ * - `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` when the lock service is unavailable.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_exit_enter_lock_passes(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   DbRef exit;
@@ -234,6 +340,23 @@ static int lua_mux_exit_enter_lock_passes(lua_State *state) {
   return 1;
 }
 
+/**
+ * Resolves public read-only fields and falls back to methods in the Object
+ * metatable.
+ *
+ * @par Lua name `Object.__index`
+ * @par Lua signature `object[key]`
+ * @par Lua parameters - `object` (`Object`): The validated object handle.
+ * - `key` (`string`): A property or method name.
+ * @par Lua returns - `value` (`integer|string|nil|function`): Read-only
+ * `dbref`, `name`, `type`, `description`, or `inside_description`, or a
+ * registered method.
+ * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` when the handle is stale; a
+ * Lua type error when `key` is not string-convertible.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_object_index(lua_State *state) {
   LuaMuxObject *handle = lua_mux_check_object_handle(state, 1);
   LuaMuxPackage *package = handle->package;
@@ -284,6 +407,18 @@ static int lua_mux_object_index(lua_State *state) {
   return 1;
 }
 
+/**
+ * Formats the Object userdata.
+ *
+ * @par Lua name `Object.__tostring`
+ * @par Lua signature `tostring(object)`
+ * @par Lua parameters - `object` (`Object`): The validated object handle.
+ * @par Lua returns - `text` (`string`): `object(#dbref)`.
+ * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` when the handle is stale.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_object_tostring(lua_State *state) {
   LuaMuxObject *handle = lua_mux_check_object_handle(state, 1);
 
@@ -291,6 +426,20 @@ static int lua_mux_object_tostring(lua_State *state) {
   return 1;
 }
 
+/**
+ * Compares Object identity without revalidating object lifetime.
+ *
+ * @par Lua name `Object.__eq`
+ * @par Lua signature `left == right`
+ * @par Lua parameters - `left` (`Object`): The left handle.
+ * - `right` (`Object`): The right handle.
+ * @par Lua returns - `equal` (`boolean`): True when runtime, dbref, and
+ * generation all match.
+ * @par Lua errors - A Lua type error when either operand is not an Object.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_object_equal(lua_State *state) {
   LuaMuxObject *left = luaL_checkudata(state, 1, LUA_MUX_OBJECT_METATABLE);
   LuaMuxObject *right = luaL_checkudata(state, 2, LUA_MUX_OBJECT_METATABLE);

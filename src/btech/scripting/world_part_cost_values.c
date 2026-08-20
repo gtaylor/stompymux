@@ -23,6 +23,25 @@ static PartMatchResult cost_part_match(BtechScriptCall *call) {
   return match;
 }
 
+/**
+ * Returns the configured cost of a part.
+ *
+ * @par Lua name `btech.part_cost`
+ * @par Lua signature `btech.part_cost( part_name )`
+ * @par Lua parameters - `part_name` (`string`) A recognized long or very-long
+ * part name.
+ * @par Lua returns - `value` (`number`): The numeric result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btgetpartcost(BtechScriptCall *call) {
   if (!is_wizard(call->evaluation->world->database, call->player)) {
     return btech_script_error(call, "#-1 PERMISSION DENIED");
@@ -36,6 +55,27 @@ BtechScriptResult fun_btgetpartcost(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
+/**
+ * Sets the configured cost of a part.
+ *
+ * @par Lua name `btech.set_part_cost`
+ * @par Lua signature `btech.set_part_cost( part_name, cost )`
+ * @par Lua parameters - `part_name` (`string`) A recognized long or very-long
+ * part name.
+ * - `cost` (`number`) The non-negative cost.
+ * @par Lua returns - `success` (`boolean`): true after the operation completes
+ * without a legacy error.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btsetpartcost(BtechScriptCall *call) {
   if (!is_wizard(call->evaluation->world->database, call->player)) {
     return btech_script_error(call, "#-1 PERMISSION DENIED");

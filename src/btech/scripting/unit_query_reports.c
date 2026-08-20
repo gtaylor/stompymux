@@ -20,6 +20,25 @@
 #include "mech_specification_api.h"
 #include "registry_api.h"
 
+/**
+ * Lists the parts needed to repair a live unit.
+ *
+ * @par Lua name `btech.tech_list`
+ * @par Lua signature `btech.tech_list( unit )`
+ * @par Lua parameters - `unit` (`number`) The unit dbref.
+ * @par Lua returns - `values` (`table`): A flat array of converted legacy
+ * result tokens.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_bttechlist(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -56,6 +75,25 @@ BtechScriptResult fun_bttechlist(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }
 
+/**
+ * Lists the parts needed to repair a unit template.
+ *
+ * @par Lua name `btech.tech_list_ref`
+ * @par Lua signature `btech.tech_list_ref( reference )`
+ * @par Lua parameters - `reference` (`string`) The unit template reference.
+ * @par Lua returns - `values` (`table`): A flat array of converted legacy
+ * result tokens.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_bttechlist_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -89,6 +127,24 @@ BtechScriptResult fun_bttechlist_ref(BtechScriptCall *call) {
  * ie: the Guns and Ammo
  * in a list format like <item_1> <# of 1>|...|<item_n> <# of n>
  * Dany - 06/2005 */
+/**
+ * Returns the weapon and ammunition payload of a unit template.
+ *
+ * @par Lua name `btech.payload_ref`
+ * @par Lua signature `btech.payload_ref( reference )`
+ * @par Lua parameters - `reference` (`string`) The unit template reference.
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btpayload_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -118,6 +174,25 @@ BtechScriptResult fun_btpayload_ref(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
 
+/**
+ * Sends a unit template's status display to a player.
+ *
+ * @par Lua name `btech.show_status_ref`
+ * @par Lua signature `btech.show_status_ref( reference, player )`
+ * @par Lua parameters - `reference` (`string`) The unit template reference.
+ * - `player` (`number`) The recipient player dbref.
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btshowstatus_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -152,6 +227,25 @@ BtechScriptResult fun_btshowstatus_ref(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
 
+/**
+ * Sends a unit template's weapon-specification display to a player.
+ *
+ * @par Lua name `btech.show_weapon_specs_ref`
+ * @par Lua signature `btech.show_weapon_specs_ref( reference, player )`
+ * @par Lua parameters - `reference` (`string`) The unit template reference.
+ * - `player` (`number`) The recipient player dbref.
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btshowwspecs_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -186,6 +280,26 @@ BtechScriptResult fun_btshowwspecs_ref(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
 
+/**
+ * Sends a template's critical-status display to a player.
+ *
+ * @par Lua name `btech.show_crit_status_ref`
+ * @par Lua signature `btech.show_crit_status_ref( reference, player, section )`
+ * @par Lua parameters - `reference` (`string`) The unit template reference.
+ * - `player` (`number`) The recipient player dbref.
+ * - `section` (`string`) The section passed to the critical-status renderer.
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btshowcritstatus_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -221,6 +335,24 @@ BtechScriptResult fun_btshowcritstatus_ref(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
 
+/**
+ * Returns the engine rating of a live unit.
+ *
+ * @par Lua name `btech.engine_rating`
+ * @par Lua signature `btech.engine_rating( unit )`
+ * @par Lua parameters - `unit` (`number`) The unit dbref.
+ * @par Lua returns - `value` (`number`): The numeric result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btengrate(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -256,6 +388,24 @@ BtechScriptResult fun_btengrate(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
+/**
+ * Returns the engine rating of a unit template.
+ *
+ * @par Lua name `btech.engine_rating_ref`
+ * @par Lua signature `btech.engine_rating_ref( reference )`
+ * @par Lua parameters - `reference` (`string`) The unit template reference.
+ * @par Lua returns - `value` (`number`): The numeric result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btengrate_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -282,6 +432,24 @@ BtechScriptResult fun_btengrate_ref(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
+/**
+ * Calculates the FASA base cost of a unit template.
+ *
+ * @par Lua name `btech.fasa_base_cost_ref`
+ * @par Lua signature `btech.fasa_base_cost_ref( reference )`
+ * @par Lua parameters - `reference` (`string`) The unit template reference.
+ * @par Lua returns - `value` (`number`): The numeric result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btfasabasecost_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -307,6 +475,25 @@ BtechScriptResult fun_btfasabasecost_ref(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
+/**
+ * Lists the parts installed in a unit template.
+ *
+ * @par Lua name `btech.unit_parts_ref`
+ * @par Lua signature `btech.unit_parts_ref( reference )`
+ * @par Lua parameters - `reference` (`string`) The unit template reference.
+ * @par Lua returns - `values` (`table`): A flat array of converted legacy
+ * result tokens.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btunitpartslist_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -334,6 +521,25 @@ BtechScriptResult fun_btunitpartslist_ref(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }
 
+/**
+ * Lists the parts installed on a live unit.
+ *
+ * @par Lua name `btech.unit_parts`
+ * @par Lua signature `btech.unit_parts( unit )`
+ * @par Lua parameters - `unit` (`number`) The unit dbref.
+ * @par Lua returns - `values` (`table`): A flat array of converted legacy
+ * result tokens.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btunitpartslist(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;

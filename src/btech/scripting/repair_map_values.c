@@ -3,11 +3,9 @@
 #include "btechstats_api.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "econ_api.h"
-#include "equipment_types.h"
 #include "map.h"
 #include "map_terrain.h"
 #include "mech_damage_api.h"
-#include "mech_partnames.h"
 #include "mech_partnames_api.h"
 #include "mech_status_api.h"
 #include "mech_tech_api.h"
@@ -16,7 +14,6 @@
 #include "mechrep_api.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/objects/db.h"
-#include "mux/objects/economy_parts.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
@@ -31,176 +28,26 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-typedef struct ScriptPartPile {
-  int values[BRANDCOUNT + 1][NUM_ITEMS];
-} ScriptPartPile;
-static int *script_part_pile_slot(ScriptPartPile *pile, int brand,
-                                  int part_id) {
-  int (*brand_values)[NUM_ITEMS] = checked_storage_at(
-      pile->values, BRANDCOUNT + 1, sizeof(*pile->values), (size_t)brand);
-  return checked_storage_at(*brand_values, NUM_ITEMS, sizeof(**brand_values),
-                            (size_t)part_id);
-}
-BtechScriptResult fun_btunderrepair(BtechScriptCall *call) {
-  [[maybe_unused]] char *buff = call->output.buffer;
-  [[maybe_unused]] char **bufc = &call->output.cursor;
-  [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
-  [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
-  [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef PLAYER = call->player;
-  int n;
-  Mech *mech;
-  DbRef it;
-  it = match_thing(&context->command->match, PLAYER,
-                   script_function_argument(fargs, NFARGS, 0));
-  if (it == NOTHING || !is_examinable(context->world->database, PLAYER, it)) {
-    return btech_script_error(call, "#-1");
-  }
-  if (!btech_context_is_mech(context->btech, it)) {
-    return btech_script_error(call, "#-2");
-  }
-  mech = btech_context_find_object(context->btech, it);
-  n = figure_latest_tech_event(mech);
-  safe_tprintf_str(buff, bufc, "%d", n > 0);
-  return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
-}
-BtechScriptResult fun_btstores(BtechScriptCall *call) {
-  [[maybe_unused]] char *buff = call->output.buffer;
-  [[maybe_unused]] char **bufc = &call->output.cursor;
-  [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
-  [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
-  [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef PLAYER = call->player;
-  DbRef it;
-  int i = -1;
-  int x = 0;
-  int p;
-  int b;
-  ScriptPartPile pile;
-  if (!is_wizard(context->world->database, PLAYER)) {
-    return btech_script_error(call, "#-1 PERMISSION DENIED");
-  }
-  if (NFARGS < 1 || NFARGS > 2) {
-    return btech_script_error(
-        call, "#-1 FUNCTION (BTSTORES) EXPECTS 1 OR 2 ARGUMENTS");
-  }
-  it = match_thing(&context->command->match, PLAYER,
-                   script_function_argument(fargs, NFARGS, 0));
-  if (!is_good_obj(context->btech->database, it)) {
-    return btech_script_error(call, "#-1 INVALID TARGET");
-  }
-  if (NFARGS > 1) {
-    const PartMatchResult MATCH = part_name_lookup(&(PartNameLookupRequest){
-        .context = context->btech,
-        .name = script_function_argument(fargs, NFARGS, 1),
-    });
-    if (!MATCH.found) {
-      return btech_script_error(call, "#-1 INVALID PART NAME");
-    }
-    p = MATCH.part.id;
-    b = MATCH.part.brand;
-    safe_tprintf_str(buff, bufc, "%d",
-                     econ_find_items(context->btech, it, p, b));
-  } else {
-    memset(&pile, 0, sizeof(pile));
-    for (size_t index = 0;
-         index < economy_parts_entry_count(context->world->database, it);
-         index++) {
-      EconomyPartsEntryResult result = economy_parts_entry(&(
-          EconomyPartsEntryRequest){
-          .database = context->world->database, .object = it, .index = index});
-      EconomyPartEntryView entry = result.entry;
-      if (result.found && entry.part_id >= 0 && entry.part_id < NUM_ITEMS &&
-          entry.brand_id >= 0 && entry.brand_id <= BRANDCOUNT)
-        *script_part_pile_slot(&pile, entry.brand_id, entry.part_id) +=
-            entry.quantity;
-    }
-    for (i = 0; i < (int)part_name_count(context->btech); i++) {
-      const PartNameEntry *part_name = part_name_at(context->btech, (size_t)i);
-      p = packed_part_id(part_name->index);
-      b = packed_part_brand(part_name->index);
-      if (*script_part_pile_slot(&pile, b, p)) {
-        if (x)
-          safe_str("|", buff, bufc);
-        x = *script_part_pile_slot(&pile, b, p);
-        safe_tprintf_str(buff, bufc, "%s:%d",
-                         part_name_long(context->btech, p, b).text, x);
-      }
-    }
-  }
-  return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
-}
-BtechScriptResult fun_btstores_short(BtechScriptCall *call) {
-  [[maybe_unused]] char *buff = call->output.buffer;
-  [[maybe_unused]] char **bufc = &call->output.cursor;
-  [[maybe_unused]] char **fargs = call->arguments.values;
-  [[maybe_unused]] const int NFARGS = (int)call->arguments.count;
-  [[maybe_unused]] char **cargs = call->command_arguments.values;
-  [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
-  [[maybe_unused]] EvaluationContext *context = call->evaluation;
-  [[maybe_unused]] const DbRef PLAYER = call->player;
-  DbRef it;
-  int i = -1;
-  int x = 0;
-  int p;
-  int b;
-  ScriptPartPile pile;
-  if (!is_wizard(context->world->database, PLAYER)) {
-    return btech_script_error(call, "#-1 PERMISSION DENIED");
-  }
-  if (NFARGS < 1 || NFARGS > 2) {
-    return btech_script_error(
-        call, "#-1 FUNCTION (BTSTORES) EXPECTS 1 OR 2 ARGUMENTS");
-  }
-  it = match_thing(&context->command->match, PLAYER,
-                   script_function_argument(fargs, NFARGS, 0));
-  if (!is_good_obj(context->btech->database, it)) {
-    return btech_script_error(call, "#-1 INVALID TARGET");
-  }
-  if (NFARGS > 1) {
-    const PartMatchResult MATCH = part_name_lookup(&(PartNameLookupRequest){
-        .context = context->btech,
-        .name = script_function_argument(fargs, NFARGS, 1),
-    });
-    if (!MATCH.found) {
-      return btech_script_error(call, "#-1 INVALID PART NAME");
-    }
-    p = MATCH.part.id;
-    b = MATCH.part.brand;
-    safe_tprintf_str(buff, bufc, "%d",
-                     econ_find_items(context->btech, it, p, b));
-  } else {
-    memset(&pile, 0, sizeof(pile));
-    for (size_t index = 0;
-         index < economy_parts_entry_count(context->world->database, it);
-         index++) {
-      EconomyPartsEntryResult result = economy_parts_entry(&(
-          EconomyPartsEntryRequest){
-          .database = context->world->database, .object = it, .index = index});
-      EconomyPartEntryView entry = result.entry;
-      if (result.found && entry.part_id >= 0 && entry.part_id < NUM_ITEMS &&
-          entry.brand_id >= 0 && entry.brand_id <= BRANDCOUNT)
-        *script_part_pile_slot(&pile, entry.brand_id, entry.part_id) +=
-            entry.quantity;
-    }
-    for (i = 0; i < (int)part_name_count(context->btech); i++) {
-      const PartNameEntry *part_name = part_name_at(context->btech, (size_t)i);
-      p = packed_part_id(part_name->index);
-      b = packed_part_brand(part_name->index);
-      if (*script_part_pile_slot(&pile, b, p)) {
-        if (x)
-          safe_str("|", buff, bufc);
-        x = *script_part_pile_slot(&pile, b, p);
-        safe_tprintf_str(buff, bufc, "%s:%d", part_name->longy, x);
-      }
-    }
-  }
-  return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
-}
+/**
+ * Returns the terrain code of a map hex.
+ *
+ * @par Lua name `btech.map_terrain`
+ * @par Lua signature `btech.map_terrain( map, x, y )`
+ * @par Lua parameters - `map` (`number`) The map dbref.
+ * - `x` (`number`) The hex X coordinate.
+ * - `y` (`number`) The hex Y coordinate.
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btmapterr(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -244,6 +91,26 @@ BtechScriptResult fun_btmapterr(BtechScriptCall *call) {
   safe_tprintf_str(buff, bufc, "%c", terr);
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
+/**
+ * Returns the elevation of a map hex.
+ *
+ * @par Lua name `btech.map_elevation`
+ * @par Lua signature `btech.map_elevation( map, x, y )`
+ * @par Lua parameters - `map` (`number`) The map dbref.
+ * - `x` (`number`) The hex X coordinate.
+ * - `y` (`number`) The hex Y coordinate.
+ * @par Lua returns - `value` (`number`): The numeric result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btmapelev(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -297,6 +164,24 @@ void list_xcodevalues(EvaluationContext *context, DbRef player) {
                   descriptor->name);
   }
 }
+/**
+ * Tests whether a unit template exists.
+ *
+ * @par Lua name `btech.design_exists`
+ * @par Lua signature `btech.design_exists( reference )`
+ * @par Lua parameters - `reference` (`string`) The unit template reference.
+ * @par Lua returns - `result` (`boolean`): Whether the condition is true.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btdesignex(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -316,6 +201,25 @@ BtechScriptResult fun_btdesignex(BtechScriptCall *call) {
   }
   return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
 }
+/**
+ * Returns serialized status for one section of a live unit.
+ *
+ * @par Lua name `btech.section_status`
+ * @par Lua signature `btech.section_status( unit, section )`
+ * @par Lua parameters - `unit` (`number`) The unit dbref.
+ * - `section` (`string`) The section name.
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btsectstatus(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -352,6 +256,24 @@ BtechScriptResult fun_btsectstatus(BtechScriptCall *call) {
   safe_tprintf_str(buff, bufc, "%s", sectstr.text);
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
+/**
+ * Returns the formatted repair-job description for a live unit.
+ *
+ * @par Lua name `btech.damages`
+ * @par Lua signature `btech.damages( unit )`
+ * @par Lua parameters - `unit` (`number`) The unit dbref.
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btdamages(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -384,6 +306,25 @@ BtechScriptResult fun_btdamages(BtechScriptCall *call) {
   free_buf(damage_jobs);
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
+/**
+ * Returns serialized critical-slot status for one section of a live unit.
+ *
+ * @par Lua name `btech.crit_status`
+ * @par Lua signature `btech.crit_status( unit, section )`
+ * @par Lua parameters - `unit` (`number`) The unit dbref.
+ * - `section` (`string`) The section name.
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btcritstatus(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -420,6 +361,25 @@ BtechScriptResult fun_btcritstatus(BtechScriptCall *call) {
   safe_tprintf_str(buff, bufc, "%s", critstr.text);
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
+/**
+ * Returns serialized armor values for one section of a live unit.
+ *
+ * @par Lua name `btech.armor_status`
+ * @par Lua signature `btech.armor_status( unit, section )`
+ * @par Lua parameters - `unit` (`number`) The unit dbref.
+ * - `section` (`string`) The section name.
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btarmorstatus(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -456,6 +416,25 @@ BtechScriptResult fun_btarmorstatus(BtechScriptCall *call) {
   safe_tprintf_str(buff, bufc, "%s", infostr.text);
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
+/**
+ * Returns serialized weapon status for a live unit or one section.
+ *
+ * @par Lua name `btech.weapon_status`
+ * @par Lua signature `btech.weapon_status( unit, [section] )`
+ * @par Lua parameters - `unit` (`number`) The unit dbref.
+ * - `section` (`string`) Optional. Optional section name.
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btweaponstatus(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -497,6 +476,25 @@ BtechScriptResult fun_btweaponstatus(BtechScriptCall *call) {
   safe_tprintf_str(buff, bufc, "%s", infostr.text);
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
+/**
+ * Returns serialized critical-slot status for one section of a unit template.
+ *
+ * @par Lua name `btech.crit_status_ref`
+ * @par Lua signature `btech.crit_status_ref( reference, section )`
+ * @par Lua parameters - `reference` (`string`) The unit template reference.
+ * - `section` (`string`) The section name.
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btcritstatus_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -525,6 +523,25 @@ BtechScriptResult fun_btcritstatus_ref(BtechScriptCall *call) {
   safe_tprintf_str(buff, bufc, "%s", critstr.text);
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
+/**
+ * Returns serialized armor values for one section of a unit template.
+ *
+ * @par Lua name `btech.armor_status_ref`
+ * @par Lua signature `btech.armor_status_ref( reference, section )`
+ * @par Lua parameters - `reference` (`string`) The unit template reference.
+ * - `section` (`string`) The section name.
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btarmorstatus_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -553,6 +570,25 @@ BtechScriptResult fun_btarmorstatus_ref(BtechScriptCall *call) {
   safe_tprintf_str(buff, bufc, "%s", infostr.text);
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
+/**
+ * Returns serialized weapon status for a unit template or one section.
+ *
+ * @par Lua name `btech.weapon_status_ref`
+ * @par Lua signature `btech.weapon_status_ref( reference, [section] )`
+ * @par Lua parameters - `reference` (`string`) The unit template reference.
+ * - `section` (`string`) Optional. Optional section name.
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btweaponstatus_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -586,6 +622,28 @@ BtechScriptResult fun_btweaponstatus_ref(BtechScriptCall *call) {
   safe_tprintf_str(buff, bufc, "%s", infostr.text);
   return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
 }
+/**
+ * Sets one armor-status field on a live unit section.
+ *
+ * @par Lua name `btech.set_armor_status`
+ * @par Lua signature `btech.set_armor_status( unit, section, field, value )`
+ * @par Lua parameters - `unit` (`number`) The unit dbref.
+ * - `section` (`string`) The section name.
+ * - `field` (`string`) The armor field to change.
+ * - `value` (`number`) The new value.
+ * @par Lua returns - `success` (`boolean`): true after the operation completes
+ * without a legacy error.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btsetarmorstatus(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;

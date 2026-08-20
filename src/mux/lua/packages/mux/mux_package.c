@@ -44,6 +44,26 @@ void lua_mux_require_runtime(LuaMuxPackage *package, lua_State *state,
                     "mux.%s is unavailable during @lua/check", function);
 }
 
+/**
+ * Appends a message to a named server log file.
+ *
+ * @par Lua name `mux.log`
+ * @par Lua signature `mux.log( filename, message )`
+ * @par Lua parameters - `filename` (`string`) The name of an existing readable
+ * and writable file directly under game/logs/. Names may not contain /, ..,
+ * embedded NUL bytes, or exceed 200 bytes.
+ * - `message` (`string`) Text to append, followed by a newline. Embedded NUL
+ * bytes are rejected.
+ * @par Lua returns - `written` (`boolean`): Whether the named log accepted the
+ * message.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`;
+ * `LUA_ERROR_CODE_ARG_INVALID` for embedded NUL bytes.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_log(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   size_t filename_length;

@@ -22,6 +22,24 @@
 #include <stddef.h>
 #include <stdio.h>
 
+/**
+ * Tests whether a live unit can be repaired.
+ *
+ * @par Lua name `btech.unit_fixable`
+ * @par Lua signature `btech.unit_fixable( unit )`
+ * @par Lua parameters - `unit` (`number`) The unit dbref.
+ * @par Lua returns - `result` (`boolean`): Whether the condition is true.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btunitfixable(BtechScriptCall *call) {
   if (!is_wizard(call->evaluation->world->database, call->player)) {
     return btech_script_error(call, "#-1 PERMISSION DENIED");
@@ -39,6 +57,25 @@ BtechScriptResult fun_btunitfixable(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
 }
 
+/**
+ * Lists blast-zone coordinates and radii on a map.
+ *
+ * @par Lua name `btech.blast_zones`
+ * @par Lua signature `btech.blast_zones( map )`
+ * @par Lua parameters - `map` (`number`) The map dbref.
+ * @par Lua returns - `values` (`table`): A flat array of repeating x, y, and
+ * radius numbers.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btlistblz(BtechScriptCall *call) {
   char buffer[MBUF_SIZE] = {'\0'};
   if (!is_wizard(call->evaluation->world->database, call->player)) {
@@ -69,6 +106,26 @@ BtechScriptResult fun_btlistblz(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }
 
+/**
+ * Tests whether a map hex lies in a configured blast zone.
+ *
+ * @par Lua name `btech.hex_in_blast_zone`
+ * @par Lua signature `btech.hex_in_blast_zone( map, x, y )`
+ * @par Lua parameters - `map` (`number`) The map dbref.
+ * - `x` (`number`) The hex X coordinate.
+ * - `y` (`number`) The hex Y coordinate.
+ * @par Lua returns - `result` (`boolean`): Whether the condition is true.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_bthexinblz(BtechScriptCall *call) {
   if (!is_wizard(call->evaluation->world->database, call->player)) {
     return btech_script_error(call, "#-1 PERMISSION DENIED");
@@ -116,6 +173,24 @@ BtechScriptResult fun_bthexinblz(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
 }
 
+/**
+ * Returns the current BattleTech event lag.
+ *
+ * @par Lua name `btech.lag`
+ * @par Lua signature `btech.lag(  )`
+ * @par Lua parameters - None.
+ * @par Lua returns - `value` (`number`): The numeric result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btlag(BtechScriptCall *call) {
   safe_tprintf_str(call->output.buffer, &call->output.cursor, "%d",
                    game_lag(call->evaluation->btech));

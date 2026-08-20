@@ -30,6 +30,22 @@ static const Attribute *lua_mux_attribute_name(lua_State *state,
   return attribute;
 }
 
+/**
+ * Creates an attribute handle for this object.
+ *
+ * @par Lua name `object:attribute`
+ * @par Lua signature `object:attribute( )`
+ * @par Lua parameters - None.
+ * @par Lua returns - `attributes` (`Attribute`): A handle for the object's
+ * supported native attributes.
+ * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Object;
+ * `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_object_attribute(lua_State *state) {
   LuaMuxObject *object = lua_mux_check_object_handle(state, 1);
   LuaMuxAttribute *handle;
@@ -46,6 +62,19 @@ static int lua_mux_object_attribute(lua_State *state) {
   return 1;
 }
 
+/**
+ * Gets a supported native attribute.
+ *
+ * @par Lua name `attributes:get`
+ * @par Lua signature `attributes:get( name )`
+ * @par Lua parameters - `name` (`string`) A supported native attribute name.
+ * @par Lua returns - `value` (`string|nil`): The raw value, or nil when unset.
+ * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Attribute;
+ * `LUA_ERROR_CODE_ATTRIBUTE_INVALID` for an invalid or unsupported name.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_attribute_get(lua_State *state) {
   LuaMuxAttribute *handle = lua_mux_check_attribute(state, 1);
   const Attribute *attribute = lua_mux_attribute_name(state, handle, 2);
@@ -59,6 +88,24 @@ static int lua_mux_attribute_get(lua_State *state) {
   return 1;
 }
 
+/**
+ * Sets or clears a supported native attribute.
+ *
+ * @par Lua name `attributes:set`
+ * @par Lua signature `attributes:set( name, value )`
+ * @par Lua parameters - `name` (`string`) A supported native attribute name.
+ * - `value` (`string|nil`) The new raw value; nil clears the attribute.
+ * @par Lua returns - No values.
+ * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Attribute;
+ * `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_ATTRIBUTE_INVALID` for an invalid name/value or a failed
+ * native update.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_attribute_set(lua_State *state) {
   LuaMuxAttribute *handle = lua_mux_check_attribute(state, 1);
   const Attribute *attribute = lua_mux_attribute_name(state, handle, 2);
@@ -90,6 +137,19 @@ static int lua_mux_attribute_set(lua_State *state) {
   return 0;
 }
 
+/**
+ * Returns every supported native attribute and its current value.
+ *
+ * @par Lua name `attributes:entries`
+ * @par Lua signature `attributes:entries( )`
+ * @par Lua parameters - None.
+ * @par Lua returns - `entries` (`table`): A name-to-string table of all
+ * supported attributes.
+ * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Attribute.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_attribute_entries(lua_State *state) {
   LuaMuxAttribute *handle = lua_mux_check_attribute(state, 1);
   GameDatabase *database = handle->package->services->database;

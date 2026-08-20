@@ -128,6 +128,10 @@ fmt-check-lua:
 
 fmt-check: fmt-check-c fmt-check-lua
 
+# Refresh the checked-in LuaLS definitions from the native package bindings.
+update-lua-types:
+    codex --sandbox workspace-write --ask-for-approval never --cd "$PWD" exec --ephemeral - < tools/update_lua_types_prompt.md
+
 tidy:
     {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -fix -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'
 

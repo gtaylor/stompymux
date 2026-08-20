@@ -216,6 +216,7 @@ set(BTECH_SOURCES
   scripting/registry_values.c
   scripting/value_catalog.c
   scripting/repair_map_values.c
+  scripting/repair_stores_values.c
   scripting/repair_damage_values.c
   scripting/unit_query_values.c
   scripting/unit_battle_value_values.c

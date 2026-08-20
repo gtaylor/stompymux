@@ -17,6 +17,23 @@
 #include "mux/server/server_config.h" // IWYU pragma: keep
 #include "mux/support/utf8.h"
 
+/**
+ * Sends a message to an object.
+ *
+ * @par Lua name `mux.notify`
+ * @par Lua signature `mux.notify( object, message )`
+ * @par Lua parameters - `object` (`number|Object`) The recipient.
+ * - `message` (`string`) Valid UTF-8 text without embedded NUL bytes.
+ * @par Lua returns - No values.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_CONNECTION_INVALID` for embedded NUL or invalid UTF-8;
+ * `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid recipient.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_notify(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   DbRef object;
@@ -38,6 +55,21 @@ static int lua_mux_notify(lua_State *state) {
   return 0;
 }
 
+/**
+ * Lists player connections visible to the normal who command.
+ *
+ * @par Lua name `mux.connected_players`
+ * @par Lua signature `mux.connected_players( )`
+ * @par Lua parameters - None.
+ * @par Lua returns - `players` (`Connection[]`): Connection records with
+ * `object` (`Object`), `name` (`string`), `connected_for` (`integer` seconds),
+ * and `idle_for` (`integer` seconds).
+ * @par Lua errors - No stable native error is raised after Lua argument
+ * validation.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_connected_players(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   Descriptor *descriptor;
@@ -64,6 +96,20 @@ static int lua_mux_connected_players(lua_State *state) {
   return 1;
 }
 
+/**
+ * Returns the non-privileged WHO summary.
+ *
+ * @par Lua name `mux.who_summary`
+ * @par Lua signature `mux.who_summary( )`
+ * @par Lua parameters - None.
+ * @par Lua returns - `summary` (`WhoSummary`): A table with `hidden`
+ * (`integer`), `record` (`integer`), and `maximum` (`integer|nil`) fields.
+ * @par Lua errors - No stable native error is raised after Lua argument
+ * validation.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_who_summary(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
 
@@ -107,6 +153,26 @@ static TelnetEnvironmentKind lua_mux_telnet_environment_kind(lua_State *state,
   return TELNET_ENVIRONMENT_VAR;
 }
 
+/**
+ * Tests whether an RFC 1572 NEW-ENVIRON variable is defined on a live
+ * connection.
+ *
+ * @par Lua name `mux.telnet_environment_has`
+ * @par Lua signature `mux.telnet_environment_has( descriptor, kind, name )`
+ * @par Lua parameters - `descriptor` (`number`) A live descriptor ID, normally
+ * ctx.descriptor.
+ * - `kind` (`string`) Either "var" or "uservar".
+ * - `name` (`string`) The binary-safe variable name.
+ * @par Lua returns - `defined` (`boolean`): Whether the variable is present,
+ * including with an empty value.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`;
+ * `LUA_ERROR_CODE_CONNECTION_INVALID` for an unknown descriptor or kind.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_telnet_environment_has(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   Descriptor *descriptor = lua_mux_require_descriptor(package, state, 1);
@@ -119,6 +185,25 @@ static int lua_mux_telnet_environment_has(lua_State *state) {
   return 1;
 }
 
+/**
+ * Gets an RFC 1572 NEW-ENVIRON variable from a live connection.
+ *
+ * @par Lua name `mux.telnet_environment_get`
+ * @par Lua signature `mux.telnet_environment_get( descriptor, kind, name )`
+ * @par Lua parameters - `descriptor` (`number`) A live descriptor ID, normally
+ * ctx.descriptor.
+ * - `kind` (`string`) Either "var" or "uservar".
+ * - `name` (`string`) The binary-safe variable name.
+ * @par Lua returns - `value` (`string|nil`): The binary-safe value, or nil when
+ * the variable is absent.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`;
+ * `LUA_ERROR_CODE_CONNECTION_INVALID` for an unknown descriptor or kind.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_telnet_environment_get(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   Descriptor *descriptor = lua_mux_require_descriptor(package, state, 1);
@@ -136,6 +221,24 @@ static int lua_mux_telnet_environment_get(lua_State *state) {
   return 1;
 }
 
+/**
+ * Attaches an interactive flow to a descriptor and shows its first prompt.
+ *
+ * @par Lua name `mux.flow_start`
+ * @par Lua signature `mux.flow_start( descriptor, module, first_step )`
+ * @par Lua parameters - `descriptor` (`number`) A live descriptor ID, normally
+ * ctx.descriptor.
+ * - `module` (`string`) The flow module path, resolved like require.
+ * - `first_step` (`string`) A key in the module's flows table.
+ * @par Lua returns - No values.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`;
+ * `LUA_ERROR_CODE_CONNECTION_UNAVAILABLE` when flow support is absent.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_flow_start(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   int descriptor_id = (int)luaL_checkinteger(state, 1);

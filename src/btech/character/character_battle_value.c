@@ -439,6 +439,28 @@ legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
   }
 }
 
+/**
+ * Gets a character attribute, skill level, target, experience, or experience
+ * threshold.
+ * @par Lua name `btech.char_value`
+ * @par Lua signature `btech.char_value( character, value, mode )`
+ * @par Lua parameters - `character` (`number|string`) The character dbref or
+ * player name.
+ * - `value` (`number|string`) The character-value code or name.
+ * - `mode` (`number`) 0 for value, 1 for skill target, 2 for XP, 3 for raw
+ * skill value, or 4 for XP to next level.
+ * @par Lua returns - `value` (`number`): The numeric result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btgetcharvalue(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -511,6 +533,29 @@ BtechScriptResult fun_btgetcharvalue(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
+/**
+ * Sets a character value or adjusts skill experience.
+ * @par Lua name `btech.set_char_value`
+ * @par Lua signature `btech.set_char_value( character, value, amount, mode )`
+ * @par Lua parameters - `character` (`number|string`) The character dbref or
+ * player name.
+ * - `value` (`number|string`) The character-value code or name.
+ * - `amount` (`number`) The value or experience amount.
+ * - `mode` (`number`) 0 sets level/value, 1 sets skill target, 3 sets XP, and
+ * other nonzero values add XP.
+ * @par Lua returns - `success` (`boolean`): true after the operation completes
+ * without a legacy error.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btsetcharvalue(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -658,6 +703,27 @@ BtechScriptResult fun_btsetcharvalue(BtechScriptCall *call) {
 ** appear. For attributes the full list will be returned of since
 ** characters need all of them.
 */
+/**
+ * Lists character value names in a requested category.
+ * @par Lua name `btech.char_list`
+ * @par Lua signature `btech.char_list( kind, [character] )`
+ * @par Lua parameters - `kind` (`string`) "skills", "advantages", or
+ * "attributes".
+ * - `character` (`number|string`) Optional. Optional character dbref or player
+ * name used to filter learned values.
+ * @par Lua returns - `values` (`table`): A flat array of converted legacy
+ * result tokens.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btcharlist(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;

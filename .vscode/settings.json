@@ -1,3 +1,6 @@
 {
-    "C_Cpp.intelliSenseEngine": "disabled"
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "Lua.workspace.library": [
+        "${workspaceFolder}/game/lua/types"
+    ]
 }

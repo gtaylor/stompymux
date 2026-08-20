@@ -386,6 +386,25 @@ void list_forms(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   }
 }
 
+/**
+ * Finds packed part IDs whose names match a string.
+ *
+ * @par Lua name `btech.part_match`
+ * @par Lua signature `btech.part_match( query )`
+ * @par Lua parameters - `query` (`string`) The part-name text to match.
+ * @par Lua returns - `values` (`table`): A flat array of converted legacy
+ * result tokens.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btpartmatch(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -513,6 +532,25 @@ static bool btpartslist_matches(const PartCategoryRequest *request) {
 }
 
 /* List the canonical category names accepted by btpartslist(). */
+/**
+ * Lists the canonical categories accepted by btech.parts.
+ *
+ * @par Lua name `btech.part_categories`
+ * @par Lua signature `btech.part_categories(  )`
+ * @par Lua parameters - None.
+ * @par Lua returns - `values` (`table`): A flat array of converted legacy
+ * result tokens.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btpartscategorylist(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -533,6 +571,27 @@ BtechScriptResult fun_btpartscategorylist(BtechScriptCall *call) {
 /*
  * Return canonical long part names from one category, separated by pipes.
  * Requiring the category keeps the result within one LBUF.
+ */
+/**
+ * Lists canonical long part names in one category.
+ *
+ * @par Lua name `btech.parts`
+ * @par Lua signature `btech.parts( category )`
+ * @par Lua parameters - `category` (`string`) "ammo", "weapon", "bomb",
+ * "special", or "cargo". The aliases "weapons", "weap", "bombs", "specials",
+ * "part", "parts", and "carg" are also accepted.
+ * @par Lua returns - `values` (`table`): A flat array of converted legacy
+ * result tokens.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
 BtechScriptResult fun_btpartslist(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
@@ -591,6 +650,25 @@ BtechScriptResult fun_btpartslist(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_LIST);
 }
 
+/**
+ * Returns a name for a packed part ID.
+ *
+ * @par Lua name `btech.part_name`
+ * @par Lua signature `btech.part_name( part, size )`
+ * @par Lua parameters - `part` (`number`) The packed part ID.
+ * - `size` (`string`) "short", "long", or "vlong".
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btpartname(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;

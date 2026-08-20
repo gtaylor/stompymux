@@ -13,6 +13,24 @@
 #include "registry_api.h"
 #include "script_functions_api.h"
 
+/**
+ * Returns the configured experience threshold for a skill.
+ *
+ * @par Lua name `btech.threshold`
+ * @par Lua signature `btech.threshold( skill )`
+ * @par Lua parameters - `skill` (`string`) The skill name.
+ * @par Lua returns - `value` (`number`): The numeric result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btthreshold(BtechScriptCall *call) {
   if (!is_wizard(call->evaluation->world->database, call->player)) {
     return btech_script_error(call, "#-1 PERMISSION DENIED");
@@ -55,6 +73,32 @@ static Mech *damage_target(BtechScriptCall *call,
   return mech;
 }
 
+/**
+ * Applies clustered damage to a live unit.
+ *
+ * @par Lua name `btech.damage_mech`
+ * @par Lua signature `btech.damage_mech( unit, damage, cluster_size, direction,
+ * force_critical, unit_message, los_message )`
+ * @par Lua parameters - `unit` (`number`) The unit dbref.
+ * - `damage` (`number`) Total damage, from 1 through 1000.
+ * - `cluster_size` (`number`) Damage applied per cluster; at least 1.
+ * - `direction` (`number`) The attack direction code.
+ * - `force_critical` (`boolean|number`) Whether to try to force a critical hit.
+ * - `unit_message` (`string`) Message sent to the damaged unit.
+ * - `los_message` (`string`) Message broadcast to units with line of sight.
+ * @par Lua returns - `success` (`boolean`): true after the operation completes
+ * without a legacy error.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btdamagemech(BtechScriptCall *call) {
   Mech *mech = damage_target(call, BTECH_SCRIPT_MUTATION);
   if (!mech)
@@ -104,6 +148,24 @@ BtechScriptResult fun_btdamagemech(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 }
 
+/**
+ * Returns formatted repair status for a live unit.
+ *
+ * @par Lua name `btech.tech_status`
+ * @par Lua signature `btech.tech_status( unit )`
+ * @par Lua parameters - `unit` (`number`) The unit dbref.
+ * @par Lua returns - `result` (`string`): The handler's serialized text result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_bttechstatus(BtechScriptCall *call) {
   Mech *mech = damage_target(call, BTECH_SCRIPT_TEXT);
   if (!mech)

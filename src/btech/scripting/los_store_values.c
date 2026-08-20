@@ -31,6 +31,25 @@
 #include "mech_tic_api.h"
 #include <string.h>
 
+/**
+ * Recursively updates links associated with a map.
+ *
+ * @par Lua name `btech.update_links`
+ * @par Lua signature `btech.update_links( map )`
+ * @par Lua parameters - `map` (`number`) The map dbref.
+ * @par Lua returns - `success` (`boolean`): true after the operation completes
+ * without a legacy error.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btupdatelinks(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -65,6 +84,28 @@ BtechScriptResult fun_btupdatelinks(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 }
 
+/**
+ * Broadcasts a message from one map hex.
+ *
+ * @par Lua name `btech.hex_emit`
+ * @par Lua signature `btech.hex_emit( map, x, y, message )`
+ * @par Lua parameters - `map` (`number`) The map dbref.
+ * - `x` (`number`) The hex X coordinate.
+ * - `y` (`number`) The hex Y coordinate.
+ * - `message` (`string`) A non-empty message.
+ * @par Lua returns - `success` (`boolean`): true after the operation completes
+ * without a legacy error.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_bthexemit(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -118,6 +159,27 @@ BtechScriptResult fun_bthexemit(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 }
 
+/**
+ * Makes a piloting roll and causes a fall when it fails.
+ *
+ * @par Lua name `btech.make_pilot_roll`
+ * @par Lua signature `btech.make_pilot_roll( unit, roll_modifier,
+ * damage_modifier )`
+ * @par Lua parameters - `unit` (`number`) The unit dbref.
+ * - `roll_modifier` (`number`) Modifier applied to the piloting roll.
+ * - `damage_modifier` (`number`) Modifier passed to falling damage.
+ * @par Lua returns - `result` (`boolean`): Whether the condition is true.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btmakepilotroll(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -171,6 +233,26 @@ BtechScriptResult fun_btmakepilotroll(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
 }
 
+/**
+ * Resolves a two-character tactical ID on a unit's map.
+ *
+ * @par Lua name `btech.id_to_dbref`
+ * @par Lua signature `btech.id_to_dbref( unit_or_map, id )`
+ * @par Lua parameters - `unit_or_map` (`number`) The observing unit or map
+ * dbref.
+ * - `id` (`string`) The two-character tactical ID.
+ * @par Lua returns - `value` (`number`): The numeric result.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btid2db(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -234,6 +316,26 @@ BtechScriptResult fun_btid2db(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 
+/**
+ * Tests whether a live unit has unobstructed line of sight to a map hex.
+ *
+ * @par Lua name `btech.hex_line_of_sight`
+ * @par Lua signature `btech.hex_line_of_sight( unit, x, y )`
+ * @par Lua parameters - `unit` (`number`) The observing unit dbref.
+ * - `x` (`number`) The target hex X coordinate.
+ * - `y` (`number`) The target hex Y coordinate.
+ * @par Lua returns - `result` (`boolean`): Whether the condition is true.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_bthexlos(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -298,6 +400,26 @@ BtechScriptResult fun_bthexlos(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_BOOLEAN);
 }
 
+/**
+ * Tests line of sight between two live units.
+ *
+ * @par Lua name `btech.mech_line_of_sight`
+ * @par Lua signature `btech.mech_line_of_sight( unit, target )`
+ * @par Lua parameters - `unit` (`number`) The observing unit dbref.
+ * - `target` (`number`) The target unit dbref.
+ * @par Lua returns - `visible` (`boolean`): true when the legacy line-of-sight
+ * result is nonzero.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btlosm2m(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
@@ -366,6 +488,28 @@ BtechScriptResult fun_btlosm2m(BtechScriptCall *call) {
  *
  * Adds the specified parts/commodities to a map. The maximum value for
  * <PartName> is the define, ADDSTORES_MAX.
+ */
+/**
+ * Adds a quantity of a part to an object's stores.
+ *
+ * @par Lua name `btech.add_stores`
+ * @par Lua signature `btech.add_stores( target, part_name, quantity )`
+ * @par Lua parameters - `target` (`number`) The dbref of the stores-bearing
+ * object.
+ * - `part_name` (`string`) A recognized part name.
+ * - `quantity` (`number`) The quantity to add, capped by the server limit.
+ * @par Lua returns - `success` (`boolean`): true after the operation completes
+ * without a legacy error.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
 BtechScriptResult fun_btaddstores(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
@@ -452,6 +596,26 @@ BtechScriptResult fun_btaddstores(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 } /* end btaddstores() */
 
+/**
+ * Lists the weapons assigned to a unit's target-interlock circuit.
+ *
+ * @par Lua name `btech.tic_weapons`
+ * @par Lua signature `btech.tic_weapons( unit, tic )`
+ * @par Lua parameters - `unit` (`number`) The unit dbref.
+ * - `tic` (`number`) The zero-based TIC number.
+ * @par Lua returns - `values` (`table`): A flat array of converted legacy
+ * result tokens.
+ * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
+ * `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
+ * supplied.
+ * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
+ * error.
+ * @par Lua availability Available only from a running Lua callback; unavailable
+ * during `@lua/check`.
+ * @param[in,out] call The BattleTech arguments, output, and evaluation context.
+ * @return A `BtechScriptResult` consumed by the Lua trampoline.
+ */
 BtechScriptResult fun_btticweaps(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;

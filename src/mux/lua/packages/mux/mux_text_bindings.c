@@ -13,6 +13,19 @@
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/utf8.h"
 
+/**
+ * Validates styled-text markup and returns it unchanged.
+ *
+ * @par Lua name `mux.markup`
+ * @par Lua signature `mux.markup( value )`
+ * @par Lua parameters - `value` (`string`) Styled-text markup to validate.
+ * @par Lua returns - `markup` (`string`): The validated input string.
+ * @par Lua errors - `LUA_ERROR_CODE_TEXT_INVALID` when styled-text markup
+ * compilation fails.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_markup(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   const char *markup = luaL_checkstring(state, 1);
@@ -30,6 +43,20 @@ static int lua_mux_markup(lua_State *state) {
   return 1;
 }
 
+/**
+ * Tests whether every byte in a string is printable ASCII.
+ *
+ * @par Lua name `mux.is_printable_ascii`
+ * @par Lua signature `mux.is_printable_ascii( value )`
+ * @par Lua parameters - `value` (`string`) The byte string to inspect.
+ * @par Lua returns - `printable` (`boolean`): Whether every byte is between
+ * space (0x20) and ~ (0x7e), inclusive.
+ * @par Lua errors - No stable native error is raised after Lua argument
+ * validation.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_is_printable_ascii(lua_State *state) {
   size_t length;
   const char *value;
@@ -103,6 +130,22 @@ static bool lua_mux_style_open(const LuaStylePropertyRequest *request) {
   return true;
 }
 
+/**
+ * Applies styled-text markup described by an options table.
+ *
+ * @par Lua name `mux.style`
+ * @par Lua signature `mux.style( value, options )`
+ * @par Lua parameters - `value` (`string`) The text to style; it must not
+ * contain an embedded NUL byte.
+ * - `options` (`table`) Style fields to apply.
+ * @par Lua returns - `styled` (`string`): The input wrapped in validated
+ * styled-text markup.
+ * @par Lua errors - `LUA_ERROR_CODE_TEXT_INVALID` for embedded NUL, invalid
+ * option fields, or markup compilation failure.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_style(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   size_t text_length;
@@ -164,6 +207,19 @@ static int lua_mux_style(lua_State *state) {
   return 1;
 }
 
+/**
+ * Removes styled-text markup and ANSI styling from a string.
+ *
+ * @par Lua name `mux.strip_style`
+ * @par Lua signature `mux.strip_style( value )`
+ * @par Lua parameters - `value` (`string`) Styled or unstyled text.
+ * @par Lua returns - `plain` (`string`): The visible unstyled text.
+ * @par Lua errors - No stable native error is raised after Lua argument
+ * validation.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_strip_style(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   const char *value = luaL_checkstring(state, 1);
@@ -176,6 +232,20 @@ static int lua_mux_strip_style(lua_State *state) {
   return 1;
 }
 
+/**
+ * Measures the visible byte width of styled text.
+ *
+ * @par Lua name `mux.text_width`
+ * @par Lua signature `mux.text_width( value )`
+ * @par Lua parameters - `value` (`string`) Styled or unstyled text.
+ * @par Lua returns - `width` (`number`): The number of visible bytes, excluding
+ * markup and ANSI styling.
+ * @par Lua errors - No stable native error is raised after Lua argument
+ * validation.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_text_width(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
 
@@ -185,6 +255,20 @@ static int lua_mux_text_width(lua_State *state) {
   return 1;
 }
 
+/**
+ * Truncates styled text to a maximum visible width.
+ *
+ * @par Lua name `mux.truncate_text`
+ * @par Lua signature `mux.truncate_text( value, width )`
+ * @par Lua parameters - `value` (`string`) Styled or unstyled text.
+ * - `width` (`number`) A non-negative maximum visible byte width.
+ * @par Lua returns - `truncated` (`string`): The safely truncated text,
+ * including any resets needed for active styles.
+ * @par Lua errors - `LUA_ERROR_CODE_TEXT_INVALID` when width is negative.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
 static int lua_mux_truncate_text(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   const char *value = luaL_checkstring(state, 1);
