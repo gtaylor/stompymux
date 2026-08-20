@@ -44,6 +44,7 @@ When writing C code, use the following naming conventions:
 - LuaLS stubs may be found in game/lua/types. These drive IDE validation and hover hinting.
 - All C functions that are bound to Lua packages should include Doxygen-style comments to help the stub generator agent out.
 - Run `just update-lua-types` any time you add, remove, or change inputs or outputs for C functions that are bound to Lua packages.
+- Update the reference docs in docs/content/docs/scripting/packages when you make changes to the exported Lua packages.
 
 ## Testing Practices
 
