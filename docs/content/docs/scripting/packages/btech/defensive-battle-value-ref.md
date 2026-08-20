@@ -1,5 +1,5 @@
 ---
-title: btech.defensive_battle_value_ref
+title: defensive_battle_value_ref
 type: docs
 toc_hide: false
 ---

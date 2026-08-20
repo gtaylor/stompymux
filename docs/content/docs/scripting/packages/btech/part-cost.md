@@ -1,5 +1,5 @@
 ---
-title: btech.part_cost
+title: part_cost
 type: docs
 toc_hide: false
 ---

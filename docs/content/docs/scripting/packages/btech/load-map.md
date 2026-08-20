@@ -1,5 +1,5 @@
 ---
-title: btech.load_map
+title: load_map
 type: docs
 toc_hide: false
 ---

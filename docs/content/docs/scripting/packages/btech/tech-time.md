@@ -1,5 +1,5 @@
 ---
-title: btech.tech_time
+title: tech_time
 type: docs
 toc_hide: false
 ---

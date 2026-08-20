@@ -1,5 +1,5 @@
 ---
-title: btech.design_exists
+title: design_exists
 type: docs
 toc_hide: false
 ---

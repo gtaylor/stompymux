@@ -1,5 +1,5 @@
 ---
-title: btech.offensive_battle_value_ref
+title: offensive_battle_value_ref
 type: docs
 toc_hide: false
 ---

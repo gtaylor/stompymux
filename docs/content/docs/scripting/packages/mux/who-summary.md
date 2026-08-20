@@ -1,5 +1,5 @@
 ---
-title: mux.who_summary
+title: who_summary
 type: docs
 toc_hide: false
 ---

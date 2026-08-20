@@ -1,5 +1,5 @@
 ---
-title: btech.update_links
+title: update_links
 type: docs
 toc_hide: false
 ---

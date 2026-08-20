@@ -1,5 +1,5 @@
 ---
-title: btech.blast_zones
+title: blast_zones
 type: docs
 toc_hide: false
 ---

@@ -21,6 +21,12 @@ for each function. Mutation-only operations return `true`. List operations
 split the legacy result on whitespace and `|`, convert numeric tokens (including
 `#123`) to Lua numbers, and return a flat array.
 
+## Subpackages
+
+| Package | Description |
+| --- | --- |
+| [`btech.error`](error/) | Checked BattleTech error-code symbols. |
+
 ## Functions
 
 ### Unit data
@@ -130,9 +136,3 @@ split the legacy result on whitespace and `|`, convert numeric tokens (including
 | [`btech.lag`](lag/) | Returns the current BattleTech event lag. |
 | [`btech.mech_frequencies`](mech-frequencies/) | Lists the configured radio channels of a live unit. |
 | [`btech.zone_mechs`](zone-mechs/) | Lists live unit objects assigned to a zone. |
-
-## Errors
-
-| Function | Description |
-| --- | --- |
-| [`btech.error`](../btech-error/) | Checked BattleTech error-code symbols. |

@@ -1,5 +1,5 @@
 ---
-title: btech.id_to_dbref
+title: id_to_dbref
 type: docs
 toc_hide: false
 ---

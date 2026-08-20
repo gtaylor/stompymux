@@ -1,5 +1,5 @@
 ---
-title: btech.threshold
+title: threshold
 type: docs
 toc_hide: false
 ---

@@ -1,5 +1,5 @@
 ---
-title: btech.char_list
+title: char_list
 type: docs
 toc_hide: false
 ---

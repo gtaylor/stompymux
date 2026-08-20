@@ -1,5 +1,5 @@
 ---
-title: btech.range
+title: range
 type: docs
 toc_hide: false
 ---

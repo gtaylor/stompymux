@@ -1,5 +1,5 @@
 ---
-title: btech.map_units
+title: map_units
 type: docs
 toc_hide: false
 ---

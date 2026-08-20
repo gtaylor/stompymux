@@ -1,5 +1,5 @@
 ---
-title: btech.fasa_base_cost_ref
+title: fasa_base_cost_ref
 type: docs
 toc_hide: false
 ---

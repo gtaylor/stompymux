@@ -1,5 +1,5 @@
 ---
-title: btech.char_value
+title: char_value
 type: docs
 toc_hide: false
 ---

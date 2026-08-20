@@ -1,5 +1,5 @@
 ---
-title: btech.stores
+title: stores
 type: docs
 toc_hide: false
 ---

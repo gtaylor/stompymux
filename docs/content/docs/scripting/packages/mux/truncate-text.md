@@ -1,5 +1,5 @@
 ---
-title: mux.truncate_text
+title: truncate_text
 type: docs
 toc_hide: false
 ---

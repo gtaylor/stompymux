@@ -1,5 +1,5 @@
 ---
-title: btech.set_xcode_value
+title: set_xcode_value
 type: docs
 toc_hide: false
 ---

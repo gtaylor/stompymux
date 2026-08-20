@@ -271,6 +271,32 @@ function Object:attribute() end
 ---@field record integer Record simultaneous-player count.
 ---@field maximum? integer Configured limit, or nil when unlimited.
 
+---Telnet protocol state and capabilities for live connections.
+---@class MuxTelnetPackage
+local mux_telnet = {}
+
+---Tests whether a binary-safe RFC 1572 NEW-ENVIRON variable is defined.
+---@param descriptor integer Live descriptor ID, normally `ctx.descriptor`.
+---@param kind TelnetEnvironmentKind NEW-ENVIRON variable namespace.
+---@param name string Binary-safe variable name.
+---@return boolean defined Whether the variable is present, including with an empty value.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.connection.invalid`](lua://mux.error.codes.connection.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.connection.invalid
+function mux_telnet.environment_has(descriptor, kind, name) end
+
+---Gets a binary-safe RFC 1572 NEW-ENVIRON value.
+---@param descriptor integer Live descriptor ID, normally `ctx.descriptor`.
+---@param kind TelnetEnvironmentKind NEW-ENVIRON variable namespace.
+---@param name string Binary-safe variable name.
+---@return string? value Binary-safe value, or nil when the variable is absent.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.connection.invalid`](lua://mux.error.codes.connection.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.connection.invalid
+function mux_telnet.environment_get(descriptor, kind, name) end
+
 ---@class StyleOptions
 ---@field foreground? string Palette foreground name.
 ---@field background? string Palette background name.
@@ -353,6 +379,7 @@ function mux_error.code_tree(root) end
 ---The native MUX host API.
 ---@class MuxPackage
 ---@field error MuxErrorPackage
+---@field telnet MuxTelnetPackage Telnet protocol state and capabilities.
 mux = {}
 
 ---Creates a validated object handle from a dbref or existing handle.
@@ -391,28 +418,6 @@ function mux.connected_players() end
 ---Returns the non-privileged WHO summary.
 ---@return WhoSummary summary
 function mux.who_summary() end
-
----Tests whether a binary-safe RFC 1572 NEW-ENVIRON variable is defined.
----@param descriptor integer
----@param kind TelnetEnvironmentKind
----@param name string
----@return boolean defined
----
----Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.connection.invalid`](lua://mux.error.codes.connection.invalid).
----@see mux.error.codes.unavailable.checking
----@see mux.error.codes.connection.invalid
-function mux.telnet_environment_has(descriptor, kind, name) end
-
----Gets a binary-safe RFC 1572 NEW-ENVIRON value.
----@param descriptor integer
----@param kind TelnetEnvironmentKind
----@param name string
----@return string? value
----
----Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.connection.invalid`](lua://mux.error.codes.connection.invalid).
----@see mux.error.codes.unavailable.checking
----@see mux.error.codes.connection.invalid
-function mux.telnet_environment_get(descriptor, kind, name) end
 
 ---Attaches an interactive flow to a descriptor and displays its first prompt.
 ---@param descriptor integer
@@ -466,5 +471,6 @@ function mux.text_width(value) end
 function mux.truncate_text(value, width) end
 
 mux.error = mux_error
+mux.telnet = mux_telnet
 
 return mux

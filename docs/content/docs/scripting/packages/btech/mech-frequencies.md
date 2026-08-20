@@ -1,5 +1,5 @@
 ---
-title: btech.mech_frequencies
+title: mech_frequencies
 type: docs
 toc_hide: false
 ---

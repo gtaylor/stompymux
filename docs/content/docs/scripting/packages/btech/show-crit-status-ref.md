@@ -1,5 +1,5 @@
 ---
-title: btech.show_crit_status_ref
+title: show_crit_status_ref
 type: docs
 toc_hide: false
 ---

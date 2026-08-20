@@ -1,5 +1,5 @@
 ---
-title: btech.part_weight
+title: part_weight
 type: docs
 toc_hide: false
 ---

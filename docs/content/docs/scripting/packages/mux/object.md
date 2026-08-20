@@ -1,10 +1,15 @@
 ---
-title: mux.object
+title: object
 type: docs
 toc_hide: false
 ---
 
-Creates a validated handle for a native database object.
+Creates a validated handle for a native database [Object](../type-object/).
+Since this function raises errors, it's best to wrap its invocation in a
+[pcall()](https://www.lua.org/pil/8.4.html) (see below).
+
+Once you've retrieved an [Object](../type-object/), you'll have access to its
+properties and a handful of methods for things like object's [State](../type-state/).
 
 ## Function
 
@@ -24,16 +29,40 @@ mux.object( dbref )
 `Object object`
 : A handle for the referenced object.
 
+### Raises
+
+Raises an error with code `mux.object.invalid` when passed an invalid dbref.
+
 ## Examples
+
+The simplest form of object retrieval involves naively (without regards to errors)
+attempting a retrieval:
 
 ```lua
 local object = mux.object(ctx.object)
 mux.notify(ctx.enactor, object.name)
 ```
 
-## Notes
+`pcall` returns the object handle after the success flag when the database
+reference is valid:
 
-This function is unavailable during `@lua/check`. Passing an invalid object raises a Lua error.
+```lua
+local ok, object = pcall(mux.object, ctx.object)
+
+assert(ok)
+mux.notify(ctx.enactor, object.name)
+```
+
+Invalid database references raise a structured Lua error rather than returning
+`nil`:
+
+```lua
+local ok, err = pcall(mux.object, 999999)
+
+assert(not ok)
+assert(err.code == "mux.object.invalid")
+assert(err.detail.argument == 1)
+```
 
 ## See Also
 

@@ -1,5 +1,5 @@
 ---
-title: btech.tech_list
+title: tech_list
 type: docs
 toc_hide: false
 ---

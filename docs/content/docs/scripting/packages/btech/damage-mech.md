@@ -1,5 +1,5 @@
 ---
-title: btech.damage_mech
+title: damage_mech
 type: docs
 toc_hide: false
 ---

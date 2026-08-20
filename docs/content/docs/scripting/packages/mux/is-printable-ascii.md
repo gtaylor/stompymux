@@ -1,5 +1,5 @@
 ---
-title: mux.is_printable_ascii
+title: is_printable_ascii
 type: docs
 toc_hide: false
 ---

@@ -71,7 +71,7 @@ persistent state. Styled text, notifications, queued commands, connection
 summaries, and interactive flows remain top-level `mux` operations. Queued
 commands execute as `#1` after the current handler completes. See the
 [`mux` package reference](packages/mux/) for the full API.
-See [Lua errors](errors/) and the [`mux.error` package reference](packages/mux-error/)
+See [Lua errors](errors/) and the [`mux.error` package reference](packages/mux/error/)
 for the structured error convention used by native bindings and script authors.
 
 Lua has no filesystem, process, debug, FFI, coroutine, or dynamic-loading

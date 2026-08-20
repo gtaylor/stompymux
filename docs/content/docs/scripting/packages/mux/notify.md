@@ -1,5 +1,5 @@
 ---
-title: mux.notify
+title: notify
 type: docs
 toc_hide: false
 ---

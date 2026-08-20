@@ -59,7 +59,7 @@ still permits `after_all` to run.
 `is_error`. `raises` returns the structured error so tests can inspect its
 code and detail. Assertion errors keep expected and actual values structured,
 so the runner can report them differently from Lua runtime errors. See the
-[`mux.error` reference](packages/mux-error/) for error fields and matching.
+[`mux.error` reference](packages/mux/error/) for error fields and matching.
 
 ## Testing error codes
 

@@ -1,5 +1,5 @@
 ---
-title: btech.tic_weapons
+title: tic_weapons
 type: docs
 toc_hide: false
 ---

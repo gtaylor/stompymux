@@ -1,5 +1,5 @@
 ---
-title: btech.zone_mechs
+title: zone_mechs
 type: docs
 toc_hide: false
 ---

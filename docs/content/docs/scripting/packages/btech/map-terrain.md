@@ -1,5 +1,5 @@
 ---
-title: btech.map_terrain
+title: map_terrain
 type: docs
 toc_hide: false
 ---

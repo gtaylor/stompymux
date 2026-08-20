@@ -1,5 +1,5 @@
 ---
-title: btech.repair_job_count
+title: repair_job_count
 type: docs
 toc_hide: false
 ---

@@ -1,5 +1,5 @@
 ---
-title: btech.lag
+title: lag
 type: docs
 toc_hide: false
 ---

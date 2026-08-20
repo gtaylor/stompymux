@@ -1,5 +1,5 @@
 ---
-title: btech.weapon_status_ref
+title: weapon_status_ref
 type: docs
 toc_hide: false
 ---

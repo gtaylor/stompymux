@@ -1,5 +1,5 @@
 ---
-title: btech.set_xy
+title: set_xy
 type: docs
 toc_hide: false
 ---

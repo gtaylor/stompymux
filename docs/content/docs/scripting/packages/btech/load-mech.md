@@ -1,5 +1,5 @@
 ---
-title: btech.load_mech
+title: load_mech
 type: docs
 toc_hide: false
 ---

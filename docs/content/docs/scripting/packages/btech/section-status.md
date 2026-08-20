@@ -1,5 +1,5 @@
 ---
-title: btech.section_status
+title: section_status
 type: docs
 toc_hide: false
 ---

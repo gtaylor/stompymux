@@ -1,5 +1,5 @@
 ---
-title: btech.remove_stores
+title: remove_stores
 type: docs
 toc_hide: false
 ---

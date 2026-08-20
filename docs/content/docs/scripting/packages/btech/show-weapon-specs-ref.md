@@ -1,5 +1,5 @@
 ---
-title: btech.show_weapon_specs_ref
+title: show_weapon_specs_ref
 type: docs
 toc_hide: false
 ---

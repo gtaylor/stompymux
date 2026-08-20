@@ -1,5 +1,5 @@
 ---
-title: btech.under_repair
+title: under_repair
 type: docs
 toc_hide: false
 ---

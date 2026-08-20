@@ -1,5 +1,5 @@
 ---
-title: btech.damages
+title: damages
 type: docs
 toc_hide: false
 ---

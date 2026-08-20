@@ -1,5 +1,5 @@
 ---
-title: btech.mech_line_of_sight
+title: mech_line_of_sight
 type: docs
 toc_hide: false
 ---

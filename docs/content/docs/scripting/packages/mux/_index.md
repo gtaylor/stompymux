@@ -8,11 +8,29 @@ no_list: true
 ---
 
 `mux` is the built-in server API available to every Lua module. It is supplied
-by the game server rather than loaded with `require`. Lua callbacks and commands
-run with the server's `#1` authority model; scripts should still use the callback
-context to identify the object and enactor that triggered them.
+by the game server rather than loaded with `require`.
+
+## Subpackages
+
+| Package | Description |
+| --- | --- |
+| [`mux.error`](error/) | Structured errors, checked error codes, and error-handling helpers. |
+| [`mux.telnet`](telnet/) | Telnet protocol state and capabilities. |
+
+## Types
+
+The `mux` module provides several Lua types that are core to most scripting.
+
+| Type | Description |
+| --- | --- |
+| [`Object`](type-object/) | A validated handle for a native database object. |
+| [`Attribute`](type-attribute/) | Access to an object's supported native attributes. |
+| [`State`](type-state/) | Typed, persistent state in one object namespace. |
 
 ## Functions
+
+The `mux` module provides functions for common in-game operations, excluding the btech
+economy and combat functionality (which is addressed through the [btech](../btech/) module).
 
 ### Objects and state
 
@@ -21,6 +39,9 @@ context to identify the object and enactor that triggered them.
 | [`mux.object`](object/) | Creates a validated handle for a database object. |
 
 ### Styled text
+
+StompyMUX supports a rich set of facilities for styling text. Colors, decorations, clickable
+links, and more. See [Styled Text](../../../concepts/styled-text/) for an overview.
 
 | Function | Description |
 | --- | --- |
@@ -38,8 +59,6 @@ context to identify the object and enactor that triggered them.
 | [`mux.notify`](notify/) | Sends a message to an object. |
 | [`mux.connected_players`](connected-players/) | Lists player connections visible to the normal `who` command. |
 | [`mux.who_summary`](who-summary/) | Returns the non-privileged WHO summary. |
-| [`mux.telnet_environment_has`](telnet-environment-has/) | Tests whether a NEW-ENVIRON variable is defined. |
-| [`mux.telnet_environment_get`](telnet-environment-get/) | Gets a NEW-ENVIRON variable. |
 | [`mux.flow_start`](flow-start/) | Starts an interactive flow on a descriptor. |
 
 ### Server operations
@@ -47,20 +66,6 @@ context to identify the object and enactor that triggered them.
 | Function | Description |
 | --- | --- |
 | [`mux.log`](log/) | Appends a message to a named file under `game/logs/`. |
-
-### Errors
-
-| Function | Description |
-| --- | --- |
-| [`mux.error`](../mux-error/) | Creates, raises, and inspects structured Lua errors. |
-
-## Types
-
-| Type | Description |
-| --- | --- |
-| [`Object`](type-object/) | A validated handle for a native database object. |
-| [`Attribute`](type-attribute/) | Access to an object's supported native attributes. |
-| [`State`](type-state/) | Typed, persistent state in one object namespace. |
 
 ## Availability and limits
 

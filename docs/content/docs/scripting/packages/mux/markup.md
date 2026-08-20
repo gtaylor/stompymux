@@ -1,5 +1,5 @@
 ---
-title: mux.markup
+title: markup
 type: docs
 toc_hide: false
 ---

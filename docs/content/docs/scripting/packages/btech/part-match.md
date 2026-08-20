@@ -1,5 +1,5 @@
 ---
-title: btech.part_match
+title: part_match
 type: docs
 toc_hide: false
 ---

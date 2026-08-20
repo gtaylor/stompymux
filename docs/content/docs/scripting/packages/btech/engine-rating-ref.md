@@ -1,5 +1,5 @@
 ---
-title: btech.engine_rating_ref
+title: engine_rating_ref
 type: docs
 toc_hide: false
 ---

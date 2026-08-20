@@ -131,7 +131,7 @@ static Descriptor *lua_mux_require_descriptor(LuaMuxPackage *package,
   int descriptor_id = (int)luaL_checkinteger(state, argument);
   Descriptor *descriptor;
 
-  lua_mux_require_runtime(package, state, "telnet_environment");
+  lua_mux_require_runtime(package, state, "telnet.environment");
   descriptor =
       descriptor_find_by_fd(package->services->descriptors, descriptor_id);
   if (descriptor == nullptr)
@@ -157,8 +157,8 @@ static TelnetEnvironmentKind lua_mux_telnet_environment_kind(lua_State *state,
  * Tests whether an RFC 1572 NEW-ENVIRON variable is defined on a live
  * connection.
  *
- * @par Lua name `mux.telnet_environment_has`
- * @par Lua signature `mux.telnet_environment_has( descriptor, kind, name )`
+ * @par Lua name `mux.telnet.environment_has`
+ * @par Lua signature `mux.telnet.environment_has( descriptor, kind, name )`
  * @par Lua parameters - `descriptor` (`number`) A live descriptor ID, normally
  * ctx.descriptor.
  * - `kind` (`string`) Either "var" or "uservar".
@@ -188,8 +188,8 @@ static int lua_mux_telnet_environment_has(lua_State *state) {
 /**
  * Gets an RFC 1572 NEW-ENVIRON variable from a live connection.
  *
- * @par Lua name `mux.telnet_environment_get`
- * @par Lua signature `mux.telnet_environment_get( descriptor, kind, name )`
+ * @par Lua name `mux.telnet.environment_get`
+ * @par Lua signature `mux.telnet.environment_get( descriptor, kind, name )`
  * @par Lua parameters - `descriptor` (`number`) A live descriptor ID, normally
  * ctx.descriptor.
  * - `kind` (`string`) Either "var" or "uservar".
@@ -266,12 +266,14 @@ void lua_mux_install_connection_bindings(lua_State *state,
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_who_summary, 1);
   lua_setfield(state, -2, "who_summary");
+  lua_newtable(state);
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_telnet_environment_has, 1);
-  lua_setfield(state, -2, "telnet_environment_has");
+  lua_setfield(state, -2, "environment_has");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_telnet_environment_get, 1);
-  lua_setfield(state, -2, "telnet_environment_get");
+  lua_setfield(state, -2, "environment_get");
+  lua_setfield(state, -2, "telnet");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_flow_start, 1);
   lua_setfield(state, -2, "flow_start");

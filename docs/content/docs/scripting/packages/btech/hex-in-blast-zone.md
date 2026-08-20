@@ -1,5 +1,5 @@
 ---
-title: btech.hex_in_blast_zone
+title: hex_in_blast_zone
 type: docs
 toc_hide: false
 ---

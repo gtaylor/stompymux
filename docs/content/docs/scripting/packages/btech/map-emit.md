@@ -1,5 +1,5 @@
 ---
-title: btech.map_emit
+title: map_emit
 type: docs
 toc_hide: false
 ---

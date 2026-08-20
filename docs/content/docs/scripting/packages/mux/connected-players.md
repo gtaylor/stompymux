@@ -1,5 +1,5 @@
 ---
-title: mux.connected_players
+title: connected_players
 type: docs
 toc_hide: false
 ---

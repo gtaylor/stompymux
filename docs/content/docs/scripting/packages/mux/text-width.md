@@ -1,5 +1,5 @@
 ---
-title: mux.text_width
+title: text_width
 type: docs
 toc_hide: false
 ---

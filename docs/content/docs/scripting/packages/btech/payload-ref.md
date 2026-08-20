@@ -1,5 +1,5 @@
 ---
-title: btech.payload_ref
+title: payload_ref
 type: docs
 toc_hide: false
 ---

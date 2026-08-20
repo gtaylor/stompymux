@@ -1,5 +1,5 @@
 ---
-title: btech.hex_emit
+title: hex_emit
 type: docs
 toc_hide: false
 ---

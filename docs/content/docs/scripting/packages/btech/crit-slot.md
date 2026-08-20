@@ -1,5 +1,5 @@
 ---
-title: btech.crit_slot
+title: crit_slot
 type: docs
 toc_hide: false
 ---

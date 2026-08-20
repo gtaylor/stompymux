@@ -1,5 +1,5 @@
 ---
-title: mux.log
+title: log
 type: docs
 toc_hide: false
 ---

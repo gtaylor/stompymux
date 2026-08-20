@@ -1,5 +1,5 @@
 ---
-title: btech.real_max_speed
+title: real_max_speed
 type: docs
 toc_hide: false
 ---

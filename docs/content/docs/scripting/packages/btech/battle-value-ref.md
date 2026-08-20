@@ -1,5 +1,5 @@
 ---
-title: btech.battle_value_ref
+title: battle_value_ref
 type: docs
 toc_hide: false
 ---

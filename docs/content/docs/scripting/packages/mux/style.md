@@ -1,5 +1,5 @@
 ---
-title: mux.style
+title: style
 type: docs
 toc_hide: false
 ---

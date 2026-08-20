@@ -1,5 +1,5 @@
 ---
-title: btech.weapon_stat
+title: weapon_stat
 type: docs
 toc_hide: false
 ---

@@ -1,5 +1,5 @@
 ---
-title: btech.get_weight
+title: get_weight
 type: docs
 toc_hide: false
 ---

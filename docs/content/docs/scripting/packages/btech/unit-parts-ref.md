@@ -1,5 +1,5 @@
 ---
-title: btech.unit_parts_ref
+title: unit_parts_ref
 type: docs
 toc_hide: false
 ---

@@ -1,5 +1,5 @@
 ---
-title: btech.set_tons
+title: set_tons
 type: docs
 toc_hide: false
 ---

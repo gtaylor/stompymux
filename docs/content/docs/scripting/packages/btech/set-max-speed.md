@@ -1,5 +1,5 @@
 ---
-title: btech.set_max_speed
+title: set_max_speed
 type: docs
 toc_hide: false
 ---

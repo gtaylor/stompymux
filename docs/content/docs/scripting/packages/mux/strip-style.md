@@ -1,5 +1,5 @@
 ---
-title: mux.strip_style
+title: strip_style
 type: docs
 toc_hide: false
 ---

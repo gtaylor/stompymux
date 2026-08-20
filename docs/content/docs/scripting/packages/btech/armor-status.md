@@ -1,5 +1,5 @@
 ---
-title: btech.armor_status
+title: armor_status
 type: docs
 toc_hide: false
 ---
