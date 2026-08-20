@@ -10,9 +10,9 @@
 
 #include <lua.h>
 
-#include "mux/lua/btech_package.h"
 #include "mux/lua/lua_runtime.h"
-#include "mux/lua/mux_package.h"
+#include "mux/lua/packages/btech/btech_package.h"
+#include "mux/lua/packages/mux/mux_package.h"
 
 typedef struct CommandInvocation CommandInvocation;
 

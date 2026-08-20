@@ -6,7 +6,7 @@
 #include <string.h>
 
 #include "mux/lua/lua_error.h"
-#include "mux/lua/mux_package_internal.h"
+#include "mux/lua/packages/mux/mux_package_internal.h"
 
 static bool run(lua_State *state, const char *source) {
   return luaL_loadstring(state, source) == 0 && lua_pcall(state, 0, 1, 0) == 0;

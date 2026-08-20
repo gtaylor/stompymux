@@ -7,8 +7,8 @@
 
 #include "mux/lua/lua_error.h"
 #include "mux/lua/lua_error_codes.h"
-#include "mux/lua/mux_package.h"
-#include "mux/lua/mux_package_internal.h"
+#include "mux/lua/packages/mux/mux_package.h"
+#include "mux/lua/packages/mux/mux_package_internal.h"
 #include "mux/support/checked_storage.h"
 
 static char lua_mux_error_code_character_at(const char *code, size_t code_size,

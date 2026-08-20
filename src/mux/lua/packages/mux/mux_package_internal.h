@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 
-#include "mux/lua/mux_package.h"
+#include "mux/lua/packages/mux/mux_package.h"
 
 extern const char LUA_MUX_OBJECT_METATABLE[];
 extern const char LUA_MUX_STATE_METATABLE[];

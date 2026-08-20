@@ -15,12 +15,12 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include "mux/lua/btech_package.h"
 #include "mux/lua/lua_error.h"
 #include "mux/lua/lua_error_codes.h"
 #include "mux/lua/lua_internal.h"
 #include "mux/lua/lua_runtime.h"
-#include "mux/lua/mux_package.h"
+#include "mux/lua/packages/btech/btech_package.h"
+#include "mux/lua/packages/mux/mux_package.h"
 #include "mux/network/network_output.h"
 #include "mux/objects/flags.h"
 #include "mux/server/log.h"

@@ -1,4 +1,4 @@
-/* mux_package.c - Built-in Lua mux package bindings. */
+/* mux_state_bindings.c - Lua bindings for persistent object state. */
 
 #include <lauxlib.h>
 #include <lua.h>
@@ -8,8 +8,8 @@
 
 #include "mux/lua/lua_error.h"
 #include "mux/lua/lua_error_codes.h"
-#include "mux/lua/mux_package.h"
-#include "mux/lua/mux_package_internal.h"
+#include "mux/lua/packages/mux/mux_package.h"
+#include "mux/lua/packages/mux/mux_package_internal.h"
 #include "mux/objects/object_state.h"
 #include "mux/support/checked_storage.h"
 

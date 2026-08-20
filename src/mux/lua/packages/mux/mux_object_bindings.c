@@ -1,4 +1,4 @@
-/* mux_package.c - Built-in Lua mux package bindings. */
+/* mux_object_bindings.c - Lua bindings for MUX objects. */
 
 #include <lauxlib.h>
 #include <lua.h>
@@ -6,8 +6,8 @@
 
 #include "mux/lua/lua_error.h"
 #include "mux/lua/lua_error_codes.h"
-#include "mux/lua/mux_package.h"
-#include "mux/lua/mux_package_internal.h"
+#include "mux/lua/packages/mux/mux_package.h"
+#include "mux/lua/packages/mux/mux_package_internal.h"
 #include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"

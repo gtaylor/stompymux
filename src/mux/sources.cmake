@@ -63,14 +63,14 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/lua_schedule.c
   ${MUX_MODULE_DIR}/lua/lua_commands.c
   ${MUX_MODULE_DIR}/lua/lua_flow.c
-  ${MUX_MODULE_DIR}/lua/btech_package.c
-  ${MUX_MODULE_DIR}/lua/mux_package.c
-  ${MUX_MODULE_DIR}/lua/mux_error_bindings.c
-  ${MUX_MODULE_DIR}/lua/mux_object_bindings.c
-  ${MUX_MODULE_DIR}/lua/mux_attribute_bindings.c
-  ${MUX_MODULE_DIR}/lua/mux_text_bindings.c
-  ${MUX_MODULE_DIR}/lua/mux_state_bindings.c
-  ${MUX_MODULE_DIR}/lua/mux_connection_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/btech/btech_package.c
+  ${MUX_MODULE_DIR}/lua/packages/mux/mux_package.c
+  ${MUX_MODULE_DIR}/lua/packages/mux/mux_error_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/mux/mux_object_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/mux/mux_attribute_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/mux/mux_text_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/mux/mux_state_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/mux/mux_connection_bindings.c
   ${MUX_MODULE_DIR}/network/connect_flow.c
   ${MUX_MODULE_DIR}/network/descriptor.c
   ${MUX_MODULE_DIR}/network/input_flow.c

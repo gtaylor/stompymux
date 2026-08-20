@@ -1,5 +1,5 @@
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
-/* mux_package.c - Built-in Lua mux package bindings. */
+/* mux_connection_bindings.c - Lua bindings for connections and flows. */
 
 #include <lauxlib.h>
 #include <lua.h>
@@ -7,8 +7,8 @@
 
 #include "mux/lua/lua_error.h"
 #include "mux/lua/lua_error_codes.h"
-#include "mux/lua/mux_package.h"
-#include "mux/lua/mux_package_internal.h"
+#include "mux/lua/packages/mux/mux_package.h"
+#include "mux/lua/packages/mux/mux_package_internal.h"
 #include "mux/network/descriptor.h"
 #include "mux/network/telnet_environment.h"
 #include "mux/objects/db.h"

@@ -7,12 +7,12 @@
 
 #include <lua.h>
 
-#include "mux/lua/btech_package.h"
+#include "mux/lua/packages/btech/btech_package.h"
 #include "mux/lua/lua_error.h"
 #include "mux/lua/lua_internal.h"
 #include "mux/lua/lua_test_runner.h"
-#include "mux/lua/mux_package.h"
-#include "mux/lua/mux_package_internal.h"
+#include "mux/lua/packages/mux/mux_package.h"
+#include "mux/lua/packages/mux/mux_package_internal.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"

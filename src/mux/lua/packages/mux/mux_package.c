@@ -6,8 +6,8 @@
 
 #include "mux/lua/lua_error.h"
 #include "mux/lua/lua_error_codes.h"
-#include "mux/lua/mux_package.h"
-#include "mux/lua/mux_package_internal.h"
+#include "mux/lua/packages/mux/mux_package.h"
+#include "mux/lua/packages/mux/mux_package_internal.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/object_state.h"
 #include "mux/server/log.h"

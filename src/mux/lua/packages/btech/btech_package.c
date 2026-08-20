@@ -7,10 +7,10 @@
 #include <string.h>
 
 #include "btech/scripting/script_functions_api.h"
-#include "mux/lua/btech_package.h"
 #include "mux/lua/lua_error.h"
 #include "mux/lua/lua_error_codes.h"
 #include "mux/lua/lua_runtime.h"
+#include "mux/lua/packages/btech/btech_package.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
