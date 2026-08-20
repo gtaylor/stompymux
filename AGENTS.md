@@ -38,6 +38,13 @@ When writing C code, use the following naming conventions:
 - Struct names and typedefs should be in PascalCase: `FileDescription`, `MechObject`
 - Functions that operate on structs should use classic C style naming in snake_case: `file_descriptor_write`, `mech_object_destroy`
 
+## Lua bindings and Lua code
+
+- Use [StyLua](https://github.com/JohnnyMorganz/StyLua) for code formatting.
+- LuaLS stubs may be found in game/lua/types. These drive IDE validation and hover hinting.
+- All C functions that are bound to Lua packages should include Doxygen-style comments to help the stub generator agent out.
+- Run `just update-lua-types` any time you add, remove, or change inputs or outputs for C functions that are bound to Lua packages.
+
 ## Testing Practices
 
 - Unit and integration tests must not interact with the production `game/` directory. Copy fixtures to tests/fixtures/game and tests/fixtures/{integration|unit} instead.
