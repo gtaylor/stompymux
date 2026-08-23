@@ -51,7 +51,8 @@ five-field UTC cron expressions. Object schedules run once for every directly
 attached object; global schedules run once per
 matching module entry. Scheduled jobs receive deterministic jitter and do not
 replay missed minutes. Inspect active schedules with the wizard-only
-`@lua/schedule` command.
+`@lua/schedule` command. See [Scheduled events](scheduled-events/) for the
+complete schedule contract.
 
 ## Imports
 

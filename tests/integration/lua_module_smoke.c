@@ -34,11 +34,17 @@ static bool lua_configure_package_path(lua_State *state,
 
 int main(int argc, char *argv[]) {
   static const char *const modules[] = {
-      "packages/object_appearances.lua", "object_logic/example.lua",
-      "object_logic/counter.lua",        "object_logic/events/enter_notice.lua",
-      "object_logic/default_thing.lua",  "object_logic/default_room.lua",
-      "object_logic/default_exit.lua",   "object_logic/default_player.lua",
-      "global_logic/example.lua",        "global_logic/who.lua",
+      "packages/object_appearances.lua",
+      "object_logic/example.lua",
+      "object_logic/counter.lua",
+      "object_logic/events/enter_notice.lua",
+      "object_logic/default_thing.lua",
+      "object_logic/default_room.lua",
+      "object_logic/default_exit.lua",
+      "object_logic/default_player.lua",
+      "global_logic/example.lua",
+      "global_logic/who.lua",
+      "global_logic/lifecycle_events.lua",
   };
   char module[PATH_MAX];
   char package_directory[PATH_MAX];

@@ -27,12 +27,12 @@ static const POWERENT POWER_ENTRIES[] = {
     {"idle", POWER_IDLE, 0},
     {nullptr, POWER_NONE, 0},
 };
-static size_t power_entry_count(void) {
+size_t object_power_entry_count(void) {
   return (sizeof(POWER_ENTRIES) / sizeof(*POWER_ENTRIES)) - 1;
 }
 
-static const POWERENT *power_entry_at(size_t index) {
-  return checked_storage_at_const(POWER_ENTRIES, power_entry_count(),
+const POWERENT *object_power_entry_at(size_t index) {
+  return checked_storage_at_const(POWER_ENTRIES, object_power_entry_count(),
                                   sizeof(*POWER_ENTRIES), index);
 }
 
@@ -44,8 +44,8 @@ void init_powertab(WorldIndexes *indexes) {
   char nbuf[SBUF_SIZE];
 
   hash_table_initialize(&indexes->powers, 15 * HASH_FACTOR);
-  for (size_t index = 0; index < power_entry_count(); index++) {
-    fp = power_entry_at(index);
+  for (size_t index = 0; index < object_power_entry_count(); index++) {
+    fp = object_power_entry_at(index);
     size_t length = strlen(fp->powername);
     for (size_t character_index = 0; character_index < length;
          character_index++) {
@@ -71,8 +71,8 @@ void display_powertab(EvaluationContext *evaluation, DbRef player) {
 
   bp = buf = alloc_lbuf("display_powertab");
   safe_str("Powers:", buf, &bp);
-  for (size_t index = 0; index < power_entry_count(); index++) {
-    fp = power_entry_at(index);
+  for (size_t index = 0; index < object_power_entry_count(); index++) {
+    fp = object_power_entry_at(index);
     if ((fp->listperm & CA_WIZARD) &&
         !is_wizard(evaluation->world->database, player))
       continue;
@@ -226,8 +226,8 @@ OwnedText power_description(const PowerDescriptionRequest *request) {
 
   safe_mb_str("Powers:", buff, &bp);
 
-  for (size_t index = 0; index < power_entry_count(); index++) {
-    fp = power_entry_at(index);
+  for (size_t index = 0; index < object_power_entry_count(); index++) {
+    fp = object_power_entry_at(index);
     if (game_object_has_power(&(ObjectPowerRequest){
             .database = database, .object = target, .power = fp->id})) {
       if ((fp->listperm & CA_WIZARD) && !is_wizard(database, player))

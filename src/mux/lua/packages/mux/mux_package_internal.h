@@ -9,6 +9,10 @@
 extern const char LUA_MUX_OBJECT_METATABLE[];
 extern const char LUA_MUX_STATE_METATABLE[];
 extern const char LUA_MUX_ATTRIBUTE_METATABLE[];
+extern const char LUA_MUX_FLAGS_METATABLE[];
+extern const char LUA_MUX_POWERS_METATABLE[];
+extern const char LUA_MUX_FLAG_METATABLE[];
+extern const char LUA_MUX_POWER_METATABLE[];
 
 typedef struct LuaMuxObject LuaMuxObject;
 struct LuaMuxObject {
@@ -32,6 +36,20 @@ struct LuaMuxAttribute {
   uint64_t generation;
 };
 
+typedef struct LuaMuxObjectSet LuaMuxObjectSet;
+struct LuaMuxObjectSet {
+  LuaMuxPackage *package;
+  DbRef object;
+  uint64_t generation;
+};
+
+typedef struct LuaMuxNamedConstant LuaMuxNamedConstant;
+struct LuaMuxNamedConstant {
+  LuaMuxPackage *package;
+  int id;
+  const char *name;
+};
+
 LuaMuxPackage *lua_mux_package_get(lua_State *state);
 bool lua_mux_package_is_checking(LuaMuxPackage *package);
 void lua_mux_require_runtime(LuaMuxPackage *package, lua_State *state,
@@ -48,6 +66,8 @@ void lua_mux_install_object_bindings(lua_State *state, LuaMuxPackage *package);
 void lua_mux_install_state_bindings(lua_State *state, LuaMuxPackage *package);
 void lua_mux_install_attribute_bindings(lua_State *state,
                                         LuaMuxPackage *package);
+void lua_mux_install_flag_power_bindings(lua_State *state,
+                                         LuaMuxPackage *package);
 void lua_mux_install_text_bindings(lua_State *state, LuaMuxPackage *package);
 void lua_mux_install_world_bindings(lua_State *state, LuaMuxPackage *package);
 void lua_mux_install_session_bindings(lua_State *state, LuaMuxPackage *package);

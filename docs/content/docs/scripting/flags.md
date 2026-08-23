@@ -19,9 +19,11 @@ administrator should use the full flag name when issuing a command because
 @flag <object>=!<flag>
 ```
 
-The `mux` Lua package does not currently expose direct flag getter or setter
-functions. Lua logic can invoke an appropriate native command with
-`mux.command`; queued commands run as God after the current callback finishes.
+Lua logic uses typed constants such as `mux.world.flags.SAFE` with an
+[`Object:flags`](../packages/mux/world/type-object/flags/) collection. Raw flag
+name strings and command aliases are intentionally not accepted by that API.
+Lua changes run immediately as God and are not rolled back when a callback
+later fails.
 
 ## Flag summary
 

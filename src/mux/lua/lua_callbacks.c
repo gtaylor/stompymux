@@ -35,8 +35,8 @@ const char *const LUA_EVENT_NAMES[LUA_EVENT_COUNT] = {
     [LUA_EVENT_TELEPORT_OUT_FAIL] = "on_teleport_out_fail",
     [LUA_EVENT_CLONE] = "on_clone",
     [LUA_EVENT_SERVER_STARTUP] = "on_server_startup",
-    [LUA_EVENT_CONNECT] = "on_connect",
-    [LUA_EVENT_DISCONNECT] = "on_disconnect",
+    [LUA_EVENT_PLAYER_CONNECT] = "on_player_connect",
+    [LUA_EVENT_PLAYER_DISCONNECT] = "on_player_disconnect",
     [LUA_EVENT_MECH_DESTROYED] = "on_mech_destroyed",
     [LUA_EVENT_MECH_MINE_TRIGGER] = "on_mech_mine_trigger",
     [LUA_EVENT_AERO_LAND] = "on_aero_land",
@@ -476,10 +476,11 @@ bool lua_event_dispatch(LuaRuntime *runtime,
                    invocation->object, invocation->enactor, invocation->cause,
                    nullptr, event, nullptr, invocation->arguments,
                    invocation->argument_count);
-  if (invocation->type == LUA_EVENT_CONNECT) {
+  if (invocation->type == LUA_EVENT_PLAYER_CONNECT) {
     lua_pushboolean(state, invocation->reconnect);
     lua_setfield(state, -2, "reconnect");
-  } else if (invocation->type == LUA_EVENT_DISCONNECT && invocation->reason) {
+  } else if (invocation->type == LUA_EVENT_PLAYER_DISCONNECT &&
+             invocation->reason) {
     lua_pushstring(state, invocation->reason);
     lua_setfield(state, -2, "reason");
   }

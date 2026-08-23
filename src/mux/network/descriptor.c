@@ -37,7 +37,7 @@ static const char *const DESCRIPTOR_DISCONNECT_REASONS[] = {
     "Logins Disabled",
     "Too Many Connected Players"};
 
-/* Lua on_disconnect reason strings for DescriptorShutdownReason values. */
+/* Lua on_player_disconnect reason strings for shutdown reason values. */
 static const char *const DESCRIPTOR_DISCONNECT_MESSAGES[] = {
     "unknown",  "quit",     "timeout",  "boot",    "netdeath",
     "shutdown", "badlogin", "nologins", "gamefull"};

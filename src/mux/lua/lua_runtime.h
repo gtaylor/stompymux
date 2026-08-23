@@ -56,8 +56,8 @@ typedef enum LuaEventType : int {
   LUA_EVENT_TELEPORT_OUT_FAIL,
   LUA_EVENT_CLONE,
   LUA_EVENT_SERVER_STARTUP,
-  LUA_EVENT_CONNECT,
-  LUA_EVENT_DISCONNECT,
+  LUA_EVENT_PLAYER_CONNECT,
+  LUA_EVENT_PLAYER_DISCONNECT,
   LUA_EVENT_MECH_DESTROYED,
   LUA_EVENT_MECH_MINE_TRIGGER,
   LUA_EVENT_AERO_LAND,
@@ -359,6 +359,12 @@ bool lua_event_defined(LuaRuntime *runtime, DbRef object, LuaEventType event);
 
 bool lua_event_dispatch(LuaRuntime *runtime,
                         const LuaEventInvocation *invocation);
+/** Dispatches an event to all matching global logic modules in lexical order.
+ * @param[in,out] runtime Runtime services. @param[in] invocation Event
+ * invocation. */
+
+void lua_global_event_dispatch(LuaRuntime *runtime,
+                               const LuaEventInvocation *invocation);
 /** Executes lua lock name. @param[in] lock Lock. */
 
 const char *lua_lock_name(LuaLockType lock);

@@ -60,6 +60,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/lua_validation.c
   ${MUX_MODULE_DIR}/lua/lua_test_runner.c
   ${MUX_MODULE_DIR}/lua/lua_callbacks.c
+  ${MUX_MODULE_DIR}/lua/lua_global_events.c
   ${MUX_MODULE_DIR}/lua/lua_schedule.c
   ${MUX_MODULE_DIR}/lua/lua_commands.c
   ${MUX_MODULE_DIR}/lua/lua_flow.c
@@ -70,6 +71,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_world_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_object_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_attribute_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_flag_power_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/text/mux_text_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_state_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/telnet/mux_telnet_bindings.c
@@ -136,6 +138,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/world/movement_commands.c
   ${MUX_MODULE_DIR}/world/inventory_commands.c
   ${MUX_MODULE_DIR}/world/object.c
+  ${MUX_MODULE_DIR}/world/object_lifecycle.c
   ${MUX_MODULE_DIR}/world/database_check.c
   ${MUX_MODULE_DIR}/world/object_list.c
   ${MUX_MODULE_DIR}/world/player.c

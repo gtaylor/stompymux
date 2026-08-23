@@ -413,6 +413,35 @@ static int lua_verify_events(lua_State *state, int events, const char *path,
   return 1;
 }
 
+static bool lua_global_event_name_is_known(const char *name) {
+  return (
+      bool)(name &&
+            (strcmp(name, lua_event_name(LUA_EVENT_SERVER_STARTUP)) == 0 ||
+             strcmp(name, lua_event_name(LUA_EVENT_PLAYER_CONNECT)) == 0 ||
+             strcmp(name, lua_event_name(LUA_EVENT_PLAYER_DISCONNECT)) == 0));
+}
+
+static int lua_verify_global_events(lua_State *state, int events,
+                                    const char *path, char *error,
+                                    size_t error_size) {
+  lua_pushnil(state);
+  while (lua_next(state, events) != 0) {
+    const char *name = lua_tostring(state, -2);
+
+    if (lua_type(state, -2) != LUA_TSTRING ||
+        !lua_global_event_name_is_known(name) || !lua_isfunction(state, -1)) {
+      lua_set_error(
+          error, error_size,
+          "events in %s must map global lifecycle event names to functions",
+          path);
+      lua_pop(state, 2);
+      return 0;
+    }
+    lua_pop(state, 1);
+  }
+  return 1;
+}
+
 static int lua_verify_locks(lua_State *state, int locks, const char *path,
                             char *error, size_t error_size) {
   lua_pushnil(state);
@@ -476,6 +505,7 @@ static bool lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
                               size_t error_size) {
   int top = lua_gettop(runtime->state);
   int has_commands = 0;
+  int has_events = 0;
   int has_schedules = 0;
   int has_flows = 0;
 
@@ -523,19 +553,22 @@ static bool lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
     lua_pop(runtime->state, 1);
     lua_getfield(runtime->state, -1, "events");
     if (!lua_isnil(runtime->state, -1)) {
-      if (root != LUA_ROOT_OBJECT_LOGIC) {
-        lua_set_error(error, error_size,
-                      "events in %s are only valid in object modules", path);
-        lua_settop(runtime->state, top);
-        return false;
-      }
       if (!lua_istable(runtime->state, -1)) {
         lua_set_error(error, error_size, "events in %s must be a table", path);
         lua_settop(runtime->state, top);
         return false;
       }
-      if (!lua_verify_events(runtime->state, lua_gettop(runtime->state), path,
-                             error, error_size)) {
+      lua_pushnil(runtime->state);
+      has_events = lua_next(runtime->state, -2) != 0;
+      if (has_events) {
+        lua_pop(runtime->state, 2);
+      }
+      if (root == LUA_ROOT_GLOBAL_LOGIC
+              ? !lua_verify_global_events(runtime->state,
+                                          lua_gettop(runtime->state), path,
+                                          error, error_size)
+              : !lua_verify_events(runtime->state, lua_gettop(runtime->state),
+                                   path, error, error_size)) {
         lua_settop(runtime->state, top);
         return false;
       }
@@ -615,11 +648,12 @@ static bool lua_verify_module(LuaRuntime *runtime, LuaModuleRoot root,
     }
     lua_pop(runtime->state, 1);
   }
-  if (root == LUA_ROOT_GLOBAL_LOGIC && !has_commands && !has_schedules &&
-      !has_flows) {
+  if (root == LUA_ROOT_GLOBAL_LOGIC && !has_commands && !has_events &&
+      !has_schedules && !has_flows) {
     lua_set_error(
         error, error_size,
-        "global logic module %s must export commands, schedules, or flows",
+        "global logic module %s must export commands, events, schedules, or "
+        "flows",
         path);
     lua_settop(runtime->state, top);
     return false;

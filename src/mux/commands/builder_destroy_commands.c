@@ -2,22 +2,17 @@
  * builder_commands.c -- Commands that create and configure world objects
  */
 
-#include "btech/special_objects.h"
 #include "mux/commands/command_context.h" // IWYU pragma: keep
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_keys.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/server/server_config.h" // IWYU pragma: keep
-#include "mux/server/server_control.h"
 #include "mux/support/name_table.h"
 #include "mux/world/match.h"
-#include "mux/world/object.h"
+#include "mux/world/object_lifecycle.h"
 #include "mux/world/object_set.h"
-#include <stdio.h>
 
 typedef struct DestroyExitCheck {
   EvaluationContext *evaluation;
@@ -41,38 +36,7 @@ static bool can_destroy_exit(const DestroyExitCheck *check) {
   return true;
 }
 
-/*
- * ---------------------------------------------------------------------------
- * * destroyable: Indicates if target of a @destroy is a 'special' object in
- * * the database.
- */
-
-static bool destroyable(GameDatabase *database,
-                        const ServerConfiguration *configuration,
-                        DbRef victim) {
-  return (victim != configuration->default_home &&
-          victim != configuration->start_home &&
-          victim != configuration->start_room && victim != (DbRef)0 &&
-          !is_god(database, victim)) != 0;
-}
-
-static bool can_destroy_player(EvaluationContext *evaluation, DbRef player,
-                               DbRef victim) {
-  if (!is_wizard(evaluation->world->database, player)) {
-    notify_checked(evaluation, player, player, "Sorry, no suicide allowed.",
-                   MSG_ME);
-    return false;
-  }
-  if (is_wizard(evaluation->world->database, victim)) {
-    notify_checked(evaluation, player, player, "You may not destroy Wizards!",
-                   MSG_ME);
-    return false;
-  }
-  return true;
-}
-
 void do_destroy(CommandInvocation *invocation) {
-  char message_buffer[128];
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   int key = invocation->key;
@@ -103,94 +67,79 @@ void do_destroy(CommandInvocation *invocation) {
   if (match_status(evaluation, player, thing) == NOTHING) {
     return;
   }
-  if (is_safe(evaluation->world->database, thing) && !(key & DEST_OVERRIDE)) {
+  if (is_exit(evaluation->world->database, thing) &&
+      !can_destroy_exit(&(DestroyExitCheck){
+          .evaluation = evaluation, .player = player, .exit = thing}))
+    return;
+
+  ObjectDestroyStatus status =
+      object_destroy_schedule(&(ObjectDestroyScheduleRequest){
+          .evaluation = evaluation,
+          .actor = player,
+          .object = thing,
+          .override_safe = (key & DEST_OVERRIDE) != 0});
+  if (status == OBJECT_DESTROY_SAFE) {
     notify_checked(evaluation, player, player,
                    "Sorry, that object is protected. Use "
                    "@destroy/override to destroy it.",
                    MSG_ME);
     return;
   }
-  /*
-   * Make sure we're not trying to destroy a special object
-   */
-
-  if (!destroyable(evaluation->world->database,
-                   invocation->context->world->configuration, thing)) {
+  if (status == OBJECT_DESTROY_PROTECTED) {
     notify_checked(evaluation, player, player, "You can't destroy that!",
                    MSG_ME);
     return;
   }
-  /*
-   * Go do it
-   */
+  if (status == OBJECT_DESTROY_PLAYER_PERMISSION) {
+    notify_checked(evaluation, player, player, "Sorry, no suicide allowed.",
+                   MSG_ME);
+    return;
+  }
+  if (status == OBJECT_DESTROY_WIZARD_PLAYER) {
+    notify_checked(evaluation, player, player, "You may not destroy Wizards!",
+                   MSG_ME);
+    return;
+  }
+  if (status == OBJECT_DESTROY_ALREADY_GOING) {
+    const char *message = "No sense beating a dead object.";
+
+    switch (typeof_obj(evaluation->world->database, thing)) {
+    case OBJECT_TYPE_EXIT:
+      message = "No sense beating a dead exit.";
+      break;
+    case OBJECT_TYPE_PLAYER:
+      message = "No sense beating a dead player.";
+      break;
+    case OBJECT_TYPE_ROOM:
+      message = "No sense beating a dead room.";
+      break;
+    default:
+      break;
+    }
+    notify_checked(evaluation, player, player, message, MSG_ME);
+    return;
+  }
 
   switch (typeof_obj(evaluation->world->database, thing)) {
   case OBJECT_TYPE_EXIT:
-    if (can_destroy_exit(&(DestroyExitCheck){
-            .evaluation = evaluation, .player = player, .exit = thing})) {
-      if (is_going(evaluation->world->database, thing)) {
-        notify_checked(evaluation, player, player,
-                       "No sense beating a dead exit.", MSG_ME);
-      } else {
-        if (is_xcode(evaluation->world->database, thing)) {
-          btech_special_object_dispose(&(BtechSpecialObjectAction){
-              .context = evaluation->btech, .actor = player, .object = thing});
-          c_xcode(evaluation->world->database, thing);
-        }
-        notify_checked(evaluation, player, player,
-                       "The exit shakes and begins to crumble.",
-                       MSG_ME_ALL | MSG_F_DOWN);
-        s_going(evaluation->world->database, thing);
-      }
-    }
+    notify_checked(evaluation, player, player,
+                   "The exit shakes and begins to crumble.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     break;
   case OBJECT_TYPE_THING:
-    if (is_going(evaluation->world->database, thing)) {
-      notify_checked(evaluation, player, player,
-                     "No sense beating a dead object.", MSG_ME);
-    } else {
-      if (is_xcode(evaluation->world->database, thing)) {
-        btech_special_object_dispose(&(BtechSpecialObjectAction){
-            .context = evaluation->btech, .actor = player, .object = thing});
-        c_xcode(evaluation->world->database, thing);
-      }
-      notify_checked(evaluation, player, player,
-                     "The object shakes and begins to crumble.",
-                     MSG_ME_ALL | MSG_F_DOWN);
-      s_going(evaluation->world->database, thing);
-    }
+    notify_checked(evaluation, player, player,
+                   "The object shakes and begins to crumble.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     break;
   case OBJECT_TYPE_PLAYER:
-    if (can_destroy_player(evaluation, player, thing)) {
-      if (is_going(evaluation->world->database, thing)) {
-        notify_checked(evaluation, player, player,
-                       "No sense beating a dead player.", MSG_ME);
-      } else {
-        if (is_xcode(evaluation->world->database, thing)) {
-          btech_special_object_dispose(&(BtechSpecialObjectAction){
-              .context = evaluation->btech, .actor = player, .object = thing});
-          c_xcode(evaluation->world->database, thing);
-        }
-        notify_checked(evaluation, player, player,
-                       "The player shakes and begins to crumble.",
-                       MSG_ME_ALL | MSG_F_DOWN);
-        s_going(evaluation->world->database, thing);
-        (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", player);
-        attribute_add_raw(evaluation->world->database, thing, A_DESTROYER,
-                          message_buffer);
-      }
-    }
+    notify_checked(evaluation, player, player,
+                   "The player shakes and begins to crumble.",
+                   MSG_ME_ALL | MSG_F_DOWN);
     break;
   case OBJECT_TYPE_ROOM:
-    if (is_going(evaluation->world->database, thing)) {
-      notify_checked(evaluation, player, player,
-                     "No sense beating a dead room.", MSG_ME);
-    } else {
-      notify_checked(evaluation, thing, player,
-                     "The room shakes and begins to crumble.",
-                     MSG_ME_ALL | MSG_NBR_EXITS | MSG_F_UP | MSG_F_CONTENTS);
-      s_going(evaluation->world->database, thing);
-    }
+    notify_checked(evaluation, thing, player,
+                   "The room shakes and begins to crumble.",
+                   MSG_ME_ALL | MSG_NBR_EXITS | MSG_F_UP | MSG_F_CONTENTS);
     break;
   default:
     break;

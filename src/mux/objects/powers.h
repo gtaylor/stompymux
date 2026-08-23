@@ -3,6 +3,8 @@
  */
 #pragma once
 
+#include <stddef.h>
+
 #include "mux/commands/command_context.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
@@ -35,6 +37,14 @@ typedef struct EvaluationContext EvaluationContext;
 /** Executes init powertab. @param[in,out] indexes Indexes. */
 
 extern void init_powertab(WorldIndexes *indexes);
+/** Returns the number of canonical object power registry entries. */
+
+size_t object_power_entry_count(void);
+/** Returns the canonical object power entry at a valid zero-based index.
+ * @param[in] index Zero-based registry index smaller than
+ * object_power_entry_count(). */
+
+const POWERENT *object_power_entry_at(size_t index);
 /** Executes display powertab. @param[in,out] evaluation Expression evaluation
  * context. @param[in] player Player object. */
 

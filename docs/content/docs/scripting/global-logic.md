@@ -14,7 +14,8 @@ domain-oriented paths such as `player/help.lua`, `world/travel.lua`, and
 cross-domain priority is necessary.
 Use [`@lua/check`](validating-and-reloading/) to validate every Lua module before reloading.
 
-Each global module returns a table containing `commands`:
+Each global module returns a table containing one or more of `commands`,
+`events`, `schedules`, or `flows`:
 
 ```lua
 return {
@@ -35,9 +36,31 @@ command. Master-room exits and other non-command behavior are unchanged.
 Matching stops at the first global handler that returns `true`; `false` or
 `nil` allows the next handler to try.
 
-Global contexts include `ctx.scope == "global"`, `ctx.enactor`, `ctx.cause`,
-and `ctx.command`; `ctx.object` is `nil`. Global modules receive command
-dispatch only, not object event hooks.
+Global command contexts include `ctx.scope == "global"`, `ctx.enactor`,
+`ctx.cause`, and `ctx.command`; `ctx.object` is `nil`.
+
+Global modules may define the lifecycle events `on_server_startup`,
+`on_player_connect`, and `on_player_disconnect`:
+
+```lua
+return {
+  events = {
+    on_player_connect = function(ctx)
+      mux.world.pemit(ctx.enactor, "Welcome!")
+    end,
+  },
+}
+```
+
+Global event handlers run in lexical module-path order before object-scoped
+handlers. An error is logged without preventing later global handlers from
+running. Their context has `ctx.scope == "global"` and no `ctx.object`.
+Startup uses God for `ctx.enactor` and `ctx.cause`. Player connection events
+use the player for both fields and provide `ctx.descriptor`;
+`on_player_connect` also provides boolean `ctx.reconnect`, while
+`on_player_disconnect` provides string `ctx.reason` and runs only when the
+player's final descriptor disconnects. `on_server_startup` runs only during
+server startup, not after `@lua/reload`.
 
 See [Commands](commands/) for Lua-pattern syntax, capture arguments, and the
 handler context table.
@@ -47,7 +70,6 @@ shared `packages` root. Put shared parsing, formatting, and policy helpers in
 `packages`. The working `game/lua/global_logic/example.lua` module
 defines the `global-hello` command.
 
-Global logic modules may also define `schedules`, an ordered array of named
-UTC five-field cron handlers. A global schedule runs once per matching module
-entry and receives `ctx.scope == "global"`; `ctx.object`, `ctx.enactor`, and
-`ctx.cause` are `nil`.
+Global logic modules may also define `schedules`. See
+[Scheduled events](scheduled-events/) for the shared schedule format and the
+differences between global and object-attached execution.

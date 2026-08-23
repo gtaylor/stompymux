@@ -51,6 +51,10 @@ function Error:root() end
 ---@field unavailable ErrorCode `mux.object.unavailable`.
 ---@class MuxAttributeErrorCodes: ErrorCode
 ---@field invalid ErrorCode `mux.attribute.invalid`.
+---@class MuxFlagErrorCodes: ErrorCode
+---@field invalid ErrorCode `mux.flag.invalid`.
+---@class MuxPowerErrorCodes: ErrorCode
+---@field invalid ErrorCode `mux.power.invalid`.
 ---@class MuxConnectionErrorCodes: ErrorCode
 ---@field invalid ErrorCode `mux.connection.invalid`.
 ---@field unavailable ErrorCode `mux.connection.unavailable`.
@@ -66,6 +70,8 @@ function Error:root() end
 ---@field state MuxStateErrorCodes
 ---@field object MuxObjectErrorCodes
 ---@field attribute MuxAttributeErrorCodes
+---@field flag MuxFlagErrorCodes
+---@field power MuxPowerErrorCodes
 ---@field connection MuxConnectionErrorCodes
 ---@field text MuxTextErrorCodes
 ---@field module MuxModuleErrorCodes
@@ -159,6 +165,135 @@ function State:set_many(values) end
 ---A handle exposing supported native attributes for one object.
 ---@class Attribute
 local Attribute = {}
+
+---A checked flag constant obtained from [`mux.world.flags`](lua://mux.world.flags).
+---Its string form is the canonical uppercase native name, and equality compares
+---the native flag identity within the current runtime.
+---@class Flag
+
+---A checked power constant obtained from [`mux.world.powers`](lua://mux.world.powers).
+---Its string form is the canonical uppercase native name, and equality compares
+---the native power identity within the current runtime.
+---@class Power
+
+---Dynamic, immutable lookup namespace for registered flags. Keys must use the
+---canonical uppercase native name.
+---
+---Raises [`mux.error.codes.flag.invalid`](lua://mux.error.codes.flag.invalid) for
+---unknown or non-string keys and attempted mutation.
+---@class FlagNamespace
+---@field ANSI Flag
+---@field AUDIBLE Flag
+---@field AUDITORIUM Flag
+---@field BLIND Flag
+---@field CONNECTED Flag
+---@field DARK Flag
+---@field FLOATING Flag
+---@field GAGGED Flag
+---@field GOING Flag
+---@field HALTED Flag
+---@field IN_CHARACTER Flag
+---@field LIGHT Flag
+---@field MONITOR Flag
+---@field NO_COMMAND Flag
+---@field SAFE Flag
+---@field SUSPECT Flag
+---@field TRANSPARENT Flag
+---@field WIZARD Flag
+---@field XCODE Flag
+---@field ZOMBIE Flag
+---@see mux.error.codes.flag.invalid
+
+---Dynamic, immutable lookup namespace for registered powers. Keys must use the
+---canonical uppercase native name.
+---
+---Raises [`mux.error.codes.power.invalid`](lua://mux.error.codes.power.invalid)
+---for unknown or non-string keys and attempted mutation.
+---@class PowerNamespace
+---@field IDLE Power
+---@see mux.error.codes.power.invalid
+
+---A generation-checked view of the flags set on one object.
+---@class Flags
+local Flags = {}
+
+---Lists set flags in native registry order.
+---@return Flag[] values
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+---@see mux.error.codes.object.invalid
+function Flags:list() end
+
+---Tests whether this object has a flag.
+---@param flag Flag Checked constant from [`mux.world.flags`](lua://mux.world.flags).
+---@return boolean present
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) or [`mux.error.codes.flag.invalid`](lua://mux.error.codes.flag.invalid).
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.flag.invalid
+function Flags:has(flag) end
+
+---Adds a flag and reports whether the object changed.
+---@param flag Flag Checked constant from [`mux.world.flags`](lua://mux.world.flags).
+---@return boolean changed
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.flag.invalid`](lua://mux.error.codes.flag.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.flag.invalid
+---@see mux.error.codes.object.unavailable
+function Flags:add(flag) end
+
+---Removes a flag and reports whether the object changed.
+---@param flag Flag Checked constant from [`mux.world.flags`](lua://mux.world.flags).
+---@return boolean changed
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.flag.invalid`](lua://mux.error.codes.flag.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.flag.invalid
+---@see mux.error.codes.object.unavailable
+function Flags:remove(flag) end
+
+---A generation-checked view of the powers granted to one object.
+---@class Powers
+local Powers = {}
+
+---Lists granted powers in native registry order.
+---@return Power[] values
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+---@see mux.error.codes.object.invalid
+function Powers:list() end
+
+---Tests whether this object has a power.
+---@param power Power Checked constant from [`mux.world.powers`](lua://mux.world.powers).
+---@return boolean present
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) or [`mux.error.codes.power.invalid`](lua://mux.error.codes.power.invalid).
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.power.invalid
+function Powers:has(power) end
+
+---Grants a power and reports whether the object changed.
+---@param power Power Checked constant from [`mux.world.powers`](lua://mux.world.powers).
+---@return boolean changed
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), or [`mux.error.codes.power.invalid`](lua://mux.error.codes.power.invalid).
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.power.invalid
+function Powers:add(power) end
+
+---Removes a power and reports whether the object changed.
+---@param power Power Checked constant from [`mux.world.powers`](lua://mux.world.powers).
+---@return boolean changed
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), or [`mux.error.codes.power.invalid`](lua://mux.error.codes.power.invalid).
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.power.invalid
+function Powers:remove(power) end
 
 ---Gets a raw native attribute, or nil when unset.
 ---@param name string
@@ -259,6 +394,22 @@ function Object:state(namespace) end
 ---@see mux.error.codes.object.invalid
 ---@see mux.error.codes.unavailable.checking
 function Object:attribute() end
+
+---Creates a handle for this object's flags.
+---@return Flags flags
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) or [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking).
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.unavailable.checking
+function Object:flags() end
+
+---Creates a handle for this object's powers.
+---@return Powers powers
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) or [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking).
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.unavailable.checking
+function Object:powers() end
 
 ---@class Connection
 ---@field object Object Connected player.
@@ -376,8 +527,35 @@ function mux_error.namespace(prefix, names) end
 ---@see mux.error.codes.arg.invalid
 function mux_error.code_tree(root) end
 
+---Fields accepted when creating a detached room.
+---@class (exact) CreateRoomOptions
+---@field name string Required UTF-8 name, optionally containing valid styled-text markup.
+
+---Fields accepted when creating and placing a thing.
+---@class (exact) CreateThingOptions
+---@field name string Required UTF-8 name, optionally containing valid styled-text markup.
+---@field location DbRef|Object Required object that can contain the new thing.
+---@field home? DbRef|Object Home object; defaults to `location` when omitted.
+
+---Fields accepted when creating and attaching an exit.
+---@class (exact) CreateExitOptions
+---@field name string Required UTF-8 name, optionally containing valid styled-text markup.
+---@field location DbRef|Object Required source object capable of holding exits.
+---@field destination? DbRef|Object Optional destination capable of containing objects; omission leaves the exit unlinked.
+
+---Fields accepted when teleporting a thing or player.
+---@class (exact) TeleportOptions
+---@field object DbRef|Object Required thing or player to move.
+---@field destination DbRef|Object Required object capable of containing objects.
+
+---Options controlling object destruction.
+---@class (exact) DestroyOptions
+---@field override? boolean Whether to bypass the target's SAFE flag; core objects and Wizard players remain protected.
+
 ---World database object access.
 ---@class MuxWorldPackage
+---@field flags FlagNamespace Immutable namespace of registered flag constants.
+---@field powers PowerNamespace Immutable namespace of registered power constants.
 local mux_world = {}
 
 ---Creates a validated object handle from a dbref or existing handle.
@@ -388,6 +566,112 @@ local mux_world = {}
 ---@see mux.error.codes.unavailable.checking
 ---@see mux.error.codes.object.invalid
 function mux_world.object(dbref) end
+
+---Creates a detached room with the configured room flags and default Lua parent.
+---@param options CreateRoomOptions Creation fields; unknown fields are rejected.
+---@return Object room Newly created room.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.object.unavailable
+function mux_world.create_room(options) end
+
+---Creates a thing, establishes its home, and places it in a container.
+---@param options CreateThingOptions Creation fields; unknown fields are rejected.
+---@return Object thing Newly created thing.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+function mux_world.create_thing(options) end
+
+---Creates an exit, attaches it to a source, and optionally links it to a destination.
+---@param options CreateExitOptions Creation fields; unknown fields are rejected.
+---@return Object exit Newly created exit.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+function mux_world.create_exit(options) end
+
+---Returns an object's assigned zone, or nil when no zone is assigned.
+---@param object DbRef|Object Live object to inspect.
+---@return Object? zone Assigned zone.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.object.invalid
+function mux_world.zone(object) end
+
+---Assigns an object's zone, or clears it when `zone` is nil.
+---@param object DbRef|Object Live object to update.
+---@param zone DbRef|Object|nil Live thing or room to assign, or nil to clear the zone.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `zone` is omitted, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+function mux_world.set_zone(object, zone) end
+
+---Returns an object's direct Lua parent path, or nil when none is assigned.
+---@param object DbRef|Object Live object to inspect.
+---@return string? parent `object_logic`-relative parent path.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.object.invalid
+function mux_world.lua_parent(object) end
+
+---Assigns an object's direct Lua parent path, or clears it when `parent` is nil.
+---@param object DbRef|Object Live object to update.
+---@param parent string|nil Existing `object_logic`-relative `.lua` path, or nil to clear it.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `parent` is omitted or malformed, [`mux.error.codes.module.invalid`](lua://mux.error.codes.module.invalid) for an invalid or unavailable path, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.module.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+function mux_world.set_lua_parent(object, parent) end
+
+---Links an exit to a destination, or unlinks it when `destination` is nil.
+---@param exit DbRef|Object Live exit to update.
+---@param destination DbRef|Object|nil Live object capable of containing objects, or nil to unlink the exit.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `destination` is omitted, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+function mux_world.link_exit(exit, destination) end
+
+---Teleports a thing or player through the native movement path.
+---@param options TeleportOptions Teleport fields; unknown fields are rejected.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+function mux_world.teleport(options) end
+
+---Silently schedules a live object for destruction by the normal maintenance purge.
+---@param object DbRef|Object Object to destroy.
+---@param options? DestroyOptions Destruction controls; unknown fields are rejected.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable), or [`mux.error.codes.internal`](lua://mux.error.codes.internal) for an unexpected native destruction result.
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+---@see mux.error.codes.internal
+function mux_world.destroy(object, options) end
 
 ---Live connection queries and interactive flows.
 ---@class MuxSessionPackage

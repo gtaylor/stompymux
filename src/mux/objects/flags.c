@@ -313,12 +313,12 @@ static const FlagEntry FLAG_ENTRIES[] = {
     {"ZOMBIE", OBJECT_FLAG_ZOMBIE, 'z', flag_wizard},
     {nullptr, OBJECT_FLAG_NONE, ' ', nullptr}};
 
-static size_t flag_entry_count(void) {
+size_t object_flag_entry_count(void) {
   return (sizeof(FLAG_ENTRIES) / sizeof(*FLAG_ENTRIES)) - 1;
 }
 
-static const FlagEntry *flag_entry_at(size_t index) {
-  return checked_storage_at_const(FLAG_ENTRIES, flag_entry_count(),
+const FlagEntry *object_flag_entry_at(size_t index) {
+  return checked_storage_at_const(FLAG_ENTRIES, object_flag_entry_count(),
                                   sizeof(*FLAG_ENTRIES), index);
 }
 
@@ -361,8 +361,8 @@ const ObjectEntry *object_type_entry(int type) {
 void init_flagtab(WorldIndexes *indexes) {
   char buffer[SBUF_SIZE];
   hash_table_initialize(&indexes->flags, 100 * HASH_FACTOR);
-  for (size_t index = 0; index < flag_entry_count(); index++) {
-    const FlagEntry *flag = flag_entry_at(index);
+  for (size_t index = 0; index < object_flag_entry_count(); index++) {
+    const FlagEntry *flag = object_flag_entry_at(index);
     size_t name_length = strlen(flag->flagname);
     for (size_t name_index = 0; name_index < name_length; name_index++) {
       const char *input = checked_storage_at_const(flag->flagname, name_length,
@@ -380,8 +380,8 @@ void display_flagtab(EvaluationContext *evaluation, DbRef player) {
   char *buffer = alloc_lbuf("display_flagtab");
   char *out = buffer;
   safe_str("Flags:", buffer, &out);
-  for (size_t index = 0; index < flag_entry_count(); index++) {
-    const FlagEntry *flag = flag_entry_at(index);
+  for (size_t index = 0; index < object_flag_entry_count(); index++) {
+    const FlagEntry *flag = object_flag_entry_at(index);
     safe_chr(' ', buffer, &out);
     safe_str(flag->flagname, buffer, &out);
     safe_chr('(', buffer, &out);
@@ -490,8 +490,8 @@ OwnedText decode_flags(const DecodeFlagsRequest *request) {
   const ObjectEntry *object_type = object_type_entry(request->object_type);
   if (object_type->lett != ' ')
     safe_sb_chr(object_type->lett, buffer, &out);
-  for (size_t index = 0; index < flag_entry_count(); index++) {
-    const FlagEntry *flag = flag_entry_at(index);
+  for (size_t index = 0; index < object_flag_entry_count(); index++) {
+    const FlagEntry *flag = object_flag_entry_at(index);
     if (!object_flag_set_has(request->flags, flag->id))
       continue;
     safe_sb_chr(flag->flaglett, buffer, &out);
@@ -506,8 +506,8 @@ OwnedText flag_description(GameDatabase *database, DbRef target) {
   safe_mb_str(object_type_entry(typeof_obj(database, target))->name, buffer,
               &out);
   safe_mb_str(" Flags:", buffer, &out);
-  for (size_t index = 0; index < flag_entry_count(); index++) {
-    const FlagEntry *flag = flag_entry_at(index);
+  for (size_t index = 0; index < object_flag_entry_count(); index++) {
+    const FlagEntry *flag = object_flag_entry_at(index);
     if (game_object_has_flag(&(ObjectFlagRequest){
             .database = database, .object = target, .flag = flag->id})) {
       safe_mb_chr(' ', buffer, &out);
@@ -523,8 +523,8 @@ OwnedText flags_description(GameDatabase *database, DbRef target) {
   char *out = buffer;
 
   safe_mb_str("Flags:", buffer, &out);
-  for (size_t index = 0; index < flag_entry_count(); index++) {
-    const FlagEntry *flag = flag_entry_at(index);
+  for (size_t index = 0; index < object_flag_entry_count(); index++) {
+    const FlagEntry *flag = object_flag_entry_at(index);
     if (game_object_has_flag(&(ObjectFlagRequest){
             .database = database, .object = target, .flag = flag->id})) {
       safe_mb_chr(' ', buffer, &out);
@@ -585,8 +585,9 @@ bool convert_flags(EvaluationContext *evaluation, DbRef player, char *list,
         *type = index;
         handled = true;
       }
-    for (size_t index = 0; index < flag_entry_count() && !handled; index++) {
-      const FlagEntry *flag = flag_entry_at(index);
+    for (size_t index = 0; index < object_flag_entry_count() && !handled;
+         index++) {
+      const FlagEntry *flag = object_flag_entry_at(index);
       if (flag->flaglett == *character) {
         object_flag_set_set(flags, flag->id, true);
         handled = true;

@@ -103,6 +103,18 @@ dispatch_connection_event_scope(const ConnectionEventScopeRequest *request) {
   DbRef object;
   DbRef zone;
 
+  LuaEventInvocation global_invocation = {
+      .type = type,
+      .descriptor = d,
+      .object = NOTHING,
+      .enactor = player,
+      .cause = player,
+      .reconnect = reconnect,
+      .reason = reason,
+  };
+
+  lua_global_event_dispatch(runtime->lua_owner->runtime, &global_invocation);
+
   dispatch_connection_event(runtime, d, player, player, type, reconnect,
                             reason);
   zone = game_object_zone(runtime->world->database, location);
@@ -204,7 +216,7 @@ void announce_connect(DbRef player, Descriptor *d) {
                                      .descriptor = d,
                                      .player = player,
                                      .location = loc,
-                                     .type = LUA_EVENT_CONNECT,
+                                     .type = LUA_EVENT_PLAYER_CONNECT,
                                      .reconnect = num >= 2});
   record_login(&command->evaluation, player, true, runtime->clock->now, d->addr,
                d->username);
@@ -267,7 +279,7 @@ void descriptor_announce_disconnect(DbRef player, Descriptor *d,
                                        .descriptor = d,
                                        .player = player,
                                        .location = loc,
-                                       .type = LUA_EVENT_DISCONNECT,
+                                       .type = LUA_EVENT_PLAYER_DISCONNECT,
                                        .reason = reason});
     if (d->is_autodark) {
       game_object_set_flag(

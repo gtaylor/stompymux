@@ -62,6 +62,7 @@ Wizards can use the following native commands to discover and inspect powers:
 `Powers:` line for the target. `@search power=idle` finds objects with the
 stored `IDLE` power; its power name is case-insensitive, just like `@power`.
 
-The `mux` Lua package does not currently expose direct power getter or setter
-functions. Privileged Lua logic can queue the native `@power` command with
-`mux.command`; queued commands run as God after the current callback finishes.
+Lua logic uses typed constants such as `mux.world.powers.IDLE` with an
+[`Object:powers`](../packages/mux/world/type-object/powers/) collection. Raw
+power-name strings are intentionally not accepted. Lua changes run immediately
+as God and are not rolled back when a callback later fails.

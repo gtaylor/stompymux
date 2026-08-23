@@ -3,6 +3,8 @@
  */
 #pragma once
 
+#include <stddef.h>
+
 #include "mux/objects/db.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_registries.h"
@@ -107,6 +109,14 @@ typedef struct WorldContext WorldContext;
 /** Executes init flagtab. @param[in,out] indexes Indexes. */
 
 void init_flagtab(WorldIndexes *indexes);
+/** Returns the number of canonical object flag registry entries. */
+
+size_t object_flag_entry_count(void);
+/** Returns the canonical object flag entry at a valid zero-based index.
+ * @param[in] index Zero-based registry index smaller than
+ * object_flag_entry_count(). */
+
+const FlagEntry *object_flag_entry_at(size_t index);
 /** Executes display flagtab. @param[in,out] evaluation Expression evaluation
  * context. @param[in] player Player object. */
 

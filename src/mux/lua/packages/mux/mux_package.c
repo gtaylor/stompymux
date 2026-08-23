@@ -19,6 +19,10 @@ LuaMuxPackage *lua_mux_package_get(lua_State *state) {
 const char LUA_MUX_OBJECT_METATABLE[] = "btmux.object";
 const char LUA_MUX_STATE_METATABLE[] = "btmux.object_state";
 const char LUA_MUX_ATTRIBUTE_METATABLE[] = "btmux.object_attribute";
+const char LUA_MUX_FLAGS_METATABLE[] = "btmux.object_flags";
+const char LUA_MUX_POWERS_METATABLE[] = "btmux.object_powers";
+const char LUA_MUX_FLAG_METATABLE[] = "btmux.flag";
+const char LUA_MUX_POWER_METATABLE[] = "btmux.power";
 
 bool lua_mux_package_transaction_begin(LuaMuxPackage *package) {
   return object_state_transaction_begin(&package->state_transaction,

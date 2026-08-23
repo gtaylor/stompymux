@@ -20,8 +20,10 @@ available as `testing.error.codes` in test suites.
 | `mux.error.codes.state.value_too_large` | `mux.state.value_too_large` | A state write exceeds a configured per-value, entry, or object limit. |
 | `mux.error.codes.state.unavailable` | `mux.state.unavailable` | State enumeration occurs outside an active callback or state changes during enumeration. |
 | `mux.error.codes.object.invalid` | `mux.object.invalid` | An object handle or database object is invalid, stale, or unsuitable for the requested operation. |
-| `mux.error.codes.object.unavailable` | `mux.object.unavailable` | `Object:enter_lock_passes` is unavailable in this runtime. |
+| `mux.error.codes.object.unavailable` | `mux.object.unavailable` | An object operation is unavailable or native policy rejects the requested change. |
 | `mux.error.codes.attribute.invalid` | `mux.attribute.invalid` | An attribute name or value is invalid, not administrable, or cannot be written. |
+| `mux.error.codes.flag.invalid` | `mux.flag.invalid` | A flag constant or lookup in `mux.world.flags` is invalid. |
+| `mux.error.codes.power.invalid` | `mux.power.invalid` | A power constant or lookup in `mux.world.powers` is invalid. |
 | `mux.error.codes.connection.invalid` | `mux.connection.invalid` | A message, descriptor, Telnet-environment kind, or flow descriptor is invalid. |
 | `mux.error.codes.connection.unavailable` | `mux.connection.unavailable` | Flow support is unavailable or the descriptor already has an active flow. |
 | `mux.error.codes.text.invalid` | `mux.text.invalid` | Styled text, a style field, or a requested text width is invalid. |

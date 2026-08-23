@@ -71,7 +71,8 @@ object. Wipe removes either one namespace or all state on the object.
 
 An object module returns a table with optional `commands`, `events`, `locks`,
 `messages`, and `schedules` tables, plus optional `internal_appearance` and
-`external_appearance` functions.
+`external_appearance` functions. See [Scheduled events](scheduled-events/) for
+the schedule entry format and object-attached execution behavior.
 Command entries use native Lua patterns and a handler:
 
 ```lua
@@ -244,8 +245,8 @@ messages come from the structured lock result or the native defaults.
 | `on_teleport_out_fail` | Teleporting out of an origin fails. | Lock result |
 | `on_clone` | An object is cloned. | — |
 | `on_server_startup` | The server starts. | — |
-| `on_connect` | A player connects or reconnects. | — |
-| `on_disconnect` | A player's final descriptor disconnects. | — |
+| `on_player_connect` | A player connects or reconnects. | — |
+| `on_player_disconnect` | A player's final descriptor disconnects. | — |
 | `on_mech_destroyed` | A BattleTech mech is destroyed. | — |
 | `on_mech_mine_trigger` | A BattleTech mine is triggered. | — |
 | `on_aero_land` | A BattleTech aerospace unit lands. | — |
@@ -254,10 +255,11 @@ messages come from the structured lock result or the native defaults.
 Movement also invokes the applicable cross-location message providers, which
 do not have corresponding events.
 
-Connection events run for the player's attached module and the applicable zone
-object or zone-room contents. Both receive `ctx.descriptor`. `on_connect` also
-receives boolean `ctx.reconnect`; `on_disconnect` receives string `ctx.reason`
-and runs only for the final active descriptor.
+Player connection events run first for global logic, then for the player's
+attached module and the applicable zone object or zone-room contents. Object
+handlers receive `ctx.descriptor`. `on_player_connect` also receives boolean
+`ctx.reconnect`; `on_player_disconnect` receives string `ctx.reason` and runs
+only for the final active descriptor.
 
 See [Commands](commands/) for Lua-pattern syntax, capture arguments, and the
 handler context table.
@@ -270,26 +272,3 @@ the shared `packages` root. See `game/lua/object_logic/` for the `hello`,
 
 The [`mux` package](packages/mux/) documents the server API available to
 object modules.
-
-## Scheduled events
-
-Object modules may define a `schedules` array. Each entry has a unique `name`,
-a numeric five-field UTC cron expression, and a handler. Cron fields accept
-`*`, values, lists, ranges, and steps. Matching jobs are spread deterministically
-across the first 55 seconds of the minute and are not replayed after downtime.
-
-```lua
-schedules = {
-  {
-    name = "hourly_notice",
-    cron = "0 * * * *",
-    handler = function(ctx)
-      -- ctx.scope == "object" and ctx.object is the attached object.
-    end,
-  },
-}
-```
-
-A shared module path runs each matching schedule once for every object directly
-attached to it. Use the wizard-only `@lua/schedule` command to inspect active
-schedules and their attached objects.

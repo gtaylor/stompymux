@@ -68,6 +68,17 @@ static void server_lifecycle_signal_test_ready(void) {
 /* Run Lua startup events after load. */
 static void server_lifecycle_process_preload(ServerLifecycle *lifecycle) {
   DbRef thing;
+  LuaEventInvocation global_invocation = {
+      .type = LUA_EVENT_SERVER_STARTUP,
+      .object = NOTHING,
+      .enactor = GOD,
+      .cause = GOD,
+  };
+
+  lua_global_event_dispatch(lifecycle->maintenance->lua->runtime,
+                            &global_invocation);
+  do_top(lifecycle->maintenance->commands, 10);
+
   DO_WHOLE_DB(lifecycle->maintenance->database, thing) {
     if (is_going(lifecycle->maintenance->database, thing))
       continue;

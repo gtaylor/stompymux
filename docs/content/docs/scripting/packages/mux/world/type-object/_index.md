@@ -34,6 +34,8 @@ All properties are read-only.
 | [`Object:exits_visible`](exits-visible/) | Applies native exit visibility rules. |
 | [`Object:enter_lock_passes`](enter-lock-passes/) | Tests an exit's traversal lock. |
 | [`Object:attribute`](attribute/) | Opens the native attribute interface. |
+| [`Object:flags`](flags/) | Opens the object's flag collection. |
+| [`Object:powers`](powers/) | Opens the object's power collection. |
 | [`Object:state`](state/) | Opens a persistent state namespace. |
 
 ## See Also
