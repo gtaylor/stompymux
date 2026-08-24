@@ -32,9 +32,12 @@ void server_lifecycle_prepare(ServerLifecycle *lifecycle);
  * Lifecycle. */
 
 void server_lifecycle_unbind_signals(ServerLifecycle *lifecycle);
-/** Executes server lifecycle boot. @param[in,out] lifecycle Lifecycle. */
+/** Boots services after database initialization and dispatches startup events.
+ * @param[in,out] lifecycle Lifecycle.
+ * @param[in] first_startup Whether this process created the initial database.
+ */
 
-bool server_lifecycle_boot(ServerLifecycle *lifecycle);
+bool server_lifecycle_boot(ServerLifecycle *lifecycle, bool first_startup);
 /** Executes server lifecycle run. @param[in,out] lifecycle Lifecycle.
  * @param[in] port Port. */
 

@@ -65,11 +65,12 @@ static void server_lifecycle_signal_test_ready(void) {
 }
 #endif
 
-/* Run Lua startup events after load. */
-static void server_lifecycle_process_preload(ServerLifecycle *lifecycle) {
+/* Run one Lua startup event across global and object logic. */
+static void server_lifecycle_dispatch_startup_event(ServerLifecycle *lifecycle,
+                                                    LuaEventType event) {
   DbRef thing;
   LuaEventInvocation global_invocation = {
-      .type = LUA_EVENT_SERVER_STARTUP,
+      .type = event,
       .object = NOTHING,
       .enactor = GOD,
       .cause = GOD,
@@ -84,7 +85,7 @@ static void server_lifecycle_process_preload(ServerLifecycle *lifecycle) {
       continue;
 
     LuaEventInvocation invocation = {
-        .type = LUA_EVENT_SERVER_STARTUP,
+        .type = event,
         .object = thing,
         .enactor = GOD,
         .cause = GOD,
@@ -206,7 +207,7 @@ void server_lifecycle_unbind_signals(ServerLifecycle *lifecycle) {
 }
 
 /* Start services required after the database and descriptor state are ready. */
-bool server_lifecycle_boot(ServerLifecycle *lifecycle) {
+bool server_lifecycle_boot(ServerLifecycle *lifecycle, bool first_startup) {
   char lua_error[LBUF_SIZE];
 
   lifecycle->maintenance->clock->now = time(nullptr);
@@ -220,7 +221,10 @@ bool server_lifecycle_boot(ServerLifecycle *lifecycle) {
               "Unable to initialize Lua: %s", lua_error);
     return false;
   }
-  server_lifecycle_process_preload(lifecycle);
+  if (first_startup)
+    server_lifecycle_dispatch_startup_event(lifecycle,
+                                            LUA_EVENT_SERVER_FIRST_STARTUP);
+  server_lifecycle_dispatch_startup_event(lifecycle, LUA_EVENT_SERVER_STARTUP);
   lifecycle->timer =
       server_timer_create(&lifecycle->event_loop, lifecycle->maintenance);
   return lifecycle->timer != nullptr;

@@ -39,8 +39,8 @@ Matching stops at the first global handler that returns `true`; `false` or
 Global command contexts include `ctx.scope == "global"`, `ctx.enactor`,
 `ctx.cause`, and `ctx.command`; `ctx.object` is `nil`.
 
-Global modules may define the lifecycle events `on_server_startup`,
-`on_player_connect`, and `on_player_disconnect`:
+Global modules may define the lifecycle events `on_server_first_startup`,
+`on_server_startup`, `on_player_connect`, and `on_player_disconnect`:
 
 ```lua
 return {
@@ -59,8 +59,11 @@ Startup uses God for `ctx.enactor` and `ctx.cause`. Player connection events
 use the player for both fields and provide `ctx.descriptor`;
 `on_player_connect` also provides boolean `ctx.reconnect`, while
 `on_player_disconnect` provides string `ctx.reason` and runs only when the
-player's final descriptor disconnects. `on_server_startup` runs only during
-server startup, not after `@lua/reload`.
+player's final descriptor disconnects. `on_server_first_startup` runs only when
+the configured database file was missing, after the server has populated and
+committed the initial database. All of its global and object handlers finish
+before `on_server_startup`, which runs on the first and every later startup.
+Neither startup event runs after `@lua/reload`.
 
 See [Commands](commands/) for Lua-pattern syntax, capture arguments, and the
 handler context table.

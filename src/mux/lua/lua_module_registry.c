@@ -416,7 +416,9 @@ static int lua_verify_events(lua_State *state, int events, const char *path,
 static bool lua_global_event_name_is_known(const char *name) {
   return (
       bool)(name &&
-            (strcmp(name, lua_event_name(LUA_EVENT_SERVER_STARTUP)) == 0 ||
+            (strcmp(name, lua_event_name(LUA_EVENT_SERVER_FIRST_STARTUP)) ==
+                 0 ||
+             strcmp(name, lua_event_name(LUA_EVENT_SERVER_STARTUP)) == 0 ||
              strcmp(name, lua_event_name(LUA_EVENT_PLAYER_CONNECT)) == 0 ||
              strcmp(name, lua_event_name(LUA_EVENT_PLAYER_DISCONNECT)) == 0));
 }

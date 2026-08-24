@@ -195,13 +195,25 @@ static int write_lua_fixture(const char *directory) {
   if (!file)
     return -1;
   fputs("local safe_thing\n"
+        "local first_startup_count = 0\n"
         "local startup_count = 0\n"
         "local connect_count = 0\n"
+        "local startup_order = {}\n"
         "return {\n"
         "  events = {\n"
+        "    on_server_first_startup = function(ctx)\n"
+        "      assert(ctx.scope == \"global\" and ctx.object == nil)\n"
+        "      assert(ctx.enactor == 1 and ctx.cause == 1)\n"
+        "      for object = 0, 2 do\n"
+        "        assert(mux.world.object(object).dbref == object)\n"
+        "      end\n"
+        "      first_startup_count = first_startup_count + 1\n"
+        "      table.insert(startup_order, \"first\")\n"
+        "    end,\n"
         "    on_server_startup = function(ctx)\n"
         "      assert(ctx.scope == \"global\" and ctx.object == nil)\n"
         "      startup_count = startup_count + 1\n"
+        "      table.insert(startup_order, \"startup\")\n"
         "    end,\n"
         "    on_player_connect = function(ctx)\n"
         "      assert(ctx.scope == \"global\" and ctx.object == nil)\n"
@@ -219,8 +231,10 @@ static int write_lua_fixture(const char *directory) {
         "    {\n"
         "      pattern = \"^luaevents$\",\n"
         "      handler = function(ctx)\n"
-        "        mux.world.pemit(ctx.enactor, \"LuaEvents startup=\" ..\n"
-        "          startup_count .. \" connect=\" .. connect_count)\n"
+        "        mux.world.pemit(ctx.enactor, \"LuaEvents first=\" ..\n"
+        "          first_startup_count .. \" startup=\" .. startup_count ..\n"
+        "          \" connect=\" .. connect_count .. \" order=\" ..\n"
+        "          table.concat(startup_order, \",\"))\n"
         "        return true\n"
         "      end,\n"
         "    },\n"
@@ -1500,7 +1514,12 @@ static int exercise_split_modules(int socket_fd) {
   return send_command(socket_fd, "@list commands\r\n") < 0 ||
                  expect_text(socket_fd, "Built-in commands:") < 0 ||
                  send_command(socket_fd, "luaevents\r\n") < 0 ||
-                 expect_text(socket_fd, "LuaEvents startup=1 connect=1") < 0 ||
+                 expect_text(socket_fd, "LuaEvents first=1 startup=1 connect=1 "
+                                        "order=first,startup") < 0 ||
+                 send_command(socket_fd, "objectevents\r\n") < 0 ||
+                 expect_text(socket_fd,
+                             "ObjectEvents first=2 startup=2 "
+                             "order=first,first,startup,startup") < 0 ||
                  send_command(socket_fd, "@lua/check\r\n") < 0 ||
                  expect_text(socket_fd, "All Lua module checks passed.") < 0 ||
                  send_command(socket_fd, "lualifecycle\r\n") < 0 ||
@@ -2011,6 +2030,51 @@ int main(int argc, char **argv) {
     fprintf(stderr, "styled-object database check failed in %s\n", directory);
     goto done;
   }
+
+  for (size_t index = 0; index < TEST_CONNECTION_COUNT; index++) {
+    int *socket_fd = socket_slot(socket_fds, index);
+    if (*socket_fd >= 0)
+      close(*socket_fd);
+    *socket_fd = -1;
+  }
+  child = fork();
+  if (child < 0)
+    goto done;
+  if (child == 0) {
+    if (chdir(directory) < 0)
+      _exit(127);
+    char *server = process_argument(argv, argc, 1);
+    execl(server, server, "stompymux.toml", nullptr);
+    _exit(127);
+  }
+  {
+    int *socket_fd = socket_slot(socket_fds, 0);
+    *socket_fd = connect_when_ready(port);
+    TelnetTestClient restart_client = {.socket_fd = *socket_fd};
+
+    if (*socket_fd < 0 ||
+        wait_for_patterns(&restart_client, "restart welcome",
+                          "This site is under construction!",
+                          sizeof("This site is under construction!") - 1,
+                          nullptr, 0) < 0 ||
+        send_command(*socket_fd, "GOD\r\n") < 0 ||
+        expect_text(*socket_fd, "Password:") < 0 ||
+        send_command(*socket_fd, "btmuxr0x\r\n") < 0 ||
+        expect_text(*socket_fd, "Connected.") < 0 ||
+        send_command(*socket_fd, "luaevents\r\n") < 0 ||
+        expect_text(*socket_fd,
+                    "LuaEvents first=0 startup=1 connect=1 order=startup") <
+            0 ||
+        send_command(*socket_fd, "objectevents\r\n") < 0 ||
+        expect_text(*socket_fd, "ObjectEvents first=0 startup=2 "
+                                "order=startup,startup") < 0) {
+      fprintf(stderr, "startup lifecycle restart check failed\n");
+      goto done;
+    }
+  }
+  if (kill(child, SIGTERM) < 0 || wait_child(child) < 0)
+    goto done;
+  child = -1;
   result = 0;
 
 done:

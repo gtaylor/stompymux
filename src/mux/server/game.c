@@ -643,7 +643,7 @@ int main(int argc, char *argv[]) {
   hash_table_reset(&server.world_indexes.flags);
   hash_table_reset(&server.world_indexes.players);
 
-  if (!server_lifecycle_boot(server.lifecycle)) {
+  if (!server_lifecycle_boot(server.lifecycle, create_database)) {
     goto fail;
   }
 

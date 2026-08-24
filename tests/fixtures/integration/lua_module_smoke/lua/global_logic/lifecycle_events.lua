@@ -1,5 +1,9 @@
 return {
   events = {
+    on_server_first_startup = function(ctx)
+      assert(ctx.scope == "global")
+      assert(ctx.object == nil)
+    end,
     on_server_startup = function(ctx)
       assert(ctx.scope == "global")
       assert(ctx.object == nil)

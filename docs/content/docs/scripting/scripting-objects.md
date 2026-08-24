@@ -244,6 +244,7 @@ messages come from the structured lock result or the native defaults.
 | `on_teleport_destination_fail` | Teleporting to a destination fails. | Lock result |
 | `on_teleport_out_fail` | Teleporting out of an origin fails. | Lock result |
 | `on_clone` | An object is cloned. | — |
+| `on_server_first_startup` | The server starts after creating its initial database. | — |
 | `on_server_startup` | The server starts. | — |
 | `on_player_connect` | A player connects or reconnects. | — |
 | `on_player_disconnect` | A player's final descriptor disconnects. | — |
@@ -260,6 +261,12 @@ attached module and the applicable zone object or zone-room contents. Object
 handlers receive `ctx.descriptor`. `on_player_connect` also receives boolean
 `ctx.reconnect`; `on_player_disconnect` receives string `ctx.reason` and runs
 only for the final active descriptor.
+
+`on_server_first_startup` runs only after a missing database has been fully
+bootstrapped and its initial SQLite snapshot committed. Its global and object
+handlers all run before any `on_server_startup` handlers. `on_server_startup`
+still runs on that first startup and every later startup. Neither startup event
+runs after `@lua/reload`.
 
 See [Commands](commands/) for Lua-pattern syntax, capture arguments, and the
 handler context table.

@@ -34,6 +34,7 @@ const char *const LUA_EVENT_NAMES[LUA_EVENT_COUNT] = {
     [LUA_EVENT_TELEPORT_DESTINATION_FAIL] = "on_teleport_destination_fail",
     [LUA_EVENT_TELEPORT_OUT_FAIL] = "on_teleport_out_fail",
     [LUA_EVENT_CLONE] = "on_clone",
+    [LUA_EVENT_SERVER_FIRST_STARTUP] = "on_server_first_startup",
     [LUA_EVENT_SERVER_STARTUP] = "on_server_startup",
     [LUA_EVENT_PLAYER_CONNECT] = "on_player_connect",
     [LUA_EVENT_PLAYER_DISCONNECT] = "on_player_disconnect",
