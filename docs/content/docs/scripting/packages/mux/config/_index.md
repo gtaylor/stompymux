@@ -1,6 +1,6 @@
 ---
 title: mux.config package
-linkTitle: config
+linkTitle: mux.config
 type: docs
 weight: 15
 sidebar_root_for: self
