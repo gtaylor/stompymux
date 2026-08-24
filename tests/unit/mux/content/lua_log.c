@@ -47,6 +47,8 @@ void lua_mux_install_text_bindings(lua_State *state [[maybe_unused]],
                                    LuaMuxPackage *package [[maybe_unused]]) {}
 void lua_mux_install_telnet_bindings(lua_State *state [[maybe_unused]],
                                      LuaMuxPackage *package [[maybe_unused]]) {}
+void lua_mux_install_config_bindings(lua_State *state [[maybe_unused]],
+                                     LuaMuxPackage *package [[maybe_unused]]) {}
 
 static int is_checking(void *context [[maybe_unused]]) { return checking; }
 

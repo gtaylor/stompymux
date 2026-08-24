@@ -163,8 +163,8 @@ bool mux_server_create(MuxServer *server) {
       &server->channels, &server->macros, &server->clock.now,
       &server->record_players, &server->world, &server->log);
   lua_services_initialize(&server->lua_services, server->configuration,
-                          &server->database, server->descriptors,
-                          server->commands, &server->clock,
+                          &server->configuration_registry, &server->database,
+                          server->descriptors, server->commands, &server->clock,
                           &server->background_command, &server->log,
                           &server->record_players, server->styled_text_palette);
   maintenance_context_initialize(

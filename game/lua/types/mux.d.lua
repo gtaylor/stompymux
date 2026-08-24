@@ -8,6 +8,7 @@
 ---@alias TelnetEnvironmentKind "var"|"uservar"
 ---@alias ObjectType "room"|"thing"|"exit"|"player"
 ---@alias NativeErrorRoot "mux"|"btech"|"testing"
+---@alias ConfigValue string|number|boolean Scalar value returned by the live configuration registry.
 
 ---A checked error-code symbol. Calling `tostring` returns its dotted `code`.
 ---@class ErrorCode
@@ -63,6 +64,9 @@ function Error:root() end
 ---@class MuxModuleErrorCodes: ErrorCode
 ---@field invalid ErrorCode `mux.module.invalid`.
 ---@field unavailable ErrorCode `mux.module.unavailable`.
+---@class MuxConfigErrorCodes: ErrorCode
+---@field not_found ErrorCode `mux.config.not_found`.
+---@field unsupported ErrorCode `mux.config.unsupported`.
 ---@class MuxErrorCodes: ErrorCode
 ---@field arg MuxArgErrorCodes
 ---@field unavailable MuxUnavailableErrorCodes
@@ -75,10 +79,16 @@ function Error:root() end
 ---@field connection MuxConnectionErrorCodes
 ---@field text MuxTextErrorCodes
 ---@field module MuxModuleErrorCodes
+---@field config MuxConfigErrorCodes
 ---@field internal ErrorCode `mux.internal`.
 
 ---@class ErrorCodeTree: ErrorCode
 ---@field [string] ErrorCodeTree
+
+---Checked native codes used by the Lua test harness.
+---@class TestingErrorCodes: ErrorCode
+---@field assertion ErrorCode `testing.assertion`.
+---@field runtime ErrorCode `testing.runtime`.
 
 ---Persistent state entry returned by [`State:entries`](lua://State.entries).
 ---@class StateEntry
@@ -522,10 +532,27 @@ function mux_error.namespace(prefix, names) end
 ---@param root NativeErrorRoot
 ---@return ErrorCodeTree codes
 ---@overload fun(root: "mux"): MuxErrorCodes
+---@overload fun(root: "btech"): BtechErrorCodes
+---@overload fun(root: "testing"): TestingErrorCodes
 ---
 ---Raises [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).
 ---@see mux.error.codes.arg.invalid
 function mux_error.code_tree(root) end
+
+---Read-only access to live scalar server configuration.
+---@class MuxConfigPackage
+local mux_config = {}
+
+---Returns the live scalar value of an exact, case-sensitive configuration directive.
+---@param name string Configuration directive name; embedded NUL bytes are rejected.
+---@return ConfigValue value Current value represented by its native Lua scalar type.
+---
+---Raises [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.config.not_found`](lua://mux.error.codes.config.not_found), [`mux.error.codes.config.unsupported`](lua://mux.error.codes.config.unsupported), or [`mux.error.codes.internal`](lua://mux.error.codes.internal).
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.config.not_found
+---@see mux.error.codes.config.unsupported
+---@see mux.error.codes.internal
+function mux_config.get(name) end
 
 ---Fields accepted when creating a detached room.
 ---@class (exact) CreateRoomOptions
@@ -742,6 +769,7 @@ function mux_text.truncate(value, width) end
 
 ---The native MUX host API.
 ---@class MuxPackage
+---@field config MuxConfigPackage Read-only scalar server configuration.
 ---@field error MuxErrorPackage
 ---@field session MuxSessionPackage Live connections and interactive flows.
 ---@field telnet MuxTelnetPackage Telnet protocol state and capabilities.
@@ -769,6 +797,7 @@ function mux.log(filename, message) end
 ---@see mux.error.codes.object.invalid
 function mux_world.pemit(object, message) end
 
+mux.config = mux_config
 mux.error = mux_error
 mux.session = mux_session
 mux.telnet = mux_telnet

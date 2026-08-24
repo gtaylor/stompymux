@@ -29,6 +29,7 @@ typedef struct EvaluationContext EvaluationContext;
 typedef struct GameDatabase GameDatabase;
 typedef struct RuntimeClock RuntimeClock;
 typedef struct ServerConfiguration ServerConfiguration;
+typedef struct ConfigurationRegistry ConfigurationRegistry;
 typedef struct ServerLog ServerLog;
 typedef struct StyledTextPalette StyledTextPalette;
 
@@ -223,6 +224,7 @@ typedef struct LuaMessageResult {
 struct LuaServices {
   /* Every member is borrowed from MuxServer. */
   const ServerConfiguration *configuration;
+  const ConfigurationRegistry *configuration_registry;
   GameDatabase *database;
   DescriptorRegistry *descriptors;
   CommandQueue *commands;
@@ -244,15 +246,15 @@ struct LuaOwner {
  * Server log. @param[in] record_players Record players. @param[in] palette
  * Palette. */
 
-static inline void
-lua_services_initialize(LuaServices *services,
-                        const ServerConfiguration *configuration,
-                        GameDatabase *database, DescriptorRegistry *descriptors,
-                        CommandQueue *commands, RuntimeClock *clock,
-                        CommandContext *background_command, ServerLog *log,
-                        const int *record_players, StyledTextPalette *palette) {
+static inline void lua_services_initialize(
+    LuaServices *services, const ServerConfiguration *configuration,
+    const ConfigurationRegistry *configuration_registry, GameDatabase *database,
+    DescriptorRegistry *descriptors, CommandQueue *commands,
+    RuntimeClock *clock, CommandContext *background_command, ServerLog *log,
+    const int *record_players, StyledTextPalette *palette) {
   *services = (LuaServices){
       .configuration = configuration,
+      .configuration_registry = configuration_registry,
       .database = database,
       .descriptors = descriptors,
       .commands = commands,

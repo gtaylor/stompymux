@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "mux/commands/command.h" // IWYU pragma: keep
 #include "mux/commands/command_internal.h"
@@ -14,7 +15,8 @@
 #include "mux/server/log.h"
 #include "mux/server/server_config.h"     // IWYU pragma: keep
 #include "mux/server/server_registries.h" // IWYU pragma: keep
-#include "mux/support/hash_table.h"       // IWYU pragma: keep
+#include "mux/support/checked_storage.h"
+#include "mux/support/hash_table.h" // IWYU pragma: keep
 #include "mux/support/name_table.h"
 
 #define CONFIG_LOC(member) (offsetof(ServerConfiguration, member) + 1)
@@ -304,12 +306,36 @@ bool configuration_registry_initialize(ConfigurationRegistry *registry) {
                           sizeof(AccessControlStore),
       .list_options_location = CONFIGURATION_LIST_NAMES_LOCATION,
   };
-  return configuration_catalog_install(
-      registry, CONFIGURATION_ENTRY_TEMPLATES,
-      sizeof(CONFIGURATION_ENTRY_TEMPLATES) /
-          sizeof(*CONFIGURATION_ENTRY_TEMPLATES),
-      LIST_OPTION_TEMPLATES,
-      sizeof(LIST_OPTION_TEMPLATES) / sizeof(*LIST_OPTION_TEMPLATES), POLICY);
+  if (!configuration_catalog_install(registry, CONFIGURATION_ENTRY_TEMPLATES,
+                                     sizeof(CONFIGURATION_ENTRY_TEMPLATES) /
+                                         sizeof(*CONFIGURATION_ENTRY_TEMPLATES),
+                                     LIST_OPTION_TEMPLATES,
+                                     sizeof(LIST_OPTION_TEMPLATES) /
+                                         sizeof(*LIST_OPTION_TEMPLATES),
+                                     POLICY))
+    return false;
+
+  for (size_t index = 0; index < registry->entry_count; index++) {
+    ConfigurationEntry *entry =
+        configuration_registry_entry_at(registry, index);
+    ConfigurationValueKind *kind =
+        checked_storage_at(registry->value_kinds, registry->entry_count,
+                           sizeof(*registry->value_kinds), index);
+    if (entry->interpreter == cf_int ||
+        entry->interpreter == cf_player_name_length_limit)
+      *kind = CONFIGURATION_VALUE_INTEGER;
+    else if (entry->interpreter == cf_bool)
+      *kind = CONFIGURATION_VALUE_INTEGER_BOOLEAN;
+    else if (entry->interpreter == cf_string)
+      *kind = CONFIGURATION_VALUE_STRING;
+    else if (entry->interpreter == cf_techtime_multiplier)
+      *kind = CONFIGURATION_VALUE_NUMBER;
+    else if (entry->interpreter == cf_lua_error_reporting)
+      *kind = CONFIGURATION_VALUE_LUA_ERROR_REPORTING;
+    if (strcmp(entry->pname, "btech_allow_cargo_commands") == 0)
+      *kind = CONFIGURATION_VALUE_BOOLEAN;
+  }
+  return true;
 }
 
 /*

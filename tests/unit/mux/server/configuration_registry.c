@@ -1,9 +1,12 @@
 #include <assert.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "mux/server/configuration_catalog.h"
 #include "mux/server/configuration_registry.h"
+#include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"
 
 static int fixture_interpreter(const ConfigurationCall *call [[maybe_unused]]) {
@@ -63,6 +66,73 @@ int main(void) {
   assert(first_option->flag == LIST_OPTIONS);
   assert(first_sentinel->name == nullptr);
   assert(second_sentinel->name == nullptr);
+
+  ServerConfiguration configuration = {
+      .cache_depth = 17,
+      .lua = {.error_reporting = LUA_ERROR_REPORTING_WIZARDS},
+      .btech_allow_cargo_commands = true,
+      .btech_techtime_multiplier = 1.75,
+      .name_spaces = 1,
+      .mud_name = "Query Test",
+  };
+  ConfigurationEntry query_entries[] = {
+      {"integer", fixture_interpreter, 0,
+       offsetof(ServerConfiguration, cache_depth) + 1, 0},
+      {"number", fixture_interpreter, 0,
+       offsetof(ServerConfiguration, btech_techtime_multiplier) + 1, 0},
+      {"boolean", fixture_interpreter, 0,
+       offsetof(ServerConfiguration, btech_allow_cargo_commands) + 1, 0},
+      {"integer_boolean", fixture_interpreter, 0,
+       offsetof(ServerConfiguration, name_spaces) + 1, 0},
+      {"string", fixture_interpreter, 0,
+       offsetof(ServerConfiguration, mud_name) + 1, 0},
+      {"enum", fixture_interpreter, 0,
+       offsetof(ServerConfiguration, lua.error_reporting) + 1, 0},
+      {"unsupported", fixture_interpreter, 0, 0, 0},
+  };
+  ConfigurationValueKind query_kinds[] = {
+      CONFIGURATION_VALUE_INTEGER,     CONFIGURATION_VALUE_NUMBER,
+      CONFIGURATION_VALUE_BOOLEAN,     CONFIGURATION_VALUE_INTEGER_BOOLEAN,
+      CONFIGURATION_VALUE_STRING,      CONFIGURATION_VALUE_LUA_ERROR_REPORTING,
+      CONFIGURATION_VALUE_UNSUPPORTED,
+  };
+  ConfigurationRegistry query_registry = {
+      .entries = query_entries,
+      .value_kinds = query_kinds,
+      .entry_count = sizeof(query_entries) / sizeof(*query_entries),
+  };
+  ConfigurationValue queried;
+  assert(configuration_registry_query(&query_registry, &configuration,
+                                      "integer",
+                                      &queried) == CONFIGURATION_QUERY_OK);
+  assert(queried.kind == CONFIGURATION_VALUE_INTEGER &&
+         queried.as.integer == 17);
+  assert(configuration_registry_query(&query_registry, &configuration, "number",
+                                      &queried) == CONFIGURATION_QUERY_OK);
+  assert(queried.kind == CONFIGURATION_VALUE_NUMBER &&
+         queried.as.number == 1.75);
+  assert(configuration_registry_query(&query_registry, &configuration,
+                                      "boolean",
+                                      &queried) == CONFIGURATION_QUERY_OK);
+  assert(queried.kind == CONFIGURATION_VALUE_BOOLEAN && queried.as.boolean);
+  assert(configuration_registry_query(&query_registry, &configuration,
+                                      "integer_boolean",
+                                      &queried) == CONFIGURATION_QUERY_OK);
+  assert(queried.kind == CONFIGURATION_VALUE_BOOLEAN && queried.as.boolean);
+  assert(configuration_registry_query(&query_registry, &configuration, "string",
+                                      &queried) == CONFIGURATION_QUERY_OK);
+  assert(queried.kind == CONFIGURATION_VALUE_STRING &&
+         strcmp(queried.as.string, "Query Test") == 0);
+  assert(configuration_registry_query(&query_registry, &configuration, "enum",
+                                      &queried) == CONFIGURATION_QUERY_OK);
+  assert(queried.kind == CONFIGURATION_VALUE_STRING &&
+         strcmp(queried.as.string, "wizards") == 0);
+  assert(configuration_registry_query(&query_registry, &configuration,
+                                      "unsupported", &queried) ==
+         CONFIGURATION_QUERY_UNSUPPORTED);
+  assert(configuration_registry_query(&query_registry, &configuration,
+                                      "missing", &queried) ==
+         CONFIGURATION_QUERY_NOT_FOUND);
 
   first.entries[0].flags = 99;
   first.list_options[0].perm = 77;

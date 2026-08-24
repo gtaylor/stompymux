@@ -11,6 +11,35 @@
 #include "mux/support/name_table.h"
 
 typedef struct ConfigurationEntry ConfigurationEntry;
+typedef struct ServerConfiguration ServerConfiguration;
+
+typedef enum ConfigurationValueKind : int {
+  CONFIGURATION_VALUE_UNSUPPORTED,
+  CONFIGURATION_VALUE_INTEGER,
+  CONFIGURATION_VALUE_NUMBER,
+  CONFIGURATION_VALUE_BOOLEAN,
+  CONFIGURATION_VALUE_INTEGER_BOOLEAN,
+  CONFIGURATION_VALUE_STRING,
+  CONFIGURATION_VALUE_LUA_ERROR_REPORTING,
+} ConfigurationValueKind;
+
+typedef struct ConfigurationValue ConfigurationValue;
+struct ConfigurationValue {
+  ConfigurationValueKind kind;
+  union {
+    int integer;
+    double number;
+    bool boolean;
+    const char *string;
+  } as;
+};
+
+typedef enum ConfigurationQueryStatus : int {
+  CONFIGURATION_QUERY_OK,
+  CONFIGURATION_QUERY_NOT_FOUND,
+  CONFIGURATION_QUERY_UNSUPPORTED,
+} ConfigurationQueryStatus;
+
 struct ConfigurationEntry {
   const char *pname;
   ConfigurationInterpreter interpreter;
@@ -24,6 +53,7 @@ typedef ConfigurationEntry CONF;
 typedef struct ConfigurationRegistry ConfigurationRegistry;
 struct ConfigurationRegistry {
   ConfigurationEntry *entries;
+  ConfigurationValueKind *value_kinds;
   size_t entry_count;
   NameTable *list_options;
   size_t list_option_count;
@@ -76,3 +106,13 @@ NameTable *configuration_registry_list_options(ConfigurationRegistry *registry);
 
 const NameTable *configuration_registry_list_options_const(
     const ConfigurationRegistry *registry);
+
+/** Queries a scalar configuration value by its exact directive name.
+ * @param[in] registry Registry to search. @param[in] configuration Current
+ * server configuration. @param[in] name Exact, case-sensitive directive name.
+ * @param[out] value Typed borrowed result on success. @return Query status. */
+
+ConfigurationQueryStatus
+configuration_registry_query(const ConfigurationRegistry *registry,
+                             const ServerConfiguration *configuration,
+                             const char *name, ConfigurationValue *value);

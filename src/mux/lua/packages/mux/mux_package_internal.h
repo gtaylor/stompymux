@@ -73,3 +73,4 @@ void lua_mux_install_world_bindings(lua_State *state, LuaMuxPackage *package);
 void lua_mux_install_session_bindings(lua_State *state, LuaMuxPackage *package);
 void lua_mux_install_telnet_bindings(lua_State *state, LuaMuxPackage *package);
 void lua_mux_install_error_bindings(lua_State *state, LuaMuxPackage *package);
+void lua_mux_install_config_bindings(lua_State *state, LuaMuxPackage *package);

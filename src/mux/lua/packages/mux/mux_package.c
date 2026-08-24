@@ -103,5 +103,6 @@ void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   lua_mux_install_text_bindings(state, package);
   lua_mux_install_telnet_bindings(state, package);
   lua_mux_install_error_bindings(state, package);
+  lua_mux_install_config_bindings(state, package);
   lua_setglobal(state, "mux");
 }
