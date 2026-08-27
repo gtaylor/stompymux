@@ -430,7 +430,7 @@ void mech_listtic(DbRef player, Mech *mech, char *buffer) {
 static void heat_cutoff_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
 
-  if (e->data2) {
+  if (e->secondary.integer != 0) {
     mech_notify(mech, MECHALL,
                 "[fg=yellow]Heat dissipation cutoff engaged![reset]");
     mech_crit_status_set(&mech->rd.critstatus, MECH_CRIT_STATUS_HEATCUTOFF);

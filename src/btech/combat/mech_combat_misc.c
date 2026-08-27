@@ -211,6 +211,7 @@ static const char BOOM[BOOM_LENGTH][80] = {
     "----------------------------------------------------------------------------"};
 // clang-format on
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void mech_destroy(Mech *target, Mech *mech, bool showboom, const char *reason) {
   BtechContext *context = mech_context(target);
   GameDatabase *database = btech_context_database(context);

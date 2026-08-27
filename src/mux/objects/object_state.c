@@ -15,11 +15,12 @@
 #include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"
 
-constexpr size_t OBJECT_STATE_NAMESPACE_LIMIT = 127;
-constexpr size_t OBJECT_STATE_KEY_LIMIT = 255;
-constexpr size_t OBJECT_STATE_DEFAULT_VALUE_LIMIT = 65536;
-constexpr size_t OBJECT_STATE_DEFAULT_ENTRY_LIMIT = 1024;
-constexpr size_t OBJECT_STATE_DEFAULT_OBJECT_LIMIT = (size_t)(1024 * 1024);
+static constexpr size_t OBJECT_STATE_NAMESPACE_LIMIT = 127;
+static constexpr size_t OBJECT_STATE_KEY_LIMIT = 255;
+static constexpr size_t OBJECT_STATE_DEFAULT_VALUE_LIMIT = 65536;
+static constexpr size_t OBJECT_STATE_DEFAULT_ENTRY_LIMIT = 1024;
+static constexpr size_t OBJECT_STATE_DEFAULT_OBJECT_LIMIT =
+    (size_t)(1024 * 1024);
 
 typedef struct ObjectStateEntry ObjectStateEntry;
 typedef struct ObjectStateOwnedValue ObjectStateOwnedValue;

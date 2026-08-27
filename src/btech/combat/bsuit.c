@@ -40,8 +40,8 @@
 
 /* Stops everyone who's swarming this poor guy */
 
-constexpr int RECYCLE_SWARM = PHYSICAL_RECYCLE_TIME / 3;
-constexpr int RECYCLE_ATTACKLEG = PHYSICAL_RECYCLE_TIME / 2;
+static constexpr int RECYCLE_SWARM = PHYSICAL_RECYCLE_TIME / 3;
+static constexpr int RECYCLE_ATTACKLEG = PHYSICAL_RECYCLE_TIME / 2;
 
 void bsuit_swarm(DbRef player, Mech *mech, char *buffer) {
   Mech *target;

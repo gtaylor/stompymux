@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mux/commands/command_internal.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/configuration.h"
@@ -321,6 +322,20 @@ int configuration_modify_bits(const ConfigurationCall *call) {
   int negate;
   int success;
   int failure;
+  const NameTable *table;
+
+  switch ((ConfigurationNameTableId)call->extra) {
+  case CONFIGURATION_NAMETAB_ACCESS:
+    table = ACCESS_NAMETAB;
+    break;
+  case CONFIGURATION_NAMETAB_LOGDATA:
+    table = LOGDATA_NAMETAB;
+    break;
+  default:
+    configuration_log_not_found(context, call->player, call->command,
+                                "Name table", "internal identifier");
+    return -1;
+  }
 
   /*
    * Walk through the tokens
@@ -344,8 +359,8 @@ int configuration_modify_bits(const ConfigurationCall *call) {
      * Set or clear the appropriate bit
      */
 
-    f = name_table_search(context->database, context->configuration, GOD,
-                          (const NameTable *)call->extra, sp);
+    f = name_table_search(context->database, context->configuration, GOD, table,
+                          sp);
     if (f > 0) {
       if (negate)
         *vp &= ~f;

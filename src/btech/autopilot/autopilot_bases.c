@@ -35,7 +35,7 @@ void auto_leave_event(MuxEvent *muxevent) {
   BattleMap *map;
 
   int dir;
-  long reset_mapindex = (long)muxevent->data2;
+  long reset_mapindex = (long)muxevent->secondary.integer;
   char *argument;
   char error_buf[MBUF_SIZE];
 
@@ -166,7 +166,7 @@ void auto_enter_event(MuxEvent *muxevent) {
   Mech *mech = autopilot->mymech;
   BattleMap *map;
   MapObject *map_object;
-  long reset_mapindex = (long)muxevent->data2;
+  long reset_mapindex = (long)muxevent->secondary.integer;
 
   char *argument;
   char dir[2];

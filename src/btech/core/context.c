@@ -551,8 +551,8 @@ int btech_context_weapon_recycle_time(const BtechContext *context,
 int btech_context_event_data_count(const BtechContext *context, int event_type,
                                    intptr_t event_data) {
   assert(context != nullptr);
-  return mux_event_count_type_data2(context->events, event_type,
-                                    (void *)event_data);
+  return mux_event_count_type_secondary_integer(context->events, event_type,
+                                                event_data);
 }
 
 time_t btech_context_now(const BtechContext *context) {

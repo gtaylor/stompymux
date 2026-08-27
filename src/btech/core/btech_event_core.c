@@ -26,8 +26,6 @@ static const char *const EVENT_NAMES[] = {
     "75",         "SchFail",     "SchRegen",   "CkStagger",  "MoveMode",
     "Sideslip",   nullptr};
 
-static void *event_payload(intptr_t data) { return (void *)data; }
-
 const char *btech_event_name(int type) {
   constexpr size_t EVENT_NAME_COUNT =
       (sizeof(EVENT_NAMES) / sizeof(EVENT_NAMES[0])) - 1;
@@ -39,12 +37,40 @@ const char *btech_event_name(int type) {
 
 void btech_event_schedule(MuxEventScheduler *events, void *object, int type,
                           MuxEventCallback callback, int delay, intptr_t data) {
-  mux_event_add(&(MuxEventRequest){.scheduler = events,
-                                   .delay = delay,
-                                   .type = type,
-                                   .callback = callback,
-                                   .data = object,
-                                   .secondary_data = event_payload(data)});
+  mux_event_add(&(MuxEventRequest){
+      .scheduler = events,
+      .delay = delay,
+      .type = type,
+      .callback = callback,
+      .data = object,
+      .secondary = {.kind = MUX_EVENT_PAYLOAD_INTEGER, .integer = data}});
+}
+
+void btech_event_schedule_pointer(MuxEventScheduler *events, void *object,
+                                  int type, MuxEventCallback callback,
+                                  int delay, void *pointer) {
+  mux_event_add(&(MuxEventRequest){
+      .scheduler = events,
+      .delay = delay,
+      .type = type,
+      .callback = callback,
+      .data = object,
+      .secondary = {.kind = MUX_EVENT_PAYLOAD_POINTER, .pointer = pointer},
+  });
+}
+
+void btech_event_schedule_owned_pointer(MuxEventScheduler *events, void *object,
+                                        int type, MuxEventCallback callback,
+                                        int delay, void *pointer) {
+  mux_event_add(&(MuxEventRequest){
+      .scheduler = events,
+      .delay = delay,
+      .flags = FLAG_FREE_SECONDARY,
+      .type = type,
+      .callback = callback,
+      .data = object,
+      .secondary = {.kind = MUX_EVENT_PAYLOAD_POINTER, .pointer = pointer},
+  });
 }
 
 int btech_event_count(MuxEventScheduler *events, const void *object, int type) {
@@ -53,8 +79,7 @@ int btech_event_count(MuxEventScheduler *events, const void *object, int type) {
 
 int btech_event_count_data(MuxEventScheduler *events, const void *object,
                            int type, intptr_t data) {
-  return mux_event_count_type_data_data(events, type, object,
-                                        event_payload(data));
+  return mux_event_count_type_data_integer(events, type, object, data);
 }
 
 long btech_event_first_delay(MuxEventScheduler *events, const void *object,
@@ -68,9 +93,9 @@ int btech_event_last_delay(MuxEventScheduler *events, const void *object,
 }
 
 long btech_event_data(MuxEventScheduler *events, const void *object, int type) {
-  long data = 0;
+  intptr_t data = 0;
   mux_event_get_type_data(events, type, object, &data);
-  return data;
+  return (long)data;
 }
 
 void btech_event_cancel(MuxEventScheduler *events, void *object, int type) {
@@ -79,7 +104,7 @@ void btech_event_cancel(MuxEventScheduler *events, void *object, int type) {
 
 void btech_event_cancel_data(MuxEventScheduler *events, void *object, int type,
                              intptr_t data) {
-  mux_event_remove_type_data_data(events, type, object, event_payload(data));
+  mux_event_remove_type_data_integer(events, type, object, data);
 }
 
 void btech_events_cancel_all(MuxEventScheduler *events, void *object) {

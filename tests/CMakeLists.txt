@@ -1126,6 +1126,19 @@ target_include_directories(checked_storage_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME checked_storage COMMAND checked_storage_test)
 
+add_executable(wild_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/wild.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/wild.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/stringutil.c)
+target_compile_options(wild_test PRIVATE -ffunction-sections)
+target_link_options(wild_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(wild_test PRIVATE btmux_options btmux_checked_storage)
+target_include_directories(wild_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME wild COMMAND wild_test)
+set_tests_properties(wild PROPERTIES LABELS "unit;mux;mux-support")
+
 add_executable(string_copy_bounded_test
   ${CMAKE_SOURCE_DIR}/tests/unit/mux/support/string_copy_bounded.c)
 target_link_libraries(string_copy_bounded_test PRIVATE btmux_options)

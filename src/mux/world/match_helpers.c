@@ -36,6 +36,7 @@ static DbRef promote_dflt(DbRef old, DbRef new) {
   return NOTHING;
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 DbRef match_possessed(MatchContext *match_context, DbRef player, DbRef thing,
                       char *target, DbRef dflt) {
   DbRef result;

@@ -5,6 +5,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "mux/help/help_index.h"
 #include "mux/help/help_types.h"
@@ -73,6 +74,7 @@ int main(int argc, char *argv[]) {
   HelpIndex *index;
   HelpIndex *second_index;
   char help_directory[PATH_MAX];
+  char symlink_path[PATH_MAX];
 
   if (argc != 2) {
     fprintf(stderr, "usage: %s <help-directory>\n", argv[0]);
@@ -308,8 +310,15 @@ int main(int argc, char *argv[]) {
     return 11;
   }
 
+  if (snprintf(symlink_path, sizeof(symlink_path), "%s/recursive-link",
+               help_directory) >= (int)sizeof(symlink_path) ||
+      symlink(".", symlink_path) < 0)
+    return 12;
   second_index = help_index_create(nullptr, nullptr, help_directory, NOTHING);
+  (void)unlink(symlink_path);
   if (second_index == nullptr)
+    return 12;
+  if (help_index_article_count(second_index) != help_index_article_count(index))
     return 12;
   help_index_destroy(index);
   article = help_index_find_exact(second_index, "about", false);

@@ -3,6 +3,7 @@
  */
 
 #include "mux/server/server_config.h" // IWYU pragma: keep
+#include <stdint.h>
 #include <stdlib.h>
 
 #include "mux/objects/db.h"
@@ -28,10 +29,8 @@ struct PlayerCache {
 };
 
 static int compare_pcache(const RedBlackTreeCompareCall *call) {
-  const void *left_key = call->lhs;
-  const void *right_key = call->rhs;
-  const DbRef LEFT = (DbRef)left_key;
-  const DbRef RIGHT = (DbRef)right_key;
+  const intptr_t LEFT = *(const intptr_t *)call->lhs;
+  const intptr_t RIGHT = *(const intptr_t *)call->rhs;
 
   return (LEFT > RIGHT) - (LEFT < RIGHT);
 }
@@ -76,7 +75,7 @@ static PlayerCacheEntry *player_cache_find(PlayerCache *cache, DbRef player) {
       !is_player(cache->database, player))
     return nullptr;
 
-  entry = red_black_tree_find(cache->tree, (void *)player);
+  entry = red_black_tree_find_integer(cache->tree, player);
   if (entry) {
     entry->recently_referenced = true;
     return entry;
@@ -87,7 +86,7 @@ static PlayerCacheEntry *player_cache_find(PlayerCache *cache, DbRef player) {
   entry->recently_referenced = true;
   entry->next = cache->head;
   cache->head = entry;
-  red_black_tree_insert(cache->tree, (void *)player, entry);
+  red_black_tree_insert_integer(cache->tree, player, entry);
   return entry;
 }
 
@@ -109,7 +108,7 @@ void player_cache_trim(PlayerCache *cache) {
         previous->next = next;
       else
         cache->head = next;
-      red_black_tree_delete(cache->tree, (void *)entry->player);
+      red_black_tree_delete_integer(cache->tree, entry->player);
       free(entry);
       entry = next;
     }

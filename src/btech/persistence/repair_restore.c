@@ -418,7 +418,8 @@ int btech_special_load_repair_events(sqlite3 *sqlite, BtechContext *context) {
           .type = event->event_type,
           .callback = event->function,
           .data = event->mech,
-          .secondary_data = (void *)(intptr_t)event->event_data,
+          .secondary = {.kind = MUX_EVENT_PAYLOAD_INTEGER,
+                        .integer = event->event_data},
       });
     }
   }

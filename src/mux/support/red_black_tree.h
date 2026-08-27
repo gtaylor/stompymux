@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 enum : int {
   SEARCH_EQUAL = 0x1,
   SEARCH_GTEQ = 0x2,
@@ -80,18 +82,26 @@ void red_black_tree_destroy(RedBlackTree bt);
  * key or command flags. @param[in,out] data Caller-provided data. */
 
 void red_black_tree_insert(RedBlackTree bt, void *key, void *data);
+/** Inserts data under a typed integer key stored inline with the tree node. */
+void red_black_tree_insert_integer(RedBlackTree bt, intptr_t key, void *data);
 /** Finds red black tree find. @param[in] bt Bt. @param[in] key Lookup key or
  * command flags. */
 
 void *red_black_tree_find(RedBlackTree bt, const void *key);
+/** Finds data stored under an integer key. */
+void *red_black_tree_find_integer(RedBlackTree bt, intptr_t key);
 /** Executes red black tree exists. @param[in] bt Bt. @param[in] key Lookup key
  * or command flags. */
 
 bool red_black_tree_exists(RedBlackTree bt, const void *key);
+/** Reports whether an integer key is present. */
+bool red_black_tree_exists_integer(RedBlackTree bt, intptr_t key);
 /** Executes red black tree delete. @param[in] bt Bt. @param[in] key Lookup key
  * or command flags. */
 
 void *red_black_tree_delete(RedBlackTree bt, const void *key);
+/** Deletes an integer key and returns its associated data. */
+void *red_black_tree_delete_integer(RedBlackTree bt, intptr_t key);
 /** Executes red black tree release. @param[in] bt Bt. @param[in] release
  * Release. @param[in] context Operation context. */
 

@@ -132,6 +132,7 @@ static OwnedText dflt_from_msg(GameDatabase *database, DbRef sender,
   return owned_text_take(tbuff);
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void notify_checked(EvaluationContext *evaluation, DbRef target, DbRef sender,
                     const char *msg, int key) {
   char *msg_copy;

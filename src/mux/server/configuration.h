@@ -9,6 +9,11 @@
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 
+typedef enum ConfigurationNameTableId : int {
+  CONFIGURATION_NAMETAB_ACCESS = 1,
+  CONFIGURATION_NAMETAB_LOGDATA = 2,
+} ConfigurationNameTableId;
+
 typedef struct ConfigurationContext ConfigurationContext;
 typedef struct ConfigurationRegistry ConfigurationRegistry;
 typedef struct EvaluationContext EvaluationContext;

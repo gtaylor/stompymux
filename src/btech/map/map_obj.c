@@ -120,6 +120,7 @@ char find_decorations(BattleMap *map, int x, int y) {
   return 0;
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void del_mapobj(const MapObjectDeleteRequest *request) {
   BattleMap *map = request->map;
   MapObject *mapob = request->object;
@@ -146,8 +147,8 @@ void del_mapobj(const MapObjectDeleteRequest *request) {
     if (!request->preserve_terrain)
       map_terrain_set(map, mapob->x, mapob->y, clamp_int_to_char(mapob->datac));
     if (request->cancel_event)
-      mux_event_remove_type_data2(map->xcode.context->events, EVENT_DECORATION,
-                                  mapob);
+      mux_event_remove_type_secondary_pointer(map->xcode.context->events,
+                                              EVENT_DECORATION, mapob);
   }
   if (type == TYPE_BUILD) {
 
@@ -170,6 +171,7 @@ void del_mapobj(const MapObjectDeleteRequest *request) {
   free(mapob);
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void del_mapobjst(BattleMap *map, int type) {
   if (!(map->flags & MAPFLAG_MAPO))
     return;
@@ -213,7 +215,7 @@ MapObject *add_mapobj_to_type(BattleMap *map, int type, MapObject *from,
 
 static void smoke_dissipation_event(MuxEvent *e) {
   BattleMap *map = (BattleMap *)e->data;
-  MapObject *o = (MapObject *)e->data2;
+  MapObject *o = e->secondary.pointer;
 
   del_mapobj(&(MapObjectDeleteRequest){
       .map = map,
@@ -224,7 +226,7 @@ static void smoke_dissipation_event(MuxEvent *e) {
 
 static void fire_dissipation_event(MuxEvent *e) {
   BattleMap *map = (BattleMap *)e->data;
-  MapObject *o = (MapObject *)e->data2;
+  MapObject *o = e->secondary.pointer;
   int x;
   int y;
 
@@ -502,7 +504,7 @@ static MapHexPosition wind_spread_position(const WindSpreadRequest *request) {
 
 static void fire_spreading_event(MuxEvent *e) {
   BattleMap *map = (BattleMap *)e->data;
-  MapObject *o = (MapObject *)e->data2;
+  MapObject *o = e->secondary.pointer;
   int x;
   int y;
   int loop;
@@ -560,11 +562,11 @@ static void fire_spreading_event(MuxEvent *e) {
   check_for_fire(map, new_fire_hexes);
   flaggo = (o->datas -= map_fire_speed(map));
   if (flaggo > map_fire_speed(map))
-    map_event_schedule(map, EVENT_DECORATION, fire_spreading_event,
-                       map_fire_speed(map), (intptr_t)o);
+    map_event_schedule_pointer(map, EVENT_DECORATION, fire_spreading_event,
+                               map_fire_speed(map), o);
   else
-    map_event_schedule(map, EVENT_DECORATION, fire_dissipation_event, flaggo,
-                       (intptr_t)o);
+    map_event_schedule_pointer(map, EVENT_DECORATION, fire_dissipation_event,
+                               flaggo, o);
 }
 
 void add_decoration(const MapDecorationRequest *request) {
@@ -610,14 +612,14 @@ void add_decoration(const MapDecorationRequest *request) {
   tmpo = add_mapobj(map, map_object_slot(map, type), &foo, 1);
   if (flaggo) {
     if (type == TYPE_SMOKE)
-      map_event_schedule(map, EVENT_DECORATION, smoke_dissipation_event, flaggo,
-                         (intptr_t)tmpo);
+      map_event_schedule_pointer(map, EVENT_DECORATION, smoke_dissipation_event,
+                                 flaggo, tmpo);
     if (type == TYPE_FIRE) {
       const int FIRE_DURATION = foo.datas * map_fire_speed(map) * 4 / 3 / 60;
       foo.datas = clamp_int_to_short(FIRE_DURATION);
       foo.datas = clamp_int_to_short(max(foo.datas, map_fire_speed(map) * 2));
-      map_event_schedule(map, EVENT_DECORATION, fire_spreading_event,
-                         map_fire_speed(map), (intptr_t)tmpo);
+      map_event_schedule_pointer(map, EVENT_DECORATION, fire_spreading_event,
+                                 map_fire_speed(map), tmpo);
     }
   }
 }

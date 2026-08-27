@@ -12,6 +12,7 @@
 
 /* Implements registration and lookup of BattleTech special objects. */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -141,10 +142,8 @@ void list_hashstat(DbRef player, const char *tab_name, HashTable *htab);
 /*************PERSONAL PROTOS*****************/
 
 static int compare_dbrefs(const RedBlackTreeCompareCall *call) {
-  const void *key1 = call->lhs;
-  const void *key2 = call->rhs;
-  const DbRef KEY1_VAL = (DbRef)key1;
-  const DbRef KEY2_VAL = (DbRef)key2;
+  const intptr_t KEY1_VAL = *(const intptr_t *)call->lhs;
+  const intptr_t KEY2_VAL = *(const intptr_t *)call->rhs;
 
   if (KEY1_VAL < KEY2_VAL)
     return -1;
@@ -230,7 +229,7 @@ bool handled_command_sub(BtechContext *context, DbRef player, DbRef location,
   bool special_data_missing = false;
   if (type >= 0 && btech_special_object_data_size(
                        btech_special_object_definition(type)) > 0) {
-    xcode_obj = red_black_tree_find(context->special_objects, (void *)location);
+    xcode_obj = red_black_tree_find_integer(context->special_objects, location);
     special_data_missing = xcode_obj == nullptr;
   }
   if (type < 0 || special_data_missing) {
@@ -354,7 +353,7 @@ void *new_special_object(BtechContext *context, DbRef id, int type) {
       btech_special_object_definition(type)->lifecycle(id, (void **)&xcode_obj,
                                                        SPECIAL_ALLOC);
 
-    red_black_tree_insert(context->special_objects, (void *)id, xcode_obj);
+    red_black_tree_insert_integer(context->special_objects, id, xcode_obj);
   }
 
   return xcode_obj;
@@ -416,7 +415,7 @@ void btech_special_object_dispose(const BtechSpecialObjectAction *action) {
   int i;
   const BtechSpecialObjectDefinition *type_of_object;
 
-  xcode_obj = red_black_tree_find(context->special_objects, (void *)KEY);
+  xcode_obj = red_black_tree_find_integer(context->special_objects, KEY);
 
   i = btech_context_which_special_attribute(context, KEY);
   if (i < 0) {
@@ -439,7 +438,7 @@ void btech_special_object_dispose(const BtechSpecialObjectAction *action) {
   if (xcode_obj) {
     if (type_of_object->lifecycle)
       type_of_object->lifecycle(KEY, (void **)&xcode_obj, SPECIAL_FREE);
-    red_black_tree_delete(context->special_objects, (void *)KEY);
+    red_black_tree_delete_integer(context->special_objects, KEY);
     mux_event_remove_data(context->events, xcode_obj);
     free(xcode_obj);
   } else if (btech_special_object_data_size(type_of_object) > 0) {
@@ -451,7 +450,7 @@ void btech_special_object_dispose(const BtechSpecialObjectAction *action) {
 }
 
 static void destroy_special_object(const RedBlackTreeReleaseCall *call) {
-  void *key = call->key;
+  const DbRef KEY = (DbRef) * (const intptr_t *)call->key;
   void *data = call->data;
   void *arg = call->context;
   BtechContext *context = arg;
@@ -461,7 +460,7 @@ static void destroy_special_object(const RedBlackTreeReleaseCall *call) {
 
   mux_event_remove_data(context->events, xcode_obj);
   if (type->lifecycle)
-    type->lifecycle((DbRef)key, (void **)&xcode_obj, SPECIAL_FREE);
+    type->lifecycle(KEY, (void **)&xcode_obj, SPECIAL_FREE);
   free(xcode_obj);
 }
 
@@ -537,7 +536,7 @@ bool btech_context_is_map(BtechContext *context, DbRef key) {
 }
 
 void *btech_context_find_object(BtechContext *context, DbRef key) {
-  return red_black_tree_find(context->special_objects, (void *)key);
+  return red_black_tree_find_integer(context->special_objects, key);
 }
 
 void init_special_hash(BtechContext *context, int which) {
@@ -665,7 +664,7 @@ void btech_special_objects_reset(BtechContext *context) {
 BattleMap *btech_context_get_map(BtechContext *context, DbRef d) {
   BtechSpecialObject *xcode_obj;
 
-  xcode_obj = red_black_tree_find(context->special_objects, (void *)d);
+  xcode_obj = red_black_tree_find_integer(context->special_objects, d);
   if (!xcode_obj)
     return nullptr;
   if (xcode_obj->type != GTYPE_MAP)
@@ -680,7 +679,7 @@ Mech *btech_context_get_mech(BtechContext *context, DbRef d) {
     return nullptr;
   if (!(is_xcode(context->database, d)))
     return nullptr;
-  xcode_obj = red_black_tree_find(context->special_objects, (void *)d);
+  xcode_obj = red_black_tree_find_integer(context->special_objects, d);
   if (!xcode_obj)
     return nullptr;
   if (xcode_obj->type != GTYPE_MECH)

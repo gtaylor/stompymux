@@ -394,7 +394,7 @@ void attribute_copy(const AttributeCopyRequest *request) {
  */
 
 // So mistaken refs to #-1 won't die.
-constexpr int SIZE_HACK = 1;
+static constexpr int SIZE_HACK = 1;
 
 typedef struct NameCacheResizeRequest {
   GameDatabase *database;

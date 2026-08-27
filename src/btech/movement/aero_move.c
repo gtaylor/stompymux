@@ -99,7 +99,7 @@ static void aero_takeoff_event(MuxEvent *e) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   int i = -1;
-  long count = (long)e->data2;
+  long count = (long)e->secondary.integer;
   if (mech_is_dropship(mech))
     for (i = 0; i < (int)(NUM_LAND_TYPES); i++)
       if (mech_class(mech) == land_data_entry(i)->type)
@@ -300,7 +300,7 @@ void aero_takeoff(DbRef player, Mech *mech, const char *buffer) {
   }
   mech_event_cancel(mech, EVENT_HIDE);
   mech_event_schedule(mech, EVENT_TAKEOFF, aero_takeoff_event, 1,
-                      (void *)j ? j : land_data_entry(i)->launchtime);
+                      j != 0 ? j : land_data_entry(i)->launchtime);
 }
 void dropship_exhaust_blast(const DropshipExhaustBlastRequest *request) {
   char message_buffer[LBUF_SIZE];

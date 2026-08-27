@@ -139,6 +139,7 @@ void mech_c3i_network_add(Mech *mech, Mech *mech_to_add) {
   mech_c3i_network_validate(mech);
 }
 
+// NOLINTNEXTLINE(misc-no-recursion): fixed C3i network size bounds traversal.
 void mech_c3i_network_remove_reference(DbRef ref_to_clear, Mech *mech) {
   int i;
 
@@ -153,6 +154,7 @@ void mech_c3i_network_remove_reference(DbRef ref_to_clear, Mech *mech) {
   mech_c3i_network_validate(mech);
 }
 
+// NOLINTNEXTLINE(misc-no-recursion): fixed C3i network size bounds traversal.
 void mech_c3i_network_clear(Mech *mech, int t_clear_from_others) {
   Mech *other_mech;
   int i;
@@ -176,6 +178,7 @@ void mech_c3i_network_clear(Mech *mech, int t_clear_from_others) {
   mech_c3i_network_size_set(mech, 0);
 }
 
+// NOLINTNEXTLINE(misc-no-recursion): fixed C3i network size bounds traversal.
 void mech_c3i_network_validate(Mech *mech) {
   Mech *other_mech;
   DbRef my_temp_network[C3I_NETWORK_SIZE];

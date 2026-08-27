@@ -112,7 +112,7 @@ static void add_event(MechEventType type, MuxEventCallback callback,
       .type = (char)type,
       .function = callback,
       .data = TEST_MECH,
-      .data2 = (void *)(uintptr_t)encoded,
+      .secondary = {.kind = MUX_EVENT_PAYLOAD_INTEGER, .integer = encoded},
       .tick = scheduler.tick + 120,
       .scheduler = &scheduler,
   };

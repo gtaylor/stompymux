@@ -389,7 +389,7 @@ static void find_latest_tech_event(MuxEvent *event, void *data) {
   LatestTechEventContext *context = data;
   int offset = event->tick - event->scheduler->tick;
   RepairEventPayload payload =
-      repair_event_payload_unpack((intptr_t)event->data2);
+      repair_event_payload_unpack(event->secondary.integer);
   int amount = repair_fix_event_amount(payload);
 
   if (event->function != mech_event_failure_marker) {

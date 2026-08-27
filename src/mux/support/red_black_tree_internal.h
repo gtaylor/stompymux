@@ -16,6 +16,8 @@ struct RedBlackTreeNode {
   RedBlackTreeNode *parent;
   void *key;
   void *data;
+  intptr_t integer_key;
+  bool key_is_integer;
   RedBlackTreeColor color;
   int count;
 };

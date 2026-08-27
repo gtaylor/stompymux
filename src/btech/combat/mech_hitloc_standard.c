@@ -30,6 +30,7 @@ static int hit_location_export(HitLocationResult result,
   return result.location;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 int mech_hit_location(Mech *mech, int hit_group, bool *iscritical,
                       bool *isrear) {
   int roll;

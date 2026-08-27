@@ -59,7 +59,9 @@ void mech_event_visit(Mech *mech [[maybe_unused]], MechEventType type,
     const TestEvent *test_event = event_at_const(index);
     if (test_event->type != type)
       continue;
-    MuxEvent event = {.data = mech, .data2 = (void *)test_event->data};
+    MuxEvent event = {.data = mech,
+                      .secondary = {.kind = MUX_EVENT_PAYLOAD_INTEGER,
+                                    .integer = test_event->data}};
     visitor(&event, context);
   }
 }

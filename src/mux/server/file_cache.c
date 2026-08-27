@@ -47,7 +47,7 @@ struct FileCache {
   DescriptorRegistry *descriptors;
 };
 
-constexpr int MAX_CONN = 100;
+static constexpr int MAX_CONN = 100;
 
 static FCACHE *fcache_entry_at(FCACHE *entries, size_t count, size_t index) {
   return checked_storage_at(entries, count, sizeof(*entries), index);

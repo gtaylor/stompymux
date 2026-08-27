@@ -57,7 +57,7 @@ static void mech_hide_event(MuxEvent *e) {
   BattleMap *map = btech_context_get_map(context, mech_map_dbref(mech));
   int fail = 0;
   int i;
-  long tic = (long)e->data2;
+  long tic = (long)e->secondary.integer;
 
   if (!map)
     return;

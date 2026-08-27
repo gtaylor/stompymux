@@ -38,7 +38,7 @@
 
 #include "mux/server/log_cache.h"
 
-constexpr char CACHING[] = "object";
+static constexpr char CACHING[] = "object";
 
 typedef struct LuaCommandListContext {
   EvaluationContext *evaluation;

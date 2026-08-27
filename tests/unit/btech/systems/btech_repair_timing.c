@@ -42,7 +42,8 @@ static void add_event(MechEventType type, int tick, RepairEventPayload payload,
       .tick = tick,
       .scheduler = &scheduler,
       .function = callback,
-      .data2 = (void *)(intptr_t)repair_event_payload_pack(payload),
+      .secondary = {.kind = MUX_EVENT_PAYLOAD_INTEGER,
+                    .integer = repair_event_payload_pack(payload)},
   };
 }
 

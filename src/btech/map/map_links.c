@@ -17,6 +17,7 @@
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -79,8 +80,8 @@ static char *link_argument(char **arguments, size_t count, int index) {
 static void recursively_update_links(const MapLinkUpdateRequest *request);
 
 static int compare_dbrefs(const RedBlackTreeCompareCall *call) {
-  const DbRef LEFT = (DbRef)call->lhs;
-  const DbRef RIGHT = (DbRef)call->rhs;
+  const intptr_t LEFT = *(const intptr_t *)call->lhs;
+  const intptr_t RIGHT = *(const intptr_t *)call->rhs;
 
   if (LEFT < RIGHT)
     return -1;
@@ -96,13 +97,13 @@ static void map_link_update_skip(MapLinkUpdateStats *stats) {
 
 static bool map_link_update_visit(const MapLinkUpdateRequest *request) {
   if (request->depth >= MAP_LINK_MAX_DEPTH ||
-      red_black_tree_exists(request->traversal->visited,
-                            (void *)request->location)) {
+      red_black_tree_exists_integer(request->traversal->visited,
+                                    request->location)) {
     map_link_update_skip(request->stats);
     return false;
   }
-  red_black_tree_insert(request->traversal->visited, (void *)request->location,
-                        request->traversal);
+  red_black_tree_insert_integer(request->traversal->visited, request->location,
+                                request->traversal);
   return true;
 }
 
@@ -186,6 +187,7 @@ static void add_entrances(DbRef loc [[maybe_unused]], BattleMap *map,
   free_buf(buf);
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 static void add_links(const MapLinkUpdateRequest *request, BattleMap *map,
                       char *data) {
   char *buf;
@@ -242,6 +244,7 @@ static void add_links(const MapLinkUpdateRequest *request, BattleMap *map,
   free_buf(buf);
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 static void recursively_update_links(const MapLinkUpdateRequest *request) {
   BtechContext *context = request->context;
   const DbRef FROM = request->source;

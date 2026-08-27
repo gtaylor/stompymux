@@ -2,7 +2,6 @@
 
 #include <math.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
@@ -75,7 +74,7 @@ bool mech_spot_has_artillery(Mech *mech) {
 }
 
 static void mech_check_range(MuxEvent *e) {
-  Mech *spotter = (Mech *)e->data2;
+  Mech *spotter = e->secondary.pointer;
   Mech *mech = (Mech *)e->data;
   float range;
 
@@ -98,14 +97,14 @@ static void mech_check_range(MuxEvent *e) {
     mech_spotter_dbref_set(mech, -1);
     return;
   }
-  mech_event_schedule(mech, EVENT_SPOT_CHECK, mech_check_range, SPOT_TICK,
-                      (intptr_t)spotter);
+  mech_event_schedule_pointer(mech, EVENT_SPOT_CHECK, mech_check_range,
+                              SPOT_TICK, spotter);
 }
 
 static void mech_spot_event(MuxEvent *e) {
   Mech *target;
   Mech *mech = (Mech *)e->data;
-  SpotLinkEventData *sd = (SpotLinkEventData *)e->data2;
+  SpotLinkEventData *sd = e->secondary.pointer;
 
   target = sd->target;
 
@@ -117,7 +116,6 @@ static void mech_spot_event(MuxEvent *e) {
                 "The data link was not established due to movement!");
     mech_notify(mech, MECHALL,
                 "The data link was not established due to movement!");
-    free(e->data2);
     return;
   }
   mech_printf(target, MECHALL, "Data link established with %s.",
@@ -126,9 +124,8 @@ static void mech_spot_event(MuxEvent *e) {
               "Data link established with %s, you now have a forward observer.",
               mech_to_mech_display_id(target, mech).text);
   mech_spotter_dbref_set(mech, mech_dbref(target));
-  mech_event_schedule(mech, EVENT_SPOT_CHECK, mech_check_range, SPOT_TICK,
-                      (intptr_t)target);
-  free(e->data2);
+  mech_event_schedule_pointer(mech, EVENT_SPOT_CHECK, mech_check_range,
+                              SPOT_TICK, target);
 }
 
 void mech_spot_clear_fire_adjustments(BattleMap *map, DbRef mech) {
@@ -238,8 +235,9 @@ void mech_spot(DbRef player, Mech *mech, char *buffer) {
     dat->target_y = mech_position_real_y(target);
     dat->target = target;
     // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
-    mech_event_schedule(mech, EVENT_SPOT_LOCK, mech_spot_event,
-                        WEAPON_TICK * (((int)range / 10) + 5), (intptr_t)dat);
+    mech_event_schedule_owned_pointer(mech, EVENT_SPOT_LOCK, mech_spot_event,
+                                      WEAPON_TICK * (((int)range / 10) + 5),
+                                      dat);
     return;
   }
   if (!los) {

@@ -47,7 +47,7 @@ void auto_astar_follow_event(MuxEvent *muxevent) {
   short generated_x;
   short generated_y;
   int bearing;
-  long destroy_path = (long)muxevent->data2;
+  long destroy_path = (long)muxevent->secondary.integer;
 
   char *argument;
   AutopilotPathNode *temp_astar_node;

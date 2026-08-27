@@ -67,7 +67,7 @@ static void ammunition_item_add(const AmmunitionItemAddition *addition) {
 
 static void mech_dump_event(MuxEvent *ev) {
   Mech *mech = (Mech *)ev->data;
-  long arg = (long)ev->data2;
+  long arg = (long)ev->secondary.integer;
   int loc;
   int i;
   int l;

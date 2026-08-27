@@ -136,7 +136,7 @@ void btech_finalize_object_statements(BtechObjectStoreContext *context) {
 /* Replace the default map grid with a validated grid owned by this MAP. */
 
 bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
-  void *key = call->key;
+  const DbRef KEY = (DbRef) * (const intptr_t *)call->key;
   void *data = call->data;
   int depth [[maybe_unused]] = call->depth;
   void *argument = call->context;
@@ -154,7 +154,7 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
   if (xcode->type == GTYPE_MECH) {
     mech = (Mech *)xcode;
     mech_persistence_snapshot_export(mech, &snapshot);
-    if (btech_special_bind_int(context->mech, 1, (DbRef)key) < 0 ||
+    if (btech_special_bind_int(context->mech, 1, KEY) < 0 ||
         btech_special_bind_int(context->mech, 2, snapshot.id[0]) < 0 ||
         btech_special_bind_int(context->mech, 3, snapshot.id[1]) < 0 ||
         btech_special_bind_int(context->mech, 4, snapshot.brief) < 0 ||
@@ -219,7 +219,7 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
       context->result = -1;
     for (index = 0; context->result == 0 && index < NUM_SECTIONS; index++) {
       const struct MechSection *section = stored_section(&snapshot, index);
-      if (btech_special_bind_int(context->section, 1, (DbRef)key) < 0 ||
+      if (btech_special_bind_int(context->section, 1, KEY) < 0 ||
           btech_special_bind_int(context->section, 2, index) < 0 ||
           btech_special_bind_int(context->section, 3, section->armor) < 0 ||
           btech_special_bind_int(context->section, 4, section->internal) < 0 ||
@@ -239,7 +239,7 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
       }
       for (slot = 0; context->result == 0 && slot < NUM_CRITICALS; slot++) {
         const struct CriticalSlot *critical = stored_critical(section, slot);
-        if (btech_special_bind_int(context->critical, 1, (DbRef)key) < 0 ||
+        if (btech_special_bind_int(context->critical, 1, KEY) < 0 ||
             btech_special_bind_int(context->critical, 2, index) < 0 ||
             btech_special_bind_int(context->critical, 3, slot) < 0 ||
             btech_special_bind_int(context->critical, 4, critical->brand) < 0 ||
@@ -258,7 +258,7 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
       }
     }
     if (context->result == 0 &&
-        (btech_special_bind_int(context->position, 1, (DbRef)key) < 0 ||
+        (btech_special_bind_int(context->position, 1, KEY) < 0 ||
          btech_special_bind_int(context->position, 2,
                                 snapshot.position.pilotstatus) < 0 ||
          bind_float(context->position, 3, snapshot.position.hexes_walked) !=
@@ -289,7 +289,7 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
          btech_special_write_step(context->fault, context->position) < 0))
       context->result = -1;
     for (index = 0; context->result == 0 && index < NUM_BAYS; index++) {
-      if (btech_special_bind_int(context->bay, 1, (DbRef)key) < 0 ||
+      if (btech_special_bind_int(context->bay, 1, KEY) < 0 ||
           btech_special_bind_int(context->bay, 2, index) < 0 ||
           btech_special_bind_int(
               context->bay, 3,
@@ -298,7 +298,7 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
         context->result = -1;
     }
     for (index = 0; context->result == 0 && index < NUM_TURRETS; index++) {
-      if (btech_special_bind_int(context->mech_turret, 1, (DbRef)key) < 0 ||
+      if (btech_special_bind_int(context->mech_turret, 1, KEY) < 0 ||
           btech_special_bind_int(context->mech_turret, 2, index) < 0 ||
           btech_special_bind_int(
               context->mech_turret, 3,
@@ -307,7 +307,7 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
         context->result = -1;
     }
     if (context->result == 0 &&
-        (btech_special_bind_int(context->c3, 1, (DbRef)key) < 0 ||
+        (btech_special_bind_int(context->c3, 1, KEY) < 0 ||
          sqlite3_bind_text(context->c3, 2, snapshot.network.c3_chan_title, -1,
                            SQLITE_TRANSIENT) != SQLITE_OK ||
          btech_special_bind_int(context->c3, 3,
@@ -338,7 +338,7 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
       int network = index < C3I_NETWORK_SIZE ? 0 : 1;
       int node_index =
           index < C3I_NETWORK_SIZE ? index : index - C3I_NETWORK_SIZE;
-      if (btech_special_bind_int(context->c3node, 1, (DbRef)key) < 0 ||
+      if (btech_special_bind_int(context->c3node, 1, KEY) < 0 ||
           btech_special_bind_int(context->c3node, 2, network) < 0 ||
           btech_special_bind_int(context->c3node, 3, node_index) < 0 ||
           btech_special_bind_int(context->c3node, 4, node) < 0 ||
@@ -347,7 +347,7 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
     }
     for (index = 0; context->result == 0 && index < NUM_TICS; index++) {
       for (slot = 0; context->result == 0 && slot < TICLONGS; slot++) {
-        if (btech_special_bind_int(context->tic, 1, (DbRef)key) < 0 ||
+        if (btech_special_bind_int(context->tic, 1, KEY) < 0 ||
             btech_special_bind_int(context->tic, 2, index) < 0 ||
             btech_special_bind_int(context->tic, 3, slot) < 0 ||
             bind_unsigned_long(context->tic, 4,
@@ -357,7 +357,7 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
       }
     }
     for (index = 0; context->result == 0 && index < FREQS; index++) {
-      if (btech_special_bind_int(context->frequency, 1, (DbRef)key) < 0 ||
+      if (btech_special_bind_int(context->frequency, 1, KEY) < 0 ||
           btech_special_bind_int(context->frequency, 2, index) < 0 ||
           btech_special_bind_int(
               context->frequency, 3,
@@ -373,7 +373,7 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
     }
     if (context->result == 0) {
       runtime_index = 1;
-      if (bind_runtime_int(context->runtime, &runtime_index, (DbRef)key) < 0 ||
+      if (bind_runtime_int(context->runtime, &runtime_index, KEY) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
                            snapshot.runtime.jumptop) < 0 ||
           bind_runtime_int(context->runtime, &runtime_index,
@@ -567,14 +567,14 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
         context->result = -1;
     }
     if (context->result == 0 &&
-        (btech_special_bind_int(context->unit_aux, 1, (DbRef)key) < 0 ||
+        (btech_special_bind_int(context->unit_aux, 1, KEY) < 0 ||
          btech_special_bind_int(context->unit_aux, 2, 0) < 0 ||
          btech_special_bind_int(context->unit_aux, 3,
                                 snapshot.definition.mechbv_last) < 0 ||
          btech_special_write_step(context->fault, context->unit_aux) < 0))
       context->result = -1;
     for (index = 0; context->result == 0 && index < 3; index++) {
-      if (btech_special_bind_int(context->unit_aux, 1, (DbRef)key) < 0 ||
+      if (btech_special_bind_int(context->unit_aux, 1, KEY) < 0 ||
           btech_special_bind_int(context->unit_aux, 2, 8 + index) < 0 ||
           btech_special_bind_int(
               context->unit_aux, 3,
@@ -585,7 +585,7 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
     for (index = 0;
          context->result == 0 && mech_stagger_damage_get(mech, index, &damage);
          index++) {
-      if (btech_special_bind_int(context->stagger_damage, 1, (DbRef)key) < 0 ||
+      if (btech_special_bind_int(context->stagger_damage, 1, KEY) < 0 ||
           btech_special_bind_int(context->stagger_damage, 2, index) < 0 ||
           btech_special_bind_int(context->stagger_damage, 3, damage.amount) <
               0 ||
@@ -599,7 +599,7 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
         context->result = -1;
     }
   } else {
-    btech_store_auxiliary_object(context, (DbRef)key, xcode);
+    btech_store_auxiliary_object(context, KEY, xcode);
   }
   return context->result == 0;
 }

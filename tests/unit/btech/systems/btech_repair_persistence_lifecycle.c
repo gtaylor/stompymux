@@ -52,9 +52,9 @@ void mech_event_failure_marker(MuxEvent *event [[maybe_unused]]) {}
 bool red_black_tree_walk(RedBlackTree tree [[maybe_unused]],
                          int how [[maybe_unused]], RedBlackTreeVisitor visitor,
                          void *context) {
-  return visitor(&(RedBlackTreeVisitCall){.key = (void *)registered_dbref,
-                                          .data = registered_data,
-                                          .context = context});
+  intptr_t key = registered_dbref;
+  return visitor(&(RedBlackTreeVisitCall){
+      .key = (void *)&key, .data = registered_data, .context = context});
 }
 
 int btech_special_bind_int(sqlite3_stmt *statement, int index,
@@ -125,29 +125,32 @@ int main(void) {
       (RepairEventPayload){.location = 1, .position = 2, .player = 9});
   intptr_t fixi_data = repair_event_payload_pack(
       (RepairEventPayload){.location = 3, .position = 1, .player = 10});
-  MuxEvent oldest = {.function = canonical_fix,
-                     .data = test_mech,
-                     .data2 = (void *)(intptr_t)fix_data,
-                     .tick = 130,
-                     .type = EVENT_REPAIR_FIX,
-                     .scheduler = &scheduler};
-  MuxEvent newer = {.function = mech_event_failure_marker,
-                    .data = test_mech,
-                    .data2 = (void *)(intptr_t)fixi_data,
-                    .tick = 110,
-                    .type = EVENT_REPAIR_FIXI,
-                    .scheduler = &scheduler,
-                    .next_in_main = &oldest};
+  MuxEvent oldest = {
+      .function = canonical_fix,
+      .data = test_mech,
+      .secondary = {.kind = MUX_EVENT_PAYLOAD_INTEGER, .integer = fix_data},
+      .tick = 130,
+      .type = EVENT_REPAIR_FIX,
+      .scheduler = &scheduler};
+  MuxEvent newer = {
+      .function = mech_event_failure_marker,
+      .data = test_mech,
+      .secondary = {.kind = MUX_EVENT_PAYLOAD_INTEGER, .integer = fixi_data},
+      .tick = 110,
+      .type = EVENT_REPAIR_FIXI,
+      .scheduler = &scheduler,
+      .next_in_main = &oldest};
   oldest.prev_in_main = &newer;
   intptr_t due_data = repair_event_payload_pack(
       (RepairEventPayload){.location = 4, .position = 1, .player = 11});
-  MuxEvent at_due = {.function = canonical_fix,
-                     .data = test_mech,
-                     .data2 = (void *)(intptr_t)due_data,
-                     .tick = scheduler.tick,
-                     .type = EVENT_REPAIR_FIX,
-                     .scheduler = &scheduler,
-                     .next_in_main = &newer};
+  MuxEvent at_due = {
+      .function = canonical_fix,
+      .data = test_mech,
+      .secondary = {.kind = MUX_EVENT_PAYLOAD_INTEGER, .integer = due_data},
+      .tick = scheduler.tick,
+      .type = EVENT_REPAIR_FIX,
+      .scheduler = &scheduler,
+      .next_in_main = &newer};
   newer.prev_in_main = &at_due;
   MuxEvent zombie = {.flags = FLAG_ZOMBIE,
                      .function = canonical_fix,

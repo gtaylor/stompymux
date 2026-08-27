@@ -244,6 +244,7 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
  *       Member in another chain (recursive check)       - terminate chain.
  *       Location of member is not specified location    - reset it.
  */
+// NOLINTNEXTLINE(misc-no-recursion): repair advances or removes a finite link.
 static void check_loc_exits(EvaluationContext *evaluation, DbRef loc,
                             bool full_check) {
   DbRef exit;
@@ -470,6 +471,7 @@ static void check_exit_chains(EvaluationContext *evaluation, bool full_check) {
 static void check_loc_contents(EvaluationContext *evaluation, DbRef loc,
                                bool full_check);
 
+// NOLINTNEXTLINE(misc-no-recursion): repair advances or removes a finite link.
 static void check_misplaced_obj(EvaluationContext *evaluation, DbRef *obj,
                                 DbRef back, DbRef loc, bool full_check) {
   /*
@@ -520,6 +522,7 @@ static void check_misplaced_obj(EvaluationContext *evaluation, DbRef *obj,
   }
 }
 
+// NOLINTNEXTLINE(misc-no-recursion): repair advances or removes a finite link.
 static void check_loc_contents(EvaluationContext *evaluation, DbRef loc,
                                bool full_check) {
   DbRef obj;
@@ -681,6 +684,7 @@ static void check_contents_chains(EvaluationContext *evaluation,
 /**
  * mark_place, check_floating: Look for floating rooms not set FLOATING.
  */
+// NOLINTNEXTLINE(misc-no-recursion)
 static void mark_place(GameDatabase *database, DbRef loc) {
   DbRef exit;
 

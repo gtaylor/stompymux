@@ -44,6 +44,7 @@ static void configuration_toml_resolve(const char *base_dir, const char *rel,
     (void)snprintf(out, out_size, "%s/%s", base_dir, rel);
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 static bool configuration_toml_load_merged(const char *path, int depth,
                                            toml_result_t *out, char *errbuf,
                                            size_t errbuf_size) {

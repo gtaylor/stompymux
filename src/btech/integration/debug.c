@@ -2,6 +2,7 @@
 
 #include "debug_api.h"
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -96,10 +97,9 @@ static DebugMemoryStat *debug_memory_stat(DebugMemoryContext *memory,
                             sizeof(*memory->stats), (size_t)type);
 }
 static bool debug_check_stuff(const RedBlackTreeVisitCall *call) {
-  void *key = call->key;
+  const DbRef KEY = (DbRef) * (const intptr_t *)call->key;
   void *data = call->data;
   void *arg = call->context;
-  const DbRef KEY_VAL = (DbRef)key;
   BtechSpecialObject *const XCODE_OBJ = data;
   DebugMemoryContext *memory = arg;
 
@@ -139,7 +139,7 @@ static bool debug_check_stuff(const RedBlackTreeVisitCall *call) {
   if (memory->detail_player > 0) {
     notify_printf(
         btech_context_evaluation(XCODE_OBJ->context), memory->detail_player,
-        "#%5ld: %10s %5ld", KEY_VAL, btech_special_object_type_name(TYPE),
+        "#%5ld: %10s %5ld", KEY, btech_special_object_type_name(TYPE),
         XCODE_OBJ->type == GTYPE_AUTO ? ((Autopilot *)XCODE_OBJ)->mymechnum
                                       : 0);
   }
@@ -204,7 +204,7 @@ void map_shutdown_units(const MapShutdownRequest *request) {
   int j;
 
   xcode_obj =
-      red_black_tree_find(context->special_objects, (void *)request->map);
+      red_black_tree_find_integer(context->special_objects, request->map);
   if (xcode_obj) {
     map = (BattleMap *)xcode_obj;
     for (j = 0; j < battle_map_unit_count(map); j++) {

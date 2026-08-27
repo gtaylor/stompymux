@@ -43,7 +43,7 @@ static const char *const DESCRIPTOR_DISCONNECT_MESSAGES[] = {
     "shutdown", "badlogin", "nologins", "gamefull"};
 
 /* Number of slots allocated when the descriptor registry first grows. */
-constexpr size_t DESCRIPTOR_REGISTRY_INITIAL_CAPACITY = 16;
+static constexpr size_t DESCRIPTOR_REGISTRY_INITIAL_CAPACITY = 16;
 
 /* Flat storage for every descriptor owned by the server event loop. */
 struct DescriptorRegistry {

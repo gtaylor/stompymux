@@ -138,7 +138,7 @@ static int mech_startup_step_delay(const Mech *mech) {
 
 static void mech_startup_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long timer = (long)e->data2;
+  long timer = (long)e->secondary.integer;
   BattleMap *mech_map;
   int unit_class = mech_class(mech);
   int movement_type = mech_movement_type(mech);

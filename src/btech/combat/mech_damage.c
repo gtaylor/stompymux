@@ -44,6 +44,7 @@
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
+// NOLINTNEXTLINE(misc-no-recursion): fixed unit/component counts bound cascade.
 void mech_damage_apply(const MechDamageRequest *request) {
   char message_buffer[LBUF_SIZE];
   Mech *wounded = request->target;

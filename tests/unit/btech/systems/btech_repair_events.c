@@ -136,7 +136,9 @@ static void reset_test_state(void) {
 static MuxEvent event_for(Mech *mech, MuxEventCallback callback,
                           intptr_t payload) {
   return (MuxEvent){
-      .data = mech, .data2 = (void *)payload, .function = callback};
+      .data = mech,
+      .secondary = {.kind = MUX_EVENT_PAYLOAD_INTEGER, .integer = payload},
+      .function = callback};
 }
 
 int min(int left, int right) { return left < right ? left : right; }
@@ -693,7 +695,7 @@ static bool test_gun_and_part_events(void) {
 
   reset_test_state();
   critical_type = special_equipment_index(HEAT_SINK);
-  remove_part.data2 = (void *)(intptr_t)repair_event_payload_pack(
+  remove_part.secondary.integer = repair_event_payload_pack(
       (RepairEventPayload){.location = 2, .position = 3, .extra = 1});
   mux_event_tickmech_removepart(&remove_part);
   if (destroy_count || added_parts_count)
@@ -701,7 +703,7 @@ static bool test_gun_and_part_events(void) {
 
   reset_test_state();
   critical_type = special_equipment_index(SPLIT_CRIT_RIGHT);
-  remove_part.data2 = (void *)(intptr_t)repair_event_payload_pack(
+  remove_part.secondary.integer = repair_event_payload_pack(
       (RepairEventPayload){.location = 2, .position = 3, .extra = 2});
   mux_event_tickmech_removepart(&remove_part);
   if (destroy_count || added_parts_count)
@@ -806,7 +808,7 @@ static bool test_reload_and_payload_validation(void) {
     return false;
 
   reset_test_state();
-  remove_section.data2 = (void *)(intptr_t)repair_event_payload_pack(
+  remove_section.secondary.integer = repair_event_payload_pack(
       (RepairEventPayload){.location = 2, .extra = 1});
   mux_event_tickmech_removesection(&remove_section);
   if (detach_count || added_parts_count)
@@ -826,7 +828,7 @@ static bool test_reload_and_payload_validation(void) {
   reset_test_state();
   critical_type = ammunition_equipment_index(2);
   critical_nonfunctional = false;
-  reload.data2 = (void *)(intptr_t)repair_event_payload_pack(
+  reload.secondary.integer = repair_event_payload_pack(
       (RepairEventPayload){.location = 2, .position = 3, .extra = 2});
   mux_event_tickmech_reload(&reload);
   if (filled_ammo_count != 0 || data_set_count != 1 || added_parts_count != 1)

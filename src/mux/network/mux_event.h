@@ -3,6 +3,8 @@
  */
 #pragma once
 
+#include <stdint.h>
+
 /* EVENT_DEBUG adds some useful debugging information to the structure
    / allows more diverse set of error messages to be shown. However,
    for a run-time version it's practically useless. */
@@ -10,8 +12,8 @@
 /* #undef EVENT_DEBUG */
 
 enum : int {
-  FLAG_FREE_DATA = 1,  /* Free the 1st data segment after execution */
-  FLAG_FREE_DATA2 = 2, /* Free the 2nd data segment after execution */
+  FLAG_FREE_DATA = 1,      /* Free the 1st data segment after execution */
+  FLAG_FREE_SECONDARY = 2, /* Free an owned secondary pointer payload */
   /* Exists there just because we're too lazy to search for it everywhere -
    * dud */
   FLAG_ZOMBIE = 4,
@@ -35,11 +37,29 @@ typedef struct MuxEvent MuxEvent;
 typedef struct MuxEventScheduler MuxEventScheduler;
 typedef struct MuxTimer MuxTimer;
 typedef void (*MuxEventCallback)(MuxEvent *event);
+
+/** Identifies the active member of a secondary event payload. */
+typedef enum MuxEventPayloadKind : unsigned char {
+  MUX_EVENT_PAYLOAD_NONE,
+  MUX_EVENT_PAYLOAD_POINTER,
+  MUX_EVENT_PAYLOAD_INTEGER,
+} MuxEventPayloadKind;
+
+/** Secondary event payload with explicit none/pointer/integer representation.
+ */
+typedef struct MuxEventPayload {
+  MuxEventPayloadKind kind;
+  union {
+    void *pointer;
+    intptr_t integer;
+  };
+} MuxEventPayload;
+
 struct MuxEvent {
   char flags;
   MuxEventCallback function;
   void *data;
-  void *data2;
+  MuxEventPayload secondary;
   int tick; /* The tick this baby was first scheduled to go off */
   char type;
   MuxEvent *next;
@@ -86,7 +106,7 @@ typedef struct MuxEventRequest {
   int type;
   MuxEventCallback callback;
   void *data;
-  void *secondary_data;
+  MuxEventPayload secondary;
 } MuxEventRequest;
 
 /** Adds mux event. @param[in] request Request. */
@@ -114,23 +134,25 @@ void mux_event_remove_data(MuxEventScheduler *scheduler, void *data);
 
 void mux_event_remove_type_data(MuxEventScheduler *scheduler, int type,
                                 void *data);
-/** Removes type data2 from mux event. @param[in,out] scheduler Event scheduler.
- * @param[in] type Type. @param[in,out] data Caller-provided data. */
+/** Marks events with a matching type and pointer payload for removal.
+ * @param[in,out] scheduler Event scheduler. @param[in] type Event type.
+ * @param[in] pointer Borrowed pointer payload to match. */
 
-void mux_event_remove_type_data2(MuxEventScheduler *scheduler, int type,
-                                 void *data);
-/** Removes type data data from mux event. @param[in,out] scheduler Event
- * scheduler. @param[in] type Type. @param[in,out] data Caller-provided data.
- * @param[in,out] data2 Data2. */
+void mux_event_remove_type_secondary_pointer(MuxEventScheduler *scheduler,
+                                             int type, const void *pointer);
+/** Marks events with matching type, primary data, and integer payload.
+ * @param[in,out] scheduler Event scheduler. @param[in] type Event type.
+ * @param[in] data Primary event data. @param[in] integer Integer payload. */
 
-void mux_event_remove_type_data_data(MuxEventScheduler *scheduler, int type,
-                                     void *data, void *data2);
-/** Returns type data from mux event. @param[in,out] scheduler Event scheduler.
- * @param[in] type Type. @param[in] data Caller-provided data. @param[in,out]
- * data2 Data2. */
+void mux_event_remove_type_data_integer(MuxEventScheduler *scheduler, int type,
+                                        const void *data, intptr_t integer);
+/** Gets the last matching event's integer payload.
+ * @param[in,out] scheduler Event scheduler. @param[in] type Event type.
+ * @param[in] data Primary event data.
+ * @param[out] secondary_integer Matching integer payload, if present. */
 
 void mux_event_get_type_data(MuxEventScheduler *scheduler, int type,
-                             const void *data, long *data2);
+                             const void *data, intptr_t *secondary_integer);
 /** Executes mux event count type. @param[in] scheduler Event scheduler.
  * @param[in] type Type. */
 
@@ -140,17 +162,18 @@ int mux_event_count_type(MuxEventScheduler *scheduler, int type);
 
 int mux_event_count_type_data(MuxEventScheduler *scheduler, int type,
                               const void *data);
-/** Executes mux event count type data2. @param[in,out] scheduler Event
- * scheduler. @param[in] type Type. @param[in,out] data Caller-provided data. */
+/** Counts events with a matching type and integer payload.
+ * @param[in] scheduler Event scheduler. @param[in] type Event type.
+ * @param[in] integer Integer payload. */
 
-int mux_event_count_type_data2(MuxEventScheduler *scheduler, int type,
-                               void *data);
-/** Executes mux event count type data data. @param[in,out] scheduler Event
- * scheduler. @param[in] type Type. @param[in] data Caller-provided data.
- * @param[in] data2 Data2. */
+int mux_event_count_type_secondary_integer(MuxEventScheduler *scheduler,
+                                           int type, intptr_t integer);
+/** Counts events with matching type, primary data, and integer payload.
+ * @param[in] scheduler Event scheduler. @param[in] type Event type.
+ * @param[in] data Primary event data. @param[in] integer Integer payload. */
 
-int mux_event_count_type_data_data(MuxEventScheduler *scheduler, int type,
-                                   const void *data, const void *data2);
+int mux_event_count_type_data_integer(MuxEventScheduler *scheduler, int type,
+                                      const void *data, intptr_t integer);
 /** Executes mux event count data. @param[in,out] scheduler Event scheduler.
  * @param[in] type Type. @param[in,out] data Caller-provided data. */
 

@@ -1,16 +1,14 @@
 /* numeric_hash_table.c - Numeric-keyed hash-table operations. */
 
+#include <stdint.h>
 #include <string.h>
 
-#include "mux/server/platform.h"
 #include "mux/support/hash_table.h"
 #include "mux/support/red_black_tree.h"
 
 static int nhrbtab_compare(const RedBlackTreeCompareCall *call) {
-  const void *left_key = call->lhs;
-  const void *right_key = call->rhs;
-  const DbRef LEFT = (DbRef)left_key;
-  const DbRef RIGHT = (DbRef)right_key;
+  const intptr_t LEFT = *(const intptr_t *)call->lhs;
+  const intptr_t RIGHT = *(const intptr_t *)call->rhs;
 
   return (RIGHT > LEFT) - (RIGHT < LEFT);
 }
@@ -43,7 +41,7 @@ void numeric_hash_table_reset(HashTable *htab) {
 
 void *numeric_hash_table_find(long val, HashTable *htab) {
   htab->checks++;
-  return red_black_tree_find(htab->tree, (void *)val);
+  return red_black_tree_find_integer(htab->tree, val);
 }
 
 /*
@@ -52,9 +50,9 @@ void *numeric_hash_table_find(long val, HashTable *htab) {
  */
 
 int numeric_hash_table_add(long val, void *hashdata, HashTable *htab) {
-  if (red_black_tree_exists(htab->tree, (void *)val))
+  if (red_black_tree_exists_integer(htab->tree, val))
     return (-1);
-  red_black_tree_insert(htab->tree, (void *)val, hashdata);
+  red_black_tree_insert_integer(htab->tree, val, hashdata);
   return 0;
 }
 
@@ -64,7 +62,7 @@ int numeric_hash_table_add(long val, void *hashdata, HashTable *htab) {
  */
 
 void numeric_hash_table_delete(long val, HashTable *htab) {
-  red_black_tree_delete(htab->tree, (void *)val);
+  red_black_tree_delete_integer(htab->tree, val);
 }
 
 /*
@@ -85,6 +83,6 @@ void numeric_hash_table_flush(HashTable *htab, int size [[maybe_unused]]) {
 
 bool numeric_hash_table_replace(long val, void *hashdata, HashTable *htab) {
 
-  red_black_tree_insert(htab->tree, (void *)val, hashdata);
+  red_black_tree_insert_integer(htab->tree, val, hashdata);
   return true;
 }

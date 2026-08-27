@@ -10,6 +10,7 @@
 #include "mux/server/runtime_clock.h" // IWYU pragma: keep
 /* Implements loading for BattleTech special objects. */
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <time.h>
 
@@ -50,7 +51,7 @@
 #include "mux/support/stringutil.h"
 #include "registry_internal.h"
 static bool remove_from_all_maps_func(const RedBlackTreeVisitCall *call) {
-  void *key = call->key;
+  const DbRef KEY = (DbRef) * (const intptr_t *)call->key;
   void *data = call->data;
   void *arg = call->context;
   BtechSpecialObject *const XCODE_OBJ = data;
@@ -60,7 +61,7 @@ static bool remove_from_all_maps_func(const RedBlackTreeVisitCall *call) {
     BattleMap *map;
     int i;
 
-    map = btech_context_get_map(mech_context(MECH), (DbRef)key);
+    map = btech_context_get_map(mech_context(MECH), KEY);
     if (!map)
       return true;
     for (i = 0; i < battle_map_unit_count(map); i++)
@@ -82,10 +83,9 @@ typedef struct RemoveFromAllMapsContext {
 
 static bool
 remove_from_all_maps_except_func(const RedBlackTreeVisitCall *call) {
-  void *key = call->key;
+  const DbRef KEY = (DbRef) * (const intptr_t *)call->key;
   void *data = call->data;
   void *arg = call->context;
-  DbRef key_val = (DbRef)key;
   BtechSpecialObject *const XCODE_OBJ = data;
   RemoveFromAllMapsContext *context = arg;
   Mech *const MECH = context->mech;
@@ -94,9 +94,9 @@ remove_from_all_maps_except_func(const RedBlackTreeVisitCall *call) {
     int i;
     BattleMap *map;
 
-    if (key_val == context->except_map)
+    if (KEY == context->except_map)
       return true;
-    map = btech_context_get_map(mech_context(MECH), key_val);
+    map = btech_context_get_map(mech_context(MECH), KEY);
     if (!map)
       return true;
     for (i = 0; i < battle_map_unit_count(map); i++)
@@ -296,7 +296,7 @@ void btech_special_objects_load(BtechContext *context) {
 }
 
 static bool update_special_object_func(const RedBlackTreeVisitCall *call) {
-  void *key = call->key;
+  const DbRef KEY = (DbRef) * (const intptr_t *)call->key;
   void *data = call->data;
   void *arg = call->context;
   BtechSpecialObject *const XCODE_OBJ = data;
@@ -308,7 +308,7 @@ static bool update_special_object_func(const RedBlackTreeVisitCall *call) {
     return true;
   if ((CONTEXT->clock->now % definition->update_time))
     return true;
-  definition->update((DbRef)key, XCODE_OBJ);
+  definition->update(KEY, XCODE_OBJ);
   return true;
 }
 

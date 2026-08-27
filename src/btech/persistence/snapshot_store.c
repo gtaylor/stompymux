@@ -39,7 +39,7 @@ static unsigned char stored_bits_byte(const unsigned char *row, int count,
 }
 
 bool btech_store_map(const RedBlackTreeVisitCall *call) {
-  void *key = call->key;
+  const DbRef KEY = (DbRef) * (const intptr_t *)call->key;
   void *data = call->data;
   int depth [[maybe_unused]] = call->depth;
   void *argument = call->context;
@@ -60,7 +60,7 @@ bool btech_store_map(const RedBlackTreeVisitCall *call) {
   if (context->result < 0 || xcode->type != GTYPE_MAP)
     return context->result == 0;
   map = (BattleMap *)xcode;
-  if (btech_special_bind_int(context->map, 1, (DbRef)key) < 0 ||
+  if (btech_special_bind_int(context->map, 1, KEY) < 0 ||
       sqlite3_bind_text(context->map, 2, map->mapname, -1, SQLITE_TRANSIENT) !=
           SQLITE_OK ||
       btech_special_bind_int(context->map, 3, map->map_width) < 0 ||
@@ -94,7 +94,7 @@ bool btech_store_map(const RedBlackTreeVisitCall *call) {
   }
   for (y = 0; context->result == 0 && y < map->map_height; y++) {
     for (x = 0; context->result == 0 && x < map->map_width; x++) {
-      if (btech_special_bind_int(context->hex, 1, (DbRef)key) < 0 ||
+      if (btech_special_bind_int(context->hex, 1, KEY) < 0 ||
           btech_special_bind_int(context->hex, 2, x) < 0 ||
           btech_special_bind_int(context->hex, 3, y) < 0 ||
           btech_special_bind_int(context->hex, 4,
@@ -104,7 +104,7 @@ bool btech_store_map(const RedBlackTreeVisitCall *call) {
     }
   }
   for (index = 0; context->result == 0 && index < map->first_free; index++) {
-    if (btech_special_bind_int(context->slot, 1, (DbRef)key) < 0 ||
+    if (btech_special_bind_int(context->slot, 1, KEY) < 0 ||
         btech_special_bind_int(context->slot, 2, index) < 0 ||
         btech_special_bind_int(context->slot, 3,
                                battle_map_unit_dbref(map, index)) < 0 ||
@@ -116,7 +116,7 @@ bool btech_store_map(const RedBlackTreeVisitCall *call) {
     }
     for (target = 0; context->result == 0 && target < map->first_free;
          target++) {
-      if (btech_special_bind_int(context->los, 1, (DbRef)key) < 0 ||
+      if (btech_special_bind_int(context->los, 1, KEY) < 0 ||
           btech_special_bind_int(context->los, 2, index) < 0 ||
           btech_special_bind_int(context->los, 3, target) < 0 ||
           btech_special_bind_int(
@@ -132,7 +132,7 @@ bool btech_store_map(const RedBlackTreeVisitCall *call) {
     ordinal = 0;
     for (object = first_mapobj(map, object_type);
          context->result == 0 && object; object = object->next, ordinal++) {
-      if (btech_special_bind_int(context->object, 1, (DbRef)key) < 0 ||
+      if (btech_special_bind_int(context->object, 1, KEY) < 0 ||
           btech_special_bind_int(context->object, 2, object_type) < 0 ||
           btech_special_bind_int(context->object, 3, ordinal) < 0 ||
           btech_special_bind_int(context->object, 4, object->x) < 0 ||
@@ -155,7 +155,7 @@ bool btech_store_map(const RedBlackTreeVisitCall *call) {
       if (!*row)
         continue;
       for (byte_index = 0; byte_index < bytes_per_row; byte_index++) {
-        if (btech_special_bind_int(context->bits, 1, (DbRef)key) < 0 ||
+        if (btech_special_bind_int(context->bits, 1, KEY) < 0 ||
             btech_special_bind_int(context->bits, 2, index) < 0 ||
             btech_special_bind_int(context->bits, 3, byte_index) < 0 ||
             btech_special_bind_int(
@@ -210,7 +210,7 @@ static void btech_store_repair_event(MuxEvent *event, void *context_argument) {
   DbRef mech_dbref_value = mech_dbref(mech);
   BtechRepairEventClassification classification =
       btech_special_repair_event_classify(
-          mech, context->type, (intptr_t)event->data2,
+          mech, context->type, event->secondary.integer,
           event->function == mech_event_failure_marker);
   if (classification == BTECH_REPAIR_EVENT_INVALID) {
     context->result = -1;
@@ -223,7 +223,7 @@ static void btech_store_repair_event(MuxEvent *event, void *context_argument) {
         context->events, context->event_count, index);
     if (stored->mech == mech && btech_special_repair_events_conflict(
                                     stored->event_type, stored->event_data,
-                                    context->type, (intptr_t)event->data2)) {
+                                    context->type, event->secondary.integer)) {
       context->result = -1;
       return;
     }
@@ -238,7 +238,7 @@ static void btech_store_repair_event(MuxEvent *event, void *context_argument) {
   *btech_stored_repair_event_at(context->events, context->event_count + 1,
                                 context->event_count) =
       (BtechStoredRepairEvent){.mech = mech,
-                               .event_data = (intptr_t)event->data2,
+                               .event_data = event->secondary.integer,
                                .event_type = context->type};
   context->event_count++;
   if (remaining < 1)
@@ -249,7 +249,7 @@ static void btech_store_repair_event(MuxEvent *event, void *context_argument) {
       btech_special_bind_int(context->statement, 2, context->type) < 0 ||
       btech_special_bind_int(context->statement, 3,
                              remaining < 0 ? -remaining : remaining) < 0 ||
-      btech_special_bind_int(context->statement, 4, (intptr_t)event->data2) <
+      btech_special_bind_int(context->statement, 4, event->secondary.integer) <
           0 ||
       btech_special_bind_int(context->statement, 5, remaining < 0) < 0 ||
       btech_special_write_step(context->fault, context->statement) < 0)

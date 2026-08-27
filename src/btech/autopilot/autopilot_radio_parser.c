@@ -5,7 +5,6 @@
 
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 
@@ -48,20 +47,16 @@ static void build_auto_reply(char *reply, const char *prefix,
 void auto_reply_event(MuxEvent *muxevent) {
 
   Mech *mech = (Mech *)muxevent->data;
-  char *buf = (char *)muxevent->data2;
+  char *buf = muxevent->secondary.pointer;
 
   /* Make sure its a mech */
-  if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech))) {
-    free(buf);
+  if (!btech_context_is_mech(mech_context(mech), mech_dbref(mech)))
     return;
-  }
 
   /* If valid object */
   if (mech)
     if (btech_context_get_map(mech_context(mech), mech_map_dbref(mech)))
       sendchannelstuff(mech, 0, buf);
-
-  free(buf);
 }
 
 /*
@@ -94,9 +89,9 @@ void auto_reply(Mech *mech, const char *buf) {
 
   if (reply) {
     // NOLINTNEXTLINE(clang-analyzer-unix.Malloc)
-    mech_event_schedule(mech, EVENT_AUTO_REPLY, auto_reply_event,
-                        (int)btech_random_range(mech_context(mech), 1, 2),
-                        (intptr_t)reply);
+    mech_event_schedule_owned_pointer(
+        mech, EVENT_AUTO_REPLY, auto_reply_event,
+        (int)btech_random_range(mech_context(mech), 1, 2), reply);
   } else {
     btech_channel_send(
         mech_context(mech), BTECH_CHANNEL_MECH_AI,

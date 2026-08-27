@@ -28,7 +28,7 @@ static constexpr int TAG_LONG = 15;
 
 static void tag_recycle_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long data = (long)e->data2;
+  long data = (long)e->secondary.integer;
   Mech *target;
 
   if (mech_tag_is_destroyed(mech))

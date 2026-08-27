@@ -42,7 +42,7 @@ static int mech_hull_down_change_delay(const Mech *mech) {
 }
 static void mech_hulldown_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long type = (long)e->data2;
+  long type = (long)e->secondary.integer;
 
   if (!mech_event_count(mech, EVENT_CHANGING_HULLDOWN))
     return;

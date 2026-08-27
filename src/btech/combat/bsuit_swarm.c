@@ -28,9 +28,9 @@
 #include "registry_api.h"
 #include "section_types.h"
 
-constexpr int RECYCLE_INT_STOPSWARM = PHYSICAL_RECYCLE_TIME / 3;
-constexpr int RECYCLE_UNINT_STOPSWARM = PHYSICAL_RECYCLE_TIME / 2;
-constexpr int RECYCLE_FALL_STOPSWARM = (PHYSICAL_RECYCLE_TIME / 4) * 3;
+static constexpr int RECYCLE_INT_STOPSWARM = PHYSICAL_RECYCLE_TIME / 3;
+static constexpr int RECYCLE_UNINT_STOPSWARM = PHYSICAL_RECYCLE_TIME / 2;
+static constexpr int RECYCLE_FALL_STOPSWARM = (PHYSICAL_RECYCLE_TIME / 4) * 3;
 
 const char *bsuit_formation_name(const Mech *mech) {
   return (mech_technology_flags(mech) & CLAN_TECH) ? "Point" : "Squad";

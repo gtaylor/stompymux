@@ -170,7 +170,7 @@ struct SensorSelection {
 
 static void sensor_selection_read(MuxEvent *event, void *data) {
   SensorSelection *selection = data;
-  const long ENCODED = (long)event->data2;
+  const long ENCODED = (long)event->secondary.integer;
   const long PRIMARY = ENCODED / NUM_SENSORS;
   const long SECONDARY = ENCODED % NUM_SENSORS;
 
@@ -222,7 +222,7 @@ static void show_sensor(DbRef player, Mech *mech, int verbose) {
 }
 
 static void mech_sensorchange_event(MuxEvent *e) {
-  const long D = (long)e->data2;
+  const long D = (long)e->secondary.integer;
   Mech *mech = (Mech *)e->data;
   const long PRIMARY = D / NUM_SENSORS;
   const long SECONDARY = D % NUM_SENSORS;

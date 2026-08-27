@@ -39,6 +39,7 @@ static bool mech_passes_cliff_check(Mech *mech, bool skid_cliff) {
 /*
  * Check to see what happens to the unit now that its entered a new hex
  */
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void mech_hex_entry_resolve(const MechHexEntryRequest *request) {
   Mech *mech = request->mech;
   BattleMap *mech_map = request->map;

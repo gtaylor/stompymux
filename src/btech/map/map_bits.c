@@ -9,8 +9,8 @@
 
 #include <stdlib.h>
 
-constexpr unsigned char BIT_MINE = 1;
-constexpr unsigned char BIT_HANGAR = 2;
+static constexpr unsigned char BIT_MINE = 1;
+static constexpr unsigned char BIT_HANGAR = 2;
 
 static size_t map_bits_byte_count(int hex_count) {
   if (hex_count < 0)

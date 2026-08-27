@@ -4,6 +4,7 @@
 
 #include <stddef.h> // IWYU pragma: keep
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "autopilot.h"
 #include "btech/context.h"
@@ -29,13 +30,14 @@ void btech_context_event_schedule(BtechContext *context, void *object, int type,
 void btech_context_owned_event_schedule(BtechContext *context, void *object,
                                         int type, MuxEventCallback callback,
                                         int delay, intptr_t data) {
-  mux_event_add(&(MuxEventRequest){.scheduler = context->events,
-                                   .delay = delay,
-                                   .flags = FLAG_FREE_DATA,
-                                   .type = type,
-                                   .callback = callback,
-                                   .data = object,
-                                   .secondary_data = (void *)data});
+  mux_event_add(&(MuxEventRequest){
+      .scheduler = context->events,
+      .delay = delay,
+      .flags = FLAG_FREE_DATA,
+      .type = type,
+      .callback = callback,
+      .data = object,
+      .secondary = {.kind = MUX_EVENT_PAYLOAD_INTEGER, .integer = data}});
 }
 
 void mech_event_schedule(Mech *mech, MechEventType type,
@@ -43,6 +45,26 @@ void mech_event_schedule(Mech *mech, MechEventType type,
   if (mech_dbref(mech) > 0) {
     btech_event_schedule(mech_context(mech)->events, mech, type, callback,
                          delay, data);
+  }
+}
+
+void mech_event_schedule_pointer(Mech *mech, MechEventType type,
+                                 MuxEventCallback callback, int delay,
+                                 void *pointer) {
+  if (mech_dbref(mech) > 0) {
+    btech_event_schedule_pointer(mech_context(mech)->events, mech, type,
+                                 callback, delay, pointer);
+  }
+}
+
+void mech_event_schedule_owned_pointer(Mech *mech, MechEventType type,
+                                       MuxEventCallback callback, int delay,
+                                       void *pointer) {
+  if (mech_dbref(mech) > 0) {
+    btech_event_schedule_owned_pointer(mech_context(mech)->events, mech, type,
+                                       callback, delay, pointer);
+  } else {
+    free(pointer);
   }
 }
 
@@ -57,6 +79,20 @@ void map_event_schedule(BattleMap *map, MechEventType type,
                         MuxEventCallback callback, int delay, intptr_t data) {
   btech_event_schedule(map->xcode.context->events, map, type, callback, delay,
                        data);
+}
+
+void map_event_schedule_pointer(BattleMap *map, MechEventType type,
+                                MuxEventCallback callback, int delay,
+                                void *pointer) {
+  btech_event_schedule_pointer(map->xcode.context->events, map, type, callback,
+                               delay, pointer);
+}
+
+void map_event_schedule_owned_pointer(BattleMap *map, MechEventType type,
+                                      MuxEventCallback callback, int delay,
+                                      void *pointer) {
+  btech_event_schedule_owned_pointer(map->xcode.context->events, map, type,
+                                     callback, delay, pointer);
 }
 
 int mech_event_count(const Mech *mech, MechEventType type) {

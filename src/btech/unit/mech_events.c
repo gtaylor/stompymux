@@ -161,7 +161,7 @@ void mech_standfail_event(MuxEvent *e) {
 
 void mech_fall_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long fallspeed = (long)e->data2;
+  long fallspeed = (long)e->secondary.integer;
   int fallen_elev;
 
   if (mech_is_started(mech) && fallspeed >= 0)
@@ -263,7 +263,7 @@ void mech_unconsciousness_extend(Mech *mech, int len) {
 
 void mech_lateral_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  intptr_t latmode = (intptr_t)e->data2;
+  intptr_t latmode = e->secondary.integer;
   const char *description;
   int offset;
 
@@ -461,7 +461,7 @@ void unstun_crew_event(MuxEvent *e) {
 void mech_unjam_ammo_event(MuxEvent *obj_event) {
   Mech *obj_mech = (Mech *)obj_event->data; /* get the mech */
   int w_weap_num =
-      clamp_intptr_to_int((intptr_t)obj_event->data2); /* weapon number */
+      clamp_intptr_to_int(obj_event->secondary.integer); /* weapon number */
   int w_sect;
   int w_slot;
   int w_weap_status;

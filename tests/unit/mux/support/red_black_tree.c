@@ -3,11 +3,17 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
 typedef struct WalkResult {
   int values[16];
   size_t count;
 } WalkResult;
+
+typedef struct IntegerReleaseResult {
+  intptr_t sum;
+  size_t count;
+} IntegerReleaseResult;
 
 static int *int_slot(int *values, size_t count, size_t index) {
   return checked_storage_at(values, count, sizeof(*values), index);
@@ -21,6 +27,12 @@ static int compare_ints(const RedBlackTreeCompareCall *call) {
   const int b = *(const int *)right;
 
   return (a > b) - (a < b);
+}
+
+static int compare_intptrs(const RedBlackTreeCompareCall *call) {
+  const intptr_t left = *(const intptr_t *)call->lhs;
+  const intptr_t right = *(const intptr_t *)call->rhs;
+  return (left > right) - (left < right);
 }
 
 static bool collect_walk(const RedBlackTreeVisitCall *call) {
@@ -41,6 +53,12 @@ static void count_release(const RedBlackTreeReleaseCall *call) {
   size_t *count = context;
 
   (*count)++;
+}
+
+static void collect_integer_release(const RedBlackTreeReleaseCall *call) {
+  IntegerReleaseResult *result = call->context;
+  result->sum += *(const intptr_t *)call->key;
+  result->count++;
 }
 
 static bool expect_value(RedBlackTree tree, int method, int *key,
@@ -124,6 +142,43 @@ int main(void) {
 
   tree = red_black_tree_init(compare_ints, nullptr);
   if (tree == nullptr)
+    return 1;
+  red_black_tree_destroy(tree);
+
+  int minimum = 1;
+  int zero = 2;
+  int maximum = 3;
+  int replacement_zero = 4;
+  IntegerReleaseResult integer_release = {};
+  tree = red_black_tree_init(compare_intptrs, nullptr);
+  if (tree == nullptr)
+    return 1;
+  red_black_tree_insert_integer(tree, INTPTR_MIN, &minimum);
+  red_black_tree_insert_integer(tree, 0, &zero);
+  red_black_tree_insert_integer(tree, INTPTR_MAX, &maximum);
+  red_black_tree_insert_integer(tree, 0, &replacement_zero);
+  if (red_black_tree_find_integer(tree, INTPTR_MIN) != &minimum ||
+      red_black_tree_find_integer(tree, 0) != &replacement_zero ||
+      red_black_tree_find_integer(tree, INTPTR_MAX) != &maximum ||
+      !red_black_tree_exists_integer(tree, INTPTR_MIN) ||
+      red_black_tree_size(tree) != 3 ||
+      red_black_tree_delete_integer(tree, 0) != &replacement_zero ||
+      red_black_tree_exists_integer(tree, 0))
+    return 1;
+  red_black_tree_release(tree, collect_integer_release, &integer_release);
+  if (integer_release.count != 2 || integer_release.sum != -1)
+    return 1;
+
+  tree = red_black_tree_init(compare_intptrs, nullptr);
+  if (tree == nullptr)
+    return 1;
+  red_black_tree_insert_integer(tree, 1, &minimum);
+  red_black_tree_insert_integer(tree, 2, &zero);
+  red_black_tree_insert_integer(tree, 3, &maximum);
+  if (red_black_tree_delete_integer(tree, 1) != &minimum ||
+      red_black_tree_delete_integer(tree, 2) != &zero ||
+      red_black_tree_delete_integer(tree, 3) != &maximum ||
+      red_black_tree_size(tree) != 0)
     return 1;
   red_black_tree_destroy(tree);
   return 0;

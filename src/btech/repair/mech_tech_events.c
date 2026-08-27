@@ -39,7 +39,7 @@ static bool repair_critical_location_valid(Mech *mech, int location,
 }
 
 static RepairEventPayload repair_event_payload(const MuxEvent *event) {
-  return repair_event_payload_unpack((intptr_t)event->data2);
+  return repair_event_payload_unpack(event->secondary.integer);
 }
 
 static bool completely_intact(Mech *mech) {

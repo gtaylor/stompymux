@@ -154,7 +154,7 @@ static int sixth_sense_tonnage_severity(int difference) {
 
 static void mech_ss_event(MuxEvent *ev) {
   Mech *mech = (Mech *)ev->data;
-  const int I = (int)(intptr_t)ev->data2;
+  const int I = (int)ev->secondary.integer;
 
   if (mech_pilot_is_unconscious(mech))
     return;

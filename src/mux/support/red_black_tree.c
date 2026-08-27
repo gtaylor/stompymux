@@ -1,5 +1,6 @@
 /* red_black_tree.c - Red-black tree ownership and ordered queries. */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -193,6 +194,10 @@ void *red_black_tree_find(RedBlackTree bt, const void *key) {
   exit(1);
 }
 
+void *red_black_tree_find_integer(RedBlackTree bt, intptr_t key) {
+  return red_black_tree_find(bt, &key);
+}
+
 bool red_black_tree_exists(RedBlackTree bt, const void *key) {
   RbtreeNode *node;
   int compare_result;
@@ -228,6 +233,10 @@ bool red_black_tree_exists(RedBlackTree bt, const void *key) {
   (void)fprintf(stderr,
                 "Serious fault in RedBlackTree.c:red_black_tree_exists!\n");
   exit(1);
+}
+
+bool red_black_tree_exists_integer(RedBlackTree bt, intptr_t key) {
+  return red_black_tree_exists(bt, &key);
 }
 
 bool red_black_tree_walk(RedBlackTree bt, int how, RedBlackTreeVisitor visitor,

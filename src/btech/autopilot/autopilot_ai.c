@@ -224,6 +224,7 @@ typedef struct AiPathScoreResult {
   int selected_option;
   int score;
 } AiPathScoreResult;
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
   AiPathContext *path = request->path;
   Mech *m = request->mech;

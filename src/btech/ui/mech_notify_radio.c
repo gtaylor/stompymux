@@ -271,6 +271,7 @@ static void scramble_message(const RadioScrambleRequest *request) {
   }
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 static void recursive_commlink(CommRelayContext *relay, int i, int dep) {
   int j;
 

@@ -48,7 +48,7 @@ static MechEventType tech_event_type_at(const MechEventType *values,
 
 static void tech_check_locpart(MuxEvent *e, void *data) {
   TechCheckContext *context = data;
-  intptr_t event_data = (intptr_t)e->data2;
+  intptr_t event_data = e->secondary.integer;
 
   RepairEventPayload payload = repair_event_payload_unpack(event_data);
   if (payload.location == context->location &&
@@ -58,7 +58,8 @@ static void tech_check_locpart(MuxEvent *e, void *data) {
 
 static void tech_check_loc(MuxEvent *e, void *data) {
   TechCheckContext *context = data;
-  RepairEventPayload payload = repair_event_payload_unpack((intptr_t)e->data2);
+  RepairEventPayload payload =
+      repair_event_payload_unpack(e->secondary.integer);
 
   if (payload.location == context->location)
     context->matches++;
@@ -68,7 +69,7 @@ static void tech_check_scrap_gun_footprint(MuxEvent *event, void *data) {
   TechCheckContext *context = data;
   Mech *mech = event->data;
   RepairEventPayload payload =
-      repair_event_payload_unpack((intptr_t)event->data2);
+      repair_event_payload_unpack(event->secondary.integer);
   if (payload.location == context->location) {
     context->matches++;
     return;

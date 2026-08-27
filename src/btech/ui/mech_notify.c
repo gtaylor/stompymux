@@ -372,6 +372,7 @@ void mech_fire_broadcast(Mech *mech, Mech *target, int x, int y,
   }
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void mech_notify(Mech *mech, MechNotifyAudience audience, const char *buffer) {
   int i;
 

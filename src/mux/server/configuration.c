@@ -29,8 +29,8 @@
 #include "mux/support/name_table.h"
 /* default (runtime-resettable) cache parameters */
 
-constexpr int CACHE_DEPTH = 10;
-constexpr int CACHE_WIDTH = 20;
+static constexpr int CACHE_DEPTH = 10;
+static constexpr int CACHE_WIDTH = 20;
 
 ServerConfiguration *server_configuration_create(void) {
   return checked_storage_try_allocate_array(1, sizeof(ServerConfiguration));

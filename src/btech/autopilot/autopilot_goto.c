@@ -308,7 +308,7 @@ void auto_astar_goto_event(MuxEvent *muxevent) {
   float range;
   int bearing;
 
-  long generate_path = (long)muxevent->data2;
+  long generate_path = (long)muxevent->secondary.integer;
 
   char *argument;
   AutopilotPathNode *temp_astar_node;

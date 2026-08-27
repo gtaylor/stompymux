@@ -51,7 +51,7 @@ static void mech_enter_event(MuxEvent *e) {
   BattleMap *map =
       btech_context_get_map(mech_context(mech), mech_map_dbref(mech));
   BattleMap *newmap;
-  const intptr_t TARGET_VALUE = (intptr_t)e->data2;
+  const intptr_t TARGET_VALUE = e->secondary.integer;
   char target;
   int x;
   int y;

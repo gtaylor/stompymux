@@ -325,11 +325,13 @@ void tech_removepart(DbRef player, Mech *facility, char *buffer) {
           .location = loc, .position = part, .extra = mod, .player = player}});
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 static bool invalid_scrap_dependency(Mech *mech, int location) {
   return (!mech_section_is_destroyed(mech, location) ||
           invalid_scrap_path(mech, location)) != 0;
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 bool invalid_scrap_path(Mech *mech, int loc) {
   if (loc < 0)
     return false;

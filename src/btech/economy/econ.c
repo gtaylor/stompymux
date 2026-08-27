@@ -11,6 +11,7 @@
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void economy_inventory_change(const EconomyInventoryChange *change) {
   BtechContext *context = change->context;
   const DbRef D = change->store;

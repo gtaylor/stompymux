@@ -191,8 +191,9 @@ int btech_special_write_step(BtechSpecialWriteContext *fault [[maybe_unused]],
 bool red_black_tree_walk(RedBlackTree tree [[maybe_unused]],
                          int how [[maybe_unused]], RedBlackTreeVisitor visitor,
                          void *context) {
+  intptr_t key = 3;
   return visitor(&(RedBlackTreeVisitCall){
-      .key = (void *)(intptr_t)3, .data = test_mech, .context = context});
+      .key = (void *)&key, .data = test_mech, .context = context});
 }
 void mux_event_add(const MuxEventRequest *request) {
   if (scheduled_count >= 16)
@@ -200,7 +201,7 @@ void mux_event_add(const MuxEventRequest *request) {
   *scheduled_request_at(scheduled_count) = (ScheduledRequest){
       .callback = request->callback,
       .data = request->data,
-      .event_data = (intptr_t)request->secondary_data,
+      .event_data = request->secondary.integer,
       .type = request->type,
       .delay = request->delay,
   };
@@ -548,12 +549,13 @@ static bool test_store_load_roundtrip(sqlite3 *sqlite) {
     return false;
   intptr_t event_data = repair_event_payload_pack(payload);
   test_scheduler.tick = 100;
-  MuxEvent event = {.function = mux_event_tickmech_repairarmor,
-                    .data = test_mech,
-                    .data2 = (void *)(intptr_t)event_data,
-                    .tick = 117,
-                    .type = EVENT_REPAIR_FIX,
-                    .scheduler = &test_scheduler};
+  MuxEvent event = {
+      .function = mux_event_tickmech_repairarmor,
+      .data = test_mech,
+      .secondary = {.kind = MUX_EVENT_PAYLOAD_INTEGER, .integer = event_data},
+      .tick = 117,
+      .type = EVENT_REPAIR_FIX,
+      .scheduler = &test_scheduler};
   test_scheduler.events = &event;
   sqlite3_stmt *insert = nullptr;
   if (sqlite3_prepare_v2(
@@ -603,7 +605,7 @@ static bool test_store_load_roundtrip(sqlite3 *sqlite) {
   section_flooded = true;
   event.type = EVENT_REPAIR_REPAG;
   event.function = mux_event_tickmech_repairgun;
-  event.data2 = (void *)(intptr_t)repair_event_payload_pack(
+  event.secondary.integer = repair_event_payload_pack(
       (RepairEventPayload){.location = 1, .position = 2});
   passed =
       passed &&
@@ -614,7 +616,7 @@ static bool test_store_load_roundtrip(sqlite3 *sqlite) {
   critical_type = EMPTY;
   event.type = EVENT_REPAIR_REPAP;
   event.function = mux_event_tickmech_repairpart;
-  event.data2 = (void *)(intptr_t)repair_event_payload_pack(
+  event.secondary.integer = repair_event_payload_pack(
       (RepairEventPayload){.location = 1, .position = 2});
   passed =
       passed &&
@@ -633,13 +635,12 @@ static bool test_store_load_roundtrip(sqlite3 *sqlite) {
   armor_value = 0;
   event.type = EVENT_REPAIR_FIX;
   event.function = mux_event_tickmech_repairarmor;
-  event.data2 = (void *)(intptr_t)event_data;
+  event.secondary.integer = event_data;
   RepairEventPayload duplicate_payload = {.location = 1, .player = 100};
   if (!repair_fix_event_payload_with_amount(&duplicate_payload, 1))
     return false;
   MuxEvent duplicate = event;
-  duplicate.data2 =
-      (void *)(intptr_t)repair_event_payload_pack(duplicate_payload);
+  duplicate.secondary.integer = repair_event_payload_pack(duplicate_payload);
   duplicate.tick = 120;
   duplicate.next_in_main = &event;
   event.prev_in_main = &duplicate;
@@ -655,7 +656,7 @@ static bool test_store_load_roundtrip(sqlite3 *sqlite) {
   /* Bad payload encoding still fails the snapshot rather than disappearing. */
   event.type = EVENT_REPAIR_FIX;
   event.function = mux_event_tickmech_repairarmor;
-  event.data2 = (void *)(intptr_t)-1;
+  event.secondary.integer = -1;
   int malformed_result =
       btech_special_store_repair_events(&fault, insert, test_context);
   passed = passed && malformed_result == -1 && repair_row_count(sqlite) == 0;

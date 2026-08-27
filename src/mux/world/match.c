@@ -569,6 +569,7 @@ DbRef last_match_result(MatchContext *match_context) {
   return match_context->match;
 }
 
+// NOLINTNEXTLINE(misc-no-recursion): matcher rejects possession cycles.
 DbRef match_status(EvaluationContext *evaluation, DbRef player, DbRef match) {
   switch (match) {
   case NOTHING:

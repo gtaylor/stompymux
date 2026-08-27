@@ -42,6 +42,7 @@
    further than LOOKAHEAD_STACK_SIZE in the future
    */
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -59,6 +60,18 @@ void mux_event_scheduler_set_loop(MuxEventScheduler *scheduler, UvLoopT *loop) {
   scheduler->loop = loop;
 }
 
+static void mux_event_release_owned_data(int flags, void *data,
+                                         MuxEventPayload secondary) {
+  if (flags & FLAG_FREE_DATA)
+    free(data);
+  if (flags & FLAG_FREE_SECONDARY) {
+    assert(secondary.kind == MUX_EVENT_PAYLOAD_POINTER);
+    if (secondary.kind == MUX_EVENT_PAYLOAD_POINTER &&
+        (!(flags & FLAG_FREE_DATA) || secondary.pointer != data))
+      free(secondary.pointer);
+  }
+}
+
 void mux_event_scheduler_destroy(MuxEventScheduler *scheduler) {
   MuxEvent *event;
   MuxEvent *next;
@@ -69,10 +82,7 @@ void mux_event_scheduler_destroy(MuxEventScheduler *scheduler) {
     next = event->next_in_main;
     mux_timer_destroy(event->timer);
     event->timer = nullptr;
-    if (event->flags & FLAG_FREE_DATA)
-      free(event->data);
-    if (event->flags & FLAG_FREE_DATA2)
-      free(event->data2);
+    mux_event_release_owned_data(event->flags, event->data, event->secondary);
     free(event);
   }
   for (event = scheduler->free_events; event != nullptr; event = next) {
@@ -178,12 +188,13 @@ void mux_event_add(const MuxEventRequest *request) {
   int type = request->type;
   MuxEventCallback func = request->callback;
   void *data = request->data;
-  void *data2 = request->secondary_data;
   MuxEvent *e = (MuxEvent *)0xDEADBEEF;
   int i;
 
-  if (type < 0)
+  if (type < 0) {
+    mux_event_release_owned_data(flags, data, request->secondary);
     return;
+  }
   if (time < 1)
     time = 1;
   /* Event type heads grow with the highest registered type. */
@@ -191,8 +202,10 @@ void mux_event_add(const MuxEventRequest *request) {
     int previous_last_type = scheduler->last_type;
     MuxEvent **heads = (MuxEvent **)checked_storage_try_reallocate_array(
         (void *)scheduler->first_by_type, (size_t)type + 1, sizeof(*heads));
-    if (heads == nullptr)
+    if (heads == nullptr) {
+      mux_event_release_owned_data(flags, data, request->secondary);
       return;
+    }
     scheduler->first_by_type = heads;
     scheduler->last_type = type;
     for (i = previous_last_type + 1; i <= type; i++)
@@ -203,15 +216,17 @@ void mux_event_add(const MuxEventRequest *request) {
     scheduler->free_events = scheduler->free_events->next;
   } else {
     e = checked_storage_try_allocate(sizeof(MuxEvent));
-    if (e == nullptr)
+    if (e == nullptr) {
+      mux_event_release_owned_data(flags, data, request->secondary);
       return;
+    }
     memset(e, 0, sizeof(MuxEvent));
   }
 
   e->flags = (char)flags;
   e->function = func;
   e->data = data;
-  e->data2 = data2;
+  e->secondary = request->secondary;
   e->type = (char)type;
   e->tick = scheduler->tick + time;
   e->scheduler = scheduler;
@@ -219,11 +234,13 @@ void mux_event_add(const MuxEventRequest *request) {
 
   e->timer = mux_timer_create(scheduler->loop, mux_event_wakeup, e);
   if (e->timer == nullptr) {
+    mux_event_release_owned_data(flags, data, request->secondary);
     free(e);
     return;
   }
   if (!mux_timer_start(e->timer, (uint64_t)time * 1000, 0)) {
     mux_timer_destroy(e->timer);
+    mux_event_release_owned_data(flags, data, request->secondary);
     free(e);
     return;
   }
@@ -239,10 +256,7 @@ static void mux_event_delete(MuxEvent *e) {
   mux_timer_destroy(e->timer);
   e->timer = nullptr;
 
-  if (e->flags & FLAG_FREE_DATA)
-    free(e->data);
-  if (e->flags & FLAG_FREE_DATA2)
-    free(e->data2);
+  mux_event_release_owned_data(e->flags, e->data, e->secondary);
 
   mux_event_main_list_remove(e);
   mux_event_type_list_remove(e);
@@ -302,34 +316,38 @@ void mux_event_remove_type_data(MuxEventScheduler *scheduler, int type,
     }
 }
 
-void mux_event_remove_type_data2(MuxEventScheduler *scheduler, int type,
-                                 void *data) {
+void mux_event_remove_type_secondary_pointer(MuxEventScheduler *scheduler,
+                                             int type, const void *pointer) {
   MuxEvent *e;
 
   if (type > scheduler->last_type)
     return;
   for (e = mux_event_type_head(scheduler, type); e; e = e->next_in_type)
-    if (e->data2 == data)
+    if (e->secondary.kind == MUX_EVENT_PAYLOAD_POINTER &&
+        e->secondary.pointer == pointer)
       e->flags |= FLAG_ZOMBIE;
 }
 
-void mux_event_remove_type_data_data(MuxEventScheduler *scheduler, int type,
-                                     void *data, void *data2) {
+void mux_event_remove_type_data_integer(MuxEventScheduler *scheduler, int type,
+                                        const void *data, intptr_t integer) {
   MuxEvent *e;
 
   if (type > scheduler->last_type)
     return;
   for (e = mux_event_type_head(scheduler, type); e; e = e->next_in_type)
-    if (e->data == data && e->data2 == data2)
+    if (e->data == data && e->secondary.kind == MUX_EVENT_PAYLOAD_INTEGER &&
+        e->secondary.integer == integer)
       e->flags |= FLAG_ZOMBIE;
 }
 
 /* return the args of the event */
 void mux_event_get_type_data(MuxEventScheduler *scheduler, int type,
-                             const void *data, long *data2) {
+                             const void *data, intptr_t *secondary_integer) {
   MuxEvent *e;
 
-  LOOP_TYPE(type, e) if (e->data == data) *data2 = (long)e->data2;
+  LOOP_TYPE(type, e)
+  if (e->data == data && e->secondary.kind == MUX_EVENT_PAYLOAD_INTEGER)
+    *secondary_integer = e->secondary.integer;
 }
 
 /* All the counting / other kinds of 'useless' functions */
@@ -354,25 +372,34 @@ int mux_event_count_type_data(MuxEventScheduler *scheduler, int type,
   return count;
 }
 
-int mux_event_count_type_data2(MuxEventScheduler *scheduler, int type,
-                               void *data) {
+// The public query API consistently accepts the event type before its matcher.
+// NOLINTBEGIN(bugprone-easily-swappable-parameters)
+int mux_event_count_type_secondary_integer(MuxEventScheduler *scheduler,
+                                           int type, intptr_t integer) {
   MuxEvent *e;
   int count = 0;
 
   if (type > scheduler->last_type)
     return count;
-  LOOP_TYPE(type, e) if (e->data2 == data) count++;
+  LOOP_TYPE(type, e)
+  if (e->secondary.kind == MUX_EVENT_PAYLOAD_INTEGER &&
+      e->secondary.integer == integer)
+    count++;
   return count;
 }
+// NOLINTEND(bugprone-easily-swappable-parameters)
 
-int mux_event_count_type_data_data(MuxEventScheduler *scheduler, int type,
-                                   const void *data, const void *data2) {
+int mux_event_count_type_data_integer(MuxEventScheduler *scheduler, int type,
+                                      const void *data, intptr_t integer) {
   MuxEvent *e;
   int count = 0;
 
   if (type > scheduler->last_type)
     return count;
-  LOOP_TYPE(type, e) if (e->data == data && e->data2 == data2) count++;
+  LOOP_TYPE(type, e)
+  if (e->data == data && e->secondary.kind == MUX_EVENT_PAYLOAD_INTEGER &&
+      e->secondary.integer == integer)
+    count++;
   return count;
 }
 
@@ -446,6 +473,9 @@ long mux_event_count_type_data_firstev(MuxEventScheduler *scheduler, int type,
 
   if (type > scheduler->last_type)
     return -1;
-  LOOP_TYPE(type, e) if (e->data == data) { return (long)(e->data2); }
+  LOOP_TYPE(type, e)
+  if (e->data == data && e->secondary.kind == MUX_EVENT_PAYLOAD_INTEGER) {
+    return (long)e->secondary.integer;
+  }
   return -1;
 }

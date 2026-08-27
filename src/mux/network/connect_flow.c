@@ -52,7 +52,7 @@ static constexpr char CREATE_FAILURE[] =
     "Either there is already a player with that name, or that name is "
     "illegal.\r\n";
 
-constexpr int LOGIN_THROTTLE_ENTRIES = 1024;
+static constexpr int LOGIN_THROTTLE_ENTRIES = 1024;
 
 typedef struct LoginThrottleEntry LoginThrottleEntry;
 struct LoginThrottleEntry {

@@ -16,7 +16,7 @@
 #include "mux/support/name_table.h"
 #include "mux/support/stringutil.h"
 
-constexpr size_t NAME_TABLE_MAX_ENTRIES = 1024;
+static constexpr size_t NAME_TABLE_MAX_ENTRIES = 1024;
 
 static bool name_table_is_sentinel(const void *element) {
   return ((const NameTable *)element)->name == nullptr;

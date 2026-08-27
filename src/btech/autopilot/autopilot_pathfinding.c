@@ -30,8 +30,6 @@ static short autopilot_map_coordinate(int coordinate) {
   return (short)coordinate;
 }
 
-static void *astar_key(int value) { return (void *)(intptr_t)value; }
-
 typedef struct AutopilotHexBitSet {
   unsigned char bytes[(MAPX * MAPY) / 8];
 } AutopilotHexBitSet;
@@ -107,10 +105,8 @@ auto_create_astar_node(const AutopilotPathNodeRequest *request) {
  * Returns 1 if it found a path and 0 if it doesn't
  */
 static int astar_compare(const RedBlackTreeCompareCall *call) {
-  const void *left_key = call->lhs;
-  const void *right_key = call->rhs;
-  const intptr_t LEFT = (intptr_t)left_key;
-  const intptr_t RIGHT = (intptr_t)right_key;
+  const intptr_t LEFT = *(const intptr_t *)call->lhs;
+  const intptr_t RIGHT = *(const intptr_t *)call->rhs;
 
   return (LEFT > RIGHT) - (LEFT < RIGHT);
 }
@@ -193,10 +189,10 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
   }
 
   /* Add start hex to open list */
-  red_black_tree_insert(open_list_by_score, astar_key(temp_astar_node->f_score),
-                        temp_astar_node);
-  red_black_tree_insert(open_list_by_xy, astar_key(temp_astar_node->hexoffset),
-                        temp_astar_node);
+  red_black_tree_insert_integer(open_list_by_score, temp_astar_node->f_score,
+                                temp_astar_node);
+  red_black_tree_insert_integer(open_list_by_xy, temp_astar_node->hexoffset,
+                                temp_astar_node);
   autopilot_hex_bit_set(open_list_bitfield, temp_astar_node->hexoffset, true);
 
   /* Now loop till we find path */
@@ -212,16 +208,16 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
     parent_astar_node = (AutopilotPathNode *)red_black_tree_search(
         open_list_by_score, SEARCH_FIRST, nullptr);
 
-    red_black_tree_delete(open_list_by_score,
-                          astar_key(parent_astar_node->f_score));
-    red_black_tree_delete(open_list_by_xy,
-                          astar_key(parent_astar_node->hexoffset));
+    red_black_tree_delete_integer(open_list_by_score,
+                                  parent_astar_node->f_score);
+    red_black_tree_delete_integer(open_list_by_xy,
+                                  parent_astar_node->hexoffset);
     autopilot_hex_bit_set(open_list_bitfield, parent_astar_node->hexoffset,
                           false);
 
     /* Add it to the closed list */
-    red_black_tree_insert(closed_list, astar_key(parent_astar_node->hexoffset),
-                          parent_astar_node);
+    red_black_tree_insert_integer(closed_list, parent_astar_node->hexoffset,
+                                  parent_astar_node);
     autopilot_hex_bit_set(closed_list_bitfield, parent_astar_node->hexoffset,
                           true);
 
@@ -320,8 +316,8 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
          * and change stuff */
 
         /* Get the node off the open_list */
-        temp_astar_node = (AutopilotPathNode *)red_black_tree_find(
-            open_list_by_xy, astar_key(hexoffset));
+        temp_astar_node =
+            red_black_tree_find_integer(open_list_by_xy, hexoffset);
 
         /* Now compare the 'g_scores' to determine shortest path */
         /* If g_score is lower, this means better path
@@ -329,10 +325,10 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
         if (child_g_score < temp_astar_node->g_score) {
 
           /* Remove from open list */
-          red_black_tree_delete(open_list_by_score,
-                                astar_key(temp_astar_node->f_score));
-          red_black_tree_delete(open_list_by_xy,
-                                astar_key(temp_astar_node->hexoffset));
+          red_black_tree_delete_integer(open_list_by_score,
+                                        temp_astar_node->f_score);
+          red_black_tree_delete_integer(open_list_by_xy,
+                                        temp_astar_node->hexoffset);
           autopilot_hex_bit_set(open_list_bitfield, temp_astar_node->hexoffset,
                                 false);
 
@@ -376,20 +372,18 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
        * then those found later */
       while (1) {
 
-        if (red_black_tree_exists(open_list_by_score,
-                                  astar_key(temp_astar_node->f_score))) {
+        if (red_black_tree_exists_integer(open_list_by_score,
+                                          temp_astar_node->f_score)) {
           temp_astar_node->f_score++;
 
         } else {
           break;
         }
       }
-      red_black_tree_insert(open_list_by_score,
-                            astar_key(temp_astar_node->f_score),
-                            temp_astar_node);
-      red_black_tree_insert(open_list_by_xy,
-                            astar_key(temp_astar_node->hexoffset),
-                            temp_astar_node);
+      red_black_tree_insert_integer(open_list_by_score,
+                                    temp_astar_node->f_score, temp_astar_node);
+      red_black_tree_insert_integer(open_list_by_xy, temp_astar_node->hexoffset,
+                                    temp_astar_node);
       autopilot_hex_bit_set(open_list_bitfield, temp_astar_node->hexoffset,
                             true);
 
@@ -410,14 +404,14 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
 
     /* Get end hex from closed list */
     hexoffset = autopilot_hex_offset(end_x, end_y);
-    temp_astar_node = red_black_tree_find(closed_list, astar_key(hexoffset));
+    temp_astar_node = red_black_tree_find_integer(closed_list, hexoffset);
 
     /* Add end hex to path list */
     astar_path_node = doubly_linked_list_create_node(temp_astar_node);
     doubly_linked_list_insert_beginning(autopilot->astar_path, astar_path_node);
 
     /* Remove it from closed list */
-    red_black_tree_delete(closed_list, astar_key(temp_astar_node->hexoffset));
+    red_black_tree_delete_integer(closed_list, temp_astar_node->hexoffset);
 
     /* Check if the end hex is the start hex */
     if (!(temp_astar_node->x == mech_position_x(mech) &&
@@ -437,8 +431,7 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
          * looking for some how did not end up on the list} */
 
         /* Get Parent Node from closed list */
-        parent_astar_node =
-            red_black_tree_find(closed_list, astar_key(hexoffset));
+        parent_astar_node = red_black_tree_find_integer(closed_list, hexoffset);
 
         /* Check if start hex */
         /* If start hex quit */
@@ -453,8 +446,8 @@ int auto_astar_generate_path(Autopilot *autopilot, Mech *mech, int end_x,
                                             astar_path_node);
 
         /* Remove from closed list */
-        red_black_tree_delete(closed_list,
-                              astar_key(parent_astar_node->hexoffset));
+        red_black_tree_delete_integer(closed_list,
+                                      parent_astar_node->hexoffset);
 
         /* Make parent new child */
         temp_astar_node = parent_astar_node;

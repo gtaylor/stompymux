@@ -8,10 +8,10 @@
 #include "mux/network/telnet_environment.h"
 #include "mux/support/checked_storage.h"
 
-constexpr size_t TELNET_ENVIRONMENT_MAX_ENTRIES = 64;
-constexpr size_t TELNET_ENVIRONMENT_MAX_NAME_SIZE = 256;
-constexpr size_t TELNET_ENVIRONMENT_MAX_VALUE_SIZE = 4096;
-constexpr size_t TELNET_ENVIRONMENT_MAX_TOTAL_SIZE = 65536;
+static constexpr size_t TELNET_ENVIRONMENT_MAX_ENTRIES = 64;
+static constexpr size_t TELNET_ENVIRONMENT_MAX_NAME_SIZE = 256;
+static constexpr size_t TELNET_ENVIRONMENT_MAX_VALUE_SIZE = 4096;
+static constexpr size_t TELNET_ENVIRONMENT_MAX_TOTAL_SIZE = 65536;
 
 typedef struct TelnetEnvironmentEntry {
   TelnetEnvironmentKind kind;

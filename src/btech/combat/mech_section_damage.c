@@ -46,6 +46,7 @@
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 
+// NOLINTNEXTLINE(misc-no-recursion): fixed critical-slot count bounds cascade.
 void mech_weapon_destroy(const WeaponDestructionRequest *request) {
   Mech *wounded = request->mech;
   int hitloc = request->first.section;
@@ -197,6 +198,7 @@ void mech_heat_sink_destroy(Mech *mech, int hitloc) {
   }
 }
 
+// NOLINTNEXTLINE(misc-no-recursion): fixed section count bounds cascade.
 void mech_section_destroy(const SectionDestructionRequest *request) {
   Mech *wounded = request->wounded;
   Mech *attacker = request->attacker;

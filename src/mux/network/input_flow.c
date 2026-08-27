@@ -19,7 +19,7 @@
 #include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 
-constexpr int FLOW_MAX_GOTO_CHAIN = 32;
+static constexpr int FLOW_MAX_GOTO_CHAIN = 32;
 
 struct InputFlow {
   FlowStepFn step_fn;

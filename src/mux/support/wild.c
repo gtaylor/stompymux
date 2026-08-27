@@ -92,95 +92,45 @@ static void wild_capture_character(const WildCharacterCapture *capture_call) {
 bool quick_wild(const char *tstr, const char *dstr) {
   WildCursor pattern = wild_cursor(tstr);
   WildCursor data = wild_cursor(dstr);
-
-  while (wild_cursor_current(&pattern) != '*') {
-    switch (wild_cursor_current(&pattern)) {
-    case '?':
-      /*
-       * Single character match.  Return false if at * end
-       * * * * of data.
-       */
-      if (!wild_cursor_current(&data))
-        return false;
-      break;
-    case '\\':
-      /*
-       * Escape character.  Move up, and force literal * *
-       * * * match of next character.
-       */
-      wild_cursor_advance(&pattern);
-      /*
-       * FALL THROUGH
-       */
-      [[fallthrough]];
-    default:
-      /*
-       * Literal character.  Check for a match. * If * * *
-       * matching end of data, return true.
-       */
-      if (is_notequal(wild_cursor_current(&data),
-                      wild_cursor_current(&pattern)))
-        return false;
-      if (!wild_cursor_current(&data))
-        return true;
-    }
-    wild_cursor_advance(&pattern);
-    wild_cursor_advance(&data);
-  }
-
-  /*
-   * Skip over '*'.
-   */
-
-  wild_cursor_advance(&pattern);
-
-  /*
-   * Return true on trailing '*'.
-   */
-
-  if (!wild_cursor_current(&pattern))
-    return true;
-
-  /*
-   * Skip over wildcards.
-   */
-
-  while (wild_cursor_current(&pattern) == '?' ||
-         wild_cursor_current(&pattern) == '*') {
-    if (wild_cursor_current(&pattern) == '?') {
-      if (!wild_cursor_current(&data))
-        return false;
-      wild_cursor_advance(&data);
-    }
-    wild_cursor_advance(&pattern);
-  }
-
-  /*
-   * Skip over a backslash in the pattern string if it is there.
-   */
-
-  if (wild_cursor_current(&pattern) == '\\')
-    wild_cursor_advance(&pattern);
-
-  /*
-   * Return true on trailing '*'.
-   */
-
-  if (!wild_cursor_current(&pattern))
-    return true;
-
-  /*
-   * Scan for possible matches.
-   */
+  WildCursor star_pattern = {};
+  WildCursor star_data = {};
+  bool has_star = false;
 
   while (wild_cursor_current(&data)) {
-    if (is_equal(wild_cursor_current(&data), wild_cursor_current(&pattern)) &&
-        quick_wild(wild_cursor_suffix(&pattern, 1),
-                   wild_cursor_suffix(&data, 1)))
-      return true;
-    wild_cursor_advance(&data);
+    char pattern_character = wild_cursor_current(&pattern);
+    if (pattern_character == '*') {
+      wild_cursor_advance(&pattern);
+      star_pattern = pattern;
+      star_data = data;
+      has_star = true;
+      continue;
+    }
+
+    WildCursor next_pattern = pattern;
+    if (pattern_character == '\\') {
+      wild_cursor_advance(&next_pattern);
+      pattern_character = wild_cursor_current(&next_pattern);
+    }
+    if (pattern_character == '?' ||
+        is_equal(pattern_character, wild_cursor_current(&data))) {
+      wild_cursor_advance(&next_pattern);
+      pattern = next_pattern;
+      wild_cursor_advance(&data);
+      continue;
+    }
+
+    if (!has_star)
+      return false;
+    wild_cursor_advance(&star_data);
+    data = star_data;
+    pattern = star_pattern;
   }
-  return false;
+
+  while (wild_cursor_current(&pattern) == '*')
+    wild_cursor_advance(&pattern);
+  if (wild_cursor_current(&pattern) == '\\')
+    wild_cursor_advance(&pattern);
+  return wild_cursor_current(&pattern) == '\0';
 }
 
 /**
@@ -191,13 +141,19 @@ bool quick_wild(const char *tstr, const char *dstr) {
  *
  * Captures are stored in the stack-owned context supplied by wild().
  */
+static constexpr size_t WILD_CAPTURE_MAX_DEPTH = 64;
+
+// NOLINTNEXTLINE(misc-no-recursion): bounded by WILD_CAPTURE_MAX_DEPTH.
 static bool wild1(WildcardContext *context, const char *tstr, const char *dstr,
-                  int arg) {
+                  int arg, size_t depth) {
   WildCursor pattern = wild_cursor(tstr);
   WildCursor data = wild_cursor(dstr);
   size_t data_capture_offset;
   int argpos;
   int numextra;
+
+  if (depth > WILD_CAPTURE_MAX_DEPTH)
+    return false;
 
   while (wild_cursor_current(&pattern) != '*') {
     switch (wild_cursor_current(&pattern)) {
@@ -366,7 +322,7 @@ static bool wild1(WildcardContext *context, const char *tstr, const char *dstr,
     if (!wild_cursor_current(&data) ||
         ((arg < context->argument_count)
              ? wild1(context, wild_cursor_suffix(&pattern, 1),
-                     wild_cursor_suffix(&data, 1), arg)
+                     wild_cursor_suffix(&data, 1), arg, depth + 1)
              : quick_wild(wild_cursor_suffix(&pattern, 1),
                           wild_cursor_suffix(&data, 1)))) {
 
@@ -485,7 +441,7 @@ bool wild(const char *tstr, const char *dstr, char *args[], int nargs) {
    */
 
   value = ((nargs ? wild1(&context, wild_cursor_suffix(&pattern, 0),
-                          wild_cursor_suffix(&data, 0), 0)
+                          wild_cursor_suffix(&data, 0), 0, 0)
                   : quick_wild(wild_cursor_suffix(&pattern, 0),
                                wild_cursor_suffix(&data, 0))) != 0);
 

@@ -23,7 +23,7 @@
 /* The LOGFILE_TIMEOUT field describes how long a mux should keep an idle
  * open. LOGFILE_TIMEOUT seconds after the last write, it will close. The
  * timer is reset on each write. */
-constexpr int LOGFILE_TIMEOUT = 300; // Five Minutes
+static constexpr int LOGFILE_TIMEOUT = 300; // Five Minutes
 
 struct LogfileT {
   LogCache *cache;

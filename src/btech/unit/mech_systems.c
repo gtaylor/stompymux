@@ -124,6 +124,7 @@ bool is_mech_leg_less(Mech *obj_mech) {
   return false;
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 int mech_weapon_first_critical(const WeaponCriticalSearch *search) {
   Mech *obj_mech = search->mech;
   const int W_LOC = search->weapon.section;

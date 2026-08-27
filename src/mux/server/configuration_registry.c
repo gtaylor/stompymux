@@ -4,8 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "mux/commands/command.h" // IWYU pragma: keep
-#include "mux/commands/command_internal.h"
+#include "mux/commands/command.h"     // IWYU pragma: keep
 #include "mux/objects/flags.h"        // IWYU pragma: keep
 #include "mux/server/configuration.h" // IWYU pragma: keep
 #include "mux/server/configuration_catalog.h"
@@ -27,7 +26,7 @@
    sizeof(WorldIndexes) + offsetof(AccessControlStore, member) + 1)
 
 static const ConfigurationEntry CONFIGURATION_ENTRY_TEMPLATES[] = {
-    {"access", cf_access, CA_GOD, 0, (intptr_t)ACCESS_NAMETAB},
+    {"access", cf_access, CA_GOD, 0, CONFIGURATION_NAMETAB_ACCESS},
     {"alias", cf_cmd_alias, CA_GOD, COMMAND_LOC(commands), 0},
     {"bad_name", cf_badname, CA_GOD, 0, 0},
     {"badsite_file", cf_string, CA_DISABLED, CONFIG_LOC(site_file), 32},
@@ -157,7 +156,7 @@ static const ConfigurationEntry CONFIGURATION_ENTRY_TEMPLATES[] = {
     {"command_quota_increment", cf_int, CA_GOD,
      CONFIG_LOC(command_quota_increment), 0},
     {"command_quota_max", cf_int, CA_GOD, CONFIG_LOC(command_quota_max), 0},
-    {"config_access", cf_cf_access, CA_GOD, 0, (intptr_t)ACCESS_NAMETAB},
+    {"config_access", cf_cf_access, CA_GOD, 0, CONFIGURATION_NAMETAB_ACCESS},
     {"conn_timeout", cf_int, CA_GOD, CONFIG_LOC(conn_timeout), 0},
     {"connect_dir", cf_string, CA_DISABLED, CONFIG_LOC(conn_dir), 32},
     {"connect_file", cf_string, CA_DISABLED, CONFIG_LOC(conn_file), 32},
@@ -185,7 +184,7 @@ static const ConfigurationEntry CONFIGURATION_ENTRY_TEMPLATES[] = {
     {"idle_timeout", cf_int, CA_GOD, CONFIG_LOC(idle_timeout), 0},
     {"initial_size", cf_int, CA_DISABLED, CONFIG_LOC(init_size), 0},
     {"list_access", cf_ntab_access, CA_GOD, CONFIGURATION_LIST_NAMES_LOCATION,
-     (intptr_t)ACCESS_NAMETAB},
+     CONFIGURATION_NAMETAB_ACCESS},
     {"lua_directory", cf_string, CA_GOD, CONFIG_LOC(lua.directory),
      sizeof(((ServerConfiguration *)nullptr)->lua.directory)},
     {"lua_memory_limit", cf_int, CA_GOD, CONFIG_LOC(lua.memory_limit), 0},
@@ -220,7 +219,7 @@ static const ConfigurationEntry CONFIGURATION_ENTRY_TEMPLATES[] = {
     {"startup", cf_bool_bit, CA_GOD, CONFIG_LOC(log_options), LOG_STARTUP},
     {"wizard", cf_bool_bit, CA_GOD, CONFIG_LOC(log_options), LOG_WIZARD},
     {"log_options", configuration_modify_bits, CA_GOD, CONFIG_LOC(log_info),
-     (intptr_t)LOGDATA_NAMETAB},
+     CONFIGURATION_NAMETAB_LOGDATA},
     {"map_database", cf_string, CA_GOD, CONFIG_LOC(database.map_db),
      sizeof(((ServerConfiguration *)nullptr)->database.map_db)},
     {"default_thing_lua_parent", cf_string, CA_GOD,

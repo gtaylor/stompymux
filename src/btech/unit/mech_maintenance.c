@@ -593,6 +593,7 @@ void mark_for_los_update(Mech *mech) {
   battle_map_unit_moved_set(mech_map, mech_map_slot(mech));
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 void multi_weapon_select(const MultiWeaponSelectionRequest *request) {
   Mech *mech = request->mech;
   const DbRef PLAYER = request->actor;

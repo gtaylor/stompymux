@@ -45,6 +45,7 @@ struct BtechContext {
   HashTable *special_commands;
   size_t special_command_count;
   HashTable *player_value_hashes;
+  int *character_value_indices;
   char **char_value_short_names;
   size_t char_value_count;
   BtechCharacterValueSettings character_values;

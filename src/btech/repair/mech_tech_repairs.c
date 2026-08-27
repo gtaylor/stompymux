@@ -75,7 +75,7 @@ static void describe_repairs(MuxEvent *e, void *menu_context) {
   CoolMenu **menu = (CoolMenu **)menu_context;
   int type = (unsigned char)e->type;
   Mech *mech = (Mech *)e->data;
-  intptr_t encoded = (intptr_t)e->data2;
+  intptr_t encoded = e->secondary.integer;
   char buf[MBUF_SIZE] = {0};
   char buf2[LBUF_SIZE] = {0};
   bool fail = (e->function == mech_event_failure_marker) != 0;

@@ -32,7 +32,7 @@
 
 static void mech_self_destruct_event(MuxEvent *event) {
   Mech *mech = event->data;
-  long extra = (long)event->data2;
+  long extra = (long)event->secondary.integer;
 
   if (mech_is_destroyed(mech) || !mech_is_started(mech))
     return;

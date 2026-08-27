@@ -639,6 +639,7 @@ static void configuration_toml_dispatch(const ConfigTomlMapping *m,
  * Tree walking.
  */
 
+// NOLINTNEXTLINE(misc-no-recursion)
 static void configuration_toml_walk_table(toml_datum_t table,
                                           const char *parent_path, bool is_root,
                                           ConfigDirectiveSetFn set_fn,

@@ -23,13 +23,37 @@ void mech_event_failure_marker(MuxEvent *event);
 
 void mech_event_schedule(Mech *mech, MechEventType type,
                          MuxEventCallback callback, int delay, intptr_t data);
+/** Schedules a mech event carrying a borrowed pointer payload. */
+void mech_event_schedule_pointer(Mech *mech, MechEventType type,
+                                 MuxEventCallback callback, int delay,
+                                 void *pointer);
+/** Schedules a mech event that takes ownership of its pointer payload. */
+void mech_event_schedule_owned_pointer(Mech *mech, MechEventType type,
+                                       MuxEventCallback callback, int delay,
+                                       void *pointer);
 void autopilot_event_schedule(Autopilot *autopilot, MechEventType type,
                               MuxEventCallback callback, int delay,
                               intptr_t data);
 void map_event_schedule(BattleMap *map, MechEventType type,
                         MuxEventCallback callback, int delay, intptr_t data);
+/** Schedules a map event carrying a borrowed pointer payload. */
+void map_event_schedule_pointer(BattleMap *map, MechEventType type,
+                                MuxEventCallback callback, int delay,
+                                void *pointer);
+/** Schedules a map event that takes ownership of its pointer payload. */
+void map_event_schedule_owned_pointer(BattleMap *map, MechEventType type,
+                                      MuxEventCallback callback, int delay,
+                                      void *pointer);
 void btech_event_schedule(MuxEventScheduler *events, void *object, int type,
                           MuxEventCallback callback, int delay, intptr_t data);
+/** Schedules a BTech event carrying a borrowed pointer payload. */
+void btech_event_schedule_pointer(MuxEventScheduler *events, void *object,
+                                  int type, MuxEventCallback callback,
+                                  int delay, void *pointer);
+/** Schedules an event that takes ownership of its pointer payload. */
+void btech_event_schedule_owned_pointer(MuxEventScheduler *events, void *object,
+                                        int type, MuxEventCallback callback,
+                                        int delay, void *pointer);
 void btech_context_event_schedule(BtechContext *context, void *object, int type,
                                   MuxEventCallback callback, int delay,
                                   intptr_t data);

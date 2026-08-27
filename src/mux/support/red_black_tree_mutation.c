@@ -1,5 +1,6 @@
 /* red_black_tree_mutation.c - Red-black tree insertion and deletion. */
 
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +18,7 @@ typedef struct RedBlackTreeNodeAllocation {
   RbtreeNode *parent;
   void *key;
   void *data;
+  bool key_is_integer;
 } RedBlackTreeNodeAllocation;
 
 static RbtreeNode *
@@ -27,8 +29,14 @@ red_black_tree_allocate(const RedBlackTreeNodeAllocation *allocation) {
     red_black_tree_fail("unable to allocate a node");
   memset(temp, 0, sizeof(struct RedBlackTreeNode));
   temp->parent = allocation->parent;
-  temp->key = allocation->key;
   temp->data = allocation->data;
+  temp->key_is_integer = allocation->key_is_integer;
+  if (allocation->key_is_integer) {
+    temp->integer_key = *(const intptr_t *)allocation->key;
+    temp->key = &temp->integer_key;
+  } else {
+    temp->key = allocation->key;
+  }
   temp->count = 1;
   return temp;
 }
@@ -95,14 +103,15 @@ static void red_black_tree_rotate_left(RedBlackTree bt, RbtreeNode *pivot) {
                  (pivot->right ? pivot->right->count : 0);
 }
 
-void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
+static void red_black_tree_insert_internal(RedBlackTree bt, void *key,
+                                           void *data, bool key_is_integer) {
   RbtreeNode *node;
   RbtreeNode *iter;
   int compare_result;
 
   if (!bt->head) {
-    bt->head = red_black_tree_allocate(
-        &(RedBlackTreeNodeAllocation){.key = key, .data = data});
+    bt->head = red_black_tree_allocate(&(RedBlackTreeNodeAllocation){
+        .key = key, .data = data, .key_is_integer = key_is_integer});
     bt->size++;
     bt->head->color = RED_BLACK_TREE_BLACK;
     return;
@@ -117,8 +126,14 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
     });
     if (compare_result == 0) {
       // Key already exists, replace data.
-      node->key = key;
       node->data = data;
+      node->key_is_integer = key_is_integer;
+      if (key_is_integer) {
+        node->integer_key = *(const intptr_t *)key;
+        node->key = &node->integer_key;
+      } else {
+        node->key = key;
+      }
       return;
     }
     if (compare_result < 0) {
@@ -126,8 +141,11 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
       if (node->left != nullptr) {
         node = node->left;
       } else {
-        node->left = red_black_tree_allocate(&(RedBlackTreeNodeAllocation){
-            .parent = node, .key = key, .data = data});
+        node->left = red_black_tree_allocate(
+            &(RedBlackTreeNodeAllocation){.parent = node,
+                                          .key = key,
+                                          .data = data,
+                                          .key_is_integer = key_is_integer});
         bt->size++;
         node = node->left;
         break;
@@ -136,8 +154,11 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
       if (node->right != nullptr) {
         node = node->right;
       } else {
-        node->right = red_black_tree_allocate(&(RedBlackTreeNodeAllocation){
-            .parent = node, .key = key, .data = data});
+        node->right = red_black_tree_allocate(
+            &(RedBlackTreeNodeAllocation){.parent = node,
+                                          .key = key,
+                                          .data = data,
+                                          .key_is_integer = key_is_integer});
         bt->size++;
         node = node->right;
         break;
@@ -219,6 +240,14 @@ void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
     }
   }
   bt->head->color = RED_BLACK_TREE_BLACK;
+}
+
+void red_black_tree_insert(RedBlackTree bt, void *key, void *data) {
+  red_black_tree_insert_internal(bt, key, data, false);
+}
+
+void red_black_tree_insert_integer(RedBlackTree bt, intptr_t key, void *data) {
+  red_black_tree_insert_internal(bt, &key, data, true);
 }
 
 static void red_black_tree_unlink_leaf(RedBlackTree bt, RbtreeNode *leaf) {
@@ -506,10 +535,20 @@ void *red_black_tree_delete(RedBlackTree bt, const void *key) {
   red_black_tree_unlink_leaf(bt, child);
 
   node->data = child->data;
-  node->key = child->key;
+  node->key_is_integer = child->key_is_integer;
+  if (child->key_is_integer) {
+    node->integer_key = child->integer_key;
+    node->key = &node->integer_key;
+  } else {
+    node->key = child->key;
+  }
 
   // XXX: finish delete
 
   free(child);
   return data;
+}
+
+void *red_black_tree_delete_integer(RedBlackTree bt, intptr_t key) {
+  return red_black_tree_delete(bt, &key);
 }

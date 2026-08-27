@@ -4,13 +4,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <lua.h>
 
-#include "mux/lua/packages/btech/btech_package.h"
 #include "mux/lua/lua_error.h"
 #include "mux/lua/lua_internal.h"
 #include "mux/lua/lua_test_runner.h"
+#include "mux/lua/packages/btech/btech_package.h"
 #include "mux/lua/packages/mux/mux_package.h"
 #include "mux/lua/packages/mux/mux_package_internal.h"
 #include "mux/server/platform.h"
@@ -66,6 +67,7 @@ int main(int argc, char *argv[]) {
   LuaServices services = {.configuration = &configuration};
   LuaTestRunResult *result;
   char directory[PATH_MAX];
+  char symlink_path[PATH_MAX];
   const char *game_directory;
   int status = 1;
 
@@ -85,6 +87,12 @@ int main(int argc, char *argv[]) {
   result = checked_storage_try_allocate_array(1, sizeof(*result));
   if (!result)
     return 2;
+  if (snprintf(symlink_path, sizeof(symlink_path), "%s/tests/recursive-link",
+               directory) >= (int)sizeof(symlink_path) ||
+      symlink(".", symlink_path) < 0) {
+    free(result);
+    return 2;
+  }
   if (!lua_tests_run(
           &(LuaTestRunRequest){.services = &services, .run_unit = true},
           result))
@@ -125,6 +133,7 @@ int main(int argc, char *argv[]) {
     goto done;
   status = 0;
 done:
+  (void)unlink(symlink_path);
   free(result);
   return status;
 }

@@ -54,7 +54,7 @@ void mech_inferno_burn(Mech *mech, int time) {
 
 static void vehicle_burn_event(MuxEvent *obj_event) {
   Mech *obj_mech = (Mech *)obj_event->data; /* get the mech */
-  const int W_LOC = (int)(intptr_t)obj_event->data2;
+  const int W_LOC = (int)obj_event->secondary.integer;
   int w_dam_roll;
   char str_loc_name[30];
 

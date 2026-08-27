@@ -24,6 +24,8 @@
 #include "mux/support/array_sort.h"
 #include "mux/support/checked_storage.h"
 
+static constexpr size_t LUA_MODULE_MAX_DEPTH = 64;
+
 static char **lua_module_slot(char **modules, size_t capacity, size_t index) {
   return (char **)checked_storage_at((void *)modules, capacity,
                                      sizeof(*modules), index);
@@ -121,13 +123,22 @@ static bool lua_add_module(char ***modules, size_t *module_count,
   return true;
 }
 
-bool lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
-                         const char *relative, char ***modules,
-                         size_t *module_count, char *error, size_t error_size) {
+// NOLINTNEXTLINE(misc-no-recursion): bounded by LUA_MODULE_MAX_DEPTH.
+static bool lua_collect_modules_at_depth(LuaRuntime *runtime,
+                                         LuaModuleRoot root,
+                                         const char *relative, char ***modules,
+                                         size_t *module_count, char *error,
+                                         size_t error_size, size_t depth) {
   char directory[PATH_MAX];
   DIR *stream;
   struct dirent *entry;
 
+  if (depth > LUA_MODULE_MAX_DEPTH) {
+    lua_set_error(error, error_size,
+                  "Lua module directory nesting exceeds %zu at '%s'",
+                  LUA_MODULE_MAX_DEPTH, relative);
+    return false;
+  }
   if (relative[0]) {
     if (!lua_join_path(directory, sizeof(directory),
                        lua_runtime_root(runtime, root), relative)) {
@@ -169,11 +180,12 @@ bool lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
       closedir(stream);
       return false;
     }
-    if (stat(child_path, &status) < 0)
+    if (lstat(child_path, &status) < 0)
       continue;
     if (S_ISDIR(status.st_mode)) {
-      if (!lua_collect_modules(runtime, root, child_relative, modules,
-                               module_count, error, error_size)) {
+      if (!lua_collect_modules_at_depth(runtime, root, child_relative, modules,
+                                        module_count, error, error_size,
+                                        depth + 1)) {
         closedir(stream);
         return false;
       }
@@ -192,6 +204,13 @@ bool lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
   }
   closedir(stream);
   return true;
+}
+
+bool lua_collect_modules(LuaRuntime *runtime, LuaModuleRoot root,
+                         const char *relative, char ***modules,
+                         size_t *module_count, char *error, size_t error_size) {
+  return lua_collect_modules_at_depth(runtime, root, relative, modules,
+                                      module_count, error, error_size, 0);
 }
 
 static bool lua_collect_global_modules(LuaRuntime *runtime,

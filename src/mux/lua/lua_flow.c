@@ -21,8 +21,8 @@
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 
-constexpr int LUA_FLOW_MAX_FIELDS = 16;
-constexpr int LUA_FLOW_KEY_SIZE = 32;
+static constexpr int LUA_FLOW_MAX_FIELDS = 16;
+static constexpr int LUA_FLOW_KEY_SIZE = 32;
 
 typedef struct LuaFlowField {
   char key[LUA_FLOW_KEY_SIZE];

@@ -171,7 +171,7 @@ void mech_angeleccm(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
 
 static void mech_searchlight_change_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long w_type = (long)e->data2;
+  long w_type = (long)e->secondary.integer;
 
   if (mech_condition_summary(mech).searchlight_destroyed)
     return;
@@ -238,7 +238,7 @@ void mech_slite(DbRef player, Mech *mech, char *buffer [[maybe_unused]]) {
 
 static void mech_stealth_armor_change_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long w_type = (long)e->data2;
+  long w_type = (long)e->secondary.integer;
 
   if (!mech_is_started(mech))
     return;
@@ -304,7 +304,7 @@ void mech_stealtharmor(DbRef player, Mech *mech,
 
 static void mech_null_signature_change_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
-  long w_type = (long)e->data2;
+  long w_type = (long)e->secondary.integer;
 
   if (!mech_is_started(mech))
     return;

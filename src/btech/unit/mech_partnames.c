@@ -31,22 +31,13 @@
 
 void list_hashstat(DbRef player, const char *tab_name, HashTable *htab);
 
-/* Main idea:
-   Keep 2 sorted tables, one of shortform -> index
-   longform  -> index
-   vlongform -> index
-   Other
-   index -> {short,long,vlong} form
-
-   Index = ID + NUM_ITEMS * brand
- */
-
 struct PartNameRegistry {
   PartNameEntry *index_sorted[BRANDCOUNT + 1][NUM_ITEMS];
   PartNameEntry **short_sorted;
   PartNameEntry **long_sorted;
   PartNameEntry **vlong_sorted;
   int object_count;
+  int *sorted_indices;
   HashTable short_hash;
   HashTable vlong_hash;
 };
@@ -65,6 +56,12 @@ static PartNameEntry **part_index_slot(PartNameRegistry *registry, int brand,
   return (PartNameEntry **)checked_storage_at(
       registry->index_sorted, ((size_t)BRANDCOUNT + 1U) * (size_t)NUM_ITEMS,
       sizeof(PartNameEntry *), index);
+}
+
+static int *part_sorted_index_slot(PartNameRegistry *registry, int index) {
+  return checked_storage_at(registry->sorted_indices,
+                            (size_t)registry->object_count,
+                            sizeof(*registry->sorted_indices), (size_t)index);
 }
 
 static PartNameEntry *part_index_entry(PartNameRegistry *registry, int brand,
@@ -246,14 +243,19 @@ void initialize_partname_tables(BtechContext *context) {
                                 part_index_entry(registry, m, n));
   hash_table_initialize(&registry->short_hash, 20 * HASH_FACTOR);
   hash_table_initialize(&registry->vlong_hash, 20 * HASH_FACTOR);
+  registry->sorted_indices = checked_storage_allocate_array(
+      (size_t)c, sizeof(*registry->sorted_indices));
   for (i = 0; i < c; i++) {
+    *part_sorted_index_slot(registry, i) = i + 1;
     PartNameEntry *entry =
         sorted_entry(registry->short_sorted, (size_t)c, (size_t)i);
     lowercase_name(tmpbuf, entry->shorty);
-    hash_table_add(tmpbuf, (void *)(intptr_t)(i + 1), &registry->short_hash);
+    hash_table_add(tmpbuf, part_sorted_index_slot(registry, i),
+                   &registry->short_hash);
 
     lowercase_name(tmpbuf, entry->vlongy);
-    hash_table_add(tmpbuf, (void *)(intptr_t)(i + 1), &registry->vlong_hash);
+    hash_table_add(tmpbuf, part_sorted_index_slot(registry, i),
+                   &registry->vlong_hash);
   }
   free_buf(tmpbuf);
 }
@@ -301,19 +303,19 @@ static PartMatchResult part_match_exact(const PartMatchRequest *request,
   PartNameRegistry *registry = request->context->part_names;
   PartNameEntry *p;
   char tmpbuf[MBUF_SIZE];
-  void *match;
+  int *match;
 
   if (request->cursor >= 0)
     return (PartMatchResult){};
   lowercase_name(tmpbuf, request->pattern);
   match = hash_table_find(tmpbuf, table);
   if (match) {
-    intptr_t match_index = (intptr_t)match;
+    const int MATCH_INDEX = *match;
     p = sorted_entry(entries, (size_t)registry->object_count,
-                     (size_t)(match_index - 1));
+                     (size_t)(MATCH_INDEX - 1));
     if (p)
       return (PartMatchResult){.found = true,
-                               .cursor = clamp_intptr_to_int(match_index),
+                               .cursor = MATCH_INDEX,
                                .part = {.id = packed_part_id(p->index),
                                         .brand = packed_part_brand(p->index)}};
   }
@@ -777,6 +779,7 @@ void destroy_partname_tables(BtechContext *context) {
     return;
   hash_table_destroy(&registry->short_hash);
   hash_table_destroy(&registry->vlong_hash);
+  free(registry->sorted_indices);
   for (int brand = 0; brand <= BRANDCOUNT; brand++) {
     for (int id = 0; id < NUM_ITEMS; id++) {
       PartNameEntry *part_name = part_index_entry(registry, brand, id);

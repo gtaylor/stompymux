@@ -233,7 +233,7 @@ static void mech_enterbay_event(MuxEvent *e) {
   Mech *mech = (Mech *)e->data;
   Mech *ds;
   Mech *tmpm = nullptr;
-  DbRef ref = (DbRef)(intptr_t)e->data2;
+  DbRef ref = (DbRef)e->secondary.integer;
   int bayn;
   int x = 5;
   int y = 5;

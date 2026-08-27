@@ -351,7 +351,7 @@ void auto_astar_roam_event(MuxEvent *muxevent) {
   float range;
   int bearing;
   int roam_hex_attempt;
-  long generate_path = (long)muxevent->data2;
+  long generate_path = (long)muxevent->secondary.integer;
 
   AutopilotPathNode *temp_astar_node;
 

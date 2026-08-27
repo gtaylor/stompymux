@@ -82,6 +82,12 @@ static HashTable *character_value_hash(BtechContext *context, size_t index) {
                             sizeof(*context->player_value_hashes), index);
 }
 
+static int *character_value_index_slot(BtechContext *context, size_t index) {
+  return checked_storage_at(context->character_value_indices,
+                            context->char_value_count,
+                            sizeof(*context->character_value_indices), index);
+}
+
 static char **character_short_name_slot(BtechContext *context, int code) {
   return (char **)checked_storage_at(
       (void *)context->char_value_short_names, context->char_value_count,
@@ -285,7 +291,7 @@ int char_getvaluecode(BtechContext *context, const char *name) {
   if (!ip)
     ip = hash_table_find(tmpbuf, character_value_hash(context, 1));
   free_buf(tmpbuf);
-  return (int)(intptr_t)ip - 1;
+  return ip != nullptr ? *ip - 1 : -1;
 }
 
 /********************/
@@ -649,17 +655,21 @@ void init_btechstats(BtechContext *context) {
       2, sizeof(*context->player_value_hashes));
   context->char_value_short_names = (char **)checked_storage_try_allocate_array(
       NUM_CHARVALUES, sizeof(*context->char_value_short_names));
+  context->character_value_indices = checked_storage_try_allocate_array(
+      NUM_CHARVALUES, sizeof(*context->character_value_indices));
   if (context->player_value_hashes == nullptr ||
-      context->char_value_short_names == nullptr)
+      context->char_value_short_names == nullptr ||
+      context->character_value_indices == nullptr)
     exit(EXIT_FAILURE);
   context->char_value_count = NUM_CHARVALUES;
   hash_table_initialize(character_value_hash(context, 0), 20 * HASH_FACTOR);
   hash_table_initialize(character_value_hash(context, 1), 20 * HASH_FACTOR);
   tmpbuf = alloc_sbuf("getvaluecode");
   for (int i = 0; i < NUM_CHARVALUES; i++) {
+    *character_value_index_slot(context, (size_t)i) = i + 1;
     const char *name = character_value_definition(i)->name;
     lowercase_copy(tmpbuf, SBUF_SIZE, name);
-    hash_table_add(tmpbuf, (int *)(intptr_t)(i + 1),
+    hash_table_add(tmpbuf, character_value_index_slot(context, (size_t)i),
                    character_value_hash(context, 0));
     *(char *)checked_storage_at(tmpbuf, SBUF_SIZE, sizeof(char), 0) = '\0';
     const size_t NAME_LENGTH = strlen(name);
@@ -677,7 +687,7 @@ void init_btechstats(BtechContext *context) {
     }
     *character_short_name_slot(context, i) = strdup(tmpbuf);
     lowercase_copy(tmpbuf, SBUF_SIZE, tmpbuf);
-    hash_table_add(tmpbuf, (int *)(intptr_t)(i + 1),
+    hash_table_add(tmpbuf, character_value_index_slot(context, (size_t)i),
                    character_value_hash(context, 1));
   }
   free_buf(tmpbuf);
@@ -697,6 +707,8 @@ void btech_stats_destroy(BtechContext *context) {
     free(*character_short_name_slot(context, (int)i));
   free((void *)context->char_value_short_names);
   context->char_value_short_names = nullptr;
+  free(context->character_value_indices);
+  context->character_value_indices = nullptr;
   context->char_value_count = 0;
   context->cached_target_character = -1;
 }

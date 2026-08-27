@@ -44,8 +44,8 @@ struct SignalHandlers {
   int closing_count;
 };
 
-constexpr size_t ALT_STACK_SIZE = 0x40000;
-constexpr size_t ALT_STACK_ALIGN = 0x1000;
+static constexpr size_t ALT_STACK_SIZE = 0x40000;
+static constexpr size_t ALT_STACK_ALIGN = 0x1000;
 
 SignalHandlers *signal_handlers_create(uv_loop_t *loop,
                                        ServerControl *control) {

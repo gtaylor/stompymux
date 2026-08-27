@@ -115,10 +115,8 @@ static void cque_free_entry(BQUE *entry) {
 }
 
 static int objqe_compare(const RedBlackTreeCompareCall *call) {
-  const void *left_key = call->lhs;
-  const void *right_key = call->rhs;
-  const DbRef LEFT = (DbRef)left_key;
-  const DbRef RIGHT = (DbRef)right_key;
+  const intptr_t LEFT = *(const intptr_t *)call->lhs;
+  const intptr_t RIGHT = *(const intptr_t *)call->rhs;
 
   return (RIGHT > LEFT) - (RIGHT < LEFT);
 }
@@ -135,7 +133,7 @@ static OBJQE *cque_find(CommandQueue *queue, DbRef player) {
     cque_init(queue);
   }
 
-  tmp = red_black_tree_find(queue->object_queues, (void *)player);
+  tmp = red_black_tree_find_integer(queue->object_queues, player);
 
   if (!tmp && is_good_obj(queue->world->database, player)) {
     tmp = checked_storage_allocate(sizeof(OBJQE));
@@ -146,7 +144,7 @@ static OBJQE *cque_find(CommandQueue *queue, DbRef player) {
     tmp->queued = 0;
     tmp->wait_que = nullptr;
     tmp->pending_que = nullptr;
-    red_black_tree_insert(queue->object_queues, (void *)player, tmp);
+    red_black_tree_insert_integer(queue->object_queues, player, tmp);
   }
 
   return tmp;

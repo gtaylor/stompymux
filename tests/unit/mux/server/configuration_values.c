@@ -3,11 +3,40 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "mux/commands/command_internal.h"
 #include "mux/server/configuration.h"
 #include "mux/server/configuration_internal.h"
+#include "mux/server/log.h"
 #include "mux/server/platform.h"
+#include "mux/support/name_table.h"
 
 static char syntax_expectation[128];
+static bool name_table_error_logged;
+
+const NameTable ACCESS_NAMETAB[] = {{}};
+const NameTable LOGDATA_NAMETAB[] = {{}};
+
+void configuration_log_not_found(ConfigurationContext *context [[maybe_unused]],
+                                 DbRef player [[maybe_unused]],
+                                 const char *command [[maybe_unused]],
+                                 const char *thing_name [[maybe_unused]],
+                                 const char *thing [[maybe_unused]]) {
+  name_table_error_logged = true;
+}
+
+int name_table_search(GameDatabase *database [[maybe_unused]],
+                      const ServerConfiguration *configuration [[maybe_unused]],
+                      DbRef player [[maybe_unused]],
+                      const NameTable *table [[maybe_unused]],
+                      char *flag_name [[maybe_unused]]) {
+  return 0;
+}
+
+int configuration_status_from_counts(const ConfigurationCall *call
+                                     [[maybe_unused]],
+                                     ConfigurationParseCounts counts) {
+  return counts.success > 0 ? (counts.failure > 0 ? 1 : 0) : -1;
+}
 
 void configuration_log_syntax(ConfigurationContext *context [[maybe_unused]],
                               DbRef player [[maybe_unused]],
@@ -42,9 +71,20 @@ static int check_limit(const char *text, int expected_result,
 }
 
 int main(void) {
+  ConfigurationContext context = {};
+  int bits = 0;
+  char text[] = "flags";
+  ConfigurationCall invalid_table = {.context = &context,
+                                     .value = &bits,
+                                     .text = text,
+                                     .command = "test",
+                                     .extra = 0};
+
   return check_limit("2", 0, 2) < 0 || check_limit("255", 0, 255) < 0 ||
                  check_limit("0", -1, 30) < 0 || check_limit("1", -1, 30) < 0 ||
-                 check_limit("256", -1, 30) < 0
+                 check_limit("256", -1, 30) < 0 ||
+                 configuration_modify_bits(&invalid_table) != -1 ||
+                 !name_table_error_logged || bits != 0
              ? 1
              : 0;
 }

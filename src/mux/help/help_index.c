@@ -33,6 +33,8 @@ struct HelpIndex {
   char *root_directory;
 };
 
+static constexpr size_t HELP_DIRECTORY_MAX_DEPTH = 64;
+
 static HelpArticle *help_article_slot(HelpArticleVector *vector, size_t index) {
   return checked_storage_at(vector->items, vector->capacity,
                             sizeof(*vector->items), index);
@@ -336,17 +338,35 @@ static void help_index_process_file(const HelpFileProcessRequest *request) {
   free(content);
 }
 
+// NOLINTNEXTLINE(misc-no-recursion): bounded by HELP_DIRECTORY_MAX_DEPTH.
 static void help_index_walk_directory(EvaluationContext *evaluation,
                                       HelpIndex *index,
                                       const char *absolute_dir,
                                       const char *relative_prefix, DbRef player,
-                                      int *error_count) {
+                                      int *error_count, size_t depth) {
   DIR *stream;
   struct dirent *entry;
   char **entry_names = nullptr;
   size_t name_count = 0;
   size_t name_capacity = 0;
   size_t i;
+
+  if (depth > HELP_DIRECTORY_MAX_DEPTH) {
+    if (index->log != nullptr) {
+      log_error((LogEntry){.log = index->log,
+                           .key = LOG_PROBLEMS,
+                           .primary = "HLP",
+                           .secondary = "DEPTH"},
+                "help directory nesting exceeds %zu at '%s'",
+                HELP_DIRECTORY_MAX_DEPTH, absolute_dir);
+    }
+    if (player != NOTHING)
+      notify_printf(evaluation, player,
+                    "Help index error: directory nesting exceeds %zu at '%s'",
+                    HELP_DIRECTORY_MAX_DEPTH, absolute_dir);
+    (*error_count)++;
+    return;
+  }
 
   stream = opendir(absolute_dir);
   if (!stream) {
@@ -407,10 +427,11 @@ static void help_index_walk_directory(EvaluationContext *evaluation,
       (*error_count)++;
       continue;
     }
-    if (stat(absolute_child, &status) == 0) {
+    if (lstat(absolute_child, &status) == 0) {
       if (S_ISDIR(status.st_mode)) {
         help_index_walk_directory(evaluation, index, absolute_child,
-                                  relative_child, player, error_count);
+                                  relative_child, player, error_count,
+                                  depth + 1);
       } else if (S_ISREG(status.st_mode)) {
         size_t name_length = strlen(entry_name);
 
@@ -535,7 +556,7 @@ static void help_index_rebuild(EvaluationContext *evaluation, HelpIndex *index,
 
   help_index_reset(index);
   help_index_walk_directory(evaluation, index, index->root_directory, "",
-                            player, &error_count);
+                            player, &error_count, 0);
   help_index_build_keywords(evaluation, index, player, &warning_count);
 
   for (i = 0; i < index->articles.count; i++) {

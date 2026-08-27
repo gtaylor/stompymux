@@ -405,6 +405,7 @@ void mech_eta(DbRef player, Mech *mech, char *buffer) {
   }
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 float mech_cargo_maximum_speed(Mech *mech, float mspeed) {
   int lugged = 0;
   int mod = 2;

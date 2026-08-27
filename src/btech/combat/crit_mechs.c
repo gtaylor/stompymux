@@ -50,6 +50,7 @@
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 bool mech_critical_effect_apply(const CriticalEffectRequest *request) {
   Mech *wounded = request->wounded;
   Mech *attacker = request->attacker;
