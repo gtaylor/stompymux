@@ -24,7 +24,7 @@ ci: ci-build-test ci-analysis
 
 ci-build-test: build test
 
-ci-analysis: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis fmt-check build frame-check check-ast-policies tidy-check
+ci-analysis: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis check-complexity-suppressions fmt-check build frame-check check-ast-policies tidy-check
 
 agent-checks: ci
 
@@ -32,6 +32,11 @@ checks: ci
 
 check-source-size:
     status=0; while IFS= read -r -d '' source; do lines=$(awk 'END { print NR }' "$source"); if (( lines > 800 )); then echo "$source: $lines lines (maximum 800)"; status=1; fi; done < <(find src/mux src/btech -type f \( -name '*.c' -o -name '*.h' -o -name '*.h.in' \) -print0); exit "$status"
+
+# Complexity debt must be paid through decomposition rather than hidden from
+# the global ratchet. Keep this lexical so suppressions cannot disable it.
+check-complexity-suppressions:
+    status=0; rg -n --glob '*.[ch]' 'NOLINT[^[:space:]]*\([^)]*readability-function-cognitive-complexity' src || status=$?; if (( status == 0 )); then echo 'Cognitive-complexity suppressions are not permitted in src/.' >&2; exit 1; fi; if (( status != 1 )); then exit "$status"; fi
 
 # Object-like constants in headers and implementations should use typed C23
 # objects or enums. String literals remain macros because constexpr pointers
@@ -137,6 +142,11 @@ tidy:
 
 tidy-check:
     output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -p {{build_dir}} -j "$(nproc)" -checks='readability-implicit-bool-conversion' -warnings-as-errors='*,-readability-implicit-bool-conversion' '^.*/src/(mux|btech)/.*[.]c$' >"$output" 2>&1 || status=$?; if (( status != 0 )); then cat "$output" >&2; exit "$status"; fi; if rg -n -- "-> 'bool'" "$output"; then echo 'Implicit conversion into bool found; make the conversion explicit.' >&2; exit 1; fi
+
+# Report every non-trivial function's measured score, highest first. Header
+# diagnostics are deduplicated because clang-tidy can see them from many TUs.
+complexity-report: build
+    output=$(mktemp); trap 'rm -f "$output"' EXIT; {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -p {{build_dir}} -j "$(nproc)" -checks='-*,readability-function-cognitive-complexity' -config="{Checks: '-*,readability-function-cognitive-complexity', WarningsAsErrors: '', HeaderFilterRegex: '^.*/src/(mux|btech)/.*', CheckOptions: {readability-function-cognitive-complexity.Threshold: '0', readability-function-cognitive-complexity.DescribeBasicIncrements: 'false'}}" '^.*/src/(mux|btech)/.*[.]c$' >"$output" 2>&1; perl -ne 'if (m{^(.+?):(\d+):\d+: warning: function '\''([^'\'']+)'\'' has cognitive complexity of (\d+)}) { print "$4\t$1:$2\t$3\n" }' "$output" | sort -t $$'\t' -k1,1nr -k2,2 -u
 
 build:
     cmake -S . -B {{build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBTECH_ENABLE_ASAN={{enable_asan}} -DBTECH_ENABLE_UBSAN={{enable_ubsan}} -DBTECH_ENABLE_HARDENING={{enable_hardening}} -DBTECH_STRICT_C23={{strict_c23}} -DBTECH_BUILD_FUZZERS={{build_fuzzers}}

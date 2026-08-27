@@ -715,6 +715,7 @@ set_tests_properties(btech_mechrep_repair_command PROPERTIES
 
 add_executable(btech_template_specials_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_template_specials.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/template_specials.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/unit/template_save.c)
 target_compile_options(btech_template_specials_test PRIVATE -ffunction-sections)
 target_link_options(btech_template_specials_test PRIVATE -Wl,--gc-sections)

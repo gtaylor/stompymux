@@ -315,6 +315,7 @@ set(BTECH_SOURCES
   unit/template_load_helpers.c
   unit/template_loader.c
   unit/template_registry.c
+  unit/template_specials.c
   unit/template_save.c)
 
 set(BTECH_SUBSYSTEMS

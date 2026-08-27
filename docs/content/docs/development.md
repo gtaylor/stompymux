@@ -27,6 +27,17 @@ Stop `stompymux`, back up `game/data/stompymux.db`, and apply the required SQL
 script with `sqlite3` before starting a build with a newer schema. Migrations
 are deliberately not applied by the running server.
 
+### C complexity ratchet
+
+Clang-tidy enforces a cognitive-complexity ceiling of 200 for every C
+function. Suppressing this check in `src/` is not permitted; split complicated
+control flow into named helpers instead. Run `just complexity-report` to see
+all measured functions ordered from highest to lowest score.
+
+The planned follow-up ratchets are 150 and then 100. Each threshold change is
+landed only after every existing function satisfies it, so the main branch has
+one global ceiling and no complexity allowlist.
+
 ## Lua development workflow
 
 The Lua sources in `game/lua` are where most of the player-visible logic lives. These are typically developed like this:

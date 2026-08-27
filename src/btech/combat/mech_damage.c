@@ -44,6 +44,77 @@
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
+
+static bool mech_damage_redirect_to_swarmer(const MechDamageRequest *request,
+                                            Mech *wounded, Mech *attacker,
+                                            int hit_location, bool rear,
+                                            int damage, int roll) {
+  if (bsuit_swarmer_count(wounded) <= 0 || request->ignore_swarmers)
+    return false;
+  Mech *swarmer = bsuit_swarmer_find(wounded);
+  if (swarmer == nullptr ||
+      (attacker != nullptr && mech_dbref(attacker) == mech_dbref(swarmer)))
+    return false;
+
+  int hit_chance = 20 * bsuit_member_count(swarmer);
+  if (rear) {
+    if (hit_location != CTORSO && hit_location != RTORSO &&
+        hit_location != LTORSO)
+      hit_chance = 0;
+  } else if (hit_location != RTORSO && hit_location != LTORSO) {
+    hit_chance = 0;
+  }
+  if (hit_chance < roll || !mech_section_armor(wounded, hit_location))
+    return false;
+
+  if (attacker != nullptr && mech_dbref(attacker) != mech_dbref(wounded))
+    mech_notify(attacker, MECHALL,
+                "The battlesuits crawling all over your target absorb the "
+                "damage!");
+  mech_notify(wounded, MECHALL,
+              "The battlesuits crawling all over you absorb the damage!");
+  mech_notify(swarmer, MECHALL, "You absorb the damage!");
+  bool critical = request->critical;
+  bool redirected_rear = rear;
+  const int REDIRECTED_LOCATION =
+      mech_hit_location(swarmer, 0, &critical, &redirected_rear);
+  mech_damage_apply(&(MechDamageRequest){
+      .target = swarmer,
+      .attacker = attacker,
+      .line_of_sight = request->line_of_sight,
+      .attack_pilot = request->attack_pilot,
+      .hit_location = REDIRECTED_LOCATION,
+      .armor_damage = damage,
+      .cause = request->cause,
+      .base_to_hit = request->base_to_hit,
+      .weapon_index = request->weapon_index,
+      .ammunition_mode = request->ammunition_mode,
+  });
+  return true;
+}
+
+static void mech_damage_searchlight_maybe_destroy(Mech *wounded, bool rear,
+                                                  int hit_location) {
+  bool exposed = false;
+  if (mech_class(wounded) == CLASS_MECH)
+    exposed = hit_location == LTORSO || hit_location == CTORSO ||
+              hit_location == RTORSO;
+  else if (mech_class(wounded) == CLASS_VEH_GROUND)
+    exposed = hit_location == FSIDE;
+  if (rear || !exposed || !(mech_technology_flags(wounded) & SLITE_TECH) ||
+      mech_condition_summary(wounded).searchlight_destroyed)
+    return;
+  if (btech_random_roll(mech_context(wounded)) <= 6)
+    return;
+  if (!mech_condition_summary(wounded).searchlight_on &&
+      btech_random_roll(mech_context(wounded)) <= 5)
+    return;
+  mech_searchlight_destroy(wounded);
+  mech_los_broadcast(wounded, "'s searchlight is blown apart!");
+  mech_notify(wounded, MECHALL,
+              "[fg=yellow bold]Your searchlight is destroyed![reset]");
+}
+
 // NOLINTNEXTLINE(misc-no-recursion): fixed unit/component counts bound cascade.
 void mech_damage_apply(const MechDamageRequest *request) {
   char message_buffer[LBUF_SIZE];
@@ -70,9 +141,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
   BattleMap *map;
   int crits = 0;
   int t_blow_dumping_ammo = 0;
-  int w_swarmer_hit_chance = 0;
   int w_roll = btech_random_roll(mech_context(wounded));
-  Mech *mech_swarmer;
   int t_snap_tow_lines = 0;
   Mech *tow_target;
 
@@ -107,49 +176,9 @@ void mech_damage_apply(const MechDamageRequest *request) {
    * one suits. 3030 rules are there's a 20 percent chance per suit on you that
    * the suits will eat up the damage.
    */
-  if ((bsuit_swarmer_count(wounded) > 0) && (!T_IGNORE_SWARMERS)) {
-    mech_swarmer = bsuit_swarmer_find(wounded);
-    if (mech_swarmer) {
-      if (!attacker || (mech_dbref(attacker) != mech_dbref(mech_swarmer))) {
-        w_swarmer_hit_chance = 20 * bsuit_member_count(mech_swarmer);
-        if (isrear) {
-          if ((hitloc != CTORSO) && (hitloc != RTORSO) && (hitloc != LTORSO))
-            w_swarmer_hit_chance = 0;
-        } else {
-          if ((hitloc != RTORSO) && (hitloc != LTORSO))
-            w_swarmer_hit_chance = 0;
-        }
-
-        if ((w_swarmer_hit_chance >= w_roll) &&
-            mech_section_armor(wounded, hitloc)) {
-          if (attacker && (mech_dbref(attacker) != mech_dbref(wounded))) {
-            mech_notify(attacker, MECHALL,
-                        "The battlesuits crawling all over your target absorb "
-                        "the damage!");
-          }
-
-          mech_notify(
-              wounded, MECHALL,
-              "The battlesuits crawling all over you absorb the damage!");
-          mech_notify(mech_swarmer, MECHALL, "You absorb the damage!");
-          hitloc = mech_hit_location(mech_swarmer, 0, &iscritical, &isrear);
-          mech_damage_apply(&(MechDamageRequest){
-              .target = mech_swarmer,
-              .attacker = attacker,
-              .line_of_sight = LOS,
-              .attack_pilot = ATTACK_PILOT,
-              .hit_location = hitloc,
-              .armor_damage = damage,
-              .cause = CAUSE,
-              .base_to_hit = BTH,
-              .weapon_index = W_WEAP_INDX,
-              .ammunition_mode = W_AMMO_MODE,
-          });
-          return;
-        }
-      }
-    }
-  }
+  if (mech_damage_redirect_to_swarmer(request, wounded, attacker, hitloc,
+                                      isrear, damage, w_roll))
+    return;
 
   if (mech_class(wounded) == CLASS_MW || mech_class(wounded) == CLASS_MECH)
     transfer = 1;
@@ -375,40 +404,7 @@ void mech_damage_apply(const MechDamageRequest *request) {
     return;
   }
   if (damage > 0) {
-    if (mech_class(wounded) == CLASS_MECH) {
-      if (!isrear && (mech_technology_flags(wounded) & SLITE_TECH) &&
-          !mech_condition_summary(wounded).searchlight_destroyed &&
-          (hitloc == LTORSO || hitloc == CTORSO || hitloc == RTORSO)) {
-        /* Possibly destroy the light */
-        if (btech_random_roll(mech_context(wounded)) > 6) {
-          if (mech_condition_summary(wounded).searchlight_on ||
-              (btech_random_roll(mech_context(wounded)) > 5)) {
-            mech_searchlight_destroy(wounded);
-            mech_los_broadcast(wounded, "'s searchlight is blown apart!");
-            mech_notify(
-                wounded, MECHALL,
-                "[fg=yellow bold]Your searchlight is destroyed![reset]");
-          }
-        }
-      }
-    }
-    if (mech_class(wounded) == CLASS_VEH_GROUND) {
-      if (!isrear && (mech_technology_flags(wounded) & SLITE_TECH) &&
-          !mech_condition_summary(wounded).searchlight_destroyed &&
-          (hitloc == FSIDE)) {
-        /* Possibly destroy the light */
-        if (btech_random_roll(mech_context(wounded)) > 6) {
-          if (mech_condition_summary(wounded).searchlight_on ||
-              (btech_random_roll(mech_context(wounded)) > 5)) {
-            mech_searchlight_destroy(wounded);
-            mech_los_broadcast(wounded, "'s searchlight is blown apart!");
-            mech_notify(
-                wounded, MECHALL,
-                "[fg=yellow bold]Your searchlight is destroyed![reset]");
-          }
-        }
-      }
-    }
+    mech_damage_searchlight_maybe_destroy(wounded, isrear, hitloc);
     int_damage += cause_armordamage(
         &(ArmorDamageRequest){.wounded = wounded,
                               .attacker = attacker,

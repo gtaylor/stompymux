@@ -32,6 +32,82 @@ static void format_physical_command(char buffer[static LBUF_SIZE], char side,
   (void)snprintf(buffer, LBUF_SIZE, "%c %c%c", side, id.first, id.second);
 }
 
+typedef struct AutogunPhysicalTargetSelection {
+  Mech *physical_target;
+  Mech *last_target;
+} AutogunPhysicalTargetSelection;
+
+static float autogun_physical_range(const Mech *mech, const Mech *target) {
+  return map_real_range(&(MapRealSegment){
+      .start = {.x = mech_position_real_x(mech),
+                .y = mech_position_real_y(mech)},
+      .end = {.x = mech_position_real_x(target),
+              .y = mech_position_real_y(target)},
+  });
+}
+
+static AutogunPhysicalTargetSelection
+autogun_physical_target_select(Mech *mech, BattleMap *map, Mech *target) {
+  const float RANGE = autogun_physical_range(mech, target);
+  if (RANGE < 1.0F)
+    return (AutogunPhysicalTargetSelection){target, target};
+  if (RANGE <= AUTO_GUN_PHYSICAL_RANGE_MIN)
+    return (AutogunPhysicalTargetSelection){nullptr, target};
+
+  Mech *last_target = target;
+  for (int slot = 0; slot < battle_map_unit_count(map); slot++) {
+    if (slot == mech_map_slot(mech))
+      continue;
+    const DbRef DBREF = battle_map_unit_dbref(map, slot);
+    if (DBREF <= 0)
+      continue;
+    last_target = btech_context_get_mech(mech_context(mech), DBREF);
+    if (last_target == nullptr || mech_is_destroyed(last_target) ||
+        mech_condition_summary(last_target).combat_safe ||
+        mech_team(last_target) == mech_team(mech))
+      continue;
+    if (autogun_physical_range(mech, last_target) < 1.0F)
+      return (AutogunPhysicalTargetSelection){last_target, last_target};
+  }
+  return (AutogunPhysicalTargetSelection){nullptr, last_target};
+}
+
+typedef struct AutogunPhysicalArcs {
+  int original;
+  int aligned;
+} AutogunPhysicalArcs;
+
+static AutogunPhysicalArcs autogun_physical_align(Mech *mech,
+                                                  const Mech *target) {
+  mech_torso_twist_set(mech, MECH_TORSO_CENTER);
+  if (mech_technology_flags(mech) & FLIPABLE_ARMS)
+    mech_arms_center(mech);
+
+  const int ORIGINAL = in_weapon_arc(mech, mech_position_real_x(target),
+                                     mech_position_real_y(target));
+  if (ORIGINAL & LSIDEARC) {
+    mech_torso_twist_set(mech, MECH_TORSO_LEFT);
+  } else if (ORIGINAL & RSIDEARC) {
+    mech_torso_twist_set(mech, MECH_TORSO_RIGHT);
+  } else if (ORIGINAL & REARARC) {
+    const int RELATIVE_BEARING =
+        mech_heading_degrees(mech) -
+        map_bearing(
+            &(MapRealSegment){.start = {.x = mech_position_real_x(mech),
+                                        .y = mech_position_real_y(mech)},
+                              .end = {.x = mech_position_real_x(target),
+                                      .y = mech_position_real_y(target)}});
+    if (RELATIVE_BEARING > 120 && RELATIVE_BEARING < 180)
+      mech_torso_twist_set(mech, MECH_TORSO_RIGHT);
+    else if (RELATIVE_BEARING > 180 && RELATIVE_BEARING < 240)
+      mech_torso_twist_set(mech, MECH_TORSO_LEFT);
+  }
+  return (AutogunPhysicalArcs){
+      .original = ORIGINAL,
+      .aligned = in_weapon_arc(mech, mech_position_real_x(target),
+                               mech_position_real_y(target))};
+}
+
 void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
                              Mech *target) {
   Mech *physical_target;
@@ -39,89 +115,20 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
   int elevation_diff;
   int what_arc;
   int new_arc;
-  int relative_bearing;
   bool is_section_destroyed[4];
   bool section_hasbusyweap[4];
   int rleg_bth;
   int lleg_bth;
   bool is_rarm_ready;
   bool is_larm_ready;
-  int i;
-  DbRef j;
-  float range;
 
   /* Log It */
   autopilot_autogun_log(autopilot, "Autogun - Start Physical Attack Stage");
 
-  /* Get range from mech to current target */
-  range = map_real_range(&(MapRealSegment){
-      .start = {.x = mech_position_real_x(mech),
-                .y = mech_position_real_y(mech)},
-      .end = {.x = mech_position_real_x(target),
-              .y = mech_position_real_y(target)},
-  });
-
-  /* First check our range to our target, if within range attack it, else
-   * check to see if its outside our range threshold and if so pick a target
-   * close and attack that */
-
-  /*! \todo {Might need to add in here something incase the target is a bsuit}
-   */
-  if (range < 1.0F) {
-
-    /* We're beating on our main target */
-    physical_target = target;
-
-  } else if (range > AUTO_GUN_PHYSICAL_RANGE_MIN) {
-
-    /* Try and find a target */
-
-    physical_target = nullptr;
-
-    /* Cycle through possible targets and pick something to beat on */
-    for (i = 0; i < battle_map_unit_count(map); i++) {
-
-      /* Make sure its on the right map */
-      if (i != mech_map_slot(mech)) {
-        j = battle_map_unit_dbref(map, i);
-        if (j <= 0)
-          continue;
-
-        /* Is it a valid unit ? */
-        target = btech_context_get_mech(mech_context(mech), j);
-        if (!target)
-          continue;
-
-        if (mech_is_destroyed(target))
-          continue;
-
-        if (mech_condition_summary(target).combat_safe)
-          continue;
-
-        if (mech_team(target) == mech_team(mech))
-          continue;
-
-        /* Check its range */
-        range = map_real_range(&(MapRealSegment){
-            .start = {.x = mech_position_real_x(mech),
-                      .y = mech_position_real_y(mech)},
-            .end = {.x = mech_position_real_x(target),
-                    .y = mech_position_real_y(target)},
-        });
-
-        /* Just go for first one , can always add scoring later */
-        if (range < 1.0F) {
-          physical_target = target;
-          break;
-        }
-      }
-    }
-
-  } else {
-
-    /* Our target is close so dont try and physically attack anyone */
-    physical_target = nullptr;
-  }
+  const AutogunPhysicalTargetSelection SELECTION =
+      autogun_physical_target_select(mech, map, target);
+  physical_target = SELECTION.physical_target;
+  target = SELECTION.last_target;
 
   /* Now nail it with a physical attack but only if we see it */
   if (physical_target && battle_map_unit_is_seen(map, mech, physical_target)) {
@@ -139,59 +146,10 @@ void autogun_physical_attack(Autopilot *autopilot, Mech *mech, BattleMap *map,
     if ((mech_class(mech) == CLASS_MECH) &&
         (mech_movement_type(mech) == MOVE_BIPED)) {
 
-      /* Center the torso */
-      mech_torso_twist_set(mech, MECH_TORSO_CENTER);
-
-      if (mech_technology_flags(mech) & FLIPABLE_ARMS) {
-
-        /* Center the arms if need be */
-        mech_arms_center(mech);
-      }
-
-      /* Find direction of bad guy */
-      what_arc = in_weapon_arc(mech, mech_position_real_x(physical_target),
-                               mech_position_real_y(physical_target));
-
-      /* Rotate if we need to */
-      if (what_arc & LSIDEARC) {
-
-        /* Rotate Left */
-        mech_torso_twist_set(mech, MECH_TORSO_LEFT);
-
-      } else if (what_arc & RSIDEARC) {
-
-        /* Rotate Right */
-        mech_torso_twist_set(mech, MECH_TORSO_RIGHT);
-
-      } else if (what_arc & REARARC) {
-
-        /* Find out if it would be better to
-         * rotate left or right */
-        relative_bearing =
-            mech_heading_degrees(mech) -
-            map_bearing(&(MapRealSegment){
-                .start = {.x = mech_position_real_x(mech),
-                          .y = mech_position_real_y(mech)},
-                .end = {.x = mech_position_real_x(physical_target),
-                        .y = mech_position_real_y(physical_target)}});
-
-        if (relative_bearing > 120 && relative_bearing < 180) {
-
-          /* Rotate Right */
-          mech_torso_twist_set(mech, MECH_TORSO_RIGHT);
-
-        } else if (relative_bearing > 180 && relative_bearing < 240) {
-
-          /* Rotate Left */
-          mech_torso_twist_set(mech, MECH_TORSO_LEFT);
-        }
-
-        /* ELSE: Hes directly behind us so we can't do anything */
-      }
-
-      /* Calculate the new arc */
-      new_arc = in_weapon_arc(mech, mech_position_real_x(physical_target),
-                              mech_position_real_y(physical_target));
+      const AutogunPhysicalArcs ARCS =
+          autogun_physical_align(mech, physical_target);
+      what_arc = ARCS.original;
+      new_arc = ARCS.aligned;
 
       /* Check to see what sections are destroyed */
       is_section_destroyed[0] = mech_section_is_destroyed(mech, RARM);

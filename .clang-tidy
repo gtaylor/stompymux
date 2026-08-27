@@ -80,4 +80,4 @@ CheckOptions:
   readability-identifier-naming.UnionCase: CamelCase
   readability-identifier-naming.VariableCase: lower_case
   readability-suspicious-call-argument.MinimumIdentifierNameLength: 12
-  readability-function-cognitive-complexity.Threshold: 250
+  readability-function-cognitive-complexity.Threshold: 200

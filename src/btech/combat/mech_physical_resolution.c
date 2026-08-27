@@ -45,6 +45,48 @@ static int physical_forward_arc(Mech *mech, const Mech *target) {
   return arc;
 }
 
+static int physical_actuator_to_hit_modifier(Mech *mech,
+                                             PhysicalAttackType attack_type,
+                                             int section) {
+  int modifier = 0;
+  if (attack_type == PA_PUNCH || attack_type == PA_KICK ||
+      attack_type == PA_AXE || attack_type == PA_SWORD ||
+      attack_type == PA_CLAW || attack_type == PA_MACE ||
+      attack_type == PA_SAW) {
+    if (mech_critical_is_nonfunctional(mech, section, 1) ||
+        mech_critical_part_type(mech, section, 1) !=
+            special_equipment_index(UPPER_ACTUATOR))
+      modifier += 2;
+    if (mech_critical_is_nonfunctional(mech, section, 2) ||
+        mech_critical_part_type(mech, section, 2) !=
+            special_equipment_index(LOWER_ACTUATOR))
+      modifier += 2;
+    if ((attack_type == PA_PUNCH || attack_type == PA_KICK) &&
+        (mech_critical_is_nonfunctional(mech, section, 3) ||
+         mech_critical_part_type(mech, section, 3) !=
+             special_equipment_index(HAND_OR_FOOT_ACTUATOR)))
+      modifier++;
+  } else if (attack_type == PA_CLUB) {
+    if (mech_critical_is_nonfunctional(mech, RARM, 1) ||
+        mech_critical_part_type(mech, section, 1) !=
+            special_equipment_index(UPPER_ACTUATOR))
+      modifier += 2;
+    if (mech_critical_is_nonfunctional(mech, RARM, 2) ||
+        mech_critical_part_type(mech, section, 2) !=
+            special_equipment_index(LOWER_ACTUATOR))
+      modifier += 2;
+    if (mech_critical_is_nonfunctional(mech, LARM, 1) ||
+        mech_critical_part_type(mech, section, 1) !=
+            special_equipment_index(UPPER_ACTUATOR))
+      modifier += 2;
+    if (mech_critical_is_nonfunctional(mech, LARM, 2) ||
+        mech_critical_part_type(mech, section, 2) !=
+            special_equipment_index(LOWER_ACTUATOR))
+      modifier += 2;
+  }
+  return modifier;
+}
+
 void physical_attack_resolve(const PhysicalAttackRequest *request) {
   Mech *mech = request->mech;
   const int DAMAGEWEIGHT = request->damage_weight;
@@ -80,60 +122,8 @@ void physical_attack_resolve(const PhysicalAttackRequest *request) {
       return;
   }
 
-  /* BTH Adjustments for crits to limbs - seperate one for
-   * club because it checks for both limbs */
-  if ((ATTACK_TYPE == PA_PUNCH) || (ATTACK_TYPE == PA_KICK) ||
-      (ATTACK_TYPE == PA_AXE) || (ATTACK_TYPE == PA_SWORD) ||
-      (ATTACK_TYPE == PA_CLAW) || (ATTACK_TYPE == PA_MACE) ||
-      (ATTACK_TYPE == PA_SAW)) {
-
-    if (mech_critical_is_nonfunctional(mech, SECT, 1) ||
-        mech_critical_part_type(mech, SECT, 1) !=
-            special_equipment_index(UPPER_ACTUATOR)) {
-      base_to_hit += 2;
-    }
-
-    if (mech_critical_is_nonfunctional(mech, SECT, 2) ||
-        mech_critical_part_type(mech, SECT, 2) !=
-            special_equipment_index(LOWER_ACTUATOR)) {
-      base_to_hit += 2;
-    }
-
-    /* Hand/Foot crits only affect punch/kick since with the other attacks
-     * are not allowed if they're broken */
-    if ((ATTACK_TYPE == PA_PUNCH) || (ATTACK_TYPE == PA_KICK)) {
-      if (mech_critical_is_nonfunctional(mech, SECT, 3) ||
-          mech_critical_part_type(mech, SECT, 3) !=
-              special_equipment_index(HAND_OR_FOOT_ACTUATOR)) {
-        base_to_hit += 1;
-      }
-    }
-
-  } else if (ATTACK_TYPE == PA_CLUB) {
-
-    /* Only check lower/upper acts since without shoulder or hand you can't
-     * club */
-    if (mech_critical_is_nonfunctional(mech, RARM, 1) ||
-        mech_critical_part_type(mech, SECT, 1) !=
-            special_equipment_index(UPPER_ACTUATOR)) {
-      base_to_hit += 2;
-    }
-    if (mech_critical_is_nonfunctional(mech, RARM, 2) ||
-        mech_critical_part_type(mech, SECT, 2) !=
-            special_equipment_index(LOWER_ACTUATOR)) {
-      base_to_hit += 2;
-    }
-    if (mech_critical_is_nonfunctional(mech, LARM, 1) ||
-        mech_critical_part_type(mech, SECT, 1) !=
-            special_equipment_index(UPPER_ACTUATOR)) {
-      base_to_hit += 2;
-    }
-    if (mech_critical_is_nonfunctional(mech, LARM, 2) ||
-        mech_critical_part_type(mech, SECT, 2) !=
-            special_equipment_index(LOWER_ACTUATOR)) {
-      base_to_hit += 2;
-    }
-  }
+  /* Club checks both arms; other attacks use the selected limb. */
+  base_to_hit += physical_actuator_to_hit_modifier(mech, ATTACK_TYPE, SECT);
 
   // All weapons must be cycled in the target limb.
   if (mech_section_has_recycling_weapon(mech, SECT)) {
