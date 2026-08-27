@@ -179,23 +179,26 @@ weapon_advanced_status_notify(const WeaponAdvancedStatusRequest *request) {
 
   (void)string_copy_bounded(workspace->tempbuff, sizeof(workspace->tempbuff),
                             "AdvTech: ");
-  if (TECHNOLOGY & ECM_TECH)
+  if (TECHNOLOGY & ECM_TECH) {
     append_status(workspace->tempbuff, sizeof(workspace->tempbuff), "ECM(%s)  ",
                   ecm_status(CONDITIONS.ecm_destroyed, CONDITIONS.ecm_enabled,
                              CONDITIONS.ecm_active, CONDITIONS.eccm_enabled,
                              CONDITIONS.ecm_countered));
-  if (TECHNOLOGY_SECONDARY & ANGEL_ECM_TECH)
+  }
+  if (TECHNOLOGY_SECONDARY & ANGEL_ECM_TECH) {
     append_status(
         workspace->tempbuff, sizeof(workspace->tempbuff), "AngelECM(%s)  ",
         ecm_status(CONDITIONS.angel_ecm_destroyed, CONDITIONS.angel_ecm_enabled,
                    CONDITIONS.angel_ecm_active, CONDITIONS.angel_eccm_enabled,
                    CONDITIONS.ecm_countered));
-  if (INFANTRY_TECHNOLOGY & FC_INFILTRATORII_STEALTH_TECH)
+  }
+  if (INFANTRY_TECHNOLOGY & FC_INFILTRATORII_STEALTH_TECH) {
     append_status(
         workspace->tempbuff, sizeof(workspace->tempbuff), "PersonalECM(%s)  ",
         ecm_status(false, CONDITIONS.personal_ecm_enabled,
                    CONDITIONS.personal_ecm_active,
                    CONDITIONS.personal_eccm_enabled, CONDITIONS.ecm_countered));
+  }
   if (TECHNOLOGY_SECONDARY & STEALTH_ARMOR_TECH) {
     const char *status = CONDITIONS.stealth_armor_active
                              ? "[fg=green bold]On[reset]"
@@ -223,28 +226,32 @@ weapon_advanced_status_notify(const WeaponAdvancedStatusRequest *request) {
     append_status(workspace->tempbuff, sizeof(workspace->tempbuff),
                   "SLITE(%s)  ", status);
   }
-  if (HAS_C3_MASTER)
+  if (HAS_C3_MASTER) {
     append_status(workspace->tempbuff, sizeof(workspace->tempbuff),
                   "%sC3M[reset]  ",
                   network_status_color(CONDITIONS.c3_destroyed,
                                        mech_is_any_ecm_disturbed(mech),
                                        mech_c3_network_size(mech) > 0));
-  if (HAS_C3_SLAVE)
+  }
+  if (HAS_C3_SLAVE) {
     append_status(workspace->tempbuff, sizeof(workspace->tempbuff),
                   "%sC3S[reset]  ",
                   network_status_color(CONDITIONS.c3_destroyed,
                                        mech_is_any_ecm_disturbed(mech),
                                        mech_c3_network_size(mech) > 0));
-  if (HAS_C3I)
+  }
+  if (HAS_C3I) {
     append_status(workspace->tempbuff, sizeof(workspace->tempbuff),
                   "%sC3i[reset]  ",
                   network_status_color(CONDITIONS.c3i_destroyed,
                                        mech_is_any_ecm_disturbed(mech),
                                        mech_c3i_network_size(mech) > 0));
-  if (TECHNOLOGY & TRIPLE_MYOMER_TECH)
+  }
+  if (TECHNOLOGY & TRIPLE_MYOMER_TECH) {
     append_status(workspace->tempbuff, sizeof(workspace->tempbuff), "TSM(%s)  ",
                   mech_excess_heat(mech) >= 9.0F ? "[fg=green bold]On[reset]"
                                                  : "[fg=green]Off[reset]");
+  }
   if (HAS_TAG) {
     const DbRef TAG_TARGET_DBREF = mech_tag_target_dbref(mech);
     Mech *tag_target =
@@ -267,17 +274,19 @@ weapon_advanced_status_notify(const WeaponAdvancedStatusRequest *request) {
     append_status(workspace->tempbuff, sizeof(workspace->tempbuff), "TAG(%s)  ",
                   status);
   }
-  if (TECHNOLOGY_SECONDARY & SUPERCHARGER_TECH)
+  if (TECHNOLOGY_SECONDARY & SUPERCHARGER_TECH) {
     append_status(workspace->tempbuff, sizeof(workspace->tempbuff),
                   "SCHARGE: %s%d[reset] (%s)",
                   counter_status_color(CONDITIONS.supercharger_counter),
                   CONDITIONS.supercharger_counter,
                   CONDITIONS.supercharger_enabled ? "On" : "Off");
-  if (TECHNOLOGY & MASC_TECH)
+  }
+  if (TECHNOLOGY & MASC_TECH) {
     append_status(
         workspace->tempbuff, sizeof(workspace->tempbuff),
         "MASC: %s%d[reset] (%s)", counter_status_color(CONDITIONS.masc_counter),
         CONDITIONS.masc_counter, CONDITIONS.masc_enabled ? "On" : "Off");
+  }
   mecha_notify(evaluation, PLAYER, workspace->tempbuff);
   workspace->tempbuff[0] = 0;
 }

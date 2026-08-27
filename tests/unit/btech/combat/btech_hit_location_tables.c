@@ -460,6 +460,67 @@ static int test_ground_and_naval_tables(void) {
   return 0;
 }
 
+static int test_aerospace_tables(void) {
+  static const int AERO_FRONT[11] = {
+      AERO_NOSE, AERO_NOSE,  AERO_RWING, AERO_RWING, AERO_NOSE, AERO_NOSE,
+      AERO_NOSE, AERO_LWING, AERO_RWING, AERO_NOSE,  AERO_NOSE,
+  };
+  static const int AERO_LEFT[11] = {
+      AERO_AFT,   AERO_LWING, AERO_AFT, AERO_NOSE,  AERO_LWING, AERO_LWING,
+      AERO_LWING, AERO_NOSE,  AERO_AFT, AERO_LWING, AERO_AFT,
+  };
+  static const int AERO_RIGHT[11] = {
+      AERO_AFT,   AERO_RWING, AERO_AFT, AERO_NOSE,  AERO_RWING, AERO_RWING,
+      AERO_RWING, AERO_NOSE,  AERO_AFT, AERO_RWING, AERO_AFT,
+  };
+  static const int AERO_REAR[11] = {
+      AERO_AFT, AERO_RWING, AERO_RWING, AERO_RWING, AERO_AFT, AERO_RWING,
+      AERO_AFT, AERO_LWING, AERO_RWING, AERO_RWING, AERO_AFT,
+  };
+
+  fixture_class = CLASS_AERO;
+  fixture_crittable = false;
+  fixture_turret_internal = false;
+  if (check_standard_table(AERO_FRONT, FRONT, "standard front aerospace") ||
+      check_standard_table(AERO_LEFT, LEFTSIDE, "standard left aerospace") ||
+      check_standard_table(AERO_RIGHT, RIGHTSIDE, "standard right aerospace") ||
+      check_standard_table(AERO_REAR, BACK, "standard rear aerospace"))
+    return 1;
+
+  static const int DS_FRONT[11] = {
+      DS_NOSE, DS_NOSE,  DS_LWING, DS_RWING, DS_NOSE, DS_NOSE,
+      DS_NOSE, DS_LWING, DS_LWING, DS_NOSE,  DS_NOSE,
+  };
+  static const int DS_LEFT[11] = {
+      DS_NOSE,  DS_LWING, DS_LWING, DS_LWING, DS_LWING, DS_LWING,
+      DS_LWING, DS_NOSE,  DS_LWING, DS_LWING, DS_LWING,
+  };
+  static const int DS_RIGHT[11] = {
+      DS_NOSE,  DS_RWING, DS_RWING, DS_RWING, DS_RWING, DS_RWING,
+      DS_RWING, DS_NOSE,  DS_RWING, DS_RWING, DS_RWING,
+  };
+  static const int DS_REAR[11] = {
+      DS_AFT, DS_AFT,   DS_AFT, DS_RWING, DS_AFT, DS_AFT,
+      DS_AFT, DS_LWING, DS_AFT, DS_AFT,   DS_AFT,
+  };
+
+  fixture_class = CLASS_DS;
+  if (check_standard_table(DS_FRONT, FRONT, "standard front dropship") ||
+      check_standard_table(DS_LEFT, LEFTSIDE, "standard left dropship") ||
+      check_standard_table(DS_RIGHT, RIGHTSIDE, "standard right dropship") ||
+      check_standard_table(DS_REAR, BACK, "standard rear dropship"))
+    return 1;
+
+  fixture_class = CLASS_SPHEROID_DS;
+  return check_standard_table(DS_FRONT, FRONT,
+                              "standard front spheroid dropship") ||
+         check_standard_table(DS_LEFT, LEFTSIDE,
+                              "standard left spheroid dropship") ||
+         check_standard_table(DS_RIGHT, RIGHTSIDE,
+                              "standard right spheroid dropship") ||
+         check_standard_table(DS_REAR, BACK, "standard rear spheroid dropship");
+}
+
 static int test_fasa_tables(void) {
   /* FASA-era VTOL and naval tables; these are kept separate from the modern
    * advanced tables because the published rule sets differ. */
@@ -588,6 +649,10 @@ int main(void) {
   }
   if (test_advanced_tables()) {
     fprintf(stderr, "advanced hit-location tables failed\n");
+    ++failures;
+  }
+  if (test_aerospace_tables()) {
+    fprintf(stderr, "aerospace hit-location tables failed\n");
     ++failures;
   }
   if (test_fasa_tables()) {

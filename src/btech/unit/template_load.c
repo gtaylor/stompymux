@@ -34,31 +34,229 @@ typedef struct TemplateLoadScratch {
   char description_buffer[BTECH_TEXT_CAPACITY];
 } TemplateLoadScratch;
 
+typedef struct TemplateCriticalLoadRequest {
+  FILE *file;
+  DbRef player;
+  Mech *mech;
+  const char *filename;
+  char *command;
+  char *description;
+  char *token;
+  char *description_buffer;
+  int section;
+  int *is_clan;
+} TemplateCriticalLoadRequest;
+
+static bool template_critical_load(const TemplateCriticalLoadRequest *request) {
+  FILE *fp = request->file;
+  Mech *mech = request->mech;
+  DbRef player = request->player;
+  const char *filename = request->filename;
+  char *cmd = request->command;
+  char *ptr = request->description;
+  char *buf = request->token;
+  char *description_buffer = request->description_buffer;
+  char *line2;
+  int section = request->section;
+  int x;
+  int y;
+  int value = 0;
+  int type;
+  int brand;
+  int lpos;
+  int hpos;
+  int critical;
+  int w_fire_modes;
+  int w_ammo_modes;
+
+  if (!template_parse_critical_range(cmd, &x, &y) || x > NUM_CRITICALS ||
+      y > NUM_CRITICALS) {
+    template_load_error(fp, mech, player, true, true,
+                        "Error while loading: Invalid critical '%s'.", cmd);
+    return false;
+  }
+  lpos = x - 1;
+  hpos = y - 1;
+  critical = lpos;
+  line2 = template_description_read(&(TemplateDescriptionRead){
+      .file = fp, .line = ptr, .buffer = description_buffer});
+  line2 = template_token_parse(&(TemplateTokenRequest){
+      .input = line2, .output = buf, .output_capacity = MAX_STRING_LENGTH});
+  if (!strncasecmp(buf, "CL.", 3))
+    *request->is_clan = 1;
+  PartMatchResult match =
+      part_match_next(&(PartMatchRequest){.context = mech->xcode.context,
+                                          .pattern = buf,
+                                          .kind = PART_MATCH_VERY_LONG,
+                                          .cursor = -1});
+  if (template_load_error(fp, mech, player, (!match.found) != 0, true,
+                          "Unable to find %s", buf)) {
+    return false;
+  }
+  type = match.part.id;
+  brand = match.part.brand;
+  mech_critical_part_type_set(mech, section, critical, type);
+  if (!mech->xcode.context->configuration->btech_parts)
+    brand = 0;
+  mech_critical_brand_set(&(CriticalSlotBrandSet){
+      .mech = mech,
+      .slot = {.section = section, .critical = critical},
+      .brand = brand});
+  mech_critical_desired_ammo_section_set(mech, section, critical, -1);
+  if (equipment_is_weapon(type)) {
+    /* Thanks to legacy of past, we _do_ have to do this.. sniff */
+    if (weapon_catalogue_is_anti_missile(weapon_from_equipment_index(type))) {
+      if (weapon_catalogue_has_special(weapon_from_equipment_index(type), CLAT))
+        ((mech)->rd.specials) |= CL_ANTI_MISSILE_TECH;
+      else
+        ((mech)->rd.specials) |= IS_ANTI_MISSILE_TECH;
+    }
+    mech_critical_data_set(mech, section, critical, 0);
+    line2 = template_token_parse(&(TemplateTokenRequest){
+        .input = line2, .output = buf, .output_capacity = MAX_STRING_LENGTH});
+    line2 = template_token_parse(&(TemplateTokenRequest){
+        .input = line2, .output = buf, .output_capacity = MAX_STRING_LENGTH});
+    /*              wAmmoModes = BuildBitVector(crit_ammo_modes, buf); */
+    w_fire_modes = clamp_long_to_int(
+        build_bit_vector_with_delim(template_critical_fire_mode_names(),
+                                    template_critical_fire_mode_count(), buf));
+    w_ammo_modes = clamp_long_to_int(
+        build_bit_vector_with_delim(template_critical_ammo_mode_names(),
+                                    template_critical_ammo_mode_count(), buf));
+    if (template_load_error(
+            fp, mech, player, (w_fire_modes < 0 && w_ammo_modes < 0) != 0, true,
+            "Error while loading: Invalid crit modes for weapon: %s.", buf)) {
+      return false;
+    }
+    if (w_fire_modes < 0)
+      w_fire_modes = 0;
+    if (w_ammo_modes < 0)
+      w_ammo_modes = 0;
+    mech_critical_fire_mode_set(mech, section, critical, w_fire_modes);
+    mech_critical_ammo_mode_set(mech, section, critical, w_ammo_modes);
+    template_token_parse(&(TemplateTokenRequest){
+        .input = line2, .output = buf, .output_capacity = MAX_STRING_LENGTH});
+    if (mech->xcode.context->configuration->btech_parts &&
+        !template_read_int(fp, mech, player, buf, &value))
+      return false;
+    if (mech->xcode.context->configuration->btech_parts && value != 0)
+      mech_critical_brand_set(&(CriticalSlotBrandSet){
+          .mech = mech,
+          .slot = {.section = section, .critical = critical},
+          .brand = value});
+  } else if (equipment_is_ammunition(type)) {
+    template_token_parse(&(TemplateTokenRequest){
+        .input = line2, .output = buf, .output_capacity = MAX_STRING_LENGTH});
+    if (!template_read_int(fp, mech, player, buf, &value))
+      return false;
+    mech_critical_data_set(mech, section, critical, value);
+    template_token_parse(&(TemplateTokenRequest){
+        .input = line2, .output = buf, .output_capacity = MAX_STRING_LENGTH});
+    /*              wFireModes = BuildBitVector(crit_fire_modes, buf); */
+    /*              wAmmoModes = BuildBitVector(crit_ammo_modes, buf); */
+    w_fire_modes = clamp_long_to_int(
+        build_bit_vector_with_delim(template_critical_fire_mode_names(),
+                                    template_critical_fire_mode_count(), buf));
+    w_ammo_modes = clamp_long_to_int(
+        build_bit_vector_with_delim(template_critical_ammo_mode_names(),
+                                    template_critical_ammo_mode_count(), buf));
+    if (template_load_error(
+            fp, mech, player, (w_fire_modes < 0 && w_ammo_modes < 0) != 0, true,
+            "Error while loading: Invalid crit modes for ammo: %s.", buf)) {
+      return false;
+    }
+    if (w_fire_modes < 0)
+      w_fire_modes = 0;
+    if (w_ammo_modes < 0)
+      w_ammo_modes = 0;
+    mech_critical_fire_mode_set(mech, section, critical, w_fire_modes);
+    mech_critical_ammo_mode_set(mech, section, critical, w_ammo_modes);
+    if (mech_critical_data(mech, section, critical) <
+        full_ammo(mech, section, critical)) {
+      mech_critical_fire_mode_add(mech, section, critical, HALFTON_MODE);
+      if (mech_critical_data(mech, section, critical) >
+          full_ammo(mech, section, critical))
+        mech_critical_fire_mode_clear(mech, section, critical, HALFTON_MODE);
+    }
+    if (mech_critical_data(mech, section, critical) !=
+            full_ammo(mech, section, critical) &&
+        ((mech)->ud.type) != CLASS_MW && ((mech)->ud.type) != CLASS_BSUIT) {
+      btech_channel_send(
+          mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
+          "Invalid ammo crit for %s in #%ld %s (%d/%d)",
+          weapon_catalogue_name(ammunition_to_weapon_index(type)), mech->mynum,
+          filename, mech_critical_data(mech, section, critical),
+          full_ammo(mech, section, critical));
+      mech_critical_data_set(mech, section, critical,
+                             full_ammo(mech, section, critical));
+    }
+  } else {
+    if (template_token_parse(
+            &(TemplateTokenRequest){.input = line2,
+                                    .output = buf,
+                                    .output_capacity = MAX_STRING_LENGTH})) {
+      if (!template_read_int(fp, mech, player, buf, &value))
+        return false;
+      mech_critical_data_set(mech, section, critical, value);
+    } else {
+      mech_critical_data_set(mech, section, critical, 0);
+    }
+    mech_critical_fire_mode_set(mech, section, critical, 0);
+    mech_critical_ammo_mode_set(mech, section, critical, 0);
+    if (template_token_parse(
+            &(TemplateTokenRequest){.input = line2,
+                                    .output = buf,
+                                    .output_capacity = MAX_STRING_LENGTH})) {
+      if (template_token_parse(
+              &(TemplateTokenRequest){.input = line2,
+                                      .output = buf,
+                                      .output_capacity = MAX_STRING_LENGTH})) {
+        if (mech->xcode.context->configuration->btech_parts) {
+          if (!template_read_int(fp, mech, player, buf, &value))
+            return false;
+          if (value != 0)
+            mech_critical_brand_set(&(CriticalSlotBrandSet){
+                .mech = mech,
+                .slot = {.section = section, .critical = critical},
+                .brand = value});
+        }
+      }
+    }
+  }
+  for (x = (lpos + 1); x <= hpos; x++) {
+    mech_critical_part_type_set(mech, section, x,
+                                mech_critical_part_type(mech, section, lpos));
+    mech_critical_data_set(mech, section, x,
+                           mech_critical_data(mech, section, lpos));
+    mech_critical_fire_mode_set(mech, section, x,
+                                mech_critical_fire_mode(mech, section, lpos));
+    mech_critical_ammo_mode_set(mech, section, x,
+                                mech_critical_ammo_mode(mech, section, lpos));
+    mech_critical_brand_set(&(CriticalSlotBrandSet){
+        .mech = mech,
+        .slot = {.section = section, .critical = x},
+        .brand = mech_critical_brand(mech, section, lpos)});
+  }
+
+  return true;
+}
+
 static int load_template_internal(DbRef player, Mech *mech, char *filename,
                                   TemplateLoadScratch *scratch) {
   char *line = scratch->line;
   char *buf = scratch->buf;
-  int x;
-  int y;
   int value = 0;
   float decimal_value;
   char *cmd = scratch->cmd;
   char *description_buffer = scratch->description_buffer;
   char *ptr;
-  char *line2;
   int section = 0;
-  int critical;
   int selection;
   int type;
-  int brand;
   FILE *fp = fopen(filename, "r");
   char *tmpc;
-  int lpos;
-  int hpos;
   int ok_count = 0;
   int is_clan = 0;
-  int w_fire_modes;
-  int w_ammo_modes;
   if (!fp)
     return -1;
   ptr = strrchr(filename, '/');
@@ -296,189 +494,19 @@ static int load_template_internal(DbRef player, Mech *mech, char *filename,
       }
       break;
     case 9999:
-      if (!template_parse_critical_range(cmd, &x, &y) || x > NUM_CRITICALS ||
-          y > NUM_CRITICALS) {
-        template_load_error(fp, mech, player, true, true,
-                            "Error while loading: Invalid critical '%s'.", cmd);
-        return -1;
-      }
-      lpos = x - 1;
-      hpos = y - 1;
-      critical = lpos;
-      line2 = template_description_read(&(TemplateDescriptionRead){
-          .file = fp, .line = ptr, .buffer = description_buffer});
-      line2 = template_token_parse(&(TemplateTokenRequest){
-          .input = line2, .output = buf, .output_capacity = MAX_STRING_LENGTH});
-      if (!strncasecmp(buf, "CL.", 3))
-        is_clan = 1;
-      PartMatchResult match =
-          part_match_next(&(PartMatchRequest){.context = mech->xcode.context,
-                                              .pattern = buf,
-                                              .kind = PART_MATCH_VERY_LONG,
-                                              .cursor = -1});
-      if (template_load_error(fp, mech, player, (!match.found) != 0, true,
-                              "Unable to find %s", buf)) {
-        return -1;
-      }
-      type = match.part.id;
-      brand = match.part.brand;
-      mech_critical_part_type_set(mech, section, critical, type);
-      if (!mech->xcode.context->configuration->btech_parts)
-        brand = 0;
-      mech_critical_brand_set(&(CriticalSlotBrandSet){
-          .mech = mech,
-          .slot = {.section = section, .critical = critical},
-          .brand = brand});
-      mech_critical_desired_ammo_section_set(mech, section, critical, -1);
-      if (equipment_is_weapon(type)) {
-        /* Thanks to legacy of past, we _do_ have to do this.. sniff */
-        if (weapon_catalogue_is_anti_missile(
-                weapon_from_equipment_index(type))) {
-          if (weapon_catalogue_has_special(weapon_from_equipment_index(type),
-                                           CLAT))
-            ((mech)->rd.specials) |= CL_ANTI_MISSILE_TECH;
-          else
-            ((mech)->rd.specials) |= IS_ANTI_MISSILE_TECH;
-        }
-        mech_critical_data_set(mech, section, critical, 0);
-        line2 = template_token_parse(
-            &(TemplateTokenRequest){.input = line2,
-                                    .output = buf,
-                                    .output_capacity = MAX_STRING_LENGTH});
-        line2 = template_token_parse(
-            &(TemplateTokenRequest){.input = line2,
-                                    .output = buf,
-                                    .output_capacity = MAX_STRING_LENGTH});
-        /*              wAmmoModes = BuildBitVector(crit_ammo_modes, buf); */
-        w_fire_modes = clamp_long_to_int(build_bit_vector_with_delim(
-            template_critical_fire_mode_names(),
-            template_critical_fire_mode_count(), buf));
-        w_ammo_modes = clamp_long_to_int(build_bit_vector_with_delim(
-            template_critical_ammo_mode_names(),
-            template_critical_ammo_mode_count(), buf));
-        if (template_load_error(
-                fp, mech, player, (w_fire_modes < 0 && w_ammo_modes < 0) != 0,
-                true, "Error while loading: Invalid crit modes for weapon: %s.",
-                buf)) {
-          return -1;
-        }
-        if (w_fire_modes < 0)
-          w_fire_modes = 0;
-        if (w_ammo_modes < 0)
-          w_ammo_modes = 0;
-        mech_critical_fire_mode_set(mech, section, critical, w_fire_modes);
-        mech_critical_ammo_mode_set(mech, section, critical, w_ammo_modes);
-        template_token_parse(
-            &(TemplateTokenRequest){.input = line2,
-                                    .output = buf,
-                                    .output_capacity = MAX_STRING_LENGTH});
-        if (mech->xcode.context->configuration->btech_parts &&
-            !template_read_int(fp, mech, player, buf, &value))
-          return -1;
-        if (mech->xcode.context->configuration->btech_parts && value != 0)
-          mech_critical_brand_set(&(CriticalSlotBrandSet){
+      if (!template_critical_load(&(TemplateCriticalLoadRequest){
+              .file = fp,
+              .player = player,
               .mech = mech,
-              .slot = {.section = section, .critical = critical},
-              .brand = value});
-      } else if (equipment_is_ammunition(type)) {
-        template_token_parse(
-            &(TemplateTokenRequest){.input = line2,
-                                    .output = buf,
-                                    .output_capacity = MAX_STRING_LENGTH});
-        if (!template_read_int(fp, mech, player, buf, &value))
-          return -1;
-        mech_critical_data_set(mech, section, critical, value);
-        template_token_parse(
-            &(TemplateTokenRequest){.input = line2,
-                                    .output = buf,
-                                    .output_capacity = MAX_STRING_LENGTH});
-        /*              wFireModes = BuildBitVector(crit_fire_modes, buf); */
-        /*              wAmmoModes = BuildBitVector(crit_ammo_modes, buf); */
-        w_fire_modes = clamp_long_to_int(build_bit_vector_with_delim(
-            template_critical_fire_mode_names(),
-            template_critical_fire_mode_count(), buf));
-        w_ammo_modes = clamp_long_to_int(build_bit_vector_with_delim(
-            template_critical_ammo_mode_names(),
-            template_critical_ammo_mode_count(), buf));
-        if (template_load_error(
-                fp, mech, player, (w_fire_modes < 0 && w_ammo_modes < 0) != 0,
-                true, "Error while loading: Invalid crit modes for ammo: %s.",
-                buf)) {
-          return -1;
-        }
-        if (w_fire_modes < 0)
-          w_fire_modes = 0;
-        if (w_ammo_modes < 0)
-          w_ammo_modes = 0;
-        mech_critical_fire_mode_set(mech, section, critical, w_fire_modes);
-        mech_critical_ammo_mode_set(mech, section, critical, w_ammo_modes);
-        if (mech_critical_data(mech, section, critical) <
-            full_ammo(mech, section, critical)) {
-          mech_critical_fire_mode_add(mech, section, critical, HALFTON_MODE);
-          if (mech_critical_data(mech, section, critical) >
-              full_ammo(mech, section, critical))
-            mech_critical_fire_mode_clear(mech, section, critical,
-                                          HALFTON_MODE);
-        }
-        if (mech_critical_data(mech, section, critical) !=
-                full_ammo(mech, section, critical) &&
-            ((mech)->ud.type) != CLASS_MW && ((mech)->ud.type) != CLASS_BSUIT) {
-          btech_channel_send(
-              mech->xcode.context, BTECH_CHANNEL_MECH_ERRORS,
-              "Invalid ammo crit for %s in #%ld %s (%d/%d)",
-              weapon_catalogue_name(ammunition_to_weapon_index(type)),
-              mech->mynum, filename,
-              mech_critical_data(mech, section, critical),
-              full_ammo(mech, section, critical));
-          mech_critical_data_set(mech, section, critical,
-                                 full_ammo(mech, section, critical));
-        }
-      } else {
-        if (template_token_parse(&(TemplateTokenRequest){
-                .input = line2,
-                .output = buf,
-                .output_capacity = MAX_STRING_LENGTH})) {
-          if (!template_read_int(fp, mech, player, buf, &value))
-            return -1;
-          mech_critical_data_set(mech, section, critical, value);
-        } else {
-          mech_critical_data_set(mech, section, critical, 0);
-        }
-        mech_critical_fire_mode_set(mech, section, critical, 0);
-        mech_critical_ammo_mode_set(mech, section, critical, 0);
-        if (template_token_parse(&(TemplateTokenRequest){
-                .input = line2,
-                .output = buf,
-                .output_capacity = MAX_STRING_LENGTH})) {
-          if (template_token_parse(&(TemplateTokenRequest){
-                  .input = line2,
-                  .output = buf,
-                  .output_capacity = MAX_STRING_LENGTH})) {
-            if (mech->xcode.context->configuration->btech_parts) {
-              if (!template_read_int(fp, mech, player, buf, &value))
-                return -1;
-              if (value != 0)
-                mech_critical_brand_set(&(CriticalSlotBrandSet){
-                    .mech = mech,
-                    .slot = {.section = section, .critical = critical},
-                    .brand = value});
-            }
-          }
-        }
-      }
-      for (x = (lpos + 1); x <= hpos; x++) {
-        mech_critical_part_type_set(
-            mech, section, x, mech_critical_part_type(mech, section, lpos));
-        mech_critical_data_set(mech, section, x,
-                               mech_critical_data(mech, section, lpos));
-        mech_critical_fire_mode_set(
-            mech, section, x, mech_critical_fire_mode(mech, section, lpos));
-        mech_critical_ammo_mode_set(
-            mech, section, x, mech_critical_ammo_mode(mech, section, lpos));
-        mech_critical_brand_set(&(CriticalSlotBrandSet){
-            .mech = mech,
-            .slot = {.section = section, .critical = x},
-            .brand = mech_critical_brand(mech, section, lpos)});
+              .filename = filename,
+              .command = cmd,
+              .description = ptr,
+              .token = buf,
+              .description_buffer = description_buffer,
+              .section = section,
+              .is_clan = &is_clan,
+          })) {
+        return -1;
       }
       break;
     case 15: /* Mech's Computer level */

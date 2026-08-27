@@ -109,6 +109,337 @@ static MechWeaponArcCheck mech_weapon_arc_check(Mech *mech, float x, float y,
              : MECH_WEAPON_ARC_OUTSIDE;
 }
 
+typedef struct WeaponFireTargetResolveRequest {
+  const WeaponFireCommandRequest *command;
+  int weapon_index;
+  int section;
+  int critical;
+  int mode;
+  MechConditionSummary conditions;
+} WeaponFireTargetResolveRequest;
+
+typedef struct WeaponFireTargetResult {
+  Mech *target;
+  int map_x;
+  int map_y;
+  int line_of_sight;
+  float range;
+  int target_kind;
+} WeaponFireTargetResult;
+
+static bool
+weapon_fire_target_resolve(const WeaponFireTargetResolveRequest *request,
+                           WeaponFireTargetResult *result) {
+  const WeaponFireCommandRequest *command = request->command;
+  const DbRef PLAYER = command->actor;
+  Mech *mech = command->mech;
+  BattleMap *mech_map = command->map;
+  const int ARGC = command->argument_count;
+  char **args = command->arguments;
+  const bool SIGHT = command->sight;
+  int weaptype = request->weapon_index;
+  int section = request->section;
+  int critical = request->critical;
+  int mode = request->mode;
+  MechConditionSummary conditions = request->conditions;
+  BtechContext *context = mech_context(mech);
+  DbRef target;
+  char target_id[2];
+  int mapx = 0;
+  int mapy = 0;
+  int los = 0;
+  Mech *temp_mech = nullptr;
+  float range = 0;
+  float enemy_x = 0;
+  float enemy_y = 0;
+  float enemy_z = 0;
+  int ishex = 0;
+
+  switch (ARGC) {
+    /* Fire at default target */
+  case 1:
+
+    /* If its a coolant gun in heat mode we should shot our mech */
+    if (weapon_catalogue_is_coolant(weaptype) && (mode & HEAT_MODE)) {
+      /* Setting our mech as the target and the other parameters
+       * as well */
+      temp_mech = mech;
+      if (!temp_mech) {
+        mecha_notify(btech_context_evaluation(context), PLAYER,
+                     "Error in FireWeaponNumber routine");
+        return false;
+      }
+      enemy_x = mech_position_real_x(temp_mech);
+      enemy_y = mech_position_real_y(temp_mech);
+      mapx = mech_position_x(temp_mech);
+      mapy = mech_position_y(temp_mech);
+      range = 0.2F;
+      los = 1;
+
+    } else {
+
+      const MechTargetPositionResult TARGET_POSITION =
+          mech_target_position(mech);
+      if (!TARGET_POSITION.found) {
+        mecha_notify(btech_context_evaluation(context), PLAYER,
+                     "You do not have a default target set!");
+        return false;
+      }
+      enemy_x = TARGET_POSITION.position.x;
+      enemy_y = TARGET_POSITION.position.y;
+      enemy_z = TARGET_POSITION.position.z;
+
+      if (mech_target_dbref(mech) != -1) {
+        temp_mech = btech_context_get_mech(context, mech_target_dbref(mech));
+        if (!temp_mech) {
+          mecha_notify(btech_context_evaluation(context), PLAYER,
+                       "Error in FireWeaponNumber routine");
+          return false;
+        }
+        mapx = mech_position_x(temp_mech);
+        mapy = mech_position_y(temp_mech);
+        range = mech_range_to(mech, temp_mech);
+        los = mech_los_check_unblocked(mech, temp_mech, mapx, mapy, range);
+
+        if (!weapon_catalogue_supports_indirect_fire(weaptype)) {
+          if (!los) {
+            mecha_notify(btech_context_evaluation(context), PLAYER,
+                         "That target is not in your line of sight!");
+            return false;
+          }
+        } else if (battle_map_is_underground(mech_map)) {
+          if (!los) {
+            mecha_notify(btech_context_evaluation(context), PLAYER,
+                         "That target is not in your direct line of sight, and "
+                         "you cannot fire your IDF weapons underground!");
+            return false;
+          }
+        }
+        if (btech_context_idf_requires_spotter(context) &&
+            weapon_catalogue_supports_indirect_fire(weaptype) &&
+            (mech_spotter_dbref(mech) == -1)) {
+          if (!los) {
+            mecha_notify(btech_context_evaluation(context), PLAYER,
+                         "That target is not in your direct line of sight"
+                         " and you do not have a spotter set!!");
+            return false;
+          }
+        }
+      } else {
+
+        /* default target is a hex */
+        ishex = 1;
+        if (!SIGHT && !weapon_catalogue_is_artillery(weaptype) &&
+            conditions.unit_target_lock) {
+          /* look for enemies in the default hex cause they may have moved */
+          temp_mech = find_mech_in_hex(mech, mech_map, mech_target_hex_x(mech),
+                                       mech_target_hex_y(mech), 0);
+          if (temp_mech) {
+            enemy_x = mech_position_real_x(temp_mech);
+            enemy_y = mech_position_real_y(temp_mech);
+            enemy_z = mech_position_real_z(temp_mech);
+            mapx = mech_position_x(temp_mech);
+            mapy = mech_position_y(temp_mech);
+          }
+        }
+
+        if (!temp_mech) {
+          mapx = mech_target_hex_x(mech);
+          mapy = mech_target_hex_y(mech);
+          mech_target_hex_z_set(mech,
+                                battle_map_hex_elevation(mech_map, mapx, mapy));
+          const int TARGET_HEX_Z = mech_target_hex_z(mech);
+          enemy_z = ZSCALE * (float)TARGET_HEX_Z;
+          map_coord_to_real_coord(mapx, mapy, &enemy_x, &enemy_y);
+        }
+
+        /* don't check LOS for missile weapons firing at hex number */
+        range = map_spatial_range(&(MapSpatialSegment){
+            .start = {.x = mech_position_real_x(mech),
+                      .y = mech_position_real_y(mech),
+                      .z = mech_position_real_z(mech)},
+            .end = {.x = enemy_x, .y = enemy_y, .z = enemy_z},
+        });
+        los = mech_los_check_unblocked(mech, temp_mech, mapx, mapy, range);
+
+        /* Check for Spotter here */
+        if (btech_context_idf_requires_spotter(context) &&
+            weapon_catalogue_supports_indirect_fire(weaptype) &&
+            (mech_spotter_dbref(mech) == -1)) {
+          if (!los) {
+            mecha_notify(btech_context_evaluation(context), PLAYER,
+                         "That hex target is not in your direct line of sight"
+                         " and you do not have a spotter set!!");
+            return false;
+          }
+        }
+
+        if (!(weapon_catalogue_is_artillery(weaptype) ||
+              weapon_catalogue_supports_indirect_fire(weaptype))) {
+          if (!los) {
+            mecha_notify(btech_context_evaluation(context), PLAYER,
+                         "That hex target is not in your line of sight!");
+            return false;
+          }
+        } else if (battle_map_is_underground(mech_map)) {
+          if (!los) {
+            mecha_notify(btech_context_evaluation(context), PLAYER,
+                         "That target is not in your direct line of sight, and "
+                         "you cannot fire your IDF weapons underground!");
+            return false;
+          }
+        }
+      }
+
+      if (mech_class(mech) != CLASS_BSUIT) {
+        MechWeaponArcCheck arc =
+            mech_weapon_arc_check(mech, enemy_x, enemy_y, section, critical);
+        if (arc == MECH_WEAPON_ARC_NOT_CONTROLLED) {
+          mecha_notify(btech_context_evaluation(context), PLAYER,
+                       "That arc's weapons aren't under your control!");
+          return false;
+        }
+        if (arc == MECH_WEAPON_ARC_OUTSIDE) {
+          mecha_notify(btech_context_evaluation(context), PLAYER,
+                       "Default target is not in your weapons arc!");
+          return false;
+        }
+      }
+    }
+    break;
+
+  case 2:
+    /* Fire at the numbered target */
+    target_id[0] = *checked_string_suffix(fire_argument(args, 1), 0);
+    target_id[1] = *checked_string_suffix(fire_argument(args, 1), 1);
+    target = find_target_dbref_from_map_number(mech, target_id);
+    if (target == -1) {
+      mecha_notify(btech_context_evaluation(context), PLAYER,
+                   "That target is not in your line of sight!");
+      return false;
+    }
+    temp_mech = btech_context_get_mech(context, target);
+    if (!temp_mech) {
+      mecha_notify(btech_context_evaluation(context), PLAYER,
+                   "Error in FireWeaponNumber routine!");
+      return false;
+    }
+    enemy_x = mech_position_real_x(temp_mech);
+    enemy_y = mech_position_real_y(temp_mech);
+    enemy_z = mech_position_real_z(temp_mech);
+    mapx = mech_position_x(temp_mech);
+    mapy = mech_position_y(temp_mech);
+
+    range = map_spatial_range(&(MapSpatialSegment){
+        .start = {.x = mech_position_real_x(mech),
+                  .y = mech_position_real_y(mech),
+                  .z = mech_position_real_z(mech)},
+        .end = {.x = enemy_x, .y = enemy_y, .z = enemy_z},
+    });
+    los = mech_los_check_unblocked(mech, temp_mech, mech_position_x(temp_mech),
+                                   mech_position_y(temp_mech), range);
+
+    if (!los) {
+      mecha_notify(btech_context_evaluation(context), PLAYER,
+                   "That target is not in your line of sight!");
+      return false;
+    }
+
+    if (mech_class(mech) != CLASS_BSUIT) {
+      MechWeaponArcCheck arc =
+          mech_weapon_arc_check(mech, enemy_x, enemy_y, section, critical);
+      if (arc == MECH_WEAPON_ARC_NOT_CONTROLLED) {
+        mecha_notify(btech_context_evaluation(context), PLAYER,
+                     "That arc's weapons aren't under your control!");
+        return false;
+      }
+      if (arc == MECH_WEAPON_ARC_OUTSIDE) {
+        mecha_notify(btech_context_evaluation(context), PLAYER,
+                     "That target is not in your weapons arc!");
+        return false;
+      }
+    }
+    break;
+
+  case 3:
+
+    /* Fire at the Map X Y */
+    if (!parse_int_checked(fire_argument(args, 1), &mapx) ||
+        !parse_int_checked(fire_argument(args, 2), &mapy)) {
+      mecha_notify(btech_context_evaluation(context), PLAYER,
+                   "Invalid map coordinates!");
+      return false;
+    }
+    ishex = 1;
+    if (!battle_map_coordinate_is_valid(mech_map, mapx, mapy)) {
+      mecha_notify(btech_context_evaluation(context), PLAYER,
+                   "Map coordinates out of range!");
+      return false;
+    }
+
+    if (!SIGHT && !weapon_catalogue_is_artillery(weaptype))
+
+      /* look for enemies in that hex... */
+      temp_mech = find_mech_in_hex(mech, mech_map, mapx, mapy, 0);
+    if (temp_mech) {
+      enemy_x = mech_position_real_x(temp_mech);
+      enemy_y = mech_position_real_y(temp_mech);
+      enemy_z = mech_position_real_z(temp_mech);
+    }
+
+    if (!temp_mech) {
+      map_coord_to_real_coord(mapx, mapy, &enemy_x, &enemy_y);
+      mech_target_hex_z_set(mech,
+                            battle_map_hex_elevation(mech_map, mapx, mapy));
+      const int TARGET_HEX_Z = mech_target_hex_z(mech);
+      enemy_z = ZSCALE * (float)TARGET_HEX_Z;
+    }
+
+    if (mech_class(mech) != CLASS_BSUIT) {
+      MechWeaponArcCheck arc =
+          mech_weapon_arc_check(mech, enemy_x, enemy_y, section, critical);
+      if (arc == MECH_WEAPON_ARC_NOT_CONTROLLED) {
+        mecha_notify(btech_context_evaluation(context), PLAYER,
+                     "That arc's weapons aren't under your control!");
+        return false;
+      }
+      if (arc == MECH_WEAPON_ARC_OUTSIDE) {
+        mecha_notify(btech_context_evaluation(context), PLAYER,
+                     "That hex target is not in your weapons arc!");
+        return false;
+      }
+    }
+
+    /* Don't check LOS for missile weapons */
+    range = map_spatial_range(&(MapSpatialSegment){
+        .start = {.x = mech_position_real_x(mech),
+                  .y = mech_position_real_y(mech),
+                  .z = mech_position_real_z(mech)},
+        .end = {.x = enemy_x, .y = enemy_y, .z = enemy_z},
+    });
+    los = mech_los_check_unblocked(mech, temp_mech, mapx, mapy, range);
+
+    if (!weapon_catalogue_is_artillery(weaptype)) {
+      if (!los) {
+        mecha_notify(btech_context_evaluation(context), PLAYER,
+                     "That hex target is not in your line of sight!");
+        return false;
+      }
+    }
+    break;
+
+  default:
+    return false;
+  }
+
+  result->target = temp_mech;
+  result->map_x = mapx;
+  result->map_y = mapy;
+  result->line_of_sight = los;
+  result->range = range;
+  result->target_kind = ishex;
+  return true;
+}
 /*
  * Main weapon firing routine
  */
@@ -118,22 +449,16 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
   BattleMap *mech_map = request->map;
   const int WEAPNUM = request->weapon_number;
   const int ARGC = request->argument_count;
-  char **args = request->arguments;
   const bool SIGHT = request->sight;
   int weaptype;
-  DbRef target;
-  char target_id[2];
-  int mapx = 0;
-  int mapy = 0;
-  int los = 0;
-  Mech *temp_mech = nullptr;
+  int mapx;
+  int mapy;
+  int los;
+  Mech *temp_mech;
   int section;
   int critical;
-  float range = 0;
-  float enemy_x = 0;
-  float enemy_y = 0;
-  float enemy_z = 0;
-  int ishex = 0;
+  float range;
+  int ishex;
   int wc_dead_legs = 0;
   char location[UNIT_SECTION_NAME_CAPACITY];
   int mode;
@@ -349,282 +674,25 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
     return 0;
   }
 
-  switch (ARGC) {
-    /* Fire at default target */
-  case 1:
-
-    /* If its a coolant gun in heat mode we should shot our mech */
-    if (weapon_catalogue_is_coolant(weaptype) && (mode & HEAT_MODE)) {
-      /* Setting our mech as the target and the other parameters
-       * as well */
-      temp_mech = mech;
-      if (!temp_mech) {
-        mecha_notify(btech_context_evaluation(context), PLAYER,
-                     "Error in FireWeaponNumber routine");
-        return 0;
-      }
-      enemy_x = mech_position_real_x(temp_mech);
-      enemy_y = mech_position_real_y(temp_mech);
-      mapx = mech_position_x(temp_mech);
-      mapy = mech_position_y(temp_mech);
-      range = 0.2F;
-      los = 1;
-
-    } else {
-
-      const MechTargetPositionResult TARGET_POSITION =
-          mech_target_position(mech);
-      if (!TARGET_POSITION.found) {
-        mecha_notify(btech_context_evaluation(context), PLAYER,
-                     "You do not have a default target set!");
-        return 0;
-      }
-      enemy_x = TARGET_POSITION.position.x;
-      enemy_y = TARGET_POSITION.position.y;
-      enemy_z = TARGET_POSITION.position.z;
-
-      if (mech_target_dbref(mech) != -1) {
-        temp_mech = btech_context_get_mech(context, mech_target_dbref(mech));
-        if (!temp_mech) {
-          mecha_notify(btech_context_evaluation(context), PLAYER,
-                       "Error in FireWeaponNumber routine");
-          return 0;
-        }
-        mapx = mech_position_x(temp_mech);
-        mapy = mech_position_y(temp_mech);
-        range = mech_range_to(mech, temp_mech);
-        los = mech_los_check_unblocked(mech, temp_mech, mapx, mapy, range);
-
-        if (!weapon_catalogue_supports_indirect_fire(weaptype)) {
-          if (!los) {
-            mecha_notify(btech_context_evaluation(context), PLAYER,
-                         "That target is not in your line of sight!");
-            return 0;
-          }
-        } else if (battle_map_is_underground(mech_map)) {
-          if (!los) {
-            mecha_notify(btech_context_evaluation(context), PLAYER,
-                         "That target is not in your direct line of sight, and "
-                         "you cannot fire your IDF weapons underground!");
-            return 0;
-          }
-        }
-        if (btech_context_idf_requires_spotter(context) &&
-            weapon_catalogue_supports_indirect_fire(weaptype) &&
-            (mech_spotter_dbref(mech) == -1)) {
-          if (!los) {
-            mecha_notify(btech_context_evaluation(context), PLAYER,
-                         "That target is not in your direct line of sight"
-                         " and you do not have a spotter set!!");
-            return 0;
-          }
-        }
-      } else {
-
-        /* default target is a hex */
-        ishex = 1;
-        if (!SIGHT && !weapon_catalogue_is_artillery(weaptype) &&
-            conditions.unit_target_lock) {
-          /* look for enemies in the default hex cause they may have moved */
-          temp_mech = find_mech_in_hex(mech, mech_map, mech_target_hex_x(mech),
-                                       mech_target_hex_y(mech), 0);
-          if (temp_mech) {
-            enemy_x = mech_position_real_x(temp_mech);
-            enemy_y = mech_position_real_y(temp_mech);
-            enemy_z = mech_position_real_z(temp_mech);
-            mapx = mech_position_x(temp_mech);
-            mapy = mech_position_y(temp_mech);
-          }
-        }
-
-        if (!temp_mech) {
-          mapx = mech_target_hex_x(mech);
-          mapy = mech_target_hex_y(mech);
-          mech_target_hex_z_set(mech,
-                                battle_map_hex_elevation(mech_map, mapx, mapy));
-          const int TARGET_HEX_Z = mech_target_hex_z(mech);
-          enemy_z = ZSCALE * (float)TARGET_HEX_Z;
-          map_coord_to_real_coord(mapx, mapy, &enemy_x, &enemy_y);
-        }
-
-        /* don't check LOS for missile weapons firing at hex number */
-        range = map_spatial_range(&(MapSpatialSegment){
-            .start = {.x = mech_position_real_x(mech),
-                      .y = mech_position_real_y(mech),
-                      .z = mech_position_real_z(mech)},
-            .end = {.x = enemy_x, .y = enemy_y, .z = enemy_z},
-        });
-        los = mech_los_check_unblocked(mech, temp_mech, mapx, mapy, range);
-
-        /* Check for Spotter here */
-        if (btech_context_idf_requires_spotter(context) &&
-            weapon_catalogue_supports_indirect_fire(weaptype) &&
-            (mech_spotter_dbref(mech) == -1)) {
-          if (!los) {
-            mecha_notify(btech_context_evaluation(context), PLAYER,
-                         "That hex target is not in your direct line of sight"
-                         " and you do not have a spotter set!!");
-            return 0;
-          }
-        }
-
-        if (!(weapon_catalogue_is_artillery(weaptype) ||
-              weapon_catalogue_supports_indirect_fire(weaptype))) {
-          if (!los) {
-            mecha_notify(btech_context_evaluation(context), PLAYER,
-                         "That hex target is not in your line of sight!");
-            return 0;
-          }
-        } else if (battle_map_is_underground(mech_map)) {
-          if (!los) {
-            mecha_notify(btech_context_evaluation(context), PLAYER,
-                         "That target is not in your direct line of sight, and "
-                         "you cannot fire your IDF weapons underground!");
-            return 0;
-          }
-        }
-      }
-
-      if (mech_class(mech) != CLASS_BSUIT) {
-        MechWeaponArcCheck arc =
-            mech_weapon_arc_check(mech, enemy_x, enemy_y, section, critical);
-        if (arc == MECH_WEAPON_ARC_NOT_CONTROLLED) {
-          mecha_notify(btech_context_evaluation(context), PLAYER,
-                       "That arc's weapons aren't under your control!");
-          return 0;
-        }
-        if (arc == MECH_WEAPON_ARC_OUTSIDE) {
-          mecha_notify(btech_context_evaluation(context), PLAYER,
-                       "Default target is not in your weapons arc!");
-          return 0;
-        }
-      }
-    }
-    break;
-
-  case 2:
-    /* Fire at the numbered target */
-    target_id[0] = *checked_string_suffix(fire_argument(args, 1), 0);
-    target_id[1] = *checked_string_suffix(fire_argument(args, 1), 1);
-    target = find_target_dbref_from_map_number(mech, target_id);
-    if (target == -1) {
-      mecha_notify(btech_context_evaluation(context), PLAYER,
-                   "That target is not in your line of sight!");
-      return 0;
-    }
-    temp_mech = btech_context_get_mech(context, target);
-    if (!temp_mech) {
-      mecha_notify(btech_context_evaluation(context), PLAYER,
-                   "Error in FireWeaponNumber routine!");
-      return 0;
-    }
-    enemy_x = mech_position_real_x(temp_mech);
-    enemy_y = mech_position_real_y(temp_mech);
-    enemy_z = mech_position_real_z(temp_mech);
-    mapx = mech_position_x(temp_mech);
-    mapy = mech_position_y(temp_mech);
-
-    range = map_spatial_range(&(MapSpatialSegment){
-        .start = {.x = mech_position_real_x(mech),
-                  .y = mech_position_real_y(mech),
-                  .z = mech_position_real_z(mech)},
-        .end = {.x = enemy_x, .y = enemy_y, .z = enemy_z},
-    });
-    los = mech_los_check_unblocked(mech, temp_mech, mech_position_x(temp_mech),
-                                   mech_position_y(temp_mech), range);
-
-    if (!los) {
-      mecha_notify(btech_context_evaluation(context), PLAYER,
-                   "That target is not in your line of sight!");
-      return 0;
-    }
-
-    if (mech_class(mech) != CLASS_BSUIT) {
-      MechWeaponArcCheck arc =
-          mech_weapon_arc_check(mech, enemy_x, enemy_y, section, critical);
-      if (arc == MECH_WEAPON_ARC_NOT_CONTROLLED) {
-        mecha_notify(btech_context_evaluation(context), PLAYER,
-                     "That arc's weapons aren't under your control!");
-        return 0;
-      }
-      if (arc == MECH_WEAPON_ARC_OUTSIDE) {
-        mecha_notify(btech_context_evaluation(context), PLAYER,
-                     "That target is not in your weapons arc!");
-        return 0;
-      }
-    }
-    break;
-
-  case 3:
-
-    /* Fire at the Map X Y */
-    if (!parse_int_checked(fire_argument(args, 1), &mapx) ||
-        !parse_int_checked(fire_argument(args, 2), &mapy)) {
-      mecha_notify(btech_context_evaluation(context), PLAYER,
-                   "Invalid map coordinates!");
-      return 0;
-    }
-    ishex = 1;
-    if (!battle_map_coordinate_is_valid(mech_map, mapx, mapy)) {
-      mecha_notify(btech_context_evaluation(context), PLAYER,
-                   "Map coordinates out of range!");
-      return 0;
-    }
-
-    if (!SIGHT && !weapon_catalogue_is_artillery(weaptype))
-
-      /* look for enemies in that hex... */
-      temp_mech = find_mech_in_hex(mech, mech_map, mapx, mapy, 0);
-    if (temp_mech) {
-      enemy_x = mech_position_real_x(temp_mech);
-      enemy_y = mech_position_real_y(temp_mech);
-      enemy_z = mech_position_real_z(temp_mech);
-    }
-
-    if (!temp_mech) {
-      map_coord_to_real_coord(mapx, mapy, &enemy_x, &enemy_y);
-      mech_target_hex_z_set(mech,
-                            battle_map_hex_elevation(mech_map, mapx, mapy));
-      const int TARGET_HEX_Z = mech_target_hex_z(mech);
-      enemy_z = ZSCALE * (float)TARGET_HEX_Z;
-    }
-
-    if (mech_class(mech) != CLASS_BSUIT) {
-      MechWeaponArcCheck arc =
-          mech_weapon_arc_check(mech, enemy_x, enemy_y, section, critical);
-      if (arc == MECH_WEAPON_ARC_NOT_CONTROLLED) {
-        mecha_notify(btech_context_evaluation(context), PLAYER,
-                     "That arc's weapons aren't under your control!");
-        return 0;
-      }
-      if (arc == MECH_WEAPON_ARC_OUTSIDE) {
-        mecha_notify(btech_context_evaluation(context), PLAYER,
-                     "That hex target is not in your weapons arc!");
-        return 0;
-      }
-    }
-
-    /* Don't check LOS for missile weapons */
-    range = map_spatial_range(&(MapSpatialSegment){
-        .start = {.x = mech_position_real_x(mech),
-                  .y = mech_position_real_y(mech),
-                  .z = mech_position_real_z(mech)},
-        .end = {.x = enemy_x, .y = enemy_y, .z = enemy_z},
-    });
-    los = mech_los_check_unblocked(mech, temp_mech, mapx, mapy, range);
-
-    if (!weapon_catalogue_is_artillery(weaptype)) {
-      if (!los) {
-        mecha_notify(btech_context_evaluation(context), PLAYER,
-                     "That hex target is not in your line of sight!");
-        return 0;
-      }
-    }
-    break;
-
-  default:
+  WeaponFireTargetResult fire_target;
+  if (!weapon_fire_target_resolve(
+          &(WeaponFireTargetResolveRequest){
+              .command = request,
+              .weapon_index = weaptype,
+              .section = section,
+              .critical = critical,
+              .mode = mode,
+              .conditions = conditions,
+          },
+          &fire_target)) {
     return 0;
   }
+  temp_mech = fire_target.target;
+  mapx = fire_target.map_x;
+  mapy = fire_target.map_y;
+  los = fire_target.line_of_sight;
+  range = fire_target.range;
+  ishex = fire_target.target_kind;
 
   if (temp_mech) {
     if (weapon_catalogue_is_artillery(weaptype)) {

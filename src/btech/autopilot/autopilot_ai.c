@@ -77,7 +77,6 @@ static const AiPathOption MOVE_NORM_OPT[MNORM_COUNT] = {
     {120, AI_SPEED_NORMAL},  {-160, AI_SPEED_NORMAL}, {160, AI_SPEED_NORMAL},
     {-160, AI_SPEED_SLOWER}, {160, AI_SPEED_SLOWER},  {-160, AI_SPEED_FASTER},
     {160, AI_SPEED_FASTER}};
-/* Update: Just do subset if we're in silly mood */
 static const AiPathOption COMBAT_FAST_OPT[CFAST_COUNT] = {
     {0, AI_SPEED_FASTER},   {0, AI_SPEED_NORMAL},   {0, AI_SPEED_SLOWER},
     {-10, AI_SPEED_NORMAL}, {10, AI_SPEED_NORMAL},  {-30, AI_SPEED_NORMAL},
@@ -208,7 +207,6 @@ static void ai_path_collect_friends(AiPathContext *path, Mech *mech,
     friend->out = false;
   }
 }
-/* Simulate all candidate states independently for efficient path scoring. */
 typedef struct AiPathScoreRequest {
   AiPathContext *path;
   Mech *mech;
@@ -224,9 +222,207 @@ typedef struct AiPathScoreResult {
   int selected_option;
   int score;
 } AiPathScoreResult;
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+typedef struct AiPathTickRequest {
+  const AiPathScoreRequest *score;
+  AiPathWorkspace *workspace;
+  float target_x;
+  float target_y;
+  int tick;
+} AiPathTickRequest;
+
+static void ai_path_friend_tick(const AiPathTickRequest *request) {
+  AiPathContext *path = request->score->path;
+  Mech *m = request->score->mech;
+  BattleMap *map = request->score->map;
+  const int OPTION_COUNT = request->score->option_count;
+  const bool GOTENEMY = request->score->has_enemy;
+  AiPathWorkspace *workspace = request->workspace;
+  int i = request->tick;
+  int j;
+  int k;
+
+  if (mech_class(m) == CLASS_MECH) {
+    for (j = 0; j < path->friend_count; j++) {
+      AiPathUnitSimulation *friend = ai_path_unit_at(path->friends, j);
+      if (friend->out)
+        continue;
+      if (ai_crash(map, friend->mech, &friend->location))
+        friend->out = true;
+    }
+    for (k = 0; k < OPTION_COUNT; k++) {
+      int stack_count = 0;
+      AiPathCandidate *candidate = ai_path_candidate_at(workspace, k);
+      if (candidate->out_step || candidate->stack_step)
+        continue;
+      for (j = 0; j < path->friend_count; j++) {
+        AiPathUnitSimulation *friend = ai_path_unit_at(path->friends, j);
+        if (!friend->out)
+          if (candidate->location.x == friend->location.x &&
+              candidate->location.y == friend->location.y)
+            stack_count++;
+      }
+      if (stack_count > 1) { /* Possible stackage */
+        int osc = stack_count;
+        for (j = 0; j < path->friend_count; j++) {
+          AiPathUnitSimulation *friend = ai_path_unit_at(path->friends, j);
+          if (!friend->out) {
+            if (candidate->location.x == friend->location.x &&
+                candidate->location.y == friend->location.y) {
+              if ((candidate->location.lx != candidate->location.x ||
+                   candidate->location.ly != candidate->location.y) ||
+                  (friend->location.lx != friend->location.x ||
+                   friend->location.ly != friend->location.y))
+                osc--;
+            }
+          }
+        }
+        if (osc != stack_count)
+          candidate->stack_step = i + 1;
+      }
+      if (GOTENEMY)
+        candidate->tick_danger = 0;
+    }
+  }
+}
+
+static void ai_path_enemy_tick(const AiPathTickRequest *request) {
+  AiPathContext *path = request->score->path;
+  Mech *m = request->score->mech;
+  BattleMap *map = request->score->map;
+  Autopilot *a = request->score->autopilot;
+  const int OPTION_COUNT = request->score->option_count;
+  const bool GOTENEMY = request->score->has_enemy;
+  float dx = request->target_x;
+  float dy = request->target_y;
+  const float DELX = request->score->target_delta.x;
+  const float DELY = request->score->target_delta.y;
+  AiPathWorkspace *workspace = request->workspace;
+  int i = request->tick;
+  int j;
+  int k;
+  int l;
+  int bearing;
+
+  if (GOTENEMY) {
+    for (j = 0; j < path->enemy_count; j++) {
+      AiPathUnitSimulation *enemy = ai_path_unit_at(path->enemies, j);
+      if (enemy->out)
+        continue;
+      if (ai_crash(map, enemy->mech, &enemy->location))
+        enemy->out = true;
+      for (k = 0; k < OPTION_COUNT; k++) {
+        AiPathCandidate *candidate = ai_path_candidate_at(workspace, k);
+        if (candidate->out_step)
+          continue;
+        l = map_hex_distance(&(HexDistanceRequest){
+            .start = {.x = candidate->location.x, .y = candidate->location.y},
+            .end = {.x = enemy->location.x, .y = enemy->location.y},
+            .correction = 0,
+        });
+        if (l >= 100)
+          continue;
+        switch (a->auto_cmode) {
+        case 0: /* Withdraw */
+          if (l > a->auto_cdist)
+            candidate->battle_score += (5 * a->auto_cdist) + l - a->auto_cdist;
+          else
+            candidate->battle_score += 5 * l;
+          break;
+        case 1: /* Score  = fulfilling goal (=> distance from cdist) */
+          if (l < a->auto_cdist)
+            candidate->battle_score -=
+                10 * (a->auto_cdist - l); /* Not too close */
+          else
+            candidate->battle_score -= 2 * (l - a->auto_cdist);
+          break;
+        case 2:
+          if (l < a->auto_cdist)
+            candidate->battle_score -= 2 * (a->auto_cdist - l);
+          else
+            candidate->battle_score -= 10 * (l - a->auto_cdist);
+        }
+        if (l > 28)
+          continue;
+        candidate->tick_danger += (40 - min(40, l));
+        if (mech_class(m) == CLASS_MECH) {
+          bearing = map_bearing(&(MapRealSegment){
+              .start = {.x = candidate->location.fx,
+                        .y = candidate->location.fy},
+              .end = {.x = enemy->location.fx, .y = enemy->location.fy}});
+          bearing = candidate->location.h - bearing;
+          if (bearing < 0)
+            bearing += 360;
+          if (bearing >= 90 && bearing <= 270) {
+            candidate->tick_danger += 5 * (29 - min(29, l));
+            if (bearing >= 120 && bearing <= 240) {
+              candidate->tick_danger += 20 * (29 - min(29, l));
+            }
+          }
+        } else if (mech_class(m) == CLASS_VEH_GROUND) {
+          bearing = map_bearing(&(MapRealSegment){
+              .start = {.x = candidate->location.fx,
+                        .y = candidate->location.fy},
+              .end = {.x = enemy->location.fx, .y = enemy->location.fy}});
+          bearing = candidate->location.h - bearing;
+          if (bearing < 0)
+            bearing += 360;
+          if (bearing >= 45 && bearing <= 315) {
+            if (bearing >= 135 && bearing <= 225) {
+              candidate->tick_danger +=
+                  10 * (29 - min(29, l)) *
+                  (100 - (100 * mech_section_armor(m, BSIDE) /
+                          max(1, mech_section_original_armor(m, BSIDE)))) /
+                  100;
+            } else if (bearing < 135) {
+              candidate->tick_danger +=
+                  7 * (29 - min(29, l)) *
+                  (100 - (100 * mech_section_armor(m, RSIDE) /
+                          max(1, mech_section_original_armor(m, RSIDE)))) /
+                  100;
+            } else {
+              candidate->tick_danger +=
+                  7 * (29 - min(29, l)) *
+                  (100 - (100 * mech_section_armor(m, LSIDE) /
+                          max(1, mech_section_original_armor(m, LSIDE)))) /
+                  100;
+            }
+          } else {
+            candidate->tick_danger +=
+                5 * (29 - min(29, l)) *
+                (100 - (100 * mech_section_armor(m, FSIDE) /
+                        max(1, mech_section_original_armor(m, FSIDE)))) /
+                100;
+          }
+        }
+      }
+      for (k = 0; k < OPTION_COUNT; k++) {
+        AiPathCandidate *candidate = ai_path_candidate_at(workspace, k);
+        if (candidate->out_step)
+          continue;
+        const float TARGET_RANGE = map_real_range(&(MapRealSegment){
+            .start = {.x = candidate->location.fx, .y = candidate->location.fy},
+            .end = {.x = dx, .y = dy},
+        });
+        l = (int)TARGET_RANGE;
+        if ((DELX != 0.0F || DELY != 0.0F))
+          candidate->tick_danger += min(100, l * l);
+        if (path->enemy_count)
+          candidate->tick_danger /= path->enemy_count;
+        if (candidate->location.s <= MP2)
+          candidate->tick_danger += 400;
+        else if (candidate->location.s <= MP4)
+          candidate->tick_danger += 300;
+        else if (candidate->location.s <= MP6)
+          candidate->tick_danger += 200;
+        else if (candidate->location.s <= MP9)
+          candidate->tick_danger += 100;
+        candidate->danger +=
+            candidate->tick_danger * (NORM_SAFE - i) / (NORM_SAFE / 2);
+      }
+    }
+  }
+}
 static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
-  AiPathContext *path = request->path;
   Mech *m = request->mech;
   BattleMap *map = request->map;
   Autopilot *a = request->autopilot;
@@ -239,10 +435,8 @@ static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
   const float DELY = request->target_delta.y;
   AiPathScoreResult result = {.selected_option = -1};
   int i;
-  int j;
   int k;
   int l;
-  int bearing;
   int sd;
   int sc;
   AiPathWorkspace workspace = {0};
@@ -282,7 +476,6 @@ static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
         candidate->out_step = i + 1;
         continue;
       }
-      /* Base target-acquisition stuff */
       const float TARGET_RANGE = map_real_range(&(MapRealSegment){
           .start = {.x = candidate->location.fx, .y = candidate->location.fy},
           .end = {.x = dx, .y = dy},
@@ -290,20 +483,16 @@ static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
       l = (int)TARGET_RANGE;
       if (l < candidate->best_range)
         candidate->best_range = l;
-      /* Generally speaking we're going to the point spesified */
       candidate->movement_score +=
           4 * ((2 * (50 - candidate->best_range)) + (100 - l));
-      /* Heading change's inherently [slightly] evil */
       if (candidate->location.h != candidate->location.dh)
         candidate->movement_score -= 1;
-      /* Moving is a good thing */
       if (candidate->location.x != candidate->location.lx ||
           candidate->location.y != candidate->location.ly) {
         if (candidate->location.t == BATTLE_TERRAIN_WATER)
           candidate->movement_score -= 5;
         candidate->movement_score += 10;
       }
-      /* Punish for not utilizing full speed (this is .. hm, flaky) */
       const AiPathOption *option =
           ai_path_option_at(options, (size_t)OPTION_COUNT, k);
       if (option->speed != AI_SPEED_FASTER &&
@@ -315,179 +504,15 @@ static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
             (100 - sc) / 30; /* Basically, unused speed is bad */
       }
     }
-    if (mech_class(m) == CLASS_MECH) {
-      /* Simulate friends */
-      for (j = 0; j < path->friend_count; j++) {
-        AiPathUnitSimulation *friend = ai_path_unit_at(path->friends, j);
-        if (friend->out)
-          continue;
-        if (ai_crash(map, friend->mech, &friend->location))
-          friend->out = true;
-      }
-      for (k = 0; k < OPTION_COUNT; k++) {
-        int stack_count = 0;
-        AiPathCandidate *candidate = ai_path_candidate_at(&workspace, k);
-        if (candidate->out_step || candidate->stack_step)
-          continue;
-        /* Meaning of stack: Someone moves _into_ the hex */
-        for (j = 0; j < path->friend_count; j++) {
-          AiPathUnitSimulation *friend = ai_path_unit_at(path->friends, j);
-          if (!friend->out)
-            if (candidate->location.x == friend->location.x &&
-                candidate->location.y == friend->location.y)
-              stack_count++;
-        }
-        if (stack_count > 1) { /* Possible stackage */
-          int osc = stack_count;
-          for (j = 0; j < path->friend_count; j++) {
-            AiPathUnitSimulation *friend = ai_path_unit_at(path->friends, j);
-            if (!friend->out) {
-              if (candidate->location.x == friend->location.x &&
-                  candidate->location.y == friend->location.y) {
-                if ((candidate->location.lx != candidate->location.x ||
-                     candidate->location.ly != candidate->location.y) ||
-                    (friend->location.lx != friend->location.x ||
-                     friend->location.ly != friend->location.y))
-                  osc--;
-              }
-            }
-          }
-          if (osc != stack_count)
-            candidate->stack_step = i + 1;
-        }
-        if (GOTENEMY)
-          candidate->tick_danger = 0;
-      }
-    }
-    if (GOTENEMY) {
-      /* Update enemy locations as well */
-      for (j = 0; j < path->enemy_count; j++) {
-        AiPathUnitSimulation *enemy = ai_path_unit_at(path->enemies, j);
-        if (enemy->out)
-          continue;
-        if (ai_crash(map, enemy->mech, &enemy->location))
-          enemy->out = true;
-        for (k = 0; k < OPTION_COUNT; k++) {
-          AiPathCandidate *candidate = ai_path_candidate_at(&workspace, k);
-          if (candidate->out_step)
-            continue;
-          l = map_hex_distance(&(HexDistanceRequest){
-              .start = {.x = candidate->location.x, .y = candidate->location.y},
-              .end = {.x = enemy->location.x, .y = enemy->location.y},
-              .correction = 0,
-          });
-          if (l >= 100)
-            continue;
-          switch (a->auto_cmode) {
-          case 0: /* Withdraw */
-            if (l > a->auto_cdist)
-              candidate->battle_score +=
-                  (5 * a->auto_cdist) + l - a->auto_cdist;
-            else
-              candidate->battle_score += 5 * l;
-            break;
-          case 1: /* Score  = fulfilling goal (=> distance from cdist) */
-            if (l < a->auto_cdist)
-              candidate->battle_score -=
-                  10 * (a->auto_cdist - l); /* Not too close */
-            else
-              candidate->battle_score -= 2 * (l - a->auto_cdist);
-            break;
-          case 2:
-            if (l < a->auto_cdist)
-              candidate->battle_score -= 2 * (a->auto_cdist - l);
-            else
-              candidate->battle_score -= 10 * (l - a->auto_cdist);
-          }
-          if (l > 28)
-            continue;
-          /* Danger modifier ; it's _always_ dangerous to be close */
-          candidate->tick_danger += (40 - min(40, l));
-          /* Arcs can be .. dangerous */
-          if (mech_class(m) == CLASS_MECH) {
-            bearing = map_bearing(&(MapRealSegment){
-                .start = {.x = candidate->location.fx,
-                          .y = candidate->location.fy},
-                .end = {.x = enemy->location.fx, .y = enemy->location.fy}});
-            bearing = candidate->location.h - bearing;
-            if (bearing < 0)
-              bearing += 360;
-            if (bearing >= 90 && bearing <= 270) {
-              /* Sides are moderately dangerous [potential rear arcs] */
-              candidate->tick_danger += 5 * (29 - min(29, l));
-              if (bearing >= 120 && bearing <= 240) {
-                /* Rear arc is VERY dangerous */
-                candidate->tick_danger += 20 * (29 - min(29, l));
-              }
-            }
-          } else if (mech_class(m) == CLASS_VEH_GROUND) {
-            bearing = map_bearing(&(MapRealSegment){
-                .start = {.x = candidate->location.fx,
-                          .y = candidate->location.fy},
-                .end = {.x = enemy->location.fx, .y = enemy->location.fy}});
-            bearing = candidate->location.h - bearing;
-            if (bearing < 0)
-              bearing += 360;
-            if (bearing >= 45 && bearing <= 315) {
-              if (bearing >= 135 && bearing <= 225) {
-                /* Rear arc is VERY dangerous */
-                candidate->tick_danger +=
-                    10 * (29 - min(29, l)) *
-                    (100 - (100 * mech_section_armor(m, BSIDE) /
-                            max(1, mech_section_original_armor(m, BSIDE)))) /
-                    100;
-              } else if (bearing < 135) {
-                /* right side */
-                candidate->tick_danger +=
-                    7 * (29 - min(29, l)) *
-                    (100 - (100 * mech_section_armor(m, RSIDE) /
-                            max(1, mech_section_original_armor(m, RSIDE)))) /
-                    100;
-              } else {
-                candidate->tick_danger +=
-                    7 * (29 - min(29, l)) *
-                    (100 - (100 * mech_section_armor(m, LSIDE) /
-                            max(1, mech_section_original_armor(m, LSIDE)))) /
-                    100;
-              }
-            } else {
-              candidate->tick_danger +=
-                  5 * (29 - min(29, l)) *
-                  (100 - (100 * mech_section_armor(m, FSIDE) /
-                          max(1, mech_section_original_armor(m, FSIDE)))) /
-                  100;
-            }
-          }
-        }
-        for (k = 0; k < OPTION_COUNT; k++) {
-          AiPathCandidate *candidate = ai_path_candidate_at(&workspace, k);
-          if (candidate->out_step)
-            continue;
-          /* Dangerous to be far from buddy in fight */
-          const float TARGET_RANGE = map_real_range(&(MapRealSegment){
-              .start = {.x = candidate->location.fx,
-                        .y = candidate->location.fy},
-              .end = {.x = dx, .y = dy},
-          });
-          l = (int)TARGET_RANGE;
-          if ((DELX != 0.0F || DELY != 0.0F))
-            candidate->tick_danger += min(100, l * l);
-          if (path->enemy_count)
-            candidate->tick_danger /= path->enemy_count;
-          /* It's inherently dangerous to move slowly: */
-          if (candidate->location.s <= MP2)
-            candidate->tick_danger += 400;
-          else if (candidate->location.s <= MP4)
-            candidate->tick_danger += 300;
-          else if (candidate->location.s <= MP6)
-            candidate->tick_danger += 200;
-          else if (candidate->location.s <= MP9)
-            candidate->tick_danger += 100;
-          candidate->danger +=
-              candidate->tick_danger * (NORM_SAFE - i) / (NORM_SAFE / 2);
-        }
-      }
-    }
+    AiPathTickRequest tick = {
+        .score = request,
+        .workspace = &workspace,
+        .target_x = dx,
+        .target_y = dy,
+        .tick = i,
+    };
+    ai_path_friend_tick(&tick);
+    ai_path_enemy_tick(&tick);
   }
   for (i = 0; i < OPTION_COUNT; i++) {
     AiPathCandidate *candidate = ai_path_candidate_at(&workspace, i);
@@ -500,8 +525,6 @@ static AiPathScoreResult ai_path_score(const AiPathScoreRequest *request) {
       ai_score_max_update(&a->b_dan, candidate->danger);
     }
   }
-  /* Now we have been.. calibrated */
-  /* Find best overall score */
   for (i = 0; i < OPTION_COUNT; i++) {
     AiPathCandidate *candidate = ai_path_candidate_at(&workspace, i);
     const AiPathOption *option =

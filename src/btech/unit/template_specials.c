@@ -1,22 +1,21 @@
 /* Rebuilds derived unit technology flags from installed equipment. */
 
 #include "bsuit_api.h"
-#include "btconfig.h"
 #include "btech_channel.h"
 #include "command_handlers_api.h"
-#include "context_internal.h"
 #include "equipment_types.h"
 #include "mech_c3_api.h"
 #include "mech_equipment_api.h"
 #include "mech_internal.h"
 #include "mech_network_api.h"
-#include "mech_runtime_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mux/support/checked_storage.h"
 #include "section_types.h"
 #include "template_api.h"
 #include "weapon_catalogue_api.h"
+
+#include <stddef.h>
 
 static int *template_integer_slot(int *values, size_t count, int index) {
   return checked_storage_at(values, count, sizeof(*values), (size_t)index);
@@ -60,11 +59,12 @@ typedef struct TemplateSpecialScan {
   bool clan;
 } TemplateSpecialScan;
 
-static void template_special_part_scan(Mech *mech, int section, int critical,
-                                       TemplateSpecialScan *scan) {
-  const int x = section;
-  const int y = critical;
-  const int t = mech_critical_part_type(mech, x, y);
+static void template_special_part_scan(Mech *mech, int section,
+                                       TemplateSpecialScan *scan,
+                                       int critical) {
+  int x = section;
+  int y = critical;
+  int t = mech_critical_part_type(mech, x, y);
   if (t) {
     switch (special_from_equipment_index(t)) {
     case ARTEMIS_IV:
@@ -208,7 +208,7 @@ void update_specials(Mech *mech) {
     *template_integer_slot(scan.null_signature_by_section, NUM_SECTIONS, x) = 0;
 
     for (y = 0; y < crits_in_loc(mech, x); y++) {
-      template_special_part_scan(mech, x, y, &scan);
+      template_special_part_scan(mech, x, &scan, y);
     }
     if (x != CTORSO && scan.engine_count) {
       if (scan.engine_count > 3) {

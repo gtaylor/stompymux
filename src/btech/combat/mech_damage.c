@@ -45,10 +45,12 @@
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
 
-static bool mech_damage_redirect_to_swarmer(const MechDamageRequest *request,
-                                            Mech *wounded, Mech *attacker,
-                                            int hit_location, bool rear,
-                                            int damage, int roll) {
+// Intentional legacy recursion redirects damage from a carrier to its swarmer.
+// NOLINTNEXTLINE(misc-no-recursion)
+static bool mech_damage_redirect_to_swarmer(
+    const MechDamageRequest *request, Mech *wounded, Mech *attacker,
+    // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+    int hit_location, bool rear, int damage, int roll) {
   if (bsuit_swarmer_count(wounded) <= 0 || request->ignore_swarmers)
     return false;
   Mech *swarmer = bsuit_swarmer_find(wounded);
@@ -97,10 +99,10 @@ static void mech_damage_searchlight_maybe_destroy(Mech *wounded, bool rear,
                                                   int hit_location) {
   bool exposed = false;
   if (mech_class(wounded) == CLASS_MECH)
-    exposed = hit_location == LTORSO || hit_location == CTORSO ||
-              hit_location == RTORSO;
+    exposed = (hit_location == LTORSO || hit_location == CTORSO ||
+               hit_location == RTORSO) != 0;
   else if (mech_class(wounded) == CLASS_VEH_GROUND)
-    exposed = hit_location == FSIDE;
+    exposed = (hit_location == FSIDE) != 0;
   if (rear || !exposed || !(mech_technology_flags(wounded) & SLITE_TECH) ||
       mech_condition_summary(wounded).searchlight_destroyed)
     return;

@@ -29,6 +29,18 @@ typedef struct HexTransitionResult {
   int done;
 } HexTransitionResult;
 
+typedef struct HexVehicleTransitionInput {
+  Mech *mech;
+  float delta_x;
+  float delta_y;
+  int elevation;
+  int last_elevation;
+  int old_terrain;
+  bool skid_cliff;
+  bool roll_on_backwalk;
+  bool new_terrain;
+} HexVehicleTransitionInput;
+
 typedef struct MovementCollisionCheck {
   Mech *mech;
   MovementCollisionMode mode;
@@ -39,3 +51,7 @@ typedef struct MovementCollisionCheck {
 int collision_check(const MovementCollisionCheck *check);
 HexTransitionResult
 mech_hex_transition_resolve(const HexMechTransitionInput *input);
+
+/** Resolves terrain interactions for a vehicle entering a new hex. */
+bool mech_vehicle_hex_transition_resolve(
+    const HexVehicleTransitionInput *input);
