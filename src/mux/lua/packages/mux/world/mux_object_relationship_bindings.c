@@ -1,7 +1,6 @@
 /* mux_object_relationship_bindings.c - Lua bindings for object relationships.
  */
 
-#include <lauxlib.h>
 #include <lua.h>
 #include <string.h>
 
@@ -13,6 +12,7 @@
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
+#include "mux/support/alloc.h"
 
 /**
  * Returns this object's assigned zone.
