@@ -18,6 +18,6 @@ state.
 | [`job_count`](job-count/) | Returns the number of pending repair jobs. |
 | [`tech_list`](tech-list/) / [`tech_list_ref`](tech-list-ref/) | Lists parts needed for repairs. |
 | [`tech_status`](tech-status/) | Returns formatted repair status. |
-| [`tech_time`](tech-time/) | Runs the technician-time query. |
+| [`tech_time`](tech-time/) | Returns a player's remaining technician time. |
 | [`under_repair`](under-repair/) | Tests for an active repair event. |
 | [`unit_fixable`](unit-fixable/) | Tests whether a unit can be repaired. |

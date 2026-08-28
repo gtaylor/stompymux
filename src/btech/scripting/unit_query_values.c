@@ -305,12 +305,13 @@ BtechScriptResult fun_btremovestores(BtechScriptCall *call) {
   return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 }
 /**
- * Runs the legacy technician-time query.
+ * Returns a player's remaining technician time in seconds.
  *
  * @par Lua name `btech.repair.tech_time`
- * @par Lua signature `btech.repair.tech_time(  )`
- * @par Lua parameters - None.
- * @par Lua returns - `value` (`number`): The numeric result.
+ * @par Lua signature `btech.repair.tech_time( player )`
+ * @par Lua parameters - `player` (`number`) The player dbref.
+ * @par Lua returns - `seconds` (`number`): Remaining technician time in
+ * seconds, or zero when the player has no pending technician time.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
  * `@lua/check`.
  * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
@@ -331,25 +332,26 @@ BtechScriptResult fun_bttechtime(BtechScriptCall *call) {
   [[maybe_unused]] const int NCARGS = (int)call->command_arguments.count;
   [[maybe_unused]] EvaluationContext *context = call->evaluation;
   [[maybe_unused]] const DbRef PLAYER = call->player;
-  time_t old;
-  char *olds = btech_attribute_read(context->world->database, PLAYER,
-                                    A_TECHTIME, (char[LBUF_SIZE]){0});
-  char buf[MBUF_SIZE];
-  if (olds) {
-    if (!parse_time_checked(olds, &old))
-      old = context->btech->clock->now;
-    if (old < context->btech->clock->now) {
-      (void)string_copy_bounded(buf, sizeof(buf), "00:00.00");
-    } else {
-      old -= context->btech->clock->now;
-      (void)snprintf(buf, MBUF_SIZE, "%02ld:%02d.%02d", (long)(old / 3600),
-                     (int)((old / 60) % 60), (int)(old % 60));
-    }
-  } else {
-    (void)string_copy_bounded(buf, sizeof(buf), "00:00.00");
+  DbRef player;
+  time_t completion;
+  time_t remaining = 0;
+
+  if (!argument_count_in_range("BTTECHTIME", NFARGS, 1, 1, buff, bufc))
+    return btech_script_error_output(call);
+  if (!parse_long_checked(script_function_argument(fargs, NFARGS, 0),
+                          &player) ||
+      !is_good_obj(context->world->database, player) ||
+      !is_player(context->world->database, player)) {
+    return btech_script_error(call, "#-1 INVALID PLAYER");
   }
-  mecha_notify(context, PLAYER, buf);
-  return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
+  char *stored = btech_attribute_read(context->world->database, player,
+                                      A_TECHTIME, (char[LBUF_SIZE]){0});
+  if (stored != nullptr && parse_time_checked(stored, &completion) &&
+      completion > context->btech->clock->now) {
+    remaining = completion - context->btech->clock->now;
+  }
+  safe_tprintf_str(buff, bufc, "%ld", (long)remaining);
+  return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
 /**
  * Describes one critical slot on a live unit.

@@ -777,14 +777,15 @@ function btech_repair.tech_list_ref(reference) end
 ---@see btech.error.codes.failed
 function btech_repair.tech_status(unit) end
 
----Runs the legacy technician-time query.
----@return number value
+---Returns a player's remaining technician time in seconds.
+---@param player integer
+---@return number seconds Remaining technician time, or zero when the player has no pending technician time.
 ---
 ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech_repair.tech_time() end
+function btech_repair.tech_time(player) end
 
 ---Returns the configured experience threshold for a skill.
 ---@param skill string

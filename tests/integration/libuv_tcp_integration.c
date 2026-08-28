@@ -298,6 +298,8 @@ static int write_lua_fixture(const char *directory) {
         "    {\n"
         "      pattern = \"^luacolor$\",\n"
         "      handler = function(ctx)\n"
+        "        assert(btech.repair.tech_time(ctx.enactor) == 0)\n"
+        "        assert(not pcall(btech.repair.tech_time))\n"
         "        assert(mux.object == nil)\n"
         "        assert(mux.connected_players == nil)\n"
         "        assert(mux.who_summary == nil)\n"

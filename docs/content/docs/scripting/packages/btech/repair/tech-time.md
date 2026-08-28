@@ -4,28 +4,29 @@ type: docs
 toc_hide: false
 ---
 
-Runs the legacy technician-time query.
+Returns a player's remaining technician time in seconds.
 
 ## Function
 
 ### Synopsis
 
 ```lua
-btech.repair.tech_time(  )
+btech.repair.tech_time( player )
 ```
 
 ### Arguments
 
-None.
+`number player`
+: The player dbref.
 
 ### Returns
 
-`number value`
-: The numeric result.
+`number seconds`
+: The remaining technician time in seconds, or `0` when the player has no pending technician time.
 
 ## Notes
 
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error. The legacy handler sends a formatted time directly to its invocation player and does not write a return value; through the Lua adapter the numeric result is therefore `0`.
+This function is available only in a running Lua callback. Invalid players, invalid arguments, and legacy error results raise a Lua error.
 
 ## See Also
 
