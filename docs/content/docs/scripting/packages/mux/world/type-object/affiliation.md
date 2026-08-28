@@ -5,13 +5,10 @@ title: affiliation
 Returns an object's assigned affiliation.
 
 ```lua
-local affiliation = mux.world.affiliation(object)
+local affiliation = object:affiliation()
 ```
 
-## Parameters
-
-`number|Object object`
-: The live database object to inspect.
+The receiver is the live database object to inspect.
 
 ## Returns
 
@@ -24,6 +21,6 @@ matching, events, permissions, or other server behavior.
 
 ## Errors and availability
 
-Raises `mux.object.invalid` for an invalid object reference or an invalid
-affiliation stored on the object. This function is unavailable during
+Raises `mux.object.invalid` for an invalid receiver or an invalid affiliation
+stored on the object. This method is unavailable during
 `@lua/check` and raises `mux.unavailable.checking` there.

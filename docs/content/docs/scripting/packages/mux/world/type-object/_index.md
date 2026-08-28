@@ -28,6 +28,7 @@ All properties are read-only.
 
 | Method | Description |
 | --- | --- |
+| [`Object:affiliation`](affiliation/) | Returns the object's assigned affiliation. |
 | [`Object:contents`](contents/) | Lists directly contained objects. |
 | [`Object:contents_visible`](contents-visible/) | Applies native content visibility rules. |
 | [`Object:exits`](exits/) | Lists directly attached exits. |
@@ -36,7 +37,12 @@ All properties are read-only.
 | [`Object:attribute`](attribute/) | Opens the native attribute interface. |
 | [`Object:flags`](flags/) | Opens the object's flag collection. |
 | [`Object:powers`](powers/) | Opens the object's power collection. |
+| [`Object:lua_parent`](lua-parent/) | Returns the object's direct Lua parent path. |
+| [`Object:set_affiliation`](set-affiliation/) | Assigns or clears the object's affiliation. |
+| [`Object:set_lua_parent`](set-lua-parent/) | Assigns or clears the object's Lua parent. |
+| [`Object:set_zone`](set-zone/) | Assigns or clears the object's zone. |
 | [`Object:state`](state/) | Opens a persistent state namespace. |
+| [`Object:zone`](zone/) | Returns the object's assigned zone. |
 
 ## See Also
 

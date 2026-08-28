@@ -319,180 +319,6 @@ static int lua_mux_create_exit(lua_State *state) {
 }
 
 /**
- * Returns an object's assigned zone.
- *
- * @par Lua name `mux.world.zone`
- * @par Lua signature `mux.world.zone( object )`
- * @par Lua parameters - `object` (`number|Object`) Live object to inspect.
- * @par Lua returns - `zone` (`Object|nil`): The assigned zone, or `nil` when
- * the object has no zone or its zone is being destroyed.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid reference.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
- */
-static int lua_mux_zone(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-
-  lua_mux_require_runtime(package, state, "world.zone");
-  DbRef object = lua_mux_require_object(package, state, 1);
-  DbRef zone = game_object_zone(package->services->database, object);
-
-  if (zone == NOTHING) {
-    lua_pushnil(state);
-    return 1;
-  }
-  if (!is_good_obj(package->services->database, zone))
-    return lua_error_raise(state, LUA_ERROR_CODE_OBJECT_INVALID,
-                           "object has an invalid zone");
-  if (is_going(package->services->database, zone)) {
-    lua_pushnil(state);
-    return 1;
-  }
-  lua_mux_push_object(state, package, zone);
-  return 1;
-}
-
-/**
- * Assigns an object's zone, or clears it with `nil`.
- *
- * @par Lua name `mux.world.set_zone`
- * @par Lua signature `mux.world.set_zone( object, zone )`
- * @par Lua parameters - `object` (`number|Object`) Live object to update.
- * - `zone` (`number|Object|nil`) Live thing or room to assign, or `nil` to
- * clear the object's zone.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when the zone argument is omitted;
- * `LUA_ERROR_CODE_OBJECT_INVALID` for invalid references or object kinds;
- * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for an object or zone being destroyed.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
- */
-static int lua_mux_set_zone(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-  GameDatabase *database = package->services->database;
-
-  lua_mux_require_runtime(package, state, "world.set_zone");
-  DbRef object = lua_mux_require_object(package, state, 1);
-  if (is_going(database, object))
-    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
-                         "object is being destroyed");
-  if (lua_gettop(state) < 2)
-    return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
-                         "zone is required; pass nil to clear it");
-  if (lua_isnil(state, 2)) {
-    game_object_set_zone(database, object, NOTHING);
-    return 0;
-  }
-
-  DbRef zone = lua_mux_require_object(package, state, 2);
-  if (is_going(database, zone))
-    return lua_error_arg(state, 2, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
-                         "zone is being destroyed");
-  if (!is_thing(database, zone) && !is_room(database, zone))
-    return lua_error_arg(state, 2, LUA_ERROR_CODE_OBJECT_INVALID,
-                         "zone must be a thing or room");
-  if (is_room(database, zone) && !is_room(database, object))
-    return lua_error_arg(state, 2, LUA_ERROR_CODE_OBJECT_INVALID,
-                         "only rooms may use rooms as zones");
-
-  game_object_set_zone(database, object, zone);
-  return 0;
-}
-
-/**
- * Returns an object's direct Lua parent path.
- *
- * @par Lua name `mux.world.lua_parent`
- * @par Lua signature `mux.world.lua_parent( object )`
- * @par Lua parameters - `object` (`number|Object`) Live object to inspect.
- * @par Lua returns - `parent` (`string|nil`): The object's direct,
- * `object_logic`-relative Lua parent path, or `nil` when none is assigned.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid reference.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
- */
-static int lua_mux_lua_parent(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-
-  lua_mux_require_runtime(package, state, "world.lua_parent");
-  DbRef object = lua_mux_require_object(package, state, 1);
-  const char *parent =
-      game_object_lua_parent(package->services->database, object);
-
-  if (*parent)
-    lua_pushstring(state, parent);
-  else
-    lua_pushnil(state);
-  return 1;
-}
-
-/**
- * Assigns an object's direct Lua parent path, or clears it with `nil`.
- *
- * @par Lua name `mux.world.set_lua_parent`
- * @par Lua signature `mux.world.set_lua_parent( object, parent )`
- * @par Lua parameters - `object` (`number|Object`) Live object to update.
- * - `parent` (`string|nil`) Existing `object_logic`-relative `.lua` path to
- * assign, or `nil` to clear the object's Lua parent.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when the parent is omitted, is not a string
- * or nil, or contains an embedded NUL byte;
- * `LUA_ERROR_CODE_MODULE_INVALID` for an invalid or unavailable parent path;
- * `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid object reference;
- * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` when the object is being destroyed or
- * the parent path cannot be stored.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
- */
-static int lua_mux_set_lua_parent(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-  GameDatabase *database = package->services->database;
-
-  lua_mux_require_runtime(package, state, "world.set_lua_parent");
-  DbRef object = lua_mux_require_object(package, state, 1);
-  if (is_going(database, object))
-    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
-                         "object is being destroyed");
-  if (lua_gettop(state) < 2)
-    return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
-                         "parent is required; pass nil to clear it");
-  if (lua_isnil(state, 2)) {
-    if (!game_object_lua_parent_set(database, object, ""))
-      return lua_error_raise(state, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
-                             "Lua parent could not be stored");
-    return 0;
-  }
-  if (lua_type(state, 2) != LUA_TSTRING)
-    return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
-                         "parent must be a string or nil");
-
-  size_t parent_length;
-  const char *parent = lua_tolstring(state, 2, &parent_length);
-  if (strlen(parent) != parent_length)
-    return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
-                         "parent contains an embedded NUL byte");
-  char error[LBUF_SIZE];
-  if (!lua_validate_path(package->context, parent, error, sizeof(error)))
-    return lua_error_arg(state, 2, LUA_ERROR_CODE_MODULE_INVALID, "%s", error);
-  if (!game_object_lua_parent_set(database, object, parent))
-    return lua_error_raise(state, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
-                           "Lua parent could not be stored");
-  return 0;
-}
-
-/**
  * Links an exit to a destination or unlinks it with `nil`.
  *
  * @par Lua name `mux.world.link_exit`
@@ -709,7 +535,6 @@ void lua_mux_install_world_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_mux_install_state_bindings(state, package);
   lua_mux_install_attribute_bindings(state, package);
   lua_mux_install_flag_power_bindings(state, package);
-  lua_mux_install_affiliation_bindings(state, package);
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_pemit, 1);
   lua_setfield(state, -2, "pemit");
@@ -722,18 +547,6 @@ void lua_mux_install_world_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_create_exit, 1);
   lua_setfield(state, -2, "create_exit");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_zone, 1);
-  lua_setfield(state, -2, "zone");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_set_zone, 1);
-  lua_setfield(state, -2, "set_zone");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_lua_parent, 1);
-  lua_setfield(state, -2, "lua_parent");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_set_lua_parent, 1);
-  lua_setfield(state, -2, "set_lua_parent");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_link_exit, 1);
   lua_setfield(state, -2, "link_exit");

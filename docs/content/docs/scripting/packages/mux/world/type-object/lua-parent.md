@@ -5,13 +5,10 @@ title: lua_parent
 Returns an object's directly assigned Lua parent path.
 
 ```lua
-local parent = mux.world.lua_parent(object)
+local parent = object:lua_parent()
 ```
 
-## Parameters
-
-`number|Object object`
-: The live database object to inspect.
+The receiver is the live database object to inspect.
 
 ## Returns
 
@@ -24,5 +21,5 @@ inherited through zones, locations, or other objects.
 
 ## Errors and availability
 
-Raises `mux.object.invalid` for an invalid object reference. This function is
+Raises `mux.object.invalid` for an invalid receiver. This method is
 unavailable during `@lua/check` and raises `mux.unavailable.checking` there.

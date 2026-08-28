@@ -8,7 +8,7 @@ return {
       local object = mux.world.object(ctx.object)
       assert(ctx.enactor == 1 and ctx.cause == 1)
       assert(object.dbref == ctx.object and object.type == "player")
-      assert(mux.world.lua_parent(object) == "default_player.lua")
+      assert(object:lua_parent() == "default_player.lua")
       first_startup_count = first_startup_count + 1
       table.insert(startup_order, "first")
     end,

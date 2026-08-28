@@ -473,6 +473,7 @@ void lua_mux_install_object_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_exit_enter_lock_passes, 1);
   lua_setfield(state, -2, "enter_lock_passes");
+  lua_mux_install_object_relationship_bindings(state, package);
   lua_pop(state, 1);
 
   lua_pushlightuserdata(state, package);
