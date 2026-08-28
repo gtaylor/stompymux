@@ -4,7 +4,7 @@
 	"name": "btmux",
 	"build": {
 		"dockerfile": "Dockerfile"
-	}
+	},
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
@@ -13,7 +13,7 @@
 	// "forwardPorts": [],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "gcc -v",
+	"postCreateCommand": ".devcontainer/setup-devenv.sh"
 
 	// Configure tool-specific properties.
 	// "customizations": {},
