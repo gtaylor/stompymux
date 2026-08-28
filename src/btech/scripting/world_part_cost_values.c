@@ -26,8 +26,8 @@ static PartMatchResult cost_part_match(BtechScriptCall *call) {
 /**
  * Returns the configured cost of a part.
  *
- * @par Lua name `btech.part_cost`
- * @par Lua signature `btech.part_cost( part_name )`
+ * @par Lua name `btech.parts.cost`
+ * @par Lua signature `btech.parts.cost( part_name )`
  * @par Lua parameters - `part_name` (`string`) A recognized long or very-long
  * part name.
  * @par Lua returns - `value` (`number`): The numeric result.
@@ -58,8 +58,8 @@ BtechScriptResult fun_btgetpartcost(BtechScriptCall *call) {
 /**
  * Sets the configured cost of a part.
  *
- * @par Lua name `btech.set_part_cost`
- * @par Lua signature `btech.set_part_cost( part_name, cost )`
+ * @par Lua name `btech.parts.set_cost`
+ * @par Lua signature `btech.parts.set_cost( part_name, cost )`
  * @par Lua parameters - `part_name` (`string`) A recognized long or very-long
  * part name.
  * - `cost` (`number`) The non-negative cost.

@@ -4,10 +4,10 @@
 ---Doxygen comments, then refresh this definition instead of editing it alone.
 
 ---@alias DbRef integer Database object reference.
----@alias StateValue string|boolean|number
----@alias TelnetEnvironmentKind "var"|"uservar"
----@alias ObjectType "room"|"thing"|"exit"|"player"
----@alias NativeErrorRoot "mux"|"btech"|"testing"
+---@alias StateValue string|boolean|number Scalar value supported by persistent object state.
+---@alias TelnetEnvironmentKind "var"|"uservar" RFC 1572 NEW-ENVIRON variable namespace.
+---@alias ObjectType "room"|"thing"|"exit"|"player" Public native database object kind.
+---@alias NativeErrorRoot "mux"|"btech"|"testing" Root of a checked native error-code tree.
 ---@alias ConfigValue string|number|boolean Scalar value returned by the live configuration registry.
 
 ---A checked error-code symbol. Calling `tostring` returns its dotted `code`.
@@ -421,12 +421,14 @@ function Object:flags() end
 ---@see mux.error.codes.unavailable.checking
 function Object:powers() end
 
+---One player connection visible to the ordinary WHO command.
 ---@class Connection
 ---@field object Object Connected player.
 ---@field name string Current object name.
 ---@field connected_for integer Connected duration in seconds.
 ---@field idle_for integer Idle duration in seconds.
 
+---Non-privileged server population statistics.
 ---@class WhoSummary
 ---@field hidden integer Hidden-player count; currently always zero for this non-privileged view.
 ---@field record integer Record simultaneous-player count.
@@ -458,6 +460,7 @@ function mux_telnet.environment_has(descriptor, kind, name) end
 ---@see mux.error.codes.connection.invalid
 function mux_telnet.environment_get(descriptor, kind, name) end
 
+---Optional styled-text attributes applied by [`mux.text.style`](lua://mux.text.style).
 ---@class StyleOptions
 ---@field foreground? string Palette foreground name.
 ---@field background? string Palette background name.
@@ -481,6 +484,8 @@ function mux_error.new(fields) end
 ---@param code string|ErrorCode
 ---@param message string
 ---@param detail? any
+---
+---Raises the requested code, or [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `code` is invalid.
 ---@see mux.error.codes.arg.invalid
 function mux_error.raise(code, message, detail) end
 
@@ -498,6 +503,8 @@ function mux_error.is(value, code) end
 ---@param value T
 ---@param err any
 ---@return T value
+---
+---Raises `err` unchanged when `value` is false or nil.
 function mux_error.check(value, err) end
 
 ---Wraps a failure as the cause of a new structured error.

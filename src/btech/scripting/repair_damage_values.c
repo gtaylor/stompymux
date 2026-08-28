@@ -16,8 +16,8 @@
 /**
  * Returns the configured experience threshold for a skill.
  *
- * @par Lua name `btech.threshold`
- * @par Lua signature `btech.threshold( skill )`
+ * @par Lua name `btech.character.threshold`
+ * @par Lua signature `btech.character.threshold( skill )`
  * @par Lua parameters - `skill` (`string`) The skill name.
  * @par Lua returns - `value` (`number`): The numeric result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -76,8 +76,8 @@ static Mech *damage_target(BtechScriptCall *call,
 /**
  * Applies clustered damage to a live unit.
  *
- * @par Lua name `btech.damage_mech`
- * @par Lua signature `btech.damage_mech( unit, damage, cluster_size, direction,
+ * @par Lua name `btech.unit.damage`
+ * @par Lua signature `btech.unit.damage( unit, damage, cluster_size, direction,
  * force_critical, unit_message, los_message )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * - `damage` (`number`) Total damage, from 1 through 1000.
@@ -151,8 +151,8 @@ BtechScriptResult fun_btdamagemech(BtechScriptCall *call) {
 /**
  * Returns formatted repair status for a live unit.
  *
- * @par Lua name `btech.tech_status`
- * @par Lua signature `btech.tech_status( unit )`
+ * @par Lua name `btech.repair.tech_status`
+ * @par Lua signature `btech.repair.tech_status( unit )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during

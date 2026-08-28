@@ -46,8 +46,8 @@ static bool parse_hex_coordinate(const char *text, int *coordinate) {
 /**
  * Returns one numeric weapon-catalog statistic as text.
  *
- * @par Lua name `btech.weapon_stat`
- * @par Lua signature `btech.weapon_stat( weapon, stat )`
+ * @par Lua name `btech.parts.weapon_stat`
+ * @par Lua signature `btech.parts.weapon_stat( weapon, stat )`
  * @par Lua parameters - `weapon` (`string`) A recognized weapon part name.
  * - `stat` (`string`) One of VRT, TYPE, HEAT, DAMAGE, MIN, SR, MR, LR, CRIT,
  * AMMO, WEIGHT, or BV.
@@ -126,8 +126,8 @@ BtechScriptResult fun_btweapstat(BtechScriptCall *call) {
 /**
  * Returns the number of pending repair jobs on a live unit.
  *
- * @par Lua name `btech.repair_job_count`
- * @par Lua signature `btech.repair_job_count( unit )`
+ * @par Lua name `btech.repair.job_count`
+ * @par Lua signature `btech.repair.job_count( unit )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * @par Lua returns - `value` (`number`): The numeric result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -167,8 +167,8 @@ BtechScriptResult fun_btnumrepjobs(BtechScriptCall *call) {
 /**
  * Sets a live unit's tonnage and original weight.
  *
- * @par Lua name `btech.set_tons`
- * @par Lua signature `btech.set_tons( unit, tons )`
+ * @par Lua name `btech.unit.set_tons`
+ * @par Lua signature `btech.unit.set_tons( unit, tons )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * - `tons` (`number`) The new tonnage.
  * @par Lua returns - `success` (`boolean`): true after the operation completes
@@ -219,8 +219,8 @@ BtechScriptResult fun_btsettons(BtechScriptCall *call) {
 /**
  * Places a live unit on a map at specified coordinates.
  *
- * @par Lua name `btech.set_xy`
- * @par Lua signature `btech.set_xy( unit, map, x, y, [z] )`
+ * @par Lua name `btech.map.set_xy`
+ * @par Lua signature `btech.map.set_xy( unit, map, x, y, [z] )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * - `map` (`number`) The destination map dbref.
  * - `x` (`number`) The destination X coordinate.
@@ -325,8 +325,8 @@ BtechScriptResult fun_btsetxy(BtechScriptCall *call) {
 /**
  * Lists all units on a map or those within a 2D or 3D range.
  *
- * @par Lua name `btech.map_units`
- * @par Lua signature `btech.map_units( map )`
+ * @par Lua name `btech.map.units`
+ * @par Lua signature `btech.map.units( map )`
  * @par Lua parameters - `map` (`number`) The map dbref.
  * @par Lua returns - `units` (`table`): An array of unit dbrefs.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -468,8 +468,8 @@ BtechScriptResult fun_btmapunits(BtechScriptCall *call) {
 /**
  * Broadcasts a message to all or nearby units on a map.
  *
- * @par Lua name `btech.map_emit`
- * @par Lua signature `btech.map_emit( map, message )`
+ * @par Lua name `btech.map.emit`
+ * @par Lua signature `btech.map.emit( map, message )`
  * @par Lua parameters - `map` (`number`) The map dbref.
  * - `message` (`string`) A non-empty message.
  * @par Lua returns - `success` (`boolean`): true after the operation completes
@@ -589,8 +589,8 @@ BtechScriptResult fun_btmapemit(BtechScriptCall *call) {
 /**
  * Returns the broad category of a part.
  *
- * @par Lua name `btech.part_type`
- * @par Lua signature `btech.part_type( part_name )`
+ * @par Lua name `btech.parts.type`
+ * @par Lua signature `btech.parts.type( part_name )`
  * @par Lua parameters - `part_name` (`string`) A recognized long or very-long
  * part name.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.

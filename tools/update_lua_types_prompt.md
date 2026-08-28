@@ -8,7 +8,8 @@ Scope and authority:
 - Treat the Doxygen comments immediately above bound C functions and their
   actual implementations as authoritative. Runtime behavior wins if comments
   or scripting documentation disagree.
-- Follow every `BTECH_LUA_ENTRIES` handler into `src/btech/scripting/`.
+- Follow every `BtechLuaEntry` registration handler in the topical `btech`
+  binding modules into `src/btech/scripting/`.
 - Cross-check stable errors in `src/mux/lua/lua_error_codes.h` and
   `src/mux/lua/lua_error.c`, including errors raised by shared helpers.
 - Use `docs/content/docs/scripting/packages/` to clarify public terminology,

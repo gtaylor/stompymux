@@ -31,8 +31,8 @@
 /**
  * Returns the terrain code of a map hex.
  *
- * @par Lua name `btech.map_terrain`
- * @par Lua signature `btech.map_terrain( map, x, y )`
+ * @par Lua name `btech.map.terrain`
+ * @par Lua signature `btech.map.terrain( map, x, y )`
  * @par Lua parameters - `map` (`number`) The map dbref.
  * - `x` (`number`) The hex X coordinate.
  * - `y` (`number`) The hex Y coordinate.
@@ -94,8 +94,8 @@ BtechScriptResult fun_btmapterr(BtechScriptCall *call) {
 /**
  * Returns the elevation of a map hex.
  *
- * @par Lua name `btech.map_elevation`
- * @par Lua signature `btech.map_elevation( map, x, y )`
+ * @par Lua name `btech.map.elevation`
+ * @par Lua signature `btech.map.elevation( map, x, y )`
  * @par Lua parameters - `map` (`number`) The map dbref.
  * - `x` (`number`) The hex X coordinate.
  * - `y` (`number`) The hex Y coordinate.
@@ -167,8 +167,8 @@ void list_xcodevalues(EvaluationContext *context, DbRef player) {
 /**
  * Tests whether a unit template exists.
  *
- * @par Lua name `btech.design_exists`
- * @par Lua signature `btech.design_exists( reference )`
+ * @par Lua name `btech.system.design_exists`
+ * @par Lua signature `btech.system.design_exists( reference )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * @par Lua returns - `result` (`boolean`): Whether the condition is true.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -204,8 +204,8 @@ BtechScriptResult fun_btdesignex(BtechScriptCall *call) {
 /**
  * Returns serialized status for one section of a live unit.
  *
- * @par Lua name `btech.section_status`
- * @par Lua signature `btech.section_status( unit, section )`
+ * @par Lua name `btech.unit.section_status`
+ * @par Lua signature `btech.unit.section_status( unit, section )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * - `section` (`string`) The section name.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.
@@ -259,8 +259,8 @@ BtechScriptResult fun_btsectstatus(BtechScriptCall *call) {
 /**
  * Returns the formatted repair-job description for a live unit.
  *
- * @par Lua name `btech.damages`
- * @par Lua signature `btech.damages( unit )`
+ * @par Lua name `btech.repair.damages`
+ * @par Lua signature `btech.repair.damages( unit )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -309,8 +309,8 @@ BtechScriptResult fun_btdamages(BtechScriptCall *call) {
 /**
  * Returns serialized critical-slot status for one section of a live unit.
  *
- * @par Lua name `btech.crit_status`
- * @par Lua signature `btech.crit_status( unit, section )`
+ * @par Lua name `btech.unit.crit_status`
+ * @par Lua signature `btech.unit.crit_status( unit, section )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * - `section` (`string`) The section name.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.
@@ -364,8 +364,8 @@ BtechScriptResult fun_btcritstatus(BtechScriptCall *call) {
 /**
  * Returns serialized armor values for one section of a live unit.
  *
- * @par Lua name `btech.armor_status`
- * @par Lua signature `btech.armor_status( unit, section )`
+ * @par Lua name `btech.unit.armor_status`
+ * @par Lua signature `btech.unit.armor_status( unit, section )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * - `section` (`string`) The section name.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.
@@ -419,8 +419,8 @@ BtechScriptResult fun_btarmorstatus(BtechScriptCall *call) {
 /**
  * Returns serialized weapon status for a live unit or one section.
  *
- * @par Lua name `btech.weapon_status`
- * @par Lua signature `btech.weapon_status( unit, [section] )`
+ * @par Lua name `btech.unit.weapon_status`
+ * @par Lua signature `btech.unit.weapon_status( unit, [section] )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * - `section` (`string`) Optional. Optional section name.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.
@@ -479,8 +479,8 @@ BtechScriptResult fun_btweaponstatus(BtechScriptCall *call) {
 /**
  * Returns serialized critical-slot status for one section of a unit template.
  *
- * @par Lua name `btech.crit_status_ref`
- * @par Lua signature `btech.crit_status_ref( reference, section )`
+ * @par Lua name `btech.unit.crit_status_ref`
+ * @par Lua signature `btech.unit.crit_status_ref( reference, section )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * - `section` (`string`) The section name.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.
@@ -526,8 +526,8 @@ BtechScriptResult fun_btcritstatus_ref(BtechScriptCall *call) {
 /**
  * Returns serialized armor values for one section of a unit template.
  *
- * @par Lua name `btech.armor_status_ref`
- * @par Lua signature `btech.armor_status_ref( reference, section )`
+ * @par Lua name `btech.unit.armor_status_ref`
+ * @par Lua signature `btech.unit.armor_status_ref( reference, section )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * - `section` (`string`) The section name.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.
@@ -573,8 +573,8 @@ BtechScriptResult fun_btarmorstatus_ref(BtechScriptCall *call) {
 /**
  * Returns serialized weapon status for a unit template or one section.
  *
- * @par Lua name `btech.weapon_status_ref`
- * @par Lua signature `btech.weapon_status_ref( reference, [section] )`
+ * @par Lua name `btech.unit.weapon_status_ref`
+ * @par Lua signature `btech.unit.weapon_status_ref( reference, [section] )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * - `section` (`string`) Optional. Optional section name.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.
@@ -625,8 +625,9 @@ BtechScriptResult fun_btweaponstatus_ref(BtechScriptCall *call) {
 /**
  * Sets one armor-status field on a live unit section.
  *
- * @par Lua name `btech.set_armor_status`
- * @par Lua signature `btech.set_armor_status( unit, section, field, value )`
+ * @par Lua name `btech.unit.set_armor_status`
+ * @par Lua signature `btech.unit.set_armor_status( unit, section, field, value
+ * )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * - `section` (`string`) The section name.
  * - `field` (`string`) The armor field to change.

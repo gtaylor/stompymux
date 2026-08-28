@@ -11,98 +11,11 @@
 #include "mux/lua/lua_error_codes.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/lua/packages/btech/btech_package.h"
+#include "mux/lua/packages/btech/btech_package_internal.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-
-typedef struct BtechLuaEntry BtechLuaEntry;
-struct BtechLuaEntry {
-  const char *name;
-  BtechScriptFunction *handler;
-};
-
-static const BtechLuaEntry BTECH_LUA_ENTRIES[] = {
-    {"add_stores", fun_btaddstores},
-    {"armor_status", fun_btarmorstatus},
-    {"armor_status_ref", fun_btarmorstatus_ref},
-    {"char_list", fun_btcharlist},
-    {"crit_slot", fun_btcritslot},
-    {"crit_slot_ref", fun_btcritslot_ref},
-    {"section_status", fun_btsectstatus},
-    {"crit_status", fun_btcritstatus},
-    {"crit_status_ref", fun_btcritstatus_ref},
-    {"damage_mech", fun_btdamagemech},
-    {"damages", fun_btdamages},
-    {"design_exists", fun_btdesignex},
-    {"engine_rating", fun_btengrate},
-    {"engine_rating_ref", fun_btengrate_ref},
-    {"fasa_base_cost_ref", fun_btfasabasecost_ref},
-    {"battle_value", fun_btgetbv},
-    {"battle_value_ref", fun_btgetbv_ref},
-    {"battle_value2_ref", fun_btgetbv2_ref},
-    {"defensive_battle_value_ref", fun_btgetdbv_ref},
-    {"offensive_battle_value_ref", fun_btgetobv_ref},
-    {"char_value", fun_btgetcharvalue},
-    {"part_cost", fun_btgetpartcost},
-    {"range", fun_btgetrange},
-    {"real_max_speed", fun_btgetrealmaxspeed},
-    {"get_weight", fun_btgetweight},
-    {"xcode_value", fun_btgetxcodevalue},
-    {"xcode_value_ref", fun_btgetxcodevalue_ref},
-    {"hex_emit", fun_bthexemit},
-    {"hex_in_blast_zone", fun_bthexinblz},
-    {"hex_line_of_sight", fun_bthexlos},
-    {"id_to_dbref", fun_btid2db},
-    {"lag", fun_btlag},
-    {"blast_zones", fun_btlistblz},
-    {"load_map", fun_btloadmap},
-    {"load_mech", fun_btloadmech},
-    {"mech_line_of_sight", fun_btlosm2m},
-    {"make_pilot_roll", fun_btmakepilotroll},
-    {"map_elevation", fun_btmapelev},
-    {"map_emit", fun_btmapemit},
-    {"map_terrain", fun_btmapterr},
-    {"map_units", fun_btmapunits},
-    {"mech_frequencies", fun_btmechfreqs},
-    {"repair_job_count", fun_btnumrepjobs},
-    {"part_type", fun_btparttype},
-    {"part_match", fun_btpartmatch},
-    {"part_name", fun_btpartname},
-    {"part_categories", fun_btpartscategorylist},
-    {"parts", fun_btpartslist},
-    {"part_weight", fun_btgetweight},
-    {"payload_ref", fun_btpayload_ref},
-    {"remove_stores", fun_btremovestores},
-    {"set_armor_status", fun_btsetarmorstatus},
-    {"set_char_value", fun_btsetcharvalue},
-    {"set_max_speed", fun_btsetmaxspeed},
-    {"set_part_cost", fun_btsetpartcost},
-    {"set_tons", fun_btsettons},
-    {"set_xcode_value", fun_btsetxcodevalue},
-    {"set_xy", fun_btsetxy},
-    {"show_crit_status_ref", fun_btshowcritstatus_ref},
-    {"show_status_ref", fun_btshowstatus_ref},
-    {"show_weapon_specs_ref", fun_btshowwspecs_ref},
-    {"stores", fun_btstores},
-    {"stores_short", fun_btstores_short},
-    {"tech_list", fun_bttechlist},
-    {"tech_list_ref", fun_bttechlist_ref},
-    {"tech_status", fun_bttechstatus},
-    {"tech_time", fun_bttechtime},
-    {"threshold", fun_btthreshold},
-    {"tic_weapons", fun_btticweaps},
-    {"under_repair", fun_btunderrepair},
-    {"unit_fixable", fun_btunitfixable},
-    {"unit_parts", fun_btunitpartslist},
-    {"unit_parts_ref", fun_btunitpartslist_ref},
-    {"update_links", fun_btupdatelinks},
-    {"weapon_status", fun_btweaponstatus},
-    {"weapon_status_ref", fun_btweaponstatus_ref},
-    {"weapon_stat", fun_btweapstat},
-    {"zone_mechs", fun_zmechs},
-    {nullptr, nullptr},
-};
 
 static void btech_lua_push_list(lua_State *state, const BtechScriptList *list) {
   lua_newtable(state);
@@ -119,12 +32,9 @@ static void btech_lua_push_list(lua_State *state, const BtechScriptList *list) {
 
 static int btech_lua_invoke(lua_State *state) {
   LuaBtechPackage *package = lua_touserdata(state, lua_upvalueindex(1));
-  constexpr size_t ENTRY_COUNT =
-      (sizeof(BTECH_LUA_ENTRIES) / sizeof(BTECH_LUA_ENTRIES[0])) - 1;
-  const lua_Integer ENTRY_INDEX = lua_tointeger(state, lua_upvalueindex(2));
-  const BtechLuaEntry *entry =
-      checked_storage_at_const(BTECH_LUA_ENTRIES, ENTRY_COUNT,
-                               sizeof(*BTECH_LUA_ENTRIES), (size_t)ENTRY_INDEX);
+  const BtechLuaEntry *const *binding =
+      (const BtechLuaEntry *const *)lua_touserdata(state, lua_upvalueindex(2));
+  const BtechLuaEntry *entry = *binding;
   int argument_count = lua_gettop(state);
   char *arguments[MAX_ARG] = {};
   char *buffer = alloc_lbuf("btech_lua_invoke");
@@ -134,7 +44,7 @@ static int btech_lua_invoke(lua_State *state) {
     free_buf(buffer);
     return lua_error_raise(state, LUA_ERROR_CODE_BTECH_UNAVAILABLE,
                            "btech.%s is unavailable during @lua/check",
-                           entry->name);
+                           entry->qualified_name);
   }
   if (argument_count > MAX_ARG) {
     free_buf(buffer);
@@ -193,20 +103,32 @@ static int btech_lua_invoke(lua_State *state) {
   return 1;
 }
 
-void lua_btech_package_install(lua_State *state, LuaBtechPackage *package) {
+void lua_btech_install_bindings(lua_State *state, LuaBtechPackage *package,
+                                const char *name, const BtechLuaEntry *entries,
+                                size_t entry_count) {
   lua_newtable(state);
-  constexpr size_t ENTRY_COUNT =
-      (sizeof(BTECH_LUA_ENTRIES) / sizeof(BTECH_LUA_ENTRIES[0])) - 1;
-
-  for (size_t index = 0; index < ENTRY_COUNT; index++) {
-    const BtechLuaEntry *entry = checked_storage_at_const(
-        BTECH_LUA_ENTRIES, ENTRY_COUNT, sizeof(*BTECH_LUA_ENTRIES), index);
+  for (size_t index = 0; index < entry_count; index++) {
+    const BtechLuaEntry *entry =
+        checked_storage_at_const(entries, entry_count, sizeof(*entries), index);
+    const BtechLuaEntry **binding;
 
     lua_pushlightuserdata(state, package);
-    lua_pushinteger(state, (lua_Integer)index);
+    binding = (const BtechLuaEntry **)lua_newuserdata(state, sizeof(*binding));
+    *binding = entry;
     lua_pushcclosure(state, btech_lua_invoke, 2);
     lua_setfield(state, -2, entry->name);
   }
+  lua_setfield(state, -2, name);
+}
+
+void lua_btech_package_install(lua_State *state, LuaBtechPackage *package) {
+  lua_newtable(state);
+  lua_btech_install_unit_bindings(state, package);
+  lua_btech_install_map_bindings(state, package);
+  lua_btech_install_parts_bindings(state, package);
+  lua_btech_install_character_bindings(state, package);
+  lua_btech_install_repair_bindings(state, package);
+  lua_btech_install_system_bindings(state, package);
   lua_newtable(state);
   if (!lua_error_push_code_tree(state, "btech")) {
     (void)lua_error_raise(state, LUA_ERROR_CODE_INTERNAL,

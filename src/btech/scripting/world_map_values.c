@@ -25,8 +25,8 @@
 /**
  * Tests whether a live unit can be repaired.
  *
- * @par Lua name `btech.unit_fixable`
- * @par Lua signature `btech.unit_fixable( unit )`
+ * @par Lua name `btech.repair.unit_fixable`
+ * @par Lua signature `btech.repair.unit_fixable( unit )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * @par Lua returns - `result` (`boolean`): Whether the condition is true.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -60,8 +60,8 @@ BtechScriptResult fun_btunitfixable(BtechScriptCall *call) {
 /**
  * Lists blast-zone coordinates and radii on a map.
  *
- * @par Lua name `btech.blast_zones`
- * @par Lua signature `btech.blast_zones( map )`
+ * @par Lua name `btech.map.blast_zones`
+ * @par Lua signature `btech.map.blast_zones( map )`
  * @par Lua parameters - `map` (`number`) The map dbref.
  * @par Lua returns - `values` (`table`): A flat array of repeating x, y, and
  * radius numbers.
@@ -109,8 +109,8 @@ BtechScriptResult fun_btlistblz(BtechScriptCall *call) {
 /**
  * Tests whether a map hex lies in a configured blast zone.
  *
- * @par Lua name `btech.hex_in_blast_zone`
- * @par Lua signature `btech.hex_in_blast_zone( map, x, y )`
+ * @par Lua name `btech.map.hex_in_blast_zone`
+ * @par Lua signature `btech.map.hex_in_blast_zone( map, x, y )`
  * @par Lua parameters - `map` (`number`) The map dbref.
  * - `x` (`number`) The hex X coordinate.
  * - `y` (`number`) The hex Y coordinate.
@@ -176,8 +176,8 @@ BtechScriptResult fun_bthexinblz(BtechScriptCall *call) {
 /**
  * Returns the current BattleTech event lag.
  *
- * @par Lua name `btech.lag`
- * @par Lua signature `btech.lag(  )`
+ * @par Lua name `btech.system.lag`
+ * @par Lua signature `btech.system.lag(  )`
  * @par Lua parameters - None.
  * @par Lua returns - `value` (`number`): The numeric result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
