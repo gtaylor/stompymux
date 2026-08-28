@@ -11,7 +11,7 @@ Makes a piloting roll and causes a fall when it fails.
 ### Synopsis
 
 ```lua
-btech.character.make_pilot_roll( unit, roll_modifier, damage_modifier )
+btech.unit.make_pilot_roll( unit, roll_modifier, damage_modifier )
 ```
 
 ### Arguments

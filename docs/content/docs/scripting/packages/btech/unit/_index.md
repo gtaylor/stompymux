@@ -25,6 +25,7 @@ and status reports.
 | [`fasa_base_cost_ref`](fasa-base-cost-ref/) | Calculates a template's FASA base cost. |
 | [`frequencies`](frequencies/) | Lists configured radio channels. |
 | [`load`](load/) | Loads a template into a live unit. |
+| [`make_pilot_roll`](make-pilot-roll/) | Makes a piloting roll and applies a failed roll. |
 | [`payload_ref`](payload-ref/) | Returns a template's weapon and ammunition payload. |
 | [`real_max_speed`](real-max-speed/) | Returns effective maximum speed. |
 | [`section_status`](section-status/) | Returns serialized section status. |

@@ -162,8 +162,8 @@ BtechScriptResult fun_bthexemit(BtechScriptCall *call) {
 /**
  * Makes a piloting roll and causes a fall when it fails.
  *
- * @par Lua name `btech.character.make_pilot_roll`
- * @par Lua signature `btech.character.make_pilot_roll( unit, roll_modifier,
+ * @par Lua name `btech.unit.make_pilot_roll`
+ * @par Lua signature `btech.unit.make_pilot_roll( unit, roll_modifier,
  * damage_modifier )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * - `roll_modifier` (`number`) Modifier applied to the piloting roll.

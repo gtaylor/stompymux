@@ -463,7 +463,7 @@ function btech_map.unit_line_of_sight(unit, target) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech_character.make_pilot_roll(unit, roll_modifier, damage_modifier) end
+function btech_unit.make_pilot_roll(unit, roll_modifier, damage_modifier) end
 
 ---Returns the elevation of a map hex.
 ---@param map integer

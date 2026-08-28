@@ -8,7 +8,6 @@
 
 static const BtechLuaEntry BTECH_CHARACTER_ENTRIES[] = {
     {"list", "character.list", fun_btcharlist},
-    {"make_pilot_roll", "character.make_pilot_roll", fun_btmakepilotroll},
     {"set_value", "character.set_value", fun_btsetcharvalue},
     {"threshold", "character.threshold", fun_btthreshold},
     {"value", "character.value", fun_btgetcharvalue},

@@ -24,6 +24,7 @@ static const BtechLuaEntry BTECH_UNIT_ENTRIES[] = {
     {"fasa_base_cost_ref", "unit.fasa_base_cost_ref", fun_btfasabasecost_ref},
     {"frequencies", "unit.frequencies", fun_btmechfreqs},
     {"load", "unit.load", fun_btloadmech},
+    {"make_pilot_roll", "unit.make_pilot_roll", fun_btmakepilotroll},
     {"offensive_battle_value_ref", "unit.offensive_battle_value_ref",
      fun_btgetobv_ref},
     {"payload_ref", "unit.payload_ref", fun_btpayload_ref},
