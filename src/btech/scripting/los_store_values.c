@@ -34,8 +34,8 @@
 /**
  * Recursively updates links associated with a map.
  *
- * @par Lua name `btech.update_links`
- * @par Lua signature `btech.update_links( map )`
+ * @par Lua name `btech.map.update_links`
+ * @par Lua signature `btech.map.update_links( map )`
  * @par Lua parameters - `map` (`number`) The map dbref.
  * @par Lua returns - `success` (`boolean`): true after the operation completes
  * without a legacy error.
@@ -87,8 +87,8 @@ BtechScriptResult fun_btupdatelinks(BtechScriptCall *call) {
 /**
  * Broadcasts a message from one map hex.
  *
- * @par Lua name `btech.hex_emit`
- * @par Lua signature `btech.hex_emit( map, x, y, message )`
+ * @par Lua name `btech.map.hex_emit`
+ * @par Lua signature `btech.map.hex_emit( map, x, y, message )`
  * @par Lua parameters - `map` (`number`) The map dbref.
  * - `x` (`number`) The hex X coordinate.
  * - `y` (`number`) The hex Y coordinate.
@@ -162,8 +162,8 @@ BtechScriptResult fun_bthexemit(BtechScriptCall *call) {
 /**
  * Makes a piloting roll and causes a fall when it fails.
  *
- * @par Lua name `btech.make_pilot_roll`
- * @par Lua signature `btech.make_pilot_roll( unit, roll_modifier,
+ * @par Lua name `btech.character.make_pilot_roll`
+ * @par Lua signature `btech.character.make_pilot_roll( unit, roll_modifier,
  * damage_modifier )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * - `roll_modifier` (`number`) Modifier applied to the piloting roll.
@@ -236,8 +236,8 @@ BtechScriptResult fun_btmakepilotroll(BtechScriptCall *call) {
 /**
  * Resolves a two-character tactical ID on a unit's map.
  *
- * @par Lua name `btech.id_to_dbref`
- * @par Lua signature `btech.id_to_dbref( unit_or_map, id )`
+ * @par Lua name `btech.map.id_to_dbref`
+ * @par Lua signature `btech.map.id_to_dbref( unit_or_map, id )`
  * @par Lua parameters - `unit_or_map` (`number`) The observing unit or map
  * dbref.
  * - `id` (`string`) The two-character tactical ID.
@@ -319,8 +319,8 @@ BtechScriptResult fun_btid2db(BtechScriptCall *call) {
 /**
  * Tests whether a live unit has unobstructed line of sight to a map hex.
  *
- * @par Lua name `btech.hex_line_of_sight`
- * @par Lua signature `btech.hex_line_of_sight( unit, x, y )`
+ * @par Lua name `btech.map.hex_line_of_sight`
+ * @par Lua signature `btech.map.hex_line_of_sight( unit, x, y )`
  * @par Lua parameters - `unit` (`number`) The observing unit dbref.
  * - `x` (`number`) The target hex X coordinate.
  * - `y` (`number`) The target hex Y coordinate.
@@ -403,8 +403,8 @@ BtechScriptResult fun_bthexlos(BtechScriptCall *call) {
 /**
  * Tests line of sight between two live units.
  *
- * @par Lua name `btech.mech_line_of_sight`
- * @par Lua signature `btech.mech_line_of_sight( unit, target )`
+ * @par Lua name `btech.map.unit_line_of_sight`
+ * @par Lua signature `btech.map.unit_line_of_sight( unit, target )`
  * @par Lua parameters - `unit` (`number`) The observing unit dbref.
  * - `target` (`number`) The target unit dbref.
  * @par Lua returns - `visible` (`boolean`): true when the legacy line-of-sight
@@ -492,8 +492,8 @@ BtechScriptResult fun_btlosm2m(BtechScriptCall *call) {
 /**
  * Adds a quantity of a part to an object's stores.
  *
- * @par Lua name `btech.add_stores`
- * @par Lua signature `btech.add_stores( target, part_name, quantity )`
+ * @par Lua name `btech.parts.add_stores`
+ * @par Lua signature `btech.parts.add_stores( target, part_name, quantity )`
  * @par Lua parameters - `target` (`number`) The dbref of the stores-bearing
  * object.
  * - `part_name` (`string`) A recognized part name.
@@ -599,8 +599,8 @@ BtechScriptResult fun_btaddstores(BtechScriptCall *call) {
 /**
  * Lists the weapons assigned to a unit's target-interlock circuit.
  *
- * @par Lua name `btech.tic_weapons`
- * @par Lua signature `btech.tic_weapons( unit, tic )`
+ * @par Lua name `btech.unit.tic_weapons`
+ * @par Lua signature `btech.unit.tic_weapons( unit, tic )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * - `tic` (`number`) The zero-based TIC number.
  * @par Lua returns - `values` (`table`): A flat array of converted legacy

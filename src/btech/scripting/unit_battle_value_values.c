@@ -38,8 +38,8 @@ static Mech *matched_mech(BtechScriptCall *call) {
 /**
  * Sets a live unit's maximum speed and corrects its current speed.
  *
- * @par Lua name `btech.set_max_speed`
- * @par Lua signature `btech.set_max_speed( unit, speed )`
+ * @par Lua name `btech.unit.set_max_speed`
+ * @par Lua signature `btech.unit.set_max_speed( unit, speed )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * - `speed` (`number`) The new maximum speed.
  * @par Lua returns - `success` (`boolean`): true after the operation completes
@@ -75,8 +75,8 @@ BtechScriptResult fun_btsetmaxspeed(BtechScriptCall *call) {
 /**
  * Returns a live unit's effective maximum speed.
  *
- * @par Lua name `btech.real_max_speed`
- * @par Lua signature `btech.real_max_speed( unit )`
+ * @par Lua name `btech.unit.real_max_speed`
+ * @par Lua signature `btech.unit.real_max_speed( unit )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * @par Lua returns - `value` (`number`): The numeric result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -106,8 +106,8 @@ BtechScriptResult fun_btgetrealmaxspeed(BtechScriptCall *call) {
 /**
  * Calculates the battle value of a live unit.
  *
- * @par Lua name `btech.battle_value`
- * @par Lua signature `btech.battle_value( unit )`
+ * @par Lua name `btech.unit.battle_value`
+ * @par Lua signature `btech.unit.battle_value( unit )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * @par Lua returns - `value` (`number`): The numeric result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -164,8 +164,8 @@ static Mech *reference_mech(BtechScriptCall *call) {
 /**
  * Calculates the battle value of a unit template.
  *
- * @par Lua name `btech.battle_value_ref`
- * @par Lua signature `btech.battle_value_ref( reference )`
+ * @par Lua name `btech.unit.battle_value_ref`
+ * @par Lua signature `btech.unit.battle_value_ref( reference )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * @par Lua returns - `value` (`number`): The numeric result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -192,8 +192,8 @@ BtechScriptResult fun_btgetbv_ref(BtechScriptCall *call) {
 /**
  * Calculates the defensive battle-value component of a unit template.
  *
- * @par Lua name `btech.defensive_battle_value_ref`
- * @par Lua signature `btech.defensive_battle_value_ref( reference )`
+ * @par Lua name `btech.unit.defensive_battle_value_ref`
+ * @par Lua signature `btech.unit.defensive_battle_value_ref( reference )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * @par Lua returns - `value` (`number`): The numeric result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -219,8 +219,8 @@ BtechScriptResult fun_btgetdbv_ref(BtechScriptCall *call) {
 /**
  * Calculates the offensive battle-value component of a unit template.
  *
- * @par Lua name `btech.offensive_battle_value_ref`
- * @par Lua signature `btech.offensive_battle_value_ref( reference )`
+ * @par Lua name `btech.unit.offensive_battle_value_ref`
+ * @par Lua signature `btech.unit.offensive_battle_value_ref( reference )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * @par Lua returns - `value` (`number`): The numeric result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -246,8 +246,8 @@ BtechScriptResult fun_btgetobv_ref(BtechScriptCall *call) {
 /**
  * Calculates the second-generation battle value of a unit template.
  *
- * @par Lua name `btech.battle_value2_ref`
- * @par Lua signature `btech.battle_value2_ref( reference )`
+ * @par Lua name `btech.unit.battle_value2_ref`
+ * @par Lua signature `btech.unit.battle_value2_ref( reference )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * @par Lua returns - `value` (`number`): The numeric result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during

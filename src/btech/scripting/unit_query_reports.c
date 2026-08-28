@@ -23,8 +23,8 @@
 /**
  * Lists the parts needed to repair a live unit.
  *
- * @par Lua name `btech.tech_list`
- * @par Lua signature `btech.tech_list( unit )`
+ * @par Lua name `btech.repair.tech_list`
+ * @par Lua signature `btech.repair.tech_list( unit )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * @par Lua returns - `values` (`table`): A flat array of converted legacy
  * result tokens.
@@ -78,8 +78,8 @@ BtechScriptResult fun_bttechlist(BtechScriptCall *call) {
 /**
  * Lists the parts needed to repair a unit template.
  *
- * @par Lua name `btech.tech_list_ref`
- * @par Lua signature `btech.tech_list_ref( reference )`
+ * @par Lua name `btech.repair.tech_list_ref`
+ * @par Lua signature `btech.repair.tech_list_ref( reference )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * @par Lua returns - `values` (`table`): A flat array of converted legacy
  * result tokens.
@@ -130,8 +130,8 @@ BtechScriptResult fun_bttechlist_ref(BtechScriptCall *call) {
 /**
  * Returns the weapon and ammunition payload of a unit template.
  *
- * @par Lua name `btech.payload_ref`
- * @par Lua signature `btech.payload_ref( reference )`
+ * @par Lua name `btech.unit.payload_ref`
+ * @par Lua signature `btech.unit.payload_ref( reference )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -177,8 +177,8 @@ BtechScriptResult fun_btpayload_ref(BtechScriptCall *call) {
 /**
  * Sends a unit template's status display to a player.
  *
- * @par Lua name `btech.show_status_ref`
- * @par Lua signature `btech.show_status_ref( reference, player )`
+ * @par Lua name `btech.unit.show_status_ref`
+ * @par Lua signature `btech.unit.show_status_ref( reference, player )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * - `player` (`number`) The recipient player dbref.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.
@@ -230,8 +230,8 @@ BtechScriptResult fun_btshowstatus_ref(BtechScriptCall *call) {
 /**
  * Sends a unit template's weapon-specification display to a player.
  *
- * @par Lua name `btech.show_weapon_specs_ref`
- * @par Lua signature `btech.show_weapon_specs_ref( reference, player )`
+ * @par Lua name `btech.unit.show_weapon_specs_ref`
+ * @par Lua signature `btech.unit.show_weapon_specs_ref( reference, player )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * - `player` (`number`) The recipient player dbref.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.
@@ -283,8 +283,9 @@ BtechScriptResult fun_btshowwspecs_ref(BtechScriptCall *call) {
 /**
  * Sends a template's critical-status display to a player.
  *
- * @par Lua name `btech.show_crit_status_ref`
- * @par Lua signature `btech.show_crit_status_ref( reference, player, section )`
+ * @par Lua name `btech.unit.show_crit_status_ref`
+ * @par Lua signature `btech.unit.show_crit_status_ref( reference, player,
+ * section )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * - `player` (`number`) The recipient player dbref.
  * - `section` (`string`) The section passed to the critical-status renderer.
@@ -338,8 +339,8 @@ BtechScriptResult fun_btshowcritstatus_ref(BtechScriptCall *call) {
 /**
  * Returns the engine rating of a live unit.
  *
- * @par Lua name `btech.engine_rating`
- * @par Lua signature `btech.engine_rating( unit )`
+ * @par Lua name `btech.unit.engine_rating`
+ * @par Lua signature `btech.unit.engine_rating( unit )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * @par Lua returns - `value` (`number`): The numeric result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -391,8 +392,8 @@ BtechScriptResult fun_btengrate(BtechScriptCall *call) {
 /**
  * Returns the engine rating of a unit template.
  *
- * @par Lua name `btech.engine_rating_ref`
- * @par Lua signature `btech.engine_rating_ref( reference )`
+ * @par Lua name `btech.unit.engine_rating_ref`
+ * @par Lua signature `btech.unit.engine_rating_ref( reference )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * @par Lua returns - `value` (`number`): The numeric result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -435,8 +436,8 @@ BtechScriptResult fun_btengrate_ref(BtechScriptCall *call) {
 /**
  * Calculates the FASA base cost of a unit template.
  *
- * @par Lua name `btech.fasa_base_cost_ref`
- * @par Lua signature `btech.fasa_base_cost_ref( reference )`
+ * @par Lua name `btech.unit.fasa_base_cost_ref`
+ * @par Lua signature `btech.unit.fasa_base_cost_ref( reference )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * @par Lua returns - `value` (`number`): The numeric result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -478,8 +479,8 @@ BtechScriptResult fun_btfasabasecost_ref(BtechScriptCall *call) {
 /**
  * Lists the parts installed in a unit template.
  *
- * @par Lua name `btech.unit_parts_ref`
- * @par Lua signature `btech.unit_parts_ref( reference )`
+ * @par Lua name `btech.parts.installed_ref`
+ * @par Lua signature `btech.parts.installed_ref( reference )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * @par Lua returns - `values` (`table`): A flat array of converted legacy
  * result tokens.
@@ -524,8 +525,8 @@ BtechScriptResult fun_btunitpartslist_ref(BtechScriptCall *call) {
 /**
  * Lists the parts installed on a live unit.
  *
- * @par Lua name `btech.unit_parts`
- * @par Lua signature `btech.unit_parts( unit )`
+ * @par Lua name `btech.parts.installed`
+ * @par Lua signature `btech.parts.installed( unit )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * @par Lua returns - `values` (`table`): A flat array of converted legacy
  * result tokens.

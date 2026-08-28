@@ -213,8 +213,8 @@ static bool descriptor_write_text(void *data, const GMV *descriptor,
 /**
  * Lists live unit objects assigned to a zone.
  *
- * @par Lua name `btech.zone_mechs`
- * @par Lua signature `btech.zone_mechs( zone )`
+ * @par Lua name `btech.system.zone_units`
+ * @par Lua signature `btech.system.zone_units( zone )`
  * @par Lua parameters - `zone` (`number`) The zone dbref.
  * @par Lua returns - `values` (`table`): A flat array of converted legacy
  * result tokens.
@@ -276,8 +276,8 @@ BtechScriptResult fun_zmechs(BtechScriptCall *call) {
 /**
  * Writes a script-writable native field on a live special object.
  *
- * @par Lua name `btech.set_xcode_value`
- * @par Lua signature `btech.set_xcode_value( object, name, value )`
+ * @par Lua name `btech.system.set_xcode_value`
+ * @par Lua signature `btech.system.set_xcode_value( object, name, value )`
  * @par Lua parameters - `object` (`number`) The special-object dbref.
  * - `name` (`string`) The writable field name.
  * - `value` (`string|number`) The new value, converted according to the field
@@ -423,8 +423,8 @@ static char *retrieve_value(void *data, const GMV *descriptor, char *buffer) {
 /**
  * Reads a script-visible native field from a live special object.
  *
- * @par Lua name `btech.xcode_value`
- * @par Lua signature `btech.xcode_value( object, name )`
+ * @par Lua name `btech.system.xcode_value`
+ * @par Lua signature `btech.system.xcode_value( object, name )`
  * @par Lua parameters - `object` (`number`) The special-object dbref.
  * - `name` (`string`) The field name.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.
@@ -481,8 +481,8 @@ BtechScriptResult fun_btgetxcodevalue(BtechScriptCall *call) {
 /**
  * Reads a script-visible native field from a unit template.
  *
- * @par Lua name `btech.xcode_value_ref`
- * @par Lua signature `btech.xcode_value_ref( reference, name )`
+ * @par Lua name `btech.system.xcode_value_ref`
+ * @par Lua signature `btech.system.xcode_value_ref( reference, name )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * - `name` (`string`) The field name.
  * @par Lua returns - `result` (`string`): The handler's serialized text result.

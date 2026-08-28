@@ -442,8 +442,8 @@ legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
 /**
  * Gets a character attribute, skill level, target, experience, or experience
  * threshold.
- * @par Lua name `btech.char_value`
- * @par Lua signature `btech.char_value( character, value, mode )`
+ * @par Lua name `btech.character.value`
+ * @par Lua signature `btech.character.value( character, value, mode )`
  * @par Lua parameters - `character` (`number|string`) The character dbref or
  * player name.
  * - `value` (`number|string`) The character-value code or name.
@@ -535,8 +535,8 @@ BtechScriptResult fun_btgetcharvalue(BtechScriptCall *call) {
 
 /**
  * Sets a character value or adjusts skill experience.
- * @par Lua name `btech.set_char_value`
- * @par Lua signature `btech.set_char_value( character, value, amount, mode )`
+ * @par Lua name `btech.character.set_value`
+ * @par Lua signature `btech.character.set_value(character,value,amount,mode)`
  * @par Lua parameters - `character` (`number|string`) The character dbref or
  * player name.
  * - `value` (`number|string`) The character-value code or name.
@@ -705,8 +705,8 @@ BtechScriptResult fun_btsetcharvalue(BtechScriptCall *call) {
 */
 /**
  * Lists character value names in a requested category.
- * @par Lua name `btech.char_list`
- * @par Lua signature `btech.char_list( kind, [character] )`
+ * @par Lua name `btech.character.list`
+ * @par Lua signature `btech.character.list( kind, [character] )`
  * @par Lua parameters - `kind` (`string`) "skills", "advantages", or
  * "attributes".
  * - `character` (`number|string`) Optional. Optional character dbref or player

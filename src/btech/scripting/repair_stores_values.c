@@ -39,8 +39,8 @@ static int *script_part_pile_slot(ScriptPartPile *pile, int brand,
 /**
  * Tests whether a live unit has an active repair event.
  *
- * @par Lua name `btech.under_repair`
- * @par Lua signature `btech.under_repair( unit )`
+ * @par Lua name `btech.repair.under_repair`
+ * @par Lua signature `btech.repair.under_repair( unit )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * @par Lua returns - `result` (`boolean`): Whether the condition is true.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -82,8 +82,8 @@ BtechScriptResult fun_btunderrepair(BtechScriptCall *call) {
 /**
  * Returns a part quantity or lists an object's stored parts.
  *
- * @par Lua name `btech.stores`
- * @par Lua signature `btech.stores( target, part_name )`
+ * @par Lua name `btech.parts.stores`
+ * @par Lua signature `btech.parts.stores( target, part_name )`
  * @par Lua parameters - `target` (`number`) The stores-bearing object dbref.
  * - `part_name` (`string`) A recognized part name.
  * @par Lua returns - `result` (`table`): A one-element array containing the
@@ -170,8 +170,8 @@ BtechScriptResult fun_btstores(BtechScriptCall *call) {
 /**
  * Returns a part quantity or lists stored parts using short names.
  *
- * @par Lua name `btech.stores_short`
- * @par Lua signature `btech.stores_short( target, part_name )`
+ * @par Lua name `btech.parts.stores_short`
+ * @par Lua signature `btech.parts.stores_short( target, part_name )`
  * @par Lua parameters - `target` (`number`) The stores-bearing object dbref.
  * - `part_name` (`string`) A recognized part name.
  * @par Lua returns - `result` (`table`): A one-element array containing the

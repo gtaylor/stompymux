@@ -21,8 +21,38 @@
 ---@class BtechErrorPackage
 ---@field codes BtechErrorCodes
 
+---Live units, templates, combat values, and status.
+---@class BtechUnitPackage
+local btech_unit = {}
+
+---Battle maps, geometry, line of sight, and map messaging.
+---@class BtechMapPackage
+local btech_map = {}
+
+---Part catalogues, installed parts, stores, and costs.
+---@class BtechPartsPackage
+local btech_parts = {}
+
+---Character values, skills, experience, and piloting rolls.
+---@class BtechCharacterPackage
+local btech_character = {}
+
+---Damage and technician-status queries.
+---@class BtechRepairPackage
+local btech_repair = {}
+
+---Special-object fields and server-wide BattleTech queries.
+---@class BtechSystemPackage
+local btech_system = {}
+
 ---The native BattleTech host API. All functions are unavailable during `@lua/check`.
 ---@class BtechPackage
+---@field unit BtechUnitPackage
+---@field map BtechMapPackage
+---@field parts BtechPartsPackage
+---@field character BtechCharacterPackage
+---@field repair BtechRepairPackage
+---@field system BtechSystemPackage
 ---@field error BtechErrorPackage
 btech = {}
 
@@ -36,7 +66,7 @@ btech = {}
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.add_stores(target, part_name, quantity) end
+function btech_parts.add_stores(target, part_name, quantity) end
 
 ---Returns serialized armor values for a live unit section.
 ---@param unit integer
@@ -47,7 +77,7 @@ function btech.add_stores(target, part_name, quantity) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.armor_status(unit, section) end
+function btech_unit.armor_status(unit, section) end
 
 ---Returns serialized armor values for a unit-template section.
 ---@param reference string
@@ -58,7 +88,7 @@ function btech.armor_status(unit, section) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.armor_status_ref(reference, section) end
+function btech_unit.armor_status_ref(reference, section) end
 
 ---Lists character-value names in a category, optionally filtered by learned values.
 ---@param kind CharacterListKind
@@ -69,7 +99,7 @@ function btech.armor_status_ref(reference, section) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.char_list(kind, character) end
+function btech_character.list(kind, character) end
 
 ---Describes one critical slot on a live unit.
 ---@param unit integer
@@ -82,7 +112,7 @@ function btech.char_list(kind, character) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.crit_slot(unit, section, slot, name_type) end
+function btech_unit.crit_slot(unit, section, slot, name_type) end
 
 ---Describes one critical slot in a unit template.
 ---@param reference string
@@ -95,7 +125,7 @@ function btech.crit_slot(unit, section, slot, name_type) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.crit_slot_ref(reference, section, slot, name_type) end
+function btech_unit.crit_slot_ref(reference, section, slot, name_type) end
 
 ---Returns serialized status for one live-unit section.
 ---@param unit integer
@@ -106,7 +136,7 @@ function btech.crit_slot_ref(reference, section, slot, name_type) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.section_status(unit, section) end
+function btech_unit.section_status(unit, section) end
 
 ---Returns serialized critical-slot status for one live-unit section.
 ---@param unit integer
@@ -117,7 +147,7 @@ function btech.section_status(unit, section) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.crit_status(unit, section) end
+function btech_unit.crit_status(unit, section) end
 
 ---Returns serialized critical-slot status for one template section.
 ---@param reference string
@@ -128,7 +158,7 @@ function btech.crit_status(unit, section) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.crit_status_ref(reference, section) end
+function btech_unit.crit_status_ref(reference, section) end
 
 ---Applies clustered damage and associated messages to a live unit.
 ---@param unit integer
@@ -144,7 +174,7 @@ function btech.crit_status_ref(reference, section) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.damage_mech(unit, damage, cluster_size, direction, force_critical, unit_message, los_message) end
+function btech_unit.damage(unit, damage, cluster_size, direction, force_critical, unit_message, los_message) end
 
 ---Returns the formatted repair-job description for a live unit.
 ---@param unit integer
@@ -154,7 +184,7 @@ function btech.damage_mech(unit, damage, cluster_size, direction, force_critical
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.damages(unit) end
+function btech_repair.damages(unit) end
 
 ---Tests whether a unit-template reference exists.
 ---@param reference string
@@ -164,7 +194,7 @@ function btech.damages(unit) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.design_exists(reference) end
+function btech_system.design_exists(reference) end
 
 ---Returns a live unit's engine rating.
 ---@param unit integer
@@ -174,7 +204,7 @@ function btech.design_exists(reference) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.engine_rating(unit) end
+function btech_unit.engine_rating(unit) end
 
 ---Returns a unit template's engine rating.
 ---@param reference string
@@ -184,7 +214,7 @@ function btech.engine_rating(unit) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.engine_rating_ref(reference) end
+function btech_unit.engine_rating_ref(reference) end
 
 ---Calculates a unit template's FASA base cost.
 ---@param reference string
@@ -194,7 +224,7 @@ function btech.engine_rating_ref(reference) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.fasa_base_cost_ref(reference) end
+function btech_unit.fasa_base_cost_ref(reference) end
 
 ---Calculates a live unit's battle value.
 ---@param unit integer
@@ -204,7 +234,7 @@ function btech.fasa_base_cost_ref(reference) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.battle_value(unit) end
+function btech_unit.battle_value(unit) end
 
 ---Calculates a unit template's battle value.
 ---@param reference string
@@ -214,7 +244,7 @@ function btech.battle_value(unit) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.battle_value_ref(reference) end
+function btech_unit.battle_value_ref(reference) end
 
 ---Calculates a unit template's second-generation battle value.
 ---@param reference string
@@ -224,7 +254,7 @@ function btech.battle_value_ref(reference) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.battle_value2_ref(reference) end
+function btech_unit.battle_value2_ref(reference) end
 
 ---Calculates a unit template's defensive battle-value component.
 ---@param reference string
@@ -234,7 +264,7 @@ function btech.battle_value2_ref(reference) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.defensive_battle_value_ref(reference) end
+function btech_unit.defensive_battle_value_ref(reference) end
 
 ---Calculates a unit template's offensive battle-value component.
 ---@param reference string
@@ -244,7 +274,7 @@ function btech.defensive_battle_value_ref(reference) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.offensive_battle_value_ref(reference) end
+function btech_unit.offensive_battle_value_ref(reference) end
 
 ---Gets a character attribute, skill level, target, experience, or threshold.
 ---@param character CharacterRef
@@ -256,7 +286,7 @@ function btech.offensive_battle_value_ref(reference) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.char_value(character, value, mode) end
+function btech_character.value(character, value, mode) end
 
 ---Returns the configured cost of a recognized part.
 ---@param part_name string
@@ -266,7 +296,7 @@ function btech.char_value(character, value, mode) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.part_cost(part_name) end
+function btech_parts.cost(part_name) end
 
 ---Calculates three-dimensional range between two units on a map.
 ---@param map integer
@@ -278,7 +308,7 @@ function btech.part_cost(part_name) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.range(map, unit_a, unit_b) end
+function btech_map.range(map, unit_a, unit_b) end
 
 ---Returns a live unit's effective maximum speed.
 ---@param unit integer
@@ -288,7 +318,7 @@ function btech.range(map, unit_a, unit_b) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.real_max_speed(unit) end
+function btech_unit.real_max_speed(unit) end
 
 ---Returns a recognized part's weight in tons.
 ---@param part_name string
@@ -298,17 +328,7 @@ function btech.real_max_speed(unit) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.get_weight(part_name) end
-
----Returns a recognized part's weight in tons; alias of [`btech.get_weight`](lua://btech.get_weight).
----@param part_name string
----@return number tons
----
----Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
----@see btech.error.codes.unavailable
----@see mux.error.codes.arg.invalid
----@see btech.error.codes.failed
-function btech.part_weight(part_name) end
+function btech_parts.weight(part_name) end
 
 ---Reads a script-visible native field from a live special object.
 ---@param object integer
@@ -319,7 +339,7 @@ function btech.part_weight(part_name) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.xcode_value(object, name) end
+function btech_system.xcode_value(object, name) end
 
 ---Reads a script-visible native field from a unit template.
 ---@param reference string
@@ -330,7 +350,7 @@ function btech.xcode_value(object, name) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.xcode_value_ref(reference, name) end
+function btech_system.xcode_value_ref(reference, name) end
 
 ---Broadcasts a non-empty message from one map hex.
 ---@param map integer
@@ -343,7 +363,7 @@ function btech.xcode_value_ref(reference, name) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.hex_emit(map, x, y, message) end
+function btech_map.hex_emit(map, x, y, message) end
 
 ---Tests whether a map hex lies in a configured blast zone.
 ---@param map integer
@@ -355,7 +375,7 @@ function btech.hex_emit(map, x, y, message) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.hex_in_blast_zone(map, x, y) end
+function btech_map.hex_in_blast_zone(map, x, y) end
 
 ---Tests a live unit's line of sight to a map hex.
 ---@param unit integer
@@ -367,7 +387,7 @@ function btech.hex_in_blast_zone(map, x, y) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.hex_line_of_sight(unit, x, y) end
+function btech_map.hex_line_of_sight(unit, x, y) end
 
 ---Resolves a two-character tactical ID on a unit's map.
 ---@param unit_or_map integer
@@ -378,7 +398,7 @@ function btech.hex_line_of_sight(unit, x, y) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.id_to_dbref(unit_or_map, id) end
+function btech_map.id_to_dbref(unit_or_map, id) end
 
 ---Returns the current BattleTech event lag.
 ---@return number lag
@@ -387,7 +407,7 @@ function btech.id_to_dbref(unit_or_map, id) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.lag() end
+function btech_system.lag() end
 
 ---Lists blast-zone data as repeating x, y, and radius numbers.
 ---@param map integer
@@ -397,7 +417,7 @@ function btech.lag() end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.blast_zones(map) end
+function btech_map.blast_zones(map) end
 
 ---Loads a map file and clears units and map objects from the target map.
 ---@param map integer
@@ -409,7 +429,7 @@ function btech.blast_zones(map) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.load_map(map, name, clear) end
+function btech_map.load(map, name, clear) end
 
 ---Loads a unit template into a live unit object.
 ---@param unit integer
@@ -420,7 +440,7 @@ function btech.load_map(map, name, clear) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.load_mech(unit, reference) end
+function btech_unit.load(unit, reference) end
 
 ---Tests line of sight between two live units.
 ---@param unit integer
@@ -431,7 +451,7 @@ function btech.load_mech(unit, reference) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.mech_line_of_sight(unit, target) end
+function btech_map.unit_line_of_sight(unit, target) end
 
 ---Makes a piloting roll and causes a fall when it fails.
 ---@param unit integer
@@ -443,7 +463,7 @@ function btech.mech_line_of_sight(unit, target) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.make_pilot_roll(unit, roll_modifier, damage_modifier) end
+function btech_character.make_pilot_roll(unit, roll_modifier, damage_modifier) end
 
 ---Returns the elevation of a map hex.
 ---@param map integer
@@ -455,7 +475,7 @@ function btech.make_pilot_roll(unit, roll_modifier, damage_modifier) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.map_elevation(map, x, y) end
+function btech_map.elevation(map, x, y) end
 
 ---Broadcasts a non-empty message to all or nearby units on a map.
 ---@param map integer
@@ -466,7 +486,7 @@ function btech.map_elevation(map, x, y) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.map_emit(map, message) end
+function btech_map.emit(map, message) end
 
 ---Returns the terrain code of a map hex.
 ---@param map integer
@@ -478,7 +498,7 @@ function btech.map_emit(map, message) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.map_terrain(map, x, y) end
+function btech_map.terrain(map, x, y) end
 
 ---Lists unit dbrefs on a map.
 ---@param map integer
@@ -490,7 +510,7 @@ function btech.map_terrain(map, x, y) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.map_units(map) end
+function btech_map.units(map) end
 
 ---Lists configured radio channels for a live unit.
 ---@param unit integer
@@ -500,7 +520,7 @@ function btech.map_units(map) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.mech_frequencies(unit) end
+function btech_unit.frequencies(unit) end
 
 ---Returns the number of pending repair jobs on a live unit.
 ---@param unit integer
@@ -510,7 +530,7 @@ function btech.mech_frequencies(unit) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.repair_job_count(unit) end
+function btech_repair.job_count(unit) end
 
 ---Returns the broad category of a recognized part.
 ---@param part_name string
@@ -520,7 +540,7 @@ function btech.repair_job_count(unit) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.part_type(part_name) end
+function btech_parts.type(part_name) end
 
 ---Finds packed part IDs whose names match text.
 ---@param query string
@@ -530,7 +550,7 @@ function btech.part_type(part_name) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.part_match(query) end
+function btech_parts.match(query) end
 
 ---Returns a selected name for a packed part ID.
 ---@param part integer
@@ -541,16 +561,16 @@ function btech.part_match(query) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.part_name(part, size) end
+function btech_parts.name(part, size) end
 
----Lists canonical part categories accepted by [`btech.parts`](lua://btech.parts).
+---Lists canonical part categories accepted by [`btech.parts.list`](lua://btech.parts.list).
 ---@return string[] categories
 ---
 ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.part_categories() end
+function btech_parts.categories() end
 
 ---Lists canonical long part names in a category or accepted alias.
 ---@param category PartCategory
@@ -560,7 +580,7 @@ function btech.part_categories() end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.parts(category) end
+function btech_parts.list(category) end
 
 ---Returns the weapon and ammunition payload of a unit template.
 ---@param reference string
@@ -570,7 +590,7 @@ function btech.parts(category) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.payload_ref(reference) end
+function btech_unit.payload_ref(reference) end
 
 ---Removes a quantity of a part from an object's stores.
 ---@param target integer
@@ -582,7 +602,7 @@ function btech.payload_ref(reference) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.remove_stores(target, part_name, quantity) end
+function btech_parts.remove_stores(target, part_name, quantity) end
 
 ---Sets one armor-status field on a live-unit section.
 ---@param unit integer
@@ -595,7 +615,7 @@ function btech.remove_stores(target, part_name, quantity) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.set_armor_status(unit, section, field, value) end
+function btech_unit.set_armor_status(unit, section, field, value) end
 
 ---Sets a character value or adjusts skill experience.
 ---@param character CharacterRef
@@ -608,7 +628,7 @@ function btech.set_armor_status(unit, section, field, value) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.set_char_value(character, value, amount, mode) end
+function btech_character.set_value(character, value, amount, mode) end
 
 ---Sets a live unit's maximum speed and corrects its current speed.
 ---@param unit integer
@@ -619,7 +639,7 @@ function btech.set_char_value(character, value, amount, mode) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.set_max_speed(unit, speed) end
+function btech_unit.set_max_speed(unit, speed) end
 
 ---Sets the non-negative configured cost of a recognized part.
 ---@param part_name string
@@ -630,7 +650,7 @@ function btech.set_max_speed(unit, speed) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.set_part_cost(part_name, cost) end
+function btech_parts.set_cost(part_name, cost) end
 
 ---Sets a live unit's tonnage and original weight.
 ---@param unit integer
@@ -641,7 +661,7 @@ function btech.set_part_cost(part_name, cost) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.set_tons(unit, tons) end
+function btech_unit.set_tons(unit, tons) end
 
 ---Writes a script-writable native field on a live special object.
 ---@param object integer
@@ -653,7 +673,7 @@ function btech.set_tons(unit, tons) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.set_xcode_value(object, name, value) end
+function btech_system.set_xcode_value(object, name, value) end
 
 ---Places a live unit on a map at specified coordinates.
 ---@param unit integer
@@ -667,7 +687,7 @@ function btech.set_xcode_value(object, name, value) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.set_xy(unit, map, x, y, z) end
+function btech_map.set_xy(unit, map, x, y, z) end
 
 ---Sends a template's critical-status display to a player.
 ---@param reference string
@@ -679,7 +699,7 @@ function btech.set_xy(unit, map, x, y, z) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.show_crit_status_ref(reference, player, section) end
+function btech_unit.show_crit_status_ref(reference, player, section) end
 
 ---Sends a unit template's status display to a player.
 ---@param reference string
@@ -690,7 +710,7 @@ function btech.show_crit_status_ref(reference, player, section) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.show_status_ref(reference, player) end
+function btech_unit.show_status_ref(reference, player) end
 
 ---Sends a unit template's weapon-specification display to a player.
 ---@param reference string
@@ -701,7 +721,7 @@ function btech.show_status_ref(reference, player) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.show_weapon_specs_ref(reference, player) end
+function btech_unit.show_weapon_specs_ref(reference, player) end
 
 ---Returns a quantity for one part, or lists stored parts when the part is omitted.
 ---@param target integer
@@ -713,7 +733,7 @@ function btech.show_weapon_specs_ref(reference, player) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.stores(target, part_name) end
+function btech_parts.stores(target, part_name) end
 
 ---Returns a quantity or lists stored parts using short names.
 ---@param target integer
@@ -725,7 +745,7 @@ function btech.stores(target, part_name) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.stores_short(target, part_name) end
+function btech_parts.stores_short(target, part_name) end
 
 ---Lists parts needed to repair a live unit.
 ---@param unit integer
@@ -735,7 +755,7 @@ function btech.stores_short(target, part_name) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.tech_list(unit) end
+function btech_repair.tech_list(unit) end
 
 ---Lists parts needed to repair a unit template.
 ---@param reference string
@@ -745,7 +765,7 @@ function btech.tech_list(unit) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.tech_list_ref(reference) end
+function btech_repair.tech_list_ref(reference) end
 
 ---Returns formatted repair status for a live unit.
 ---@param unit integer
@@ -755,7 +775,7 @@ function btech.tech_list_ref(reference) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.tech_status(unit) end
+function btech_repair.tech_status(unit) end
 
 ---Runs the legacy technician-time query.
 ---@return number value
@@ -764,7 +784,7 @@ function btech.tech_status(unit) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.tech_time() end
+function btech_repair.tech_time() end
 
 ---Returns the configured experience threshold for a skill.
 ---@param skill string
@@ -774,7 +794,7 @@ function btech.tech_time() end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.threshold(skill) end
+function btech_character.threshold(skill) end
 
 ---Lists weapons assigned to a unit's zero-based target-interlock circuit.
 ---@param unit integer
@@ -785,7 +805,7 @@ function btech.threshold(skill) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.tic_weapons(unit, tic) end
+function btech_unit.tic_weapons(unit, tic) end
 
 ---Tests whether a live unit has an active repair event.
 ---@param unit integer
@@ -795,7 +815,7 @@ function btech.tic_weapons(unit, tic) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.under_repair(unit) end
+function btech_repair.under_repair(unit) end
 
 ---Tests whether a live unit can be repaired.
 ---@param unit integer
@@ -805,7 +825,7 @@ function btech.under_repair(unit) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.unit_fixable(unit) end
+function btech_repair.unit_fixable(unit) end
 
 ---Lists parts installed on a live unit.
 ---@param unit integer
@@ -815,7 +835,7 @@ function btech.unit_fixable(unit) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.unit_parts(unit) end
+function btech_parts.installed(unit) end
 
 ---Lists parts installed in a unit template.
 ---@param reference string
@@ -825,7 +845,7 @@ function btech.unit_parts(unit) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.unit_parts_ref(reference) end
+function btech_parts.installed_ref(reference) end
 
 ---Recursively updates links associated with a map.
 ---@param map integer
@@ -835,7 +855,7 @@ function btech.unit_parts_ref(reference) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.update_links(map) end
+function btech_map.update_links(map) end
 
 ---Returns serialized weapon status for a live unit or optional section.
 ---@param unit integer
@@ -846,7 +866,7 @@ function btech.update_links(map) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.weapon_status(unit, section) end
+function btech_unit.weapon_status(unit, section) end
 
 ---Returns serialized weapon status for a unit template or optional section.
 ---@param reference string
@@ -857,7 +877,7 @@ function btech.weapon_status(unit, section) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.weapon_status_ref(reference, section) end
+function btech_unit.weapon_status_ref(reference, section) end
 
 ---Returns a selected numeric weapon-catalog statistic as serialized text.
 ---@param weapon string
@@ -868,7 +888,7 @@ function btech.weapon_status_ref(reference, section) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.weapon_stat(weapon, stat) end
+function btech_parts.weapon_stat(weapon, stat) end
 
 ---Lists live unit dbrefs assigned to a zone.
 ---@param zone integer
@@ -878,6 +898,6 @@ function btech.weapon_stat(weapon, stat) end
 ---@see btech.error.codes.unavailable
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
-function btech.zone_mechs(zone) end
+function btech_system.zone_units(zone) end
 
 return btech

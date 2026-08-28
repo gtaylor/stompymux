@@ -15,8 +15,8 @@
 /**
  * Loads a map file into a map object and clears its units and map objects.
  *
- * @par Lua name `btech.load_map`
- * @par Lua signature `btech.load_map( map, name, [clear] )`
+ * @par Lua name `btech.map.load`
+ * @par Lua signature `btech.map.load( map, name, [clear] )`
  * @par Lua parameters - `map` (`number`) The map-object dbref.
  * - `name` (`string`) The map file name.
  * - `clear` (`boolean`) Optional. Optional compatibility argument; currently
@@ -82,8 +82,8 @@ BtechScriptResult fun_btloadmap(BtechScriptCall *call) {
 /**
  * Loads a unit template into a live unit object.
  *
- * @par Lua name `btech.load_mech`
- * @par Lua signature `btech.load_mech( unit, reference )`
+ * @par Lua name `btech.unit.load`
+ * @par Lua signature `btech.unit.load( unit, reference )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * - `reference` (`string`) The unit template reference.
  * @par Lua returns - `success` (`boolean`): true after the operation completes
@@ -135,8 +135,8 @@ BtechScriptResult fun_btloadmech(BtechScriptCall *call) {
 /**
  * Lists the configured radio channels of a live unit.
  *
- * @par Lua name `btech.mech_frequencies`
- * @par Lua signature `btech.mech_frequencies( unit )`
+ * @par Lua name `btech.unit.frequencies`
+ * @par Lua signature `btech.unit.frequencies( unit )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * @par Lua returns - `values` (`table`): A flat array of converted legacy
  * result tokens.
@@ -195,16 +195,11 @@ BtechScriptResult fun_btmechfreqs(BtechScriptCall *call) {
 /**
  * Returns a part's weight in tons.
  *
- * @par Lua name `btech.get\_weight, btech.part_weight`
- * @par Lua signature `btech.get\_weight( part_name ); btech.part_weight(
- * part_name )`
- * @par Lua parameters - For `btech.get\_weight`: `part_name` (`string`) A
- * recognized long or very-long part name.
- * - For `btech.part_weight`: `part_name` (`string`) A recognized long or
- * very-long part name.
- * @par Lua returns - For `btech.get\_weight`: `value` (`number`): The numeric
- * result.
- * - For `btech.part_weight`: `value` (`number`): The numeric result.
+ * @par Lua name `btech.parts.weight`
+ * @par Lua signature `btech.parts.weight( part_name )`
+ * @par Lua parameters - `part_name` (`string`) A recognized long or very-long
+ * part name.
+ * @par Lua returns - `value` (`number`): The numeric result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
  * `@lua/check`.
  * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
@@ -248,8 +243,8 @@ BtechScriptResult fun_btgetweight(BtechScriptCall *call) {
 /**
  * Removes a quantity of a part from an object's stores.
  *
- * @par Lua name `btech.remove_stores`
- * @par Lua signature `btech.remove_stores( target, part_name, quantity )`
+ * @par Lua name `btech.parts.remove_stores`
+ * @par Lua signature `btech.parts.remove_stores( target, part_name, quantity )`
  * @par Lua parameters - `target` (`number`) The stores-bearing object dbref.
  * - `part_name` (`string`) A recognized part name.
  * - `quantity` (`number`) The quantity to remove.
@@ -312,8 +307,8 @@ BtechScriptResult fun_btremovestores(BtechScriptCall *call) {
 /**
  * Runs the legacy technician-time query.
  *
- * @par Lua name `btech.tech_time`
- * @par Lua signature `btech.tech_time(  )`
+ * @par Lua name `btech.repair.tech_time`
+ * @par Lua signature `btech.repair.tech_time(  )`
  * @par Lua parameters - None.
  * @par Lua returns - `value` (`number`): The numeric result.
  * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
@@ -359,8 +354,8 @@ BtechScriptResult fun_bttechtime(BtechScriptCall *call) {
 /**
  * Describes one critical slot on a live unit.
  *
- * @par Lua name `btech.crit_slot`
- * @par Lua signature `btech.crit_slot( unit, section, slot, [name_type] )`
+ * @par Lua name `btech.unit.crit_slot`
+ * @par Lua signature `btech.unit.crit_slot( unit, section, slot, [name_type] )`
  * @par Lua parameters - `unit` (`number`) The unit dbref.
  * - `section` (`string`) The section name.
  * - `slot` (`number`) The critical-slot number.
@@ -420,8 +415,8 @@ BtechScriptResult fun_btcritslot(BtechScriptCall *call) {
 /**
  * Describes one critical slot in a unit template.
  *
- * @par Lua name `btech.crit_slot_ref`
- * @par Lua signature `btech.crit_slot_ref( reference, section, slot,
+ * @par Lua name `btech.unit.crit_slot_ref`
+ * @par Lua signature `btech.unit.crit_slot_ref( reference, section, slot,
  * [name_type] )`
  * @par Lua parameters - `reference` (`string`) The unit template reference.
  * - `section` (`string`) The section name.
@@ -482,8 +477,8 @@ static float map_hex_scaled_elevation(BattleMap *map, int x, int y) {
 /**
  * Calculates distance between units or map coordinates.
  *
- * @par Lua name `btech.range`
- * @par Lua signature `btech.range( map, unit_a, unit_b )`
+ * @par Lua name `btech.map.range`
+ * @par Lua signature `btech.map.range( map, unit_a, unit_b )`
  * @par Lua parameters - `map` (`number`) The map dbref.
  * - `unit_a` (`number`) The first unit dbref.
  * - `unit_b` (`number`) The second unit dbref.
