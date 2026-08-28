@@ -628,7 +628,27 @@ static int write_lua_fixture(const char *directory) {
         "          mux.world.set_zone, going_target, thing_zone)\n"
         "        assert(not target_ok\n"
         "          and target_error.code == \"mux.object.unavailable\")\n"
+        "        local cleanup_target = mux.world.create_thing({\n"
+        "          name = \"Lua Cleared Zone Target\", location = room\n"
+        "        })\n"
+        "        local cleanup_zone = mux.world.create_thing({\n"
+        "          name = \"Lua Destroyed Zone\", location = room\n"
+        "        })\n"
+        "        mux.world.set_zone(cleanup_target, cleanup_zone)\n"
+        "        mux.world.destroy(cleanup_zone)\n"
+        "        assert(mux.world.zone(cleanup_target) == nil)\n"
+        "        mux.world.set_zone(ctx.enactor, thing_zone)\n"
         "        mux.world.pemit(ctx.enactor, \"LuaZone assigned\")\n"
+        "        return true\n"
+        "      end,\n"
+        "    },\n",
+        file);
+  fputs("    {\n"
+        "      pattern = \"^luazonereloaded$\",\n"
+        "      handler = function(ctx)\n"
+        "        local zone = mux.world.zone(ctx.enactor)\n"
+        "        assert(zone ~= nil and zone.name == \"Lua Persistent Zone\")\n"
+        "        mux.world.pemit(ctx.enactor, \"LuaZone reloaded\")\n"
         "        return true\n"
         "      end,\n"
         "    },\n",
@@ -2223,6 +2243,8 @@ int main(int argc, char **argv) {
         expect_text(*socket_fd, "Password:") < 0 ||
         send_command(*socket_fd, "btmuxr0x\r\n") < 0 ||
         expect_text(*socket_fd, "Connected.") < 0 ||
+        send_command(*socket_fd, "luazonereloaded\r\n") < 0 ||
+        expect_text(*socket_fd, "LuaZone reloaded") < 0 ||
         send_command(*socket_fd, "luaaffiliationreloaded\r\n") < 0 ||
         expect_text(*socket_fd, "LuaAffiliation reloaded") < 0 ||
         send_command(*socket_fd, "luaevents\r\n") < 0 ||

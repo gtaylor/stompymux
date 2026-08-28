@@ -633,7 +633,7 @@ function mux_world.create_thing(options) end
 ---@see mux.error.codes.object.unavailable
 function mux_world.create_exit(options) end
 
----Returns an object's assigned zone, or nil when no zone is assigned.
+---Returns an object's assigned zone, or nil when no zone is assigned or the zone is being destroyed.
 ---@param object DbRef|Object Live object to inspect.
 ---@return Object? zone Assigned zone.
 ---

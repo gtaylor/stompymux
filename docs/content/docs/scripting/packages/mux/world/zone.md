@@ -16,7 +16,8 @@ local zone = mux.world.zone(object)
 ## Returns
 
 `Object|nil zone`
-: A handle for the assigned zone, or `nil` when the object has no zone.
+: A handle for the assigned zone, or `nil` when the object has no zone or its
+  zone is being destroyed.
 
 ## Errors and availability
 

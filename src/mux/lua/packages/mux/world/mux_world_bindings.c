@@ -325,7 +325,7 @@ static int lua_mux_create_exit(lua_State *state) {
  * @par Lua signature `mux.world.zone( object )`
  * @par Lua parameters - `object` (`number|Object`) Live object to inspect.
  * @par Lua returns - `zone` (`Object|nil`): The assigned zone, or `nil` when
- * the object has no zone.
+ * the object has no zone or its zone is being destroyed.
  * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
  * - `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid reference.
  * @par Lua availability Available only at runtime; unavailable during
@@ -347,6 +347,10 @@ static int lua_mux_zone(lua_State *state) {
   if (!is_good_obj(package->services->database, zone))
     return lua_error_raise(state, LUA_ERROR_CODE_OBJECT_INVALID,
                            "object has an invalid zone");
+  if (is_going(package->services->database, zone)) {
+    lua_pushnil(state);
+    return 1;
+  }
   lua_mux_push_object(state, package, zone);
   return 1;
 }
