@@ -21,6 +21,7 @@ sidebar_root_for: self
 
 | Function | Description |
 | --- | --- |
+| [`affiliation`](affiliation/) | Returns an object's assigned affiliation. |
 | [`create_exit`](create-exit/) | Creates and attaches an exit. |
 | [`create_room`](create-room/) | Creates a detached room. |
 | [`create_thing`](create-thing/) | Creates and places a thing. |
@@ -31,6 +32,7 @@ sidebar_root_for: self
 | [`object`](object/) | Creates a validated handle for a database object. |
 | [`pemit`](pemit/) | Privately emits a message to an object. |
 | [`powers`](powers/) | Typed constants for native object powers. |
+| [`set_affiliation`](set-affiliation/) | Assigns or clears an object's affiliation. |
 | [`set_lua_parent`](set-lua-parent/) | Assigns or clears an object's Lua parent. |
 | [`set_zone`](set-zone/) | Assigns or clears an object's zone. |
 | [`teleport`](teleport/) | Teleports a thing or player to a destination. |

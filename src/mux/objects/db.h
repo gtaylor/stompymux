@@ -111,7 +111,8 @@ struct GameObject {
   /* ROOM: unused */
   DbRef link; /* PLAYER, THING: home location */
   /* ROOM, EXIT: unused */
-  DbRef zone; /* Whatever the object is zoned to. */
+  DbRef zone;        /* Whatever the object is zoned to. */
+  DbRef affiliation; /* Object this object is affiliated with. */
 
   char *lua_parent; /* Relative object_logic module path. */
 
@@ -236,6 +237,13 @@ static inline DbRef game_object_location(GameDatabase *database, DbRef object) {
 static inline DbRef game_object_zone(GameDatabase *database, DbRef object) {
   return game_database_object(database, object)->zone;
 }
+/** Returns a game object's affiliation. @param[in,out] database Game database.
+ * @param[in] object Game object. */
+
+static inline DbRef game_object_affiliation(GameDatabase *database,
+                                            DbRef object) {
+  return game_database_object(database, object)->affiliation;
+}
 /** Executes game object contents. @param[in,out] database Game database.
  * @param[in] object Game object. */
 
@@ -288,6 +296,14 @@ static inline void game_object_set_location(GameDatabase *database,
 static inline void game_object_set_zone(GameDatabase *database, DbRef object,
                                         DbRef value) {
   game_database_object(database, object)->zone = value;
+}
+/** Sets a game object's affiliation. @param[in,out] database Game database.
+ * @param[in] object Game object. @param[in] value Affiliation object or
+ * NOTHING. */
+
+static inline void game_object_set_affiliation(GameDatabase *database,
+                                               DbRef object, DbRef value) {
+  game_database_object(database, object)->affiliation = value;
 }
 /** Sets contents on game object. @param[in,out] database Game database.
  * @param[in] object Game object. @param[in] value Value to use. */

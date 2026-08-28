@@ -6,7 +6,7 @@
 #include "mux/persistence/gamedb_sqlite_internal.h"
 
 // Increment whenever an incompatible schema change is made.
-const int GAMEDB_SCHEMA_VERSION = 28;
+const int GAMEDB_SCHEMA_VERSION = 29;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 const int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -32,6 +32,7 @@ const char SCHEMA_OBJECTS_SQL[] =
     " name TEXT NOT NULL,"
     " location INTEGER NOT NULL,"
     " zone INTEGER NOT NULL,"
+    " affiliation INTEGER NOT NULL DEFAULT -1,"
     " contents INTEGER NOT NULL,"
     " exits INTEGER NOT NULL,"
     " link INTEGER NOT NULL,"

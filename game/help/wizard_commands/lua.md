@@ -36,6 +36,10 @@ pass `nil` as the destination to unlink it without detaching it from its source.
 `mux.world.teleport` moves a thing or player using an extensible options table.
 `mux.world.zone` reads an object's zone, and `mux.world.set_zone` assigns a
 thing or room as its zone or clears the assignment with `nil`.
+`mux.world.affiliation` reads an object's affiliation, and
+`mux.world.set_affiliation` assigns any live object as its affiliation or
+clears the assignment with `nil`. Affiliations do not affect command matching,
+events, or other server behavior.
 `mux.world.lua_parent` reads an object's direct object-logic module path, and
 `mux.world.set_lua_parent` assigns a validated path or clears it with `nil`.
 Object handles also expose `object:flags()` and `object:powers()`. Their

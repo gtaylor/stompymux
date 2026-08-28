@@ -81,6 +81,8 @@ static void debug_examine(EvaluationContext *evaluation, DbRef player,
                 game_object_next(evaluation->world->database, thing));
   notify_printf(evaluation, player, "Zone    = %ld",
                 game_object_zone(evaluation->world->database, thing));
+  notify_printf(evaluation, player, "Affil.  = %ld",
+                game_object_affiliation(evaluation->world->database, thing));
   buf = flag_description(evaluation->world->database, thing);
   notify_printf(evaluation, player, "Flags   = %s", buf.text);
   owned_text_release(&buf);
@@ -198,6 +200,11 @@ void do_examine(CommandInvocation *invocation) {
   buf2 = unparse_object(evaluation->world->database, evaluation, PLAYER,
                         game_object_zone(evaluation->world->database, thing));
   notify_printf(evaluation, PLAYER, "Zone: %s", buf2.text);
+  owned_text_release(&buf2);
+  buf2 = unparse_object(
+      evaluation->world->database, evaluation, PLAYER,
+      game_object_affiliation(evaluation->world->database, thing));
+  notify_printf(evaluation, PLAYER, "Affiliation: %s", buf2.text);
   owned_text_release(&buf2);
   lua_examine_object(&(LuaExamineObjectRequest){
       .runtime = invocation->context->runtime->lua_owner->runtime,

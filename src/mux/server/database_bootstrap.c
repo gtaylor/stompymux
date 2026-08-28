@@ -113,6 +113,7 @@ bootstrap_initialize_object(EvaluationContext *evaluation,
   game_object_set_type(database, configuration->dbref, type);
   game_object_set_location(database, configuration->dbref, NOTHING);
   game_object_set_zone(database, configuration->dbref, NOTHING);
+  game_object_set_affiliation(database, configuration->dbref, NOTHING);
   game_object_set_contents(database, configuration->dbref, NOTHING);
   game_object_set_exits(database, configuration->dbref, NOTHING);
   game_object_set_link(database, configuration->dbref, NOTHING);

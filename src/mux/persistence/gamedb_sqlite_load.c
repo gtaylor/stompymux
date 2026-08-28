@@ -62,6 +62,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   const char *lua_parent;
   const char *name;
   DbRef object;
+  DbRef affiliation;
   DbRef contents;
   DbRef exits;
   int type;
@@ -76,8 +77,8 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
 
   statement = nullptr;
   const char *query =
-      "SELECT dbref, name, location, zone, contents, exits, link, next, "
-      "type, lua_parent, has_ansi_flag, has_audible_flag, "
+      "SELECT dbref, name, location, zone, affiliation, contents, exits, link, "
+      "next, type, lua_parent, has_ansi_flag, has_audible_flag, "
       "has_auditorium_flag, has_blind_flag, has_connected_flag, "
       "has_dark_flag, "
       "has_floating_flag, has_gagged_flag, has_going_flag, "
@@ -100,12 +101,13 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
         gamedb_column_text(statement, 1, &name, MBUF_SIZE) < 0 ||
         gamedb_column_long(statement, 2, &location) < 0 ||
         gamedb_column_long(statement, 3, &zone) < 0 ||
-        gamedb_column_long(statement, 4, &contents) < 0 ||
-        gamedb_column_long(statement, 5, &exits) < 0 ||
-        gamedb_column_long(statement, 6, &link) < 0 ||
-        gamedb_column_long(statement, 7, &next) < 0 ||
-        gamedb_column_int(statement, 8, &type) < 0 ||
-        gamedb_column_text(statement, 9, &lua_parent, PATH_MAX) < 0 ||
+        gamedb_column_long(statement, 4, &affiliation) < 0 ||
+        gamedb_column_long(statement, 5, &contents) < 0 ||
+        gamedb_column_long(statement, 6, &exits) < 0 ||
+        gamedb_column_long(statement, 7, &link) < 0 ||
+        gamedb_column_long(statement, 8, &next) < 0 ||
+        gamedb_column_int(statement, 9, &type) < 0 ||
+        gamedb_column_text(statement, 10, &lua_parent, PATH_MAX) < 0 ||
         (type != OBJECT_TYPE_ROOM && type != OBJECT_TYPE_THING &&
          type != OBJECT_TYPE_EXIT && type != OBJECT_TYPE_PLAYER &&
          type != OBJECT_TYPE_GARBAGE) ||
@@ -117,14 +119,14 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       for (ObjectFlag flag = OBJECT_FLAG_ANSI;
            result == 0 && flag < OBJECT_FLAG_COUNT; flag++) {
         if (gamedb_column_bool(
-                statement, 9 + (int)flag,
+                statement, 10 + (int)flag,
                 checked_storage_at(object_flags, OBJECT_FLAG_COUNT,
                                    sizeof(*object_flags), (size_t)flag)) < 0)
           result = -1;
       }
       for (PowerId power = POWER_IDLE; result == 0 && power < POWER_COUNT;
            power++) {
-        if (gamedb_column_bool(statement, 29 + (int)power,
+        if (gamedb_column_bool(statement, 30 + (int)power,
                                checked_storage_at(powers, POWER_COUNT,
                                                   sizeof(*powers),
                                                   (size_t)power)) < 0)
@@ -135,6 +137,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       object_name_set(context->database, object, name);
       game_object_set_location(context->database, object, location);
       game_object_set_zone(context->database, object, zone);
+      game_object_set_affiliation(context->database, object, affiliation);
       game_object_set_contents(context->database, object, contents);
       game_object_set_exits(context->database, object, exits);
       game_object_set_link(context->database, object, link);

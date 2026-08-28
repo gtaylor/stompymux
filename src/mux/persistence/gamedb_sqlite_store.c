@@ -285,8 +285,8 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
       gamedb_prepare(
           sqlite, &objects,
           "INSERT INTO objects "
-          "(dbref, name, location, zone, contents, exits, link, next, type, "
-          "lua_parent, "
+          "(dbref, name, location, zone, affiliation, contents, exits, link, "
+          "next, type, lua_parent, "
           "has_ansi_flag, has_audible_flag, "
           "has_auditorium_flag, has_blind_flag, has_connected_flag, "
           "has_dark_flag, has_floating_flag, has_gagged_flag, has_going_flag, "
@@ -297,7 +297,7 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
           "has_zombie_flag, "
           "has_idle_power) "
           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
+          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
       gamedb_prepare(sqlite, &object_state,
                      "INSERT INTO object_state "
                      "(object_dbref, namespace, key, value_type, value) "
@@ -327,22 +327,25 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
         gamedb_bind_int(objects, 4,
                         game_object_zone(context->database, object)) < 0 ||
         gamedb_bind_int(objects, 5,
-                        game_object_contents(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 6,
-                        game_object_exits(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 7,
-                        game_object_link(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 8,
-                        game_object_next(context->database, object)) < 0 ||
-        gamedb_bind_int(objects, 9, typeof_obj(context->database, object)) <
+                        game_object_affiliation(context->database, object)) <
             0 ||
-        sqlite3_bind_text(objects, 10,
+        gamedb_bind_int(objects, 6,
+                        game_object_contents(context->database, object)) < 0 ||
+        gamedb_bind_int(objects, 7,
+                        game_object_exits(context->database, object)) < 0 ||
+        gamedb_bind_int(objects, 8,
+                        game_object_link(context->database, object)) < 0 ||
+        gamedb_bind_int(objects, 9,
+                        game_object_next(context->database, object)) < 0 ||
+        gamedb_bind_int(objects, 10, typeof_obj(context->database, object)) <
+            0 ||
+        sqlite3_bind_text(objects, 11,
                           game_object_lua_parent(context->database, object), -1,
                           SQLITE_TRANSIENT) != SQLITE_OK) {
       return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
     }
     for (ObjectFlag flag = OBJECT_FLAG_ANSI; flag < OBJECT_FLAG_COUNT; flag++) {
-      if (gamedb_bind_int(objects, 10 + (int)flag,
+      if (gamedb_bind_int(objects, 11 + (int)flag,
                           game_object_has_flag(&(ObjectFlagRequest){
                               .database = context->database,
                               .object = object,
@@ -351,7 +354,7 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
                                       0);
     }
     for (PowerId power = POWER_IDLE; power < POWER_COUNT; power++) {
-      if (gamedb_bind_int(objects, 30 + (int)power,
+      if (gamedb_bind_int(objects, 31 + (int)power,
                           game_object_has_power(&(ObjectPowerRequest){
                               .database = context->database,
                               .object = object,

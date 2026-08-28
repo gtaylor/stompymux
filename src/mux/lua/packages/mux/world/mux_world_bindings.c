@@ -705,6 +705,7 @@ void lua_mux_install_world_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_mux_install_state_bindings(state, package);
   lua_mux_install_attribute_bindings(state, package);
   lua_mux_install_flag_power_bindings(state, package);
+  lua_mux_install_affiliation_bindings(state, package);
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_pemit, 1);
   lua_setfield(state, -2, "pemit");

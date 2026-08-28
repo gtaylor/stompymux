@@ -313,6 +313,8 @@ static int write_lua_fixture(const char *directory) {
         "        assert(type(mux.world.create_exit) == \"function\")\n"
         "        assert(type(mux.world.zone) == \"function\")\n"
         "        assert(type(mux.world.set_zone) == \"function\")\n"
+        "        assert(type(mux.world.affiliation) == \"function\")\n"
+        "        assert(type(mux.world.set_affiliation) == \"function\")\n"
         "        assert(type(mux.world.lua_parent) == \"function\")\n"
         "        assert(type(mux.world.set_lua_parent) == \"function\")\n"
         "        assert(type(mux.world.link_exit) == \"function\")\n"
@@ -627,6 +629,81 @@ static int write_lua_fixture(const char *directory) {
         "        assert(not target_ok\n"
         "          and target_error.code == \"mux.object.unavailable\")\n"
         "        mux.world.pemit(ctx.enactor, \"LuaZone assigned\")\n"
+        "        return true\n"
+        "      end,\n"
+        "    },\n",
+        file);
+  fputs("    {\n"
+        "      pattern = \"^luaaffiliation$\",\n"
+        "      handler = function(ctx)\n"
+        "        local room = mux.world.create_room({\n"
+        "          name = \"Lua Affiliation Room\"\n"
+        "        })\n"
+        "        local affiliate = mux.world.create_thing({\n"
+        "          name = \"Lua Persistent Affiliation\", location = room\n"
+        "        })\n"
+        "        local target = mux.world.create_thing({\n"
+        "          name = \"Lua Persistently Affiliated Thing\",\n"
+        "          location = ctx.enactor\n"
+        "        })\n"
+        "        local exit = mux.world.create_exit({\n"
+        "          name = \"Lua Affiliation Exit\", location = room\n"
+        "        })\n"
+        "        local player = mux.world.object(ctx.enactor)\n"
+        "        assert(mux.world.affiliation(target) == nil)\n"
+        "        mux.world.set_affiliation(target, room)\n"
+        "        assert(mux.world.affiliation(target) == room)\n"
+        "        mux.world.set_affiliation(target, exit)\n"
+        "        assert(mux.world.affiliation(target.dbref) == exit)\n"
+        "        mux.world.set_affiliation(target, player)\n"
+        "        assert(mux.world.affiliation(target) == player)\n"
+        "        mux.world.set_affiliation(target, target)\n"
+        "        assert(mux.world.affiliation(target) == target)\n"
+        "        mux.world.set_affiliation(target, nil)\n"
+        "        assert(mux.world.affiliation(target) == nil)\n"
+        "        local missing_ok, missing_error = mux.error.pcall(\n"
+        "          mux.world.set_affiliation, target)\n"
+        "        assert(not missing_ok\n"
+        "          and missing_error.code == \"mux.arg.invalid\")\n"
+        "        local going_affiliate = mux.world.create_thing({\n"
+        "          name = \"Lua Going Affiliation\", location = room\n"
+        "        })\n"
+        "        mux.world.destroy(going_affiliate)\n"
+        "        local affiliation_ok, affiliation_error = mux.error.pcall(\n"
+        "          mux.world.set_affiliation, target, going_affiliate)\n"
+        "        assert(not affiliation_ok\n"
+        "          and affiliation_error.code == \"mux.object.unavailable\")\n"
+        "        local going_target = mux.world.create_thing({\n"
+        "          name = \"Lua Going Affiliation Target\", location = room\n"
+        "        })\n"
+        "        mux.world.destroy(going_target)\n"
+        "        local target_ok, target_error = mux.error.pcall(\n"
+        "          mux.world.set_affiliation, going_target, affiliate)\n"
+        "        assert(not target_ok\n"
+        "          and target_error.code == \"mux.object.unavailable\")\n"
+        "        local cleanup_target = mux.world.create_thing({\n"
+        "          name = \"Lua Cleared Affiliation Target\", location = room\n"
+        "        })\n"
+        "        local cleanup_affiliate = mux.world.create_thing({\n"
+        "          name = \"Lua Destroyed Affiliation\", location = room\n"
+        "        })\n"
+        "        mux.world.set_affiliation(cleanup_target, cleanup_affiliate)\n"
+        "        mux.world.destroy(cleanup_affiliate)\n"
+        "        assert(mux.world.affiliation(cleanup_target) == nil)\n"
+        "        mux.world.set_affiliation(target, affiliate)\n"
+        "        mux.world.set_affiliation(player, affiliate)\n"
+        "        mux.world.pemit(ctx.enactor, \"LuaAffiliation assigned\")\n"
+        "        return true\n"
+        "      end,\n"
+        "    },\n",
+        file);
+  fputs("    {\n"
+        "      pattern = \"^luaaffiliationreloaded$\",\n"
+        "      handler = function(ctx)\n"
+        "        local affiliate = mux.world.affiliation(ctx.enactor)\n"
+        "        assert(affiliate ~= nil\n"
+        "          and affiliate.name == \"Lua Persistent Affiliation\")\n"
+        "        mux.world.pemit(ctx.enactor, \"LuaAffiliation reloaded\")\n"
         "        return true\n"
         "      end,\n"
         "    },\n",
@@ -1588,6 +1665,21 @@ static int exercise_split_modules(int socket_fd) {
                  expect_text(socket_fd, "LuaTeleport moved") < 0 ||
                  send_command(socket_fd, "luazone\r\n") < 0 ||
                  expect_text(socket_fd, "LuaZone assigned") < 0 ||
+                 send_command(socket_fd, "luaaffiliation\r\n") < 0 ||
+                 expect_text(socket_fd, "LuaAffiliation assigned") < 0 ||
+                 send_command(
+                     socket_fd,
+                     "@examine Lua Persistently Affiliated Thing\r\n") < 0 ||
+                 expect_text(socket_fd, "Zone:") < 0 ||
+                 expect_text(socket_fd,
+                             "Affiliation: Lua Persistent Affiliation") < 0 ||
+                 send_command(socket_fd,
+                              "@examine/debug Lua Persistently Affiliated "
+                              "Thing\r\n") < 0 ||
+                 expect_text(socket_fd, "Zone    =") < 0 ||
+                 expect_text(socket_fd, "Affil.  =") < 0 ||
+                 send_command(socket_fd, "@dbck\r\n") < 0 ||
+                 expect_text(socket_fd, "Done.") < 0 ||
                  send_command(socket_fd, "lualuaparent\r\n") < 0 ||
                  expect_text(socket_fd, "LuaParent assigned") < 0 ||
                  send_command(socket_fd, "luaflags\r\n") < 0 ||
@@ -1942,6 +2034,12 @@ static int check_styled_object(const char *directory) {
           "   WHERE name = 'Lua Persistently Zoned Thing')"
           ", (SELECT dbref FROM objects"
           "   WHERE name = 'Lua Persistent Zone')"
+          ", (SELECT affiliation FROM objects"
+          "   WHERE name = 'Lua Persistently Affiliated Thing')"
+          ", (SELECT dbref FROM objects"
+          "   WHERE name = 'Lua Persistent Affiliation')"
+          ", (SELECT affiliation FROM objects"
+          "   WHERE name = 'Lua Cleared Affiliation Target')"
           ", (SELECT lua_parent FROM objects"
           "   WHERE name = 'Lua Persistently Parented Thing')"
           ", (SELECT lua_parent FROM objects"
@@ -1982,9 +2080,14 @@ static int check_styled_object(const char *directory) {
       sqlite3_column_type(statement, 12) != SQLITE_NULL &&
       sqlite3_column_int64(statement, 11) ==
           sqlite3_column_int64(statement, 12) &&
-      !strcmp((const char *)sqlite3_column_text(statement, 13),
+      sqlite3_column_type(statement, 13) != SQLITE_NULL &&
+      sqlite3_column_type(statement, 14) != SQLITE_NULL &&
+      sqlite3_column_int64(statement, 13) ==
+          sqlite3_column_int64(statement, 14) &&
+      sqlite3_column_int64(statement, 15) == -1 &&
+      !strcmp((const char *)sqlite3_column_text(statement, 16),
               "example.lua") &&
-      !strcmp((const char *)sqlite3_column_text(statement, 14), ""))
+      !strcmp((const char *)sqlite3_column_text(statement, 17), ""))
     result = 0;
 
 done:
@@ -2120,6 +2223,8 @@ int main(int argc, char **argv) {
         expect_text(*socket_fd, "Password:") < 0 ||
         send_command(*socket_fd, "btmuxr0x\r\n") < 0 ||
         expect_text(*socket_fd, "Connected.") < 0 ||
+        send_command(*socket_fd, "luaaffiliationreloaded\r\n") < 0 ||
+        expect_text(*socket_fd, "LuaAffiliation reloaded") < 0 ||
         send_command(*socket_fd, "luaevents\r\n") < 0 ||
         expect_text(*socket_fd,
                     "LuaEvents first=0 startup=1 connect=1 order=startup") <

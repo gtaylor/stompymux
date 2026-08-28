@@ -459,13 +459,16 @@ static int check_snapshot(const char *path) {
            "'btech_character_state', 'btech_character_values');",
            10) == 0 &&
        query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                 28) == 0 &&
+                 29) == 0 &&
        query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
                  1) == 0 &&
        query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
            0 &&
        (query_int(sqlite, "SELECT count(*) FROM objects;", 6) == 0 ||
         query_int(sqlite, "SELECT count(*) FROM objects;", 7) == 0) &&
+       query_int(sqlite,
+                 "SELECT count(*) FROM objects WHERE affiliation != -1;", 0) ==
+           0 &&
        (query_int(sqlite, "SELECT count(*) FROM object_state;", 0) == 0 ||
         query_int(sqlite, "SELECT count(*) FROM object_state;", 6) == 0) &&
        query_int(sqlite,

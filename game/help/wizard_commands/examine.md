@@ -17,12 +17,12 @@ Inspect an object as a Wizard:
 ```
 
 The normal view includes flags, powers, contents, locations and links, plus the
-direct Lua parent's appearances, commands, events, schedules, messages, and
-locks. Persistent object state is summarized by namespace, with the number of
-values in each namespace; keys and values are not displayed. `/brief` omits the
-namespace summary, and `/debug` displays raw database fields and the total
-number of persistent Lua state entries. Normal `@examine` never displays state
-keys or values.
+object's zone and affiliation and the direct Lua parent's appearances,
+commands, events, schedules, messages, and locks. Persistent object state is
+summarized by namespace, with the number of values in each namespace; keys and
+values are not displayed. `/brief` omits the namespace summary, and `/debug`
+displays raw database fields and the total number of persistent Lua state
+entries. Normal `@examine` never displays state keys or values.
 
 The examined object's name, `Desc`, and `Idesc` are shown using editable styled
 text markup instead of terminal color escape sequences. `Idesc` is omitted when

@@ -326,6 +326,7 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
   game_object_set_exits(evaluation->world->database, obj, NOTHING);
   game_object_set_next(evaluation->world->database, obj, NOTHING);
   game_object_set_link(evaluation->world->database, obj, NOTHING);
+  game_object_set_affiliation(evaluation->world->database, obj, NOTHING);
 
   if (objtype == OBJECT_TYPE_PLAYER) {
     DbRef zone = evaluation->world->configuration->player_zone > 0
@@ -401,6 +402,7 @@ void destroy_obj(const ObjectDestructionRequest *request) {
   game_object_set_next(evaluation->world->database, obj, NOTHING);
   game_object_set_link(evaluation->world->database, obj, NOTHING);
   game_object_set_zone(evaluation->world->database, obj, NOTHING);
+  game_object_set_affiliation(evaluation->world->database, obj, NOTHING);
 
   /*
    * Clear the stack

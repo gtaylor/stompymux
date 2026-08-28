@@ -449,6 +449,7 @@ static void initialize_objects(GameDatabase *database, DbRef first,
     game_object_set_link(database, thing, NOTHING);
     game_object_set_next(database, thing, NOTHING);
     game_object_set_zone(database, thing, NOTHING);
+    game_object_set_affiliation(database, thing, NOTHING);
     game_object_set_stack(database, thing, nullptr);
     game_database_object(database, thing)->state = nullptr;
   }
@@ -583,6 +584,7 @@ void db_grow(GameDatabase *database, DbRef newtop) {
       game_object_set_link(database, RESERVED, NOTHING);
       game_object_set_next(database, RESERVED, NOTHING);
       game_object_set_zone(database, RESERVED, NOTHING);
+      game_object_set_affiliation(database, RESERVED, NOTHING);
       game_object_set_stack(database, RESERVED, nullptr);
       game_database_object(database, RESERVED)->state = nullptr;
     }

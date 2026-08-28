@@ -68,6 +68,8 @@ void lua_mux_install_attribute_bindings(lua_State *state,
                                         LuaMuxPackage *package);
 void lua_mux_install_flag_power_bindings(lua_State *state,
                                          LuaMuxPackage *package);
+void lua_mux_install_affiliation_bindings(lua_State *state,
+                                          LuaMuxPackage *package);
 void lua_mux_install_text_bindings(lua_State *state, LuaMuxPackage *package);
 void lua_mux_install_world_bindings(lua_State *state, LuaMuxPackage *package);
 void lua_mux_install_session_bindings(lua_State *state, LuaMuxPackage *package);

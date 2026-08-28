@@ -653,6 +653,26 @@ function mux_world.zone(object) end
 ---@see mux.error.codes.object.unavailable
 function mux_world.set_zone(object, zone) end
 
+---Returns an object's assigned affiliation, or nil when none is assigned or the affiliate is being destroyed.
+---@param object DbRef|Object Live object to inspect.
+---@return Object? affiliation Assigned affiliation.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) for an invalid object or stored affiliation.
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.object.invalid
+function mux_world.affiliation(object) end
+
+---Assigns an object's affiliation, or clears it when `affiliation` is nil.
+---@param object DbRef|Object Live object to update.
+---@param affiliation DbRef|Object|nil Live object to assign, or nil to clear the affiliation. This argument must be supplied explicitly.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `affiliation` is omitted, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) for an invalid reference, or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable) when either object is being destroyed.
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+function mux_world.set_affiliation(object, affiliation) end
+
 ---Returns an object's direct Lua parent path, or nil when none is assigned.
 ---@param object DbRef|Object Live object to inspect.
 ---@return string? parent `object_logic`-relative parent path.

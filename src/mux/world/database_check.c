@@ -38,6 +38,18 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
           targ, true, "Zone", "is invalid. Cleared.");
       game_object_set_zone(evaluation->world->database, i, NOTHING);
     }
+
+    /* Check the affiliation. */
+    targ = game_object_affiliation(evaluation->world->database, i);
+    if (is_good_obj(evaluation->world->database, targ)) {
+      if (is_going(evaluation->world->database, targ))
+        game_object_set_affiliation(evaluation->world->database, i, NOTHING);
+    } else if (targ != NOTHING) {
+      object_log_header_error(
+          evaluation, i, game_object_location(evaluation->world->database, i),
+          targ, true, "Affiliation", "is invalid. Cleared.");
+      game_object_set_affiliation(evaluation->world->database, i, NOTHING);
+    }
     switch (typeof_obj(evaluation->world->database, i)) {
     case OBJECT_TYPE_PLAYER:
     case OBJECT_TYPE_THING:
