@@ -12,37 +12,36 @@ An `Object` is a validated handle for a native database object. Create one with
 or its database slot is reused. Two handles for the same live object compare
 equal, and `tostring(object)` produces a value such as `object(#123)`.
 
-## Properties
+## Sub-handlers
 
-All properties are read-only.
+The following methods return nested handlers for managing more complex aspects of the object.
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `dbref` | number | The native database reference. |
-| `name` | string | The object's current name. |
-| `type` | string | `room`, `thing`, `exit`, or `player`. |
-| `description` | string or nil | The native description, if set. |
-| `inside_description` | string or nil | The native inside description, if set. |
+| Method | Description |
+| --- | --- |
+| [`Object:attributes`](attributes/) | Opens the native attribute interface. |
+| [`Object:flags`](flags/) | Opens the object's flag collection. |
+| [`Object:powers`](powers/) | Opens the object's power collection. |
+| [`Object:state`](state/) | Opens a persistent state namespace. |
 
 ## Methods
 
 | Method | Description |
 | --- | --- |
 | [`Object:affiliation`](affiliation/) | Returns the object's assigned affiliation. |
+| [`Object:set_affiliation`](set-affiliation/) | Assigns or clears the object's affiliation. |
 | [`Object:contents`](contents/) | Lists directly contained objects. |
 | [`Object:contents_visible`](contents-visible/) | Applies native content visibility rules. |
+| [`Object:dbref`](dbref/) | Returns the object's native database reference. |
 | [`Object:exits`](exits/) | Lists directly attached exits. |
 | [`Object:exits_visible`](exits-visible/) | Applies native exit visibility rules. |
 | [`Object:enter_lock_passes`](enter-lock-passes/) | Tests an exit's traversal lock. |
-| [`Object:attribute`](attribute/) | Opens the native attribute interface. |
-| [`Object:flags`](flags/) | Opens the object's flag collection. |
-| [`Object:powers`](powers/) | Opens the object's power collection. |
+| [`Object:name`](name/) | Returns the object's current name. |
+| [`Object:set_name`](set-name/) | Changes the object's name. |
 | [`Object:lua_parent`](lua-parent/) | Returns the object's direct Lua parent path. |
-| [`Object:set_affiliation`](set-affiliation/) | Assigns or clears the object's affiliation. |
 | [`Object:set_lua_parent`](set-lua-parent/) | Assigns or clears the object's Lua parent. |
-| [`Object:set_zone`](set-zone/) | Assigns or clears the object's zone. |
-| [`Object:state`](state/) | Opens a persistent state namespace. |
+| [`Object:type`](type/) | Returns the object's native object type. |
 | [`Object:zone`](zone/) | Returns the object's assigned zone. |
+| [`Object:set_zone`](set-zone/) | Assigns or clears the object's zone. |
 
 ## See Also
 

@@ -6,7 +6,7 @@
 #include "mux/persistence/gamedb_sqlite_internal.h"
 
 // Increment whenever an incompatible schema change is made.
-const int GAMEDB_SCHEMA_VERSION = 29;
+const int GAMEDB_SCHEMA_VERSION = 30;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 const int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -39,7 +39,7 @@ const char SCHEMA_OBJECTS_SQL[] =
     " next INTEGER NOT NULL,"
     " type INTEGER NOT NULL CHECK (type IN (0, 1, 2, 3, 5)),"
     " lua_parent TEXT NOT NULL DEFAULT '',"
-    " description TEXT, inside_description TEXT,"
+    " description TEXT, internal_description TEXT,"
     " destroyer INTEGER,"
     " has_ansi_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_ansi_flag IN (0, 1)),"
     " has_audible_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_audible_flag IN "
@@ -157,8 +157,8 @@ const char SCHEMA_STATE_SQL[] =
     ") WITHOUT ROWID;";
 
 const NativeColumn NATIVE_COLUMNS[] = {
-    {A_DESC, "objects", "dbref", "description"},
-    {A_IDESC, "objects", "dbref", "inside_description"},
+    {A_DESCRIPTION, "objects", "dbref", "description"},
+    {A_INTERNAL_DESCRIPTION, "objects", "dbref", "internal_description"},
     {A_DESTROYER, "objects", "dbref", "destroyer"},
     {A_ALIAS, "player_state", "object_dbref", "alias"},
     {A_MECHPREFID, "btech_object_state", "object_dbref", "mech_preferred_id"},

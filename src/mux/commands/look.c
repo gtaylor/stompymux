@@ -336,7 +336,7 @@ static bool look_simple(EvaluationContext *evaluation, DbRef player,
                    MSG_ME_ALL | MSG_F_DOWN);
     owned_text_release(&buff);
   }
-  pattr = A_DESC;
+  pattr = A_DESCRIPTION;
   notify_action(evaluation,
                 &(ActionMessageInvocation){
                     .message = {.type = LUA_MESSAGE_DESCRIBE,
@@ -363,7 +363,7 @@ static void show_a_desc(EvaluationContext *evaluation, DbRef player,
                                 .cause = player,
                                 .source = NOTHING,
                                 .destination = NOTHING},
-                    .content_attribute = A_DESC,
+                    .content_attribute = A_DESCRIPTION,
                     .event = LUA_EVENT_DESCRIBE});
 }
 
@@ -374,7 +374,8 @@ static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
 
   if ((typeof_obj(evaluation->world->database, loc) != OBJECT_TYPE_ROOM) &&
       use_idesc) {
-    got = attribute_get(evaluation->world->database, loc, A_IDESC, &aflags);
+    got = attribute_get(evaluation->world->database, loc,
+                        A_INTERNAL_DESCRIPTION, &aflags);
     if (*got.text) {
       notify_action(
           evaluation,
@@ -386,7 +387,7 @@ static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
                           .cause = player,
                           .source = NOTHING,
                           .destination = NOTHING},
-              .content_attribute = A_IDESC,
+              .content_attribute = A_INTERNAL_DESCRIPTION,
               .event = LUA_EVENT_DESCRIBE});
     } else {
       show_a_desc(evaluation, player, loc);

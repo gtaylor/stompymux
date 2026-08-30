@@ -18,7 +18,8 @@ indexed below.
 Lua modules are the supported way to define programmable commands. Attribute
 values beginning with `$` are not matched as commands.
 
-Lua command entries may set `access = "wizard"` or `access = "god"` alongside
-their `pattern` and `handler`. Omitting `access`, or setting it to `"public"`,
-allows everyone. Unauthorized entries are skipped silently so later command
-entries may still match.
+Lua command entries may set `access = mux.world.access.WIZARD` or
+`access = mux.world.access.GOD` alongside their `pattern` and `handler`.
+Omitting `access`, or setting it to `mux.world.access.PUBLIC`, allows everyone.
+Raw access strings are invalid. Unauthorized entries are skipped silently so
+later command entries may still match.

@@ -154,8 +154,8 @@ void do_alias(CommandInvocation *invocation) {
 
 bool object_attribute_is_administrable(int attribute_number) {
   switch (attribute_number) {
-  case A_DESC:
-  case A_IDESC:
+  case A_DESCRIPTION:
+  case A_INTERNAL_DESCRIPTION:
   case A_MECHPREFID:
   case A_MECHSKILLS:
   case A_XTYPE:
@@ -294,7 +294,7 @@ bool object_attribute_set(EvaluationContext *evaluation, DbRef player,
                      MSG_ME);
       return false;
     }
-    if (attrnum == A_DESC || attrnum == A_IDESC) {
+    if (attrnum == A_DESCRIPTION || attrnum == A_INTERNAL_DESCRIPTION) {
       compiled = alloc_lbuf("object_attribute_set.style");
       if (!styled_text_compile(evaluation->world->styled_text_palette, attrtext,
                                compiled, LBUF_SIZE, error, sizeof(error))) {

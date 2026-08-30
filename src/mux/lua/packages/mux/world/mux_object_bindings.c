@@ -8,13 +8,19 @@
 #include "mux/lua/lua_error_codes.h"
 #include "mux/lua/packages/mux/mux_package.h"
 #include "mux/lua/packages/mux/mux_package_internal.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_control.h"
+#include "mux/support/alloc.h"
+#include "mux/support/owned_text.h"
+#include "mux/support/stringutil.h"
+#include "mux/support/styled_text/markup.h"
+#include "mux/support/utf8.h"
+#include "mux/support/validation.h"
 #include "mux/world/access.h"
 #include "mux/world/object_spatial.h"
+#include "mux/world/player.h"
 
 DbRef lua_mux_require_object(LuaMuxPackage *package, lua_State *state,
                              int argument) {
@@ -341,70 +347,190 @@ static int lua_mux_exit_enter_lock_passes(lua_State *state) {
 }
 
 /**
- * Resolves public read-only fields and falls back to methods in the Object
- * metatable.
+ * Returns this object's current name.
  *
- * @par Lua name `Object.__index`
- * @par Lua signature `object[key]`
- * @par Lua parameters - `object` (`Object`): The validated object handle.
- * - `key` (`string`): A property or method name.
- * @par Lua returns - `value` (`integer|string|nil|function`): Read-only
- * `dbref`, `name`, `type`, `description`, or `inside_description`, or a
- * registered method.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` when the handle is stale; a
- * Lua type error when `key` is not string-convertible.
+ * @par Lua name `object:name`
+ * @par Lua signature `object:name( )`
+ * @par Lua parameters - None.
+ * @par Lua returns - `name` (`string`): The current stored object name.
+ * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Object.
  * @param[in,out] state The Lua state whose arguments are read and results are
  * pushed.
  * @return The number of Lua values pushed onto the stack.
  */
-static int lua_mux_object_index(lua_State *state) {
+static int lua_mux_object_name(lua_State *state) {
   LuaMuxObject *handle = lua_mux_check_object_handle(state, 1);
-  LuaMuxPackage *package = handle->package;
-  const char *key = luaL_checkstring(state, 2);
-  GameDatabase *database = package->services->database;
 
-  if (!strcmp(key, "dbref")) {
-    lua_pushinteger(state, handle->object);
-    return 1;
-  }
-  if (!strcmp(key, "name")) {
-    lua_pushstring(state, game_object_name(database, handle->object));
-    return 1;
-  }
-  if (!strcmp(key, "type")) {
-    switch (typeof_obj(database, handle->object)) {
-    case OBJECT_TYPE_ROOM:
-      lua_pushliteral(state, "room");
-      break;
-    case OBJECT_TYPE_THING:
-      lua_pushliteral(state, "thing");
-      break;
-    case OBJECT_TYPE_EXIT:
-      lua_pushliteral(state, "exit");
-      break;
-    case OBJECT_TYPE_PLAYER:
-      lua_pushliteral(state, "player");
-      break;
-    default:
-      lua_pushnil(state);
-      break;
-    }
-    return 1;
-  }
-  if (!strcmp(key, "description") || !strcmp(key, "inside_description")) {
-    int attribute = !strcmp(key, "description") ? A_DESC : A_IDESC;
-    const char *description =
-        attribute_get_raw(database, handle->object, attribute);
-    if (description)
-      lua_pushstring(state, description);
-    else
-      lua_pushnil(state);
-    return 1;
-  }
-  luaL_getmetatable(state, LUA_MUX_OBJECT_METATABLE);
-  lua_getfield(state, -1, key);
-  lua_remove(state, -2);
+  lua_pushstring(state, game_object_name(handle->package->services->database,
+                                         handle->object));
   return 1;
+}
+
+/**
+ * Returns this object's native database reference.
+ *
+ * @par Lua name `object:dbref`
+ * @par Lua signature `object:dbref( )`
+ * @par Lua parameters - None.
+ * @par Lua returns - `dbref` (`integer`): The native database reference.
+ * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Object.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
+static int lua_mux_object_dbref(lua_State *state) {
+  LuaMuxObject *handle = lua_mux_check_object_handle(state, 1);
+
+  lua_pushinteger(state, handle->object);
+  return 1;
+}
+
+/**
+ * Returns this object's native object type.
+ *
+ * @par Lua name `object:type`
+ * @par Lua signature `object:type( )`
+ * @par Lua parameters - None.
+ * @par Lua returns - `type` (`string|nil`): `room`, `thing`, `exit`, or
+ * `player`, or nil for an unrecognized native object type.
+ * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Object.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
+static int lua_mux_object_type(lua_State *state) {
+  LuaMuxObject *handle = lua_mux_check_object_handle(state, 1);
+  GameDatabase *database = handle->package->services->database;
+
+  switch (typeof_obj(database, handle->object)) {
+  case OBJECT_TYPE_ROOM:
+    lua_pushliteral(state, "room");
+    break;
+  case OBJECT_TYPE_THING:
+    lua_pushliteral(state, "thing");
+    break;
+  case OBJECT_TYPE_EXIT:
+    lua_pushliteral(state, "exit");
+    break;
+  case OBJECT_TYPE_PLAYER:
+    lua_pushliteral(state, "player");
+    break;
+  default:
+    lua_pushnil(state);
+    break;
+  }
+  return 1;
+}
+
+static char *lua_mux_object_compile_name(lua_State *state,
+                                         LuaMuxPackage *package, int argument) {
+  size_t length;
+  const char *name;
+  char error[256];
+  char *compiled;
+
+  if (lua_type(state, argument) != LUA_TSTRING)
+    lua_error_arg(state, argument, LUA_ERROR_CODE_ARG_INVALID,
+                  "name must be a string");
+  name = lua_tolstring(state, argument, &length);
+  if (strlen(name) != length)
+    lua_error_arg(state, argument, LUA_ERROR_CODE_ARG_INVALID,
+                  "name contains an embedded NUL byte");
+  if (!utf8_validate(name, length))
+    lua_error_arg(state, argument, LUA_ERROR_CODE_ARG_INVALID,
+                  "name is not valid UTF-8");
+
+  compiled = alloc_lbuf("lua_mux_object_compile_name");
+  if (!styled_text_compile(package->services->styled_text_palette, name,
+                           compiled, LBUF_SIZE, error, sizeof(error))) {
+    free_buf(compiled);
+    (void)lua_error_arg(state, argument, LUA_ERROR_CODE_ARG_INVALID,
+                        "name has invalid styled-text markup: %s", error);
+    return nullptr;
+  }
+  if (!string_copy_bounded(compiled, LBUF_SIZE, name)) {
+    free_buf(compiled);
+    (void)lua_error_arg(state, argument, LUA_ERROR_CODE_ARG_INVALID,
+                        "name is too long");
+    return nullptr;
+  }
+  return compiled;
+}
+
+/**
+ * Changes this object's name using native object-name validation.
+ *
+ * @par Lua name `object:set_name`
+ * @par Lua signature `object:set_name( name )`
+ * @par Lua parameters - `name` (`string`) The new UTF-8 object name,
+ * optionally containing valid styled-text markup.
+ * @par Lua returns - No values.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` for an invalid, unavailable, or duplicate
+ * name.
+ * - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Object.
+ * - `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` when the object is being destroyed.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
+static int lua_mux_object_set_name(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
+  GameDatabase *database = package->services->database;
+  WorldContext *world = package->services->background_command->world;
+  char clear[LBUF_SIZE];
+
+  lua_mux_require_runtime(package, state, "object:set_name");
+  DbRef object = lua_mux_require_object(package, state, 1);
+  if (is_going(database, object))
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
+                         "object is being destroyed");
+  if (lua_gettop(state) < 2)
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                         "name is required");
+  char *compiled = lua_mux_object_compile_name(state, package, 2);
+
+  if (!compiled)
+    return 0;
+
+  styled_text_strip(package->services->styled_text_palette, compiled, clear,
+                    sizeof(clear));
+  if (is_player(database, object)) {
+    OwnedText trimmed = trim_spaces(clear);
+    const char *current = game_object_pure_name(database, object);
+
+    if (!ok_player_name(package->services->configuration, trimmed.text) ||
+        !badname_check(world, trimmed.text)) {
+      owned_text_release(&trimmed);
+      free_buf(compiled);
+      return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                           "name is not a valid player name");
+    }
+    if (string_compare(package->services->configuration, trimmed.text,
+                       current) &&
+        lookup_player(world, NOTHING, trimmed.text, 0) != NOTHING) {
+      owned_text_release(&trimmed);
+      free_buf(compiled);
+      return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                           "player name is already in use");
+    }
+    (void)delete_player_name(world, object, current);
+    object_name_set(database, object, compiled);
+    (void)add_player_name(world, object,
+                          game_object_pure_name(database, object));
+    owned_text_release(&trimmed);
+  } else {
+    if (!ok_name(package->services->configuration, clear)) {
+      free_buf(compiled);
+      return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                           "name is not a valid object name");
+    }
+    object_name_set(database, object, compiled);
+  }
+  free_buf(compiled);
+  return 0;
 }
 
 /**
@@ -452,12 +578,24 @@ static int lua_mux_object_equal(lua_State *state) {
 
 void lua_mux_install_object_bindings(lua_State *state, LuaMuxPackage *package) {
   luaL_newmetatable(state, LUA_MUX_OBJECT_METATABLE);
-  lua_pushcfunction(state, lua_mux_object_index);
+  lua_pushvalue(state, -1);
   lua_setfield(state, -2, "__index");
   lua_pushcfunction(state, lua_mux_object_tostring);
   lua_setfield(state, -2, "__tostring");
   lua_pushcfunction(state, lua_mux_object_equal);
   lua_setfield(state, -2, "__eq");
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_object_name, 1);
+  lua_setfield(state, -2, "name");
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_object_dbref, 1);
+  lua_setfield(state, -2, "dbref");
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_object_type, 1);
+  lua_setfield(state, -2, "type");
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_object_set_name, 1);
+  lua_setfield(state, -2, "set_name");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_contents, 1);
   lua_setfield(state, -2, "contents");

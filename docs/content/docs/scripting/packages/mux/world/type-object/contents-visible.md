@@ -32,7 +32,7 @@ object:contents_visible( viewer, member )
 ```lua
 for _, member in ipairs(room:contents()) do
   if room:contents_visible(ctx.enactor, member) then
-    mux.world.pemit(ctx.enactor, member.name)
+    mux.world.pemit(ctx.enactor, member:name())
   end
 end
 ```

@@ -8,8 +8,8 @@ Creates a validated handle for a native database [Object](../type-object/).
 Since this function raises errors, it's best to wrap its invocation in a
 [pcall()](https://www.lua.org/pil/8.4.html) (see below).
 
-Once you've retrieved an [Object](../type-object/), you'll have access to its
-properties and a handful of methods for things like object's [State](../type-state/).
+Once you've retrieved an [Object](../type-object/), its methods provide access
+to native metadata and handles for features such as [State](../type-state/).
 
 ## Function
 
@@ -40,7 +40,7 @@ attempting a retrieval:
 
 ```lua
 local object = mux.world.object(ctx.object)
-mux.world.pemit(ctx.enactor, object.name)
+mux.world.pemit(ctx.enactor, object:name())
 ```
 
 `pcall` returns the object handle after the success flag when the database
@@ -50,7 +50,7 @@ reference is valid:
 local ok, object = pcall(mux.world.object, ctx.object)
 
 assert(ok)
-mux.world.pemit(ctx.enactor, object.name)
+mux.world.pemit(ctx.enactor, object:name())
 ```
 
 Invalid database references raise a structured Lua error rather than returning

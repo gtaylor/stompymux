@@ -20,9 +20,9 @@ local function send_link(value, command)
 end
 
 local function render_content_name(object)
-  local name = object.name
+  local name = object:name()
 
-  if object.type == "player" then
+  if object:type() == "player" then
     name = mux.text.style(name, { foreground = "bright-white" })
   end
   return name
@@ -46,7 +46,7 @@ local function render_exits(ctx)
 
   for _, exit in ipairs(location:exits()) do
     if location:exits_visible(ctx.enactor, exit) then
-      local stored_name = exit.name
+      local stored_name = exit:name()
       local name, aliases = stored_name:match("^([^;]+);?(.*)$")
       local first_alias = aliases:match("^([^;]+)")
       local command = mux.text.strip_style(first_alias or name)
@@ -67,9 +67,9 @@ local function render_room_contents_and_players(ctx)
 
   for _, object in ipairs(container:contents()) do
     if container:contents_visible(ctx.enactor, object) then
-      if object.type == "player" then
-        if object.dbref ~= ctx.enactor then
-          players[#players + 1] = object.name
+      if object:type() == "player" then
+        if object:dbref() ~= ctx.enactor then
+          players[#players + 1] = object:name()
         end
       else
         contents[#contents + 1] = render_content_name(object)
@@ -85,7 +85,7 @@ local function render_room_exits(ctx)
 
   for _, exit in ipairs(location:exits()) do
     if location:exits_visible(ctx.enactor, exit) then
-      local stored_name = exit.name
+      local stored_name = exit:name()
       local name, aliases = stored_name:match("^([^;]+);?(.*)$")
       local first_alias = aliases:match("^([^;]+)")
       local passes_enter_lock = exit:enter_lock_passes(ctx.enactor)
@@ -151,9 +151,10 @@ end
 
 local function render_internal_appearance(ctx)
   local object = mux.world.object(ctx.object)
+  local attributes = object:attributes()
   local lines = {
-    object.name,
-    object.description or "",
+    object:name(),
+    attributes:get("Description") or "",
   }
   local contents, players = render_room_contents_and_players(ctx)
   local exits = render_room_exits(ctx)

@@ -31,6 +31,7 @@ const char *const LUA_ERROR_CODE_NAMES[LUA_ERROR_CODE_COUNT] = {
     [LUA_ERROR_CODE_ATTRIBUTE_INVALID] = "mux.attribute.invalid",
     [LUA_ERROR_CODE_FLAG_INVALID] = "mux.flag.invalid",
     [LUA_ERROR_CODE_POWER_INVALID] = "mux.power.invalid",
+    [LUA_ERROR_CODE_ACCESS_INVALID] = "mux.access.invalid",
     [LUA_ERROR_CODE_CONNECTION_INVALID] = "mux.connection.invalid",
     [LUA_ERROR_CODE_CONNECTION_UNAVAILABLE] = "mux.connection.unavailable",
     [LUA_ERROR_CODE_TEXT_INVALID] = "mux.text.invalid",

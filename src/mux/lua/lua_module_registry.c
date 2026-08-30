@@ -512,7 +512,7 @@ static int lua_verify_commands(lua_State *state, int commands, const char *path,
         !lua_command_access_read(state, lua_gettop(state), &access)) {
       lua_pop(state, 1);
       lua_set_error(error, error_size,
-                    "command access in %s must be public, wizard, or god",
+                    "command access in %s must be a mux.world.access constant",
                     path);
       return 0;
     }

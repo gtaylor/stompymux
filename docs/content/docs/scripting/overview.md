@@ -35,10 +35,11 @@ after every local or zone Lua command has declined the command. See
 Each module returns a table with optional `commands`, `schedules`, and `flows`
 entries; object modules may also provide `events`, `locks`, successful action
 `messages`, and appearance functions. A command entry pairs a native Lua
-`pattern` with a `handler(ctx, ...)` and may set `access` to `"wizard"` or
-`"god"`; omitted access is public. Returning `true` handles the command,
-`false` or `nil` lets other matching continue. See [Commands](commands/) for
-pattern syntax, access behavior, and the handler context table.
+`pattern` with a `handler(ctx, ...)` and may set `access` to a typed
+[`mux.world.access`](packages/mux/world/access/) constant; omitted access is
+public. Returning `true` handles the command, while `false` or `nil` lets other
+matching continue. See [Commands](commands/) for pattern syntax, access
+behavior, and the handler context table.
 
 A module's `flows` table holds named step functions that
 [`mux.session.flow_start`](packages/mux/session/flow-start/)

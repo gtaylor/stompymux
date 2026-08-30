@@ -157,9 +157,10 @@ static int check_owned_attribute_text(void) {
   GameDatabase database = {.object_storage = objects, .top = 1, .size = 1};
   long flags = -1;
 
-  attribute_add(&database, 0, A_DESC, "description", 0);
-  OwnedText present = attribute_get(&database, 0, A_DESC, &flags);
-  OwnedText missing = attribute_get(&database, 0, A_IDESC, nullptr);
+  attribute_add(&database, 0, A_DESCRIPTION, "description", 0);
+  OwnedText present = attribute_get(&database, 0, A_DESCRIPTION, &flags);
+  OwnedText missing =
+      attribute_get(&database, 0, A_INTERNAL_DESCRIPTION, nullptr);
   int result = 0;
 
   if (present.owned == nullptr || strcmp(present.text, "description") != 0 ||

@@ -20,6 +20,12 @@ typedef enum LuaCommandAccess : int {
 
 bool lua_command_access_read(LuaState *state, int entry,
                              LuaCommandAccess *access);
+
+/** Installs the immutable `mux.world.access` namespace into the table at the
+ * top of the Lua stack. @param[in,out] state Lua state. */
+
+void lua_command_access_install_namespace(LuaState *state);
+
 typedef struct LuaCommandAccessRequest {
   GameDatabase *database;
   DbRef player;

@@ -15,13 +15,29 @@ mux.world.create_exit({
 })
 ```
 
-`name` and source `location` are required. The source must be capable of
-holding exits. `destination` is optional; omitting it creates an attached but
-unlinked exit. A destination must be capable of containing objects. References
-may be dbrefs or [Object](../type-object/) handles.
+## Parameters
 
-The function returns the new `Object` with configured exit flags and default
-Lua parent applied. It raises `mux.arg.invalid` for invalid options,
+`table options`
+: An exact options table with the following fields:
+
+  | Field | Type | Description |
+  | --- | --- | --- |
+  | `name` | `string` | Required UTF-8 name. It may contain valid styled-text markup. |
+  | `location` | number or [`Object`](../type-object/) | Required live source object capable of holding exits. |
+  | `destination` | number or [`Object`](../type-object/) | Optional live destination capable of containing objects. Omit it to leave the exit unlinked. |
+
+Unknown fields are rejected.
+
+## Returns
+
+`Object exit`
+: A handle for the newly created exit. The exit is attached to `location`,
+  linked to `destination` when supplied, and has the configured exit flags and
+  default Lua parent.
+
+## Errors and availability
+
+Raises `mux.arg.invalid` for invalid options or names,
 `mux.object.invalid` for invalid references or object kinds,
 `mux.object.unavailable` for a source or destination being destroyed, and
 `mux.unavailable.checking` during `@lua/check`.

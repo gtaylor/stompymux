@@ -56,6 +56,8 @@ function Error:root() end
 ---@field invalid ErrorCode `mux.flag.invalid`.
 ---@class MuxPowerErrorCodes: ErrorCode
 ---@field invalid ErrorCode `mux.power.invalid`.
+---@class MuxAccessErrorCodes: ErrorCode
+---@field invalid ErrorCode `mux.access.invalid`.
 ---@class MuxConnectionErrorCodes: ErrorCode
 ---@field invalid ErrorCode `mux.connection.invalid`.
 ---@field unavailable ErrorCode `mux.connection.unavailable`.
@@ -76,6 +78,7 @@ function Error:root() end
 ---@field attribute MuxAttributeErrorCodes
 ---@field flag MuxFlagErrorCodes
 ---@field power MuxPowerErrorCodes
+---@field access MuxAccessErrorCodes
 ---@field connection MuxConnectionErrorCodes
 ---@field text MuxTextErrorCodes
 ---@field module MuxModuleErrorCodes
@@ -185,6 +188,20 @@ local Attribute = {}
 ---Its string form is the canonical uppercase native name, and equality compares
 ---the native power identity within the current runtime.
 ---@class Power
+
+---A checked command-access constant obtained from [`mux.world.access`](lua://mux.world.access).
+---Its string form is its uppercase name, and equality compares access identity.
+---@class Access
+
+---Immutable lookup namespace for command-access constants.
+---
+---Raises [`mux.error.codes.access.invalid`](lua://mux.error.codes.access.invalid)
+---for unknown or non-string keys and attempted mutation.
+---@class AccessNamespace
+---@field PUBLIC Access Allows every invoker; also the default when access is omitted.
+---@field WIZARD Access Allows Wizards and God.
+---@field GOD Access Allows only God.
+---@see mux.error.codes.access.invalid
 
 ---Dynamic, immutable lookup namespace for registered flags. Keys must use the
 ---canonical uppercase native name.
@@ -334,12 +351,38 @@ function Attribute:entries() end
 ---A generation-checked native database object handle. Native equality compares
 ---object identity, and `tostring` returns its database-reference form.
 ---@class Object
----@field dbref DbRef Read-only native database reference.
----@field name string Read-only current object name.
----@field type? ObjectType Read-only type, or nil for an unrecognized native object type.
----@field description? string Read-only native description.
----@field inside_description? string Read-only native inside description.
 local Object = {}
+
+---Returns this object's native database reference.
+---@return DbRef dbref
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+---@see mux.error.codes.object.invalid
+function Object:dbref() end
+
+---Returns this object's native object type.
+---@return ObjectType? type
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+---@see mux.error.codes.object.invalid
+function Object:type() end
+
+---Returns this object's current stored name.
+---@return string name
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+---@see mux.error.codes.object.invalid
+function Object:name() end
+
+---Changes this object's name using native object-name validation.
+---@param name string New UTF-8 name, optionally containing styled-text markup.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+function Object:set_name(name) end
 
 ---Returns directly contained objects in database order.
 ---@return Object[] contents
@@ -458,7 +501,7 @@ function Object:state(namespace) end
 ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking).
 ---@see mux.error.codes.object.invalid
 ---@see mux.error.codes.unavailable.checking
-function Object:attribute() end
+function Object:attributes() end
 
 ---Creates a handle for this object's flags.
 ---@return Flags flags
@@ -643,6 +686,7 @@ function mux_config.get(name) end
 
 ---World database object access.
 ---@class MuxWorldPackage
+---@field access AccessNamespace Immutable namespace of command-access constants.
 ---@field flags FlagNamespace Immutable namespace of registered flag constants.
 ---@field powers PowerNamespace Immutable namespace of registered power constants.
 local mux_world = {}

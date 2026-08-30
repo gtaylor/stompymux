@@ -21,6 +21,7 @@ sidebar_root_for: self
 
 | Function | Description |
 | --- | --- |
+| [`access`](access/) | Typed constants for Lua command access levels. |
 | [`create_exit`](create-exit/) | Creates and attaches an exit. |
 | [`create_room`](create-room/) | Creates a detached room. |
 | [`create_thing`](create-thing/) | Creates and places a thing. |

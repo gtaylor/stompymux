@@ -1547,7 +1547,8 @@ add_test(NAME lua_test_runner_integration
     $<TARGET_FILE:lua_test_runner_integration_test>)
 
 add_executable(lua_command_access_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/content/lua_command_access.c
-  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/command_access.c)
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/command_access.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_error.c)
 target_link_libraries(lua_command_access_test PRIVATE btmux_options luajit m)
 target_include_directories(lua_command_access_test PRIVATE
   "${CMAKE_BINARY_DIR}"

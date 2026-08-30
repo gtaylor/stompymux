@@ -21,10 +21,11 @@ values beginning with `$` are not matched as commands.
 `@lua/test` runs fully mutable Lua tests against the currently loaded database.
 Run it only with a scratch database, never production data.
 
-Lua command entries may set `access = "wizard"` or `access = "god"` alongside
-their `pattern` and `handler`. Omitting `access`, or setting it to `"public"`,
-allows everyone. Unauthorized entries are skipped silently so later command
-entries may still match.
+Lua command entries may set `access = mux.world.access.WIZARD` or
+`access = mux.world.access.GOD` alongside their `pattern` and `handler`.
+Omitting `access`, or setting it to `mux.world.access.PUBLIC`, allows everyone.
+Raw access strings are invalid. Unauthorized entries are skipped silently so
+later command entries may still match.
 Lua callback reporting is configured with `lua_error_reporting`: `off`,
 `wizards` (the default), or `all`. Errors are always logged; this setting only
 controls player-visible reporting.

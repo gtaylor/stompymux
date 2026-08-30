@@ -14,7 +14,7 @@ return {
   commands = {
     {
       pattern = "^say%s+(.+)$",
-      access = "wizard",
+      access = mux.world.access.WIZARD,
       handler = function(ctx, message)
         mux.world.pemit(ctx.enactor, "You said: " .. message)
         return true
@@ -24,9 +24,10 @@ return {
 }
 ```
 
-Omit `access`, or set it to `"public"`, to allow everyone. Set it to
-`"wizard"` to allow Wizards and God, or `"god"` to allow only God. Values are
-case-sensitive. Invalid values cause module validation and reload to fail.
+Omit `access`, or set it to [`mux.world.access.PUBLIC`](packages/mux/world/access/),
+to allow everyone. Use `mux.world.access.WIZARD` to allow Wizards and God, or
+`mux.world.access.GOD` to allow only God. Raw strings are rejected. Invalid
+values cause module validation and reload to fail.
 
 An entry the invoker cannot access is skipped silently before its pattern or
 handler runs. Matching continues with later entries and command scopes.

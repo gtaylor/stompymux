@@ -84,7 +84,7 @@ btech.map.units( map, x, y, z, range )
 local btech = require("btech")
 
 for _, unit in ipairs(btech.map.units(map_dbref)) do
-  mux.world.pemit(ctx.enactor, mux.world.object(unit).name)
+  mux.world.pemit(ctx.enactor, mux.world.object(unit):name())
 end
 ```
 

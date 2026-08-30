@@ -28,6 +28,11 @@ attributes:get( name )
 
 Unsupported names and invalid handles raise a Lua error.
 
+The removed `Object.description` and `Object.inside_description` properties are
+available as `attributes:get("Description")` and
+`attributes:get("InternalDescription")`, respectively. Both return `nil` when
+unset.
+
 ## See Also
 
 - [`mux`](../../../)

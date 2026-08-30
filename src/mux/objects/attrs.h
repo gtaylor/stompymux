@@ -7,7 +7,7 @@
 
 /* 1 through 4 are reserved for removed action and lock-failure attributes. */
 /* 5 is reserved for the removed player Password attribute. */
-constexpr int A_DESC = 6; /* Description */
+constexpr int A_DESCRIPTION = 6; /* Description */
 /* 7 is reserved for the removed Sex attribute. */
 /* 8 and 9 are reserved for removed action-message attributes. */
 /* 10 and 11 are reserved for the removed OKILL and KILL attributes. */
@@ -16,7 +16,8 @@ constexpr int A_DESC = 6; /* Description */
 /* 26 through 29 are reserved for removed listen attributes and actions. */
 /* 30 is reserved for the removed player Last attribute. */
 /* 31 is reserved for the removed QueueMax attribute. */
-constexpr int A_IDESC = 32; /* Inside description (ENTER to get inside) */
+constexpr int A_INTERNAL_DESCRIPTION =
+    32; /* Internal description (ENTER to get inside) */
 /* 33 and 34 are reserved for removed action-message attributes. */
 /* 35 and 36 are reserved for removed action attributes. */
 /* 37 is reserved for the removed Odesc attribute. */

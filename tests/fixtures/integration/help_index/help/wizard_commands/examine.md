@@ -24,8 +24,9 @@ namespace summary, and `/debug` displays raw database fields and the total
 number of persistent Lua state entries. Normal `@examine` never displays state
 keys or values.
 
-The examined object's name, `Desc`, and `Idesc` are shown using editable styled
-text markup instead of terminal color escape sequences. `Idesc` is omitted when
+The examined object's name, `Description`, and `InternalDescription` are shown
+using editable styled text markup instead of terminal color escape sequences.
+`InternalDescription` is omitted when
 it is empty. This output can be copied into `@name` or `@attribute/set`.
 
 Only Wizards can use `@examine`. Wizards may examine any object.

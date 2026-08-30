@@ -13,8 +13,8 @@ when a user activates a rendered link.
 
 ```text
 @name drone=[fg=bright-cyan]Aegis[/]
-@attribute/set drone/Desc=A shell of [fg=#d78700]burnished amber[/] metal.
-@attribute/set dropship/Idesc=[fg=#8090ff bold]Cool blue light[/] fills the cabin.
+@attribute/set drone/Description=A shell of [fg=#d78700]burnished amber[/] metal.
+@attribute/set dropship/InternalDescription=[fg=#8090ff bold]Cool blue light[/] fills the cabin.
 ```
 
 ## Syntax

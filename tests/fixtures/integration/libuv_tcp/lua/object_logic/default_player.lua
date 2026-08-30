@@ -7,13 +7,13 @@ return {
     on_server_first_startup = function(ctx)
       local object = mux.world.object(ctx.object)
       assert(ctx.enactor == 1 and ctx.cause == 1)
-      assert(object.dbref == ctx.object and object.type == "player")
+      assert(object:dbref() == ctx.object and object:type() == "player")
       assert(object:lua_parent() == "default_player.lua")
       first_startup_count = first_startup_count + 1
       table.insert(startup_order, "first")
     end,
     on_server_startup = function(ctx)
-      assert(mux.world.object(ctx.object).type == "player")
+      assert(mux.world.object(ctx.object):type() == "player")
       startup_count = startup_count + 1
       table.insert(startup_order, "startup")
     end,

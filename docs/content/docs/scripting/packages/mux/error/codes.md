@@ -24,6 +24,7 @@ available as `testing.error.codes` in test suites.
 | `mux.error.codes.attribute.invalid` | `mux.attribute.invalid` | An attribute name or value is invalid, not administrable, or cannot be written. |
 | `mux.error.codes.flag.invalid` | `mux.flag.invalid` | A flag constant or lookup in `mux.world.flags` is invalid. |
 | `mux.error.codes.power.invalid` | `mux.power.invalid` | A power constant or lookup in `mux.world.powers` is invalid. |
+| `mux.error.codes.access.invalid` | `mux.access.invalid` | A command-access constant or lookup in `mux.world.access` is invalid. |
 | `mux.error.codes.connection.invalid` | `mux.connection.invalid` | A message, descriptor, Telnet-environment kind, or flow descriptor is invalid. |
 | `mux.error.codes.connection.unavailable` | `mux.connection.unavailable` | Flow support is unavailable or the descriptor already has an active flow. |
 | `mux.error.codes.text.invalid` | `mux.text.invalid` | Styled text, a style field, or a requested text width is invalid. |
@@ -51,9 +52,10 @@ end
 Each leaf and intermediate node has a `.code` field, and `tostring(node)`
 returns that dotted string. The intermediate nodes are derived from the leaves,
 not native enum members: `mux`, `mux.arg`, `mux.unavailable`, `mux.state`,
-`mux.object`, `mux.attribute`, `mux.connection`, `mux.text`, and `mux.module`.
-They are useful with [`mux.error.is`](../is/) for a whole-namespace check; for
-example, `mux.error.codes.state` matches every
+`mux.object`, `mux.attribute`, `mux.flag`, `mux.power`, `mux.access`,
+`mux.connection`, `mux.text`, and `mux.module`. They are useful with
+[`mux.error.is`](../is/) for a whole-namespace check; for example,
+`mux.error.codes.state` matches every
 `mux.state.*` code.
 
 Unknown node keys raise when looked up instead of returning `nil`, which makes

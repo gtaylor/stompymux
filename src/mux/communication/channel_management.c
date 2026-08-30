@@ -301,7 +301,7 @@ static void comlist_description(GameDatabase *database, struct Channel *ch,
     return;
   }
 
-  description = attribute_get(database, ch->chan_obj, A_DESC, &flags);
+  description = attribute_get(database, ch->chan_obj, A_DESCRIPTION, &flags);
   if (!*description.text) {
     (void)string_copy_bounded(buffer, buffer_size, "No description.");
   } else {

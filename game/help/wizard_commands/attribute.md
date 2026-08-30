@@ -18,6 +18,7 @@ Inspect or change supported native attributes. Dynamic Lua-backed values use
 ```
 
 `@attribute/examine` shows every supported attribute, including unset ones.
-Only descriptions and BattleTech-native attributes are available. Set `Xtype`
-before enabling XCODE; valid values include `MECH`, `MECHREP`, `MAP`, `DEBUG`,
-`AUTOPILOT`, and `TURRET`.
+Only descriptions and BattleTech-native attributes are available. Object
+descriptions use `Description` and `InternalDescription`; the legacy names
+`Desc` and `Idesc` are invalid. Set `Xtype` before enabling XCODE; valid values
+include `MECH`, `MECHREP`, `MAP`, `DEBUG`, `AUTOPILOT`, and `TURRET`.

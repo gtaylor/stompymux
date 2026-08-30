@@ -18,5 +18,6 @@ Validate every Lua module without replacing the running Lua state:
 The check covers object logic, global logic, shared packages, configured Lua
 parent paths, module return values, imports, and schedules. Runtime-only `mux`
 operations are unavailable while validation evaluates module top-level code.
-Command `access` values must be `"public"`, `"wizard"`, or `"god"` when
-present.
+Command `access` values must be `mux.world.access.PUBLIC`,
+`mux.world.access.WIZARD`, or `mux.world.access.GOD` when present. Raw strings
+are invalid.

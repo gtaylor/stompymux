@@ -395,8 +395,8 @@ void do_chanlist(CommandInvocation *invocation) {
                                                     .access = CHANNEL_JOIN,
                                                     .channel = ch}))) {
 
-      atrstr = attribute_get(evaluation->world->database, ch->chan_obj, A_DESC,
-                             &flags);
+      atrstr = attribute_get(evaluation->world->database, ch->chan_obj,
+                             A_DESCRIPTION, &flags);
       if ((ch->chan_obj == NOTHING) || !*atrstr.text)
         (void)snprintf(buf, MBUF_SIZE, "%s", "No description.");
       else
@@ -463,8 +463,8 @@ void do_chanstatus(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "@chan/status: Unknown channel.");
     return;
   }
-  atrstr =
-      attribute_get(evaluation->world->database, ch->chan_obj, A_DESC, &flags);
+  atrstr = attribute_get(evaluation->world->database, ch->chan_obj,
+                         A_DESCRIPTION, &flags);
   if ((ch->chan_obj == NOTHING) || !*atrstr.text)
     (void)snprintf(buf, MBUF_SIZE, "%s", "No description.");
   else

@@ -35,8 +35,8 @@ static const Attribute *lua_mux_attribute_name(lua_State *state,
 /**
  * Creates an attribute handle for this object.
  *
- * @par Lua name `object:attribute`
- * @par Lua signature `object:attribute( )`
+ * @par Lua name `object:attributes`
+ * @par Lua signature `object:attributes( )`
  * @par Lua parameters - None.
  * @par Lua returns - `attributes` (`Attribute`): A handle for the object's
  * supported native attributes.
@@ -48,11 +48,11 @@ static const Attribute *lua_mux_attribute_name(lua_State *state,
  * pushed.
  * @return The number of Lua values pushed onto the stack.
  */
-static int lua_mux_object_attribute(lua_State *state) {
+static int lua_mux_object_attributes(lua_State *state) {
   LuaMuxObject *object = lua_mux_check_object_handle(state, 1);
   LuaMuxAttribute *handle;
 
-  lua_mux_require_runtime(object->package, state, "object:attribute");
+  lua_mux_require_runtime(object->package, state, "object:attributes");
   handle = lua_newuserdata(state, sizeof(*handle));
   *handle = (LuaMuxAttribute){
       .package = object->package,
@@ -174,8 +174,8 @@ static int lua_mux_attribute_entries(lua_State *state) {
 void lua_mux_install_attribute_bindings(lua_State *state, LuaMuxPackage *package
                                         [[maybe_unused]]) {
   luaL_getmetatable(state, LUA_MUX_OBJECT_METATABLE);
-  lua_pushcfunction(state, lua_mux_object_attribute);
-  lua_setfield(state, -2, "attribute");
+  lua_pushcfunction(state, lua_mux_object_attributes);
+  lua_setfield(state, -2, "attributes");
   lua_pop(state, 1);
 
   luaL_newmetatable(state, LUA_MUX_ATTRIBUTE_METATABLE);
