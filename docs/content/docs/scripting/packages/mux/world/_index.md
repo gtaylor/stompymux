@@ -22,9 +22,7 @@ sidebar_root_for: self
 | Function | Description |
 | --- | --- |
 | [`access`](access/) | Typed constants for Lua command access levels. |
-| [`create_exit`](create-exit/) | Creates and attaches an exit. |
-| [`create_room`](create-room/) | Creates a detached room. |
-| [`create_thing`](create-thing/) | Creates and places a thing. |
+| [`create_object`](create-object/) | Creates a room, thing, or exit. |
 | [`destroy`](destroy/) | Schedules an object for destruction. |
 | [`flags`](flags/) | Typed constants for native object flags. |
 | [`link_exit`](link-exit/) | Links or unlinks an exit's destination. |

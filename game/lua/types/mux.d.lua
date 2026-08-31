@@ -269,15 +269,27 @@ local Attribute = {}
 ---identity within the current runtime.
 ---@class ObjectType
 
+---The `ROOM` object-kind constant from the current runtime.
+---@class RoomObjectType: ObjectType
+
+---The `THING` object-kind constant from the current runtime.
+---@class ThingObjectType: ObjectType
+
+---The `EXIT` object-kind constant from the current runtime.
+---@class ExitObjectType: ObjectType
+
+---The `PLAYER` object-kind constant from the current runtime.
+---@class PlayerObjectType: ObjectType
+
 ---Immutable namespace of typed native object kinds.
 ---
 ---Raises [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) for
 ---unknown or non-string keys and attempted mutation.
 ---@class (exact) ObjectTypeNamespace
----@field ROOM ObjectType
----@field THING ObjectType
----@field EXIT ObjectType
----@field PLAYER ObjectType
+---@field ROOM RoomObjectType Detached room kind accepted by [`mux.world.create_object`](lua://mux.world.create_object).
+---@field THING ThingObjectType Contained thing kind accepted by [`mux.world.create_object`](lua://mux.world.create_object).
+---@field EXIT ExitObjectType Attached exit kind accepted by [`mux.world.create_object`](lua://mux.world.create_object).
+---@field PLAYER PlayerObjectType Player kind; existing players may have this type, but scripts cannot create them.
 ---@see mux.error.codes.arg.invalid
 
 ---Immutable namespace of typed native locks. Unknown or non-string lookups
@@ -734,24 +746,34 @@ local mux_config = {}
 ---@see mux.error.codes.internal
 function mux_config.get(name) end
 
----Fields accepted when creating a detached room.
+---Fields accepted when creating a detached room through
+---[`mux.world.create_object`](lua://mux.world.create_object).
 ---@class (exact) CreateRoomOptions
+---@field type RoomObjectType The current runtime's [`mux.world.types.ROOM`](lua://mux.world.types.ROOM) constant.
 ---@field name string Required UTF-8 name, optionally containing valid styled-text markup.
 ---@field zone? DbRef|Object Live thing or room to assign; omission preserves the native creator's inherited zone.
 
----Fields accepted when creating and placing a thing.
+---Fields accepted when creating and placing a thing through
+---[`mux.world.create_object`](lua://mux.world.create_object).
 ---@class (exact) CreateThingOptions
+---@field type ThingObjectType The current runtime's [`mux.world.types.THING`](lua://mux.world.types.THING) constant.
 ---@field name string Required UTF-8 name, optionally containing valid styled-text markup.
 ---@field location DbRef|Object Required object that can contain the new thing.
 ---@field home? DbRef|Object Home object; defaults to `location` when omitted.
 ---@field zone? DbRef|Object Live thing or room to assign; omission preserves the native creator's inherited zone.
 
----Fields accepted when creating and attaching an exit.
+---Fields accepted when creating and attaching an exit through
+---[`mux.world.create_object`](lua://mux.world.create_object).
 ---@class (exact) CreateExitOptions
+---@field type ExitObjectType The current runtime's [`mux.world.types.EXIT`](lua://mux.world.types.EXIT) constant.
 ---@field name string Required UTF-8 name, optionally containing valid styled-text markup.
 ---@field location DbRef|Object Required source object capable of holding exits.
 ---@field destination? DbRef|Object Optional destination capable of containing objects; omission leaves the exit unlinked.
 ---@field zone? DbRef|Object Live thing or room to assign; omission preserves the native creator's inherited zone.
+
+---Exact fields accepted by [`mux.world.create_object`](lua://mux.world.create_object).
+---The selected typed object-kind constant determines which other fields apply.
+---@alias CreateObjectOptions CreateRoomOptions|CreateThingOptions|CreateExitOptions
 
 ---Fields accepted when teleporting a thing or player.
 ---@class (exact) TeleportOptions
@@ -809,38 +831,19 @@ function mux_world.object(dbref) end
 ---@see mux.error.codes.object.unavailable
 function mux_world.list_objects(options) end
 
----Creates a detached room with the configured room flags and default Lua parent.
----@param options CreateRoomOptions Creation fields; unknown fields are rejected.
----@return Object room Newly created room.
+---Creates a room, thing, or exit selected by a typed object-kind constant.
+---Rooms are detached; things require a container and receive a home; exits
+---require a source and may be linked to a destination. Unknown fields and
+---fields that do not apply to the selected type are rejected.
+---@param options CreateObjectOptions Exact creation fields selected by `options.type`.
+---@return Object object Newly created object.
 ---
 ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
 ---@see mux.error.codes.unavailable.checking
 ---@see mux.error.codes.arg.invalid
 ---@see mux.error.codes.object.invalid
 ---@see mux.error.codes.object.unavailable
-function mux_world.create_room(options) end
-
----Creates a thing, establishes its home, and places it in a container.
----@param options CreateThingOptions Creation fields; unknown fields are rejected.
----@return Object thing Newly created thing.
----
----Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
----@see mux.error.codes.unavailable.checking
----@see mux.error.codes.arg.invalid
----@see mux.error.codes.object.invalid
----@see mux.error.codes.object.unavailable
-function mux_world.create_thing(options) end
-
----Creates an exit, attaches it to a source, and optionally links it to a destination.
----@param options CreateExitOptions Creation fields; unknown fields are rejected.
----@return Object exit Newly created exit.
----
----Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
----@see mux.error.codes.unavailable.checking
----@see mux.error.codes.arg.invalid
----@see mux.error.codes.object.invalid
----@see mux.error.codes.object.unavailable
-function mux_world.create_exit(options) end
+function mux_world.create_object(options) end
 
 ---Links an exit to a destination, or unlinks it when `destination` is nil.
 ---@param exit DbRef|Object Live exit to update.

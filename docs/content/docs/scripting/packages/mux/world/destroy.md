@@ -28,6 +28,6 @@ object, `mux.arg.invalid` for invalid options, and
 ## Example
 
 ```lua
-local object = mux.world.create_thing({ name = "Temporary", location = room })
+local object = mux.world.create_object({ type = mux.world.types.THING, name = "Temporary", location = room })
 mux.world.destroy(object)
 ```

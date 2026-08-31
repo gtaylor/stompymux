@@ -26,7 +26,8 @@ Please be sure to read the room descriptions for details on the contents of each
 ]]
   )
   local new_player_starting_room = mux.world.object(mux.config.get("player_starting_room") --[[@as integer]])
-  mux.world.create_exit({
+  mux.world.create_object({
+    type = mux.world.types.EXIT,
     name = "New Player Room;np",
     location = limbo,
     zone = limbo,
@@ -34,7 +35,8 @@ Please be sure to read the room descriptions for details on the contents of each
   })
 
   local used_mech_store_room = mux.world.object(mux.config.get("btech_usedmechstore") --[[@as integer]])
-  mux.world.create_exit({
+  mux.world.create_object({
+    type = mux.world.types.EXIT,
     name = "Used Mech Store;us;ums",
     location = limbo,
     zone = limbo,
@@ -42,7 +44,8 @@ Please be sure to read the room descriptions for details on the contents of each
   })
 
   local afterlife_room = mux.world.object(mux.config.get("btech_afterlife_dbref") --[[@as integer]])
-  mux.world.create_exit({
+  mux.world.create_object({
+    type = mux.world.types.EXIT,
     name = "Afterlife;al",
     location = limbo,
     zone = limbo,
@@ -55,10 +58,7 @@ Please be sure to read the room descriptions for details on the contents of each
 ]]
   )
 
-  local room = mux.world.create_room({
-    name = "Test Room",
-    zone = limbo,
-  })
+  local room = mux.world.create_object({ type = mux.world.types.ROOM, name = "Test Room", zone = limbo })
   room:attributes():set(
     "Description",
     [[This is a test room created during world bootstrap.

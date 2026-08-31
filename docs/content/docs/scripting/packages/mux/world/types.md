@@ -20,9 +20,11 @@ Constants compare by native type identity within one Lua runtime. Their string
 forms are their canonical uppercase names. Unknown lookups and attempted
 mutation raise `mux.arg.invalid`.
 
-Use these constants with [`Object:type`](../type-object/type/) and
+Use these constants with [`create_object`](../create-object/),
+[`list_objects`](../list-objects/), [`Object:type`](../type-object/type/), and
 [`Object:contents`](../type-object/contents/) rather than comparing or passing
-magic strings.
+magic strings. `PLAYER` identifies existing players but is not accepted by
+`create_object`.
 
 ## See Also
 

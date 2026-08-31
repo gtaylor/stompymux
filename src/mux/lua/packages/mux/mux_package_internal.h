@@ -78,6 +78,8 @@ void lua_mux_object_type_filter_parse(LuaMuxPackage *package, lua_State *state,
                                       LuaMuxObjectTypeFilter *filter);
 bool lua_mux_object_type_filter_matches(const LuaMuxObjectTypeFilter *filter,
                                         int type);
+int lua_mux_require_object_type_at(LuaMuxPackage *package, lua_State *state,
+                                   int index, int argument, const char *label);
 LuaMuxObject *lua_mux_check_object_handle(lua_State *state, int argument);
 LuaMuxState *lua_mux_check_state(lua_State *state, int argument);
 LuaMuxAttribute *lua_mux_check_attribute(lua_State *state, int argument);

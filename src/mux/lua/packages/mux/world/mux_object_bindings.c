@@ -112,6 +112,21 @@ static int lua_mux_object_type_namespace_index(lua_State *state) {
   return 1;
 }
 
+// Stack index and public argument number have distinct error-reporting roles.
+// NOLINTBEGIN(bugprone-easily-swappable-parameters)
+int lua_mux_require_object_type_at(LuaMuxPackage *package, lua_State *state,
+                                   int index, int argument, const char *label) {
+  LuaMuxObjectType *object_type =
+      luaL_testudata(state, index, LUA_MUX_OBJECT_TYPE_METATABLE);
+
+  if (!object_type || object_type->package != package)
+    return lua_error_arg(
+        state, argument, LUA_ERROR_CODE_ARG_INVALID,
+        "%s must be a mux.world.types constant from this runtime", label);
+  return object_type->type;
+}
+// NOLINTEND(bugprone-easily-swappable-parameters)
+
 bool lua_mux_object_type_filter_matches(const LuaMuxObjectTypeFilter *filter,
                                         int type) {
   if (!filter->enabled)
@@ -188,16 +203,9 @@ void lua_mux_object_type_filter_parse(LuaMuxPackage *package, lua_State *state,
                           "options.types must be a dense array");
       return;
     }
-    LuaMuxObjectType *object_type =
-        luaL_testudata(state, -1, LUA_MUX_OBJECT_TYPE_METATABLE);
-    if (!object_type || object_type->package != package) {
-      (void)lua_error_arg(
-          state, options, LUA_ERROR_CODE_ARG_INVALID,
-          "options.types entries must be mux.world.types constants "
-          "from this runtime");
-      return;
-    }
-    lua_mux_object_type_filter_add(filter, object_type->type);
+    int type = lua_mux_require_object_type_at(package, state, -1, options,
+                                              "options.types entries");
+    lua_mux_object_type_filter_add(filter, type);
     entries++;
     lua_pop(state, 1);
   }
