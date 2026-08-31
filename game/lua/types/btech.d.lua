@@ -13,10 +13,18 @@
 ---@alias PartNameSize "short"|"long"|"vlong" Requested native part-name length.
 ---@alias WeaponStat "VRT"|"TYPE"|"HEAT"|"DAMAGE"|"MIN"|"SR"|"MR"|"LR"|"CRIT"|"AMMO"|"WEIGHT"|"BV" Weapon statistic recognized by [`btech.parts.weapon_stat`](lua://btech.parts.weapon_stat).
 
+---Checked `btech.unavailable` error-code node.
+---@class BtechUnavailableErrorCode: ErrorCode
+---@field code "btech.unavailable"
+
+---Checked `btech.failed` error-code node.
+---@class BtechFailedErrorCode: ErrorCode
+---@field code "btech.failed"
+
 ---Checked native BattleTech error-code tree.
 ---@class BtechErrorCodes: ErrorCode
----@field unavailable ErrorCode `btech.unavailable`, raised during `@lua/check`.
----@field failed ErrorCode `btech.failed`, raised when a mapped legacy handler reports an error.
+---@field unavailable BtechUnavailableErrorCode `btech.unavailable`, raised during `@lua/check`.
+---@field failed BtechFailedErrorCode `btech.failed`, raised when a mapped legacy handler reports an error.
 
 ---@class BtechErrorPackage
 ---@field codes BtechErrorCodes

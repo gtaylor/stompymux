@@ -38,40 +38,101 @@ function Error:root() end
 ---@field detail? any
 ---@field cause? any
 
+---Checked `mux.arg.invalid` error-code node.
+---@class MuxArgInvalidErrorCode: ErrorCode
+---@field code "mux.arg.invalid"
+---Checked `mux.unavailable.checking` error-code node.
+---@class MuxCheckingUnavailableErrorCode: ErrorCode
+---@field code "mux.unavailable.checking"
+---Checked `mux.runtime` error-code node.
+---@class MuxRuntimeErrorCode: ErrorCode
+---@field code "mux.runtime"
+---Checked `mux.state.invalid` error-code node.
+---@class MuxStateInvalidErrorCode: ErrorCode
+---@field code "mux.state.invalid"
+---Checked `mux.state.value_too_large` error-code node.
+---@class MuxStateValueTooLargeErrorCode: ErrorCode
+---@field code "mux.state.value_too_large"
+---Checked `mux.state.unavailable` error-code node.
+---@class MuxStateUnavailableErrorCode: ErrorCode
+---@field code "mux.state.unavailable"
+---Checked `mux.object.invalid` error-code node.
+---@class MuxObjectInvalidErrorCode: ErrorCode
+---@field code "mux.object.invalid"
+---Checked `mux.object.unavailable` error-code node.
+---@class MuxObjectUnavailableErrorCode: ErrorCode
+---@field code "mux.object.unavailable"
+---Checked `mux.attribute.invalid` error-code node.
+---@class MuxAttributeInvalidErrorCode: ErrorCode
+---@field code "mux.attribute.invalid"
+---Checked `mux.flag.invalid` error-code node.
+---@class MuxFlagInvalidErrorCode: ErrorCode
+---@field code "mux.flag.invalid"
+---Checked `mux.power.invalid` error-code node.
+---@class MuxPowerInvalidErrorCode: ErrorCode
+---@field code "mux.power.invalid"
+---Checked `mux.access.invalid` error-code node.
+---@class MuxAccessInvalidErrorCode: ErrorCode
+---@field code "mux.access.invalid"
+---Checked `mux.connection.invalid` error-code node.
+---@class MuxConnectionInvalidErrorCode: ErrorCode
+---@field code "mux.connection.invalid"
+---Checked `mux.connection.unavailable` error-code node.
+---@class MuxConnectionUnavailableErrorCode: ErrorCode
+---@field code "mux.connection.unavailable"
+---Checked `mux.text.invalid` error-code node.
+---@class MuxTextInvalidErrorCode: ErrorCode
+---@field code "mux.text.invalid"
+---Checked `mux.module.invalid` error-code node.
+---@class MuxModuleInvalidErrorCode: ErrorCode
+---@field code "mux.module.invalid"
+---Checked `mux.module.unavailable` error-code node.
+---@class MuxModuleUnavailableErrorCode: ErrorCode
+---@field code "mux.module.unavailable"
+---Checked `mux.config.not_found` error-code node.
+---@class MuxConfigNotFoundErrorCode: ErrorCode
+---@field code "mux.config.not_found"
+---Checked `mux.config.unsupported` error-code node.
+---@class MuxConfigUnsupportedErrorCode: ErrorCode
+---@field code "mux.config.unsupported"
+---Checked `mux.internal` error-code node.
+---@class MuxInternalErrorCode: ErrorCode
+---@field code "mux.internal"
+
 ---@class MuxArgErrorCodes: ErrorCode
----@field invalid ErrorCode `mux.arg.invalid`.
+---@field invalid MuxArgInvalidErrorCode `mux.arg.invalid`.
 ---@class MuxUnavailableErrorCodes: ErrorCode
----@field checking ErrorCode `mux.unavailable.checking`.
+---@field checking MuxCheckingUnavailableErrorCode `mux.unavailable.checking`.
 ---@class MuxStateErrorCodes: ErrorCode
----@field invalid ErrorCode `mux.state.invalid`.
----@field value_too_large ErrorCode `mux.state.value_too_large`.
----@field unavailable ErrorCode `mux.state.unavailable`.
+---@field invalid MuxStateInvalidErrorCode `mux.state.invalid`.
+---@field value_too_large MuxStateValueTooLargeErrorCode `mux.state.value_too_large`.
+---@field unavailable MuxStateUnavailableErrorCode `mux.state.unavailable`.
 ---@class MuxObjectErrorCodes: ErrorCode
----@field invalid ErrorCode `mux.object.invalid`.
----@field unavailable ErrorCode `mux.object.unavailable`.
+---@field invalid MuxObjectInvalidErrorCode `mux.object.invalid`.
+---@field unavailable MuxObjectUnavailableErrorCode `mux.object.unavailable`.
 ---@class MuxAttributeErrorCodes: ErrorCode
----@field invalid ErrorCode `mux.attribute.invalid`.
+---@field invalid MuxAttributeInvalidErrorCode `mux.attribute.invalid`.
 ---@class MuxFlagErrorCodes: ErrorCode
----@field invalid ErrorCode `mux.flag.invalid`.
+---@field invalid MuxFlagInvalidErrorCode `mux.flag.invalid`.
 ---@class MuxPowerErrorCodes: ErrorCode
----@field invalid ErrorCode `mux.power.invalid`.
+---@field invalid MuxPowerInvalidErrorCode `mux.power.invalid`.
 ---@class MuxAccessErrorCodes: ErrorCode
----@field invalid ErrorCode `mux.access.invalid`.
+---@field invalid MuxAccessInvalidErrorCode `mux.access.invalid`.
 ---@class MuxConnectionErrorCodes: ErrorCode
----@field invalid ErrorCode `mux.connection.invalid`.
----@field unavailable ErrorCode `mux.connection.unavailable`.
+---@field invalid MuxConnectionInvalidErrorCode `mux.connection.invalid`.
+---@field unavailable MuxConnectionUnavailableErrorCode `mux.connection.unavailable`.
 ---@class MuxTextErrorCodes: ErrorCode
----@field invalid ErrorCode `mux.text.invalid`.
+---@field invalid MuxTextInvalidErrorCode `mux.text.invalid`.
 ---@class MuxModuleErrorCodes: ErrorCode
----@field invalid ErrorCode `mux.module.invalid`.
----@field unavailable ErrorCode `mux.module.unavailable`.
+---@field invalid MuxModuleInvalidErrorCode `mux.module.invalid`.
+---@field unavailable MuxModuleUnavailableErrorCode `mux.module.unavailable`.
 ---@class MuxConfigErrorCodes: ErrorCode
----@field not_found ErrorCode `mux.config.not_found`.
----@field unsupported ErrorCode `mux.config.unsupported`.
+---@field not_found MuxConfigNotFoundErrorCode `mux.config.not_found`.
+---@field unsupported MuxConfigUnsupportedErrorCode `mux.config.unsupported`.
 ---@class MuxErrorCodes: ErrorCode
 ---@field arg MuxArgErrorCodes
 ---@field unavailable MuxUnavailableErrorCodes
----@field runtime ErrorCode `mux.runtime`.
+---@field runtime MuxRuntimeErrorCode `mux.runtime`.
 ---@field state MuxStateErrorCodes
 ---@field object MuxObjectErrorCodes
 ---@field attribute MuxAttributeErrorCodes
@@ -82,15 +143,21 @@ function Error:root() end
 ---@field text MuxTextErrorCodes
 ---@field module MuxModuleErrorCodes
 ---@field config MuxConfigErrorCodes
----@field internal ErrorCode `mux.internal`.
+---@field internal MuxInternalErrorCode `mux.internal`.
 
 ---@class ErrorCodeTree: ErrorCode
 ---@field [string] ErrorCodeTree
 
----Checked native codes used by the Lua test harness.
+---Checked `testing.assertion` error-code node used by the Lua test harness.
+---@class TestingAssertionErrorCode: ErrorCode
+---@field code "testing.assertion"
+---Checked `testing.runtime` error-code node used by the Lua test harness.
+---@class TestingRuntimeErrorCode: ErrorCode
+---@field code "testing.runtime"
+---Checked native code tree used by the Lua test harness.
 ---@class TestingErrorCodes: ErrorCode
----@field assertion ErrorCode `testing.assertion`.
----@field runtime ErrorCode `testing.runtime`.
+---@field assertion TestingAssertionErrorCode `testing.assertion`.
+---@field runtime TestingRuntimeErrorCode `testing.runtime`.
 
 ---Persistent state entry returned by [`State:entries`](lua://State.entries).
 ---@class StateEntry
