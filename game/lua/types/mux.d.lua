@@ -6,7 +6,6 @@
 ---@alias DbRef integer Database object reference.
 ---@alias StateValue string|boolean|number Scalar value supported by persistent object state.
 ---@alias TelnetEnvironmentKind "var"|"uservar" RFC 1572 NEW-ENVIRON variable namespace.
----@alias ObjectType "room"|"thing"|"exit"|"player" Public native database object kind.
 ---@alias NativeErrorRoot "mux"|"btech"|"testing" Root of a checked native error-code tree.
 ---@alias ConfigValue string|number|boolean Scalar value returned by the live configuration registry.
 
@@ -197,6 +196,22 @@ local Attribute = {}
 ---Its string form is its uppercase name, and equality compares lock identity
 ---within the current runtime.
 ---@class Lock
+
+---A typed native object kind obtained from [`mux.world.types`](lua://mux.world.types).
+---Its string form is its uppercase name, and equality compares native type
+---identity within the current runtime.
+---@class ObjectType
+
+---Immutable namespace of typed native object kinds.
+---
+---Raises [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) for
+---unknown or non-string keys and attempted mutation.
+---@class (exact) ObjectTypeNamespace
+---@field ROOM ObjectType
+---@field THING ObjectType
+---@field EXIT ObjectType
+---@field PLAYER ObjectType
+---@see mux.error.codes.arg.invalid
 
 ---Immutable namespace of typed native locks. Unknown or non-string lookups
 ---and attempted mutation raise
@@ -413,41 +428,15 @@ function Object:name() end
 ---@see mux.error.codes.object.unavailable
 function Object:set_name(name) end
 
----Returns directly contained objects in database order.
+---Returns matching objects directly contained by or attached to this object.
+---@param options? ContentsOptions Optional type and visibility filters.
 ---@return Object[] contents
 ---
----Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
 ---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
 ---@see mux.error.codes.object.invalid
-function Object:contents() end
-
----Tests whether a directly contained member is visible to a viewer.
----@param viewer DbRef|Object
----@param member DbRef|Object
----@return boolean visible
----
----Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
----@see mux.error.codes.unavailable.checking
----@see mux.error.codes.object.invalid
-function Object:contents_visible(viewer, member) end
-
----Returns directly attached exits in database order.
----@return Object[] exits
----
----Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
----@see mux.error.codes.unavailable.checking
----@see mux.error.codes.object.invalid
-function Object:exits() end
-
----Tests whether a directly attached exit is visible to a viewer.
----@param viewer DbRef|Object
----@param exit DbRef|Object
----@return boolean visible
----
----Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
----@see mux.error.codes.unavailable.checking
----@see mux.error.codes.object.invalid
-function Object:exits_visible(viewer, exit) end
+function Object:contents(options) end
 
 ---Returns this object's assigned zone, or nil when no zone is assigned or the zone is being destroyed.
 ---@return Object? zone Assigned zone.
@@ -711,12 +700,18 @@ function mux_config.get(name) end
 ---@field cause? DbRef|Object Object that caused the action; defaults to `enactor`.
 ---@field subject? DbRef|Object Object acted upon in the lock context; defaults to `enactor`.
 
+---Filters for [`Object:contents`](lua://Object.contents).
+---@class (exact) ContentsOptions
+---@field types? ObjectType[] Native object kinds to include; an empty array matches nothing.
+---@field visible_to? DbRef|Object Viewer whose native visibility rules are applied.
+
 ---World database object access.
 ---@class MuxWorldPackage
 ---@field access AccessNamespace Immutable namespace of command-access constants.
 ---@field flags FlagNamespace Immutable namespace of registered flag constants.
 ---@field locks LockNamespace Immutable namespace of native lock constants.
 ---@field powers PowerNamespace Immutable namespace of registered power constants.
+---@field types ObjectTypeNamespace Immutable namespace of native object-kind constants.
 local mux_world = {}
 
 ---Creates a validated object handle from a dbref or existing handle.

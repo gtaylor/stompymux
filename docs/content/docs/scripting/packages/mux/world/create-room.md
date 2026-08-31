@@ -43,5 +43,5 @@ This trusted operation is available only at runtime and raises
 
 ```lua
 local room = mux.world.create_room({ name = "[bold]Operations[/]" })
-assert(room:type() == "room")
+assert(room:type() == mux.world.types.ROOM)
 ```

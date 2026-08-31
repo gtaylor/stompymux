@@ -20,8 +20,17 @@ None.
 
 ### Returns
 
-`string or nil type`
-: `room`, `thing`, `exit`, or `player`; `nil` for an unrecognized native type.
+`ObjectType or nil type`
+: The corresponding typed constant from [`mux.world.types`](../../types/), or
+  `nil` for an unrecognized native type.
+
+## Examples
+
+```lua
+if object:type() == mux.world.types.PLAYER then
+  mux.world.pemit(object, "You are a player.")
+end
+```
 
 ## Notes
 
@@ -32,3 +41,4 @@ raises `mux.object.invalid`.
 
 - [`mux`](../../../)
 - [`Object`](../)
+- [`mux.world.types`](../../types/)

@@ -29,11 +29,8 @@ The following methods return nested handlers for managing more complex aspects o
 | --- | --- |
 | [`Object:affiliation`](affiliation/) | Returns the object's assigned affiliation. |
 | [`Object:set_affiliation`](set-affiliation/) | Assigns or clears the object's affiliation. |
-| [`Object:contents`](contents/) | Lists directly contained objects. |
-| [`Object:contents_visible`](contents-visible/) | Applies native content visibility rules. |
+| [`Object:contents`](contents/) | Lists and filters directly contained objects and attached exits. |
 | [`Object:dbref`](dbref/) | Returns the object's native database reference. |
-| [`Object:exits`](exits/) | Lists directly attached exits. |
-| [`Object:exits_visible`](exits-visible/) | Applies native exit visibility rules. |
 | [`Object:name`](name/) | Returns the object's current name. |
 | [`Object:set_name`](set-name/) | Changes the object's name. |
 | [`Object:lua_parent`](lua-parent/) | Returns the object's direct Lua parent path. |

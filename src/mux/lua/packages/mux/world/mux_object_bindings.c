@@ -22,6 +22,156 @@
 #include "mux/world/object_spatial.h"
 #include "mux/world/player.h"
 
+static const char LUA_MUX_OBJECT_TYPE_NAMESPACE_METATABLE[] =
+    "btmux.object_type_namespace";
+static const char LUA_MUX_OBJECT_TYPE_METATABLE[] = "btmux.object_type";
+
+typedef struct LuaMuxObjectType LuaMuxObjectType;
+struct LuaMuxObjectType {
+  LuaMuxPackage *package;
+  int type;
+  const char *name;
+};
+
+typedef struct LuaMuxObjectTypeNamespace LuaMuxObjectTypeNamespace;
+struct LuaMuxObjectTypeNamespace {
+  LuaMuxPackage *package;
+};
+
+typedef struct LuaMuxObjectTypeFilter LuaMuxObjectTypeFilter;
+struct LuaMuxObjectTypeFilter {
+  bool enabled;
+  bool rooms;
+  bool things;
+  bool exits;
+  bool players;
+};
+
+static const char *lua_mux_object_type_name(int type) {
+  switch (type) {
+  case OBJECT_TYPE_ROOM:
+    return "ROOM";
+  case OBJECT_TYPE_THING:
+    return "THING";
+  case OBJECT_TYPE_EXIT:
+    return "EXIT";
+  case OBJECT_TYPE_PLAYER:
+    return "PLAYER";
+  default:
+    return nullptr;
+  }
+}
+
+static void lua_mux_push_object_type(lua_State *state, LuaMuxPackage *package,
+                                     int type) {
+  LuaMuxObjectType *object_type = lua_newuserdata(state, sizeof(*object_type));
+
+  *object_type = (LuaMuxObjectType){
+      .package = package,
+      .type = type,
+      .name = lua_mux_object_type_name(type),
+  };
+  luaL_getmetatable(state, LUA_MUX_OBJECT_TYPE_METATABLE);
+  lua_setmetatable(state, -2);
+}
+
+static int lua_mux_object_type_tostring(lua_State *state) {
+  LuaMuxObjectType *object_type =
+      luaL_checkudata(state, 1, LUA_MUX_OBJECT_TYPE_METATABLE);
+
+  lua_pushstring(state, object_type->name);
+  return 1;
+}
+
+static int lua_mux_object_type_equal(lua_State *state) {
+  LuaMuxObjectType *left =
+      luaL_checkudata(state, 1, LUA_MUX_OBJECT_TYPE_METATABLE);
+  LuaMuxObjectType *right =
+      luaL_checkudata(state, 2, LUA_MUX_OBJECT_TYPE_METATABLE);
+
+  lua_pushboolean(state,
+                  left->package == right->package && left->type == right->type);
+  return 1;
+}
+
+static int lua_mux_object_type_immutable(lua_State *state) {
+  return lua_error_raise(state, LUA_ERROR_CODE_ARG_INVALID,
+                         "mux.world.types constants are immutable");
+}
+
+static int lua_mux_object_type_namespace_index(lua_State *state) {
+  LuaMuxObjectTypeNamespace *name_space =
+      luaL_checkudata(state, 1, LUA_MUX_OBJECT_TYPE_NAMESPACE_METATABLE);
+
+  if (lua_type(state, 2) != LUA_TSTRING)
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                         "object type name must be a string");
+  const char *name = lua_tostring(state, 2);
+  if (!strcmp(name, "ROOM"))
+    lua_mux_push_object_type(state, name_space->package, OBJECT_TYPE_ROOM);
+  else if (!strcmp(name, "THING"))
+    lua_mux_push_object_type(state, name_space->package, OBJECT_TYPE_THING);
+  else if (!strcmp(name, "EXIT"))
+    lua_mux_push_object_type(state, name_space->package, OBJECT_TYPE_EXIT);
+  else if (!strcmp(name, "PLAYER"))
+    lua_mux_push_object_type(state, name_space->package, OBJECT_TYPE_PLAYER);
+  else
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                         "unknown object type '%s'", name);
+  return 1;
+}
+
+static bool
+lua_mux_object_type_filter_matches(const LuaMuxObjectTypeFilter *filter,
+                                   int type) {
+  if (!filter->enabled)
+    return true;
+  switch (type) {
+  case OBJECT_TYPE_ROOM:
+    return filter->rooms;
+  case OBJECT_TYPE_THING:
+    return filter->things;
+  case OBJECT_TYPE_EXIT:
+    return filter->exits;
+  case OBJECT_TYPE_PLAYER:
+    return filter->players;
+  default:
+    return false;
+  }
+}
+
+static void lua_mux_object_type_filter_add(LuaMuxObjectTypeFilter *filter,
+                                           int type) {
+  switch (type) {
+  case OBJECT_TYPE_ROOM:
+    filter->rooms = true;
+    break;
+  case OBJECT_TYPE_THING:
+    filter->things = true;
+    break;
+  case OBJECT_TYPE_EXIT:
+    filter->exits = true;
+    break;
+  case OBJECT_TYPE_PLAYER:
+    filter->players = true;
+    break;
+  default:
+    break;
+  }
+}
+
+static bool lua_mux_object_type_array_key(lua_State *state, size_t count) {
+  if (lua_type(state, -2) != LUA_TNUMBER)
+    return false;
+  lua_Integer key = lua_tointeger(state, -2);
+  lua_Number number = lua_tonumber(state, -2);
+
+  // Type filters are deliberately strict arrays: reject holes and hash keys.
+  // The ordered comparisons test integrality without float equality.
+  return (key >= 1 && (size_t)key <= count && number >= (lua_Number)key &&
+          number <= (lua_Number)key) != 0;
+}
+
 // Stack index and public argument number have distinct error-reporting roles.
 // NOLINTBEGIN(bugprone-easily-swappable-parameters)
 DbRef lua_mux_require_object_at(LuaMuxPackage *package, lua_State *state,
@@ -135,28 +285,21 @@ static int lua_mux_object(lua_State *state) {
   return 1;
 }
 
-static bool lua_mux_list_contains(GameDatabase *database, DbRef first,
-                                  DbRef member) {
-  DbRef object;
-
-  DOLIST(database, object, first) {
-    if (object == member)
-      return true;
-  }
-  return false;
-}
-
 /**
- * Returns the objects directly contained by this object.
+ * Returns objects directly contained by or attached to this object.
  *
  * @par Lua name `object:contents`
- * @par Lua signature `object:contents( )`
- * @par Lua parameters - None.
- * @par Lua returns - `contents` (`table`): An array of Object handles in native
- * database order.
+ * @par Lua signature `object:contents( options? )`
+ * @par Lua parameters - `options` (`ContentsOptions|nil`) Optional filters.
+ * `types` is an array of typed constants from `mux.world.types`, and
+ * `visible_to` is a dbref or Object whose native visibility rules are applied.
+ * @par Lua returns - `contents` (`table`): Matching Object handles. Ordinary
+ * contents precede attached exits; each group retains native database order.
  * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid handle or an object that
- * cannot contain objects.
+ * - `LUA_ERROR_CODE_ARG_INVALID` for malformed options or object type
+ * constants not owned by this runtime.
+ * - `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid receiver/viewer or an
+ * object that can hold neither contents nor exits.
  * @par Lua availability Available only at runtime; unavailable during
  * `@lua/check`.
  * @param[in,out] state The Lua state whose arguments are read and results are
@@ -165,158 +308,101 @@ static bool lua_mux_list_contains(GameDatabase *database, DbRef first,
  */
 static int lua_mux_contents(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
+  GameDatabase *database = package->services->database;
+  static const char *const FIELDS[] = {"types", "visible_to"};
+  LuaMuxObjectTypeFilter filter = {
+      .enabled = false,
+      .rooms = false,
+      .things = false,
+      .exits = false,
+      .players = false,
+  };
   DbRef object;
+  DbRef viewer = NOTHING;
   DbRef member;
+  bool filter_visibility = false;
   int index = 1;
 
   lua_mux_require_runtime(package, state, "contents");
   object = lua_mux_require_object(package, state, 1);
-  if (!has_contents(package->services->database, object))
+  if (!has_contents(database, object) && !has_exits(database, object))
     return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
-                         "object cannot contain other objects");
-  lua_newtable(state);
-  DOLIST(package->services->database, member,
-         game_object_contents(package->services->database, object)) {
-    lua_mux_push_object(state, package, member);
-    lua_rawseti(state, -2, index++);
+                         "object can hold neither contents nor exits");
+
+  if (!lua_isnoneornil(state, 2)) {
+    lua_mux_check_options(state, 2, FIELDS, sizeof(FIELDS) / sizeof(*FIELDS));
+    lua_getfield(state, 2, "types");
+    if (!lua_isnil(state, -1)) {
+      size_t count;
+      size_t entries = 0;
+
+      if (!lua_istable(state, -1))
+        return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                             "options.types must be an array");
+      filter.enabled = true;
+      count = lua_objlen(state, -1);
+      lua_pushnil(state);
+      while (lua_next(state, -2) != 0) {
+        LuaMuxObjectType *object_type;
+
+        if (!lua_mux_object_type_array_key(state, count))
+          return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                               "options.types must be a dense array");
+        object_type = luaL_testudata(state, -1, LUA_MUX_OBJECT_TYPE_METATABLE);
+        if (!object_type || object_type->package != package)
+          return lua_error_arg(
+              state, 2, LUA_ERROR_CODE_ARG_INVALID,
+              "options.types entries must be mux.world.types constants "
+              "from this runtime");
+        lua_mux_object_type_filter_add(&filter, object_type->type);
+        entries++;
+        lua_pop(state, 1);
+      }
+      if (entries != count)
+        return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                             "options.types must be a dense array");
+    }
+    lua_pop(state, 1);
+    viewer = lua_mux_option_object(package, state, 2, "visible_to", false,
+                                   &filter_visibility);
   }
-  return 1;
-}
 
-/**
- * Tests whether a directly contained object is visible to a viewer.
- *
- * @par Lua name `object:contents_visible`
- * @par Lua signature `object:contents_visible( viewer, member )`
- * @par Lua parameters - `viewer` (`number|Object`) The object viewing the
- * container.
- * - `member` (`number|Object`) An object directly contained by the receiver.
- * @par Lua returns - `visible` (`boolean`): Whether native look rules expose
- * the member.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` for invalid handles, a non-container, or a
- * member not directly contained.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
- */
-static int lua_mux_contents_visible(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-  EvaluationContext *evaluation;
-  DbRef container;
-  DbRef viewer;
-  DbRef member;
-  bool can_see_location;
-
-  lua_mux_require_runtime(package, state, "contents_visible");
-  container = lua_mux_require_object(package, state, 1);
-  viewer = lua_mux_require_object(package, state, 2);
-  member = lua_mux_require_object(package, state, 3);
-  if (!has_contents(package->services->database, container))
-    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
-                         "object cannot contain other objects");
-  if (!lua_mux_list_contains(
-          package->services->database,
-          game_object_contents(package->services->database, container), member))
-    return lua_error_arg(state, 3, LUA_ERROR_CODE_OBJECT_INVALID,
-                         "object is not directly contained");
-  evaluation = &package->services->background_command->evaluation;
-  can_see_location = ((!is_dark(package->services->database, container)) != 0);
-  lua_pushboolean(state, can_see(&(ObjectVisibilityRequest){
-                             .evaluation = evaluation,
-                             .viewer = viewer,
-                             .object = member,
-                             .location_visible = can_see_location}));
-  return 1;
-}
-
-/**
- * Returns the exits directly attached to this object.
- *
- * @par Lua name `object:exits`
- * @par Lua signature `object:exits( )`
- * @par Lua parameters - None.
- * @par Lua returns - `exits` (`table`): An array of Object handles in native
- * database order.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid handle or an object that
- * cannot have exits.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
- */
-static int lua_mux_exits(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-  DbRef object;
-  DbRef exit;
-  int index = 1;
-
-  lua_mux_require_runtime(package, state, "exits");
-  object = lua_mux_require_object(package, state, 1);
-  if (!has_exits(package->services->database, object))
-    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
-                         "object cannot have exits");
   lua_newtable(state);
-  DOLIST(package->services->database, exit,
-         game_object_exits(package->services->database, object)) {
-    lua_mux_push_object(state, package, exit);
-    lua_rawseti(state, -2, index++);
+  if (has_contents(database, object)) {
+    bool location_visible = is_dark(database, object) == 0;
+
+    DOLIST(database, member, game_object_contents(database, object)) {
+      if (!lua_mux_object_type_filter_matches(&filter,
+                                              typeof_obj(database, member)))
+        continue;
+      if (filter_visibility &&
+          !can_see(&(ObjectVisibilityRequest){
+              .evaluation = &package->services->background_command->evaluation,
+              .viewer = viewer,
+              .object = member,
+              .location_visible = location_visible}))
+        continue;
+      lua_mux_push_object(state, package, member);
+      lua_rawseti(state, -2, index++);
+    }
   }
-  return 1;
-}
+  if (has_exits(database, object)) {
+    int visibility_options = is_dark(database, object) ? VE_LOC_DARK : 0;
 
-/**
- * Tests whether a directly attached exit is visible to a viewer.
- *
- * @par Lua name `object:exits_visible`
- * @par Lua signature `object:exits_visible( viewer, exit )`
- * @par Lua parameters - `viewer` (`number|Object`) The object viewing the
- * location.
- * - `exit` (`number|Object`) An exit directly attached to the receiver.
- * @par Lua returns - `visible` (`boolean`): Whether native exit-display rules
- * expose the exit.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` for invalid handles, an invalid
- * location/exit, or an exit not directly attached.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
- */
-static int lua_mux_exits_visible(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-  DbRef location;
-  DbRef viewer;
-  DbRef exit;
-  int key = 0;
-
-  lua_mux_require_runtime(package, state, "exits_visible");
-  location = lua_mux_require_object(package, state, 1);
-  viewer = lua_mux_require_object(package, state, 2);
-  exit = lua_mux_require_object(package, state, 3);
-  if (!has_exits(package->services->database, location))
-    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
-                         "object cannot have exits");
-  if (!is_exit(package->services->database, exit))
-    return lua_error_arg(state, 3, LUA_ERROR_CODE_OBJECT_INVALID,
-                         "object is not an exit");
-  if (!lua_mux_list_contains(
-          package->services->database,
-          game_object_exits(package->services->database, location), exit))
-    return lua_error_arg(state, 3, LUA_ERROR_CODE_OBJECT_INVALID,
-                         "exit is not directly attached");
-  if (is_dark(package->services->database, location))
-    key |= VE_LOC_DARK;
-  lua_pushboolean(state, exit_displayable(&(ExitVisibilityRequest){
-                             .database = package->services->database,
-                             .exit = exit,
-                             .viewer = viewer,
-                             .options = key}));
+    DOLIST(database, member, game_object_exits(database, object)) {
+      if (!lua_mux_object_type_filter_matches(&filter,
+                                              typeof_obj(database, member)))
+        continue;
+      if (filter_visibility && !exit_displayable(&(ExitVisibilityRequest){
+                                   .database = database,
+                                   .exit = member,
+                                   .viewer = viewer,
+                                   .options = visibility_options}))
+        continue;
+      lua_mux_push_object(state, package, member);
+      lua_rawseti(state, -2, index++);
+    }
+  }
   return 1;
 }
 
@@ -365,8 +451,8 @@ static int lua_mux_object_dbref(lua_State *state) {
  * @par Lua name `object:type`
  * @par Lua signature `object:type( )`
  * @par Lua parameters - None.
- * @par Lua returns - `type` (`string|nil`): `room`, `thing`, `exit`, or
- * `player`, or nil for an unrecognized native object type.
+ * @par Lua returns - `type` (`ObjectType|nil`): The corresponding typed
+ * constant from `mux.world.types`, or nil for an unrecognized native type.
  * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Object.
  * @param[in,out] state The Lua state whose arguments are read and results are
  * pushed.
@@ -374,25 +460,12 @@ static int lua_mux_object_dbref(lua_State *state) {
  */
 static int lua_mux_object_type(lua_State *state) {
   LuaMuxObject *handle = lua_mux_check_object_handle(state, 1);
-  GameDatabase *database = handle->package->services->database;
+  int type = typeof_obj(handle->package->services->database, handle->object);
 
-  switch (typeof_obj(database, handle->object)) {
-  case OBJECT_TYPE_ROOM:
-    lua_pushliteral(state, "room");
-    break;
-  case OBJECT_TYPE_THING:
-    lua_pushliteral(state, "thing");
-    break;
-  case OBJECT_TYPE_EXIT:
-    lua_pushliteral(state, "exit");
-    break;
-  case OBJECT_TYPE_PLAYER:
-    lua_pushliteral(state, "player");
-    break;
-  default:
+  if (!lua_mux_object_type_name(type))
     lua_pushnil(state);
-    break;
-  }
+  else
+    lua_mux_push_object_type(state, handle->package, type);
   return 1;
 }
 
@@ -550,7 +623,35 @@ static int lua_mux_object_equal(lua_State *state) {
   return 1;
 }
 
+/**
+ * Installs Object methods and typed native object-kind constants.
+ *
+ * @par Lua name `mux.world.types`
+ * @par Lua constants Immutable `ObjectType` constants `ROOM`, `THING`, `EXIT`,
+ * and `PLAYER`. Their string forms are their uppercase names, and equality
+ * compares native type identity within the current runtime.
+ * @par Lua errors - `LUA_ERROR_CODE_ARG_INVALID` for unknown or non-string
+ * lookups and attempted mutation.
+ * @param[in,out] state Lua state whose top value is the `mux.world` table.
+ * @param[in,out] package Package owning the constants.
+ */
 void lua_mux_install_object_bindings(lua_State *state, LuaMuxPackage *package) {
+  luaL_newmetatable(state, LUA_MUX_OBJECT_TYPE_METATABLE);
+  lua_pushcfunction(state, lua_mux_object_type_tostring);
+  lua_setfield(state, -2, "__tostring");
+  lua_pushcfunction(state, lua_mux_object_type_equal);
+  lua_setfield(state, -2, "__eq");
+  lua_pushcfunction(state, lua_mux_object_type_immutable);
+  lua_setfield(state, -2, "__newindex");
+  lua_pop(state, 1);
+
+  luaL_newmetatable(state, LUA_MUX_OBJECT_TYPE_NAMESPACE_METATABLE);
+  lua_pushcfunction(state, lua_mux_object_type_namespace_index);
+  lua_setfield(state, -2, "__index");
+  lua_pushcfunction(state, lua_mux_object_type_immutable);
+  lua_setfield(state, -2, "__newindex");
+  lua_pop(state, 1);
+
   luaL_newmetatable(state, LUA_MUX_OBJECT_METATABLE);
   lua_pushvalue(state, -1);
   lua_setfield(state, -2, "__index");
@@ -573,19 +674,18 @@ void lua_mux_install_object_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_contents, 1);
   lua_setfield(state, -2, "contents");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_contents_visible, 1);
-  lua_setfield(state, -2, "contents_visible");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_exits, 1);
-  lua_setfield(state, -2, "exits");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_exits_visible, 1);
-  lua_setfield(state, -2, "exits_visible");
   lua_mux_install_object_relationship_bindings(state, package);
   lua_pop(state, 1);
 
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_object, 1);
   lua_setfield(state, -2, "object");
+
+  LuaMuxObjectTypeNamespace *name_space =
+      lua_newuserdata(state, sizeof(*name_space));
+
+  *name_space = (LuaMuxObjectTypeNamespace){.package = package};
+  luaL_getmetatable(state, LUA_MUX_OBJECT_TYPE_NAMESPACE_METATABLE);
+  lua_setmetatable(state, -2);
+  lua_setfield(state, -2, "types");
 }

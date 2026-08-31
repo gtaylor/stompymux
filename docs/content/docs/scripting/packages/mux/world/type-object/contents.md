@@ -4,31 +4,52 @@ type: docs
 toc_hide: false
 ---
 
-Returns the objects directly contained by this object.
+Returns objects directly contained by or attached to this object.
 
 ## Function
 
 ### Synopsis
 
 ```lua
-object:contents( )
+object:contents( options? )
 ```
 
 ### Arguments
 
-None.
+`table or nil options`
+: Optional filters.
+
+`ObjectType[] options.types`
+: Include only objects whose types appear in this array. Values must be typed
+  constants from [`mux.world.types`](../../types/). An empty array matches
+  nothing.
+
+`number or Object options.visible_to`
+: Include only objects visible to this viewer under native look rules.
 
 ### Returns
 
 `table contents`
-: An array of `Object` handles in native database order.
+: An array of matching `Object` handles. Ordinary contents precede attached
+  exits, with native database order preserved within each group.
+
+## Examples
+
+```lua
+local visible_exits = room:contents({
+  types = { mux.world.types.EXIT },
+  visible_to = ctx.enactor,
+})
+```
 
 ## Notes
 
-The receiver must be able to contain objects. Results are unfiltered; use `Object:contents_visible` to apply native look visibility rules. This method is unavailable during `@lua/check`.
+With no argument, `nil`, or `{}` as the options table, the method returns all
+ordinary contents and attached exits. The receiver must be capable of holding
+contents or exits. This method is unavailable during `@lua/check`.
 
 ## See Also
 
 - [`mux`](../../../)
 - [`Object`](../)
-- [`Object:contents_visible`](../contents-visible/)
+- [`mux.world.types`](../../types/)

@@ -34,3 +34,4 @@ sidebar_root_for: self
 | [`pemit`](pemit/) | Privately emits a message to an object. |
 | [`powers`](powers/) | Typed constants for native object powers. |
 | [`teleport`](teleport/) | Teleports a thing or player to a destination. |
+| [`types`](types/) | Typed constants for native object kinds. |

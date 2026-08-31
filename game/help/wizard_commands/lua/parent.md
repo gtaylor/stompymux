@@ -30,9 +30,11 @@ the configured default.
 An object module may export `internal_appearance(ctx)` and
 `external_appearance(ctx)`. Returning a string replaces the complete native
 `look` appearance; returning `nil` uses the native appearance. Rooms always use
-the internal function. Use `mux.world.object(ctx.object)` and the handle's properties,
-`contents`, `contents_visible`, `exits`, and `exits_visible` methods when
-assembling custom output. Use `mux.world.lock_passes` with a typed
+the internal function. Use `mux.world.object(ctx.object)`, `Object:contents`
+filters, and typed `mux.world.types` constants when assembling custom output.
+`Object:contents()` includes both ordinary contents and attached exits; pass a
+`types` filter when only one group should be shown.
+Use `mux.world.lock_passes` with a typed
 `mux.world.locks` constant when output depends on a lock result.
 There is no native opacity flag; use `external_appearance` to control what an
 outside viewer sees.

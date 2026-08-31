@@ -22,7 +22,7 @@ end
 local function render_content_name(object)
   local name = object:name()
 
-  if object:type() == "player" then
+  if object:type() == mux.world.types.PLAYER then
     name = mux.text.style(name, { foreground = "bright-white" })
   end
   return name
@@ -32,10 +32,13 @@ local function render_contents(ctx)
   local rendered = {}
   local container = mux.world.object(ctx.object)
 
-  for _, object in ipairs(container:contents()) do
-    if container:contents_visible(ctx.enactor, object) then
-      rendered[#rendered + 1] = render_content_name(object)
-    end
+  for _, object in
+    ipairs(container:contents({
+      types = { mux.world.types.ROOM, mux.world.types.THING, mux.world.types.PLAYER },
+      visible_to = ctx.enactor,
+    }))
+  do
+    rendered[#rendered + 1] = render_content_name(object)
   end
   return rendered
 end
@@ -44,17 +47,20 @@ local function render_exits(ctx)
   local rendered = {}
   local location = mux.world.object(ctx.object)
 
-  for _, exit in ipairs(location:exits()) do
-    if location:exits_visible(ctx.enactor, exit) then
-      local stored_name = exit:name()
-      local name, aliases = stored_name:match("^([^;]+);?(.*)$")
-      local first_alias = aliases:match("^([^;]+)")
-      local command = mux.text.strip_style(first_alias or name)
-      if first_alias then
-        rendered[#rendered + 1] = send_link("(" .. first_alias .. ") " .. name, command)
-      else
-        rendered[#rendered + 1] = send_link(name, command)
-      end
+  for _, exit in
+    ipairs(location:contents({
+      types = { mux.world.types.EXIT },
+      visible_to = ctx.enactor,
+    }))
+  do
+    local stored_name = exit:name()
+    local name, aliases = stored_name:match("^([^;]+);?(.*)$")
+    local first_alias = aliases:match("^([^;]+)")
+    local command = mux.text.strip_style(first_alias or name)
+    if first_alias then
+      rendered[#rendered + 1] = send_link("(" .. first_alias .. ") " .. name, command)
+    else
+      rendered[#rendered + 1] = send_link(name, command)
     end
   end
   return rendered
@@ -65,15 +71,18 @@ local function render_room_contents_and_players(ctx)
   local players = {}
   local container = mux.world.object(ctx.object)
 
-  for _, object in ipairs(container:contents()) do
-    if container:contents_visible(ctx.enactor, object) then
-      if object:type() == "player" then
-        if object:dbref() ~= ctx.enactor then
-          players[#players + 1] = object:name()
-        end
-      else
-        contents[#contents + 1] = render_content_name(object)
+  for _, object in
+    ipairs(container:contents({
+      types = { mux.world.types.ROOM, mux.world.types.THING, mux.world.types.PLAYER },
+      visible_to = ctx.enactor,
+    }))
+  do
+    if object:type() == mux.world.types.PLAYER then
+      if object:dbref() ~= ctx.enactor then
+        players[#players + 1] = object:name()
       end
+    else
+      contents[#contents + 1] = render_content_name(object)
     end
   end
   return contents, players
@@ -83,25 +92,28 @@ local function render_room_exits(ctx)
   local rendered = {}
   local location = mux.world.object(ctx.object)
 
-  for _, exit in ipairs(location:exits()) do
-    if location:exits_visible(ctx.enactor, exit) then
-      local stored_name = exit:name()
-      local name, aliases = stored_name:match("^([^;]+);?(.*)$")
-      local first_alias = aliases:match("^([^;]+)")
-      local passes_enter_lock = mux.world.lock_passes({
-        object = exit,
-        enactor = ctx.enactor,
-        lock = mux.world.locks.TRAVERSE,
-      })
+  for _, exit in
+    ipairs(location:contents({
+      types = { mux.world.types.EXIT },
+      visible_to = ctx.enactor,
+    }))
+  do
+    local stored_name = exit:name()
+    local name, aliases = stored_name:match("^([^;]+);?(.*)$")
+    local first_alias = aliases:match("^([^;]+)")
+    local passes_enter_lock = mux.world.lock_passes({
+      object = exit,
+      enactor = ctx.enactor,
+      lock = mux.world.locks.TRAVERSE,
+    })
 
-      rendered[#rendered + 1] = {
-        alias = first_alias and "{" .. first_alias .. "}" or "",
-        alias_color = passes_enter_lock and "green" or "red",
-        name = name,
-        name_color = passes_enter_lock and "bright-green" or "bright-red",
-        command = mux.text.strip_style(first_alias or name),
-      }
-    end
+    rendered[#rendered + 1] = {
+      alias = first_alias and "{" .. first_alias .. "}" or "",
+      alias_color = passes_enter_lock and "green" or "red",
+      name = name,
+      name_color = passes_enter_lock and "bright-green" or "bright-red",
+      command = mux.text.strip_style(first_alias or name),
+    }
   end
   return rendered
 end
