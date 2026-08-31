@@ -60,6 +60,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/lua_validation.c
   ${MUX_MODULE_DIR}/lua/lua_test_runner.c
   ${MUX_MODULE_DIR}/lua/lua_callbacks.c
+  ${MUX_MODULE_DIR}/lua/lua_lock_catalog.c
   ${MUX_MODULE_DIR}/lua/lua_global_events.c
   ${MUX_MODULE_DIR}/lua/lua_schedule.c
   ${MUX_MODULE_DIR}/lua/lua_commands.c
@@ -72,6 +73,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/packages/btech/system/btech_system_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/btech/unit/btech_unit_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/mux_package.c
+  ${MUX_MODULE_DIR}/lua/packages/mux/mux_options.c
   ${MUX_MODULE_DIR}/lua/packages/mux/error/mux_error_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/config/mux_config_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/session/mux_session_bindings.c
@@ -80,6 +82,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_object_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_attribute_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_flag_power_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_lock_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/text/mux_text_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_state_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/telnet/mux_telnet_bindings.c

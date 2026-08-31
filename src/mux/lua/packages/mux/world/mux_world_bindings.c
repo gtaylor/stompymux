@@ -16,47 +16,11 @@
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
-#include "mux/support/checked_storage.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/utf8.h"
 #include "mux/world/move.h"
 #include "mux/world/object.h"
 #include "mux/world/object_lifecycle.h"
-
-static void lua_mux_world_check_table(lua_State *state, int argument) {
-  if (!lua_istable(state, argument))
-    lua_error_arg(state, argument, LUA_ERROR_CODE_ARG_INVALID,
-                  "options must be a table");
-}
-
-static bool lua_mux_world_field_allowed(const char *field,
-                                        const char *const *allowed,
-                                        size_t allowed_count) {
-  for (size_t index = 0; index < allowed_count; index++) {
-    const char *candidate = *(const char *const *)checked_storage_at_const(
-        (const void *)allowed, allowed_count, sizeof(*allowed), index);
-
-    if (!strcmp(field, candidate))
-      return true;
-  }
-  return false;
-}
-
-static void lua_mux_world_check_fields(lua_State *state, int table,
-                                       const char *const *allowed,
-                                       size_t allowed_count) {
-  lua_pushnil(state);
-  while (lua_next(state, table) != 0) {
-    const char *field =
-        lua_type(state, -2) == LUA_TSTRING ? lua_tostring(state, -2) : nullptr;
-
-    lua_pop(state, 1);
-    if (!field || !lua_mux_world_field_allowed(field, allowed, allowed_count))
-      lua_error_arg(state, table, LUA_ERROR_CODE_ARG_INVALID,
-                    "unknown options field '%s'",
-                    field ? field : "<non-string>");
-  }
-}
 
 static const char *lua_mux_world_require_name(lua_State *state, int table,
                                               size_t *length) {
@@ -75,26 +39,6 @@ static const char *lua_mux_world_require_name(lua_State *state, int table,
                   "options.name is not valid UTF-8");
   lua_pop(state, 1);
   return name;
-}
-
-static DbRef lua_mux_world_object_field(LuaMuxPackage *package,
-                                        lua_State *state, int table,
-                                        const char *field, bool required,
-                                        bool *present) {
-  DbRef object = NOTHING;
-
-  lua_getfield(state, table, field);
-  *present = lua_isnil(state, -1) == 0;
-  if (!*present) {
-    lua_pop(state, 1);
-    if (required)
-      lua_error_arg(state, table, LUA_ERROR_CODE_ARG_INVALID,
-                    "options.%s is required", field);
-    return NOTHING;
-  }
-  object = lua_mux_require_object(package, state, -1);
-  lua_pop(state, 1);
-  return object;
 }
 
 static char *lua_mux_world_compile_name(LuaMuxPackage *package,
@@ -183,8 +127,7 @@ static int lua_mux_create_room(lua_State *state) {
   DbRef room;
 
   lua_mux_require_runtime(package, state, "world.create_room");
-  lua_mux_world_check_table(state, 1);
-  lua_mux_world_check_fields(state, 1, FIELDS, 1);
+  lua_mux_check_options(state, 1, FIELDS, sizeof(FIELDS) / sizeof(*FIELDS));
   const char *name = lua_mux_world_require_name(state, 1, &name_length);
   char *compiled = lua_mux_world_compile_name(package, state, 1, name);
 
@@ -224,13 +167,12 @@ static int lua_mux_create_thing(lua_State *state) {
   DbRef thing;
 
   lua_mux_require_runtime(package, state, "world.create_thing");
-  lua_mux_world_check_table(state, 1);
-  lua_mux_world_check_fields(state, 1, FIELDS, 3);
+  lua_mux_check_options(state, 1, FIELDS, sizeof(FIELDS) / sizeof(*FIELDS));
   const char *name = lua_mux_world_require_name(state, 1, &name_length);
-  DbRef location = lua_mux_world_object_field(package, state, 1, "location",
-                                              true, &location_present);
-  DbRef home = lua_mux_world_object_field(package, state, 1, "home", false,
-                                          &home_present);
+  DbRef location = lua_mux_option_object(package, state, 1, "location", true,
+                                         &location_present);
+  DbRef home =
+      lua_mux_option_object(package, state, 1, "home", false, &home_present);
   lua_mux_world_require_container(package, state, 1, "options.location",
                                   location);
   if (home_present)
@@ -282,13 +224,12 @@ static int lua_mux_create_exit(lua_State *state) {
   DbRef exit;
 
   lua_mux_require_runtime(package, state, "world.create_exit");
-  lua_mux_world_check_table(state, 1);
-  lua_mux_world_check_fields(state, 1, FIELDS, 3);
+  lua_mux_check_options(state, 1, FIELDS, sizeof(FIELDS) / sizeof(*FIELDS));
   const char *name = lua_mux_world_require_name(state, 1, &name_length);
-  DbRef location = lua_mux_world_object_field(package, state, 1, "location",
-                                              true, &location_present);
-  DbRef destination = lua_mux_world_object_field(
-      package, state, 1, "destination", false, &destination_present);
+  DbRef location = lua_mux_option_object(package, state, 1, "location", true,
+                                         &location_present);
+  DbRef destination = lua_mux_option_object(package, state, 1, "destination",
+                                            false, &destination_present);
   (void)location_present;
   if (!has_exits(package->services->database, location))
     return lua_error_arg(
@@ -389,12 +330,11 @@ static int lua_mux_teleport(lua_State *state) {
   bool destination_present;
 
   lua_mux_require_runtime(package, state, "world.teleport");
-  lua_mux_world_check_table(state, 1);
-  lua_mux_world_check_fields(state, 1, FIELDS, 2);
-  DbRef object = lua_mux_world_object_field(package, state, 1, "object", true,
-                                            &object_present);
-  DbRef destination = lua_mux_world_object_field(
-      package, state, 1, "destination", true, &destination_present);
+  lua_mux_check_options(state, 1, FIELDS, sizeof(FIELDS) / sizeof(*FIELDS));
+  DbRef object =
+      lua_mux_option_object(package, state, 1, "object", true, &object_present);
+  DbRef destination = lua_mux_option_object(package, state, 1, "destination",
+                                            true, &destination_present);
   (void)object_present;
   (void)destination_present;
 
@@ -452,8 +392,7 @@ static int lua_mux_destroy(lua_State *state) {
   lua_mux_require_runtime(package, state, "world.destroy");
   DbRef object = lua_mux_require_object(package, state, 1);
   if (!lua_isnoneornil(state, 2)) {
-    lua_mux_world_check_table(state, 2);
-    lua_mux_world_check_fields(state, 2, FIELDS, 1);
+    lua_mux_check_options(state, 2, FIELDS, sizeof(FIELDS) / sizeof(*FIELDS));
     lua_getfield(state, 2, "override");
     if (!lua_isnil(state, -1)) {
       if (!lua_isboolean(state, -1))
@@ -536,6 +475,7 @@ void lua_mux_install_world_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_mux_install_state_bindings(state, package);
   lua_mux_install_attribute_bindings(state, package);
   lua_mux_install_flag_power_bindings(state, package);
+  lua_mux_install_lock_bindings(state, package);
   lua_command_access_install_namespace(state);
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_pemit, 1);

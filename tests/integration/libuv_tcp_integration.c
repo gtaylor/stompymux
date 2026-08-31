@@ -185,10 +185,42 @@ static int remove_game_database(const char *directory) {
              : 0;
 }
 
+static int send_command(int socket_fd, const char *command);
+static int expect_text(int socket_fd, const char *expected);
+
+static int write_nested_lock_fixture(const char *directory) {
+  char path[PATH_MAX];
+
+  if (snprintf(path, sizeof(path), "%s/lua/object_logic/nested_lock.lua",
+               directory) >= (int)sizeof(path))
+    return -1;
+  FILE *file = fopen(path, "w");
+
+  if (!file)
+    return -1;
+  bool failed =
+      fputs("return {\n"
+            "  locks = {\n"
+            "    use = function(ctx)\n"
+            "      assert(ctx.descriptor ~= nil, \"nested lock lost "
+            "descriptor\")\n"
+            "      mux.world.object(ctx.subject):state(\"nested_lock\")"
+            ":set(\"inner\", \"discarded\")\n"
+            "      error(\"expected nested lock failure\")\n"
+            "    end,\n"
+            "  },\n"
+            "}\n",
+            file) < 0;
+
+  return fclose(file) == 0 && !failed ? 0 : -1;
+}
+
 static int write_lua_fixture(const char *directory) {
   char path[PATH_MAX];
   FILE *file;
 
+  if (write_nested_lock_fixture(directory) < 0)
+    return -1;
   snprintf(path, sizeof(path), "%s/lua/global_logic/styled_text_test.lua",
            directory);
   file = fopen(path, "w");
@@ -913,6 +945,40 @@ static int write_lua_fixture(const char *directory) {
       "        mux.world.pemit(ctx.enactor, \"LuaState \" .. balance)\n"
       "        return true\n"
       "      end,\n"
+      "    },\n",
+      file);
+  fputs(
+      "    {\n"
+      "      pattern = \"^lualocknested$\",\n"
+      "      handler = function(ctx)\n"
+      "        local actor = mux.world.object(ctx.enactor)\n"
+      "        local target = mux.world.create_thing({\n"
+      "          name = \"Lua Nested Lock Target\", location = actor\n"
+      "        })\n"
+      "        target:set_lua_parent(\"nested_lock.lua\")\n"
+      "        local state = actor:state(\"nested_lock\")\n"
+      "        state:set(\"outer\", \"preserved\")\n"
+      "        local passes = mux.world.lock_passes({\n"
+      "          object = target, enactor = actor, cause = actor,\n"
+      "          subject = actor, lock = mux.world.locks.USE\n"
+      "        })\n"
+      "        assert(not passes and not state:has(\"inner\"))\n"
+      "        state:set(\"after\", \"committed\")\n"
+      "        mux.world.pemit(ctx.enactor, \"LuaLock nested isolated\")\n"
+      "        return true\n"
+      "      end,\n"
+      "    },\n"
+      "    {\n"
+      "      pattern = \"^lualockverify$\",\n"
+      "      handler = function(ctx)\n"
+      "        local state = mux.world.object(ctx.enactor):state("
+      "\"nested_lock\")\n"
+      "        assert(state:get(\"outer\") == \"preserved\")\n"
+      "        assert(state:get(\"after\") == \"committed\")\n"
+      "        assert(not state:has(\"inner\"))\n"
+      "        mux.world.pemit(ctx.enactor, \"LuaLock state verified\")\n"
+      "        return true\n"
+      "      end,\n"
       "    },\n"
       "    {\n"
       "      pattern = \"^luaflags$\",\n"
@@ -988,6 +1054,46 @@ static int write_lua_fixture(const char *directory) {
       "}\n",
       file);
   return fclose(file) == 0 ? 0 : -1;
+}
+
+static int exercise_invalid_lock_keys(int socket_fd, const char *directory) {
+  static const char *const INVALID_KEYS[] = {"default", "speech", "look",
+                                             "contact"};
+  char path[PATH_MAX];
+
+  if (snprintf(path, sizeof(path), "%s/lua/object_logic/invalid_lock.lua",
+               directory) >= (int)sizeof(path))
+    return -1;
+  for (size_t index = 0; index < sizeof(INVALID_KEYS) / sizeof(*INVALID_KEYS);
+       index++) {
+    const char *key = *(const char *const *)checked_storage_at_const(
+        INVALID_KEYS, sizeof(INVALID_KEYS) / sizeof(*INVALID_KEYS),
+        sizeof(*INVALID_KEYS), index);
+    FILE *file = fopen(path, "w");
+
+    if (!file)
+      return -1;
+    bool failed = fprintf(file,
+                          "return { locks = { %s = function() return true "
+                          "end } }\n",
+                          key) < 0;
+    if (fclose(file) != 0 || failed ||
+        send_command(socket_fd, "@lua/check\r\n") < 0) {
+      (void)unlink(path);
+      return -1;
+    }
+    char expected[128];
+
+    if (snprintf(expected, sizeof(expected), "unknown lock key '%s'", key) >=
+            (int)sizeof(expected) ||
+        expect_text(socket_fd, expected) < 0) {
+      (void)unlink(path);
+      return -1;
+    }
+    if (unlink(path) < 0)
+      return -1;
+  }
+  return 0;
 }
 
 /* Connect one client to port once the child server begins listening. */
@@ -1785,6 +1891,10 @@ static int exercise_split_modules(int socket_fd) {
                              "order=first,first,startup,startup") < 0 ||
                  send_command(socket_fd, "@lua/check\r\n") < 0 ||
                  expect_text(socket_fd, "All Lua module checks passed.") < 0 ||
+                 send_command(socket_fd, "lualocknested\r\n") < 0 ||
+                 expect_text(socket_fd, "LuaLock nested isolated") < 0 ||
+                 send_command(socket_fd, "lualockverify\r\n") < 0 ||
+                 expect_text(socket_fd, "LuaLock state verified") < 0 ||
                  send_command(socket_fd, "lualifecycle\r\n") < 0 ||
                  expect_text(socket_fd,
                              "LuaLifecycle room thing exit destroyed") < 0 ||
@@ -2326,6 +2436,7 @@ int main(int argc, char **argv) {
     }
   }
   if (create_styled_object(*socket_slot(socket_fds, 0)) < 0 ||
+      exercise_invalid_lock_keys(*socket_slot(socket_fds, 0), directory) < 0 ||
       exercise_plain_osc_fallback(*socket_slot(socket_fds, 1)) < 0)
     goto done;
   if (kill(child, SIGTERM) < 0 || wait_child(child) < 0)

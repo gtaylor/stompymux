@@ -162,7 +162,7 @@ static void open_exit(const ExitCreationRequest *request) {
 
     LuaLockResult *result = checked_storage_allocate(sizeof(*result));
     if (!lock_test(evaluation, player, player, player, loc, LUA_LOCK_LINK,
-                   LUA_LOCK_OPERATION_LINK, false, &lock, result)) {
+                   false, &lock, result)) {
       notify_lock_failure(&(LockFailureNotification){
           .evaluation = evaluation,
           .invocation = &lock,
@@ -248,7 +248,7 @@ static void link_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
     }
     LuaLockResult *result = checked_storage_allocate(sizeof(*result));
     if (!lock_test(evaluation, player, player, player, dest, LUA_LOCK_LINK,
-                   LUA_LOCK_OPERATION_LINK, false, &lock, result)) {
+                   false, &lock, result)) {
       notify_lock_failure(
           &(LockFailureNotification){.evaluation = evaluation,
                                      .invocation = &lock,
@@ -343,8 +343,7 @@ void do_link(CommandInvocation *invocation) {
     if (!can_set_home(evaluation, player, thing, room)) {
       notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     } else if (!lock_test(evaluation, player, invocation->cause, player, room,
-                          LUA_LOCK_LINK, LUA_LOCK_OPERATION_SET_HOME, false,
-                          &lock, result)) {
+                          LUA_LOCK_SET_HOME, false, &lock, result)) {
       notify_lock_failure(
           &(LockFailureNotification){.evaluation = evaluation,
                                      .invocation = &lock,
@@ -380,8 +379,7 @@ void do_link(CommandInvocation *invocation) {
       notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
     } else if ((room != HOME) &&
                !lock_test(evaluation, player, invocation->cause, player, room,
-                          LUA_LOCK_LINK, LUA_LOCK_OPERATION_LINK, false, &lock,
-                          result)) {
+                          LUA_LOCK_LINK, false, &lock, result)) {
       notify_lock_failure(
           &(LockFailureNotification){.evaluation = evaluation,
                                      .invocation = &lock,

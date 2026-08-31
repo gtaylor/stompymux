@@ -50,10 +50,10 @@ int lua_runtime_flow_start(void *context [[maybe_unused]],
   return 0;
 }
 
-int lua_runtime_exit_enter_lock_passes(void *context [[maybe_unused]],
-                                       DbRef exit [[maybe_unused]],
-                                       DbRef enactor [[maybe_unused]]) {
-  return 0;
+bool lua_runtime_lock_passes(void *context [[maybe_unused]],
+                             const LuaLockInvocation *invocation
+                             [[maybe_unused]]) {
+  return false;
 }
 
 static const LuaTestFailure *test_failure_at(const LuaTestRunResult *result,

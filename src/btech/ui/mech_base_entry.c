@@ -88,8 +88,7 @@ static void mech_enter_event(MuxEvent *e) {
 
   if (!lock_test(btech_context_evaluation(mech_context(mech)), mech_dbref(mech),
                  mech_dbref(mech), mech_dbref(mech), newmap->mynum,
-                 LUA_LOCK_ENTER, LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock,
-                 lock_result) &&
+                 LUA_LOCK_ENTER, false, &lock, lock_result) &&
       (battle_map_build_is_safe(newmap) || newmap->cf >= (newmap->cfmax / 2))) {
     const char *msg = lock_result->has_enactor_message
                           ? lock_result->enactor_message
@@ -267,8 +266,8 @@ void mech_enterbase(DbRef player, Mech *mech, char *buffer) {
   }
   LuaLockResult *lock_result = checked_storage_allocate(sizeof(*lock_result));
   if (!lock_test(btech_context_evaluation(mech_context(mech)), player, player,
-                 mech_dbref(mech), newmap->mynum, LUA_LOCK_ENTER,
-                 LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, lock_result) &&
+                 mech_dbref(mech), newmap->mynum, LUA_LOCK_ENTER, false, &lock,
+                 lock_result) &&
       (battle_map_build_is_safe(newmap) || newmap->cf >= (newmap->cfmax / 2))) {
     /* Trigger FAIL & AFAIL */
     memset(fail_mesg, 0, sizeof(fail_mesg));

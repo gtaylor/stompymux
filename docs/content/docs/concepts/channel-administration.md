@@ -123,9 +123,9 @@ end
 
 return {
   locks = {
-    default = function(ctx) return is_staff(ctx.subject) end,
-    use = function(ctx) return is_staff(ctx.subject) end,
-    enter = function(ctx) return is_staff(ctx.subject) end,
+    channel_join = function(ctx) return is_staff(ctx.subject) end,
+    channel_transmit = function(ctx) return is_staff(ctx.subject) end,
+    channel_receive = function(ctx) return is_staff(ctx.subject) end,
   },
 }
 ```
@@ -134,14 +134,14 @@ The lock mapping is:
 
 | Channel capability | Channel-object lock |
 | --- | --- |
-| Join | `default` |
-| Transmit | `use` |
-| Receive | `enter` |
+| Join | `channel_join` |
+| Transmit | `channel_transmit` |
+| Receive | `channel_receive` |
 
 Capability flags are permissive grants and take precedence over the need to
 pass a lock. For example, if the player join flag is enabled, every player can
-join regardless of the default lock. To make a lock authoritative for a type
-and capability, clear that grant first:
+join regardless of the `channel_join` lock. To make a lock authoritative for a
+type and capability, clear that grant first:
 
 ```text
 @chan/pflags Staff=!join

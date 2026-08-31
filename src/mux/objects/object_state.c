@@ -61,11 +61,24 @@ struct ObjectStateTransactionObject {
   ObjectStateCollection *collection;
 };
 
+typedef struct ObjectStateTransactionSavepoint {
+  ObjectStateTransactionObject *objects;
+  size_t object_count;
+} ObjectStateTransactionSavepoint;
+
 static ObjectStateTransactionObject *
 object_state_transaction_object(ObjectStateTransaction *transaction,
                                 size_t index) {
   return checked_storage_at(transaction->objects, transaction->object_capacity,
                             sizeof(ObjectStateTransactionObject), index);
+}
+
+static ObjectStateTransactionSavepoint *
+object_state_transaction_savepoint(ObjectStateTransaction *transaction,
+                                   size_t index) {
+  return checked_storage_at(transaction->savepoints,
+                            transaction->savepoint_capacity,
+                            sizeof(ObjectStateTransactionSavepoint), index);
 }
 
 static void object_state_error(char *error, size_t error_size,
@@ -502,17 +515,81 @@ void object_state_transaction_initialize(ObjectStateTransaction *transaction) {
   memset(transaction, 0, sizeof(*transaction));
 }
 
+static void
+object_state_transaction_objects_destroy(ObjectStateTransactionObject *objects,
+                                         size_t object_count) {
+  for (size_t index = 0; index < object_count; index++) {
+    ObjectStateTransactionObject *object =
+        checked_storage_at(objects, object_count, sizeof(*objects), index);
+
+    object_state_collection_destroy(object->collection);
+  }
+}
+
+static bool
+object_state_transaction_savepoint_push(ObjectStateTransaction *transaction) {
+  ObjectStateTransactionObject *objects = nullptr;
+
+  if (transaction->object_count > 0) {
+    objects = checked_storage_try_allocate_array(transaction->object_count,
+                                                 sizeof(*objects));
+    if (!objects)
+      return false;
+    for (size_t index = 0; index < transaction->object_count; index++) {
+      ObjectStateTransactionObject *source =
+          object_state_transaction_object(transaction, index);
+      ObjectStateTransactionObject *copy = checked_storage_at(
+          objects, transaction->object_count, sizeof(*objects), index);
+
+      copy->object = source->object;
+      copy->collection = object_state_collection_clone(source->collection);
+      if (!copy->collection) {
+        object_state_transaction_objects_destroy(objects, index);
+        free(objects);
+        return false;
+      }
+    }
+  }
+  if (transaction->savepoint_count == transaction->savepoint_capacity) {
+    size_t capacity = transaction->savepoint_capacity == 0
+                          ? 4
+                          : transaction->savepoint_capacity * 2;
+    ObjectStateTransactionSavepoint *savepoints =
+        checked_storage_try_reallocate_array(transaction->savepoints, capacity,
+                                             sizeof(*savepoints));
+
+    if (!savepoints) {
+      object_state_transaction_objects_destroy(objects,
+                                               transaction->object_count);
+      free(objects);
+      return false;
+    }
+    transaction->savepoints = savepoints;
+    transaction->savepoint_capacity = capacity;
+  }
+  ObjectStateTransactionSavepoint *savepoint =
+      object_state_transaction_savepoint(transaction,
+                                         transaction->savepoint_count);
+
+  *savepoint = (ObjectStateTransactionSavepoint){
+      .objects = objects,
+      .object_count = transaction->object_count,
+  };
+  transaction->savepoint_count++;
+  return true;
+}
+
 bool object_state_transaction_begin(ObjectStateTransaction *transaction,
                                     GameDatabase *database) {
   if (transaction->depth > 0) {
-    if (transaction->database != database)
+    if (transaction->database != database ||
+        !object_state_transaction_savepoint_push(transaction))
       return false;
     transaction->depth++;
     return true;
   }
   transaction->database = database;
   transaction->depth = 1;
-  transaction->rollback_only = false;
   return true;
 }
 
@@ -659,25 +736,49 @@ bool object_state_transaction_entry(ObjectStateTransaction *transaction,
 
 static void
 object_state_transaction_reset(ObjectStateTransaction *transaction) {
-  for (size_t index = 0; index < transaction->object_count; index++)
-    object_state_collection_destroy(
-        object_state_transaction_object(transaction, index)->collection);
+  object_state_transaction_objects_destroy(transaction->objects,
+                                           transaction->object_count);
+  for (size_t index = 0; index < transaction->savepoint_count; index++) {
+    ObjectStateTransactionSavepoint *savepoint =
+        object_state_transaction_savepoint(transaction, index);
+
+    object_state_transaction_objects_destroy(savepoint->objects,
+                                             savepoint->object_count);
+    free(savepoint->objects);
+  }
   transaction->object_count = 0;
+  transaction->savepoint_count = 0;
   transaction->depth = 0;
   transaction->database = nullptr;
-  transaction->rollback_only = false;
 }
 
 void object_state_transaction_finish(ObjectStateTransaction *transaction,
                                      bool commit) {
   if (transaction->depth == 0)
     return;
-  if (!commit)
-    transaction->rollback_only = true;
-  transaction->depth--;
-  if (transaction->depth > 0)
+  if (transaction->depth > 1) {
+    ObjectStateTransactionSavepoint *savepoint =
+        object_state_transaction_savepoint(transaction,
+                                           transaction->savepoint_count - 1);
+
+    if (commit) {
+      object_state_transaction_objects_destroy(savepoint->objects,
+                                               savepoint->object_count);
+      free(savepoint->objects);
+    } else {
+      object_state_transaction_objects_destroy(transaction->objects,
+                                               transaction->object_count);
+      free(transaction->objects);
+      transaction->objects = savepoint->objects;
+      transaction->object_count = savepoint->object_count;
+      transaction->object_capacity = savepoint->object_count;
+    }
+    *savepoint = (ObjectStateTransactionSavepoint){};
+    transaction->savepoint_count--;
+    transaction->depth--;
     return;
-  if (!transaction->rollback_only) {
+  }
+  if (commit) {
     for (size_t index = 0; index < transaction->object_count; index++) {
       ObjectStateTransactionObject *stored =
           object_state_transaction_object(transaction, index);
@@ -694,5 +795,6 @@ void object_state_transaction_finish(ObjectStateTransaction *transaction,
 void object_state_transaction_destroy(ObjectStateTransaction *transaction) {
   object_state_transaction_reset(transaction);
   free(transaction->objects);
+  free(transaction->savepoints);
   memset(transaction, 0, sizeof(*transaction));
 }

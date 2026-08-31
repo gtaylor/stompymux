@@ -88,7 +88,11 @@ local function render_room_exits(ctx)
       local stored_name = exit:name()
       local name, aliases = stored_name:match("^([^;]+);?(.*)$")
       local first_alias = aliases:match("^([^;]+)")
-      local passes_enter_lock = exit:enter_lock_passes(ctx.enactor)
+      local passes_enter_lock = mux.world.lock_passes({
+        object = exit,
+        enactor = ctx.enactor,
+        lock = mux.world.locks.TRAVERSE,
+      })
 
       rendered[#rendered + 1] = {
         alias = first_alias and "{" .. first_alias .. "}" or "",

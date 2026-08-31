@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "mux/lua/lua_internal.h"
+#include "mux/lua/lua_lock_catalog.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
@@ -44,39 +45,6 @@ const char *const LUA_EVENT_NAMES[LUA_EVENT_COUNT] = {
     [LUA_EVENT_OOD_LAND] = "on_ood_land",
 };
 
-const char *const LUA_LOCK_NAMES[LUA_LOCK_COUNT] = {
-    [LUA_LOCK_DEFAULT] = "default",   [LUA_LOCK_DROP] = "drop",
-    [LUA_LOCK_ENTER] = "enter",       [LUA_LOCK_GIVE] = "give",
-    [LUA_LOCK_LEAVE] = "leave",       [LUA_LOCK_LINK] = "link",
-    [LUA_LOCK_RECEIVE] = "receive",   [LUA_LOCK_SPEECH] = "speech",
-    [LUA_LOCK_TELEPORT] = "teleport", [LUA_LOCK_TELEPORT_OUT] = "teleport_out",
-    [LUA_LOCK_USE] = "use",
-};
-
-const char *const LUA_LOCK_OPERATION_NAMES[LUA_LOCK_OPERATION_COUNT] = {
-    [LUA_LOCK_OPERATION_MATCH] = "match",
-    [LUA_LOCK_OPERATION_TRAVERSE] = "traverse",
-    [LUA_LOCK_OPERATION_TAKE] = "take",
-    [LUA_LOCK_OPERATION_LOOK] = "look",
-    [LUA_LOCK_OPERATION_COMMAND_MATCH] = "command_match",
-    [LUA_LOCK_OPERATION_USE] = "use",
-    [LUA_LOCK_OPERATION_DROP] = "drop",
-    [LUA_LOCK_OPERATION_GIVE] = "give",
-    [LUA_LOCK_OPERATION_RECEIVE] = "receive",
-    [LUA_LOCK_OPERATION_ENTER] = "enter",
-    [LUA_LOCK_OPERATION_LEAVE] = "leave",
-    [LUA_LOCK_OPERATION_TELEPORT] = "teleport",
-    [LUA_LOCK_OPERATION_TELEPORT_OUT] = "teleport_out",
-    [LUA_LOCK_OPERATION_LINK] = "link",
-    [LUA_LOCK_OPERATION_SET_HOME] = "set_home",
-    [LUA_LOCK_OPERATION_SPEAK] = "speak",
-    [LUA_LOCK_OPERATION_CHANNEL_JOIN] = "channel_join",
-    [LUA_LOCK_OPERATION_CHANNEL_TRANSMIT] = "channel_transmit",
-    [LUA_LOCK_OPERATION_CHANNEL_RECEIVE] = "channel_receive",
-    [LUA_LOCK_OPERATION_BTECH_ENTER] = "btech_enter",
-    [LUA_LOCK_OPERATION_BTECH_CONTACT] = "btech_contact",
-};
-
 const char *const LUA_MESSAGE_NAMES[LUA_MESSAGE_COUNT] = {
     [LUA_MESSAGE_NONE] = nullptr,
     [LUA_MESSAGE_SUCCESS] = "success",
@@ -94,7 +62,6 @@ const char *const LUA_MESSAGE_NAMES[LUA_MESSAGE_COUNT] = {
 
 const char *const LUA_MESSAGE_OPERATION_NAMES[LUA_MESSAGE_OPERATION_COUNT] = {
     [LUA_MESSAGE_OPERATION_NONE] = "none",
-    [LUA_MESSAGE_OPERATION_LOOK] = "look",
     [LUA_MESSAGE_OPERATION_TAKE] = "take",
     [LUA_MESSAGE_OPERATION_TRAVERSE] = "traverse",
     [LUA_MESSAGE_OPERATION_RECEIVE] = "receive",
@@ -132,30 +99,8 @@ bool lua_event_name_is_known(const char *name) {
   return false;
 }
 
-const char *lua_lock_name(LuaLockType lock) {
-  if ((unsigned int)lock >= LUA_LOCK_COUNT)
-    return nullptr;
-  return lua_name_at(LUA_LOCK_NAMES, LUA_LOCK_COUNT, (size_t)lock);
-}
-
-const char *lua_lock_operation_name(LuaLockOperation operation) {
-  if ((unsigned int)operation >= LUA_LOCK_OPERATION_COUNT)
-    return nullptr;
-  return lua_name_at(LUA_LOCK_OPERATION_NAMES, LUA_LOCK_OPERATION_COUNT,
-                     (size_t)operation);
-}
-
 bool lua_lock_name_is_known(const char *name) {
-  LuaLockType lock;
-
-  if (!name)
-    return false;
-  for (lock = LUA_LOCK_DEFAULT; lock < LUA_LOCK_COUNT; lock++) {
-    if (!strcmp(name,
-                lua_name_at(LUA_LOCK_NAMES, LUA_LOCK_COUNT, (size_t)lock)))
-      return true;
-  }
-  return false;
+  return lua_lock_definition_find_key(name) != nullptr;
 }
 
 const char *lua_message_name(LuaMessageType message) {
@@ -569,7 +514,6 @@ void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
                        LuaLockResult *result) {
   lua_State *state;
   const char *lock;
-  const char *operation;
   char path[PATH_MAX];
   char error[LBUF_SIZE];
   int top;
@@ -581,9 +525,6 @@ void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
     return;
   lock = lua_lock_name(invocation->type);
   if (!lock)
-    return;
-  operation = lua_lock_operation_name(invocation->operation);
-  if (!operation)
     return;
   if (!lua_attached_path(runtime, invocation->object, path, sizeof(path),
                          nullptr)) {
@@ -619,8 +560,6 @@ void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
   lua_setfield(state, -2, "subject");
   lua_pushstring(state, lock);
   lua_setfield(state, -2, "lock");
-  lua_pushstring(state, operation);
-  lua_setfield(state, -2, "operation");
   lua_pushboolean(state, invocation->silent);
   lua_setfield(state, -2, "silent");
   {

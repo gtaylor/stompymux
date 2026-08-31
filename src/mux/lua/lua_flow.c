@@ -292,22 +292,12 @@ int lua_runtime_flow_start(void *context, lua_State *state, int descriptor_id,
   return 0;
 }
 
-int lua_runtime_exit_enter_lock_passes(void *context, DbRef exit,
-                                       DbRef enactor) {
+bool lua_runtime_lock_passes(void *context,
+                             const LuaLockInvocation *invocation) {
   LuaRuntime *runtime = context;
   LuaLockResult *result = checked_storage_allocate(sizeof(*result));
 
-  lua_lock_evaluate(runtime,
-                    &(LuaLockInvocation){
-                        .type = LUA_LOCK_DEFAULT,
-                        .operation = LUA_LOCK_OPERATION_TRAVERSE,
-                        .object = exit,
-                        .enactor = enactor,
-                        .cause = enactor,
-                        .subject = enactor,
-                        .silent = true,
-                    },
-                    result);
+  lua_lock_evaluate(runtime, invocation, result);
   const bool PASSES = result->passes;
   free_buf(result);
   return PASSES;

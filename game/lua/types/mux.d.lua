@@ -193,6 +193,35 @@ local Attribute = {}
 ---Its string form is its uppercase name, and equality compares access identity.
 ---@class Access
 
+---A typed native lock obtained from [`mux.world.locks`](lua://mux.world.locks).
+---Its string form is its uppercase name, and equality compares lock identity
+---within the current runtime.
+---@class Lock
+
+---Immutable namespace of typed native locks. Unknown or non-string lookups
+---and attempted mutation raise
+---[`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).
+---@class (exact) LockNamespace
+---@field MATCH Lock Prefer an object that passes during key-aware matching.
+---@field TRAVERSE Lock Traverse an exit.
+---@field TAKE Lock Take an object.
+---@field USE Lock Use an object.
+---@field DROP Lock Drop an object.
+---@field GIVE Lock Give an object.
+---@field RECEIVE Lock Receive a given object.
+---@field ENTER Lock Enter an object, room, BattleTech unit, bay, or hangar.
+---@field LEAVE Lock Leave an object or room.
+---@field TELEPORT Lock Teleport into a destination.
+---@field TELEPORT_OUT Lock Teleport out of an origin.
+---@field LINK Lock Link an exit or object.
+---@field SET_HOME Lock Set an object's home to a destination.
+---@field SPEAK Lock Speak in a location.
+---@field CHANNEL_JOIN Lock Join a channel.
+---@field CHANNEL_TRANSMIT Lock Transmit on a channel.
+---@field CHANNEL_RECEIVE Lock Receive channel traffic.
+---@field IDENTIFY_BUILDING Lock Identify a BattleTech building contact.
+---@see mux.error.codes.arg.invalid
+
 ---Immutable lookup namespace for command-access constants.
 ---
 ---Raises [`mux.error.codes.access.invalid`](lua://mux.error.codes.access.invalid)
@@ -419,16 +448,6 @@ function Object:exits() end
 ---@see mux.error.codes.unavailable.checking
 ---@see mux.error.codes.object.invalid
 function Object:exits_visible(viewer, exit) end
-
----Tests whether an enactor passes this exit's default traversal lock.
----@param enactor DbRef|Object
----@return boolean passes
----
----Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
----@see mux.error.codes.unavailable.checking
----@see mux.error.codes.object.invalid
----@see mux.error.codes.object.unavailable
-function Object:enter_lock_passes(enactor) end
 
 ---Returns this object's assigned zone, or nil when no zone is assigned or the zone is being destroyed.
 ---@return Object? zone Assigned zone.
@@ -684,10 +703,19 @@ function mux_config.get(name) end
 ---@class (exact) DestroyOptions
 ---@field override? boolean Whether to bypass the target's SAFE flag; core objects and Wizard players remain protected.
 
+---Fields selecting a native lock invocation to test.
+---@class (exact) LockPassesOptions
+---@field object DbRef|Object Required object whose lock is tested.
+---@field enactor DbRef|Object Required object attempting the action.
+---@field lock Lock Required typed lock constant from [`mux.world.locks`](lua://mux.world.locks).
+---@field cause? DbRef|Object Object that caused the action; defaults to `enactor`.
+---@field subject? DbRef|Object Object acted upon in the lock context; defaults to `enactor`.
+
 ---World database object access.
 ---@class MuxWorldPackage
 ---@field access AccessNamespace Immutable namespace of command-access constants.
 ---@field flags FlagNamespace Immutable namespace of registered flag constants.
+---@field locks LockNamespace Immutable namespace of native lock constants.
 ---@field powers PowerNamespace Immutable namespace of registered power constants.
 local mux_world = {}
 
@@ -764,6 +792,18 @@ function mux_world.teleport(options) end
 ---@see mux.error.codes.object.unavailable
 ---@see mux.error.codes.internal
 function mux_world.destroy(object, options) end
+
+---Tests a native object lock without emitting lock messages or performing the
+---associated action. The lock runs with a silent callback context.
+---@param options LockPassesOptions Lock invocation fields; unknown fields are rejected.
+---@return boolean passes Whether the selected lock passes.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+function mux_world.lock_passes(options) end
 
 ---Live connection queries and interactive flows.
 ---@class MuxSessionPackage

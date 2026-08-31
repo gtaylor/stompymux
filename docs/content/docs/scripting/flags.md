@@ -31,7 +31,7 @@ later fails.
 | --- | --- | --- | --- |
 | `ANSI` | `X` | `has_ansi_flag` | Enables ANSI color and formatting, including BattleTech map displays, for a player. |
 | `AUDIBLE` | `a` | `has_audible_flag` | Allows sound to propagate through the object or an audible exit. |
-| `AUDITORIUM` | `b` | `has_auditorium_flag` | Requires speakers in the location to pass its speech lock. |
+| `AUDITORIUM` | `b` | `has_auditorium_flag` | Requires speakers in the location to pass its `speak` lock. |
 | `BLIND` | `(` | `has_blind_flag` | Stored marker with no native consumer; available for game policy. |
 | `CONNECTED` | `c` | `has_connected_flag` | Records an active player connection. |
 | `DARK` | `D` | `has_dark_flag` | Hides objects from ordinary visibility; see below. |

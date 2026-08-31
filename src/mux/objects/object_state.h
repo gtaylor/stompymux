@@ -49,8 +49,10 @@ struct ObjectStateTransaction {
   void *objects;
   size_t object_count;
   size_t object_capacity;
+  void *savepoints;
+  size_t savepoint_count;
+  size_t savepoint_capacity;
   unsigned int depth;
-  bool rollback_only;
 };
 
 /** Executes object state name is valid. @param[in] name Name to use. */

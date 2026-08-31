@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "mux/lua/lua_internal.h"
+#include "mux/lua/lua_lock_catalog.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
@@ -320,6 +321,53 @@ lua_examine_named_functions(const LuaExamineFunctionsRequest *request) {
   lua_pop(state, 1);
 }
 
+static void lua_examine_locks(const LuaExamineContext *context) {
+  LuaRuntime *runtime = context->runtime;
+  lua_State *state = runtime->state;
+  bool found = false;
+
+  lua_getfield(state, context->module, "locks");
+  if (lua_istable(state, -1)) {
+    for (size_t index = 0; index < lua_lock_definition_count(); index++) {
+      const LuaLockDefinition *definition = lua_lock_definition_at(index);
+
+      lua_getfield(state, -1, definition->key);
+      if (lua_isfunction(state, -1)) {
+        if (!found)
+          notify_printf(context->evaluation, context->viewer, "Lua locks:");
+        notify_printf(context->evaluation, context->viewer, "  %s",
+                      definition->key);
+        found = true;
+      }
+      lua_pop(state, 1);
+    }
+  }
+  lua_pop(state, 1);
+}
+
+bool lua_verify_locks(lua_State *state, int locks, const char *path,
+                      char *error, size_t error_size) {
+  lua_pushnil(state);
+  while (lua_next(state, locks) != 0) {
+    if (lua_type(state, -2) != LUA_TSTRING) {
+      lua_set_error(error, error_size, "locks in %s must use string keys",
+                    path);
+    } else if (!lua_lock_name_is_known(lua_tostring(state, -2))) {
+      lua_set_error(error, error_size, "unknown lock key '%s' in %s",
+                    lua_tostring(state, -2), path);
+    } else if (!lua_isfunction(state, -1)) {
+      lua_set_error(error, error_size, "lock '%s' in %s must be a function",
+                    lua_tostring(state, -2), path);
+    } else {
+      lua_pop(state, 1);
+      continue;
+    }
+    lua_pop(state, 2);
+    return false;
+  }
+  return true;
+}
+
 void lua_examine_object(const LuaExamineObjectRequest *request) {
   LuaRuntime *runtime = request->runtime;
   EvaluationContext *evaluation = request->evaluation;
@@ -391,12 +439,6 @@ void lua_examine_object(const LuaExamineObjectRequest *request) {
                                     .names = LUA_MESSAGE_NAMES,
                                     .first = LUA_MESSAGE_SUCCESS,
                                     .count = LUA_MESSAGE_COUNT});
-  lua_examine_named_functions(
-      &(LuaExamineFunctionsRequest){.context = &examine,
-                                    .table_name = "locks",
-                                    .label = "Lua locks",
-                                    .names = LUA_LOCK_NAMES,
-                                    .first = LUA_LOCK_DEFAULT,
-                                    .count = LUA_LOCK_COUNT});
+  lua_examine_locks(&examine);
   lua_settop(state, top);
 }

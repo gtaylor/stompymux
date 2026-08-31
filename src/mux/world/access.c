@@ -18,12 +18,10 @@ bool lock_evaluate(EvaluationContext *context,
 }
 
 bool lock_test(EvaluationContext *context, DbRef enactor, DbRef cause,
-               DbRef subject, DbRef object, LuaLockType type,
-               LuaLockOperation operation, bool silent,
+               DbRef subject, DbRef object, LuaLockType type, bool silent,
                LuaLockInvocation *invocation, LuaLockResult *result) {
   *invocation = (LuaLockInvocation){
       .type = type,
-      .operation = operation,
       .descriptor = context->command ? context->command->descriptor : nullptr,
       .object = object,
       .enactor = enactor,

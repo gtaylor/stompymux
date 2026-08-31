@@ -90,8 +90,7 @@ void do_get(CommandInvocation *invocation) {
     } else {
       LuaLockResult *result = checked_storage_allocate(sizeof(*result));
       if (lock_test(evaluation, player, invocation->cause, player, thing,
-                    LUA_LOCK_DEFAULT, LUA_LOCK_OPERATION_TAKE, quiet != 0,
-                    &lock, result)) {
+                    LUA_LOCK_TAKE, quiet != 0, &lock, result)) {
         if (thingloc !=
             game_object_location(evaluation->world->database, player)) {
           notify_printf(evaluation, thingloc, "%s was taken from you.",
@@ -236,8 +235,7 @@ void do_drop(CommandInvocation *invocation) {
     }
     LuaLockResult *result = checked_storage_allocate(sizeof(*result));
     if (!lock_test(evaluation, player, invocation->cause, player, thing,
-                   LUA_LOCK_DROP, LUA_LOCK_OPERATION_DROP, false, &lock,
-                   result)) {
+                   LUA_LOCK_DROP, false, &lock, result)) {
       notify_lock_failure(
           &(LockFailureNotification){.evaluation = evaluation,
                                      .invocation = &lock,

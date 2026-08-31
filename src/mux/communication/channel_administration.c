@@ -144,8 +144,7 @@ int comsys_test_access(const ChannelAccessRequest *request) {
   if ((flag_value & CHANNEL_JOIN) &&
       !((chan->chan_obj == NOTHING) || (chan->chan_obj == 0))) {
     if (lock_test(evaluation, player, player, player, chan->chan_obj,
-                  LUA_LOCK_DEFAULT, LUA_LOCK_OPERATION_CHANNEL_JOIN, true,
-                  &lock, result)) {
+                  LUA_LOCK_CHANNEL_JOIN, true, &lock, result)) {
       free_buf(result);
       return (1);
     }
@@ -153,8 +152,7 @@ int comsys_test_access(const ChannelAccessRequest *request) {
   if ((flag_value & CHANNEL_TRANSMIT) &&
       !((chan->chan_obj == NOTHING) || (chan->chan_obj == 0))) {
     if (lock_test(evaluation, player, player, player, chan->chan_obj,
-                  LUA_LOCK_USE, LUA_LOCK_OPERATION_CHANNEL_TRANSMIT, true,
-                  &lock, result)) {
+                  LUA_LOCK_CHANNEL_TRANSMIT, true, &lock, result)) {
       free_buf(result);
       return (1);
     }
@@ -162,8 +160,7 @@ int comsys_test_access(const ChannelAccessRequest *request) {
   if ((flag_value & CHANNEL_RECIEVE) &&
       !((chan->chan_obj == NOTHING) || (chan->chan_obj == 0))) {
     if (lock_test(evaluation, player, player, player, chan->chan_obj,
-                  LUA_LOCK_ENTER, LUA_LOCK_OPERATION_CHANNEL_RECEIVE, true,
-                  &lock, result)) {
+                  LUA_LOCK_CHANNEL_RECEIVE, true, &lock, result)) {
       free_buf(result);
       return (1);
     }

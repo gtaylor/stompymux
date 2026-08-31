@@ -42,8 +42,7 @@ static bool sp_ok(EvaluationContext *evaluation,
     result = checked_storage_allocate(sizeof(*result));
     if (!lock_test(evaluation, player, player, player,
                    game_object_location(evaluation->world->database, player),
-                   LUA_LOCK_SPEECH, LUA_LOCK_OPERATION_SPEAK, false, &lock,
-                   result)) {
+                   LUA_LOCK_SPEAK, false, &lock, result)) {
       notify_lock_failure(&(LockFailureNotification){
           .evaluation = evaluation,
           .invocation = &lock,

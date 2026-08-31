@@ -17,5 +17,5 @@ Attach an object to a channel, or use an empty value to detach it:
 ```
 
 The attached object's description is used by `/list` and `/status`. Its
-default lock grants join access, its use lock grants transmit access, and its
-enter lock grants receive access.
+`channel_join`, `channel_transmit`, and `channel_receive` locks grant the
+corresponding access.

@@ -299,8 +299,7 @@ static bool lua_install_sandbox(LuaRuntime *runtime) {
   runtime->mux_package.services = runtime->services;
   runtime->mux_package.is_checking = lua_runtime_is_checking;
   runtime->mux_package.flow_start = lua_runtime_flow_start;
-  runtime->mux_package.exit_enter_lock_passes =
-      lua_runtime_exit_enter_lock_passes;
+  runtime->mux_package.lock_passes = lua_runtime_lock_passes;
   lua_mux_package_install(runtime->state, &runtime->mux_package);
   runtime->btech_package.context = runtime;
   runtime->btech_package.services = runtime->services;

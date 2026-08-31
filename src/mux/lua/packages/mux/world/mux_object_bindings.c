@@ -22,30 +22,41 @@
 #include "mux/world/object_spatial.h"
 #include "mux/world/player.h"
 
-DbRef lua_mux_require_object(LuaMuxPackage *package, lua_State *state,
-                             int argument) {
+// Stack index and public argument number have distinct error-reporting roles.
+// NOLINTBEGIN(bugprone-easily-swappable-parameters)
+DbRef lua_mux_require_object_at(LuaMuxPackage *package, lua_State *state,
+                                int index, int argument, const char *label) {
   DbRef object;
-  LuaMuxObject *handle =
-      luaL_testudata(state, argument, LUA_MUX_OBJECT_METATABLE);
+  LuaMuxObject *handle = luaL_testudata(state, index, LUA_MUX_OBJECT_METATABLE);
 
   if (handle) {
     if (handle->package != package)
       lua_error_arg(state, argument, LUA_ERROR_CODE_OBJECT_INVALID,
-                    "object belongs to another Lua runtime");
+                    "%s belongs to another Lua runtime", label);
     if (!is_good_obj(package->services->database, handle->object) ||
         game_object_generation(package->services->database, handle->object) !=
             handle->generation)
       lua_error_arg(state, argument, LUA_ERROR_CODE_OBJECT_INVALID,
-                    "object no longer exists");
+                    "%s no longer exists", label);
     object = handle->object;
   } else {
-    object = (DbRef)luaL_checkinteger(state, argument);
+    if (!lua_isnumber(state, index))
+      lua_error_arg(state, argument, LUA_ERROR_CODE_OBJECT_INVALID,
+                    "%s must be a dbref or Object", label);
+    object = (DbRef)lua_tointeger(state, index);
   }
 
   if (!is_good_obj(package->services->database, object))
     lua_error_arg(state, argument, LUA_ERROR_CODE_OBJECT_INVALID,
-                  "invalid object");
+                  "%s is invalid", label);
   return object;
+}
+// NOLINTEND(bugprone-easily-swappable-parameters)
+
+DbRef lua_mux_require_object(LuaMuxPackage *package, lua_State *state,
+                             int argument) {
+  return lua_mux_require_object_at(package, state, argument, argument,
+                                   "object");
 }
 
 LuaMuxObject *lua_mux_push_object(lua_State *state, LuaMuxPackage *package,
@@ -306,43 +317,6 @@ static int lua_mux_exits_visible(lua_State *state) {
                              .exit = exit,
                              .viewer = viewer,
                              .options = key}));
-  return 1;
-}
-
-/**
- * Tests whether an enactor passes this exit's default traversal lock.
- *
- * @par Lua name `exit:enter_lock_passes`
- * @par Lua signature `exit:enter_lock_passes( enactor )`
- * @par Lua parameters - `enactor` (`number|Object`) The object attempting
- * traversal.
- * @par Lua returns - `passes` (`boolean`): Whether the lock passes.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` for invalid handles or a receiver that is
- * not an exit.
- * - `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` when the lock service is unavailable.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
- */
-static int lua_mux_exit_enter_lock_passes(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-  DbRef exit;
-  DbRef enactor;
-
-  lua_mux_require_runtime(package, state, "object:enter_lock_passes");
-  exit = lua_mux_require_object(package, state, 1);
-  enactor = lua_mux_require_object(package, state, 2);
-  if (!is_exit(package->services->database, exit))
-    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
-                         "object is not an exit");
-  if (!package->exit_enter_lock_passes)
-    return lua_error_raise(state, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
-                           "object:enter_lock_passes is unavailable");
-  lua_pushboolean(
-      state, package->exit_enter_lock_passes(package->context, exit, enactor));
   return 1;
 }
 
@@ -608,9 +582,6 @@ void lua_mux_install_object_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_exits_visible, 1);
   lua_setfield(state, -2, "exits_visible");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_exit_enter_lock_passes, 1);
-  lua_setfield(state, -2, "enter_lock_passes");
   lua_mux_install_object_relationship_bindings(state, package);
   lua_pop(state, 1);
 

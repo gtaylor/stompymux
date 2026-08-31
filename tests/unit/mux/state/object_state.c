@@ -165,6 +165,46 @@ int main(void) {
   if (!state_string_equals(&database, 0, "owned", "omega", "omega"))
     return 1;
 
+  if (!object_state_transaction_begin(&transaction, &database))
+    return 1;
+  ObjectStateValue outer = string_value("outer");
+  ObjectStateValue inner = string_value("inner");
+  if (!object_state_transaction_set(&transaction, 0, "nested", "outer", &outer,
+                                    error, sizeof(error)) ||
+      !object_state_transaction_begin(&transaction, &database) ||
+      !object_state_transaction_set(&transaction, 0, "nested", "outer", &inner,
+                                    error, sizeof(error)) ||
+      !object_state_transaction_set(&transaction, 1, "nested", "inner", &inner,
+                                    error, sizeof(error)))
+    return 1;
+  object_state_transaction_finish(&transaction, false);
+  const ObjectStateValue *staged_outer =
+      object_state_transaction_get(&transaction, 0, "nested", "outer");
+  if (!staged_outer || staged_outer->type != OBJECT_STATE_STRING ||
+      staged_outer->as.string.length != strlen("outer") ||
+      memcmp(staged_outer->as.string.data, "outer", strlen("outer")) ||
+      object_state_transaction_get(&transaction, 1, "nested", "inner"))
+    return 1;
+  object_state_transaction_finish(&transaction, true);
+  if (!state_string_equals(&database, 0, "nested", "outer", "outer") ||
+      object_state_get(&database, 1, "nested", "inner"))
+    return 1;
+
+  if (!object_state_transaction_begin(&transaction, &database) ||
+      !object_state_transaction_set(&transaction, 0, "nested", "discarded",
+                                    &outer, error, sizeof(error)) ||
+      !object_state_transaction_begin(&transaction, &database) ||
+      !object_state_transaction_set(&transaction, 1, "nested", "committed",
+                                    &inner, error, sizeof(error)))
+    return 1;
+  object_state_transaction_finish(&transaction, true);
+  if (!object_state_transaction_get(&transaction, 1, "nested", "committed"))
+    return 1;
+  object_state_transaction_finish(&transaction, false);
+  if (object_state_get(&database, 0, "nested", "discarded") ||
+      object_state_get(&database, 1, "nested", "committed"))
+    return 1;
+
   object_state_clear(&database, 1);
   configuration.lua.state_object_limit = 32;
   ObjectStateValue six_bytes = string_value("123456");

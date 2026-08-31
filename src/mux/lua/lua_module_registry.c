@@ -463,24 +463,6 @@ static int lua_verify_global_events(lua_State *state, int events,
   return 1;
 }
 
-static int lua_verify_locks(lua_State *state, int locks, const char *path,
-                            char *error, size_t error_size) {
-  lua_pushnil(state);
-  while (lua_next(state, locks) != 0) {
-    const char *name = lua_tostring(state, -2);
-
-    if (lua_type(state, -2) != LUA_TSTRING || !lua_lock_name_is_known(name) ||
-        !lua_isfunction(state, -1)) {
-      lua_set_error(error, error_size,
-                    "locks in %s must map known lock names to functions", path);
-      lua_pop(state, 2);
-      return 0;
-    }
-    lua_pop(state, 1);
-  }
-  return 1;
-}
-
 static int lua_verify_messages(lua_State *state, int messages, const char *path,
                                char *error, size_t error_size) {
   lua_pushnil(state);

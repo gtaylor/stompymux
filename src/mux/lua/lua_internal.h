@@ -61,8 +61,6 @@ LuaScheduleJob *lua_schedule_job_at(LuaRuntime *runtime, size_t index);
 
 extern const char LUA_MODULES_KEY[];
 extern const char *const LUA_EVENT_NAMES[LUA_EVENT_COUNT];
-extern const char *const LUA_LOCK_NAMES[LUA_LOCK_COUNT];
-extern const char *const LUA_LOCK_OPERATION_NAMES[LUA_LOCK_OPERATION_COUNT];
 extern const char *const LUA_MESSAGE_NAMES[LUA_MESSAGE_COUNT];
 extern const char *const
     LUA_MESSAGE_OPERATION_NAMES[LUA_MESSAGE_OPERATION_COUNT];
@@ -105,6 +103,8 @@ bool lua_check_one_module(LuaRuntime *runtime, LuaModuleRoot root,
 
 bool lua_event_name_is_known(const char *name);
 bool lua_lock_name_is_known(const char *name);
+bool lua_verify_locks(lua_State *state, int locks, const char *path,
+                      char *error, size_t error_size);
 bool lua_message_name_is_known(const char *name);
 void lua_push_context(GameDatabase *database, Descriptor *descriptor,
                       lua_State *state, DbRef object, DbRef player, DbRef cause,
@@ -117,5 +117,5 @@ void do_luaschedule(CommandInvocation *invocation);
 int lua_runtime_is_checking(void *context);
 int lua_runtime_flow_start(void *context, lua_State *state, int descriptor_id,
                            const char *module, const char *first_step);
-int lua_runtime_exit_enter_lock_passes(void *context, DbRef exit,
-                                       DbRef enactor);
+bool lua_runtime_lock_passes(void *context,
+                             const LuaLockInvocation *invocation);

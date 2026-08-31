@@ -1556,6 +1556,20 @@ target_include_directories(lua_command_access_test PRIVATE
   "${LUAJIT_SOURCE_DIR}/src")
 add_test(NAME lua_command_access COMMAND lua_command_access_test)
 
+add_executable(lua_lock_checks_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/content/lua_lock_checks.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/packages/mux/mux_options.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/packages/mux/world/mux_lock_bindings.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_lock_catalog.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_error.c)
+target_link_libraries(lua_lock_checks_test PRIVATE
+  btmux_options btmux_checked_storage luajit m)
+target_include_directories(lua_lock_checks_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  "${CMAKE_SOURCE_DIR}/src"
+  "${LUAJIT_SOURCE_DIR}/src")
+add_test(NAME lua_lock_checks COMMAND lua_lock_checks_test)
+
 add_executable(lua_log_test ${CMAKE_SOURCE_DIR}/tests/unit/mux/content/lua_log.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/packages/mux/mux_package.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_error.c

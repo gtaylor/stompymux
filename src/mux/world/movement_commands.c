@@ -125,9 +125,9 @@ void do_enter_internal(EvaluationContext *evaluation, DbRef player, DbRef thing,
   } else {
     LuaLockResult *result = checked_storage_allocate(sizeof(*result));
     if (lock_test(evaluation, player, player, player, thing, LUA_LOCK_ENTER,
-                  LUA_LOCK_OPERATION_ENTER, quiet != 0, &lock, result) &&
+                  quiet != 0, &lock, result) &&
         lock_test(evaluation, player, player, player, loc, LUA_LOCK_LEAVE,
-                  LUA_LOCK_OPERATION_ENTER, quiet != 0, &lock, result)) {
+                  quiet != 0, &lock, result)) {
       oattr = quiet ? HUSH_ENTER : 0;
       move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
                                                 .object = player,
@@ -200,12 +200,10 @@ void do_leave(CommandInvocation *invocation) {
     quiet = HUSH_LEAVE;
   LuaLockResult *result = checked_storage_allocate(sizeof(*result));
   if (lock_test(evaluation, player, invocation->cause, player, loc,
-                LUA_LOCK_LEAVE, LUA_LOCK_OPERATION_LEAVE, quiet != 0, &lock,
-                result) &&
+                LUA_LOCK_LEAVE, quiet != 0, &lock, result) &&
       lock_test(evaluation, player, invocation->cause, player,
                 game_object_location(evaluation->world->database, loc),
-                LUA_LOCK_ENTER, LUA_LOCK_OPERATION_LEAVE, quiet != 0, &lock,
-                result)) {
+                LUA_LOCK_ENTER, quiet != 0, &lock, result)) {
     move_via_generic(&(ObjectMovementRequest){
         .evaluation = evaluation,
         .object = player,

@@ -102,8 +102,7 @@ static void promote_match(MatchContext *match_context,
     if (is_good_obj(match_context->evaluation->world->database, what) &&
         lock_test(match_context->evaluation, match_context->player,
                   match_context->player, match_context->player, what,
-                  LUA_LOCK_DEFAULT, LUA_LOCK_OPERATION_MATCH, true, &lock,
-                  result))
+                  LUA_LOCK_MATCH, true, &lock, result))
       confidence |= CON_LOCK;
     match_state_restore(match_context, &save_md);
     free_buf(result);

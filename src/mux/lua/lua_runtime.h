@@ -110,48 +110,29 @@ typedef struct LuaMechStatusResult {
 } LuaMechStatusResult;
 
 typedef enum LuaLockType : int {
-  LUA_LOCK_DEFAULT,
+  LUA_LOCK_MATCH,
+  LUA_LOCK_TRAVERSE,
+  LUA_LOCK_TAKE,
+  LUA_LOCK_USE,
   LUA_LOCK_DROP,
-  LUA_LOCK_ENTER,
   LUA_LOCK_GIVE,
-  LUA_LOCK_LEAVE,
-  LUA_LOCK_LINK,
   LUA_LOCK_RECEIVE,
-  LUA_LOCK_SPEECH,
+  LUA_LOCK_ENTER,
+  LUA_LOCK_LEAVE,
   LUA_LOCK_TELEPORT,
   LUA_LOCK_TELEPORT_OUT,
-  LUA_LOCK_USE,
+  LUA_LOCK_LINK,
+  LUA_LOCK_SET_HOME,
+  LUA_LOCK_SPEAK,
+  LUA_LOCK_CHANNEL_JOIN,
+  LUA_LOCK_CHANNEL_TRANSMIT,
+  LUA_LOCK_CHANNEL_RECEIVE,
+  LUA_LOCK_IDENTIFY_BUILDING,
   LUA_LOCK_COUNT,
 } LuaLockType;
 
-typedef enum LuaLockOperation : int {
-  LUA_LOCK_OPERATION_MATCH,
-  LUA_LOCK_OPERATION_TRAVERSE,
-  LUA_LOCK_OPERATION_TAKE,
-  LUA_LOCK_OPERATION_LOOK,
-  LUA_LOCK_OPERATION_COMMAND_MATCH,
-  LUA_LOCK_OPERATION_USE,
-  LUA_LOCK_OPERATION_DROP,
-  LUA_LOCK_OPERATION_GIVE,
-  LUA_LOCK_OPERATION_RECEIVE,
-  LUA_LOCK_OPERATION_ENTER,
-  LUA_LOCK_OPERATION_LEAVE,
-  LUA_LOCK_OPERATION_TELEPORT,
-  LUA_LOCK_OPERATION_TELEPORT_OUT,
-  LUA_LOCK_OPERATION_LINK,
-  LUA_LOCK_OPERATION_SET_HOME,
-  LUA_LOCK_OPERATION_SPEAK,
-  LUA_LOCK_OPERATION_CHANNEL_JOIN,
-  LUA_LOCK_OPERATION_CHANNEL_TRANSMIT,
-  LUA_LOCK_OPERATION_CHANNEL_RECEIVE,
-  LUA_LOCK_OPERATION_BTECH_ENTER,
-  LUA_LOCK_OPERATION_BTECH_CONTACT,
-  LUA_LOCK_OPERATION_COUNT,
-} LuaLockOperation;
-
 typedef struct LuaLockInvocation {
   LuaLockType type;
-  LuaLockOperation operation;
   Descriptor *descriptor;
   DbRef object;
   DbRef enactor;
@@ -187,7 +168,6 @@ typedef enum LuaMessageType : int {
 
 typedef enum LuaMessageOperation : int {
   LUA_MESSAGE_OPERATION_NONE,
-  LUA_MESSAGE_OPERATION_LOOK,
   LUA_MESSAGE_OPERATION_TAKE,
   LUA_MESSAGE_OPERATION_TRAVERSE,
   LUA_MESSAGE_OPERATION_RECEIVE,
@@ -371,9 +351,6 @@ void lua_global_event_dispatch(LuaRuntime *runtime,
 /** Executes lua lock name. @param[in] lock Lock. */
 
 const char *lua_lock_name(LuaLockType lock);
-/** Executes lua lock operation name. @param[in] operation Operation. */
-
-const char *lua_lock_operation_name(LuaLockOperation operation);
 /** Executes lua lock defined. @param[in,out] runtime Runtime services.
  * @param[in] object Game object. @param[in] lock Lock. */
 

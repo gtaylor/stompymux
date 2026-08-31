@@ -402,7 +402,7 @@ void do_use(CommandInvocation *invocation) {
 
   LuaLockResult *result = checked_storage_allocate(sizeof(*result));
   if (!lock_test(evaluation, PLAYER, invocation->cause, PLAYER, thing,
-                 LUA_LOCK_USE, LUA_LOCK_OPERATION_USE, false, &lock, result)) {
+                 LUA_LOCK_USE, false, &lock, result)) {
     notify_lock_failure(&(LockFailureNotification){
         .evaluation = evaluation,
         .invocation = &lock,

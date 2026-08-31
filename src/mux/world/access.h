@@ -17,13 +17,11 @@ bool lock_evaluate(EvaluationContext *context,
 /** Executes lock test. @param[in,out] context Operation context. @param[in]
  * enactor Object that initiated the operation. @param[in] cause Object that
  * caused the operation. @param[in] subject Subject. @param[in] object Game
- * object. @param[in] type Type. @param[in] operation Operation. @param[in]
- * silent Silent. @param[in,out] invocation Command invocation. @param[out]
- * result Result. */
+ * object. @param[in] type Type. @param[in] silent Silent. @param[in,out]
+ * invocation Command invocation. @param[out] result Result. */
 
 bool lock_test(EvaluationContext *context, DbRef enactor, DbRef cause,
-               DbRef subject, DbRef object, LuaLockType type,
-               LuaLockOperation operation, bool silent,
+               DbRef subject, DbRef object, LuaLockType type, bool silent,
                LuaLockInvocation *invocation, LuaLockResult *result);
 typedef struct ObjectVisibilityRequest {
   EvaluationContext *evaluation;

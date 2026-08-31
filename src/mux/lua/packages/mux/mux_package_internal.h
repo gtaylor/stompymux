@@ -54,8 +54,14 @@ LuaMuxPackage *lua_mux_package_get(lua_State *state);
 bool lua_mux_package_is_checking(LuaMuxPackage *package);
 void lua_mux_require_runtime(LuaMuxPackage *package, lua_State *state,
                              const char *function);
+void lua_mux_check_options(lua_State *state, int table,
+                           const char *const *allowed, size_t allowed_count);
+DbRef lua_mux_option_object(LuaMuxPackage *package, lua_State *state, int table,
+                            const char *field, bool required, bool *present);
 DbRef lua_mux_require_object(LuaMuxPackage *package, lua_State *state,
                              int argument);
+DbRef lua_mux_require_object_at(LuaMuxPackage *package, lua_State *state,
+                                int index, int argument, const char *label);
 LuaMuxObject *lua_mux_push_object(lua_State *state, LuaMuxPackage *package,
                                   DbRef object);
 LuaMuxObject *lua_mux_check_object_handle(lua_State *state, int argument);
@@ -70,6 +76,10 @@ void lua_mux_install_attribute_bindings(lua_State *state,
                                         LuaMuxPackage *package);
 void lua_mux_install_flag_power_bindings(lua_State *state,
                                          LuaMuxPackage *package);
+/** Installs typed lock constants and evaluation bindings.
+ * @param[in,out] state Lua state whose top value is the world table.
+ * @param[in,out] package Owning package. */
+void lua_mux_install_lock_bindings(lua_State *state, LuaMuxPackage *package);
 void lua_mux_install_text_bindings(lua_State *state, LuaMuxPackage *package);
 void lua_mux_install_world_bindings(lua_State *state, LuaMuxPackage *package);
 void lua_mux_install_session_bindings(lua_State *state, LuaMuxPackage *package);

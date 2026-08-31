@@ -497,8 +497,8 @@ void mech_enterbay(DbRef player, Mech *mech, char *buffer) {
   }
   LuaLockResult *lock_result = checked_storage_allocate(sizeof(*lock_result));
   if (!lock_test(btech_context_evaluation(context), player, player,
-                 mech_dbref(mech), ref, LUA_LOCK_ENTER,
-                 LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, lock_result)) {
+                 mech_dbref(mech), ref, LUA_LOCK_ENTER, false, &lock,
+                 lock_result)) {
     const char *msg = lock_result->has_enactor_message
                           ? lock_result->enactor_message
                           : "You are unable to enter the bay!";

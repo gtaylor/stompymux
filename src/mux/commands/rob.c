@@ -73,8 +73,8 @@ static void give_thing(const GiveThingRequest *request) {
     return;
   }
   LuaLockResult *result = checked_storage_allocate(sizeof(*result));
-  if (!lock_test(evaluation, giver, giver, giver, thing, LUA_LOCK_GIVE,
-                 LUA_LOCK_OPERATION_GIVE, false, &lock, result)) {
+  if (!lock_test(evaluation, giver, giver, giver, thing, LUA_LOCK_GIVE, false,
+                 &lock, result)) {
     sp = str = alloc_lbuf("do_give.gfail");
     safe_str("You can't give ", str, &sp);
     safe_str(game_object_name(evaluation->world->database, thing), str, &sp);
@@ -92,7 +92,7 @@ static void give_thing(const GiveThingRequest *request) {
     return;
   }
   if (!lock_test(evaluation, giver, giver, thing, recipient, LUA_LOCK_RECEIVE,
-                 LUA_LOCK_OPERATION_RECEIVE, false, &lock, result)) {
+                 false, &lock, result)) {
     sp = str = alloc_lbuf("do_give.rfail");
     safe_str(game_object_name(evaluation->world->database, recipient), str,
              &sp);

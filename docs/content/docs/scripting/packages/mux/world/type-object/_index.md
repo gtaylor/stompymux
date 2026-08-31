@@ -34,7 +34,6 @@ The following methods return nested handlers for managing more complex aspects o
 | [`Object:dbref`](dbref/) | Returns the object's native database reference. |
 | [`Object:exits`](exits/) | Lists directly attached exits. |
 | [`Object:exits_visible`](exits-visible/) | Applies native exit visibility rules. |
-| [`Object:enter_lock_passes`](enter-lock-passes/) | Tests an exit's traversal lock. |
 | [`Object:name`](name/) | Returns the object's current name. |
 | [`Object:set_name`](set-name/) | Changes the object's name. |
 | [`Object:lua_parent`](lua-parent/) | Returns the object's direct Lua parent path. |

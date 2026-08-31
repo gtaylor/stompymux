@@ -107,9 +107,8 @@ Rooms always use `internal_appearance`, including a Wizard looking at a room
 remotely. Other objects use the internal function when the viewer is physically
 inside the object and the external function otherwise. A successful override
 suppresses the native name, description, contents, exits, and transparent-exit
-continuation. The normal room look lock and `on_describe` event still run.
-There is no native opacity flag; use `external_appearance` to decide what an
-outside viewer sees.
+continuation. The `on_describe` event still runs. There is no native opacity
+flag; use `external_appearance` to decide what an outside viewer sees.
 
 The bundled `default_room.lua` parent renders visible players other than the
 viewer alongside visible exits, then renders non-player contents below those
@@ -134,13 +133,15 @@ fall back to the native template.
 ## Object locks
 
 Define locks as functions in the module's `locks` table. The supported keys
-are `default`, `drop`, `enter`, `give`, `leave`, `link`, `receive`, `speech`,
-`teleport`, `teleport_out`, and `use`.
+are `match`, `traverse`, `take`, `use`, `drop`, `give`, `receive`, `enter`,
+`leave`, `teleport`, `teleport_out`, `link`, `set_home`, `speak`,
+`channel_join`, `channel_transmit`, `channel_receive`, and
+`identify_building`.
 
-The destination object's `enter` lock is the sole entry authorization check.
-If no enter lock is defined, entry is allowed. Giving an object to another
-object likewise uses the destination's `receive` lock without a native flag
-gate.
+Movement out of a source may require its `leave` lock, and movement into a
+destination may require its `enter` lock. An absent lock passes. Giving an
+object to another object likewise uses the destination's `receive` lock
+without a native flag gate.
 
 ```lua
 locks = {
@@ -164,13 +165,14 @@ that message. On failure, messages are delivered first and the corresponding
 `on_*_fail` event then runs on the object whose lock failed.
 
 The context includes the normal `object`, `enactor`, `cause`, and `descriptor`
-fields, plus `subject` (the object being tested), `lock`, `operation`, and
-`silent`. `operation` distinguishes uses of the same semantic lock. Its values
-are `match`, `traverse`, `take`, `look`, `command_match`, `use`,
-`drop`, `give`, `receive`, `enter`, `leave`, `teleport`, `teleport_out`,
-`link`, `set_home`, `speak`, `channel_join`,
-`channel_transmit`, `channel_receive`, `btech_enter`, and `btech_contact`.
-Lock handlers have access to the full [`mux`](packages/mux/) API.
+fields, plus `subject` (the object being tested), `lock`, and `silent`. Lock
+handlers have access to the full [`mux`](packages/mux/) API. One function may
+be assigned to several keys and can use `ctx.lock` to distinguish them.
+
+Lock keys are exact and no compatibility aliases are provided. BattleTech
+building identification uses `identify_building`, while BattleTech entry uses
+`enter`. Native room looks do not perform a Lua authorization lock or dispatch
+look-time lock success and failure callbacks.
 
 An absent lock handler passes. An attached module that cannot load, a runtime
 error, or a malformed lock result fails closed and is logged. Native
@@ -207,9 +209,8 @@ the action continues.
 
 The context includes the normal object fields, plus `message`, `operation`,
 `silent`, `source`, and `destination`. `source` or `destination` is `nil` when
-it does not apply. Operation values are `none`, `look`, `take`, `traverse`,
-`receive`, `drop`, `give`, `describe`, `inside_describe`, `use`, `move`, and
-`teleport`.
+it does not apply. Operation values are `none`, `take`, `traverse`, `receive`,
+`drop`, `give`, `describe`, `inside_describe`, `use`, `move`, and `teleport`.
 
 The cross-location providers preserve the old movement notification scopes:
 `enter_source` belongs to the destination and speaks in the source before a
@@ -226,8 +227,8 @@ messages come from the structured lock result or the native defaults.
 
 | Lua event | Trigger | Message before event |
 | --- | --- | --- |
-| `on_success` | A successful take, exit traversal, or lock-checked look. | `messages.success` |
-| `on_fail` | A failed take, exit traversal, or lock-checked look. | Lock result |
+| `on_success` | A successful take or exit traversal. | `messages.success` |
+| `on_fail` | A failed take or exit traversal. | Lock result |
 | `on_drop` | An object is dropped. | `messages.drop` |
 | `on_give_fail` | Giving an object fails its give lock. | Lock result |
 | `on_give_receive_fail` | Giving to a recipient fails its receive lock. | Lock result |

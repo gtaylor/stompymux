@@ -625,8 +625,7 @@ void mech_contacts(DbRef player, Mech *mech, char *buffer) {
         continue;
       j = !lock_test(btech_context_evaluation(mech_context(mech)), player,
                      player, mech_dbref(mech), battle_map_dbref(tmp_map),
-                     LUA_LOCK_ENTER, LUA_LOCK_OPERATION_BTECH_CONTACT, true,
-                     &lock, lock_result);
+                     LUA_LOCK_IDENTIFY_BUILDING, true, &lock, lock_result);
       if (j && battle_map_building_is_hidden(tmp_map))
         continue;
       bearing = map_bearing(

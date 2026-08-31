@@ -441,8 +441,7 @@ static bool teleport_is_allowed(const ObjectMovementRequest *request) {
     curr = src;
     for (count = configuration->ntfy_nest_lim; count > 0; count--) {
       if (!lock_test(evaluation, thing, cause, thing, curr,
-                     LUA_LOCK_TELEPORT_OUT, LUA_LOCK_OPERATION_TELEPORT_OUT,
-                     false, &lock, result)) {
+                     LUA_LOCK_TELEPORT_OUT, false, &lock, result)) {
         if ((thing == cause) || (cause == NOTHING)) {
           failmsg = "You can't teleport out!";
         } else {
@@ -566,20 +565,19 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
   silent = (((is_wizard(evaluation->world->database, player) &&
               is_dark(evaluation->world->database, player)) ||
              (hush & HUSH_EXIT)) != 0);
-  lock = (LuaLockInvocation){
-      .type = LUA_LOCK_DEFAULT,
-      .operation = LUA_LOCK_OPERATION_TRAVERSE,
-      .descriptor = evaluation->command->descriptor,
-      .object = exit,
-      .enactor = player,
-      .cause = player,
-      .subject = player,
-      .silent = silent,
-  };
+  lock = (LuaLockInvocation){.type = LUA_LOCK_TRAVERSE,
+                             .descriptor = evaluation->command
+                                               ? evaluation->command->descriptor
+                                               : nullptr,
+                             .object = exit,
+                             .enactor = player,
+                             .cause = player,
+                             .subject = player,
+                             .silent = silent};
   LuaLockResult *result = checked_storage_allocate(sizeof(*result));
   if (is_good_obj(evaluation->world->database, loc) &&
-      lock_test(evaluation, player, player, player, exit, LUA_LOCK_DEFAULT,
-                LUA_LOCK_OPERATION_TRAVERSE, silent, &lock, result)) {
+      lock_test(evaluation, player, player, player, exit, LUA_LOCK_TRAVERSE,
+                silent, &lock, result)) {
     switch (typeof_obj(evaluation->world->database, loc)) {
     case OBJECT_TYPE_ROOM:
       move_via_exit(

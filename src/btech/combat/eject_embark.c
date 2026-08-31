@@ -133,8 +133,8 @@ void mech_embark(DbRef player, Mech *mech, char *buffer) {
 
     lock_result = checked_storage_allocate(sizeof(*lock_result));
     if (!lock_test(evaluation, player, player, mech_dbref(mech),
-                   mech_dbref(target), LUA_LOCK_ENTER,
-                   LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, lock_result)) {
+                   mech_dbref(target), LUA_LOCK_ENTER, false, &lock,
+                   lock_result)) {
       /* Trigger FAIL & AFAIL */
       memset(fail_mesg, 0, sizeof(fail_mesg));
       (void)snprintf(fail_mesg, SBUF_SIZE, "That unit's bay doors are locked.");
@@ -292,8 +292,8 @@ void mech_embark(DbRef player, Mech *mech, char *buffer) {
 
   lock_result = checked_storage_allocate(sizeof(*lock_result));
   if (!lock_test(evaluation, player, player, mech_dbref(mech),
-                 mech_dbref(target), LUA_LOCK_ENTER,
-                 LUA_LOCK_OPERATION_BTECH_ENTER, false, &lock, lock_result)) {
+                 mech_dbref(target), LUA_LOCK_ENTER, false, &lock,
+                 lock_result)) {
     /* Trigger FAIL & AFAIL */
     memset(fail_mesg, 0, sizeof(fail_mesg));
     (void)snprintf(fail_mesg, SBUF_SIZE, "That unit's bay doors are locked.");
