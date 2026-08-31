@@ -28,6 +28,7 @@ sidebar_root_for: self
 | [`destroy`](destroy/) | Schedules an object for destruction. |
 | [`flags`](flags/) | Typed constants for native object flags. |
 | [`link_exit`](link-exit/) | Links or unlinks an exit's destination. |
+| [`list_objects`](list-objects/) | Lists database objects with optional type and zone filters. |
 | [`lock_passes`](lock-passes/) | Tests a native object lock without emitting messages. |
 | [`locks`](locks/) | Typed constants for native object locks. |
 | [`object`](object/) | Creates a validated handle for a database object. |

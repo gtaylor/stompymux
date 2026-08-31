@@ -737,18 +737,21 @@ function mux_config.get(name) end
 ---Fields accepted when creating a detached room.
 ---@class (exact) CreateRoomOptions
 ---@field name string Required UTF-8 name, optionally containing valid styled-text markup.
+---@field zone? DbRef|Object Live thing or room to assign; omission preserves the native creator's inherited zone.
 
 ---Fields accepted when creating and placing a thing.
 ---@class (exact) CreateThingOptions
 ---@field name string Required UTF-8 name, optionally containing valid styled-text markup.
 ---@field location DbRef|Object Required object that can contain the new thing.
 ---@field home? DbRef|Object Home object; defaults to `location` when omitted.
+---@field zone? DbRef|Object Live thing or room to assign; omission preserves the native creator's inherited zone.
 
 ---Fields accepted when creating and attaching an exit.
 ---@class (exact) CreateExitOptions
 ---@field name string Required UTF-8 name, optionally containing valid styled-text markup.
 ---@field location DbRef|Object Required source object capable of holding exits.
 ---@field destination? DbRef|Object Optional destination capable of containing objects; omission leaves the exit unlinked.
+---@field zone? DbRef|Object Live thing or room to assign; omission preserves the native creator's inherited zone.
 
 ---Fields accepted when teleporting a thing or player.
 ---@class (exact) TeleportOptions
@@ -772,6 +775,11 @@ function mux_config.get(name) end
 ---@field types? ObjectType[] Native object kinds to include; an empty array matches nothing.
 ---@field visible_to? DbRef|Object Viewer whose native visibility rules are applied.
 
+---Filters for [`mux.world.list_objects`](lua://mux.world.list_objects).
+---@class (exact) ListObjectsOptions
+---@field types? ObjectType[] Native object kinds to include; an empty array matches nothing.
+---@field in_zone? DbRef|Object Include only objects directly assigned to this zone.
+
 ---World database object access.
 ---@class MuxWorldPackage
 ---@field access AccessNamespace Immutable namespace of command-access constants.
@@ -790,13 +798,25 @@ local mux_world = {}
 ---@see mux.error.codes.object.invalid
 function mux_world.object(dbref) end
 
+---Lists database objects matching optional type and direct-zone filters.
+---@param options? ListObjectsOptions Optional filters; unknown fields are rejected.
+---@return Object[] objects Matching objects in ascending dbref order.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+function mux_world.list_objects(options) end
+
 ---Creates a detached room with the configured room flags and default Lua parent.
 ---@param options CreateRoomOptions Creation fields; unknown fields are rejected.
 ---@return Object room Newly created room.
 ---
----Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
 ---@see mux.error.codes.unavailable.checking
 ---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.object.invalid
 ---@see mux.error.codes.object.unavailable
 function mux_world.create_room(options) end
 
@@ -943,6 +963,13 @@ function mux_text.truncate(value, width) end
 ---@field text MuxTextPackage Styled-text utilities.
 ---@field world MuxWorldPackage World database object access.
 mux = {}
+
+---Checks the database for inconsistencies and repairs damage found by the
+---default native `@dbck` pass. Findings are written to the server log.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking).
+---@see mux.error.codes.unavailable.checking
+function mux.check_db() end
 
 ---Appends a newline-terminated message to a permitted file under `game/logs`.
 ---@param filename string

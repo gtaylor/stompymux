@@ -71,17 +71,6 @@ void do_chzone(CommandInvocation *invocation) {
     return;
   }
   /*
-   * only rooms may be zoned to other rooms
-   */
-  if ((zone != NOTHING) &&
-      (typeof_obj(evaluation->world->database, zone) == OBJECT_TYPE_ROOM) &&
-      typeof_obj(evaluation->world->database, thing) != OBJECT_TYPE_ROOM) {
-    notify_checked(evaluation, player, player,
-                   "Only rooms may be zoned to rooms.",
-                   MSG_ME_ALL | MSG_F_DOWN);
-    return;
-  }
-  /*
    * everything is okay, do the change
    */
   game_object_set_zone(invocation->context->world->database, thing, zone);

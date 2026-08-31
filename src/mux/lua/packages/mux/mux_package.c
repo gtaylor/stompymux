@@ -8,9 +8,11 @@
 #include "mux/lua/lua_error_codes.h"
 #include "mux/lua/packages/mux/mux_package.h"
 #include "mux/lua/packages/mux/mux_package_internal.h"
+#include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/object_state.h"
 #include "mux/server/log.h"
+#include "mux/world/database_check.h"
 
 LuaMuxPackage *lua_mux_package_get(lua_State *state) {
   return lua_touserdata(state, lua_upvalueindex(1));
@@ -46,6 +48,34 @@ void lua_mux_require_runtime(LuaMuxPackage *package, lua_State *state,
   if (lua_mux_package_is_checking(package))
     lua_error_raise(state, LUA_ERROR_CODE_CHECKING_UNAVAILABLE,
                     "mux.%s is unavailable during @lua/check", function);
+}
+
+/**
+ * Checks the game database for inconsistencies and repairs any damage found.
+ *
+ * @par Lua name `mux.check_db`
+ * @par Lua signature `mux.check_db( )`
+ * @par Lua parameters - None.
+ * @par Lua returns - None.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @par Lua notes Runs the same default consistency check as `@dbck`. Damage is
+ * written to the server log, but no completion message is sent to a player.
+ * @param[in,out] state The Lua state whose arguments are read and results are
+ * pushed.
+ * @return The number of Lua values pushed onto the stack.
+ */
+static int lua_mux_check_db(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
+
+  lua_mux_require_runtime(package, state, "check_db");
+  database_check(&(DatabaseCheckRequest){
+      .evaluation = &package->services->background_command->evaluation,
+      .player = NOTHING,
+      .options = 0,
+  });
+  return 0;
 }
 
 /**
@@ -95,6 +125,9 @@ static int lua_mux_log(lua_State *state) {
 void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   object_state_transaction_initialize(&package->state_transaction);
   lua_newtable(state);
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_check_db, 1);
+  lua_setfield(state, -2, "check_db");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_log, 1);
   lua_setfield(state, -2, "log");

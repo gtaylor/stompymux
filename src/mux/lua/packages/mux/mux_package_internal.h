@@ -50,6 +50,15 @@ struct LuaMuxNamedConstant {
   const char *name;
 };
 
+typedef struct LuaMuxObjectTypeFilter LuaMuxObjectTypeFilter;
+struct LuaMuxObjectTypeFilter {
+  bool enabled;
+  bool rooms;
+  bool things;
+  bool exits;
+  bool players;
+};
+
 LuaMuxPackage *lua_mux_package_get(lua_State *state);
 bool lua_mux_package_is_checking(LuaMuxPackage *package);
 void lua_mux_require_runtime(LuaMuxPackage *package, lua_State *state,
@@ -64,6 +73,11 @@ DbRef lua_mux_require_object_at(LuaMuxPackage *package, lua_State *state,
                                 int index, int argument, const char *label);
 LuaMuxObject *lua_mux_push_object(lua_State *state, LuaMuxPackage *package,
                                   DbRef object);
+void lua_mux_object_type_filter_parse(LuaMuxPackage *package, lua_State *state,
+                                      int options,
+                                      LuaMuxObjectTypeFilter *filter);
+bool lua_mux_object_type_filter_matches(const LuaMuxObjectTypeFilter *filter,
+                                        int type);
 LuaMuxObject *lua_mux_check_object_handle(lua_State *state, int argument);
 LuaMuxState *lua_mux_check_state(lua_State *state, int argument);
 LuaMuxAttribute *lua_mux_check_attribute(lua_State *state, int argument);

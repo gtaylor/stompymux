@@ -38,15 +38,6 @@ struct LuaMuxObjectTypeNamespace {
   LuaMuxPackage *package;
 };
 
-typedef struct LuaMuxObjectTypeFilter LuaMuxObjectTypeFilter;
-struct LuaMuxObjectTypeFilter {
-  bool enabled;
-  bool rooms;
-  bool things;
-  bool exits;
-  bool players;
-};
-
 static const char *lua_mux_object_type_name(int type) {
   switch (type) {
   case OBJECT_TYPE_ROOM:
@@ -121,9 +112,8 @@ static int lua_mux_object_type_namespace_index(lua_State *state) {
   return 1;
 }
 
-static bool
-lua_mux_object_type_filter_matches(const LuaMuxObjectTypeFilter *filter,
-                                   int type) {
+bool lua_mux_object_type_filter_matches(const LuaMuxObjectTypeFilter *filter,
+                                        int type) {
   if (!filter->enabled)
     return true;
   switch (type) {
@@ -170,6 +160,53 @@ static bool lua_mux_object_type_array_key(lua_State *state, size_t count) {
   // The ordered comparisons test integrality without float equality.
   return (key >= 1 && (size_t)key <= count && number >= (lua_Number)key &&
           number <= (lua_Number)key) != 0;
+}
+
+void lua_mux_object_type_filter_parse(LuaMuxPackage *package, lua_State *state,
+                                      int options,
+                                      LuaMuxObjectTypeFilter *filter) {
+  if (options < 0 && options > LUA_REGISTRYINDEX)
+    options = lua_gettop(state) + options + 1;
+  lua_getfield(state, options, "types");
+  if (lua_isnil(state, -1)) {
+    lua_pop(state, 1);
+    return;
+  }
+
+  if (!lua_istable(state, -1)) {
+    (void)lua_error_arg(state, options, LUA_ERROR_CODE_ARG_INVALID,
+                        "options.types must be an array");
+    return;
+  }
+  filter->enabled = true;
+  size_t count = lua_objlen(state, -1);
+  size_t entries = 0;
+  lua_pushnil(state);
+  while (lua_next(state, -2) != 0) {
+    if (!lua_mux_object_type_array_key(state, count)) {
+      (void)lua_error_arg(state, options, LUA_ERROR_CODE_ARG_INVALID,
+                          "options.types must be a dense array");
+      return;
+    }
+    LuaMuxObjectType *object_type =
+        luaL_testudata(state, -1, LUA_MUX_OBJECT_TYPE_METATABLE);
+    if (!object_type || object_type->package != package) {
+      (void)lua_error_arg(
+          state, options, LUA_ERROR_CODE_ARG_INVALID,
+          "options.types entries must be mux.world.types constants "
+          "from this runtime");
+      return;
+    }
+    lua_mux_object_type_filter_add(filter, object_type->type);
+    entries++;
+    lua_pop(state, 1);
+  }
+  if (entries != count) {
+    (void)lua_error_arg(state, options, LUA_ERROR_CODE_ARG_INVALID,
+                        "options.types must be a dense array");
+    return;
+  }
+  lua_pop(state, 1);
 }
 
 // Stack index and public argument number have distinct error-reporting roles.
@@ -331,38 +368,7 @@ static int lua_mux_contents(lua_State *state) {
 
   if (!lua_isnoneornil(state, 2)) {
     lua_mux_check_options(state, 2, FIELDS, sizeof(FIELDS) / sizeof(*FIELDS));
-    lua_getfield(state, 2, "types");
-    if (!lua_isnil(state, -1)) {
-      size_t count;
-      size_t entries = 0;
-
-      if (!lua_istable(state, -1))
-        return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
-                             "options.types must be an array");
-      filter.enabled = true;
-      count = lua_objlen(state, -1);
-      lua_pushnil(state);
-      while (lua_next(state, -2) != 0) {
-        LuaMuxObjectType *object_type;
-
-        if (!lua_mux_object_type_array_key(state, count))
-          return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
-                               "options.types must be a dense array");
-        object_type = luaL_testudata(state, -1, LUA_MUX_OBJECT_TYPE_METATABLE);
-        if (!object_type || object_type->package != package)
-          return lua_error_arg(
-              state, 2, LUA_ERROR_CODE_ARG_INVALID,
-              "options.types entries must be mux.world.types constants "
-              "from this runtime");
-        lua_mux_object_type_filter_add(&filter, object_type->type);
-        entries++;
-        lua_pop(state, 1);
-      }
-      if (entries != count)
-        return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
-                             "options.types must be a dense array");
-    }
-    lua_pop(state, 1);
+    lua_mux_object_type_filter_parse(package, state, 2, &filter);
     viewer = lua_mux_option_object(package, state, 2, "visible_to", false,
                                    &filter_visibility);
   }

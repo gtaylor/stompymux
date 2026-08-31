@@ -28,6 +28,7 @@ not yet belong to a larger subpackage.
 
 | Function | Description |
 | --- | --- |
+| [`mux.check_db`](check-db/) | Checks and repairs the game database without notifying a player. |
 | [`mux.log`](log/) | Appends a message to a named file under `game/logs/`. |
 
 ## Availability and limits

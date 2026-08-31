@@ -93,10 +93,6 @@ static int lua_mux_object_set_zone(lua_State *state) {
   if (!is_thing(database, zone) && !is_room(database, zone))
     return lua_error_arg(state, 2, LUA_ERROR_CODE_OBJECT_INVALID,
                          "zone must be a thing or room");
-  if (is_room(database, zone) && !is_room(database, object))
-    return lua_error_arg(state, 2, LUA_ERROR_CODE_OBJECT_INVALID,
-                         "only rooms may use rooms as zones");
-
   game_object_set_zone(database, object, zone);
   return 0;
 }

@@ -84,6 +84,19 @@ static void lua_mux_world_require_container(LuaMuxPackage *package,
                   "%s is being destroyed", label);
 }
 
+static void lua_mux_world_require_zone(LuaMuxPackage *package, lua_State *state,
+                                       int argument, const char *label,
+                                       DbRef zone) {
+  GameDatabase *database = package->services->database;
+
+  if (is_going(database, zone))
+    lua_error_arg(state, argument, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
+                  "%s is being destroyed", label);
+  if (!is_thing(database, zone) && !is_room(database, zone))
+    lua_error_arg(state, argument, LUA_ERROR_CODE_OBJECT_INVALID,
+                  "%s must be a thing or room", label);
+}
+
 typedef struct LuaMuxWorldContainmentCheck {
   GameDatabase *database;
   DbRef object;
@@ -106,15 +119,79 @@ lua_mux_world_destination_is_within(const LuaMuxWorldContainmentCheck *check) {
 }
 
 /**
+ * Lists database objects, optionally filtered by type and assigned zone.
+ *
+ * @par Lua name `mux.world.list_objects`
+ * @par Lua signature `mux.world.list_objects( options? )`
+ * @par Lua parameters - `options` (`ListObjectsOptions|nil`) Optional filters.
+ * `types` is an array of typed constants from `mux.world.types`, and `in_zone`
+ * is a dbref or Object whose direct zone members are included.
+ * @par Lua returns - `objects` (`table`): Matching Object handles in ascending
+ * dbref order.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` for malformed options or object type
+ * constants not owned by this runtime.
+ * - `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid zone.
+ * - `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for a zone being destroyed.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state Lua state.
+ * @return The number of Lua values pushed.
+ */
+static int lua_mux_list_objects(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
+  GameDatabase *database = package->services->database;
+  static const char *const FIELDS[] = {"types", "in_zone"};
+  LuaMuxObjectTypeFilter filter = {
+      .enabled = false,
+      .rooms = false,
+      .things = false,
+      .exits = false,
+      .players = false,
+  };
+  DbRef zone = NOTHING;
+  bool filter_zone = false;
+  int result_index = 1;
+
+  lua_mux_require_runtime(package, state, "world.list_objects");
+  if (!lua_isnoneornil(state, 1)) {
+    lua_mux_check_options(state, 1, FIELDS, sizeof(FIELDS) / sizeof(*FIELDS));
+    lua_mux_object_type_filter_parse(package, state, 1, &filter);
+    zone = lua_mux_option_object(package, state, 1, "in_zone", false,
+                                 &filter_zone);
+    if (filter_zone && is_going(database, zone))
+      return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
+                           "options.in_zone is being destroyed");
+  }
+
+  lua_newtable(state);
+  for (DbRef object = 0; object < database->top; object++) {
+    if (!is_good_obj(database, object) ||
+        typeof_obj(database, object) == OBJECT_TYPE_GARBAGE)
+      continue;
+    if (!lua_mux_object_type_filter_matches(&filter,
+                                            typeof_obj(database, object)))
+      continue;
+    if (filter_zone && game_object_zone(database, object) != zone)
+      continue;
+    lua_mux_push_object(state, package, object);
+    lua_rawseti(state, -2, result_index++);
+  }
+  return 1;
+}
+
+/**
  * Creates a detached room.
  *
  * @par Lua name `mux.world.create_room`
  * @par Lua signature `mux.world.create_room( options )`
  * @par Lua parameters - `options` (`CreateRoomOptions`) Creation fields. Its
- * `name` string is required.
+ * `name` string is required; `zone` is an optional dbref or Object.
  * @par Lua returns - `room` (`Object`): The newly created room.
  * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` for invalid fields or names.
+ * - `LUA_ERROR_CODE_ARG_INVALID` for invalid fields or names;
+ * `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid zone or object kind;
+ * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for a zone being destroyed.
  * @par Lua availability Available only at runtime; unavailable during
  * `@lua/check`.
  * @param[in,out] state Lua state.
@@ -122,13 +199,18 @@ lua_mux_world_destination_is_within(const LuaMuxWorldContainmentCheck *check) {
  */
 static int lua_mux_create_room(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
-  static const char *const FIELDS[] = {"name"};
+  static const char *const FIELDS[] = {"name", "zone"};
   size_t name_length;
+  bool zone_present;
   DbRef room;
 
   lua_mux_require_runtime(package, state, "world.create_room");
   lua_mux_check_options(state, 1, FIELDS, sizeof(FIELDS) / sizeof(*FIELDS));
   const char *name = lua_mux_world_require_name(state, 1, &name_length);
+  DbRef zone =
+      lua_mux_option_object(package, state, 1, "zone", false, &zone_present);
+  if (zone_present)
+    lua_mux_world_require_zone(package, state, 1, "options.zone", zone);
   char *compiled = lua_mux_world_compile_name(package, state, 1, name);
 
   room = create_obj(&package->services->background_command->evaluation, GOD,
@@ -137,6 +219,8 @@ static int lua_mux_create_room(lua_State *state) {
   if (room == NOTHING)
     return lua_error_raise(state, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
                            "room creation failed");
+  if (zone_present)
+    game_object_set_zone(package->services->database, room, zone);
   lua_mux_push_object(state, package, room);
   return 1;
 }
@@ -147,12 +231,13 @@ static int lua_mux_create_room(lua_State *state) {
  * @par Lua name `mux.world.create_thing`
  * @par Lua signature `mux.world.create_thing( options )`
  * @par Lua parameters - `options` (`CreateThingOptions`) Creation fields.
- * `name` and `location` are required; `home` defaults to `location`.
+ * `name` and `location` are required; `home` defaults to `location`, and
+ * `zone` is an optional dbref or Object.
  * @par Lua returns - `thing` (`Object`): The newly created thing.
  * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
  * - `LUA_ERROR_CODE_ARG_INVALID` for invalid fields or names;
  * `LUA_ERROR_CODE_OBJECT_INVALID` for invalid references or object kinds;
- * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for a location being destroyed.
+ * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for a location or zone being destroyed.
  * @par Lua availability Available only at runtime; unavailable during
  * `@lua/check`.
  * @param[in,out] state Lua state.
@@ -160,10 +245,11 @@ static int lua_mux_create_room(lua_State *state) {
  */
 static int lua_mux_create_thing(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
-  static const char *const FIELDS[] = {"name", "location", "home"};
+  static const char *const FIELDS[] = {"name", "location", "home", "zone"};
   size_t name_length;
   bool location_present;
   bool home_present;
+  bool zone_present;
   DbRef thing;
 
   lua_mux_require_runtime(package, state, "world.create_thing");
@@ -173,12 +259,16 @@ static int lua_mux_create_thing(lua_State *state) {
                                          &location_present);
   DbRef home =
       lua_mux_option_object(package, state, 1, "home", false, &home_present);
+  DbRef zone =
+      lua_mux_option_object(package, state, 1, "zone", false, &zone_present);
   lua_mux_world_require_container(package, state, 1, "options.location",
                                   location);
   if (home_present)
     lua_mux_world_require_container(package, state, 1, "options.home", home);
   else
     home = location;
+  if (zone_present)
+    lua_mux_world_require_zone(package, state, 1, "options.zone", zone);
   (void)location_present;
   char *compiled = lua_mux_world_compile_name(package, state, 1, name);
 
@@ -189,6 +279,8 @@ static int lua_mux_create_thing(lua_State *state) {
   if (thing == NOTHING)
     return lua_error_raise(state, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
                            "thing creation failed");
+  if (zone_present)
+    game_object_set_zone(package->services->database, thing, zone);
   game_object_set_link(package->services->database, thing, home);
   move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
                                             .object = thing,
@@ -204,12 +296,13 @@ static int lua_mux_create_thing(lua_State *state) {
  * @par Lua name `mux.world.create_exit`
  * @par Lua signature `mux.world.create_exit( options )`
  * @par Lua parameters - `options` (`CreateExitOptions`) Creation fields.
- * `name` and source `location` are required; `destination` is optional.
+ * `name` and source `location` are required; `destination` and `zone` are
+ * optional. The zone is a dbref or Object.
  * @par Lua returns - `exit` (`Object`): The newly created exit.
  * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
  * - `LUA_ERROR_CODE_ARG_INVALID` for invalid fields or names;
  * `LUA_ERROR_CODE_OBJECT_INVALID` for invalid references or object kinds;
- * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for a location being destroyed.
+ * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for a location or zone being destroyed.
  * @par Lua availability Available only at runtime; unavailable during
  * `@lua/check`.
  * @param[in,out] state Lua state.
@@ -217,10 +310,12 @@ static int lua_mux_create_thing(lua_State *state) {
  */
 static int lua_mux_create_exit(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
-  static const char *const FIELDS[] = {"name", "location", "destination"};
+  static const char *const FIELDS[] = {"name", "location", "destination",
+                                       "zone"};
   size_t name_length;
   bool location_present;
   bool destination_present;
+  bool zone_present;
   DbRef exit;
 
   lua_mux_require_runtime(package, state, "world.create_exit");
@@ -230,6 +325,8 @@ static int lua_mux_create_exit(lua_State *state) {
                                          &location_present);
   DbRef destination = lua_mux_option_object(package, state, 1, "destination",
                                             false, &destination_present);
+  DbRef zone =
+      lua_mux_option_object(package, state, 1, "zone", false, &zone_present);
   (void)location_present;
   if (!has_exits(package->services->database, location))
     return lua_error_arg(
@@ -241,6 +338,8 @@ static int lua_mux_create_exit(lua_State *state) {
   if (destination_present)
     lua_mux_world_require_container(package, state, 1, "options.destination",
                                     destination);
+  if (zone_present)
+    lua_mux_world_require_zone(package, state, 1, "options.zone", zone);
   char *compiled = lua_mux_world_compile_name(package, state, 1, name);
 
   exit = create_obj(&package->services->background_command->evaluation, GOD,
@@ -249,6 +348,8 @@ static int lua_mux_create_exit(lua_State *state) {
   if (exit == NOTHING)
     return lua_error_raise(state, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
                            "exit creation failed");
+  if (zone_present)
+    game_object_set_zone(package->services->database, exit, zone);
   game_object_set_exits(package->services->database, exit, location);
   game_object_set_next(
       package->services->database, exit,
@@ -480,6 +581,9 @@ void lua_mux_install_world_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_pemit, 1);
   lua_setfield(state, -2, "pemit");
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_list_objects, 1);
+  lua_setfield(state, -2, "list_objects");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_create_room, 1);
   lua_setfield(state, -2, "create_room");
