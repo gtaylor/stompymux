@@ -2,7 +2,7 @@
 title: Attribute
 type: docs
 toc_hide: false
-weight: -30
+weight: 10
 no_list: true
 sidebar_root_for: self
 ---

@@ -1,6 +1,7 @@
 ---
 title: Flags
 type: docs
+weight: 20
 toc_hide: false
 no_list: true
 sidebar_root_for: self

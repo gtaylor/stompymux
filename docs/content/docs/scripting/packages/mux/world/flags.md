@@ -1,6 +1,7 @@
 ---
 title: mux.world.flags
 type: docs
+weight: -50
 toc_hide: false
 ---
 

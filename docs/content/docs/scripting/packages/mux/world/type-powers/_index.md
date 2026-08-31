@@ -1,6 +1,7 @@
 ---
 title: Powers
 type: docs
+weight: 40
 toc_hide: false
 no_list: true
 sidebar_root_for: self

@@ -2,6 +2,7 @@
 title: mux.world.access
 type: docs
 toc_hide: false
+weight: -60
 ---
 
 `mux.world.access` is an immutable namespace of typed `Access` constants. Use

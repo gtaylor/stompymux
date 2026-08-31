@@ -19,13 +19,18 @@ object:contents( options? )
 `table or nil options`
 : Optional filters.
 
+### Filter table keys and values
+
+With no argument, `nil`, or `{}` as the options table, the method returns all
+ordinary contents and attached exits.
+
 `ObjectType[] options.types`
 : Include only objects whose types appear in this array. Values must be typed
   constants from [`mux.world.types`](../../types/). An empty array matches
   nothing.
 
 `number or Object options.visible_to`
-: Include only objects visible to this viewer under native look rules.
+: Include only objects visible to the provided viewer under native look rules.
 
 ### Returns
 
@@ -44,9 +49,8 @@ local visible_exits = room:contents({
 
 ## Notes
 
-With no argument, `nil`, or `{}` as the options table, the method returns all
-ordinary contents and attached exits. The receiver must be capable of holding
-contents or exits. This method is unavailable during `@lua/check`.
+The receiver must be capable of holding contents or exits. 
+This method is unavailable during `@lua/check`.
 
 ## See Also
 

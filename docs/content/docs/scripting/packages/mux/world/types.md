@@ -1,6 +1,7 @@
 ---
 title: mux.world.types
 type: docs
+weight: -10
 toc_hide: false
 ---
 

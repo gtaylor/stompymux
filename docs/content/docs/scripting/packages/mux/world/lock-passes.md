@@ -1,6 +1,7 @@
 ---
 title: mux.world.lock_passes
 type: docs
+weight: -40
 toc_hide: false
 ---
 
