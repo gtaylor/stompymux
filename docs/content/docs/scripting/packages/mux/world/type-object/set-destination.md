@@ -1,5 +1,5 @@
 ---
-title: Object:set_destination
+title: set_destination
 type: docs
 ---
 
