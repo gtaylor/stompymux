@@ -49,3 +49,10 @@ collection methods use typed constants such as `mux.world.flags.SAFE` and
 immediately as God and are not rolled back if the callback later fails.
 These operations are unavailable during `@lua/check`; use the scripting
 package reference for their arguments and safeguards.
+
+Trusted runtime scripts may manage communication channels through
+`mux.comsys`. The package returns typed Channel handles, supports channel
+creation and destruction, exposes typed `PUBLIC`, `LOUD`, and `TRANSPARENT`
+flags, and provides structured emit, membership, object-attachment, and boot
+operations. These changes run immediately as God and are not rolled back when
+a callback later fails.

@@ -137,7 +137,7 @@ void do_createchannel(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
   char *channel = invocation->first;
-  struct Channel *newchannel;
+  struct Channel *newchannel = nullptr;
 
   if (select_channel(evaluation->runtime->channels, channel)) {
     notify_printf(evaluation, player, "Channel %s already exists.", channel);
@@ -158,26 +158,47 @@ void do_createchannel(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "You do not have permission to do that.");
     return;
   }
-  newchannel =
-      (struct Channel *)checked_storage_allocate(sizeof(struct Channel));
-
-  (void)string_copy_bounded(newchannel->name, sizeof(newchannel->name),
-                            channel);
-  newchannel->last_messages = nullptr;
-  newchannel->type = 127;
-  newchannel->num_users = 0;
-  newchannel->max_users = 0;
-  newchannel->users = nullptr;
-  newchannel->on_users = nullptr;
-  newchannel->chan_obj = NOTHING;
-  newchannel->num_messages = 0;
-
-  evaluation->runtime->channels->count++;
-
-  hash_table_add(newchannel->name, (int *)newchannel,
-                 &evaluation->runtime->channels->channels);
+  /* Preserve the command's specific messages and permission-check ordering.
+   * The shared creator validates again so non-command callers are safe. */
+  ChannelCreateResult result = comsys_channel_create(
+      evaluation->runtime->channels, channel, &newchannel);
+  if (result != CHANNEL_CREATE_OK) {
+    raw_notify(evaluation, player, "Unable to create that channel.");
+    return;
+  }
 
   notify_printf(evaluation, player, "Channel %s created.", channel);
+}
+
+ChannelCreateResult comsys_channel_create(ChannelRegistry *channels,
+                                          const char *name,
+                                          struct Channel **created) {
+  if (created != nullptr)
+    *created = nullptr;
+  if (select_channel(channels, name))
+    return CHANNEL_CREATE_ALREADY_EXISTS;
+  if (!*name)
+    return CHANNEL_CREATE_NAME_REQUIRED;
+  if (strlen(name) >= CHAN_NAME_LEN ||
+      !utf8_is_printable_ascii(name, strlen(name)) || strchr(name, ' '))
+    return CHANNEL_CREATE_NAME_INVALID;
+
+  struct Channel *channel = checked_storage_allocate(sizeof(*channel));
+  (void)string_copy_bounded(channel->name, sizeof(channel->name), name);
+  channel->generation = channel_registry_claim_generation(channels);
+  channel->last_messages = nullptr;
+  channel->type = 127;
+  channel->num_users = 0;
+  channel->max_users = 0;
+  channel->users = nullptr;
+  channel->on_users = nullptr;
+  channel->chan_obj = NOTHING;
+  channel->num_messages = 0;
+  channels->count++;
+  hash_table_add(channel->name, (int *)channel, &channels->channels);
+  if (created != nullptr)
+    *created = channel;
+  return CHANNEL_CREATE_OK;
 }
 
 void channel_destroy(struct Channel *channel) {
@@ -194,6 +215,16 @@ void channel_destroy(struct Channel *channel) {
   }
   free(channel->last_messages);
   free(channel);
+}
+
+bool comsys_channel_destroy(ChannelRegistry *channels,
+                            struct Channel *channel) {
+  if (channel == nullptr || select_channel(channels, channel->name) != channel)
+    return false;
+  channels->count--;
+  hash_table_delete(channel->name, &channels->channels);
+  channel_destroy(channel);
+  return true;
 }
 
 void do_destroychannel(CommandInvocation *invocation) {
@@ -213,10 +244,7 @@ void do_destroychannel(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "You do not have permission to do that. ");
     return;
   }
-  evaluation->runtime->channels->count--;
-  hash_table_delete(channel, &evaluation->runtime->channels->channels);
-
-  channel_destroy(ch);
+  (void)comsys_channel_destroy(evaluation->runtime->channels, ch);
   notify_printf(evaluation, player, "Channel %s destroyed.", channel);
 }
 

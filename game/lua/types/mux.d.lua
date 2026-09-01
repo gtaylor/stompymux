@@ -80,6 +80,12 @@ function Error:root() end
 ---Checked `mux.connection.unavailable` error-code node.
 ---@class MuxConnectionUnavailableErrorCode: ErrorCode
 ---@field code "mux.connection.unavailable"
+---Checked `mux.channel.invalid` error-code node.
+---@class MuxChannelInvalidErrorCode: ErrorCode
+---@field code "mux.channel.invalid"
+---Checked `mux.channel_flag.invalid` error-code node.
+---@class MuxChannelFlagInvalidErrorCode: ErrorCode
+---@field code "mux.channel_flag.invalid"
 ---Checked `mux.text.invalid` error-code node.
 ---@class MuxTextInvalidErrorCode: ErrorCode
 ---@field code "mux.text.invalid"
@@ -121,6 +127,10 @@ function Error:root() end
 ---@class MuxConnectionErrorCodes: ErrorCode
 ---@field invalid MuxConnectionInvalidErrorCode `mux.connection.invalid`.
 ---@field unavailable MuxConnectionUnavailableErrorCode `mux.connection.unavailable`.
+---@class MuxChannelErrorCodes: ErrorCode
+---@field invalid MuxChannelInvalidErrorCode `mux.channel.invalid`.
+---@class MuxChannelFlagErrorCodes: ErrorCode
+---@field invalid MuxChannelFlagInvalidErrorCode `mux.channel_flag.invalid`.
 ---@class MuxTextErrorCodes: ErrorCode
 ---@field invalid MuxTextInvalidErrorCode `mux.text.invalid`.
 ---@class MuxModuleErrorCodes: ErrorCode
@@ -140,6 +150,8 @@ function Error:root() end
 ---@field power MuxPowerErrorCodes
 ---@field access MuxAccessErrorCodes
 ---@field connection MuxConnectionErrorCodes
+---@field channel MuxChannelErrorCodes
+---@field channel_flag MuxChannelFlagErrorCodes
 ---@field text MuxTextErrorCodes
 ---@field module MuxModuleErrorCodes
 ---@field config MuxConfigErrorCodes
@@ -616,6 +628,177 @@ function Object:flags() end
 ---@see mux.error.codes.unavailable.checking
 function Object:powers() end
 
+---A typed communication-channel flag constant from
+---[`mux.comsys.flags`](lua://mux.comsys.flags). Its string form is the
+---canonical uppercase name, and equality compares identity within the current
+---Lua runtime.
+---@class ChannelFlag
+
+---Immutable namespace of supported communication-channel flags. Unknown or
+---non-string lookups and attempted mutation raise
+---[`mux.error.codes.channel_flag.invalid`](lua://mux.error.codes.channel_flag.invalid).
+---@class (exact) ChannelFlagNamespace
+---@field PUBLIC ChannelFlag Makes the channel visible without a successful join lock.
+---@field LOUD ChannelFlag Announces applicable connection and presence changes.
+---@field TRANSPARENT ChannelFlag Relaxes hidden-member filtering in native channel displays.
+---@see mux.error.codes.channel_flag.invalid
+
+---Options for [`Channel:emit`](lua://Channel.emit).
+---@class (exact) ChannelEmitOptions
+---@field no_header? boolean Send the message without the usual `[channel]` prefix.
+
+---Options for [`Channel:who`](lua://Channel.who).
+---@class (exact) ChannelWhoOptions
+---@field all? boolean Include inactive membership records.
+
+---One communication-channel membership record.
+---@class ChannelMember
+---@field object Object Live member object.
+---@field listening boolean Whether the member is currently listening to the channel.
+
+---A generation-sensitive handle to one live communication channel. Handles
+---remain stale after destruction even if a channel with the same name is
+---created later. Assigning fields raises
+---[`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).
+---@class Channel
+---@see mux.error.codes.arg.invalid
+local Channel = {}
+
+---Returns the channel's exact name.
+---@return string name
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+function Channel:name() end
+
+---Returns the object that supplies the channel description and locks.
+---@return Object? object The attached object, or nil when none is attached.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+---@see mux.error.codes.object.invalid
+function Channel:object() end
+
+---Returns the number of channel membership records.
+---@return integer count
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+function Channel:user_count() end
+
+---Returns the channel's currently allocated membership capacity.
+---@return integer count
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+function Channel:max_user_count() end
+
+---Returns the channel's lifetime delivered-message count.
+---@return integer count
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+function Channel:message_count() end
+
+---Attaches an object that supplies channel locks and description, or detaches
+---the current object when passed nil.
+---@param object? DbRef|Object
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+function Channel:set_object(object) end
+
+---Opens the live administrative flag collection for this channel.
+---@return ChannelFlags flags
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+function Channel:flags() end
+
+---Emits an administrative channel message through native delivery, history,
+---receive-lock, and message-count behavior.
+---@param message string Valid UTF-8 without embedded NUL bytes.
+---@param options? ChannelEmitOptions Unknown option fields are rejected.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+---@see mux.error.codes.arg.invalid
+function Channel:emit(message, options) end
+
+---Returns channel membership records. By default the native active-member
+---filter is applied; `options.all` includes inactive records.
+---@param options? ChannelWhoOptions Unknown option fields are rejected.
+---@return ChannelMember[] members
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+---@see mux.error.codes.arg.invalid
+function Channel:who(options) end
+
+---Announces a God-administered boot and removes a current member's channel
+---aliases using the native side-effect path.
+---@param object DbRef|Object Current channel member.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+---@see mux.error.codes.object.invalid
+function Channel:boot_player(object) end
+
+---A live view of one channel's administrative flags. It becomes stale when
+---its originating channel is destroyed.
+---@class ChannelFlags
+local ChannelFlags = {}
+
+---Lists set flags in `PUBLIC`, `LOUD`, `TRANSPARENT` order.
+---@return ChannelFlag[] flags
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+function ChannelFlags:list() end
+
+---Tests whether the channel has a typed flag.
+---@param flag ChannelFlag Constant from [`mux.comsys.flags`](lua://mux.comsys.flags).
+---@return boolean present
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.channel_flag.invalid`](lua://mux.error.codes.channel_flag.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+---@see mux.error.codes.channel_flag.invalid
+function ChannelFlags:has(flag) end
+
+---Sets a typed channel flag.
+---@param flag ChannelFlag Constant from [`mux.comsys.flags`](lua://mux.comsys.flags).
+---@return boolean changed Whether the flag changed from unset to set.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.channel_flag.invalid`](lua://mux.error.codes.channel_flag.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+---@see mux.error.codes.channel_flag.invalid
+function ChannelFlags:add(flag) end
+
+---Clears a typed channel flag.
+---@param flag ChannelFlag Constant from [`mux.comsys.flags`](lua://mux.comsys.flags).
+---@return boolean changed Whether the flag changed from set to unset.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.channel_flag.invalid`](lua://mux.error.codes.channel_flag.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+---@see mux.error.codes.channel_flag.invalid
+function ChannelFlags:remove(flag) end
+
 ---One player connection visible to the ordinary WHO command.
 ---@class Connection
 ---@field object Object Connected player.
@@ -755,6 +938,52 @@ local mux_config = {}
 ---@see mux.error.codes.config.unsupported
 ---@see mux.error.codes.internal
 function mux_config.get(name) end
+
+---Trusted access to the live communication-channel registry. Mutations take
+---effect immediately and are not rolled back when the surrounding Lua
+---callback later fails.
+---@class MuxComsysPackage
+---@field flags ChannelFlagNamespace Immutable typed channel-flag constants.
+local mux_comsys = {}
+
+---Retrieves an existing communication channel by case-insensitive name.
+---@param name string Existing channel name without embedded NUL bytes; the returned handle preserves canonical spelling.
+---@return Channel channel
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.channel.invalid
+function mux_comsys.channel(name) end
+
+---Creates a private communication channel using the native channel-name
+---rules. Names must be non-empty printable ASCII, contain no spaces, and be
+---shorter than 50 bytes.
+---@param name string New channel name.
+---@return Channel channel
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid) when the name already exists.
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.channel.invalid
+function mux_comsys.create_channel(name) end
+
+---Permanently removes a live channel and its membership storage. The supplied
+---handle and every flag handle derived from it become stale.
+---@param channel Channel Live channel handle.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+function mux_comsys.destroy_channel(channel) end
+
+---Lists every live communication channel in case-insensitive name order, with
+---original spelling used as the tie-breaker.
+---@return Channel[] channels
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking).
+---@see mux.error.codes.unavailable.checking
+function mux_comsys.list_channels() end
 
 ---Fields accepted when creating a detached room through
 ---[`mux.world.create_object`](lua://mux.world.create_object).
@@ -958,6 +1187,7 @@ function mux_text.truncate(value, width) end
 
 ---The native MUX host API.
 ---@class MuxPackage
+---@field comsys MuxComsysPackage Trusted live communication-channel administration.
 ---@field config MuxConfigPackage Read-only scalar server configuration.
 ---@field error MuxErrorPackage
 ---@field session MuxSessionPackage Live connections and interactive flows.
@@ -994,6 +1224,7 @@ function mux.log(filename, message) end
 function mux_world.pemit(object, message) end
 
 mux.config = mux_config
+mux.comsys = mux_comsys
 mux.error = mux_error
 mux.session = mux_session
 mux.telnet = mux_telnet

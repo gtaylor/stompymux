@@ -202,7 +202,7 @@ void comsys_process_alias_command(EvaluationContext *evaluation, DbRef player,
 }
 
 void comsys_send_channel_message(EvaluationContext *evaluation,
-                                 struct Channel *ch, char *mess) {
+                                 struct Channel *ch, const char *mess) {
   struct Comuser *user;
   Chmsg *c;
 

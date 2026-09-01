@@ -471,6 +471,8 @@ static int commac_load_channels(sqlite3 *sqlite, PersistenceContext *context) {
         break;
       }
       (void)string_copy_bounded(channel->name, sizeof(channel->name), name);
+      channel->generation =
+          channel_registry_claim_generation(context->channels);
       channel->type = (int)value;
       if (commac_column_int(statement, 2, &value) < 0)
         result = -1;

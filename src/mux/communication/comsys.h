@@ -4,6 +4,7 @@
 #pragma once
 
 #include <stdarg.h>
+#include <stdint.h>
 #include <time.h>
 
 #include "mux/commands/command_context.h"
@@ -55,6 +56,7 @@ struct Comuser {
 
 struct Channel {
   char name[CHAN_NAME_LEN];
+  uint64_t generation;
   int type;
   int num_users;
   int max_users;
@@ -64,6 +66,13 @@ struct Channel {
   Fifo *last_messages;
   int num_messages;
 };
+
+typedef enum ChannelCreateResult : int {
+  CHANNEL_CREATE_OK,
+  CHANNEL_CREATE_NAME_REQUIRED,
+  CHANNEL_CREATE_NAME_INVALID,
+  CHANNEL_CREATE_ALREADY_EXISTS,
+} ChannelCreateResult;
 
 typedef struct {
   time_t time;
@@ -76,6 +85,21 @@ void init_chantab(ChannelRegistry *channels);
 /** Destroys channel. @param[in,out] channel Channel. */
 
 void channel_destroy(struct Channel *channel);
+/** Creates and registers a channel after validating its native name rules.
+ * @param[in,out] channels Channel registry.
+ * @param[in] name Requested channel name.
+ * @param[out] created Newly created channel on success.
+ * @return The creation result. */
+
+ChannelCreateResult comsys_channel_create(ChannelRegistry *channels,
+                                          const char *name,
+                                          struct Channel **created);
+/** Removes and destroys a registered channel.
+ * @param[in,out] channels Channel registry.
+ * @param[in] channel Channel to remove.
+ * @return Whether the exact channel was registered and removed. */
+
+bool comsys_channel_destroy(ChannelRegistry *channels, struct Channel *channel);
 /** Executes send channel. @param[in,out] evaluation Expression evaluation
  * context. @param[in] chan Chan. @param[in] format Format. */
 

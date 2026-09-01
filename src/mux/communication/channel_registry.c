@@ -2,6 +2,8 @@
 
 #include "mux/communication/channel_registry.h"
 
+#include <stdint.h>
+
 #include "mux/support/checked_storage.h"
 #include "mux/support/hash_table.h"
 #include <stddef.h>
@@ -29,6 +31,7 @@ void channel_registry_initialize(ChannelRegistry *registry) {
   assert(registry != nullptr);
   hash_table_initialize(&registry->channels, 30 * HASH_FACTOR);
   registry->count = 0;
+  registry->next_generation = 1;
 }
 
 void channel_registry_destroy(ChannelRegistry *registry) {
@@ -61,4 +64,13 @@ void channel_registry_reset_statistics(ChannelRegistry *registry) {
 void *channel_registry_find(ChannelRegistry *registry, const char *name) {
   assert(registry != nullptr);
   return hash_table_find(name, &registry->channels);
+}
+
+uint64_t channel_registry_claim_generation(ChannelRegistry *registry) {
+  assert(registry != nullptr);
+  uint64_t generation = registry->next_generation++;
+
+  if (registry->next_generation == 0)
+    registry->next_generation = 1;
+  return generation;
 }

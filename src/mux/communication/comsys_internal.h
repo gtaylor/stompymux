@@ -26,5 +26,5 @@ int comsys_test_access(const ChannelAccessRequest *request);
 void comsys_disconnect_channel(EvaluationContext *evaluation, DbRef player,
                                char *channel);
 void comsys_send_channel_message(EvaluationContext *evaluation,
-                                 struct Channel *channel, char *message);
+                                 struct Channel *channel, const char *message);
 void comsys_list_channels(EvaluationContext *evaluation, DbRef player);

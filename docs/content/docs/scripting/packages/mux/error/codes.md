@@ -27,6 +27,8 @@ available as `testing.error.codes` in test suites.
 | `mux.error.codes.access.invalid` | `mux.access.invalid` | A command-access constant or lookup in `mux.world.access` is invalid. |
 | `mux.error.codes.connection.invalid` | `mux.connection.invalid` | A message, descriptor, Telnet-environment kind, or flow descriptor is invalid. |
 | `mux.error.codes.connection.unavailable` | `mux.connection.unavailable` | Flow support is unavailable or the descriptor already has an active flow. |
+| `mux.error.codes.channel.invalid` | `mux.channel.invalid` | A channel name, membership, or Channel handle is unknown or stale. |
+| `mux.error.codes.channel_flag.invalid` | `mux.channel_flag.invalid` | A constant or lookup in `mux.comsys.flags` is invalid. |
 | `mux.error.codes.text.invalid` | `mux.text.invalid` | Styled text, a style field, or a requested text width is invalid. |
 | `mux.error.codes.module.invalid` | `mux.module.invalid` | A module name is invalid or a requested flow step is absent from its module. |
 | `mux.error.codes.module.unavailable` | `mux.module.unavailable` | A required module cannot be loaded or is unavailable from the current module root. |
@@ -53,7 +55,8 @@ Each leaf and intermediate node has a `.code` field, and `tostring(node)`
 returns that dotted string. The intermediate nodes are derived from the leaves,
 not native enum members: `mux`, `mux.arg`, `mux.unavailable`, `mux.state`,
 `mux.object`, `mux.attribute`, `mux.flag`, `mux.power`, `mux.access`,
-`mux.connection`, `mux.text`, and `mux.module`. They are useful with
+`mux.connection`, `mux.channel`, `mux.channel_flag`, `mux.text`, and
+`mux.module`. They are useful with
 [`mux.error.is`](../is/) for a whole-namespace check; for example,
 `mux.error.codes.state` matches every
 `mux.state.*` code.

@@ -16,6 +16,7 @@ by the game server rather than loaded with `require`.
 | --- | --- |
 | [`mux.error`](error/) | Structured errors, checked error codes, and error-handling helpers. |
 | [`mux.config`](config/) | Read-only access to scalar server configuration. |
+| [`mux.comsys`](comsys/) | Trusted communication-channel management. |
 | [`mux.telnet`](telnet/) | Telnet protocol state and capabilities. |
 | [`mux.session`](session/) | Interactive flows and active player-session information. |
 | [`mux.text`](text/) | Styled-text validation, formatting, and measurement helpers. |

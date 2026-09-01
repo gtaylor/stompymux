@@ -3,6 +3,8 @@
  */
 #pragma once
 
+#include <stdint.h>
+
 #include "mux/support/hash_table.h"
 
 struct ChannelRegistry; // IWYU pragma: keep
@@ -15,6 +17,7 @@ struct ChannelRegistry {
   HashTable channels;
   Commac *commacs[COMMAC_BUCKET_COUNT];
   int count;
+  uint64_t next_generation;
 };
 
 /** Initializes channel registry. @param[out] registry Registry to use. */
@@ -31,6 +34,11 @@ void channel_registry_reset_statistics(ChannelRegistry *registry);
  * name Name to use. */
 
 void *channel_registry_find(ChannelRegistry *registry, const char *name);
+/** Claims a nonzero identity generation for a newly registered channel.
+ * @param[in,out] registry Registry to use.
+ * @return The claimed generation. */
+
+uint64_t channel_registry_claim_generation(ChannelRegistry *registry);
 /** Returns channel registry bucket at. @param[in] registry Registry to use.
  * @param[in] bucket Bucket. */
 
