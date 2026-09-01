@@ -11,6 +11,7 @@
 ---@alias CriticalNameType 0|1 Critical-slot naming mode: template names or repair-part names.
 ---@alias PartCategory "ammo"|"weapon"|"weapons"|"weap"|"bomb"|"bombs"|"special"|"specials"|"cargo"|"carg"|"part"|"parts" Canonical or legacy part-category spelling.
 ---@alias PartNameSize "short"|"long"|"vlong" Requested native part-name length.
+---@alias PartType "WEAP"|"AMMO"|"BOMB"|"PART"|"CARG"|"OTHER" Broad category returned by [`btech.parts.type`](lua://btech.parts.type).
 ---@alias WeaponStat "VRT"|"TYPE"|"HEAT"|"DAMAGE"|"MIN"|"SR"|"MR"|"LR"|"CRIT"|"AMMO"|"WEIGHT"|"BV" Weapon statistic recognized by [`btech.parts.weapon_stat`](lua://btech.parts.weapon_stat).
 
 ---Checked `btech.unavailable` error-code node.
@@ -27,7 +28,7 @@
 ---@field failed BtechFailedErrorCode `btech.failed`, raised when a mapped legacy handler reports an error.
 
 ---@class BtechErrorPackage
----@field codes BtechErrorCodes
+---@field codes BtechErrorCodes Checked native BattleTech code tree.
 
 ---Live units, templates, combat values, and status.
 ---@class BtechUnitPackage
@@ -55,13 +56,13 @@ local btech_system = {}
 
 ---The native BattleTech host API. All functions are unavailable during `@lua/check`.
 ---@class BtechPackage
----@field unit BtechUnitPackage
----@field map BtechMapPackage
----@field parts BtechPartsPackage
----@field character BtechCharacterPackage
----@field repair BtechRepairPackage
----@field system BtechSystemPackage
----@field error BtechErrorPackage
+---@field unit BtechUnitPackage Live units, templates, combat values, and status.
+---@field map BtechMapPackage Maps, geometry, line of sight, and map messaging.
+---@field parts BtechPartsPackage Part catalogues, installed parts, stores, and costs.
+---@field character BtechCharacterPackage Character values, skills, experience, and piloting rolls.
+---@field repair BtechRepairPackage Damage and technician-status queries.
+---@field system BtechSystemPackage Special-object fields and server-wide queries.
+---@field error BtechErrorPackage BattleTech checked error codes.
 btech = {}
 
 ---Adds a quantity of a part to an object's stores.
@@ -311,6 +312,12 @@ function btech_parts.cost(part_name) end
 ---@param unit_a integer
 ---@param unit_b integer
 ---@return number range
+---@overload fun(map: integer, unit: integer, x: number, y: number): number
+---@overload fun(map: integer, x: number, y: number, unit: integer): number
+---@overload fun(map: integer, unit: integer, x: number, y: number, z: number): number
+---@overload fun(map: integer, x: number, y: number, z: number, unit: integer): number
+---@overload fun(map: integer, x1: number, y1: number, x2: number, y2: number): number
+---@overload fun(map: integer, x1: number, y1: number, z1: number, x2: number, y2: number, z2: number): number
 ---
 ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
 ---@see btech.error.codes.unavailable
@@ -400,7 +407,7 @@ function btech_map.hex_line_of_sight(unit, x, y) end
 ---Resolves a two-character tactical ID on a unit's map.
 ---@param unit_or_map integer
 ---@param id string
----@return integer dbref
+---@return 0 value The numeric adapter currently converts the handler's leading-`#` dbref text to zero.
 ---
 ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
 ---@see btech.error.codes.unavailable
@@ -431,7 +438,7 @@ function btech_map.blast_zones(map) end
 ---@param map integer
 ---@param name string
 ---@param clear? boolean Ignored compatibility argument.
----@return boolean success
+---@return 1 success Numeric one returned by the handler's `BTECH_SCRIPT_NUMBER` conversion.
 ---
 ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
 ---@see btech.error.codes.unavailable
@@ -489,6 +496,8 @@ function btech_map.elevation(map, x, y) end
 ---@param map integer
 ---@param message string
 ---@return boolean success
+---@overload fun(map: integer, x: number, y: number, range: number, message: string): boolean
+---@overload fun(map: integer, x: number, y: number, z: number, range: number, message: string): boolean
 ---
 ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
 ---@see btech.error.codes.unavailable
@@ -542,7 +551,7 @@ function btech_repair.job_count(unit) end
 
 ---Returns the broad category of a recognized part.
 ---@param part_name string
----@return string category
+---@return PartType category
 ---
 ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
 ---@see btech.error.codes.unavailable

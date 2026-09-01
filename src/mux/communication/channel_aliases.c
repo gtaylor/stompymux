@@ -38,7 +38,7 @@ struct Comuser **channel_user_slot(struct Channel *channel, size_t index) {
 }
 
 void do_joinchannel(EvaluationContext *evaluation, DbRef player,
-                    struct Channel *ch) {
+                    struct Channel *ch, bool quiet) {
   struct Comuser *user;
   int i;
 
@@ -89,7 +89,7 @@ void do_joinchannel(EvaluationContext *evaluation, DbRef player,
   }
   notify_printf(evaluation, player, "You have joined channel %s.", ch->name);
 
-  if (!is_dark(evaluation->world->database, player)) {
+  if (!quiet && !is_dark(evaluation->world->database, player)) {
     comsys_channel_printf(
         evaluation, ch, "[%s] %s has joined this channel.", ch->name,
         game_object_name(evaluation->world->database, player));
@@ -219,11 +219,58 @@ struct Comuser *select_user(struct Channel *ch, DbRef player) {
   return nullptr;
 }
 
+ChannelAddPlayerResult comsys_channel_add_player(EvaluationContext *evaluation,
+                                                 DbRef player,
+                                                 struct Channel *channel,
+                                                 const char *alias,
+                                                 bool quiet) {
+  int where;
+  struct Commac *commac;
+
+  if (!*alias)
+    return CHANNEL_ADD_PLAYER_ALIAS_REQUIRED;
+  if (strlen(alias) > COMMAC_ALIAS_MAX_LENGTH ||
+      !utf8_is_printable_ascii(alias, strlen(alias)) || strchr(alias, ' '))
+    return CHANNEL_ADD_PLAYER_ALIAS_INVALID;
+
+  commac = get_commac(evaluation->runtime->channels, player);
+  for (where = 0; where < commac->numchannels &&
+                  strcasecmp(alias, commac_alias_at(commac, (size_t)where)) > 0;
+       where++)
+    ;
+  if (where < commac->numchannels &&
+      !strcasecmp(alias, commac_alias_at(commac, (size_t)where)))
+    return CHANNEL_ADD_PLAYER_ALIAS_IN_USE;
+  if (commac->numchannels >= commac->maxchannels) {
+    const size_t CAPACITY = (size_t)commac->maxchannels + 10;
+
+    if (!commac_reserve_aliases(commac, CAPACITY))
+      return CHANNEL_ADD_PLAYER_CAPACITY_FAILURE;
+  }
+  if (where < commac->numchannels) {
+    memmove(commac_alias_at(commac, (size_t)where + 1),
+            commac_alias_at(commac, (size_t)where),
+            COMMAC_ALIAS_SIZE * (size_t)(commac->numchannels - where));
+    memmove((void *)commac_channel_slot(commac, (size_t)where + 1),
+            (const void *)commac_channel_slot(commac, (size_t)where),
+            sizeof(*commac->channels) * (size_t)(commac->numchannels - where));
+  }
+
+  commac->numchannels++;
+  (void)string_copy_bounded(commac_alias_at(commac, (size_t)where),
+                            COMMAC_ALIAS_SIZE, alias);
+  *commac_channel_slot(commac, (size_t)where) = strdup(channel->name);
+
+  do_joinchannel(evaluation, player, channel, quiet);
+  notify_printf(evaluation, player, "Channel %s added with alias %s.",
+                channel->name, alias);
+  return CHANNEL_ADD_PLAYER_OK;
+}
+
 void comsys_add_alias(EvaluationContext *evaluation, DbRef player,
                       const char *arg1, const char *arg2) {
   char channel[200];
   struct Channel *ch;
-  int where;
   struct Commac *c;
 
   if (!*arg1) {
@@ -272,43 +319,17 @@ void comsys_add_alias(EvaluationContext *evaluation, DbRef player,
                "Warning: you are already listed on that channel.");
   }
   c = get_commac(evaluation->runtime->channels, player);
-  for (where = 0; where < c->numchannels &&
-                  (strcasecmp(arg1, commac_alias_at(c, (size_t)where)) > 0);
-       where++)
-    ;
-  if (where < c->numchannels &&
-      !strcasecmp(arg1, commac_alias_at(c, (size_t)where))) {
+  const char *existing_channel = commac_channel_for_alias(c, arg1);
+  if (existing_channel != nullptr) {
     notify_printf(evaluation, player,
                   "That alias is already in use for channel %s.",
-                  commac_channel_at(c, (size_t)where));
+                  existing_channel);
     return;
   }
-  if (c->numchannels >= c->maxchannels) {
-    const size_t CAPACITY = (size_t)c->maxchannels + 10;
-    if (!commac_reserve_aliases(c, CAPACITY)) {
-      raw_notify(evaluation, player, "Unable to add that channel alias.");
-      return;
-    }
-  }
-  if (where < c->numchannels) {
-    memmove(commac_alias_at(c, (size_t)where + 1),
-            commac_alias_at(c, (size_t)where),
-            COMMAC_ALIAS_SIZE * (size_t)(c->numchannels - where));
-    memmove((void *)commac_channel_slot(c, (size_t)where + 1),
-            (const void *)commac_channel_slot(c, (size_t)where),
-            sizeof(*c->channels) * (size_t)(c->numchannels - where));
-  }
-
-  c->numchannels++;
-
-  char *alias = commac_alias_at(c, (size_t)where);
-
-  (void)string_copy_bounded(alias, COMMAC_ALIAS_SIZE, arg1);
-  *commac_channel_slot(c, (size_t)where) = strdup(ch->name);
-
-  do_joinchannel(evaluation, player, ch);
-  notify_printf(evaluation, player, "Channel %s added with alias %s.", ch->name,
-                arg1);
+  ChannelAddPlayerResult result =
+      comsys_channel_add_player(evaluation, player, ch, arg1, false);
+  if (result == CHANNEL_ADD_PLAYER_CAPACITY_FAILURE)
+    raw_notify(evaluation, player, "Unable to add that channel alias.");
 }
 
 void do_addcom(CommandInvocation *invocation) {

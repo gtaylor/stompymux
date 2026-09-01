@@ -395,8 +395,8 @@ static int lua_mux_create_object(lua_State *state) {
 /**
  * Teleports a location-bearing object to a destination container.
  *
- * @par Lua name `mux.world.teleport`
- * @par Lua signature `mux.world.teleport( options )`
+ * @par Lua name `mux.world.teleport_object`
+ * @par Lua signature `mux.world.teleport_object( options )`
  * @par Lua parameters - `options` (`TeleportOptions`) Teleport fields. Its
  * `object` and `destination` references are required.
  * @par Lua returns - No values.
@@ -410,13 +410,13 @@ static int lua_mux_create_object(lua_State *state) {
  * @param[in,out] state Lua state.
  * @return The number of Lua values pushed.
  */
-static int lua_mux_teleport(lua_State *state) {
+static int lua_mux_teleport_object(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   static const char *const FIELDS[] = {"object", "destination"};
   bool object_present;
   bool destination_present;
 
-  lua_mux_require_runtime(package, state, "world.teleport");
+  lua_mux_require_runtime(package, state, "world.teleport_object");
   lua_mux_check_options(state, 1, FIELDS, sizeof(FIELDS) / sizeof(*FIELDS));
   DbRef object =
       lua_mux_option_object(package, state, 1, "object", true, &object_present);
@@ -456,8 +456,8 @@ static int lua_mux_teleport(lua_State *state) {
 /**
  * Silently schedules an object for destruction.
  *
- * @par Lua name `mux.world.destroy`
- * @par Lua signature `mux.world.destroy( object, options? )`
+ * @par Lua name `mux.world.destroy_object`
+ * @par Lua signature `mux.world.destroy_object( object, options? )`
  * @par Lua parameters - `object` (`number|Object`) Live object to destroy.
  * - `options` (`DestroyOptions|nil`) Optional fields; `override=true` bypasses
  * the target's SAFE flag, but never core-object or Wizard-player protection.
@@ -471,12 +471,12 @@ static int lua_mux_teleport(lua_State *state) {
  * @param[in,out] state Lua state.
  * @return The number of Lua values pushed.
  */
-static int lua_mux_destroy(lua_State *state) {
+static int lua_mux_destroy_object(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   static const char *const FIELDS[] = {"override"};
   bool override_safe = false;
 
-  lua_mux_require_runtime(package, state, "world.destroy");
+  lua_mux_require_runtime(package, state, "world.destroy_object");
   DbRef object = lua_mux_require_object(package, state, 1);
   if (!lua_isnoneornil(state, 2)) {
     lua_mux_check_options(state, 2, FIELDS, sizeof(FIELDS) / sizeof(*FIELDS));
@@ -574,10 +574,10 @@ void lua_mux_install_world_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_pushcclosure(state, lua_mux_create_object, 1);
   lua_setfield(state, -2, "create_object");
   lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_teleport, 1);
-  lua_setfield(state, -2, "teleport");
+  lua_pushcclosure(state, lua_mux_teleport_object, 1);
+  lua_setfield(state, -2, "teleport_object");
   lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_destroy, 1);
-  lua_setfield(state, -2, "destroy");
+  lua_pushcclosure(state, lua_mux_destroy_object, 1);
+  lua_setfield(state, -2, "destroy_object");
   lua_setfield(state, -2, "world");
 }

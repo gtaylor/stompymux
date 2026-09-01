@@ -77,6 +77,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/packages/mux/error/mux_error_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/config/mux_config_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/comsys/mux_comsys_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/mux/comsys/mux_comsys_channel_membership_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/session/mux_session_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_world_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_object_relationship_bindings.c

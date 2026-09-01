@@ -1,7 +1,9 @@
 ---
 title: mux.comsys
+linkTitle: mux.comsys
 type: docs
 weight: 14
+no_list: true
 sidebar_root_for: self
 ---
 
@@ -14,50 +16,24 @@ All functions are unavailable during `@lua/check`. Unknown or stale channels
 raise `mux.channel.invalid`. A Channel handle stays stale after destruction even
 if another channel is created with the same name.
 
+## Namespaces
+
+| Type | Description |
+| --- | --- |
+| [`Channel`](type-channel/) | A validated handle for a live communication channel. |
+| [`ChannelFlags`](type-channel-flags/) | Reads and changes a channel's administrative flags. |
+
 ## Functions
 
-### `channel`
+| Function | Description |
+| --- | --- |
+| [`channel`](channel/) | Retrieves an existing channel by name. |
+| [`create_channel`](create-channel/) | Creates a private channel. |
+| [`destroy_channel`](destroy-channel/) | Permanently removes a channel. |
+| [`list_channels`](list-channels/) | Lists channels in deterministic name order. |
 
-```lua
-local public = mux.comsys.channel("Public")
-```
+## Constants
 
-Returns the existing [Channel](type-channel/) using a case-insensitive lookup.
-`Channel:name()` returns its canonical spelling. Unknown names raise
-`mux.channel.invalid`.
-
-### `create_channel`
-
-```lua
-local staff = mux.comsys.create_channel("Staff")
-```
-
-Creates and returns a private channel. Names must be non-empty printable ASCII,
-contain no spaces, and be shorter than 50 bytes. Invalid names raise
-`mux.arg.invalid`; duplicate names raise `mux.channel.invalid`.
-
-### `destroy_channel`
-
-```lua
-mux.comsys.destroy_channel(staff)
-```
-
-Permanently removes a live Channel and its membership storage. The handle and
-all flag handles derived from it become stale.
-
-### `list_channels`
-
-```lua
-for _, channel in ipairs(mux.comsys.list_channels()) do
-  mux.log("channels.log", channel:name())
-end
-```
-
-Returns every channel as a dense array sorted case-insensitively by name, with
-the original spelling as the tie-breaker.
-
-## Types and constants
-
-- [Channel](type-channel/) exposes channel properties and operations as methods.
-- [ChannelFlags](type-channel-flags/) reads and changes the administrative flags.
-- [`mux.comsys.flags`](flags/) provides typed channel-flag constants.
+| Constants package | Description |
+| --- | --- |
+| [`flags`](flags/) | Typed constants for native channel flags. |

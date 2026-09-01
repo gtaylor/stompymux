@@ -1,5 +1,5 @@
 ---
-title: teleport
+title: teleport_object
 type: docs
 ---
 
@@ -10,7 +10,7 @@ teleport and movement callbacks.
 ## Function
 
 ```lua
-mux.world.teleport({
+mux.world.teleport_object({
   object = thing,
   destination = room,
 })

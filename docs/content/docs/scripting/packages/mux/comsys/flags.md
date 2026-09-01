@@ -1,6 +1,8 @@
 ---
-title: flags
+title: mux.comsys.flags
 type: docs
+toc_hide: false
+weight: -50
 ---
 
 `mux.comsys.flags` contains immutable typed constants accepted by
@@ -15,3 +17,8 @@ type: docs
 Constants compare by identity within the current Lua runtime and render as
 their uppercase names. Unknown constants, raw strings, and constants from
 another runtime raise `mux.channel_flag.invalid`.
+
+## See Also
+
+- [`mux.comsys`](../)
+- [`ChannelFlags`](../type-channel-flags/)

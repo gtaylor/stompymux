@@ -74,6 +74,14 @@ typedef enum ChannelCreateResult : int {
   CHANNEL_CREATE_ALREADY_EXISTS,
 } ChannelCreateResult;
 
+typedef enum ChannelAddPlayerResult : int {
+  CHANNEL_ADD_PLAYER_OK,
+  CHANNEL_ADD_PLAYER_ALIAS_REQUIRED,
+  CHANNEL_ADD_PLAYER_ALIAS_INVALID,
+  CHANNEL_ADD_PLAYER_ALIAS_IN_USE,
+  CHANNEL_ADD_PLAYER_CAPACITY_FAILURE,
+} ChannelAddPlayerResult;
+
 typedef struct {
   time_t time;
   char *msg;
@@ -141,6 +149,19 @@ void do_addcom(CommandInvocation *invocation);
 
 void comsys_add_alias(EvaluationContext *evaluation, DbRef player,
                       const char *arg1, const char *arg2);
+/** Administratively adds a player's alias and joins them to a channel without
+ * applying its join lock.
+ * @param[in,out] evaluation Expression evaluation context.
+ * @param[in] player Player object to add.
+ * @param[in,out] channel Channel to join.
+ * @param[in] alias Player-local channel alias.
+ * @param[in] quiet Whether to suppress the channel-wide join announcement.
+ * @return The add-player result. */
+
+ChannelAddPlayerResult comsys_channel_add_player(EvaluationContext *evaluation,
+                                                 DbRef player,
+                                                 struct Channel *channel,
+                                                 const char *alias, bool quiet);
 /** Handles the delcom command. @param[in,out] invocation Command invocation. */
 
 void do_delcom(CommandInvocation *invocation);
@@ -216,7 +237,7 @@ void do_chanlist(CommandInvocation *invocation);
  * evaluation context. @param[in] player Player object. @param[in,out] ch Ch. */
 
 void do_joinchannel(EvaluationContext *evaluation, DbRef player,
-                    struct Channel *ch);
+                    struct Channel *ch, bool quiet);
 /** Executes fun cemit. @param[out] buff Caller-owned output storage.
  * @param[in,out] bufc Bufc. @param[in] player Player object. @param[in] cause
  * Object that caused the operation. @param[in,out] fargs Fargs. @param[in]

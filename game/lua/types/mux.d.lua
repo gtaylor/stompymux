@@ -33,10 +33,10 @@ function Error:is(code) end
 function Error:root() end
 
 ---@class ErrorFields
----@field code string|ErrorCode
----@field message string
----@field detail? any
----@field cause? any
+---@field code string|ErrorCode Stable dotted code or checked code node.
+---@field message string Human-readable failure description.
+---@field detail? any Optional structured context.
+---@field cause? any Optional earlier failure.
 
 ---Checked `mux.arg.invalid` error-code node.
 ---@class MuxArgInvalidErrorCode: ErrorCode
@@ -140,25 +140,25 @@ function Error:root() end
 ---@field not_found MuxConfigNotFoundErrorCode `mux.config.not_found`.
 ---@field unsupported MuxConfigUnsupportedErrorCode `mux.config.unsupported`.
 ---@class MuxErrorCodes: ErrorCode
----@field arg MuxArgErrorCodes
----@field unavailable MuxUnavailableErrorCodes
+---@field arg MuxArgErrorCodes Invalid-argument code branch.
+---@field unavailable MuxUnavailableErrorCodes Runtime-availability code branch.
 ---@field runtime MuxRuntimeErrorCode `mux.runtime`.
----@field state MuxStateErrorCodes
----@field object MuxObjectErrorCodes
----@field attribute MuxAttributeErrorCodes
----@field flag MuxFlagErrorCodes
----@field power MuxPowerErrorCodes
----@field access MuxAccessErrorCodes
----@field connection MuxConnectionErrorCodes
----@field channel MuxChannelErrorCodes
----@field channel_flag MuxChannelFlagErrorCodes
----@field text MuxTextErrorCodes
----@field module MuxModuleErrorCodes
----@field config MuxConfigErrorCodes
+---@field state MuxStateErrorCodes Persistent-state code branch.
+---@field object MuxObjectErrorCodes Database-object code branch.
+---@field attribute MuxAttributeErrorCodes Native-attribute code branch.
+---@field flag MuxFlagErrorCodes Object-flag code branch.
+---@field power MuxPowerErrorCodes Object-power code branch.
+---@field access MuxAccessErrorCodes Command-access code branch.
+---@field connection MuxConnectionErrorCodes Connection code branch.
+---@field channel MuxChannelErrorCodes Communication-channel code branch.
+---@field channel_flag MuxChannelFlagErrorCodes Channel-flag code branch.
+---@field text MuxTextErrorCodes Styled-text code branch.
+---@field module MuxModuleErrorCodes Lua-module code branch.
+---@field config MuxConfigErrorCodes Configuration code branch.
 ---@field internal MuxInternalErrorCode `mux.internal`.
 
 ---@class ErrorCodeTree: ErrorCode
----@field [string] ErrorCodeTree
+---@field [string] ErrorCodeTree Checked child code segment.
 
 ---Checked `testing.assertion` error-code node used by the Lua test harness.
 ---@class TestingAssertionErrorCode: ErrorCode
@@ -173,8 +173,8 @@ function Error:root() end
 
 ---Persistent state entry returned by [`State:entries`](lua://State.entries).
 ---@class StateEntry
----@field key string
----@field value StateValue
+---@field key string Stored state key.
+---@field value StateValue Stored scalar value.
 
 ---A persistent, object-scoped state namespace with a native string representation.
 ---@class State
@@ -344,26 +344,26 @@ local Attribute = {}
 ---Raises [`mux.error.codes.flag.invalid`](lua://mux.error.codes.flag.invalid) for
 ---unknown or non-string keys and attempted mutation.
 ---@class FlagNamespace
----@field ANSI Flag
----@field AUDIBLE Flag
----@field AUDITORIUM Flag
----@field BLIND Flag
----@field CONNECTED Flag
----@field DARK Flag
----@field FLOATING Flag
----@field GAGGED Flag
----@field GOING Flag
----@field HALTED Flag
----@field IN_CHARACTER Flag
----@field LIGHT Flag
----@field MONITOR Flag
----@field NO_COMMAND Flag
----@field SAFE Flag
----@field SUSPECT Flag
----@field TRANSPARENT Flag
----@field WIZARD Flag
----@field XCODE Flag
----@field ZOMBIE Flag
+---@field ANSI Flag Enables ANSI-capable output for the object.
+---@field AUDIBLE Flag Enables sound-capable notifications associated with the object.
+---@field AUDITORIUM Flag Applies auditorium-style speech propagation.
+---@field BLIND Flag Marks the object as unable to see normally.
+---@field CONNECTED Flag Marks a player as currently connected.
+---@field DARK Flag Hides the object according to native visibility rules.
+---@field FLOATING Flag Prevents ordinary location inheritance for the object.
+---@field GAGGED Flag Prevents the object from speaking normally.
+---@field GOING Flag Marks the object for deferred destruction.
+---@field HALTED Flag Prevents queued command execution by the object.
+---@field IN_CHARACTER Flag Marks the object as participating in in-character play.
+---@field LIGHT Flag Makes the object visible through native light rules.
+---@field MONITOR Flag Enables command monitoring behavior.
+---@field NO_COMMAND Flag Prevents attributes on the object from acting as commands.
+---@field SAFE Flag Protects the object from ordinary destruction.
+---@field SUSPECT Flag Marks a player for suspect-activity monitoring.
+---@field TRANSPARENT Flag Allows visibility through the object.
+---@field WIZARD Flag Grants Wizard status under native privilege rules.
+---@field XCODE Flag Marks an object as a BattleTech special object.
+---@field ZOMBIE Flag Allows a thing to act through its owner under native rules.
 ---@see mux.error.codes.flag.invalid
 
 ---Dynamic, immutable lookup namespace for registered powers. Keys must use the
@@ -372,7 +372,7 @@ local Attribute = {}
 ---Raises [`mux.error.codes.power.invalid`](lua://mux.error.codes.power.invalid)
 ---for unknown or non-string keys and attempted mutation.
 ---@class PowerNamespace
----@field IDLE Power
+---@field IDLE Power Exempts a player from ordinary idle-timeout handling.
 ---@see mux.error.codes.power.invalid
 
 ---A generation-checked view of the flags set on one object.
@@ -529,7 +529,7 @@ function Object:set_name(name) end
 ---@see mux.error.codes.object.invalid
 function Object:contents(options) end
 
----Links this exit to a destination, or unlinks it when `destination` is nil.
+---Sets this exit's destination, or clears it when `destination` is nil.
 ---@param destination DbRef|Object|nil Live object capable of containing objects, or nil to unlink this exit. This argument must be supplied explicitly.
 ---
 ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `destination` is omitted, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when the receiver is not an exit or the destination cannot contain objects, or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable) when the receiver or destination is being destroyed.
@@ -537,7 +537,7 @@ function Object:contents(options) end
 ---@see mux.error.codes.arg.invalid
 ---@see mux.error.codes.object.invalid
 ---@see mux.error.codes.object.unavailable
-function Object:link_exit(destination) end
+function Object:set_destination(destination) end
 
 ---Returns this object's assigned zone, or nil when no zone is assigned or the zone is being destroyed.
 ---@return Object? zone Assigned zone.
@@ -661,6 +661,8 @@ function Object:powers() end
 ---created later. Assigning fields raises
 ---[`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).
 ---@class Channel
+---@field flags fun(self: Channel): ChannelFlags
+---@field set_object fun(self: Channel, object?: DbRef|Object) Attaches the object supplying channel locks and description, or detaches it when omitted or nil.
 ---@see mux.error.codes.arg.invalid
 local Channel = {}
 
@@ -745,6 +747,22 @@ function Channel:emit(message, options) end
 ---@see mux.error.codes.channel.invalid
 ---@see mux.error.codes.arg.invalid
 function Channel:who(options) end
+
+---Adds a player to this channel with a player-local command alias. The trusted
+---operation bypasses the channel join lock. A quiet join suppresses only the
+---channel-wide announcement; direct confirmations are still sent to the player.
+---@param player DbRef|Object Player to add.
+---@param alias string One to five printable ASCII characters without spaces.
+---@param quiet boolean Whether to suppress the channel-wide join announcement.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`mux.error.codes.internal`](lua://mux.error.codes.internal).
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.channel.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.internal
+function Channel:add_player(player, alias, quiet) end
 
 ---Announces a God-administered boot and removes a current member's channel
 ---aliases using the native side-effect path.
@@ -842,9 +860,9 @@ function mux_telnet.environment_get(descriptor, kind, name) end
 ---@class StyleOptions
 ---@field foreground? string Palette foreground name.
 ---@field background? string Palette background name.
----@field bold? boolean
----@field underline? boolean
----@field inverse? boolean
+---@field bold? boolean Whether to enable bold intensity.
+---@field underline? boolean Whether to underline the text.
+---@field inverse? boolean Whether to swap foreground and background presentation.
 
 ---@class MuxErrorPackage
 ---@field codes MuxErrorCodes Checked native `mux` code tree.
@@ -891,7 +909,10 @@ function mux_error.check(value, err) end
 ---@param message string
 ---@return Error error
 ---
----Raises [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.runtime`](lua://mux.error.codes.runtime).
+---Non-error causes are normalized to
+---[`mux.error.codes.runtime`](lua://mux.error.codes.runtime). Raises
+---[`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when the
+---wrapper code is invalid.
 ---@see mux.error.codes.arg.invalid
 ---@see mux.error.codes.runtime
 function mux_error.wrap(err, code, message) end
@@ -1092,7 +1113,7 @@ function mux_world.create_object(options) end
 ---@see mux.error.codes.arg.invalid
 ---@see mux.error.codes.object.invalid
 ---@see mux.error.codes.object.unavailable
-function mux_world.teleport(options) end
+function mux_world.teleport_object(options) end
 
 ---Silently schedules a live object for destruction by the normal maintenance purge.
 ---@param object DbRef|Object Object to destroy.
@@ -1104,7 +1125,7 @@ function mux_world.teleport(options) end
 ---@see mux.error.codes.object.invalid
 ---@see mux.error.codes.object.unavailable
 ---@see mux.error.codes.internal
-function mux_world.destroy(object, options) end
+function mux_world.destroy_object(object, options) end
 
 ---Tests a native object lock without emitting lock messages or performing the
 ---associated action. The lock runs with a silent callback context.
@@ -1189,7 +1210,7 @@ function mux_text.truncate(value, width) end
 ---@class MuxPackage
 ---@field comsys MuxComsysPackage Trusted live communication-channel administration.
 ---@field config MuxConfigPackage Read-only scalar server configuration.
----@field error MuxErrorPackage
+---@field error MuxErrorPackage Structured errors and checked code nodes.
 ---@field session MuxSessionPackage Live connections and interactive flows.
 ---@field telnet MuxTelnetPackage Telnet protocol state and capabilities.
 ---@field text MuxTextPackage Styled-text utilities.

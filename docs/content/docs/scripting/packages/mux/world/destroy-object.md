@@ -1,5 +1,5 @@
 ---
-title: destroy
+title: destroy_object
 type: docs
 ---
 
@@ -10,8 +10,8 @@ that purge runs.
 ## Function
 
 ```lua
-mux.world.destroy(object)
-mux.world.destroy(object, { override = true })
+mux.world.destroy_object(object)
+mux.world.destroy_object(object, { override = true })
 ```
 
 The optional Boolean `override` field bypasses a target's `SAFE` flag. It does
@@ -29,5 +29,5 @@ object, `mux.arg.invalid` for invalid options, and
 
 ```lua
 local object = mux.world.create_object({ type = mux.world.types.THING, name = "Temporary", location = room })
-mux.world.destroy(object)
+mux.world.destroy_object(object)
 ```

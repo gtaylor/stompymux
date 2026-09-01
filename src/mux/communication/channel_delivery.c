@@ -152,7 +152,7 @@ void comsys_process_alias_command(EvaluationContext *evaluation, DbRef player,
     return;
   }
   if (!strcasecmp(arg2, "on")) {
-    do_joinchannel(evaluation, player, ch);
+    do_joinchannel(evaluation, player, ch, false);
   } else if (!strcasecmp(arg2, "off")) {
     comsys_leave_channel(evaluation, player, ch);
     // Body matches the later bare `!user->on` branch, but this one fires

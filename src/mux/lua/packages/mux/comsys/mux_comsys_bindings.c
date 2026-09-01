@@ -12,6 +12,7 @@
 #include "mux/communication/comsys_internal.h"
 #include "mux/lua/lua_error.h"
 #include "mux/lua/lua_error_codes.h"
+#include "mux/lua/packages/mux/comsys/mux_comsys_bindings_internal.h"
 #include "mux/lua/packages/mux/mux_package.h"
 #include "mux/lua/packages/mux/mux_package_internal.h"
 #include "mux/objects/db.h"
@@ -27,14 +28,6 @@ static const char LUA_MUX_CHANNEL_FLAGS_METATABLE[] = "btmux.channel_flags";
 static const char LUA_MUX_CHANNEL_FLAG_METATABLE[] = "btmux.channel_flag";
 static const char LUA_MUX_CHANNEL_FLAG_NAMESPACE_METATABLE[] =
     "btmux.channel_flag_namespace";
-
-typedef struct LuaMuxChannel LuaMuxChannel;
-struct LuaMuxChannel {
-  LuaMuxPackage *package;
-  struct Channel *identity;
-  uint64_t generation;
-  char name[CHAN_NAME_LEN];
-};
 
 typedef struct LuaMuxChannelFlags LuaMuxChannelFlags;
 struct LuaMuxChannelFlags {
@@ -98,7 +91,7 @@ lua_mux_check_channel_identity(LuaMuxPackage *package, lua_State *state,
   return current;
 }
 
-static LuaMuxChannel *lua_mux_check_channel(lua_State *state, int argument) {
+LuaMuxChannel *lua_mux_check_channel(lua_State *state, int argument) {
   LuaMuxChannel *handle =
       luaL_checkudata(state, argument, LUA_MUX_CHANNEL_METATABLE);
 
@@ -602,14 +595,14 @@ static int lua_mux_channel_flags_change(lua_State *state, bool enabled) {
   bool current = (handle->identity->type & flag->value) != 0;
 
   if (current == enabled) {
-    lua_pushboolean(state, false);
+    lua_pushboolean(state, 0);
     return 1;
   }
   if (enabled)
     handle->identity->type |= flag->value;
   else
     handle->identity->type &= ~flag->value;
-  lua_pushboolean(state, true);
+  lua_pushboolean(state, 1);
   return 1;
 }
 
@@ -689,6 +682,7 @@ static void lua_mux_install_channel_metatable(lua_State *state,
       {"flags", lua_mux_channel_flags},
       {"emit", lua_mux_channel_emit},
       {"who", lua_mux_channel_who},
+      {"add_player", lua_mux_channel_add_player},
       {"boot_player", lua_mux_channel_boot_player},
   };
   for (size_t index = 0; index < sizeof(METHODS) / sizeof(*METHODS); index++) {

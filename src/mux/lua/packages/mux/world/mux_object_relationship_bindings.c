@@ -15,10 +15,10 @@
 #include "mux/support/alloc.h"
 
 /**
- * Links this exit to a destination or unlinks it with `nil`.
+ * Sets this exit's destination or clears it with `nil`.
  *
- * @par Lua name `object:link_exit`
- * @par Lua signature `object:link_exit( destination )`
+ * @par Lua name `object:set_destination`
+ * @par Lua signature `object:set_destination( destination )`
  * @par Lua parameters - `destination` (`number|Object|nil`) Live object capable
  * of containing objects, or `nil` to unlink this exit.
  * @par Lua returns - No values.
@@ -32,11 +32,11 @@
  * @param[in,out] state Lua state.
  * @return The number of Lua values pushed.
  */
-static int lua_mux_object_link_exit(lua_State *state) {
+static int lua_mux_object_set_destination(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
   GameDatabase *database = package->services->database;
 
-  lua_mux_require_runtime(package, state, "object:link_exit");
+  lua_mux_require_runtime(package, state, "object:set_destination");
   DbRef exit = lua_mux_require_object(package, state, 1);
   if (!is_exit(database, exit))
     return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
@@ -321,8 +321,8 @@ static int lua_mux_object_set_lua_parent(lua_State *state) {
 void lua_mux_install_object_relationship_bindings(lua_State *state,
                                                   LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_object_link_exit, 1);
-  lua_setfield(state, -2, "link_exit");
+  lua_pushcclosure(state, lua_mux_object_set_destination, 1);
+  lua_setfield(state, -2, "set_destination");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_object_zone, 1);
   lua_setfield(state, -2, "zone");
