@@ -34,7 +34,11 @@ Trusted runtime scripts may create rooms, things, and exits with the
 `mux.world.create_*` functions and schedule any supported object for deletion
 with `mux.world.destroy_object`. `exit:set_destination(destination)` sets an
 exit's destination; pass `nil` to clear it without detaching it from its source.
-`mux.world.teleport_object` moves a thing or player using an extensible options table.
+`exit:destination()` reads a concrete destination. `object:home()` and
+`object:location()` read a thing or player's home and current location, and
+`object:set_home(new_home)` changes its home.
+`mux.world.teleport_object` moves a thing or player using an extensible options
+table.
 `object:zone()` reads an object's zone, and `object:set_zone()` assigns a thing
 or room as its zone or clears the assignment with `nil`.
 `object:affiliation()` reads an object's affiliation, and

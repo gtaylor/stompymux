@@ -14,6 +14,56 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 
+static int lua_mux_push_relationship(lua_State *state, LuaMuxPackage *package,
+                                     DbRef relationship,
+                                     const char *relationship_name) {
+  GameDatabase *database = package->services->database;
+
+  if (relationship == NOTHING || (is_good_obj(database, relationship) &&
+                                  is_going(database, relationship))) {
+    lua_pushnil(state);
+    return 1;
+  }
+  if (!is_good_obj(database, relationship))
+    return lua_error_raise(state, LUA_ERROR_CODE_OBJECT_INVALID,
+                           "object has an invalid %s", relationship_name);
+  lua_mux_push_object(state, package, relationship);
+  return 1;
+}
+
+/**
+ * Returns this exit's destination.
+ *
+ * @par Lua name `object:destination`
+ * @par Lua signature `object:destination( )`
+ * @par Lua parameters - None.
+ * @par Lua returns - `destination` (`Object|nil`): The exit destination, or
+ * `nil` when the exit is unlinked or its destination is being destroyed.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_OBJECT_INVALID` when the receiver is not an exit or its
+ * stored destination is invalid or `HOME`.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state Lua state.
+ * @return The number of Lua values pushed.
+ */
+static int lua_mux_object_destination(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
+  GameDatabase *database = package->services->database;
+
+  lua_mux_require_runtime(package, state, "object:destination");
+  DbRef exit = lua_mux_require_object(package, state, 1);
+  if (!is_exit(database, exit))
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "object is not an exit");
+  DbRef destination = game_object_location(database, exit);
+
+  if (destination == HOME)
+    return lua_error_raise(state, LUA_ERROR_CODE_OBJECT_INVALID,
+                           "exit is linked to HOME");
+  return lua_mux_push_relationship(state, package, destination, "destination");
+}
+
 /**
  * Sets this exit's destination or clears it with `nil`.
  *
@@ -62,6 +112,114 @@ static int lua_mux_object_set_destination(lua_State *state) {
                          "destination is being destroyed");
   game_object_set_location(database, exit, destination);
   return 0;
+}
+
+/**
+ * Returns this thing or player's home.
+ *
+ * @par Lua name `object:home`
+ * @par Lua signature `object:home( )`
+ * @par Lua parameters - None.
+ * @par Lua returns - `home` (`Object|nil`): The object's home, or `nil` when
+ * no home is assigned or the home is being destroyed.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_OBJECT_INVALID` when the receiver is not a thing or player
+ * or its stored home is invalid.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state Lua state.
+ * @return The number of Lua values pushed.
+ */
+static int lua_mux_object_home(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
+  GameDatabase *database = package->services->database;
+
+  lua_mux_require_runtime(package, state, "object:home");
+  DbRef object = lua_mux_require_object(package, state, 1);
+  if (!has_location(database, object))
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "object is not a thing or player");
+  return lua_mux_push_relationship(state, package,
+                                   game_object_link(database, object), "home");
+}
+
+/**
+ * Sets this thing or player's home.
+ *
+ * @par Lua name `object:set_home`
+ * @par Lua signature `object:set_home( new_home )`
+ * @par Lua parameters - `new_home` (`number|Object`) Live room, thing, or
+ * player to assign as the object's home.
+ * @par Lua returns - No values.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when `new_home` is omitted;
+ * `LUA_ERROR_CODE_OBJECT_INVALID` when the receiver is not a thing or player,
+ * the destination cannot contain objects, or the object would be its own home;
+ * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` when the receiver or destination is
+ * being destroyed.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state Lua state.
+ * @return The number of Lua values pushed.
+ */
+static int lua_mux_object_set_home(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
+  GameDatabase *database = package->services->database;
+
+  lua_mux_require_runtime(package, state, "object:set_home");
+  DbRef object = lua_mux_require_object(package, state, 1);
+  if (!has_location(database, object))
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "object is not a thing or player");
+  if (is_going(database, object))
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
+                         "object is being destroyed");
+  if (lua_gettop(state) < 2)
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                         "new_home is required");
+
+  DbRef new_home = lua_mux_require_object(package, state, 2);
+  if (!has_contents(database, new_home))
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "new_home must be an object that can contain objects");
+  if (is_going(database, new_home))
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
+                         "new_home is being destroyed");
+  if (object == new_home)
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "object cannot be its own home");
+
+  game_object_set_link(database, object, new_home);
+  return 0;
+}
+
+/**
+ * Returns this thing or player's location.
+ *
+ * @par Lua name `object:location`
+ * @par Lua signature `object:location( )`
+ * @par Lua parameters - None.
+ * @par Lua returns - `location` (`Object|nil`): The object's location, or
+ * `nil` when no location is assigned or the location is being destroyed.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_OBJECT_INVALID` when the receiver is not a thing or player
+ * or its stored location is invalid.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state Lua state.
+ * @return The number of Lua values pushed.
+ */
+static int lua_mux_object_location(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
+  GameDatabase *database = package->services->database;
+
+  lua_mux_require_runtime(package, state, "object:location");
+  DbRef object = lua_mux_require_object(package, state, 1);
+  if (!has_location(database, object))
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "object is not a thing or player");
+  return lua_mux_push_relationship(
+      state, package, game_object_location(database, object), "location");
 }
 
 /**
@@ -321,8 +479,20 @@ static int lua_mux_object_set_lua_parent(lua_State *state) {
 void lua_mux_install_object_relationship_bindings(lua_State *state,
                                                   LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_object_destination, 1);
+  lua_setfield(state, -2, "destination");
+  lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_object_set_destination, 1);
   lua_setfield(state, -2, "set_destination");
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_object_home, 1);
+  lua_setfield(state, -2, "home");
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_object_set_home, 1);
+  lua_setfield(state, -2, "set_home");
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_object_location, 1);
+  lua_setfield(state, -2, "location");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_object_zone, 1);
   lua_setfield(state, -2, "zone");

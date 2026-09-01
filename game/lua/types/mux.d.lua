@@ -1,7 +1,7 @@
 ---@meta _
 
----Maintained by `just update-lua-types`; edit the native bindings and their
----Doxygen comments, then refresh this definition instead of editing it alone.
+---Maintained by `just update-lua-types`; refresh this definition from the
+---native bindings and their Doxygen comments rather than editing it alone.
 
 ---@alias DbRef integer Database object reference.
 ---@alias StateValue string|boolean|number Scalar value supported by persistent object state.
@@ -529,6 +529,19 @@ function Object:set_name(name) end
 ---@see mux.error.codes.object.invalid
 function Object:contents(options) end
 
+---Returns this exit's destination, or nil when it is unlinked or the
+---destination is being destroyed.
+---@return Object? destination
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking)
+---during `@lua/check`, or
+---[`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when
+---the receiver is not an exit or its stored destination is invalid, including
+---the special `HOME` destination.
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.object.invalid
+function Object:destination() end
+
 ---Sets this exit's destination, or clears it when `destination` is nil.
 ---@param destination DbRef|Object|nil Live object capable of containing objects, or nil to unlink this exit. This argument must be supplied explicitly.
 ---
@@ -538,6 +551,48 @@ function Object:contents(options) end
 ---@see mux.error.codes.object.invalid
 ---@see mux.error.codes.object.unavailable
 function Object:set_destination(destination) end
+
+---Returns this thing or player's home, or nil when no home is assigned or the
+---home is being destroyed.
+---@return Object? home
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking)
+---during `@lua/check`, or
+---[`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when
+---the receiver is not a thing or player or its stored home is invalid.
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.object.invalid
+function Object:home() end
+
+---Sets this thing or player's home to a live object capable of containing
+---objects.
+---@param new_home DbRef|Object Live room, thing, or player to assign as the object's home.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking)
+---during `@lua/check`, [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid)
+---when `new_home` is omitted,
+---[`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when
+---the receiver is not a thing or player, the home cannot contain objects, or
+---the object would be its own home, or
+---[`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable)
+---when the receiver or home is being destroyed.
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+function Object:set_home(new_home) end
+
+---Returns this thing or player's current location, or nil when no location is
+---assigned or the location is being destroyed.
+---@return Object? location
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking)
+---during `@lua/check`, or
+---[`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when
+---the receiver is not a thing or player or its stored location is invalid.
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.object.invalid
+function Object:location() end
 
 ---Returns this object's assigned zone, or nil when no zone is assigned or the zone is being destroyed.
 ---@return Object? zone Assigned zone.

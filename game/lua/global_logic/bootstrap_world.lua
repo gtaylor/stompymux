@@ -42,7 +42,8 @@ local function bootstrap_staff_rooms(ctx)
     [[This is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.
 
 Please be sure to read the room descriptions for details on the contents of each area.
-]])
+]]
+  )
 
   local new_player_starting_room = mux.world.object(mux.config.get("player_starting_room") --[[@as integer]])
   mux.world.create_object({
@@ -85,7 +86,8 @@ Please be sure to read the room descriptions for details on the contents of each
   })
   channel_storage_room:attributes():set(
     "Description",
-    [[This room contains channel objects, which are attached to comsys channels and are used for advanced configuration and locking.]])
+    [[This room contains channel objects, which are attached to comsys channels and are used for advanced configuration and locking.]]
+  )
   mux.world.create_object({
     type = mux.world.types.EXIT,
     name = "Channel Object Storage;cs;cos",
