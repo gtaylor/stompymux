@@ -40,6 +40,7 @@ When writing C code, use the following naming conventions:
 
 ## Lua bindings and Lua code
 
+- We use LuaJIT 2.1 for all Lua code. LuaJIT comes with non-standard [extensions](https://luajit.org/extensions.html) to the upstream Lua 5.1 language.
 - Use [StyLua](https://github.com/JohnnyMorganz/StyLua) for code formatting.
 - LuaLS stubs may be found in game/lua/types. These drive IDE validation and hover hinting.
 - All C functions that are bound to Lua packages should include Doxygen-style comments to help the stub generator agent out.
