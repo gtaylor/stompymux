@@ -393,51 +393,6 @@ static int lua_mux_create_object(lua_State *state) {
 }
 
 /**
- * Links an exit to a destination or unlinks it with `nil`.
- *
- * @par Lua name `mux.world.link_exit`
- * @par Lua signature `mux.world.link_exit( exit, destination )`
- * @par Lua parameters - `exit` (`number|Object`) Live exit to update.
- * - `destination` (`number|Object|nil`) Live object capable of containing
- * objects, or `nil` to unlink the exit.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when the destination argument is omitted;
- * `LUA_ERROR_CODE_OBJECT_INVALID` for invalid references or object kinds;
- * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for an exit or destination being
- * destroyed.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
- */
-static int lua_mux_link_exit(lua_State *state) {
-  LuaMuxPackage *package = lua_mux_package_get(state);
-
-  lua_mux_require_runtime(package, state, "world.link_exit");
-  DbRef exit = lua_mux_require_object(package, state, 1);
-  if (!is_exit(package->services->database, exit))
-    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
-                         "object is not an exit");
-  if (is_going(package->services->database, exit))
-    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
-                         "exit is being destroyed");
-  if (lua_gettop(state) < 2)
-    return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
-                         "destination is required; pass nil to unlink");
-  if (lua_isnil(state, 2)) {
-    game_object_set_location(package->services->database, exit, NOTHING);
-    return 0;
-  }
-
-  DbRef destination = lua_mux_require_object(package, state, 2);
-  lua_mux_world_require_container(package, state, 2, "destination",
-                                  destination);
-  game_object_set_location(package->services->database, exit, destination);
-  return 0;
-}
-
-/**
  * Teleports a location-bearing object to a destination container.
  *
  * @par Lua name `mux.world.teleport`
@@ -618,9 +573,6 @@ void lua_mux_install_world_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_create_object, 1);
   lua_setfield(state, -2, "create_object");
-  lua_pushlightuserdata(state, package);
-  lua_pushcclosure(state, lua_mux_link_exit, 1);
-  lua_setfield(state, -2, "link_exit");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_teleport, 1);
   lua_setfield(state, -2, "teleport");

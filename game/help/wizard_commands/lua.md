@@ -32,8 +32,8 @@ controls player-visible reporting.
 
 Trusted runtime scripts may create rooms, things, and exits with the
 `mux.world.create_*` functions and schedule any supported object for deletion
-with `mux.world.destroy`. `mux.world.link_exit` links an exit to a destination;
-pass `nil` as the destination to unlink it without detaching it from its source.
+with `mux.world.destroy`. `exit:link_exit(destination)` links an exit to a
+destination; pass `nil` to unlink it without detaching it from its source.
 `mux.world.teleport` moves a thing or player using an extensible options table.
 `object:zone()` reads an object's zone, and `object:set_zone()` assigns a thing
 or room as its zone or clears the assignment with `nil`.

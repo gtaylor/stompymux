@@ -15,6 +15,56 @@
 #include "mux/support/alloc.h"
 
 /**
+ * Links this exit to a destination or unlinks it with `nil`.
+ *
+ * @par Lua name `object:link_exit`
+ * @par Lua signature `object:link_exit( destination )`
+ * @par Lua parameters - `destination` (`number|Object|nil`) Live object capable
+ * of containing objects, or `nil` to unlink this exit.
+ * @par Lua returns - No values.
+ * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
+ * - `LUA_ERROR_CODE_ARG_INVALID` when the destination argument is omitted;
+ * `LUA_ERROR_CODE_OBJECT_INVALID` when the receiver is not an exit or the
+ * destination cannot contain objects; `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for
+ * a receiver or destination being destroyed.
+ * @par Lua availability Available only at runtime; unavailable during
+ * `@lua/check`.
+ * @param[in,out] state Lua state.
+ * @return The number of Lua values pushed.
+ */
+static int lua_mux_object_link_exit(lua_State *state) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
+  GameDatabase *database = package->services->database;
+
+  lua_mux_require_runtime(package, state, "object:link_exit");
+  DbRef exit = lua_mux_require_object(package, state, 1);
+  if (!is_exit(database, exit))
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "object is not an exit");
+  if (is_going(database, exit))
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
+                         "exit is being destroyed");
+  if (lua_gettop(state) < 2)
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                         "destination is required; pass nil to unlink");
+  if (lua_isnil(state, 2)) {
+    game_object_set_location(database, exit, NOTHING);
+    return 0;
+  }
+
+  DbRef destination = lua_mux_require_object(package, state, 2);
+  if (!has_contents(database, destination))
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_OBJECT_INVALID,
+                         "destination must be an object that can contain "
+                         "objects");
+  if (is_going(database, destination))
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
+                         "destination is being destroyed");
+  game_object_set_location(database, exit, destination);
+  return 0;
+}
+
+/**
  * Returns this object's assigned zone.
  *
  * @par Lua name `object:zone`
@@ -270,6 +320,9 @@ static int lua_mux_object_set_lua_parent(lua_State *state) {
 
 void lua_mux_install_object_relationship_bindings(lua_State *state,
                                                   LuaMuxPackage *package) {
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_object_link_exit, 1);
+  lua_setfield(state, -2, "link_exit");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_object_zone, 1);
   lua_setfield(state, -2, "zone");

@@ -517,6 +517,16 @@ function Object:set_name(name) end
 ---@see mux.error.codes.object.invalid
 function Object:contents(options) end
 
+---Links this exit to a destination, or unlinks it when `destination` is nil.
+---@param destination DbRef|Object|nil Live object capable of containing objects, or nil to unlink this exit. This argument must be supplied explicitly.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `destination` is omitted, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when the receiver is not an exit or the destination cannot contain objects, or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable) when the receiver or destination is being destroyed.
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.arg.invalid
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+function Object:link_exit(destination) end
+
 ---Returns this object's assigned zone, or nil when no zone is assigned or the zone is being destroyed.
 ---@return Object? zone Assigned zone.
 ---
@@ -844,17 +854,6 @@ function mux_world.list_objects(options) end
 ---@see mux.error.codes.object.invalid
 ---@see mux.error.codes.object.unavailable
 function mux_world.create_object(options) end
-
----Links an exit to a destination, or unlinks it when `destination` is nil.
----@param exit DbRef|Object Live exit to update.
----@param destination DbRef|Object|nil Live object capable of containing objects, or nil to unlink the exit.
----
----Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `destination` is omitted, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
----@see mux.error.codes.unavailable.checking
----@see mux.error.codes.arg.invalid
----@see mux.error.codes.object.invalid
----@see mux.error.codes.object.unavailable
-function mux_world.link_exit(exit, destination) end
 
 ---Teleports a thing or player through the native movement path.
 ---@param options TeleportOptions Teleport fields; unknown fields are rejected.
