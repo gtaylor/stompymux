@@ -169,7 +169,7 @@ local function render_internal_appearance(ctx)
   local object = mux.world.object(ctx.object)
   local attributes = object:attributes()
   local lines = {
-    object:name(),
+    mux.text.style(object:name(), { foreground = "bright-white" }),
     attributes:get("Description") or "",
   }
   local contents, players = render_room_contents_and_players(ctx)
