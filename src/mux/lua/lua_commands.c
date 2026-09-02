@@ -72,7 +72,7 @@ static int lua_module_command_match(LuaRuntime *runtime, Descriptor *descriptor,
     lua_pushstring(state, pattern);
     status = lua_pcall_checked(runtime, 2, LUA_MULTRET);
     if (status) {
-      lua_log_error_value(runtime, thing, player, "MATCH", state, -1);
+      lua_log_error_value(runtime, thing, player, path, "MATCH", state, -1);
       handled = 1;
       if (stop_on_handled) {
         lua_settop(state, top);
@@ -95,7 +95,7 @@ static int lua_module_command_match(LuaRuntime *runtime, Descriptor *descriptor,
     status = lua_callback_pcall_checked(runtime, results + 1, 1);
     runtime->current_root = previous_root;
     if (status) {
-      lua_log_error_value(runtime, thing, player, "COMMAND", state, -1);
+      lua_log_error_value(runtime, thing, player, path, "COMMAND", state, -1);
       handled = 1;
     } else if (lua_toboolean(state, -1)) {
       handled = 1;

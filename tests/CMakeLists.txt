@@ -1593,6 +1593,18 @@ target_include_directories(lua_pcall_checked_test PRIVATE
   "${LUAJIT_SOURCE_DIR}/src")
 add_test(NAME lua_pcall_checked COMMAND lua_pcall_checked_test)
 
+add_executable(lua_module_log_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/mux/lua/lua_module_log.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_runtime.c)
+target_compile_options(lua_module_log_test PRIVATE -ffunction-sections)
+target_link_options(lua_module_log_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(lua_module_log_test PRIVATE btmux_options luajit m)
+target_include_directories(lua_module_log_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  "${CMAKE_SOURCE_DIR}/src"
+  "${LUAJIT_SOURCE_DIR}/src")
+add_test(NAME lua_module_log COMMAND lua_module_log_test)
+
 add_executable(lua_error_test
   ${CMAKE_SOURCE_DIR}/tests/unit/mux/lua/lua_error.c
   ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/lua/lua_error.c

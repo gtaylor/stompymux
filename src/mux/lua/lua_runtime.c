@@ -109,20 +109,20 @@ int lua_callback_pcall_checked(LuaRuntime *runtime, int arguments,
   return status;
 }
 
-void lua_log_error(LuaRuntime *runtime, DbRef object, const char *kind,
-                   const char *error) {
+void lua_log_error(LuaRuntime *runtime, DbRef object, const char *module,
+                   const char *kind, const char *error) {
   log_error((LogEntry){.log = runtime->services->log,
                        .key = LOG_PROBLEMS,
                        .primary = "LUA",
                        .secondary = kind},
-            "object #%ld module %s: %s", object,
-            runtime->module[0] ? runtime->module : "<unknown>",
+            "object #%ld module %s: %s", object, module ? module : "<unknown>",
             error ? error : "unknown Lua error");
 }
 
 // NOLINTBEGIN(bugprone-easily-swappable-parameters): distinct callback roles.
 void lua_log_error_value(LuaRuntime *runtime, DbRef object, DbRef enactor,
-                         const char *kind, lua_State *state, int index) {
+                         const char *module, const char *kind, lua_State *state,
+                         int index) {
   char description[LBUF_SIZE];
   char code[256];
   char secondary[320];
@@ -143,8 +143,8 @@ void lua_log_error_value(LuaRuntime *runtime, DbRef object, DbRef enactor,
                        .key = LOG_PROBLEMS,
                        .primary = "LUA",
                        .secondary = secondary},
-            "object #%ld module %s: %s", object,
-            runtime->module[0] ? runtime->module : "<unknown>", description);
+            "object #%ld module %s: %s", object, module ? module : "<unknown>",
+            description);
   if (detailed)
     notification = description;
   if (enactor >= 0 && reporting != LUA_ERROR_REPORTING_OFF)
@@ -335,7 +335,6 @@ bool lua_load_module(LuaRuntime *runtime, LuaModuleRoot root, const char *path,
     return true;
   }
   lua_pop(state, 1);
-  (void)snprintf(runtime->module, sizeof(runtime->module), "%s", key);
   previous_root = runtime->current_root;
   runtime->current_root = root;
   status = luaL_loadfile(state, resolved);

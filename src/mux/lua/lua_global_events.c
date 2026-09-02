@@ -61,8 +61,8 @@ void lua_global_event_dispatch(LuaRuntime *runtime,
       runtime->current_root = previous_root;
     }
     if (status)
-      lua_log_error_value(runtime, NOTHING, invocation->enactor, "EVENT", state,
-                          -1);
+      lua_log_error_value(runtime, NOTHING, invocation->enactor, path, "EVENT",
+                          state, -1);
     lua_settop(state, top);
   }
 }

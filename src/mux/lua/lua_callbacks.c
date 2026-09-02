@@ -220,19 +220,19 @@ void lua_appearance_evaluate(LuaRuntime *runtime,
     runtime->current_root = previous_root;
   }
   if (status) {
-    lua_log_error_value(runtime, invocation->object, invocation->enactor,
+    lua_log_error_value(runtime, invocation->object, invocation->enactor, path,
                         "APPEARANCE", state, -1);
   } else if (!lua_isnil(state, -1)) {
     if (lua_type(state, -1) != LUA_TSTRING) {
-      lua_log_error(runtime, invocation->object, "APPEARANCE",
+      lua_log_error(runtime, invocation->object, path, "APPEARANCE",
                     "appearance function must return a string or nil");
     } else {
       rendered = lua_tolstring(state, -1, &length);
       if (length >= sizeof(result->rendered)) {
-        lua_log_error(runtime, invocation->object, "APPEARANCE",
+        lua_log_error(runtime, invocation->object, path, "APPEARANCE",
                       "appearance string exceeds the MUX buffer limit");
       } else if (memchr(rendered, '\0', length)) {
-        lua_log_error(runtime, invocation->object, "APPEARANCE",
+        lua_log_error(runtime, invocation->object, path, "APPEARANCE",
                       "appearance string contains an embedded NUL");
       } else {
         memcpy(result->rendered, rendered, length);
@@ -280,20 +280,20 @@ void lua_mech_status_evaluate(LuaRuntime *runtime,
   int status = lua_callback_pcall_checked(runtime, 1, 1);
   runtime->current_root = previous_root;
   if (status) {
-    lua_log_error_value(runtime, invocation->object, invocation->enactor,
+    lua_log_error_value(runtime, invocation->object, invocation->enactor, path,
                         "MECH_STATUS", state, -1);
   } else if (!lua_isnil(state, -1)) {
     if (lua_type(state, -1) != LUA_TSTRING) {
-      lua_log_error(runtime, invocation->object, "MECH_STATUS",
+      lua_log_error(runtime, invocation->object, path, "MECH_STATUS",
                     "mech_status must return a string or nil");
     } else {
       size_t length;
       const char *rendered = lua_tolstring(state, -1, &length);
       if (length >= sizeof(result->rendered)) {
-        lua_log_error(runtime, invocation->object, "MECH_STATUS",
+        lua_log_error(runtime, invocation->object, path, "MECH_STATUS",
                       "mech_status exceeds the MUX buffer limit");
       } else if (memchr(rendered, '\0', length)) {
-        lua_log_error(runtime, invocation->object, "MECH_STATUS",
+        lua_log_error(runtime, invocation->object, path, "MECH_STATUS",
                       "mech_status contains an embedded NUL");
       } else {
         memcpy(result->rendered, rendered, length);
@@ -438,7 +438,7 @@ bool lua_event_dispatch(LuaRuntime *runtime,
     runtime->current_root = previous_root;
   }
   if (status)
-    lua_log_error_value(runtime, invocation->object, invocation->enactor,
+    lua_log_error_value(runtime, invocation->object, invocation->enactor, path,
                         "EVENT", state, -1);
   lua_settop(state, top);
   return true;
@@ -570,10 +570,10 @@ void lua_lock_evaluate(LuaRuntime *runtime, const LuaLockInvocation *invocation,
     runtime->current_root = previous_root;
   }
   if (status) {
-    lua_log_error_value(runtime, invocation->object, invocation->enactor,
+    lua_log_error_value(runtime, invocation->object, invocation->enactor, path,
                         "LOCK", state, -1);
   } else if (!lua_lock_parse_result(state, result)) {
-    lua_log_error(runtime, invocation->object, "LOCK",
+    lua_log_error(runtime, invocation->object, path, "LOCK",
                   "lock handler must return a boolean or a valid result table");
     result->passes = false;
     result->has_enactor_message = false;
@@ -682,10 +682,10 @@ void lua_message_evaluate(LuaRuntime *runtime,
     runtime->current_root = previous_root;
   }
   if (status) {
-    lua_log_error_value(runtime, invocation->object, invocation->enactor,
+    lua_log_error_value(runtime, invocation->object, invocation->enactor, path,
                         "MESSAGE", state, -1);
   } else if (!lua_message_parse_result(state, invocation->type, result)) {
-    lua_log_error(runtime, invocation->object, "MESSAGE",
+    lua_log_error(runtime, invocation->object, path, "MESSAGE",
                   "message provider must return a valid result table");
     result->has_enactor_message = false;
     result->has_other_message = false;

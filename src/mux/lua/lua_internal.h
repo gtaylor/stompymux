@@ -41,7 +41,6 @@ struct LuaRuntime {
   lua_State *state;
   char root[PATH_MAX];
   char roots[LUA_ROOT_COUNT][PATH_MAX];
-  char module[PATH_MAX];
   LuaModuleRoot current_root;
   int checking;
   char **global_modules;
@@ -69,12 +68,13 @@ void lua_set_error(char *error, size_t error_size, const char *format, ...)
     __attribute__((format(printf, 3, 4)));
 int lua_pcall_checked(LuaRuntime *runtime, int arguments, int results);
 int lua_callback_pcall_checked(LuaRuntime *runtime, int arguments, int results);
-void lua_log_error(LuaRuntime *runtime, DbRef object, const char *kind,
-                   const char *error);
+void lua_log_error(LuaRuntime *runtime, DbRef object, const char *module,
+                   const char *kind, const char *error);
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters): distinct callback
 // roles.
 void lua_log_error_value(LuaRuntime *runtime, DbRef object, DbRef enactor,
-                         const char *kind, lua_State *state, int index);
+                         const char *module, const char *kind, lua_State *state,
+                         int index);
 void lua_log_load_error(LuaRuntime *runtime, DbRef object, const char *path,
                         const char *error);
 bool lua_valid_relative_path(const char *path);

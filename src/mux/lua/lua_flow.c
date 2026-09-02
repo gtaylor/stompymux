@@ -169,7 +169,8 @@ static FlowOutcome lua_flow_step(const FlowStepCall *call) {
   status = lua_callback_pcall_checked(runtime, 1, 1);
   runtime->current_root = previous_root;
   if (status) {
-    lua_log_error_value(runtime, d->player, d->player, "FLOW", state, -1);
+    lua_log_error_value(runtime, d->player, d->player, data->path, "FLOW",
+                        state, -1);
     lua_settop(state, top);
     outcome.prompt = "A script error interrupted this flow.\r\n";
     return outcome;
