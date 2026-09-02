@@ -30,8 +30,17 @@ end
 local function bootstrap_players(ctx)
   -- TODO: Add God and Wizard to channels
   local god_player = mux.world.object(1)
-  -- TODO: Set God and Wizard's home to #0
+  god_player:set_home(0)
+  mux.world.teleport_object({
+    object = god_player,
+    destination = 0,
+  })
   local wizard_player = mux.world.object(2)
+  wizard_player:set_home(0)
+  mux.world.teleport_object({
+    object = wizard_player,
+    destination = 0,
+  })
 end
 
 local function bootstrap_staff_rooms(ctx)
@@ -108,17 +117,27 @@ Please be sure to read the room descriptions for details on the contents of each
   }
 end
 
-local function bootstrap_player_rooms(ctx)
+local function bootstrap_player_rooms(ctx, staff_rooms)
   local new_player_starting_room = mux.world.object(mux.config.get("player_starting_room") --[[@as integer]])
   new_player_starting_room:attributes():set(
     "Description",
     [[Welcome to this new StompyMUX game. We're not ready for prime time quite yet but you are Welcome to explore if you'd like.]]
   )
+  local new_player_starting_room_out_exit = mux.world.create_object({
+    type = mux.world.types.EXIT,
+    name = "Out;o",
+    location = new_player_starting_room,
+    zone = staff_rooms.limbo_room,
+    destination = staff_rooms.limbo_room,
+  })
+  new_player_starting_room_out_exit:state("locks.traverse"):set("flag/WIZARD", true)
+  new_player_starting_room_out_exit:flags():add(mux.world.flags.DARK)
+
 end
 
 local function bootstrap(ctx)
   local staff_rooms = bootstrap_staff_rooms(ctx)
-  bootstrap_player_rooms(ctx)
+  bootstrap_player_rooms(ctx, staff_rooms)
   bootstrap_channels(ctx, staff_rooms)
   bootstrap_players(ctx)
 end
@@ -126,34 +145,5 @@ end
 return {
   events = {
     on_server_first_startup = bootstrap,
-  },
-  commands = {
-    {
-      pattern = "^bs%-delete$",
-      access = mux.world.access.WIZARD,
-      handler = function(ctx)
-        mux.world.pemit(ctx.enactor, "Deleting all bootstrapped objects.")
-        local bootstrapped_objects = mux.world.list_objects({
-          in_zone = 0,
-        })
-        for _, object in ipairs(bootstrapped_objects) do
-          mux.world.destroy_object(object, { override = true })
-        end
-
-        mux.check_db()
-        mux.world.pemit(ctx.enactor, "Deletion complete.")
-        return true
-      end,
-    },
-    {
-      pattern = "^bs%-run$",
-      access = mux.world.access.WIZARD,
-      handler = function(ctx)
-        mux.world.pemit(ctx.enactor, "Re-bootstrapping!")
-        bootstrap(ctx)
-        mux.world.pemit(ctx.enactor, "Re-bootstrapping completed.")
-        return true
-      end,
-    },
   },
 }

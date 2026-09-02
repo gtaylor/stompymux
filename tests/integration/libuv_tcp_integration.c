@@ -2465,6 +2465,8 @@ static int exercise_split_modules(int socket_fd) {
                              "order=first,first,startup,startup") < 0 ||
                  send_command(socket_fd, "@lua/check\r\n") < 0 ||
                  expect_text(socket_fd, "All Lua module checks passed.") < 0 ||
+                 send_command(socket_fd, "accesspolicytest\r\n") < 0 ||
+                 expect_text(socket_fd, "AccessPolicy passed") < 0 ||
                  send_command(socket_fd, "lualocknested\r\n") < 0 ||
                  expect_text(socket_fd, "LuaLock nested isolated") < 0 ||
                  send_command(socket_fd, "lualockverify\r\n") < 0 ||

@@ -181,6 +181,33 @@ error, or a malformed lock result fails closed and is logged. Native
 Lock result messages are used only when a lock fails. Successful actions use
 the message providers described below.
 
+### Bundled default exit policy
+
+The bundled `default_exit.lua` parent supplies an opt-in, state-driven
+`traverse` lock. Store requirements on an exit in the `locks.traverse`
+namespace:
+
+```text
+@state/set <exit>/locks.traverse flag/WIZARD=true
+@state/set <exit>/locks.traverse affiliation=123
+@state/set <exit>/locks.traverse attribute/Faction="Davion"
+@state/set <exit>/locks.traverse state/faction/member=true
+```
+
+An exit with no requirements passes. Multiple requirements are combined with
+AND, and Wizards obey the configured requirements. `flag/<FLAG>` compares flag
+presence to a boolean, `affiliation` compares native affiliation identity to a
+live integer dbref, `attribute/<Name>` compares a supported native attribute to
+an exact string, and `state/<namespace>/<key>` compares the subject's scalar
+state type and value exactly. Referenced state namespaces and keys cannot
+contain `/`.
+
+Optional string entries `message/enactor` and `message/others` override the
+default denial messages. Message entries do not restrict access by themselves.
+An empty message suppresses that notification. Unknown or malformed entries,
+unsupported names, invalid affiliation dbrefs, and incorrectly typed values
+fail closed and are reported through normal Lua callback error handling.
+
 ## Action messages
 
 Define successful-action messages as functions in the module's `messages`

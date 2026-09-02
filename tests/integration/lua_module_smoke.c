@@ -34,6 +34,7 @@ static bool lua_configure_package_path(lua_State *state,
 
 int main(int argc, char *argv[]) {
   static const char *const modules[] = {
+      "packages/access_policy.lua",
       "packages/object_appearances.lua",
       "object_logic/example.lua",
       "object_logic/counter.lua",
