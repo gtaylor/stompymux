@@ -975,10 +975,15 @@ static int write_lua_fixture(const char *directory) {
       "        persistent_home_thing:set_home(link_destination_one)\n"
       "        assert(persistent_home_thing:home() ==\n"
       "          link_destination_one)\n"
-      "        home_destination_exit = mux.world.create_object({\n"
+      "        local legacy_home_room = mux.world.create_object({\n"
+      "          type = mux.world.types.ROOM,\n"
+      "          name = \"Lua Legacy Home Room\"\n"
+      "        })\n"
+      "        mux.world.create_object({\n"
       "          type = mux.world.types.EXIT,\n"
-      "          name = \"Lua HOME Destination Exit\",\n"
-      "          location = ctx.enactor\n"
+      "          name = \"Lua Legacy Home Exit\",\n"
+      "          location = legacy_home_room,\n"
+      "          destination = link_destination_one\n"
       "        })\n",
       file);
   fputs(
@@ -1043,23 +1048,20 @@ static int write_lua_fixture(const char *directory) {
       "    },\n",
       file);
   fputs("    {\n"
-        "      pattern = \"^luahomedestination$\",\n"
+        "      pattern = \"^luadbck$\",\n"
         "      handler = function(ctx)\n"
-        "        local ok, err = mux.error.pcall(\n"
-        "          home_destination_exit.destination,\n"
-        "          home_destination_exit)\n"
-        "        assert(not ok and err.code == \"mux.object.invalid\"\n"
-        "          and err.message == \"exit is linked to HOME\")\n"
-        "        mux.world.pemit(ctx.enactor, \"Lua HOME rejected\")\n"
+        "        mux.check_db()\n"
+        "        mux.world.pemit(ctx.enactor, \"LuaDbck complete\")\n"
         "        return true\n"
         "      end,\n"
         "    },\n",
         file);
   fputs("    {\n"
-        "      pattern = \"^luadbck$\",\n"
+        "      pattern = \"^luacurrentlocation$\",\n"
         "      handler = function(ctx)\n"
-        "        mux.check_db()\n"
-        "        mux.world.pemit(ctx.enactor, \"LuaDbck complete\")\n"
+        "        local location = mux.world.object(ctx.enactor):location()\n"
+        "        mux.world.pemit(ctx.enactor, \"Current location: \" ..\n"
+        "          (location and location:name() or \"nil\"))\n"
         "        return true\n"
         "      end,\n"
         "    },\n",
@@ -2470,11 +2472,6 @@ static int exercise_split_modules(int socket_fd) {
                  send_command(socket_fd, "lualifecycle\r\n") < 0 ||
                  expect_text(socket_fd,
                              "LuaLifecycle room thing exit destroyed") < 0 ||
-                 send_command(socket_fd,
-                              "@link Lua HOME Destination Exit=home\r\n") < 0 ||
-                 expect_text(socket_fd, "Linked.") < 0 ||
-                 send_command(socket_fd, "luahomedestination\r\n") < 0 ||
-                 expect_text(socket_fd, "Lua HOME rejected") < 0 ||
                  send_command(socket_fd, "luateleport\r\n") < 0 ||
                  expect_text(socket_fd, "LuaTeleport moved") < 0 ||
                  send_command(socket_fd, "luazone\r\n") < 0 ||
@@ -2538,6 +2535,52 @@ static int exercise_split_modules(int socket_fd) {
                  send_command(socket_fd, "@destroy SplitExit\r\n") < 0 ||
                  expect_text(socket_fd,
                              "The exit shakes and begins to crumble.") < 0
+             ? -1
+             : 0;
+}
+
+static int exercise_home_command_access(int wizard_fd, int player_fd) {
+  return send_command(wizard_fd, "@open Sentinel Removal Exit\r\n") < 0 ||
+                 expect_text(wizard_fd, "Opened.") < 0 ||
+                 send_command(wizard_fd,
+                              "@link Sentinel Removal Exit=home\r\n") < 0 ||
+                 expect_text(wizard_fd, "That's not a valid object.") < 0 ||
+                 send_command(wizard_fd, "@teleport me=home\r\n") < 0 ||
+                 expect_text(wizard_fd, "No match.") < 0 ||
+                 send_command(wizard_fd, "@create home\r\n") < 0 ||
+                 expect_text(wizard_fd, "home created as object") < 0 ||
+                 send_command(wizard_fd, "drop home\r\n") < 0 ||
+                 expect_text(wizard_fd, "Dropped.") < 0 ||
+                 send_command(wizard_fd,
+                              "@link Sentinel Removal Exit=home\r\n") < 0 ||
+                 expect_text(wizard_fd, "Linked.") < 0 ||
+                 send_command(wizard_fd, "@teleport me=home\r\n") < 0 ||
+                 send_command(wizard_fd, "luacurrentlocation\r\n") < 0 ||
+                 expect_text(wizard_fd, "Current location: home") < 0 ||
+                 send_command(wizard_fd, "home\r\n") < 0 ||
+                 expect_text(wizard_fd, "There's no place like home...") < 0 ||
+                 send_command(wizard_fd, "luacurrentlocation\r\n") < 0 ||
+                 expect_text(wizard_fd, "Current location: Starter Room") < 0 ||
+                 send_command(wizard_fd, "@open home=home\r\n") < 0 ||
+                 expect_text(wizard_fd, "Linked.") < 0 ||
+                 send_command(wizard_fd, "home\r\n") < 0 ||
+                 expect_text(wizard_fd, "There's no place like home...") < 0 ||
+                 send_command(wizard_fd, "luacurrentlocation\r\n") < 0 ||
+                 expect_text(wizard_fd, "Current location: Starter Room") < 0 ||
+                 send_command(wizard_fd, "@pcreate HomeTester=hometest1!\r\n") <
+                     0 ||
+                 expect_text(wizard_fd, "New player 'HomeTester'") < 0 ||
+                 send_command(player_fd, "HomeTester\r\n") < 0 ||
+                 expect_text(player_fd, "Password:") < 0 ||
+                 send_command(player_fd, "hometest1!\r\n") < 0 ||
+                 expect_text(player_fd, "Connected.") < 0 ||
+                 send_command(player_fd, "home\r\n") < 0 ||
+                 expect_text(player_fd, "Permission denied.") < 0 ||
+                 send_command(player_fd, "luacurrentlocation\r\n") < 0 ||
+                 expect_text(player_fd, "Current location: Starter Room") < 0 ||
+                 send_command(player_fd, "goto home\r\n") < 0 ||
+                 send_command(player_fd, "luacurrentlocation\r\n") < 0 ||
+                 expect_text(player_fd, "Current location: home") < 0
              ? -1
              : 0;
 }
@@ -2938,11 +2981,108 @@ done:
   return result;
 }
 
+typedef struct RemovedHomeDbrefs {
+  sqlite3_int64 thing;
+  sqlite3_int64 room;
+  sqlite3_int64 exit;
+} RemovedHomeDbrefs;
+
+static int seed_removed_home_dbrefs(const char *directory,
+                                    RemovedHomeDbrefs *dbrefs) {
+  char database_path[PATH_MAX];
+  sqlite3 *database = nullptr;
+  sqlite3_stmt *statement = nullptr;
+  int result = -1;
+
+  snprintf(database_path, sizeof(database_path), "%s/data/stompymux.db",
+           directory);
+  if (sqlite3_open_v2(database_path, &database, SQLITE_OPEN_READWRITE,
+                      nullptr) != SQLITE_OK ||
+      sqlite3_prepare_v2(
+          database,
+          "SELECT"
+          " (SELECT dbref FROM objects "
+          "  WHERE name = 'Lua Persistently Homed Thing'),"
+          " (SELECT dbref FROM objects WHERE name = 'Lua Legacy Home Room'),"
+          " (SELECT dbref FROM objects WHERE name = 'Lua Legacy Home Exit');",
+          -1, &statement, nullptr) != SQLITE_OK ||
+      sqlite3_step(statement) != SQLITE_ROW)
+    goto done;
+
+  dbrefs->thing = sqlite3_column_int64(statement, 0);
+  dbrefs->room = sqlite3_column_int64(statement, 1);
+  dbrefs->exit = sqlite3_column_int64(statement, 2);
+  sqlite3_finalize(statement);
+  statement = nullptr;
+
+  if (sqlite3_exec(
+          database,
+          "UPDATE objects SET link = -3, location = -3 "
+          "WHERE dbref = (SELECT dbref FROM objects "
+          "               WHERE name = 'Lua Persistently Homed Thing');"
+          "UPDATE objects SET location = -3 "
+          "WHERE dbref IN ((SELECT dbref FROM objects "
+          "                 WHERE name = 'Lua Legacy Home Room'),"
+          "                (SELECT dbref FROM objects "
+          "                 WHERE name = 'Lua Legacy Home Exit'));",
+          nullptr, nullptr, nullptr) == SQLITE_OK)
+    result = 0;
+
+done:
+  sqlite3_finalize(statement);
+  sqlite3_close(database);
+  return result;
+}
+
+static int check_removed_home_dbrefs_repaired(const char *directory,
+                                              const RemovedHomeDbrefs *dbrefs) {
+  char database_path[PATH_MAX];
+  sqlite3 *database = nullptr;
+  sqlite3_stmt *statement = nullptr;
+  int result = -1;
+
+  snprintf(database_path, sizeof(database_path), "%s/data/stompymux.db",
+           directory);
+  if (sqlite3_open_v2(database_path, &database, SQLITE_OPEN_READONLY,
+                      nullptr) != SQLITE_OK ||
+      sqlite3_prepare_v2(
+          database,
+          "SELECT"
+          " (SELECT count(*) FROM objects WHERE location = -3 OR link = -3),"
+          " (SELECT location FROM objects WHERE dbref = ?1),"
+          " (SELECT link FROM objects WHERE dbref = ?2),"
+          " (SELECT location FROM objects WHERE dbref = ?2),"
+          " (SELECT count(*) FROM objects "
+          "  WHERE dbref = ?3 AND type = 2);",
+          -1, &statement, nullptr) != SQLITE_OK)
+    goto done;
+
+  sqlite3_bind_int64(statement, 1, dbrefs->room);
+  sqlite3_bind_int64(statement, 2, dbrefs->thing);
+  sqlite3_bind_int64(statement, 3, dbrefs->exit);
+  if (sqlite3_step(statement) != SQLITE_ROW)
+    goto done;
+
+  if (sqlite3_column_int(statement, 0) == 0 &&
+      sqlite3_column_int64(statement, 1) == -1 &&
+      sqlite3_column_int64(statement, 2) >= 0 &&
+      sqlite3_column_int64(statement, 3) ==
+          sqlite3_column_int64(statement, 2) &&
+      sqlite3_column_int(statement, 4) == 0)
+    result = 0;
+
+done:
+  sqlite3_finalize(statement);
+  sqlite3_close(database);
+  return result;
+}
+
 /* Start a server, open enough clients to grow its registry, and stop it. */
 int main(int argc, char **argv) {
   char target_config[PATH_MAX];
   int socket_fds[TEST_CONNECTION_COUNT];
   TelnetTestClient primary_client = {.socket_fd = -1};
+  RemovedHomeDbrefs removed_home_dbrefs = {0};
   pid_t child = -1;
   int port;
   int result = 1;
@@ -3026,13 +3166,20 @@ int main(int argc, char **argv) {
   }
   if (create_styled_object(*socket_slot(socket_fds, 0)) < 0 ||
       exercise_invalid_lock_keys(*socket_slot(socket_fds, 0), directory) < 0 ||
-      exercise_plain_osc_fallback(*socket_slot(socket_fds, 1)) < 0)
+      exercise_plain_osc_fallback(*socket_slot(socket_fds, 1)) < 0 ||
+      exercise_home_command_access(*socket_slot(socket_fds, 0),
+                                   *socket_slot(socket_fds, 2)) < 0)
     goto done;
   if (kill(child, SIGTERM) < 0 || wait_child(child) < 0)
     goto done;
   child = -1;
   if (check_styled_object(directory) < 0) {
     fprintf(stderr, "styled-object database check failed in %s\n", directory);
+    goto done;
+  }
+  if (seed_removed_home_dbrefs(directory, &removed_home_dbrefs) < 0) {
+    fprintf(stderr, "removed-home dbref fixture seed failed in %s\n",
+            directory);
     goto done;
   }
 
@@ -3075,8 +3222,8 @@ int main(int argc, char **argv) {
                     "LuaEvents first=0 startup=1 connect=1 order=startup") <
             0 ||
         send_command(*socket_fd, "objectevents\r\n") < 0 ||
-        expect_text(*socket_fd, "ObjectEvents first=0 startup=2 "
-                                "order=startup,startup") < 0) {
+        expect_text(*socket_fd, "ObjectEvents first=0 startup=3 "
+                                "order=startup,startup,startup") < 0) {
       fprintf(stderr, "startup lifecycle restart check failed\n");
       goto done;
     }
@@ -3084,6 +3231,10 @@ int main(int argc, char **argv) {
   if (kill(child, SIGTERM) < 0 || wait_child(child) < 0)
     goto done;
   child = -1;
+  if (check_removed_home_dbrefs_repaired(directory, &removed_home_dbrefs) < 0) {
+    fprintf(stderr, "removed-home dbrefs were not repaired in %s\n", directory);
+    goto done;
+  }
   result = 0;
 
 done:

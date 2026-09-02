@@ -43,8 +43,6 @@ void do_teleport(CommandInvocation *invocation) {
   int key = invocation->key;
   char *arg1 = invocation->first;
   char *arg2 = invocation->second;
-  ServerConfiguration *configuration =
-      invocation->context->world->configuration;
   DbRef victim;
   DbRef destination;
   DbRef exitloc;
@@ -88,19 +86,6 @@ void do_teleport(CommandInvocation *invocation) {
                    game_object_location(evaluation->world->database, victim)) &&
       !is_wizard(evaluation->world->database, player)) {
     notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
-    return;
-  }
-  /*
-   * Check for teleporting home
-   * Also, can't teleport exits 'home'
-   */
-
-  if (!string_compare(configuration, to, "home") &&
-      typeof_obj(evaluation->world->database, victim) != OBJECT_TYPE_EXIT) {
-    (void)move_via_teleport(&(ObjectMovementRequest){.evaluation = evaluation,
-                                                     .object = victim,
-                                                     .destination = HOME,
-                                                     .cause = cause});
     return;
   }
   /*

@@ -246,8 +246,8 @@ struct ServerConfiguration {
   int stack_limit;                  /* How big can stacks get? */
   int space_compress;               /* Convert multiple spaces into one space */
   int start_room;                   /* initial location and home for players */
-  int start_home;                   /* initial HOME for players */
-  int default_home;                 /* HOME when home is inaccessable */
+  int start_home;                   /* initial home for players */
+  int default_home;                 /* home when home is inaccessible */
   char default_thing_lua_parent[128];  /* Lua parent for new things */
   char default_room_lua_parent[128];   /* Lua parent for new rooms */
   char default_exit_lua_parent[128];   /* Lua parent for new exits */

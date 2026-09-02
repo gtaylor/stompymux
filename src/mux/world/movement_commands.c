@@ -3,7 +3,6 @@
  */
 
 #include <stdio.h>
-#include <string.h>
 
 #include "mux/commands/action_messages.h"
 #include "mux/commands/command_context.h"
@@ -14,7 +13,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/stringutil.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
 #include "mux/world/move.h"
@@ -26,53 +24,40 @@
  * * a place.
  */
 
+void move_home_command(EvaluationContext *evaluation, DbRef player) {
+  DbRef location = game_object_location(evaluation->world->database, player);
+  if (location != NOTHING && !is_dark(evaluation->world->database, player) &&
+      !is_dark(evaluation->world->database, location)) {
+    char buffer[MBUF_SIZE] = {0};
+    (void)snprintf(buffer, MBUF_SIZE - 1, "%s goes home.",
+                   game_object_name(evaluation->world->database, player));
+    notify_excluding(&(ExcludingNotification){.evaluation = evaluation,
+                                              .location = location,
+                                              .sender = player,
+                                              .exceptions = {player},
+                                              .exception_count = 1,
+                                              .message = buffer});
+  }
+
+  for (int index = 0; index < 3; index++)
+    notify_checked(evaluation, player, player, "There's no place like home...",
+                   MSG_ME_ALL | MSG_F_DOWN);
+  move_via_generic(&(ObjectMovementRequest){
+      .evaluation = evaluation,
+      .object = player,
+      .destination = game_object_link(evaluation->world->database, player),
+      .cause = NOTHING});
+}
+
 void move_command(const MoveCommandRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
   DbRef player = request->player;
   int key = request->key;
   const char *direction = request->direction;
   DbRef exit;
-  DbRef loc;
-  int i;
   int quiet;
-  const ServerConfiguration *configuration = evaluation->world->configuration;
   MatchContext *match = &evaluation->command->match;
 
-  if (!string_compare(configuration, direction, "home")) { /*
-                                                            * go home w/o stuff
-                                                            */
-
-    loc = game_object_location(evaluation->world->database, player);
-    if (loc != NOTHING && !is_dark(evaluation->world->database, player) &&
-        !is_dark(evaluation->world->database, loc)) {
-
-      /*
-       * tell all
-       */
-      char buffer[MBUF_SIZE];
-      memset(buffer, 0, MBUF_SIZE);
-      (void)snprintf(buffer, MBUF_SIZE - 1, "%s goes home.",
-                     game_object_name(evaluation->world->database, player));
-      notify_excluding(&(ExcludingNotification){.evaluation = evaluation,
-                                                .location = loc,
-                                                .sender = player,
-                                                .exceptions = {player},
-                                                .exception_count = 1,
-                                                .message = buffer});
-    }
-    /*
-     * give the player the messages
-     */
-
-    for (i = 0; i < 3; i++)
-      notify_checked(evaluation, player, player,
-                     "There's no place like home...", MSG_ME_ALL | MSG_F_DOWN);
-    move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
-                                              .object = player,
-                                              .destination = HOME,
-                                              .cause = NOTHING});
-    return;
-  }
   /*
    * find the exit
    */

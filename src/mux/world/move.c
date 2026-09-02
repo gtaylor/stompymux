@@ -49,9 +49,6 @@ static void process_leave_loc(const LocationTransition *transition) {
   if ((loc == NOTHING) || (loc == dest))
     return;
 
-  if (dest == HOME)
-    dest = game_object_link(evaluation->world->database, thing);
-
   /*
    * Run the LEAVE attributes in the current room if we meet any of * *
    *
@@ -226,13 +223,6 @@ void move_object(EvaluationContext *evaluation, DbRef thing, DbRef dest) {
   }
 
   /*
-   * Special check for HOME
-   */
-
-  if (dest == HOME)
-    dest = game_object_link(evaluation->world->database, thing);
-
-  /*
    * Add to destination location
    */
 
@@ -305,8 +295,6 @@ void move_via_generic(const ObjectMovementRequest *request) {
   DbRef src;
   bool canhear;
 
-  if (dest == HOME)
-    dest = game_object_link(evaluation->world->database, thing);
   src = game_object_location(evaluation->world->database, thing);
   canhear = is_hearer(evaluation, thing);
   process_leave_loc(&(LocationTransition){.evaluation = evaluation,
@@ -351,8 +339,6 @@ void move_via_exit(const ExitMovementRequest *request) {
   int darkwiz;
   int quiet;
 
-  if (dest == HOME)
-    dest = game_object_link(evaluation->world->database, thing);
   src = game_object_location(evaluation->world->database, thing);
   canhear = is_hearer(evaluation, thing);
 
@@ -426,7 +412,6 @@ void move_via_exit(const ExitMovementRequest *request) {
 static bool teleport_is_allowed(const ObjectMovementRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
   DbRef thing = request->object;
-  DbRef dest = request->destination;
   DbRef cause = request->cause;
   DbRef curr;
   int count;
@@ -436,7 +421,7 @@ static bool teleport_is_allowed(const ObjectMovementRequest *request) {
   const ServerConfiguration *configuration = evaluation->world->configuration;
 
   DbRef src = game_object_location(evaluation->world->database, thing);
-  if ((dest != HOME) && is_good_obj(evaluation->world->database, src)) {
+  if (is_good_obj(evaluation->world->database, src)) {
     result = checked_storage_allocate(sizeof(*result));
     curr = src;
     for (count = configuration->ntfy_nest_lim; count > 0; count--) {
@@ -475,8 +460,6 @@ static void teleport_commit(const ObjectMovementRequest *request) {
   int hush = request->hush;
   DbRef src = game_object_location(evaluation->world->database, thing);
 
-  if (dest == HOME)
-    dest = game_object_link(evaluation->world->database, thing);
   bool canhear = is_hearer(evaluation, thing);
   if (!(hush & HUSH_LEAVE)) {
     notify_action(evaluation,
@@ -560,8 +543,6 @@ void move_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
   LuaLockInvocation lock;
 
   loc = game_object_location(evaluation->world->database, exit);
-  if (loc == HOME)
-    loc = game_object_link(evaluation->world->database, player);
   silent = (((is_wizard(evaluation->world->database, player) &&
               is_dark(evaluation->world->database, player)) ||
              (hush & HUSH_EXIT)) != 0);

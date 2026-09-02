@@ -90,7 +90,8 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
                                   .error_type = "is invalid.  Moved to home."});
         game_object_set_location(evaluation->world->database, i, NOTHING);
         game_object_set_next(evaluation->world->database, i, NOTHING);
-        move_object(evaluation, i, HOME);
+        move_object(evaluation, i,
+                    game_object_link(evaluation->world->database, i));
       }
       /*
        * Check for self-referential
@@ -114,7 +115,7 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
         if (is_going(evaluation->world->database, targ)) {
           game_object_set_location(evaluation->world->database, i, NOTHING);
         }
-      } else if ((targ != NOTHING) && (targ != HOME)) {
+      } else if (targ != NOTHING) {
         object_log_header_error(evaluation, i, NOTHING, targ, true, "Dropto",
                                 "is invalid.  Cleared.");
         game_object_set_location(evaluation->world->database, i, NOTHING);
@@ -156,10 +157,6 @@ static void check_dead_refs(EvaluationContext *evaluation, bool full_check) {
         if (is_going(evaluation->world->database, targ)) {
           s_going(evaluation->world->database, i);
         }
-      } else if (targ == HOME) {
-        /*
-         * null case, HOME is always valid
-         */
       } else if (targ != NOTHING) {
         object_log_header_error(
             evaluation, i, game_object_exits(evaluation->world->database, i),
@@ -376,7 +373,7 @@ static void check_loc_exits(EvaluationContext *evaluation, DbRef loc,
       }
       exit = NOTHING;
     } else if (!is_good_obj(evaluation->world->database, dest) &&
-               (dest != HOME) && (dest != NOTHING)) {
+               dest != NOTHING) {
 
       /*
        * Destination is not in the db.  Null it.
@@ -686,10 +683,11 @@ static void check_contents_chains(EvaluationContext *evaluation,
         "Orphaned object, moved home.");
     game_object_set_location(evaluation->world->database, i, NOTHING);
     game_object_set_next(evaluation->world->database, i, NOTHING);
-    move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
-                                              .object = i,
-                                              .destination = HOME,
-                                              .cause = NOTHING});
+    move_via_generic(&(ObjectMovementRequest){
+        .evaluation = evaluation,
+        .object = i,
+        .destination = game_object_link(evaluation->world->database, i),
+        .cause = NOTHING});
   }
 }
 

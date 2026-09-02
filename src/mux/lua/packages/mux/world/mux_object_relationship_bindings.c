@@ -41,7 +41,7 @@ static int lua_mux_push_relationship(lua_State *state, LuaMuxPackage *package,
  * `nil` when the exit is unlinked or its destination is being destroyed.
  * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
  * - `LUA_ERROR_CODE_OBJECT_INVALID` when the receiver is not an exit or its
- * stored destination is invalid or `HOME`.
+ * stored destination is invalid.
  * @par Lua availability Available only at runtime; unavailable during
  * `@lua/check`.
  * @param[in,out] state Lua state.
@@ -58,9 +58,6 @@ static int lua_mux_object_destination(lua_State *state) {
                          "object is not an exit");
   DbRef destination = game_object_location(database, exit);
 
-  if (destination == HOME)
-    return lua_error_raise(state, LUA_ERROR_CODE_OBJECT_INVALID,
-                           "exit is linked to HOME");
   return lua_mux_push_relationship(state, package, destination, "destination");
 }
 

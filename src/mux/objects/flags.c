@@ -539,8 +539,6 @@ OwnedText unparse_object_numonly(GameDatabase *database, DbRef target) {
   char *buffer = alloc_lbuf("unparse_object_numonly");
   if (target == NOTHING)
     (void)string_copy_bounded(buffer, LBUF_SIZE, "*NOTHING*");
-  else if (target == HOME)
-    (void)string_copy_bounded(buffer, LBUF_SIZE, "*HOME*");
   else if (!is_good_obj(database, target))
     (void)snprintf(buffer, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
   else
@@ -554,8 +552,6 @@ OwnedText unparse_object(GameDatabase *database,
   char *buffer = alloc_lbuf("unparse_object");
   if (target == NOTHING) {
     (void)string_copy_bounded(buffer, LBUF_SIZE, "*NOTHING*");
-  } else if (target == HOME) {
-    (void)string_copy_bounded(buffer, LBUF_SIZE, "*HOME*");
   } else if (!is_good_obj(database, target)) {
     (void)snprintf(buffer, LBUF_SIZE, "*ILLEGAL*(#%ld)", target);
   } else if (is_examinable(database, player, target)) {

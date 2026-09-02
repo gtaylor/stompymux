@@ -536,8 +536,7 @@ function Object:contents(options) end
 ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking)
 ---during `@lua/check`, or
 ---[`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when
----the receiver is not an exit or its stored destination is invalid, including
----the special `HOME` destination.
+---the receiver is not an exit or its stored destination is invalid.
 ---@see mux.error.codes.unavailable.checking
 ---@see mux.error.codes.object.invalid
 function Object:destination() end

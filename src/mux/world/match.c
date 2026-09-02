@@ -279,14 +279,6 @@ void match_me(MatchContext *match_context) {
                                                   CON_TOKEN | CON_LOCAL});
 }
 
-void match_home(MatchContext *match_context) {
-  if (match_context->confidence >= CON_DBREF)
-    return;
-  if (!string_compare(match_context->evaluation->world->configuration,
-                      match_context->string, "home"))
-    promote_match(match_context, (MatchCandidate){HOME, CON_TOKEN});
-}
-
 void match_here(MatchContext *match_context) {
   DbRef loc;
 
@@ -535,8 +527,6 @@ void match_everything(MatchContext *match_context, int key) {
   match_absolute(match_context);
   if (key & MAT_NUMERIC)
     match_numeric(match_context);
-  if (key & MAT_HOME)
-    match_home(match_context);
   match_player(match_context);
   if (match_context->confidence >= CON_TOKEN)
     return;

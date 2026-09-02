@@ -328,10 +328,6 @@ void do_examine(CommandInvocation *invocation) {
     switch (game_object_location(evaluation->world->database, thing)) {
     case NOTHING:
       break;
-    case HOME:
-      notify_checked(evaluation, PLAYER, PLAYER, "Destination: *HOME*",
-                     MSG_ME_ALL | MSG_F_DOWN);
-      break;
     default:
       buf2 = unparse_object(
           evaluation->world->database, evaluation, PLAYER,

@@ -456,10 +456,11 @@ void empty_obj(EvaluationContext *evaluation, DbRef obj) {
       game_object_set_link(evaluation->world->database, targ,
                            new_home(evaluation, targ));
     }
-    move_via_generic(&(ObjectMovementRequest){.evaluation = evaluation,
-                                              .object = targ,
-                                              .destination = HOME,
-                                              .cause = NOTHING});
+    move_via_generic(&(ObjectMovementRequest){
+        .evaluation = evaluation,
+        .object = targ,
+        .destination = game_object_link(evaluation->world->database, targ),
+        .cause = NOTHING});
   }
 
   /*

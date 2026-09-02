@@ -514,12 +514,7 @@ void process_command(CommandContext *context, char *command,
     command_length = write_offset;
   }
 
-  /*
-   * Now comes the fun stuff.  First check for single-letter leadins.
-   * We check these before checking HOME because
-   * they are among the most frequently executed commands,
-   * and they can never be the HOME command.
-   */
+  /* Check the frequently executed single-letter leadins first. */
 
   i = (unsigned char)*command;
   CMDENT *prefix_command = command_prefix_entry_at(registry, (size_t)i);
@@ -557,14 +552,16 @@ void process_command(CommandContext *context, char *command,
           context->btech, PLAYER,
           game_object_location(context->world->database, PLAYER), command))
     goto exit;
-  /*
-   * Check for the HOME command
-   */
+  /* Check for the wizard-only home command before matching exits. */
 
   if (string_compare(configuration, command, "home") == 0) {
-    move_command(&(MoveCommandRequest){.evaluation = &context->evaluation,
-                                       .player = PLAYER,
-                                       .direction = "home"});
+    if (check_access(context->world->database, configuration, PLAYER,
+                     CA_WIZARD)) {
+      move_home_command(&context->evaluation, PLAYER);
+    } else {
+      notify_checked(&context->evaluation, PLAYER, PLAYER, "Permission denied.",
+                     MSG_ME_ALL | MSG_F_DOWN);
+    }
     goto exit;
   }
 

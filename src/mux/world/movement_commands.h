@@ -22,6 +22,10 @@ typedef struct MoveCommandRequest {
 /** Executes move command. @param[in] request Request. */
 
 void move_command(const MoveCommandRequest *request);
+/** Moves a player to its configured home. @param[in,out] evaluation Expression
+ * evaluation context. @param[in] player Player object. */
+
+void move_home_command(EvaluationContext *evaluation, DbRef player);
 /** Handles the move command. @param[in,out] invocation Command invocation. */
 
 void do_move(CommandInvocation *invocation);

@@ -83,8 +83,8 @@ constexpr char ATR_INFO_CHAR = '\1'; /* Leadin char for attr control data */
 /* special dbref's */
 constexpr DbRef NOTHING = -1;   /* null dbref */
 constexpr DbRef AMBIGUOUS = -2; /* multiple possibilities, for matchers */
-constexpr DbRef HOME = -3;      /* virtual room, represents mover's home */
-constexpr DbRef NOPERM = -4;    /* Error status, no permission */
+/* Dbref -3 is intentionally unused. */
+constexpr DbRef NOPERM = -4; /* Error status, no permission */
 
 typedef enum ObjectType : int {
   OBJECT_TYPE_ROOM = 0,

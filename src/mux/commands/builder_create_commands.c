@@ -58,15 +58,8 @@ static DbRef parse_linkable_room(EvaluationContext *evaluation,
   DbRef room;
 
   init_match(match, player, room_name, OBJECT_TYPE_NOTYPE);
-  match_everything(match, MAT_NO_EXITS | MAT_NUMERIC | MAT_HOME);
+  match_everything(match, MAT_NO_EXITS | MAT_NUMERIC);
   room = match_result(match);
-
-  /*
-   * HOME is always linkable
-   */
-
-  if (room == HOME)
-    return HOME;
 
   /*
    * Make sure we can link to it
@@ -241,24 +234,22 @@ static void link_exit(EvaluationContext *evaluation, DbRef player, DbRef exit,
    * Make sure we can link there
    */
 
-  if (dest != HOME) {
-    if (!is_controls(evaluation->world->database, player, dest)) {
-      notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
-      return;
-    }
-    LuaLockResult *result = checked_storage_allocate(sizeof(*result));
-    if (!lock_test(evaluation, player, player, player, dest, LUA_LOCK_LINK,
-                   false, &lock, result)) {
-      notify_lock_failure(
-          &(LockFailureNotification){.evaluation = evaluation,
-                                     .invocation = &lock,
-                                     .result = result,
-                                     .enactor_default = "Permission denied."});
-      free_buf(result);
-      return;
-    }
-    free_buf(result);
+  if (!is_controls(evaluation->world->database, player, dest)) {
+    notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
+    return;
   }
+  LuaLockResult *result = checked_storage_allocate(sizeof(*result));
+  if (!lock_test(evaluation, player, player, player, dest, LUA_LOCK_LINK, false,
+                 &lock, result)) {
+    notify_lock_failure(
+        &(LockFailureNotification){.evaluation = evaluation,
+                                   .invocation = &lock,
+                                   .result = result,
+                                   .enactor_default = "Permission denied."});
+    free_buf(result);
+    return;
+  }
+  free_buf(result);
   /*
    * Exit must be unlinked or controlled by you
    */
@@ -349,9 +340,6 @@ void do_link(CommandInvocation *invocation) {
                                      .invocation = &lock,
                                      .result = result,
                                      .enactor_default = "Permission denied."});
-    } else if (room == HOME) {
-      notify_checked(evaluation, player, player, "Can't set home to home.",
-                     MSG_ME);
     } else {
       game_object_set_link(evaluation->world->database, thing, room);
       notify_checked(evaluation, player, player, "Home set.", MSG_ME);
@@ -369,16 +357,14 @@ void do_link(CommandInvocation *invocation) {
     }
     room = parse_linkable_room(evaluation, &invocation->context->match, player,
                                where);
-    if (!(is_good_obj(evaluation->world->database, room) || (room == HOME)))
+    if (!is_good_obj(evaluation->world->database, room))
       break;
 
-    if ((room != HOME) && !is_room(evaluation->world->database, room)) {
+    if (!is_room(evaluation->world->database, room)) {
       notify_checked(evaluation, player, player, "That is not a room!", MSG_ME);
-    } else if ((room != HOME) &&
-               !is_controls(evaluation->world->database, player, room)) {
+    } else if (!is_controls(evaluation->world->database, player, room)) {
       notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
-    } else if ((room != HOME) &&
-               !lock_test(evaluation, player, invocation->cause, player, room,
+    } else if (!lock_test(evaluation, player, invocation->cause, player, room,
                           LUA_LOCK_LINK, false, &lock, result)) {
       notify_lock_failure(
           &(LockFailureNotification){.evaluation = evaluation,

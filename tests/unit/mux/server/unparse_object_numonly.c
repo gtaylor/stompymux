@@ -37,11 +37,11 @@ int main(void) {
   game_database_object(&database, GOD)->type = OBJECT_TYPE_PLAYER;
 
   OwnedText nothing = unparse_object_numonly(&database, NOTHING);
-  OwnedText home = unparse_object_numonly(&database, HOME);
+  OwnedText removed_home = unparse_object_numonly(&database, -3);
   OwnedText invalid = unparse_object_numonly(&database, 3);
   OwnedText valid = unparse_object_numonly(&database, 0);
   OwnedText rendered_nothing = unparse_object(&database, nullptr, 0, NOTHING);
-  OwnedText rendered_home = unparse_object(&database, nullptr, 0, HOME);
+  OwnedText rendered_removed_home = unparse_object(&database, nullptr, 0, -3);
   OwnedText rendered_invalid = unparse_object(&database, nullptr, 0, 3);
   OwnedText examinable = unparse_object(&database, nullptr, GOD, 0);
   OwnedText hidden_details = unparse_object(&database, nullptr, 0, 0);
@@ -56,7 +56,8 @@ int main(void) {
 
   if (nothing.owned == nullptr || strcmp(nothing.text, "*NOTHING*") != 0)
     result = 1;
-  else if (home.owned == nullptr || strcmp(home.text, "*HOME*") != 0)
+  else if (removed_home.owned == nullptr ||
+           strcmp(removed_home.text, "*ILLEGAL*(#-3)") != 0)
     result = 2;
   else if (invalid.owned == nullptr ||
            strcmp(invalid.text, "*ILLEGAL*(#3)") != 0)
@@ -66,8 +67,8 @@ int main(void) {
   else if (rendered_nothing.owned == nullptr ||
            strcmp(rendered_nothing.text, "*NOTHING*") != 0)
     result = 5;
-  else if (rendered_home.owned == nullptr ||
-           strcmp(rendered_home.text, "*HOME*") != 0)
+  else if (rendered_removed_home.owned == nullptr ||
+           strcmp(rendered_removed_home.text, "*ILLEGAL*(#-3)") != 0)
     result = 6;
   else if (rendered_invalid.owned == nullptr ||
            strcmp(rendered_invalid.text, "*ILLEGAL*(#3)") != 0)
@@ -82,11 +83,11 @@ int main(void) {
     result = 10;
 
   owned_text_release(&nothing);
-  owned_text_release(&home);
+  owned_text_release(&removed_home);
   owned_text_release(&invalid);
   owned_text_release(&valid);
   owned_text_release(&rendered_nothing);
-  owned_text_release(&rendered_home);
+  owned_text_release(&rendered_removed_home);
   owned_text_release(&rendered_invalid);
   owned_text_release(&examinable);
   owned_text_release(&hidden_details);

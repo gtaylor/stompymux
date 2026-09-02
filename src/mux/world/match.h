@@ -48,9 +48,6 @@ extern void match_me(MatchContext *match_context);
 /** Executes match here. @param[in] match_context Match context. */
 
 extern void match_here(MatchContext *match_context);
-/** Executes match home. @param[in] match_context Match context. */
-
-extern void match_home(MatchContext *match_context);
 /** Executes match possession. @param[in] match_context Match context. */
 
 extern void match_possession(MatchContext *match_context);
@@ -115,5 +112,4 @@ extern bool parse_thing_slash(MatchContext *match_context, DbRef player,
 enum : int {
   MAT_NO_EXITS = 1, /* Don't check for exits */
   MAT_NUMERIC = 4,  /* Check for un-#ified dbrefs */
-  MAT_HOME = 8,     /* Check for 'home' */
 };
