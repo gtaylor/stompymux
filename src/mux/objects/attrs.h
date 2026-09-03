@@ -15,7 +15,6 @@ constexpr int A_IDLE = 74;   /* Success page return message */
 constexpr int A_PFAIL = 78;  /* Invoker page fail message */
 constexpr int A_MECHPREFID = 146; /* Preferred Mech ID on map */
 constexpr int A_DESTROYER = 212;  /* Who is destroying this object? */
-constexpr int A_UNUSED1 = 213;    /* Old luck.c, now unused. */
 
 /* Mecha stuff */
 constexpr int A_MECHSKILLS = 214;    /* Pilot's skills in using a mech */
