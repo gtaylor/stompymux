@@ -33,8 +33,3 @@ constexpr int A_PILOTNUM = 239;      /* Mech's pilot # */
 constexpr int A_MAPVIS = 240;        /* Visibility */
 constexpr int A_TECHTIME = 242; /* Time (as a time_t number) until completion */
 constexpr int A_PCEQUIP = 245;  /* PCombat equipment */
-
-constexpr int A_VLIST = 252;
-constexpr int A_LIST = 253;
-constexpr int A_STRUCT = 254;
-constexpr int A_TEMP = 255;
