@@ -167,10 +167,9 @@ end
 
 local function render_internal_appearance(ctx)
   local object = mux.world.object(ctx.object)
-  local attributes = object:attributes()
   local lines = {
     object:name(),
-    attributes:get("Description") or "",
+    object:description() or "",
   }
   local contents, players = render_room_contents_and_players(ctx)
   local exits = render_room_exits(ctx)

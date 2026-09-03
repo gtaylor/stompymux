@@ -102,12 +102,49 @@ typedef struct ExamineObjectRequest {
   DbRef object;
 } ExamineObjectRequest;
 
+typedef struct ExamineDescription {
+  const char *name;
+  const char *value;
+} ExamineDescription;
+
+static void examine_description(const ExamineObjectRequest *request,
+                                ExamineDescription description,
+                                bool *has_attributes) {
+  if (!description.value || !*description.value)
+    return;
+  if (!*has_attributes) {
+    notify_checked(request->evaluation, request->viewer, request->viewer,
+                   "Attributes:", MSG_ME_ALL | MSG_F_DOWN);
+    *has_attributes = true;
+  }
+  char label[MBUF_SIZE];
+
+  (void)snprintf(label, sizeof label, "  %s", description.name);
+  examine_notify_markup(
+      &(ExamineMarkupRequest){.evaluation = request->evaluation,
+                              .viewer = request->viewer,
+                              .label = label,
+                              .styled = description.value});
+}
+
 static void examine_native_attributes(const ExamineObjectRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
   DbRef player = request->viewer;
   DbRef thing = request->object;
   GameDatabase *database = evaluation->world->database;
   bool has_attributes = false;
+
+  examine_description(
+      request,
+      (ExamineDescription){.name = "Description",
+                           .value = game_object_description(database, thing)},
+      &has_attributes);
+  examine_description(
+      request,
+      (ExamineDescription){
+          .name = "InternalDescription",
+          .value = game_object_internal_description(database, thing)},
+      &has_attributes);
 
   for (size_t index = 0; index < native_attribute_count(); index++) {
     const Attribute *entry = native_attribute_at(index);

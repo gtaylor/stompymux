@@ -579,11 +579,8 @@ static int write_lua_fixture(const char *directory) {
       "        assert(object_ok)\n"
       "        assert(player:dbref() == ctx.enactor)\n"
       "        assert(player:type() == mux.world.types.PLAYER)\n"
-      "        assert(player.description == nil)\n"
-      "        assert(player.inside_description == nil)\n"
-      "        assert(player:attributes():get(\"Description\") == nil)\n"
-      "        assert(player:attributes():get(\"InternalDescription\") == "
-      "nil)\n"
+      "        assert(player:description() == nil)\n"
+      "        assert(player:internal_description() == nil)\n"
       "        local invalid_ok, invalid_error = "
       "pcall(mux.world.object, 999999)\n"
       "        assert(not invalid_ok)\n"
@@ -669,19 +666,34 @@ static int write_lua_fixture(const char *directory) {
         "        assert(thing:type() == object_types.THING and\n"
         "          thing:name() == \"Lua Thing\")\n"
         "        assert(exit:type() == object_types.EXIT and\n"
-        "          exit:name() == \"out;o\")\n"
-        "        thing:attributes():set(\"Description\", \"Lua description\")\n"
-        "        thing:attributes():set(\"InternalDescription\", \"Lua "
-        "inside\")\n"
-        "        assert(thing:attributes():get(\"Description\") == \"Lua "
-        "description\")\n"
-        "        assert(thing:attributes():get(\"InternalDescription\") == "
-        "\"Lua inside\")\n"
+        "          exit:name() == \"out;o\")\n",
+        file);
+  fputs("        thing:set_description(\"Lua description\")\n"
+        "        thing:set_internal_description(\"Lua inside\")\n"
+        "        assert(thing:description() == \"Lua description\")\n"
+        "        assert(thing:internal_description() == \"Lua inside\")\n"
+        "        thing:set_description(nil)\n"
+        "        thing:set_internal_description(\"\")\n"
+        "        assert(thing:description() == nil and\n"
+        "          thing:internal_description() == nil)\n"
+        "        local bad_description_ok, bad_description_error =\n"
+        "          mux.error.pcall(thing.set_description, thing, \"[bold]x\")\n"
+        "        assert(not bad_description_ok and\n"
+        "          bad_description_error.code == \"mux.arg.invalid\")\n"
+        "        local missing_description_ok, missing_description_error =\n"
+        "          mux.error.pcall(thing.set_description, thing)\n"
+        "        assert(not missing_description_ok and\n"
+        "          missing_description_error.code == \"mux.arg.invalid\")\n"
+        "        local missing_internal_ok, missing_internal_error =\n"
+        "          mux.error.pcall(thing.set_internal_description, thing)\n"
+        "        assert(not missing_internal_ok and\n"
+        "          missing_internal_error.code == \"mux.arg.invalid\")\n"
+        "        thing:set_description(\"Lua description\")\n"
+        "        thing:set_internal_description(\"Lua inside\")\n"
         "        local attributes = thing:attributes()\n"
         "        local entries = attributes:entries()\n"
-        "        assert(entries.Description == \"Lua description\")\n"
-        "        assert(entries.InternalDescription == \"Lua inside\")\n"
-        "        assert(entries.Desc == nil and entries.Idesc == nil)\n"
+        "        assert(entries.Description == nil and\n"
+        "          entries.InternalDescription == nil)\n"
         "        local old_desc_ok, old_desc_error = mux.error.pcall(\n"
         "          attributes.get, attributes, \"Desc\")\n"
         "        assert(not old_desc_ok and\n"
@@ -690,6 +702,9 @@ static int write_lua_fixture(const char *directory) {
         "          attributes.get, attributes, \"Idesc\")\n"
         "        assert(not old_idesc_ok and\n"
         "          old_idesc_error.code == \"mux.attribute.invalid\")\n"
+        "        local description_attribute_ok = pcall(\n"
+        "          attributes.get, attributes, \"Description\")\n"
+        "        assert(not description_attribute_ok)\n"
         "        thing:set_name(\"[fg=green]Renamed Lua Thing[/]\")\n"
         "        assert(thing:name() == \"[fg=green]Renamed Lua Thing[/]\")\n"
         "        local missing_name_ok, missing_name_error = mux.error.pcall(\n"
@@ -2790,7 +2805,7 @@ static int create_styled_object(int socket_fd) {
     return -1;
   }
   if (send_command(socket_fd,
-                   "@attribute/set RenamedWidget/Description=[send=\"look\" "
+                   "@description RenamedWidget=[send=\"look\" "
                    "color=red bold "
                    "hover.color=yellow tooltip=\"Inspect this object\" "
                    "title=\"Actions\" menu.1.label=\"Look\" "
@@ -2826,9 +2841,8 @@ static int create_styled_object(int socket_fd) {
     fprintf(stderr, "OSC Tier 6 rendering failed\n");
     return -1;
   }
-  if (send_command(socket_fd,
-                   "@attribute/set RenamedWidget/InternalDescription="
-                   "[bg=blue]Inside[/]\r\n") < 0 ||
+  if (send_command(socket_fd, "@internal-description RenamedWidget="
+                              "[bg=blue]Inside[/]\r\n") < 0 ||
       expect_text(socket_fd, "InternalDescription - Set.") < 0) {
     fprintf(stderr, "styled-object inside description failed\n");
     return -1;
@@ -2836,8 +2850,35 @@ static int create_styled_object(int socket_fd) {
   if (send_command(socket_fd, "@attribute/get RenamedWidget/Desc\r\n") < 0 ||
       expect_text(socket_fd, "That is not an administrable attribute.") < 0 ||
       send_command(socket_fd, "@attribute/get RenamedWidget/Idesc\r\n") < 0 ||
+      expect_text(socket_fd, "That is not an administrable attribute.") < 0 ||
+      send_command(socket_fd, "@attribute/get RenamedWidget/Description\r\n") <
+          0 ||
+      expect_text(socket_fd, "That is not an administrable attribute.") < 0 ||
+      send_command(socket_fd,
+                   "@attribute/get RenamedWidget/InternalDescription\r\n") <
+          0 ||
       expect_text(socket_fd, "That is not an administrable attribute.") < 0) {
     fprintf(stderr, "legacy description attributes were accepted\n");
+    return -1;
+  }
+  if (send_command(socket_fd, "@create DescriptionClearTarget\r\n") < 0 ||
+      expect_text(socket_fd, "DescriptionClearTarget created as object #") <
+          0 ||
+      send_command(socket_fd, "@description DescriptionClearTarget=Text\r\n") <
+          0 ||
+      expect_text(socket_fd, "Description - Set.") < 0 ||
+      send_command(socket_fd, "@description DescriptionClearTarget=\r\n") < 0 ||
+      expect_text(socket_fd, "Description - Cleared.") < 0 ||
+      send_command(socket_fd,
+                   "@internal-description DescriptionClearTarget=Inside\r\n") <
+          0 ||
+      expect_text(socket_fd, "InternalDescription - Set.") < 0 ||
+      send_command(socket_fd,
+                   "@internal-description DescriptionClearTarget=\r\n") < 0 ||
+      expect_text(socket_fd, "InternalDescription - Cleared.") < 0 ||
+      send_command(socket_fd, "@destroy DescriptionClearTarget\r\n") < 0 ||
+      expect_text(socket_fd, "The object shakes and begins to crumble.") < 0) {
+    fprintf(stderr, "description clearing failed\n");
     return -1;
   }
   if (send_command(socket_fd, "@examine RenamedWidget\r\n") < 0 ||

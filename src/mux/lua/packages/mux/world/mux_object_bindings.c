@@ -439,6 +439,91 @@ static int lua_mux_object_name(lua_State *state) {
                                          handle->object));
   return 1;
 }
+static int lua_mux_object_push_description(lua_State *state, bool internal) {
+  LuaMuxObject *handle = lua_mux_check_object_handle(state, 1);
+  const char *description =
+      internal ? game_object_internal_description(
+                     handle->package->services->database, handle->object)
+               : game_object_description(handle->package->services->database,
+                                         handle->object);
+
+  if (description)
+    lua_pushstring(state, description);
+  else
+    lua_pushnil(state);
+  return 1;
+}
+/** Lua `object:description()`: returns styled text or nil when unset.
+ * @param[in,out] state Lua state. @return One Lua value.
+ * @exception LUA_ERROR_CODE_OBJECT_INVALID The Object is stale. */
+static int lua_mux_object_description(lua_State *state) {
+  return lua_mux_object_push_description(state, false);
+}
+/** Lua `object:internal_description()`: returns styled text or nil when unset.
+ * @param[in,out] state Lua state. @return One Lua value.
+ * @exception LUA_ERROR_CODE_OBJECT_INVALID The Object is stale. */
+static int lua_mux_object_internal_description(lua_State *state) {
+  return lua_mux_object_push_description(state, true);
+}
+static int lua_mux_object_set_description_value(lua_State *state,
+                                                bool internal) {
+  LuaMuxPackage *package = lua_mux_package_get(state);
+  DbRef object;
+  const char *description = nullptr;
+  size_t length = 0;
+  char compiled[LBUF_SIZE];
+  char error[256];
+
+  lua_mux_require_runtime(package, state,
+                          internal ? "object:set_internal_description"
+                                   : "object:set_description");
+  object = lua_mux_require_object(package, state, 1);
+  if (is_going(package->services->database, object))
+    return lua_error_arg(state, 1, LUA_ERROR_CODE_OBJECT_UNAVAILABLE,
+                         "object is being destroyed");
+  if (lua_gettop(state) < 2)
+    return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                         "description is required; pass nil to clear it");
+  if (!lua_isnil(state, 2)) {
+    description = luaL_checklstring(state, 2, &length);
+    if (length >= LBUF_SIZE || memchr(description, '\0', length) ||
+        !utf8_validate(description, length))
+      return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                           "description must be valid UTF-8 without embedded "
+                           "NUL bytes and shorter than LBUF_SIZE");
+    if (!styled_text_compile(package->services->styled_text_palette,
+                             description, compiled, sizeof(compiled), error,
+                             sizeof(error)))
+      return lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                           "description has invalid styled-text markup: %s",
+                           error);
+  }
+  if (internal)
+    game_object_internal_description_set(package->services->database, object,
+                                         description);
+  else
+    game_object_description_set(package->services->database, object,
+                                description);
+  return 0;
+}
+/** Lua `object:set_description(value)`: sets styled text; nil/empty clears.
+ * @param[in,out] state Lua state. @return No Lua values. @exception
+ * LUA_ERROR_CODE_OBJECT_INVALID Stale Object. @exception
+ * LUA_ERROR_CODE_OBJECT_UNAVAILABLE Object being destroyed. @exception
+ * LUA_ERROR_CODE_ARG_INVALID Invalid text or markup. @exception
+ * LUA_ERROR_CODE_CHECKING_UNAVAILABLE Called during `@lua/check`. */
+static int lua_mux_object_set_description(lua_State *state) {
+  return lua_mux_object_set_description_value(state, false);
+}
+/** Lua `object:set_internal_description(value)`: sets styled text; nil clears.
+ * @param[in,out] state Lua state. @return No Lua values. @exception
+ * LUA_ERROR_CODE_OBJECT_INVALID Stale Object. @exception
+ * LUA_ERROR_CODE_OBJECT_UNAVAILABLE Object being destroyed. @exception
+ * LUA_ERROR_CODE_ARG_INVALID Invalid text or markup. @exception
+ * LUA_ERROR_CODE_CHECKING_UNAVAILABLE Called during `@lua/check`. */
+static int lua_mux_object_set_internal_description(lua_State *state) {
+  return lua_mux_object_set_description_value(state, true);
+}
 
 /**
  * Returns this object's native database reference.
@@ -676,6 +761,10 @@ void lua_mux_install_object_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_object_name, 1);
   lua_setfield(state, -2, "name");
+  lua_pushcfunction(state, lua_mux_object_description);
+  lua_setfield(state, -2, "description");
+  lua_pushcfunction(state, lua_mux_object_internal_description);
+  lua_setfield(state, -2, "internal_description");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_object_dbref, 1);
   lua_setfield(state, -2, "dbref");
@@ -685,6 +774,12 @@ void lua_mux_install_object_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_object_set_name, 1);
   lua_setfield(state, -2, "set_name");
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_object_set_description, 1);
+  lua_setfield(state, -2, "set_description");
+  lua_pushlightuserdata(state, package);
+  lua_pushcclosure(state, lua_mux_object_set_internal_description, 1);
+  lua_setfield(state, -2, "set_internal_description");
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_contents, 1);
   lua_setfield(state, -2, "contents");

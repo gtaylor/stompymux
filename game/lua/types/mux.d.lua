@@ -509,6 +509,22 @@ function Object:type() end
 ---@see mux.error.codes.object.invalid
 function Object:name() end
 
+---Returns this object's styled description, or nil when it is unset.
+---@return string? description
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid)
+---for a stale Object.
+---@see mux.error.codes.object.invalid
+function Object:description() end
+
+---Returns this object's styled internal description, or nil when it is unset.
+---@return string? description
+---
+---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid)
+---for a stale Object.
+---@see mux.error.codes.object.invalid
+function Object:internal_description() end
+
 ---Changes this object's name using native object-name validation.
 ---@param name string New UTF-8 name, optionally containing styled-text markup.
 ---
@@ -518,6 +534,38 @@ function Object:name() end
 ---@see mux.error.codes.object.invalid
 ---@see mux.error.codes.object.unavailable
 function Object:set_name(name) end
+
+---Sets this object's styled description. Nil or an empty string clears it.
+---@param description string|nil Valid UTF-8 styled-text markup without embedded NUL bytes, or nil to clear the description. This argument must be supplied explicitly.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking)
+---during `@lua/check`, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid)
+---for a stale Object,
+---[`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable)
+---when the object is being destroyed, or
+---[`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) for text
+---that is too long or has invalid UTF-8 or styled-text markup.
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+---@see mux.error.codes.arg.invalid
+function Object:set_description(description) end
+
+---Sets this object's styled internal description. Nil or an empty string clears it.
+---@param description string|nil Valid UTF-8 styled-text markup without embedded NUL bytes, or nil to clear the internal description. This argument must be supplied explicitly.
+---
+---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking)
+---during `@lua/check`, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid)
+---for a stale Object,
+---[`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable)
+---when the object is being destroyed, or
+---[`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) for text
+---that is too long or has invalid UTF-8 or styled-text markup.
+---@see mux.error.codes.unavailable.checking
+---@see mux.error.codes.object.invalid
+---@see mux.error.codes.object.unavailable
+---@see mux.error.codes.arg.invalid
+function Object:set_internal_description(description) end
 
 ---Returns matching objects directly contained by or attached to this object.
 ---@param options? ContentsOptions Optional type and visibility filters.

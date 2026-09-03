@@ -190,7 +190,7 @@ namespace:
 ```text
 @state/set <exit>/locks.traverse flag/WIZARD=true
 @state/set <exit>/locks.traverse affiliation=123
-@state/set <exit>/locks.traverse attribute/Description="Authorized"
+@state/set <exit>/locks.traverse attribute/Mechname="Authorized"
 @state/set <exit>/locks.traverse state/access/member=true
 ```
 

@@ -8,7 +8,6 @@
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/look.h"
 #include "mux/lua/lua_runtime.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/persistence/gamedb.h" // IWYU pragma: keep
@@ -312,7 +311,6 @@ static bool look_custom_appearance(EvaluationContext *evaluation, DbRef player,
 
 static bool look_simple(EvaluationContext *evaluation, DbRef player,
                         DbRef thing) {
-  int pattr;
   OwnedText buff;
 
   /*
@@ -336,7 +334,6 @@ static bool look_simple(EvaluationContext *evaluation, DbRef player,
                    MSG_ME_ALL | MSG_F_DOWN);
     owned_text_release(&buff);
   }
-  pattr = A_DESCRIPTION;
   notify_action(evaluation,
                 &(ActionMessageInvocation){
                     .message = {.type = LUA_MESSAGE_DESCRIBE,
@@ -346,7 +343,7 @@ static bool look_simple(EvaluationContext *evaluation, DbRef player,
                                 .cause = player,
                                 .source = NOTHING,
                                 .destination = NOTHING},
-                    .content_attribute = pattr,
+                    .content = ACTION_MESSAGE_CONTENT_DESCRIPTION,
                     .enactor_default = "You see nothing special.",
                     .event = LUA_EVENT_DESCRIBE});
   return false;
@@ -363,20 +360,17 @@ static void show_a_desc(EvaluationContext *evaluation, DbRef player,
                                 .cause = player,
                                 .source = NOTHING,
                                 .destination = NOTHING},
-                    .content_attribute = A_DESCRIPTION,
+                    .content = ACTION_MESSAGE_CONTENT_DESCRIPTION,
                     .event = LUA_EVENT_DESCRIBE});
 }
 
 static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
                       int use_idesc) {
-  OwnedText got;
-  long aflags;
-
   if ((typeof_obj(evaluation->world->database, loc) != OBJECT_TYPE_ROOM) &&
       use_idesc) {
-    got = attribute_get(evaluation->world->database, loc,
-                        A_INTERNAL_DESCRIPTION, &aflags);
-    if (*got.text) {
+    const char *internal_description =
+        game_object_internal_description(evaluation->world->database, loc);
+    if (internal_description && *internal_description) {
       notify_action(
           evaluation,
           &(ActionMessageInvocation){
@@ -387,12 +381,11 @@ static void show_desc(EvaluationContext *evaluation, DbRef player, DbRef loc,
                           .cause = player,
                           .source = NOTHING,
                           .destination = NOTHING},
-              .content_attribute = A_INTERNAL_DESCRIPTION,
+              .content = ACTION_MESSAGE_CONTENT_INTERNAL_DESCRIPTION,
               .event = LUA_EVENT_DESCRIBE});
     } else {
       show_a_desc(evaluation, player, loc);
     }
-    owned_text_release(&got);
   } else {
     show_a_desc(evaluation, player, loc);
   }

@@ -90,6 +90,14 @@ enum {
 
 void player_account_clear(GameDatabase *database, DbRef player);
 
+/** Returns a player's login alias, or an empty string when unset. */
+
+const char *player_account_alias(GameDatabase *database, DbRef player);
+/** Sets or clears a player's login alias. */
+
+[[nodiscard]] bool player_account_alias_set(GameDatabase *database,
+                                            DbRef player, const char *alias);
+
 /** Executes player account password hash. @param[in,out] database Game
  * database. @param[in] player Player object. */
 

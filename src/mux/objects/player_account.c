@@ -20,6 +20,7 @@ struct PlayerLoginRecord {
 };
 
 struct PlayerAccountState {
+  char *alias;
   char *password_hash;
   char *last_site;
   time_t last_login;
@@ -84,6 +85,7 @@ void player_account_clear(GameDatabase *database, DbRef player) {
   account = game_database_object(database, player)->account;
   if (!account)
     return;
+  free(account->alias);
   free(account->password_hash);
   free(account->last_site);
   for (size_t index = 0; index < account->successful_history_count; index++)
@@ -97,6 +99,17 @@ void player_account_clear(GameDatabase *database, DbRef player) {
   free(account->last_page_recipients);
   free(account);
   game_database_object(database, player)->account = nullptr;
+}
+
+const char *player_account_alias(GameDatabase *database, DbRef player) {
+  PlayerAccountState *account = player_account(database, player);
+  return account && account->alias ? account->alias : "";
+}
+
+bool player_account_alias_set(GameDatabase *database, DbRef player,
+                              const char *alias) {
+  PlayerAccountState *account = player_account_require(database, player);
+  return (account && account_replace_string(&account->alias, alias)) != 0;
 }
 
 const char *player_account_password_hash(GameDatabase *database, DbRef player) {

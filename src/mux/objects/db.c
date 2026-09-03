@@ -63,27 +63,15 @@ void game_database_destroy(GameDatabase *database) {
  * Hardcoded native fields. Dynamic Lua attributes are not registered here.
  */
 static const Attribute NATIVE_ATTRIBUTES[] = {
-    {"Alias", A_ALIAS},
-    {"Buildcoord", A_BUILDCOORD},
-    {"Buildentrance", A_BUILDENTRANCE},
-    {"Buildlinks", A_BUILDLINKS},
-    {"Contactoptions", A_CONTACTOPT},
-    {"Description", A_DESCRIPTION},
-    {"Destroyer", A_DESTROYER},
-    {"InternalDescription", A_INTERNAL_DESCRIPTION},
-    {"LRSheight", A_LRSHEIGHT},
-    {"Mapvis", A_MAPVIS},
-    {"Mechdesc", A_MECHDESC},
-    {"Mechname", A_MECHNAME},
-    {"Mechtype", A_MECHTYPE},
-    {"MechPrefID", A_MECHPREFID},
-    {"Mechskills", A_MECHSKILLS},
-    {"Mwtemplate", A_MWTEMPLATE},
-    {"PCequip", A_PCEQUIP},
-    {"Pilot", A_PILOTNUM},
-    {"Tacsize", A_TACSIZE},
-    {"Xtype", A_XTYPE},
-    {nullptr, 0}};
+    {"Buildcoord", A_BUILDCOORD}, {"Buildentrance", A_BUILDENTRANCE},
+    {"Buildlinks", A_BUILDLINKS}, {"Contactoptions", A_CONTACTOPT},
+    {"Destroyer", A_DESTROYER},   {"LRSheight", A_LRSHEIGHT},
+    {"Mapvis", A_MAPVIS},         {"Mechdesc", A_MECHDESC},
+    {"Mechname", A_MECHNAME},     {"Mechtype", A_MECHTYPE},
+    {"MechPrefID", A_MECHPREFID}, {"Mechskills", A_MECHSKILLS},
+    {"Mwtemplate", A_MWTEMPLATE}, {"PCequip", A_PCEQUIP},
+    {"Pilot", A_PILOTNUM},        {"Tacsize", A_TACSIZE},
+    {"Xtype", A_XTYPE},           {nullptr, 0}};
 
 size_t native_attribute_count(void) {
   return (sizeof(NATIVE_ATTRIBUTES) / sizeof(NATIVE_ATTRIBUTES[0])) - 1;
@@ -94,43 +82,16 @@ const Attribute *native_attribute_at(size_t index) {
                                   sizeof(*NATIVE_ATTRIBUTES), index);
 }
 
-static char *set_string(char **ptr, char *new) {
-  /*
-   * if pointer not null unalloc it
-   */
+static char *set_string(char **ptr, const char *new) {
+  char *copy = nullptr;
 
-  if (*ptr)
-    free(*ptr);
-
-  /*
-   * if new string is not null allocate space for it and copy it
-   */
-
-  if (!new)                  /*
-                              * * || !*new
-                              */
-    return (*ptr = nullptr); /*
-                              * Check with GAC about this
-                              */
-  *ptr = (char *)checked_storage_allocate(strlen(new) + 1);
-  (void)string_copy_bounded(*ptr, strlen(new) + 1, new);
-  return (*ptr);
-}
-
-static NAME *name_cache_slot(NAME *storage, int size, DbRef object) {
-  if (storage == nullptr || size < 0 || object < -1 || object >= size) {
-    abort();
+  if (new) {
+    copy = checked_storage_allocate(strlen(new) + 1);
+    (void)string_copy_bounded(copy, strlen(new) + 1, new);
   }
-  return (NAME *)checked_storage_at((void *)storage, (size_t)size + 1,
-                                    sizeof(NAME), (size_t)(object + 1));
-}
-
-static NAME *name_slot(GameDatabase *database, DbRef object) {
-  return name_cache_slot(database->name_storage, database->size, object);
-}
-
-static NAME *pure_name_slot(GameDatabase *database, DbRef object) {
-  return name_cache_slot(database->pure_name_storage, database->size, object);
+  free(*ptr);
+  *ptr = copy;
+  return copy;
 }
 
 typedef struct NativeAttributeReference {
@@ -154,26 +115,11 @@ static char **native_attribute_slot(const NativeAttributeReference *reference) {
  * * Name, s_Name: Get or set an object's name.
  */
 const char *game_object_name(GameDatabase *database, DbRef thing) {
-  long aflags;
-
   if (thing >= database->top || thing < 0) {
     return "#-1 INVALID DBREF";
   }
-  if (!*name_slot(database, thing)) {
-    char name[MBUF_SIZE];
-
-    attribute_get_string(database, thing, A_NAME, name, sizeof(name), &aflags);
-    set_string(name_slot(database, thing), name);
-  }
-  if (!*pure_name_slot(database, thing)) {
-    char pure_name[MBUF_SIZE];
-
-    styled_text_strip(database->styled_text_palette,
-                      *name_slot(database, thing), pure_name,
-                      sizeof(pure_name));
-    set_string(pure_name_slot(database, thing), pure_name);
-  }
-  return *name_slot(database, thing);
+  GameObject *object = game_database_object(database, thing);
+  return object->name ? object->name : "";
 }
 
 const char *game_object_lua_parent(GameDatabase *database, DbRef object) {
@@ -200,9 +146,8 @@ const char *game_object_pure_name(GameDatabase *database, DbRef thing) {
   if (thing >= database->top || thing < 0) {
     return "#-1 INVALID DBREF";
   }
-  if (!*pure_name_slot(database, thing))
-    (void)game_object_name(database, thing);
-  return *pure_name_slot(database, thing);
+  GameObject *object = game_database_object(database, thing);
+  return object->pure_name ? object->pure_name : "";
 }
 
 void object_name_set(GameDatabase *database, DbRef thing, const char *s) {
@@ -210,11 +155,31 @@ void object_name_set(GameDatabase *database, DbRef thing, const char *s) {
   char new[MBUF_SIZE];
 
   utf8_copy_truncated(stored, sizeof(stored), s);
-  attribute_add_raw(database, thing, A_NAME, stored);
-
-  set_string(name_slot(database, thing), stored);
+  GameObject *object = game_database_object(database, thing);
+  set_string(&object->name, stored);
   styled_text_strip(database->styled_text_palette, stored, new, sizeof(new));
-  set_string(pure_name_slot(database, thing), new);
+  set_string(&object->pure_name, new);
+}
+
+const char *game_object_description(GameDatabase *database, DbRef object) {
+  return game_database_object(database, object)->description;
+}
+
+void game_object_description_set(GameDatabase *database, DbRef object,
+                                 const char *description) {
+  set_string(&game_database_object(database, object)->description,
+             description && *description ? description : nullptr);
+}
+
+const char *game_object_internal_description(GameDatabase *database,
+                                             DbRef object) {
+  return game_database_object(database, object)->internal_description;
+}
+
+void game_object_internal_description_set(GameDatabase *database, DbRef object,
+                                          const char *description) {
+  set_string(&game_database_object(database, object)->internal_description,
+             description && *description ? description : nullptr);
 }
 
 bool object_password_set(GameDatabase *database, DbRef thing, const char *s) {
@@ -347,6 +312,14 @@ bool attribute_get_info(GameDatabase *database, DbRef thing, int atr,
 
 void attribute_free(GameDatabase *database, DbRef thing) {
   GameObject *game_object = game_database_object(database, thing);
+  free(game_object->name);
+  game_object->name = nullptr;
+  free(game_object->pure_name);
+  game_object->pure_name = nullptr;
+  free(game_object->description);
+  game_object->description = nullptr;
+  free(game_object->internal_description);
+  game_object->internal_description = nullptr;
   free(game_object->lua_parent);
   game_object->lua_parent = nullptr;
   object_state_clear(database, thing);
@@ -385,6 +358,10 @@ void attribute_copy(const AttributeCopyRequest *request) {
   object_state_copy(evaluation->world->database, dest, source);
   game_object_lua_parent_set(evaluation->world->database, dest,
                              source_object->lua_parent);
+  game_object_description_set(evaluation->world->database, dest,
+                              source_object->description);
+  game_object_internal_description_set(evaluation->world->database, dest,
+                                       source_object->internal_description);
 }
 
 /*
@@ -394,42 +371,6 @@ void attribute_copy(const AttributeCopyRequest *request) {
 
 // So mistaken refs to #-1 won't die.
 static constexpr int SIZE_HACK = 1;
-
-typedef struct NameCacheResizeRequest {
-  GameDatabase *database;
-  NAME *storage;
-  int old_size;
-  int new_size;
-} NameCacheResizeRequest;
-
-static NAME *name_cache_resize(const NameCacheResizeRequest *request) {
-  NAME *resized =
-      request->new_size < 0
-          ? nullptr
-          : (NAME *)checked_storage_try_allocate_array(
-                (size_t)request->new_size + SIZE_HACK, sizeof(NAME));
-
-  if (!resized) {
-    char message[128];
-    (void)snprintf(message, sizeof(message),
-                   "Could not allocate space for %d item name cache.",
-                   request->new_size);
-    log_simple((LogEntry){.log = request->database->log,
-                          .key = LOG_ALWAYS,
-                          .primary = "ALC",
-                          .secondary = "DB"},
-               message);
-    abort();
-  }
-  memset((void *)resized, 0,
-         (size_t)(request->new_size + SIZE_HACK) * sizeof(NAME));
-  if (request->storage) {
-    memmove((void *)resized, (const void *)request->storage,
-            (size_t)(request->old_size + SIZE_HACK) * sizeof(NAME));
-    free((void *)request->storage);
-  }
-  return resized;
-}
 
 static void initialize_objects(GameDatabase *database, DbRef first,
                                DbRef last) {
@@ -491,10 +432,6 @@ void db_grow(GameDatabase *database, DbRef newtop) {
    */
 
   if (newtop <= database->size) {
-    for (i = database->top; i < newtop; i++) {
-      *name_slot(database, i) = nullptr;
-      *pure_name_slot(database, i) = nullptr;
-    }
     initialize_objects(database, database->top, newtop);
     database->top = (int)newtop;
     return;
@@ -516,22 +453,6 @@ void db_grow(GameDatabase *database, DbRef newtop) {
   if (newsize < database->minimum_size)
     newsize = database->minimum_size + delta;
 
-  /*
-   * Grow the name tables
-   */
-
-  database->name_storage = name_cache_resize(&(NameCacheResizeRequest){
-      .database = database,
-      .storage = database->name_storage,
-      .old_size = database->size,
-      .new_size = newsize,
-  });
-  database->pure_name_storage = name_cache_resize(&(NameCacheResizeRequest){
-      .database = database,
-      .storage = database->pure_name_storage,
-      .old_size = database->size,
-      .new_size = newsize,
-  });
   /*
    * Grow the database->objects array
    */
@@ -591,10 +512,6 @@ void db_grow(GameDatabase *database, DbRef newtop) {
   database->object_storage = newdb;
   newdb = nullptr;
 
-  for (i = database->top; i < newtop; i++) {
-    *name_slot(database, i) = nullptr;
-    *pure_name_slot(database, i) = nullptr;
-  }
   initialize_objects(database, database->top, newtop);
   database->top = (int)newtop;
 
@@ -623,18 +540,6 @@ void db_free(GameDatabase *database) {
     cp = (char *)database->object_storage;
     free(cp);
     database->object_storage = nullptr;
-  }
-  if (database->pure_name_storage != nullptr) {
-    for (DbRef object = 0; object < database->top; object++)
-      free(*pure_name_slot(database, object));
-    free((void *)database->pure_name_storage);
-    database->pure_name_storage = nullptr;
-  }
-  if (database->name_storage != nullptr) {
-    for (DbRef object = 0; object < database->top; object++)
-      free(*name_slot(database, object));
-    free((void *)database->name_storage);
-    database->name_storage = nullptr;
   }
   free(database->markbits);
   database->markbits = nullptr;

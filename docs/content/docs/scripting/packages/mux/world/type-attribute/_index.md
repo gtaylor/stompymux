@@ -11,11 +11,9 @@ An `Attribute` handle exposes the same safe native-attribute set as the
 Wizard-only `@attribute` command. It is distinct from dynamic [`State`](../type-state/).
 Create a handle with [`Object:attributes`](../type-object/attributes/).
 
-Only descriptions and BattleTech-native attributes are exposed. Names are
-matched by the native attribute registry; unsupported names raise an error.
-Use `Description` for an object's description and `InternalDescription` for its
-internal description. Their values are `nil` when unset. The former `Desc` and
-`Idesc` names are invalid.
+Only BattleTech-native attributes are exposed. Names are matched by the native
+attribute registry; unsupported names raise an error. Object descriptions use
+dedicated [`Object`](../type-object/) methods instead.
 
 ## Methods
 

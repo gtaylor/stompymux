@@ -114,6 +114,10 @@ struct GameObject {
   DbRef zone;        /* Whatever the object is zoned to. */
   DbRef affiliation; /* Object this object is affiliated with. */
 
+  char *name;
+  char *pure_name;
+  char *description;
+  char *internal_description;
   char *lua_parent; /* Relative object_logic module path. */
 
   ObjectType type;
@@ -150,8 +154,6 @@ struct GameObject {
   NativeObjectState native;
 };
 
-typedef char *NAME;
-
 typedef struct DatabaseMarkBuffer DatabaseMarkBuffer;
 struct DatabaseMarkBuffer {
   char chunk[5000];
@@ -159,8 +161,6 @@ struct DatabaseMarkBuffer {
 
 struct GameDatabase {
   GameObject *object_storage;
-  NAME *name_storage;
-  NAME *pure_name_storage;
   int top;
   int size;
   int minimum_size;
@@ -389,6 +389,21 @@ const char *game_object_name(GameDatabase *database, DbRef thing);
  * @param[in] thing Thing. */
 
 const char *game_object_pure_name(GameDatabase *database, DbRef thing);
+/** Returns an object's description, or nullptr when unset. */
+
+const char *game_object_description(GameDatabase *database, DbRef object);
+/** Sets or clears an object's description. */
+
+void game_object_description_set(GameDatabase *database, DbRef object,
+                                 const char *description);
+/** Returns an object's internal description, or nullptr when unset. */
+
+const char *game_object_internal_description(GameDatabase *database,
+                                             DbRef object);
+/** Sets or clears an object's internal description. */
+
+void game_object_internal_description_set(GameDatabase *database, DbRef object,
+                                          const char *description);
 /** Executes game object lua parent. @param[in,out] database Game database.
  * @param[in] object Game object. */
 

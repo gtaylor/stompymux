@@ -1001,6 +1001,7 @@ static int seed_player_account_state(const char *path) {
               sqlite3_exec(
                   sqlite,
                   "UPDATE player_state SET password_hash = 'test-hash', "
+                  "alias = 'PersistedAlias', "
                   "last_login = 123456789, last_site = 'user@example.test', "
                   "successful_login_count = 9, failed_login_count = 4, "
                   "unreported_failed_login_count = 2 WHERE object_dbref = 1;"
@@ -1203,12 +1204,16 @@ static int check_player_account_state(const char *path) {
   if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
     return -1;
   result =
-      query_int(sqlite,
-                "SELECT last_login = 123456789 AND "
-                "successful_login_count = 9 AND failed_login_count = 4 AND "
-                "unreported_failed_login_count = 2 FROM player_state "
-                "WHERE object_dbref = 1;",
-                1) == 0 &&
+      query_text(sqlite,
+                 "SELECT alias FROM player_state WHERE object_dbref = 1;",
+                 "PersistedAlias") == 0 &&
+              query_int(
+                  sqlite,
+                  "SELECT last_login = 123456789 AND "
+                  "successful_login_count = 9 AND failed_login_count = 4 AND "
+                  "unreported_failed_login_count = 2 FROM player_state "
+                  "WHERE object_dbref = 1;",
+                  1) == 0 &&
               query_int(sqlite,
                         "SELECT count(*) FROM player_state WHERE "
                         "object_dbref NOT IN (SELECT dbref FROM objects WHERE "

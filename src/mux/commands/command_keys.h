@@ -17,6 +17,9 @@ constexpr int DEST_ONE = 1;       /* Destroy one object. */
 constexpr int DEST_OVERRIDE = 4;  /* Override safety check. */
 constexpr int DEST_RECURSIVE = 8; /* Destroy recursively. */
 
+constexpr int DESCRIPTION_EXTERNAL = 0;
+constexpr int DESCRIPTION_INTERNAL = 1;
+
 constexpr int DIG_TELEPORT = 1; /* Teleport after digging. */
 constexpr int EXAM_BRIEF = 1;   /* Omit ordinary attribute list. */
 constexpr int EXAM_DEBUG = 4;   /* Display database debugging details. */

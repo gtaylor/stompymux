@@ -157,10 +157,7 @@ const char SCHEMA_STATE_SQL[] =
     ") WITHOUT ROWID;";
 
 const NativeColumn NATIVE_COLUMNS[] = {
-    {A_DESCRIPTION, "objects", "dbref", "description"},
-    {A_INTERNAL_DESCRIPTION, "objects", "dbref", "internal_description"},
     {A_DESTROYER, "objects", "dbref", "destroyer"},
-    {A_ALIAS, "player_state", "object_dbref", "alias"},
     {A_MECHPREFID, "btech_object_state", "object_dbref", "mech_preferred_id"},
     {A_MECHSKILLS, "btech_object_state", "object_dbref", "mech_skills"},
     {A_XTYPE, "btech_object_state", "object_dbref", "object_type"},

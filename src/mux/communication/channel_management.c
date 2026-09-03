@@ -11,7 +11,6 @@
 #include "mux/communication/comsys_internal.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/network/network_output.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
@@ -21,7 +20,6 @@
 #include "mux/support/checked_storage.h"
 #include "mux/support/fifo.h"
 #include "mux/support/hash_table.h"
-#include "mux/support/owned_text.h"
 #include "mux/support/utf8.h"
 #include "mux/world/player.h"
 
@@ -319,9 +317,6 @@ void do_comlist(CommandInvocation *invocation) {
 
 static void comlist_description(GameDatabase *database, struct Channel *ch,
                                 char *buffer, size_t buffer_size) {
-  long flags;
-  OwnedText description;
-
   if (buffer_size == 0)
     return;
   if (ch->chan_obj == NOTHING) {
@@ -329,16 +324,16 @@ static void comlist_description(GameDatabase *database, struct Channel *ch,
     return;
   }
 
-  description = attribute_get(database, ch->chan_obj, A_DESCRIPTION, &flags);
-  if (!*description.text) {
+  const char *description = game_object_description(database, ch->chan_obj);
+  if (!description || !*description) {
     (void)string_copy_bounded(buffer, buffer_size, "No description.");
   } else {
-    const size_t DESCRIPTION_LENGTH = strlen(description.text);
+    const size_t DESCRIPTION_LENGTH = strlen(description);
     size_t output = 0;
 
     while (output < DESCRIPTION_LENGTH && output < buffer_size - 1) {
       const char CHARACTER = *(const char *)checked_storage_at_const(
-          description.text, DESCRIPTION_LENGTH + 1, sizeof(char), output);
+          description, DESCRIPTION_LENGTH + 1, sizeof(char), output);
 
       *(char *)checked_storage_at(buffer, buffer_size, sizeof(char), output) =
           CHARACTER == '\r' || CHARACTER == '\n' ? ' ' : CHARACTER;
@@ -347,5 +342,4 @@ static void comlist_description(GameDatabase *database, struct Channel *ch,
     *(char *)checked_storage_at(buffer, buffer_size, sizeof(char), output) =
         '\0';
   }
-  owned_text_release(&description);
 }

@@ -27,6 +27,7 @@ keys or values.
 The examined object's name, `Description`, and `InternalDescription` are shown
 using editable styled text markup instead of terminal color escape sequences.
 `InternalDescription` is omitted when
-it is empty. This output can be copied into `@name` or `@attribute/set`.
+it is empty. This output can be copied into `@name`, `@description`, or
+`@internal-description`.
 
 Only Wizards can use `@examine`. Wizards may examine any object.

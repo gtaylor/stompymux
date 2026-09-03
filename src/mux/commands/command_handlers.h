@@ -60,6 +60,9 @@ void do_create(CommandInvocation *invocation);
  */
 
 void do_destroy(CommandInvocation *invocation);
+/** Handles object description commands. */
+
+void do_description(CommandInvocation *invocation);
 /** Handles the dig command. @param[in,out] invocation Command invocation. */
 
 void do_dig(CommandInvocation *invocation);

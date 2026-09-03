@@ -29,16 +29,12 @@ None.
 local attributes = mux.world.object(ctx.object):attributes()
 attributes:set("Mechname", "H-7")
 local name = attributes:get("Mechname")
-
-local description = attributes:get("Description")
-local internal_description = attributes:get("InternalDescription")
 ```
 
 ## Notes
 
-Use `Description` for an object's description and `InternalDescription` for its
-internal description. Both return `nil` when unset. This method is unavailable
-during `@lua/check`. The former `Desc` and `Idesc` names are invalid.
+Descriptions are available through dedicated `Object` methods, not this
+handle. This method is unavailable during `@lua/check`.
 
 ## See Also
 

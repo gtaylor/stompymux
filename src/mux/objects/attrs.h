@@ -4,15 +4,8 @@
 
 #pragma once
 
-constexpr int A_DESCRIPTION = 6; /* Description */
-constexpr int A_INTERNAL_DESCRIPTION =
-    32;                     /* Internal description (ENTER to get inside) */
-constexpr int A_NAME = 43;  /* Object name */
-constexpr int A_ALIAS = 58; /* Alias for player names */
-constexpr int A_MECHPREFID = 146; /* Preferred Mech ID on map */
-constexpr int A_DESTROYER = 212;  /* Who is destroying this object? */
-
-/* Mecha stuff */
+constexpr int A_MECHPREFID = 146;    /* Preferred Mech ID on map */
+constexpr int A_DESTROYER = 212;     /* Who is destroying this object? */
 constexpr int A_MECHSKILLS = 214;    /* Pilot's skills in using a mech */
 constexpr int A_XTYPE = 215;         /* Hardcode type */
 constexpr int A_TACSIZE = 216;       /* Tactical Size (H & W) */

@@ -11,7 +11,6 @@
 #include "mux/commands/command_helpers.h"
 #include "mux/communication/access_policy.h"
 #include "mux/communication/page_recipients.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/player_account.h"
@@ -130,7 +129,6 @@ void do_page(CommandInvocation *invocation) {
   int ismessage = 0;
   int n = 0;
   size_t delivery_count = 0;
-  long aflags = 0;
   char *token_context = nullptr;
   char *owned_tname = nullptr;
 
@@ -195,8 +193,9 @@ void do_page(CommandInvocation *invocation) {
   message = plain_message;
   mp = message;
 
-  attribute_get_string(evaluation->world->database, PLAYER, A_ALIAS, formatted,
-                       LBUF_SIZE, &aflags);
+  (void)string_copy_bounded(
+      formatted, LBUF_SIZE,
+      player_account_alias(evaluation->world->database, PLAYER));
   if (*formatted) {
     char *ap = aladd;
 

@@ -9,9 +9,15 @@
 
 typedef struct EvaluationContext EvaluationContext;
 
+typedef enum ActionMessageContent : int {
+  ACTION_MESSAGE_CONTENT_NONE,
+  ACTION_MESSAGE_CONTENT_DESCRIPTION,
+  ACTION_MESSAGE_CONTENT_INTERNAL_DESCRIPTION,
+} ActionMessageContent;
+
 typedef struct ActionMessageInvocation {
   LuaMessageInvocation message;
-  int content_attribute;
+  ActionMessageContent content;
   const char *enactor_default;
   const char *other_default;
   LuaEventType event;
