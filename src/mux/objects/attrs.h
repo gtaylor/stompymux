@@ -18,15 +18,15 @@ constexpr int A_DESTROYER = 212;  /* Who is destroying this object? */
 constexpr int A_UNUSED1 = 213;    /* Old luck.c, now unused. */
 
 /* Mecha stuff */
-constexpr int A_MECHSKILLS = 214; /* Pilot's skills in using a mech */
-constexpr int A_XTYPE = 215;      /* Hardcode type */
-constexpr int A_TACSIZE = 216;    /* Tactical Size (H & W) */
-constexpr int A_LRSHEIGHT = 217;  /* LRS height */
-constexpr int A_CONTACTOPT = 218; /* Contact options */
-constexpr int A_MECHNAME = 219;   /* Mech name */
-constexpr int A_MECHTYPE = 220;   /* Mech type */
-constexpr int A_MECHDESC = 221;   /* Mech extra desc (for view) */
-constexpr int A_MWTEMPLATE = 229; /* MW template to use (if any) */
+constexpr int A_MECHSKILLS = 214;    /* Pilot's skills in using a mech */
+constexpr int A_XTYPE = 215;         /* Hardcode type */
+constexpr int A_TACSIZE = 216;       /* Tactical Size (H & W) */
+constexpr int A_LRSHEIGHT = 217;     /* LRS height */
+constexpr int A_CONTACTOPT = 218;    /* Contact options */
+constexpr int A_MECHNAME = 219;      /* Mech name */
+constexpr int A_MECHTYPE = 220;      /* Mech type */
+constexpr int A_MECHDESC = 221;      /* Mech extra desc (for view) */
+constexpr int A_MWTEMPLATE = 229;    /* MW template to use (if any) */
 constexpr int A_BUILDLINKS = 235;    /* Links */
 constexpr int A_BUILDENTRANCE = 236; /* Entrance(s) */
 constexpr int A_BUILDCOORD = 237;    /* X/Y coord */
