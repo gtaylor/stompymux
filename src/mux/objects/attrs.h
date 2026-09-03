@@ -6,13 +6,9 @@
 
 constexpr int A_DESCRIPTION = 6; /* Description */
 constexpr int A_INTERNAL_DESCRIPTION =
-    32;                      /* Internal description (ENTER to get inside) */
-constexpr int A_NAME = 43;   /* Object name */
-constexpr int A_ALIAS = 58;  /* Alias for player names */
-constexpr int A_REJECT = 72; /* Rejected page return message */
-constexpr int A_AWAY = 73;   /* Not_connected page return message */
-constexpr int A_IDLE = 74;   /* Success page return message */
-constexpr int A_PFAIL = 78;  /* Invoker page fail message */
+    32;                     /* Internal description (ENTER to get inside) */
+constexpr int A_NAME = 43;  /* Object name */
+constexpr int A_ALIAS = 58; /* Alias for player names */
 constexpr int A_MECHPREFID = 146; /* Preferred Mech ID on map */
 constexpr int A_DESTROYER = 212;  /* Who is destroying this object? */
 
