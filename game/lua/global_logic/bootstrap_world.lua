@@ -132,7 +132,6 @@ local function bootstrap_player_rooms(ctx, staff_rooms)
   })
   new_player_starting_room_out_exit:state("locks.traverse"):set("flag/WIZARD", true)
   new_player_starting_room_out_exit:flags():add(mux.world.flags.DARK)
-
 end
 
 local function bootstrap(ctx)
