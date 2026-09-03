@@ -6,7 +6,7 @@
 #include "mux/persistence/gamedb_sqlite_internal.h"
 
 // Increment whenever an incompatible schema change is made.
-const int GAMEDB_SCHEMA_VERSION = 30;
+const int GAMEDB_SCHEMA_VERSION = 31;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 const int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -115,7 +115,7 @@ const char SCHEMA_STATE_SQL[] =
     " mech_preferred_id TEXT, mech_skills TEXT,"
     " object_type TEXT, tactical_size TEXT, lrs_height TEXT,"
     " contact_options TEXT, mech_name TEXT, mech_type TEXT,"
-    " mech_description TEXT, mw_template TEXT, faction TEXT,"
+    " mech_description TEXT, mw_template TEXT,"
     " build_links TEXT, build_entrances TEXT,"
     " build_coordinates TEXT, pilot_dbref INTEGER,"
     " map_visibility TEXT, tech_complete_at INTEGER,"
@@ -171,7 +171,6 @@ const NativeColumn NATIVE_COLUMNS[] = {
     {A_MECHTYPE, "btech_object_state", "object_dbref", "mech_type"},
     {A_MECHDESC, "btech_object_state", "object_dbref", "mech_description"},
     {A_MWTEMPLATE, "btech_object_state", "object_dbref", "mw_template"},
-    {A_FACTION, "btech_object_state", "object_dbref", "faction"},
     {A_BUILDLINKS, "btech_object_state", "object_dbref", "build_links"},
     {A_BUILDENTRANCE, "btech_object_state", "object_dbref", "build_entrances"},
     {A_BUILDCOORD, "btech_object_state", "object_dbref", "build_coordinates"},

@@ -70,7 +70,6 @@ static const Attribute NATIVE_ATTRIBUTES[] = {
     {"Contactoptions", A_CONTACTOPT},
     {"Description", A_DESCRIPTION},
     {"Destroyer", A_DESTROYER},
-    {"Faction", A_FACTION},
     {"InternalDescription", A_INTERNAL_DESCRIPTION},
     {"LRSheight", A_LRSHEIGHT},
     {"Mapvis", A_MAPVIS},

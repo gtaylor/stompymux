@@ -24,7 +24,6 @@
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
@@ -413,14 +412,23 @@ static bool find_comm_link(CommRelayContext *relay, BattleMap *map, Mech *from,
  * someone speaks on a given frequency */
 static void build_observer_channel_message(
     char *buf, const char *color, char open_bracket, char close_bracket,
-    char channel, int bearing, const char *faction, const char *id,
+    char channel, int bearing, const char *affiliation, const char *id,
     int frequency, const char *title, const char *message) {
   BtechTextBuilder output;
   btech_text_builder_initialize(&output, buf, LBUF_SIZE);
   btech_text_builder_append(&output, color);
   btech_text_builder_append_format(
       &output, "%c%c:%d%c <%s:%s:%d> <%s> %s[reset]", open_bracket, channel,
-      bearing, close_bracket, faction, id, frequency, title, message);
+      bearing, close_bracket, affiliation, id, frequency, title, message);
+}
+
+static const char *observer_affiliation_name(GameDatabase *database,
+                                             DbRef object) {
+  const DbRef AFFILIATION = game_object_affiliation(database, object);
+
+  if (!is_good_obj(database, AFFILIATION) || is_going(database, AFFILIATION))
+    return "";
+  return game_object_name(database, AFFILIATION);
 }
 
 static void build_channel_message(char *buf, const char *color,
@@ -440,7 +448,6 @@ typedef struct RadioSendWorkspace {
   char buf2[LBUF_SIZE];
   char buf3[LBUF_SIZE];
   char ai_buf[LBUF_SIZE];
-  char faction_buffer[LBUF_SIZE];
 } RadioSendWorkspace;
 
 void sendchannelstuff(Mech *mech, int freq, char *msg) {
@@ -462,7 +469,6 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
   RadioSendWorkspace *workspace;
 
   char *ai_buf;
-  char *faction_buffer;
 
   /* Radio failure checks were intentionally removed from message delivery. */
   if (!mech_radio_range(mech))
@@ -472,7 +478,6 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
   buf2 = workspace->buf2;
   buf3 = workspace->buf3;
   ai_buf = workspace->ai_buf;
-  faction_buffer = workspace->faction_buffer;
   relay = checked_storage_allocate_array(1, sizeof(*relay));
 
   /* Loop through all the units on the map */
@@ -581,18 +586,18 @@ void sendchannelstuff(Mech *mech, int freq, char *msg) {
        * it should technically hear everything */
 
       if (obs) {
+        GameDatabase *database = btech_context_database(mech_context(mech));
+        const char *affiliation =
+            observer_affiliation_name(database, mech_dbref(mech));
+
         if (mech_radio_mode(mech, freq) & FREQ_DIGITAL) {
           build_observer_channel_message(
-              buf, color_code, '[', ']', (char)('A' + i), bearing,
-              btech_attribute_read(btech_context_database(mech_context(mech)),
-                                   mech_dbref(mech), A_FACTION, faction_buffer),
+              buf, color_code, '[', ']', (char)('A' + i), bearing, affiliation,
               mech_id(mech, false).text, mech_radio_frequency(mech, freq),
               mech_radio_title(mech, freq), buf2);
         } else {
           build_observer_channel_message(
-              buf, color_code, '(', ')', (char)('A' + i), bearing,
-              btech_attribute_read(btech_context_database(mech_context(mech)),
-                                   mech_dbref(mech), A_FACTION, faction_buffer),
+              buf, color_code, '(', ')', (char)('A' + i), bearing, affiliation,
               mech_id(mech, false).text, mech_radio_frequency(mech, freq),
               mech_radio_title(mech, freq), buf2);
         }

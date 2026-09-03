@@ -190,8 +190,8 @@ namespace:
 ```text
 @state/set <exit>/locks.traverse flag/WIZARD=true
 @state/set <exit>/locks.traverse affiliation=123
-@state/set <exit>/locks.traverse attribute/Faction="Davion"
-@state/set <exit>/locks.traverse state/faction/member=true
+@state/set <exit>/locks.traverse attribute/Description="Authorized"
+@state/set <exit>/locks.traverse state/access/member=true
 ```
 
 An exit with no requirements passes. Multiple requirements are combined with

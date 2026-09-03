@@ -460,9 +460,11 @@ static int check_snapshot(const char *path) {
           "'btech_character_state', 'btech_character_values');",
           10) == 0 &&
       query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                30) == 0 &&
+                31) == 0 &&
       query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
                 1) == 0 &&
+      query_int(sqlite, "SELECT storage_version FROM snapshot WHERE id = 1;",
+                31) == 0 &&
       query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
           0 &&
       (query_int(sqlite, "SELECT count(*) FROM objects;", 6) == 0 ||
@@ -488,6 +490,10 @@ static int check_snapshot(const char *path) {
                 "WHERE name IN ('economy_parts', 'health', "
                 "'character_attributes', 'advantages', 'skills');",
                 0) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info("
+                "'btech_object_state');",
+                18) == 0 &&
       query_int(sqlite,
                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
                 "name IN ('has_long_fingers_power', 'has_comm_all_power', "

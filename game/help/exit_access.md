@@ -17,8 +17,8 @@ Use `@state/set` to add requirements:
 ```text
 @state/set <exit>/locks.traverse flag/WIZARD=true
 @state/set <exit>/locks.traverse affiliation=123
-@state/set <exit>/locks.traverse attribute/Faction="Davion"
-@state/set <exit>/locks.traverse state/faction/member=true
+@state/set <exit>/locks.traverse attribute/Description="Authorized"
+@state/set <exit>/locks.traverse state/access/member=true
 ```
 
 `flag/<FLAG>` takes a boolean and requires the named flag to have that state.

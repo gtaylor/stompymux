@@ -58,29 +58,29 @@ return {
         return { action = "repeat", prompt = "What's your character concept's name? " }
       end
       ctx.flow.name = ctx.input
-      return { action = "goto", step = "signup_faction" }
+      return { action = "goto", step = "signup_affiliation" }
     end,
-    signup_faction = function(ctx)
+    signup_affiliation = function(ctx)
       if ctx.input == nil then
-        return { action = "repeat", prompt = "Faction -- (1) Inner Sphere or (2) Clan? " }
+        return { action = "repeat", prompt = "Affiliation -- (1) Inner Sphere or (2) Clan? " }
       end
       if ctx.input ~= "1" and ctx.input ~= "2" then
         return { action = "repeat", prompt = "Enter 1 or 2: " }
       end
-      ctx.flow.faction = (ctx.input == "1") and "Inner Sphere" or "Clan"
+      ctx.flow.affiliation = (ctx.input == "1") and "Inner Sphere" or "Clan"
       return { action = "goto", step = "signup_confirm" }
     end,
     signup_confirm = function(ctx)
       if ctx.input == nil then
         return {
           action = "repeat",
-          prompt = string.format("%s, %s -- confirm? (y/n) ", ctx.flow.name, ctx.flow.faction),
+          prompt = string.format("%s, %s -- confirm? (y/n) ", ctx.flow.name, ctx.flow.affiliation),
         }
       end
       if ctx.input:match("^[Yy]") then
         return {
           action = "done",
-          message = string.format("Recorded %s (%s).", ctx.flow.name, ctx.flow.faction),
+          message = string.format("Recorded %s (%s).", ctx.flow.name, ctx.flow.affiliation),
         }
       end
       return { action = "goto", step = "signup_name" }
