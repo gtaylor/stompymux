@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "btech/configuration.h"
 #include "btech/special_objects.h"
 #include "btech_channel.h"
 #include "btech_event.h"
@@ -50,7 +51,6 @@
 #include "mech_tech_api.h"
 #include "mech_utils_api.h"
 #include "mux/lua/lua_runtime.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/support/alloc.h"
@@ -105,8 +105,7 @@ static void mech_discard_event(MuxEvent *e) {
                                 .source = game_object_location(database, i),
                                 .destination = NOTHING},
                     .event = LUA_EVENT_LEAVE});
-  c_xcode(database, i);
-  btech_special_object_flag_changed(mech_context(mech), GOD, i, true, false);
+  btech_object_forget(mech_context(mech), i);
   s_going(database, i);
   s_dark(database, i);
   s_zombie(database, i);
@@ -138,7 +137,7 @@ static bool move_player_into_unit(EvaluationContext *evaluation, DbRef player,
 
 static void destroy_failed_suit(BtechContext *context,
                                 EvaluationContext *evaluation, DbRef suit) {
-  btech_special_object_flag_changed(context, GOD, suit, true, false);
+  btech_object_forget(context, suit);
   destroy_thing(evaluation, suit);
 }
 
@@ -218,18 +217,22 @@ static void char_eject(DbRef player, Mech *mech) {
   char message_buffer[MBUF_SIZE];
   Mech *m;
   DbRef suit;
-  char *d;
+  const char *d;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   GameDatabase *database = btech_context_database(mech_context(mech));
 
   (void)snprintf(message_buffer, sizeof(message_buffer), "MechWarrior - %s",
                  game_object_name(database, player));
   suit = create_obj(evaluation, GOD, OBJECT_TYPE_THING, message_buffer);
-  silly_atr_set_in(database, suit, A_XTYPE, "MECH");
-  s_xcode(database, suit);
-  btech_special_object_flag_changed(mech_context(mech), GOD, suit, false, true);
-  d = btech_attribute_read(database, player, A_MWTEMPLATE,
-                           (char[LBUF_SIZE]){0});
+  char registration_error[128];
+  if (!btech_special_object_register(mech_context(mech), GOD, suit, "MECH",
+                                     registration_error,
+                                     sizeof(registration_error))) {
+    destroy_thing(evaluation, suit);
+    mecha_notify(evaluation, player, registration_error);
+    return;
+  }
+  d = btech_player_mechwarrior_template(mech_context(mech), player);
   m = btech_context_get_mech(mech_context(mech), suit);
   if (!m) {
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
@@ -253,7 +256,7 @@ static void char_eject(DbRef player, Mech *mech) {
                  "(can't load MWTemplate)");
     return;
   }
-  silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
+  (void)btech_unit_display_name_set(mech_context(mech), suit, "MechWarrior");
   mech_team_set(m, mech_team(mech));
   if (mech_map_index_set(m, mech_map_dbref(mech), nullptr) != MECH_MAP_SET_OK ||
       !mech_position_set(&(MechPositionSetRequest){
@@ -272,8 +275,8 @@ static void char_eject(DbRef player, Mech *mech) {
   mech_los_broadcastf(m, "ejected from %s!", mech_display_id(mech).text);
   s_in_character(database, suit);
   initialize_pc(player, m);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "#%ld", player);
-  silly_atr_set_in(database, mech_dbref(m), A_PILOTNUM, message_buffer);
+  (void)btech_unit_assigned_pilot_set(mech_context(mech), mech_dbref(m),
+                                      player);
   mech_pilot_dbref_set(m, player);
   mech_team_set(m, mech_team(mech));
   mech_radio_frequency_set(
@@ -340,13 +343,8 @@ void mech_eject(DbRef player, void *data, char *buffer [[maybe_unused]]) {
     return;
   }
   if (!mech_is_started(mech)) {
-    if ((character_lookup(&(CharacterLookupRequest){
-            .context = mech_context(mech),
-            .viewer = GOD,
-            .name = btech_attribute_read(
-                btech_context_database(mech_context(mech)), mech_dbref(mech),
-                A_PILOTNUM, (char[LBUF_SIZE]){0}),
-        })) != player) {
+    if (btech_unit_assigned_pilot(mech_context(mech), mech_dbref(mech)) !=
+        player) {
       mecha_notify(
           btech_context_evaluation(mech_context(mech)), player,
           "You aren't the official pilot of this thing. Try 'disembark'");
@@ -370,7 +368,7 @@ static void char_disembark(DbRef player, Mech *mech) {
   char message_buffer[MBUF_SIZE];
   Mech *m;
   DbRef suit;
-  char *d;
+  const char *d;
   BattleMap *mymap;
   long initial_speed;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
@@ -379,11 +377,15 @@ static void char_disembark(DbRef player, Mech *mech) {
   (void)snprintf(message_buffer, sizeof(message_buffer), "MechWarrior - %s",
                  game_object_name(database, player));
   suit = create_obj(evaluation, GOD, OBJECT_TYPE_THING, message_buffer);
-  silly_atr_set_in(database, suit, A_XTYPE, "MECH");
-  s_xcode(database, suit);
-  btech_special_object_flag_changed(mech_context(mech), GOD, suit, false, true);
-  d = btech_attribute_read(database, player, A_MWTEMPLATE,
-                           (char[LBUF_SIZE]){0});
+  char registration_error[128];
+  if (!btech_special_object_register(mech_context(mech), GOD, suit, "MECH",
+                                     registration_error,
+                                     sizeof(registration_error))) {
+    destroy_thing(evaluation, suit);
+    mecha_notify(evaluation, player, registration_error);
+    return;
+  }
+  d = btech_player_mechwarrior_template(mech_context(mech), player);
   m = btech_context_get_mech(mech_context(mech), suit);
   if (!m) {
     btech_channel_send(
@@ -407,7 +409,7 @@ static void char_disembark(DbRef player, Mech *mech) {
                  "(can't load MWTemplate)");
     return;
   }
-  silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
+  (void)btech_unit_display_name_set(mech_context(mech), suit, "MechWarrior");
   mech_team_set(m, mech_team(mech));
   if (mech_map_index_set(m, mech_map_dbref(mech), nullptr) != MECH_MAP_SET_OK ||
       !mech_position_set(&(MechPositionSetRequest){
@@ -427,8 +429,8 @@ static void char_disembark(DbRef player, Mech *mech) {
   s_in_character(database, suit);
   initialize_pc(player, m);
   mech_pilot_dbref_set(m, player);
-  (void)snprintf(message_buffer, sizeof(message_buffer), "#%ld", player);
-  silly_atr_set_in(database, mech_dbref(m), A_PILOTNUM, message_buffer);
+  (void)btech_unit_assigned_pilot_set(mech_context(mech), mech_dbref(m),
+                                      player);
   mech_team_set(m, mech_team(mech));
   mech_radio_frequency_set(
       m, 0, (int)(btech_context_random_i31(mech_context(m)) % 1000000));
@@ -534,12 +536,8 @@ void mech_udisembark(DbRef player, Mech *mech,
    */
   if (is_in_character(database, mech_dbref(mech)) &&
       !is_wizard(database, player) &&
-      (character_lookup(&(CharacterLookupRequest){
-           .context = mech_context(mech),
-           .viewer = GOD,
-           .name = btech_attribute_read(database, mech_dbref(mech), A_PILOTNUM,
-                                        (char[LBUF_SIZE]){0}),
-       }) != player)) {
+      btech_unit_assigned_pilot(mech_context(mech), mech_dbref(mech)) !=
+          player) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "This isn't your mech!");
     return;
@@ -548,7 +546,8 @@ void mech_udisembark(DbRef player, Mech *mech,
   /* Find the carrier that the invoker's unit is in and check it for validity.
    */
   newmech = game_object_location(database, mech_dbref(mech));
-  if (!(is_good_obj(database, newmech) && is_xcode(database, newmech))) {
+  if (!(is_good_obj(database, newmech) &&
+        btech_special_object_type(mech_context(mech), newmech) >= 0)) {
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "You're not being carried!");
     return;

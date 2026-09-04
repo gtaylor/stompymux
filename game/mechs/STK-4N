@@ -3,7 +3,6 @@ Reference        { STK-4N }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 85 }
-Mech_BV          { 1128 }
 Computer         { 4 }
 Heat_Sinks       { 26 }
 Max_Speed        { 53.75 }

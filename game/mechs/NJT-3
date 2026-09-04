@@ -6,7 +6,6 @@ Tons             { 65 }
 Heat_Sinks       { 24 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 1279 }
 Max_Speed        { 96.75 }
 Specials         { DoubleHS EndoSteel_Tech XLEngine_Tech C3SlaveTech }
 Left_Arm

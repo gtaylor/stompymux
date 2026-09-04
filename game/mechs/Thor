@@ -3,7 +3,6 @@ Reference        { Thor }
 Type             { Vehicle }
 Move_Type        { Wheel }
 Tons             { 55 }
-Mech_BV          { 325 }
 Computer         { 3 }
 Max_Speed        { 86.00 }
 Specials         { FerroFibrous_Tech }

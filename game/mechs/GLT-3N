@@ -3,7 +3,6 @@ Reference        { GLT-3N }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 70 }
-Mech_BV          { 1296 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 25 }

@@ -46,8 +46,7 @@ end
 local function bootstrap_staff_rooms(ctx)
   local limbo_room = mux.world.object(0)
   limbo_room:set_name("Staff Nexus")
-  limbo_room:attributes():set(
-    "Description",
+  limbo_room:set_description(
     [[This is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.
 
 Please be sure to read the room descriptions for details on the contents of each area.
@@ -93,8 +92,7 @@ Please be sure to read the room descriptions for details on the contents of each
     name = "Channel Object Storage",
     zone = limbo_room,
   })
-  channel_storage_room:attributes():set(
-    "Description",
+  channel_storage_room:set_description(
     [[This room contains channel objects, which are attached to comsys channels and are used for advanced configuration and locking.]]
   )
   mux.world.create_object({
@@ -119,8 +117,7 @@ end
 
 local function bootstrap_player_rooms(ctx, staff_rooms)
   local new_player_starting_room = mux.world.object(mux.config.get("player_starting_room") --[[@as integer]])
-  new_player_starting_room:attributes():set(
-    "Description",
+  new_player_starting_room:set_description(
     [[Welcome to this new StompyMUX game. We're not ready for prime time quite yet but you are Welcome to explore if you'd like.]]
   )
   local new_player_starting_room_out_exit = mux.world.create_object({

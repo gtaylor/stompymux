@@ -66,23 +66,30 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/lua_commands.c
   ${MUX_MODULE_DIR}/lua/lua_flow.c
   ${MUX_MODULE_DIR}/lua/packages/btech/btech_package.c
+  ${MUX_MODULE_DIR}/lua/packages/btech/btech_contracts.c
+  ${MUX_MODULE_DIR}/lua/packages/btech/btech_mode_records.c
   ${MUX_MODULE_DIR}/lua/packages/btech/character/btech_character_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/btech/map/btech_map_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/btech/map/btech_map_los_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/btech/parts/btech_parts_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/btech/player/btech_player_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/btech/repair/btech_repair_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/btech/system/btech_system_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/btech/template/btech_template_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/btech/unit/btech_unit_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/btech/unit/btech_unit_operations.c
   ${MUX_MODULE_DIR}/lua/packages/mux/mux_package.c
   ${MUX_MODULE_DIR}/lua/packages/mux/mux_options.c
   ${MUX_MODULE_DIR}/lua/packages/mux/error/mux_error_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/config/mux_config_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/comsys/mux_comsys_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/mux/comsys/mux_comsys_channel_flag_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/comsys/mux_comsys_channel_membership_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/session/mux_session_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_world_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_object_relationship_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_object_bindings.c
-  ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_attribute_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_object_type_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_flag_power_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_lock_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/text/mux_text_bindings.c

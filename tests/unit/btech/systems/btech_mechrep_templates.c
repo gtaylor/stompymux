@@ -77,13 +77,9 @@ bool mech_template_load(DbRef player [[maybe_unused]], Mech *value,
   return template_load_result;
 }
 
-char *btech_attribute_read(GameDatabase *value, DbRef object, int attribute,
-                           char *buffer) {
-  assert(value == database);
-  assert(object == 44);
-  assert(attribute == A_MECHTYPE);
-  strcpy(buffer, "restore-template");
-  return buffer;
+const char *mech_model_reference(const Mech *value) {
+  assert(value == mech);
+  return "restore-template";
 }
 
 void mech_events_cancel_all(Mech *value) {

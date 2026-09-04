@@ -477,7 +477,7 @@ bool lua_tests_run(const LuaTestRunRequest *request, LuaTestRunResult *result) {
 
   if (!request || !request->services || !result)
     return false;
-  *result = (LuaTestRunResult){};
+  memset(result, 0, sizeof(*result));
   if (!request->run_unit && !request->run_integration) {
     (void)string_copy_bounded(result->error, sizeof(result->error),
                               "no Lua test directories were selected");

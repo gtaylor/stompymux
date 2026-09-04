@@ -3,7 +3,6 @@ Reference        { Engineering }
 Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 40 }
-Mech_BV          { 42 }
 Max_Speed        { 96.75 }
 Computer         { 4 }
 Specials         { ICEEngine_Tech CargoTech }

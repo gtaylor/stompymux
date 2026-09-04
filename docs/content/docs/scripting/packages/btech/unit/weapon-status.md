@@ -1,4 +1,5 @@
 ---
+draft: true
 title: weapon_status
 type: docs
 toc_hide: false
@@ -20,7 +21,10 @@ btech.unit.weapon_status( unit, [section] )
 : The unit dbref.
 
 `string section`
-: Optional section name.
+: Optional full section name, matched without regard to case. Otherwise the
+  legacy resolver uses a class-dependent one- or two-character prefix and may
+  ignore trailing characters. It may be omitted, but explicitly passing `nil`
+  raises an argument error.
 
 ### Returns
 

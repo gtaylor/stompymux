@@ -10,7 +10,6 @@ Scan_Range       { 30 }
 Radio_Range      { 120 }
 Heat_Sinks       { 26 }
 RadioType        { 24 }
-Mech_BV          { 1915 }
 Cargo_Space      { 0 }
 Max_Speed        { 86.00 }
 Jump_Speed       { 53.75 }

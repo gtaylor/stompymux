@@ -34,6 +34,23 @@ int btech_persistence_register(PersistenceContext *context,
 int btech_persistence_load_special_state_path(BtechContext *context,
                                               const char *path);
 
+/** Loads and allocates the authoritative BTech special-object registry. */
+int btech_persistence_load_registrations_path(BtechContext *context,
+                                              const char *path);
+
+/**
+ * Loads typed configuration after registered objects have usable dimensions.
+ *
+ * This entry point supports the persistence bootstrap test path. Normal
+ * startup loads configuration as part of the special-state restoration pass.
+ *
+ * @param[in,out] context BTech runtime context receiving configuration.
+ * @param[in] path Path to the game database.
+ * @return Zero on success; otherwise an error code.
+ */
+int btech_persistence_load_configurations_path(BtechContext *context,
+                                               const char *path);
+
 /**
  * Removes every BTech-owned table from an offline game database.
  *

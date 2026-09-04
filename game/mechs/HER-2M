@@ -3,7 +3,6 @@ Reference        { HER-2M }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 40 }
-Mech_BV          { 740 }
 Radio            { 5 }
 Heat_Sinks       { 11 }
 Max_Speed        { 118.25 }

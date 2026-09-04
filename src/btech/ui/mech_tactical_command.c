@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include "btech/configuration.h"
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "context_internal.h" // IWYU pragma: keep
@@ -12,9 +13,7 @@
 #include "mech_maps_api.h"
 #include "mech_notify_api.h"
 #include "mech_status_types.h"
-#include "mux/objects/attrs.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
@@ -40,7 +39,6 @@ void mech_tacmap(DbRef player, Mech *mech, char *buffer) {
   BattleMap *mech_map;
   int display_height = MAP_DISPLAY_HEIGHT;
   int display_width = MAP_DISPLAY_WIDTH;
-  char *str;
   MapText *map_text;
   int flags = 3;
   int dohexlos = 0;
@@ -127,31 +125,10 @@ void mech_tacmap(DbRef player, Mech *mech, char *buffer) {
   x = PARSED.position.x;
   y = PARSED.position.y;
 
-  /* Get the Tacsize attribute from
-   * the player, if doesn't exist set the height and width to
-   * default params. If it does exist, check the values and
-   * make sure they are legit. */
-  str = btech_attribute_read(mech_context(mech)->database, player, A_TACSIZE,
-                             (char[LBUF_SIZE]){0});
-  if (!*str) {
-    display_height = MAP_DISPLAY_HEIGHT;
-    display_width = MAP_DISPLAY_WIDTH;
-  } else {
-    char *token_context = nullptr;
-    if (!parse_int_checked(strtok_r(str, " \t", &token_context),
-                           &display_height) ||
-        !parse_int_checked(strtok_r(nullptr, " \t", &token_context),
-                           &display_width) ||
-        strtok_r(nullptr, " \t", &token_context) != nullptr ||
-        display_height > 24 || display_height < 5 || display_width > 40 ||
-        display_width < 5) {
-      mecha_notify(evaluation, player,
-                   "Illegal Tacsize attribute. Must be in format "
-                   "'Height Width' . Height : 5-24 Width : 5-40");
-      display_height = MAP_DISPLAY_HEIGHT;
-      display_width = MAP_DISPLAY_WIDTH;
-    }
-  }
+  BtechPlayerUiPreferences preferences =
+      btech_player_ui_preferences(mech_context(mech), player);
+  display_height = preferences.tactical_height;
+  display_width = preferences.tactical_width;
 
   /* Everything worked but lets check the mech's tac range
    * and the map size */

@@ -3,7 +3,6 @@ Reference        { Skulker }
 Type             { Vehicle }
 Move_Type        { Wheel }
 Tons             { 20 }
-Mech_BV          { 155 }
 Computer         { 4 }
 Radio            { 3 }
 Heat_Sinks       { 3 }

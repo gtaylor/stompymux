@@ -3,7 +3,6 @@ Reference        { Chaparral }
 Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 50 }
-Mech_BV          { 467 }
 Computer         { 3 }
 Heat_Sinks       { 10 }
 Max_Speed        { 64.50 }

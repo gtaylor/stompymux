@@ -37,7 +37,6 @@
 #include "missile_hit_registry.h"
 #include "mux/commands/action_messages.h"
 #include "mux/lua/lua_runtime.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
@@ -48,20 +47,6 @@
 #include "registry_api.h"
 #include "template_api.h"
 #include "weapon_settings.h"
-
-int mech_weapon_recycle_time(const Mech *mech, int weapon_index);
-int mech_weapon_battle_value(const Mech *mech, int weapon_index);
-
-enum { BTECH_BV_SKILL_LIMIT = 8 };
-float battle_value_skill_multiplier(int gunnery, int piloting);
-
-static inline int battle_value_skill_index(int skill) {
-  if (skill < 0)
-    return 0;
-  if (skill >= BTECH_BV_SKILL_LIMIT - 1)
-    return BTECH_BV_SKILL_LIMIT - 1;
-  return skill;
-}
 
 static inline float degrees_to_radians(float degrees) {
   return degrees * ((float)M_PI / 180.0F);

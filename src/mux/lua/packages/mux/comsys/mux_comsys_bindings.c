@@ -23,37 +23,7 @@
 #include "mux/support/owned_text.h"
 #include "mux/support/utf8.h"
 
-static const char LUA_MUX_CHANNEL_METATABLE[] = "btmux.channel";
-static const char LUA_MUX_CHANNEL_FLAGS_METATABLE[] = "btmux.channel_flags";
-static const char LUA_MUX_CHANNEL_FLAG_METATABLE[] = "btmux.channel_flag";
-static const char LUA_MUX_CHANNEL_FLAG_NAMESPACE_METATABLE[] =
-    "btmux.channel_flag_namespace";
-
-typedef struct LuaMuxChannelFlags LuaMuxChannelFlags;
-struct LuaMuxChannelFlags {
-  LuaMuxPackage *package;
-  struct Channel *identity;
-  uint64_t generation;
-  char name[CHAN_NAME_LEN];
-};
-
-typedef struct LuaMuxChannelFlag LuaMuxChannelFlag;
-struct LuaMuxChannelFlag {
-  LuaMuxPackage *package;
-  int value;
-  const char *name;
-};
-
-typedef struct LuaMuxChannelFlagNamespace LuaMuxChannelFlagNamespace;
-struct LuaMuxChannelFlagNamespace {
-  LuaMuxPackage *package;
-};
-
-typedef struct ChannelFlagDefinition ChannelFlagDefinition;
-struct ChannelFlagDefinition {
-  int value;
-  const char *name;
-};
+const char LUA_MUX_CHANNEL_METATABLE[] = "btmux.channel";
 
 typedef struct LuaMuxChannelMethod LuaMuxChannelMethod;
 struct LuaMuxChannelMethod {
@@ -61,26 +31,15 @@ struct LuaMuxChannelMethod {
   lua_CFunction function;
 };
 
-static const ChannelFlagDefinition CHANNEL_FLAGS[] = {
-    {CHANNEL_PUBLIC, "PUBLIC"},
-    {CHANNEL_LOUD, "LOUD"},
-    {CHANNEL_TRANSPARENT, "TRANSPARENT"},
-};
-
-static const ChannelFlagDefinition *lua_mux_channel_flag_at(size_t index) {
-  return checked_storage_at_const(
-      CHANNEL_FLAGS, sizeof(CHANNEL_FLAGS) / sizeof(*CHANNEL_FLAGS),
-      sizeof(*CHANNEL_FLAGS), index);
-}
-
 static ChannelRegistry *lua_mux_channel_registry(LuaMuxPackage *package) {
   return package->services->background_command->evaluation.runtime->channels;
 }
 
-static struct Channel *
-lua_mux_check_channel_identity(LuaMuxPackage *package, lua_State *state,
-                               int argument, const char *name,
-                               struct Channel *identity, uint64_t generation) {
+struct Channel *lua_mux_check_channel_identity(LuaMuxPackage *package,
+                                               lua_State *state, int argument,
+                                               const char *name,
+                                               struct Channel *identity,
+                                               uint64_t generation) {
   struct Channel *current =
       select_channel(lua_mux_channel_registry(package), name);
 
@@ -96,18 +55,6 @@ LuaMuxChannel *lua_mux_check_channel(lua_State *state, int argument) {
       luaL_checkudata(state, argument, LUA_MUX_CHANNEL_METATABLE);
 
   lua_mux_require_runtime(handle->package, state, "comsys.Channel");
-  (void)lua_mux_check_channel_identity(handle->package, state, argument,
-                                       handle->name, handle->identity,
-                                       handle->generation);
-  return handle;
-}
-
-static LuaMuxChannelFlags *lua_mux_check_channel_flags(lua_State *state,
-                                                       int argument) {
-  LuaMuxChannelFlags *handle =
-      luaL_checkudata(state, argument, LUA_MUX_CHANNEL_FLAGS_METATABLE);
-
-  lua_mux_require_runtime(handle->package, state, "comsys.Channel:flags");
   (void)lua_mux_check_channel_identity(handle->package, state, argument,
                                        handle->name, handle->identity,
                                        handle->generation);
@@ -130,31 +77,6 @@ static LuaMuxChannel *lua_mux_push_channel(lua_State *state,
   return handle;
 }
 
-static void lua_mux_push_channel_flag(lua_State *state, LuaMuxPackage *package,
-                                      const ChannelFlagDefinition *definition) {
-  LuaMuxChannelFlag *flag = lua_newuserdata(state, sizeof(*flag));
-
-  *flag = (LuaMuxChannelFlag){
-      .package = package,
-      .value = definition->value,
-      .name = definition->name,
-  };
-  luaL_getmetatable(state, LUA_MUX_CHANNEL_FLAG_METATABLE);
-  lua_setmetatable(state, -2);
-}
-
-static LuaMuxChannelFlag *lua_mux_check_channel_flag(lua_State *state,
-                                                     int argument,
-                                                     LuaMuxPackage *package) {
-  LuaMuxChannelFlag *flag =
-      luaL_testudata(state, argument, LUA_MUX_CHANNEL_FLAG_METATABLE);
-
-  if (flag == nullptr || flag->package != package)
-    lua_error_arg(state, argument, LUA_ERROR_CODE_CHANNEL_FLAG_INVALID,
-                  "expected a mux.comsys.flags constant");
-  return flag;
-}
-
 static bool lua_mux_option_boolean(lua_State *state, int table,
                                    const char *field) {
   bool value = false;
@@ -173,16 +95,18 @@ static bool lua_mux_option_boolean(lua_State *state, int table,
 /**
  * Retrieves an existing communication channel by name.
  *
- * @par Lua name `mux.comsys.channel`
- * @par Lua signature `mux.comsys.channel( name )`
- * @par Lua parameters - `name` (`string`) Existing channel name.
- * @par Lua returns - `channel` (`Channel`): A live channel handle.
- * @par Lua errors - `LUA_ERROR_CODE_CHANNEL_INVALID` for an unknown channel;
- * `LUA_ERROR_CODE_ARG_INVALID` for embedded NUL bytes;
- * `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * @par Lua availability Available only at runtime.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable mux.comsys.channel
+ * @code{.lua}
+ * ---Retrieves an existing communication channel by case-insensitive name.
+ * ---@param name string Existing channel name without embedded NUL bytes; the returned handle preserves canonical spelling.
+ * ---@return Channel channel
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.channel.invalid
+ * function mux_comsys.channel(name) end
+ * @endcode
  */
 static int lua_mux_comsys_channel(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -205,16 +129,20 @@ static int lua_mux_comsys_channel(lua_State *state) {
 /**
  * Creates a communication channel using native channel-name rules.
  *
- * @par Lua name `mux.comsys.create_channel`
- * @par Lua signature `mux.comsys.create_channel( name )`
- * @par Lua parameters - `name` (`string`) Printable ASCII name without spaces.
- * @par Lua returns - `channel` (`Channel`): The created channel.
- * @par Lua errors - `LUA_ERROR_CODE_ARG_INVALID` for an invalid name;
- * `LUA_ERROR_CODE_CHANNEL_INVALID` when the channel already exists;
- * `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * @par Lua availability Available only at runtime.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable mux.comsys.create_channel
+ * @code{.lua}
+ * ---Creates a private communication channel using the native channel-name
+ * ---rules. Names must be non-empty printable ASCII, contain no spaces, and be
+ * ---shorter than 50 bytes.
+ * ---@param name string New channel name.
+ * ---@return Channel channel
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid) when the name already exists.
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.channel.invalid
+ * function mux_comsys.create_channel(name) end
+ * @endcode
  */
 static int lua_mux_comsys_create_channel(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -243,15 +171,17 @@ static int lua_mux_comsys_create_channel(lua_State *state) {
 /**
  * Permanently destroys a communication channel.
  *
- * @par Lua name `mux.comsys.destroy_channel`
- * @par Lua signature `mux.comsys.destroy_channel( channel )`
- * @par Lua parameters - `channel` (`Channel`) Live channel handle.
- * @par Lua returns - None.
- * @par Lua errors - `LUA_ERROR_CODE_CHANNEL_INVALID` for a stale handle;
- * `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * @par Lua availability Available only at runtime.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable mux.comsys.destroy_channel
+ * @code{.lua}
+ * ---Permanently removes a live channel and its membership storage. The supplied
+ * ---handle and every flag handle derived from it become stale.
+ * ---@param channel Channel Live channel handle.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.channel.invalid
+ * function mux_comsys.destroy_channel(channel) end
+ * @endcode
  */
 static int lua_mux_comsys_destroy_channel(lua_State *state) {
   LuaMuxChannel *handle = lua_mux_check_channel(state, 1);
@@ -275,14 +205,19 @@ static int lua_mux_channel_compare(const void *left, const void *right) {
 /**
  * Lists every communication channel in deterministic name order.
  *
- * @par Lua name `mux.comsys.list_channels`
- * @par Lua signature `mux.comsys.list_channels( )`
- * @par Lua parameters - None.
- * @par Lua returns - `channels` (`table`): Array of Channel handles.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * @par Lua availability Available only at runtime.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable mux.comsys.list_channels
+ * @code{.lua}
+ * ---Lists every live communication channel in case-insensitive name order, with
+ * ---original spelling used as the tie-breaker.
+ * ---@return Channel[] channels
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking)
+ * ---or [`mux.error.codes.internal`](lua://mux.error.codes.internal) if the native
+ * ---registry count changes while it is copied.
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.internal
+ * function mux_comsys.list_channels() end
+ * @endcode
  */
 static int lua_mux_comsys_list_channels(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -324,7 +259,18 @@ static int lua_mux_comsys_list_channels(lua_State *state) {
   return 1;
 }
 
-/** Returns the channel name. Lua signature `channel:name( ) -> string`. */
+/**
+ * @par LuaLS definition mux callable Channel:name
+ * @code{.lua}
+ * ---Returns the channel's exact name.
+ * ---@return string name
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.channel.invalid
+ * function Channel:name() end
+ * @endcode
+ */
 static int lua_mux_channel_name(lua_State *state) {
   LuaMuxChannel *handle = lua_mux_check_channel(state, 1);
 
@@ -332,7 +278,19 @@ static int lua_mux_channel_name(lua_State *state) {
   return 1;
 }
 
-/** Returns the attached Object or nil. Lua signature `channel:object( )`. */
+/**
+ * @par LuaLS definition mux callable Channel:object
+ * @code{.lua}
+ * ---Returns the object that supplies the channel description and locks.
+ * ---@return Object? object The attached object, or nil when none is attached.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.channel.invalid
+ * ---@see mux.error.codes.object.invalid
+ * function Channel:object() end
+ * @endcode
+ */
 static int lua_mux_channel_object(lua_State *state) {
   LuaMuxChannel *handle = lua_mux_check_channel(state, 1);
   struct Channel *channel = handle->identity;
@@ -348,7 +306,18 @@ static int lua_mux_channel_object(lua_State *state) {
   return 1;
 }
 
-/** Returns the member count. Lua signature `channel:user_count( )`. */
+/**
+ * @par LuaLS definition mux callable Channel:user_count
+ * @code{.lua}
+ * ---Returns the number of channel membership records.
+ * ---@return integer count
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.channel.invalid
+ * function Channel:user_count() end
+ * @endcode
+ */
 static int lua_mux_channel_user_count(lua_State *state) {
   LuaMuxChannel *handle = lua_mux_check_channel(state, 1);
 
@@ -356,8 +325,18 @@ static int lua_mux_channel_user_count(lua_State *state) {
   return 1;
 }
 
-/** Returns the allocated member capacity. Lua signature
- * `channel:max_user_count( )`. */
+/**
+ * @par LuaLS definition mux callable Channel:max_user_count
+ * @code{.lua}
+ * ---Returns the channel's currently allocated membership capacity.
+ * ---@return integer count
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.channel.invalid
+ * function Channel:max_user_count() end
+ * @endcode
+ */
 static int lua_mux_channel_max_user_count(lua_State *state) {
   LuaMuxChannel *handle = lua_mux_check_channel(state, 1);
 
@@ -365,8 +344,18 @@ static int lua_mux_channel_max_user_count(lua_State *state) {
   return 1;
 }
 
-/** Returns the lifetime message count. Lua signature `channel:message_count(
- * )`. */
+/**
+ * @par LuaLS definition mux callable Channel:message_count
+ * @code{.lua}
+ * ---Returns the channel's lifetime delivered-message count.
+ * ---@return integer count
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.channel.invalid
+ * function Channel:message_count() end
+ * @endcode
+ */
 static int lua_mux_channel_message_count(lua_State *state) {
   LuaMuxChannel *handle = lua_mux_check_channel(state, 1);
 
@@ -377,15 +366,20 @@ static int lua_mux_channel_message_count(lua_State *state) {
 /**
  * Attaches or detaches the object supplying channel locks and description.
  *
- * @par Lua name `Channel:set_object`
- * @par Lua signature `channel:set_object( object )`
- * @par Lua parameters - `object` (`number|Object|nil`) Live object or nil.
- * @par Lua returns - None.
- * @par Lua errors - Channel/object validation errors; unavailable while
- * checking.
- * @par Lua availability Available only at runtime.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Channel:set_object
+ * @code{.lua}
+ * ---Attaches an object that supplies channel locks and description, or detaches
+ * ---the current object when passed nil.
+ * ---@param object DbRef|Object|nil
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `object` is omitted, [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.channel.invalid
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.object.unavailable
+ * function Channel:set_object(object) end
+ * @endcode
  */
 static int lua_mux_channel_set_object(lua_State *state) {
   LuaMuxChannel *handle = lua_mux_check_channel(state, 1);
@@ -405,34 +399,22 @@ static int lua_mux_channel_set_object(lua_State *state) {
   return 0;
 }
 
-/** Opens the channel flag collection. Lua signature `channel:flags( )`. */
-static int lua_mux_channel_flags(lua_State *state) {
-  LuaMuxChannel *handle = lua_mux_check_channel(state, 1);
-  LuaMuxChannelFlags *flags = lua_newuserdata(state, sizeof(*flags));
-
-  *flags = (LuaMuxChannelFlags){
-      .package = handle->package,
-      .identity = handle->identity,
-      .generation = handle->generation,
-  };
-  (void)string_copy_bounded(flags->name, sizeof(flags->name), handle->name);
-  luaL_getmetatable(state, LUA_MUX_CHANNEL_FLAGS_METATABLE);
-  lua_setmetatable(state, -2);
-  return 1;
-}
-
 /**
  * Emits an administrative channel message.
  *
- * @par Lua name `Channel:emit`
- * @par Lua signature `channel:emit( message, options? )`
- * @par Lua parameters - `message` (`string`) Message to deliver.
- * - `options` (`EmitOptions|nil`) Supports `no_header`.
- * @par Lua returns - None.
- * @par Lua errors - Argument/channel errors; unavailable while checking.
- * @par Lua availability Available only at runtime.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Channel:emit
+ * @code{.lua}
+ * ---Emits an administrative channel message through native delivery, history,
+ * ---receive-lock, and message-count behavior.
+ * ---@param message string Valid UTF-8 without embedded NUL bytes.
+ * ---@param options? ChannelEmitOptions Unknown option fields are rejected.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.channel.invalid
+ * ---@see mux.error.codes.arg.invalid
+ * function Channel:emit(message, options) end
+ * @endcode
  */
 static int lua_mux_channel_emit(lua_State *state) {
   LuaMuxChannel *handle = lua_mux_check_channel(state, 1);
@@ -464,14 +446,19 @@ static int lua_mux_channel_emit(lua_State *state) {
 /**
  * Returns structured channel membership records.
  *
- * @par Lua name `Channel:who`
- * @par Lua signature `channel:who( options? )`
- * @par Lua parameters - `options` (`WhoOptions|nil`) Supports `all`.
- * @par Lua returns - `members` (`table`): `{object, listening}` records.
- * @par Lua errors - Argument/channel errors; unavailable while checking.
- * @par Lua availability Available only at runtime.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Channel:who
+ * @code{.lua}
+ * ---Returns channel membership records. By default the native active-member
+ * ---filter is applied; `options.all` includes inactive records.
+ * ---@param options? ChannelWhoOptions Unknown option fields are rejected.
+ * ---@return ChannelMember[] members
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.channel.invalid
+ * ---@see mux.error.codes.arg.invalid
+ * function Channel:who(options) end
+ * @endcode
  */
 static int lua_mux_channel_who(lua_State *state) {
   LuaMuxChannel *handle = lua_mux_check_channel(state, 1);
@@ -503,15 +490,18 @@ static int lua_mux_channel_who(lua_State *state) {
 /**
  * Boots an object from a channel using native alias-removal side effects.
  *
- * @par Lua name `Channel:boot_player`
- * @par Lua signature `channel:boot_player( object )`
- * @par Lua parameters - `object` (`number|Object`) Current member.
- * @par Lua returns - None.
- * @par Lua errors - Object/channel validation errors; unavailable while
- * checking.
- * @par Lua availability Available only at runtime.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Channel:boot_player
+ * @code{.lua}
+ * ---Announces a God-administered boot and removes a current member's channel
+ * ---aliases using the native side-effect path.
+ * ---@param object DbRef|Object Current channel member.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.channel.invalid
+ * ---@see mux.error.codes.object.invalid
+ * function Channel:boot_player(object) end
+ * @endcode
  */
 static int lua_mux_channel_boot_player(lua_State *state) {
   LuaMuxChannel *handle = lua_mux_check_channel(state, 1);
@@ -535,6 +525,9 @@ static int lua_mux_channel_boot_player(lua_State *state) {
   return 0;
 }
 
+/**
+ * @par LuaLS ignore mux __tostring -- String conversion is represented by the Channel class declaration.
+ */
 static int lua_mux_channel_tostring(lua_State *state) {
   LuaMuxChannel *handle = luaL_checkudata(state, 1, LUA_MUX_CHANNEL_METATABLE);
 
@@ -542,6 +535,9 @@ static int lua_mux_channel_tostring(lua_State *state) {
   return 1;
 }
 
+/**
+ * @par LuaLS ignore mux __eq -- LuaCATS has no equality-operator declaration; Channel equality semantics are documented on the class.
+ */
 static int lua_mux_channel_equal(lua_State *state) {
   LuaMuxChannel *left = luaL_checkudata(state, 1, LUA_MUX_CHANNEL_METATABLE);
   LuaMuxChannel *right = luaL_checkudata(state, 2, LUA_MUX_CHANNEL_METATABLE);
@@ -552,113 +548,12 @@ static int lua_mux_channel_equal(lua_State *state) {
   return 1;
 }
 
+/**
+ * @par LuaLS ignore mux __newindex -- Immutability is represented by the Channel class declaration.
+ */
 static int lua_mux_channel_immutable(lua_State *state) {
   return lua_error_raise(state, LUA_ERROR_CODE_ARG_INVALID,
                          "channel values are immutable");
-}
-
-static int lua_mux_channel_flag_immutable(lua_State *state) {
-  return lua_error_raise(state, LUA_ERROR_CODE_CHANNEL_FLAG_INVALID,
-                         "channel flag values are immutable");
-}
-
-static int lua_mux_channel_flags_list(lua_State *state) {
-  LuaMuxChannelFlags *handle = lua_mux_check_channel_flags(state, 1);
-  int output = 1;
-
-  lua_newtable(state);
-  for (size_t index = 0; index < sizeof(CHANNEL_FLAGS) / sizeof(*CHANNEL_FLAGS);
-       index++) {
-    const ChannelFlagDefinition *definition = lua_mux_channel_flag_at(index);
-
-    if ((handle->identity->type & definition->value) == 0)
-      continue;
-    lua_mux_push_channel_flag(state, handle->package, definition);
-    lua_rawseti(state, -2, output++);
-  }
-  return 1;
-}
-
-static int lua_mux_channel_flags_has(lua_State *state) {
-  LuaMuxChannelFlags *handle = lua_mux_check_channel_flags(state, 1);
-  LuaMuxChannelFlag *flag =
-      lua_mux_check_channel_flag(state, 2, handle->package);
-
-  lua_pushboolean(state, (handle->identity->type & flag->value) != 0);
-  return 1;
-}
-
-static int lua_mux_channel_flags_change(lua_State *state, bool enabled) {
-  LuaMuxChannelFlags *handle = lua_mux_check_channel_flags(state, 1);
-  LuaMuxChannelFlag *flag =
-      lua_mux_check_channel_flag(state, 2, handle->package);
-  bool current = (handle->identity->type & flag->value) != 0;
-
-  if (current == enabled) {
-    lua_pushboolean(state, 0);
-    return 1;
-  }
-  if (enabled)
-    handle->identity->type |= flag->value;
-  else
-    handle->identity->type &= ~flag->value;
-  lua_pushboolean(state, 1);
-  return 1;
-}
-
-static int lua_mux_channel_flags_add(lua_State *state) {
-  return lua_mux_channel_flags_change(state, true);
-}
-
-static int lua_mux_channel_flags_remove(lua_State *state) {
-  return lua_mux_channel_flags_change(state, false);
-}
-
-static int lua_mux_channel_flags_tostring(lua_State *state) {
-  LuaMuxChannelFlags *handle = lua_mux_check_channel_flags(state, 1);
-
-  lua_pushfstring(state, "channel_flags(%s)", handle->name);
-  return 1;
-}
-
-static int lua_mux_channel_flag_tostring(lua_State *state) {
-  LuaMuxChannelFlag *flag =
-      luaL_checkudata(state, 1, LUA_MUX_CHANNEL_FLAG_METATABLE);
-
-  lua_pushstring(state, flag->name);
-  return 1;
-}
-
-static int lua_mux_channel_flag_equal(lua_State *state) {
-  LuaMuxChannelFlag *left =
-      luaL_checkudata(state, 1, LUA_MUX_CHANNEL_FLAG_METATABLE);
-  LuaMuxChannelFlag *right =
-      luaL_checkudata(state, 2, LUA_MUX_CHANNEL_FLAG_METATABLE);
-
-  lua_pushboolean(state, left->package == right->package &&
-                             left->value == right->value);
-  return 1;
-}
-
-static int lua_mux_channel_flag_namespace_index(lua_State *state) {
-  LuaMuxChannelFlagNamespace *name_space =
-      luaL_checkudata(state, 1, LUA_MUX_CHANNEL_FLAG_NAMESPACE_METATABLE);
-  const char *name = lua_tostring(state, 2);
-
-  if (name == nullptr)
-    return lua_error_arg(state, 2, LUA_ERROR_CODE_CHANNEL_FLAG_INVALID,
-                         "channel flag name must be a string");
-  for (size_t index = 0; index < sizeof(CHANNEL_FLAGS) / sizeof(*CHANNEL_FLAGS);
-       index++) {
-    const ChannelFlagDefinition *definition = lua_mux_channel_flag_at(index);
-
-    if (strcmp(name, definition->name) == 0) {
-      lua_mux_push_channel_flag(state, name_space->package, definition);
-      return 1;
-    }
-  }
-  return lua_error_arg(state, 2, LUA_ERROR_CODE_CHANNEL_FLAG_INVALID,
-                       "unknown channel flag constant '%s'", name);
 }
 
 static void lua_mux_install_channel_metatable(lua_State *state,
@@ -679,7 +574,6 @@ static void lua_mux_install_channel_metatable(lua_State *state,
       {"max_user_count", lua_mux_channel_max_user_count},
       {"message_count", lua_mux_channel_message_count},
       {"set_object", lua_mux_channel_set_object},
-      {"flags", lua_mux_channel_flags},
       {"emit", lua_mux_channel_emit},
       {"who", lua_mux_channel_who},
       {"add_player", lua_mux_channel_add_player},
@@ -696,44 +590,46 @@ static void lua_mux_install_channel_metatable(lua_State *state,
   lua_pop(state, 1);
 }
 
-static void lua_mux_install_channel_flag_metatables(lua_State *state) {
-  luaL_newmetatable(state, LUA_MUX_CHANNEL_FLAGS_METATABLE);
-  lua_pushvalue(state, -1);
-  lua_setfield(state, -2, "__index");
-  lua_pushcfunction(state, lua_mux_channel_flags_tostring);
-  lua_setfield(state, -2, "__tostring");
-  lua_pushcfunction(state, lua_mux_channel_flags_list);
-  lua_setfield(state, -2, "list");
-  lua_pushcfunction(state, lua_mux_channel_flags_has);
-  lua_setfield(state, -2, "has");
-  lua_pushcfunction(state, lua_mux_channel_flags_add);
-  lua_setfield(state, -2, "add");
-  lua_pushcfunction(state, lua_mux_channel_flags_remove);
-  lua_setfield(state, -2, "remove");
-  lua_pop(state, 1);
-
-  luaL_newmetatable(state, LUA_MUX_CHANNEL_FLAG_METATABLE);
-  lua_pushcfunction(state, lua_mux_channel_flag_tostring);
-  lua_setfield(state, -2, "__tostring");
-  lua_pushcfunction(state, lua_mux_channel_flag_equal);
-  lua_setfield(state, -2, "__eq");
-  lua_pushcfunction(state, lua_mux_channel_flag_immutable);
-  lua_setfield(state, -2, "__newindex");
-  lua_pop(state, 1);
-
-  luaL_newmetatable(state, LUA_MUX_CHANNEL_FLAG_NAMESPACE_METATABLE);
-  lua_pushcfunction(state, lua_mux_channel_flag_namespace_index);
-  lua_setfield(state, -2, "__index");
-  lua_pushcfunction(state, lua_mux_channel_flag_immutable);
-  lua_setfield(state, -2, "__newindex");
-  lua_pop(state, 1);
-}
-
-/** Installs the trusted `mux.comsys` channel API. */
+/**
+ * @par LuaLS definition mux type channel
+ * @code{.lua}
+ * ---Options for [`Channel:emit`](lua://Channel.emit).
+ * ---@class (exact) ChannelEmitOptions
+ * ---@field no_header? boolean Send the message without the usual `[channel]` prefix.
+ *
+ * ---Options for [`Channel:who`](lua://Channel.who).
+ * ---@class (exact) ChannelWhoOptions
+ * ---@field all? boolean Include inactive membership records.
+ *
+ * ---One communication-channel membership record.
+ * ---@class ChannelMember
+ * ---@field object Object Live member object.
+ * ---@field listening boolean Whether the member is currently listening to the channel.
+ *
+ * ---A generation-sensitive handle to one live communication channel. Equality
+ * ---requires the same package, native channel identity, and generation. Handles
+ * ---remain stale after destruction even if a channel with the same name is
+ * ---created later. Assigning fields raises
+ * ---[`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).
+ * ---@see mux.error.codes.arg.invalid
+ * ---@class Channel
+ * local Channel = {}
+ * @endcode
+ *
+ * @par LuaLS definition mux namespace mux.comsys
+ * @code{.lua}
+ * ---Trusted access to the live communication-channel registry. Mutations take
+ * ---effect immediately and are not rolled back when the surrounding Lua
+ * ---callback later fails.
+ * ---@class MuxComsysPackage
+ * ---@field flags ChannelFlagNamespace Immutable typed channel-flag constants.
+ * local mux_comsys = {}
+ * @endcode
+ */
 void lua_mux_install_comsys_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_mux_install_channel_metatable(state, package);
-  lua_mux_install_channel_flag_metatables(state);
   lua_newtable(state);
+  lua_mux_install_channel_flag_bindings(state, package);
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_comsys_channel, 1);
   lua_setfield(state, -2, "channel");
@@ -746,11 +642,5 @@ void lua_mux_install_comsys_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_pushlightuserdata(state, package);
   lua_pushcclosure(state, lua_mux_comsys_list_channels, 1);
   lua_setfield(state, -2, "list_channels");
-  LuaMuxChannelFlagNamespace *name_space =
-      lua_newuserdata(state, sizeof(*name_space));
-  *name_space = (LuaMuxChannelFlagNamespace){.package = package};
-  luaL_getmetatable(state, LUA_MUX_CHANNEL_FLAG_NAMESPACE_METATABLE);
-  lua_setmetatable(state, -2);
-  lua_setfield(state, -2, "flags");
   lua_setfield(state, -2, "comsys");
 }

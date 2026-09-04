@@ -6,7 +6,6 @@ Tons             { 60 }
 Heat_Sinks       { 20 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 1275 }
 Max_Speed        { 86.00 }
 Specials         { DoubleHS FlipArms EndoSteel_Tech XLEngine_Tech AntiAircraft Searchlight }
 Left_Arm

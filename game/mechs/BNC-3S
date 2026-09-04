@@ -3,7 +3,6 @@ Reference        { BNC-3S }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 95 }
-Mech_BV          { 1323 }
 Heat_Sinks       { 21 }
 Max_Speed        { 53.75 }
 Left_Arm

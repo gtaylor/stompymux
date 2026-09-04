@@ -1,4 +1,5 @@
 ---
+draft: true
 title: categories
 type: docs
 toc_hide: false

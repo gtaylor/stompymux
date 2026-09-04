@@ -3,7 +3,6 @@ Reference        { Partisan-58 }
 Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 80 }
-Mech_BV          { 588 }
 Max_Speed        { 53.75 }
 Specials         { AntiAircraft }
 Left_Side

@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "bsuit_api.h"
+#include "btech/configuration.h"
 #include "btech/context.h"
 #include "btech_text_builder.h"
 #include "btechstats_api.h"
@@ -35,7 +36,6 @@
 #include "mech_specification_api.h"
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
@@ -173,20 +173,12 @@ void print_generic_status(EvaluationContext *evaluation, DbRef player,
   char mech_name[100] = {0};
   char mech_ref[100] = {0};
   char move_type[50] = {0};
-  char *attribute_buffer = alloc_lbuf("print_generic_status.attribute");
-
   (void)string_copy_bounded(
       mech_name, sizeof(mech_name),
-      use_model_reference
-          ? mech_model_name(mech)
-          : btech_attribute_read(context->database, mech_dbref(mech),
-                                 A_MECHNAME, attribute_buffer));
-  (void)string_copy_bounded(
-      mech_ref, sizeof(mech_ref),
-      use_model_reference
-          ? mech_model_reference(mech)
-          : btech_attribute_read(context->database, mech_dbref(mech),
-                                 A_MECHTYPE, attribute_buffer));
+      use_model_reference ? mech_model_name(mech)
+                          : btech_unit_display_name(context, mech_dbref(mech)));
+  (void)string_copy_bounded(mech_ref, sizeof(mech_ref),
+                            mech_model_reference(mech));
 
   switch (mech_class(mech)) {
   case CLASS_MW:
@@ -368,7 +360,6 @@ void print_generic_status(EvaluationContext *evaluation, DbRef player,
     mech_show_flags(&(MechFlagDisplayRequest){
         .evaluation = evaluation, .player = player, .mech = mech});
   }
-  free_buf(attribute_buffer);
 }
 
 void print_short_info(EvaluationContext *evaluation, DbRef player, Mech *mech) {

@@ -11,6 +11,16 @@
 
 typedef struct BtechContext BtechContext;
 
+/** Durable kinds of registered BTech special object. */
+typedef enum BtechSpecialObjectType : int {
+  BTECH_SPECIAL_MECH,
+  BTECH_SPECIAL_DEBUG,
+  BTECH_SPECIAL_MECHREP,
+  BTECH_SPECIAL_MAP,
+  BTECH_SPECIAL_AUTOPILOT,
+  BTECH_SPECIAL_TURRET,
+} BtechSpecialObjectType;
+
 /** Context for an operation on one BTech special object. */
 typedef struct BtechSpecialObjectAction {
   /** BTech runtime context. */
@@ -42,44 +52,28 @@ void btech_special_objects_update(BtechContext *context);
  */
 void btech_special_objects_reset(BtechContext *context);
 
+/** Returns the registered type, or `-1` when the object is not registered. */
+int btech_special_object_type(BtechContext *context, BtechObjectId object);
+
+/** Returns the stable uppercase name for a registered type. */
+const char *btech_special_object_type_name(int type);
+
+/** Registers a live controlled thing as one BTech special-object type. */
+bool btech_special_object_register(BtechContext *context, BtechObjectId actor,
+                                   BtechObjectId object, const char *type,
+                                   char *error, size_t error_size);
+
+/** Unregisters a controlled BTech special object. */
+bool btech_special_object_unregister(BtechContext *context, BtechObjectId actor,
+                                     BtechObjectId object, char *error,
+                                     size_t error_size);
+
+/** Forgets all runtime and configuration state owned by one object. */
+void btech_object_forget(BtechContext *context, BtechObjectId object);
+
 /**
  * Disposes of one BTech special object.
  *
  * @param[in] action Object and actor describing the disposal.
  */
 void btech_special_object_dispose(const BtechSpecialObjectAction *action);
-
-/**
- * Applies a special-object flag transition.
- *
- * @param[in,out] context BTech runtime context.
- * @param[in] player Object requesting the flag change.
- * @param[in] object Object whose flag changed.
- * @param[in] from Previous flag state.
- * @param[in] to New flag state.
- */
-void btech_special_object_flag_changed(BtechContext *context,
-                                       BtechObjectId player,
-                                       BtechObjectId object, bool from,
-                                       bool to);
-
-/**
- * Checks whether an object's BTech special type may be changed.
- *
- * @param[in] context BTech runtime context.
- * @param[in] object Object to inspect.
- * @param[in] type Requested special-object type.
- * @param[out] error Buffer receiving a rejection message.
- * @param[in] error_size Capacity of @p error in bytes.
- * @return `true` when the type may be set; otherwise `false`.
- */
-bool btech_special_object_type_can_set(BtechContext *context,
-                                       BtechObjectId object, const char *type,
-                                       char *error, size_t error_size);
-
-/**
- * Registers one object under its configured BTech special type.
- *
- * @param[in] action Object and actor describing the registration.
- */
-void btech_special_object_type_register(const BtechSpecialObjectAction *action);

@@ -3,7 +3,6 @@ Reference        { ARC-2S }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 70 }
-Mech_BV          { 997 }
 Max_Speed        { 64.50 }
 Left_Arm
   Armor            { 22 }

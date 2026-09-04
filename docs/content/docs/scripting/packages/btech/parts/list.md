@@ -1,4 +1,5 @@
 ---
+draft: true
 title: list
 type: docs
 toc_hide: false
@@ -19,7 +20,8 @@ btech.parts.list( category )
 `string category`
 : `"ammo"`, `"weapon"`, `"bomb"`, `"special"`, or `"cargo"`. The aliases
   `"weapons"`, `"weap"`, `"bombs"`, `"specials"`, `"part"`, `"parts"`, and
-  `"carg"` are also accepted.
+  `"carg"` are also accepted. All spellings are matched without regard to
+  case.
 
 ### Returns
 

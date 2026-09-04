@@ -235,26 +235,27 @@ static int write_lua_fixture(const char *directory) {
         "local startup_order = {}\n",
         file);
   fputs("local btech_api = {\n"
-        "  unit = \"armor_status armor_status_ref battle_value "
-        "battle_value_ref battle_value2_ref crit_slot crit_slot_ref "
-        "crit_status crit_status_ref damage defensive_battle_value_ref "
-        "engine_rating engine_rating_ref fasa_base_cost_ref frequencies load "
-        "make_pilot_roll offensive_battle_value_ref payload_ref "
-        "real_max_speed section_status "
-        "set_armor_status set_max_speed set_tons show_crit_status_ref "
-        "show_status_ref show_weapon_specs_ref tic_weapons weapon_status "
-        "weapon_status_ref\",\n"
-        "  map = \"blast_zones elevation emit hex_emit hex_in_blast_zone "
-        "hex_line_of_sight id_to_dbref load range set_xy terrain "
-        "unit_line_of_sight units update_links\",\n"
-        "  parts = \"add_stores categories cost installed installed_ref list "
-        "match name remove_stores set_cost stores stores_short type "
-        "weapon_stat weight\",\n"
-        "  character = \"list set_value threshold value\",\n"
-        "  repair = \"damages job_count tech_list tech_list_ref tech_status "
-        "tech_time under_repair unit_fixable\",\n"
-        "  system = \"design_exists lag set_xcode_value xcode_value "
-        "xcode_value_ref zone_units\",\n"
+        "  unit = \"armor battle_value critical_slots engine weapons "
+        "installed_parts payload technologies preferred_id set_preferred_id "
+        "markings set_markings assigned_pilot set_assigned_pilot display_name "
+        "set_display_name set_armor apply_damage radio_channels load_template "
+        "piloting_check effective_max_speed section_condition set_max_speed "
+        "set_tonnage tic_weapons\",\n"
+        "  template = \"exists armor battle_value critical_slots engine "
+        "weapons installed_parts payload technologies base_cost show_status "
+        "show_weapon_specs show_critical_status\",\n"
+        "  map = \"blast_zones cargo_transfer_point set_cargo_transfer_point "
+        "elevation terrain emit in_blast_zone line_of_sight unit_by_id link "
+        "set_link load range place_unit units update_links\",\n"
+        "  player = \"loadout mechwarrior_template set_loadout "
+        "set_mechwarrior_template set_ui_preferences ui_preferences\",\n"
+        "  parts = \"categories list search resolve stores store_quantity "
+        "adjust_stores set_cost\",\n"
+        "  character = \"catalog value experience_threshold set_value "
+        "set_skill_target set_skill_experience add_skill_experience\",\n"
+        "  repair = \"needs is_under_repair is_fixable "
+        "technician_available_in\",\n"
+        "  system = \"event_lag units_in_zone\",\n"
         "}\n"
         "for pkg, names in pairs(btech_api) do\n"
         "  assert(type(btech[pkg]) == \"table\")\n"
@@ -266,7 +267,8 @@ static int write_lua_fixture(const char *directory) {
         "  for name in pairs(btech[pkg]) do assert(expected[name]) end\n"
         "end\n"
         "local btech_roots = { character = true, error = true, map = true, "
-        "parts = true, repair = true, system = true, unit = true }\n"
+        "parts = true, player = true, repair = true, system = true, "
+        "template = true, unit = true }\n"
         "for name in pairs(btech) do assert(btech_roots[name]) end\n",
         file);
   fputs("assert(type(mux.config.get(\"game_database\")) == \"string\")\n"
@@ -334,8 +336,6 @@ static int write_lua_fixture(const char *directory) {
         "      pattern = \"^luacolor$\",\n"
         "      access = mux.world.access.PUBLIC,\n"
         "      handler = function(ctx)\n"
-        "        assert(btech.repair.tech_time(ctx.enactor) == 0)\n"
-        "        assert(not pcall(btech.repair.tech_time))\n"
         "        assert(mux.object == nil)\n"
         "        assert(mux.connected_players == nil)\n"
         "        assert(mux.who_summary == nil)\n"
@@ -378,7 +378,7 @@ static int write_lua_fixture(const char *directory) {
         "        assert(type(api_object.name) == \"function\")\n"
         "        assert(type(api_object.set_name) == \"function\")\n"
         "        assert(api_object.attribute == nil)\n"
-        "        assert(type(api_object.attributes) == \"function\")\n"
+        "        assert(api_object.attributes == nil)\n"
         "        assert(type(api_object.zone) == \"function\")\n"
         "        assert(type(api_object.set_zone) == \"function\")\n"
         "        assert(type(api_object.affiliation) == \"function\")\n"
@@ -579,11 +579,8 @@ static int write_lua_fixture(const char *directory) {
       "        assert(object_ok)\n"
       "        assert(player:dbref() == ctx.enactor)\n"
       "        assert(player:type() == mux.world.types.PLAYER)\n"
-      "        assert(player.description == nil)\n"
-      "        assert(player.inside_description == nil)\n"
-      "        assert(player:attributes():get(\"Description\") == nil)\n"
-      "        assert(player:attributes():get(\"InternalDescription\") == "
-      "nil)\n"
+      "        assert(player:description() == nil)\n"
+      "        assert(player:internal_description() == nil)\n"
       "        local invalid_ok, invalid_error = "
       "pcall(mux.world.object, 999999)\n"
       "        assert(not invalid_ok)\n"
@@ -669,27 +666,30 @@ static int write_lua_fixture(const char *directory) {
         "        assert(thing:type() == object_types.THING and\n"
         "          thing:name() == \"Lua Thing\")\n"
         "        assert(exit:type() == object_types.EXIT and\n"
-        "          exit:name() == \"out;o\")\n"
-        "        thing:attributes():set(\"Description\", \"Lua description\")\n"
-        "        thing:attributes():set(\"InternalDescription\", \"Lua "
-        "inside\")\n"
-        "        assert(thing:attributes():get(\"Description\") == \"Lua "
-        "description\")\n"
-        "        assert(thing:attributes():get(\"InternalDescription\") == "
-        "\"Lua inside\")\n"
-        "        local attributes = thing:attributes()\n"
-        "        local entries = attributes:entries()\n"
-        "        assert(entries.Description == \"Lua description\")\n"
-        "        assert(entries.InternalDescription == \"Lua inside\")\n"
-        "        assert(entries.Desc == nil and entries.Idesc == nil)\n"
-        "        local old_desc_ok, old_desc_error = mux.error.pcall(\n"
-        "          attributes.get, attributes, \"Desc\")\n"
-        "        assert(not old_desc_ok and\n"
-        "          old_desc_error.code == \"mux.attribute.invalid\")\n"
-        "        local old_idesc_ok, old_idesc_error = mux.error.pcall(\n"
-        "          attributes.get, attributes, \"Idesc\")\n"
-        "        assert(not old_idesc_ok and\n"
-        "          old_idesc_error.code == \"mux.attribute.invalid\")\n"
+        "          exit:name() == \"out;o\")\n",
+        file);
+  fputs("        thing:set_description(\"Lua description\")\n"
+        "        thing:set_internal_description(\"Lua inside\")\n"
+        "        assert(thing:description() == \"Lua description\")\n"
+        "        assert(thing:internal_description() == \"Lua inside\")\n"
+        "        thing:set_description(nil)\n"
+        "        thing:set_internal_description(\"\")\n"
+        "        assert(thing:description() == nil and\n"
+        "          thing:internal_description() == nil)\n"
+        "        local bad_description_ok, bad_description_error =\n"
+        "          mux.error.pcall(thing.set_description, thing, \"[bold]x\")\n"
+        "        assert(not bad_description_ok and\n"
+        "          bad_description_error.code == \"mux.arg.invalid\")\n"
+        "        local missing_description_ok, missing_description_error =\n"
+        "          mux.error.pcall(thing.set_description, thing)\n"
+        "        assert(not missing_description_ok and\n"
+        "          missing_description_error.code == \"mux.arg.invalid\")\n"
+        "        local missing_internal_ok, missing_internal_error =\n"
+        "          mux.error.pcall(thing.set_internal_description, thing)\n"
+        "        assert(not missing_internal_ok and\n"
+        "          missing_internal_error.code == \"mux.arg.invalid\")\n"
+        "        thing:set_description(\"Lua description\")\n"
+        "        thing:set_internal_description(\"Lua inside\")\n"
         "        thing:set_name(\"[fg=green]Renamed Lua Thing[/]\")\n"
         "        assert(thing:name() == \"[fg=green]Renamed Lua Thing[/]\")\n"
         "        local missing_name_ok, missing_name_error = mux.error.pcall(\n"
@@ -1513,33 +1513,44 @@ static int write_lua_fixture(const char *directory) {
       "        assert(#state:keys() == 4 and #state:entries() == 4)\n"
       "        local values = state:get_many({ \"balance\", \"enabled\" })\n"
       "        assert(values.balance == balance and values.enabled)\n"
+      "        state:set(\"explicit_nil\", \"temporary\")\n"
+      "        state:set(\"explicit_nil\", nil)\n"
+      "        assert(not state:has(\"explicit_nil\"))\n"
+      "        state:set(\"omitted_value\", \"temporary\")\n"
+      "        local missing_state_ok, missing_state_error =\n"
+      "          mux.error.pcall(state.set, state, \"omitted_value\")\n"
+      "        assert(not missing_state_ok and\n"
+      "          missing_state_error.code == \"mux.state.invalid\")\n"
+      "        assert(state:get(\"omitted_value\") == \"temporary\")\n"
+      "        state:set(\"omitted_value\", nil)\n"
       "        mux.world.pemit(ctx.enactor, \"LuaState \" .. balance)\n"
       "        return true\n"
       "      end,\n"
       "    },\n",
       file);
+  fputs("    {\n"
+        "      pattern = \"^lualocknested$\",\n"
+        "      handler = function(ctx)\n"
+        "        local actor = mux.world.object(ctx.enactor)\n"
+        "        local target = mux.world.create_object({ type = "
+        "mux.world.types.THING,\n"
+        "          name = \"Lua Nested Lock Target\", location = actor\n"
+        "        })\n"
+        "        target:set_lua_parent(\"nested_lock.lua\")\n"
+        "        local state = actor:state(\"nested_lock\")\n"
+        "        state:set(\"outer\", \"preserved\")\n"
+        "        local passes = mux.world.lock_passes({\n"
+        "          object = target, enactor = actor, cause = actor,\n"
+        "          subject = actor, lock = mux.world.locks.USE\n"
+        "        })\n"
+        "        assert(not passes and not state:has(\"inner\"))\n"
+        "        state:set(\"after\", \"committed\")\n"
+        "        mux.world.pemit(ctx.enactor, \"LuaLock nested isolated\")\n"
+        "        return true\n"
+        "      end,\n"
+        "    },\n",
+        file);
   fputs(
-      "    {\n"
-      "      pattern = \"^lualocknested$\",\n"
-      "      handler = function(ctx)\n"
-      "        local actor = mux.world.object(ctx.enactor)\n"
-      "        local target = mux.world.create_object({ type = "
-      "mux.world.types.THING,\n"
-      "          name = \"Lua Nested Lock Target\", location = actor\n"
-      "        })\n"
-      "        target:set_lua_parent(\"nested_lock.lua\")\n"
-      "        local state = actor:state(\"nested_lock\")\n"
-      "        state:set(\"outer\", \"preserved\")\n"
-      "        local passes = mux.world.lock_passes({\n"
-      "          object = target, enactor = actor, cause = actor,\n"
-      "          subject = actor, lock = mux.world.locks.USE\n"
-      "        })\n"
-      "        assert(not passes and not state:has(\"inner\"))\n"
-      "        state:set(\"after\", \"committed\")\n"
-      "        mux.world.pemit(ctx.enactor, \"LuaLock nested isolated\")\n"
-      "        return true\n"
-      "      end,\n"
-      "    },\n"
       "    {\n"
       "      pattern = \"^lualockverify$\",\n"
       "      handler = function(ctx)\n"
@@ -1586,8 +1597,9 @@ static int write_lua_fixture(const char *directory) {
       "          and safe_index < transparent_index)\n"
       "        assert(flags:remove(safe) and not flags:remove(safe))\n"
       "        assert(flags:remove(transparent))\n"
-      "        assert(not flags:add(mux.world.flags.XCODE))\n"
-      "        assert(not flags:has(mux.world.flags.XCODE))\n"
+      "        local xcode_ok = pcall(function() return "
+      "mux.world.flags.XCODE end)\n"
+      "        assert(not xcode_ok)\n"
       "        assert(not powers:has(idle) and powers:add(idle))\n"
       "        assert(powers:has(idle) and not powers:add(idle))\n"
       "        local listed_powers = powers:list()\n"
@@ -1615,18 +1627,177 @@ static int write_lua_fixture(const char *directory) {
       "        mux.world.pemit(ctx.enactor, \"LuaFlags constants changed\")\n"
       "        return true\n"
       "      end,\n"
-      "    },\n"
-      "    {\n"
-      "      pattern = \"^luafail$\",\n"
-      "      handler = function(ctx)\n"
-      "        mux.world.object(ctx.enactor):state(\"integration\")"
-      ":set(\"balance\", 99)\n"
-      "        error(\"expected rollback\")\n"
-      "      end,\n"
-      "    },\n"
-      "  },\n"
-      "}\n",
+      "    },\n",
       file);
+  fputs(
+      "    {\n"
+      "      pattern = \"^btechplayerconfig$\",\n"
+      "      access = mux.world.access.WIZARD,\n"
+      "      handler = function(ctx)\n"
+      "        local player = mux.world.object(ctx.enactor)\n"
+      "        local defaults = btech.player.ui_preferences(player)\n"
+      "        assert(not defaults.configured and defaults.tactical_height == "
+      "14)\n"
+      "        local preferences = { tactical_height = 15,\n"
+      "          tactical_width = 22, lrs_height = 12,\n"
+      "          include_dead = true, include_shutdown = false,\n"
+      "          include_enemies = true, include_allies = false,\n"
+      "          include_target = true, buildings = \"include\" }\n"
+      "        assert(select(\"#\", btech.player.set_ui_preferences("
+      "ctx.enactor, preferences)) == 0)\n"
+      "        local stored = btech.player.ui_preferences(player)\n"
+      "        assert(stored.configured and stored.tactical_width == 22\n"
+      "          and stored.buildings == \"include\")\n"
+      "        local invalid = {}\n"
+      "        for key, value in pairs(preferences) do invalid[key] = value "
+      "end\n"
+      "        invalid.unknown = true\n"
+      "        local ok, err = mux.error.pcall(\n"
+      "          btech.player.set_ui_preferences, player, invalid)\n"
+      "        assert(not ok and err.code == \"mux.arg.invalid\")\n"
+      "        stored = btech.player.ui_preferences(player)\n"
+      "        assert(stored.configured and stored.tactical_width == 22)\n"
+      "        ok, err = mux.error.pcall("
+      "btech.player.set_mechwarrior_template, player, \"Missing\")\n"
+      "        assert(not ok and err.code == \"btech.template.not_found\" "
+      "and btech.player.mechwarrior_template(ctx.enactor) == nil)\n"
+      "        assert(select(\"#\", btech.player.set_loadout(player, nil)) == "
+      "0)\n"
+      "        assert(btech.player.loadout(player) == nil)\n"
+      "        assert(select(\"#\", "
+      "btech.player.set_mechwarrior_template(player, nil)) == 0)\n"
+      "        assert(btech.player.mechwarrior_template(player) == nil)\n"
+      "        assert(select(\"#\", btech.player.set_ui_preferences(player, "
+      "nil)) == 0)\n"
+      "        assert(not btech.player.ui_preferences(player).configured)\n"
+      "        mux.world.pemit(ctx.enactor, \"BTech player config passed\")\n"
+      "        return true\n"
+      "      end,\n"
+      "    },\n",
+      file);
+  fputs(
+      "    {\n"
+      "      pattern = \"^btechunitconfig%s+#?(%d+)$\",\n"
+      "      access = mux.world.access.WIZARD,\n"
+      "      handler = function(ctx, unit_dbref)\n"
+      "        unit_dbref = tonumber(unit_dbref)\n"
+      "        local unit = mux.world.object(unit_dbref)\n"
+      "        local options_ok, options_error = mux.error.pcall(\n"
+      "          btech.template.battle_value, \"AS7-D\", {})\n"
+      "        assert(not options_ok and options_error.code == "
+      "\"mux.arg.invalid\")\n"
+      "        local template = btech.template.battle_value(\"BV-Test\")\n"
+      "        assert(template.total == template.offensive + "
+      "template.defensive\n"
+      "          and template.offensive == 20 and template.defensive > 0\n"
+      "          and template.defensive ~= math.floor(template.defensive))\n"
+      "        assert(select(\"#\", btech.unit.load_template(unit, "
+      "\"BV-Test\")) == 0)\n"
+      "        local initial = btech.unit.battle_value(unit)\n"
+      "        assert(type(initial.total) == \"number\"\n"
+      "          and type(initial.offensive) == \"number\"\n"
+      "          and type(initial.defensive) == \"number\"\n"
+      "          and initial.total == initial.offensive + initial.defensive\n"
+      "          and initial.total == template.total\n"
+      "          and initial.offensive == template.offensive\n"
+      "          and initial.defensive == template.defensive)\n"
+      "        for key in pairs(initial) do\n"
+      "          assert(key == \"total\" or key == \"offensive\"\n"
+      "            or key == \"defensive\")\n"
+      "        end\n"
+      "        assert(select(\"#\", btech.unit.set_tonnage(unit, 100)) == 0)\n"
+      "        local changed = btech.unit.battle_value(unit)\n"
+      "        assert(changed.total > initial.total\n"
+      "          and changed.offensive > initial.offensive)\n"
+      "        assert(btech.unit.preferred_id(unit) == nil)\n"
+      "        assert(select(\"#\", btech.unit.set_preferred_id(unit_dbref, "
+      "\"bk\")) == 0)\n"
+      "        assert(btech.unit.preferred_id(unit) == \"BK\")\n"
+      "        assert(select(\"#\", btech.unit.set_markings(unit, "
+      "\"stripes\")) == 0)\n"
+      "        assert(btech.unit.markings(unit_dbref) == \"stripes\")\n"
+      "        local pilot = mux.world.object(ctx.enactor)\n"
+      "        assert(select(\"#\", btech.unit.set_assigned_pilot(unit, "
+      "pilot)) == 0)\n"
+      "        assert(btech.unit.assigned_pilot(unit_dbref):dbref()\n"
+      "          == ctx.enactor)\n"
+      "        local ok, err = mux.error.pcall(\n"
+      "          btech.unit.set_preferred_id, unit, \"X\")\n"
+      "        assert(not ok and err.code == \"mux.arg.invalid\"\n"
+      "          and btech.unit.preferred_id(unit) == \"BK\")\n"
+      "        ok, err = mux.error.pcall(btech.unit.preferred_id, pilot)\n"
+      "        assert(not ok and err.code == \"mux.object.invalid\")\n"
+      "        assert(select(\"#\", btech.unit.set_assigned_pilot(unit, nil)) "
+      "== 0)\n"
+      "        assert(btech.unit.assigned_pilot(unit) == nil)\n"
+      "        assert(select(\"#\", btech.unit.set_markings(unit, nil)) == 0)\n"
+      "        assert(select(\"#\", btech.unit.set_preferred_id(unit, nil)) == "
+      "0)\n"
+      "        assert(btech.unit.markings(unit) == nil\n"
+      "          and btech.unit.preferred_id(unit) == nil)\n"
+      "        mux.world.pemit(ctx.enactor, \"BTech unit config passed\")\n"
+      "        return true\n"
+      "      end,\n"
+      "    },\n",
+      file);
+  fputs("    {\n"
+        "      pattern = \"^btechmapconfig%s+#?(%d+)%s+#?(%d+)$\",\n"
+        "      access = mux.world.access.WIZARD,\n"
+        "      handler = function(ctx, child_dbref, parent_dbref)\n"
+        "        child_dbref, parent_dbref = tonumber(child_dbref),\n"
+        "          tonumber(parent_dbref)\n"
+        "        local child, parent = mux.world.object(child_dbref),\n"
+        "          mux.world.object(parent_dbref)\n"
+        "        assert(btech.map.cargo_transfer_point(parent) == nil)\n"
+        "        assert(select(\"#\", "
+        "btech.map.set_cargo_transfer_point(parent_dbref,\n"
+        "          { x = 1, y = 2, reveal_hint = true })) == 0)\n"
+        "        local point = btech.map.cargo_transfer_point(parent)\n"
+        "        assert(point.x == 1 and point.y == 2 and point.reveal_hint)\n"
+        "        local link_value = { parent = parent, x = 3, y = 4,\n"
+        "          entrances = {\n"
+        "            north = { mode = \"offset\", offset = 2 },\n"
+        "            east = { mode = \"exact\", x = 0, y = 5 }\n"
+        "          } }\n"
+        "        assert(select(\"#\", btech.map.set_link(child_dbref, "
+        "link_value)) == 0)\n"
+        "        local stored = btech.map.link(child)\n"
+        "        assert(stored.parent:dbref() == parent_dbref\n"
+        "          and stored.x == 3 and stored.entrances.north.offset == 2\n"
+        "          and stored.entrances.east.y == 5)\n"
+        "        local ok, err = mux.error.pcall(\n"
+        "          btech.map.set_cargo_transfer_point, parent,\n"
+        "          { x = 99, y = 2, reveal_hint = false })\n"
+        "        assert(not ok and err.code == \"mux.arg.invalid\"\n"
+        "          and btech.map.cargo_transfer_point(parent).x == 1)\n"
+        "        ok, err = mux.error.pcall(btech.map.set_link, child,\n"
+        "          { parent = parent, x = 3, y = 4, entrances = {\n"
+        "            north = { mode = \"offset\", offset = 1,\n"
+        "              unknown = true } } })\n"
+        "        assert(not ok and err.code == \"mux.arg.invalid\"\n"
+        "          and err.detail.argument == 2\n"
+        "          and btech.map.link(child).x == 3)\n"
+        "        assert(select(\"#\", btech.map.set_link(child, nil)) == 0)\n"
+        "        assert(btech.map.link(child) == nil)\n"
+        "        assert(select(\"#\", "
+        "btech.map.set_cargo_transfer_point(parent, nil)) == 0)\n"
+        "        assert(btech.map.cargo_transfer_point(parent) == nil)\n"
+        "        mux.world.pemit(ctx.enactor, \"BTech map config passed\")\n"
+        "        return true\n"
+        "      end,\n"
+        "    },\n",
+        file);
+  fputs("    {\n"
+        "      pattern = \"^luafail$\",\n"
+        "      handler = function(ctx)\n"
+        "        mux.world.object(ctx.enactor):state(\"integration\")"
+        ":set(\"balance\", 99)\n"
+        "        error(\"expected rollback\")\n"
+        "      end,\n"
+        "    },\n"
+        "  },\n"
+        "}\n",
+        file);
   return fclose(file) == 0 ? 0 : -1;
 }
 
@@ -2269,6 +2440,59 @@ static int expect_text(int socket_fd, const char *expected) {
   return -1;
 }
 
+static int expect_created_dbref(int socket_fd, const char *name, long *dbref) {
+  char received[16384];
+  char expected[256];
+  size_t received_size = 0;
+  struct pollfd readable = {.fd = socket_fd, .events = POLLIN};
+  int idle_attempts = 0;
+
+  if (snprintf(expected, sizeof(expected), "%s created as object #", name) >=
+      (int)sizeof(expected))
+    return -1;
+  while (idle_attempts < 20) {
+    if (poll(&readable, 1, 500) != 1) {
+      idle_attempts++;
+      continue;
+    }
+    ssize_t size = read(
+        socket_fd, buffer_suffix(received, sizeof(received), received_size),
+        sizeof(received) - received_size - 1);
+    if (size <= 0)
+      return -1;
+    received_size += (size_t)size;
+    *(char *)checked_storage_at(received, sizeof(received), sizeof(char),
+                                received_size) = '\0';
+    const char *match = strstr(received, expected);
+    if (match != nullptr) {
+      char *end;
+      const char *number = checked_string_suffix(match, strlen(expected));
+      *dbref = strtol(number, &end, 10);
+      return end != number && *dbref >= 0 ? 0 : -1;
+    }
+    if (received_size == sizeof(received) - 1)
+      break;
+  }
+  fprintf(stderr, "expected creation of '%s', received '%s'\n", name, received);
+  return -1;
+}
+
+static int send_btech_unit_config(int socket_fd, long unit) {
+  char command[128];
+  if (snprintf(command, sizeof(command), "btechunitconfig %ld\r\n", unit) >=
+      (int)sizeof(command))
+    return -1;
+  return send_command(socket_fd, command);
+}
+
+static int send_btech_map_config(int socket_fd, long child, long parent) {
+  char command[128];
+  if (snprintf(command, sizeof(command), "btechmapconfig %ld %ld\r\n", child,
+               parent) >= (int)sizeof(command))
+    return -1;
+  return send_command(socket_fd, command);
+}
+
 static int expect_text_without(int socket_fd, const char *expected,
                                const char *forbidden) {
   char received[16384];
@@ -2467,6 +2691,8 @@ static int exercise_split_modules(int socket_fd) {
                  expect_text(socket_fd, "All Lua module checks passed.") < 0 ||
                  send_command(socket_fd, "accesspolicytest\r\n") < 0 ||
                  expect_text(socket_fd, "AccessPolicy passed") < 0 ||
+                 send_command(socket_fd, "btechplayerconfig\r\n") < 0 ||
+                 expect_text(socket_fd, "BTech player config passed") < 0 ||
                  send_command(socket_fd, "lualocknested\r\n") < 0 ||
                  expect_text(socket_fd, "LuaLock nested isolated") < 0 ||
                  send_command(socket_fd, "lualockverify\r\n") < 0 ||
@@ -2588,6 +2814,10 @@ static int exercise_home_command_access(int wizard_fd, int player_fd) {
 }
 
 static int create_styled_object(int socket_fd) {
+  long child_map;
+  long description_target;
+  long parent_map;
+
   if (send_command(socket_fd, "GOD\r\n") < 0 ||
       expect_three_texts(socket_fd, "preset:osc8-demo-button?config=",
                          "preset:osc8-demo-danger?config=", "Password:") < 0 ||
@@ -2790,7 +3020,7 @@ static int create_styled_object(int socket_fd) {
     return -1;
   }
   if (send_command(socket_fd,
-                   "@attribute/set RenamedWidget/Description=[send=\"look\" "
+                   "@description RenamedWidget=[send=\"look\" "
                    "color=red bold "
                    "hover.color=yellow tooltip=\"Inspect this object\" "
                    "title=\"Actions\" menu.1.label=\"Look\" "
@@ -2826,18 +3056,72 @@ static int create_styled_object(int socket_fd) {
     fprintf(stderr, "OSC Tier 6 rendering failed\n");
     return -1;
   }
-  if (send_command(socket_fd,
-                   "@attribute/set RenamedWidget/InternalDescription="
-                   "[bg=blue]Inside[/]\r\n") < 0 ||
+  if (send_command(socket_fd, "@internal-description RenamedWidget="
+                              "[bg=blue]Inside[/]\r\n") < 0 ||
       expect_text(socket_fd, "InternalDescription - Set.") < 0) {
     fprintf(stderr, "styled-object inside description failed\n");
     return -1;
   }
-  if (send_command(socket_fd, "@attribute/get RenamedWidget/Desc\r\n") < 0 ||
-      expect_text(socket_fd, "That is not an administrable attribute.") < 0 ||
-      send_command(socket_fd, "@attribute/get RenamedWidget/Idesc\r\n") < 0 ||
-      expect_text(socket_fd, "That is not an administrable attribute.") < 0) {
-    fprintf(stderr, "legacy description attributes were accepted\n");
+  if (send_command(socket_fd, "@create DescriptionClearTarget\r\n") < 0 ||
+      expect_created_dbref(socket_fd, "DescriptionClearTarget",
+                           &description_target) < 0 ||
+      send_command(socket_fd, "@description DescriptionClearTarget=Text\r\n") <
+          0 ||
+      expect_text(socket_fd, "Description - Set.") < 0 ||
+      send_command(socket_fd, "@description DescriptionClearTarget=\r\n") < 0 ||
+      expect_text(socket_fd, "Description - Cleared.") < 0 ||
+      send_command(socket_fd,
+                   "@internal-description DescriptionClearTarget=Inside\r\n") <
+          0 ||
+      expect_text(socket_fd, "InternalDescription - Set.") < 0 ||
+      send_command(socket_fd,
+                   "@internal-description DescriptionClearTarget=\r\n") < 0 ||
+      expect_text(socket_fd, "InternalDescription - Cleared.") < 0) {
+    fprintf(stderr, "description clearing failed\n");
+    return -1;
+  }
+  if (send_command(socket_fd,
+                   "@btech/register DescriptionClearTarget=MECH\r\n") < 0 ||
+      expect_text(socket_fd, "as BTech type MECH.") < 0 ||
+      send_command(socket_fd, "@btech DescriptionClearTarget\r\n") < 0 ||
+      expect_text(socket_fd, "BTech type: MECH") < 0 ||
+      send_command(socket_fd, "@examine DescriptionClearTarget\r\n") < 0 ||
+      expect_text(socket_fd, "BTech type: MECH") < 0 ||
+      send_command(socket_fd, "@examine/brief DescriptionClearTarget\r\n") <
+          0 ||
+      expect_text(socket_fd, "BTech type: MECH") < 0 ||
+      send_command(socket_fd, "@examine/debug DescriptionClearTarget\r\n") <
+          0 ||
+      expect_text(socket_fd, "BTech type: MECH") < 0 ||
+      send_btech_unit_config(socket_fd, description_target) < 0 ||
+      expect_text(socket_fd, "BTech unit config passed") < 0 ||
+      send_command(socket_fd, "@btech/unregister DescriptionClearTarget\r\n") <
+          0 ||
+      expect_text(socket_fd, "Unregistered #") < 0 ||
+      send_command(socket_fd, "@destroy DescriptionClearTarget\r\n") < 0 ||
+      expect_text(socket_fd, "The object shakes and begins to crumble.") < 0) {
+    fprintf(stderr, "BTech registration or examine type failed\n");
+    return -1;
+  }
+  if (send_command(socket_fd, "@create ConfigParentMap\r\n") < 0 ||
+      expect_created_dbref(socket_fd, "ConfigParentMap", &parent_map) < 0 ||
+      send_command(socket_fd, "@create ConfigChildMap\r\n") < 0 ||
+      expect_created_dbref(socket_fd, "ConfigChildMap", &child_map) < 0 ||
+      send_command(socket_fd, "@btech/register ConfigParentMap=MAP\r\n") < 0 ||
+      expect_text(socket_fd, "as BTech type MAP.") < 0 ||
+      send_command(socket_fd, "@btech/register ConfigChildMap=MAP\r\n") < 0 ||
+      expect_text(socket_fd, "as BTech type MAP.") < 0 ||
+      send_btech_map_config(socket_fd, child_map, parent_map) < 0 ||
+      expect_text(socket_fd, "BTech map config passed") < 0 ||
+      send_command(socket_fd, "@btech/unregister ConfigChildMap\r\n") < 0 ||
+      expect_text(socket_fd, "Unregistered #") < 0 ||
+      send_command(socket_fd, "@btech/unregister ConfigParentMap\r\n") < 0 ||
+      expect_text(socket_fd, "Unregistered #") < 0 ||
+      send_command(socket_fd, "@destroy ConfigChildMap\r\n") < 0 ||
+      expect_text(socket_fd, "The object shakes and begins to crumble.") < 0 ||
+      send_command(socket_fd, "@destroy ConfigParentMap\r\n") < 0 ||
+      expect_text(socket_fd, "The object shakes and begins to crumble.") < 0) {
+    fprintf(stderr, "BTech typed map configuration failed\n");
     return -1;
   }
   if (send_command(socket_fd, "@examine RenamedWidget\r\n") < 0 ||

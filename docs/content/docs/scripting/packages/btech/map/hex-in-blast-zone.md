@@ -1,4 +1,5 @@
 ---
+draft: true
 title: hex_in_blast_zone
 type: docs
 toc_hide: false
@@ -19,10 +20,10 @@ btech.map.hex_in_blast_zone( map, x, y )
 `number map`
 : The map dbref.
 
-`number x`
+`integer x`
 : The hex X coordinate.
 
-`number y`
+`integer y`
 : The hex Y coordinate.
 
 ### Returns

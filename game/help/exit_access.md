@@ -17,7 +17,6 @@ Use `@state/set` to add requirements:
 ```text
 @state/set <exit>/locks.traverse flag/WIZARD=true
 @state/set <exit>/locks.traverse affiliation=123
-@state/set <exit>/locks.traverse attribute/Description="Authorized"
 @state/set <exit>/locks.traverse state/access/member=true
 ```
 
@@ -27,9 +26,6 @@ example, `flag/SUSPECT=false`. Flag names must be canonical uppercase names.
 
 `affiliation` takes the integer dbref of a live object and compares native
 affiliation object identity. Do not include the `#` prefix.
-
-`attribute/<Name>` takes a quoted string and compares the raw value of a
-supported native attribute exactly. Attribute names are case-sensitive.
 
 `state/<namespace>/<key>` compares a persistent state value on the traversing
 object. Boolean, number, and string types remain distinct, so `7` does not
@@ -47,6 +43,6 @@ Messages alone do not restrict an exit. Empty strings suppress the
 corresponding message. Delete any policy entry by assigning an empty value, or
 remove the complete policy with `@state/wipe <exit>/locks.traverse`.
 
-Malformed entries, unsupported flag or attribute names, invalid affiliation
-dbrefs, and incorrectly typed values fail closed and are reported as Lua
+Malformed entries, unsupported flag names, invalid affiliation dbrefs, and
+incorrectly typed values fail closed and are reported as Lua
 callback errors.

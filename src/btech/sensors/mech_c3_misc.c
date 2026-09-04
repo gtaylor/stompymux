@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "btech/configuration.h"
 #include "btech/context.h"
-#include "command_handlers_api.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "map_coordinates.h"
@@ -30,7 +30,6 @@
 #include "mech_status_types.h"
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
@@ -267,7 +266,6 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool t_is_c3) {
   float real_range;
   float c3_range;
   char *buff = alloc_lbuf("mech_network_show_targets.buff");
-  char *attribute_buffer = alloc_lbuf("mech_network_show_targets.attribute");
   const char *mech_name;
   char move_type[30];
   char c_status1;
@@ -352,9 +350,8 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool t_is_c3) {
       mech_name = "something";
     } else {
       t_show_status_info = 1;
-      mech_name = btech_attribute_read(mech_context(other_mech)->database,
-                                       mech_dbref(other_mech), A_MECHNAME,
-                                       attribute_buffer);
+      mech_name = btech_unit_display_name(mech_context(other_mech),
+                                          mech_dbref(other_mech));
     }
 
     bearing = map_bearing(
@@ -437,7 +434,6 @@ void mech_network_show_targets(DbRef player, Mech *mech, bool t_is_c3) {
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "End %s Contact List", t_is_c3 ? "C3" : "C3i");
   free(contacts);
-  free_buf(attribute_buffer);
   free_buf(buff);
 }
 
@@ -447,7 +443,6 @@ void mech_network_show_status(DbRef player, Mech *mech, bool t_is_c3) {
   Mech *other_mech;
   float range;
   char *buff = alloc_lbuf("mech_network_show_status.buff");
-  char *attribute_buffer = alloc_lbuf("mech_network_show_status.attribute");
   const char *mech_name;
   char move_type[30];
   int network_size;
@@ -480,9 +475,8 @@ void mech_network_show_status(DbRef player, Mech *mech, bool t_is_c3) {
     (void)string_copy_bounded(move_type, sizeof(move_type),
                               get_move_type_id(mech_movement_type(other_mech)));
 
-    mech_name = btech_attribute_read(mech_context(other_mech)->database,
-                                     mech_dbref(other_mech), A_MECHNAME,
-                                     attribute_buffer);
+    mech_name = btech_unit_display_name(mech_context(other_mech),
+                                        mech_dbref(other_mech));
 
     (void)snprintf(buff, LBUF_SIZE,
                    "[fg=yellow bold][%s][reset]%c %-12.12s x:%3d y:%3d z:%3d "
@@ -503,7 +497,6 @@ void mech_network_show_status(DbRef player, Mech *mech, bool t_is_c3) {
   notify_printf(btech_context_evaluation(mech_context(mech)), player,
                 "End %s Network Status", t_is_c3 ? "C3" : "C3i");
   free_buf(buff);
-  free_buf(attribute_buffer);
 }
 
 int mech_network_visibility(const MechNetworkVisibilityRequest *request) {

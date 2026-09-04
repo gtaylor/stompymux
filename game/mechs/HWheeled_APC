@@ -5,7 +5,6 @@ Move_Type        { Wheel }
 Tons             { 20 }
 Comment          { Saved by: Stringfellow Hawke(#988) at Fri Nov 11 14:35:40 2005 }
 Computer         { 3 }
-Mech_BV          { 70 }
 Cargo_Space      { 600 }
 Max_Ton          { 5 }
 Max_Suits        { 0 }

@@ -5,7 +5,6 @@ Move_Type        { Track }
 Tons             { 60 }
 Comment          { Saved by: Captain QB(#198) at Tue Oct 25 11:34:16 2005 }
 Computer         { 3 }
-Mech_BV          { 676 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 53.75 }

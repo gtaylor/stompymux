@@ -6,7 +6,6 @@ Tons             { 45 }
 Comment          { Saved by: Captain QB(#198) at Wed Nov 23 13:19:26 2005 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 818 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 64.50 }

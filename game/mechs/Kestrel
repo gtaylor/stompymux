@@ -3,7 +3,6 @@ Reference        { Kestrel }
 Type             { VTOL }
 Move_Type        { VTOL }
 Tons             { 25 }
-Mech_BV          { 75 }
 Max_Speed        { 193.50 }
 Specials         { CargoTech ICEEngine_Tech }
 Left_Side

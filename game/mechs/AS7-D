@@ -3,7 +3,6 @@ Reference        { AS7-D }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 100 }
-Mech_BV          { 1557 }
 Heat_Sinks       { 20 }
 Computer	 { 4 }
 Radio		 { 5 }

@@ -6,7 +6,6 @@ Tons             { 70 }
 Heat_Sinks       { 24 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 1377 }
 Max_Speed        { 64.50 }
 Specials         { DoubleHS ArtemisIV EndoSteel_Tech }
 Left_Arm

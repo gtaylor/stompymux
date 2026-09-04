@@ -1,4 +1,5 @@
 ---
+draft: true
 title: set_tons
 type: docs
 toc_hide: false
@@ -19,12 +20,12 @@ btech.unit.set_tons( unit, tons )
 `number unit`
 : The unit dbref.
 
-`number tons`
+`integer tons`
 : The new tonnage.
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Notes

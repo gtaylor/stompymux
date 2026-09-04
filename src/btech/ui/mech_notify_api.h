@@ -56,7 +56,7 @@ int mech_sees_hex_f(Mech *mech, BattleMap *map, float x, float y, int ix,
 int mech_sees_hex(Mech *mech, BattleMap *map, int x, int y);
 void hex_los_broadcast(BattleMap *mech_map, int x, int y, const char *message);
 void mech_los_broadcast_unit(Mech *mech, Mech *target, const char *message);
-void map_broadcast(BattleMap *map, char *message);
+void map_broadcast(BattleMap *map, const char *message);
 void mech_fire_broadcast(Mech *mech, Mech *target, int x, int y,
                          BattleMap *mech_map, const char *weapname, int is_hit);
 void mech_notify(Mech *mech, MechNotifyAudience audience, const char *buffer);

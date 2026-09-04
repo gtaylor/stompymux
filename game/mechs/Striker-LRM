@@ -3,7 +3,6 @@ Reference        { Striker-LRM }
 Type             { Vehicle }
 Move_Type        { Wheel }
 Tons             { 35 }
-Mech_BV          { 383 }
 Max_Speed        { 86.00 }
 Specials	 { ICEEngine_Tech Searchlight }
 Left_Side

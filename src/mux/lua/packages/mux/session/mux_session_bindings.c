@@ -15,20 +15,20 @@
 /**
  * Attaches an interactive flow to a descriptor and shows its first prompt.
  *
- * @par Lua name `mux.session.flow_start`
- * @par Lua signature `mux.session.flow_start( descriptor, module, first_step )`
- * @par Lua parameters - `descriptor` (`number`) A live descriptor ID, normally
- * ctx.descriptor.
- * - `module` (`string`) The flow module path, resolved like require.
- * - `first_step` (`string`) A key in the module's flows table.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`;
- * `LUA_ERROR_CODE_CONNECTION_UNAVAILABLE` when flow support is absent.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.session.flow_start
+ * @code{.lua}
+ * ---Attaches an interactive flow to a descriptor and displays its first prompt.
+ * ---@param descriptor integer
+ * ---@param module string Require-style module path.
+ * ---@param first_step string Key in the module's `flows` table.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.connection.invalid`](lua://mux.error.codes.connection.invalid), [`mux.error.codes.connection.unavailable`](lua://mux.error.codes.connection.unavailable), or [`mux.error.codes.module.invalid`](lua://mux.error.codes.module.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.connection.invalid
+ * ---@see mux.error.codes.connection.unavailable
+ * ---@see mux.error.codes.module.invalid
+ * function mux_session.flow_start(descriptor, module, first_step) end
+ * @endcode
  */
 static int lua_mux_flow_start(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -50,17 +50,12 @@ static int lua_mux_flow_start(lua_State *state) {
 /**
  * Lists player connections visible to the normal who command.
  *
- * @par Lua name `mux.session.connected_players`
- * @par Lua signature `mux.session.connected_players( )`
- * @par Lua parameters - None.
- * @par Lua returns - `players` (`Connection[]`): Connection records with
- * `object` (`Object`), `name` (`string`), `connected_for` (`integer` seconds),
- * and `idle_for` (`integer` seconds).
- * @par Lua errors - No stable native error is raised after Lua argument
- * validation.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.session.connected_players
+ * @code{.lua}
+ * ---Lists connected players visible to the ordinary WHO command.
+ * ---@return Connection[] players
+ * function mux_session.connected_players() end
+ * @endcode
  */
 static int lua_mux_connected_players(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -91,16 +86,12 @@ static int lua_mux_connected_players(lua_State *state) {
 /**
  * Returns the non-privileged WHO summary.
  *
- * @par Lua name `mux.session.who_summary`
- * @par Lua signature `mux.session.who_summary( )`
- * @par Lua parameters - None.
- * @par Lua returns - `summary` (`WhoSummary`): A table with `hidden`
- * (`integer`), `record` (`integer`), and `maximum` (`integer|nil`) fields.
- * @par Lua errors - No stable native error is raised after Lua argument
- * validation.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.session.who_summary
+ * @code{.lua}
+ * ---Returns the non-privileged WHO summary.
+ * ---@return WhoSummary summary
+ * function mux_session.who_summary() end
+ * @endcode
  */
 static int lua_mux_who_summary(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -118,6 +109,30 @@ static int lua_mux_who_summary(lua_State *state) {
   return 1;
 }
 
+/**
+ * @par LuaLS definition mux type session.values
+ * @code{.lua}
+ * ---One player connection visible to the ordinary WHO command.
+ * ---@class Connection
+ * ---@field object Object Connected player.
+ * ---@field name string Current object name.
+ * ---@field connected_for integer Connected duration in seconds.
+ * ---@field idle_for integer Idle duration in seconds.
+ *
+ * ---Non-privileged server population statistics.
+ * ---@class WhoSummary
+ * ---@field hidden integer Hidden-player count; currently always zero for this non-privileged view.
+ * ---@field record integer Record simultaneous-player count.
+ * ---@field maximum? integer Configured limit, or nil when unlimited.
+ * @endcode
+ *
+ * @par LuaLS definition mux namespace mux.session
+ * @code{.lua}
+ * ---Live connection queries and interactive flows.
+ * ---@class MuxSessionPackage
+ * local mux_session = {}
+ * @endcode
+ */
 void lua_mux_install_session_bindings(lua_State *state,
                                       LuaMuxPackage *package) {
   lua_newtable(state);

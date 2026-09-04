@@ -4,7 +4,6 @@ Type             { Vehicle }
 Move_Type        { Wheel }
 Tons             { 80 }
 Comment          { Saved by: Charlemagne(#4624) at Mon Feb 21 07:14:44 2000 }
-Mech_BV          { 1088 }
 Max_Speed        { 53.75 }
 Specials         { XLEngine_Tech }
 Left_Side

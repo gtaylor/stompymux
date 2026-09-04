@@ -1,4 +1,5 @@
 #include "map.h"
+#include "btech/configuration.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "checked_conversion.h"
@@ -19,15 +20,12 @@
 #include "mech_notify_api.h"
 #include "mech_sensor_api.h"
 #include "mech_utils_api.h"
-#include "mux/network/mux_event.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
 #include "mux/server/server_control.h"
-#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
@@ -100,19 +98,17 @@ void debug_fixmap(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   notify_printf(btech_context_evaluation(m->xcode.context), player,
                 "Checking %d entries..", m->first_free);
   DOLIST(database, k, game_object_contents(database, m->mynum)) {
-    if (is_xcode(database, k)) {
-      if (btech_context_which_special(m->xcode.context, k) == GTYPE_MECH) {
-        Mech *map_mech;
-        /* Check if it's on the map */
-        for (i = 0; i < battle_map_unit_count(m); i++)
-          if (battle_map_unit_dbref(m, i) == k)
-            break;
-        if (i != battle_map_unit_count(m))
-          continue;
-        map_mech = btech_context_get_mech(m->xcode.context, k);
-        mech_map_dbref_set(map_mech, -1); /* Eep. */
-        mech_map_slot_set(map_mech, 0);
-      }
+    if (btech_context_which_special(m->xcode.context, k) == GTYPE_MECH) {
+      Mech *map_mech;
+      /* Check if it's on the map */
+      for (i = 0; i < battle_map_unit_count(m); i++)
+        if (battle_map_unit_dbref(m, i) == k)
+          break;
+      if (i != battle_map_unit_count(m))
+        continue;
+      map_mech = btech_context_get_mech(m->xcode.context, k);
+      mech_map_dbref_set(map_mech, -1); /* Eep. */
+      mech_map_slot_set(map_mech, 0);
     }
   }
   for (i = 0; i < battle_map_unit_count(m); i++) {
@@ -154,7 +150,6 @@ void map_view(DbRef player, void *data, char *buffer) {
   char *args[2];
   int display_height = MAP_DISPLAY_HEIGHT;
   int display_width = MAP_DISPLAY_WIDTH;
-  char *str;
   MapText *map_text;
   /* Check if its a valid map */
   if (!mech_map)
@@ -177,29 +172,10 @@ void map_view(DbRef player, void *data, char *buffer) {
     mecha_notify(evaluation, player, "Invalid number of parameters!");
     return;
   }
-  /* Get the Tacsize attribute from
-   * the player, if doesn't exist set the height and width to
-   * default params. If it does exist, check the values and
-   * make sure they are legit. */
-  char *token_context = nullptr;
-  str = btech_attribute_read(mech_map->xcode.context->database, player,
-                             A_TACSIZE, (char[LBUF_SIZE]){0});
-  if (!*str) {
-    display_height = MAP_DISPLAY_HEIGHT;
-    display_width = MAP_DISPLAY_WIDTH;
-  } else if (!parse_int_checked(strtok_r(str, " \t", &token_context),
-                                &display_height) ||
-             !parse_int_checked(strtok_r(nullptr, " \t", &token_context),
-                                &display_width) ||
-             strtok_r(nullptr, " \t", &token_context) != nullptr ||
-             display_height > 24 || display_height < 5 || display_width < 5 ||
-             display_width > 40) {
-    mecha_notify(evaluation, player,
-                 "Illegal Tacsize attribute. Must be in format "
-                 "'Height Width' . Height : 5-24 Width : 5-40");
-    display_height = MAP_DISPLAY_HEIGHT;
-    display_width = MAP_DISPLAY_WIDTH;
-  }
+  BtechPlayerUiPreferences preferences =
+      btech_player_ui_preferences(mech_map->xcode.context, player);
+  display_height = preferences.tactical_height;
+  display_width = preferences.tactical_width;
   /* Everything worked but lets check the map size */
   display_height = (display_height <= mech_map->map_height)
                        ? display_height
@@ -691,59 +667,7 @@ void map_clearmechs(DbRef player, void *data,
 }
 void map_update(DbRef obj, void *data) {
   BattleMap *map = ((BattleMap *)data);
-  Mech *mech;
-  char *tmps;
-  char *changemsg = alloc_lbuf("map_update.change");
-  char *attribute_buffer = alloc_lbuf("map_update.attribute");
-  int ma = 30;
-  int ml = 2;
-  int wind = 0;
-  int wspeed = 0;
-  int cloudbase = 200;
-  int oldl;
-  int oldv;
-  int i;
-  /* Changed from % 25 to % 60. %60 never hit when the event tick came here
-     and was odd. %25 should hit when it is odd or even. */
-  if (!(map->xcode.context->events->tick % 25)) {
-    oldl = (unsigned char)map->maplight;
-    oldv = (unsigned char)map->mapvis;
-    bool valid_map_visibility =
-        ((tmps = btech_attribute_read(map->xcode.context->database, obj,
-                                      A_MAPVIS, attribute_buffer)) != nullptr &&
-         map_parse_visibility_attribute(tmps, &ma, &ml, &wind, &wspeed,
-                                        &cloudbase, changemsg, LBUF_SIZE)) != 0;
-    if (!valid_map_visibility) {
-      ma = 30;
-      ml = 2;
-      wind = 0;
-      wspeed = 0;
-      cloudbase = 200;
-    }
-    map->winddir = clamp_int_to_short(wind);
-    map->windspeed = clamp_int_to_short(wspeed);
-    map->mapvis = clamp_int_to_char(bounded(0, ma, 60));
-    map->maxvis = clamp_int_to_short(bounded(24, ma * 3, 60));
-    map->maplight = clamp_int_to_char(bounded(0, ml, 2));
-    map->cloudbase = clamp_int_to_short(cloudbase);
-    if (ml != oldl || ma != oldv) {
-      for (i = 0; i < battle_map_unit_count(map); i++) {
-        const DbRef MECH_DBREF = battle_map_unit_dbref(map, i);
-        if (MECH_DBREF < 0)
-          continue;
-        mech = btech_context_get_mech(map->xcode.context, MECH_DBREF);
-        if (!mech)
-          continue;
-        if (ml != oldl)
-          sensor_light_availability_check(mech);
-        if (strlen(changemsg) > 5)
-          mech_notify(mech, MECHALL, changemsg);
-      }
-    }
-  }
   mech_sensor_map_los_update(obj, map);
-  free_buf(attribute_buffer);
-  free_buf(changemsg);
   /* Fire/Smoke are event-driven -> nothing related to them done here */
 }
 void initialize_map_empty(BattleMap *new, DbRef key) {
@@ -753,6 +677,9 @@ void initialize_map_empty(BattleMap *new, DbRef key) {
   new->map_width = DEFAULT_MAP_WIDTH;
   new->map_height = DEFAULT_MAP_HEIGHT;
   new->regen_factor = 1; /* Default the building regen to 1 */
+  (void)battle_map_visibility_set(new, 30);
+  new->maplight = 2;
+  new->cloudbase = 200;
   new->map = battle_map_grid_create(new->map_width, new->map_height);
   if (new->map == nullptr)
     abort();

@@ -1,4 +1,5 @@
 ---
+draft: true
 title: tech_time
 type: docs
 toc_hide: false

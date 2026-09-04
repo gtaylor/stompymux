@@ -3,7 +3,6 @@ Reference        { PXH-1 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 45 }
-Mech_BV          { 838 }
 Computer	 { 4 }
 Radio		 { 4 }
 Max_Speed        { 96.75 }

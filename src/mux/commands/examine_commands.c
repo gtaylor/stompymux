@@ -4,6 +4,7 @@
 
 #include "mux/commands/examine_commands.h"
 
+#include "btech/special_objects.h"
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_keys.h"
@@ -23,7 +24,6 @@
 #include "mux/support/styled_text/markup.h"
 #include "mux/world/access.h"
 #include "mux/world/match.h"
-#include "mux/world/object_set.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
@@ -37,16 +37,17 @@ typedef struct ExamineMarkupRequest {
 
 static void examine_notify_markup(const ExamineMarkupRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
-  DbRef player = request->viewer;
   char *markup = alloc_lbuf("examine_notify_markup");
 
   if (!styled_text_escape(request->styled, markup, LBUF_SIZE))
     styled_text_strip(evaluation->world->styled_text_palette, request->styled,
                       markup, LBUF_SIZE);
   if (request->label)
-    notify_printf(evaluation, player, "%s: %s", request->label, markup);
+    notify_printf(evaluation, request->viewer, "%s: %s", request->label,
+                  markup);
   else
-    notify_checked(evaluation, player, player, markup, MSG_ME_ALL | MSG_F_DOWN);
+    notify_checked(evaluation, request->viewer, request->viewer, markup,
+                   MSG_ME_ALL | MSG_F_DOWN);
   free_buf(markup);
 }
 
@@ -69,6 +70,10 @@ static void debug_examine(EvaluationContext *evaluation, DbRef player,
 
   notify_printf(evaluation, player, "Name    = %s",
                 game_object_name(evaluation->world->database, thing));
+  int btech_type = btech_special_object_type(evaluation->btech, thing);
+  if (btech_type >= 0)
+    notify_printf(evaluation, player, "BTech type: %s",
+                  btech_special_object_type_name(btech_type));
   notify_printf(evaluation, player, "Location= %ld",
                 game_object_location(evaluation->world->database, thing));
   notify_printf(evaluation, player, "Contents= %ld",
@@ -102,36 +107,48 @@ typedef struct ExamineObjectRequest {
   DbRef object;
 } ExamineObjectRequest;
 
-static void examine_native_attributes(const ExamineObjectRequest *request) {
+typedef struct ExamineDescription {
+  const char *name;
+  const char *value;
+} ExamineDescription;
+
+static void examine_description(const ExamineObjectRequest *request,
+                                ExamineDescription description,
+                                bool *has_attributes) {
+  if (!description.value || !*description.value)
+    return;
+  if (!*has_attributes) {
+    notify_checked(request->evaluation, request->viewer, request->viewer,
+                   "Attributes:", MSG_ME_ALL | MSG_F_DOWN);
+    *has_attributes = true;
+  }
+  char label[MBUF_SIZE];
+
+  (void)snprintf(label, sizeof label, "  %s", description.name);
+  examine_notify_markup(
+      &(ExamineMarkupRequest){.evaluation = request->evaluation,
+                              .viewer = request->viewer,
+                              .label = label,
+                              .styled = description.value});
+}
+
+static void examine_descriptions(const ExamineObjectRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
-  DbRef player = request->viewer;
   DbRef thing = request->object;
   GameDatabase *database = evaluation->world->database;
   bool has_attributes = false;
 
-  for (size_t index = 0; index < native_attribute_count(); index++) {
-    const Attribute *entry = native_attribute_at(index);
-
-    const char *value;
-
-    if (!object_attribute_is_administrable(entry->number))
-      continue;
-    value = attribute_get_raw(database, thing, entry->number);
-    if (!value || !*value)
-      continue;
-    if (!has_attributes) {
-      notify_checked(evaluation, player, player,
-                     "Attributes:", MSG_ME_ALL | MSG_F_DOWN);
-      has_attributes = true;
-    }
-    char label[MBUF_SIZE];
-
-    (void)snprintf(label, sizeof label, "  %s", entry->name);
-    examine_notify_markup(&(ExamineMarkupRequest){.evaluation = evaluation,
-                                                  .viewer = player,
-                                                  .label = label,
-                                                  .styled = value});
-  }
+  examine_description(
+      request,
+      (ExamineDescription){.name = "Description",
+                           .value = game_object_description(database, thing)},
+      &has_attributes);
+  examine_description(
+      request,
+      (ExamineDescription){
+          .name = "InternalDescription",
+          .value = game_object_internal_description(database, thing)},
+      &has_attributes);
 }
 
 void do_examine(CommandInvocation *invocation) {
@@ -183,6 +200,10 @@ void do_examine(CommandInvocation *invocation) {
   notify_printf(
       evaluation, PLAYER, "Type: %s",
       object_type_entry(typeof_obj(evaluation->world->database, thing))->name);
+  int btech_type = btech_special_object_type(evaluation->btech, thing);
+  if (btech_type >= 0)
+    notify_printf(evaluation, PLAYER, "BTech type: %s",
+                  btech_special_object_type_name(btech_type));
   description = flags_description(evaluation->world->database, thing);
   notify_checked(evaluation, PLAYER, PLAYER, description.text,
                  MSG_ME_ALL | MSG_F_DOWN);
@@ -195,7 +216,7 @@ void do_examine(CommandInvocation *invocation) {
   notify_checked(evaluation, PLAYER, PLAYER, description.text,
                  MSG_ME_ALL | MSG_F_DOWN);
   owned_text_release(&description);
-  examine_native_attributes(&(ExamineObjectRequest){
+  examine_descriptions(&(ExamineObjectRequest){
       .evaluation = evaluation, .viewer = PLAYER, .object = thing});
   buf2 = unparse_object(evaluation->world->database, evaluation, PLAYER,
                         game_object_zone(evaluation->world->database, thing));

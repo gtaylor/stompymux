@@ -4,7 +4,6 @@ Type             { Mech }
 Move_Type        { Biped }
 Tons             { 50 }
 Heat_Sinks       { 22 }
-Mech_BV          { 1280 }
 Max_Speed        { 96.75 }
 Specials         { DoubleHS FerroFibrous_Tech EndoSteel_Tech XLEngine_Tech }
 Left_Arm

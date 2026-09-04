@@ -3,7 +3,6 @@ Reference        { Marksman }
 Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 65 }
-Mech_BV          { 392 }
 Computer         { 3 }
 Max_Speed        { 64.50 }
 Specials         { FerroFibrous_Tech }

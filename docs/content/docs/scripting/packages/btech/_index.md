@@ -7,30 +7,32 @@ sidebar_root_for: self
 no_list: true
 ---
 
-`require("btech")` returns the built-in BattleTech API. It is available to
-running Lua callbacks, but its gameplay functions are unavailable during
-`@lua/check`. The package adapts the server's trusted BattleTech scripting
-handlers to Lua and invokes them with server authority.
+`require("btech")` returns the native, typed BattleTech API. Gameplay calls are
+unavailable during `@lua/check` and raise `mux.unavailable.checking` there.
 
-Arguments use Lua strings, numbers, and booleans; object arguments are native
-dbrefs rather than [`Object`](../mux/world/type-object/) handles. Invalid
-objects, arguments, or legacy error results raise structured Lua errors.
-Generic failures use `mux.error.codes`; BattleTech-subsystem failures use
-`btech.error.codes`.
+Database-object parameters accept either a numeric `DbRef` or a same-runtime
+[`Object`](../mux/world/type-object/) handle. Character parameters require an
+`Object`. Returned database references are `Object` handles; absent optional
+relationships are `nil`, and object collections are dense arrays.
+
+The package follows Mux conventions: required arguments are validated, surplus
+positional arguments are ignored, options tables reject unknown fields, and
+mutation-only functions return no Lua values. Failures raise structured errors
+instead of returning `#-N` strings. Sections accept an exact class-specific
+name or generated abbreviation, case-insensitively.
 
 ## Subpackages
 
 | Package | Description |
 | --- | --- |
-| [`btech.character`](character/) | Character values, skills, experience, and piloting rolls. |
-| [`btech.error`](error/) | Checked BattleTech error-code symbols. |
-| [`btech.map`](map/) | Battle maps, geometry, line of sight, and map messaging. |
-| [`btech.parts`](parts/) | Part catalogues, installed parts, stores, and costs. |
-| [`btech.repair`](repair/) | Damage and technician-status queries. |
-| [`btech.system`](system/) | Special-object fields and server-wide BattleTech queries. |
-| [`btech.unit`](unit/) | Live units, templates, combat values, and status. |
+| [`btech.character`](api/#character) | Character values, skills, and experience. |
+| [`btech.map`](api/#maps) | Maps, geometry, line of sight, placement, and messaging. |
+| [`btech.parts`](api/#parts-and-stores) | Part catalogues and stores. |
+| [`btech.player`](api/#player-configuration) | Player configuration. |
+| [`btech.repair`](api/#repair-and-system) | Repair state and technician queries. |
+| [`btech.system`](api/#repair-and-system) | Server-wide BattleTech queries. |
+| [`btech.template`](template/) | Immutable unit-template queries and displays. |
+| [`btech.unit`](api/#live-units) | Live units, combat state, and mutations. |
 
-Successful results are converted to the type documented for each function.
-Mutation-only operations return `true`. List operations split the legacy
-result on whitespace and `|`, convert numeric tokens (including `#123`) to
-Lua numbers, and return a flat array.
+See the [API reference](api/) for the complete exported surface and the
+generated `game/lua/types/btech.d.lua` for record fields and editor types.

@@ -3,7 +3,6 @@ Reference        { VL-2T }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 40 }
-Mech_BV          { 523 }
 Max_Speed        { 96.75 }
 Jump_Speed       { 64.50 }
 Specials         { Searchlight }

@@ -3,7 +3,6 @@ Reference        { HNT-151 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 20 }
-Mech_BV          { 429 }
 Max_Speed        { 86.00 }
 Jump_Speed       { 53.75 }
 Specials         { Fliparms }

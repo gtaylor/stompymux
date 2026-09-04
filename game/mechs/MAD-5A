@@ -7,7 +7,6 @@ Comment          { Saved by: Charlemagne(#4624) at Wed Feb 16 08:03:08 2000 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 29 }
-Mech_BV          { 1725 }
 Max_Speed        { 53.75 }
 Jump_Speed       { 32.25 }
 Specials         { SearchLight }

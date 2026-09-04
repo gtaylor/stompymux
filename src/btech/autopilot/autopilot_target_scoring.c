@@ -4,6 +4,7 @@
 
 #include "autopilot.h"
 #include "autopilot_autogun_api.h"
+#include "battle_value_api.h"
 #include "equipment_types.h"
 #include "map_coordinates.h"
 #include "map_los_api.h"
@@ -11,7 +12,6 @@
 #include "mech_condition_api.h"
 #include "mech_equipment_api.h"
 #include "mech_position_api.h"
-#include "mech_progress_api.h"
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_utils_api.h"
@@ -22,7 +22,7 @@ int auto_calc_target_score(Autopilot *autopilot [[maybe_unused]], Mech *mech,
   int target_score;
   float range;
   float target_speed;
-  int target_bv;
+  float target_bv;
 
   int total_armor_current;
   int total_armor_original;
@@ -96,12 +96,12 @@ int auto_calc_target_score(Autopilot *autopilot [[maybe_unused]], Mech *mech,
   speed_score = (-2.0F * target_speed) + 300.0F;
 
   /* Get the BV of the target */
-  target_bv = mech_battle_value(target);
+  target_bv = (float)battle_value_calculate(target).total;
 
   /* BV score calc */
   /* Min bv is 0, max is around 2000 (can go higher), and score goes from
    * 0 to 100 (can go higher but we don't care much about bv) */
-  bv_score = 0.05F * (float)target_bv;
+  bv_score = 0.05F * target_bv;
 
   /* Get the damage of the target by cycling through all the sections
    * and adding up the current and original values */

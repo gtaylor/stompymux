@@ -3,7 +3,6 @@ Reference        { WHM-6L }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 70 }
-Mech_BV          { 943 }
 Heat_Sinks       { 18 }
 Max_Speed        { 64.50 }
 Specials         { SearchLight }

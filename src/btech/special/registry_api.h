@@ -45,7 +45,6 @@ void mecha_notify_exceptf(const MechaNotificationExclusion *notification,
     __attribute__((format(printf, 2, 3)));
 void list_chashstats(DbRef player);
 int btech_special_object_type_count(void);
-const char *btech_special_object_type_name(int type);
 size_t btech_special_object_storage_size(int type);
 BattleMap *btech_context_get_map(BtechContext *context, DbRef d);
 Mech *btech_context_get_mech(BtechContext *context, DbRef d);

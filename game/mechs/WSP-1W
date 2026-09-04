@@ -3,7 +3,6 @@ Reference        { WSP-1W }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 20 }
-Mech_BV          { 316 }
 Max_Speed        { 96.75 }
 Jump_Speed       { 64.50 }
 Left_Arm

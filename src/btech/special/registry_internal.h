@@ -78,7 +78,6 @@ void btech_registry_tree_initialize(BtechContext *context);
 bool btech_command_allowed_for_mech(Mech *mech, int cmdflag);
 bool btech_special_command_access(BtechContext *context, DbRef object,
                                   PowerId power);
-int btech_context_which_special_attribute(BtechContext *context, DbRef key);
 typedef struct SpecialObjectHelpRequest {
   BtechContext *context;
   DbRef player;

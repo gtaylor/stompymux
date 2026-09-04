@@ -1,3 +1,4 @@
+#include "battle_value_api.h"
 #include "btech_channel.h"
 #include "checked_conversion.h"
 #include "context_internal.h" // IWYU pragma: keep
@@ -8,16 +9,12 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mech_utils_internal.h"
+#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "section_types.h"
 #include "weapon_settings.h"
 
-int mech_weapon_recycle_time(const Mech *mech, int weapon_index) {
-  return btech_weapon_settings_recycle_time(
-      &mech->xcode.context->weapon_settings, weapon_index);
-}
-
-int mech_weapon_battle_value(const Mech *mech, int weapon_index) {
+static int mech_weapon_battle_value(const Mech *mech, int weapon_index) {
   return btech_weapon_settings_battle_value(
       &mech->xcode.context->weapon_settings, weapon_index);
 }
@@ -48,59 +45,32 @@ static unsigned char battle_value_weapon_get(const unsigned char *values,
       values, MAX_WEAPS_SECTION, sizeof(*values), (size_t)index);
 }
 
-int find_average_gunnery(Mech *mech) {
-  /* NULLTODO : Get the multiple skills for gunnery and such ported or working
-   * here so this is usefull again. */
-  return find_pilot_gunnery(mech, 0);
-}
-
-static const float
-    SKILL_MULTIPLIERS[BTECH_BV_SKILL_LIMIT][BTECH_BV_SKILL_LIMIT] = {
-        {2.05F, 2.00F, 1.95F, 1.90F, 1.85F, 1.80F, 1.75F, 1.70F},
-        {1.85F, 1.80F, 1.75F, 1.70F, 1.65F, 1.60F, 1.55F, 1.50F},
-        {1.65F, 1.60F, 1.55F, 1.50F, 1.45F, 1.40F, 1.35F, 1.30F},
-        {1.45F, 1.40F, 1.35F, 1.30F, 1.25F, 1.20F, 1.15F, 1.10F},
-        {1.25F, 1.20F, 1.15F, 1.10F, 1.05F, 1.00F, 0.95F, 0.90F},
-        {1.15F, 1.10F, 1.05F, 1.00F, 0.95F, 0.90F, 0.85F, 0.80F},
-        {1.05F, 1.00F, 0.95F, 0.90F, 0.85F, 0.80F, 0.75F, 0.70F},
-        {0.95F, 0.90F, 0.85F, 0.80F, 0.75F, 0.70F, 0.65F, 0.60F}};
-
-float battle_value_skill_multiplier(int gunnery, int piloting) {
-  const int GUN_INDEX = battle_value_skill_index(gunnery);
-  const int PILOT_INDEX = battle_value_skill_index(piloting);
-  const float (*row)[BTECH_BV_SKILL_LIMIT] =
-      checked_storage_at_const(SKILL_MULTIPLIERS, BTECH_BV_SKILL_LIMIT,
-                               sizeof(*SKILL_MULTIPLIERS), (size_t)GUN_INDEX);
-  return *(const float *)checked_storage_at_const(
-      *row, BTECH_BV_SKILL_LIMIT, sizeof(**row), (size_t)PILOT_INDEX);
-}
-
-void calc_add_off_bv(const Mech *mech, float *offbv, const char *desc,
-                     float value) {
+static void calc_add_off_bv(const Mech *mech, float *offbv, const char *desc,
+                            float value) {
   *offbv += value;
   if (mech->xcode.context->configuration->btech_cost_debug)
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
                        "AddOffBV %25s %8.2f", desc, (double)value);
 }
 
-void calc_add_def_bv(const Mech *mech, float *defbv, const char *desc,
-                     float value) {
+static void calc_add_def_bv(const Mech *mech, float *defbv, const char *desc,
+                            float value) {
   *defbv += value;
   if (mech->xcode.context->configuration->btech_cost_debug)
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
                        "AddDefBV %25s %8.2f", desc, (double)value);
 }
 
-void calc_sub_def_bv(const Mech *mech, float *defbv, const char *desc,
-                     float value) {
+static void calc_sub_def_bv(const Mech *mech, float *defbv, const char *desc,
+                            float value) {
   *defbv -= value;
   if (mech->xcode.context->configuration->btech_cost_debug)
     btech_channel_send(mech->xcode.context, BTECH_CHANNEL_MECH_DEBUG,
                        "SubDefBV %25s-%8.2f", desc, (double)value);
 }
 
-/* Calculate Defensive BV 2.0 per Total Warfare Rules */
-float calculate_defensive_bv(Mech *mech) {
+/* Calculate defensive Battle Value per Total Warfare rules. */
+static float calculate_defensive_bv(Mech *mech) {
   float defbv = 0.0F;
   float engine_mod = 0.0F;
   int i;
@@ -371,11 +341,11 @@ float calculate_defensive_bv(Mech *mech) {
 
   defbv = roundf(defbv * 100.0F) / 100.0F;
   /* END DEFENSIVE BV */
-  return defbv;
+  return fmaxf(defbv, 0.0F);
 }
 
-/* Calculate Offensive BV 2.0 per Total Warfare Rules */
-float calculate_offensive_bv(Mech *mech) {
+/* Calculate offensive Battle Value per Total Warfare rules. */
+static float calculate_offensive_bv(Mech *mech) {
   float offbv = 0.0F;
   int heat_efficiency;
   int heat_sinks;
@@ -481,4 +451,17 @@ float calculate_offensive_bv(Mech *mech) {
 
   /* END OFFENSIVE BV */
   return offbv;
+}
+
+BattleValue battle_value_calculate(Mech *mech) {
+  const double OFFENSIVE = (double)calculate_offensive_bv(mech);
+  const double DEFENSIVE = (double)calculate_defensive_bv(mech);
+  return (BattleValue){.total = OFFENSIVE + DEFENSIVE,
+                       .offensive = OFFENSIVE,
+                       .defensive = DEFENSIVE};
+}
+
+char *battle_value_format(Mech *mech, char buffer[static LBUF_SIZE]) {
+  (void)snprintf(buffer, LBUF_SIZE, "%.2f", battle_value_calculate(mech).total);
+  return buffer;
 }

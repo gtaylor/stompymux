@@ -8,15 +8,16 @@ typedef struct BtechContext BtechContext;
 typedef struct BattleMap BattleMap;
 typedef struct Mech Mech;
 
-typedef enum {
-  GTYPE_MECH,
-  GTYPE_DEBUG,
-  GTYPE_MECHREP,
-  GTYPE_MAP,
-  GTYPE_AUTO,
-  GTYPE_TURRET,
-  GTYPE_UNUSED1 /* placeholder for old chargen object */
-} BtechSpecialObjectType;
+#include "btech/special_objects.h"
+
+enum : int {
+  GTYPE_MECH = BTECH_SPECIAL_MECH,
+  GTYPE_DEBUG = BTECH_SPECIAL_DEBUG,
+  GTYPE_MECHREP = BTECH_SPECIAL_MECHREP,
+  GTYPE_MAP = BTECH_SPECIAL_MAP,
+  GTYPE_AUTO = BTECH_SPECIAL_AUTOPILOT,
+  GTYPE_TURRET = BTECH_SPECIAL_TURRET,
+};
 
 typedef enum BtechSpecialLifecycleOperation : int {
   SPECIAL_FREE = 0,
@@ -24,13 +25,13 @@ typedef enum BtechSpecialLifecycleOperation : int {
 } BtechSpecialLifecycleOperation;
 
 /*
- * Base "class" for all XCODE objects.  Every XCODE object should start with a
- * field of this type, called 'xcode' by convention.
+ * Base "class" for registered BTech objects. Concrete legacy structs start
+ * with a field of this type, still called `xcode` for layout compatibility.
  */
 typedef struct BtechSpecialObject {
-  BtechSpecialObjectType type; /* XCODE object type */
-  size_t size;                 /* object size */
-  BtechContext *context;       /* borrowed runtime owner */
+  BtechSpecialObjectType type;
+  size_t size;           /* object size */
+  BtechContext *context; /* borrowed runtime owner */
 } BtechSpecialObject;
 
 /* Checked downcasts for objects already retrieved from the special registry. */

@@ -78,23 +78,14 @@ static void lua_mux_error_normalize(lua_State *state, int index) {
 /**
  * Creates a structured error value without raising it.
  *
- * @par Lua name `mux.error.new`
- * @par Lua signature `mux.error.new({ code = "area.missing", message = "area
- * was not found", detail = {} })`
- * @par Lua parameters - `fields` (`table`) An error definition with the
- * required code and message fields, and optional detail and cause fields.
- * - `fields.code` (`string|ErrorCode`) A dotted code string or a node from
- * mux.error.codes or mux.error.namespace.
- * - `fields.message` (`string`) A readable description of the error.
- * - `fields.detail` (`any`) Optional. Optional structured context for the
- * failure.
- * - `fields.cause` (`any`) Optional. Optional earlier error or other Lua value.
- * @par Lua returns - `error` (`Error`): The new structured error value.
- * @par Lua errors - `LUA_ERROR_CODE_ARG_INVALID` for an invalid error code;
- * ordinary Lua type errors for invalid fields.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.error.new
+ * @code{.lua}
+ * ---Creates a structured error without raising it.
+ * ---@param fields ErrorFields
+ * ---@return Error error
+ * ---
+ * function mux_error.new(fields) end
+ * @endcode
  */
 static int lua_mux_error_new(lua_State *state) {
   const char *code;
@@ -122,19 +113,17 @@ static int lua_mux_error_new(lua_State *state) {
 /**
  * Raises a structured error.
  *
- * @par Lua name `mux.error.raise`
- * @par Lua signature `mux.error.raise(code, message [, detail])`
- * @par Lua parameters - `code` (`string|ErrorCode`) A dotted code string or a
- * node from mux.error.codes or mux.error.namespace.
- * - `message` (`string`) A readable description of the failure.
- * - `detail` (`any`) Optional. Optional structured context stored on the raised
- * Error.
- * @par Lua returns - No values.
- * @par Lua errors - Raises the requested stable code;
- * `LUA_ERROR_CODE_ARG_INVALID` if that code is invalid.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.error.raise
+ * @code{.lua}
+ * ---Raises a structured error with the requested code.
+ * ---@param code string|ErrorCode
+ * ---@param message string
+ * ---@param detail? any
+ * ---
+ * ---Raises the requested code. Ordinary Lua type errors are raised when `code`
+ * ---or `message` cannot be converted to a string.
+ * function mux_error.raise(code, message, detail) end
+ * @endcode
  */
 static int lua_mux_error_raise(lua_State *state) {
   const char *code = lua_error_check_code(state, 1);
@@ -151,19 +140,16 @@ static int lua_mux_error_raise(lua_State *state) {
 /**
  * Tests whether an error-like value has a matching code.
  *
- * @par Lua name `mux.error.is`
- * @par Lua signature `mux.error.is(value, code)`
- * @par Lua parameters - `value` (`any`) A value to inspect. It matches only
- * when it is a table with a string code field.
- * - `code` (`string|ErrorCode`) A dotted code string or a node from
- * mux.error.codes or mux.error.namespace.
- * @par Lua returns - `matches` (`boolean`): true when value.code equals code or
- * begins with code followed by a dotted segment; otherwise false.
- * @par Lua errors - `LUA_ERROR_CODE_ARG_INVALID` when the requested comparison
- * code is invalid.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.error.is
+ * @code{.lua}
+ * ---Tests a table's code using exact or dotted-prefix matching.
+ * ---@param value any
+ * ---@param code string|ErrorCode
+ * ---@return boolean matches
+ * ---
+ * ---Raises an ordinary Lua type error when `code` cannot be converted to a string.
+ * function mux_error.is(value, code) end
+ * @endcode
  */
 static int lua_mux_error_is(lua_State *state) {
   const char *code = lua_error_check_code(state, 2);
@@ -175,18 +161,17 @@ static int lua_mux_error_is(lua_State *state) {
 /**
  * Returns a successful value or raises the supplied failure.
  *
- * @par Lua name `mux.error.check`
- * @par Lua signature `mux.error.check(value, err)`
- * @par Lua parameters - `value` (`any`) The result to test. Any Lua truthy
- * value is returned unchanged.
- * - `err` (`any`) The Lua value to raise when value is false or nil; normally
- * an Error.
- * @par Lua returns - `value` (`any`): The original truthy value.
- * @par Lua errors - Raises `err` unchanged when `value` is false or nil; it
- * does not invent a stable code.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.error.check
+ * @code{.lua}
+ * ---Returns a truthy value unchanged or raises `err` unchanged.
+ * ---@generic T
+ * ---@param value T
+ * ---@param err any
+ * ---@return T value
+ * ---
+ * ---Raises `err` unchanged when `value` is false or nil.
+ * function mux_error.check(value, err) end
+ * @endcode
  */
 static int lua_mux_error_check(lua_State *state) {
   if (!lua_toboolean(state, 1)) {
@@ -200,21 +185,20 @@ static int lua_mux_error_check(lua_State *state) {
 /**
  * Creates a structured error that preserves an earlier failure as its cause.
  *
- * @par Lua name `mux.error.wrap`
- * @par Lua signature `mux.error.wrap(err, code, message)`
- * @par Lua parameters - `err` (`any`) The earlier failure. A table with a
- * string code field is retained; another Lua value is normalized to a
- * mux.runtime error before becoming the cause.
- * - `code` (`string|ErrorCode`) A dotted code string or a node from
- * mux.error.codes or mux.error.namespace.
- * - `message` (`string`) A readable description of the additional context.
- * @par Lua returns - `error` (`Error`): A new error with error.cause set to the
- * retained or normalized err.
- * @par Lua errors - `LUA_ERROR_CODE_ARG_INVALID` for an invalid wrapper code;
- * non-error causes are normalized to `LUA_ERROR_CODE_RUNTIME`.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.error.wrap
+ * @code{.lua}
+ * ---Wraps a failure as the cause of a new structured error.
+ * ---@param err any
+ * ---@param code string|ErrorCode
+ * ---@param message string
+ * ---@return Error error
+ * ---
+ * ---Non-error causes are normalized to
+ * ---[`mux.error.codes.runtime`](lua://mux.error.codes.runtime). Ordinary Lua type
+ * ---errors are raised when `code` or `message` cannot be converted to a string.
+ * ---@see mux.error.codes.runtime
+ * function mux_error.wrap(err, code, message) end
+ * @endcode
  */
 static int lua_mux_error_wrap(lua_State *state) {
   const char *code = lua_error_check_code(state, 2);
@@ -229,22 +213,17 @@ static int lua_mux_error_wrap(lua_State *state) {
 /**
  * Builds a checked code-symbol tree for an author-defined error namespace.
  *
- * @par Lua name `local codes = mux.error.namespace`
- * @par Lua signature `local codes = mux.error.namespace("cargo", { "full",
- * "bay.locked" })`
- * @par Lua parameters - `prefix` (`string`) The first code segment, or a dotted
- * series of lower-case segments. The first segment must not be mux, btech, or
- * testing.
- * - `names` (`string[]`) An array of leaf names relative to prefix. Every name
- * uses one or more lower-case dotted segments; later segments may also contain
- * digits or _.
- * @par Lua returns - `codes` (`table`): A code-symbol tree whose leaf and
- * intermediate nodes can be passed wherever mux.error accepts a code.
- * @par Lua errors - `LUA_ERROR_CODE_ARG_INVALID` for invalid/reserved prefixes,
- * invalid names, or too many names.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.error.namespace
+ * @code{.lua}
+ * ---Builds a checked code-symbol tree for an author-defined namespace.
+ * ---@param prefix string
+ * ---@param names string[]
+ * ---@return ErrorCodeTree codes
+ * ---
+ * ---Raises [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).
+ * ---@see mux.error.codes.arg.invalid
+ * function mux_error.namespace(prefix, names) end
+ * @endcode
  */
 static int lua_mux_error_namespace(lua_State *state) {
   const char *prefix;
@@ -291,18 +270,19 @@ static int lua_mux_error_namespace(lua_State *state) {
 /**
  * Returns the checked native code tree for a namespace root.
  *
- * @par Lua name `local btech_codes = mux.error.code_tree`
- * @par Lua signature `local btech_codes = mux.error.code_tree("btech")`
- * @par Lua parameters - `root` (`string`) A native namespace root: mux, btech,
- * or testing.
- * @par Lua returns - `codes` (`table`): The cached checked symbol tree for the
- * root. Repeated calls for the same root return the same table object.  Unknown
- * roots raise mux.arg.invalid.
- * @par Lua errors - `LUA_ERROR_CODE_ARG_INVALID` for an unknown native
- * namespace root.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.error.code_tree
+ * @code{.lua}
+ * ---Returns the cached checked native code tree for a root.
+ * ---@param root NativeErrorRoot
+ * ---@return ErrorCodeTree codes
+ * ---@overload fun(root: "mux"): MuxErrorCodes
+ * ---@overload fun(root: "btech"): BtechErrorCodes
+ * ---@overload fun(root: "testing"): TestingErrorCodes
+ * ---
+ * ---Raises [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).
+ * ---@see mux.error.codes.arg.invalid
+ * function mux_error.code_tree(root) end
+ * @endcode
  */
 static int lua_mux_error_code_tree(lua_State *state) {
   const char *root = luaL_checkstring(state, 1);
@@ -317,20 +297,16 @@ static int lua_mux_error_code_tree(lua_State *state) {
  * Calls a function and returns either its results or a normalized error with a
  * traceback.
  *
- * @par Lua name `ok, result_or_error = mux.error.pcall`
- * @par Lua signature `ok, result_or_error = mux.error.pcall(fn, ...)`
- * @par Lua parameters - `fn` (`function`) The function to call.
- * - `...` (`any...`) Arguments passed to fn.
- * @par Lua returns - `...` (`true|any...`): On success, true followed by every
- * value returned by fn.
- * - `error` (`false|table`): On failure, false and the raised error. A raised
- * table with a string code field is retained; another Lua value is converted to
- * a mux.runtime error. The returned error receives a traceback field.
- * @par Lua errors - Does not raise a native error; failures are returned and
- * non-error failures are normalized to `LUA_ERROR_CODE_RUNTIME`.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.error.pcall
+ * @code{.lua}
+ * ---Calls a function, returning all results on success or a normalized traced error.
+ * ---@generic R...
+ * ---@param fn fun(...): R...
+ * ---@param ... any
+ * ---@return true, R...
+ * ---@overload fun(fn: function, ...: any): false, Error|CaughtError
+ * function mux_error.pcall(fn, ...) end
+ * @endcode
  */
 static int lua_mux_error_pcall(lua_State *state) {
   int arguments = lua_gettop(state) - 1;
@@ -371,6 +347,14 @@ static int lua_mux_error_pcall(lua_State *state) {
   return 2;
 }
 
+/**
+ * @par LuaLS definition mux namespace mux.error
+ * @code{.lua}
+ * ---@class MuxErrorPackage
+ * ---@field codes MuxErrorCodes Checked native `mux` code tree.
+ * local mux_error = {}
+ * @endcode
+ */
 void lua_mux_install_error_bindings(lua_State *state,
                                     LuaMuxPackage *package [[maybe_unused]]) {
   lua_error_install(state);

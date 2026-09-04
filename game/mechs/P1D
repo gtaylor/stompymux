@@ -6,7 +6,6 @@ Tons             { 75 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 24 }
-Mech_BV          { 1358 }
 Cargo_Space      { 0 }
 Max_Speed        { 64.50 }
 Specials         { DoubleHS FlipArms }

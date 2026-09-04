@@ -3,7 +3,6 @@ Reference        { SHD-2K }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 55 }
-Mech_BV          { 1018 }
 Heat_Sinks       { 17 }
 Max_Speed        { 86.00 }
 Jump_Speed       { 32.25 }

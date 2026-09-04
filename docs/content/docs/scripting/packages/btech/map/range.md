@@ -1,4 +1,5 @@
 ---
+draft: true
 title: range
 type: docs
 toc_hide: false
@@ -52,10 +53,10 @@ btech.map.range( map, x, y, unit )
 `number unit`
 : A unit dbref on the map.
 
-`number x`
+`integer x`
 : The hex X coordinate.
 
-`number y`
+`integer y`
 : The hex Y coordinate.
 
 ### Returns
@@ -83,13 +84,13 @@ btech.map.range( map, x, y, z, unit )
 `number unit`
 : A unit dbref on the map.
 
-`number x`
+`integer x`
 : The X coordinate.
 
-`number y`
+`integer y`
 : The Y coordinate.
 
-`number z`
+`integer z`
 : The altitude.
 
 ### Returns
@@ -112,10 +113,10 @@ btech.map.range( map, x1, y1, x2, y2 )
 `number map`
 : The map dbref.
 
-`number x1, y1`
+`integer x1, y1`
 : The first hex coordinates.
 
-`number x2, y2`
+`integer x2, y2`
 : The second hex coordinates.
 
 ### Returns
@@ -138,10 +139,10 @@ btech.map.range( map, x1, y1, z1, x2, y2, z2 )
 `number map`
 : The map dbref.
 
-`number x1, y1, z1`
+`integer x1, y1, z1`
 : The first coordinate and altitude.
 
-`number x2, y2, z2`
+`integer x2, y2, z2`
 : The second coordinate and altitude.
 
 ### Returns
@@ -154,6 +155,14 @@ btech.map.range( map, x1, y1, z1, x2, y2, z2 )
 This function is available only in a running Lua callback. Units must be on the
 specified map and hex coordinates must be within its bounds. Invalid targets,
 invalid arguments, and legacy error results raise a Lua error.
+
+The mixed unit/coordinate forms have a legacy dispatch limitation. In the
+four-argument form, an integer in the first overloaded position selects the
+coordinate-first form, so the unit-first form requires a non-integer textual
+reference such as `#42`. In the five-argument form, dispatch treats a leading
+digit or `.` as numeric; numeric-looking unit references in either unit position
+are therefore ambiguous. The signatures retain the canonical integer dbref type
+despite this runtime defect.
 
 ## See Also
 

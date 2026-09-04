@@ -4,7 +4,6 @@ Type             { Vehicle }
 Move_Type        { Wheel }
 Tons             { 30 }
 Comment          { Saved by: Captain QB(#198) at Tue Nov 15 16:47:48 2005 }
-Mech_BV          { 114 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 64.50 }

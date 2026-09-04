@@ -3,7 +3,6 @@ Reference        { RFL-3C }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 60 }
-Mech_BV          { 860 }
 Computer	 { 5 }
 Radio		 { 4 }
 Max_Speed        { 64.50 }

@@ -3,7 +3,6 @@
 --
 --   flag/<FLAG>                 boolean flag-presence comparison
 --   affiliation                integer dbref identity comparison
---   attribute/<Name>           exact native-attribute string comparison
 --   state/<namespace>/<key>    exact typed persistent-state comparison
 --   message/enactor            optional denial message for the enactor
 --   message/others             optional denial message for nearby objects
@@ -32,21 +31,6 @@ local function checked_flag(namespace, key, name)
     policy_error(namespace, key, "unsupported flag " .. string.format("%q", name))
   end
   return flag
-end
-
----Reads a supported native attribute or raises a policy-specific error.
----@param namespace string
----@param key string
----@param attributes Attribute
----@param name string
----@return string?
-local function checked_attribute(namespace, key, attributes, name)
-  local ok, value = pcall(attributes.get, attributes, name)
-
-  if not ok then
-    policy_error(namespace, key, "unsupported attribute " .. string.format("%q", name))
-  end
-  return value
 end
 
 ---Resolves a live affiliation dbref or raises a policy-specific error.
@@ -112,7 +96,6 @@ function access_policy.evaluate(ctx, options)
   local namespace = options.namespace
   local policy_object = mux.world.object(ctx.object)
   local subject = mux.world.object(ctx.subject)
-  local subject_attributes = subject:attributes()
   local entries = policy_object:state(namespace):entries()
   local passes = true
   local enactor_message = options.enactor_message
@@ -122,7 +105,6 @@ function access_policy.evaluate(ctx, options)
     local key = entry.key
     local value = entry.value
     local flag_name = string.match(key, "^flag/([A-Za-z][A-Za-z0-9_.%-]*)$")
-    local attribute_name = string.match(key, "^attribute/([A-Za-z][A-Za-z0-9_.%-]*)$")
     local state_namespace, state_key =
       string.match(key, "^state/([A-Za-z][A-Za-z0-9_.%-]*)/([A-Za-z][A-Za-z0-9_.%-]*)$")
 
@@ -137,13 +119,6 @@ function access_policy.evaluate(ctx, options)
     elseif key == "affiliation" then
       local required_affiliation = checked_affiliation(namespace, key, value)
       if subject:affiliation() ~= required_affiliation then
-        passes = false
-      end
-    elseif attribute_name then
-      if type(value) ~= "string" then
-        policy_error(namespace, key, "attribute requirement must be a string")
-      end
-      if checked_attribute(namespace, key, subject_attributes, attribute_name) ~= value then
         passes = false
       end
     elseif state_namespace then

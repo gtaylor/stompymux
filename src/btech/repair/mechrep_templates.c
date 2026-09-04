@@ -10,11 +10,9 @@
 #include "equipment_types.h"
 #include "map_terrain.h"    // IWYU pragma: keep
 #include "mech_lifecycle.h" // IWYU pragma: keep
-#include "mux/objects/attrs.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
 #include "registry_api.h"
 #include "repair_job.h"
 
@@ -72,7 +70,7 @@ void mechrep_rloadnew(DbRef player, void *data, char *buffer) {
 }
 
 void mechrep_rrestore(DbRef player, void *data, char *buffer [[maybe_unused]]) {
-  char *c;
+  const char *c;
 
   RepairFacilityCommandContext repair_command;
   RepairCommandStatus repair_status =
@@ -86,8 +84,7 @@ void mechrep_rrestore(DbRef player, void *data, char *buffer [[maybe_unused]]) {
   }
   RepairFacility *rep = repair_command.facility;
   Mech *mech = repair_command.mech;
-  c = btech_attribute_read(btech_context_database(mech_context(mech)),
-                           mech_dbref(mech), A_MECHTYPE, (char[LBUF_SIZE]){0});
+  c = mech_model_reference(mech);
   if (!c || !*c) {
     mecha_notify(btech_context_evaluation(rep->xcode.context), player,
                  "Sorry, I don't know what type of mech this is");

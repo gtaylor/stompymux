@@ -16,6 +16,9 @@ letter and may contain letters, digits, `_`, `-`, `.`, and `/`; keys are at most
 Supported values are strings, booleans, integers, and finite numbers. Empty
 strings are values; `nil` deletes a value.
 
+`tostring(state)` produces `state(#<dbref>, <namespace>)`. It raises
+`mux.object.invalid` after the underlying object becomes stale.
+
 Every callback has an implicit transaction. Reads observe earlier writes from
 that callback, including writes to multiple objects. A successful callback
 commits them together; a Lua error or memory-limit error discards them. The

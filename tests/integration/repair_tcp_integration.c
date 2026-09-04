@@ -345,11 +345,11 @@ static int seed_special_mech(const char *database) {
                   "UPDATE snapshot SET db_top = 8 WHERE id = 1;"
                   "INSERT INTO objects "
                   "(dbref, name, location, contents, exits, next, "
-                  "link, zone, type, has_xcode_flag) VALUES "
-                  "(6, 'Repair Test Mech', 7, 1, -1, -1, -1, -1, 1, 1),"
-                  "(7, 'Repair Test Store', -1, 6, -1, -1, -1, -1, 1, 0);"
-                  "INSERT INTO btech_object_state "
-                  "(object_dbref, object_type) VALUES (6, 'MECH');"
+                  "link, zone, type) VALUES "
+                  "(6, 'Repair Test Mech', 7, 1, -1, -1, -1, -1, 1),"
+                  "(7, 'Repair Test Store', -1, 6, -1, -1, -1, -1, 1);"
+                  "INSERT INTO btech_special_registrations "
+                  "(dbref, special_type) VALUES (6, 'MECH');"
                   "UPDATE objects SET location = 6, next = -1 WHERE dbref = 1;",
                   nullptr, nullptr, &error) == SQLITE_OK
           ? 0
@@ -512,7 +512,8 @@ int main(int argc, char **argv) {
           (int)sizeof(config) ||
       snprintf(database, sizeof(database), "%s/data/stompymux.db", directory) >=
           (int)sizeof(database) ||
-      (port = choose_port()) < 0 || write_config(config, port) < 0)
+      (unlink(database) < 0 && errno != ENOENT) || (port = choose_port()) < 0 ||
+      write_config(config, port) < 0)
     goto done;
 
   fprintf(stderr, "repair TCP phase: bootstrap database\n");

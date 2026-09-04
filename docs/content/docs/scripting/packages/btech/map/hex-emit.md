@@ -1,4 +1,5 @@
 ---
+draft: true
 title: hex_emit
 type: docs
 toc_hide: false
@@ -19,10 +20,10 @@ btech.map.hex_emit( map, x, y, message )
 `number map`
 : The map dbref.
 
-`number x`
+`integer x`
 : The hex X coordinate.
 
-`number y`
+`integer y`
 : The hex Y coordinate.
 
 `string message`
@@ -30,7 +31,7 @@ btech.map.hex_emit( map, x, y, message )
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Notes

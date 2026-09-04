@@ -3,7 +3,6 @@ Reference        { Gabriel }
 Type             { Vehicle }
 Move_Type        { Hover }
 Tons             { 5 }
-Mech_BV          { 175 }
 Computer         { 3 }
 Max_Speed        { 247.25 }
 Specials         { FerroFibrous_Tech }

@@ -5,7 +5,6 @@ Move_Type        { None }
 Tons             { 70 }
 Comment          { Saved by: Power Shaper(#1235) at Thu May 24 14:14:36 2007 }
 Heat_Sinks       { 12 }
-Mech_BV          { 917 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 0.00 }

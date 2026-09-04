@@ -4,7 +4,6 @@ Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 30 }
 Comment          { Saved by: Charlemagne(#4624) at Wed Feb 16 07:59:10 2000 }
-Mech_BV          { 393 }
 Max_Speed        { 118.25 }
 Left_Side
   Armor            { 18 }

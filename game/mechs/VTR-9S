@@ -3,7 +3,6 @@ Reference        { VTR-9S }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 80 }
-Mech_BV          { 1140 }
 Heat_Sinks       { 15 }
 Max_Speed        { 64.50 }
 Jump_Speed       { 43.00 }

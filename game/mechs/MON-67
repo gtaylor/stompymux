@@ -3,7 +3,6 @@ Reference        { MON-67 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 25 }
-Mech_BV          { 612 }
 Max_Speed        { 129.00 }
 Left_Arm
   Armor            { 8 }

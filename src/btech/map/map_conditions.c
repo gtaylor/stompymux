@@ -9,12 +9,11 @@
 #include "map_units_api.h"
 #include "mech_api_types.h"
 #include "mech_runtime_api.h"
+#include "mech_sensor_api.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 bool map_read_dimensions(FILE *file, int *width, int *height) {
@@ -31,38 +30,6 @@ bool map_read_dimensions(FILE *file, int *width, int *height) {
           parse_int_checked(height_text, height)) != 0;
 }
 
-bool map_parse_visibility_attribute(const char *attribute, int *visibility,
-                                    int *light, int *wind_direction,
-                                    int *wind_speed, int *cloud_base,
-                                    char *message, size_t message_size) {
-  char values[LBUF_SIZE];
-  char *token_context = nullptr;
-  (void)snprintf(values, sizeof(values), "%s", attribute);
-  char *first = strtok_r(values, " \t\r\n", &token_context);
-  char *second = strtok_r(nullptr, " \t\r\n", &token_context);
-  char *third = strtok_r(nullptr, " \t\r\n", &token_context);
-  char *fourth = strtok_r(nullptr, " \t\r\n", &token_context);
-  char *fifth = strtok_r(nullptr, " \t\r\n", &token_context);
-  if (!first || !second || !third || !fourth ||
-      !parse_int_checked(first, visibility) ||
-      !parse_int_checked(second, light) ||
-      !parse_int_checked(third, wind_direction) ||
-      !parse_int_checked(fourth, wind_speed))
-    return false;
-  if (!fifth)
-    return true;
-  if (!parse_int_checked(fifth, cloud_base)) {
-    char *message_rest = strtok_r(nullptr, "\r\n", &token_context);
-    (void)snprintf(message, message_size, "%s%s%s", fifth,
-                   message_rest ? " " : "", message_rest ? message_rest : "");
-    return true;
-  }
-  char *message_text = strtok_r(nullptr, "\r\n", &token_context);
-  if (message_text)
-    (void)snprintf(message, message_size, "%s", message_text);
-  return true;
-}
-
 void alter_conditions(BattleMap *map) {
   int i;
   Mech *mech;
@@ -74,6 +41,29 @@ void alter_conditions(BattleMap *map) {
       map_conditions_apply(mech, map);
     }
   }
+}
+
+bool battle_map_light_set(BattleMap *map, int light) {
+  if (map == nullptr || light < 0 || light > 2)
+    return false;
+  if (map->maplight == light)
+    return true;
+  map->maplight = clamp_int_to_char(light);
+  for (int index = 0; index < battle_map_unit_count(map); index++) {
+    Mech *mech = btech_context_get_mech(map->xcode.context,
+                                        battle_map_unit_dbref(map, index));
+    if (mech != nullptr)
+      sensor_light_availability_check(mech);
+  }
+  return true;
+}
+
+bool battle_map_visibility_set(BattleMap *map, int visibility) {
+  if (map == nullptr || visibility < 0 || visibility > 60)
+    return false;
+  map->mapvis = clamp_int_to_char(visibility);
+  map->maxvis = clamp_int_to_short(bounded(24, visibility * 3, 60));
+  return true;
 }
 
 int battle_map_gravity(const BattleMap *map) { return map->grav; }

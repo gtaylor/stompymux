@@ -6,7 +6,6 @@ Tons             { 90 }
 Comment          { Saved by: Spectre(#4628) at Mon Jan 14 13:06:44 2002 }
 Computer         { 3 }
 Heat_Sinks       { 20 }
-Mech_BV          { 1698 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 53.75 }

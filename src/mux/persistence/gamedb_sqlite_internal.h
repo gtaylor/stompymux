@@ -7,21 +7,10 @@
 
 #include "mux/persistence/gamedb.h"
 
-typedef struct NativeColumn {
-  int field;
-  const char *table;
-  const char *key_column;
-  const char *column;
-} NativeColumn;
-
 extern const int GAMEDB_SCHEMA_VERSION;
 extern const int GAMEDB_SOURCE_FORMAT_SQLITE;
 extern const char SCHEMA_OBJECTS_SQL[];
 extern const char SCHEMA_STATE_SQL[];
-extern const NativeColumn NATIVE_COLUMNS[];
-extern const size_t NATIVE_COLUMN_COUNT;
-const NativeColumn *gamedb_native_column_at(size_t index);
-
 void gamedb_log_failure(ServerLog *log, const char *stage, const char *path,
                         sqlite3 *sqlite);
 int gamedb_load_extensions(PersistenceContext *context, sqlite3 *sqlite,

@@ -19,6 +19,226 @@ const char LUA_TRACEBACK_KEY[] = "btmux.lua.traceback";
 static const char LUA_ERROR_CODE_NODE_METATABLE[] = "stompymux.error_code";
 static const char LUA_ERROR_CODE_TREES_KEY[] = "btmux.lua.error_code_trees";
 
+/**
+ * @par LuaLS definition mux alias error.root
+ * @code{.lua}
+ * ---@alias NativeErrorRoot "mux"|"btech"|"testing" Root of a checked native error-code tree.
+ * @endcode
+ *
+ * @par LuaLS definition mux type error.code
+ * @code{.lua}
+ * ---A checked error-code symbol. Calling `tostring` returns its dotted `code`.
+ * ---@class ErrorCode
+ * ---@field code string Fully qualified error code represented by this node.
+ * @endcode
+ *
+ * @par LuaLS definition mux type error.value
+ * @code{.lua}
+ * ---A structured Lua failure raised by native and script APIs. Calling `tostring`
+ * ---renders its stable code followed by its human-readable message.
+ * ---@class Error
+ * ---@field code string Stable dotted error code.
+ * ---@field message string Human-readable failure description.
+ * ---@field detail? any Optional structured context.
+ * ---@field cause? any Earlier failure preserved by wrapping.
+ * ---@field traceback? string Traceback added by [`mux.error.pcall`](lua://mux.error.pcall).
+ * local Error = {}
+ * @endcode
+ *
+ * @par LuaLS definition mux type error.caught
+ * @code{.lua}
+ * ---The minimum shape returned when [`mux.error.pcall`](lua://mux.error.pcall)
+ * ---catches a table carrying a string error code. Such a table is not guaranteed
+ * ---to use the native [`Error`](lua://Error) metatable.
+ * ---@class CaughtError
+ * ---@field code string Stable dotted error code.
+ * ---@field traceback string Traceback captured by `mux.error.pcall`.
+ * ---@field message? string Optional human-readable failure description.
+ * ---@field detail? any Optional structured context.
+ * ---@field cause? any Optional earlier failure.
+ * @endcode
+ *
+ * @par LuaLS definition mux type error.fields
+ * @code{.lua}
+ * ---@class ErrorFields
+ * ---@field code string|ErrorCode Stable dotted code or checked code node.
+ * ---@field message string Human-readable failure description.
+ * ---@field detail? any Optional structured context.
+ * ---@field cause? any Optional earlier failure.
+ * @endcode
+ *
+ * @par LuaLS definition mux catalog mux.error.codes
+ * @code{.lua}
+ * ---Checked `mux.arg.invalid` error-code node.
+ * ---@class MuxArgInvalidErrorCode: ErrorCode
+ * ---@field code "mux.arg.invalid"
+ * ---Checked `mux.unavailable.checking` error-code node.
+ * ---@class MuxCheckingUnavailableErrorCode: ErrorCode
+ * ---@field code "mux.unavailable.checking"
+ * ---Checked `mux.runtime` error-code node.
+ * ---@class MuxRuntimeErrorCode: ErrorCode
+ * ---@field code "mux.runtime"
+ * ---Checked `mux.state.invalid` error-code node.
+ * ---@class MuxStateInvalidErrorCode: ErrorCode
+ * ---@field code "mux.state.invalid"
+ * ---Checked `mux.state.value_too_large` error-code node.
+ * ---@class MuxStateValueTooLargeErrorCode: ErrorCode
+ * ---@field code "mux.state.value_too_large"
+ * ---Checked `mux.state.unavailable` error-code node.
+ * ---@class MuxStateUnavailableErrorCode: ErrorCode
+ * ---@field code "mux.state.unavailable"
+ * ---Checked `mux.object.invalid` error-code node.
+ * ---@class MuxObjectInvalidErrorCode: ErrorCode
+ * ---@field code "mux.object.invalid"
+ * ---Checked `mux.object.unavailable` error-code node.
+ * ---@class MuxObjectUnavailableErrorCode: ErrorCode
+ * ---@field code "mux.object.unavailable"
+ * ---Checked `mux.flag.invalid` error-code node.
+ * ---@class MuxFlagInvalidErrorCode: ErrorCode
+ * ---@field code "mux.flag.invalid"
+ * ---Checked `mux.power.invalid` error-code node.
+ * ---@class MuxPowerInvalidErrorCode: ErrorCode
+ * ---@field code "mux.power.invalid"
+ * ---Checked `mux.access.invalid` error-code node.
+ * ---@class MuxAccessInvalidErrorCode: ErrorCode
+ * ---@field code "mux.access.invalid"
+ * ---Checked `mux.connection.invalid` error-code node.
+ * ---@class MuxConnectionInvalidErrorCode: ErrorCode
+ * ---@field code "mux.connection.invalid"
+ * ---Checked `mux.connection.unavailable` error-code node.
+ * ---@class MuxConnectionUnavailableErrorCode: ErrorCode
+ * ---@field code "mux.connection.unavailable"
+ * ---Checked `mux.channel.invalid` error-code node.
+ * ---@class MuxChannelInvalidErrorCode: ErrorCode
+ * ---@field code "mux.channel.invalid"
+ * ---Checked `mux.channel_flag.invalid` error-code node.
+ * ---@class MuxChannelFlagInvalidErrorCode: ErrorCode
+ * ---@field code "mux.channel_flag.invalid"
+ * ---Checked `mux.text.invalid` error-code node.
+ * ---@class MuxTextInvalidErrorCode: ErrorCode
+ * ---@field code "mux.text.invalid"
+ * ---Checked `mux.module.invalid` error-code node.
+ * ---@class MuxModuleInvalidErrorCode: ErrorCode
+ * ---@field code "mux.module.invalid"
+ * ---Checked `mux.module.unavailable` error-code node.
+ * ---@class MuxModuleUnavailableErrorCode: ErrorCode
+ * ---@field code "mux.module.unavailable"
+ * ---Checked `mux.config.not_found` error-code node.
+ * ---@class MuxConfigNotFoundErrorCode: ErrorCode
+ * ---@field code "mux.config.not_found"
+ * ---Checked `mux.config.unsupported` error-code node.
+ * ---@class MuxConfigUnsupportedErrorCode: ErrorCode
+ * ---@field code "mux.config.unsupported"
+ * ---Checked `mux.internal` error-code node.
+ * ---@class MuxInternalErrorCode: ErrorCode
+ * ---@field code "mux.internal"
+ *
+ * ---@class MuxArgErrorCodes: ErrorCode
+ * ---@field invalid MuxArgInvalidErrorCode `mux.arg.invalid`.
+ * ---@class MuxUnavailableErrorCodes: ErrorCode
+ * ---@field checking MuxCheckingUnavailableErrorCode `mux.unavailable.checking`.
+ * ---@class MuxStateErrorCodes: ErrorCode
+ * ---@field invalid MuxStateInvalidErrorCode `mux.state.invalid`.
+ * ---@field value_too_large MuxStateValueTooLargeErrorCode `mux.state.value_too_large`.
+ * ---@field unavailable MuxStateUnavailableErrorCode `mux.state.unavailable`.
+ * ---@class MuxObjectErrorCodes: ErrorCode
+ * ---@field invalid MuxObjectInvalidErrorCode `mux.object.invalid`.
+ * ---@field unavailable MuxObjectUnavailableErrorCode `mux.object.unavailable`.
+ * ---@class MuxFlagErrorCodes: ErrorCode
+ * ---@field invalid MuxFlagInvalidErrorCode `mux.flag.invalid`.
+ * ---@class MuxPowerErrorCodes: ErrorCode
+ * ---@field invalid MuxPowerInvalidErrorCode `mux.power.invalid`.
+ * ---@class MuxAccessErrorCodes: ErrorCode
+ * ---@field invalid MuxAccessInvalidErrorCode `mux.access.invalid`.
+ * ---@class MuxConnectionErrorCodes: ErrorCode
+ * ---@field invalid MuxConnectionInvalidErrorCode `mux.connection.invalid`.
+ * ---@field unavailable MuxConnectionUnavailableErrorCode `mux.connection.unavailable`.
+ * ---@class MuxChannelErrorCodes: ErrorCode
+ * ---@field invalid MuxChannelInvalidErrorCode `mux.channel.invalid`.
+ * ---@class MuxChannelFlagErrorCodes: ErrorCode
+ * ---@field invalid MuxChannelFlagInvalidErrorCode `mux.channel_flag.invalid`.
+ * ---@class MuxTextErrorCodes: ErrorCode
+ * ---@field invalid MuxTextInvalidErrorCode `mux.text.invalid`.
+ * ---@class MuxModuleErrorCodes: ErrorCode
+ * ---@field invalid MuxModuleInvalidErrorCode `mux.module.invalid`.
+ * ---@field unavailable MuxModuleUnavailableErrorCode `mux.module.unavailable`.
+ * ---@class MuxConfigErrorCodes: ErrorCode
+ * ---@field not_found MuxConfigNotFoundErrorCode `mux.config.not_found`.
+ * ---@field unsupported MuxConfigUnsupportedErrorCode `mux.config.unsupported`.
+ * ---@class MuxErrorCodes: ErrorCode
+ * ---@field arg MuxArgErrorCodes Invalid-argument code branch.
+ * ---@field unavailable MuxUnavailableErrorCodes Runtime-availability code branch.
+ * ---@field runtime MuxRuntimeErrorCode `mux.runtime`.
+ * ---@field state MuxStateErrorCodes Persistent-state code branch.
+ * ---@field object MuxObjectErrorCodes Database-object code branch.
+ * ---@field flag MuxFlagErrorCodes Object-flag code branch.
+ * ---@field power MuxPowerErrorCodes Object-power code branch.
+ * ---@field access MuxAccessErrorCodes Command-access code branch.
+ * ---@field connection MuxConnectionErrorCodes Connection code branch.
+ * ---@field channel MuxChannelErrorCodes Communication-channel code branch.
+ * ---@field channel_flag MuxChannelFlagErrorCodes Channel-flag code branch.
+ * ---@field text MuxTextErrorCodes Styled-text code branch.
+ * ---@field module MuxModuleErrorCodes Lua-module code branch.
+ * ---@field config MuxConfigErrorCodes Configuration code branch.
+ * ---@field internal MuxInternalErrorCode `mux.internal`.
+ * @endcode
+ *
+ * @par LuaLS definition mux type error.tree
+ * @code{.lua}
+ * ---@class ErrorCodeTree: ErrorCode
+ * ---@field [string] ErrorCodeTree Checked child code segment.
+ * @endcode
+ *
+ * @par LuaLS definition mux catalog mux.testing.codes
+ * @code{.lua}
+ * ---Checked `testing.assertion` error-code node used by the Lua test harness.
+ * ---@class TestingAssertionErrorCode: ErrorCode
+ * ---@field code "testing.assertion"
+ * ---Checked `testing.runtime` error-code node used by the Lua test harness.
+ * ---@class TestingRuntimeErrorCode: ErrorCode
+ * ---@field code "testing.runtime"
+ * ---Checked native code tree used by the Lua test harness.
+ * ---@class TestingErrorCodes: ErrorCode
+ * ---@field assertion TestingAssertionErrorCode `testing.assertion`.
+ * ---@field runtime TestingRuntimeErrorCode `testing.runtime`.
+ * @endcode
+ *
+ * @par LuaLS definition btech catalog btech.error.codes
+ * @code{.lua}
+ * ---Checked native BattleTech error-code tree.
+ * ---@class BtechPartNotFoundErrorCode: ErrorCode
+ * ---@field code "btech.part.not_found"
+ * ---@class BtechPartAmbiguousErrorCode: ErrorCode
+ * ---@field code "btech.part.ambiguous"
+ * ---@class BtechPartWrongKindErrorCode: ErrorCode
+ * ---@field code "btech.part.wrong_kind"
+ * ---@class BtechPartErrorCodes: ErrorCode
+ * ---@field not_found BtechPartNotFoundErrorCode `btech.part.not_found`.
+ * ---@field ambiguous BtechPartAmbiguousErrorCode `btech.part.ambiguous`.
+ * ---@field wrong_kind BtechPartWrongKindErrorCode `btech.part.wrong_kind`.
+ * ---@class BtechTemplateNotFoundErrorCode: ErrorCode
+ * ---@field code "btech.template.not_found"
+ * ---@class BtechTemplateInvalidErrorCode: ErrorCode
+ * ---@field code "btech.template.invalid"
+ * ---@class BtechTemplateErrorCodes: ErrorCode
+ * ---@field not_found BtechTemplateNotFoundErrorCode `btech.template.not_found`.
+ * ---@field invalid BtechTemplateInvalidErrorCode `btech.template.invalid`.
+ * ---@class BtechOperationFailedErrorCode: ErrorCode
+ * ---@field code "btech.operation.failed"
+ * ---@class BtechOperationErrorCodes: ErrorCode
+ * ---@field failed BtechOperationFailedErrorCode `btech.operation.failed`.
+ * ---@class BtechErrorCodes: ErrorCode
+ * ---@field part BtechPartErrorCodes Part resolution errors.
+ * ---@field template BtechTemplateErrorCodes Template resolution errors.
+ * ---@field operation BtechOperationErrorCodes Operational failures.
+ * @endcode
+ *
+ * @par LuaLS definition btech type error.package
+ * @code{.lua}
+ * ---@class BtechErrorPackage
+ * ---@field codes BtechErrorCodes Checked native BattleTech code tree.
+ * @endcode
+ */
 const char *const LUA_ERROR_CODE_NAMES[LUA_ERROR_CODE_COUNT] = {
     [LUA_ERROR_CODE_ARG_INVALID] = "mux.arg.invalid",
     [LUA_ERROR_CODE_CHECKING_UNAVAILABLE] = "mux.unavailable.checking",
@@ -28,7 +248,6 @@ const char *const LUA_ERROR_CODE_NAMES[LUA_ERROR_CODE_COUNT] = {
     [LUA_ERROR_CODE_STATE_UNAVAILABLE] = "mux.state.unavailable",
     [LUA_ERROR_CODE_OBJECT_INVALID] = "mux.object.invalid",
     [LUA_ERROR_CODE_OBJECT_UNAVAILABLE] = "mux.object.unavailable",
-    [LUA_ERROR_CODE_ATTRIBUTE_INVALID] = "mux.attribute.invalid",
     [LUA_ERROR_CODE_FLAG_INVALID] = "mux.flag.invalid",
     [LUA_ERROR_CODE_POWER_INVALID] = "mux.power.invalid",
     [LUA_ERROR_CODE_ACCESS_INVALID] = "mux.access.invalid",
@@ -41,8 +260,12 @@ const char *const LUA_ERROR_CODE_NAMES[LUA_ERROR_CODE_COUNT] = {
     [LUA_ERROR_CODE_MODULE_UNAVAILABLE] = "mux.module.unavailable",
     [LUA_ERROR_CODE_CONFIG_NOT_FOUND] = "mux.config.not_found",
     [LUA_ERROR_CODE_CONFIG_UNSUPPORTED] = "mux.config.unsupported",
-    [LUA_ERROR_CODE_BTECH_UNAVAILABLE] = "btech.unavailable",
-    [LUA_ERROR_CODE_BTECH_FAILED] = "btech.failed",
+    [LUA_ERROR_CODE_BTECH_PART_NOT_FOUND] = "btech.part.not_found",
+    [LUA_ERROR_CODE_BTECH_PART_AMBIGUOUS] = "btech.part.ambiguous",
+    [LUA_ERROR_CODE_BTECH_PART_WRONG_KIND] = "btech.part.wrong_kind",
+    [LUA_ERROR_CODE_BTECH_TEMPLATE_NOT_FOUND] = "btech.template.not_found",
+    [LUA_ERROR_CODE_BTECH_TEMPLATE_INVALID] = "btech.template.invalid",
+    [LUA_ERROR_CODE_BTECH_OPERATION_FAILED] = "btech.operation.failed",
     [LUA_ERROR_CODE_TESTING_ASSERTION] = "testing.assertion",
     [LUA_ERROR_CODE_TESTING_RUNTIME] = "testing.runtime",
     [LUA_ERROR_CODE_INTERNAL] = "mux.internal",
@@ -89,11 +312,17 @@ static const char *lua_error_code_at(const char *code, size_t code_size,
   return checked_storage_at_const(code, code_size, sizeof(char), index);
 }
 
+/**
+ * @par LuaLS ignore mux __tostring -- String conversion is represented by the ErrorCode class declaration.
+ */
 static int lua_error_code_node_tostring(lua_State *state) {
   lua_getfield(state, 1, "code");
   return 1;
 }
 
+/**
+ * @par LuaLS ignore mux __index -- Dynamic child lookup is represented by the ErrorCodeTree table declaration.
+ */
 static int lua_error_code_node_index(lua_State *state) {
   const char *key = lua_tostring(state, 2);
 
@@ -102,6 +331,9 @@ static int lua_error_code_node_index(lua_State *state) {
                          key ? key : "<non-string>");
 }
 
+/**
+ * @par LuaLS ignore mux __newindex -- Immutability is represented by the ErrorCode and ErrorCodeTree declarations.
+ */
 static int lua_error_code_node_newindex(lua_State *state) {
   return lua_error_raise(state, LUA_ERROR_CODE_ARG_INVALID,
                          "Lua error code nodes are immutable");
@@ -211,6 +443,9 @@ bool lua_error_push_code_tree(lua_State *state, const char *root) {
   return true;
 }
 
+/**
+ * @par LuaLS ignore mux __tostring -- String conversion is represented by the Error class declaration.
+ */
 static int lua_error_tostring(lua_State *state) {
   const char *code;
   const char *message;
@@ -224,6 +459,17 @@ static int lua_error_tostring(lua_State *state) {
   return 1;
 }
 
+/**
+ * Tests this error's code using dotted-prefix matching.
+ *
+ * @par LuaLS definition mux callable Error:is
+ * @code{.lua}
+ * ---Tests this error's code using dotted-prefix matching.
+ * ---@param code string|ErrorCode
+ * ---@return boolean matches
+ * function Error:is(code) end
+ * @endcode
+ */
 static int lua_error_is_method(lua_State *state) {
   const char *code = lua_error_check_code(state, 2);
 
@@ -231,6 +477,16 @@ static int lua_error_is_method(lua_State *state) {
   return 1;
 }
 
+/**
+ * Returns the deepest table-valued cause, or this error when it has none.
+ *
+ * @par LuaLS definition mux callable Error:root
+ * @code{.lua}
+ * ---Returns the deepest table-valued cause, or this error when it has none.
+ * ---@return any root
+ * function Error:root() end
+ * @endcode
+ */
 static int lua_error_root_method(lua_State *state) {
   constexpr int ROOT_LIMIT = 64;
   int depth = 0;

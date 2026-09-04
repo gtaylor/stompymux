@@ -5,7 +5,6 @@ Move_Type        { Track }
 Tons             { 95 }
 Comment          { Saved by: Charlemagne(#4624) at Wed Feb 16 07:58:37 2000 }
 Heat_Sinks       { 24 }
-Mech_BV          { 619 }
 Max_Speed        { 53.75 }
 Specials         { SearchLight ICEEngine_Tech }
 Left_Side

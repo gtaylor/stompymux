@@ -3,7 +3,6 @@ Reference        { HCT-3F }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 45 }
-Mech_BV          { 769 }
 Heat_Sinks       { 11 }
 Computer 	 { 4 }
 Max_Speed        { 64.50 }

@@ -4,7 +4,6 @@ Type             { VTOL }
 Move_Type        { VTOL }
 Computer         { 4 }
 Tons             { 21 }
-Mech_BV          { 398 }
 Max_Speed        { 161.25 }
 Comment		 { ICEEngine_Tech }
 Specials	 { Searchlight }

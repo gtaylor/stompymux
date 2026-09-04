@@ -3,7 +3,6 @@ Reference        { FLC-4N }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 30 }
-Mech_BV          { 523 }
 Heat_Sinks       { 12 }
 Max_Speed        { 96.75 }
 Jump_Speed       { 64.50 }

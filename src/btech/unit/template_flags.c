@@ -22,12 +22,12 @@ static const char *const UNIT_CLASS_NAMES[] = {
     nullptr};
 
 static const char *const CRITICAL_FIRE_MODE_NAMES[] = {
-    "Destroyed", "Disabled",       "Broken",          "Damaged",
-    "OnTC",      "RearMount",      "Hotload",         "Halfton",
-    "OneShot",   "OneShot_Used",   "UltraMode",       "RapidFire",
-    "Gattling",  "Rotary_TwoShot", "Rotary_FourShot", "Rotary_SixShot",
-    "Heat",      "BackPack",       "Jettisoned",      "OmniBase",
-    nullptr};
+    "Destroyed",   "Disabled",       "Broken",          "Damaged",
+    "OnTC",        "RearMount",      "Hotload",         "Halfton",
+    "OneShot",     "OneShot_Used",   "UltraMode",       "RapidFire",
+    "Gattling",    "Rotary_TwoShot", "Rotary_FourShot", "Rotary_SixShot",
+    "Heat",        "BackPack",       "Jettisoned",      "OmniBase",
+    "RocketFired", nullptr};
 
 static const char *const CRITICAL_AMMO_MODE_NAMES[] = {
     "LBX/Cluster",   "Artemis/Mine",
@@ -41,7 +41,7 @@ static const char *const CRITICAL_AMMO_MODE_NAMES[] = {
     "Precision",     "Stinger",
     "Caseless",      "Sguided",
     "ExtendedRange", "HighExplosive",
-    nullptr};
+    "MML_LRM",       nullptr};
 
 /* 'specials' is *full* */
 static const char *const PRIMARY_TECHNOLOGY_NAMES[] = {
@@ -139,10 +139,24 @@ size_t template_critical_fire_mode_count(void) {
          1;
 }
 
+const char *template_critical_fire_mode_name(size_t index) {
+  return *(const char *const *)checked_storage_at_const(
+      (const void *)CRITICAL_FIRE_MODE_NAMES,
+      template_critical_fire_mode_count(), sizeof(*CRITICAL_FIRE_MODE_NAMES),
+      index);
+}
+
 size_t template_critical_ammo_mode_count(void) {
   return (sizeof(CRITICAL_AMMO_MODE_NAMES) /
           sizeof(*CRITICAL_AMMO_MODE_NAMES)) -
          1;
+}
+
+const char *template_critical_ammo_mode_name(size_t index) {
+  return *(const char *const *)checked_storage_at_const(
+      (const void *)CRITICAL_AMMO_MODE_NAMES,
+      template_critical_ammo_mode_count(), sizeof(*CRITICAL_AMMO_MODE_NAMES),
+      index);
 }
 
 size_t primary_technology_name_count(void) {

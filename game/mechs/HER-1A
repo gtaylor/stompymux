@@ -3,7 +3,6 @@ Reference        { HER-1A }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 30 }
-Mech_BV          { 501 }
 Radio 		 { 5 }
 Max_Speed        { 150.5 }
 Left_Arm

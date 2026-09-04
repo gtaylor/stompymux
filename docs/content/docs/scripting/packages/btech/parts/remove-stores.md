@@ -1,4 +1,5 @@
 ---
+draft: true
 title: remove_stores
 type: docs
 toc_hide: false
@@ -22,12 +23,12 @@ btech.parts.remove_stores( target, part_name, quantity )
 `string part_name`
 : A recognized part name.
 
-`number quantity`
+`integer quantity`
 : The quantity to remove.
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Notes

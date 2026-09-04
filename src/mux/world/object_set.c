@@ -5,17 +5,15 @@
 #include "mux/world/object_set.h"
 
 #include <stdio.h>
-#include <string.h>
 
-#include "btech/special_objects.h"
 #include "mux/commands/action_messages.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_keys.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/network/network_output.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
+#include "mux/objects/player_account.h"
 #include "mux/objects/powers.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
@@ -69,8 +67,7 @@ void do_alias(CommandInvocation *invocation) {
   char *name = invocation->first;
   char *alias = invocation->second;
   DbRef thing;
-  long aflags;
-  OwnedText oldalias;
+  const char *oldalias;
   OwnedText trimalias;
 
   thing = match_controlled(&invocation->context->match, player, name);
@@ -87,8 +84,7 @@ void do_alias(CommandInvocation *invocation) {
      * Fetch the old alias
      */
 
-    oldalias =
-        attribute_get(evaluation->world->database, thing, A_ALIAS, &aflags);
+    oldalias = player_account_alias(evaluation->world->database, thing);
     trimalias = trim_spaces(alias);
 
     if (!is_controls(evaluation->world->database, player, thing)) {
@@ -108,9 +104,16 @@ void do_alias(CommandInvocation *invocation) {
        * New alias is null, just clear it
        */
 
-      delete_player_name(invocation->context->world, thing, oldalias.text);
-      attribute_clear(evaluation->world->database, thing, A_ALIAS);
-      notify_checked(evaluation, player, player, "Alias removed.", MSG_ME);
+      delete_player_name(invocation->context->world, thing, oldalias);
+      if (player_account_alias_set(evaluation->world->database, thing,
+                                   nullptr)) {
+        notify_checked(evaluation, player, player, "Alias removed.", MSG_ME);
+      } else {
+        if (*oldalias)
+          (void)add_player_name(invocation->context->world, thing, oldalias);
+        notify_checked(evaluation, player, player, "Unable to remove alias.",
+                       MSG_ME);
+      }
     } else if (lookup_player(invocation->context->world, NOTHING,
                              trimalias.text, 0) != NOTHING) {
 
@@ -131,203 +134,62 @@ void do_alias(CommandInvocation *invocation) {
        * Remove the old name and add the new name
        */
 
-      delete_player_name(invocation->context->world, thing, oldalias.text);
-      attribute_add(evaluation->world->database, thing, A_ALIAS, trimalias.text,
-                    aflags);
-      if (add_player_name(invocation->context->world, thing, trimalias.text)) {
+      delete_player_name(invocation->context->world, thing, oldalias);
+      if (!player_account_alias_set(evaluation->world->database, thing,
+                                    trimalias.text)) {
+        if (*oldalias)
+          (void)add_player_name(invocation->context->world, thing, oldalias);
+        notify_checked(evaluation, player, player, "Unable to set alias.",
+                       MSG_ME);
+      } else if (add_player_name(invocation->context->world, thing,
+                                 trimalias.text)) {
         notify_checked(evaluation, player, player, "Alias set.", MSG_ME);
       } else {
         notify_checked(
             evaluation, player, player,
             "That name is already in use or is illegal, alias cleared.",
             MSG_ME);
-        attribute_clear(evaluation->world->database, thing, A_ALIAS);
+        if (!player_account_alias_set(evaluation->world->database, thing,
+                                      nullptr))
+          notify_checked(evaluation, player, player,
+                         "Unable to clear the rejected alias.", MSG_ME);
       }
     }
     owned_text_release(&trimalias);
-    owned_text_release(&oldalias);
   } else {
     notify_checked(evaluation, player, player, "Only players may have aliases.",
                    MSG_ME);
   }
 }
 
-bool object_attribute_is_administrable(int attribute_number) {
-  switch (attribute_number) {
-  case A_DESCRIPTION:
-  case A_INTERNAL_DESCRIPTION:
-  case A_MECHPREFID:
-  case A_MECHSKILLS:
-  case A_XTYPE:
-  case A_TACSIZE:
-  case A_LRSHEIGHT:
-  case A_CONTACTOPT:
-  case A_MECHNAME:
-  case A_MECHTYPE:
-  case A_MECHDESC:
-  case A_MWTEMPLATE:
-  case A_BUILDLINKS:
-  case A_BUILDENTRANCE:
-  case A_BUILDCOORD:
-  case A_PILOTNUM:
-  case A_MAPVIS:
-  case A_TECHTIME:
-  case A_PCEQUIP:
-    return true;
-  default:
-    return false;
-  }
-}
-
-const Attribute *object_attribute_administrable_by_name(GameDatabase *database,
-                                                        const char *name) {
-  const Attribute *attribute = attribute_by_name(database, name);
-
-  return attribute && object_attribute_is_administrable(attribute->number)
-             ? attribute
-             : nullptr;
-}
-
-static bool object_attribute_command_target(CommandInvocation *invocation,
-                                            char *address, DbRef *object,
-                                            const Attribute **attribute) {
-  size_t length = strlen(address);
-  size_t slash = 0;
-  while (slash < length && *(const char *)checked_storage_at_const(
-                               address, length, sizeof(char), slash) != '/')
-    slash++;
-
-  if (slash == length || slash + 1 == length) {
-    notify_checked(&invocation->context->evaluation, invocation->player,
-                   invocation->player, "Specify an object and attribute.",
-                   MSG_ME);
-    return false;
-  }
-  *(char *)checked_storage_at(address, length + 1, sizeof(char), slash) = '\0';
-  char *name = checked_storage_at(address, length + 1, sizeof(char), slash + 1);
-  *object = match_controlled(&invocation->context->match, invocation->player,
-                             address);
-  if (*object == NOTHING)
-    return false;
-  *attribute = object_attribute_administrable_by_name(
-      invocation->context->world->database, name);
-  if (!*attribute) {
-    notify_checked(&invocation->context->evaluation, invocation->player,
-                   invocation->player,
-                   "That is not an administrable attribute.", MSG_ME);
-    return false;
-  }
-  return true;
-}
-
-void do_attribute(CommandInvocation *invocation) {
+void do_description(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
-  GameDatabase *database = invocation->context->world->database;
-  DbRef object;
-  const Attribute *attribute;
-
-  if (invocation->key == 0) {
-    raw_notify(evaluation, invocation->player, "@attribute command switches:");
-    raw_notify(evaluation, invocation->player,
-               "  /get      Display one native attribute.");
-    raw_notify(evaluation, invocation->player,
-               "  /examine  Display all supported native attributes.");
-    raw_notify(evaluation, invocation->player,
-               "  /set      Set or clear one native attribute.");
-    return;
-  }
-  if (invocation->key == ATTRIBUTE_EXAMINE) {
-    object = match_controlled(&invocation->context->match, invocation->player,
-                              invocation->first);
-    if (object == NOTHING)
-      return;
-    for (size_t index = 0; index < native_attribute_count(); index++) {
-      const Attribute *entry = native_attribute_at(index);
-
-      const char *value;
-
-      if (!object_attribute_is_administrable(entry->number))
-        continue;
-      value = attribute_get_raw(database, object, entry->number);
-      notify_printf(evaluation, invocation->player, "%s: %s", entry->name,
-                    value ? value : "");
-    }
-    return;
-  }
-  if (invocation->key != ATTRIBUTE_GET && invocation->key != ATTRIBUTE_SET) {
-    raw_notify(evaluation, invocation->player,
-               "Invalid @attribute switch combination.");
-    return;
-  }
-  if (!object_attribute_command_target(invocation, invocation->first, &object,
-                                       &attribute))
-    return;
-  if (invocation->key == ATTRIBUTE_GET) {
-    const char *value = attribute_get_raw(database, object, attribute->number);
-
-    notify_printf(evaluation, invocation->player, "%s: %s", attribute->name,
-                  value ? value : "");
-    return;
-  }
-  object_attribute_set(evaluation, invocation->player, object,
-                       attribute->number, invocation->second, 0);
-}
-
-bool object_attribute_set(EvaluationContext *evaluation, DbRef player,
-                          DbRef thing, int attrnum, char *attrtext, int key) {
-  long aflags;
-  int have_xcode;
-  const Attribute *attr;
-  char *compiled = nullptr;
+  DbRef object = match_controlled(&invocation->context->match,
+                                  invocation->player, invocation->first);
+  char compiled[LBUF_SIZE];
   char error[256];
 
-  attr = attribute_by_number(evaluation->world->database, attrnum);
-  attribute_get_info(evaluation->world->database, thing, attrnum, &aflags);
-  if (attr && is_wizard(evaluation->world->database, player)) {
-    if (attrnum == A_ALIAS &&
-        (!is_player(evaluation->world->database, thing) ||
-         (*attrtext &&
-          !ok_player_name(evaluation->world->configuration, attrtext)))) {
-      notify_checked(evaluation, player, player,
-                     "Player aliases must use valid printable ASCII names.",
-                     MSG_ME);
-      return false;
-    }
-    if (attrnum == A_DESCRIPTION || attrnum == A_INTERNAL_DESCRIPTION) {
-      compiled = alloc_lbuf("object_attribute_set.style");
-      if (!styled_text_compile(evaluation->world->styled_text_palette, attrtext,
-                               compiled, LBUF_SIZE, error, sizeof(error))) {
-        notify_printf(evaluation, player, "Invalid styled-text markup: %s.",
-                      error);
-        free_buf(compiled);
-        return false;
-      }
-    }
-    if (attrnum == A_XTYPE &&
-        !btech_special_object_type_can_set(evaluation->btech, thing, attrtext,
-                                           error, sizeof(error))) {
-      notify_printf(evaluation, player, "%s.", error);
-      free_buf(compiled);
-      return false;
-    }
-    have_xcode = is_xcode(evaluation->world->database, thing);
-    attribute_add(evaluation->world->database, thing, attrnum, attrtext,
-                  aflags);
-    btech_special_object_flag_changed(
-        evaluation->btech, player, thing, have_xcode != 0,
-        is_xcode(evaluation->world->database, thing));
-    if (attrnum == A_XTYPE)
-      btech_special_object_type_register(&(BtechSpecialObjectAction){
-          .context = evaluation->btech, .actor = player, .object = thing});
-    if (!(key & SET_QUIET))
-      notify_printf(evaluation, player, "%s/%s - %s",
-                    game_object_name(evaluation->world->database, thing),
-                    attr->name, strlen(attrtext) ? "Set." : "Cleared.");
-    free_buf(compiled);
-    return true;
+  if (object == NOTHING)
+    return;
+  if (!styled_text_compile(evaluation->world->styled_text_palette,
+                           invocation->second, compiled, sizeof(compiled),
+                           error, sizeof(error))) {
+    notify_printf(evaluation, invocation->player,
+                  "Invalid styled-text markup: %s.", error);
+    return;
   }
-  notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
-  return false;
+  const bool IS_INTERNAL = invocation->key == DESCRIPTION_INTERNAL;
+  if (IS_INTERNAL) {
+    game_object_internal_description_set(evaluation->world->database, object,
+                                         invocation->second);
+  } else {
+    game_object_description_set(evaluation->world->database, object,
+                                invocation->second);
+  }
+  notify_printf(evaluation, invocation->player, "%s/%s - %s",
+                game_object_name(evaluation->world->database, object),
+                IS_INTERNAL ? "InternalDescription" : "Description",
+                *invocation->second ? "Set." : "Cleared.");
 }
 
 void do_power(CommandInvocation *invocation) {
@@ -353,23 +215,6 @@ void do_power(CommandInvocation *invocation) {
   power_set(&invocation->context->evaluation,
             invocation->context->runtime->world_indexes, thing, player, flag,
             invocation->key);
-}
-
-void do_setattr(CommandInvocation *invocation) {
-  DbRef player = invocation->player;
-  int attrnum = invocation->key;
-  char *name = invocation->first;
-  char *attrtext = invocation->second;
-  DbRef thing;
-
-  init_match(&invocation->context->match, player, name, OBJECT_TYPE_NOTYPE);
-  match_everything(&invocation->context->match, 0);
-  thing = noisy_match_result(&invocation->context->match);
-
-  if (thing == NOTHING)
-    return;
-  object_attribute_set(&invocation->context->evaluation, player, thing, attrnum,
-                       attrtext, 0);
 }
 
 void do_use(CommandInvocation *invocation) {

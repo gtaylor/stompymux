@@ -8,7 +8,6 @@ Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 12 }
 RadioType        { 127 }
-Mech_BV          { 1251 }
 Max_Speed        { 64.50 }
 Left_Arm
   Armor            { 10 }

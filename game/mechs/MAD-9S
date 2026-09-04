@@ -6,7 +6,6 @@ Tons             { 75 }
 Heat_Sinks       { 28 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 1406 }
 Max_Speed        { 64.50 }
 Specials         { DoubleHS EndoSteel_Tech LightEngine_Tech ECM BeagleProbe Searchlight }
 Left_Arm

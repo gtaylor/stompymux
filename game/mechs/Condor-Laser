@@ -9,7 +9,6 @@ LRS_Range        { 60 }
 Scan_Range       { 30 }
 Computer         { 3 }
 Heat_Sinks       { 20 }
-Mech_BV          { 0 }
 Max_Speed        { 118.25 }
 Left_Side
   Armor            { 24 }

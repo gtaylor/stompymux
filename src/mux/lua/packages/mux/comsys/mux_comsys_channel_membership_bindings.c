@@ -16,17 +16,24 @@
 /**
  * Adds a player to a channel with a player-local command alias.
  *
- * @par Lua name `Channel:add_player`
- * @par Lua signature `channel:add_player( player, alias, quiet )`
- * @par Lua parameters - `player` (`number|Object`) Live player object.
- * - `alias` (`string`) One to five printable ASCII characters without spaces.
- * - `quiet` (`boolean`) Suppresses the channel-wide join announcement.
- * @par Lua returns - None.
- * @par Lua errors - Argument, object, or channel validation errors; unavailable
- * while checking.
- * @par Lua availability Available only at runtime.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Channel:add_player
+ * @code{.lua}
+ * ---Adds a player to this channel with a player-local command alias. The trusted
+ * ---operation bypasses the channel join lock. A quiet join suppresses only the
+ * ---channel-wide announcement; direct confirmations are still sent to the player.
+ * ---@param player DbRef|Object Player to add.
+ * ---@param alias string One to five printable ASCII characters without spaces.
+ * ---@param quiet boolean Whether to suppress the channel-wide join announcement.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`mux.error.codes.internal`](lua://mux.error.codes.internal).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.channel.invalid
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.object.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.internal
+ * function Channel:add_player(player, alias, quiet) end
+ * @endcode
  */
 int lua_mux_channel_add_player(lua_State *state) {
   LuaMuxChannel *handle = lua_mux_check_channel(state, 1);

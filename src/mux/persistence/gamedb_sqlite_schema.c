@@ -1,12 +1,9 @@
 /* gamedb_sqlite.c -- SQLite game-database persistence */
 
-#include <stddef.h>
-
-#include "mux/objects/attrs.h"
 #include "mux/persistence/gamedb_sqlite_internal.h"
 
 // Increment whenever an incompatible schema change is made.
-const int GAMEDB_SCHEMA_VERSION = 31;
+const int GAMEDB_SCHEMA_VERSION = 32;
 
 // Identifies SQLite as the storage implementation in snapshot metadata.
 const int GAMEDB_SOURCE_FORMAT_SQLITE = 1;
@@ -40,7 +37,6 @@ const char SCHEMA_OBJECTS_SQL[] =
     " type INTEGER NOT NULL CHECK (type IN (0, 1, 2, 3, 5)),"
     " lua_parent TEXT NOT NULL DEFAULT '',"
     " description TEXT, internal_description TEXT,"
-    " destroyer INTEGER,"
     " has_ansi_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_ansi_flag IN (0, 1)),"
     " has_audible_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_audible_flag IN "
     "(0, 1)),"
@@ -73,8 +69,6 @@ const char SCHEMA_OBJECTS_SQL[] =
     " has_transparent_flag INTEGER NOT NULL DEFAULT 0 CHECK "
     "(has_transparent_flag IN (0, 1)),"
     " has_wizard_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_wizard_flag IN (0, "
-    "1)),"
-    " has_xcode_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_xcode_flag IN (0, "
     "1)),"
     " has_zombie_flag INTEGER NOT NULL DEFAULT 0 CHECK (has_zombie_flag IN (0, "
     "1)),"
@@ -110,17 +104,6 @@ const char SCHEMA_STATE_SQL[] =
     " recipient_dbref INTEGER NOT NULL,"
     " PRIMARY KEY (player_dbref, position)"
     ") WITHOUT ROWID;"
-    "CREATE TABLE btech_object_state ("
-    " object_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref),"
-    " mech_preferred_id TEXT, mech_skills TEXT,"
-    " object_type TEXT, tactical_size TEXT, lrs_height TEXT,"
-    " contact_options TEXT, mech_name TEXT, mech_type TEXT,"
-    " mech_description TEXT, mw_template TEXT,"
-    " build_links TEXT, build_entrances TEXT,"
-    " build_coordinates TEXT, pilot_dbref INTEGER,"
-    " map_visibility TEXT, tech_complete_at INTEGER,"
-    " personal_combat_equipment TEXT"
-    ");"
     "CREATE TABLE btech_character_state ("
     " player_dbref INTEGER PRIMARY KEY REFERENCES objects(dbref) ON DELETE "
     "CASCADE,"
@@ -155,33 +138,5 @@ const char SCHEMA_STATE_SQL[] =
     " value BLOB NOT NULL,"
     " PRIMARY KEY (object_dbref, namespace, key)"
     ") WITHOUT ROWID;";
-
-const NativeColumn NATIVE_COLUMNS[] = {
-    {A_DESCRIPTION, "objects", "dbref", "description"},
-    {A_INTERNAL_DESCRIPTION, "objects", "dbref", "internal_description"},
-    {A_DESTROYER, "objects", "dbref", "destroyer"},
-    {A_ALIAS, "player_state", "object_dbref", "alias"},
-    {A_MECHPREFID, "btech_object_state", "object_dbref", "mech_preferred_id"},
-    {A_MECHSKILLS, "btech_object_state", "object_dbref", "mech_skills"},
-    {A_XTYPE, "btech_object_state", "object_dbref", "object_type"},
-    {A_TACSIZE, "btech_object_state", "object_dbref", "tactical_size"},
-    {A_LRSHEIGHT, "btech_object_state", "object_dbref", "lrs_height"},
-    {A_CONTACTOPT, "btech_object_state", "object_dbref", "contact_options"},
-    {A_MECHNAME, "btech_object_state", "object_dbref", "mech_name"},
-    {A_MECHTYPE, "btech_object_state", "object_dbref", "mech_type"},
-    {A_MECHDESC, "btech_object_state", "object_dbref", "mech_description"},
-    {A_MWTEMPLATE, "btech_object_state", "object_dbref", "mw_template"},
-    {A_BUILDLINKS, "btech_object_state", "object_dbref", "build_links"},
-    {A_BUILDENTRANCE, "btech_object_state", "object_dbref", "build_entrances"},
-    {A_BUILDCOORD, "btech_object_state", "object_dbref", "build_coordinates"},
-    {A_PILOTNUM, "btech_object_state", "object_dbref", "pilot_dbref"},
-    {A_MAPVIS, "btech_object_state", "object_dbref", "map_visibility"},
-    {A_TECHTIME, "btech_object_state", "object_dbref", "tech_complete_at"},
-    {A_PCEQUIP, "btech_object_state", "object_dbref",
-     "personal_combat_equipment"},
-};
-
-const size_t NATIVE_COLUMN_COUNT =
-    sizeof(NATIVE_COLUMNS) / sizeof(*NATIVE_COLUMNS);
 
 /* Log either the SQLite error or the current operating-system error. */

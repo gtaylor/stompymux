@@ -3,7 +3,6 @@ Reference        { KGC-0000 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 100 }
-Mech_BV          { 1401 }
 Comment          { RS3025 has hands/lower arm actuators, removed for MUX }
 Heat_Sinks       { 15 }
 Max_Speed        { 53.75 }

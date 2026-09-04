@@ -5,7 +5,6 @@ Move_Type        { Biped }
 Tons             { 1 }
 Radio            { 4 }
 Heat_Sinks       { 12 }
-Mech_BV          { 184 }
 Cargo_Space      { 0 }
 Max_Suits        { 4 }
 Max_Speed        { 32.25 }

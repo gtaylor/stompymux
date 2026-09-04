@@ -5,7 +5,6 @@ Move_Type        { Hover }
 Tons             { 20 }
 Comment          { Saved by: Captain QB(#198) at Fri Nov  4 23:18:29 2005 }
 Heat_Sinks       { 3 }
-Mech_BV          { 163 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 129.00 }

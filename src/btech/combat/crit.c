@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "btech/context.h"
+#include "btech/special_objects.h"
 #include "btech_channel.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
@@ -65,7 +66,8 @@ void mech_explosion_apply(Mech *wounded, Mech *attacker) {
   from = mech_dbref(wounded);
 
   SAFE_DOLIST(database, i, tmpnext, game_object_contents(database, from)) {
-    if (is_good_obj(database, i) && is_xcode(database, i)) {
+    if (is_good_obj(database, i) &&
+        btech_special_object_type(context, i) >= 0) {
       target = btech_context_get_mech(context, i);
       if (target) {
         if (mech_class(target) == CLASS_BSUIT) {

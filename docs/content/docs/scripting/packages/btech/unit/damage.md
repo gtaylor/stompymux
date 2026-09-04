@@ -1,4 +1,5 @@
 ---
+draft: true
 title: damage
 type: docs
 toc_hide: false
@@ -19,16 +20,16 @@ btech.unit.damage( unit, damage, cluster_size, direction, force_critical, unit_m
 `number unit`
 : The unit dbref.
 
-`number damage`
+`integer damage`
 : Total damage, from 1 through 1000.
 
-`number cluster_size`
+`integer cluster_size`
 : Damage applied per cluster; at least 1.
 
-`number direction`
+`integer direction`
 : The attack direction code.
 
-`boolean or number force_critical`
+`boolean or integer force_critical`
 : Whether to try to force a critical hit.
 
 `string unit_message`
@@ -39,7 +40,7 @@ btech.unit.damage( unit, damage, cluster_size, direction, force_critical, unit_m
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Notes

@@ -3,7 +3,6 @@ Reference        { J_Edgar-Flamer }
 Type             { Vehicle }
 Move_Type        { Hover }
 Tons             { 25 }
-Mech_BV          { 243 }
 Max_Speed        { 182.75 }
 Left_Side
   Armor            { 19 }

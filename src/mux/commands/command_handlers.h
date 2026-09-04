@@ -34,10 +34,8 @@ void do_tapcom(DbRef player, DbRef cause, int key, char *channel,
 /** Handles the admin command. @param[in,out] invocation Command invocation. */
 
 void do_admin(CommandInvocation *invocation); /* Change config parameters */
-/** Handles the attribute command. @param[in,out] invocation Command invocation.
- */
-
-void do_attribute(CommandInvocation *invocation);
+/** Handles typed BTech special-object registration and inspection. */
+void do_btech(CommandInvocation *invocation);
 /** Handles the alias command. @param[in,out] invocation Command invocation. */
 
 void do_alias(CommandInvocation *invocation);
@@ -60,6 +58,9 @@ void do_create(CommandInvocation *invocation);
  */
 
 void do_destroy(CommandInvocation *invocation);
+/** Handles object description commands. */
+
+void do_description(CommandInvocation *invocation);
 /** Handles the dig command. @param[in,out] invocation Command invocation. */
 
 void do_dig(CommandInvocation *invocation);
@@ -159,10 +160,6 @@ void do_search(CommandInvocation *invocation); /* Search matching objects. */
 /** Handles the flag command. @param[in,out] invocation Command invocation. */
 
 void do_flag(CommandInvocation *invocation);
-/** Handles the setattr command. @param[in,out] invocation Command invocation.
- */
-
-void do_setattr(CommandInvocation *invocation); /* Set object attribute */
 /** Handles the stats command. @param[in,out] invocation Command invocation. */
 
 void do_stats(CommandInvocation *invocation); /* Display object statistics. */

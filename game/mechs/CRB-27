@@ -3,7 +3,6 @@ Reference        { CRB-27 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 50 }
-Mech_BV          { 965 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 16 }

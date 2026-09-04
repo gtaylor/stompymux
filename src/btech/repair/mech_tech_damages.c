@@ -23,6 +23,7 @@
 #include "mycool.h"
 #include "registry_api.h"
 #include "repair_job.h"
+#include "repair_need_messages.h"
 #include "section_types.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -62,38 +63,6 @@ static void append_damage(char *buffer, size_t size, const char *fmt, ...) {
   // NOLINTNEXTLINE(clang-analyzer-security.VAList)
   (void)vsnprintf(destination, size - len, fmt, ap);
   va_end(ap);
-}
-static const char *const REPAIR_NEED_MSGS[] = {
-    "Reattachment",
-    "Repairs on %s",
-    "Repairs on %s",
-    "Repairs on %s",
-    "Realign focus on %s",
-    "Charging crystal repairs on %s",
-    "Barrel repairs on %s",
-    "Ammo feed repairs on %s",
-    "Ranging system repairs on %s",
-    "Ammo feed repairs on %s",
-    "Replacement of %s",
-    "Reload of %s%s (%d rounds)",
-    "Repairs on%s armor (%d points)",
-    "Repairs on rear%s armor (%d points)",
-    "Repairs on%s internals (%d points)",
-    "Removal of section",
-    "Removal of %s",
-    "Removal of %s",
-    "Unload of %s%s(%d rounds)",
-    "Reseal",
-    "Replace suit",
-};
-static const char *repair_need_message(int type) {
-  if (type < 0)
-    abort();
-  const char *const *message = (const char *const *)checked_storage_at_const(
-      (const void *)REPAIR_NEED_MSGS,
-      sizeof(REPAIR_NEED_MSGS) / sizeof(*REPAIR_NEED_MSGS),
-      sizeof(*REPAIR_NEED_MSGS), (size_t)type);
-  return *message;
 }
 static void repair_damage_add(RepairDamageTable *damages, int type,
                               int location) {
@@ -367,6 +336,25 @@ size_t mech_repair_job_count(Mech *mech) {
   else
     make_scrap_table(&damages, mech);
   return (size_t)damages.count;
+}
+void btech_repair_needs_visit(Mech *mech, BtechRepairNeedVisitor visitor,
+                              void *context) {
+  RepairDamageTable damages = {0};
+  if (unit_is_fixable(mech))
+    make_damage_table(&damages, mech);
+  else
+    make_scrap_table(&damages, mech);
+  for (int index = 0; index < damages.count; index++) {
+    const RepairDamage *damage = repair_damage_const(&damages, index);
+    const BtechRepairNeed NEED = {
+        .operation = damage->type,
+        .section = damage->location,
+        .detail = damage->detail,
+        .in_progress = is_under_repair(&damages, mech, index) != 0,
+    };
+    if (!visitor(&NEED, context))
+      return;
+  }
 }
 void show_mechs_damage(DbRef player, Mech *mech,
                        char *buffer [[maybe_unused]]) {

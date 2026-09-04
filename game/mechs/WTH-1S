@@ -3,7 +3,6 @@ Reference        { WTH-1S }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 40 }
-Mech_BV          { 753 }
 Heat_Sinks       { 14 }
 Max_Speed        { 64.50 }
 Jump_Speed       { 43.00 }

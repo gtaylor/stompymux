@@ -6,7 +6,6 @@ Tons             { 90 }
 Heat_Sinks       { 24 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 1088 }
 Max_Speed        { 64.50 }
 Specials         { DoubleHS FerroFibrous_Tech }
 Left_Arm

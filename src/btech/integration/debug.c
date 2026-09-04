@@ -8,6 +8,7 @@
 
 #include "autopilot.h"
 #include "btech/context.h"
+#include "btech/special_objects.h"
 #include "command_handlers_api.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
@@ -124,8 +125,6 @@ static bool debug_check_stuff(const RedBlackTreeVisitCall *call) {
 
   case GTYPE_AUTO:
   case GTYPE_TURRET:
-  case GTYPE_UNUSED1:
-    break;
   }
 
   DebugMemoryStat *stat = debug_memory_stat(memory, TYPE);

@@ -3,7 +3,6 @@ Reference        { Cavalry-SRM }
 Type             { VTOL }
 Move_Type        { VTOL }
 Tons             { 25 }
-Mech_BV          { 714 }
 Max_Speed        { 161.25 }
 Specials	 { ICEEngine_Tech }
 Left_Side

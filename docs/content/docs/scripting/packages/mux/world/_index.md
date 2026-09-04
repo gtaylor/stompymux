@@ -13,7 +13,6 @@ sidebar_root_for: self
 
 | Type | Description |
 | --- | --- |
-| [`Attribute`](type-attribute/) | Access to an object's supported native attributes. |
 | [`Flags`](type-flags/) | Flags that change object behavior. |
 | [`Object`](type-object/) | A validated handle for a native database object. |
 | [`Powers`](type-powers/) | Bits that bring granularly escalated privileges. |

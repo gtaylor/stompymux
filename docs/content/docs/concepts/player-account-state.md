@@ -13,6 +13,7 @@ All wall-clock values use signed Unix epoch seconds in SQLite. Commands that
 show login history render those values as ISO 8601 UTC. Game ticks and elapsed
 durations are not wall-clock timestamps and remain in their native units.
 
-`Alias` remains a native object attribute because changing it participates in
-the live player-name index. Passwords, login metadata, and page memory are not
-available through the attribute interface.
+Aliases are typed player-account state because changing them participates in
+the live player-name index. They remain editable through `@alias`. Passwords,
+aliases, login metadata, and page memory are not available through the
+attribute interface.

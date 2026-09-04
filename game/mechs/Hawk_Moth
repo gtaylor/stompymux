@@ -3,7 +3,6 @@ Reference        { Hawk_Moth }
 Type             { VTOL }
 Move_Type        { VTOL }
 Tons             { 25 }
-Mech_BV          { 734 }
 Max_Speed        { 129.00 }
 Left_Side
   Armor            { 6 }

@@ -3,7 +3,6 @@ Reference        { CRB-20 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 50 }
-Mech_BV          { 921 }
 Heat_Sinks       { 16 }
 Computer	 { 4 }
 Radio		 { 4 }

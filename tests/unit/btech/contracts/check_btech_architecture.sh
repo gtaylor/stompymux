@@ -567,7 +567,7 @@ while IFS= read -r match; do
   echo "$match: converted character module uses a legacy Mech state macro"
   status=1
 done < <(rg -n \
-  '\b(MechPilot|MechPilotStatus|GunPilot|MechPer|MechLX|MechLY|MechX|MechY|MechTeam|MechType|MechMove|MechTons|MechXPMod|MechBV|MechCritStatus|MechMaxSpeed|MechSpeed|MechDesiredSpeed|Destroyed|NoGunXP|SetSect[A-Za-z]*|SetPart[A-Za-z]*)\s*\(' \
+  '\b(MechPilot|MechPilotStatus|GunPilot|MechPer|MechLX|MechLY|MechX|MechY|MechTeam|MechType|MechMove|MechTons|MechXPMod|MechCritStatus|MechMaxSpeed|MechSpeed|MechDesiredSpeed|Destroyed|NoGunXP|SetSect[A-Za-z]*|SetPart[A-Za-z]*)\s*\(' \
   src/btech/character/character_health.c \
   src/btech/character/character_experience.c \
   src/btech/character/character_battle_value.c \

@@ -3,7 +3,6 @@ Reference        { BMB-10D }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 65 }
-Mech_BV          { 1015 }
 Max_Speed        { 64.50 }
 Left_Arm
   Armor            { 20 }

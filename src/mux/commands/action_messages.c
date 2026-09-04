@@ -10,7 +10,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/owned_text.h"
 #include "mux/world/object_spatial.h"
 
 void notify_action(EvaluationContext *evaluation,
@@ -19,9 +18,7 @@ void notify_action(EvaluationContext *evaluation,
   LuaMessageResult *result = checked_storage_allocate(sizeof(*result));
   const char *enactor_message;
   const char *other_message;
-  OwnedText d;
   DbRef location = NOTHING;
-  long attribute_flags;
   char *message_buffer = alloc_lbuf("notify_action.message");
 
   if (!message.descriptor && evaluation->command)
@@ -37,17 +34,20 @@ void notify_action(EvaluationContext *evaluation,
    * message to player
    */
 
-  if (invocation->content_attribute > 0) {
-    d = attribute_get(evaluation->world->database, message.object,
-                      invocation->content_attribute, &attribute_flags);
-    if (*d.text) {
-      notify_checked(evaluation, message.enactor, message.enactor, d.text,
+  if (invocation->content != ACTION_MESSAGE_CONTENT_NONE) {
+    const char *content =
+        invocation->content == ACTION_MESSAGE_CONTENT_INTERNAL_DESCRIPTION
+            ? game_object_internal_description(evaluation->world->database,
+                                               message.object)
+            : game_object_description(evaluation->world->database,
+                                      message.object);
+    if (content && *content) {
+      notify_checked(evaluation, message.enactor, message.enactor, content,
                      MSG_ME_ALL | MSG_F_DOWN);
     } else if (enactor_message) {
       notify_checked(evaluation, message.enactor, message.enactor,
                      enactor_message, MSG_ME_ALL | MSG_F_DOWN);
     }
-    owned_text_release(&d);
   } else if (enactor_message && *enactor_message) {
     notify_checked(evaluation, message.enactor, message.enactor,
                    enactor_message, MSG_ME_ALL | MSG_F_DOWN);

@@ -3,7 +3,6 @@ Reference        { THE-S }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 20 }
-Mech_BV          { 445 }
 Max_Speed        { 96.75 }
 Left_Arm
   Armor            { 6 }

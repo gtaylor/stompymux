@@ -3,7 +3,6 @@ Reference        { ON1-K }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 75 }
-Mech_BV          { 1069 }
 Max_Speed        { 64.50 }
 Specials 	 { AntiAircraft }
 Left_Arm

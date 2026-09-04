@@ -24,7 +24,6 @@
 #include "mux/network/telnet_environment.h"
 #include "mux/network/telnet_handler.h"
 #include "mux/network/telnet_socket.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/character_state.h"
 #include "mux/objects/db.h"
 #include "mux/objects/economy_parts.h"

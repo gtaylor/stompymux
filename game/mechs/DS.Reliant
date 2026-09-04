@@ -9,7 +9,6 @@ LRS_Range        { 60 }
 Scan_Range       { 30 }
 Computer         { 3 }
 Heat_Sinks       { 90 }
-Mech_BV          { 0 }
 Cargo_Space      { 0 }
 Fuel             { 8000 }
 Max_Speed        { 86.00 }

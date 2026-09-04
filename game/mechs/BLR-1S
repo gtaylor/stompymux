@@ -3,7 +3,6 @@ Reference        { BLR-1S }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 85 }
-Mech_BV          { 1227 }
 Heat_Sinks       { 20 }
 Max_Speed        { 64.50 }
 Specials         { Searchlight }

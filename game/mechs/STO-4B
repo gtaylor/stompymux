@@ -6,7 +6,6 @@ Tons             { 35 }
 Heat_Sinks       { 20 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 936 }
 Max_Speed        { 129.00 }
 Specials         { DoubleHS FlipArms FerroFibrous_Tech EndoSteel_Tech LightEngine_Tech ECM }
 Left_Arm

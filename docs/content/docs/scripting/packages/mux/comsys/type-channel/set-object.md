@@ -17,7 +17,8 @@ channel:set_object( object )
 ### Arguments
 
 `number, Object, or nil object`
-: A live object to attach, or `nil` to detach the current object.
+: A live object to attach. This argument is required; pass `nil` explicitly to
+  detach the current object.
 
 ### Returns
 
@@ -26,6 +27,7 @@ Nothing.
 ### Raises
 
 - `mux.unavailable.checking` during `@lua/check`.
+- `mux.arg.invalid` if `object` is omitted.
 - `mux.channel.invalid` if the channel handle is stale.
 - `mux.object.invalid` if the object reference is invalid.
 - `mux.object.unavailable` if the object is being destroyed.

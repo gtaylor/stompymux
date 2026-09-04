@@ -1,4 +1,5 @@
 ---
+draft: true
 title: weight
 type: docs
 toc_hide: false

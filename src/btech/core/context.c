@@ -8,6 +8,7 @@
 #include <time.h>
 
 #include "btech/ids.h"
+#include "configuration_internal.h"
 #include "context_internal.h"
 #include "missile_hit_registry.h"
 #include "mux/commands/command_context.h"
@@ -57,6 +58,7 @@ BtechContext *btech_context_create(const BtechDependencies *dependencies) {
       .process_start_time = dependencies->process_start_time,
       .cached_target_character = -1,
   };
+  btech_configuration_initialize(context);
   return context;
 }
 

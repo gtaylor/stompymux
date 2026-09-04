@@ -108,7 +108,7 @@ bootstrap_initialize_object(EvaluationContext *evaluation,
   const ObjectFlagSet *flags = bootstrap_default_flags(
       evaluation->world->configuration, configuration->type);
 
-  attribute_free(database, configuration->dbref);
+  game_object_owned_state_clear(database, configuration->dbref);
   object_name_set(database, configuration->dbref, configuration->name);
   game_object_set_type(database, configuration->dbref, type);
   game_object_set_location(database, configuration->dbref, NOTHING);

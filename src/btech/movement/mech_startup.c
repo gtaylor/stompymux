@@ -9,10 +9,11 @@
 
 #include "autopilot_resume_api.h"
 #include "btconfig.h"
+#include "btech/configuration.h"
 #include "btech/context.h"
+#include "btech/special_objects.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
-#include "command_handlers_api.h"
 #include "econ_cmds_api.h"
 #include "map_los_api.h"
 #include "map_terrain.h"
@@ -36,10 +37,8 @@
 #include "mech_status_types.h"
 #include "mech_tech_api.h"
 #include "mech_utils_api.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "registry_api.h"
 #include "section_types.h"
@@ -269,7 +268,8 @@ void mech_startup(DbRef player, Mech *mech, const char *buffer) {
   if (!buffer)
     buffer = "";
   if (!(is_good_obj(database, player) &&
-        (is_alive(database, player) || is_xcode(database, player)))) {
+        (is_alive(database, player) ||
+         btech_special_object_type(context, player) >= 0))) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That is not a valid player!");
     return;
@@ -324,12 +324,7 @@ void mech_startup(DbRef player, Mech *mech, const char *buffer) {
   }
   if (is_in_character(database, mech_dbref(mech)) &&
       !is_wizard(database, player) &&
-      (character_lookup(&(CharacterLookupRequest){
-           .context = context,
-           .viewer = GOD,
-           .name = btech_attribute_read(database, mech_dbref(mech), A_PILOTNUM,
-                                        (char[LBUF_SIZE]){0}),
-       }) != player)) {
+      btech_unit_assigned_pilot(context, mech_dbref(mech)) != player) {
     mecha_notify(btech_context_evaluation(context), player,
                  "This isn't your mech!");
     return;

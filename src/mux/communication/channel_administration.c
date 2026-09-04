@@ -12,7 +12,6 @@
 #include "mux/communication/comsys_internal.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/network/network_output.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
@@ -368,12 +367,8 @@ void do_chanlist(CommandInvocation *invocation) {
   DbRef player = invocation->player;
   int key = invocation->key;
   struct Channel *ch;
-  long flags;
   char temp[MBUF_SIZE];
   char buf[MBUF_SIZE];
-  OwnedText atrstr;
-
-  flags = 0;
 
   if (key & CLIST_FULL) {
     comsys_list_channels(evaluation, player);
@@ -392,14 +387,15 @@ void do_chanlist(CommandInvocation *invocation) {
                                                     .access = CHANNEL_JOIN,
                                                     .channel = ch}))) {
 
-      atrstr = attribute_get(evaluation->world->database, ch->chan_obj,
-                             A_DESCRIPTION, &flags);
-      if ((ch->chan_obj == NOTHING) || !*atrstr.text)
+      const char *description =
+          ch->chan_obj == NOTHING
+              ? nullptr
+              : game_object_description(evaluation->world->database,
+                                        ch->chan_obj);
+      if (!description || !*description)
         (void)snprintf(buf, MBUF_SIZE, "%s", "No description.");
       else
-        (void)snprintf(buf, MBUF_SIZE, "%-54.54s", atrstr.text);
-
-      owned_text_release(&atrstr);
+        (void)snprintf(buf, MBUF_SIZE, "%-54.54s", description);
       (void)snprintf(temp, MBUF_SIZE, "%c%c %-13.13s %-60.60s",
                      (ch->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
                      (ch->type & (CHANNEL_LOUD)) ? 'L' : '-', ch->name, buf);
@@ -416,9 +412,6 @@ void do_chanstatus(CommandInvocation *invocation) {
   int key = invocation->key;
   char *chan = invocation->first;
   struct Channel *ch;
-  long flags;
-  OwnedText atrstr;
-
   if (key & CSTATUS_FULL) {
     struct Channel *selected_channel;
     raw_notify(evaluation, player,
@@ -460,14 +453,14 @@ void do_chanstatus(CommandInvocation *invocation) {
     raw_notify(evaluation, player, "@chan/status: Unknown channel.");
     return;
   }
-  atrstr = attribute_get(evaluation->world->database, ch->chan_obj,
-                         A_DESCRIPTION, &flags);
-  if ((ch->chan_obj == NOTHING) || !*atrstr.text)
+  const char *description =
+      ch->chan_obj == NOTHING
+          ? nullptr
+          : game_object_description(evaluation->world->database, ch->chan_obj);
+  if (!description || !*description)
     (void)snprintf(buf, MBUF_SIZE, "%s", "No description.");
   else
-    (void)snprintf(buf, MBUF_SIZE, "%-54.54s", atrstr.text);
-
-  owned_text_release(&atrstr);
+    (void)snprintf(buf, MBUF_SIZE, "%-54.54s", description);
   (void)snprintf(temp, MBUF_SIZE, "%c%c %-13.13s %-60.60s",
                  (ch->type & (CHANNEL_PUBLIC)) ? 'P' : '-',
                  (ch->type & (CHANNEL_LOUD)) ? 'L' : '-', ch->name, buf);

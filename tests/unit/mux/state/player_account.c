@@ -86,6 +86,7 @@ static int check_invalid_player_rejections(GameDatabase *database,
 
   return !player_account_last_login_set(
              &(PlayerLastLoginChange){.account = account, .occurred_at = 1}) &&
+                 !player_account_alias_set(database, player, "invalid") &&
                  !player_account_last_site_set(database, player, "invalid") &&
                  !player_account_login_counts_set(
                      &(PlayerLoginCountsChange){.account = account,
@@ -119,11 +120,14 @@ int main(void) {
   GameObject objects[3] = {0};
   GameDatabase database = {.object_storage = objects, .top = 2, .size = 2};
   DbRef recipients[] = {42, 7, 999};
+  char alias[] = "WizardAlias";
 
   game_object_set_type(&database, 0, OBJECT_TYPE_PLAYER);
   game_object_set_type(&database, 1, OBJECT_TYPE_THING);
   if (!player_account_password_hash_set(&database, 0, "hash") ||
       strcmp(player_account_password_hash(&database, 0), "hash") != 0 ||
+      !player_account_alias_set(&database, 0, alias) ||
+      strcmp(player_account_alias(&database, 0), "WizardAlias") != 0 ||
       player_account_password_hash_set(&database, 1, "invalid") ||
       check_invalid_player_rejections(&database, 1) < 0 ||
       check_invalid_player_rejections(&database, 2) < 0 ||
@@ -147,13 +151,20 @@ int main(void) {
     player_account_clear(&database, 0);
     return 1;
   }
+  alias[0] = 'X';
+  if (strcmp(player_account_alias(&database, 0), "WizardAlias") != 0 ||
+      !player_account_alias_set(&database, 0, nullptr) ||
+      *player_account_alias(&database, 0) ||
+      !player_account_alias_set(&database, 0, "FinalAlias"))
+    return 1;
   PlayerLastLoginResult last_login = player_account_last_login(
       (PlayerAccountRef){.database = &database, .player = 0});
   if (!last_login.found || last_login.occurred_at != 123456789)
     return 1;
   player_account_clear(&database, 0);
   if (game_database_object(&database, 0)->account ||
-      *player_account_password_hash(&database, 0))
+      *player_account_password_hash(&database, 0) ||
+      *player_account_alias(&database, 0))
     return 1;
   return 0;
 }

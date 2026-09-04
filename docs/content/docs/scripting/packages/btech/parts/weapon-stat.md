@@ -1,4 +1,5 @@
 ---
+draft: true
 title: weapon_stat
 type: docs
 toc_hide: false
@@ -20,7 +21,8 @@ btech.parts.weapon_stat( weapon, stat )
 : A recognized weapon part name.
 
 `string stat`
-: One of `VRT`, `TYPE`, `HEAT`, `DAMAGE`, `MIN`, `SR`, `MR`, `LR`, `CRIT`, `AMMO`, `WEIGHT`, or `BV`.
+: One of `VRT`, `TYPE`, `HEAT`, `DAMAGE`, `MIN`, `SR`, `MR`, `LR`, `CRIT`,
+  `AMMO`, `WEIGHT`, or `BV`, matched without regard to case.
 
 ### Returns
 

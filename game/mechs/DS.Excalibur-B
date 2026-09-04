@@ -8,7 +8,6 @@ Tac_Range        { 50 }
 LRS_Range        { 100 }
 Scan_Range       { 50 }
 Heat_Sinks       { 127 }
-Mech_BV          { 0 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 53.00 }

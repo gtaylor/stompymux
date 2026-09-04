@@ -3,7 +3,6 @@ Reference        { OW-1E }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 35 }
-Mech_BV          { 654 }
 Computer	 { 4 }
 Radio            { 4 }
 Max_Speed        { 129.00 }

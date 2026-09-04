@@ -3,7 +3,6 @@ Reference        { FLE-15 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 20 }
-Mech_BV          { 352 }
 Tac_Range        { 32 }
 LRS_Range        { 64 }
 Scan_Range       { 32 }

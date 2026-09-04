@@ -3,7 +3,6 @@ Reference        { Sprint }
 Type             { VTOL }
 Move_Type        { VTOL }
 Tons             { 10 }
-Mech_BV          { 72 }
 Max_Speed        { 215.00 }
 Left_Side
   Armor            { 3 }

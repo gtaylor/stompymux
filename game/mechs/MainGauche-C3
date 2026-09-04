@@ -6,7 +6,6 @@ Tons             { 30 }
 Comment          { Saved by: Spectre(#4628) at Thu Jul 11 06:54:52 2002 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 302 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 64.50 }

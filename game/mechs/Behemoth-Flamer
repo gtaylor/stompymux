@@ -4,7 +4,6 @@ Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 100 }
 Comment          { Saved by: Tantrum(#4394) at Sun Apr  1 18:59:05 2001 }
-Mech_BV          { 706 }
 Cargo_Space      { 0 }
 Max_Speed        { 32.25 }
 Left_Side

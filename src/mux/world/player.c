@@ -15,7 +15,6 @@
 #include "mux/commands/command_handlers.h"
 #include "mux/communication/comsys.h"
 #include "mux/network/site_access.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/player_account.h"
@@ -424,24 +423,19 @@ DbRef lookup_player(WorldContext *world, DbRef doer, const char *name,
 
 void load_player_names(WorldContext *world) {
   DbRef i;
-  long aflags;
-  char *alias;
 
   DO_WHOLE_DB(world->database, i) {
     if (typeof_obj(world->database, i) == OBJECT_TYPE_PLAYER) {
       add_player_name(world, i, game_object_pure_name(world->database, i));
     }
   }
-  alias = alloc_lbuf("load_player_names");
   DO_WHOLE_DB(world->database, i) {
     if (typeof_obj(world->database, i) == OBJECT_TYPE_PLAYER) {
-      alias = attribute_get_string(world->database, i, A_ALIAS, alias,
-                                   LBUF_SIZE, &aflags);
+      const char *alias = player_account_alias(world->database, i);
       if (*alias)
         add_player_name(world, i, alias);
     }
   }
-  free_buf(alias);
 }
 
 /**

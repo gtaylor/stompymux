@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "btconfig.h"
+#include "btech/configuration.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btechstats.h"
@@ -23,7 +24,6 @@
 #include "mech_runtime_api.h"
 #include "mech_specification_api.h"
 #include "mech_utils_api.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/character_state.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
@@ -31,7 +31,6 @@
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/stringutil.h"
 #include "mux/world/player.h"
 #include "registry_api.h"
 #include "special_object.h"
@@ -135,12 +134,10 @@ void initialize_pc(DbRef player, Mech *mech) {
   int player_bld;
   int dam;
   int tot;
-  char *c;
-  int cnt;
+  int cnt = 3;
   char buf1[MBUF_SIZE];
   char buf2[MBUF_SIZE];
   char buf3[MBUF_SIZE];
-  char buf4[2];
   int ammo1 = 0;
   int ammo2 = 0;
   int i;
@@ -148,7 +145,6 @@ void initialize_pc(DbRef player, Mech *mech) {
 
   if (!mech_player_character_initialization_begin(mech))
     return;
-  buf4[1] = 0;
   character_stats_retrieve(context, player,
                            VALUES_HEALTH | VALUES_ATTRS | VALUES_SKILLS, s);
   player_bld = char_getstatvalue(s, "build");
@@ -167,50 +163,18 @@ void initialize_pc(DbRef player, Mech *mech) {
     mech_section_original_internal_set(mech, i,
                                        ((loc_mod(i) * (tot - dam)) / 100) + 1);
   }
-  char *attribute_buffer = alloc_lbuf("initialize_pc.attribute");
-  char *equipment = alloc_lbuf("initialize_pc.equipment");
-  c = btech_attribute_read(context->database, player, A_PCEQUIP,
-                           attribute_buffer);
-  char *token_context = nullptr;
-  (void)snprintf(equipment, LBUF_SIZE, "%s", c);
-  char *armor = strtok_r(equipment, " \t\r\n", &token_context);
-  char *weapon_one = strtok_r(nullptr, " \t\r\n", &token_context);
-  char *weapon_two = strtok_r(nullptr, " \t\r\n", &token_context);
-  char *first_ammunition = strtok_r(nullptr, " \t\r\n", &token_context);
-  char *second_ammunition = strtok_r(nullptr, " \t\r\n", &token_context);
-  cnt = 0;
-  if (armor) {
-    if (strlen(armor) >= sizeof(buf1))
-      goto cleanup;
-    (void)snprintf(buf1, sizeof(buf1), "%s", armor);
-    cnt = 1;
-  }
-  if (weapon_one) {
-    if (strlen(weapon_one) >= sizeof(buf2))
-      goto cleanup;
-    (void)snprintf(buf2, sizeof(buf2), "%s", weapon_one);
-    cnt = 2;
-  }
-  if (weapon_two) {
-    if (strlen(weapon_two) >= sizeof(buf3))
-      goto cleanup;
-    (void)snprintf(buf3, sizeof(buf3), "%s", weapon_two);
-    cnt = 3;
-  }
-  if (first_ammunition) {
-    if (!parse_int_checked(first_ammunition, &ammo1))
-      goto cleanup;
-    cnt = 4;
-  }
-  if (second_ammunition) {
-    if (!parse_int_checked(second_ammunition, &ammo2))
-      goto cleanup;
-    cnt = 5;
-  }
-
+  BtechPersonalCombatLoadout loadout;
+  if (!btech_player_loadout(context, player, &loadout))
+    return;
+  (void)snprintf(buf1, sizeof(buf1), "%d%d%d%d", loadout.armor_head,
+                 loadout.armor_torso, loadout.armor_hands, loadout.armor_feet);
+  (void)string_copy_bounded(buf2, sizeof(buf2),
+                            *loadout.right_weapon ? loadout.right_weapon : "-");
+  (void)string_copy_bounded(buf3, sizeof(buf3),
+                            *loadout.left_weapon ? loadout.left_weapon : "-");
+  ammo1 = loadout.right_ammunition;
+  ammo2 = loadout.left_ammunition;
   switch (cnt) {
-  case 5:
-  case 4:
   case 3:
     if (strcmp(buf3, "-")) {
       PartMatchResult match =
@@ -224,7 +188,7 @@ void initialize_pc(DbRef player, Mech *mech) {
             "Invalid PC weapon #1 for %s(#%ld): %s",
             game_object_name(mech_context(mech)->database, player), player,
             buf3);
-        goto cleanup;
+        return;
       }
       id = match.part.id;
       if (equipment_is_weapon(id)) {
@@ -240,7 +204,7 @@ void initialize_pc(DbRef player, Mech *mech) {
               .slot = {.section = LARM, .critical = 1},
               .part_type =
                   ammunition_equipment_index(weapon_from_equipment_index(id)),
-              .data = cnt >= 5 ? ammo2 : i});
+              .data = loadout.has_left_ammunition ? ammo2 : i});
         }
       }
     }
@@ -258,7 +222,7 @@ void initialize_pc(DbRef player, Mech *mech) {
             "Invalid PC weapon #1 for %s(#%ld): %s",
             game_object_name(mech_context(mech)->database, player), player,
             buf2);
-        goto cleanup;
+        return;
       }
       id = match.part.id;
       if (equipment_is_weapon(id)) {
@@ -274,7 +238,7 @@ void initialize_pc(DbRef player, Mech *mech) {
               .slot = {.section = RARM, .critical = 1},
               .part_type =
                   ammunition_equipment_index(weapon_from_equipment_index(id)),
-              .data = cnt >= 4 ? ammo1 : i});
+              .data = loadout.has_right_ammunition ? ammo1 : i});
         }
       }
     }
@@ -285,7 +249,7 @@ void initialize_pc(DbRef player, Mech *mech) {
                          "Invalid armor string for %s(#%ld): %s",
                          game_object_name(mech_context(mech)->database, player),
                          player, buf1);
-      goto cleanup;
+      return;
     }
     for (size_t index = 0; index < strlen(buf1); index++) {
       const char *armor_character =
@@ -296,7 +260,7 @@ void initialize_pc(DbRef player, Mech *mech) {
             "Invalid armor char for %s(#%ld) in %s (pos %d,%c)",
             game_object_name(mech_context(mech)->database, player), player,
             buf1, (int)index + 1, *armor_character);
-        goto cleanup;
+        return;
       }
     }
     for (size_t index = 0; index < strlen(buf1); index++) {
@@ -306,9 +270,6 @@ void initialize_pc(DbRef player, Mech *mech) {
                              *armor_character - '0');
     }
   }
-cleanup:
-  free_buf(equipment);
-  free_buf(attribute_buffer);
 }
 
 void fix_pilotdamage(Mech *mech, DbRef player) {

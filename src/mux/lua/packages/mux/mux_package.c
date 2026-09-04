@@ -20,7 +20,6 @@ LuaMuxPackage *lua_mux_package_get(lua_State *state) {
 
 const char LUA_MUX_OBJECT_METATABLE[] = "btmux.object";
 const char LUA_MUX_STATE_METATABLE[] = "btmux.object_state";
-const char LUA_MUX_ATTRIBUTE_METATABLE[] = "btmux.object_attribute";
 const char LUA_MUX_FLAGS_METATABLE[] = "btmux.object_flags";
 const char LUA_MUX_POWERS_METATABLE[] = "btmux.object_powers";
 const char LUA_MUX_FLAG_METATABLE[] = "btmux.flag";
@@ -53,18 +52,15 @@ void lua_mux_require_runtime(LuaMuxPackage *package, lua_State *state,
 /**
  * Checks the game database for inconsistencies and repairs any damage found.
  *
- * @par Lua name `mux.check_db`
- * @par Lua signature `mux.check_db( )`
- * @par Lua parameters - None.
- * @par Lua returns - None.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @par Lua notes Runs the same default consistency check as `@dbck`. Damage is
- * written to the server log, but no completion message is sent to a player.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.check_db
+ * @code{.lua}
+ * ---Checks the database for inconsistencies and repairs damage found by the
+ * ---default native `@dbck` pass. Findings are written to the server log.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking).
+ * ---@see mux.error.codes.unavailable.checking
+ * function mux.check_db() end
+ * @endcode
  */
 static int lua_mux_check_db(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -81,22 +77,18 @@ static int lua_mux_check_db(lua_State *state) {
 /**
  * Appends a message to a named server log file.
  *
- * @par Lua name `mux.log`
- * @par Lua signature `mux.log( filename, message )`
- * @par Lua parameters - `filename` (`string`) The name of an existing readable
- * and writable file directly under game/logs/. Names may not contain /, ..,
- * embedded NUL bytes, or exceed 200 bytes.
- * - `message` (`string`) Text to append, followed by a newline. Embedded NUL
- * bytes are rejected.
- * @par Lua returns - `written` (`boolean`): Whether the named log accepted the
- * message.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`;
- * `LUA_ERROR_CODE_ARG_INVALID` for embedded NUL bytes.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.log
+ * @code{.lua}
+ * ---Appends a newline-terminated message to a permitted file under `game/logs`.
+ * ---@param filename string
+ * ---@param message string
+ * ---@return boolean written
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.arg.invalid
+ * function mux.log(filename, message) end
+ * @endcode
  */
 static int lua_mux_log(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -122,6 +114,37 @@ static int lua_mux_log(lua_State *state) {
   return 1;
 }
 
+/**
+ * @par LuaLS definition mux alias dbref
+ * @code{.lua}
+ * ---@alias DbRef integer Database object reference.
+ * @endcode
+ *
+ * @par LuaLS definition mux namespace mux
+ * @code{.lua}
+ * ---The native MUX host API.
+ * ---@class MuxPackage
+ * ---@field comsys MuxComsysPackage Trusted live communication-channel administration.
+ * ---@field config MuxConfigPackage Read-only scalar server configuration.
+ * ---@field error MuxErrorPackage Structured errors and checked code nodes.
+ * ---@field session MuxSessionPackage Live connections and interactive flows.
+ * ---@field telnet MuxTelnetPackage Telnet protocol state and capabilities.
+ * ---@field text MuxTextPackage Styled-text utilities.
+ * ---@field world MuxWorldPackage World database object access.
+ * mux = {}
+ * @endcode
+ *
+ * @par LuaLS definition mux binding mux.packages
+ * @code{.lua}
+ * mux.config = mux_config
+ * mux.comsys = mux_comsys
+ * mux.error = mux_error
+ * mux.session = mux_session
+ * mux.telnet = mux_telnet
+ * mux.text = mux_text
+ * mux.world = mux_world
+ * @endcode
+ */
 void lua_mux_package_install(lua_State *state, LuaMuxPackage *package) {
   object_state_transaction_initialize(&package->state_transaction);
   lua_newtable(state);

@@ -7,7 +7,6 @@ Comment          { Saved by: Mad Tom(#2531) at Mon Nov 26 21:36:41 2007 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 30 }
-Mech_BV          { 1165 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 86.00 }

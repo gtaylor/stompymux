@@ -7,7 +7,6 @@ Comment          { Saved by: Spectre(#4628) at Sun Jun 10 20:27:35 2001 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 20 }
-Mech_BV          { 1159 }
 Cargo_Space      { 0 }
 Max_Speed        { 96.75 }
 Specials         { DoubleHS }

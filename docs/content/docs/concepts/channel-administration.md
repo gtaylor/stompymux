@@ -109,7 +109,7 @@ channel:
 
 ```text
 @create Staff Channel Object
-@attribute/set #123/Description=Coordination channel for game staff.
+@description #123=Coordination channel for game staff.
 @lua/parent #123=channels/staff.lua
 @chan/object Staff=#123
 ```

@@ -42,12 +42,11 @@ static const NameTable BOOT_SW[] = {
     {"quiet", 1, CA_WIZARD, BOOT_QUIET | SW_MULTIPLE},
     {nullptr, 0, 0, 0}};
 
-static const NameTable ATTRIBUTE_SW[] = {
-    {"get", 1, CA_WIZARD, ATTRIBUTE_GET},
-    {"examine", 1, CA_WIZARD, ATTRIBUTE_EXAMINE},
-    {"set", 1, CA_WIZARD, ATTRIBUTE_SET},
-    {nullptr, 0, 0, 0},
-};
+static const NameTable BTECH_SW[] = {
+    {"info", 1, CA_WIZARD, BTECH_INFO},
+    {"register", 1, CA_WIZARD, BTECH_REGISTER},
+    {"unregister", 1, CA_WIZARD, BTECH_UNREGISTER},
+    {nullptr, 0, 0, 0}};
 
 static const NameTable CHAN_SW[] = {
     {"boot", 4, CA_PUBLIC, CHAN_BOOT | SW_MULTIPLE},
@@ -192,14 +191,9 @@ static const NameTable WALL_SW[] = {
 
 static const CommandDefinition COMMAND_TABLE[] = {
     {"@admin", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_admin}},
-    {"@attribute",
-     ATTRIBUTE_SW,
-     CA_WIZARD,
-     0,
-     CS_TWO_ARG,
-     {.invoke = do_attribute}},
     {"@alias", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_alias}},
     {"@boot", BOOT_SW, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_boot}},
+    {"@btech", BTECH_SW, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_btech}},
     {"@chan", CHAN_SW, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_chan}},
     {"@chzone", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_chzone}},
     {"@clone",
@@ -215,6 +209,12 @@ static const CommandDefinition COMMAND_TABLE[] = {
      CS_ONE_ARG,
      {.invoke = do_create}},
     {"@dbck", nullptr, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_dbck}},
+    {"@description",
+     nullptr,
+     CA_WIZARD,
+     DESCRIPTION_EXTERNAL,
+     CS_TWO_ARG,
+     {.invoke = do_description}},
     {"@destroy",
      DESTROY_SW,
      CA_WIZARD,
@@ -271,6 +271,12 @@ static const CommandDefinition COMMAND_TABLE[] = {
      {.invoke = do_pemit}},
     {"@halt", HALT_SW, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_halt}},
     {"@help", HELP_SW, CA_WIZARD, 0, CS_NO_ARGS, {.invoke = do_help_admin}},
+    {"@internal-description",
+     nullptr,
+     CA_WIZARD,
+     DESCRIPTION_INTERNAL,
+     CS_TWO_ARG,
+     {.invoke = do_description}},
     {"@last", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_last}},
     {"@link", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_link}},
     {"@lua", LUA_SW, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_lua}},

@@ -5,7 +5,6 @@ Move_Type        { Track }
 Tons             { 65 }
 Comment          { Saved by: Spectre(#4628) at Fri Jun 21 07:51:57 2002 }
 Computer         { 3 }
-Mech_BV          { 742 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 64.50 }

@@ -4,7 +4,6 @@ Type             { Mechwarrior }
 Move_Type        { Biped }
 Tons             { 1 }
 Max_Speed        { 5.00 }
-Mech_BV          { 100 }
 Radio            { 1 }
 Computer         { 1 }
 RadioType        { 129 }

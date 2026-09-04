@@ -18,7 +18,6 @@
 
 struct GameDatabase; // IWYU pragma: keep
 
-typedef struct Attribute Attribute;
 typedef struct EvaluationContext EvaluationContext;
 typedef struct GameDatabase GameDatabase;
 typedef struct ServerConfiguration ServerConfiguration;
@@ -30,18 +29,6 @@ typedef struct CharacterState CharacterState;
 typedef struct WorldIndexes WorldIndexes;
 typedef struct DescriptorRegistry DescriptorRegistry;
 typedef struct PlayerCache PlayerCache;
-struct Attribute {
-  const char *name;
-  int number;
-};
-
-/* Native state is not part of Lua object state. The slots are
- * addressed only by the hardcoded C field selectors in attrs.h and are
- * persisted into explicit subsystem columns. */
-typedef struct NativeObjectState NativeObjectState;
-struct NativeObjectState {
-  char *values[256];
-};
 
 typedef struct EconomyPartEntry EconomyPartEntry;
 struct EconomyPartEntry {
@@ -61,24 +48,6 @@ struct AttributeStack {
   char *data;
   AttributeStack *next;
 };
-
-/** Executes attribute by number. @param[in,out] database Game database.
- * @param[in] anum Anum. */
-
-const Attribute *attribute_by_number(GameDatabase *database, int anum);
-/** Executes attribute by name. @param[in] database Game database. @param[in] s
- * String or object to process. */
-
-const Attribute *attribute_by_name(GameDatabase *database, const char *s);
-
-/** Counts native attribute. */
-
-size_t native_attribute_count(void);
-/** Returns native attribute at. @param[in] index Zero-based index. */
-
-const Attribute *native_attribute_at(size_t index);
-
-constexpr char ATR_INFO_CHAR = '\1'; /* Leadin char for attr control data */
 
 /* special dbref's */
 constexpr DbRef NOTHING = -1;   /* null dbref */
@@ -111,9 +80,14 @@ struct GameObject {
   /* ROOM: unused */
   DbRef link; /* PLAYER, THING: home location */
   /* ROOM, EXIT: unused */
-  DbRef zone;        /* Whatever the object is zoned to. */
-  DbRef affiliation; /* Object this object is affiliated with. */
+  DbRef zone;              /* Whatever the object is zoned to. */
+  DbRef affiliation;       /* Object this object is affiliated with. */
+  DbRef pending_destroyer; /* Actor responsible for deferred destruction. */
 
+  char *name;
+  char *pure_name;
+  char *description;
+  char *internal_description;
   char *lua_parent; /* Relative object_logic module path. */
 
   ObjectType type;
@@ -136,7 +110,6 @@ struct GameObject {
   bool has_suspect_flag;
   bool has_transparent_flag;
   bool has_wizard_flag;
-  bool has_xcode_flag;
   bool has_zombie_flag;
 
   bool has_idle_power;
@@ -147,10 +120,7 @@ struct GameObject {
   PlayerAccountState *account; /* Present only for player objects. */
   CharacterState *character;   /* Present only for player objects. */
   EconomyPartsState economy_parts;
-  NativeObjectState native;
 };
-
-typedef char *NAME;
 
 typedef struct DatabaseMarkBuffer DatabaseMarkBuffer;
 struct DatabaseMarkBuffer {
@@ -159,8 +129,6 @@ struct DatabaseMarkBuffer {
 
 struct GameDatabase {
   GameObject *object_storage;
-  NAME *name_storage;
-  NAME *pure_name_storage;
   int top;
   int size;
   int minimum_size;
@@ -389,6 +357,21 @@ const char *game_object_name(GameDatabase *database, DbRef thing);
  * @param[in] thing Thing. */
 
 const char *game_object_pure_name(GameDatabase *database, DbRef thing);
+/** Returns an object's description, or nullptr when unset. */
+
+const char *game_object_description(GameDatabase *database, DbRef object);
+/** Sets or clears an object's description. */
+
+void game_object_description_set(GameDatabase *database, DbRef object,
+                                 const char *description);
+/** Returns an object's internal description, or nullptr when unset. */
+
+const char *game_object_internal_description(GameDatabase *database,
+                                             DbRef object);
+/** Sets or clears an object's internal description. */
+
+void game_object_internal_description_set(GameDatabase *database, DbRef object,
+                                          const char *description);
 /** Executes game object lua parent. @param[in,out] database Game database.
  * @param[in] object Game object. */
 
@@ -410,56 +393,18 @@ void attribute_stack_pop(void);
 /** Executes init gdbm db. @param[in,out] path Filesystem path. */
 
 int init_gdbm_db(char *path);
-typedef struct AttributeCopyRequest {
+typedef struct GameObjectOwnedStateCopyRequest {
   EvaluationContext *evaluation;
   DbRef source;
   DbRef destination;
-} AttributeCopyRequest;
+} GameObjectOwnedStateCopyRequest;
 
-/** Executes attribute copy. @param[in] request Request. */
+/** Copies core object-owned state. @param[in] request Request. */
 
-void attribute_copy(const AttributeCopyRequest *request);
-/** Clears attribute. @param[in,out] database Game database. @param[in] thing
- * Thing. @param[in] atr Atr. */
-
-void attribute_clear(GameDatabase *database, DbRef thing, int atr);
-/** Adds raw to attribute. @param[in,out] database Game database. @param[in]
- * thing Thing. @param[in] atr Atr. @param[in] buff Caller-owned output storage.
- */
-
-void attribute_add_raw(GameDatabase *database, DbRef thing, int atr,
-                       const char *buff);
-/** Adds attribute. @param[in,out] database Game database. @param[in] thing
- * Thing. @param[in] atr Atr. @param[in] buff Caller-owned output storage.
- * @param[in] flags Flags. */
-
-void attribute_add(GameDatabase *database, DbRef thing, int atr,
-                   const char *buff, long flags);
-/** Returns raw from attribute. @param[in,out] database Game database.
- * @param[in] thing Thing. @param[in] atr Atr. */
-
-char *attribute_get_raw(GameDatabase *database, DbRef thing, int atr);
-/** Returns attribute. @param[in] database Game database. @param[in] thing
- * Thing. @param[in] atr Atr. @param[in] flags Flags. */
-
-OwnedText attribute_get(GameDatabase *database, DbRef thing, int atr,
-                        long *flags);
-/** Returns string from attribute. @param[in,out] database Game database.
- * @param[in] thing Thing. @param[in] atr Atr. @param[in,out] s String or object
- * to process. @param[in] size Storage size in bytes. @param[in,out] flags
- * Flags. */
-
-char *attribute_get_string(GameDatabase *database, DbRef thing, int atr,
-                           char *s, size_t size, long *flags);
-/** Returns info from attribute. @param[in,out] database Game database.
- * @param[in] thing Thing. @param[in] atr Atr. @param[in,out] flags Flags. */
-
-bool attribute_get_info(GameDatabase *database, DbRef thing, int atr,
-                        long *flags);
-/** Releases attribute. @param[in,out] database Game database. @param[in] thing
- * Thing. */
-
-void attribute_free(GameDatabase *database, DbRef thing);
+void game_object_owned_state_copy(
+    const GameObjectOwnedStateCopyRequest *request);
+/** Releases core object-owned state. */
+void game_object_owned_state_clear(GameDatabase *database, DbRef thing);
 /** Executes toast player. @param[in,out] evaluation Expression evaluation
  * context. @param[in] player Player object. */
 

@@ -577,8 +577,8 @@ void do_clone(CommandInvocation *invocation) {
    * Wipe out any old attributes and copy in the new data
    */
 
-  attribute_free(evaluation->world->database, clone);
-  attribute_copy(&(AttributeCopyRequest){
+  game_object_owned_state_clear(evaluation->world->database, clone);
+  game_object_owned_state_copy(&(GameObjectOwnedStateCopyRequest){
       .evaluation = evaluation, .source = thing, .destination = clone});
 
   /*

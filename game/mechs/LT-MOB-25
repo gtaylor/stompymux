@@ -3,7 +3,6 @@ Reference        { LT-MOB-25 }
 Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 95 }
-Mech_BV          { 532 }
 Computer         { 2 }
 Radio		 { 2 }
 Heat_Sinks       { 0 }

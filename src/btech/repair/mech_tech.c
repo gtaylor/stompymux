@@ -11,6 +11,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "btech/configuration.h"
 #include "btech/context.h"
 #include "btech_event.h"
 #include "btechstats_api.h"
@@ -30,7 +31,6 @@
 #include "mech_tech_api.h"
 #include "mech_utils_api.h"
 #include "mux/network/mux_event.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/support/alloc.h"
@@ -87,20 +87,11 @@ int player_techtime(BtechContext *context, DbRef player) {
   /* Returns tech time, in minutes, for given player */
 
   time_t techtime;
-  char *tt_attr;
   int tused;
 
-  tt_attr = btech_attribute_read(context->database, player, A_TECHTIME,
-                                 (char[LBUF_SIZE]){0});
-
-  if (tt_attr) {
-    if (!parse_time_checked(tt_attr, &techtime))
-      techtime = context->clock->now;
-    if (techtime < context->clock->now)
-      techtime = context->clock->now;
-  } else {
+  techtime = btech_repair_technician_available_at(context, player);
+  if (techtime < context->clock->now)
     techtime = context->clock->now;
-  }
 
   tused = clamp_intptr_to_int(
       (intptr_t)((techtime - context->clock->now) / TECH_TICK));
@@ -174,21 +165,12 @@ static void tech_status(const TechStatusRequest *request) {
   const DbRef PLAYER = request->player;
   time_t dat = request->completion;
   char buf[MBUF_SIZE] = {0};
-  char *attribute_buffer = alloc_lbuf("tech_status.attribute");
-  char *olds;
   int un;
 
   if (dat <= 0) {
-    olds = btech_attribute_read(context->database, PLAYER, A_TECHTIME,
-                                attribute_buffer);
-    if (olds) {
-      if (!parse_time_checked(olds, &dat))
-        dat = context->clock->now;
-      if (dat < context->clock->now)
-        dat = context->clock->now;
-    } else {
+    dat = btech_repair_technician_available_at(context, PLAYER);
+    if (dat < context->clock->now)
       dat = context->clock->now;
-    }
   }
   if (dat <= context->clock->now) {
     mecha_notify(btech_context_evaluation(context), PLAYER,
@@ -211,11 +193,9 @@ static void tech_status(const TechStatusRequest *request) {
     }
     mecha_notify(btech_context_evaluation(context), PLAYER, buf);
   }
-  free_buf(attribute_buffer);
 }
 
 int tech_addtechtime(const TechTimeAddition *addition) {
-  char message_buffer[128];
   BtechContext *context = addition->context;
   const DbRef PLAYER = addition->player;
   int added_seconds = tech_time_scaled_seconds(context, addition->units);
@@ -223,24 +203,14 @@ int tech_addtechtime(const TechTimeAddition *addition) {
     return 1;
 
   time_t old;
-  char *attribute_buffer = alloc_lbuf("tech_addtechtime.attribute");
-  char *olds = btech_attribute_read(context->database, PLAYER, A_TECHTIME,
-                                    attribute_buffer);
-
-  if (olds) {
-    if (!parse_time_checked(olds, &old))
-      old = context->clock->now;
-    if (old < context->clock->now)
-      old = context->clock->now;
-  } else {
+  old = btech_repair_technician_available_at(context, PLAYER);
+  if (old < context->clock->now)
     old = context->clock->now;
-  }
   old += added_seconds;
-  (void)snprintf(message_buffer, sizeof(message_buffer), "%ld", old);
-  silly_atr_set_in(context->database, PLAYER, A_TECHTIME, message_buffer);
+  if (!btech_repair_technician_available_at_set(context, PLAYER, old))
+    return 0;
   tech_status(&(TechStatusRequest){
       .context = context, .player = PLAYER, .completion = old});
-  free_buf(attribute_buffer);
   return clamp_intptr_to_int((intptr_t)(old - context->clock->now));
 }
 

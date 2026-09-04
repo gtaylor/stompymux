@@ -3,7 +3,6 @@ Reference        { CDA-3C }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 40 }
-Mech_BV          { 656 }
 Heat_Sinks       { 11 }
 Specials         { Fliparms }
 Computer 	 { 4 }

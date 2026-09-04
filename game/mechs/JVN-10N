@@ -3,7 +3,6 @@ Reference        { JVN-10N }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 30 }
-Mech_BV          { 487 }
 Max_Speed        { 96.75 }
 Jump_Speed       { 64.50 }
 Left_Arm

@@ -4,7 +4,6 @@ Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 100 }
 Comment          { Saved by: Captain QB(#198) at Mon Dec  5 20:51:21 2005 }
-Mech_BV          { 1039 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 53.75 }

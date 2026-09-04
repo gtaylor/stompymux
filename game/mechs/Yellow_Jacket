@@ -3,7 +3,6 @@ Reference        { Yellow_Jacket }
 Type             { VTOL }
 Move_Type        { VTOL }
 Tons             { 30 }
-Mech_BV          { 1106 }
 Max_Speed        { 96.75 }
 Specials	 { Searchlight }
 Left_Side

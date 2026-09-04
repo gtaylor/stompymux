@@ -68,15 +68,39 @@ int main(void) {
   if (!lua_toboolean(state, -1))
     goto failed;
   lua_pop(state, 1);
-  if (!run(state, "local btech = mux.error.code_tree('btech') "
+  if (!run(state,
+           "local caught = { code = 'author.caught', token = 17 } "
+           "local ok, err = mux.error.pcall(function() error(caught) end) "
+           "return not ok and err == caught and err.code == 'author.caught' "
+           "and err.token == 17 and err.message == nil "
+           "and type(err.traceback) == 'string'"))
+    goto failed;
+  if (!lua_toboolean(state, -1))
+    goto failed;
+  lua_pop(state, 1);
+  if (!run(state,
+           "local code = 'NOT valid..code!' "
+           "local made = mux.error.new({ code = code, message = 'made' }) "
+           "local raised_ok, raised = pcall(mux.error.raise, code, 'raised') "
+           "local wrapped = mux.error.wrap('cause', code, 'wrapped') "
+           "return made.code == code and made:is(code) "
+           "and mux.error.is(made, code) and not raised_ok "
+           "and raised.code == code and wrapped.code == code"))
+    goto failed;
+  if (!lua_toboolean(state, -1))
+    goto failed;
+  lua_pop(state, 1);
+  if (!run(state,
+           "local btech = mux.error.code_tree('btech') "
            "local testing = mux.error.code_tree('testing') "
            "return btech == mux.error.code_tree('btech') and "
-           "btech.code == 'btech' and btech.unavailable.code == "
-           "'btech.unavailable' and testing == mux.error.code_tree('testing') "
+           "btech.code == 'btech' and btech.operation.failed.code == "
+           "'btech.operation.failed' and testing == "
+           "mux.error.code_tree('testing') "
            "and testing.code == 'testing' and "
-                  "testing.assertion.code == 'testing.assertion' and "
-                  "mux.error.new({ code = btech.failed, message = 'failed' "
-                  "}):is(btech)"))
+           "testing.assertion.code == 'testing.assertion' and "
+           "mux.error.new({ code = btech.operation.failed, message = 'failed' "
+           "}):is(btech)"))
     goto failed;
   if (!lua_toboolean(state, -1))
     goto failed;

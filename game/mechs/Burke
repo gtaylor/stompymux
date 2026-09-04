@@ -3,7 +3,6 @@ Reference        { Burke }
 Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 75 }
-Mech_BV          { 594 }
 Computer         { 3 }
 Heat_Sinks       { 30 }
 Max_Speed        { 32.25 }

@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "battle_value_api.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btechstats.h"
@@ -262,10 +263,8 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
   }
 
   /* Need to do a BV mod between the mechs */
-  const int ATTACKER_BATTLE_VALUE = mech_battle_value(attacker);
-  const int WOUNDED_BATTLE_VALUE = mech_battle_value(wounded);
-  my_battle_value = ATTACKER_BATTLE_VALUE;
-  their_battle_value = WOUNDED_BATTLE_VALUE;
+  my_battle_value = battle_value_calculate(attacker).total;
+  their_battle_value = battle_value_calculate(wounded).total;
 
   if (mech_context(attacker)->configuration->btech_xp_use_pilot_bv_mod) {
     my_pilot_bv_mod = get_pilot_bv_mod(attacker, WEAPINDX);
@@ -442,22 +441,20 @@ legacy_gunnery_experience_award(const GunneryExperienceAward *award) {
 /**
  * Gets a character attribute, skill level, target, experience, or experience
  * threshold.
- * @par Lua name `btech.character.value`
- * @par Lua signature `btech.character.value( character, value, mode )`
- * @par Lua parameters - `character` (`number|string`) The character dbref or
- * player name.
- * - `value` (`number|string`) The character-value code or name.
- * - `mode` (`number`) 0 for value, 1 for skill target, 2 for XP, 3 for raw
- * skill value, or 4 for XP to next level.
- * @par Lua returns - `value` (`number`): The numeric result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.character.value
+ * @code{.lua}
+ * ---Gets a character attribute, skill level, target, experience, or threshold.
+ * ---@param character CharacterRef
+ * ---@param value integer|string Character-value code or name.
+ * ---@param mode CharacterValueMode
+ * ---@return number result
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_character.value(character, value, mode) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -535,24 +532,21 @@ BtechScriptResult fun_btgetcharvalue(BtechScriptCall *call) {
 
 /**
  * Sets a character value or adjusts skill experience.
- * @par Lua name `btech.character.set_value`
- * @par Lua signature `btech.character.set_value(character,value,amount,mode)`
- * @par Lua parameters - `character` (`number|string`) The character dbref or
- * player name.
- * - `value` (`number|string`) The character-value code or name.
- * - `amount` (`number`) The value or experience amount.
- * - `mode` (`number`) 0 sets level/value, 1 sets skill target, 3 sets XP, and
- * other nonzero values add XP.
- * @par Lua returns - `success` (`boolean`): true after the operation completes
- * without a legacy error.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.character.set_value
+ * @code{.lua}
+ * ---Sets a character value or adjusts skill experience.
+ * ---@param character CharacterRef
+ * ---@param value integer|string
+ * ---@param amount integer
+ * ---@param mode integer `0` sets value, `1` target, `3` XP; other nonzero modes add XP.
+ * ---@return true success
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_character.set_value(character, value, amount, mode) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -705,22 +699,20 @@ BtechScriptResult fun_btsetcharvalue(BtechScriptCall *call) {
 */
 /**
  * Lists character value names in a requested category.
- * @par Lua name `btech.character.list`
- * @par Lua signature `btech.character.list( kind, [character] )`
- * @par Lua parameters - `kind` (`string`) "skills", "advantages", or
- * "attributes".
- * - `character` (`number|string`) Optional. Optional character dbref or player
- * name used to filter learned values.
- * @par Lua returns - `values` (`table`): A flat array of converted legacy
- * result tokens.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.character.list
+ * @code{.lua}
+ * ---Lists character-value names in a category, optionally filtered by learned values.
+ * ---@param kind CharacterListKind
+ * ---@param character CharacterRef Learned-value filter; explicit `nil` is rejected by the Lua bridge.
+ * ---@return BtechListItem[] values
+ * ---@overload fun(kind: CharacterListKind): BtechListItem[]
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_character.list(kind, character) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */

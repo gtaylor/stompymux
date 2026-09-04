@@ -3,7 +3,6 @@ Reference        { FLE-4 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 20 }
-Mech_BV          { 360 }
 Computer         { 5 }
 Radio 		 { 5 }
 Max_Speed        { 96.75 }

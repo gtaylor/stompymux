@@ -6,7 +6,6 @@ Tons             { 55 }
 Comment          { Saved by: Charlemagne(#4624) at Wed Feb 16 08:04:30 2000 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 1078 }
 Max_Speed        { 64.50 }
 Left_Arm
   Armor            { 18 }

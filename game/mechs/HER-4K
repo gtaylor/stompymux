@@ -3,7 +3,6 @@ Reference        { HER-4K }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 40 }
-Mech_BV          { 749 }
 Radio            { 5 }
 Heat_Sinks       { 11 }
 Max_Speed        { 96.75 }

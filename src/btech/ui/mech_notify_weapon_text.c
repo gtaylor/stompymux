@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "bsuit_api.h"
+#include "btech/configuration.h"
 #include "btech/context.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
@@ -18,12 +19,10 @@
 #include "mech_sensor_state_api.h"
 #include "mech_specification_api.h"
 #include "mech_utils_api.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
 #include "registry_api.h"
 #include "section_types.h"
 #include "weapon_catalogue_api.h"
@@ -408,8 +407,7 @@ MechDisplayId mech_to_mech_display_id_base(Mech *see, Mech *mech, int inlos) {
   if (!inlos)
     mname = "something";
   else
-    mname = btech_attribute_read(context->database, object, A_MECHNAME,
-                                 (char[LBUF_SIZE]){0});
+    mname = btech_unit_display_name(context, object);
 
   (void)snprintf(
       id.text, sizeof(id.text), "%s [%s]", mname,
@@ -437,8 +435,7 @@ MechDisplayId mech_to_mech_display_id(Mech *see, Mech *mech) {
     mname = "something";
     team = 0;
   } else {
-    mname = btech_attribute_read(context->database, object, A_MECHNAME,
-                                 (char[LBUF_SIZE]){0});
+    mname = btech_unit_display_name(context, object);
     team = mech_team(see) == mech_team(mech);
   }
 
@@ -448,7 +445,7 @@ MechDisplayId mech_to_mech_display_id(Mech *see, Mech *mech) {
 }
 
 MechDisplayId mech_display_id(Mech *mech) {
-  char *mname;
+  const char *mname;
   MechDisplayId id = {0};
 
   BtechContext *context = mech_context(mech);
@@ -456,8 +453,7 @@ MechDisplayId mech_display_id(Mech *mech) {
   if (!is_good_obj(context->database, object))
     return id;
 
-  mname = btech_attribute_read(context->database, object, A_MECHNAME,
-                               (char[LBUF_SIZE]){0});
+  mname = btech_unit_display_name(context, object);
   (void)snprintf(id.text, sizeof(id.text), "%s [%s]", mname,
                  mech_id(mech, false).text);
   return id;

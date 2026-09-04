@@ -1,4 +1,5 @@
 // NOLINTBEGIN(misc-include-cleaner): Direct dependencies exceed file-size cap.
+#include "btech/configuration.h"
 #include "btech_text_result.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "crit_api.h"
@@ -15,22 +16,21 @@
 /**
  * Loads a map file into a map object and clears its units and map objects.
  *
- * @par Lua name `btech.map.load`
- * @par Lua signature `btech.map.load( map, name, [clear] )`
- * @par Lua parameters - `map` (`number`) The map-object dbref.
- * - `name` (`string`) The map file name.
- * - `clear` (`boolean`) Optional. Optional compatibility argument; currently
- * ignored.
- * @par Lua returns - `success` (`boolean`): true after the operation completes
- * without a legacy error.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.map.load
+ * @code{.lua}
+ * ---Loads a map file and clears units and map objects from the target map.
+ * ---@param map integer
+ * ---@param name string
+ * ---@param clear boolean Ignored compatibility argument; explicit `nil` is rejected by the Lua bridge.
+ * ---@return 1 success Numeric one returned by the handler's `BTECH_SCRIPT_NUMBER` conversion.
+ * ---@overload fun(map: integer, name: string): 1
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_map.load(map, name, clear) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -82,20 +82,19 @@ BtechScriptResult fun_btloadmap(BtechScriptCall *call) {
 /**
  * Loads a unit template into a live unit object.
  *
- * @par Lua name `btech.unit.load`
- * @par Lua signature `btech.unit.load( unit, reference )`
- * @par Lua parameters - `unit` (`number`) The unit dbref.
- * - `reference` (`string`) The unit template reference.
- * @par Lua returns - `success` (`boolean`): true after the operation completes
- * without a legacy error.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.unit.load
+ * @code{.lua}
+ * ---Loads a unit template into a live unit object.
+ * ---@param unit integer
+ * ---@param reference string
+ * ---@return true success
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_unit.load(unit, reference) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -135,19 +134,20 @@ BtechScriptResult fun_btloadmech(BtechScriptCall *call) {
 /**
  * Lists the configured radio channels of a live unit.
  *
- * @par Lua name `btech.unit.frequencies`
- * @par Lua signature `btech.unit.frequencies( unit )`
- * @par Lua parameters - `unit` (`number`) The unit dbref.
- * @par Lua returns - `values` (`table`): A flat array of converted legacy
- * result tokens.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.unit.frequencies
+ * @code{.lua}
+ * ---Lists configured radio channels for a live unit.
+ * ---The list adapter does not split the comma between serialized channel
+ * ---records, so adjacent records can be merged into one token.
+ * ---@param unit integer
+ * ---@return BtechListItem[] values
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_unit.frequencies(unit) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -195,19 +195,18 @@ BtechScriptResult fun_btmechfreqs(BtechScriptCall *call) {
 /**
  * Returns a part's weight in tons.
  *
- * @par Lua name `btech.parts.weight`
- * @par Lua signature `btech.parts.weight( part_name )`
- * @par Lua parameters - `part_name` (`string`) A recognized long or very-long
- * part name.
- * @par Lua returns - `value` (`number`): The numeric result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.parts.weight
+ * @code{.lua}
+ * ---Returns a recognized part's weight in tons.
+ * ---@param part_name string
+ * ---@return number tons
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_parts.weight(part_name) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -243,21 +242,20 @@ BtechScriptResult fun_btgetweight(BtechScriptCall *call) {
 /**
  * Removes a quantity of a part from an object's stores.
  *
- * @par Lua name `btech.parts.remove_stores`
- * @par Lua signature `btech.parts.remove_stores( target, part_name, quantity )`
- * @par Lua parameters - `target` (`number`) The stores-bearing object dbref.
- * - `part_name` (`string`) A recognized part name.
- * - `quantity` (`number`) The quantity to remove.
- * @par Lua returns - `success` (`boolean`): true after the operation completes
- * without a legacy error.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.parts.remove_stores
+ * @code{.lua}
+ * ---Removes a quantity of a part from an object's stores.
+ * ---@param target integer
+ * ---@param part_name string
+ * ---@param quantity integer
+ * ---@return true success
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_parts.remove_stores(target, part_name, quantity) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -307,19 +305,18 @@ BtechScriptResult fun_btremovestores(BtechScriptCall *call) {
 /**
  * Returns a player's remaining technician time in seconds.
  *
- * @par Lua name `btech.repair.tech_time`
- * @par Lua signature `btech.repair.tech_time( player )`
- * @par Lua parameters - `player` (`number`) The player dbref.
- * @par Lua returns - `seconds` (`number`): Remaining technician time in
- * seconds, or zero when the player has no pending technician time.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.repair.tech_time
+ * @code{.lua}
+ * ---Returns a player's remaining technician time in seconds.
+ * ---@param player integer
+ * ---@return number seconds Remaining technician time, or zero when the player has no pending technician time.
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_repair.tech_time(player) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -344,10 +341,8 @@ BtechScriptResult fun_bttechtime(BtechScriptCall *call) {
       !is_player(context->world->database, player)) {
     return btech_script_error(call, "#-1 INVALID PLAYER");
   }
-  char *stored = btech_attribute_read(context->world->database, player,
-                                      A_TECHTIME, (char[LBUF_SIZE]){0});
-  if (stored != nullptr && parse_time_checked(stored, &completion) &&
-      completion > context->btech->clock->now) {
+  completion = btech_repair_technician_available_at(context->btech, player);
+  if (completion > context->btech->clock->now) {
     remaining = completion - context->btech->clock->now;
   }
   safe_tprintf_str(buff, bufc, "%ld", (long)remaining);
@@ -356,22 +351,21 @@ BtechScriptResult fun_bttechtime(BtechScriptCall *call) {
 /**
  * Describes one critical slot on a live unit.
  *
- * @par Lua name `btech.unit.crit_slot`
- * @par Lua signature `btech.unit.crit_slot( unit, section, slot, [name_type] )`
- * @par Lua parameters - `unit` (`number`) The unit dbref.
- * - `section` (`string`) The section name.
- * - `slot` (`number`) The critical-slot number.
- * - `name_type` (`number`) Optional. Optional naming mode: 0 for template names
- * or 1 for repair-part names.
- * @par Lua returns - `result` (`string`): The handler's serialized text result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.unit.crit_slot
+ * @code{.lua}
+ * ---Describes one critical slot on a live unit.
+ * ---@param unit integer
+ * ---@param section string Canonical section name; native matching is case-insensitive and also uses class-dependent leading characters for legacy loose matches.
+ * ---@param slot integer
+ * ---@param field CriticalSlotField Required field selector; native matching is ASCII-case-insensitive.
+ * ---@return string result
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_unit.crit_slot(unit, section, slot, field) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -417,23 +411,21 @@ BtechScriptResult fun_btcritslot(BtechScriptCall *call) {
 /**
  * Describes one critical slot in a unit template.
  *
- * @par Lua name `btech.unit.crit_slot_ref`
- * @par Lua signature `btech.unit.crit_slot_ref( reference, section, slot,
- * [name_type] )`
- * @par Lua parameters - `reference` (`string`) The unit template reference.
- * - `section` (`string`) The section name.
- * - `slot` (`number`) The critical-slot number.
- * - `name_type` (`number`) Optional. Optional naming mode: 0 for template names
- * or 1 for repair-part names.
- * @par Lua returns - `result` (`string`): The handler's serialized text result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.unit.crit_slot_ref
+ * @code{.lua}
+ * ---Describes one critical slot in a unit template.
+ * ---@param reference string
+ * ---@param section string Canonical section name; native matching is case-insensitive and also uses class-dependent leading characters for legacy loose matches.
+ * ---@param slot integer
+ * ---@param field CriticalSlotField Required field selector; native matching is ASCII-case-insensitive.
+ * ---@return string result
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_unit.crit_slot_ref(reference, section, slot, field) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -479,21 +471,30 @@ static float map_hex_scaled_elevation(BattleMap *map, int x, int y) {
 /**
  * Calculates distance between units or map coordinates.
  *
- * @par Lua name `btech.map.range`
- * @par Lua signature `btech.map.range( map, unit_a, unit_b )`
- * @par Lua parameters - `map` (`number`) The map dbref.
- * - `unit_a` (`number`) The first unit dbref.
- * - `unit_b` (`number`) The second unit dbref.
- * @par Lua returns - `range` (`number`): The three-dimensional range between
- * the units.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.map.range
+ * @code{.lua}
+ * ---Calculates three-dimensional range between two units on a map.
+ * ---For the four-argument forms, an integer in the first overloaded position
+ * ---selects coordinate-first dispatch, so unit-first requires a non-integer
+ * ---textual reference. For the five-argument forms, dispatch treats a leading
+ * ---digit or `.` as numeric, making numeric-looking unit references ambiguous.
+ * ---@param map integer
+ * ---@param unit_a integer
+ * ---@param unit_b integer
+ * ---@return number range
+ * ---@overload fun(map: integer, unit: integer, x: integer, y: integer): number
+ * ---@overload fun(map: integer, x: integer, y: integer, unit: integer): number
+ * ---@overload fun(map: integer, unit: integer, x: integer, y: integer, z: integer): number
+ * ---@overload fun(map: integer, x: integer, y: integer, z: integer, unit: integer): number
+ * ---@overload fun(map: integer, x1: integer, y1: integer, x2: integer, y2: integer): number
+ * ---@overload fun(map: integer, x1: integer, y1: integer, z1: integer, x2: integer, y2: integer, z2: integer): number
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_map.range(map, unit_a, unit_b) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */

@@ -1,4 +1,5 @@
 ---
+draft: true
 title: stores
 type: docs
 toc_hide: false
@@ -45,7 +46,9 @@ btech.parts.stores( target )
 ### Returns
 
 `table stores`
-: A flat array of serialized `name:quantity` strings.
+: A flat array of legacy serialization tokens. A long display name containing
+  spaces is split across multiple items, so an item is not guaranteed to hold
+  one complete `name:quantity` record.
 
 ## Examples
 
@@ -58,7 +61,10 @@ mux.world.pemit(ctx.enactor, "Available: " .. quantity)
 
 ## Notes
 
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error.
+This function is available only in a running Lua callback. Invalid targets,
+invalid arguments, and legacy error results raise a Lua error. The record
+splitting is a limitation of the shared legacy list adapter, which treats spaces
+and `|` as separators.
 
 ## See Also
 

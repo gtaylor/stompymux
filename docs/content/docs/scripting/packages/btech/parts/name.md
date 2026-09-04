@@ -1,4 +1,5 @@
 ---
+draft: true
 title: name
 type: docs
 toc_hide: false
@@ -20,7 +21,9 @@ btech.parts.name( part, size )
 : The packed part ID.
 
 `string size`
-: `"short"`, `"long"`, or `"vlong"`.
+: Canonically `"short"`, `"long"`, or `"vlong"`. The legacy handler examines
+  only the first letter without regard to case, so any non-empty string
+  beginning with `s`, `l`, or `v` selects the corresponding form.
 
 ### Returns
 
@@ -29,7 +32,10 @@ btech.parts.name( part, size )
 
 ## Notes
 
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error.
+This function is available only in a running Lua callback. Invalid targets,
+invalid arguments, and legacy error results raise a Lua error. The `size`
+argument is required: the legacy handler does not safely reject its omission
+and may abort instead of raising a checked Lua error.
 
 ## See Also
 

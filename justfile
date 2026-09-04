@@ -10,6 +10,7 @@ strict_c23 := env("BTECH_STRICT_C23", "ON")
 build_fuzzers := env("BTECH_BUILD_FUZZERS", "OFF")
 frame_check_build_dir := ".build-frame-check"
 ast_policy_checker_build_dir := ".build-ast-policy-checker"
+lua_type_generator_build_dir := ".build-lua-type-generator"
 clang_tidy := env("CLANG_TIDY", "clang-tidy-22")
 run_clang_tidy := env("RUN_CLANG_TIDY", "run-clang-tidy-22")
 clang := env("CLANG", "clang-22")
@@ -24,7 +25,7 @@ ci: ci-build-test ci-analysis
 
 ci-build-test: build test
 
-ci-analysis: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis check-complexity-suppressions fmt-check build frame-check check-ast-policies tidy-check
+ci-analysis: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis check-complexity-suppressions fmt-check build check-lua-types frame-check check-ast-policies tidy-check
 
 agent-checks: ci
 
@@ -118,24 +119,42 @@ check-boolean-conversions:
     output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -p {{build_dir}} -j "$(nproc)" -checks='-*,readability-implicit-bool-conversion' -config="{Checks: '-*,readability-implicit-bool-conversion', WarningsAsErrors: '', HeaderFilterRegex: '^.*/src/(mux|btech)/.*', CheckOptions: {readability-implicit-bool-conversion.AllowIntegerConditions: 'true', readability-implicit-bool-conversion.AllowPointerConditions: 'true'}}" '^.*/src/(mux|btech)/.*[.]c$' >"$output" 2>&1 || status=$?; if (( status != 0 )); then cat "$output" >&2; exit "$status"; fi; if rg -n -- "-> 'bool'" "$output"; then echo 'Implicit conversion into bool found; make the conversion explicit.' >&2; exit 1; fi
 
 fmt-c:
-    find src tools/ast_policy_checker -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} -i
+    find src tools/ast_policy_checker tools/lua_type_generator -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} -i
 
 fmt-lua:
-    {{stylua}} --glob '**/*.lua' -- game/lua
+    {{stylua}} --glob '**/*.lua' --glob '!game/lua/types/**/*.lua' -- game/lua
 
 fmt: fmt-c fmt-lua
 
 fmt-check-c:
-    find src tools/ast_policy_checker -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} --dry-run --Werror
+    find src tools/ast_policy_checker tools/lua_type_generator -type f \( -name '*.c' -o -name '*.cpp' -o -name '*.h' -o -name '*.h.in' \) -print0 | xargs -0 -r {{clang_format}} --dry-run --Werror
 
 fmt-check-lua:
     {{stylua}} --check --glob '**/*.lua' -- game/lua
 
 fmt-check: fmt-check-c fmt-check-lua
 
-# Refresh the checked-in LuaLS definitions from the native package bindings.
-update-lua-types:
-    codex --sandbox workspace-write --ask-for-approval never --cd "$PWD" exec --ephemeral - < tools/update_lua_types_prompt.md
+lua-type-generator-build:
+    llvm_cmake_dir="$({{llvm_config}} --cmakedir)"; cmake -S tools/lua_type_generator -B {{lua_type_generator_build_dir}} -DCMAKE_CXX_COMPILER={{clangxx}} -DLLVM_DIR="$llvm_cmake_dir" -DClang_DIR="${llvm_cmake_dir%/llvm}/clang"
+    cmake --build {{lua_type_generator_build_dir}} -j "$(nproc)"
+
+# Validate generator fixtures, generated syntax and formatting, and whole-workspace
+# types without reparsing the native sources.
+[private]
+validate-lua-types-output:
+    ctest --test-dir {{lua_type_generator_build_dir}} --output-on-failure
+    {{stylua}} --check game/lua/types/mux.d.lua game/lua/types/btech.d.lua
+    third_party/luajit/src/luajit -e 'for _, path in ipairs({ "game/lua/types/mux.d.lua", "game/lua/types/btech.d.lua" }) do local chunk, message = loadfile(path); assert(chunk, message) end'
+    mkdir -p {{build_dir}}/lua-language-server
+    tools/run-lua-language-server.sh --check=. --configpath=.luarc.json --checklevel=Warning --check_format=pretty --logpath={{build_dir}}/lua-language-server
+
+# Refresh the checked-in LuaLS definitions from exact contracts in native C.
+update-lua-types: build lua-type-generator-build && validate-lua-types-output
+    mapfile -d '' -t sources < <(find src/mux -type f -name '*.c' -print0 | sort -z); {{lua_type_generator_build_dir}}/lua-type-generator --write --repo-root "$PWD" --output-dir game/lua/types -p {{build_dir}} "${sources[@]}"
+
+# Check deterministic freshness, syntax, formatting, and whole-workspace types.
+check-lua-types: build lua-type-generator-build && validate-lua-types-output
+    mapfile -d '' -t sources < <(find src/mux -type f -name '*.c' -print0 | sort -z); {{lua_type_generator_build_dir}}/lua-type-generator --check --repo-root "$PWD" --output-dir game/lua/types -p {{build_dir}} "${sources[@]}"
 
 tidy:
     {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -fix -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'

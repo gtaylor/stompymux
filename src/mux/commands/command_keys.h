@@ -6,9 +6,9 @@
 constexpr int BOOT_QUIET = 1; /* Inhibit boot message to victim. */
 constexpr int BOOT_PORT = 2;  /* Boot by port number. */
 
-constexpr int ATTRIBUTE_GET = 1;
-constexpr int ATTRIBUTE_EXAMINE = 2;
-constexpr int ATTRIBUTE_SET = 3;
+constexpr int BTECH_INFO = 0;
+constexpr int BTECH_REGISTER = 1;
+constexpr int BTECH_UNREGISTER = 2;
 
 constexpr int CLONE_LOCATION = 0;  /* Create clone in current location. */
 constexpr int CLONE_INVENTORY = 4; /* Create clone in current inventory. */
@@ -16,6 +16,9 @@ constexpr int CLONE_INVENTORY = 4; /* Create clone in current inventory. */
 constexpr int DEST_ONE = 1;       /* Destroy one object. */
 constexpr int DEST_OVERRIDE = 4;  /* Override safety check. */
 constexpr int DEST_RECURSIVE = 8; /* Destroy recursively. */
+
+constexpr int DESCRIPTION_EXTERNAL = 0;
+constexpr int DESCRIPTION_INTERNAL = 1;
 
 constexpr int DIG_TELEPORT = 1; /* Teleport after digging. */
 constexpr int EXAM_BRIEF = 1;   /* Omit ordinary attribute list. */

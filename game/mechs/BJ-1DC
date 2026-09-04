@@ -3,7 +3,6 @@ Reference        { BJ-1DC }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 45 }
-Mech_BV          { 718 }
 Heat_Sinks       { 12 }
 Max_Speed        { 64.50 }
 Specials         { Fliparms }

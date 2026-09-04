@@ -3,7 +3,6 @@ Reference        { Peregrine }
 Type             { VTOL }
 Move_Type        { VTOL }
 Tons             { 30 }
-Mech_BV          { 520 }
 Max_Speed        { 193.50 }
 Left_Side
   Armor            { 2 }

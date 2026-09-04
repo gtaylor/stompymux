@@ -3,7 +3,6 @@ Reference        { Harasser-L }
 Type             { Vehicle }
 Move_Type        { Hover }
 Tons             { 25 }
-Mech_BV          { 245 }
 Computer         { 3 }
 Max_Speed        { 161.25 }
 Specials         { ICEEngine_Tech Searchlight }

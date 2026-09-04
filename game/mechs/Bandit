@@ -4,7 +4,6 @@ Type             { Vehicle }
 Move_Type        { Hover }
 Tons             { 50 }
 Comment          { Saved by: Stringfellow Hawke(#988) at Fri Nov  4 10:43:41 2005 }
-Mech_BV          { 566 }
 Cargo_Space      { 400 }
 Max_Ton          { 10 }
 Max_Suits        { 0 }

@@ -3,7 +3,6 @@ Reference        { ARC-2K }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 70 }
-Mech_BV          { 977 }
 Heat_Sinks       { 12 }
 Max_Speed        { 64.50 }
 Left_Arm

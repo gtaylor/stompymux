@@ -3,7 +3,6 @@ Reference        { ZEU-6S }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 80 }
-Mech_BV          { 1148 }
 Heat_Sinks       { 17 }
 Max_Speed        { 64.50 }
 Left_Arm

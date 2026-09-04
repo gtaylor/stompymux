@@ -1,4 +1,5 @@
 ---
+draft: true
 title: set_xy
 type: docs
 toc_hide: false
@@ -22,18 +23,19 @@ btech.map.set_xy( unit, map, x, y, [z] )
 `number map`
 : The destination map dbref.
 
-`number x`
+`integer x`
 : The destination X coordinate.
 
-`number y`
+`integer y`
 : The destination Y coordinate.
 
-`number z`
-: Optional altitude, defaulting to `0`.
+`integer z`
+: Optional altitude, defaulting to `0` when omitted. Explicitly passing `nil`
+  raises an argument error.
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Notes

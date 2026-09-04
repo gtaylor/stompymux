@@ -7,7 +7,6 @@ Comment          { Saved by: Tantrum(#4394) at Wed May 10 22:37:50 2000 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 24 }
-Mech_BV          { 1336 }
 Cargo_Space      { 0 }
 Max_Speed        { 86.00 }
 Specials         { DoubleHS }

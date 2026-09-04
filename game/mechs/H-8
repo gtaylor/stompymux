@@ -3,7 +3,6 @@ Reference        { H-8 }
 Type             { VTOL }
 Move_Type        { VTOL }
 Tons             { 20 }
-Mech_BV          { 545 }
 Max_Speed        { 161.25 }
 Specials	 { Searchlight }
 Left_Side

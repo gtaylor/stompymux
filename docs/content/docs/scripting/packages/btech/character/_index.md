@@ -1,4 +1,5 @@
 ---
+draft: true
 title: btech.character
 linkTitle: btech.character
 type: docs

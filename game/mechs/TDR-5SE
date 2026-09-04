@@ -3,7 +3,6 @@ Reference        { TDR-5SE }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 65 }
-Mech_BV          { 1180 }
 Heat_Sinks       { 17 }
 Max_Speed        { 64.50 }
 Jump_Speed       { 43.00 }

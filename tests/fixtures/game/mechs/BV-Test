@@ -1,0 +1,10 @@
+Name             { Battle Value Test }
+Reference        { BV-Test }
+Type             { Mech }
+Move_Type        { Biped }
+Tons             { 20 }
+Heat_Sinks       { 10 }
+Max_Speed        { 64.50 }
+Left_Arm
+  Armor            { 1 }
+  Internals        { 1 }

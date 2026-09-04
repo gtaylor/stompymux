@@ -1,4 +1,5 @@
 ---
+draft: true
 title: list
 type: docs
 toc_hide: false
@@ -17,10 +18,12 @@ btech.character.list( kind, [character] )
 ### Arguments
 
 `string kind`
-: `"skills"`, `"advantages"`, or `"attributes"`.
+: `"skills"`, `"advantages"`, or `"attributes"`, matched without regard to
+  case.
 
 `number or string character`
-: Optional character dbref or player name used to filter learned values.
+: Optional character dbref or player name used to filter learned values. It may
+  be omitted, but explicitly passing `nil` raises an argument error.
 
 ### Returns
 

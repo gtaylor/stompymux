@@ -3,7 +3,6 @@ Reference        { LNC-25-01 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 60 }
-Mech_BV          { 1185 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 26 }

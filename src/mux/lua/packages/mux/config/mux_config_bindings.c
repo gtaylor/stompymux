@@ -13,19 +13,19 @@
 /**
  * Returns the live value of a scalar server configuration directive.
  *
- * @par Lua name `mux.config.get`
- * @par Lua signature `mux.config.get( name )`
- * @par Lua parameters - `name` (`string`) Exact, case-sensitive configuration
- * directive name. Embedded NUL bytes are rejected.
- * @par Lua returns - `value` (`string|number|boolean`): The directive's current
- * live value, represented using its native Lua scalar type.
- * @par Lua errors - `LUA_ERROR_CODE_ARG_INVALID` for an embedded NUL byte;
- * `LUA_ERROR_CODE_CONFIG_NOT_FOUND` for an unknown directive;
- * `LUA_ERROR_CODE_CONFIG_UNSUPPORTED` for a known non-scalar directive.
- * @par Lua availability Available both at runtime and during `@lua/check`.
- * @param[in,out] state The Lua state whose arguments are read and result is
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.config.get
+ * @code{.lua}
+ * ---Returns the live scalar value of an exact, case-sensitive configuration directive.
+ * ---@param name string Configuration directive name; embedded NUL bytes are rejected.
+ * ---@return ConfigValue value Current value represented by its native Lua scalar type.
+ * ---
+ * ---Raises [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.config.not_found`](lua://mux.error.codes.config.not_found), [`mux.error.codes.config.unsupported`](lua://mux.error.codes.config.unsupported), or [`mux.error.codes.internal`](lua://mux.error.codes.internal).
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.config.not_found
+ * ---@see mux.error.codes.config.unsupported
+ * ---@see mux.error.codes.internal
+ * function mux_config.get(name) end
+ * @endcode
  */
 static int lua_mux_config_get(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -77,6 +77,19 @@ static int lua_mux_config_get(lua_State *state) {
   return 1;
 }
 
+/**
+ * @par LuaLS definition mux alias config.value
+ * @code{.lua}
+ * ---@alias ConfigValue string|number|boolean Scalar value returned by the live configuration registry.
+ * @endcode
+ *
+ * @par LuaLS definition mux namespace mux.config
+ * @code{.lua}
+ * ---Read-only access to live scalar server configuration.
+ * ---@class MuxConfigPackage
+ * local mux_config = {}
+ * @endcode
+ */
 void lua_mux_install_config_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_newtable(state);
   lua_pushlightuserdata(state, package);

@@ -1,4 +1,4 @@
-/* object_names.c -- Object-name cache lifetime tests. */
+/* object_names.c -- Core object text-field lifetime tests. */
 
 #include "mux/server/platform.h"
 
@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mux/objects/attrs.h"
 #include "mux/objects/character_state.h"
 #include "mux/objects/db.h"
 #include "mux/objects/economy_parts.h"
@@ -17,7 +16,6 @@
 #include "mux/server/log.h"
 #include "mux/server/server_config.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/owned_text.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/utf8.h"
@@ -76,23 +74,17 @@ void game_object_clear_powers(GameDatabase *database [[maybe_unused]],
 
 static int check_stable_names(void) {
   GameObject objects[3] = {};
-  NAME names[3] = {};
-  NAME pure_names[3] = {};
   ServerConfiguration configuration = {};
   GameDatabase database = {
       .object_storage = objects,
-      .name_storage = names,
-      .pure_name_storage = pure_names,
       .top = 2,
       .size = 2,
       .configuration = &configuration,
   };
   int result = 1;
 
-  objects[1].native.values[A_NAME] = strdup("{Alpha}");
-  objects[2].native.values[A_NAME] = strdup("{Beta}");
-  if (!objects[1].native.values[A_NAME] || !objects[2].native.values[A_NAME])
-    goto cleanup;
+  object_name_set(&database, 0, "{Alpha}");
+  object_name_set(&database, 1, "{Beta}");
 
   const char *raw_alpha = game_object_name(&database, 0);
   const char *raw_beta = game_object_name(&database, 1);
@@ -120,12 +112,8 @@ static int check_stable_names(void) {
 
   result = 0;
 cleanup:
-  free(objects[1].native.values[A_NAME]);
-  free(objects[2].native.values[A_NAME]);
-  free(names[1]);
-  free(names[2]);
-  free(pure_names[1]);
-  free(pure_names[2]);
+  game_object_owned_state_clear(&database, 0);
+  game_object_owned_state_clear(&database, 1);
   return result;
 }
 
@@ -137,48 +125,54 @@ static int check_grow_and_free(void) {
   database.configuration = &configuration;
   db_grow(&database, 1);
   object_name_set(&database, 0, "Persistent");
+  game_object_description_set(&database, 0, "Persistent description");
+  game_object_internal_description_set(&database, 0, "Persistent inside");
   const char *cached = game_object_pure_name(&database, 0);
+  const char *description = game_object_description(&database, 0);
+  const char *internal_description =
+      game_object_internal_description(&database, 0);
   if (strcmp(cached, "Persistent") != 0)
     return 1;
 
   db_grow(&database, 4);
   if (cached != game_object_pure_name(&database, 0) ||
-      strcmp(cached, "Persistent") != 0)
+      strcmp(cached, "Persistent") != 0 ||
+      description != game_object_description(&database, 0) ||
+      strcmp(description, "Persistent description") != 0 ||
+      internal_description != game_object_internal_description(&database, 0) ||
+      strcmp(internal_description, "Persistent inside") != 0)
     return 1;
 
   db_free(&database);
-  return database.object_storage != nullptr ||
-         database.name_storage != nullptr ||
-         database.pure_name_storage != nullptr || database.markbits != nullptr;
+  return database.object_storage != nullptr || database.markbits != nullptr;
 }
 
-static int check_owned_attribute_text(void) {
+static int check_descriptions(void) {
   GameObject objects[2] = {};
   GameDatabase database = {.object_storage = objects, .top = 1, .size = 1};
-  long flags = -1;
+  char description[] = "description";
+  char internal_description[] = "inside";
 
-  attribute_add(&database, 0, A_DESCRIPTION, "description", 0);
-  OwnedText present = attribute_get(&database, 0, A_DESCRIPTION, &flags);
-  OwnedText missing =
-      attribute_get(&database, 0, A_INTERNAL_DESCRIPTION, nullptr);
-  int result = 0;
-
-  if (present.owned == nullptr || strcmp(present.text, "description") != 0 ||
-      flags != 0)
-    result = 1;
-  else if (missing.owned == nullptr || strcmp(missing.text, "") != 0)
-    result = 2;
-
-  owned_text_release(&present);
-  owned_text_release(&missing);
-  attribute_free(&database, 0);
-  return result;
+  game_object_description_set(&database, 0, description);
+  game_object_internal_description_set(&database, 0, internal_description);
+  description[0] = 'D';
+  internal_description[0] = 'I';
+  if (strcmp(game_object_description(&database, 0), "description") != 0 ||
+      strcmp(game_object_internal_description(&database, 0), "inside") != 0)
+    return 1;
+  game_object_description_set(&database, 0, "");
+  game_object_internal_description_set(&database, 0, nullptr);
+  if (game_object_description(&database, 0) != nullptr ||
+      game_object_internal_description(&database, 0) != nullptr)
+    return 2;
+  game_object_owned_state_clear(&database, 0);
+  return 0;
 }
 
 int main(void) {
   if (check_stable_names() != 0 || check_grow_and_free() != 0 ||
-      check_owned_attribute_text() != 0) {
-    (void)fprintf(stderr, "object name cache lifetime test failed\n");
+      check_descriptions() != 0) {
+    (void)fprintf(stderr, "core object text-field lifetime test failed\n");
     return 1;
   }
   return 0;

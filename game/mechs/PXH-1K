@@ -3,7 +3,6 @@ Reference        { PXH-1K }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 45 }
-Mech_BV          { 872 }
 Heat_Sinks       { 13 }
 Computer	 { 4 } 
 Radio		 { 4 }

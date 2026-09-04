@@ -1,4 +1,5 @@
 ---
+draft: true
 title: update_links
 type: docs
 toc_hide: false
@@ -21,7 +22,7 @@ btech.map.update_links( map )
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Notes

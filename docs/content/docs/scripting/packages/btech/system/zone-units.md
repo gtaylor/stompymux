@@ -1,4 +1,5 @@
 ---
+draft: true
 title: zone_units
 type: docs
 toc_hide: false
@@ -22,7 +23,8 @@ btech.system.zone_units( zone )
 ### Returns
 
 `table values`
-: A flat array of converted legacy result tokens.
+: A flat array of unit dbrefs. If the legacy output buffer fills, the final value
+  is `-1` to indicate that the list was truncated.
 
 ## Notes
 

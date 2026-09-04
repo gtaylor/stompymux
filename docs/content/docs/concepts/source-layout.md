@@ -140,9 +140,9 @@ command scope.
 Long-lived mutable process ownership is now concentrated at the POSIX
 signal-handler dispatch bridge. Compiled BTech formatting paths no longer use
 function-local static result buffers: formatters either return small values or
-write into storage owned by the enclosing operation. This includes xcode value
-callbacks, status renderers, menu callbacks, generated part names, attribute
-reads, mech identifiers, and unit-parts summaries. Random-generator state and
+write into storage owned by the enclosing operation. This includes BTech field
+callbacks, status renderers, menu callbacks, generated part names, mech
+identifiers, and unit-parts summaries. Random-generator state and
 its roll statistics, startup-resolved missile cluster indexes, map coding, and
 generated part-name indexes are explicit `BtechContext` owners, while artillery
 and map-object recycler lists have been replaced by
@@ -166,7 +166,7 @@ treating it as precedent. It contains only the POSIX signal bridge, whose
 callback interface cannot carry server context. SQLite writer fault injection
 is owned by each snapshot write and threaded through its store contexts. Flow
 prompts belong to their active flows, while connection displays and
-xcode-reference handlers use
+unit-template field handlers use
 owner- or caller-provided storage. Flag and power lookup normalizes const input
 into bounded automatic storage. Token parsing, local-time formatting, network
 address rendering, system-error messages, and transient formatted text likewise

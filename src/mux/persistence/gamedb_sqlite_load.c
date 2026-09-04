@@ -4,12 +4,10 @@
 #include <linux/limits.h>
 #include <sqlite3.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
-#include "mux/objects/attrs.h"
 #include "mux/objects/character_state.h"
 #include "mux/objects/db.h"
 #include "mux/objects/economy_parts.h"
@@ -61,6 +59,8 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   sqlite3_stmt *statement;
   const char *lua_parent;
   const char *name;
+  const char *description;
+  const char *internal_description;
   DbRef object;
   DbRef affiliation;
   DbRef contents;
@@ -78,7 +78,8 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   statement = nullptr;
   const char *query =
       "SELECT dbref, name, location, zone, affiliation, contents, exits, link, "
-      "next, type, lua_parent, has_ansi_flag, has_audible_flag, "
+      "next, type, lua_parent, description, internal_description, "
+      "has_ansi_flag, has_audible_flag, "
       "has_auditorium_flag, has_blind_flag, has_connected_flag, "
       "has_dark_flag, "
       "has_floating_flag, has_gagged_flag, has_going_flag, "
@@ -86,7 +87,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       "has_in_character_flag, has_light_flag, has_monitor_flag, "
       "has_no_command_flag, has_safe_flag, "
       "has_suspect_flag, has_transparent_flag, has_wizard_flag, "
-      "has_xcode_flag, has_zombie_flag, has_idle_power "
+      "has_zombie_flag, has_idle_power "
       "FROM objects "
       "ORDER BY dbref;";
   if (gamedb_prepare(sqlite, &statement, query) < 0) {
@@ -96,6 +97,8 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
 
   result = 0;
   while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
+    description = nullptr;
+    internal_description = nullptr;
     if (gamedb_column_long(statement, 0, &object) < 0 || object < 0 ||
         object >= db_top ||
         gamedb_column_text(statement, 1, &name, MBUF_SIZE) < 0 ||
@@ -108,6 +111,11 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
         gamedb_column_long(statement, 8, &next) < 0 ||
         gamedb_column_int(statement, 9, &type) < 0 ||
         gamedb_column_text(statement, 10, &lua_parent, PATH_MAX) < 0 ||
+        (sqlite3_column_type(statement, 11) != SQLITE_NULL &&
+         gamedb_column_text(statement, 11, &description, LBUF_SIZE) < 0) ||
+        (sqlite3_column_type(statement, 12) != SQLITE_NULL &&
+         gamedb_column_text(statement, 12, &internal_description, LBUF_SIZE) <
+             0) ||
         (type != OBJECT_TYPE_ROOM && type != OBJECT_TYPE_THING &&
          type != OBJECT_TYPE_EXIT && type != OBJECT_TYPE_PLAYER &&
          type != OBJECT_TYPE_GARBAGE) ||
@@ -119,14 +127,14 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       for (ObjectFlag flag = OBJECT_FLAG_ANSI;
            result == 0 && flag < OBJECT_FLAG_COUNT; flag++) {
         if (gamedb_column_bool(
-                statement, 10 + (int)flag,
+                statement, 12 + (int)flag,
                 checked_storage_at(object_flags, OBJECT_FLAG_COUNT,
                                    sizeof(*object_flags), (size_t)flag)) < 0)
           result = -1;
       }
       for (PowerId power = POWER_IDLE; result == 0 && power < POWER_COUNT;
            power++) {
-        if (gamedb_column_bool(statement, 30 + (int)power,
+        if (gamedb_column_bool(statement, 11 + OBJECT_FLAG_COUNT + (int)power,
                                checked_storage_at(powers, POWER_COUNT,
                                                   sizeof(*powers),
                                                   (size_t)power)) < 0)
@@ -135,6 +143,9 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       if (result != 0)
         continue;
       object_name_set(context->database, object, name);
+      game_object_description_set(context->database, object, description);
+      game_object_internal_description_set(context->database, object,
+                                           internal_description);
       game_object_set_location(context->database, object, location);
       game_object_set_zone(context->database, object, zone);
       game_object_set_affiliation(context->database, object, affiliation);
@@ -174,42 +185,6 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
   return result;
 }
 
-static int gamedb_load_native_state(PersistenceContext *context,
-                                    sqlite3 *sqlite) {
-  char query[256];
-
-  for (size_t index = 0; index < NATIVE_COLUMN_COUNT; index++) {
-    const NativeColumn *column = gamedb_native_column_at(index);
-    sqlite3_stmt *statement = nullptr;
-    int step;
-
-    (void)snprintf(query, sizeof(query),
-                   "SELECT %s, CAST(%s AS TEXT) FROM %s WHERE %s IS NOT NULL;",
-                   column->key_column, column->column, column->table,
-                   column->column);
-    if (gamedb_prepare(sqlite, &statement, query) < 0)
-      return -1;
-    while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
-      const char *value;
-      DbRef object;
-
-      if (gamedb_column_long(statement, 0, &object) < 0 ||
-          !is_good_obj(context->database, object) ||
-          gamedb_column_text(statement, 1, &value, LBUF_SIZE) < 0 ||
-          (column->field == A_ALIAS &&
-           !ok_stored_player_name(context->configuration, value))) {
-        sqlite3_finalize(statement);
-        return -1;
-      }
-      attribute_add_raw(context->database, object, column->field, value);
-    }
-    sqlite3_finalize(statement);
-    if (step != SQLITE_DONE)
-      return -1;
-  }
-  return 0;
-}
-
 static int gamedb_load_player_accounts(PersistenceContext *context,
                                        sqlite3 *sqlite) {
   sqlite3_stmt *statement = nullptr;
@@ -218,23 +193,25 @@ static int gamedb_load_player_accounts(PersistenceContext *context,
   DbRef object;
   int step;
 
-  if (!seen || gamedb_prepare(
-                   sqlite, &statement,
-                   "SELECT object_dbref, password_hash, last_login, last_site, "
-                   "successful_login_count, failed_login_count, "
-                   "unreported_failed_login_count FROM player_state "
-                   "ORDER BY object_dbref;") < 0) {
+  if (!seen ||
+      gamedb_prepare(sqlite, &statement,
+                     "SELECT object_dbref, password_hash, alias, last_login, "
+                     "last_site, "
+                     "successful_login_count, failed_login_count, "
+                     "unreported_failed_login_count FROM player_state "
+                     "ORDER BY object_dbref;") < 0) {
     free(seen);
     return -1;
   }
   while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
     const char *password_hash = nullptr;
+    const char *alias = nullptr;
     const char *last_site = nullptr;
     DbRef player;
     long last_login = 0;
-    int64_t successful = sqlite3_column_int64(statement, 4);
-    int64_t failed = sqlite3_column_int64(statement, 5);
-    int64_t unreported = sqlite3_column_int64(statement, 6);
+    int64_t successful = sqlite3_column_int64(statement, 5);
+    int64_t failed = sqlite3_column_int64(statement, 6);
+    int64_t unreported = sqlite3_column_int64(statement, 7);
 
     if (gamedb_column_long(statement, 0, &player) < 0 ||
         !is_good_obj(context->database, player) ||
@@ -245,13 +222,16 @@ static int gamedb_load_player_accounts(PersistenceContext *context,
         (sqlite3_column_type(statement, 1) != SQLITE_NULL &&
          gamedb_column_text(statement, 1, &password_hash, LBUF_SIZE) < 0) ||
         (sqlite3_column_type(statement, 2) != SQLITE_NULL &&
-         (sqlite3_column_type(statement, 2) != SQLITE_INTEGER ||
-          gamedb_column_long(statement, 2, &last_login) < 0)) ||
+         (gamedb_column_text(statement, 2, &alias, LBUF_SIZE) < 0 ||
+          !ok_stored_player_name(context->configuration, alias))) ||
         (sqlite3_column_type(statement, 3) != SQLITE_NULL &&
-         gamedb_column_text(statement, 3, &last_site, LBUF_SIZE) < 0) ||
-        sqlite3_column_type(statement, 4) != SQLITE_INTEGER ||
+         (sqlite3_column_type(statement, 3) != SQLITE_INTEGER ||
+          gamedb_column_long(statement, 3, &last_login) < 0)) ||
+        (sqlite3_column_type(statement, 4) != SQLITE_NULL &&
+         gamedb_column_text(statement, 4, &last_site, LBUF_SIZE) < 0) ||
         sqlite3_column_type(statement, 5) != SQLITE_INTEGER ||
         sqlite3_column_type(statement, 6) != SQLITE_INTEGER ||
+        sqlite3_column_type(statement, 7) != SQLITE_INTEGER ||
         !player_account_login_counts_set(&(PlayerLoginCountsChange){
             .account = {.database = context->database, .player = player},
             .successful = successful,
@@ -259,9 +239,11 @@ static int gamedb_load_player_accounts(PersistenceContext *context,
             .unreported_failed = unreported}) ||
         (password_hash && !player_account_password_hash_set(
                               context->database, player, password_hash)) ||
+        (alias &&
+         !player_account_alias_set(context->database, player, alias)) ||
         (last_site &&
          !player_account_last_site_set(context->database, player, last_site)) ||
-        (sqlite3_column_type(statement, 2) != SQLITE_NULL &&
+        (sqlite3_column_type(statement, 3) != SQLITE_NULL &&
          !player_account_last_login_set(&(PlayerLastLoginChange){
              .account = {.database = context->database, .player = player},
              .occurred_at = (time_t)last_login}))) {
@@ -596,7 +578,6 @@ int gamedb_load(PersistenceContext *context, const char *path) {
     db_grow(context->database, db_top);
     if (gamedb_load_objects(context, sqlite, db_top) < 0 ||
         gamedb_load_player_accounts(context, sqlite) < 0 ||
-        gamedb_load_native_state(context, sqlite) < 0 ||
         gamedb_load_character_state(context, sqlite) < 0 ||
         gamedb_load_economy_parts(context, sqlite) < 0 ||
         gamedb_load_object_state(context, sqlite) < 0) {

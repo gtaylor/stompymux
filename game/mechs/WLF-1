@@ -3,7 +3,6 @@ Reference        { WLF-1 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 35 }
-Mech_BV          { 736 }
 Max_Speed        { 96.75 }
 Left_Arm
   Armor            { 12 }

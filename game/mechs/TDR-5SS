@@ -3,7 +3,6 @@ Reference        { TDR-5SS }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 65 }
-Mech_BV          { 1077 }
 Heat_Sinks       { 21 }
 Max_Speed        { 64.50 }
 Left_Arm

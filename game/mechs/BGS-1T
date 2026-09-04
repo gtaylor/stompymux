@@ -5,7 +5,6 @@ Move_Type        { Quad }
 Tons             { 70 }
 Comment          { Saved by: Charlemagne(#4624) at Wed Feb 16 07:59:33 2000 }
 Heat_Sinks       { 20 }
-Mech_BV          { 1205 }
 Max_Speed        { 86.00 }
 Specials         { DoubleHS }
 Front_Left_Leg

@@ -6,7 +6,6 @@ Tons             { 25 }
 Comment          { Saved by: Mad Tom(#2531) at Sun Dec 30 19:30:25 2007 }
 Radio            { 2 }
 Heat_Sinks       { 20 }
-Mech_BV          { 432 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 118.25 }

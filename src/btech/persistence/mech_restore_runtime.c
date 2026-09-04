@@ -281,8 +281,7 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
     }
     if (mech_dbref != current_mech) {
       if (mech) {
-        if (!*runtime_restore_int_slot(seen, 11, 0) ||
-            !*runtime_restore_int_slot(seen, 11, 8) ||
+        if (!*runtime_restore_int_slot(seen, 11, 8) ||
             !*runtime_restore_int_slot(seen, 11, 9) ||
             !*runtime_restore_int_slot(seen, 11, 10))
           result = -1;
@@ -298,14 +297,12 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
       memset(seen, 0, sizeof(seen));
       mech_persistence_snapshot_export(mech, &snapshot);
     }
-    if ((slot > 0 && slot < 8) || *runtime_restore_int_slot(seen, 11, slot)) {
+    if (slot < 8 || *runtime_restore_int_slot(seen, 11, slot)) {
       result = -1;
       break;
     }
     *runtime_restore_int_slot(seen, 11, slot) = 1;
-    if (slot == 0)
-      snapshot.definition.mechbv_last = value;
-    else if (value < CHAR_MIN || value > CHAR_MAX)
+    if (value < CHAR_MIN || value > CHAR_MAX)
       result = -1;
     else
       *runtime_restore_char_slot(snapshot.definition.unused_char, 3, slot - 8) =
@@ -316,8 +313,7 @@ int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context) {
   if (result == 0 && step != SQLITE_DONE)
     result = -1;
   if (result == 0 && mech) {
-    if (!*runtime_restore_int_slot(seen, 11, 0) ||
-        !*runtime_restore_int_slot(seen, 11, 8) ||
+    if (!*runtime_restore_int_slot(seen, 11, 8) ||
         !*runtime_restore_int_slot(seen, 11, 9) ||
         !*runtime_restore_int_slot(seen, 11, 10))
       result = -1;

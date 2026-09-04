@@ -1,4 +1,5 @@
 ---
+draft: true
 title: set_max_speed
 type: docs
 toc_hide: false
@@ -24,7 +25,7 @@ btech.unit.set_max_speed( unit, speed )
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Notes

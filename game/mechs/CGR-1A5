@@ -3,7 +3,6 @@ Reference        { CGR-1A5 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 80 }
-Mech_BV          { 820 }
 Heat_Sinks       { 13 }
 Max_Speed        { 64.50 }
 Left_Arm

@@ -3,7 +3,6 @@ Reference        { EXT-4A }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 65 }
-Mech_BV          { 1067 }
 Heat_Sinks       { 11 }
 Max_Speed        { 86.00 }
 Jump_Speed       { 53.75 }

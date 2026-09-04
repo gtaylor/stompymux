@@ -3,7 +3,6 @@ Reference        { JM6-S }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 65 }
-Mech_BV          { 749 }
 Max_Speed        { 64.50 }
 Specials	 { FlipArms AntiAircraft }
 Left_Arm

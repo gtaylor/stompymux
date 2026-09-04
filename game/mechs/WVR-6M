@@ -3,7 +3,6 @@ Reference        { WVR-6M }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 55 }
-Mech_BV          { 1059 }
 Heat_Sinks       { 14 }
 Radio		 { 4 }
 Max_Speed        { 86.00 }

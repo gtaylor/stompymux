@@ -7,6 +7,34 @@
 #include "mux/lua/lua_runtime.h"
 #include "mux/support/checked_storage.h"
 
+/**
+ * @par LuaLS definition mux catalog mux.world.locks
+ * @code{.lua}
+ * ---Immutable namespace of typed native locks. Unknown or non-string lookups
+ * ---and attempted mutation raise
+ * ---[`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).
+ * ---@class (exact) LockNamespace
+ * ---@field MATCH Lock Prefer an object that passes during key-aware matching.
+ * ---@field TRAVERSE Lock Traverse an exit.
+ * ---@field TAKE Lock Take an object.
+ * ---@field USE Lock Use an object.
+ * ---@field DROP Lock Drop an object.
+ * ---@field GIVE Lock Give an object.
+ * ---@field RECEIVE Lock Receive a given object.
+ * ---@field ENTER Lock Enter an object, room, BattleTech unit, bay, or hangar.
+ * ---@field LEAVE Lock Leave an object or room.
+ * ---@field TELEPORT Lock Teleport into a destination.
+ * ---@field TELEPORT_OUT Lock Teleport out of an origin.
+ * ---@field LINK Lock Link an exit or object.
+ * ---@field SET_HOME Lock Set an object's home to a destination.
+ * ---@field SPEAK Lock Speak in a location.
+ * ---@field CHANNEL_JOIN Lock Join a channel.
+ * ---@field CHANNEL_TRANSMIT Lock Transmit on a channel.
+ * ---@field CHANNEL_RECEIVE Lock Receive channel traffic.
+ * ---@field IDENTIFY_BUILDING Lock Identify a BattleTech building contact.
+ * ---@see mux.error.codes.arg.invalid
+ * @endcode
+ */
 static const LuaLockDefinition LUA_LOCK_DEFINITIONS[] = {
     {LUA_LOCK_MATCH, "match", "MATCH"},
     {LUA_LOCK_TRAVERSE, "traverse", "TRAVERSE"},

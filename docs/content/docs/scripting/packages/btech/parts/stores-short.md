@@ -1,4 +1,5 @@
 ---
+draft: true
 title: stores_short
 type: docs
 toc_hide: false

@@ -6,7 +6,6 @@ Tons             { 65 }
 Comment          { Saved by: Charlemagne(#4624) at Wed Feb 16 07:59:02 2000 }
 Computer         { 3 }
 Heat_Sinks       { 10 }
-Mech_BV          { 513 }
 Max_Speed        { 64.50 }
 Left_Side
   Armor            { 46 }

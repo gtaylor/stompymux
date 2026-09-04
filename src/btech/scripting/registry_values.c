@@ -1,9 +1,12 @@
 #include "btconfig.h"
+#include "btech/configuration.h"
 #include "btech/context.h"
+#include "btech/special_objects.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "coolmenu.h"
+#include "map_conditions_api.h"
 #include "mech_script_value_api.h"
 #include "mechrep_api.h"
 #include "mux/commands/command_helpers.h"
@@ -45,14 +48,78 @@ static int descriptor_permissions(int type) {
 
 static const GMV *find_descriptor(const char *name, int special_type,
                                   int required_permission) {
-  for (size_t index = 0; index < xcode_descriptor_count(); ++index) {
-    const GMV *descriptor = xcode_descriptor_at(index);
+  for (size_t index = 0; index < special_value_descriptor_count(); ++index) {
+    const GMV *descriptor = special_value_descriptor_at(index);
     if (descriptor->gtype == special_type &&
         (descriptor_permissions(descriptor->type) & required_permission) &&
         (name == nullptr || strcasecmp(name, descriptor->name) == 0))
       return descriptor;
   }
   return nullptr;
+}
+
+static DbRef script_unit(BtechScriptCall *call, char *text) {
+  DbRef unit =
+      match_thing(&call->evaluation->command->match, call->player, text);
+  return btech_context_get_mech(call->evaluation->btech, unit) != nullptr
+             ? unit
+             : NOTHING;
+}
+
+/**
+ * Returns a registered unit's optional display-name override.
+ *
+ * @par LuaLS definition btech callable btech.unit.display_name
+ * @code{.lua}
+ * ---Returns a registered unit's display-name override, or an empty string.
+ * ---@param unit integer
+ * ---@return string name
+ * function btech_unit.display_name(unit) end
+ * @endcode
+ */
+BtechScriptResult fun_btunitdisplayname(BtechScriptCall *call) {
+  if (call->arguments.count != 1)
+    return btech_script_error(call, "#-1 EXPECTED ONE UNIT");
+  DbRef unit = script_unit(
+      call, script_function_argument(call->arguments.values,
+                                     (int)call->arguments.count, 0));
+  if (unit == NOTHING ||
+      !is_examinable(call->evaluation->world->database, call->player, unit))
+    return btech_script_error(call, "#-1 NO SUCH UNIT");
+  safe_str(btech_unit_display_name(call->evaluation->btech, unit),
+           call->output.buffer, &call->output.cursor);
+  return btech_script_result_finish(call, BTECH_SCRIPT_TEXT);
+}
+
+/**
+ * Sets or clears a registered unit's display-name override.
+ *
+ * @par LuaLS definition btech callable btech.unit.set_display_name
+ * @code{.lua}
+ * ---Sets a registered unit's display-name override; an empty name clears it.
+ * ---@param unit integer
+ * ---@param name string
+ * ---@return true success
+ * function btech_unit.set_display_name(unit, name) end
+ * @endcode
+ */
+BtechScriptResult fun_btsetunitdisplayname(BtechScriptCall *call) {
+  if (call->arguments.count != 2)
+    return btech_script_error(call, "#-1 EXPECTED UNIT AND NAME");
+  if (!is_wizard(call->evaluation->world->database, call->player))
+    return btech_script_error(call, "#-1 PERMISSION DENIED");
+  DbRef unit = script_unit(
+      call, script_function_argument(call->arguments.values,
+                                     (int)call->arguments.count, 0));
+  if (unit == NOTHING)
+    return btech_script_error(call, "#-1 NO SUCH UNIT");
+  if (!btech_unit_display_name_set(
+          call->evaluation->btech, unit,
+          script_function_argument(call->arguments.values,
+                                   (int)call->arguments.count, 1)))
+    return btech_script_error(call, "#-1 INVALID DISPLAY NAME");
+  safe_str("1", call->output.buffer, &call->output.cursor);
+  return btech_script_result_finish(call, BTECH_SCRIPT_MUTATION);
 }
 
 static void *descriptor_field(void *data, const GMV *descriptor,
@@ -213,19 +280,18 @@ static bool descriptor_write_text(void *data, const GMV *descriptor,
 /**
  * Lists live unit objects assigned to a zone.
  *
- * @par Lua name `btech.system.zone_units`
- * @par Lua signature `btech.system.zone_units( zone )`
- * @par Lua parameters - `zone` (`number`) The zone dbref.
- * @par Lua returns - `values` (`table`): A flat array of converted legacy
- * result tokens.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.system.zone_units
+ * @code{.lua}
+ * ---Lists live unit dbrefs assigned to a zone. A trailing `-1` indicates that the legacy output was truncated.
+ * ---@param zone integer
+ * ---@return integer[] units Unit dbrefs, possibly followed by the `-1` truncation sentinel.
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_system.zone_units(zone) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -274,28 +340,26 @@ BtechScriptResult fun_zmechs(BtechScriptCall *call) {
 }
 
 /**
- * Writes a script-writable native field on a live special object.
+ * Writes a script-writable field on a live unit.
  *
- * @par Lua name `btech.system.set_xcode_value`
- * @par Lua signature `btech.system.set_xcode_value( object, name, value )`
- * @par Lua parameters - `object` (`number`) The special-object dbref.
- * - `name` (`string`) The writable field name.
- * - `value` (`string|number`) The new value, converted according to the field
- * type.
- * @par Lua returns - `success` (`boolean`): true after the operation completes
- * without a legacy error.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.unit.set_value
+ * @code{.lua}
+ * ---Writes a script-writable field on a live unit.
+ * ---@param unit integer
+ * ---@param name string Unit field name, matched ASCII-case-insensitively.
+ * ---@param value string|number
+ * ---@return true success
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_unit.set_value(unit, name, value) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
-BtechScriptResult fun_btsetxcodevalue(BtechScriptCall *call) {
+BtechScriptResult fun_btsetunitvalue(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
@@ -318,6 +382,8 @@ BtechScriptResult fun_btsetxcodevalue(BtechScriptCall *call) {
     return btech_script_error(call, "#-1");
   }
   spec = btech_context_which_special(context->btech, it);
+  if (spec != GTYPE_MECH)
+    return btech_script_error(call, "#-1 NO SUCH UNIT");
   foo = btech_context_find_object(context->btech, it);
   if (!foo) {
     return btech_script_error(call, "#-1");
@@ -421,25 +487,25 @@ static char *retrieve_value(void *data, const GMV *descriptor, char *buffer) {
 }
 
 /**
- * Reads a script-visible native field from a live special object.
+ * Reads a script-visible field from a live unit.
  *
- * @par Lua name `btech.system.xcode_value`
- * @par Lua signature `btech.system.xcode_value( object, name )`
- * @par Lua parameters - `object` (`number`) The special-object dbref.
- * - `name` (`string`) The field name.
- * @par Lua returns - `result` (`string`): The handler's serialized text result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.unit.value
+ * @code{.lua}
+ * ---Reads a script-visible field from a live unit.
+ * ---@param unit integer
+ * ---@param name string Unit field name, matched ASCII-case-insensitively.
+ * ---@return string result
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_unit.value(unit, name) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
-BtechScriptResult fun_btgetxcodevalue(BtechScriptCall *call) {
+BtechScriptResult fun_btgetunitvalue(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
@@ -461,6 +527,8 @@ BtechScriptResult fun_btgetxcodevalue(BtechScriptCall *call) {
     return btech_script_error(call, "#-1");
   }
   spec = btech_context_which_special(context->btech, it);
+  if (spec != GTYPE_MECH)
+    return btech_script_error(call, "#-1 NO SUCH UNIT");
   foo = btech_context_find_object(context->btech, it);
   if (!foo) {
     return btech_script_error(call, "#-1");
@@ -479,25 +547,25 @@ BtechScriptResult fun_btgetxcodevalue(BtechScriptCall *call) {
 }
 
 /**
- * Reads a script-visible native field from a unit template.
+ * Reads a script-visible field from a unit template.
  *
- * @par Lua name `btech.system.xcode_value_ref`
- * @par Lua signature `btech.system.xcode_value_ref( reference, name )`
- * @par Lua parameters - `reference` (`string`) The unit template reference.
- * - `name` (`string`) The field name.
- * @par Lua returns - `result` (`string`): The handler's serialized text result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.unit.value_ref
+ * @code{.lua}
+ * ---Reads a script-visible field from a unit template.
+ * ---@param reference string
+ * ---@param name string Unit field name, matched ASCII-case-insensitively.
+ * ---@return string result
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_unit.value_ref(reference, name) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
-BtechScriptResult fun_btgetxcodevalue_ref(BtechScriptCall *call) {
+BtechScriptResult fun_btgetunitvalue_ref(BtechScriptCall *call) {
   [[maybe_unused]] char *buff = call->output.buffer;
   [[maybe_unused]] char **bufc = &call->output.cursor;
   [[maybe_unused]] char **fargs = call->arguments.values;
@@ -529,7 +597,7 @@ BtechScriptResult fun_btgetxcodevalue_ref(BtechScriptCall *call) {
   return btech_script_error(call, "#-1");
 }
 
-void set_xcodestuff(DbRef player, BtechSpecialObject *object, char *buffer) {
+void set_special_value(DbRef player, BtechSpecialObject *object, char *buffer) {
   BtechContext *context = object->context;
   char *args[2];
   int t;
@@ -543,32 +611,50 @@ void set_xcodestuff(DbRef player, BtechSpecialObject *object, char *buffer) {
   }
   char *name = *(char **)checked_storage_at((void *)args, 2, sizeof(*args), 0);
   char *value = *(char **)checked_storage_at((void *)args, 2, sizeof(*args), 1);
-  t = btech_context_which_special(
-      context, game_object_location(context->database, player));
+  DbRef target = game_object_location(context->database, player);
+  t = btech_context_which_special(context, target);
+  if (t == GTYPE_MECH && strcasecmp(name, "displayname") == 0) {
+    if (!btech_unit_display_name_set(context, target, value))
+      mecha_notify(btech_context_evaluation(context), player,
+                   "Error: Invalid unit display name.");
+    free_text_items(args, 2);
+    return;
+  }
   if (find_descriptor(nullptr, t, 1) == nullptr) {
     mecha_notify(btech_context_evaluation(context), player,
-                 "Error: No xcode values for this type of object found.");
+                 "Error: No fields for this BTech type were found.");
     free_text_items(args, 2);
     return;
   }
   const GMV *descriptor = find_descriptor(name, t, 2);
   if (descriptor == nullptr) {
-    mecha_notify(
-        btech_context_evaluation(context), player,
-        "Error: No matching xcode value for this type of object found.");
+    mecha_notify(btech_context_evaluation(context), player,
+                 "Error: No matching field for this BTech type was found.");
     free_text_items(args, 2);
     return;
   }
   void *target_object = btech_context_find_object(
       context, game_object_location(context->database, player));
-  if (!descriptor_write_text(target_object, descriptor, value))
+  int parsed;
+  bool written;
+  if (t == GTYPE_MAP && !strcasecmp(descriptor->name, "maplight")) {
+    written = (parse_int_checked(value, &parsed) &&
+               battle_map_light_set(target_object, parsed)) != 0;
+  } else if (t == GTYPE_MAP && !strcasecmp(descriptor->name, "mapvis")) {
+    written = (parse_int_checked(value, &parsed) &&
+               battle_map_visibility_set(target_object, parsed)) != 0;
+  } else {
+    written = descriptor_write_text(target_object, descriptor, value);
+  }
+  if (!written) {
     mecha_notify(btech_context_evaluation(context), player,
-                 "Error: Unable to set that xcode value.");
+                 "Error: Unable to set that BTech field.");
+  }
   free_text_items(args, 2);
 }
 
-void list_xcodestuff(DbRef player, BtechSpecialObject *object,
-                     const char *buffer) {
+void list_special_values(DbRef player, BtechSpecialObject *object,
+                         const char *buffer) {
   BtechContext *context = object->context;
   int t;
   int flag = CM_TWO;
@@ -579,11 +665,11 @@ void list_xcodestuff(DbRef player, BtechSpecialObject *object,
       context, game_object_location(context->database, player));
   if (find_descriptor(nullptr, t, 1) == nullptr) {
     mecha_notify(btech_context_evaluation(context), player,
-                 "Error: No xcode values for this type of object found.");
+                 "Error: No fields for this BTech type were found.");
     return;
   }
-  char *message_buffer = alloc_lbuf("list_xcodestuff.message");
-  char *value_buffer = alloc_lbuf("list_xcodestuff.value");
+  char *message_buffer = alloc_lbuf("list_special_values.message");
+  char *value_buffer = alloc_lbuf("list_special_values.value");
   cool_menu_add_line(&c);
   (void)snprintf(
       message_buffer, LBUF_SIZE, "Data for %s (%s)",
@@ -603,8 +689,21 @@ void list_xcodestuff(DbRef player, BtechSpecialObject *object,
   const char *filter = buffer;
   if (*filter == '1' || *filter == '4')
     filter = checked_string_suffix(filter, 1);
-  for (size_t index = 0; index < xcode_descriptor_count(); ++index) {
-    const GMV *descriptor = xcode_descriptor_at(index);
+  if (t == GTYPE_MECH &&
+      (!*filter || strncasecmp("displayname", filter, strlen(filter)) == 0)) {
+    char label[SBUF_SIZE];
+    (void)snprintf(label, sizeof(label), "%s", "displayname");
+    const size_t LABEL_LIMIT = (size_t)(se_len / 3);
+    *(char *)checked_storage_at(label, sizeof(label), sizeof(char),
+                                LABEL_LIMIT) = '\0';
+    (void)snprintf(
+        message_buffer, LBUF_SIZE, "%-*s%*s", se_len / 3, label, se_len * 2 / 3,
+        btech_unit_display_name(
+            context, game_object_location(context->database, player)));
+    cool_menu_add_with_flags(&c, message_buffer, flag);
+  }
+  for (size_t index = 0; index < special_value_descriptor_count(); ++index) {
+    const GMV *descriptor = special_value_descriptor_at(index);
     if (descriptor->gtype == t &&
         (descriptor_permissions(descriptor->type) & 1)) {
       /* 1/3(left) = name, 2/3(right)=value */

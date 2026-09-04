@@ -6,7 +6,6 @@ Tons             { 75 }
 Heat_Sinks       { 34 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 1674 }
 Max_Speed        { 64.50 }
 Specials         { DoubleHS XLEngine_Tech ECM C3SlaveTech Searchlight }
 Left_Arm

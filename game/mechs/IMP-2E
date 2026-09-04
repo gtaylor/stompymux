@@ -3,7 +3,6 @@ Reference        { IMP-2E }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 100 }
-Mech_BV          { 1619 }
 Heat_Sinks       { 30 }
 Radio            { 4 }
 Max_Speed        { 53.75 }

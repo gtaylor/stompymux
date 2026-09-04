@@ -571,16 +571,7 @@ static int load_template_internal(DbRef player, Mech *mech, char *filename,
         return -1;
       mech_radio_configuration_set(mech, value);
       break;
-    case 23: /* Mech battle value */
-      if (!template_read_int(
-              fp, mech, player,
-              template_description_read(&(TemplateDescriptionRead){
-                  .file = fp, .line = ptr, .buffer = description_buffer}),
-              &value))
-        return -1;
-      ((mech)->ud.mechbv) = value;
-      break;
-    case 24: /* Cargospace */
+    case 23: /* Cargospace */
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
@@ -589,7 +580,7 @@ static int load_template_internal(DbRef player, Mech *mech, char *filename,
         return -1;
       ((mech)->ud.cargospace) = value;
       break;
-    case 25: /* Maxsuits */
+    case 24: /* Maxsuits */
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
@@ -598,7 +589,7 @@ static int load_template_internal(DbRef player, Mech *mech, char *filename,
         return -1;
       ((mech)->rd.maxsuits) = value;
       break;
-    case 26: /* Specials */
+    case 25: /* Specials */
       tmpc = template_description_read(&(TemplateDescriptionRead){
           .file = fp, .line = ptr, .buffer = description_buffer});
       if (check_specials_list(infantry_technology_names(),
@@ -608,7 +599,7 @@ static int load_template_internal(DbRef player, Mech *mech, char *filename,
             build_bit_vector_no_err(infantry_technology_names(),
                                     infantry_technology_name_count(), tmpc);
       break;
-    case 27: /* Carmaxton */
+    case 26: /* Carmaxton */
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
@@ -617,7 +608,7 @@ static int load_template_internal(DbRef player, Mech *mech, char *filename,
         return -1;
       ((mech)->ud.carmaxton) = clamp_int_to_char(value);
       break;
-    case 28:
+    case 27:
       if (!template_read_int(
               fp, mech, player,
               template_description_read(&(TemplateDescriptionRead){
@@ -626,7 +617,7 @@ static int load_template_internal(DbRef player, Mech *mech, char *filename,
         return -1;
       ((mech)->ud.hsengoverride) = value;
       break;
-    case 29:
+    case 28:
       tmpc = template_description_read(&(TemplateDescriptionRead){
           .file = fp, .line = ptr, .buffer = description_buffer});
       if (strlen(tmpc) == 1) /* just the \0 */
@@ -636,7 +627,7 @@ static int load_template_internal(DbRef player, Mech *mech, char *filename,
         (void)string_copy_bounded(((mech)->ud.unit_era),
                                   sizeof(((mech)->ud.unit_era)), tmpc);
       break;
-    case 30:
+    case 29:
       tmpc = template_description_read(&(TemplateDescriptionRead){
           .file = fp, .line = ptr, .buffer = description_buffer});
       if (strlen(tmpc) == 1) /* just the \0 */

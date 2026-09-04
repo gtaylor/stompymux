@@ -5,7 +5,6 @@ Move_Type        { Track }
 Tons             { 45 }
 Comment          { Saved by: Stringfellow Hawke(#988) at Wed Jan  4 11:47:34 2006 }
 Computer         { 3 }
-Mech_BV          { 280 }
 Cargo_Space      { 950 }
 Max_Ton          { 1 }
 Max_Suits        { 0 }

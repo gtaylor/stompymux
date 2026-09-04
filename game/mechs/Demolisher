@@ -3,7 +3,6 @@ Reference        { Demolisher }
 Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 80 }
-Mech_BV          { 609 }
 Max_Speed        { 53.75 }
 Specials         { ICEEngine_Tech }
 Left_Side

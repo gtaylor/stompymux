@@ -1,4 +1,5 @@
 ---
+draft: true
 title: set_cost
 type: docs
 toc_hide: false
@@ -19,12 +20,14 @@ btech.parts.set_cost( part_name, cost )
 `string part_name`
 : A recognized long or very-long part name.
 
-`number cost`
-: The non-negative cost.
+`integer cost`
+: The cost parsed into native unsigned storage. The current native parser
+  accepts a leading sign, so a negative input wraps into the unsigned range
+  (for example, `-1` becomes the maximum unsigned value).
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Notes

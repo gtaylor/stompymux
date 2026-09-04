@@ -163,7 +163,6 @@ int template_save(const TemplateSaveRequest *request) {
                           generic_radio_type(mech_radio_quality(mech),
                                              ((mech)->rd.specials) & CLAN_TECH),
                           mech_radio_configuration(mech), "RadioType");
-  save_nondefault_integer(fp, 2000, ((mech)->ud.mechbv), "Mech_BV");
   save_nondefault_integer(fp, 2000, ((mech)->ud.cargospace), "Cargo_Space");
   save_nondefault_integer(fp, 0, ((mech)->ud.carmaxton), "Max_Ton");
   save_nondefault_integer(fp, 2000, ((mech)->rd.maxsuits), "Max_Suits");

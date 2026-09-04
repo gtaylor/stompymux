@@ -5,7 +5,6 @@ Move_Type        { Track }
 Tons             { 80 }
 Comment          { Saved by: Stringfellow Hawke(#988) at Fri Nov  4 10:41:25 2005 }
 Heat_Sinks       { 9 }
-Mech_BV          { 1514 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 53.75 }

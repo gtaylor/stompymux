@@ -1,4 +1,5 @@
 ---
+draft: true
 title: btech.parts
 linkTitle: btech.parts
 type: docs

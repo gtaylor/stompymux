@@ -3,7 +3,6 @@ Reference        { Mobile_HQ }
 Type             { Vehicle }
 Move_Type        { Wheel }
 Tons             { 25 }
-Mech_BV          { 149 }
 Computer         { 3 }
 Radio            { 5 }
 RadioType        { 126 }

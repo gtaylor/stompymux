@@ -1,4 +1,5 @@
 ---
+draft: true
 title: hex_line_of_sight
 type: docs
 toc_hide: false
@@ -19,10 +20,10 @@ btech.map.hex_line_of_sight( unit, x, y )
 `number unit`
 : The observing unit dbref.
 
-`number x`
+`integer x`
 : The target hex X coordinate.
 
-`number y`
+`integer y`
 : The target hex Y coordinate.
 
 ### Returns

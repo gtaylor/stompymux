@@ -16,8 +16,7 @@ Set or clear a flag on an object:
 ```
 
 The first form sets the named flag and the second clears it. Flag names are
-case-insensitive; use full flag names because `ANSI` and `XCODE` both use the
-compact display letter `X`. Use `@list flags` to display the live flag list.
+case-insensitive. Use `@list flags` to display the live flag list.
 
 Only Wizards and God may use `@flag`, and the normal control rules apply to the
 target. Flag-specific privilege rules still apply.

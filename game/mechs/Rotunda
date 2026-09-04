@@ -3,7 +3,6 @@ Reference        { Rotunda }
 Type             { Vehicle }
 Move_Type        { Wheel }
 Tons             { 20 }
-Mech_BV          { 341 }
 Computer         { 3 }
 Max_Speed        { 150.50 }
 Specials         { FerroFibrous_Tech }

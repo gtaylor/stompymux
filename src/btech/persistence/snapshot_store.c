@@ -1,5 +1,6 @@
 #include "autopilot.h"
 #include "btech/context.h"
+#include "btech/special_objects.h"
 #include "btech_event.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "map.h"
@@ -7,6 +8,7 @@
 #include "map_terrain.h"
 #include "mech_events.h"
 #include "mux/network/mux_event.h"
+#include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/red_black_tree.h"
 #include "special_object.h"
@@ -20,6 +22,35 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+
+typedef struct BtechRegistrationStoreContext {
+  BtechContext *context;
+  BtechSpecialWriteContext *fault;
+  sqlite3_stmt *statement;
+  int result;
+} BtechRegistrationStoreContext;
+
+static bool btech_store_registration(const RedBlackTreeVisitCall *call) {
+  BtechRegistrationStoreContext *context = call->context;
+  const DbRef OBJECT = (DbRef) * (const intptr_t *)call->key;
+  BtechSpecialObject *special = call->data;
+
+  if (context->result < 0)
+    return false;
+  if (!is_good_obj(context->context->database, OBJECT) ||
+      !is_thing(context->context->database, OBJECT) ||
+      is_going(context->context->database, OBJECT))
+    return true;
+  if (btech_special_bind_int(context->statement, 1, OBJECT) < 0 ||
+      sqlite3_bind_text(context->statement, 2,
+                        btech_special_object_type_name((int)special->type), -1,
+                        SQLITE_STATIC) != SQLITE_OK ||
+      btech_special_write_step(context->fault, context->statement) < 0) {
+    context->result = -1;
+    return false;
+  }
+  return true;
+}
 
 static unsigned char *const *stored_bits_row(unsigned char **bits, int height,
                                              int row) {
@@ -57,7 +88,10 @@ bool btech_store_map(const RedBlackTreeVisitCall *call) {
   MapObject *object;
   unsigned char **bits;
 
-  if (context->result < 0 || xcode->type != GTYPE_MAP)
+  if (context->result < 0)
+    return false;
+  if (xcode->type != GTYPE_MAP || !is_good_obj(context->database, KEY) ||
+      !is_thing(context->database, KEY) || is_going(context->database, KEY))
     return context->result == 0;
   map = (BattleMap *)xcode;
   if (btech_special_bind_int(context->map, 1, KEY) < 0 ||
@@ -290,22 +324,41 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
                                           void *extension_context) {
   BtechContext *btech = extension_context;
   BtechSpecialWriteContext fault;
-  BtechMapStoreContext maps = {.result = -1};
+  BtechMapStoreContext maps = {.database = btech->database, .result = -1};
   BtechObjectStoreContext objects;
   sqlite3_stmt *repairs = nullptr;
+  sqlite3_stmt *registrations = nullptr;
   int result;
 
   btech_special_write_context_init(&fault);
   maps.fault = &fault;
   memset(&objects, 0, sizeof(objects));
+  objects.database = btech->database;
   objects.fault = &fault;
   objects.result = -1;
   if (btech_special_exec(sqlite, BTECH_SPECIAL_SCHEMA_SQL) < 0)
     return -1;
   if (btech_special_store_metadata(&fault, sqlite) < 0)
     return -1;
+  if (btech_special_store_configurations(&fault, sqlite, btech) < 0)
+    return -1;
   if (!btech->special_objects)
     return 0;
+  if (btech_special_write_prepare(
+          &fault, sqlite,
+          "INSERT INTO btech_special_registrations VALUES (?, ?);", -1,
+          &registrations, nullptr) != SQLITE_OK)
+    return -1;
+  BtechRegistrationStoreContext registration_context = {.context = btech,
+                                                        .fault = &fault,
+                                                        .statement =
+                                                            registrations,
+                                                        .result = 0};
+  red_black_tree_walk(btech->special_objects, WALK_INORDER,
+                      btech_store_registration, &registration_context);
+  sqlite3_finalize(registrations);
+  if (registration_context.result < 0)
+    return -1;
   if (btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_maps VALUES (?, ?, ?, ?, ?, ?, ?, "
@@ -361,7 +414,7 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
       btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_mechs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
           -1, &objects.mech, nullptr) != SQLITE_OK ||
       btech_special_write_prepare(
           &fault, sqlite,

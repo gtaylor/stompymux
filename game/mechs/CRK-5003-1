@@ -3,7 +3,6 @@ Reference        { CRK-5003-1 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 85 }
-Mech_BV          { 1619 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 30 }

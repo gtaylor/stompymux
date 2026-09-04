@@ -24,6 +24,9 @@ typedef struct LuaMuxLockNamespace {
   LuaMuxPackage *package;
 } LuaMuxLockNamespace;
 
+/**
+ * @par LuaLS ignore mux __tostring -- String conversion is represented by the Lock class declaration.
+ */
 static int lua_mux_lock_tostring(lua_State *state) {
   LuaMuxLock *lock = luaL_checkudata(state, 1, LUA_MUX_LOCK_METATABLE);
 
@@ -31,6 +34,9 @@ static int lua_mux_lock_tostring(lua_State *state) {
   return 1;
 }
 
+/**
+ * @par LuaLS ignore mux __eq -- LuaCATS has no equality-operator declaration; Lock equality semantics are documented on the class.
+ */
 static int lua_mux_lock_equal(lua_State *state) {
   LuaMuxLock *left = luaL_checkudata(state, 1, LUA_MUX_LOCK_METATABLE);
   LuaMuxLock *right = luaL_checkudata(state, 2, LUA_MUX_LOCK_METATABLE);
@@ -40,11 +46,17 @@ static int lua_mux_lock_equal(lua_State *state) {
   return 1;
 }
 
+/**
+ * @par LuaLS ignore mux __newindex -- Immutability is represented by the Lock class and lock namespace table declarations.
+ */
 static int lua_mux_lock_immutable(lua_State *state) {
   return lua_error_raise(state, LUA_ERROR_CODE_ARG_INVALID,
                          "mux.world.locks constants are immutable");
 }
 
+/**
+ * @par LuaLS ignore mux __index -- Dynamic lookup is represented by the lock namespace table declaration.
+ */
 static int lua_mux_lock_namespace_index(lua_State *state) {
   LuaMuxLockNamespace *name_space =
       luaL_checkudata(state, 1, LUA_MUX_LOCK_NAMESPACE_METATABLE);
@@ -69,20 +81,20 @@ static int lua_mux_lock_namespace_index(lua_State *state) {
 /**
  * Tests a native lock invocation without emitting lock messages.
  *
- * @par Lua name `mux.world.lock_passes`
- * @par Lua signature `mux.world.lock_passes( options )`
- * @par Lua parameters - `options` (`LockPassesOptions`) Required `object`,
- * `enactor`, and typed `lock` fields, with optional `cause` and `subject`
- * object references that each default to `enactor`.
- * @par Lua returns - `passes` (`boolean`): Whether the selected lock passes.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` for invalid fields or lock constants.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` for invalid object references.
- * - `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` when the lock service is unavailable.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable mux.world.lock_passes
+ * @code{.lua}
+ * ---Tests a native object lock without emitting lock messages or performing the
+ * ---associated action. The lock runs with a silent callback context.
+ * ---@param options LockPassesOptions Lock invocation fields; unknown fields are rejected.
+ * ---@return boolean passes Whether the selected lock passes.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.object.unavailable
+ * function mux_world.lock_passes(options) end
+ * @endcode
  */
 static int lua_mux_lock_passes(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -136,11 +148,14 @@ static int lua_mux_lock_passes(lua_State *state) {
 /**
  * Installs typed constants for native locks.
  *
- * @par Lua name `mux.world.locks`
- * @par Lua constants Flat immutable `Lock` constants such as `TRAVERSE` and
- * `CHANNEL_RECEIVE`.
- * @par Lua errors - `LUA_ERROR_CODE_ARG_INVALID` for unknown or non-string
- * lookups and attempted mutation.
+ * @par LuaLS definition mux type lock
+ * @code{.lua}
+ * ---A typed native lock obtained from [`mux.world.locks`](lua://mux.world.locks).
+ * ---Its string form is its uppercase name, and equality compares lock identity
+ * ---within the current runtime.
+ * ---@class Lock
+ * @endcode
+ *
  * @param[in,out] state Lua state whose top value is the `mux.world` table.
  * @param[in,out] package Package owning the constants.
  */

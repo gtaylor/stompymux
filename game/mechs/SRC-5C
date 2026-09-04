@@ -7,7 +7,6 @@ Comment          { Saved by: Power Shaper(#1235) at Tue May 29 16:15:06 2007 }
 Computer         { 5 }
 Radio            { 5 }
 Heat_Sinks       { 24 }
-Mech_BV          { 1835 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 53.75 }

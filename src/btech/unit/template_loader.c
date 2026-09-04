@@ -4,7 +4,6 @@
 
 #include "btech/context.h"
 #include "btech_event.h"
-#include "command_handlers_api.h"
 #include "mech_crew_api.h"
 #include "mech_events.h"
 #include "mech_identity_api.h"
@@ -12,7 +11,6 @@
 #include "mech_lifecycle.h"
 #include "mech_status_types.h"
 #include "mech_targeting_api.h"
-#include "mux/objects/attrs.h"
 #include "mux/server/platform.h"
 #include "template_api.h"
 
@@ -51,8 +49,6 @@ bool mech_template_load(DbRef player, Mech *mech, const char *id) {
     return false;
 
   *mech = staged;
-  silly_atr_set_in(btech_context_database(mech_context(mech)), mech->mynum,
-                   A_MECHTYPE, mech->ud.mech_type);
   mech_event_cancel(mech, EVENT_VEHICLEBURN);
   return true;
 }

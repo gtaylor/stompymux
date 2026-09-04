@@ -8,7 +8,6 @@ LRS_Range        { 20 }
 Radio_Range      { 100 }
 Radio            { 2 }
 Heat_Sinks       { 0 }
-Mech_BV          { 532 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 86.00 }
