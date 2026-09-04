@@ -49,6 +49,6 @@ bool mech_template_load(DbRef player, Mech *mech, const char *id) {
     return false;
 
   *mech = staged;
-  mech_event_cancel(mech, EVENT_VEHICLEBURN);
+  mech_events_cancel_all(mech);
   return true;
 }

@@ -128,7 +128,7 @@ to avoid writing an operation.
 ## Persistence
 
 The BTech SQLite schema has its own version and is intentionally independent of
-in-memory structure layouts. Schema version 5 is a hard cut with no migration
+in-memory structure layouts. Schema version 6 is a hard cut with no migration
 from older versions. An offline reset operation removes the BTech extension's
 registry, configuration, and runtime tables. It preserves the core database's
 `btech_character_state`, `btech_character_values`, and `btech_economy_parts`

@@ -136,9 +136,9 @@ static void push_ui_preferences(lua_State *state,
 static BtechPlayerUiPreferences check_ui_preferences(lua_State *state,
                                                      int table) {
   static const char *const FIELDS[] = {
-      "tactical_height", "tactical_width",   "lrs_height",
-      "include_dead",    "include_shutdown", "include_enemies",
-      "include_allies",  "include_target",   "buildings",
+      "tactical_height",  "tactical_width",  "lrs_height",     "include_dead",
+      "include_shutdown", "include_enemies", "include_allies", "include_target",
+      "buildings",        "configured",
   };
   lua_btech_check_options(state, table, FIELDS,
                           sizeof(FIELDS) / sizeof(FIELDS[0]), 2);
