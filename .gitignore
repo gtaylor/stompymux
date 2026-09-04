@@ -35,6 +35,7 @@
 /game/data/*
 !/game/data/migrations/
 !/game/data/migrations/btech_v2_to_v3.sql
+/tests/fixtures/game/data/*.db*
 /game*/lib/
 /game*/stompymux
 /game*/text/*.indx
