@@ -454,17 +454,22 @@ static int check_snapshot(const char *path) {
       query_int(
           sqlite,
           "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name "
-          "IN ('snapshot', 'objects', 'player_state', 'btech_object_state', "
+          "IN ('snapshot', 'objects', 'player_state', "
+          "'btech_special_registrations', "
           "'object_state', 'player_login_history', "
           "'player_last_page_recipients', 'btech_economy_parts', "
           "'btech_character_state', 'btech_character_values');",
           10) == 0 &&
+      query_int(sqlite,
+                "SELECT count(*) FROM pragma_table_info('btech_maps') "
+                "WHERE name = 'display_name';",
+                0) == 0 &&
       query_int(sqlite, "SELECT schema_version FROM snapshot WHERE id = 1;",
-                31) == 0 &&
+                32) == 0 &&
       query_int(sqlite, "SELECT storage_format FROM snapshot WHERE id = 1;",
                 1) == 0 &&
       query_int(sqlite, "SELECT storage_version FROM snapshot WHERE id = 1;",
-                31) == 0 &&
+                32) == 0 &&
       query_int(sqlite, "SELECT dump_type FROM snapshot WHERE id = 1;", 0) ==
           0 &&
       (query_int(sqlite, "SELECT count(*) FROM objects;", 6) == 0 ||
@@ -485,15 +490,6 @@ static int check_snapshot(const char *path) {
                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
                 "name = 'has_idle_power';",
                 1) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info('btech_object_state') "
-                "WHERE name IN ('economy_parts', 'health', "
-                "'character_attributes', 'advantages', 'skills');",
-                0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info("
-                "'btech_object_state');",
-                18) == 0 &&
       query_int(sqlite,
                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
                 "name IN ('has_long_fingers_power', 'has_comm_all_power', "
@@ -535,8 +531,8 @@ static int check_snapshot(const char *path) {
           "'has_in_character_flag', 'has_light_flag', 'has_monitor_flag', "
           "'has_no_command_flag', "
           "'has_safe_flag', 'has_suspect_flag', 'has_transparent_flag', "
-          "'has_wizard_flag', 'has_xcode_flag', 'has_zombie_flag');",
-          22) == 0 &&
+          "'has_wizard_flag', 'has_zombie_flag');",
+          21) == 0 &&
       query_int(
           sqlite,
           "SELECT count(*) FROM objects WHERE has_idle_power NOT IN (0, 1);",
@@ -555,10 +551,6 @@ static int check_snapshot(const char *path) {
       query_int(sqlite,
                 "SELECT count(*) FROM pragma_table_info('objects') WHERE "
                 "name = 'parent';",
-                0) == 0 &&
-      query_int(sqlite,
-                "SELECT count(*) FROM pragma_table_info("
-                "'btech_object_state') WHERE name = 'mech_status';",
                 0) == 0 &&
       query_int(
           sqlite,
@@ -580,7 +572,10 @@ static int check_snapshot(const char *path) {
        query_int(
            sqlite,
            "SELECT count(*) FROM sqlite_master WHERE type = 'table' "
-           "AND name IN ('btech_persistence_metadata', 'btech_maps', "
+           "AND name IN ('btech_persistence_metadata', "
+           "'btech_special_registrations', 'btech_unit_configuration', "
+           "'btech_player_configuration', 'btech_map_cargo_configuration', "
+           "'btech_map_links', 'btech_map_entrances', 'btech_maps', "
            "'btech_map_hexes', 'btech_map_slots', "
            "'btech_map_los', 'btech_map_objects', 'btech_map_bits', "
            "'btech_repair_events', 'btech_mechrep', 'btech_turrets', "
@@ -592,11 +587,11 @@ static int check_snapshot(const char *path) {
            "'btech_mech_tics', 'btech_mech_frequencies', 'btech_mech_runtime', "
            "'btech_mech_unit_aux', "
            "'btech_mech_stagger_damage');",
-           28) == 0;
+           34) == 0;
   ok = ok && query_int(sqlite,
                        "SELECT schema_version FROM btech_persistence_metadata "
                        "WHERE id = 1;",
-                       4) == 0;
+                       5) == 0;
   ok =
       ok && query_int(sqlite,
                       "SELECT count(*) FROM sqlite_master WHERE type = 'table' "
@@ -743,17 +738,21 @@ static int seed_btech_special_objects(const char *path) {
                   "DELETE FROM player_state WHERE object_dbref = 2;"
                   "INSERT OR REPLACE INTO objects "
                   "(dbref, name, location, contents, exits, next, link, zone, "
-                  "type, has_xcode_flag) VALUES "
-                  "(2, 'Test map', -1, -1, -1, -1, -1, -1, 1, 1),"
-                  "(3, 'Test mech', -1, -1, -1, -1, -1, -1, 1, 1),"
-                  "(4, 'Test repair', -1, -1, -1, -1, -1, -1, 1, 1),"
-                  "(5, 'Test autopilot', -1, -1, -1, -1, -1, -1, 1, 1),"
-                  "(6, 'Test turret', -1, -1, -1, -1, -1, -1, 1, 1);"
-                  "INSERT OR REPLACE INTO btech_object_state "
-                  "(object_dbref, object_type) "
+                  "type) VALUES "
+                  "(2, 'Test map', -1, -1, -1, -1, -1, -1, 1),"
+                  "(3, 'Test mech', -1, -1, -1, -1, -1, -1, 1),"
+                  "(4, 'Test repair', -1, -1, -1, -1, -1, -1, 1),"
+                  "(5, 'Test autopilot', -1, -1, -1, -1, -1, -1, 1),"
+                  "(6, 'Test turret', -1, -1, -1, -1, -1, -1, 1);"
+                  "INSERT OR REPLACE INTO btech_special_registrations "
+                  "(dbref, special_type) "
                   "VALUES "
                   "(2, 'MAP'), (3, 'MECH'), (4, 'MECHREP'),"
                   "(5, 'AUTOPILOT'), (6, 'TURRET');"
+                  "INSERT INTO btech_unit_configuration VALUES "
+                  "(3, 'ZZ', 'Test Display', 'stripes', 1);"
+                  "INSERT INTO btech_map_cargo_configuration VALUES "
+                  "(2, 1, 2, 1);"
                   "INSERT INTO object_state VALUES "
                   "(2, 'test', 'CaseKey', 1, CAST('upper' AS BLOB)),"
                   "(2, 'test', 'casekey', 1, CAST('lower' AS BLOB)),"
@@ -832,8 +831,24 @@ static int check_btech_special_snapshot(const char *path) {
   if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
     return -1;
   result =
-      query_int(sqlite, "SELECT count(*) FROM btech_maps;", 1) == 0 &&
+      query_int(sqlite, "SELECT count(*) FROM btech_special_registrations;",
+                5) == 0 &&
+              query_int(sqlite, "SELECT count(*) FROM btech_maps;", 1) == 0 &&
               query_int(sqlite, "SELECT count(*) FROM btech_mechs;", 1) == 0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM btech_unit_configuration "
+                        "WHERE object_dbref=3 AND preferred_id='ZZ' AND "
+                        "display_name='Test Display' AND markings='stripes' "
+                        "AND assigned_pilot=1;",
+                        1) == 0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM "
+                        "btech_map_cargo_configuration WHERE map_dbref=2 "
+                        "AND reveal_hint=1 AND ((x=1 AND y=2 AND "
+                        "(SELECT width FROM btech_maps WHERE dbref=2)=21) OR "
+                        "(x=25 AND y=25 AND (SELECT width FROM btech_maps "
+                        "WHERE dbref=2)=30));",
+                        1) == 0 &&
               query_int(sqlite, "SELECT count(*) FROM btech_mechrep;", 1) ==
                   0 &&
               query_int(sqlite, "SELECT count(*) FROM btech_autopilots;", 1) ==
@@ -1247,10 +1262,21 @@ static int seed_btech_nondefault_state(const char *path) {
                   SQLITE_OK &&
               sqlite3_exec(
                   sqlite,
-                  "UPDATE btech_maps SET temperature = 17, regen_factor = 7 "
+                  "UPDATE btech_maps SET temperature = 17, regen_factor = 7, "
+                  "width = 30, height = 30 "
                   "WHERE dbref = 2;"
-                  "UPDATE btech_map_hexes SET value = 42 "
-                  "WHERE map_dbref = 2 AND x = 0 AND y = 0;"
+                  "DELETE FROM btech_map_hexes WHERE map_dbref = 2;"
+                  "WITH RECURSIVE cells(x, y) AS ("
+                  " VALUES(0, 0)"
+                  " UNION ALL"
+                  " SELECT CASE WHEN x=29 THEN 0 ELSE x+1 END,"
+                  " CASE WHEN x=29 THEN y+1 ELSE y END"
+                  " FROM cells WHERE x<29 OR y<29"
+                  ") INSERT INTO btech_map_hexes(map_dbref, x, y, value)"
+                  " SELECT 2, x, y, CASE WHEN x=0 AND y=0 THEN 42 ELSE 0 END "
+                  "FROM cells;"
+                  "UPDATE btech_map_cargo_configuration SET x=25, y=25 "
+                  "WHERE map_dbref=2;"
                   "UPDATE btech_mech_sections SET armor = 19 "
                   "WHERE mech_dbref = 3 AND section = 0;"
                   "UPDATE btech_mech_criticals SET data = 3, fire_mode = 64 "
@@ -1320,6 +1346,42 @@ static int seed_btech_nondefault_state(const char *path) {
           : -1;
   sqlite3_close(sqlite);
   return result;
+}
+
+/* A stale coordinate must be discarded instead of making startup fail. */
+static int seed_invalid_btech_configuration(const char *path) {
+  sqlite3 *sqlite = NULL;
+  int result =
+      sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READWRITE, NULL) ==
+                  SQLITE_OK &&
+              sqlite3_exec(sqlite,
+                           "UPDATE btech_map_cargo_configuration SET x=30 "
+                           "WHERE map_dbref=2;",
+                           NULL, NULL, NULL) == SQLITE_OK
+          ? 0
+          : -1;
+  if (sqlite != NULL)
+    sqlite3_close(sqlite);
+  return result;
+}
+
+static int check_invalid_btech_configuration_removed(const char *path) {
+  sqlite3 *sqlite = NULL;
+  if (sqlite3_open_v2(path, &sqlite, SQLITE_OPEN_READONLY, NULL) != SQLITE_OK)
+    return -1;
+  const int RESULT =
+      query_int(sqlite,
+                "SELECT count(*) FROM btech_map_cargo_configuration "
+                "WHERE map_dbref=2;",
+                0) == 0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM btech_unit_configuration "
+                        "WHERE object_dbref=3 AND preferred_id='ZZ';",
+                        1) == 0
+          ? 0
+          : -1;
+  sqlite3_close(sqlite);
+  return RESULT;
 }
 
 /* Verify non-default values survived a SQLite-only read and follow-up dump. */
@@ -1761,7 +1823,11 @@ int main(int argc, char *argv[]) {
         check_commac_snapshot(database) < 0 ||
         insert_sparse_economy_cost(database) < 0 ||
         run_server(server, config, 0, &status) < 0 || !WIFEXITED(status) ||
-        WEXITSTATUS(status) == 2 || check_sparse_economy_cost(database) < 0)
+        WEXITSTATUS(status) == 2 || check_sparse_economy_cost(database) < 0 ||
+        seed_invalid_btech_configuration(database) < 0 ||
+        run_server(server, config, 0, &status) < 0 || !WIFEXITED(status) ||
+        WEXITSTATUS(status) != 0 ||
+        check_invalid_btech_configuration_removed(database) < 0)
       return 1;
     return result;
   }

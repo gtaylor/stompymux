@@ -4,7 +4,6 @@
 #include <linux/limits.h>
 #include <sqlite3.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -88,7 +87,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       "has_in_character_flag, has_light_flag, has_monitor_flag, "
       "has_no_command_flag, has_safe_flag, "
       "has_suspect_flag, has_transparent_flag, has_wizard_flag, "
-      "has_xcode_flag, has_zombie_flag, has_idle_power "
+      "has_zombie_flag, has_idle_power "
       "FROM objects "
       "ORDER BY dbref;";
   if (gamedb_prepare(sqlite, &statement, query) < 0) {
@@ -135,7 +134,7 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
       }
       for (PowerId power = POWER_IDLE; result == 0 && power < POWER_COUNT;
            power++) {
-        if (gamedb_column_bool(statement, 32 + (int)power,
+        if (gamedb_column_bool(statement, 11 + OBJECT_FLAG_COUNT + (int)power,
                                checked_storage_at(powers, POWER_COUNT,
                                                   sizeof(*powers),
                                                   (size_t)power)) < 0)
@@ -184,40 +183,6 @@ static int gamedb_load_objects(PersistenceContext *context, sqlite3 *sqlite,
     result = -1;
   sqlite3_finalize(statement);
   return result;
-}
-
-static int gamedb_load_native_state(PersistenceContext *context,
-                                    sqlite3 *sqlite) {
-  char query[256];
-
-  for (size_t index = 0; index < NATIVE_COLUMN_COUNT; index++) {
-    const NativeColumn *column = gamedb_native_column_at(index);
-    sqlite3_stmt *statement = nullptr;
-    int step;
-
-    (void)snprintf(query, sizeof(query),
-                   "SELECT %s, CAST(%s AS TEXT) FROM %s WHERE %s IS NOT NULL;",
-                   column->key_column, column->column, column->table,
-                   column->column);
-    if (gamedb_prepare(sqlite, &statement, query) < 0)
-      return -1;
-    while ((step = sqlite3_step(statement)) == SQLITE_ROW) {
-      const char *value;
-      DbRef object;
-
-      if (gamedb_column_long(statement, 0, &object) < 0 ||
-          !is_good_obj(context->database, object) ||
-          gamedb_column_text(statement, 1, &value, LBUF_SIZE) < 0) {
-        sqlite3_finalize(statement);
-        return -1;
-      }
-      attribute_add_raw(context->database, object, column->field, value);
-    }
-    sqlite3_finalize(statement);
-    if (step != SQLITE_DONE)
-      return -1;
-  }
-  return 0;
 }
 
 static int gamedb_load_player_accounts(PersistenceContext *context,
@@ -613,7 +578,6 @@ int gamedb_load(PersistenceContext *context, const char *path) {
     db_grow(context->database, db_top);
     if (gamedb_load_objects(context, sqlite, db_top) < 0 ||
         gamedb_load_player_accounts(context, sqlite) < 0 ||
-        gamedb_load_native_state(context, sqlite) < 0 ||
         gamedb_load_character_state(context, sqlite) < 0 ||
         gamedb_load_economy_parts(context, sqlite) < 0 ||
         gamedb_load_object_state(context, sqlite) < 0) {

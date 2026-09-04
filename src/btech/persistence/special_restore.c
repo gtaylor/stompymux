@@ -1,4 +1,5 @@
 #include "autopilot.h"
+#include "btech/special_objects.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
 #include "mechrep.h"

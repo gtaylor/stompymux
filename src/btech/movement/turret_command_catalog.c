@@ -4,12 +4,10 @@
 #include <stddef.h>
 
 const BtechCommandDefinition TURRETCOMMANDS[] = {
-    {0, "@SETTURRET <NAME> <VALUE|DATA>", "@Sets xcode value on object",
-     btech_command_invoke_set_xcodestuff},
-    {0, "@SETXCODE <NAME> <VALUE|DATA>", "@Sets xcode value on object",
-     btech_command_invoke_set_xcodestuff},
-    {0, "@VIEWXCODE", "@Views xcode values on object",
-     btech_command_invoke_list_xcodestuff},
+    {0, "@SETTURRET <NAME> <VALUE|DATA>", "@Sets a turret field",
+     btech_command_invoke_set_special_value},
+    {0, "@VIEWTURRET", "@Views turret fields",
+     btech_command_invoke_list_special_values},
     {0, "DEINITIALIZE", "De-initializes you as gunner",
      btech_command_invoke_turret_deinitialize},
     {0, "INITIALIZE", "Sets you as the gunner",

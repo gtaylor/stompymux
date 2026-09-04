@@ -7,6 +7,7 @@
 #include "autopilot.h"
 #include "autopilot_resume_api.h"
 #include "autopilot_weapon_profile_api.h"
+#include "btech/configuration.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
@@ -38,11 +39,9 @@
 #include "mech_template_api.h"
 #include "mech_utils_api.h"
 #include "mechrep_api.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/doubly_linked_list.h"
 #include "mux/support/stringutil.h"
@@ -198,19 +197,18 @@ static bool battle_map_unit_id_in_use(const BattleMap *map, const Mech *mech,
 
 static MechUnitId mech_map_unit_id_select(Mech *mech, const BattleMap *map,
                                           const char *preferred_id) {
-  char *attribute;
+  const char *configured_id;
   MechUnitId id;
 
   if (preferred_id != nullptr && strlen(preferred_id) > 1) {
     id = (MechUnitId){.first = *checked_string_suffix(preferred_id, 0),
                       .second = *checked_string_suffix(preferred_id, 1)};
   } else {
-    attribute =
-        btech_attribute_read(mech_context(mech)->database, mech_dbref(mech),
-                             A_MECHPREFID, (char[LBUF_SIZE]){0});
-    if (attribute != nullptr && strlen(attribute) > 1) {
-      id = (MechUnitId){.first = *checked_string_suffix(attribute, 0),
-                        .second = *checked_string_suffix(attribute, 1)};
+    configured_id =
+        btech_unit_preferred_id(mech_context(mech), mech_dbref(mech));
+    if (strlen(configured_id) > 1) {
+      id = (MechUnitId){.first = *checked_string_suffix(configured_id, 0),
+                        .second = *checked_string_suffix(configured_id, 1)};
     } else {
       id = (MechUnitId){.first = random_mech_id_character(mech_context(mech)),
                         .second = random_mech_id_character(mech_context(mech))};

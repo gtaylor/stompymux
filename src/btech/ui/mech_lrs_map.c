@@ -1,4 +1,5 @@
 #include "btconfig.h"
+#include "btech/configuration.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "command_handlers_api.h"
@@ -20,7 +21,6 @@
 #include "mech_specification_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
@@ -529,7 +529,6 @@ void mech_lrsmap(DbRef player, Mech *mech, char *buffer) {
   int x;
   int y;
   char *args[5];
-  char *str;
   int display_height = LRS_DISPLAY_HEIGHT;
 
   if (!common_checks(player, mech, MECH_USUAL))
@@ -600,18 +599,8 @@ void mech_lrsmap(DbRef player, Mech *mech, char *buffer) {
        mech_context(mech)->configuration->btech_mw_losmap))
     mode |= LRS_LOSMODE;
 
-  char *attribute_buffer = alloc_lbuf("mech_lrsmap.attribute");
-  str = btech_attribute_read(mech_context(mech)->database, player, A_LRSHEIGHT,
-                             attribute_buffer);
-  if (*str) {
-    if (!parse_int_checked(str, &display_height) || display_height < 10 ||
-        display_height > 40) {
-      mecha_notify(btech_context_evaluation(mech_context(mech)), player,
-                   "Illegal LRSHeight attribute.  Must be between 10 and 40");
-      display_height = LRS_DISPLAY_HEIGHT;
-    }
-  }
-  free_buf(attribute_buffer);
+  display_height =
+      btech_player_ui_preferences(mech_context(mech), player).lrs_height;
 
   display_height = min(display_height, 2 * mech_long_range_sensor_range(mech));
   display_height = min(display_height, map->map_height);

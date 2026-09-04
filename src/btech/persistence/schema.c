@@ -37,7 +37,8 @@ static int btech_table_names_load(sqlite3 *database, BtechTableNames *names) {
   if (sqlite3_prepare_v2(database,
                          "SELECT name FROM sqlite_schema "
                          "WHERE type = 'table' AND name GLOB 'btech_*' "
-                         "AND name <> 'btech_object_state' "
+                         "AND name NOT IN ('btech_character_state', "
+                         "'btech_character_values', 'btech_economy_parts') "
                          "ORDER BY name;",
                          -1, &statement, nullptr) != SQLITE_OK)
     return -1;

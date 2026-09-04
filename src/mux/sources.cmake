@@ -69,6 +69,7 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/packages/btech/character/btech_character_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/btech/map/btech_map_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/btech/parts/btech_parts_bindings.c
+  ${MUX_MODULE_DIR}/lua/packages/btech/player/btech_player_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/btech/repair/btech_repair_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/btech/system/btech_system_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/btech/unit/btech_unit_bindings.c
@@ -84,7 +85,6 @@ target_sources(stompymux PRIVATE
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_object_relationship_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_object_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_object_type_bindings.c
-  ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_attribute_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_flag_power_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/world/mux_lock_bindings.c
   ${MUX_MODULE_DIR}/lua/packages/mux/text/mux_text_bindings.c

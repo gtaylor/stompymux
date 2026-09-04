@@ -33,11 +33,6 @@ void gamedb_log_failure(ServerLog *log, const char *stage, const char *path,
       "SQLite %s for %s: %s", stage, path, detail);
 }
 
-const NativeColumn *gamedb_native_column_at(size_t index) {
-  return checked_storage_at_const(NATIVE_COLUMNS, NATIVE_COLUMN_COUNT,
-                                  sizeof(*NATIVE_COLUMNS), index);
-}
-
 /* Report a subsystem persistence failure with its registered extension name. */
 static void gamedb_log_extension_failure(ServerLog *log, const char *operation,
                                          const char *name, const char *path,

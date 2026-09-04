@@ -32,6 +32,9 @@ int main(void) {
       sqlite3_exec(database,
                    "CREATE TABLE btech_old_state (id INTEGER);"
                    "CREATE TABLE btech_object_state (id INTEGER);"
+                   "CREATE TABLE btech_character_state (id INTEGER);"
+                   "CREATE TABLE btech_character_values (id INTEGER);"
+                   "CREATE TABLE btech_economy_parts (id INTEGER);"
                    "CREATE TABLE unrelated_state (id INTEGER);",
                    nullptr, nullptr, nullptr) != SQLITE_OK)
     goto done;
@@ -41,7 +44,10 @@ int main(void) {
   if (btech_persistence_reset_schema_path(path) < 0 ||
       sqlite3_open(path, &database) != SQLITE_OK ||
       table_count(database, "btech_old_state") != 0 ||
-      table_count(database, "btech_object_state") != 1 ||
+      table_count(database, "btech_object_state") != 0 ||
+      table_count(database, "btech_character_state") != 1 ||
+      table_count(database, "btech_character_values") != 1 ||
+      table_count(database, "btech_economy_parts") != 1 ||
       table_count(database, "unrelated_state") != 1)
     goto done;
   result = 0;

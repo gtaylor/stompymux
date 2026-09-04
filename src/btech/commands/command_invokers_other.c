@@ -13,9 +13,10 @@
     handler(invocation->actor, invocation->object, invocation->arguments);     \
   }
 DEFINE_BTECH_COMMAND_INVOKER(list_forms)
-void btech_command_invoke_list_xcodestuff(
+void btech_command_invoke_list_special_values(
     const BtechCommandInvocation *invocation) {
-  list_xcodestuff(invocation->actor, invocation->object, invocation->arguments);
+  list_special_values(invocation->actor, invocation->object,
+                      invocation->arguments);
 }
 DEFINE_BTECH_COMMAND_INVOKER(auto_addcommand)
 void btech_command_invoke_auto_delcommand(
@@ -110,9 +111,10 @@ DEFINE_BTECH_COMMAND_INVOKER(mechrep_rsettype)
 DEFINE_BTECH_COMMAND_INVOKER(mechrep_rshowtech)
 DEFINE_BTECH_COMMAND_INVOKER(mechrep_setcargospace)
 DEFINE_BTECH_COMMAND_INVOKER(mine_command_add)
-void btech_command_invoke_set_xcodestuff(
+void btech_command_invoke_set_special_value(
     const BtechCommandInvocation *invocation) {
-  set_xcodestuff(invocation->actor, invocation->object, invocation->arguments);
+  set_special_value(invocation->actor, invocation->object,
+                    invocation->arguments);
 }
 DEFINE_BTECH_COMMAND_INVOKER(turret_addtic)
 DEFINE_BTECH_COMMAND_INVOKER(turret_bearing)

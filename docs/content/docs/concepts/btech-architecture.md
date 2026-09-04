@@ -26,7 +26,7 @@ Each domain owns both its state and the operations that change that state:
 | `economy` | Stores, cargo, and part costs |
 | `character` | Skills, experience, advantages, and personal combat |
 | `ui` | Shared menu, notification, and presentation primitives |
-| `scripting` | Native XCODE-value and script-function adapters |
+| `scripting` | BTech field and script-function adapters |
 | `persistence` | SQLite schema and domain persistence adapters |
 | `integration` | Narrow adapters to MUX-owned services |
 
@@ -128,11 +128,11 @@ to avoid writing an operation.
 ## Persistence
 
 The BTech SQLite schema has its own version and is intentionally independent of
-in-memory structure layouts. Schema version 2 has no version-1 migration. An
-offline reset operation removes the BTech extension tables whose names begin
-with `btech_`. It preserves `btech_object_state`, which belongs to the core MUX
-snapshot schema. The server never performs this destructive reset
-automatically.
+in-memory structure layouts. Schema version 5 is a hard cut with no migration
+from older versions. An offline reset operation removes the BTech extension's
+registry, configuration, and runtime tables. It preserves the core database's
+`btech_character_state`, `btech_character_values`, and `btech_economy_parts`
+tables. The server never performs this destructive reset automatically.
 
 Shut down `stompymux` before resetting or replacing the game database. A normal
 dump creates the current BTech tables again.

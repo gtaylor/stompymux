@@ -3,6 +3,7 @@
  */
 
 #include "mux/world/object.h"
+#include "btech/special_objects.h"
 #include <stdio.h>
 
 #include <stdlib.h>
@@ -10,7 +11,6 @@
 
 #include "mux/commands/command_queue.h"
 #include "mux/network/connection_events.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/player_account.h"
@@ -314,7 +314,8 @@ DbRef create_obj(EvaluationContext *evaluation, DbRef player, int objtype,
     obj = evaluation->world->database->top;
     db_grow(evaluation->world->database, evaluation->world->database->top + 1);
   }
-  attribute_free(evaluation->world->database, obj); // Just in case...
+  game_object_owned_state_clear(evaluation->world->database,
+                                obj); // Just in case...
   game_object_renew_generation(evaluation->world->database, obj);
 
   /*
@@ -390,7 +391,8 @@ void destroy_obj(const ObjectDestructionRequest *request) {
     notify_checked(evaluation, player, player, "Destroyed.",
                    MSG_ME_ALL | MSG_F_DOWN);
 
-  attribute_free(evaluation->world->database, obj);
+  btech_object_forget(evaluation->btech, obj);
+  game_object_owned_state_clear(evaluation->world->database, obj);
   object_name_set(evaluation->world->database, obj, "Garbage");
   game_object_set_type(evaluation->world->database, obj, OBJECT_TYPE_GARBAGE);
   game_object_clear_flags(evaluation->world->database, obj);
@@ -527,10 +529,8 @@ void destroy_player(EvaluationContext *evaluation, DbRef victim) {
   /*
    * Bye bye...
    */
-  const char *destroyer =
-      attribute_get_raw(evaluation->world->database, victim, A_DESTROYER);
-  if (!parse_long_checked(destroyer, &player))
-    player = NOTHING;
+  player = game_database_object(evaluation->world->database, victim)
+               ->pending_destroyer;
   toast_player(evaluation, victim);
   boot_off(evaluation->world->descriptors, victim, "You have been destroyed!");
   halt_que(evaluation->runtime->commands, victim, NOTHING);

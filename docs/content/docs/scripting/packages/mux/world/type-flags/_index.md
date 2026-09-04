@@ -15,7 +15,7 @@ constants from [`mux.world.flags`](../flags/).
 after the underlying object becomes stale.
 
 Changes run immediately as God through the native flag handlers, including
-XCODE transition side effects. They are not part of the State transaction and
+flag transition side effects. They are not part of the State transaction and
 are not rolled back if the callback later fails.
 
 | Method | Description |

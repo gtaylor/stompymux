@@ -48,7 +48,6 @@
 #include "mechrep_api.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/network/mux_event.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
@@ -128,8 +127,8 @@ enum {
   TYPE_LAST_TYPE
 };
 extern const int SCODE_IN_OUT[TYPE_LAST_TYPE];
-size_t xcode_descriptor_count(void);
-const GMV *xcode_descriptor_at(size_t index);
+size_t special_value_descriptor_count(void);
+const GMV *special_value_descriptor_at(size_t index);
 
 int text2bv(const char *text);
 char *bv2text(int i, char *buffer);

@@ -2,8 +2,6 @@
 
 #include <string.h>
 
-#include "btech/ids.h"
-#include "btech/special_objects.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
@@ -21,13 +19,6 @@ void notify_checked(EvaluationContext *evaluation [[maybe_unused]],
                     DbRef sender [[maybe_unused]],
                     const char *msg [[maybe_unused]],
                     int key [[maybe_unused]]) {}
-
-void btech_special_object_flag_changed(BtechContext *context [[maybe_unused]],
-                                       BtechObjectId player
-                                       [[maybe_unused]], // NOLINT
-                                       BtechObjectId object [[maybe_unused]],
-                                       bool from [[maybe_unused]],
-                                       bool to [[maybe_unused]]) {}
 
 int main(void) {
   GameObject objects[3] = {};

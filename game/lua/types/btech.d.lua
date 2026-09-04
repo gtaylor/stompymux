@@ -11,6 +11,8 @@
 
 ---@alias BtechListItem string|number Item returned by a legacy BattleTech list result.
 
+---@alias BtechMapEntrance BtechMapOffsetEntrance|BtechMapExactEntrance
+
 ---@alias PartCategory "ammo"|"weapon"|"weapons"|"weap"|"bomb"|"bombs"|"special"|"specials"|"cargo"|"carg"|"part"|"parts" Canonical or legacy spelling; native matching is ASCII-case-insensitive.
 
 ---@alias PartNameSize "short"|"long"|"vlong" Canonical name length; native matching inspects only the first letter, case-insensitively.
@@ -19,9 +21,63 @@
 
 ---@alias WeaponStat "VRT"|"TYPE"|"HEAT"|"DAMAGE"|"MIN"|"SR"|"MR"|"LR"|"CRIT"|"AMMO"|"WEIGHT"|"BV" Canonical weapon statistic; native matching is ASCII-case-insensitive.
 
+---@alias BtechBuildingContactMode "follow_brief"|"include"|"exclude"
+
 ---@alias ArmorStatusField 0|1|2 Armor field: current armor, internal structure, or rear armor.
 
 ---@alias CriticalSlotField "NAME"|"STATUS"|"DATA"|"MAXAMMO"|"AMMOTYPE"|"MODE"|"HALFTON" Canonical critical-slot field; native matching is ASCII-case-insensitive.
+
+---@class BtechCargoTransferPoint
+---@field x integer
+---@field y integer
+---@field reveal_hint boolean
+
+---@class BtechMapEntrances
+---@field north? BtechMapEntrance
+---@field east? BtechMapEntrance
+---@field south? BtechMapEntrance
+---@field west? BtechMapEntrance
+
+---@class BtechMapExactEntrance
+---@field mode "exact"
+---@field x integer
+---@field y integer
+
+---@class BtechMapLink
+---@field parent DbRef|Object
+---@field x integer
+---@field y integer
+---@field entrances? BtechMapEntrances
+
+---@class BtechMapOffsetEntrance
+---@field mode "offset"
+---@field offset integer
+
+---@class BtechPersonalCombatArmor
+---@field head integer
+---@field torso integer
+---@field hands integer
+---@field feet integer
+
+---@class BtechPersonalCombatEquipment
+---@field weapon string
+---@field ammunition? integer
+
+---@class BtechPersonalCombatLoadout
+---@field armor BtechPersonalCombatArmor
+---@field right? BtechPersonalCombatEquipment
+---@field left? BtechPersonalCombatEquipment
+
+---@class BtechPlayerUiPreferences
+---@field tactical_height integer
+---@field tactical_width integer
+---@field lrs_height integer
+---@field include_dead boolean
+---@field include_shutdown boolean
+---@field include_enemies boolean
+---@field include_allies boolean
+---@field include_target boolean
+---@field buildings BtechBuildingContactMode
 
 ---@class BtechErrorPackage
 ---@field codes BtechErrorCodes Checked native BattleTech code tree.
@@ -37,7 +93,7 @@
 ---Checked native BattleTech error-code tree.
 ---@class BtechErrorCodes: ErrorCode
 ---@field unavailable BtechUnavailableErrorCode `btech.unavailable`, raised during `@lua/check`.
----@field failed BtechFailedErrorCode `btech.failed`, raised when a mapped legacy handler reports an error.
+---@field failed BtechFailedErrorCode `btech.failed`, raised for a BattleTech domain failure, such as a wrong object kind or a failed legacy handler.
 
 ---Character values, skills, experience, and piloting rolls.
 ---@class BtechCharacterPackage
@@ -51,6 +107,7 @@ local btech_map = {}
 ---@class BtechPackage
 ---@field unit BtechUnitPackage Live units, templates, combat values, and status.
 ---@field map BtechMapPackage Maps, geometry, line of sight, and map messaging.
+---@field player BtechPlayerPackage Player-owned BattleTech configuration.
 ---@field parts BtechPartsPackage Part catalogues, installed parts, stores, and costs.
 ---@field character BtechCharacterPackage Character values, skills, experience, and piloting rolls.
 ---@field repair BtechRepairPackage Damage and technician-status queries.
@@ -61,6 +118,10 @@ btech = {}
 ---Part catalogues, installed parts, stores, and costs.
 ---@class BtechPartsPackage
 local btech_parts = {}
+
+---Player-owned BattleTech configuration.
+---@class BtechPlayerPackage
+local btech_player = {}
 
 ---Damage and technician-status queries.
 ---@class BtechRepairPackage
@@ -130,6 +191,11 @@ function btech_character.value(character, value, mode) end
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
 function btech_map.blast_zones(map) end
+
+---Returns a map's cargo-transfer point, or nil.
+---@param map DbRef|Object
+---@return BtechCargoTransferPoint|nil point
+function btech_map.cargo_transfer_point(map) end
 
 ---Returns the elevation of a map hex.
 ---@param map integer
@@ -204,6 +270,11 @@ function btech_map.hex_line_of_sight(unit, x, y) end
 ---@see btech.error.codes.failed
 function btech_map.id_to_dbref(unit_or_map, id) end
 
+---Returns a child map's configured parent link, or nil.
+---@param child DbRef|Object
+---@return BtechMapLink|nil link
+function btech_map.link(child) end
+
 ---Loads a map file and clears units and map objects from the target map.
 ---@param map integer
 ---@param name string
@@ -238,6 +309,18 @@ function btech_map.load(map, name, clear) end
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
 function btech_map.range(map, unit_a, unit_b) end
+
+---Sets a map's cargo-transfer point, or clears it with nil.
+---@param map DbRef|Object
+---@param point BtechCargoTransferPoint|nil
+---@return true success
+function btech_map.set_cargo_transfer_point(map, point) end
+
+---Atomically sets a child map link, or clears it with nil.
+---@param child DbRef|Object
+---@param link BtechMapLink|nil
+---@return true success
+function btech_map.set_link(child, link) end
 
 ---Places a live unit on a map at specified coordinates.
 ---@param unit integer
@@ -463,6 +546,40 @@ function btech_parts.weapon_stat(weapon, stat) end
 ---@see btech.error.codes.failed
 function btech_parts.weight(part_name) end
 
+---Returns the configured personal-combat loadout, or nil.
+---@param player DbRef|Object
+---@return BtechPersonalCombatLoadout|nil loadout
+function btech_player.loadout(player) end
+
+---Returns the configured MechWarrior template override, or nil.
+---@param player DbRef|Object
+---@return string|nil reference
+function btech_player.mechwarrior_template(player) end
+
+---Atomically sets a personal-combat loadout, or clears it with nil.
+---@param player DbRef|Object
+---@param loadout BtechPersonalCombatLoadout|nil
+---@return true success
+function btech_player.set_loadout(player, loadout) end
+
+---Sets the MechWarrior template override, or clears it with nil.
+---@param player DbRef|Object
+---@param reference string|nil
+---@return true success
+function btech_player.set_mechwarrior_template(player, reference) end
+
+---Atomically sets UI preferences, or restores defaults with nil.
+---@param player DbRef|Object
+---@param preferences BtechPlayerUiPreferences|nil
+---@return true success
+function btech_player.set_ui_preferences(player, preferences) end
+
+---Returns effective UI preferences and whether they are explicitly configured.
+---@param player DbRef|Object
+---@return BtechPlayerUiPreferences preferences
+---@return boolean configured
+function btech_player.ui_preferences(player) end
+
 ---Returns the formatted repair-job description for a live unit.
 ---@param unit integer
 ---@return string result
@@ -562,40 +679,6 @@ function btech_system.design_exists(reference) end
 ---@see btech.error.codes.failed
 function btech_system.lag() end
 
----Writes a script-writable native field on a live special object.
----@param object integer
----@param name string Native field name, matched ASCII-case-insensitively.
----@param value string|number
----@return true success
----
----Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
----@see btech.error.codes.unavailable
----@see mux.error.codes.arg.invalid
----@see btech.error.codes.failed
-function btech_system.set_xcode_value(object, name, value) end
-
----Reads a script-visible native field from a live special object.
----@param object integer
----@param name string Native field name, matched ASCII-case-insensitively.
----@return string result
----
----Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
----@see btech.error.codes.unavailable
----@see mux.error.codes.arg.invalid
----@see btech.error.codes.failed
-function btech_system.xcode_value(object, name) end
-
----Reads a script-visible native field from a unit template.
----@param reference string
----@param name string Native field name, matched ASCII-case-insensitively.
----@return string result
----
----Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
----@see btech.error.codes.unavailable
----@see mux.error.codes.arg.invalid
----@see btech.error.codes.failed
-function btech_system.xcode_value_ref(reference, name) end
-
 ---Lists live unit dbrefs assigned to a zone. A trailing `-1` indicates that the legacy output was truncated.
 ---@param zone integer
 ---@return integer[] units Unit dbrefs, possibly followed by the `-1` truncation sentinel.
@@ -627,6 +710,11 @@ function btech_unit.armor_status(unit, section) end
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
 function btech_unit.armor_status_ref(reference, section) end
+
+---Returns a unit's assigned pilot as an Object, or nil.
+---@param unit DbRef|Object
+---@return Object|nil pilot
+function btech_unit.assigned_pilot(unit) end
 
 ---Calculates a live unit's battle value.
 ---@param unit integer
@@ -732,6 +820,11 @@ function btech_unit.damage(unit, damage, cluster_size, direction, force_critical
 ---@see btech.error.codes.failed
 function btech_unit.defensive_battle_value_ref(reference) end
 
+---Returns a registered unit's display-name override, or an empty string.
+---@param unit integer
+---@return string name
+function btech_unit.display_name(unit) end
+
 ---Returns a live unit's engine rating.
 ---@param unit integer
 ---@return number rating
@@ -797,6 +890,11 @@ function btech_unit.load(unit, reference) end
 ---@see btech.error.codes.failed
 function btech_unit.make_pilot_roll(unit, roll_modifier, damage_modifier) end
 
+---Returns a unit's markings, or nil.
+---@param unit DbRef|Object
+---@return string|nil markings
+function btech_unit.markings(unit) end
+
 ---Calculates a unit template's offensive battle-value component.
 ---@param reference string
 ---@return number value
@@ -816,6 +914,11 @@ function btech_unit.offensive_battle_value_ref(reference) end
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
 function btech_unit.payload_ref(reference) end
+
+---Returns a unit's preferred two-letter map identifier, or nil.
+---@param unit DbRef|Object
+---@return string|nil preferred_id
+function btech_unit.preferred_id(unit) end
 
 ---Returns a live unit's effective maximum speed.
 ---@param unit integer
@@ -851,6 +954,24 @@ function btech_unit.section_status(unit, section) end
 ---@see btech.error.codes.failed
 function btech_unit.set_armor_status(unit, section, field, value) end
 
+---Sets a unit's assigned pilot, or clears the assignment with nil.
+---@param unit DbRef|Object
+---@param pilot DbRef|Object|nil
+---@return true success
+function btech_unit.set_assigned_pilot(unit, pilot) end
+
+---Sets a registered unit's display-name override; an empty name clears it.
+---@param unit integer
+---@param name string
+---@return true success
+function btech_unit.set_display_name(unit, name) end
+
+---Sets a unit's markings, or clears them with nil.
+---@param unit DbRef|Object
+---@param markings string|nil
+---@return true success
+function btech_unit.set_markings(unit, markings) end
+
 ---Sets a live unit's maximum speed and corrects its current speed.
 ---@param unit integer
 ---@param speed number
@@ -862,6 +983,12 @@ function btech_unit.set_armor_status(unit, section, field, value) end
 ---@see btech.error.codes.failed
 function btech_unit.set_max_speed(unit, speed) end
 
+---Sets a unit's preferred map identifier, or clears it with nil.
+---@param unit DbRef|Object
+---@param preferred_id string|nil
+---@return true success
+function btech_unit.set_preferred_id(unit, preferred_id) end
+
 ---Sets a live unit's tonnage and original weight.
 ---@param unit integer
 ---@param tons integer
@@ -872,6 +999,18 @@ function btech_unit.set_max_speed(unit, speed) end
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
 function btech_unit.set_tons(unit, tons) end
+
+---Writes a script-writable field on a live unit.
+---@param unit integer
+---@param name string Unit field name, matched ASCII-case-insensitively.
+---@param value string|number
+---@return true success
+---
+---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+---@see btech.error.codes.unavailable
+---@see mux.error.codes.arg.invalid
+---@see btech.error.codes.failed
+function btech_unit.set_value(unit, name, value) end
 
 ---Requests a template's critical-status display for a player.
 ---@param reference string
@@ -923,6 +1062,28 @@ function btech_unit.show_weapon_specs_ref(reference, player) end
 ---@see mux.error.codes.arg.invalid
 ---@see btech.error.codes.failed
 function btech_unit.tic_weapons(unit, tic) end
+
+---Reads a script-visible field from a live unit.
+---@param unit integer
+---@param name string Unit field name, matched ASCII-case-insensitively.
+---@return string result
+---
+---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+---@see btech.error.codes.unavailable
+---@see mux.error.codes.arg.invalid
+---@see btech.error.codes.failed
+function btech_unit.value(unit, name) end
+
+---Reads a script-visible field from a unit template.
+---@param reference string
+---@param name string Unit field name, matched ASCII-case-insensitively.
+---@return string result
+---
+---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+---@see btech.error.codes.unavailable
+---@see mux.error.codes.arg.invalid
+---@see btech.error.codes.failed
+function btech_unit.value_ref(reference, name) end
 
 ---Returns serialized weapon status for a live unit or optional section.
 ---@param unit integer

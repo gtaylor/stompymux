@@ -1,10 +1,10 @@
+#include "btech/configuration.h"
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "context_internal.h"
 #include "map.h"
 #include "map_bits_api.h"
 #include "map_obj_api.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
@@ -24,7 +24,7 @@ typedef struct MapLinkFixture {
   GameDatabase database;
   BattleMap *maps;
   GameObject *objects;
-  char **links;
+  DbRef *parents;
   size_t map_count;
   size_t processed_count;
   int expected_builds;
@@ -45,11 +45,6 @@ static BattleMap *fixture_map(DbRef dbref) {
   }
   return checked_storage_at(active_fixture->maps, active_fixture->map_count,
                             sizeof(*active_fixture->maps), (size_t)dbref);
-}
-
-static char **fixture_link_slot(MapLinkFixture *fixture, size_t index) {
-  return checked_storage_at(fixture->links, fixture->map_count,
-                            sizeof(*fixture->links), index);
 }
 
 static MapObject **fixture_object_slot(BattleMap *map, int type) {
@@ -74,45 +69,31 @@ EvaluationContext *btech_context_evaluation(BtechContext *context
   return nullptr;
 }
 
-char *btech_attribute_read(GameDatabase *database, DbRef id, int flag,
-                           char buffer[static LBUF_SIZE]) {
-  if (active_fixture == nullptr || database != &active_fixture->database ||
-      id < 0 || (size_t)id >= active_fixture->map_count) {
-    return nullptr;
-  }
-
-  const char *value = nullptr;
-  if (flag == A_BUILDCOORD) {
-    value = "0,0";
-  } else if (flag == A_BUILDLINKS) {
-    value = *fixture_link_slot(active_fixture, (size_t)id);
-  }
-  if (value == nullptr)
-    return nullptr;
-  (void)string_copy_bounded(buffer, LBUF_SIZE, value);
-  return buffer;
+bool btech_map_link(BtechContext *context, BtechObjectId child,
+                    BtechMapLink *link) {
+  if (active_fixture == nullptr || context != &active_fixture->context ||
+      child < 0 || (size_t)child >= active_fixture->map_count)
+    return false;
+  DbRef parent = *(const DbRef *)checked_storage_at_const(
+      active_fixture->parents, active_fixture->map_count,
+      sizeof(*active_fixture->parents), (size_t)child);
+  if (parent == NOTHING)
+    return false;
+  if (link != nullptr)
+    *link = (BtechMapLink){.parent = parent};
+  return true;
 }
 
-int mech_parseattributes(char *buffer, char **args, int maxargs) {
-  if (maxargs <= 0)
-    return 0;
-  const size_t CAPACITY = (size_t)maxargs;
-  memset(args, 0, sizeof(*args) * CAPACITY);
-
-  int count = 0;
-  char *remaining = buffer;
-  char *token_context = nullptr;
-  while (count < maxargs) {
-    char *token =
-        strtok_r(count == 0 ? remaining : nullptr, " \t", &token_context);
-    if (token == nullptr)
-      break;
-    char **slot =
-        checked_storage_at(args, CAPACITY, sizeof(*args), (size_t)count);
-    *slot = token;
-    count++;
+void btech_map_links_visit(BtechContext *context, BtechMapLinkVisitor visitor,
+                           void *visitor_context) {
+  if (active_fixture == nullptr || context != &active_fixture->context)
+    return;
+  for (size_t child = 0; child < active_fixture->map_count; child++) {
+    BtechMapLink link;
+    if (btech_map_link(context, (BtechObjectId)child, &link) &&
+        !visitor((BtechObjectId)child, &link, visitor_context))
+      return;
   }
-  return count;
 }
 
 void clear_hex_bits(BattleMap *map [[maybe_unused]],
@@ -173,8 +154,8 @@ static bool fixture_load(MapLinkFixture *fixture, const char *path) {
 
   fixture->maps = checked_storage_allocate_array(fixture->map_count,
                                                  sizeof(*fixture->maps));
-  fixture->links = checked_storage_allocate_array(fixture->map_count,
-                                                  sizeof(*fixture->links));
+  fixture->parents = checked_storage_allocate_array(fixture->map_count,
+                                                    sizeof(*fixture->parents));
   fixture->database.size = (int)fixture->map_count + 1;
   fixture->objects = checked_storage_allocate_array(
       (size_t)fixture->database.size + 1, sizeof(*fixture->objects));
@@ -183,6 +164,8 @@ static bool fixture_load(MapLinkFixture *fixture, const char *path) {
   fixture->context.database = &fixture->database;
 
   for (size_t index = 0; index < fixture->map_count; ++index) {
+    *(DbRef *)checked_storage_at(fixture->parents, fixture->map_count,
+                                 sizeof(*fixture->parents), index) = NOTHING;
     BattleMap *map = checked_storage_at(fixture->maps, fixture->map_count,
                                         sizeof(*fixture->maps), index);
     map->xcode.context = &fixture->context;
@@ -199,19 +182,11 @@ static bool fixture_load(MapLinkFixture *fixture, const char *path) {
       (void)fclose(input);
       return false;
     }
-    char **slot = fixture_link_slot(fixture, (size_t)source);
-    char rendered[32];
-    (void)snprintf(rendered, sizeof(rendered), "%ld", target);
-    if (*slot == nullptr)
-      *slot = alloc_lbuf("map link fixture");
-    if (**slot != '\0' && !string_append_bounded(*slot, LBUF_SIZE, " ")) {
-      (void)fclose(input);
-      return false;
-    }
-    if (!string_append_bounded(*slot, LBUF_SIZE, rendered)) {
-      (void)fclose(input);
-      return false;
-    }
+    DbRef *parent =
+        checked_storage_at(fixture->parents, fixture->map_count,
+                           sizeof(*fixture->parents), (size_t)target);
+    if (*parent == NOTHING)
+      *parent = source;
   }
 
   const DbRef PLAYER = (DbRef)fixture->map_count;
@@ -247,13 +222,11 @@ static void fixture_destroy(MapLinkFixture *fixture) {
                                           sizeof(*fixture->maps), index);
       for (int type = 0; type < NUM_MAPOBJTYPES; ++type)
         del_mapobjst(map, type);
-      if (fixture->links != nullptr)
-        free_buf(*fixture_link_slot(fixture, index));
     }
   }
   free(fixture->maps);
   free(fixture->objects);
-  free(fixture->links);
+  free(fixture->parents);
   *fixture = (MapLinkFixture){};
 }
 

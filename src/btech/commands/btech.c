@@ -8,19 +8,70 @@
 
 #include <stdio.h>
 
+#include "btech/special_objects.h"
 #include "btech_api.h"
 #include "btechstats_api.h"
 #include "btechstats_global.h"
 #include "command_handlers_api.h"
 #include "mech_utils_api.h"
 #include "mux/commands/command_invocation.h"
+#include "mux/commands/command_keys.h"
 #include "mux/commands/command_queue.h"
+#include "mux/network/network_output.h"
+#include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
+#include "mux/world/object_set.h"
 #include "registry_api.h"
 #include "value_handlers_api.h"
+
+void do_btech(CommandInvocation *invocation) {
+  EvaluationContext *evaluation = &invocation->context->evaluation;
+  DbRef object = match_controlled(&invocation->context->match,
+                                  invocation->player, invocation->first);
+  char error[256];
+
+  if (object == NOTHING)
+    return;
+  if (invocation->key == BTECH_REGISTER) {
+    if (!invocation->second || !*invocation->second) {
+      mecha_notify(evaluation, invocation->player,
+                   "Specify MECH, DEBUG, MECHREP, MAP, AUTOPILOT, or TURRET.");
+      return;
+    }
+    if (!btech_special_object_register(evaluation->btech, invocation->player,
+                                       object, invocation->second, error,
+                                       sizeof(error))) {
+      notify_printf(evaluation, invocation->player, "%s.", error);
+      return;
+    }
+    notify_printf(evaluation, invocation->player,
+                  "Registered #%ld as BTech type %s.", object,
+                  btech_special_object_type_name(
+                      btech_special_object_type(evaluation->btech, object)));
+    return;
+  }
+  if (invocation->key == BTECH_UNREGISTER) {
+    if (!btech_special_object_unregister(evaluation->btech, invocation->player,
+                                         object, error, sizeof(error))) {
+      notify_printf(evaluation, invocation->player, "%s.", error);
+      return;
+    }
+    notify_printf(evaluation, invocation->player,
+                  "Unregistered #%ld from BTech.", object);
+    return;
+  }
+  int type = btech_special_object_type(evaluation->btech, object);
+  if (type < 0) {
+    notify_printf(evaluation, invocation->player,
+                  "#%ld is not registered with BTech.", object);
+    return;
+  }
+  notify_printf(evaluation, invocation->player, "#%ld BTech type: %s", object,
+                btech_special_object_type_name(type));
+}
 
 void do_show(CommandInvocation *invocation) {
   CommandContext *command = invocation->context;
@@ -30,14 +81,14 @@ void do_show(CommandInvocation *invocation) {
   int i;
   enum { CHAVA, CHVAL, CHSKI, CHADV, CHATT, MECHVALUES };
   const char *const CMDS[] = {"allvalues",  "values",     "skills",
-                              "advantages", "attributes", "xcodevalues",
+                              "advantages", "attributes", "btechvalues",
                               nullptr};
   const char *const CMDS_HELP[] = {"[char_]allvalues",
                                    "[char_]values",
                                    "[char_]skills",
                                    "[char_]advantages",
                                    "[char_]attributes",
-                                   "xcodevalues [scode]",
+                                   "btechvalues [scode]",
                                    nullptr};
   char buf[MBUF_SIZE] = {0};
 
@@ -65,7 +116,7 @@ void do_show(CommandInvocation *invocation) {
   /* Do da cmd */
   switch (i) {
   case MECHVALUES:
-    list_xcodevalues(&command->evaluation, player);
+    list_special_value_names(&command->evaluation, player);
     return;
   case CHAVA:
     list_charvaluestuff(&command->evaluation, player, -1);

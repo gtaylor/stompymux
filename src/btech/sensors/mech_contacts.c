@@ -1,9 +1,11 @@
 /* Implements BattleTech sensor mechanics for unit contacts. */
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "btech/configuration.h"
 #include "btech/context.h"
 #include "btech_event.h"
 #include "command_handlers_api.h"
@@ -33,7 +35,6 @@
 #include "mech_targeting_api.h"
 #include "mech_utils_api.h"
 #include "mux/lua/lua_runtime.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
@@ -45,7 +46,6 @@
 #include "mux/world/access.h"
 #include "registry_api.h"
 
-static const char DEFAULT_CONTACTOPTIONS[] = "!db";
 static constexpr size_t CONTACT_OPTIONS_LENGTH_LIMIT = 49;
 
 static bool mech_contact_is_friend(Mech *observer, Mech *target) {
@@ -338,6 +338,29 @@ char mech_contact_status_character(Mech *mech, Mech *mech_target,
   return ' ';
 }
 
+static unsigned char
+contact_default_options(BtechPlayerUiPreferences preferences,
+                        bool brief_buildings) {
+  unsigned char options = 0;
+  if (preferences.include_dead)
+    options |= SEE_DEAD;
+  if (preferences.include_shutdown)
+    options |= SEE_SHUTDOWN;
+  if (preferences.include_enemies)
+    options |= SEE_ENEMA;
+  if (preferences.include_allies)
+    options |= SEE_ALLY;
+  if (preferences.include_target)
+    options |= SEE_TARGET;
+  const bool INCLUDE_BUILDINGS =
+      (preferences.buildings == BTECH_BUILDING_CONTACTS_INCLUDE ||
+       (preferences.buildings == BTECH_BUILDING_CONTACTS_FOLLOW_BRIEF &&
+        brief_buildings)) != 0;
+  if (INCLUDE_BUILDINGS)
+    options |= SEE_BUILDINGS;
+  return options;
+}
+
 void mech_contacts(DbRef player, Mech *mech, char *buffer) {
   Mech *temp_mech;
   BattleMap *mech_map =
@@ -359,7 +382,6 @@ void mech_contacts(DbRef player, Mech *mech, char *buffer) {
   char weaponarc;
   const char *mech_name;
   unsigned char see_what;
-  char *str;
   char move_type[30];
   char c_status1;
   char c_status2;
@@ -370,14 +392,12 @@ void mech_contacts(DbRef player, Mech *mech, char *buffer) {
   int isvb;
   int inlos;
   char *new;
-  char *attribute_buffer;
   LuaLockInvocation lock;
 
   if (!common_checks(player, mech, MECH_USUAL))
     return;
   contacts = checked_storage_allocate_array(BATTLE_MAP_UNIT_CAPACITY,
                                             sizeof(*contacts));
-  attribute_buffer = alloc_lbuf("mech_contacts.attribute");
   new = alloc_lbuf("mech_contacts.new");
   LuaLockResult *lock_result = checked_storage_allocate(sizeof(*lock_result));
   argc = mech_parseattributes(buffer, args, 1);
@@ -387,55 +407,43 @@ void mech_contacts(DbRef player, Mech *mech, char *buffer) {
     char *argument =
         *(char **)checked_storage_at((void *)args, 1, sizeof(*args), 0);
     if (*argument == '+') {
-      str = btech_attribute_read(mech_context(mech)->database, player,
-                                 A_CONTACTOPT, attribute_buffer);
-      if (!*str) {
-        (void)string_copy_bounded(buff, sizeof(buff), DEFAULT_CONTACTOPTIONS);
-      } else {
-        (void)string_copy_bounded(buff, CONTACT_OPTIONS_LENGTH_LIMIT + 1, str);
-
-        if (strlen(buff) == 0)
-          (void)string_copy_bounded(buff, sizeof(buff), DEFAULT_CONTACTOPTIONS);
-      }
+      BtechPlayerUiPreferences preferences =
+          btech_player_ui_preferences(mech_context(mech), player);
+      see_what = contact_default_options(preferences, isvb == 1);
     } else {
       (void)string_copy_bounded(buff, CONTACT_OPTIONS_LENGTH_LIMIT + 1,
                                 argument);
-    }
+      see_what = isvb == 1 ? SEE_BUILDINGS : 0;
+      for (loop = 0; loop < 50; loop++) {
+        const char C = *checked_string_suffix(buff, (size_t)loop);
+        if (C == '\0')
+          break;
 
-    if (isvb == 1)
-      see_what = SEE_BUILDINGS;
-    else
-      see_what = 0x0;
-
-    for (loop = 0; loop < 50; loop++) {
-      const char C = *checked_string_suffix(buff, (size_t)loop);
-      if (C == '\0')
-        break;
-
-      if (C == 'd') {
-        (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_DEAD)
-                                 : (see_what |= SEE_DEAD);
-      } else if (C == 's') {
-        (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_SHUTDOWN)
-                                 : (see_what |= SEE_SHUTDOWN);
-      } else if (C == 'b') {
-        (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_BUILDINGS)
-                                 : (see_what |= SEE_BUILDINGS);
-      } else if (C == 'e') {
-        (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_ENEMA)
-                                 : (see_what |= SEE_ENEMA);
-      } else if (C == 'a') {
-        (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_ALLY)
-                                 : (see_what |= SEE_ALLY);
-      } else if (C == 't') {
-        (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_TARGET)
-                                 : (see_what |= SEE_TARGET);
-      } else if (C == '!') {
-        see_what = (SEE_NEGNEXT | SEE_DEAD | SEE_SHUTDOWN | SEE_ENEMA |
-                    SEE_ALLY | SEE_TARGET);
-      } else {
-        notify_printf(btech_context_evaluation(mech_context(mech)), player,
-                      "Ignoring %c as contact option.", C);
+        if (C == 'd') {
+          (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_DEAD)
+                                   : (see_what |= SEE_DEAD);
+        } else if (C == 's') {
+          (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_SHUTDOWN)
+                                   : (see_what |= SEE_SHUTDOWN);
+        } else if (C == 'b') {
+          (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_BUILDINGS)
+                                   : (see_what |= SEE_BUILDINGS);
+        } else if (C == 'e') {
+          (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_ENEMA)
+                                   : (see_what |= SEE_ENEMA);
+        } else if (C == 'a') {
+          (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_ALLY)
+                                   : (see_what |= SEE_ALLY);
+        } else if (C == 't') {
+          (see_what & SEE_NEGNEXT) ? (see_what &= ~SEE_TARGET)
+                                   : (see_what |= SEE_TARGET);
+        } else if (C == '!') {
+          see_what = (SEE_NEGNEXT | SEE_DEAD | SEE_SHUTDOWN | SEE_ENEMA |
+                      SEE_ALLY | SEE_TARGET);
+        } else {
+          notify_printf(btech_context_evaluation(mech_context(mech)), player,
+                        "Ignoring %c as contact option.", C);
+        }
       }
     }
   } else {
@@ -485,9 +493,8 @@ void mech_contacts(DbRef player, Mech *mech, char *buffer) {
         mech_name = "something";
         inlos = 0;
       } else {
-        mech_name = btech_attribute_read(mech_context(temp_mech)->database,
-                                         mech_dbref(temp_mech), A_MECHNAME,
-                                         attribute_buffer);
+        mech_name = btech_unit_display_name(mech_context(temp_mech),
+                                            mech_dbref(temp_mech));
         inlos = 1;
       }
     } else {
@@ -634,16 +641,11 @@ void mech_contacts(DbRef player, Mech *mech, char *buffer) {
                             .end = {.x = fx, .y = fy}});
       weaponarc = mech_contact_weapon_arc(in_weapon_arc(mech, fx, fy));
 
-      mech_name =
-          btech_attribute_read(mech_context(mech)->database, BUILDING_DBREF,
-                               A_MECHNAME, attribute_buffer);
-      if (!mech_name || !*mech_name) {
-        styled_text_strip(
-            mech_context(mech)->database->styled_text_palette,
-            game_object_name(mech_context(mech)->database, BUILDING_DBREF), new,
-            sizeof(new));
-        mech_name = new;
-      }
+      styled_text_strip(
+          mech_context(mech)->database->styled_text_palette,
+          game_object_name(mech_context(mech)->database, BUILDING_DBREF), new,
+          LBUF_SIZE);
+      mech_name = new;
 
       char building_status = ' ';
       if (battle_map_building_is_safe(tmp_map) ||
@@ -694,7 +696,6 @@ void mech_contacts(DbRef player, Mech *mech, char *buffer) {
   if (isvb <= 2)
     mecha_notify(btech_context_evaluation(mech_context(mech)), player,
                  "End Contact List");
-  free_buf(attribute_buffer);
   free_buf(new);
   free_buf(lock_result);
   free(contacts);

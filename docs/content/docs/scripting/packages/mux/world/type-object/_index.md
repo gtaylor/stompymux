@@ -18,7 +18,6 @@ The following methods return nested handlers for managing more complex aspects o
 
 | Method | Description |
 | --- | --- |
-| [`Object:attributes`](attributes/) | Opens the native attribute interface. |
 | [`Object:flags`](flags/) | Opens the object's flag collection. |
 | [`Object:powers`](powers/) | Opens the object's power collection. |
 | [`Object:state`](state/) | Opens a persistent state namespace. |

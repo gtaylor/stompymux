@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include "btconfig.h"
+#include "btech/configuration.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "command_handlers_api.h"
@@ -34,7 +35,6 @@
 #include "mech_status_api.h"
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/economy_parts.h"
 #include "mux/objects/flags.h"
@@ -135,39 +135,17 @@ void mech_cargo_weight_recalculate(Mech *mech) {
 
 bool loading_bay_blocks_transfer(const LoadingBayCheck *check) {
   Mech *mech = check->mech;
-  char *c;
-  char *attribute_buffer = alloc_lbuf("loading_bay_blocks_transfer.attribute");
-  char *values = alloc_lbuf("loading_bay_blocks_transfer.values");
-  int i1;
-  int i2;
-  int i3 = 0;
-
-  c = btech_attribute_read(mech_context(mech)->database, check->cargo_bay,
-                           A_MECHSKILLS, attribute_buffer);
-  if (c && *c) {
-    char *token_context = nullptr;
-    (void)snprintf(values, LBUF_SIZE, "%s", c);
-    char *first = strtok_r(values, " \t\r\n", &token_context);
-    char *second = strtok_r(nullptr, " \t\r\n", &token_context);
-    char *third = strtok_r(nullptr, " \t\r\n", &token_context);
-    if (first && second && parse_int_checked(first, &i1) &&
-        parse_int_checked(second, &i2) &&
-        (!third || parse_int_checked(third, &i3))) {
-      if (mech_position_x(mech) != i1 || mech_position_y(mech) != i2) {
-        mecha_notify(btech_context_evaluation(mech_context(mech)), check->actor,
-                     "You're not where the cargo is!");
-        if (i3)
-          notify_printf(btech_context_evaluation(mech_context(mech)),
-                        check->actor, "Try looking around %d,%d instead.", i1,
-                        i2);
-        free_buf(values);
-        free_buf(attribute_buffer);
-        return true;
-      }
-    }
+  BtechCargoTransferPoint point;
+  if (btech_map_cargo_transfer_point(mech_context(mech), check->cargo_bay,
+                                     &point) &&
+      (mech_position_x(mech) != point.x || mech_position_y(mech) != point.y)) {
+    mecha_notify(btech_context_evaluation(mech_context(mech)), check->actor,
+                 "You're not where the cargo is!");
+    if (point.reveal_hint)
+      notify_printf(btech_context_evaluation(mech_context(mech)), check->actor,
+                    "Try looking around %d,%d instead.", point.x, point.y);
+    return true;
   }
-  free_buf(values);
-  free_buf(attribute_buffer);
   return false;
 }
 

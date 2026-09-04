@@ -630,7 +630,6 @@ void lua_mux_install_world_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_newtable(state);
   lua_mux_install_object_bindings(state, package);
   lua_mux_install_state_bindings(state, package);
-  lua_mux_install_attribute_bindings(state, package);
   lua_mux_install_flag_power_bindings(state, package);
   lua_mux_install_lock_bindings(state, package);
   lua_command_access_install_namespace(state);

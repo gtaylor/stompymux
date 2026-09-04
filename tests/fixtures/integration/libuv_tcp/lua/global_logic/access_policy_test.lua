@@ -73,12 +73,6 @@ local function access_policy_test(ctx)
   assert(not traverse_passes(exit, enactor, subject))
 
   policy:set("affiliation", nil)
-  policy:set("attribute/Mechname", "Test subject")
-  assert(not traverse_passes(exit, enactor, subject))
-  subject:attributes():set("Mechname", "Test subject")
-  assert(traverse_passes(exit, enactor, subject))
-
-  policy:set("attribute/Mechname", nil)
   policy:set("state/access/enabled", true)
   assert(not traverse_passes(exit, enactor, subject))
   subject:state("access"):set("enabled", true)
@@ -123,10 +117,6 @@ local function access_policy_test(ctx)
   assert(not ok and tostring(err):find("unsupported flag", 1, true))
 
   policy:set("flag/NOT_A_FLAG", nil)
-  policy:set("attribute/Mechname", true)
-  ok, err = pcall(evaluate, exit, subject)
-  assert(not ok and tostring(err):find("attribute requirement must be a string", 1, true))
-
   subject:flags():remove(mux.world.flags.SAFE)
   mux.world.destroy_object(exit)
   mux.world.destroy_object(subject)

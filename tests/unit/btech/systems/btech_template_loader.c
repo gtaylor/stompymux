@@ -15,13 +15,10 @@
 #include <assert.h>
 #include <string.h>
 
-static GameDatabase *const test_database = (GameDatabase *)1;
 static BtechContext test_context_data = {.database = (GameDatabase *)1};
 static BtechContext *const test_context = &test_context_data;
 static int communications_clear_count;
 static int template_parse_count;
-static int attribute_write_count;
-static char stored_template[64];
 
 BtechContext *mech_context(const Mech *mech [[maybe_unused]]) {
   return test_context;
@@ -36,15 +33,6 @@ const char *btech_context_mech_template_path(const BtechContext *context
 GameDatabase *btech_context_database(BtechContext *context [[maybe_unused]]) {
   assert(context == test_context);
   return context->database;
-}
-
-void silly_atr_set_in(GameDatabase *database, DbRef object, int attribute,
-                      const char *value) {
-  assert(database == test_database);
-  assert(object == 77);
-  assert(attribute == A_MECHTYPE);
-  attribute_write_count++;
-  strcpy(stored_template, value);
 }
 
 char *mech_template_resolve_path(BtechContext *context [[maybe_unused]],
@@ -107,8 +95,6 @@ void mech_event_cancel(Mech *mech [[maybe_unused]],
 static void reset_observations(void) {
   communications_clear_count = 0;
   template_parse_count = 0;
-  attribute_write_count = 0;
-  strcpy(stored_template, "previous-template");
 }
 
 int main(void) {
@@ -123,8 +109,6 @@ int main(void) {
   assert(mech_template_load(1, &mech, "modern"));
   assert(template_parse_count == 1);
   assert(communications_clear_count == 0);
-  assert(attribute_write_count == 1);
-  assert(strcmp(stored_template, "modern") == 0);
 
   strcpy(mech.ud.mech_type, "modern");
   mech.ud.tons = 55;
@@ -137,8 +121,6 @@ int main(void) {
   assert(template_parse_count == 1);
   assert(communications_clear_count == 1);
   assert(memcmp(&mech, &expected, sizeof(mech)) == 0);
-  assert(attribute_write_count == 0);
-  assert(strcmp(stored_template, "previous-template") == 0);
 
   strcpy(mech.ud.mech_type, "modern");
   expected = mech;
@@ -147,7 +129,5 @@ int main(void) {
   assert(template_parse_count == 0);
   assert(communications_clear_count == 0);
   assert(memcmp(&mech, &expected, sizeof(mech)) == 0);
-  assert(attribute_write_count == 0);
-  assert(strcmp(stored_template, "previous-template") == 0);
   return 0;
 }

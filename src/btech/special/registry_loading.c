@@ -27,7 +27,6 @@
 #include "missile_hit_registry.h"
 #include "mux/network/mux_event.h"
 #include "mux/objects/db.h"
-#include "mux/objects/flags.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
@@ -227,9 +226,7 @@ static bool load_autopilot_data(const RedBlackTreeVisitCall *call) {
 }
 
 void btech_special_objects_load(BtechContext *context) {
-  DbRef i;
   int special_type;
-  int type;
 
   btech_registry_tree_initialize(context);
   context->special_commands = checked_storage_try_allocate_array(
@@ -246,20 +243,9 @@ void btech_special_objects_load(BtechContext *context) {
   btech_character_value_settings_initialize(&context->character_values);
   if (!missile_hit_registry_initialize(&context->missile_hits, context))
     exit(EXIT_FAILURE);
-  /* Loop through the entire database, and if it has the special */
-  /* object flag, add it to our linked list. */
-  DO_WHOLE_DB(context->database, i)
-  if (is_xcode(context->database, i) && !is_going(context->database, i) &&
-      !is_halted(context->database, i)) {
-    type = btech_context_which_special_attribute(context, i);
-    if (type >= 0) {
-      if (btech_special_object_data_size(
-              btech_special_object_definition(type)) > 0)
-        new_special_object(context, i, type);
-    } else {
-      c_xcode(context->database, i); /* Reset the flag */
-    }
-  }
+  if (btech_persistence_load_registrations_path(
+          context, context->configuration->database.gamedb) < 0)
+    exit(EXIT_FAILURE);
   for (special_type = 0; special_type < BTECH_SPECIAL_OBJECT_COUNT;
        special_type++) {
     init_special_hash(context, special_type);
@@ -276,6 +262,9 @@ void btech_special_objects_load(BtechContext *context) {
 #ifdef BTECH_PERSISTENCE_TESTING
   /* The integration fixture creates its initial SQLite special-state rows. */
   if (getenv("BTECH_TEST_BTECH_BOOTSTRAP")) {
+    if (btech_persistence_load_configurations_path(
+            context, context->configuration->database.gamedb) < 0)
+      exit(EXIT_FAILURE);
     btech_heartbeat_start(context);
     return;
   }

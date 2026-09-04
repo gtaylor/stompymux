@@ -3,8 +3,8 @@
 #include "command_registry.h"
 
 const BtechCommandDefinition SSCOMMANDS[] = {
-    {0, "@SETXCODE <NAME> <VALUE|DATA>", "@Sets xcode value on object",
-     btech_command_invoke_set_xcodestuff},
-    {0, "@VIEWXCODE", "@Views xcode values on object",
-     btech_command_invoke_list_xcodestuff},
+    {0, "@SETSPECIAL <NAME> <VALUE|DATA>", "@Sets a BTech object field",
+     btech_command_invoke_set_special_value},
+    {0, "@VIEWSPECIAL", "@Views BTech object fields",
+     btech_command_invoke_list_special_values},
     {0, nullptr, nullptr, nullptr}};

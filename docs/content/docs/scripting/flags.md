@@ -11,8 +11,7 @@ code stores each flag in a `has_<name>_flag` field and in a matching SQLite
 column. There is no packed flag word and no reserved legacy bits.
 
 Flags are displayed after the object type as compact letters. A script or
-administrator should use the full flag name when issuing a command because
-`ANSI` and `XCODE` both use `X`:
+administrator should use the full flag name when issuing a command:
 
 ```text
 @flag <object>=<flag>
@@ -47,7 +46,6 @@ later fails.
 | `SUSPECT` | `u` | `has_suspect_flag` | Reports the player's connections and commands to monitoring staff and blocks commands that disallow suspect users. |
 | `TRANSPARENT` | `t` | `has_transparent_flag` | Exposes contents through native `look` presentation. |
 | `WIZARD` | `W` | `has_wizard_flag` | Grants Wizard status and native Wizard control. |
-| `XCODE` | `X` | `has_xcode_flag` | Marks a BattleTech special object managed by XCode. |
 | `ZOMBIE` | `z` | `has_zombie_flag` | Marks an inactive BattleTech special object for selected validation and containment behavior. |
 
 ## Visibility flags
@@ -81,11 +79,11 @@ it does not describe queue state.
 
 ## BattleTech flags
 
-`ANSI` controls color in BattleTech map displays. `IN_CHARACTER`, `XCODE`, and
-`ZOMBIE` are consulted throughout the BattleTech subsystem. `IN_CHARACTER`
-gates combat, damage, movement, economy, and related behavior. `XCODE`
-identifies a native special object. `ZOMBIE` marks selected special objects as
-inactive.
+`ANSI` controls color in BattleTech map displays. `IN_CHARACTER` and `ZOMBIE`
+are consulted throughout the BattleTech subsystem. `IN_CHARACTER` gates
+combat, damage, movement, economy, and related behavior. `ZOMBIE` marks
+selected special objects as inactive. BTech special-object identity is managed
+by `@btech`, not an object flag.
 
 ## Native command restrictions
 
@@ -102,7 +100,6 @@ handlers add these restrictions:
 | `MONITOR` | Only Wizards or God may change it. |
 | `SUSPECT` | Only Wizards or God may change it. |
 | `WIZARD` | Only God may change it, and God cannot remove it from themself. |
-| `XCODE` | Wizards or God may set or clear it. |
 | `ZOMBIE` | Only Wizards or God may change it. |
 
 Flags not listed in this table have no additional flag-specific restriction.

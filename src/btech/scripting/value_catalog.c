@@ -7,7 +7,7 @@
 #include "value_handlers_api.h"
 #include "values_internal.h"
 #include <stddef.h>
-static const GMV XCODE_DESCRIPTORS[] = {
+static const GMV SPECIAL_VALUE_DESCRIPTORS[] = {
     {.gtype = GTYPE_MECH,
      .name = "mapindex",
      .source_kind = GMV_SOURCE_MECH_KEY,
@@ -553,7 +553,7 @@ static const GMV XCODE_DESCRIPTORS[] = {
      .name = "maxvis",
      .source_kind = GMV_SOURCE_FIELD_OFFSET,
      .source.field_offset = offsetof(BattleMap, maxvis),
-     .type = TYPE_SHORT,
+     .type = TYPE_SHORT_RO,
      .size = 0},
     {.gtype = GTYPE_MAP,
      .name = "temperature",
@@ -714,11 +714,14 @@ static const GMV XCODE_DESCRIPTORS[] = {
      .source_kind = GMV_SOURCE_SENTINEL,
      .type = TYPE_STRING}};
 
-size_t xcode_descriptor_count(void) {
-  return (sizeof(XCODE_DESCRIPTORS) / sizeof(*XCODE_DESCRIPTORS)) - 1;
+size_t special_value_descriptor_count(void) {
+  return (sizeof(SPECIAL_VALUE_DESCRIPTORS) /
+          sizeof(*SPECIAL_VALUE_DESCRIPTORS)) -
+         1;
 }
 
-const GMV *xcode_descriptor_at(size_t index) {
-  return checked_storage_at_const(XCODE_DESCRIPTORS, xcode_descriptor_count(),
-                                  sizeof(*XCODE_DESCRIPTORS), index);
+const GMV *special_value_descriptor_at(size_t index) {
+  return checked_storage_at_const(SPECIAL_VALUE_DESCRIPTORS,
+                                  special_value_descriptor_count(),
+                                  sizeof(*SPECIAL_VALUE_DESCRIPTORS), index);
 }

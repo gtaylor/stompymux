@@ -19,7 +19,6 @@
 #include "mux/persistence/gamedb_sqlite_internal.h"
 #include "mux/server/platform.h"
 #include "mux/server/server_config.h"
-#include "mux/support/checked_storage.h"
 
 static int gamedb_finish_snapshot(sqlite3 *sqlite, sqlite3_stmt *snapshot,
                                   sqlite3_stmt *objects,
@@ -30,49 +29,6 @@ static int gamedb_finish_snapshot(sqlite3 *sqlite, sqlite3_stmt *snapshot,
   sqlite3_finalize(objects);
   sqlite3_finalize(object_state);
   return success ? 0 : -1;
-}
-
-static int gamedb_store_native_state(GameDatabase *database, sqlite3 *sqlite,
-                                     DbRef object) {
-  sqlite3_stmt *statement = nullptr;
-  char query[256];
-
-  const char *tables[] = {"btech_object_state"};
-  const size_t TABLE_COUNT = sizeof(tables) / sizeof(*tables);
-  for (size_t index = 0; index < TABLE_COUNT; index++) {
-    const char *table = *(const char *const *)checked_storage_at_const(
-        (const void *)tables, TABLE_COUNT, sizeof(*tables), index);
-    (void)snprintf(query, sizeof(query),
-                   "INSERT INTO %s (object_dbref) VALUES (?);", table);
-    if (gamedb_prepare(sqlite, &statement, query) < 0 ||
-        gamedb_bind_int(statement, 1, object) < 0 ||
-        gamedb_step(statement) < 0) {
-      sqlite3_finalize(statement);
-      return -1;
-    }
-    sqlite3_finalize(statement);
-    statement = nullptr;
-  }
-  for (size_t index = 0; index < NATIVE_COLUMN_COUNT; index++) {
-    const NativeColumn *column = gamedb_native_column_at(index);
-    const char *value = attribute_get_raw(database, object, column->field);
-
-    if (!value)
-      continue;
-    (void)snprintf(query, sizeof(query), "UPDATE %s SET %s = ? WHERE %s = ?;",
-                   column->table, column->column, column->key_column);
-    if (gamedb_prepare(sqlite, &statement, query) < 0 ||
-        sqlite3_bind_text(statement, 1, value, -1, SQLITE_TRANSIENT) !=
-            SQLITE_OK ||
-        gamedb_bind_int(statement, 2, object) < 0 ||
-        gamedb_step(statement) < 0) {
-      sqlite3_finalize(statement);
-      return -1;
-    }
-    sqlite3_finalize(statement);
-    statement = nullptr;
-  }
-  return 0;
 }
 
 static int gamedb_store_player_account(GameDatabase *database, sqlite3 *sqlite,
@@ -297,11 +253,10 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
           "has_halted_flag, has_in_character_flag, has_light_flag, "
           "has_monitor_flag, has_no_command_flag, "
           "has_safe_flag, has_suspect_flag, "
-          "has_transparent_flag, has_wizard_flag, has_xcode_flag, "
-          "has_zombie_flag, "
+          "has_transparent_flag, has_wizard_flag, has_zombie_flag, "
           "has_idle_power) "
           "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
+          "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);") < 0 ||
       gamedb_prepare(sqlite, &object_state,
                      "INSERT INTO object_state "
                      "(object_dbref, namespace, key, value_type, value) "
@@ -370,7 +325,7 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
                                       0);
     }
     for (PowerId power = POWER_IDLE; power < POWER_COUNT; power++) {
-      if (gamedb_bind_int(objects, 33 + (int)power,
+      if (gamedb_bind_int(objects, 12 + OBJECT_FLAG_COUNT + (int)power,
                           game_object_has_power(&(ObjectPowerRequest){
                               .database = context->database,
                               .object = object,
@@ -385,7 +340,6 @@ static int gamedb_store_snapshot(PersistenceContext *context, sqlite3 *sqlite,
          (gamedb_store_player_account(context->database, sqlite, object) < 0 ||
           gamedb_store_character_state(context->database, sqlite, object) <
               0)) ||
-        gamedb_store_native_state(context->database, sqlite, object) < 0 ||
         gamedb_store_economy_parts(context->database, sqlite, object) < 0)
       return gamedb_finish_snapshot(sqlite, snapshot, objects, object_state, 0);
     for (size_t index = 0;

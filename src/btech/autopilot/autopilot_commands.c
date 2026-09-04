@@ -6,6 +6,7 @@
 #include "aero_move_api.h"
 #include "autopilot.h"
 #include "autopilot_argument_list_api.h"
+#include "btech/configuration.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
@@ -23,7 +24,6 @@
 #include "mech_sensor_state_api.h"
 #include "mech_startup_api.h"
 #include "mech_utils_api.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
@@ -568,14 +568,7 @@ void auto_command_embark(Autopilot *autopilot, Mech *mech) {
  */
 void auto_command_udisembark(Mech *mech) {
 
-  DbRef pil = -1;
-  char *buf;
-
-  buf =
-      btech_attribute_read(btech_context_database(mech_context(mech)),
-                           mech_dbref(mech), A_PILOTNUM, (char[LBUF_SIZE]){0});
-  if (*buf == '#')
-    parse_long_checked(checked_string_suffix(buf, 1), &pil);
+  DbRef pil = btech_unit_assigned_pilot(mech_context(mech), mech_dbref(mech));
   mech_udisembark(pil, mech, "");
 }
 

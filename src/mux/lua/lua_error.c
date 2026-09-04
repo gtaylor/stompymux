@@ -93,9 +93,6 @@ static const char LUA_ERROR_CODE_TREES_KEY[] = "btmux.lua.error_code_trees";
  * ---Checked `mux.object.unavailable` error-code node.
  * ---@class MuxObjectUnavailableErrorCode: ErrorCode
  * ---@field code "mux.object.unavailable"
- * ---Checked `mux.attribute.invalid` error-code node.
- * ---@class MuxAttributeInvalidErrorCode: ErrorCode
- * ---@field code "mux.attribute.invalid"
  * ---Checked `mux.flag.invalid` error-code node.
  * ---@class MuxFlagInvalidErrorCode: ErrorCode
  * ---@field code "mux.flag.invalid"
@@ -147,8 +144,6 @@ static const char LUA_ERROR_CODE_TREES_KEY[] = "btmux.lua.error_code_trees";
  * ---@class MuxObjectErrorCodes: ErrorCode
  * ---@field invalid MuxObjectInvalidErrorCode `mux.object.invalid`.
  * ---@field unavailable MuxObjectUnavailableErrorCode `mux.object.unavailable`.
- * ---@class MuxAttributeErrorCodes: ErrorCode
- * ---@field invalid MuxAttributeInvalidErrorCode `mux.attribute.invalid`.
  * ---@class MuxFlagErrorCodes: ErrorCode
  * ---@field invalid MuxFlagInvalidErrorCode `mux.flag.invalid`.
  * ---@class MuxPowerErrorCodes: ErrorCode
@@ -176,7 +171,6 @@ static const char LUA_ERROR_CODE_TREES_KEY[] = "btmux.lua.error_code_trees";
  * ---@field runtime MuxRuntimeErrorCode `mux.runtime`.
  * ---@field state MuxStateErrorCodes Persistent-state code branch.
  * ---@field object MuxObjectErrorCodes Database-object code branch.
- * ---@field attribute MuxAttributeErrorCodes Native-attribute code branch.
  * ---@field flag MuxFlagErrorCodes Object-flag code branch.
  * ---@field power MuxPowerErrorCodes Object-power code branch.
  * ---@field access MuxAccessErrorCodes Command-access code branch.
@@ -222,7 +216,7 @@ static const char LUA_ERROR_CODE_TREES_KEY[] = "btmux.lua.error_code_trees";
  * ---Checked native BattleTech error-code tree.
  * ---@class BtechErrorCodes: ErrorCode
  * ---@field unavailable BtechUnavailableErrorCode `btech.unavailable`, raised during `@lua/check`.
- * ---@field failed BtechFailedErrorCode `btech.failed`, raised when a mapped legacy handler reports an error.
+ * ---@field failed BtechFailedErrorCode `btech.failed`, raised for a BattleTech domain failure, such as a wrong object kind or a failed legacy handler.
  * @endcode
  *
  * @par LuaLS definition btech type error.package
@@ -240,7 +234,6 @@ const char *const LUA_ERROR_CODE_NAMES[LUA_ERROR_CODE_COUNT] = {
     [LUA_ERROR_CODE_STATE_UNAVAILABLE] = "mux.state.unavailable",
     [LUA_ERROR_CODE_OBJECT_INVALID] = "mux.object.invalid",
     [LUA_ERROR_CODE_OBJECT_UNAVAILABLE] = "mux.object.unavailable",
-    [LUA_ERROR_CODE_ATTRIBUTE_INVALID] = "mux.attribute.invalid",
     [LUA_ERROR_CODE_FLAG_INVALID] = "mux.flag.invalid",
     [LUA_ERROR_CODE_POWER_INVALID] = "mux.power.invalid",
     [LUA_ERROR_CODE_ACCESS_INVALID] = "mux.access.invalid",

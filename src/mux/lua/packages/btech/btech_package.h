@@ -8,10 +8,12 @@
 #include "mux/lua/lua_runtime.h"
 
 typedef struct LuaBtechPackage LuaBtechPackage;
+typedef struct LuaMuxPackage LuaMuxPackage;
 typedef struct LuaServices LuaServices;
 
 struct LuaBtechPackage {
   const LuaServices *services;
+  LuaMuxPackage *mux_package;
   void *context;
   int (*is_checking)(void *context);
 };

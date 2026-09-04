@@ -97,18 +97,6 @@ LuaMuxState *lua_mux_check_state(lua_State *state, int argument) {
   return handle;
 }
 
-LuaMuxAttribute *lua_mux_check_attribute(lua_State *state, int argument) {
-  LuaMuxAttribute *handle =
-      luaL_checkudata(state, argument, LUA_MUX_ATTRIBUTE_METATABLE);
-
-  if (!is_good_obj(handle->package->services->database, handle->object) ||
-      game_object_generation(handle->package->services->database,
-                             handle->object) != handle->generation)
-    lua_error_arg(state, argument, LUA_ERROR_CODE_OBJECT_INVALID,
-                  "object no longer exists");
-  return handle;
-}
-
 /**
  * Creates a validated handle for a native database object.
  *

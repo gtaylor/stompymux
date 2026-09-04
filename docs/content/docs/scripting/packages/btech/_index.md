@@ -12,9 +12,11 @@ running Lua callbacks, but its gameplay functions are unavailable during
 `@lua/check`. The package adapts the server's trusted BattleTech scripting
 handlers to Lua and invokes them with server authority.
 
-Arguments use Lua strings, numbers, and booleans; object arguments are native
-dbrefs rather than [`Object`](../mux/world/type-object/) handles. Failures
-reported by legacy handlers become `btech.failed`, while exceeding the bridge's
+Legacy object arguments are native dbrefs. The typed configuration functions
+in `btech.unit`, `btech.player`, and `btech.map` accept either dbrefs or
+[`Object`](../mux/world/type-object/) handles, and return handles for
+object-valued results. Failures reported by legacy handlers become
+`btech.failed`, while exceeding the bridge's
 argument limit raises `mux.arg.invalid`. Supplying `nil`, a table, a function,
 or userdata where the bridge expects a scalar instead raises an ordinary Lua
 type error. Some legacy handlers do not safely guard too few arguments and may
@@ -25,7 +27,7 @@ legacy compatibility, the native bridge also stringifies numeric scalar
 arguments and converts booleans to `"1"` or `"0"` before invoking a handler;
 these coercions are intentionally not repeated in every signature. The legacy
 handlers match character list kinds, part categories, part-name size selectors,
-weapon-stat selectors, critical-slot field selectors, xcode field names, and
+weapon-stat selectors, critical-slot field selectors, unit field names, and
 full unit section names without regard to case. Part-name sizes are selected by
 their first letter. For a unit section that is not a full-name match, the legacy
 resolver uses a class-dependent one- or two-character prefix and may ignore
@@ -40,6 +42,7 @@ canonical spellings.
 | [`btech.error`](error/) | Checked BattleTech error-code symbols. |
 | [`btech.map`](map/) | Battle maps, geometry, line of sight, and map messaging. |
 | [`btech.parts`](parts/) | Part catalogues, installed parts, stores, and costs. |
+| [`btech.player`](player/) | Player display and personal-combat configuration. |
 | [`btech.repair`](repair/) | Damage and technician-status queries. |
 | [`btech.system`](system/) | Special-object fields and server-wide BattleTech queries. |
 | [`btech.unit`](unit/) | Live units, templates, combat values, and status. |

@@ -55,6 +55,7 @@ typedef struct BtechSpecialWriteContext {
 
 typedef struct BtechMapStoreContext BtechMapStoreContext;
 struct BtechMapStoreContext {
+  GameDatabase *database;
   BtechSpecialWriteContext *fault;
   sqlite3_stmt *map;
   sqlite3_stmt *hex;
@@ -67,6 +68,7 @@ struct BtechMapStoreContext {
 
 typedef struct BtechObjectStoreContext BtechObjectStoreContext;
 struct BtechObjectStoreContext {
+  GameDatabase *database;
   BtechSpecialWriteContext *fault;
   sqlite3_stmt *mechrep;
   sqlite3_stmt *turret;
@@ -131,6 +133,9 @@ int btech_special_column_real(sqlite3_stmt *statement, int column,
 int btech_special_column_text(sqlite3_stmt *statement, int column,
                               char *destination, size_t destination_size);
 int btech_special_validate_metadata(sqlite3 *sqlite);
+int btech_special_load_configurations(sqlite3 *sqlite, BtechContext *context);
+int btech_special_store_configurations(BtechSpecialWriteContext *fault,
+                                       sqlite3 *sqlite, BtechContext *context);
 
 int btech_special_load_map_parents(sqlite3 *sqlite, BtechContext *context);
 int btech_special_load_map_hexes(sqlite3 *sqlite, BtechContext *context);

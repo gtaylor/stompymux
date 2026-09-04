@@ -21,7 +21,6 @@ available as `testing.error.codes` in test suites.
 | `mux.error.codes.state.unavailable` | `mux.state.unavailable` | State enumeration occurs outside an active callback or state changes during enumeration. |
 | `mux.error.codes.object.invalid` | `mux.object.invalid` | An object handle or database object is invalid, stale, or unsuitable for the requested operation. |
 | `mux.error.codes.object.unavailable` | `mux.object.unavailable` | An object operation is unavailable or native policy rejects the requested change. |
-| `mux.error.codes.attribute.invalid` | `mux.attribute.invalid` | An attribute name or value is invalid, not administrable, or cannot be written. |
 | `mux.error.codes.flag.invalid` | `mux.flag.invalid` | A flag constant or lookup in `mux.world.flags` is invalid. |
 | `mux.error.codes.power.invalid` | `mux.power.invalid` | A power constant or lookup in `mux.world.powers` is invalid. |
 | `mux.error.codes.access.invalid` | `mux.access.invalid` | A command-access constant or lookup in `mux.world.access` is invalid. |

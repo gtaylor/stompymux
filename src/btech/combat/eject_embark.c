@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "btech/configuration.h"
 #include "btech/special_objects.h"
 #include "btech_channel.h"
 #include "btech_event.h"
@@ -44,7 +45,6 @@
 #include "mech_tech_commands_api.h"
 #include "mech_utils_api.h"
 #include "mux/lua/lua_runtime.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/support/alloc.h"
@@ -53,7 +53,7 @@
 
 static void destroy_failed_suit(BtechContext *context,
                                 EvaluationContext *evaluation, DbRef suit) {
-  btech_special_object_flag_changed(context, GOD, suit, true, false);
+  btech_object_forget(context, suit);
   destroy_thing(evaluation, suit);
 }
 
@@ -454,7 +454,7 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
   char message_buffer[MBUF_SIZE];
   Mech *m;
   DbRef suit;
-  char *d;
+  const char *d;
   EvaluationContext *evaluation = btech_context_evaluation(mech_context(mech));
   GameDatabase *database = btech_context_database(mech_context(mech));
 
@@ -469,11 +469,15 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
                  game_object_name(database, player));
   /* Create the MW object */
   suit = create_obj(evaluation, GOD, OBJECT_TYPE_THING, message_buffer);
-  silly_atr_set_in(database, suit, A_XTYPE, "MECH");
-  s_xcode(database, suit);
-  btech_special_object_flag_changed(mech_context(mech), GOD, suit, false, true);
-  d = btech_attribute_read(database, player, A_MWTEMPLATE,
-                           (char[LBUF_SIZE]){0});
+  char registration_error[128];
+  if (!btech_special_object_register(mech_context(mech), GOD, suit, "MECH",
+                                     registration_error,
+                                     sizeof(registration_error))) {
+    destroy_thing(evaluation, suit);
+    mecha_notify(evaluation, player, registration_error);
+    return;
+  }
+  d = btech_player_mechwarrior_template(mech_context(mech), player);
   m = btech_context_get_mech(mech_context(mech), suit);
   if (!m) {
     btech_channel_send(mech_context(mech), BTECH_CHANNEL_MECH_ERRORS,
@@ -497,7 +501,7 @@ void autoeject(DbRef player, Mech *mech, int t_is_b_suit) {
                  "(can't load MWTemplate)");
     return;
   }
-  silly_atr_set_in(database, suit, A_MECHNAME, "MechWarrior");
+  (void)btech_unit_display_name_set(mech_context(mech), suit, "MechWarrior");
   mech_team_set(m, mech_team(mech));
   if (mech_map_index_set(m, mech_map_dbref(mech), nullptr) != MECH_MAP_SET_OK ||
       !mech_position_set(&(MechPositionSetRequest){

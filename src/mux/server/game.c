@@ -610,6 +610,7 @@ int main(int argc, char *argv[]) {
                            wizard_password) < 0 ||
         gamedb_create(&server.persistence) < 0)
       goto fail;
+    btech_special_objects_load(server.btech);
     (void)fprintf(stderr,
                   "Created %s. Initial credentials (shown once):\n"
                   "  GOD (#1): %s\n  Wizard (#2): %s\n",

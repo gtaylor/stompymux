@@ -1,4 +1,5 @@
 // NOLINTBEGIN(misc-include-cleaner): Direct dependencies exceed file-size cap.
+#include "btech/configuration.h"
 #include "btech_text_result.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "crit_api.h"
@@ -340,10 +341,8 @@ BtechScriptResult fun_bttechtime(BtechScriptCall *call) {
       !is_player(context->world->database, player)) {
     return btech_script_error(call, "#-1 INVALID PLAYER");
   }
-  char *stored = btech_attribute_read(context->world->database, player,
-                                      A_TECHTIME, (char[LBUF_SIZE]){0});
-  if (stored != nullptr && parse_time_checked(stored, &completion) &&
-      completion > context->btech->clock->now) {
+  completion = btech_repair_technician_available_at(context->btech, player);
+  if (completion > context->btech->clock->now) {
     remaining = completion - context->btech->clock->now;
   }
   safe_tprintf_str(buff, bufc, "%ld", (long)remaining);

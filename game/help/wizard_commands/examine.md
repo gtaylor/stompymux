@@ -24,6 +24,10 @@ values are not displayed. `/brief` omits the namespace summary, and `/debug`
 displays raw database fields and the total number of persistent Lua state
 entries. Normal `@examine` never displays state keys or values.
 
+Registered BattleTech objects also show `BTech type: TYPE`. This line appears
+in normal, `/brief`, and `/debug` output and is omitted for unregistered
+objects.
+
 The examined object's name, description, and internal description are shown
 using editable styled text markup instead of terminal color escape sequences.
 The internal description is omitted when

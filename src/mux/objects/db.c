@@ -4,12 +4,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
 
 #include "mux/commands/macro.h"
 #include "mux/communication/commac.h"
 #include "mux/communication/comsys.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/character_state.h"
 #include "mux/objects/db.h"
 #include "mux/objects/economy_parts.h"
@@ -22,7 +20,6 @@
 #include "mux/server/server_config.h"
 #include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
-#include "mux/support/owned_text.h"
 #include "mux/support/stringutil.h"
 #include "mux/support/styled_text/markup.h"
 #include "mux/support/utf8.h"
@@ -59,29 +56,6 @@ void game_database_destroy(GameDatabase *database) {
   db_free(database);
 }
 
-/*
- * Hardcoded native fields. Dynamic Lua attributes are not registered here.
- */
-static const Attribute NATIVE_ATTRIBUTES[] = {
-    {"Buildcoord", A_BUILDCOORD}, {"Buildentrance", A_BUILDENTRANCE},
-    {"Buildlinks", A_BUILDLINKS}, {"Contactoptions", A_CONTACTOPT},
-    {"Destroyer", A_DESTROYER},   {"LRSheight", A_LRSHEIGHT},
-    {"Mapvis", A_MAPVIS},         {"Mechdesc", A_MECHDESC},
-    {"Mechname", A_MECHNAME},     {"Mechtype", A_MECHTYPE},
-    {"MechPrefID", A_MECHPREFID}, {"Mechskills", A_MECHSKILLS},
-    {"Mwtemplate", A_MWTEMPLATE}, {"PCequip", A_PCEQUIP},
-    {"Pilot", A_PILOTNUM},        {"Tacsize", A_TACSIZE},
-    {"Xtype", A_XTYPE},           {nullptr, 0}};
-
-size_t native_attribute_count(void) {
-  return (sizeof(NATIVE_ATTRIBUTES) / sizeof(NATIVE_ATTRIBUTES[0])) - 1;
-}
-
-const Attribute *native_attribute_at(size_t index) {
-  return checked_storage_at_const(NATIVE_ATTRIBUTES, native_attribute_count(),
-                                  sizeof(*NATIVE_ATTRIBUTES), index);
-}
-
 static char *set_string(char **ptr, const char *new) {
   char *copy = nullptr;
 
@@ -92,22 +66,6 @@ static char *set_string(char **ptr, const char *new) {
   free(*ptr);
   *ptr = copy;
   return copy;
-}
-
-typedef struct NativeAttributeReference {
-  GameDatabase *database;
-  DbRef object;
-  int attribute;
-} NativeAttributeReference;
-
-static char **native_attribute_slot(const NativeAttributeReference *reference) {
-  if (reference->attribute < 0 || reference->attribute >= 256)
-    return nullptr;
-  GameObject *game_object =
-      game_database_object(reference->database, reference->object);
-  return (char **)checked_storage_at((void *)game_object->native.values, 256,
-                                     sizeof(char *),
-                                     (size_t)reference->attribute);
 }
 
 /*
@@ -186,131 +144,7 @@ bool object_password_set(GameDatabase *database, DbRef thing, const char *s) {
   return player_account_password_hash_set(database, thing, s);
 }
 
-const Attribute *attribute_by_name(GameDatabase *database [[maybe_unused]],
-                                   const char *s) {
-  if (s == nullptr || *s == '\0')
-    return nullptr;
-  for (size_t index = 0; index < native_attribute_count(); index++) {
-    const Attribute *attribute = native_attribute_at(index);
-
-    if (strcasecmp(attribute->name, s) == 0)
-      return attribute;
-  }
-  return nullptr;
-}
-
-const Attribute *attribute_by_number(GameDatabase *database [[maybe_unused]],
-                                     int anum) {
-  for (size_t index = 0; index < native_attribute_count(); index++) {
-    const Attribute *attribute = native_attribute_at(index);
-
-    if (attribute->number == anum)
-      return attribute;
-  }
-  return nullptr;
-}
-
-/*
- * routines to handle object attribute lists
- */
-
-/*
- * ---------------------------------------------------------------------------
- * * attribute_clear: clear an attribute in the list.
- */
-
-void attribute_clear(GameDatabase *database, DbRef thing, int atr) {
-  if (thing < 0 || atr < 0 || atr >= 256)
-    return;
-  char **slot = native_attribute_slot(&(NativeAttributeReference){
-      .database = database, .object = thing, .attribute = atr});
-  free(*slot);
-  *slot = nullptr;
-}
-
-/*
- * ---------------------------------------------------------------------------
- * * attribute_add_raw, attribute_add: add attribute of type atr to list
- */
-
-void attribute_add_raw(GameDatabase *database, DbRef thing, int atr,
-                       const char *buff) {
-  char truncated[LBUF_SIZE];
-  char *text;
-  if (thing < 0 || atr < 0 || atr >= 256)
-    return;
-  if (!buff || !*buff) {
-    attribute_clear(database, thing, atr);
-    return;
-  }
-  utf8_copy_truncated(truncated, sizeof(truncated), buff);
-  text = strdup(truncated);
-  if (!text) {
-    return;
-  }
-  char **slot = native_attribute_slot(&(NativeAttributeReference){
-      .database = database, .object = thing, .attribute = atr});
-  free(*slot);
-  *slot = text;
-}
-
-void attribute_add(GameDatabase *database, DbRef thing, int atr,
-                   const char *buff, long flags [[maybe_unused]]) {
-  attribute_add_raw(database, thing, atr, buff);
-}
-
-/*
- * ---------------------------------------------------------------------------
- * * get_atr,attribute_get_raw, attribute_get_string, attribute_get: Get an
- * attribute from the database.
- */
-
-char *attribute_get_raw(GameDatabase *database, DbRef thing, int atr) {
-  if (thing < 0 || atr < 0 || atr >= 256)
-    return nullptr;
-  return *native_attribute_slot(&(NativeAttributeReference){
-      .database = database, .object = thing, .attribute = atr});
-}
-
-char *attribute_get_string(GameDatabase *database, DbRef thing, int atr,
-                           char *s, size_t size, long *flags) {
-  char *buff;
-
-  buff = attribute_get_raw(database, thing, atr);
-  if (flags)
-    *flags = 0;
-  if (!buff) {
-    *s = '\0';
-  } else {
-    (void)string_copy_bounded(s, size, buff);
-  }
-  return s;
-}
-
-OwnedText attribute_get(GameDatabase *database, DbRef thing, int atr,
-                        long *flags) {
-  char *buff;
-
-  buff = alloc_lbuf("attribute_get");
-  (void)attribute_get_string(database, thing, atr, buff, LBUF_SIZE, flags);
-  return owned_text_take(buff);
-}
-
-bool attribute_get_info(GameDatabase *database, DbRef thing, int atr,
-                        long *flags) {
-  char *buff;
-
-  buff = attribute_get_raw(database, thing, atr);
-  *flags = 0;
-  return buff != nullptr;
-}
-
-/*
- * ---------------------------------------------------------------------------
- * * attribute_free: Return all attributes of an object.
- */
-
-void attribute_free(GameDatabase *database, DbRef thing) {
+void game_object_owned_state_clear(GameDatabase *database, DbRef thing) {
   GameObject *game_object = game_database_object(database, thing);
   free(game_object->name);
   game_object->name = nullptr;
@@ -322,39 +156,28 @@ void attribute_free(GameDatabase *database, DbRef thing) {
   game_object->internal_description = nullptr;
   free(game_object->lua_parent);
   game_object->lua_parent = nullptr;
+  game_object->pending_destroyer = NOTHING;
   object_state_clear(database, thing);
   player_account_clear(database, thing);
   character_state_clear(database, thing);
   economy_parts_clear(database, thing);
-  for (int index = 0; index < 256; index++) {
-    char **slot = native_attribute_slot(&(NativeAttributeReference){
-        .database = database, .object = thing, .attribute = index});
-    free(*slot);
-    *slot = nullptr;
-  }
 }
 
 /*
  * ---------------------------------------------------------------------------
- * * attribute_copy: Copy all attributes from one object to another.  Takes the
+ * * game_object_owned_state_copy: Copy core-owned state between objects. Takes
+ * the
  * * player argument to ensure that only attributes that COULD be set by
  * * the player are copied.
  */
 
-void attribute_copy(const AttributeCopyRequest *request) {
+void game_object_owned_state_copy(
+    const GameObjectOwnedStateCopyRequest *request) {
   EvaluationContext *evaluation = request->evaluation;
   DbRef dest = request->destination;
   DbRef source = request->source;
   GameObject *source_object =
       game_database_object(evaluation->world->database, source);
-  for (int field = 1; field < 256; field++) {
-    const char *value = *native_attribute_slot(
-        &(NativeAttributeReference){.database = evaluation->world->database,
-                                    .object = source,
-                                    .attribute = field});
-    if (value)
-      attribute_add_raw(evaluation->world->database, dest, field, value);
-  }
   object_state_copy(evaluation->world->database, dest, source);
   game_object_lua_parent_set(evaluation->world->database, dest,
                              source_object->lua_parent);
@@ -390,6 +213,7 @@ static void initialize_objects(GameDatabase *database, DbRef first,
     game_object_set_next(database, thing, NOTHING);
     game_object_set_zone(database, thing, NOTHING);
     game_object_set_affiliation(database, thing, NOTHING);
+    game_database_object(database, thing)->pending_destroyer = NOTHING;
     game_object_set_stack(database, thing, nullptr);
     game_database_object(database, thing)->state = nullptr;
   }
@@ -505,6 +329,7 @@ void db_grow(GameDatabase *database, DbRef newtop) {
       game_object_set_next(database, RESERVED, NOTHING);
       game_object_set_zone(database, RESERVED, NOTHING);
       game_object_set_affiliation(database, RESERVED, NOTHING);
+      game_database_object(database, RESERVED)->pending_destroyer = NOTHING;
       game_object_set_stack(database, RESERVED, nullptr);
       game_database_object(database, RESERVED)->state = nullptr;
     }
@@ -536,7 +361,7 @@ void db_free(GameDatabase *database) {
 
   if (database->object_storage != nullptr) {
     for (DbRef object = 0; object < database->top; object++)
-      attribute_free(database, object);
+      game_object_owned_state_clear(database, object);
     cp = (char *)database->object_storage;
     free(cp);
     database->object_storage = nullptr;

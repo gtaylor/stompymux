@@ -155,11 +155,10 @@ BtechScriptResult fun_btmapelev(BtechScriptCall *call) {
     safe_tprintf_str(buff, bufc, "%c", '0' + i);
   return btech_script_result_finish(call, BTECH_SCRIPT_NUMBER);
 }
-void list_xcodevalues(EvaluationContext *context, DbRef player) {
-  mecha_notify(context, player,
-               "Xcode attributes accessible thru get/setxcodevalue:");
-  for (size_t index = 0; index < xcode_descriptor_count(); ++index) {
-    const GMV *descriptor = xcode_descriptor_at(index);
+void list_special_value_names(EvaluationContext *context, DbRef player) {
+  mecha_notify(context, player, "BTech fields available to view and set:");
+  for (size_t index = 0; index < special_value_descriptor_count(); ++index) {
+    const GMV *descriptor = special_value_descriptor_at(index);
     mecha_notifyf(context, player, "\t%d\t%s", descriptor->gtype,
                   descriptor->name);
   }

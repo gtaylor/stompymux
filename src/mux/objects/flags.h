@@ -32,7 +32,6 @@ typedef enum ObjectFlag : int {
   OBJECT_FLAG_SUSPECT,
   OBJECT_FLAG_TRANSPARENT,
   OBJECT_FLAG_WIZARD,
-  OBJECT_FLAG_XCODE,
   OBJECT_FLAG_ZOMBIE,
   OBJECT_FLAG_COUNT,
 } ObjectFlag;
@@ -342,12 +341,6 @@ static inline bool is_floating(GameDatabase *database, DbRef object) {
 static inline bool is_light(GameDatabase *database, DbRef object) {
   return object_has_flag(object, database, OBJECT_FLAG_LIGHT);
 }
-/** Reports whether is xcode. @param[in] database Game database. @param[in]
- * object Game object. */
-
-static inline bool is_xcode(GameDatabase *database, DbRef object) {
-  return object_has_flag(object, database, OBJECT_FLAG_XCODE);
-}
 /** Reports whether is zombie. @param[in] database Game database. @param[in]
  * object Game object. */
 
@@ -482,12 +475,6 @@ static inline void s_going(GameDatabase *database, DbRef object) {
 static inline void s_connected(GameDatabase *database, DbRef object) {
   object_flag_enable(object, database, OBJECT_FLAG_CONNECTED);
 }
-/** Sets the xcode flag. @param[in,out] database Game database. @param[in]
- * object Game object. */
-
-static inline void s_xcode(GameDatabase *database, DbRef object) {
-  object_flag_enable(object, database, OBJECT_FLAG_XCODE);
-}
 /** Sets the zombie flag. @param[in,out] database Game database. @param[in]
  * object Game object. */
 
@@ -505,13 +492,6 @@ static inline void s_in_character(GameDatabase *database, DbRef object) {
 
 static inline void s_dark(GameDatabase *database, DbRef object) {
   object_flag_enable(object, database, OBJECT_FLAG_DARK);
-}
-/** Clears the xcode flag. @param[in,out] database Game database. @param[in] x
- * X. */
-
-static inline void c_xcode(GameDatabase *database, DbRef x) {
-  game_object_set_flag(&(ObjectFlagChangeRequest){
-      .database = database, .object = x, .flag = OBJECT_FLAG_XCODE});
 }
 /** Clears the connected flag. @param[in,out] database Game database. @param[in]
  * x X. */

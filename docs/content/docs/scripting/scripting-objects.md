@@ -190,15 +190,13 @@ namespace:
 ```text
 @state/set <exit>/locks.traverse flag/WIZARD=true
 @state/set <exit>/locks.traverse affiliation=123
-@state/set <exit>/locks.traverse attribute/Mechname="Authorized"
 @state/set <exit>/locks.traverse state/access/member=true
 ```
 
 An exit with no requirements passes. Multiple requirements are combined with
 AND, and Wizards obey the configured requirements. `flag/<FLAG>` compares flag
 presence to a boolean, `affiliation` compares native affiliation identity to a
-live integer dbref, `attribute/<Name>` compares a supported native attribute to
-an exact string, and `state/<namespace>/<key>` compares the subject's scalar
+live integer dbref, and `state/<namespace>/<key>` compares the subject's scalar
 state type and value exactly. Referenced state namespaces and keys cannot
 contain `/`.
 

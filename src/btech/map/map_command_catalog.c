@@ -4,12 +4,10 @@
 #include <stddef.h>
 
 const BtechCommandDefinition MAPCOMMANDS[] = {
-    {0, "@VIEWXCODE", "@Views xcode values on object",
-     btech_command_invoke_list_xcodestuff},
-    {0, "@SETXCODE <NAME> <VALUE|DATA>", "@Sets xcode value on object",
-     btech_command_invoke_set_xcodestuff},
-    {0, "@SETMAP <NAME> <VALUE|DATA>", "@Sets xcode value on object",
-     btech_command_invoke_set_xcodestuff},
+    {0, "@VIEWMAP", "@Views map fields",
+     btech_command_invoke_list_special_values},
+    {0, "@SETMAP <NAME> <VALUE|DATA>", "@Sets a map field",
+     btech_command_invoke_set_special_value},
 
     {0, "ADDICE <NUMBER>",
      "@Adds ice (<NUMBER> percent chance for each watery hex connected to "

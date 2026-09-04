@@ -9,8 +9,9 @@
 static BtechSpecialObject *received_object;
 
 /* This stub replaces the real handler; this test must not link libbtech. */
-void list_xcodestuff(DbRef player [[maybe_unused]], BtechSpecialObject *object,
-                     const char *buffer [[maybe_unused]]) {
+void list_special_values(DbRef player [[maybe_unused]],
+                         BtechSpecialObject *object,
+                         const char *buffer [[maybe_unused]]) {
   received_object = object;
 }
 
@@ -22,7 +23,7 @@ int main(void) {
       .arguments = arguments,
   };
 
-  btech_command_invoke_list_xcodestuff(&INVOCATION);
+  btech_command_invoke_list_special_values(&INVOCATION);
   assert(received_object == &map);
   return 0;
 }

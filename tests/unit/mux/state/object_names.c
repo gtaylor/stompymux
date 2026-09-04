@@ -112,8 +112,8 @@ static int check_stable_names(void) {
 
   result = 0;
 cleanup:
-  attribute_free(&database, 0);
-  attribute_free(&database, 1);
+  game_object_owned_state_clear(&database, 0);
+  game_object_owned_state_clear(&database, 1);
   return result;
 }
 
@@ -165,7 +165,7 @@ static int check_descriptions(void) {
   if (game_object_description(&database, 0) != nullptr ||
       game_object_internal_description(&database, 0) != nullptr)
     return 2;
-  attribute_free(&database, 0);
+  game_object_owned_state_clear(&database, 0);
   return 0;
 }
 

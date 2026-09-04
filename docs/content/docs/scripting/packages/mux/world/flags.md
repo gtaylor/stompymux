@@ -14,7 +14,7 @@ these values with [`Flags`](../type-flags/) methods; raw strings are rejected.
 | `CONNECTED` | `DARK` | `FLOATING` | `GAGGED` |
 | `GOING` | `HALTED` | `IN_CHARACTER` | `LIGHT` |
 | `MONITOR` | `NO_COMMAND` | `SAFE` | `SUSPECT` |
-| `TRANSPARENT` | `WIZARD` | `XCODE` | `ZOMBIE` |
+| `TRANSPARENT` | `WIZARD` | `ZOMBIE` |
 
 Constants compare by flag identity and stringify to the displayed uppercase
 name. Unknown lookups and attempts to modify the namespace raise

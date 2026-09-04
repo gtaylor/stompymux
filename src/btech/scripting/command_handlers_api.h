@@ -6,14 +6,9 @@
 
 #include "mux/support/alloc.h"
 
-typedef struct GameDatabase GameDatabase;
 typedef struct EvaluationContext EvaluationContext;
 
 /* functions.c */
-char *btech_attribute_read(GameDatabase *database, DbRef id, int flag,
-                           char buffer[static LBUF_SIZE]);
-void silly_atr_set_in(GameDatabase *database, DbRef id, int flag,
-                      const char *data);
 void kill_text(char **lines, size_t count);
 void free_text_items(char **lines, size_t count);
 void show_text(EvaluationContext *evaluation, char **lines, size_t count,

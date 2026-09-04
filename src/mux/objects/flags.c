@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "btech/context.h" // IWYU pragma: keep
-#include "btech/special_objects.h"
 #include "mux/commands/command.h"
 #include "mux/commands/command_keys.h"
 #include "mux/objects/db.h"
@@ -75,8 +73,6 @@ bool game_object_has_flag(const ObjectFlagRequest *request) {
     return game_object->has_transparent_flag;
   case OBJECT_FLAG_WIZARD:
     return game_object->has_wizard_flag;
-  case OBJECT_FLAG_XCODE:
-    return game_object->has_xcode_flag;
   case OBJECT_FLAG_ZOMBIE:
     return game_object->has_zombie_flag;
   case OBJECT_FLAG_NONE:
@@ -147,9 +143,6 @@ void game_object_set_flag(const ObjectFlagChangeRequest *request) {
     break;
   case OBJECT_FLAG_WIZARD:
     game_object->has_wizard_flag = value;
-    break;
-  case OBJECT_FLAG_XCODE:
-    game_object->has_xcode_flag = value;
     break;
   case OBJECT_FLAG_ZOMBIE:
     game_object->has_zombie_flag = value;
@@ -273,23 +266,6 @@ static bool flag_going(const FlagChangeRequest *request) {
           flag_any(request)) != 0;
 }
 
-static bool flag_xcode(const FlagChangeRequest *request) {
-  bool previously_enabled =
-      is_xcode(request->evaluation->world->database, request->target);
-  bool changed;
-
-  if (!flag_wizard(request))
-    return false;
-  changed = previously_enabled !=
-            is_xcode(request->evaluation->world->database, request->target);
-  if (changed)
-    btech_special_object_flag_changed(
-        request->evaluation->btech, request->player, request->target,
-        previously_enabled,
-        is_xcode(request->evaluation->world->database, request->target));
-  return true;
-}
-
 /**
  * @par LuaLS definition mux catalog mux.world.flags
  * @code{.lua}
@@ -312,12 +288,11 @@ static bool flag_xcode(const FlagChangeRequest *request) {
  * ---@field IN_CHARACTER Flag Marks the object as participating in in-character play.
  * ---@field LIGHT Flag Makes the object visible through native light rules.
  * ---@field MONITOR Flag Enables command monitoring behavior.
- * ---@field NO_COMMAND Flag Prevents attributes on the object from acting as commands.
+ * ---@field NO_COMMAND Flag Excludes commands stored on the object from command matching.
  * ---@field SAFE Flag Protects the object from ordinary destruction.
  * ---@field SUSPECT Flag Marks a player for suspect-activity monitoring.
  * ---@field TRANSPARENT Flag Allows visibility through the object.
  * ---@field WIZARD Flag Grants Wizard status under native privilege rules.
- * ---@field XCODE Flag Marks an object as a BattleTech special object.
  * ---@field ZOMBIE Flag Allows a thing to act through its owner under native rules.
  * ---@see mux.error.codes.flag.invalid
  * @endcode
@@ -341,7 +316,6 @@ static const FlagEntry FLAG_ENTRIES[] = {
     {"SUSPECT", OBJECT_FLAG_SUSPECT, 'u', flag_wizard},
     {"TRANSPARENT", OBJECT_FLAG_TRANSPARENT, 't', flag_wizard},
     {"WIZARD", OBJECT_FLAG_WIZARD, 'W', flag_wizard_bit},
-    {"XCODE", OBJECT_FLAG_XCODE, 'X', flag_xcode},
     {"ZOMBIE", OBJECT_FLAG_ZOMBIE, 'z', flag_wizard},
     {nullptr, OBJECT_FLAG_NONE, ' ', nullptr}};
 

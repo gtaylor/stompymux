@@ -303,6 +303,7 @@ static bool lua_install_sandbox(LuaRuntime *runtime) {
   lua_mux_package_install(runtime->state, &runtime->mux_package);
   runtime->btech_package.context = runtime;
   runtime->btech_package.services = runtime->services;
+  runtime->btech_package.mux_package = &runtime->mux_package;
   runtime->btech_package.is_checking = lua_runtime_is_checking;
   lua_btech_package_install(runtime->state, &runtime->btech_package);
   lua_pushlightuserdata(runtime->state, runtime);

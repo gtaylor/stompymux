@@ -6,9 +6,9 @@
 constexpr int BOOT_QUIET = 1; /* Inhibit boot message to victim. */
 constexpr int BOOT_PORT = 2;  /* Boot by port number. */
 
-constexpr int ATTRIBUTE_GET = 1;
-constexpr int ATTRIBUTE_EXAMINE = 2;
-constexpr int ATTRIBUTE_SET = 3;
+constexpr int BTECH_INFO = 0;
+constexpr int BTECH_REGISTER = 1;
+constexpr int BTECH_UNREGISTER = 2;
 
 constexpr int CLONE_LOCATION = 0;  /* Create clone in current location. */
 constexpr int CLONE_INVENTORY = 4; /* Create clone in current inventory. */

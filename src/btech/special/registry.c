@@ -1,6 +1,7 @@
 #include "btech_event.h" // IWYU pragma: keep
 #include "command_catalogs.h"
 #include "command_registry.h"
+#include "configuration_internal.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "map.h"              // IWYU pragma: keep
 #include "map_api.h"
@@ -16,9 +17,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
 #include "btconfig.h"
+#include "btech/configuration.h"
 #include "btech/context.h"
+#include "btech/ids.h"
 #include "btechstats_api.h"
 #include "command_handlers_api.h"
 #include "ds_turret_api.h"
@@ -30,7 +34,6 @@
 #include "mine_api.h"
 #include "missile_hit_registry.h"
 #include "mux/network/mux_event.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/game.h"
@@ -217,7 +220,7 @@ bool btech_special_command_access(BtechContext *context, DbRef object,
 
 bool handled_command_sub(BtechContext *context, DbRef player, DbRef location,
                          char *command) {
-  BtechSpecialObject *xcode_obj = nullptr;
+  BtechSpecialObject *xcode_obj = btech_context_find_object(context, location);
 
   const BtechSpecialObjectDefinition *type_of_object;
   int type;
@@ -225,28 +228,9 @@ bool handled_command_sub(BtechContext *context, DbRef player, DbRef location,
   char *tmpc;
   int ishelp;
 
-  type = btech_context_which_special(context, location);
-  bool special_data_missing = false;
-  if (type >= 0 && btech_special_object_data_size(
-                       btech_special_object_definition(type)) > 0) {
-    xcode_obj = red_black_tree_find_integer(context->special_objects, location);
-    special_data_missing = xcode_obj == nullptr;
-  }
-  if (type < 0 || special_data_missing) {
-    if (type >= 0 || !is_xcode(context->database, location) ||
-        is_zombie(context->database, location))
-      return false;
-    type = btech_context_which_special_attribute(context, location);
-    if (type >= 0) {
-      if (btech_special_object_data_size(
-              btech_special_object_definition(type)) > 0)
-        return false;
-    } else {
-      return false;
-    }
-  }
-  if (type > BTECH_SPECIAL_OBJECT_COUNT)
+  if (xcode_obj == nullptr || is_zombie(context->database, location))
     return false;
+  type = (int)xcode_obj->type;
   type_of_object = btech_special_object_definition(type);
   const size_t COMMAND_NAME_LENGTH = strcspn(command, " ");
   tmpc = strstr(command, " ");
@@ -304,7 +288,8 @@ bool handled_command_sub(BtechContext *context, DbRef player, DbRef location,
 }
 
 static bool okay_hcode(BtechContext *context, DbRef object) {
-  return (object >= 0 && is_xcode(context->database, object) &&
+  return (object >= 0 &&
+          btech_context_find_object(context, object) != nullptr &&
           !is_zombie(context->database, object)) != 0;
 }
 
@@ -359,93 +344,20 @@ void *new_special_object(BtechContext *context, DbRef id, int type) {
   return xcode_obj;
 }
 
-static void create_special_object(const BtechSpecialObjectAction *action) {
-  BtechContext *context = action->context;
-  const DbRef PLAYER = action->actor;
-  const DbRef KEY = action->object;
-  void *new;
-  const BtechSpecialObjectDefinition *type_of_object;
-  int type;
-  char *str;
-
-  str = btech_attribute_read(context->database, KEY, A_XTYPE,
-                             (char[LBUF_SIZE]){0});
-  if (!(str && *str)) {
-    mecha_notify(
-        btech_context_evaluation(context), PLAYER,
-        "You must first set Xtype using @attribute/set <object>/Xtype=<type>");
-    mecha_notify(btech_context_evaluation(context), PLAYER,
-                 "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
-                 "AUTOPILOT, TURRET.");
-    mecha_notify(btech_context_evaluation(context), PLAYER,
-                 "Resetting XCODE flag.");
-    c_xcode(context->database, KEY); /* Reset the flag */
-    return;
-  }
-
-  /* Find the special objects */
-  type = btech_context_which_special_attribute(context, KEY);
-  if (type > -1) {
-    /* We found the proper special object */
-    type_of_object = btech_special_object_definition(type);
-    if (btech_special_object_data_size(type_of_object)) {
-      new = new_special_object(context, KEY, type);
-      if (!new)
-        mecha_notify(btech_context_evaluation(context), PLAYER,
-                     "Memory allocation failure!");
-    }
-  } else {
-    mecha_notify(btech_context_evaluation(context), PLAYER,
-                 "That is not a valid XTYPE!");
-    mecha_notify(btech_context_evaluation(context), PLAYER,
-                 "Valid XTYPEs include: MECH, MECHREP, MAP, DEBUG, "
-                 "AUTOPILOT, TURRET.");
-    mecha_notify(btech_context_evaluation(context), PLAYER,
-                 "Resetting XCODE flag.");
-    c_xcode(context->database, KEY);
-  }
-}
-
 void btech_special_object_dispose(const BtechSpecialObjectAction *action) {
   BtechContext *context = action->context;
-  const DbRef PLAYER = action->actor;
   const DbRef KEY = action->object;
   BtechSpecialObject *xcode_obj;
 
-  int i;
-  const BtechSpecialObjectDefinition *type_of_object;
-
   xcode_obj = red_black_tree_find_integer(context->special_objects, KEY);
-
-  i = btech_context_which_special_attribute(context, KEY);
-  if (i < 0) {
-    mecha_notify(
-        btech_context_evaluation(context), PLAYER,
-        "CRITICAL: Unable to free data, inconsistency somewhere. Please");
-    mecha_notify(btech_context_evaluation(context), PLAYER,
-                 "contact a wizard about this _NOW_!");
-    return;
-  }
-  type_of_object = btech_special_object_definition(i);
-
-  if (btech_special_object_data_size(type_of_object) > 0 &&
-      btech_context_which_special(context, KEY) != i) {
-    mecha_notify(btech_context_evaluation(context), PLAYER,
-                 "Semi-critical error has occured. For some reason the "
-                 "object's data differs\nfrom the data on the object. Please "
-                 "contact a wizard about this.");
-  }
   if (xcode_obj) {
+    const BtechSpecialObjectDefinition *type_of_object =
+        btech_special_object_definition((int)xcode_obj->type);
     if (type_of_object->lifecycle)
       type_of_object->lifecycle(KEY, (void **)&xcode_obj, SPECIAL_FREE);
     red_black_tree_delete_integer(context->special_objects, KEY);
     mux_event_remove_data(context->events, xcode_obj);
     free(xcode_obj);
-  } else if (btech_special_object_data_size(type_of_object) > 0) {
-    mecha_notify(btech_context_evaluation(context), PLAYER,
-                 "This object is not in the special object DBASE.");
-    mecha_notify(btech_context_evaluation(context), PLAYER,
-                 "Please contact a wizard about this bug. ");
   }
 }
 
@@ -473,6 +385,7 @@ void btech_context_release_owned_state(BtechContext *context) {
                            context);
     context->special_objects = nullptr;
   }
+  btech_configuration_destroy(context);
   for (size_t i = 0; i < context->special_command_count; i++)
     hash_table_destroy(special_command_table(context, i));
   free(context->special_commands);
@@ -500,27 +413,15 @@ void dump_maps(BtechContext *context, DbRef player) {
 
 /***************** INTERNAL ROUTINES *************/
 int btech_context_which_special(BtechContext *context, DbRef key) {
-  return btech_context_which_special_attribute(context, key);
+  if (context == nullptr || context->special_objects == nullptr)
+    return -1;
+  BtechSpecialObject *object =
+      red_black_tree_find_integer(context->special_objects, key);
+  return object == nullptr ? -1 : (int)object->type;
 }
 
-int btech_context_which_special_attribute(BtechContext *context, DbRef key) {
-  int i;
-  int return_value = -1;
-  char *str;
-
-  if (!is_xcode(context->database, key))
-    return -1;
-  str = btech_attribute_read(context->database, key, A_XTYPE,
-                             (char[LBUF_SIZE]){0});
-  if (str && *str) {
-    for (i = 0; i < BTECH_SPECIAL_OBJECT_COUNT; i++) {
-      if (!strcmp(btech_special_object_definition(i)->type, str)) {
-        return_value = i;
-        break;
-      }
-    }
-  }
-  return (return_value);
+int btech_special_object_type(BtechContext *context, BtechObjectId object) {
+  return btech_context_which_special(context, (DbRef)object);
 }
 
 bool btech_context_is_mech(BtechContext *context, DbRef key) {
@@ -536,6 +437,8 @@ bool btech_context_is_map(BtechContext *context, DbRef key) {
 }
 
 void *btech_context_find_object(BtechContext *context, DbRef key) {
+  if (context == nullptr || context->special_objects == nullptr)
+    return nullptr;
   return red_black_tree_find_integer(context->special_objects, key);
 }
 
@@ -563,71 +466,84 @@ void init_special_hash(BtechContext *context, int which) {
   }
 }
 
-void btech_special_object_flag_changed(BtechContext *context, DbRef player,
-                                       DbRef obj, bool from, bool to) {
-  if (from == to)
-    return;
-  if (!to) {
-    s_xcode(context->database, obj);
-    btech_special_object_dispose(&(BtechSpecialObjectAction){
-        .context = context, .actor = player, .object = obj});
-    c_xcode(context->database, obj);
-  } else {
-    create_special_object(&(BtechSpecialObjectAction){
-        .context = context, .actor = player, .object = obj});
-  }
+static int special_type_parse(const char *name) {
+  for (int type = 0; type < BTECH_SPECIAL_OBJECT_COUNT; type++)
+    if (!strcasecmp(name, btech_special_object_type_name(type)))
+      return type;
+  return -1;
 }
 
-bool btech_special_object_type_can_set(BtechContext *context, DbRef object,
-                                       const char *type, char *error,
-                                       size_t error_size) {
-  BtechSpecialObject *registered;
-  int requested = -1;
+static bool special_actor_controls(BtechContext *context, DbRef actor,
+                                   DbRef object) {
+  return (is_wizard(context->database, actor) &&
+          is_controls(context->database, actor, object)) != 0;
+}
 
-  if (!*type) {
-    if (is_xcode(context->database, object)) {
-      (void)snprintf(error, error_size,
-                     "cannot clear XTYPE while XCODE is set");
-      return false;
-    }
-    return true;
-  }
-  for (int index = 0; index < BTECH_SPECIAL_OBJECT_COUNT; index++) {
-    if (!strcmp(btech_special_object_definition(index)->type, type)) {
-      requested = index;
-      break;
-    }
-  }
-  if (requested < 0) {
-    (void)snprintf(error, error_size, "invalid XTYPE %s", type);
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+bool btech_special_object_register(BtechContext *context, BtechObjectId actor,
+                                   BtechObjectId object, const char *type_name,
+                                   char *error, size_t error_size) {
+  const DbRef ID = (DbRef)object;
+  const int TYPE = special_type_parse(type_name);
+  if (!is_good_obj(context->database, ID) || !is_thing(context->database, ID) ||
+      is_going(context->database, ID)) {
+    (void)snprintf(error, error_size, "target must be a live thing");
     return false;
   }
-  if (!is_xcode(context->database, object))
+  if (!special_actor_controls(context, (DbRef)actor, ID)) {
+    (void)snprintf(error, error_size, "permission denied");
+    return false;
+  }
+  if (TYPE < 0) {
+    (void)snprintf(error, error_size, "invalid BTech type %s", type_name);
+    return false;
+  }
+  const int EXISTING = btech_context_which_special(context, ID);
+  if (EXISTING == TYPE)
     return true;
-
-  registered = btech_context_find_object(context, object);
-  if (registered && (int)registered->type != requested) {
+  if (EXISTING >= 0) {
     (void)snprintf(error, error_size,
-                   "cannot change XTYPE while the XCODE object is registered");
+                   "object is already registered as %s; unregister it first",
+                   btech_special_object_type_name(EXISTING));
+    return false;
+  }
+  if (new_special_object(context, ID, TYPE) == nullptr) {
+    (void)snprintf(error, error_size, "unable to allocate BTech object");
     return false;
   }
   return true;
 }
 
-void btech_special_object_type_register(
-    const BtechSpecialObjectAction *action) {
-  BtechContext *context = action->context;
-  const DbRef PLAYER [[maybe_unused]] = action->actor;
-  const DbRef OBJECT = action->object;
-  int type;
+bool btech_special_object_unregister(BtechContext *context, BtechObjectId actor,
+                                     BtechObjectId object, char *error,
+                                     size_t error_size) {
+  const DbRef ID = (DbRef)object;
+  if (!special_actor_controls(context, (DbRef)actor, ID)) {
+    (void)snprintf(error, error_size, "permission denied");
+    return false;
+  }
+  if (btech_context_which_special(context, ID) < 0) {
+    btech_configuration_forget(context, object);
+    return true;
+  }
+  btech_special_object_dispose(&(BtechSpecialObjectAction){
+      .context = context, .actor = actor, .object = object});
+  btech_configuration_forget(context, object);
+  return true;
+}
 
-  if (!is_xcode(context->database, OBJECT) ||
-      btech_context_find_object(context, OBJECT))
+void btech_object_forget(BtechContext *context, BtechObjectId object) {
+  if (context == nullptr)
     return;
-  type = btech_context_which_special_attribute(context, OBJECT);
-  if (type >= 0 &&
-      btech_special_object_data_size(btech_special_object_definition(type)) > 0)
-    new_special_object(context, OBJECT, type);
+  BtechSpecialObject *registered =
+      context->special_objects == nullptr
+          ? nullptr
+          : red_black_tree_find_integer(context->special_objects,
+                                        (DbRef)object);
+  if (registered != nullptr)
+    btech_special_object_dispose(&(BtechSpecialObjectAction){
+        .context = context, .actor = NOTHING, .object = object});
+  btech_configuration_forget(context, object);
 }
 
 #undef notify
@@ -664,6 +580,9 @@ void btech_special_objects_reset(BtechContext *context) {
 BattleMap *btech_context_get_map(BtechContext *context, DbRef d) {
   BtechSpecialObject *xcode_obj;
 
+  if (context == nullptr || context->special_objects == nullptr ||
+      !is_good_obj(context->database, d))
+    return nullptr;
   xcode_obj = red_black_tree_find_integer(context->special_objects, d);
   if (!xcode_obj)
     return nullptr;
@@ -675,9 +594,8 @@ BattleMap *btech_context_get_map(BtechContext *context, DbRef d) {
 Mech *btech_context_get_mech(BtechContext *context, DbRef d) {
   BtechSpecialObject *xcode_obj;
 
-  if (!(is_good_obj(context->database, d)))
-    return nullptr;
-  if (!(is_xcode(context->database, d)))
+  if (context == nullptr || context->special_objects == nullptr ||
+      !is_good_obj(context->database, d))
     return nullptr;
   xcode_obj = red_black_tree_find_integer(context->special_objects, d);
   if (!xcode_obj)

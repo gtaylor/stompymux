@@ -2,6 +2,7 @@
 #include "bsuit_api.h"
 #include "btconfig.h"
 #include "btech/context.h"
+#include "btech/special_objects.h"
 #include "btech_channel.h"
 #include "btechstats_api.h"
 #include "checked_conversion.h"
@@ -28,11 +29,9 @@
 #include "mech_status_types.h"
 #include "mech_utils_api.h"
 #include "mech_utils_internal.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "mux/world/move.h"
@@ -172,7 +171,6 @@ BattleMap *valid_map(const MapValidationRequest *request) {
   BtechContext *context = request->context;
   DbRef player = request->player;
   DbRef map = request->map;
-  char *str;
   BattleMap *maps;
 
   if (!is_good_obj(context->database, map)) {
@@ -180,14 +178,7 @@ BattleMap *valid_map(const MapValidationRequest *request) {
                  "Index out of range!");
     return nullptr;
   }
-  str = btech_attribute_read(context->database, map, A_XTYPE,
-                             (char[LBUF_SIZE]){0});
-  if (!str || !*str) {
-    mecha_notify(btech_context_evaluation(context), player,
-                 "That is not a valid map! (no XTYPE!)");
-    return nullptr;
-  }
-  if (strcmp("MAP", str)) {
+  if (btech_special_object_type(context, map) != BTECH_SPECIAL_MAP) {
     mecha_notify(btech_context_evaluation(context), player,
                  "That is not a valid map!");
     return nullptr;

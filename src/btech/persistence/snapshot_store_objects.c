@@ -2,6 +2,7 @@
 #include "equipment_types.h"
 #include "mech_persistence.h"
 #include "mech_stagger.h"
+#include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "mux/support/red_black_tree.h"
 #include "section_types.h"
@@ -151,6 +152,9 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
 
   if (context->result < 0)
     return false;
+  if (!is_good_obj(context->database, KEY) ||
+      !is_thing(context->database, KEY) || is_going(context->database, KEY))
+    return true;
   if (xcode->type == GTYPE_MECH) {
     mech = (Mech *)xcode;
     mech_persistence_snapshot_export(mech, &snapshot);

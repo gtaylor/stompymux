@@ -6,6 +6,7 @@
 #include "btech/ids.h"
 #include "character_value_settings.h"
 #include "coding_registry.h"
+#include "configuration_internal.h"
 #include "missile_hit_registry.h"
 #include "mux/support/red_black_tree.h"
 #include "random.h"
@@ -42,6 +43,7 @@ struct BtechContext {
   time_t process_start_time;
 
   RedBlackTree special_objects;
+  RedBlackTree configurations;
   HashTable *special_commands;
   size_t special_command_count;
   HashTable *player_value_hashes;

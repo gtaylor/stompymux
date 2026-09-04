@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include <stddef.h>
 #include <stdio.h>
 
 #include "mux/server/platform.h"
@@ -14,11 +13,9 @@ typedef struct Mech Mech;
 void alter_conditions(BattleMap *map);
 void map_setconditions(DbRef player, BattleMap *map, char *buffer);
 void map_conditions_apply(Mech *mech, BattleMap *map);
+bool battle_map_light_set(BattleMap *map, int light);
+bool battle_map_visibility_set(BattleMap *map, int visibility);
 bool map_read_dimensions(FILE *file, int *width, int *height);
-bool map_parse_visibility_attribute(const char *attribute, int *visibility,
-                                    int *light, int *wind_direction,
-                                    int *wind_speed, int *cloud_base,
-                                    char *message, size_t message_size);
 int battle_map_gravity(const BattleMap *map);
 int battle_map_light(const BattleMap *map);
 int battle_map_visibility(const BattleMap *map);

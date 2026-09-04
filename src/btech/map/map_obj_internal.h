@@ -22,7 +22,6 @@
 #include "mine_api.h"
 #include "missile_hit_registry.h"
 #include "mux/network/mux_event.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"

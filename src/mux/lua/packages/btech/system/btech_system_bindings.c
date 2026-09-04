@@ -17,9 +17,6 @@
 static const BtechLuaEntry BTECH_SYSTEM_ENTRIES[] = {
     {"design_exists", "system.design_exists", fun_btdesignex},
     {"lag", "system.lag", fun_btlag},
-    {"set_xcode_value", "system.set_xcode_value", fun_btsetxcodevalue},
-    {"xcode_value", "system.xcode_value", fun_btgetxcodevalue},
-    {"xcode_value_ref", "system.xcode_value_ref", fun_btgetxcodevalue_ref},
     {"zone_units", "system.zone_units", fun_zmechs},
 };
 

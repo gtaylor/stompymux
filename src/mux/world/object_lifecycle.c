@@ -2,11 +2,8 @@
 
 #include "mux/world/object_lifecycle.h"
 
-#include <stdio.h>
-
 #include "btech/special_objects.h"
 #include "mux/commands/command_context.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
@@ -48,20 +45,9 @@ object_destroy_schedule(const ObjectDestroyScheduleRequest *request) {
       return OBJECT_DESTROY_WIZARD_PLAYER;
   }
 
-  if (is_xcode(database, object) && !is_room(database, object)) {
-    btech_special_object_dispose(&(BtechSpecialObjectAction){
-        .context = evaluation->btech,
-        .actor = request->actor,
-        .object = object,
-    });
-    c_xcode(database, object);
-  }
+  btech_object_forget(evaluation->btech, object);
   s_going(database, object);
-  if (is_player(database, object)) {
-    char destroyer[32];
-
-    (void)snprintf(destroyer, sizeof(destroyer), "%ld", request->actor);
-    attribute_add_raw(database, object, A_DESTROYER, destroyer);
-  }
+  if (is_player(database, object))
+    game_database_object(database, object)->pending_destroyer = request->actor;
   return OBJECT_DESTROY_SCHEDULED;
 }

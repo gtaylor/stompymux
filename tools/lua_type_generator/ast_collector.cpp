@@ -169,8 +169,11 @@ bool is_btech_dynamic_registration(const std::string &path,
       set->getNumArgs() < 3)
     return false;
   const FunctionDecl *handler = function_expression(push->getArg(1));
-  return handler != nullptr && handler->getName() == "btech_lua_invoke" &&
-         is_named_member(set->getArg(2), "name", "BtechLuaEntry");
+  return handler != nullptr &&
+         (handler->getName() == "btech_lua_invoke" ||
+          handler->getName() == "btech_lua_invoke_native") &&
+         (is_named_member(set->getArg(2), "name", "BtechLuaEntry") ||
+          is_named_member(set->getArg(2), "name", "BtechLuaNativeEntry"));
 }
 
 bool is_internal_runtime_registration(const std::string &path,
@@ -317,7 +320,8 @@ public:
     const std::string name = declaration->getNameAsString();
     const std::string type = declaration->getType().getAsString();
     if (declaration->getType()->isArrayType() &&
-        type.find("BtechLuaEntry") != std::string::npos)
+        (type.find("BtechLuaEntry") != std::string::npos ||
+         type.find("BtechLuaNativeEntry") != std::string::npos))
       collect_btech_entries(*declaration);
     if (name == "LUA_ERROR_CODE_NAMES")
       collect_error_codes(*declaration);
@@ -449,7 +453,8 @@ public:
                           sources_.getExpansionLoc(call->getExprLoc())),
           "unsupported Lua C callback registration pattern");
     }
-    if (callee->getName() == "lua_btech_install_bindings")
+    if (callee->getName() == "lua_btech_install_bindings" ||
+        callee->getName() == "lua_btech_install_native_bindings")
       collect_btech_installation(*call);
     InstallerCall invocation;
     invocation.installer = declaration_usr(callee, sources_, model_);
@@ -628,8 +633,10 @@ private:
       return;
     }
     if (inventory == nullptr || !inventory->getType()->isArrayType() ||
-        inventory->getType().getAsString().find("BtechLuaEntry") ==
-            std::string::npos) {
+        (inventory->getType().getAsString().find("BtechLuaEntry") ==
+             std::string::npos &&
+         inventory->getType().getAsString().find("BtechLuaNativeEntry") ==
+             std::string::npos)) {
       model_.diagnose(location,
                       "BTech installer inventory could not be resolved");
       return;

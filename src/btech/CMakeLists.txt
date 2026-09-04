@@ -100,6 +100,7 @@ set(BTECH_SOURCES
   commands/typed_command_invokers.c
   core/btech_channel.c
   core/btech_event.c
+  core/configuration.c
   core/context.c
   core/heartbeat.c
   core/legacy_events.c
@@ -183,6 +184,9 @@ set(BTECH_SOURCES
   persistence/mech_restore_runtime.c
   persistence/mech_restore_state.c
   persistence/repair_restore.c
+  persistence/registration_restore.c
+  persistence/configuration_restore.c
+  persistence/configuration_store.c
   persistence/schema.c
   persistence/schema_v2.c
   persistence/snapshot_store.c

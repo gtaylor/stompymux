@@ -5,15 +5,12 @@
 #include "mux/world/object_set.h"
 
 #include <stdio.h>
-#include <string.h>
 
-#include "btech/special_objects.h"
 #include "mux/commands/action_messages.h"
 #include "mux/commands/command_handlers.h"
 #include "mux/commands/command_keys.h"
 #include "mux/lua/lua_runtime.h"
 #include "mux/network/network_output.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/objects/player_account.h"
@@ -195,160 +192,6 @@ void do_description(CommandInvocation *invocation) {
                 *invocation->second ? "Set." : "Cleared.");
 }
 
-bool object_attribute_is_administrable(int attribute_number) {
-  switch (attribute_number) {
-  case A_MECHPREFID:
-  case A_MECHSKILLS:
-  case A_XTYPE:
-  case A_TACSIZE:
-  case A_LRSHEIGHT:
-  case A_CONTACTOPT:
-  case A_MECHNAME:
-  case A_MECHTYPE:
-  case A_MECHDESC:
-  case A_MWTEMPLATE:
-  case A_BUILDLINKS:
-  case A_BUILDENTRANCE:
-  case A_BUILDCOORD:
-  case A_PILOTNUM:
-  case A_MAPVIS:
-  case A_TECHTIME:
-  case A_PCEQUIP:
-    return true;
-  default:
-    return false;
-  }
-}
-
-const Attribute *object_attribute_administrable_by_name(GameDatabase *database,
-                                                        const char *name) {
-  const Attribute *attribute = attribute_by_name(database, name);
-
-  return attribute && object_attribute_is_administrable(attribute->number)
-             ? attribute
-             : nullptr;
-}
-
-static bool object_attribute_command_target(CommandInvocation *invocation,
-                                            char *address, DbRef *object,
-                                            const Attribute **attribute) {
-  size_t length = strlen(address);
-  size_t slash = 0;
-  while (slash < length && *(const char *)checked_storage_at_const(
-                               address, length, sizeof(char), slash) != '/')
-    slash++;
-
-  if (slash == length || slash + 1 == length) {
-    notify_checked(&invocation->context->evaluation, invocation->player,
-                   invocation->player, "Specify an object and attribute.",
-                   MSG_ME);
-    return false;
-  }
-  *(char *)checked_storage_at(address, length + 1, sizeof(char), slash) = '\0';
-  char *name = checked_storage_at(address, length + 1, sizeof(char), slash + 1);
-  *object = match_controlled(&invocation->context->match, invocation->player,
-                             address);
-  if (*object == NOTHING)
-    return false;
-  *attribute = object_attribute_administrable_by_name(
-      invocation->context->world->database, name);
-  if (!*attribute) {
-    notify_checked(&invocation->context->evaluation, invocation->player,
-                   invocation->player,
-                   "That is not an administrable attribute.", MSG_ME);
-    return false;
-  }
-  return true;
-}
-
-void do_attribute(CommandInvocation *invocation) {
-  EvaluationContext *evaluation = &invocation->context->evaluation;
-  GameDatabase *database = invocation->context->world->database;
-  DbRef object;
-  const Attribute *attribute;
-
-  if (invocation->key == 0) {
-    raw_notify(evaluation, invocation->player, "@attribute command switches:");
-    raw_notify(evaluation, invocation->player,
-               "  /get      Display one native attribute.");
-    raw_notify(evaluation, invocation->player,
-               "  /examine  Display all supported native attributes.");
-    raw_notify(evaluation, invocation->player,
-               "  /set      Set or clear one native attribute.");
-    return;
-  }
-  if (invocation->key == ATTRIBUTE_EXAMINE) {
-    object = match_controlled(&invocation->context->match, invocation->player,
-                              invocation->first);
-    if (object == NOTHING)
-      return;
-    for (size_t index = 0; index < native_attribute_count(); index++) {
-      const Attribute *entry = native_attribute_at(index);
-
-      const char *value;
-
-      if (!object_attribute_is_administrable(entry->number))
-        continue;
-      value = attribute_get_raw(database, object, entry->number);
-      notify_printf(evaluation, invocation->player, "%s: %s", entry->name,
-                    value ? value : "");
-    }
-    return;
-  }
-  if (invocation->key != ATTRIBUTE_GET && invocation->key != ATTRIBUTE_SET) {
-    raw_notify(evaluation, invocation->player,
-               "Invalid @attribute switch combination.");
-    return;
-  }
-  if (!object_attribute_command_target(invocation, invocation->first, &object,
-                                       &attribute))
-    return;
-  if (invocation->key == ATTRIBUTE_GET) {
-    const char *value = attribute_get_raw(database, object, attribute->number);
-
-    notify_printf(evaluation, invocation->player, "%s: %s", attribute->name,
-                  value ? value : "");
-    return;
-  }
-  object_attribute_set(evaluation, invocation->player, object,
-                       attribute->number, invocation->second, 0);
-}
-
-bool object_attribute_set(EvaluationContext *evaluation, DbRef player,
-                          DbRef thing, int attrnum, char *attrtext, int key) {
-  long aflags;
-  int have_xcode;
-  const Attribute *attr;
-  char error[256];
-
-  attr = attribute_by_number(evaluation->world->database, attrnum);
-  attribute_get_info(evaluation->world->database, thing, attrnum, &aflags);
-  if (attr && is_wizard(evaluation->world->database, player)) {
-    if (attrnum == A_XTYPE &&
-        !btech_special_object_type_can_set(evaluation->btech, thing, attrtext,
-                                           error, sizeof(error))) {
-      notify_printf(evaluation, player, "%s.", error);
-      return false;
-    }
-    have_xcode = is_xcode(evaluation->world->database, thing);
-    attribute_add(evaluation->world->database, thing, attrnum, attrtext,
-                  aflags);
-    btech_special_object_flag_changed(
-        evaluation->btech, player, thing, have_xcode != 0,
-        is_xcode(evaluation->world->database, thing));
-    if (attrnum == A_XTYPE)
-      btech_special_object_type_register(&(BtechSpecialObjectAction){
-          .context = evaluation->btech, .actor = player, .object = thing});
-    if (!(key & SET_QUIET))
-      notify_printf(evaluation, player, "%s/%s - %s",
-                    game_object_name(evaluation->world->database, thing),
-                    attr->name, strlen(attrtext) ? "Set." : "Cleared.");
-    return true;
-  }
-  notify_checked(evaluation, player, player, "Permission denied.", MSG_ME);
-  return false;
-}
-
 void do_power(CommandInvocation *invocation) {
   EvaluationContext *evaluation = &invocation->context->evaluation;
   DbRef player = invocation->player;
@@ -372,23 +215,6 @@ void do_power(CommandInvocation *invocation) {
   power_set(&invocation->context->evaluation,
             invocation->context->runtime->world_indexes, thing, player, flag,
             invocation->key);
-}
-
-void do_setattr(CommandInvocation *invocation) {
-  DbRef player = invocation->player;
-  int attrnum = invocation->key;
-  char *name = invocation->first;
-  char *attrtext = invocation->second;
-  DbRef thing;
-
-  init_match(&invocation->context->match, player, name, OBJECT_TYPE_NOTYPE);
-  match_everything(&invocation->context->match, 0);
-  thing = noisy_match_result(&invocation->context->match);
-
-  if (thing == NOTHING)
-    return;
-  object_attribute_set(&invocation->context->evaluation, player, thing, attrnum,
-                       attrtext, 0);
 }
 
 void do_use(CommandInvocation *invocation) {

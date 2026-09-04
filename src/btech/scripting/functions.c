@@ -12,18 +12,6 @@
 #include "mux/support/checked_storage.h"
 #include "registry_api.h"
 
-char *btech_attribute_read(GameDatabase *database, DbRef id, int flag,
-                           char buffer[static LBUF_SIZE]) {
-  long flags;
-
-  return attribute_get_string(database, id, flag, buffer, LBUF_SIZE, &flags);
-}
-
-void silly_atr_set_in(GameDatabase *database, DbRef id, int flag,
-                      const char *data) {
-  attribute_add_raw(database, id, flag, data);
-}
-
 static char **text_slot(char **lines, size_t count, size_t index) {
   return (char **)checked_storage_at((void *)lines, count, sizeof(*lines),
                                      index);

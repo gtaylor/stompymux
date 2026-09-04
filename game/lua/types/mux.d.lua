@@ -17,10 +17,6 @@
 ---The selected typed object-kind constant determines which other fields apply.
 ---@alias CreateObjectOptions CreateRoomOptions|CreateThingOptions|CreateExitOptions
 
----A handle exposing supported native attributes for one object.
----@class Attribute
-local Attribute = {}
-
 ---Options for [`Channel:emit`](lua://Channel.emit).
 ---@class (exact) ChannelEmitOptions
 ---@field no_header? boolean Send the message without the usual `[channel]` prefix.
@@ -265,9 +261,6 @@ local State = {}
 ---Checked `mux.object.unavailable` error-code node.
 ---@class MuxObjectUnavailableErrorCode: ErrorCode
 ---@field code "mux.object.unavailable"
----Checked `mux.attribute.invalid` error-code node.
----@class MuxAttributeInvalidErrorCode: ErrorCode
----@field code "mux.attribute.invalid"
 ---Checked `mux.flag.invalid` error-code node.
 ---@class MuxFlagInvalidErrorCode: ErrorCode
 ---@field code "mux.flag.invalid"
@@ -319,8 +312,6 @@ local State = {}
 ---@class MuxObjectErrorCodes: ErrorCode
 ---@field invalid MuxObjectInvalidErrorCode `mux.object.invalid`.
 ---@field unavailable MuxObjectUnavailableErrorCode `mux.object.unavailable`.
----@class MuxAttributeErrorCodes: ErrorCode
----@field invalid MuxAttributeInvalidErrorCode `mux.attribute.invalid`.
 ---@class MuxFlagErrorCodes: ErrorCode
 ---@field invalid MuxFlagInvalidErrorCode `mux.flag.invalid`.
 ---@class MuxPowerErrorCodes: ErrorCode
@@ -348,7 +339,6 @@ local State = {}
 ---@field runtime MuxRuntimeErrorCode `mux.runtime`.
 ---@field state MuxStateErrorCodes Persistent-state code branch.
 ---@field object MuxObjectErrorCodes Database-object code branch.
----@field attribute MuxAttributeErrorCodes Native-attribute code branch.
 ---@field flag MuxFlagErrorCodes Object-flag code branch.
 ---@field power MuxPowerErrorCodes Object-power code branch.
 ---@field access MuxAccessErrorCodes Command-access code branch.
@@ -400,12 +390,11 @@ local State = {}
 ---@field IN_CHARACTER Flag Marks the object as participating in in-character play.
 ---@field LIGHT Flag Makes the object visible through native light rules.
 ---@field MONITOR Flag Enables command monitoring behavior.
----@field NO_COMMAND Flag Prevents attributes on the object from acting as commands.
+---@field NO_COMMAND Flag Excludes commands stored on the object from command matching.
 ---@field SAFE Flag Protects the object from ordinary destruction.
 ---@field SUSPECT Flag Marks a player for suspect-activity monitoring.
 ---@field TRANSPARENT Flag Allows visibility through the object.
 ---@field WIZARD Flag Grants Wizard status under native privilege rules.
----@field XCODE Flag Marks an object as a BattleTech special object.
 ---@field ZOMBIE Flag Allows a thing to act through its owner under native rules.
 ---@see mux.error.codes.flag.invalid
 
@@ -499,34 +488,6 @@ local mux_text = {}
 ---@field powers PowerNamespace Immutable namespace of registered power constants.
 ---@field types ObjectTypeNamespace Immutable namespace of native object-kind constants.
 local mux_world = {}
-
----Returns every supported native attribute; unset values appear as empty strings.
----@return table<string, string> entries
----
----Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
----@see mux.error.codes.object.invalid
-function Attribute:entries() end
-
----Gets a raw native attribute, or nil when unset.
----@param name string
----@return string? value
----
----Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.attribute.invalid`](lua://mux.error.codes.attribute.invalid).
----@see mux.error.codes.object.invalid
----@see mux.error.codes.attribute.invalid
-function Attribute:get(name) end
-
----Sets a raw native attribute, or clears it with nil.
----The `value` argument is required; omission raises [`mux.error.codes.runtime`](lua://mux.error.codes.runtime), while explicit nil clears the attribute.
----@param name string
----@param value string|nil
----
----Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.attribute.invalid`](lua://mux.error.codes.attribute.invalid), or [`mux.error.codes.runtime`](lua://mux.error.codes.runtime) when `value` is omitted.
----@see mux.error.codes.object.invalid
----@see mux.error.codes.unavailable.checking
----@see mux.error.codes.attribute.invalid
----@see mux.error.codes.runtime
-function Attribute:set(name, value) end
 
 ---Adds a player to this channel with a player-local command alias. The trusted
 ---operation bypasses the channel join lock. A quiet join suppresses only the
@@ -729,14 +690,6 @@ function Flags:remove(flag) end
 ---@see mux.error.codes.unavailable.checking
 ---@see mux.error.codes.object.invalid
 function Object:affiliation() end
-
----Creates a native-attribute handle for this object.
----@return Attribute attributes
----
----Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking).
----@see mux.error.codes.object.invalid
----@see mux.error.codes.unavailable.checking
-function Object:attributes() end
 
 ---Returns matching objects directly contained by or attached to this object.
 ---@param options? ContentsOptions Optional type and visibility filters.

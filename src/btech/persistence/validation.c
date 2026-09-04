@@ -46,7 +46,6 @@ static bool btech_special_count_objects(const RedBlackTreeVisitCall *call) {
     counts->autopilots++;
     break;
   case GTYPE_DEBUG:
-  case GTYPE_UNUSED1:
     break;
   default:
     break;
@@ -185,6 +184,9 @@ static int btech_special_load_all(sqlite3 *sqlite, BtechContext *context) {
     return -1;
   if (btech_special_load_context_stage(sqlite, context, "map parents",
                                        btech_special_load_map_parents) < 0)
+    return -1;
+  if (btech_special_load_context_stage(sqlite, context, "typed configurations",
+                                       btech_special_load_configurations) < 0)
     return -1;
   if (btech_special_load_context_stage(sqlite, context, "map hexes",
                                        btech_special_load_map_hexes) < 0)

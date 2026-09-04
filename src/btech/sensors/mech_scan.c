@@ -1,4 +1,5 @@
 #include "autopilot.h"
+#include "btech/configuration.h"
 #include "btech/context.h"
 #include "command_handlers_api.h"
 #include "equipment_types.h"
@@ -25,7 +26,6 @@
 #include "mech_utils_api.h"
 #include "mine_api.h"
 #include "mux/network/network_output.h"
-#include "mux/objects/attrs.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
 #include "mux/support/alloc.h"
@@ -536,11 +536,10 @@ void mech_scan_print_report(EvaluationContext *evaluation, DbRef player,
   int bearing;
   char buff[100] = {0};
   int weaponarc;
-  char *mech_name;
+  const char *mech_name;
 
-  mech_name = btech_attribute_read(
-      btech_context_database(mech_context(temp_mech)), mech_dbref(temp_mech),
-      A_MECHNAME, (char[LBUF_SIZE]){0});
+  mech_name =
+      btech_unit_display_name(mech_context(temp_mech), mech_dbref(temp_mech));
   (void)snprintf(buff, sizeof(buff), "[%s]  %-25.25s Tonnage: %d",
                  mech_id(temp_mech, (mech_team(mech) == mech_team(temp_mech) &&
                                      mech_los_check_unblocked(mech, temp_mech,

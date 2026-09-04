@@ -37,7 +37,6 @@
 #include "missile_hit_registry.h"
 #include "mux/commands/action_messages.h"
 #include "mux/lua/lua_runtime.h"
-#include "mux/objects/attrs.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"

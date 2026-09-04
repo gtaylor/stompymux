@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "bsuit_api.h"
+#include "btech/configuration.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btech_event.h"
@@ -36,10 +37,8 @@
 #include "mech_utils_api.h"
 #include "mine_api.h"
 #include "missile_hit_registry.h"
-#include "mux/objects/attrs.h"
 #include "mux/server/game.h"
 #include "mux/server/platform.h"
-#include "mux/support/alloc.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/stringutil.h"
 #include "registry_api.h"
@@ -755,10 +754,9 @@ int mech_weapon_fire_command(const WeaponFireCommandRequest *request) {
 void mech_c3_track_emit(Mech *mech, DbRef network_reference [[maybe_unused]],
                         Mech *c3_mech) {
   if (c3_mech && mech_dbref(c3_mech) != mech_dbref(mech)) {
-    mech_printf(mech, MECHALL, "Using range data from %s [%s]",
-                btech_attribute_read(
-                    btech_context_database(mech_context(c3_mech)),
-                    mech_dbref(c3_mech), A_MECHNAME, (char[LBUF_SIZE]){0}),
-                mech_id(c3_mech, true).text);
+    mech_printf(
+        mech, MECHALL, "Using range data from %s [%s]",
+        btech_unit_display_name(mech_context(c3_mech), mech_dbref(c3_mech)),
+        mech_id(c3_mech, true).text);
   }
 }
