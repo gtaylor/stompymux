@@ -1,4 +1,5 @@
 ---
+draft: true
 title: weapon_status
 type: docs
 toc_hide: false

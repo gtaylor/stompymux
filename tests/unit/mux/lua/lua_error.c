@@ -94,11 +94,12 @@ int main(void) {
            "local btech = mux.error.code_tree('btech') "
            "local testing = mux.error.code_tree('testing') "
            "return btech == mux.error.code_tree('btech') and "
-           "btech.code == 'btech' and btech.unavailable.code == "
-           "'btech.unavailable' and testing == mux.error.code_tree('testing') "
+           "btech.code == 'btech' and btech.operation.failed.code == "
+           "'btech.operation.failed' and testing == "
+           "mux.error.code_tree('testing') "
            "and testing.code == 'testing' and "
            "testing.assertion.code == 'testing.assertion' and "
-           "mux.error.new({ code = btech.failed, message = 'failed' "
+           "mux.error.new({ code = btech.operation.failed, message = 'failed' "
            "}):is(btech)"))
     goto failed;
   if (!lua_toboolean(state, -1))

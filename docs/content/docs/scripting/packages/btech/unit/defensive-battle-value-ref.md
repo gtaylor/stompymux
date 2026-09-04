@@ -1,4 +1,5 @@
 ---
+draft: true
 title: defensive_battle_value_ref
 type: docs
 toc_hide: false

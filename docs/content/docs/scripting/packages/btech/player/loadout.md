@@ -1,4 +1,5 @@
 ---
+draft: true
 title: loadout
 type: docs
 ---

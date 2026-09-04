@@ -1,4 +1,5 @@
 ---
+draft: true
 title: btech.error.codes
 type: docs
 toc_hide: false

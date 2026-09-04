@@ -29,6 +29,9 @@ void char_setvalue(BtechContext *context, DbRef player, const char *name,
                    int value);
 int char_getskilltargetbycode(BtechContext *context, DbRef player, int code,
                               int modifier);
+/** Sets a skill's raw level so its effective target exactly matches target. */
+bool character_skill_target_set(BtechContext *context, DbRef player, int code,
+                                int target);
 int char_getskilltarget(BtechContext *context, DbRef player, const char *name,
                         int modifier);
 int char_getxpbycode(const CharacterValueRequest *request);

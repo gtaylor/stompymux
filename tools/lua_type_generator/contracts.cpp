@@ -561,50 +561,53 @@ void validate_model(Model &model) {
     }
     if (!btech_installations.emplace(installation.inventory, &installation)
              .second)
-      model.diagnose(installation.location,
-                     "BtechLuaEntry inventory is installed more than once");
+      model.diagnose(
+          installation.location,
+          "BtechLuaNativeEntry inventory is installed more than once");
   }
   for (const auto &[inventory, location] : model.btech_inventories) {
     if (!btech_installations.contains(inventory))
-      model.diagnose(location,
-                     "BtechLuaEntry inventory has no recognized installer");
+      model.diagnose(
+          location,
+          "BtechLuaNativeEntry inventory has no recognized installer");
   }
 
   std::map<std::string, const BtechEntry *> btech_names;
-  std::set<std::pair<std::string, std::string>> btech_expected;
+  std::set<std::string> btech_expected;
   for (const BtechEntry &entry : model.btech_entries) {
     if (symbol_leaf(entry.qualified_name) != entry.name)
-      model.diagnose(entry.location,
-                     "BtechLuaEntry short name differs from qualified leaf");
+      model.diagnose(
+          entry.location,
+          "BtechLuaNativeEntry short name differs from qualified leaf");
     const auto installation = btech_installations.find(entry.inventory);
     if (installation == btech_installations.end())
       continue;
     const std::string runtime_name =
         installation->second->package + "." + entry.name;
     if (entry.qualified_name != runtime_name)
-      model.diagnose(
-          entry.location,
-          "BtechLuaEntry qualified name differs from installer package/name");
+      model.diagnose(entry.location, "BtechLuaNativeEntry qualified name "
+                                     "differs from installer package/name");
     const std::string public_name = "btech." + runtime_name;
     if (!btech_names.emplace(public_name, &entry).second)
       model.diagnose(entry.location, "duplicate registered BTech name");
-    btech_expected.emplace(entry.handler, public_name);
+    btech_expected.emplace(public_name);
   }
-  std::set<std::pair<std::string, std::string>> btech_actual;
+  std::set<std::string> btech_actual;
   for (const Contract &contract : model.contracts) {
     if (contract.module != "btech" || contract.section != "callable")
       continue;
-    const auto key = std::pair(contract.owner, contract.key);
-    btech_actual.insert(key);
-    if (!btech_expected.contains(key))
-      model.diagnose(contract.location,
-                     "BTech callable does not exactly match a BtechLuaEntry");
+    btech_actual.insert(contract.key);
+    if (!btech_expected.contains(contract.key))
+      model.diagnose(
+          contract.location,
+          "BTech callable does not exactly match a BtechLuaNativeEntry");
   }
   for (const BtechEntry &entry : model.btech_entries) {
-    const auto key = std::pair(entry.handler, "btech." + entry.qualified_name);
+    const std::string key = "btech." + entry.qualified_name;
     if (!btech_actual.contains(key))
-      model.diagnose(entry.location,
-                     "BtechLuaEntry lacks its exact LuaLS callable contract");
+      model.diagnose(
+          entry.location,
+          "BtechLuaNativeEntry lacks its exact LuaLS callable contract");
   }
 
   std::map<std::string, const Contract *> catalog_contracts;

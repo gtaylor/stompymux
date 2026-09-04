@@ -1,4 +1,5 @@
 ---
+draft: true
 title: btech.map
 linkTitle: btech.map
 type: docs

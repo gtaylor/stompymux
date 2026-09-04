@@ -1,4 +1,5 @@
 ---
+draft: true
 title: set_mechwarrior_template
 type: docs
 ---

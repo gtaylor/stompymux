@@ -5,10 +5,13 @@ return t.suite("passing", {
     t.test("works", function(_, expect)
       local codes = mux.error.codes
       expect.equal(2, 2)
-      expect.equal(btech.error.codes.unavailable.code, "btech.unavailable")
+      expect.equal(
+        btech.error.codes.operation.failed.code,
+        "btech.operation.failed"
+      )
       expect.raises_code(function()
-        mux.error.raise(btech.error.codes.failed, "expected")
-      end, btech.error.codes)
+        mux.error.raise(btech.error.codes.operation.failed, "expected")
+      end, btech.error.codes.operation)
       expect.raises_code(function()
         mux.error.raise("author.example", "expected")
       end, "author")

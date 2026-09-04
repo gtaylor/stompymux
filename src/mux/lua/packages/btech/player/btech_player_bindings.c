@@ -5,6 +5,12 @@
 #include <string.h>
 
 #include "btech/configuration.h"
+#include "btech/context.h"
+#include "btech/repair/mechrep_api.h"
+#include "btech/unit/mech_partnames_api.h"
+#include "btech/unit/mech_template_api.h"
+#include "btech/unit/weapon_catalogue_api.h"
+#include "equipment_types.h"
 #include "mux/lua/lua_error.h"
 #include "mux/lua/lua_error_codes.h"
 #include "mux/lua/packages/btech/btech_package.h"
@@ -20,7 +26,7 @@
  *
  * @par LuaLS definition btech type btech.player.ui-preferences
  * @code{.lua}
- * ---@class BtechPlayerUiPreferences
+ * ---@class BtechUiPreferencesState
  * ---@field tactical_height integer
  * ---@field tactical_width integer
  * ---@field lrs_height integer
@@ -30,6 +36,7 @@
  * ---@field include_allies boolean
  * ---@field include_target boolean
  * ---@field buildings BtechBuildingContactMode
+ * ---@field configured boolean
  * @endcode
  *
  * @par LuaLS definition btech type btech.player.personal-combat-armor
@@ -44,7 +51,7 @@
  * @par LuaLS definition btech type btech.player.personal-combat-equipment
  * @code{.lua}
  * ---@class BtechPersonalCombatEquipment
- * ---@field weapon string
+ * ---@field weapon BtechPart
  * ---@field ammunition? integer
  * @endcode
  *
@@ -56,7 +63,7 @@
  * ---@field left? BtechPersonalCombatEquipment
  * @endcode
  *
- * @par LuaLS definition btech namespace btech.player
+ * @par Lua API definition btech namespace btech.player
  * @code{.lua}
  * ---Player-owned BattleTech configuration.
  * ---@class BtechPlayerPackage
@@ -69,7 +76,7 @@ static DbRef require_player(lua_State *state, LuaBtechPackage *package,
   const DbRef PLAYER = lua_btech_require_object(package, state, argument);
   if (!is_player(package->services->database, PLAYER) ||
       is_going(package->services->database, PLAYER))
-    (void)lua_error_arg(state, argument, LUA_ERROR_CODE_BTECH_FAILED,
+    (void)lua_error_arg(state, argument, LUA_ERROR_CODE_OBJECT_INVALID,
                         "object is not a live player");
   return PLAYER;
 }
@@ -157,12 +164,11 @@ static BtechPlayerUiPreferences check_ui_preferences(lua_State *state,
 }
 
 /**
- * @par LuaLS definition btech callable btech.player.ui_preferences
+ * @par Lua API definition btech callable btech.player.ui_preferences
  * @code{.lua}
  * ---Returns effective UI preferences and whether they are explicitly configured.
  * ---@param player DbRef|Object
- * ---@return BtechPlayerUiPreferences preferences
- * ---@return boolean configured
+ * ---@return BtechUiPreferencesState preferences
  * function btech_player.ui_preferences(player) end
  * @endcode
  */
@@ -175,16 +181,16 @@ static int lua_btech_player_ui_preferences(lua_State *state,
   const bool CONFIGURED =
       btech_player_ui_preferences_configured(context, PLAYER);
   lua_pushboolean(state, (int)CONFIGURED);
-  return 2;
+  lua_setfield(state, -2, "configured");
+  return 1;
 }
 
 /**
- * @par LuaLS definition btech callable btech.player.set_ui_preferences
+ * @par Lua API definition btech callable btech.player.set_ui_preferences
  * @code{.lua}
  * ---Atomically sets UI preferences, or restores defaults with nil.
  * ---@param player DbRef|Object
- * ---@param preferences BtechPlayerUiPreferences|nil
- * ---@return true success
+ * ---@param preferences BtechUiPreferencesState|nil
  * function btech_player.set_ui_preferences(player, preferences) end
  * @endcode
  */
@@ -198,11 +204,10 @@ static int lua_btech_player_set_ui_preferences(lua_State *state,
   } else {
     BtechPlayerUiPreferences preferences = check_ui_preferences(state, 2);
     if (!btech_player_ui_preferences_set(context, PLAYER, preferences))
-      return lua_error_raise(state, LUA_ERROR_CODE_BTECH_FAILED,
-                             "unable to store UI preferences");
+      return lua_btech_operation_error(state, "ui_preferences_store_failed",
+                                       "unable to store UI preferences");
   }
-  lua_pushboolean(state, 1);
-  return 1;
+  return 0;
 }
 
 static const char *optional_string(lua_State *state, int argument,
@@ -221,7 +226,7 @@ static const char *optional_string(lua_State *state, int argument,
 }
 
 /**
- * @par LuaLS definition btech callable btech.player.mechwarrior_template
+ * @par Lua API definition btech callable btech.player.mechwarrior_template
  * @code{.lua}
  * ---Returns the configured MechWarrior template override, or nil.
  * ---@param player DbRef|Object
@@ -242,12 +247,11 @@ static int lua_btech_player_mechwarrior_template(lua_State *state,
 }
 
 /**
- * @par LuaLS definition btech callable btech.player.set_mechwarrior_template
+ * @par Lua API definition btech callable btech.player.set_mechwarrior_template
  * @code{.lua}
  * ---Sets the MechWarrior template override, or clears it with nil.
  * ---@param player DbRef|Object
  * ---@param reference string|nil
- * ---@return true success
  * function btech_player.set_mechwarrior_template(player, reference) end
  * @endcode
  */
@@ -256,12 +260,22 @@ static int lua_btech_player_set_mechwarrior_template(lua_State *state,
   lua_btech_check_arity(state, 2);
   const DbRef PLAYER = require_player(state, package, 1);
   const char *reference = optional_string(state, 2, 24, "reference");
-  if (!btech_player_mechwarrior_template_set(lua_btech_context(package), PLAYER,
-                                             reference))
-    return lua_error_raise(state, LUA_ERROR_CODE_BTECH_FAILED,
-                           "unable to store MechWarrior template");
-  lua_pushboolean(state, 1);
-  return 1;
+  BtechContext *context = lua_btech_context(package);
+  if (reference != nullptr) {
+    lua_btech_validate_resource_name(state, 2, reference, "reference");
+    if (mech_template_resolve_path(context,
+                                   btech_context_mech_template_path(context),
+                                   reference) == nullptr)
+      return lua_error_arg(state, 2, LUA_ERROR_CODE_BTECH_TEMPLATE_NOT_FOUND,
+                           "template was not found");
+    if (load_refmech(context, reference) == nullptr)
+      return lua_error_arg(state, 2, LUA_ERROR_CODE_BTECH_TEMPLATE_INVALID,
+                           "template is malformed");
+  }
+  if (!btech_player_mechwarrior_template_set(context, PLAYER, reference))
+    return lua_btech_operation_error(state, "template_preference_store_failed",
+                                     "unable to store MechWarrior template");
+  return 0;
 }
 
 static bool check_optional_ammunition(lua_State *state, int table,
@@ -272,7 +286,7 @@ static bool check_optional_ammunition(lua_State *state, int table,
     *ammunition = 0;
     return false;
   }
-  if (!lua_isnumber(state, -1))
+  if (lua_type(state, -1) != LUA_TNUMBER)
     (void)lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
                         "ammunition must be an integer from 0 to 255");
   const lua_Number NUMBER = lua_tonumber(state, -1);
@@ -285,9 +299,10 @@ static bool check_optional_ammunition(lua_State *state, int table,
   return true;
 }
 
-static void check_equipment(lua_State *state, int loadout, const char *field,
-                            char *weapon, size_t weapon_size,
-                            bool *has_ammunition, int *ammunition) {
+static void check_equipment(lua_State *state, LuaBtechPackage *package,
+                            int loadout, const char *field, char *weapon,
+                            size_t weapon_size, bool *has_ammunition,
+                            int *ammunition) {
   static const char *const FIELDS[] = {"weapon", "ammunition"};
   lua_btech_get_field(state, loadout, field);
   if (lua_isnil(state, -1)) {
@@ -303,14 +318,31 @@ static void check_equipment(lua_State *state, int loadout, const char *field,
   const int TABLE = lua_gettop(state);
   lua_btech_check_options(state, TABLE, FIELDS,
                           sizeof(FIELDS) / sizeof(FIELDS[0]), 2);
-  const char *value =
-      lua_btech_check_string_field(state, TABLE, "weapon", weapon_size - 1, 2);
-  (void)string_copy_bounded(weapon, weapon_size, value);
+  lua_btech_get_field(state, TABLE, "weapon");
+  PartReference part;
+  if (!lua_btech_check_part(state, lua_btech_context(package), -1, 2, &part))
+    (void)lua_error_arg(state, 2, LUA_ERROR_CODE_BTECH_PART_NOT_FOUND,
+                        "%s.weapon was not found", field);
+  lua_pop(state, 1);
+  if (!equipment_is_weapon(part.id))
+    (void)lua_error_arg(state, 2, LUA_ERROR_CODE_BTECH_PART_WRONG_KIND,
+                        "%s.weapon is not a weapon", field);
+  const int WEAPON = weapon_from_equipment_index(part.id);
+  if (!weapon_catalogue_is_personal_combat(WEAPON))
+    (void)lua_error_arg(state, 2, LUA_ERROR_CODE_BTECH_PART_WRONG_KIND,
+                        "%s.weapon is not a personal-combat weapon", field);
+  (void)string_copy_bounded(
+      weapon, weapon_size,
+      get_parts_vlong_name(lua_btech_context(package), part.id, 0));
   *has_ammunition = check_optional_ammunition(state, TABLE, ammunition);
+  if (*has_ammunition && weapon_catalogue_ammunition_per_ton(WEAPON) <= 0)
+    (void)lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
+                        "%s.ammunition is invalid for this weapon", field);
   lua_pop(state, 1);
 }
 
-static BtechPersonalCombatLoadout check_loadout(lua_State *state, int table) {
+static BtechPersonalCombatLoadout
+check_loadout(lua_State *state, LuaBtechPackage *package, int table) {
   static const char *const FIELDS[] = {"armor", "right", "left"};
   static const char *const ARMOR_FIELDS[] = {"head", "torso", "hands", "feet"};
   BtechPersonalCombatLoadout loadout = {0};
@@ -321,35 +353,42 @@ static BtechPersonalCombatLoadout check_loadout(lua_State *state, int table) {
   if (!lua_istable(state, -1))
     (void)lua_error_arg(state, 2, LUA_ERROR_CODE_ARG_INVALID,
                         "armor must be a table");
-  const int ARMOR = lua_gettop(state);
-  lua_btech_check_options(state, ARMOR, ARMOR_FIELDS,
+  const int ARMOR_TABLE = lua_gettop(state);
+  lua_btech_check_options(state, ARMOR_TABLE, ARMOR_FIELDS,
                           sizeof(ARMOR_FIELDS) / sizeof(ARMOR_FIELDS[0]), 2);
   loadout.armor_head =
-      (int)lua_btech_check_integer_field(state, ARMOR, "head", 0, 2, 2);
+      (int)lua_btech_check_integer_field(state, ARMOR_TABLE, "head", 0, 2, 2);
   loadout.armor_torso =
-      (int)lua_btech_check_integer_field(state, ARMOR, "torso", 0, 8, 2);
+      (int)lua_btech_check_integer_field(state, ARMOR_TABLE, "torso", 0, 8, 2);
   loadout.armor_hands =
-      (int)lua_btech_check_integer_field(state, ARMOR, "hands", 0, 2, 2);
+      (int)lua_btech_check_integer_field(state, ARMOR_TABLE, "hands", 0, 2, 2);
   loadout.armor_feet =
-      (int)lua_btech_check_integer_field(state, ARMOR, "feet", 0, 2, 2);
+      (int)lua_btech_check_integer_field(state, ARMOR_TABLE, "feet", 0, 2, 2);
   lua_pop(state, 1);
 
-  check_equipment(state, table, "right", loadout.right_weapon,
+  check_equipment(state, package, table, "right", loadout.right_weapon,
                   sizeof(loadout.right_weapon), &loadout.has_right_ammunition,
                   &loadout.right_ammunition);
-  check_equipment(state, table, "left", loadout.left_weapon,
+  check_equipment(state, package, table, "left", loadout.left_weapon,
                   sizeof(loadout.left_weapon), &loadout.has_left_ammunition,
                   &loadout.left_ammunition);
   return loadout;
 }
 
-static void push_equipment(lua_State *state, const char *field,
-                           bool has_ammunition, const char *weapon,
-                           int ammunition) {
+static void push_equipment(lua_State *state, BtechContext *context,
+                           const char *field, bool has_ammunition,
+                           const char *weapon, int ammunition) {
   if (*weapon == '\0')
     return;
   lua_newtable(state);
   lua_pushstring(state, weapon);
+  PartReference part;
+  if (!lua_btech_check_part(state, context, -1, 1, &part))
+    (void)lua_error_raise(state, LUA_ERROR_CODE_INTERNAL,
+                          "configured loadout contains an unknown weapon");
+  lua_pop(state, 1);
+  lua_btech_push_part(state, context,
+                      (PartReference){.id = part.id, .brand = 0});
   lua_setfield(state, -2, "weapon");
   if (has_ammunition) {
     lua_pushinteger(state, ammunition);
@@ -358,7 +397,7 @@ static void push_equipment(lua_State *state, const char *field,
   lua_setfield(state, -2, field);
 }
 
-static void push_loadout(lua_State *state,
+static void push_loadout(lua_State *state, BtechContext *context,
                          const BtechPersonalCombatLoadout *loadout) {
   lua_newtable(state);
   lua_newtable(state);
@@ -367,14 +406,14 @@ static void push_loadout(lua_State *state,
   set_integer_field(state, "hands", loadout->armor_hands);
   set_integer_field(state, "feet", loadout->armor_feet);
   lua_setfield(state, -2, "armor");
-  push_equipment(state, "right", loadout->has_right_ammunition,
+  push_equipment(state, context, "right", loadout->has_right_ammunition,
                  loadout->right_weapon, loadout->right_ammunition);
-  push_equipment(state, "left", loadout->has_left_ammunition,
+  push_equipment(state, context, "left", loadout->has_left_ammunition,
                  loadout->left_weapon, loadout->left_ammunition);
 }
 
 /**
- * @par LuaLS definition btech callable btech.player.loadout
+ * @par Lua API definition btech callable btech.player.loadout
  * @code{.lua}
  * ---Returns the configured personal-combat loadout, or nil.
  * ---@param player DbRef|Object
@@ -390,17 +429,16 @@ static int lua_btech_player_loadout(lua_State *state,
   if (!btech_player_loadout(lua_btech_context(package), PLAYER, &loadout))
     lua_pushnil(state);
   else
-    push_loadout(state, &loadout);
+    push_loadout(state, lua_btech_context(package), &loadout);
   return 1;
 }
 
 /**
- * @par LuaLS definition btech callable btech.player.set_loadout
+ * @par Lua API definition btech callable btech.player.set_loadout
  * @code{.lua}
  * ---Atomically sets a personal-combat loadout, or clears it with nil.
  * ---@param player DbRef|Object
  * ---@param loadout BtechPersonalCombatLoadout|nil
- * ---@return true success
  * function btech_player.set_loadout(player, loadout) end
  * @endcode
  */
@@ -412,13 +450,13 @@ static int lua_btech_player_set_loadout(lua_State *state,
   if (lua_isnil(state, 2)) {
     btech_player_loadout_clear(context, PLAYER);
   } else {
-    BtechPersonalCombatLoadout loadout = check_loadout(state, 2);
+    BtechPersonalCombatLoadout loadout = check_loadout(state, package, 2);
     if (!btech_player_loadout_set(context, PLAYER, &loadout))
-      return lua_error_raise(state, LUA_ERROR_CODE_BTECH_FAILED,
-                             "unable to store personal-combat loadout");
+      return lua_btech_operation_error(
+          state, "loadout_store_failed",
+          "unable to store personal-combat loadout");
   }
-  lua_pushboolean(state, 1);
-  return 1;
+  return 0;
 }
 
 static const BtechLuaNativeEntry BTECH_PLAYER_NATIVE_ENTRIES[] = {

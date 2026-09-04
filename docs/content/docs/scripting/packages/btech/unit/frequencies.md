@@ -1,4 +1,5 @@
 ---
+draft: true
 title: frequencies
 type: docs
 toc_hide: false

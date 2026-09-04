@@ -203,6 +203,7 @@ set(BTECH_SOURCES
   repair/mech_tech_structure_commands.c
   repair/mech_tech_section_commands.c
   repair/mech_tech_damages.c
+  repair/repair_need_messages.c
   repair/mech_tech_do.c
   repair/mech_tech_events.c
   repair/mech_tech_repairs.c
@@ -303,6 +304,7 @@ set(BTECH_SOURCES
   unit/mech_script_value.c
   unit/mech_mechref_ident.c
   unit/mech_partnames.c
+  unit/mech_partnames_reference.c
   unit/mech_parts.c
   unit/mech_systems.c
   unit/mech_tic.c

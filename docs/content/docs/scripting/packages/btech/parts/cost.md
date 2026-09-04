@@ -1,4 +1,5 @@
 ---
+draft: true
 title: cost
 type: docs
 toc_hide: false

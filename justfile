@@ -150,11 +150,11 @@ validate-lua-types-output:
 
 # Refresh the checked-in LuaLS definitions from exact contracts in native C.
 update-lua-types: build lua-type-generator-build && validate-lua-types-output
-    mapfile -d '' -t sources < <(find src/mux src/btech -type f -name '*.c' -print0 | sort -z); {{lua_type_generator_build_dir}}/lua-type-generator --write --repo-root "$PWD" --output-dir game/lua/types -p {{build_dir}} "${sources[@]}"
+    mapfile -d '' -t sources < <(find src/mux -type f -name '*.c' -print0 | sort -z); {{lua_type_generator_build_dir}}/lua-type-generator --write --repo-root "$PWD" --output-dir game/lua/types -p {{build_dir}} "${sources[@]}"
 
 # Check deterministic freshness, syntax, formatting, and whole-workspace types.
 check-lua-types: build lua-type-generator-build && validate-lua-types-output
-    mapfile -d '' -t sources < <(find src/mux src/btech -type f -name '*.c' -print0 | sort -z); {{lua_type_generator_build_dir}}/lua-type-generator --check --repo-root "$PWD" --output-dir game/lua/types -p {{build_dir}} "${sources[@]}"
+    mapfile -d '' -t sources < <(find src/mux -type f -name '*.c' -print0 | sort -z); {{lua_type_generator_build_dir}}/lua-type-generator --check --repo-root "$PWD" --output-dir game/lua/types -p {{build_dir}} "${sources[@]}"
 
 tidy:
     {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -fix -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'

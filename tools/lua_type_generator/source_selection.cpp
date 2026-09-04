@@ -20,8 +20,8 @@ constexpr std::string_view CONTRACT_MARKER = "@par LuaLS";
 // native catalog or registration from model validation.
 constexpr std::array<std::string_view, 13> SOURCE_TRIGGERS = {
     CONTRACT_MARKER,
-    "BtechLuaEntry",
-    "lua_btech_install_bindings",
+    "BtechLuaNativeEntry",
+    "lua_btech_install_native_bindings",
     "LUA_ERROR_CODE_NAMES",
     "LUA_LOCK_DEFINITIONS",
     "LUA_COMMAND_ACCESS_ENTRIES",

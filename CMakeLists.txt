@@ -266,6 +266,7 @@ endif()
 target_link_libraries(stompymux PRIVATE btmux_options btech luajit libtelnet uv_a SQLite3::SQLite3 libsodium tomlc17 cmark m)
 target_include_directories(stompymux PRIVATE
   "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
   "${CMAKE_SOURCE_DIR}/src")
 if(BTECH_ENABLE_IWYU)
   set_property(TARGET stompymux PROPERTY C_INCLUDE_WHAT_YOU_USE "${BTECH_IWYU_COMMAND}")

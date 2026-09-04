@@ -1,4 +1,5 @@
 ---
+draft: true
 title: installed
 type: docs
 toc_hide: false

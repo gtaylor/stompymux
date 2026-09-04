@@ -1,4 +1,5 @@
 ---
+draft: true
 title: hex_in_blast_zone
 type: docs
 toc_hide: false

@@ -1,4 +1,5 @@
 ---
+draft: true
 title: hex_emit
 type: docs
 toc_hide: false

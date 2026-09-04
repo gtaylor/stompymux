@@ -170,10 +170,8 @@ bool is_btech_dynamic_registration(const std::string &path,
     return false;
   const FunctionDecl *handler = function_expression(push->getArg(1));
   return handler != nullptr &&
-         (handler->getName() == "btech_lua_invoke" ||
-          handler->getName() == "btech_lua_invoke_native") &&
-         (is_named_member(set->getArg(2), "name", "BtechLuaEntry") ||
-          is_named_member(set->getArg(2), "name", "BtechLuaNativeEntry"));
+         handler->getName() == "btech_lua_invoke_native" &&
+         is_named_member(set->getArg(2), "name", "BtechLuaNativeEntry");
 }
 
 bool is_internal_runtime_registration(const std::string &path,
@@ -320,8 +318,7 @@ public:
     const std::string name = declaration->getNameAsString();
     const std::string type = declaration->getType().getAsString();
     if (declaration->getType()->isArrayType() &&
-        (type.find("BtechLuaEntry") != std::string::npos ||
-         type.find("BtechLuaNativeEntry") != std::string::npos))
+        type.find("BtechLuaNativeEntry") != std::string::npos)
       collect_btech_entries(*declaration);
     if (name == "LUA_ERROR_CODE_NAMES")
       collect_error_codes(*declaration);
@@ -453,8 +450,7 @@ public:
                           sources_.getExpansionLoc(call->getExprLoc())),
           "unsupported Lua C callback registration pattern");
     }
-    if (callee->getName() == "lua_btech_install_bindings" ||
-        callee->getName() == "lua_btech_install_native_bindings")
+    if (callee->getName() == "lua_btech_install_native_bindings")
       collect_btech_installation(*call);
     InstallerCall invocation;
     invocation.installer = declaration_usr(callee, sources_, model_);
@@ -589,7 +585,7 @@ private:
     if (outer == nullptr) {
       model_.diagnose(
           source_location(model_, sources_, declaration.getLocation()),
-          "BtechLuaEntry inventory is not an initializer list");
+          "BtechLuaNativeEntry inventory is not an initializer list");
       return;
     }
     for (const Expr *element : outer->inits()) {
@@ -597,7 +593,7 @@ private:
       const Location location =
           source_location(model_, sources_, element->getExprLoc());
       if (row == nullptr || row->getNumInits() < 3) {
-        model_.diagnose(location, "malformed BtechLuaEntry initializer");
+        model_.diagnose(location, "malformed BtechLuaNativeEntry initializer");
         continue;
       }
       const StringLiteral *name = string_expression(row->getInit(0));
@@ -605,7 +601,7 @@ private:
       const FunctionDecl *handler = function_expression(row->getInit(2));
       if (name == nullptr || qualified == nullptr || handler == nullptr) {
         model_.diagnose(location,
-                        "could not resolve BtechLuaEntry initializer");
+                        "could not resolve BtechLuaNativeEntry initializer");
         continue;
       }
       model_.btech_entries.push_back(
@@ -621,8 +617,9 @@ private:
     const Location location =
         source_location(model_, sources_, call.getExprLoc());
     if (call.getNumArgs() < 4) {
-      model_.diagnose(location,
-                      "lua_btech_install_bindings call has too few arguments");
+      model_.diagnose(
+          location,
+          "lua_btech_install_native_bindings call has too few arguments");
       return;
     }
     const StringLiteral *package = string_expression(call.getArg(2));
@@ -633,10 +630,8 @@ private:
       return;
     }
     if (inventory == nullptr || !inventory->getType()->isArrayType() ||
-        (inventory->getType().getAsString().find("BtechLuaEntry") ==
-             std::string::npos &&
-         inventory->getType().getAsString().find("BtechLuaNativeEntry") ==
-             std::string::npos)) {
+        inventory->getType().getAsString().find("BtechLuaNativeEntry") ==
+            std::string::npos) {
       model_.diagnose(location,
                       "BTech installer inventory could not be resolved");
       return;

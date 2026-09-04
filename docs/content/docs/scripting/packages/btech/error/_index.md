@@ -1,4 +1,5 @@
 ---
+draft: true
 title: btech.error package
 linkTitle: btech.error
 type: docs

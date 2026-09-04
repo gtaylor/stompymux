@@ -1,4 +1,5 @@
 ---
+draft: true
 title: battle_value2_ref
 type: docs
 toc_hide: false

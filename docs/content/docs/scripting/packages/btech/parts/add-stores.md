@@ -1,4 +1,5 @@
 ---
+draft: true
 title: add_stores
 type: docs
 toc_hide: false

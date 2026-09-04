@@ -8,13 +8,13 @@
  */
 static int fun_foo(void *call [[maybe_unused]]) { return 0; }
 
-static const BtechLuaEntry BTECH_WRONG_PACKAGE_ENTRIES[] = {
+static const BtechLuaNativeEntry BTECH_WRONG_PACKAGE_ENTRIES[] = {
     {"foo", "map.foo", fun_foo},
 };
 
 void install_wrong_package(lua_State *state) {
-  lua_btech_install_bindings(state, nullptr, "unit",
-                             BTECH_WRONG_PACKAGE_ENTRIES,
-                             sizeof(BTECH_WRONG_PACKAGE_ENTRIES) /
-                                 sizeof(BTECH_WRONG_PACKAGE_ENTRIES[0]));
+  lua_btech_install_native_bindings(state, nullptr, "unit",
+                                    BTECH_WRONG_PACKAGE_ENTRIES,
+                                    sizeof(BTECH_WRONG_PACKAGE_ENTRIES) /
+                                        sizeof(BTECH_WRONG_PACKAGE_ENTRIES[0]));
 }

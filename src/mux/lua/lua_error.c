@@ -205,18 +205,32 @@ static const char LUA_ERROR_CODE_TREES_KEY[] = "btmux.lua.error_code_trees";
  *
  * @par LuaLS definition btech catalog btech.error.codes
  * @code{.lua}
- * ---Checked `btech.unavailable` error-code node.
- * ---@class BtechUnavailableErrorCode: ErrorCode
- * ---@field code "btech.unavailable"
- *
- * ---Checked `btech.failed` error-code node.
- * ---@class BtechFailedErrorCode: ErrorCode
- * ---@field code "btech.failed"
- *
  * ---Checked native BattleTech error-code tree.
+ * ---@class BtechPartNotFoundErrorCode: ErrorCode
+ * ---@field code "btech.part.not_found"
+ * ---@class BtechPartAmbiguousErrorCode: ErrorCode
+ * ---@field code "btech.part.ambiguous"
+ * ---@class BtechPartWrongKindErrorCode: ErrorCode
+ * ---@field code "btech.part.wrong_kind"
+ * ---@class BtechPartErrorCodes: ErrorCode
+ * ---@field not_found BtechPartNotFoundErrorCode `btech.part.not_found`.
+ * ---@field ambiguous BtechPartAmbiguousErrorCode `btech.part.ambiguous`.
+ * ---@field wrong_kind BtechPartWrongKindErrorCode `btech.part.wrong_kind`.
+ * ---@class BtechTemplateNotFoundErrorCode: ErrorCode
+ * ---@field code "btech.template.not_found"
+ * ---@class BtechTemplateInvalidErrorCode: ErrorCode
+ * ---@field code "btech.template.invalid"
+ * ---@class BtechTemplateErrorCodes: ErrorCode
+ * ---@field not_found BtechTemplateNotFoundErrorCode `btech.template.not_found`.
+ * ---@field invalid BtechTemplateInvalidErrorCode `btech.template.invalid`.
+ * ---@class BtechOperationFailedErrorCode: ErrorCode
+ * ---@field code "btech.operation.failed"
+ * ---@class BtechOperationErrorCodes: ErrorCode
+ * ---@field failed BtechOperationFailedErrorCode `btech.operation.failed`.
  * ---@class BtechErrorCodes: ErrorCode
- * ---@field unavailable BtechUnavailableErrorCode `btech.unavailable`, raised during `@lua/check`.
- * ---@field failed BtechFailedErrorCode `btech.failed`, raised for a BattleTech domain failure, such as a wrong object kind or a failed legacy handler.
+ * ---@field part BtechPartErrorCodes Part resolution errors.
+ * ---@field template BtechTemplateErrorCodes Template resolution errors.
+ * ---@field operation BtechOperationErrorCodes Operational failures.
  * @endcode
  *
  * @par LuaLS definition btech type error.package
@@ -246,8 +260,12 @@ const char *const LUA_ERROR_CODE_NAMES[LUA_ERROR_CODE_COUNT] = {
     [LUA_ERROR_CODE_MODULE_UNAVAILABLE] = "mux.module.unavailable",
     [LUA_ERROR_CODE_CONFIG_NOT_FOUND] = "mux.config.not_found",
     [LUA_ERROR_CODE_CONFIG_UNSUPPORTED] = "mux.config.unsupported",
-    [LUA_ERROR_CODE_BTECH_UNAVAILABLE] = "btech.unavailable",
-    [LUA_ERROR_CODE_BTECH_FAILED] = "btech.failed",
+    [LUA_ERROR_CODE_BTECH_PART_NOT_FOUND] = "btech.part.not_found",
+    [LUA_ERROR_CODE_BTECH_PART_AMBIGUOUS] = "btech.part.ambiguous",
+    [LUA_ERROR_CODE_BTECH_PART_WRONG_KIND] = "btech.part.wrong_kind",
+    [LUA_ERROR_CODE_BTECH_TEMPLATE_NOT_FOUND] = "btech.template.not_found",
+    [LUA_ERROR_CODE_BTECH_TEMPLATE_INVALID] = "btech.template.invalid",
+    [LUA_ERROR_CODE_BTECH_OPERATION_FAILED] = "btech.operation.failed",
     [LUA_ERROR_CODE_TESTING_ASSERTION] = "testing.assertion",
     [LUA_ERROR_CODE_TESTING_RUNTIME] = "testing.runtime",
     [LUA_ERROR_CODE_INTERNAL] = "mux.internal",

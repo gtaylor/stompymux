@@ -1,4 +1,5 @@
 ---
+draft: true
 title: set_assigned_pilot
 type: docs
 ---

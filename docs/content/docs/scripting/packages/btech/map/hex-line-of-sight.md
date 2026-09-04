@@ -1,4 +1,5 @@
 ---
+draft: true
 title: hex_line_of_sight
 type: docs
 toc_hide: false

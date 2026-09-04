@@ -1,4 +1,5 @@
 ---
+draft: true
 title: tech_list
 type: docs
 toc_hide: false

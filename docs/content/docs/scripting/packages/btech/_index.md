@@ -7,49 +7,32 @@ sidebar_root_for: self
 no_list: true
 ---
 
-`require("btech")` returns the built-in BattleTech API. It is available to
-running Lua callbacks, but its gameplay functions are unavailable during
-`@lua/check`. The package adapts the server's trusted BattleTech scripting
-handlers to Lua and invokes them with server authority.
+`require("btech")` returns the native, typed BattleTech API. Gameplay calls are
+unavailable during `@lua/check` and raise `mux.unavailable.checking` there.
 
-Legacy object arguments are native dbrefs. The typed configuration functions
-in `btech.unit`, `btech.player`, and `btech.map` accept either dbrefs or
-[`Object`](../mux/world/type-object/) handles, and return handles for
-object-valued results. Failures reported by legacy handlers become
-`btech.failed`, while exceeding the bridge's
-argument limit raises `mux.arg.invalid`. Supplying `nil`, a table, a function,
-or userdata where the bridge expects a scalar instead raises an ordinary Lua
-type error. Some legacy handlers do not safely guard too few arguments and may
-abort; the required LuaLS parameters describe the supported call shapes.
+Database-object parameters accept either a numeric `DbRef` or a same-runtime
+[`Object`](../mux/world/type-object/) handle. Character parameters require an
+`Object`. Returned database references are `Object` handles; absent optional
+relationships are `nil`, and object collections are dense arrays.
 
-The LuaLS signatures document each argument's canonical semantic type. For
-legacy compatibility, the native bridge also stringifies numeric scalar
-arguments and converts booleans to `"1"` or `"0"` before invoking a handler;
-these coercions are intentionally not repeated in every signature. The legacy
-handlers match character list kinds, part categories, part-name size selectors,
-weapon-stat selectors, critical-slot field selectors, unit field names, and
-full unit section names without regard to case. Part-name sizes are selected by
-their first letter. For a unit section that is not a full-name match, the legacy
-resolver uses a class-dependent one- or two-character prefix and may ignore
-trailing characters. The documentation and LuaLS aliases continue to use
-canonical spellings.
+The package follows Mux conventions: required arguments are validated, surplus
+positional arguments are ignored, options tables reject unknown fields, and
+mutation-only functions return no Lua values. Failures raise structured errors
+instead of returning `#-N` strings. Sections accept an exact class-specific
+name or generated abbreviation, case-insensitively.
 
 ## Subpackages
 
 | Package | Description |
 | --- | --- |
-| [`btech.character`](character/) | Character values, skills, experience, and piloting rolls. |
-| [`btech.error`](error/) | Checked BattleTech error-code symbols. |
-| [`btech.map`](map/) | Battle maps, geometry, line of sight, and map messaging. |
-| [`btech.parts`](parts/) | Part catalogues, installed parts, stores, and costs. |
-| [`btech.player`](player/) | Player display and personal-combat configuration. |
-| [`btech.repair`](repair/) | Damage and technician-status queries. |
-| [`btech.system`](system/) | Special-object fields and server-wide BattleTech queries. |
-| [`btech.unit`](unit/) | Live units, templates, combat values, and status. |
+| [`btech.character`](api/#character) | Character values, skills, and experience. |
+| [`btech.map`](api/#maps) | Maps, geometry, line of sight, placement, and messaging. |
+| [`btech.parts`](api/#parts-and-stores) | Part catalogues and stores. |
+| [`btech.player`](api/#player-configuration) | Player configuration. |
+| [`btech.repair`](api/#repair-and-system) | Repair state and technician queries. |
+| [`btech.system`](api/#repair-and-system) | Server-wide BattleTech queries. |
+| [`btech.template`](template/) | Immutable unit-template queries and displays. |
+| [`btech.unit`](api/#live-units) | Live units, combat state, and mutations. |
 
-Successful results are converted to the type documented for each function.
-Mutation-only operations return `true`. List operations split the legacy
-result on whitespace and `|`, convert numeric tokens (including `#123`) to
-Lua numbers, and return a flat array. Other producer delimiters remain inside
-tokens, while spaces inside a display name split that name across items; see
-the affected function pages for producer-specific limitations.
+See the [API reference](api/) for the complete exported surface and the
+generated `game/lua/types/btech.d.lua` for record fields and editor types.

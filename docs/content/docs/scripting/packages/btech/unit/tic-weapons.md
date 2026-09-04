@@ -1,4 +1,5 @@
 ---
+draft: true
 title: tic_weapons
 type: docs
 toc_hide: false

@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -401,6 +402,27 @@ void character_value_set_by_code(const CharacterValueChange *change) {
   character_stats_store(change->target.context, change->target.player, &stats,
                         VALUES_ALL);
 }
+
+// NOLINTBEGIN(bugprone-easily-swappable-parameters): The catalogue code and
+// requested target are distinct domain values passed in their API order.
+bool character_skill_target_set(BtechContext *context, DbRef player, int code,
+                                int target) {
+  if (character_value_definition(code)->type != CHAR_SKILL)
+    return false;
+  PSTATS stats;
+  character_stats_retrieve(context, player, VALUES_ALL, &stats);
+  const int RAW_LEVEL = character_stats_value_get(&stats, code);
+  const int EFFECTIVE_LEVEL = char_getstatvalue_by_code(&stats, code);
+  const int BASE_TARGET =
+      char_getskilltargetbycode(context, player, code, 0) + EFFECTIVE_LEVEL;
+  const int NEW_LEVEL = BASE_TARGET - target - (EFFECTIVE_LEVEL - RAW_LEVEL);
+  if (NEW_LEVEL < 0 || NEW_LEVEL > UCHAR_MAX)
+    return false;
+  char_setstatvalue_by_code(&stats, code, NEW_LEVEL);
+  character_stats_store(context, player, &stats, VALUES_ALL);
+  return true;
+}
+// NOLINTEND(bugprone-easily-swappable-parameters)
 
 int char_getvalue(BtechContext *context, DbRef player, const char *name) {
   return character_value_by_code(

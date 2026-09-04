@@ -8,12 +8,12 @@
  */
 static int fun_actual(void *call [[maybe_unused]]) { return 0; }
 
-static const BtechLuaEntry BTECH_BAD_ENTRIES[] = {
+static const BtechLuaNativeEntry BTECH_BAD_ENTRIES[] = {
     {"wrong", "system.actual", fun_actual},
 };
 
 void install_bad(lua_State *state) {
-  lua_btech_install_bindings(state, nullptr, "system", BTECH_BAD_ENTRIES,
-                             sizeof(BTECH_BAD_ENTRIES) /
-                                 sizeof(BTECH_BAD_ENTRIES[0]));
+  lua_btech_install_native_bindings(state, nullptr, "system", BTECH_BAD_ENTRIES,
+                                    sizeof(BTECH_BAD_ENTRIES) /
+                                        sizeof(BTECH_BAD_ENTRIES[0]));
 }

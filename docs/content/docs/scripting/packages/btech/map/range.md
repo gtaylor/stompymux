@@ -1,4 +1,5 @@
 ---
+draft: true
 title: range
 type: docs
 toc_hide: false

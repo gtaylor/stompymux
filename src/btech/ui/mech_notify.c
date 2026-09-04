@@ -224,7 +224,7 @@ void mech_los_broadcast_unit(Mech *mech, Mech *target, const char *message) {
   free_buf(oddbuff);
 }
 
-void map_broadcast(BattleMap *map, char *message) {
+void map_broadcast(BattleMap *map, const char *message) {
   /* Sends msg to everyone except the mech */
   int i;
   Mech *temp_mech;

@@ -13,15 +13,16 @@ void lua_setglobal(lua_State *state, const char *name);
 #define lua_pushcfunction(state, function)                                     \
   lua_pushcclosure((state), (function), 0)
 
-typedef struct BtechLuaEntry {
+typedef struct BtechLuaNativeEntry {
   const char *name;
   const char *qualified_name;
   int (*handler)(void *call);
-} BtechLuaEntry;
+} BtechLuaNativeEntry;
 
-void lua_btech_install_bindings(lua_State *state, void *package,
-                                const char *name, const BtechLuaEntry *entries,
-                                size_t entry_count);
+void lua_btech_install_native_bindings(lua_State *state, void *package,
+                                       const char *name,
+                                       const BtechLuaNativeEntry *entries,
+                                       size_t entry_count);
 
 typedef struct ChannelFlagDefinition {
   int value;

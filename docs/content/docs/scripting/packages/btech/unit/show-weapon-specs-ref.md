@@ -1,4 +1,5 @@
 ---
+draft: true
 title: show_weapon_specs_ref
 type: docs
 toc_hide: false

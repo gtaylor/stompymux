@@ -1,4 +1,5 @@
 ---
+draft: true
 title: damage
 type: docs
 toc_hide: false

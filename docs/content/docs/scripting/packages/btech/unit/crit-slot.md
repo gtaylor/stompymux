@@ -1,4 +1,5 @@
 ---
+draft: true
 title: crit_slot
 type: docs
 toc_hide: false

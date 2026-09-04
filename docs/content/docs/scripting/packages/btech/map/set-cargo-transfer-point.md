@@ -1,4 +1,5 @@
 ---
+draft: true
 title: set_cargo_transfer_point
 type: docs
 ---

@@ -1,4 +1,5 @@
 ---
+draft: true
 title: btech.system
 linkTitle: btech.system
 type: docs

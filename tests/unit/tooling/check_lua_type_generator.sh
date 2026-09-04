@@ -327,15 +327,15 @@ expect_failure src/mux/lua/packages/mux unrecognized_member_registration.c \
 expect_failure src/mux/lua/packages/mux bad_callable_name.c \
   'callable key and emitted function have different leaves'
 expect_failure src/btech btech_bad_name.c \
-  'BtechLuaEntry short name differs from qualified leaf'
+  'BtechLuaNativeEntry short name differs from qualified leaf'
 expect_failure src/btech btech_missing_contract.c \
-  'BtechLuaEntry lacks its exact LuaLS callable contract'
+  'BtechLuaNativeEntry lacks its exact LuaLS callable contract'
 expect_failure src/btech btech_orphan_callable.c \
-  'BTech callable does not exactly match a BtechLuaEntry'
+  'BTech callable does not exactly match a BtechLuaNativeEntry'
 expect_failure src/btech btech_malformed_entry.c \
-  'malformed BtechLuaEntry initializer'
+  'malformed BtechLuaNativeEntry initializer'
 expect_failure src/btech btech_package_mismatch.c \
-  'BtechLuaEntry qualified name differs from installer package/name'
+  'BtechLuaNativeEntry qualified name differs from installer package/name'
 expect_failure src/mux/lua/packages/mux catalog_mismatch.c \
   'LuaLS catalog differs from native values; missing: LOUD; extra: EXTRA'
 expect_failure src/mux/lua/packages/mux object_type_mismatch.c \

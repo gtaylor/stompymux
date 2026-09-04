@@ -27,7 +27,9 @@ size_t template_section_configuration_count(void);
 size_t template_unit_class_count(void);
 size_t template_movement_type_count(void);
 size_t template_critical_fire_mode_count(void);
+const char *template_critical_fire_mode_name(size_t index);
 size_t template_critical_ammo_mode_count(void);
+const char *template_critical_ammo_mode_name(size_t index);
 
 /* template.c */
 int count_special_items(void);
