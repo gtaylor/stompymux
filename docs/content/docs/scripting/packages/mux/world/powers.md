@@ -14,7 +14,9 @@ these values with [`Powers`](../type-powers/) methods; raw strings are rejected.
 
 Constants compare by power identity and stringify to their uppercase name.
 Unknown lookups and attempts to modify the namespace raise
-`mux.power.invalid`.
+`mux.power.invalid`. String conversion raises the invariant-only `mux.internal`
+error if a registered native power name exceeds the internal conversion
+buffer.
 
 ```lua
 local powers = mux.world.object(ctx.object):powers()

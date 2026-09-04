@@ -11,6 +11,9 @@ A `Flags` handle reads and changes the native flags on one live object. Create
 one with [`Object:flags`](../type-object/flags/). Methods accept only typed
 constants from [`mux.world.flags`](../flags/).
 
+`tostring(flags)` produces `flags(#<dbref>)`. It raises `mux.object.invalid`
+after the underlying object becomes stale.
+
 Changes run immediately as God through the native flag handlers, including
 XCODE transition side effects. They are not part of the State transaction and
 are not rolled back if the callback later fails.

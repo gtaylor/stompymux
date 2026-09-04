@@ -4,6 +4,7 @@ set -euo pipefail
 CMAKE_VERSION="${CMAKE_VERSION:-4.4.2}"
 JUST_VERSION="${JUST_VERSION:-1.57.0}"
 STYLUA_VERSION="${STYLUA_VERSION:-2.5.2}"
+LUA_LANGUAGE_SERVER_VERSION="3.19.1"
 
 CURL_OPTIONS=(
   --location
@@ -58,9 +59,23 @@ curl "${CURL_OPTIONS[@]}" \
   --output "/tmp/${STYLUA_ARCHIVE}"
 "${SUDO[@]}" unzip -oq "/tmp/${STYLUA_ARCHIVE}" -d /usr/local/bin
 
+LUA_LANGUAGE_SERVER_ARCHIVE="lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}-linux-x64.tar.gz"
+LUA_LANGUAGE_SERVER_INSTALL_DIR="/opt/lua-language-server-${LUA_LANGUAGE_SERVER_VERSION}"
+curl "${CURL_OPTIONS[@]}" \
+  "https://github.com/LuaLS/lua-language-server/releases/download/${LUA_LANGUAGE_SERVER_VERSION}/${LUA_LANGUAGE_SERVER_ARCHIVE}" \
+  --output "/tmp/${LUA_LANGUAGE_SERVER_ARCHIVE}"
+"${SUDO[@]}" install -d -m 0755 "${LUA_LANGUAGE_SERVER_INSTALL_DIR}"
+"${SUDO[@]}" tar --extract --gzip \
+  --file "/tmp/${LUA_LANGUAGE_SERVER_ARCHIVE}" \
+  --directory "${LUA_LANGUAGE_SERVER_INSTALL_DIR}"
+"${SUDO[@]}" ln --symbolic --force \
+  "${LUA_LANGUAGE_SERVER_INSTALL_DIR}/bin/lua-language-server" \
+  /usr/local/bin/lua-language-server
+
 rm -f \
   /tmp/apt.llvm.org.asc \
   "/tmp/${CMAKE_ARCHIVE}" \
   /tmp/just-install.sh \
-  "/tmp/${STYLUA_ARCHIVE}"
+  "/tmp/${STYLUA_ARCHIVE}" \
+  "/tmp/${LUA_LANGUAGE_SERVER_ARCHIVE}"
 "${SUDO[@]}" rm -rf /var/lib/apt/lists/*

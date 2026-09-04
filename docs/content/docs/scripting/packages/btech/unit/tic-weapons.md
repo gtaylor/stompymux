@@ -19,7 +19,7 @@ btech.unit.tic_weapons( unit, tic )
 `number unit`
 : The unit dbref.
 
-`number tic`
+`integer tic`
 : The zero-based TIC number.
 
 ### Returns

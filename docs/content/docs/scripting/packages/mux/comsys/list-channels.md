@@ -27,6 +27,8 @@ None.
 ### Raises
 
 - `mux.unavailable.checking` during `@lua/check`.
+- `mux.internal` if the native registry count changes while the channel list is
+  copied.
 
 ## Example
 

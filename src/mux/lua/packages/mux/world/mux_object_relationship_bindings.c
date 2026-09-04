@@ -34,18 +34,20 @@ static int lua_mux_push_relationship(lua_State *state, LuaMuxPackage *package,
 /**
  * Returns this exit's destination.
  *
- * @par Lua name `object:destination`
- * @par Lua signature `object:destination( )`
- * @par Lua parameters - None.
- * @par Lua returns - `destination` (`Object|nil`): The exit destination, or
- * `nil` when the exit is unlinked or its destination is being destroyed.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` when the receiver is not an exit or its
- * stored destination is invalid.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Object:destination
+ * @code{.lua}
+ * ---Returns this exit's destination, or nil when it is unlinked or the
+ * ---destination is being destroyed.
+ * ---@return Object? destination
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking)
+ * ---during `@lua/check`, or
+ * ---[`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when
+ * ---the receiver is not an exit or its stored destination is invalid.
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.object.invalid
+ * function Object:destination() end
+ * @endcode
  */
 static int lua_mux_object_destination(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -64,20 +66,18 @@ static int lua_mux_object_destination(lua_State *state) {
 /**
  * Sets this exit's destination or clears it with `nil`.
  *
- * @par Lua name `object:set_destination`
- * @par Lua signature `object:set_destination( destination )`
- * @par Lua parameters - `destination` (`number|Object|nil`) Live object capable
- * of containing objects, or `nil` to unlink this exit.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when the destination argument is omitted;
- * `LUA_ERROR_CODE_OBJECT_INVALID` when the receiver is not an exit or the
- * destination cannot contain objects; `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for
- * a receiver or destination being destroyed.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Object:set_destination
+ * @code{.lua}
+ * ---Sets this exit's destination, or clears it when `destination` is nil.
+ * ---@param destination DbRef|Object|nil Live object capable of containing objects, or nil to unlink this exit. This argument must be supplied explicitly.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `destination` is omitted, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when the receiver is not an exit or the destination cannot contain objects, or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable) when the receiver or destination is being destroyed.
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.object.unavailable
+ * function Object:set_destination(destination) end
+ * @endcode
  */
 static int lua_mux_object_set_destination(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -114,18 +114,20 @@ static int lua_mux_object_set_destination(lua_State *state) {
 /**
  * Returns this thing or player's home.
  *
- * @par Lua name `object:home`
- * @par Lua signature `object:home( )`
- * @par Lua parameters - None.
- * @par Lua returns - `home` (`Object|nil`): The object's home, or `nil` when
- * no home is assigned or the home is being destroyed.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` when the receiver is not a thing or player
- * or its stored home is invalid.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Object:home
+ * @code{.lua}
+ * ---Returns this thing or player's home, or nil when no home is assigned or the
+ * ---home is being destroyed.
+ * ---@return Object? home
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking)
+ * ---during `@lua/check`, or
+ * ---[`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when
+ * ---the receiver is not a thing or player or its stored home is invalid.
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.object.invalid
+ * function Object:home() end
+ * @endcode
  */
 static int lua_mux_object_home(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -143,21 +145,26 @@ static int lua_mux_object_home(lua_State *state) {
 /**
  * Sets this thing or player's home.
  *
- * @par Lua name `object:set_home`
- * @par Lua signature `object:set_home( new_home )`
- * @par Lua parameters - `new_home` (`number|Object`) Live room, thing, or
- * player to assign as the object's home.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when `new_home` is omitted;
- * `LUA_ERROR_CODE_OBJECT_INVALID` when the receiver is not a thing or player,
- * the destination cannot contain objects, or the object would be its own home;
- * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` when the receiver or destination is
- * being destroyed.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Object:set_home
+ * @code{.lua}
+ * ---Sets this thing or player's home to a live object capable of containing
+ * ---objects.
+ * ---@param new_home DbRef|Object Live room, thing, or player to assign as the object's home.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking)
+ * ---during `@lua/check`, [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid)
+ * ---when `new_home` is omitted,
+ * ---[`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when
+ * ---the receiver is not a thing or player, the home cannot contain objects, or
+ * ---the object would be its own home, or
+ * ---[`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable)
+ * ---when the receiver or home is being destroyed.
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.object.unavailable
+ * function Object:set_home(new_home) end
+ * @endcode
  */
 static int lua_mux_object_set_home(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -193,18 +200,20 @@ static int lua_mux_object_set_home(lua_State *state) {
 /**
  * Returns this thing or player's location.
  *
- * @par Lua name `object:location`
- * @par Lua signature `object:location( )`
- * @par Lua parameters - None.
- * @par Lua returns - `location` (`Object|nil`): The object's location, or
- * `nil` when no location is assigned or the location is being destroyed.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` when the receiver is not a thing or player
- * or its stored location is invalid.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Object:location
+ * @code{.lua}
+ * ---Returns this thing or player's current location, or nil when no location is
+ * ---assigned or the location is being destroyed.
+ * ---@return Object? location
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking)
+ * ---during `@lua/check`, or
+ * ---[`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when
+ * ---the receiver is not a thing or player or its stored location is invalid.
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.object.invalid
+ * function Object:location() end
+ * @endcode
  */
 static int lua_mux_object_location(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -222,17 +231,16 @@ static int lua_mux_object_location(lua_State *state) {
 /**
  * Returns this object's assigned zone.
  *
- * @par Lua name `object:zone`
- * @par Lua signature `object:zone( )`
- * @par Lua parameters - None.
- * @par Lua returns - `zone` (`Object|nil`): The assigned zone, or `nil` when
- * the object has no zone or its zone is being destroyed.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid receiver or stored zone.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Object:zone
+ * @code{.lua}
+ * ---Returns this object's assigned zone, or nil when no zone is assigned or the zone is being destroyed.
+ * ---@return Object? zone Assigned zone.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.object.invalid
+ * function Object:zone() end
+ * @endcode
  */
 static int lua_mux_object_zone(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -259,20 +267,18 @@ static int lua_mux_object_zone(lua_State *state) {
 /**
  * Assigns this object's zone, or clears it with `nil`.
  *
- * @par Lua name `object:set_zone`
- * @par Lua signature `object:set_zone( zone )`
- * @par Lua parameters - `zone` (`number|Object|nil`) Live thing or room to
- * assign, or `nil` to clear the object's zone.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when the zone argument is omitted;
- * `LUA_ERROR_CODE_OBJECT_INVALID` for invalid references or object kinds;
- * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for the receiver or zone being
- * destroyed.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Object:set_zone
+ * @code{.lua}
+ * ---Assigns this object's zone, or clears it when `zone` is nil.
+ * ---@param zone DbRef|Object|nil Live thing or room to assign, or nil to clear the zone. This argument must be supplied explicitly.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `zone` is omitted, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.object.unavailable
+ * function Object:set_zone(zone) end
+ * @endcode
  */
 static int lua_mux_object_set_zone(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -305,19 +311,16 @@ static int lua_mux_object_set_zone(lua_State *state) {
 /**
  * Returns this object's assigned affiliation.
  *
- * @par Lua name `object:affiliation`
- * @par Lua signature `object:affiliation( )`
- * @par Lua parameters - None.
- * @par Lua returns - `affiliation` (`Object|nil`): The assigned affiliation,
- * or `nil` when the object has no affiliation or its affiliate is being
- * destroyed.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid receiver or stored
- * affiliation.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Object:affiliation
+ * @code{.lua}
+ * ---Returns this object's assigned affiliation, or nil when none is assigned or the affiliate is being destroyed.
+ * ---@return Object? affiliation Assigned affiliation.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) for an invalid receiver or stored affiliation.
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.object.invalid
+ * function Object:affiliation() end
+ * @endcode
  */
 static int lua_mux_object_affiliation(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -345,20 +348,18 @@ static int lua_mux_object_affiliation(lua_State *state) {
 /**
  * Assigns this object's affiliation, or clears it with `nil`.
  *
- * @par Lua name `object:set_affiliation`
- * @par Lua signature `object:set_affiliation( affiliation )`
- * @par Lua parameters - `affiliation` (`number|Object|nil`) Live object to
- * assign, or `nil` to clear the object's affiliation.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when the affiliation argument is omitted;
- * `LUA_ERROR_CODE_OBJECT_INVALID` for invalid references;
- * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for the receiver or affiliation being
- * destroyed.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Object:set_affiliation
+ * @code{.lua}
+ * ---Assigns this object's affiliation, or clears it when `affiliation` is nil.
+ * ---@param affiliation DbRef|Object|nil Any live object to assign, or nil to clear the affiliation. This argument must be supplied explicitly.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `affiliation` is omitted, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) for an invalid reference, or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable) when either object is being destroyed.
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.object.unavailable
+ * function Object:set_affiliation(affiliation) end
+ * @endcode
  */
 static int lua_mux_object_set_affiliation(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -389,17 +390,16 @@ static int lua_mux_object_set_affiliation(lua_State *state) {
 /**
  * Returns this object's direct Lua parent path.
  *
- * @par Lua name `object:lua_parent`
- * @par Lua signature `object:lua_parent( )`
- * @par Lua parameters - None.
- * @par Lua returns - `parent` (`string|nil`): The object's direct,
- * `object_logic`-relative Lua parent path, or `nil` when none is assigned.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid receiver.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Object:lua_parent
+ * @code{.lua}
+ * ---Returns this object's direct Lua parent path, or nil when none is assigned.
+ * ---@return string? parent `object_logic`-relative parent path.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.object.invalid
+ * function Object:lua_parent() end
+ * @endcode
  */
 static int lua_mux_object_lua_parent(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -419,23 +419,19 @@ static int lua_mux_object_lua_parent(lua_State *state) {
 /**
  * Assigns this object's direct Lua parent path, or clears it with `nil`.
  *
- * @par Lua name `object:set_lua_parent`
- * @par Lua signature `object:set_lua_parent( parent )`
- * @par Lua parameters - `parent` (`string|nil`) Existing
- * `object_logic`-relative `.lua` path to assign, or `nil` to clear the
- * object's Lua parent.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when the parent is omitted, is not a string
- * or nil, or contains an embedded NUL byte;
- * `LUA_ERROR_CODE_MODULE_INVALID` for an invalid or unavailable parent path;
- * `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid receiver;
- * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` when the receiver is being destroyed or
- * the parent path cannot be stored.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Object:set_lua_parent
+ * @code{.lua}
+ * ---Assigns this object's direct Lua parent path, or clears it when `parent` is nil.
+ * ---@param parent string|nil Existing `object_logic`-relative `.lua` path, or nil to clear it. This argument must be supplied explicitly.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `parent` is omitted or malformed, [`mux.error.codes.module.invalid`](lua://mux.error.codes.module.invalid) for an invalid or unavailable path, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.module.invalid
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.object.unavailable
+ * function Object:set_lua_parent(parent) end
+ * @endcode
  */
 static int lua_mux_object_set_lua_parent(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);

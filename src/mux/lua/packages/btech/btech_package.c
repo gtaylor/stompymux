@@ -121,6 +121,28 @@ void lua_btech_install_bindings(lua_State *state, LuaBtechPackage *package,
   lua_setfield(state, -2, name);
 }
 
+/**
+ * Installs the root BattleTech package and its public namespaces.
+ *
+ * @par LuaLS definition btech alias btech.list-item
+ * @code{.lua}
+ * ---@alias BtechListItem string|number Item returned by a legacy BattleTech list result.
+ * @endcode
+ *
+ * @par LuaLS definition btech namespace btech.package
+ * @code{.lua}
+ * ---The native BattleTech host API. All functions are unavailable during `@lua/check`.
+ * ---@class BtechPackage
+ * ---@field unit BtechUnitPackage Live units, templates, combat values, and status.
+ * ---@field map BtechMapPackage Maps, geometry, line of sight, and map messaging.
+ * ---@field parts BtechPartsPackage Part catalogues, installed parts, stores, and costs.
+ * ---@field character BtechCharacterPackage Character values, skills, experience, and piloting rolls.
+ * ---@field repair BtechRepairPackage Damage and technician-status queries.
+ * ---@field system BtechSystemPackage Special-object fields and server-wide queries.
+ * ---@field error BtechErrorPackage BattleTech checked error codes.
+ * btech = {}
+ * @endcode
+ */
 void lua_btech_package_install(lua_State *state, LuaBtechPackage *package) {
   lua_newtable(state);
   lua_btech_install_unit_bindings(state, package);

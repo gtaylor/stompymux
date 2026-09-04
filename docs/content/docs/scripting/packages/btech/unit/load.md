@@ -24,7 +24,7 @@ btech.unit.load( unit, reference )
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Notes

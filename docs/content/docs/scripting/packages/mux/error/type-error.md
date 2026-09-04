@@ -47,8 +47,9 @@ error:is(code)
 ```
 
 `string or code node code`
-: A dotted code string or a node from [`mux.error.codes`](../codes/) or
-  [`mux.error.namespace`](../namespace/).
+: A comparison string or a node from [`mux.error.codes`](../codes/) or
+  [`mux.error.namespace`](../namespace/). Plain strings are used verbatim and
+  are not syntax-validated.
 
 Returns `true` when this error's code is an exact match or begins with `code`
 at a dotted segment boundary.

@@ -27,6 +27,20 @@ typedef struct LuaCommandAccessEntry {
   const char *name;
 } LuaCommandAccessEntry;
 
+/**
+ * @par LuaLS definition mux catalog mux.world.access
+ * @code{.lua}
+ * ---Immutable lookup namespace for command-access constants.
+ * ---
+ * ---Raises [`mux.error.codes.access.invalid`](lua://mux.error.codes.access.invalid)
+ * ---for unknown or non-string keys and attempted mutation.
+ * ---@class AccessNamespace
+ * ---@field PUBLIC Access Allows every invoker; also the default when access is omitted.
+ * ---@field WIZARD Access Allows Wizards and God.
+ * ---@field GOD Access Allows only God.
+ * ---@see mux.error.codes.access.invalid
+ * @endcode
+ */
 static const LuaCommandAccessEntry LUA_COMMAND_ACCESS_ENTRIES[] = {
     {LUA_COMMAND_ACCESS_PUBLIC, "PUBLIC"},
     {LUA_COMMAND_ACCESS_WIZARD, "WIZARD"},
@@ -56,6 +70,9 @@ static void lua_command_access_push(lua_State *state,
   lua_setmetatable(state, -2);
 }
 
+/**
+ * @par LuaLS ignore mux __tostring -- String conversion is represented by the Access class declaration.
+ */
 static int lua_command_access_tostring(lua_State *state) {
   LuaCommandAccessConstant *constant =
       luaL_checkudata(state, 1, LUA_COMMAND_ACCESS_METATABLE);
@@ -64,6 +81,9 @@ static int lua_command_access_tostring(lua_State *state) {
   return 1;
 }
 
+/**
+ * @par LuaLS ignore mux __eq -- LuaCATS has no equality-operator declaration; Access equality semantics are documented on the class.
+ */
 static int lua_command_access_equal(lua_State *state) {
   LuaCommandAccessConstant *left =
       luaL_checkudata(state, 1, LUA_COMMAND_ACCESS_METATABLE);
@@ -74,11 +94,17 @@ static int lua_command_access_equal(lua_State *state) {
   return 1;
 }
 
+/**
+ * @par LuaLS ignore mux __newindex -- Immutability is represented by the Access class declaration.
+ */
 static int lua_command_access_newindex(lua_State *state) {
   return lua_error_raise(state, LUA_ERROR_CODE_ACCESS_INVALID,
                          "command access constants are immutable");
 }
 
+/**
+ * @par LuaLS ignore mux __index -- Dynamic lookup is represented by the AccessNamespace table declaration.
+ */
 static int lua_command_access_namespace_index(lua_State *state) {
   if (lua_type(state, 2) != LUA_TSTRING)
     return lua_error_arg(state, 2, LUA_ERROR_CODE_ACCESS_INVALID,
@@ -98,6 +124,9 @@ static int lua_command_access_namespace_index(lua_State *state) {
                        "unknown command access constant '%s'", name);
 }
 
+/**
+ * @par LuaLS ignore mux __newindex -- Immutability is represented by the AccessNamespace table declaration.
+ */
 static int lua_command_access_namespace_newindex(lua_State *state) {
   return lua_error_raise(state, LUA_ERROR_CODE_ACCESS_INVALID,
                          "mux.world.access constants are immutable");
@@ -129,12 +158,8 @@ bool lua_command_access_read(lua_State *state, int entry,
 /**
  * Installs typed command-access constants.
  *
- * @par Lua name `mux.world.access`
- * @par Lua constants - `PUBLIC` (`Access`) Allows every invoker.
- * - `WIZARD` (`Access`) Allows Wizards and God.
- * - `GOD` (`Access`) Allows only God.
- * @par Lua errors - `LUA_ERROR_CODE_ACCESS_INVALID` for unknown or non-string
- * lookups and attempted mutation.
+ * The namespace is published as `mux.world.access`. Unknown or non-string
+ * lookups and attempted mutation raise `LUA_ERROR_CODE_ACCESS_INVALID`.
  * @param[in,out] state Lua state whose top value is the `mux.world` table.
  */
 void lua_command_access_install_namespace(lua_State *state) {

@@ -36,9 +36,13 @@ Nothing.
 mux.session.flow_start(ctx.descriptor, "confirm_delete.lua", "confirm")
 ```
 
-## Notes
+## Errors and availability
 
-Raises an error if the descriptor does not exist, already has a flow, or the module lacks the requested step. This function is unavailable during `@lua/check`.
+Raises `mux.connection.invalid` if the descriptor does not exist,
+`mux.connection.unavailable` if it already has a flow or flow support is not
+available, and `mux.module.invalid` if the module cannot be loaded or lacks the
+requested step. This function raises `mux.unavailable.checking` during
+`@lua/check`.
 
 ## See Also
 

@@ -6,6 +6,14 @@
 #include "mux/lua/packages/btech/btech_package.h"
 #include "mux/lua/packages/btech/btech_package_internal.h"
 
+/**
+ * @par LuaLS definition btech namespace btech.map
+ * @code{.lua}
+ * ---Battle maps, geometry, line of sight, and map messaging.
+ * ---@class BtechMapPackage
+ * local btech_map = {}
+ * @endcode
+ */
 static const BtechLuaEntry BTECH_MAP_ENTRIES[] = {
     {"blast_zones", "map.blast_zones", fun_btlistblz},
     {"elevation", "map.elevation", fun_btmapelev},

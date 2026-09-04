@@ -6,6 +6,14 @@
 #include "mux/lua/packages/btech/btech_package.h"
 #include "mux/lua/packages/btech/btech_package_internal.h"
 
+/**
+ * @par LuaLS definition btech namespace btech.repair
+ * @code{.lua}
+ * ---Damage and technician-status queries.
+ * ---@class BtechRepairPackage
+ * local btech_repair = {}
+ * @endcode
+ */
 static const BtechLuaEntry BTECH_REPAIR_ENTRIES[] = {
     {"damages", "repair.damages", fun_btdamages},
     {"job_count", "repair.job_count", fun_btnumrepjobs},

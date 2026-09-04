@@ -213,19 +213,18 @@ static bool descriptor_write_text(void *data, const GMV *descriptor,
 /**
  * Lists live unit objects assigned to a zone.
  *
- * @par Lua name `btech.system.zone_units`
- * @par Lua signature `btech.system.zone_units( zone )`
- * @par Lua parameters - `zone` (`number`) The zone dbref.
- * @par Lua returns - `values` (`table`): A flat array of converted legacy
- * result tokens.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.system.zone_units
+ * @code{.lua}
+ * ---Lists live unit dbrefs assigned to a zone. A trailing `-1` indicates that the legacy output was truncated.
+ * ---@param zone integer
+ * ---@return integer[] units Unit dbrefs, possibly followed by the `-1` truncation sentinel.
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_system.zone_units(zone) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -276,22 +275,20 @@ BtechScriptResult fun_zmechs(BtechScriptCall *call) {
 /**
  * Writes a script-writable native field on a live special object.
  *
- * @par Lua name `btech.system.set_xcode_value`
- * @par Lua signature `btech.system.set_xcode_value( object, name, value )`
- * @par Lua parameters - `object` (`number`) The special-object dbref.
- * - `name` (`string`) The writable field name.
- * - `value` (`string|number`) The new value, converted according to the field
- * type.
- * @par Lua returns - `success` (`boolean`): true after the operation completes
- * without a legacy error.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.system.set_xcode_value
+ * @code{.lua}
+ * ---Writes a script-writable native field on a live special object.
+ * ---@param object integer
+ * ---@param name string Native field name, matched ASCII-case-insensitively.
+ * ---@param value string|number
+ * ---@return true success
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_system.set_xcode_value(object, name, value) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -423,19 +420,19 @@ static char *retrieve_value(void *data, const GMV *descriptor, char *buffer) {
 /**
  * Reads a script-visible native field from a live special object.
  *
- * @par Lua name `btech.system.xcode_value`
- * @par Lua signature `btech.system.xcode_value( object, name )`
- * @par Lua parameters - `object` (`number`) The special-object dbref.
- * - `name` (`string`) The field name.
- * @par Lua returns - `result` (`string`): The handler's serialized text result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.system.xcode_value
+ * @code{.lua}
+ * ---Reads a script-visible native field from a live special object.
+ * ---@param object integer
+ * ---@param name string Native field name, matched ASCII-case-insensitively.
+ * ---@return string result
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_system.xcode_value(object, name) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -481,19 +478,19 @@ BtechScriptResult fun_btgetxcodevalue(BtechScriptCall *call) {
 /**
  * Reads a script-visible native field from a unit template.
  *
- * @par Lua name `btech.system.xcode_value_ref`
- * @par Lua signature `btech.system.xcode_value_ref( reference, name )`
- * @par Lua parameters - `reference` (`string`) The unit template reference.
- * - `name` (`string`) The field name.
- * @par Lua returns - `result` (`string`): The handler's serialized text result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.system.xcode_value_ref
+ * @code{.lua}
+ * ---Reads a script-visible native field from a unit template.
+ * ---@param reference string
+ * ---@param name string Native field name, matched ASCII-case-insensitively.
+ * ---@return string result
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_system.xcode_value_ref(reference, name) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */

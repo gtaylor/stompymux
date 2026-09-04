@@ -19,10 +19,10 @@ btech.unit.make_pilot_roll( unit, roll_modifier, damage_modifier )
 `number unit`
 : The unit dbref.
 
-`number roll_modifier`
+`integer roll_modifier`
 : Modifier applied to the piloting roll.
 
-`number damage_modifier`
+`integer damage_modifier`
 : Modifier passed to falling damage.
 
 ### Returns

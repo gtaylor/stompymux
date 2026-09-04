@@ -21,8 +21,9 @@ mux.error.wrap(err, code, message)
   Lua value is normalized to a `mux.runtime` error before becoming the cause.
 
 `string or code node code`
-: A dotted code string or a node from [`mux.error.codes`](../codes/) or
-  [`mux.error.namespace`](../namespace/).
+: A code string or a node from [`mux.error.codes`](../codes/) or
+  [`mux.error.namespace`](../namespace/). Plain strings are accepted verbatim;
+  this function does not validate their syntax.
 
 `string message`
 : A readable description of the additional context.
@@ -44,7 +45,9 @@ end
 ## Notes
 
 Use [`Error:root`](../type-error/) to retrieve the deepest table-valued cause.
-`wrap` does not attach a traceback; [`mux.error.pcall`](../pcall/) does.
+`wrap` does not validate its code string or attach a traceback;
+[`mux.error.pcall`](../pcall/) does attach a traceback when it catches a
+failure.
 
 ## See Also
 

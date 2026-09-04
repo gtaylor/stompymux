@@ -21,8 +21,9 @@ mux.error.new({ code = "area.missing", message = "area was not found", detail = 
   optional `detail` and `cause` fields.
 
 `string or code node fields.code`
-: A dotted code string or a node from [`mux.error.codes`](../codes/) or
-  [`mux.error.namespace`](../namespace/).
+: A code string or a node from [`mux.error.codes`](../codes/) or
+  [`mux.error.namespace`](../namespace/). Plain strings are accepted verbatim;
+  this function does not validate their syntax.
 
 `string fields.message`
 : A readable description of the error.
@@ -50,7 +51,8 @@ return nil, mux.error.new({
 ## Notes
 
 This function copies `code`, `message`, and non-`nil` `detail` and `cause`
-into a new `Error`; it does not validate or normalize the cause.
+into a new `Error`; it does not validate the code string or normalize the
+cause.
 
 ## See Also
 

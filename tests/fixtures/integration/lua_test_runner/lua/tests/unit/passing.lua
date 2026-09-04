@@ -20,6 +20,7 @@ return t.suite("passing", {
       end)
       expect.falsy(ok)
       expect.is_error(err, codes.runtime)
+      ---@cast err Error
       expect.truthy(type(err.traceback) == "string" and #err.traceback > 0)
       local cause = mux.error.new({ code = "author.cause", message = "cause" })
       local wrapped = mux.error.wrap(cause, "author.wrapper", "wrapper")

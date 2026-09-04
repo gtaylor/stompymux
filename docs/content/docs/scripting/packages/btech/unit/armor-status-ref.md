@@ -4,7 +4,8 @@ type: docs
 toc_hide: false
 ---
 
-Returns serialized armor values for one section of a unit template.
+Returns serialized armor values for one section of a unit template or aggregate
+armor and internal-structure totals.
 
 ## Function
 
@@ -20,12 +21,16 @@ btech.unit.armor_status_ref( reference, section )
 : The unit template reference.
 
 `string section`
-: The section name.
+: A full section name, matched without regard to case. Otherwise the legacy
+  resolver uses a class-dependent one- or two-character prefix and may ignore
+  trailing characters. The special selector `all` returns aggregate totals and
+  must be exactly lowercase.
 
 ### Returns
 
 `string result`
-: The handler's serialized text result.
+: Per-section armor, internal, and rear-armor values, or aggregate current and
+  original armor/internal totals for `all`.
 
 ## Notes
 

@@ -109,6 +109,9 @@ static LuaMuxNamedConstant *lua_mux_check_named_constant(lua_State *state,
   return constant;
 }
 
+/**
+ * @par LuaLS ignore mux __tostring -- String conversion is represented by the Flag and Power class declarations.
+ */
 static int lua_mux_constant_tostring(lua_State *state) {
   LuaMuxNamedConstant *constant = lua_touserdata(state, 1);
 
@@ -116,6 +119,9 @@ static int lua_mux_constant_tostring(lua_State *state) {
   return 1;
 }
 
+/**
+ * @par LuaLS ignore mux __eq -- LuaCATS has no equality-operator declaration; Flag and Power equality semantics are documented on their classes.
+ */
 static int lua_mux_constant_equal(lua_State *state) {
   LuaMuxNamedConstant *left = lua_touserdata(state, 1);
   LuaMuxNamedConstant *right = lua_touserdata(state, 2);
@@ -125,11 +131,17 @@ static int lua_mux_constant_equal(lua_State *state) {
   return 1;
 }
 
+/**
+ * @par LuaLS ignore mux __newindex -- Immutability is represented by the Flag and Power class declarations.
+ */
 static int lua_mux_constant_newindex(lua_State *state) {
   return lua_error_raise(state, LUA_ERROR_CODE_ARG_INVALID,
                          "flag and power constants are immutable");
 }
 
+/**
+ * @par LuaLS ignore mux __index -- Dynamic lookup is represented by the flag and power namespace table declarations.
+ */
 static int lua_mux_constant_namespace_index(lua_State *state) {
   LuaMuxConstantNamespace *name_space = lua_touserdata(state, 1);
   LuaErrorCode code = name_space->powers ? LUA_ERROR_CODE_POWER_INVALID
@@ -163,6 +175,9 @@ static int lua_mux_constant_namespace_index(lua_State *state) {
                        name_space->powers ? "power" : "flag", name);
 }
 
+/**
+ * @par LuaLS ignore mux __newindex -- Immutability is represented by the flag and power namespace table declarations.
+ */
 static int lua_mux_constant_namespace_newindex(lua_State *state) {
   LuaMuxConstantNamespace *name_space = lua_touserdata(state, 1);
 
@@ -189,16 +204,16 @@ static void lua_mux_push_object_set(lua_State *state, LuaMuxObject *object,
 /**
  * Creates a flag collection handle for this object.
  *
- * @par Lua name `object:flags`
- * @par Lua signature `object:flags( )`
- * @par Lua parameters - None.
- * @par Lua returns - `flags` (`Flags`): The object's flag collection.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Object;
- * `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Object:flags
+ * @code{.lua}
+ * ---Creates a handle for this object's flags.
+ * ---@return Flags flags
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) or [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.unavailable.checking
+ * function Object:flags() end
+ * @endcode
  */
 static int lua_mux_object_flags(lua_State *state) {
   LuaMuxObject *object = lua_mux_check_object_handle(state, 1);
@@ -211,16 +226,16 @@ static int lua_mux_object_flags(lua_State *state) {
 /**
  * Creates a power collection handle for this object.
  *
- * @par Lua name `object:powers`
- * @par Lua signature `object:powers( )`
- * @par Lua parameters - None.
- * @par Lua returns - `powers` (`Powers`): The object's power collection.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Object;
- * `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Object:powers
+ * @code{.lua}
+ * ---Creates a handle for this object's powers.
+ * ---@return Powers powers
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) or [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.unavailable.checking
+ * function Object:powers() end
+ * @endcode
  */
 static int lua_mux_object_powers(lua_State *state) {
   LuaMuxObject *object = lua_mux_check_object_handle(state, 1);
@@ -233,14 +248,15 @@ static int lua_mux_object_powers(lua_State *state) {
 /**
  * Lists the flags currently set on an object.
  *
- * @par Lua name `flags:list`
- * @par Lua signature `flags:list( )`
- * @par Lua parameters - None.
- * @par Lua returns - `values` (`table`): An array of `Flag` constants in
- * native registry order.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Flags handle.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Flags:list
+ * @code{.lua}
+ * ---Lists set flags in native registry order.
+ * ---@return Flag[] values
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+ * ---@see mux.error.codes.object.invalid
+ * function Flags:list() end
+ * @endcode
  */
 static int lua_mux_flags_list(lua_State *state) {
   LuaMuxObjectSet *handle =
@@ -265,14 +281,15 @@ static int lua_mux_flags_list(lua_State *state) {
 /**
  * Lists the powers currently granted to an object.
  *
- * @par Lua name `powers:list`
- * @par Lua signature `powers:list( )`
- * @par Lua parameters - None.
- * @par Lua returns - `values` (`table`): An array of `Power` constants in
- * native registry order.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Powers handle.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Powers:list
+ * @code{.lua}
+ * ---Lists granted powers in native registry order.
+ * ---@return Power[] values
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+ * ---@see mux.error.codes.object.invalid
+ * function Powers:list() end
+ * @endcode
  */
 static int lua_mux_powers_list(lua_State *state) {
   LuaMuxObjectSet *handle =
@@ -298,14 +315,17 @@ static int lua_mux_powers_list(lua_State *state) {
 /**
  * Tests whether an object has a flag.
  *
- * @par Lua name `flags:has`
- * @par Lua signature `flags:has( flag )`
- * @par Lua parameters - `flag` (`Flag`) A `mux.world.flags` constant.
- * @par Lua returns - `present` (`boolean`): Whether the flag is set.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Flags handle;
- * `LUA_ERROR_CODE_FLAG_INVALID` for a value that is not a Flag constant.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Flags:has
+ * @code{.lua}
+ * ---Tests whether this object has a flag.
+ * ---@param flag Flag Checked constant from [`mux.world.flags`](lua://mux.world.flags).
+ * ---@return boolean present
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) or [`mux.error.codes.flag.invalid`](lua://mux.error.codes.flag.invalid).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.flag.invalid
+ * function Flags:has(flag) end
+ * @endcode
  */
 static int lua_mux_flags_has(lua_State *state) {
   LuaMuxObjectSet *handle =
@@ -323,14 +343,17 @@ static int lua_mux_flags_has(lua_State *state) {
 /**
  * Tests whether an object has a power.
  *
- * @par Lua name `powers:has`
- * @par Lua signature `powers:has( power )`
- * @par Lua parameters - `power` (`Power`) A `mux.world.powers` constant.
- * @par Lua returns - `present` (`boolean`): Whether the power is granted.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Powers handle;
- * `LUA_ERROR_CODE_POWER_INVALID` for a value that is not a Power constant.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Powers:has
+ * @code{.lua}
+ * ---Tests whether this object has a power.
+ * ---@param power Power Checked constant from [`mux.world.powers`](lua://mux.world.powers).
+ * ---@return boolean present
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) or [`mux.error.codes.power.invalid`](lua://mux.error.codes.power.invalid).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.power.invalid
+ * function Powers:has(power) end
+ * @endcode
  */
 static int lua_mux_powers_has(lua_State *state) {
   LuaMuxObjectSet *handle =
@@ -392,16 +415,19 @@ static int lua_mux_flags_change(lua_State *state, bool value) {
 /**
  * Adds a flag and reports whether the object changed.
  *
- * @par Lua name `flags:add`
- * @par Lua signature `flags:add( flag )`
- * @par Lua parameters - `flag` (`Flag`) A `mux.world.flags` constant.
- * @par Lua returns - `changed` (`boolean`): True when the flag was newly set.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Flags handle;
- * `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`;
- * `LUA_ERROR_CODE_FLAG_INVALID` for a value that is not a Flag constant;
- * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` when native policy rejects the change.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Flags:add
+ * @code{.lua}
+ * ---Adds a flag and reports whether the object changed.
+ * ---@param flag Flag Checked constant from [`mux.world.flags`](lua://mux.world.flags).
+ * ---@return boolean changed
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.flag.invalid`](lua://mux.error.codes.flag.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.flag.invalid
+ * ---@see mux.error.codes.object.unavailable
+ * function Flags:add(flag) end
+ * @endcode
  */
 static int lua_mux_flags_add(lua_State *state) {
   return lua_mux_flags_change(state, true);
@@ -410,16 +436,19 @@ static int lua_mux_flags_add(lua_State *state) {
 /**
  * Removes a flag and reports whether the object changed.
  *
- * @par Lua name `flags:remove`
- * @par Lua signature `flags:remove( flag )`
- * @par Lua parameters - `flag` (`Flag`) A `mux.world.flags` constant.
- * @par Lua returns - `changed` (`boolean`): True when the flag was removed.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Flags handle;
- * `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`;
- * `LUA_ERROR_CODE_FLAG_INVALID` for a value that is not a Flag constant;
- * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` when native policy rejects the change.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Flags:remove
+ * @code{.lua}
+ * ---Removes a flag and reports whether the object changed.
+ * ---@param flag Flag Checked constant from [`mux.world.flags`](lua://mux.world.flags).
+ * ---@return boolean changed
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.flag.invalid`](lua://mux.error.codes.flag.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.flag.invalid
+ * ---@see mux.error.codes.object.unavailable
+ * function Flags:remove(flag) end
+ * @endcode
  */
 static int lua_mux_flags_remove(lua_State *state) {
   return lua_mux_flags_change(state, false);
@@ -454,15 +483,18 @@ static int lua_mux_powers_change(lua_State *state, bool value) {
 /**
  * Grants a power and reports whether the object changed.
  *
- * @par Lua name `powers:add`
- * @par Lua signature `powers:add( power )`
- * @par Lua parameters - `power` (`Power`) A `mux.world.powers` constant.
- * @par Lua returns - `changed` (`boolean`): True when newly granted.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Powers handle;
- * `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`;
- * `LUA_ERROR_CODE_POWER_INVALID` for a value that is not a Power constant.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Powers:add
+ * @code{.lua}
+ * ---Grants a power and reports whether the object changed.
+ * ---@param power Power Checked constant from [`mux.world.powers`](lua://mux.world.powers).
+ * ---@return boolean changed
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), or [`mux.error.codes.power.invalid`](lua://mux.error.codes.power.invalid).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.power.invalid
+ * function Powers:add(power) end
+ * @endcode
  */
 static int lua_mux_powers_add(lua_State *state) {
   return lua_mux_powers_change(state, true);
@@ -471,20 +503,26 @@ static int lua_mux_powers_add(lua_State *state) {
 /**
  * Removes a power and reports whether the object changed.
  *
- * @par Lua name `powers:remove`
- * @par Lua signature `powers:remove( power )`
- * @par Lua parameters - `power` (`Power`) A `mux.world.powers` constant.
- * @par Lua returns - `changed` (`boolean`): True when removed.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Powers handle;
- * `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`;
- * `LUA_ERROR_CODE_POWER_INVALID` for a value that is not a Power constant.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable Powers:remove
+ * @code{.lua}
+ * ---Removes a power and reports whether the object changed.
+ * ---@param power Power Checked constant from [`mux.world.powers`](lua://mux.world.powers).
+ * ---@return boolean changed
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), or [`mux.error.codes.power.invalid`](lua://mux.error.codes.power.invalid).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.power.invalid
+ * function Powers:remove(power) end
+ * @endcode
  */
 static int lua_mux_powers_remove(lua_State *state) {
   return lua_mux_powers_change(state, false);
 }
 
+/**
+ * @par LuaLS ignore mux __tostring -- String conversion is represented by the Flags and Powers class declarations.
+ */
 static int lua_mux_object_set_tostring(lua_State *state) {
   bool powers = luaL_testudata(state, 1, LUA_MUX_POWERS_METATABLE) != nullptr;
   LuaMuxObjectSet *handle = lua_mux_check_object_set(
@@ -553,6 +591,44 @@ static void lua_mux_install_constant_namespace(lua_State *state,
   lua_setfield(state, -2, powers ? "powers" : "flags");
 }
 
+/**
+ * @par LuaLS definition mux type constant.values
+ * @code{.lua}
+ * ---A checked flag constant obtained from [`mux.world.flags`](lua://mux.world.flags).
+ * ---Its string form is the canonical uppercase native name, and equality compares
+ * ---the native flag identity within the current runtime.
+ * ---String conversion raises [`mux.error.codes.internal`](lua://mux.error.codes.internal) if a registered native name exceeds the internal conversion buffer.
+ * ---@class Flag
+ *
+ * ---A checked power constant obtained from [`mux.world.powers`](lua://mux.world.powers).
+ * ---Its string form is the canonical uppercase native name, and equality compares
+ * ---the native power identity within the current runtime.
+ * ---String conversion raises [`mux.error.codes.internal`](lua://mux.error.codes.internal) if a registered native name exceeds the internal conversion buffer.
+ * ---@class Power
+ *
+ * ---A checked command-access constant obtained from [`mux.world.access`](lua://mux.world.access).
+ * ---Its string form is its uppercase name, and equality compares access identity.
+ * ---@class Access
+ * @endcode
+ *
+ * @par LuaLS definition mux type flags
+ * @code{.lua}
+ * ---A generation-checked view of the flags set on one object. `tostring`
+ * ---returns `flags(#<dbref>)`; a stale object raises
+ * ---[`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+ * ---@class Flags
+ * local Flags = {}
+ * @endcode
+ *
+ * @par LuaLS definition mux type powers
+ * @code{.lua}
+ * ---A generation-checked view of the powers granted to one object. `tostring`
+ * ---returns `powers(#<dbref>)`; a stale object raises
+ * ---[`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+ * ---@class Powers
+ * local Powers = {}
+ * @endcode
+ */
 void lua_mux_install_flag_power_bindings(lua_State *state,
                                          LuaMuxPackage *package) {
   lua_mux_install_constant_metatable(state, LUA_MUX_FLAG_METATABLE);

@@ -6,6 +6,14 @@
 #include "mux/lua/packages/btech/btech_package.h"
 #include "mux/lua/packages/btech/btech_package_internal.h"
 
+/**
+ * @par LuaLS definition btech namespace btech.system
+ * @code{.lua}
+ * ---Special-object fields and server-wide BattleTech queries.
+ * ---@class BtechSystemPackage
+ * local btech_system = {}
+ * @endcode
+ */
 static const BtechLuaEntry BTECH_SYSTEM_ENTRIES[] = {
     {"design_exists", "system.design_exists", fun_btdesignex},
     {"lag", "system.lag", fun_btlag},

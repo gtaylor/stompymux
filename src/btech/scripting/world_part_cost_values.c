@@ -26,19 +26,18 @@ static PartMatchResult cost_part_match(BtechScriptCall *call) {
 /**
  * Returns the configured cost of a part.
  *
- * @par Lua name `btech.parts.cost`
- * @par Lua signature `btech.parts.cost( part_name )`
- * @par Lua parameters - `part_name` (`string`) A recognized long or very-long
- * part name.
- * @par Lua returns - `value` (`number`): The numeric result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.parts.cost
+ * @code{.lua}
+ * ---Returns the configured cost of a recognized part.
+ * ---@param part_name string
+ * ---@return number cost
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_parts.cost(part_name) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -58,21 +57,19 @@ BtechScriptResult fun_btgetpartcost(BtechScriptCall *call) {
 /**
  * Sets the configured cost of a part.
  *
- * @par Lua name `btech.parts.set_cost`
- * @par Lua signature `btech.parts.set_cost( part_name, cost )`
- * @par Lua parameters - `part_name` (`string`) A recognized long or very-long
- * part name.
- * - `cost` (`number`) The non-negative cost.
- * @par Lua returns - `success` (`boolean`): true after the operation completes
- * without a legacy error.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.parts.set_cost
+ * @code{.lua}
+ * ---Sets the configured unsigned cost of a recognized part. The native parser currently accepts a leading sign, so negative inputs wrap into the unsigned range.
+ * ---@param part_name string
+ * ---@param cost integer
+ * ---@return true success
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_parts.set_cost(part_name, cost) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */

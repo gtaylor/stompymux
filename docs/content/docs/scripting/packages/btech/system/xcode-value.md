@@ -20,7 +20,7 @@ btech.system.xcode_value( object, name )
 : The special-object dbref.
 
 `string name`
-: The field name.
+: The field name, matched without regard to case.
 
 ### Returns
 

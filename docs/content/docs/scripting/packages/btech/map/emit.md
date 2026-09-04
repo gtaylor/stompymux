@@ -26,7 +26,7 @@ btech.map.emit( map, message )
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Function
@@ -44,7 +44,7 @@ btech.map.emit( map, x, y, range, message )
 `number map`
 : The map dbref.
 
-`number x, y`
+`integer x, y`
 : The origin hex coordinates.
 
 `number range`
@@ -55,7 +55,7 @@ btech.map.emit( map, x, y, range, message )
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Function
@@ -73,8 +73,11 @@ btech.map.emit( map, x, y, z, range, message )
 `number map`
 : The map dbref.
 
-`number x, y, z`
-: The origin hex coordinates and altitude.
+`integer x, y`
+: The origin hex coordinates.
+
+`number z`
+: The origin altitude.
 
 `number range`
 : A non-negative range.
@@ -84,7 +87,7 @@ btech.map.emit( map, x, y, z, range, message )
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Notes

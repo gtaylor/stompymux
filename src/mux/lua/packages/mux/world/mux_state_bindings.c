@@ -16,19 +16,18 @@
 /**
  * Creates a persistent-state handle for one namespace on this object.
  *
- * @par Lua name `object:state`
- * @par Lua signature `object:state( namespace )`
- * @par Lua parameters - `namespace` (`string`) A valid, exact, case-sensitive
- * state namespace.
- * @par Lua returns - `state` (`State`): A handle for the namespace.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Object.
- * - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_STATE_INVALID` for an invalid namespace.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable Object:state
+ * @code{.lua}
+ * ---Creates a persistent-state handle for an exact, case-sensitive namespace.
+ * ---@param namespace string
+ * ---@return State state
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.state.invalid`](lua://mux.error.codes.state.invalid).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.state.invalid
+ * function Object:state(namespace) end
+ * @endcode
  */
 static int lua_mux_object_state(lua_State *state) {
   LuaMuxObject *object = lua_mux_check_object_handle(state, 1);
@@ -124,17 +123,19 @@ static bool lua_mux_read_state_value(lua_State *state, int argument,
 /**
  * Gets a persistent state value.
  *
- * @par Lua name `state:get`
- * @par Lua signature `state:get( key [, default] )`
- * @par Lua parameters - `key` (`string`) A valid state key.
- * - `default` (`any`) Optional. Optional value returned when the key is absent.
- * @par Lua returns - `value` (`any`): The stored value,
- * the supplied default, or nil.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale State;
- * `LUA_ERROR_CODE_STATE_INVALID` for an invalid key.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable State:get
+ * @code{.lua}
+ * ---Gets a stored value, an optional default, or nil.
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) or [`mux.error.codes.state.invalid`](lua://mux.error.codes.state.invalid).
+ * ---@generic T
+ * ---@param key string
+ * ---@param default? T
+ * ---@return StateValue|T|nil value
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.state.invalid
+ * function State:get(key, default) end
+ * @endcode
  */
 static int lua_mux_state_get(lua_State *state) {
   LuaMuxState *handle = lua_mux_check_state(state, 1);
@@ -159,15 +160,17 @@ static int lua_mux_state_get(lua_State *state) {
 /**
  * Tests whether a persistent state key exists.
  *
- * @par Lua name `state:has`
- * @par Lua signature `state:has( key )`
- * @par Lua parameters - `key` (`string`) A valid state key.
- * @par Lua returns - `exists` (`boolean`): Whether the key has a value.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale State;
- * `LUA_ERROR_CODE_STATE_INVALID` for an invalid key.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable State:has
+ * @code{.lua}
+ * ---Tests whether a state key is present.
+ * ---@param key string
+ * ---@return boolean exists
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.state.invalid`](lua://mux.error.codes.state.invalid).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.state.invalid
+ * function State:has(key) end
+ * @endcode
  */
 static int lua_mux_state_has(lua_State *state) {
   LuaMuxState *handle = lua_mux_check_state(state, 1);
@@ -187,19 +190,20 @@ static int lua_mux_state_has(lua_State *state) {
 /**
  * Sets or deletes a persistent state value.
  *
- * @par Lua name `state:set`
- * @par Lua signature `state:set( key, value )`
- * @par Lua parameters - `key` (`string`) A valid state key.
- * - `value` (`string, boolean, finite number,|nil`) The new value; nil deletes
- * the key.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale State;
- * `LUA_ERROR_CODE_STATE_INVALID` for an invalid key/value.
- * - `LUA_ERROR_CODE_STATE_VALUE_TOO_LARGE` when the transaction limits reject
- * the value.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable State:set
+ * @code{.lua}
+ * ---Sets a supported value, or deletes the key when `value` is nil.
+ * ---The `value` argument is required; omission raises
+ * ---[`mux.error.codes.state.invalid`](lua://mux.error.codes.state.invalid).
+ * ---
+ * ---Raises invalid-object/key/value errors or [`mux.error.codes.state.value_too_large`](lua://mux.error.codes.state.value_too_large).
+ * ---@param key string
+ * ---@param value StateValue|nil
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.state.invalid
+ * ---@see mux.error.codes.state.value_too_large
+ * function State:set(key, value) end
+ * @endcode
  */
 static int lua_mux_state_set(lua_State *state) {
   LuaMuxState *handle = lua_mux_check_state(state, 1);
@@ -227,16 +231,17 @@ static int lua_mux_state_set(lua_State *state) {
 /**
  * Deletes a persistent state value.
  *
- * @par Lua name `state:delete`
- * @par Lua signature `state:delete( key )`
- * @par Lua parameters - `key` (`string`) A valid state key.
- * @par Lua returns - `existed` (`boolean`): Whether the key existed before
- * deletion.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale State;
- * `LUA_ERROR_CODE_STATE_INVALID` for an invalid key.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable State:delete
+ * @code{.lua}
+ * ---Deletes a state key and reports whether it existed.
+ * ---@param key string
+ * ---@return boolean existed
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.state.invalid`](lua://mux.error.codes.state.invalid).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.state.invalid
+ * function State:delete(key) end
+ * @endcode
  */
 static int lua_mux_state_delete(lua_State *state) {
   LuaMuxState *handle = lua_mux_check_state(state, 1);
@@ -260,16 +265,16 @@ static int lua_mux_state_delete(lua_State *state) {
 /**
  * Lists the keys in this state namespace.
  *
- * @par Lua name `state:keys`
- * @par Lua signature `state:keys( )`
- * @par Lua parameters - None.
- * @par Lua returns - `keys` (`table`): An array of strings sorted by key.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale State.
- * - `LUA_ERROR_CODE_STATE_UNAVAILABLE` outside an active callback transaction
- * or if state changes during enumeration.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable State:keys
+ * @code{.lua}
+ * ---Lists keys sorted in native key order.
+ * ---
+ * ---Raises [`mux.error.codes.state.unavailable`](lua://mux.error.codes.state.unavailable) outside a callback transaction or if state changes while enumerating.
+ * ---@return string[] keys
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.state.unavailable
+ * function State:keys() end
+ * @endcode
  */
 static int lua_mux_state_keys(lua_State *state) {
   LuaMuxState *handle = lua_mux_check_state(state, 1);
@@ -299,17 +304,16 @@ static int lua_mux_state_keys(lua_State *state) {
 /**
  * Lists the entries in this state namespace.
  *
- * @par Lua name `state:entries`
- * @par Lua signature `state:entries( )`
- * @par Lua parameters - None.
- * @par Lua returns - `entries` (`StateEntry[]`): Records sorted by key, each
- * with `key` (`string`) and `value` (`string|boolean|number`) fields.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale State.
- * - `LUA_ERROR_CODE_STATE_UNAVAILABLE` outside an active callback transaction
- * or if state changes during enumeration.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable State:entries
+ * @code{.lua}
+ * ---Lists key/value records sorted by key.
+ * ---@return StateEntry[] entries
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.state.unavailable`](lua://mux.error.codes.state.unavailable).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.state.unavailable
+ * function State:entries() end
+ * @endcode
  */
 static int lua_mux_state_entries(lua_State *state) {
   LuaMuxState *handle = lua_mux_check_state(state, 1);
@@ -343,16 +347,17 @@ static int lua_mux_state_entries(lua_State *state) {
 /**
  * Gets every present value from a requested set of keys.
  *
- * @par Lua name `state:get_many`
- * @par Lua signature `state:get_many( keys )`
- * @par Lua parameters - `keys` (`table`) An array of valid state-key strings.
- * @par Lua returns - `values` (`table`): A key-to-value table containing only
- * keys that are present.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale State;
- * `LUA_ERROR_CODE_STATE_INVALID` for any invalid key.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable State:get_many
+ * @code{.lua}
+ * ---Returns only the requested keys that are present.
+ * ---@param keys string[]
+ * ---@return table<string, StateValue> values
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.state.invalid`](lua://mux.error.codes.state.invalid).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.state.invalid
+ * function State:get_many(keys) end
+ * @endcode
  */
 static int lua_mux_state_get_many(lua_State *state) {
   LuaMuxState *handle = lua_mux_check_state(state, 1);
@@ -385,18 +390,17 @@ static int lua_mux_state_get_many(lua_State *state) {
 /**
  * Applies several persistent state updates.
  *
- * @par Lua name `state:set_many`
- * @par Lua signature `state:set_many( values )`
- * @par Lua parameters - `values` (`table`) A string-keyed table of supported
- * state values.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale State;
- * `LUA_ERROR_CODE_STATE_INVALID` for non-string/invalid keys or invalid values.
- * - `LUA_ERROR_CODE_STATE_VALUE_TOO_LARGE` when transaction limits reject a
- * value.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable State:set_many
+ * @code{.lua}
+ * ---Applies several persistent state updates. Use `State:set` or `State:delete` for removals.
+ * ---@param values table<string, StateValue>
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.state.invalid`](lua://mux.error.codes.state.invalid), [`mux.error.codes.state.value_too_large`](lua://mux.error.codes.state.value_too_large).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.state.invalid
+ * ---@see mux.error.codes.state.value_too_large
+ * function State:set_many(values) end
+ * @endcode
  */
 static int lua_mux_state_set_many(lua_State *state) {
   LuaMuxState *handle = lua_mux_check_state(state, 1);
@@ -434,13 +438,9 @@ static int lua_mux_state_set_many(lua_State *state) {
 /**
  * Formats the State userdata.
  *
- * @par Lua name `State.__tostring`
- * @par Lua signature `tostring(state)`
- * @par Lua parameters - `state` (`State`): The validated persistent-state
- * handle.
- * @par Lua returns - `text` (`string`): `state(#dbref, namespace)`.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` when the underlying object
- * is stale.
+ * @par LuaLS ignore mux __tostring -- String conversion is represented by the State class declaration.
+ *
+ * Raises `LUA_ERROR_CODE_OBJECT_INVALID` when the underlying object is stale.
  * @param[in,out] state The Lua state whose arguments are read and results are
  * pushed.
  * @return The number of Lua values pushed onto the stack.
@@ -453,6 +453,27 @@ static int lua_mux_state_tostring(lua_State *state) {
   return 1;
 }
 
+/**
+ * @par LuaLS definition mux alias state.value
+ * @code{.lua}
+ * ---@alias StateValue string|boolean|number Scalar value supported by persistent object state.
+ * @endcode
+ *
+ * @par LuaLS definition mux type state
+ * @code{.lua}
+ * ---Persistent state entry returned by [`State:entries`](lua://State.entries).
+ * ---@class StateEntry
+ * ---@field key string Stored state key.
+ * ---@field value StateValue Stored scalar value.
+ *
+ * ---A persistent, object-scoped state namespace. `tostring` returns
+ * ---`state(#<dbref>, <namespace>)` and raises
+ * ---[`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid)
+ * ---when the underlying object is stale.
+ * ---@class State
+ * local State = {}
+ * @endcode
+ */
 void lua_mux_install_state_bindings(lua_State *state,
                                     LuaMuxPackage *package [[maybe_unused]]) {
   luaL_getmetatable(state, LUA_MUX_OBJECT_METATABLE);

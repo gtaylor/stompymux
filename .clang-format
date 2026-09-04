@@ -6,6 +6,10 @@ Standard: Latest
 IndentWidth: 2
 UseTab: Never
 ColumnLimit: 80
+# LuaLS contracts are copied byte-for-byte from Doxygen @code blocks. Keep the
+# deliberately small stub-language subset intact, even when a declaration is
+# longer than ColumnLimit.
+CommentPragmas: '^(@par LuaLS |-{3}|local |function |[A-Za-z_][A-Za-z0-9_.]* *=)'
 
 BreakBeforeBraces: Attach
 PointerAlignment: Right

@@ -20,7 +20,7 @@ btech.system.xcode_value_ref( reference, name )
 : The unit template reference.
 
 `string name`
-: The field name.
+: The field name, matched without regard to case.
 
 ### Returns
 

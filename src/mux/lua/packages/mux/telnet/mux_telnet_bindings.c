@@ -42,21 +42,19 @@ static TelnetEnvironmentKind lua_mux_telnet_environment_kind(lua_State *state,
  * Tests whether an RFC 1572 NEW-ENVIRON variable is defined on a live
  * connection.
  *
- * @par Lua name `mux.telnet.environment_has`
- * @par Lua signature `mux.telnet.environment_has( descriptor, kind, name )`
- * @par Lua parameters - `descriptor` (`number`) A live descriptor ID, normally
- * ctx.descriptor.
- * - `kind` (`string`) Either "var" or "uservar".
- * - `name` (`string`) The binary-safe variable name.
- * @par Lua returns - `defined` (`boolean`): Whether the variable is present,
- * including with an empty value.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`;
- * `LUA_ERROR_CODE_CONNECTION_INVALID` for an unknown descriptor or kind.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.telnet.environment_has
+ * @code{.lua}
+ * ---Tests whether a binary-safe RFC 1572 NEW-ENVIRON variable is defined.
+ * ---@param descriptor integer Live descriptor ID, normally `ctx.descriptor`.
+ * ---@param kind TelnetEnvironmentKind NEW-ENVIRON variable namespace.
+ * ---@param name string Binary-safe variable name.
+ * ---@return boolean defined Whether the variable is present, including with an empty value.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.connection.invalid`](lua://mux.error.codes.connection.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.connection.invalid
+ * function mux_telnet.environment_has(descriptor, kind, name) end
+ * @endcode
  */
 static int lua_mux_telnet_environment_has(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -74,21 +72,19 @@ static int lua_mux_telnet_environment_has(lua_State *state) {
 /**
  * Gets an RFC 1572 NEW-ENVIRON variable from a live connection.
  *
- * @par Lua name `mux.telnet.environment_get`
- * @par Lua signature `mux.telnet.environment_get( descriptor, kind, name )`
- * @par Lua parameters - `descriptor` (`number`) A live descriptor ID, normally
- * ctx.descriptor.
- * - `kind` (`string`) Either "var" or "uservar".
- * - `name` (`string`) The binary-safe variable name.
- * @par Lua returns - `value` (`string|nil`): The binary-safe value, or nil when
- * the variable is absent.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`;
- * `LUA_ERROR_CODE_CONNECTION_INVALID` for an unknown descriptor or kind.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.telnet.environment_get
+ * @code{.lua}
+ * ---Gets a binary-safe RFC 1572 NEW-ENVIRON value.
+ * ---@param descriptor integer Live descriptor ID, normally `ctx.descriptor`.
+ * ---@param kind TelnetEnvironmentKind NEW-ENVIRON variable namespace.
+ * ---@param name string Binary-safe variable name.
+ * ---@return string? value Binary-safe value, or nil when the variable is absent.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.connection.invalid`](lua://mux.error.codes.connection.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.connection.invalid
+ * function mux_telnet.environment_get(descriptor, kind, name) end
+ * @endcode
  */
 static int lua_mux_telnet_environment_get(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -107,6 +103,19 @@ static int lua_mux_telnet_environment_get(lua_State *state) {
   return 1;
 }
 
+/**
+ * @par LuaLS definition mux alias telnet.environment_kind
+ * @code{.lua}
+ * ---@alias TelnetEnvironmentKind "var"|"uservar" RFC 1572 NEW-ENVIRON variable namespace.
+ * @endcode
+ *
+ * @par LuaLS definition mux namespace mux.telnet
+ * @code{.lua}
+ * ---Telnet protocol state and capabilities for live connections.
+ * ---@class MuxTelnetPackage
+ * local mux_telnet = {}
+ * @endcode
+ */
 void lua_mux_install_telnet_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_newtable(state);
   lua_pushlightuserdata(state, package);

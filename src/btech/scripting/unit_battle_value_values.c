@@ -38,20 +38,19 @@ static Mech *matched_mech(BtechScriptCall *call) {
 /**
  * Sets a live unit's maximum speed and corrects its current speed.
  *
- * @par Lua name `btech.unit.set_max_speed`
- * @par Lua signature `btech.unit.set_max_speed( unit, speed )`
- * @par Lua parameters - `unit` (`number`) The unit dbref.
- * - `speed` (`number`) The new maximum speed.
- * @par Lua returns - `success` (`boolean`): true after the operation completes
- * without a legacy error.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.unit.set_max_speed
+ * @code{.lua}
+ * ---Sets a live unit's maximum speed and corrects its current speed.
+ * ---@param unit integer
+ * ---@param speed number
+ * ---@return true success
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_unit.set_max_speed(unit, speed) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -75,18 +74,18 @@ BtechScriptResult fun_btsetmaxspeed(BtechScriptCall *call) {
 /**
  * Returns a live unit's effective maximum speed.
  *
- * @par Lua name `btech.unit.real_max_speed`
- * @par Lua signature `btech.unit.real_max_speed( unit )`
- * @par Lua parameters - `unit` (`number`) The unit dbref.
- * @par Lua returns - `value` (`number`): The numeric result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.unit.real_max_speed
+ * @code{.lua}
+ * ---Returns a live unit's effective maximum speed.
+ * ---@param unit integer
+ * ---@return number speed
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_unit.real_max_speed(unit) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -106,18 +105,18 @@ BtechScriptResult fun_btgetrealmaxspeed(BtechScriptCall *call) {
 /**
  * Calculates the battle value of a live unit.
  *
- * @par Lua name `btech.unit.battle_value`
- * @par Lua signature `btech.unit.battle_value( unit )`
- * @par Lua parameters - `unit` (`number`) The unit dbref.
- * @par Lua returns - `value` (`number`): The numeric result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.unit.battle_value
+ * @code{.lua}
+ * ---Calculates a live unit's battle value.
+ * ---@param unit integer
+ * ---@return number value
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_unit.battle_value(unit) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -164,18 +163,18 @@ static Mech *reference_mech(BtechScriptCall *call) {
 /**
  * Calculates the battle value of a unit template.
  *
- * @par Lua name `btech.unit.battle_value_ref`
- * @par Lua signature `btech.unit.battle_value_ref( reference )`
- * @par Lua parameters - `reference` (`string`) The unit template reference.
- * @par Lua returns - `value` (`number`): The numeric result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.unit.battle_value_ref
+ * @code{.lua}
+ * ---Calculates a unit template's battle value.
+ * ---@param reference string
+ * ---@return number value
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_unit.battle_value_ref(reference) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -192,18 +191,18 @@ BtechScriptResult fun_btgetbv_ref(BtechScriptCall *call) {
 /**
  * Calculates the defensive battle-value component of a unit template.
  *
- * @par Lua name `btech.unit.defensive_battle_value_ref`
- * @par Lua signature `btech.unit.defensive_battle_value_ref( reference )`
- * @par Lua parameters - `reference` (`string`) The unit template reference.
- * @par Lua returns - `value` (`number`): The numeric result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.unit.defensive_battle_value_ref
+ * @code{.lua}
+ * ---Calculates a unit template's defensive battle-value component.
+ * ---@param reference string
+ * ---@return number value
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_unit.defensive_battle_value_ref(reference) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -219,18 +218,18 @@ BtechScriptResult fun_btgetdbv_ref(BtechScriptCall *call) {
 /**
  * Calculates the offensive battle-value component of a unit template.
  *
- * @par Lua name `btech.unit.offensive_battle_value_ref`
- * @par Lua signature `btech.unit.offensive_battle_value_ref( reference )`
- * @par Lua parameters - `reference` (`string`) The unit template reference.
- * @par Lua returns - `value` (`number`): The numeric result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.unit.offensive_battle_value_ref
+ * @code{.lua}
+ * ---Calculates a unit template's offensive battle-value component.
+ * ---@param reference string
+ * ---@return number value
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_unit.offensive_battle_value_ref(reference) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -246,18 +245,18 @@ BtechScriptResult fun_btgetobv_ref(BtechScriptCall *call) {
 /**
  * Calculates the second-generation battle value of a unit template.
  *
- * @par Lua name `btech.unit.battle_value2_ref`
- * @par Lua signature `btech.unit.battle_value2_ref( reference )`
- * @par Lua parameters - `reference` (`string`) The unit template reference.
- * @par Lua returns - `value` (`number`): The numeric result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.unit.battle_value2_ref
+ * @code{.lua}
+ * ---Calculates a unit template's second-generation battle value.
+ * ---@param reference string
+ * ---@return number value
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_unit.battle_value2_ref(reference) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */

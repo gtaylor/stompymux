@@ -290,6 +290,38 @@ static bool flag_xcode(const FlagChangeRequest *request) {
   return true;
 }
 
+/**
+ * @par LuaLS definition mux catalog mux.world.flags
+ * @code{.lua}
+ * ---Dynamic, immutable lookup namespace for registered flags. Keys must use the
+ * ---canonical uppercase native name.
+ * ---
+ * ---Raises [`mux.error.codes.flag.invalid`](lua://mux.error.codes.flag.invalid) for
+ * ---unknown or non-string keys and attempted mutation.
+ * ---@class FlagNamespace
+ * ---@field ANSI Flag Enables ANSI-capable output for the object.
+ * ---@field AUDIBLE Flag Enables sound-capable notifications associated with the object.
+ * ---@field AUDITORIUM Flag Applies auditorium-style speech propagation.
+ * ---@field BLIND Flag Marks the object as unable to see normally.
+ * ---@field CONNECTED Flag Marks a player as currently connected.
+ * ---@field DARK Flag Hides the object according to native visibility rules.
+ * ---@field FLOATING Flag Prevents ordinary location inheritance for the object.
+ * ---@field GAGGED Flag Prevents the object from speaking normally.
+ * ---@field GOING Flag Marks the object for deferred destruction.
+ * ---@field HALTED Flag Prevents queued command execution by the object.
+ * ---@field IN_CHARACTER Flag Marks the object as participating in in-character play.
+ * ---@field LIGHT Flag Makes the object visible through native light rules.
+ * ---@field MONITOR Flag Enables command monitoring behavior.
+ * ---@field NO_COMMAND Flag Prevents attributes on the object from acting as commands.
+ * ---@field SAFE Flag Protects the object from ordinary destruction.
+ * ---@field SUSPECT Flag Marks a player for suspect-activity monitoring.
+ * ---@field TRANSPARENT Flag Allows visibility through the object.
+ * ---@field WIZARD Flag Grants Wizard status under native privilege rules.
+ * ---@field XCODE Flag Marks an object as a BattleTech special object.
+ * ---@field ZOMBIE Flag Allows a thing to act through its owner under native rules.
+ * ---@see mux.error.codes.flag.invalid
+ * @endcode
+ */
 static const FlagEntry FLAG_ENTRIES[] = {
     {"ANSI", OBJECT_FLAG_ANSI, 'X', flag_wizard},
     {"AUDIBLE", OBJECT_FLAG_AUDIBLE, 'a', flag_wizard},

@@ -19,7 +19,8 @@ these values with [`Flags`](../type-flags/) methods; raw strings are rejected.
 Constants compare by flag identity and stringify to the displayed uppercase
 name. Unknown lookups and attempts to modify the namespace raise
 `mux.flag.invalid`. Command-only aliases from `[aliases.flags]` are not
-constants.
+constants. String conversion raises the invariant-only `mux.internal` error if
+a registered native flag name exceeds the internal conversion buffer.
 
 ```lua
 local flags = mux.world.object(ctx.object):flags()

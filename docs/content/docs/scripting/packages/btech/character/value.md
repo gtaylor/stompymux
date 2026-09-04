@@ -22,7 +22,7 @@ btech.character.value( character, value, mode )
 `number or string value`
 : The character-value code or name.
 
-`number mode`
+`integer mode`
 : `0` for value, `1` for skill target, `2` for XP, `3` for raw skill value, or `4` for XP to next level.
 
 ### Returns

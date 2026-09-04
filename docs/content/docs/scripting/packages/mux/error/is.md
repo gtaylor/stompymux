@@ -21,8 +21,9 @@ mux.error.is(value, code)
   field.
 
 `string or code node code`
-: A dotted code string or a node from [`mux.error.codes`](../codes/) or
-  [`mux.error.namespace`](../namespace/).
+: A comparison string or a node from [`mux.error.codes`](../codes/) or
+  [`mux.error.namespace`](../namespace/). Plain strings are used verbatim;
+  this function does not validate their syntax.
 
 ### Returns
 
@@ -42,7 +43,8 @@ end
 
 [`Error:is`](../type-error/) is the equivalent method on an `Error`. Prefix
 matching stops at segment boundaries, so `mux.state` does not match
-`mux.statement.invalid`.
+`mux.statement.invalid`. Prefer checked code nodes when possible; malformed
+plain strings simply participate in the same exact-or-prefix comparison.
 
 ## See Also
 

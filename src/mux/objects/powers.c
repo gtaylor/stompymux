@@ -23,6 +23,19 @@
 #include "mux/support/owned_text.h"
 #include "mux/support/stringutil.h"
 
+/**
+ * @par LuaLS definition mux catalog mux.world.powers
+ * @code{.lua}
+ * ---Dynamic, immutable lookup namespace for registered powers. Keys must use the
+ * ---canonical uppercase native name.
+ * ---
+ * ---Raises [`mux.error.codes.power.invalid`](lua://mux.error.codes.power.invalid)
+ * ---for unknown or non-string keys and attempted mutation.
+ * ---@class PowerNamespace
+ * ---@field IDLE Power Exempts a player from ordinary idle-timeout handling.
+ * ---@see mux.error.codes.power.invalid
+ * @endcode
+ */
 static const POWERENT POWER_ENTRIES[] = {
     {"idle", POWER_IDLE, 0},
     {nullptr, POWER_NONE, 0},

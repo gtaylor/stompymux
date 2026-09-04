@@ -55,7 +55,8 @@ Raises `mux.arg.invalid` for invalid options, names, object type constants, or
 fields that do not apply to the selected type. `PLAYER` is not a creatable
 type. Raises `mux.object.invalid` for invalid references or object kinds and
 `mux.object.unavailable` for referenced objects being destroyed or creation
-failure.
+failure. If a validated object kind reaches an unsupported native creation
+branch, the invariant failure raises `mux.internal`.
 
 This trusted operation is available only at runtime and raises
 `mux.unavailable.checking` during `@lua/check`.

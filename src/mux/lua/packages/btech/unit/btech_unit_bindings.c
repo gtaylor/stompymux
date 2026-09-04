@@ -6,6 +6,24 @@
 #include "mux/lua/packages/btech/btech_package.h"
 #include "mux/lua/packages/btech/btech_package_internal.h"
 
+/**
+ * @par LuaLS definition btech alias btech.unit.critical-slot-field
+ * @code{.lua}
+ * ---@alias CriticalSlotField "NAME"|"STATUS"|"DATA"|"MAXAMMO"|"AMMOTYPE"|"MODE"|"HALFTON" Canonical critical-slot field; native matching is ASCII-case-insensitive.
+ * @endcode
+ *
+ * @par LuaLS definition btech alias btech.unit.armor-status-field
+ * @code{.lua}
+ * ---@alias ArmorStatusField 0|1|2 Armor field: current armor, internal structure, or rear armor.
+ * @endcode
+ *
+ * @par LuaLS definition btech namespace btech.unit
+ * @code{.lua}
+ * ---Live units, templates, combat values, and status.
+ * ---@class BtechUnitPackage
+ * local btech_unit = {}
+ * @endcode
+ */
 static const BtechLuaEntry BTECH_UNIT_ENTRIES[] = {
     {"armor_status", "unit.armor_status", fun_btarmorstatus},
     {"armor_status_ref", "unit.armor_status_ref", fun_btarmorstatus_ref},

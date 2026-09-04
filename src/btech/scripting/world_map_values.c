@@ -25,18 +25,18 @@
 /**
  * Tests whether a live unit can be repaired.
  *
- * @par Lua name `btech.repair.unit_fixable`
- * @par Lua signature `btech.repair.unit_fixable( unit )`
- * @par Lua parameters - `unit` (`number`) The unit dbref.
- * @par Lua returns - `result` (`boolean`): Whether the condition is true.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.repair.unit_fixable
+ * @code{.lua}
+ * ---Tests whether a live unit can be repaired.
+ * ---@param unit integer
+ * ---@return boolean fixable
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_repair.unit_fixable(unit) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -60,19 +60,18 @@ BtechScriptResult fun_btunitfixable(BtechScriptCall *call) {
 /**
  * Lists blast-zone coordinates and radii on a map.
  *
- * @par Lua name `btech.map.blast_zones`
- * @par Lua signature `btech.map.blast_zones( map )`
- * @par Lua parameters - `map` (`number`) The map dbref.
- * @par Lua returns - `values` (`table`): A flat array of repeating x, y, and
- * radius numbers.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.map.blast_zones
+ * @code{.lua}
+ * ---Lists blast-zone data as repeating x, y, and radius numbers.
+ * ---@param map integer
+ * ---@return number[] values
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_map.blast_zones(map) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -109,20 +108,20 @@ BtechScriptResult fun_btlistblz(BtechScriptCall *call) {
 /**
  * Tests whether a map hex lies in a configured blast zone.
  *
- * @par Lua name `btech.map.hex_in_blast_zone`
- * @par Lua signature `btech.map.hex_in_blast_zone( map, x, y )`
- * @par Lua parameters - `map` (`number`) The map dbref.
- * - `x` (`number`) The hex X coordinate.
- * - `y` (`number`) The hex Y coordinate.
- * @par Lua returns - `result` (`boolean`): Whether the condition is true.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.map.hex_in_blast_zone
+ * @code{.lua}
+ * ---Tests whether a map hex lies in a configured blast zone.
+ * ---@param map integer
+ * ---@param x integer
+ * ---@param y integer
+ * ---@return boolean inside
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_map.hex_in_blast_zone(map, x, y) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -176,18 +175,17 @@ BtechScriptResult fun_bthexinblz(BtechScriptCall *call) {
 /**
  * Returns the current BattleTech event lag.
  *
- * @par Lua name `btech.system.lag`
- * @par Lua signature `btech.system.lag(  )`
- * @par Lua parameters - None.
- * @par Lua returns - `value` (`number`): The numeric result.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.system.lag
+ * @code{.lua}
+ * ---Returns the current BattleTech event lag.
+ * ---@return number lag
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_system.lag() end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */

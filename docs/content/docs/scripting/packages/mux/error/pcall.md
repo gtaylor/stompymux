@@ -28,10 +28,10 @@ ok, result_or_error = mux.error.pcall(fn, ...)
 `true, ...`
 : On success, `true` followed by every value returned by `fn`.
 
-`false, table error`
+`false, Error or caught-error table error`
 : On failure, `false` and the raised error. A raised table with a string
   `code` field is retained; another Lua value is converted to a `mux.runtime`
-  error. The returned error receives a `traceback` field.
+  `Error`. Every returned failure has string `code` and `traceback` fields.
 
 ## Examples
 
@@ -46,9 +46,10 @@ end
 
 Unlike Lua's `pcall`, this helper makes unstructured failures inspectable by
 code. A retained table with a string `code` field is not copied or given the
-`Error` metatable, so it may not have `Error` methods or a `message`. The
-traceback is reported as `Lua traceback unavailable` only when the runtime
-cannot obtain one.
+`Error` metatable. Such a caught-error table is guaranteed only `code` and
+`traceback`; it can omit `message`, `detail`, `cause`, and every `Error` method,
+and it can retain arbitrary caller-defined fields. The traceback is reported as
+`Lua traceback unavailable` only when the runtime cannot obtain one.
 
 ## See Also
 

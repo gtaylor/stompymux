@@ -20,14 +20,14 @@ btech.system.set_xcode_value( object, name, value )
 : The special-object dbref.
 
 `string name`
-: The writable field name.
+: The writable field name, matched without regard to case.
 
 `string or number value`
 : The new value, converted according to the field type.
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Notes

@@ -121,22 +121,19 @@ lua_mux_world_destination_is_within(const LuaMuxWorldContainmentCheck *check) {
 /**
  * Lists database objects, optionally filtered by type and assigned zone.
  *
- * @par Lua name `mux.world.list_objects`
- * @par Lua signature `mux.world.list_objects( options? )`
- * @par Lua parameters - `options` (`ListObjectsOptions|nil`) Optional filters.
- * `types` is an array of typed constants from `mux.world.types`, and `in_zone`
- * is a dbref or Object whose direct zone members are included.
- * @par Lua returns - `objects` (`table`): Matching Object handles in ascending
- * dbref order.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` for malformed options or object type
- * constants not owned by this runtime.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid zone.
- * - `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for a zone being destroyed.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable mux.world.list_objects
+ * @code{.lua}
+ * ---Lists database objects matching optional type and direct-zone filters.
+ * ---@param options? ListObjectsOptions Optional filters; unknown fields are rejected.
+ * ---@return Object[] objects Matching objects in ascending dbref order.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.object.unavailable
+ * function mux_world.list_objects(options) end
+ * @endcode
  */
 static int lua_mux_list_objects(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -340,25 +337,23 @@ lua_mux_world_finish_create_object(LuaMuxPackage *package,
 /**
  * Creates a room, thing, or exit selected by a typed object-kind constant.
  *
- * @par Lua name `mux.world.create_object`
- * @par Lua signature `mux.world.create_object( options )`
- * @par Lua parameters - `options` (`CreateObjectOptions`) Exact creation
- * fields. `type` and `name` are required. Rooms accept only optional `zone`;
- * things require `location` and accept optional `home` and `zone`; exits
- * require source `location` and accept optional `destination` and `zone`.
- * `type` must be `ROOM`, `THING`, or `EXIT` from `mux.world.types` in the
- * current runtime.
- * @par Lua returns - `object` (`Object`): The newly created object.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` for invalid or inapplicable fields, names, or
- * object type constants.
- * - `LUA_ERROR_CODE_OBJECT_INVALID` for invalid references or object kinds.
- * - `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for referenced objects being destroyed
- * or creation failure.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable mux.world.create_object
+ * @code{.lua}
+ * ---Creates a room, thing, or exit selected by a typed object-kind constant.
+ * ---Rooms are detached; things require a container and receive a home; exits
+ * ---require a source and may be linked to a destination. Unknown fields and
+ * ---fields that do not apply to the selected type are rejected.
+ * ---@param options CreateObjectOptions Exact creation fields selected by `options.type`.
+ * ---@return Object object Newly created object.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable), or [`mux.error.codes.internal`](lua://mux.error.codes.internal) if a validated object kind reaches an unsupported native creation branch.
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.object.unavailable
+ * ---@see mux.error.codes.internal
+ * function mux_world.create_object(options) end
+ * @endcode
  */
 static int lua_mux_create_object(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -395,20 +390,18 @@ static int lua_mux_create_object(lua_State *state) {
 /**
  * Teleports a location-bearing object to a destination container.
  *
- * @par Lua name `mux.world.teleport_object`
- * @par Lua signature `mux.world.teleport_object( options )`
- * @par Lua parameters - `options` (`TeleportOptions`) Teleport fields. Its
- * `object` and `destination` references are required.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` for missing or unknown fields;
- * `LUA_ERROR_CODE_OBJECT_INVALID` for invalid references, object kinds, or a
- * self-destination; `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for an object or
- * destination being destroyed, or when the native teleport is denied.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable mux.world.teleport_object
+ * @code{.lua}
+ * ---Teleports a thing or player through the native movement path.
+ * ---@param options TeleportOptions Teleport fields; unknown fields are rejected.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.object.unavailable
+ * function mux_world.teleport_object(options) end
+ * @endcode
  */
 static int lua_mux_teleport_object(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -456,20 +449,20 @@ static int lua_mux_teleport_object(lua_State *state) {
 /**
  * Silently schedules an object for destruction.
  *
- * @par Lua name `mux.world.destroy_object`
- * @par Lua signature `mux.world.destroy_object( object, options? )`
- * @par Lua parameters - `object` (`number|Object`) Live object to destroy.
- * - `options` (`DestroyOptions|nil`) Optional fields; `override=true` bypasses
- * the target's SAFE flag, but never core-object or Wizard-player protection.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` for invalid options;
- * `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid object;
- * `LUA_ERROR_CODE_OBJECT_UNAVAILABLE` for a protected or already-GOING object.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state Lua state.
- * @return The number of Lua values pushed.
+ * @par LuaLS definition mux callable mux.world.destroy_object
+ * @code{.lua}
+ * ---Silently schedules a live object for destruction by the normal maintenance purge.
+ * ---@param object DbRef|Object Object to destroy.
+ * ---@param options? DestroyOptions Destruction controls; unknown fields are rejected.
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable), or [`mux.error.codes.internal`](lua://mux.error.codes.internal) for an unexpected native destruction result.
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.object.unavailable
+ * ---@see mux.error.codes.internal
+ * function mux_world.destroy_object(object, options) end
+ * @endcode
  */
 static int lua_mux_destroy_object(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -521,19 +514,18 @@ static int lua_mux_destroy_object(lua_State *state) {
 /**
  * Privately emits a message to an object.
  *
- * @par Lua name `mux.world.pemit`
- * @par Lua signature `mux.world.pemit( object, message )`
- * @par Lua parameters - `object` (`number|Object`) The recipient.
- * - `message` (`string`) Valid UTF-8 text without embedded NUL bytes.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_CONNECTION_INVALID` for embedded NUL or invalid UTF-8;
- * `LUA_ERROR_CODE_OBJECT_INVALID` for an invalid recipient.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable mux.world.pemit
+ * @code{.lua}
+ * ---Sends valid UTF-8 text to an object.
+ * ---@param object DbRef|Object
+ * ---@param message string
+ * ---
+ * ---Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.connection.invalid`](lua://mux.error.codes.connection.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.connection.invalid
+ * ---@see mux.error.codes.object.invalid
+ * function mux_world.pemit(object, message) end
+ * @endcode
  */
 static int lua_mux_pemit(lua_State *state) {
   LuaMuxPackage *package = lua_mux_package_get(state);
@@ -556,6 +548,84 @@ static int lua_mux_pemit(lua_State *state) {
   return 0;
 }
 
+/**
+ * @par LuaLS definition mux type world.create_options
+ * @code{.lua}
+ * ---Fields accepted when creating a detached room through
+ * ---[`mux.world.create_object`](lua://mux.world.create_object).
+ * ---@class (exact) CreateRoomOptions
+ * ---@field type RoomObjectType The current runtime's [`mux.world.types.ROOM`](lua://mux.world.types.ROOM) constant.
+ * ---@field name string Required UTF-8 name, optionally containing valid styled-text markup.
+ * ---@field zone? DbRef|Object Live thing or room to assign; omission preserves the native creator's inherited zone.
+ *
+ * ---Fields accepted when creating and placing a thing through
+ * ---[`mux.world.create_object`](lua://mux.world.create_object).
+ * ---@class (exact) CreateThingOptions
+ * ---@field type ThingObjectType The current runtime's [`mux.world.types.THING`](lua://mux.world.types.THING) constant.
+ * ---@field name string Required UTF-8 name, optionally containing valid styled-text markup.
+ * ---@field location DbRef|Object Required object that can contain the new thing.
+ * ---@field home? DbRef|Object Home object; defaults to `location` when omitted.
+ * ---@field zone? DbRef|Object Live thing or room to assign; omission preserves the native creator's inherited zone.
+ *
+ * ---Fields accepted when creating and attaching an exit through
+ * ---[`mux.world.create_object`](lua://mux.world.create_object).
+ * ---@class (exact) CreateExitOptions
+ * ---@field type ExitObjectType The current runtime's [`mux.world.types.EXIT`](lua://mux.world.types.EXIT) constant.
+ * ---@field name string Required UTF-8 name, optionally containing valid styled-text markup.
+ * ---@field location DbRef|Object Required source object capable of holding exits.
+ * ---@field destination? DbRef|Object Optional destination capable of containing objects; omission leaves the exit unlinked.
+ * ---@field zone? DbRef|Object Live thing or room to assign; omission preserves the native creator's inherited zone.
+ * @endcode
+ *
+ * @par LuaLS definition mux alias world.create_options.union
+ * @code{.lua}
+ * ---Exact fields accepted by [`mux.world.create_object`](lua://mux.world.create_object).
+ * ---The selected typed object-kind constant determines which other fields apply.
+ * ---@alias CreateObjectOptions CreateRoomOptions|CreateThingOptions|CreateExitOptions
+ * @endcode
+ *
+ * @par LuaLS definition mux type world.options
+ * @code{.lua}
+ * ---Fields accepted when teleporting a thing or player.
+ * ---@class (exact) TeleportOptions
+ * ---@field object DbRef|Object Required thing or player to move.
+ * ---@field destination DbRef|Object Required object capable of containing objects.
+ *
+ * ---Options controlling object destruction.
+ * ---@class (exact) DestroyOptions
+ * ---@field override? boolean Whether to bypass the target's SAFE flag; core objects and Wizard players remain protected.
+ *
+ * ---Fields selecting a native lock invocation to test.
+ * ---@class (exact) LockPassesOptions
+ * ---@field object DbRef|Object Required object whose lock is tested.
+ * ---@field enactor DbRef|Object Required object attempting the action.
+ * ---@field lock Lock Required typed lock constant from [`mux.world.locks`](lua://mux.world.locks).
+ * ---@field cause? DbRef|Object Object that caused the action; defaults to `enactor`.
+ * ---@field subject? DbRef|Object Object acted upon in the lock context; defaults to `enactor`.
+ *
+ * ---Filters for [`Object:contents`](lua://Object.contents).
+ * ---@class (exact) ContentsOptions
+ * ---@field types? ObjectType[] Native object kinds to include; an empty array matches nothing.
+ * ---@field visible_to? DbRef|Object Viewer whose native visibility rules are applied.
+ *
+ * ---Filters for [`mux.world.list_objects`](lua://mux.world.list_objects).
+ * ---@class (exact) ListObjectsOptions
+ * ---@field types? ObjectType[] Native object kinds to include; an empty array matches nothing.
+ * ---@field in_zone? DbRef|Object Include only objects directly assigned to this zone.
+ * @endcode
+ *
+ * @par LuaLS definition mux namespace mux.world
+ * @code{.lua}
+ * ---World database object access.
+ * ---@class MuxWorldPackage
+ * ---@field access AccessNamespace Immutable namespace of command-access constants.
+ * ---@field flags FlagNamespace Immutable namespace of registered flag constants.
+ * ---@field locks LockNamespace Immutable namespace of native lock constants.
+ * ---@field powers PowerNamespace Immutable namespace of registered power constants.
+ * ---@field types ObjectTypeNamespace Immutable namespace of native object-kind constants.
+ * local mux_world = {}
+ * @endcode
+ */
 void lua_mux_install_world_bindings(lua_State *state, LuaMuxPackage *package) {
   lua_newtable(state);
   lua_mux_install_object_bindings(state, package);

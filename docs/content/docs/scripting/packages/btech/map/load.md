@@ -23,16 +23,21 @@ btech.map.load( map, name, [clear] )
 : The map file name.
 
 `boolean clear`
-: Optional compatibility argument; currently ignored.
+: Optional compatibility argument; currently ignored. It may be omitted, but
+  explicitly passing `nil` raises an argument error.
 
 ### Returns
 
-`boolean success`
-: `true` after the operation completes without a legacy error.
+`1 success`
+: Numeric `1` after the operation completes without a legacy error.
 
 ## Notes
 
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error. The optional `clear` argument is retained for compatibility; the current handler always clears units and map objects.
+This function is available only in a running Lua callback. Invalid targets,
+invalid arguments, and legacy error results raise a Lua error. The optional
+`clear` argument is retained for compatibility; the current handler always
+clears units and map objects. Unlike most mutating BTech calls, `load` uses the
+numeric adapter and therefore returns the literal number `1`, not `true`.
 
 ## See Also
 

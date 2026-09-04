@@ -39,18 +39,18 @@ static int *script_part_pile_slot(ScriptPartPile *pile, int brand,
 /**
  * Tests whether a live unit has an active repair event.
  *
- * @par Lua name `btech.repair.under_repair`
- * @par Lua signature `btech.repair.under_repair( unit )`
- * @par Lua parameters - `unit` (`number`) The unit dbref.
- * @par Lua returns - `result` (`boolean`): Whether the condition is true.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.repair.under_repair
+ * @code{.lua}
+ * ---Tests whether a live unit has an active repair event.
+ * ---@param unit integer
+ * ---@return boolean under_repair
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_repair.under_repair(unit) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -82,20 +82,22 @@ BtechScriptResult fun_btunderrepair(BtechScriptCall *call) {
 /**
  * Returns a part quantity or lists an object's stored parts.
  *
- * @par Lua name `btech.parts.stores`
- * @par Lua signature `btech.parts.stores( target, part_name )`
- * @par Lua parameters - `target` (`number`) The stores-bearing object dbref.
- * - `part_name` (`string`) A recognized part name.
- * @par Lua returns - `result` (`table`): A one-element array containing the
- * numeric quantity.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.parts.stores
+ * @code{.lua}
+ * ---Returns a quantity for one part, or lists stored parts when the part is omitted.
+ * ---In list form, spaces in long display names split one serialized stack into
+ * ---multiple items in the shared legacy list adapter.
+ * ---@param target integer
+ * ---@param part_name string
+ * ---@return number[] result One-element quantity array.
+ * ---@overload fun(target: integer): BtechListItem[]
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_parts.stores(target, part_name) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */
@@ -170,20 +172,20 @@ BtechScriptResult fun_btstores(BtechScriptCall *call) {
 /**
  * Returns a part quantity or lists stored parts using short names.
  *
- * @par Lua name `btech.parts.stores_short`
- * @par Lua signature `btech.parts.stores_short( target, part_name )`
- * @par Lua parameters - `target` (`number`) The stores-bearing object dbref.
- * - `part_name` (`string`) A recognized part name.
- * @par Lua returns - `result` (`table`): A one-element array containing the
- * numeric quantity.
- * @par Lua errors - `LUA_ERROR_CODE_BTECH_UNAVAILABLE` when called during
- * `@lua/check`.
- * - `LUA_ERROR_CODE_ARG_INVALID` when more than `MAX_ARG` arguments are
- * supplied.
- * - `LUA_ERROR_CODE_BTECH_FAILED` when the mapped legacy handler reports an
- * error.
- * @par Lua availability Available only from a running Lua callback; unavailable
- * during `@lua/check`.
+ * @par LuaLS definition btech callable btech.parts.stores_short
+ * @code{.lua}
+ * ---Returns a quantity or lists stored parts using short names.
+ * ---@param target integer
+ * ---@param part_name string
+ * ---@return number[] result One-element quantity array.
+ * ---@overload fun(target: integer): BtechListItem[]
+ * ---
+ * ---Raises [`btech.error.codes.unavailable`](lua://btech.error.codes.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`btech.error.codes.failed`](lua://btech.error.codes.failed).
+ * ---@see btech.error.codes.unavailable
+ * ---@see mux.error.codes.arg.invalid
+ * ---@see btech.error.codes.failed
+ * function btech_parts.stores_short(target, part_name) end
+ * @endcode
  * @param[in,out] call The BattleTech arguments, output, and evaluation context.
  * @return A `BtechScriptResult` consumed by the Lua trampoline.
  */

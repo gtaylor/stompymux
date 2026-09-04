@@ -60,16 +60,17 @@ find_program(GNU_MAKE_EXECUTABLE NAMES gmake make REQUIRED)
 
 set(LUAJIT_SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/luajit")
 set(LUAJIT_LIBRARY "${LUAJIT_SOURCE_DIR}/src/libluajit.a")
+set(LUAJIT_EXECUTABLE "${LUAJIT_SOURCE_DIR}/src/luajit")
 if(NOT EXISTS "${LUAJIT_SOURCE_DIR}/src/Makefile")
   message(FATAL_ERROR "LuaJIT submodule is missing; run git submodule update --init --recursive")
 endif()
 add_custom_command(
-  OUTPUT "${LUAJIT_LIBRARY}"
+  OUTPUT "${LUAJIT_LIBRARY}" "${LUAJIT_EXECUTABLE}"
   COMMAND "${GNU_MAKE_EXECUTABLE}" -C "${LUAJIT_SOURCE_DIR}" BUILDMODE=static
   DEPENDS "${LUAJIT_SOURCE_DIR}/src/Makefile"
   WORKING_DIRECTORY "${LUAJIT_SOURCE_DIR}"
   VERBATIM)
-add_custom_target(luajit_build DEPENDS "${LUAJIT_LIBRARY}")
+add_custom_target(luajit_build DEPENDS "${LUAJIT_LIBRARY}" "${LUAJIT_EXECUTABLE}")
 add_library(luajit STATIC IMPORTED GLOBAL)
 set_target_properties(luajit PROPERTIES
   IMPORTED_LOCATION "${LUAJIT_LIBRARY}"

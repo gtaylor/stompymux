@@ -41,7 +41,7 @@ btech.map.units( map, x, y, range )
 `number map`
 : The map dbref.
 
-`number x, y`
+`integer x, y`
 : The origin hex coordinates.
 
 `number range`
@@ -67,8 +67,11 @@ btech.map.units( map, x, y, z, range )
 `number map`
 : The map dbref.
 
-`number x, y, z`
-: The origin hex coordinates and altitude.
+`integer x, y`
+: The origin hex coordinates.
+
+`number z`
+: The origin altitude.
 
 `number range`
 : A non-negative range.

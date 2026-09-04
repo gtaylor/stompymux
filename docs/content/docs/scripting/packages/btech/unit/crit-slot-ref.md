@@ -11,7 +11,7 @@ Describes one critical slot in a unit template.
 ### Synopsis
 
 ```lua
-btech.unit.crit_slot_ref( reference, section, slot, [name_type] )
+btech.unit.crit_slot_ref( reference, section, slot, field )
 ```
 
 ### Arguments
@@ -20,13 +20,17 @@ btech.unit.crit_slot_ref( reference, section, slot, [name_type] )
 : The unit template reference.
 
 `string section`
-: The section name.
+: A full section name, matched without regard to case. Otherwise the legacy
+  resolver uses a class-dependent one- or two-character prefix and may ignore
+  trailing characters.
 
 `number slot`
 : The critical-slot number.
 
-`number name_type`
-: Optional naming mode: `0` for template names or `1` for repair-part names.
+`string field`
+: Required field selector: `NAME`, `STATUS`, `DATA`, `MAXAMMO`, `AMMOTYPE`,
+  `MODE`, or `HALFTON`. Matching is case-insensitive. An unrecognized supplied
+  selector currently falls back to `NAME`.
 
 ### Returns
 
@@ -35,7 +39,11 @@ btech.unit.crit_slot_ref( reference, section, slot, [name_type] )
 
 ## Notes
 
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error. The reference is resolved from the configured unit-template database.
+This function is available only in a running Lua callback. Invalid targets,
+invalid arguments, and legacy error results raise a Lua error. The reference is
+resolved from the configured unit-template database. Although the legacy
+handler's count check permits three arguments, `field` must be supplied: the
+current wrapper unconditionally reads it.
 
 ## See Also
 

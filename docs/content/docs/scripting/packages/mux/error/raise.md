@@ -17,8 +17,9 @@ mux.error.raise(code, message [, detail])
 ### Arguments
 
 `string or code node code`
-: A dotted code string or a node from [`mux.error.codes`](../codes/) or
-  [`mux.error.namespace`](../namespace/).
+: A code string or a node from [`mux.error.codes`](../codes/) or
+  [`mux.error.namespace`](../namespace/). Plain strings are accepted verbatim;
+  this function does not validate their syntax.
 
 `string message`
 : A readable description of the failure.
@@ -41,7 +42,8 @@ end
 ## Notes
 
 Use `return nil, err` rather than raising when the caller is expected to
-recover from the condition.
+recover from the condition. Prefer a checked code node or a conventionally
+dotted plain string even though plain strings are not syntax-checked.
 
 ## See Also
 

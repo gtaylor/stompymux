@@ -20,17 +20,19 @@ btech.unit.set_armor_status( unit, section, field, value )
 : The unit dbref.
 
 `string section`
-: The section name.
+: A full section name, matched without regard to case. Otherwise the legacy
+  resolver uses a class-dependent one- or two-character prefix and may ignore
+  trailing characters.
 
-`string field`
-: The armor field to change.
+`integer field`
+: `0` changes current armor, `1` internal structure, and `2` rear armor.
 
-`number value`
-: The new value.
+`integer value`
+: The new value, from `0` through `255` inclusive.
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Notes

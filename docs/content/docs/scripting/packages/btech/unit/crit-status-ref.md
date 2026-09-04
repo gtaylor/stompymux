@@ -20,7 +20,9 @@ btech.unit.crit_status_ref( reference, section )
 : The unit template reference.
 
 `string section`
-: The section name.
+: A full section name, matched without regard to case. Otherwise the legacy
+  resolver uses a class-dependent one- or two-character prefix and may ignore
+  trailing characters.
 
 ### Returns
 

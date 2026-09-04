@@ -73,6 +73,9 @@ DbRef lua_mux_require_object_at(LuaMuxPackage *package, lua_State *state,
                                 int index, int argument, const char *label);
 LuaMuxObject *lua_mux_push_object(lua_State *state, LuaMuxPackage *package,
                                   DbRef object);
+void lua_mux_push_object_type(lua_State *state, LuaMuxPackage *package,
+                              int type);
+const char *lua_mux_object_type_name(int type);
 void lua_mux_object_type_filter_parse(LuaMuxPackage *package, lua_State *state,
                                       int options,
                                       LuaMuxObjectTypeFilter *filter);
@@ -85,6 +88,8 @@ LuaMuxState *lua_mux_check_state(lua_State *state, int argument);
 LuaMuxAttribute *lua_mux_check_attribute(lua_State *state, int argument);
 
 void lua_mux_install_object_bindings(lua_State *state, LuaMuxPackage *package);
+void lua_mux_install_object_type_bindings(lua_State *state,
+                                          LuaMuxPackage *package);
 void lua_mux_install_object_relationship_bindings(lua_State *state,
                                                   LuaMuxPackage *package);
 void lua_mux_install_state_bindings(lua_State *state, LuaMuxPackage *package);

@@ -35,18 +35,16 @@ static const Attribute *lua_mux_attribute_name(lua_State *state,
 /**
  * Creates an attribute handle for this object.
  *
- * @par Lua name `object:attributes`
- * @par Lua signature `object:attributes( )`
- * @par Lua parameters - None.
- * @par Lua returns - `attributes` (`Attribute`): A handle for the object's
- * supported native attributes.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Object;
- * `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable Object:attributes
+ * @code{.lua}
+ * ---Creates a native-attribute handle for this object.
+ * ---@return Attribute attributes
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.unavailable.checking
+ * function Object:attributes() end
+ * @endcode
  */
 static int lua_mux_object_attributes(lua_State *state) {
   LuaMuxObject *object = lua_mux_check_object_handle(state, 1);
@@ -67,15 +65,17 @@ static int lua_mux_object_attributes(lua_State *state) {
 /**
  * Gets a supported native attribute.
  *
- * @par Lua name `attributes:get`
- * @par Lua signature `attributes:get( name )`
- * @par Lua parameters - `name` (`string`) A supported native attribute name.
- * @par Lua returns - `value` (`string|nil`): The raw value, or nil when unset.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Attribute;
- * `LUA_ERROR_CODE_ATTRIBUTE_INVALID` for an invalid or unsupported name.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable Attribute:get
+ * @code{.lua}
+ * ---Gets a raw native attribute, or nil when unset.
+ * ---@param name string
+ * ---@return string? value
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.attribute.invalid`](lua://mux.error.codes.attribute.invalid).
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.attribute.invalid
+ * function Attribute:get(name) end
+ * @endcode
  */
 static int lua_mux_attribute_get(lua_State *state) {
   LuaMuxAttribute *handle = lua_mux_check_attribute(state, 1);
@@ -93,39 +93,42 @@ static int lua_mux_attribute_get(lua_State *state) {
 /**
  * Sets or clears a supported native attribute.
  *
- * @par Lua name `attributes:set`
- * @par Lua signature `attributes:set( name, value )`
- * @par Lua parameters - `name` (`string`) A supported native attribute name.
- * - `value` (`string|nil`) The new raw value; nil clears the attribute.
- * @par Lua returns - No values.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Attribute;
- * `LUA_ERROR_CODE_CHECKING_UNAVAILABLE` during `@lua/check`.
- * - `LUA_ERROR_CODE_ATTRIBUTE_INVALID` for an invalid name/value or a failed
- * native update.
- * @par Lua availability Available only at runtime; unavailable during
- * `@lua/check`.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable Attribute:set
+ * @code{.lua}
+ * ---Sets a raw native attribute, or clears it with nil.
+ * ---The `value` argument is required; omission raises [`mux.error.codes.runtime`](lua://mux.error.codes.runtime), while explicit nil clears the attribute.
+ * ---@param name string
+ * ---@param value string|nil
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.attribute.invalid`](lua://mux.error.codes.attribute.invalid), or [`mux.error.codes.runtime`](lua://mux.error.codes.runtime) when `value` is omitted.
+ * ---@see mux.error.codes.object.invalid
+ * ---@see mux.error.codes.unavailable.checking
+ * ---@see mux.error.codes.attribute.invalid
+ * ---@see mux.error.codes.runtime
+ * function Attribute:set(name, value) end
+ * @endcode
  */
 static int lua_mux_attribute_set(lua_State *state) {
   LuaMuxAttribute *handle = lua_mux_check_attribute(state, 1);
   const Attribute *attribute = lua_mux_attribute_name(state, handle, 2);
-  char *text = alloc_lbuf("lua_mux_attribute_set");
+  const char *value = nullptr;
+  size_t length = 0;
+  bool clear = lua_isnil(state, 3);
   bool set;
 
   lua_mux_require_runtime(handle->package, state, "attribute:set");
-  if (lua_isnil(state, 3)) {
-    text[0] = '\0';
-  } else {
-    size_t length;
-    const char *value = luaL_checklstring(state, 3, &length);
-
-    if (length >= LBUF_SIZE || memchr(value, '\0', length)) {
-      free_buf(text);
+  if (!clear) {
+    value = luaL_checklstring(state, 3, &length);
+    if (length >= LBUF_SIZE || memchr(value, '\0', length))
       return lua_error_arg(state, 3, LUA_ERROR_CODE_ATTRIBUTE_INVALID,
                            "invalid attribute value");
-    }
+  }
+
+  char *text = alloc_lbuf("lua_mux_attribute_set");
+
+  if (clear) {
+    text[0] = '\0';
+  } else {
     memcpy(text, value, length);
     *(char *)checked_storage_at(text, LBUF_SIZE, sizeof(char), length) = '\0';
   }
@@ -142,15 +145,15 @@ static int lua_mux_attribute_set(lua_State *state) {
 /**
  * Returns every supported native attribute and its current value.
  *
- * @par Lua name `attributes:entries`
- * @par Lua signature `attributes:entries( )`
- * @par Lua parameters - None.
- * @par Lua returns - `entries` (`table`): A name-to-string table of all
- * supported attributes.
- * @par Lua errors - `LUA_ERROR_CODE_OBJECT_INVALID` for a stale Attribute.
- * @param[in,out] state The Lua state whose arguments are read and results are
- * pushed.
- * @return The number of Lua values pushed onto the stack.
+ * @par LuaLS definition mux callable Attribute:entries
+ * @code{.lua}
+ * ---Returns every supported native attribute; unset values appear as empty strings.
+ * ---@return table<string, string> entries
+ * ---
+ * ---Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).
+ * ---@see mux.error.codes.object.invalid
+ * function Attribute:entries() end
+ * @endcode
  */
 static int lua_mux_attribute_entries(lua_State *state) {
   LuaMuxAttribute *handle = lua_mux_check_attribute(state, 1);
@@ -171,6 +174,14 @@ static int lua_mux_attribute_entries(lua_State *state) {
   return 1;
 }
 
+/**
+ * @par LuaLS definition mux type attribute
+ * @code{.lua}
+ * ---A handle exposing supported native attributes for one object.
+ * ---@class Attribute
+ * local Attribute = {}
+ * @endcode
+ */
 void lua_mux_install_attribute_bindings(lua_State *state, LuaMuxPackage *package
                                         [[maybe_unused]]) {
   luaL_getmetatable(state, LUA_MUX_OBJECT_METATABLE);

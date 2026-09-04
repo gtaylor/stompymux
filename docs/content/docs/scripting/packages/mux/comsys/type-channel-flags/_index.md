@@ -9,6 +9,9 @@ sidebar_root_for: self
 
 Create a `ChannelFlags` handle with [`Channel:flags`](../type-channel/flags/).
 Methods accept only typed constants from [`mux.comsys.flags`](../flags/).
+`tostring(channel_flags)` produces `channel_flags(<name>)`; it raises
+`mux.unavailable.checking` during `@lua/check` and `mux.channel.invalid` after
+the originating channel becomes stale.
 
 ## Methods
 

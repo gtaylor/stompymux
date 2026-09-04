@@ -22,15 +22,15 @@ btech.character.set_value( character, value, amount, mode )
 `number or string value`
 : The character-value code or name.
 
-`number amount`
+`integer amount`
 : The value or experience amount.
 
-`number mode`
+`integer mode`
 : `0` sets level/value, `1` sets skill target, `3` sets XP, and other nonzero values add XP.
 
 ### Returns
 
-`boolean success`
+`true success`
 : `true` after the operation completes without a legacy error.
 
 ## Notes

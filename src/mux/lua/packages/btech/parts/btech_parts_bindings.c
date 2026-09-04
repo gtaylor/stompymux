@@ -6,6 +6,34 @@
 #include "mux/lua/packages/btech/btech_package.h"
 #include "mux/lua/packages/btech/btech_package_internal.h"
 
+/**
+ * @par LuaLS definition btech alias btech.parts.category
+ * @code{.lua}
+ * ---@alias PartCategory "ammo"|"weapon"|"weapons"|"weap"|"bomb"|"bombs"|"special"|"specials"|"cargo"|"carg"|"part"|"parts" Canonical or legacy spelling; native matching is ASCII-case-insensitive.
+ * @endcode
+ *
+ * @par LuaLS definition btech alias btech.parts.name-size
+ * @code{.lua}
+ * ---@alias PartNameSize "short"|"long"|"vlong" Canonical name length; native matching inspects only the first letter, case-insensitively.
+ * @endcode
+ *
+ * @par LuaLS definition btech alias btech.parts.part-type
+ * @code{.lua}
+ * ---@alias PartType "WEAP"|"AMMO"|"BOMB"|"PART"|"CARG"|"OTHER" Broad category returned by [`btech.parts.type`](lua://btech.parts.type).
+ * @endcode
+ *
+ * @par LuaLS definition btech alias btech.parts.weapon-stat
+ * @code{.lua}
+ * ---@alias WeaponStat "VRT"|"TYPE"|"HEAT"|"DAMAGE"|"MIN"|"SR"|"MR"|"LR"|"CRIT"|"AMMO"|"WEIGHT"|"BV" Canonical weapon statistic; native matching is ASCII-case-insensitive.
+ * @endcode
+ *
+ * @par LuaLS definition btech namespace btech.parts
+ * @code{.lua}
+ * ---Part catalogues, installed parts, stores, and costs.
+ * ---@class BtechPartsPackage
+ * local btech_parts = {}
+ * @endcode
+ */
 static const BtechLuaEntry BTECH_PARTS_ENTRIES[] = {
     {"add_stores", "parts.add_stores", fun_btaddstores},
     {"categories", "parts.categories", fun_btpartscategorylist},

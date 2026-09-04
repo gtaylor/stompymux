@@ -773,8 +773,11 @@ add_test(NAME btech_script_descriptors COMMAND btech_script_descriptors_test)
 
 add_executable(btech_script_results_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_script_results.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/scripting/los_store_values.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/scripting/script_results.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/scripting/unit_query_values.c
   ${CMAKE_SOURCE_DIR}/src/mux/support/checked_storage.c
+  ${CMAKE_SOURCE_DIR}/src/mux/support/formatting.c
   ${CMAKE_SOURCE_DIR}/src/mux/support/stringutil.c)
 target_compile_options(btech_script_results_test PRIVATE -ffunction-sections)
 target_link_options(btech_script_results_test PRIVATE -Wl,--gc-sections)
