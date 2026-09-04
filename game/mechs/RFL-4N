@@ -6,7 +6,6 @@ Tons             { 60 }
 Comment          { Saved by: Spectre(#4628) at Sat Jun  9 06:43:01 2001 }
 Computer         { 5 }
 Radio            { 4 }
-Mech_BV          { 797 }
 Cargo_Space      { 0 }
 Max_Speed        { 64.50 }
 Specials         { FlipArms SearchLight AntiAircraft }

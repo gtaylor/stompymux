@@ -7,7 +7,6 @@ Comment          { Saved by: Charlemagne(#4624) at Wed Feb 16 07:59:21 2000 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 20 }
-Mech_BV          { 718 }
 Max_Speed        { 86.00 }
 Jump_Speed       { 53.75 }
 Specials         { DoubleHS }

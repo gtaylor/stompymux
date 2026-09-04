@@ -46,7 +46,6 @@ int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
   long map_dbref;
   float max_speed;
   float template_max_speed;
-  int battle_value;
   int cargo_space;
   int carrier_max_tons;
   int computer;
@@ -85,7 +84,7 @@ int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
           "heat_sink_override, computer, radio, radio_info, "
           "structural_integrity, structural_integrity_original, radio_range, "
           "fuel, fuel_original, tons, walk_speed, run_speed, max_speed, "
-          "template_max_speed, battle_value, cargo_space, targeting_computer, "
+          "template_max_speed, cargo_space, targeting_computer, "
           "carrier_max_tons FROM btech_mechs ORDER BY dbref;",
           -1, &statement, nullptr) == SQLITE_OK
           ? 0
@@ -130,10 +129,9 @@ int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
         btech_special_column_int(statement, 27, &run_speed) < 0 ||
         btech_special_column_real(statement, 28, &max_speed) < 0 ||
         btech_special_column_real(statement, 29, &template_max_speed) < 0 ||
-        btech_special_column_int(statement, 30, &battle_value) < 0 ||
-        btech_special_column_int(statement, 31, &cargo_space) < 0 ||
-        btech_special_column_int(statement, 32, &targeting_computer) < 0 ||
-        btech_special_column_int(statement, 33, &carrier_max_tons) < 0 ||
+        btech_special_column_int(statement, 30, &cargo_space) < 0 ||
+        btech_special_column_int(statement, 31, &targeting_computer) < 0 ||
+        btech_special_column_int(statement, 32, &carrier_max_tons) < 0 ||
         id_0 < CHAR_MIN || id_0 > CHAR_MAX || id_1 < CHAR_MIN ||
         id_1 > CHAR_MAX || brief < CHAR_MIN || brief > CHAR_MAX ||
         unit_class < CHAR_MIN || unit_class > CHAR_MAX ||
@@ -184,7 +182,6 @@ int btech_special_load_mech_parents(sqlite3 *sqlite, BtechContext *context) {
     snapshot.definition.runspeed = run_speed;
     snapshot.definition.maxspeed = max_speed;
     snapshot.definition.template_maxspeed = template_max_speed;
-    snapshot.definition.mechbv = battle_value;
     snapshot.definition.cargospace = cargo_space;
     snapshot.definition.targcomp = (char)targeting_computer;
     snapshot.definition.carmaxton = (char)carrier_max_tons;

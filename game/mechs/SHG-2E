@@ -7,7 +7,6 @@ Comment          { Saved by: Spectre(#4628) at Fri Mar 16 16:01:32 2001 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 17 }
-Mech_BV          { 1498 }
 Cargo_Space      { 0 }
 Max_Speed        { 53.75 }
 Jump_Speed       { 32.25 }

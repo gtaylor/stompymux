@@ -3,7 +3,6 @@ Reference        { ASN-101 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 40 }
-Mech_BV          { 586 }
 Max_Speed        { 118.25 }
 Jump_Speed       { 53.75 }
 Left_Arm

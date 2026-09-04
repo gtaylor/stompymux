@@ -3,7 +3,6 @@ Reference        { STK-3F }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 85 }
-Mech_BV          { 1152 }
 Heat_Sinks       { 20 }
 Computer	 { 4 }
 Max_Speed        { 53.75 }

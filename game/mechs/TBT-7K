@@ -3,7 +3,6 @@ Reference        { TBT-7K }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 50 }
-Mech_BV          { 792 }
 Heat_Sinks       { 11 }
 Max_Speed        { 86.00 }
 Left_Arm

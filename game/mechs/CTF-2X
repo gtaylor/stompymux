@@ -3,7 +3,6 @@ Reference        { CTF-2X }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 70 }
-Mech_BV          { 1026 }
 Heat_Sinks       { 14 }
 Max_Speed        { 64.50 }
 Left_Arm

@@ -3,7 +3,6 @@ Reference        { TBT-5S }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 50 }
-Mech_BV          { 841 }
 Heat_Sinks       { 18 }
 Max_Speed        { 86.00 }
 Left_Arm

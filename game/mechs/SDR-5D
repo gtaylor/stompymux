@@ -3,7 +3,6 @@ Reference        { SDR-5D }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 30 }
-Mech_BV          { 412 }
 Max_Speed        { 129.00 }
 Jump_Speed       { 86.00 }
 Left_Arm

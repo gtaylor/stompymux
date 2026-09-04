@@ -3,7 +3,6 @@ Reference        { MAD-4A }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 100 }
-Mech_BV          { 1769 }
 Heat_Sinks       { 29 }
 Max_Speed        { 53.75 }
 Jump_Speed       { 32.25 }

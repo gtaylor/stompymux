@@ -3,7 +3,6 @@ Reference        { HGN-732 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 90 }
-Mech_BV          { 1838 }
 Radio            { 4 }
 Computer         { 4 }
 Heat_Sinks       { 12 }

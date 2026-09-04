@@ -3,7 +3,6 @@ Reference        { JR7-D }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 35 }
-Mech_BV          { 669 }
 Max_Speed        { 118.25 }
 Jump_Speed       { 53.75 }
 Computer 	 { 2 }

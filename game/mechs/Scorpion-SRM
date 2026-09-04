@@ -3,7 +3,6 @@ Reference        { Scorpion-SRM }
 Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 25 }
-Mech_BV          { 231 }
 Computer         { 3 }
 Max_Speed        { 64.50 }
 Specials         { ICEEngine_Tech }

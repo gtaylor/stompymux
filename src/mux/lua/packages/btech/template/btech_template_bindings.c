@@ -98,8 +98,11 @@ static int lua_btech_template_engine(lua_State *state,
 
 static int lua_btech_template_battle_value(lua_State *state,
                                            LuaBtechPackage *package) {
+  if (lua_gettop(state) != 1)
+    return lua_error_raise(state, LUA_ERROR_CODE_ARG_INVALID,
+                           "expected exactly 1 argument");
   Mech *mech = require_template(state, package, 1);
-  lua_btech_push_battle_value(state, mech, 2, true);
+  lua_btech_push_battle_value(state, mech);
   return 1;
 }
 

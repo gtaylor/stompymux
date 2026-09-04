@@ -3,7 +3,6 @@ Reference        { Padilla }
 Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 75 }
-Mech_BV          { 621 }
 Max_Speed        { 86.00 }
 Specials         { XLEngine_Tech }
 Left_Side

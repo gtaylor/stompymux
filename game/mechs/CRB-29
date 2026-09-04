@@ -5,7 +5,6 @@ Move_Type        { Biped }
 Tons             { 50 }
 Comment          { Saved by: Spectre(#4628) at Mon Jan 14 09:39:10 2002 }
 Heat_Sinks       { 24 }
-Mech_BV          { 1171 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 86.00 }

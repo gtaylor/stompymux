@@ -3,7 +3,6 @@ Reference        { BLR-1D }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 85 }
-Mech_BV          { 1323 }
 Heat_Sinks       { 24 }
 Computer 	 { 4 }
 Radio		 { 4 }

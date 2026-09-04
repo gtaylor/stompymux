@@ -4,7 +4,6 @@ Type             { VTOL }
 Move_Type        { VTOL }
 Tons             { 30 }
 Comment          { Saved by: Stringfellow Hawke(#988) at Fri Jan  6 14:54:19 2006 }
-Mech_BV          { 37 }
 Cargo_Space      { 600 }
 Max_Ton          { 1 }
 Max_Suits        { 0 }

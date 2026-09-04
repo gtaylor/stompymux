@@ -3,7 +3,6 @@ Reference        { Neptune }
 Type             { Naval }
 Move_Type        { Sub }
 Tons             { 100 }
-Mech_BV          { 604 }
 Heat_Sinks	 { 8 }
 Max_Speed        { 53.75 }
 Specials         { ICEEngine_Tech }

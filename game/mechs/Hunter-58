@@ -3,7 +3,6 @@ Reference        { Hunter-58 }
 Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 35 }
-Mech_BV          { 480 }
 Max_Speed        { 64.50 }
 Specials	 { Searchlight }
 Left_Side

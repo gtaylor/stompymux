@@ -3,7 +3,6 @@ Reference        { RVN-1X }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 35 }
-Mech_BV          { 621 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 12 }

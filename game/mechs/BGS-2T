@@ -5,7 +5,6 @@ Move_Type        { Quad }
 Tons             { 70 }
 Comment          { Saved by: Spectre(#4628) at Wed May 30 12:47:27 2001 }
 Heat_Sinks       { 22 }
-Mech_BV          { 1236 }
 Cargo_Space      { 0 }
 Max_Speed        { 86.00 }
 Specials         { DoubleHS }

@@ -3,7 +3,6 @@ Reference        { GLT-4L }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 70 }
-Mech_BV          { 1222 }
 Heat_Sinks       { 22 }
 Max_Speed        { 64.50 }
 Jump_Speed       { 43.00 }

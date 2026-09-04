@@ -3,7 +3,6 @@ Reference        { Kanga }
 Type             { Vehicle }
 Move_Type        { Hover }
 Tons             { 50 }
-Mech_BV          { 679 }
 Max_Speed        { 129.00 }
 Jump_Speed	 { 64.50 }
 Left_Side

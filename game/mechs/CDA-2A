@@ -3,7 +3,6 @@ Reference        { CDA-2A }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 40 }
-Mech_BV          { 567 }
 Specials         { Fliparms }
 Computer 	 { 4 }
 Radio 	 	 { 4 }

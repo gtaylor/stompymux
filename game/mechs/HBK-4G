@@ -3,7 +3,6 @@ Reference        { HBK-4G }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 50 }
-Mech_BV          { 851 }
 Heat_Sinks       { 13 }
 Max_Speed        { 64.50 }
 Left_Arm

@@ -6,7 +6,6 @@ Tons             { 30 }
 Comment          { Saved by: Spanky(#6784) at Tue Jun 26 07:57:55 2001 }
 Computer         { 3 }
 Heat_Sinks       { 11 }
-Mech_BV          { 604 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 32.25 }

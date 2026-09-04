@@ -5,7 +5,6 @@ Move_Type        { Hull }
 Tons             { 200 }
 Comment          { Saved by: Tony(#8) at Wed Mar  6 11:28:35 2002 }
 Computer         { 3 }
-Mech_BV          { 560 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 32.25 }

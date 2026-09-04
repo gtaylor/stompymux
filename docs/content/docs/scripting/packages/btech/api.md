@@ -61,8 +61,9 @@ ammunition on weapons that do not consume it.
 `effective_max_speed`, `section_condition`, `set_max_speed`, `set_tonnage`, and
 `tic_weapons`.
 
-Battle value defaults to BV2. Legacy mode supports paired gunnery/piloting
-overrides and reports those skills; BV2 rejects skill overrides.
+Battle value is calculated from the unit's current armor, internals, movement,
+tonnage, weapons, heat efficiency, and operational equipment. The returned
+record contains `total`, `offensive`, and `defensive` numeric fields.
 
 ## Errors
 

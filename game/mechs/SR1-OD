@@ -6,7 +6,6 @@ Tons             { 40 }
 Comment          { Saved by: Charlemagne(#4624) at Fri Feb 25 18:46:20 2000 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 770 }
 Max_Speed        { 96.75 }
 Specials         { FlipArms }
 Left_Arm

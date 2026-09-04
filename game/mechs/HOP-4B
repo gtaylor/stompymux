@@ -3,7 +3,6 @@ Reference        { HOP-4B }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 55 }
-Mech_BV          { 989 }
 Heat_Sinks       { 16 }
 Max_Speed        { 64.50 }
 Specials         { Fliparms }

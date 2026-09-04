@@ -3,7 +3,6 @@ Reference        { VND-1R }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 45 }
-Mech_BV          { 900 }
 Heat_Sinks       { 16 }
 Max_Speed        { 64.50 }
 Jump_Speed       { 43.00 }

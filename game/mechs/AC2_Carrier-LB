@@ -7,7 +7,6 @@ Comment          { Saved by: Stringfellow Hawke(#988) at Thu Apr  6 17:46:34 200
 Tac_Range        { 30 }
 LRS_Range        { 60 }
 Scan_Range       { 30 }
-Mech_BV          { 0 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 53.75 }

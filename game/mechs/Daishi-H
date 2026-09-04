@@ -7,7 +7,6 @@ Comment          { Saved by: Kelvin McCorvin(#2) at Wed Jan  3 01:55:56 2007 }
 Computer         { 5 }
 Radio            { 5 }
 Heat_Sinks       { 40 }
-Mech_BV          { 0 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 53.75 }

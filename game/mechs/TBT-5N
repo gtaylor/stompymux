@@ -3,7 +3,6 @@ Reference        { TBT-5N }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 50 }
-Mech_BV          { 864 }
 Max_Speed        { 86.00 }
 Left_Arm
   Armor            { 10 }

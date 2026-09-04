@@ -3,7 +3,6 @@ Reference        { GHR-5H }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 70 }
-Mech_BV          { 1268 }
 Heat_Sinks       { 22 }
 Max_Speed        { 64.50 }
 Jump_Speed       { 43.00 }

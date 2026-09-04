@@ -4,7 +4,6 @@ Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 45 }
 Comment          { Saved by: Charlemagne(#4624) at Sat Mar  4 14:56:14 2000 }
-Mech_BV          { 436 }
 Cargo_Space      { 300 }
 Max_Speed        { 64.50 }
 Specials         { CargoTech }

@@ -12,7 +12,6 @@ Computer         { 3 }
 Radio            { 5 }
 Heat_Sinks       { 20 }
 RadioType        { 126 }
-Mech_BV          { 1102 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 64.50 }

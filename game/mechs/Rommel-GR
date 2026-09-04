@@ -8,7 +8,6 @@ Tac_Range        { 30 }
 LRS_Range        { 60 }
 Scan_Range       { 30 }
 Computer         { 3 }
-Mech_BV          { 0 }
 Max_Speed        { 64.50 }
 Left_Side
   Armor            { 40 }

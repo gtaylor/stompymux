@@ -7,7 +7,6 @@ Comment          { Saved by: Spectre(#4628) at Mon Jan 14 13:03:04 2002 }
 Tac_Range        { 30 }
 LRS_Range        { 60 }
 Scan_Range       { 30 }
-Mech_BV          { 1211 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 53.75 }

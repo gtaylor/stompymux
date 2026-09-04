@@ -6,7 +6,6 @@ Tons             { 55 }
 Heat_Sinks       { 14 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 1070 }
 Max_Speed        { 86.00 }
 Jump_Speed       { 53.75 }
 Left_Arm

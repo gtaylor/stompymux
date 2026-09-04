@@ -69,8 +69,7 @@ void lua_btech_push_critical_slots(lua_State *state, BtechContext *context,
 void lua_btech_push_weapons(lua_State *state, BtechContext *context, Mech *mech,
                             int section);
 void lua_btech_push_technologies(lua_State *state, Mech *mech);
-void lua_btech_push_battle_value(lua_State *state, Mech *mech, int options,
-                                 bool template_defaults);
+void lua_btech_push_battle_value(lua_State *state, Mech *mech);
 void lua_btech_install_unit_bindings(lua_State *state,
                                      LuaBtechPackage *package);
 void lua_btech_install_unit_operation_bindings(lua_State *state,

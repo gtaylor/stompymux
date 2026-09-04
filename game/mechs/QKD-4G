@@ -3,7 +3,6 @@ Reference        { QKD-4G }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 60 }
-Mech_BV          { 1012 }
 Heat_Sinks       { 13 }
 Max_Speed        { 86.00 }
 Jump_Speed       { 53.75 }

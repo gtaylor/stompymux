@@ -3,7 +3,6 @@ Reference        { THE-N }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 20 }
-Mech_BV          { 484 }
 Radio            { 4 }
 Computer         { 4 }
 Max_Speed        { 96.75 }

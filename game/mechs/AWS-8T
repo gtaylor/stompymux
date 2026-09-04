@@ -3,7 +3,6 @@ Reference        { AWS-8T }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 80 }
-Mech_BV          { 1312 }
 Heat_Sinks       { 23 }
 Computer 	 { 4 }
 Max_Speed        { 53.75 }

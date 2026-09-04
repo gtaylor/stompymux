@@ -7,7 +7,6 @@ Comment          { Saved by: Genitrix(#1511) at Mon Feb 26 02:17:37 2001 }
 Tac_Range        { 30 }
 LRS_Range        { 60 }
 Scan_Range       { 30 }
-Mech_BV          { 0 }
 Max_Speed        { 53.75 }
 Left_Side
   Armor            { 22 }

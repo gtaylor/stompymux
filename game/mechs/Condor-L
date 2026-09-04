@@ -6,7 +6,6 @@ Tons             { 50 }
 Comment          { Saved by: Charlemagne(#4624) at Wed Feb 16 07:58:53 2000 }
 Computer         { 3 }
 Heat_Sinks       { 12 }
-Mech_BV          { 473 }
 Max_Speed        { 129.00 }
 Specials         { ICEEngine_Tech }
 Left_Side

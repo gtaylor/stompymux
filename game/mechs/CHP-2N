@@ -3,7 +3,6 @@ Reference        { CHP-2N }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 60 }
-Mech_BV          { 839 }
 Max_Speed        { 86.00 }
 Specials         { Fliparms }
 Left_Arm

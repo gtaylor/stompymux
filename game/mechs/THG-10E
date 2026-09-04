@@ -3,7 +3,6 @@ Reference        { THG-10E }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 80 }
-Mech_BV          { 1203 }
 Heat_Sinks       { 19 }
 Max_Speed        { 64.50 }
 Left_Arm

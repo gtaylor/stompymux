@@ -3,7 +3,6 @@ Reference        { ANH-1A }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 100 }
-Mech_BV          { 1151 }
 Heat_Sinks       { 18 }
 Max_Speed        { 32.25 }
 Left_Arm

@@ -3,7 +3,6 @@ Reference        { Cyrano }
 Type             { VTOL }
 Move_Type        { VTOL }
 Tons             { 30 }
-Mech_BV          { 754 }
 Radio            { 3 }
 Computer         { 3 }
 Max_Speed        { 193.50 }

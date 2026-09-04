@@ -3,7 +3,6 @@ Reference        { Neptune-SRM }
 Type             { Naval }
 Move_Type        { Sub }
 Tons             { 100 }
-Mech_BV          { 701 }
 Heat_Sinks	 { 0 }
 Max_Speed        { 53.75 }
 Specials         { ICEEngine_Tech }

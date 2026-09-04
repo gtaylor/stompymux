@@ -3,7 +3,6 @@ Reference        { HER-1S }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 30 }
-Mech_BV          { 596 }
 Computer         { 4 }
 Radio            { 4 }
 Max_Speed        { 150.50 }

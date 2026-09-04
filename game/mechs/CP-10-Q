@@ -3,7 +3,6 @@ Reference        { CP-10-Q }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 90 }
-Mech_BV          { 1213 }
 Computer         { 4 }
 Radio            { 5 }
 RadioType        { 126 }

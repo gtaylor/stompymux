@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdlib.h>
 
+#include "battle_value_api.h"
 #include "btech/context.h"
 #include "btech_channel.h"
 #include "btechstats.h"
@@ -262,10 +263,8 @@ void gunnery_experience_award(const GunneryExperienceAward *award) {
   }
 
   /* Need to do a BV mod between the mechs */
-  const int ATTACKER_BATTLE_VALUE = mech_battle_value(attacker);
-  const int WOUNDED_BATTLE_VALUE = mech_battle_value(wounded);
-  my_battle_value = ATTACKER_BATTLE_VALUE;
-  their_battle_value = WOUNDED_BATTLE_VALUE;
+  my_battle_value = battle_value_calculate(attacker).total;
+  their_battle_value = battle_value_calculate(wounded).total;
 
   if (mech_context(attacker)->configuration->btech_xp_use_pilot_bv_mod) {
     my_pilot_bv_mod = get_pilot_bv_mod(attacker, WEAPINDX);

@@ -3,7 +3,6 @@ Reference        { JVN-10F }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 30 }
-Mech_BV          { 702 }
 Heat_Sinks       { 12 }
 Max_Speed        { 96.75 }
 Jump_Speed       { 64.50 }

@@ -7,7 +7,6 @@ Comment          { Saved by: Charlemagne(#4624) at Sat Mar  4 14:45:56 2000 }
 Computer         { 5 }
 Radio            { 5 }
 Heat_Sinks       { 13 }
-Mech_BV          { 1221 }
 Cargo_Space      { 700 }
 Max_Speed        { 129.00 }
 Specials         { Clan CargoTech }

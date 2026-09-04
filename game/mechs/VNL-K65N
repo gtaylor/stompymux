@@ -3,7 +3,6 @@ Reference        { VNL-K65N }
 Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 75 }
-Mech_BV          { 663 }
 Heat_Sinks       { 10 }
 Max_Speed        { 53.75 }
 Left_Side

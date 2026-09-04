@@ -3,7 +3,6 @@ Reference        { CGR-1A1 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 80 }
-Mech_BV          { 1274 }
 Max_Speed        { 86.00 }
 Left_Arm
   Armor            { 15 }

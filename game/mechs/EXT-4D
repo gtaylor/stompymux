@@ -3,7 +3,6 @@ Reference        { EXT-4D }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 65 }
-Mech_BV          { 1239 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 20 }

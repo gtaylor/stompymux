@@ -3,7 +3,6 @@ Reference        { STG-3R }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 20 }
-Mech_BV          { 320 }
 Max_Speed        { 96.75 }
 Jump_Speed       { 64.50 }
 Specials         { Searchlight }

@@ -3,7 +3,6 @@ Reference        { Sea_Skimmer }
 Type             { Naval }
 Move_Type        { Foil }
 Tons             { 25 }
-Mech_BV          { 188 }
 Computer         { 3 }
 Max_Speed        { 193.50 }
 Specials         { ICEEngine_Tech }

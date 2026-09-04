@@ -7,7 +7,6 @@ Comment          { Saved by: Genitrix(#1511) at Thu Feb 15 14:28:17 2001 }
 Tac_Range        { 30 }
 LRS_Range        { 60 }
 Scan_Range       { 30 }
-Mech_BV          { 0 }
 Max_Speed        { 96.75 }
 Cargo_Space      { 4096 }
 Specials         { CargoTech }

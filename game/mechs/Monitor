@@ -3,7 +3,6 @@ Reference        { Monitor }
 Type             { Naval }
 Move_Type        { Hull }
 Tons             { 75 }
-Mech_BV          { 560 }
 Computer         { 3 }
 Max_Speed        { 53.75 }
 Comment         { ICEEngine_Tech CargoTech }

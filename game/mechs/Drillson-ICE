@@ -3,7 +3,6 @@ Reference        { Drillson-ICE }
 Type             { Vehicle }
 Move_Type        { Hover }
 Tons             { 50 }
-Mech_BV          { 584 }
 Comment          { Saved by: Parallax(#2385) at Mon May 25 12:32:57 1998 }
 Max_Speed        { 96.75 }
 Left_Side

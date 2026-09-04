@@ -3,7 +3,6 @@ Reference        { HGN-733 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 90 }
-Mech_BV          { 1424 }
 Heat_Sinks       { 13 }
 Max_Speed        { 53.75 }
 Jump_Speed       { 32.25 }

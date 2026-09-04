@@ -1,3 +1,4 @@
+#include "battle_value_api.h"
 #include "btech_event.h"
 #include "mech_script_value_api.h"
 #include "mech_sensor_api.h"
@@ -397,9 +398,9 @@ static const GMV SPECIAL_VALUE_DESCRIPTORS[] = {
      .size = 0},
     {.gtype = GTYPE_MECH,
      .name = "bv",
-     .source_kind = GMV_SOURCE_MECH_KEY,
-     .source.mech_key = MECH_SCRIPT_BATTLE_VALUE,
-     .type = TYPE_INT,
+     .source_kind = GMV_SOURCE_BUFFERED_CALLBACK,
+     .source.buffered_callback = battle_value_format,
+     .type = TYPE_STRFUNC_BUF,
      .size = 0},
     {.gtype = GTYPE_MECH,
      .name = "cargospace",

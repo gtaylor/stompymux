@@ -3,7 +3,6 @@ Reference        { CLN-7V }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 50 }
-Mech_BV          { 839 }
 Max_Speed        { 96.75 }
 Jump_Speed	 { 64.50 }
 Left_Arm

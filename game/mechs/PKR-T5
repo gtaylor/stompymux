@@ -7,7 +7,6 @@ Comment          { Saved by: GreaseMonkey(#1094) at Mon Jul 16 21:08:05 2007 }
 Computer         { 4 }
 Radio            { 5 }
 RadioType        { 126 }
-Mech_BV          { 200 }
 Cargo_Space      { 100 }
 Max_Ton          { 1 }
 Max_Suits        { 0 }

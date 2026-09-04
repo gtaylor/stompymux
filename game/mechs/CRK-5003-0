@@ -3,7 +3,6 @@ Reference        { CRK-5003-0 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 85 }
-Mech_BV          { 1325 }
 Heat_Sinks       { 15 }
 Max_Speed        { 53.75 }
 Jump_Speed       { 32.25 }

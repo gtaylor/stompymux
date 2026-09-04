@@ -5,7 +5,6 @@ Move_Type        { Hover }
 Tons             { 10 }
 Comment          { Saved by: Christmas QB(#198) at Wed Dec 21 16:19:27 2005 }
 Computer         { 3 }
-Mech_BV          { 106 }
 Cargo_Space      { 500 }
 Max_Ton          { 4 }
 Max_Suits        { 0 }

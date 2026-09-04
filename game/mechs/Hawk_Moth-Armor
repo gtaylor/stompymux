@@ -4,7 +4,6 @@ Type             { VTOL }
 Move_Type        { VTOL }
 Tons             { 25 }
 Comment          { Saved by: Tantrum(#4394) at Wed May 24 07:24:51 2000 }
-Mech_BV          { 672 }
 Cargo_Space      { 0 }
 Max_Speed        { 129.00 }
 Left_Side

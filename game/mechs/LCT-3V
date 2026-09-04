@@ -3,7 +3,6 @@ Reference        { LCT-3V }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 20 }
-Mech_BV          { 434 }
 Computer         { 3 }
 Radio 		 { 3 }
 Max_Speed        { 129.00 }

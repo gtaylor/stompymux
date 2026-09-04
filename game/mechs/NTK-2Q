@@ -7,7 +7,6 @@ Comment          { Saved by: Charlemagne(#4624) at Wed Feb 16 08:05:18 2000 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 24 }
-Mech_BV          { 863 }
 Max_Speed        { 96.75 }
 Specials         { DoubleHS FlipArms }
 Left_Arm

@@ -3,7 +3,6 @@ Reference        { Chevalier }
 Type             { Vehicle }
 Move_Type        { Wheel }
 Tons             { 35 }
-Mech_BV          { 444 }
 Heat_Sinks       { 12 }
 Max_Speed        { 96.75 }
 Left_Side

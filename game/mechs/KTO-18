@@ -3,7 +3,6 @@ Reference        { KTO-18 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 55 }
-Mech_BV          { 864 }
 Max_Speed        { 86.00 }
 Left_Arm
   Armor            { 18 }

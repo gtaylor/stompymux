@@ -17,13 +17,11 @@ and status reports.
 | --- | --- |
 | [`armor_status`](armor-status/) / [`armor_status_ref`](armor-status-ref/) | Returns serialized armor values for a section. |
 | [`assigned_pilot`](assigned-pilot/) / [`set_assigned_pilot`](set-assigned-pilot/) | Gets or sets the assigned pilot. |
-| [`battle_value`](battle-value/) / [`battle_value_ref`](battle-value-ref/) | Calculates a unit's battle value. |
-| [`battle_value2_ref`](battle-value2-ref/) | Calculates second-generation template battle value. |
+| [`battle_value`](battle-value/) | Calculates a live unit's current battle value. |
 | [`crit_slot`](crit-slot/) / [`crit_slot_ref`](crit-slot-ref/) | Describes one critical slot. |
 | [`crit_status`](crit-status/) / [`crit_status_ref`](crit-status-ref/) | Returns serialized critical status. |
 | [`damage`](damage/) | Applies clustered damage to a live unit. |
 | [`display_name`](display-name/) | Returns a unit's display-name override. |
-| [`defensive_battle_value_ref`](defensive-battle-value-ref/) / [`offensive_battle_value_ref`](offensive-battle-value-ref/) | Calculates a battle-value component. |
 | [`engine_rating`](engine-rating/) / [`engine_rating_ref`](engine-rating-ref/) | Returns an engine rating. |
 | [`fasa_base_cost_ref`](fasa-base-cost-ref/) | Calculates a template's FASA base cost. |
 | [`frequencies`](frequencies/) | Lists configured radio channels. |

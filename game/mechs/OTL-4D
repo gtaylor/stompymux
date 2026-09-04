@@ -3,7 +3,6 @@ Reference        { OTL-4D }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 60 }
-Mech_BV          { 1034 }
 Heat_Sinks       { 16 }
 Max_Speed        { 86.00 }
 Left_Arm

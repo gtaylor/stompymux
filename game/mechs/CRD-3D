@@ -3,7 +3,6 @@ Reference        { CRD-3D }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 65 }
-Mech_BV          { 1020 }
 Heat_Sinks       { 14 }
 Max_Speed        { 64.50 }
 Left_Arm

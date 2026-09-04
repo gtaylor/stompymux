@@ -7,7 +7,6 @@ Comment          { Saved by: Stringfellow Hawke(#988) at Thu Mar  2 13:13:57 200
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 36 }
-Mech_BV          { 1162 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 64.50 }

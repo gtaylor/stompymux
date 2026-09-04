@@ -3,7 +3,6 @@ Reference        { FLS-7K }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 75 }
-Mech_BV          { 1192 }
 Heat_Sinks       { 23 }
 Max_Speed        { 64.50 }
 Left_Arm

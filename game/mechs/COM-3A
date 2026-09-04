@@ -3,7 +3,6 @@ Reference        { COM-3A }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 25 }
-Mech_BV          { 392 }
 Computer	 { 2 }
 Radio 		 { 2 }
 Max_Speed        { 96.75 }

@@ -9,7 +9,6 @@ LRS_Range        { 127 }
 Scan_Range       { 127 }
 Radio_Range      { 1000 }
 Computer         { 3 }
-Mech_BV          { 0 }
 Cargo_Space      { 0 }
 Max_Speed        { 0.00 }
 Specials         { SalvageTech }

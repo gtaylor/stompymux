@@ -3,7 +3,6 @@ Reference        { UM-R60L }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 30 }
-Mech_BV          { 443 }
 Heat_Sinks       { 11 }
 Computer	 { 3 }
 Radio		 { 3 }

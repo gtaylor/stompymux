@@ -15,5 +15,5 @@ template and raises `btech.template.invalid` for a malformed one. Other queries
 raise `btech.template.not_found` or `btech.template.invalid`. Display functions
 accept a `DbRef|Object` recipient and return no Lua values.
 
-Template battle-value queries default skills to gunnery 4 and piloting 5 in
-explicit legacy mode. Base cost is returned as a safe Lua integer.
+Battle value is returned as `total`, `offensive`, and `defensive` numeric
+components. Base cost is returned as a safe Lua integer.

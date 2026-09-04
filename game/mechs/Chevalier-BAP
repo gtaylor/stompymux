@@ -5,7 +5,6 @@ Move_Type        { Wheel }
 Tons             { 35 }
 Comment          { Saved by: Spectre(#4628) at Fri Jun 21 07:45:57 2002 }
 Heat_Sinks       { 12 }
-Mech_BV          { 431 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 96.75 }

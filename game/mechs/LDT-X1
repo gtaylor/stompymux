@@ -6,7 +6,6 @@ Tons             { 25 }
 Heat_Sinks       { 20 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 838 }
 Max_Speed        { 96.75 }
 Jump_Speed       { 64.50 }
 Specials         { DoubleHS EndoSteel_Tech }

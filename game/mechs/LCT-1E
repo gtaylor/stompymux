@@ -3,7 +3,6 @@ Reference        { LCT-1E }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 20 }
-Mech_BV          { 484 }
 Max_Speed        { 129.00 }
 Specials         { Fliparms }
 Left_Arm

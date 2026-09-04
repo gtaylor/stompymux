@@ -3,7 +3,6 @@ Reference        { STN-3K }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 40 }
-Mech_BV          { 536 }
 Computer	 { 4 }
 Radio		 { 4 }
 Max_Speed        { 96.75 }

@@ -225,7 +225,7 @@ set(BTECH_SOURCES
   scripting/repair_stores_values.c
   scripting/repair_damage_values.c
   scripting/unit_query_values.c
-  scripting/unit_battle_value_values.c
+  scripting/unit_speed_values.c
   scripting/unit_query_reports.c
   scripting/unit_values.c
   scripting/world_values.c
@@ -280,7 +280,6 @@ set(BTECH_SOURCES
   core/btech_text_builder.c
   unit/mech_advanced.c
   unit/battle_value.c
-  unit/battle_value_legacy.c
   unit/mech_build.c
   unit/weapons_catalogue.c
   unit/mech_classification_state.c

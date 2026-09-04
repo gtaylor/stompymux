@@ -591,7 +591,7 @@ static int check_snapshot(const char *path) {
   ok = ok && query_int(sqlite,
                        "SELECT schema_version FROM btech_persistence_metadata "
                        "WHERE id = 1;",
-                       5) == 0;
+                       6) == 0;
   ok =
       ok && query_int(sqlite,
                       "SELECT count(*) FROM sqlite_master WHERE type = 'table' "

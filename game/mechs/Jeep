@@ -9,7 +9,6 @@ LRS_Range        { 31 }
 Scan_Range       { 12 }
 Radio_Range      { 80 }
 Computer         { 3 }
-Mech_BV          { 131 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 121.00 }

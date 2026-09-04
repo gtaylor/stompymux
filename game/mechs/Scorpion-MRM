@@ -5,7 +5,6 @@ Move_Type        { Track }
 Tons             { 25 }
 Comment          { Saved by: Genitrix(#1511) at Thu Feb 15 14:32:23 2001 }
 Computer         { 3 }
-Mech_BV          { 0 }
 Max_Speed        { 64.50 }
 Specials         { ICEEngine_Tech }
 Left_Side

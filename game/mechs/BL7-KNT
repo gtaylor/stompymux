@@ -3,7 +3,6 @@ Reference        { BL7-KNT }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 75 }
-Mech_BV          { 1106 }
 Heat_Sinks       { 20 }
 Max_Speed        { 64.50 }
 Specials	 { Searchlight }

@@ -6,7 +6,6 @@ Tons             { 60 }
 Heat_Sinks       { 26 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 1333 }
 Max_Speed        { 86.00 }
 Jump_Speed       { 53.75 }
 Specials         { DoubleHS StealthArmor_Tech EndoSteel_Tech ECM }

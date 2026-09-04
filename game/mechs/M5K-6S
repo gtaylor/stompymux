@@ -6,7 +6,6 @@ Tons             { 100 }
 Comment          { Saved by: Spectre(#4628) at Sat Mar 31 15:20:27 2001 }
 Radio            { 2 }
 Heat_Sinks       { 15 }
-Mech_BV          { 1180 }
 Cargo_Space      { 0 }
 Max_Speed        { 53.75 }
 Left_Arm

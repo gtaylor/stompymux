@@ -3,7 +3,6 @@ Reference        { Schiltron-B }
 Type             { Vehicle }
 Move_Type        { Wheel }
 Tons             { 80 }
-Mech_BV          { 1117 }
 Max_Speed        { 53.75 }
 Specials         { XLEngine_Tech ArtemisIV }
 Left_Side

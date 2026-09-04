@@ -3,7 +3,6 @@ Reference        { OTT-7J }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 35 }
-Mech_BV          { 497 }
 Computer	 { 5 }
 Radio		 { 5 }
 Max_Speed        { 129.00 }

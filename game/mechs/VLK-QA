@@ -3,7 +3,6 @@ Reference        { VLK-QA }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 30 }
-Mech_BV          { 640 }
 Heat_Sinks       { 11 }
 Max_Speed        { 86.00 }
 Jump_Speed       { 53.75 }

@@ -3,7 +3,6 @@ Reference        { LGB-0W }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 85 }
-Mech_BV          { 1034 }
 Heat_Sinks       { 13 }
 Max_Speed        { 64.50 }
 Specials         { Fliparms AntiAircraft }

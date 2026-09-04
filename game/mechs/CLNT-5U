@@ -10,7 +10,6 @@ Scan_Range       { 30 }
 Computer         { 5 }
 Radio            { 4 }
 Heat_Sinks       { 24 }
-Mech_BV          { 1118 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 96.75 }

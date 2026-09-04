@@ -182,9 +182,6 @@ bool mech_script_value_read(const Mech *mech, MechScriptValueKey key,
   case MECH_SCRIPT_RADIO_TYPE:
     value->integer = mech_radio_configuration(mech);
     return true;
-  case MECH_SCRIPT_BATTLE_VALUE:
-    value->integer = ((mech)->ud.mechbv);
-    return true;
   case MECH_SCRIPT_CARGO_SPACE:
     value->integer = ((mech)->ud.cargospace);
     return true;
@@ -418,9 +415,6 @@ bool mech_script_value_write(Mech *mech, MechScriptValueKey key,
     return true;
   case MECH_SCRIPT_RADIO_TYPE:
     mech_radio_configuration_set(mech, value.integer);
-    return true;
-  case MECH_SCRIPT_BATTLE_VALUE:
-    ((mech)->ud.mechbv) = value.integer;
     return true;
   case MECH_SCRIPT_CARGO_SPACE:
     ((mech)->ud.cargospace) = value.integer;

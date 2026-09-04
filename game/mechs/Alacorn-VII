@@ -7,7 +7,6 @@ Comment          { Saved by: Tantrum(#4394) at Sun Jun 17 23:44:34 2001 }
 Tac_Range        { 30 }
 LRS_Range        { 60 }
 Scan_Range       { 30 }
-Mech_BV          { 1719 }
 Cargo_Space      { 0 }
 Max_Speed        { 53.75 }
 Specials         { SearchLight XLEngine_Tech }

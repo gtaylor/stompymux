@@ -191,16 +191,9 @@
  * ---@field title string
  * ---@field modes string[]
  * ---@class BtechBattleValue
- * ---@field rules "bv2"|"legacy"
  * ---@field total number
- * ---@field offensive? number
- * ---@field defensive? number
- * ---@field gunnery? integer
- * ---@field piloting? integer
- * ---@class BtechBattleValueOptions
- * ---@field rules? "bv2"|"legacy"
- * ---@field gunnery? integer
- * ---@field piloting? integer
+ * ---@field offensive number
+ * ---@field defensive number
  * ---@class BtechTechnology
  * ---@field code string
  * ---@field name string
@@ -457,9 +450,8 @@
  * @par LuaLS definition btech callable btech.template.battle_value
  * @code{.lua}
  * ---@param reference string
- * ---@param options? BtechBattleValueOptions
  * ---@return BtechBattleValue value
- * function btech_template.battle_value(reference, options) end
+ * function btech_template.battle_value(reference) end
  * @endcode
  * @par LuaLS definition btech callable btech.template.critical_slots
  * @code{.lua}
@@ -535,9 +527,8 @@
  * @par LuaLS definition btech callable btech.unit.battle_value
  * @code{.lua}
  * ---@param unit DbRef|Object
- * ---@param options? BtechBattleValueOptions
  * ---@return BtechBattleValue value
- * function btech_unit.battle_value(unit, options) end
+ * function btech_unit.battle_value(unit) end
  * @endcode
  * @par LuaLS definition btech callable btech.unit.critical_slots
  * @code{.lua}

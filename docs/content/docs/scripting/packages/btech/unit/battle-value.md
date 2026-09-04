@@ -5,31 +5,33 @@ type: docs
 toc_hide: false
 ---
 
-Calculates the battle value of a live unit.
+Calculates the current battle value of a live unit.
 
 ## Function
 
 ### Synopsis
 
 ```lua
-btech.unit.battle_value( unit )
+btech.unit.battle_value(unit)
 ```
 
 ### Arguments
 
-`number unit`
-: The unit dbref.
+`DbRef|Object unit`
+: The live unit.
 
 ### Returns
 
-`number value`
-: The numeric result.
+`BtechBattleValue value`
+: A record containing numeric `total`, `offensive`, and `defensive` fields.
 
 ## Notes
 
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error.
+The value is calculated from the unit's current armor, internals, movement,
+tonnage, weapons, heat efficiency, and operational equipment. Invalid targets
+and arguments raise a Lua error.
 
 ## See Also
 
 - [`btech`](../../)
-- [`btech.unit.battle_value_ref`](../battle-value-ref/)
+- [`btech.template`](../../template/)

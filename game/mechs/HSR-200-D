@@ -3,7 +3,6 @@ Reference        { HSR-200-D }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 30 }
-Mech_BV          { 577 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 20 }

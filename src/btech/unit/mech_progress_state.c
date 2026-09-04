@@ -11,12 +11,6 @@ bool mech_piloting_position_mark_changed(Mech *mech) {
   return true;
 }
 
-int mech_battle_value(const Mech *mech) { return mech->ud.mechbv; }
-
-void mech_battle_value_set(Mech *mech, int battle_value) {
-  mech->ud.mechbv = battle_value;
-}
-
 double mech_experience_modifier(const Mech *mech) {
   return (double)mech->rd.xpmod;
 }

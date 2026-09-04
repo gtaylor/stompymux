@@ -134,7 +134,7 @@ static int btech_special_validate_required_rows(sqlite3 *sqlite,
       0)
     return -1;
   if (btech_special_require_rows(sqlite, "btech_mech_unit_aux",
-                                 counts.mechs * 4) < 0)
+                                 counts.mechs * 3) < 0)
     return -1;
   if (btech_special_require_rows(sqlite, "btech_turret_tics",
                                  counts.turrets * NUM_TICS) < 0)

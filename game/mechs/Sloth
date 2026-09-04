@@ -4,7 +4,6 @@ Type             { Battlesuit }
 Move_Type        { Biped }
 Tons             { 1 }
 Comment          { Saved by: Kelvin McCorvin(#2) at Wed Apr  5 23:31:58 2006 }
-Mech_BV          { 203 }
 Cargo_Space      { 0 }
 Max_Suits        { 4 }
 Max_Speed        { 32.25 }

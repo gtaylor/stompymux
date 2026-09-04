@@ -3,7 +3,6 @@ Reference        { BL6-KNT }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 75 }
-Mech_BV          { 1191 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 20 }

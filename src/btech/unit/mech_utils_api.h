@@ -298,17 +298,7 @@ typedef struct AmmunitionCheckResult {
 
 AmmunitionCheckResult ammunition_check(const AmmunitionCheckRequest *request);
 
-void calc_add_off_bv(const Mech *mech, float *offbv, const char *desc,
-                     float value);
-void calc_add_def_bv(const Mech *mech, float *defbv, const char *desc,
-                     float value);
-void calc_sub_def_bv(const Mech *mech, float *defbv, const char *desc,
-                     float value);
 int mech_armorpoints(Mech *mech);
 int mech_intpoints(Mech *mech);
-int find_average_gunnery(Mech *mech);
-int calculate_bv(Mech *mech, int gunstat, int pilstat);
-float calculate_defensive_bv(Mech *mech);
-float calculate_offensive_bv(Mech *mech);
 void unit_parts_list(Mech *mech, char buffer[static LBUF_SIZE]);
 int mech_recycling_state(Mech *mech, int num);

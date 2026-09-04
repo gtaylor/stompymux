@@ -3,7 +3,6 @@ Reference        { Kage-FL }
 Type             { Battlesuit }
 Move_Type        { Biped }
 Tons             { 1 }
-Mech_BV          { 79 }
 Max_Speed        { 32.50 }
 Max_Suits        { 4 }
 Jump_Speed       { 43.00 }

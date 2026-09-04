@@ -2,15 +2,14 @@
 
 #include <limits.h>
 #include <lua.h>
-#include <math.h>
 #include <stddef.h>
-#include <string.h>
 #include <strings.h>
 
 #include "btech/combat/mech_damage_api.h"
 #include "btech/configuration.h"
 #include "btech/special/registry_api.h"
 #include "btech/special_objects.h"
+#include "btech/unit/battle_value_api.h"
 #include "btech/unit/mech_build_api.h"
 #include "btech/unit/mech_classification_api.h"
 #include "btech/unit/mech_consistency_api.h"
@@ -340,95 +339,23 @@ static int lua_btech_unit_engine(lua_State *state, LuaBtechPackage *package) {
   return 1;
 }
 
-static bool optional_skill(lua_State *state, int table, const char *field,
-                           int *value) {
-  lua_btech_get_field(state, table, field);
-  if (lua_isnil(state, -1)) {
-    lua_pop(state, 1);
-    return false;
-  }
-  if (lua_type(state, -1) != LUA_TNUMBER) {
-    lua_pop(state, 1);
-    (void)lua_error_arg(state, table, LUA_ERROR_CODE_ARG_INVALID,
-                        "%s must be an integer", field);
-  }
-  const lua_Number NUMBER = lua_tonumber(state, -1);
-  lua_pop(state, 1);
-  if (!isfinite(NUMBER) || floor(NUMBER) != NUMBER || NUMBER < 0 || NUMBER > 20)
-    (void)lua_error_arg(state, table, LUA_ERROR_CODE_ARG_INVALID,
-                        "%s must be an integer from 0 through 20", field);
-  *value = (int)NUMBER;
-  return true;
-}
-
-void lua_btech_push_battle_value(lua_State *state, Mech *mech, int options,
-                                 bool template_defaults) {
-  static const char *const FIELDS[] = {"rules", "gunnery", "piloting"};
-  const char *rules = "bv2";
-  int gunnery = template_defaults ? 4 : find_average_gunnery(mech);
-  int piloting = template_defaults ? 5 : find_pilot_piloting(mech);
-  if (!lua_isnoneornil(state, options)) {
-    lua_btech_check_options(state, options, FIELDS,
-                            sizeof(FIELDS) / sizeof(FIELDS[0]), options);
-    lua_btech_get_field(state, options, "rules");
-    if (!lua_isnil(state, -1)) {
-      if (lua_type(state, -1) != LUA_TSTRING)
-        (void)lua_error_arg(state, options, LUA_ERROR_CODE_ARG_INVALID,
-                            "rules must be 'bv2' or 'legacy'");
-      rules = lua_tostring(state, -1);
-    }
-    lua_pop(state, 1);
-  }
+void lua_btech_push_battle_value(lua_State *state, Mech *mech) {
+  const BattleValue VALUE = battle_value_calculate(mech);
   lua_newtable(state);
-  lua_pushstring(state, rules);
-  lua_setfield(state, -2, "rules");
-  if (strcmp(rules, "bv2") == 0) {
-    if (!lua_isnoneornil(state, options)) {
-      lua_btech_get_field(state, options, "gunnery");
-      const bool GUNNERY = lua_isnil(state, -1) == 0;
-      lua_pop(state, 1);
-      lua_btech_get_field(state, options, "piloting");
-      const bool PILOTING = lua_isnil(state, -1) == 0;
-      lua_pop(state, 1);
-      if (GUNNERY || PILOTING)
-        (void)lua_error_arg(state, options, LUA_ERROR_CODE_ARG_INVALID,
-                            "skill overrides are invalid for BV2");
-    }
-    const float OFFENSIVE_FLOAT = calculate_offensive_bv(mech);
-    const float DEFENSIVE_FLOAT = calculate_defensive_bv(mech);
-    const lua_Number OFFENSIVE = (lua_Number)OFFENSIVE_FLOAT;
-    const lua_Number DEFENSIVE = (lua_Number)DEFENSIVE_FLOAT;
-    lua_pushnumber(state, OFFENSIVE + DEFENSIVE);
-    lua_setfield(state, -2, "total");
-    lua_pushnumber(state, OFFENSIVE);
-    lua_setfield(state, -2, "offensive");
-    lua_pushnumber(state, DEFENSIVE);
-    lua_setfield(state, -2, "defensive");
-    return;
-  }
-  if (strcmp(rules, "legacy") != 0)
-    (void)lua_error_arg(state, options, LUA_ERROR_CODE_ARG_INVALID,
-                        "rules must be 'bv2' or 'legacy'");
-  if (!lua_isnoneornil(state, options)) {
-    const bool HAS_GUNNERY =
-        optional_skill(state, options, "gunnery", &gunnery);
-    const bool HAS_PILOTING =
-        optional_skill(state, options, "piloting", &piloting);
-    if (HAS_GUNNERY != HAS_PILOTING)
-      (void)lua_error_arg(state, options, LUA_ERROR_CODE_ARG_INVALID,
-                          "gunnery and piloting must be supplied together");
-  }
-  lua_pushinteger(state, calculate_bv(mech, gunnery, piloting));
+  lua_pushnumber(state, (lua_Number)VALUE.total);
   lua_setfield(state, -2, "total");
-  lua_pushinteger(state, gunnery);
-  lua_setfield(state, -2, "gunnery");
-  lua_pushinteger(state, piloting);
-  lua_setfield(state, -2, "piloting");
+  lua_pushnumber(state, (lua_Number)VALUE.offensive);
+  lua_setfield(state, -2, "offensive");
+  lua_pushnumber(state, (lua_Number)VALUE.defensive);
+  lua_setfield(state, -2, "defensive");
 }
 
 static int lua_btech_unit_battle_value(lua_State *state,
                                        LuaBtechPackage *package) {
-  lua_btech_push_battle_value(state, require_mech(state, package, 1), 2, false);
+  if (lua_gettop(state) != 1)
+    return lua_error_raise(state, LUA_ERROR_CODE_ARG_INVALID,
+                           "expected exactly 1 argument");
+  lua_btech_push_battle_value(state, require_mech(state, package, 1));
   return 1;
 }
 

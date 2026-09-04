@@ -3,7 +3,6 @@ Reference        { GAL-200 }
 Type             { Vehicle }
 Move_Type        { Track }
 Tons             { 30 }
-Mech_BV          { 168 }
 Max_Speed        { 96.75 }
 Specials         { ICEEngine_Tech }
 Left_Side

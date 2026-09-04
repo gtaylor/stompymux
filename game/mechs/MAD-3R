@@ -3,7 +3,6 @@ Reference        { MAD-3R }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 75 }
-Mech_BV          { 1089 }
 Heat_Sinks       { 16 }
 Max_Speed        { 64.50 }
 Specials         { Searchlight }

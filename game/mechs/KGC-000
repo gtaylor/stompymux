@@ -3,7 +3,6 @@ Reference        { KGC-000 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 100 }
-Mech_BV          { 1509 }
 Comment          { RS3050 says AC/20 is split between RA/RT }
 Radio            { 4 }
 Computer         { 4 }

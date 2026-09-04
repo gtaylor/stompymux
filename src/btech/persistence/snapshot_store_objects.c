@@ -211,13 +211,11 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
             SQLITE_OK ||
         bind_float(context->mech, 30, snapshot.definition.template_maxspeed) !=
             SQLITE_OK ||
-        btech_special_bind_int(context->mech, 31, snapshot.definition.mechbv) <
-            0 ||
-        btech_special_bind_int(context->mech, 32,
+        btech_special_bind_int(context->mech, 31,
                                snapshot.definition.cargospace) < 0 ||
-        btech_special_bind_int(context->mech, 33,
+        btech_special_bind_int(context->mech, 32,
                                snapshot.definition.targcomp) < 0 ||
-        btech_special_bind_int(context->mech, 34,
+        btech_special_bind_int(context->mech, 33,
                                snapshot.definition.carmaxton) < 0 ||
         btech_special_write_step(context->fault, context->mech) < 0)
       context->result = -1;
@@ -570,13 +568,6 @@ bool btech_store_simple_object(const RedBlackTreeVisitCall *call) {
           btech_special_write_step(context->fault, context->runtime) < 0)
         context->result = -1;
     }
-    if (context->result == 0 &&
-        (btech_special_bind_int(context->unit_aux, 1, KEY) < 0 ||
-         btech_special_bind_int(context->unit_aux, 2, 0) < 0 ||
-         btech_special_bind_int(context->unit_aux, 3,
-                                snapshot.definition.mechbv_last) < 0 ||
-         btech_special_write_step(context->fault, context->unit_aux) < 0))
-      context->result = -1;
     for (index = 0; context->result == 0 && index < 3; index++) {
       if (btech_special_bind_int(context->unit_aux, 1, KEY) < 0 ||
           btech_special_bind_int(context->unit_aux, 2, 8 + index) < 0 ||

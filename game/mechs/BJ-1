@@ -3,7 +3,6 @@ Reference        { BJ-1 }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 45 }
-Mech_BV          { 795 }
 Heat_Sinks       { 11 }
 Max_Speed        { 64.50 }
 Jump_Speed       { 43.00 }

@@ -3,7 +3,6 @@ Reference        { SCP-1N }
 Type             { Mech }
 Move_Type        { Quad }
 Tons             { 55 }
-Mech_BV          { 786 }
 Computer         { 4 }
 Radio            { 4 }
 Max_Speed        { 96.75 }

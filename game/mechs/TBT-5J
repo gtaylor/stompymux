@@ -3,7 +3,6 @@ Reference        { TBT-5J }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 50 }
-Mech_BV          { 1034 }
 Heat_Sinks       { 15 }
 Max_Speed        { 86.00 }
 Jump_Speed       { 53.75 }

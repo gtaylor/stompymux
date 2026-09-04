@@ -3,7 +3,6 @@ Reference        { Cavalry }
 Type             { VTOL }
 Move_Type        { VTOL }
 Tons             { 25 }
-Mech_BV          { 629 }
 Max_Speed        { 161.25 }
 Specials	 { ICEEngine_Tech }
 Left_Side

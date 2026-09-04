@@ -3,7 +3,6 @@ Reference        { FFL-4A }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 30 }
-Mech_BV          { 649 }
 Max_Speed        { 86.00 }
 Jump_Speed       { 43.00 }
 Specials         { Fliparms }

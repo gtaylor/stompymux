@@ -3,7 +3,6 @@ Reference        { CLNT-2-3T }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 40 }
-Mech_BV          { 672 }
 Computer 	 { 5 }
 Radio 		 { 4 }
 Max_Speed        { 96.75 }

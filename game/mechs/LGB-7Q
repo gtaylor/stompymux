@@ -3,7 +3,6 @@ Reference        { LGB-7Q }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 85 }
-Mech_BV          { 1376 }
 Radio            { 4 }
 Computer         { 4 }
 Heat_Sinks       { 22 }

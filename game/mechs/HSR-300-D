@@ -3,7 +3,6 @@ Reference        { HSR-300-D }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 30 }
-Mech_BV          { 484 }
 Max_Speed        { 150.50 }
 Left_Arm
   Armor            { 2 }

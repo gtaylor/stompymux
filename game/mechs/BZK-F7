@@ -6,7 +6,6 @@ Tons             { 45 }
 Comment          { Saved by: Kue(#923) at Tue Sep 26 10:00:58 2000 }
 Computer         { 4 }
 Radio            { 4 }
-Mech_BV          { 0 }
 Max_Speed        { 86.00 }
 Left_Arm
   Armor            { 9 }

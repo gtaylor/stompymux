@@ -7,7 +7,6 @@ Comment          { Saved by: Charlemagne(#4624) at Sun Mar 12 15:52:47 2000 }
 Computer         { 4 }
 Radio            { 4 }
 Heat_Sinks       { 28 }
-Mech_BV          { 1508 }
 Cargo_Space      { 0 }
 Max_Speed        { 86.00 }
 Jump_Speed       { 53.75 }

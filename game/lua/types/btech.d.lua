@@ -145,16 +145,9 @@
 ---@field title string
 ---@field modes string[]
 ---@class BtechBattleValue
----@field rules "bv2"|"legacy"
 ---@field total number
----@field offensive? number
----@field defensive? number
----@field gunnery? integer
----@field piloting? integer
----@class BtechBattleValueOptions
----@field rules? "bv2"|"legacy"
----@field gunnery? integer
----@field piloting? integer
+---@field offensive number
+---@field defensive number
 ---@class BtechTechnology
 ---@field code string
 ---@field name string
@@ -447,9 +440,8 @@ function btech_template.armor(reference, section) end
 function btech_template.base_cost(reference) end
 
 ---@param reference string
----@param options? BtechBattleValueOptions
 ---@return BtechBattleValue value
-function btech_template.battle_value(reference, options) end
+function btech_template.battle_value(reference) end
 
 ---@param reference string
 ---@param section string
@@ -508,9 +500,8 @@ function btech_unit.armor(unit, section) end
 function btech_unit.assigned_pilot(unit) end
 
 ---@param unit DbRef|Object
----@param options? BtechBattleValueOptions
 ---@return BtechBattleValue value
-function btech_unit.battle_value(unit, options) end
+function btech_unit.battle_value(unit) end
 
 ---@param unit DbRef|Object
 ---@param section string

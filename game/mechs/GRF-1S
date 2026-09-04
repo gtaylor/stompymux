@@ -3,7 +3,6 @@ Reference        { GRF-1S }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 55 }
-Mech_BV          { 1061 }
 Heat_Sinks       { 16 }
 Max_Speed        { 86.00 }
 Jump_Speed       { 53.75 }

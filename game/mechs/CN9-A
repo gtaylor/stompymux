@@ -3,7 +3,6 @@ Reference        { CN9-A }
 Type             { Mech }
 Move_Type        { Biped }
 Tons             { 50 }
-Mech_BV          { 772 }
 Max_Speed        { 64.50 }
 Left_Arm
   Armor            { 16 }
