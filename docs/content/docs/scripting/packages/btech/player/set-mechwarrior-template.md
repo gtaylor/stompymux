@@ -20,7 +20,8 @@ btech.player.set_mechwarrior_template( player, reference )
 : The player.
 
 `string|nil reference`
-: The template reference, or `nil` to clear it.
+: A non-empty resource name of at most 24 bytes that identifies an existing,
+  well-formed unit template, or `nil` to clear the override.
 
 ### Returns
 

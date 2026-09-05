@@ -23,7 +23,7 @@ btech.character.set_skill_experience( character, skill, experience )
 : The skill name.
 
 `integer experience`
-: The new accumulated experience.
+: The new non-negative accumulated experience.
 
 ### Returns
 

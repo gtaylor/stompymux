@@ -34,3 +34,6 @@ abbreviations are matched case-insensitively.
 | [`btech.system`](system/) | Server-wide BattleTech queries. |
 | [`btech.template`](template/) | Immutable unit-template queries and displays. |
 | [`btech.unit`](unit/) | Live-unit state, combat queries, and mutations. |
+
+Record fields and editor types are defined in the
+[generated LuaLS definitions](https://github.com/gtaylor/stompymux/blob/main/game/lua/types/btech.d.lua).
