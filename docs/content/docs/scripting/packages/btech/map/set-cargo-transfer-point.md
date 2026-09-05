@@ -1,11 +1,32 @@
 ---
-draft: true
 title: set_cargo_transfer_point
 type: docs
+toc_hide: false
 ---
 
-Atomically stores an in-bounds cargo-transfer point. Pass `nil` to clear it.
+Sets or clears a map's cargo-transfer point.
+
+## Function
+
+### Synopsis
 
 ```lua
-btech.map.set_cargo_transfer_point(map, { x = 4, y = 7, reveal_hint = true })
+btech.map.set_cargo_transfer_point( map, point )
 ```
+
+### Arguments
+
+`DbRef|Object map`
+: The BattleTech map.
+
+`BtechCargoTransferPoint|nil point`
+: The new point, or `nil` to clear it.
+
+### Returns
+
+None.
+
+## See Also
+
+- [`btech`](../../)
+- [`btech.map`](../)

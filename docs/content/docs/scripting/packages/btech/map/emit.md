@@ -1,102 +1,39 @@
 ---
-draft: true
 title: emit
 type: docs
 toc_hide: false
 ---
 
-Broadcasts a message to all or nearby units on a map.
+Emits a message to units on a map.
 
 ## Function
-
-Broadcasts to every unit on a map.
 
 ### Synopsis
 
 ```lua
-btech.map.emit( map, message )
+btech.map.emit( map, message, options )
 ```
 
 ### Arguments
 
-`number map`
-: The map dbref.
+`DbRef|Object map`
+: The BattleTech map.
 
 `string message`
-: A non-empty message.
+: The message to emit.
+
+`BtechMapEmitOptions|nil options`
+: Optional audience, origin, and range controls.
 
 ### Returns
 
-`true success`
-: `true` after the operation completes without a legacy error.
-
-## Function
-
-Broadcasts to units within a two-dimensional range of a map coordinate.
-
-### Synopsis
-
-```lua
-btech.map.emit( map, x, y, range, message )
-```
-
-### Arguments
-
-`number map`
-: The map dbref.
-
-`integer x, y`
-: The origin hex coordinates.
-
-`number range`
-: A non-negative range.
-
-`string message`
-: A non-empty message.
-
-### Returns
-
-`true success`
-: `true` after the operation completes without a legacy error.
-
-## Function
-
-Broadcasts to units within a three-dimensional range of a map coordinate.
-
-### Synopsis
-
-```lua
-btech.map.emit( map, x, y, z, range, message )
-```
-
-### Arguments
-
-`number map`
-: The map dbref.
-
-`integer x, y`
-: The origin hex coordinates.
-
-`number z`
-: The origin altitude.
-
-`number range`
-: A non-negative range.
-
-`string message`
-: A non-empty message.
-
-### Returns
-
-`true success`
-: `true` after the operation completes without a legacy error.
+None.
 
 ## Notes
 
-This function is available only in a running Lua callback. Invalid targets,
-out-of-bounds coordinates, invalid ranges, empty messages, and legacy error
-results raise a Lua error.
+The `all` audience forbids `origin` and `range`. The `range` audience requires both; `line_of_sight` requires `origin` and forbids `range`.
 
 ## See Also
 
 - [`btech`](../../)
+- [`btech.map`](../)

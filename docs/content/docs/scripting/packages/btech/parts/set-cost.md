@@ -1,40 +1,32 @@
 ---
-draft: true
 title: set_cost
 type: docs
 toc_hide: false
 ---
 
-Sets the configured cost of a part.
+Sets a part's configured cost.
 
 ## Function
 
 ### Synopsis
 
 ```lua
-btech.parts.set_cost( part_name, cost )
+btech.parts.set_cost( part, cost )
 ```
 
 ### Arguments
 
-`string part_name`
-: A recognized long or very-long part name.
+`BtechPartRef part`
+: A part record, packed ID, or unique name.
 
 `integer cost`
-: The cost parsed into native unsigned storage. The current native parser
-  accepts a leading sign, so a negative input wraps into the unsigned range
-  (for example, `-1` becomes the maximum unsigned value).
+: The new non-negative cost.
 
 ### Returns
 
-`true success`
-: `true` after the operation completes without a legacy error.
-
-## Notes
-
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error. This operation requires a build with advanced economy support.
+None.
 
 ## See Also
 
 - [`btech`](../../)
-- [`btech.parts.cost`](../cost/)
+- [`btech.parts`](../)

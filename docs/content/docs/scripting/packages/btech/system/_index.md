@@ -1,5 +1,4 @@
 ---
-draft: true
 title: btech.system
 linkTitle: btech.system
 type: docs
@@ -8,12 +7,11 @@ no_list: true
 sidebar_root_for: self
 ---
 
-`btech.system` provides server-wide BattleTech queries.
+`btech.system` provides server-wide BattleTech state.
 
 ## Functions
 
 | Function | Description |
 | --- | --- |
-| [`design_exists`](design-exists/) | Tests whether a unit template exists. |
-| [`lag`](lag/) | Returns current BattleTech event lag. |
-| [`zone_units`](zone-units/) | Lists live units assigned to a zone. |
+| [`event_lag`](event-lag/) | Returns the current BattleTech event-processing lag. |
+| [`units_in_zone`](units-in-zone/) | Lists live units assigned to a database zone. |

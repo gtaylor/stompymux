@@ -1,5 +1,4 @@
 ---
-draft: true
 title: elevation
 type: docs
 toc_hide: false
@@ -12,29 +11,23 @@ Returns the elevation of a map hex.
 ### Synopsis
 
 ```lua
-btech.map.elevation( map, x, y )
+btech.map.elevation( map, hex )
 ```
 
 ### Arguments
 
-`number map`
-: The map dbref.
+`DbRef|Object map`
+: The BattleTech map.
 
-`integer x`
-: The hex X coordinate.
-
-`integer y`
-: The hex Y coordinate.
+`BtechHex hex`
+: The zero-based map coordinates.
 
 ### Returns
 
-`number value`
-: The numeric result.
-
-## Notes
-
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error.
+`integer elevation`
+: The hex elevation.
 
 ## See Also
 
 - [`btech`](../../)
+- [`btech.map`](../)

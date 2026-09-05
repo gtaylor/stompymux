@@ -1,19 +1,28 @@
 ---
 title: btech.template
-linkTitle: template
+linkTitle: btech.template
 type: docs
-weight: 70
+weight: 15
+no_list: true
+sidebar_root_for: self
 ---
 
-`btech.template` is the immutable counterpart to `btech.unit`. It exports
-`exists`, `armor`, `battle_value`, `critical_slots`, `engine`, `weapons`,
-`installed_parts`, `payload`, `technologies`, `base_cost`, `show_status`,
-`show_weapon_specs`, and `show_critical_status`.
+`btech.template` provides immutable unit-template queries and displays.
 
-Template references are strings. `exists` returns `false` for a missing
-template and raises `btech.template.invalid` for a malformed one. Other queries
-raise `btech.template.not_found` or `btech.template.invalid`. Display functions
-accept a `DbRef|Object` recipient and return no Lua values.
+## Functions
 
-Battle value is returned as `total`, `offensive`, and `defensive` numeric
-components. Base cost is returned as a safe Lua integer.
+| Function | Description |
+| --- | --- |
+| [`armor`](armor/) | Returns a template's armor and internal values. |
+| [`base_cost`](base-cost/) | Calculates a template's FASA base cost. |
+| [`battle_value`](battle-value/) | Calculates a template's battle value. |
+| [`critical_slots`](critical-slots/) | Lists a template section's critical slots. |
+| [`engine`](engine/) | Returns a template's engine configuration. |
+| [`exists`](exists/) | Tests whether a unit template exists. |
+| [`installed_parts`](installed-parts/) | Lists all parts installed on a unit template. |
+| [`payload`](payload/) | Lists a template's weapons and ammunition. |
+| [`show_critical_status`](show-critical-status/) | Sends a template's critical-status report to a player. |
+| [`show_status`](show-status/) | Sends a template's status report to a player. |
+| [`show_weapon_specs`](show-weapon-specs/) | Sends a template's weapon-specification report to a player. |
+| [`technologies`](technologies/) | Lists a template's configured and inferred technologies. |
+| [`weapons`](weapons/) | Lists the weapons mounted on a unit template. |

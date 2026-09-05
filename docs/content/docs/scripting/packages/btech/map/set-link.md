@@ -1,23 +1,32 @@
 ---
-draft: true
 title: set_link
 type: docs
+toc_hide: false
 ---
 
-Atomically stores a child map's parent placement and optional entrances. Pass
-`nil` to clear it. `parent` accepts a dbref or `mux.world.Object`.
+Sets or clears a child map's parent-link configuration.
+
+## Function
+
+### Synopsis
 
 ```lua
-btech.map.set_link(child, {
-  parent = parent,
-  x = 10,
-  y = 20,
-  entrances = {
-    north = { mode = "offset", offset = 3 },
-    east = { mode = "exact", x = 0, y = 5 },
-  },
-})
+btech.map.set_link( child, link )
 ```
 
-Configuration changes do not rebuild live `BUILD`, `LEAVE`, or `ENTRANCE`
-objects. Call `btech.map.update_links(parent)` after the desired edits.
+### Arguments
+
+`DbRef|Object child`
+: The child BattleTech map.
+
+`BtechMapLink|nil link`
+: The new parent link, or `nil` to clear it.
+
+### Returns
+
+None.
+
+## See Also
+
+- [`btech`](../../)
+- [`btech.map`](../)

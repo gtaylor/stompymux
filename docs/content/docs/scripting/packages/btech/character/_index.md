@@ -1,5 +1,4 @@
 ---
-draft: true
 title: btech.character
 linkTitle: btech.character
 type: docs
@@ -8,14 +7,16 @@ no_list: true
 sidebar_root_for: self
 ---
 
-`btech.character` provides character values, catalogues, and experience
-thresholds.
+`btech.character` provides character values, skills, and experience.
 
 ## Functions
 
 | Function | Description |
 | --- | --- |
-| [`list`](list/) | Lists character value names. |
-| [`set_value`](set-value/) | Sets a character value or adjusts experience. |
-| [`threshold`](threshold/) | Returns an experience threshold. |
-| [`value`](value/) | Gets a character value. |
+| [`add_skill_experience`](add-skill-experience/) | Adds experience to one of a character's skills. |
+| [`catalog`](catalog/) | Lists configured character values of a given kind. |
+| [`experience_threshold`](experience-threshold/) | Returns the configured experience threshold for a skill. |
+| [`set_skill_experience`](set-skill-experience/) | Sets a character skill's accumulated experience. |
+| [`set_skill_target`](set-skill-target/) | Sets a character skill's target number. |
+| [`set_value`](set-value/) | Sets a script-visible character value. |
+| [`value`](value/) | Returns one script-visible character value. |

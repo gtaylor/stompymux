@@ -1,14 +1,30 @@
 ---
-draft: true
 title: display_name
 type: docs
 toc_hide: false
 ---
 
-Returns a registered unit's display-name override, or an empty string.
+Returns a live unit's display-name override.
+
+## Function
+
+### Synopsis
 
 ```lua
-local name = btech.unit.display_name(unit)
+btech.unit.display_name( unit )
 ```
 
-The target must be a registered unit visible to the caller.
+### Arguments
+
+`DbRef|Object unit`
+: The live unit.
+
+### Returns
+
+`string|nil name`
+: The override, or `nil` when unset.
+
+## See Also
+
+- [`btech`](../../)
+- [`btech.unit`](../)

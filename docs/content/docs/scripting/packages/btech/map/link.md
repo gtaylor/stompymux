@@ -1,12 +1,30 @@
 ---
-draft: true
 title: link
 type: docs
+toc_hide: false
 ---
 
-Returns a child map's typed parent-link configuration, or `nil`. The `parent`
-field is a `mux.world.Object`; entrances are keyed by cardinal direction.
+Returns a child map's parent-link configuration.
+
+## Function
+
+### Synopsis
 
 ```lua
-local link = btech.map.link(child)
+btech.map.link( child )
 ```
+
+### Arguments
+
+`DbRef|Object child`
+: The child BattleTech map.
+
+### Returns
+
+`BtechMapLink|nil link`
+: The parent link, or `nil` when unset.
+
+## See Also
+
+- [`btech`](../../)
+- [`btech.map`](../)

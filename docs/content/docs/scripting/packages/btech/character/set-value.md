@@ -1,43 +1,35 @@
 ---
-draft: true
 title: set_value
 type: docs
 toc_hide: false
 ---
 
-Sets a character value or adjusts skill experience.
+Sets a script-visible character value.
 
 ## Function
 
 ### Synopsis
 
 ```lua
-btech.character.set_value( character, value, amount, mode )
+btech.character.set_value( character, value, amount )
 ```
 
 ### Arguments
 
-`number or string character`
-: The character dbref or player name.
+`Object character`
+: The character.
 
-`number or string value`
-: The character-value code or name.
+`string value`
+: The value name.
 
 `integer amount`
-: The value or experience amount.
-
-`integer mode`
-: `0` sets level/value, `1` sets skill target, `3` sets XP, and other nonzero values add XP.
+: The new value.
 
 ### Returns
 
-`true success`
-: `true` after the operation completes without a legacy error.
-
-## Notes
-
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error.
+None.
 
 ## See Also
 
 - [`btech`](../../)
+- [`btech.character`](../)

@@ -1,12 +1,30 @@
 ---
-draft: true
 title: mechwarrior_template
 type: docs
+toc_hide: false
 ---
 
-Returns the player's configured MechWarrior-template override, or `nil`. An
-unset override uses the native `MechWarrior` default.
+Returns a player's ejected-pilot template override.
+
+## Function
+
+### Synopsis
 
 ```lua
-local reference = btech.player.mechwarrior_template(player)
+btech.player.mechwarrior_template( player )
 ```
+
+### Arguments
+
+`DbRef|Object player`
+: The player.
+
+### Returns
+
+`string|nil reference`
+: The template reference, or `nil` when unset.
+
+## See Also
+
+- [`btech`](../../)
+- [`btech.player`](../)

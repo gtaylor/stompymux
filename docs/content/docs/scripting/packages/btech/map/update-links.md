@@ -1,11 +1,10 @@
 ---
-draft: true
 title: update_links
 type: docs
 toc_hide: false
 ---
 
-Recursively updates links associated with a map.
+Recursively updates a map and its linked child maps.
 
 ## Function
 
@@ -17,18 +16,14 @@ btech.map.update_links( map )
 
 ### Arguments
 
-`number map`
-: The map dbref.
+`DbRef|Object map`
+: The root BattleTech map.
 
 ### Returns
 
-`true success`
-: `true` after the operation completes without a legacy error.
-
-## Notes
-
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error.
+None.
 
 ## See Also
 
 - [`btech`](../../)
+- [`btech.map`](../)
