@@ -4,7 +4,7 @@ type: docs
 toc_hide: false
 ---
 
-Sets a character skill's accumulated experience.
+Sets a character skill's packed experience value.
 
 ## Function
 
@@ -23,7 +23,9 @@ btech.character.set_skill_experience( character, skill, experience )
 : The skill name.
 
 `integer experience`
-: The new accumulated experience, from 0 through 2,147,483,647.
+: The new packed experience value, from 0 through 2,147,483,647. The value
+  modulo 16,777,216 is the skill's accumulated experience; each complete
+  multiple of 16,777,216 adds one to the skill's effective value.
 
 ### Returns
 
