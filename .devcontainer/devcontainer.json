@@ -2,9 +2,7 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/cpp
 {
 	"name": "stompymux",
-	"build": {
-		"dockerfile": "Dockerfile"
-	},
+	"image": "ghcr.io/gtaylor/stompymux-devcontainer@sha256:e32d63cb3d9e427030cd6222ba3e8e31924fe9cbef303d490e159d76a43da9fd",
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},

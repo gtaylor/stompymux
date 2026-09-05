@@ -1,0 +1,82 @@
+name: Publish devcontainer image
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .devcontainer/Dockerfile
+      - .devcontainer/image.json
+      - .devcontainer/install-tools.sh
+      - .github/workflows/devcontainer-image.yml
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: devcontainer-image
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: ghcr.io/gtaylor/stompymux-devcontainer
+
+jobs:
+  publish:
+    name: Build, verify, and publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and verify image
+        uses: devcontainers/ci@v0.3
+        with:
+          configFile: .devcontainer/image.json
+          imageName: ${{ env.IMAGE_NAME }}
+          imageTag: ${{ github.sha }}
+          push: never
+          runCmd: |
+            set -euo pipefail
+            clang-22 --version
+            clang-format-22 --version
+            clang-tidy-22 --version
+            clangd-22 --version
+            llvm-config-22 --version
+            test -f "$(llvm-config-22 --includedir)/clang-c/Index.h"
+            test -e "$(llvm-config-22 --libdir)/libclang.so"
+            cmake --version
+            just --version
+            stylua --version
+            lua-language-server --version
+            lua_language_server_bin=$(readlink -f "$(command -v lua-language-server)")
+            test -w "$(dirname "$(dirname "$lua_language_server_bin")")"
+
+      - name: Publish image and report immutable digest
+        env:
+          IMAGE_TAG: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+        run: |
+          set -euo pipefail
+          docker push "$IMAGE_TAG"
+          digest=$(docker buildx imagetools inspect "$IMAGE_TAG" \
+            --format '{{json .Manifest.Digest}}' | tr -d '"')
+          test -n "$digest"
+          {
+            echo '## Published devcontainer image'
+            echo
+            echo "\`$IMAGE_TAG@$digest\`"
+            echo
+            echo 'Pin `.devcontainer/devcontainer.json` to this digest in a reviewable PR.'
+          } >> "$GITHUB_STEP_SUMMARY"

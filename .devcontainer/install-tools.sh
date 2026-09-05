@@ -18,26 +18,36 @@ CURL_OPTIONS=(
   --retry-all-errors
 )
 
+APT_GET=(
+  apt-get
+  -o Acquire::Retries=5
+  -o Acquire::http::Timeout=30
+  -o Acquire::https::Timeout=30
+)
+
 if ((EUID == 0)); then
   SUDO=()
 else
   SUDO=(sudo)
 fi
 
-"${SUDO[@]}" apt-get update
-"${SUDO[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+"${SUDO[@]}" "${APT_GET[@]}" update
+"${SUDO[@]}" env DEBIAN_FRONTEND=noninteractive "${APT_GET[@]}" install \
+  -y --no-install-recommends \
   ca-certificates curl
 
 curl "${CURL_OPTIONS[@]}" \
   https://apt.llvm.org/llvm-snapshot.gpg.key \
   --output /tmp/apt.llvm.org.asc
+"${SUDO[@]}" install -d -m 0755 /etc/apt/keyrings
 "${SUDO[@]}" install -m 0644 \
-  /tmp/apt.llvm.org.asc /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-echo 'deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main' \
+  /tmp/apt.llvm.org.asc /etc/apt/keyrings/apt.llvm.org.asc
+echo 'deb [signed-by=/etc/apt/keyrings/apt.llvm.org.asc] https://apt.llvm.org/noble/ llvm-toolchain-noble-22 main' \
   | "${SUDO[@]}" tee /etc/apt/sources.list.d/llvm.list >/dev/null
 
-"${SUDO[@]}" apt-get update
-"${SUDO[@]}" env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+"${SUDO[@]}" "${APT_GET[@]}" update
+"${SUDO[@]}" env DEBIAN_FRONTEND=noninteractive "${APT_GET[@]}" install \
+  -y --no-install-recommends \
   build-essential gcc-14 g++-14 clang-22 clang-format-22 clang-tidy-22 \
   clang-tools-22 libclang-22-dev libclang-rt-22-dev llvm-22-dev clangd-22 \
   libsqlite3-dev ripgrep sqlite3 unzip xxd
@@ -68,6 +78,7 @@ curl "${CURL_OPTIONS[@]}" \
 "${SUDO[@]}" tar --extract --gzip \
   --file "/tmp/${LUA_LANGUAGE_SERVER_ARCHIVE}" \
   --directory "${LUA_LANGUAGE_SERVER_INSTALL_DIR}"
+"${SUDO[@]}" chown -R vscode:vscode "${LUA_LANGUAGE_SERVER_INSTALL_DIR}"
 "${SUDO[@]}" ln --symbolic --force \
   "${LUA_LANGUAGE_SERVER_INSTALL_DIR}/bin/lua-language-server" \
   /usr/local/bin/lua-language-server

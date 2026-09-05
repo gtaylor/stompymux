@@ -10,6 +10,25 @@ The sources are split across two different domains:
 1. The `src/` directory contains the C sources for the game server.
 1. The `game/lua/` directory contains the Lua sources for most of the in-game commands and logic. You should be able to focus most of your efforts here.
 
+## Devcontainer image updates
+
+Normal CI and development use the public devcontainer image pinned by immutable
+digest in `.devcontainer/devcontainer.json`. The image is deliberately not
+refreshed on a schedule.
+
+To update its tools:
+
+1. Change `.devcontainer/Dockerfile` or `.devcontainer/install-tools.sh` and merge
+   the reviewed change.
+1. Run the **Publish devcontainer image** workflow if the push did not trigger it.
+1. Copy the published image digest from the workflow summary.
+1. Update the `image` property in `.devcontainer/devcontainer.json` to that exact
+   digest in a separate pull request.
+1. Let the full CI suite validate the candidate before merging the new pin.
+
+A failed image publication does not replace the currently pinned environment and
+does not affect ordinary CI builds.
+
 ## C/Game server development workflow
 
 To make changes to the game server sources, a typical development loop looks like this:

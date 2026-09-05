@@ -8,6 +8,11 @@ weight: 10
 
 - **StompyMUX only builds on Linux**. It has been primarily developed on Ubuntu 24.04 but most quasi-recent distributions should fit the bill.
 
+The recommended development environment is the repository's devcontainer. It
+contains the complete, tested toolchain and avoids downloading compiler packages
+during ordinary builds. Open the repository in a devcontainer-capable editor or
+Codespace and rebuild the container when prompted.
+
 ## Clone the sources
 
 Fork and clone the repo and then `cd` into it:
@@ -57,4 +62,3 @@ The following articles are good reads to get started:
 
 1. [Development Workflows](./development.md)
 2. [Configuration](./configuration/_index.md)
-
