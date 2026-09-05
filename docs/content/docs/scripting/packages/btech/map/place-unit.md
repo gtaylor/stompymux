@@ -24,7 +24,9 @@ btech.map.place_unit( unit, map, position )
 
 `BtechPosition position`
 : The zero-based `x` and `y` coordinates and optional `z` altitude. When
-  provided, `z` must be an integer from 0 through 10000.
+  provided, `z` must be an integer from 0 through 10000. When omitted, the
+  unit's altitude is derived from the destination terrain rather than preserved;
+  drop-surface state is cleared, and flying unit classes are marked as landed.
 
 ### Returns
 

@@ -9,6 +9,10 @@ sidebar_root_for: self
 
 `btech.template` provides immutable unit-template queries and displays.
 
+Except for [`exists`](exists/), template queries raise
+`btech.template.not_found` when the reference is missing and
+`btech.template.invalid` when the referenced template is malformed.
+
 ## Functions
 
 | Function | Description |

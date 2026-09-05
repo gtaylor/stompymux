@@ -33,6 +33,32 @@ The request requires these fields:
 `integer direction_code`
 : The attack direction code, from 0 to 21.
 
+Codes 0 through 7 damage a fixed section; codes 8 through 15 damage the rear
+armor of the corresponding section (`code - 8`). Section indices depend on the
+unit class:
+
+| Indices | Unit class and section order |
+| --- | --- |
+| 0–7 | Biped mech: left arm, right arm, left torso, right torso, center torso, left leg, right leg, head. |
+| 0–7 | Quad mech: front left leg, front right leg, left torso, right torso, center torso, rear left leg, rear right leg, head. |
+| 0–7 | Battle suit: suit members 1 through 8. |
+| 0–5 | Ground/naval vehicle or VTOL: left side, right side, front side, aft side, turret, rotor. |
+| 0–3 | Aerospace unit: nose, left wing, right wing, aft. |
+| 0–5 | Aerodyne DropShip: right wing, left wing, left rear wing, right rear wing, aft, nose. |
+| 0–5 | Spheroid DropShip: front right, front left, rear left, rear right, aft, nose. |
+
+Codes 16 through 21 choose a random section using the unit class's hit-location
+table:
+
+| Code | Hit-location table | Rear armor |
+| --- | --- | --- |
+| 16 | Rear | No |
+| 17 | Left side | No |
+| 18 | Right side | No |
+| 19 | Front | Yes |
+| 20 | Rear | Yes |
+| 21 | Left side | Yes |
+
 It also accepts these optional fields:
 
 `boolean force_critical`
