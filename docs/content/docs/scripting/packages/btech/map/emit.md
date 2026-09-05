@@ -20,7 +20,7 @@ btech.map.emit( map, message, options )
 : The BattleTech map.
 
 `string message`
-: The message to emit.
+: The non-empty message to emit.
 
 `BtechMapEmitOptions|nil options`
 : Optional audience, origin, and range controls.

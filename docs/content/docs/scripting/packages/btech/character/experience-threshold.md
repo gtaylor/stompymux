@@ -4,7 +4,7 @@ type: docs
 toc_hide: false
 ---
 
-Returns the configured experience threshold for a skill.
+Returns the configured base experience threshold for a skill.
 
 ## Function
 
@@ -22,7 +22,10 @@ btech.character.experience_threshold( skill )
 ### Returns
 
 `integer threshold`
-: The experience needed for the next level.
+: The configured base threshold. This is not the character-specific experience
+  remaining until the next level; use
+  [`btech.character.value`](../value/)'s `experience_to_next_level` field for
+  that value.
 
 ## See Also
 
