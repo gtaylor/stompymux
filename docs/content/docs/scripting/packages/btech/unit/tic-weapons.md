@@ -20,7 +20,7 @@ btech.unit.tic_weapons( unit, tic )
 : The live unit.
 
 `integer tic`
-: The circuit number.
+: The zero-based circuit number.
 
 ### Returns
 

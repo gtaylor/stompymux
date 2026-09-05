@@ -22,6 +22,14 @@ btech.unit.piloting_check( unit, options )
 `table options`
 : The piloting-check options.
 
+The options table requires these fields:
+
+`integer roll_modifier`
+: The modifier applied to the unit's piloting skill roll.
+
+`integer damage_modifier`
+: The modifier applied to the fall when the piloting check fails.
+
 ### Returns
 
 `boolean succeeded`

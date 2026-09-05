@@ -21,10 +21,10 @@ sidebar_root_for: self
 | [`display_name`](display-name/) | Returns a live unit's display-name override. |
 | [`effective_max_speed`](effective-max-speed/) | Returns a live unit's effective maximum speed. |
 | [`engine`](engine/) | Returns a live unit's engine configuration. |
-| [`installed_parts`](installed-parts/) | Lists all operational parts installed on a live unit. |
+| [`installed_parts`](installed-parts/) | Lists parts represented by non-destroyed critical slots on a live unit. |
 | [`load_template`](load-template/) | Loads a unit template into a live unit. |
 | [`markings`](markings/) | Returns a live unit's markings. |
-| [`payload`](payload/) | Lists a live unit's operational weapons and ammunition. |
+| [`payload`](payload/) | Lists weapons and ammunition represented by non-destroyed critical slots on a live unit. |
 | [`piloting_check`](piloting-check/) | Makes a piloting check and applies a failed result. |
 | [`preferred_id`](preferred-id/) | Returns a live unit's preferred tactical ID. |
 | [`radio_channels`](radio-channels/) | Lists a live unit's configured radio channels. |

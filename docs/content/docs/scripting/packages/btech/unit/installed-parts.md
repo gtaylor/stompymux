@@ -4,7 +4,7 @@ type: docs
 toc_hide: false
 ---
 
-Lists all operational parts installed on a live unit.
+Lists parts represented by non-destroyed critical slots on a live unit.
 
 ## Function
 
@@ -23,6 +23,10 @@ btech.unit.installed_parts( unit )
 
 `BtechPartStack[] parts`
 : The installed parts and quantities.
+
+## Notes
+
+Destroyed critical slots are omitted.
 
 ## See Also
 

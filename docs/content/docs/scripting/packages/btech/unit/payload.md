@@ -4,7 +4,8 @@ type: docs
 toc_hide: false
 ---
 
-Lists a live unit's operational weapons and ammunition.
+Lists weapons and ammunition represented by non-destroyed critical slots on a
+live unit.
 
 ## Function
 
@@ -23,6 +24,10 @@ btech.unit.payload( unit )
 
 `BtechPartStack[] parts`
 : The payload parts and quantities.
+
+## Notes
+
+Destroyed critical slots are omitted.
 
 ## See Also
 

@@ -21,4 +21,4 @@ Provides checked error-code symbols for BattleTech-specific failures.
 
 - [`btech`](../../)
 - [`btech.error`](../)
-- [`mux.error.codes`](../../mux/error/codes/)
+- [`mux.error.codes`](../../../mux/error/codes/)
