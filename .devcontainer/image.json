@@ -1,6 +1,0 @@
-{
-	"name": "stompymux-image",
-	"build": {
-		"dockerfile": "Dockerfile"
-	}
-}

@@ -78,7 +78,10 @@ curl "${CURL_OPTIONS[@]}" \
 "${SUDO[@]}" tar --extract --gzip \
   --file "/tmp/${LUA_LANGUAGE_SERVER_ARCHIVE}" \
   --directory "${LUA_LANGUAGE_SERVER_INSTALL_DIR}"
-"${SUDO[@]}" chown -R vscode:vscode "${LUA_LANGUAGE_SERVER_INSTALL_DIR}"
+# Devcontainers may remap the vscode user's UID to match the host. LuaLS creates
+# runtime-specific standard-library metadata here, so ownership by the image's
+# original numeric UID is insufficient after that remap.
+"${SUDO[@]}" chmod 1777 "${LUA_LANGUAGE_SERVER_INSTALL_DIR}/meta"
 "${SUDO[@]}" ln --symbolic --force \
   "${LUA_LANGUAGE_SERVER_INSTALL_DIR}/bin/lua-language-server" \
   /usr/local/bin/lua-language-server

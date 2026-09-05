@@ -7,7 +7,7 @@ on:
       - main
     paths:
       - .devcontainer/Dockerfile
-      - .devcontainer/image.json
+      - .devcontainer/image/devcontainer.json
       - .devcontainer/install-tools.sh
       - .github/workflows/devcontainer-image.yml
 
@@ -44,7 +44,7 @@ jobs:
       - name: Build and verify image
         uses: devcontainers/ci@v0.3
         with:
-          configFile: .devcontainer/image.json
+          configFile: .devcontainer/image/devcontainer.json
           imageName: ${{ env.IMAGE_NAME }}
           imageTag: ${{ github.sha }}
           push: never
@@ -62,7 +62,7 @@ jobs:
             stylua --version
             lua-language-server --version
             lua_language_server_bin=$(readlink -f "$(command -v lua-language-server)")
-            test -w "$(dirname "$(dirname "$lua_language_server_bin")")"
+            test -w "$(dirname "$(dirname "$lua_language_server_bin")")/meta"
 
       - name: Publish image and report immutable digest
         env:

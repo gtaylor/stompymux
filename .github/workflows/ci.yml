@@ -43,6 +43,7 @@ jobs:
         with:
           configFile: .devcontainer/devcontainer.json
           env: |
+            GITHUB_ACTIONS=true
             CMAKE_BUILD_TYPE=${{ matrix.configuration.build_type }}
             BTECH_ENABLE_ASAN=${{ matrix.configuration.asan }}
             BTECH_ENABLE_UBSAN=${{ matrix.configuration.ubsan }}
@@ -74,6 +75,7 @@ jobs:
         with:
           configFile: .devcontainer/devcontainer.json
           env: |
+            GITHUB_ACTIONS=true
             CMAKE_BUILD_TYPE=Release
             BTECH_ENABLE_ASAN=OFF
             BTECH_ENABLE_UBSAN=OFF
@@ -104,6 +106,8 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           configFile: .devcontainer/devcontainer.json
+          env: |
+            GITHUB_ACTIONS=true
           push: never
           runCmd: |
             set -euo pipefail
