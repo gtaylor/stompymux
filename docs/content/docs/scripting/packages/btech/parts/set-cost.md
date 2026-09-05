@@ -20,7 +20,7 @@ btech.parts.set_cost( part, cost )
 : A part record, packed ID, or unique name.
 
 `integer cost`
-: The new non-negative cost.
+: The new cost, from 0 through Lua's safe-integer maximum of `2^53 - 1`.
 
 ### Returns
 

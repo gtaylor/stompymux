@@ -17,6 +17,9 @@ Provides checked error-code symbols for BattleTech-specific failures.
 | `btech.error.codes.template.invalid` | `btech.template.invalid` |
 | `btech.error.codes.operation.failed` | `btech.operation.failed` |
 
+Errors with the `btech.operation.failed` code include a stable,
+machine-readable reason string in `error.detail.reason`.
+
 ## See Also
 
 - [`btech`](../../)

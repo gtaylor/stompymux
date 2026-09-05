@@ -23,7 +23,8 @@ btech.map.place_unit( unit, map, position )
 : The destination BattleTech map.
 
 `BtechPosition position`
-: The zero-based coordinates and optional altitude.
+: The zero-based `x` and `y` coordinates and optional `z` altitude. When
+  provided, `z` must be an integer from 0 through 10000.
 
 ### Returns
 

@@ -20,7 +20,7 @@ btech.unit.set_assigned_pilot( unit, pilot )
 : The live unit.
 
 `DbRef|Object|nil pilot`
-: The pilot, or `nil` to clear the assignment.
+: A player to assign as the pilot, or `nil` to clear the assignment.
 
 ### Returns
 
