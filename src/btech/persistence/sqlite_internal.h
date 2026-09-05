@@ -23,7 +23,6 @@
 #include "mech_stagger.h"
 #include "mech_tech_events_api.h"
 #include "mech_utils_api.h"
-#include "mechrep.h"
 #include "mux/network/mux_event.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
@@ -70,7 +69,6 @@ typedef struct BtechObjectStoreContext BtechObjectStoreContext;
 struct BtechObjectStoreContext {
   GameDatabase *database;
   BtechSpecialWriteContext *fault;
-  sqlite3_stmt *mechrep;
   sqlite3_stmt *turret;
   sqlite3_stmt *turret_tic;
   sqlite3_stmt *autopilot;
@@ -174,7 +172,6 @@ int btech_special_load_mech_runtime(sqlite3 *sqlite, BtechContext *context);
 int btech_special_load_mech_unit_aux(sqlite3 *sqlite, BtechContext *context);
 int btech_special_load_mech_stagger_damage(sqlite3 *sqlite,
                                            BtechContext *context);
-int btech_special_load_mechrep(sqlite3 *sqlite, BtechContext *context);
 int btech_special_load_turrets(sqlite3 *sqlite, BtechContext *context);
 int btech_special_load_turret_tics(sqlite3 *sqlite, BtechContext *context);
 int btech_special_load_autopilots(sqlite3 *sqlite, BtechContext *context);

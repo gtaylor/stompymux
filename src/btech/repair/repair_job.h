@@ -22,8 +22,6 @@ typedef enum RepairCommandStatus : int {
   REPAIR_COMMAND_STARTED,
   REPAIR_COMMAND_NO_STALL,
   REPAIR_COMMAND_UNAUTHORIZED,
-  REPAIR_COMMAND_NO_TARGET,
-  REPAIR_COMMAND_TARGET_UNALLOCATED,
 } RepairCommandStatus;
 
 typedef struct RepairCommandContext {
@@ -34,14 +32,12 @@ typedef struct RepairCommandContext {
   bool is_dropship;
 } RepairCommandContext;
 
-typedef struct RepairFacility RepairFacility;
-typedef struct RepairFacilityCommandContext {
+typedef struct MechAdminCommandContext {
   DbRef player;
-  RepairFacility *facility;
   BtechContext *context;
   EvaluationContext *evaluation;
   Mech *mech;
-} RepairFacilityCommandContext;
+} MechAdminCommandContext;
 
 typedef enum RepairParseStatus : int {
   REPAIR_PARSE_OK,
@@ -136,9 +132,9 @@ repair_command_context_initialize(DbRef player, void *data,
                                   RepairStallPolicy stall_policy,
                                   RepairCommandContext *command);
 const char *repair_command_status_message(RepairCommandStatus status);
-RepairCommandStatus repair_facility_command_context_initialize(
-    DbRef player, void *data, bool target_required,
-    RepairFacilityCommandContext *command);
+RepairCommandStatus
+mech_admin_command_context_initialize(DbRef player, void *data,
+                                      MechAdminCommandContext *command);
 RepairParseStatus repair_selection_parse_part(Mech *mech, char *buffer,
                                               bool parse_position,
                                               bool parse_brand,

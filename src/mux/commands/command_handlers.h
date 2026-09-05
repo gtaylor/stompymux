@@ -36,6 +36,9 @@ void do_tapcom(DbRef player, DbRef cause, int key, char *channel,
 void do_admin(CommandInvocation *invocation); /* Change config parameters */
 /** Handles typed BTech special-object registration and inspection. */
 void do_btech(CommandInvocation *invocation);
+/** Applies a wizard administration command to the unit containing the player.
+ * @param[in,out] invocation Command invocation. */
+void do_mech_admin(CommandInvocation *invocation);
 /** Handles the alias command. @param[in,out] invocation Command invocation. */
 
 void do_alias(CommandInvocation *invocation);

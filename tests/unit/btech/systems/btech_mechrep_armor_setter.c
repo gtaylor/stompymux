@@ -15,7 +15,6 @@
 #include "mech_equipment_api.h"
 #include "mech_identity_api.h"
 #include "mech_specification_api.h"
-#include "mechrep.h"
 #include "mux/network/network_output.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
@@ -26,7 +25,6 @@
 static BtechContext *const CONTEXT = (BtechContext *)1;
 static EvaluationContext *const EVALUATION = (EvaluationContext *)2;
 static Mech *const MECH = (Mech *)3;
-static RepairFacility facility = {.xcode = {.context = (BtechContext *)1}};
 static RepairCommandStatus command_status;
 
 typedef struct ArmorValues {
@@ -56,20 +54,20 @@ static void reset_state(void) {
   }
 }
 
-RepairCommandStatus repair_facility_command_context_initialize(
-    DbRef player, void *data, bool target_required [[maybe_unused]],
-    RepairFacilityCommandContext *command) {
-  assert(data == &facility);
-  *command = (RepairFacilityCommandContext){.player = player,
-                                            .facility = &facility,
-                                            .context = CONTEXT,
-                                            .evaluation = EVALUATION,
-                                            .mech = MECH};
+RepairCommandStatus
+mech_admin_command_context_initialize(DbRef player, void *data,
+                                      MechAdminCommandContext *command) {
+  assert(data == MECH);
+  *command = (MechAdminCommandContext){.player = player,
+                                       .context = CONTEXT,
+                                       .evaluation = EVALUATION,
+                                       .mech = MECH};
   return command_status;
 }
 
-const char *repair_command_status_message(RepairCommandStatus status) {
-  return status == REPAIR_COMMAND_NO_TARGET ? "No target." : "Unavailable.";
+const char *repair_command_status_message(RepairCommandStatus status
+                                          [[maybe_unused]]) {
+  return "Unavailable.";
 }
 
 EvaluationContext *btech_context_evaluation(BtechContext *context) {
@@ -154,7 +152,7 @@ static void invoke(const char *input) {
   char buffer[128];
 
   assert(snprintf(buffer, sizeof(buffer), "%s", input) >= 0);
-  mechrep_rsetarmor(99, &facility, buffer);
+  mechrep_rsetarmor(99, MECH, buffer);
 }
 
 static void assert_section_unchanged(int section) {
@@ -228,7 +226,7 @@ static void test_boundaries_and_valid_torso_update(void) {
 
 static void test_no_target_or_authorization_never_mutates(void) {
   reset_state();
-  command_status = REPAIR_COMMAND_NO_TARGET;
+  command_status = REPAIR_COMMAND_MISSING_MECH;
   invoke("CTORSO 20 21 22");
   assert_section_unchanged(CTORSO);
 

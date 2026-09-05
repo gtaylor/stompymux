@@ -640,24 +640,6 @@ add_test(NAME btech_repair_timing COMMAND btech_repair_timing_test)
 set_tests_properties(btech_repair_timing PROPERTIES
   LABELS "unit;btech-systems;btech")
 
-add_executable(btech_mechrep_target_restore_test
-  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_mechrep_target_restore.c
-  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/persistence/special_restore.c)
-target_compile_options(btech_mechrep_target_restore_test PRIVATE
-  -ffunction-sections)
-target_link_options(btech_mechrep_target_restore_test PRIVATE
-  -Wl,--gc-sections)
-target_link_libraries(btech_mechrep_target_restore_test PRIVATE
-  btmux_options SQLite3::SQLite3)
-target_include_directories(btech_mechrep_target_restore_test PRIVATE
-  "${CMAKE_BINARY_DIR}"
-  ${BTECH_PRIVATE_INCLUDE_DIRS}
-  "${CMAKE_SOURCE_DIR}/src")
-add_test(NAME btech_mechrep_target_restore
-  COMMAND btech_mechrep_target_restore_test)
-set_tests_properties(btech_mechrep_target_restore PROPERTIES
-  LABELS "unit;btech-systems;btech")
-
 add_executable(btech_mechrep_admin_test
   ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_mechrep_admin.c
   ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/repair/mechrep_construction.c
@@ -673,6 +655,21 @@ target_include_directories(btech_mechrep_admin_test PRIVATE
   "${CMAKE_SOURCE_DIR}/src")
 add_test(NAME btech_mechrep_admin COMMAND btech_mechrep_admin_test)
 set_tests_properties(btech_mechrep_admin PROPERTIES
+  LABELS "unit;btech-systems;btech")
+
+add_executable(btech_mech_admin_command_test
+  ${CMAKE_SOURCE_DIR}/tests/unit/btech/systems/btech_mech_admin_command.c
+  ${CMAKE_SOURCE_DIR}/${BTECH_SOURCE_DIR}/commands/btech.c
+  ${CMAKE_SOURCE_DIR}/${MUX_SOURCE_DIR}/support/checked_storage.c)
+target_compile_options(btech_mech_admin_command_test PRIVATE -ffunction-sections)
+target_link_options(btech_mech_admin_command_test PRIVATE -Wl,--gc-sections)
+target_link_libraries(btech_mech_admin_command_test PRIVATE btmux_options)
+target_include_directories(btech_mech_admin_command_test PRIVATE
+  "${CMAKE_BINARY_DIR}"
+  ${BTECH_PRIVATE_INCLUDE_DIRS}
+  "${CMAKE_SOURCE_DIR}/src")
+add_test(NAME btech_mech_admin_command COMMAND btech_mech_admin_command_test)
+set_tests_properties(btech_mech_admin_command PROPERTIES
   LABELS "unit;btech-systems;btech")
 
 add_executable(btech_mechrep_armor_setter_test

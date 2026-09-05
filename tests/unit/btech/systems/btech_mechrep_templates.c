@@ -10,14 +10,12 @@
 #include "mech_identity_api.h"
 #include "mech_restrict_api.h"
 #include "mech_template_api.h"
-#include "mechrep.h"
 #include "registry_api.h"
 #include "repair_job.h"
 
 static BtechContext *const context = (BtechContext *)1;
 static EvaluationContext *const evaluation = (EvaluationContext *)2;
 static GameDatabase *const database = (GameDatabase *)3;
-static RepairFacility facility = {.xcode = {.context = (BtechContext *)1}};
 static Mech *const mech = (Mech *)4;
 static bool template_load_result;
 static int events_cancelled;
@@ -31,15 +29,14 @@ static void reset_state(void) {
   memset(loaded_template, 0, sizeof(loaded_template));
 }
 
-RepairCommandStatus repair_facility_command_context_initialize(
-    DbRef player, void *data, bool require_target [[maybe_unused]],
-    RepairFacilityCommandContext *command) {
-  assert(data == &facility);
-  *command = (RepairFacilityCommandContext){.player = player,
-                                            .facility = &facility,
-                                            .context = context,
-                                            .evaluation = evaluation,
-                                            .mech = mech};
+RepairCommandStatus
+mech_admin_command_context_initialize(DbRef player, void *data,
+                                      MechAdminCommandContext *command) {
+  assert(data == mech);
+  *command = (MechAdminCommandContext){.player = player,
+                                       .context = context,
+                                       .evaluation = evaluation,
+                                       .mech = mech};
   return REPAIR_COMMAND_READY;
 }
 
@@ -100,12 +97,12 @@ static void test_loadnew_and_restore_cleanup_match(void) {
   char loadnew[] = "load-template";
 
   reset_state();
-  mechrep_rloadnew(99, &facility, loadnew);
+  mechrep_rloadnew(99, mech, loadnew);
   assert(strcmp(loaded_template, "load-template") == 0);
   assert(events_cancelled == 1);
   assert(los_cleared == 1);
 
-  mechrep_rrestore(99, &facility, nullptr);
+  mechrep_rrestore(99, mech, nullptr);
   assert(strcmp(loaded_template, "restore-template") == 0);
   assert(events_cancelled == 2);
   assert(los_cleared == 2);
@@ -116,11 +113,11 @@ static void test_failed_load_does_not_cleanup(void) {
 
   reset_state();
   template_load_result = false;
-  mechrep_rloadnew(99, &facility, loadnew);
+  mechrep_rloadnew(99, mech, loadnew);
   assert(events_cancelled == 0);
   assert(los_cleared == 0);
 
-  mechrep_rrestore(99, &facility, nullptr);
+  mechrep_rrestore(99, mech, nullptr);
   assert(events_cancelled == 0);
   assert(los_cleared == 0);
 }

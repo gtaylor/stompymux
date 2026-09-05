@@ -52,7 +52,6 @@ static bool heartbeat_dispatch(const RedBlackTreeVisitCall *call) {
     break;
 
   case GTYPE_DEBUG:
-  case GTYPE_MECHREP:
   case GTYPE_MAP:
   case GTYPE_TURRET:
 

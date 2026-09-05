@@ -13,7 +13,6 @@
 #include "mech_position_api.h"
 #include "mech_runtime_api.h"
 #include "mech_tech_api.h"
-#include "mechrep.h"
 #include "mux/objects/flags.h"
 #include "mux/server/platform.h"
 #include "registry_api.h"
@@ -62,40 +61,29 @@ const char *repair_command_status_message(RepairCommandStatus status) {
     return "The 'mech isn't in a repair stall!";
   case REPAIR_COMMAND_UNAUTHORIZED:
     return "I'm sorry Dave, can't do that.";
-  case REPAIR_COMMAND_NO_TARGET:
-    return "You must set a target first!";
-  case REPAIR_COMMAND_TARGET_UNALLOCATED:
-    return "The target's BTech data is not allocated.";
   case REPAIR_COMMAND_READY:
     return "";
   }
   return "";
 }
 
-RepairCommandStatus repair_facility_command_context_initialize(
-    DbRef player, void *data, bool target_required,
-    RepairFacilityCommandContext *command) {
-  RepairFacility *facility = data;
-  *command = (RepairFacilityCommandContext){
+RepairCommandStatus
+mech_admin_command_context_initialize(DbRef player, void *data,
+                                      MechAdminCommandContext *command) {
+  Mech *mech = data;
+  *command = (MechAdminCommandContext){
       .player = player,
-      .facility = facility,
-      .context = facility ? facility->xcode.context : nullptr,
-      .evaluation = facility ? btech_context_evaluation(facility->xcode.context)
-                             : nullptr,
+      .context = mech ? mech_context(mech) : nullptr,
+      .evaluation =
+          mech ? btech_context_evaluation(mech_context(mech)) : nullptr,
+      .mech = mech,
   };
-  if (!facility)
+  if (!mech)
     return REPAIR_COMMAND_MISSING_MECH;
   GameDatabase *database = btech_context_database(command->context);
   if (!is_god(database, player) && !is_wizard(database, player))
     return REPAIR_COMMAND_UNAUTHORIZED;
-  if (!target_required)
-    return REPAIR_COMMAND_READY;
-  if (facility->current_target == -1)
-    return REPAIR_COMMAND_NO_TARGET;
-  command->mech =
-      btech_context_get_mech(command->context, facility->current_target);
-  return command->mech ? REPAIR_COMMAND_READY
-                       : REPAIR_COMMAND_TARGET_UNALLOCATED;
+  return REPAIR_COMMAND_READY;
 }
 
 RepairParseStatus repair_selection_parse_part(Mech *mech, char *buffer,

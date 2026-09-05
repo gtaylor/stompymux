@@ -15,7 +15,6 @@ typedef struct BtechContext BtechContext;
 typedef enum BtechSpecialObjectType : int {
   BTECH_SPECIAL_MECH,
   BTECH_SPECIAL_DEBUG,
-  BTECH_SPECIAL_MECHREP,
   BTECH_SPECIAL_MAP,
   BTECH_SPECIAL_AUTOPILOT,
   BTECH_SPECIAL_TURRET,

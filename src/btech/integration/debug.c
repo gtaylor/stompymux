@@ -111,7 +111,6 @@ static bool debug_check_stuff(const RedBlackTreeVisitCall *call) {
   switch (XCODE_OBJ->type) {
   case GTYPE_MECH:
   case GTYPE_DEBUG:
-  case GTYPE_MECHREP:
   case GTYPE_MAP:
     map = (BattleMap *)XCODE_OBJ;
     if (map->map) {

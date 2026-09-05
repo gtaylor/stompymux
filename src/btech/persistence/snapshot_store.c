@@ -395,10 +395,7 @@ int btech_persistence_store_special_state(sqlite3 *sqlite,
     sqlite3_finalize(repairs);
     return -1;
   }
-  if (btech_special_write_prepare(&fault, sqlite,
-                                  "INSERT INTO btech_mechrep VALUES (?, ?);",
-                                  -1, &objects.mechrep, nullptr) != SQLITE_OK ||
-      btech_special_write_prepare(
+  if (btech_special_write_prepare(
           &fault, sqlite,
           "INSERT INTO btech_turrets VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);", -1,
           &objects.turret, nullptr) != SQLITE_OK ||

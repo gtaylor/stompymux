@@ -14,7 +14,6 @@ typedef struct BtechSpecialObjectCounts BtechSpecialObjectCounts;
 struct BtechSpecialObjectCounts {
   int maps;
   int mechs;
-  int mechreps;
   int turrets;
   int autopilots;
 };
@@ -35,9 +34,6 @@ static bool btech_special_count_objects(const RedBlackTreeVisitCall *call) {
     break;
   case GTYPE_MECH:
     counts->mechs++;
-    break;
-  case GTYPE_MECHREP:
-    counts->mechreps++;
     break;
   case GTYPE_TURRET:
     counts->turrets++;
@@ -87,15 +83,13 @@ static int btech_special_require_rows(sqlite3 *sqlite, const char *table,
 /* Require one parent and every fixed child row for each preallocated object. */
 static int btech_special_validate_required_rows(sqlite3 *sqlite,
                                                 BtechContext *context) {
-  BtechSpecialObjectCounts counts = {0, 0, 0, 0, 0};
+  BtechSpecialObjectCounts counts = {0, 0, 0, 0};
 
   red_black_tree_walk(context->special_objects, WALK_INORDER,
                       btech_special_count_objects, &counts);
   if (btech_special_require_rows(sqlite, "btech_maps", counts.maps) < 0)
     return -1;
   if (btech_special_require_rows(sqlite, "btech_mechs", counts.mechs) < 0)
-    return -1;
-  if (btech_special_require_rows(sqlite, "btech_mechrep", counts.mechreps) < 0)
     return -1;
   if (btech_special_require_rows(sqlite, "btech_turrets", counts.turrets) < 0)
     return -1;
@@ -245,9 +239,6 @@ static int btech_special_load_all(sqlite3 *sqlite, BtechContext *context) {
   if (btech_special_load_context_stage(sqlite, context, "mech stagger damage",
                                        btech_special_load_mech_stagger_damage) <
       0)
-    return -1;
-  if (btech_special_load_context_stage(sqlite, context, "mech repair consoles",
-                                       btech_special_load_mechrep) < 0)
     return -1;
   if (btech_special_load_context_stage(sqlite, context, "turrets",
                                        btech_special_load_turrets) < 0)

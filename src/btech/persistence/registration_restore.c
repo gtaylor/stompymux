@@ -38,6 +38,8 @@ static int load_registrations(sqlite3 *sqlite, BtechContext *context) {
       result = -1;
       break;
     }
+    if (!strcmp(name, "MECHREP"))
+      continue;
     const int TYPE = registration_type(name);
     if (TYPE < 0) {
       result = -1;

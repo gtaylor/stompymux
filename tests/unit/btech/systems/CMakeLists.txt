@@ -24,8 +24,8 @@ btmux_label_unit_topic(btech-systems btech
   btech_repair_restore
   btech_repair_persistence_lifecycle
   btech_repair_timing
-  btech_mechrep_target_restore
   btech_mechrep_admin
+  btech_mech_admin_command
   btech_mechrep_armor_setter
   btech_mechrep_repair_command
   btech_template_specials

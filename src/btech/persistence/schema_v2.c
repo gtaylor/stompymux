@@ -20,7 +20,7 @@ const char BTECH_SPECIAL_SCHEMA_SQL[] =
     "CREATE TABLE btech_persistence_metadata ("
     " id INTEGER PRIMARY KEY CHECK (id = 1),"
     " schema_name TEXT NOT NULL CHECK (schema_name = 'stompymux-btech'),"
-    " schema_version INTEGER NOT NULL CHECK (schema_version = 6)"
+    " schema_version INTEGER NOT NULL CHECK (schema_version = 7)"
     ");"
     "CREATE TABLE btech_special_registrations ("
     " dbref INTEGER PRIMARY KEY, special_type TEXT NOT NULL"
@@ -104,9 +104,6 @@ const char BTECH_SPECIAL_SCHEMA_SQL[] =
     "INTEGER NOT NULL,"
     " remaining_ticks INTEGER NOT NULL, event_data INTEGER NOT NULL, is_fake "
     "INTEGER NOT NULL"
-    ");"
-    "CREATE TABLE btech_mechrep ("
-    " dbref INTEGER PRIMARY KEY, current_target INTEGER NOT NULL"
     ");"
     "CREATE TABLE btech_turrets ("
     " dbref INTEGER PRIMARY KEY, arcs INTEGER NOT NULL, parent INTEGER NOT "
@@ -577,7 +574,7 @@ int btech_special_validate_metadata(sqlite3 *sqlite) {
           sqlite,
           "SELECT count(*) FROM btech_persistence_metadata "
           "WHERE id = 1 AND schema_name = 'stompymux-btech' "
-          "AND schema_version = 6;",
+          "AND schema_version IN (6, 7);",
           -1, &statement, nullptr) == SQLITE_OK &&
               sqlite3_step(statement) == SQLITE_ROW &&
               btech_special_column_int(statement, 0, &matching_rows) == 0 &&

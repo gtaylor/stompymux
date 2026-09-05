@@ -55,7 +55,6 @@
 #include "mech_events.h"
 #include "mech_partnames_api.h"
 #include "mech_stat_api.h"
-#include "mechrep.h"
 #include "mechrep_api.h"
 #include "mux/objects/powers.h"
 #include "mux/support/red_black_tree.h"
@@ -70,8 +69,6 @@ const BtechSpecialObjectDefinition SPECIAL_OBJECTS[BTECH_SPECIAL_OBJECT_COUNT] =
       mech_update, POWER_NONE},
      {"DEBUG", DEBUGCOMMANDS, sizeof(BtechSpecialObject), nullptr, nullptr, 0,
       nullptr, POWER_NONE},
-     {"MECHREP", MECHREPCOMMANDS, sizeof(RepairFacility), nullptr,
-      newfreemechrep, 0, nullptr, POWER_NONE},
      {"MAP", MAPCOMMANDS, sizeof(BattleMap), nullptr, newfreemap, LOS_TICK,
       map_update, POWER_NONE},
      {"AUTOPILOT", AUTOPILOTCOMMANDS, sizeof(Autopilot), nullptr,
@@ -98,8 +95,6 @@ size_t btech_special_command_count(int type) {
     return mech_command_count();
   case GTYPE_DEBUG:
     return debug_command_count();
-  case GTYPE_MECHREP:
-    return repair_command_count();
   case GTYPE_MAP:
     return map_command_count();
   case GTYPE_AUTO:
