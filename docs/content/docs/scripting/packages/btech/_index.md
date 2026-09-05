@@ -5,8 +5,6 @@ type: docs
 weight: 20
 sidebar_root_for: self
 no_list: true
-aliases:
-  - /docs/scripting/packages/btech/api/
 ---
 
 `require("btech")` returns the native, typed BattleTech API. Gameplay calls are
