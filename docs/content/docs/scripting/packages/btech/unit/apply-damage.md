@@ -74,11 +74,17 @@ It also accepts these optional fields:
 : A message sent to the damaged unit.
 
 `string map_message`
-: A message broadcast on the unit's map.
+: A line-of-sight broadcast sent to other started units that can see the
+  damaged unit. The damaged unit does not receive it.
 
 ### Returns
 
 None.
+
+## Notes
+
+When the target unit has the combat-safe condition or is on a combat-safe map,
+the function returns normally but applies no damage.
 
 ## See Also
 
