@@ -6,7 +6,8 @@ type: docs
 
 Atomically stores a complete display-preference table. Pass `nil` to restore
 defaults. Heights must be 5–24 for tactical, 5–40 for tactical width, and
-10–40 for LRS.
+10–40 for LRS. A table returned by `ui_preferences` can be passed directly;
+its informational `configured` field is ignored.
 
 ```lua
 btech.player.set_ui_preferences(player, {

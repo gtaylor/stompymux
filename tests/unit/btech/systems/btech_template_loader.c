@@ -18,6 +18,7 @@
 static BtechContext test_context_data = {.database = (GameDatabase *)1};
 static BtechContext *const test_context = &test_context_data;
 static int communications_clear_count;
+static int event_cancel_count;
 static int template_parse_count;
 
 BtechContext *mech_context(const Mech *mech [[maybe_unused]]) {
@@ -87,13 +88,19 @@ void mech_pilot_dbref_set(Mech *mech [[maybe_unused]],
 
 void mech_targeting_aim_reset(Mech *mech) { (void)mech; }
 
-void mech_event_cancel(Mech *mech [[maybe_unused]],
-                       MechEventType type [[maybe_unused]]) {
+void mech_events_cancel_all(Mech *mech) {
+  assert(mech != nullptr);
+  event_cancel_count++;
+}
+
+void mech_event_cancel(Mech *mech, MechEventType type) {
+  assert(mech != nullptr);
   assert(type == EVENT_VEHICLEBURN);
 }
 
 static void reset_observations(void) {
   communications_clear_count = 0;
+  event_cancel_count = 0;
   template_parse_count = 0;
 }
 
@@ -109,6 +116,7 @@ int main(void) {
   assert(mech_template_load(1, &mech, "modern"));
   assert(template_parse_count == 1);
   assert(communications_clear_count == 0);
+  assert(event_cancel_count == 1);
 
   strcpy(mech.ud.mech_type, "modern");
   mech.ud.tons = 55;
@@ -120,6 +128,7 @@ int main(void) {
   assert(!mech_template_load(1, &mech, "legacy"));
   assert(template_parse_count == 1);
   assert(communications_clear_count == 1);
+  assert(event_cancel_count == 0);
   assert(memcmp(&mech, &expected, sizeof(mech)) == 0);
 
   strcpy(mech.ud.mech_type, "modern");
@@ -128,6 +137,7 @@ int main(void) {
   assert(!mech_template_load(1, &mech, "missing"));
   assert(template_parse_count == 0);
   assert(communications_clear_count == 0);
+  assert(event_cancel_count == 0);
   assert(memcmp(&mech, &expected, sizeof(mech)) == 0);
   return 0;
 }
