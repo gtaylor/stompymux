@@ -20,8 +20,9 @@ None.
 
 ### Returns
 
-`integer seconds`
-: The lag in seconds.
+`integer percent`
+: The event-processing lag as a percentage. `0` means processing is on
+  schedule; `100` means elapsed wall time is twice the processed tick time.
 
 ## See Also
 
