@@ -33,9 +33,9 @@ The request requires these fields:
 `integer direction_code`
 : The attack direction code, from 0 to 21.
 
-Codes 0 through 7 damage a fixed section; codes 8 through 15 damage the rear
-armor of the corresponding section (`code - 8`). Section indices depend on the
-unit class:
+Codes 0 through 7 damage a fixed section; codes 8 through 15 target the
+corresponding section (`code - 8`) with the rear-hit flag. Section indices
+depend on the unit class:
 
 | Indices | Unit class and section order |
 | --- | --- |
@@ -58,6 +58,12 @@ table:
 | 19 | Front | Yes |
 | 20 | Rear | Yes |
 | 21 | Left side | Yes |
+
+For mechs, the rear-hit flag applies damage to rear armor when the selected
+section is the left, right, or center torso. For non-mechs, the flag is cleared;
+a front-side result is remapped to the aft section, while other selected
+sections remain unchanged. This applies to both the fixed and randomized codes
+whose table above says `Rear armor` is `Yes`.
 
 It also accepts these optional fields:
 

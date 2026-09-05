@@ -23,7 +23,7 @@ Except for [`exists`](exists/), template queries raise
 | [`critical_slots`](critical-slots/) | Lists a template section's critical slots. |
 | [`engine`](engine/) | Returns a template's engine configuration. |
 | [`exists`](exists/) | Tests whether a unit template exists. |
-| [`installed_parts`](installed-parts/) | Lists all parts installed on a unit template. |
+| [`installed_parts`](installed-parts/) | Lists parts represented by non-destroyed critical slots. |
 | [`payload`](payload/) | Lists a template's weapons and ammunition. |
 | [`show_critical_status`](show-critical-status/) | Sends a template's critical-status report to a player. |
 | [`show_status`](show-status/) | Sends a template's status report to a player. |
