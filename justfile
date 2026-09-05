@@ -110,7 +110,10 @@ ast-policy-checker-build:
     llvm_cmake_dir="$({{llvm_config}} --cmakedir)"; launcher=(); if command -v ccache >/dev/null; then launcher=(-DCMAKE_CXX_COMPILER_LAUNCHER=ccache); fi; cmake -S tools/ast_policy_checker -B {{ast_policy_checker_build_dir}} -DCMAKE_CXX_COMPILER={{clangxx}} -DLLVM_DIR="$llvm_cmake_dir" -DClang_DIR="${llvm_cmake_dir%/llvm}/clang" "${launcher[@]}"
     cmake --build {{ast_policy_checker_build_dir}} -j "$(nproc)"
 
-check-ast-policies: configure ast-policy-checker-build
+ast-runtime-build: configure
+    cmake --build {{build_dir}} --target libsodium_build -j "$(nproc)"
+
+check-ast-policies: configure ast-policy-checker-build ast-runtime-build
     mapfile -d '' -t sources < <(find src/mux src/btech tests -path tests/fixtures -prune -o -type f -name '*.c' -print0); output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{ast_policy_checker_build_dir}}/ast-policy-checker -p {{build_dir}} --checks=all "${sources[@]}" >"$output" 2>&1 || status=$?; if (( status != 0 )); then rg -v '^\[[0-9]+/[0-9]+\]' "$output" >&2 || true; exit "$status"; fi
     ctest --test-dir {{ast_policy_checker_build_dir}} --output-on-failure
 
