@@ -39,7 +39,8 @@ has these fields:
 
 `integer|nil ammunition`
 : Optional ammunition from 0 to 255. This field is valid only for a weapon that
-  uses ammunition.
+  uses ammunition. If omitted, the weapon receives its `ammunition_per_ton`
+  amount; pass `0` explicitly to equip the weapon without ammunition.
 
 ### Returns
 
