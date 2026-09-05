@@ -1,12 +1,33 @@
 ---
-draft: true
 title: set_preferred_id
 type: docs
+toc_hide: false
 ---
 
-Sets a registered unit's preferred tactical ID. The value must be two ASCII
-letters and is normalized to uppercase; pass `nil` to clear it.
+Sets or clears a live unit's preferred tactical ID.
+
+## Function
+
+### Synopsis
 
 ```lua
-btech.unit.set_preferred_id(unit, "BK")
+btech.unit.set_preferred_id( unit, id )
 ```
+
+### Arguments
+
+`DbRef|Object unit`
+: The live unit.
+
+`string|nil id`
+: Exactly two ASCII letters, or `nil` to clear the tactical ID. Letters are
+  stored in uppercase.
+
+### Returns
+
+None.
+
+## See Also
+
+- [`btech`](../../)
+- [`btech.unit`](../)

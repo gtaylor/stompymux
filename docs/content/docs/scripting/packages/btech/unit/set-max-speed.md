@@ -1,11 +1,10 @@
 ---
-draft: true
 title: set_max_speed
 type: docs
 toc_hide: false
 ---
 
-Sets a live unit's maximum speed and corrects its current speed.
+Sets a live unit's maximum speed.
 
 ## Function
 
@@ -17,21 +16,23 @@ btech.unit.set_max_speed( unit, speed )
 
 ### Arguments
 
-`number unit`
-: The unit dbref.
+`DbRef|Object unit`
+: The live unit.
 
 `number speed`
-: The new maximum speed.
+: The new maximum speed, from 0 to 100000.
 
 ### Returns
 
-`true success`
-: `true` after the operation completes without a legacy error.
+None.
 
 ## Notes
 
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error.
+After setting the limit, this function corrects the unit's movement state. If
+necessary, it immediately clamps the desired and current speeds to the new
+maximum and recalculates cargo weight.
 
 ## See Also
 
 - [`btech`](../../)
+- [`btech.unit`](../)

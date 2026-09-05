@@ -1,11 +1,10 @@
 ---
-draft: true
 title: list
 type: docs
 toc_hide: false
 ---
 
-Lists canonical long part names in one category.
+Lists parts, optionally restricted to one category.
 
 ## Function
 
@@ -17,32 +16,15 @@ btech.parts.list( category )
 
 ### Arguments
 
-`string category`
-: `"ammo"`, `"weapon"`, `"bomb"`, `"special"`, or `"cargo"`. The aliases
-  `"weapons"`, `"weap"`, `"bombs"`, `"specials"`, `"part"`, `"parts"`, and
-  `"carg"` are also accepted. All spellings are matched without regard to
-  case.
+`string|nil category`
+: An optional canonical category code.
 
 ### Returns
 
-`table values`
-: A flat array of converted legacy result tokens.
-
-## Examples
-
-```lua
-local btech = require("btech")
-
-for _, name in ipairs(btech.parts.list("weapon")) do
-  mux.world.pemit(ctx.enactor, name)
-end
-```
-
-## Notes
-
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error.
+`BtechPart[] parts`
+: The matching part records.
 
 ## See Also
 
 - [`btech`](../../)
-- [`btech.parts.categories`](../categories/)
+- [`btech.parts`](../)

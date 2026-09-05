@@ -1,11 +1,33 @@
 ---
-draft: true
 title: set_markings
 type: docs
+toc_hide: false
 ---
 
-Sets a registered unit's markings. Pass `nil` to clear them.
+Sets or clears a live unit's markings.
+
+## Function
+
+### Synopsis
 
 ```lua
-btech.unit.set_markings(unit, "black-and-gold stripes")
+btech.unit.set_markings( unit, markings )
 ```
+
+### Arguments
+
+`DbRef|Object unit`
+: The live unit.
+
+`string|nil markings`
+: The markings as a non-empty string of at most 16,383 bytes, or `nil` to clear
+  them.
+
+### Returns
+
+None.
+
+## See Also
+
+- [`btech`](../../)
+- [`btech.unit`](../)

@@ -1,40 +1,33 @@
 ---
-draft: true
 title: terrain
 type: docs
 toc_hide: false
 ---
 
-Returns the terrain code of a map hex.
+Returns the terrain type of a map hex.
 
 ## Function
 
 ### Synopsis
 
 ```lua
-btech.map.terrain( map, x, y )
+btech.map.terrain( map, hex )
 ```
 
 ### Arguments
 
-`number map`
-: The map dbref.
+`DbRef|Object map`
+: The BattleTech map.
 
-`integer x`
-: The hex X coordinate.
-
-`integer y`
-: The hex Y coordinate.
+`BtechHex hex`
+: The zero-based map coordinates.
 
 ### Returns
 
-`string result`
-: The handler's serialized text result.
-
-## Notes
-
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error.
+`BtechTerrain terrain`
+: The canonical terrain name.
 
 ## See Also
 
 - [`btech`](../../)
+- [`btech.map`](../)

@@ -1,15 +1,52 @@
 ---
-draft: true
 title: set_loadout
 type: docs
+toc_hide: false
 ---
 
-Atomically stores a personal-combat loadout. Pass `nil` to clear it. Equipment
-has a required nonempty `weapon` and optional ammunition count from 0–255.
+Sets or clears a player's personal-combat loadout.
+
+## Function
+
+### Synopsis
 
 ```lua
-btech.player.set_loadout(player, {
-  armor = { head = 2, torso = 8, hands = 2, feet = 2 },
-  right = { weapon = "Laser Pistol", ammunition = 12 },
-})
+btech.player.set_loadout( player, loadout )
 ```
+
+### Arguments
+
+`DbRef|Object player`
+: The player.
+
+`BtechPersonalCombatLoadout|nil loadout`
+: The new loadout, or `nil` to clear it.
+
+A loadout contains a required `armor` table:
+
+| Field | Type | Range |
+| --- | --- | --- |
+| `head` | integer | 0 to 2 |
+| `torso` | integer | 0 to 8 |
+| `hands` | integer | 0 to 2 |
+| `feet` | integer | 0 to 2 |
+
+It may also contain `right` and `left` equipment tables. Each equipment table
+has these fields:
+
+`BtechPartRef weapon`
+: A personal-combat weapon.
+
+`integer|nil ammunition`
+: Optional ammunition from 0 to 255. This field is valid only for a weapon that
+  uses ammunition. If omitted, the weapon receives its `ammunition_per_ton`
+  amount; pass `0` explicitly to equip the weapon without ammunition.
+
+### Returns
+
+None.
+
+## See Also
+
+- [`btech`](../../)
+- [`btech.player`](../)

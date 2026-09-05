@@ -1,11 +1,10 @@
 ---
-draft: true
 title: tic_weapons
 type: docs
 toc_hide: false
 ---
 
-Lists the weapons assigned to a unit's target-interlock circuit.
+Lists the weapons assigned to a target-interlock circuit.
 
 ## Function
 
@@ -17,21 +16,18 @@ btech.unit.tic_weapons( unit, tic )
 
 ### Arguments
 
-`number unit`
-: The unit dbref.
+`DbRef|Object unit`
+: The live unit.
 
 `integer tic`
-: The zero-based TIC number.
+: The zero-based circuit number, from 0 through 3.
 
 ### Returns
 
-`table values`
-: A flat array of converted legacy result tokens.
-
-## Notes
-
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error.
+`BtechMountedWeapon[] weapons`
+: The assigned mounted weapons.
 
 ## See Also
 
 - [`btech`](../../)
+- [`btech.unit`](../)

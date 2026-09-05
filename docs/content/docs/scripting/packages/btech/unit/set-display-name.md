@@ -1,15 +1,32 @@
 ---
-draft: true
 title: set_display_name
 type: docs
 toc_hide: false
 ---
 
-Sets a registered unit's display-name override. An empty string clears it.
+Sets or clears a live unit's display-name override.
+
+## Function
+
+### Synopsis
 
 ```lua
-btech.unit.set_display_name(unit, "Black Knight")
+btech.unit.set_display_name( unit, name )
 ```
 
-The caller must be a wizard. This function is deliberately unit-specific;
-maps use their core object name and do not have a display-name override.
+### Arguments
+
+`DbRef|Object unit`
+: The live unit.
+
+`string|nil name`
+: A display name from 1 to 120 bytes, or `nil` to clear it.
+
+### Returns
+
+None.
+
+## See Also
+
+- [`btech`](../../)
+- [`btech.unit`](../)

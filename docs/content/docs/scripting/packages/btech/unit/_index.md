@@ -1,5 +1,4 @@
 ---
-draft: true
 title: btech.unit
 linkTitle: btech.unit
 type: docs
@@ -8,36 +7,35 @@ no_list: true
 sidebar_root_for: self
 ---
 
-`btech.unit` exposes live-unit and template data, mutations, battle values,
-and status reports.
+`btech.unit` provides live-unit state, combat queries, and mutations.
 
 ## Functions
 
 | Function | Description |
 | --- | --- |
-| [`armor_status`](armor-status/) / [`armor_status_ref`](armor-status-ref/) | Returns serialized armor values for a section. |
-| [`assigned_pilot`](assigned-pilot/) / [`set_assigned_pilot`](set-assigned-pilot/) | Gets or sets the assigned pilot. |
+| [`apply_damage`](apply-damage/) | Applies clustered damage to a live unit. |
+| [`armor`](armor/) | Returns a live unit's armor and internal values. |
+| [`assigned_pilot`](assigned-pilot/) | Returns a live unit's assigned pilot. |
 | [`battle_value`](battle-value/) | Calculates a live unit's current battle value. |
-| [`crit_slot`](crit-slot/) / [`crit_slot_ref`](crit-slot-ref/) | Describes one critical slot. |
-| [`crit_status`](crit-status/) / [`crit_status_ref`](crit-status-ref/) | Returns serialized critical status. |
-| [`damage`](damage/) | Applies clustered damage to a live unit. |
-| [`display_name`](display-name/) | Returns a unit's display-name override. |
-| [`engine_rating`](engine-rating/) / [`engine_rating_ref`](engine-rating-ref/) | Returns an engine rating. |
-| [`fasa_base_cost_ref`](fasa-base-cost-ref/) | Calculates a template's FASA base cost. |
-| [`frequencies`](frequencies/) | Lists configured radio channels. |
-| [`load`](load/) | Loads a template into a live unit. |
-| [`make_pilot_roll`](make-pilot-roll/) | Makes a piloting roll and applies a failed roll. |
-| [`markings`](markings/) / [`set_markings`](set-markings/) | Gets or sets unit markings. |
-| [`payload_ref`](payload-ref/) | Returns a template's weapon and ammunition payload. |
-| [`real_max_speed`](real-max-speed/) | Returns effective maximum speed. |
-| [`preferred_id`](preferred-id/) / [`set_preferred_id`](set-preferred-id/) | Gets or sets the preferred tactical ID. |
-| [`section_status`](section-status/) | Returns serialized section status. |
-| [`set_value`](set-value/) | Writes a script-visible unit field. |
-| [`set_armor_status`](set-armor-status/) | Sets one armor-status field. |
-| [`set_display_name`](set-display-name/) | Sets or clears a unit's display-name override. |
-| [`set_max_speed`](set-max-speed/) | Sets maximum speed. |
-| [`set_tons`](set-tons/) | Sets tonnage and original weight. |
-| [`show_crit_status_ref`](show-crit-status-ref/), [`show_status_ref`](show-status-ref/), [`show_weapon_specs_ref`](show-weapon-specs-ref/) | Sends template reports to a player. |
-| [`tic_weapons`](tic-weapons/) | Lists weapons assigned to a target-interlock circuit. |
-| [`value`](value/) / [`value_ref`](value-ref/) | Reads a script-visible unit field. |
-| [`weapon_status`](weapon-status/) / [`weapon_status_ref`](weapon-status-ref/) | Returns serialized weapon status. |
+| [`critical_slots`](critical-slots/) | Lists a live unit section's critical slots. |
+| [`display_name`](display-name/) | Returns a live unit's display-name override. |
+| [`effective_max_speed`](effective-max-speed/) | Returns a live unit's effective maximum speed. |
+| [`engine`](engine/) | Returns a live unit's engine configuration. |
+| [`installed_parts`](installed-parts/) | Lists parts represented by non-destroyed critical slots on a live unit. |
+| [`load_template`](load-template/) | Loads a unit template into a live unit. |
+| [`markings`](markings/) | Returns a live unit's markings. |
+| [`payload`](payload/) | Lists weapons and ammunition represented by non-destroyed critical slots on a live unit. |
+| [`piloting_check`](piloting-check/) | Makes a piloting check and applies a failed result. |
+| [`preferred_id`](preferred-id/) | Returns a live unit's preferred tactical ID. |
+| [`radio_channels`](radio-channels/) | Lists a live unit's configured radio channels. |
+| [`section_condition`](section-condition/) | Returns a live unit section's current condition. |
+| [`set_armor`](set-armor/) | Updates selected armor fields for one live unit section. |
+| [`set_assigned_pilot`](set-assigned-pilot/) | Sets or clears a live unit's assigned pilot. |
+| [`set_display_name`](set-display-name/) | Sets or clears a live unit's display-name override. |
+| [`set_markings`](set-markings/) | Sets or clears a live unit's markings. |
+| [`set_max_speed`](set-max-speed/) | Sets a live unit's maximum speed. |
+| [`set_preferred_id`](set-preferred-id/) | Sets or clears a live unit's preferred tactical ID. |
+| [`set_tonnage`](set-tonnage/) | Sets a live unit's tonnage and original weight. |
+| [`technologies`](technologies/) | Lists a live unit's configured and inferred technologies. |
+| [`tic_weapons`](tic-weapons/) | Lists the weapons assigned to a target-interlock circuit. |
+| [`weapons`](weapons/) | Lists the weapons mounted on a live unit. |

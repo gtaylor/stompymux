@@ -1,11 +1,10 @@
 ---
-draft: true
 title: blast_zones
 type: docs
 toc_hide: false
 ---
 
-Lists blast-zone coordinates and radii on a map.
+Lists the blast zones configured on a map.
 
 ## Function
 
@@ -17,18 +16,15 @@ btech.map.blast_zones( map )
 
 ### Arguments
 
-`number map`
-: The map dbref.
+`DbRef|Object map`
+: The BattleTech map.
 
 ### Returns
 
-`table values`
-: A flat array of repeating `x`, `y`, and radius numbers.
-
-## Notes
-
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error.
+`BtechBlastZone[] zones`
+: The configured blast zones.
 
 ## See Also
 
 - [`btech`](../../)
+- [`btech.map`](../)

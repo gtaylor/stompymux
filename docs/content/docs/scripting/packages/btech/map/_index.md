@@ -1,5 +1,4 @@
 ---
-draft: true
 title: btech.map
 linkTitle: btech.map
 type: docs
@@ -8,23 +7,25 @@ no_list: true
 sidebar_root_for: self
 ---
 
-`btech.map` provides map loading, terrain and geometry queries, line of sight,
-unit placement, and map-scoped messaging.
+`btech.map` provides maps, geometry, line of sight, placement, and messaging.
 
 ## Functions
 
 | Function | Description |
 | --- | --- |
-| [`blast_zones`](blast-zones/) | Lists configured blast zones. |
-| [`cargo_transfer_point`](cargo-transfer-point/) / [`set_cargo_transfer_point`](set-cargo-transfer-point/) | Gets or sets the cargo-transfer point. |
-| [`elevation`](elevation/) / [`terrain`](terrain/) | Returns hex elevation or terrain. |
-| [`emit`](emit/) / [`hex_emit`](hex-emit/) | Broadcasts map-scoped messages. |
-| [`hex_in_blast_zone`](hex-in-blast-zone/) | Tests whether a hex lies in a blast zone. |
-| [`hex_line_of_sight`](hex-line-of-sight/) / [`unit_line_of_sight`](unit-line-of-sight/) | Tests line of sight. |
-| [`id_to_dbref`](id-to-dbref/) | Resolves a tactical ID. |
-| [`load`](load/) | Loads a map file. |
-| [`link`](link/) / [`set_link`](set-link/) | Gets or sets typed parent-link configuration. |
-| [`range`](range/) | Calculates map distance. |
-| [`set_xy`](set-xy/) | Places a unit on a map. |
-| [`units`](units/) | Lists units on a map or within a range. |
-| [`update_links`](update-links/) | Recursively updates map links. |
+| [`blast_zones`](blast-zones/) | Lists the blast zones configured on a map. |
+| [`cargo_transfer_point`](cargo-transfer-point/) | Returns a map's cargo-transfer point. |
+| [`elevation`](elevation/) | Returns the elevation of a map hex. |
+| [`emit`](emit/) | Emits a message to units on a map. |
+| [`in_blast_zone`](in-blast-zone/) | Tests whether a map hex lies in a configured blast zone. |
+| [`line_of_sight`](line-of-sight/) | Tests line of sight from a unit to another unit or hex. |
+| [`link`](link/) | Returns a child map's parent-link configuration. |
+| [`load`](load/) | Loads map data from a named map file. |
+| [`place_unit`](place-unit/) | Places a live unit at a position on a map. |
+| [`range`](range/) | Calculates the distance between two units or positions on a map. |
+| [`set_cargo_transfer_point`](set-cargo-transfer-point/) | Sets or clears a map's cargo-transfer point. |
+| [`set_link`](set-link/) | Sets or clears a child map's parent-link configuration. |
+| [`terrain`](terrain/) | Returns the terrain type of a map hex. |
+| [`unit_by_id`](unit-by-id/) | Finds a unit by its tactical ID. |
+| [`units`](units/) | Lists the live units on a map. |
+| [`update_links`](update-links/) | Recursively updates a map and its linked child maps. |

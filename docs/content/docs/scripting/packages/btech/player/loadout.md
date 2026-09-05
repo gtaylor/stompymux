@@ -1,12 +1,30 @@
 ---
-draft: true
 title: loadout
 type: docs
+toc_hide: false
 ---
 
-Returns the player's personal-combat loadout, or `nil` when none is configured.
-The result has an `armor` table and optional `right` and `left` equipment.
+Returns a player's personal-combat loadout.
+
+## Function
+
+### Synopsis
 
 ```lua
-local loadout = btech.player.loadout(player)
+btech.player.loadout( player )
 ```
+
+### Arguments
+
+`DbRef|Object player`
+: The player.
+
+### Returns
+
+`BtechPersonalCombatLoadout|nil loadout`
+: The loadout, or `nil` when unset.
+
+## See Also
+
+- [`btech`](../../)
+- [`btech.player`](../)

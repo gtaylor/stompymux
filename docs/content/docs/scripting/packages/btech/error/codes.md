@@ -1,31 +1,27 @@
 ---
-draft: true
-title: btech.error.codes
+title: codes
 type: docs
 toc_hide: false
 ---
 
-Provides checked symbols for native `btech.*` error codes.
+Provides checked error-code symbols for BattleTech-specific failures.
 
 ## Constants
 
-| Symbol | String value | When raised |
-| --- | --- | --- |
-| `btech.error.codes.unavailable` | `btech.unavailable` | A `btech` operation runs during `@lua/check`. |
-| `btech.error.codes.failed` | `btech.failed` | A BattleTech domain check fails, such as a wrong object kind, or a legacy scripting handler reports failure. |
+| Symbol | Code |
+| --- | --- |
+| `btech.error.codes.part.not_found` | `btech.part.not_found` |
+| `btech.error.codes.part.ambiguous` | `btech.part.ambiguous` |
+| `btech.error.codes.part.wrong_kind` | `btech.part.wrong_kind` |
+| `btech.error.codes.template.not_found` | `btech.template.not_found` |
+| `btech.error.codes.template.invalid` | `btech.template.invalid` |
+| `btech.error.codes.operation.failed` | `btech.operation.failed` |
 
-`btech.error` carries codes only. Use [`mux.error`](../../../mux/error/) to
-create, raise, wrap, or inspect errors. BattleTech code uses
-`mux.error.codes` for generic failures such as invalid arguments.
-
-## Examples
-
-```lua
-mux.error.raise(btech.error.codes.failed, "BattleTech operation failed")
-```
+Errors with the `btech.operation.failed` code include a stable,
+machine-readable reason string in `error.detail.reason`.
 
 ## See Also
 
+- [`btech`](../../)
 - [`btech.error`](../)
-- [`mux.error`](../../../mux/error/)
 - [`mux.error.codes`](../../../mux/error/codes/)

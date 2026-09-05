@@ -1,12 +1,32 @@
 ---
-draft: true
 title: set_assigned_pilot
 type: docs
+toc_hide: false
 ---
 
-Sets a registered unit's assigned pilot from a player dbref or Object. Pass
-`nil` to clear the assignment.
+Sets or clears a live unit's assigned pilot.
+
+## Function
+
+### Synopsis
 
 ```lua
-btech.unit.set_assigned_pilot(unit, pilot)
+btech.unit.set_assigned_pilot( unit, pilot )
 ```
+
+### Arguments
+
+`DbRef|Object unit`
+: The live unit.
+
+`DbRef|Object|nil pilot`
+: A player to assign as the pilot, or `nil` to clear the assignment.
+
+### Returns
+
+None.
+
+## See Also
+
+- [`btech`](../../)
+- [`btech.unit`](../)

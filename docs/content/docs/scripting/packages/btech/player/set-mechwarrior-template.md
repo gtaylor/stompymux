@@ -1,12 +1,40 @@
 ---
-draft: true
 title: set_mechwarrior_template
 type: docs
+toc_hide: false
 ---
 
-Sets a nonempty template reference of at most 24 bytes. Pass `nil` to restore
-the native default.
+Sets or clears a player's ejected-pilot template override.
+
+## Function
+
+### Synopsis
 
 ```lua
-btech.player.set_mechwarrior_template(player, "MechWarrior")
+btech.player.set_mechwarrior_template( player, reference )
 ```
+
+### Arguments
+
+`DbRef|Object player`
+: The player.
+
+`string|nil reference`
+: A non-empty resource name of at most 24 bytes that identifies an existing,
+  well-formed unit template, or `nil` to clear the override. A non-`nil`
+  reference cannot contain `..`, `/`, or `\`.
+
+### Returns
+
+None.
+
+## Notes
+
+A missing template raises `btech.template.not_found`. A template that exists but
+is malformed raises `btech.template.invalid`; invalid reference syntax raises
+`mux.arg.invalid`.
+
+## See Also
+
+- [`btech`](../../)
+- [`btech.player`](../)

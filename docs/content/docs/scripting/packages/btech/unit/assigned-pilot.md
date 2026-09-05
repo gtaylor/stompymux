@@ -1,11 +1,30 @@
 ---
-draft: true
 title: assigned_pilot
 type: docs
+toc_hide: false
 ---
 
-Returns the unit's assigned pilot as a `mux.world.Object`, or `nil`.
+Returns a live unit's assigned pilot.
+
+## Function
+
+### Synopsis
 
 ```lua
-local pilot = btech.unit.assigned_pilot(unit)
+btech.unit.assigned_pilot( unit )
 ```
+
+### Arguments
+
+`DbRef|Object unit`
+: The live unit.
+
+### Returns
+
+`Object|nil pilot`
+: The pilot, or `nil` when none is assigned.
+
+## See Also
+
+- [`btech`](../../)
+- [`btech.unit`](../)

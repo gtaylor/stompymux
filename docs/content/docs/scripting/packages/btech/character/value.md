@@ -1,40 +1,38 @@
 ---
-draft: true
 title: value
 type: docs
 toc_hide: false
 ---
 
-Gets a character attribute, skill level, target, experience, or experience threshold.
+Returns one script-visible character value.
 
 ## Function
 
 ### Synopsis
 
 ```lua
-btech.character.value( character, value, mode )
+btech.character.value( character, value )
 ```
 
 ### Arguments
 
-`number or string character`
-: The character dbref or player name.
+`Object character`
+: The character.
 
-`number or string value`
-: The character-value code or name.
-
-`integer mode`
-: `0` for value, `1` for skill target, `2` for XP, `3` for raw skill value, or `4` for XP to next level.
+`string|integer value`
+: The value name or numeric code.
 
 ### Returns
 
-`number value`
-: The numeric result.
+`BtechCharacterValue result`
+: The definition and current value.
 
 ## Notes
 
-This function is available only in a running Lua callback. Invalid targets, invalid arguments, and legacy error results raise a Lua error.
+`experience_to_next_level` is a cumulative experience target. Subtract the
+result's current `experience` to calculate the experience still required.
 
 ## See Also
 
 - [`btech`](../../)
+- [`btech.character`](../)
