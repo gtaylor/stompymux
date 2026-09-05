@@ -37,6 +37,9 @@ distance when `origin.z` is omitted and three-dimensional distance when it is
 provided. The `line_of_sight` audience requires `origin`, forbids `origin.z`,
 and forbids `range`.
 
+All audiences notify only eligible started units. Stopped, unconscious, or
+blinded units receive no message, including for the `all` audience.
+
 ## See Also
 
 - [`btech`](../../)
