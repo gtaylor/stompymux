@@ -164,10 +164,10 @@ check-lua-types: configure lua-type-generator-build lua-runtime-build && validat
 tidy:
     {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -fix -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'
 
-tidy-check: configure
+tidy-check: configure lua-runtime-build
     tools/run-clang-tidy-shard.sh {{build_dir}} 0 1 {{run_clang_tidy}} {{clang_tidy}}
 
-tidy-check-shard shard shard_count: configure
+tidy-check-shard shard shard_count: configure lua-runtime-build
     tools/run-clang-tidy-shard.sh {{build_dir}} {{shard}} {{shard_count}} {{run_clang_tidy}} {{clang_tidy}}
 
 # Report every non-trivial function's measured score, highest first. Header
