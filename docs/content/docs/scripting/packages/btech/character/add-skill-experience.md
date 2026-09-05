@@ -23,7 +23,9 @@ btech.character.add_skill_experience( character, skill, amount )
 : The skill name.
 
 `integer amount`
-: The signed experience adjustment, from -2,147,483,648 through 2,147,483,647.
+: The signed experience adjustment. The character's current packed experience
+  plus this amount must remain within -2,147,483,648 through 2,147,483,647;
+  exceeding that range is unsupported.
 
 ### Returns
 

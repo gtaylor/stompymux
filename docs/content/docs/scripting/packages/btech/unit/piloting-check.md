@@ -25,12 +25,13 @@ btech.unit.piloting_check( unit, options )
 The options table requires these fields:
 
 `integer roll_modifier`
-: The modifier applied to the unit's piloting skill roll, from -2,147,483,648
-  through 2,147,483,647.
+: The modifier applied to the unit's piloting skill roll. Use a gameplay
+  modifier from -100 through 100; values outside this range are unsupported.
 
 `integer damage_modifier`
-: The modifier applied to the fall when the piloting check fails, from
-  -2,147,483,648 through 2,147,483,647.
+: The number of fall levels applied when the piloting check fails. Use a value
+  from 0 through 100; values outside this range are unsupported because the
+  fall-damage calculation and damage application are not designed for them.
 
 ### Returns
 
