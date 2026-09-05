@@ -42,7 +42,8 @@ depend on the unit class:
 | 0–7 | Biped mech: left arm, right arm, left torso, right torso, center torso, left leg, right leg, head. |
 | 0–7 | Quad mech: front left leg, front right leg, left torso, right torso, center torso, rear left leg, rear right leg, head. |
 | 0–7 | Battle suit: suit members 1 through 8. |
-| 0–5 | Ground/naval vehicle or VTOL: left side, right side, front side, aft side, turret, rotor. |
+| 0–4 | Ground or naval vehicle: left side, right side, front side, aft side, turret. |
+| 0–5 | VTOL: left side, right side, front side, aft side, turret, rotor. |
 | 0–3 | Aerospace unit: nose, left wing, right wing, aft. |
 | 0–5 | Aerodyne DropShip: right wing, left wing, left rear wing, right rear wing, aft, nose. |
 | 0–5 | Spheroid DropShip: front right, front left, rear left, rear right, aft, nose. |
