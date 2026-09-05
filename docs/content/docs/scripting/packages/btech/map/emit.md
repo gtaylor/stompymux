@@ -32,8 +32,8 @@ None.
 ## Notes
 
 The `all` audience forbids `origin` and `range`. The `range` audience requires
-both. The `line_of_sight` audience requires `origin`, forbids `origin.z`, and
-forbids `range`.
+both and requires a non-negative `range`. The `line_of_sight` audience requires
+`origin`, forbids `origin.z`, and forbids `range`.
 
 ## See Also
 

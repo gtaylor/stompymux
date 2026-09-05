@@ -21,7 +21,8 @@ btech.character.catalog( kind, character )
   matched case-insensitively. An unrecognized kind returns an empty array.
 
 `Object|nil character`
-: An optional character used to resolve character-specific definitions.
+: An optional character used to restrict non-attribute results to values whose
+  current amount or experience is nonzero. Attributes are always retained.
 
 ### Returns
 
