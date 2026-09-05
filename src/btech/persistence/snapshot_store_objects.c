@@ -112,7 +112,6 @@ static int bind_runtime_real(sqlite3_stmt *statement, int *index, float value) {
 }
 
 void btech_finalize_object_statements(BtechObjectStoreContext *context) {
-  sqlite3_finalize(context->mechrep);
   sqlite3_finalize(context->turret);
   sqlite3_finalize(context->turret_tic);
   sqlite3_finalize(context->autopilot);

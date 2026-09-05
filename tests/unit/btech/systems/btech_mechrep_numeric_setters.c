@@ -12,7 +12,6 @@
 #include "mech_api_types.h"
 #include "mech_electronics_api.h"
 #include "mech_specification_api.h"
-#include "mechrep.h"
 #include "mux/commands/command_context.h"
 #include "mux/commands/command_helpers.h"
 #include "mux/network/network_output.h"
@@ -25,7 +24,6 @@
 static BtechContext *const CONTEXT = (BtechContext *)1;
 static EvaluationContext *const EVALUATION = (EvaluationContext *)2;
 static Mech *const MECH = (Mech *)3;
-static RepairFacility facility = {.xcode = {.context = (BtechContext *)1}};
 static CommandContext command_context;
 static RepairCommandStatus command_status;
 static float maximum_speed;
@@ -49,25 +47,24 @@ static void reset_state(void) {
   scan_range = 13;
   radio_range = 14;
   current_tonnage = 15;
-  facility.current_target = 777;
   matched_target = NOTHING;
   matched_target_is_mech = false;
 }
 
-RepairCommandStatus repair_facility_command_context_initialize(
-    DbRef player, void *data, bool target_required [[maybe_unused]],
-    RepairFacilityCommandContext *command) {
-  assert(data == &facility);
-  *command = (RepairFacilityCommandContext){.player = player,
-                                            .facility = &facility,
-                                            .context = CONTEXT,
-                                            .evaluation = EVALUATION,
-                                            .mech = MECH};
+RepairCommandStatus
+mech_admin_command_context_initialize(DbRef player, void *data,
+                                      MechAdminCommandContext *command) {
+  assert(data == MECH);
+  *command = (MechAdminCommandContext){.player = player,
+                                       .context = CONTEXT,
+                                       .evaluation = EVALUATION,
+                                       .mech = MECH};
   return command_status;
 }
 
-const char *repair_command_status_message(RepairCommandStatus status) {
-  return status == REPAIR_COMMAND_NO_TARGET ? "No target." : "Unavailable.";
+const char *repair_command_status_message(RepairCommandStatus status
+                                          [[maybe_unused]]) {
+  return "Unavailable.";
 }
 
 EvaluationContext *btech_context_evaluation(BtechContext *context) {
@@ -165,7 +162,7 @@ static void invoke(MechrepCommand command, const char *input) {
 
   assert(strlen(input) < sizeof(buffer));
   assert(snprintf(buffer, sizeof(buffer), "%s", input) >= 0);
-  command(99, &facility, buffer);
+  command(99, MECH, buffer);
 }
 
 #pragma clang unsafe_buffer_usage begin
@@ -268,43 +265,16 @@ static void test_setters_reject_unavailable_contexts(void) {
   invoke(mechrep_rsetheatsinks, "20");
   assert(heat_sinks == 10);
 
-  command_status = REPAIR_COMMAND_NO_TARGET;
+  command_status = REPAIR_COMMAND_MISSING_MECH;
   invoke(mechrep_rsetspeed, "4");
   assert(maximum_speed == 12.5F);
   invoke(mechrep_rsetheatsinks, "20");
   assert(heat_sinks == 10);
 }
 
-static void test_target_accepts_only_resolved_mechs(void) {
-  reset_state();
-  matched_target = 1073741824L;
-  matched_target_is_mech = true;
-  invoke(mechrep_rsettarget, "high");
-  assert(facility.current_target == 1073741824L);
-
-  facility.current_target = 777;
-  matched_target_is_mech = false;
-  invoke(mechrep_rsettarget, "not-mech");
-  assert(facility.current_target == 777);
-
-  matched_target = NOTHING;
-  invoke(mechrep_rsettarget, "missing");
-  assert(facility.current_target == 777);
-
-  matched_target = 1073741824L;
-  matched_target_is_mech = true;
-  invoke(mechrep_rsettarget, "high trailing");
-  assert(facility.current_target == 777);
-
-  command_status = REPAIR_COMMAND_UNAUTHORIZED;
-  invoke(mechrep_rsettarget, "high");
-  assert(facility.current_target == 777);
-}
-
 int main(void) {
   test_speed_setters_reject_invalid_values();
   test_integer_setters_reject_unsafe_values();
   test_setters_reject_unavailable_contexts();
-  test_target_accepts_only_resolved_mechs();
   return 0;
 }

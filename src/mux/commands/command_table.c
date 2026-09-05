@@ -48,6 +48,40 @@ static const NameTable BTECH_SW[] = {
     {"unregister", 1, CA_WIZARD, BTECH_UNREGISTER},
     {nullptr, 0, 0, 0}};
 
+static const NameTable MECH_ADMIN_SW[] = {
+    /* Full switch names avoid ambiguous repair, reload, restore, and set forms.
+     */
+    {"loadnew", 7, CA_WIZARD, MECH_ADMIN_LOADNEW},
+    {"restore", 7, CA_WIZARD, MECH_ADMIN_RESTORE},
+    {"savenew", 7, CA_WIZARD, MECH_ADMIN_SAVENEW},
+    {"setarmor", 8, CA_WIZARD, MECH_ADMIN_SETARMOR},
+    {"addweap", 7, CA_WIZARD, MECH_ADMIN_ADDWEAP},
+    {"resetcrits", 10, CA_WIZARD, MECH_ADMIN_RESETCRITS},
+    {"repair", 6, CA_WIZARD, MECH_ADMIN_REPAIR},
+    {"reload", 6, CA_WIZARD, MECH_ADMIN_RELOAD},
+    {"restock", 7, CA_WIZARD, MECH_ADMIN_RESTOCK},
+    {"firemode", 8, CA_WIZARD, MECH_ADMIN_FIREMODE},
+    {"addsp", 5, CA_WIZARD, MECH_ADMIN_ADDSP},
+    {"display", 7, CA_WIZARD, MECH_ADMIN_DISPLAY},
+    {"showtech", 8, CA_WIZARD, MECH_ADMIN_SHOWTECH},
+    {"addtech", 7, CA_WIZARD, MECH_ADMIN_ADDTECH},
+    {"deltech", 7, CA_WIZARD, MECH_ADMIN_DELTECH},
+    {"addinftech", 10, CA_WIZARD, MECH_ADMIN_ADDINFTECH},
+    {"delinftech", 10, CA_WIZARD, MECH_ADMIN_DELINFTECH},
+    {"settons", 7, CA_WIZARD, MECH_ADMIN_SETTONS},
+    {"settype", 7, CA_WIZARD, MECH_ADMIN_SETTYPE},
+    {"setmove", 7, CA_WIZARD, MECH_ADMIN_SETMOVE},
+    {"setmaxspeed", 11, CA_WIZARD, MECH_ADMIN_SETMAXSPEED},
+    {"setheatsinks", 12, CA_WIZARD, MECH_ADMIN_SETHEATSINKS},
+    {"setjumpspeed", 12, CA_WIZARD, MECH_ADMIN_SETJUMPSPEED},
+    {"setlrsrange", 11, CA_WIZARD, MECH_ADMIN_SETLRSRANGE},
+    {"settacrange", 11, CA_WIZARD, MECH_ADMIN_SETTACRANGE},
+    {"setscanrange", 12, CA_WIZARD, MECH_ADMIN_SETSCANRANGE},
+    {"setradio", 8, CA_WIZARD, MECH_ADMIN_SETRADIO},
+    {"setradiorange", 13, CA_WIZARD, MECH_ADMIN_SETRADIORANGE},
+    {"setcargospace", 13, CA_WIZARD, MECH_ADMIN_SETCARGOSPACE},
+    {nullptr, 0, 0, 0}};
+
 static const NameTable CHAN_SW[] = {
     {"boot", 4, CA_PUBLIC, CHAN_BOOT | SW_MULTIPLE},
     {"create", 6, CA_PUBLIC, CHAN_CREATE | SW_MULTIPLE},
@@ -282,6 +316,12 @@ static const CommandDefinition COMMAND_TABLE[] = {
     {"@lua", LUA_SW, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_lua}},
     {"@list", nullptr, CA_WIZARD, 0, CS_ONE_ARG, {.invoke = do_list}},
     {"@log", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_log}},
+    {"@mech",
+     MECH_ADMIN_SW,
+     CA_WIZARD,
+     0,
+     CS_ONE_ARG,
+     {.invoke = do_mech_admin}},
     {"@name", nullptr, CA_WIZARD, 0, CS_TWO_ARG, {.invoke = do_name}},
     {"@newpassword",
      nullptr,

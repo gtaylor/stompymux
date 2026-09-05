@@ -65,7 +65,7 @@ btech_special_object_data_size(const BtechSpecialObjectDefinition *definition) {
                                   : (size_t)definition->datasize;
 }
 
-enum { BTECH_SPECIAL_OBJECT_COUNT = 6 };
+enum { BTECH_SPECIAL_OBJECT_COUNT = 5 };
 
 extern const BtechSpecialObjectDefinition
     SPECIAL_OBJECTS[BTECH_SPECIAL_OBJECT_COUNT];

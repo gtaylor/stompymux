@@ -2,7 +2,6 @@
 #include "btech/special_objects.h"
 #include "context_internal.h" // IWYU pragma: keep
 #include "equipment_types.h"
-#include "mechrep.h"
 #include "missile_hit_registry.h"
 #include "mux/objects/db.h"
 #include "mux/objects/flags.h"
@@ -31,45 +30,6 @@ static void *btech_special_object(BtechContext *context, DbRef object,
       btech_context_which_special(context, object) != (int)type)
     return nullptr;
   return btech_context_find_object(context, object);
-}
-
-/* Restore repair-console target rows. */
-int btech_special_load_mechrep(sqlite3 *sqlite, BtechContext *context) {
-  sqlite3_stmt *statement;
-  RepairFacility *mechrep;
-  DbRef object;
-  DbRef target;
-  int result;
-  int step = SQLITE_DONE;
-
-  statement = nullptr;
-  result = btech_special_prepare_v2(
-               sqlite,
-               "SELECT dbref, current_target FROM btech_mechrep "
-               "ORDER BY dbref;",
-               -1, &statement, nullptr) == SQLITE_OK
-               ? 0
-               : -1;
-  while (result == 0 && (step = sqlite3_step(statement)) == SQLITE_ROW) {
-    if (btech_special_column_long(statement, 0, &object) < 0) {
-      result = -1;
-      continue;
-    }
-    mechrep = btech_special_object(context, object, GTYPE_MECHREP);
-    if (!mechrep || btech_special_column_long(statement, 1, &target) < 0 ||
-        target < NOTHING) {
-      result = -1;
-    } else {
-      if (target != NOTHING &&
-          btech_special_object(context, target, GTYPE_MECH) == nullptr)
-        target = NOTHING;
-      mechrep->current_target = target;
-    }
-  }
-  if (result == 0 && step != SQLITE_DONE)
-    result = -1;
-  sqlite3_finalize(statement);
-  return result;
 }
 
 /* Restore a turret parent and every independent timing slot. */

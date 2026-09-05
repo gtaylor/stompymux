@@ -18,7 +18,7 @@ Inspect or change an object's typed BattleTech registration:
 ```
 
 The bare command is identical to `/info`. Valid registration types are
-`MECH`, `DEBUG`, `MECHREP`, `MAP`, `AUTOPILOT`, and `TURRET`.
+`MECH`, `DEBUG`, `MAP`, `AUTOPILOT`, and `TURRET`.
 
 Registration is independent of object flags. Registering allocates the typed
 runtime object atomically; unregistering disposes its runtime state and typed

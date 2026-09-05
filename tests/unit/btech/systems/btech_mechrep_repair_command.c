@@ -15,7 +15,6 @@
 #include "mech_identity_api.h"
 #include "mech_specification_api.h"
 #include "mech_utils_api.h"
-#include "mechrep.h"
 #include "mux/network/network_output.h"
 #include "mux/server/platform.h"
 #include "mux/support/checked_storage.h"
@@ -26,7 +25,6 @@
 static BtechContext *const CONTEXT = (BtechContext *)1;
 static EvaluationContext *const EVALUATION = (EvaluationContext *)2;
 static Mech *const MECH = (Mech *)3;
-static RepairFacility facility = {.xcode = {.context = (BtechContext *)1}};
 static RepairCommandStatus command_status;
 static int armor;
 static int internal;
@@ -51,20 +49,20 @@ static void reset_state(void) {
   reattached_section = -1;
 }
 
-RepairCommandStatus repair_facility_command_context_initialize(
-    DbRef player, void *data, bool target_required [[maybe_unused]],
-    RepairFacilityCommandContext *command) {
-  assert(data == &facility);
-  *command = (RepairFacilityCommandContext){.player = player,
-                                            .facility = &facility,
-                                            .context = CONTEXT,
-                                            .evaluation = EVALUATION,
-                                            .mech = MECH};
+RepairCommandStatus
+mech_admin_command_context_initialize(DbRef player, void *data,
+                                      MechAdminCommandContext *command) {
+  assert(data == MECH);
+  *command = (MechAdminCommandContext){.player = player,
+                                       .context = CONTEXT,
+                                       .evaluation = EVALUATION,
+                                       .mech = MECH};
   return command_status;
 }
 
-const char *repair_command_status_message(RepairCommandStatus status) {
-  return status == REPAIR_COMMAND_NO_TARGET ? "No target." : "Unavailable.";
+const char *repair_command_status_message(RepairCommandStatus status
+                                          [[maybe_unused]]) {
+  return "Unavailable.";
 }
 
 EvaluationContext *btech_context_evaluation(BtechContext *context) {
@@ -149,7 +147,7 @@ static void invoke(const char *input) {
   char buffer[96];
 
   assert(snprintf(buffer, sizeof(buffer), "%s", input) >= 0);
-  mechrep_rrepair(99, &facility, buffer);
+  mechrep_rrepair(99, MECH, buffer);
 }
 
 static void assert_unchanged(void) {
@@ -244,7 +242,7 @@ static void test_section_reattach_has_exact_arguments(void) {
 }
 
 static void test_rejected_contexts_never_mutate(void) {
-  const RepairCommandStatus STATUSES[] = {REPAIR_COMMAND_NO_TARGET,
+  const RepairCommandStatus STATUSES[] = {REPAIR_COMMAND_MISSING_MECH,
                                           REPAIR_COMMAND_UNAUTHORIZED};
 
   for (size_t index = 0; index < sizeof(STATUSES) / sizeof(*STATUSES);

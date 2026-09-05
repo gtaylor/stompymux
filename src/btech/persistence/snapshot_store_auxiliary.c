@@ -4,7 +4,6 @@
 #include "autopilot.h"
 #include "autopilot_argument_list_api.h"
 #include "equipment_types.h"
-#include "mechrep.h"
 #include "mux/support/checked_storage.h"
 #include "mux/support/doubly_linked_list.h"
 #include "special_object.h"
@@ -29,16 +28,6 @@ static int bind_unsigned_long(sqlite3_stmt *statement, int index,
   if (value > INT64_MAX)
     return -1;
   return btech_special_bind_int(statement, index, (sqlite3_int64)value);
-}
-
-static void store_repair_facility(BtechObjectStoreContext *context,
-                                  DbRef object_id,
-                                  const RepairFacility *facility) {
-  if (btech_special_bind_int(context->mechrep, 1, object_id) < 0 ||
-      btech_special_bind_int(context->mechrep, 2, facility->current_target) <
-          0 ||
-      btech_special_write_step(context->fault, context->mechrep) < 0)
-    context->result = -1;
 }
 
 static void store_turret(BtechObjectStoreContext *context, DbRef object_id,
@@ -193,9 +182,7 @@ static void store_autopilot(BtechObjectStoreContext *context, DbRef object_id,
 
 void btech_store_auxiliary_object(BtechObjectStoreContext *context,
                                   DbRef object_id, BtechSpecialObject *object) {
-  if (object->type == GTYPE_MECHREP)
-    store_repair_facility(context, object_id, (RepairFacility *)object);
-  else if (object->type == GTYPE_TURRET)
+  if (object->type == GTYPE_TURRET)
     store_turret(context, object_id, (Turret *)object);
   else if (object->type == GTYPE_AUTO)
     store_autopilot(context, object_id, (Autopilot *)object);

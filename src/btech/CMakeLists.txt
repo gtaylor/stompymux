@@ -195,7 +195,6 @@ set(BTECH_SOURCES
   persistence/special_restore.c
   persistence/validation.c
   repair/mech_tech.c
-  repair/repair_command_catalog.c
   repair/mech_tech_commands.c
   repair/mech_tech_ammo_commands.c
   repair/mech_tech_scrap_commands.c

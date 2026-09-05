@@ -578,7 +578,7 @@ static int check_snapshot(const char *path) {
            "'btech_map_links', 'btech_map_entrances', 'btech_maps', "
            "'btech_map_hexes', 'btech_map_slots', "
            "'btech_map_los', 'btech_map_objects', 'btech_map_bits', "
-           "'btech_repair_events', 'btech_mechrep', 'btech_turrets', "
+           "'btech_repair_events', 'btech_turrets', "
            "'btech_turret_tics', 'btech_autopilots', "
            "'btech_autopilot_commands', 'btech_autopilot_command_args', "
            "'btech_autopilot_path', 'btech_mechs', 'btech_mech_sections', "
@@ -587,11 +587,11 @@ static int check_snapshot(const char *path) {
            "'btech_mech_tics', 'btech_mech_frequencies', 'btech_mech_runtime', "
            "'btech_mech_unit_aux', "
            "'btech_mech_stagger_damage');",
-           34) == 0;
+           33) == 0;
   ok = ok && query_int(sqlite,
                        "SELECT schema_version FROM btech_persistence_metadata "
                        "WHERE id = 1;",
-                       6) == 0;
+                       7) == 0;
   ok =
       ok && query_int(sqlite,
                       "SELECT count(*) FROM sqlite_master WHERE type = 'table' "
@@ -651,7 +651,6 @@ static const char *const btech_special_writer_tables[] = {
     "btech_map_objects",
     "btech_map_bits",
     "btech_repair_events",
-    "btech_mechrep",
     "btech_turrets",
     "btech_turret_tics",
     "btech_autopilots",
@@ -734,6 +733,12 @@ static int seed_btech_special_objects(const char *path) {
                   SQLITE_OK &&
               sqlite3_exec(
                   sqlite,
+                  "PRAGMA ignore_check_constraints=ON;"
+                  "UPDATE btech_persistence_metadata SET schema_version=6 "
+                  "WHERE id=1;"
+                  "CREATE TABLE btech_mechrep (dbref INTEGER PRIMARY KEY, "
+                  "current_target INTEGER NOT NULL);"
+                  "INSERT INTO btech_mechrep VALUES (4, 3);"
                   "UPDATE snapshot SET db_top = 7 WHERE id = 1;"
                   "DELETE FROM player_state WHERE object_dbref = 2;"
                   "INSERT OR REPLACE INTO objects "
@@ -832,7 +837,7 @@ static int check_btech_special_snapshot(const char *path) {
     return -1;
   result =
       query_int(sqlite, "SELECT count(*) FROM btech_special_registrations;",
-                5) == 0 &&
+                4) == 0 &&
               query_int(sqlite, "SELECT count(*) FROM btech_maps;", 1) == 0 &&
               query_int(sqlite, "SELECT count(*) FROM btech_mechs;", 1) == 0 &&
               query_int(sqlite,
@@ -849,8 +854,10 @@ static int check_btech_special_snapshot(const char *path) {
                         "(x=25 AND y=25 AND (SELECT width FROM btech_maps "
                         "WHERE dbref=2)=30));",
                         1) == 0 &&
-              query_int(sqlite, "SELECT count(*) FROM btech_mechrep;", 1) ==
-                  0 &&
+              query_int(sqlite,
+                        "SELECT count(*) FROM sqlite_master WHERE type='table' "
+                        "AND name='btech_mechrep';",
+                        0) == 0 &&
               query_int(sqlite, "SELECT count(*) FROM btech_autopilots;", 1) ==
                   0 &&
               query_int(sqlite, "SELECT count(*) FROM btech_turrets;", 1) ==

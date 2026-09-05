@@ -15,7 +15,6 @@
 #include "mech_identity_api.h"
 #include "mech_specification_api.h"
 #include "mech_utils_api.h"
-#include "mechrep.h"
 #include "mux/network/network_output.h"
 #include "mux/support/checked_storage.h"
 #include "registry_api.h"
@@ -25,7 +24,6 @@
 
 static BtechContext *const context = (BtechContext *)1;
 static EvaluationContext *const evaluation = (EvaluationContext *)2;
-static RepairFacility facility = {.xcode = {.context = (BtechContext *)1}};
 static Mech *const mech = (Mech *)3;
 static RepairCommandStatus command_status;
 static UnitClass unit_class;
@@ -66,7 +64,6 @@ static void reset_state(void) {
   critical_part_type_calls = 0;
   critical_destroyed = false;
   configured_count = 0;
-  facility.current_target = 777;
   memset(configured, 0, sizeof(configured));
   special_slot = (typeof(special_slot)){
       .part_type = 901,
@@ -80,20 +77,20 @@ static void reset_state(void) {
   };
 }
 
-RepairCommandStatus repair_facility_command_context_initialize(
-    DbRef player, void *data, bool require_target [[maybe_unused]],
-    RepairFacilityCommandContext *command) {
-  assert(data == &facility);
-  *command = (RepairFacilityCommandContext){.player = player,
-                                            .facility = &facility,
-                                            .context = context,
-                                            .evaluation = evaluation,
-                                            .mech = mech};
+RepairCommandStatus
+mech_admin_command_context_initialize(DbRef player, void *data,
+                                      MechAdminCommandContext *command) {
+  assert(data == mech);
+  *command = (MechAdminCommandContext){.player = player,
+                                       .context = context,
+                                       .evaluation = evaluation,
+                                       .mech = mech};
   return command_status;
 }
 
-const char *repair_command_status_message(RepairCommandStatus status) {
-  return status == REPAIR_COMMAND_NO_TARGET ? "No target." : "Unavailable.";
+const char *repair_command_status_message(RepairCommandStatus status
+                                          [[maybe_unused]]) {
+  return "Unavailable.";
 }
 
 EvaluationContext *btech_context_evaluation(BtechContext *value) {
@@ -275,23 +272,22 @@ void notify_printf(EvaluationContext *value [[maybe_unused]],
 
 static void test_delinftech_uses_repair_target(void) {
   reset_state();
-  mechrep_rdelinftech(99, &facility, nullptr);
+  mechrep_rdelinftech(99, mech, nullptr);
   assert(infantry_flags == 0);
-  assert(facility.current_target == 777);
 
   reset_state();
-  command_status = REPAIR_COMMAND_NO_TARGET;
-  mechrep_rdelinftech(99, &facility, nullptr);
+  command_status = REPAIR_COMMAND_MISSING_MECH;
+  mechrep_rdelinftech(99, mech, nullptr);
   assert(infantry_flags == 123);
 
   reset_state();
   command_status = REPAIR_COMMAND_UNAUTHORIZED;
-  mechrep_rdelinftech(99, &facility, nullptr);
+  mechrep_rdelinftech(99, mech, nullptr);
   assert(infantry_flags == 123);
 
   reset_state();
   unit_class = CLASS_MECH;
-  mechrep_rdelinftech(99, &facility, nullptr);
+  mechrep_rdelinftech(99, mech, nullptr);
   assert(infantry_flags == 123);
 }
 
@@ -299,7 +295,7 @@ static void assert_no_addition(const char *input) {
   char command[64];
 
   strcpy(command, input);
-  mechrep_raddweap(99, &facility, command);
+  mechrep_raddweap(99, mech, command);
   assert(configured_count == 0);
 }
 
@@ -308,7 +304,7 @@ static void test_addweap_validates_before_mutation(void) {
   char split_valid[] = "Laser HEAD 1 2";
 
   reset_state();
-  mechrep_raddweap(99, &facility, valid);
+  mechrep_raddweap(99, mech, valid);
   assert(configured_count == 2);
   assert(configured[0].slot.section == HEAD);
   assert(configured[0].slot.critical == 0);
@@ -323,7 +319,7 @@ static void test_addweap_validates_before_mutation(void) {
 
   reset_state();
   weapon_critical_count = 9;
-  mechrep_raddweap(99, &facility, split_valid);
+  mechrep_raddweap(99, mech, split_valid);
   assert(configured_count == 2);
 }
 
@@ -331,7 +327,7 @@ static void test_raddspecial_replaces_slot_with_fresh_state(void) {
   char command[] = "Widget HEAD 1 47";
 
   reset_state();
-  mechrep_raddspecial(99, &facility, command);
+  mechrep_raddspecial(99, mech, command);
   assert(configured_count == 1);
   assert(configured[0].slot.section == HEAD);
   assert(configured[0].slot.critical == 0);
@@ -350,7 +346,7 @@ static void invoke_setcargospace(const char *input) {
 
   assert(strlen(input) < sizeof(command));
   assert(snprintf(command, sizeof(command), "%s", input) >= 0);
-  mechrep_setcargospace(99, &facility, command);
+  mechrep_setcargospace(99, mech, command);
 }
 
 static void assert_cargo_unchanged(const char *input) {
@@ -406,7 +402,7 @@ static void test_setcargospace_rejects_unavailable_contexts(void) {
   assert(carrier_maximum_tonnage == 78);
 
   reset_state();
-  command_status = REPAIR_COMMAND_NO_TARGET;
+  command_status = REPAIR_COMMAND_MISSING_MECH;
   invoke_setcargospace("20 30");
   assert(cargo_space == 456);
   assert(carrier_maximum_tonnage == 78);
@@ -417,7 +413,7 @@ static void invoke_restock(const char *input) {
 
   assert(strlen(input) < sizeof(command));
   assert(snprintf(command, sizeof(command), "%s", input) >= 0);
-  mechrep_rrestock(99, &facility, command);
+  mechrep_rrestock(99, mech, command);
 }
 
 static void assert_restock_rejected_without_ammunition_lookups(int part_type) {
@@ -504,7 +500,7 @@ static void test_restock_rejects_invalid_or_unavailable_contexts(void) {
 
   reset_state();
   special_slot.part_type = ammunition_equipment_index(7);
-  command_status = REPAIR_COMMAND_NO_TARGET;
+  command_status = REPAIR_COMMAND_MISSING_MECH;
   invoke_restock("HEAD 1");
   assert(critical_part_type_calls == 0);
   assert(ammunition_per_ton_calls == 0);
