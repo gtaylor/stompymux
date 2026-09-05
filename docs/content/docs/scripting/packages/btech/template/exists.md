@@ -26,7 +26,10 @@ btech.template.exists( reference )
 
 ## Notes
 
-Malformed references raise `btech.template.invalid`; a well-formed missing reference returns `false`.
+An empty reference or one containing `..`, `/`, or `\` raises
+`mux.arg.invalid`. A well-formed missing reference returns `false`. When the
+referenced file exists but is not a valid template, the function raises
+`btech.template.invalid`.
 
 ## See Also
 

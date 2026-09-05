@@ -30,6 +30,11 @@ btech.map.place_unit( unit, map, position )
 
 None.
 
+## Notes
+
+If the unit is carrying or towing another live unit, that unit is also moved to
+the destination map at the same coordinates and altitude.
+
 ## See Also
 
 - [`btech`](../../)

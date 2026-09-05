@@ -17,7 +17,8 @@ btech.character.catalog( kind, character )
 ### Arguments
 
 `string kind`
-: The value kind to list.
+: One of `Char_value`, `Char_skill`, `Char_advantage`, or `Char_attribute`,
+  matched case-insensitively. An unrecognized kind returns an empty array.
 
 `Object|nil character`
 : An optional character used to resolve character-specific definitions.
