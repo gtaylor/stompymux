@@ -23,8 +23,8 @@ btech.character.set_value( character, value, amount )
 : The value name.
 
 `integer amount`
-: The new value. Values below 0 are stored as 0, and values above 255 are stored
-  as 255.
+: The new value, accepted from -2,147,483,648 through 2,147,483,647. Accepted
+  values below 0 are stored as 0, and values above 255 are stored as 255.
 
 ### Returns
 
