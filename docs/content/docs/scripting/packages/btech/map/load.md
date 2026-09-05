@@ -20,7 +20,7 @@ btech.map.load( map, name )
 : The BattleTech map.
 
 `string name`
-: The map-file name.
+: The non-empty map-file name. It cannot contain `..`, `/`, or `\`.
 
 ### Returns
 

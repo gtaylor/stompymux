@@ -20,7 +20,8 @@ btech.unit.set_markings( unit, markings )
 : The live unit.
 
 `string|nil markings`
-: The markings, or `nil` to clear them.
+: The markings as a non-empty string of at most 16,383 bytes, or `nil` to clear
+  them.
 
 ### Returns
 

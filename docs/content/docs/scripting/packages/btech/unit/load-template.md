@@ -20,11 +20,16 @@ btech.unit.load_template( unit, reference )
 : The live unit.
 
 `string reference`
-: The unit-template reference.
+: The non-empty unit-template reference. It cannot contain `..`, `/`, or `\`.
 
 ### Returns
 
 None.
+
+## Notes
+
+A missing template raises `btech.template.not_found`. A template that exists but
+is malformed raises `btech.template.invalid`.
 
 ## See Also
 
