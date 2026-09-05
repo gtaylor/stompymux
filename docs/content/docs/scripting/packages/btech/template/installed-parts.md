@@ -4,7 +4,7 @@ type: docs
 toc_hide: false
 ---
 
-Lists all parts installed on a unit template.
+Lists parts installed in a unit template's non-destroyed critical slots.
 
 ## Function
 
@@ -22,7 +22,8 @@ btech.template.installed_parts( reference )
 ### Returns
 
 `BtechPartStack[] parts`
-: The installed parts and quantities.
+: The installed parts and quantities. Parts represented only by critical slots
+  marked with the `Destroyed` fire mode are omitted.
 
 ## See Also
 

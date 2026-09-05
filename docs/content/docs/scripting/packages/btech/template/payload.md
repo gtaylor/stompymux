@@ -22,7 +22,8 @@ btech.template.payload( reference )
 ### Returns
 
 `BtechPartStack[] parts`
-: The payload parts and quantities.
+: The payload parts and quantities. Parts represented only by critical slots
+  marked with the `Destroyed` fire mode are omitted.
 
 ## See Also
 
