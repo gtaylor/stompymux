@@ -28,7 +28,13 @@ btech.map.range( map, from, to )
 ### Returns
 
 `number range`
-: The map distance.
+: The three-dimensional map distance.
+
+## Notes
+
+Unit endpoints use their current three-dimensional positions and must be on the
+supplied map. A position with an explicit `z` uses that altitude; when `z` is
+omitted, the position uses the hex's terrain elevation.
 
 ## See Also
 

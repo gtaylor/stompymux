@@ -20,7 +20,7 @@ btech.unit.set_tonnage( unit, tons )
 : The live unit.
 
 `integer tons`
-: The positive tonnage.
+: The tonnage, from 1 through 2,097,151 (`INT_MAX / 1024`).
 
 ### Returns
 

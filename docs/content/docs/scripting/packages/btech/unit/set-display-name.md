@@ -20,7 +20,7 @@ btech.unit.set_display_name( unit, name )
 : The live unit.
 
 `string|nil name`
-: The display name, or `nil` to clear it.
+: A display name from 1 to 120 bytes, or `nil` to clear it.
 
 ### Returns
 

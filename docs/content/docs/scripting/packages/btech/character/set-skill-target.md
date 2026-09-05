@@ -23,7 +23,9 @@ btech.character.set_skill_target( character, skill, target )
 : The skill name.
 
 `integer target`
-: The new target number.
+: A target number representable by a raw skill level from 0 through 255. The
+  reachable target range depends on the character's base target and current
+  skill modifiers.
 
 ### Returns
 

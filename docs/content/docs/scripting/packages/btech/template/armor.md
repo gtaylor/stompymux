@@ -27,6 +27,12 @@ btech.template.armor( reference, section )
 `BtechArmorStatus status`
 : The requested armor status.
 
+## Notes
+
+When `section` is omitted, the returned armor, internal-structure, and rear-
+armor values are totals across all sections, and the record has no `section`
+field.
+
 ## See Also
 
 - [`btech`](../../)
