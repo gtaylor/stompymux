@@ -47,8 +47,14 @@ None.
 ## Notes
 
 This function stores the link configuration but does not rebuild live link
-objects. After changing a link, call [`btech.map.update_links`](../update-links/)
-on its parent map to update the live `BUILD`, `LEAVE`, and `ENTRANCE` objects.
+objects. After setting a link, call
+[`btech.map.update_links`](../update-links/) on its parent map to update the live
+`BUILD`, `LEAVE`, and `ENTRANCE` objects.
+
+When clearing a link, rebuilding the former parent removes its `BUILD` object,
+but the current rebuild logic does not remove the former child's existing
+`LEAVE` and `ENTRANCE` objects. Calling `update_links` on the now-unlinked child
+does not remove those stale child-side objects either.
 
 ## See Also
 

@@ -21,11 +21,18 @@ btech.player.set_mechwarrior_template( player, reference )
 
 `string|nil reference`
 : A non-empty resource name of at most 24 bytes that identifies an existing,
-  well-formed unit template, or `nil` to clear the override.
+  well-formed unit template, or `nil` to clear the override. A non-`nil`
+  reference cannot contain `..`, `/`, or `\`.
 
 ### Returns
 
 None.
+
+## Notes
+
+A missing template raises `btech.template.not_found`. A template that exists but
+is malformed raises `btech.template.invalid`; invalid reference syntax raises
+`mux.arg.invalid`.
 
 ## See Also
 
