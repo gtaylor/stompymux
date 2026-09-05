@@ -25,7 +25,9 @@ btech.map.line_of_sight( observer, target )
 ### Returns
 
 `BtechLineOfSight state`
-: `"none"`, `"blocked"`, or `"clear"`.
+: For a unit target, `"none"`, `"blocked"`, or `"clear"`. `"none"` means the
+  target is not visible or is on another map. For a hex target, only
+  `"blocked"` or `"clear"`.
 
 ## See Also
 
