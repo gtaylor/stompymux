@@ -17,7 +17,7 @@ btech.parts.resolve( part )
 ### Arguments
 
 `BtechPartRef part`
-: A part record, packed ID, or unique name.
+: A part record, packed ID from 0 through 2,147,483,647, or unique name.
 
 ### Returns
 

@@ -9,6 +9,9 @@ sidebar_root_for: self
 
 `btech.parts` provides the part catalogue and object stores.
 
+Where a `BtechPartRef` accepts a packed integer ID, that ID must be from 0
+through 2,147,483,647; values outside this range raise `mux.arg.invalid`.
+
 ## Functions
 
 | Function | Description |
