@@ -17,7 +17,11 @@ btech.parts.search( query )
 ### Arguments
 
 `string query`
-: The case-insensitive search text.
+: A case-insensitive wildcard pattern matched against each complete part name.
+
+Use `*` to match any sequence of characters, `?` to match one character, and
+`\` to escape the following wildcard character. For example, `*laser*` finds
+part names containing "laser".
 
 ### Returns
 

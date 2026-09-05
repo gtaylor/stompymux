@@ -26,7 +26,14 @@ btech.map.set_link( child, link )
 
 None.
 
+## Notes
+
+This function stores the link configuration but does not rebuild live link
+objects. After changing a link, call [`btech.map.update_links`](../update-links/)
+on its parent map to update the live `BUILD`, `LEAVE`, and `ENTRANCE` objects.
+
 ## See Also
 
 - [`btech`](../../)
 - [`btech.map`](../)
+- [`btech.map.update_links`](../update-links/)

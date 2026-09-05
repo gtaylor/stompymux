@@ -15,10 +15,11 @@ Database-object parameters accept either a numeric `DbRef` or a same-runtime
 `Object`. Returned database references are `Object` handles; absent optional
 relationships are `nil`, and object collections are dense arrays.
 
-The package follows Mux conventions: required arguments are validated, surplus
-positional arguments are ignored, options tables reject unknown fields, and
-mutation-only functions return no Lua values. Failures raise structured errors.
-Section names and generated abbreviations are matched case-insensitively.
+The package follows Mux conventions: required arguments are validated, some
+functions ignore surplus positional arguments while others require exact arity,
+options tables reject unknown fields, and mutation-only functions return no Lua
+values. Failures raise structured errors. Section names and generated
+abbreviations are matched case-insensitively.
 
 ## Subpackages
 

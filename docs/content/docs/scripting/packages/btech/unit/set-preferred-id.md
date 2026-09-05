@@ -20,7 +20,8 @@ btech.unit.set_preferred_id( unit, id )
 : The live unit.
 
 `string|nil id`
-: The tactical ID, or `nil` to clear it.
+: Exactly two ASCII letters, or `nil` to clear the tactical ID. Letters are
+  stored in uppercase.
 
 ### Returns
 
