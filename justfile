@@ -25,7 +25,9 @@ ci: ci-build-test ci-analysis
 
 ci-build-test: build test
 
-ci-analysis: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis check-complexity-suppressions fmt-check build check-lua-types frame-check check-ast-policies tidy-check
+ci-analysis-tools: check-source-size check-typed-constants check-nullptr check-unsafe-apis check-bounded-copy check-allocation-discipline check-allocation-multiplication check-retired-buffer-apis check-complexity-suppressions fmt-check check-lua-types check-ast-policies
+
+ci-analysis: ci-analysis-tools frame-check tidy-check
 
 agent-checks: ci
 
@@ -105,10 +107,13 @@ check-boolean-contracts: build ast-policy-checker-build
     mapfile -d '' -t sources < <(find src/mux src/btech -type f -name '*.c' -print0); output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{ast_policy_checker_build_dir}}/ast-policy-checker -p {{build_dir}} --checks=boolean-contracts "${sources[@]}" >"$output" 2>&1 || status=$?; if (( status != 0 )); then rg -v '^\[[0-9]+/[0-9]+\]' "$output" >&2 || true; exit "$status"; fi
 
 ast-policy-checker-build:
-    llvm_cmake_dir="$({{llvm_config}} --cmakedir)"; cmake -S tools/ast_policy_checker -B {{ast_policy_checker_build_dir}} -DCMAKE_CXX_COMPILER={{clangxx}} -DLLVM_DIR="$llvm_cmake_dir" -DClang_DIR="${llvm_cmake_dir%/llvm}/clang"
+    llvm_cmake_dir="$({{llvm_config}} --cmakedir)"; launcher=(); if command -v ccache >/dev/null; then launcher=(-DCMAKE_CXX_COMPILER_LAUNCHER=ccache); fi; cmake -S tools/ast_policy_checker -B {{ast_policy_checker_build_dir}} -DCMAKE_CXX_COMPILER={{clangxx}} -DLLVM_DIR="$llvm_cmake_dir" -DClang_DIR="${llvm_cmake_dir%/llvm}/clang" "${launcher[@]}"
     cmake --build {{ast_policy_checker_build_dir}} -j "$(nproc)"
 
-check-ast-policies: build ast-policy-checker-build
+ast-runtime-build: configure
+    cmake --build {{build_dir}} --target libsodium_build -j "$(nproc)"
+
+check-ast-policies: configure ast-policy-checker-build ast-runtime-build
     mapfile -d '' -t sources < <(find src/mux src/btech tests -path tests/fixtures -prune -o -type f -name '*.c' -print0); output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{ast_policy_checker_build_dir}}/ast-policy-checker -p {{build_dir}} --checks=all "${sources[@]}" >"$output" 2>&1 || status=$?; if (( status != 0 )); then rg -v '^\[[0-9]+/[0-9]+\]' "$output" >&2 || true; exit "$status"; fi
     ctest --test-dir {{ast_policy_checker_build_dir}} --output-on-failure
 
@@ -135,7 +140,7 @@ fmt-check-lua:
 fmt-check: fmt-check-c fmt-check-lua
 
 lua-type-generator-build:
-    llvm_cmake_dir="$({{llvm_config}} --cmakedir)"; cmake -S tools/lua_type_generator -B {{lua_type_generator_build_dir}} -DCMAKE_CXX_COMPILER={{clangxx}} -DLLVM_DIR="$llvm_cmake_dir" -DClang_DIR="${llvm_cmake_dir%/llvm}/clang"
+    llvm_cmake_dir="$({{llvm_config}} --cmakedir)"; launcher=(); if command -v ccache >/dev/null; then launcher=(-DCMAKE_CXX_COMPILER_LAUNCHER=ccache); fi; cmake -S tools/lua_type_generator -B {{lua_type_generator_build_dir}} -DCMAKE_CXX_COMPILER={{clangxx}} -DLLVM_DIR="$llvm_cmake_dir" -DClang_DIR="${llvm_cmake_dir%/llvm}/clang" "${launcher[@]}"
     cmake --build {{lua_type_generator_build_dir}} -j "$(nproc)"
 
 # Validate generator fixtures, generated syntax and formatting, and whole-workspace
@@ -153,22 +158,30 @@ update-lua-types: build lua-type-generator-build && validate-lua-types-output
     mapfile -d '' -t sources < <(find src/mux -type f -name '*.c' -print0 | sort -z); {{lua_type_generator_build_dir}}/lua-type-generator --write --repo-root "$PWD" --output-dir game/lua/types -p {{build_dir}} "${sources[@]}"
 
 # Check deterministic freshness, syntax, formatting, and whole-workspace types.
-check-lua-types: build lua-type-generator-build && validate-lua-types-output
+lua-runtime-build: configure
+    cmake --build {{build_dir}} --target luajit_build -j "$(nproc)"
+
+check-lua-types: configure lua-type-generator-build lua-runtime-build && validate-lua-types-output
     mapfile -d '' -t sources < <(find src/mux -type f -name '*.c' -print0 | sort -z); {{lua_type_generator_build_dir}}/lua-type-generator --check --repo-root "$PWD" --output-dir game/lua/types -p {{build_dir}} "${sources[@]}"
 
 tidy:
     {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -fix -p {{build_dir}} -j "$(nproc)" '^.*/src/(mux|btech)/.*[.]c$'
 
-tidy-check:
-    output=$(mktemp); trap 'rm -f "$output"' EXIT; status=0; {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -p {{build_dir}} -j "$(nproc)" -checks='readability-implicit-bool-conversion' -warnings-as-errors='*,-readability-implicit-bool-conversion' '^.*/src/(mux|btech)/.*[.]c$' >"$output" 2>&1 || status=$?; if (( status != 0 )); then cat "$output" >&2; exit "$status"; fi; if rg -n -- "-> 'bool'" "$output"; then echo 'Implicit conversion into bool found; make the conversion explicit.' >&2; exit 1; fi
+tidy-check: configure lua-runtime-build
+    tools/run-clang-tidy-shard.sh {{build_dir}} 0 1 {{run_clang_tidy}} {{clang_tidy}}
+
+tidy-check-shard shard shard_count: configure lua-runtime-build
+    tools/run-clang-tidy-shard.sh {{build_dir}} {{shard}} {{shard_count}} {{run_clang_tidy}} {{clang_tidy}}
 
 # Report every non-trivial function's measured score, highest first. Header
 # diagnostics are deduplicated because clang-tidy can see them from many TUs.
 complexity-report: build
     output=$(mktemp); trap 'rm -f "$output"' EXIT; {{run_clang_tidy}} -clang-tidy-binary {{clang_tidy}} -quiet -p {{build_dir}} -j "$(nproc)" -checks='-*,readability-function-cognitive-complexity' -config="{Checks: '-*,readability-function-cognitive-complexity', WarningsAsErrors: '', HeaderFilterRegex: '^.*/src/(mux|btech)/.*', CheckOptions: {readability-function-cognitive-complexity.Threshold: '0', readability-function-cognitive-complexity.DescribeBasicIncrements: 'false'}}" '^.*/src/(mux|btech)/.*[.]c$' >"$output" 2>&1; perl -ne 'if (m{^(.+?):(\d+):\d+: warning: function '\''([^'\'']+)'\'' has cognitive complexity of (\d+)}) { print "$4\t$1:$2\t$3\n" }' "$output" | sort -k1,1nr -k2,2 -u
 
-build:
-    cmake -S . -B {{build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBTECH_ENABLE_ASAN={{enable_asan}} -DBTECH_ENABLE_UBSAN={{enable_ubsan}} -DBTECH_ENABLE_HARDENING={{enable_hardening}} -DBTECH_STRICT_C23={{strict_c23}} -DBTECH_BUILD_FUZZERS={{build_fuzzers}}
+configure:
+    launcher=(); if command -v ccache >/dev/null; then launcher=(-DCMAKE_C_COMPILER_LAUNCHER=ccache); fi; cmake -S . -B {{build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE={{build_type}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBTECH_ENABLE_ASAN={{enable_asan}} -DBTECH_ENABLE_UBSAN={{enable_ubsan}} -DBTECH_ENABLE_HARDENING={{enable_hardening}} -DBTECH_STRICT_C23={{strict_c23}} -DBTECH_BUILD_FUZZERS={{build_fuzzers}} "${launcher[@]}"
+
+build: configure
     cmake --build {{build_dir}} -j "$(nproc)"
 
 # Compile with real code generation and fail if any production frame crosses
@@ -176,8 +189,8 @@ build:
 # sanitizer redzones change frame sizes and are not the metric being gated.
 # --fresh prevents a cache copied from another worktree from poisoning CI.
 frame-check:
-    cmake --fresh -S . -B {{frame_check_build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBTECH_ENABLE_ASAN=OFF -DBTECH_ENABLE_UBSAN=OFF -DBTECH_STRICT_C23=ON -DBTECH_BUILD_FUZZERS=OFF -DBTECH_ENABLE_FRAME_SIZE_GATE=ON
-    cmake --build {{frame_check_build_dir}} -j "$(nproc)"
+    launcher=(); if command -v ccache >/dev/null; then launcher=(-DCMAKE_C_COMPILER_LAUNCHER=ccache); fi; cmake --fresh -S . -B {{frame_check_build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DBTECH_ENABLE_ASAN=OFF -DBTECH_ENABLE_UBSAN=OFF -DBTECH_STRICT_C23=ON -DBTECH_BUILD_FUZZERS=OFF -DBTECH_ENABLE_FRAME_SIZE_GATE=ON "${launcher[@]}"
+    cmake --build {{frame_check_build_dir}} --target stompymux -j "$(nproc)"
 
 test:
     ctest --test-dir {{build_dir}} --output-on-failure -j "$(nproc)"
@@ -192,7 +205,7 @@ test-integration:
     ctest --test-dir {{build_dir}} --output-on-failure --no-tests=error -j "$(nproc)" -L '^integration$'
 
 fuzz-build:
-    cmake -S . -B {{fuzz_build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBTECH_BUILD_FUZZERS=ON -DBTECH_STRICT_C23=ON -DBTECH_ENABLE_ASAN=ON -DBTECH_ENABLE_UBSAN=ON
+    launcher=(); if command -v ccache >/dev/null; then launcher=(-DCMAKE_C_COMPILER_LAUNCHER=ccache); fi; cmake -S . -B {{fuzz_build_dir}} -DCMAKE_C_COMPILER=clang-22 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBTECH_BUILD_FUZZERS=ON -DBTECH_STRICT_C23=ON -DBTECH_ENABLE_ASAN=ON -DBTECH_ENABLE_UBSAN=ON "${launcher[@]}"
     cmake --build {{fuzz_build_dir}} --target wild_fuzzer styled_text_fuzzer -j "$(nproc)"
 
 fuzz-smoke: fuzz-build

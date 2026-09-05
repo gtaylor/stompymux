@@ -57,6 +57,8 @@ jobs:
             llvm-config-22 --version
             test -f "$(llvm-config-22 --includedir)/clang-c/Index.h"
             test -e "$(llvm-config-22 --libdir)/libclang.so"
+            ccache --version
+            ninja --version
             cmake --version
             just --version
             stylua --version
