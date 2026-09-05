@@ -29,6 +29,11 @@ btech.unit.payload( unit )
 
 Destroyed critical slots are omitted.
 
+Consecutive weapon slots in the same section with the same part and brand are
+grouped as one weapon installation. Consequently, separate identical one-slot
+weapons installed in adjacent slots are reported with a combined quantity of
+one.
+
 ## See Also
 
 - [`btech`](../../)
