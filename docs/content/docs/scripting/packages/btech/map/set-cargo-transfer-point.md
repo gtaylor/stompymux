@@ -22,6 +22,14 @@ btech.map.set_cargo_transfer_point( map, point )
 `BtechCargoTransferPoint|nil point`
 : The new point, or `nil` to clear it.
 
+A non-`nil` point requires these fields:
+
+`integer x`, `integer y`
+: A valid hex on the map.
+
+`boolean reveal_hint`
+: Whether to reveal the cargo-transfer hint.
+
 ### Returns
 
 None.
