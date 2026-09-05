@@ -23,10 +23,12 @@ jobs:
       matrix:
         configuration:
           - name: Sanitizers
+            cache_variant: sanitizers
             build_type: RelWithDebInfo
             asan: "ON"
             ubsan: "ON"
           - name: Release strict C23
+            cache_variant: release
             build_type: Release
             asan: "OFF"
             ubsan: "OFF"
@@ -38,6 +40,14 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      - name: Restore compiler cache
+        uses: actions/cache@v5
+        with:
+          path: .cache/ccache
+          key: ccache-${{ runner.os }}-${{ hashFiles('.devcontainer/devcontainer.json') }}-build-${{ matrix.configuration.cache_variant }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ hashFiles('.devcontainer/devcontainer.json') }}-build-${{ matrix.configuration.cache_variant }}-
+
       - name: Build and test in devcontainer
         uses: devcontainers/ci@v0.3
         with:
@@ -48,18 +58,25 @@ jobs:
             BTECH_ENABLE_ASAN=${{ matrix.configuration.asan }}
             BTECH_ENABLE_UBSAN=${{ matrix.configuration.ubsan }}
             BTECH_STRICT_C23=ON
+            CCACHE_DIR=/workspaces/stompymux/.cache/ccache
+            CCACHE_BASEDIR=/workspaces/stompymux
+            CCACHE_COMPILERCHECK=content
+            CCACHE_MAXSIZE=750M
+            CCACHE_COMPRESS=true
           push: never
           runCmd: |
             set -euo pipefail
+            if command -v ninja >/dev/null; then export CMAKE_GENERATOR=Ninja; fi
             just ci-build-test
             grep -Fx "CMAKE_BUILD_TYPE:STRING=$CMAKE_BUILD_TYPE" .build/CMakeCache.txt
             grep -Fx "BTECH_ENABLE_ASAN:BOOL=$BTECH_ENABLE_ASAN" .build/CMakeCache.txt
             grep -Fx "BTECH_ENABLE_UBSAN:BOOL=$BTECH_ENABLE_UBSAN" .build/CMakeCache.txt
             grep -Fx "BTECH_STRICT_C23:BOOL=$BTECH_STRICT_C23" .build/CMakeCache.txt
+            if command -v ccache >/dev/null; then ccache --show-stats; fi
             git diff --exit-code
 
-  analysis:
-    name: Analysis
+  analysis-tools:
+    name: Analysis tooling
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
@@ -70,7 +87,103 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
-      - name: Analyze in devcontainer
+      - name: Restore compiler cache
+        uses: actions/cache@v5
+        with:
+          path: .cache/ccache
+          key: ccache-${{ runner.os }}-${{ hashFiles('.devcontainer/devcontainer.json') }}-analysis-tools-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ hashFiles('.devcontainer/devcontainer.json') }}-analysis-tools-
+
+      - name: Run analysis tooling in devcontainer
+        uses: devcontainers/ci@v0.3
+        with:
+          configFile: .devcontainer/devcontainer.json
+          env: |
+            GITHUB_ACTIONS=true
+            CMAKE_BUILD_TYPE=Release
+            BTECH_ENABLE_ASAN=OFF
+            BTECH_ENABLE_UBSAN=OFF
+            BTECH_STRICT_C23=ON
+            CCACHE_DIR=/workspaces/stompymux/.cache/ccache
+            CCACHE_BASEDIR=/workspaces/stompymux
+            CCACHE_COMPILERCHECK=content
+            CCACHE_MAXSIZE=750M
+            CCACHE_COMPRESS=true
+          push: never
+          runCmd: |
+            set -euo pipefail
+            if command -v ninja >/dev/null; then export CMAKE_GENERATOR=Ninja; fi
+            just ci-analysis-tools
+            grep -Fx "CMAKE_BUILD_TYPE:STRING=$CMAKE_BUILD_TYPE" .build/CMakeCache.txt
+            grep -Fx "BTECH_ENABLE_ASAN:BOOL=$BTECH_ENABLE_ASAN" .build/CMakeCache.txt
+            grep -Fx "BTECH_ENABLE_UBSAN:BOOL=$BTECH_ENABLE_UBSAN" .build/CMakeCache.txt
+            grep -Fx "BTECH_STRICT_C23:BOOL=$BTECH_STRICT_C23" .build/CMakeCache.txt
+            if command -v ccache >/dev/null; then ccache --show-stats; fi
+            git diff --exit-code
+
+  frame-check:
+    name: Frame size
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Restore compiler cache
+        uses: actions/cache@v5
+        with:
+          path: .cache/ccache
+          key: ccache-${{ runner.os }}-${{ hashFiles('.devcontainer/devcontainer.json') }}-frame-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ hashFiles('.devcontainer/devcontainer.json') }}-frame-
+
+      - name: Check frame sizes in devcontainer
+        uses: devcontainers/ci@v0.3
+        with:
+          configFile: .devcontainer/devcontainer.json
+          env: |
+            GITHUB_ACTIONS=true
+            CCACHE_DIR=/workspaces/stompymux/.cache/ccache
+            CCACHE_BASEDIR=/workspaces/stompymux
+            CCACHE_COMPILERCHECK=content
+            CCACHE_MAXSIZE=750M
+            CCACHE_COMPRESS=true
+          push: never
+          runCmd: |
+            set -euo pipefail
+            if command -v ninja >/dev/null; then export CMAKE_GENERATOR=Ninja; fi
+            just frame-check
+            if command -v ccache >/dev/null; then ccache --show-stats; fi
+            git diff --exit-code
+
+  tidy:
+    name: Clang-tidy ${{ matrix.display }}/3
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: 0
+            display: 1
+          - shard: 1
+            display: 2
+          - shard: 2
+            display: 3
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Run clang-tidy shard in devcontainer
         uses: devcontainers/ci@v0.3
         with:
           configFile: .devcontainer/devcontainer.json
@@ -83,12 +196,25 @@ jobs:
           push: never
           runCmd: |
             set -euo pipefail
-            just ci-analysis
-            grep -Fx "CMAKE_BUILD_TYPE:STRING=$CMAKE_BUILD_TYPE" .build/CMakeCache.txt
-            grep -Fx "BTECH_ENABLE_ASAN:BOOL=$BTECH_ENABLE_ASAN" .build/CMakeCache.txt
-            grep -Fx "BTECH_ENABLE_UBSAN:BOOL=$BTECH_ENABLE_UBSAN" .build/CMakeCache.txt
-            grep -Fx "BTECH_STRICT_C23:BOOL=$BTECH_STRICT_C23" .build/CMakeCache.txt
+            if command -v ninja >/dev/null; then export CMAKE_GENERATOR=Ninja; fi
+            just tidy-check-shard ${{ matrix.shard }} 3
             git diff --exit-code
+
+  analysis:
+    name: Analysis
+    if: ${{ always() }}
+    needs: [analysis-tools, frame-check, tidy]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every analysis job
+        env:
+          ANALYSIS_TOOLS_RESULT: ${{ needs.analysis-tools.result }}
+          FRAME_CHECK_RESULT: ${{ needs.frame-check.result }}
+          TIDY_RESULT: ${{ needs.tidy.result }}
+        run: |
+          test "$ANALYSIS_TOOLS_RESULT" = success
+          test "$FRAME_CHECK_RESULT" = success
+          test "$TIDY_RESULT" = success
 
   fuzz:
     name: Fuzz smoke tests
@@ -102,14 +228,29 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
+      - name: Restore compiler cache
+        uses: actions/cache@v5
+        with:
+          path: .cache/ccache
+          key: ccache-${{ runner.os }}-${{ hashFiles('.devcontainer/devcontainer.json') }}-fuzz-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ hashFiles('.devcontainer/devcontainer.json') }}-fuzz-
+
       - name: Build and run fuzz smoke tests in devcontainer
         uses: devcontainers/ci@v0.3
         with:
           configFile: .devcontainer/devcontainer.json
           env: |
             GITHUB_ACTIONS=true
+            CCACHE_DIR=/workspaces/stompymux/.cache/ccache
+            CCACHE_BASEDIR=/workspaces/stompymux
+            CCACHE_COMPILERCHECK=content
+            CCACHE_MAXSIZE=750M
+            CCACHE_COMPRESS=true
           push: never
           runCmd: |
             set -euo pipefail
+            if command -v ninja >/dev/null; then export CMAKE_GENERATOR=Ninja; fi
             just fuzz-smoke
+            if command -v ccache >/dev/null; then ccache --show-stats; fi
             git diff --exit-code

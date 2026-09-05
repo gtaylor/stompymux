@@ -48,7 +48,7 @@ echo 'deb [signed-by=/etc/apt/keyrings/apt.llvm.org.asc] https://apt.llvm.org/no
 "${SUDO[@]}" "${APT_GET[@]}" update
 "${SUDO[@]}" env DEBIAN_FRONTEND=noninteractive "${APT_GET[@]}" install \
   -y --no-install-recommends \
-  build-essential gcc-14 g++-14 clang-22 clang-format-22 clang-tidy-22 \
+  build-essential ccache ninja-build gcc-14 g++-14 clang-22 clang-format-22 clang-tidy-22 \
   clang-tools-22 libclang-22-dev libclang-rt-22-dev llvm-22-dev clangd-22 \
   libsqlite3-dev ripgrep sqlite3 unzip xxd
 
