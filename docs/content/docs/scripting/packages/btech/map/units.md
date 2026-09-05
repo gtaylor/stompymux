@@ -22,6 +22,7 @@ btech.map.units( map, filter )
 `table|nil filter`
 : An optional `{ origin = { x = x, y = y }, range = range }` filter. The
   origin must be a valid map hex, and `range` must be a non-negative number.
+  Range filtering is two-dimensional; unit altitude is ignored.
 
 ### Returns
 

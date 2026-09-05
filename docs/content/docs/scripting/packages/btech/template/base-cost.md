@@ -24,6 +24,12 @@ btech.template.base_cost( reference )
 `integer cost`
 : The base cost.
 
+## Notes
+
+The result must not exceed Lua's maximum safe integer,
+9,007,199,254,740,991 (`2^53 - 1`). A larger calculated cost raises
+`mux.internal`.
+
 ## See Also
 
 - [`btech`](../../)

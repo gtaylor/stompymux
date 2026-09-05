@@ -23,9 +23,9 @@ btech.character.experience_threshold( skill )
 
 `integer threshold`
 : The configured base threshold. This is not the character-specific experience
-  remaining until the next level; use
-  [`btech.character.value`](../value/)'s `experience_to_next_level` field for
-  that value.
+  remaining until the next level. The `experience_to_next_level` field returned
+  by [`btech.character.value`](../value/) is the character's cumulative target;
+  subtract the returned `experience` field to calculate the remaining amount.
 
 ## See Also
 

@@ -27,6 +27,11 @@ btech.character.value( character, value )
 `BtechCharacterValue result`
 : The definition and current value.
 
+## Notes
+
+`experience_to_next_level` is a cumulative experience target. Subtract the
+result's current `experience` to calculate the experience still required.
+
 ## See Also
 
 - [`btech`](../../)
