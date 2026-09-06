@@ -13,6 +13,9 @@ pub use registry::*;
 pub enum Action {
     /// Commit callback changes and flush player-directed output.
     Continue,
+    /// Read-only session diagnostics.
+    Sessions(String),
+    Telnet(String),
     /// Request common graceful shutdown.
     Shutdown,
     /// Run transactional database maintenance.

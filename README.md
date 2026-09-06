@@ -23,7 +23,7 @@ Override with `--listen-address 0.0.0.0 --port 5556` when appropriate. Connect
 using a Telnet/MUD client. Enter an existing player name, alias, or dbref (such
 as `#2`) and password, or enter
 a new name and follow the registration prompts. Registration connects the new
-player immediately. Passwords are hidden using Telnet ECHO negotiation; this
+player immediately. The server requests password hiding using Telnet ECHO negotiation; this
 milestone uses plain TCP and does not provide transport encryption.
 
 Players can use `look`/`l`, `say <message>`/`"<message>`, `WHO`, exit names or
@@ -174,14 +174,15 @@ other callback mutations.
 - Lifecycle callback failures are isolated; startup errors prevent listening.
   Failed commands roll back mutations. Invalid traversal policies deny entry.
   Lua output is bounded independently of Lua heap allocations.
-- Telnet supports fragmented framing, ECHO, TTYPE, NAWS and UTF-8 CHARSET,
+- Telnet supports fragmented framing, ECHO, TTYPE, NAWS, UTF-8 CHARSET,
+  NEW-ENVIRON, MSSP, MCCP2 output compression and GMCP Core.Ping,
   with plain/16-color ANSI output. Unsupported options are declined. Input
   lines are bounded at 8 KiB; output messages at 64 KiB, with 128 queued
   messages per connection. Slow clients are disconnected. Login throttles,
   hash concurrency/rate limits, command quotas and idle timeouts are active.
 
 BattleTech simulation, builder commands, player channel commands, cron and
-interactive Lua flows, extended styled text/custom palettes, MCCP2, GMCP and
+interactive Lua flows, extended styled text/custom palettes, additional GMCP packages and
 OSC 8 features remain deferred. Demo modules are copied unchanged: schedules
 produce startup warnings, flows report an explicit unavailable-feature error,
 and clickable markup renders visible text. Legacy help/type files describe a
@@ -315,3 +316,91 @@ Startup remains strict and does not repair malformed worlds automatically. This
 is an online maintenance command, not an offline recovery tool. It does not invent
 missing foundational objects or guess repairs for duplicate accounts or undecodable
 records. As with ordinary persistence, only one server may own the database.
+
+
+## Telnet negotiation
+
+Each session owns an RFC 1143 Q-method state machine, with independent local and
+remote state for all option numbers. Pending enable/disable negotiations retain
+one opposite request: repeated requests are suppressed, reversals wait for the
+outstanding acknowledgement, and refusals do not automatically trigger retries.
+Only the confirmed YES state enables option-specific subnegotiation effects.
+
+The compatibility reference is the C server's `mux/network/telnet_handler.c`,
+followed by its bundled libtelnet. Startup sends `DO TTYPE`, `DO NAWS`,
+`DO NEW-ENVIRON`, `WILL MSSP`, `WILL MCCP2`, `WILL CHARSET` and `WILL GMCP`. This corrects the earlier Rust implementation's CHARSET direction.
+Unsupported options/directions and unsolicited ECHO requests are declined.
+Password prompts explicitly request local ECHO changes; their acknowledgements
+are accepted even though unsolicited ECHO is not supported.
+
+TTYPE discovery requests up to three initial responses, including MTTS, following
+the C handler's connection-wide response counter. Duplicate WILL messages do not
+restart discovery. Disabling TTYPE resets the terminal name to `vt100`, retaining
+observed ANSI/MTTS metadata; disabling NAWS restores 80×25. Unnegotiated payloads
+cannot alter terminal state, but still count against subnegotiation size limits.
+
+After CHARSET enablement, the server requests UTF-8 once. Acceptance, rejection
+or disablement clears the pending request; competing requests are rejected while
+it is pending. Only UTF-8 offers are accepted. Input validation always remains
+UTF-8, regardless of a client's CHARSET response; no transcoding is performed.
+
+Login and registration do not wait for negotiation acknowledgements, preserving
+plain TCP client compatibility. Clients that refuse or ignore ECHO negotiation
+may display passwords locally; queued echo restoration is sent when the outstanding
+negotiation completes. No negotiation timeout or automatic retry is introduced.
+
+The Rust API separates `telnet::q::Negotiator` transitions from decoder framing
+and option handling. Mutable `Decoder::initial`, `echo` and `negotiate` methods
+return ordered output/state-change events. `feed_byte` lets the world owner finish
+a login action before processing later bytes in the same packet; bulk `feed`
+remains available to callers without interleaved application actions. Every wire
+reply uses the existing bounded session output queue.
+
+
+## Extended protocols and session inspection
+
+`@session [player-name prefix]` and `@telnet <player>` require Wizard status or
+GOD. Both honor command aliases, reject switches, and send read-only diagnostics
+only to the invoking session. `@telnet` accepts names, account aliases and dbrefs.
+Multiple connections are separate rows/blocks in ascending Rust session-ID order;
+IDs replace C file descriptors. Reports are bounded by `runtime.output_message_limit`
+and explicitly mark truncation. No database writes or Lua callbacks are performed.
+
+`@session` shows connection time, idle time (C's ten-minute idle suppression), and
+input/output pending, lost and total byte counters. Input totals count socket
+bytes; pending input includes queued socket bytes and unterminated text. Lost input
+counts undeliverable input batches and rejected invalid, oversized or quota-limited
+text. Output totals count attempted logical, Telnet-encoded output bytes before
+compression; pending counts accepted message bytes until the writer completes the
+message, and lost counts rejected or failed messages. A partially written failed
+message is counted as lost in full because compressed bytes cannot be mapped back
+to a precise logical prefix. Protocol startup control markers are excluded from
+logical output totals. `@telnet` additionally reports actual wire bytes written,
+including the MCCP2 marker and zlib overhead. Counters are live samples.
+
+`@telnet` groups information under TTYPE/MTTS, NAWS, CHARSET, NEW-ENVIRON, GMCP,
+MSSP, MCCP2 and ECHO. It shows both Q directions, queued reversals, requested echo
+suppression, and compression transport state independently. Advertised terminal
+color depth is metadata; rendering remains plain/16-color ANSI. Client-controlled
+values are escaped before display, including non-ASCII bytes and terminal controls.
+
+NEW-ENVIRON IS replaces the session environment; INFO patches it. VAR and USERVAR
+are separate byte-string namespaces, absent values delete entries, and empty values
+remain present. Updates are atomic with C's limits: 64 entries, 256-byte names,
+4,096-byte values and 65,536 aggregate bytes. The configured subnegotiation bound
+also applies. Invalid or oversized environment updates are logged and discarded;
+previous values survive. Values never modify the server's process environment.
+
+MSSP reports configured NAME, authenticated session count PLAYERS, server-start
+Unix timestamp UPTIME, CODEBASE `stompymux-rs`, and the actual listening PORT when
+enabled. GMCP currently handles only case-sensitive `Core.Ping` (with optional
+space-delimited payload), replying with bare `Core.Ping`, as the C handler does.
+
+MCCP2 uses one persistent zlib stream per connection. Queued plaintext precedes an
+uncompressed activation marker; all subsequent bytes, including Telnet replies,
+are compressed and sync-flushed for prompt delivery. Duplicate negotiation cannot
+start another stream. Matching the C server, DONT changes Q state but does not
+stop an already active compression stream. Graceful closure finishes the stream
+within existing output/shutdown deadlines. Compression or socket failures close
+the connection; the writer never switches back to plaintext. Buffers, queues and
+logical message limits remain bounded. Inbound compression is unsupported.

@@ -240,6 +240,10 @@ impl CommandRegistry {
         let definitions = vec![
             CommandDefinition::native("look", P::EVERYONE, native::look).matching(&["l"], None),
             CommandDefinition::native("say", P::EVERYONE, native::say).matching(&[], Some('"')),
+            CommandDefinition::native("@session", P::WIZARD, native::sessions)
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
+            CommandDefinition::native("@telnet", P::WIZARD, native::telnet)
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("@shutdown", P::WIZARD, native::shutdown)
                 .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("@dbck", P::WIZARD, native::dbck)

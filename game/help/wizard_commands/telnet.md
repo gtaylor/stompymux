@@ -21,3 +21,14 @@ CHARSET, NEW-ENVIRON, GMCP, MSSP, MCCP2, or ECHO.
 NEW-ENVIRON `VAR` and `USERVAR` names are separate namespaces. Empty values
 are displayed as `""`. Non-printable and protocol-control bytes are escaped as
 `\xNN`; the values are untrusted information reported by the client.
+
+Names, account aliases and dbrefs such as `#2` are accepted. Each connection has a
+separate block identified by its Rust session ID. Local/remote Q states show
+pending negotiations and queued reversals; only YES means negotiated. MCCP2's
+starting/active transport state is displayed separately: once started, compression
+continues until disconnect even if negotiation later changes to NO. ECHO shows the
+requested client behavior, not a guarantee that the client hides input.
+
+Output is private to your invoking session and explicitly marks truncation when
+it reaches the configured output limit. No switches are supported. Use `@session`
+for connection and byte-counter summaries.

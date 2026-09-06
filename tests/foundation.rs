@@ -227,8 +227,18 @@ async fn telnet_fragmentation_echo_and_utf8() {
         Input::InvalidUtf8
     ));
     assert!(d.feed(&vec![b'a'; 8193]).is_err());
-    assert_eq!(Decoder::echo(true), [255, 251, 1]);
-    assert_eq!(Decoder::echo(false), [255, 252, 1]);
+    assert!(
+        d.echo(true)
+            .iter()
+            .any(|e| matches!(e, Input::Reply(v) if v == &[255,251,1]))
+    );
+    assert!(!d.echo(false).iter().any(|e| matches!(e, Input::Reply(_))));
+    assert!(
+        d.feed(&[255, 253, 1])
+            .unwrap()
+            .iter()
+            .any(|e| matches!(e, Input::Reply(v) if v == &[255,252,1]))
+    );
 }
 #[tokio::test(flavor = "current_thread")]
 async fn copied_lua_renders_rooms_locks_and_commands() {
@@ -563,6 +573,7 @@ async fn bounded_output_marks_slow_clients_for_disconnect() {
     let now = Instant::now();
     let session = Session {
         output,
+        stats: Default::default(),
         peer: "127.0.0.1".parse().unwrap(),
         player: None,
         flow: LoginFlow::Name,
@@ -1950,4 +1961,236 @@ async fn tcp_dbck_relocation_callbacks_rollback_and_context() {
     sqlx::Connection::close(sql).await.unwrap();
     running.stop().await;
     server::prepare(&c).await.unwrap();
+}
+
+/// Read raw protocol bytes through a text marker without decoding away IAC commands.
+async fn telnet_until(socket: &mut TcpStream, marker: &[u8]) -> Vec<u8> {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        let mut out = Vec::new();
+        while !out.windows(marker.len()).any(|v| v == marker) {
+            let mut buffer = [0; 4096];
+            let n = socket.read(&mut buffer).await.unwrap();
+            assert_ne!(
+                n,
+                0,
+                "closed before marker: {:?}",
+                String::from_utf8_lossy(&out)
+            );
+            out.extend_from_slice(&buffer[..n]);
+        }
+        out
+    })
+    .await
+    .unwrap()
+}
+/// Login actions must run before an acknowledgement later in the same packet.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_q_echo_ordering_reversals_and_refusal() {
+    let (_d, c) = populated().await;
+    let running = Running::start(&c).await;
+    let mut socket = TcpStream::connect(&running.address).await.unwrap();
+    let initial = telnet_until(&mut socket, b"Who are you? ").await;
+    assert!(initial.starts_with(&[
+        255, 253, 24, 255, 253, 31, 255, 253, 39, 255, 251, 70, 255, 251, 86, 255, 251, 42, 255,
+        251, 201
+    ]));
+    socket.write_all(b"GOD\r\n\xff\xfd\x01").await.unwrap();
+    let password = telnet_until(&mut socket, b"Password: ").await;
+    assert!(password.windows(3).any(|w| w == [255, 251, 1]));
+    assert!(!password.windows(3).any(|w| w == [255, 252, 1]));
+    socket.write_all(b"wrong\r\n").await.unwrap();
+    let failed = telnet_until(&mut socket, b"Who are you? ").await;
+    assert_eq!(failed.windows(3).filter(|w| *w == [255, 252, 1]).count(), 1);
+    // The next password flow starts before acknowledgement of WONT. The queued reversal
+    // is sent only when DONT arrives; its DO acknowledgement follows in this same packet.
+    socket
+        .write_all(b"GOD\r\n\xff\xfe\x01\xff\xfd\x01wrong\r\n")
+        .await
+        .unwrap();
+    let retry = telnet_until(&mut socket, b"Who are you? ").await;
+    assert_eq!(retry.windows(3).filter(|w| *w == [255, 251, 1]).count(), 1);
+    assert_eq!(retry.windows(3).filter(|w| *w == [255, 252, 1]).count(), 1);
+    socket
+        .write_all(b"\xff\xfe\x01GOD\r\n\xff\xfe\x01wrong\r\n")
+        .await
+        .unwrap();
+    let refused = telnet_until(&mut socket, b"Who are you? ").await;
+    assert_eq!(
+        refused.windows(3).filter(|w| *w == [255, 251, 1]).count(),
+        1
+    );
+    assert!(!refused.windows(3).any(|w| w == [255, 252, 1]));
+    running.stop().await;
+}
+/// Registration proceeds without negotiation replies and restores echo once a delayed reply arrives.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_q_registration_allows_unanswered_echo_and_coalesces_prompts() {
+    let (_d, c) = populated().await;
+    let running = Running::start(&c).await;
+    let mut socket = TcpStream::connect(&running.address).await.unwrap();
+    telnet_until(&mut socket, b"Who are you? ").await;
+    socket.write_all(b"QTester\r\n").await.unwrap();
+    telnet_until(&mut socket, b"[Y/n] ").await;
+    socket
+        .write_all(b"y\r\nsecret\r\nsecret\r\n")
+        .await
+        .unwrap();
+    let registered = telnet_until(&mut socket, b"Starter Room").await;
+    assert_eq!(
+        registered
+            .windows(3)
+            .filter(|w| *w == [255, 251, 1])
+            .count(),
+        1
+    );
+    assert!(!registered.windows(3).any(|w| w == [255, 252, 1]));
+    assert!(
+        persistence::load(&c.database())
+            .await
+            .unwrap()
+            .find_player("QTester")
+            .is_some()
+    );
+    socket.write_all(&[255, 253, 1]).await.unwrap();
+    let restored = telnet_until(&mut socket, &[255, 252, 1]).await;
+    assert_eq!(
+        restored.windows(3).filter(|w| *w == [255, 252, 1]).count(),
+        1
+    );
+    socket.write_all(b"\xff\xfe\x01look\r\n").await.unwrap();
+    let looked = telnet_until(&mut socket, b"Starter Room").await;
+    assert!(
+        !looked
+            .windows(3)
+            .any(|w| w == [255, 251, 1] || w == [255, 252, 1])
+    );
+    running.stop().await;
+}
+
+/// Live options and both diagnostic commands remain session-private and read-only.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_extended_telnet_and_session_diagnostics() {
+    let (d, c) = populated().await;
+    let aliases = d.path().join("aliases.toml");
+    std::fs::write(
+        &aliases,
+        std::fs::read_to_string(&aliases).unwrap().replace(
+            "[aliases.commands]",
+            "[aliases.commands]\nss='@session'\ntn='@telnet'",
+        ),
+    )
+    .unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(2)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
+    persistence::save(&c.database(), &w).await.unwrap();
+    let running = Running::start(&c).await;
+    let mut wizard = Client::connect(&running).await;
+    wizard.login("#2").await;
+    let mut other = Client::connect(&running).await;
+    other.login("#2").await;
+    let mut ordinary = Client::connect(&running).await;
+    ordinary.register("Spectator").await;
+    ordinary.send("@session").await;
+    ordinary.until("Permission denied.").await;
+    ordinary.send("@telnet Wizard").await;
+    ordinary.until("Permission denied.").await;
+    wizard.send("@session/bad").await;
+    wizard.until("Unsupported command switch.").await;
+    wizard.send("@telnet").await;
+    wizard.until("Usage: @telnet <player>").await;
+    wizard.send("@telnet absent").await;
+    wizard.until("No such player.").await;
+    wizard.send("@telnet GOD").await;
+    wizard.until("That player is not connected.").await;
+    let db = std::fs::read(c.database()).unwrap();
+    wizard.socket.write_all(b"\xff\xfb\x27\xff\xfa\x27\x00\x00CLIENT\x01hello\xff\xf0\xff\xfd\x46\xff\xfd\xc9\xff\xfa\xc9Core.Ping {}\xff\xf0").await.unwrap();
+    wizard.send("tn #2").await;
+    let bytes = telnet_until(&mut wizard.socket, b"Client echo (requested): enabled").await;
+    let text = String::from_utf8_lossy(&bytes);
+    assert!(bytes.windows(3).any(|v| v == [255, 250, 70]));
+    assert!(text.contains("NAME\u{2}"));
+    assert!(text.contains("PLAYERS\u{2}3"));
+    assert!(text.contains("CODEBASE\u{2}stompymux-rs"));
+    assert!(text.contains("Core.Ping"));
+    assert!(text.contains("VAR \"CLIENT\" = \"hello\""));
+    assert!(text.contains("Q local:"));
+    // Use a subsequent marker to synchronize with both complete diagnostic blocks.
+    wizard.send("ss Wiz").await;
+    let rows = wizard.until("maximum.").await;
+    assert!(rows.contains("2 Players logged in"));
+    assert!(rows.contains("Session"));
+    assert!(!rows.contains("Spectator"));
+    other.send("@telnet #2").await;
+    let second = other.until("Client echo (requested): enabled").await;
+    assert!(second.contains("session"));
+    assert_eq!(db, std::fs::read(c.database()).unwrap());
+    running.stop().await;
+}
+
+/// A real compressed connection handles Telnet negotiation and graceful shutdown in one zlib stream.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_mccp2_stream_and_shutdown() {
+    use std::io::Read;
+    let (_d, c) = populated().await;
+    let mut running = Running::start(&c).await;
+    let mut socket = TcpStream::connect(&running.address).await.unwrap();
+    telnet_until(&mut socket, b"Who are you? ").await;
+    socket.write_all(&[255, 253, 86]).await.unwrap();
+    let marker = telnet_until(&mut socket, &[255, 250, 86, 255, 240]).await;
+    let boundary = marker
+        .windows(5)
+        .position(|v| v == [255, 250, 86, 255, 240])
+        .unwrap()
+        + 5;
+    let mut compressed = marker[boundary..].to_vec();
+    socket
+        .write_all(b"\xff\xfd\x56\xff\xfe\x56\xff\xfd\xc9\xff\xfa\xc9Core.Ping\xff\xf0Nobody\r\n")
+        .await
+        .unwrap();
+    // Keep the peer open while verifying sync-flushed protocol output.
+    let mut inflater = flate2::Decompress::new(true);
+    let mut plain = Vec::new();
+    let mut offset = 0;
+    tokio::time::timeout(Duration::from_secs(10), async {
+        while !plain.windows(6).any(|v| v == b"[Y/n] ") {
+            if offset == compressed.len() {
+                let mut b = [0; 4096];
+                let n = socket.read(&mut b).await.unwrap();
+                assert!(n > 0);
+                compressed.extend_from_slice(&b[..n]);
+            }
+            let mut out = [0; 4096];
+            let before = (inflater.total_in(), inflater.total_out());
+            inflater
+                .decompress(
+                    &compressed[offset..],
+                    &mut out,
+                    flate2::FlushDecompress::Sync,
+                )
+                .unwrap();
+            offset += (inflater.total_in() - before.0) as usize;
+            plain.extend_from_slice(&out[..(inflater.total_out() - before.1) as usize]);
+        }
+    })
+    .await
+    .unwrap();
+    assert!(plain.windows(3).any(|v| v == [255, 252, 86]));
+    assert!(plain.windows(9).any(|v| v == b"Core.Ping"));
+    assert!(!plain.windows(5).any(|v| v == [255, 250, 86, 255, 240]));
+    Command::new("kill")
+        .args(["-TERM", &running.child.id().unwrap().to_string()])
+        .status()
+        .await
+        .unwrap();
+    tokio::time::timeout(Duration::from_secs(10), socket.read_to_end(&mut compressed))
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(running.child.wait().await.unwrap().success());
+    let mut decoded = Vec::new();
+    flate2::read::ZlibDecoder::new(compressed.as_slice())
+        .read_to_end(&mut decoded)
+        .unwrap();
+    assert_eq!(decoded, plain);
 }

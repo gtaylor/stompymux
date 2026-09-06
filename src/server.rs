@@ -63,6 +63,9 @@ struct Server {
     addresses: BTreeMap<IpAddr, Bucket>,
     hashes: Bucket,
     inflight: usize,
+    /// Runtime identity for MSSP replies.
+    started_at: i64,
+    listen_port: u16,
     /// Accepted request; also prevents further command and authentication dispatch.
     shutdown: Option<ShutdownRequest>,
     /// A shutdown write failed, even if a later snapshot succeeds.
@@ -195,9 +198,12 @@ pub async fn run(
             at: Instant::now() - HASH_RATE_WINDOW,
         },
         inflight: 0,
+        started_at: accounts::now(),
+        listen_port: 0,
         shutdown: None,
         shutdown_failed: false,
     };
+    server.listen_port = listener.local_addr()?.port();
     let mut next = 0;
     let mut tick = tokio::time::interval(Duration::from_millis(
         server.config.runtime.maintenance_interval_ms,
@@ -218,17 +224,19 @@ pub async fn run(
                 let id=SessionId(next);
                 let (output,receiver)=mpsc::channel(server.config.runtime.session_output_queue_capacity);
                 let now=Instant::now();
+                let stats=std::sync::Arc::new(telnet::transport::Stats::default());
                 server.sessions.insert(id,Session {
-                    output, peer:peer.ip(), player:None, flow:LoginFlow::Name,
+                    stats:stats.clone(),output, peer:peer.ip(), player:None, flow:LoginFlow::Name,
                     connected:now, active:now, decoder:telnet::Decoder::new(&server.config.runtime),
                     find_cursor: None,
                     output_message_limit:server.config.runtime.output_message_limit,
                     quota:server.config.mux.command_quota_increment.min(server.config.mux.command_quota_max),
                     quota_at:now, failed:Default::default(),
                 });
-                tasks.spawn(connection(stream,id,tx.clone(),receiver,server.config.runtime.write_timeout_ms));
-                let session=&server.sessions[&id];
-                session.raw(telnet::Decoder::initial());
+                tasks.spawn(connection(stream,id,tx.clone(),receiver,server.config.runtime.write_timeout_ms,stats));
+                let session=server.sessions.get_mut(&id).unwrap();
+                let negotiation=session.decoder.initial();
+                session.protocol(negotiation);
                 session.text(&banner,true);
                 session.text("Who are you? ",true);
             },
@@ -286,7 +294,10 @@ async fn connection(
     events: mpsc::Sender<Event>,
     mut output: mpsc::Receiver<Output>,
     write_timeout_ms: u64,
+    stats: std::sync::Arc<telnet::transport::Stats>,
 ) {
+    use std::sync::atomic::Ordering::Relaxed;
+    let mut writer = telnet::transport::Writer::default();
     let (mut read, mut write) = stream.into_split();
     const READ_BUFFER_SIZE: usize = 1024;
     let mut buffer = [0u8; READ_BUFFER_SIZE];
@@ -295,15 +306,32 @@ async fn connection(
             result = read.read(&mut buffer), if !events.is_closed() => match result {
                 Ok(0) | Err(_) => break,
                 Ok(n) => {
-                    let _ = events.send(Event::Bytes(id,buffer[..n].to_vec())).await;
+                    stats.input_total.fetch_add(n as u64,Relaxed);
+                    stats.input_pending.fetch_add(n as u64,Relaxed);
+                    if events.send(Event::Bytes(id,buffer[..n].to_vec())).await.is_err(){stats.consumed(n as u64);stats.input_lost.fetch_add(n as u64,Relaxed);}
                 }
             },
             message = output.recv() => match message {
                 Some(Output::Bytes(bytes)) => {
-                    if !matches!(tokio::time::timeout(Duration::from_millis(write_timeout_ms),write.write_all(&bytes)).await,Ok(Ok(()))) { break; }
+                    let result=tokio::time::timeout(Duration::from_millis(write_timeout_ms),writer.bytes(&mut write,&stats,&bytes)).await;
+                    stats.output_pending.fetch_sub(bytes.len() as u64,Relaxed);
+                    if !matches!(result,Ok(Ok(()))) {stats.output_lost.fetch_add(bytes.len() as u64,Relaxed);break;}
                 },
-                Some(Output::Close) | None => break,
+                Some(Output::StartCompression)=>{
+                    if !matches!(tokio::time::timeout(Duration::from_millis(write_timeout_ms),writer.start(&mut write,&stats)).await,Ok(Ok(()))){break;}
+                },
+                Some(Output::Close) | None => {
+                    let _=tokio::time::timeout(Duration::from_millis(write_timeout_ms),writer.finish(&mut write,&stats)).await;
+                    break;
+                },
             }
+        }
+    }
+    output.close();
+    while let Some(message) = output.recv().await {
+        if let Output::Bytes(bytes) = message {
+            stats.output_pending.fetch_sub(bytes.len() as u64, Relaxed);
+            stats.output_lost.fetch_add(bytes.len() as u64, Relaxed);
         }
     }
     let _ = write.shutdown().await;
@@ -374,6 +402,163 @@ impl Server {
         }
     }
 
+    /// MSSP snapshots are generated by the world owner at confirmed enablement.
+    fn mssp(&self, id: SessionId) {
+        let fields = [
+            ("NAME", self.config.server.mud_name.clone()),
+            (
+                "PLAYERS",
+                self.sessions
+                    .values()
+                    .filter(|s| s.player.is_some())
+                    .count()
+                    .to_string(),
+            ),
+            ("UPTIME", self.started_at.to_string()),
+            ("CODEBASE", env!("CARGO_PKG_NAME").into()),
+            ("PORT", self.listen_port.to_string()),
+        ];
+        let mut payload = Vec::new();
+        for (name, value) in fields {
+            payload.push(1);
+            payload.extend(name.bytes());
+            payload.push(2);
+            payload.extend(
+                value
+                    .chars()
+                    .filter(|c| !c.is_control())
+                    .collect::<String>()
+                    .bytes(),
+            );
+        }
+        if let Some(session) = self.sessions.get(&id) {
+            session.protocol(vec![telnet::Decoder::sub_reply(telnet::MSSP, &payload)]);
+        }
+    }
+    /// Read-only, invoking-session-only connection statistics in stable session-ID order.
+    fn session_diagnostics(&self, id: SessionId, prefix: &str) {
+        let mut report = telnet::diagnostics::Report::new(self.config.runtime.output_message_limit);
+        let headers = [
+            "Player Name",
+            "On For",
+            "Idle",
+            "Session",
+            "In Pend",
+            "In Lost",
+            "In Total",
+            "Out Pend",
+            "Out Lost",
+            "Out Total",
+        ];
+        let mut rows = Vec::new();
+        let world = self.scripts.world.borrow();
+        let mut count = 0;
+        for (sid, session) in &self.sessions {
+            let Some(player) = session.player else {
+                continue;
+            };
+            let name = crate::text::plain(&world.objects[&player].name);
+            if !name
+                .to_lowercase()
+                .starts_with(&prefix.trim().to_lowercase())
+            {
+                continue;
+            }
+            count += 1;
+            let mut stats = session.stats.snapshot();
+            stats.input[0] += session.decoder.pending_text() as u64;
+            rows.push([
+                telnet::diagnostics::escape(name.chars().take(16).collect::<String>().as_bytes()),
+                telnet::diagnostics::connected_time(session.connected.elapsed().as_secs()),
+                telnet::diagnostics::idle_time(session.active.elapsed().as_secs()),
+                sid.0.to_string(),
+                stats.input[0].to_string(),
+                stats.input[1].to_string(),
+                stats.input[2].to_string(),
+                stats.output[0].to_string(),
+                stats.output[1].to_string(),
+                stats.output[2].to_string(),
+            ]);
+        }
+        // Size columns from this snapshot so large counters cannot shift later columns.
+        let widths: [usize; 10] = std::array::from_fn(|column| {
+            rows.iter()
+                .map(|row| row[column].len())
+                .chain(std::iter::once(headers[column].len()))
+                .max()
+                .unwrap()
+        });
+        let format_row = |row: [&str; 10]| {
+            row.iter()
+                .enumerate()
+                .map(|(column, value)| {
+                    let width = widths[column];
+                    if column == 0 {
+                        format!("{value:<width$}")
+                    } else {
+                        format!("{value:>width$}")
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("  ")
+        };
+        report.line(&format_row(headers));
+        for row in &rows {
+            report.line(&format_row(std::array::from_fn(|column| {
+                row[column].as_str()
+            })));
+            if report.full() {
+                break;
+            }
+        }
+        report.line(&format!(
+            "{count} Player{} logged in, {} record, {} maximum.",
+            if count == 1 { "" } else { "s" },
+            world.record_players,
+            if self.config.mux.max_players < 0 {
+                "no".into()
+            } else {
+                self.config.mux.max_players.to_string()
+            }
+        ));
+        if let Some(session) = self.sessions.get(&id) {
+            session.raw(report.finish());
+        }
+    }
+    /// Player lookup follows login identity rules; no object visibility filter hides Wizard diagnostics.
+    fn telnet_diagnostics(&self, id: SessionId, name: &str) {
+        let mut report = telnet::diagnostics::Report::new(self.config.runtime.output_message_limit);
+        let world = self.scripts.world.borrow();
+        if name.is_empty() {
+            report.line("Usage: @telnet <player>");
+        } else if let Some(player) = world.find_player(name) {
+            let mut found = false;
+            for (sid, session) in &self.sessions {
+                if session.player == Some(player) {
+                    found = true;
+                    telnet::diagnostics::telnet(
+                        &mut report,
+                        &world.objects[&player].name,
+                        player.0,
+                        sid.0,
+                        &session.decoder,
+                        &session.stats.snapshot(),
+                    );
+                    if report.full() {
+                        break;
+                    }
+                }
+            }
+            if !found {
+                report.line("That player is not connected.");
+            }
+        } else {
+            report.line("No such player.");
+        }
+        if let Some(session) = self.sessions.get(&id) {
+            session.raw(report.finish());
+        }
+    }
     fn tell(&self, id: SessionId, s: &str) {
         if let Some(session) = self.sessions.get(&id) {
             let ansi = session.player.is_none_or(|p| {
@@ -389,7 +574,8 @@ impl Server {
     fn prompt(&mut self, id: SessionId, flow: LoginFlow, text: &str, secret: bool) {
         if let Some(s) = self.sessions.get_mut(&id) {
             s.flow = flow;
-            s.raw(telnet::Decoder::echo(secret));
+            let negotiation = s.decoder.echo(secret);
+            s.protocol(negotiation);
         }
         self.tell(id, text);
     }
@@ -503,52 +689,69 @@ impl Server {
         Ok(())
     }
     async fn input(&mut self, id: SessionId, bytes: &[u8]) -> Result<()> {
-        let Some(session) = self.sessions.get_mut(&id) else {
-            return Ok(());
-        };
-        let inputs = match session.decoder.feed(bytes) {
-            Ok(v) => v,
-            Err(_) => {
-                self.tell(id, "Input limit exceeded.\r\n");
-                self.disconnect(id).await?;
-                return Ok(());
-            }
-        };
-        for input in inputs {
-            if self.shutdown.is_some() || !self.sessions.contains_key(&id) {
+        for &byte in bytes {
+            if self.shutdown.is_some() {
                 break;
             }
-            match input {
-                Input::Reply(v) => {
-                    self.sessions[&id].raw(v);
+            let Some(session) = self.sessions.get_mut(&id) else {
+                break;
+            };
+            session.stats.consumed(1);
+            let decoded = session.decoder.feed_byte(byte);
+            session.stats.input_lost.fetch_add(
+                session.decoder.take_discarded(),
+                std::sync::atomic::Ordering::Relaxed,
+            );
+            let inputs = match decoded {
+                Ok(v) => v,
+                Err(_) => {
+                    self.tell(id, "Input limit exceeded.\r\n");
+                    self.disconnect(id).await?;
+                    return Ok(());
                 }
-                Input::InvalidUtf8 => self.tell(id, "Invalid UTF-8 input.\r\n"),
-                Input::Line(line) => {
-                    let line = Zeroizing::new(line);
-                    let s = self.sessions.get_mut(&id).unwrap();
-                    s.active = Instant::now();
-                    let elapsed = s.quota_at.elapsed().as_millis();
-                    let interval = u128::from(self.config.mux.command_quota_interval);
-                    let periods = elapsed / interval;
-                    if periods > 0 {
-                        let credits =
-                            periods.saturating_mul(self.config.mux.command_quota_increment as u128);
-                        s.quota = (s.quota as u128 + credits)
-                            .min(self.config.mux.command_quota_max as u128)
-                            as usize;
-                        // Preserve the partial refill interval between commands.
-                        s.quota_at =
-                            Instant::now() - Duration::from_millis((elapsed % interval) as u64);
+            };
+            for input in inputs {
+                match input {
+                    Input::Negotiated(_) => {}
+                    Input::StartCompression => {
+                        self.sessions[&id].protocol(vec![Input::StartCompression])
                     }
-                    if s.quota == 0 {
-                        self.tell(id, "Command quota exceeded.\r\n");
-                        continue;
+                    Input::Diagnostic(message) => eprintln!("Telnet session {}: {message}", id.0),
+                    Input::StatusRequest => self.mssp(id),
+                    Input::Reply(v) => {
+                        self.sessions[&id].raw(v);
                     }
-                    s.quota -= 1;
-                    if let Some(p) = s.player {
-                        self.command(id, p, &line).await?;
-                    } else {
-                        self.login(id, &line).await?;
+                    Input::InvalidUtf8 => self.tell(id, "Invalid UTF-8 input.\r\n"),
+                    Input::Line(line) => {
+                        let line = Zeroizing::new(line);
+                        let s = self.sessions.get_mut(&id).unwrap();
+                        s.active = Instant::now();
+                        let elapsed = s.quota_at.elapsed().as_millis();
+                        let interval = u128::from(self.config.mux.command_quota_interval);
+                        let periods = elapsed / interval;
+                        if periods > 0 {
+                            let credits = periods
+                                .saturating_mul(self.config.mux.command_quota_increment as u128);
+                            s.quota = (s.quota as u128 + credits)
+                                .min(self.config.mux.command_quota_max as u128)
+                                as usize;
+                            // Preserve the partial refill interval between commands.
+                            s.quota_at =
+                                Instant::now() - Duration::from_millis((elapsed % interval) as u64);
+                        }
+                        if s.quota == 0 {
+                            s.stats
+                                .input_lost
+                                .fetch_add(line.len() as u64, std::sync::atomic::Ordering::Relaxed);
+                            self.tell(id, "Command quota exceeded.\r\n");
+                            continue;
+                        }
+                        s.quota -= 1;
+                        if let Some(p) = s.player {
+                            self.command(id, p, &line).await?;
+                        } else {
+                            self.login(id, &line).await?;
+                        }
                     }
                 }
             }
@@ -725,6 +928,8 @@ impl Server {
         self.snapshots()?;
         let before = self.scripts.world.borrow().clone();
         match commands::run(&self.scripts, &self.config, p, id.0, line) {
+            Ok(Action::Sessions(prefix)) => self.session_diagnostics(id, &prefix),
+            Ok(Action::Telnet(player)) => self.telnet_diagnostics(id, &player),
             Ok(Action::Shutdown) => self.request_shutdown(ShutdownRequest::Player(p)).await,
             Ok(Action::DbCheck) => self.dbck(id, p).await,
             Ok(Action::Find(request)) => self.find(id, p, request),
@@ -1103,6 +1308,8 @@ mod tests {
                 at: Instant::now(),
             },
             inflight: 0,
+            started_at: accounts::now(),
+            listen_port: 0,
             shutdown: None,
             shutdown_failed: false,
         };
@@ -1153,6 +1360,8 @@ mod tests {
                 at: Instant::now(),
             },
             inflight: 1,
+            started_at: accounts::now(),
+            listen_port: 0,
             shutdown: None,
             shutdown_failed: false,
         };
@@ -1162,6 +1371,7 @@ mod tests {
             SessionId(1),
             Session {
                 output,
+                stats: Default::default(),
                 peer: "127.0.0.1".parse().unwrap(),
                 player: None,
                 flow: LoginFlow::Pending,
@@ -1288,6 +1498,8 @@ mod tests {
                     at: Instant::now(),
                 },
                 inflight: 0,
+                started_at: accounts::now(),
+                listen_port: 0,
                 shutdown: None,
                 shutdown_failed: false,
             };
@@ -1300,6 +1512,7 @@ mod tests {
                     SessionId(id),
                     Session {
                         output,
+                        stats: Default::default(),
                         peer: "127.0.0.1".parse().unwrap(),
                         player: Some(ObjectId(1)),
                         flow: LoginFlow::Name,

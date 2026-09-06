@@ -1,5 +1,30 @@
 //! Incremental Telnet decoding. Negotiation never enters the command stream.
 use anyhow::{Result, bail};
+pub mod diagnostics;
+pub mod environment;
+pub mod q;
+pub mod transport;
+use q::{Negotiator, Side, Verb};
+/// Supported option numbers and subnegotiation framing bytes.
+pub const TTYPE: u8 = 24;
+pub const NAWS: u8 = 31;
+pub const CHARSET: u8 = 42;
+pub const NEW_ENVIRON: u8 = 39;
+pub const MSSP: u8 = 70;
+pub const MCCP2: u8 = 86;
+pub const GMCP: u8 = 201;
+const SB: u8 = 250;
+const SE: u8 = 240;
+/// C telnet_handler.c TELNET_OPTIONS: unsolicited acceptance is direction-specific.
+const OPTIONS: &[(u8, Side)] = &[
+    (TTYPE, Side::Remote),
+    (NAWS, Side::Remote),
+    (NEW_ENVIRON, Side::Remote),
+    (MSSP, Side::Local),
+    (MCCP2, Side::Local),
+    (CHARSET, Side::Local),
+    (GMCP, Side::Local),
+];
 pub const IAC: u8 = 255;
 pub const ECHO: u8 = 1;
 #[derive(Debug, Clone)]
@@ -9,17 +34,37 @@ enum State {
     Option(u8),
     SubOption,
     Sub(u8, Vec<u8>, bool),
+    /// Drain an oversized environment message without retaining its payload.
+    DiscardSub(bool),
 }
 #[derive(Debug)]
 pub enum Input {
     Line(String),
     Reply(Vec<u8>),
     InvalidUtf8,
+    /// Writer control and world-owner status requests.
+    StartCompression,
+    StatusRequest,
+    Diagnostic(String),
+    /// Negotiation state changed; option effects have already been applied.
+    Negotiated(q::Change),
 }
 #[derive(Debug, Clone)]
 pub struct Decoder {
     state: State,
+    negotiation: Negotiator,
+    initialized: bool,
+    pub ttype_responses: u8,
+    pub charset_pending: bool,
+    pub environment: environment::Environment,
+    pub client: String,
+    pub color_depth: u16,
+    pub screen_reader: bool,
+    pub echo_suppressed: bool,
+    /// Result of CHARSET negotiation; input remains UTF-8 regardless.
+    pub charset_utf8: bool,
     line: Vec<u8>,
+    discarded: u64,
     after_cr: bool,
     input_line_limit: usize,
     subnegotiation_limit: usize,
@@ -37,7 +82,18 @@ impl Decoder {
     pub fn new(config: &crate::config::RuntimeConfig) -> Self {
         Self {
             state: State::Data,
+            negotiation: Negotiator::default(),
+            initialized: false,
+            ttype_responses: 0,
+            charset_pending: false,
+            environment: Default::default(),
+            client: String::new(),
+            color_depth: 16,
+            screen_reader: false,
+            echo_suppressed: false,
+            charset_utf8: true,
             line: Vec::new(),
+            discarded: 0,
             after_cr: false,
             width: 80,
             height: 25,
@@ -47,12 +103,94 @@ impl Decoder {
             subnegotiation_limit: config.telnet_subnegotiation_limit,
         }
     }
-    pub fn initial() -> Vec<u8> {
-        vec![IAC, 253, 24, IAC, 253, 31, IAC, 253, 42]
+    /// Begin supported negotiations once, using the C server's option directions.
+    pub fn initial(&mut self) -> Vec<Input> {
+        if self.initialized {
+            return Vec::new();
+        }
+        self.initialized = true;
+        let mut out = Vec::new();
+        for &(option, side) in OPTIONS {
+            out.extend(self.negotiate(option, side, true));
+        }
+        out
     }
-    pub fn echo(secret: bool) -> Vec<u8> {
-        vec![IAC, if secret { 251 } else { 252 }, ECHO]
+    /// Application echo requests are explicit stimuli; the Q engine handles repeats and reversals.
+    pub fn echo(&mut self, secret: bool) -> Vec<Input> {
+        self.echo_suppressed = secret;
+        self.negotiate(ECHO, Side::Local, secret)
     }
+    /// Query either endpoint's current option state.
+    pub fn option_state(&self, option: u8, side: Side) -> q::QState {
+        self.negotiation.state(option, side)
+    }
+    /// Request supported behavior; ECHO is server-initiated only, as in the C handler.
+    pub fn negotiate(&mut self, option: u8, side: Side, enable: bool) -> Vec<Input> {
+        if enable && !OPTIONS.contains(&(option, side)) && (option, side) != (ECHO, Side::Local) {
+            return Vec::new();
+        }
+        let events = self.negotiation.request(option, side, enable);
+        self.effects(events)
+    }
+    /// Apply option effects only on real transitions, after negotiation output.
+    fn effects(&mut self, events: Vec<q::Event>) -> Vec<Input> {
+        let mut out = Vec::new();
+        for event in events {
+            match event {
+                q::Event::Send(verb, option) => {
+                    out.push(Input::Reply(vec![IAC, verb as u8, option]))
+                }
+                q::Event::Changed(change) => {
+                    out.push(Input::Negotiated(change));
+                    if change.after.enabled() && !change.before.enabled() {
+                        match (change.option, change.side) {
+                            (NEW_ENVIRON, Side::Remote) => {
+                                self.environment = Default::default();
+                                out.push(Self::sub_reply(NEW_ENVIRON, &[1]));
+                            }
+                            (MSSP, Side::Local) => out.push(Input::StatusRequest),
+                            (MCCP2, Side::Local) => out.push(Input::StartCompression),
+                            (TTYPE, Side::Remote) => out.push(Self::sub_reply(TTYPE, &[1])),
+                            (CHARSET, Side::Local) => {
+                                self.charset_pending = true;
+                                out.push(Self::sub_reply(CHARSET, b"\x01;UTF-8"));
+                            }
+                            _ => {}
+                        }
+                    } else if !change.after.enabled() {
+                        match (change.option, change.side) {
+                            (TTYPE, Side::Remote) => self.terminal = "vt100".into(),
+                            (NAWS, Side::Remote) => {
+                                self.width = 80;
+                                self.height = 25;
+                            }
+                            (CHARSET, Side::Local) => self.charset_pending = false,
+                            (NEW_ENVIRON, Side::Remote) => self.environment = Default::default(),
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+        out
+    }
+    /// Encode bounded option payloads, escaping IAC independently of text encoding.
+    pub fn sub_reply(option: u8, payload: &[u8]) -> Input {
+        let mut bytes = vec![IAC, SB, option];
+        for &b in payload {
+            bytes.push(b);
+            if b == IAC {
+                bytes.push(b);
+            }
+        }
+        bytes.extend([IAC, SE]);
+        Input::Reply(bytes)
+    }
+    /// Decode one byte so the session owner can act on a line before later negotiations.
+    pub fn feed_byte(&mut self, byte: u8) -> Result<Vec<Input>> {
+        self.feed(&[byte])
+    }
+    /// Bulk convenience API for callers without interleaved application actions.
     pub fn feed(&mut self, bytes: &[u8]) -> Result<Vec<Input>> {
         let mut out = Vec::new();
         for &b in bytes {
@@ -75,21 +213,23 @@ impl Decoder {
                     248 => self.line.clear(),
                     _ => {}
                 },
-                State::Option(cmd) => match (cmd, b) {
-                    (251, 24) => out.push(Input::Reply(vec![IAC, 250, 24, 1, IAC, 240])),
-                    (251, 31) => {}
-                    (251, 42) => out.push(Input::Reply(vec![
-                        IAC, 250, 42, 1, b';', b'U', b'T', b'F', b'-', b'8', IAC, 240,
-                    ])),
-                    (252, 31) => {
-                        self.width = 80;
-                        self.height = 25;
+                State::Option(cmd) => {
+                    let verb = Verb::from_byte(cmd).expect("framing validated verb");
+                    let side = if matches!(verb, Verb::Will | Verb::Wont) {
+                        Side::Remote
+                    } else {
+                        Side::Local
+                    };
+                    let events = self
+                        .negotiation
+                        .receive(b, verb, OPTIONS.contains(&(b, side)));
+                    out.extend(self.effects(events));
+                }
+                State::DiscardSub(escaped) => {
+                    if !(escaped && b == SE) {
+                        self.state = State::DiscardSub(!escaped && b == IAC);
                     }
-                    (253, 1) => {}
-                    (251, _) => out.push(Input::Reply(vec![IAC, 254, b])),
-                    (253, _) => out.push(Input::Reply(vec![IAC, 252, b])),
-                    _ => {}
-                },
+                }
                 State::SubOption => self.state = State::Sub(b, Vec::new(), false),
                 State::Sub(option, mut payload, escaped) => {
                     if escaped && b == 240 {
@@ -101,6 +241,13 @@ impl Decoder {
                             payload.push(b);
                         }
                         if payload.len() > self.subnegotiation_limit {
+                            if option == NEW_ENVIRON {
+                                out.push(Input::Diagnostic(
+                                    "NEW-ENVIRON: subnegotiation limit exceeded".into(),
+                                ));
+                                self.state = State::DiscardSub(false);
+                                continue;
+                            }
                             bail!("Telnet subnegotiation too long");
                         }
                         self.state = State::Sub(option, payload, false);
@@ -109,6 +256,14 @@ impl Decoder {
             }
         }
         Ok(out)
+    }
+    /// Buffered text awaiting a line terminator.
+    /// Drain invalid/oversized decoded input accounting into the session counters.
+    pub fn take_discarded(&mut self) -> u64 {
+        std::mem::take(&mut self.discarded)
+    }
+    pub fn pending_text(&self) -> usize {
+        self.line.len()
     }
     fn erase_character(&mut self) {
         while let Some(byte) = self.line.pop() {
@@ -129,7 +284,10 @@ impl Decoder {
                 let line = std::mem::take(&mut self.line);
                 out.push(match String::from_utf8(line) {
                     Ok(s) => Input::Line(s),
-                    Err(_) => Input::InvalidUtf8,
+                    Err(e) => {
+                        self.discarded += e.as_bytes().len() as u64;
+                        Input::InvalidUtf8
+                    }
                 });
                 self.after_cr = b == b'\r';
             }
@@ -140,6 +298,8 @@ impl Decoder {
             _ => {
                 self.line.push(b);
                 if self.line.len() > self.input_line_limit {
+                    self.discarded += self.line.len() as u64;
+                    self.line.clear();
                     bail!("input line exceeds {} bytes", self.input_line_limit);
                 }
             }
@@ -148,31 +308,81 @@ impl Decoder {
     }
     fn sub(&mut self, option: u8, p: &[u8], out: &mut Vec<Input>) {
         match option {
-            31 if p.len() == 4 => {
+            NEW_ENVIRON if self.option_state(NEW_ENVIRON, Side::Remote).enabled() => {
+                if let Err(e) = self.environment.update(p) {
+                    out.push(Input::Diagnostic(format!("NEW-ENVIRON: {e}")));
+                }
+            }
+            GMCP if self.option_state(GMCP, Side::Local).enabled()
+                && (p == b"Core.Ping" || p.starts_with(b"Core.Ping ")) =>
+            {
+                out.push(Self::sub_reply(GMCP, b"Core.Ping"))
+            }
+            NAWS if self.option_state(NAWS, Side::Remote).enabled() && p.len() == 4 => {
                 self.width = u16::from_be_bytes([p[0], p[1]]);
                 self.height = u16::from_be_bytes([p[2], p[3]]);
             }
-            24 if p.first() == Some(&0) => {
-                self.terminal = String::from_utf8_lossy(&p[1..]).into_owned();
-                self.ansi = !self.terminal.eq_ignore_ascii_case("DUMB");
-                if let Some(bits) = self
-                    .terminal
-                    .strip_prefix("MTTS ")
-                    .and_then(|s| s.parse::<u32>().ok())
-                {
-                    self.ansi = bits & 64 == 0 && bits & 1 != 0;
+            TTYPE if self.option_state(TTYPE, Side::Remote).enabled() && p.first() == Some(&0) => {
+                let name = String::from_utf8_lossy(&p[1..]).into_owned();
+                let bits = name
+                    .get(..5)
+                    .filter(|prefix| prefix.eq_ignore_ascii_case("MTTS "))
+                    .and_then(|_| name[5..].parse::<u32>().ok());
+                if let Some(bits) = bits {
+                    self.screen_reader = bits & 64 != 0;
+                    self.color_depth = if bits & 256 != 0 {
+                        24
+                    } else if bits & 8 != 0 {
+                        256
+                    } else if bits & 1 != 0 {
+                        16
+                    } else {
+                        0
+                    };
+                } else {
+                    if self.ttype_responses == 0 {
+                        self.client = name.clone();
+                    }
+                    self.terminal = name;
+                    let upper = self.terminal.to_ascii_uppercase();
+                    self.color_depth = if upper.contains("TRUECOLOR") {
+                        24
+                    } else if upper.contains("256COLOR") || upper == "XTERM" {
+                        256
+                    } else if upper == "DUMB" {
+                        0
+                    } else {
+                        16
+                    };
+                }
+                self.ansi = self.color_depth != 0 && !self.screen_reader;
+                // C handler counts responses across the connection, including re-negotiations.
+                self.ttype_responses = self.ttype_responses.saturating_add(1);
+                if self.ttype_responses < 3 {
+                    out.push(Self::sub_reply(TTYPE, &[1]));
                 }
             }
-            42 if p.first() == Some(&1) && p.len() > 2 => {
-                let accepted = p[2..]
-                    .split(|b| *b == p[1])
-                    .any(|s| s.eq_ignore_ascii_case(b"UTF-8"));
-                let mut reply = vec![IAC, 250, 42, if accepted { 2 } else { 3 }];
-                if accepted {
-                    reply.extend(b"UTF-8");
+            CHARSET if self.option_state(CHARSET, Side::Local).enabled() && !p.is_empty() => {
+                match p[0] {
+                    2 => {
+                        self.charset_pending = false;
+                        self.charset_utf8 = p[1..].eq_ignore_ascii_case(b"UTF-8");
+                    }
+                    3 => self.charset_pending = false,
+                    1 if p.len() > 2 && !self.charset_pending => {
+                        let accepted = p[2..]
+                            .split(|b| *b == p[1])
+                            .any(|s| s.eq_ignore_ascii_case(b"UTF-8"));
+                        if accepted {
+                            self.charset_utf8 = true;
+                        }
+                        out.push(Self::sub_reply(
+                            CHARSET,
+                            if accepted { b"\x02UTF-8" } else { b"\x03" },
+                        ));
+                    }
+                    _ => out.push(Self::sub_reply(CHARSET, &[3])),
                 }
-                reply.extend([IAC, 240]);
-                out.push(Input::Reply(reply));
             }
             _ => {}
         }

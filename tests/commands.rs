@@ -62,6 +62,8 @@ async fn native_catalog_permissions_and_aliases() {
         [
             "look",
             "say",
+            "@session",
+            "@telnet",
             "@shutdown",
             "@dbck",
             "quit",

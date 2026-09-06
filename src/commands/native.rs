@@ -265,3 +265,12 @@ pub(super) fn dbck(_: &CommandContext<'_>, input: &CommandInput) -> Result<Actio
         Action::Reply("Usage: @dbck".into())
     })
 }
+
+/// Inspect live sessions without entering the world transaction path.
+pub(super) fn sessions(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    Ok(Action::Sessions(input.args.clone()))
+}
+/// Inspect negotiated options for every session belonging to a player.
+pub(super) fn telnet(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    Ok(Action::Telnet(input.args.clone()))
+}
