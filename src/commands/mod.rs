@@ -1,7 +1,7 @@
 //! Registry-driven commands with transactional native/Lua handlers and exit fallback.
 mod native;
 mod registry;
-mod target;
+pub(crate) mod target;
 use crate::{
     config::Config,
     lua::Scripts,
@@ -58,6 +58,9 @@ impl CommandContext<'_> {
 }
 /// Resolve the registry first, then Lua scopes and exit-name matching.
 pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, line: &str) -> Result<Action> {
+    if let Some(action) = crate::communication::alias(s, c, player, line)? {
+        return Ok(action);
+    }
     let input = CommandInput::parse(c, line);
     let ctx = CommandContext {
         scripts: s,

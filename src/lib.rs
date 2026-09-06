@@ -21,3 +21,6 @@ pub mod dbck;
 
 /// Startup-indexed Markdown help.
 pub mod help;
+
+/// Channels, communication policy and online paging.
+pub mod communication;

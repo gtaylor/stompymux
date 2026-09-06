@@ -1,4 +1,5 @@
 //! Direct asynchronous schema-32 persistence with selective, atomic updates.
+mod communication;
 mod load;
 mod maintenance;
 mod write;
@@ -194,8 +195,8 @@ where
         let changes_before: i64 = sqlx::query_scalar("SELECT total_changes()")
             .fetch_one(&mut *tx)
             .await?;
-        maintenance::cleanup(&mut tx, &report.plan.purges).await?;
         write::apply_changes(&mut tx, &before, &after, Some(&report.plan)).await?;
+        maintenance::cleanup(&mut tx, &report.plan.purges).await?;
         ensure!(
             sqlx::query("PRAGMA foreign_key_check")
                 .fetch_all(&mut *tx)

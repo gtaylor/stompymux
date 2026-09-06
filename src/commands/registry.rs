@@ -238,6 +238,14 @@ impl CommandRegistry {
     pub fn new() -> Self {
         use CommandPermissions as P;
         let definitions = vec![
+            CommandDefinition::native("addcom", P::EVERYONE, crate::communication::addcom),
+            CommandDefinition::native("delcom", P::EVERYONE, crate::communication::delcom),
+            CommandDefinition::native("clearcom", P::EVERYONE, crate::communication::clearcom),
+            CommandDefinition::native("comlist", P::EVERYONE, crate::communication::comlist),
+            CommandDefinition::native("allcom", P::EVERYONE, crate::communication::allcom),
+            CommandDefinition::native("page", P::EVERYONE, crate::communication::page),
+            CommandDefinition::native("@chan", P::WIZARD, crate::communication::admin)
+                .policy(SwitchPolicy::Handler, true),
             CommandDefinition::native("look", P::EVERYONE, native::look).matching(&["l"], None),
             CommandDefinition::native("say", P::EVERYONE, native::say).matching(&[], Some('"')),
             CommandDefinition::native("@session", P::WIZARD, native::sessions)

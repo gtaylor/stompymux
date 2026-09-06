@@ -311,7 +311,13 @@ pub fn plan(before: &World, raw: &Links, c: &Config) -> Result<(World, DbCheckRe
         w.accounts.remove(id);
         report.findings.push(format!("Purged #{}", id.0));
     }
+    w.channel_aliases.retain(|id, _| live.contains(id));
+    w.last_pages.retain(|id, _| live.contains(id));
+    for recipients in w.last_pages.values_mut() {
+        recipients.retain(|id| live.contains(id));
+    }
     for ch in w.channels.values_mut() {
+        ch.users.retain(|u| live.contains(&u.who));
         if ch.object.is_some_and(|id| !live.contains(&id)) {
             ch.object = None;
         }

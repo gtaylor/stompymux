@@ -88,7 +88,7 @@ fn display_name(object: &Object, palette: &text::Palette) -> String {
         .collect()
 }
 /// Format the stable dbref/type/flag portion using the shared catalog order.
-fn suffix(object: &Object) -> String {
+pub(crate) fn suffix(object: &Object) -> String {
     let mut letters = match object.kind {
         Kind::Room => "R",
         Kind::Player => "P",

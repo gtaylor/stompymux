@@ -81,7 +81,7 @@ mux.world = {
     types = {ROOM = 0, THING = 1, EXIT = 2, PLAYER = 3},
     flags = native.flags,
     powers = native.powers,
-    locks = {TRAVERSE = 'traverse', TELEPORT = 'teleport', TELEPORT_OUT = 'teleport_out'},
+    locks = {TRAVERSE = 'traverse', TELEPORT = 'teleport', TELEPORT_OUT = 'teleport_out', CHANNEL_JOIN = 'channel_join', CHANNEL_TRANSMIT = 'channel_transmit', CHANNEL_RECEIVE = 'channel_receive'},
     object = object,
 }
 

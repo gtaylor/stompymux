@@ -171,13 +171,15 @@ pub(super) async fn read(c: &mut SqliteConnection) -> Result<World> {
         w.channels.insert(
             name.clone(),
             Channel {
-                name,
+                name: name.clone(),
                 object: id(r.try_get("chan_obj")?),
-                flags: r.try_get("type")?,
+                flags: crate::communication::ChannelFlags(r.try_get("type")?),
                 messages: r.try_get("num_messages")?,
+                ..Channel::new(name)
             },
         );
     }
+    super::communication::load(c, &mut w).await?;
     w.next_id = w
         .next_id
         .max(w.objects.keys().next_back().map_or(0, |id| id.0 + 1));

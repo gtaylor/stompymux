@@ -88,13 +88,7 @@ pub struct Login {
     pub at: i64,
     pub host: String,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Channel {
-    pub name: String,
-    pub object: Option<ObjectId>,
-    pub flags: i64,
-    pub messages: i64,
-}
+pub use crate::communication::Channel;
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct World {
     /// Runtime-only palette, excluded from all storage formats.
@@ -103,6 +97,8 @@ pub struct World {
     pub objects: BTreeMap<ObjectId, Object>,
     pub accounts: BTreeMap<ObjectId, Account>,
     pub channels: BTreeMap<String, Channel>,
+    pub channel_aliases: BTreeMap<ObjectId, Vec<crate::communication::ChannelAlias>>,
+    pub last_pages: BTreeMap<ObjectId, Vec<ObjectId>>,
     pub next_id: i64,
     pub record_players: usize,
     pub initialized: bool,
@@ -282,7 +278,35 @@ impl World {
                 );
             }
         }
+        let mut channel_names = BTreeSet::new();
         for channel in self.channels.values() {
+            ensure!(
+                channel_names.insert(channel.name.to_ascii_lowercase()),
+                "duplicate channel {}",
+                channel.name
+            );
+            ensure!(
+                channel.messages >= 0,
+                "channel {} has a negative message count",
+                channel.name
+            );
+            let mut members = BTreeSet::new();
+            for member in &channel.users {
+                ensure!(
+                    members.insert(member.who),
+                    "channel {} has duplicate member #{}",
+                    channel.name,
+                    member.who.0
+                );
+                ensure!(
+                    self.objects
+                        .get(&member.who)
+                        .is_some_and(|o| o.kind != Kind::Garbage),
+                    "channel {} has invalid member #{}",
+                    channel.name,
+                    member.who.0
+                );
+            }
             if let Some(id) = channel.object {
                 ensure!(
                     self.objects
@@ -291,6 +315,38 @@ impl World {
                     "channel {} references invalid #{}",
                     channel.name,
                     id.0
+                );
+            }
+        }
+        for (who, aliases) in &self.channel_aliases {
+            ensure!(
+                self.objects
+                    .get(who)
+                    .is_some_and(|o| o.kind != Kind::Garbage),
+                "channel aliases have invalid owner #{}",
+                who.0
+            );
+            let mut names = BTreeSet::new();
+            for alias in aliases {
+                ensure!(
+                    names.insert(alias.alias.to_ascii_lowercase()),
+                    "duplicate channel alias {} for #{}",
+                    alias.alias,
+                    who.0
+                );
+            }
+        }
+        for (who, recipients) in &self.last_pages {
+            ensure!(
+                self.accounts.contains_key(who),
+                "last-page owner #{} is not a player",
+                who.0
+            );
+            for recipient in recipients {
+                ensure!(
+                    self.accounts.contains_key(recipient),
+                    "last-page recipient #{} is not a player",
+                    recipient.0
                 );
             }
         }

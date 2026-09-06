@@ -6,7 +6,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// SQL values for explicitly owned columns; unknown columns never enter a write set.
 #[derive(Clone, Debug, PartialEq)]
-enum Cell {
+pub(super) enum Cell {
     Null,
     Integer(i64),
     Number(f64),
@@ -36,9 +36,9 @@ impl Cell {
     }
 }
 /// Known column/value projection of a row.
-type Fields = BTreeMap<String, Cell>;
+pub(super) type Fields = BTreeMap<String, Cell>;
 /// Convert fixed, code-owned column names into a field map.
-fn fields(items: impl IntoIterator<Item = (&'static str, Cell)>) -> Fields {
+pub(super) fn fields(items: impl IntoIterator<Item = (&'static str, Cell)>) -> Fields {
     items
         .into_iter()
         .map(|(key, value)| (key.into(), value))
@@ -67,7 +67,7 @@ fn predicate(q: &mut QueryBuilder<Sqlite>, key: &Fields) {
     }
 }
 /// Insert new rows or update only changed supported fields. Never use REPLACE.
-async fn row(
+pub(super) async fn row(
     c: &mut SqliteConnection,
     table: &str,
     key: Fields,
@@ -124,7 +124,7 @@ async fn row(
     Ok(true)
 }
 /// Delete a specifically removed owned key, never an entire table or object.
-async fn delete(c: &mut SqliteConnection, table: &str, key: Fields) -> Result<()> {
+pub(super) async fn delete(c: &mut SqliteConnection, table: &str, key: Fields) -> Result<()> {
     let mut query = QueryBuilder::new(format!("DELETE FROM {table} WHERE "));
     predicate(&mut query, &key);
     query
@@ -359,13 +359,6 @@ pub(super) async fn apply_changes(
                 || maintenance.is_some_and(|plan| plan.purges.contains(k))),
         "account deletion is not supported"
     );
-    ensure!(
-        before
-            .channels
-            .keys()
-            .all(|k| after.channels.contains_key(k)),
-        "channel deletion is not supported"
-    );
     for o in after.objects.values() {
         let chain = after.containment_chain(o.location)?;
         ensure!(!chain.contains(&o.id), "containment cycle at #{}", o.id.0);
@@ -475,7 +468,7 @@ pub(super) async fn apply_changes(
     for (name, ch) in &after.channels {
         let channel = |ch: &Channel| {
             fields([
-                ("type", Cell::Integer(ch.flags)),
+                ("type", Cell::Integer(ch.flags.0)),
                 ("num_messages", Cell::Integer(ch.messages)),
                 ("chan_obj", reference(ch.object)),
             ])
@@ -490,6 +483,7 @@ pub(super) async fn apply_changes(
         )
         .await?;
     }
+    changed |= super::communication::save(c, before, after).await?;
     let next = after
         .next_id
         .max(before.next_id)

@@ -40,7 +40,7 @@ tables. SQLx updates only changed supported columns in a single transaction;
 existing rows are never replaced. Failed writes restore the in-memory world and
 discard pending success output.
 
-Unknown columns, deferred BattleTech/channel/macros/page-recipient data, indexes
+Unknown columns, deferred BattleTech and communication-macro data, indexes
 and triggers remain in place. Unchanged Lua values retain their original SQLite
 storage types, including UTF-8 blobs. Explicit state-key removals and expired
 login-history entries remove only those owned rows. Unsupported required columns
@@ -528,3 +528,48 @@ require the source tree at runtime. Editable object/global scripts and helper
 packages such as `access_policy` and `object_appearances` remain in the configured
 game Lua directory. Dotted helper imports still resolve through
 `packages/?.lua`, independently of the built-in source layout.
+
+
+## Channels and paging
+
+The shared `communication` service owns channel memberships, per-player aliases,
+listening preferences, twenty-message histories and last-page recipients.
+`addcom`, `delcom`, `clearcom`, `comlist`, `allcom`, channel aliases and `page`
+are available to players; `@chan` administration requires Wizard access.
+See `help channels`, `help page` and `help @chan` for syntax.
+
+Channel aliases match case-insensitively before the native/Lua command registry.
+Configured aliases still select registered communication commands normally.
+Channel speech strips styling from message bodies; administrative emits retain
+styled markup. All output uses the existing session rendering, Telnet encoding,
+bounded queues and MCCP2 writer. Active recipients come from authenticated
+sessions, so multiple sessions receive the same player-directed message without
+duplicating channel history or first/final connection announcements.
+
+Storage directly owns `comsys_channels`, `comsys_channel_users`,
+`comsys_channel_messages`, `commac_aliases` and `player_last_page_recipients`.
+Updates preserve unknown columns on retained rows and untouched position lists.
+Channel deletion removes related aliases, members and history. `commac_entries`
+is initialized only when needed; existing macro slots remain unchanged. Unknown
+foreign-key dependencies block destruction instead of being guessed. No schema
+migration or reinterpretation of stored channel bits occurs: PUBLIC is `0x200`,
+LOUD `0x100`, TRANSPARENT `0x400`, and a new channel starts with mask `127`.
+
+Lua exposes `mux.comsys.channel(name)`, `create_channel(name)`,
+`destroy_channel(channel)` and `list_channels()`. Channel handles provide
+`name`, `object`, `set_object`, `user_count`, `max_user_count`, `message_count`,
+`emit(message, {no_header=true})`, `who({all=true})`,
+`add_player(player, alias, quiet)` and `boot_player(object)`.
+`channel:flags()` supports `list`, `has`, `add` and `remove` with immutable
+`mux.comsys.flags.PUBLIC`, `.LOUD` and `.TRANSPARENT` constants. Mutators return
+whether the flag changed. Handles retain identity across transactions and reject
+use after destruction, including provisional channels removed by rollback.
+
+Attached objects supply `CHANNEL_JOIN`, `CHANNEL_TRANSMIT` and `CHANNEL_RECEIVE`
+locks. As in the C fork, a passing lock grants access independently of the
+player/object access bits. Failed lock callbacks roll back their mutations;
+explicit access bits still apply. Channel things receive `on_leave` callbacks.
+Native commands, Lua calls and lifecycle delivery share transaction-staged output.
+Pages are online-only, obey in-character/GAGGED restrictions with Wizard endpoint
+exceptions, and persist the ordered successful recipients for repeat paging.
+Communication macro expansion remains deferred; macro records are preserved.

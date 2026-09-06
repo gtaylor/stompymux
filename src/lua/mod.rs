@@ -47,3 +47,19 @@ pub struct Scripts {
 fn err(e: impl std::fmt::Display) -> mlua::Error {
     mlua::Error::RuntimeError(e.to_string())
 }
+
+impl Scripts {
+    /// Begin a native communication operation with one shared callback budget.
+    pub fn communication<'a>(
+        &'a self,
+        config: &'a crate::config::Config,
+    ) -> crate::communication::Service<'a> {
+        self.budget.reset();
+        crate::communication::Service {
+            world: &self.world,
+            outbox: &self.outbox,
+            config,
+            lua: &self.lua,
+        }
+    }
+}

@@ -38,7 +38,7 @@ pub(super) fn register_native(
         .map_err(|e| anyhow::anyhow!(e.to_string()))?;
     world::register(lua, &api, config, world, outbox, palette)?;
     config::register(lua, &api, config)?;
-    comsys::register(lua, &api, world)?;
+    comsys::register(lua, &api, config, world, outbox)?;
     text::register(lua, &api, config, palette)?;
     Ok(api)
 }

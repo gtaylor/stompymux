@@ -2,7 +2,7 @@
 use crate::world::{Kind, ObjectId};
 use anyhow::{Context, Result};
 /// Resolve explicit identities and exact visible local names without guessing.
-pub(super) fn admin_target(
+pub(crate) fn admin_target(
     w: &crate::world::World,
     player: ObjectId,
     name: &str,

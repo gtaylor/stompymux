@@ -2191,6 +2191,42 @@ async fn tcp_mccp2_stream_and_shutdown() {
     assert!(plain.windows(3).any(|v| v == [255, 252, 86]));
     assert!(plain.windows(9).any(|v| v == b"Core.Ping"));
     assert!(!plain.windows(5).any(|v| v == [255, 250, 86, 255, 240]));
+    // Complete registration, then verify communication output within the same zlib stream.
+    for (input, needle) in [
+        (b"y\r\nsecret\r\nsecret\r\n".as_slice(), "Starter Room"),
+        (
+            b"pub CompressedChannel\r\npage Nobody=CompressedPage\r\n".as_slice(),
+            "You paged Nobody",
+        ),
+    ] {
+        socket.write_all(input).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(10), async {
+            while !String::from_utf8_lossy(&plain).contains(needle) {
+                if offset == compressed.len() {
+                    let mut input = [0; 4096];
+                    let count = socket.read(&mut input).await.unwrap();
+                    assert!(count > 0);
+                    compressed.extend_from_slice(&input[..count]);
+                }
+                let mut output = [0; 4096];
+                let before = (inflater.total_in(), inflater.total_out());
+                inflater
+                    .decompress(
+                        &compressed[offset..],
+                        &mut output,
+                        flate2::FlushDecompress::Sync,
+                    )
+                    .unwrap();
+                offset += (inflater.total_in() - before.0) as usize;
+                plain.extend_from_slice(&output[..(inflater.total_out() - before.1) as usize]);
+            }
+        })
+        .await
+        .unwrap();
+    }
+    let rendered = String::from_utf8_lossy(&plain);
+    assert!(rendered.contains("[Public] Nobody: CompressedChannel"));
+    assert!(rendered.contains("Nobody pages: CompressedPage"));
     Command::new("kill")
         .args(["-TERM", &running.child.id().unwrap().to_string()])
         .status()
@@ -2436,4 +2472,105 @@ async fn tcp_help_reload_navigation_and_compressed_chunks() {
     }
     assert_eq!(db, std::fs::read(c.database()).unwrap());
     running.stop().await;
+}
+
+/// Channel and page delivery is player-scoped, transactional and durable across TCP reconnects.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_comsys_pages_sessions_and_write_rollback() {
+    let (d, c) = populated().await;
+    std::fs::write(d.path().join("lua/global_logic/failing_comsys.lua"), r#"return {commands={{name='failcom',permission='everyone',pattern='^failcom$',handler=function(ctx) mux.comsys.channel('Public'):emit('Lua must never arrive'); error('comsys failure') end}}}"#).unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(2)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
+    persistence::save(&c.database(), &w).await.unwrap();
+    let running = Running::start(&c).await;
+    let mut wizard = Client::connect(&running).await;
+    wizard.login("#2").await;
+    wizard.send("@chan/flags Public=loud").await;
+    wizard.until("Set.").await;
+    let mut alice = Client::connect(&running).await;
+    alice.register("ComAlice").await;
+    let mut bob = Client::connect(&running).await;
+    bob.register("ComBob").await;
+    alice.send("pub hello channel").await;
+    alice.until("ComAlice: hello channel").await;
+    bob.until("ComAlice: hello channel").await;
+    let mut second = Client::connect(&running).await;
+    second.login("ComAlice").await;
+    bob.send("pub both sessions").await;
+    alice.until("ComBob: both sessions").await;
+    second.until("ComBob: both sessions").await;
+    bob.until("ComBob: both sessions").await;
+    alice.send("failcom").await;
+    alice.until("That command could not be completed.").await;
+    bob.send("page ComAlice=private hello").await;
+    alice.until("ComBob pages: private hello").await;
+    second.until("ComBob pages: private hello").await;
+    bob.until("You paged ComAlice").await;
+    let before = persistence::load(&c.database()).await.unwrap();
+    second.send("quit").await;
+    second.until("Goodbye").await;
+    alice.send("pub still here").await;
+    alice.until("ComAlice: still here").await;
+    bob.until("ComAlice: still here").await;
+    let after = persistence::load(&c.database()).await.unwrap();
+    assert_eq!(
+        after.channels["Public"].messages,
+        before.channels["Public"].messages + 1
+    );
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("CREATE TRIGGER reject_channel BEFORE UPDATE ON comsys_channels BEGIN SELECT RAISE(FAIL,'channel write blocked'); END").execute(&mut db).await.unwrap();
+    alice.send("pub must never arrive").await;
+    alice.until("Unable to save your changes").await;
+    // Read-only channel inspection still works while durable channel writes are forbidden.
+    alice.send("comlist").await;
+    alice.until("-- End of comlist --").await;
+    bob.send("pub last").await;
+    let history = bob.until("ComAlice has connected.").await;
+    assert!(!history.contains("must never arrive"));
+    assert_eq!(
+        persistence::load(&c.database()).await.unwrap().channels["Public"].messages,
+        after.channels["Public"].messages
+    );
+    sqlx::raw_sql("DROP TRIGGER reject_channel")
+        .execute(&mut db)
+        .await
+        .unwrap();
+    drop(alice);
+    bob.until("ComAlice has disconnected.").await;
+    wizard.send("@shutdown").await;
+    assert!(
+        tokio::time::timeout(Duration::from_secs(10), async {
+            running
+                .child
+                .wait_with_output()
+                .await
+                .unwrap()
+                .status
+                .success()
+        })
+        .await
+        .unwrap()
+    );
+    let w = persistence::load(&c.database()).await.unwrap();
+    let bob_id = w.find_player("ComBob").unwrap();
+    assert_eq!(
+        w.last_pages[&bob_id],
+        vec![w.find_player("ComAlice").unwrap()]
+    );
+    sqlx::Connection::close(db).await.unwrap();
+    let restarted = Running::start(&c).await;
+    let mut bob = Client::connect(&restarted).await;
+    bob.login("ComBob").await;
+    bob.send("page").await;
+    bob.until("You last paged ComAlice.").await;
+    bob.send("pub last").await;
+    bob.until("ComAlice: still here").await;
+    restarted.stop().await;
 }

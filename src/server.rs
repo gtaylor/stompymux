@@ -658,11 +658,11 @@ impl Server {
     fn snapshots(&self) -> Result<()> {
         let w = self.scripts.world.borrow();
         let mut hidden = 0;
-        let list:Vec<_>=self.sessions.values().filter_map(|session| {
+        let list:Vec<_>=self.sessions.iter().filter_map(|(session_id,session)| {
             let id=session.player?;
             let object=&w.objects[&id];
             if object.flags.contains(crate::flags::Flag::Dark) { hidden+=1; return None; }
-            Some(serde_json::json!({"name":object.name,"dbref":id.0,"connected_for":session.connected.elapsed().as_secs(),"idle_for":session.active.elapsed().as_secs()}))
+            Some(serde_json::json!({"name":object.name,"dbref":id.0,"session":session_id.0,"terminal_width":session.decoder.width,"connected_for":session.connected.elapsed().as_secs(),"idle_for":session.active.elapsed().as_secs()}))
         }).collect();
         self.scripts
             .lua
@@ -756,7 +756,12 @@ impl Server {
                 self.reconcile_connections();
                 if let Err(e) = self
                     .scripts
-                    .event("on_player_disconnect", Some(p), Some(id.0))
+                    .communication(&self.config)
+                    .presence(p, false, None)
+                    .and_then(|()| {
+                        self.scripts
+                            .event("on_player_disconnect", Some(p), Some(id.0))
+                    })
                 {
                     eprintln!("Disconnect hook: {e:#}");
                     *self.scripts.world.borrow_mut() = before.clone();
@@ -1376,6 +1381,24 @@ impl Server {
         } else {
             existing.context("authenticated player disappeared")?
         };
+        if create && !self.config.mux.public_channel.is_empty() {
+            let service = self.scripts.communication(&self.config);
+            if service.name(&self.config.mux.public_channel).is_ok()
+                && let Err(error) =
+                    service.add(p, &self.config.mux.public_channel, "pub", true, true)
+            {
+                *self.scripts.world.borrow_mut() = before;
+                self.scripts.outbox.borrow_mut().clear();
+                eprintln!("Registration channel: {error:#}");
+                self.prompt(
+                    id,
+                    LoginFlow::Name,
+                    "Unable to register.\r\nWho are you? ",
+                    false,
+                );
+                return Ok(());
+            }
+        }
         {
             let mut w = self.scripts.world.borrow_mut();
             let a = w.accounts.get_mut(&p).unwrap();
@@ -1385,7 +1408,7 @@ impl Server {
             a.history.push(Login {
                 success: true,
                 at: accounts::now(),
-                host,
+                host: host.clone(),
             });
             persistence::trim_history(&mut a.history, self.config.security.login_history_limit);
         }
@@ -1415,10 +1438,17 @@ impl Server {
             w.record_players = w.record_players.max(count);
         }
         self.snapshots()?;
-        if let Err(e) =
+        let presence = if reconnect {
+            Ok(())
+        } else {
+            self.scripts
+                .communication(&self.config)
+                .presence(p, true, Some(&host))
+        };
+        if let Err(e) = presence.and_then(|()| {
             self.scripts
                 .lifecycle("on_player_connect", Some(p), Some(id.0), reconnect, "")
-        {
+        }) {
             eprintln!("Connect hook: {e:#}");
             *self.scripts.world.borrow_mut() = before.clone();
             self.reconcile_connections();

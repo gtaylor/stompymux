@@ -60,6 +60,13 @@ async fn native_catalog_permissions_and_aliases() {
             .map(|d| d.name.as_str())
             .collect::<Vec<_>>(),
         [
+            "addcom",
+            "delcom",
+            "clearcom",
+            "comlist",
+            "allcom",
+            "page",
+            "@chan",
             "look",
             "say",
             "@session",
@@ -82,7 +89,12 @@ async fn native_catalog_permissions_and_aliases() {
     for d in &definitions {
         assert_eq!(
             d.permission,
-            if ["look", "say", "quit", "color", "help"].contains(&d.name.as_str()) {
+            if [
+                "look", "say", "quit", "color", "help", "addcom", "delcom", "clearcom", "comlist",
+                "allcom", "page"
+            ]
+            .contains(&d.name.as_str())
+            {
                 P::EVERYONE
             } else {
                 P::WIZARD

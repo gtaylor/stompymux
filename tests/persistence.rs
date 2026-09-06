@@ -270,8 +270,9 @@ async fn history_capacity_order_and_extra_required_columns() {
         Channel {
             name: "new".into(),
             object: None,
-            flags: 0,
+            flags: stompymux_rs::communication::ChannelFlags(0),
             messages: 0,
+            ..Channel::new("new".into())
         },
     );
     let before = std::fs::read(&path).unwrap();
