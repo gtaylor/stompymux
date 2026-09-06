@@ -11,40 +11,8 @@ pub enum ErrorReporting {
     All,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-/// Known object flags accepted by configuration.
-pub enum Flag {
-    Ansi,
-    Audible,
-    Auditorium,
-    Blind,
-    Connected,
-    Dark,
-    Floating,
-    Gagged,
-    Going,
-    Halted,
-    InCharacter,
-    Light,
-    Monitor,
-    NoCommand,
-    Safe,
-    Suspect,
-    Transparent,
-    Wizard,
-    Zombie,
-}
-impl Flag {
-    /// Return the canonical spelling used by world objects.
-    pub fn world_name(&self) -> String {
-        serde_json::to_value(self)
-            .expect("flag serialization")
-            .as_str()
-            .unwrap()
-            .to_ascii_uppercase()
-    }
-}
+pub use crate::flags::Flag;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 /// Legacy log decoration flags retained for compatibility.

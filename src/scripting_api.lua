@@ -16,8 +16,8 @@ function methods:contents(opts)
 end
 function methods:flags()
  local n=self._id
- return {has=function(_,flag) for _,f in ipairs(native.get(n,'flags')) do if flag==f then return true end end return false end,
- add=function(_,flag) native.flag(n,flag,true) end,remove=function(_,flag) native.flag(n,flag,false) end}
+ return {has=function(_,flag) return native.has_flag(n,flag) end,
+ add=function(_,flag) return native.flag(n,flag,true) end,remove=function(_,flag) return native.flag(n,flag,false) end}
 end
 function methods:state(ns)
  local n=self._id
@@ -25,9 +25,7 @@ function methods:state(ns)
  get=function(_,key,default) for _,e in ipairs(native.entries(n,ns)) do if e.key==key then return e.value end end return default end,
  set=function(_,key,v) native.state_set(n,ns,key,v) end}
 end
-local flags={}
-for _,name in ipairs({'ANSI','AUDIBLE','AUDITORIUM','BLIND','CONNECTED','DARK','FLOATING','GAGGED','GOING','HALTED','IN_CHARACTER','LIGHT','MONITOR','NO_COMMAND','SAFE','SUSPECT','TRANSPARENT','WIZARD','ZOMBIE'}) do flags[name]=name end
-setmetatable(flags,{__index=function(_,k) error('Unsupported flag '..tostring(k)) end})
+local flags=native.flags
 mux={world={types={ROOM=0,THING=1,EXIT=2,PLAYER=3},flags=flags,locks={TRAVERSE='traverse'},object=object},session={},config={get=native.config},text={markup=native.markup,style=native.style,width=native.width,truncate=native.truncate,strip_style=native.strip},comsys={flags={PUBLIC=1}}}
 function mux.world.create_object(t)
  local copy={};for k,v in pairs(t) do copy[k]=id(v) end

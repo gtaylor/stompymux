@@ -179,7 +179,7 @@ fn copied_lua_renders_rooms_locks_and_commands() {
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
-        .remove("WIZARD");
+        .remove(stompymux_rs::flags::Flag::Wizard);
     assert!(!s.lock(ObjectId(2), ObjectId(13)).unwrap());
     assert!(s.dispatch(ObjectId(1), 1, "global-hello").unwrap());
     assert!(s.outbox.borrow()[0].1.contains("Hello, world"));
@@ -514,11 +514,13 @@ async fn connection_hooks_only_disconnect_last_session_and_shutdown_cleanly() {
     persistence::save(&c.database(), &w).unwrap();
     std::fs::write(d.path().join("lua/global_logic/session_test.lua"),r#"return {events={
  on_player_connect=function(ctx)
+  assert(mux.world.object(ctx.enactor):flags():has(mux.world.flags.CONNECTED))
   assert(ctx.scope=='global' and ctx.object==nil and ctx.cause==ctx.enactor)
   local s=mux.world.object(ctx.enactor):state('connections')
   s:set('connects',s:get('connects',0)+1);s:set('reconnect',ctx.reconnect)
  end,
  on_player_disconnect=function(ctx)
+  assert(not mux.world.object(ctx.enactor):flags():has(mux.world.flags.CONNECTED))
   assert(type(ctx.reason)=='string')
   local s=mux.world.object(ctx.enactor):state('connections');s:set('disconnects',s:get('disconnects',0)+1)
  end}}
@@ -621,4 +623,235 @@ async fn tcp_login_by_dbref_authenticates_existing_player() {
     assert_eq!(world.accounts.len(), 2);
     assert_eq!(world.objects.len(), 16);
     running.stop().await;
+}
+
+/// Typed flags preserve old snapshots while rejecting unknown flag identities.
+#[test]
+fn flag_catalog_storage_commands_and_lua_contract() {
+    use stompymux_rs::{
+        commands,
+        flags::{self, Flag},
+    };
+    let (_d, c) = imported();
+    let world = Rc::new(RefCell::new(persistence::load(&c.database()).unwrap()));
+    let s = Scripts::new(&c, world.clone()).unwrap();
+    assert_eq!(flags::ALL.len(), 19);
+    assert_eq!(
+        flags::ALL.iter().map(|f| f.letter()).collect::<String>(),
+        "Xab(cDFjGh#lMnsutWz"
+    );
+    for flag in flags::ALL {
+        assert_eq!(
+            Flag::parse(&flag.world_name().to_lowercase()).unwrap(),
+            flag
+        );
+        let code = format!(
+            "local f=mux.world.flags.{}; assert(tostring(f)=='{}'); assert(f==mux.world.flags.{})",
+            flag.world_name(),
+            flag.world_name(),
+            flag.world_name()
+        );
+        s.lua.load(code).exec().unwrap();
+    }
+    s.lua
+        .load(
+            r#"
+      local flags=mux.world.flags
+      local object=mux.world.object(4)
+      assert(not pcall(function() flags.ANSI=false end))
+      assert(not pcall(function() return flags.UNKNOWN end))
+      assert(not pcall(function() return flags.ansi end))
+      assert(not pcall(function() object:flags():add('DARK') end))
+      assert(not pcall(function() object:flags():has('DARK') end))
+      assert(not pcall(function() object:flags():add(flags.CONNECTED) end))
+      assert(not pcall(function() mux.world.object(1):flags():remove(flags.WIZARD) end))
+      assert(object:flags():add(flags.DARK)==true)
+      assert(object:flags():add(flags.DARK)==false)
+      assert(object:flags():remove(flags.DARK)==true)
+      assert(object:flags():remove(flags.DARK)==false)
+    "#,
+        )
+        .exec()
+        .unwrap();
+    for (input, expected) in [
+        ("@flag #4=DA", "DARK set."),
+        ("@flag #4=!DARK", "DARK cleared."),
+        ("@flag me=!wizard", "cannot make yourself mortal"),
+        ("@flag me=connected", "managed by player sessions"),
+        ("@list flags", "CONNECTED(c)"),
+        ("@ex me", "Flags:"),
+        ("@flag #4=not_a_flag", "don't understand"),
+        ("@flag #999=dark", "No such object"),
+    ] {
+        commands::run(&s, &c, ObjectId(1), 1, input).unwrap();
+        assert!(
+            s.outbox.borrow_mut().pop().unwrap().1.contains(expected),
+            "{input}"
+        );
+    }
+    {
+        let mut w = world.borrow_mut();
+        for _ in 0..2 {
+            let id = w.create(&c, "Twin".into(), stompymux_rs::world::Kind::Thing);
+            w.objects.get_mut(&id).unwrap().location = w.objects[&ObjectId(1)].location;
+        }
+        let exit = w.create(
+            &c,
+            "Test exit;shortcut".into(),
+            stompymux_rs::world::Kind::Exit,
+        );
+        w.objects.get_mut(&exit).unwrap().location = w.objects[&ObjectId(1)].location;
+    }
+    for (input, expected) in [
+        ("@flag Twin=dark", "which object"),
+        ("@flag shortcut=dark", "DARK set."),
+        ("@flag here=light", "LIGHT set."),
+    ] {
+        commands::run(&s, &c, ObjectId(1), 1, input).unwrap();
+        assert!(s.outbox.borrow_mut().pop().unwrap().1.contains(expected));
+    }
+    let player =
+        world
+            .borrow_mut()
+            .create(&c, "Ordinary".into(), stompymux_rs::world::Kind::Player);
+    commands::run(&s, &c, player, 1, "@flag me=dark").unwrap();
+    assert_eq!(s.outbox.borrow_mut().pop().unwrap().1, "Permission denied.");
+    assert!(!flags::controls(&world.borrow(), ObjectId(2), ObjectId(1)));
+    assert!(flags::controls(&world.borrow(), ObjectId(2), ObjectId(2)));
+    assert!(
+        flags::change(
+            &mut world.borrow_mut(),
+            ObjectId(2),
+            ObjectId(4),
+            Flag::Wizard,
+            true
+        )
+        .is_err()
+    );
+    flags::change(
+        &mut world.borrow_mut(),
+        ObjectId(1),
+        ObjectId(4),
+        Flag::Going,
+        true,
+    )
+    .unwrap();
+    assert!(
+        flags::change(
+            &mut world.borrow_mut(),
+            ObjectId(2),
+            ObjectId(4),
+            Flag::Going,
+            false
+        )
+        .unwrap()
+    );
+    assert!(
+        flags::change(
+            &mut world.borrow_mut(),
+            ObjectId(2),
+            ObjectId(4),
+            Flag::Going,
+            true
+        )
+        .is_err()
+    );
+    world
+        .borrow_mut()
+        .objects
+        .get_mut(&ObjectId(1))
+        .unwrap()
+        .flags
+        .insert(Flag::Connected);
+    persistence::save(&c.database(), &world.borrow()).unwrap();
+    let db = rusqlite::Connection::open(c.database()).unwrap();
+    let json: String = db
+        .query_row("SELECT document FROM world", [], |r| r.get(0))
+        .unwrap();
+    assert!(!json.contains("CONNECTED"));
+    let mut value: serde_json::Value = serde_json::from_str(&json).unwrap();
+    value["objects"]["1"]["flags"]
+        .as_array_mut()
+        .unwrap()
+        .push("CONNECTED".into());
+    db.execute("UPDATE world SET document=?1", [value.to_string()])
+        .unwrap();
+    assert!(
+        !persistence::load(&c.database()).unwrap().objects[&ObjectId(1)]
+            .flags
+            .contains(Flag::Connected)
+    );
+    value["objects"]["1"]["flags"]
+        .as_array_mut()
+        .unwrap()
+        .push("UNKNOWN".into());
+    db.execute("UPDATE world SET document=?1", [value.to_string()])
+        .unwrap();
+    let error = format!("{:#}", persistence::load(&c.database()).unwrap_err());
+    assert!(error.contains("#1") && error.contains("UNKNOWN"), "{error}");
+}
+
+/// Runtime flag state is observable over TCP, but never stored as durable truth.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_flags_follow_registration_and_multiple_sessions() {
+    let (_d, c) = imported();
+    let mut world = persistence::load(&c.database()).unwrap();
+    world.accounts.get_mut(&ObjectId(1)).unwrap().hash =
+        Some(accounts::hash("secret", &c).unwrap());
+    persistence::save(&c.database(), &world).unwrap();
+    let running = Running::start(&c).await;
+    let mut admin = Client::connect(&running).await;
+    admin.send("#1").await;
+    admin.until("Password: ").await;
+    admin.send("secret").await;
+    admin.until("Staff Nexus").await;
+    let mut first = Client::connect(&running).await;
+    first.register("FlagTester").await;
+    let id = persistence::load(&c.database())
+        .unwrap()
+        .find_player("FlagTester")
+        .unwrap();
+    admin.send(&format!("@examine #{}", id.0)).await;
+    admin.until("CONNECTED").await;
+    let mut second = Client::connect(&running).await;
+    second.login(&format!("#{}", id.0)).await;
+    first.send("quit").await;
+    drop(first);
+    admin.send(&format!("@flag #{}=DARK", id.0)).await;
+    admin.until("DARK set.").await;
+    admin.send(&format!("@examine #{}", id.0)).await;
+    admin.until("CONNECTED").await;
+    let db = rusqlite::Connection::open(c.database()).unwrap();
+    db.execute_batch("CREATE TRIGGER fail_flags BEFORE UPDATE ON world BEGIN SELECT RAISE(FAIL,'injected'); END;").unwrap();
+    admin.send(&format!("@flag #{}=!DARK", id.0)).await;
+    admin.until("Unable to save your changes").await;
+    admin.send(&format!("@examine #{}", id.0)).await;
+    admin.until("DARK").await;
+    db.execute_batch("DROP TRIGGER fail_flags").unwrap();
+    drop(second);
+    // Poll the observable condition, allowing the independent socket-close event to arrive.
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            admin.send(&format!("@examine #{}", id.0)).await;
+            let output = admin.until("IN_CHARACTER").await;
+            if !output.contains("CONNECTED") {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+    })
+    .await
+    .unwrap();
+    running.stop().await;
+    let loaded = persistence::load(&c.database()).unwrap();
+    assert!(
+        loaded.objects[&id]
+            .flags
+            .contains(stompymux_rs::flags::Flag::Dark)
+    );
+    assert!(
+        !loaded.objects[&id]
+            .flags
+            .contains(stompymux_rs::flags::Flag::Connected)
+    );
 }

@@ -28,9 +28,18 @@ pub fn load_with_timeout(path: &Path, busy_timeout_ms: u64) -> Result<World> {
         "unsupported Rust database version"
     );
     let json: String = c.query_row("SELECT document FROM world WHERE id=1", [], |r| r.get(0))?;
-    let mut w: World = serde_json::from_str(&json)?;
+    let value: serde_json::Value = serde_json::from_str(&json)?;
+    if let Some(objects) = value.get("objects").and_then(|v| v.as_object()) {
+        for (id, object) in objects {
+            if let Some(flags) = object.get("flags") {
+                serde_json::from_value::<crate::flags::FlagSet>(flags.clone())
+                    .with_context(|| format!("object #{id}: invalid stored flags"))?;
+            }
+        }
+    }
+    let mut w: World = serde_json::from_value(value)?;
     for o in w.objects.values_mut() {
-        o.flags.remove("CONNECTED");
+        o.flags.remove(crate::flags::Flag::Connected);
     }
     Ok(w)
 }
@@ -42,6 +51,11 @@ pub fn save(path: &Path, w: &World) -> Result<()> {
     )
 }
 pub fn save_with_timeout(path: &Path, w: &World, busy_timeout_ms: u64) -> Result<()> {
+    let mut durable = w.clone();
+    for o in durable.objects.values_mut() {
+        o.flags.remove(crate::flags::Flag::Connected);
+    }
+    let w = &durable;
     let mut c = Connection::open(path)?;
     c.busy_timeout(std::time::Duration::from_millis(busy_timeout_ms))?;
     let version: i64 = c.pragma_query_value(None, "user_version", |r| r.get(0))?;
@@ -113,7 +127,7 @@ pub fn read_legacy(source: &Path, cfg: &Config) -> Result<World> {
         let object_id = ObjectId(r.get("dbref")?);
         let kind = Kind::from_code(r.get("type")?)?;
         let link = id(r.get("link")?);
-        let mut flags = BTreeSet::new();
+        let mut flags = crate::flags::FlagSet::default();
         let mut powers = BTreeSet::new();
         for col in &columns {
             if r.get::<_, i64>(col.as_str()).unwrap_or(0) == 1 {
@@ -122,7 +136,10 @@ pub fn read_legacy(source: &Path, cfg: &Config) -> Result<World> {
                     .and_then(|s| s.strip_suffix("_flag"))
                     && s != "connected"
                 {
-                    flags.insert(s.to_uppercase());
+                    flags.insert(
+                        crate::flags::Flag::parse(s)
+                            .with_context(|| format!("object #{}", object_id.0))?,
+                    );
                 }
                 if let Some(s) = col
                     .strip_prefix("has_")

@@ -456,7 +456,7 @@ async fn configured_bootstrap_objects_and_credentials_path_are_used() {
     assert!(
         !scripts.world.borrow().objects[&stompymux_rs::world::ObjectId(2)]
             .flags
-            .contains("WIZARD")
+            .contains(stompymux_rs::flags::Flag::Wizard)
     );
     assert!(d.path().join("private/initial.txt").exists());
     assert!(!d.path().join("bootstrap-credentials.txt").exists());

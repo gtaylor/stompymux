@@ -1,3 +1,4 @@
+//! Independent MUX server components.
 pub mod accounts;
 pub mod commands;
 pub mod config;
@@ -8,3 +9,5 @@ pub mod sessions;
 pub mod telnet;
 pub mod text;
 pub mod world;
+
+pub mod flags;

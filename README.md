@@ -83,6 +83,36 @@ defaulting to `data/stompymux.db`. Update older configurations to declare both.
 No files are moved, migrated or automatically imported. The explicit
 `import-legacy --source` argument takes precedence over the archive setting.
 
+## Object flags
+
+Objects use the shared 19-flag MUX catalog. Wizards can inspect flags with
+`@list flags` and `@examine <target>` (including configured aliases such as
+`@ex`). This examination command currently shows identity, type and flags.
+Use `@flag <target>=DARK` to set a flag and `@flag <target>=!DARK` to clear it.
+Targets support `me`, `here`, dbrefs and exact visible nearby names or exit
+aliases. Ambiguous names are rejected. Flag names and configured aliases are
+case-insensitive; one flag is changed per command.
+
+GOD controls all live objects. Wizards control themselves and non-Wizard
+objects, but cannot edit another Wizard or grant Wizard status. Only GOD can
+change WIZARD, and cannot clear its own WIZARD flag. GOING follows the legacy
+special clearing policy; destruction itself remains deferred. Ordinary players
+cannot use these administrative commands. Successful durable changes are saved
+before acknowledgement.
+
+**CONNECTED is session-owned.** It becomes true after a successful login or
+registration and stays true until the last session disconnects. Lua lifecycle
+hooks observe the updated value. Callback errors and database failures cannot
+restore stale connection state. CONNECTED is excluded from saved snapshots and
+ignored in imported/default object flags; commands and Lua cannot override it.
+
+Lua uses immutable constants such as `mux.world.flags.DARK` and
+`object:flags():has/add/remove`. Mutation returns whether the flag changed;
+unknown names and raw strings are rejected. Trusted Lua retains GOD-level
+mutation authority, subject to GOD's WIZARD protection and session-owned
+CONNECTED. Flags for deferred systems remain available as data without enabling
+those systems.
+
 ## Implementation boundaries
 
 - Tokio handles sockets and timers. A single owner serializes world and Lua

@@ -162,19 +162,36 @@ impl Scripts {
                     .collect::<Vec<_>>(),
             )
         });
+        api.set(
+            "flags",
+            lua.create_userdata(crate::flags::LuaFlags)
+                .map_err(|e| anyhow::anyhow!(e.to_string()))?,
+        )
+        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         let w = world.clone();
-        bind!("flag", move |_, (id, flag, add): (i64, String, bool)| {
-            let mut w = w.borrow_mut();
-            let o = w
-                .objects
-                .get_mut(&ObjectId(id))
-                .ok_or_else(|| err("object missing"))?;
-            if add {
-                o.flags.insert(flag);
-            } else {
-                o.flags.remove(&flag);
+        bind!(
+            "has_flag",
+            move |_, (id, flag): (i64, mlua::AnyUserData)| {
+                let flag = *flag.borrow::<crate::flags::Flag>()?;
+                let world = w.borrow();
+                let o = world
+                    .objects
+                    .get(&ObjectId(id))
+                    .filter(|o| o.kind != Kind::Garbage)
+                    .ok_or_else(|| err("object does not exist"))?;
+                Ok(o.flags.contains(flag))
             }
-            Ok(())
+        );
+        let w = world.clone();
+        bind!("flag", move |_,
+                            (id, flag, add): (
+            i64,
+            mlua::AnyUserData,
+            bool
+        )| {
+            let flag = *flag.borrow::<crate::flags::Flag>()?;
+            crate::flags::change(&mut w.borrow_mut(), ObjectId(1), ObjectId(id), flag, add)
+                .map_err(err)
         });
         let w = world.clone();
         bind!("entries", move |lua, (id, ns): (i64, String)| {
@@ -557,7 +574,10 @@ impl Scripts {
             w.objects
                 .values()
                 .filter(|o| o.id == player || Some(o.id) == room || o.location == room)
-                .filter(|o| !o.flags.contains("NO_COMMAND") && !o.flags.contains("HALTED"))
+                .filter(|o| {
+                    !o.flags.contains(crate::flags::Flag::NoCommand)
+                        && !o.flags.contains(crate::flags::Flag::Halted)
+                })
                 .map(|o| o.id)
                 .collect()
         };

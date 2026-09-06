@@ -78,7 +78,7 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
                 object.location = Some(ObjectId(c.start()));
                 object.home = Some(ObjectId(c.home()));
                 if entry.wizard {
-                    object.flags.insert("WIZARD".into());
+                    object.flags.insert(crate::flags::Flag::Wizard);
                 }
             }
         }
@@ -290,7 +290,7 @@ impl Server {
             let ansi = session.player.is_none_or(|p| {
                 self.scripts.world.borrow().objects[&p]
                     .flags
-                    .contains("ANSI")
+                    .contains(crate::flags::Flag::Ansi)
             });
             if !session.text(s, ansi) {
                 session.close();
@@ -310,7 +310,7 @@ impl Server {
         let list:Vec<_>=self.sessions.values().filter_map(|session| {
             let id=session.player?;
             let object=&w.objects[&id];
-            if object.flags.contains("DARK") { hidden+=1; return None; }
+            if object.flags.contains(crate::flags::Flag::Dark) { hidden+=1; return None; }
             Some(serde_json::json!({"name":object.name,"dbref":id.0,"connected_for":session.connected.elapsed().as_secs(),"idle_for":session.active.elapsed().as_secs()}))
         }).collect();
         self.scripts
@@ -337,6 +337,18 @@ impl Server {
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         Ok(())
     }
+    /// Session state is authoritative even when durable world mutations roll back.
+    fn reconcile_connections(&self) {
+        let connected: std::collections::BTreeSet<_> =
+            self.sessions.values().filter_map(|s| s.player).collect();
+        for o in self.scripts.world.borrow_mut().objects.values_mut() {
+            if o.kind == Kind::Player && connected.contains(&o.id) {
+                o.flags.insert(crate::flags::Flag::Connected);
+            } else {
+                o.flags.remove(crate::flags::Flag::Connected);
+            }
+        }
+    }
     async fn commit(&mut self, before: World) -> bool {
         let after = self.scripts.world.borrow().clone();
         let result = match after.validate(&self.config) {
@@ -356,6 +368,7 @@ impl Server {
         if let Err(e) = result {
             eprintln!("Persistence failed: {e:#}");
             *self.scripts.world.borrow_mut() = before;
+            self.reconcile_connections();
             self.scripts.outbox.borrow_mut().clear();
             false
         } else {
@@ -375,27 +388,20 @@ impl Server {
     async fn disconnect(&mut self, id: SessionId) -> Result<()> {
         if let Some(s) = self.sessions.remove(&id) {
             s.close();
+            self.reconcile_connections();
             if let Some(p) = s.player {
                 if self.sessions.values().any(|s| s.player == Some(p)) {
                     return Ok(());
                 }
                 let before = self.scripts.world.borrow().clone();
-                if !self.sessions.values().any(|s| s.player == Some(p)) {
-                    self.scripts
-                        .world
-                        .borrow_mut()
-                        .objects
-                        .get_mut(&p)
-                        .unwrap()
-                        .flags
-                        .remove("CONNECTED");
-                }
+                self.reconcile_connections();
                 if let Err(e) = self
                     .scripts
                     .event("on_player_disconnect", Some(p), Some(id.0))
                 {
                     eprintln!("Disconnect hook: {e:#}");
                     *self.scripts.world.borrow_mut() = before.clone();
+                    self.reconcile_connections();
                     self.scripts.outbox.borrow_mut().clear();
                 }
                 self.commit(before).await;
@@ -478,6 +484,7 @@ impl Server {
             }
             Err(e) => {
                 *self.scripts.world.borrow_mut() = before;
+                self.reconcile_connections();
                 self.scripts.outbox.borrow_mut().clear();
                 eprintln!("Command callback failed: {e:#}");
                 if e.to_string().contains("Interactive Lua flows") {
@@ -489,7 +496,7 @@ impl Server {
                     let report = self.config.lua.error_reporting;
                     let wizard = self.scripts.world.borrow().objects[&p]
                         .flags
-                        .contains("WIZARD");
+                        .contains(crate::flags::Flag::Wizard);
                     if report == crate::config::ErrorReporting::All
                         || (report == crate::config::ErrorReporting::Wizards && wizard)
                     {
@@ -737,11 +744,6 @@ impl Server {
                 .len()
                 .saturating_sub(self.config.security.login_history_limit);
             a.history.drain(..excess);
-            w.objects
-                .get_mut(&p)
-                .unwrap()
-                .flags
-                .insert("CONNECTED".into());
         }
         if !self.commit(before).await {
             self.prompt(
@@ -757,6 +759,7 @@ impl Server {
         session.player = Some(p);
         session.connected = Instant::now();
         session.flow = LoginFlow::Name;
+        self.reconcile_connections();
         let before = self.scripts.world.borrow().clone();
         let count = self
             .sessions
@@ -774,6 +777,7 @@ impl Server {
         {
             eprintln!("Connect hook: {e:#}");
             *self.scripts.world.borrow_mut() = before.clone();
+            self.reconcile_connections();
             self.scripts.outbox.borrow_mut().clear();
         }
         self.commit(before).await;
@@ -826,5 +830,111 @@ mod tests {
                 .find_player("Disconnected")
                 .is_none()
         );
+    }
+    /// Failures cannot undo the final session detachment or its CONNECTED state.
+    #[tokio::test(flavor = "current_thread")]
+    async fn connection_state_survives_hook_and_persistence_rollback() {
+        fn copy(source: &std::path::Path, target: &std::path::Path) {
+            std::fs::create_dir_all(target).unwrap();
+            for entry in std::fs::read_dir(source).unwrap() {
+                let entry = entry.unwrap();
+                if entry.path().is_dir() {
+                    copy(&entry.path(), &target.join(entry.file_name()));
+                } else {
+                    std::fs::copy(entry.path(), target.join(entry.file_name())).unwrap();
+                }
+            }
+        }
+        for hook_failure in [false, true] {
+            let d = tempfile::tempdir().unwrap();
+            copy(
+                &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
+                d.path(),
+            );
+            std::fs::write(
+                d.path().join("lua/global_logic/failure_test.lua"),
+                format!(
+                    r#"return {{events={{on_player_disconnect=function(ctx)
+                local o=mux.world.object(ctx.enactor)
+                assert(not o:flags():has(mux.world.flags.CONNECTED))
+                o:state('failure'):set('changed',true)
+                {}
+            end}}}}"#,
+                    if hook_failure {
+                        "error('injected disconnect failure')"
+                    } else {
+                        ""
+                    }
+                ),
+            )
+            .unwrap();
+            let c = Config::load(d.path()).unwrap();
+            persistence::import(&c.legacy_database(), &c).unwrap();
+            let world = persistence::load(&c.database()).unwrap();
+            let scripts = Scripts::new(&c, Rc::new(RefCell::new(world))).unwrap();
+            let (events, _) = mpsc::channel(1);
+            let mut server = Server {
+                config: c,
+                scripts,
+                sessions: BTreeMap::new(),
+                events,
+                addresses: BTreeMap::new(),
+                hashes: Bucket {
+                    tokens: 1,
+                    at: Instant::now(),
+                },
+                inflight: 0,
+            };
+            let mut receivers = Vec::new();
+            for id in [1, 2] {
+                let (output, receiver) = mpsc::channel(16);
+                receivers.push(receiver);
+                let now = Instant::now();
+                server.sessions.insert(
+                    SessionId(id),
+                    Session {
+                        output,
+                        peer: "127.0.0.1".parse().unwrap(),
+                        player: Some(ObjectId(1)),
+                        flow: LoginFlow::Name,
+                        connected: now,
+                        active: now,
+                        decoder: Default::default(),
+                        quota: 1,
+                        quota_at: now,
+                        failed: Default::default(),
+                        output_message_limit: 65536,
+                    },
+                );
+            }
+            server.reconcile_connections();
+            assert!(
+                server.scripts.world.borrow().objects[&ObjectId(1)]
+                    .flags
+                    .contains(crate::flags::Flag::Connected)
+            );
+            let db = rusqlite::Connection::open(server.config.database()).unwrap();
+            db.execute_batch("CREATE TRIGGER fail BEFORE UPDATE ON world BEGIN SELECT RAISE(FAIL,'injected'); END;").unwrap();
+            server.disconnect(SessionId(1)).await.unwrap();
+            assert!(
+                server.scripts.world.borrow().objects[&ObjectId(1)]
+                    .flags
+                    .contains(crate::flags::Flag::Connected)
+            );
+            server.disconnect(SessionId(2)).await.unwrap();
+            let world = server.scripts.world.borrow();
+            assert!(
+                !world.objects[&ObjectId(1)]
+                    .flags
+                    .contains(crate::flags::Flag::Connected)
+            );
+            assert!(!world.objects[&ObjectId(1)].state.contains_key("failure"));
+            server
+                .scripts
+                .lua
+                .load("assert(not mux.world.object(1):flags():has(mux.world.flags.CONNECTED))")
+                .exec()
+                .unwrap();
+        }
     }
 }

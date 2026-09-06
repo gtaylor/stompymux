@@ -64,7 +64,7 @@ pub struct Object {
     pub description: Option<String>,
     pub internal_description: Option<String>,
     pub lua_parent: String,
-    pub flags: BTreeSet<String>,
+    pub flags: crate::flags::FlagSet,
     pub powers: BTreeSet<String>,
     pub state: BTreeMap<String, BTreeMap<String, Scalar>>,
 }
@@ -114,7 +114,11 @@ impl World {
             Kind::Exit => (&c.mux.default_exit_flags, &c.mux.default_exit_lua_parent),
             _ => (&c.mux.default_thing_flags, &c.mux.default_thing_lua_parent),
         };
-        let flags = flags.iter().map(|flag| flag.world_name()).collect();
+        let flags = flags
+            .iter()
+            .copied()
+            .filter(|f| *f != crate::flags::Flag::Connected)
+            .collect();
         self.objects.insert(
             id,
             Object {
@@ -206,11 +210,11 @@ impl World {
         Ok(())
     }
     pub fn visible(&self, o: &Object, viewer: ObjectId) -> bool {
-        !o.flags.contains("DARK")
+        !o.flags.contains(crate::flags::Flag::Dark)
             || o.id == viewer
             || self
                 .objects
                 .get(&viewer)
-                .is_some_and(|p| p.flags.contains("WIZARD"))
+                .is_some_and(|p| p.flags.contains(crate::flags::Flag::Wizard))
     }
 }
