@@ -21,6 +21,8 @@ pub struct Decoder {
     state: State,
     line: Vec<u8>,
     after_cr: bool,
+    input_line_limit: usize,
+    subnegotiation_limit: usize,
     pub width: u16,
     pub height: u16,
     pub ansi: bool,
@@ -28,6 +30,11 @@ pub struct Decoder {
 }
 impl Default for Decoder {
     fn default() -> Self {
+        Self::new(&crate::config::RuntimeConfig::default())
+    }
+}
+impl Decoder {
+    pub fn new(config: &crate::config::RuntimeConfig) -> Self {
         Self {
             state: State::Data,
             line: Vec::new(),
@@ -36,10 +43,10 @@ impl Default for Decoder {
             height: 25,
             ansi: true,
             terminal: "vt100".into(),
+            input_line_limit: config.input_line_limit,
+            subnegotiation_limit: config.telnet_subnegotiation_limit,
         }
     }
-}
-impl Decoder {
     pub fn initial() -> Vec<u8> {
         vec![IAC, 253, 24, IAC, 253, 31, IAC, 253, 42]
     }
@@ -93,7 +100,7 @@ impl Decoder {
                         if !escaped || b == IAC {
                             payload.push(b);
                         }
-                        if payload.len() > 8192 {
+                        if payload.len() > self.subnegotiation_limit {
                             bail!("Telnet subnegotiation too long");
                         }
                         self.state = State::Sub(option, payload, false);
@@ -132,8 +139,8 @@ impl Decoder {
             0 => {}
             _ => {
                 self.line.push(b);
-                if self.line.len() > 8192 {
-                    bail!("input line exceeds 8192 bytes");
+                if self.line.len() > self.input_line_limit {
+                    bail!("input line exceeds {} bytes", self.input_line_limit);
                 }
             }
         }

@@ -1,0 +1,1319 @@
+[
+  {
+    "path": "database.game_database",
+    "legacy_name": "game_database",
+    "registry_type": "cf_string",
+    "rust_type": "PathBuf",
+    "default": ""
+  },
+  {
+    "path": "database.mech_database",
+    "legacy_name": "mech_database",
+    "registry_type": "cf_string",
+    "rust_type": "PathBuf",
+    "default": "mechs"
+  },
+  {
+    "path": "database.map_database",
+    "legacy_name": "map_database",
+    "registry_type": "cf_string",
+    "rust_type": "PathBuf",
+    "default": "maps"
+  },
+  {
+    "path": "database.dump_interval",
+    "legacy_name": "dump_interval",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 3600
+  },
+  {
+    "path": "database.fork_dump",
+    "legacy_name": "fork_dump",
+    "registry_type": "cf_bool",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "database.dump_message",
+    "legacy_name": "dump_message",
+    "registry_type": "cf_string",
+    "rust_type": "String",
+    "default": ""
+  },
+  {
+    "path": "database.postdump_message",
+    "legacy_name": "postdump_message",
+    "registry_type": "cf_string",
+    "rust_type": "String",
+    "default": ""
+  },
+  {
+    "path": "database.bootstrap.objects",
+    "legacy_name": "bootstrap_object",
+    "registry_type": "cf_bootstrap_object",
+    "rust_type": "BTreeMap<BootstrapId, BootstrapObject>",
+    "default": {
+      "0": {
+        "type": "room",
+        "name": "Limbo",
+        "wizard": false
+      },
+      "1": {
+        "type": "player",
+        "name": "GOD",
+        "wizard": true
+      },
+      "2": {
+        "type": "player",
+        "name": "Wizard",
+        "wizard": true
+      },
+      "3": {
+        "type": "room",
+        "name": "Used Mech Store",
+        "wizard": false
+      },
+      "4": {
+        "type": "room",
+        "name": "Starter Room",
+        "wizard": false
+      },
+      "5": {
+        "type": "room",
+        "name": "Afterlife",
+        "wizard": false
+      }
+    }
+  },
+  {
+    "path": "lua.directory",
+    "legacy_name": "lua_directory",
+    "registry_type": "cf_string",
+    "rust_type": "PathBuf",
+    "default": "lua"
+  },
+  {
+    "path": "lua.memory_limit",
+    "legacy_name": "lua_memory_limit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 67108864
+  },
+  {
+    "path": "lua.error_reporting",
+    "legacy_name": "lua_error_reporting",
+    "registry_type": "cf_lua_error_reporting",
+    "rust_type": "ErrorReporting",
+    "default": "wizards"
+  },
+  {
+    "path": "lua.state_value_limit",
+    "legacy_name": "lua_state_value_limit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 65536
+  },
+  {
+    "path": "lua.state_entry_limit",
+    "legacy_name": "lua_state_entry_limit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1024
+  },
+  {
+    "path": "lua.state_object_limit",
+    "legacy_name": "lua_state_object_limit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1048576
+  },
+  {
+    "path": "server.port",
+    "legacy_name": "port",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 6250
+  },
+  {
+    "path": "server.mud_name",
+    "legacy_name": "mud_name",
+    "registry_type": "cf_string",
+    "rust_type": "String",
+    "default": "StompyMUX"
+  },
+  {
+    "path": "battletech.explode_reactor",
+    "legacy_name": "btech_explode_reactor",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.explode_time",
+    "legacy_name": "btech_explode_time",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 120
+  },
+  {
+    "path": "battletech.explode_ammo",
+    "legacy_name": "btech_explode_ammo",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.explode_stop",
+    "legacy_name": "btech_explode_stop",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.parts",
+    "legacy_name": "btech_parts",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.ic",
+    "legacy_name": "btech_ic",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.afterlife_dbref",
+    "legacy_name": "btech_afterlife_dbref",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 5
+  },
+  {
+    "path": "battletech.vcrit",
+    "legacy_name": "btech_vcrit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 2
+  },
+  {
+    "path": "battletech.dynspeed",
+    "legacy_name": "btech_dynspeed",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.slowdown",
+    "legacy_name": "btech_slowdown",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 2
+  },
+  {
+    "path": "battletech.fasaturn",
+    "legacy_name": "btech_fasaturn",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.fasacrit",
+    "legacy_name": "btech_fasacrit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.fasaadvvtolcrit",
+    "legacy_name": "btech_fasaadvvtolcrit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.fasaadvvhlcrit",
+    "legacy_name": "btech_fasaadvvhlcrit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.fasaadvvhlfire",
+    "legacy_name": "btech_fasaadvvhlfire",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.divrotordamage",
+    "legacy_name": "btech_divrotordamage",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.moddamagewithrange",
+    "legacy_name": "btech_moddamagewithrange",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.moddamagewithwoods",
+    "legacy_name": "btech_moddamagewithwoods",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.hotloadaddshalfbthmod",
+    "legacy_name": "btech_hotloadaddshalfbthmod",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.nofusionvtolfuel",
+    "legacy_name": "btech_nofusionvtolfuel",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.tankfriendly",
+    "legacy_name": "btech_tankfriendly",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.newcharge",
+    "legacy_name": "btech_newcharge",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.tl3_charge",
+    "legacy_name": "btech_tl3_charge",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.newterrain",
+    "legacy_name": "btech_newterrain",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.xploss",
+    "legacy_name": "btech_xploss",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 666
+  },
+  {
+    "path": "battletech.critlevel",
+    "legacy_name": "btech_critlevel",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 100
+  },
+  {
+    "path": "battletech.tankshield",
+    "legacy_name": "btech_tankshield",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.newstagger",
+    "legacy_name": "btech_newstagger",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.newstaggertons",
+    "legacy_name": "btech_newstaggertons",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.newstaggertime",
+    "legacy_name": "btech_newstaggertime",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 5
+  },
+  {
+    "path": "battletech.skidcliff",
+    "legacy_name": "btech_skidcliff",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.extendedmovemod",
+    "legacy_name": "btech_extendedmovemod",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.stacking",
+    "legacy_name": "btech_stacking",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 2
+  },
+  {
+    "path": "battletech.stackdamage",
+    "legacy_name": "btech_stackdamage",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 100
+  },
+  {
+    "path": "battletech.mw_losmap",
+    "legacy_name": "btech_mw_losmap",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.exile_stun_code",
+    "legacy_name": "btech_exile_stun_code",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.roll_on_backwalk",
+    "legacy_name": "btech_roll_on_backwalk",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.usedmechstore",
+    "legacy_name": "btech_usedmechstore",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 3
+  },
+  {
+    "path": "battletech.ooc_comsys",
+    "legacy_name": "btech_ooc_comsys",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.idf_requires_spotter",
+    "legacy_name": "btech_idf_requires_spotter",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.tsm_tow_bonus",
+    "legacy_name": "btech_tsm_tow_bonus",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.heatcutoff",
+    "legacy_name": "btech_heatcutoff",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.cost_debug",
+    "legacy_name": "btech_cost_debug",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.allow_cargo_commands",
+    "legacy_name": "btech_allow_cargo_commands",
+    "registry_type": "cf_bool",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "battletech.transported_unit_death",
+    "legacy_name": "btech_transported_unit_death",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.mwpickup_action",
+    "legacy_name": "btech_mwpickup_action",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.standcareful",
+    "legacy_name": "btech_standcareful",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.maxtechtime",
+    "legacy_name": "btech_maxtechtime",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 600
+  },
+  {
+    "path": "battletech.sprint_bth",
+    "legacy_name": "btech_sprint_bth",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": -4
+  },
+  {
+    "path": "battletech.tsm_sprint_bonus",
+    "legacy_name": "btech_tsm_sprint_bonus",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.vtol_ice_causes_fire",
+    "legacy_name": "btech_vtol_ice_causes_fire",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.glancing_blows",
+    "legacy_name": "btech_glancing_blows",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.inferno_penalty",
+    "legacy_name": "btech_inferno_penalty",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.blzmapmode",
+    "legacy_name": "btech_blzmapmode",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.extended_piloting",
+    "legacy_name": "btech_extended_piloting",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.extended_gunnery",
+    "legacy_name": "btech_extended_gunnery",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.xploss_for_mw",
+    "legacy_name": "btech_xploss_for_mw",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.variable_techtime",
+    "legacy_name": "btech_variable_techtime",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.techtime_mod",
+    "legacy_name": "btech_techtime_mod",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.techtime_multiplier",
+    "legacy_name": "btech_techtime_multiplier",
+    "registry_type": "cf_techtime_multiplier",
+    "rust_type": "f64",
+    "default": 1.0
+  },
+  {
+    "path": "battletech.statengine_obj",
+    "legacy_name": "btech_statengine_obj",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": -1
+  },
+  {
+    "path": "battletech.seismic_see_stopped",
+    "legacy_name": "btech_seismic_see_stopped",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.limitedrepairs",
+    "legacy_name": "btech_limitedrepairs",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.stackpole",
+    "legacy_name": "btech_stackpole",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.phys_use_pskill",
+    "legacy_name": "btech_phys_use_pskill",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.erange",
+    "legacy_name": "btech_erange",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.hit_arcs",
+    "legacy_name": "btech_hit_arcs",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.dig_only_fs",
+    "legacy_name": "btech_dig_only_fs",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.digbonus",
+    "legacy_name": "btech_digbonus",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 3
+  },
+  {
+    "path": "battletech.xp.bthmod",
+    "legacy_name": "btech_xp_bthmod",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.xp.missilemod",
+    "legacy_name": "btech_xp_missilemod",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 100
+  },
+  {
+    "path": "battletech.xp.ammomod",
+    "legacy_name": "btech_xp_ammomod",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 100
+  },
+  {
+    "path": "battletech.xp.defaultweapdam",
+    "legacy_name": "btech_defaultweapdam",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 5
+  },
+  {
+    "path": "battletech.xp.modifier",
+    "legacy_name": "btech_xp_modifier",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 100
+  },
+  {
+    "path": "battletech.xp.defaultweapbv",
+    "legacy_name": "btech_defaultweapbv",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 120
+  },
+  {
+    "path": "battletech.xp.use_pilot_bv_mod",
+    "legacy_name": "btech_xp_usePilotBVMod",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.xp.oldxpsystem",
+    "legacy_name": "btech_oldxpsystem",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.xp.vrtmod",
+    "legacy_name": "btech_xp_vrtmod",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.xp.perunit_xpmod",
+    "legacy_name": "btech_perunit_xpmod",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1
+  },
+  {
+    "path": "battletech.xp.noisy_xpgain",
+    "legacy_name": "btech_noisy_xpgain",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "battletech.xp.xpgain_cap",
+    "legacy_name": "btech_xpgain_cap",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 10
+  },
+  {
+    "path": "mux.badsite_file",
+    "legacy_name": "badsite_file",
+    "registry_type": "cf_string",
+    "rust_type": "PathBuf",
+    "default": "text/badsite.txt"
+  },
+  {
+    "path": "mux.allow_chanlurking",
+    "legacy_name": "allow_chanlurking",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "mux.cache_depth",
+    "legacy_name": "cache_depth",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 10
+  },
+  {
+    "path": "mux.cache_trim",
+    "legacy_name": "cache_trim",
+    "registry_type": "cf_bool",
+    "rust_type": "bool",
+    "default": false
+  },
+  {
+    "path": "mux.cache_width",
+    "legacy_name": "cache_width",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 20
+  },
+  {
+    "path": "mux.check_interval",
+    "legacy_name": "check_interval",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 600
+  },
+  {
+    "path": "mux.check_offset",
+    "legacy_name": "check_offset",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 300
+  },
+  {
+    "path": "mux.command_quota_increment",
+    "legacy_name": "command_quota_increment",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 5
+  },
+  {
+    "path": "mux.command_quota_max",
+    "legacy_name": "command_quota_max",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 100
+  },
+  {
+    "path": "mux.conn_timeout",
+    "legacy_name": "conn_timeout",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 120
+  },
+  {
+    "path": "mux.connect_dir",
+    "legacy_name": "connect_dir",
+    "registry_type": "cf_string",
+    "rust_type": "PathBuf",
+    "default": ""
+  },
+  {
+    "path": "mux.connect_file",
+    "legacy_name": "connect_file",
+    "registry_type": "cf_string",
+    "rust_type": "PathBuf",
+    "default": "text/connect.txt"
+  },
+  {
+    "path": "mux.connect_reg_file",
+    "legacy_name": "connect_reg_file",
+    "registry_type": "unregistered",
+    "rust_type": "PathBuf",
+    "default": "",
+    "note": "TOML mapping has no registered backing directive; retained with empty default."
+  },
+  {
+    "path": "mux.default_home",
+    "legacy_name": "default_home",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "mux.default_thing_lua_parent",
+    "legacy_name": "default_thing_lua_parent",
+    "registry_type": "cf_string",
+    "rust_type": "String",
+    "default": "default_thing.lua"
+  },
+  {
+    "path": "mux.default_room_lua_parent",
+    "legacy_name": "default_room_lua_parent",
+    "registry_type": "cf_string",
+    "rust_type": "String",
+    "default": "default_room.lua"
+  },
+  {
+    "path": "mux.default_exit_lua_parent",
+    "legacy_name": "default_exit_lua_parent",
+    "registry_type": "cf_string",
+    "rust_type": "String",
+    "default": "default_exit.lua"
+  },
+  {
+    "path": "mux.default_player_lua_parent",
+    "legacy_name": "default_player_lua_parent",
+    "registry_type": "cf_string",
+    "rust_type": "String",
+    "default": "default_player.lua"
+  },
+  {
+    "path": "mux.default_exit_flags",
+    "legacy_name": "default_exit_flags",
+    "registry_type": "cf_set_flags",
+    "rust_type": "Vec<Flag>",
+    "default": [
+      "no_command"
+    ]
+  },
+  {
+    "path": "mux.default_player_flags",
+    "legacy_name": "default_player_flags",
+    "registry_type": "cf_set_flags",
+    "rust_type": "Vec<Flag>",
+    "default": [
+      "ansi",
+      "in_character"
+    ]
+  },
+  {
+    "path": "mux.default_room_flags",
+    "legacy_name": "default_room_flags",
+    "registry_type": "cf_set_flags",
+    "rust_type": "Vec<Flag>",
+    "default": [
+      "no_command"
+    ]
+  },
+  {
+    "path": "mux.default_thing_flags",
+    "legacy_name": "default_thing_flags",
+    "registry_type": "cf_set_flags",
+    "rust_type": "Vec<Flag>",
+    "default": []
+  },
+  {
+    "path": "mux.down_file",
+    "legacy_name": "down_file",
+    "registry_type": "cf_string",
+    "rust_type": "PathBuf",
+    "default": "text/down.txt"
+  },
+  {
+    "path": "mux.down_message",
+    "legacy_name": "down_message",
+    "registry_type": "cf_string",
+    "rust_type": "String",
+    "default": ""
+  },
+  {
+    "path": "mux.dump_offset",
+    "legacy_name": "dump_offset",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "mux.full_file",
+    "legacy_name": "full_file",
+    "registry_type": "cf_string",
+    "rust_type": "PathBuf",
+    "default": "text/full.txt"
+  },
+  {
+    "path": "mux.full_message",
+    "legacy_name": "full_message",
+    "registry_type": "cf_string",
+    "rust_type": "String",
+    "default": ""
+  },
+  {
+    "path": "mux.help_directory",
+    "legacy_name": "help_directory",
+    "registry_type": "cf_string",
+    "rust_type": "PathBuf",
+    "default": "help"
+  },
+  {
+    "path": "mux.idle_interval",
+    "legacy_name": "idle_interval",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 60
+  },
+  {
+    "path": "mux.idle_timeout",
+    "legacy_name": "idle_timeout",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 3600
+  },
+  {
+    "path": "mux.initial_size",
+    "legacy_name": "initial_size",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 1000
+  },
+  {
+    "path": "mux.max_players",
+    "legacy_name": "max_players",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": -1
+  },
+  {
+    "path": "mux.notify_recursion_limit",
+    "legacy_name": "notify_recursion_limit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 20
+  },
+  {
+    "path": "mux.output_limit",
+    "legacy_name": "output_limit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 16384
+  },
+  {
+    "path": "mux.player_name_spaces",
+    "legacy_name": "player_name_spaces",
+    "registry_type": "cf_bool",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "mux.command_queue_limit",
+    "legacy_name": "command_queue_limit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 100
+  },
+  {
+    "path": "mux.player_starting_home",
+    "legacy_name": "player_starting_home",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 4
+  },
+  {
+    "path": "mux.player_starting_room",
+    "legacy_name": "player_starting_room",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 4
+  },
+  {
+    "path": "mux.public_channel",
+    "legacy_name": "public_channel",
+    "registry_type": "cf_string",
+    "rust_type": "String",
+    "default": "Public"
+  },
+  {
+    "path": "mux.command_queue_active_chunk",
+    "legacy_name": "command_queue_active_chunk",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 10
+  },
+  {
+    "path": "mux.command_queue_idle_chunk",
+    "legacy_name": "command_queue_idle_chunk",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 10
+  },
+  {
+    "path": "mux.quit_file",
+    "legacy_name": "quit_file",
+    "registry_type": "cf_string",
+    "rust_type": "PathBuf",
+    "default": "text/quit.txt"
+  },
+  {
+    "path": "mux.retry_limit",
+    "legacy_name": "retry_limit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 3
+  },
+  {
+    "path": "mux.space_compress",
+    "legacy_name": "space_compress",
+    "registry_type": "cf_bool",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "mux.stack_limit",
+    "legacy_name": "stack_limit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 50
+  },
+  {
+    "path": "mux.command_quota_interval",
+    "legacy_name": "command_quota_interval",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 100
+  },
+  {
+    "path": "mux.unowned_safe",
+    "legacy_name": "unowned_safe",
+    "registry_type": "unregistered",
+    "rust_type": "bool",
+    "default": false,
+    "note": "TOML mapping has no registered backing directive; retained with false default."
+  },
+  {
+    "path": "mux.player_zone",
+    "legacy_name": "player_zone",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 0
+  },
+  {
+    "path": "names.maximum_length",
+    "legacy_name": "player_name_length_limit",
+    "registry_type": "cf_player_name_length_limit",
+    "rust_type": "i64",
+    "default": 30
+  },
+  {
+    "path": "security.player_password_length_limit",
+    "legacy_name": "player_password_length_limit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 64
+  },
+  {
+    "path": "security.password_hash_opslimit",
+    "legacy_name": "password_hash_opslimit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 3
+  },
+  {
+    "path": "security.password_hash_memlimit",
+    "legacy_name": "password_hash_memlimit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 12582912
+  },
+  {
+    "path": "security.login_attempt_burst",
+    "legacy_name": "login_attempt_burst",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 3
+  },
+  {
+    "path": "security.login_attempt_refill",
+    "legacy_name": "login_attempt_refill",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 10
+  },
+  {
+    "path": "security.login_hash_limit",
+    "legacy_name": "login_hash_limit",
+    "registry_type": "cf_int",
+    "rust_type": "i64",
+    "default": 5
+  },
+  {
+    "path": "logging.topics.accounting",
+    "legacy_name": "accounting",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": false
+  },
+  {
+    "path": "logging.topics.all_commands",
+    "legacy_name": "all_commands",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": false
+  },
+  {
+    "path": "logging.topics.suspect_commands",
+    "legacy_name": "suspect_commands",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": false
+  },
+  {
+    "path": "logging.topics.bad_commands",
+    "legacy_name": "bad_commands",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": false
+  },
+  {
+    "path": "logging.topics.buffer_alloc",
+    "legacy_name": "buffer_alloc",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": false
+  },
+  {
+    "path": "logging.topics.bugs",
+    "legacy_name": "bugs",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "logging.topics.checkpoints",
+    "legacy_name": "checkpoints",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "logging.topics.config_changes",
+    "legacy_name": "config_changes",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "logging.topics.create",
+    "legacy_name": "create",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "logging.topics.logins",
+    "legacy_name": "logins",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "logging.topics.network",
+    "legacy_name": "network",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "logging.topics.problems",
+    "legacy_name": "problems",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "logging.topics.security",
+    "legacy_name": "security",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "logging.topics.shouts",
+    "legacy_name": "shouts",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "logging.topics.startup",
+    "legacy_name": "startup",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "logging.topics.wizard",
+    "legacy_name": "wizard",
+    "registry_type": "cf_bool_bit",
+    "rust_type": "bool",
+    "default": true
+  },
+  {
+    "path": "logging.log_options",
+    "legacy_name": "log_options",
+    "registry_type": "configuration_modify_bits",
+    "rust_type": "Vec<LogOption>",
+    "default": [
+      "timestamp",
+      "location"
+    ]
+  },
+  {
+    "path": "access.commands",
+    "legacy_name": "access",
+    "registry_type": "cf_access",
+    "rust_type": "BTreeMap<String, Permissions>",
+    "default": {}
+  },
+  {
+    "path": "access.lists",
+    "legacy_name": "list_access",
+    "registry_type": "cf_ntab_access",
+    "rust_type": "BTreeMap<String, Permissions>",
+    "default": {}
+  },
+  {
+    "path": "access.config",
+    "legacy_name": "config_access",
+    "registry_type": "cf_cf_access",
+    "rust_type": "BTreeMap<String, Permissions>",
+    "default": {}
+  },
+  {
+    "path": "aliases.commands",
+    "legacy_name": "alias",
+    "registry_type": "cf_cmd_alias",
+    "rust_type": "BTreeMap<String, String>",
+    "default": {}
+  },
+  {
+    "path": "aliases.flags",
+    "legacy_name": "flag_alias",
+    "registry_type": "cf_flagalias",
+    "rust_type": "BTreeMap<String, String>",
+    "default": {}
+  },
+  {
+    "path": "colors",
+    "legacy_name": "named_color",
+    "registry_type": "cf_named_color",
+    "rust_type": "BTreeMap<String, Rgb>",
+    "default": {}
+  },
+  {
+    "path": "osc8.presets",
+    "legacy_name": "osc8_preset",
+    "registry_type": "cf_osc8_preset",
+    "rust_type": "BTreeMap<String, String>",
+    "default": {}
+  },
+  {
+    "path": "names.bad",
+    "legacy_name": "bad_name",
+    "registry_type": "cf_badname",
+    "rust_type": "Vec<String>",
+    "default": []
+  },
+  {
+    "path": "names.good",
+    "legacy_name": "good_name",
+    "registry_type": "cf_badname",
+    "rust_type": "Vec<String>",
+    "default": []
+  },
+  {
+    "path": "sites.forbid",
+    "legacy_name": "forbid_site",
+    "registry_type": "cf_site",
+    "rust_type": "Vec<SiteRule>",
+    "default": []
+  },
+  {
+    "path": "sites.suspect",
+    "legacy_name": "suspect_site",
+    "registry_type": "cf_site",
+    "rust_type": "Vec<SiteRule>",
+    "default": []
+  },
+  {
+    "path": "sites.trust",
+    "legacy_name": "trust_site",
+    "registry_type": "cf_site",
+    "rust_type": "Vec<SiteRule>",
+    "default": []
+  },
+  {
+    "path": "sites.permit",
+    "legacy_name": "permit_site",
+    "registry_type": "cf_site",
+    "rust_type": "Vec<SiteRule>",
+    "default": []
+  }
+]

@@ -25,6 +25,9 @@ use tokio::{
 };
 use zeroize::Zeroizing;
 
+// login_hash_limit is measured per second; this is its unit, not a tunable.
+const HASH_RATE_WINDOW: Duration = Duration::from_secs(1);
+
 enum Event {
     Bytes(SessionId, Vec<u8>),
     Gone(SessionId),
@@ -45,14 +48,15 @@ struct Server {
 }
 
 pub async fn prepare(c: &Config) -> Result<Scripts> {
+    c.validate_for_serve()?;
     let existing = c.database().exists();
     let world = if existing {
         let path = c.database();
-        tokio::task::spawn_blocking(move || persistence::load(&path)).await??
+        let timeout = c.database.busy_timeout_ms;
+        tokio::task::spawn_blocking(move || persistence::load_with_timeout(&path, timeout))
+            .await??
     } else {
-        let legacy = c
-            .root
-            .join(c.string("database.game_database", "data/stompymux.db"));
+        let legacy = c.legacy_database();
         ensure!(
             !legacy.exists() || std::fs::metadata(&legacy)?.len() == 0,
             "Legacy database exists. Run import-legacy explicitly before serving this world."
@@ -62,20 +66,20 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
     let world = Rc::new(RefCell::new(world));
     if !existing {
         let mut w = world.borrow_mut();
-        for (name, kind) in [
-            ("Limbo", Kind::Room),
-            ("GOD", Kind::Player),
-            ("Wizard", Kind::Player),
-            ("Used Mech Store", Kind::Room),
-            ("Starter Room", Kind::Room),
-            ("Afterlife", Kind::Room),
-        ] {
-            let id = w.create(c, name.into(), kind);
+        for (dbref, entry) in &c.database.bootstrap.objects {
+            w.next_id = dbref.0;
+            let kind = match entry.r#type {
+                crate::config::BootstrapKind::Room => Kind::Room,
+                crate::config::BootstrapKind::Player => Kind::Player,
+            };
+            let id = w.create(c, entry.name.clone(), kind);
             if kind == Kind::Player {
-                let o = w.objects.get_mut(&id).unwrap();
-                o.location = Some(ObjectId(c.start()));
-                o.home = Some(ObjectId(c.home()));
-                o.flags.insert("WIZARD".into());
+                let object = w.objects.get_mut(&id).unwrap();
+                object.location = Some(ObjectId(c.start()));
+                object.home = Some(ObjectId(c.home()));
+                if entry.wizard {
+                    object.flags.insert("WIZARD".into());
+                }
             }
         }
     }
@@ -112,7 +116,10 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
         scripts.world.borrow().validate(c)?;
         use std::io::Write;
         use std::os::unix::fs::OpenOptionsExt;
-        let credentials = c.root.join("bootstrap-credentials.txt");
+        let credentials = c.path(&c.database.bootstrap.credentials_file);
+        if let Some(parent) = credentials.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
         let mut f = std::fs::OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -123,8 +130,11 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
         f.sync_all()?;
         let path = c.database();
         let snapshot = scripts.world.borrow().clone();
-        if let Err(e) =
-            tokio::task::spawn_blocking(move || persistence::initialize(&path, &snapshot)).await?
+        let busy_timeout_ms = c.database.busy_timeout_ms;
+        if let Err(e) = tokio::task::spawn_blocking(move || {
+            persistence::initialize_with_timeout(&path, &snapshot, busy_timeout_ms)
+        })
+        .await?
         {
             let _ = std::fs::remove_file(&credentials);
             return Err(e);
@@ -136,12 +146,13 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
     scripts.event("on_server_startup", None, None)?;
     let after = scripts.world.borrow().clone();
     if serde_json::to_vec(&before)? != serde_json::to_vec(&after)? {
-        persistence::persist(c.database(), after).await?;
+        persistence::persist(c.database(), after, c.database.busy_timeout_ms).await?;
     }
     scripts.outbox.borrow_mut().clear();
     Ok(scripts)
 }
-pub async fn serve(c: Config, address: &str, shutdown: impl Future<Output = ()>) -> Result<()> {
+pub async fn serve(c: Config, shutdown: impl Future<Output = ()>) -> Result<()> {
+    let address = c.listener();
     let scripts = prepare(&c).await?;
     let listener = TcpListener::bind(address).await?;
     run(c, scripts, listener, shutdown).await
@@ -156,7 +167,7 @@ pub async fn run(
         eprintln!("Warning: {warning}");
     }
     println!("Listening on {}", listener.local_addr()?);
-    let (tx, mut rx) = mpsc::channel(256);
+    let (tx, mut rx) = mpsc::channel(c.runtime.event_queue_capacity);
     let mut server = Server {
         config: c,
         scripts,
@@ -165,33 +176,38 @@ pub async fn run(
         addresses: BTreeMap::new(),
         hashes: Bucket {
             tokens: 0,
-            at: Instant::now() - Duration::from_secs(1),
+            at: Instant::now() - HASH_RATE_WINDOW,
         },
         inflight: 0,
     };
     let mut next = 0;
-    let mut tick = tokio::time::interval(Duration::from_secs(1));
+    let mut tick = tokio::time::interval(Duration::from_millis(
+        server.config.runtime.maintenance_interval_ms,
+    ));
     let mut tasks = tokio::task::JoinSet::new();
+    let mut idle_check =
+        tokio::time::interval(Duration::from_secs(server.config.mux.idle_interval));
     tokio::pin!(shutdown);
-    let banner =
-        std::fs::read_to_string(server.config.root.join("text/connect.txt")).unwrap_or_default();
+    let banner = std::fs::read_to_string(server.config.path(&server.config.mux.connect_file))
+        .unwrap_or_default();
     loop {
         tokio::select! {
             _ = &mut shutdown => break,
             accepted = listener.accept() => {
                 let (stream,peer)=accepted?;
-                if server.sessions.len()>=1024 { drop(stream); continue; }
+                if server.sessions.len()>=server.config.runtime.max_connections { drop(stream); continue; }
                 next+=1;
                 let id=SessionId(next);
-                let (output,receiver)=mpsc::channel(128);
+                let (output,receiver)=mpsc::channel(server.config.runtime.session_output_queue_capacity);
                 let now=Instant::now();
                 server.sessions.insert(id,Session {
                     output, peer:peer.ip(), player:None, flow:LoginFlow::Name,
-                    connected:now, active:now, decoder:Default::default(),
-                    quota:server.config.int("mux.command_quota_increment",1000) as usize,
+                    connected:now, active:now, decoder:telnet::Decoder::new(&server.config.runtime),
+                    output_message_limit:server.config.runtime.output_message_limit,
+                    quota:server.config.mux.command_quota_increment.min(server.config.mux.command_quota_max),
                     quota_at:now, failed:Default::default(),
                 });
-                tasks.spawn(connection(stream,id,tx.clone(),receiver));
+                tasks.spawn(connection(stream,id,tx.clone(),receiver,server.config.runtime.write_timeout_ms));
                 let session=&server.sessions[&id];
                 session.raw(telnet::Decoder::initial());
                 session.text(&banner,true);
@@ -208,12 +224,17 @@ pub async fn run(
                 }}
             },
             _ = tick.tick() => {
-                let timeout=Duration::from_secs(server.config.int("mux.idle_timeout",3600) as u64);
+                let timeout=Duration::from_secs(server.config.mux.conn_timeout);
                 let idle:Vec<_>=server.sessions.iter()
-                    .filter(|(_,s)|s.active.elapsed()>timeout||s.output.is_closed()||s.failed.get())
+                    .filter(|(_,s)|(s.player.is_none() && s.connected.elapsed()>timeout)||s.output.is_closed()||s.failed.get())
                     .map(|(id,_)|*id).collect();
                 for id in idle { server.disconnect(id).await?; }
-                server.addresses.retain(|_,b|b.at.elapsed()<Duration::from_secs(86400));
+                server.addresses.retain(|_,b|b.at.elapsed()<Duration::from_secs(server.config.security.login_address_retention_seconds));
+            },
+            _ = idle_check.tick() => {
+                let timeout=Duration::from_secs(server.config.mux.idle_timeout);
+                let idle:Vec<_>=server.sessions.iter().filter(|(_,s)|s.player.is_some() && s.active.elapsed()>timeout).map(|(id,_)|*id).collect();
+                for id in idle {server.disconnect(id).await?;}
             },
             _ = tasks.join_next(), if !tasks.is_empty() => {}
         }
@@ -222,9 +243,10 @@ pub async fn run(
         server.disconnect(id).await?;
     }
     drop(rx);
-    if tokio::time::timeout(Duration::from_secs(5), async {
-        while tasks.join_next().await.is_some() {}
-    })
+    if tokio::time::timeout(
+        Duration::from_millis(server.config.runtime.shutdown_timeout_ms),
+        async { while tasks.join_next().await.is_some() {} },
+    )
     .await
     .is_err()
     {
@@ -238,9 +260,11 @@ async fn connection(
     id: SessionId,
     events: mpsc::Sender<Event>,
     mut output: mpsc::Receiver<Output>,
+    write_timeout_ms: u64,
 ) {
     let (mut read, mut write) = stream.into_split();
-    let mut buffer = [0u8; 1024];
+    const READ_BUFFER_SIZE: usize = 1024;
+    let mut buffer = [0u8; READ_BUFFER_SIZE];
     loop {
         tokio::select! {
             result = read.read(&mut buffer) => match result {
@@ -251,7 +275,7 @@ async fn connection(
             },
             message = output.recv() => match message {
                 Some(Output::Bytes(bytes)) => {
-                    if !matches!(tokio::time::timeout(Duration::from_secs(5),write.write_all(&bytes)).await,Ok(Ok(()))) { break; }
+                    if !matches!(tokio::time::timeout(Duration::from_millis(write_timeout_ms),write.write_all(&bytes)).await,Ok(Ok(()))) { break; }
                 },
                 Some(Output::Close) | None => break,
             }
@@ -319,7 +343,14 @@ impl Server {
             Err(e) => Err(e),
             Ok(()) => match (serde_json::to_vec(&before), serde_json::to_vec(&after)) {
                 (Ok(a), Ok(b)) if a == b => Ok(()),
-                _ => persistence::persist(self.config.database(), after).await,
+                _ => {
+                    persistence::persist(
+                        self.config.database(),
+                        after,
+                        self.config.database.busy_timeout_ms,
+                    )
+                    .await
+                }
             },
         };
         if let Err(e) = result {
@@ -398,13 +429,18 @@ impl Server {
                     let line = Zeroizing::new(line);
                     let s = self.sessions.get_mut(&id).unwrap();
                     s.active = Instant::now();
-                    if s.quota_at.elapsed()
-                        >= Duration::from_millis(
-                            self.config.int("mux.command_quota_interval", 50) as u64
-                        )
-                    {
-                        s.quota = self.config.int("mux.command_quota_increment", 1000) as usize;
-                        s.quota_at = Instant::now();
+                    let elapsed = s.quota_at.elapsed().as_millis();
+                    let interval = u128::from(self.config.mux.command_quota_interval);
+                    let periods = elapsed / interval;
+                    if periods > 0 {
+                        let credits =
+                            periods.saturating_mul(self.config.mux.command_quota_increment as u128);
+                        s.quota = (s.quota as u128 + credits)
+                            .min(self.config.mux.command_quota_max as u128)
+                            as usize;
+                        // Preserve the partial refill interval between commands.
+                        s.quota_at =
+                            Instant::now() - Duration::from_millis((elapsed % interval) as u64);
                     }
                     if s.quota == 0 {
                         self.tell(id, "Command quota exceeded.\r\n");
@@ -428,7 +464,7 @@ impl Server {
             Ok(Action::Quit) => {
                 self.tell(
                     id,
-                    &std::fs::read_to_string(self.config.root.join("text/quit.txt"))
+                    &std::fs::read_to_string(self.config.path(&self.config.mux.quit_file))
                         .unwrap_or_else(|_| "Goodbye.\r\n".into()),
                 );
                 self.disconnect(id).await?;
@@ -450,11 +486,13 @@ impl Server {
                         "Interactive Lua flows are unavailable in this milestone.\r\n",
                     );
                 } else {
-                    let report = self.config.string("lua.error_reporting", "wizards");
+                    let report = self.config.lua.error_reporting;
                     let wizard = self.scripts.world.borrow().objects[&p]
                         .flags
                         .contains("WIZARD");
-                    if report == "all" || (report == "wizards" && wizard) {
+                    if report == crate::config::ErrorReporting::All
+                        || (report == crate::config::ErrorReporting::Wizards && wizard)
+                    {
                         self.tell(id, &format!("Lua error: {e}\r\n"));
                     } else {
                         self.tell(id, "That command could not be completed.\r\n");
@@ -548,10 +586,12 @@ impl Server {
         create: bool,
     ) {
         let now = Instant::now();
-        let burst = self.config.int("security.login_attempt_burst", 3) as usize;
-        let refill = self.config.int("security.login_attempt_refill", 10) as u64;
+        let burst = self.config.security.login_attempt_burst;
+        let refill = self.config.security.login_attempt_refill;
         let address = self.sessions[&id].peer;
-        if self.addresses.len() >= 4096 && !self.addresses.contains_key(&address) {
+        if self.addresses.len() >= self.config.security.login_address_limit
+            && !self.addresses.contains_key(&address)
+        {
             self.prompt(
                 id,
                 LoginFlow::Name,
@@ -569,13 +609,13 @@ impl Server {
             bucket.tokens = (bucket.tokens + count as usize).min(burst);
             bucket.at = now;
         }
-        if self.hashes.at.elapsed() >= Duration::from_secs(1) {
-            self.hashes.tokens = self.config.int("security.login_hash_limit", 5) as usize;
+        if self.hashes.at.elapsed() >= HASH_RATE_WINDOW {
+            self.hashes.tokens = self.config.security.login_hash_limit;
             self.hashes.at = now;
         }
         if bucket.tokens == 0
             || self.hashes.tokens == 0
-            || self.inflight >= self.config.int("security.login_hash_limit", 5) as usize
+            || self.inflight >= self.config.security.login_hash_concurrency
         {
             self.prompt(
                 id,
@@ -644,9 +684,11 @@ impl Server {
                         at: accounts::now(),
                         host,
                     });
-                    if a.history.len() > 32 {
-                        a.history.remove(0);
-                    }
+                    let excess = a
+                        .history
+                        .len()
+                        .saturating_sub(self.config.security.login_history_limit);
+                    a.history.drain(..excess);
                 }
                 self.commit(before).await;
                 self.prompt(id,LoginFlow::Name,"Either that player does not exist, or has a different password.\r\nWho are you? ",false);
@@ -690,9 +732,11 @@ impl Server {
                 at: accounts::now(),
                 host,
             });
-            if a.history.len() > 32 {
-                a.history.remove(0);
-            }
+            let excess = a
+                .history
+                .len()
+                .saturating_sub(self.config.security.login_history_limit);
+            a.history.drain(..excess);
             w.objects
                 .get_mut(&p)
                 .unwrap()

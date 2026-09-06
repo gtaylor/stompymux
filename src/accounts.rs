@@ -6,8 +6,8 @@ use argon2::{
 };
 pub fn hash(password: &str, c: &Config) -> Result<String> {
     let params = Params::new(
-        (c.int("security.password_hash_memlimit", 12582912) / 1024) as u32,
-        c.int("security.password_hash_opslimit", 3) as u32,
+        (c.security.password_hash_memlimit / 1024) as u32,
+        c.security.password_hash_opslimit as u32,
         1,
         None,
     )
@@ -27,23 +27,20 @@ pub fn verify(password: &str, hash: &str) -> bool {
 }
 pub fn validate_name(name: &str, c: &Config) -> Result<()> {
     ensure!(
-        name.len() >= 2 && name.len() <= c.int("names.maximum_length", 30) as usize,
+        name.len() >= 2 && name.len() <= c.names.maximum_length,
         "New usernames must be between 2 and the configured maximum length."
     );
     ensure!(
         name.as_bytes()[0].is_ascii_alphabetic()
             && name.bytes().all(|b| b.is_ascii_alphanumeric()
                 || b"`$_-.,\'".contains(&b)
-                || (b == b' '
-                    && c.get("mux.player_name_spaces")
-                        .and_then(|v| v.as_bool())
-                        .unwrap_or(true))),
+                || (b == b' ' && c.mux.player_name_spaces)),
         "New usernames must start with a letter and use valid player-name characters."
     );
-    for pattern in c.strings("names.bad") {
+    for pattern in &c.names.bad {
         let re = format!(
             "(?i)^{}$",
-            regex::escape(&pattern)
+            regex::escape(pattern)
                 .replace("\\*", ".*")
                 .replace("\\?", ".")
         );
@@ -57,7 +54,7 @@ pub fn validate_name(name: &str, c: &Config) -> Result<()> {
 pub fn validate_password(password: &str, c: &Config) -> Result<()> {
     ensure!(
         !password.is_empty()
-            && password.len() <= c.int("security.player_password_length_limit", 64) as usize
+            && password.len() <= c.security.player_password_length_limit
             && !password.chars().any(|ch| ch.is_control() || ch == ' ')
             && !(password.len() == 13 && password.starts_with("XX")),
         "Invalid password: use printable characters without spaces, within the configured length limit."

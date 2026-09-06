@@ -18,7 +18,8 @@ Import is a one-time operation. If `game/data/stompymux-rs.db` already exists,
 skip import and start the server. Import refuses to overwrite it. The server
 refuses to silently bootstrap when a populated legacy database exists.
 
-The default listener is `127.0.0.1:5555`, using the port in `stompymux.toml`.
+The supplied configuration listens on `127.0.0.1:5555`. Without a configured
+port, the compiled legacy default is 6250.
 Override with `--listen-address 0.0.0.0 --port 5556` when appropriate. Connect
 using a Telnet/MUD client. Enter an existing player name, alias, or dbref (such
 as `#2`) and password, or enter
@@ -65,6 +66,23 @@ once. Random administrator credentials are written to
 another bootstrap attempt rather than overwriting credentials. Existing/imported
 worlds never run first-startup hooks.
 
+## Configuration
+
+All 182 legacy TOML mappings are typed and retained, including options for
+features not yet implemented. Twenty additional settings configure the Rust
+runtime. See [configuration semantics and runtime defaults](docs/configuration.md)
+and the annotated `game/stompymux.toml`.
+
+Listener precedence is CLI → TOML → centralized defaults. Both IPv4 and IPv6
+addresses are supported. Content paths resolve relative to `--game-dir` (default
+`game`); recursive include paths resolve relative to the including file.
+
+`database.game_database` now names **live Rust storage**, defaulting to
+`data/stompymux-rs.db`. `database.legacy_game_database` names the legacy archive,
+defaulting to `data/stompymux.db`. Update older configurations to declare both.
+No files are moved, migrated or automatically imported. The explicit
+`import-legacy --source` argument takes precedence over the archive setting.
+
 ## Implementation boundaries
 
 - Tokio handles sockets and timers. A single owner serializes world and Lua
@@ -93,8 +111,9 @@ interactive Lua flows, extended styled text/custom palettes, MCCP2, GMCP and
 OSC 8 features remain deferred. Demo modules are copied unchanged: schedules
 produce startup warnings, flows report an explicit unavailable-feature error,
 and clickable markup renders visible text. Legacy help/type files describe a
-larger API than this milestone implements. Deferred configuration is reported;
-nonempty site/command access rules are rejected rather than ignored.
+larger API than this milestone implements. Deferred configuration is reported in one capability diagnostic. Site/access
+rules parse and pass configuration checks, but block serving before writes or
+listening because enforcement is not implemented.
 
 ## Validation
 

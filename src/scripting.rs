@@ -16,6 +16,7 @@ pub struct Scripts {
     globals: Vec<Table>,
     parents: BTreeMap<String, Table>,
     budget: Rc<Cell<usize>>,
+    instruction_limit: usize,
     pub warnings: Vec<String>,
 }
 fn err(e: impl std::fmt::Display) -> mlua::Error {
@@ -37,23 +38,26 @@ fn files(dir: &Path) -> Result<Vec<PathBuf>> {
 impl Scripts {
     pub fn new(config: &Config, world: SharedWorld) -> Result<Self> {
         let lua = Lua::new();
-        lua.set_memory_limit(config.int("lua.memory_limit", 67108864) as usize)
+        lua.set_memory_limit(config.lua.memory_limit)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         // JIT traces can bypass instruction hooks. Keep the LuaJIT runtime, with tracing off,
         // so an operator-supplied script cannot monopolize the world owner indefinitely.
         lua.load("if jit then jit.off() end")
             .exec()
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-        let budget = Rc::new(Cell::new(1000usize));
+        let budget = Rc::new(Cell::new(config.lua.instruction_limit));
         let b = budget.clone();
+        // Sampling granularity is an implementation detail; the budget is configured.
+        const HOOK_QUANTUM: usize = 1000;
+        let quantum = config.lua.instruction_limit.min(HOOK_QUANTUM);
         lua.set_global_hook(
-            HookTriggers::new().every_nth_instruction(1000),
+            HookTriggers::new().every_nth_instruction(quantum as u32),
             move |_, _| {
                 let n = b.get();
-                if n == 0 {
+                if n <= quantum {
                     return Err(err("Lua instruction budget exceeded"));
                 }
-                b.set(n - 1);
+                b.set(n - quantum);
                 Ok(VmState::Continue)
             },
         )
@@ -208,7 +212,7 @@ impl Scripts {
                 Some(lua.from_value(v)?)
             };
             if let Some(Scalar::String(s)) = &value
-                && s.len() > c.int("lua.state_value_limit", 65536) as usize
+                && s.len() > c.lua.state_value_limit
             {
                 return Err(err("Lua state string limit exceeded"));
             }
@@ -224,10 +228,8 @@ impl Scripts {
             } else {
                 entries.remove(&key);
             }
-            if state.values().map(|v| v.len()).sum::<usize>()
-                > c.int("lua.state_entry_limit", 1024) as usize
-                || serde_json::to_vec(&state).map_err(err)?.len()
-                    > c.int("lua.state_object_limit", 1048576) as usize
+            if state.values().map(|v| v.len()).sum::<usize>() > c.lua.state_entry_limit
+                || serde_json::to_vec(&state).map_err(err)?.len() > c.lua.state_object_limit
             {
                 return Err(err("Lua object state limit exceeded"));
             }
@@ -235,11 +237,14 @@ impl Scripts {
             Ok(())
         });
         let o = outbox.clone();
+        let output_settings = config.lua.clone();
+        let message_limit = config.runtime.output_message_limit;
         bind!("pemit", move |_, (id, s): (i64, String)| {
             let mut out = o.borrow_mut();
-            if s.len() > 65536
-                || out.len() >= 1024
-                || out.iter().map(|(_, s)| s.len()).sum::<usize>() + s.len() > 1048576
+            if s.len() > message_limit
+                || out.len() >= output_settings.output_entry_limit
+                || out.iter().map(|(_, s)| s.len()).sum::<usize>() + s.len()
+                    > output_settings.output_byte_limit
             {
                 return Err(err("Lua output limit exceeded"));
             }
@@ -248,14 +253,7 @@ impl Scripts {
         });
         let c = config.clone();
         bind!("config", move |lua, key: String| {
-            let mapped = match key.as_str() {
-                "player_starting_room" => "mux.player_starting_room",
-                "player_starting_home" => "mux.player_starting_home",
-                "btech_usedmechstore" => "battletech.usedmechstore",
-                "btech_afterlife_dbref" => "battletech.afterlife_dbref",
-                _ => key.as_str(),
-            };
-            if let Some(v) = c.get(mapped) {
+            if let Some(v) = c.effective_value(&key) {
                 lua.to_value(v)
             } else {
                 Ok(Value::Nil)
@@ -323,6 +321,7 @@ impl Scripts {
             globals: Vec::new(),
             parents: BTreeMap::new(),
             budget,
+            instruction_limit: config.lua.instruction_limit,
             warnings: Vec::new(),
         };
         let dir = config.lua_dir();
@@ -380,7 +379,7 @@ impl Scripts {
         Ok(s)
     }
     fn load_module(&self, p: &Path) -> Result<Table> {
-        self.budget.set(1000);
+        self.budget.set(self.instruction_limit);
         self.lua
             .load(std::fs::read_to_string(p)?)
             .set_name(p.to_string_lossy())
@@ -520,7 +519,7 @@ impl Scripts {
                 .get::<Option<Function>>(name)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?
         {
-            self.budget.set(1000);
+            self.budget.set(self.instruction_limit);
             f.call::<()>(ctx)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         }
@@ -535,14 +534,14 @@ impl Scripts {
         let f: Function = t
             .get("internal_appearance")
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-        self.budget.set(1000);
+        self.budget.set(self.instruction_limit);
         f.call(self.context(Some(player), Some(room), Some(session))?)
             .map_err(|e| anyhow::anyhow!(e.to_string()))
     }
     pub fn lock(&self, player: ObjectId, exit: ObjectId) -> Result<bool> {
         self.sync_parents()?;
         let f:Function=self.lua.load("return function(o,p) return mux.world.lock_passes({object=mux.world.object(o),enactor=p,lock='traverse'}) end").eval().map_err(|e|anyhow::anyhow!(e.to_string()))?;
-        self.budget.set(1000);
+        self.budget.set(self.instruction_limit);
         f.call((exit.0, player.0))
             .map_err(|e| anyhow::anyhow!(e.to_string()))
     }
@@ -570,7 +569,7 @@ impl Scripts {
                     .map_err(|e| anyhow::anyhow!(e.to_string()))?;
                 ctx.set("command", line)
                     .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-                self.budget.set(1000);
+                self.budget.set(self.instruction_limit);
                 if dispatch
                     .call::<bool>((t.clone(), ctx, line))
                     .map_err(|e| anyhow::anyhow!(e.to_string()))?
@@ -585,7 +584,7 @@ impl Scripts {
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
             ctx.set("command", line)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-            self.budget.set(1000);
+            self.budget.set(self.instruction_limit);
             if dispatch
                 .call::<bool>((t.clone(), ctx, line))
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?

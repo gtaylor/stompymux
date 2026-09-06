@@ -136,7 +136,7 @@ fn config_includes_override_and_detect_cycles() {
     let text = std::fs::read_to_string(&path).unwrap();
     std::fs::write(&path, format!("{text}\n[aliases.commands]\nl = 'look'\n")).unwrap();
     let c = Config::load(d.path()).unwrap();
-    assert_eq!(c.string("aliases.commands.l", ""), "look");
+    assert_eq!(c.aliases.commands["l"], "look");
     std::fs::write(d.path().join("aliases.toml"), "include=['stompymux.toml']").unwrap();
     assert!(Config::load(d.path()).is_err());
 }
@@ -492,6 +492,7 @@ fn bounded_output_marks_slow_clients_for_disconnect() {
         quota: 1,
         quota_at: now,
         failed: Default::default(),
+        output_message_limit: stompymux_rs::config::RuntimeConfig::default().output_message_limit,
     };
     assert!(session.raw(vec![1]));
     assert!(!session.raw(vec![2]));

@@ -12,11 +12,7 @@ pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, input: &str)
     let line = input.trim();
     let (verb, args) = line.split_once(' ').unwrap_or((line, ""));
     let mut command = verb.to_ascii_lowercase();
-    if let Some(alias) = c
-        .get("aliases.commands")
-        .and_then(|v| v.get(&command))
-        .and_then(|v| v.as_str())
-    {
+    if let Some(alias) = c.aliases.commands.get(&command) {
         command = alias.to_ascii_lowercase();
     }
     let room = s

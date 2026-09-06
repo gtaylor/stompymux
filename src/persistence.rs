@@ -6,14 +6,23 @@ use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
 };
-fn readonly(path: &Path) -> Result<Connection> {
-    Ok(Connection::open_with_flags(
-        path,
-        OpenFlags::SQLITE_OPEN_READ_ONLY,
-    )?)
+fn readonly(path: &Path, busy_timeout_ms: u64) -> Result<Connection> {
+    let connection = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    connection.busy_timeout(std::time::Duration::from_millis(busy_timeout_ms))?;
+    Ok(connection)
 }
 pub fn load(path: &Path) -> Result<World> {
-    let c = readonly(path)?;
+    load_with_timeout(
+        path,
+        crate::config::DatabaseConfig::default().busy_timeout_ms,
+    )
+}
+pub fn load_with_timeout(path: &Path, busy_timeout_ms: u64) -> Result<World> {
+    let c = readonly(path, busy_timeout_ms)?;
+    ensure!(
+        !c.prepare("SELECT 1 FROM snapshot LIMIT 1").is_ok(),
+        "database.game_database points to a legacy database; set the live Rust path and use import-legacy --source explicitly"
+    );
     ensure!(
         c.pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0))? == 1,
         "unsupported Rust database version"
@@ -26,8 +35,15 @@ pub fn load(path: &Path) -> Result<World> {
     Ok(w)
 }
 pub fn save(path: &Path, w: &World) -> Result<()> {
+    save_with_timeout(
+        path,
+        w,
+        crate::config::DatabaseConfig::default().busy_timeout_ms,
+    )
+}
+pub fn save_with_timeout(path: &Path, w: &World, busy_timeout_ms: u64) -> Result<()> {
     let mut c = Connection::open(path)?;
-    c.busy_timeout(std::time::Duration::from_secs(5))?;
+    c.busy_timeout(std::time::Duration::from_millis(busy_timeout_ms))?;
     let version: i64 = c.pragma_query_value(None, "user_version", |r| r.get(0))?;
     ensure!(
         version == 0 || version == 1,
@@ -42,10 +58,17 @@ pub fn save(path: &Path, w: &World) -> Result<()> {
     tx.commit()?;
     Ok(())
 }
-pub async fn persist(path: PathBuf, w: World) -> Result<()> {
-    tokio::task::spawn_blocking(move || save(&path, &w)).await?
+pub async fn persist(path: PathBuf, w: World, busy_timeout_ms: u64) -> Result<()> {
+    tokio::task::spawn_blocking(move || save_with_timeout(&path, &w, busy_timeout_ms)).await?
 }
 pub fn initialize(path: &Path, w: &World) -> Result<()> {
+    initialize_with_timeout(
+        path,
+        w,
+        crate::config::DatabaseConfig::default().busy_timeout_ms,
+    )
+}
+pub fn initialize_with_timeout(path: &Path, w: &World, busy_timeout_ms: u64) -> Result<()> {
     use std::os::unix::fs::OpenOptionsExt;
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
@@ -57,7 +80,7 @@ pub fn initialize(path: &Path, w: &World) -> Result<()> {
         .open(path)
         .context("destination already exists or cannot be created")?;
     drop(file);
-    if let Err(e) = save(path, w) {
+    if let Err(e) = save_with_timeout(path, w, busy_timeout_ms) {
         let _ = std::fs::remove_file(path);
         return Err(e);
     }
@@ -67,7 +90,7 @@ fn id(v: i64) -> Option<ObjectId> {
     (v >= 0).then_some(ObjectId(v))
 }
 pub fn read_legacy(source: &Path, cfg: &Config) -> Result<World> {
-    let c = readonly(source)?;
+    let c = readonly(source, cfg.database.busy_timeout_ms)?;
     let (version, next, record): (i64, i64, usize) = c.query_row(
         "SELECT schema_version,db_top,record_players FROM snapshot WHERE id=1",
         [],
@@ -212,7 +235,7 @@ pub fn read_legacy(source: &Path, cfg: &Config) -> Result<World> {
 }
 pub fn import(source: &Path, cfg: &Config) -> Result<String> {
     let w = read_legacy(source, cfg)?;
-    initialize(&cfg.database(), &w)?;
+    initialize_with_timeout(&cfg.database(), &w, cfg.database.busy_timeout_ms)?;
     Ok(format!(
         "Imported schema 32: {} objects, {} accounts, {} channels. Object/account/login/Lua state imported; remaining tables retained in source archive {}. No legacy data was modified.",
         w.objects.len(),

@@ -105,11 +105,16 @@ impl World {
     pub fn create(&mut self, c: &Config, name: String, kind: Kind) -> ObjectId {
         let id = ObjectId(self.next_id);
         self.next_id += 1;
-        let flags = c
-            .strings(&format!("mux.default_{}_flags", kind.parent()))
-            .into_iter()
-            .map(|s| s.to_uppercase())
-            .collect();
+        let (flags, parent) = match kind {
+            Kind::Player => (
+                &c.mux.default_player_flags,
+                &c.mux.default_player_lua_parent,
+            ),
+            Kind::Room => (&c.mux.default_room_flags, &c.mux.default_room_lua_parent),
+            Kind::Exit => (&c.mux.default_exit_flags, &c.mux.default_exit_lua_parent),
+            _ => (&c.mux.default_thing_flags, &c.mux.default_thing_lua_parent),
+        };
+        let flags = flags.iter().map(|flag| flag.world_name()).collect();
         self.objects.insert(
             id,
             Object {
@@ -123,10 +128,7 @@ impl World {
                 destination: None,
                 description: None,
                 internal_description: None,
-                lua_parent: c.string(
-                    &format!("mux.default_{}_lua_parent", kind.parent()),
-                    &format!("default_{}.lua", kind.parent()),
-                ),
+                lua_parent: parent.clone(),
                 flags,
                 powers: BTreeSet::new(),
                 state: BTreeMap::new(),

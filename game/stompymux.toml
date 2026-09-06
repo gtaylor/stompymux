@@ -3,7 +3,7 @@
 # From within this file, you can change much about the way your game behaves.
 # Some directives are clearly labeled and described, others are not. Others
 # aren't even listed in this file. For a complete list with descriptions,
-# please see docs/content/docs/configuration/stompymux-toml.md.
+# see ../docs/configuration.md and the checked-in legacy catalog fixture.
 # ----------------------------------------------------------------------------
 
 # Include the stock command and flag aliases. Add local
@@ -17,7 +17,11 @@ include = ["aliases.toml"]
 
 [database]
 # SQLite database file holding persistent game state.
-game_database = "data/stompymux.db"
+game_database = "data/stompymux-rs.db"
+# Archived source for explicit legacy import and read-only validation.
+legacy_game_database = "data/stompymux.db"
+# Maximum time SQLite waits for a database lock, in milliseconds.
+busy_timeout_ms = 5000
 # Directory containing BattleTech unit template files.
 mech_database = "mechs"
 # Directory containing map template files.
@@ -30,6 +34,18 @@ fork_dump = true
 # dump_message = "BattletechMUX : Saving Database. Game will pause."
 # Message displayed to players after a database dump finishes.
 # postdump_message = "BattletechMUX : Database Saved."
+
+# First-startup credentials are created with mode 0600. Relative paths are
+# resolved from the game directory. The object table replaces all defaults.
+[database.bootstrap]
+credentials_file = "bootstrap-credentials.txt"
+# [database.bootstrap.objects]
+# 0 = { type = "room", name = "Limbo" }
+# 1 = { type = "player", name = "GOD", wizard = true }
+# 2 = { type = "player", name = "Wizard", wizard = true }
+# 3 = { type = "room", name = "Used Mech Store" }
+# 4 = { type = "room", name = "Starter Room" }
+# 5 = { type = "room", name = "Afterlife" }
 
 # -----------------------------------------------
 #  Lua runtime
@@ -48,12 +64,19 @@ state_entry_limit = 1024
 state_object_limit = 1048576
 # Player-facing Lua callback errors: off, wizards, or all.
 error_reporting = "wizards"
+# Maximum VM instructions per callback/module; tracing remains disabled.
+instruction_limit = 1000000
+# Pending Lua output is bounded separately from the Lua heap.
+output_entry_limit = 1024
+output_byte_limit = 1048576
 
 # -----------------------------------------------
 #  Important Directives (Look these over!)
 # -----------------------------------------------
 
 [server]
+# Numeric IPv4 or IPv6 bind address. CLI overrides apply only when supplied.
+listen_address = "127.0.0.1"
 # The port you want your game to run on.
 port = 5555
 # The name returned by mudname().
@@ -219,6 +242,13 @@ login_attempt_burst = 3
 login_attempt_refill = 10
 # Maximum password hash operations accepted across the server per second.
 login_hash_limit = 5
+# Independent cap on concurrently executing password hashes.
+login_hash_concurrency = 5
+# Maximum remembered source-address throttles, and their retention in seconds.
+login_address_limit = 4096
+login_address_retention_seconds = 86400
+# Maximum persisted login-history entries per account.
+login_history_limit = 32
 
 # -----------------------------------------------
 #  Player Names
@@ -287,3 +317,16 @@ shouts = false
 startup = true
 # Write sensitive or dangerous wizard actions.
 wizard = false
+
+# Rust runtime resource limits. Counts and byte limits must be positive.
+[runtime]
+max_connections = 1024
+event_queue_capacity = 256
+session_output_queue_capacity = 128
+input_line_limit = 8192
+telnet_subnegotiation_limit = 8192
+output_message_limit = 65536
+# Durations below are milliseconds. Player-idle checking uses mux.idle_interval.
+write_timeout_ms = 5000
+shutdown_timeout_ms = 5000
+maintenance_interval_ms = 1000

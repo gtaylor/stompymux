@@ -27,10 +27,12 @@ pub struct Session {
     pub quota: usize,
     pub quota_at: Instant,
     pub failed: Cell<bool>,
+    pub output_message_limit: usize,
 }
 impl Session {
     pub fn raw(&self, data: Vec<u8>) -> bool {
-        let ok = data.len() <= 65536 && self.output.try_send(Output::Bytes(data)).is_ok();
+        let ok = data.len() <= self.output_message_limit
+            && self.output.try_send(Output::Bytes(data)).is_ok();
         if !ok {
             self.failed.set(true);
         }
