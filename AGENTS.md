@@ -10,3 +10,7 @@
 * Avoid unsafe code blocks where possible.
 * Leave a comment describing what each Rust file is for.
 * Document functions, types, and other variables with comments.
+
+## Rust formatting
+
+* Ensure that there is a newline between Rust blocks (ex: functions, structs, enums, etc) for readability.
