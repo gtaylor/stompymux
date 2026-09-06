@@ -68,7 +68,7 @@ async fn complete_legacy_catalog_and_compiled_defaults() {
         let path = row["path"].as_str().unwrap();
         let actual = serde_json::to_value(c.effective_value(path).unwrap()).unwrap();
         let expected = if path == "database.game_database" {
-            serde_json::json!("data/stompymux-rs.db")
+            serde_json::json!("data/stompymux.db")
         } else {
             row["default"].clone()
         };
@@ -212,51 +212,59 @@ async fn listener_precedence_and_effective_lua_values() {
     );
 }
 #[tokio::test(flavor = "current_thread")]
-async fn live_and_legacy_paths_are_distinct_and_legacy_live_storage_is_diagnosed() {
+async fn custom_live_path_and_json_storage_diagnostic() {
     let d = game();
     let path = d.path().join("stompymux.toml");
-    let text = std::fs::read_to_string(&path)
-        .unwrap()
-        .replace("data/stompymux-rs.db", "state/live.db")
-        .replace("data/stompymux.db", "archive/source.db");
+    let text = std::fs::read_to_string(&path).unwrap().replace(
+        "game_database = \"data/stompymux.db\"",
+        "game_database = \"state/live.db\"",
+    );
     std::fs::write(path, text).unwrap();
-    std::fs::create_dir(d.path().join("archive")).unwrap();
+    std::fs::create_dir(d.path().join("state")).unwrap();
     std::fs::rename(
         d.path().join("data/stompymux.db"),
-        d.path().join("archive/source.db"),
+        d.path().join("state/live.db"),
     )
     .unwrap();
     let c = Config::load(d.path()).unwrap();
-    persistence::import(&c.legacy_database(), &c).await.unwrap();
-    assert!(d.path().join("state/live.db").exists());
+    assert_eq!(
+        persistence::load(&c.database())
+            .await
+            .unwrap()
+            .objects
+            .len(),
+        16
+    );
     assert!(!d.path().join("data/stompymux-rs.db").exists());
+    let other = d.path().join("old-rust.db");
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(&other)
+            .create_if_missing(true),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql(
+        "CREATE TABLE world(id INTEGER PRIMARY KEY,document TEXT); PRAGMA user_version=1;",
+    )
+    .execute(&mut db)
+    .await
+    .unwrap();
+    sqlx::Connection::close(db).await.unwrap();
     assert!(
-        format!(
-            "{:#}",
-            persistence::load(&c.legacy_database()).await.unwrap_err()
-        )
-        .contains("import-legacy")
+        format!("{:#}", persistence::load(&other).await.unwrap_err())
+            .contains("Rust JSON snapshot")
     );
 }
 #[tokio::test(flavor = "current_thread")]
-async fn acl_parsing_and_check_succeed_but_serve_has_no_side_effects() {
+async fn acl_parsing_succeeds_but_serve_has_no_side_effects() {
     let d = game();
     append(d.path(), "\n[access.lists]\noptions='wizard'\n");
     let c = Config::load(d.path()).unwrap();
+    let before = std::fs::read(c.database()).unwrap();
     assert!(server::prepare(&c).await.is_err());
-    assert!(!c.database().exists());
     assert!(!c.path(&c.database.bootstrap.credentials_file).exists());
-    let before = std::fs::read(c.legacy_database()).unwrap();
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_stompymux-rs"))
-        .args(["check", "--game-dir", d.path().to_str().unwrap()])
-        .output()
-        .unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert_eq!(before, std::fs::read(c.legacy_database()).unwrap());
+    assert_eq!(before, std::fs::read(c.database()).unwrap());
 }
 #[tokio::test(flavor = "current_thread")]
 async fn lua_sees_defaults_overrides_and_legacy_aliases() {
@@ -265,9 +273,7 @@ async fn lua_sees_defaults_overrides_and_legacy_aliases() {
         .unwrap()
         .with_listener_overrides(None, Some(8765))
         .unwrap();
-    let w = persistence::read_legacy(&c.legacy_database(), &c)
-        .await
-        .unwrap();
+    let w = persistence::load(&c.database()).await.unwrap();
     let scripts = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     assert!(scripts.lua.load("return mux.config.get('port')==8765 and mux.config.get('server.port')==8765 and mux.config.get('btech_xp_usePilotBVMod')==1 and mux.config.get('runtime.input_line_limit')==8192 and mux.config.get('runtime.find_page_size')==20").eval::<bool>().unwrap());
 }
@@ -313,9 +319,7 @@ async fn configured_lua_limits_take_effect() {
     let d = game();
     append(d.path(), "\n[runtime]\noutput_message_limit=8\n");
     let c = Config::load(d.path()).unwrap();
-    let w = persistence::read_legacy(&c.legacy_database(), &c)
-        .await
-        .unwrap();
+    let w = persistence::load(&c.database()).await.unwrap();
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     assert!(s.lua.load("mux.world.pemit(1,'123456789')").exec().is_err());
 }
@@ -365,7 +369,7 @@ async fn cli_uses_toml_listener_paths_and_optional_overrides() {
     )
     .unwrap();
     let c = Config::load(d.path()).unwrap();
-    persistence::import(&c.legacy_database(), &c).await.unwrap();
+    persistence::load(&c.database()).await.unwrap();
     let mut w = persistence::load(&c.database()).await.unwrap();
     w.accounts
         .get_mut(&stompymux_rs::world::ObjectId(2))
@@ -488,9 +492,7 @@ async fn instruction_and_output_entry_budgets_are_configurable() {
     put(d.path(), "lua.instruction_limit", 10000.into());
     put(d.path(), "lua.output_entry_limit", 1.into());
     let c = Config::load(d.path()).unwrap();
-    let w = persistence::read_legacy(&c.legacy_database(), &c)
-        .await
-        .unwrap();
+    let w = persistence::load(&c.database()).await.unwrap();
     let scripts = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     scripts
         .lua

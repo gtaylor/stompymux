@@ -32,9 +32,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World) {
         d.path(),
     );
     let c = Config::load(d.path()).unwrap();
-    let w = persistence::read_legacy(&c.legacy_database(), &c)
-        .await
-        .unwrap();
+    let w = persistence::load(&c.database()).await.unwrap();
     (d, c, w)
 }
 /// Execute through native matching and collect ordinary player-directed output.

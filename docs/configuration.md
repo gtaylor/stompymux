@@ -39,16 +39,16 @@ wins over defaults. `server.listen_address` defaults to `127.0.0.1` and accepts
 IPv4 or IPv6 literals. The compiled `server.port` default is 6250; the supplied
 file selects 5555. Port zero requests an ephemeral port.
 
-`database.game_database` defaults to `data/stompymux-rs.db` and must contain Rust
-storage. `database.legacy_game_database` defaults to `data/stompymux.db` and is
-used for read-only checks and detecting an existing world before bootstrap.
-Import remains explicit; `import-legacy --source FILE` is authoritative. A legacy
-database used as live storage is rejected with import instructions. Changing
-these names never moves files or migrates data automatically.
+`database.game_database` defaults to `data/stompymux.db` and is the only live
+storage path. `serve` loads schema-32 relational tables there directly. `database.legacy_game_database` remains parseable but is deprecated
+and ignored. Existing Rust JSON snapshots are rejected and never converted or
+merged.
+Changing configuration never moves files. A missing live database permits fresh
+bootstrap; an existing empty or malformed file requires explicit operator action.
 
 Content and database paths are relative to the game directory, unless absolute.
 This includes Lua modules, connection/quit files and bootstrap credentials.
-Fresh bootstrap uses the configured object map; imported worlds never bootstrap.
+Fresh bootstrap uses the configured object map; existing worlds never bootstrap.
 The foundational GOD/Wizard IDs and required room references are validated.
 Default object flags and Lua parents also come from configuration.
 
@@ -86,3 +86,7 @@ The other two additions are `server.listen_address` and
 `database.legacy_game_database`, described above. Protocol bytes, schema limits,
 cryptographic constants and socket read-buffer sizes remain implementation
 constants.
+
+Login history remains bounded by the legacy schema: four successes and three
+failures, or fewer when `security.login_history_limit` is lower. The configured
+limit remains the total retained-history bound; lifetime counters are not pruned.

@@ -49,6 +49,9 @@ impl Config {
             origins: doc.origins,
         };
         config.validate()?;
+        if config.origins.contains_key("database.legacy_game_database") {
+            config.warnings.push("database.legacy_game_database is deprecated and unused; database.game_database is the live schema-32 database".into());
+        }
         config.warnings.push("Configuration parsed completely; BattleTech, extended rendering/OSC presets, logging controls, site/access policies, and remaining legacy command-system settings are retained for future implementation.".into());
         Ok(config)
     }
@@ -84,11 +87,6 @@ impl Config {
                 fail(key)
             );
         }
-        ensure!(
-            self.database() != self.legacy_database(),
-            "{}: live and legacy database paths must differ",
-            fail("database.game_database")
-        );
         let objects = &self.settings.database.bootstrap.objects;
         for (id, obj) in objects {
             ensure!(
@@ -190,13 +188,9 @@ impl Config {
     pub fn path(&self, path: impl AsRef<Path>) -> PathBuf {
         self.root.join(path)
     }
-    /// Resolve the live Rust database path.
+    /// Resolve the live schema-32 database path.
     pub fn database(&self) -> PathBuf {
         self.path(&self.settings.database.game_database)
-    }
-    /// Resolve the archived legacy database path.
-    pub fn legacy_database(&self) -> PathBuf {
-        self.path(&self.settings.database.legacy_game_database)
     }
     /// Resolve the Lua module directory.
     pub fn lua_dir(&self) -> PathBuf {

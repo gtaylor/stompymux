@@ -9,14 +9,13 @@ linked or invoked. LuaJIT and SQLite are built from vendored dependencies.
 From this directory, with Rust and a C compiler installed:
 
 ```sh
-cargo run -- check --game-dir game
-cargo run -- import-legacy --source game/data/stompymux.db --game-dir game
 cargo run -- serve --game-dir game
 ```
 
-Import is a one-time operation. If `game/data/stompymux-rs.db` already exists,
-skip import and start the server. Import refuses to overwrite it. The server
-refuses to silently bootstrap when a populated legacy database exists.
+The server reads and updates `game/data/stompymux.db` directly. Existing
+`stompymux-rs.db` JSON snapshots are left untouched and are not merged or loaded.
+Use only one server writer for a database; do not run legacy and Rust servers
+against the same file simultaneously.
 
 The supplied configuration listens on `127.0.0.1:5555`. Without a configured
 port, the compiled legacy default is 6250.
@@ -33,44 +32,37 @@ Accounts and locations survive restart. Multiple sessions are supported;
 connection hooks receive `reconnect`, and disconnect hooks run only for the
 last session. Ctrl-C and SIGTERM stop the listener and finish accepted writes.
 
-`check` reads configuration, validates references, and loads required Lua
-modules without writing files. It reads Rust storage when present, otherwise
-validates the legacy source. It does not execute startup hooks.
+## Storage
 
-## Storage and import
+The live format is **schema 32**. The supplied fixture has 16 objects, two
+accounts and two channels. Supported fields are read directly from the relational
+tables. SQLx updates only changed supported columns in a single transaction;
+existing rows are never replaced. Failed writes restore the in-memory world and
+discard pending success output.
 
-The supported legacy import format is **schema 32**. The supplied fixture has
-16 objects, two accounts, two channels and the already-bootstrapped starting
-world. Object IDs, names, account hashes and aliases, login metadata/history,
-flags/powers, descriptions, relationships, typed Lua state and channel metadata
-are imported. Legacy exit fields are converted into explicit source and
-destination relationships; linked-list bookkeeping is not retained.
+Unknown columns, deferred BattleTech/channel/macros/page-recipient data, indexes
+and triggers remain in place. Unchanged Lua values retain their original SQLite
+storage types, including UTF-8 blobs. Explicit state-key removals and expired
+login-history entries remove only those owned rows. Unsupported required columns
+on new rows cause an atomic failure instead of invented defaults.
 
-Rust storage uses SQLite `user_version=1` and a single versioned JSON world
-snapshot in the `world` table. Each accepted mutation replaces that snapshot in
-one transaction. Failed writes restore the in-memory world and discard pending
-success output. This deliberately simple format is suitable for the first
-milestone; later versions can migrate to relational tables without changing
-the world API. Files are created with mode 0600.
+Legacy containment lists (`contents`, `exits`, `next`) are updated for movement
+and creation, preserving unaffected lists and the relative order of retained
+members. Login history keeps at most four successes and three failures, newest
+first within each outcome, additionally respecting a smaller configured total
+limit. Lifetime login counters are independent of retained history.
 
-Persistence uses SQLx 0.9 with Tokio and bundled SQLite. Queries run at runtime;
-building requires no database, SQLx CLI or query metadata. Each operation opens
-and closes its own connection, honoring `database.busy_timeout_ms`. Checks and
-legacy reads use read-only connections. The driver change introduces no journal
-mode change, connection pool, foreign-key enforcement or schema migration.
+Persistence uses SQLx 0.9 with Tokio and bundled SQLite, operation-scoped
+connections and `database.busy_timeout_ms`. Database loads use read-only connections.
+Normal writes do not change journal mode, foreign-key policy or schema metadata.
+Older schemas and Rust JSON snapshots are rejected without conversion.
 
-The copied legacy database remains unchanged and is the archive for deferred
-BattleTech tables, channel membership/history, macros and page-recipient data.
-Keep it alongside Rust storage. The importer prints its coverage. There is no
-legacy write compatibility or import support for older backup schemas.
-
-For a **new, empty game**, use a separate game-directory copy with no populated
-legacy database and no Rust database. `serve` creates foundational objects,
-runs the unchanged `bootstrap_world.lua`, and commits the initialized world
-once. Random administrator credentials are written to
-`bootstrap-credentials.txt` with mode 0600. A stale credentials file blocks
-another bootstrap attempt rather than overwriting credentials. Existing/imported
-worlds never run first-startup hooks.
+For a **new game**, use a separate game-directory copy with the configured live
+database absent. `serve` exclusively creates schema-32 storage with mode 0600,
+runs bootstrap Lua, and commits initialization atomically. Empty or malformed
+existing files are rejected. Random administrator credentials are written to
+`bootstrap-credentials.txt` with mode 0600; stale credentials are not overwritten.
+Existing worlds never run first-startup hooks.
 
 ## Configuration
 
@@ -83,11 +75,9 @@ Listener precedence is CLI → TOML → centralized defaults. Both IPv4 and IPv6
 addresses are supported. Content paths resolve relative to `--game-dir` (default
 `game`); recursive include paths resolve relative to the including file.
 
-`database.game_database` now names **live Rust storage**, defaulting to
-`data/stompymux-rs.db`. `database.legacy_game_database` names the legacy archive,
-defaulting to `data/stompymux.db`. Update older configurations to declare both.
-No files are moved, migrated or automatically imported. The explicit
-`import-legacy --source` argument takes precedence over the archive setting.
+`database.game_database` names live schema-32 storage, defaulting to
+`data/stompymux.db`. `database.legacy_game_database` is deprecated and ignored.
+Changing configuration never moves files or merges data from another database.
 
 ## Wizard movement
 
@@ -137,8 +127,8 @@ before acknowledgement.
 **CONNECTED is session-owned.** It becomes true after a successful login or
 registration and stays true until the last session disconnects. Lua lifecycle
 hooks observe the updated value. Callback errors and database failures cannot
-restore stale connection state. CONNECTED is excluded from saved snapshots and
-ignored in imported/default object flags; commands and Lua cannot override it.
+restore stale connection state. CONNECTED is stored as zero and
+ignored in stored/default object flags; commands and Lua cannot override it.
 
 Lua uses immutable constants such as `mux.world.flags.DARK` and
 `object:flags():has/add/remove`. Mutation returns whether the flag changed;
@@ -208,7 +198,7 @@ cargo test
 ```
 
 Tests use `tests/fixtures/game` copied into temporary directories, ephemeral
-TCP ports and controlled credentials. They cover import preservation and schema
+TCP ports and controlled credentials. They cover relational data preservation and schema
 rejection, bootstrap idempotence, Lua limits/locks, real registration and login,
 duplicate registration, password mismatch, throttling, speech, WHO, movement,
 multiple sessions, restart durability, injected write failures, stale auth

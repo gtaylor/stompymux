@@ -17,8 +17,8 @@ include = ["aliases.toml"]
 
 [database]
 # SQLite database file holding persistent game state.
-game_database = "data/stompymux-rs.db"
-# Archived source for explicit legacy import and read-only validation.
+game_database = "data/stompymux.db"
+# Deprecated compatibility setting; ignored. game_database is the live database.
 legacy_game_database = "data/stompymux.db"
 # Directory containing BattleTech unit template files.
 mech_database = "mechs"

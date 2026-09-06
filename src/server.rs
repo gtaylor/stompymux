@@ -8,7 +8,7 @@ use crate::{
     telnet::{self, Input},
     world::*,
 };
-use anyhow::{Context, Result, ensure};
+use anyhow::{Context, Result};
 use mlua::LuaSerdeExt;
 use std::{
     cell::RefCell,
@@ -55,11 +55,6 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
         let timeout = c.database.busy_timeout_ms;
         persistence::load_with_timeout(&path, timeout).await?
     } else {
-        let legacy = c.legacy_database();
-        ensure!(
-            !legacy.exists() || std::fs::metadata(&legacy)?.len() == 0,
-            "Legacy database exists. Run import-legacy explicitly before serving this world."
-        );
         World::default()
     };
     let world = Rc::new(RefCell::new(world));
@@ -139,12 +134,11 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
         eprintln!("Bootstrap credentials written to {}", credentials.display());
     }
     scripts.world.borrow().validate(c)?;
-    let before = scripts.world.borrow().clone();
     scripts.event("on_server_startup", None, None)?;
     let after = scripts.world.borrow().clone();
-    if serde_json::to_vec(&before)? != serde_json::to_vec(&after)? {
-        persistence::persist(c.database(), after, c.database.busy_timeout_ms).await?;
-    }
+    after.validate(c)?;
+    // Also clears stale stored CONNECTED values; unchanged durable fields are not rewritten.
+    persistence::persist(c.database(), after, c.database.busy_timeout_ms).await?;
     scripts.outbox.borrow_mut().clear();
     Ok(scripts)
 }
@@ -746,11 +740,10 @@ impl Server {
                         at: accounts::now(),
                         host,
                     });
-                    let excess = a
-                        .history
-                        .len()
-                        .saturating_sub(self.config.security.login_history_limit);
-                    a.history.drain(..excess);
+                    persistence::trim_history(
+                        &mut a.history,
+                        self.config.security.login_history_limit,
+                    );
                 }
                 self.commit(before).await;
                 self.prompt(id,LoginFlow::Name,"Either that player does not exist, or has a different password.\r\nWho are you? ",false);
@@ -794,11 +787,7 @@ impl Server {
                 at: accounts::now(),
                 host,
             });
-            let excess = a
-                .history
-                .len()
-                .saturating_sub(self.config.security.login_history_limit);
-            a.history.drain(..excess);
+            persistence::trim_history(&mut a.history, self.config.security.login_history_limit);
         }
         if !self.commit(before).await {
             self.prompt(
@@ -852,9 +841,7 @@ mod tests {
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
         )
         .unwrap();
-        let world = persistence::read_legacy(&c.root.join("data/stompymux.db"), &c)
-            .await
-            .unwrap();
+        let world = persistence::load(&c.database()).await.unwrap();
         let scripts = Scripts::new(&c, Rc::new(RefCell::new(world))).unwrap();
         let (events, _) = mpsc::channel(1);
         let mut server = Server {
@@ -926,7 +913,7 @@ mod tests {
             )
             .unwrap();
             let c = Config::load(d.path()).unwrap();
-            persistence::import(&c.legacy_database(), &c).await.unwrap();
+            persistence::load(&c.database()).await.unwrap();
             let world = persistence::load(&c.database()).await.unwrap();
             let scripts = Scripts::new(&c, Rc::new(RefCell::new(world))).unwrap();
             let (events, _) = mpsc::channel(1);
@@ -978,7 +965,7 @@ mod tests {
             )
             .await
             .unwrap();
-            sqlx::raw_sql("CREATE TRIGGER fail BEFORE UPDATE ON world BEGIN SELECT RAISE(FAIL,'injected'); END;").execute(&mut db).await.unwrap();
+            sqlx::raw_sql("CREATE TRIGGER fail BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(FAIL,'injected'); END;").execute(&mut db).await.unwrap();
             server.disconnect(SessionId(1)).await.unwrap();
             assert!(
                 server.scripts.world.borrow().objects[&ObjectId(1)]

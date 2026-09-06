@@ -20,7 +20,7 @@ pub struct DatabaseConfig {
     pub dump_message: String,
     /// Configuration value for `postdump_message`; defaults are centralized below.
     pub postdump_message: String,
-    /// Configuration value for `legacy_game_database`; defaults are centralized below.
+    /// Deprecated compatibility value; no runtime operation uses this path.
     pub legacy_game_database: PathBuf,
     /// Configuration value for `busy_timeout_ms`; defaults are centralized below.
     pub busy_timeout_ms: u64,
@@ -30,7 +30,7 @@ pub struct DatabaseConfig {
 impl Default for DatabaseConfig {
     fn default() -> Self {
         Self {
-            game_database: PathBuf::from("data/stompymux-rs.db"),
+            game_database: PathBuf::from("data/stompymux.db"),
             mech_database: PathBuf::from("mechs"),
             map_database: PathBuf::from("maps"),
             dump_interval: 3600,

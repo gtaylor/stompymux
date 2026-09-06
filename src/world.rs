@@ -80,7 +80,7 @@ pub struct Account {
     pub unreported_failures: i64,
     pub history: Vec<Login>,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Login {
     pub success: bool,
     pub at: i64,

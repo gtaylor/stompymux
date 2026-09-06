@@ -49,21 +49,19 @@ fn fixture() -> tempfile::TempDir {
     std::fs::write(p, text).unwrap();
     d
 }
-async fn imported() -> (tempfile::TempDir, Config) {
+async fn populated() -> (tempfile::TempDir, Config) {
     let d = fixture();
     let c = Config::load(d.path()).unwrap();
-    persistence::import(&d.path().join("data/stompymux.db"), &c)
-        .await
-        .unwrap();
+    persistence::load(&c.database()).await.unwrap();
     (d, c)
 }
 #[tokio::test(flavor = "current_thread")]
-async fn import_is_explicit_lossless_for_supported_data_and_read_only() {
+async fn direct_load_is_lossless_for_supported_data_and_read_only() {
     let d = fixture();
     let c = Config::load(d.path()).unwrap();
     let source = d.path().join("data/stompymux.db");
     let before = std::fs::read(&source).unwrap();
-    let w = persistence::read_legacy(&source, &c).await.unwrap();
+    let w = persistence::load(&source).await.unwrap();
     assert_eq!(w.objects.len(), 16);
     assert_eq!(w.accounts.len(), 2);
     assert_eq!(w.channels.len(), 2);
@@ -71,13 +69,12 @@ async fn import_is_explicit_lossless_for_supported_data_and_read_only() {
         w.objects[&ObjectId(13)].state["locks.traverse"]["flag/WIZARD"],
         Scalar::Boolean(true)
     );
-    persistence::import(&source, &c).await.unwrap();
+    persistence::load(&source).await.unwrap();
     let loaded = persistence::load(&c.database()).await.unwrap();
     assert_eq!(
         serde_json::to_value(w).unwrap(),
         serde_json::to_value(loaded).unwrap()
     );
-    assert!(persistence::import(&source, &c).await.is_err());
     assert_eq!(before, std::fs::read(&source).unwrap());
 }
 #[tokio::test(flavor = "current_thread")]
@@ -96,8 +93,8 @@ async fn rejects_unsupported_schema_and_bad_references() {
         .execute(&mut sql)
         .await
         .unwrap();
-    assert!(persistence::import(&source, &c).await.is_err());
-    assert!(!c.database().exists());
+    assert!(persistence::load(&source).await.is_err());
+    assert!(c.database().exists());
     sqlx::query("UPDATE snapshot SET schema_version=32")
         .execute(&mut sql)
         .await
@@ -106,11 +103,17 @@ async fn rejects_unsupported_schema_and_bad_references() {
         .execute(&mut sql)
         .await
         .unwrap();
-    assert!(persistence::import(&source, &c).await.is_err());
+    assert!(
+        persistence::load(&source)
+            .await
+            .unwrap()
+            .validate(&c)
+            .is_err()
+    );
     sqlx::Connection::close(sql).await.unwrap();
 }
 #[tokio::test(flavor = "current_thread")]
-async fn import_all_scalar_types_and_argon_hash() {
+async fn load_all_scalar_types_and_argon_hash() {
     let d = fixture();
     let c = Config::load(d.path()).unwrap();
     let source = d.path().join("data/stompymux.db");
@@ -157,7 +160,7 @@ async fn import_all_scalar_types_and_argon_hash() {
         .execute(&mut sql)
         .await
         .unwrap();
-    persistence::import(&source, &c).await.unwrap();
+    persistence::load(&source).await.unwrap();
     let w = persistence::load(&c.database()).await.unwrap();
     assert!(accounts::verify(
         "known-secret",
@@ -229,7 +232,7 @@ async fn telnet_fragmentation_echo_and_utf8() {
 }
 #[tokio::test(flavor = "current_thread")]
 async fn copied_lua_renders_rooms_locks_and_commands() {
-    let (_d, c) = imported().await;
+    let (_d, c) = populated().await;
     let w = Rc::new(RefCell::new(
         persistence::load(&c.database()).await.unwrap(),
     ));
@@ -251,7 +254,7 @@ async fn copied_lua_renders_rooms_locks_and_commands() {
 }
 #[tokio::test(flavor = "current_thread")]
 async fn lua_resource_limits_and_fail_closed() {
-    let (_d, c) = imported().await;
+    let (_d, c) = populated().await;
     let w = Rc::new(RefCell::new(
         persistence::load(&c.database()).await.unwrap(),
     ));
@@ -284,7 +287,7 @@ async fn lua_resource_limits_and_fail_closed() {
     assert!(s.lock(ObjectId(1), ObjectId(13)).is_err());
 }
 #[tokio::test(flavor = "current_thread")]
-async fn bootstrap_once_and_import_does_not_bootstrap() {
+async fn bootstrap_once_and_existing_world_does_not_bootstrap() {
     let d = fixture();
     std::fs::remove_file(d.path().join("data/stompymux.db")).unwrap();
     let c = Config::load(d.path()).unwrap();
@@ -305,7 +308,7 @@ async fn bootstrap_once_and_import_does_not_bootstrap() {
             & 0o777,
         0o600
     );
-    let (_d, c) = imported().await;
+    let (_d, c) = populated().await;
     let s = server::prepare(&c).await.unwrap();
     assert_eq!(s.world.borrow().objects.len(), 16);
     assert!(!c.root.join("bootstrap-credentials.txt").exists());
@@ -406,7 +409,7 @@ impl Client {
 }
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_register_social_world_and_restart() {
-    let (_d, c) = imported().await;
+    let (_d, c) = populated().await;
     let running = Running::start(&c).await;
     let mut alice = Client::connect(&running).await;
     alice.register("Alice").await;
@@ -443,7 +446,7 @@ async fn tcp_register_social_world_and_restart() {
 }
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_mismatch_bad_password_and_duplicate_registration() {
-    let (_d, c) = imported().await;
+    let (_d, c) = populated().await;
     let running = Running::start(&c).await;
     let mut a = Client::connect(&running).await;
     let mut b = Client::connect(&running).await;
@@ -474,7 +477,7 @@ async fn tcp_mismatch_bad_password_and_duplicate_registration() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn movement_persists_and_failed_registration_rolls_back() {
-    let (_d, c) = imported().await;
+    let (_d, c) = populated().await;
     let mut w = persistence::load(&c.database()).await.unwrap();
     w.accounts.get_mut(&ObjectId(2)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
     persistence::save(&c.database(), &w).await.unwrap();
@@ -497,7 +500,7 @@ async fn movement_persists_and_failed_registration_rolls_back() {
     )
     .await
     .unwrap();
-    sqlx::raw_sql("CREATE TRIGGER reject_write BEFORE UPDATE ON world BEGIN SELECT RAISE(ABORT,'injected persistence failure'); END;").execute(&mut db).await.unwrap();
+    sqlx::raw_sql("CREATE TRIGGER reject_write BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'injected persistence failure'); END;").execute(&mut db).await.unwrap();
     let mut newcomer = Client::connect(&running).await;
     newcomer.send("Unsaved").await;
     newcomer.until("[Y/n] ").await;
@@ -530,7 +533,7 @@ async fn movement_persists_and_failed_registration_rolls_back() {
 }
 #[tokio::test(flavor = "current_thread")]
 async fn login_throttle_utf8_and_echo_over_tcp() {
-    let (d, _) = imported().await;
+    let (d, _) = populated().await;
     let path = d.path().join("stompymux.toml");
     let text = std::fs::read_to_string(&path)
         .unwrap()
@@ -578,7 +581,7 @@ async fn bounded_output_marks_slow_clients_for_disconnect() {
 }
 #[tokio::test(flavor = "current_thread")]
 async fn missing_required_parent_prevents_startup() {
-    let (d, c) = imported().await;
+    let (d, c) = populated().await;
     std::fs::remove_file(d.path().join("lua/object_logic/default_room.lua")).unwrap();
     let w = Rc::new(RefCell::new(
         persistence::load(&c.database()).await.unwrap(),
@@ -588,7 +591,7 @@ async fn missing_required_parent_prevents_startup() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn connection_hooks_only_disconnect_last_session_and_shutdown_cleanly() {
-    let (d, c) = imported().await;
+    let (d, c) = populated().await;
     let mut w = persistence::load(&c.database()).await.unwrap();
     w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
     persistence::save(&c.database(), &w).await.unwrap();
@@ -658,7 +661,7 @@ async fn connection_hooks_only_disconnect_last_session_and_shutdown_cleanly() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn player_lookup_accepts_dbrefs_only_for_player_accounts() {
-    let (_d, c) = imported().await;
+    let (_d, c) = populated().await;
     let mut world = persistence::load(&c.database()).await.unwrap();
     world.accounts.get_mut(&ObjectId(2)).unwrap().alias = Some("Wiz".into());
     for identity in ["#2", "Wizard", "wizard", "WIZ"] {
@@ -682,7 +685,7 @@ async fn player_lookup_accepts_dbrefs_only_for_player_accounts() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_login_by_dbref_authenticates_existing_player() {
-    let (_d, c) = imported().await;
+    let (_d, c) = populated().await;
     let mut world = persistence::load(&c.database()).await.unwrap();
     world.accounts.get_mut(&ObjectId(2)).unwrap().hash =
         Some(accounts::hash("secret", &c).unwrap());
@@ -712,7 +715,7 @@ async fn flag_catalog_storage_commands_and_lua_contract() {
         commands,
         flags::{self, Flag},
     };
-    let (_d, c) = imported().await;
+    let (_d, c) = populated().await;
     let world = Rc::new(RefCell::new(
         persistence::load(&c.database()).await.unwrap(),
     ));
@@ -854,18 +857,12 @@ async fn flag_catalog_storage_commands_and_lua_contract() {
     )
     .await
     .unwrap();
-    let json: String = sqlx::query_scalar("SELECT document FROM world")
+    let connected: i64 = sqlx::query_scalar("SELECT has_connected_flag FROM objects WHERE dbref=1")
         .fetch_one(&mut db)
         .await
         .unwrap();
-    assert!(!json.contains("CONNECTED"));
-    let mut value: serde_json::Value = serde_json::from_str(&json).unwrap();
-    value["objects"]["1"]["flags"]
-        .as_array_mut()
-        .unwrap()
-        .push("CONNECTED".into());
-    sqlx::query("UPDATE world SET document=?1")
-        .bind(value.to_string())
+    assert_eq!(connected, 0);
+    sqlx::query("UPDATE objects SET has_connected_flag=1 WHERE dbref=1")
         .execute(&mut db)
         .await
         .unwrap();
@@ -874,24 +871,29 @@ async fn flag_catalog_storage_commands_and_lua_contract() {
             .flags
             .contains(Flag::Connected)
     );
-    value["objects"]["1"]["flags"]
-        .as_array_mut()
-        .unwrap()
-        .push("UNKNOWN".into());
-    sqlx::query("UPDATE world SET document=?1")
-        .bind(value.to_string())
+    sqlx::raw_sql("ALTER TABLE objects ADD COLUMN has_unknown_flag INTEGER NOT NULL DEFAULT 1")
         .execute(&mut db)
         .await
         .unwrap();
+    assert!(persistence::load(&c.database()).await.is_ok());
+    sqlx::raw_sql(
+        "PRAGMA ignore_check_constraints=ON; UPDATE objects SET has_dark_flag=2 WHERE dbref=1",
+    )
+    .execute(&mut db)
+    .await
+    .unwrap();
     let error = format!("{:#}", persistence::load(&c.database()).await.unwrap_err());
-    assert!(error.contains("#1") && error.contains("UNKNOWN"), "{error}");
+    assert!(
+        error.contains("#1") && error.contains("has_dark_flag"),
+        "{error}"
+    );
     sqlx::Connection::close(db).await.unwrap();
 }
 
 /// Runtime flag state is observable over TCP, but never stored as durable truth.
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_flags_follow_registration_and_multiple_sessions() {
-    let (_d, c) = imported().await;
+    let (_d, c) = populated().await;
     let mut world = persistence::load(&c.database()).await.unwrap();
     world.accounts.get_mut(&ObjectId(1)).unwrap().hash =
         Some(accounts::hash("secret", &c).unwrap());
@@ -926,7 +928,7 @@ async fn tcp_flags_follow_registration_and_multiple_sessions() {
     )
     .await
     .unwrap();
-    sqlx::raw_sql("CREATE TRIGGER fail_flags BEFORE UPDATE ON world BEGIN SELECT RAISE(FAIL,'injected'); END;").execute(&mut db).await.unwrap();
+    sqlx::raw_sql("CREATE TRIGGER fail_flags BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(FAIL,'injected'); END;").execute(&mut db).await.unwrap();
     admin.send(&format!("@flag #{}=!DARK", id.0)).await;
     admin.until("Unable to save your changes").await;
     admin.send(&format!("@examine #{}", id.0)).await;
@@ -964,15 +966,15 @@ async fn tcp_flags_follow_registration_and_multiple_sessions() {
     sqlx::Connection::close(db).await.unwrap();
 }
 
-/// The complete catalog, typed Lua contract and old snapshot format agree.
+/// The complete catalog, typed Lua contract and relational storage agree.
 #[tokio::test(flavor = "current_thread")]
-async fn powers_catalog_lua_import_and_storage() {
+async fn powers_catalog_lua_and_relational_storage() {
     use stompymux_rs::powers::{self, Power, PowerSet};
     let d = fixture();
     let c = Config::load(d.path()).unwrap();
     let mut legacy = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
         &sqlx::sqlite::SqliteConnectOptions::new()
-            .filename(c.legacy_database())
+            .filename(c.database())
             .foreign_keys(false),
     )
     .await
@@ -982,7 +984,7 @@ async fn powers_catalog_lua_import_and_storage() {
         .execute(&mut legacy)
         .await
         .unwrap();
-    persistence::import(&c.legacy_database(), &c).await.unwrap();
+    persistence::load(&c.database()).await.unwrap();
     let world = Rc::new(RefCell::new(
         persistence::load(&c.database()).await.unwrap(),
     ));
@@ -1028,25 +1030,32 @@ async fn powers_catalog_lua_import_and_storage() {
     )
     .await
     .unwrap();
-    let json: String = sqlx::query_scalar("SELECT document FROM world")
+    let idle: i64 = sqlx::query_scalar("SELECT has_idle_power FROM objects WHERE dbref=2")
         .fetch_one(&mut db)
         .await
         .unwrap();
-    let mut value: serde_json::Value = serde_json::from_str(&json).unwrap();
-    assert_eq!(value["objects"]["2"]["powers"], serde_json::json!(["IDLE"]));
+    assert_eq!(idle, 1);
     assert!(
         persistence::load(&c.database()).await.unwrap().objects[&ObjectId(2)]
             .powers
             .contains(Power::Idle)
     );
-    value["objects"]["2"]["powers"] = serde_json::json!(["UNKNOWN"]);
-    sqlx::query("UPDATE world SET document=?1")
-        .bind(value.to_string())
+    sqlx::raw_sql("ALTER TABLE objects ADD COLUMN has_unknown_power INTEGER NOT NULL DEFAULT 1")
         .execute(&mut db)
         .await
         .unwrap();
+    assert!(persistence::load(&c.database()).await.is_ok());
+    sqlx::raw_sql(
+        "PRAGMA ignore_check_constraints=ON; UPDATE objects SET has_idle_power=2 WHERE dbref=2",
+    )
+    .execute(&mut db)
+    .await
+    .unwrap();
     let error = format!("{:#}", persistence::load(&c.database()).await.unwrap_err());
-    assert!(error.contains("#2") && error.contains("UNKNOWN"), "{error}");
+    assert!(
+        error.contains("#2") && error.contains("has_idle_power"),
+        "{error}"
+    );
     sqlx::Connection::close(legacy).await.unwrap();
     sqlx::Connection::close(db).await.unwrap();
 }
@@ -1055,7 +1064,7 @@ async fn powers_catalog_lua_import_and_storage() {
 #[tokio::test(flavor = "current_thread")]
 async fn power_commands_validate_targets_permissions_and_names() {
     use stompymux_rs::{commands, powers::Power, world::Kind};
-    let (d, _) = imported().await;
+    let (d, _) = populated().await;
     let path = d.path().join("aliases.toml");
     let aliases = std::fs::read_to_string(&path)
         .unwrap()
@@ -1106,7 +1115,7 @@ async fn power_commands_validate_targets_permissions_and_names() {
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_powers_are_transactional_and_durable() {
     use stompymux_rs::powers::Power;
-    let (d, c) = imported().await;
+    let (d, c) = populated().await;
     let mut w = persistence::load(&c.database()).await.unwrap();
     w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
     w.objects
@@ -1150,7 +1159,7 @@ async fn tcp_powers_are_transactional_and_durable() {
     )
     .await
     .unwrap();
-    sqlx::raw_sql("CREATE TRIGGER fail_power BEFORE UPDATE ON world BEGIN SELECT RAISE(FAIL,'injected'); END;").execute(&mut db).await.unwrap();
+    sqlx::raw_sql("CREATE TRIGGER fail_power BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(FAIL,'injected'); END;").execute(&mut db).await.unwrap();
     admin.send("@power #4=idle").await;
     let output = admin.until("Unable to save your changes").await;
     assert!(!output.contains("granted"));
@@ -1181,7 +1190,7 @@ async fn tcp_powers_are_transactional_and_durable() {
 /// IDLE is retained as metadata and does not yet bypass timeout enforcement.
 #[tokio::test(flavor = "current_thread")]
 async fn idle_power_does_not_change_idle_timeout() {
-    let (d, _) = imported().await;
+    let (d, _) = populated().await;
     let path = d.path().join("stompymux.toml");
     let text = std::fs::read_to_string(&path)
         .unwrap()
@@ -1216,7 +1225,7 @@ async fn idle_power_does_not_change_idle_timeout() {
 #[tokio::test(flavor = "current_thread")]
 async fn wizard_teleport_and_home_validate_containment() {
     use stompymux_rs::{commands, world::Kind};
-    let (_d, c) = imported().await;
+    let (_d, c) = populated().await;
     let mut w = persistence::load(&c.database()).await.unwrap();
     let stored_home = w.objects[&ObjectId(1)].home;
     let cargo = w.create(&c, "Cargo".into(), Kind::Thing);
@@ -1337,7 +1346,7 @@ async fn wizard_teleport_and_home_validate_containment() {
 #[tokio::test(flavor = "current_thread")]
 async fn teleport_locks_context_and_callbacks_are_transactional() {
     use stompymux_rs::{commands, world::Kind};
-    let (d, c) = imported().await;
+    let (d, c) = populated().await;
     std::fs::write(d.path().join("lua/object_logic/movement_test.lua"),r#"
       return {locks={teleport=function(ctx)
         if lock_error then error("injected lock failure") end
@@ -1421,7 +1430,7 @@ async fn teleport_locks_context_and_callbacks_are_transactional() {
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_teleport_containers_and_home_persist() {
     use stompymux_rs::world::Kind;
-    let (_d, c) = imported().await;
+    let (_d, c) = populated().await;
     let mut w = persistence::load(&c.database()).await.unwrap();
     for id in [1, 2] {
         w.accounts.get_mut(&ObjectId(id)).unwrap().hash =
@@ -1456,7 +1465,7 @@ async fn tcp_teleport_containers_and_home_persist() {
     .await
     .unwrap();
     sqlx::raw_sql(
-        "CREATE TRIGGER fail_move BEFORE UPDATE ON world BEGIN SELECT RAISE(FAIL,'injected'); END;",
+        "CREATE TRIGGER fail_move BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(FAIL,'injected'); END;",
     )
     .execute(&mut db)
     .await
@@ -1489,7 +1498,7 @@ async fn tcp_teleport_containers_and_home_persist() {
 /// Searches are paginated per connection, bypass writes, and reserve aliases/switches.
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_find_pages_are_private_and_read_only() {
-    let (d, _c) = imported().await;
+    let (d, _c) = populated().await;
     let path = d.path().join("stompymux.toml");
     let text = std::fs::read_to_string(&path).unwrap();
     std::fs::write(&path, format!("{text}\n[runtime]\nfind_page_size=1\n")).unwrap();
@@ -1526,7 +1535,7 @@ async fn tcp_find_pages_are_private_and_read_only() {
     )
     .await
     .unwrap();
-    sqlx::raw_sql("CREATE TABLE find_writes(count INTEGER); INSERT INTO find_writes VALUES(0); CREATE TRIGGER count_find_writes AFTER UPDATE ON world BEGIN UPDATE find_writes SET count=count+1; END;").execute(&mut db).await.unwrap();
+    sqlx::raw_sql("CREATE TABLE find_writes(count INTEGER); INSERT INTO find_writes VALUES(0); CREATE TRIGGER count_find_writes AFTER UPDATE ON snapshot BEGIN UPDATE find_writes SET count=count+1; END;").execute(&mut db).await.unwrap();
     first.send("@FI ,0,4").await;
     let page = first.until("***Use @find/next for more***").await;
     assert!(page.contains("(#0:R"), "{page}");
@@ -1623,7 +1632,7 @@ async fn tcp_find_pages_are_private_and_read_only() {
 /// The shared registry applies native/Lua aliases and observes changed authority over TCP.
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_registry_permissions_and_lua_aliases() {
-    let (d, c) = imported().await;
+    let (d, c) = populated().await;
     let mut w = persistence::load(&c.database()).await.unwrap();
     for id in [1, 2] {
         w.accounts.get_mut(&ObjectId(id)).unwrap().hash =
