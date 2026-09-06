@@ -5,3 +5,4 @@
 /game/data/*-shm
 /game/data/stompymux-rs.db*
 /game/bootstrap-credentials.txt
+/game/data/stompymux.db*
