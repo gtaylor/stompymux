@@ -291,7 +291,7 @@ async fn relational_roundtrip_sparse_positions_unknown_fields_and_failed_writes(
     run(&s, &c, 1, "page #2=message");
     save(&c, &s).await.unwrap();
     let mut db = connection(&c).await;
-    sqlx::raw_sql("ALTER TABLE comsys_channels ADD COLUMN extra BLOB DEFAULT X'FE'; ALTER TABLE commac_aliases ADD COLUMN extra BLOB DEFAULT X'FF'; UPDATE commac_entries SET curmac=42,macro_slot_0=43 WHERE who=1; UPDATE comsys_channels SET type=type|8192 WHERE name='Durable'; UPDATE comsys_channel_messages SET position=position+100 WHERE channel_name='Durable'").execute(&mut db).await.unwrap();
+    sqlx::raw_sql("ALTER TABLE comsys_channels ADD COLUMN extra BLOB DEFAULT X'FE'; ALTER TABLE commac_aliases ADD COLUMN extra BLOB DEFAULT X'FF'; INSERT INTO macro_sets VALUES(0,1,0,'preserved'); UPDATE commac_entries SET curmac=0,macro_slot_0=0 WHERE who=1; UPDATE comsys_channels SET type=type|8192 WHERE name='Durable'; UPDATE comsys_channel_messages SET position=position+100 WHERE channel_name='Durable'").execute(&mut db).await.unwrap();
     let w = persistence::load(&c.database()).await.unwrap();
     let image = std::fs::read(c.database()).unwrap();
     persistence::save(&c.database(), &w).await.unwrap();
@@ -325,7 +325,7 @@ async fn relational_roundtrip_sparse_positions_unknown_fields_and_failed_writes(
             .fetch_one(&mut db)
             .await
             .unwrap(),
-        42
+        0
     );
     sqlx::raw_sql("CREATE TRIGGER block_comsys BEFORE UPDATE ON comsys_channels BEGIN SELECT RAISE(FAIL,'comsys blocked'); END").execute(&mut db).await.unwrap();
     run(&s, &c, 1, "dur rollback");
@@ -344,7 +344,8 @@ async fn destroy_preserves_macros_and_rejects_unknown_dependencies() {
     run(&s, &c, 1, "addcom del=Delete");
     save(&c, &s).await.unwrap();
     let mut db = connection(&c).await;
-    sqlx::raw_sql("UPDATE commac_entries SET macro_slot_4=99 WHERE who=1; CREATE TABLE extension(channel TEXT REFERENCES comsys_channels(name)); INSERT INTO extension VALUES('Delete')").execute(&mut db).await.unwrap();
+    sqlx::raw_sql("INSERT INTO macro_sets VALUES(0,1,0,'preserved'); UPDATE commac_entries SET macro_slot_4=0 WHERE who=1; CREATE TABLE extension(channel TEXT REFERENCES comsys_channels(name)); INSERT INTO extension VALUES('Delete')").execute(&mut db).await.unwrap();
+    s.world.borrow_mut().macros = persistence::load(&c.database()).await.unwrap().macros;
     run(&s, &c, 1, "@chan/destroy Delete");
     assert!(
         format!("{:#}", save(&c, &s).await.unwrap_err()).contains("dependency extension.channel")
@@ -359,7 +360,7 @@ async fn destroy_preserves_macros_and_rejects_unknown_dependencies() {
             .fetch_one(&mut db)
             .await
             .unwrap(),
-        99
+        0
     );
     assert_eq!(
         sqlx::query_scalar::<_, i64>(

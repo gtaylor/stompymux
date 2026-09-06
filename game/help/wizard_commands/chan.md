@@ -41,5 +41,4 @@ a false or failed lock does not revoke an explicit bit grant. Wizards bypass
 channel access checks.
 
 Durable mutations commit before message delivery. Unrelated macro records and
-unknown database columns remain untouched. Communication macro expansion is
-not implemented.
+unknown database columns remain untouched. See [player macros](../macros.md) for persistent dot-command shortcuts.

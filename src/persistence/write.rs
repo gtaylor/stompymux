@@ -484,6 +484,7 @@ pub(super) async fn apply_changes(
         .await?;
     }
     changed |= super::communication::save(c, before, after).await?;
+    changed |= super::macros::save(c, before, after).await?;
     let next = after
         .next_id
         .max(before.next_id)

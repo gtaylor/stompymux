@@ -13,6 +13,8 @@ pub use registry::*;
 pub enum Action {
     /// Commit callback changes and flush player-directed output.
     Continue,
+    /// Commit mutations before delivering a private confirmation.
+    CommitReply(String),
     /// Read-only session diagnostics.
     Sessions(String),
     Telnet(String),
@@ -60,17 +62,52 @@ impl CommandContext<'_> {
 }
 /// Resolve the registry first, then Lua scopes and exit-name matching.
 pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, line: &str) -> Result<Action> {
-    if let Some(action) = crate::communication::alias(s, c, player, line)? {
-        return Ok(action);
-    }
-    let input = CommandInput::parse(c, line);
     let ctx = CommandContext {
         scripts: s,
         config: c,
         player,
         session,
     };
-    if let Some((definition, input)) = s.commands.native_match(input.clone()) {
+    if line.trim().starts_with('.')
+        && !s
+            .world
+            .borrow()
+            .objects
+            .get(&player)
+            .is_some_and(|o| o.kind == Kind::Player)
+    {
+        return Ok(Action::Reply(
+            "MACRO: Only players may use macro sets.".into(),
+        ));
+    }
+    let direct = CommandInput::parse(c, line);
+    if let Some((definition, input)) = s.commands.native_match(direct)
+        && line.trim().starts_with('.')
+        && definition.direct_input_only
+    {
+        return definition.invoke_native(&ctx, &input);
+    }
+    let expanded =
+        match s
+            .world
+            .borrow()
+            .macros
+            .expand(player, line.trim(), c.runtime.input_line_limit)
+        {
+            Ok(expanded) => expanded,
+            Err(error) => return Ok(Action::Reply(error.to_string())),
+        };
+    let line = expanded.as_deref().unwrap_or(line);
+    if line.is_empty() {
+        return Ok(Action::Reply(String::new()));
+    }
+    if let Some(action) = crate::communication::alias(s, c, player, line)? {
+        return Ok(action);
+    }
+    let input = CommandInput::parse(c, line);
+    if let Some((definition, input)) = s.commands.native_match(input.clone())
+        && !definition.direct_input_only
+    {
         return definition.invoke_native(&ctx, &input);
     }
     if s.dispatch(player, session, &input.line)? {

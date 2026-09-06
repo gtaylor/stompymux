@@ -35,3 +35,7 @@ pub use lua::schedules::{
 };
 /// Embedded server entry point with a schedule-only test clock.
 pub use server::run_with_schedule_clock;
+
+/// Player-defined command templates and shared macro sets.
+pub mod macros;
+pub use macros::{MacroEntry, MacroModes, MacroSet, MacroSlots, PlayerMacros};

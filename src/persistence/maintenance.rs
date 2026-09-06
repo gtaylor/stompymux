@@ -116,36 +116,6 @@ pub(super) async fn cleanup(c: &mut SqliteConnection, purges: &BTreeSet<ObjectId
         }
     }
     for id in purges {
-        // Macro sets have their own IDs. Remove only sets owned by this identity.
-        let sets: Vec<i64> = sqlx::query_scalar("SELECT set_index FROM macro_sets WHERE owner=?")
-            .bind(id.0)
-            .fetch_all(&mut *c)
-            .await?;
-        for set in sets {
-            for slot in [
-                "curmac",
-                "macro_slot_0",
-                "macro_slot_1",
-                "macro_slot_2",
-                "macro_slot_3",
-                "macro_slot_4",
-            ] {
-                sqlx::query(sqlx::AssertSqlSafe(format!(
-                    "UPDATE commac_entries SET {slot}=-1 WHERE {slot}=?"
-                )))
-                .bind(set)
-                .execute(&mut *c)
-                .await?;
-            }
-            sqlx::query("DELETE FROM macro_entries WHERE set_index=?")
-                .bind(set)
-                .execute(&mut *c)
-                .await?;
-            sqlx::query("DELETE FROM macro_sets WHERE set_index=?")
-                .bind(set)
-                .execute(&mut *c)
-                .await?;
-        }
         for (table, column) in OWNED {
             sqlx::query(sqlx::AssertSqlSafe(format!(
                 "DELETE FROM {table} WHERE {column}=?"

@@ -95,6 +95,7 @@ pub struct World {
     pub accounts: BTreeMap<ObjectId, Account>,
     pub channels: BTreeMap<String, Channel>,
     pub channel_aliases: BTreeMap<ObjectId, Vec<crate::communication::ChannelAlias>>,
+    pub macros: crate::macros::PlayerMacros,
     pub last_pages: BTreeMap<ObjectId, Vec<ObjectId>>,
     pub next_id: i64,
     pub record_players: usize,
@@ -238,6 +239,7 @@ impl World {
         Ok(())
     }
     pub fn validate(&self, c: &Config) -> Result<()> {
+        self.macros.validate(self)?;
         for id in [c.start(), c.home()] {
             ensure!(
                 self.objects

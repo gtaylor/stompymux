@@ -1145,6 +1145,18 @@ impl Server {
             Ok(Action::Shutdown) => self.request_shutdown(ShutdownRequest::Player(p)).await,
             Ok(Action::DbCheck) => self.dbck(id, p).await,
             Ok(Action::Find(request)) => self.find(id, p, request),
+            Ok(Action::CommitReply(text)) => {
+                if self.commit(before).await {
+                    if let Some(session) = self.sessions.get(&id) {
+                        session.raw(crate::find::bounded_error(
+                            &text,
+                            self.config.runtime.output_message_limit,
+                        ));
+                    }
+                } else {
+                    self.tell(id, "Unable to save your changes. Please try again.\r\n");
+                }
+            }
             Ok(Action::Reply(text)) => {
                 if let Some(session) = self.sessions.get(&id) {
                     session.raw(crate::find::bounded_error(

@@ -2671,3 +2671,103 @@ async fn tcp_state_default_exit_policy_and_failed_write_rollback() {
     );
     restarted.stop().await;
 }
+
+/// Macros expand once through native/Lua dispatch, commit atomically and survive reconnects.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_player_macros_shared_sessions_restart_and_write_failures() {
+    let (d, c) = populated().await;
+    std::fs::write(d.path().join("lua/global_logic/macro_failure.lua"), r#"return {commands={{name='macro-fail',permission='everyone',pattern='^macro%-fail$',handler=function(ctx) mux.world.object(ctx.enactor):state('macro_test'):set('failed',true); mux.world.pemit(ctx.enactor,'must-not-arrive'); error('macro callback failed') end}}}"#).unwrap();
+    let running = Running::start(&c).await;
+    let mut alice = Client::connect(&running).await;
+    alice.register("MacroAlice").await;
+    let mut second = Client::connect(&running).await;
+    second.login("MacroAlice").await;
+    let mut bob = Client::connect(&running).await;
+    bob.register("MacroBob").await;
+    alice.send(".create Personal").await;
+    alice.until("created in slot 0.").await;
+    alice.send(".def hi=say hello * %*").await;
+    alice.until("defined.").await;
+    second.send(".HI everyone").await;
+    alice.until("hello everyone *").await;
+    second.until("hello everyone *").await;
+    let other = bob.until("hello everyone *").await;
+    assert!(!other.contains("created in slot") && !other.contains("defined."));
+    alice.send(".def lua=global-hello").await;
+    alice.until("defined.").await;
+    second.send(".lua").await;
+    second.until("Hello, world").await;
+    alice.send(".def adm=@shutdown").await;
+    alice.until("defined.").await;
+    alice.send(".adm").await;
+    alice.until("Permission denied.").await;
+    bob.send(".add 0").await;
+    bob.until("Permission denied.").await;
+    alice.send(".chmod R").await;
+    alice.until("Current set modes: -R-.").await;
+    bob.send(".add 0").await;
+    bob.until("added in the 0 slot.").await;
+    bob.send(".HI shared").await;
+    bob.until("hello shared *").await;
+
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("CREATE TRIGGER deny_macro BEFORE INSERT ON macro_entries BEGIN SELECT RAISE(FAIL,'macro blocked'); END").execute(&mut db).await.unwrap();
+    alice.send(".def bad=say should-not-exist").await;
+    alice.until("Unable to save your changes.").await;
+    alice.send(".ex").await;
+    let inspection = alice.until("global-hello").await;
+    assert!(!inspection.contains("should-not-exist"));
+    assert!(
+        persistence::load(&c.database()).await.unwrap().macros.sets[0]
+            .entries
+            .iter()
+            .all(|e| e.alias != "bad")
+    );
+    sqlx::query("DROP TRIGGER deny_macro")
+        .execute(&mut db)
+        .await
+        .unwrap();
+    alice.send(".def fail=macro-fail").await;
+    alice.until("defined.").await;
+    alice.send(".fail").await;
+    alice.until("That command could not be completed.").await;
+    assert!(
+        persistence::load(&c.database())
+            .await
+            .unwrap()
+            .objects
+            .values()
+            .all(|o| !o.state.contains_key("macro_test"))
+    );
+    alice.send(".list").await;
+    alice.until("Current slot: 0").await;
+    // A sentinel on the other session proves confirmations and inspection stayed private.
+    second.send("look").await;
+    let private = second.until("Starter Room").await;
+    assert!(!private.contains("Current slot:") && !private.contains("defined."));
+    sqlx::Connection::close(db).await.unwrap();
+    running.stop().await;
+    let running = Running::start(&c).await;
+    let mut alice = Client::connect(&running).await;
+    alice.login("MacroAlice").await;
+    alice.send(".hI persisted").await;
+    alice.until("hello persisted *").await;
+    alice.send(".undef HI").await;
+    alice.until("deleted from set.").await;
+    alice.send("quit").await;
+    alice.until("Goodbye").await;
+    let loaded = persistence::load(&c.database()).await.unwrap();
+    assert!(
+        loaded.macros.sets[0]
+            .entries
+            .iter()
+            .all(|e| !e.alias.eq_ignore_ascii_case("hi"))
+    );
+    running.stop().await;
+}

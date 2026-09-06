@@ -110,6 +110,8 @@ pub struct CommandDefinition {
     pub switches: SwitchPolicy,
     /// Session-only errors are required by read-only searches.
     pub private_errors: bool,
+    /// Eligible only before interactive macro expansion.
+    pub direct_input_only: bool,
 }
 impl CommandDefinition {
     /// Describe a native handler with default exact matching and no switches.
@@ -127,6 +129,7 @@ impl CommandDefinition {
             handler: CommandHandler::Native(handler),
             switches: SwitchPolicy::Reject("Unsupported command switch."),
             private_errors: false,
+            direct_input_only: false,
         }
     }
     /// Attach built-in shorthand metadata without adding duplicate catalog entries.
@@ -237,7 +240,7 @@ impl CommandRegistry {
     /// Build the native table before registering game modules.
     pub fn new() -> Self {
         use CommandPermissions as P;
-        let definitions = vec![
+        let mut definitions = vec![
             CommandDefinition::native("addcom", P::EVERYONE, crate::communication::addcom),
             CommandDefinition::native("delcom", P::EVERYONE, crate::communication::delcom),
             CommandDefinition::native("clearcom", P::EVERYONE, crate::communication::clearcom),
@@ -282,6 +285,7 @@ impl CommandRegistry {
             CommandDefinition::native("@find", P::WIZARD, native::find)
                 .policy(SwitchPolicy::Handler, true),
         ];
+        definitions.extend(crate::macros::commands::definitions());
         Self { definitions }
     }
     /// Stable catalog including commands on currently unattached object modules.
@@ -386,6 +390,7 @@ impl CommandRegistry {
                     handler: CommandHandler::Lua(invoke),
                     switches: SwitchPolicy::Handler,
                     private_errors: false,
+                    direct_input_only: false,
                 })
             })()
             .with_context(|| format!("{source}: command {index}"))?;

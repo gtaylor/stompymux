@@ -43,7 +43,7 @@ async fn schema(db: &mut SqliteConnection) -> Vec<(String, String)> {
 async fn preserves_unknown_data_and_unchanged_storage_classes() {
     let (_dir, path, _) = fixture().await;
     let mut db = connect(&path).await;
-    sqlx::raw_sql("ALTER TABLE objects ADD COLUMN opaque BLOB; ALTER TABLE objects ADD COLUMN has_future_flag INTEGER NOT NULL DEFAULT 1; ALTER TABLE objects ADD COLUMN has_future_power INTEGER NOT NULL DEFAULT 1; UPDATE objects SET opaque=X'00FF42'; ALTER TABLE object_state ADD COLUMN opaque TEXT DEFAULT 'state extension'; ALTER TABLE player_state ADD COLUMN opaque TEXT DEFAULT 'account extension'; CREATE TABLE future_system(id INTEGER PRIMARY KEY, payload BLOB); INSERT INTO future_system VALUES(1,X'00FEFF'); CREATE INDEX future_index ON future_system(payload); CREATE TABLE writes_seen(value INTEGER); INSERT INTO writes_seen VALUES(0); CREATE TRIGGER name_only AFTER UPDATE OF name ON objects BEGIN UPDATE writes_seen SET value=value+1; END; INSERT INTO commac_entries VALUES(1,2,3,4,5,6,7); UPDATE snapshot SET min_size=123,dump_type=7; INSERT INTO btech_unit_configuration(object_dbref,preferred_id) VALUES(1,'keep-btech');").execute(&mut db).await.unwrap();
+    sqlx::raw_sql("ALTER TABLE objects ADD COLUMN opaque BLOB; ALTER TABLE objects ADD COLUMN has_future_flag INTEGER NOT NULL DEFAULT 1; ALTER TABLE objects ADD COLUMN has_future_power INTEGER NOT NULL DEFAULT 1; UPDATE objects SET opaque=X'00FF42'; ALTER TABLE object_state ADD COLUMN opaque TEXT DEFAULT 'state extension'; ALTER TABLE player_state ADD COLUMN opaque TEXT DEFAULT 'account extension'; CREATE TABLE future_system(id INTEGER PRIMARY KEY, payload BLOB); INSERT INTO future_system VALUES(1,X'00FEFF'); CREATE INDEX future_index ON future_system(payload); CREATE TABLE writes_seen(value INTEGER); INSERT INTO writes_seen VALUES(0); CREATE TRIGGER name_only AFTER UPDATE OF name ON objects BEGIN UPDATE writes_seen SET value=value+1; END; INSERT INTO macro_sets VALUES(0,1,0,'preserved'); INSERT INTO commac_entries VALUES(1,2,0,0,0,0,0); UPDATE snapshot SET min_size=123,dump_type=7; INSERT INTO btech_unit_configuration(object_dbref,preferred_id) VALUES(1,'keep-btech');").execute(&mut db).await.unwrap();
     for (key, value, tag) in [
         ("blob", b"hello".as_slice(), 1),
         ("remove", b"bye".as_slice(), 1),
@@ -128,7 +128,7 @@ async fn preserves_unknown_data_and_unchanged_storage_classes() {
             .fetch_one(&mut db)
             .await
             .unwrap();
-    assert_eq!(macro_state, (2, 7));
+    assert_eq!(macro_state, (2, 0));
     let btech: String = sqlx::query_scalar(
         "SELECT preferred_id FROM btech_unit_configuration WHERE object_dbref=1",
     )

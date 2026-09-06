@@ -40,7 +40,7 @@ tables. SQLx updates only changed supported columns in a single transaction;
 existing rows are never replaced. Failed writes restore the in-memory world and
 discard pending success output.
 
-Unknown columns, deferred BattleTech and communication-macro data, indexes
+Unknown columns, deferred BattleTech data, indexes
 and triggers remain in place. Unchanged Lua values retain their original SQLite
 storage types, including binary strings in TEXT or BLOB cells. Explicit state-key removals and expired
 login-history entries remove only those owned rows. Unsupported required columns
@@ -572,7 +572,35 @@ explicit access bits still apply. Channel things receive `on_leave` callbacks.
 Native commands, Lua calls and lifecycle delivery share transaction-staged output.
 Pages are online-only, obey in-character/GAGGED restrictions with Wizard endpoint
 exceptions, and persist the ordered successful recipients for repeat paging.
-Communication macro expansion remains deferred; macro records are preserved.
+## Player macros
+
+`help macros` documents the complete dot-command system: `.create`, `.add`,
+`.del`, `.chslot`, `.list`, `.glist`, `.ex`, `.gex`, `.name`, `.chmod`, `.chown`,
+`.clear`, `.def` and `.undef`. For example, `.create Shortcuts`, then
+`.def hi=say Hello, *!`, makes `.hi everyone` say “Hello, everyone!”.
+
+Players attach up to five shared sets. Lookup checks slots 0–4 independently
+of the selected editing slot. Aliases are 1–4 printable ASCII bytes; matching,
+duplicate detection and removal are case-insensitive. `*` substitutes the
+remaining arguments and `%*` is literal. Expansion runs once before channel,
+native and Lua dispatch, preserving permissions and configured command aliases.
+Expanded text cannot invoke macro management. The expansion limit is the smaller
+of `runtime.input_line_limit` and 8,191 bytes; overflow rejects the entire command.
+
+The `macros` domain owns sets and attachments; registered management handlers
+stage private confirmations until commit. SQLite uses `macro_sets`,
+`macro_entries` and the existing macro fields of `commac_entries`, with no schema
+change. Channel operations preserve these fields. Explicit row identities track
+set/entry reindexing so unknown columns move with retained records; identities
+advance only after a successful transaction. `.clear` and `@dbck` compact global
+set numbers and update every affected slot. Unknown declared dependencies prevent
+unsafe reindexing rather than being rewritten speculatively.
+
+L/R/W permissions follow the C model, including no implicit Wizard write bypass
+and continued use of previously attached sets after R is removed. Two deliberate
+corrections are case-insensitive invocation/removal and requiring an unlocked,
+writable set for `.name`. No macro Lua API or recursive command evaluation is
+provided.
 
 ## Object state and exit policies
 

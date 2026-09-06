@@ -85,7 +85,21 @@ async fn native_catalog_permissions_and_aliases() {
             "@list",
             "@state",
             "@examine",
-            "@find"
+            "@find",
+            ".add",
+            ".clear",
+            ".chmod",
+            ".chown",
+            ".create",
+            ".def",
+            ".del",
+            ".name",
+            ".chslot",
+            ".ex",
+            ".gex",
+            ".glist",
+            ".list",
+            ".undef"
         ]
     );
     for d in &definitions {
@@ -96,6 +110,7 @@ async fn native_catalog_permissions_and_aliases() {
                 "allcom", "page"
             ]
             .contains(&d.name.as_str())
+                || (d.direct_input_only && d.name != ".chown")
             {
                 P::EVERYONE
             } else {

@@ -1,6 +1,7 @@
 //! Direct asynchronous schema-32 persistence with selective, atomic updates.
 mod communication;
 mod load;
+mod macros;
 mod maintenance;
 mod write;
 use crate::world::*;
@@ -97,6 +98,7 @@ pub async fn save_with_timeout(path: &Path, world: &World, timeout: u64) -> Resu
         let before = load::read(&mut tx).await?;
         write::apply(&mut tx, &before, world).await?;
         tx.commit().await?;
+        world.macros.committed();
         Ok(())
     }
     .await;
@@ -140,6 +142,7 @@ pub async fn initialize_with_timeout(path: &Path, world: &World, timeout: u64) -
                 .await?;
             write::apply(&mut tx, &World::default(), world).await?;
             tx.commit().await?;
+            world.macros.committed();
             Ok(())
         }
         .await;
@@ -214,6 +217,7 @@ where
                 .await?;
         }
         tx.commit().await?;
+        after.macros.committed();
         Ok(report)
     }
     .await;
