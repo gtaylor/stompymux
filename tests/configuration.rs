@@ -269,7 +269,7 @@ async fn lua_sees_defaults_overrides_and_legacy_aliases() {
         .await
         .unwrap();
     let scripts = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
-    assert!(scripts.lua.load("return mux.config.get('port')==8765 and mux.config.get('server.port')==8765 and mux.config.get('btech_xp_usePilotBVMod')==1 and mux.config.get('runtime.input_line_limit')==8192").eval::<bool>().unwrap());
+    assert!(scripts.lua.load("return mux.config.get('port')==8765 and mux.config.get('server.port')==8765 and mux.config.get('btech_xp_usePilotBVMod')==1 and mux.config.get('runtime.input_line_limit')==8192 and mux.config.get('runtime.find_page_size')==20").eval::<bool>().unwrap());
 }
 #[tokio::test(flavor = "current_thread")]
 async fn configured_decoding_hashing_and_sqlite_timeouts_take_effect() {
@@ -528,11 +528,42 @@ async fn supplied_configuration_parses_without_unknown_keys() {
     )
     .unwrap();
     let c = Config::load(d.path()).unwrap();
-    assert_eq!(KEYS.len(), 202);
+    assert_eq!(KEYS.len(), 203);
     assert_eq!(c.server.port, 5555);
     assert!(
         !c.warnings.iter().any(|w| w.contains("unknown")),
         "{:?}",
         c.warnings
     );
+}
+
+/// Page sizes are typed, defaulted, exposed to Lua and reject nonpositive values.
+#[test]
+fn find_page_size_configuration() {
+    let (_d, c) = config("");
+    assert_eq!(c.runtime.find_page_size, 20);
+    assert_eq!(
+        c.effective_value("runtime.find_page_size")
+            .unwrap()
+            .as_integer(),
+        Some(20)
+    );
+    let (_d, c) = config("runtime.find_page_size=3");
+    assert_eq!(c.runtime.find_page_size, 3);
+    assert_eq!(
+        c.effective_value("runtime.find_page_size")
+            .unwrap()
+            .as_integer(),
+        Some(3)
+    );
+    for value in ["0", "-1", "1.5", "'three'"] {
+        let d = tempfile::tempdir().unwrap();
+        std::fs::write(
+            d.path().join("stompymux.toml"),
+            format!("runtime.find_page_size={value}"),
+        )
+        .unwrap();
+        let error = Config::load(d.path()).unwrap_err().to_string();
+        assert!(error.contains("runtime.find_page_size"), "{error}");
+    }
 }

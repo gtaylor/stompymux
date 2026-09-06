@@ -738,6 +738,8 @@ pub struct RuntimeConfig {
     pub telnet_subnegotiation_limit: usize,
     /// Configuration value for `output_message_limit`; defaults are centralized below.
     pub output_message_limit: usize,
+    /// Maximum results per @find page; defaults to 20.
+    pub find_page_size: usize,
     /// Configuration value for `write_timeout_ms`; defaults are centralized below.
     pub write_timeout_ms: u64,
     /// Configuration value for `shutdown_timeout_ms`; defaults are centralized below.
@@ -754,6 +756,7 @@ impl Default for RuntimeConfig {
             input_line_limit: 8192,
             telnet_subnegotiation_limit: 8192,
             output_message_limit: 65536,
+            find_page_size: 20,
             write_timeout_ms: 5000,
             shutdown_timeout_ms: 5000,
             maintenance_interval_ms: 1000,

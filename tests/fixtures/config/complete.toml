@@ -184,3 +184,5 @@ sites.permit = [{"address" = "2001:db8::", "mask" = "ffff:ffff::"}]
 database.legacy_game_database = "data/source.db"
 server.listen_address = "::1"
 runtime.input_line_limit = 512
+
+runtime.find_page_size = 3

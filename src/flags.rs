@@ -162,7 +162,15 @@ impl<'de> Deserialize<'de> for FlagSet {
             .collect()
     }
 }
-/// Legacy control policy, independent of deferred ownership/building systems.
+/// Shared Wizard/GOD command permission check.
+pub fn is_wizard(world: &World, actor: ObjectId) -> bool {
+    actor == ObjectId(1)
+        || world
+            .objects
+            .get(&actor)
+            .is_some_and(|o| o.flags.contains(Flag::Wizard))
+}
+/// Whether the actor has legacy administrative control of the target.
 pub fn controls(world: &World, actor: ObjectId, target: ObjectId) -> bool {
     let Some(t) = world
         .objects

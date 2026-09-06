@@ -1198,6 +1198,12 @@ pub const KEYS: &[KeySpec] = &[
         bounds: Some((1.0, 2147483647.0)),
     },
     KeySpec {
+        path: "runtime.find_page_size",
+        legacy: "",
+        kind: "usize",
+        bounds: Some((1.0, 2147483647.0)),
+    },
+    KeySpec {
         path: "runtime.output_message_limit",
         legacy: "",
         kind: "usize",

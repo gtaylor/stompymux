@@ -1,3 +1,4 @@
+//! Connection state, bounded output and session-owned search cursors.
 use crate::{telnet::Decoder, world::ObjectId};
 use std::{cell::Cell, net::IpAddr, time::Instant};
 use tokio::sync::mpsc;
@@ -20,6 +21,8 @@ pub struct Session {
     pub output: mpsc::Sender<Output>,
     pub peer: IpAddr,
     pub player: Option<ObjectId>,
+    /// Pending object search, discarded when this session disconnects.
+    pub find_cursor: Option<crate::find::FindCursor>,
     pub flow: LoginFlow,
     pub connected: Instant,
     pub active: Instant,

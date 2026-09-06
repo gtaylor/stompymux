@@ -200,6 +200,7 @@ pub async fn run(
                 server.sessions.insert(id,Session {
                     output, peer:peer.ip(), player:None, flow:LoginFlow::Name,
                     connected:now, active:now, decoder:telnet::Decoder::new(&server.config.runtime),
+                    find_cursor: None,
                     output_message_limit:server.config.runtime.output_message_limit,
                     quota:server.config.mux.command_quota_increment.min(server.config.mux.command_quota_max),
                     quota_at:now, failed:Default::default(),
@@ -460,10 +461,59 @@ impl Server {
         }
         Ok(())
     }
+    /// Deliver a read-only page only to the invoking session, bypassing persistence.
+    fn find(&mut self, id: SessionId, player: ObjectId, request: crate::find::FindRequest) {
+        use crate::find::{FindCursor, FindRequest, bounded_error, page};
+        let Some(session) = self.sessions.get_mut(&id) else {
+            return;
+        };
+        let world = self.scripts.world.borrow();
+        let limit = self.config.runtime.output_message_limit;
+        let error = if !crate::flags::is_wizard(&world, player) {
+            Some("Permission denied.".to_string())
+        } else {
+            match request {
+                FindRequest::Search(args) => {
+                    session.find_cursor = Some(FindCursor::new(&args, &world));
+                    None
+                }
+                FindRequest::Next if session.find_cursor.is_none() => {
+                    Some("No active @find search.".into())
+                }
+                FindRequest::Next => None,
+                FindRequest::Error(error) => Some(error),
+            }
+        };
+        if let Some(error) = error {
+            session.raw(bounded_error(&error, limit));
+            return;
+        }
+        let cursor = session
+            .find_cursor
+            .as_ref()
+            .expect("validated search cursor");
+        match page(
+            &world,
+            player,
+            cursor,
+            self.config.runtime.find_page_size,
+            limit,
+        ) {
+            Ok(page) => {
+                if session.raw(page.bytes) {
+                    session.find_cursor = page.cursor;
+                }
+            }
+            Err(error) => {
+                session.raw(bounded_error(error, limit));
+            }
+        }
+    }
     async fn command(&mut self, id: SessionId, p: ObjectId, line: &str) -> Result<()> {
         self.snapshots()?;
         let before = self.scripts.world.borrow().clone();
         match commands::run(&self.scripts, &self.config, p, id.0, line) {
+            Ok(Action::Find(request)) => self.find(id, p, request),
             Ok(Action::Quit) => {
                 self.tell(
                     id,
@@ -902,6 +952,7 @@ mod tests {
                         quota: 1,
                         quota_at: now,
                         failed: Default::default(),
+                        find_cursor: None,
                         output_message_limit: 65536,
                     },
                 );

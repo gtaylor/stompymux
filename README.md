@@ -75,7 +75,7 @@ worlds never run first-startup hooks.
 ## Configuration
 
 All 182 legacy TOML mappings are typed and retained, including options for
-features not yet implemented. Twenty additional settings configure the Rust
+features not yet implemented. Twenty-one additional settings configure the Rust
 runtime. See [configuration semantics and runtime defaults](docs/configuration.md)
 and the annotated `game/stompymux.toml`.
 
@@ -217,3 +217,21 @@ results, bounded output and graceful shutdown. They do not mutate `game/` or
 
 The original game assets and data were copied intact. Their inherited license
 is retained in `LEGACY-LICENSE.md`.
+
+## Object search
+
+Wizards and GOD can use `@find [name][,low[,high]]` (also `@fi` or `@fin`).
+Names match case-insensitive prefixes at the start of a name or word; wildcard
+characters are literal. Bounds are inclusive, accept optional `#`, and default
+to zero and the current database maximum when omitted or invalid.
+Searches list controlled live objects except exits, ordered by dbref, including
+DARK and GOING objects. Wizards cannot list GOD or other Wizards; GOD can list all.
+Results use `Name(#dbref:type-and-flag-letters)`.
+
+Each connection has its own search. Use `@find/next` to continue; a new search
+replaces the previous one. Other commands leave it intact. The final page ends
+with `***End of List***`. Each page rechecks current objects and permissions up
+to the original upper bound. Searches never write the database or run callbacks.
+`runtime.find_page_size` defaults to 20. The output byte limit may shorten pages
+or truncate displayed names while preserving identity and flags. If a row and
+footer cannot fit, the search remains available for retry.

@@ -8,6 +8,8 @@ use anyhow::{Context, Result};
 pub enum Action {
     Continue,
     Quit,
+    /// Read-only session search, handled without a world transaction.
+    Find(crate::find::FindRequest),
 }
 pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, input: &str) -> Result<Action> {
     let line = input.trim();
@@ -27,6 +29,9 @@ pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, input: &str)
         .get(base)
         .map_or(base, String::as_str)
         .to_ascii_lowercase();
+    if base == "@find" {
+        return Ok(Action::Find(crate::find::FindRequest::parse(args, switch)));
+    }
     if matches!(base.as_str(), "home" | "@teleport") {
         let result = movement_command(s, player, session, &base, args, switch);
         if let Err(error) = result {
@@ -184,13 +189,7 @@ fn admin_command(
     use crate::flags::{self, Flag};
     use anyhow::ensure;
     let mut w = s.world.borrow_mut();
-    ensure!(
-        player == ObjectId(1)
-            || w.objects
-                .get(&player)
-                .is_some_and(|o| o.flags.contains(Flag::Wizard)),
-        "Permission denied."
-    );
+    ensure!(flags::is_wizard(&w, player), "Permission denied.");
     if command == "@list" {
         if args.trim().eq_ignore_ascii_case("powers") {
             return Ok(format!(
@@ -286,16 +285,10 @@ fn movement_command(
     args: &str,
     switch: Option<&str>,
 ) -> Result<()> {
-    use crate::{
-        flags::Flag,
-        movement::{self, Route},
-    };
+    use crate::movement::{self, Route};
     use anyhow::ensure;
     ensure!(
-        player == ObjectId(1)
-            || s.world.borrow().objects[&player]
-                .flags
-                .contains(Flag::Wizard),
+        crate::flags::is_wizard(&s.world.borrow(), player),
         "Permission denied."
     );
     ensure!(
