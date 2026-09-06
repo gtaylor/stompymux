@@ -49,19 +49,21 @@ fn fixture() -> tempfile::TempDir {
     std::fs::write(p, text).unwrap();
     d
 }
-fn imported() -> (tempfile::TempDir, Config) {
+async fn imported() -> (tempfile::TempDir, Config) {
     let d = fixture();
     let c = Config::load(d.path()).unwrap();
-    persistence::import(&d.path().join("data/stompymux.db"), &c).unwrap();
+    persistence::import(&d.path().join("data/stompymux.db"), &c)
+        .await
+        .unwrap();
     (d, c)
 }
-#[test]
-fn import_is_explicit_lossless_for_supported_data_and_read_only() {
+#[tokio::test(flavor = "current_thread")]
+async fn import_is_explicit_lossless_for_supported_data_and_read_only() {
     let d = fixture();
     let c = Config::load(d.path()).unwrap();
     let source = d.path().join("data/stompymux.db");
     let before = std::fs::read(&source).unwrap();
-    let w = persistence::read_legacy(&source, &c).unwrap();
+    let w = persistence::read_legacy(&source, &c).await.unwrap();
     assert_eq!(w.objects.len(), 16);
     assert_eq!(w.accounts.len(), 2);
     assert_eq!(w.channels.len(), 2);
@@ -69,68 +71,128 @@ fn import_is_explicit_lossless_for_supported_data_and_read_only() {
         w.objects[&ObjectId(13)].state["locks.traverse"]["flag/WIZARD"],
         Scalar::Boolean(true)
     );
-    persistence::import(&source, &c).unwrap();
-    let loaded = persistence::load(&c.database()).unwrap();
+    persistence::import(&source, &c).await.unwrap();
+    let loaded = persistence::load(&c.database()).await.unwrap();
     assert_eq!(
         serde_json::to_value(w).unwrap(),
         serde_json::to_value(loaded).unwrap()
     );
-    assert!(persistence::import(&source, &c).is_err());
+    assert!(persistence::import(&source, &c).await.is_err());
     assert_eq!(before, std::fs::read(&source).unwrap());
 }
-#[test]
-fn rejects_unsupported_schema_and_bad_references() {
+#[tokio::test(flavor = "current_thread")]
+async fn rejects_unsupported_schema_and_bad_references() {
     let d = fixture();
     let source = d.path().join("data/stompymux.db");
     let c = Config::load(d.path()).unwrap();
-    let sql = rusqlite::Connection::open(&source).unwrap();
-    sql.execute("UPDATE snapshot SET schema_version=29", [])
-        .unwrap();
-    assert!(persistence::import(&source, &c).is_err());
-    assert!(!c.database().exists());
-    sql.execute("UPDATE snapshot SET schema_version=32", [])
-        .unwrap();
-    sql.execute("UPDATE objects SET location=99999 WHERE dbref=1", [])
-        .unwrap();
-    assert!(persistence::import(&source, &c).is_err());
-}
-#[test]
-fn import_all_scalar_types_and_argon_hash() {
-    let d = fixture();
-    let c = Config::load(d.path()).unwrap();
-    let source = d.path().join("data/stompymux.db");
-    let sql = rusqlite::Connection::open(&source).unwrap();
-    let hash = accounts::hash("known-secret", &c).unwrap();
-    sql.execute(
-        "UPDATE player_state SET password_hash=?1 WHERE object_dbref=1",
-        [&hash],
+    let mut sql = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(&source)
+            .foreign_keys(false),
     )
+    .await
     .unwrap();
-    for (key, kind, value) in [
-        ("string", 1, rusqlite::types::Value::Text("hi".into())),
-        ("integer", 3, rusqlite::types::Value::Integer(42)),
-        ("number", 4, rusqlite::types::Value::Real(1.5)),
-    ] {
-        sql.execute(
-            "INSERT INTO object_state VALUES(1,'test',?1,?2,?3)",
-            rusqlite::params![key, kind, value],
-        )
+    sqlx::query("UPDATE snapshot SET schema_version=29")
+        .execute(&mut sql)
+        .await
         .unwrap();
-    }
-    persistence::import(&source, &c).unwrap();
-    let w = persistence::load(&c.database()).unwrap();
+    assert!(persistence::import(&source, &c).await.is_err());
+    assert!(!c.database().exists());
+    sqlx::query("UPDATE snapshot SET schema_version=32")
+        .execute(&mut sql)
+        .await
+        .unwrap();
+    sqlx::query("UPDATE objects SET location=99999 WHERE dbref=1")
+        .execute(&mut sql)
+        .await
+        .unwrap();
+    assert!(persistence::import(&source, &c).await.is_err());
+    sqlx::Connection::close(sql).await.unwrap();
+}
+#[tokio::test(flavor = "current_thread")]
+async fn import_all_scalar_types_and_argon_hash() {
+    let d = fixture();
+    let c = Config::load(d.path()).unwrap();
+    let source = d.path().join("data/stompymux.db");
+    let mut sql = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(&source)
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    let hash = accounts::hash("known-secret", &c).unwrap();
+    sqlx::query("UPDATE player_state SET password_hash=?1 WHERE object_dbref=1")
+        .bind(&hash)
+        .execute(&mut sql)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO object_state VALUES(1,'test','string',1,?1)")
+        .bind("hi")
+        .execute(&mut sql)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO object_state VALUES(1,'test','integer',3,?1)")
+        .bind(42_i64)
+        .execute(&mut sql)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO object_state VALUES(1,'test','number',4,?1)")
+        .bind(1.5_f64)
+        .execute(&mut sql)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO object_state VALUES(1,'test','blob',1,?1)")
+        .bind(b"bytes".as_slice())
+        .execute(&mut sql)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO object_state VALUES(1,'test','boolean',2,?1)")
+        .bind(1_i64)
+        .execute(&mut sql)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO object_state VALUES(1,'test','integer_number',4,?1)")
+        .bind(7_i64)
+        .execute(&mut sql)
+        .await
+        .unwrap();
+    persistence::import(&source, &c).await.unwrap();
+    let w = persistence::load(&c.database()).await.unwrap();
     assert!(accounts::verify(
         "known-secret",
         w.accounts[&ObjectId(1)].hash.as_ref().unwrap()
     ));
     assert!(!accounts::verify("wrong", &hash));
     assert_eq!(
+        w.objects[&ObjectId(1)].state["test"]["string"],
+        Scalar::String("hi".into())
+    );
+    assert_eq!(
+        w.objects[&ObjectId(1)].state["test"]["blob"],
+        Scalar::String("bytes".into())
+    );
+    assert_eq!(
+        w.objects[&ObjectId(1)].state["test"]["boolean"],
+        Scalar::Boolean(true)
+    );
+    assert_eq!(
+        w.objects[&ObjectId(1)].state["test"]["number"],
+        Scalar::Number(1.5)
+    );
+    assert_eq!(
+        w.objects[&ObjectId(1)].state["test"]["integer_number"],
+        Scalar::Number(7.0)
+    );
+
+    assert_eq!(
         w.objects[&ObjectId(1)].state["test"]["integer"],
         Scalar::Integer(42)
     );
+    sqlx::Connection::close(sql).await.unwrap();
 }
-#[test]
-fn config_includes_override_and_detect_cycles() {
+#[tokio::test(flavor = "current_thread")]
+async fn config_includes_override_and_detect_cycles() {
     let d = fixture();
     let path = d.path().join("stompymux.toml");
     let text = std::fs::read_to_string(&path).unwrap();
@@ -140,8 +202,8 @@ fn config_includes_override_and_detect_cycles() {
     std::fs::write(d.path().join("aliases.toml"), "include=['stompymux.toml']").unwrap();
     assert!(Config::load(d.path()).is_err());
 }
-#[test]
-fn telnet_fragmentation_echo_and_utf8() {
+#[tokio::test(flavor = "current_thread")]
+async fn telnet_fragmentation_echo_and_utf8() {
     let mut d = Decoder::default();
     let bytes = [255, 251, 31, 255, 250, 31, 0, 120, 0, 40, 255, 240];
     for b in bytes {
@@ -165,10 +227,12 @@ fn telnet_fragmentation_echo_and_utf8() {
     assert_eq!(Decoder::echo(true), [255, 251, 1]);
     assert_eq!(Decoder::echo(false), [255, 252, 1]);
 }
-#[test]
-fn copied_lua_renders_rooms_locks_and_commands() {
-    let (_d, c) = imported();
-    let w = Rc::new(RefCell::new(persistence::load(&c.database()).unwrap()));
+#[tokio::test(flavor = "current_thread")]
+async fn copied_lua_renders_rooms_locks_and_commands() {
+    let (_d, c) = imported().await;
+    let w = Rc::new(RefCell::new(
+        persistence::load(&c.database()).await.unwrap(),
+    ));
     let s = Scripts::new(&c, w).unwrap();
     let appearance = s.appearance(ObjectId(1), ObjectId(4), 1).unwrap();
     assert!(appearance.contains("Starter Room"));
@@ -185,10 +249,12 @@ fn copied_lua_renders_rooms_locks_and_commands() {
     assert!(s.outbox.borrow()[0].1.contains("Hello, world"));
     assert!(s.dispatch(ObjectId(1), 1, "flow-demo confirm").is_err());
 }
-#[test]
-fn lua_resource_limits_and_fail_closed() {
-    let (_d, c) = imported();
-    let w = Rc::new(RefCell::new(persistence::load(&c.database()).unwrap()));
+#[tokio::test(flavor = "current_thread")]
+async fn lua_resource_limits_and_fail_closed() {
+    let (_d, c) = imported().await;
+    let w = Rc::new(RefCell::new(
+        persistence::load(&c.database()).await.unwrap(),
+    ));
     let s = Scripts::new(&c, w).unwrap();
     assert!(s.lua.load("while true do end").exec().is_err());
     let s = Scripts::new(&c, s.world.clone()).unwrap();
@@ -239,7 +305,7 @@ async fn bootstrap_once_and_import_does_not_bootstrap() {
             & 0o777,
         0o600
     );
-    let (_d, c) = imported();
+    let (_d, c) = imported().await;
     let s = server::prepare(&c).await.unwrap();
     assert_eq!(s.world.borrow().objects.len(), 16);
     assert!(!c.root.join("bootstrap-credentials.txt").exists());
@@ -340,7 +406,7 @@ impl Client {
 }
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_register_social_world_and_restart() {
-    let (_d, c) = imported();
+    let (_d, c) = imported().await;
     let running = Running::start(&c).await;
     let mut alice = Client::connect(&running).await;
     alice.register("Alice").await;
@@ -367,7 +433,7 @@ async fn tcp_register_social_world_and_restart() {
     let running = Running::start(&c).await;
     let mut alice = Client::connect(&running).await;
     alice.login("Alice").await;
-    let w = persistence::load(&c.database()).unwrap();
+    let w = persistence::load(&c.database()).await.unwrap();
     assert_eq!(w.objects.len(), 18);
     assert_eq!(
         w.objects[&w.find_player("alice").unwrap()].location,
@@ -377,7 +443,7 @@ async fn tcp_register_social_world_and_restart() {
 }
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_mismatch_bad_password_and_duplicate_registration() {
-    let (_d, c) = imported();
+    let (_d, c) = imported().await;
     let running = Running::start(&c).await;
     let mut a = Client::connect(&running).await;
     let mut b = Client::connect(&running).await;
@@ -401,17 +467,17 @@ async fn tcp_mismatch_bad_password_and_duplicate_registration() {
     b.until("Password: ").await;
     b.send("wrong").await;
     b.until("different password.").await;
-    let w = persistence::load(&c.database()).unwrap();
+    let w = persistence::load(&c.database()).await.unwrap();
     assert_eq!(w.accounts.len(), 3);
     running.stop().await;
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn movement_persists_and_failed_registration_rolls_back() {
-    let (_d, c) = imported();
-    let mut w = persistence::load(&c.database()).unwrap();
+    let (_d, c) = imported().await;
+    let mut w = persistence::load(&c.database()).await.unwrap();
     w.accounts.get_mut(&ObjectId(2)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
-    persistence::save(&c.database(), &w).unwrap();
+    persistence::save(&c.database(), &w).await.unwrap();
     let running = Running::start(&c).await;
     let mut wizard = Client::connect(&running).await;
     wizard.send("Wizard").await;
@@ -421,11 +487,17 @@ async fn movement_persists_and_failed_registration_rolls_back() {
     wizard.send("np").await;
     wizard.until("Starter Room").await;
     assert_eq!(
-        persistence::load(&c.database()).unwrap().objects[&ObjectId(2)].location,
+        persistence::load(&c.database()).await.unwrap().objects[&ObjectId(2)].location,
         Some(ObjectId(4))
     );
-    let db = rusqlite::Connection::open(c.database()).unwrap();
-    db.execute_batch("CREATE TRIGGER reject_write BEFORE UPDATE ON world BEGIN SELECT RAISE(ABORT,'injected persistence failure'); END;").unwrap();
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("CREATE TRIGGER reject_write BEFORE UPDATE ON world BEGIN SELECT RAISE(ABORT,'injected persistence failure'); END;").execute(&mut db).await.unwrap();
     let mut newcomer = Client::connect(&running).await;
     newcomer.send("Unsaved").await;
     newcomer.until("[Y/n] ").await;
@@ -437,6 +509,7 @@ async fn movement_persists_and_failed_registration_rolls_back() {
     newcomer.until("Unable to save login.").await;
     assert!(
         persistence::load(&c.database())
+            .await
             .unwrap()
             .find_player("Unsaved")
             .is_none()
@@ -444,16 +517,20 @@ async fn movement_persists_and_failed_registration_rolls_back() {
     wizard.send("out").await;
     wizard.until("Unable to save your changes.").await;
     assert_eq!(
-        persistence::load(&c.database()).unwrap().objects[&ObjectId(2)].location,
+        persistence::load(&c.database()).await.unwrap().objects[&ObjectId(2)].location,
         Some(ObjectId(4))
     );
-    db.execute_batch("DROP TRIGGER reject_write").unwrap();
+    sqlx::raw_sql("DROP TRIGGER reject_write")
+        .execute(&mut db)
+        .await
+        .unwrap();
     newcomer.register("Unsaved").await;
     running.stop().await;
+    sqlx::Connection::close(db).await.unwrap();
 }
 #[tokio::test(flavor = "current_thread")]
 async fn login_throttle_utf8_and_echo_over_tcp() {
-    let (d, _) = imported();
+    let (d, _) = imported().await;
     let path = d.path().join("stompymux.toml");
     let text = std::fs::read_to_string(&path)
         .unwrap()
@@ -475,8 +552,8 @@ async fn login_throttle_utf8_and_echo_over_tcp() {
     a.until("Too many login attempts.").await;
     running.stop().await;
 }
-#[test]
-fn bounded_output_marks_slow_clients_for_disconnect() {
+#[tokio::test(flavor = "current_thread")]
+async fn bounded_output_marks_slow_clients_for_disconnect() {
     use std::time::Instant;
     use stompymux_rs::sessions::{LoginFlow, Session};
     let (output, _receiver) = tokio::sync::mpsc::channel(1);
@@ -498,20 +575,22 @@ fn bounded_output_marks_slow_clients_for_disconnect() {
     assert!(!session.raw(vec![2]));
     assert!(session.failed.get());
 }
-#[test]
-fn missing_required_parent_prevents_startup() {
-    let (d, c) = imported();
+#[tokio::test(flavor = "current_thread")]
+async fn missing_required_parent_prevents_startup() {
+    let (d, c) = imported().await;
     std::fs::remove_file(d.path().join("lua/object_logic/default_room.lua")).unwrap();
-    let w = Rc::new(RefCell::new(persistence::load(&c.database()).unwrap()));
+    let w = Rc::new(RefCell::new(
+        persistence::load(&c.database()).await.unwrap(),
+    ));
     assert!(Scripts::new(&c, w).is_err());
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn connection_hooks_only_disconnect_last_session_and_shutdown_cleanly() {
-    let (d, c) = imported();
-    let mut w = persistence::load(&c.database()).unwrap();
+    let (d, c) = imported().await;
+    let mut w = persistence::load(&c.database()).await.unwrap();
     w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
-    persistence::save(&c.database(), &w).unwrap();
+    persistence::save(&c.database(), &w).await.unwrap();
     std::fs::write(d.path().join("lua/global_logic/session_test.lua"),r#"return {events={
  on_player_connect=function(ctx)
   assert(mux.world.object(ctx.enactor):flags():has(mux.world.flags.CONNECTED))
@@ -536,7 +615,7 @@ async fn connection_hooks_only_disconnect_last_session_and_shutdown_cleanly() {
     second.until("Password: ").await;
     second.send("secret").await;
     second.until("Staff Nexus").await;
-    let w = persistence::load(&c.database()).unwrap();
+    let w = persistence::load(&c.database()).await.unwrap();
     assert_eq!(
         w.objects[&ObjectId(1)].state["connections"]["connects"],
         Scalar::Integer(2)
@@ -552,7 +631,7 @@ async fn connection_hooks_only_disconnect_last_session_and_shutdown_cleanly() {
         .until("Hello, world, from a global Lua command!")
         .await;
     assert!(
-        !persistence::load(&c.database()).unwrap().objects[&ObjectId(1)].state["connections"]
+        !persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)].state["connections"]
             .contains_key("disconnects")
     );
     let pid = running.child.id().unwrap().to_string();
@@ -569,17 +648,17 @@ async fn connection_hooks_only_disconnect_last_session_and_shutdown_cleanly() {
         .unwrap()
         .unwrap();
     assert!(status.success());
-    let w = persistence::load(&c.database()).unwrap();
+    let w = persistence::load(&c.database()).await.unwrap();
     assert_eq!(
         w.objects[&ObjectId(1)].state["connections"]["disconnects"],
         Scalar::Integer(1)
     );
 }
 
-#[test]
-fn player_lookup_accepts_dbrefs_only_for_player_accounts() {
-    let (_d, c) = imported();
-    let mut world = persistence::load(&c.database()).unwrap();
+#[tokio::test(flavor = "current_thread")]
+async fn player_lookup_accepts_dbrefs_only_for_player_accounts() {
+    let (_d, c) = imported().await;
+    let mut world = persistence::load(&c.database()).await.unwrap();
     world.accounts.get_mut(&ObjectId(2)).unwrap().alias = Some("Wiz".into());
     for identity in ["#2", "Wizard", "wizard", "WIZ"] {
         assert_eq!(world.find_player(identity), Some(ObjectId(2)));
@@ -602,11 +681,11 @@ fn player_lookup_accepts_dbrefs_only_for_player_accounts() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_login_by_dbref_authenticates_existing_player() {
-    let (_d, c) = imported();
-    let mut world = persistence::load(&c.database()).unwrap();
+    let (_d, c) = imported().await;
+    let mut world = persistence::load(&c.database()).await.unwrap();
     world.accounts.get_mut(&ObjectId(2)).unwrap().hash =
         Some(accounts::hash("secret", &c).unwrap());
-    persistence::save(&c.database(), &world).unwrap();
+    persistence::save(&c.database(), &world).await.unwrap();
     let running = Running::start(&c).await;
     let mut client = Client::connect(&running).await;
     client.send("#2").await;
@@ -619,21 +698,23 @@ async fn tcp_login_by_dbref_authenticates_existing_player() {
     client.until("Staff Nexus").await;
     client.send("WHO").await;
     assert!(client.until("maximum.").await.contains("Wizard"));
-    let world = persistence::load(&c.database()).unwrap();
+    let world = persistence::load(&c.database()).await.unwrap();
     assert_eq!(world.accounts.len(), 2);
     assert_eq!(world.objects.len(), 16);
     running.stop().await;
 }
 
 /// Typed flags preserve old snapshots while rejecting unknown flag identities.
-#[test]
-fn flag_catalog_storage_commands_and_lua_contract() {
+#[tokio::test(flavor = "current_thread")]
+async fn flag_catalog_storage_commands_and_lua_contract() {
     use stompymux_rs::{
         commands,
         flags::{self, Flag},
     };
-    let (_d, c) = imported();
-    let world = Rc::new(RefCell::new(persistence::load(&c.database()).unwrap()));
+    let (_d, c) = imported().await;
+    let world = Rc::new(RefCell::new(
+        persistence::load(&c.database()).await.unwrap(),
+    ));
     let s = Scripts::new(&c, world.clone()).unwrap();
     assert_eq!(flags::ALL.len(), 19);
     assert_eq!(
@@ -763,10 +844,18 @@ fn flag_catalog_storage_commands_and_lua_contract() {
         .unwrap()
         .flags
         .insert(Flag::Connected);
-    persistence::save(&c.database(), &world.borrow()).unwrap();
-    let db = rusqlite::Connection::open(c.database()).unwrap();
-    let json: String = db
-        .query_row("SELECT document FROM world", [], |r| r.get(0))
+    let snapshot = world.borrow().clone();
+    persistence::save(&c.database(), &snapshot).await.unwrap();
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    let json: String = sqlx::query_scalar("SELECT document FROM world")
+        .fetch_one(&mut db)
+        .await
         .unwrap();
     assert!(!json.contains("CONNECTED"));
     let mut value: serde_json::Value = serde_json::from_str(&json).unwrap();
@@ -774,10 +863,13 @@ fn flag_catalog_storage_commands_and_lua_contract() {
         .as_array_mut()
         .unwrap()
         .push("CONNECTED".into());
-    db.execute("UPDATE world SET document=?1", [value.to_string()])
+    sqlx::query("UPDATE world SET document=?1")
+        .bind(value.to_string())
+        .execute(&mut db)
+        .await
         .unwrap();
     assert!(
-        !persistence::load(&c.database()).unwrap().objects[&ObjectId(1)]
+        !persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)]
             .flags
             .contains(Flag::Connected)
     );
@@ -785,20 +877,24 @@ fn flag_catalog_storage_commands_and_lua_contract() {
         .as_array_mut()
         .unwrap()
         .push("UNKNOWN".into());
-    db.execute("UPDATE world SET document=?1", [value.to_string()])
+    sqlx::query("UPDATE world SET document=?1")
+        .bind(value.to_string())
+        .execute(&mut db)
+        .await
         .unwrap();
-    let error = format!("{:#}", persistence::load(&c.database()).unwrap_err());
+    let error = format!("{:#}", persistence::load(&c.database()).await.unwrap_err());
     assert!(error.contains("#1") && error.contains("UNKNOWN"), "{error}");
+    sqlx::Connection::close(db).await.unwrap();
 }
 
 /// Runtime flag state is observable over TCP, but never stored as durable truth.
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_flags_follow_registration_and_multiple_sessions() {
-    let (_d, c) = imported();
-    let mut world = persistence::load(&c.database()).unwrap();
+    let (_d, c) = imported().await;
+    let mut world = persistence::load(&c.database()).await.unwrap();
     world.accounts.get_mut(&ObjectId(1)).unwrap().hash =
         Some(accounts::hash("secret", &c).unwrap());
-    persistence::save(&c.database(), &world).unwrap();
+    persistence::save(&c.database(), &world).await.unwrap();
     let running = Running::start(&c).await;
     let mut admin = Client::connect(&running).await;
     admin.send("#1").await;
@@ -808,6 +904,7 @@ async fn tcp_flags_follow_registration_and_multiple_sessions() {
     let mut first = Client::connect(&running).await;
     first.register("FlagTester").await;
     let id = persistence::load(&c.database())
+        .await
         .unwrap()
         .find_player("FlagTester")
         .unwrap();
@@ -821,13 +918,22 @@ async fn tcp_flags_follow_registration_and_multiple_sessions() {
     admin.until("DARK set.").await;
     admin.send(&format!("@examine #{}", id.0)).await;
     admin.until("CONNECTED").await;
-    let db = rusqlite::Connection::open(c.database()).unwrap();
-    db.execute_batch("CREATE TRIGGER fail_flags BEFORE UPDATE ON world BEGIN SELECT RAISE(FAIL,'injected'); END;").unwrap();
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("CREATE TRIGGER fail_flags BEFORE UPDATE ON world BEGIN SELECT RAISE(FAIL,'injected'); END;").execute(&mut db).await.unwrap();
     admin.send(&format!("@flag #{}=!DARK", id.0)).await;
     admin.until("Unable to save your changes").await;
     admin.send(&format!("@examine #{}", id.0)).await;
     admin.until("DARK").await;
-    db.execute_batch("DROP TRIGGER fail_flags").unwrap();
+    sqlx::raw_sql("DROP TRIGGER fail_flags")
+        .execute(&mut db)
+        .await
+        .unwrap();
     drop(second);
     // Poll the observable condition, allowing the independent socket-close event to arrive.
     tokio::time::timeout(Duration::from_secs(5), async {
@@ -843,7 +949,7 @@ async fn tcp_flags_follow_registration_and_multiple_sessions() {
     .await
     .unwrap();
     running.stop().await;
-    let loaded = persistence::load(&c.database()).unwrap();
+    let loaded = persistence::load(&c.database()).await.unwrap();
     assert!(
         loaded.objects[&id]
             .flags
@@ -854,4 +960,527 @@ async fn tcp_flags_follow_registration_and_multiple_sessions() {
             .flags
             .contains(stompymux_rs::flags::Flag::Connected)
     );
+    sqlx::Connection::close(db).await.unwrap();
+}
+
+/// The complete catalog, typed Lua contract and old snapshot format agree.
+#[tokio::test(flavor = "current_thread")]
+async fn powers_catalog_lua_import_and_storage() {
+    use stompymux_rs::powers::{self, Power, PowerSet};
+    let d = fixture();
+    let c = Config::load(d.path()).unwrap();
+    let mut legacy = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.legacy_database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    // Mutate only the temporary import fixture's schema-32 objects table.
+    sqlx::query("UPDATE objects SET has_idle_power=1 WHERE dbref=2")
+        .execute(&mut legacy)
+        .await
+        .unwrap();
+    persistence::import(&c.legacy_database(), &c).await.unwrap();
+    let world = Rc::new(RefCell::new(
+        persistence::load(&c.database()).await.unwrap(),
+    ));
+    assert!(
+        world.borrow().objects[&ObjectId(2)]
+            .powers
+            .contains(Power::Idle)
+    );
+    let s = Scripts::new(&c, world.clone()).unwrap();
+    assert_eq!(powers::ALL, [Power::Idle]);
+    assert_eq!(Power::parse("iDlE").unwrap(), Power::Idle);
+    assert_eq!(serde_json::to_string(&PowerSet::default()).unwrap(), "[]");
+    s.lua
+        .load(
+            r#"
+        local p=mux.world.powers
+        local o=mux.world.object(2)
+        assert(tostring(p.IDLE)=='IDLE' and p.IDLE==p.IDLE)
+        assert(o:powers():has(p.IDLE))
+        assert(o:powers():remove(p.IDLE))
+        assert(not o:powers():remove(p.IDLE))
+        assert(o:powers():add(p.IDLE))
+        assert(not o:powers():add(p.IDLE))
+        assert(not pcall(function() p.IDLE=false end))
+        assert(not pcall(function() return p.UNKNOWN end))
+        assert(not pcall(function() return p.idle end))
+        assert(not pcall(function() return p[false] end))
+        assert(not pcall(function() o:powers():has('IDLE') end))
+        assert(not pcall(function() o:powers():add(mux.world.flags.ANSI) end))
+        assert(not pcall(function() o:powers():remove(mux.world.flags.ANSI) end))
+        assert(not pcall(function() o:flags():add(p.IDLE) end))
+        assert(not pcall(function() mux.world.object(999999):powers():has(p.IDLE) end))
+    "#,
+        )
+        .exec()
+        .unwrap();
+    let snapshot = world.borrow().clone();
+    persistence::save(&c.database(), &snapshot).await.unwrap();
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    let json: String = sqlx::query_scalar("SELECT document FROM world")
+        .fetch_one(&mut db)
+        .await
+        .unwrap();
+    let mut value: serde_json::Value = serde_json::from_str(&json).unwrap();
+    assert_eq!(value["objects"]["2"]["powers"], serde_json::json!(["IDLE"]));
+    assert!(
+        persistence::load(&c.database()).await.unwrap().objects[&ObjectId(2)]
+            .powers
+            .contains(Power::Idle)
+    );
+    value["objects"]["2"]["powers"] = serde_json::json!(["UNKNOWN"]);
+    sqlx::query("UPDATE world SET document=?1")
+        .bind(value.to_string())
+        .execute(&mut db)
+        .await
+        .unwrap();
+    let error = format!("{:#}", persistence::load(&c.database()).await.unwrap_err());
+    assert!(error.contains("#2") && error.contains("UNKNOWN"), "{error}");
+    sqlx::Connection::close(legacy).await.unwrap();
+    sqlx::Connection::close(db).await.unwrap();
+}
+
+/// Administration reuses flag targeting and control permissions.
+#[tokio::test(flavor = "current_thread")]
+async fn power_commands_validate_targets_permissions_and_names() {
+    use stompymux_rs::{commands, powers::Power, world::Kind};
+    let (d, _) = imported().await;
+    let path = d.path().join("aliases.toml");
+    let aliases = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace("[aliases.commands]", "[aliases.commands]\npow='@power'");
+    std::fs::write(path, aliases).unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let world = Rc::new(RefCell::new(
+        persistence::load(&c.database()).await.unwrap(),
+    ));
+    let scripts = Scripts::new(&c, world.clone()).unwrap();
+    let ordinary = world
+        .borrow_mut()
+        .create(&c, "Ordinary".into(), Kind::Player);
+    for _ in 0..2 {
+        let id = world.borrow_mut().create(&c, "Twin".into(), Kind::Thing);
+        let room = world.borrow().objects[&ObjectId(1)].location;
+        world.borrow_mut().objects.get_mut(&id).unwrap().location = room;
+    }
+    for (actor, command, expected) in [
+        (ObjectId(1), "pow #4=iDlE", "idle granted."),
+        (ObjectId(1), "@power #4=!idle", "idle removed."),
+        (ObjectId(1), "@power here=idle", "idle granted."),
+        (ObjectId(2), "@power me=idle", "idle granted."),
+        (ObjectId(2), "@power #1=idle", "Permission denied."),
+        (ordinary, "@power me=idle", "Permission denied."),
+        (ordinary, "@list powers", "Permission denied."),
+        (ObjectId(1), "@power Twin=idle", "which object"),
+        (ObjectId(1), "@power #99999=idle", "No such object"),
+        (ObjectId(1), "@power #4=UNKNOWN", "understand that power"),
+        (ObjectId(1), "@power #4=idle idle", "understand that power"),
+        (ObjectId(1), "@power #4=", "specify a power"),
+        (ObjectId(1), "@power #4=!", "specify a power"),
+        (ObjectId(1), "@list powers", "Powers: idle"),
+        (ObjectId(1), "@examine #2", "Powers: idle"),
+    ] {
+        commands::run(&scripts, &c, actor, 1, command).unwrap();
+        let output = scripts.outbox.borrow_mut().pop().unwrap().1;
+        assert!(output.contains(expected), "{command}: {output}");
+    }
+    assert!(
+        !world.borrow().objects[&ordinary]
+            .powers
+            .contains(Power::Idle)
+    );
+}
+
+/// TCP changes survive restart; failed writes and callbacks cannot grant powers.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_powers_are_transactional_and_durable() {
+    use stompymux_rs::powers::Power;
+    let (d, c) = imported().await;
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects
+        .get_mut(&ObjectId(4))
+        .unwrap()
+        .powers
+        .remove(Power::Idle);
+    persistence::save(&c.database(), &w).await.unwrap();
+    std::fs::write(
+        d.path().join("lua/global_logic/power_failure.lua"),
+        r#"return {commands={{pattern='^power%-failure$',handler=function(ctx)
+        mux.world.object(4):powers():add(mux.world.powers.IDLE)
+        mux.world.pemit(ctx.enactor,'SHOULD NOT APPEAR')
+        error('injected power callback failure')
+    end},{pattern='^power%-status$',handler=function(ctx)
+        mux.world.pemit(ctx.enactor,'Power status: '..tostring(mux.world.object(4):powers():has(mux.world.powers.IDLE)))
+        return true
+    end}}}"#,
+    )
+    .unwrap();
+    let running = Running::start(&c).await;
+    let mut admin = Client::connect(&running).await;
+    admin.send("#1").await;
+    admin.until("Password: ").await;
+    admin.send("secret").await;
+    admin.until("Staff Nexus").await;
+    admin.send("power-failure").await;
+    let output = admin.until("injected power callback failure").await;
+    assert!(!output.contains("SHOULD NOT APPEAR"));
+    assert!(
+        !persistence::load(&c.database()).await.unwrap().objects[&ObjectId(4)]
+            .powers
+            .contains(Power::Idle)
+    );
+    admin.send("power-status").await;
+    admin.until("Power status: false").await;
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("CREATE TRIGGER fail_power BEFORE UPDATE ON world BEGIN SELECT RAISE(FAIL,'injected'); END;").execute(&mut db).await.unwrap();
+    admin.send("@power #4=idle").await;
+    let output = admin.until("Unable to save your changes").await;
+    assert!(!output.contains("granted"));
+    assert!(
+        !persistence::load(&c.database()).await.unwrap().objects[&ObjectId(4)]
+            .powers
+            .contains(Power::Idle)
+    );
+    admin.send("power-status").await;
+    admin.until("Power status: false").await;
+    sqlx::raw_sql("DROP TRIGGER fail_power")
+        .execute(&mut db)
+        .await
+        .unwrap();
+    admin.send("@power #4=IDLE").await;
+    admin.until("idle granted.").await;
+    running.stop().await;
+    let restarted = Running::start(&c).await;
+    assert!(
+        persistence::load(&c.database()).await.unwrap().objects[&ObjectId(4)]
+            .powers
+            .contains(Power::Idle)
+    );
+    restarted.stop().await;
+    sqlx::Connection::close(db).await.unwrap();
+}
+
+/// IDLE is retained as metadata and does not yet bypass timeout enforcement.
+#[tokio::test(flavor = "current_thread")]
+async fn idle_power_does_not_change_idle_timeout() {
+    let (d, _) = imported().await;
+    let path = d.path().join("stompymux.toml");
+    let text = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace("idle_interval = 99999", "idle_interval = 1")
+        .replace("idle_timeout = 99999999", "idle_timeout = 1");
+    std::fs::write(path, text).unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects
+        .get_mut(&ObjectId(1))
+        .unwrap()
+        .powers
+        .insert(stompymux_rs::powers::Power::Idle);
+    persistence::save(&c.database(), &w).await.unwrap();
+    let running = Running::start(&c).await;
+    let mut client = Client::connect(&running).await;
+    client.send("#1").await;
+    client.until("Password: ").await;
+    client.send("secret").await;
+    client.until("Staff Nexus").await;
+    tokio::time::timeout(Duration::from_secs(5), async {
+        let mut bytes = [0; 1024];
+        while client.socket.read(&mut bytes).await.unwrap() != 0 {}
+    })
+    .await
+    .expect("IDLE must not prevent timeout");
+    running.stop().await;
+}
+
+/// Wizard movement handles containers, home, occupied containers and exit relocation.
+#[tokio::test(flavor = "current_thread")]
+async fn wizard_teleport_and_home_validate_containment() {
+    use stompymux_rs::{commands, world::Kind};
+    let (_d, c) = imported().await;
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    let stored_home = w.objects[&ObjectId(1)].home;
+    let cargo = w.create(&c, "Cargo".into(), Kind::Thing);
+    let inner = w.create(&c, "Inner".into(), Kind::Thing);
+    w.objects.get_mut(&cargo).unwrap().location = Some(ObjectId(4));
+    w.objects.get_mut(&inner).unwrap().location = Some(cargo);
+    let ordinary = w.create(&c, "Ordinary".into(), Kind::Player);
+    w.objects.get_mut(&ordinary).unwrap().location = Some(ObjectId(4));
+    let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    for input in ["home", "@teleport #4", "@tel/quiet #4"] {
+        commands::run(&s, &c, ordinary, 99, input).unwrap();
+        assert_eq!(s.outbox.borrow_mut().pop().unwrap().1, "Permission denied.");
+    }
+    commands::run(&s, &c, ObjectId(1), 1, &format!("@tel #{}", cargo.0)).unwrap();
+    assert_eq!(s.world.borrow().objects[&ObjectId(1)].location, Some(cargo));
+    assert!(s.outbox.borrow().iter().any(|(_, t)| t.contains("Cargo")));
+    commands::run(&s, &c, ObjectId(1), 1, "look").unwrap();
+    assert!(s.outbox.borrow_mut().pop().unwrap().1.contains("Inner"));
+    commands::run(&s, &c, ObjectId(1), 1, &format!("@teleport #{}", inner.0)).unwrap();
+    for input in [
+        format!("@teleport #{}=me", cargo.0),
+        "@teleport me".into(),
+        "@teleport #4=#2".into(),
+        "@teleport #13".into(),
+        "home extra".into(),
+        "@tel/quiet #4".into(),
+        "@teleport =#4".into(),
+    ] {
+        let before = s.world.borrow().clone();
+        commands::run(&s, &c, ObjectId(1), 1, &input).unwrap();
+        assert_eq!(
+            serde_json::to_value(before).unwrap(),
+            serde_json::to_value(&*s.world.borrow()).unwrap(),
+            "{input}"
+        );
+    }
+    commands::run(
+        &s,
+        &c,
+        ObjectId(1),
+        1,
+        &format!("@teleport #2=#{}", cargo.0),
+    )
+    .unwrap();
+    commands::run(
+        &s,
+        &c,
+        ObjectId(1),
+        1,
+        &format!("@teleport #{}=#4", cargo.0),
+    )
+    .unwrap();
+    assert_eq!(s.world.borrow().objects[&ObjectId(2)].location, Some(cargo));
+    let linked = s.world.borrow().objects[&ObjectId(13)].destination;
+    commands::run(
+        &s,
+        &c,
+        ObjectId(1),
+        1,
+        &format!("@teleport #13=#{}", cargo.0),
+    )
+    .unwrap();
+    assert_eq!(s.world.borrow().objects[&ObjectId(13)].destination, linked);
+    assert_eq!(
+        s.world.borrow().objects[&ObjectId(13)].location,
+        Some(cargo)
+    );
+    s.outbox.borrow_mut().clear();
+    commands::run(&s, &c, ObjectId(1), 1, "HoMe").unwrap();
+    assert_eq!(s.world.borrow().objects[&ObjectId(1)].location, stored_home);
+    assert_eq!(
+        s.outbox
+            .borrow()
+            .iter()
+            .filter(|(_, t)| t == "There's no place like home...")
+            .count(),
+        3
+    );
+    commands::run(&s, &c, ObjectId(1), 1, "@teleport #2").unwrap();
+    assert_eq!(
+        s.world.borrow().objects[&ObjectId(1)].location,
+        Some(ObjectId(2))
+    );
+    for home in [
+        None,
+        Some(ObjectId(13)),
+        Some(ObjectId(999999)),
+        Some(ObjectId(1)),
+    ] {
+        s.world
+            .borrow_mut()
+            .objects
+            .get_mut(&ObjectId(1))
+            .unwrap()
+            .home = home;
+        let before = serde_json::to_value(&*s.world.borrow()).unwrap();
+        commands::run(&s, &c, ObjectId(1), 1, "home").unwrap();
+        assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
+    }
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&ObjectId(1))
+        .unwrap()
+        .home = stored_home;
+    let snapshot = s.world.borrow().clone();
+    persistence::save(&c.database(), &snapshot).await.unwrap();
+    let mut loaded = persistence::load(&c.database()).await.unwrap();
+    loaded.validate(&c).unwrap();
+    assert_eq!(loaded.objects[&ObjectId(1)].location, Some(ObjectId(2)));
+    loaded.objects.get_mut(&cargo).unwrap().location = Some(inner);
+    assert!(loaded.validate(&c).is_err());
+    loaded.objects.get_mut(&cargo).unwrap().location = Some(ObjectId(13));
+    assert!(loaded.validate(&c).is_err());
+}
+
+/// Nested locks get distinct subject/enactor identities and callbacks roll back atomically.
+#[tokio::test(flavor = "current_thread")]
+async fn teleport_locks_context_and_callbacks_are_transactional() {
+    use stompymux_rs::{commands, world::Kind};
+    let (d, c) = imported().await;
+    std::fs::write(d.path().join("lua/object_logic/movement_test.lua"),r#"
+      return {locks={teleport=function(ctx)
+        if lock_error then error("injected lock failure") end
+        assert(ctx.cause==1 and ctx.subject==1 and ctx.enactor==2)
+        assert(ctx.descriptor==nil)
+        return not deny_destination
+      end,teleport_out=function(ctx)
+        assert(ctx.subject==ctx.enactor)
+        return not deny_out
+      end},events={on_exit=function(ctx)
+        assert(ctx.source==ctx.object)
+        if fail_exit then mux.world.object(ctx.enactor):set_description('leaked');error('exit failed') end
+      end,on_enter=function(ctx)
+        assert(ctx.destination==ctx.object)
+        mux.world.object(ctx.enactor):state('movement'):set('cause',ctx.cause)
+        if fail_enter then mux.world.pemit(ctx.enactor,'LEAKED');error('enter failed') end
+      end}}
+    "#).unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    let boxid = w.create(&c, "Box".into(), Kind::Thing);
+    w.objects.get_mut(&boxid).unwrap().location = Some(ObjectId(4));
+    w.objects.get_mut(&ObjectId(4)).unwrap().lua_parent = "movement_test.lua".into();
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(boxid);
+    w.objects.get_mut(&ObjectId(2)).unwrap().home = Some(ObjectId(4));
+    let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    let request = "@teleport #2=#4";
+    for globals in [
+        "deny_destination=true",
+        "deny_destination=false;lock_error=true",
+        "lock_error=false;deny_out=true",
+        "deny_out=false;fail_enter=true",
+    ] {
+        s.lua.load(globals).exec().unwrap();
+        let before = serde_json::to_value(&*s.world.borrow()).unwrap();
+        commands::run(&s, &c, ObjectId(1), 1, request).unwrap();
+        assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
+        assert!(!s.outbox.borrow().iter().any(|(_, t)| t == "LEAKED"));
+    }
+    s.lua
+        .load("fail_enter=false;deny_out=false")
+        .exec()
+        .unwrap();
+    commands::run(&s, &c, ObjectId(1), 1, request).unwrap();
+    assert_eq!(
+        s.world.borrow().objects[&ObjectId(2)].state["movement"]["cause"],
+        Scalar::Integer(1)
+    );
+    s.lua.load("fail_exit=true").exec().unwrap();
+    let before = serde_json::to_value(&*s.world.borrow()).unwrap();
+    commands::run(
+        &s,
+        &c,
+        ObjectId(1),
+        1,
+        &format!("@teleport #2=#{}", boxid.0),
+    )
+    .unwrap();
+    assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
+    // Going home bypasses both destination and nested teleport-out locks.
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .location = Some(boxid);
+    s.lua
+        .load("fail_exit=false;deny_destination=true;deny_out=true")
+        .exec()
+        .unwrap();
+    commands::run(&s, &c, ObjectId(2), 2, "home").unwrap();
+    assert_eq!(
+        s.world.borrow().objects[&ObjectId(2)].location,
+        Some(ObjectId(4))
+    );
+    let before = serde_json::to_value(&*s.world.borrow()).unwrap();
+    commands::run(&s, &c, ObjectId(2), 2, "home").unwrap();
+    assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
+}
+
+/// Connected targets see container appearance on every session; failed writes preserve location.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_teleport_containers_and_home_persist() {
+    use stompymux_rs::world::Kind;
+    let (_d, c) = imported().await;
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    for id in [1, 2] {
+        w.accounts.get_mut(&ObjectId(id)).unwrap().hash =
+            Some(accounts::hash("secret", &c).unwrap());
+    }
+    let cargo = w.create(&c, "Teleport Cargo".into(), Kind::Thing);
+    w.objects.get_mut(&cargo).unwrap().location = Some(ObjectId(4));
+    persistence::save(&c.database(), &w).await.unwrap();
+    let running = Running::start(&c).await;
+    let mut admin = Client::connect(&running).await;
+    admin.send("#1").await;
+    admin.until("Password: ").await;
+    admin.send("secret").await;
+    admin.until("Staff Nexus").await;
+    let mut first = Client::connect(&running).await;
+    first.send("#2").await;
+    first.until("Password: ").await;
+    first.send("secret").await;
+    first.until("Staff Nexus").await;
+    let mut second = Client::connect(&running).await;
+    second.send("#2").await;
+    second.until("Password: ").await;
+    second.send("secret").await;
+    second.until("Staff Nexus").await;
+    admin.send(&format!("@tel #2=#{}", cargo.0)).await;
+    admin.until("Teleported.").await;
+    first.until("Teleport Cargo").await;
+    second.until("Teleport Cargo").await;
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql(
+        "CREATE TRIGGER fail_move BEFORE UPDATE ON world BEGIN SELECT RAISE(FAIL,'injected'); END;",
+    )
+    .execute(&mut db)
+    .await
+    .unwrap();
+    admin.send("@teleport #2=#4").await;
+    admin.until("Unable to save your changes").await;
+    assert_eq!(
+        persistence::load(&c.database()).await.unwrap().objects[&ObjectId(2)].location,
+        Some(cargo)
+    );
+    sqlx::raw_sql("DROP TRIGGER fail_move")
+        .execute(&mut db)
+        .await
+        .unwrap();
+    first.send("home").await;
+    first.until("Staff Nexus").await;
+    second.until("Staff Nexus").await;
+    admin.send(&format!("@teleport #{}", cargo.0)).await;
+    admin.until("Teleport Cargo").await;
+    running.stop().await;
+    sqlx::Connection::close(db).await.unwrap();
+    assert_eq!(
+        persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)].location,
+        Some(cargo)
+    );
+    let restarted = Running::start(&c).await;
+    restarted.stop().await;
 }

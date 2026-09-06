@@ -1,36 +1,63 @@
-//! Rust-owned, versioned snapshots. Every accepted mutation is one SQLite transaction.
+//! Async SQLx SQLite snapshots; accepted mutations commit in one transaction.
 use crate::{config::Config, world::*};
 use anyhow::{Context, Result, ensure};
-use rusqlite::{Connection, OpenFlags, types::ValueRef};
-use std::{
-    collections::BTreeSet,
-    path::{Path, PathBuf},
-};
-fn readonly(path: &Path, busy_timeout_ms: u64) -> Result<Connection> {
-    let connection = Connection::open_with_flags(path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
-    connection.busy_timeout(std::time::Duration::from_millis(busy_timeout_ms))?;
-    Ok(connection)
+use sqlx::{Column, Connection, Row, SqliteConnection, sqlite::SqliteConnectOptions};
+use std::path::{Path, PathBuf};
+
+/// Open an operation-scoped connection without altering journal or foreign-key policy.
+async fn connect(
+    path: &Path,
+    timeout: u64,
+    readonly: bool,
+    create: bool,
+) -> Result<SqliteConnection> {
+    Ok(SqliteConnection::connect_with(
+        &SqliteConnectOptions::new()
+            .filename(path)
+            .read_only(readonly)
+            .create_if_missing(create)
+            .foreign_keys(false)
+            .busy_timeout(std::time::Duration::from_millis(timeout)),
+    )
+    .await?)
 }
-pub fn load(path: &Path) -> Result<World> {
+/// Drain the worker before returning, preserving the original operation error.
+async fn finish<T>(connection: SqliteConnection, result: Result<T>) -> Result<T> {
+    let closed = connection.close().await;
+    match result {
+        Err(error) => Err(error),
+        Ok(value) => {
+            if let Err(error) = closed {
+                eprintln!("SQLite close failed after completed operation: {error}");
+            }
+            Ok(value)
+        }
+    }
+}
+/// Load Rust storage using the centralized default timeout.
+pub async fn load(path: &Path) -> Result<World> {
     load_with_timeout(
         path,
         crate::config::DatabaseConfig::default().busy_timeout_ms,
     )
+    .await
 }
-pub fn load_with_timeout(path: &Path, busy_timeout_ms: u64) -> Result<World> {
-    let c = readonly(path, busy_timeout_ms)?;
-    ensure!(
-        !c.prepare("SELECT 1 FROM snapshot LIMIT 1").is_ok(),
-        "database.game_database points to a legacy database; set the live Rust path and use import-legacy --source explicitly"
-    );
-    ensure!(
-        c.pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0))? == 1,
-        "unsupported Rust database version"
-    );
-    let json: String = c.query_row("SELECT document FROM world WHERE id=1", [], |r| r.get(0))?;
+/// Read and validate a snapshot without creating or modifying storage.
+pub async fn load_with_timeout(path: &Path, busy_timeout_ms: u64) -> Result<World> {
+    let mut c = connect(path, busy_timeout_ms, true, false).await?;
+    let result=async {
+        let legacy:i64=sqlx::query_scalar("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='snapshot'").fetch_one(&mut c).await?;
+        ensure!(legacy==0,"database.game_database points to a legacy database; set the live Rust path and use import-legacy --source explicitly");
+        let version:i64=sqlx::query_scalar("PRAGMA user_version").fetch_one(&mut c).await?;
+        ensure!(version==1,"unsupported Rust database version");
+        let json:String=sqlx::query_scalar("SELECT document FROM world WHERE id=1").fetch_one(&mut c).await?;
     let value: serde_json::Value = serde_json::from_str(&json)?;
     if let Some(objects) = value.get("objects").and_then(|v| v.as_object()) {
         for (id, object) in objects {
+            if let Some(powers) = object.get("powers") {
+                serde_json::from_value::<crate::powers::PowerSet>(powers.clone())
+                    .with_context(|| format!("object #{id}: invalid stored powers"))?;
+            }
             if let Some(flags) = object.get("flags") {
                 serde_json::from_value::<crate::flags::FlagSet>(flags.clone())
                     .with_context(|| format!("object #{id}: invalid stored flags"))?;
@@ -42,95 +69,110 @@ pub fn load_with_timeout(path: &Path, busy_timeout_ms: u64) -> Result<World> {
         o.flags.remove(crate::flags::Flag::Connected);
     }
     Ok(w)
+    }.await;
+    finish(c, result).await
 }
-pub fn save(path: &Path, w: &World) -> Result<()> {
+/// Save using the centralized timeout.
+pub async fn save(path: &Path, w: &World) -> Result<()> {
     save_with_timeout(
         path,
         w,
         crate::config::DatabaseConfig::default().busy_timeout_ms,
     )
+    .await
 }
-pub fn save_with_timeout(path: &Path, w: &World, busy_timeout_ms: u64) -> Result<()> {
+/// Persist durable fields atomically, excluding session-owned connection flags.
+pub async fn save_with_timeout(path: &Path, w: &World, busy_timeout_ms: u64) -> Result<()> {
     let mut durable = w.clone();
     for o in durable.objects.values_mut() {
         o.flags.remove(crate::flags::Flag::Connected);
     }
-    let w = &durable;
-    let mut c = Connection::open(path)?;
-    c.busy_timeout(std::time::Duration::from_millis(busy_timeout_ms))?;
-    let version: i64 = c.pragma_query_value(None, "user_version", |r| r.get(0))?;
-    ensure!(
-        version == 0 || version == 1,
-        "unsupported Rust database version"
-    );
-    let tx = c.transaction()?;
-    tx.execute_batch("CREATE TABLE IF NOT EXISTS world (id INTEGER PRIMARY KEY CHECK(id=1), document TEXT NOT NULL); PRAGMA user_version=1;")?;
-    tx.execute(
-        "INSERT INTO world VALUES(1,?1) ON CONFLICT(id) DO UPDATE SET document=excluded.document",
-        [serde_json::to_string(w)?],
-    )?;
-    tx.commit()?;
-    Ok(())
+    let document = serde_json::to_string(&durable)?;
+    let mut c = connect(path, busy_timeout_ms, false, true).await?;
+    let result=async {
+        let version:i64=sqlx::query_scalar("PRAGMA user_version").fetch_one(&mut c).await?;
+        ensure!(version==0 || version==1,"unsupported Rust database version");
+        let mut tx=c.begin().await?;
+        sqlx::raw_sql("CREATE TABLE IF NOT EXISTS world (id INTEGER PRIMARY KEY CHECK(id=1), document TEXT NOT NULL); PRAGMA user_version=1;").execute(&mut *tx).await?;
+        sqlx::query("INSERT INTO world VALUES(1,?1) ON CONFLICT(id) DO UPDATE SET document=excluded.document").bind(document).execute(&mut *tx).await?;
+        tx.commit().await?;
+        Ok(())
+    }.await;
+    finish(c, result).await
 }
+/// Persist an owned world snapshot without sending Lua values to a worker.
 pub async fn persist(path: PathBuf, w: World, busy_timeout_ms: u64) -> Result<()> {
-    tokio::task::spawn_blocking(move || save_with_timeout(&path, &w, busy_timeout_ms)).await?
+    save_with_timeout(&path, &w, busy_timeout_ms).await
 }
-pub fn initialize(path: &Path, w: &World) -> Result<()> {
+/// Initialize storage using the centralized timeout.
+pub async fn initialize(path: &Path, w: &World) -> Result<()> {
     initialize_with_timeout(
         path,
         w,
         crate::config::DatabaseConfig::default().busy_timeout_ms,
     )
+    .await
 }
-pub fn initialize_with_timeout(path: &Path, w: &World, busy_timeout_ms: u64) -> Result<()> {
-    use std::os::unix::fs::OpenOptionsExt;
+/// Exclusively create restricted storage and remove it after failed initialization.
+pub async fn initialize_with_timeout(path: &Path, w: &World, busy_timeout_ms: u64) -> Result<()> {
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
+        tokio::fs::create_dir_all(parent).await?;
     }
-    let file = std::fs::OpenOptions::new()
+    let file = tokio::fs::OpenOptions::new()
         .write(true)
         .create_new(true)
         .mode(0o600)
         .open(path)
+        .await
         .context("destination already exists or cannot be created")?;
     drop(file);
-    if let Err(e) = save_with_timeout(path, w, busy_timeout_ms) {
-        let _ = std::fs::remove_file(path);
-        return Err(e);
+    if let Err(error) = save_with_timeout(path, w, busy_timeout_ms).await {
+        let _ = tokio::fs::remove_file(path).await;
+        return Err(error);
     }
     Ok(())
 }
-fn id(v: i64) -> Option<ObjectId> {
-    (v >= 0).then_some(ObjectId(v))
+/// Convert the legacy negative-reference sentinel.
+fn id(value: i64) -> Option<ObjectId> {
+    (value >= 0).then_some(ObjectId(value))
 }
-pub fn read_legacy(source: &Path, cfg: &Config) -> Result<World> {
-    let c = readonly(source, cfg.database.busy_timeout_ms)?;
-    let (version, next, record): (i64, i64, usize) = c.query_row(
-        "SELECT schema_version,db_top,record_players FROM snapshot WHERE id=1",
-        [],
-        |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
-    )?;
+/// Read schema 32 without modifying the source archive.
+pub async fn read_legacy(source: &Path, cfg: &Config) -> Result<World> {
+    let mut c = connect(source, cfg.database.busy_timeout_ms, true, false).await?;
+    let result = read_legacy_connection(&mut c, cfg).await;
+    finish(c, result).await
+}
+/// Decode legacy rows with checked SQLite storage classes for Lua scalar values.
+async fn read_legacy_connection(c: &mut SqliteConnection, cfg: &Config) -> Result<World> {
+    let (version, next, record): (i64, i64, i64) =
+        sqlx::query_as("SELECT schema_version,db_top,record_players FROM snapshot WHERE id=1")
+            .fetch_one(&mut *c)
+            .await?;
     ensure!(
         version == 32,
         "unsupported legacy schema {version}; expected 32"
     );
     let mut w = World {
         next_id: next,
-        record_players: record,
+        record_players: usize::try_from(record).context("invalid record_players")?,
         initialized: true,
         ..Default::default()
     };
-    let mut stmt = c.prepare("SELECT * FROM objects")?;
-    let columns: Vec<String> = stmt.column_names().iter().map(|s| s.to_string()).collect();
-    let mut rows = stmt.query([])?;
-    while let Some(r) = rows.next()? {
-        let object_id = ObjectId(r.get("dbref")?);
-        let kind = Kind::from_code(r.get("type")?)?;
-        let link = id(r.get("link")?);
+    for r in sqlx::query("SELECT * FROM objects")
+        .fetch_all(&mut *c)
+        .await?
+    {
+        let columns: Vec<&str> = r.columns().iter().map(|c| c.name()).collect();
+        let object_id = ObjectId(r.try_get("dbref")?);
+        let kind = Kind::from_code(r.try_get("type")?)?;
+        let link = id(r.try_get("link")?);
         let mut flags = crate::flags::FlagSet::default();
-        let mut powers = BTreeSet::new();
+        let mut powers = crate::powers::PowerSet::default();
         for col in &columns {
-            if r.get::<_, i64>(col.as_str()).unwrap_or(0) == 1 {
+            if col.starts_with("has_")
+                && (col.ends_with("_flag") || col.ends_with("_power"))
+                && r.try_get::<i64, _>(*col)? == 1
+            {
                 if let Some(s) = col
                     .strip_prefix("has_")
                     .and_then(|s| s.strip_suffix("_flag"))
@@ -145,7 +187,10 @@ pub fn read_legacy(source: &Path, cfg: &Config) -> Result<World> {
                     .strip_prefix("has_")
                     .and_then(|s| s.strip_suffix("_power"))
                 {
-                    powers.insert(s.to_uppercase());
+                    powers.insert(
+                        crate::powers::Power::parse(s)
+                            .with_context(|| format!("object #{}", object_id.0))?,
+                    );
                 }
             }
         }
@@ -153,94 +198,98 @@ pub fn read_legacy(source: &Path, cfg: &Config) -> Result<World> {
             object_id,
             Object {
                 id: object_id,
-                name: r.get("name")?,
+                name: r.try_get("name")?,
                 kind,
-                location: id(r.get(if kind == Kind::Exit {
+                location: id(r.try_get(if kind == Kind::Exit {
                     "exits"
                 } else {
                     "location"
                 })?),
-                zone: id(r.get("zone")?),
-                affiliation: id(r.get("affiliation")?),
+                zone: id(r.try_get("zone")?),
+                affiliation: id(r.try_get("affiliation")?),
                 home: if kind != Kind::Exit { link } else { None },
                 destination: if kind == Kind::Exit {
-                    id(r.get("location")?)
+                    id(r.try_get("location")?)
                 } else {
                     None
                 },
-                description: r.get("description")?,
-                internal_description: r.get("internal_description")?,
-                lua_parent: r.get("lua_parent")?,
+                description: r.try_get("description")?,
+                internal_description: r.try_get("internal_description")?,
+                lua_parent: r.try_get("lua_parent")?,
                 flags,
                 powers,
                 state: Default::default(),
             },
         );
     }
-    let mut stmt = c.prepare("SELECT * FROM player_state")?;
-    let mut rows = stmt.query([])?;
-    while let Some(r) = rows.next()? {
+    for r in sqlx::query("SELECT * FROM player_state")
+        .fetch_all(&mut *c)
+        .await?
+    {
         w.accounts.insert(
-            ObjectId(r.get("object_dbref")?),
+            ObjectId(r.try_get("object_dbref")?),
             Account {
-                hash: r.get("password_hash")?,
-                alias: r.get("alias")?,
-                last_login: r.get("last_login")?,
-                last_site: r.get("last_site")?,
-                successes: r.get("successful_login_count")?,
-                failures: r.get("failed_login_count")?,
-                unreported_failures: r.get("unreported_failed_login_count")?,
+                hash: r.try_get("password_hash")?,
+                alias: r.try_get("alias")?,
+                last_login: r.try_get("last_login")?,
+                last_site: r.try_get("last_site")?,
+                successes: r.try_get("successful_login_count")?,
+                failures: r.try_get("failed_login_count")?,
+                unreported_failures: r.try_get("unreported_failed_login_count")?,
                 history: Vec::new(),
             },
         );
     }
-    let mut stmt =
-        c.prepare("SELECT * FROM player_login_history ORDER BY player_dbref,outcome,position")?;
-    let mut rows = stmt.query([])?;
-    while let Some(r) = rows.next()? {
+    for r in
+        sqlx::query("SELECT * FROM player_login_history ORDER BY player_dbref,outcome,position")
+            .fetch_all(&mut *c)
+            .await?
+    {
         w.accounts
-            .get_mut(&ObjectId(r.get("player_dbref")?))
+            .get_mut(&ObjectId(r.try_get("player_dbref")?))
             .context("login history account missing")?
             .history
             .push(Login {
-                success: r.get::<_, i64>("outcome")? == 0,
-                at: r.get("occurred_at")?,
-                host: r.get("host")?,
+                success: r.try_get::<i64, _>("outcome")? == 0,
+                at: r.try_get("occurred_at")?,
+                host: r.try_get("host")?,
             });
     }
-    let mut stmt = c.prepare("SELECT * FROM object_state")?;
-    let mut rows = stmt.query([])?;
-    while let Some(r) = rows.next()? {
-        let kind: i64 = r.get("value_type")?;
-        let value = match (kind, r.get_ref("value")?) {
-            (3, ValueRef::Integer(n)) => Scalar::Integer(n),
-            (2, ValueRef::Integer(n)) => Scalar::Boolean(n != 0),
-            (4, ValueRef::Real(n)) => Scalar::Number(n),
-            (4, ValueRef::Integer(n)) => Scalar::Number(n as f64),
-            (1, ValueRef::Text(s) | ValueRef::Blob(s)) => {
-                Scalar::String(String::from_utf8(s.to_vec())?)
-            }
-            _ => anyhow::bail!("unsupported legacy state encoding {kind}"),
+    for r in sqlx::query("SELECT *, typeof(value) AS storage_type FROM object_state")
+        .fetch_all(&mut *c)
+        .await?
+    {
+        let kind: i64 = r.try_get("value_type")?;
+        let storage: String = r.try_get("storage_type")?;
+        let value = match (kind, storage.as_str()) {
+            (3, "integer") => Scalar::Integer(r.try_get("value")?),
+            (2, "integer") => Scalar::Boolean(r.try_get::<i64, _>("value")? != 0),
+            (4, "real") => Scalar::Number(r.try_get("value")?),
+            (4, "integer") => Scalar::Number(r.try_get::<i64, _>("value")? as f64),
+            (1, "text") => Scalar::String(r.try_get("value")?),
+            (1, "blob") => Scalar::String(String::from_utf8(r.try_get("value")?)?),
+            _ => anyhow::bail!("unsupported legacy state encoding {kind} ({storage})"),
         };
         w.objects
-            .get_mut(&ObjectId(r.get("object_dbref")?))
+            .get_mut(&ObjectId(r.try_get("object_dbref")?))
             .context("state object missing")?
             .state
-            .entry(r.get("namespace")?)
+            .entry(r.try_get("namespace")?)
             .or_default()
-            .insert(r.get("key")?, value);
+            .insert(r.try_get("key")?, value);
     }
-    let mut stmt = c.prepare("SELECT * FROM comsys_channels")?;
-    let mut rows = stmt.query([])?;
-    while let Some(r) = rows.next()? {
-        let name: String = r.get("name")?;
+    for r in sqlx::query("SELECT * FROM comsys_channels")
+        .fetch_all(&mut *c)
+        .await?
+    {
+        let name: String = r.try_get("name")?;
         w.channels.insert(
             name.clone(),
             Channel {
                 name,
-                object: id(r.get("chan_obj")?),
-                flags: r.get("type")?,
-                messages: r.get("num_messages")?,
+                object: id(r.try_get("chan_obj")?),
+                flags: r.try_get("type")?,
+                messages: r.try_get("num_messages")?,
             },
         );
     }
@@ -250,9 +299,10 @@ pub fn read_legacy(source: &Path, cfg: &Config) -> Result<World> {
     w.validate(cfg)?;
     Ok(w)
 }
-pub fn import(source: &Path, cfg: &Config) -> Result<String> {
-    let w = read_legacy(source, cfg)?;
-    initialize_with_timeout(&cfg.database(), &w, cfg.database.busy_timeout_ms)?;
+/// Import explicitly, refusing to overwrite initialized destinations.
+pub async fn import(source: &Path, cfg: &Config) -> Result<String> {
+    let w = read_legacy(source, cfg).await?;
+    initialize_with_timeout(&cfg.database(), &w, cfg.database.busy_timeout_ms).await?;
     Ok(format!(
         "Imported schema 32: {} objects, {} accounts, {} channels. Object/account/login/Lua state imported; remaining tables retained in source archive {}. No legacy data was modified.",
         w.objects.len(),

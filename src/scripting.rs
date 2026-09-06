@@ -1,3 +1,4 @@
+//! LuaJIT compatibility bindings and bounded world callbacks.
 use crate::{config::Config, text, world::*};
 use anyhow::{Context, Result, ensure};
 use mlua::{Function, HookTriggers, Lua, LuaSerdeExt, Table, Value, VmState};
@@ -191,6 +192,37 @@ impl Scripts {
         )| {
             let flag = *flag.borrow::<crate::flags::Flag>()?;
             crate::flags::change(&mut w.borrow_mut(), ObjectId(1), ObjectId(id), flag, add)
+                .map_err(err)
+        });
+        api.set(
+            "powers",
+            lua.create_userdata(crate::powers::LuaPowers)
+                .map_err(|e| anyhow::anyhow!(e.to_string()))?,
+        )
+        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let w = world.clone();
+        bind!(
+            "has_power",
+            move |_, (id, power): (i64, mlua::AnyUserData)| {
+                let power = *power.borrow::<crate::powers::Power>()?;
+                let world = w.borrow();
+                let o = world
+                    .objects
+                    .get(&ObjectId(id))
+                    .filter(|o| o.kind != Kind::Garbage)
+                    .ok_or_else(|| err("object does not exist"))?;
+                Ok(o.powers.contains(power))
+            }
+        );
+        let w = world.clone();
+        bind!("power", move |_,
+                             (id, power, value): (
+            i64,
+            mlua::AnyUserData,
+            bool
+        )| {
+            let power = *power.borrow::<crate::powers::Power>()?;
+            crate::powers::change(&mut w.borrow_mut(), ObjectId(1), ObjectId(id), power, value)
                 .map_err(err)
         });
         let w = world.clone();
@@ -498,20 +530,26 @@ impl Scripts {
         }
         Ok(())
     }
+    /// Run a location hook with the moved object and initiating actor kept distinct.
     pub fn movement_event(
         &self,
         name: &str,
-        player: ObjectId,
-        object: ObjectId,
-        session: u64,
+        location: ObjectId,
+        movement: &crate::movement::Move,
     ) -> Result<()> {
-        let parent = self.world.borrow().objects[&object].lua_parent.clone();
+        self.sync_parents()?;
+        let parent = self.world.borrow().objects[&location].lua_parent.clone();
         if let Some(t) = self.parents.get(&parent) {
-            self.call_event(
-                t,
-                name,
-                self.context(Some(player), Some(object), Some(session))?,
-            )?;
+            let ctx = self.context(Some(movement.object), Some(location), movement.session)?;
+            for (key, value) in [
+                ("cause", Some(movement.actor.0)),
+                ("source", movement.source.map(|id| id.0)),
+                ("destination", Some(movement.destination.0)),
+            ] {
+                ctx.set(key, value)
+                    .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+            }
+            self.call_event(t, name, ctx)?;
         }
         Ok(())
     }
@@ -542,18 +580,62 @@ impl Scripts {
         }
         Ok(())
     }
-    pub fn appearance(&self, player: ObjectId, room: ObjectId, session: u64) -> Result<String> {
-        let parent = self.world.borrow().objects[&room].lua_parent.clone();
+    /// Render the current location for an initiating session.
+    pub fn appearance(&self, player: ObjectId, location: ObjectId, session: u64) -> Result<String> {
+        self.appearance_for(player, location, Some(session))
+    }
+    /// Container modules may omit a renderer; use the copied generic appearance package.
+    pub fn appearance_for(
+        &self,
+        player: ObjectId,
+        location: ObjectId,
+        session: Option<u64>,
+    ) -> Result<String> {
+        self.sync_parents()?;
+        let parent = self.world.borrow().objects[&location].lua_parent.clone();
         let t = self
             .parents
             .get(&parent)
             .context("appearance parent missing")?;
-        let f: Function = t
-            .get("internal_appearance")
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         self.budget.set(self.instruction_limit);
-        f.call(self.context(Some(player), Some(room), Some(session))?)
+        let f = match t
+            .get::<Option<Function>>("internal_appearance")
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?
+        {
+            Some(f) => f,
+            None => self
+                .lua
+                .load("return require('object_appearances').render_internal_appearance")
+                .eval::<Function>()
+                .map_err(|e| anyhow::anyhow!(e.to_string()))?,
+        };
+        f.call(self.context(Some(player), Some(location), session)?)
             .map_err(|e| anyhow::anyhow!(e.to_string()))
+    }
+    /// Evaluate teleport policy with explicit enactor, subject and cause identities.
+    pub fn movement_lock(
+        &self,
+        location: ObjectId,
+        lock: &str,
+        subject: ObjectId,
+        movement: &crate::movement::Move,
+    ) -> Result<bool> {
+        self.sync_parents()?;
+        self.budget.set(self.instruction_limit);
+        let f:Function=self.lua.load("return function(t) t.object=mux.world.object(t.object); return mux.world.lock_passes(t) end").eval().map_err(|e|anyhow::anyhow!(e.to_string()))?;
+        let ctx = self.context(Some(movement.object), Some(location), movement.session)?;
+        ctx.set("lock", lock)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        for (key, value) in [
+            ("subject", Some(subject.0)),
+            ("cause", Some(movement.actor.0)),
+            ("source", movement.source.map(|id| id.0)),
+            ("destination", Some(movement.destination.0)),
+        ] {
+            ctx.set(key, value)
+                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        }
+        f.call(ctx).map_err(|e| anyhow::anyhow!(e.to_string()))
     }
     pub fn lock(&self, player: ObjectId, exit: ObjectId) -> Result<bool> {
         self.sync_parents()?;

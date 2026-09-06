@@ -16,8 +16,27 @@ pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, input: &str)
     if let Some(alias) = c.aliases.commands.get(&command) {
         command = alias.to_ascii_lowercase();
     }
-    if matches!(command.as_str(), "@flag" | "@list" | "@examine") {
-        let response = flag_command(s, c, player, &command, args).unwrap_or_else(|e| e.to_string());
+    let (base, switch) = command
+        .split_once('/')
+        .map_or((command.as_str(), None), |(base, switch)| {
+            (base, Some(switch))
+        });
+    let base = c
+        .aliases
+        .commands
+        .get(base)
+        .map_or(base, String::as_str)
+        .to_ascii_lowercase();
+    if matches!(base.as_str(), "home" | "@teleport") {
+        let result = movement_command(s, player, session, &base, args, switch);
+        if let Err(error) = result {
+            s.outbox.borrow_mut().push((player, error.to_string()));
+        }
+        return Ok(Action::Continue);
+    }
+    if matches!(command.as_str(), "@flag" | "@power" | "@list" | "@examine") {
+        let response =
+            admin_command(s, c, player, &command, args).unwrap_or_else(|e| e.to_string());
         s.outbox.borrow_mut().push((player, response));
         return Ok(Action::Continue);
     }
@@ -60,30 +79,14 @@ pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, input: &str)
                             .borrow_mut()
                             .push((player, "You cannot go that way.".into()));
                     } else {
-                        let destination = *destination;
-                        let valid = s
-                            .world
-                            .borrow()
-                            .objects
-                            .get(&destination)
-                            .is_some_and(|o| o.kind == Kind::Room);
-                        if valid {
-                            s.movement_event("on_exit", player, room, session)?;
-                            s.world
-                                .borrow_mut()
-                                .objects
-                                .get_mut(&player)
-                                .unwrap()
-                                .location = Some(destination);
-                            s.movement_event("on_enter", player, destination, session)?;
-                            s.outbox
-                                .borrow_mut()
-                                .push((player, s.appearance(player, destination, session)?));
-                        } else {
-                            s.outbox
-                                .borrow_mut()
-                                .push((player, "That exit has no usable destination.".into()));
-                        }
+                        crate::movement::perform(
+                            s,
+                            player,
+                            player,
+                            *destination,
+                            Some(session),
+                            crate::movement::Route::Exit,
+                        )?;
                     }
                 }
                 [] => s.outbox.borrow_mut().push((
@@ -124,7 +127,7 @@ fn say(s: &Scripts, player: ObjectId, room: ObjectId, message: &str) {
     }
 }
 /// Resolve explicit identities and exact visible local names without guessing.
-fn flag_target(w: &crate::world::World, player: ObjectId, name: &str) -> Result<ObjectId> {
+fn admin_target(w: &crate::world::World, player: ObjectId, name: &str) -> Result<ObjectId> {
     use anyhow::{bail, ensure};
     let name = name.trim();
     let room = w.objects.get(&player).and_then(|o| o.location);
@@ -170,8 +173,8 @@ fn flag_target(w: &crate::world::World, player: ObjectId, name: &str) -> Result<
         _ => bail!("I don't know which object you mean."),
     }
 }
-/// Flag-only administration surface; broader builder commands remain deferred.
-fn flag_command(
+/// Flag and power administration; broader builder commands remain deferred.
+fn admin_command(
     s: &Scripts,
     c: &Config,
     player: ObjectId,
@@ -189,9 +192,19 @@ fn flag_command(
         "Permission denied."
     );
     if command == "@list" {
+        if args.trim().eq_ignore_ascii_case("powers") {
+            return Ok(format!(
+                "Powers: {}",
+                crate::powers::ALL
+                    .iter()
+                    .map(|p| p.display_name())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            ));
+        }
         ensure!(
             args.trim().eq_ignore_ascii_case("flags"),
-            "Usage: @list flags"
+            "Usage: @list flags or @list powers"
         );
         return Ok(format!(
             "Flags: {}",
@@ -203,20 +216,46 @@ fn flag_command(
         ));
     }
     if command == "@examine" {
-        let target = flag_target(&w, player, args)?;
+        let target = admin_target(&w, player, args)?;
         let o = &w.objects[&target];
         return Ok(format!(
-            "{}(#{})\r\nType: {} Flags: {}",
+            "{}(#{})\r\nType: {} Flags: {}\r\nPowers: {}",
             o.name,
             o.id.0,
             format!("{:?}", o.kind).to_uppercase(),
-            o.flags.names().join(" ")
+            o.flags.names().join(" "),
+            o.powers.description()
+        ));
+    }
+    if command == "@power" {
+        let (target, power) = args
+            .split_once('=')
+            .context("Usage: @power <target>=<power> or !<power>")?;
+        let target = admin_target(&w, player, target)?;
+        ensure!(flags::controls(&w, player, target), "Permission denied.");
+        let power = power.trim();
+        let (value, name) = power
+            .strip_prefix('!')
+            .map_or((true, power), |name| (false, name.trim()));
+        ensure!(
+            !name.is_empty(),
+            "You must specify a power to {}.",
+            if value { "set" } else { "clear" }
+        );
+        let power = crate::powers::Power::parse(name)
+            .map_err(|_| anyhow::anyhow!("I don't understand that power."))?;
+        crate::powers::change(&mut w, player, target, power, value)?;
+        return Ok(format!(
+            "{} - {} {}.",
+            w.objects[&target].name,
+            power.display_name(),
+            if value { "granted" } else { "removed" }
         ));
     }
     let (target, flag) = args
         .split_once('=')
         .context("Usage: @flag <target>=<flag> or !<flag>")?;
-    let target = flag_target(&w, player, target)?;
+    let target = admin_target(&w, player, target)?;
     ensure!(flags::controls(&w, player, target), "Permission denied.");
     let flag = flag.trim();
     let (value, name) = flag
@@ -236,4 +275,69 @@ fn flag_command(
         flag.world_name(),
         if value { "set" } else { "cleared" }
     ))
+}
+
+/// Resolve wizard movement syntax before applying the shared transaction.
+fn movement_command(
+    s: &Scripts,
+    player: ObjectId,
+    session: u64,
+    command: &str,
+    args: &str,
+    switch: Option<&str>,
+) -> Result<()> {
+    use crate::{
+        flags::Flag,
+        movement::{self, Route},
+    };
+    use anyhow::ensure;
+    ensure!(
+        player == ObjectId(1)
+            || s.world.borrow().objects[&player]
+                .flags
+                .contains(Flag::Wizard),
+        "Permission denied."
+    );
+    ensure!(
+        switch.is_none(),
+        "Movement command switches are not supported."
+    );
+    let (object, destination, route) = {
+        let w = s.world.borrow();
+        if command == "home" {
+            ensure!(args.trim().is_empty(), "Usage: home");
+            (
+                player,
+                w.objects[&player].home.context("Your home is not set.")?,
+                Route::Home,
+            )
+        } else {
+            ensure!(
+                !args.trim().is_empty(),
+                "Usage: @teleport <destination> or <object>=<destination>"
+            );
+            let (object, destination) = match args.split_once('=') {
+                Some((object, destination)) => {
+                    ensure!(
+                        !object.trim().is_empty() && !destination.trim().is_empty(),
+                        "Both target and destination are required."
+                    );
+                    (
+                        admin_target(&w, player, object)?,
+                        admin_target(&w, player, destination)?,
+                    )
+                }
+                None => (player, admin_target(&w, player, args)?),
+            };
+            (object, destination, Route::Teleport)
+        }
+    };
+    movement::perform(
+        s,
+        player,
+        object,
+        destination,
+        (object == player).then_some(session),
+        route,
+    )
 }

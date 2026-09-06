@@ -53,8 +53,7 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
     let world = if existing {
         let path = c.database();
         let timeout = c.database.busy_timeout_ms;
-        tokio::task::spawn_blocking(move || persistence::load_with_timeout(&path, timeout))
-            .await??
+        persistence::load_with_timeout(&path, timeout).await?
     } else {
         let legacy = c.legacy_database();
         ensure!(
@@ -131,10 +130,8 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
         let path = c.database();
         let snapshot = scripts.world.borrow().clone();
         let busy_timeout_ms = c.database.busy_timeout_ms;
-        if let Err(e) = tokio::task::spawn_blocking(move || {
-            persistence::initialize_with_timeout(&path, &snapshot, busy_timeout_ms)
-        })
-        .await?
+        if let Err(e) =
+            persistence::initialize_with_timeout(&path, &snapshot, busy_timeout_ms).await
         {
             let _ = std::fs::remove_file(&credentials);
             return Err(e);
@@ -797,7 +794,9 @@ mod tests {
             std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
         )
         .unwrap();
-        let world = persistence::read_legacy(&c.root.join("data/stompymux.db"), &c).unwrap();
+        let world = persistence::read_legacy(&c.root.join("data/stompymux.db"), &c)
+            .await
+            .unwrap();
         let scripts = Scripts::new(&c, Rc::new(RefCell::new(world))).unwrap();
         let (events, _) = mpsc::channel(1);
         let mut server = Server {
@@ -869,8 +868,8 @@ mod tests {
             )
             .unwrap();
             let c = Config::load(d.path()).unwrap();
-            persistence::import(&c.legacy_database(), &c).unwrap();
-            let world = persistence::load(&c.database()).unwrap();
+            persistence::import(&c.legacy_database(), &c).await.unwrap();
+            let world = persistence::load(&c.database()).await.unwrap();
             let scripts = Scripts::new(&c, Rc::new(RefCell::new(world))).unwrap();
             let (events, _) = mpsc::channel(1);
             let mut server = Server {
@@ -913,8 +912,14 @@ mod tests {
                     .flags
                     .contains(crate::flags::Flag::Connected)
             );
-            let db = rusqlite::Connection::open(server.config.database()).unwrap();
-            db.execute_batch("CREATE TRIGGER fail BEFORE UPDATE ON world BEGIN SELECT RAISE(FAIL,'injected'); END;").unwrap();
+            let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+                &sqlx::sqlite::SqliteConnectOptions::new()
+                    .filename(server.config.database())
+                    .foreign_keys(false),
+            )
+            .await
+            .unwrap();
+            sqlx::raw_sql("CREATE TRIGGER fail BEFORE UPDATE ON world BEGIN SELECT RAISE(FAIL,'injected'); END;").execute(&mut db).await.unwrap();
             server.disconnect(SessionId(1)).await.unwrap();
             assert!(
                 server.scripts.world.borrow().objects[&ObjectId(1)]
@@ -922,7 +927,7 @@ mod tests {
                     .contains(crate::flags::Flag::Connected)
             );
             server.disconnect(SessionId(2)).await.unwrap();
-            let world = server.scripts.world.borrow();
+            let world = server.scripts.world.borrow().clone();
             assert!(
                 !world.objects[&ObjectId(1)]
                     .flags
@@ -935,6 +940,7 @@ mod tests {
                 .load("assert(not mux.world.object(1):flags():has(mux.world.flags.CONNECTED))")
                 .exec()
                 .unwrap();
+            sqlx::Connection::close(db).await.unwrap();
         }
     }
 }

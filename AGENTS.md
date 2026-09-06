@@ -3,7 +3,7 @@
 ## Core workflow
 
 1. Make your changes.
-1. Run `cargo fmt` before handing back to the human.
+1. Run `cargo fmt` and `cargo test` before handing back to the human.
 
 ## Rust rules
 

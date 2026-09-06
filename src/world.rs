@@ -1,3 +1,4 @@
+//! Typed world objects, relationships and persistent account state.
 use crate::config::Config;
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
@@ -65,7 +66,7 @@ pub struct Object {
     pub internal_description: Option<String>,
     pub lua_parent: String,
     pub flags: crate::flags::FlagSet,
-    pub powers: BTreeSet<String>,
+    pub powers: crate::powers::PowerSet,
     pub state: BTreeMap<String, BTreeMap<String, Scalar>>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -134,7 +135,7 @@ impl World {
                 internal_description: None,
                 lua_parent: parent.clone(),
                 flags,
-                powers: BTreeSet::new(),
+                powers: Default::default(),
                 state: BTreeMap::new(),
             },
         );
@@ -163,6 +164,53 @@ impl World {
                 })
                 .map(|_| *id)
         })
+    }
+    /// Walk enclosing containers, rejecting invalid types, references and cycles.
+    pub fn containment_chain(&self, start: Option<ObjectId>) -> Result<Vec<ObjectId>> {
+        let mut chain = Vec::new();
+        let mut seen = BTreeSet::new();
+        let mut current = start;
+        while let Some(id) = current {
+            ensure!(seen.insert(id), "Containment cycle at #{}.", id.0);
+            let o = self
+                .objects
+                .get(&id)
+                .ok_or_else(|| anyhow::anyhow!("Missing container #{}.", id.0))?;
+            ensure!(
+                matches!(o.kind, Kind::Room | Kind::Player | Kind::Thing),
+                "Object #{} cannot contain objects.",
+                id.0
+            );
+            chain.push(id);
+            if o.kind == Kind::Room {
+                ensure!(
+                    o.location.is_none(),
+                    "Room #{} has an invalid location.",
+                    id.0
+                );
+                break;
+            }
+            current = o.location;
+        }
+        Ok(chain)
+    }
+    /// Check the complete destination chain before any location mutation.
+    pub fn validate_move(&self, object: ObjectId, destination: ObjectId) -> Result<()> {
+        let o = self
+            .objects
+            .get(&object)
+            .ok_or_else(|| anyhow::anyhow!("No such object."))?;
+        ensure!(
+            matches!(o.kind, Kind::Player | Kind::Thing | Kind::Exit),
+            "You can't teleport that."
+        );
+        let chain = self.containment_chain(Some(destination))?;
+        ensure!(
+            !chain.contains(&object),
+            "Cannot move an object into itself or its descendants."
+        );
+        self.containment_chain(o.location)?;
+        Ok(())
     }
     pub fn validate(&self, c: &Config) -> Result<()> {
         for id in [c.start(), c.home()] {
@@ -195,6 +243,13 @@ impl World {
             }
         }
         for o in self.objects.values().filter(|o| o.kind != Kind::Garbage) {
+            let chain = self.containment_chain(o.location)?;
+            ensure!(!chain.contains(&o.id), "Containment cycle at #{}.", o.id.0);
+            ensure!(
+                o.kind != Kind::Room || o.location.is_none(),
+                "Room #{} has an invalid location.",
+                o.id.0
+            );
             for id in [o.location, o.home, o.destination, o.zone, o.affiliation]
                 .into_iter()
                 .flatten()

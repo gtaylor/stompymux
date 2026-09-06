@@ -53,6 +53,12 @@ success output. This deliberately simple format is suitable for the first
 milestone; later versions can migrate to relational tables without changing
 the world API. Files are created with mode 0600.
 
+Persistence uses SQLx 0.9 with Tokio and bundled SQLite. Queries run at runtime;
+building requires no database, SQLx CLI or query metadata. Each operation opens
+and closes its own connection, honoring `database.busy_timeout_ms`. Checks and
+legacy reads use read-only connections. The driver change introduces no journal
+mode change, connection pool, foreign-key enforcement or schema migration.
+
 The copied legacy database remains unchanged and is the archive for deferred
 BattleTech tables, channel membership/history, macros and page-recipient data.
 Keep it alongside Rust storage. The importer prints its coverage. There is no
@@ -83,11 +89,39 @@ defaulting to `data/stompymux.db`. Update older configurations to declare both.
 No files are moved, migrated or automatically imported. The explicit
 `import-legacy --source` argument takes precedence over the archive setting.
 
+## Wizard movement
+
+Wizards and GOD can use `home` to return to their stored home, or
+`@teleport <destination>` to move inside a room, player or thing.
+`@teleport <object>=<destination>` moves another player, thing or exit; configured
+aliases such as `@tel` work too. Ordinary players cannot use these commands.
+Wizards may teleport other Wizards. Use dbrefs for remote targets, or `me`,
+`here` and exact visible nearby names. Ambiguous names are rejected.
+
+Containment cycles and invalid destinations are rejected. Moving an occupied
+container carries its contents; relocating an exit preserves its linked
+destination. Teleporting through exits and command switches remain unavailable.
+Teleportation checks the destination's `teleport` lock and each enclosing
+source container's `teleport_out` lock; errors deny movement. `home` bypasses
+these locks, but still validates its stored destination.
+
+Movement calls source `on_exit` and destination `on_enter` hooks with the moved
+object as `enactor`, initiator as `cause`, immediate `source` and `destination`,
+and the location hosting the callback as `object`. A descriptor is supplied
+only when the moved player initiated the command. Moving an exit or remaining
+in the same location does not fire occupant transition hooks. Containers without
+an appearance callback use the generic Lua renderer for `look` and arrival.
+Connected moved players receive the appearance on all their sessions.
+
+Location changes and callback effects persist together before success output.
+Failures roll back the move and discard its pending messages. No home fallback
+is selected when the stored home is missing or invalid.
+
 ## Object flags
 
 Objects use the shared 19-flag MUX catalog. Wizards can inspect flags with
 `@list flags` and `@examine <target>` (including configured aliases such as
-`@ex`). This examination command currently shows identity, type and flags.
+`@ex`). This examination command currently shows identity, type, flags and powers.
 Use `@flag <target>=DARK` to set a flag and `@flag <target>=!DARK` to clear it.
 Targets support `me`, `here`, dbrefs and exact visible nearby names or exit
 aliases. Ambiguous names are rejected. Flag names and configured aliases are
@@ -113,12 +147,32 @@ mutation authority, subject to GOD's WIZARD protection and session-owned
 CONNECTED. Flags for deferred systems remain available as data without enabling
 those systems.
 
+## Object powers
+
+The current legacy catalog contains one power, `IDLE`. It is persistent metadata
+only: granting it does **not** bypass idle timeouts yet. New objects have no
+powers, and imported powers survive restart.
+
+Wizards can use `@power <target>=idle`, `@power <target>=!idle`, and `@list powers`.
+`@examine` also shows a `Powers:` line. Target resolution and control permissions
+match flag administration: GOD controls all live objects; Wizards control
+themselves and non-Wizard objects. Names are case-insensitive, and each command
+changes one power. Configured command aliases apply; power aliases are not added.
+Changes are saved before success is reported.
+
+Lua exposes immutable `mux.world.powers.IDLE` and
+`object:powers():has/add/remove`. Add/remove return whether the set changed.
+Use power constants rather than strings or flag constants. Trusted Lua can
+change powers on any live object, with the same transactional rollback used by
+other callback mutations.
+
 ## Implementation boundaries
 
 - Tokio handles sockets and timers. A single owner serializes world and Lua
-  work, using bounded channels. SQLite and Argon2id run on bounded blocking
-  work; Lua values never cross threads. A database commit briefly serializes
-  command processing while networking continues.
+  work, using bounded channels. SQLx provides async SQLite access through its
+  own worker threads; Argon2id runs on bounded blocking workers. Lua values
+  never cross threads. A database commit serializes command processing while
+  networking continues.
 - LuaJIT runs the copied packages, object parents and global modules in lexical
   path order. World/state/flag handles, appearance and traversal callbacks,
   lifecycle hooks, local/global command matching, basic channel creation,

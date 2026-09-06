@@ -19,6 +19,12 @@ function methods:flags()
  return {has=function(_,flag) return native.has_flag(n,flag) end,
  add=function(_,flag) return native.flag(n,flag,true) end,remove=function(_,flag) return native.flag(n,flag,false) end}
 end
+function methods:powers()
+ local n=self._id
+ return {has=function(_,power) return native.has_power(n,power) end,
+ add=function(_,power) return native.power(n,power,true) end,
+ remove=function(_,power) return native.power(n,power,false) end}
+end
 function methods:state(ns)
  local n=self._id
  return {entries=function() return native.entries(n,ns) end,
@@ -26,7 +32,7 @@ function methods:state(ns)
  set=function(_,key,v) native.state_set(n,ns,key,v) end}
 end
 local flags=native.flags
-mux={world={types={ROOM=0,THING=1,EXIT=2,PLAYER=3},flags=flags,locks={TRAVERSE='traverse'},object=object},session={},config={get=native.config},text={markup=native.markup,style=native.style,width=native.width,truncate=native.truncate,strip_style=native.strip},comsys={flags={PUBLIC=1}}}
+mux={world={types={ROOM=0,THING=1,EXIT=2,PLAYER=3},flags=flags,powers=native.powers,locks={TRAVERSE='traverse',TELEPORT='teleport',TELEPORT_OUT='teleport_out'},object=object},session={},config={get=native.config},text={markup=native.markup,style=native.style,width=native.width,truncate=native.truncate,strip_style=native.strip},comsys={flags={PUBLIC=1}}}
 function mux.world.create_object(t)
  local copy={};for k,v in pairs(t) do copy[k]=id(v) end
  return object(native.create(copy))
@@ -37,8 +43,8 @@ function mux.world.lock_passes(t)
  local n=id(t.object);local parent=_parents[_object_parents[n]]
  if not parent then error('Missing lock parent') end
  local lock=parent.locks and parent.locks[t.lock]
- if not lock then return true end
- local result=lock({object=n,subject=id(t.enactor),enactor=id(t.enactor)})
+ if lock==nil then return true end
+ local result=lock({object=n,subject=id(t.subject or t.enactor),enactor=id(t.enactor),cause=id(t.cause or t.enactor),source=id(t.source),destination=id(t.destination),descriptor=t.descriptor})
  return result==true or (type(result)=='table' and result.passes==true)
 end
 function mux.comsys.create_channel(name)

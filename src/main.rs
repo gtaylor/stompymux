@@ -48,9 +48,9 @@ async fn main() -> anyhow::Result<()> {
         Command::Check { game_dir } => {
             let c = Config::load(game_dir)?;
             let w = if c.database().exists() {
-                persistence::load_with_timeout(&c.database(), c.database.busy_timeout_ms)?
+                persistence::load_with_timeout(&c.database(), c.database.busy_timeout_ms).await?
             } else {
-                persistence::read_legacy(&c.legacy_database(), &c)?
+                persistence::read_legacy(&c.legacy_database(), &c).await?
             };
             w.validate(&c)?;
             let s = Scripts::new(&c, std::rc::Rc::new(std::cell::RefCell::new(w)))?;
@@ -61,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
         }
         Command::ImportLegacy { source, game_dir } => {
             let c = Config::load(game_dir)?;
-            println!("{}", persistence::import(&source, &c)?);
+            println!("{}", persistence::import(&source, &c).await?);
         }
     }
     Ok(())

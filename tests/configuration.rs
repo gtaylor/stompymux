@@ -48,8 +48,8 @@ fn append(dir: &Path, text: &str) {
         .unwrap();
     file.write_all(text.as_bytes()).unwrap();
 }
-#[test]
-fn complete_legacy_catalog_and_compiled_defaults() {
+#[tokio::test(flavor = "current_thread")]
+async fn complete_legacy_catalog_and_compiled_defaults() {
     let (_d, c) = config("");
     let inventory: Vec<serde_json::Value> =
         serde_json::from_str(include_str!("fixtures/config/legacy-catalog.json")).unwrap();
@@ -83,8 +83,8 @@ fn complete_legacy_catalog_and_compiled_defaults() {
     assert_eq!(c.server.listen_address.to_string(), "127.0.0.1");
     assert_eq!(c.security.login_hash_concurrency, 5);
 }
-#[test]
-fn complete_fixture_parses_every_shape() {
+#[tokio::test(flavor = "current_thread")]
+async fn complete_fixture_parses_every_shape() {
     let (_d, c) = config(include_str!("fixtures/config/complete.toml"));
     assert_eq!(c.colors["brand-blue"], [32, 96, 192]);
     assert_eq!(c.access.commands["@foo"].0, ["wizard", "need_player"]);
@@ -94,8 +94,8 @@ fn complete_fixture_parses_every_shape() {
     assert!(c.validate_for_serve().is_err());
     assert!(!c.warnings.iter().any(|w| w.contains("unknown")));
 }
-#[test]
-fn includes_merge_maps_replace_arrays_and_keep_parent_precedence() {
+#[tokio::test(flavor = "current_thread")]
+async fn includes_merge_maps_replace_arrays_and_keep_parent_precedence() {
     let d = tempfile::tempdir().unwrap();
     std::fs::create_dir(d.path().join("parts")).unwrap();
     std::fs::write(d.path().join("parts/first.toml"),"server.port=1000\nnames.bad=['first']\naliases.commands.a='look'\naliases.commands.b='say'\n").unwrap();
@@ -112,8 +112,8 @@ fn includes_merge_maps_replace_arrays_and_keep_parent_precedence() {
     assert_eq!(c.aliases.commands["b"], "say");
     assert_eq!(c.aliases.commands["c"], "quit");
 }
-#[test]
-fn bootstrap_map_replaces_included_map() {
+#[tokio::test(flavor = "current_thread")]
+async fn bootstrap_map_replaces_included_map() {
     let d = tempfile::tempdir().unwrap();
     std::fs::write(
         d.path().join("included.toml"),
@@ -144,8 +144,8 @@ fn bootstrap_map_replaces_included_map() {
             .contains_key(&stompymux_rs::config::BootstrapId(99))
     );
 }
-#[test]
-fn unknown_keys_warn_but_known_type_errors_report_the_included_file() {
+#[tokio::test(flavor = "current_thread")]
+async fn unknown_keys_warn_but_known_type_errors_report_the_included_file() {
     let d = tempfile::tempdir().unwrap();
     std::fs::write(d.path().join("child.toml"), "server.port='oops'").unwrap();
     std::fs::write(
@@ -165,8 +165,8 @@ fn unknown_keys_warn_but_known_type_errors_report_the_included_file() {
     );
     assert!(c.effective_value("server.new_setting").is_none());
 }
-#[test]
-fn malformed_known_values_and_cycles_are_rejected() {
+#[tokio::test(flavor = "current_thread")]
+async fn malformed_known_values_and_cycles_are_rejected() {
     for text in [
         "lua.memory_limit=-1",
         "server.port=65536",
@@ -190,13 +190,13 @@ fn malformed_known_values_and_cycles_are_rejected() {
     std::fs::write(d.path().join("loop.toml"), "include=['stompymux.toml']").unwrap();
     assert!(format!("{:#}", Config::load(d.path()).unwrap_err()).contains("cycle"));
 }
-#[test]
-fn aliases_resolve_default_flags_after_includes() {
+#[tokio::test(flavor = "current_thread")]
+async fn aliases_resolve_default_flags_after_includes() {
     let (_d, c) = config("aliases.flags.wi='WIZARD'\nmux.default_player_flags=['wi','ANSI']");
     assert_eq!(c.mux.default_player_flags, vec![Flag::Wizard, Flag::Ansi]);
 }
-#[test]
-fn listener_precedence_and_effective_lua_values() {
+#[tokio::test(flavor = "current_thread")]
+async fn listener_precedence_and_effective_lua_values() {
     let (_d, c) = config("server.port=4321\nserver.listen_address='::1'");
     assert_eq!(c.listener().to_string(), "[::1]:4321");
     let c = c
@@ -211,8 +211,8 @@ fn listener_precedence_and_effective_lua_values() {
         Some(1)
     );
 }
-#[test]
-fn live_and_legacy_paths_are_distinct_and_legacy_live_storage_is_diagnosed() {
+#[tokio::test(flavor = "current_thread")]
+async fn live_and_legacy_paths_are_distinct_and_legacy_live_storage_is_diagnosed() {
     let d = game();
     let path = d.path().join("stompymux.toml");
     let text = std::fs::read_to_string(&path)
@@ -227,12 +227,15 @@ fn live_and_legacy_paths_are_distinct_and_legacy_live_storage_is_diagnosed() {
     )
     .unwrap();
     let c = Config::load(d.path()).unwrap();
-    persistence::import(&c.legacy_database(), &c).unwrap();
+    persistence::import(&c.legacy_database(), &c).await.unwrap();
     assert!(d.path().join("state/live.db").exists());
     assert!(!d.path().join("data/stompymux-rs.db").exists());
     assert!(
-        format!("{:#}", persistence::load(&c.legacy_database()).unwrap_err())
-            .contains("import-legacy")
+        format!(
+            "{:#}",
+            persistence::load(&c.legacy_database()).await.unwrap_err()
+        )
+        .contains("import-legacy")
     );
 }
 #[tokio::test(flavor = "current_thread")]
@@ -255,19 +258,21 @@ async fn acl_parsing_and_check_succeed_but_serve_has_no_side_effects() {
     );
     assert_eq!(before, std::fs::read(c.legacy_database()).unwrap());
 }
-#[test]
-fn lua_sees_defaults_overrides_and_legacy_aliases() {
+#[tokio::test(flavor = "current_thread")]
+async fn lua_sees_defaults_overrides_and_legacy_aliases() {
     let d = game();
     let c = Config::load(d.path())
         .unwrap()
         .with_listener_overrides(None, Some(8765))
         .unwrap();
-    let w = persistence::read_legacy(&c.legacy_database(), &c).unwrap();
+    let w = persistence::read_legacy(&c.legacy_database(), &c)
+        .await
+        .unwrap();
     let scripts = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     assert!(scripts.lua.load("return mux.config.get('port')==8765 and mux.config.get('server.port')==8765 and mux.config.get('btech_xp_usePilotBVMod')==1 and mux.config.get('runtime.input_line_limit')==8192").eval::<bool>().unwrap());
 }
-#[test]
-fn configured_decoding_hashing_and_sqlite_timeouts_take_effect() {
+#[tokio::test(flavor = "current_thread")]
+async fn configured_decoding_hashing_and_sqlite_timeouts_take_effect() {
     let (_d, c) = config(
         "runtime.input_line_limit=4\nruntime.telnet_subnegotiation_limit=2\nsecurity.password_hash_opslimit=1\nsecurity.password_hash_memlimit=1048576\ndatabase.busy_timeout_ms=1",
     );
@@ -279,22 +284,38 @@ fn configured_decoding_hashing_and_sqlite_timeouts_take_effect() {
     let hash = accounts::hash("secret", &c).unwrap();
     assert!(hash.contains("m=1024,t=1,p=1"));
     let world = World::default();
-    persistence::initialize(&c.database(), &world).unwrap();
-    let conn = rusqlite::Connection::open(c.database()).unwrap();
-    conn.execute_batch("BEGIN EXCLUSIVE").unwrap();
+    persistence::initialize(&c.database(), &world)
+        .await
+        .unwrap();
+    let mut conn = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("BEGIN EXCLUSIVE")
+        .execute(&mut conn)
+        .await
+        .unwrap();
     let now = Instant::now();
     assert!(
-        persistence::save_with_timeout(&c.database(), &world, c.database.busy_timeout_ms).is_err()
+        persistence::save_with_timeout(&c.database(), &world, c.database.busy_timeout_ms)
+            .await
+            .is_err()
     );
     assert!(now.elapsed() < Duration::from_secs(1));
-    conn.execute_batch("ROLLBACK").unwrap();
+    sqlx::raw_sql("ROLLBACK").execute(&mut conn).await.unwrap();
+    sqlx::Connection::close(conn).await.unwrap();
 }
-#[test]
-fn configured_lua_limits_take_effect() {
+#[tokio::test(flavor = "current_thread")]
+async fn configured_lua_limits_take_effect() {
     let d = game();
     append(d.path(), "\n[runtime]\noutput_message_limit=8\n");
     let c = Config::load(d.path()).unwrap();
-    let w = persistence::read_legacy(&c.legacy_database(), &c).unwrap();
+    let w = persistence::read_legacy(&c.legacy_database(), &c)
+        .await
+        .unwrap();
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     assert!(s.lua.load("mux.world.pemit(1,'123456789')").exec().is_err());
 }
@@ -344,8 +365,8 @@ async fn cli_uses_toml_listener_paths_and_optional_overrides() {
     )
     .unwrap();
     let c = Config::load(d.path()).unwrap();
-    persistence::import(&c.legacy_database(), &c).unwrap();
-    let mut w = persistence::load(&c.database()).unwrap();
+    persistence::import(&c.legacy_database(), &c).await.unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
     w.accounts
         .get_mut(&stompymux_rs::world::ObjectId(2))
         .unwrap()
@@ -360,7 +381,7 @@ async fn cli_uses_toml_listener_paths_and_optional_overrides() {
             host: "old".into(),
         })
         .collect();
-    persistence::save(&c.database(), &w).unwrap();
+    persistence::save(&c.database(), &w).await.unwrap();
     async fn until(stream: &mut TcpStream, needle: &str) {
         tokio::time::timeout(Duration::from_secs(5), async {
             let mut collected = Vec::new();
@@ -407,7 +428,7 @@ async fn cli_uses_toml_listener_paths_and_optional_overrides() {
         until(&mut stream, "Password: ").await;
         stream.write_all(b"secret\r\n").await.unwrap();
         until(&mut stream, "Staff Nexus").await;
-        let persisted = persistence::load(&c.database()).unwrap();
+        let persisted = persistence::load(&c.database()).await.unwrap();
         assert_eq!(
             persisted.accounts[&stompymux_rs::world::ObjectId(2)]
                 .history
@@ -461,13 +482,15 @@ async fn configured_bootstrap_objects_and_credentials_path_are_used() {
     assert!(d.path().join("private/initial.txt").exists());
     assert!(!d.path().join("bootstrap-credentials.txt").exists());
 }
-#[test]
-fn instruction_and_output_entry_budgets_are_configurable() {
+#[tokio::test(flavor = "current_thread")]
+async fn instruction_and_output_entry_budgets_are_configurable() {
     let d = game();
     put(d.path(), "lua.instruction_limit", 10000.into());
     put(d.path(), "lua.output_entry_limit", 1.into());
     let c = Config::load(d.path()).unwrap();
-    let w = persistence::read_legacy(&c.legacy_database(), &c).unwrap();
+    let w = persistence::read_legacy(&c.legacy_database(), &c)
+        .await
+        .unwrap();
     let scripts = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     scripts
         .lua
@@ -491,8 +514,8 @@ fn instruction_and_output_entry_budgets_are_configurable() {
 }
 
 /// Parse the operator-supplied files without opening any live game data.
-#[test]
-fn supplied_configuration_parses_without_unknown_keys() {
+#[tokio::test(flavor = "current_thread")]
+async fn supplied_configuration_parses_without_unknown_keys() {
     let d = tempfile::tempdir().unwrap();
     std::fs::write(
         d.path().join("stompymux.toml"),
