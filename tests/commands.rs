@@ -41,7 +41,7 @@ fn run(s: &Scripts, c: &Config, player: i64, line: &str) -> String {
     s.outbox
         .borrow_mut()
         .drain(..)
-        .map(|(_, s)| s)
+        .map(|(_, s)| s.source().to_string())
         .collect::<Vec<_>>()
         .join("\n")
 }
@@ -66,6 +66,8 @@ async fn native_catalog_permissions_and_aliases() {
             "@telnet",
             "@shutdown",
             "@dbck",
+            "color",
+            "help",
             "quit",
             "home",
             "@teleport",
@@ -79,7 +81,7 @@ async fn native_catalog_permissions_and_aliases() {
     for d in &definitions {
         assert_eq!(
             d.permission,
-            if ["look", "say", "quit"].contains(&d.name.as_str()) {
+            if ["look", "say", "quit", "color", "help"].contains(&d.name.as_str()) {
                 P::EVERYONE
             } else {
                 P::WIZARD

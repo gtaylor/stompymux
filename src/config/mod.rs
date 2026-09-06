@@ -49,10 +49,20 @@ impl Config {
             origins: doc.origins,
         };
         config.validate()?;
+        crate::text::Palette::from_config(&config).with_context(|| {
+            let origins = config
+                .origins
+                .iter()
+                .filter(|(k, _)| k.starts_with("colors") || k.starts_with("osc8"))
+                .map(|(k, p)| format!("{k} in {}", p.display()))
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("rendering configuration: {origins}")
+        })?;
         if config.origins.contains_key("database.legacy_game_database") {
             config.warnings.push("database.legacy_game_database is deprecated and unused; database.game_database is the live schema-32 database".into());
         }
-        config.warnings.push("Configuration parsed completely; BattleTech, extended rendering/OSC presets, logging controls, site/access policies, and remaining legacy command-system settings are retained for future implementation.".into());
+        config.warnings.push("Configuration parsed completely; BattleTech, logging controls, site/access policies, and remaining legacy command-system settings are retained for future implementation.".into());
         Ok(config)
     }
     /// Check structural invariants independently of implemented server capabilities.

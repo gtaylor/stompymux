@@ -97,6 +97,9 @@ pub struct Channel {
 }
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct World {
+    /// Runtime-only palette, excluded from all storage formats.
+    #[serde(skip)]
+    pub palette: std::sync::Arc<crate::text::Palette>,
     pub objects: BTreeMap<ObjectId, Object>,
     pub accounts: BTreeMap<ObjectId, Account>,
     pub channels: BTreeMap<String, Channel>,
@@ -160,7 +163,7 @@ impl World {
             self.objects
                 .get(id)
                 .filter(|o| {
-                    o.name.eq_ignore_ascii_case(name)
+                    crate::text::plain_with(&self.palette, &o.name).eq_ignore_ascii_case(name)
                         || a.alias
                             .as_ref()
                             .is_some_and(|s| s.eq_ignore_ascii_case(name))
@@ -225,12 +228,12 @@ impl World {
                 .ok_or_else(|| anyhow::anyhow!("account object missing"))?;
             ensure!(o.kind == Kind::Player, "account is not a player");
             ensure!(
-                names.insert(o.name.to_ascii_lowercase()),
+                names.insert(crate::text::plain_with(&self.palette, &o.name).to_ascii_lowercase()),
                 "duplicate player name"
             );
             if let Some(alias) = &a.alias
                 && !alias.is_empty()
-                && !alias.eq_ignore_ascii_case(&o.name)
+                && !alias.eq_ignore_ascii_case(&crate::text::plain_with(&self.palette, &o.name))
             {
                 ensure!(
                     names.insert(alias.to_ascii_lowercase()),

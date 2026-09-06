@@ -39,9 +39,11 @@ pub(super) fn admin_target(
                     || o.location == room
                     || o.location == Some(player))
                 && if o.kind == Kind::Exit {
-                    o.name.split(';').any(|n| n.eq_ignore_ascii_case(name))
+                    crate::text::plain_with(&w.palette, &o.name)
+                        .split(';')
+                        .any(|n| n.eq_ignore_ascii_case(name))
                 } else {
-                    o.name.eq_ignore_ascii_case(name)
+                    crate::text::plain_with(&w.palette, &o.name).eq_ignore_ascii_case(name)
                 }
         })
         .map(|o| o.id)

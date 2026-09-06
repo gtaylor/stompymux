@@ -10,6 +10,8 @@ function methods:description() return native.get(self._id,'description') end
 function methods:affiliation() local n=native.get(self._id,'affiliation'); if n then return object(n) end end
 function methods:set_name(s) native.set(self._id,'name',s) end
 function methods:set_description(s) native.set(self._id,'description',s) end
+function methods:internal_description() return native.get(self._id,'internal_description') end
+function methods:set_internal_description(s) native.set(self._id,'internal_description',s) end
 function methods:set_home(o) native.set(self._id,'home',id(o)) end
 function methods:contents(opts)
  opts=opts or {}; local r={}; for _,n in ipairs(native.contents(self._id,opts.types or {},id(opts.visible_to))) do r[#r+1]=object(n) end; return r
@@ -32,7 +34,7 @@ function methods:state(ns)
  set=function(_,key,v) native.state_set(n,ns,key,v) end}
 end
 local flags=native.flags
-mux={world={types={ROOM=0,THING=1,EXIT=2,PLAYER=3},flags=flags,powers=native.powers,locks={TRAVERSE='traverse',TELEPORT='teleport',TELEPORT_OUT='teleport_out'},object=object},session={},config={get=native.config},text={markup=native.markup,style=native.style,width=native.width,truncate=native.truncate,strip_style=native.strip},comsys={flags={PUBLIC=1}}}
+mux={world={types={ROOM=0,THING=1,EXIT=2,PLAYER=3},flags=flags,powers=native.powers,locks={TRAVERSE='traverse',TELEPORT='teleport',TELEPORT_OUT='teleport_out'},object=object},session={},config={get=native.config},text={markdown=native.markdown,is_printable_ascii=native.printable_ascii,markup=native.markup,style=native.style,width=native.width,truncate=native.truncate,strip_style=native.strip},comsys={flags={PUBLIC=1}}}
 function mux.world.create_object(t)
  local copy={};for k,v in pairs(t) do copy[k]=id(v) end
  return object(native.create(copy))

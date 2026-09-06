@@ -18,6 +18,8 @@ tokio = { version = "1.53.1", features = ["full"] }
 toml = "1.1.5"
 unicode-width = "0.2.2"
 zeroize = { version = "1.9.0", features = ["derive"] }
+pulldown-cmark = { version = "0.13.4", default-features = false, features = ["html"] }
+unicode-segmentation = "1.13.3"
 
 [dev-dependencies]
 tempfile = "3.27.0"

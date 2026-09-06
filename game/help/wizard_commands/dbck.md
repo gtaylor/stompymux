@@ -1,15 +1,17 @@
 +++
+description = "Check and repair the world database"
 title = "@dbck"
-aliases = ["dbck"]
-categories = ["wizard commands"]
+keywords = ["@dbck", "dbck"]
+article_tags = ["wizard_commands"]
+wizard_only = true
 +++
 
 # @dbck
 
 > `@dbck`
 
-Checks the game database for inconsistencies, repairs damage, rebuilds the
-free-object list, and purges objects marked for destruction. The command writes
+Checks the game database for inconsistencies, repairs damage, repairs containment lists, and purges objects marked for destruction.
+Purged dbrefs remain Garbage tombstones and are not reused. The command writes
 damage details to the server log and reports `Done.` to the invoking Wizard
 when complete.
 

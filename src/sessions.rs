@@ -36,6 +36,10 @@ pub struct Session {
     pub quota_at: Instant,
     pub failed: Cell<bool>,
     pub output_message_limit: usize,
+    /// Rendering catalog and transient connection preferences.
+    pub palette: Arc<crate::text::Palette>,
+    pub color_override: Cell<Option<crate::text::ColorDepth>>,
+    pub presets_emitted: Cell<bool>,
 }
 impl Session {
     /// Queue ordered Telnet output; metadata events are already reflected in the decoder.
@@ -78,13 +82,70 @@ impl Session {
         }
         ok
     }
-    pub fn text(&self, s: &str, ansi: bool) -> bool {
-        self.raw(crate::telnet::encode(&if ansi && self.decoder.ansi {
-            s.into()
+
+    /// Resolve capabilities independently for each receiving session.
+    pub fn render_options(&self, ansi: bool) -> crate::text::RenderOptions {
+        use crate::text::ColorDepth;
+        let color = if !ansi {
+            ColorDepth::None
+        } else if let Some(c) = self.color_override.get() {
+            c
+        } else if self.decoder.screen_reader {
+            ColorDepth::None
         } else {
-            crate::text::plain(s)
-        }))
+            ColorDepth::advertised(self.decoder.color_depth)
+        };
+        let capabilities = self
+            .decoder
+            .environment
+            .0
+            .iter()
+            .filter_map(|((kind, name), value)| {
+                if *kind != crate::telnet::environment::Kind::UserVar || value != b"1" {
+                    return None;
+                }
+                let name = std::str::from_utf8(name).ok()?;
+                if name == "OSC_HYPERLINKS" {
+                    Some(String::new())
+                } else {
+                    name.strip_prefix("OSC_HYPERLINKS_")
+                        .filter(|suffix| crate::text::OSC_CAPABILITIES.contains(suffix))
+                        .map(str::to_string)
+                }
+            })
+            .collect();
+        crate::text::RenderOptions {
+            color,
+            capabilities,
+            width: usize::from(self.decoder.width).max(1),
+        }
     }
+
+    /// Render game text before Telnet encoding, queue accounting and compression.
+    pub fn document(&self, document: &crate::text::Document, ansi: bool, newline: bool) -> bool {
+        let options = self.render_options(ansi);
+        if options.has("PRESETS") && !self.presets_emitted.replace(true) {
+            for (name, config) in &self.palette.presets {
+                let bytes = crate::telnet::encode(&crate::text::preset(name, config, &options));
+                if !self.raw(bytes) {
+                    return false;
+                }
+            }
+        }
+        let limit = self
+            .output_message_limit
+            .saturating_sub(if newline { 2 } else { 0 });
+        let mut bytes = document.telnet(&self.palette, &options, limit);
+        if newline && self.output_message_limit >= 2 {
+            bytes.extend_from_slice(b"\r\n");
+        }
+        self.raw(bytes)
+    }
+
+    pub fn text(&self, s: &str, ansi: bool) -> bool {
+        self.document(&crate::text::Document::Styled(s.into()), ansi, false)
+    }
+
     pub fn close(&self) {
         let _ = self.output.try_send(Output::Close);
     }

@@ -16,6 +16,9 @@ pub enum Action {
     /// Read-only session diagnostics.
     Sessions(String),
     Telnet(String),
+    /// Session-local rendering preferences and read-only help.
+    Color(String),
+    Help(String),
     /// Request common graceful shutdown.
     Shutdown,
     /// Run transactional database maintenance.
@@ -76,7 +79,9 @@ pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, line: &str) 
         .filter(|o| {
             o.kind == Kind::Exit
                 && o.location == Some(room)
-                && o.name.split(';').any(|n| n.eq_ignore_ascii_case(line))
+                && crate::text::plain_with(&s.palette, &o.name)
+                    .split(';')
+                    .any(|n| n.eq_ignore_ascii_case(line))
         })
         .map(|o| (o.id, o.destination))
         .collect();

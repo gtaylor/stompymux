@@ -574,6 +574,9 @@ async fn bounded_output_marks_slow_clients_for_disconnect() {
     let session = Session {
         output,
         stats: Default::default(),
+        palette: Default::default(),
+        color_override: Default::default(),
+        presets_emitted: Default::default(),
         peer: "127.0.0.1".parse().unwrap(),
         player: None,
         flow: LoginFlow::Name,
@@ -811,7 +814,10 @@ async fn flag_catalog_storage_commands_and_lua_contract() {
             .borrow_mut()
             .create(&c, "Ordinary".into(), stompymux_rs::world::Kind::Player);
     commands::run(&s, &c, player, 1, "@flag me=dark").unwrap();
-    assert_eq!(s.outbox.borrow_mut().pop().unwrap().1, "Permission denied.");
+    assert_eq!(
+        s.outbox.borrow_mut().pop().unwrap().1.source(),
+        "Permission denied."
+    );
     assert!(!flags::controls(&world.borrow(), ObjectId(2), ObjectId(1)));
     assert!(flags::controls(&world.borrow(), ObjectId(2), ObjectId(2)));
     assert!(
@@ -1248,7 +1254,10 @@ async fn wizard_teleport_and_home_validate_containment() {
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     for input in ["home", "@teleport #4", "@tel/quiet #4"] {
         commands::run(&s, &c, ordinary, 99, input).unwrap();
-        assert_eq!(s.outbox.borrow_mut().pop().unwrap().1, "Permission denied.");
+        assert_eq!(
+            s.outbox.borrow_mut().pop().unwrap().1.source(),
+            "Permission denied."
+        );
     }
     commands::run(&s, &c, ObjectId(1), 1, &format!("@tel #{}", cargo.0)).unwrap();
     assert_eq!(s.world.borrow().objects[&ObjectId(1)].location, Some(cargo));
@@ -1311,7 +1320,7 @@ async fn wizard_teleport_and_home_validate_containment() {
         s.outbox
             .borrow()
             .iter()
-            .filter(|(_, t)| t == "There's no place like home...")
+            .filter(|(_, t)| t.source() == "There's no place like home...")
             .count(),
         3
     );
@@ -1394,7 +1403,12 @@ async fn teleport_locks_context_and_callbacks_are_transactional() {
         let before = serde_json::to_value(&*s.world.borrow()).unwrap();
         commands::run(&s, &c, ObjectId(1), 1, request).unwrap();
         assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
-        assert!(!s.outbox.borrow().iter().any(|(_, t)| t == "LEAKED"));
+        assert!(
+            !s.outbox
+                .borrow()
+                .iter()
+                .any(|(_, t)| t.source() == "LEAKED")
+        );
     }
     s.lua
         .load("fail_enter=false;deny_out=false")
@@ -2193,4 +2207,89 @@ async fn tcp_mccp2_stream_and_shutdown() {
         .read_to_end(&mut decoded)
         .unwrap();
     assert_eq!(decoded, plain);
+}
+
+/// Markdown and styled messages render independently per socket; help/color stay read-only.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_rich_text_help_color_and_rollback() {
+    let (d, c) = populated().await;
+    let aliases = d.path().join("aliases.toml");
+    std::fs::write(
+        &aliases,
+        std::fs::read_to_string(&aliases)
+            .unwrap()
+            .replace("[aliases.commands]", "[aliases.commands]\ncol='color'"),
+    )
+    .unwrap();
+    copy(Path::new("game/help"), &d.path().join("help"));
+    std::fs::write(d.path().join("lua/global_logic/rich_test.lua"),r#"
+return {commands={
+ {name='rich',permission='everyone',pattern='^rich$',handler=function(ctx)
+ mux.world.pemit(ctx.enactor,mux.text.markdown('**Strong** and `[fg=red]literal[/]`\n\n[Web](https://example.com)\n\nRICH-END'))
+ return true end},
+ {name='richfail',permission='everyone',pattern='^richfail$',handler=function(ctx)
+ mux.world.pemit(ctx.enactor,mux.text.markdown('LEAKED MARKDOWN'))
+ mux.world.object(ctx.enactor):set_description('LEAKED STATE')
+ error('rich callback failure') end}
+}}
+"#).unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(2)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .flags
+        .insert(stompymux_rs::flags::Flag::Ansi);
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
+    persistence::save(&c.database(), &w).await.unwrap();
+    let running = Running::start(&c).await;
+    let mut first = Client::connect(&running).await;
+    first.login("#2").await;
+    let mut second = Client::connect(&running).await;
+    second.login("#2").await;
+    first.send("col truecolor").await;
+    first.until("Color mode set to truecolor.").await;
+    second.send("color off").await;
+    second.until("Color mode set to off.").await;
+    first.socket.write_all(b"\xff\xfb\x27\xff\xfa\x27\x00\x03OSC_HYPERLINKS\x011\x03OSC_HYPERLINKS_SEND\x011\x03OSC_HYPERLINKS_PRESETS\x011\xff\xf0").await.unwrap();
+    first.send("color").await;
+    let prefs = first.until("Client capability: 16.").await;
+    assert!(prefs.contains("truecolor (override)"));
+    assert!(prefs.contains("preset:osc8-demo-button"));
+    let db = std::fs::read(c.database()).unwrap();
+    first.send("h @session").await;
+    let help = first.until("Pending output").await;
+    assert!(help.contains("@session"));
+    first.send("color").await;
+    first.until("Client capability: 16.").await;
+    assert_eq!(db, std::fs::read(c.database()).unwrap());
+    first.send("rich").await;
+    let rich = first.until("RICH-END").await;
+    let plain = second.until("RICH-END").await;
+    assert!(rich.contains("\x1b[1m"));
+    assert!(rich.contains("\x1b]8;;https://example.com"));
+    assert!(rich.contains("[fg=red]literal[/]"));
+    assert!(!rich.contains("preset:osc8-demo-button"));
+    assert!(!plain.contains('\x1b'));
+    assert!(plain.contains("Web (https://example.com)"));
+    let description = persistence::load(&c.database()).await.unwrap().objects[&ObjectId(2)]
+        .description
+        .clone();
+    first.send("richfail").await;
+    let failed = first.until("rich callback failure").await;
+    assert!(!failed.contains("LEAKED MARKDOWN"));
+    assert_eq!(
+        description,
+        persistence::load(&c.database()).await.unwrap().objects[&ObjectId(2)].description
+    );
+    let mut ordinary = Client::connect(&running).await;
+    ordinary.register("Reader").await;
+    ordinary.send("help @session").await;
+    ordinary.until("No help found").await;
+    ordinary.send("color/bogus").await;
+    ordinary.until("Unsupported command switch.").await;
+    ordinary.send("help").await;
+    let index = ordinary.until("All about this game").await;
+    assert!(!index.contains("wizard_commands"));
+    running.stop().await;
 }

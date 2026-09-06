@@ -32,3 +32,7 @@ requested client behavior, not a guarantee that the client hides input.
 Output is private to your invoking session and explicitly marks truncation when
 it reaches the configured output limit. No switches are supported. Use `@session`
 for connection and byte-counter summaries.
+
+Rendering diagnostics also report effective color depth, the session's `color`
+override, and enabled OSC capability names. Advertised terminal capability remains
+visible separately from the effective rendering choice.

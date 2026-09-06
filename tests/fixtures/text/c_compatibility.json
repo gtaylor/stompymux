@@ -1,0 +1,884 @@
+[
+  {
+    "reference": "osc8.c:180",
+    "mode": "valid",
+    "source": "[send=\"x\" color=red bg=black bold=false italic underline=wavy overline=dotted strikethrough=dashed text-decoration-color=green active.color=red hover.bg=blue focus-visible.bold focus.italic visited.underline=false selected.overline=true disabled.strikethrough=true link.fg=yellow any-link.bg=black]x[/]"
+  },
+  {
+    "reference": "osc8.c:187",
+    "mode": "valid",
+    "source": "[send=\"x\" tooltip=\"café \\\"tip\\\" \\\\\" title=\"Actions\" title.color=red title.bold menu.2.prompt=\"examine target\" menu.1.send=\"attack\" menu.2.label=\"Inspect\" menu.1.label=\"Attack\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:199",
+    "mode": "invalid",
+    "source": "[fg=unknown]x[/]"
+  },
+  {
+    "reference": "osc8.c:200",
+    "mode": "invalid",
+    "source": "[fg=#abcd]x[/]"
+  },
+  {
+    "reference": "osc8.c:200",
+    "mode": "invalid",
+    "source": "[bold]x"
+  },
+  {
+    "reference": "osc8.c:201",
+    "mode": "invalid",
+    "source": "[fg=#fff]x[/]"
+  },
+  {
+    "reference": "osc8.c:202",
+    "mode": "invalid",
+    "source": "[fg=rgb(256,0,0)]x[/]"
+  },
+  {
+    "reference": "osc8.c:203",
+    "mode": "invalid",
+    "source": "[fg=rgb(1,2)]x[/]"
+  },
+  {
+    "reference": "osc8.c:204",
+    "mode": "invalid",
+    "source": "[fg=rgb(1,2,3,4)]x[/]"
+  },
+  {
+    "reference": "osc8.c:205",
+    "mode": "invalid",
+    "source": "[fg=rgba(1,2,3,1)]x[/]"
+  },
+  {
+    "reference": "osc8.c:206",
+    "mode": "invalid",
+    "source": "[fg=rgb(100%,0%,0%)]x[/]"
+  },
+  {
+    "reference": "osc8.c:207",
+    "mode": "invalid",
+    "source": "[fg=rgb(1, 2, 3)]x[/]"
+  },
+  {
+    "reference": "osc8.c:208",
+    "mode": "invalid",
+    "source": "[fg=red unknown]x[/]"
+  },
+  {
+    "reference": "osc8.c:209",
+    "mode": "invalid",
+    "source": "[send=\"x\" hover.unknown=red]x[/]"
+  },
+  {
+    "reference": "osc8.c:210",
+    "mode": "invalid",
+    "source": "[send=\"x\" unknown.color=red]x[/]"
+  },
+  {
+    "reference": "osc8.c:211",
+    "mode": "invalid",
+    "source": "[send=\"x\" hover.bold=maybe]x[/]"
+  },
+  {
+    "reference": "osc8.c:212",
+    "mode": "invalid",
+    "source": "[send=\"x\" underline=double]x[/]"
+  },
+  {
+    "reference": "osc8.c:213",
+    "mode": "invalid",
+    "source": "[send=\"x\" color]x[/]"
+  },
+  {
+    "reference": "osc8.c:214",
+    "mode": "invalid",
+    "source": "[send=\"x\" tooltip=plain]x[/]"
+  },
+  {
+    "reference": "osc8.c:215",
+    "mode": "invalid",
+    "source": "[send=\"x\" tooltip=\"\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:216",
+    "mode": "invalid",
+    "source": "[send=\"x\" tooltip=\"unterminated]x[/]"
+  },
+  {
+    "reference": "osc8.c:217",
+    "mode": "invalid",
+    "source": "[send=\"x\" tooltip=\"line\nbreak\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:219",
+    "mode": "invalid",
+    "source": "[send=\"x\" title=\"Orphan\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:220",
+    "mode": "invalid",
+    "source": "[send=\"x\" title.bold menu.1.label=\"A\" menu.1.send=\"a\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:222",
+    "mode": "invalid",
+    "source": "[send=\"x\" menu.2.label=\"A\" menu.2.send=\"a\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:224",
+    "mode": "invalid",
+    "source": "[send=\"x\" menu.1.label=\"A\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:225",
+    "mode": "invalid",
+    "source": "[send=\"x\" menu.1.send=\"a\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:226",
+    "mode": "invalid",
+    "source": "[send=\"x\" menu.1.label=\"A\" menu.1.label=\"B\" menu.1.send=\"a\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:228",
+    "mode": "invalid",
+    "source": "[send=\"x\" menu.1.label=\"A\" menu.1.send=\"a\" menu.1.prompt=\"a\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:230",
+    "mode": "invalid",
+    "source": "[send=\"x\" menu.1.separator menu.1.label=\"A\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:232",
+    "mode": "invalid",
+    "source": "[send=\"x\" menu.1.label=\"A\" menu.1.link=\"file:///tmp/a\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:234",
+    "mode": "invalid",
+    "source": "[send=\"x\" menu.0.separator]x[/]"
+  },
+  {
+    "reference": "osc8.c:235",
+    "mode": "invalid",
+    "source": "[send=\"x\" visibility.delay=1]x[/]"
+  },
+  {
+    "reference": "osc8.c:236",
+    "mode": "invalid",
+    "source": "[send=\"x\" visibility.action=hide]x[/]"
+  },
+  {
+    "reference": "osc8.c:237",
+    "mode": "invalid",
+    "source": "[send=\"x\" visibility.action=\"conceal\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:238",
+    "mode": "invalid",
+    "source": "[send=\"x\" visibility.action=conceal visibility.delay=-1]x[/]"
+  },
+  {
+    "reference": "osc8.c:240",
+    "mode": "invalid",
+    "source": "[send=\"x\" visibility.action=conceal visibility.delay=1.5]x[/]"
+  },
+  {
+    "reference": "osc8.c:242",
+    "mode": "invalid",
+    "source": "[send=\"x\" visibility.action=conceal visibility.delay=4294967296]x[/]"
+  },
+  {
+    "reference": "osc8.c:244",
+    "mode": "invalid",
+    "source": "[send=\"x\" visibility.action=conceal visibility.delay=999999999999999999999999]x[/]"
+  },
+  {
+    "reference": "osc8.c:246",
+    "mode": "invalid",
+    "source": "[send=\"x\" visibility.action=conceal visibility.expire.input=false]x[/]"
+  },
+  {
+    "reference": "osc8.c:248",
+    "mode": "invalid",
+    "source": "[send=\"x\" visibility.action=conceal visibility.expire.outputDelay=500]x[/]"
+  },
+  {
+    "reference": "osc8.c:250",
+    "mode": "invalid",
+    "source": "[send=\"x\" visibility.action=conceal visibility.expire.unknown]x[/]"
+  },
+  {
+    "reference": "osc8.c:252",
+    "mode": "invalid",
+    "source": "[send=\"x\" spoiler=maybe]x[/]"
+  },
+  {
+    "reference": "osc8.c:253",
+    "mode": "invalid",
+    "source": "[send=\"x\" disabled=\"true\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:254",
+    "mode": "invalid",
+    "source": "[send=\"x\" selection.group=\"g\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:255",
+    "mode": "invalid",
+    "source": "[send=\"x\" selection.value=\"v\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:256",
+    "mode": "invalid",
+    "source": "[send=\"x\" selection.toggle]x[/]"
+  },
+  {
+    "reference": "osc8.c:257",
+    "mode": "invalid",
+    "source": "[send=\"x\" selection.group=g selection.value=\"v\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:259",
+    "mode": "invalid",
+    "source": "[send=\"x\" selection.group=\"\" selection.value=\"v\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:261",
+    "mode": "invalid",
+    "source": "[send=\"x\" selection.group=\"g\" selection.value=\"line\nbreak\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:265",
+    "mode": "invalid",
+    "source": "[send=\"x\" selection.group=\"g\" selection.value=\"v\" selection.toggle=maybe]x[/]"
+  },
+  {
+    "reference": "osc8.c:267",
+    "mode": "invalid",
+    "source": "[send=\"x\" selection.group=\"g\" selection.value=\"v\" selection.toggle=\"true\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:269",
+    "mode": "invalid",
+    "source": "[send=\"x\" selection.group=\"g\" selection.value=\"v\" selection.unknown]x[/]"
+  },
+  {
+    "reference": "osc8.c:272",
+    "mode": "invalid",
+    "source": "[fg=red /]x[/]"
+  },
+  {
+    "reference": "osc8.c:273",
+    "mode": "invalid",
+    "source": "[/]"
+  },
+  {
+    "reference": "osc8.c:273",
+    "mode": "invalid",
+    "source": "[send=look]x[/]"
+  },
+  {
+    "reference": "osc8.c:274",
+    "mode": "invalid",
+    "source": "[send=\"look\"][prompt=\"say\"]x[/][/]"
+  },
+  {
+    "reference": "osc8.c:275",
+    "mode": "invalid",
+    "source": "[link=\"file:///tmp/a\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:276",
+    "mode": "invalid",
+    "source": "[link=\"https://example.com/%xx\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:278",
+    "mode": "invalid",
+    "source": "[send=\"line\nbreak\"]x[/]"
+  },
+  {
+    "reference": "osc8.c:279",
+    "mode": "invalid",
+    "source": "\u001b[31mraw"
+  },
+  {
+    "reference": "osc8.c:164",
+    "mode": "compile",
+    "source": "[fg=red]Red[/]",
+    "expected": "\u001b[0m\u001b[38;2;255;0;0mRed\u001b[0m"
+  },
+  {
+    "reference": "osc8.c:165",
+    "mode": "compile",
+    "source": "[fg=red]red [bold]bold[/] red[/]",
+    "expected": "\u001b[0m\u001b[38;2;255;0;0mred \u001b[0m\u001b[1m\u001b[38;2;255;0;0mbold\u001b[0m\u001b[38;2;255;0;0m red\u001b[0m"
+  },
+  {
+    "reference": "osc8.c:166",
+    "mode": "compile",
+    "source": "[fg=red]café[/]",
+    "expected": "\u001b[0m\u001b[38;2;255;0;0mcafé\u001b[0m"
+  },
+  {
+    "reference": "osc8.c:168",
+    "mode": "compile",
+    "source": "[fg=blue bg=white bold]Blue[/]",
+    "expected": "\u001b[0m\u001b[1m\u001b[38;2;0;0;255m\u001b[48;2;255;255;255mBlue\u001b[0m"
+  },
+  {
+    "reference": "osc8.c:169",
+    "mode": "compile",
+    "source": "[fg=RGB(1,2,3) bg=rgb(255,254,253)]x[/]",
+    "expected": "\u001b[0m\u001b[38;2;1;2;3m\u001b[48;2;255;254;253mx\u001b[0m"
+  },
+  {
+    "reference": "osc8.c:172",
+    "mode": "compile",
+    "source": "[fg=RebeccaPurple]x[/]",
+    "expected": "\u001b[0m\u001b[38;2;102;51;153mx\u001b[0m"
+  },
+  {
+    "reference": "osc8.c:174",
+    "mode": "compile",
+    "source": "[color=red italic overline strikethrough]R[/]",
+    "expected": "\u001b[0m\u001b[3m\u001b[53m\u001b[9m\u001b[38;2;255;0;0mR\u001b[0m"
+  },
+  {
+    "reference": "osc8.c:177",
+    "mode": "compile",
+    "source": "[bold][bold=false]x[/]y[/]",
+    "expected": "\u001b[0m\u001b[1m\u001b[0mx\u001b[0m\u001b[1my\u001b[0m"
+  },
+  {
+    "reference": "osc8.c:179",
+    "mode": "compile",
+    "source": "[fg=red bold blink]Alert[/]",
+    "expected": "\u001b[0m\u001b[1m\u001b[5m\u001b[38;2;255;0;0mAlert\u001b[0m"
+  },
+  {
+    "reference": "osc8.c:191",
+    "mode": "compile",
+    "source": "[[literal]",
+    "expected": "[literal]"
+  },
+  {
+    "reference": "osc8.c:192",
+    "mode": "compile",
+    "source": "[send=\"cast fireball\"]Cast[/]",
+    "expected": "\u001b]8;;send:cast%20fireball\u001b\\Cast\u001b]8;;\u001b\\"
+  },
+  {
+    "reference": "osc8.c:193",
+    "mode": "compile",
+    "source": "[prompt=\"say \\\"hi\\\" \\\\ ok\"]Edit[/]",
+    "expected": "\u001b]8;;prompt:say%20%22hi%22%20%5C%20ok\u001b\\Edit\u001b]8;;\u001b\\"
+  },
+  {
+    "reference": "osc8.c:196",
+    "mode": "compile",
+    "source": "[link=\"https://example.com/a?x=1&y=%202\"]Web[/]",
+    "expected": "\u001b]8;;https://example.com/a?x=1&y=%202\u001b\\Web\u001b]8;;\u001b\\"
+  },
+  {
+    "reference": "osc8.c:283",
+    "mode": "render",
+    "source": "\u001b[38;2;255;0;0mR",
+    "expected": "R"
+  },
+  {
+    "reference": "osc8.c:530",
+    "mode": "render",
+    "source": "\u001b]8;;https://example.com\u001b\\Raw\u001b]8;;\u001b\\",
+    "expected": "Raw"
+  },
+  {
+    "reference": "osc8.c:532",
+    "mode": "render",
+    "source": "café 😀",
+    "expected": "café 😀"
+  },
+  {
+    "reference": "osc8.c:536",
+    "mode": "render",
+    "source": "\u001b[38;2;255;0;0mR",
+    "expected": "\u001b[91mR\u001b[0m"
+  },
+  {
+    "reference": "osc8.c:537",
+    "mode": "render",
+    "source": "\u001b[38;2;255;0;0mR",
+    "expected": "\u001b[38;5;9mR\u001b[0m"
+  },
+  {
+    "reference": "osc8.c:539",
+    "mode": "render",
+    "source": "\u001b[38;2;255;0;0mR",
+    "expected": "\u001b[38;2;255;0;0mR\u001b[0m"
+  },
+  {
+    "reference": "osc8.c:284",
+    "mode": "render_options",
+    "source": "[send=\"cast fireball\"]Cast[/]",
+    "expected": "Cast",
+    "capabilities": []
+  },
+  {
+    "reference": "osc8.c:285",
+    "mode": "render_options",
+    "source": "[send=\"x\" color=red bold]X[/]",
+    "expected": "\u001b[0m\u001b[1m\u001b[91mX\u001b[0m\u001b[0m",
+    "capabilities": []
+  },
+  {
+    "reference": "osc8.c:287",
+    "mode": "render_options",
+    "source": "[send=\"cast fireball\"]Cast[/]",
+    "expected": "\u001b]8;;send:cast%20fireball\u001b\\Cast\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND"
+    ]
+  },
+  {
+    "reference": "osc8.c:288",
+    "mode": "render_options",
+    "source": "[link=\"https://example.com\"]Web[/]",
+    "expected": "Web",
+    "capabilities": [
+      "SEND"
+    ]
+  },
+  {
+    "reference": "osc8.c:290",
+    "mode": "render_options",
+    "source": "[link=\"https://example.com\"]Web[/]",
+    "expected": "\u001b]8;;https://example.com\u001b\\Web\u001b]8;;\u001b\\",
+    "capabilities": [
+      "",
+      "SEND",
+      "PROMPT"
+    ]
+  },
+  {
+    "reference": "osc8.c:293",
+    "mode": "render_options",
+    "source": "[prompt=\"look\"]Edit[/]",
+    "expected": "Edit",
+    "capabilities": [
+      "SEND"
+    ]
+  },
+  {
+    "reference": "osc8.c:294",
+    "mode": "render_options",
+    "source": "[send=\"attack\" color=red bg=black bold hover.color=yellow active.bg=rgb(255,0,0)]Attack[/]",
+    "expected": "\u001b]8;;send:attack?config=%7B%22style%22%3A%7B%22color%22%3A%22%23ff0000%22%2C%22bg%22%3A%22%23000000%22%2C%22bold%22%3Atrue%2C%22active%22%3A%7B%22bg%22%3A%22%23ff0000%22%7D%2C%22hover%22%3A%7B%22color%22%3A%22%23ffff00%22%7D%7D%7D\u001b\\Attack\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "STYLE_BASIC",
+      "STYLE_STATES"
+    ]
+  },
+  {
+    "reference": "osc8.c:301",
+    "mode": "render_options",
+    "source": "[send=\"attack\" color=red]Attack[/]",
+    "expected": "\u001b]8;;send:attack?config=%7B%22style%22%3A%7B%22color%22%3A%22%23ff0000%22%7D%7D\u001b\\Attack\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "STYLE_BASIC"
+    ]
+  },
+  {
+    "reference": "osc8.c:305",
+    "mode": "render_options",
+    "source": "[send=\"attack\" color=red]Attack[/]",
+    "expected": "\u001b]8;;send:attack\u001b\\\u001b[0m\u001b[91mAttack\u001b]8;;\u001b\\\u001b[0m\u001b[0m",
+    "capabilities": [
+      "SEND"
+    ]
+  },
+  {
+    "reference": "osc8.c:309",
+    "mode": "render_options",
+    "source": "[send=\"attack\" color=red hover.color=yellow]Attack[/]",
+    "expected": "\u001b]8;;send:attack?config=%7B%22style%22%3A%7B%22hover%22%3A%7B%22color%22%3A%22%23ffff00%22%7D%7D%7D\u001b\\\u001b[0m\u001b[91mAttack\u001b]8;;\u001b\\\u001b[0m\u001b[0m",
+    "capabilities": [
+      "SEND",
+      "STYLE_STATES"
+    ]
+  },
+  {
+    "reference": "osc8.c:315",
+    "mode": "render_options",
+    "source": "[send=\"x\" color=rgb(1,2,3) text-decoration-color=rgb(7,8,9) hover.bg=rgb(4,5,6)]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22style%22%3A%7B%22color%22%3A%22%23010203%22%2C%22text-decoration-color%22%3A%22%23070809%22%2C%22hover%22%3A%7B%22bg%22%3A%22%23040506%22%7D%7D%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "STYLE_BASIC",
+      "STYLE_STATES"
+    ]
+  },
+  {
+    "reference": "osc8.c:330",
+    "mode": "render_options",
+    "source": "[send=\"x\" fg=red color=blue]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22style%22%3A%7B%22color%22%3A%22%230000ff%22%7D%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "STYLE_BASIC"
+    ]
+  },
+  {
+    "reference": "osc8.c:334",
+    "mode": "render_options",
+    "source": "[send=\"x\" tooltip=\"Choose an action\"]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22tooltip%22%3A%22Choose%20an%20action%22%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "TOOLTIP"
+    ]
+  },
+  {
+    "reference": "osc8.c:338",
+    "mode": "render_options",
+    "source": "[send=\"x\" tooltip=\"Say \\\"hi\\\" \\\\ café\"]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22tooltip%22%3A%22Say%20%5C%22hi%5C%22%20%5C%5C%20caf%C3%A9%22%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "TOOLTIP"
+    ]
+  },
+  {
+    "reference": "osc8.c:343",
+    "mode": "render_options",
+    "source": "[send=\"x\" title.bold title.color=red menu.4.link=\"https://example.com/guide\" menu.1.send=\"attack\" menu.2.prompt=\"examine target\" menu.3.separator menu.2.label=\"Inspect\" title=\"Combat\" menu.4.label=\"Guide\" menu.1.label=\"Attack\"]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22menu%22%3A%5B%7B%22Attack%22%3A%22send%3Aattack%22%7D%2C%7B%22Inspect%22%3A%22prompt%3Aexamine%20target%22%7D%2C%22-%22%2C%7B%22Guide%22%3A%22https%3A%2F%2Fexample.com%2Fguide%22%7D%5D%2C%22title%22%3A%7B%22text%22%3A%22Combat%22%2C%22style%22%3A%7B%22color%22%3A%22%23ff0000%22%2C%22bold%22%3Atrue%7D%7D%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "",
+      "SEND",
+      "PROMPT",
+      "STYLE_BASIC",
+      "STYLE_STATES",
+      "TOOLTIP",
+      "MENU"
+    ]
+  },
+  {
+    "reference": "osc8.c:356",
+    "mode": "render_options",
+    "source": "[send=\"x\" color=red tooltip=\"Tip\" title=\"Combat\" menu.1.label=\"Attack\" menu.1.send=\"attack\"]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22style%22%3A%7B%22color%22%3A%22%23ff0000%22%7D%2C%22tooltip%22%3A%22Tip%22%2C%22menu%22%3A%5B%7B%22Attack%22%3A%22send%3Aattack%22%7D%5D%2C%22title%22%3A%22Combat%22%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "",
+      "SEND",
+      "PROMPT",
+      "STYLE_BASIC",
+      "STYLE_STATES",
+      "TOOLTIP",
+      "MENU"
+    ]
+  },
+  {
+    "reference": "osc8.c:364",
+    "mode": "render_options",
+    "source": "[send=\"x\" menu.1.separator menu.2.label=\"Web\" menu.2.link=\"https://example.com\" menu.3.separator menu.4.label=\"Attack\" menu.4.send=\"attack\" menu.5.separator menu.6.separator menu.7.label=\"Edit\" menu.7.prompt=\"look\" menu.8.separator menu.9.label=\"Flee\" menu.9.send=\"flee\" menu.10.separator title=\"Combat\"]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22menu%22%3A%5B%7B%22Attack%22%3A%22send%3Aattack%22%7D%2C%22-%22%2C%7B%22Flee%22%3A%22send%3Aflee%22%7D%5D%2C%22title%22%3A%22Combat%22%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "MENU"
+    ]
+  },
+  {
+    "reference": "osc8.c:376",
+    "mode": "render_options",
+    "source": "[send=\"x\" title=\"Combat\" title.color=red menu.1.label=\"Attack\" menu.1.send=\"attack\"]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22menu%22%3A%5B%7B%22Attack%22%3A%22send%3Aattack%22%7D%5D%2C%22title%22%3A%22Combat%22%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "MENU"
+    ]
+  },
+  {
+    "reference": "osc8.c:383",
+    "mode": "render_options",
+    "source": "[send=\"x\" menu.1.label=\"Edit\" menu.1.prompt=\"look\"]x[/]",
+    "expected": "\u001b]8;;send:x\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "MENU"
+    ]
+  },
+  {
+    "reference": "osc8.c:387",
+    "mode": "render_options",
+    "source": "[send=\"x\" tooltip=\"Tip\" menu.1.label=\"Attack\" menu.1.send=\"attack\"]x[/]",
+    "expected": "x",
+    "capabilities": []
+  },
+  {
+    "reference": "osc8.c:398",
+    "mode": "render_options",
+    "source": "[send=\"x\" visibility.action=conceal visibility.delay=0 visibility.expire.input visibility.expire.prompt=false visibility.expire.output visibility.expire.outputDelay=500 visibility.wholeline]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22visibility%22%3A%7B%22action%22%3A%22conceal%22%2C%22delay%22%3A0%2C%22expire%22%3A%7B%22input%22%3Atrue%2C%22prompt%22%3Afalse%2C%22output%22%3Atrue%2C%22outputDelay%22%3A500%7D%2C%22wholeline%22%3Atrue%7D%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "VISIBILITY",
+      "SPOILER",
+      "DISABLED"
+    ]
+  },
+  {
+    "reference": "osc8.c:409",
+    "mode": "render_options",
+    "source": "[send=\"x\" visibility.action=reveal,conceal spoiler disabled=false]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22visibility%22%3A%7B%22action%22%3A%5B%22reveal%22%2C%22conceal%22%5D%7D%2C%22spoiler%22%3Atrue%2C%22disabled%22%3Afalse%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "VISIBILITY",
+      "SPOILER",
+      "DISABLED"
+    ]
+  },
+  {
+    "reference": "osc8.c:416",
+    "mode": "render_options",
+    "source": "[send=\"x\" visibility.action=reveal visibility.wholeline=false spoiler=false]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22visibility%22%3A%7B%22action%22%3A%22reveal%22%2C%22wholeline%22%3Afalse%7D%2C%22spoiler%22%3Afalse%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "VISIBILITY",
+      "SPOILER",
+      "DISABLED"
+    ]
+  },
+  {
+    "reference": "osc8.c:423",
+    "mode": "render_options",
+    "source": "[send=\"x\" spoiler]x[/]",
+    "expected": "\u001b]8;;send:x\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND"
+    ]
+  },
+  {
+    "reference": "osc8.c:425",
+    "mode": "render_options",
+    "source": "[send=\"x\" disabled]x[/]",
+    "expected": "x",
+    "capabilities": [
+      "SEND"
+    ]
+  },
+  {
+    "reference": "osc8.c:426",
+    "mode": "render_options",
+    "source": "[send=\"x\" spoiler disabled]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22spoiler%22%3Atrue%2C%22disabled%22%3Atrue%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "VISIBILITY",
+      "SPOILER",
+      "DISABLED"
+    ]
+  },
+  {
+    "reference": "osc8.c:436",
+    "mode": "render_options",
+    "source": "[send=\"x\" color=red tooltip=\"Tip\" title=\"Actions\" menu.1.label=\"Look\" menu.1.send=\"look\" visibility.action=reveal visibility.delay=5 spoiler disabled=false]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22style%22%3A%7B%22color%22%3A%22%23ff0000%22%7D%2C%22tooltip%22%3A%22Tip%22%2C%22menu%22%3A%5B%7B%22Look%22%3A%22send%3Alook%22%7D%5D%2C%22title%22%3A%22Actions%22%2C%22visibility%22%3A%7B%22action%22%3A%22reveal%22%2C%22delay%22%3A5%7D%2C%22spoiler%22%3Atrue%2C%22disabled%22%3Afalse%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "",
+      "SEND",
+      "PROMPT",
+      "STYLE_BASIC",
+      "STYLE_STATES",
+      "TOOLTIP",
+      "MENU",
+      "VISIBILITY",
+      "SPOILER",
+      "DISABLED"
+    ]
+  },
+  {
+    "reference": "osc8.c:448",
+    "mode": "render_options",
+    "source": "[send=\"react?type=like\" selection.group=\"reactions\" selection.value=\"like\"]Like[/]",
+    "expected": "\u001b]8;;send:react%3Ftype%3Dlike?config=%7B%22selection%22%3A%7B%22group%22%3A%22reactions%22%2C%22value%22%3A%22like%22%7D%7D\u001b\\Like\u001b]8;;\u001b\\",
+    "capabilities": [
+      "",
+      "SEND",
+      "PROMPT",
+      "SELECTION"
+    ]
+  },
+  {
+    "reference": "osc8.c:455",
+    "mode": "render_options",
+    "source": "[send=\"x\" selection.group=\"g\" selection.value=\"v\" selection.toggle=true selection.selected=false selection.exclusive=true selection.disabled=false]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22selection%22%3A%7B%22group%22%3A%22g%22%2C%22value%22%3A%22v%22%2C%22toggle%22%3Atrue%2C%22selected%22%3Afalse%2C%22exclusive%22%3Atrue%2C%22disabled%22%3Afalse%7D%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "",
+      "SEND",
+      "PROMPT",
+      "SELECTION"
+    ]
+  },
+  {
+    "reference": "osc8.c:464",
+    "mode": "render_options",
+    "source": "[send=\"x\" selection.group=\"old\" selection.group=\"café\" selection.value=\"old\" selection.value=\"Say \\\"yes\\\" \\\\\" selection.toggle selection.toggle=false selection.selected selection.exclusive=false selection.disabled]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22selection%22%3A%7B%22group%22%3A%22caf%C3%A9%22%2C%22value%22%3A%22Say%20%5C%22yes%5C%22%20%5C%5C%22%2C%22toggle%22%3Afalse%2C%22selected%22%3Atrue%2C%22exclusive%22%3Afalse%2C%22disabled%22%3Atrue%7D%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "",
+      "SEND",
+      "PROMPT",
+      "SELECTION"
+    ]
+  },
+  {
+    "reference": "osc8.c:475",
+    "mode": "render_options",
+    "source": "[send=\"x\" selected.color=blue disabled.strikethrough selection.group=\"difficulty\" selection.value=\"hard\" selection.exclusive]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22style%22%3A%7B%22selected%22%3A%7B%22color%22%3A%22%230000ff%22%7D%2C%22disabled%22%3A%7B%22strikethrough%22%3Atrue%7D%7D%2C%22selection%22%3A%7B%22group%22%3A%22difficulty%22%2C%22value%22%3A%22hard%22%2C%22exclusive%22%3Atrue%7D%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "",
+      "SEND",
+      "PROMPT",
+      "STYLE_BASIC",
+      "STYLE_STATES",
+      "TOOLTIP",
+      "MENU",
+      "VISIBILITY",
+      "SPOILER",
+      "DISABLED",
+      "SELECTION"
+    ]
+  },
+  {
+    "reference": "osc8.c:485",
+    "mode": "render_options",
+    "source": "[send=\"x\" selected.bold selection.group=\"g\" selection.value=\"v\"]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22style%22%3A%7B%22selected%22%3A%7B%22bold%22%3Atrue%7D%7D%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "STYLE_STATES"
+    ]
+  },
+  {
+    "reference": "osc8.c:491",
+    "mode": "render_options",
+    "source": "[send=\"x\" selection.group=\"g\" selection.value=\"v\"]x[/]",
+    "expected": "\u001b]8;;send:x\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND"
+    ]
+  },
+  {
+    "reference": "osc8.c:494",
+    "mode": "render_options",
+    "source": "[prompt=\"choose?mode=fast\" selection.group=\"mode\" selection.value=\"fast\"]Fast[/]",
+    "expected": "\u001b]8;;prompt:choose%3Fmode%3Dfast?config=%7B%22selection%22%3A%7B%22group%22%3A%22mode%22%2C%22value%22%3A%22fast%22%7D%7D\u001b\\Fast\u001b]8;;\u001b\\",
+    "capabilities": [
+      "",
+      "SEND",
+      "PROMPT",
+      "SELECTION"
+    ]
+  },
+  {
+    "reference": "osc8.c:501",
+    "mode": "render_options",
+    "source": "[link=\"https://example.com/?config=old#part\" selection.group=\"tabs\" selection.value=\"one\"]One[/]",
+    "expected": "\u001b]8;;https://example.com/?%63%6F%6E%66%69%67=old&config=%7B%22selection%22%3A%7B%22group%22%3A%22tabs%22%2C%22value%22%3A%22one%22%7D%7D#part\u001b\\One\u001b]8;;\u001b\\",
+    "capabilities": [
+      "",
+      "SEND",
+      "PROMPT",
+      "SELECTION"
+    ]
+  },
+  {
+    "reference": "osc8.c:518",
+    "mode": "render_options",
+    "source": "[send=\"x\" tooltip=\"Choose\" menu.1.label=\"One\" menu.1.send=\"one\" visibility.action=conceal selection.group=\"choices\" selection.value=\"one\" spoiler=false disabled=false]x[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22tooltip%22%3A%22Choose%22%2C%22menu%22%3A%5B%7B%22One%22%3A%22send%3Aone%22%7D%5D%2C%22visibility%22%3A%7B%22action%22%3A%22conceal%22%7D%2C%22selection%22%3A%7B%22group%22%3A%22choices%22%2C%22value%22%3A%22one%22%7D%2C%22spoiler%22%3Afalse%2C%22disabled%22%3Afalse%7D\u001b\\x\u001b]8;;\u001b\\",
+    "capabilities": [
+      "",
+      "SEND",
+      "PROMPT",
+      "STYLE_BASIC",
+      "STYLE_STATES",
+      "TOOLTIP",
+      "MENU",
+      "VISIBILITY",
+      "SPOILER",
+      "DISABLED",
+      "SELECTION"
+    ]
+  },
+  {
+    "reference": "markup.c:69",
+    "mode": "compile",
+    "source": "[fg=BRAND-BLUE]B[/]",
+    "expected": "\u001b[0m\u001b[38;2;32;96;192mB\u001b[0m"
+  },
+  {
+    "reference": "markup.c:85",
+    "mode": "compile",
+    "source": "[fg=red]R[/]",
+    "expected": "\u001b[0m\u001b[38;2;255;0;0mR\u001b[0m"
+  },
+  {
+    "reference": "markup.c:24",
+    "mode": "render",
+    "source": "[fg=#ff0000]R[/]",
+    "expected": "\u001b[0m\u001b[91mR\u001b[0m\u001b[0m"
+  },
+  {
+    "reference": "markup.c:26",
+    "mode": "render",
+    "source": "[fg=#ff0000]R[/]",
+    "expected": "\u001b[0m\u001b[38;5;9mR\u001b[0m\u001b[0m"
+  },
+  {
+    "reference": "markup.c:28",
+    "mode": "render",
+    "source": "[fg=#ff0000]R[/]",
+    "expected": "\u001b[0m\u001b[38;2;255;0;0mR\u001b[0m\u001b[0m"
+  },
+  {
+    "reference": "markup.c:30",
+    "mode": "render",
+    "source": "[blink]Alert[/]",
+    "expected": "\u001b[0m\u001b[5mAlert\u001b[0m\u001b[0m"
+  },
+  {
+    "reference": "markup.c:71",
+    "mode": "render",
+    "source": "[bg=brand-blue]B[/]",
+    "expected": "\u001b[0m\u001b[48;2;32;96;192mB\u001b[0m\u001b[0m"
+  },
+  {
+    "reference": "markup.c:73",
+    "mode": "render_options",
+    "source": "[send=\"x\" color=brand-blue]B[/]",
+    "expected": "\u001b]8;;send:x?config=%7B%22style%22%3A%7B%22color%22%3A%22%232060c0%22%7D%7D\u001b\\B\u001b]8;;\u001b\\",
+    "capabilities": [
+      "SEND",
+      "STYLE_BASIC"
+    ]
+  },
+  {
+    "reference": "presets.c:144",
+    "mode": "invalid",
+    "source": "[send=\"x\" preset=\"missing\"]x[/]"
+  },
+  {
+    "reference": "presets.c:145",
+    "mode": "invalid",
+    "source": "[send=\"x\" preset=danger]x[/]"
+  }
+]

@@ -3,6 +3,7 @@ use crate::{
     flags, telnet, text,
     world::{Kind, Object, ObjectId, World},
 };
+use unicode_segmentation::UnicodeSegmentation;
 
 /// Parsed search operation; switches are validated before execution.
 #[derive(Debug)]
@@ -80,8 +81,8 @@ pub fn matches(name: &str, query: &str) -> bool {
     })
 }
 /// Strip display styling and control characters from object names.
-fn display_name(object: &Object) -> String {
-    text::markup(&text::plain(&object.name))
+fn display_name(object: &Object, palette: &text::Palette) -> String {
+    text::plain_with(palette, &object.name)
         .chars()
         .map(|c| if c.is_control() { ' ' } else { c })
         .collect()
@@ -127,7 +128,7 @@ pub fn page(
         .filter(|o| {
             !matches!(o.kind, Kind::Exit | Kind::Garbage)
                 && flags::controls(world, actor, o.id)
-                && matches(&display_name(o), &cursor.query)
+                && matches(&display_name(o, &world.palette), &cursor.query)
         })
         .peekable();
     // Names contain no controls and valid UTF-8 cannot contain Telnet IAC (0xff).
@@ -137,7 +138,7 @@ pub fn page(
     let mut count = 0;
     while let Some(object) = found.next() {
         let footer = if found.peek().is_some() { MORE } else { END };
-        let name = display_name(object);
+        let name = display_name(object, &world.palette);
         let suffix = suffix(object);
         let available = limit.saturating_sub(output.len() + footer.len());
         let full = name.len() + suffix.len() + 2;
@@ -146,14 +147,17 @@ pub fn page(
             break;
         }
         // Retain at least one character for nonempty names, and always the full identity.
-        let minimum = name.chars().next().map_or(0, char::len_utf8) + suffix.len() + 2;
+        let minimum = name.graphemes(true).next().map_or(0, str::len) + suffix.len() + 2;
         if minimum > available {
             return Err(ERROR);
         }
-        let mut end = name.len().min(available - suffix.len() - 2);
-        while !name.is_char_boundary(end) {
-            end -= 1;
-        }
+        let capacity = available - suffix.len() - 2;
+        let end = name
+            .grapheme_indices(true)
+            .map(|(i, g)| i + g.len())
+            .take_while(|&end| end <= capacity)
+            .last()
+            .unwrap_or(0);
         output.push_str(&name[..end]);
         output.push_str(&suffix);
         output.push_str("\r\n");

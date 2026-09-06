@@ -176,16 +176,15 @@ other callback mutations.
   Lua output is bounded independently of Lua heap allocations.
 - Telnet supports fragmented framing, ECHO, TTYPE, NAWS, UTF-8 CHARSET,
   NEW-ENVIRON, MSSP, MCCP2 output compression and GMCP Core.Ping,
-  with plain/16-color ANSI output. Unsupported options are declined. Input
+  with plain, ANSI 16/256 and truecolor output, plus capability-gated OSC 8 links. Unsupported options are declined. Input
   lines are bounded at 8 KiB; output messages at 64 KiB, with 128 queued
   messages per connection. Slow clients are disconnected. Login throttles,
   hash concurrency/rate limits, command quotas and idle timeouts are active.
 
 BattleTech simulation, builder commands, player channel commands, cron and
-interactive Lua flows, extended styled text/custom palettes, additional GMCP packages and
-OSC 8 features remain deferred. Demo modules are copied unchanged: schedules
-produce startup warnings, flows report an explicit unavailable-feature error,
-and clickable markup renders visible text. Legacy help/type files describe a
+interactive Lua flows, additional GMCP packages, a webserver and browser-side
+action handling remain deferred. Schedules produce startup warnings and flows
+report an explicit unavailable-feature error. Legacy help/type files describe a
 larger API than this milestone implements. Deferred configuration is reported in one capability diagnostic. Site/access
 rules parse and pass configuration checks, but block serving before writes or
 listening because enforcement is not implemented.
@@ -404,3 +403,71 @@ stop an already active compression stream. Graceful closure finishes the stream
 within existing output/shutdown deadlines. Compression or socket failures close
 the connection; the writer never switches back to plaintext. Buffers, queues and
 logical message limits remain bounded. Inbound compression is unsupported.
+
+
+## Styled text, Markdown and help
+
+Game output retains the C bracket language. The parser supports grouped and
+nested foreground/background colors, bold, italic, blink, underline, overline,
+strikethrough, inverse, reset and literal `[[` escaping. Colors resolve through
+CSS/X11 names, configured `[colors]`, `#RRGGBB` and `rgb(R,G,B)`.
+
+`mux.text.markup()` validates and returns the original markup. `mux.text.style()`
+wraps its input using foreground/background, bold, underline and inverse options.
+Invalid strict input raises a Lua error. Ordinary output uses permissive parsing:
+invalid markup stays visible, legacy SGR is adapted to the terminal, and other
+raw escape sequences are removed. `say` strips user styling, matching C.
+Object name/description setters validate new markup; existing stored text is
+preserved and rendered permissively.
+
+OSC 8 supports C's external/send/prompt actions and all Tier 1–6 metadata:
+base/state styles, tooltips, titles, menus, visibility/expiry, spoilers, disabled
+links, selection, compact encoding and configured presets. Each capability requires
+its corresponding NEW-ENVIRON USERVAR to equal `1`. Presets are sent once per
+connection before use. Unsupported actions retain their labels and applicable
+ANSI styling; `osc8demo` exercises the copied demonstration module.
+
+`color` reports the current session's mode. Use `color auto`, `off`, `16`, `256`
+or `truecolor`; overrides affect only that connection and disappear at disconnect.
+The ANSI player flag is still required. Auto mode respects screen-reader detection;
+an explicit override can enable colors for a screen-reader client. OSC capability
+selection is independent of color. `@telnet <player>` reports effective settings.
+
+Conventional Markdown is opt-in, parsed by pulldown-cmark with CommonMark, tables,
+task lists and strikethrough. It is never inferred from names or ordinary messages:
+
+```lua
+mux.world.pemit(ctx.enactor, mux.text.markdown(
+  "## Notice\n\n**Welcome!** Read [help](help:about)."
+))
+```
+
+The immutable document stays typed through callback transactions and renders for
+each receiving session. Markdown code and C bracket examples stay literal.
+Telnet output wraps prose to NAWS width, preserves code whitespace, and lays out
+tables using display columns, falling back to labeled rows on narrow terminals.
+External links display their destination when OSC links are unavailable. Relative
+help paths and `help:topic` links become help actions.
+
+`help [topic]` and configured aliases read the startup index in `mux.help_directory`.
+Articles use `+++` TOML front matter (title, description, keywords and optional
+index/visibility metadata). Wizard-only articles are excluded from unauthorized
+lookups, suggestions and indexes. Invalid files and duplicate keywords produce
+file-specific startup diagnostics. `@help` and live reload are not implemented.
+
+Text width, wrapping and truncation use unicode-width and unicode-segmentation.
+This deliberately improves on C's byte counts: CJK, combining marks and emoji
+clusters remain intact, even across style boundaries. Rendered messages fit the
+existing encoded output limit, including closing OSC links and ANSI resets.
+Rendering precedes queue accounting and MCCP2 compression. Lua document sources
+are bounded by the message limit; retained document memory additionally shares a
+budget capped by the configured Lua memory and output-byte limits.
+
+The library exposes `text::Document::html(palette, limit)` for future web use.
+Markdown uses pulldown-cmark's HTML renderer with raw HTML suppressed. Legacy
+styles produce escaped spans and links with controlled CSS; game actions and
+advanced link metadata use `data-mux-*` attributes, never inline JavaScript.
+Hosts may supply presentation for `.mux-inverse` and `.mux-blink` and implement
+action handling. No HTTP server, browser interaction or network image fetching
+is included. HTML exceeding its byte limit returns an error rather than a broken
+fragment.

@@ -18,3 +18,6 @@ pub mod find;
 
 /// Transactional database checking and semantic repair.
 pub mod dbck;
+
+/// Startup-indexed Markdown help.
+pub mod help;

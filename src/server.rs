@@ -78,7 +78,8 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
     let world = if existing {
         let path = c.database();
         let timeout = c.database.busy_timeout_ms;
-        let loaded = persistence::load_with_timeout(&path, timeout).await?;
+        let mut loaded = persistence::load_with_timeout(&path, timeout).await?;
+        loaded.palette = std::sync::Arc::new(crate::text::Palette::from_config(c)?);
         loaded.validate(c)?;
         persistence::validate_lists(&path, &loaded, timeout).await?;
         loaded
@@ -226,6 +227,7 @@ pub async fn run(
                 let now=Instant::now();
                 let stats=std::sync::Arc::new(telnet::transport::Stats::default());
                 server.sessions.insert(id,Session {
+                    palette:server.scripts.palette.clone(), color_override:Default::default(), presets_emitted:Default::default(),
                     stats:stats.clone(),output, peer:peer.ip(), player:None, flow:LoginFlow::Name,
                     connected:now, active:now, decoder:telnet::Decoder::new(&server.config.runtime),
                     find_cursor: None,
@@ -435,6 +437,53 @@ impl Server {
             session.protocol(vec![telnet::Decoder::sub_reply(telnet::MSSP, &payload)]);
         }
     }
+    /// Color overrides never affect another connection or persistent account state.
+    fn color(&self, id: SessionId, mode: &str) {
+        use crate::text::ColorDepth;
+        let Some(session) = self.sessions.get(&id) else {
+            return;
+        };
+        let mode = mode.trim().to_ascii_lowercase();
+        let reply = if mode.is_empty() {
+            format!(
+                "Color mode: {}{}. Client capability: {}{}.",
+                session
+                    .color_override
+                    .get()
+                    .map_or("auto", ColorDepth::name),
+                if session.color_override.get().is_some() {
+                    " (override)"
+                } else {
+                    ""
+                },
+                ColorDepth::advertised(session.decoder.color_depth).name(),
+                if session.decoder.screen_reader {
+                    ", screen reader"
+                } else {
+                    ""
+                }
+            )
+        } else {
+            let selected = match mode.as_str() {
+                "auto" => None,
+                "off" => Some(ColorDepth::None),
+                "16" => Some(ColorDepth::Ansi16),
+                "256" => Some(ColorDepth::Ansi256),
+                "truecolor" => Some(ColorDepth::Truecolor),
+                _ => {
+                    self.tell(id, "Use color auto, off, 16, 256, or truecolor.\r\n");
+                    return;
+                }
+            };
+            session.color_override.set(selected);
+            format!(
+                "Color mode set to {}.",
+                selected.map_or("auto", ColorDepth::name)
+            )
+        };
+        self.tell(id, &format!("{reply}\r\n"));
+    }
+
     /// Read-only, invoking-session-only connection statistics in stable session-ID order.
     fn session_diagnostics(&self, id: SessionId, prefix: &str) {
         let mut report = telnet::diagnostics::Report::new(self.config.runtime.output_message_limit);
@@ -457,7 +506,7 @@ impl Server {
             let Some(player) = session.player else {
                 continue;
             };
-            let name = crate::text::plain(&world.objects[&player].name);
+            let name = crate::text::plain_with(&self.scripts.palette, &world.objects[&player].name);
             if !name
                 .to_lowercase()
                 .starts_with(&prefix.trim().to_lowercase())
@@ -468,7 +517,7 @@ impl Server {
             let mut stats = session.stats.snapshot();
             stats.input[0] += session.decoder.pending_text() as u64;
             rows.push([
-                telnet::diagnostics::escape(name.chars().take(16).collect::<String>().as_bytes()),
+                telnet::diagnostics::escape(crate::text::literal_prefix(&name, 16).as_bytes()),
                 telnet::diagnostics::connected_time(session.connected.elapsed().as_secs()),
                 telnet::diagnostics::idle_time(session.active.elapsed().as_secs()),
                 sid.0.to_string(),
@@ -536,6 +585,30 @@ impl Server {
             for (sid, session) in &self.sessions {
                 if session.player == Some(player) {
                     found = true;
+                    let ansi = world.objects[&player]
+                        .flags
+                        .contains(crate::flags::Flag::Ansi);
+                    let options = session.render_options(ansi);
+                    report.line(&format!(
+                        "Color effective: {}; override: {}; OSC capabilities: {}",
+                        options.color.name(),
+                        session
+                            .color_override
+                            .get()
+                            .map_or("auto", crate::text::ColorDepth::name),
+                        options
+                            .capabilities
+                            .iter()
+                            .map(|suffix| {
+                                if suffix.is_empty() {
+                                    "OSC_HYPERLINKS".to_owned()
+                                } else {
+                                    format!("OSC_HYPERLINKS_{suffix}")
+                                }
+                            })
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ));
                     telnet::diagnostics::telnet(
                         &mut report,
                         &world.objects[&player].name,
@@ -658,7 +731,12 @@ impl Server {
         for (p, text) in messages {
             for (id, s) in &self.sessions {
                 if s.player == Some(p) {
-                    self.tell(*id, &format!("{text}\r\n"));
+                    let ansi = self.scripts.world.borrow().objects[&p]
+                        .flags
+                        .contains(crate::flags::Flag::Ansi);
+                    if !s.document(&text, ansi, true) {
+                        self.sessions[id].close();
+                    }
                 }
             }
         }
@@ -928,6 +1006,20 @@ impl Server {
         self.snapshots()?;
         let before = self.scripts.world.borrow().clone();
         match commands::run(&self.scripts, &self.config, p, id.0, line) {
+            Ok(Action::Color(mode)) => self.color(id, &mode),
+            Ok(Action::Help(topic)) => {
+                let wizard = p.0 == 1
+                    || self.scripts.world.borrow().objects[&p]
+                        .flags
+                        .contains(crate::flags::Flag::Wizard);
+                let doc = self.scripts.help.lookup(&topic, wizard);
+                let ansi = self.scripts.world.borrow().objects[&p]
+                    .flags
+                    .contains(crate::flags::Flag::Ansi);
+                if let Some(s) = self.sessions.get(&id) {
+                    s.document(&doc, ansi, true);
+                }
+            }
             Ok(Action::Sessions(prefix)) => self.session_diagnostics(id, &prefix),
             Ok(Action::Telnet(player)) => self.telnet_diagnostics(id, &player),
             Ok(Action::Shutdown) => self.request_shutdown(ShutdownRequest::Player(p)).await,
@@ -1372,6 +1464,9 @@ mod tests {
             Session {
                 output,
                 stats: Default::default(),
+                palette: Default::default(),
+                color_override: Default::default(),
+                presets_emitted: Default::default(),
                 peer: "127.0.0.1".parse().unwrap(),
                 player: None,
                 flow: LoginFlow::Pending,
@@ -1513,6 +1608,9 @@ mod tests {
                     Session {
                         output,
                         stats: Default::default(),
+                        palette: Default::default(),
+                        color_override: Default::default(),
+                        presets_emitted: Default::default(),
                         peer: "127.0.0.1".parse().unwrap(),
                         player: Some(ObjectId(1)),
                         flow: LoginFlow::Name,

@@ -98,7 +98,7 @@ fn apply(
             {
                 s.outbox
                     .borrow_mut()
-                    .push((recipient.id, format!("{} goes home.", o.name)));
+                    .push((recipient.id, format!("{} goes home.", o.name).into()));
             }
         }
         for _ in 0..3 {
@@ -130,7 +130,7 @@ fn apply(
                 .contains(Flag::Connected))
     {
         let text = s.appearance_for(object, destination, session)?;
-        s.outbox.borrow_mut().push((object, text));
+        s.outbox.borrow_mut().push((object, text.into()));
     }
     if object != actor {
         s.outbox.borrow_mut().push((

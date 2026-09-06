@@ -1,7 +1,9 @@
 +++
+description = "Inspect legacy logging controls"
 title = "@log"
-aliases = ["log"]
-categories = ["wizard commands"]
+keywords = ["@log", "log"]
+article_tags = ["wizard_commands"]
+wizard_only = true
 +++
 
 # @log

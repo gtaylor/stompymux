@@ -210,6 +210,9 @@ fn queue_counters_and_starting_compression_are_observable() {
     let s = Session {
         output,
         stats: Default::default(),
+        palette: Default::default(),
+        color_override: Default::default(),
+        presets_emitted: Default::default(),
         peer: "127.0.0.1".parse().unwrap(),
         player: None,
         find_cursor: None,

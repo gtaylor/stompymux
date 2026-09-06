@@ -248,6 +248,10 @@ impl CommandRegistry {
                 .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("@dbck", P::WIZARD, native::dbck)
                 .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
+            CommandDefinition::native("color", P::EVERYONE, native::color)
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
+            CommandDefinition::native("help", P::EVERYONE, native::help)
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("quit", P::EVERYONE, native::quit),
             CommandDefinition::native("home", P::WIZARD, native::home).policy(
                 SwitchPolicy::Reject("Movement command switches are not supported."),

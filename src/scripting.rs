@@ -9,7 +9,7 @@ use std::{
     rc::Rc,
 };
 pub type SharedWorld = Rc<RefCell<World>>;
-pub type Outbox = Rc<RefCell<Vec<(ObjectId, String)>>>;
+pub type Outbox = Rc<RefCell<Vec<(ObjectId, text::Document)>>>;
 pub struct Scripts {
     pub lua: Lua,
     pub world: SharedWorld,
@@ -21,6 +21,9 @@ pub struct Scripts {
     budget: Rc<Cell<usize>>,
     instruction_limit: usize,
     pub warnings: Vec<String>,
+    /// Shared immutable rendering catalogs and startup help index.
+    pub palette: std::sync::Arc<text::Palette>,
+    pub help: crate::help::HelpIndex,
 }
 fn err(e: impl std::fmt::Display) -> mlua::Error {
     mlua::Error::RuntimeError(e.to_string())
@@ -40,6 +43,9 @@ fn files(dir: &Path) -> Result<Vec<PathBuf>> {
 }
 impl Scripts {
     pub fn new(config: &Config, world: SharedWorld) -> Result<Self> {
+        let palette = std::sync::Arc::new(text::Palette::from_config(config)?);
+        world.borrow_mut().palette = palette.clone();
+        let help = crate::help::HelpIndex::load(config)?;
         let lua = Lua::new();
         lua.set_memory_limit(config.lua.memory_limit)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
@@ -92,6 +98,10 @@ impl Scripts {
                     &o.description,
                     mlua::serde::SerializeOptions::new().serialize_none_to_null(false),
                 ),
+                "internal_description" => lua.to_value_with(
+                    &o.internal_description,
+                    mlua::serde::SerializeOptions::new().serialize_none_to_null(false),
+                ),
                 "type" => Ok(Value::Integer(o.kind.code())),
                 "location" => lua.to_value_with(
                     &o.location,
@@ -110,6 +120,8 @@ impl Scripts {
             }
         });
         let w = world.clone();
+        let p = palette.clone();
+        let text_limit = config.runtime.output_message_limit;
         bind!("set", move |lua, (id, key, v): (i64, String, Value)| {
             let mut w = w.borrow_mut();
             let o = w
@@ -117,8 +129,27 @@ impl Scripts {
                 .get_mut(&ObjectId(id))
                 .ok_or_else(|| err("object does not exist"))?;
             match key.as_str() {
-                "name" => o.name = lua.from_value(v)?,
-                "description" => o.description = lua.from_value(v)?,
+                "name" => {
+                    let name: String = lua.from_value(v)?;
+                    if name.len() > text_limit {
+                        return Err(err("object name exceeds text limit"));
+                    }
+                    o.name = text::validate(&p, &name).map_err(err)?;
+                }
+                "description" | "internal_description" => {
+                    let value: Option<String> = lua.from_value(v)?;
+                    if let Some(value) = &value {
+                        if value.len() > text_limit {
+                            return Err(err("description exceeds text limit"));
+                        }
+                        text::validate(&p, value).map_err(err)?;
+                    }
+                    if key == "description" {
+                        o.description = value;
+                    } else {
+                        o.internal_description = value;
+                    }
+                }
                 "home" => o.home = lua.from_value(v)?,
                 "location" => o.location = lua.from_value(v)?,
                 _ => return Err(err("unsupported object mutation")),
@@ -127,13 +158,19 @@ impl Scripts {
         });
         let w = world.clone();
         let c = config.clone();
+        let p = palette.clone();
         bind!("create", move |_, t: Table| {
             let mut w = w.borrow_mut();
             let kind = Kind::from_code(t.get("type")?).map_err(err)?;
             if kind == Kind::Player || kind == Kind::Garbage {
                 return Err(err("Use account registration to create players"));
             }
-            let id = w.create(&c, t.get("name")?, kind);
+            let name: String = t.get("name")?;
+            if name.len() > text_limit {
+                return Err(err("object name exceeds text limit"));
+            }
+            let name = text::validate(&p, &name).map_err(err)?;
+            let id = w.create(&c, name, kind);
             let o = w.objects.get_mut(&id).unwrap();
             for key in ["location", "zone", "destination"] {
                 let value: Option<i64> = t.get(key)?;
@@ -290,7 +327,12 @@ impl Scripts {
         let o = outbox.clone();
         let output_settings = config.lua.clone();
         let message_limit = config.runtime.output_message_limit;
-        bind!("pemit", move |_, (id, s): (i64, String)| {
+        bind!("pemit", move |_, (id, value): (i64, Value)| {
+            let s = match value {
+                Value::String(s) => text::Document::Styled(s.to_str()?.to_string()),
+                Value::UserData(u) => u.borrow::<text::LuaDocument>()?.document.clone(),
+                _ => return Err(err("output must be text or a Markdown document")),
+            };
             let mut out = o.borrow_mut();
             if s.len() > message_limit
                 || out.len() >= output_settings.output_entry_limit
@@ -332,16 +374,72 @@ impl Scripts {
             }
             Ok(())
         });
-        bind!("markup", |_, s: String| Ok(text::markup(&s)));
-        bind!("width", |_, s: String| Ok(text::width(&s)));
-        bind!("truncate", |_, (s, n): (String, usize)| Ok(text::truncate(
-            &s, n
-        )));
-        bind!("strip", |_, s: String| Ok(text::plain(&s)));
-        bind!("style", |_, (s, t): (String, Table)| Ok(text::style(
-            &s,
-            &t.get::<Option<String>>("foreground")?.unwrap_or_default()
-        )));
+        let p = palette.clone();
+        bind!("markup", move |_, s: String| text::validate(&p, &s)
+            .map_err(err));
+        let p = palette.clone();
+        bind!("width", move |_, s: String| {
+            let plain: String = text::Document::Styled(s)
+                .spans(&p, &text::RenderOptions::default())
+                .iter()
+                .map(|s| s.text.as_str())
+                .collect();
+            Ok(unicode_width::UnicodeWidthStr::width(plain.as_str()))
+        });
+        let p = palette.clone();
+        bind!("truncate", move |_, (s, n): (String, usize)| Ok(
+            text::truncate_with(&p, &s, n)
+        ));
+        let p = palette.clone();
+        bind!("strip", move |_, s: String| Ok(text::Document::Styled(s)
+            .spans(&p, &text::RenderOptions::default())
+            .iter()
+            .map(|s| s.text.as_str())
+            .collect::<String>()));
+        let p = palette.clone();
+        bind!("style", move |_, (s, t): (String, Table)| {
+            let mut tags = Vec::new();
+            for (field, tag) in [("foreground", "fg"), ("background", "bg")] {
+                if let Some(v) = t.get::<Option<String>>(field)? {
+                    tags.push(format!("{tag}={v}"));
+                }
+            }
+            for field in ["bold", "underline", "inverse"] {
+                match t.get::<Value>(field)? {
+                    Value::Nil | Value::Boolean(false) => {}
+                    Value::Boolean(true) => tags.push(field.into()),
+                    _ => return Err(err("style fields have invalid types")),
+                }
+            }
+            let value = if tags.is_empty() {
+                s
+            } else {
+                format!("[{}]{s}[/]", tags.join(" "))
+            };
+            if value.len() > message_limit {
+                return Err(err("styled text output limit exceeded"));
+            }
+            text::validate(&p, &value).map_err(err)
+        });
+        let markdown_usage = Rc::new(Cell::new(0usize));
+        let markdown_memory_limit = config.lua.memory_limit.min(config.lua.output_byte_limit);
+        bind!("markdown", move |_, s: String| {
+            let allocation = s.capacity();
+            if allocation > markdown_memory_limit.saturating_sub(markdown_usage.get()) {
+                return Err(err("Markdown document memory limit exceeded"));
+            }
+            let document = text::Document::markdown(s, message_limit).map_err(err)?;
+            markdown_usage.set(markdown_usage.get() + allocation);
+            Ok(text::LuaDocument {
+                document,
+                allocation,
+                usage: markdown_usage.clone(),
+            })
+        });
+        bind!("printable_ascii", |_, s: mlua::LuaString| Ok(s
+            .as_bytes()
+            .iter()
+            .all(|b| (0x20..=0x7e).contains(b))));
         lua.globals()
             .set("_native", api)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
@@ -366,6 +464,8 @@ impl Scripts {
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         }
         let mut s = Self {
+            palette,
+            help,
             lua,
             world,
             outbox,

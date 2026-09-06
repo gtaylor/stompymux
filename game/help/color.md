@@ -32,7 +32,8 @@ anywhere a predefined color is accepted, but cannot override a CSS/X11 name.
 BattleTech maps, status displays, menus, and notifications use the same named
 palette.
 
-Formatting tags are `[bold]`, `[blink]`, `[underline]`, and `[inverse]`. They
+Formatting tags include `[bold]`, `[italic]`, `[blink]`, `[underline]`,
+`[overline]`, `[strikethrough]`, and `[inverse]`. They
 can share a tag with colors, as in `[fg=blue bg=white bold]`. One `[/]` closes
 everything opened by that tag. `[reset]` closes all active styles. Write `[[`
 to display a literal `[` character.
@@ -57,3 +58,8 @@ negotiated behavior. `color off`, `color 16`, `color 256`, and
 `color truecolor` override it for the current connection. An override is
 useful when a client reports the wrong capability or when a screen-reader user
 explicitly wants styled output. The player ANSI flag must still be enabled.
+
+In stompymux-rs, Markdown is an explicit help/Lua document format. It does not
+change the bracket language used by ordinary game output. Markdown examples in
+code spans or blocks display literally. Width and truncation use Unicode display
+columns and preserve whole grapheme clusters.

@@ -13,7 +13,7 @@ fn response(ctx: &CommandContext<'_>, result: Result<String>) -> Result<Action> 
     ctx.scripts
         .outbox
         .borrow_mut()
-        .push((ctx.player, result.unwrap_or_else(|e| e.to_string())));
+        .push((ctx.player, result.unwrap_or_else(|e| e.to_string()).into()));
     Ok(Action::Continue)
 }
 /// Handle the @list command after the registry permission check.
@@ -142,7 +142,10 @@ pub(super) fn look(ctx: &CommandContext<'_>, _: &CommandInput) -> Result<Action>
     let text = ctx
         .scripts
         .appearance(ctx.player, ctx.location()?, ctx.session)?;
-    ctx.scripts.outbox.borrow_mut().push((ctx.player, text));
+    ctx.scripts
+        .outbox
+        .borrow_mut()
+        .push((ctx.player, text.into()));
     Ok(Action::Continue)
 }
 /// Speak to occupants of the immediate location.
@@ -220,11 +223,13 @@ fn movement_response(ctx: &CommandContext<'_>, result: Result<()>) -> Result<Act
         ctx.scripts
             .outbox
             .borrow_mut()
-            .push((ctx.player, error.to_string()));
+            .push((ctx.player, error.to_string().into()));
     }
     Ok(Action::Continue)
 }
 fn broadcast_speech(s: &Scripts, player: ObjectId, room: ObjectId, message: &str) {
+    // C speech strips user formatting; escape the resulting literal before composing the line.
+    let message = crate::text::escape(&crate::text::plain_with(&s.palette, message));
     let w = s.world.borrow();
     let p = &w.objects[&player];
     if p.flags.contains(crate::flags::Flag::Gagged) {
@@ -244,7 +249,8 @@ fn broadcast_speech(s: &Scripts, player: ObjectId, room: ObjectId, message: &str
                 format!("You say, \"{message}\"")
             } else {
                 format!("{} says, \"{message}\"", p.name)
-            },
+            }
+            .into(),
         ));
     }
 }
@@ -273,4 +279,14 @@ pub(super) fn sessions(_: &CommandContext<'_>, input: &CommandInput) -> Result<A
 /// Inspect negotiated options for every session belonging to a player.
 pub(super) fn telnet(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     Ok(Action::Telnet(input.args.clone()))
+}
+
+/// Inspect or change the invoking connection's rendering preference.
+pub fn color(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    Ok(Action::Color(input.args.clone()))
+}
+
+/// Resolve a help topic without invoking Lua or writing the database.
+pub fn help(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    Ok(Action::Help(input.args.clone()))
 }
