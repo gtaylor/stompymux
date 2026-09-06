@@ -1,0 +1,289 @@
+# stompymux.toml - MUX configuration file
+# ----------------------------------------------------------------------------
+# From within this file, you can change much about the way your game behaves.
+# Some directives are clearly labeled and described, others are not. Others
+# aren't even listed in this file. For a complete list with descriptions,
+# please see docs/content/docs/configuration/stompymux-toml.md.
+# ----------------------------------------------------------------------------
+
+# Include the stock command and flag aliases. Add local
+# aliases in the [aliases.*] tables below instead of editing aliases.toml -
+# this file's own keys always win over anything pulled in via `include`.
+include = ["aliases.toml"]
+
+# -----------------------------------------------
+#  SQLite game database
+# -----------------------------------------------
+
+[database]
+# SQLite database file holding persistent game state.
+game_database = "data/stompymux.db"
+# Directory containing BattleTech unit template files.
+mech_database = "mechs"
+# Directory containing map template files.
+map_database = "maps"
+# Seconds between automatic database dumps.
+dump_interval = 1200
+# Whether to use a child process when writing database dumps.
+fork_dump = true
+# Message displayed to players when a database dump begins.
+# dump_message = "BattletechMUX : Saving Database. Game will pause."
+# Message displayed to players after a database dump finishes.
+# postdump_message = "BattletechMUX : Database Saved."
+
+# -----------------------------------------------
+#  Lua runtime
+# -----------------------------------------------
+
+[lua]
+# Directory containing global and object Lua modules.
+directory = "lua"
+# Maximum memory, in bytes, permitted for the Lua VM.
+memory_limit = 67108864
+# Maximum bytes in one persistent Lua state string.
+state_value_limit = 65536
+# Maximum persistent Lua state entries on one object.
+state_entry_limit = 1024
+# Maximum total persistent Lua state bytes on one object.
+state_object_limit = 1048576
+# Player-facing Lua callback errors: off, wizards, or all.
+error_reporting = "wizards"
+
+# -----------------------------------------------
+#  Important Directives (Look these over!)
+# -----------------------------------------------
+
+[server]
+# The port you want your game to run on.
+port = 5555
+# The name returned by mudname().
+mud_name = "Big Stompy Robot Game"
+
+# -----------------------------------------------
+#  Styled-text named colors
+# -----------------------------------------------
+
+# RGB channels range from 0 through 255. Names are case-insensitive and must
+# not conflict with a built-in CSS/X11 color. Each key defines a custom name
+# for [fg=NAME], [color=NAME], and [bg=NAME] markup.
+[colors]
+bright-black = [127, 127, 127]
+bright-red = [255, 0, 0]
+bright-green = [0, 255, 0]
+bright-yellow = [255, 255, 0]
+bright-blue = [92, 92, 255]
+bright-magenta = [255, 0, 255]
+bright-cyan = [0, 255, 255]
+bright-white = [255, 255, 255]
+stompy-orange = [255, 112, 0]
+
+# Session-scoped Mudlet OSC 8 presets. Values use the same flattened
+# directives accepted inside styled link tags.
+[osc8.presets]
+osc8-demo-button = 'color=white bg=green bold hover.bg=darkgreen'
+osc8-demo-danger = 'color=white bg=red bold hover.bg=darkred disabled.strikethrough'
+
+# -----------------------------------------------
+#  Define local aliases/parameters/whatnot here.
+# -----------------------------------------------
+
+[battletech]
+# Allow players to use LOADCARGO, UNLOADCARGO, MANIFEST, and STORES.
+allow_cargo_commands = true
+# Overall repair-time multiplier, from 0.0 through 10.0. Zero makes newly
+# started repairs complete on the event scheduler's next one-second tick.
+techtime_multiplier = 1.0
+# Allow units that lose armor or ammunition to exceed their normal maximum speed.
+dynspeed = 0
+# To-hit penalty applied when firing at a dug-in unit.
+digbonus = 2
+# Apply the dug-in to-hit penalty only when attacking a target's front side.
+dig_only_fs = 1
+# Armor percentage below which through-armor criticals may occur.
+critlevel = 66
+# Enable vehicle critical-hit handling; zero disables it.
+vcrit = 101
+# Critical-hit rules: -1 for MaxTech, 0 for Semi-FASA, 1 for FASA.
+fasacrit = -1
+# Allow players to self-destruct a unit by exploding its reactor.
+explode_reactor = 1
+# Allow players to self-destruct a unit by exploding its ammunition.
+explode_ammo = 1
+# Allow players to abort a self-destruction sequence after starting it.
+explode_stop = 0
+# Seconds for reactor self-destruction; ammunition self-destruction takes half as long.
+explode_time = 120
+# Enable extended weapon ranges, up to twice a weapon's medium range.
+erange = 0
+# Hit-arc rules: 0 for Total Warfare, 1 for classic BTMUX, 2 for BattleMech Manual.
+hit_arcs = 0
+# Enable MechWarrior embark/disembark behavior and experience loss.
+ic = 0
+# Use the pilot's piloting skill for physical-attack to-hit rolls.
+phys_use_pskill = 1
+# Speed-reduction rules while turning: 0 disables them, 1 is legacy, 2 is facing-based.
+slowdown = 2
+# Apply FASA turning rules and their associated to-hit modifier.
+fasaturn = 0
+# Enable additional terrain movement restrictions and checks.
+newterrain = 0
+# Use the newer charge movement, damage, and distance rules.
+newcharge = 1
+# Reduce vehicle movement points rather than setting speed to zero for most vehicle crits.
+tankfriendly = 0
+# Prevent vehicles from taking crash damage.
+tankshield = 0
+# Use skid-based piloting checks when colliding with cliffs or drops.
+skidcliff = 1
+# Require units to be stalled before non-wizard players can perform serious repairs.
+limitedrepairs = 1
+# Database object that stores destroyed units.
+usedmechstore = 3
+# Enable catastrophic explosions after a third engine critical hit.
+stackpole = 1
+# Database object to which players are moved after death.
+afterlife_dbref = 5
+
+# -----------------------------------------------
+#  XP System
+# -----------------------------------------------
+
+[battletech.xp]
+# Select the XP system: 0 for the current system, 1 for the legacy system.
+oldxpsystem = 0
+# Apply the to-hit-number modifier in the current weapon XP calculation.
+bthmod = 200
+# Apply a recycle-time modifier in the current weapon XP calculation.
+vrtmod = 1
+# XP multiplier for missile weapons.
+missilemod = 69
+# XP multiplier for ammunition and ballistic weapons.
+ammomod = 42
+# Damage divisor used by the current weapon XP formula.
+defaultweapdam = 3
+# Reference weapon Battle Value used by the current weapon XP formula.
+defaultweapbv = 70
+# Overall XP multiplier; 100 represents the standard rate.
+modifier = 100
+
+# -----------------------------------------------
+#  Base MUX Configs
+# -----------------------------------------------
+
+[mux]
+idle_interval = 99999
+# Amount of time a player must be idle before being idlekicked.
+idle_timeout = 99999999
+# The number of commands to be run from queue when there is net traffic.
+# Lua parents assigned to newly created objects. Paths are relative to
+# game/lua/object_logic.
+default_thing_lua_parent = "default_thing.lua"
+default_room_lua_parent = "default_room.lua"
+default_exit_lua_parent = "default_exit.lua"
+default_player_lua_parent = "default_player.lua"
+# Flags that are set on players after creation.
+default_player_flags = ["ansi", "in_character"]
+# Flags that are set on exits after creation.
+default_exit_flags = ["no_command"]
+# Flags that are set on rooms after creation.
+default_room_flags = ["no_command"]
+# Flags that are set on things after creation.
+default_thing_flags = []
+# Room where players start after creation.
+player_starting_room = 4
+# Default home for new players.
+player_starting_home = 4
+# Interval for checking idle players.
+command_queue_active_chunk = 100
+# Number of commands to be run from queue when there is no net traffic.
+command_queue_idle_chunk = 200
+# Command quota per player.
+command_quota_increment = 1000
+# Milliseconds between command-quota refills.
+command_quota_interval = 50
+
+# -----------------------------------------------
+#  Password and Login Security
+# -----------------------------------------------
+
+[security]
+# Maximum permitted player password length.
+player_password_length_limit = 64
+# Argon2id CPU work factor used when hashing passwords.
+password_hash_opslimit = 3
+# Argon2id memory work factor in bytes used when hashing passwords.
+password_hash_memlimit = 12582912
+# Password attempts a source address may make before it is throttled.
+login_attempt_burst = 3
+# Seconds required for a throttled source address to regain one attempt.
+login_attempt_refill = 10
+# Maximum password hash operations accepted across the server per second.
+login_hash_limit = 5
+
+# -----------------------------------------------
+#  Player Names
+# -----------------------------------------------
+
+[names]
+# Maximum number of characters in a newly registered player name.
+maximum_length = 30
+# Disallow player names matching wildcard patterns. For example:
+# bad = ["Admin*", "*wizard*"]
+
+# -----------------------------------------------
+#  Site Permissions
+# -----------------------------------------------
+
+[sites]
+# Example: Forbid this site from connecting.
+# forbid = [ { address = "216.184.159.82", mask = "255.255.255.255" } ]
+
+# -----------------------------------------------
+#  Command Security
+# -----------------------------------------------
+
+# Limit commands access.
+[access.commands]
+#"some_command" = "wizard"
+
+# -----------------------------------------------
+#  Logging Options
+# -----------------------------------------------
+
+[logging]
+# Controls extra data written with each log entry: flags, location, timestamp.
+log_options = ["flags", "location", "timestamp"]
+
+[logging.topics]
+# Write account usage information when a player logs out.
+accounting = false
+# Write every command entered by any player.
+all_commands = false
+# Write commands entered by players marked SUSPECT.
+suspect_commands = false
+# Write commands the server does not recognize.
+bad_commands = false
+# Write buffer-pool allocation and release activity.
+buffer_alloc = false
+# Write internal server bugs and crash reports.
+bugs = true
+# Write normal database checkpoint activity.
+checkpoints = false
+# Write runtime changes to configuration directives.
+config_changes = true
+# Write player-character creation events.
+create = true
+# Write successful logins and logouts.
+logins = true
+# Write network connections and disconnections.
+network = true
+# Write detected runtime inconsistencies and other operational problems.
+problems = true
+# Write security-related events, including failed authentication attempts.
+security = true
+# Write shouts, broadcasts, and other global speech.
+shouts = false
+# Write nonfatal errors and progress during server startup.
+startup = true
+# Write sensitive or dangerous wizard actions.
+wizard = false

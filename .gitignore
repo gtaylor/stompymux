@@ -1,0 +1,7 @@
+/target/
+/game/stompymux
+/game/logs/
+/game/data/*-wal
+/game/data/*-shm
+/game/data/stompymux-rs.db*
+/game/bootstrap-credentials.txt
