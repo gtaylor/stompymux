@@ -5,6 +5,7 @@ mod loading;
 mod packages;
 mod runtime;
 mod sandbox;
+pub mod schedules;
 pub(crate) mod transactions;
 
 use crate::{
@@ -34,6 +35,8 @@ pub struct Scripts {
     pub commands: crate::commands::CommandRegistry,
     /// Object module tables keyed by relative parent path.
     parents: BTreeMap<String, Table>,
+    /// Captured, validated schedules, independent of mutable module tables.
+    pub schedules: schedules::Catalog,
     /// Shared instruction budget also captured by the VM hook.
     budget: sandbox::InstructionBudget,
     /// Deferred capability diagnostics discovered during module loading.

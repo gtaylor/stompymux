@@ -186,6 +186,18 @@ pub async fn run(
     listener: TcpListener,
     shutdown: impl Future<Output = ShutdownRequest>,
 ) -> Result<()> {
+    run_with_schedule_clock(c, scripts, listener, shutdown, accounts::now).await
+}
+
+/// Run with an injected schedule-only UTC clock for deterministic embedding and TCP tests.
+/// Connection timeouts and authentication continue to use their normal clocks.
+pub async fn run_with_schedule_clock(
+    c: Config,
+    scripts: Scripts,
+    listener: TcpListener,
+    shutdown: impl Future<Output = ShutdownRequest>,
+    schedule_now: impl Fn() -> i64,
+) -> Result<()> {
     for warning in c.warnings.iter().chain(&scripts.warnings) {
         eprintln!("Warning: {warning}");
     }
@@ -218,8 +230,19 @@ pub async fn run(
     tokio::pin!(shutdown);
     let banner = std::fs::read_to_string(server.config.path(&server.config.mux.connect_file))
         .unwrap_or_default();
+    let mut schedules = crate::lua::schedules::Queue::default();
+    schedules.observe(
+        &server.scripts.schedules,
+        &server.scripts.world.borrow(),
+        schedule_now(),
+    );
     loop {
+        let ready = schedules.ready(schedule_now());
         tokio::select! {
+            _ = std::future::ready(()), if ready => {
+                if let Some(job)=schedules.take_due(schedule_now()) { server.scheduled(job).await; }
+                tokio::task::yield_now().await;
+            },
             request = &mut shutdown => { server.request_shutdown(request).await; },
             accepted = listener.accept() => {
                 let (stream,peer)=accepted?;
@@ -255,6 +278,7 @@ pub async fn run(
                 }}
             },
             _ = tick.tick() => {
+                schedules.observe(&server.scripts.schedules,&server.scripts.world.borrow(),schedule_now());
                 let timeout=Duration::from_secs(server.config.mux.conn_timeout);
                 let idle:Vec<_>=server.sessions.iter()
                     .filter(|(_,s)|(s.player.is_none() && s.connected.elapsed()>timeout)||s.output.is_closed()||s.failed.get())
@@ -274,6 +298,7 @@ pub async fn run(
         }
     }
     drop(listener);
+    schedules.clear();
     server.finish_shutdown().await;
 
     drop(rx);
@@ -700,6 +725,30 @@ impl Server {
             }
         }
     }
+    /// Each job is consumed once and owns its commit-before-output transaction.
+    async fn scheduled(&mut self, job: crate::lua::schedules::Job) {
+        if self.shutdown.is_some() {
+            return;
+        }
+        let before = self.scripts.world.borrow().clone();
+        match self.scripts.run_schedule(&job) {
+            Ok(true) => {
+                if self.commit(before).await {
+                    self.flush();
+                } else {
+                    eprintln!("Lua schedule persistence failed: {}", job.description());
+                }
+            }
+            Ok(false) => {}
+            Err(error) => {
+                *self.scripts.world.borrow_mut() = before;
+                self.reconcile_connections();
+                self.scripts.outbox.borrow_mut().clear();
+                eprintln!("Lua schedule failed: {error:#}");
+            }
+        }
+    }
+
     async fn commit(&mut self, before: World) -> bool {
         let after = self.scripts.world.borrow().clone();
         let result = match after.validate(&self.config) {
@@ -1082,6 +1131,17 @@ impl Server {
             }
             Ok(Action::Sessions(prefix)) => self.session_diagnostics(id, &prefix),
             Ok(Action::Telnet(player)) => self.telnet_diagnostics(id, &player),
+            Ok(Action::LuaSchedules(target)) => {
+                let bytes = self.scripts.schedules.inspect(
+                    &self.scripts.world.borrow(),
+                    p,
+                    &target,
+                    self.config.runtime.output_message_limit,
+                );
+                if let Some(session) = self.sessions.get(&id) {
+                    session.raw(bytes);
+                }
+            }
             Ok(Action::Shutdown) => self.request_shutdown(ShutdownRequest::Player(p)).await,
             Ok(Action::DbCheck) => self.dbck(id, p).await,
             Ok(Action::Find(request)) => self.find(id, p, request),

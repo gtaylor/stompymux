@@ -36,6 +36,8 @@ impl Scripts {
                 &format!("object_logic/{name}"),
                 crate::commands::CommandScope::Object(name.clone()),
             )?;
+            self.schedules
+                .register(&format!("object_logic/{name}"), &t)?;
             self.parents.insert(name, t);
         }
         let table = self
@@ -73,12 +75,6 @@ impl Scripts {
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         for p in files(&dir.join("global_logic"))? {
             let t = self.load_module(&p)?;
-            if t.contains_key("schedules")
-                .map_err(|e| anyhow::anyhow!(e.to_string()))?
-            {
-                self.warnings
-                    .push(format!("{}: schedules deferred", p.display()));
-            }
             let source = p.strip_prefix(&dir)?.to_string_lossy().replace('\\', "/");
             self.commands.register_lua(
                 &self.lua,
@@ -86,6 +82,7 @@ impl Scripts {
                 &source,
                 crate::commands::CommandScope::Global,
             )?;
+            self.schedules.register(&source, &t)?;
             self.globals.push(t);
         }
         Ok(())

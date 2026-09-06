@@ -27,3 +27,11 @@ pub mod communication;
 
 /// Binary-safe typed object state and administrative operations.
 pub mod state;
+
+/// Captured Lua scheduling and clock-driven execution primitives.
+pub use lua::schedules::{
+    Catalog as ScheduleCatalog, Cron, Definition as ScheduleDefinition, Job as ScheduledJob,
+    Queue as ScheduleQueue, jitter as schedule_jitter,
+};
+/// Embedded server entry point with a schedule-only test clock.
+pub use server::run_with_schedule_clock;

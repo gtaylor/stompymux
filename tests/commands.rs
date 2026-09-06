@@ -75,6 +75,7 @@ async fn native_catalog_permissions_and_aliases() {
             "@dbck",
             "color",
             "help",
+            "@lua",
             "@help",
             "quit",
             "home",

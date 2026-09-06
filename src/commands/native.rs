@@ -308,3 +308,15 @@ pub(super) fn help_admin(_: &CommandContext<'_>, input: &CommandInput) -> Result
         _ => Action::Reply("Invalid @help switch combination.".into()),
     })
 }
+
+/// Inspect schedules without exposing unimplemented Lua administration operations.
+pub(super) fn lua_admin(_ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    Ok(match input.switch.as_deref() {
+        None if input.args.is_empty() => Action::Reply(
+            "@lua command switches:\r\n  /schedule  Inspect active Lua schedules.".into(),
+        ),
+        Some("schedule") => Action::LuaSchedules(input.args.clone()),
+        None => Action::Reply("Usage: @lua/schedule [object or module]".into()),
+        _ => Action::Reply("Unsupported @lua switch; only /schedule is implemented.".into()),
+    })
+}

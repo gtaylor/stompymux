@@ -631,3 +631,24 @@ notifications and failure hooks. Valid denials invoke `on_fail`; teleport policy
 denials use their corresponding teleport failure events. Lock errors and invalid
 return tables cannot retain callback mutations. Channel permission bits retain
 their independent grant behavior.
+
+## Scheduled Lua events
+
+Global and object-logic modules can declare named `schedules` with a five-field
+UTC `cron` expression and a `handler(ctx)`. The supplied `example.lua` hourly
+schedule is registered at startup. Definitions are captured once; changes require
+a restart. See [Lua schedule authoring](docs/lua-schedules.md) for syntax and
+callback contexts.
+
+Matching jobs run at a deterministic offset within the first 55 seconds of their
+minute. Startup and missed minutes are skipped, expired jobs are dropped, and
+failed jobs are not retried. Each callback uses the normal resource limits and
+commits its world changes before delivering output. Shutdown cancels pending
+jobs. Garbage and GOING objects do not run schedules; HALTED and NO_COMMAND do
+not suppress them.
+
+Wizards use `@lua/schedule [object or module]` to inspect captured declarations.
+For example, `@lua/schedule global_logic/example.lua` shows the supplied hourly
+job. Inspection is private to the invoking session and performs no writes.
+Bare `@lua` lists the supported switch; reload and other `@lua` operations remain
+deferred.

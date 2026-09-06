@@ -11,6 +11,9 @@ index_style = "list_with_description"
 
 # @lua
 
+Currently, only `@lua/schedule` is implemented. The other articles below describe
+commands reserved for future implementation.
+
 `@lua` groups the Wizard-only Lua administration commands under one command.
 Type `@lua` by itself to see a short list of switches, or use one of the forms
 indexed below.

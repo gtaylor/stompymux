@@ -16,6 +16,8 @@ pub enum Action {
     /// Read-only session diagnostics.
     Sessions(String),
     Telnet(String),
+    /// Captured schedule metadata, delivered only to the invoking session.
+    LuaSchedules(String),
     /// Session-local rendering preferences and read-only help.
     Color(String),
     Help(String),

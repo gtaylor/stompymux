@@ -37,6 +37,7 @@ impl Scripts {
             globals: Vec::new(),
             commands: crate::commands::CommandRegistry::new(),
             parents: BTreeMap::new(),
+            schedules: Default::default(),
             budget,
             warnings: Vec::new(),
         };
