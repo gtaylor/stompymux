@@ -1117,11 +1117,11 @@ async fn tcp_powers_are_transactional_and_durable() {
     persistence::save(&c.database(), &w).await.unwrap();
     std::fs::write(
         d.path().join("lua/global_logic/power_failure.lua"),
-        r#"return {commands={{pattern='^power%-failure$',handler=function(ctx)
+        r#"return {commands={{name='power-failure',permission='everyone',pattern='^power%-failure$',handler=function(ctx)
         mux.world.object(4):powers():add(mux.world.powers.IDLE)
         mux.world.pemit(ctx.enactor,'SHOULD NOT APPEAR')
         error('injected power callback failure')
-    end},{pattern='^power%-status$',handler=function(ctx)
+    end},{name='power-status',permission='everyone',pattern='^power%-status$',handler=function(ctx)
         mux.world.pemit(ctx.enactor,'Power status: '..tostring(mux.world.object(4):powers():has(mux.world.powers.IDLE)))
         return true
     end}}}"#,
@@ -1502,7 +1502,7 @@ async fn tcp_find_pages_are_private_and_read_only() {
     persistence::save(&c.database(), &world).await.unwrap();
     std::fs::write(
         d.path().join("lua/global_logic/find_trap.lua"),
-        "return {commands={{pattern='^@fi',handler=function(ctx) error('find reached Lua') end}}}",
+        "return {commands={{name='find-trap',permission='everyone',pattern='^@fi',handler=function(ctx) error('find reached Lua') end}}}",
     )
     .unwrap();
     let running = Running::start(&c).await;
@@ -1617,5 +1617,58 @@ async fn tcp_find_pages_are_private_and_read_only() {
     <sqlx::SqliteConnection as sqlx::Connection>::close(db)
         .await
         .unwrap();
+    running.stop().await;
+}
+
+/// The shared registry applies native/Lua aliases and observes changed authority over TCP.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_registry_permissions_and_lua_aliases() {
+    let (d, c) = imported().await;
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    for id in [1, 2] {
+        w.accounts.get_mut(&ObjectId(id)).unwrap().hash =
+            Some(accounts::hash("secret", &c).unwrap());
+    }
+    persistence::save(&c.database(), &w).await.unwrap();
+    let path = d.path().join("stompymux.toml");
+    let original = std::fs::read_to_string(&path).unwrap();
+    std::fs::write(
+        &path,
+        format!("{original}\n[aliases.commands]\nrp='registry-probe'\nre='@examine'\n"),
+    )
+    .unwrap();
+    std::fs::write(d.path().join("lua/global_logic/registry.lua"),r#"return {commands={
+      {name='registry-probe',permission='god',pattern='^registry%-probe%s+(.*)$',handler=function(ctx,value) mux.world.pemit(ctx.enactor,'GOD probe: '..value); return true end},
+      {name='registry-probe',permission='wizard',pattern='^registry%-probe%s+(.*)$',handler=function(ctx,value) mux.world.pemit(ctx.enactor,'Wizard probe: '..value); return true end},
+      {name='registry-probe',permission='everyone',pattern='^registry%-probe%s+(.*)$',handler=function(ctx,value) mux.world.pemit(ctx.enactor,'Everyone probe: '..value); return true end}
+    }}"#).unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let running = Running::start(&c).await;
+    let mut god = Client::connect(&running).await;
+    let mut wizard = Client::connect(&running).await;
+    for (client, name) in [(&mut god, "#1"), (&mut wizard, "#2")] {
+        client.send(name).await;
+        client.until("Password: ").await;
+        client.send("secret").await;
+        client.until("Staff Nexus").await;
+    }
+    god.send("RP MiXeD words").await;
+    god.until("GOD probe: MiXeD words").await;
+    wizard.send("rp MiXeD words").await;
+    wizard.until("Wizard probe: MiXeD words").await;
+    wizard.send("RE #2").await;
+    wizard.until("Powers:").await;
+    god.send("@flag #2=!wizard").await;
+    god.until("cleared.").await;
+    wizard.send("rp after change").await;
+    wizard.until("Everyone probe: after change").await;
+    wizard.send("re/unknown #2").await;
+    wizard.until("Permission denied.").await;
+    god.send("@flag #2=wizard").await;
+    god.until("set.").await;
+    wizard.send("re/unknown #2").await;
+    wizard.until("Unsupported command switch.").await;
+    wizard.send("rp restored").await;
+    wizard.until("Wizard probe: restored").await;
     running.stop().await;
 }

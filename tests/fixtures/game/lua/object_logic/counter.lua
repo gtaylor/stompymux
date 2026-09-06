@@ -3,6 +3,8 @@
 return {
   commands = {
     {
+      name = "count",
+      permission = "everyone",
       pattern = "^count$",
       handler = function(ctx)
         local state = mux.world.object(ctx.object):state("counter")

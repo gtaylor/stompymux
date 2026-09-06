@@ -19,6 +19,8 @@ return {
   internal_appearance = ObjectAppearances.render_internal_appearance,
   commands = {
     {
+      name = "hello",
+      permission = "everyone",
       pattern = "^hello%s*(.*)$",
       handler = hello_command,
     },

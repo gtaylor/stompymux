@@ -58,16 +58,6 @@ function mux.session.connected_players()
 end
 function mux.session.who_summary() return _who_summary or {hidden=0,record=0} end
 function mux.session.flow_start() error('Interactive Lua flows are unavailable in this milestone') end
-function _dispatch(module,ctx,line)
- for _,command in ipairs(module.commands or {}) do
-  local captures={string.find(line,command.pattern)}
-  if captures[1] then
-   table.remove(captures,1);table.remove(captures,1)
-   if command.handler(ctx,unpack(captures))==true then return true end
-  end
- end
- return false
-end
 package.loaded.mux=mux
 
 -- Restrict require to game packages and safe built-ins. Do not allow scripts to

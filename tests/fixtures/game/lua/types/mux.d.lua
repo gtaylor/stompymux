@@ -1341,3 +1341,10 @@ mux.text = mux_text
 mux.world = mux_world
 
 return mux
+
+---A command declaration registered when a game module loads.
+---@class MuxCommandDefinition
+---@field name string Canonical command token, without whitespace or slash.
+---@field permission 'everyone'|'wizard'|'god' Required actor authority; restricted entries are skipped.
+---@field pattern string Lua string.find pattern.
+---@field handler fun(ctx: table, ...): boolean? True consumes the input; false/nil continues dispatch.

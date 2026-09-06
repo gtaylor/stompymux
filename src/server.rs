@@ -514,6 +514,14 @@ impl Server {
         let before = self.scripts.world.borrow().clone();
         match commands::run(&self.scripts, &self.config, p, id.0, line) {
             Ok(Action::Find(request)) => self.find(id, p, request),
+            Ok(Action::Reply(text)) => {
+                if let Some(session) = self.sessions.get(&id) {
+                    session.raw(crate::find::bounded_error(
+                        &text,
+                        self.config.runtime.output_message_limit,
+                    ));
+                }
+            }
             Ok(Action::Quit) => {
                 self.tell(
                     id,

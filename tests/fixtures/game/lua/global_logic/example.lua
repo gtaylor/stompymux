@@ -4,6 +4,8 @@
 return {
   commands = {
     {
+      name = "global-hello",
+      permission = "everyone",
       pattern = "^global%-hello$",
       handler = function(ctx)
         mux.world.pemit(ctx.enactor, "Hello, world, from a global Lua command!")

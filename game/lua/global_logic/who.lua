@@ -37,6 +37,8 @@ end
 return {
   commands = {
     {
+      name = "who",
+      permission = "everyone",
       pattern = "^[Ww][Hh][Oo](.*)$",
       handler = function(ctx, query)
         local prefix = query:match("^%s*(.-)%s*$"):lower()

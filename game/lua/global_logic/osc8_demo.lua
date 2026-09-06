@@ -36,6 +36,8 @@ local lines = {
 return {
   commands = {
     {
+      name = "osc8demo",
+      permission = "everyone",
       pattern = "^[Oo][Ss][Cc]8[Dd][Ee][Mm][Oo]$",
       handler = function(ctx)
         for _, line in ipairs(lines) do

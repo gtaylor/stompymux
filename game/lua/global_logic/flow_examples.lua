@@ -6,6 +6,8 @@
 return {
   commands = {
     {
+      name = "flow-demo",
+      permission = "everyone",
       pattern = "^flow%-demo%s+(%S+)$",
       handler = function(ctx, choice)
         local starters = { confirm = "confirm", menu = "menu", signup = "signup_name" }

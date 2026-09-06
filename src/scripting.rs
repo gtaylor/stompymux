@@ -15,6 +15,8 @@ pub struct Scripts {
     pub world: SharedWorld,
     pub outbox: Outbox,
     globals: Vec<Table>,
+    /// Immutable native and Lua command catalog captured during module loading.
+    pub commands: crate::commands::CommandRegistry,
     parents: BTreeMap<String, Table>,
     budget: Rc<Cell<usize>>,
     instruction_limit: usize,
@@ -368,6 +370,7 @@ impl Scripts {
             world,
             outbox,
             globals: Vec::new(),
+            commands: crate::commands::CommandRegistry::new(),
             parents: BTreeMap::new(),
             budget,
             instruction_limit: config.lua.instruction_limit,
@@ -380,6 +383,12 @@ impl Scripts {
                 .to_string_lossy()
                 .replace('\\', "/");
             let t = s.load_module(&p)?;
+            s.commands.register_lua(
+                &s.lua,
+                &t,
+                &format!("object_logic/{name}"),
+                crate::commands::CommandScope::Object(name.clone()),
+            )?;
             s.parents.insert(name, t);
         }
         let table = s
@@ -423,6 +432,9 @@ impl Scripts {
                 s.warnings
                     .push(format!("{}: schedules deferred", p.display()));
             }
+            let source = p.strip_prefix(&dir)?.to_string_lossy().replace('\\', "/");
+            s.commands
+                .register_lua(&s.lua, &t, &source, crate::commands::CommandScope::Global)?;
             s.globals.push(t);
         }
         Ok(s)
@@ -645,11 +657,6 @@ impl Scripts {
             .map_err(|e| anyhow::anyhow!(e.to_string()))
     }
     pub fn dispatch(&self, player: ObjectId, session: u64, line: &str) -> Result<bool> {
-        let dispatch: Function = self
-            .lua
-            .globals()
-            .get("_dispatch")
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         let room = self.world.borrow().objects[&player].location;
         let objects: Vec<ObjectId> = {
             let w = self.world.borrow();
@@ -665,31 +672,74 @@ impl Scripts {
         };
         for id in objects {
             let parent = self.world.borrow().objects[&id].lua_parent.clone();
-            if let Some(t) = self.parents.get(&parent) {
-                let ctx = self.context(Some(player), Some(id), Some(session))?;
-                ctx.set("scope", Value::Nil)
-                    .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-                ctx.set("command", line)
-                    .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-                self.budget.set(self.instruction_limit);
-                if dispatch
-                    .call::<bool>((t.clone(), ctx, line))
-                    .map_err(|e| anyhow::anyhow!(e.to_string()))?
-                {
-                    return Ok(true);
-                }
+            if self.dispatch_scope(
+                player,
+                session,
+                line,
+                Some(id),
+                &crate::commands::CommandScope::Object(parent),
+            )? {
+                return Ok(true);
             }
         }
-        for t in &self.globals {
-            let ctx = self.context(Some(player), None, Some(session))?;
-            ctx.set("scope", "global")
+        self.dispatch_scope(
+            player,
+            session,
+            line,
+            None,
+            &crate::commands::CommandScope::Global,
+        )
+    }
+    /// Execute eligible captured Lua handlers in declaration order with per-module budgets.
+    fn dispatch_scope(
+        &self,
+        player: ObjectId,
+        session: u64,
+        line: &str,
+        object: Option<ObjectId>,
+        scope: &crate::commands::CommandScope,
+    ) -> Result<bool> {
+        use crate::commands::CommandHandler;
+        let mut source = None;
+        let mut context: Option<Table> = None;
+        for definition in self.commands.definitions().filter(|d| &d.scope == scope) {
+            if !definition.permission.allows(&self.world.borrow(), player) {
+                continue;
+            }
+            if source != Some(definition.source.as_str()) {
+                self.budget.set(self.instruction_limit);
+                source = Some(definition.source.as_str());
+                let ctx = self.context(Some(player), object, Some(session))?;
+                ctx.set(
+                    "scope",
+                    if object.is_none() {
+                        Value::String(
+                            self.lua
+                                .create_string("global")
+                                .map_err(|e| anyhow::anyhow!(e.to_string()))?,
+                        )
+                    } else {
+                        Value::Nil
+                    },
+                )
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-            ctx.set("command", line)
-                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-            self.budget.set(self.instruction_limit);
-            if dispatch
-                .call::<bool>((t.clone(), ctx, line))
-                .map_err(|e| anyhow::anyhow!(e.to_string()))?
+                ctx.set("command", line)
+                    .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+                context = Some(ctx);
+            }
+            let ctx = context
+                .as_ref()
+                .expect("context initialized for eligible module")
+                .clone();
+            if let CommandHandler::Lua(handler) = &definition.handler
+                && handler.call::<bool>((ctx, line)).map_err(|error| {
+                    anyhow::anyhow!(
+                        "{}: command {}: {}",
+                        definition.source,
+                        definition.declaration.unwrap_or(0),
+                        error
+                    )
+                })?
             {
                 return Ok(true);
             }

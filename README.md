@@ -235,3 +235,46 @@ to the original upper bound. Searches never write the database or run callbacks.
 `runtime.find_page_size` defaults to 20. The output byte limit may shorten pages
 or truncate displayed names while preserving identity and flags. If a row and
 footer cannot fit, the search remains available for retry.
+
+## Command registration
+
+Native and Lua commands share an enumerable registry of names, permissions,
+matchers and sources. Native definitions in `src/commands/registry.rs` register
+function pointers; command handlers live separately from dispatch and target
+matching. Permission bits are `EVERYONE`, `WIZARD` and `GOD`; combining restricted
+bits requires GOD. Object control, flag policies and movement locks still apply.
+
+Lua declarations now require explicit metadata:
+
+```lua
+return {
+  commands = {
+    {
+      name = "greet",
+      permission = "everyone", -- also "wizard" or "god"
+      pattern = "^greet%s+(.*)$",
+      handler = function(ctx, name)
+        mux.world.pemit(ctx.enactor, "Hello, " .. name)
+        return true
+      end,
+    },
+  },
+}
+```
+
+Missing metadata or malformed patterns fail module loading with the source and
+command index. Names are single tokens without `/`; the registry normalizes
+names to lowercase. Lua patterns retain their original case behavior. Patterns,
+permissions and handlers are captured at load time; editing the returned module
+table does not change registration.
+
+Configured aliases work for both native and Lua commands, preserving arguments.
+Full-token aliases take precedence, followed by base-token aliases for switches;
+there is no recursive alias expansion. Unaliased Lua commands see original input.
+
+Native commands run first and reject unauthorized access or unsupported switches
+without falling through. Lua tries eligible local objects by dbref, then global
+modules in lexical order, preserving declaration order within modules. Restricted
+Lua entries are skipped; a handler returning false/nil allows later handlers and
+then exits to match. NO_COMMAND and HALTED still exclude object-local commands.
+The metadata API prepares for `@list commands`; that command is not added yet.
