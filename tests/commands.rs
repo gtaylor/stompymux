@@ -138,6 +138,21 @@ async fn native_catalog_permissions_and_aliases() {
         Action::Reply(_)
     ));
 }
+
+/// Omitted and whitespace-only targets use the same matching as explicit `here`.
+#[tokio::test(flavor = "current_thread")]
+async fn examine_defaults_to_here() {
+    let (_d, c, w) = fixture().await;
+    let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    let expected = run(&s, &c, 2, "@examine here");
+    assert!(expected.contains("Staff Nexus"));
+    for command in ["@examine", "@examine   ", "@EX"] {
+        assert_eq!(run(&s, &c, 2, command), expected, "{command}");
+    }
+    assert!(run(&s, &c, 2, "@examine me").contains("Wizard(#2)"));
+    assert!(run(&s, &c, 4, "@examine").contains("Permission denied."));
+}
+
 #[test]
 fn lua_metadata_is_required_and_patterns_are_validated() {
     let lua = mlua::Lua::new();

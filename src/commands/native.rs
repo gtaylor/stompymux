@@ -47,12 +47,14 @@ pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
         })(),
     )
 }
-/// Handle the @examine command after the registry permission check.
+
+/// Inspect an explicit target or the caller's location when no argument is supplied.
 pub(super) fn examine(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     response(
         ctx,
         (|| {
-            let args = input.args.as_str();
+            let args = input.args.trim();
+            let args = if args.is_empty() { "here" } else { args };
             let player = ctx.player;
             let w = ctx.scripts.world.borrow();
             let target = admin_target(&w, player, args)?;
@@ -68,6 +70,7 @@ pub(super) fn examine(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
         })(),
     )
 }
+
 /// Handle the @power command after the registry permission check.
 pub(super) fn power(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     response(
