@@ -4,7 +4,7 @@ mod registry;
 mod target;
 use crate::{
     config::Config,
-    scripting::Scripts,
+    lua::Scripts,
     world::{Kind, ObjectId},
 };
 use anyhow::{Context, Result};

@@ -7,9 +7,8 @@ use std::{
 use stompymux_rs::{
     accounts,
     config::Config,
-    persistence,
-    scripting::Scripts,
-    server,
+    lua::Scripts,
+    persistence, server,
     telnet::{Decoder, Input},
     world::{ObjectId, Scalar},
 };

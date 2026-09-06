@@ -471,3 +471,25 @@ Hosts may supply presentation for `.mux-inverse` and `.mux-blink` and implement
 action handling. No HTTP server, browser interaction or network image fetching
 is included. HTML exceeding its byte limit returns an error rather than a broken
 fragment.
+
+### Server-owned Lua code
+
+`src/lua` owns the LuaJIT runtime. Runtime construction installs the shared
+instruction/memory budgets, registers built-ins, seals the existing sandbox,
+then loads object and global game modules in lexical order. Loading, callbacks
+and scoped command invocation live in separate modules; command metadata stays
+in the command registry. Rust callers use `stompymux_rs::lua::Scripts`.
+
+`src/lua/packages` contains one directory per built-in API area: `world`,
+`session`, `config`, `text` and `comsys`. Each directory owns its Rust bindings
+and embedded Lua facade. World bindings also own flag/power userdata; text
+bindings own immutable Markdown userdata and its allocation accounting. Domain
+models and text renderers remain independent of those Lua adapters. Registration
+passes shared dependencies explicitly and assembles the same `mux` table returned
+by `require("mux")`; it adds no new require paths.
+
+The Lua facades and sandbox script are compiled into the binary. They do not
+require the source tree at runtime. Editable object/global scripts and helper
+packages such as `access_policy` and `object_appearances` remain in the configured
+game Lua directory. Dotted helper imports still resolve through
+`packages/?.lua`, independently of the built-in source layout.

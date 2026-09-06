@@ -1,0 +1,3 @@
+-- Effective configuration lookup.
+local native, mux, id = ...
+mux.config = {get = native.config}

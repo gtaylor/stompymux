@@ -1,7 +1,7 @@
 //! Transactional container movement shared by home, teleport and exit travel.
 use crate::{
     flags::Flag,
-    scripting::Scripts,
+    lua::Scripts,
     world::{Kind, ObjectId},
 };
 use anyhow::{Result, ensure};

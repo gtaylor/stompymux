@@ -7,8 +7,8 @@ use stompymux_rs::{
     },
     config::Config,
     flags::Flag,
+    lua::Scripts,
     persistence,
-    scripting::Scripts,
     world::{ObjectId, World},
 };
 

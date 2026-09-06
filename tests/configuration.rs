@@ -9,9 +9,8 @@ use std::{
 use stompymux_rs::{
     accounts,
     config::{Config, Flag, catalog::KEYS},
-    persistence,
-    scripting::Scripts,
-    server,
+    lua::Scripts,
+    persistence, server,
     telnet::{Decoder, Input},
     world::World,
 };

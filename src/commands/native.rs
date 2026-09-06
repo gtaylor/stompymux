@@ -3,8 +3,8 @@ use super::target::admin_target;
 use super::{Action, CommandContext, CommandInput};
 use crate::{
     flags::{self, Flag},
+    lua::Scripts,
     movement::{self, Route},
-    scripting::Scripts,
     world::{Kind, ObjectId},
 };
 use anyhow::{Context, Result, ensure};

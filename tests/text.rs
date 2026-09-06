@@ -244,7 +244,7 @@ async fn lua_documents_are_immutable_bounded_and_palette_aware() {
     )
     .unwrap();
     let c = stompymux_rs::config::Config::load(temp.path()).unwrap();
-    let s = stompymux_rs::scripting::Scripts::new(&c, Rc::new(RefCell::new(world))).unwrap();
+    let s = stompymux_rs::lua::Scripts::new(&c, Rc::new(RefCell::new(world))).unwrap();
     s.lua.load(r#"
       local d=mux.text.markdown('**value**')
       assert(not pcall(function() d.source='changed' end))
