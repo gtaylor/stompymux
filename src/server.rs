@@ -1,3 +1,4 @@
+//! Serialized world owner, connection lifecycle and common graceful shutdown coordinator.
 use crate::{
     accounts,
     commands::{self, Action},
@@ -28,10 +29,27 @@ use zeroize::Zeroizing;
 // login_hash_limit is measured per second; this is its unit, not a tunable.
 const HASH_RATE_WINDOW: Duration = Duration::from_secs(1);
 
+/// Origin of a request handled exclusively by the world owner.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ShutdownRequest {
+    /// Interrupt signal.
+    Sigint,
+    /// Termination signal.
+    Sigterm,
+    /// Authenticated administrator.
+    Player(ObjectId),
+}
+
 enum Event {
     Bytes(SessionId, Vec<u8>),
     Gone(SessionId),
-    Authenticated(SessionId, String, bool, Result<Option<String>>),
+    Authenticated(
+        SessionId,
+        String,
+        bool,
+        Option<ObjectId>,
+        Result<Option<String>>,
+    ),
 }
 struct Bucket {
     tokens: usize,
@@ -45,6 +63,10 @@ struct Server {
     addresses: BTreeMap<IpAddr, Bucket>,
     hashes: Bucket,
     inflight: usize,
+    /// Accepted request; also prevents further command and authentication dispatch.
+    shutdown: Option<ShutdownRequest>,
+    /// A shutdown write failed, even if a later snapshot succeeds.
+    shutdown_failed: bool,
 }
 
 pub async fn prepare(c: &Config) -> Result<Scripts> {
@@ -53,7 +75,10 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
     let world = if existing {
         let path = c.database();
         let timeout = c.database.busy_timeout_ms;
-        persistence::load_with_timeout(&path, timeout).await?
+        let loaded = persistence::load_with_timeout(&path, timeout).await?;
+        loaded.validate(c)?;
+        persistence::validate_lists(&path, &loaded, timeout).await?;
+        loaded
     } else {
         World::default()
     };
@@ -142,7 +167,7 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
     scripts.outbox.borrow_mut().clear();
     Ok(scripts)
 }
-pub async fn serve(c: Config, shutdown: impl Future<Output = ()>) -> Result<()> {
+pub async fn serve(c: Config, shutdown: impl Future<Output = ShutdownRequest>) -> Result<()> {
     let address = c.listener();
     let scripts = prepare(&c).await?;
     let listener = TcpListener::bind(address).await?;
@@ -152,7 +177,7 @@ pub async fn run(
     c: Config,
     scripts: Scripts,
     listener: TcpListener,
-    shutdown: impl Future<Output = ()>,
+    shutdown: impl Future<Output = ShutdownRequest>,
 ) -> Result<()> {
     for warning in c.warnings.iter().chain(&scripts.warnings) {
         eprintln!("Warning: {warning}");
@@ -170,6 +195,8 @@ pub async fn run(
             at: Instant::now() - HASH_RATE_WINDOW,
         },
         inflight: 0,
+        shutdown: None,
+        shutdown_failed: false,
     };
     let mut next = 0;
     let mut tick = tokio::time::interval(Duration::from_millis(
@@ -183,7 +210,7 @@ pub async fn run(
         .unwrap_or_default();
     loop {
         tokio::select! {
-            _ = &mut shutdown => break,
+            request = &mut shutdown => { server.request_shutdown(request).await; },
             accepted = listener.accept() => {
                 let (stream,peer)=accepted?;
                 if server.sessions.len()>=server.config.runtime.max_connections { drop(stream); continue; }
@@ -209,9 +236,8 @@ pub async fn run(
                 if let Some(event)=event { match event {
                     Event::Gone(id) => server.disconnect(id).await?,
                     Event::Bytes(id,bytes) => server.input(id,&bytes).await?,
-                    Event::Authenticated(id,name,create,result) => {
-                        server.inflight=server.inflight.saturating_sub(1);
-                        server.authenticated(id,name,create,result).await?;
+                    Event::Authenticated(id,name,create,identity,result) => {
+                        server.authentication_result(id,name,create,identity,result).await?;
                     }
                 }}
             },
@@ -230,10 +256,13 @@ pub async fn run(
             },
             _ = tasks.join_next(), if !tasks.is_empty() => {}
         }
+        if server.shutdown.is_some() {
+            break;
+        }
     }
-    for id in server.sessions.keys().copied().collect::<Vec<_>>() {
-        server.disconnect(id).await?;
-    }
+    drop(listener);
+    server.finish_shutdown().await;
+
     drop(rx);
     if tokio::time::timeout(
         Duration::from_millis(server.config.runtime.shutdown_timeout_ms),
@@ -245,6 +274,10 @@ pub async fn run(
         tasks.abort_all();
         while tasks.join_next().await.is_some() {}
     }
+    anyhow::ensure!(
+        !server.shutdown_failed,
+        "shutdown completed with unsaved changes; see server diagnostics"
+    );
     Ok(())
 }
 async fn connection(
@@ -259,10 +292,10 @@ async fn connection(
     let mut buffer = [0u8; READ_BUFFER_SIZE];
     loop {
         tokio::select! {
-            result = read.read(&mut buffer) => match result {
+            result = read.read(&mut buffer), if !events.is_closed() => match result {
                 Ok(0) | Err(_) => break,
                 Ok(n) => {
-                    if events.send(Event::Bytes(id,buffer[..n].to_vec())).await.is_err() { break; }
+                    let _ = events.send(Event::Bytes(id,buffer[..n].to_vec())).await;
                 }
             },
             message = output.recv() => match message {
@@ -277,6 +310,70 @@ async fn connection(
     let _ = events.send(Event::Gone(id)).await;
 }
 impl Server {
+    /// Validate and save before accepting command shutdown; signals proceed on failure.
+    async fn request_shutdown(&mut self, request: ShutdownRequest) {
+        if self.shutdown.is_some() {
+            return;
+        }
+        let snapshot = self.scripts.world.borrow().clone();
+        let result = match snapshot.validate(&self.config) {
+            Ok(()) => {
+                persistence::persist(
+                    self.config.database(),
+                    snapshot,
+                    self.config.database.busy_timeout_ms,
+                )
+                .await
+            }
+            Err(e) => Err(e),
+        };
+        if let Err(e) = result {
+            eprintln!("Shutdown initial save failed: {e:#}");
+            if let ShutdownRequest::Player(player) = request {
+                for (id, session) in &self.sessions {
+                    if session.player == Some(player) {
+                        self.tell(*id, "Shutdown cancelled: unable to save the database.\r\n");
+                    }
+                }
+                return;
+            }
+            self.shutdown_failed = true;
+        }
+        self.shutdown = Some(request);
+        eprintln!("Graceful shutdown: {request:?}");
+        if let ShutdownRequest::Player(player) = request {
+            let name = self.scripts.world.borrow().objects[&player].name.clone();
+            for id in self.sessions.keys() {
+                self.tell(*id, &format!("Game: Shutdown by {name}\r\n"));
+            }
+        }
+    }
+    /// The sole shutdown cleanup path, after acceptance and before task draining.
+    async fn finish_shutdown(&mut self) {
+        for id in self.sessions.keys().copied().collect::<Vec<_>>() {
+            if let Err(e) = self.disconnect(id).await {
+                eprintln!("Shutdown disconnect failed: {e:#}");
+                self.shutdown_failed = true;
+            }
+        }
+        let snapshot = self.scripts.world.borrow().clone();
+        let result = match snapshot.validate(&self.config) {
+            Ok(()) => {
+                persistence::persist(
+                    self.config.database(),
+                    snapshot,
+                    self.config.database.busy_timeout_ms,
+                )
+                .await
+            }
+            Err(e) => Err(e),
+        };
+        if let Err(e) = result {
+            eprintln!("Shutdown final save failed: {e:#}");
+            self.shutdown_failed = true;
+        }
+    }
+
     fn tell(&self, id: SessionId, s: &str) {
         if let Some(session) = self.sessions.get(&id) {
             let ansi = session.player.is_none_or(|p| {
@@ -359,6 +456,9 @@ impl Server {
         };
         if let Err(e) = result {
             eprintln!("Persistence failed: {e:#}");
+            if self.shutdown.is_some() {
+                self.shutdown_failed = true;
+            }
             *self.scripts.world.borrow_mut() = before;
             self.reconcile_connections();
             self.scripts.outbox.borrow_mut().clear();
@@ -415,7 +515,7 @@ impl Server {
             }
         };
         for input in inputs {
-            if !self.sessions.contains_key(&id) {
+            if self.shutdown.is_some() || !self.sessions.contains_key(&id) {
                 break;
             }
             match input {
@@ -503,10 +603,130 @@ impl Server {
             }
         }
     }
+    /// Stage repair callbacks under the database transaction, detaching destroyed players only after commit.
+    async fn dbck(&mut self, session: SessionId, actor: ObjectId) {
+        let before = self.scripts.world.borrow().clone();
+        let result = persistence::repair(
+            &self.config.database(),
+            self.config.database.busy_timeout_ms,
+            |raw| {
+                let (repaired, mut report) = crate::dbck::plan(&before, raw, &self.config)?;
+                *self.scripts.world.borrow_mut() = repaired;
+                for relocation in &report.plan.relocations {
+                    let callable = |id: ObjectId| {
+                        self.scripts
+                            .world
+                            .borrow()
+                            .objects
+                            .get(&id)
+                            .is_some_and(|o| {
+                                matches!(o.kind, Kind::Room | Kind::Player | Kind::Thing)
+                            })
+                    };
+                    let movement = crate::movement::Move {
+                        actor,
+                        object: relocation.object,
+                        source: relocation.source,
+                        destination: relocation.destination,
+                        session: self
+                            .sessions
+                            .iter()
+                            .find(|(_, s)| s.player == Some(relocation.object))
+                            .map(|(id, _)| id.0),
+                    };
+                    if let Some(source) = relocation.source.filter(|id| callable(*id)) {
+                        self.scripts
+                            .world
+                            .borrow_mut()
+                            .objects
+                            .get_mut(&relocation.object)
+                            .unwrap()
+                            .location = Some(source);
+                        self.scripts.movement_event("on_exit", source, &movement)?;
+                    }
+                    self.scripts
+                        .world
+                        .borrow_mut()
+                        .objects
+                        .get_mut(&relocation.object)
+                        .context("callback removed repaired occupant")?
+                        .location = Some(relocation.destination);
+                    self.scripts
+                        .movement_event("on_enter", relocation.destination, &movement)?;
+                }
+                let after = self.scripts.world.borrow().clone();
+                after.validate(&self.config)?;
+                for id in &report.plan.purges {
+                    let o = after
+                        .objects
+                        .get(id)
+                        .context("callback removed tombstone")?;
+                    anyhow::ensure!(
+                        o.kind == Kind::Garbage
+                            && o.flags == [crate::flags::Flag::Going].into_iter().collect()
+                            && o.powers == Default::default()
+                            && o.state.is_empty()
+                            && !after.accounts.contains_key(id),
+                        "callback changed purged object #{}",
+                        id.0
+                    );
+                }
+                report.plan.links = crate::dbck::rebuild_links(&after, &report.plan.links);
+                report.plan.list_changes = report
+                    .plan
+                    .links
+                    .iter()
+                    .filter(|(id, links)| raw.get(id) != Some(*links))
+                    .map(|(id, _)| *id)
+                    .collect();
+                Ok((after, report))
+            },
+        )
+        .await;
+        match result {
+            Ok(report) => {
+                for finding in &report.findings {
+                    eprintln!("DBCK: {finding}");
+                }
+                for id in self
+                    .sessions
+                    .iter()
+                    .filter(|(_, s)| {
+                        s.player
+                            .is_some_and(|p| report.plan.detachments.contains(&p))
+                    })
+                    .map(|(id, _)| *id)
+                    .collect::<Vec<_>>()
+                {
+                    self.tell(id, "You have been destroyed!\r\n");
+                    if let Some(session) = self.sessions.remove(&id) {
+                        session.close();
+                    }
+                }
+                self.reconcile_connections();
+                self.flush();
+                if let Some(session) = self.sessions.get(&session) {
+                    session.raw(report.response(self.config.runtime.output_message_limit));
+                }
+            }
+            Err(e) => {
+                *self.scripts.world.borrow_mut() = before;
+                self.reconcile_connections();
+                self.scripts.outbox.borrow_mut().clear();
+                eprintln!("DBCK rolled back: {e:#}");
+                self.tell(
+                    session,
+                    "Database check failed; no repairs committed. See server diagnostics.\r\n",
+                );
+            }
+        }
+    }
     async fn command(&mut self, id: SessionId, p: ObjectId, line: &str) -> Result<()> {
         self.snapshots()?;
         let before = self.scripts.world.borrow().clone();
         match commands::run(&self.scripts, &self.config, p, id.0, line) {
+            Ok(Action::Shutdown) => self.request_shutdown(ShutdownRequest::Player(p)).await,
+            Ok(Action::DbCheck) => self.dbck(id, p).await,
             Ok(Action::Find(request)) => self.find(id, p, request),
             Ok(Action::Reply(text)) => {
                 if let Some(session) = self.sessions.get(&id) {
@@ -684,6 +904,7 @@ impl Server {
         bucket.tokens -= 1;
         self.hashes.tokens -= 1;
         self.inflight += 1;
+        let identity = self.scripts.world.borrow().find_player(&name);
         let hash = self
             .scripts
             .world
@@ -706,9 +927,33 @@ impl Server {
             .await
             .unwrap_or_else(|e| Err(e.into()));
             let _ = tx
-                .send(Event::Authenticated(id, name, create, result))
+                .send(Event::Authenticated(id, name, create, identity, result))
                 .await;
         });
+    }
+    /// Hash jobs retain their original identity; purging or shutdown invalidates their results.
+    async fn authentication_result(
+        &mut self,
+        id: SessionId,
+        name: String,
+        create: bool,
+        identity: Option<ObjectId>,
+        result: Result<Option<String>>,
+    ) -> Result<()> {
+        self.inflight = self.inflight.saturating_sub(1);
+        if self.shutdown.is_some() {
+            return Ok(());
+        }
+        if !create && self.scripts.world.borrow().find_player(&name) != identity {
+            self.prompt(
+                id,
+                LoginFlow::Name,
+                "Account no longer available.\r\nWho are you? ",
+                false,
+            );
+            return Ok(());
+        }
+        self.authenticated(id, name, create, result).await
     }
     async fn authenticated(
         &mut self,
@@ -717,6 +962,9 @@ impl Server {
         create: bool,
         result: Result<Option<String>>,
     ) -> Result<()> {
+        if self.shutdown.is_some() {
+            return Ok(());
+        }
         if !self
             .sessions
             .get(&id)
@@ -855,6 +1103,8 @@ mod tests {
                 at: Instant::now(),
             },
             inflight: 0,
+            shutdown: None,
+            shutdown_failed: false,
         };
         server
             .authenticated(
@@ -874,6 +1124,116 @@ mod tests {
                 .find_player("Disconnected")
                 .is_none()
         );
+    }
+    /// Late hashes cannot attach to a replacement identity, and all shutdown origins reject authentication.
+    #[tokio::test(flavor = "current_thread")]
+    async fn destroyed_identity_and_shutdown_invalidate_hash_results() {
+        let mut c = Config::load(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
+        )
+        .unwrap();
+        let mut world = persistence::load(&c.database()).await.unwrap();
+        world.accounts.remove(&ObjectId(2));
+        world.objects.get_mut(&ObjectId(2)).unwrap().kind = Kind::Garbage;
+        let replacement = world.create(&c, "Wizard".into(), Kind::Player);
+        world.accounts.insert(replacement, Account::default());
+        let scripts = Scripts::new(&c, Rc::new(RefCell::new(world))).unwrap();
+        // An accidental write in this regression can only target an isolated missing database.
+        let d = tempfile::tempdir().unwrap();
+        c.root = d.path().into();
+        let (events, _) = mpsc::channel(1);
+        let mut server = Server {
+            config: c,
+            scripts,
+            sessions: BTreeMap::new(),
+            events,
+            addresses: BTreeMap::new(),
+            hashes: Bucket {
+                tokens: 1,
+                at: Instant::now(),
+            },
+            inflight: 1,
+            shutdown: None,
+            shutdown_failed: false,
+        };
+        let (output, mut receiver) = mpsc::channel(16);
+        let now = Instant::now();
+        server.sessions.insert(
+            SessionId(1),
+            Session {
+                output,
+                peer: "127.0.0.1".parse().unwrap(),
+                player: None,
+                flow: LoginFlow::Pending,
+                connected: now,
+                active: now,
+                decoder: Default::default(),
+                quota: 1,
+                quota_at: now,
+                failed: Default::default(),
+                find_cursor: None,
+                output_message_limit: 65536,
+            },
+        );
+        server
+            .authentication_result(
+                SessionId(1),
+                "Wizard".into(),
+                false,
+                Some(ObjectId(2)),
+                Ok(None),
+            )
+            .await
+            .unwrap();
+        assert!(server.sessions[&SessionId(1)].player.is_none());
+        assert!(matches!(
+            server.sessions[&SessionId(1)].flow,
+            LoginFlow::Name
+        ));
+        let mut text = Vec::new();
+        while let Ok(output) = receiver.try_recv() {
+            if let Output::Bytes(bytes) = output {
+                text.extend(bytes);
+            }
+        }
+        assert!(String::from_utf8_lossy(&text).contains("Account no longer available"));
+        assert_eq!(
+            server.scripts.world.borrow().accounts[&replacement].successes,
+            0
+        );
+        for request in [
+            ShutdownRequest::Sigint,
+            ShutdownRequest::Sigterm,
+            ShutdownRequest::Player(ObjectId(1)),
+        ] {
+            server.shutdown = Some(request);
+            server.sessions.get_mut(&SessionId(1)).unwrap().flow = LoginFlow::Pending;
+            server
+                .authentication_result(
+                    SessionId(1),
+                    "LateRegistration".into(),
+                    true,
+                    None,
+                    Ok(Some("unused".into())),
+                )
+                .await
+                .unwrap();
+            assert!(
+                server
+                    .scripts
+                    .world
+                    .borrow()
+                    .find_player("LateRegistration")
+                    .is_none()
+            );
+            assert!(matches!(
+                server.sessions[&SessionId(1)].flow,
+                LoginFlow::Pending
+            ));
+            server.request_shutdown(ShutdownRequest::Sigterm).await;
+            assert_eq!(server.shutdown, Some(request));
+            assert!(!server.shutdown_failed); // repeated requests did not attempt another save
+        }
     }
     /// Failures cannot undo the final session detachment or its CONNECTED state.
     #[tokio::test(flavor = "current_thread")]
@@ -928,6 +1288,8 @@ mod tests {
                     at: Instant::now(),
                 },
                 inflight: 0,
+                shutdown: None,
+                shutdown_failed: false,
             };
             let mut receivers = Vec::new();
             for id in [1, 2] {

@@ -13,6 +13,10 @@ pub use registry::*;
 pub enum Action {
     /// Commit callback changes and flush player-directed output.
     Continue,
+    /// Request common graceful shutdown.
+    Shutdown,
+    /// Run transactional database maintenance.
+    DbCheck,
     /// Disconnect the invoking session.
     Quit,
     /// Read-only session-scoped object search.

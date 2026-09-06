@@ -143,6 +143,8 @@ fn object(o: &Object, links: [i64; 3]) -> Fields {
             "location",
             reference(if o.kind == Kind::Exit {
                 o.destination
+            } else if o.kind == Kind::Room {
+                o.dropto
             } else {
                 o.location
             }),
@@ -336,6 +338,15 @@ fn relationships(
 }
 /// Apply a supported projection delta to an already-open write transaction.
 pub(super) async fn apply(c: &mut SqliteConnection, before: &World, after: &World) -> Result<()> {
+    apply_changes(c, before, after, None).await
+}
+/// Explicit maintenance writes may repair lists and remove only approved accounts.
+pub(super) async fn apply_changes(
+    c: &mut SqliteConnection,
+    before: &World,
+    after: &World,
+    maintenance: Option<&crate::dbck::RepairPlan>,
+) -> Result<()> {
     ensure!(
         before.objects.keys().all(|k| after.objects.contains_key(k)),
         "object deletion is not supported; deferred rows must be preserved"
@@ -344,7 +355,8 @@ pub(super) async fn apply(c: &mut SqliteConnection, before: &World, after: &Worl
         before
             .accounts
             .keys()
-            .all(|k| after.accounts.contains_key(k)),
+            .all(|k| after.accounts.contains_key(k)
+                || maintenance.is_some_and(|plan| plan.purges.contains(k))),
         "account deletion is not supported"
     );
     ensure!(
@@ -377,7 +389,10 @@ pub(super) async fn apply(c: &mut SqliteConnection, before: &World, after: &Worl
             connected.insert(id);
         }
     }
-    let links = relationships(before, after, &raw)?;
+    let links = match maintenance {
+        Some(plan) => plan.links.clone(),
+        None => relationships(before, after, &raw)?,
+    };
     let mut changed = false;
     for (id, o) in &after.objects {
         let mut old = before

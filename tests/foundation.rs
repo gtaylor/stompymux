@@ -1681,3 +1681,273 @@ async fn tcp_registry_permissions_and_lua_aliases() {
     wizard.until("Wizard probe: restored").await;
     running.stop().await;
 }
+
+/// Every shutdown origin uses the same last-session hooks, persistence and output drain.
+#[tokio::test(flavor = "current_thread")]
+async fn shutdown_origins_share_cleanup_and_stop_pipelined_commands() {
+    for origin in ["-INT", "-TERM", "command"] {
+        let (d, c) = populated().await;
+        let mut w = persistence::load(&c.database()).await.unwrap();
+        w.accounts.get_mut(&ObjectId(2)).unwrap().hash =
+            Some(accounts::hash("secret", &c).unwrap());
+        w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
+        persistence::save(&c.database(), &w).await.unwrap();
+        std::fs::write(
+            d.path().join("lua/global_logic/shutdown_test.lua"),
+            r#"return {events={on_player_disconnect=function(ctx)
+          local o=mux.world.object(ctx.enactor)
+          assert(not o:flags():has(mux.world.flags.CONNECTED))
+          local s=o:state('shutdown');s:set('disconnects',s:get('disconnects',0)+1)
+        end}}"#,
+        )
+        .unwrap();
+        let mut running = Running::start(&c).await;
+        let mut first = Client::connect(&running).await;
+        first.login("#2").await;
+        let mut second = Client::connect(&running).await;
+        second.login("#2").await;
+        let mut pending = Client::connect(&running).await;
+        pending.send("Unfinished").await;
+        pending.until("[Y/n]").await;
+        if origin == "command" {
+            first.send("@shutdown\r\n@flag me=DARK\r\n@shutdown").await;
+        } else {
+            assert!(
+                Command::new("kill")
+                    .args([origin, &running.child.id().unwrap().to_string()])
+                    .status()
+                    .await
+                    .unwrap()
+                    .success()
+            );
+        }
+        let status = tokio::time::timeout(Duration::from_secs(10), running.child.wait())
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(status.success(), "{origin}");
+        assert!(TcpStream::connect(&running.address).await.is_err());
+        for client in [&mut first, &mut second, &mut pending] {
+            let mut rest = Vec::new();
+            tokio::time::timeout(Duration::from_secs(2), client.socket.read_to_end(&mut rest))
+                .await
+                .unwrap()
+                .unwrap();
+            if origin == "command" {
+                assert!(String::from_utf8_lossy(&rest).contains("Game: Shutdown by Wizard"));
+            }
+        }
+        let loaded = persistence::load(&c.database()).await.unwrap();
+        assert_eq!(
+            loaded.objects[&ObjectId(2)].state["shutdown"]["disconnects"],
+            Scalar::Integer(1)
+        );
+        assert!(
+            !loaded.objects[&ObjectId(2)]
+                .flags
+                .contains(stompymux_rs::flags::Flag::Dark)
+        );
+        assert!(
+            !loaded.objects[&ObjectId(2)]
+                .flags
+                .contains(stompymux_rs::flags::Flag::Connected)
+        );
+        assert!(loaded.find_player("Unfinished").is_none());
+    }
+}
+
+/// Command shutdown cancels on initial write failure; both signal origins still terminate unsuccessfully.
+#[tokio::test(flavor = "current_thread")]
+async fn shutdown_write_failures_cancel_commands_but_fail_signal_exit_status() {
+    for origin in ["command", "-INT", "-TERM"] {
+        let (_d, c) = populated().await;
+        let mut w = persistence::load(&c.database()).await.unwrap();
+        w.accounts.get_mut(&ObjectId(2)).unwrap().hash =
+            Some(accounts::hash("secret", &c).unwrap());
+        w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
+        persistence::save(&c.database(), &w).await.unwrap();
+        let mut running = Running::start(&c).await;
+        let mut client = Client::connect(&running).await;
+        client.login("#2").await;
+        let mut sql = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+            &sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()),
+        )
+        .await
+        .unwrap();
+        sqlx::raw_sql("UPDATE objects SET has_connected_flag=1 WHERE dbref=2; CREATE TRIGGER shutdown_fail BEFORE UPDATE ON objects BEGIN SELECT RAISE(FAIL,'shutdown write failure'); END;").execute(&mut sql).await.unwrap();
+        if origin == "command" {
+            client.send("@shutdown").await;
+            client.until("Shutdown cancelled").await;
+            client.send("look").await;
+            client.until("Starter Room").await;
+            assert!(running.child.try_wait().unwrap().is_none());
+            sqlx::query("DROP TRIGGER shutdown_fail")
+                .execute(&mut sql)
+                .await
+                .unwrap();
+            client.send("@shutdown").await;
+        } else {
+            Command::new("kill")
+                .args([origin, &running.child.id().unwrap().to_string()])
+                .status()
+                .await
+                .unwrap();
+        }
+        let status = tokio::time::timeout(Duration::from_secs(10), running.child.wait())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(status.success(), origin == "command");
+        assert!(TcpStream::connect(&running.address).await.is_err());
+        sqlx::Connection::close(sql).await.unwrap();
+    }
+}
+
+/// Maintenance reserves command names, persists purges before disconnecting and rolls back failed purges.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_dbck_permissions_aliases_purges_and_rollback() {
+    let (d, _c) = populated().await;
+    let aliases = d.path().join("aliases.toml");
+    std::fs::write(
+        &aliases,
+        std::fs::read_to_string(&aliases).unwrap().replace(
+            "[aliases.commands]",
+            "[aliases.commands]\nrepair='@dbck'\nstop='@shutdown'",
+        ),
+    )
+    .unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ObjectId(c.start()));
+    persistence::save(&c.database(), &w).await.unwrap();
+    let mut running = Running::start(&c).await;
+    let mut wizard = Client::connect(&running).await;
+    wizard.login("#1").await;
+    let mut player = Client::connect(&running).await;
+    player.register("Doomed").await;
+    let mut other = Client::connect(&running).await;
+    other.login("Doomed").await;
+    for command in ["@dbck", "repair/nope", "stop", "@shutdown/reason"] {
+        player.send(command).await;
+        player.until("Permission denied.").await;
+    }
+    for command in ["@dbck/nope", "@shutdown/nope"] {
+        wizard.send(command).await;
+        wizard.until("Unsupported command switch.").await;
+    }
+    for command in ["@dbck bad", "@shutdown reasons"] {
+        wizard.send(command).await;
+        wizard.until("Usage:").await;
+    }
+    wizard.send("@flag Doomed=GOING").await;
+    wizard.until("set.").await;
+    let mut sql = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()),
+    )
+    .await
+    .unwrap();
+    sqlx::query("CREATE TRIGGER fail_dbck BEFORE UPDATE ON objects WHEN NEW.type=5 BEGIN SELECT RAISE(FAIL,'purge blocked'); END").execute(&mut sql).await.unwrap();
+    wizard.send("repair").await;
+    wizard.until("no repairs committed").await;
+    player.send("look").await;
+    player.until("Starter Room").await;
+    assert!(
+        persistence::load(&c.database())
+            .await
+            .unwrap()
+            .find_player("Doomed")
+            .is_some()
+    );
+    sqlx::query("DROP TRIGGER fail_dbck")
+        .execute(&mut sql)
+        .await
+        .unwrap();
+    wizard.send("repair").await;
+    wizard.until("Done.").await;
+    player.until("You have been destroyed!").await;
+    other.until("You have been destroyed!").await;
+    assert!(
+        persistence::load(&c.database())
+            .await
+            .unwrap()
+            .find_player("Doomed")
+            .is_none()
+    );
+    wizard.send("stop").await;
+    assert!(
+        tokio::time::timeout(Duration::from_secs(10), running.child.wait())
+            .await
+            .unwrap()
+            .unwrap()
+            .success()
+    );
+    sqlx::Connection::close(sql).await.unwrap();
+}
+
+/// Repair movement bypasses locks, carries the moved session, and rolls back all callback mutations.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_dbck_relocation_callbacks_rollback_and_context() {
+    let (d, c) = populated().await;
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(2)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
+    w.objects.get_mut(&ObjectId(2)).unwrap().home = Some(ObjectId(0));
+    for id in [c.start(), 0] {
+        w.objects.get_mut(&ObjectId(id)).unwrap().lua_parent = "repair_hooks.lua".into();
+    }
+    persistence::save(&c.database(), &w).await.unwrap();
+    std::fs::write(d.path().join("lua/object_logic/repair_hooks.lua"),r#"return {
+      locks={teleport=function() error('repair must bypass locks') end, teleport_out=function() error('repair must bypass locks') end},
+      events={on_exit=function(ctx)
+        assert(ctx.source==ctx.object and ctx.cause==2)
+        local o=mux.world.object(ctx.enactor);o:state('repair'):set('exit',true)
+        if ctx.enactor==2 then assert(ctx.descriptor~=nil);assert(o:flags():has(mux.world.flags.CONNECTED)) end
+      end,on_enter=function(ctx)
+        assert(ctx.destination==ctx.object and ctx.cause==2)
+        local o=mux.world.object(ctx.enactor);o:state('repair'):set('enter',true)
+        if not repair_allowed then mux.world.pemit(ctx.enactor,'LEAKED');error('repair callback failed') end
+      end},commands={{name='allow-repair',permission='wizard',pattern='^allow%-repair$',handler=function(ctx)
+        repair_allowed=true;mux.world.pemit(ctx.enactor,'Repair enabled.');return true
+      end}}}"#).unwrap();
+    std::fs::write(d.path().join("lua/global_logic/repair_control.lua"), r#"return {commands={{name='allow-repair',permission='wizard',pattern='^allow%-repair$',handler=function(ctx)
+      repair_allowed=true;mux.world.pemit(ctx.enactor,'Repair enabled.');return true
+    end}}}"#).unwrap();
+    let running = Running::start(&c).await;
+    let mut wizard = Client::connect(&running).await;
+    wizard.login("#2").await;
+    let mut sql = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()),
+    )
+    .await
+    .unwrap();
+    sqlx::query("UPDATE objects SET contents=-1 WHERE dbref=?")
+        .bind(c.start())
+        .execute(&mut sql)
+        .await
+        .unwrap();
+    let bytes = std::fs::read(c.database()).unwrap();
+    wizard.send("@dbck").await;
+    let failed = wizard.until("no repairs committed").await;
+    assert!(!failed.contains("LEAKED"));
+    assert_eq!(bytes, std::fs::read(c.database()).unwrap());
+    let loaded = persistence::load(&c.database()).await.unwrap();
+    assert!(!loaded.objects[&ObjectId(2)].state.contains_key("repair"));
+    wizard.send("allow-repair").await;
+    wizard.until("Repair enabled.").await;
+    wizard.send("@dbck").await;
+    wizard.until("Done.").await;
+    let loaded = persistence::load(&c.database()).await.unwrap();
+    assert_eq!(loaded.objects[&ObjectId(2)].location, Some(ObjectId(0)));
+    assert_eq!(
+        loaded.objects[&ObjectId(2)].state["repair"]["exit"],
+        Scalar::Boolean(true)
+    );
+    assert_eq!(
+        loaded.objects[&ObjectId(2)].state["repair"]["enter"],
+        Scalar::Boolean(true)
+    );
+    sqlx::Connection::close(sql).await.unwrap();
+    running.stop().await;
+    server::prepare(&c).await.unwrap();
+}

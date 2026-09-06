@@ -28,11 +28,16 @@ async fn main() -> anyhow::Result<()> {
             port,
         } => {
             let c = Config::load(game_dir)?.with_listener_overrides(listen_address, port)?;
-            server::serve(c, async {
-                let mut terminate =
-                    tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-                        .expect("install SIGTERM handler");
-                tokio::select! { _=tokio::signal::ctrl_c()=>{}, _=terminate.recv()=>{} }
+            // Install both signal streams before startup so requests can wait for the world owner.
+            let mut interrupt =
+                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::interrupt())?;
+            let mut terminate =
+                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())?;
+            server::serve(c, async move {
+                tokio::select! {
+                    _ = interrupt.recv() => server::ShutdownRequest::Sigint,
+                    _ = terminate.recv() => server::ShutdownRequest::Sigterm,
+                }
             })
             .await?;
         }

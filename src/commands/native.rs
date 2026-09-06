@@ -248,3 +248,20 @@ fn broadcast_speech(s: &Scripts, player: ObjectId, room: ObjectId, message: &str
         ));
     }
 }
+
+/// Request shutdown without reasons or switches.
+pub(super) fn shutdown(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    Ok(if input.args.is_empty() {
+        Action::Shutdown
+    } else {
+        Action::Reply("Usage: @shutdown".into())
+    })
+}
+/// Request semantic checking and repair from the world owner.
+pub(super) fn dbck(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    Ok(if input.args.is_empty() {
+        Action::DbCheck
+    } else {
+        Action::Reply("Usage: @dbck".into())
+    })
+}

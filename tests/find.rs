@@ -41,6 +41,7 @@ fn world() -> World {
                 home: None,
                 affiliation: None,
                 destination: None,
+                dropto: None,
                 description: None,
                 internal_description: None,
                 lua_parent: String::new(),

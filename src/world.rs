@@ -62,6 +62,8 @@ pub struct Object {
     pub home: Option<ObjectId>,
     pub affiliation: Option<ObjectId>,
     pub destination: Option<ObjectId>,
+    /// Legacy room location slot, separate from physical containment.
+    pub dropto: Option<ObjectId>,
     pub description: Option<String>,
     pub internal_description: Option<String>,
     pub lua_parent: String,
@@ -131,6 +133,7 @@ impl World {
                 home: None,
                 affiliation: None,
                 destination: None,
+                dropto: None,
                 description: None,
                 internal_description: None,
                 lua_parent: parent.clone(),
@@ -212,15 +215,8 @@ impl World {
         self.containment_chain(o.location)?;
         Ok(())
     }
-    pub fn validate(&self, c: &Config) -> Result<()> {
-        for id in [c.start(), c.home()] {
-            ensure!(
-                self.objects
-                    .get(&ObjectId(id))
-                    .is_some_and(|o| o.kind == Kind::Room),
-                "starting room/home #{id} missing or not a room"
-            );
-        }
+    /// Account identities cannot be guessed or repaired by semantic maintenance.
+    pub fn validate_accounts(&self) -> Result<()> {
         let mut names = BTreeSet::new();
         for (id, a) in &self.accounts {
             let o = self
@@ -242,6 +238,18 @@ impl World {
                 );
             }
         }
+        Ok(())
+    }
+    pub fn validate(&self, c: &Config) -> Result<()> {
+        for id in [c.start(), c.home()] {
+            ensure!(
+                self.objects
+                    .get(&ObjectId(id))
+                    .is_some_and(|o| o.kind == Kind::Room),
+                "starting room/home #{id} missing or not a room"
+            );
+        }
+        self.validate_accounts()?;
         for o in self.objects.values().filter(|o| o.kind != Kind::Garbage) {
             let chain = self.containment_chain(o.location)?;
             ensure!(!chain.contains(&o.id), "Containment cycle at #{}.", o.id.0);
@@ -250,14 +258,35 @@ impl World {
                 "Room #{} has an invalid location.",
                 o.id.0
             );
-            for id in [o.location, o.home, o.destination, o.zone, o.affiliation]
-                .into_iter()
-                .flatten()
+            for id in [
+                o.location,
+                o.home,
+                o.destination,
+                o.zone,
+                o.affiliation,
+                o.dropto,
+            ]
+            .into_iter()
+            .flatten()
             {
                 ensure!(
-                    self.objects.contains_key(&id),
+                    self.objects
+                        .get(&id)
+                        .is_some_and(|target| target.kind != Kind::Garbage),
                     "{} references missing #{}",
                     o.name,
+                    id.0
+                );
+            }
+        }
+        for channel in self.channels.values() {
+            if let Some(id) = channel.object {
+                ensure!(
+                    self.objects
+                        .get(&id)
+                        .is_some_and(|o| o.kind != Kind::Garbage),
+                    "channel {} references invalid #{}",
+                    channel.name,
                     id.0
                 );
             }

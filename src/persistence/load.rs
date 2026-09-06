@@ -62,11 +62,20 @@ pub(super) async fn read(c: &mut SqliteConnection) -> Result<World> {
                 id: object_id,
                 name: r.try_get("name")?,
                 kind,
-                location: id(r.try_get(if kind == Kind::Exit {
-                    "exits"
+                location: if kind == Kind::Room {
+                    None
                 } else {
-                    "location"
-                })?),
+                    id(r.try_get(if kind == Kind::Exit {
+                        "exits"
+                    } else {
+                        "location"
+                    })?)
+                },
+                dropto: if kind == Kind::Room {
+                    id(r.try_get("location")?)
+                } else {
+                    None
+                },
                 zone: id(r.try_get("zone")?),
                 affiliation: id(r.try_get("affiliation")?),
                 home: if kind != Kind::Exit { link } else { None },

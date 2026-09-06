@@ -268,3 +268,50 @@ modules in lexical order, preserving declaration order within modules. Restricte
 Lua entries are skipped; a handler returning false/nil allows later handlers and
 then exits to match. NO_COMMAND and HALTED still exclude object-local commands.
 The metadata API prepares for `@list commands`; that command is not added yet.
+
+## Shutdown and database maintenance
+
+`@shutdown` and `@dbck` require Wizard status (or GOD), honor configured command
+aliases, and accept no arguments or switches. `@dump` is not implemented: ordinary
+mutations already commit to SQLite before success is reported.
+
+`@shutdown` validates and saves first. A failed initial save cancels the command
+and leaves sessions online. Once accepted, it broadcasts `Game: Shutdown by <name>`
+and stops accepting connections, commands and authentication results, including
+remaining commands in the same input batch. SIGINT and SIGTERM enter this same
+shutdown coordinator, but proceed with best-effort cleanup if the initial save
+fails. Repeated requests do not repeat cleanup. All paths detach sessions, run the
+last-session disconnect hooks, reconcile CONNECTED, finish persistence and drain
+connection output for up to `runtime.shutdown_timeout_ms` before aborting remaining
+connection tasks. Persistence failures are logged and produce an unsuccessful
+process exit.
+
+`@dbck` checks SQLite integrity and repairs supported references, homes, containment
+lists and exit sources. It preserves valid list order, resolves competing lists
+using the object's claimed location when that list contains it, and appends newly
+attached members by dbref. Replacement homes use a safe controlled location, safe
+controlled home, configured default home, starting home, then starting room.
+Room droptos are stored separately from containment; dropto movement is deferred.
+Unreachable rooms without FLOATING, Wizard objects and ordinary occupants inside
+Wizard containers are diagnostic findings, not reasons to change flags.
+
+GOD and configured starting/home destinations are protected from GOING purges by
+clearing GOING. Other doomed objects become retained Garbage tombstones; surviving
+occupants are evacuated and doomed exits are removed. Dbrefs are never reused.
+The explicit ownership map in `src/persistence/maintenance.rs` removes owned
+accounts/history, Lua state, channel memberships, communication macros, character,
+economy and BattleTech records, and clears known dependent references. Unknown
+columns on retained rows and unrelated tables remain untouched. An unknown declared
+dependency that prevents safe cleanup aborts the transaction.
+
+Repair relocations bypass movement locks and run applicable exit/enter callbacks,
+with the moved player's session when available. Callback failures, invalid callback
+results and database errors roll back the whole repair and discard pending output.
+Destroyed players are notified and disconnected only after commit; their pending
+authentication results cannot reattach them. Successful checks return a bounded
+summary ending with `Done.`; detailed findings go to server diagnostics.
+
+Startup remains strict and does not repair malformed worlds automatically. This
+is an online maintenance command, not an offline recovery tool. It does not invent
+missing foundational objects or guess repairs for duplicate accounts or undecodable
+records. As with ordinary persistence, only one server may own the database.

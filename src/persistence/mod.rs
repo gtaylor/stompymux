@@ -1,5 +1,6 @@
 //! Direct asynchronous schema-32 persistence with selective, atomic updates.
 mod load;
+mod maintenance;
 mod write;
 use crate::world::*;
 use anyhow::{Context, Result, ensure};
@@ -167,4 +168,72 @@ pub fn trim_history(history: &mut Vec<Login>, limit: usize) {
         true
     });
     history.reverse();
+}
+
+/// Check, plan, run world callbacks and persist maintenance under one SQLite transaction.
+/// The caller owns restoring its in-memory snapshot if any stage fails.
+pub async fn repair<F>(path: &Path, timeout: u64, apply: F) -> Result<crate::dbck::DbCheckReport>
+where
+    F: FnOnce(&crate::dbck::Links) -> Result<(World, crate::dbck::DbCheckReport)>,
+{
+    let mut c = connect(path, timeout, false, false).await?;
+    let result = async {
+        let mut tx = c.begin_with("BEGIN IMMEDIATE").await?;
+        validate(&mut tx).await?;
+        let integrity: Vec<String> = sqlx::query_scalar("PRAGMA integrity_check")
+            .fetch_all(&mut *tx)
+            .await?;
+        ensure!(
+            integrity == ["ok"],
+            "SQLite integrity check failed: {}",
+            integrity.join("; ")
+        );
+        let before = load::read(&mut tx).await?;
+        let raw = maintenance::links(&mut tx).await?;
+        let (after, report) = apply(&raw)?;
+        let changes_before: i64 = sqlx::query_scalar("SELECT total_changes()")
+            .fetch_one(&mut *tx)
+            .await?;
+        maintenance::cleanup(&mut tx, &report.plan.purges).await?;
+        write::apply_changes(&mut tx, &before, &after, Some(&report.plan)).await?;
+        ensure!(
+            sqlx::query("PRAGMA foreign_key_check")
+                .fetch_all(&mut *tx)
+                .await?
+                .is_empty(),
+            "database repair blocked by an unresolved foreign-key dependency"
+        );
+        let changes_after: i64 = sqlx::query_scalar("SELECT total_changes()")
+            .fetch_one(&mut *tx)
+            .await?;
+        if changes_after > changes_before {
+            sqlx::query("UPDATE snapshot SET dump_time=? WHERE id=1")
+                .bind(crate::accounts::now())
+                .execute(&mut *tx)
+                .await?;
+        }
+        tx.commit().await?;
+        Ok(report)
+    }
+    .await;
+    finish(c, result).await
+}
+
+/// Startup requires consistent legacy lists; repairing them requires explicit @dbck in an existing session.
+pub async fn validate_lists(path: &Path, world: &World, timeout: u64) -> Result<()> {
+    let mut c = connect(path, timeout, true, false).await?;
+    let result = async {
+        let raw = maintenance::links(&mut c).await?;
+        let expected = crate::dbck::rebuild_links(world, &raw);
+        for (id, links) in &expected {
+            ensure!(
+                raw.get(id) == Some(links),
+                "inconsistent persisted containment list at #{}; startup requires a valid world",
+                id.0
+            );
+        }
+        Ok(())
+    }
+    .await;
+    finish(c, result).await
 }

@@ -240,6 +240,10 @@ impl CommandRegistry {
         let definitions = vec![
             CommandDefinition::native("look", P::EVERYONE, native::look).matching(&["l"], None),
             CommandDefinition::native("say", P::EVERYONE, native::say).matching(&[], Some('"')),
+            CommandDefinition::native("@shutdown", P::WIZARD, native::shutdown)
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
+            CommandDefinition::native("@dbck", P::WIZARD, native::dbck)
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("quit", P::EVERYONE, native::quit),
             CommandDefinition::native("home", P::WIZARD, native::home).policy(
                 SwitchPolicy::Reject("Movement command switches are not supported."),
