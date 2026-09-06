@@ -24,3 +24,6 @@ pub mod help;
 
 /// Channels, communication policy and online paging.
 pub mod communication;
+
+/// Binary-safe typed object state and administrative operations.
+pub mod state;

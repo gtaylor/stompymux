@@ -60,12 +60,13 @@ pub(super) fn examine(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
             let target = admin_target(&w, player, args)?;
             let o = &w.objects[&target];
             Ok(format!(
-                "{}(#{})\r\nType: {} Flags: {}\r\nPowers: {}",
+                "{}(#{})\r\nType: {} Flags: {}\r\nPowers: {}\r\n{}",
                 o.name,
                 o.id.0,
                 format!("{:?}", o.kind).to_uppercase(),
                 o.flags.names().join(" "),
-                o.powers.description()
+                o.powers.description(),
+                crate::state::commands::summary(&o.state)
             ))
         })(),
     )

@@ -193,7 +193,7 @@ fn account(a: &Account) -> Fields {
         ),
     ])
 }
-/// Preserve legacy numeric type tags; newly written strings use UTF-8 blobs.
+/// Preserve legacy numeric type tags; newly written strings use byte-preserving blobs.
 fn scalar(s: &Scalar) -> Result<Fields> {
     let (tag, value) = match s {
         Scalar::Boolean(v) => (2, Cell::Integer(i64::from(*v))),
@@ -202,7 +202,7 @@ fn scalar(s: &Scalar) -> Result<Fields> {
             ensure!(v.is_finite(), "Lua state number must be finite");
             (4, Cell::Number(*v))
         }
-        Scalar::String(v) => (1, Cell::Blob(v.as_bytes().to_vec())),
+        Scalar::String(v) => (1, Cell::Blob(v.clone())),
     };
     Ok(fields([
         ("value_type", Cell::Integer(tag)),

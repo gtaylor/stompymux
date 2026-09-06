@@ -1,5 +1,6 @@
 //! Typed world objects, relationships and persistent account state.
 use crate::config::Config;
+use anyhow::Context;
 use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -44,16 +45,12 @@ impl Kind {
         }
     }
 }
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(untagged)]
-pub enum Scalar {
-    Boolean(bool),
-    Integer(i64),
-    Number(f64),
-    String(String),
-}
+pub use crate::state::Value as Scalar;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Object {
+    /// Runtime incarnation retained across rollback but never persisted.
+    #[serde(skip)]
+    pub generation: crate::state::Generation,
     pub id: ObjectId,
     pub name: String,
     pub kind: Kind,
@@ -69,7 +66,7 @@ pub struct Object {
     pub lua_parent: String,
     pub flags: crate::flags::FlagSet,
     pub powers: crate::powers::PowerSet,
-    pub state: BTreeMap<String, BTreeMap<String, Scalar>>,
+    pub state: crate::state::State,
 }
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Account {
@@ -124,6 +121,7 @@ impl World {
         self.objects.insert(
             id,
             Object {
+                generation: Default::default(),
                 id,
                 name,
                 kind,
@@ -250,6 +248,8 @@ impl World {
         }
         self.validate_accounts()?;
         for o in self.objects.values().filter(|o| o.kind != Kind::Garbage) {
+            crate::state::validate(&o.state, c)
+                .with_context(|| format!("object #{} state", o.id.0))?;
             let chain = self.containment_chain(o.location)?;
             ensure!(!chain.contains(&o.id), "Containment cycle at #{}.", o.id.0);
             ensure!(

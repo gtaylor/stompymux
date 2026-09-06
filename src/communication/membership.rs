@@ -301,9 +301,10 @@ impl Service<'_> {
             if callback then callback({object=object, subject=who, enactor=who, cause=who, scope='object'}) end
         end"#).eval().map_err(|e| anyhow::anyhow!(e.to_string()))?;
         for (object, parent) in objects {
-            invoke
-                .call::<()>((parent, object.0, who.0))
-                .map_err(|e| anyhow::anyhow!("channel {channel} leave callback: {e}"))?;
+            crate::lua::transactions::run(self.lua, self.world, self.outbox, || {
+                invoke.call::<()>((parent, object.0, who.0))
+            })
+            .map_err(|e| anyhow::anyhow!("channel {channel} leave callback: {e}"))?;
         }
         Ok(())
     }

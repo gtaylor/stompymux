@@ -59,6 +59,7 @@ pub(super) async fn read(c: &mut SqliteConnection) -> Result<World> {
         w.objects.insert(
             object_id,
             Object {
+                generation: Default::default(),
                 id: object_id,
                 name: r.try_get("name")?,
                 kind,
@@ -136,6 +137,7 @@ pub(super) async fn read(c: &mut SqliteConnection) -> Result<World> {
         let namespace: String = r.try_get("namespace")?;
         let key: String = r.try_get("key")?;
         let value = (|| -> Result<Scalar> {
+            crate::state::address(&namespace, Some(&key))?;
             Ok(match (kind, storage.as_str()) {
                 (3, "integer") => Scalar::Integer(r.try_get("value")?),
                 (2, "integer") => {
@@ -149,8 +151,7 @@ pub(super) async fn read(c: &mut SqliteConnection) -> Result<World> {
                     Scalar::Number(value)
                 }
                 (4, "integer") => Scalar::Number(r.try_get::<i64, _>("value")? as f64),
-                (1, "text") => Scalar::String(r.try_get("value")?),
-                (1, "blob") => Scalar::String(String::from_utf8(r.try_get("value")?)?),
+                (1, "text" | "blob") => Scalar::String(r.try_get("value")?),
                 _ => anyhow::bail!("unsupported state encoding {kind} ({storage})"),
             })
         })()

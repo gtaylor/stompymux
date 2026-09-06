@@ -19,6 +19,7 @@ impl Scripts {
         let palette = std::sync::Arc::new(text::Palette::from_config(config)?);
         world.borrow_mut().palette = palette.clone();
         let (lua, budget) = sandbox::create(config)?;
+        super::transactions::install(&lua);
         let outbox: Outbox = Default::default();
         let api = packages::register_native(&lua, config, &world, &outbox, &palette)?;
         lua.globals()

@@ -82,6 +82,7 @@ async fn native_catalog_permissions_and_aliases() {
             "@flag",
             "@power",
             "@list",
+            "@state",
             "@examine",
             "@find"
         ]

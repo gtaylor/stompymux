@@ -1,12 +1,14 @@
 //! Native bindings for the existing mux.world package.
 mod flags;
+mod locks;
 mod powers;
+mod state;
 use super::bind;
 use crate::lua::{Outbox, SharedWorld, err};
 use crate::{
     config::Config,
     text,
-    world::{Kind, ObjectId, Scalar},
+    world::{Kind, ObjectId},
 };
 use anyhow::Result;
 use mlua::{Lua, LuaSerdeExt, Table, Value};
@@ -206,66 +208,8 @@ pub(super) fn register(
         crate::powers::change(&mut w.borrow_mut(), ObjectId(1), ObjectId(id), power, value)
             .map_err(err)
     });
-    let w = world.clone();
-    bind!(lua, api, "entries", move |lua, (id, ns): (i64, String)| {
-        let w = w.borrow();
-        let o = w
-            .objects
-            .get(&ObjectId(id))
-            .ok_or_else(|| err("object missing"))?;
-        let result = lua.create_table()?;
-        if let Some(entries) = o.state.get(&ns) {
-            for (i, (key, value)) in entries.iter().enumerate() {
-                let t = lua.create_table()?;
-                t.set("key", key.clone())?;
-                t.set("value", lua.to_value(value)?)?;
-                result.set(i + 1, t)?;
-            }
-        }
-        Ok(result)
-    });
-    let w = world.clone();
-    let c = config.clone();
-    bind!(lua, api, "state_set", move |lua,
-                                       (id, ns, key, v): (
-        i64,
-        String,
-        String,
-        Value
-    )| {
-        if ns.is_empty() || key.is_empty() || ns.len() > 255 || key.len() > 255 {
-            return Err(err("invalid state namespace/key"));
-        }
-        let value: Option<Scalar> = if v.is_nil() {
-            None
-        } else {
-            Some(lua.from_value(v)?)
-        };
-        if let Some(Scalar::String(s)) = &value
-            && s.len() > c.lua.state_value_limit
-        {
-            return Err(err("Lua state string limit exceeded"));
-        }
-        let mut w = w.borrow_mut();
-        let o = w
-            .objects
-            .get_mut(&ObjectId(id))
-            .ok_or_else(|| err("object missing"))?;
-        let mut state = o.state.clone();
-        let entries = state.entry(ns).or_default();
-        if let Some(v) = value {
-            entries.insert(key, v);
-        } else {
-            entries.remove(&key);
-        }
-        if state.values().map(|v| v.len()).sum::<usize>() > c.lua.state_entry_limit
-            || serde_json::to_vec(&state).map_err(err)?.len() > c.lua.state_object_limit
-        {
-            return Err(err("Lua object state limit exceeded"));
-        }
-        o.state = state;
-        Ok(())
-    });
+    locks::register(lua, api, world, outbox).map_err(|e| anyhow::anyhow!(e.to_string()))?;
+    state::register(lua, api, config, world).map_err(|e| anyhow::anyhow!(e.to_string()))?;
     let o = outbox.clone();
     let output_settings = config.lua.clone();
     let message_limit = config.runtime.output_message_limit;

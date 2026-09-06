@@ -274,6 +274,8 @@ impl CommandRegistry {
             CommandDefinition::native("@flag", P::WIZARD, native::flag),
             CommandDefinition::native("@power", P::WIZARD, native::power),
             CommandDefinition::native("@list", P::WIZARD, native::list),
+            CommandDefinition::native("@state", P::WIZARD, crate::state::commands::command)
+                .policy(SwitchPolicy::Handler, true),
             CommandDefinition::native("@examine", P::WIZARD, native::examine),
             CommandDefinition::native("@find", P::WIZARD, native::find)
                 .policy(SwitchPolicy::Handler, true),

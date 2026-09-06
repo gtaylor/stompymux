@@ -63,19 +63,7 @@ function methods:powers()
     }
 end
 
-function methods:state(ns)
-    local n = self._id
-    return {
-        entries = function() return native.entries(n, ns) end,
-        get = function(_, key, default)
-            for _, entry in ipairs(native.entries(n, ns)) do
-                if entry.key == key then return entry.value end
-            end
-            return default
-        end,
-        set = function(_, key, value) native.state_set(n, ns, key, value) end,
-    }
-end
+function methods:state(ns) return native.state(self._id, ns) end
 
 mux.world = {
     types = {ROOM = 0, THING = 1, EXIT = 2, PLAYER = 3},
@@ -97,13 +85,13 @@ end
 
 function mux.world.pemit(o, s) native.pemit(id(o), s) end
 
-function mux.world.lock_passes(t)
+function mux.world._lock_result(t)
     local n = id(t.object)
     local parent = _parents[_object_parents[n]]
     if not parent then error('Missing lock parent') end
     local lock = parent.locks and parent.locks[t.lock]
-    if lock == nil then return true end
-    local result = lock({
+    if lock == nil then return {passes = true} end
+    return native.evaluate_lock(lock, {
         object = n,
         subject = id(t.subject or t.enactor),
         enactor = id(t.enactor),
@@ -111,6 +99,9 @@ function mux.world.lock_passes(t)
         source = id(t.source),
         destination = id(t.destination),
         descriptor = t.descriptor,
+        lock = t.lock,
+        silent = t.silent or false,
     })
-    return result == true or (type(result) == 'table' and result.passes == true)
 end
+
+function mux.world.lock_passes(t) return mux.world._lock_result(t).passes end

@@ -92,11 +92,7 @@ pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, line: &str) 
         .collect();
     match exits.as_slice() {
         [(exit, Some(destination))] => {
-            if !s.lock(player, *exit).unwrap_or(false) {
-                s.outbox
-                    .borrow_mut()
-                    .push((player, "You cannot go that way.".into()));
-            } else {
+            if s.traversal(player, *exit, session)? {
                 crate::movement::perform(
                     s,
                     player,

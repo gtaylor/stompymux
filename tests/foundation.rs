@@ -2574,3 +2574,100 @@ async fn tcp_comsys_pages_sessions_and_write_rollback() {
     bob.until("ComAlice: still here").await;
     restarted.stop().await;
 }
+
+/// State commands drive the copied exit policy end-to-end and survive relational restart.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_state_default_exit_policy_and_failed_write_rollback() {
+    let (_d, c) = populated().await;
+    let mut world = persistence::load(&c.database()).await.unwrap();
+    world.accounts.get_mut(&ObjectId(1)).unwrap().hash =
+        Some(accounts::hash("secret", &c).unwrap());
+    persistence::save(&c.database(), &world).await.unwrap();
+    let running = Running::start(&c).await;
+    let mut admin = Client::connect(&running).await;
+    admin.send("#1").await;
+    admin.until("Password: ").await;
+    admin.send("secret").await;
+    admin.until("Staff Nexus").await;
+    let mut traveler = Client::connect(&running).await;
+    traveler.register("StateWalker").await;
+    let mut witness = Client::connect(&running).await;
+    witness.register("StateWitness").await;
+    let id = persistence::load(&c.database())
+        .await
+        .unwrap()
+        .find_player("StateWalker")
+        .unwrap();
+    traveler
+        .send("@state/set #13/locks.traverse flag/WIZARD=false")
+        .await;
+    traveler.until("Permission denied.").await;
+    admin
+        .send("@state/set #13/locks.traverse message/enactor=Your pass is missing.")
+        .await;
+    admin.until("State value set.").await;
+    admin
+        .send("@state/set #13/locks.traverse message/others=is stopped at the gate.")
+        .await;
+    admin.until("State value set.").await;
+    traveler.send("out").await;
+    traveler.until("Your pass is missing.").await;
+    witness.until("StateWalker is stopped at the gate.").await;
+    admin
+        .send("@state/set #13/locks.traverse flag/WIZARD=")
+        .await;
+    admin.until("State value cleared.").await;
+    admin
+        .send("@state/set #13/locks.traverse state/access/pass=\"\\x00\\xFF\"")
+        .await;
+    admin.until("State value set.").await;
+    admin
+        .send(&format!("@state/set #{}/access pass=\"\\x00\\xFF\"", id.0))
+        .await;
+    admin.until("State value set.").await;
+    admin
+        .send(&format!("@state/examine #{}/access", id.0))
+        .await;
+    admin.until("pass (string): \"\\x00\\xFF\"").await;
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("CREATE TRIGGER fail_state BEFORE UPDATE ON object_state BEGIN SELECT RAISE(ABORT,'injected state failure'); END").execute(&mut db).await.unwrap();
+    admin
+        .send(&format!("@state/set #{}/access pass=wrong", id.0))
+        .await;
+    let failure = admin.until("Unable to save your changes").await;
+    assert!(!failure.contains("State value set."));
+    admin
+        .send(&format!("@state/examine #{}/access", id.0))
+        .await;
+    admin.until("pass (string): \"\\x00\\xFF\"").await;
+    sqlx::raw_sql("DROP TRIGGER fail_state")
+        .execute(&mut db)
+        .await
+        .unwrap();
+    sqlx::Connection::close(db).await.unwrap();
+    traveler.send("out").await;
+    traveler.until("Staff Nexus").await;
+    assert_ne!(
+        persistence::load(&c.database()).await.unwrap().objects[&id].location,
+        Some(ObjectId(4))
+    );
+    running.stop().await;
+    let restarted = Running::start(&c).await;
+    let mut traveler = Client::connect(&restarted).await;
+    traveler.send("StateWalker").await;
+    traveler.until("Password: ").await;
+    traveler.send("secret").await;
+    traveler.until("Staff Nexus").await;
+    let loaded = persistence::load(&c.database()).await.unwrap();
+    assert_eq!(
+        loaded.objects[&id].state["access"]["pass"],
+        Scalar::String(vec![0, 255])
+    );
+    restarted.stop().await;
+}

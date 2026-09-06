@@ -42,7 +42,7 @@ discard pending success output.
 
 Unknown columns, deferred BattleTech and communication-macro data, indexes
 and triggers remain in place. Unchanged Lua values retain their original SQLite
-storage types, including UTF-8 blobs. Explicit state-key removals and expired
+storage types, including binary strings in TEXT or BLOB cells. Explicit state-key removals and expired
 login-history entries remove only those owned rows. Unsupported required columns
 on new rows cause an atomic failure instead of invented defaults.
 
@@ -573,3 +573,61 @@ Native commands, Lua calls and lifecycle delivery share transaction-staged outpu
 Pages are online-only, obey in-character/GAGGED restrictions with Wizard endpoint
 exceptions, and persist the ordered successful recipients for repeat paging.
 Communication macro expansion remains deferred; macro records are preserved.
+
+## Object state and exit policies
+
+Wizard-only `@state` manages persistent, case-sensitive namespaces on any live
+object (including other Wizards and GOD). Configured command aliases apply.
+`@examine` includes namespace counts; `@state` lists the available switches.
+
+```text
+@state/examine here
+@state/examine #13/locks.traverse
+@state/set #13/locks.traverse flag/WIZARD=true
+@state/set #13/locks.traverse message/enactor="Staff only."
+@state/set me/access pass="\x00\xFF"
+@state/copy me/access pass=backup pass
+@state/move me/backup pass=archive pass
+@state/set me/access pass=
+@state/wipe me/archive
+```
+
+`/examine` defaults to `here`; `/wipe` requires an object and optionally a
+namespace. Copy and move operate on one object, overwrite their destination,
+and preserve the value's type. An empty assignment deletes; `""` stores an empty
+string. Unquoted `true`/`false`, signed decimal integers and finite numbers are
+parsed as scalars; other text is a string. Quoted strings support `\"`, `\\`,
+`\n`, `\r`, `\t`, and `\xNN`, including NUL and non-UTF-8 bytes. Inspection escapes
+these bytes and displays bracket examples literally.
+
+Namespaces start with an ASCII letter and are at most 127 bytes; keys follow the
+same rule with a 255-byte limit. Subsequent characters may be ASCII letters,
+digits, `_`, `-`, `.`, or `/`. Empty namespaces disappear after their last key is
+removed. The existing Lua limits apply to all state mutations: value payloads
+count string bytes, one byte per boolean, or eight bytes per integer/number;
+object totals also include namespace and key bytes plus one terminator each.
+
+Lua `object:state(namespace)` returns an immutable handle with `get(key, default)`,
+`has(key)`, `set(key, value)`, `delete(key)`, `keys()`, `entries()`,
+`get_many(keys)` and `set_many(values)`. Keys and entries are sorted. Missing
+values return the original default, including tables and `false`; setting `nil`
+deletes. Mutations and enumeration require a game callback. Reads can also occur
+during module loading. Handles to purged or rolled-back provisional objects are
+invalid. Lua strings preserve every byte; integers remain signed 64-bit in
+storage, subject to LuaJIT's numeric precision when read into Lua.
+
+`set_many` validates its entire final candidate before publishing any updates,
+even when Lua catches an error with `pcall`. This intentionally improves on C's
+partial batch behavior. Callback errors and persistence failures roll back state
+and staged output. New or changed strings use SQLite BLOB values; unchanged
+values retain their original SQLite storage class and extension columns.
+
+The copied `default_exit.lua` and `access_policy.lua` run unchanged. Policies in
+`locks.traverse` combine flag, affiliation and typed state requirements with AND;
+malformed entries fail closed. `message/enactor` and `message/others` customize
+denials, with empty strings suppressing the corresponding message. Neighbor
+messages include the traveler's name. Silent Dark Wizards suppress denial
+notifications and failure hooks. Valid denials invoke `on_fail`; teleport policy
+denials use their corresponding teleport failure events. Lock errors and invalid
+return tables cannot retain callback mutations. Channel permission bits retain
+their independent grant behavior.

@@ -5,6 +5,7 @@ mod loading;
 mod packages;
 mod runtime;
 mod sandbox;
+pub(crate) mod transactions;
 
 use crate::{
     text,
@@ -61,5 +62,28 @@ impl Scripts {
             config,
             lua: &self.lua,
         }
+    }
+}
+
+impl Scripts {
+    /// Invoke a protected game callback with rollback and state availability.
+    pub fn call<T: mlua::FromLuaMulti>(
+        &self,
+        f: &mlua::Function,
+        args: impl mlua::IntoLuaMulti,
+    ) -> anyhow::Result<T> {
+        transactions::run(&self.lua, &self.world, &self.outbox, || f.call(args))
+            .map_err(|e| anyhow::anyhow!(e.to_string()))
+    }
+
+    /// Execute a callback chunk with the same transaction and budget as game handlers.
+    pub fn eval_callback<T: mlua::FromLuaMulti>(&self, source: &str) -> anyhow::Result<T> {
+        self.budget.reset();
+        let f = self
+            .lua
+            .load(source)
+            .into_function()
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        self.call(&f, ())
     }
 }

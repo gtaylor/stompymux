@@ -142,7 +142,7 @@ impl Scripts {
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?
         {
             self.budget.reset();
-            f.call::<()>(ctx)
+            self.call::<()>(&f, ctx)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         }
         Ok(())
@@ -178,7 +178,7 @@ impl Scripts {
                 .eval::<Function>()
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?,
         };
-        f.call(self.context(Some(player), Some(location), session)?)
+        self.call(&f, self.context(Some(player), Some(location), session)?)
             .map_err(|e| anyhow::anyhow!(e.to_string()))
     }
 
@@ -190,22 +190,30 @@ impl Scripts {
         subject: ObjectId,
         movement: &crate::movement::Move,
     ) -> Result<bool> {
-        self.sync_parents()?;
-        self.budget.reset();
-        let f:Function=self.lua.load("return function(t) t.object=mux.world.object(t.object); return mux.world.lock_passes(t) end").eval().map_err(|e|anyhow::anyhow!(e.to_string()))?;
+        Ok(self
+            .movement_lock_outcome(location, lock, subject, movement)?
+            .passes)
+    }
+
+    /// Preserve policy messages for teleport and teleport-out denial.
+    pub fn movement_lock_outcome(
+        &self,
+        location: ObjectId,
+        lock: &str,
+        subject: ObjectId,
+        movement: &crate::movement::Move,
+    ) -> Result<LockOutcome> {
         let ctx = self.context(Some(movement.object), Some(location), movement.session)?;
-        ctx.set("lock", lock)
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        ctx.set("lock", lock).map_err(|e| anyhow::anyhow!("{e}"))?;
         for (key, value) in [
             ("subject", Some(subject.0)),
             ("cause", Some(movement.actor.0)),
             ("source", movement.source.map(|id| id.0)),
             ("destination", Some(movement.destination.0)),
         ] {
-            ctx.set(key, value)
-                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+            ctx.set(key, value).map_err(|e| anyhow::anyhow!("{e}"))?;
         }
-        f.call(ctx).map_err(|e| anyhow::anyhow!(e.to_string()))
+        self.lock_outcome(ctx)
     }
 
     /// Evaluate the existing traversal policy for the player and exit.
@@ -213,7 +221,125 @@ impl Scripts {
         self.sync_parents()?;
         let f:Function=self.lua.load("return function(o,p) return mux.world.lock_passes({object=mux.world.object(o),enactor=p,lock='traverse'}) end").eval().map_err(|e|anyhow::anyhow!(e.to_string()))?;
         self.budget.reset();
-        f.call((exit.0, player.0))
+        self.call(&f, (exit.0, player.0))
             .map_err(|e| anyhow::anyhow!(e.to_string()))
+    }
+}
+
+/// Validated lock result shared by movement and native traversal messaging.
+pub struct LockOutcome {
+    pub passes: bool,
+    pub enactor_message: Option<String>,
+    pub other_message: Option<String>,
+}
+impl Scripts {
+    /// Evaluate a full policy result; malformed results cannot retain callback mutations.
+    pub fn lock_outcome(&self, context: Table) -> Result<LockOutcome> {
+        self.sync_parents()?;
+        self.budget.reset();
+        let f: Function = self
+            .lua
+            .load("return mux.world._lock_result")
+            .eval()
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        let t: Table = self.call(&f, context)?;
+        Ok(LockOutcome {
+            passes: t.get("passes").map_err(|e| anyhow::anyhow!("{e}"))?,
+            enactor_message: t
+                .get("enactor_message")
+                .map_err(|e| anyhow::anyhow!("{e}"))?,
+            other_message: t.get("other_message").map_err(|e| anyhow::anyhow!("{e}"))?,
+        })
+    }
+
+    /// Denial notifications honor silent Wizards and optional empty messages, then fire on_fail.
+    pub fn lock_denied(&self, ctx: Table, result: &LockOutcome, default: &str) -> Result<()> {
+        let player = ObjectId(
+            ctx.get::<i64>("enactor")
+                .map_err(|e| anyhow::anyhow!("{e}"))?,
+        );
+        let object = ObjectId(
+            ctx.get::<i64>("object")
+                .map_err(|e| anyhow::anyhow!("{e}"))?,
+        );
+        if ctx
+            .get::<Option<bool>>("silent")
+            .map_err(|e| anyhow::anyhow!("{e}"))?
+            .unwrap_or(false)
+        {
+            return Ok(());
+        }
+        if let Some(message) = result
+            .enactor_message
+            .as_deref()
+            .or(Some(default))
+            .filter(|s| !s.is_empty())
+        {
+            self.outbox.borrow_mut().push((player, message.into()));
+        }
+        if let Some(message) = result.other_message.as_deref().filter(|s| !s.is_empty()) {
+            let w = self.world.borrow();
+            let actor = &w.objects[&player];
+            if let Some(location) = actor.location {
+                for other in w.objects.values().filter(|o| {
+                    o.kind == Kind::Player
+                        && o.location == Some(location)
+                        && o.id != player
+                        && o.id != object
+                }) {
+                    self.outbox
+                        .borrow_mut()
+                        .push((other.id, format!("{} {message}", actor.name).into()));
+                }
+            }
+        }
+        let parent = self
+            .world
+            .borrow()
+            .objects
+            .get(&object)
+            .map(|o| o.lua_parent.clone());
+        if let Some(t) = parent.and_then(|p| self.parents.get(&p)) {
+            let event = match ctx
+                .get::<Option<String>>("lock")
+                .map_err(|e| anyhow::anyhow!("{e}"))?
+                .as_deref()
+            {
+                Some("teleport") => "on_teleport_destination_fail",
+                Some("teleport_out") => "on_teleport_out_fail",
+                _ => "on_fail",
+            };
+            self.call_event(t, event, ctx)?;
+        }
+        Ok(())
+    }
+
+    /// Build traversal context with the same silent convention as the C server.
+    pub fn traversal(&self, player: ObjectId, exit: ObjectId, session: u64) -> Result<bool> {
+        let ctx = self.context(Some(player), Some(exit), Some(session))?;
+        ctx.set("lock", "traverse")
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        let silent = {
+            let w = self.world.borrow();
+            crate::flags::is_wizard(&w, player)
+                && w.objects[&player].flags.contains(crate::flags::Flag::Dark)
+        };
+        ctx.set("silent", silent)
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        let result = match self.lock_outcome(ctx.clone()) {
+            Ok(result) => result,
+            Err(error) => {
+                eprintln!("Traversal lock on #{} failed: {error:#}", exit.0);
+                LockOutcome {
+                    passes: false,
+                    enactor_message: None,
+                    other_message: None,
+                }
+            }
+        };
+        if !result.passes {
+            self.lock_denied(ctx, &result, "You cannot go that way.")?;
+        }
+        Ok(result.passes)
     }
 }

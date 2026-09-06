@@ -4,7 +4,7 @@ use crate::{
     lua::Scripts,
     world::{Kind, ObjectId},
 };
-use anyhow::{Result, ensure};
+use anyhow::Result;
 /// Movement route determines policy checks and user feedback.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Route {
@@ -70,20 +70,30 @@ fn apply(
         session,
     };
     if route == Route::Teleport {
-        ensure!(
-            s.movement_lock(destination, "teleport", actor, &movement)?,
-            "You can't teleport there!"
-        );
+        let mut policies = vec![(destination, "teleport", actor, "You can't teleport there!")];
         if kind != Kind::Exit {
-            let chain = s.world.borrow().containment_chain(source)?;
-            for location in chain {
-                ensure!(
-                    s.movement_lock(location, "teleport_out", object, &movement)?,
-                    "You can't teleport out!"
-                );
+            for location in s.world.borrow().containment_chain(source)? {
+                policies.push((location, "teleport_out", object, "You can't teleport out!"));
+            }
+        }
+        for (location, lock, subject, default) in policies {
+            let outcome = s.movement_lock_outcome(location, lock, subject, &movement)?;
+            if !outcome.passes {
+                let ctx = s.context(Some(object), Some(location), session)?;
+                ctx.set("lock", lock).map_err(|e| anyhow::anyhow!("{e}"))?;
+                ctx.set("cause", actor.0)
+                    .map_err(|e| anyhow::anyhow!("{e}"))?;
+                if actor != object {
+                    s.outbox
+                        .borrow_mut()
+                        .push((actor, "Permission denied.".into()));
+                }
+                s.lock_denied(ctx, &outcome, default)?;
+                return Ok(());
             }
         }
     }
+
     if route == Route::Home {
         let w = s.world.borrow();
         let o = &w.objects[&object];
