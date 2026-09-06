@@ -184,6 +184,42 @@ fn ansi(s: &Style, depth: ColorDepth) -> String {
 
 /// Keep each grapheme and its style boundaries atomic, even across semantic spans.
 pub fn telnet(spans: &[Span], p: &Palette, o: &RenderOptions, limit: usize) -> Vec<u8> {
+    render_chunks(spans, p, o, limit, usize::MAX, false)
+        .expect("single output is bounded")
+        .pop()
+        .unwrap_or_default()
+}
+
+/// Render complete text in bounded, independently closed transport messages.
+pub fn telnet_chunks(
+    spans: &[Span],
+    p: &Palette,
+    o: &RenderOptions,
+    limit: usize,
+    total_limit: usize,
+) -> anyhow::Result<Vec<Vec<u8>>> {
+    render_chunks(spans, p, o, limit, total_limit, true)
+}
+
+/// Close controls before yielding a chunk; the next chunk restores presentation explicitly.
+fn close(out: &mut Vec<u8>, link: bool, styled: bool) {
+    if link {
+        out.extend_from_slice(super::OSC8_CLOSE.as_bytes());
+    }
+    if styled {
+        out.extend_from_slice(b"\x1b[0m");
+    }
+}
+
+/// Share the exact same encoder for ordinary truncated messages and complete help responses.
+fn render_chunks(
+    spans: &[Span],
+    p: &Palette,
+    o: &RenderOptions,
+    limit: usize,
+    total_limit: usize,
+    complete: bool,
+) -> anyhow::Result<Vec<Vec<u8>>> {
     let visible: String = spans.iter().map(|s| s.text.as_str()).collect();
     let prepared: Vec<_> = spans
         .iter()
@@ -204,7 +240,11 @@ pub fn telnet(spans: &[Span], p: &Palette, o: &RenderOptions, limit: usize) -> V
     let mut style = Style::default();
     let mut link = None::<String>;
     let mut styled = false;
-    for g in visible.graphemes(true) {
+    let mut graphemes = visible.graphemes(true).peekable();
+    let mut chunks = Vec::new();
+    let mut total = 0usize;
+    while let Some(g) = graphemes.peek().copied() {
+        let saved_position = (span_index, offset);
         let mut remaining = g.len();
         let mut candidate = String::new();
         let mut next_style = style.clone();
@@ -243,20 +283,33 @@ pub fn telnet(spans: &[Span], p: &Palette, o: &RenderOptions, limit: usize) -> V
         let reserve = usize::from(next_link.is_some()) * super::OSC8_CLOSE.len()
             + usize::from(next_styled) * 4;
         if out.len() + encoded.len() + reserve > limit {
-            break;
+            if !complete {
+                break;
+            }
+            anyhow::ensure!(!out.is_empty(), "output limit cannot fit a styled grapheme");
+            close(&mut out, link.is_some(), styled);
+            total += out.len();
+            anyhow::ensure!(total <= total_limit, "help output exceeds text budget");
+            chunks.push(std::mem::take(&mut out));
+            (span_index, offset) = saved_position;
+            style = Style::default();
+            link = None;
+            styled = false;
+            continue;
         }
+        graphemes.next();
         out.extend(encoded);
         style = next_style;
         link = next_link;
         styled = next_styled;
     }
-    if link.is_some() {
-        out.extend_from_slice(b"\x1b]8;;\x1b\\");
+    close(&mut out, link.is_some(), styled);
+    total += out.len();
+    anyhow::ensure!(total <= total_limit, "help output exceeds text budget");
+    if !out.is_empty() {
+        chunks.push(out);
     }
-    if styled {
-        out.extend_from_slice(b"\x1b[0m");
-    }
-    out
+    Ok(chunks)
 }
 
 /// Escape text and attribute values for HTML fragments.

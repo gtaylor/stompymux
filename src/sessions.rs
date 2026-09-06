@@ -142,6 +142,47 @@ impl Session {
         self.raw(bytes)
     }
 
+    /// Deliver a complete help response through the same transport and accounting boundaries.
+    pub async fn help(
+        &self,
+        response: &crate::help::HelpResponse,
+        ansi: bool,
+        config: &crate::config::Config,
+    ) -> anyhow::Result<()> {
+        let options = self.render_options(ansi);
+        let mut spans = response.spans(&options);
+        spans.push(crate::text::Span {
+            text: "\n".into(),
+            ..Default::default()
+        });
+        let chunks = crate::text::telnet_chunks(
+            &spans,
+            &self.palette,
+            &options,
+            self.output_message_limit,
+            config.lua.output_byte_limit,
+        )?;
+        let deadline = tokio::time::Instant::now()
+            + std::time::Duration::from_millis(config.runtime.write_timeout_ms);
+        for chunk in chunks {
+            let n = chunk.len() as u64;
+            self.stats.output_total.fetch_add(n, Relaxed);
+            let permit = tokio::time::timeout_at(deadline, self.output.reserve()).await;
+            match permit {
+                Ok(Ok(permit)) => {
+                    self.stats.output_pending.fetch_add(n, Relaxed);
+                    permit.send(Output::Bytes(chunk));
+                }
+                _ => {
+                    self.stats.output_lost.fetch_add(n, Relaxed);
+                    self.failed.set(true);
+                    anyhow::bail!("help output queue unavailable");
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn text(&self, s: &str, ansi: bool) -> bool {
         self.document(&crate::text::Document::Styled(s.into()), ansi, false)
     }

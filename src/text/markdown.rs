@@ -15,18 +15,63 @@ pub fn parse(s: &str) -> Parser<'_> {
     )
 }
 
+/// Decode local navigation URLs without admitting control bytes or invalid UTF-8.
+fn local_url(url: &str) -> Option<String> {
+    let mut bytes = url.bytes();
+    let mut decoded = Vec::new();
+    while let Some(byte) = bytes.next() {
+        decoded.push(if byte == b'%' {
+            let high = (bytes.next()? as char).to_digit(16)?;
+            let low = (bytes.next()? as char).to_digit(16)?;
+            (high * 16 + low) as u8
+        } else {
+            byte
+        });
+    }
+    let decoded = String::from_utf8(decoded).ok()?;
+    if decoded.chars().any(char::is_control) {
+        None
+    } else {
+        Some(decoded)
+    }
+}
+
 /// Translate safe URLs and help destinations into shared actions.
-fn link(url: &str) -> Option<Link> {
+fn link(url: &str, article: Option<&str>) -> Option<Link> {
     let (kind, target) = if links::external(url) {
         ("url", url.to_string())
     } else if let Some(topic) = url
         .strip_prefix("help:")
         .filter(|s| !s.is_empty() && !s.chars().any(char::is_control))
     {
-        ("send", format!("help {topic}"))
+        ("send", format!("help {}", local_url(topic)?))
     } else if !url.contains(':') && !url.starts_with("//") && !url.chars().any(char::is_control) {
-        let topic = url.trim_end_matches(".md").trim_start_matches("./");
-        ("send", format!("help {topic}"))
+        let url = local_url(url)?;
+        let mut parts: Vec<&str> = if url.starts_with('/') {
+            Vec::new()
+        } else {
+            article
+                .and_then(|p| p.rsplit_once('/').map(|(dir, _)| dir))
+                .map(|dir| dir.split('/').collect())
+                .unwrap_or_default()
+        };
+        for component in url
+            .trim_start_matches('/')
+            .trim_end_matches(".md")
+            .split('/')
+        {
+            match component {
+                "" | "." => {}
+                ".." => {
+                    parts.pop()?;
+                }
+                other => parts.push(other),
+            }
+        }
+        if parts.is_empty() {
+            return None;
+        }
+        ("send", format!("help {}", parts.join("/")))
     } else {
         return None;
     };
@@ -42,7 +87,7 @@ fn link(url: &str) -> Option<Link> {
 }
 
 /// Keep Unicode word boundaries when possible, then split oversized words by grapheme.
-fn wrap(spans: Vec<Span>, width: usize) -> Vec<Span> {
+pub(crate) fn wrap(spans: Vec<Span>, width: usize) -> Vec<Span> {
     let plain: String = spans.iter().map(|s| s.text.as_str()).collect();
     let mut breaks = std::collections::BTreeSet::new();
     let mut omitted = std::collections::BTreeSet::new();
@@ -101,8 +146,76 @@ fn wrap(spans: Vec<Span>, width: usize) -> Vec<Span> {
         .collect()
 }
 
+/// Prefix complete display lines without letting prefixes inherit executable links.
+fn prefixed(spans: Vec<Span>, first: &str, continuation: &str) -> Vec<Span> {
+    let mut out = Vec::new();
+    let mut start = true;
+    let mut initial = true;
+    for span in spans {
+        for piece in span.text.split_inclusive('\n') {
+            if start && piece != "\n" {
+                out.push(Span {
+                    text: if initial { first } else { continuation }.into(),
+                    ..Span::default()
+                });
+                initial = false;
+            }
+            out.push(Span {
+                text: piece.into(),
+                ..span.clone()
+            });
+            start = piece.ends_with('\n');
+        }
+    }
+    out
+}
+
+/// List markers and quote prefixes belong to block layout rather than inline text.
+#[derive(Default)]
+struct BlockLayout {
+    quotes: usize,
+    indents: Vec<usize>,
+    marker: Option<String>,
+}
+
+impl BlockLayout {
+    /// Flush a paragraph or literal code block while retaining its enclosing block prefixes.
+    fn flush(&mut self, block: &mut Vec<Span>, out: &mut Vec<Span>, code: bool, width: usize) {
+        if block.is_empty() {
+            return;
+        }
+        let indent = self.indents.iter().sum::<usize>();
+        let base = "> ".repeat(self.quotes);
+        let continuation = format!("{base}{}", " ".repeat(indent));
+        let first = if let Some(marker) = self.marker.take() {
+            format!(
+                "{base}{}{marker}",
+                " ".repeat(indent.saturating_sub(marker.len()))
+            )
+        } else {
+            continuation.clone()
+        };
+        let spans = std::mem::take(block);
+        let available = width
+            .saturating_sub(UnicodeWidthStr::width(continuation.as_str()))
+            .max(1);
+        // At extremely narrow widths, omit structural prefixes rather than losing content.
+        let omit = UnicodeWidthStr::width(continuation.as_str()) >= width;
+        out.extend(prefixed(
+            if code { spans } else { wrap(spans, available) },
+            if omit { "" } else { &first },
+            if omit { "" } else { &continuation },
+        ));
+    }
+}
+
 /// Render Markdown blocks into styled runs without reparsing bracket examples.
 pub fn spans(source: &str, options: &super::RenderOptions) -> Vec<Span> {
+    spans_at(source, options, None)
+}
+
+/// Resolve relative navigation against an article's root-relative path.
+pub fn spans_at(source: &str, options: &super::RenderOptions, article: Option<&str>) -> Vec<Span> {
     let width = options.width.max(1);
     let mut out = Vec::new();
     let mut block = Vec::new();
@@ -116,22 +229,14 @@ pub fn spans(source: &str, options: &super::RenderOptions) -> Vec<Span> {
     let mut row = Vec::new();
     let mut cell = Vec::new();
     let mut in_cell = false;
-    let flush = |block: &mut Vec<Span>, out: &mut Vec<Span>, code: bool| {
-        if !block.is_empty() {
-            let spans = std::mem::take(block);
-            out.extend(if code { spans } else { wrap(spans, width) });
-        }
-    };
+    let mut layout = BlockLayout::default();
     for event in parse(source) {
-        let flush_after = matches!(
-            event,
-            Event::End(TagEnd::Paragraph | TagEnd::Heading(_) | TagEnd::Item)
-        );
+        let flush_after = matches!(event, Event::End(TagEnd::Paragraph | TagEnd::Heading(_)));
         let mut text = None;
         match event {
             Event::Start(Tag::Table(alignment)) => {
                 table_alignment = alignment;
-                flush(&mut block, &mut out, code);
+                layout.flush(&mut block, &mut out, code, width);
                 table = Some(Vec::new());
             }
             Event::Start(Tag::TableHead | Tag::TableRow) => row = Vec::new(),
@@ -150,7 +255,10 @@ pub fn spans(source: &str, options: &super::RenderOptions) -> Vec<Span> {
             }
             Event::End(TagEnd::Table) => {
                 if let Some(t) = table.take() {
-                    out.extend(table_spans(t, width, &table_alignment));
+                    let inset = layout.quotes * 2 + layout.indents.iter().sum::<usize>();
+                    let available = if inset >= width { width } else { width - inset };
+                    let mut rendered = table_spans(t, available, &table_alignment);
+                    layout.flush(&mut rendered, &mut out, true, width);
                 }
             }
             Event::Start(Tag::Emphasis | Tag::Strong | Tag::Strikethrough) => {
@@ -165,7 +273,7 @@ pub fn spans(source: &str, options: &super::RenderOptions) -> Vec<Span> {
                 style = stack.pop().unwrap_or_default()
             }
             Event::Start(Tag::Heading { level, .. }) => {
-                flush(&mut block, &mut out, code);
+                layout.flush(&mut block, &mut out, code, width);
                 style.bold = true;
                 text = Some(format!("{} ", "#".repeat(level as usize)));
             }
@@ -174,28 +282,47 @@ pub fn spans(source: &str, options: &super::RenderOptions) -> Vec<Span> {
                 text = Some("\n\n".into());
             }
             Event::Start(Tag::CodeBlock(_)) => {
-                flush(&mut block, &mut out, code);
+                layout.flush(&mut block, &mut out, code, width);
                 code = true;
             }
             Event::End(TagEnd::CodeBlock) => {
-                flush(&mut block, &mut out, true);
+                layout.flush(&mut block, &mut out, true, width);
                 code = false;
                 text = Some("\n".into());
             }
             Event::Start(Tag::BlockQuote(_)) => {
-                flush(&mut block, &mut out, code);
-                text = Some("> ".into());
+                layout.flush(&mut block, &mut out, code, width);
+                layout.quotes += 1;
+            }
+            Event::End(TagEnd::BlockQuote(_)) => {
+                layout.flush(&mut block, &mut out, code, width);
+                layout.quotes = layout.quotes.saturating_sub(1);
             }
             Event::Start(Tag::List(start)) => {
-                flush(&mut block, &mut out, code);
+                if block
+                    .last()
+                    .is_some_and(|span: &Span| !span.text.ends_with('\n'))
+                {
+                    block.push(Span {
+                        text: "\n".into(),
+                        ..Span::default()
+                    });
+                }
+                layout.flush(&mut block, &mut out, code, width);
                 lists.push(start);
             }
             Event::End(TagEnd::List(_)) => {
+                layout.flush(&mut block, &mut out, code, width);
                 lists.pop();
-                text = Some("\n".into());
+                if lists.is_empty() {
+                    out.push(Span {
+                        text: "\n".into(),
+                        ..Span::default()
+                    });
+                }
             }
             Event::Start(Tag::Item) => {
-                let depth = lists.len().saturating_sub(1);
+                layout.flush(&mut block, &mut out, code, width);
                 let marker = if let Some(Some(n)) = lists.last_mut() {
                     let s = format!("{n}. ");
                     *n += 1;
@@ -203,13 +330,24 @@ pub fn spans(source: &str, options: &super::RenderOptions) -> Vec<Span> {
                 } else {
                     "- ".into()
                 };
-                text = Some(format!("{}{marker}", "  ".repeat(depth)));
+                layout.indents.push(marker.len());
+                layout.marker = Some(marker);
             }
-            Event::End(TagEnd::Item) => text = Some("\n".into()),
+            Event::End(TagEnd::Item) => {
+                if block.last().is_some_and(|s| !s.text.ends_with('\n')) {
+                    block.push(Span {
+                        text: "\n".into(),
+                        ..Span::default()
+                    });
+                }
+                layout.flush(&mut block, &mut out, code, width);
+                layout.indents.pop();
+                layout.marker = None;
+            }
             Event::End(TagEnd::Paragraph) => {
                 text = Some(if lists.is_empty() { "\n\n" } else { "\n" }.into());
             }
-            Event::Start(Tag::Link { dest_url, .. }) => active_link = link(&dest_url),
+            Event::Start(Tag::Link { dest_url, .. }) => active_link = link(&dest_url, article),
             Event::End(TagEnd::Link) => {
                 if let Some(link) = active_link.take()
                     && link.kind == links::LinkKind::External
@@ -252,10 +390,10 @@ pub fn spans(source: &str, options: &super::RenderOptions) -> Vec<Span> {
             }
         }
         if flush_after {
-            flush(&mut block, &mut out, code);
+            layout.flush(&mut block, &mut out, code, width);
         }
     }
-    flush(&mut block, &mut out, code);
+    layout.flush(&mut block, &mut out, code, width);
     out
 }
 
@@ -332,11 +470,16 @@ fn table_spans(
 
 /// Library HTML formatting with raw HTML removed and explicit link policy.
 pub fn html(source: &str) -> String {
+    html_at(source, None)
+}
+
+/// HTML and Telnet use the same article-relative link policy.
+pub fn html_at(source: &str, article: Option<&str>) -> String {
     let mut link_stack = Vec::new();
     let events = parse(source).filter_map(|e| match e {
         Event::Html(_) | Event::InlineHtml(_) => None,
         Event::Start(Tag::Link { dest_url, .. }) => {
-            let l = link(&dest_url);
+            let l = link(&dest_url, article);
             let tag = l
                 .as_ref()
                 .map(|l| {

@@ -449,11 +449,46 @@ tables using display columns, falling back to labeled rows on narrow terminals.
 External links display their destination when OSC links are unavailable. Relative
 help paths and `help:topic` links become help actions.
 
-`help [topic]` and configured aliases read the startup index in `mux.help_directory`.
-Articles use `+++` TOML front matter (title, description, keywords and optional
-index/visibility metadata). Wizard-only articles are excluded from unauthorized
-lookups, suggestions and indexes. Invalid files and duplicate keywords produce
-file-specific startup diagnostics. `@help` and live reload are not implemented.
+`help [topic]` and configured aliases browse `mux.help_directory`. Bare `help`
+opens `index.md`; topics match keywords case-insensitively, with substring
+suggestions when no exact match exists. Root-relative article paths also work.
+Wizard-only articles are excluded from unauthorized lookups, suggestions and
+indexes. Index links issue `help <primary keyword>` when OSC send links are
+available; plain clients see the same topic names and typing instructions.
+
+Metadata is indexed at startup. Article bodies are read on demand, so editing a
+body is immediately visible. Wizards use `@help/reload` to refresh metadata,
+keywords, visibility and added/deleted files; bare `@help` lists the switch.
+Malformed articles are skipped and duplicate keywords retain the first lexical
+file's declaration, with contextual diagnostics and reload counts. A fatal
+traversal failure retains the previous index. Missing help content is tolerated
+at initial startup. These commands never change the world database.
+
+Help uses complete output chunks rather than truncating at one message. Each
+chunk honors `runtime.output_message_limit` and closes ANSI/OSC sequences;
+the complete encoded response is bounded by `lua.output_byte_limit`. Queue
+admission shares one `runtime.write_timeout_ms` deadline for the response, with
+existing slow-client eviction and compression behavior. A response that cannot
+fit these budgets produces an explicit error instead of silent truncation.
+
+Help articles use complete-line `+++` delimiters around TOML front matter:
+
+```toml
+title = "Movement"
+description = "Getting around the world"
+keywords = ["movement", "travel"]
+article_tags = ["show_in_index"]
+# Optional: wizard_only = true, weight = 10
+# For an index: show_index_for_article_tags = ["movement_topics"]
+# index_style = "list_with_description" or "columnar"
+```
+
+The body after the closing delimiter is Markdown. Tagged indexes exclude
+themselves, sort weighted articles first, and adapt topic/description rows or
+three-column layouts to the terminal width. Relative Markdown links resolve
+against the containing article, with `..` allowed only inside the help root;
+`help:topic` links address keywords directly. Code examples and bracket markup
+remain literal. Lists and quotes retain their indentation when prose wraps.
 
 Text width, wrapping and truncation use unicode-width and unicode-segmentation.
 This deliberately improves on C's byte counts: CJK, combining marks and emoji

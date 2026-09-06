@@ -2292,3 +2292,148 @@ return {commands={
     assert!(!index.contains("wizard_commands"));
     running.stop().await;
 }
+
+/// Help browsing/reload is private, read-only and complete across bounded/compressed output.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_help_reload_navigation_and_compressed_chunks() {
+    let (d, _c) = populated().await;
+    copy(Path::new("game/help"), &d.path().join("help"));
+    let aliases = d.path().join("aliases.toml");
+    std::fs::write(
+        &aliases,
+        std::fs::read_to_string(&aliases).unwrap().replace(
+            "[aliases.commands]",
+            "[aliases.commands]\nhr='@help/reload'\nhh='@help'",
+        ),
+    )
+    .unwrap();
+    let config_path = d.path().join("stompymux.toml");
+    let config_text = std::fs::read_to_string(&config_path).unwrap();
+    std::fs::write(
+        &config_path,
+        format!(
+            "{config_text}\n[runtime]\noutput_message_limit=512\nsession_output_queue_capacity=16\n"
+        ),
+    )
+    .unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let help_path = d.path().join("help/long.md");
+    let front = "+++\ntitle='Long'\ndescription='A long example'\nkeywords=['long']\narticle_tags=['show_in_index']\n+++\n";
+    let body = format!("# Long\n\n{}\nHELP_END_ONE\n", "entry-word ".repeat(2500));
+    std::fs::write(&help_path, format!("{front}{body}")).unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(2)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
+    w.objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .flags
+        .insert(stompymux_rs::flags::Flag::Ansi);
+    persistence::save(&c.database(), &w).await.unwrap();
+    let running = Running::start(&c).await;
+    let mut wizard = Client::connect(&running).await;
+    wizard.login("#2").await;
+    let mut other = Client::connect(&running).await;
+    other.login("#2").await;
+    let mut reader = Client::connect(&running).await;
+    reader.register("HelpReader").await;
+    reader.send("@help/reload").await;
+    reader.until("Permission denied.").await;
+    wizard.send("color off").await;
+    wizard.until("Color mode set to off.").await;
+    let db = std::fs::read(c.database()).unwrap();
+    wizard.send("hh").await;
+    wizard.until("Rebuild the help index.").await;
+    wizard.send("@help/bogus").await;
+    wizard.until("Invalid @help switch combination.").await;
+    wizard.send("@help/reload extra").await;
+    wizard.until("Usage: @help or @help/reload").await;
+    wizard.send("h long").await;
+    let output = wizard.until("HELP_END_ONE").await;
+    assert_eq!(output.matches("entry-word").count(), 2500);
+    other.send("color").await;
+    let private = other.until("Client capability: 16.").await;
+    assert!(!private.contains("entry-word"));
+    std::fs::write(
+        &help_path,
+        format!(
+            "{}{}",
+            front.replace("['long']", "['fresh']"),
+            body.replace("HELP_END_ONE", "HELP_END_TWO")
+        ),
+    )
+    .unwrap();
+    wizard.send("help long").await;
+    wizard.until("HELP_END_TWO").await;
+    wizard.send("help fresh").await;
+    wizard.until("No help found for 'fresh'.").await;
+    wizard.send("hr").await;
+    wizard.until("0 error(s), 0 warning(s).").await;
+    wizard.send("help fresh").await;
+    wizard.until("HELP_END_TWO").await;
+    std::fs::rename(d.path().join("help"), d.path().join("help-away")).unwrap();
+    wizard.send("hr").await;
+    wizard.until("previous index retained").await;
+    std::fs::rename(d.path().join("help-away"), d.path().join("help")).unwrap();
+    wizard.send("help fresh").await;
+    wizard.until("HELP_END_TWO").await;
+    // Confirm negotiated action links and narrow NAWS layout on a real connection.
+    wizard.socket.write_all(b"\xff\xfb\x1f\xff\xfa\x1f\x00\x18\x00\x18\xff\xf0\xff\xfb\x27\xff\xfa\x27\x00\x03OSC_HYPERLINKS_SEND\x011\xff\xf0").await.unwrap();
+    wizard.send("help").await;
+    let linked = wizard.until("help%20fresh").await;
+    assert!(linked.contains("\x1b]8;;send:"));
+    wizard.send("color").await;
+    wizard.until("Client capability: 16.").await;
+    // One zlib stream spans all chunks, including consecutive help requests.
+    other.socket.write_all(&[255, 253, 86]).await.unwrap();
+    let marker = telnet_until(&mut other.socket, &[255, 250, 86, 255, 240]).await;
+    let boundary = marker
+        .windows(5)
+        .position(|v| v == [255, 250, 86, 255, 240])
+        .unwrap()
+        + 5;
+    let mut compressed = marker[boundary..].to_vec();
+    let mut inflater = flate2::Decompress::new(true);
+    let mut offset = 0;
+    for _ in 0..2 {
+        other.send("help fresh").await;
+        let mut plain = Vec::new();
+        tokio::time::timeout(Duration::from_secs(10), async {
+            while !plain.windows(12).any(|v| v == b"HELP_END_TWO") {
+                let mut out = [0; 4096];
+                let before = (inflater.total_in(), inflater.total_out());
+                inflater
+                    .decompress(
+                        &compressed[offset..],
+                        &mut out,
+                        flate2::FlushDecompress::Sync,
+                    )
+                    .unwrap();
+                let consumed = (inflater.total_in() - before.0) as usize;
+                let written = (inflater.total_out() - before.1) as usize;
+                offset += consumed;
+                plain.extend_from_slice(&out[..written]);
+                if consumed == 0 && written == 0 {
+                    let mut input = [0; 4096];
+                    let n = other.socket.read(&mut input).await.unwrap();
+                    assert!(n > 0);
+                    compressed.extend_from_slice(&input[..n]);
+                }
+            }
+        })
+        .await
+        .unwrap();
+        assert_eq!(
+            stompymux_rs::text::Document::Literal(String::from_utf8_lossy(&plain).into_owned())
+                .spans(&Default::default(), &Default::default())
+                .iter()
+                .map(|s| s.text.as_str())
+                .collect::<String>()
+                .matches("entry-word")
+                .count(),
+            2500
+        );
+    }
+    assert_eq!(db, std::fs::read(c.database()).unwrap());
+    running.stop().await;
+}

@@ -6,7 +6,8 @@ mod parser;
 mod render;
 
 use anyhow::{Result, ensure};
-pub use render::{ColorDepth, RenderOptions, preset};
+pub(crate) use render::html as spans_html;
+pub use render::{ColorDepth, RenderOptions, preset, telnet_chunks};
 use std::collections::BTreeMap;
 use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;

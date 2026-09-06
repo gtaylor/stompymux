@@ -293,3 +293,17 @@ pub fn color(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
 pub fn help(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     Ok(Action::Help(input.args.clone()))
 }
+
+/// Wizard-only help administration with explicit switch validation.
+pub(super) fn help_admin(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    if !input.args.trim().is_empty() {
+        return Ok(Action::Reply("Usage: @help or @help/reload".into()));
+    }
+    Ok(match input.switch.as_deref() {
+        None => {
+            Action::Reply("@help command switches:\r\n  /reload  Rebuild the help index.".into())
+        }
+        Some("reload") => Action::HelpReload,
+        _ => Action::Reply("Invalid @help switch combination.".into()),
+    })
+}

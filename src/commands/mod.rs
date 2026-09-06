@@ -19,6 +19,8 @@ pub enum Action {
     /// Session-local rendering preferences and read-only help.
     Color(String),
     Help(String),
+    /// Rebuild the immutable help metadata snapshot.
+    HelpReload,
     /// Request common graceful shutdown.
     Shutdown,
     /// Run transactional database maintenance.

@@ -7,9 +7,17 @@ use std::collections::BTreeMap;
 impl Scripts {
     /// Initialize budgets, built-ins and sandbox restrictions before loading game scripts.
     pub fn new(config: &Config, world: SharedWorld) -> Result<Self> {
+        Self::with_help(config, world, crate::help::HelpIndex::load(config)?)
+    }
+
+    /// Accept a help index loaded on a blocking worker during asynchronous server startup.
+    pub(crate) fn with_help(
+        config: &Config,
+        world: SharedWorld,
+        help: crate::help::HelpIndex,
+    ) -> Result<Self> {
         let palette = std::sync::Arc::new(text::Palette::from_config(config)?);
         world.borrow_mut().palette = palette.clone();
-        let help = crate::help::HelpIndex::load(config)?;
         let (lua, budget) = sandbox::create(config)?;
         let outbox: Outbox = Default::default();
         let api = packages::register_native(&lua, config, &world, &outbox, &palette)?;

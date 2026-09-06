@@ -348,26 +348,25 @@ fn help_index_visibility_order_and_relative_topics() {
     }
     let config = stompymux_rs::config::Config::load(temp.path()).unwrap();
     let index = stompymux_rs::help::HelpIndex::load(&config).unwrap();
-    let regular = index.lookup("", false);
-    assert!(!regular.source().contains("Secret"));
-    assert!(regular.source().find("First").unwrap() < regular.source().find("Second").unwrap());
-    let wizard = index.lookup("", true);
-    assert!(wizard.source().find("Secret").unwrap() < wizard.source().find("First").unwrap());
-    assert!(index.lookup("FIRST", false).source().contains("First body"));
-    assert!(index.lookup("one", false).source().contains("First body"));
-    assert!(
+    let lookup = |topic: &str, wizard: bool| {
         index
-            .lookup("secret", false)
-            .source()
-            .contains("No help found")
-    );
-    assert!(
-        index
-            .lookup("sec", false)
-            .source()
-            .contains("No exact match")
-    ); // Second remains visible.
-    assert!(!index.lookup("sec", false).source().contains("secret"));
+            .lookup(topic, wizard)
+            .unwrap()
+            .spans(&RenderOptions::default())
+            .iter()
+            .map(|span| span.text.as_str())
+            .collect::<String>()
+    };
+    let regular = lookup("", false);
+    assert!(!regular.as_str().contains("Secret"));
+    assert!(regular.as_str().find("First").unwrap() < regular.as_str().find("Second").unwrap());
+    let wizard = lookup("", true);
+    assert!(wizard.as_str().find("Secret").unwrap() < wizard.as_str().find("First").unwrap());
+    assert!(lookup("FIRST", false).as_str().contains("First body"));
+    assert!(lookup("one", false).as_str().contains("First body"));
+    assert!(lookup("secret", false).as_str().contains("No help found"));
+    assert!(lookup("sec", false).as_str().contains("No exact match")); // Second remains visible.
+    assert!(!lookup("sec", false).as_str().contains("secret"));
 }
 
 #[test]

@@ -106,7 +106,10 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
             }
         }
     }
-    let scripts = Scripts::new(c, world)?;
+    let help_config = c.clone();
+    let help =
+        tokio::task::spawn_blocking(move || crate::help::HelpIndex::load(&help_config)).await??;
+    let scripts = Scripts::with_help(c, world, help)?;
     if !existing {
         let god = Zeroizing::new(accounts::random_password());
         let wizard = Zeroizing::new(accounts::random_password());
@@ -1012,12 +1015,64 @@ impl Server {
                     || self.scripts.world.borrow().objects[&p]
                         .flags
                         .contains(crate::flags::Flag::Wizard);
-                let doc = self.scripts.help.lookup(&topic, wizard);
-                let ansi = self.scripts.world.borrow().objects[&p]
-                    .flags
-                    .contains(crate::flags::Flag::Ansi);
-                if let Some(s) = self.sessions.get(&id) {
-                    s.document(&doc, ansi, true);
+                let index = self.scripts.help.clone();
+                let response =
+                    tokio::task::spawn_blocking(move || index.lookup(&topic, wizard)).await;
+                match response {
+                    Ok(Ok(response)) => {
+                        let ansi = self.scripts.world.borrow().objects[&p]
+                            .flags
+                            .contains(crate::flags::Flag::Ansi);
+                        if let Some(session) = self.sessions.get(&id)
+                            && let Err(error) = session.help(&response, ansi, &self.config).await
+                        {
+                            eprintln!("Help rendering: {error:#}");
+                            self.tell(
+                                id,
+                                "Unable to render help article. See server diagnostics.\r\n",
+                            );
+                        }
+                    }
+                    error => {
+                        eprintln!("Help read: {error:?}");
+                        self.tell(
+                            id,
+                            "Unable to render help article. See server diagnostics.\r\n",
+                        );
+                    }
+                }
+            }
+            Ok(Action::HelpReload) => {
+                let config = self.config.clone();
+                match tokio::task::spawn_blocking(move || crate::help::HelpIndex::reload(&config))
+                    .await
+                {
+                    Ok(Ok(index)) => {
+                        index.report.log();
+                        let report = &index.report;
+                        let mut lines: Vec<_> = report
+                            .errors
+                            .iter()
+                            .chain(&report.warnings)
+                            .cloned()
+                            .collect();
+                        lines.push(report.summary());
+                        let response = crate::help::HelpResponse::Message(lines.join("\n"));
+                        self.scripts.help = index;
+                        if let Some(session) = self.sessions.get(&id)
+                            && let Err(error) = session.help(&response, false, &self.config).await
+                        {
+                            eprintln!("Help reload diagnostics: {error:#}");
+                            self.tell(
+                                id,
+                                "Help reindexed; see server diagnostics for details.\r\n",
+                            );
+                        }
+                    }
+                    error => {
+                        eprintln!("Help reload failed: {error:?}");
+                        self.tell(id, "Help reload failed; previous index retained. See server diagnostics.\r\n");
+                    }
                 }
             }
             Ok(Action::Sessions(prefix)) => self.session_diagnostics(id, &prefix),
