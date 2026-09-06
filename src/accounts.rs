@@ -1,8 +1,9 @@
+//! Account validation, compatible password hashes and credential generation.
 use crate::config::Config;
 use anyhow::{Result, ensure};
 use argon2::{
     Algorithm, Argon2, Params, PasswordHasher, PasswordVerifier, Version,
-    password_hash::{PasswordHash, SaltString},
+    password_hash::phc::PasswordHash,
 };
 pub fn hash(password: &str, c: &Config) -> Result<String> {
     let params = Params::new(
@@ -12,9 +13,8 @@ pub fn hash(password: &str, c: &Config) -> Result<String> {
         None,
     )
     .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-    let salt = SaltString::generate(&mut rand::rngs::OsRng);
     Ok(Argon2::new(Algorithm::Argon2id, Version::V0x13, params)
-        .hash_password(password.as_bytes(), &salt)
+        .hash_password(password.as_bytes())
         .map_err(|e| anyhow::anyhow!(e.to_string()))?
         .to_string())
 }
@@ -62,9 +62,11 @@ pub fn validate_password(password: &str, c: &Config) -> Result<()> {
     Ok(())
 }
 pub fn random_password() -> String {
-    use rand::RngCore;
+    use rand::TryRng;
     let mut b = [0u8; 16];
-    rand::rngs::OsRng.fill_bytes(&mut b);
+    rand::rngs::SysRng
+        .try_fill_bytes(&mut b)
+        .expect("OS randomness unavailable");
     b.iter().map(|v| format!("{v:02x}")).collect()
 }
 pub fn now() -> i64 {
@@ -72,4 +74,16 @@ pub fn now() -> i64 {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs() as i64
+}
+
+#[cfg(test)]
+mod tests {
+    /// An Argon2 0.5 PHC vector remains readable after upgrading the hashing API.
+    #[test]
+    fn verifies_existing_argon2id_hash() {
+        // RustCrypto argon2 0.5 tests/phc_strings.rs: password is "password".
+        let hash = "$argon2id$v=19$m=65536,t=2,p=1$c29tZXNhbHQ$CTFhFdXPJO1aFaMaO6Mm5c8y7cJHAph8ArZWb2GRPPc";
+        assert!(super::verify("password", hash));
+        assert!(!super::verify("incorrect", hash));
+    }
 }

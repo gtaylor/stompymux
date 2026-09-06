@@ -88,20 +88,20 @@ impl Scripts {
                 "name" => lua.to_value(&o.name),
                 "description" => lua.to_value_with(
                     &o.description,
-                    mlua::SerializeOptions::new().serialize_none_to_null(false),
+                    mlua::serde::SerializeOptions::new().serialize_none_to_null(false),
                 ),
                 "type" => Ok(Value::Integer(o.kind.code())),
                 "location" => lua.to_value_with(
                     &o.location,
-                    mlua::SerializeOptions::new().serialize_none_to_null(false),
+                    mlua::serde::SerializeOptions::new().serialize_none_to_null(false),
                 ),
                 "home" => lua.to_value_with(
                     &o.home,
-                    mlua::SerializeOptions::new().serialize_none_to_null(false),
+                    mlua::serde::SerializeOptions::new().serialize_none_to_null(false),
                 ),
                 "affiliation" => lua.to_value_with(
                     &o.affiliation,
-                    mlua::SerializeOptions::new().serialize_none_to_null(false),
+                    mlua::serde::SerializeOptions::new().serialize_none_to_null(false),
                 ),
                 "flags" => lua.to_value(&o.flags),
                 _ => Err(err("unsupported object field")),
