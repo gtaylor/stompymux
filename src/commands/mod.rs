@@ -1,5 +1,6 @@
 //! Registry-driven commands with transactional native/Lua handlers and exit fallback.
 mod native;
+mod objects;
 mod registry;
 pub(crate) mod target;
 use crate::{
@@ -62,6 +63,17 @@ impl CommandContext<'_> {
 }
 /// Resolve the registry first, then Lua scopes and exit-name matching.
 pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, line: &str) -> Result<Action> {
+    crate::lua::transactions::with_descriptor(&s.lua, Some(session), || {
+        run_inner(s, c, player, session, line)
+    })
+}
+fn run_inner(
+    s: &Scripts,
+    c: &Config,
+    player: ObjectId,
+    session: u64,
+    line: &str,
+) -> Result<Action> {
     let ctx = CommandContext {
         scripts: s,
         config: c,
@@ -129,6 +141,11 @@ pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, line: &str) 
         })
         .map(|o| (o.id, o.destination))
         .collect();
+    let preferred = s.prefer_matches(player, exits.iter().map(|e| e.0).collect(), Some(session))?;
+    let exits: Vec<_> = exits
+        .into_iter()
+        .filter(|e| preferred.contains(&e.0))
+        .collect();
     match exits.as_slice() {
         [(exit, Some(destination))] => {
             if s.traversal(player, *exit, session)? {
@@ -142,6 +159,10 @@ pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, line: &str) 
                 )?;
             }
         }
+        [(_, None)] => s
+            .outbox
+            .borrow_mut()
+            .push((player, "You can't go that way.".into())),
         [] => s.outbox.borrow_mut().push((
             player,
             "Huh? (Type look, say <message>, WHO, an exit name, or quit.)".into(),

@@ -69,7 +69,7 @@ mux.world = {
     types = {ROOM = 0, THING = 1, EXIT = 2, PLAYER = 3},
     flags = native.flags,
     powers = native.powers,
-    locks = {TRAVERSE = 'traverse', TELEPORT = 'teleport', TELEPORT_OUT = 'teleport_out', CHANNEL_JOIN = 'channel_join', CHANNEL_TRANSMIT = 'channel_transmit', CHANNEL_RECEIVE = 'channel_receive'},
+    locks = native.locks,
     object = object,
 }
 
@@ -85,23 +85,40 @@ end
 
 function mux.world.pemit(o, s) native.pemit(id(o), s) end
 
+-- Private evaluation accepts canonical keys; public calls require typed constants.
+local function lock_identity(value)
+    if type(value) == 'table' then value = value._id end
+    return native.lock_identity(value)
+end
 function mux.world._lock_result(t)
-    local n = id(t.object)
-    local parent = _parents[_object_parents[n]]
+    local n = lock_identity(t.object)
+    local enactor = lock_identity(t.enactor)
+    local subject = lock_identity(t.subject or enactor)
+    local cause = lock_identity(t.cause or enactor)
+    local path = native.lock_parent(n)
+    if not path then return {passes = true} end
+    local parent = _parents[path]
     if not parent then error('Missing lock parent') end
-    local lock = parent.locks and parent.locks[t.lock]
+    if parent.locks == nil then return {passes = true} end
+    if type(parent.locks) ~= 'table' then error('locks must be a table') end
+    local lock = parent.locks[t.lock]
     if lock == nil then return {passes = true} end
+    if type(lock) ~= 'function' then error('lock handler must be a function') end
     return native.evaluate_lock(lock, {
-        object = n,
-        subject = id(t.subject or t.enactor),
-        enactor = id(t.enactor),
-        cause = id(t.cause or t.enactor),
-        source = id(t.source),
-        destination = id(t.destination),
-        descriptor = t.descriptor,
-        lock = t.lock,
-        silent = t.silent or false,
+        object = n, subject = subject, enactor = enactor, cause = cause,
+        source = id(t.source), destination = id(t.destination),
+        descriptor = t.descriptor, lock = t.lock, silent = t.silent or false,
+        args = {},
     })
 end
-
-function mux.world.lock_passes(t) return mux.world._lock_result(t).passes end
+function mux.world.lock_passes(t)
+    if type(t) ~= 'table' then error('lock options must be a table') end
+    local allowed = {object=true,enactor=true,lock=true,cause=true,subject=true}
+    for k in pairs(t) do if not allowed[k] then error('unknown lock option: '..tostring(k)) end end
+    local ctx = {object=lock_identity(t.object), enactor=lock_identity(t.enactor), lock=native.lock_key(t.lock), silent=true, descriptor=native.callback_descriptor()}
+    ctx.subject=lock_identity(t.subject or ctx.enactor)
+    ctx.cause=lock_identity(t.cause or ctx.enactor)
+    local ok, result = pcall(mux.world._lock_result, ctx)
+    if not ok then native.lock_error(tostring(result)); return false end
+    return result.passes
+end

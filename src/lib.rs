@@ -39,3 +39,7 @@ pub use server::run_with_schedule_clock;
 /// Player-defined command templates and shared macro sets.
 pub mod macros;
 pub use macros::{MacroEntry, MacroModes, MacroSet, MacroSlots, PlayerMacros};
+
+/// Shared object and channel lock catalog.
+pub mod locks;
+pub use locks::{LockInvocation, LockOutcome, LockType};

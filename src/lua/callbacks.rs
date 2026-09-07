@@ -1,7 +1,7 @@
 //! Lifecycle, appearance and lock callbacks with existing rollback and budget boundaries.
 use super::Scripts;
 use crate::world::{Kind, ObjectId};
-use anyhow::{Context, Result};
+use anyhow::Result;
 use mlua::{Function, Table};
 
 impl Scripts {
@@ -133,7 +133,21 @@ impl Scripts {
     }
 
     /// Invoke an optional event handler with a renewed instruction budget.
-    fn call_event(&self, t: &Table, name: &str, ctx: Table) -> Result<()> {
+    pub(super) fn call_event(&self, t: &Table, name: &str, ctx: Table) -> Result<()> {
+        ctx.set("event", name).map_err(|e| anyhow::anyhow!("{e}"))?;
+        if ctx
+            .get::<mlua::Value>("args")
+            .map_err(|e| anyhow::anyhow!("{e}"))?
+            == mlua::Value::Nil
+        {
+            ctx.set(
+                "args",
+                self.lua
+                    .create_table()
+                    .map_err(|e| anyhow::anyhow!("{e}"))?,
+            )
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        }
         if let Some(events) = t
             .get::<Option<Table>>("events")
             .map_err(|e| anyhow::anyhow!(e.to_string()))?
@@ -162,15 +176,15 @@ impl Scripts {
     ) -> Result<String> {
         self.sync_parents()?;
         let parent = self.world.borrow().objects[&location].lua_parent.clone();
-        let t = self
-            .parents
-            .get(&parent)
-            .context("appearance parent missing")?;
+        let renderer = match self.parents.get(&parent) {
+            Some(t) => t
+                .get::<Option<Function>>("internal_appearance")
+                .map_err(|e| anyhow::anyhow!("{e}"))?,
+            None if parent.is_empty() => None,
+            None => anyhow::bail!("appearance parent missing"),
+        };
         self.budget.reset();
-        let f = match t
-            .get::<Option<Function>>("internal_appearance")
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?
-        {
+        let f = match renderer {
             Some(f) => f,
             None => self
                 .lua
@@ -186,7 +200,7 @@ impl Scripts {
     pub fn movement_lock(
         &self,
         location: ObjectId,
-        lock: &str,
+        lock: LockType,
         subject: ObjectId,
         movement: &crate::movement::Move,
     ) -> Result<bool> {
@@ -199,12 +213,13 @@ impl Scripts {
     pub fn movement_lock_outcome(
         &self,
         location: ObjectId,
-        lock: &str,
+        lock: LockType,
         subject: ObjectId,
         movement: &crate::movement::Move,
     ) -> Result<LockOutcome> {
         let ctx = self.context(Some(movement.object), Some(location), movement.session)?;
-        ctx.set("lock", lock).map_err(|e| anyhow::anyhow!("{e}"))?;
+        ctx.set("lock", lock.key())
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
         for (key, value) in [
             ("subject", Some(subject.0)),
             ("cause", Some(movement.actor.0)),
@@ -219,19 +234,14 @@ impl Scripts {
     /// Evaluate the existing traversal policy for the player and exit.
     pub fn lock(&self, player: ObjectId, exit: ObjectId) -> Result<bool> {
         self.sync_parents()?;
-        let f:Function=self.lua.load("return function(o,p) return mux.world.lock_passes({object=mux.world.object(o),enactor=p,lock='traverse'}) end").eval().map_err(|e|anyhow::anyhow!(e.to_string()))?;
+        let f:Function=self.lua.load("return function(o,p) return mux.world._lock_result({object=mux.world.object(o),enactor=p,lock='traverse'}).passes end").eval().map_err(|e|anyhow::anyhow!(e.to_string()))?;
         self.budget.reset();
         self.call(&f, (exit.0, player.0))
             .map_err(|e| anyhow::anyhow!(e.to_string()))
     }
 }
 
-/// Validated lock result shared by movement and native traversal messaging.
-pub struct LockOutcome {
-    pub passes: bool,
-    pub enactor_message: Option<String>,
-    pub other_message: Option<String>,
-}
+use crate::{LockInvocation, LockOutcome, LockType};
 impl Scripts {
     /// Evaluate a full policy result; malformed results cannot retain callback mutations.
     pub fn lock_outcome(&self, context: Table) -> Result<LockOutcome> {
@@ -307,9 +317,12 @@ impl Scripts {
             {
                 Some("teleport") => "on_teleport_destination_fail",
                 Some("teleport_out") => "on_teleport_out_fail",
-                _ => "on_fail",
+                Some("traverse") | Some("take") => "on_fail",
+                _ => "",
             };
-            self.call_event(t, event, ctx)?;
+            if !event.is_empty() {
+                self.call_event(t, event, ctx)?;
+            }
         }
         Ok(())
     }
@@ -341,5 +354,60 @@ impl Scripts {
             self.lock_denied(ctx, &result, "You cannot go that way.")?;
         }
         Ok(result.passes)
+    }
+}
+
+impl Scripts {
+    /// Evaluate a typed native policy with consistent context and fresh callback limits.
+    pub fn evaluate_lock(&self, invocation: LockInvocation) -> Result<LockOutcome> {
+        let ctx = self.context(
+            Some(invocation.enactor),
+            Some(invocation.object),
+            invocation.descriptor,
+        )?;
+        for (key, value) in [
+            ("cause", invocation.cause.0),
+            ("subject", invocation.subject.0),
+        ] {
+            ctx.set(key, value).map_err(|e| anyhow::anyhow!("{e}"))?;
+        }
+        ctx.set("lock", invocation.kind.key())
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        ctx.set("silent", invocation.silent)
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        super::transactions::with_descriptor(&self.lua, invocation.descriptor, || {
+            self.lock_outcome(ctx)
+        })
+    }
+
+    /// Run key-aware preferences silently; a failed callback cannot promote a candidate.
+    pub fn prefer_matches(
+        &self,
+        player: ObjectId,
+        candidates: Vec<ObjectId>,
+        session: Option<u64>,
+    ) -> Result<Vec<ObjectId>> {
+        let mut passing = Vec::new();
+        for id in &candidates {
+            let result = self.evaluate_lock(LockInvocation {
+                kind: LockType::Match,
+                object: *id,
+                enactor: player,
+                subject: player,
+                cause: player,
+                descriptor: session,
+                silent: true,
+            });
+            match result {
+                Ok(result) if result.passes => passing.push(*id),
+                Err(e) => eprintln!("MATCH lock on #{} failed: {e:#}", id.0),
+                _ => {}
+            }
+        }
+        Ok(if passing.is_empty() {
+            candidates
+        } else {
+            passing
+        })
     }
 }

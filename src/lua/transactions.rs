@@ -44,3 +44,17 @@ pub fn run<T>(
     }
     result
 }
+
+/// Descriptor dynamically scoped to the current callback, never stored in game state.
+#[derive(Clone, Copy)]
+pub struct Descriptor(pub Option<u64>);
+pub fn descriptor(lua: &Lua) -> Option<u64> {
+    lua.app_data_ref::<Descriptor>().and_then(|d| d.0)
+}
+pub fn with_descriptor<T>(lua: &Lua, value: Option<u64>, work: impl FnOnce() -> T) -> T {
+    let before = descriptor(lua);
+    lua.set_app_data(Descriptor(value));
+    let result = work();
+    lua.set_app_data(Descriptor(before));
+    result
+}

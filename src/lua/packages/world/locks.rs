@@ -12,6 +12,64 @@ pub(super) fn register(
     world: &SharedWorld,
     outbox: &Outbox,
 ) -> mlua::Result<()> {
+    api.set(
+        "lock_error",
+        lua.create_function(|_, message: String| {
+            eprintln!("Lua lock failed: {message}");
+            Ok(())
+        })?,
+    )?;
+    api.set(
+        "callback_descriptor",
+        lua.create_function(|lua, ()| Ok(crate::lua::transactions::descriptor(lua)))?,
+    )?;
+    api.set("locks", lua.create_userdata(LockNamespace)?)?;
+    api.set(
+        "lock_key",
+        lua.create_function(|_, value: mlua::AnyUserData| {
+            Ok(value.borrow::<crate::LockType>()?.key())
+        })?,
+    )?;
+    let parents = world.clone();
+    api.set(
+        "lock_parent",
+        lua.create_function(move |_, n: i64| {
+            let w = parents.borrow();
+            let o = w
+                .objects
+                .get(&crate::world::ObjectId(n))
+                .ok_or_else(|| err("invalid lock object"))?;
+            Ok(if o.lua_parent.is_empty() {
+                None
+            } else {
+                Some(o.lua_parent.clone())
+            })
+        })?,
+    )?;
+    let identities = world.clone();
+    api.set(
+        "lock_identity",
+        lua.create_function(move |_, value: Value| {
+            let n = match value {
+                Value::Integer(n) => n,
+                Value::Number(n)
+                    if n.is_finite() && n.fract() == 0.0 && n >= 0.0 && n < i64::MAX as f64 =>
+                {
+                    n as i64
+                }
+                _ => return Err(err("lock identity must be an integer dbref or object")),
+            };
+            if !identities
+                .borrow()
+                .objects
+                .get(&crate::world::ObjectId(n))
+                .is_some_and(|o| o.kind != crate::world::Kind::Garbage)
+            {
+                return Err(err("invalid lock object"));
+            }
+            Ok(n)
+        })?,
+    )?;
     let w = world.clone();
     let out = outbox.clone();
     api.set(
@@ -59,4 +117,30 @@ pub(super) fn register(
             })
         })?,
     )
+}
+
+/// Opaque constants cannot be changed with ordinary assignment or rawset.
+struct LockNamespace;
+impl mlua::UserData for LockNamespace {
+    fn add_methods<M: mlua::UserDataMethods<Self>>(m: &mut M) {
+        m.add_meta_method(mlua::MetaMethod::Index, |lua, _, value: Value| {
+            let Value::String(name) = value else {
+                return Err(err("lock name must be a string"));
+            };
+            let name = name.to_str()?;
+            let lock = crate::locks::LOCKS
+                .into_iter()
+                .find(|k| k.name() == name.as_ref())
+                .ok_or_else(|| err("unknown lock constant"))?;
+            lua.create_userdata(lock)
+        });
+    }
+}
+impl mlua::UserData for crate::LockType {
+    fn add_methods<M: mlua::UserDataMethods<Self>>(m: &mut M) {
+        m.add_meta_method(mlua::MetaMethod::ToString, |_, lock, ()| Ok(lock.name()));
+        m.add_meta_method(mlua::MetaMethod::Eq, |_, lock, other: mlua::AnyUserData| {
+            Ok(other.borrow::<Self>().is_ok_and(|v| *lock == *v))
+        });
+    }
 }

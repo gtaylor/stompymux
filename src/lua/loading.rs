@@ -30,6 +30,7 @@ impl Scripts {
                 .to_string_lossy()
                 .replace('\\', "/");
             let t = self.load_module(&p)?;
+            Self::validate_locks(&t, &name, true)?;
             self.commands.register_lua(
                 &self.lua,
                 &t,
@@ -76,6 +77,7 @@ impl Scripts {
         for p in files(&dir.join("global_logic"))? {
             let t = self.load_module(&p)?;
             let source = p.strip_prefix(&dir)?.to_string_lossy().replace('\\', "/");
+            Self::validate_locks(&t, &source, false)?;
             self.commands.register_lua(
                 &self.lua,
                 &t,
@@ -109,6 +111,38 @@ impl Scripts {
         for o in self.world.borrow().objects.values() {
             t.set(o.id.0, o.lua_parent.as_str())
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        }
+        Ok(())
+    }
+}
+
+impl Scripts {
+    /// Reject declaration mistakes before any module can receive lock traffic.
+    fn validate_locks(module: &Table, path: &str, object: bool) -> Result<()> {
+        let value = module
+            .get::<mlua::Value>("locks")
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        if value == mlua::Value::Nil {
+            return Ok(());
+        }
+        ensure!(object, "{path}: locks are only valid in object modules");
+        let mlua::Value::Table(locks) = value else {
+            anyhow::bail!("{path}: locks must be a table");
+        };
+        for pair in locks.pairs::<mlua::Value, mlua::Value>() {
+            let (key, value) = pair.map_err(|e| anyhow::anyhow!("{e}"))?;
+            let mlua::Value::String(key) = key else {
+                anyhow::bail!("{path}: lock keys must be strings");
+            };
+            let key = key.to_str().map_err(|e| anyhow::anyhow!("{e}"))?;
+            ensure!(
+                crate::LockType::from_key(&key).is_some(),
+                "{path}: unknown lock key {key}"
+            );
+            ensure!(
+                matches!(value, mlua::Value::Function(_)),
+                "{path}: lock {key} must be a function"
+            );
         }
         Ok(())
     }

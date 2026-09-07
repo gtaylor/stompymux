@@ -14,6 +14,12 @@ pub enum Route {
     Teleport,
     /// Exit travel, after its traversal lock has passed.
     Exit,
+    /// Ordinary inventory/container relocation with policies evaluated by its caller.
+    Generic,
+    /// Controlled quiet inventory or container movement.
+    EnterQuiet,
+    /// Suppress only the controlled source leave notifications.
+    LeaveQuiet,
 }
 /// Context shared by movement hooks and lock callbacks.
 pub struct Move {
@@ -70,17 +76,28 @@ fn apply(
         session,
     };
     if route == Route::Teleport {
-        let mut policies = vec![(destination, "teleport", actor, "You can't teleport there!")];
+        let mut policies = vec![(
+            destination,
+            crate::LockType::Teleport,
+            actor,
+            "You can't teleport there!",
+        )];
         if kind != Kind::Exit {
             for location in s.world.borrow().containment_chain(source)? {
-                policies.push((location, "teleport_out", object, "You can't teleport out!"));
+                policies.push((
+                    location,
+                    crate::LockType::TeleportOut,
+                    object,
+                    "You can't teleport out!",
+                ));
             }
         }
         for (location, lock, subject, default) in policies {
             let outcome = s.movement_lock_outcome(location, lock, subject, &movement)?;
             if !outcome.passes {
                 let ctx = s.context(Some(object), Some(location), session)?;
-                ctx.set("lock", lock).map_err(|e| anyhow::anyhow!("{e}"))?;
+                ctx.set("lock", lock.key())
+                    .map_err(|e| anyhow::anyhow!("{e}"))?;
                 ctx.set("cause", actor.0)
                     .map_err(|e| anyhow::anyhow!("{e}"))?;
                 if actor != object {
@@ -117,10 +134,16 @@ fn apply(
                 .push((object, "There's no place like home...".into()));
         }
     }
-    if kind != Kind::Exit
-        && let Some(source) = source
-    {
-        s.movement_event("on_exit", source, &movement)?;
+    let generic = matches!(
+        route,
+        Route::Generic | Route::EnterQuiet | Route::LeaveQuiet
+    );
+    if kind != Kind::Exit {
+        if generic {
+            s.transition_action(&movement, false, route == Route::LeaveQuiet)?;
+        } else if let Some(source) = source {
+            s.movement_event("on_exit", source, &movement)?;
+        }
     }
     // Callbacks may change containment; check again before committing the location.
     s.world.borrow().validate_move(object, destination)?;
@@ -130,8 +153,30 @@ fn apply(
         .get_mut(&object)
         .unwrap()
         .location = Some(destination);
+    if generic && kind != Kind::Exit {
+        s.action_message(
+            crate::lua::ObjectAction {
+                object,
+                enactor: object,
+                cause: actor,
+                descriptor: session,
+                source,
+                destination: Some(destination),
+                operation: "move",
+                silent: false,
+            },
+            "move",
+            Some("on_move"),
+            None,
+            None,
+        )?;
+    }
     if kind != Kind::Exit {
-        s.movement_event("on_enter", destination, &movement)?;
+        if generic {
+            s.transition_action(&movement, true, route == Route::EnterQuiet)?;
+        } else {
+            s.movement_event("on_enter", destination, &movement)?;
+        }
     }
     if kind == Kind::Player
         && (session.is_some()
@@ -142,7 +187,7 @@ fn apply(
         let text = s.appearance_for(object, destination, session)?;
         s.outbox.borrow_mut().push((object, text.into()));
     }
-    if object != actor {
+    if object != actor && !generic {
         s.outbox.borrow_mut().push((
             actor,
             if kind == Kind::Exit {

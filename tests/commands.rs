@@ -99,15 +99,42 @@ async fn native_catalog_permissions_and_aliases() {
             ".gex",
             ".glist",
             ".list",
-            ".undef"
+            ".undef",
+            "get",
+            "drop",
+            "give",
+            "use",
+            "enter",
+            "leave",
+            "inventory",
+            "@open",
+            "@link",
+            "@unlink",
+            "@clone"
         ]
     );
     for d in &definitions {
         assert_eq!(
             d.permission,
             if [
-                "look", "say", "quit", "color", "help", "addcom", "delcom", "clearcom", "comlist",
-                "allcom", "page"
+                "look",
+                "say",
+                "quit",
+                "color",
+                "help",
+                "addcom",
+                "delcom",
+                "clearcom",
+                "comlist",
+                "allcom",
+                "page",
+                "get",
+                "drop",
+                "give",
+                "use",
+                "enter",
+                "leave",
+                "inventory"
             ]
             .contains(&d.name.as_str())
                 || (d.direct_input_only && d.name != ".chown")

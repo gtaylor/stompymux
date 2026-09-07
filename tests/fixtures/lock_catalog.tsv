@@ -1,0 +1,17 @@
+MATCH	get,exit matching	candidate	player	player	true	tie preference
+TRAVERSE	exit travel	exit	player	player	dark wizard	on_fail
+TAKE	get	item	player	player	controlled quiet	on_fail
+USE	use	item	player	player	false	on_use_fail
+DROP	drop	item	player	player	false	on_drop_fail
+GIVE	give	item	giver	giver	false	on_give_fail
+RECEIVE	give	recipient	giver	item	false	on_give_receive_fail
+ENTER	enter,leave	destination	player	player	controlled quiet	operation fail
+LEAVE	enter,leave	source	player	player	controlled quiet	operation fail
+TELEPORT	@teleport	destination	moved object	wizard	false	on_teleport_destination_fail
+TELEPORT_OUT	@teleport	source chain	moved object	moved object	false	on_teleport_out_fail
+LINK	@link,@open,@clone	destination	wizard	wizard	false	none
+SET_HOME	@link	destination	wizard	wizard	false	none
+SPEAK	say,quote	auditorium	player	player	false	none
+CHANNEL_JOIN	addcom	channel object	joining object	joining object	true	independent flags grant
+CHANNEL_TRANSMIT	channel speech	channel object	sender	sender	true	independent flags grant
+CHANNEL_RECEIVE	channel delivery	channel object	recipient	recipient	true	independent flags grant

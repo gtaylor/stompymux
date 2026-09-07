@@ -286,6 +286,7 @@ impl CommandRegistry {
                 .policy(SwitchPolicy::Handler, true),
         ];
         definitions.extend(crate::macros::commands::definitions());
+        definitions.extend(super::objects::definitions());
         Self { definitions }
     }
     /// Stable catalog including commands on currently unattached object modules.

@@ -2771,3 +2771,91 @@ async fn tcp_player_macros_shared_sessions_restart_and_write_failures() {
     );
     running.stop().await;
 }
+
+/// Native lock consumers remain transactional when reached through TCP aliases and macros.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_object_locks_builders_transfers_and_restart() {
+    use sqlx::Connection;
+    use stompymux_rs::{flags::Flag, world::Kind};
+    let (d, c) = populated().await;
+    std::fs::write(d.path().join("lua/object_logic/tcp_policy.lua"),r#"return {
+      locks={take=function(ctx) return {passes=true} end,use=function(ctx) return true end,receive=function(ctx) return true end},
+      messages={use=function(ctx) return {enactor_message='TCP activated'} end},
+      events={on_use=function(ctx) mux.world.object(ctx.object):state('usage'):set('used',true) end}
+    }"#).unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ObjectId(c.start()));
+    let item = w.create(&c, "TcpWidget".into(), Kind::Thing);
+    {
+        let o = w.objects.get_mut(&item).unwrap();
+        o.location = Some(ObjectId(c.start()));
+        o.home = Some(ObjectId(c.home()));
+        o.lua_parent = "tcp_policy.lua".into();
+    }
+    persistence::save(&c.database(), &w).await.unwrap();
+    let running = Running::start(&c).await;
+    let mut wizard = Client::connect(&running).await;
+    wizard.login("#1").await;
+    let mut alice = Client::connect(&running).await;
+    alice.register("LockAlice").await;
+    let mut second = Client::connect(&running).await;
+    second.login("LockAlice").await;
+    alice.send(".create actions").await;
+    alice.until("created in slot").await;
+    alice.send(".def tk=take *").await;
+    alice.until("defined.").await;
+    alice.send(".tk TcpWidget").await;
+    alice.until("Taken.").await;
+    second.send("inv").await;
+    second.until("TcpWidget").await;
+    alice.send("use TcpWidget").await;
+    alice.until("TCP activated").await;
+    second.until("TCP activated").await;
+    alice.send("@open forbidden").await;
+    alice.until("Permission denied.").await;
+    let copied = persistence::load(&c.database()).await.unwrap().next_id;
+    wizard.send(&format!("@cl #{}=TcpCopy", item.0)).await;
+    wizard.until("cloned, new copy").await;
+    wizard.send("enter LockAlice").await;
+    wizard.until("LockAlice").await;
+    wizard.send("leave").await;
+    wizard.until("Starter Room").await;
+    alice.send("give #1=TcpWidget").await;
+    alice.until("Given.").await;
+    wizard.send("drop TcpWidget").await;
+    wizard.until("Dropped.").await;
+    let mut db = sqlx::SqliteConnection::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("CREATE TRIGGER block_objects BEFORE UPDATE ON objects BEGIN SELECT RAISE(FAIL,'object write blocked'); END").execute(&mut db).await.unwrap();
+    alice.send("take TcpWidget").await;
+    alice.until("Unable to save your changes.").await;
+    let durable = persistence::load(&c.database()).await.unwrap();
+    assert_eq!(durable.objects[&item].location, Some(ObjectId(c.start())));
+    assert!(durable.objects.values().any(|o| o.name == "LockAlice"));
+    sqlx::query("DROP TRIGGER block_objects")
+        .execute(&mut db)
+        .await
+        .unwrap();
+    alice.send("take TcpWidget").await;
+    alice.until("Taken.").await;
+    sqlx::Connection::close(db).await.unwrap();
+    running.stop().await;
+    let loaded = persistence::load(&c.database()).await.unwrap();
+    assert_eq!(loaded.objects[&ObjectId(copied)].name, "TcpCopy");
+    assert!(loaded.objects[&item].state.contains_key("usage"));
+    assert!(!loaded.objects[&item].flags.contains(Flag::Connected));
+    let running = Running::start(&c).await;
+    let mut alice = Client::connect(&running).await;
+    alice.login("LockAlice").await;
+    alice.send("inventory").await;
+    alice.until("TcpWidget").await;
+    alice.send("use TcpWidget").await;
+    alice.until("TCP activated").await;
+    running.stop().await;
+}

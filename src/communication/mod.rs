@@ -111,11 +111,11 @@ impl Access {
     }
 
     /// Canonical object-module lock key.
-    pub fn lock(self) -> &'static str {
+    pub fn lock(self) -> crate::LockType {
         match self {
-            Self::Join => "channel_join",
-            Self::Transmit => "channel_transmit",
-            Self::Receive => "channel_receive",
+            Self::Join => crate::LockType::ChannelJoin,
+            Self::Transmit => crate::LockType::ChannelTransmit,
+            Self::Receive => crate::LockType::ChannelReceive,
         }
     }
 }
@@ -329,7 +329,7 @@ impl Service<'_> {
                 Err(e) => {
                     *self.world.borrow_mut() = before;
                     self.outbox.borrow_mut().truncate(pending);
-                    eprintln!("Channel lock {}: {e}", access.lock());
+                    eprintln!("Channel lock {}: {e}", access.lock().key());
                 }
             }
         }

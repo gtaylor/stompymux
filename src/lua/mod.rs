@@ -1,5 +1,7 @@
 //! Server-owned Lua runtime and built-in packages; editable game modules stay in game/lua.
+mod actions;
 mod callbacks;
+pub use actions::ObjectAction;
 mod dispatch;
 mod loading;
 mod packages;
@@ -75,8 +77,19 @@ impl Scripts {
         f: &mlua::Function,
         args: impl mlua::IntoLuaMulti,
     ) -> anyhow::Result<T> {
-        transactions::run(&self.lua, &self.world, &self.outbox, || f.call(args))
-            .map_err(|e| anyhow::anyhow!(e.to_string()))
+        let args = args
+            .into_lua_multi(&self.lua)
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        let descriptor = match args.front() {
+            Some(mlua::Value::Table(ctx)) => ctx
+                .get::<Option<u64>>("descriptor")
+                .map_err(|e| anyhow::anyhow!("{e}"))?,
+            _ => transactions::descriptor(&self.lua),
+        };
+        transactions::with_descriptor(&self.lua, descriptor, || {
+            transactions::run(&self.lua, &self.world, &self.outbox, || f.call(args))
+        })
+        .map_err(|e| anyhow::anyhow!(e.to_string()))
     }
 
     /// Execute a callback chunk with the same transaction and budget as game handlers.

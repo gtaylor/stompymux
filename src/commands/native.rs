@@ -154,7 +154,44 @@ pub(super) fn look(ctx: &CommandContext<'_>, _: &CommandInput) -> Result<Action>
 }
 /// Speak to occupants of the immediate location.
 pub(super) fn say(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
-    broadcast_speech(ctx.scripts, ctx.player, ctx.location()?, &input.args);
+    let location = ctx.location()?;
+    let (gagged, auditorium) = {
+        let w = ctx.scripts.world.borrow();
+        (
+            w.objects[&ctx.player].flags.contains(Flag::Gagged)
+                && !flags::is_wizard(&w, ctx.player),
+            w.objects[&location].flags.contains(Flag::Auditorium),
+        )
+    };
+    if gagged {
+        ctx.scripts
+            .outbox
+            .borrow_mut()
+            .push((ctx.player, "Sorry. Gagged players cannot speak.".into()));
+        return Ok(Action::Continue);
+    }
+    if auditorium {
+        let invocation = crate::LockInvocation {
+            kind: crate::LockType::Speak,
+            object: location,
+            enactor: ctx.player,
+            cause: ctx.player,
+            subject: ctx.player,
+            descriptor: Some(ctx.session),
+            silent: false,
+        };
+        let result = ctx.scripts.evaluate_lock(invocation)?;
+        if !result.passes {
+            ctx.scripts.deny_action(
+                invocation,
+                &result,
+                "Sorry, you may not speak in this place.",
+                None,
+            )?;
+            return Ok(Action::Continue);
+        }
+    }
+    broadcast_speech(ctx.scripts, ctx.player, location, &input.args);
     Ok(Action::Continue)
 }
 /// Ask the server to close this connection.
@@ -236,7 +273,7 @@ fn broadcast_speech(s: &Scripts, player: ObjectId, room: ObjectId, message: &str
     let message = crate::text::escape(&crate::text::plain_with(&s.palette, message));
     let w = s.world.borrow();
     let p = &w.objects[&player];
-    if p.flags.contains(crate::flags::Flag::Gagged) {
+    if p.flags.contains(crate::flags::Flag::Gagged) && !flags::is_wizard(&w, player) {
         s.outbox
             .borrow_mut()
             .push((player, "You cannot speak.".into()));

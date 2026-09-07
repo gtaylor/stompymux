@@ -291,7 +291,7 @@ lists and exit sources. It preserves valid list order, resolves competing lists
 using the object's claimed location when that list contains it, and appends newly
 attached members by dbref. Replacement homes use a safe controlled location, safe
 controlled home, configured default home, starting home, then starting room.
-Room droptos are stored separately from containment; dropto movement is deferred.
+Room droptos are stored separately from containment and applied after ordinary drops.
 Unreachable rooms without FLOATING, Wizard objects and ordinary occupants inside
 Wizard containers are diagnostic findings, not reasons to change flags.
 
@@ -680,3 +680,35 @@ For example, `@lua/schedule global_logic/example.lua` shows the supplied hourly
 job. Inspection is private to the invoking session and performs no writes.
 Bare `@lua` lists the supported switch; reload and other `@lua` operations remain
 deferred.
+
+
+## Object locks and operations
+
+All 17 non-BattleTech locks share `LockType`, `LockInvocation` and `LockOutcome`.
+`mux.world.locks` exposes immutable typed constants; `lock_passes` validates
+identities/options, supplies a silent context and returns false on callback
+failure. Declarations are validated at startup and handlers are looked up live
+on the object's current module. Missing attachments/handlers allow checks;
+malformed handlers fail closed. Failure rollback uses the existing world/output
+transaction. See `help locks` and the checked-in `tests/fixtures/lock_catalog.tsv`
+for native callers, identities and failure-event choices.
+
+Players can `get`/`take`, `drop`, `give`, `use`, `enter`, `leave` and inspect
+`inventory`. Configured aliases and player macros use the same handlers.
+MATCH is a silent matching preference, followed by action-specific policies.
+AUDITORIUM speech now checks SPEAK; Wizards retain the C GAGGED exception.
+Channel policies retain independent flag grants and Wizard bypasses.
+
+Wizards can `@open`, `@link`, `@unlink` and `@clone`, including homes and room
+droptos. Optional link denial may leave a new exit/clone unlinked. Callback or
+persistence errors restore the entire command. Cloning copies state,
+descriptions and Lua parent into a fresh object; it does not duplicate contents,
+accounts, channel/macro membership or deferred BattleTech records. See
+`help objects` and `help object building` for syntax and quiet/placement switches.
+
+The `lua::ObjectAction` service evaluates message handlers and operation-specific
+events. Ordinary relocation uses leave/move/enter and cross-location messages;
+existing teleport/home transition interfaces remain supported. Quiet switches
+follow their operation's C policy and never bypass lock checks. Output stays
+staged until the final world validates and SQLite commits. Schema-32 storage,
+unknown-column preservation and session-owned CONNECTED are unchanged.
