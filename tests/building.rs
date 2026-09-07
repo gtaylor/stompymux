@@ -193,7 +193,7 @@ async fn look_modes_possessions_transparency_and_callback_rollback() {
     let s = scripts(&c, w);
     assert!(run(&s, &c, 2, "look Cabinet").contains("Outside cabinet"));
     assert!(run(&s, &c, 2, "look Cabinet's Badge").contains("Golden badge"));
-    assert!(run(&s, &c, 2, "look/outside").contains("can't look outside"));
+    assert!(run(&s, &c, 2, "look/outside").contains("Unsupported command switch"));
     s.world
         .borrow_mut()
         .objects
@@ -201,7 +201,7 @@ async fn look_modes_possessions_transparency_and_callback_rollback() {
         .unwrap()
         .location = Some(box_id);
     assert!(run(&s, &c, 2, "look").contains("Inside cabinet"));
-    assert!(run(&s, &c, 2, "look/outside").contains("Starter Room"));
+    assert!(run(&s, &c, 2, "look/outside").contains("Unsupported command switch"));
     lua(
         &s,
         "_parents['default_thing.lua'].external_appearance=function(ctx) assert(ctx.descriptor==71); return 'EXTERNAL' end; _parents['default_thing.lua'].internal_appearance=function(ctx) return 'INTERNAL' end",
@@ -374,4 +374,54 @@ async fn appearance_validation_visibility_and_read_only_metadata() {
     );
     assert!(!report.contains("metadata invoked"));
     assert!(s.outbox.borrow().is_empty());
+}
+
+/// Removed switches are rejected centrally, including abbreviations and aliases, without side effects.
+#[tokio::test(flavor = "current_thread")]
+async fn removed_inventory_and_look_switches_are_rejected() {
+    let (_d, c, w) = fixture().await;
+    let s = scripts(&c, w);
+    let before = serde_json::to_vec(&*s.world.borrow()).unwrap();
+    for name in ["get", "drop", "give", "enter", "leave", "look"] {
+        assert!(
+            s.commands
+                .definitions()
+                .find(|d| d.name == name)
+                .unwrap()
+                .switch_definitions
+                .is_empty()
+        );
+        let switches: &[&str] = if name == "look" {
+            &["outside", "o", "OUTSIDE"]
+        } else {
+            &["quiet", "q", "QUIET"]
+        };
+        for who in [1, 2] {
+            for switch in switches {
+                assert_eq!(
+                    run(&s, &c, who, &format!("{name}/{switch} nonexistent")),
+                    "Unsupported command switch."
+                );
+            }
+        }
+    }
+    assert_eq!(run(&s, &c, 1, "l/o"), "Unsupported command switch.");
+    assert_eq!(serde_json::to_vec(&*s.world.borrow()).unwrap(), before);
+    for target in [
+        "get/quiet",
+        "drop/quiet",
+        "give/quiet",
+        "enter/quiet",
+        "leave/quiet",
+        "look/outside",
+    ] {
+        let request = stompymux_rs::config::administration::Request {
+            directive: "alias".into(),
+            value: format!("removed {target}"),
+        };
+        assert!(
+            c.administer(&request, &s.world.borrow(), ObjectId(1), &s.commands)
+                .is_err()
+        );
+    }
 }

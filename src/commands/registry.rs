@@ -263,7 +263,7 @@ impl CommandRegistry {
                 .policy(SwitchPolicy::Handler, true),
             CommandDefinition::native("look", P::EVERYONE, super::objects::look::look)
                 .matching(&["l"], None)
-                .policy(SwitchPolicy::Handler, true),
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("say", P::EVERYONE, crate::communication::speech::say)
                 .matching(&[], Some('"')),
             CommandDefinition::native("pose", P::EVERYONE, crate::communication::speech::pose)

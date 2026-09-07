@@ -63,7 +63,6 @@ impl SwitchDefinition {
 /// Native switch inventory; handlers retain operation-specific combination validation.
 pub fn switches(name: &str) -> Vec<SwitchDefinition> {
     let (names, abbreviated): (&[&str], bool) = match name {
-        "look" => (&["outside"], true),
         "pose" | "@fpose" => (&["default", "nospace"], true),
         "@emit" | "@femit" => (&["here", "room"], true),
         "@pemit" | "@npemit" => (&["contents", "object", "silent", "list"], true),
@@ -88,7 +87,6 @@ pub fn switches(name: &str) -> Vec<SwitchDefinition> {
         "@state" => (&["examine", "set", "wipe", "copy", "move"], false),
         "@examine" => (&["brief", "debug"], true),
         "@halt" => (&["all"], true),
-        "get" | "drop" | "give" | "enter" | "leave" => (&["quiet"], true),
         "@dig" => (&["teleport"], true),
         "@open" | "@clone" => (&["inventory", "location"], true),
         "@chan" => (

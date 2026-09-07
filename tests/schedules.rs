@@ -916,7 +916,7 @@ acl="acl-probe"
 [access.commands]
 "@list"="!wizard"
 say="wizard"
-"look/outside"="god"
+"pose/nospace"="god"
 "acl-probe"="wizard queue_enabled"
 [access.lists]
 permissions="!wizard"
@@ -933,7 +933,7 @@ permissions="!wizard"
         other.send("look").await;
         assert!(!other.until("Staff Nexus").await.contains("Built-in commands"));
         player.send("say BLOCKED").await;player.until("Permission denied.").await;
-        player.send("l/outside").await;player.until("Permission denied.").await;
+        player.send("pose/nospace").await;player.until("Permission denied.").await;
         player.send("acl").await;player.until("Huh?").await;
         assert_eq!(before,std::fs::read(c.database()).unwrap());
         player.send(".create access").await;player.until("created in slot").await;

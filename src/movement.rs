@@ -16,10 +16,6 @@ pub enum Route {
     Exit,
     /// Ordinary inventory/container relocation with policies evaluated by its caller.
     Generic,
-    /// Controlled quiet inventory or container movement.
-    EnterQuiet,
-    /// Suppress only the controlled source leave notifications.
-    LeaveQuiet,
 }
 /// Context shared by movement hooks and lock callbacks.
 pub struct Move {
@@ -139,13 +135,10 @@ fn apply(
                 .push((object, "There's no place like home...".into()));
         }
     }
-    let generic = matches!(
-        route,
-        Route::Generic | Route::EnterQuiet | Route::LeaveQuiet
-    );
+    let generic = matches!(route, Route::Generic);
     if kind != Kind::Exit {
         if generic {
-            s.transition_action(&movement, false, route == Route::LeaveQuiet)?;
+            s.transition_action(&movement, false, false)?;
         } else if let Some(source) = source {
             s.movement_event("on_exit", source, &movement)?;
         }
@@ -178,7 +171,7 @@ fn apply(
     }
     if kind != Kind::Exit {
         if generic {
-            s.transition_action(&movement, true, route == Route::EnterQuiet)?;
+            s.transition_action(&movement, true, false)?;
         } else {
             s.movement_event("on_enter", destination, &movement)?;
         }

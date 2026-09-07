@@ -144,7 +144,7 @@ async fn edits_partial_success_aliases_and_live_handles() {
     edit(&mut c, &mut s, 1, "access", "talk !wizard").unwrap();
     assert!(run(&s, &c, 2, "talk okay").contains("okay"));
     assert!(edit(&mut c, &mut s, 1, "alias", "talk look").is_err());
-    edit(&mut c, &mut s, 1, "alias", "peek look/outside").unwrap();
+    edit(&mut c, &mut s, 1, "alias", "peek @examine/brief").unwrap();
     assert!(edit(&mut c, &mut s, 1, "alias", "bad look/nosuchswitch").is_err());
     edit(&mut c, &mut s, 1, "flag_alias", "shiny ansi").unwrap();
     assert!(edit(&mut c, &mut s, 1, "flag_alias", "ansi dark").is_err());

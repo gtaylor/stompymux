@@ -166,25 +166,11 @@ fn show(ctx: &CommandContext<'_>, id: ObjectId, through: bool) -> Result<()> {
 /// Look can mutate through callbacks, so use the same rollback boundary as object actions.
 pub(in crate::commands) fn look(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     transaction(ctx, || {
-        let outside = match input.switch.as_deref() {
-            None => false,
-            Some(s) if !s.is_empty() && "outside".starts_with(s) => true,
-            _ => anyhow::bail!("Unsupported look switch."),
-        };
-        let location = ctx.location()?;
-        let origin = if outside {
-            ensure!(
-                ctx.scripts.world.borrow().objects[&location].kind != Kind::Room,
-                "You can't look outside."
-            );
-            location
-        } else {
-            ctx.player
-        };
+        let origin = ctx.player;
         let id = if input.args.trim().is_empty() {
             ctx.scripts.world.borrow().objects[&origin]
                 .location
-                .context("You can't look outside.")?
+                .context("You have no location.")?
         } else {
             target(ctx, origin, &input.args)?
         };

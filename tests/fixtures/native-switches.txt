@@ -15,10 +15,4 @@
 @pemit contents:1:everyone object:1:everyone silent:1:everyone list:1:everyone
 @state examine:7:everyone set:3:everyone wipe:4:everyone copy:4:everyone move:4:everyone
 @wall emit:1:wizard pose:1:wizard wizard:1:wizard admin:1:wizard no_prefix:1:wizard
-drop quiet:1:everyone
-enter quiet:1:everyone
-get quiet:1:everyone
-give quiet:1:wizard
-leave quiet:1:everyone
-look outside:1:everyone
 pose default:1:everyone nospace:1:everyone

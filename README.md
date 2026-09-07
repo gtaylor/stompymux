@@ -758,7 +758,7 @@ renames and aliases share case-insensitive login-name uniqueness; `@alias` is
 player-only. Zoning a non-player clears WIZARD and its powers.
 
 `look <target>` supports local objects, exit aliases and possessive names.
-`look/outside` looks out of a player/thing container. Internal and external Lua
+`look` accepts no switches. Internal and external Lua
 appearances are selected separately; native fallback includes descriptions,
 describe callbacks and visible contents. Looking through a transparent exit can
 show its destination. Callback mutations and output share the command transaction.

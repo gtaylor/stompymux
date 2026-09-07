@@ -1,6 +1,6 @@
 +++
 title = "Objects and containers"
-keywords = ["objects", "get", "take", "drop", "give", "use", "enter", "leave", "inventory", "look", "look/outside"]
+keywords = ["objects", "get", "take", "drop", "give", "use", "enter", "leave", "inventory", "look"]
 article_tags = ["show_in_index"]
 description = "Carry, give and use objects; enter and leave containers"
 +++
@@ -33,9 +33,7 @@ Entering checks the destination's ENTER policy followed by the source's LEAVE
 policy. Leaving checks those policies in the opposite order. Rooms marked
 AUDITORIUM also apply their SPEAK policy to speech.
 
-`get/quiet`, `drop/quiet`, `enter/quiet` and `leave/quiet` honor quiet operation
-when you control the relevant object. `give/quiet` requires Wizard permission.
-These switches do not bypass locks. An object's scripted messages may explain
+These commands accept no switches. An object's scripted messages may explain
 why an operation was denied.
 
 A dropped object follows a room's configured dropto after the initial drop.
@@ -48,9 +46,7 @@ before success is delivered; failed saves restore the previous world state.
 object, an exit alias, `me`, `here`, or a possession such as `Cabinet's Badge`.
 Targets must be within the visible local scope, including explicit dbrefs.
 
-From inside a player or thing, `look/outside` shows the enclosing location;
-`look/outside <object>` matches from that container's perspective. You cannot
-look outside a room. `/o` abbreviates `/outside`.
+`look` accepts no switches.
 
 Objects may supply internal and external Lua appearance callbacks. Otherwise,
 look displays descriptions and visible contents; an internal description takes

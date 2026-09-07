@@ -222,10 +222,7 @@ pub fn native_defaults(name: &str, roles: Permissions) -> Permissions {
 }
 /// Native switch defaults; domain IC and ownership checks remain in their services.
 pub fn switch_default(command: &str, switch: &str) -> Permissions {
-    if matches!(command, "@boot" | "@wall")
-        || command == "give" && switch == "quiet"
-        || command == "@examine" && switch == "debug"
-    {
+    if matches!(command, "@boot" | "@wall") || command == "@examine" && switch == "debug" {
         Permissions::WIZARD
     } else {
         Permissions::EVERYONE

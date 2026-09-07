@@ -49,10 +49,7 @@ pub fn definitions() -> Vec<CommandDefinition> {
             },
             handler,
         );
-        if matches!(
-            name,
-            "get" | "drop" | "give" | "enter" | "leave" | "@dig" | "@open" | "@clone" | "@destroy"
-        ) {
+        if matches!(name, "@dig" | "@open" | "@clone" | "@destroy") {
             d.switches = SwitchPolicy::Handler;
         }
         d.private_errors = true;
@@ -82,29 +79,6 @@ fn tell(ctx: &CommandContext<'_>, message: impl Into<String>) {
         .outbox
         .borrow_mut()
         .push((ctx.player, message.into().into()));
-}
-
-fn quiet(
-    ctx: &CommandContext<'_>,
-    input: &CommandInput,
-    target: ObjectId,
-    wizard_only: bool,
-) -> Result<bool> {
-    let Some(switch) = &input.switch else {
-        return Ok(false);
-    };
-    ensure!(
-        super::discovery::switches(&input.name)
-            .iter()
-            .any(|s| s.name == "quiet" && s.accepts(switch)),
-        "Unsupported command switch."
-    );
-    let w = ctx.scripts.world.borrow();
-    Ok(if wizard_only {
-        true
-    } else {
-        flags::controls(&w, ctx.player, target)
-    })
 }
 
 fn display(ctx: &CommandContext<'_>, object: ObjectId) -> Result<String> {

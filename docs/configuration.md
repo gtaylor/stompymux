@@ -165,7 +165,7 @@ bits by default and clearing them with `!`. An empty value leaves defaults intac
 [access.commands]
 "@shutdown" = "!wizard god" # GOD only; adding god alone retains Wizard access
 "@list" = "!wizard"        # permit ordinary players to request public topics
-"look/outside" = "god"     # both look and this switch must permit the caller
+"pose/nospace" = "god"     # both pose and this switch must permit the caller
 "say" = ["no_suspect"]
 "@find" = "disabled"       # denies even GOD
 "look" = "dark"            # hidden in discovery, still executable

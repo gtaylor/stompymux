@@ -19,7 +19,6 @@ pub(super) fn get(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Acti
                 true,
             )?
         };
-        let silent = quiet(ctx, input, target, false)?;
         let (kind, source) = {
             let w = ctx.scripts.world.borrow();
             let o = &w.objects[&target];
@@ -35,7 +34,7 @@ pub(super) fn get(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Acti
                 "Permission denied."
             );
             std::mem::drop(w);
-            relocate(ctx, target, ctx.player, silent)?;
+            relocate(ctx, target, ctx.player, false)?;
             tell(ctx, "Exit taken.");
             return Ok(());
         }
@@ -52,7 +51,7 @@ pub(super) fn get(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Acti
             LockType::Take,
             target,
             ctx.player,
-            silent,
+            false,
             Some("on_fail"),
             "You can't take that.",
         )? {
@@ -64,13 +63,13 @@ pub(super) fn get(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Acti
                 format!("{} was taken from you.", display(ctx, target)?).into(),
             ));
         }
-        relocate(ctx, target, ctx.player, silent)?;
+        relocate(ctx, target, ctx.player, false)?;
         ctx.scripts
             .outbox
             .borrow_mut()
             .push((target, "Taken.".into()));
         ctx.scripts.action_message(
-            action(ctx, target, "take", source, Some(ctx.player), silent),
+            action(ctx, target, "take", source, Some(ctx.player), false),
             "success",
             Some("on_success"),
             Some("Taken."),
@@ -89,14 +88,13 @@ pub(super) fn drop(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
             Some(Kind::Thing),
             false,
         )?;
-        let silent = quiet(ctx, input, target, false)?;
         let kind = ctx.scripts.world.borrow().objects[&target].kind;
         if kind == Kind::Exit {
             ensure!(
                 flags::controls(&ctx.scripts.world.borrow(), ctx.player, location),
                 "Permission denied."
             );
-            relocate(ctx, target, location, silent)?;
+            relocate(ctx, target, location, false)?;
             tell(ctx, "Exit dropped.");
             return Ok(());
         }
@@ -116,20 +114,13 @@ pub(super) fn drop(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
         )? {
             return Ok(());
         }
-        relocate(ctx, target, location, silent)?;
+        relocate(ctx, target, location, false)?;
         ctx.scripts
             .outbox
             .borrow_mut()
             .push((target, "Dropped.".into()));
         ctx.scripts.action_message(
-            action(
-                ctx,
-                target,
-                "drop",
-                Some(ctx.player),
-                Some(location),
-                silent,
-            ),
+            action(ctx, target, "drop", Some(ctx.player), Some(location), false),
             "drop",
             Some("on_drop"),
             Some("Dropped."),
@@ -159,7 +150,6 @@ pub(super) fn give(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
         nearby.extend(located(ctx, ctx.player));
         nearby.push(ctx.player);
         let recipient = matched(ctx, recipient, nearby, Some(Kind::Player), false)?;
-        let silent = quiet(ctx, input, recipient, true)?;
         let mut inventory = located(ctx, ctx.player);
         inventory.push(ctx.player);
         let target = matched(ctx, item, inventory, Some(Kind::Thing), false)?;
@@ -198,27 +188,25 @@ pub(super) fn give(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
             return Ok(());
         }
         relocate(ctx, target, recipient, false)?;
-        if !silent {
-            tell(ctx, "Given.");
-            ctx.scripts.outbox.borrow_mut().push((
-                recipient,
-                format!(
-                    "{} gave you {}.",
-                    display(ctx, ctx.player)?,
-                    display(ctx, target)?
-                )
-                .into(),
-            ));
-            ctx.scripts.outbox.borrow_mut().push((
-                target,
-                format!(
-                    "{} gave you to {}.",
-                    display(ctx, ctx.player)?,
-                    display(ctx, recipient)?
-                )
-                .into(),
-            ));
-        }
+        tell(ctx, "Given.");
+        ctx.scripts.outbox.borrow_mut().push((
+            recipient,
+            format!(
+                "{} gave you {}.",
+                display(ctx, ctx.player)?,
+                display(ctx, target)?
+            )
+            .into(),
+        ));
+        ctx.scripts.outbox.borrow_mut().push((
+            target,
+            format!(
+                "{} gave you to {}.",
+                display(ctx, ctx.player)?,
+                display(ctx, recipient)?
+            )
+            .into(),
+        ));
         ctx.scripts.action_message(
             action(ctx, target, "give", None, None, false),
             "drop",
@@ -326,7 +314,6 @@ pub(super) fn enter(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
             ),
             "Permission denied."
         );
-        let silent = quiet(ctx, input, target, false)?;
         ctx.scripts
             .world
             .borrow()
@@ -336,7 +323,7 @@ pub(super) fn enter(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
             LockType::Enter,
             target,
             ctx.player,
-            silent,
+            false,
             Some("on_enter_fail"),
             "You can't enter that.",
         )? {
@@ -347,7 +334,7 @@ pub(super) fn enter(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
             LockType::Leave,
             source,
             ctx.player,
-            silent,
+            false,
             Some("on_enter_fail"),
             "You can't enter that.",
         )? {
@@ -359,11 +346,7 @@ pub(super) fn enter(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
             ctx.player,
             target,
             ctx.session,
-            if silent {
-                crate::movement::Route::EnterQuiet
-            } else {
-                crate::movement::Route::Generic
-            },
+            crate::movement::Route::Generic,
         )
     })
 }
@@ -381,7 +364,6 @@ pub(super) fn leave(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
             );
             o.location.context("You can't leave.")?
         };
-        let silent = quiet(ctx, input, source, false)?;
         ctx.scripts
             .world
             .borrow()
@@ -391,7 +373,7 @@ pub(super) fn leave(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
             LockType::Leave,
             source,
             ctx.player,
-            silent,
+            false,
             Some("on_leave_fail"),
             "You can't leave.",
         )? {
@@ -402,7 +384,7 @@ pub(super) fn leave(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
             LockType::Enter,
             destination,
             ctx.player,
-            silent,
+            false,
             Some("on_leave_fail"),
             "You can't leave.",
         )? {
@@ -414,11 +396,7 @@ pub(super) fn leave(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
             ctx.player,
             destination,
             ctx.session,
-            if silent {
-                crate::movement::Route::LeaveQuiet
-            } else {
-                crate::movement::Route::Generic
-            },
+            crate::movement::Route::Generic,
         )
     })
 }

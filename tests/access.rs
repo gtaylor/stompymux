@@ -73,7 +73,7 @@ inspect="@list"
 [access.commands]
 "@list"="!wizard"
 "say"="wizard"
-"look/outside"="god"
+"pose/nospace"="god"
 "l"="dark"
 "@find"="disabled"
 ";"="!dark"
@@ -86,7 +86,7 @@ permissions="!wizard"
     let c = Config::load(d.path()).unwrap();
     let mut s = scripts(&c).await;
     assert!(run(&s, &c, 2, "say secret").contains("Permission denied"));
-    assert!(run(&s, &c, 2, "l/outside").contains("Permission denied"));
+    assert!(run(&s, &c, 2, "pose/nospace").contains("Permission denied"));
     assert!(run(&s, &c, 2, "inspect flags").contains("Permission denied"));
     assert!(run(&s, &c, 1, "@list flags").contains("Permission denied"));
     assert!(run(&s, &c, 2, "@list si").contains("Permission denied"));

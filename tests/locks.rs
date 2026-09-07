@@ -463,7 +463,7 @@ async fn native_results_nested_policies_and_channel_descriptor() {
 }
 
 #[tokio::test(flavor = "current_thread")]
-async fn quiet_movement_exit_inventory_and_lock_resource_failure() {
+async fn movement_exit_inventory_and_lock_resource_failure() {
     let (d, c, mut w) = fixture().await;
     let room = ObjectId(c.start());
     let cabin = object(&mut w, &c, "Quiet Cabin", Kind::Thing, room);
@@ -475,21 +475,21 @@ async fn quiet_movement_exit_inventory_and_lock_resource_failure() {
         r#"
       events={};_parents['default_room.lua'].events={on_leave=function()table.insert(events,'room-leave')end,on_enter=function()table.insert(events,'room-enter')end}
       _parents['default_thing.lua'].events={on_leave=function()table.insert(events,'cabin-leave')end,on_enter=function()table.insert(events,'cabin-enter')end}
-      _parents['default_thing.lua'].locks={enter=function(ctx) assert(ctx.silent);return true end,leave=function(ctx) assert(ctx.silent);return true end}
+      _parents['default_thing.lua'].locks={enter=function(ctx) assert(not ctx.silent);return true end,leave=function(ctx) assert(not ctx.silent);return true end}
     "#,
     );
-    run(&s, &c, 1, "enter/q Quiet Cabin");
+    run(&s, &c, 1, "enter Quiet Cabin");
     assert_eq!(s.world.borrow().objects[&ObjectId(1)].location, Some(cabin));
-    run(&s, &c, 1, "leave/q");
+    run(&s, &c, 1, "leave");
     lua(
         &s,
-        "assert(table.concat(events,',')=='room-leave,room-enter')",
+        "assert(table.concat(events,',')=='room-leave,cabin-enter,cabin-leave,room-enter')",
     );
     assert!(run(&s, &c, 2, "get Loose Exit").contains("Permission denied"));
     assert!(run(&s, &c, 1, "get Loose Exit").contains("Exit taken"));
     assert_eq!(s.world.borrow().objects[&exit].destination, Some(room));
     assert!(run(&s, &c, 1, "drop Loose Exit").contains("Exit dropped"));
-    assert!(run(&s, &c, 2, "give/q #1=anything").contains("Permission denied"));
+    assert!(run(&s, &c, 2, "give/q #1=anything").contains("Unsupported command switch"));
     assert!(run(&s, &c, 1, "enter/invalid Quiet Cabin").contains("Unsupported"));
     let path = d.path().join("stompymux.toml");
     let source = std::fs::read_to_string(&path).unwrap();
