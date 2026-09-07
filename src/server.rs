@@ -109,7 +109,17 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
     let help_config = c.clone();
     let help =
         tokio::task::spawn_blocking(move || crate::help::HelpIndex::load(&help_config)).await??;
-    let scripts = Scripts::with_help(c, world, help)?;
+    let source_config = c.clone();
+    let sources =
+        tokio::task::spawn_blocking(move || crate::lua::sources::Sources::read(&source_config))
+            .await??;
+    let scripts = Scripts::from_sources(
+        c,
+        world,
+        help,
+        std::sync::Arc::new(sources),
+        crate::lua::RuntimeMode::Live,
+    )?;
     if !existing {
         let god = Zeroizing::new(accounts::random_password());
         let wizard = Zeroizing::new(accounts::random_password());
@@ -230,6 +240,7 @@ pub async fn run_with_schedule_clock(
     tokio::pin!(shutdown);
     let banner = std::fs::read_to_string(server.config.path(&server.config.mux.connect_file))
         .unwrap_or_default();
+    let mut runtime_sources = server.scripts.sources.clone();
     let mut schedules = crate::lua::schedules::Queue::default();
     schedules.observe(
         &server.scripts.schedules,
@@ -292,6 +303,11 @@ pub async fn run_with_schedule_clock(
                 for id in idle {server.disconnect(id).await?;}
             },
             _ = tasks.join_next(), if !tasks.is_empty() => {}
+        }
+        if !std::sync::Arc::ptr_eq(&runtime_sources, &server.scripts.sources) {
+            // Old jobs own old VM functions. Cancel before the next loop turn, retaining minute history.
+            schedules.clear();
+            runtime_sources = server.scripts.sources.clone();
         }
         if server.shutdown.is_some() {
             break;
@@ -681,7 +697,11 @@ impl Server {
         self.tell(id, text);
     }
     fn snapshots(&self) -> Result<()> {
-        let w = self.scripts.world.borrow();
+        self.snapshots_for(&self.scripts)
+    }
+
+    fn snapshots_for(&self, scripts: &Scripts) -> Result<()> {
+        let w = scripts.world.borrow();
         let mut hidden = 0;
         let list:Vec<_>=self.sessions.iter().filter_map(|(session_id,session)| {
             let id=session.player?;
@@ -689,23 +709,23 @@ impl Server {
             if object.flags.contains(crate::flags::Flag::Dark) { hidden+=1; return None; }
             Some(serde_json::json!({"name":object.name,"dbref":id.0,"session":session_id.0,"terminal_width":session.decoder.width,"connected_for":session.connected.elapsed().as_secs(),"idle_for":session.active.elapsed().as_secs()}))
         }).collect();
-        self.scripts
+        scripts
             .lua
             .globals()
             .set(
                 "_connected_players",
-                self.scripts
+                scripts
                     .lua
                     .to_value(&list)
                     .map_err(|e| anyhow::anyhow!(e.to_string()))?,
             )
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-        self.scripts
+        scripts
             .lua
             .globals()
             .set(
                 "_who_summary",
-                self.scripts
+                scripts
                     .lua
                     .to_value(&serde_json::json!({"hidden":hidden,"record":w.record_players}))
                     .map_err(|e| anyhow::anyhow!(e.to_string()))?,
@@ -1059,6 +1079,132 @@ impl Server {
             }
         }
     }
+    /// Build candidates separately; publish code only after candidate state is durable.
+    async fn lua_admin(&mut self, id: SessionId, request: crate::lua::AdminRequest) {
+        use crate::lua::{AdminRequest, RuntimeMode, sources::Sources};
+        if let AdminRequest::Test(request) = request {
+            let result = async {
+                let config = self.config.clone();
+                let sources = tokio::task::spawn_blocking(move || {
+                    Sources::read(&config)?.with_tests(&config)
+                })
+                .await??;
+                let scripts = Scripts::from_sources_with(
+                    &self.config,
+                    self.scripts.world.clone(),
+                    self.scripts.help.clone(),
+                    std::sync::Arc::new(sources),
+                    RuntimeMode::Testing,
+                    |candidate| self.snapshots_for(candidate),
+                )?;
+                crate::lua::testing::run(&scripts, &self.config, &request, || {
+                    self.scripts
+                        .outbox
+                        .borrow_mut()
+                        .extend(scripts.outbox.borrow_mut().drain(..));
+                    self.flush();
+                })
+                .await
+            }
+            .await;
+            self.reconcile_connections();
+            let text = match result {
+                Ok(report) => report.render(request.verbose),
+                Err(error) => format!("Lua tests could not start: {error:#}"),
+            };
+            self.inspection_report(id, text).await;
+            return;
+        }
+        if let AdminRequest::View { path, object } = request {
+            let config = self.config.clone();
+            let label = path.clone();
+            let result = tokio::task::spawn_blocking(move || Sources::view(&config, &path)).await;
+            let text = match result {
+                Ok(Ok(source)) => format!(
+                    "Lua parent object_logic/{label}{}:\nCurrent disk source; active code changes only after reload.\n{source}\n-- End Lua parent --",
+                    object.map_or(String::new(), |o| format!(" (attached on #{})", o.0))
+                ),
+                error => format!("Lua parent unavailable: {error:?}"),
+            };
+            if let Some(session) = self.sessions.get(&id)
+                && let Err(error) = session.literal_report(&text, &self.config).await
+            {
+                eprintln!("Lua source output: {error:#}");
+                self.tell(id, "Unable to deliver complete Lua source.\r\n");
+            }
+            return;
+        }
+        let checking = matches!(request, AdminRequest::Check);
+        let result = async {
+            let config = self.config.clone();
+            let sources = tokio::task::spawn_blocking(move || {
+                let sources = Sources::read(&config)?;
+                if checking {
+                    sources.with_tests(&config)
+                } else {
+                    Ok(sources)
+                }
+            })
+            .await??;
+            let before = self.scripts.world.borrow().clone();
+            let world = std::rc::Rc::new(std::cell::RefCell::new(before.clone()));
+            let candidate = Scripts::from_sources_with(
+                &self.config,
+                world,
+                self.scripts.help.clone(),
+                std::sync::Arc::new(sources),
+                if checking {
+                    RuntimeMode::Checking
+                } else {
+                    RuntimeMode::Live
+                },
+                |candidate| self.snapshots_for(candidate),
+            )?;
+            if checking {
+                return Ok::<_, anyhow::Error>(None);
+            }
+            self.snapshots_for(&candidate)?;
+            let after = candidate.world.borrow().clone();
+            after.validate(&self.config)?;
+            if serde_json::to_vec(&before)? != serde_json::to_vec(&after)? {
+                persistence::persist(
+                    self.config.database(),
+                    after,
+                    self.config.database.busy_timeout_ms,
+                )
+                .await?;
+            }
+            Ok(Some(candidate))
+        }
+        .await;
+        match result {
+            Ok(None) => {
+                self.inspection_report(id, "All Lua module checks passed.".into())
+                    .await
+            }
+            Ok(Some(candidate)) => {
+                self.scripts = candidate;
+                self.reconcile_connections();
+                self.flush();
+                self.inspection_report(id, "Lua reloaded.".into()).await;
+            }
+            Err(error) => {
+                eprintln!(
+                    "Lua {} failed: {error:#}",
+                    if checking { "check" } else { "reload" }
+                );
+                self.inspection_report(
+                    id,
+                    format!(
+                        "Lua {} failed: {error:#}",
+                        if checking { "check" } else { "reload" }
+                    ),
+                )
+                .await;
+            }
+        }
+    }
+
     /// Reports share bounded, grapheme-safe delivery with help and never enter persistence.
     async fn inspection_report(&self, id: SessionId, text: String) {
         if let Some(session) = self.sessions.get(&id) {
@@ -1142,6 +1288,7 @@ impl Server {
             }
             Ok(Action::Sessions(prefix)) => self.session_diagnostics(id, &prefix),
             Ok(Action::Telnet(player)) => self.telnet_diagnostics(id, &player),
+            Ok(Action::LuaAdmin(request)) => self.lua_admin(id, request).await,
             Ok(Action::LuaSchedules(target)) => {
                 let bytes = self.scripts.schedules.inspect(
                     &self.scripts.world.borrow(),

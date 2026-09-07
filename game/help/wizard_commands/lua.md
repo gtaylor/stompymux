@@ -11,55 +11,27 @@ index_style = "list_with_description"
 
 # @lua
 
-Currently, only `@lua/schedule` is implemented. The other articles below describe
-commands reserved for future implementation.
+Wizard-only Lua administration provides `/parent`, `/viewparent`, `/check`,
+`/reload`, `/schedule` and `/test`. Bare `@lua` lists these switches. Interactive
+flows remain unavailable.
 
-`@lua` groups the Wizard-only Lua administration commands under one command.
-Type `@lua` by itself to see a short list of switches, or use one of the forms
-indexed below.
+Use `/parent` to attach active object modules and `/reload` to discover new files
+or apply edits. `/viewparent` shows current disk source; `/check` validates a
+candidate runtime without changing the world or running code in the active VM.
 
-Lua modules are the supported way to define programmable commands. Attribute
-values beginning with `$` are not matched as commands.
+Command declarations require `name`, `permission`, `pattern` and `handler`.
+Permissions are strings: `everyone`, `wizard` or `god`. Restricted Lua handlers
+are skipped, allowing later handlers or exits to match.
 
-`@lua/test` runs fully mutable Lua tests against the currently loaded database.
-Run it only with a scratch database, never production data.
+Trusted scripts use `mux.world.create_object` with typed `mux.world.types`
+constants. Objects expose destination, home, location, zone, affiliation and Lua
+parent getters, and corresponding setters except for location. Clear optional
+relationships with explicit `nil`; a home must remain a valid container.
 
-Lua command entries may set `access = mux.world.access.WIZARD` or
-`access = mux.world.access.GOD` alongside their `pattern` and `handler`.
-Omitting `access`, or setting it to `mux.world.access.PUBLIC`, allows everyone.
-Raw access strings are invalid. Unauthorized entries are skipped silently so
-later command entries may still match.
-Lua callback reporting is configured with `lua_error_reporting`: `off`,
-`wizards` (the default), or `all`. Errors are always logged; this setting only
-controls player-visible reporting.
-
-Trusted runtime scripts may create rooms, things, and exits with the
-`mux.world.create_*` functions and schedule any supported object for deletion
-with `mux.world.destroy_object`. `exit:set_destination(destination)` sets an
-exit's destination; pass `nil` to clear it without detaching it from its source.
-`exit:destination()` reads a concrete destination. `object:home()` and
-`object:location()` read a thing or player's home and current location, and
-`object:set_home(new_home)` changes its home.
-`mux.world.teleport_object` moves a thing or player using an extensible options
-table.
-`object:zone()` reads an object's zone, and `object:set_zone()` assigns a thing
-or room as its zone or clears the assignment with `nil`.
-`object:affiliation()` reads an object's affiliation, and
-`object:set_affiliation()` assigns any live object as its affiliation or clears
-the assignment with `nil`. Affiliations do not affect command matching, events,
-or other server behavior.
-`object:lua_parent()` reads an object's direct object-logic module path, and
-`object:set_lua_parent()` assigns a validated path or clears it with `nil`.
-Object handles also expose `object:flags()` and `object:powers()`. Their
-collection methods use typed constants such as `mux.world.flags.SAFE` and
-`mux.world.powers.IDLE`; raw name strings are not accepted. These changes run
-immediately as God and are not rolled back if the callback later fails.
-These operations are unavailable during `@lua/check`; use the scripting
-package reference for their arguments and safeguards.
-
-Trusted runtime scripts may manage communication channels through
-`mux.comsys`. The package returns typed Channel handles, supports channel
-creation and destruction, exposes typed `PUBLIC`, `LOUD`, and `TRANSPARENT`
-flags, and provides structured emit, membership, object-attachment, and boot
-operations. These changes run immediately as God and are not rolled back when
-a callback later fails.
+Flags and powers use typed constants and provide `has`, `add`, `remove` and
+`list`. `mux.comsys` manages channels. World mutations and output participate in
+the enclosing transaction: callback or persistence failure restores mutations
+and discards staged messages. Session-owned CONNECTED always reflects sessions.
+Lua globals themselves are not rolled back. Test execution is a deliberate
+exception: valid world mutations survive assertions and runtime errors in
+`@lua/test`. See `help @lua/test` before running suites.

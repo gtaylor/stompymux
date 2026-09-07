@@ -232,7 +232,7 @@ impl Queue {
         }
     }
 
-    /// Shutdown discards rather than drains scheduled work.
+    /// Shutdown and successful reload discard jobs while retaining the minute high-water mark.
     pub fn clear(&mut self) {
         self.jobs.clear();
     }

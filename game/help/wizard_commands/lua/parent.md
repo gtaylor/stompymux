@@ -17,7 +17,9 @@ attachment:
 @lua/parent <object>=
 ```
 
-Paths are relative to `game/lua/object_logic`. The attachment applies only to
+Paths are relative to the configured `object_logic` directory. Paths must name
+modules in the active catalog; use `@lua/reload` before attaching new files.
+Traversal, absolute paths and symlinks escaping the Lua root are rejected. The attachment applies only to
 that object; object-logic modules are not inherited through other objects.
 
 New objects receive the type-specific Lua parent configured by
@@ -29,8 +31,9 @@ the configured default.
 
 An object module may export `internal_appearance(ctx)` and
 `external_appearance(ctx)`. Returning a string replaces the complete native
-`look` appearance; returning `nil` uses the native appearance. Rooms always use
-the internal function. Use `mux.world.object(ctx.object)`, `Object:contents`
+`look` appearance; callbacks must return a string. Looking at the viewer's
+immediate container uses the internal function; other targets use the external
+function. Use `mux.world.object(ctx.object)`, `Object:contents`
 filters, and typed `mux.world.types` constants when assembling custom output.
 `Object:contents()` includes both ordinary contents and attached exits; pass a
 `types` filter when only one group should be shown.

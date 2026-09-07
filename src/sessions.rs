@@ -150,7 +150,29 @@ impl Session {
         config: &crate::config::Config,
     ) -> anyhow::Result<()> {
         let options = self.render_options(ansi);
-        let mut spans = response.spans(&options);
+        self.deliver_spans(response.spans(&options), ansi, config)
+            .await
+    }
+
+    /// Display source without interpreting markup or wrapping indentation.
+    pub async fn literal_report(
+        &self,
+        text: &str,
+        config: &crate::config::Config,
+    ) -> anyhow::Result<()> {
+        let options = self.render_options(false);
+        let spans = crate::text::Document::Literal(text.into()).spans(&self.palette, &options);
+        self.deliver_spans(spans, false, config).await
+    }
+
+    /// Reserve bounded queue slots under one deadline for a complete logical report.
+    async fn deliver_spans(
+        &self,
+        mut spans: Vec<crate::text::Span>,
+        ansi: bool,
+        config: &crate::config::Config,
+    ) -> anyhow::Result<()> {
+        let options = self.render_options(ansi);
         spans.push(crate::text::Span {
             text: "\n".into(),
             ..Default::default()

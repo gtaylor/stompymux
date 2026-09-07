@@ -86,11 +86,6 @@ async fn builtins_and_sandbox_precede_lexical_game_loading() {
         ["object-first", "object-last", "global-first", "global-last"]
     );
     let package: mlua::Table = scripts.lua.globals().get("package").unwrap();
-    assert_eq!(
-        package.get::<String>("path").unwrap(),
-        format!(
-            "{}/?.lua",
-            directory.join("packages").canonicalize().unwrap().display()
-        )
-    );
+    assert_eq!(package.get::<String>("path").unwrap(), "");
+    assert_eq!(package.get::<mlua::Table>("loaders").unwrap().raw_len(), 1);
 }

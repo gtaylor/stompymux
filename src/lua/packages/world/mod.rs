@@ -2,7 +2,9 @@
 mod flags;
 mod locks;
 mod powers;
+mod relationships;
 mod state;
+mod types;
 use super::bind;
 use crate::lua::{Outbox, SharedWorld, err};
 use crate::{
@@ -29,6 +31,7 @@ pub(super) fn register(
         let o = w
             .objects
             .get(&ObjectId(id))
+            .filter(|o| o.kind != Kind::Garbage)
             .ok_or_else(|| err("object does not exist"))?;
         match key.as_str() {
             "name" => lua.to_value(&o.name),
@@ -40,7 +43,7 @@ pub(super) fn register(
                 &o.internal_description,
                 mlua::serde::SerializeOptions::new().serialize_none_to_null(false),
             ),
-            "type" => Ok(Value::Integer(o.kind.code())),
+            "type" => Ok(Value::UserData(lua.create_userdata(o.kind)?)),
             "location" => lua.to_value_with(
                 &o.location,
                 mlua::serde::SerializeOptions::new().serialize_none_to_null(false),
@@ -93,8 +96,12 @@ pub(super) fn register(
                     o.internal_description = value;
                 }
             }
-            "home" => o.home = lua.from_value(v)?,
-            "location" => o.location = lua.from_value(v)?,
+            "location" => {
+                let destination = relationships::identity(v, &w, true)?;
+                relationships::identity(Value::Integer(id), &w, true)?;
+                w.validate_move(ObjectId(id), destination).map_err(err)?;
+                w.objects.get_mut(&ObjectId(id)).unwrap().location = Some(destination);
+            }
             _ => return Err(err("unsupported object mutation")),
         }
         Ok(())
@@ -104,7 +111,7 @@ pub(super) fn register(
     let p = palette.clone();
     bind!(lua, api, "create", move |_, t: Table| {
         let mut w = w.borrow_mut();
-        let kind = Kind::from_code(t.get("type")?).map_err(err)?;
+        let kind = types::kind(t.get("type")?)?;
         if kind == Kind::Player || kind == Kind::Garbage {
             return Err(err("Use account registration to create players"));
         }
@@ -113,36 +120,124 @@ pub(super) fn register(
             return Err(err("object name exceeds text limit"));
         }
         let name = text::validate(&p, &name).map_err(err)?;
+        types::options(
+            &t,
+            match kind {
+                Kind::Room => &["type", "name", "zone"],
+                Kind::Thing => &["type", "name", "location", "home", "zone"],
+                _ => &["type", "name", "location", "destination", "zone"],
+            },
+        )?;
+        let mut references = std::collections::BTreeMap::new();
+        for key in ["location", "home", "zone", "destination"] {
+            let value: Value = t.raw_get(key)?;
+            if value.is_nil() {
+                continue;
+            }
+            let target = relationships::identity(value, &w, true)?;
+            let target_kind = w.objects[&target].kind;
+            if key == "zone" {
+                if !matches!(target_kind, Kind::Room | Kind::Thing) {
+                    return Err(err("zone must be a room or thing"));
+                }
+            } else if !matches!(target_kind, Kind::Room | Kind::Thing | Kind::Player) {
+                return Err(err("target cannot contain objects"));
+            }
+            references.insert(key, target);
+        }
         let id = w.create(&c, name, kind);
         let o = w.objects.get_mut(&id).unwrap();
-        for key in ["location", "zone", "destination"] {
-            let value: Option<i64> = t.get(key)?;
-            match key {
-                "location" => o.location = value.map(ObjectId),
-                "zone" => o.zone = value.map(ObjectId),
-                _ => o.destination = value.map(ObjectId),
-            }
-        }
+        o.location = references.get("location").copied();
+        o.home = references.get("home").copied();
+        o.zone = references.get("zone").copied();
+        o.destination = references.get("destination").copied();
         Ok(id.0)
     });
     let w = world.clone();
     bind!(lua, api, "contents", move |lua,
-                                      (id, types, viewer): (
-        i64,
-        Vec<i64>,
-        Option<i64>
+                                      (id, options): (
+        Value,
+        Table
     )| {
         let w = w.borrow();
+        let id = relationships::identity(id, &w, false)?;
+        types::options(&options, &["types", "visible_to"])?;
+        let types = types::filter(options.raw_get("types")?)?;
+        let viewer = match options.raw_get::<Value>("visible_to")? {
+            Value::Nil => None,
+            v => Some(relationships::identity(v, &w, false)?),
+        };
         lua.to_value(
             &w.objects
                 .values()
                 .filter(|o| {
-                    o.location == Some(ObjectId(id))
-                        && (types.is_empty() || types.contains(&o.kind.code()))
-                        && viewer.is_none_or(|v| w.visible(o, ObjectId(v)))
+                    o.kind != Kind::Garbage
+                        && o.location == Some(id)
+                        && types.as_ref().is_none_or(|types| types.contains(&o.kind))
+                        && viewer.is_none_or(|v| w.visible(o, v))
                 })
                 .map(|o| o.id.0)
                 .collect::<Vec<_>>(),
+        )
+    });
+    let w = world.clone();
+    bind!(
+        lua,
+        api,
+        "list_objects",
+        move |lua, options: Option<Table>| {
+            let w = w.borrow();
+            let mut types = None;
+            let mut zone = None;
+            if let Some(options) = options {
+                types::options(&options, &["types", "in_zone"])?;
+                types = types::filter(options.raw_get("types")?)?;
+                if let value @ (Value::Integer(_) | Value::Number(_) | Value::Table(_)) =
+                    options.raw_get::<Value>("in_zone")?
+                {
+                    zone = Some(relationships::identity(value, &w, true)?);
+                } else if !options.raw_get::<Value>("in_zone")?.is_nil() {
+                    return Err(err("invalid zone object"));
+                }
+            }
+            lua.to_value(
+                &w.objects
+                    .values()
+                    .filter(|o| {
+                        o.kind != Kind::Garbage
+                            && types.as_ref().is_none_or(|types| types.contains(&o.kind))
+                            && zone.is_none_or(|zone| o.zone == Some(zone))
+                    })
+                    .map(|o| o.id.0)
+                    .collect::<Vec<_>>(),
+            )
+        }
+    );
+    api.set(
+        "types",
+        lua.create_userdata(types::Types)
+            .map_err(|e| anyhow::anyhow!("{e}"))?,
+    )
+    .map_err(|e| anyhow::anyhow!("{e}"))?;
+    relationships::register(lua, api, world).map_err(|e| anyhow::anyhow!("{e}"))?;
+    let w = world.clone();
+    bind!(lua, api, "list_flags", move |lua, id: Value| {
+        let w = w.borrow();
+        let id = relationships::identity(id, &w, false)?;
+        lua.create_sequence_from(
+            crate::flags::ALL
+                .into_iter()
+                .filter(|f| w.objects[&id].flags.contains(*f)),
+        )
+    });
+    let w = world.clone();
+    bind!(lua, api, "list_powers", move |lua, id: Value| {
+        let w = w.borrow();
+        let id = relationships::identity(id, &w, false)?;
+        lua.create_sequence_from(
+            crate::powers::ALL
+                .into_iter()
+                .filter(|p| w.objects[&id].powers.contains(*p)),
         )
     });
     api.set(

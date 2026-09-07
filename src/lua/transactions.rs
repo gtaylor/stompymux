@@ -58,3 +58,16 @@ pub fn with_descriptor<T>(lua: &Lua, value: Option<u64>, work: impl FnOnce() -> 
     lua.set_app_data(Descriptor(before));
     result
 }
+
+/// Test invocations retain valid mutations even when Lua cannot construct an error report.
+/// The caller must validate and persist, rolling back only an invalid or unsaved result.
+pub(super) fn live_test<T>(lua: &Lua, work: impl FnOnce() -> mlua::Result<T>) -> mlua::Result<T> {
+    let depth = lua
+        .app_data_ref::<Rc<Cell<usize>>>()
+        .expect("callback counter installed")
+        .clone();
+    depth.set(depth.get() + 1);
+    let result = work();
+    depth.set(depth.get() - 1);
+    result
+}

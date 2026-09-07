@@ -52,19 +52,40 @@ pub(super) fn create(config: &Config) -> Result<(Lua, InstructionBudget)> {
 }
 
 /// Keep require resolution restricted to the configured editable game packages.
-pub(super) fn configure_search(lua: &Lua, config: &Config) -> Result<()> {
-    let packages = config.lua_dir().join("packages").canonicalize()?;
-    let package: Table = lua
-        .globals()
-        .get("package")
-        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-    package
-        .set("path", format!("{}/?.lua", packages.display()))
-        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-    package
-        .set("cpath", "")
-        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-    Ok(())
+pub(super) fn configure_search(lua: &Lua, sources: &super::sources::Sources) -> Result<()> {
+    let install = || -> mlua::Result<()> {
+        let package: Table = lua.globals().get("package")?;
+        let preload: Table = package.get("preload")?;
+        for (path, source) in sources
+            .files
+            .iter()
+            .filter(|(p, _)| p.starts_with("packages/"))
+        {
+            let name = path
+                .strip_prefix("packages/")
+                .unwrap()
+                .strip_suffix(".lua")
+                .unwrap()
+                .replace('/', ".");
+            let source = source.clone();
+            let path = path.clone();
+            preload.set(
+                name,
+                lua.create_function(move |lua, _: Value| {
+                    lua.load(&source).set_name(&path).eval::<Value>()
+                })?,
+            )?;
+        }
+        // Retain the preload loader only; require must never consult mutable disk files.
+        let loaders: Table = package.get("loaders")?;
+        let only = lua.create_table()?;
+        only.set(1, loaders.get::<Value>(1)?)?;
+        package.set("loaders", only)?;
+        package.set("path", "")?;
+        package.set("cpath", "")?;
+        Ok(())
+    };
+    install().map_err(|e| anyhow::anyhow!("{e}"))
 }
 
 /// Seal runtime access after installing built-ins and before evaluating game modules.

@@ -20,3 +20,7 @@ or a Lua parent path relative to `game/lua/object_logic`:
 The dbref form displays the Lua parent attached directly to that object. The
 path form must use the same safe relative `.lua` path accepted by
 `@lua/parent`.
+
+Source is read from disk on each request and displayed literally in private,
+bounded chunks with whitespace preserved. It may differ from active code; use
+`@lua/reload` to activate edits. Viewing a new file does not register it.

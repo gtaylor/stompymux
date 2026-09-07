@@ -15,11 +15,11 @@ wizard_only = true
 
 Put suites below `game/lua/tests/unit/` or `game/lua/tests/integration/`. The
 directories are an authoring and command-filter convention only: both receive
-the full `mux` and `btech` Lua binding surface. Integration suites should
+the implemented non-BattleTech `mux` Lua binding surface. Integration suites should
 restore every changed object or attribute in teardown hooks.
 
 Run all suites as a Wizard with `@lua/test [filter]`. The optional filter is
-matched against `module_path:test_name`. Use `@lua/test/unit` or
+matched as a case-sensitive literal substring of `module_path:test_name`. Use `@lua/test/unit` or
 `@lua/test/integration` to limit discovery to one directory; append `/verbose`
 to list passing tests.
 
@@ -49,5 +49,20 @@ marks its suite's tests as errored without running them, then `after_all` runs.
 
 The `expect` table provides `equal`, `not_equal`, `truthy`, `falsy`, `is_nil`,
 `contains`, `near(actual, expected, tolerance)`, and
-`error_matches(function, pattern)`. Failed assertions report expected and
+`error_matches(function, pattern)`, `raises`, `raises_code`, `no_error` and
+`is_error`. Failed assertions report expected and
 actual values separately from ordinary Lua runtime errors.
+
+
+A separate VM is created for each run. It does not replace active game modules,
+run startup hooks or change pending schedules. Both test directories share live
+world services. Valid mutations survive assertions and runtime errors and are
+saved after each module initialization, hook and test before staged output is
+sent. Validation or database failure rolls back that invocation and reports an
+error; applicable teardown and subsequent tests still run.
+
+Reports go only to the invoking session; explicit script messages retain their
+normal recipients. Failure and verbose pass details are limited to 64 entries
+each, with omission notices and complete totals. Instruction, memory, state and
+output limits still apply. `@lua/check` validates declarations without executing
+test bodies or hooks. Files are read afresh for each check or test invocation.

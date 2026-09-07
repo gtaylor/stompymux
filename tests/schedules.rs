@@ -381,9 +381,10 @@ async fn inspection_is_captured_bounded_and_permission_checked() {
     assert!(
         matches!(commands::run(&s,&c,ObjectId(1),1,"@lua").unwrap(),Action::Reply(t) if t.contains("/schedule"))
     );
-    assert!(
-        matches!(commands::run(&s,&c,ObjectId(1),1,"@lua/reload").unwrap(),Action::Reply(t) if t.contains("Unsupported"))
-    );
+    assert!(matches!(
+        commands::run(&s, &c, ObjectId(1), 1, "@lua/reload").unwrap(),
+        Action::LuaAdmin(stompymux_rs::lua::AdminRequest::Reload)
+    ));
     s.world
         .borrow_mut()
         .objects
@@ -559,5 +560,40 @@ async fn tcp_scheduled_persistence_failure_consumes_job_and_discards_messages() 
         clock.set(next*60+54);
         assert_eq!(persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)].state["scheduled"]["written"],Scalar::Integer(1));
         db.close().await.unwrap();
+    }).await;
+}
+
+/// Successful replacement cancels captured jobs; failed replacement preserves them and minute history.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_reload_schedule_queue_is_atomic() {
+    tokio::task::LocalSet::new().run_until(async {
+        let (_d,c)=fixture().await;credentials(&c).await;
+        let name=(0..100).map(|i|format!("job{i}")).find(|n| jitter("reload_queue.lua",n,None,180)>5 && jitter("reload_queue.lua",n,None,240)>5).unwrap();
+        let source=|label: &str|format!(r#"return {{schedules={{{{name='{name}',cron='* * * * *',handler=function()
+          local state=mux.world.object(1):state('reload_queue');state:set('{label}',state:get('{label}',0)+1);mux.world.pemit(1,'{label}_JOB')
+        end}}}}}}"#);
+        module(&c,"global_logic/reload_queue.lua",&source("OLD"));
+        let clock=Rc::new(Cell::new(120));
+        let (address,shutdown,task,_vm)=start(&c,clock.clone()).await;
+        let mut client=Client::connect(address,1).await;
+        clock.set(180);tokio::time::sleep(Duration::from_millis(80)).await;
+        module(&c,"global_logic/reload_queue.lua","return {broken =");
+        client.send("@lua/reload").await;client.until("Lua reload failed:").await;
+        clock.set(234);client.until("OLD_JOB").await;
+        clock.set(240);tokio::time::sleep(Duration::from_millis(80)).await;
+        module(&c,"global_logic/reload_queue.lua",&source("NEW"));
+        client.send("@lua/reload").await;client.until("Lua reloaded.").await;
+        clock.set(294);tokio::time::sleep(Duration::from_millis(80)).await;
+        let world=persistence::load(&c.database()).await.unwrap();
+        assert_eq!(world.objects[&ObjectId(1)].state["reload_queue"]["OLD"],Scalar::Integer(1));
+        assert!(!world.objects[&ObjectId(1)].state["reload_queue"].contains_key("NEW"));
+        client.send("@lua/reload").await;client.until("Lua reloaded.").await;
+        let before=std::fs::read(c.database()).unwrap();
+        client.send("@lua/check").await;client.until("All Lua module checks passed.").await;
+        assert_eq!(before,std::fs::read(c.database()).unwrap());
+        clock.set(354);client.until("NEW_JOB").await;
+        let world=persistence::load(&c.database()).await.unwrap();
+        assert_eq!(world.objects[&ObjectId(1)].state["reload_queue"]["NEW"],Scalar::Integer(1));
+        shutdown.send(ShutdownRequest::Sigterm).unwrap();task.await.unwrap().unwrap();
     }).await;
 }

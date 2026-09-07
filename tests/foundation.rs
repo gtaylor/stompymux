@@ -2998,3 +2998,257 @@ async fn tcp_basic_building_inspection_and_alias_restart() {
     by_name.login("MasterBuilder").await;
     server.stop().await;
 }
+
+/// New and changed code is published atomically while old sessions and persistent state survive.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_lua_parent_check_reload_and_default_exit() {
+    use sqlx::Connection;
+    let (d, c) = populated().await;
+    let package = d.path().join("lua/packages/reload_value.lua");
+    let module = d.path().join("lua/global_logic/reload_probe.lua");
+    std::fs::write(&package, "return 'VERSION_ONE'").unwrap();
+    std::fs::write(&module,r#"local value=require('reload_value');return {
+      commands={{name='reload-probe',permission='everyone',pattern='^reload%-probe$',handler=function(ctx)
+        assert(mux.world.object(ctx.enactor):flags():has(mux.world.flags.CONNECTED));mux.world.pemit(ctx.enactor,value);return true end}},
+      events={on_server_startup=function() local s=mux.world.object(1):state('startup');s:set('count',s:get('count',0)+1) end}
+    }"#).unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ObjectId(c.start()));
+    persistence::save(&c.database(), &w).await.unwrap();
+    let server = Running::start(&c).await;
+    let mut wizard = Client::connect(&server).await;
+    wizard.login("#1").await;
+    let mut second = Client::connect(&server).await;
+    second.login("#1").await;
+    let mut alice = Client::connect(&server).await;
+    alice.register("LuaAlice").await;
+    alice.send("@lua/reload").await;
+    alice.until("Permission denied.").await;
+    wizard.send("@dig LuaGarden").await;
+    wizard.until("created with room number").await;
+    let w = persistence::load(&c.database()).await.unwrap();
+    let room = w
+        .objects
+        .values()
+        .find(|o| o.name == "LuaGarden")
+        .unwrap()
+        .id;
+    wizard.send(&format!("@open PolicyGate=#{}", room.0)).await;
+    wizard.until("Linked.").await;
+    let w = persistence::load(&c.database()).await.unwrap();
+    let gate = w
+        .objects
+        .values()
+        .find(|o| o.name == "PolicyGate")
+        .unwrap()
+        .id;
+    wizard
+        .send(&format!("@lua/parent #{}=default_exit.lua", gate.0))
+        .await;
+    wizard.until("Lua parent set.").await;
+    wizard
+        .send(&format!(
+            "@state/set #{}/locks.traverse flag/WIZARD=true",
+            gate.0
+        ))
+        .await;
+    wizard.until("State value set.").await;
+    alice.send("PolicyGate").await;
+    alice.until("You cannot go that way.").await;
+    wizard
+        .send(&format!(
+            "@state/set #{}/locks.traverse flag/WIZARD=false",
+            gate.0
+        ))
+        .await;
+    wizard.until("State value set.").await;
+    alice.send("PolicyGate").await;
+    alice.until("LuaGarden").await;
+    // Teleport matching uses explicit dbrefs for remote targets.
+    let alice_id = persistence::load(&c.database())
+        .await
+        .unwrap()
+        .find_player("LuaAlice")
+        .unwrap();
+    wizard
+        .send(&format!("@teleport #{}=#{}", alice_id.0, c.start()))
+        .await;
+    alice.until("Starter Room").await;
+    wizard.send("@lua/check").await;
+    wizard.until("All Lua module checks passed.").await;
+    std::fs::write(&package, "return 'VERSION_TWO'").unwrap();
+    alice.send("reload-probe").await;
+    alice.until("VERSION_ONE").await;
+    std::fs::write(
+        d.path().join("lua/object_logic/new_parent.lua"),
+        "-- [bold]literal[/]\nreturn {}\n",
+    )
+    .unwrap();
+    wizard
+        .send(&format!("@lua/parent #{}=new_parent.lua", gate.0))
+        .await;
+    wizard.until("not loaded").await;
+    wizard.send("@lua/viewparent new_parent.lua").await;
+    let viewed = wizard.until("-- End Lua parent --").await;
+    assert!(viewed.contains("[bold]literal[/]"));
+    wizard.send("@lua/reload").await;
+    wizard.until("Lua reloaded.").await;
+    alice.send("reload-probe").await;
+    alice.until("VERSION_TWO").await;
+    assert_eq!(
+        persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)].state["startup"]["count"],
+        stompymux_rs::world::Scalar::Integer(1)
+    );
+    wizard
+        .send(&format!("@lua/parent #{}=new_parent.lua", gate.0))
+        .await;
+    wizard.until("Lua parent set.").await;
+    std::fs::remove_file(d.path().join("lua/object_logic/new_parent.lua")).unwrap();
+    wizard.send("@lua/reload").await;
+    wizard.until("Lua reload failed:").await;
+    alice.send("reload-probe").await;
+    alice.until("VERSION_TWO").await;
+    wizard
+        .send(&format!("@lua/parent #{}=default_exit.lua", gate.0))
+        .await;
+    wizard.until("Lua parent set.").await;
+    let init = d.path().join("lua/global_logic/reload_init.lua");
+    std::fs::write(&init,"assert(#mux.session.connected_players()==3);mux.world.object(1):state('reload'):set('committed',true);mux.world.pemit(1,'CANDIDATE_SAVED');return {}").unwrap();
+    let mut db = sqlx::SqliteConnection::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("CREATE TRIGGER fail_reload BEFORE INSERT ON object_state BEGIN SELECT RAISE(FAIL,'reload blocked'); END").execute(&mut db).await.unwrap();
+    wizard.send("@lua/reload").await;
+    let failed = wizard.until("Lua reload failed:").await;
+    assert!(!failed.contains("CANDIDATE_SAVED"));
+    assert!(
+        !persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)]
+            .state
+            .contains_key("reload")
+    );
+    alice.send("reload-probe").await;
+    alice.until("VERSION_TWO").await;
+    sqlx::query("DROP TRIGGER fail_reload")
+        .execute(&mut db)
+        .await
+        .unwrap();
+    db.close().await.unwrap();
+    wizard.send("@lua/reload").await;
+    wizard.until("Lua reloaded.").await;
+    assert!(
+        persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)]
+            .state
+            .contains_key("reload")
+    );
+    std::fs::remove_file(init).unwrap();
+    std::fs::remove_file(&module).unwrap();
+    wizard.send("@lua/reload").await;
+    wizard.until("Lua reloaded.").await;
+    alice.send("reload-probe").await;
+    alice.until("Huh?").await;
+    wizard.send("@lua/reload").await;
+    wizard.until("Lua reloaded.").await;
+    server.stop().await;
+    let saved = persistence::load(&c.database()).await.unwrap();
+    assert_eq!(saved.objects[&gate].lua_parent, "default_exit.lua");
+    let server = Running::start(&c).await;
+    let mut alice = Client::connect(&server).await;
+    alice.login("LuaAlice").await;
+    alice.send("PolicyGate").await;
+    alice.until("LuaGarden").await;
+    server.stop().await;
+}
+
+/// Test commands use a separate VM while retaining live, durable world changes.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_lua_test_runner_live_mutations_and_reports() {
+    let (d, _) = populated().await;
+    let alias_path = d.path().join("aliases.toml");
+    let aliases = std::fs::read_to_string(&alias_path).unwrap();
+    std::fs::write(
+        alias_path,
+        aliases.replace(
+            "[aliases.commands]",
+            "[aliases.commands]\nlt='@lua/test/unit/verbose'\n",
+        ),
+    )
+    .unwrap();
+    let c = Config::load(d.path()).unwrap();
+    std::fs::create_dir_all(d.path().join("lua/tests/unit")).unwrap();
+    std::fs::copy(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("game/lua/packages/testing.lua"),
+        d.path().join("lua/packages/testing.lua"),
+    )
+    .unwrap();
+    std::fs::write(
+        d.path().join("lua/tests/unit/live.lua"),
+        r#"
+local t=require('testing'); return t.suite('live',{
+ after_all=function()mux.world.pemit(2,'RUNNER_TEARDOWN')end,
+ tests={t.test('live failure',function(ctx,e)
+ mux.world.object(2):state('runner'):set('durable',42)
+ e.equal(1,2)
+ end), t.test('passing',function()end)}})
+"#,
+    )
+    .unwrap();
+    std::fs::write(d.path().join("lua/global_logic/active_probe.lua"),r#"
+local n=0;return {commands={{name='active-probe',permission='everyone',pattern='^active%-probe$',handler=function(ctx)n=n+1;mux.world.pemit(ctx.enactor,'ACTIVE_'..n);return true end}}}
+"#).unwrap();
+    let mut world = persistence::load(&c.database()).await.unwrap();
+    world.accounts.get_mut(&ObjectId(2)).unwrap().hash =
+        Some(accounts::hash("secret", &c).unwrap());
+    world.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
+    persistence::save(&c.database(), &world).await.unwrap();
+    let server = Running::start(&c).await;
+    let mut wizard = Client::connect(&server).await;
+    wizard.login("#2").await;
+    let mut other = Client::connect(&server).await;
+    other.login("#2").await;
+    let mut ordinary = Client::connect(&server).await;
+    ordinary.register("RunnerUser").await;
+    ordinary.send("lt").await;
+    ordinary.until("Permission denied.").await;
+    wizard.send("active-probe").await;
+    wizard.until("ACTIVE_1").await;
+    wizard.send("@lua/check").await;
+    wizard.until("All Lua module checks passed.").await;
+    wizard.send("lt").await;
+    let report = wizard.until("skipped in").await;
+    assert!(
+        report.contains("1 passed, 1 failed, 0 errored, 0 skipped in"),
+        "{report}"
+    );
+    assert!(report.contains("unit/live.lua:passing"), "{report}");
+    let peer = other.until("RUNNER_TEARDOWN").await;
+    assert!(!peer.contains("passed, 1 failed"));
+    let w = persistence::load(&c.database()).await.unwrap();
+    let scripts =
+        stompymux_rs::lua::Scripts::new(&c, std::rc::Rc::new(std::cell::RefCell::new(w))).unwrap();
+    scripts
+        .eval_callback::<()>("assert(mux.world.object(2):state('runner'):get('durable')==42)")
+        .unwrap();
+    wizard.send("active-probe").await;
+    wizard.until("ACTIVE_2").await;
+    wizard.send("@lua/test/reload").await;
+    wizard.until("Invalid @lua switch combination.").await;
+    std::fs::write(
+        d.path().join("lua/tests/unit/invalid.lua"),
+        "return {tests={false}} ",
+    )
+    .unwrap();
+    wizard.send("@lua/check").await;
+    wizard.until("checking tests/unit/invalid.lua").await;
+    server.stop().await;
+    let server = Running::start(&c).await;
+    let mut wizard = Client::connect(&server).await;
+    wizard.login("#2").await;
+    wizard.send("@state/examine #2/runner").await;
+    wizard.until("42").await;
+    server.stop().await;
+}

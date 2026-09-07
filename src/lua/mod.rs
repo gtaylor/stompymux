@@ -1,5 +1,7 @@
 //! Server-owned Lua runtime and built-in packages; editable game modules stay in game/lua.
 mod actions;
+pub(crate) mod admin;
+pub use admin::AdminRequest;
 mod appearance;
 pub use appearance::AppearanceMode;
 mod callbacks;
@@ -8,8 +10,11 @@ mod dispatch;
 mod loading;
 mod packages;
 mod runtime;
+pub use runtime::RuntimeMode;
 mod sandbox;
 pub mod schedules;
+pub mod sources;
+pub mod testing;
 pub(crate) mod transactions;
 
 use crate::{
@@ -27,6 +32,8 @@ pub type Outbox = Rc<RefCell<Vec<(ObjectId, text::Document)>>>;
 
 /// Lua owner and loaded game modules with runtime-only shared resources.
 pub struct Scripts {
+    /// Source identity and package contents captured when this runtime was built.
+    pub sources: std::sync::Arc<sources::Sources>,
     /// VM handle for world-thread execution and session snapshot publication.
     pub lua: Lua,
     /// Shared world mutated by built-in operations and callbacks.

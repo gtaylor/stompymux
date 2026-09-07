@@ -181,10 +181,9 @@ other callback mutations.
   messages per connection. Slow clients are disconnected. Login throttles,
   hash concurrency/rate limits, command quotas and idle timeouts are active.
 
-BattleTech simulation, builder commands, player channel commands, cron and
-interactive Lua flows, additional GMCP packages, a webserver and browser-side
-action handling remain deferred. Schedules produce startup warnings and flows
-report an explicit unavailable-feature error. Legacy help/type files describe a
+BattleTech simulation, interactive Lua flows, additional GMCP packages, a
+webserver and browser-side action handling remain deferred. Flows report an
+explicit unavailable-feature error. Legacy help/type files describe a
 larger API than this milestone implements. Deferred configuration is reported in one capability diagnostic. Site/access
 rules parse and pass configuration checks, but block serving before writes or
 listening because enforcement is not implemented.
@@ -664,7 +663,7 @@ their independent grant behavior.
 
 Global and object-logic modules can declare named `schedules` with a five-field
 UTC `cron` expression and a `handler(ctx)`. The supplied `example.lua` hourly
-schedule is registered at startup. Definitions are captured once; changes require
+schedule is registered at startup. Definitions are captured at load time; apply changes with `@lua/reload` or
 a restart. See [Lua schedule authoring](docs/lua-schedules.md) for syntax and
 callback contexts.
 
@@ -678,8 +677,11 @@ not suppress them.
 Wizards use `@lua/schedule [object or module]` to inspect captured declarations.
 For example, `@lua/schedule global_logic/example.lua` shows the supplied hourly
 job. Inspection is private to the invoking session and performs no writes.
-Bare `@lua` lists the supported switch; reload and other `@lua` operations remain
-deferred.
+Bare `@lua` lists `/parent`, `/viewparent`, `/check`, `/reload`, `/schedule` and `/test`.
+Reload validates a separate runtime and persists initialization mutations before
+publication. Failure preserves active code and pending jobs. Success resets Lua
+globals and cancels old jobs without rerunning startup hooks or recollecting the
+current minute. See [Lua object APIs and administration](docs/lua-world.md).
 
 
 ## Object locks and operations
@@ -736,3 +738,20 @@ reports are private, chunked through the bounded transport, and perform no write
 or Lua callbacks. BattleTech fields, `@search` and `@stats` remain outside these
 commands' current coverage. See `help object building`, `help look` and
 `help @examine` for syntax and partial-success behavior.
+
+
+## Lua test suites
+
+Wizards use `@lua/test [filter]`, `/test/unit`, `/test/integration` and the
+`/verbose` modifier. Suites use the supplied `testing` helper under `lua/tests`;
+filters are case-sensitive literal substrings of `module_path:test_name`.
+
+The test VM is separate, but its world is live: assertions and runtime errors do
+not undo valid mutations. Every module initialization, hook and test validates
+and saves its changes before sending output. Invalid or failed writes roll back
+that invocation and count as an error. Normal gameplay callbacks retain their
+existing rollback behavior. Use a scratch database when authoring tests.
+
+`@lua/check` also validates test declarations without running hooks or tests.
+Reports are private, with bounded failure details, tracebacks, optional passing
+names and totals. See [Lua testing](game/help/wizard_commands/lua/test.md).

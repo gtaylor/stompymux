@@ -22,6 +22,8 @@ pub enum Action {
     Telnet(String),
     /// Captured schedule metadata, delivered only to the invoking session.
     LuaSchedules(String),
+    /// Isolated Lua checks, source views and atomic runtime replacement.
+    LuaAdmin(crate::lua::AdminRequest),
     /// Session-local rendering preferences and read-only help.
     Color(String),
     Help(String),

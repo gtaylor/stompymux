@@ -1,6 +1,7 @@
 //! Register built-in mux bindings and embedded facades without changing require lookup.
 mod comsys;
 mod config;
+mod error;
 mod session;
 mod text;
 mod world;
@@ -52,6 +53,7 @@ pub(super) fn install_facades(lua: &Lua, api: Table) -> Result<()> {
             .set_name("@builtin/identity")
             .eval()?;
         lua.globals().set("mux", mux.clone())?;
+        error::install(lua, &mux)?;
         world::install(lua, &api, &mux, &id)?;
         session::install(lua, &api, &mux, &id)?;
         config::install(lua, &api, &mux, &id)?;
@@ -62,4 +64,50 @@ pub(super) fn install_facades(lua: &Lua, api: Table) -> Result<()> {
         Ok(())
     };
     install().map_err(|e| anyhow::anyhow!(e.to_string()))
+}
+
+/// Remove live services from an isolated checking VM before any game source executes.
+pub(super) fn restrict_checking(lua: &Lua, api: &Table) -> Result<()> {
+    let apply = || -> mlua::Result<()> {
+        let unavailable =
+            lua.create_function(|_, _: mlua::MultiValue| -> mlua::Result<mlua::Value> {
+                Err(mlua::Error::external(
+                    "mux.unavailable.checking: live APIs are unavailable while checking",
+                ))
+            })?;
+        let pure = [
+            "config",
+            "markup",
+            "width",
+            "truncate",
+            "strip",
+            "style",
+            "markdown",
+            "printable_ascii",
+        ];
+        for pair in api.clone().pairs::<String, mlua::Value>() {
+            let (name, value) = pair?;
+            if matches!(value, mlua::Value::Function(_)) && !pure.contains(&name.as_str()) {
+                api.set(name, unavailable.clone())?;
+            }
+            if let mlua::Value::Table(table) = value {
+                for pair in table.clone().pairs::<String, mlua::Value>() {
+                    let (key, value) = pair?;
+                    if matches!(value, mlua::Value::Function(_)) {
+                        table.set(key, unavailable.clone())?;
+                    }
+                }
+            }
+        }
+        let mux: Table = lua.globals().get("mux")?;
+        let session: Table = mux.get("session")?;
+        for pair in session.clone().pairs::<String, mlua::Value>() {
+            let (key, value) = pair?;
+            if matches!(value, mlua::Value::Function(_)) {
+                session.set(key, unavailable.clone())?;
+            }
+        }
+        Ok(())
+    };
+    apply().map_err(|e| anyhow::anyhow!("{e}"))
 }

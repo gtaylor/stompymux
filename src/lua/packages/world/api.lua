@@ -8,7 +8,7 @@ local mt = {
 
 -- Validate the identity before exposing the same object wrapper used by other packages.
 local function object(n)
-    n = id(n)
+    n = native.lock_identity(id(n))
     native.get(n, 'name')
     return setmetatable({_id = n}, mt)
 end
@@ -21,11 +21,6 @@ function methods:type() return native.get(self._id, 'type') end
 
 function methods:description() return native.get(self._id, 'description') end
 
-function methods:affiliation()
-    local n = native.get(self._id, 'affiliation')
-    if n then return object(n) end
-end
-
 function methods:set_name(s) native.set(self._id, 'name', s) end
 
 function methods:set_description(s) native.set(self._id, 'description', s) end
@@ -34,12 +29,24 @@ function methods:internal_description() return native.get(self._id, 'internal_de
 
 function methods:set_internal_description(s) native.set(self._id, 'internal_description', s) end
 
-function methods:set_home(o) native.set(self._id, 'home', id(o)) end
+for _, key in ipairs({'destination', 'home', 'location', 'zone', 'affiliation'}) do
+    methods[key] = function(self)
+        local n = native.relationship(self._id, key)
+        if n then return object(n) end
+    end
+end
+function methods:lua_parent() return native.relationship(self._id, 'lua_parent') end
+for _, key in ipairs({'destination', 'home', 'zone', 'affiliation', 'lua_parent'}) do
+    methods['set_' .. key] = function(self, ...)
+        if select('#', ...) ~= 1 then error('value is required; supply nil explicitly to clear') end
+        native.set_relationship(self._id, key, ...)
+    end
+end
 
 function methods:contents(opts)
     opts = opts or {}
     local result = {}
-    for _, n in ipairs(native.contents(self._id, opts.types or {}, id(opts.visible_to))) do
+    for _, n in ipairs(native.contents(self._id, opts)) do
         result[#result + 1] = object(n)
     end
     return result
@@ -48,6 +55,7 @@ end
 function methods:flags()
     local n = self._id
     return {
+        list = function(_) return native.list_flags(n) end,
         has = function(_, flag) return native.has_flag(n, flag) end,
         add = function(_, flag) return native.flag(n, flag, true) end,
         remove = function(_, flag) return native.flag(n, flag, false) end,
@@ -57,6 +65,7 @@ end
 function methods:powers()
     local n = self._id
     return {
+        list = function(_) return native.list_powers(n) end,
         has = function(_, power) return native.has_power(n, power) end,
         add = function(_, power) return native.power(n, power, true) end,
         remove = function(_, power) return native.power(n, power, false) end,
@@ -66,7 +75,7 @@ end
 function methods:state(ns) return native.state(self._id, ns) end
 
 mux.world = {
-    types = {ROOM = 0, THING = 1, EXIT = 2, PLAYER = 3},
+    types = native.types,
     flags = native.flags,
     powers = native.powers,
     locks = native.locks,
@@ -74,9 +83,13 @@ mux.world = {
 }
 
 function mux.world.create_object(t)
-    local copy = {}
-    for k, v in pairs(t) do copy[k] = id(v) end
-    return object(native.create(copy))
+    return object(native.create(t))
+end
+
+function mux.world.list_objects(options)
+    local result = {}
+    for _, n in ipairs(native.list_objects(options)) do result[#result + 1] = object(n) end
+    return result
 end
 
 function mux.world.teleport_object(t)

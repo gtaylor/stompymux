@@ -1,4 +1,4 @@
--- Global commands and schedules are registered when the server starts.
+-- Global commands and schedules register at startup and on @lua/reload.
 -- This command intentionally uses a distinct name to avoid object-local hello
 -- examples: type "global-hello" from anywhere in the game.
 return {

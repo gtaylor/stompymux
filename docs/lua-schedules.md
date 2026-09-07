@@ -20,7 +20,7 @@ return {
 Declarations require a nonempty string name, a valid cron string and a function
 handler. Names are case-sensitive and unique within a module, but can repeat
 across modules. Metadata and functions are captured at startup; editing files or
-module tables does not re-register them. Restart to apply changes. Module-loading
+module tables does not re-register them. Use `@lua/reload` or restart to apply changes. Module-loading
 errors identify the module and declaration. Empty schedule arrays are allowed.
 
 Cron has five numeric fields: minute (0–59), hour (0–23), day of month (1–31),
@@ -78,8 +78,10 @@ The overview lists global modules and object modules with attached objects.
 Module detail shows names and cron expressions; an object-module path also lists
 its attached objects. Object targets use the normal administrative matcher.
 Reports are private to the invoking session, escaped and bounded; oversized
-reports explicitly indicate truncation. `@lua` lists the implemented switch.
-Other Lua administration switches, including reload, are not implemented.
+reports explicitly indicate truncation. `@lua` lists the implemented switches.
+Successful `@lua/reload` clears old queued jobs while retaining the observed
+minute high-water mark. Failed reloads leave jobs intact. Neither case backfills
+work or recollects a minute.
 
 The implementation separates cron parsing, captured registrations, the transient
 queue and read-only inspection under `src/lua/schedules`. The server observes its
