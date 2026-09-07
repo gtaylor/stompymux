@@ -189,14 +189,15 @@ fn speaking(ctx: &CommandContext<'_>) -> Result<bool> {
     Ok(true)
 }
 fn perform(ctx: &CommandContext<'_>, input: &CommandInput, mode: Mode) -> Result<Action> {
-    let allowed: &[&str] = match mode {
-        Mode::Pose | Mode::Fpose => &["default", "nospace"],
-        Mode::Emit | Mode::Femit => &["here", "room"],
-        Mode::Pemit => &["contents", "object", "silent", "list"],
-        Mode::Wall => &["emit", "pose", "wizard", "admin", "no_prefix"],
-        _ => &[],
-    };
-    let switches = switches(input, allowed)?;
+    let catalog = crate::commands::discovery::switches(match mode {
+        Mode::Pose | Mode::Fpose => "pose",
+        Mode::Emit | Mode::Femit => "@emit",
+        Mode::Pemit => "@pemit",
+        Mode::Wall => "@wall",
+        _ => "",
+    });
+    let allowed = catalog.iter().map(|s| s.name).collect::<Vec<_>>();
+    let switches = switches(input, &allowed)?;
     let has = |s: &str| switches.iter().any(|v| v == s);
     if matches!(mode, Mode::Say | Mode::Pose | Mode::Emit) && !speaking(ctx)? {
         return Ok(Action::Continue);

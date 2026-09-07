@@ -131,17 +131,20 @@ pub(super) fn examine(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
 pub(super) fn entrances(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     let result = (|| -> Result<String> {
         let world = ctx.scripts.world.borrow();
-        let range = crate::find::FindCursor::new(&input.args, &world);
+        let range = crate::find::SearchRange::new(
+            &input.args,
+            world.objects.keys().next_back().map_or(0, |id| id.0),
+        );
         let id = if range.query.is_empty() {
             world.objects[&ctx.player].location.unwrap_or(ctx.player)
         } else {
             target(ctx, &range.query)?
         };
         let mut lines = Vec::new();
-        if range.next <= range.upper {
+        if range.lower <= range.upper {
             for (_, o) in world
                 .objects
-                .range(ObjectId(range.next)..=ObjectId(range.upper))
+                .range(ObjectId(range.lower)..=ObjectId(range.upper))
             {
                 if !flags::is_wizard(&world, ctx.player) {
                     continue;

@@ -1,4 +1,5 @@
 //! Registry-driven commands with transactional native/Lua handlers and exit fallback.
+pub mod discovery;
 pub(crate) mod inspection;
 mod native;
 mod objects;
@@ -14,6 +15,8 @@ use anyhow::{Context, Result};
 pub use registry::*;
 /// Result interpreted by the world/session owner.
 pub enum Action {
+    /// Already bounded literal database/catalog output; delivery must not reflow its rows.
+    LiteralReport(String),
     /// Transactional queue admission or cancellation.
     Queue(queue::Request),
     /// Administrative account hashing or session removal.
@@ -40,8 +43,6 @@ pub enum Action {
     DbCheck,
     /// Disconnect the invoking session.
     Quit,
-    /// Read-only session-scoped object search.
-    Find(crate::find::FindRequest),
     /// Bounded session-private response without persistence.
     Reply(String),
     /// Complete literal report, chunked privately without a database write.

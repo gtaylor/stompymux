@@ -124,7 +124,7 @@ impl Server {
                     self.flush();
                 }
             }
-            Ok(Action::Reply(text) | Action::Report(text)) => {
+            Ok(Action::Reply(text) | Action::Report(text) | Action::LiteralReport(text)) => {
                 self.queue_reply(None, actor, &text);
                 self.flush();
             }
@@ -313,7 +313,6 @@ mod tests {
                 quota: 10,
                 quota_at: now,
                 failed: Default::default(),
-                find_cursor: None,
                 output_message_limit: 65536,
             },
         );

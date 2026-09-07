@@ -14,38 +14,6 @@ fn response(ctx: &CommandContext<'_>, result: Result<String>) -> Result<Action> 
         .push((ctx.player, result.unwrap_or_else(|e| e.to_string()).into()));
     Ok(Action::Continue)
 }
-/// Handle the @list command after the registry permission check.
-pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
-    response(
-        ctx,
-        (|| {
-            let args = input.args.as_str();
-            if args.trim().eq_ignore_ascii_case("powers") {
-                return Ok(format!(
-                    "Powers: {}",
-                    crate::powers::ALL
-                        .iter()
-                        .map(|p| p.display_name())
-                        .collect::<Vec<_>>()
-                        .join(" ")
-                ));
-            }
-            ensure!(
-                args.trim().eq_ignore_ascii_case("flags"),
-                "Usage: @list flags or @list powers"
-            );
-            Ok(format!(
-                "Flags: {}",
-                flags::ALL
-                    .iter()
-                    .map(|f| format!("{}({})", f.world_name(), f.letter()))
-                    .collect::<Vec<_>>()
-                    .join(" ")
-            ))
-        })(),
-    )
-}
-
 /// Handle the @power command after the registry permission check.
 pub(super) fn power(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     response(
@@ -119,12 +87,16 @@ pub(super) fn flag(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
 pub(super) fn quit(_: &CommandContext<'_>, _: &CommandInput) -> Result<Action> {
     Ok(Action::Quit)
 }
-/// Delegate read-only pagination to the session owner.
-pub(super) fn find(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
-    Ok(Action::Find(crate::find::FindRequest::parse(
+/// Find results share the automatic report transport with other database inspections.
+pub(super) fn find(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    Ok(crate::find::report(
+        &ctx.scripts.world.borrow(),
+        ctx.player,
         &input.args,
-        input.switch.as_deref(),
-    )))
+        ctx.config.lua.output_byte_limit,
+    )
+    .map(Action::LiteralReport)
+    .unwrap_or_else(|e| Action::Reply(e.to_string())))
 }
 /// Return to the caller's configured home.
 pub(super) fn home(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {

@@ -329,7 +329,6 @@ input_line_limit = 8192
 telnet_subnegotiation_limit = 8192
 output_message_limit = 65536
 # Maximum rows per @find page; the output byte limit may shorten pages.
-find_page_size = 20
 # Durations below are milliseconds. Player-idle checking uses mux.idle_interval.
 write_timeout_ms = 5000
 shutdown_timeout_ms = 5000

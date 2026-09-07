@@ -1,6 +1,6 @@
-//! Legacy matching, range, permissions and byte-bounded search regression tests.
+//! Compatibility fixtures for C world/walkdb.c, objects/flags.c and match_helpers.c.
 use stompymux_rs::{
-    find::{self, FindCursor},
+    find::{self, SearchRange},
     flags::Flag,
     world::{Kind, Object, ObjectId, World},
 };
@@ -53,13 +53,12 @@ fn world() -> World {
     world.next_id = 10;
     world
 }
-/// Decode a complete large page for assertions.
+/// Capture a complete report independently of transport chunk size.
 fn search(w: &World, actor: i64, query: &str) -> String {
-    String::from_utf8(
-        find::page(w, ObjectId(actor), &FindCursor::new(query, w), 20, 65536)
-            .unwrap()
-            .bytes,
-    )
+    String::from_utf8(stompymux_rs::telnet::encode(&format!(
+        "{}\n",
+        find::report(w, ObjectId(actor), query, 65536).unwrap()
+    )))
     .unwrap()
 }
 #[test]
@@ -81,7 +80,7 @@ fn legacy_matching_and_ranges() {
     for query in [",9,4", ",,-1", ",100", "missing"] {
         assert_eq!(search(&w, 1, query), "***End of List***\r\n");
     }
-    assert_eq!(FindCursor::new(",#2,4,5", &w).upper, 9);
+    assert_eq!(SearchRange::new(",#2,4,5", 9).upper, 9);
 }
 #[test]
 fn control_filtering_and_exact_format() {
@@ -95,71 +94,86 @@ fn control_filtering_and_exact_format() {
     assert_eq!(search(&w, 5, ""), "***End of List***\r\n");
 }
 #[test]
-fn pages_recheck_world_and_capture_upper_bound() {
+fn full_reports_are_bounded_and_explicit_about_omissions() {
     let mut w = world();
-    let first = find::page(&w, ObjectId(2), &FindCursor::new("", &w), 2, 65536).unwrap();
-    assert!(
-        String::from_utf8(first.bytes)
-            .unwrap()
-            .ends_with("***Use @find/next for more***\r\n")
-    );
-    let cursor = first.cursor.unwrap();
-    assert_eq!(cursor.next, 4);
+    for o in w.objects.values_mut() {
+        o.name = "é👩‍🚀".repeat(1000);
+    }
+    let report = find::report(&w, ObjectId(2), "", 200).unwrap();
+    assert!(report.contains("Report truncated"));
+    assert!(report.ends_with("***End of List***"));
+    assert!(stompymux_rs::telnet::encode(&report).len() <= 200);
+    assert!(find::report(&w, ObjectId(2), "", 10).is_err());
+    for limit in 1..40 {
+        assert!(find::bounded_error("é error", limit).len() <= limit);
+    }
+}
+
+#[test]
+fn c_search_filters_grouping_and_statistics() {
+    use stompymux_rs::search::{Criteria, report, statistics};
+    let mut w = world();
+    w.objects.get_mut(&ObjectId(8)).unwrap().zone = Some(ObjectId(4));
+    w.objects
+        .get_mut(&ObjectId(8))
+        .unwrap()
+        .powers
+        .insert(stompymux_rs::powers::Power::Idle);
+    let text = report(&w, ObjectId(2), "", 65536).unwrap();
+    assert!(text.contains("GOD(#1:PW)"));
+    assert!(text.contains("Other Wizard"));
+    assert!(text.contains("Trash(#7:-)"));
+    assert!(text.contains("out(#6:E) [from NOWHERE to NOWHERE]"));
+    assert!(text.contains("Rooms...2  Exits...1  Objects...3  Players...3  Garbage...1"));
+    let expected = [
+        ("name=apple", vec![]),
+        ("name=red", vec![8]),
+        ("name=", vec![]),
+        ("players=", vec![]),
+        ("type=p", vec![1, 2, 3]),
+        ("p=W", vec![2]),
+        ("flags=DG", vec![5]),
+        ("flags=RP", vec![1, 2, 3]),
+        ("flags=+", vec![]),
+        ("power=IDLE", vec![8]),
+        ("zone=#4", vec![8]),
+        ("name=*", vec![9]),
+        ("type=,4,5", vec![4, 5]),
+        ("name=red,9,3", vec![]),
+    ];
+    for (query, expected) in expected {
+        let criteria = Criteria::parse(&w, ObjectId(2), query).unwrap();
+        assert_eq!(
+            w.objects
+                .values()
+                .filter(|o| criteria.matches(&w, o))
+                .map(|o| o.id.0)
+                .collect::<Vec<_>>(),
+            expected,
+            "{query}"
+        );
+    }
+    for query in [
+        "oops=",
+        "flags=~",
+        "power=nope",
+        "type=invalid",
+        "zone=#999",
+    ] {
+        assert!(Criteria::parse(&w, ObjectId(2), query).is_err(), "{query}");
+    }
+    assert!(report(&w, ObjectId(5), "", 65536).is_err());
+    w.next_id = 12;
     w.objects
         .get_mut(&ObjectId(4))
         .unwrap()
         .flags
-        .insert(Flag::Wizard);
-    w.objects.get_mut(&ObjectId(5)).unwrap().name = "Changed".into();
-    let mut extra = w.objects[&ObjectId(8)].clone();
-    extra.id = ObjectId(10);
-    w.objects.insert(extra.id, extra);
-    let second = find::page(&w, ObjectId(2), &cursor, 20, 65536).unwrap();
+        .insert(Flag::Going);
     assert_eq!(
-        String::from_utf8(second.bytes).unwrap(),
-        "Changed(#5:DG)\r\nRed Apple(#8)\r\n*literal(#9)\r\n***End of List***\r\n"
+        statistics(&w),
+        "12 objects = 2 rooms, 1 exits, 2 things, 3 players. (4 garbage)"
     );
-    assert!(second.cursor.is_none());
-    w.objects
-        .get_mut(&ObjectId(2))
-        .unwrap()
-        .flags
-        .remove(Flag::Wizard);
-    assert!(!stompymux_rs::flags::is_wizard(&w, ObjectId(2)));
-}
-#[test]
-fn small_pages_truncate_without_lost_or_repeated_objects() {
-    let mut w = world();
-    for object in w.objects.values_mut() {
-        object.name = "é".repeat(1000);
-    }
-    let mut cursor = Some(FindCursor::new("", &w));
-    let mut ids = Vec::new();
-    while let Some(current) = cursor {
-        let page = find::page(&w, ObjectId(2), &current, 20, 64).unwrap();
-        assert!(page.bytes.len() <= 64);
-        let output = String::from_utf8(page.bytes).unwrap();
-        for row in output.lines().filter(|s| s.starts_with('é')) {
-            ids.push(
-                row.split("(#")
-                    .nth(1)
-                    .unwrap()
-                    .split([':', ')'])
-                    .next()
-                    .unwrap()
-                    .parse::<i64>()
-                    .unwrap(),
-            );
-        }
-        cursor = page.cursor;
-    }
-    assert_eq!(ids, [0, 2, 4, 5, 8, 9]);
-    let cursor = FindCursor::new("", &w);
-    let original = cursor.clone();
-    assert!(find::page(&w, ObjectId(2), &cursor, 20, 10).is_err());
-    assert_eq!(cursor, original);
-    for limit in 1..40 {
-        assert!(find::bounded_error("é error", limit).len() <= limit);
-    }
-    assert!(find::page(&w, ObjectId(2), &FindCursor::new("missing", &w), 20, 1).is_err());
+    let short = report(&w, ObjectId(2), "", 200).unwrap();
+    assert!(short.contains("truncated"));
+    assert!(short.contains("Rooms...2"));
 }

@@ -16,3 +16,7 @@ rooms, exits, things, players, and garbage.
 ```text
 @stats
 ```
+
+GOING non-room objects count as garbage; GOING rooms remain rooms. The total
+includes allocated dbref slots, with gaps counted as garbage. This does not create
+objects or change the database. The command takes no arguments or switches.

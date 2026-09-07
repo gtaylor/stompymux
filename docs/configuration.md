@@ -67,7 +67,6 @@ rate/burst settings remain under their legacy `security` names.
 | `runtime.session_output_queue_capacity` | 128 | Messages queued per session |
 | `runtime.input_line_limit` | 8192 | Bytes per input line |
 | `runtime.telnet_subnegotiation_limit` | 8192 | Bytes per Telnet subnegotiation |
-| `runtime.find_page_size` | 20 | Positive maximum rows per @find page |
 | `runtime.output_message_limit` | 65536 | Bytes per output message |
 | `runtime.write_timeout_ms` | 5000 | Socket write deadline |
 | `runtime.shutdown_timeout_ms` | 5000 | Connection drain deadline |

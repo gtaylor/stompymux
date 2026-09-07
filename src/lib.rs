@@ -17,6 +17,8 @@ pub mod movement;
 pub mod powers;
 
 pub mod find;
+pub mod reports;
+pub mod search;
 
 /// Transactional database checking and semantic repair.
 pub mod dbck;

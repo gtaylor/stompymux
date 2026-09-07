@@ -26,8 +26,7 @@ pub struct Session {
     pub stats: Arc<Stats>,
     pub peer: IpAddr,
     pub player: Option<ObjectId>,
-    /// Pending object search, discarded when this session disconnects.
-    pub find_cursor: Option<crate::find::FindCursor>,
+    /// Interactive login state.
     pub flow: LoginFlow,
     pub connected: Instant,
     pub active: Instant,

@@ -289,7 +289,6 @@ pub async fn run_with_schedule_clock(
                     palette:server.scripts.palette.clone(), color_override:Default::default(), presets_emitted:Default::default(),
                     stats:stats.clone(),output, peer:peer.ip(), player:None, flow:LoginFlow::Name,
                     connected:now, active:now, decoder:telnet::Decoder::new(&server.config.runtime),
-                    find_cursor: None,
                     output_message_limit:server.config.runtime.output_message_limit,
                     quota:server.config.mux.command_quota_increment.min(server.config.mux.command_quota_max),
                     quota_at:now, failed:Default::default(),
@@ -1025,54 +1024,6 @@ impl Server {
         }
         Ok(())
     }
-    /// Deliver a read-only page only to the invoking session, bypassing persistence.
-    fn find(&mut self, id: SessionId, player: ObjectId, request: crate::find::FindRequest) {
-        use crate::find::{FindCursor, FindRequest, bounded_error, page};
-        let Some(session) = self.sessions.get_mut(&id) else {
-            return;
-        };
-        let world = self.scripts.world.borrow();
-        let limit = self.config.runtime.output_message_limit;
-        let error = if !crate::flags::is_wizard(&world, player) {
-            Some("Permission denied.".to_string())
-        } else {
-            match request {
-                FindRequest::Search(args) => {
-                    session.find_cursor = Some(FindCursor::new(&args, &world));
-                    None
-                }
-                FindRequest::Next if session.find_cursor.is_none() => {
-                    Some("No active @find search.".into())
-                }
-                FindRequest::Next => None,
-                FindRequest::Error(error) => Some(error),
-            }
-        };
-        if let Some(error) = error {
-            session.raw(bounded_error(&error, limit));
-            return;
-        }
-        let cursor = session
-            .find_cursor
-            .as_ref()
-            .expect("validated search cursor");
-        match page(
-            &world,
-            player,
-            cursor,
-            self.config.runtime.find_page_size,
-            limit,
-        ) {
-            Ok(page) => {
-                if session.raw(page.bytes) {
-                    session.find_cursor = page.cursor;
-                }
-            }
-            Err(error) => {
-                session.raw(bounded_error(error, limit));
-            }
-        }
-    }
     /// Stage repair callbacks under the database transaction, detaching destroyed players only after commit.
     async fn dbck(&mut self, session: Option<SessionId>, actor: ObjectId, cause: ObjectId) {
         let before = self.scripts.world.borrow().clone();
@@ -1432,7 +1383,6 @@ impl Server {
             }
             Ok(Action::Shutdown) => self.request_shutdown(ShutdownRequest::Player(p)).await,
             Ok(Action::DbCheck) => self.dbck(Some(id), p, p).await,
-            Ok(Action::Find(request)) => self.find(id, p, request),
             Ok(Action::CommitReply(text)) => {
                 if self.commit(before).await {
                     if let Some(session) = self.sessions.get(&id) {
@@ -1443,6 +1393,17 @@ impl Server {
                     }
                 } else {
                     self.tell(id, "Unable to save your changes. Please try again.\r\n");
+                }
+            }
+            Ok(Action::LiteralReport(text)) => {
+                if let Some(session) = self.sessions.get(&id)
+                    && let Err(error) = session.literal_report(&text, &self.config).await
+                {
+                    eprintln!("Report delivery: {error:#}");
+                    session.raw(crate::find::bounded_error(
+                        "Unable to deliver complete report.",
+                        self.config.runtime.output_message_limit,
+                    ));
                 }
             }
             Ok(Action::Report(text)) => self.inspection_report(id, text).await,
@@ -1939,7 +1900,6 @@ mod tests {
                 quota: 1,
                 quota_at: now,
                 failed: Default::default(),
-                find_cursor: None,
                 output_message_limit: 65536,
             },
         );
@@ -2087,7 +2047,6 @@ mod tests {
                         quota: 1,
                         quota_at: now,
                         failed: Default::default(),
-                        find_cursor: None,
                         output_message_limit: 65536,
                     },
                 );

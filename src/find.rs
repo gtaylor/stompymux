@@ -1,45 +1,19 @@
-//! Read-only, session-scoped MUX object searches with bounded Telnet pages.
+//! Legacy word-prefix matching and read-only object reports.
 use crate::{
     flags, telnet, text,
     world::{Kind, Object, ObjectId, World},
 };
-use unicode_segmentation::UnicodeSegmentation;
 
-/// Parsed search operation; switches are validated before execution.
-#[derive(Debug)]
-pub enum FindRequest {
-    /// Start a search with legacy name/range syntax.
-    Search(String),
-    /// Continue the session's pending search.
-    Next,
-    /// A syntax error to report only to the invoking session.
-    Error(String),
-}
-impl FindRequest {
-    /// Interpret the supported continuation switch and reject extraneous arguments.
-    pub fn parse(args: &str, switch: Option<&str>) -> Self {
-        match switch {
-            None => Self::Search(args.trim().into()),
-            Some("next") if args.trim().is_empty() => Self::Next,
-            Some("next") => Self::Error("@find/next takes no arguments.".into()),
-            Some(_) => Self::Error("Unsupported @find switch.".into()),
-        }
-    }
-}
-/// Search state contains no cached objects; every page uses current permissions.
+/// A name and inclusive legacy database range; this is not session state.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FindCursor {
-    /// Case-insensitive name prefix to match.
+pub struct SearchRange {
     pub query: String,
-    /// Inclusive upper bound captured when the search began.
+    pub lower: i64,
     pub upper: i64,
-    /// First dbref not yet consumed.
-    pub next: i64,
 }
-impl FindCursor {
-    /// Apply legacy range defaults and clamp to the current database maximum.
-    pub fn new(args: &str, world: &World) -> Self {
-        let maximum = world.objects.keys().next_back().map_or(0, |id| id.0);
+impl SearchRange {
+    /// Apply legacy defaults without allocating missing database slots.
+    pub fn new(args: &str, maximum: i64) -> Self {
         let mut fields = args.splitn(3, ',');
         let query = fields.next().unwrap_or_default().trim().into();
         let bound = |s: &str| {
@@ -50,21 +24,18 @@ impl FindCursor {
                 .parse::<i64>()
                 .ok()
         };
-        let next = fields.next().and_then(bound).unwrap_or(0).max(0);
+        let lower = fields.next().and_then(bound).unwrap_or(0).max(0);
         let upper = fields
             .next()
             .and_then(bound)
             .unwrap_or(maximum)
             .min(maximum);
-        Self { query, upper, next }
+        Self {
+            query,
+            lower,
+            upper,
+        }
     }
-}
-/// A single encoded message and the cursor to install only after successful delivery.
-pub struct FindPage {
-    /// Telnet-ready bytes, including a continuation or completion footer.
-    pub bytes: Vec<u8>,
-    /// None marks a completed search.
-    pub cursor: Option<FindCursor>,
 }
 /// Legacy matching tests the beginning and each alphanumeric word boundary.
 pub fn matches(name: &str, query: &str) -> bool {
@@ -109,82 +80,31 @@ pub(crate) fn suffix(object: &Object) -> String {
         letters
     )
 }
-/// Build a page without changing world or cursor. Errors leave the search retryable.
-pub fn page(
-    world: &World,
-    actor: ObjectId,
-    cursor: &FindCursor,
-    size: usize,
-    limit: usize,
-) -> Result<FindPage, &'static str> {
-    const END: &str = "***End of List***\r\n";
-    const MORE: &str = "***Use @find/next for more***\r\n";
-    const ERROR: &str = "@find output limit too small.";
-    let mut found = world
+/// Capture a complete read-only find report, bounded independently of transport chunks.
+pub fn report(world: &World, actor: ObjectId, args: &str, limit: usize) -> anyhow::Result<String> {
+    let maximum = world.objects.keys().next_back().map_or(0, |id| id.0);
+    let range = SearchRange::new(args, maximum);
+    let mut report = crate::reports::Report::new(limit, "***End of List***")?;
+    for o in world
         .objects
-        .range(ObjectId(cursor.next)..)
-        .map(|(_, object)| object)
-        .take_while(|object| object.id.0 <= cursor.upper)
-        .filter(|o| {
-            !matches!(o.kind, Kind::Exit | Kind::Garbage)
-                && flags::controls(world, actor, o.id)
-                && matches(&display_name(o, &world.palette), &cursor.query)
-        })
-        .peekable();
-    // Names contain no controls and valid UTF-8 cannot contain Telnet IAC (0xff).
-    // With explicit CRLF separators, encoding preserves this exact byte budget.
-    let mut output = String::new();
-    let mut next = cursor.clone();
-    let mut count = 0;
-    while let Some(object) = found.next() {
-        let footer = if found.peek().is_some() { MORE } else { END };
-        let name = display_name(object, &world.palette);
-        let suffix = suffix(object);
-        let available = limit.saturating_sub(output.len() + footer.len());
-        let full = name.len() + suffix.len() + 2;
-        if full > available && count > 0 {
-            next.next = object.id.0;
-            break;
-        }
-        // Retain at least one character for nonempty names, and always the full identity.
-        let minimum = name.graphemes(true).next().map_or(0, str::len) + suffix.len() + 2;
-        if minimum > available {
-            return Err(ERROR);
-        }
-        let capacity = available - suffix.len() - 2;
-        let end = name
-            .grapheme_indices(true)
-            .map(|(i, g)| i + g.len())
-            .take_while(|&end| end <= capacity)
-            .last()
-            .unwrap_or(0);
-        output.push_str(&name[..end]);
-        output.push_str(&suffix);
-        output.push_str("\r\n");
-        count += 1;
-        match found.peek() {
-            Some(o) => next.next = o.id.0,
-            None => {
-                output.push_str(END);
-                return Ok(FindPage {
-                    bytes: telnet::encode(&output),
-                    cursor: None,
-                });
-            }
-        }
-        if count >= size {
-            break;
+        .values()
+        .filter(|o| o.id.0 >= range.lower && o.id.0 <= range.upper)
+    {
+        if !matches!(o.kind, Kind::Exit | Kind::Garbage)
+            && flags::controls(world, actor, o.id)
+            && matches(&display_name(o, &world.palette), &range.query)
+        {
+            report.row(&identity(world, Some(o.id)));
         }
     }
-    let remaining = count > 0;
-    output.push_str(if remaining { MORE } else { END });
-    if output.len() > limit {
-        return Err(ERROR);
-    }
-    Ok(FindPage {
-        bytes: telnet::encode(&output),
-        cursor: remaining.then_some(next),
-    })
+    report.finish()
+}
+/// Shared styled-name-free object identity for read-only reports.
+pub fn identity(world: &World, id: Option<ObjectId>) -> String {
+    id.and_then(|id| world.objects.get(&id)).map_or_else(
+        || "NOWHERE".into(),
+        |o| format!("{}{}", display_name(o, &world.palette), suffix(o)),
+    )
 }
 /// Encode an error within even very small message limits without evicting the client.
 pub fn bounded_error(message: &str, limit: usize) -> Vec<u8> {

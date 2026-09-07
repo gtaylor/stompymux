@@ -38,7 +38,11 @@ async fn fixture() -> (tempfile::TempDir, Config, World) {
 /// Execute through native matching and collect ordinary player-directed output.
 fn run(s: &Scripts, c: &Config, player: i64, line: &str) -> String {
     let action = commands::run(s, c, ObjectId(player), 1, line).unwrap();
-    if let Action::Reply(text) | Action::Report(text) | Action::CommitReply(text) = action {
+    if let Action::Reply(text)
+    | Action::Report(text)
+    | Action::LiteralReport(text)
+    | Action::CommitReply(text) = action
+    {
         return text;
     }
     s.outbox
@@ -101,6 +105,8 @@ async fn native_catalog_permissions_and_aliases() {
             "@flag",
             "@power",
             "@list",
+            "@search",
+            "@stats",
             "@state",
             "@examine",
             "@entrances",
@@ -212,7 +218,7 @@ async fn native_catalog_permissions_and_aliases() {
     assert!(run(&s, &c, 2, "home/quiet").contains("Movement command switches"));
     assert!(matches!(
         commands::run(&s, &c, ObjectId(2), 1, "@FI/NeXt").unwrap(),
-        Action::Find(_)
+        Action::Reply(ref text) if text.contains("Unsupported @find switch")
     ));
     assert!(run(&s, &c, 2, "l").contains("Staff Nexus"));
     assert!(run(&s, &c, 2, "\"hello/there").contains("You say \"hello/there\""));
@@ -608,7 +614,6 @@ async fn queued_context_locks_callbacks_and_session_rejection() {
         "quit",
         "color off",
         "help",
-        "@find",
         "@session",
         "@telnet #2",
         "@lua/schedule",
@@ -634,4 +639,113 @@ async fn queued_context_locks_callbacks_and_session_rejection() {
     let context = s.context(Some(ObjectId(2)), None, Some(99)).unwrap();
     assert_eq!(context.get::<i64>("cause").unwrap(), 2);
     assert_eq!(context.get::<u64>("descriptor").unwrap(), 99);
+}
+
+/// Discovery uses captured registrations and the same source enumeration as dispatch.
+#[tokio::test(flavor = "current_thread")]
+async fn discovery_is_read_only_permission_filtered_and_scope_accurate() {
+    let (d, c, mut w) = fixture().await;
+    let global = d.path().join("lua/global_logic/discovery.lua");
+    std::fs::write(&global,r#"return {commands={
+      {name='catalog-public',permission='everyone',pattern='^public$',handler=function()error('must not execute')end},
+      {name='catalog-secret',permission='god',pattern='^secret$',handler=function()error('must not execute')end}}}"#).unwrap();
+    std::fs::write(d.path().join("lua/object_logic/discovery.lua"),r#"return {commands={
+      {name='catalog-local',permission='wizard',pattern='^local1$',handler=function()error('must not execute')end},
+      {name='catalog-local',permission='wizard',pattern='^local2$',handler=function()error('must not execute')end}}}"#).unwrap();
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(4));
+    let nearby = w.create(&c, "CatalogNearby".into(), stompymux_rs::world::Kind::Thing);
+    let inventory = w.create(
+        &c,
+        "CatalogInventory".into(),
+        stompymux_rs::world::Kind::Thing,
+    );
+    for (id, location) in [(nearby, ObjectId(4)), (inventory, ObjectId(2))] {
+        let o = w.objects.get_mut(&id).unwrap();
+        o.location = Some(location);
+        o.lua_parent = "discovery.lua".into();
+    }
+    let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    let before = serde_json::to_vec(&*s.world.borrow()).unwrap();
+    let text = run(&s, &c, 2, "@list com");
+    assert!(
+        text.contains("Built-in commands:")
+            && text.contains("Global commands:")
+            && text.contains("Object commands:")
+    );
+    assert!(text.contains("catalog-public: everyone"));
+    assert!(!text.contains("catalog-secret"));
+    assert!(text.contains("CatalogNearby"));
+    assert!(!text.contains("CatalogInventory"));
+    assert_eq!(text.matches("catalog-local: wizard").count(), 2);
+    assert!(text.contains("declaration 1") && text.contains("declaration 2"));
+    assert!(text.contains("aliases:") && text.contains("prefix: \""));
+    assert!(run(&s, &c, 1, "@list commands").contains("catalog-secret: god"));
+    let permissions = run(&s, &c, 2, "@list pe");
+    assert!(permissions.contains("requires_session") && permissions.contains("no_macro"));
+    let switches = run(&s, &c, 2, "@list sw");
+    assert!(switches.contains("@clone: /inventory [wizard; min 3]"));
+    assert!(!switches.contains("@find:") && !switches.contains("catalog-local"));
+    for command in [
+        "@list commands",
+        "@list permissions",
+        "@list switches",
+        "@search",
+        "@stats",
+    ] {
+        assert!(matches!(
+            commands::run(&s, &c, ObjectId(2), 1, command).unwrap(),
+            Action::LiteralReport(_)
+        ));
+    }
+    assert_eq!(serde_json::to_vec(&*s.world.borrow()).unwrap(), before);
+    assert!(s.outbox.borrow().is_empty());
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&nearby)
+        .unwrap()
+        .flags
+        .insert(Flag::Halted);
+    assert!(!run(&s, &c, 2, "@list commands").contains("CatalogNearby"));
+    std::fs::write(&global, "return {}").unwrap();
+    assert!(run(&s, &c, 2, "@list commands").contains("catalog-public"));
+    let reload = Scripts::new(&c, s.world.clone()).unwrap();
+    assert!(!run(&reload, &c, 2, "@list commands").contains("catalog-public"));
+    assert!(run(&s, &c, 2, "@list site_information").contains("not implemented"));
+    assert!(run(&s, &c, 2, "@stats extra").contains("Usage: @stats"));
+}
+
+/// Every implemented switch is discoverable with its actual spelling and role restriction.
+#[test]
+fn native_switch_catalog_fixture() {
+    let registry = CommandRegistry::new();
+    let mut rows = registry
+        .definitions()
+        .filter(|d| !d.switch_definitions.is_empty())
+        .map(|d| {
+            format!(
+                "{} {}",
+                d.name,
+                d.switch_definitions
+                    .iter()
+                    .map(|s| {
+                        assert!(s.accepts(s.name));
+                        assert!(s.accepts(&s.name[..s.minimum]));
+                        assert!(!s.accepts(&s.name[..s.minimum - 1]));
+                        format!("{}:{}:{}", s.name, s.minimum, s.permission.name())
+                    })
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            )
+        })
+        .collect::<Vec<_>>();
+    rows.sort();
+    assert_eq!(
+        rows.join("\n") + "\n",
+        include_str!("fixtures/native-switches.txt")
+    );
+    for name in ["@find", "@search", "@stats"] {
+        let d = registry.definitions().find(|d| d.name == name).unwrap();
+        assert!(!d.requires_session && d.switch_definitions.is_empty());
+    }
 }

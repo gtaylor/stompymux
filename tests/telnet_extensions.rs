@@ -215,7 +215,6 @@ fn queue_counters_and_starting_compression_are_observable() {
         presets_emitted: Default::default(),
         peer: "127.0.0.1".parse().unwrap(),
         player: None,
-        find_cursor: None,
         flow: LoginFlow::Name,
         connected: now,
         active: now,

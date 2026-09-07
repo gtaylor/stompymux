@@ -94,6 +94,10 @@ pub enum SwitchPolicy {
 pub struct CommandDefinition {
     /// Lowercase canonical command name.
     pub name: String,
+    /// Native switches available for discovery; handlers validate combinations.
+    pub switch_definitions: Vec<super::discovery::SwitchDefinition>,
+    /// Whether this entry appears in command listings.
+    pub listed: bool,
     /// Required authority.
     pub permission: CommandPermissions,
     /// Exact or pattern-based matching metadata.
@@ -122,6 +126,8 @@ impl CommandDefinition {
     pub fn native(name: &str, permission: CommandPermissions, handler: NativeHandler) -> Self {
         Self {
             name: name.into(),
+            switch_definitions: super::discovery::switches(name),
+            listed: !matches!(name, ";" | "\\"),
             permission,
             matcher: CommandMatcher::Native {
                 aliases: Vec::new(),
@@ -328,7 +334,12 @@ impl CommandRegistry {
             ),
             CommandDefinition::native("@flag", P::WIZARD, native::flag),
             CommandDefinition::native("@power", P::WIZARD, native::power),
-            CommandDefinition::native("@list", P::WIZARD, native::list),
+            CommandDefinition::native("@list", P::WIZARD, super::discovery::list)
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
+            CommandDefinition::native("@search", P::WIZARD, super::discovery::search)
+                .policy(SwitchPolicy::Reject("Unsupported @search switch."), true),
+            CommandDefinition::native("@stats", P::WIZARD, super::discovery::stats)
+                .policy(SwitchPolicy::Reject("Unsupported @stats switch."), true),
             CommandDefinition::native("@state", P::WIZARD, crate::state::commands::command)
                 .policy(SwitchPolicy::Handler, true),
             CommandDefinition::native("@examine", P::WIZARD, super::inspection::examine)
@@ -336,7 +347,7 @@ impl CommandRegistry {
             CommandDefinition::native("@entrances", P::WIZARD, super::inspection::entrances)
                 .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("@find", P::WIZARD, native::find)
-                .policy(SwitchPolicy::Handler, true),
+                .policy(SwitchPolicy::Reject("Unsupported @find switch."), true),
         ];
         for (name, handler) in [
             ("@force", super::queue::force as NativeHandler),
@@ -360,7 +371,6 @@ impl CommandRegistry {
                     | "quit"
                     | "help"
                     | "@help"
-                    | "@find"
                     | "@session"
                     | "@telnet"
                     | "@lua"
@@ -471,6 +481,8 @@ impl CommandRegistry {
                     checked(factory.call((find, pattern.clone(), handler, unpack)))?;
                 Ok(CommandDefinition {
                     name: name.to_ascii_lowercase(),
+                    switch_definitions: Vec::new(),
+                    listed: true,
                     permission,
                     matcher: CommandMatcher::LuaPattern(pattern),
                     scope: scope.clone(),

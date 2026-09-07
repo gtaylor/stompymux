@@ -585,7 +585,6 @@ async fn bounded_output_marks_slow_clients_for_disconnect() {
         quota: 1,
         quota_at: now,
         failed: Default::default(),
-        find_cursor: None,
         output_message_limit: stompymux_rs::config::RuntimeConfig::default().output_message_limit,
     };
     assert!(session.raw(vec![1]));
@@ -783,7 +782,9 @@ async fn flag_catalog_storage_commands_and_lua_contract() {
     ] {
         let action = commands::run(&s, &c, ObjectId(1), 1, input).unwrap();
         let text = match action {
-            commands::Action::Report(text) | commands::Action::Reply(text) => text,
+            commands::Action::Report(text)
+            | commands::Action::LiteralReport(text)
+            | commands::Action::Reply(text) => text,
             _ => s.outbox.borrow_mut().pop().unwrap().1.source().to_string(),
         };
         assert!(text.contains(expected), "{input}: {text}");
@@ -1119,7 +1120,9 @@ async fn power_commands_validate_targets_permissions_and_names() {
     ] {
         let action = commands::run(&scripts, &c, actor, 1, command).unwrap();
         let output = match action {
-            commands::Action::Report(text) | commands::Action::Reply(text) => text,
+            commands::Action::Report(text)
+            | commands::Action::LiteralReport(text)
+            | commands::Action::Reply(text) => text,
             _ => scripts
                 .outbox
                 .borrow_mut()
@@ -1530,137 +1533,69 @@ async fn tcp_teleport_containers_and_home_persist() {
     restarted.stop().await;
 }
 
-/// Searches are paginated per connection, bypass writes, and reserve aliases/switches.
+/// Automatic search reports stay private, reject continuations and perform no writes.
 #[tokio::test(flavor = "current_thread")]
-async fn tcp_find_pages_are_private_and_read_only() {
-    let (d, _c) = populated().await;
+async fn tcp_search_reports_are_private_and_read_only() {
+    let (d, _) = populated().await;
     let path = d.path().join("stompymux.toml");
     let text = std::fs::read_to_string(&path).unwrap();
-    std::fs::write(&path, format!("{text}\n[runtime]\nfind_page_size=1\n")).unwrap();
-    let c = Config::load(d.path()).unwrap();
-    let mut world = persistence::load(&c.database()).await.unwrap();
-    for id in [1, 2] {
-        world.accounts.get_mut(&ObjectId(id)).unwrap().hash =
-            Some(accounts::hash("secret", &c).unwrap());
-    }
-    persistence::save(&c.database(), &world).await.unwrap();
     std::fs::write(
-        d.path().join("lua/global_logic/find_trap.lua"),
-        "return {commands={{name='find-trap',permission='everyone',pattern='^@fi',handler=function(ctx) error('find reached Lua') end}}}",
+        &path,
+        format!("{text}\n[runtime]\noutput_message_limit=256\n"),
     )
     .unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    for id in [1, 2] {
+        w.accounts.get_mut(&ObjectId(id)).unwrap().hash =
+            Some(accounts::hash("secret", &c).unwrap());
+    }
+    for i in 0..80 {
+        w.create(
+            &c,
+            format!("SearchRoom{i:03}"),
+            stompymux_rs::world::Kind::Room,
+        );
+    }
+    persistence::save(&c.database(), &w).await.unwrap();
+    std::fs::write(d.path().join("lua/global_logic/find_trap.lua"),"return {commands={{name='find-trap',permission='everyone',pattern='^@fi',handler=function(ctx) error('find reached Lua') end}}}").unwrap();
     let running = Running::start(&c).await;
-    let mut god = Client::connect(&running).await;
     let mut first = Client::connect(&running).await;
     let mut second = Client::connect(&running).await;
-    for (client, name) in [(&mut god, "#1"), (&mut first, "#2"), (&mut second, "#2")] {
-        client.send(name).await;
+    for client in [&mut first, &mut second] {
+        client.send("#2").await;
         client.until("Password: ").await;
         client.send("secret").await;
         client.until("Staff Nexus").await;
     }
     let mut ordinary = Client::connect(&running).await;
     ordinary.register("Finder").await;
-    ordinary.send("@find").await;
-    ordinary.until("Permission denied.").await;
-    ordinary.send("@find/next").await;
-    ordinary.until("Permission denied.").await;
-    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
-        &sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()),
-    )
-    .await
-    .unwrap();
-    sqlx::raw_sql("CREATE TABLE find_writes(count INTEGER); INSERT INTO find_writes VALUES(0); CREATE TRIGGER count_find_writes AFTER UPDATE ON snapshot BEGIN UPDATE find_writes SET count=count+1; END;").execute(&mut db).await.unwrap();
-    first.send("@FI ,0,4").await;
-    let page = first.until("***Use @find/next for more***").await;
-    assert!(page.contains("(#0:R"), "{page}");
+    let before = std::fs::read(c.database()).unwrap();
+    for command in ["@find", "@find/next", "@search", "@stats", "@list commands"] {
+        ordinary.send(command).await;
+        ordinary.until("Permission denied.").await;
+    }
+    first.send("@FI SearchRoom").await;
+    let text = first.until("***End of List***").await;
+    assert!(text.contains("SearchRoom000") && text.contains("SearchRoom079"));
     second.send("@fin/next").await;
-    let output = second.until("No active @find search.").await;
-    assert!(
-        !output.contains("***Use @find/next"),
-        "leaked results: {output}"
-    );
-    second.send("@find ,3,4").await;
-    assert!(
-        second
-            .until("***Use @find/next for more***")
-            .await
-            .contains("Used Mech Store(#3:")
-    );
-    first.send("@find/next extra").await;
-    first.until("takes no arguments.").await;
-    first.send("@find/unknown").await;
-    first.until("Unsupported @find switch.").await;
-    first.send("@fin/next").await;
-    assert!(
-        first
-            .until("***Use @find/next for more***")
-            .await
-            .contains("Wizard(#2:")
-    );
-    first.send("@find/next").await;
-    assert!(
-        first
-            .until("***Use @find/next for more***")
-            .await
-            .contains("Used Mech Store(#3:")
-    );
-    first.send("@find/next").await;
-    assert!(
-        first
-            .until("***End of List***")
-            .await
-            .contains("Starter Room(#4:")
-    );
-    first.send("@find/next").await;
-    first.until("No active @find search.").await;
-    second.send("@find/next").await;
-    assert!(
-        second
-            .until("***End of List***")
-            .await
-            .contains("Starter Room(#4:")
-    );
-    let writes: i64 = sqlx::query_scalar("SELECT count FROM find_writes")
-        .fetch_one(&mut db)
-        .await
-        .unwrap();
-    assert_eq!(writes, 0);
-    first.send("@find ,0,4").await;
-    first.until("***Use @find/next for more***").await;
-    first.send("look").await;
-    first.until("Staff Nexus").await;
-    first.send("@find/next").await;
-    assert!(
-        first
-            .until("***Use @find/next for more***")
-            .await
-            .contains("Wizard(#2:")
-    );
+    let text = second.until("Unsupported @find switch.").await;
+    assert!(!text.contains("SearchRoom"));
+    for command in ["@find/next extra", "@find/unknown"] {
+        first.send(command).await;
+        first.until("Unsupported @find switch.").await;
+    }
+    first.send("@search rooms=SearchRoom").await;
+    let text = first.until("Garbage...0").await;
+    assert!(text.contains("Rooms...80"));
+    first.send("@stats").await;
+    first.until("garbage)").await;
+    first.send("@list commands").await;
+    first.until("Global commands:").await;
+    // A later command synchronizes with the entire preceding listing.
     first.send("@find missing").await;
     first.until("***End of List***").await;
-    first.send("@find/next").await;
-    first.until("No active @find search.").await;
-    first.send("@find").await;
-    first.until("***Use @find/next for more***").await;
-    god.send("@flag #2=!wizard").await;
-    god.until("cleared.").await;
-    first.send("@find/next").await;
-    first.until("Permission denied.").await;
-    god.send("@flag #2=wizard").await;
-    god.until("set.").await;
-    first.send("quit").await;
-    drop(first);
-    let mut fresh = Client::connect(&running).await;
-    fresh.send("#2").await;
-    fresh.until("Password: ").await;
-    fresh.send("secret").await;
-    fresh.until("Staff Nexus").await;
-    fresh.send("@find/next").await;
-    fresh.until("No active @find search.").await;
-    <sqlx::SqliteConnection as sqlx::Connection>::close(db)
-        .await
-        .unwrap();
+    assert_eq!(before, std::fs::read(c.database()).unwrap());
     running.stop().await;
 }
 
@@ -3778,5 +3713,85 @@ async fn tcp_flow_from_hosted_test_and_background_command() {
     player.until("Background TCP: ").await;
     player.send("done").await;
     player.until("Background done").await;
+    running.stop().await;
+}
+
+/// Database reports retain complete Unicode rows across compressed transport chunks.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_compressed_database_reports() {
+    let (d, _) = populated().await;
+    let path = d.path().join("stompymux.toml");
+    let text = std::fs::read_to_string(&path).unwrap();
+    std::fs::write(
+        path,
+        format!("{text}\n[runtime]\noutput_message_limit=256\n"),
+    )
+    .unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let mut world = persistence::load(&c.database()).await.unwrap();
+    world.accounts.get_mut(&ObjectId(2)).unwrap().hash =
+        Some(accounts::hash("secret", &c).unwrap());
+    for i in 0..80 {
+        world.create(
+            &c,
+            format!("Unicode{i:03} é👩‍🚀"),
+            stompymux_rs::world::Kind::Room,
+        );
+    }
+    persistence::save(&c.database(), &world).await.unwrap();
+    let running = Running::start(&c).await;
+    let mut client = Client::connect(&running).await;
+    client.send("#2").await;
+    client.until("Password: ").await;
+    client.send("secret").await;
+    client.until("Staff Nexus").await;
+    let before = std::fs::read(c.database()).unwrap();
+    let mut socket = client.socket;
+    socket.write_all(&[255, 253, 86]).await.unwrap();
+    let marker = telnet_until(&mut socket, &[255, 250, 86, 255, 240]).await;
+    let boundary = marker
+        .windows(5)
+        .position(|v| v == [255, 250, 86, 255, 240])
+        .unwrap()
+        + 5;
+    let mut bytes = marker[boundary..].to_vec();
+    socket
+        .write_all(b"@search rooms=Unicode\r\n@find Unicode\r\n@list switches\r\n@stats\r\n")
+        .await
+        .unwrap();
+    let mut inflater = flate2::Decompress::new(true);
+    let mut decoded = Vec::new();
+    let mut offset = 0;
+    let mut drain = false;
+    tokio::time::timeout(Duration::from_secs(10), async {
+        while !String::from_utf8_lossy(&decoded).contains("garbage)") {
+            if offset == bytes.len() && !drain {
+                let mut b = [0; 4096];
+                let n = socket.read(&mut b).await.unwrap();
+                assert!(n > 0);
+                bytes.extend_from_slice(&b[..n]);
+            }
+            let mut output = [0; 4096];
+            let prior = (inflater.total_in(), inflater.total_out());
+            inflater
+                .decompress(&bytes[offset..], &mut output, flate2::FlushDecompress::Sync)
+                .unwrap();
+            offset += (inflater.total_in() - prior.0) as usize;
+            let produced = (inflater.total_out() - prior.1) as usize;
+            drain = produced == output.len();
+            decoded.extend_from_slice(&output[..produced]);
+        }
+    })
+    .await
+    .unwrap_or_else(|error| panic!("{error}: {}", String::from_utf8_lossy(&decoded)));
+    let text = String::from_utf8(decoded).unwrap();
+    assert_eq!(text.matches("Unicode079 é👩‍🚀").count(), 2);
+    assert!(
+        text.contains("Rooms...80")
+            && text.contains("***End of List***")
+            && text.contains("@clone: /inventory")
+    );
+    assert!(!text.contains("truncated"));
+    assert_eq!(before, std::fs::read(c.database()).unwrap());
     running.stop().await;
 }

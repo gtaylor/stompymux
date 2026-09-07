@@ -5,16 +5,10 @@ use anyhow::Result;
 use mlua::{Table, Value};
 
 impl Scripts {
-    /// Try eligible nearby object commands before global Lua commands.
-    pub fn dispatch(
-        &self,
-        player: ObjectId,
-        session: impl Into<Option<u64>>,
-        line: &str,
-    ) -> Result<bool> {
-        let session = session.into();
+    /// Enumerate actual object command sources without running Lua or matching patterns.
+    pub fn command_objects(&self, player: ObjectId) -> Vec<ObjectId> {
         let room = self.world.borrow().objects[&player].location;
-        let objects: Vec<ObjectId> = {
+        {
             let w = self.world.borrow();
             w.objects
                 .values()
@@ -25,7 +19,18 @@ impl Scripts {
                 })
                 .map(|o| o.id)
                 .collect()
-        };
+        }
+    }
+
+    /// Try eligible nearby object commands before global Lua commands.
+    pub fn dispatch(
+        &self,
+        player: ObjectId,
+        session: impl Into<Option<u64>>,
+        line: &str,
+    ) -> Result<bool> {
+        let session = session.into();
+        let objects = self.command_objects(player);
         for id in objects {
             let parent = self.world.borrow().objects[&id].lua_parent.clone();
             if self.dispatch_scope(

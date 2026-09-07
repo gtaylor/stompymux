@@ -216,13 +216,34 @@ Searches list controlled live objects except exits, ordered by dbref, including
 DARK and GOING objects. Wizards cannot list GOD or other Wizards; GOD can list all.
 Results use `Name(#dbref:type-and-flag-letters)`.
 
-Each connection has its own search. Use `@find/next` to continue; a new search
-replaces the previous one. Other commands leave it intact. The final page ends
-with `***End of List***`. Each page rechecks current objects and permissions up
-to the original upper bound. Searches never write the database or run callbacks.
-`runtime.find_page_size` defaults to 20. The output byte limit may shorten pages
-or truncate displayed names while preserving identity and flags. If a row and
-footer cannot fit, the search remains available for retry.
+Results are delivered automatically in bounded chunks and end with
+`***End of List***`. There is no continuation command or session search cursor.
+`runtime.find_page_size` is removed; old settings receive an unknown-key warning.
+Searches never write the database or run callbacks. Reports exceeding the aggregate
+Lua output-byte budget explicitly mark omitted rows; use narrower criteria or dbref
+ranges to reduce the result set.
+
+`@search [class=criteria[,low[,high]]]` searches the entire supported database,
+including exits, other Wizards and Garbage tombstones. Classes are `name`,
+`rooms`, `exits`, `objects`/`things`, `players`, `type`, `flags`, `power` and `zone`.
+C abbreviations apply (`p` means players, `po` means power). Name criteria match
+case-insensitive whole-name prefixes; an empty name criterion matches nothing,
+while bare `@search` matches everything. Flags use case-sensitive display letters,
+including optional type letters; all specified flags must match. `power=idle`
+uses the existing power catalog. Reports group results by type with relationship
+annotations and totals covering all matches, including any omitted rows.
+
+`@stats` reports allocated object slots and counts by type. GOING non-room objects
+and allocation gaps count as garbage; GOING rooms still count as rooms. Reports do
+not create objects for gaps. Search results enumerate actual stored objects.
+
+`@list commands`, `@list permissions` and `@list switches` describe active command
+registrations alongside existing flags/powers listings. Commands are grouped into
+built-in, global Lua and reachable object Lua entries, with aliases, permissions,
+patterns and source identity. Listings share current dispatch scope; inventory and
+command-zone expansion remain deferred. Switch listings show minimum accepted
+abbreviation lengths; handlers still enforce valid combinations. Successful Lua
+reload updates listings; editing runtime tables does not re-register declarations.
 
 ## Command registration
 
@@ -734,8 +755,7 @@ relationships, Lua metadata and state namespace counts. `/brief` omits namespace
 counts; `/debug` includes actual stored containment pointers. `@entrances` lists
 incoming exits, homes and droptos with optional inclusive dbref bounds. Inspection
 reports are private, chunked through the bounded transport, and perform no writes
-or Lua callbacks. BattleTech fields, `@search` and `@stats` remain outside these
-commands' current coverage. See `help object building`, `help look` and
+or Lua callbacks. BattleTech fields remain outside these commands' current coverage. See `help object building`, `help look` and
 `help @examine` for syntax and partial-success behavior.
 
 
@@ -834,7 +854,7 @@ chunks disable the corresponding processing opportunity; a zero entry limit
 rejects admission and triggers the executor's overflow halt.
 
 Queued execution never borrows a player's connection. Connection-specific
-commands (color, quit, help/reload, pagination, session diagnostics, `@lua` and
+commands (color, quit, help/reload, session diagnostics, `@lua` and
 account-administration tooling) require interactive input. World commands,
 including `@dbck` and `@shutdown`, and ordinary Lua commands run without a
 descriptor. Background replies follow object notification and existing output

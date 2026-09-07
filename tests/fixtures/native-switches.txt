@@ -1,0 +1,23 @@
+@boot port:1:wizard quiet:1:wizard
+@chan boot:4:wizard create:6:wizard destroy:7:wizard emit:4:wizard list:4:wizard object:6:wizard oflags:6:wizard pflags:6:wizard flags:5:wizard status:6:wizard who:3:wizard full:4:wizard noheader:8:wizard
+@clone inventory:3:wizard location:1:wizard
+@dig teleport:1:wizard
+@emit here:1:wizard room:1:wizard
+@examine brief:1:wizard debug:1:wizard
+@femit here:1:wizard room:1:wizard
+@fpose default:1:wizard nospace:1:wizard
+@halt all:1:wizard
+@help reload:6:wizard
+@lua parent:6:wizard viewparent:10:wizard check:5:wizard reload:6:wizard schedule:8:wizard test:4:wizard unit:4:wizard integration:11:wizard verbose:7:wizard
+@npemit contents:1:wizard object:1:wizard silent:1:wizard list:1:wizard
+@open inventory:1:wizard location:1:wizard
+@pemit contents:1:wizard object:1:wizard silent:1:wizard list:1:wizard
+@state examine:7:wizard set:3:wizard wipe:4:wizard copy:4:wizard move:4:wizard
+@wall emit:1:wizard pose:1:wizard wizard:1:wizard admin:1:wizard no_prefix:1:wizard
+drop quiet:1:everyone
+enter quiet:1:everyone
+get quiet:1:everyone
+give quiet:1:wizard
+leave quiet:1:everyone
+look outside:1:everyone
+pose default:1:everyone nospace:1:everyone

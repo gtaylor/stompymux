@@ -92,7 +92,9 @@ fn quiet(
         return Ok(false);
     };
     ensure!(
-        !switch.is_empty() && "quiet".starts_with(switch),
+        super::discovery::switches(&input.name)
+            .iter()
+            .any(|s| s.name == "quiet" && s.accepts(switch)),
         "Unsupported command switch."
     );
     let w = ctx.scripts.world.borrow();
