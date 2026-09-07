@@ -321,10 +321,15 @@ impl Service<'_> {
         };
         // Locks grant access independently of flags, including C's missing-lock default.
         if let Some(object) = object.filter(|id| id.0 != 0) {
-            let f:mlua::Function=self.lua.load("return function(o,p,k) return mux.world.lock_passes({object=mux.world.object(o),enactor=p,subject=p,cause=p,lock=k}) end").eval().map_err(|e|anyhow::anyhow!(e.to_string()))?;
+            let f:mlua::Function=self.lua.load("return function(o,p,k,c) return mux.world.lock_passes({object=mux.world.object(o),enactor=p,subject=p,cause=c,lock=k}) end").eval().map_err(|e|anyhow::anyhow!(e.to_string()))?;
             let before = self.world.borrow().clone();
             let pending = self.outbox.borrow().len();
-            match f.call::<bool>((object.0, who.0, access.lock())) {
+            match f.call::<bool>((
+                object.0,
+                who.0,
+                access.lock(),
+                crate::lua::transactions::cause(self.lua).unwrap_or(who).0,
+            )) {
                 Ok(true) => return Ok(true),
                 Ok(false) => {}
                 Err(e) => {

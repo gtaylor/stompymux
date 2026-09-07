@@ -170,9 +170,9 @@ fn speaking(ctx: &CommandContext<'_>) -> Result<bool> {
             kind: crate::LockType::Speak,
             object: location,
             enactor: ctx.player,
-            cause: ctx.player,
+            cause: ctx.cause,
             subject: ctx.player,
-            descriptor: Some(ctx.session),
+            descriptor: ctx.session,
             silent: false,
         };
         let outcome = ctx.scripts.evaluate_lock(invocation)?;

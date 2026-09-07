@@ -71,3 +71,21 @@ pub(super) fn live_test<T>(lua: &Lua, work: impl FnOnce() -> mlua::Result<T>) ->
     depth.set(depth.get() - 1);
     result
 }
+
+/// Causal actor dynamically scoped to a native or Lua command invocation.
+#[derive(Clone, Copy)]
+struct Cause(Option<crate::world::ObjectId>);
+
+/// Read the causal actor without changing execution authority.
+pub fn cause(lua: &Lua) -> Option<crate::world::ObjectId> {
+    lua.app_data_ref::<Cause>().and_then(|c| c.0)
+}
+
+/// Restore causal context after nested command/callback execution.
+pub fn with_cause<T>(lua: &Lua, value: crate::world::ObjectId, work: impl FnOnce() -> T) -> T {
+    let before = cause(lua);
+    lua.set_app_data(Cause(Some(value)));
+    let result = work();
+    lua.set_app_data(Cause(before));
+    result
+}

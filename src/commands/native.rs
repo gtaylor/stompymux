@@ -138,7 +138,7 @@ pub(super) fn home(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
             ctx.player,
             ctx.player,
             destination,
-            Some(ctx.session),
+            ctx.session,
             Route::Home,
         )
     })();
@@ -173,7 +173,7 @@ pub(super) fn teleport(ctx: &CommandContext<'_>, input: &CommandInput) -> Result
             ctx.player,
             object,
             destination,
-            (object == ctx.player).then_some(ctx.session),
+            ctx.session.filter(|_| object == ctx.player),
             Route::Teleport,
         )
     })();

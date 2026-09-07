@@ -568,3 +568,33 @@ fn find_page_size_configuration() {
         assert!(error.contains("runtime.find_page_size"), "{error}");
     }
 }
+
+/// Queue tunables keep compiled defaults and reject negative operational values contextually.
+#[test]
+fn queue_settings_defaults_and_nonnegative_validation() {
+    let (_d, c) = config("");
+    assert_eq!(c.mux.command_queue_limit, 100);
+    assert_eq!(c.mux.command_queue_active_chunk, 10);
+    assert_eq!(c.mux.command_queue_idle_chunk, 10);
+    for key in [
+        "command_queue_limit",
+        "command_queue_active_chunk",
+        "command_queue_idle_chunk",
+    ] {
+        let d = tempfile::tempdir().unwrap();
+        std::fs::write(
+            d.path().join("stompymux.toml"),
+            format!("[mux]\n{key}=-1\n"),
+        )
+        .unwrap();
+        let error = Config::load(d.path()).unwrap_err().to_string();
+        assert!(
+            error.contains(key)
+                && error.contains("stompymux.toml")
+                && error.contains("nonnegative"),
+            "{error}"
+        );
+        std::fs::write(d.path().join("stompymux.toml"), format!("[mux]\n{key}=0\n")).unwrap();
+        assert!(Config::load(d.path()).is_ok());
+    }
+}

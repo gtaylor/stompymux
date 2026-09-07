@@ -81,6 +81,19 @@ impl Config {
                 loader::validate(key, v).with_context(|| fail(key.path))?;
             }
         }
+        for (key, value) in [
+            ("mux.command_queue_limit", self.mux.command_queue_limit),
+            (
+                "mux.command_queue_active_chunk",
+                self.mux.command_queue_active_chunk,
+            ),
+            (
+                "mux.command_queue_idle_chunk",
+                self.mux.command_queue_idle_chunk,
+            ),
+        ] {
+            ensure!(value >= 0, "{}: must be nonnegative", fail(key));
+        }
         for key in [
             "database.game_database",
             "database.legacy_game_database",

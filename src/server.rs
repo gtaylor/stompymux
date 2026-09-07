@@ -1,5 +1,6 @@
 //! Serialized world owner, connection lifecycle and common graceful shutdown coordinator.
 mod administration;
+mod queue;
 use crate::{
     accounts,
     commands::{self, Action},
@@ -74,6 +75,8 @@ struct Server {
     shutdown: Option<ShutdownRequest>,
     /// A shutdown write failed, even if a later snapshot succeeds.
     shutdown_failed: bool,
+    /// Runtime commands survive disconnect and Lua reload, but never restart.
+    command_queue: commands::queue::Queue,
 }
 
 pub async fn prepare(c: &Config) -> Result<Scripts> {
@@ -233,6 +236,7 @@ pub async fn run_with_schedule_clock(
         listen_port: 0,
         shutdown: None,
         shutdown_failed: false,
+        command_queue: Default::default(),
     };
     server.listen_port = listener.local_addr()?.port();
     let mut next = 0;
@@ -252,9 +256,22 @@ pub async fn run_with_schedule_clock(
         &server.scripts.world.borrow(),
         schedule_now(),
     );
+    let mut queue_credit = 0usize;
     loop {
+        let now = tokio::time::Instant::now();
+        let queue_ready = queue_credit > 0 && server.command_queue.ready(now);
+        let deadline = server.command_queue.next_wakeup(now);
         let ready = schedules.ready(schedule_now());
         tokio::select! {
+            _ = std::future::ready(()), if queue_ready => {
+                queue_credit -= 1;
+                let work = server.command_queue.take(tokio::time::Instant::now(), &server.scripts.world.borrow(), server.config.mux.space_compress);
+                if let Some(work) = work { server.queued(work).await; }
+                tokio::task::yield_now().await;
+            },
+            _ = async { if let Some(due) = deadline { tokio::time::sleep_until(due).await; } else { std::future::pending::<()>().await; } } => {
+                queue_credit = server.config.mux.command_queue_idle_chunk as usize;
+            },
             _ = std::future::ready(()), if ready => {
                 if let Some(job)=schedules.take_due(schedule_now()) { server.scheduled(job).await; }
                 tokio::task::yield_now().await;
@@ -285,6 +302,7 @@ pub async fn run_with_schedule_clock(
                 session.text("Who are you? ",true);
             },
             event = rx.recv() => {
+                queue_credit = server.config.mux.command_queue_active_chunk as usize;
                 if let Some(event)=event { match event {
                     Event::AdminHashed(job,result) => server.admin_hashed(job,result).await,
                     Event::Gone(id) => server.disconnect(id).await?,
@@ -295,6 +313,7 @@ pub async fn run_with_schedule_clock(
                 }}
             },
             _ = tick.tick() => {
+                queue_credit = server.config.mux.command_queue_idle_chunk as usize;
                 schedules.observe(&server.scripts.schedules,&server.scripts.world.borrow(),schedule_now());
                 let timeout=Duration::from_secs(server.config.mux.conn_timeout);
                 let idle:Vec<_>=server.sessions.iter()
@@ -319,6 +338,7 @@ pub async fn run_with_schedule_clock(
             break;
         }
     }
+    server.command_queue = Default::default();
     drop(listener);
     schedules.clear();
     server.finish_shutdown().await;
@@ -968,82 +988,88 @@ impl Server {
         }
     }
     /// Stage repair callbacks under the database transaction, detaching destroyed players only after commit.
-    async fn dbck(&mut self, session: SessionId, actor: ObjectId) {
+    async fn dbck(&mut self, session: Option<SessionId>, actor: ObjectId, cause: ObjectId) {
         let before = self.scripts.world.borrow().clone();
         let result = persistence::repair(
             &self.config.database(),
             self.config.database.busy_timeout_ms,
             |raw| {
-                let (repaired, mut report) = crate::dbck::plan(&before, raw, &self.config)?;
-                *self.scripts.world.borrow_mut() = repaired;
-                for relocation in &report.plan.relocations {
-                    let callable = |id: ObjectId| {
-                        self.scripts
-                            .world
-                            .borrow()
-                            .objects
-                            .get(&id)
-                            .is_some_and(|o| {
-                                matches!(o.kind, Kind::Room | Kind::Player | Kind::Thing)
-                            })
-                    };
-                    let movement = crate::movement::Move {
-                        actor,
-                        object: relocation.object,
-                        source: relocation.source,
-                        destination: relocation.destination,
-                        session: self
-                            .sessions
-                            .iter()
-                            .find(|(_, s)| s.player == Some(relocation.object))
-                            .map(|(id, _)| id.0),
-                    };
-                    if let Some(source) = relocation.source.filter(|id| callable(*id)) {
+                crate::lua::transactions::with_cause(&self.scripts.lua, cause, || {
+                    let (repaired, mut report) = crate::dbck::plan(&before, raw, &self.config)?;
+                    *self.scripts.world.borrow_mut() = repaired;
+                    for relocation in &report.plan.relocations {
+                        let callable = |id: ObjectId| {
+                            self.scripts
+                                .world
+                                .borrow()
+                                .objects
+                                .get(&id)
+                                .is_some_and(|o| {
+                                    matches!(o.kind, Kind::Room | Kind::Player | Kind::Thing)
+                                })
+                        };
+                        let movement = crate::movement::Move {
+                            actor,
+                            object: relocation.object,
+                            source: relocation.source,
+                            destination: relocation.destination,
+                            session: session.and_then(|_| {
+                                self.sessions
+                                    .iter()
+                                    .find(|(_, s)| s.player == Some(relocation.object))
+                                    .map(|(id, _)| id.0)
+                            }),
+                        };
+                        if let Some(source) = relocation.source.filter(|id| callable(*id)) {
+                            self.scripts
+                                .world
+                                .borrow_mut()
+                                .objects
+                                .get_mut(&relocation.object)
+                                .unwrap()
+                                .location = Some(source);
+                            self.scripts.movement_event("on_exit", source, &movement)?;
+                        }
                         self.scripts
                             .world
                             .borrow_mut()
                             .objects
                             .get_mut(&relocation.object)
-                            .unwrap()
-                            .location = Some(source);
-                        self.scripts.movement_event("on_exit", source, &movement)?;
+                            .context("callback removed repaired occupant")?
+                            .location = Some(relocation.destination);
+                        self.scripts.movement_event(
+                            "on_enter",
+                            relocation.destination,
+                            &movement,
+                        )?;
                     }
-                    self.scripts
-                        .world
-                        .borrow_mut()
-                        .objects
-                        .get_mut(&relocation.object)
-                        .context("callback removed repaired occupant")?
-                        .location = Some(relocation.destination);
-                    self.scripts
-                        .movement_event("on_enter", relocation.destination, &movement)?;
-                }
-                let after = self.scripts.world.borrow().clone();
-                after.validate(&self.config)?;
-                for id in &report.plan.purges {
-                    let o = after
-                        .objects
-                        .get(id)
-                        .context("callback removed tombstone")?;
-                    anyhow::ensure!(
-                        o.kind == Kind::Garbage
-                            && o.flags == [crate::flags::Flag::Going].into_iter().collect()
-                            && o.powers == Default::default()
-                            && o.state.is_empty()
-                            && !after.accounts.contains_key(id),
-                        "callback changed purged object #{}",
-                        id.0
-                    );
-                }
-                report.plan.links = crate::dbck::rebuild_links(&after, &report.plan.links);
-                report.plan.list_changes = report
-                    .plan
-                    .links
-                    .iter()
-                    .filter(|(id, links)| raw.get(id) != Some(*links))
-                    .map(|(id, _)| *id)
-                    .collect();
-                Ok((after, report))
+                    let after = self.scripts.world.borrow().clone();
+                    after.validate(&self.config)?;
+                    for id in &report.plan.purges {
+                        let o = after
+                            .objects
+                            .get(id)
+                            .context("callback removed tombstone")?;
+                        anyhow::ensure!(
+                            o.kind == Kind::Garbage
+                                && o.flags == [crate::flags::Flag::Going].into_iter().collect()
+                                && o.powers == Default::default()
+                                && o.state.is_empty()
+                                && !after.accounts.contains_key(id),
+                            "callback changed purged object #{}",
+                            id.0
+                        );
+                    }
+                    report.plan.links = crate::dbck::rebuild_links(&after, &report.plan.links);
+                    report.plan.list_changes = report
+                        .plan
+                        .links
+                        .iter()
+                        .filter(|(id, links)| raw.get(id) != Some(*links))
+                        .map(|(id, _)| *id)
+                        .collect();
+                    Ok((after, report))
+                })
             },
         )
         .await;
@@ -1069,8 +1095,12 @@ impl Server {
                 }
                 self.reconcile_connections();
                 self.flush();
-                if let Some(session) = self.sessions.get(&session) {
+                self.command_queue.reconcile(&self.scripts.world.borrow());
+                if let Some(session) = session.and_then(|id| self.sessions.get(&id)) {
                     session.raw(report.response(self.config.runtime.output_message_limit));
+                } else {
+                    self.queue_reply(None, actor, &report.summary());
+                    self.flush();
                 }
             }
             Err(e) => {
@@ -1078,10 +1108,12 @@ impl Server {
                 self.reconcile_connections();
                 self.scripts.outbox.borrow_mut().clear();
                 eprintln!("DBCK rolled back: {e:#}");
-                self.tell(
+                self.queue_reply(
                     session,
-                    "Database check failed; no repairs committed. See server diagnostics.\r\n",
+                    actor,
+                    "Database check failed; no repairs committed. See server diagnostics.",
                 );
+                self.flush();
             }
         }
     }
@@ -1226,6 +1258,7 @@ impl Server {
         self.snapshots()?;
         let before = self.scripts.world.borrow().clone();
         match commands::run(&self.scripts, &self.config, p, id.0, line) {
+            Ok(Action::Queue(request)) => self.queue_request(Some(id), p, request, before).await,
             Ok(Action::AccountAdmin(request)) => self.account_admin(id, p, request).await?,
             Ok(Action::Color(mode)) => self.color(id, &mode),
             Ok(Action::Help(topic)) => {
@@ -1308,7 +1341,7 @@ impl Server {
                 }
             }
             Ok(Action::Shutdown) => self.request_shutdown(ShutdownRequest::Player(p)).await,
-            Ok(Action::DbCheck) => self.dbck(id, p).await,
+            Ok(Action::DbCheck) => self.dbck(Some(id), p, p).await,
             Ok(Action::Find(request)) => self.find(id, p, request),
             Ok(Action::CommitReply(text)) => {
                 if self.commit(before).await {
@@ -1745,6 +1778,7 @@ mod tests {
             listen_port: 0,
             shutdown: None,
             shutdown_failed: false,
+            command_queue: Default::default(),
         };
         server
             .authenticated(
@@ -1798,6 +1832,7 @@ mod tests {
             listen_port: 0,
             shutdown: None,
             shutdown_failed: false,
+            command_queue: Default::default(),
         };
         let (output, mut receiver) = mpsc::channel(16);
         let now = Instant::now();
@@ -1942,6 +1977,7 @@ mod tests {
                 listen_port: 0,
                 shutdown: None,
                 shutdown_failed: false,
+                command_queue: Default::default(),
             };
             let mut receivers = Vec::new();
             for id in [1, 2] {

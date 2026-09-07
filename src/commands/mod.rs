@@ -2,6 +2,7 @@
 pub(crate) mod inspection;
 mod native;
 mod objects;
+pub mod queue;
 mod registry;
 pub(crate) mod target;
 use crate::{
@@ -13,6 +14,8 @@ use anyhow::{Context, Result};
 pub use registry::*;
 /// Result interpreted by the world/session owner.
 pub enum Action {
+    /// Transactional queue admission or cancellation.
+    Queue(queue::Request),
     /// Administrative account hashing or session removal.
     AccountAdmin(crate::account_admin::Request),
     /// Commit callback changes and flush player-directed output.
@@ -55,7 +58,11 @@ pub struct CommandContext<'a> {
     /// Authenticated invoking player.
     pub player: ObjectId,
     /// Invoking session identifier.
-    pub session: u64,
+    pub session: Option<u64>,
+    /// Original causal actor, separate from execution authority.
+    pub cause: ObjectId,
+    /// Interactive or background dispatch.
+    pub origin: InputOrigin,
 }
 impl CommandContext<'_> {
     /// Resolve a location only for commands that need one.
@@ -70,24 +77,66 @@ impl CommandContext<'_> {
             .context("player has no location")
     }
 }
-/// Resolve the registry first, then Lua scopes and exit-name matching.
+/// Origin controls session-only commands without borrowing another connection.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum InputOrigin {
+    /// Authenticated connection input.
+    Interactive,
+    /// Descriptor-free execution owned by the runtime command queue.
+    Queued,
+}
+
+/// Identity and connection information shared by every dispatch path.
+#[derive(Clone, Copy, Debug)]
+pub struct ExecutionContext {
+    /// Object whose permissions and surroundings govern dispatch.
+    pub executor: ObjectId,
+    /// Causal actor; never a source of elevated command authority.
+    pub cause: ObjectId,
+    /// Real invoking connection, absent for background execution.
+    pub session: Option<u64>,
+    /// How this command entered the dispatcher.
+    pub origin: InputOrigin,
+}
+
+/// Dispatch an authenticated interactive command.
 pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, line: &str) -> Result<Action> {
-    crate::lua::transactions::with_descriptor(&s.lua, Some(session), || {
-        run_inner(s, c, player, session, line)
+    execute(
+        s,
+        c,
+        ExecutionContext {
+            executor: player,
+            cause: player,
+            session: Some(session),
+            origin: InputOrigin::Interactive,
+        },
+        line,
+    )
+}
+
+/// Dispatch with an explicit executor, causal actor and optional connection.
+pub fn execute(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -> Result<Action> {
+    anyhow::ensure!(
+        execution.origin != InputOrigin::Queued || execution.session.is_none(),
+        "Queued commands cannot borrow an interactive session."
+    );
+    crate::lua::transactions::with_cause(&s.lua, execution.cause, || {
+        crate::lua::transactions::with_descriptor(&s.lua, execution.session, || {
+            run_inner(s, c, execution, line)
+        })
     })
 }
-fn run_inner(
-    s: &Scripts,
-    c: &Config,
-    player: ObjectId,
-    session: u64,
-    line: &str,
-) -> Result<Action> {
+
+fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -> Result<Action> {
+    let player = execution.executor;
+    let session = execution.session;
     let ctx = CommandContext {
         scripts: s,
         config: c,
         player,
         session,
+        cause: execution.cause,
+        origin: execution.origin,
     };
     if line.trim().starts_with('.')
         && !s
@@ -129,6 +178,11 @@ fn run_inner(
     if let Some((definition, input)) = s.commands.native_match(input.clone())
         && !definition.direct_input_only
     {
+        if expanded.is_some() && definition.no_macro {
+            return Ok(Action::Reply(
+                "This command is unavailable as macro. Please use an alias instead.".into(),
+            ));
+        }
         return definition.invoke_native(&ctx, &input);
     }
     if s.dispatch(player, session, &input.line)? {
@@ -150,7 +204,7 @@ fn run_inner(
         })
         .map(|o| (o.id, o.destination))
         .collect();
-    let preferred = s.prefer_matches(player, exits.iter().map(|e| e.0).collect(), Some(session))?;
+    let preferred = s.prefer_matches(player, exits.iter().map(|e| e.0).collect(), session)?;
     let exits: Vec<_> = exits
         .into_iter()
         .filter(|e| preferred.contains(&e.0))
@@ -163,7 +217,7 @@ fn run_inner(
                     player,
                     player,
                     *destination,
-                    Some(session),
+                    session,
                     crate::movement::Route::Exit,
                 )?;
             }

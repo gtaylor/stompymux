@@ -6,7 +6,13 @@ use mlua::{Table, Value};
 
 impl Scripts {
     /// Try eligible nearby object commands before global Lua commands.
-    pub fn dispatch(&self, player: ObjectId, session: u64, line: &str) -> Result<bool> {
+    pub fn dispatch(
+        &self,
+        player: ObjectId,
+        session: impl Into<Option<u64>>,
+        line: &str,
+    ) -> Result<bool> {
+        let session = session.into();
         let room = self.world.borrow().objects[&player].location;
         let objects: Vec<ObjectId> = {
             let w = self.world.borrow();
@@ -45,7 +51,7 @@ impl Scripts {
     fn dispatch_scope(
         &self,
         player: ObjectId,
-        session: u64,
+        session: Option<u64>,
         line: &str,
         object: Option<ObjectId>,
         scope: &crate::commands::CommandScope,
@@ -60,7 +66,7 @@ impl Scripts {
             if source != Some(definition.source.as_str()) {
                 self.budget.reset();
                 source = Some(definition.source.as_str());
-                let ctx = self.context(Some(player), object, Some(session))?;
+                let ctx = self.context(Some(player), object, session)?;
                 ctx.set(
                     "scope",
                     if object.is_none() {

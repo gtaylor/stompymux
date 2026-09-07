@@ -158,8 +158,7 @@ fn matched(
     matches.retain(|m| !exact || m.1);
     let ids = matches.iter().map(|m| m.0).collect();
     let mut ids = if keys {
-        ctx.scripts
-            .prefer_matches(ctx.player, ids, Some(ctx.session))?
+        ctx.scripts.prefer_matches(ctx.player, ids, ctx.session)?
     } else {
         ids
     };
@@ -198,9 +197,9 @@ fn check(
         kind,
         object,
         enactor: ctx.player,
-        cause: ctx.player,
+        cause: ctx.cause,
         subject,
-        descriptor: Some(ctx.session),
+        descriptor: ctx.session,
         silent,
     };
     let result = ctx.scripts.evaluate_lock(invocation)?;
@@ -222,8 +221,8 @@ fn action(
     ObjectAction {
         object,
         enactor: ctx.player,
-        cause: ctx.player,
-        descriptor: Some(ctx.session),
+        cause: ctx.cause,
+        descriptor: ctx.session,
         source,
         destination,
         operation,
@@ -242,7 +241,7 @@ fn relocate(
         ctx.player,
         object,
         destination,
-        (object == ctx.player).then_some(ctx.session),
+        ctx.session.filter(|_| object == ctx.player),
         crate::movement::Route::Generic,
     )
 }

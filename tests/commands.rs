@@ -38,7 +38,7 @@ async fn fixture() -> (tempfile::TempDir, Config, World) {
 /// Execute through native matching and collect ordinary player-directed output.
 fn run(s: &Scripts, c: &Config, player: i64, line: &str) -> String {
     let action = commands::run(s, c, ObjectId(player), 1, line).unwrap();
-    if let Action::Reply(text) | Action::Report(text) = action {
+    if let Action::Reply(text) | Action::Report(text) | Action::CommitReply(text) = action {
         return text;
     }
     s.outbox
@@ -105,6 +105,9 @@ async fn native_catalog_permissions_and_aliases() {
             "@examine",
             "@entrances",
             "@find",
+            "@force",
+            "@wait",
+            "@halt",
             ".add",
             ".clear",
             ".chmod",
@@ -194,7 +197,9 @@ async fn native_catalog_permissions_and_aliases() {
                     scripts: &s,
                     config: &c,
                     player: ObjectId(player),
-                    session: 1,
+                    session: Some(1),
+                    cause: ObjectId(player),
+                    origin: commands::InputOrigin::Interactive,
                 },
                 &input,
             )
@@ -474,4 +479,159 @@ async fn account_command_validation_and_history() {
         })
     ));
     assert!(run(&s, &c, 1, "@newpassword #1=secret").contains("You cannot change"));
+}
+
+/// Queue commands use catalog permissions, aliases and literal argument handling.
+#[tokio::test(flavor = "current_thread")]
+async fn queue_registration_syntax_aliases_and_macro_restrictions() {
+    use commands::queue::Request;
+    let (d, _, mut w) = fixture().await;
+    let aliases = d.path().join("aliases.toml");
+    let contents = std::fs::read_to_string(&aliases).unwrap().replace(
+        "[aliases.commands]",
+        "[aliases.commands]\nfqueue='@force'\ncancelall='@halt/all'",
+    );
+    std::fs::write(aliases, contents).unwrap();
+    let c = Config::load(d.path()).unwrap();
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
+    let ordinary = w.create(&c, "Ordinary".into(), stompymux_rs::world::Kind::Thing);
+    w.objects.get_mut(&ordinary).unwrap().location = Some(ObjectId(c.start()));
+    let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    assert!(!s.commands.definitions().any(|d| d.name == "#"));
+    for line in ["@force me=say no", "@wait 0=say no", "@halt", "@halt/all"] {
+        assert!(run(&s, &c, ordinary.0, line).contains("Permission denied"));
+    }
+    assert!(run(&s, &c, 2, "@force #1=say no").contains("Permission denied"));
+    assert!(
+        matches!(commands::run(&s, &c, ObjectId(2), 1, &format!("FQUEUE #{}=say a;b", ordinary.0)).unwrap(), Action::Queue(Request::Add { executor, cause: ObjectId(2), seconds: 0, text }) if executor == ordinary && text == "say a;b")
+    );
+    assert!(
+        matches!(commands::run(&s, &c, ObjectId(2), 1, "@wait -1={say a;say b}").unwrap(), Action::Queue(Request::Add { seconds: -1, text, .. }) if text == "say a;say b")
+    );
+    assert!(matches!(
+        commands::run(&s, &c, ObjectId(2), 1, "cancelall").unwrap(),
+        Action::Queue(Request::Halt { target: None })
+    ));
+    for line in [
+        "@force/x me=say no",
+        "@wait/x 0=say no",
+        "@halt/no",
+        "@halt/all me",
+        "@wait nan=say no",
+        "@wait 2147483648=say no",
+        "@force",
+        "@wait",
+    ] {
+        assert!(
+            matches!(
+                commands::run(&s, &c, ObjectId(2), 1, line).unwrap(),
+                Action::Reply(_)
+            ),
+            "{line}"
+        );
+    }
+    assert!(run(&s, &c, 2, "#2 say NO-SHORTHAND").contains("Huh?"));
+    assert!(run(&s, &c, 2, ".create QueueMacros").contains("set"));
+    run(&s, &c, 2, ".def frc=fqueue me=say no");
+    run(&s, &c, 2, ".def wait=@wait 0=say no");
+    let output = run(&s, &c, 2, ".frc");
+    assert!(output.contains("unavailable as macro"), "{output}");
+    assert!(run(&s, &c, 2, ".wait").contains("unavailable as macro"));
+}
+
+/// Background dispatch keeps native authority separate from Lua cause and never invents a descriptor.
+#[tokio::test(flavor = "current_thread")]
+async fn queued_context_locks_callbacks_and_session_rejection() {
+    use commands::{ExecutionContext, InputOrigin};
+    let (d, c, mut w) = fixture().await;
+    let start = ObjectId(c.start());
+    let thing = w.create(&c, "QueueThing".into(), stompymux_rs::world::Kind::Thing);
+    w.objects.get_mut(&thing).unwrap().location = Some(start);
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(start);
+    w.objects
+        .get_mut(&start)
+        .unwrap()
+        .flags
+        .insert(Flag::Auditorium);
+    w.objects.get_mut(&start).unwrap().lua_parent = "queue_room.lua".into();
+    std::fs::write(
+        d.path().join("lua/object_logic/queue_room.lua"),
+        format!(
+            r#"return {{locks={{speak=function(ctx)
+      assert(ctx.enactor=={id} and ctx.subject=={id} and ctx.cause==1 and ctx.descriptor==nil)
+      return true
+    end}}}}"#,
+            id = thing.0
+        ),
+    )
+    .unwrap();
+    std::fs::write(d.path().join("lua/global_logic/queue_context.lua"), format!(r#"return {{commands={{{{name="queue-context",permission="everyone",pattern="^queue%-context$",handler=function(ctx)
+      assert(ctx.enactor=={id} and ctx.cause==1 and ctx.descriptor==nil)
+      mux.world.object(ctx.enactor):state('queue'):set('context', true)
+      mux.world.pemit(ctx.enactor, 'QUEUED-LUA')
+      return true
+    end}}}}}}"#, id=thing.0)).unwrap();
+    let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    let execution = ExecutionContext {
+        executor: thing,
+        cause: ObjectId(1),
+        session: None,
+        origin: InputOrigin::Queued,
+    };
+    assert!(matches!(
+        commands::execute(&s, &c, execution, "queue-context").unwrap(),
+        Action::Continue
+    ));
+    assert_eq!(
+        s.world.borrow().objects[&thing].state["queue"]["context"],
+        stompymux_rs::world::Scalar::Boolean(true)
+    );
+    assert!(matches!(
+        commands::execute(&s, &c, execution, "say test").unwrap(),
+        Action::Continue
+    ));
+    assert!(
+        s.outbox
+            .borrow()
+            .iter()
+            .any(|(_, d)| d.contains("says \"test\""))
+    );
+    // A GOD cause does not confer GOD or Wizard authority on the executor.
+    assert!(
+        matches!(commands::execute(&s, &c, execution, "@wait 0=say no").unwrap(), Action::Reply(ref text) if text.contains("Permission denied"))
+    );
+    let wizard = ExecutionContext {
+        executor: ObjectId(2),
+        ..execution
+    };
+    for line in [
+        "quit",
+        "color off",
+        "help",
+        "@find",
+        "@session",
+        "@telnet #2",
+        "@lua/schedule",
+        "@boot #2",
+    ] {
+        s.outbox.borrow_mut().clear();
+        let result = commands::execute(&s, &c, wizard, line).unwrap();
+        let mut text = s
+            .outbox
+            .borrow()
+            .iter()
+            .map(|(_, d)| d.source().to_owned())
+            .collect::<Vec<_>>()
+            .join("\n");
+        if let Action::Reply(reply) = result {
+            text.push_str(&reply);
+        }
+        assert!(
+            text.contains("requires an interactive session"),
+            "{line}: {text}"
+        );
+    }
+    let context = s.context(Some(ObjectId(2)), None, Some(99)).unwrap();
+    assert_eq!(context.get::<i64>("cause").unwrap(), 2);
+    assert_eq!(context.get::<u64>("descriptor").unwrap(), 99);
 }

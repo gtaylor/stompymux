@@ -98,8 +98,11 @@ fn apply(
                 let ctx = s.context(Some(object), Some(location), session)?;
                 ctx.set("lock", lock.key())
                     .map_err(|e| anyhow::anyhow!("{e}"))?;
-                ctx.set("cause", actor.0)
-                    .map_err(|e| anyhow::anyhow!("{e}"))?;
+                ctx.set(
+                    "cause",
+                    crate::lua::transactions::cause(&s.lua).unwrap_or(actor).0,
+                )
+                .map_err(|e| anyhow::anyhow!("{e}"))?;
                 if actor != object {
                     s.outbox
                         .borrow_mut()
@@ -158,7 +161,7 @@ fn apply(
             crate::lua::ObjectAction {
                 object,
                 enactor: object,
-                cause: actor,
+                cause: crate::lua::transactions::cause(&s.lua).unwrap_or(actor),
                 descriptor: session,
                 source,
                 destination: Some(destination),

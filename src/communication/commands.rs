@@ -114,7 +114,7 @@ impl Service<'_> {
         who: ObjectId,
         input: &CommandInput,
         operation: Operation,
-        session: u64,
+        session: Option<u64>,
     ) -> Result<()> {
         let args = input.args.trim();
         if !matches!(operation, Operation::Page | Operation::Admin) {
@@ -159,7 +159,7 @@ impl Service<'_> {
                     .and_then(|list| {
                         list.sequence_values::<mlua::Table>()
                             .filter_map(|r| r.ok())
-                            .find(|r| r.get::<u64>("session").ok() == Some(session))
+                            .find(|r| r.get::<u64>("session").ok() == session)
                     })
                     .and_then(|r| r.get::<usize>("terminal_width").ok())
                     .unwrap_or(COMLIST_MIN_WIDTH)

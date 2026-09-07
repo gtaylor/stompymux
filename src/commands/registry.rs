@@ -112,6 +112,10 @@ pub struct CommandDefinition {
     pub private_errors: bool,
     /// Eligible only before interactive macro expansion.
     pub direct_input_only: bool,
+    /// Command requires the invoking connection, never a borrowed player session.
+    pub requires_session: bool,
+    /// C command cannot be reached through macro expansion.
+    pub no_macro: bool,
 }
 impl CommandDefinition {
     /// Describe a native handler with default exact matching and no switches.
@@ -130,6 +134,8 @@ impl CommandDefinition {
             switches: SwitchPolicy::Reject("Unsupported command switch."),
             private_errors: false,
             direct_input_only: false,
+            requires_session: false,
+            no_macro: false,
         }
     }
     /// Attach built-in shorthand metadata without adding duplicate catalog entries.
@@ -153,6 +159,8 @@ impl CommandDefinition {
             .allows(&ctx.scripts.world.borrow(), ctx.player)
         {
             Some("Permission denied.")
+        } else if self.requires_session && ctx.session.is_none() {
+            Some("This command requires an interactive session.")
         } else if input.switch.is_some() {
             match self.switches {
                 SwitchPolicy::Reject(message) => Some(message),
@@ -330,8 +338,38 @@ impl CommandRegistry {
             CommandDefinition::native("@find", P::WIZARD, native::find)
                 .policy(SwitchPolicy::Handler, true),
         ];
+        for (name, handler) in [
+            ("@force", super::queue::force as NativeHandler),
+            ("@wait", super::queue::wait),
+            ("@halt", super::queue::halt),
+        ] {
+            let mut entry = CommandDefinition::native(name, P::WIZARD, handler);
+            entry.private_errors = true;
+            entry.no_macro = name != "@halt";
+            if name == "@halt" {
+                entry.switches = SwitchPolicy::Handler;
+            }
+            definitions.push(entry);
+        }
         definitions.extend(crate::macros::commands::definitions());
         definitions.extend(super::objects::definitions());
+        for entry in &mut definitions {
+            entry.requires_session = matches!(
+                entry.name.as_str(),
+                "color"
+                    | "quit"
+                    | "help"
+                    | "@help"
+                    | "@find"
+                    | "@session"
+                    | "@telnet"
+                    | "@lua"
+                    | "@pcreate"
+                    | "@newpassword"
+                    | "@boot"
+                    | "@last"
+            );
+        }
         Self { definitions }
     }
     /// Stable catalog including commands on currently unattached object modules.
@@ -442,6 +480,8 @@ impl CommandRegistry {
                     switches: SwitchPolicy::Handler,
                     private_errors: false,
                     direct_input_only: false,
+                    requires_session: false,
+                    no_macro: false,
                 })
             })()
             .with_context(|| format!("{source}: command {index}"))?;

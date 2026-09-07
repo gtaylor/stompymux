@@ -3436,3 +3436,160 @@ async fn tcp_speech_routing_styles_and_lock_persistence() {
     assert_eq!(std::fs::read(c.database()).unwrap(), before);
     running.stop().await;
 }
+
+/// Real sockets exercise descriptor-free queues, aliases, cancellation, persistence and shutdown.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_command_queue_force_wait_halt_and_shutdown() {
+    let (d, _) = populated().await;
+    let aliases = d.path().join("aliases.toml");
+    std::fs::write(
+        &aliases,
+        std::fs::read_to_string(&aliases).unwrap().replace(
+            "[aliases.commands]",
+            "[aliases.commands]\nqforce='@force'\nqwait='@wait'\nqhalt='@halt'\n",
+        ),
+    )
+    .unwrap();
+    std::fs::write(
+        d.path().join("lua/global_logic/queued_tcp.lua"),
+        r#"return {commands={
+      {name='queued-probe',permission='everyone',pattern='^queued%-probe$',handler=function(ctx)
+        assert(ctx.cause==2 and ctx.descriptor==nil)
+        mux.world.object(ctx.enactor):state('queue'):set('probe',true)
+        mux.world.pemit(2,'QUEUED-PROBE-DONE')
+        return true
+      end}
+    }}"#,
+    )
+    .unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(2)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
+    let thing = w.create(&c, "QueueRobot".into(), stompymux_rs::world::Kind::Thing);
+    w.objects.get_mut(&thing).unwrap().location = Some(ObjectId(c.start()));
+    persistence::save(&c.database(), &w).await.unwrap();
+    let mut running = Running::start(&c).await;
+    let mut wizard = Client::connect(&running).await;
+    wizard.login("#2").await;
+    let mut other = Client::connect(&running).await;
+    other.login("#2").await;
+    let mut alice = Client::connect(&running).await;
+    alice.register("QueueAlice").await;
+    alice.send("@wait 0=say DENIED").await;
+    alice.until("Permission denied.").await;
+    let before = std::fs::read(c.database()).unwrap();
+    wizard
+        .send(&format!("qforce #{}=say ROBOT-SPEAKS", thing.0))
+        .await;
+    wizard.until("QueueRobot says \"ROBOT-SPEAKS\"").await;
+    assert_eq!(before, std::fs::read(c.database()).unwrap());
+    wizard.send("qforce me=quit;say STILL-CONNECTED").await;
+    wizard.until("STILL-CONNECTED").await;
+    let rejection = other.until("STILL-CONNECTED").await;
+    assert!(rejection.contains("requires an interactive session"));
+    wizard
+        .send(&format!("qforce #{}=queued-probe", thing.0))
+        .await;
+    wizard.until("QUEUED-PROBE-DONE").await;
+    assert_eq!(
+        persistence::load(&c.database()).await.unwrap().objects[&thing].state["queue"]["probe"],
+        Scalar::Boolean(true)
+    );
+    // The target's current permissions apply, even with a Wizard cause.
+    wizard
+        .send("qforce QueueAlice=@wait 0=say PRIVILEGE-LEAK")
+        .await;
+    alice.until("Permission denied.").await;
+    wizard.send("qwait 1=say DELAYED-DONE").await;
+    wizard.until("DELAYED-DONE").await;
+    wizard.send("qwait 60=say CANCELLED\r\nqhalt/all").await;
+    wizard.until("1 queue entries removed.").await;
+    wizard.send("qwait 0=qwait 0=say NESTED-DONE").await;
+    wizard.until("NESTED-DONE").await;
+    // Admission remains valid after its executing player disconnects.
+    wizard
+        .send("qforce QueueAlice=queued-probe\r\n@boot QueueAlice")
+        .await;
+    wizard.until("QUEUED-PROBE-DONE").await;
+    let world = persistence::load(&c.database()).await.unwrap();
+    let alice_id = world.find_player("QueueAlice").unwrap();
+    assert_eq!(
+        world.objects[&alice_id].state["queue"]["probe"],
+        Scalar::Boolean(true)
+    );
+    // Shutdown consumes the triggering command but never the remaining command-list tail.
+    wizard
+        .send("qwait 0=@shutdown;@description me=SHUTDOWN-LEAK")
+        .await;
+    wizard.until("Game: Shutdown by Wizard").await;
+    assert!(
+        tokio::time::timeout(Duration::from_secs(10), running.child.wait())
+            .await
+            .unwrap()
+            .unwrap()
+            .success()
+    );
+    let world = persistence::load(&c.database()).await.unwrap();
+    assert_ne!(
+        world.objects[&ObjectId(2)].description.as_deref(),
+        Some("SHUTDOWN-LEAK")
+    );
+    assert!(
+        !world.objects[&ObjectId(2)]
+            .flags
+            .contains(stompymux_rs::flags::Flag::Connected)
+    );
+    let running = Running::start(&c).await;
+    let mut wizard = Client::connect(&running).await;
+    wizard.login("#2").await;
+    wizard.send("qhalt/all").await;
+    wizard.until("0 queue entries removed.").await;
+    running.stop().await;
+}
+
+/// Zero processing chunks stop background work while configured admission limits still apply.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_queue_nondefault_limits_and_zero_chunks() {
+    let (d, _) = populated().await;
+    let path = d.path().join("stompymux.toml");
+    std::fs::write(
+        &path,
+        std::fs::read_to_string(&path)
+            .unwrap()
+            .replace(
+                "command_queue_active_chunk = 100",
+                "command_queue_active_chunk = 0",
+            )
+            .replace(
+                "command_queue_idle_chunk = 200",
+                "command_queue_idle_chunk = 0",
+            )
+            .replace("[mux]", "[mux]\ncommand_queue_limit = 1"),
+    )
+    .unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(2)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
+    persistence::save(&c.database(), &w).await.unwrap();
+    let running = Running::start(&c).await;
+    let mut wizard = Client::connect(&running).await;
+    wizard.login("#2").await;
+    wizard
+        .send("@wait 0=say NEVER-RUN\r\n@wait 0=say OVERFLOW")
+        .await;
+    let output = wizard.until("Halted.").await;
+    assert!(!output.contains("NEVER-RUN"));
+    assert!(
+        persistence::load(&c.database()).await.unwrap().objects[&ObjectId(2)]
+            .flags
+            .contains(stompymux_rs::flags::Flag::Halted)
+    );
+    wizard.send("@flag me=!halted").await;
+    wizard.until("cleared.").await;
+    wizard.send("@wait 0=say NEVER-RUN\r\n@halt/all").await;
+    let output = wizard.until("1 queue entries removed.").await;
+    assert!(!output.contains("NEVER-RUN"));
+    running.stop().await;
+}

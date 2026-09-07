@@ -358,7 +358,7 @@ pub(super) fn enter(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
             ctx.player,
             ctx.player,
             target,
-            Some(ctx.session),
+            ctx.session,
             if silent {
                 crate::movement::Route::EnterQuiet
             } else {
@@ -413,7 +413,7 @@ pub(super) fn leave(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
             ctx.player,
             ctx.player,
             destination,
-            Some(ctx.session),
+            ctx.session,
             if silent {
                 crate::movement::Route::LeaveQuiet
             } else {

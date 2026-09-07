@@ -216,9 +216,11 @@ default_thing_flags = []
 player_starting_room = 4
 # Default home for new players.
 player_starting_home = 4
-# Interval for checking idle players.
+# Background commands allowed after servicing network input (default 10; zero disables).
+# Maximum outstanding lists per executing object: command_queue_limit = 100 (default).
+# Zero rejects admission and halts the executor. Ready and delayed lists share this limit.
 command_queue_active_chunk = 100
-# Number of commands to be run from queue when there is no net traffic.
+# Background commands allowed at maintenance or delayed wakeup (default 10; zero disables).
 command_queue_idle_chunk = 200
 # Command quota per player.
 command_quota_increment = 1000

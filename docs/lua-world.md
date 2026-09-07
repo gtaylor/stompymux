@@ -96,3 +96,18 @@ does not implement the absent listener-only downward branch. Strings retain lega
 styles; immutable Markdown documents retain their format when forwarding prefixes
 are added. Invalid objects, embedded NULs and output-budget failures raise errors.
 Fan-out is staged atomically even when a caller catches the Lua error with `pcall`.
+
+## Commands executed from a queue
+
+`@force` and `@wait` dispatch ordinary Lua commands using the executing object's
+current permissions and module registrations. `ctx.enactor` is the executor;
+`ctx.cause` identifies the forcing actor, or the cause retained by a nested wait.
+`ctx.object` continues to identify the command's scoped object and
+`ctx.descriptor` is nil. Native action, movement and lock callbacks retain this
+causal context without granting the cause's authority to the executor.
+
+Queued commands receive fresh callback budgets. Each command commits its world
+changes before delivering staged output. Failure discards that command's changes
+and output, but subsequent commands may still execute. Queues are runtime-only
+and survive Lua reloads; there is no Lua queue API in this tranche. Session-only
+APIs continue to require a real descriptor.

@@ -288,7 +288,7 @@ impl Scripts {
         let action = ObjectAction {
             object: location,
             enactor: movement.object,
-            cause: movement.actor,
+            cause: super::transactions::cause(&self.lua).unwrap_or(movement.actor),
             descriptor: movement.session,
             source: movement.source,
             destination: Some(movement.destination),

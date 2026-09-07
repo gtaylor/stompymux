@@ -77,7 +77,7 @@ fn show(ctx: &CommandContext<'_>, id: ObjectId, through: bool) -> Result<()> {
     let o = ctx.scripts.world.borrow().objects[&id].clone();
     if let Some(text) = ctx
         .scripts
-        .render_appearance(ctx.player, id, Some(ctx.session), mode)?
+        .render_appearance(ctx.player, id, ctx.session, mode)?
     {
         if !text.is_empty() {
             tell(ctx, text);

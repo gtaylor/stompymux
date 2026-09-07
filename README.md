@@ -803,3 +803,47 @@ Compatibility details: say formatting has no comma before its quote; public
 backslash emit remains available although `@emit` is Wizard-only; `: ` selects a
 no-space pose; and C's `@fpose/nospace` switch retains default spacing. Wall `/admin`
 has the same Wizard audience/authority as C and adds no new role.
+
+## Command queues
+
+Wizard-only `@force <target>=<commands>`, `@wait <seconds>=<commands>` and
+`@halt [target]` use a bounded runtime queue. `@halt/all` removes every ready and
+delayed list, including the unexecuted tail of a list. Configured aliases work;
+`#<dbref> command` is not a native shorthand. See `help command queues`.
+
+Force uses controlled-object matching and executes with the target's authority.
+The causal actor is retained separately. Wait retains that cause and uses a
+monotonic deadline; nonpositive delays are ready immediately. Literal command
+lists split at unescaped, unnested semicolons using C brace/bracket/parenthesis
+rules and `mux.space_compress`. `@wait` strips an outer pair of braces. There is
+no expression evaluation. `@force` and `@wait` reject player-macro invocation;
+queued commands themselves use the executor's current macros and permissions.
+
+Every executor has `mux.command_queue_limit` outstanding lists (default 100),
+including delayed and partially executed lists. Overflow cancels its pending
+work and transactionally sets HALTED. This corrects the C zero-limit behavior
+for non-player objects. `/all` also corrects C's incomplete ready-queue cleanup.
+Each list is bounded by `runtime.input_line_limit`; retained command text across
+all queues has a 16 MiB safety ceiling. Exceeding the byte ceiling rejects the
+new list without halting its executor.
+
+`mux.command_queue_active_chunk` and `mux.command_queue_idle_chunk` default to
+10. They limit commands after network service and at maintenance/delayed wakeups,
+respectively; each command yields a world-loop turn and executors rotate fairly.
+The supplied game selects 100/200. Queue settings must be nonnegative. Zero
+chunks disable the corresponding processing opportunity; a zero entry limit
+rejects admission and triggers the executor's overflow halt.
+
+Queued execution never borrows a player's connection. Connection-specific
+commands (color, quit, help/reload, pagination, session diagnostics, `@lua` and
+account-administration tooling) require interactive input. World commands,
+including `@dbck` and `@shutdown`, and ordinary Lua commands run without a
+descriptor. Background replies follow object notification and existing output
+budgets. Ordinary player output is rendered separately for each connected session.
+
+Admission, cancellation and overflow effects publish only after the originating
+operation commits. Each executed command has its own transaction and callback
+budgets; failures discard its mutations/output and consume the attempt, without
+retrying or rolling back earlier commands. Purge, GOING, HALTED and incarnation
+checks prevent stale execution. Queues survive disconnects and Lua reloads,
+but remain outside database snapshots and are discarded on shutdown/restart.

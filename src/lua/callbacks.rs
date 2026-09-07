@@ -18,7 +18,12 @@ impl Scripts {
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         for (key, val) in [
             ("enactor", player.map(|id| id.0)),
-            ("cause", player.map(|id| id.0)),
+            (
+                "cause",
+                super::transactions::cause(&self.lua)
+                    .or(player)
+                    .map(|id| id.0),
+            ),
             ("object", object.map(|id| id.0)),
             ("subject", player.map(|id| id.0)),
             ("descriptor", session.map(|id| id as i64)),
@@ -105,7 +110,14 @@ impl Scripts {
         if let Some(t) = self.parents.get(&parent) {
             let ctx = self.context(Some(movement.object), Some(location), movement.session)?;
             for (key, value) in [
-                ("cause", Some(movement.actor.0)),
+                (
+                    "cause",
+                    Some(
+                        super::transactions::cause(&self.lua)
+                            .unwrap_or(movement.actor)
+                            .0,
+                    ),
+                ),
                 ("source", movement.source.map(|id| id.0)),
                 ("destination", Some(movement.destination.0)),
             ] {
@@ -215,7 +227,14 @@ impl Scripts {
             .map_err(|e| anyhow::anyhow!("{e}"))?;
         for (key, value) in [
             ("subject", Some(subject.0)),
-            ("cause", Some(movement.actor.0)),
+            (
+                "cause",
+                Some(
+                    super::transactions::cause(&self.lua)
+                        .unwrap_or(movement.actor)
+                        .0,
+                ),
+            ),
             ("source", movement.source.map(|id| id.0)),
             ("destination", Some(movement.destination.0)),
         ] {
@@ -321,8 +340,13 @@ impl Scripts {
     }
 
     /// Build traversal context with the same silent convention as the C server.
-    pub fn traversal(&self, player: ObjectId, exit: ObjectId, session: u64) -> Result<bool> {
-        let ctx = self.context(Some(player), Some(exit), Some(session))?;
+    pub fn traversal(
+        &self,
+        player: ObjectId,
+        exit: ObjectId,
+        session: impl Into<Option<u64>>,
+    ) -> Result<bool> {
+        let ctx = self.context(Some(player), Some(exit), session.into())?;
         ctx.set("lock", "traverse")
             .map_err(|e| anyhow::anyhow!("{e}"))?;
         let silent = {
@@ -387,7 +411,7 @@ impl Scripts {
                 object: *id,
                 enactor: player,
                 subject: player,
-                cause: player,
+                cause: super::transactions::cause(&self.lua).unwrap_or(player),
                 descriptor: session,
                 silent: true,
             });

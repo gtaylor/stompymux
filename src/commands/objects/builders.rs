@@ -460,7 +460,7 @@ pub(super) fn dig(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Acti
                 ctx.player,
                 ctx.player,
                 room,
-                Some(ctx.session),
+                ctx.session,
                 crate::movement::Route::Teleport,
             )?;
         }
