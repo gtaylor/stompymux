@@ -78,6 +78,9 @@ struct Server {
     /// Runtime commands survive disconnect and Lua reload, but never restart.
     command_queue: commands::queue::Queue,
     cleaning: crate::cleaning::Cleaning,
+    controls: crate::controls::Controls,
+    idle_recheck: bool,
+    message_cache: crate::message_cache::MessageCache,
 }
 
 pub async fn prepare(c: &Config) -> Result<Scripts> {
@@ -260,6 +263,9 @@ pub async fn run_with_clocks(
         shutdown_failed: false,
         command_queue: Default::default(),
         cleaning: Default::default(),
+        controls: Default::default(),
+        idle_recheck: false,
+        message_cache: Default::default(),
     };
     server.cleaning = crate::cleaning::Cleaning::new(
         cleaning_now(),
@@ -275,8 +281,15 @@ pub async fn run_with_clocks(
     let mut idle_check =
         tokio::time::interval(Duration::from_secs(server.config.mux.idle_interval));
     tokio::pin!(shutdown);
-    let banner = std::fs::read_to_string(server.config.path(&server.config.mux.connect_file))
-        .unwrap_or_default();
+    let cache_config = server.config.clone();
+    let (cache, report) = tokio::task::spawn_blocking(move || {
+        crate::message_cache::MessageCache::default().reload(&cache_config)
+    })
+    .await?;
+    server.message_cache = cache;
+    for diagnostic in report {
+        eprintln!("File cache: {diagnostic}");
+    }
     let mut runtime_sources = server.scripts.sources.clone();
     let mut schedules = crate::lua::schedules::Queue::default();
     schedules.observe(
@@ -325,7 +338,9 @@ pub async fn run_with_clocks(
                 let session=server.sessions.get_mut(&id).unwrap();
                 let negotiation=session.decoder.initial();
                 session.protocol(negotiation);
-                session.text(&banner,true);
+                let index = if server.message_cache.banner_count() == 0 { 0 } else { rand::random_range(0..server.message_cache.banner_count()) };
+                let banner = server.message_cache.welcome(index);
+                if let Err(error) = session.styled_report(banner, true, &server.config).await { eprintln!("Welcome delivery: {error:#}"); }
                 session.text("Who are you? ",true);
             },
             event = rx.recv() => {
@@ -342,19 +357,16 @@ pub async fn run_with_clocks(
             _ = tick.tick() => {
                 queue_credit = server.config.mux.command_queue_idle_chunk as usize;
                 if server.shutdown.is_none() && server.cleaning.take_due(cleaning_now()) { server.dbck(crate::cleaning::CheckOrigin::Automatic).await; }
+                if server.idle_recheck { server.idle_recheck = false; server.check_idle().await?; }
                 schedules.observe(&server.scripts.schedules,&server.scripts.world.borrow(),schedule_now());
                 let timeout=Duration::from_secs(server.config.mux.conn_timeout);
                 let idle:Vec<_>=server.sessions.iter()
-                    .filter(|(_,s)|(s.player.is_none() && s.connected.elapsed()>timeout)||s.output.is_closed()||s.failed.get())
+                    .filter(|(_,s)|(server.controls.enabled(crate::controls::Control::IdleChecking) && s.player.is_none() && s.connected.elapsed()>timeout)||s.output.is_closed()||s.failed.get())
                     .map(|(id,_)|*id).collect();
-                for id in idle { server.disconnect(id).await?; }
+                for id in idle { if server.sessions.get(&id).is_some_and(|s| s.player.is_none() && s.connected.elapsed()>timeout && !s.failed.get() && !s.output.is_closed()) { server.tell(id,"*** Login Timeout ***\r\n"); } server.disconnect(id).await?; }
                 server.addresses.retain(|_,b|b.at.elapsed()<Duration::from_secs(server.config.security.login_address_retention_seconds));
             },
-            _ = idle_check.tick() => {
-                let timeout=Duration::from_secs(server.config.mux.idle_timeout);
-                let idle:Vec<_>=server.sessions.iter().filter(|(_,s)|s.player.is_some() && s.active.elapsed()>timeout).map(|(id,_)|*id).collect();
-                for id in idle {server.disconnect(id).await?;}
-            },
+            _ = idle_check.tick() => { server.check_idle().await?; },
             _ = tasks.join_next(), if !tasks.is_empty() => {}
         }
         if !std::sync::Arc::ptr_eq(&runtime_sources, &server.scripts.sources) {
@@ -1054,12 +1066,138 @@ impl Server {
         Ok(())
     }
     /// Controls are runtime-only; status queries never write the database.
-    fn cleaning_control(&mut self, value: Option<bool>) -> String {
-        if let Some(enabled) = value {
-            self.cleaning.enabled = enabled;
+    async fn check_idle(&mut self) -> Result<()> {
+        let expired: Vec<_> = self
+            .sessions
+            .iter()
+            .filter_map(|(id, session)| {
+                self.controls
+                    .timeout(
+                        &self.scripts.world.borrow(),
+                        session.player,
+                        session.connected.elapsed(),
+                        session.active.elapsed(),
+                        self.config.mux.conn_timeout,
+                        self.config.mux.idle_timeout,
+                    )
+                    .map(|reason| (*id, reason))
+            })
+            .collect();
+        for (id, reason) in expired {
+            self.tell(id, reason);
+            self.disconnect(id).await?;
+        }
+        Ok(())
+    }
+    fn global_control(&mut self, value: Option<(crate::controls::Control, bool)>) -> String {
+        if let Some((control, enabled)) = value {
+            if control == crate::controls::Control::IdleChecking
+                && enabled
+                && !self.controls.enabled(control)
+            {
+                self.idle_recheck = true;
+            }
+            self.controls.set(control, enabled);
+            if control == crate::controls::Control::Cleaning {
+                self.cleaning.enabled = enabled;
+            }
             return if enabled { "Enabled." } else { "Disabled." }.into();
         }
-        self.cleaning.status()
+        self.controls.status()
+    }
+    /// Publish successful file replacements together; retain last-good content on failures.
+    async fn readcache(&mut self, session: Option<SessionId>, actor: ObjectId) {
+        let previous = self.message_cache.clone();
+        let config = self.config.clone();
+        let response = match tokio::task::spawn_blocking(move || previous.reload(&config)).await {
+            Ok((cache, report)) => {
+                self.message_cache = cache;
+                for row in &report {
+                    eprintln!("File cache: {row}");
+                }
+                format!("File sizes: {}", report.join("  "))
+            }
+            Err(error) => format!("File cache unchanged: {error}"),
+        };
+        if let Some(id) = session {
+            self.inspection_report(id, response).await;
+        } else {
+            self.queue_reply(None, actor, &response);
+            self.flush();
+        }
+    }
+    /// Render cached text and then close through the common connection lifecycle.
+    async fn cache_close(
+        &mut self,
+        id: SessionId,
+        file: crate::message_cache::File,
+        extra: &str,
+        fallback: &str,
+    ) -> Result<()> {
+        let cached = self.message_cache.text(file);
+        let message = if cached.is_empty() && extra.is_empty() {
+            fallback.to_string()
+        } else {
+            format!(
+                "{cached}{}{}",
+                if !cached.is_empty() && !cached.ends_with('\n') {
+                    "\n"
+                } else {
+                    ""
+                },
+                extra
+            )
+        };
+        if let Some(session) = self.sessions.get_mut(&id) {
+            let echo = session.decoder.echo(false);
+            session.protocol(echo);
+            let ansi = session.player.is_none_or(|p| {
+                self.scripts
+                    .world
+                    .borrow()
+                    .objects
+                    .get(&p)
+                    .is_some_and(|o| o.flags.contains(crate::flags::Flag::Ansi))
+            });
+            if let Err(error) = session.styled_report(&message, ansi, &self.config).await {
+                eprintln!("Closing message: {error:#}");
+                session.raw(crate::find::bounded_error(
+                    fallback,
+                    self.config.runtime.output_message_limit,
+                ));
+            }
+        }
+        self.disconnect(id).await
+    }
+    fn admission(&self, privileged: bool) -> std::result::Result<(), crate::controls::Admission> {
+        self.controls.admission(
+            self.sessions
+                .values()
+                .filter(|s| s.player.is_some())
+                .count(),
+            self.config.mux.max_players,
+            privileged,
+        )
+    }
+    async fn reject_admission(
+        &mut self,
+        id: SessionId,
+        reason: crate::controls::Admission,
+    ) -> Result<()> {
+        use crate::{controls::Admission, message_cache::File};
+        let (file, extra, fallback) = match reason {
+            Admission::Down => (
+                File::Down,
+                self.config.mux.down_message.clone(),
+                "Logins are disabled.",
+            ),
+            Admission::Full => (
+                File::Full,
+                self.config.mux.full_message.clone(),
+                "The game is full.",
+            ),
+        };
+        self.cache_close(id, file, &extra, fallback).await
     }
     /// Stage repair callbacks under the database transaction, detaching destroyed players only after commit.
     async fn dbck(&mut self, origin: crate::cleaning::CheckOrigin) {
@@ -1413,6 +1551,7 @@ impl Server {
                     }
                 }
             }
+            Ok(Action::ReadCache) => self.readcache(Some(id), p).await,
             Ok(Action::HelpReload) => {
                 let config = self.config.clone();
                 match tokio::task::spawn_blocking(move || crate::help::HelpIndex::reload(&config))
@@ -1469,8 +1608,8 @@ impl Server {
                 })
                 .await
             }
-            Ok(Action::Cleaning(value)) => {
-                let response = self.cleaning_control(value);
+            Ok(Action::GlobalControl(value)) => {
+                let response = self.global_control(value);
                 if let Some(session) = self.sessions.get(&id) {
                     session.raw(crate::find::bounded_error(
                         &response,
@@ -1547,12 +1686,8 @@ impl Server {
                 }
             }
             Ok(Action::Quit) => {
-                self.tell(
-                    id,
-                    &std::fs::read_to_string(self.config.path(&self.config.mux.quit_file))
-                        .unwrap_or_else(|_| "Goodbye.\r\n".into()),
-                );
-                self.disconnect(id).await?;
+                self.cache_close(id, crate::message_cache::File::Quit, "", "Goodbye.")
+                    .await?;
             }
             Ok(Action::Continue) => {
                 if self.commit(before).await {
@@ -1606,6 +1741,7 @@ impl Server {
             }
             LoginFlow::Password(name) => {
                 self.authenticate(id, name, Zeroizing::new(input.into()), false)
+                    .await
             }
             LoginFlow::ConfirmCreate(name) => match input.to_ascii_lowercase().as_str() {
                 "" | "y" | "yes" => self.prompt(
@@ -1648,7 +1784,7 @@ impl Server {
                         true,
                     );
                 } else {
-                    self.authenticate(id, name, password, true);
+                    self.authenticate(id, name, password, true).await;
                 }
             }
             LoginFlow::Pending => {
@@ -1658,13 +1794,19 @@ impl Server {
         }
         Ok(())
     }
-    fn authenticate(
+    async fn authenticate(
         &mut self,
         id: SessionId,
         name: String,
         password: Zeroizing<String>,
         create: bool,
     ) {
+        if create && let Err(reason) = self.admission(false) {
+            if let Err(error) = self.reject_admission(id, reason).await {
+                eprintln!("Admission close: {error:#}");
+            }
+            return;
+        }
         let now = Instant::now();
         let burst = self.config.security.login_attempt_burst;
         let refill = self.config.security.login_attempt_refill;
@@ -1816,6 +1958,12 @@ impl Server {
                 return Ok(());
             }
         };
+        let privileged = !create
+            && existing.is_some_and(|p| crate::flags::is_wizard(&self.scripts.world.borrow(), p));
+        if let Err(reason) = self.admission(privileged) {
+            self.reject_admission(id, reason).await?;
+            return Ok(());
+        }
         let p = if create {
             if existing.is_some() {
                 self.prompt(
@@ -1905,6 +2053,9 @@ impl Server {
         self.commit(before).await;
         self.flush();
         self.tell(id, "Connected.\r\n");
+        if !self.controls.enabled(crate::controls::Control::Logins) {
+            self.tell(id, "*** Logins are disabled.\r\n");
+        }
         self.command(id, p, "look").await?;
         Ok(())
     }
@@ -1940,6 +2091,9 @@ mod tests {
             shutdown_failed: false,
             command_queue: Default::default(),
             cleaning: Default::default(),
+            controls: Default::default(),
+            idle_recheck: false,
+            message_cache: Default::default(),
         };
         server
             .authenticated(
@@ -1995,6 +2149,9 @@ mod tests {
             shutdown_failed: false,
             command_queue: Default::default(),
             cleaning: Default::default(),
+            controls: Default::default(),
+            idle_recheck: false,
+            message_cache: Default::default(),
         };
         let (output, mut receiver) = mpsc::channel(16);
         let now = Instant::now();
@@ -2140,6 +2297,9 @@ mod tests {
                 shutdown_failed: false,
                 command_queue: Default::default(),
                 cleaning: Default::default(),
+                controls: Default::default(),
+                idle_recheck: false,
+                message_cache: Default::default(),
             };
             let mut receivers = Vec::new();
             for id in [1, 2] {
@@ -2202,6 +2362,92 @@ mod tests {
                 .exec()
                 .unwrap();
             sqlx::Connection::close(db).await.unwrap();
+        }
+    }
+    /// A completed hash must use current admission policy before touching persistent state.
+    #[tokio::test(flavor = "current_thread")]
+    async fn admission_rechecked_after_hashing_without_history_or_creation() {
+        for create in [false, true] {
+            let mut c = Config::load(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
+            )
+            .unwrap();
+            let mut world = persistence::load(&c.database()).await.unwrap();
+            world
+                .objects
+                .get_mut(&ObjectId(2))
+                .unwrap()
+                .flags
+                .remove(crate::flags::Flag::Wizard);
+            let credential = world.accounts[&ObjectId(2)].hash.clone();
+            let scripts = Scripts::new(&c, Rc::new(RefCell::new(world))).unwrap();
+            let d = tempfile::tempdir().unwrap();
+            c.root = d.path().into();
+            let (events, _) = mpsc::channel(1);
+            let mut server = Server {
+                config: c,
+                scripts,
+                sessions: BTreeMap::new(),
+                events,
+                addresses: BTreeMap::new(),
+                hashes: Bucket {
+                    tokens: 1,
+                    at: Instant::now(),
+                },
+                inflight: 1,
+                pending_resets: Default::default(),
+                started_at: accounts::now(),
+                listen_port: 0,
+                shutdown: None,
+                shutdown_failed: false,
+                command_queue: Default::default(),
+                cleaning: Default::default(),
+                controls: Default::default(),
+                idle_recheck: false,
+                message_cache: Default::default(),
+            };
+            let (output, _receiver) = mpsc::channel(16);
+            let now = Instant::now();
+            server.sessions.insert(
+                SessionId(1),
+                Session {
+                    output,
+                    stats: Default::default(),
+                    palette: Default::default(),
+                    color_override: Default::default(),
+                    presets_emitted: Default::default(),
+                    peer: "127.0.0.1".parse().unwrap(),
+                    player: None,
+                    flow: LoginFlow::Pending,
+                    connected: now,
+                    active: now,
+                    decoder: Default::default(),
+                    quota: 1,
+                    quota_at: now,
+                    failed: Default::default(),
+                    output_message_limit: 65536,
+                },
+            );
+
+            let before = serde_json::to_vec(&*server.scripts.world.borrow()).unwrap();
+            server.controls.set(crate::controls::Control::Logins, false);
+            server
+                .authentication_result(
+                    SessionId(1),
+                    if create { "NewAdmission" } else { "Wizard" }.into(),
+                    create,
+                    if create { None } else { Some(ObjectId(2)) },
+                    if create { None } else { credential },
+                    Ok(if create { Some("unused".into()) } else { None }),
+                )
+                .await
+                .unwrap();
+            assert!(!server.sessions.contains_key(&SessionId(1)));
+            assert_eq!(
+                before,
+                serde_json::to_vec(&*server.scripts.world.borrow()).unwrap()
+            );
+            assert!(!server.config.database().exists());
         }
     }
 }

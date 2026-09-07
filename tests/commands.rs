@@ -105,6 +105,7 @@ async fn native_catalog_permissions_and_aliases() {
             "@teleport",
             "@flag",
             "@power",
+            "@readcache",
             "@enable",
             "@disable",
             "@list",
@@ -944,17 +945,10 @@ async fn deferred_destruction_and_cleaning_commands() {
         ("@list g", None),
     ] {
         assert!(
-            matches!(commands::run(&s,&c,ObjectId(1),1,command).unwrap(), Action::Cleaning(v) if v == value)
+            matches!(commands::run(&s,&c,ObjectId(1),1,command).unwrap(), Action::GlobalControl(v) if v == value.map(|b| (stompymux_rs::controls::Control::Cleaning,b)))
         );
     }
-    for command in [
-        "@enable log",
-        "@disable queueing",
-        "@enable checkpointing",
-        "@disable idlechecking",
-    ] {
-        assert!(run(&s, &c, 1, command).contains("not implemented"));
-    }
+    assert!(run(&s, &c, 1, "@enable checkpointing").contains("not implemented"));
     for command in ["@enable c", "@disable cleaning extra"] {
         assert!(run(&s, &c, 1, command).contains("don't know"));
     }

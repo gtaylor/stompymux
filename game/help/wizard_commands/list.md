@@ -30,7 +30,7 @@ permissions and minimum abbreviation lengths. Valid combinations are still
 checked by each command. Lua patterns are not interpreted as switch declarations.
 
 `@list flags` and `@list powers` retain their catalogs. `@list globals` shows
-the runtime cleaning status. Recognized list topics for
+runtime cleaning, idlechecking, queueing and login status. Recognized list topics for
 other deferred subsystems report that they are not implemented.
 
 Reports are private to your connection, automatically chunked and bounded. If the

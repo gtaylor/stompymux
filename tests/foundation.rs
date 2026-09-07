@@ -1219,9 +1219,9 @@ async fn tcp_powers_are_transactional_and_durable() {
     sqlx::Connection::close(db).await.unwrap();
 }
 
-/// IDLE is retained as metadata and does not yet bypass timeout enforcement.
+/// IDLE exempts ordinary authenticated accounts from inactivity timeout.
 #[tokio::test(flavor = "current_thread")]
-async fn idle_power_does_not_change_idle_timeout() {
+async fn idle_power_exempts_authenticated_player() {
     let (d, _) = populated().await;
     let path = d.path().join("stompymux.toml");
     let text = std::fs::read_to_string(&path)
@@ -1231,25 +1231,36 @@ async fn idle_power_does_not_change_idle_timeout() {
     std::fs::write(path, text).unwrap();
     let c = Config::load(d.path()).unwrap();
     let mut w = persistence::load(&c.database()).await.unwrap();
-    w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.accounts.get_mut(&ObjectId(2)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
     w.objects
-        .get_mut(&ObjectId(1))
+        .get_mut(&ObjectId(2))
         .unwrap()
         .powers
         .insert(stompymux_rs::powers::Power::Idle);
+    w.objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .flags
+        .remove(stompymux_rs::flags::Flag::Wizard);
+    w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
     persistence::save(&c.database(), &w).await.unwrap();
     let running = Running::start(&c).await;
     let mut client = Client::connect(&running).await;
-    client.send("#1").await;
+    client.send("#2").await;
     client.until("Password: ").await;
     client.send("secret").await;
     client.until("Staff Nexus").await;
-    tokio::time::timeout(Duration::from_secs(5), async {
-        let mut bytes = [0; 1024];
-        while client.socket.read(&mut bytes).await.unwrap() != 0 {}
-    })
-    .await
-    .expect("IDLE must not prevent timeout");
+    tokio::time::sleep(Duration::from_secs(3)).await;
+    client.send("look").await;
+    client.until("Staff Nexus").await;
+    let mut god = Client::connect(&running).await;
+    god.send("#1").await;
+    god.until("Password: ").await;
+    god.send("secret").await;
+    god.until("Staff Nexus").await;
+    god.send("@power #2=!idle").await;
+    god.until("removed.").await;
+    client.until("*** Inactivity Timeout ***").await;
     running.stop().await;
 }
 

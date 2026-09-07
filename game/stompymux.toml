@@ -194,6 +194,11 @@ modifier = 100
 # -----------------------------------------------
 
 [mux]
+# max_players counts authenticated sessions; negative is unlimited. Wizard/GOD
+# logins bypass capacity and disabled logins; public registration does not.
+# Connection/down/full/quit files and optional connect_dir are cached; @readcache
+# refreshes valid entries and retains failed replacements. UTF-8 aggregate cache
+# size uses lua.output_byte_limit. Runtime controls reset enabled on restart.
 # Automatic cleaning starts enabled each restart. Seconds: check_interval=600
 # (positive), check_offset=300 (nonnegative; zero uses check_interval).
 # @enable/@disable cleaning affect runtime only; @dbck leaves the timer unchanged.

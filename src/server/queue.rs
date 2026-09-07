@@ -11,6 +11,21 @@ impl Server {
         request: Request,
         before: World,
     ) {
+        if matches!(&request, Request::Add { .. })
+            && !self.controls.enabled(crate::controls::Control::Queueing)
+        {
+            *self.scripts.world.borrow_mut() = before;
+            self.reconcile_connections();
+            self.scripts.outbox.borrow_mut().clear();
+            self.scripts.flows.rollback();
+            self.queue_reply(
+                session,
+                actor,
+                "Sorry, queueing and triggering are not allowed now.",
+            );
+            self.flush();
+            return;
+        }
         let recipient = match &request {
             Request::Add { executor, .. } => *executor,
             _ => actor,
@@ -180,8 +195,9 @@ impl Server {
                 })
                 .await
             }
-            Ok(Action::Cleaning(value)) => {
-                let response = self.cleaning_control(value);
+            Ok(Action::ReadCache) => self.readcache(None, actor).await,
+            Ok(Action::GlobalControl(value)) => {
+                let response = self.global_control(value);
                 self.queue_reply(None, actor, &response);
                 self.flush();
             }
@@ -306,6 +322,9 @@ mod tests {
                 shutdown_failed: false,
                 command_queue: Default::default(),
                 cleaning: Default::default(),
+                controls: Default::default(),
+                idle_recheck: false,
+                message_cache: Default::default(),
             },
         )
     }

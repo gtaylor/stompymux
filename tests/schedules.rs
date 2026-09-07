@@ -663,3 +663,104 @@ async fn tcp_cleaning_controls_purge_failure_and_connected_players() {
         tx.send(ShutdownRequest::Sigterm).unwrap();task.await.unwrap().unwrap();
     }).await;
 }
+
+/// Admission capacity, runtime controls and cache reload share the real TCP owner.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_admission_controls_cache_and_existing_queue() {
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let (d, old) = fixture().await;
+            credentials(&old).await;
+            let path = d.path().join("stompymux.toml");
+            let mut config: toml::Value =
+                toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+            config
+                .as_table_mut()
+                .unwrap()
+                .entry("mux")
+                .or_insert(toml::Value::Table(Default::default()))
+                .as_table_mut()
+                .unwrap()
+                .insert("max_players".into(), toml::Value::Integer(2));
+            for key in ["login_attempt_burst", "login_hash_limit"] {
+                config["security"]
+                    .as_table_mut()
+                    .unwrap()
+                    .insert(key.into(), toml::Value::Integer(100));
+            }
+            std::fs::write(path, toml::to_string(&config).unwrap()).unwrap();
+            std::fs::write(d.path().join("text/full.txt"), "FULL OLD").unwrap();
+            std::fs::write(d.path().join("text/down.txt"), "DOWN MESSAGE").unwrap();
+            let c = Config::load(d.path()).unwrap();
+            let clock = Rc::new(Cell::new(0));
+            let (address, shutdown, task, _) = start(&c, clock).await;
+            let mut god = Client::connect(address, 1).await;
+            let mut player = Client::connect(address, 2).await;
+            async fn attempt(address: std::net::SocketAddr, name: &str, end: &str) -> String {
+                let mut client = Client {
+                    socket: TcpStream::connect(address).await.unwrap(),
+                    pending: Vec::new(),
+                };
+                client.until("Who are you? ").await;
+                client.send(name).await;
+                client.until("Password: ").await;
+                client.send("secret").await;
+                client.until(end).await
+            }
+            let before =
+                persistence::load(&c.database()).await.unwrap().accounts[&ObjectId(2)].successes;
+            attempt(address, "#2", "FULL OLD").await;
+            let mut registration = Client {
+                socket: TcpStream::connect(address).await.unwrap(),
+                pending: Vec::new(),
+            };
+            registration.until("Who are you? ").await;
+            registration.send("CapacityCandidate").await;
+            registration.until("[Y/n] ").await;
+            registration.send("y").await;
+            registration.until("Choose a password: ").await;
+            registration.send("secret").await;
+            registration.until("Retype password: ").await;
+            registration.send("secret").await;
+            registration.until("FULL OLD").await;
+            assert!(
+                persistence::load(&c.database())
+                    .await
+                    .unwrap()
+                    .find_player("CapacityCandidate")
+                    .is_none()
+            );
+
+            assert_eq!(
+                persistence::load(&c.database()).await.unwrap().accounts[&ObjectId(2)].successes,
+                before
+            );
+            std::fs::write(d.path().join("text/full.txt"), "FULL NEW").unwrap();
+            attempt(address, "#2", "FULL OLD").await;
+            god.send("@readcache").await;
+            god.until("Banners...0").await;
+            attempt(address, "#2", "FULL NEW").await;
+            god.send("@wait 1=say QUEUE_FINISHED").await;
+            god.send("@disable qu").await;
+            god.until("Disabled.").await;
+            god.send("@wait 0=say SHOULD_NOT_RUN").await;
+            god.until("queueing and triggering are not allowed now.")
+                .await;
+            god.until("QUEUE_FINISHED").await;
+            god.send("@disable log").await;
+            god.until("Disabled.").await;
+            attempt(address, "#2", "DOWN MESSAGE").await;
+            let mut privileged = Client::connect(address, 1).await;
+            privileged.send("@list globals").await;
+            privileged.until("logins...disabled").await;
+            player.send("look").await;
+            player.until("Staff Nexus").await;
+            let database = std::fs::read(c.database()).unwrap();
+            god.send("@list globals").await;
+            god.until("logins...disabled").await;
+            assert_eq!(database, std::fs::read(c.database()).unwrap());
+            shutdown.send(ShutdownRequest::Sigterm).unwrap();
+            task.await.unwrap().unwrap();
+        })
+        .await;
+}

@@ -30,6 +30,7 @@ Failed checks roll back and wait until the next interval.
 - `@dbck` checks immediately, even when automatic cleaning is disabled.
 
 `cl` abbreviates `cleaning`. Controls are runtime-only, do not edit TOML, and
-have no switches. Other global controls are not implemented. Automatic checks
+have no switches. The same commands support `idlechecking`, `queueing`, and
+`logins`; see `help runtime controls`. Checkpointing is unsupported. Automatic checks
 log their summaries to server diagnostics; ordinary destruction notifications
 and relocation callbacks still run. No prompt requests confirmation.

@@ -99,3 +99,19 @@ or unrepresentable monotonic deadlines before bootstrap or database writes.
 Cleaning starts enabled; runtime `@enable cleaning`/`@disable cleaning` do not
 change TOML. Manual `@dbck` does not reset the automatic deadline. No catch-up runs
 occur after delayed ticks, and failed attempts consume their interval.
+
+## Admission and cached connection text
+
+`mux.max_players` counts authenticated sessions; negative is unlimited and zero
+allows only privileged existing accounts. Wizard/GOD logins bypass this limit and
+the runtime logins control. Registration uses the same strict boundary as ordinary
+login. Controls default enabled each startup, have no additional TOML keys, and
+`@enable`/`@disable` do not persist them.
+
+`mux.connect_file`, `badsite_file`, `down_file`, `full_file`, `quit_file` and optional
+`connect_dir` are cached, relative to the game directory. `@readcache` applies
+successful replacements together while retaining unreadable/invalid entries.
+The existing `lua.output_byte_limit` bounds aggregate cached UTF-8 content; exceeding
+it rejects publication. Down/full responses append `mux.down_message` or
+`mux.full_message`. Banner discovery is lexical, nonrecursive and capped at 100
+regular nonhidden files containing `.txt`; each welcome selects uniformly.

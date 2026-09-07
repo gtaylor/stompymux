@@ -96,7 +96,7 @@ pub(super) fn stats(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
 pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     let arg = input.args.trim().to_ascii_lowercase();
     if !arg.is_empty() && "globals".starts_with(&arg) {
-        return Ok(Action::Cleaning(None));
+        return Ok(Action::GlobalControl(None));
     }
     let result = (|| -> Result<String> {
         let arg = input.args.trim().to_ascii_lowercase();
@@ -329,15 +329,13 @@ fn row(
 /// Toggle the implemented C global control; other known controls remain explicit errors.
 pub(super) fn cleaning(_ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     let arg = input.args.trim().to_ascii_lowercase();
-    if arg.len() >= 2 && "cleaning".starts_with(&arg) {
-        return Ok(Action::Cleaning(Some(input.name == "@enable")));
+    if let Some(control) = crate::controls::Control::parse(&arg) {
+        return Ok(Action::GlobalControl(Some((
+            control,
+            input.name == "@enable",
+        ))));
     }
-    let known = [
-        ("checkpointing", 2),
-        ("idlechecking", 2),
-        ("queueing", 2),
-        ("logins", 3),
-    ];
+    let known = [("checkpointing", 2)];
     Ok(Action::Reply(
         if known
             .iter()
@@ -348,4 +346,13 @@ pub(super) fn cleaning(_ctx: &CommandContext<'_>, input: &CommandInput) -> Resul
             "I don't know about that flag.".into()
         },
     ))
+}
+
+/// File-cache reload is an asynchronous world-owner action.
+pub(super) fn readcache(_ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    Ok(if input.args.is_empty() {
+        Action::ReadCache
+    } else {
+        Action::Reply("Usage: @readcache".into())
+    })
 }

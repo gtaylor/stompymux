@@ -40,12 +40,14 @@ pub enum Action {
     Help(String),
     /// Rebuild the immutable help metadata snapshot.
     HelpReload,
+    /// Reload connection messages without touching world storage.
+    ReadCache,
     /// Request common graceful shutdown.
     Shutdown,
     /// Run transactional database maintenance.
     DbCheck,
     /// Runtime cleaning toggle or status query.
-    Cleaning(Option<bool>),
+    GlobalControl(Option<(crate::controls::Control, bool)>),
     /// Disconnect the invoking session.
     Quit,
     /// Bounded session-private response without persistence.

@@ -139,9 +139,10 @@ those systems.
 
 ## Object powers
 
-The current legacy catalog contains one power, `IDLE`. It is persistent metadata
-only: granting it does **not** bypass idle timeouts yet. New objects have no
-powers, and imported powers survive restart.
+The current legacy catalog contains one power, `IDLE`. It exempts authenticated
+players from inactivity timeouts, as does Wizard/GOD status. New objects have no
+powers, and imported powers survive restart. Unauthenticated connections have no
+power exemption.
 
 Wizards can use `@power <target>=idle`, `@power <target>=!idle`, and `@list powers`.
 `@examine` also shows a `Powers:` line. Target resolution and control permissions
@@ -915,7 +916,45 @@ interval. No automatic check begins after shutdown starts.
 
 `@disable cleaning` and `@enable cleaning` (also `cl`) change only runtime state.
 Re-enabling overdue cleaning allows an attempt on the next maintenance tick.
-`@list globals` reports cleaning status. Other C controls are explicitly unsupported.
+`@list globals` reports cleaning, idlechecking, queueing and login status.
+Checkpointing remains unsupported.
 Manual `@dbck` works while cleaning is disabled and leaves its timer unchanged.
 Automatic summaries/errors go to diagnostics, not unsolicited player replies.
 GOING survives restart; cleaning does not reuse dbrefs or migrate the database.
+
+## Runtime controls and connection files
+
+`@enable` and `@disable` accept `cleaning` (`cl`), `idlechecking` (`id`),
+`queueing` (`qu`) and `logins` (`log`). All start enabled on restart and remain
+unchanged across Lua reload. They do not edit configuration or persistent data.
+`@list globals` displays their current state. `checkpointing` is unsupported.
+
+Disabling queueing rejects new `@force`/`@wait` admissions; existing work continues,
+and `@halt`, schedules and cleaning still operate. Disabling idlechecking suspends
+login and inactivity timeouts, but not socket cleanup, write deadlines or resource
+limits. Re-enabling checks elapsed idle time without resetting activity timestamps.
+
+`mux.max_players` counts authenticated sessions, including multiple connections
+for one account. Negative values are unlimited. Ordinary login and registration
+both require a free slot; verified Wizard/GOD logins bypass capacity and disabled
+logins. Existing sessions stay connected. Policy is rechecked after hashing before
+account creation or successful-login persistence. Public registration is blocked
+when logins are disabled; administrative `@pcreate` remains available.
+
+Connection, bad-site, down, full and quit files are cached at startup. `@readcache`
+refreshes them off-thread and reports file sizes/errors. Failed entries retain
+last-good content; an over-budget aggregate leaves the whole cache unchanged.
+The cache uses `lua.output_byte_limit`; delivery uses the existing chunked styled
+renderer and Telnet/compression queues. Missing startup entries use an empty cache,
+with built-in admission/goodbye fallbacks where needed. Bad-site text is cached,
+but site-rule enforcement and `connect_reg_file` remain deferred.
+
+A nonempty `mux.connect_dir` supplies random welcome banners: up to 100 nonhidden
+regular files whose names contain `.txt`, selected lexically before uniform choice.
+Without banners, the main connect file is used. A successful directory refresh
+removes deleted banners; a failed traversal retains the previous collection.
+All paths resolve against the game directory. Text must be UTF-8; CR and NUL are
+removed, LF is encoded as CRLF on delivery, and unsupported controls are filtered.
+Edits become visible after reload or restart; existing sessions are not rebannered.
+Admission refusal sends down/full file content plus its optional configured message
+before closing. Help reload remains independent of `@readcache`.
