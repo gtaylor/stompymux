@@ -34,7 +34,7 @@ pub fn list_definitions() -> Vec<ListDefinition> {
         ("options", 1, P::EVERYONE, true),
         ("permissions", 2, P::WIZARD, true),
         ("powers", 2, P::WIZARD, true),
-        ("process", 2, P::WIZARD, false),
+        ("process", 2, P::WIZARD, true),
         ("site_information", 2, P::WIZARD, true),
         ("switches", 2, P::EVERYONE, true),
         ("logfiles", 4, P::WIZARD, true),
@@ -166,6 +166,9 @@ pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
         )));
     }
     let topic = definition.name;
+    if topic == "process" {
+        return Ok(Action::ProcessReport);
+    }
     if topic == "logging" {
         return Ok(Action::LiteralReport(crate::logging::report(ctx.config)));
     }

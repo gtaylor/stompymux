@@ -1,7 +1,7 @@
 +++
 title = "@list commands"
 description = "List accessible built-in and Lua commands"
-keywords = ["@list commands", "@list", "list commands", "@list permissions", "@list switches", "@list config_permissions", "@list options", "@list default_flags", "@list bad_names"]
+keywords = ["@list commands", "@list", "list commands", "@list permissions", "@list switches", "@list config_permissions", "@list options", "@list default_flags", "@list bad_names", "@list process"]
 article_tags = ["wizard_commands"]
 wizard_only = true
 +++
@@ -56,3 +56,12 @@ unavailable for execution.
 live, restart-only or unsupported. `@list options` shows implemented runtime
 settings, `@list default_flags` shows new-object defaults, and `@list bad_names`
 lists disallowed name patterns. See [runtime administration](admin.md).
+
+## Process statistics
+
+`@list process` (abbreviated `@list pr`) reports process-wide host resource usage.
+It requires Wizard access by default and supports queued execution. CPU time is
+in seconds; page size and peak resident memory are bytes. Descriptor values are
+soft/hard limits, not free slots. Block I/O counts operations, and IPC counts
+messages rather than socket bytes. Unsupported counters say `unavailable` instead
+of misleadingly reporting zero. Collection is on demand with a bounded deadline.

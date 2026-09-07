@@ -30,6 +30,10 @@ pub enum Action {
     CommitReply(String),
     /// Read-only session diagnostics.
     Sessions(String),
+    /// Administrative connection listing.
+    Who(String),
+    /// Collect platform resource usage outside the world borrow.
+    ProcessReport,
     Telnet(String),
     /// Captured schedule metadata, delivered only to the invoking session.
     LuaSchedules(String),

@@ -5,6 +5,8 @@ use tokio::io::{AsyncWrite, AsyncWriteExt};
 /// Logical queue counters and actual socket bytes. Compression: 0 inactive, 1 starting, 2 active.
 #[derive(Debug, Default)]
 pub struct Stats {
+    /// Accepted interactive commands; only the world owner increments this counter.
+    pub commands: AtomicU64,
     pub input_total: AtomicU64,
     pub input_pending: AtomicU64,
     pub input_lost: AtomicU64,

@@ -1026,3 +1026,32 @@ appends to an operator-created regular file under `game/logs`; Wizards can inspe
 `@list logfiles`, and GOD can inspect `@list logging` (subject to configured topic
 permissions). See [logging](docs/logging.md) for auditing, redaction, runtime
 controls and transactional `mux.log` behavior.
+
+## Operational reports
+
+`WHO` remains the public Lua player listing. Wizard-only `@who [prefix]` lists
+all authenticated connections, including hidden players and multiple sessions,
+in session-ID order. It shows connection/idle times, DARK (`D`) and SUSPECT (`+`)
+markers, immediate location, accepted command count and peer IP. It requires an
+active connection and does not perform ident or reverse-DNS lookups.
+
+`@session [prefix]` shows transport queue and byte counters; `@telnet <player>`
+shows negotiated protocol details. All administrative connection reports are
+private to the requesting connection.
+
+The command counter includes denied and unknown commands, counting each macro
+invocation once. Login prompts, flow responses, queued commands, synthetic login
+appearance and quota-rejected input do not count. Exact case-insensitive `IDLE`
+outside a flow is a silent authenticated keepalive: quotas still apply, but it
+does not reset idle time, count, audit or dispatch. Whitespace and arguments make
+it an ordinary command; within flows it remains ordinary response text.
+
+Public `version` prints the Cargo package name and version. `@list process`
+(or `@list pr`) reports host resource usage; its topic permission defaults to
+Wizard and remains independently configurable. CPU time is in seconds, page size
+and peak RSS in bytes, and descriptor limits are soft/hard limits, not free slots.
+IPC counters describe messages, not Telnet traffic. Unsupported metrics say
+`unavailable`, which is distinct from measured zero. Collection is on-demand on a
+blocking worker with the configured write deadline. Both commands support queued
+execution. Reports use bounded chunked output and perform no world writes;
+independent suspect-command auditing can still update its channel.

@@ -70,3 +70,6 @@ pub mod sites;
 pub mod access;
 
 pub mod logging;
+
+/// Read-only operational reports and platform resource snapshots.
+pub mod operations;

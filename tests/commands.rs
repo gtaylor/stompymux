@@ -68,6 +68,8 @@ async fn native_catalog_permissions_and_aliases() {
             .map(|d| d.name.as_str())
             .collect::<Vec<_>>(),
         [
+            "@who",
+            "version",
             "@log",
             "@admin",
             "addcom",
@@ -159,6 +161,7 @@ async fn native_catalog_permissions_and_aliases() {
         assert_eq!(
             d.permission.roles(),
             if [
+                "version",
                 "look",
                 "say",
                 "pose",

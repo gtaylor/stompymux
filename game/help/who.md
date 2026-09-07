@@ -16,3 +16,7 @@ who Alex
 
 Players hidden from WHO are omitted when the server is configured to hide
 them. Wizards can use `@who` to see the privileged connection details.
+
+Wizards can use [@who](wizard_commands/who.md) for every authenticated connection,
+including hidden players, locations, command counts and hosts. `@session` instead
+shows transport queue and byte counters.

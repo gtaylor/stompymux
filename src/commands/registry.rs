@@ -73,6 +73,8 @@ pub struct CommandDefinition {
     pub direct_input_only: bool,
     /// Command requires the invoking connection, never a borrowed player session.
     pub requires_session: bool,
+    /// Native contextual response when invoked without a descriptor.
+    pub session_error: &'static str,
     /// C command cannot be reached through macro expansion.
     pub no_macro: bool,
 }
@@ -98,8 +100,15 @@ impl CommandDefinition {
             private_errors: false,
             direct_input_only: false,
             requires_session: false,
+            session_error: "This command requires an interactive session.",
             no_macro: false,
         }
+    }
+    /// Customize a descriptor-only command's error while retaining enumerable metadata.
+    pub fn requiring_session(mut self, message: &'static str) -> Self {
+        self.requires_session = true;
+        self.session_error = message;
+        self
     }
     /// Attach a native handler to objects using this module identity.
     pub fn object_native(
@@ -139,7 +148,7 @@ impl CommandDefinition {
             )
             .or_else(|| {
                 if self.requires_session && ctx.session.is_none() {
-                    Some("This command requires an interactive session.")
+                    Some(self.session_error)
                 } else {
                     None
                 }
@@ -251,6 +260,11 @@ impl CommandRegistry {
     pub fn new() -> Self {
         use CommandPermissions as P;
         let mut definitions = vec![
+            CommandDefinition::native("@who", P::WIZARD, crate::operations::who_command)
+                .requiring_session("@who is only available from an active connection.")
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
+            CommandDefinition::native("version", P::EVERYONE, crate::operations::version_command)
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("@log", P::WIZARD, crate::logging::command)
                 .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("@admin", P::WIZARD, crate::config::administration::command)
@@ -371,7 +385,7 @@ impl CommandRegistry {
         definitions.extend(crate::macros::commands::definitions());
         definitions.extend(super::objects::definitions());
         for entry in &mut definitions {
-            entry.requires_session = matches!(
+            entry.requires_session |= matches!(
                 entry.name.as_str(),
                 "color"
                     | "quit"
@@ -615,6 +629,7 @@ impl CommandRegistry {
                     private_errors: false,
                     direct_input_only: false,
                     requires_session: false,
+                    session_error: "This command requires an interactive session.",
                     no_macro: false,
                 })
             })()

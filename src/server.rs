@@ -2,6 +2,7 @@
 mod administration;
 mod configuration;
 mod logging;
+mod operations;
 mod presence;
 mod queue;
 use crate::{
@@ -1240,7 +1241,12 @@ impl Server {
                     Input::Line(line) => {
                         let line = Zeroizing::new(line);
                         let s = self.sessions.get_mut(&id).unwrap();
-                        s.active = Instant::now();
+                        let keepalive = s.player.is_some()
+                            && !self.scripts.flows.active(id.0)
+                            && line.eq_ignore_ascii_case("IDLE");
+                        if !keepalive {
+                            s.active = Instant::now();
+                        }
                         let elapsed = s.quota_at.elapsed().as_millis();
                         let interval = u128::from(self.config.mux.command_quota_interval);
                         let periods = elapsed / interval;
@@ -1262,10 +1268,18 @@ impl Server {
                             continue;
                         }
                         s.quota -= 1;
+                        if keepalive {
+                            continue;
+                        }
                         if let Some(p) = s.player {
                             if self.scripts.flows.active(id.0) {
                                 self.flow_input(id, &line).await;
                             } else {
+                                let _ = s.stats.commands.fetch_update(
+                                    std::sync::atomic::Ordering::Relaxed,
+                                    std::sync::atomic::Ordering::Relaxed,
+                                    |n| Some(n.saturating_add(1)),
+                                );
                                 self.command(id, p, &line).await?;
                             }
                         } else {
@@ -1989,6 +2003,14 @@ impl Server {
                         ));
                     }
                 }
+            }
+            Ok(Action::Who(prefix)) => {
+                let text = self.who_report(&prefix);
+                self.operation_report(id, &text).await;
+            }
+            Ok(Action::ProcessReport) => {
+                let text = crate::operations::process_report(&self.config).await;
+                self.operation_report(id, &text).await;
             }
             Ok(Action::LiteralReport(text)) => {
                 if let Some(session) = self.sessions.get(&id)

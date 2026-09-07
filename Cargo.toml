@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+nix = { version = "0.31.3", default-features = false, features = ["resource", "feature"] }
 flate2 = { version = "1.1.10", default-features = false, features = ["rust_backend"] }
 anyhow = "1.0.104"
 argon2 = "0.6.0"

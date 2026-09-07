@@ -179,6 +179,11 @@ impl Server {
                 self.queue_reply(None, actor, &text);
                 self.flush();
             }
+            Ok(Action::ProcessReport) => {
+                let text = crate::operations::process_report(&self.config).await;
+                self.queue_reply(None, actor, &text);
+                self.flush();
+            }
             Ok(Action::ExamineDebug(object)) => {
                 let result = persistence::inspect_links(
                     &self.config.database(),
