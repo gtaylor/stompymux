@@ -36,6 +36,7 @@ fn error(e: impl std::fmt::Display) -> mlua::Error {
 #[derive(Clone)]
 struct Handle {
     id: ChannelId,
+    name: String,
     bindings: Rc<Bindings>,
 }
 
@@ -72,6 +73,9 @@ fn wrapper(lua: &Lua, id: ObjectId) -> mlua::Result<Value> {
 
 impl UserData for Handle {
     fn add_methods<M: UserDataMethods<Self>>(m: &mut M) {
+        m.add_meta_method(MetaMethod::ToString, |_, h, ()| {
+            Ok(format!("channel({})", h.name))
+        });
         m.add_method("name", |lua, h, ()| h.name(lua));
         m.add_method("object", |lua, h, ()| {
             let name = h.name(lua)?;
@@ -129,10 +133,12 @@ impl UserData for Handle {
             |lua, h, (message, options): (String, Option<Table>)| {
                 let name = h.name(lua)?;
                 let no_header = option(options, "no_header")?;
-                h.bindings
-                    .service(lua)
-                    .emit(&name, &message, no_header)
-                    .map_err(error)
+                crate::lua::transactions::run(lua, &h.bindings.world, &h.bindings.outbox, || {
+                    h.bindings
+                        .service(lua)
+                        .emit(&name, &message, no_header)
+                        .map_err(error)
+                })
             },
         );
         m.add_method("who", |lua, h, options: Option<Table>| {
@@ -169,19 +175,23 @@ impl UserData for Handle {
                 if h.bindings.world.borrow().objects[&who].kind != Kind::Player {
                     return Err(error("expected a player"));
                 }
-                h.bindings
-                    .service(lua)
-                    .add(who, &name, &alias, quiet, true)
-                    .map_err(error)
+                crate::lua::transactions::run(lua, &h.bindings.world, &h.bindings.outbox, || {
+                    h.bindings
+                        .service(lua)
+                        .add(who, &name, &alias, quiet, true)
+                        .map_err(error)
+                })
             },
         );
         m.add_method("boot_player", |lua, h, value: Value| {
             let name = h.name(lua)?;
             let who = object(value, &h.bindings)?;
-            h.bindings
-                .service(lua)
-                .boot(ObjectId(1), who, &name)
-                .map_err(error)
+            crate::lua::transactions::run(lua, &h.bindings.world, &h.bindings.outbox, || {
+                h.bindings
+                    .service(lua)
+                    .boot(ObjectId(1), who, &name)
+                    .map_err(error)
+            })
         });
         m.add_meta_method(MetaMethod::Eq, |_, h, other: AnyUserData| {
             Ok(other
@@ -222,6 +232,9 @@ impl UserData for ChannelFlag {
 struct Flags(Handle);
 impl UserData for Flags {
     fn add_methods<M: UserDataMethods<Self>>(m: &mut M) {
+        m.add_meta_method(MetaMethod::ToString, |lua, f, ()| {
+            Ok(format!("channel_flags({})", f.0.name(lua)?))
+        });
         m.add_method("list", |lua, f, ()| {
             let name = f.0.name(lua)?;
             let flags = f.0.bindings.world.borrow().channels[&name].flags;
@@ -289,6 +302,7 @@ pub(super) fn register(
                 let id = bindings.service(lua).create(&name).map_err(error)?;
                 lua.create_userdata(Handle {
                     id,
+                    name,
                     bindings: bindings.clone(),
                 })
             })?,
@@ -305,6 +319,7 @@ pub(super) fn register(
                 let id = bindings.world.borrow().channels[&name].id;
                 Ok(Value::UserData(lua.create_userdata(Handle {
                     id,
+                    name,
                     bindings: bindings.clone(),
                 })?))
             })?,
@@ -330,15 +345,16 @@ pub(super) fn register(
                     .borrow()
                     .channels
                     .values()
-                    .map(|c| (c.name.to_ascii_lowercase(), c.id))
+                    .map(|c| (c.name.clone(), c.id))
                     .collect::<Vec<_>>();
-                channels.sort_by(|a, b| a.0.cmp(&b.0));
+                channels.sort_by_key(|a| a.0.to_ascii_lowercase());
                 let result = lua.create_table()?;
-                for (i, (_, id)) in channels.into_iter().enumerate() {
+                for (i, (name, id)) in channels.into_iter().enumerate() {
                     result.set(
                         i + 1,
                         lua.create_userdata(Handle {
                             id,
+                            name,
                             bindings: bindings.clone(),
                         })?,
                     )?;

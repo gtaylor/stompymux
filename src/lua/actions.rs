@@ -1,11 +1,16 @@
 //! Transaction-staged action messages and operation-specific object events.
 use super::Scripts;
-use crate::{
-    LockInvocation, LockOutcome,
-    world::{Kind, ObjectId},
-};
-use anyhow::{Result, ensure};
+use crate::{LockInvocation, LockOutcome, world::ObjectId};
+use anyhow::{Context, Result, ensure};
 use mlua::{Function, Table, Value};
+
+/// Live stored content that takes precedence after a message provider executes.
+#[derive(Clone, Copy)]
+pub(crate) enum ActionContent {
+    None,
+    Description,
+    InternalDescription,
+}
 
 /// Explicit action context shared by message and event handlers.
 #[derive(Clone, Copy)]
@@ -95,14 +100,31 @@ impl Scripts {
         default: Option<&str>,
         others: Option<&str>,
     ) -> Result<()> {
+        self.action_message_content(
+            action,
+            message,
+            event,
+            ActionContent::None,
+            (default, others),
+        )
+    }
+
+    /// Evaluate providers before reading selected content, retaining their side effects.
+    pub(crate) fn action_message_content(
+        &self,
+        action: ObjectAction<'_>,
+        message: &str,
+        event: Option<&str>,
+        content: ActionContent,
+        defaults: (Option<&str>, Option<&str>),
+    ) -> Result<()> {
+        let (default, others) = defaults;
         let ctx = self.action_context(action)?;
         ctx.set("message", message)
             .map_err(|e| anyhow::anyhow!("{e}"))?;
         let mut enactor_text = default.map(str::to_string);
         let mut other_text = others.map(str::to_string);
-        if !action.silent
-            && let Some(parent) = self.action_parent(action.object)?
-        {
+        if let Some(parent) = self.action_parent(action.object)? {
             let messages = parent
                 .get::<Option<Table>>("messages")
                 .map_err(|e| anyhow::anyhow!("{e}"))?;
@@ -125,7 +147,10 @@ impl Scripts {
                     );
                     ensure!(
                         key.as_ref() != "enactor_message"
-                            || !matches!(message, "enter_source" | "leave_destination"),
+                            || !matches!(
+                                message,
+                                "enter_source" | "leave_destination" | "teleport_source"
+                            ),
                         "{message} only accepts other_message"
                     );
                     let Value::String(value) = value else {
@@ -147,14 +172,35 @@ impl Scripts {
                 }
             }
         }
-        if !action.silent {
-            self.action_text(
-                action.enactor,
-                action.object,
-                enactor_text.as_deref(),
-                other_text.as_deref(),
-            )?;
+        if !matches!(content, ActionContent::None) {
+            let world = self.world.borrow();
+            let object = world
+                .objects
+                .get(&action.object)
+                .context("Action object missing")?;
+            ensure!(
+                object.kind != crate::world::Kind::Garbage,
+                "Action object destroyed"
+            );
+            let stored = match content {
+                ActionContent::Description => &object.description,
+                ActionContent::InternalDescription => &object.internal_description,
+                ActionContent::None => unreachable!(),
+            };
+            if let Some(text) = stored.as_ref().filter(|text| !text.is_empty()) {
+                enactor_text = Some(text.clone());
+            }
         }
+        self.action_text(
+            action.enactor,
+            action.object,
+            enactor_text.as_deref(),
+            if action.silent {
+                None
+            } else {
+                other_text.as_deref()
+            },
+        )?;
         if !action.silent
             && let Some(event) = event
         {
@@ -163,34 +209,56 @@ impl Scripts {
         Ok(())
     }
 
-    /// Deliver ordinary action text without interpreting it as a command.
+    /// Route action text through the notification graph, including AUDIBLE containment/exits.
     pub fn action_text(
         &self,
         enactor: ObjectId,
-        object: ObjectId,
+        excluded: ObjectId,
         direct: Option<&str>,
         others: Option<&str>,
     ) -> Result<()> {
-        if let Some(text) = direct.filter(|s| !s.is_empty()) {
+        if let Some(text) = direct.filter(|v| !v.is_empty()) {
             self.outbox.borrow_mut().push((enactor, text.into()));
+            let has_exit = self.world.borrow().objects.values().any(|object| {
+                object.kind == crate::world::Kind::Exit
+                    && object.location == Some(enactor)
+                    && object.flags.contains(crate::flags::Flag::Audible)
+                    && object.destination.is_some_and(|to| to != enactor)
+            });
+            if has_exit {
+                crate::notification::send(
+                    &self.world.borrow(),
+                    &self.outbox,
+                    &super::configuration(&self.lua),
+                    crate::notification::Request {
+                        target: enactor,
+                        sender: enactor,
+                        document: text.into(),
+                        policy: crate::notification::Policy::AUDIBLE_EXITS,
+                        exclusions: None,
+                    },
+                )?;
+            }
         }
-        if let Some(text) = others.filter(|s| !s.is_empty()) {
-            let w = self.world.borrow();
-            let actor = w
+        if let Some(text) = others.filter(|v| !v.is_empty()) {
+            let world = self.world.borrow();
+            let actor = world
                 .objects
                 .get(&enactor)
                 .ok_or_else(|| anyhow::anyhow!("Action enactor missing"))?;
             if let Some(location) = actor.location {
-                for other in w.objects.values().filter(|o| {
-                    o.kind == Kind::Player
-                        && o.location == Some(location)
-                        && o.id != enactor
-                        && o.id != object
-                }) {
-                    self.outbox
-                        .borrow_mut()
-                        .push((other.id, format!("{} {text}", actor.name).into()));
-                }
+                crate::notification::send(
+                    &world,
+                    &self.outbox,
+                    &super::configuration(&self.lua),
+                    crate::notification::Request {
+                        target: location,
+                        sender: enactor,
+                        document: format!("{} {text}", actor.name).into(),
+                        policy: crate::notification::Policy::ROOM,
+                        exclusions: Some(vec![enactor, excluded]),
+                    },
+                )?;
             }
         }
         Ok(())
@@ -203,6 +271,17 @@ impl Scripts {
         };
         let ctx = self.action_context(action)?;
         ctx.set("event", event)
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        self.call_event(parent, event, ctx)
+    }
+
+    /// Invoke a native lock-failure event without leaking the lock-only subject field.
+    fn failure_event(&self, action: ObjectAction<'_>, event: &str) -> Result<()> {
+        let Some(parent) = self.action_parent(action.object)? else {
+            return Ok(());
+        };
+        let ctx = self.action_context(action)?;
+        ctx.set("subject", Value::Nil)
             .map_err(|e| anyhow::anyhow!("{e}"))?;
         self.call_event(parent, event, ctx)
     }
@@ -225,7 +304,7 @@ impl Scripts {
             outcome.other_message.as_deref(),
         )?;
         if let Some(event) = event {
-            self.object_event(
+            self.failure_event(
                 ObjectAction {
                     object: invocation.object,
                     enactor: invocation.enactor,
@@ -244,19 +323,31 @@ impl Scripts {
 }
 
 impl Scripts {
-    /// Ordinary movement's departure/arrival messages, cross-location messages and events.
-    pub fn transition_action(
+    /// Apply departure/arrival actions with the captured cause and hearing state.
+    pub fn transition_action_context(
         &self,
         movement: &crate::movement::Move,
         entering: bool,
         hush: bool,
+        context: TransitionContext,
     ) -> Result<()> {
         use crate::flags::{self, Flag};
-        let location = if entering {
-            Some(movement.destination)
-        } else {
-            movement.source
-        };
+        let location = self
+            .world
+            .borrow()
+            .objects
+            .get(&movement.object)
+            .ok_or_else(|| anyhow::anyhow!("Moved object missing"))?
+            .location;
+        if location
+            == if entering {
+                movement.source
+            } else {
+                Some(movement.destination)
+            }
+        {
+            return Ok(());
+        }
         let Some(location) = location else {
             return Ok(());
         };
@@ -271,7 +362,7 @@ impl Scripts {
                 .get(&location)
                 .ok_or_else(|| anyhow::anyhow!("Movement location missing"))?;
             let dark_wizard = flags::is_wizard(&w, thing.id) && thing.flags.contains(Flag::Dark);
-            let hear = thing.flags.contains(Flag::Connected);
+            let hear = context.hear;
             let visible = !thing.flags.contains(Flag::Dark) && !loc.flags.contains(Flag::Dark);
             let quiet =
                 hush || !(flags::is_wizard(&w, location) || visible || (hear && !dark_wizard));
@@ -288,10 +379,18 @@ impl Scripts {
         let action = ObjectAction {
             object: location,
             enactor: movement.object,
-            cause: super::transactions::cause(&self.lua).unwrap_or(movement.actor),
+            cause: context.cause,
             descriptor: movement.session,
-            source: movement.source,
-            destination: Some(movement.destination),
+            source: if !entering {
+                Some(location)
+            } else {
+                movement.source
+            },
+            destination: if entering {
+                Some(location)
+            } else {
+                Some(movement.destination)
+            },
             operation: "move",
             silent: quiet,
         };
@@ -328,7 +427,7 @@ impl Scripts {
         if announce {
             self.action_text(
                 movement.object,
-                movement.actor,
+                context.excluded,
                 None,
                 Some(if entering {
                     "has arrived."
@@ -339,4 +438,12 @@ impl Scripts {
         }
         Ok(())
     }
+}
+
+/// Values captured before any movement messages or callbacks execute.
+#[derive(Clone, Copy)]
+pub struct TransitionContext {
+    pub cause: ObjectId,
+    pub hear: bool,
+    pub excluded: ObjectId,
 }

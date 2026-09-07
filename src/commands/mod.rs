@@ -1,5 +1,6 @@
 //! Exit-first scoped command dispatch with transactional native and Lua handlers.
 pub mod discovery;
+mod exits;
 pub(crate) mod inspection;
 mod native;
 mod objects;
@@ -205,7 +206,7 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
         return Ok(action);
     }
     let input = CommandInput::parse(c, line);
-    if match_exit(&ctx, line)? {
+    if exits::travel(&ctx, line, exits::Invocation::Bare)? {
         return Ok(Action::Continue);
     }
     let sources = sources::sources(&s.world.borrow(), player);
@@ -261,65 +262,4 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
         "Huh? (Type look, say <message>, WHO, an exit name, or quit.)".into(),
     ));
     Ok(Action::Continue)
-}
-
-/// Exit matches consume the command even when traversal fails.
-fn match_exit(ctx: &CommandContext<'_>, line: &str) -> Result<bool> {
-    let s = ctx.scripts;
-    let player = ctx.player;
-    let session = ctx.session;
-    let Some(room) = s
-        .world
-        .borrow()
-        .objects
-        .get(&player)
-        .and_then(|o| o.location)
-    else {
-        return Ok(false);
-    };
-
-    let line = line.trim();
-    let exits: Vec<_> = s
-        .world
-        .borrow()
-        .objects
-        .values()
-        .filter(|o| {
-            o.kind == Kind::Exit
-                && o.location == Some(room)
-                && crate::text::plain_with(&s.palette, &o.name)
-                    .split(';')
-                    .any(|n| n.eq_ignore_ascii_case(line))
-        })
-        .map(|o| (o.id, o.destination))
-        .collect();
-    let preferred = s.prefer_matches(player, exits.iter().map(|e| e.0).collect(), session)?;
-    let exits: Vec<_> = exits
-        .into_iter()
-        .filter(|e| preferred.contains(&e.0))
-        .collect();
-    match exits.as_slice() {
-        [(exit, Some(destination))] => {
-            if s.traversal(player, *exit, session)? {
-                crate::movement::perform(
-                    s,
-                    player,
-                    ctx.cause,
-                    *destination,
-                    session,
-                    crate::movement::Route::Exit,
-                )?;
-            }
-        }
-        [(_, None)] => s
-            .outbox
-            .borrow_mut()
-            .push((player, "You can't go that way.".into())),
-        [] => return Ok(false),
-        _ => s
-            .outbox
-            .borrow_mut()
-            .push((player, "I don't know which exit you mean.".into())),
-    }
-    Ok(true)
 }

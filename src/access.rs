@@ -212,7 +212,7 @@ pub fn native_defaults(name: &str, roles: Permissions) -> Permissions {
     let extra = match name {
         "@clone" | "@create" => P::CONTENTS,
         "@emit" | "@femit" | "@fpose" | "@fsay" | "@oemit" | "enter" | "get" | "give" | "leave"
-        | "look" | "pose" | "say" => P::LOCATION,
+        | "goto" | "look" | "pose" | "say" => P::LOCATION,
         "drop" => P::CONTENTS | P::LOCATION,
         "@force" | "@wait" => P::QUEUE,
         ";" | "\\" => P::LOCATION | P::DARK,

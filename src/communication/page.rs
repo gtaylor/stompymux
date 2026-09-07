@@ -9,19 +9,23 @@ impl Service<'_> {
         if !saved && targets.trim().is_empty() {
             return self.notify(sender, "I don't recognize \"\".");
         }
-        let recipients = if saved {
-            self.world
+        let (recipients, group_format) = if saved {
+            let recipients = self
+                .world
                 .borrow()
                 .last_pages
                 .get(&sender)
                 .cloned()
-                .unwrap_or_default()
+                .unwrap_or_default();
+            let group = recipients.len() > 1;
+            (recipients, group)
         } else {
             let w = self.world.borrow();
             if let Some(id) = w.find_player(targets.trim()) {
-                vec![id]
+                (vec![id], false)
             } else {
                 let names: Vec<_> = targets.split_whitespace().collect();
+                let group = names.len() > 1;
                 let mut found = Vec::new();
                 for name in names {
                     if let Some(id) = w.find_player(name) {
@@ -33,7 +37,7 @@ impl Service<'_> {
                         )?;
                     }
                 }
-                found
+                (found, group)
             }
         };
         if saved && targets.is_empty() {
@@ -104,20 +108,40 @@ impl Service<'_> {
                 continue;
             }
             let output = if let Some((separator, body)) = pose {
-                if multiple {
+                if group_format {
                     format!("From afar, to ({names}):{alias} {name}{separator}{body}")
                 } else {
                     format!("From afar,{alias} {name}{separator}{body}")
                 }
             } else {
                 let body = message.strip_prefix('"').unwrap_or(&message);
-                if multiple {
+                if group_format {
                     format!("To ({names}), {name}{alias} pages you: {body}")
                 } else {
                     format!("{name}{alias} pages: {body}")
                 }
             };
-            self.deliver(target, &output, true)?;
+            self.notify(target, output.clone())?;
+            let has_exit = self.world.borrow().objects.values().any(|object| {
+                object.kind == Kind::Exit
+                    && object.location == Some(target)
+                    && object.flags.contains(Flag::Audible)
+                    && object.destination.is_some_and(|to| to != target)
+            });
+            if has_exit {
+                crate::notification::send(
+                    &self.world.borrow(),
+                    self.outbox,
+                    &self.config,
+                    crate::notification::Request {
+                        target,
+                        sender,
+                        document: output.into(),
+                        policy: crate::notification::Policy::AUDIBLE_EXITS,
+                        exclusions: None,
+                    },
+                )?;
+            }
             delivered.push(target);
         }
         if !delivered.is_empty() {

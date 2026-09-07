@@ -53,7 +53,11 @@ pub(super) fn get(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Acti
             ctx.player,
             false,
             Some("on_fail"),
-            "You can't take that.",
+            if source == Some(location) {
+                "You can't pick that up."
+            } else {
+                "You can't take that from there."
+            },
         )? {
             return Ok(());
         }
@@ -124,7 +128,7 @@ pub(super) fn drop(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
             "drop",
             Some("on_drop"),
             Some("Dropped."),
-            Some(&format!("drops {}.", display(ctx, target)?)),
+            Some(&format!("dropped {}.", display(ctx, target)?)),
         )?;
         let dropto = {
             let w = ctx.scripts.world.borrow();
@@ -172,7 +176,7 @@ pub(super) fn give(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
             ctx.player,
             false,
             Some("on_give_fail"),
-            "You can't give that away.",
+            &format!("You can't give {} away.", display(ctx, target)?),
         )? {
             return Ok(());
         }
@@ -183,7 +187,11 @@ pub(super) fn give(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
             target,
             false,
             Some("on_give_receive_fail"),
-            "That recipient won't accept the object.",
+            &format!(
+                "{} doesn't want {}.",
+                display(ctx, recipient)?,
+                display(ctx, target)?
+            ),
         )? {
             return Ok(());
         }
@@ -342,11 +350,14 @@ pub(super) fn enter(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
         }
         crate::movement::perform(
             ctx.scripts,
-            ctx.player,
-            ctx.player,
-            target,
-            ctx.session,
-            crate::movement::Route::Generic,
+            crate::movement::Request {
+                actor: ctx.player,
+                object: ctx.player,
+                cause: ctx.cause,
+                destination: target,
+                session: ctx.session,
+                route: crate::movement::Route::Generic,
+            },
         )
     })
 }
@@ -392,11 +403,14 @@ pub(super) fn leave(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
         }
         crate::movement::perform(
             ctx.scripts,
-            ctx.player,
-            ctx.player,
-            destination,
-            ctx.session,
-            crate::movement::Route::Generic,
+            crate::movement::Request {
+                actor: ctx.player,
+                object: ctx.player,
+                cause: ctx.cause,
+                destination,
+                session: ctx.session,
+                route: crate::movement::Route::Generic,
+            },
         )
     })
 }

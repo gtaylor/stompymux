@@ -107,11 +107,14 @@ pub(super) fn home(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
             .context("Your home is not set.")?;
         movement::perform(
             ctx.scripts,
-            ctx.player,
-            ctx.player,
-            destination,
-            ctx.session,
-            Route::Home,
+            movement::Request {
+                actor: ctx.player,
+                object: ctx.player,
+                cause: ctx.cause,
+                destination,
+                session: ctx.session,
+                route: Route::Home,
+            },
         )
     })();
     movement_response(ctx, result)
@@ -142,11 +145,14 @@ pub(super) fn teleport(ctx: &CommandContext<'_>, input: &CommandInput) -> Result
         };
         movement::perform(
             ctx.scripts,
-            ctx.player,
-            object,
-            destination,
-            ctx.session.filter(|_| object == ctx.player),
-            Route::Teleport,
+            movement::Request {
+                actor: ctx.player,
+                object,
+                cause: ctx.cause,
+                destination,
+                session: ctx.session.filter(|_| object == ctx.player),
+                route: Route::Teleport,
+            },
         )
     })();
     movement_response(ctx, result)
@@ -214,4 +220,10 @@ pub(super) fn help_admin(_: &CommandContext<'_>, input: &CommandInput) -> Result
 /// Delegate typed Lua administration after central permission checks.
 pub(super) fn lua_admin(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     crate::lua::admin::command(ctx, input)
+}
+
+/// Traverse a local exit after central command permission and switch checks.
+pub(super) fn goto(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    super::exits::travel(ctx, &input.args, super::exits::Invocation::Explicit)?;
+    Ok(Action::Continue)
 }

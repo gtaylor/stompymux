@@ -1,0 +1,869 @@
+{
+  "c_revision": "2bbbe6fc",
+  "baseline_rust_revision": "3a1c559",
+  "evidence": "Initial rows use source inspection plus named Rust regressions. Round two adds optional paired C/Rust TCP execution, captured in behavioral-wire.json; each new finding identifies its evidence in behavioral-audit-round2.json. Verification claims apply only to the stated contract.",
+  "behaviors": [
+    {
+      "id": "M01",
+      "area": "movement/locks",
+      "behavior": "Home and container teleport action order, causes and DARK suppression",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/world/move.c",
+      "rust_source": "src/movement.rs",
+      "tests": [
+        "tests/movement_parity.rs",
+        "tests/fixtures/movement-parity.json"
+      ],
+      "note": "Selected C traces; descriptors remain session-safe, event contexts retain Rust source/destination fields. Appearance precedes object arrival actions."
+    },
+    {
+      "id": "M02",
+      "area": "movement/locks",
+      "behavior": "Same-location movement has no transition side effects",
+      "status": "intentional difference",
+      "c_source": "btmux-khi/src/mux/world/move.c",
+      "rust_source": "src/movement.rs",
+      "tests": [
+        "tests/movement_parity.rs"
+      ],
+      "note": "Preserve successful no-op; C generic/teleport object actions can still run."
+    },
+    {
+      "id": "M03",
+      "area": "movement/locks",
+      "behavior": "Exit teleport destinations and movement switches",
+      "status": "intentional difference",
+      "c_source": "btmux-khi/src/mux/commands/wiz.c",
+      "rust_source": "src/commands/native.rs",
+      "tests": [
+        "tests/movement_parity.rs"
+      ],
+      "note": "Exit destinations, goto/quiet and @teleport/quiet|loud remain rejected by user decision."
+    },
+    {
+      "id": "M04",
+      "area": "movement/locks",
+      "behavior": "Lock catalog and fail-closed checks",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/lua/lua_lock_catalog.c",
+      "rust_source": "src/locks.rs",
+      "tests": [
+        "tests/locks.rs",
+        "tests/fixtures/lock_catalog.tsv"
+      ],
+      "note": "Catalog and selected lock invocation/denial contracts; not a claim of every matching combination."
+    },
+    {
+      "id": "D01",
+      "area": "movement/locks",
+      "behavior": "Silent generic movement message providers",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/commands/action_messages.c",
+      "rust_source": "src/lua/actions.rs",
+      "tests": [
+        "tests/movement_parity.rs"
+      ],
+      "note": "Resolved: silent providers execute and retain direct text/mutations; neighbor text and associated events are suppressed. generic_actions_match_c_silence_order_and_routing and exit_contexts_suppression_and_callback_rollback."
+    },
+    {
+      "id": "D02",
+      "area": "communication",
+      "behavior": "Ordinary action other_message routing",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/commands/action_messages.c",
+      "rust_source": "src/lua/actions.rs",
+      "tests": [
+        "tests/movement_parity.rs"
+      ],
+      "note": "Resolved: all shared action neighbors use the notification graph with actor prefixes and exclusions. generic_actions_match_c_silence_order_and_routing and generic_container_contexts_and_notification_limits."
+    },
+    {
+      "id": "D03",
+      "area": "movement/locks",
+      "behavior": "Generic movement appearance ordering",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/world/move.c",
+      "rust_source": "src/movement.rs",
+      "tests": [
+        "tests/movement_parity.rs"
+      ],
+      "note": "Resolved: generic relocation renders immediately before move/arrival actions. generic_actions_match_c_silence_order_and_routing; container and rendering rollback regressions."
+    },
+    {
+      "id": "C01",
+      "area": "commands/switches",
+      "behavior": "Catalog, scoped matching and access inventory",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/commands/command_dispatch.c",
+      "rust_source": "src/commands/registry.rs",
+      "tests": [
+        "tests/commands.rs",
+        "tests/access.rs",
+        "tests/fixtures/native-switches.txt"
+      ],
+      "note": "Existing coverage is extensive; no exhaustive cross-product of scoped handlers, aliases, exits and switch ACLs compared against C in this pass. Round two reviewed selected paths; coverage and remaining gaps are recorded in behavioral-audit-round2.json."
+    },
+    {
+      "id": "C02",
+      "area": "commands/switches",
+      "behavior": "Removed command forms",
+      "status": "intentional difference",
+      "c_source": "btmux-khi/src/mux/commands/command_table.c",
+      "rust_source": "src/commands/registry.rs",
+      "tests": [
+        "tests/commands.rs",
+        "tests/foundation.rs"
+      ],
+      "note": "Do not restore @dump, #dbref command, inventory /quiet or look/outside."
+    },
+    {
+      "id": "C03",
+      "area": "commands/switches",
+      "behavior": "@destroy/recursive spelling",
+      "status": "intentional difference",
+      "c_source": "btmux-khi/src/mux/commands/builder_destroy_commands.c",
+      "rust_source": "src/commands/objects/destruction.rs",
+      "tests": [
+        "tests/foundation.rs"
+      ],
+      "note": "C accepts the bit but ignores it in do_destroy. Rust rejects it; no recursive destruction feature is inferred."
+    },
+    {
+      "id": "T01",
+      "area": "targeting/permissions",
+      "behavior": "Control rules and ambiguous target combinations",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/world/match.c",
+      "rust_source": "src/commands/target.rs",
+      "tests": [
+        "tests/building.rs",
+        "tests/locks.rs",
+        "tests/access.rs"
+      ],
+      "note": "GOD/Wizard and visible-target coverage exists; all preferred-type, inherited-exit and ambiguous-name combinations still need comparative review. Round two reviewed selected paths; coverage and remaining gaps are recorded in behavioral-audit-round2.json."
+    },
+    {
+      "id": "O01",
+      "area": "object lifecycle",
+      "behavior": "GOING, protected objects, purge and relational cleanup",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/world/database_check.c",
+      "rust_source": "src/dbck.rs",
+      "tests": [
+        "tests/dbck.rs",
+        "tests/foundation.rs"
+      ],
+      "note": "Rust failure injection/repair tests establish safety; all corrupt-list ownership and cleanup combinations have not been proven equivalent to C. Round two reviewed selected paths; coverage and remaining gaps are recorded in behavioral-audit-round2.json."
+    },
+    {
+      "id": "O02",
+      "area": "object lifecycle",
+      "behavior": "Containment list insertion order",
+      "status": "intentional difference",
+      "c_source": "btmux-khi/src/mux/world/move.c",
+      "rust_source": "src/persistence/write.rs",
+      "tests": [
+        "tests/persistence.rs"
+      ],
+      "note": "C inserts at head; approved Rust persistence preserves survivors and appends new members in dbref order."
+    },
+    {
+      "id": "S01",
+      "area": "communication",
+      "behavior": "Speech formats and notification routing",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/communication/speech_format.c",
+      "rust_source": "src/communication/speech.rs",
+      "tests": [
+        "tests/speech.rs",
+        "tests/fixtures/speech_formats.tsv"
+      ],
+      "note": "Selected standard speech formats, audiences and exclusions match source-grounded tests; D02 is separate."
+    },
+    {
+      "id": "S02",
+      "area": "communication",
+      "behavior": "Channel/page edge combinations",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/communication/comsys_context.c",
+      "rust_source": "src/communication/mod.rs",
+      "tests": [
+        "tests/communication.rs"
+      ],
+      "note": "Persistent channels/page operations covered; compound lock/lurk/permission/history cases require further differential review. Round two reviewed selected paths; coverage and remaining gaps are recorded in behavioral-audit-round2.json."
+    },
+    {
+      "id": "Q01",
+      "area": "macros/queues",
+      "behavior": "Macro slot priority and single-pass expansion",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/commands/macro.c",
+      "rust_source": "src/macros/mod.rs",
+      "tests": [
+        "tests/macros.rs"
+      ],
+      "note": "Selected attachment ordering, case folding and substitution behaviors have source-grounded regression coverage."
+    },
+    {
+      "id": "Q02",
+      "area": "macros/queues",
+      "behavior": "Queue cancellation and resource safety",
+      "status": "intentional difference",
+      "c_source": "btmux-khi/src/mux/commands/command_dispatch.c",
+      "rust_source": "src/commands/queue.rs",
+      "tests": [
+        "tests/foundation.rs"
+      ],
+      "note": "Keep fixed halt/all ready cleanup, safe zero-limit handling and bounded aggregate queued text."
+    },
+    {
+      "id": "Q03",
+      "area": "macros/queues",
+      "behavior": "Nested expansion and execution cross-product",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/commands/command_dispatch.c",
+      "rust_source": "src/server/queue.rs",
+      "tests": [
+        "tests/macros.rs",
+        "tests/foundation.rs"
+      ],
+      "note": "No claim that every malformed delimiter/scoped alias/queued-cause combination has been compared. Round two reviewed selected paths; coverage and remaining gaps are recorded in behavioral-audit-round2.json."
+    },
+    {
+      "id": "L01",
+      "area": "Lua APIs/callbacks",
+      "behavior": "Callable names and immutable identity contracts",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/lua/packages/mux/mux_package.c",
+      "rust_source": "src/lua/packages/world/handles.rs",
+      "tests": [
+        "tests/lua_parity.rs",
+        "tests/fixtures/lua-api.json"
+      ],
+      "note": "Callable coverage and selected identity/error contracts; presence does not establish argument/result equivalence for all calls."
+    },
+    {
+      "id": "L02",
+      "area": "Lua APIs/callbacks",
+      "behavior": "All argument coercions and malformed callback return values",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/lua/lua_callbacks.c",
+      "rust_source": "src/lua/actions.rs",
+      "tests": [
+        "tests/lua_parity.rs",
+        "tests/lua.rs"
+      ],
+      "note": "Further table-shape, binary-string, coercion and nested error comparisons required; transaction failure differences remain intentional. Round two reviewed selected paths; coverage and remaining gaps are recorded in behavioral-audit-round2.json."
+    },
+    {
+      "id": "L03",
+      "area": "Lua APIs/callbacks",
+      "behavior": "Captured schedules and UTC cron timing",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/lua/lua_schedule.c",
+      "rust_source": "src/lua/schedules/mod.rs",
+      "tests": [
+        "tests/schedules.rs"
+      ],
+      "note": "Source-grounded cron and jitter tests; module registration-at-load and clock-jump policy are documented Rust choices."
+    },
+    {
+      "id": "L04",
+      "area": "Lua APIs/callbacks",
+      "behavior": "Atomic world and staged side effects",
+      "status": "intentional difference",
+      "c_source": "btmux-khi/src/mux/commands/action_messages.c",
+      "rust_source": "src/lua/transactions.rs",
+      "tests": [
+        "tests/lua_parity.rs",
+        "tests/logging.rs",
+        "tests/movement_parity.rs"
+      ],
+      "note": "Keep commit-before-output, nested rollback, instruction/output budgets and safe checking VMs."
+    },
+    {
+      "id": "A01",
+      "area": "accounts/admission",
+      "behavior": "Retry counts and creation zones",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/network/connect_flow.c",
+      "rust_source": "src/server.rs",
+      "tests": [
+        "tests/policies.rs",
+        "tests/fixtures/config/mux-policy.json"
+      ],
+      "note": "Recent tranche verifies retries, live edits and creation-zone policies against source-grounded fixtures."
+    },
+    {
+      "id": "A02",
+      "area": "accounts/admission",
+      "behavior": "CONNECTED and stale authentication safety",
+      "status": "intentional difference",
+      "c_source": "btmux-khi/src/mux/network/connect_flow.c",
+      "rust_source": "src/server.rs",
+      "tests": [
+        "tests/foundation.rs"
+      ],
+      "note": "Sessions own CONNECTED; never persist active connection flags or revive stale sessions on rollback."
+    },
+    {
+      "id": "F01",
+      "area": "configuration",
+      "behavior": "Includes, defaults and typed validation",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/server/configuration_toml_load.c",
+      "rust_source": "src/config/loader.rs",
+      "tests": [
+        "tests/configuration.rs",
+        "tests/fixtures/config/legacy-catalog.json"
+      ],
+      "note": "C table merge/table-array append semantics and compiled default fixtures; stricter malformed numeric handling is intentional."
+    },
+    {
+      "id": "F02",
+      "area": "configuration",
+      "behavior": "All runtime directive interactions",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/server/configuration_interpreter.c",
+      "rust_source": "src/config/administration.rs",
+      "tests": [
+        "tests/administration.rs",
+        "tests/access.rs"
+      ],
+      "note": "Coverage of selected live controls does not verify every ordered partial edit and permission interaction. Round two reviewed selected paths; coverage and remaining gaps are recorded in behavioral-audit-round2.json."
+    },
+    {
+      "id": "N01",
+      "area": "Telnet/rendering",
+      "behavior": "Q transitions and implemented option directions",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/network/telnet_handler.c",
+      "rust_source": "src/telnet.rs",
+      "tests": [
+        "tests/telnet.rs",
+        "tests/telnet_extensions.rs"
+      ],
+      "note": "C-grounded sequences plus RFC1143 tests; additional options are not assumed missing."
+    },
+    {
+      "id": "N02",
+      "area": "Telnet/rendering",
+      "behavior": "All markup/OSC capability combinations",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/support/styled_text/markup.h",
+      "rust_source": "src/text.rs",
+      "tests": [
+        "tests/text.rs",
+        "tests/fixtures/text/c_compatibility.json"
+      ],
+      "note": "Fixtures cover selected C text cases; no exhaustive nested markup, palette, preset and capability comparison. Round two reviewed selected paths; coverage and remaining gaps are recorded in behavioral-audit-round2.json."
+    },
+    {
+      "id": "N03",
+      "area": "Telnet/rendering",
+      "behavior": "Markdown, Unicode layout and bounded rich output",
+      "status": "intentional difference",
+      "c_source": "btmux-khi/src/mux/help/help_render.c",
+      "rust_source": "src/text.rs",
+      "tests": [
+        "tests/text.rs",
+        "tests/help.rs"
+      ],
+      "note": "Retain Markdown/HTML extensions, Unicode-safe layout and bounded output."
+    },
+    {
+      "id": "H01",
+      "area": "help",
+      "behavior": "Lookup, metadata refresh and invalid-file handling",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/help/help_index.c",
+      "rust_source": "src/help.rs",
+      "tests": [
+        "tests/help.rs"
+      ],
+      "note": "Selected C keyword/visibility/index refresh rules verified; layout differences follow the documented Rust renderer."
+    },
+    {
+      "id": "G01",
+      "area": "logging",
+      "behavior": "Audit privacy, staged file logs and path confinement",
+      "status": "intentional difference",
+      "c_source": "btmux-khi/src/mux/server/log.c",
+      "rust_source": "src/logging/mod.rs",
+      "tests": [
+        "tests/logging.rs"
+      ],
+      "note": "Preserve redaction, commit staging, no symlinks, bounded worker/deadlines; C writes Lua file logs immediately."
+    },
+    {
+      "id": "G02",
+      "area": "logging",
+      "behavior": "Complete event-category/format coverage",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/server/log.c",
+      "rust_source": "src/logging/mod.rs",
+      "tests": [
+        "tests/logging.rs"
+      ],
+      "note": "Category defaults and selected formats tested; producer-by-producer diagnostic wording and coverage not exhaustive. Round two reviewed selected paths; coverage and remaining gaps are recorded in behavioral-audit-round2.json."
+    },
+    {
+      "id": "R01",
+      "area": "operational reports",
+      "behavior": "WHO and process-report selected contracts",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/network/connection_commands.c",
+      "rust_source": "src/operations/mod.rs",
+      "tests": [
+        "tests/operations.rs"
+      ],
+      "note": "Source-grounded filtering/count tests; actual process metrics are platform-dependent."
+    },
+    {
+      "id": "R02",
+      "area": "operational reports",
+      "behavior": "Session identifiers and metric units",
+      "status": "intentional difference",
+      "c_source": "btmux-khi/src/mux/commands/command_list.c",
+      "rust_source": "src/operations/process.rs",
+      "tests": [
+        "tests/operations.rs"
+      ],
+      "note": "Stable session IDs replace descriptors; corrected/platform-aware metrics are retained."
+    },
+    {
+      "id": "D04",
+      "area": "macros/queues",
+      "behavior": "Forced exit movement moves executor and retains cause",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/world/movement_commands.c",
+      "rust_source": "src/commands/mod.rs",
+      "tests": [
+        "tests/movement_parity.rs",
+        "tests/foundation.rs"
+      ],
+      "note": "Resolved: typed movement requests separate executor, moved object and cause. Forced and nested queued exits move the executor, retain cause and do not borrow descriptors; TCP failure/restart coverage."
+    },
+    {
+      "id": "D05",
+      "area": "movement/locks",
+      "behavior": "Exit action sequence",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/world/move.c",
+      "rust_source": "src/movement.rs",
+      "tests": [
+        "tests/movement_parity.rs",
+        "tests/foundation.rs"
+      ],
+      "note": "Resolved: exit success/leave/appearance/drop/move/enter providers and events match C order, contexts and DARK suppression. Per-phase callback rollback and TCP multiple-session delivery. Original cause retention differs at C command entrypoints; see M05."
+    },
+    {
+      "id": "M05",
+      "area": "movement/locks",
+      "behavior": "Original cause retained in ordinary movement callbacks",
+      "status": "intentional difference",
+      "c_source": "btmux-khi/src/mux/world/movement_commands.c",
+      "rust_source": "src/movement.rs",
+      "tests": [
+        "tests/movement_parity.rs",
+        "tests/foundation.rs"
+      ],
+      "note": "Approved retention of original causal identity: Rust exit/generic requests retain the command cause. C move_exit and native enter/leave pass NOTHING to movement, and move_exit passes the player as traversal-lock cause. C get/drop pass the executing player to generic movement. Provider ordering/identities are tested separately from this caller-level difference."
+    },
+    {
+      "id": "D06",
+      "area": "targeting/permissions",
+      "behavior": "Ordinary object matching accepts C word prefixes",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/world/match.c",
+      "rust_source": "src/commands/objects/mod.rs",
+      "tests": [
+        "tests/behavioral_audit.rs",
+        "tests/building.rs",
+        "tests/foundation.rs"
+      ],
+      "note": "D06 resolved: shared ordinary matcher uses the existing C word-prefix helper on style-stripped names. Exact precedence, candidate scope, type preference and MATCH-lock selection are retained. Original wire evidence remains historical."
+    },
+    {
+      "id": "D07",
+      "area": "Lua APIs/callbacks",
+      "behavior": "Fallback description content loses precedence over its provider",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/commands/look.c",
+      "rust_source": "src/commands/objects/look.rs",
+      "tests": [
+        "tests/behavioral_audit.rs",
+        "tests/fixtures/behavioral-wire.json"
+      ],
+      "note": "Resolved D07/D08: live content precedence and internal room views; positive tests in behavioral_audit.rs and corrected TCP evidence."
+    },
+    {
+      "id": "D08",
+      "area": "Telnet/rendering",
+      "behavior": "Transparent exit selects the remote room external renderer",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/commands/look.c",
+      "rust_source": "src/commands/objects/look.rs",
+      "tests": [
+        "tests/behavioral_audit.rs",
+        "tests/fixtures/behavioral-wire.json"
+      ],
+      "note": "Resolved D07/D08: live content precedence and internal room views; positive tests in behavioral_audit.rs and corrected TCP evidence."
+    },
+    {
+      "id": "D09",
+      "area": "communication",
+      "behavior": "Private pages exclude contained non-recipients",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/communication/page_commands.c",
+      "rust_source": "src/communication/delivery.rs",
+      "tests": [
+        "tests/behavioral_audit.rs",
+        "tests/fixtures/behavioral-wire.json",
+        "tests/communication.rs",
+        "tests/foundation.rs",
+        "tests/fixtures/behavioral-wire-d09-resolved.json"
+      ],
+      "note": "D09 resolved: direct player delivery, including saved/pose/group forms and all recipient sessions. Nested containment and output/persistence rollback regressions; historical leak transcript retained separately."
+    },
+    {
+      "id": "D10",
+      "area": "communication",
+      "behavior": "Mixed valid/unknown page recipients lose group annotation",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/communication/page_commands.c",
+      "rust_source": "src/communication/page.rs",
+      "tests": [
+        "tests/behavioral_audit.rs",
+        "tests/foundation.rs",
+        "tests/fixtures/behavioral-wire-d10-d11-resolved.json"
+      ],
+      "note": "Resolved: Recipient formatting tracks the original group request independently of successful resolution; whole names remain single-target. Sender confirmations and history remain unchanged. Regression: mixed_recipient_page_preserves_group_annotation"
+    },
+    {
+      "id": "D11",
+      "area": "Lua APIs/callbacks",
+      "behavior": "Printable-ASCII predicate silently coerces numeric input",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/lua/packages/mux/text/mux_text_bindings.c",
+      "rust_source": "src/lua/packages/text/mod.rs",
+      "tests": [
+        "tests/behavioral_audit.rs",
+        "tests/foundation.rs",
+        "tests/fixtures/behavioral-wire-d10-d11-resolved.json"
+      ],
+      "note": "Resolved: Only actual Lua strings are accepted; all 256 byte values are checked directly, including binary strings. Regression: printable_ascii_requires_strings"
+    },
+    {
+      "id": "D12",
+      "area": "commands/switches",
+      "behavior": "Plain goto and configured movement aliases dispatch local exit travel",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/world/movement_commands.c",
+      "rust_source": "src/commands/exits.rs",
+      "tests": [
+        "tests/behavioral_audit.rs",
+        "tests/commands.rs",
+        "tests/foundation.rs"
+      ],
+      "note": "D12 resolved: goto and shorthand share exit selection, locks, effective permissions and typed movement. Original command causes and current Rust dispatch order remain intentional. Historical failure transcript retained."
+    },
+    {
+      "id": "T02",
+      "area": "targeting/permissions",
+      "behavior": "Leading name prefix selects a carried thing",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/world/match.c",
+      "rust_source": "src/commands/objects/mod.rs",
+      "tests": [
+        "tests/behavioral_audit.rs",
+        "tests/tools/behavioral_probe.py"
+      ],
+      "note": "Round-two paired TCP evidence, limited to look red. No broader equivalence claim."
+    },
+    {
+      "id": "S03",
+      "area": "communication",
+      "behavior": "Single connected named page recipient receives the same text",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/communication/page_commands.c",
+      "rust_source": "src/communication/page.rs",
+      "tests": [
+        "tests/behavioral_audit.rs",
+        "tests/tools/behavioral_probe.py"
+      ],
+      "note": "Round-two paired TCP evidence, limited to page Wizard=hello. No broader equivalence claim."
+    },
+    {
+      "id": "L05",
+      "area": "Lua APIs/callbacks",
+      "behavior": "Describe provider state mutation occurs even when stored content exists",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/commands/action_messages.c",
+      "rust_source": "src/lua/actions.rs",
+      "tests": [
+        "tests/behavioral_audit.rs",
+        "tests/tools/behavioral_probe.py"
+      ],
+      "note": "Round-two paired TCP evidence, limited to @state/examine Red Sword/audit. No broader equivalence claim."
+    },
+    {
+      "id": "L06",
+      "area": "Lua APIs/callbacks",
+      "behavior": "ASCII and newline-containing Lua string controls return true and false",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/lua/packages/mux/text/mux_text_bindings.c",
+      "rust_source": "src/lua/packages/text/mod.rs",
+      "tests": [
+        "tests/behavioral_audit.rs",
+        "tests/tools/behavioral_probe.py"
+      ],
+      "note": "Round-two paired TCP evidence, limited to audit-ascii. No broader equivalence claim."
+    },
+    {
+      "id": "A03",
+      "area": "accounts/admission",
+      "behavior": "Both accounts authenticate by dbref using the same controlled Argon2id hash",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/network/connect_flow.c",
+      "rust_source": "src/server.rs",
+      "tests": [
+        "tests/behavioral_audit.rs",
+        "tests/tools/behavioral_probe.py"
+      ],
+      "note": "Round-two paired TCP evidence, limited to probe Client.login assertions. No broader equivalence claim."
+    },
+    {
+      "id": "C01a",
+      "area": "commands/switches",
+      "behavior": "Native/Lua shadowing and first-handler versus accumulated local matches",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/commands/command_dispatch.c",
+      "rust_source": "src/commands/registry.rs",
+      "tests": [
+        "tests/commands.rs",
+        "tests/access.rs",
+        "tests/fixtures/native-switches.txt"
+      ],
+      "note": "Policy question P01; source-confirmed order difference, disposition unresolved."
+    },
+    {
+      "id": "C01b",
+      "area": "commands/switches",
+      "behavior": "Switched aliases combined with scoped permission denial",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/commands/command_dispatch.c",
+      "rust_source": "src/commands/registry.rs",
+      "tests": [
+        "tests/commands.rs",
+        "tests/access.rs",
+        "tests/fixtures/native-switches.txt"
+      ],
+      "note": "Catalog and existing tests reviewed; no new paired cross-product."
+    },
+    {
+      "id": "T01a",
+      "area": "targeting/permissions",
+      "behavior": "Ambiguous ordinary matches with competing lock-preferred candidates",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/world/match.c",
+      "rust_source": "src/commands/target.rs",
+      "tests": [
+        "tests/building.rs",
+        "tests/locks.rs",
+        "tests/access.rs"
+      ],
+      "note": "Later-word match D06 confirmed separately; ambiguity/lock interactions remain unverified."
+    },
+    {
+      "id": "O01a",
+      "area": "object lifecycle",
+      "behavior": "Destruction evacuation when current and stored homes are both invalid",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/world/database_check.c",
+      "rust_source": "src/dbck.rs",
+      "tests": [
+        "tests/dbck.rs",
+        "tests/foundation.rs"
+      ],
+      "note": "Source review and Rust repair tests; no new malformed C-world execution."
+    },
+    {
+      "id": "O01b",
+      "area": "object lifecycle",
+      "behavior": "Purge cleanup with owned and unknown dependent records",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/world/database_check.c",
+      "rust_source": "src/dbck.rs",
+      "tests": [
+        "tests/dbck.rs",
+        "tests/foundation.rs"
+      ],
+      "note": "Known cleanup maps inspected; ownership cross-product not executed against C."
+    },
+    {
+      "id": "S02a",
+      "area": "communication",
+      "behavior": "Non-player channel recipients containing connected players",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/communication/comsys_context.c",
+      "rust_source": "src/communication/mod.rs",
+      "tests": [
+        "tests/communication.rs"
+      ],
+      "note": "Page recursion D09 does not prove the same channel behavior; needs separate recipient probe."
+    },
+    {
+      "id": "S02b",
+      "area": "communication",
+      "behavior": "Partial/offline and repeated page recipient history",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/communication/comsys_context.c",
+      "rust_source": "src/communication/mod.rs",
+      "tests": [
+        "tests/communication.rs"
+      ],
+      "note": "D10 covers one valid plus one nonexistent name only."
+    },
+    {
+      "id": "Q03a",
+      "area": "macros/queues",
+      "behavior": "Zone exit fallback with nested queued execution",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/commands/command_dispatch.c",
+      "rust_source": "src/server/queue.rs",
+      "tests": [
+        "tests/macros.rs",
+        "tests/foundation.rs"
+      ],
+      "note": "Simple zone fixture failed in both engines (P02); working C preconditions unresolved."
+    },
+    {
+      "id": "L02a",
+      "area": "Lua APIs/callbacks",
+      "behavior": "Optional Lua values and malformed callback results across flow/reload boundaries",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/lua/lua_callbacks.c",
+      "rust_source": "src/lua/actions.rs",
+      "tests": [
+        "tests/lua_parity.rs",
+        "tests/lua.rs"
+      ],
+      "note": "D07/D11 cover particular entrypoints, not all conversion paths."
+    },
+    {
+      "id": "F02a",
+      "area": "configuration",
+      "behavior": "Live policy edits applied to existing versus newly accepted sessions",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/server/configuration_interpreter.c",
+      "rust_source": "src/config/administration.rs",
+      "tests": [
+        "tests/administration.rs",
+        "tests/access.rs"
+      ],
+      "note": "Configuration unit suites pass; no complete paired transition test."
+    },
+    {
+      "id": "N02a",
+      "area": "Telnet/rendering",
+      "behavior": "OSC presets after NEW-ENVIRON changes on an already compressed session",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/support/styled_text/markup.h",
+      "rust_source": "src/text.rs",
+      "tests": [
+        "tests/text.rs",
+        "tests/fixtures/text/c_compatibility.json"
+      ],
+      "note": "Existing transport/rendering tests retained; combined C/Rust wire behavior unverified."
+    },
+    {
+      "id": "G02a",
+      "area": "logging",
+      "behavior": "Combined log categories across authentication, queue execution and reload",
+      "status": "unverified",
+      "c_source": "btmux-khi/src/mux/server/log.c",
+      "rust_source": "src/logging/mod.rs",
+      "tests": [
+        "tests/logging.rs"
+      ],
+      "note": "Producer paths reviewed; no complete differential event/category sequence."
+    },
+    {
+      "id": "LM01",
+      "area": "communication",
+      "behavior": "Channel traffic reaches unnamed occupants of subscribed things",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/communication/channel_delivery.c",
+      "rust_source": "src/communication/delivery.rs",
+      "tests": [
+        "tests/lock_message_audit.rs",
+        "tests/fixtures/lock-message-wire.json"
+      ],
+      "note": "high: Corrected with C-grounded live-runtime coverage; the paired transcript remains historical evidence."
+    },
+    {
+      "id": "LM02",
+      "area": "communication",
+      "behavior": "Channel leave uses unavailable testing globals in Live mode",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/communication/channel_aliases.c",
+      "rust_source": "src/communication/membership.rs",
+      "tests": [
+        "tests/lock_message_audit.rs",
+        "tests/fixtures/lock-message-wire.json"
+      ],
+      "note": "high: Corrected with C-grounded live-runtime coverage; the paired transcript remains historical evidence."
+    },
+    {
+      "id": "LM03",
+      "area": "communication",
+      "behavior": "Direct action, denial and page delivery omit AUDIBLE exits",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/commands/action_messages.c",
+      "rust_source": "src/lua/actions.rs",
+      "tests": [
+        "tests/lock_message_audit.rs",
+        "tests/fixtures/lock-message-wire.json"
+      ],
+      "note": "medium: Corrected with C-grounded live-runtime coverage; the paired transcript remains historical evidence."
+    },
+    {
+      "id": "LM04",
+      "area": "communication",
+      "behavior": "Native denial defaults and channel/inventory confirmations differ",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/commands/rob.c",
+      "rust_source": "src/commands/objects/inventory.rs",
+      "tests": [
+        "tests/lock_message_audit.rs",
+        "tests/fixtures/lock-message-wire.json"
+      ],
+      "note": "low: Corrected with C-grounded live-runtime coverage; the paired transcript remains historical evidence."
+    },
+    {
+      "id": "LM05",
+      "area": "communication",
+      "behavior": "Closed-channel native JOIN denial wording",
+      "status": "verified equivalent",
+      "rust_source": "src/communication/membership.rs",
+      "c_source": "btmux-khi/src/mux/communication/channel_aliases.c",
+      "tests": [
+        "tests/channel_join_parity.rs"
+      ],
+      "note": "Narrowly scoped follow-up correction. See docs/lock-message-audit.md for C source, preserved intentional differences and test evidence."
+    },
+    {
+      "id": "LM06",
+      "area": "Lua APIs/callbacks",
+      "behavior": "Native lock-failure events omit the lock-only subject field",
+      "status": "verified equivalent",
+      "rust_source": "src/lua/actions.rs",
+      "c_source": "btmux-khi/src/mux/commands/action_messages.c",
+      "tests": [
+        "tests/failure_event_parity.rs"
+      ],
+      "note": "Narrowly scoped follow-up correction. See docs/lock-message-audit.md for C source, preserved intentional differences and test evidence."
+    }
+  ]
+}

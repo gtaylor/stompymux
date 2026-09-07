@@ -62,10 +62,24 @@ in `src/lua/packages/error/catalog.rs`.
 ## Movement, destruction and repair
 
 `mux.world.teleport_object{object=..., destination=...}` uses shared movement
-policy, containment validation, locks and callbacks with GOD as cause and no
-invented descriptor. Only players and things can move; destinations must be valid
+policy, containment validation, locks and object callbacks with GOD as cause and no
+invented descriptor. Location transition providers/events use C cause `#-1`.
+Teleport-source and leave actions precede relocation; appearance precedes
+teleport/move and enter actions. DARK teleports retain silent location providers
+and move events, while suppressing teleport and location events. Only players and things can move; destinations must be valid
 containers. A same-location move is a no-op. Denial raises an error, and callback
 failure restores movement and staged effects even when caught with `pcall`.
+
+Native generic movement also renders immediately after relocation. Exit traversal
+runs exit success/on_success, source leave/on_leave and destination enter_source,
+relocation/appearance, exit drop/on_drop, traveler move/on_move, destination
+enter/on_enter and source leave_destination. Exit actions use `operation="traverse"`;
+traveler/location actions use `"move"`, retaining the original command cause.
+That cause retention is an approved Rust difference: C's normal exit/enter/leave
+command entrypoints supply `#-1` to movement actions (see parity finding M05).
+Providers still execute when silent, with direct messages retained and neighbor
+messages/events suppressed according to the action policy. Shared action neighbor
+text uses the bounded notification graph, including AUDIBLE forwarding.
 
 `mux.world.destroy_object(object, {override=true})` silently schedules normal
 GOING destruction. Options are optional; `override` bypasses SAFE, not protection
@@ -109,3 +123,7 @@ use the latest host snapshot and cannot alter negotiation or persistent state.
   they do not call SQLite synchronously from the VM.
 - No BattleTech package, C internals, host filesystem access or extra debug/native
   module loading is exposed.
+
+`mux.text.is_printable_ascii(value)` requires an actual Lua string and raises an
+argument error for all other types. It checks bytes `0x20–0x7e` without UTF-8
+conversion; empty strings return true, and embedded NUL/non-ASCII bytes return false.

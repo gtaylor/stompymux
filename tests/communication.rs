@@ -163,6 +163,7 @@ async fn lua_catalog_handles_and_argument_validation() {
             r#"
         local c=mux.comsys.create_channel('Lua')
         assert(c:name()=='Lua' and c:user_count()==0 and c:max_user_count()==0)
+        assert(tostring(c)=='channel(Lua)' and tostring(c:flags())=='channel_flags(Lua)')
         assert(mux.comsys.channel('lua')==c)
         assert(not pcall(function() mux.comsys.channel('missing') end))
         local f=c:flags()
@@ -194,6 +195,7 @@ async fn lua_catalog_handles_and_argument_validation() {
         assert(c:user_count()==0)
         mux.comsys.destroy_channel(c)
         local replacement=mux.comsys.create_channel('Lua')
+        assert(tostring(c)=='channel(Lua)' and not pcall(function() tostring(f) end))
         assert(c~=replacement)
         assert(not pcall(function() c:name() end))
         assert(not pcall(function() f:has(mux.comsys.flags.PUBLIC) end))
@@ -217,7 +219,10 @@ async fn locks_grant_independently_errors_restore_and_output_limits_rollback() {
     let (_d, c, s) = fixture().await;
     run(&s, &c, 1, "@chan/create Locked");
     run(&s, &c, 1, "@chan/pflags Locked=!join");
-    assert!(run(&s, &c, 2, "addcom lock=Locked").contains("not allowed"));
+    assert!(
+        run(&s, &c, 2, "addcom lock=Locked")
+            .contains("Sorry, this channel type does not allow you to join.")
+    );
     s.world
         .borrow_mut()
         .channels
@@ -387,7 +392,7 @@ async fn destroy_preserves_macros_and_rejects_unknown_dependencies() {
         .fetch_one(&mut db)
         .await
         .unwrap(),
-        0
+        1
     );
     assert!(
         !persistence::load(&c.database())
@@ -486,4 +491,88 @@ async fn repair_purges_communication_ownership_and_retains_survivors() {
     );
     assert_eq!(loaded.last_pages[&ObjectId(1)], vec![ObjectId(2)]);
     assert!(!loaded.channel_aliases.contains_key(&victim));
+}
+
+/// Private page delivery does not traverse nested contents of either participant.
+#[tokio::test(flavor = "current_thread")]
+async fn pages_are_direct_for_all_forms_and_roll_back_output_limits() {
+    let (d, c, s) = fixture().await;
+    let aliases = d.path().join("aliases.toml");
+    std::fs::write(
+        &aliases,
+        std::fs::read_to_string(&aliases)
+            .unwrap()
+            .replace("[aliases.commands]", "[aliases.commands]\npc='page'"),
+    )
+    .unwrap();
+    c.logger.shutdown(&c).await.unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let box_id = {
+        let mut w = s.world.borrow_mut();
+        let id = w.create(&c, "Page Box".into(), stompymux_rs::world::Kind::Thing);
+        w.objects.get_mut(&id).unwrap().location = Some(ObjectId(1));
+        w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
+        id
+    };
+    for command in [
+        "pc #1=private",
+        "page saved",
+        "page :waves",
+        "page ;smiles",
+        "page #1=\"speech",
+    ] {
+        commands::run(&s, &c, ObjectId(1), 1, command).unwrap();
+        let output = s.outbox.borrow_mut().drain(..).collect::<Vec<_>>();
+        assert_eq!(output.len(), 2, "{command}");
+        assert!(output.iter().all(|(id, _)| *id == ObjectId(1)), "{command}");
+    }
+    // Explicitly naming a contained player still delivers to them once.
+    commands::run(&s, &c, ObjectId(1), 1, "page #1 #2=addressed").unwrap();
+    assert_eq!(
+        s.outbox
+            .borrow()
+            .iter()
+            .filter(|(id, _)| *id == ObjectId(2))
+            .count(),
+        1
+    );
+    s.outbox.borrow_mut().clear();
+    // An ordinary player containing the sender gets the page, but no echoed copy
+    // goes to the sender: only their normal confirmation is staged.
+    {
+        let mut w = s.world.borrow_mut();
+        w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(0));
+        w.objects.get_mut(&box_id).unwrap().location = Some(ObjectId(2));
+        w.objects.get_mut(&ObjectId(1)).unwrap().location = Some(box_id);
+    }
+    commands::run(&s, &c, ObjectId(1), 1, "page #2=ordinary").unwrap();
+    assert_eq!(
+        s.outbox
+            .borrow()
+            .iter()
+            .filter(|(id, _)| *id == ObjectId(1))
+            .count(),
+        1
+    );
+    s.outbox.borrow_mut().clear();
+    commands::run(&s, &c, ObjectId(2), 2, "page #2=self").unwrap();
+    assert!(s.outbox.borrow().iter().all(|(id, _)| *id == ObjectId(2)));
+    s.outbox.borrow_mut().clear();
+    let history = s.world.borrow().last_pages.clone();
+    // The direct page fits, but its confirmation exceeds the entry budget.
+    let path = d.path().join("stompymux.toml");
+    let mut config: toml::Value = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    config["lua"]
+        .as_table_mut()
+        .unwrap()
+        .insert("output_entry_limit".into(), toml::Value::Integer(1));
+    std::fs::write(&path, toml::to_string(&config).unwrap()).unwrap();
+    c.logger.shutdown(&c).await.unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let output = run(&s, &c, 1, "page #1=rollback");
+    assert!(output.contains("output limit"));
+    assert!(!output.contains("GOD pages:") && !output.contains("You paged"));
+    assert!(s.outbox.borrow().is_empty());
+    assert_eq!(s.world.borrow().last_pages, history);
+    c.logger.shutdown(&c).await.unwrap();
 }

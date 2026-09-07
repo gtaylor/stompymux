@@ -277,6 +277,7 @@ impl CommandRegistry {
             CommandDefinition::native("page", P::EVERYONE, crate::communication::page),
             CommandDefinition::native("@chan", P::WIZARD, crate::communication::admin)
                 .policy(SwitchPolicy::Handler, true),
+            CommandDefinition::native("goto", P::EVERYONE, native::goto),
             CommandDefinition::native("look", P::EVERYONE, super::objects::look::look)
                 .matching(&["l"], None)
                 .policy(SwitchPolicy::Reject("Unsupported command switch."), true),

@@ -1,6 +1,9 @@
 //! Local and possessive looking with distinct external and internal appearance callbacks.
 use super::*;
-use crate::{flags::Flag, lua::AppearanceMode};
+use crate::{
+    flags::Flag,
+    lua::{ActionContent, AppearanceMode},
+};
 
 /// Select visible candidates without widening local dbref scope.
 fn candidates(ctx: &CommandContext<'_>, origin: ObjectId) -> Vec<ObjectId> {
@@ -69,12 +72,22 @@ fn contents(ctx: &CommandContext<'_>, object: ObjectId, label: &str, exits: bool
 
 /// Render one object. Transparent exits reveal their destination without recursive exit traversal.
 fn show(ctx: &CommandContext<'_>, id: ObjectId, through: bool) -> Result<()> {
-    let mode = if ctx.scripts.world.borrow().objects[&ctx.player].location == Some(id) {
+    let o = ctx
+        .scripts
+        .world
+        .borrow()
+        .objects
+        .get(&id)
+        .context("Appearance object missing")?
+        .clone();
+    ensure!(o.kind != Kind::Garbage, "Appearance object destroyed");
+    let mode = if o.kind == Kind::Room
+        || ctx.scripts.world.borrow().objects[&ctx.player].location == Some(id)
+    {
         AppearanceMode::Internal
     } else {
         AppearanceMode::External
     };
-    let o = ctx.scripts.world.borrow().objects[&id].clone();
     if let Some(text) = ctx
         .scripts
         .render_appearance(ctx.player, id, ctx.session, mode)?
@@ -101,18 +114,18 @@ fn show(ctx: &CommandContext<'_>, id: ObjectId, through: bool) -> Result<()> {
             ),
         );
     }
-    if !through {
+    {
         let internal = mode == AppearanceMode::Internal
             && o.kind != Kind::Room
             && o.internal_description
                 .as_ref()
                 .is_some_and(|v| !v.is_empty());
-        let description = if internal {
-            &o.internal_description
+        let content = if internal {
+            ActionContent::InternalDescription
         } else {
-            &o.description
+            ActionContent::Description
         };
-        ctx.scripts.action_message(
+        ctx.scripts.action_message_content(
             action(
                 ctx,
                 id,
@@ -127,10 +140,12 @@ fn show(ctx: &CommandContext<'_>, id: ObjectId, through: bool) -> Result<()> {
             ),
             "describe",
             Some("on_describe"),
-            description
-                .as_deref()
-                .or_else(|| (o.kind != Kind::Room).then_some("You see nothing special.")),
-            None,
+            content,
+            (
+                (mode == AppearanceMode::External && !through)
+                    .then_some("You see nothing special."),
+                None,
+            ),
         )?;
     }
     match o.kind {

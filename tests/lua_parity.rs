@@ -329,12 +329,12 @@ async fn movement_callbacks_and_maintenance_effects_are_atomic() {
       local room=mux.world.create_object{type=mux.world.types.ROOM,name='Destination'}
       local thing=mux.world.create_object{type=mux.world.types.THING,name='Cargo',location=0,home=0}
       test_parent.events={on_enter=function(ctx)
-        assert(ctx.cause==1 and ctx.enactor==thing:dbref() and ctx.descriptor==nil)
+        assert(ctx.cause==-1 and ctx.enactor==thing:dbref() and ctx.descriptor==nil)
         thing:state('parity'):set('entered',true)
       end}
       mux.world.teleport_object{object=thing,destination=room}
       assert(thing:location()==room and thing:state('parity'):get('entered'))
-      test_parent.events.on_exit=function()
+      test_parent.events.on_leave=function()
         mux.world.destroy_object(thing)
         mux.check_db()
         error('reject relocation')

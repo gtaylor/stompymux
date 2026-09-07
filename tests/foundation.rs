@@ -1404,7 +1404,7 @@ async fn teleport_locks_context_and_callbacks_are_transactional() {
       end,teleport_out=function(ctx)
         assert(ctx.subject==ctx.enactor)
         return not deny_out
-      end},events={on_exit=function(ctx)
+      end},events={on_leave=function(ctx)
         assert(ctx.source==ctx.object)
         if fail_exit then mux.world.object(ctx.enactor):set_description('leaked');error('exit failed') end
       end,on_enter=function(ctx)
@@ -1445,7 +1445,7 @@ async fn teleport_locks_context_and_callbacks_are_transactional() {
     commands::run(&s, &c, ObjectId(1), 1, request).unwrap();
     assert_eq!(
         s.world.borrow().objects[&ObjectId(2)].state["movement"]["cause"],
-        Scalar::Integer(1)
+        Scalar::Integer(-1)
     );
     s.lua.load("fail_exit=true").exec().unwrap();
     let before = serde_json::to_value(&*s.world.borrow()).unwrap();
@@ -1484,13 +1484,30 @@ async fn teleport_locks_context_and_callbacks_are_transactional() {
 async fn tcp_teleport_containers_and_home_persist() {
     use stompymux_rs::world::Kind;
     let (_d, c) = populated().await;
+    std::fs::create_dir_all(c.root.join("logs")).unwrap();
+    std::fs::write(c.root.join("logs/movement.log"), "").unwrap();
+    std::fs::write(
+        c.root.join("lua/object_logic/tcp_movement.lua"),
+        r#"return {events={on_move=function(ctx)
+        local state=mux.world.object(ctx.enactor):state('movement_parity')
+        state:set('count',state:get('count',0)+1)
+        assert(mux.log('movement.log','committed move'))
+        mux.world.pemit(ctx.enactor,mux.text.markdown('**PARITY ARRIVAL**'))
+    end}}"#,
+    )
+    .unwrap();
     let mut w = persistence::load(&c.database()).await.unwrap();
+    w.objects.get_mut(&ObjectId(2)).unwrap().lua_parent = "tcp_movement.lua".into();
     for id in [1, 2] {
         w.accounts.get_mut(&ObjectId(id)).unwrap().hash =
             Some(accounts::hash("secret", &c).unwrap());
     }
     let cargo = w.create(&c, "Teleport Cargo".into(), Kind::Thing);
     w.objects.get_mut(&cargo).unwrap().location = Some(ObjectId(4));
+    std::fs::write(c.root.join("lua/global_logic/parity_move.lua"),
+        r#"return {commands={{name='paritymove',permission='wizard',pattern='^paritymove$',handler=function()
+            mux.world.teleport_object{object=2,destination=DEST};return true
+        end}}}"#.replace("DEST", &cargo.0.to_string())).unwrap();
     persistence::save(&c.database(), &w).await.unwrap();
     let running = Running::start(&c).await;
     let mut admin = Client::connect(&running).await;
@@ -1510,8 +1527,18 @@ async fn tcp_teleport_containers_and_home_persist() {
     second.until("Staff Nexus").await;
     admin.send(&format!("@tel #2=#{}", cargo.0)).await;
     admin.until("Teleported.").await;
-    first.until("Teleport Cargo").await;
-    second.until("Teleport Cargo").await;
+    assert!(
+        first
+            .until("PARITY ARRIVAL")
+            .await
+            .contains("Teleport Cargo")
+    );
+    assert!(
+        second
+            .until("PARITY ARRIVAL")
+            .await
+            .contains("Teleport Cargo")
+    );
     let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
         &sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()),
     )
@@ -1533,12 +1560,34 @@ async fn tcp_teleport_containers_and_home_persist() {
         .execute(&mut db)
         .await
         .unwrap();
+    assert_eq!(
+        persistence::load(&c.database()).await.unwrap().objects[&ObjectId(2)].state["movement_parity"]
+            ["count"],
+        Scalar::Integer(1)
+    );
     first.send("home").await;
-    first.until("Staff Nexus").await;
-    second.until("Staff Nexus").await;
+    assert!(first.until("PARITY ARRIVAL").await.contains("Staff Nexus"));
+    assert!(second.until("PARITY ARRIVAL").await.contains("Staff Nexus"));
+    admin.send("paritymove").await;
+    assert!(
+        first
+            .until("PARITY ARRIVAL")
+            .await
+            .contains("Teleport Cargo")
+    );
+    assert!(
+        second
+            .until("PARITY ARRIVAL")
+            .await
+            .contains("Teleport Cargo")
+    );
     admin.send(&format!("@teleport #{}", cargo.0)).await;
     admin.until("Teleport Cargo").await;
     running.stop().await;
+    assert_eq!(
+        std::fs::read_to_string(c.root.join("logs/movement.log")).unwrap(),
+        "committed move\ncommitted move\ncommitted move\n"
+    );
     sqlx::Connection::close(db).await.unwrap();
     assert_eq!(
         persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)].location,
@@ -2479,10 +2528,34 @@ async fn tcp_comsys_pages_sessions_and_write_rollback() {
     bob.until("ComBob: both sessions").await;
     alice.send("failcom").await;
     alice.until("That command could not be completed.").await;
+    wizard.send("@teleport ComAlice").await;
+    wizard.until("ComAlice").await;
     bob.send("page ComAlice=private hello").await;
     alice.until("ComBob pages: private hello").await;
     second.until("ComBob pages: private hello").await;
     bob.until("You paged ComAlice").await;
+    // A subsequent response is a wire-order barrier for the contained observer.
+    wizard.send("page ComBob=observer barrier").await;
+    let observer = wizard.until("You paged ComBob").await;
+    assert!(!observer.contains("private hello"));
+    bob.until("observer barrier").await;
+
+    // D10: both sessions retain the requested group context after an unknown name.
+    bob.send("page MissingPlayer ComAlice=partial page").await;
+    let reply = bob.until("You paged ComAlice with 'partial page'.").await;
+    assert!(reply.contains("I don't recognize \"MissingPlayer\"."));
+    alice
+        .until("To (ComAlice), ComBob pages you: partial page")
+        .await;
+    second
+        .until("To (ComAlice), ComBob pages you: partial page")
+        .await;
+    bob.send("page :waves again").await;
+    bob.until("Long distance to ComAlice: ComBob waves again")
+        .await;
+    alice.until("From afar, ComBob waves again").await;
+    second.until("From afar, ComBob waves again").await;
+
     let before = persistence::load(&c.database()).await.unwrap();
     second.send("quit").await;
     second.until("Goodbye").await;
@@ -2514,6 +2587,25 @@ async fn tcp_comsys_pages_sessions_and_write_rollback() {
         persistence::load(&c.database()).await.unwrap().channels["Public"].messages,
         after.channels["Public"].messages
     );
+    // Page history failure must discard both the new recipients and their output.
+    sqlx::raw_sql("CREATE TRIGGER reject_page BEFORE INSERT ON player_last_page_recipients BEGIN SELECT RAISE(FAIL,'page write blocked'); END")
+        .execute(&mut db).await.unwrap();
+    bob.send("page ComAlice Wizard=unsaved private page").await;
+    bob.until("Unable to save your changes").await;
+    for client in [&mut alice, &mut wizard] {
+        client.send("comlist").await;
+        let output = client.until("-- End of comlist --").await;
+        assert!(!output.contains("unsaved private page"));
+    }
+    assert_eq!(
+        persistence::load(&c.database()).await.unwrap().last_pages
+            [&before.find_player("ComBob").unwrap()],
+        vec![before.find_player("ComAlice").unwrap()]
+    );
+    sqlx::raw_sql("DROP TRIGGER reject_page")
+        .execute(&mut db)
+        .await
+        .unwrap();
     sqlx::raw_sql("DROP TRIGGER reject_channel")
         .execute(&mut db)
         .await
@@ -2554,12 +2646,51 @@ async fn tcp_comsys_pages_sessions_and_write_rollback() {
 /// State commands drive the copied exit policy end-to-end and survive relational restart.
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_state_default_exit_policy_and_failed_write_rollback() {
-    let (_d, c) = populated().await;
+    tcp_exit_policy_roundtrip("out").await;
+}
+
+/// Explicit goto shares copied locks, nested force, rollback and restart behavior.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_goto_default_exit_policy_and_failed_write_rollback() {
+    tcp_exit_policy_roundtrip("go out").await;
+}
+
+/// Run the identical movement contract through shorthand or the configured goto alias.
+async fn tcp_exit_policy_roundtrip(direction: &str) {
+    let (d, c) = populated().await;
+    // Keep the copied access policy and add trace callbacks around successful exit travel.
+    let path = d.path().join("lua/object_logic/default_exit.lua");
+    let source = std::fs::read_to_string(&path)
+        .unwrap()
+        .replace("return {", "local module = {");
+    std::fs::write(
+        &path,
+        format!(
+            r#"{source}
+      module.events={{
+        on_success=function(ctx)
+          assert(ctx.object==13 and ctx.cause==1 and ctx.enactor~=1 and ctx.descriptor==nil)
+          mux.world.object(ctx.enactor):state('exit_trace'):set('success',true)
+          mux.world.pemit(ctx.enactor,mux.text.markdown('**EXIT SUCCESS**'))
+          assert(mux.log('exit.log','exit committed'))
+        end,
+        on_drop=function(ctx)
+          assert(ctx.object==13 and ctx.cause==1 and ctx.descriptor==nil)
+          mux.world.pemit(ctx.enactor,'EXIT DROP')
+        end
+      }}
+      return module
+    "#
+        ),
+    )
+    .unwrap();
+    std::fs::create_dir_all(d.path().join("logs")).unwrap();
+    std::fs::write(d.path().join("logs/exit.log"), "").unwrap();
     let mut world = persistence::load(&c.database()).await.unwrap();
     world.accounts.get_mut(&ObjectId(1)).unwrap().hash =
         Some(accounts::hash("secret", &c).unwrap());
     persistence::save(&c.database(), &world).await.unwrap();
-    let running = Running::start(&c).await;
+    let mut running = Running::start(&c).await;
     let mut admin = Client::connect(&running).await;
     admin.send("#1").await;
     admin.until("Password: ").await;
@@ -2567,6 +2698,8 @@ async fn tcp_state_default_exit_policy_and_failed_write_rollback() {
     admin.until("Staff Nexus").await;
     let mut traveler = Client::connect(&running).await;
     traveler.register("StateWalker").await;
+    let mut second = Client::connect(&running).await;
+    second.login("StateWalker").await;
     let mut witness = Client::connect(&running).await;
     witness.register("StateWitness").await;
     let id = persistence::load(&c.database())
@@ -2586,7 +2719,7 @@ async fn tcp_state_default_exit_policy_and_failed_write_rollback() {
         .send("@state/set #13/locks.traverse message/others=is stopped at the gate.")
         .await;
     admin.until("State value set.").await;
-    traveler.send("out").await;
+    traveler.send(direction).await;
     traveler.until("Your pass is missing.").await;
     witness.until("StateWalker is stopped at the gate.").await;
     admin
@@ -2626,14 +2759,58 @@ async fn tcp_state_default_exit_policy_and_failed_write_rollback() {
         .execute(&mut db)
         .await
         .unwrap();
+    // A queued move failing persistence must leak neither actions nor its location change.
+    sqlx::raw_sql("CREATE TRIGGER reject_exit BEFORE UPDATE ON objects BEGIN SELECT RAISE(ABORT,'injected movement failure'); END").execute(&mut db).await.unwrap();
+    admin.send(&format!("@force #{}={direction}", id.0)).await;
+    for client in [&mut traveler, &mut second] {
+        let failure = client.until("Unable to save your changes").await;
+        assert!(!failure.contains("EXIT SUCCESS") && !failure.contains("EXIT DROP"));
+    }
+    let failed = persistence::load(&c.database()).await.unwrap();
+    assert_eq!(failed.objects[&id].location, Some(ObjectId(4)));
+    assert!(!failed.objects[&id].state.contains_key("exit_trace"));
+    sqlx::raw_sql("DROP TRIGGER reject_exit")
+        .execute(&mut db)
+        .await
+        .unwrap();
     sqlx::Connection::close(db).await.unwrap();
-    traveler.send("out").await;
-    traveler.until("Staff Nexus").await;
+    // Nested queue execution retains GOD as cause, but moves the ordinary player.
+    admin
+        .send(&format!("@wait 0=@force #{}={direction}", id.0))
+        .await;
+    for client in [&mut traveler, &mut second] {
+        let output = client.until("EXIT DROP").await;
+        let success = output.find("EXIT SUCCESS").unwrap();
+        let appearance = output.find("Staff Nexus").unwrap();
+        let drop = output.find("EXIT DROP").unwrap();
+        assert!(success < appearance && appearance < drop, "{output}");
+    }
+    let saved = persistence::load(&c.database()).await.unwrap();
+    assert_eq!(
+        saved.objects[&ObjectId(1)].location,
+        world.objects[&ObjectId(1)].location
+    );
+    assert_eq!(
+        saved.objects[&id].state["exit_trace"]["success"],
+        Scalar::Boolean(true)
+    );
     assert_ne!(
         persistence::load(&c.database()).await.unwrap().objects[&id].location,
         Some(ObjectId(4))
     );
-    running.stop().await;
+    admin.send("@shutdown").await;
+    admin.until("Game: Shutdown by GOD").await;
+    assert!(
+        tokio::time::timeout(Duration::from_secs(10), running.child.wait())
+            .await
+            .unwrap()
+            .unwrap()
+            .success()
+    );
+    assert_eq!(
+        std::fs::read_to_string(d.path().join("logs/exit.log")).unwrap(),
+        "exit committed\n"
+    );
     let restarted = Running::start(&c).await;
     let mut traveler = Client::connect(&restarted).await;
     traveler.send("StateWalker").await;
@@ -3882,4 +4059,148 @@ async fn tcp_portable_commands_inventory_and_report_rollback() {
         saved.objects[&item].state["portable"]["calls"],
         Scalar::Integer(1)
     );
+}
+
+/// D06: later-word look and inventory abbreviations work over TCP and retain durable locations.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_ordinary_word_prefix_inventory() {
+    use stompymux_rs::world::Kind;
+    let (_d, c) = populated().await;
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ObjectId(c.start()));
+    let item = w.create(&c, "Red Sword".into(), Kind::Thing);
+    let o = w.objects.get_mut(&item).unwrap();
+    o.location = Some(ObjectId(c.start()));
+    o.home = Some(ObjectId(c.home()));
+    o.description = Some("WORD-PREFIX TCP DESCRIPTION".into());
+    o.lua_parent.clear();
+    persistence::save(&c.database(), &w).await.unwrap();
+    let server = Running::start(&c).await;
+    let mut wizard = Client::connect(&server).await;
+    wizard.login("#1").await;
+    let mut player = Client::connect(&server).await;
+    player.register("PrefixTester").await;
+    player.send("look sWoRd").await;
+    player.until("WORD-PREFIX TCP DESCRIPTION").await;
+    player.send("take sword").await;
+    player.until("Taken.").await;
+    player.send("drop sword").await;
+    player.until("Dropped.").await;
+    player.send("get sword").await;
+    player.until("Taken.").await;
+    player.send("give #1=sword").await;
+    player.until("Given.").await;
+    wizard.send("look sword").await;
+    wizard.until("WORD-PREFIX TCP DESCRIPTION").await;
+    server.stop().await;
+    let w = persistence::load(&c.database()).await.unwrap();
+    assert_eq!(w.objects[&item].location, Some(ObjectId(1)));
+    let server = Running::start(&c).await;
+    let mut wizard = Client::connect(&server).await;
+    wizard.login("#1").await;
+    wizard.send("look sword").await;
+    wizard.until("WORD-PREFIX TCP DESCRIPTION").await;
+    server.stop().await;
+}
+
+/// Stored descriptions and remote-room callbacks retain C precedence on real connections.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_description_precedence_and_remote_room_appearance() {
+    use stompymux_rs::world::Kind;
+    let (_d, c) = populated().await;
+    std::fs::write(
+        c.root.join("lua/object_logic/description_parity.lua"),
+        r#"return {
+      messages={describe=function(ctx)
+        local st=mux.world.object(ctx.object):state('description_parity')
+        st:set('seen',true)
+        st:set('count',st:get('count',0)+1)
+        return {enactor_message='WRONG PROVIDER'}
+      end},
+      events={on_describe=function(ctx) mux.world.pemit(ctx.enactor,'DESCRIBE COMPLETE') end}
+    }"#,
+    )
+    .unwrap();
+    std::fs::write(
+        c.root.join("lua/object_logic/room_parity.lua"),
+        r#"return {
+      internal_appearance=function() return 'REMOTE INTERNAL' end,
+      external_appearance=function() return 'WRONG EXTERNAL' end
+    }"#,
+    )
+    .unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    let location = w.objects[&ObjectId(1)].location.unwrap();
+    let thing = w.create(&c, "Parity Token".into(), Kind::Thing);
+    let o = w.objects.get_mut(&thing).unwrap();
+    o.location = Some(ObjectId(1));
+    o.home = Some(location);
+    o.description = Some("STORED TCP DESCRIPTION".into());
+    o.lua_parent = "description_parity.lua".into();
+    let room = w.create(&c, "Remote Parity".into(), Kind::Room);
+    w.objects.get_mut(&room).unwrap().lua_parent = "room_parity.lua".into();
+    let exit = w.create(&c, "parity-window".into(), Kind::Exit);
+    let o = w.objects.get_mut(&exit).unwrap();
+    o.location = Some(location);
+    o.destination = Some(room);
+    o.flags.insert(stompymux_rs::flags::Flag::Transparent);
+    o.lua_parent.clear();
+    persistence::save(&c.database(), &w).await.unwrap();
+    let running = Running::start(&c).await;
+    let mut client = Client::connect(&running).await;
+    client.send("#1").await;
+    client.until("Password: ").await;
+    client.send("secret").await;
+    client.until("Staff Nexus").await;
+    client.send("look Parity Token").await;
+    let output = client.until("DESCRIBE COMPLETE").await;
+    assert!(output.contains("STORED TCP DESCRIPTION") && !output.contains("WRONG PROVIDER"));
+    client.send("look parity-window").await;
+    assert!(
+        !client
+            .until("REMOTE INTERNAL")
+            .await
+            .contains("WRONG EXTERNAL")
+    );
+    let saved = persistence::load(&c.database()).await.unwrap();
+    assert_eq!(
+        saved.objects[&thing].state["description_parity"]["seen"],
+        stompymux_rs::world::Scalar::Boolean(true)
+    );
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("CREATE TRIGGER fail_describe BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(FAIL,'describe persistence failure'); END;")
+        .execute(&mut db).await.unwrap();
+    client.send("look Parity Token").await;
+    let failure = client.until("Unable to save your changes.").await;
+    assert!(!failure.contains("STORED TCP DESCRIPTION") && !failure.contains("DESCRIBE COMPLETE"));
+    assert_eq!(
+        persistence::load(&c.database()).await.unwrap().objects[&thing].state,
+        saved.objects[&thing].state
+    );
+    sqlx::raw_sql("DROP TRIGGER fail_describe")
+        .execute(&mut db)
+        .await
+        .unwrap();
+    sqlx::Connection::close(db).await.unwrap();
+    running.stop().await;
+    let restarted = Running::start(&c).await;
+    let mut client = Client::connect(&restarted).await;
+    client.send("#1").await;
+    client.until("Password: ").await;
+    client.send("secret").await;
+    client.until("Staff Nexus").await;
+    client.send("look Parity Token").await;
+    assert!(
+        client
+            .until("DESCRIBE COMPLETE")
+            .await
+            .contains("STORED TCP DESCRIPTION")
+    );
+    restarted.stop().await;
 }

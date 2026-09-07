@@ -1,0 +1,726 @@
+{
+  "c": [
+    {
+      "actor": 1,
+      "command": "@create LockBox",
+      "god": "LockBox created as object #16\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_deny.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "drop LockBox",
+      "god": "LOCK drop object=16 enactor=1 subject=1 silent=false\nDENY drop\nEVENT on_drop_fail object=16 enactor=1 subject=nil operation=nil\n",
+      "wizard": "GOD BLOCKED drop\n"
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_bare.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "give Wizard=LockBox",
+      "god": "LOCK give object=16 enactor=1 subject=1 silent=false\nYou can't give LockBox away.\nEVENT on_give_fail object=16 enactor=1 subject=nil operation=nil\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_allow.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #2=probe_bare.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "give Wizard=LockBox",
+      "god": "LOCK give object=16 enactor=1 subject=1 silent=false\nLOCK receive object=2 enactor=1 subject=16 silent=false\nWizard doesn't want LockBox.\nEVENT on_give_receive_fail object=2 enactor=1 subject=nil operation=nil\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #2=default_player.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_deny.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "use LockBox",
+      "god": "LOCK use object=16 enactor=1 subject=1 silent=false\nDENY use\nEVENT on_use_fail object=16 enactor=1 subject=nil operation=nil\n",
+      "wizard": "GOD BLOCKED use\n"
+    },
+    {
+      "actor": 1,
+      "command": "give Wizard=LockBox",
+      "god": "LOCK give object=16 enactor=1 subject=1 silent=false\nDENY give\nEVENT on_give_fail object=16 enactor=1 subject=nil operation=nil\n",
+      "wizard": "GOD BLOCKED give\n"
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_allow.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "drop LockBox",
+      "god": "LOCK drop object=16 enactor=1 subject=1 silent=false\nDropped.\n",
+      "wizard": "GOD dropped LockBox.\n"
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_deny.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "get LockBox",
+      "god": "LOCK match object=16 enactor=1 subject=1 silent=true\nLOCK take object=16 enactor=1 subject=1 silent=false\nDENY take\nEVENT on_fail object=16 enactor=1 subject=nil operation=nil\n",
+      "wizard": "GOD BLOCKED take\n"
+    },
+    {
+      "actor": 1,
+      "command": "enter LockBox",
+      "god": "LOCK enter object=16 enactor=1 subject=1 silent=false\nDENY enter\nEVENT on_enter_fail object=16 enactor=1 subject=nil operation=nil\n",
+      "wizard": "GOD BLOCKED enter\n"
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_bare.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "get LockBox",
+      "god": "LOCK match object=16 enactor=1 subject=1 silent=true\nLOCK take object=16 enactor=1 subject=1 silent=false\nYou can't pick that up.\nEVENT on_fail object=16 enactor=1 subject=nil operation=nil\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_deny.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@open ear=#4",
+      "god": "Opened.\nLinked.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "get ear",
+      "god": "Exit taken.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@flag ear=audible",
+      "god": "ear - AUDIBLE set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@teleport Wizard=#4",
+      "god": "Wizard has left.\nTeleported.\n",
+      "wizard": "\u001b[0m\u001b[97mStarter Room\u001b[0m\nWelcome to this new StompyMUX game. We're not ready for prime time quite yet but you are Welcome to explore if you'd like.\u001b[0m\n"
+    },
+    {
+      "actor": 1,
+      "command": "use LockBox",
+      "god": "LOCK use object=16 enactor=1 subject=1 silent=false\nDENY use\nEVENT on_use_fail object=16 enactor=1 subject=nil operation=nil\n",
+      "wizard": "From a distance, LOCK use object=16 enactor=1 subject=1 silent=false\nFrom a distance, DENY use\nFrom a distance, EVENT on_use_fail object=16 enactor=1 subject=nil operation=nil\n"
+    },
+    {
+      "actor": 1,
+      "command": "@pemit GOD=CONTROL",
+      "god": "CONTROL\n",
+      "wizard": "From a distance, CONTROL\n"
+    },
+    {
+      "actor": 1,
+      "command": "page GOD=ROUTED PAGE",
+      "god": "GOD pages: ROUTED PAGE\nYou paged GOD with 'ROUTED PAGE'.\n",
+      "wizard": "From a distance, GOD pages: ROUTED PAGE\n"
+    },
+    {
+      "actor": 1,
+      "command": "@teleport #2=#0",
+      "god": "Wizard has arrived.\nTeleported.\n",
+      "wizard": "\u001b[0m\u001b[97mStaff Nexus\u001b[0m\nThis is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.\n\nPlease be sure to read the room descriptions for details on the contents of each area.\n\n\n\u001b[0m\u001b[93m Players:\u001b[0m                             \u001b[0m\u001b[93mObvious Exits:\u001b[0m\n \u001b[0m\u001b[97mGOD\u001b[0m                                  \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mcs\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mChannel Object Storage\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mal\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mAfterlife\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mus\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mUsed Mech Store\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mnp\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mNew Player Room\u001b[0m\n\n \u001b[0m\u001b[93mContents:\u001b[0m\n LockBox\u001b[0m\n"
+    },
+    {
+      "actor": 1,
+      "command": "@flag ear=!audible",
+      "god": "ear - AUDIBLE cleared.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #0=probe_deny.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@flag here=auditorium",
+      "god": "Staff Nexus - AUDITORIUM set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "say LOCKED SPEECH",
+      "god": "LOCK speak object=0 enactor=1 subject=1 silent=false\nDENY speak\n",
+      "wizard": "GOD BLOCKED speak\n"
+    },
+    {
+      "actor": 1,
+      "command": "pose LOCKED POSE",
+      "god": "LOCK speak object=0 enactor=1 subject=1 silent=false\nDENY speak\n",
+      "wizard": "GOD BLOCKED speak\n"
+    },
+    {
+      "actor": 1,
+      "command": "@emit LOCKED EMIT",
+      "god": "LOCK speak object=0 enactor=1 subject=1 silent=false\nDENY speak\n",
+      "wizard": "GOD BLOCKED speak\n"
+    },
+    {
+      "actor": 1,
+      "command": "@flag here=!auditorium",
+      "god": "Staff Nexus - AUDITORIUM cleared.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #0=default_room.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_error.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "get LockBox",
+      "god": "LOCK match object=16 enactor=1 subject=1 silent=true\n/tmp/mux-parity-c-vfeiri3d/lua/object_logic/probe_error.lua:2: PROBE ERROR\nLOCK take object=16 enactor=1 subject=1 silent=false\n/tmp/mux-parity-c-vfeiri3d/lua/object_logic/probe_error.lua:4: PROBE ERROR\nYou can't pick that up.\nEVENT on_fail object=16 enactor=1 subject=nil operation=nil\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "use LockBox",
+      "god": "LOCK use object=16 enactor=1 subject=1 silent=false\n/tmp/mux-parity-c-vfeiri3d/lua/object_logic/probe_error.lua:5: PROBE ERROR\nYou can't figure out how to use that.\nEVENT on_use_fail object=16 enactor=1 subject=nil operation=nil\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_allow.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/create Probe",
+      "god": "Channel Probe created.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@force #16=addcom box=Probe",
+      "god": "",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@teleport Wizard=#16",
+      "god": "LOCK teleport object=16 enactor=2 subject=1 silent=false\nWizard has left.\nTeleported.\n",
+      "wizard": "LockBox(#16)\n"
+    },
+    {
+      "actor": 1,
+      "command": "@chan/emit Probe=CHANNEL LEAK",
+      "god": "",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@teleport #2=#0",
+      "god": "LOCK teleport_out object=16 enactor=2 subject=2 silent=false\nEVENT on_leave object=16 enactor=2 subject=nil operation=nil\nWizard has arrived.\nTeleported.\n",
+      "wizard": "\u001b[0m\u001b[97mStaff Nexus\u001b[0m\nThis is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.\n\nPlease be sure to read the room descriptions for details on the contents of each area.\n\n\n\u001b[0m\u001b[93m Players:\u001b[0m                             \u001b[0m\u001b[93mObvious Exits:\u001b[0m\n \u001b[0m\u001b[97mGOD\u001b[0m                                  \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mcs\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mChannel Object Storage\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mal\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mAfterlife\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mus\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mUsed Mech Store\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mnp\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mNew Player Room\u001b[0m\n\n \u001b[0m\u001b[93mContents:\u001b[0m\n LockBox\u001b[0m\n"
+    },
+    {
+      "actor": 1,
+      "command": "@chan/object Probe=#16",
+      "god": "Channel Probe is now using LockBox(#16) as channel object.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@flag #2=!wizard",
+      "god": "Wizard - WIZARD cleared.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 2,
+      "command": "addcom p=Probe",
+      "god": "LOCK channel_join object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=16 subject=16 silent=true\n",
+      "wizard": "You have joined channel Probe.\n[Probe] Wizard has joined this channel.\nChannel Probe added with alias p.\n"
+    },
+    {
+      "actor": 2,
+      "command": "p TEST",
+      "god": "LOCK channel_transmit object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=16 subject=16 silent=true\n",
+      "wizard": "[Probe] Wizard: TEST\n"
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_deny.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 2,
+      "command": "p TEST DENIED LOCK OPEN FLAGS",
+      "god": "LOCK channel_transmit object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=16 subject=16 silent=true\n",
+      "wizard": "[Probe] Wizard: TEST DENIED LOCK OPEN FLAGS\n"
+    },
+    {
+      "actor": 2,
+      "command": "p off",
+      "god": "EVENT on_leave object=16 enactor=2 subject=nil operation=nil\nLOCK channel_receive object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=16 subject=16 silent=true\n",
+      "wizard": "You have left channel Probe.\n[Probe] Wizard has left this channel.\n"
+    },
+    {
+      "actor": 2,
+      "command": "p on",
+      "god": "LOCK channel_receive object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=16 subject=16 silent=true\n",
+      "wizard": "You have joined channel Probe.\n[Probe] Wizard has joined this channel.\n"
+    },
+    {
+      "actor": 1,
+      "command": "@chan/pflags Probe=!receive",
+      "god": "@chan/pflags: Cleared.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/emit Probe=RECEIVE DENIED",
+      "god": "LOCK channel_receive object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=16 subject=16 silent=true\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/pflags Probe=!transmit",
+      "god": "@chan/pflags: Cleared.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 2,
+      "command": "p TRANSMIT DENIED",
+      "god": "LOCK channel_transmit object=16 enactor=2 subject=2 silent=true\n",
+      "wizard": "That channel type cannot be transmitted on.\n"
+    },
+    {
+      "actor": 1,
+      "command": "@chan/pflags Probe=!join",
+      "god": "@chan/pflags: Cleared.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 2,
+      "command": "delcom p",
+      "god": "EVENT on_leave object=16 enactor=2 subject=nil operation=nil\nLOCK channel_receive object=16 enactor=16 subject=16 silent=true\n",
+      "wizard": "You have left channel Probe.\nChannel Probe deleted.\n"
+    },
+    {
+      "actor": 2,
+      "command": "addcom p=Probe",
+      "god": "LOCK channel_join object=16 enactor=2 subject=2 silent=true\n",
+      "wizard": "Sorry, this channel type does not allow you to join.\n"
+    }
+  ],
+  "rust": [
+    {
+      "actor": 1,
+      "command": "@create LockBox",
+      "god": "LockBox created as object #16\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_deny.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "drop LockBox",
+      "god": "LOCK drop object=16 enactor=1 subject=1 silent=false\nDENY drop\nEVENT on_drop_fail object=16 enactor=1 subject=1 operation=drop\n",
+      "wizard": "GOD BLOCKED drop\n"
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_bare.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "give Wizard=LockBox",
+      "god": "LOCK give object=16 enactor=1 subject=1 silent=false\nYou can't give that away.\nEVENT on_give_fail object=16 enactor=1 subject=1 operation=give\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_allow.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #2=probe_bare.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "give Wizard=LockBox",
+      "god": "LOCK give object=16 enactor=1 subject=1 silent=false\nLOCK receive object=2 enactor=1 subject=16 silent=false\nThat recipient won't accept the object.\nEVENT on_give_receive_fail object=2 enactor=1 subject=1 operation=receive\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #2=default_player.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_deny.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "use LockBox",
+      "god": "LOCK use object=16 enactor=1 subject=1 silent=false\nDENY use\nEVENT on_use_fail object=16 enactor=1 subject=1 operation=use\n",
+      "wizard": "GOD BLOCKED use\n"
+    },
+    {
+      "actor": 1,
+      "command": "give Wizard=LockBox",
+      "god": "LOCK give object=16 enactor=1 subject=1 silent=false\nDENY give\nEVENT on_give_fail object=16 enactor=1 subject=1 operation=give\n",
+      "wizard": "GOD BLOCKED give\n"
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_allow.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "drop LockBox",
+      "god": "LOCK drop object=16 enactor=1 subject=1 silent=false\nDropped.\n",
+      "wizard": "GOD drops LockBox.\n"
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_deny.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "get LockBox",
+      "god": "LOCK match object=16 enactor=1 subject=1 silent=true\nLOCK take object=16 enactor=1 subject=1 silent=false\nDENY take\nEVENT on_fail object=16 enactor=1 subject=1 operation=take\n",
+      "wizard": "GOD BLOCKED take\n"
+    },
+    {
+      "actor": 1,
+      "command": "enter LockBox",
+      "god": "LOCK enter object=16 enactor=1 subject=1 silent=false\nDENY enter\nEVENT on_enter_fail object=16 enactor=1 subject=1 operation=enter\n",
+      "wizard": "GOD BLOCKED enter\n"
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_bare.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "get LockBox",
+      "god": "LOCK match object=16 enactor=1 subject=1 silent=true\nLOCK take object=16 enactor=1 subject=1 silent=false\nYou can't take that.\nEVENT on_fail object=16 enactor=1 subject=1 operation=take\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_deny.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@open ear=#4",
+      "god": "Opened exit #17.\nLinked.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "get ear",
+      "god": "Exit taken.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@flag ear=audible",
+      "god": "ear - AUDIBLE set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@teleport Wizard=#4",
+      "god": "Wizard has left.\nTeleported.\n",
+      "wizard": "\u001b[0m\u001b[97mStarter Room\u001b[0m\nWelcome to this new StompyMUX game. We're not ready for prime time quite yet but you are Welcome to explore if you'd like.\n\n                                      \u001b[0m\u001b[93mObvious Exits:\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mo\u001b[0m\u001b[97m}\u001b[0m  \u001b[0m\u001b[92mOut\u001b[0m\n"
+    },
+    {
+      "actor": 1,
+      "command": "use LockBox",
+      "god": "LOCK use object=16 enactor=1 subject=1 silent=false\nDENY use\nEVENT on_use_fail object=16 enactor=1 subject=1 operation=use\n",
+      "wizard": "From a distance, LOCK use object=16 enactor=1 subject=1 silent=false\nFrom a distance, EVENT on_use_fail object=16 enactor=1 subject=1 operation=use\n"
+    },
+    {
+      "actor": 1,
+      "command": "@pemit GOD=CONTROL",
+      "god": "CONTROL\n",
+      "wizard": "From a distance, CONTROL\n"
+    },
+    {
+      "actor": 1,
+      "command": "page GOD=ROUTED PAGE",
+      "god": "GOD pages: ROUTED PAGE\nYou paged GOD with 'ROUTED PAGE'.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@teleport #2=#0",
+      "god": "Wizard has arrived.\nTeleported.\n",
+      "wizard": "\u001b[0m\u001b[97mStaff Nexus\u001b[0m\nThis is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.\n\nPlease be sure to read the room descriptions for details on the contents of each area.\n\n\n\u001b[0m\u001b[93m Players:\u001b[0m                             \u001b[0m\u001b[93mObvious Exits:\u001b[0m\n \u001b[0m\u001b[97mGOD\u001b[0m                                  \u001b[0m\u001b[97m{\u001b[0m\u001b[32mnp\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mNew Player Room\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mus\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mUsed Mech Store\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mal\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mAfterlife\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mcs\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mChannel Object Storage\u001b[0m\n\n \u001b[0m\u001b[93mContents:\u001b[0m\n LockBox\u001b[0m\n"
+    },
+    {
+      "actor": 1,
+      "command": "@flag ear=!audible",
+      "god": "ear - AUDIBLE cleared.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #0=probe_deny.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@flag here=auditorium",
+      "god": "Staff Nexus - AUDITORIUM set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "say LOCKED SPEECH",
+      "god": "LOCK speak object=0 enactor=1 subject=1 silent=false\nDENY speak\n",
+      "wizard": "GOD BLOCKED speak\n"
+    },
+    {
+      "actor": 1,
+      "command": "pose LOCKED POSE",
+      "god": "LOCK speak object=0 enactor=1 subject=1 silent=false\nDENY speak\n",
+      "wizard": "GOD BLOCKED speak\n"
+    },
+    {
+      "actor": 1,
+      "command": "@emit LOCKED EMIT",
+      "god": "LOCK speak object=0 enactor=1 subject=1 silent=false\nDENY speak\n",
+      "wizard": "GOD BLOCKED speak\n"
+    },
+    {
+      "actor": 1,
+      "command": "@flag here=!auditorium",
+      "god": "Staff Nexus - AUDITORIUM cleared.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #0=default_room.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_error.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "get LockBox",
+      "god": "runtime error: mux.object.invalid: runtime error: [string \"object_logic/probe_error.lua\"]:4: PROBE ERROR\nstack traceback:\n\t[C]: in ?\n\t[C]: in function 'error'\n\t[string \"object_logic/probe_error.lua\"]:4: in function <[string \"object_logic/probe_error.lua\"]:4>\n\t[C]: in ?\n\t[C]: in upvalue 'pcall'\n\tsrc/lua/packages/error/mod.rs:111:1: in function <src/lua/packages/error/mod.rs:111:1>\nstack traceback:\n\t[C]: in ?\n\t[C]: in function 'error'\n\tsrc/lua/packages/error/mod.rs:111:1: in function <src/lua/packages/error/mod.rs:111:1>\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "use LockBox",
+      "god": "runtime error: mux.object.invalid: runtime error: [string \"object_logic/probe_error.lua\"]:5: PROBE ERROR\nstack traceback:\n\t[C]: in ?\n\t[C]: in function 'error'\n\t[string \"object_logic/probe_error.lua\"]:5: in function <[string \"object_logic/probe_error.lua\"]:5>\n\t[C]: in ?\n\t[C]: in upvalue 'pcall'\n\tsrc/lua/packages/error/mod.rs:111:1: in function <src/lua/packages/error/mod.rs:111:1>\nstack traceback:\n\t[C]: in ?\n\t[C]: in function 'error'\n\tsrc/lua/packages/error/mod.rs:111:1: in function <src/lua/packages/error/mod.rs:111:1>\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_allow.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/create Probe",
+      "god": "Channel Probe created.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@force #16=addcom box=Probe",
+      "god": "",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@teleport Wizard=#16",
+      "god": "LOCK teleport object=16 enactor=2 subject=1 silent=false\nWizard has left.\nTeleported.\n",
+      "wizard": "\u001b[0m\u001b[97mLockBox\u001b[0m\n\u001b[0m\n"
+    },
+    {
+      "actor": 1,
+      "command": "@chan/emit Probe=CHANNEL LEAK",
+      "god": "",
+      "wizard": "[Probe] CHANNEL LEAK\n"
+    },
+    {
+      "actor": 1,
+      "command": "@teleport #2=#0",
+      "god": "LOCK teleport_out object=16 enactor=2 subject=2 silent=false\nEVENT on_leave object=16 enactor=2 subject=2 operation=move\nWizard has arrived.\nTeleported.\n",
+      "wizard": "\u001b[0m\u001b[97mStaff Nexus\u001b[0m\nThis is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.\n\nPlease be sure to read the room descriptions for details on the contents of each area.\n\n\n\u001b[0m\u001b[93m Players:\u001b[0m                             \u001b[0m\u001b[93mObvious Exits:\u001b[0m\n \u001b[0m\u001b[97mGOD\u001b[0m                                  \u001b[0m\u001b[97m{\u001b[0m\u001b[32mnp\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mNew Player Room\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mus\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mUsed Mech Store\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mal\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mAfterlife\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mcs\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mChannel Object Storage\u001b[0m\n\n \u001b[0m\u001b[93mContents:\u001b[0m\n LockBox\u001b[0m\n"
+    },
+    {
+      "actor": 1,
+      "command": "@chan/object Probe=#16",
+      "god": "@chan/object: Set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@flag #2=!wizard",
+      "god": "Wizard - WIZARD cleared.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 2,
+      "command": "addcom p=Probe",
+      "god": "LOCK channel_join object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=16 subject=16 silent=true\n",
+      "wizard": "You have joined channel Probe.\n[Probe] Wizard has joined this channel.\n"
+    },
+    {
+      "actor": 2,
+      "command": "p TEST",
+      "god": "LOCK channel_transmit object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=16 subject=16 silent=true\n",
+      "wizard": "[Probe] Wizard: TEST\n"
+    },
+    {
+      "actor": 1,
+      "command": "@lua/parent #16=probe_deny.lua",
+      "god": "Lua parent set.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 2,
+      "command": "p TEST DENIED LOCK OPEN FLAGS",
+      "god": "LOCK channel_transmit object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=16 subject=16 silent=true\n",
+      "wizard": "[Probe] Wizard: TEST DENIED LOCK OPEN FLAGS\n"
+    },
+    {
+      "actor": 2,
+      "command": "p off",
+      "god": "",
+      "wizard": "channel Probe leave callback: runtime error: src/communication/membership.rs:298:2: attempt to index global '_parents' (a nil value)\nstack traceback:\n\t[C]: in metamethod '__index'\n\tsrc/communication/membership.rs:298:2: in function <src/communication/membership.rs:298:1>\n"
+    },
+    {
+      "actor": 2,
+      "command": "p on",
+      "god": "",
+      "wizard": "You are already on channel Probe.\n"
+    },
+    {
+      "actor": 1,
+      "command": "@chan/pflags Probe=!receive",
+      "god": "@chan/pflags: Cleared.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/emit Probe=RECEIVE DENIED",
+      "god": "LOCK channel_receive object=16 enactor=2 subject=2 silent=true\nLOCK channel_receive object=16 enactor=16 subject=16 silent=true\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/pflags Probe=!transmit",
+      "god": "@chan/pflags: Cleared.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 2,
+      "command": "p TRANSMIT DENIED",
+      "god": "",
+      "wizard": "That channel type cannot be transmitted on.\n"
+    },
+    {
+      "actor": 1,
+      "command": "@chan/pflags Probe=!join",
+      "god": "@chan/pflags: Cleared.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 2,
+      "command": "delcom p",
+      "god": "",
+      "wizard": "channel Probe leave callback: runtime error: src/communication/membership.rs:298:2: attempt to index global '_parents' (a nil value)\nstack traceback:\n\t[C]: in metamethod '__index'\n\tsrc/communication/membership.rs:298:2: in function <src/communication/membership.rs:298:1>\n"
+    },
+    {
+      "actor": 2,
+      "command": "addcom p=Probe",
+      "god": "",
+      "wizard": "That alias is already in use.\n"
+    }
+  ]
+}

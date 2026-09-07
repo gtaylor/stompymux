@@ -1,0 +1,361 @@
+{
+  "baseline": {
+    "c_revision": "2bbbe6fcdbabe69e229d73089f44bf38f91c0591",
+    "rust_revision": "3a1c55947f00fee05a69c7df5398e0c1e0398664",
+    "rust_runtime_sha256": "7b631fa21126407a90e3b877b1c46d8d56aec20e7a9beff91c6a15a6dee854c4",
+    "rust_runtime_digest_format": "sha256 of lexically sorted files under src: repository-relative path (including src/) NUL file-bytes NUL",
+    "c_clean": true,
+    "rust_pending_baseline": [
+      " M README.md",
+      " M docs/lua-api-parity.md",
+      " M game/help/wizard_commands/home.md",
+      " M src/commands/mod.rs",
+      " M src/commands/native.rs",
+      " M src/commands/objects/builders.rs",
+      " M src/commands/objects/inventory.rs",
+      " M src/commands/objects/mod.rs",
+      " M src/lua/actions.rs",
+      " M src/lua/callbacks.rs",
+      " M src/lua/mod.rs",
+      " M src/lua/packages/world/mod.rs",
+      " M src/movement.rs",
+      " M tests/foundation.rs",
+      " M tests/lua_parity.rs",
+      "?? docs/behavioral-parity.md",
+      "?? tests/fixtures/behavioral-parity.json",
+      "?? tests/fixtures/movement-parity.json",
+      "?? tests/movement_parity.rs"
+    ],
+    "scope": "Current Rust working tree includes pending D01\u2013D05 corrections; audit adds no runtime changes."
+  },
+  "exclusions": [
+    {
+      "id": "X01",
+      "behavior": "Transactional persistence, output, logs, flows and maintenance; rollback/error isolation",
+      "decision": "Prior approved plans and behavioral-parity.md L04/G01",
+      "boundary": "Exclude timing/rollback differences, not successful recipients or content."
+    },
+    {
+      "id": "X02",
+      "behavior": "Original movement cause, same-location no-op and safe descriptors",
+      "decision": "Prior approved plan and M02/M05",
+      "boundary": "Do not report C NOTHING defaults or invented descriptors as missing parity."
+    },
+    {
+      "id": "X03",
+      "behavior": "CONNECTED reconciliation, generations, bounded resources, queue safety and strict admission/path validation",
+      "decision": "Prior approved plans and A02/Q02",
+      "boundary": "Do not excuse looser type validation or incorrect target selection."
+    },
+    {
+      "id": "X04",
+      "behavior": "Markdown/HTML, Unicode/grapheme layout and session IDs/process units",
+      "decision": "Prior approved plans and N03/R02",
+      "boundary": "Legacy ASCII matching and room renderer selection remain comparable."
+    },
+    {
+      "id": "X05",
+      "behavior": "Stable append order in containment lists",
+      "decision": "Prior approved storage plan and O02",
+      "boundary": "Exclude presentation reordering caused solely by list order."
+    },
+    {
+      "id": "X06",
+      "behavior": "Removed inventory /quiet, look/outside, goto/quiet, teleport/quiet|loud, exit teleport destinations, #dbref command, @find/next and @dump",
+      "decision": "Explicit prior user decisions and C02/M03",
+      "boundary": "Plain goto and normal linked exit travel are not excluded."
+    },
+    {
+      "id": "X07",
+      "behavior": "BattleTech, HTTP, shutdown reasons and additional deferred Telnet options",
+      "decision": "Prior boundaries",
+      "boundary": "Dormant C declarations or ignored @destroy/recursive bits are not implemented features."
+    }
+  ],
+  "findings": [
+    {
+      "id": "D06",
+      "area": "targeting/permissions",
+      "title": "Ordinary object matching loses word-prefix matches",
+      "severity": "medium",
+      "status": "verified equivalent",
+      "evidence": "paired TCP execution + C/Rust source tracing + Rust characterization",
+      "command": "look sword",
+      "setup": "Create a carried thing named Red Sword; use look sword.",
+      "c_result": "Red Sword is selected and described.",
+      "rust_result": "I don't see that here.",
+      "effect": "Valid abbreviations for later words fail. The shared matcher also serves inventory operations; the paired probe exercises look.",
+      "recommendation": "Use the C word-prefix matcher consistently for ordinary local candidates; keep exact-match precedence, lock preferences and scope.",
+      "c_source": "btmux-khi/src/mux/world/match.c",
+      "rust_source": "src/commands/objects/mod.rs",
+      "test": "ordinary_word_prefix_matches_c",
+      "resolution": "Resolved using the existing C word-prefix helper in the shared ordinary matcher. Original C/Rust results above and behavioral-wire.json remain historical. Positive ordinary-matching, scope, ambiguity, type/MATCH-lock, possessive/inventory and TCP restart regressions cover the correction."
+    },
+    {
+      "id": "D07",
+      "area": "Lua APIs/callbacks",
+      "title": "Fallback description content loses precedence over its provider",
+      "severity": "medium",
+      "status": "verified equivalent",
+      "evidence": "paired TCP execution + C/Rust source tracing + Rust characterization",
+      "command": "look Red Sword",
+      "setup": "Give Red Sword stored description STORED DESCRIPTION and audit.lua messages.describe returning PROVIDER DESCRIPTION while setting audit.provider=true.",
+      "c_result": "STORED DESCRIPTION; provider still executes and sets state.",
+      "rust_result": "PROVIDER DESCRIPTION; provider executes and sets state.",
+      "effect": "Stored descriptions become invisible whenever a describe provider supplies direct text, even though C gives stored content priority.",
+      "recommendation": "Model stored description/internal-description priority explicitly after provider evaluation. Do not skip provider mutations or on_describe.",
+      "c_source": "btmux-khi/src/mux/commands/look.c",
+      "rust_source": "src/commands/objects/look.rs",
+      "test": "describe_provider_overrides_stored_content",
+      "regression_test": "stored_description_overrides_provider_content",
+      "resolution": "Resolved: live stored content is selected after provider execution; room appearance is internal, including transparent-exit views. Historical results above are preserved. Positive Rust and TCP regressions cover the correction."
+    },
+    {
+      "id": "D08",
+      "area": "Telnet/rendering",
+      "title": "Transparent exit selects the remote room external renderer",
+      "severity": "medium",
+      "status": "verified equivalent",
+      "evidence": "paired TCP execution + C/Rust source tracing + Rust characterization",
+      "command": "look audit-window",
+      "setup": "Link a transparent exit to a room with distinct INTERNAL ROOM VIEW and EXTERNAL ROOM VIEW callbacks; look at the exit from its source.",
+      "c_result": "INTERNAL ROOM VIEW.",
+      "rust_result": "EXTERNAL ROOM VIEW.",
+      "effect": "Copied room modules commonly supply only internal_appearance; remote room views fall back or lose their intended rendering.",
+      "recommendation": "Select internal appearance for rooms regardless of viewer location, retaining the approved container distinction and transaction staging.",
+      "c_source": "btmux-khi/src/mux/commands/look.c",
+      "rust_source": "src/commands/objects/look.rs",
+      "test": "remote_room_uses_external_appearance",
+      "regression_test": "remote_room_uses_internal_appearance",
+      "resolution": "Resolved: live stored content is selected after provider execution; room appearance is internal, including transparent-exit views. Historical results above are preserved. Positive Rust and TCP regressions cover the correction."
+    },
+    {
+      "id": "D09",
+      "area": "communication",
+      "title": "Private pages reach contained non-recipients",
+      "severity": "high",
+      "status": "verified equivalent",
+      "evidence": "paired TCP execution + C/Rust source tracing + Rust characterization",
+      "command": "page GOD=PRIVATE-PAGE",
+      "setup": "Connect GOD and Wizard, teleport Wizard inside GOD, then GOD pages GOD with PRIVATE-PAGE.",
+      "c_result": "Only GOD receives the page and sender confirmation; Wizard receives no text.",
+      "rust_result": "Wizard also receives GOD pages: PRIVATE-PAGE, despite last-page recipients containing only GOD.",
+      "effect": "A player inside another player receives private communications without being named as a recipient. This is recipient expansion, not a multiple-session difference.",
+      "recommendation": "Fix page delivery first. Match the C direct-player notification policy; audit related channel/non-player delivery separately rather than globally disabling legitimate broadcasts.",
+      "c_source": "btmux-khi/src/mux/communication/page_commands.c",
+      "rust_source": "src/communication/delivery.rs",
+      "test": "private_page_excludes_contained_bystander",
+      "resolution": "Resolved by direct player notification. Original results above remain historical; behavioral-wire-d09-resolved.json records the corrected paired run."
+    },
+    {
+      "id": "D10",
+      "area": "communication",
+      "title": "Mixed valid/unknown page recipients lose group annotation",
+      "severity": "low",
+      "status": "verified equivalent",
+      "evidence": "paired TCP execution + C/Rust source tracing + Rust characterization",
+      "command": "page Wizard MissingPlayer=hello",
+      "setup": "Connect Wizard and page Wizard MissingPlayer=hello.",
+      "c_result": "Wizard receives To (Wizard), GOD pages you: hello. Sender reports the missing name.",
+      "rust_result": "Wizard receives GOD pages: hello. Sender reports the same missing name.",
+      "effect": "The recipient cannot see the original multi-target context. Delivery and successful-recipient history are otherwise correct in this case.",
+      "recommendation": "Preserve C target-token/group semantics separately from the resolved/delivered list. Review partial/offline and repeated recipients together.",
+      "c_source": "btmux-khi/src/mux/communication/page_commands.c",
+      "rust_source": "src/communication/page.rs",
+      "test": "mixed_recipient_page_loses_group_annotation",
+      "regression_test": "mixed_recipient_page_preserves_group_annotation",
+      "resolution": "Recipient formatting tracks the original group request independently of successful resolution; whole names remain single-target. Sender confirmations and history remain unchanged. Original results above remain historical; behavioral-wire-d10-d11-resolved.json records corrected paired execution."
+    },
+    {
+      "id": "D11",
+      "area": "Lua APIs/callbacks",
+      "title": "Printable-ASCII predicate silently coerces numeric input",
+      "severity": "low",
+      "status": "verified equivalent",
+      "evidence": "paired TCP execution + C/Rust source tracing + Rust characterization",
+      "command": "audit-ascii",
+      "setup": "Evaluate pcall(mux.text.is_printable_ascii,123), plus ASCII and newline-containing string controls.",
+      "c_result": "The number is rejected; strings are accepted and return true/false as appropriate.",
+      "rust_result": "The number is accepted and returns true; string controls match C.",
+      "effect": "Callers that depend on argument validation receive a successful boolean instead of a type error. This is looser validation, not the approved stricter-input behavior.",
+      "recommendation": "Require an actual Lua string for this predicate, preserving binary-safe checks and documenting its argument error.",
+      "c_source": "btmux-khi/src/mux/lua/packages/mux/text/mux_text_bindings.c",
+      "rust_source": "src/lua/packages/text/mod.rs",
+      "test": "printable_ascii_coerces_numbers",
+      "regression_test": "printable_ascii_requires_strings",
+      "resolution": "Only actual Lua strings are accepted; all 256 byte values are checked directly, including binary strings. Original results above remain historical; behavioral-wire-d10-d11-resolved.json records corrected paired execution."
+    },
+    {
+      "id": "D12",
+      "area": "commands/switches",
+      "title": "Plain goto and configured movement aliases do not work",
+      "severity": "medium",
+      "status": "verified equivalent",
+      "evidence": "paired TCP execution + C/Rust source tracing + Rust characterization",
+      "command": "goto audit-window",
+      "setup": "Create a linked exit audit-window; execute goto audit-window. The bare exit name is a working control.",
+      "c_result": "The caller traverses the exit and sees INTERNAL ROOM VIEW.",
+      "rust_result": "Unknown-command response; location does not change. Rust tests also reproduce go and move aliases.",
+      "effect": "Existing help and aliases advertise an unavailable core movement command. Only goto/quiet was intentionally excluded, not plain goto.",
+      "recommendation": "Register plain goto using the shared exit path and its access policy; retain rejection of /quiet and test native/alias/forced execution.",
+      "c_source": "btmux-khi/src/mux/world/movement_commands.c",
+      "rust_source": "src/commands/registry.rs",
+      "test": "goto_and_aliases_dispatch_exit_travel",
+      "resolution": "Registered plain goto with shared local exit travel and effective access gating; positive alias, denial, queued/TCP rollback and restart regressions. Historical results above remain unchanged."
+    }
+  ],
+  "coverage": [
+    {
+      "parent": "C01",
+      "area": "Dispatch and scoped permissions",
+      "review": "Traced exit/native/Lua entry order, command registration, shadowing and aliases. D12 reproduced.",
+      "remaining": "README explicitly documents Rust shadowing/first-handler semantics; native-first C behavior is a policy question P01, not silently classified as a bug.",
+      "tests": "tests/commands.rs"
+    },
+    {
+      "parent": "T01",
+      "area": "Matching and visibility",
+      "review": "Exact/leading-prefix controls match on TCP; D06 later-word matching fails. Read C match_list and Rust ordinary/builder matchers separately.",
+      "remaining": "Ambiguous lock-preference/type combinations and possessive matching remain only partially covered.",
+      "tests": "tests/building.rs"
+    },
+    {
+      "parent": "O01",
+      "area": "Object lifecycle and repair",
+      "review": "Reviewed SAFE/GOING/Wizard/foundation guards, replacement-home selection and the supported ownership cleanup map against C destruction/home code. Existing malformed-list/purge regressions retained.",
+      "remaining": "No new paired C/Rust malformed-database destruction run; do not promote full repair equivalence. Unknown-dependency failure and append ordering remain intentional.",
+      "tests": "tests/dbck.rs"
+    },
+    {
+      "parent": "S02",
+      "area": "Channels and pages",
+      "review": "Traced join/listening/receive/IC gates and direct vs recursive delivery. Paired page controls, partial targets and containment establish D09/D10.",
+      "remaining": "Non-player channel recipient forwarding and partial/offline/repeated page combinations need focused follow-up.",
+      "tests": "tests/communication.rs"
+    },
+    {
+      "parent": "Q03",
+      "area": "Macros, queues and fallback",
+      "review": "Read macro expansion and common queued dispatch/commit paths; retained the recently executed nested-force regression. Checked zone-room fallback suspicion in both servers.",
+      "remaining": "Zonegate was unknown in both probes (P02); C declaration alone is not proof of working zone exits. Multi-handler scope semantics depend on P01.",
+      "tests": "tests/macros.rs"
+    },
+    {
+      "parent": "L02",
+      "area": "Lua coercions and callback results",
+      "review": "Compared binary state scalar conversion, strict message fields, describe side effects and ASCII predicate validation. Paired evidence establishes D07/D11.",
+      "remaining": "All API coercions, coroutine/reload cross-products and malformed-return combinations are not verified; Rust rollback/checking restrictions excluded.",
+      "tests": "tests/lua_parity.rs"
+    },
+    {
+      "parent": "F02",
+      "area": "Configuration and runtime settings",
+      "review": "Reviewed log_options partial edits and alias/directive plumbing; rebuilt and ran C configuration registry/value/interpreter/TOML tests, retaining Rust live-edit/include tests.",
+      "remaining": "No exhaustive paired live reconfiguration across existing sessions; dormant directives and Rust-only runtime knobs excluded.",
+      "tests": "tests/administration.rs"
+    },
+    {
+      "parent": "N02",
+      "area": "Telnet and rendering",
+      "review": "Compared startup option directions and declined negotiation on real TCP for both engines. Reviewed legacy rendering boundaries; D08 room-mode selection reproduced. Rebuilt C text/Telnet/environment tests.",
+      "remaining": "Full ANSI/OSC/capability/environment cross-product remains unverified; raw SGR redundancy alone is not a rendering defect.",
+      "tests": "tests/text.rs"
+    },
+    {
+      "parent": "G02",
+      "area": "Logging producers and formats",
+      "review": "Reviewed audit placement, unknown-command logging, category defaults, cache expiry and filename/write entrypoints. Rebuilt C log tests and retained Rust logging regressions.",
+      "remaining": "Complete event/category combinations and loss/saturation behavior were not paired; redaction, staged logs and confinement excluded.",
+      "tests": "tests/logging.rs"
+    },
+    {
+      "parent": "A03",
+      "area": "Accounts/admission",
+      "review": "Both engines authenticate the same controlled schema-32 Argon2id fixture by dbref with unanswered/refused optional negotiation. C password/account tests rebuilt.",
+      "remaining": "All retry/site/edit/multiple-session combinations rely on existing Rust tests and source review, not a new differential run.",
+      "tests": "tests/policies.rs"
+    },
+    {
+      "parent": "H02",
+      "area": "Help",
+      "review": "Reviewed ASCII keyword case folding and metadata/body separation; rebuilt C frontmatter/index/render tests and retained Rust browsing/reload tests.",
+      "remaining": "Not every supplied article has a new paired rendering transcript; Markdown extensions and Unicode layout excluded.",
+      "tests": "tests/help.rs"
+    },
+    {
+      "parent": "R03",
+      "area": "Operational reports",
+      "review": "Reviewed shared command access and report/session accounting boundaries, using existing report regressions and the C connection command source.",
+      "remaining": "No new byte-for-byte WHO/session/log-report comparison; IDs, units, timestamps and bounded chunking remain excluded.",
+      "tests": "tests/operations.rs"
+    }
+  ],
+  "validation": {
+    "c": "Built current stompymux and the 32 selected C test targets; all 32 tests passed. TCP probe then used the rebuilt server.",
+    "rust": "cargo fmt --check and cargo clippy --all-targets -- -D warnings passed. Full cargo test: 302 passed, 0 failed, 0 ignored; includes seven new characterizations and one fixture-consistency test.",
+    "c_tests": [
+      "command_registry",
+      "configuration_registry",
+      "configuration_values",
+      "configuration_interpreter",
+      "commac",
+      "speech_format",
+      "flag_privileges",
+      "unparse_object_numonly",
+      "power_fields",
+      "password_hash",
+      "validation",
+      "utf8",
+      "styled_text",
+      "object_state",
+      "object_names",
+      "player_account",
+      "player_cache",
+      "page_recipients",
+      "lua_module_smoke",
+      "lua_command_access",
+      "lua_lock_checks",
+      "lua_log",
+      "lua_pcall_checked",
+      "lua_module_log",
+      "lua_error",
+      "libtelnet_integration",
+      "telnet_environment",
+      "help_frontmatter_parse",
+      "help_render",
+      "help_index_integration",
+      "configuration_toml_parse",
+      "libuv_tcp_integration"
+    ]
+  },
+  "policy_questions": [
+    {
+      "id": "P01",
+      "question": "C places global natives before Lua and accumulates matches across local sources; README explicitly documents Rust Lua shadowing and first-handled behavior. Preserve the existing contract pending an explicit disposition; no automatic fix or claim of equivalence.",
+      "c_source": "btmux-khi/src/mux/commands/command_dispatch.c",
+      "rust_source": "src/commands/mod.rs"
+    },
+    {
+      "id": "P02",
+      "question": "C contains a zone-exit fallback, but the controlled zone-room fixture returned unknown in both engines. Establish working C preconditions before proposing this as a missing feature.",
+      "command": "zonegate"
+    }
+  ],
+  "presentation_observations": [
+    {
+      "command": "@open audit-window=#17",
+      "difference": "C: Opened. Rust: Opened exit #18. Both then report Linked.",
+      "recommendation": "Low priority; consider approving the more informative Rust confirmation."
+    },
+    {
+      "command": "@state/examine Red Sword/audit",
+      "difference": "Rust adds a final blank line; the namespace, value and type match.",
+      "recommendation": "Review as report formatting, not a state failure."
+    },
+    {
+      "command": "zonegate",
+      "difference": "Both reject the command; their unknown-command guidance differs.",
+      "recommendation": "Choose wording deliberately; not evidence of a zone feature mismatch."
+    }
+  ]
+}

@@ -435,3 +435,87 @@ async fn removed_inventory_and_look_switches_are_rejected() {
         );
     }
 }
+
+/// Ordinary local matching uses C word boundaries without broadening visibility or scope.
+#[tokio::test(flavor = "current_thread")]
+async fn ordinary_word_prefix_boundaries_scope_and_precedence() {
+    let (_d, c, mut w) = fixture().await;
+    let room = ObjectId(c.start());
+    let sword = object(&mut w, &c, "[bold]Red-Sword Blade[/]", Kind::Thing, room);
+    w.objects.get_mut(&sword).unwrap().description = Some("WORD MATCH".into());
+    let hidden = object(&mut w, &c, "Hidden Relic", Kind::Thing, room);
+    w.objects.get_mut(&hidden).unwrap().flags.insert(Flag::Dark);
+    let remote = object(&mut w, &c, "Remote Relic", Kind::Thing, ObjectId(0));
+    let s = scripts(&c, w);
+    for query in ["red", "sWo", "Sword Bl", "blade"] {
+        assert!(
+            run(&s, &c, 2, &format!("look {query}")).contains("WORD MATCH"),
+            "{query}"
+        );
+    }
+    for query in ["word", "*Sword*", "relic"] {
+        assert!(
+            run(&s, &c, 2, &format!("look {query}")).contains("I don't see that here."),
+            "{query}"
+        );
+    }
+    assert!(run(&s, &c, 2, &format!("look #{}", remote.0)).contains("I don't see that here."));
+    assert!(run(&s, &c, 2, "get   ").contains("Specify an object."));
+    assert!(run(&s, &c, 2, &format!("look #{}", sword.0)).contains("WORD MATCH"));
+    let second = {
+        let mut w = s.world.borrow_mut();
+        let id = object(&mut w, &c, "Blue Sword", Kind::Thing, room);
+        w.objects.get_mut(&id).unwrap().description = Some("OTHER MATCH".into());
+        id
+    };
+    assert!(run(&s, &c, 2, "look sword").contains("I don't know which object you mean."));
+    s.world.borrow_mut().objects.get_mut(&second).unwrap().name = "Sword".into();
+    assert!(run(&s, &c, 2, "look sword").contains("OTHER MATCH"));
+    assert!(!run(&s, &c, 2, "look sword").contains("WORD MATCH"));
+    c.logger.shutdown(&c).await.unwrap();
+}
+
+/// Inventory callers retain lock/type preferences and use word matching for both possessive parts.
+#[tokio::test(flavor = "current_thread")]
+async fn word_prefix_inventory_possessions_and_match_locks() {
+    let (_d, c, mut w) = fixture().await;
+    let room = ObjectId(c.start());
+    let bag = object(&mut w, &c, "Travel Bag", Kind::Thing, room);
+    let item = object(&mut w, &c, "Red Sword", Kind::Thing, bag);
+    let first = object(&mut w, &c, "First Token", Kind::Thing, room);
+    let second = object(&mut w, &c, "Second Token", Kind::Thing, room);
+    let player = ObjectId(1);
+    w.objects.get_mut(&player).unwrap().name = "Visitor Token".into();
+    w.objects.get_mut(&item).unwrap().description = Some("POSSESSIVE MATCH".into());
+    let s = scripts(&c, w);
+    lua(
+        &s,
+        &format!(
+            r#"
+      _parents['default_thing.lua'].locks={{
+        match=function(ctx) assert(ctx.silent);return ctx.object~={first_id} end,
+        take=function() return true end,enter=function() return true end}}
+      _parents['default_thing.lua'].messages={{use=function() return {{enactor_message='USED SWORD'}} end}}
+    "#,
+            first_id = first.0
+        ),
+    );
+    assert!(run(&s, &c, 2, "look bag's sword").contains("POSSESSIVE MATCH"));
+    assert!(run(&s, &c, 2, "get bag's sword").contains("Taken."));
+    assert_eq!(s.world.borrow().objects[&item].location, Some(ObjectId(2)));
+    assert!(run(&s, &c, 2, "use sword").contains("USED SWORD"));
+    assert!(run(&s, &c, 2, "drop sword").contains("Dropped."));
+    assert!(run(&s, &c, 2, "get sword").contains("Taken."));
+    assert!(run(&s, &c, 2, "give token=sword").contains("Given."));
+    assert_eq!(s.world.borrow().objects[&item].location, Some(player));
+    assert!(run(&s, &c, 2, "get token").contains("Taken."));
+    assert_eq!(
+        s.world.borrow().objects[&second].location,
+        Some(ObjectId(2))
+    );
+    assert_eq!(s.world.borrow().objects[&first].location, Some(room));
+    assert_eq!(s.world.borrow().objects[&player].location, Some(room));
+    run(&s, &c, 2, "enter bag");
+    assert_eq!(s.world.borrow().objects[&ObjectId(2)].location, Some(bag));
+    c.logger.shutdown(&c).await.unwrap();
+}

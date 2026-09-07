@@ -1,0 +1,99 @@
+{
+  "baseline": {
+    "rust_revision": "3a1c55947f00fee05a69c7df5398e0c1e0398664",
+    "c_revision": "2bbbe6fcdbabe69e229d73089f44bf38f91c0591",
+    "rust_src_sha256": "cbfd831c8262df4bcf1216b14834c03bbe1efc907a66d9f3bdc045c20d7fd5cc",
+    "digest_format": "sorted repository-relative src paths NUL file bytes NUL",
+    "working_tree": "Historical pre-fix baseline including pending movement and D06-D12 corrections."
+  },
+  "correction": {
+    "rust_src_sha256": "604968e19e3885de65064bbbbeed051bec3c069aea3eb483e47a842a40e2914b",
+    "paired_probe": "tests/fixtures/lock-message-wire-corrected.json",
+    "wire_fixture_policy": "The checked-in wire fixture remains the original 60-command pre-fix transcript; corrected behavior is asserted by the Live runtime tests.",
+    "remaining_observation": "Historical LM01-LM04 probe exposed the closed JOIN denial wording subsequently corrected by LM05."
+  },
+  "evidence": {
+    "wire": "tests/fixtures/lock-message-wire.json",
+    "corrected_wire": "tests/fixtures/lock-message-wire-corrected.json",
+    "probe": "tests/tools/lock_message_probe.py",
+    "commands_per_engine": 60,
+    "tests": "tests/lock_message_audit.rs",
+    "interpretation": "The wire transcript preserves the original discrepancies; runtime tests now verify their C-grounded corrections. Existing tests do not imply exhaustive differential coverage."
+  },
+  "findings": [
+    {
+      "id": "LM01",
+      "severity": "high",
+      "behavior": "Channel traffic reaches unnamed occupants of subscribed things",
+      "status": "corrected",
+      "rust_source": "src/communication/delivery.rs",
+      "c_source": "btmux-khi/src/mux/communication/channel_delivery.c",
+      "test": "channel_thing_routes_only_through_audible_exits"
+    },
+    {
+      "id": "LM02",
+      "severity": "high",
+      "behavior": "Channel leave uses unavailable testing globals in Live mode",
+      "status": "corrected",
+      "rust_source": "src/communication/membership.rs",
+      "c_source": "btmux-khi/src/mux/communication/channel_aliases.c",
+      "test": "channel_leave_callbacks_work_in_live_runtime"
+    },
+    {
+      "id": "LM03",
+      "severity": "medium",
+      "behavior": "Direct action, denial and page delivery omit AUDIBLE exits",
+      "status": "corrected",
+      "rust_source": "src/lua/actions.rs",
+      "c_source": "btmux-khi/src/mux/commands/action_messages.c",
+      "test": "direct_lock_messages_and_pages_use_audible_exits"
+    },
+    {
+      "id": "LM04",
+      "severity": "low",
+      "behavior": "Native denial defaults and channel/inventory confirmations differ",
+      "status": "corrected",
+      "rust_source": "src/commands/objects/inventory.rs",
+      "c_source": "btmux-khi/src/mux/commands/rob.c",
+      "test": "native_defaults_and_confirmations_match_c"
+    }
+  ],
+  "report": "docs/lock-message-audit.md",
+  "validation": {
+    "rust": "321 tests passed, 0 failed; cargo fmt and Clippy with warnings denied passed. Five corrected-behavior/fixture tests.",
+    "c": "8 selected tests passed; the paired 60-command C/Rust TCP probe completed successfully"
+  },
+  "followups": [
+    {
+      "id": "LM05",
+      "severity": "low",
+      "behavior": "Closed-channel native JOIN denial wording",
+      "status": "corrected",
+      "rust_source": "src/communication/membership.rs",
+      "c_source": "btmux-khi/src/mux/communication/channel_aliases.c",
+      "tests": [
+        "tests/channel_join_parity.rs"
+      ]
+    },
+    {
+      "id": "LM06",
+      "severity": "medium",
+      "behavior": "Native lock-failure events omit the lock-only subject field",
+      "status": "corrected",
+      "rust_source": "src/lua/actions.rs",
+      "c_source": "btmux-khi/src/mux/commands/action_messages.c",
+      "tests": [
+        "tests/failure_event_parity.rs"
+      ]
+    }
+  ],
+  "followup_correction": {
+    "rust_src_sha256": "375abb5bddbbf482282af27d5ab9cc2a45dd9f2975ebb45dcc9180260604428b",
+    "scope": "LM05 native denial text and LM06 failure-event subject only; approved context extensions and transaction behavior retained.",
+    "paired_probe": "tests/fixtures/lock-message-wire-followup.json",
+    "validation": {
+      "rust": "326 tests passed, 0 failed; formatting and Clippy --all-targets with warnings denied passed.",
+      "c": "8 selected C tests passed; combined 60-command TCP probe verifies JOIN denial wording and absent failure-event subjects, with lock subjects preserved."
+    }
+  }
+}

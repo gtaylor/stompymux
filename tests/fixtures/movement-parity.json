@@ -1,0 +1,59 @@
+{
+  "source": "btmux-khi/src/mux/world/move.c:move_via_generic,move_via_exit,teleport_commit,process_leave_loc,process_enter_loc",
+  "teleport": [
+    "teleport_source",
+    "leave",
+    "on_leave",
+    "enter_source",
+    "teleport",
+    "on_teleport",
+    "move",
+    "on_move",
+    "enter",
+    "on_enter",
+    "leave_destination"
+  ],
+  "home": [
+    "leave",
+    "on_leave",
+    "enter_source",
+    "move",
+    "on_move",
+    "enter",
+    "on_enter",
+    "leave_destination"
+  ],
+  "dark_teleport": [
+    "leave:silent",
+    "move",
+    "on_move",
+    "enter:silent"
+  ],
+  "location_cause": -1,
+  "home_cause": -1,
+  "exit": [
+    "success",
+    "on_success",
+    "leave",
+    "on_leave",
+    "enter_source",
+    "appearance",
+    "drop",
+    "on_drop",
+    "move",
+    "on_move",
+    "enter",
+    "on_enter",
+    "leave_destination"
+  ],
+  "dark_exit": [
+    "success:silent",
+    "leave:silent",
+    "appearance",
+    "drop:silent",
+    "move",
+    "on_move",
+    "enter:silent"
+  ],
+  "cause_policy": "Traces exercise explicit movement requests. C native move_exit/enter/leave supply NOTHING; Rust intentionally retains the original command cause (M05)."
+}

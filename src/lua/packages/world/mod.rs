@@ -99,11 +99,14 @@ pub(super) fn register(
             crate::lua::transactions::with_cause(lua, ObjectId(1), || {
                 crate::movement::perform(
                     &s,
-                    ObjectId(1),
-                    id,
-                    dest,
-                    None,
-                    crate::movement::Route::Teleport,
+                    crate::movement::Request {
+                        actor: ObjectId(1),
+                        object: id,
+                        cause: ObjectId(1),
+                        destination: dest,
+                        session: None,
+                        route: crate::movement::Route::Teleport,
+                    },
                 )
             })
             .map_err(|e| super::error::failure("mux.object.unavailable", e))?;

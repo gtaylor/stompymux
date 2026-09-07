@@ -1,0 +1,306 @@
+{
+  "c": [
+    {
+      "command": "audit-ascii",
+      "sender": "ASCII number accepted=false\nASCII string accepted=true result=true\nASCII string accepted=true result=false\n",
+      "observer": ""
+    },
+    {
+      "command": "@create Red Sword",
+      "sender": "Red Sword created as object #16\n",
+      "observer": ""
+    },
+    {
+      "command": "look sword",
+      "sender": "Red Sword(#16)\nYou see nothing special.\n",
+      "observer": ""
+    },
+    {
+      "command": "look red",
+      "sender": "Red Sword(#16)\nYou see nothing special.\n",
+      "observer": ""
+    },
+    {
+      "command": "@description Red Sword=STORED DESCRIPTION",
+      "sender": "Red Sword/Description - Set.\n",
+      "observer": ""
+    },
+    {
+      "command": "@lua/parent Red Sword=audit.lua",
+      "sender": "Lua parent set.\n",
+      "observer": ""
+    },
+    {
+      "command": "look Red Sword",
+      "sender": "Red Sword(#16)\nSTORED DESCRIPTION\n",
+      "observer": ""
+    },
+    {
+      "command": "@state/examine Red Sword/audit",
+      "sender": "State namespace audit:\n  provider (boolean): true\n",
+      "observer": ""
+    },
+    {
+      "command": "page Wizard MissingPlayer=hello",
+      "sender": "I don't recognize \"MissingPlayer\".\nYou paged Wizard with 'hello'.\n",
+      "observer": "To (Wizard), GOD pages you: hello\n"
+    },
+    {
+      "command": "page Wizard=hello",
+      "sender": "You paged Wizard with 'hello'.\n",
+      "observer": "GOD pages: hello\n"
+    },
+    {
+      "command": "@dig Audit Room",
+      "sender": "Audit Room created with room number 17.\n",
+      "observer": ""
+    },
+    {
+      "command": "@lua/parent #17=audit_room.lua",
+      "sender": "Lua parent set.\n",
+      "observer": ""
+    },
+    {
+      "command": "@open audit-window=#17",
+      "sender": "Opened.\nLinked.\n",
+      "observer": ""
+    },
+    {
+      "command": "@flag audit-window=transparent",
+      "sender": "audit-window - TRANSPARENT set.\n",
+      "observer": ""
+    },
+    {
+      "command": "look audit-window",
+      "sender": "audit-window(#18:Ent)\nYou see nothing special.\nINTERNAL ROOM VIEW\n",
+      "observer": ""
+    },
+    {
+      "command": "goto audit-window",
+      "sender": "INTERNAL ROOM VIEW\n",
+      "observer": "GOD has left.\n"
+    },
+    {
+      "command": "@teleport #0",
+      "sender": "\u001b[0m\u001b[97mStaff Nexus\u001b[0m\nThis is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.\n\nPlease be sure to read the room descriptions for details on the contents of each area.\n\n\n\u001b[0m\u001b[93m Players:\u001b[0m                             \u001b[0m\u001b[93mObvious Exits:\u001b[0m\n \u001b[0m\u001b[97mWizard\u001b[0m                                    \u001b[0m\u001b[92maudit-window\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mcs\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mChannel Object Storage\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mal\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mAfterlife\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mus\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mUsed Mech Store\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mnp\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mNew Player Room\u001b[0m\u001b[0m\n",
+      "observer": "GOD has arrived.\n"
+    },
+    {
+      "command": "go audit-window",
+      "sender": "INTERNAL ROOM VIEW\n",
+      "observer": "GOD has left.\n"
+    },
+    {
+      "command": "@teleport #0",
+      "sender": "\u001b[0m\u001b[97mStaff Nexus\u001b[0m\nThis is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.\n\nPlease be sure to read the room descriptions for details on the contents of each area.\n\n\n\u001b[0m\u001b[93m Players:\u001b[0m                             \u001b[0m\u001b[93mObvious Exits:\u001b[0m\n \u001b[0m\u001b[97mWizard\u001b[0m                                    \u001b[0m\u001b[92maudit-window\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mcs\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mChannel Object Storage\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mal\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mAfterlife\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mus\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mUsed Mech Store\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mnp\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mNew Player Room\u001b[0m\u001b[0m\n",
+      "observer": "GOD has arrived.\n"
+    },
+    {
+      "command": "move audit-window",
+      "sender": "INTERNAL ROOM VIEW\n",
+      "observer": "GOD has left.\n"
+    },
+    {
+      "command": "@teleport #0",
+      "sender": "\u001b[0m\u001b[97mStaff Nexus\u001b[0m\nThis is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.\n\nPlease be sure to read the room descriptions for details on the contents of each area.\n\n\n\u001b[0m\u001b[93m Players:\u001b[0m                             \u001b[0m\u001b[93mObvious Exits:\u001b[0m\n \u001b[0m\u001b[97mWizard\u001b[0m                                    \u001b[0m\u001b[92maudit-window\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mcs\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mChannel Object Storage\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mal\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mAfterlife\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mus\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mUsed Mech Store\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mnp\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mNew Player Room\u001b[0m\u001b[0m\n",
+      "observer": "GOD has arrived.\n"
+    },
+    {
+      "command": "@teleport #17",
+      "sender": "INTERNAL ROOM VIEW\n",
+      "observer": "GOD has left.\n"
+    },
+    {
+      "command": "@open zonegate=#4",
+      "sender": "Opened.\nLinked.\n",
+      "observer": ""
+    },
+    {
+      "command": "@teleport #0",
+      "sender": "\u001b[0m\u001b[97mStaff Nexus\u001b[0m\nThis is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.\n\nPlease be sure to read the room descriptions for details on the contents of each area.\n\n\n\u001b[0m\u001b[93m Players:\u001b[0m                             \u001b[0m\u001b[93mObvious Exits:\u001b[0m\n \u001b[0m\u001b[97mWizard\u001b[0m                                    \u001b[0m\u001b[92maudit-window\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mcs\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mChannel Object Storage\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mal\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mAfterlife\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mus\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mUsed Mech Store\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mnp\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mNew Player Room\u001b[0m\u001b[0m\n",
+      "observer": "GOD has arrived.\n"
+    },
+    {
+      "command": "@chzone here=#17",
+      "sender": "Zone changed.\n",
+      "observer": ""
+    },
+    {
+      "command": "zonegate",
+      "sender": "Huh?  (Type \"help\" for help.)\n",
+      "observer": ""
+    },
+    {
+      "command": "@chzone #0=#0",
+      "sender": "Zone changed.\n",
+      "observer": ""
+    },
+    {
+      "command": "@teleport #0",
+      "sender": "\u001b[0m\u001b[97mStaff Nexus\u001b[0m\nThis is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.\n\nPlease be sure to read the room descriptions for details on the contents of each area.\n\n\n\u001b[0m\u001b[93m Players:\u001b[0m                             \u001b[0m\u001b[93mObvious Exits:\u001b[0m\n \u001b[0m\u001b[97mWizard\u001b[0m                                    \u001b[0m\u001b[92maudit-window\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mcs\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mChannel Object Storage\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mal\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mAfterlife\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mus\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mUsed Mech Store\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[0m\u001b[32mnp\u001b[0m\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mNew Player Room\u001b[0m\u001b[0m\n",
+      "observer": ""
+    },
+    {
+      "command": "@teleport Wizard=me",
+      "sender": "Wizard has left.\nWizard has arrived.\nTeleported.\n",
+      "observer": "GOD(#1:PXc#W)\nContents:\nRed Sword(#16)\n"
+    },
+    {
+      "command": "page GOD=PRIVATE-PAGE",
+      "sender": "GOD pages: PRIVATE-PAGE\nYou paged GOD with 'PRIVATE-PAGE'.\n",
+      "observer": ""
+    }
+  ],
+  "rust": [
+    {
+      "command": "audit-ascii",
+      "sender": "ASCII number accepted=true result=true\nASCII string accepted=true result=true\nASCII string accepted=true result=false\n",
+      "observer": ""
+    },
+    {
+      "command": "@create Red Sword",
+      "sender": "Red Sword created as object #16\n",
+      "observer": ""
+    },
+    {
+      "command": "look sword",
+      "sender": "I don't see that here.\n",
+      "observer": ""
+    },
+    {
+      "command": "look red",
+      "sender": "Red Sword(#16)\nYou see nothing special.\n",
+      "observer": ""
+    },
+    {
+      "command": "@description Red Sword=STORED DESCRIPTION",
+      "sender": "Red Sword/Description - Set.\n",
+      "observer": ""
+    },
+    {
+      "command": "@lua/parent Red Sword=audit.lua",
+      "sender": "Lua parent set.\n",
+      "observer": ""
+    },
+    {
+      "command": "look Red Sword",
+      "sender": "Red Sword(#16)\nPROVIDER DESCRIPTION\n",
+      "observer": ""
+    },
+    {
+      "command": "@state/examine Red Sword/audit",
+      "sender": "State namespace audit:\n  provider (boolean): true\n\n",
+      "observer": ""
+    },
+    {
+      "command": "page Wizard MissingPlayer=hello",
+      "sender": "I don't recognize \"MissingPlayer\".\nYou paged Wizard with 'hello'.\n",
+      "observer": "GOD pages: hello\n"
+    },
+    {
+      "command": "page Wizard=hello",
+      "sender": "You paged Wizard with 'hello'.\n",
+      "observer": "GOD pages: hello\n"
+    },
+    {
+      "command": "@dig Audit Room",
+      "sender": "Audit Room created with room number 17.\n",
+      "observer": ""
+    },
+    {
+      "command": "@lua/parent #17=audit_room.lua",
+      "sender": "Lua parent set.\n",
+      "observer": ""
+    },
+    {
+      "command": "@open audit-window=#17",
+      "sender": "Opened exit #18.\nLinked.\n",
+      "observer": ""
+    },
+    {
+      "command": "@flag audit-window=transparent",
+      "sender": "audit-window - TRANSPARENT set.\n",
+      "observer": ""
+    },
+    {
+      "command": "look audit-window",
+      "sender": "audit-window(#18:Ent)\nYou see nothing special.\nEXTERNAL ROOM VIEW\n",
+      "observer": ""
+    },
+    {
+      "command": "goto audit-window",
+      "sender": "INTERNAL ROOM VIEW\n",
+      "observer": "GOD has left.\n"
+    },
+    {
+      "command": "@teleport #0",
+      "sender": "\u001b[0m\u001b[97mStaff Nexus\u001b[0m\nThis is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.\n\nPlease be sure to read the room descriptions for details on the contents of each area.\n\n\n\u001b[0m\u001b[93m Players:\u001b[0m                             \u001b[0m\u001b[93mObvious Exits:\u001b[0m\n \u001b[0m\u001b[97mWizard\u001b[0m                               \u001b[0m\u001b[97m{\u001b[0m\u001b[32mnp\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mNew Player Room\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mus\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mUsed Mech Store\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mal\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mAfterlife\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mcs\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mChannel Object Storage\u001b[0m\n                                           \u001b[0m\u001b[92maudit-window\u001b[0m\n",
+      "observer": "GOD has arrived.\n"
+    },
+    {
+      "command": "go audit-window",
+      "sender": "INTERNAL ROOM VIEW\n",
+      "observer": "GOD has left.\n"
+    },
+    {
+      "command": "@teleport #0",
+      "sender": "\u001b[0m\u001b[97mStaff Nexus\u001b[0m\nThis is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.\n\nPlease be sure to read the room descriptions for details on the contents of each area.\n\n\n\u001b[0m\u001b[93m Players:\u001b[0m                             \u001b[0m\u001b[93mObvious Exits:\u001b[0m\n \u001b[0m\u001b[97mWizard\u001b[0m                               \u001b[0m\u001b[97m{\u001b[0m\u001b[32mnp\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mNew Player Room\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mus\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mUsed Mech Store\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mal\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mAfterlife\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mcs\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mChannel Object Storage\u001b[0m\n                                           \u001b[0m\u001b[92maudit-window\u001b[0m\n",
+      "observer": "GOD has arrived.\n"
+    },
+    {
+      "command": "move audit-window",
+      "sender": "INTERNAL ROOM VIEW\n",
+      "observer": "GOD has left.\n"
+    },
+    {
+      "command": "@teleport #0",
+      "sender": "\u001b[0m\u001b[97mStaff Nexus\u001b[0m\nThis is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.\n\nPlease be sure to read the room descriptions for details on the contents of each area.\n\n\n\u001b[0m\u001b[93m Players:\u001b[0m                             \u001b[0m\u001b[93mObvious Exits:\u001b[0m\n \u001b[0m\u001b[97mWizard\u001b[0m                               \u001b[0m\u001b[97m{\u001b[0m\u001b[32mnp\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mNew Player Room\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mus\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mUsed Mech Store\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mal\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mAfterlife\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mcs\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mChannel Object Storage\u001b[0m\n                                           \u001b[0m\u001b[92maudit-window\u001b[0m\n",
+      "observer": "GOD has arrived.\n"
+    },
+    {
+      "command": "@teleport #17",
+      "sender": "INTERNAL ROOM VIEW\n",
+      "observer": "GOD has left.\n"
+    },
+    {
+      "command": "@open zonegate=#4",
+      "sender": "Opened exit #19.\nLinked.\n",
+      "observer": ""
+    },
+    {
+      "command": "@teleport #0",
+      "sender": "\u001b[0m\u001b[97mStaff Nexus\u001b[0m\nThis is the hub of the guts of the MUX. From here you can get to the internals of the game, sorted into various different rooms.\n\nPlease be sure to read the room descriptions for details on the contents of each area.\n\n\n\u001b[0m\u001b[93m Players:\u001b[0m                             \u001b[0m\u001b[93mObvious Exits:\u001b[0m\n \u001b[0m\u001b[97mWizard\u001b[0m                               \u001b[0m\u001b[97m{\u001b[0m\u001b[32mnp\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mNew Player Room\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mus\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mUsed Mech Store\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mal\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mAfterlife\u001b[0m\n                                      \u001b[0m\u001b[97m{\u001b[0m\u001b[32mcs\u001b[0m\u001b[97m}\u001b[0m \u001b[0m\u001b[92mChannel Object Storage\u001b[0m\n                                           \u001b[0m\u001b[92maudit-window\u001b[0m\n",
+      "observer": "GOD has arrived.\n"
+    },
+    {
+      "command": "@chzone here=#17",
+      "sender": "Zone changed.\n",
+      "observer": ""
+    },
+    {
+      "command": "zonegate",
+      "sender": "Huh? (Type look, say <message>, WHO, an exit name, or quit.)\n",
+      "observer": ""
+    },
+    {
+      "command": "@chzone #0=#0",
+      "sender": "Zone changed.\n",
+      "observer": ""
+    },
+    {
+      "command": "@teleport #0",
+      "sender": "Already there.\n",
+      "observer": ""
+    },
+    {
+      "command": "@teleport Wizard=me",
+      "sender": "Wizard has left.\nWizard has arrived.\nTeleported.\n",
+      "observer": "\u001b[0m\u001b[97mGOD\u001b[0m\n\n\n \u001b[0m\u001b[93mContents:\u001b[0m\n Red Sword\u001b[0m\n"
+    },
+    {
+      "command": "page GOD=PRIVATE-PAGE",
+      "sender": "GOD pages: PRIVATE-PAGE\nYou paged GOD with 'PRIVATE-PAGE'.\n",
+      "observer": ""
+    }
+  ]
+}

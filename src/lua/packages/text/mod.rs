@@ -82,10 +82,22 @@ pub(super) fn register(
             usage: markdown_usage.clone(),
         })
     });
-    bind!(lua, api, "printable_ascii", |_, s: mlua::LuaString| Ok(s
-        .as_bytes()
-        .iter()
-        .all(|b| (0x20..=0x7e).contains(b))));
+    bind!(lua, api, "printable_ascii", |_, value: Value| {
+        let Value::String(s) = value else {
+            return Err(mlua::Error::BadArgument {
+                to: Some("mux.text.is_printable_ascii".into()),
+                pos: 1,
+                name: None,
+                cause: mlua::Error::FromLuaConversionError {
+                    from: value.type_name(),
+                    to: "string".into(),
+                    message: Some("expected an actual Lua string".into()),
+                }
+                .into(),
+            });
+        };
+        Ok(s.as_bytes().iter().all(|b| (0x20..=0x7e).contains(b)))
+    });
     Ok(())
 }
 

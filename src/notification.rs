@@ -20,6 +20,7 @@ const NEIGHBOR_EXITS_A: u16 = 32;
 const INSIDE: u16 = 64;
 impl Policy {
     pub const DIRECT: Self = Self(ME | EXITS);
+    pub const AUDIBLE_EXITS: Self = Self(EXITS);
     pub const ROOM: Self = Self(ME | EXITS | INV | NBR_A | LOC_A | NEIGHBOR_EXITS_A | INSIDE);
     const ROOM_EXCLUDED: Self = Self(ME | EXITS | NBR_A | LOC_A | NEIGHBOR_EXITS_A | INSIDE);
 }

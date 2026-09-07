@@ -124,7 +124,7 @@ fn matched(
                 && plain
                     .split(if o.kind == Kind::Exit { ';' } else { '\0' })
                     .any(|n| n.eq_ignore_ascii_case(name)));
-        let prefix = explicit.is_none() && plain.to_lowercase().starts_with(&name.to_lowercase());
+        let prefix = explicit.is_none() && crate::find::matches(&plain, name);
         if exact || prefix {
             matches.push((id, exact, preferred == Some(o.kind)));
         }
@@ -214,10 +214,13 @@ fn relocate(
 ) -> Result<()> {
     crate::movement::perform(
         ctx.scripts,
-        ctx.player,
-        object,
-        destination,
-        ctx.session.filter(|_| object == ctx.player),
-        crate::movement::Route::Generic,
+        crate::movement::Request {
+            actor: ctx.player,
+            object,
+            cause: ctx.cause,
+            destination,
+            session: ctx.session.filter(|_| object == ctx.player),
+            route: crate::movement::Route::Generic,
+        },
     )
 }

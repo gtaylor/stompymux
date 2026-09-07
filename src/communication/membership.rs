@@ -16,25 +16,51 @@ impl Service<'_> {
             alias.len() <= ALIAS_LIMIT && alias.bytes().all(|b| (33..=126).contains(&b)),
             "Channel aliases must be 1-5 printable ASCII characters without spaces."
         );
-        let name = self.name(channel)?;
+        ensure!(!channel.is_empty(), "You need to specify a channel.");
+        ensure!(channel.len() < 200, "Channel name too long.");
+        ensure!(
+            !channel.contains(' '),
+            "Channel name cannot contain spaces."
+        );
+        let name = self
+            .name(channel)
+            .map_err(|_| anyhow::anyhow!("Channel {channel} does not exist yet."))?;
         let identity = self.world.borrow().channels[&name].id;
         ensure!(
-            !self
-                .world
-                .borrow()
-                .channel_aliases
-                .get(&who)
-                .is_some_and(|a| a.iter().any(|a| a.alias.eq_ignore_ascii_case(alias))),
-            "That alias is already in use."
-        );
-        ensure!(
             trusted || self.allowed(who, &name, Access::Join)?,
-            "You are not allowed to join that channel."
+            "Sorry, this channel type does not allow you to join."
         );
         ensure!(
             self.by_id(identity)? == name,
             "channel replaced by callback"
         );
+        let existing = self
+            .world
+            .borrow()
+            .channel_aliases
+            .get(&who)
+            .and_then(|a| a.iter().find(|a| a.alias.eq_ignore_ascii_case(alias)))
+            .map(|a| a.channel.clone());
+        let listed = !trusted
+            && self.world.borrow().channels[&name]
+                .users
+                .iter()
+                .any(|u| u.who == who);
+        let warning = "Warning: you are already listed on that channel.";
+        if let Some(existing) = existing {
+            // Return both lines as the refusal so transactional rollback retains the warning.
+            anyhow::bail!(
+                "{}That alias is already in use for channel {existing}.",
+                if listed {
+                    format!("{warning}\n")
+                } else {
+                    String::new()
+                }
+            );
+        }
+        if listed {
+            self.notify(who, warning)?;
+        }
         {
             let mut w = self.world.borrow_mut();
             let aliases = w.channel_aliases.entry(who).or_default();
@@ -44,7 +70,8 @@ impl Service<'_> {
             });
             aliases.sort_by_key(|a| a.alias.to_ascii_lowercase());
         }
-        self.join(who, &name, quiet)
+        self.join(who, &name, quiet)?;
+        self.notify(who, format!("Channel {name} added with alias {alias}."))
     }
 
     /// Enable membership, growing capacity in the C ten-entry increments.
@@ -57,6 +84,7 @@ impl Service<'_> {
         if already {
             return self.notify(who, format!("You are already on channel {name}."));
         }
+        self.online_members(&name)?;
         let (player, dark) = {
             let mut w = self.world.borrow_mut();
             let o = w
@@ -64,6 +92,7 @@ impl Service<'_> {
                 .get(&who)
                 .ok_or_else(|| anyhow::anyhow!("object does not exist"))?;
             let details = (o.name.clone(), o.flags.contains(Flag::Dark));
+            let online = o.kind != Kind::Player || o.flags.contains(Flag::Connected);
             let c = w.channels.get_mut(&name).unwrap();
             if let Some(u) = c.users.iter_mut().find(|u| u.who == who) {
                 u.listening = true;
@@ -73,6 +102,9 @@ impl Service<'_> {
                     listening: true,
                 });
                 c.users.sort_by_key(|u| u.who);
+                if online {
+                    c.online.insert(0, who);
+                }
                 if c.users.len() >= c.max_users {
                     c.max_users += 10;
                 }
@@ -124,44 +156,85 @@ impl Service<'_> {
         Ok(())
     }
 
-    /// Remove membership only when the last alias to that channel disappears.
-    pub fn remove_alias(&self, who: ObjectId, alias: &str) -> Result<()> {
-        let name = {
-            let mut w = self.world.borrow_mut();
-            let a = w
-                .channel_aliases
-                .get_mut(&who)
-                .ok_or_else(|| anyhow::anyhow!("Unknown channel alias."))?;
-            let i = a
-                .iter()
-                .position(|a| a.alias.eq_ignore_ascii_case(alias))
-                .ok_or_else(|| anyhow::anyhow!("Unknown channel alias."))?;
-            a.remove(i).channel
+    /// Remove membership independently of aliases, excluding the departing member from the announcement.
+    pub fn remove_member(&self, who: ObjectId, channel: &str) -> Result<()> {
+        let Ok(name) = self.name(channel) else {
+            return self.notify(who, format!("Unknown channel {channel}."));
         };
-        if !self.world.borrow().channel_aliases[&who]
+        let identity = self.world.borrow().channels[&name].id;
+        self.leave_callbacks(who, &name)?;
+        ensure!(
+            self.by_id(identity)? == name,
+            "channel replaced by callback"
+        );
+        let Some(on) = self.world.borrow().channels[&name]
+            .users
             .iter()
-            .any(|a| a.channel.eq_ignore_ascii_case(&name))
-            && let Ok(name) = self.name(&name)
-        {
-            if self.world.borrow().channels[&name]
-                .users
-                .iter()
-                .any(|u| u.who == who && u.listening)
-            {
-                self.leave(who, &name)?;
-            }
-            self.world
-                .borrow_mut()
-                .channels
-                .get_mut(&name)
-                .ok_or_else(|| anyhow::anyhow!("channel removed by callback"))?
-                .users
-                .retain(|u| u.who != who);
+            .find(|u| u.who == who)
+            .map(|u| u.listening)
+        else {
+            return Ok(());
+        };
+        let (player, dark) = {
+            let w = self.world.borrow();
+            let o = w
+                .objects
+                .get(&who)
+                .ok_or_else(|| anyhow::anyhow!("member removed by callback"))?;
+            (o.name.clone(), o.flags.contains(Flag::Dark))
+        };
+        self.online_members(&name)?;
+        self.world
+            .borrow_mut()
+            .channels
+            .get_mut(&name)
+            .unwrap()
+            .online
+            .retain(|id| *id != who);
+        if on && !dark && !player.is_empty() {
+            self.emit_excluding(
+                &name,
+                &format!("{player} has left this channel."),
+                false,
+                Some(who),
+            )?;
         }
-        self.notify(who, format!("Alias {alias} deleted."))
+        self.notify(who, format!("You have left channel {channel}."))?;
+        let mut w = self.world.borrow_mut();
+        let c = w
+            .channels
+            .get_mut(&name)
+            .ok_or_else(|| anyhow::anyhow!("channel removed by callback"))?;
+        ensure!(c.id == identity, "channel replaced by callback");
+        c.users.retain(|u| u.who != who);
+        c.online.retain(|id| *id != who);
+        Ok(())
     }
 
-    /// Use the shared leave/alias cleanup path for administrative removal.
+    /// Delete exactly one alias, removing membership even when other aliases remain.
+    pub fn remove_alias(&self, who: ObjectId, alias: &str) -> Result<()> {
+        let name = self
+            .world
+            .borrow()
+            .channel_aliases
+            .get(&who)
+            .and_then(|a| a.iter().find(|a| a.alias.eq_ignore_ascii_case(alias)))
+            .map(|a| a.channel.clone())
+            .ok_or_else(|| anyhow::anyhow!("Unable to find that alias."))?;
+        self.remove_member(who, &name)?;
+        self.notify(who, format!("Channel {name} deleted."))?;
+        self.delete_alias_entry(who, alias);
+        Ok(())
+    }
+
+    /// Remove only the alias record after the membership operation succeeds.
+    pub(super) fn delete_alias_entry(&self, who: ObjectId, alias: &str) {
+        if let Some(aliases) = self.world.borrow_mut().channel_aliases.get_mut(&who) {
+            aliases.retain(|a| !a.alias.eq_ignore_ascii_case(alias));
+        }
+    }
+
+    /// Announce an administrative removal, retaining the member's aliases.
     pub fn boot(&self, actor: ObjectId, who: ObjectId, channel: &str) -> Result<()> {
         let name = self.name(channel)?;
         ensure!(
@@ -179,27 +252,36 @@ impl Service<'_> {
             )
         };
         self.emit(&name, &format!("{a} boots {b} off the channel."), false)?;
-        let aliases = self
-            .world
-            .borrow()
-            .channel_aliases
-            .get(&who)
-            .cloned()
-            .unwrap_or_default();
-        for alias in aliases
-            .into_iter()
-            .filter(|a| a.channel.eq_ignore_ascii_case(&name))
-        {
-            self.remove_alias(who, &alias.alias)?;
-        }
-        self.world
-            .borrow_mut()
-            .channels
-            .get_mut(&name)
-            .ok_or_else(|| anyhow::anyhow!("channel removed by callback"))?
+        self.remove_member(who, &name)
+    }
+
+    /// Reconcile live eligibility while retaining the C online insertion order.
+    /// Missing entries are populated in reverse persisted slot order on first use.
+    pub(super) fn online_members(&self, channel: &str) -> Result<Vec<Membership>> {
+        let name = self.name(channel)?;
+        let mut w = self.world.borrow_mut();
+        let eligible = w.channels[&name]
             .users
-            .retain(|u| u.who != who);
-        Ok(())
+            .iter()
+            .filter(|u| {
+                w.objects.get(&u.who).is_some_and(|o| {
+                    o.kind != Kind::Garbage
+                        && (o.kind != Kind::Player || o.flags.contains(Flag::Connected))
+                })
+            })
+            .map(|u| u.who)
+            .collect::<Vec<_>>();
+        let c = w.channels.get_mut(&name).unwrap();
+        c.online.retain(|id| eligible.contains(id));
+        if !c.online_initialized {
+            c.online = eligible.into_iter().rev().collect();
+            c.online_initialized = true;
+        }
+        Ok(c.online
+            .iter()
+            .filter_map(|id| c.users.iter().find(|u| u.who == *id))
+            .cloned()
+            .collect())
     }
 
     /// Return valid active or all memberships for native and Lua queries.
@@ -222,7 +304,11 @@ impl Service<'_> {
     /// Render C player/object groups and Wizard-level identity details.
     pub fn who(&self, viewer: ObjectId, channel: &str, all: bool, admin: bool) -> Result<()> {
         let name = self.name(channel)?;
-        let members = self.members(&name, all)?;
+        let members = if admin {
+            self.members(&name, all)?
+        } else {
+            self.online_members(&name)?
+        };
         if admin {
             self.notify(viewer, format!("-- {name} --"))?;
         }
@@ -231,15 +317,20 @@ impl Service<'_> {
         } else {
             self.notify(viewer, "-- Players --")?;
         }
-        for kind in [true, false] {
-            if !kind && !admin {
+        for group in if admin {
+            vec![None]
+        } else {
+            vec![Some(true), Some(false)]
+        } {
+            if group == Some(false) {
                 self.notify(viewer, "-- Objects --")?;
             }
             for u in &members {
                 let output = {
                     let w = self.world.borrow();
                     let o = &w.objects[&u.who];
-                    if (o.kind == Kind::Player) != kind || (!admin && !u.listening) {
+                    let kind = o.kind == Kind::Player;
+                    if group.is_some_and(|group| group != kind) || (!admin && !u.listening) {
                         continue;
                     }
                     if (kind || admin) && o.flags.contains(Flag::Dark) && !wizard(&w, viewer) {
@@ -259,7 +350,7 @@ impl Service<'_> {
                     };
                     if admin {
                         format!(
-                            "{} {:6} {}",
+                            "{} {:6} {:6}",
                             column(&crate::text::plain_with(&w.palette, &display), 29),
                             if u.listening { "on" } else { "off" },
                             if kind { "yes" } else { "no" }
@@ -289,20 +380,20 @@ impl Service<'_> {
             w.channels[channel]
                 .users
                 .iter()
+                .skip(1)
                 .rev()
                 .filter_map(|u| w.objects.get(&u.who))
                 .filter(|o| o.kind == Kind::Thing && !o.flags.contains(Flag::Halted))
-                .map(|o| (o.id, o.lua_parent.clone()))
+                .map(|o| o.id)
                 .collect::<Vec<_>>()
         };
-        let invoke: mlua::Function = self.lua.load(r#"return function(parent, object, who)
-            local module = _parents[parent]
-            local callback = module and module.events and module.events.on_leave
-            if callback then callback({object=object, subject=who, enactor=who, cause=who, scope='object'}) end
-        end"#).eval().map_err(|e| anyhow::anyhow!(e.to_string()))?;
-        for (object, parent) in objects {
+        let scripts =
+            crate::lua::Scripts::services(self.lua).map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        for object in objects {
             crate::lua::transactions::run(self.lua, self.world, self.outbox, || {
-                invoke.call::<()>((parent, object.0, who.0))
+                scripts
+                    .channel_leave_event(object, who)
+                    .map_err(mlua::Error::external)
             })
             .map_err(|e| anyhow::anyhow!("channel {channel} leave callback: {e}"))?;
         }

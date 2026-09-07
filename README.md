@@ -95,12 +95,18 @@ Teleportation checks the destination's `teleport` lock and each enclosing
 source container's `teleport_out` lock; errors deny movement. `home` bypasses
 these locks, but still validates its stored destination.
 
-Movement calls source `on_exit` and destination `on_enter` hooks with the moved
-object as `enactor`, initiator as `cause`, immediate `source` and `destination`,
-and the location hosting the callback as `object`. A descriptor is supplied
-only when the moved player initiated the command. Moving an exit or remaining
-in the same location does not fire occupant transition hooks. Containers without
-an appearance callback use native description rendering for `look` and the generic Lua renderer on arrival.
+Home and container teleportation use C action providers and events. Source
+`leave/on_leave` and destination `enter/on_enter` transitions have cause `#-1`.
+Teleport also runs the moved object's `teleport_source`, `teleport/on_teleport`
+and `move/on_move`; those object actions retain the initiating cause. Home runs
+`move/on_move` with cause `#-1`. Appearance is rendered immediately after relocation,
+before arrival actions. DARK teleportation suppresses teleport and location events,
+but still invokes silent location message providers and `move/on_move`.
+A descriptor is supplied only when it belongs to the moved player. Moving an exit
+or remaining in the same location does not fire occupant transition hooks.
+Containers without an appearance callback use native description rendering for
+`look` and the generic Lua renderer on arrival. See the
+[parity audit](docs/behavioral-parity.md) for remaining differences outside these routes.
 Connected moved players receive the appearance on all their sessions.
 
 Location changes and callback effects persist together before success output.
@@ -590,7 +596,10 @@ duplicating channel history or first/final connection announcements.
 Storage directly owns `comsys_channels`, `comsys_channel_users`,
 `comsys_channel_messages`, `commac_aliases` and `player_last_page_recipients`.
 Updates preserve unknown columns on retained rows and untouched position lists.
-Channel deletion removes related aliases, members and history. `commac_entries`
+Channel deletion removes members and history, retaining player-owned aliases.
+Deleting any alias removes its channel membership even when other aliases remain.
+Boots also retain aliases; stale aliases can be removed with `delcom` or `clearcom`.
+`allcom` visits every alias slot, including multiple aliases to one channel. `commac_entries`
 is initialized only when needed; existing macro slots remain unchanged. Unknown
 foreign-key dependencies block destruction instead of being guessed. No schema
 migration or reinterpretation of stored channel bits occurs: PUBLIC is `0x200`,
@@ -605,6 +614,10 @@ Lua exposes `mux.comsys.channel(name)`, `create_channel(name)`,
 `mux.comsys.flags.PUBLIC`, `.LOUD` and `.TRANSPARENT` constants. Mutators return
 whether the flag changed. Handles retain identity across transactions and reject
 use after destruction, including provisional channels removed by rollback.
+Quiet Lua joins suppress the broadcast but still send join/alias confirmations.
+Caught failures in Lua add/emit/boot calls roll back partial changes and output.
+See the [comsys audit](docs/comsys-parity.md) for C references, paired TCP evidence
+and the remaining comparison limits.
 
 Attached objects supply `CHANNEL_JOIN`, `CHANNEL_TRANSMIT` and `CHANNEL_RECEIVE`
 locks. As in the C fork, a passing lock grants access independently of the
@@ -751,9 +764,15 @@ accounts, channel/macro membership or deferred BattleTech records. See
 `help objects` and `help object building` for syntax and quiet/placement switches.
 
 The `lua::ObjectAction` service evaluates message handlers and operation-specific
-events. Ordinary relocation uses leave/move/enter and cross-location messages;
-existing teleport/home transition interfaces remain supported. Quiet switches
-follow their operation's C policy and never bypass lock checks. Output stays
+events. Ordinary relocation runs leave actions, relocation/appearance, move actions
+and enter actions, including cross-location providers. Exit travel adds exit
+success/on_success before departure and drop/on_drop after appearance. Forced
+travel moves the executor while retaining the initiating cause; background work
+never borrows a player's session. Retaining the original cause is deliberate:
+C's normal exit and enter/leave entrypoints instead pass `#-1` to movement actions.
+Silent providers still run and can return direct
+text, while neighbor messages follow the bounded AUDIBLE notification graph.
+Previously removed movement switches remain unsupported. Output stays
 staged until the final world validates and SQLite commits. Schema-32 storage,
 unknown-column preservation and session-owned CONNECTED are unchanged.
 
@@ -956,7 +975,8 @@ last-good content; an over-budget aggregate leaves the whole cache unchanged.
 The cache uses `lua.output_byte_limit`; delivery uses the existing chunked styled
 renderer and Telnet/compression queues. Missing startup entries use an empty cache,
 with built-in admission/goodbye fallbacks where needed. Forbidden sites receive cached bad-site text before negotiation or login.
-`connect_reg_file` remains deferred.
+`connect_reg_file` is retained configuration with no active C consumer; it is not
+a missing registration flow.
 
 A nonempty `mux.connect_dir` supplies random welcome banners: up to 100 nonhidden
 regular files whose names contain `.txt`, selected lexically before uniform choice.
@@ -986,8 +1006,8 @@ in `@telnet`. MONITOR players receive first/repeated connection and partial/fina
 disconnection notices. SUSPECT players and suspected-site sessions independently
 produce notices on the existing `Suspect` channel. Channel delivery and history
 commit transactionally; MONITOR messages report actual transitions even after
-callback failures. Runtime site edits are available through `@admin`; suspect command auditing
-remains deferred.
+callback failures. Runtime site edits are available through `@admin`; suspect command auditing uses
+the existing `SuspectsLog` channel and configured stderr categories.
 
 ## Configured command access
 
@@ -1061,3 +1081,33 @@ affect new connections. New players use `mux.player_zone` (default 0/no zone), a
 new non-player objects inherit their creator's zone, including clones. Trusted Lua
 creation inherits GOD's zone unless explicitly overridden. See
 [creation and login policies](docs/configuration.md#login-retries-and-creation-zones).
+
+The [behavioral parity audit](docs/behavioral-parity.md) records selected verified
+contracts, intentional differences, the five resolved audit findings and unverified cases.
+It does not claim complete non-BattleTech behavioral equivalence.
+
+The [broader comparison](docs/behavioral-audit-round2.md) records seven additional
+reproduced discrepancies, optional C/Rust TCP probes, and the remaining unverified
+areas. These audit characterizations do not change server behavior.
+
+Private pages are delivered only to addressed players and their authenticated
+sessions, never to players contained inside them. See the D09 correction in the
+[broader comparison](docs/behavioral-audit-round2.md).
+
+Plain `goto <exit>` follows a local exit by its name or alias, just like entering
+its bare name. The supplied `go`, `got`, `m`, `mo`, `mov` and `move` aliases work.
+Both forms respect the effective `goto` access policy and traversal locks.
+No `goto` switches are supported, including `/quiet`.
+
+Ordinary object commands accept case-insensitive word prefixes: `look sword`
+can select `Red Sword`. Exact names take precedence, and ambiguous matches fail.
+This also applies to inventory operations and possessive lookups within their
+existing scope; wildcard expansion and midword substring matching are not supported.
+
+Description providers run before stored content is selected: a nonempty description
+takes precedence over provider text, including changes made by that provider.
+Rooms use internal appearance when viewed through transparent exits; players and
+things use internal appearance only for their immediate occupants.
+
+The [lock and messaging audit](docs/lock-message-audit.md) records channel recipient,
+live callback, AUDIBLE forwarding and default-text discrepancies with paired evidence.

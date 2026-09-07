@@ -129,14 +129,11 @@ impl Service<'_> {
         match operation {
             Operation::Page => self.page(who, args),
             Operation::Add => {
-                let (alias, channel) = args
-                    .split_once('=')
-                    .ok_or_else(|| anyhow::anyhow!("Usage: addcom <alias>=<channel>"))?;
+                let (alias, channel) = args.split_once('=').unwrap_or((args, ""));
                 self.add(who, channel.trim(), alias.trim(), false, false)
             }
             Operation::Delete => self.remove_alias(who, args),
             Operation::Clear => {
-                ensure!(args.is_empty(), "Usage: clearcom");
                 let aliases = self
                     .world
                     .borrow()
@@ -144,13 +141,13 @@ impl Service<'_> {
                     .get(&who)
                     .cloned()
                     .unwrap_or_default();
-                for a in aliases {
-                    self.remove_alias(who, &a.alias)?;
+                for a in aliases.into_iter().rev() {
+                    self.remove_member(who, &a.channel)?;
+                    self.delete_alias_entry(who, &a.alias);
                 }
                 Ok(())
             }
             Operation::List => {
-                ensure!(args.is_empty(), "Usage: comlist");
                 self.notify(who, "Alias     Channel             Status Description")?;
                 let width = crate::lua::sessions::players(self.lua)
                     .ok()
@@ -183,8 +180,11 @@ impl Service<'_> {
                                 .unwrap_or("No description.");
                             (
                                 u.listening,
-                                crate::text::plain_with(&w.palette, description)
-                                    .replace(['\r', '\n'], " "),
+                                crate::text::truncate_with(
+                                    &w.palette,
+                                    &description.replace(['\r', '\n'], " "),
+                                    width,
+                                ),
                             )
                         })
                     });
@@ -194,7 +194,7 @@ impl Service<'_> {
                             super::membership::column(&a.alias, 9),
                             super::membership::column(&a.channel, 19),
                             if on { "on" } else { "off" },
-                            super::membership::column(&description, width).trim_end()
+                            description
                         )
                     } else {
                         format!("Bad Comsys Alias: {} for Channel: {}", a.alias, a.channel)
@@ -208,7 +208,7 @@ impl Service<'_> {
                     ["on", "off", "who"]
                         .iter()
                         .any(|s| args.eq_ignore_ascii_case(s)),
-                    "Usage: allcom on|off|who"
+                    "Only options available are: on, off and who."
                 );
                 let channels = self
                     .world
@@ -219,7 +219,7 @@ impl Service<'_> {
                     .unwrap_or_default()
                     .into_iter()
                     .map(|a| a.channel)
-                    .collect::<std::collections::BTreeSet<_>>();
+                    .collect::<Vec<_>>();
                 for c in channels {
                     let before = self.world.borrow().clone();
                     let pending = self.outbox.borrow().len();
@@ -229,6 +229,9 @@ impl Service<'_> {
                         self.outbox.borrow_mut().truncate(pending);
                         crate::lua::flows::restore(self.lua, flow_effects);
                         self.notify(who, error.to_string())?;
+                    }
+                    if args.eq_ignore_ascii_case("who") {
+                        self.notify(who, "")?;
                     }
                 }
                 Ok(())
@@ -240,7 +243,7 @@ impl Service<'_> {
     /// Validate switch combinations before any channel mutation.
     fn admin(&self, who: ObjectId, args: &str, switch: Option<&str>) -> Result<()> {
         let Some(switch) = switch else {
-            return self.notify(who,"@chan switches: boot create destroy emit list object oflags pflags flags status who");
+            return self.notify(who, "@chan command switches:\n  /boot     Remove a member from a channel.\n  /create   Create a channel.\n  /destroy  Destroy a channel.\n  /emit     Send an administrative message.\n  /list     List channels.\n  /object   Attach a channel object.\n  /oflags   Set channel permissions for objects.\n  /pflags   Set channel permissions for players.\n  /flags    Set or clear channel flags.\n  /status   Show a channel's status.\n  /who      List a channel's members.");
         };
         let parts = switch.split('/').collect::<Vec<_>>();
         let operation = parts[0];
@@ -259,22 +262,24 @@ impl Service<'_> {
         let second = second.trim();
         match operation {
             "create" => {
-                ensure!(second.is_empty(), "Usage: @chan/create <channel>");
+                ensure!(self.name(first).is_err(), "Channel {first} already exists.");
                 self.create(first)?;
                 self.notify(who, format!("Channel {first} created."))
             }
             "destroy" => {
-                ensure!(second.is_empty(), "Usage: @chan/destroy <channel>");
-                self.destroy(first)?;
+                let name = self.admin_name(first, operation)?;
+                self.destroy(&name)?;
                 self.notify(who, format!("Channel {first} destroyed."))
             }
             "list" | "status" => {
-                ensure!(
-                    second.is_empty() && (operation != "list" || first.is_empty()),
-                    "Invalid channel list arguments."
-                );
                 let names = if operation == "status" {
-                    vec![self.name(first)?]
+                    match self.name(first) {
+                        Ok(name) => vec![name],
+                        Err(_) => {
+                            self.list_header(who, modifier == Some("full"))?;
+                            return self.notify(who, "@chan/status: Unknown channel.");
+                        }
+                    }
                 } else {
                     let mut names = self
                         .world
@@ -289,26 +294,34 @@ impl Service<'_> {
                 self.list(who, &names, modifier == Some("full"))
             }
             "emit" => {
-                ensure!(!second.is_empty(), "Usage: @chan/emit <channel>=<message>");
+                self.admin_name(first, operation)?;
                 self.emit(first, second, modifier == Some("noheader"))
             }
             "who" => {
-                ensure!(second.is_empty(), "Usage: @chan/who <channel>[/all]");
                 let (channel, all) = first
-                    .rsplit_once('/')
-                    .map_or((first, false), |(c, s)| (c, s.eq_ignore_ascii_case("all")));
-                self.who(who, channel, all, true)
+                    .split_once('/')
+                    .map_or((first, false), |(c, s)| (c, s.starts_with('a')));
+                let channel = self.admin_name(channel, operation)?;
+                self.who(who, &channel, all, true)
             }
             "object" => {
-                let name = self.name(first)?;
+                let name = self.admin_name(first, operation)?;
                 let object = if second.is_empty() || second == "#-1" {
                     None
                 } else {
-                    Some(crate::commands::target::admin_target(
-                        &self.world.borrow(),
-                        who,
-                        second,
-                    )?)
+                    match crate::commands::target::builder_target(&self.world.borrow(), who, second)
+                    {
+                        Ok(id) => Some(id),
+                        Err(e)
+                            if matches!(
+                                e.to_string().as_str(),
+                                "No such object." | "No such player."
+                            ) =>
+                        {
+                            None
+                        }
+                        Err(e) => return Err(e),
+                    }
                 };
                 self.world
                     .borrow_mut()
@@ -316,10 +329,22 @@ impl Service<'_> {
                     .get_mut(&name)
                     .unwrap()
                     .object = object;
-                self.notify(who, "@chan/object: Set.")
+                if let Some(object) = object {
+                    let display = {
+                        let w = self.world.borrow();
+                        let object = &w.objects[&object];
+                        format!("{}{}", object.name, crate::find::suffix(object))
+                    };
+                    self.notify(
+                        who,
+                        format!("Channel {name} is now using {display} as channel object."),
+                    )
+                } else {
+                    self.notify(who, "@chan/object: Set.")
+                }
             }
             "boot" => {
-                let name = self.name(first)?;
+                let name = self.admin_name(first, operation)?;
                 ensure!(
                     self.world.borrow().channels[&name]
                         .users
@@ -327,29 +352,43 @@ impl Service<'_> {
                         .any(|u| u.who == who),
                     "@chan/boot: You are not on that channel."
                 );
-                let target = self
-                    .world
-                    .borrow()
-                    .find_player(second)
-                    .map(Ok)
-                    .unwrap_or_else(|| {
-                        crate::commands::target::admin_target(&self.world.borrow(), who, second)
-                    })?;
+                let target =
+                    crate::commands::target::builder_target(&self.world.borrow(), who, second)
+                        .map_err(|e| {
+                            if matches!(
+                                e.to_string().as_str(),
+                                "No such object." | "No such player."
+                            ) {
+                                anyhow::anyhow!("I don't see that here.")
+                            } else {
+                                e
+                            }
+                        })?;
+                ensure!(
+                    self.world.borrow().channels[&name]
+                        .users
+                        .iter()
+                        .any(|u| u.who == target),
+                    "@chan/boot: {} is not on the channel.",
+                    self.world.borrow().objects[&target].name
+                );
                 self.boot(who, target, &name)
             }
             "flags" | "pflags" | "oflags" => {
-                let name = self.name(first)?;
+                let name = self.admin_name(first, operation)?;
                 let (enabled, flag) = second
                     .strip_prefix('!')
                     .map_or((true, second), |s| (false, s));
                 let bit = if operation == "flags" {
-                    ChannelFlag::parse(flag)?.bit()
+                    ChannelFlag::parse(flag)
+                        .map_err(|_| anyhow::anyhow!("@chan/{operation}: Unknown flag."))?
+                        .bit()
                 } else {
                     let access = match flag.to_ascii_lowercase().as_str() {
                         "join" => Access::Join,
                         "transmit" => Access::Transmit,
                         "receive" => Access::Receive,
-                        _ => anyhow::bail!("Unknown channel flag."),
+                        _ => anyhow::bail!("@chan/{operation}: Unknown flag."),
                     };
                     access.bit() * if operation == "oflags" { 16 } else { 1 }
                 };
@@ -374,8 +413,14 @@ impl Service<'_> {
         }
     }
 
-    /// Stable channel metadata listing; source styles render through the shared pipeline.
-    fn list(&self, who: ObjectId, names: &[String], full: bool) -> Result<()> {
+    /// Native operations supply their own channel lookup diagnostics.
+    fn admin_name(&self, name: &str, operation: &str) -> Result<String> {
+        self.name(name)
+            .map_err(|_| anyhow::anyhow!("@chan/{operation}: Unknown channel."))
+    }
+
+    /// Header is emitted even when a status lookup cannot find its channel.
+    fn list_header(&self, who: ObjectId, full: bool) -> Result<()> {
         self.notify(
             who,
             if full {
@@ -383,7 +428,12 @@ impl Service<'_> {
             } else {
                 "** Channel       Description"
             },
-        )?;
+        )
+    }
+
+    /// Stable channel metadata listing; source styles render through the shared pipeline.
+    fn list(&self, who: ObjectId, names: &[String], full: bool) -> Result<()> {
+        self.list_header(who, full)?;
         for name in names {
             let output = {
                 let w = self.world.borrow();
@@ -410,7 +460,7 @@ impl Service<'_> {
                     .map(|(b, c1)| if c.flags.0 & b != 0 { c1 } else { '-' });
                     format!(
                         "{public}{loud} {:20} {}{}{}/{}{}{} {:5} {:6} {:10}",
-                        name,
+                        super::membership::column(name, 20),
                         bits[0],
                         bits[1],
                         bits[2],
@@ -428,7 +478,14 @@ impl Service<'_> {
                         .and_then(|o| o.description.as_deref())
                         .filter(|s| !s.is_empty())
                         .unwrap_or("No description.");
-                    format!("{public}{loud} {name:13} {desc}")
+                    format!(
+                        "{public}{loud} {} {}",
+                        super::membership::column(name, 13),
+                        super::membership::column(
+                            super::membership::column(desc, 54).trim_end(),
+                            60
+                        )
+                    )
                 }
             };
             self.notify(who, output)?;

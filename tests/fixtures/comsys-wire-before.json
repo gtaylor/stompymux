@@ -1,0 +1,522 @@
+{
+  "c": [
+    {
+      "actor": 1,
+      "command": "@chan",
+      "god": "@chan command switches:\n  /boot     Remove a member from a channel.\n  /create   Create a channel.\n  /destroy  Destroy a channel.\n  /emit     Send an administrative message.\n  /list     List channels.\n  /object   Attach a channel object.\n  /oflags   Set channel permissions for objects.\n  /pflags   Set channel permissions for players.\n  /flags    Set or clear channel flags.\n  /status   Show a channel's status.\n  /who      List a channel's members.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/create Probe",
+      "god": "Channel Probe created.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/create probe",
+      "god": "Channel probe already exists.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/create Other",
+      "god": "Channel Other created.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom a=Probe",
+      "god": "You have joined channel Probe.\n[Probe] GOD has joined this channel.\nChannel Probe added with alias a.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom b=Probe",
+      "god": "Warning: you are already listed on that channel.\nYou are already on channel Probe.\nChannel Probe added with alias b.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom a=Probe",
+      "god": "Warning: you are already listed on that channel.\nThat alias is already in use for channel Probe.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom a=Other",
+      "god": "That alias is already in use for channel Probe.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "allcom on",
+      "god": "You are already on channel Probe.\nYou are already on channel Probe.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "a first",
+      "god": "[Probe] GOD: first\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "a :poses",
+      "god": "[Probe] GOD poses\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "a ;suffix",
+      "god": "[Probe] GODsuffix\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/status Probe/full",
+      "god": "** Channel       Description\n@chan/status: Unknown channel.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/status/full Probe",
+      "god": "** Channel             --Flags--  Obj  Users   Messages\n-- Probe                JXR/jxr    -1      1          4\n-- End of list of Channels --\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/who Probe",
+      "god": "-- Probe --\nName                          Status Player\nGOD(#1:PXc#W)                 on     yes   \n-- Probe --\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "delcom a",
+      "god": "You have left channel Probe.\nChannel Probe deleted.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "comlist",
+      "god": "Alias     Channel             Status Description\nBad Comsys Alias: b for Channel: Probe\n-- End of comlist --\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "b afterdel",
+      "god": "You are not listed as on that channel.  Delete this alias and re-add.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom a=Probe",
+      "god": "You have joined channel Probe.\n[Probe] GOD has joined this channel.\nChannel Probe added with alias a.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "allcom off",
+      "god": "You have left channel Probe.\n[Probe] GOD has left this channel.\nYou have left channel Probe.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "allcom on",
+      "god": "You have joined channel Probe.\n[Probe] GOD has joined this channel.\nYou are already on channel Probe.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "delcom b",
+      "god": "You have left channel Probe.\nChannel Probe deleted.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "delcom missing",
+      "god": "Unable to find that alias.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/destroy Probe",
+      "god": "Channel Probe destroyed.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "comlist",
+      "god": "Alias     Channel             Status Description\nBad Comsys Alias: a for Channel: Probe\n-- End of comlist --\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "a absent",
+      "god": "Unknown channel Probe.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/create Probe",
+      "god": "Channel Probe created.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "a recreated",
+      "god": "You are not listed as on that channel.  Delete this alias and re-add.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom p=Probe",
+      "god": "You have joined channel Probe.\n[Probe] GOD has joined this channel.\nChannel Probe added with alias p.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "lua-add",
+      "god": "",
+      "wizard": "You have joined channel Probe.\nChannel Probe added with alias lua.\n"
+    },
+    {
+      "actor": 2,
+      "command": "lua hello",
+      "god": "[Probe] Wizard: hello\n",
+      "wizard": "[Probe] Wizard: hello\n"
+    },
+    {
+      "actor": 1,
+      "command": "lua-boot",
+      "god": "[Probe] GOD(#1) boots Wizard(#2) off the channel.\n[Probe] Wizard has left this channel.\n",
+      "wizard": "[Probe] GOD(#1) boots Wizard(#2) off the channel.\nYou have left channel Probe.\n"
+    },
+    {
+      "actor": 2,
+      "command": "lua afterboot",
+      "god": "",
+      "wizard": "You are not listed as on that channel.  Delete this alias and re-add.\n"
+    },
+    {
+      "actor": 2,
+      "command": "comlist",
+      "god": "",
+      "wizard": "Alias     Channel             Status Description\nBad Comsys Alias: lua for Channel: Probe\n-- End of comlist --\n"
+    },
+    {
+      "actor": 1,
+      "command": "clearcom",
+      "god": "You have left channel Probe.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "comlist",
+      "god": "Alias     Channel             Status Description\n-- End of comlist --\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/who Missing",
+      "god": "@chan/who: Unknown channel.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/destroy Missing",
+      "god": "@chan/destroy: Unknown channel.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom",
+      "god": "You need to specify an alias.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom =Probe",
+      "god": "You need to specify an alias.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom a=",
+      "god": "You need to specify a channel.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom a=Missing",
+      "god": "Channel Missing does not exist yet.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "allcom bad",
+      "god": "Only options available are: on, off and who.\n",
+      "wizard": ""
+    }
+  ],
+  "rust": [
+    {
+      "actor": 1,
+      "command": "@chan",
+      "god": "@chan switches: boot create destroy emit list object oflags pflags flags status who\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/create Probe",
+      "god": "Channel Probe created.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/create probe",
+      "god": "Channel already exists.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/create Other",
+      "god": "Channel Other created.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom a=Probe",
+      "god": "You have joined channel Probe.\n[Probe] GOD has joined this channel.\nChannel Probe added with alias a.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom b=Probe",
+      "god": "You are already on channel Probe.\nChannel Probe added with alias b.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom a=Probe",
+      "god": "That alias is already in use.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom a=Other",
+      "god": "That alias is already in use.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "allcom on",
+      "god": "You are already on channel Probe.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "a first",
+      "god": "[Probe] GOD: first\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "a :poses",
+      "god": "[Probe] GOD poses\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "a ;suffix",
+      "god": "[Probe] GODsuffix\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/status Probe/full",
+      "god": "Unknown channel Probe/full.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/status/full Probe",
+      "god": "** Channel             --Flags--  Obj  Users   Messages\n-- Probe                JXR/jxr    -1      1          4\n-- End of list of Channels --\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/who Probe",
+      "god": "-- Probe --\nName                          Status Player\nGOD(#1:PXc#W)                 on     yes\n-- Probe --\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "delcom a",
+      "god": "Alias a deleted.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "comlist",
+      "god": "Alias     Channel             Status Description\nb         Probe               on     No description.\n-- End of comlist --\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "b afterdel",
+      "god": "[Probe] GOD: afterdel\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom a=Probe",
+      "god": "You are already on channel Probe.\nChannel Probe added with alias a.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "allcom off",
+      "god": "You have left channel Probe.\n[Probe] GOD has left this channel.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "allcom on",
+      "god": "You have joined channel Probe.\n[Probe] GOD has joined this channel.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "delcom b",
+      "god": "Alias b deleted.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "delcom missing",
+      "god": "Unknown channel alias.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/destroy Probe",
+      "god": "Channel Probe destroyed.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "comlist",
+      "god": "Alias     Channel             Status Description\n-- End of comlist --\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "a absent",
+      "god": "Huh? (Type look, say <message>, WHO, an exit name, or quit.)\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/create Probe",
+      "god": "Channel Probe created.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "a recreated",
+      "god": "Huh? (Type look, say <message>, WHO, an exit name, or quit.)\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom p=Probe",
+      "god": "You have joined channel Probe.\n[Probe] GOD has joined this channel.\nChannel Probe added with alias p.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "lua-add",
+      "god": "",
+      "wizard": "You have joined channel Probe.\n"
+    },
+    {
+      "actor": 2,
+      "command": "lua hello",
+      "god": "[Probe] Wizard: hello\n",
+      "wizard": "[Probe] Wizard: hello\n"
+    },
+    {
+      "actor": 1,
+      "command": "lua-boot",
+      "god": "[Probe] GOD(#1) boots Wizard(#2) off the channel.\n[Probe] Wizard has left this channel.\n",
+      "wizard": "[Probe] GOD(#1) boots Wizard(#2) off the channel.\nYou have left channel Probe.\n[Probe] Wizard has left this channel.\nAlias lua deleted.\n"
+    },
+    {
+      "actor": 2,
+      "command": "lua afterboot",
+      "god": "",
+      "wizard": "Huh? (Type look, say <message>, WHO, an exit name, or quit.)\n"
+    },
+    {
+      "actor": 2,
+      "command": "comlist",
+      "god": "",
+      "wizard": "Alias     Channel             Status Description\n-- End of comlist --\n"
+    },
+    {
+      "actor": 1,
+      "command": "clearcom",
+      "god": "You have left channel Probe.\n[Probe] GOD has left this channel.\nAlias p deleted.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "comlist",
+      "god": "Alias     Channel             Status Description\n-- End of comlist --\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/who Missing",
+      "god": "Unknown channel Missing.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "@chan/destroy Missing",
+      "god": "Unknown channel Missing.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom",
+      "god": "Usage: addcom <alias>=<channel>\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom =Probe",
+      "god": "You need to specify an alias.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom a=",
+      "god": "Unknown channel .\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "addcom a=Missing",
+      "god": "Unknown channel Missing.\n",
+      "wizard": ""
+    },
+    {
+      "actor": 1,
+      "command": "allcom bad",
+      "god": "Usage: allcom on|off|who\n",
+      "wizard": ""
+    }
+  ]
+}

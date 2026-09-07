@@ -1,0 +1,86 @@
+{
+  "c": [
+    {
+      "command": "@description Red Sword=STORED DESCRIPTION",
+      "sender": "Red Sword/Description - Set.\n",
+      "observer": ""
+    },
+    {
+      "command": "@lua/parent Red Sword=audit.lua",
+      "sender": "Lua parent set.\n",
+      "observer": ""
+    },
+    {
+      "command": "look Red Sword",
+      "sender": "Red Sword(#16)\nSTORED DESCRIPTION\n",
+      "observer": ""
+    },
+    {
+      "command": "@state/examine Red Sword/audit",
+      "sender": "State namespace audit:\n  provider (boolean): true\n",
+      "observer": ""
+    },
+    {
+      "command": "@lua/parent #17=audit_room.lua",
+      "sender": "Lua parent set.\n",
+      "observer": ""
+    },
+    {
+      "command": "@open audit-window=#17",
+      "sender": "Opened.\nLinked.\n",
+      "observer": ""
+    },
+    {
+      "command": "@flag audit-window=transparent",
+      "sender": "audit-window - TRANSPARENT set.\n",
+      "observer": ""
+    },
+    {
+      "command": "look audit-window",
+      "sender": "audit-window(#18:Ent)\nYou see nothing special.\nINTERNAL ROOM VIEW\n",
+      "observer": ""
+    }
+  ],
+  "rust": [
+    {
+      "command": "@description Red Sword=STORED DESCRIPTION",
+      "sender": "Red Sword/Description - Set.\n",
+      "observer": ""
+    },
+    {
+      "command": "@lua/parent Red Sword=audit.lua",
+      "sender": "Lua parent set.\n",
+      "observer": ""
+    },
+    {
+      "command": "look Red Sword",
+      "sender": "Red Sword(#16)\nSTORED DESCRIPTION\n",
+      "observer": ""
+    },
+    {
+      "command": "@state/examine Red Sword/audit",
+      "sender": "State namespace audit:\n  provider (boolean): true\n\n",
+      "observer": ""
+    },
+    {
+      "command": "@lua/parent #17=audit_room.lua",
+      "sender": "Lua parent set.\n",
+      "observer": ""
+    },
+    {
+      "command": "@open audit-window=#17",
+      "sender": "Opened exit #18.\nLinked.\n",
+      "observer": ""
+    },
+    {
+      "command": "@flag audit-window=transparent",
+      "sender": "audit-window - TRANSPARENT set.\n",
+      "observer": ""
+    },
+    {
+      "command": "look audit-window",
+      "sender": "audit-window(#18:Ent)\nYou see nothing special.\nINTERNAL ROOM VIEW\n",
+      "observer": ""
+    }
+  ]
+}

@@ -473,11 +473,14 @@ pub(super) fn dig(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Acti
         if teleport {
             crate::movement::perform(
                 ctx.scripts,
-                ctx.player,
-                ctx.player,
-                room,
-                ctx.session,
-                crate::movement::Route::Teleport,
+                crate::movement::Request {
+                    actor: ctx.player,
+                    object: ctx.player,
+                    cause: ctx.cause,
+                    destination: room,
+                    session: ctx.session,
+                    route: crate::movement::Route::Teleport,
+                },
             )?;
         }
         Ok(())

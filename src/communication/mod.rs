@@ -169,6 +169,12 @@ pub struct Channel {
     #[serde(skip)]
     /// C-compatible membership capacity; runtime-only.
     pub max_users: usize,
+    #[serde(skip)]
+    /// Online delivery order: most recently attached member first, independent of listening.
+    pub online: Vec<ObjectId>,
+    #[serde(skip)]
+    /// Whether persisted memberships have been reconciled into online ordering.
+    pub online_initialized: bool,
 }
 
 impl Channel {
@@ -183,6 +189,8 @@ impl Channel {
             history: Vec::new(),
             id: identity(),
             max_users: 0,
+            online: Vec::new(),
+            online_initialized: false,
         }
     }
 }
@@ -276,20 +284,20 @@ impl Service<'_> {
         Ok(id)
     }
 
-    /// Remove owned channel state while retaining unrelated communication macros.
+    /// Remove channel state while retaining player-owned aliases and macros.
     pub fn destroy(&self, name: &str) -> Result<()> {
         let name = self.name(name)?;
         let mut w = self.world.borrow_mut();
         w.channels.remove(&name);
-        for aliases in w.channel_aliases.values_mut() {
-            aliases.retain(|a| !a.channel.eq_ignore_ascii_case(&name));
-        }
         Ok(())
     }
 
     /// Stage bounded styled output for delivery only after transaction commit.
     pub fn notify(&self, player: ObjectId, message: impl Into<String>) -> Result<()> {
         let message = message.into();
+        if message.is_empty() {
+            return Ok(());
+        }
         let mut out = self.outbox.borrow_mut();
         ensure!(
             message.len() <= self.config.runtime.output_message_limit

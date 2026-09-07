@@ -79,6 +79,7 @@ async fn native_catalog_permissions_and_aliases() {
             "allcom",
             "page",
             "@chan",
+            "goto",
             "look",
             "say",
             "pose",
@@ -162,6 +163,7 @@ async fn native_catalog_permissions_and_aliases() {
             d.permission.roles(),
             if [
                 "version",
+                "goto",
                 "look",
                 "say",
                 "pose",
@@ -974,4 +976,140 @@ async fn deferred_destruction_and_cleaning_commands() {
     ] {
         assert!(run(&s, &c, 2, command).contains("Permission denied"));
     }
+}
+
+/// Explicit travel diagnostics and live access use the same local exit service as shorthand.
+#[tokio::test(flavor = "current_thread")]
+async fn goto_matching_switches_and_live_access() {
+    use stompymux_rs::{
+        access::{Edit, Rule},
+        world::Kind,
+    };
+    let (_d, mut c, mut w) = fixture().await;
+    w.objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .flags
+        .remove(Flag::Wizard);
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(4));
+    let exit = w.create(&c, "auditway;aw".into(), Kind::Exit);
+    let e = w.objects.get_mut(&exit).unwrap();
+    e.location = Some(ObjectId(4));
+    e.destination = Some(ObjectId(0));
+    e.lua_parent.clear();
+    let mut s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    for command in ["goto", "goto nowhere", "go nowhere"] {
+        assert_eq!(run(&s, &c, 2, command), "You can't go that way.");
+    }
+    for command in ["goto/quiet aw", "go/loud aw", "goto/unknown aw"] {
+        assert!(run(&s, &c, 2, command).contains("Unsupported command switch."));
+        assert_eq!(
+            s.world.borrow().objects[&ObjectId(2)].location,
+            Some(ObjectId(4))
+        );
+    }
+    run(&s, &c, 2, "GoTo AW");
+    assert_eq!(
+        s.world.borrow().objects[&ObjectId(2)].location,
+        Some(ObjectId(0))
+    );
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .location = Some(ObjectId(4));
+    c.access_rules.push(Rule {
+        target: "goto".into(),
+        list: false,
+        edits: vec![Edit::parse("wizard").unwrap()],
+        origin: "test".into(),
+    });
+    s.commands.configure_access(&c).unwrap();
+    for command in ["goto aw", "go aw", "move aw"] {
+        assert!(run(&s, &c, 2, command).contains("Permission denied."));
+    }
+    assert!(run(&s, &c, 2, "aw").contains("Huh?"));
+    assert_eq!(
+        s.world.borrow().objects[&ObjectId(2)].location,
+        Some(ObjectId(4))
+    );
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .flags
+        .insert(Flag::Wizard);
+    run(&s, &c, 2, "aw");
+    assert_eq!(
+        s.world.borrow().objects[&ObjectId(2)].location,
+        Some(ObjectId(0))
+    );
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .location = Some(ObjectId(4));
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&exit)
+        .unwrap()
+        .destination = None;
+    assert_eq!(run(&s, &c, 2, "goto aw"), "You can't go that way.");
+    {
+        let mut w = s.world.borrow_mut();
+        let other = w.create(&c, "auditway;aw".into(), Kind::Exit);
+        let e = w.objects.get_mut(&other).unwrap();
+        e.location = Some(ObjectId(4));
+        e.destination = Some(ObjectId(0));
+        e.lua_parent.clear();
+    }
+    assert_eq!(
+        run(&s, &c, 2, "goto aw"),
+        "I don't know which way you mean!"
+    );
+    assert!(run(&s, &c, 4, "goto aw").contains("Command incompatible with invoker type."));
+    c.logger.shutdown(&c).await.unwrap();
+}
+
+/// A permitted exit wins duplicate-name matching; Lua shadowing keeps its existing precedence.
+#[tokio::test(flavor = "current_thread")]
+async fn goto_lock_preference_and_lua_shadowing() {
+    use stompymux_rs::world::Kind;
+    let (d, c, mut w) = fixture().await;
+    std::fs::write(
+        d.path().join("lua/object_logic/goto_denied.lua"),
+        "return {locks={match=function() return false end}}",
+    )
+    .unwrap();
+    std::fs::write(d.path().join("lua/global_logic/goto_shadow.lua"),
+        "return {commands={{name='goto',permission='everyone',pattern='^goto shadow$',handler=function(ctx) mux.world.pemit(ctx.enactor,'SHADOW');return true end}}}").unwrap();
+    w.objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .flags
+        .remove(Flag::Wizard);
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(4));
+    for parent in ["goto_denied.lua", ""] {
+        let id = w.create(&c, "chosen".into(), Kind::Exit);
+        let e = w.objects.get_mut(&id).unwrap();
+        e.location = Some(ObjectId(4));
+        e.destination = Some(ObjectId(0));
+        e.lua_parent = parent.into();
+    }
+    let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    assert_eq!(run(&s, &c, 2, "go shadow"), "SHADOW");
+    assert_eq!(
+        s.world.borrow().objects[&ObjectId(2)].location,
+        Some(ObjectId(4))
+    );
+    run(&s, &c, 2, "goto chosen");
+    assert_eq!(
+        s.world.borrow().objects[&ObjectId(2)].location,
+        Some(ObjectId(0))
+    );
+    c.logger.shutdown(&c).await.unwrap();
 }

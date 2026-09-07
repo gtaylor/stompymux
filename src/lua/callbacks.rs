@@ -189,6 +189,26 @@ impl Scripts {
         Ok(())
     }
 
+    /// Invoke a channel object's leave hook with the legacy membership context.
+    pub(crate) fn channel_leave_event(&self, object: ObjectId, who: ObjectId) -> Result<()> {
+        let parent = {
+            let world = self.world.borrow();
+            let Some(object) = world.objects.get(&object).filter(|object| {
+                object.kind == Kind::Thing && !object.flags.contains(crate::flags::Flag::Halted)
+            }) else {
+                return Ok(());
+            };
+            object.lua_parent.clone()
+        };
+        let Some(module) = self.parents.get(&parent) else {
+            return Ok(());
+        };
+        let ctx = self.context(Some(who), Some(object), None)?;
+        ctx.set("cause", who.0)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        self.call_event(module, "on_leave", ctx)
+    }
+
     /// Render the current location for an initiating session.
     pub fn appearance(&self, player: ObjectId, location: ObjectId, session: u64) -> Result<String> {
         self.appearance_for(player, location, Some(session))
@@ -309,30 +329,12 @@ impl Scripts {
         {
             return Ok(());
         }
-        if let Some(message) = result
-            .enactor_message
-            .as_deref()
-            .or(Some(default))
-            .filter(|s| !s.is_empty())
-        {
-            self.outbox.borrow_mut().push((player, message.into()));
-        }
-        if let Some(message) = result.other_message.as_deref().filter(|s| !s.is_empty()) {
-            let w = self.world.borrow();
-            let actor = &w.objects[&player];
-            if let Some(location) = actor.location {
-                for other in w.objects.values().filter(|o| {
-                    o.kind == Kind::Player
-                        && o.location == Some(location)
-                        && o.id != player
-                        && o.id != object
-                }) {
-                    self.outbox
-                        .borrow_mut()
-                        .push((other.id, format!("{} {message}", actor.name).into()));
-                }
-            }
-        }
+        self.action_text(
+            player,
+            object,
+            result.enactor_message.as_deref().or(Some(default)),
+            result.other_message.as_deref(),
+        )?;
         let parent = self
             .world
             .borrow()
@@ -351,6 +353,8 @@ impl Scripts {
                 _ => "",
             };
             if !event.is_empty() {
+                ctx.set("subject", mlua::Value::Nil)
+                    .map_err(|e| anyhow::anyhow!("{e}"))?;
                 self.call_event(t, event, ctx)?;
             }
         }
