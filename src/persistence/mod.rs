@@ -32,7 +32,9 @@ async fn finish<T>(connection: SqliteConnection, result: Result<T>) -> Result<T>
         Err(error) => Err(error),
         Ok(value) => {
             if let Err(error) = closed {
-                eprintln!("SQLite close failed after completed operation: {error}");
+                crate::logging::fatal(&format!(
+                    "SQLite close failed after completed operation: {error}"
+                ));
             }
             Ok(value)
         }

@@ -53,6 +53,7 @@ impl Scripts {
         world.borrow_mut().palette = palette.clone();
         let (lua, budget) = sandbox::create(config)?;
         lua.set_app_data(config.clone());
+        lua.set_app_data(mode);
         super::transactions::install(&lua);
         super::testing::install(&lua).map_err(|e| anyhow::anyhow!(e.to_string()))?;
         lua.set_app_data(sources.clone());

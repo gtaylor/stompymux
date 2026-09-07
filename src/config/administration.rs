@@ -29,6 +29,13 @@ impl Support {
 }
 /// Implemented consumers, never silently accepted storage-only edits.
 pub fn support(d: &Directive) -> Support {
+    if d.name == "log_options"
+        || crate::logging::CATEGORIES
+            .iter()
+            .any(|(_, name, _)| *name == d.name)
+    {
+        return Support::Live;
+    }
     if d.permission.contains(Permissions::DISABLED) || d.name == "check_offset" {
         return Support::Restart;
     }
@@ -195,6 +202,38 @@ impl Config {
         let mut diagnostics = Vec::new();
         let value = request.value.as_str();
         match d.name {
+            "log_options" => {
+                let mut success = false;
+                for word in value.split_whitespace() {
+                    let (set, name) = word.strip_prefix('!').map_or((true, word), |s| (false, s));
+                    let name = name.to_ascii_lowercase();
+                    let option = [
+                        ("flags", super::LogOption::Flags),
+                        ("location", super::LogOption::Location),
+                        ("timestamp", super::LogOption::Timestamp),
+                    ]
+                    .into_iter()
+                    .find(|(n, _)| !name.is_empty() && n.starts_with(&name));
+                    if let Some((_, option)) = option {
+                        success = true;
+                        c.settings.logging.log_options.retain(|o| o != &option);
+                        if set {
+                            c.settings.logging.log_options.push(option);
+                        }
+                    } else {
+                        diagnostics.push(format!("Unknown logging option {word}"));
+                    }
+                }
+                ensure!(
+                    success,
+                    "{}",
+                    if diagnostics.is_empty() {
+                        "Nothing to set".into()
+                    } else {
+                        diagnostics.join("\n")
+                    }
+                );
+            }
             "access" | "list_access" | "config_access" => {
                 let (target, words) = value
                     .split_once(char::is_whitespace)

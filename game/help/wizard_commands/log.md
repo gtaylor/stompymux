@@ -1,19 +1,27 @@
 +++
-description = "Inspect legacy logging controls"
 title = "@log"
-keywords = ["@log", "log"]
+description = "Append a message to an existing server log"
+keywords = ["@log", "logging", "logfiles"]
 article_tags = ["wizard_commands"]
 wizard_only = true
 +++
 
-# @log
+# Logging
 
-> `@log <filename>=<message>`
+`@log <filename>=<message>` appends a message and newline to an existing readable,
+writable regular file in `game/logs`. No switches are supported. A successful
+write replies **Message logged.** Files are not created automatically; filenames
+cannot contain `/` or `..` and must be at most 200 bytes. Messages are truncated
+to 4094 UTF-8 bytes before the newline.
 
-Writes a message to an existing file in the game's `logs` directory. The
-filename may not contain `/` or `..`, and the file must already be readable
-and writable by the game server.
+`@list logfiles` shows cached handles and their idle timeouts. `@list logging`
+requires GOD by default and shows effective topics and decorations.
 
-Lua code can perform the same operation with `mux.log(filename, message)`.
-It returns `true` when the message was written and `false` when validation or
-the write fails. This operation is not available during `@lua/check`.
+`@admin all_commands=yes` enables command auditing. `suspect_commands` and
+`bad_commands` control their respective diagnostics. Password arguments are
+redacted, including aliases, macros and queued commands. SUSPECT commands also go
+to an existing SuspectsLog channel, independently of stderr switches.
+
+Lua `mux.log(filename, message)` returns true when a request is staged for commit,
+not when written. Failed transactions discard their requests; errors after commit
+are reported in server diagnostics. Logging-only operations do not save the world.

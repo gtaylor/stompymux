@@ -337,7 +337,12 @@ impl Service<'_> {
                     *self.world.borrow_mut() = before;
                     self.outbox.borrow_mut().truncate(pending);
                     crate::lua::flows::restore(self.lua, flow_effects);
-                    eprintln!("Channel lock {}: {e}", access.lock().key());
+                    self.config.log(
+                        &[crate::logging::Category::Bugs],
+                        "LUA",
+                        "ERROR",
+                        format!("Channel lock {}: {e}", access.lock().key()),
+                    );
                 }
             }
         }

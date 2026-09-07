@@ -44,7 +44,7 @@ pub struct Session {
 }
 impl Session {
     /// Queue ordered Telnet output; metadata events are already reflected in the decoder.
-    pub fn protocol(&self, events: Vec<crate::telnet::Input>) {
+    pub fn protocol(&self, events: Vec<crate::telnet::Input>, config: &crate::config::Config) {
         for event in events {
             match event {
                 crate::telnet::Input::Reply(bytes) => {
@@ -62,7 +62,12 @@ impl Session {
                         self.stats.compression.store(0, Relaxed);
                     }
                 }
-                crate::telnet::Input::Diagnostic(message) => eprintln!("Telnet: {message}"),
+                crate::telnet::Input::Diagnostic(message) => config.log(
+                    &[crate::logging::Category::Network],
+                    "NET",
+                    "TELNET",
+                    message,
+                ),
                 _ => {}
             }
         }

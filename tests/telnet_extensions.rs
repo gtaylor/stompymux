@@ -207,6 +207,9 @@ fn queue_counters_and_starting_compression_are_observable() {
     use stompymux_rs::sessions::{LoginFlow, Output, Session};
     let (output, mut rx) = tokio::sync::mpsc::channel(1);
     let now = std::time::Instant::now();
+    let d = tempfile::tempdir().unwrap();
+    std::fs::write(d.path().join("stompymux.toml"), "").unwrap();
+    let config = stompymux_rs::config::Config::load(d.path()).unwrap();
     let s = Session {
         output,
         stats: Default::default(),
@@ -225,10 +228,10 @@ fn queue_counters_and_starting_compression_are_observable() {
         failed: Default::default(),
         output_message_limit: 64,
     };
-    s.protocol(vec![Input::StartCompression]);
+    s.protocol(vec![Input::StartCompression], &config);
     assert_eq!(s.stats.snapshot().compression, 1);
     assert!(matches!(rx.try_recv().unwrap(), Output::StartCompression));
-    s.protocol(vec![Input::StartCompression]);
+    s.protocol(vec![Input::StartCompression], &config);
     assert!(rx.try_recv().is_err());
     assert!(s.raw(b"abc".to_vec()));
     assert!(!s.raw(b"xy".to_vec()));

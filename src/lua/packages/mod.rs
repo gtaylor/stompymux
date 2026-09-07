@@ -2,6 +2,7 @@
 mod comsys;
 mod config;
 mod error;
+mod logging;
 mod session;
 mod text;
 mod world;
@@ -41,6 +42,7 @@ pub(super) fn register_native(
     config::register(lua, &api, config)?;
     comsys::register(lua, &api, config, world, outbox)?;
     text::register(lua, &api, config, palette)?;
+    logging::register(lua, &api).map_err(|e| anyhow::anyhow!("{e}"))?;
     Ok(api)
 }
 
@@ -59,6 +61,7 @@ pub(super) fn install_facades(lua: &Lua, api: Table) -> Result<()> {
         config::install(lua, &api, &mux, &id)?;
         text::install(lua, &api, &mux, &id)?;
         comsys::install(lua, &api, &mux, &id)?;
+        logging::install(lua, &api, &mux)?;
         let package: Table = lua.globals().get("package")?;
         package.get::<Table>("loaded")?.set("mux", mux)?;
         Ok(())

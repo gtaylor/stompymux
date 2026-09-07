@@ -69,11 +69,21 @@ impl HelpLoadReport {
     }
 
     /// Record details without exposing filesystem diagnostics to ordinary players.
-    pub fn log(&self) {
+    pub fn log(&self, config: &Config) {
         for detail in self.errors.iter().chain(&self.warnings) {
-            eprintln!("Help: {detail}");
+            (config).log(
+                &[crate::logging::Category::Startup],
+                "INI",
+                "INFO",
+                format!("Help: {detail}"),
+            );
         }
-        eprintln!("{}", self.summary());
+        (config).log(
+            &[crate::logging::Category::Startup],
+            "INI",
+            "INFO",
+            self.summary(),
+        );
     }
 }
 
@@ -166,11 +176,11 @@ impl HelpIndex {
                 text_limit: config.lua.output_byte_limit,
                 ..Self::default()
             };
-            index.report.log();
+            index.report.log(config);
             return Ok(index);
         }
         let index = Self::reload(config)?;
-        index.report.log();
+        index.report.log(config);
         Ok(index)
     }
 

@@ -303,6 +303,8 @@ maximum_length = 30
 
 [logging]
 # Controls extra data written with each log entry: flags, location, timestamp.
+# Runtime @admin log_options edits accept !flags/!location/!timestamp to clear.
+# Command audit passwords are redacted; Lua mux.log requests wait for commit.
 log_options = ["flags", "location", "timestamp"]
 
 [logging.topics]
@@ -314,7 +316,7 @@ all_commands = false
 suspect_commands = false
 # Write commands the server does not recognize.
 bad_commands = false
-# Write buffer-pool allocation and release activity.
+# Retained for compatibility; no Rust allocator event producer.
 buffer_alloc = false
 # Write internal server bugs and crash reports.
 bugs = true

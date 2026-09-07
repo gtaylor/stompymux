@@ -1011,3 +1011,9 @@ C multi-token partial success is retained. Changes are visible to Rust and Lua,
 survive Lua reload, and disappear on restart. They never rewrite configuration files
 or the database. See [runtime administration](docs/configuration.md#runtime-administration)
 for syntax, application timing and boundaries.
+
+Logging uses the configured C topic switches and decorators. `@log file=message`
+appends to an operator-created regular file under `game/logs`; Wizards can inspect
+`@list logfiles`, and GOD can inspect `@list logging` (subject to configured topic
+permissions). See [logging](docs/logging.md) for auditing, redaction, runtime
+controls and transactional `mux.log` behavior.

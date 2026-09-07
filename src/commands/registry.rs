@@ -251,6 +251,8 @@ impl CommandRegistry {
     pub fn new() -> Self {
         use CommandPermissions as P;
         let mut definitions = vec![
+            CommandDefinition::native("@log", P::WIZARD, crate::logging::command)
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("@admin", P::WIZARD, crate::config::administration::command)
                 .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("addcom", P::EVERYONE, crate::communication::addcom),

@@ -30,14 +30,14 @@ pub fn list_definitions() -> Vec<ListDefinition> {
         ("default_flags", 1, P::EVERYONE, true),
         ("flags", 2, P::EVERYONE, true),
         ("globals", 1, P::WIZARD, true),
-        ("logging", 4, P::GOD, false),
+        ("logging", 4, P::GOD, true),
         ("options", 1, P::EVERYONE, true),
         ("permissions", 2, P::WIZARD, true),
         ("powers", 2, P::WIZARD, true),
         ("process", 2, P::WIZARD, false),
         ("site_information", 2, P::WIZARD, true),
         ("switches", 2, P::EVERYONE, true),
-        ("logfiles", 4, P::WIZARD, false),
+        ("logfiles", 4, P::WIZARD, true),
     ]
     .into_iter()
     .map(|(name, minimum, permission, implemented)| ListDefinition {
@@ -166,6 +166,12 @@ pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
         )));
     }
     let topic = definition.name;
+    if topic == "logging" {
+        return Ok(Action::LiteralReport(crate::logging::report(ctx.config)));
+    }
+    if topic == "logfiles" {
+        return Ok(Action::LiteralReport(ctx.config.logger.report()));
+    }
     if topic == "globals" {
         return Ok(Action::GlobalControl(None));
     }

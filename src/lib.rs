@@ -67,3 +67,5 @@ pub mod sites;
 
 /// Shared command and list access evaluation.
 pub mod access;
+
+pub mod logging;

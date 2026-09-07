@@ -535,8 +535,9 @@ async fn tcp_schedules_commit_before_output_private_inspection_restart_and_shutd
 async fn tcp_scheduled_persistence_failure_consumes_job_and_discards_messages() {
     tokio::task::LocalSet::new().run_until(async {
         let (_d,c)=fixture().await;credentials(&c).await;
+        std::fs::create_dir_all(c.root.join("logs")).unwrap();std::fs::write(c.root.join("logs/schedule.log"),"").unwrap();
         module(&c,"global_logic/write.lua",r#"return {schedules={{name='write',cron='* * * * *',handler=function()
-            schedule_attempts=(schedule_attempts or 0)+1;local state=mux.world.object(1):state('scheduled');state:set('written',state:get('written',0)+1);mux.world.pemit(1,'SCHEDULE SAVED')
+            assert(mux.log('schedule.log','scheduled commit'));schedule_attempts=(schedule_attempts or 0)+1;local state=mux.world.object(1):state('scheduled');state:set('written',state:get('written',0)+1);mux.world.pemit(1,'SCHEDULE SAVED')
         end}}}"#);
         let clock=Rc::new(Cell::new(120));let (address,shutdown,task,vm)=start(&c,clock.clone()).await;let mut client=Client::connect(address,1).await;
         let mut db=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()).foreign_keys(false)).await.unwrap();
@@ -548,6 +549,7 @@ async fn tcp_scheduled_persistence_failure_consumes_job_and_discards_messages() 
         }).await.unwrap();
         client.send("@state/examine #1/scheduled").await;let text=client.until("No state namespace named scheduled.").await;assert!(!text.contains("SCHEDULE SAVED"));
         assert!(!persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)].state.contains_key("scheduled"));
+        assert_eq!(std::fs::read_to_string(c.root.join("logs/schedule.log")).unwrap(), "");
         client.send("@examine me").await;client.until("CONNECTED").await;
         sqlx::raw_sql("DROP TRIGGER reject_schedule").execute(&mut db).await.unwrap();
         tokio::time::sleep(Duration::from_millis(50)).await;
@@ -559,6 +561,7 @@ async fn tcp_scheduled_persistence_failure_consumes_job_and_discards_messages() 
         client.send("@shutdown").await;client.until("Game: Shutdown by").await;task.await.unwrap().unwrap();drop(shutdown);
         clock.set(next*60+54);
         assert_eq!(persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)].state["scheduled"]["written"],Scalar::Integer(1));
+        assert_eq!(std::fs::read_to_string(c.root.join("logs/schedule.log")).unwrap(), "scheduled commit\n");
         db.close().await.unwrap();
     }).await;
 }

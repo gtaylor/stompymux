@@ -111,7 +111,7 @@ async fn live_settings_permissions_reports_and_restart() {
             .contains("restart-only")
     );
     assert!(
-        edit(&mut c, &mut s, 1, "all_commands", "yes")
+        edit(&mut c, &mut s, 1, "cache_trim", "yes")
             .unwrap_err()
             .to_string()
             .contains("unsupported")

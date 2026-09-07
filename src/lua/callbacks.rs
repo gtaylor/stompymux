@@ -141,7 +141,12 @@ impl Scripts {
             *self.world.borrow_mut() = before;
             self.outbox.borrow_mut().truncate(pending);
             crate::lua::flows::restore(&self.lua, flow_effects);
-            eprintln!("Lua {name} callback failed: {error:#}");
+            crate::lua::configuration(&self.lua).log(
+                &[crate::logging::Category::Bugs],
+                "LUA",
+                "ERROR",
+                format!("Lua {name} callback failed: {error:#}"),
+            );
         }
         Ok(())
     }
@@ -361,7 +366,12 @@ impl Scripts {
         let result = match self.lock_outcome(ctx.clone()) {
             Ok(result) => result,
             Err(error) => {
-                eprintln!("Traversal lock on #{} failed: {error:#}", exit.0);
+                crate::lua::configuration(&self.lua).log(
+                    &[crate::logging::Category::Bugs],
+                    "LUA",
+                    "ERROR",
+                    format!("Traversal lock on #{} failed: {error:#}", exit.0),
+                );
                 LockOutcome {
                     passes: false,
                     enactor_message: None,
@@ -419,7 +429,12 @@ impl Scripts {
             });
             match result {
                 Ok(result) if result.passes => passing.push(*id),
-                Err(e) => eprintln!("MATCH lock on #{} failed: {e:#}", id.0),
+                Err(e) => crate::lua::configuration(&self.lua).log(
+                    &[crate::logging::Category::Bugs],
+                    "LUA",
+                    "ERROR",
+                    format!("MATCH lock on #{} failed: {e:#}", id.0),
+                ),
                 _ => {}
             }
         }

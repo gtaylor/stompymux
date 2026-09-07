@@ -43,6 +43,8 @@ pub struct PrivateOutput {
 pub struct Snapshot {
     active: BTreeMap<u64, Active>,
     pub output: Vec<PrivateOutput>,
+    /// Script file appends share every native and Lua rollback boundary.
+    pub logs: Vec<crate::logging::FileRequest>,
 }
 
 /// Session identity is authoritative and is never restored by world rollback.
@@ -203,6 +205,7 @@ impl Engine {
         s.pending = Snapshot {
             active: s.durable.clone(),
             output: Vec::new(),
+            logs: Vec::new(),
         };
     }
     /// Whether this session currently consumes input through a flow.
@@ -216,6 +219,31 @@ impl Engine {
         s.durable.remove(&session);
         s.pending.output.retain(|p| p.session != session);
     }
+    /// Admit a bounded log request without touching the filesystem.
+    pub(crate) fn stage_log(
+        &self,
+        request: crate::logging::FileRequest,
+        config: &Config,
+    ) -> mlua::Result<bool> {
+        let mut state = self.state.borrow_mut();
+        let pending = &mut state.pending.logs;
+        let bytes = pending
+            .iter()
+            .map(|r| r.filename.len() + r.message.len())
+            .sum::<usize>();
+        if pending.len() >= config.lua.output_entry_limit
+            || bytes.saturating_add(request.filename.len() + request.message.len())
+                > config.lua.output_byte_limit
+        {
+            return Ok(false);
+        }
+        pending.push(request);
+        Ok(true)
+    }
+    /// Consume appends only after their enclosing transaction commits.
+    pub fn drain_logs(&self) -> Vec<crate::logging::FileRequest> {
+        std::mem::take(&mut self.state.borrow_mut().pending.logs)
+    }
     /// Consume staged private messages after their transaction commits.
     pub fn drain(&self) -> Vec<PrivateOutput> {
         std::mem::take(&mut self.state.borrow_mut().pending.output)
@@ -224,11 +252,13 @@ impl Engine {
     pub fn inherit(&self, previous: &Self) {
         let previous = previous.state.borrow();
         let mut s = self.state.borrow_mut();
+        let logs = std::mem::take(&mut s.pending.logs);
         s.sessions = previous.sessions.clone();
         s.durable = previous.durable.clone();
         s.pending = Snapshot {
             active: s.durable.clone(),
             output: Vec::new(),
+            logs,
         };
     }
 
@@ -241,8 +271,20 @@ impl Engine {
             .iter()
             .map(|(_, d)| d.len())
             .sum::<usize>()
-            .saturating_add(private.iter().map(|o| o.document.len()).sum::<usize>());
-        if normal.len().saturating_add(private.len()) > self.config.lua.output_entry_limit
+            .saturating_add(private.iter().map(|o| o.document.len()).sum::<usize>())
+            .saturating_add(
+                state
+                    .pending
+                    .logs
+                    .iter()
+                    .map(|r| r.filename.len() + r.message.len())
+                    .sum::<usize>(),
+            );
+        if normal
+            .len()
+            .saturating_add(private.len())
+            .saturating_add(state.pending.logs.len())
+            > self.config.lua.output_entry_limit
             || bytes > self.config.lua.output_byte_limit
         {
             return Err(mlua::Error::runtime("Lua output limit exceeded"));

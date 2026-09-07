@@ -42,6 +42,8 @@ pub enum Action {
     HelpReload,
     /// Reload connection messages without touching world storage.
     ReadCache,
+    /// Append to a permitted existing logfile outside world persistence.
+    Log(crate::logging::FileRequest),
     /// Runtime-only configuration administration.
     ConfigAdmin(crate::config::administration::Request),
     /// Request common graceful shutdown.
@@ -244,6 +246,12 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
         }
         return definition.invoke_native(&ctx, &input);
     }
+    c.log(
+        &[crate::logging::Category::BadCommands],
+        "CMD",
+        "BAD",
+        crate::logging::audit::message(c, &s.world.borrow(), execution, line),
+    );
     s.outbox.borrow_mut().push((
         player,
         "Huh? (Type look, say <message>, WHO, an exit name, or quit.)".into(),

@@ -34,23 +34,33 @@ impl Server {
         })();
         match result {
             Ok(mut messages) => {
-                eprintln!(
-                    "Configuration: #{} edited {}: {}",
-                    player.0,
-                    request.directive,
-                    if messages.is_empty() {
-                        "Success"
-                    } else {
-                        "Partial success"
-                    }
+                self.config.log(
+                    &[crate::logging::Category::ConfigChanges],
+                    "CFG",
+                    "UPDAT",
+                    format!(
+                        "Configuration: #{} edited {}: {}",
+                        player.0,
+                        request.directive,
+                        if messages.is_empty() {
+                            "Success"
+                        } else {
+                            "Partial success"
+                        }
+                    ),
                 );
                 messages.push("Set.".into());
                 messages.join("\n")
             }
             Err(error) => {
-                eprintln!(
-                    "Configuration: #{} {} failed: {error:#}",
-                    player.0, request.directive
+                self.config.log(
+                    &[crate::logging::Category::ConfigChanges],
+                    "CFG",
+                    "UPDAT",
+                    format!(
+                        "Configuration: #{} {} failed: {error:#}",
+                        player.0, request.directive
+                    ),
                 );
                 error.to_string()
             }

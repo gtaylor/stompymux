@@ -1,0 +1,3 @@
+-- True means accepted for commit; file output is performed by the logging worker.
+local native, mux = ...
+mux.log = native.log

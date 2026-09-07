@@ -1,6 +1,7 @@
 //! Serialized world owner, connection lifecycle and common graceful shutdown coordinator.
 mod administration;
 mod configuration;
+mod logging;
 mod presence;
 mod queue;
 use crate::{
@@ -188,7 +189,15 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
             let _ = std::fs::remove_file(&credentials);
             return Err(e);
         }
-        eprintln!("Bootstrap credentials written to {}", credentials.display());
+        for request in scripts.flows.drain_logs() {
+            c.logger.submit(c, request);
+        }
+        (c).log(
+            &[crate::logging::Category::Startup],
+            "INI",
+            "INFO",
+            format!("Bootstrap credentials written to {}", credentials.display()),
+        );
     }
     scripts.world.borrow().validate(c)?;
     scripts.event("on_server_startup", None, None)?;
@@ -197,6 +206,9 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
     // Also clears stale stored CONNECTED values; unchanged durable fields are not rewritten.
     persistence::persist(c.database(), after, c.database.busy_timeout_ms).await?;
     scripts.outbox.borrow_mut().clear();
+    for request in scripts.flows.drain_logs() {
+        c.logger.submit(c, request);
+    }
     Ok(scripts)
 }
 pub async fn serve(c: Config, shutdown: impl Future<Output = ShutdownRequest>) -> Result<()> {
@@ -247,7 +259,12 @@ pub async fn run_with_clocks(
     c.site_policy
         .validate_listener(listener.local_addr()?.ip())?;
     for warning in c.warnings.iter().chain(&scripts.warnings) {
-        eprintln!("Warning: {warning}");
+        c.log(
+            &[crate::logging::Category::Startup],
+            "INI",
+            "INFO",
+            format!("Warning: {warning}"),
+        );
     }
     println!("Listening on {}", listener.local_addr()?);
     let (tx, mut rx) = mpsc::channel(c.runtime.event_queue_capacity);
@@ -293,7 +310,12 @@ pub async fn run_with_clocks(
     .await?;
     server.message_cache = cache;
     for diagnostic in report {
-        eprintln!("File cache: {diagnostic}");
+        server.config.log(
+            &[crate::logging::Category::Startup],
+            "INI",
+            "INFO",
+            format!("File cache: {diagnostic}"),
+        );
     }
     let mut runtime_sources = server.scripts.sources.clone();
     let mut schedules = crate::lua::schedules::Queue::default();
@@ -328,12 +350,13 @@ pub async fn run_with_clocks(
                 if tasks.len()>=server.config.runtime.max_connections { drop(stream); continue; }
                 let site = server.config.site_policy.classify(peer.ip());
                 if site.forbidden {
-                    eprintln!("Connection refused from {peer}: forbidden site");
+                    server.config.log(&[crate::logging::Category::Network], "NET", "ERROR", format!("Connection refused from {peer}: forbidden site"));
                     tasks.spawn(presence::reject_site(stream, server.message_cache.text(crate::message_cache::File::BadSite).to_owned(), server.scripts.palette.clone(), server.config.clone()));
                     continue;
                 }
                 next+=1;
                 let id=SessionId(next);
+                server.config.log(&[crate::logging::Category::Network], "NET", "CONN", format!("Session {} accepted from {peer}", id.0));
                 let (output,receiver)=mpsc::channel(server.config.runtime.session_output_queue_capacity);
                 let now=Instant::now();
                 let stats=std::sync::Arc::new(telnet::transport::Stats::default());
@@ -348,10 +371,10 @@ pub async fn run_with_clocks(
                 tasks.spawn(connection(stream,id,tx.clone(),receiver,server.config.runtime.write_timeout_ms,stats));
                 let session=server.sessions.get_mut(&id).unwrap();
                 let negotiation=session.decoder.initial();
-                session.protocol(negotiation);
+                session.protocol(negotiation, &server.config);
                 let index = if server.message_cache.banner_count() == 0 { 0 } else { rand::random_range(0..server.message_cache.banner_count()) };
                 let banner = server.message_cache.welcome(index);
-                if let Err(error) = session.styled_report(banner, true, &server.config).await { eprintln!("Welcome delivery: {error:#}"); }
+                if let Err(error) = session.styled_report(banner, true, &server.config).await { server.config.log(&[crate::logging::Category::Network], "NET", "ERROR", format!("Welcome delivery: {error:#}")); }
                 session.text("Who are you? ",true);
             },
             event = rx.recv() => {
@@ -407,6 +430,10 @@ pub async fn run_with_clocks(
     {
         tasks.abort_all();
         while tasks.join_next().await.is_some() {}
+    }
+    if let Err(error) = server.config.logger.shutdown(&server.config).await {
+        crate::logging::fatal(&format!("Logging shutdown: {error:#}"));
+        server.shutdown_failed = true;
     }
     anyhow::ensure!(
         !server.shutdown_failed,
@@ -482,7 +509,12 @@ impl Server {
             Err(e) => Err(e),
         };
         if let Err(e) = result {
-            eprintln!("Shutdown initial save failed: {e:#}");
+            self.config.log(
+                &[crate::logging::Category::Problems],
+                "SHT",
+                "ERROR",
+                format!("Shutdown initial save failed: {e:#}"),
+            );
             if let ShutdownRequest::Player(player) = request {
                 for (id, session) in &self.sessions {
                     if session.player == Some(player) {
@@ -495,7 +527,12 @@ impl Server {
         }
         self.shutdown = Some(request);
         self.scripts.flows.stop();
-        eprintln!("Graceful shutdown: {request:?}");
+        self.config.log(
+            &[crate::logging::Category::Startup],
+            "SHT",
+            "START",
+            format!("Graceful shutdown: {request:?}"),
+        );
         if let ShutdownRequest::Player(player) = request {
             let name = self.scripts.world.borrow().objects[&player].name.clone();
             for id in self.sessions.keys() {
@@ -508,7 +545,12 @@ impl Server {
         self.scripts.flows.stop();
         for id in self.sessions.keys().copied().collect::<Vec<_>>() {
             if let Err(e) = self.disconnect(id).await {
-                eprintln!("Shutdown disconnect failed: {e:#}");
+                self.config.log(
+                    &[crate::logging::Category::Problems],
+                    "SHT",
+                    "ERROR",
+                    format!("Shutdown disconnect failed: {e:#}"),
+                );
                 self.shutdown_failed = true;
             }
         }
@@ -525,7 +567,12 @@ impl Server {
             Err(e) => Err(e),
         };
         if let Err(e) = result {
-            eprintln!("Shutdown final save failed: {e:#}");
+            self.config.log(
+                &[crate::logging::Category::Problems],
+                "SHT",
+                "ERROR",
+                format!("Shutdown final save failed: {e:#}"),
+            );
             self.shutdown_failed = true;
         }
     }
@@ -560,7 +607,10 @@ impl Server {
             );
         }
         if let Some(session) = self.sessions.get(&id) {
-            session.protocol(vec![telnet::Decoder::sub_reply(telnet::MSSP, &payload)]);
+            session.protocol(
+                vec![telnet::Decoder::sub_reply(telnet::MSSP, &payload)],
+                &self.config,
+            );
         }
     }
     /// Color overrides never affect another connection or persistent account state.
@@ -788,7 +838,7 @@ impl Server {
         if let Some(s) = self.sessions.get_mut(&id) {
             s.flow = flow;
             let negotiation = s.decoder.echo(secret);
-            s.protocol(negotiation);
+            s.protocol(negotiation, &self.config);
         }
         self.tell(id, text);
     }
@@ -872,7 +922,12 @@ impl Server {
                 if self.commit(before).await {
                     self.flush();
                 } else {
-                    eprintln!("Lua schedule persistence failed: {}", job.description());
+                    self.config.log(
+                        &[crate::logging::Category::Bugs],
+                        "LUA",
+                        "ERROR",
+                        format!("Lua schedule persistence failed: {}", job.description()),
+                    );
                 }
             }
             Ok(false) => {}
@@ -881,7 +936,12 @@ impl Server {
                 self.reconcile_connections();
                 self.scripts.outbox.borrow_mut().clear();
                 self.scripts.flows.rollback();
-                eprintln!("Lua schedule failed: {error:#}");
+                self.config.log(
+                    &[crate::logging::Category::Bugs],
+                    "LUA",
+                    "ERROR",
+                    format!("Lua schedule failed: {error:#}"),
+                );
             }
         }
     }
@@ -907,7 +967,12 @@ impl Server {
                 self.scripts.flows.rollback();
                 self.scripts.flows.cancel(id.0);
                 self.reconcile_connections();
-                eprintln!("Interactive flow failed for session {}: {error:#}", id.0);
+                self.config.log(
+                    &[crate::logging::Category::Bugs],
+                    "LUA",
+                    "ERROR",
+                    format!("Interactive flow failed for session {}: {error:#}", id.0),
+                );
                 self.tell(id, "Interactive flow failed and was cancelled.\r\n");
             }
         }
@@ -915,6 +980,7 @@ impl Server {
 
     async fn commit(&mut self, before: World) -> bool {
         let after = self.scripts.world.borrow().clone();
+        let mut saved = false;
         let result = match self
             .scripts
             .flows
@@ -926,6 +992,7 @@ impl Server {
             Ok(()) => match (serde_json::to_vec(&before), serde_json::to_vec(&after)) {
                 (Ok(a), Ok(b)) if a == b => Ok(()),
                 _ => {
+                    saved = true;
                     persistence::persist(
                         self.config.database(),
                         after,
@@ -936,7 +1003,15 @@ impl Server {
             },
         };
         if let Err(e) = result {
-            eprintln!("Persistence failed: {e:#}");
+            self.config.log(
+                &[
+                    crate::logging::Category::Checkpoints,
+                    crate::logging::Category::Problems,
+                ],
+                "DB",
+                "CHECK",
+                format!("Persistence failed: {e:#}"),
+            );
             if self.shutdown.is_some() {
                 self.shutdown_failed = true;
             }
@@ -946,10 +1021,21 @@ impl Server {
             self.scripts.flows.rollback();
             false
         } else {
+            if saved {
+                self.config.log(
+                    &[crate::logging::Category::Checkpoints],
+                    "DB",
+                    "SAVE",
+                    "World changes committed.",
+                );
+            }
             true
         }
     }
     fn flush(&self) {
+        for request in self.scripts.flows.drain_logs() {
+            self.config.logger.submit(&self.config, request);
+        }
         self.scripts.flows.commit();
         let mut private = self.scripts.flows.drain().into_iter().peekable();
         let messages = std::mem::take(&mut *self.scripts.outbox.borrow_mut());
@@ -993,6 +1079,22 @@ impl Server {
     }
     async fn disconnect(&mut self, id: SessionId) -> Result<()> {
         if let Some(s) = self.sessions.remove(&id) {
+            let stats = s.stats.snapshot();
+            self.config.log(
+                &[crate::logging::Category::Accounting],
+                "NET",
+                "DISC",
+                format!(
+                    "Session {} player {:?} peer {} duration {}s input {} output {} wire {}",
+                    id.0,
+                    s.player,
+                    s.peer,
+                    s.connected.elapsed().as_secs(),
+                    stats.input[2],
+                    stats.output[2],
+                    stats.wire_output
+                ),
+            );
             s.close();
             self.reconcile_connections();
             if let Some(p) = s.player {
@@ -1022,7 +1124,12 @@ impl Server {
                             .event("on_player_disconnect", Some(p), Some(id.0))
                     })
                 {
-                    eprintln!("Disconnect hook: {e:#}");
+                    self.config.log(
+                        &[crate::logging::Category::Problems],
+                        "SRV",
+                        "ERROR",
+                        format!("Disconnect hook: {e:#}"),
+                    );
                     *self.scripts.world.borrow_mut() = before.clone();
                     self.reconcile_connections();
                     self.scripts.outbox.borrow_mut().clear();
@@ -1061,9 +1168,14 @@ impl Server {
                 match input {
                     Input::Negotiated(_) => {}
                     Input::StartCompression => {
-                        self.sessions[&id].protocol(vec![Input::StartCompression])
+                        self.sessions[&id].protocol(vec![Input::StartCompression], &self.config)
                     }
-                    Input::Diagnostic(message) => eprintln!("Telnet session {}: {message}", id.0),
+                    Input::Diagnostic(message) => self.config.log(
+                        &[crate::logging::Category::Network],
+                        "NET",
+                        "ERROR",
+                        format!("Telnet session {}: {message}", id.0),
+                    ),
                     Input::StatusRequest => self.mssp(id),
                     Input::Reply(v) => {
                         self.sessions[&id].raw(v);
@@ -1160,7 +1272,12 @@ impl Server {
             Ok((cache, report)) => {
                 self.message_cache = cache;
                 for row in &report {
-                    eprintln!("File cache: {row}");
+                    self.config.log(
+                        &[crate::logging::Category::Startup],
+                        "INI",
+                        "INFO",
+                        format!("File cache: {row}"),
+                    );
                 }
                 format!("File sizes: {}", report.join("  "))
             }
@@ -1197,7 +1314,7 @@ impl Server {
         };
         if let Some(session) = self.sessions.get_mut(&id) {
             let echo = session.decoder.echo(false);
-            session.protocol(echo);
+            session.protocol(echo, &self.config);
             let ansi = session.player.is_none_or(|p| {
                 self.scripts
                     .world
@@ -1207,7 +1324,12 @@ impl Server {
                     .is_some_and(|o| o.flags.contains(crate::flags::Flag::Ansi))
             });
             if let Err(error) = session.styled_report(&message, ansi, &self.config).await {
-                eprintln!("Closing message: {error:#}");
+                self.config.log(
+                    &[crate::logging::Category::Problems],
+                    "SRV",
+                    "ERROR",
+                    format!("Closing message: {error:#}"),
+                );
                 session.raw(crate::find::bounded_error(
                     fallback,
                     self.config.runtime.output_message_limit,
@@ -1260,7 +1382,15 @@ impl Server {
         };
         let automatic = matches!(origin, CheckOrigin::Automatic);
         if let Err(error) = self.snapshots() {
-            eprintln!("DBCK session snapshot failed: {error:#}");
+            self.config.log(
+                &[
+                    crate::logging::Category::Checkpoints,
+                    crate::logging::Category::Problems,
+                ],
+                "DB",
+                "CHECK",
+                format!("DBCK session snapshot failed: {error:#}"),
+            );
             if !automatic {
                 self.queue_reply(
                     session,
@@ -1358,7 +1488,15 @@ impl Server {
         match result {
             Ok(report) => {
                 for finding in &report.findings {
-                    eprintln!("DBCK: {finding}");
+                    self.config.log(
+                        &[
+                            crate::logging::Category::Checkpoints,
+                            crate::logging::Category::Problems,
+                        ],
+                        "DB",
+                        "CHECK",
+                        format!("DBCK: {finding}"),
+                    );
                 }
                 let mut transitions = Vec::new();
                 for id in self
@@ -1399,7 +1537,12 @@ impl Server {
                 if let Some(session) = session.and_then(|id| self.sessions.get(&id)) {
                     session.raw(report.response(self.config.runtime.output_message_limit));
                 } else if automatic {
-                    eprintln!("Automatic {}", report.summary());
+                    self.config.log(
+                        &[crate::logging::Category::Startup],
+                        "INI",
+                        "INFO",
+                        format!("Automatic {}", report.summary()),
+                    );
                 } else {
                     self.queue_reply(None, actor, &report.summary());
                     self.flush();
@@ -1410,7 +1553,15 @@ impl Server {
                 self.reconcile_connections();
                 self.scripts.outbox.borrow_mut().clear();
                 self.scripts.flows.rollback();
-                eprintln!("DBCK rolled back: {e:#}");
+                self.config.log(
+                    &[
+                        crate::logging::Category::Checkpoints,
+                        crate::logging::Category::Problems,
+                    ],
+                    "DB",
+                    "CHECK",
+                    format!("DBCK rolled back: {e:#}"),
+                );
                 if !automatic {
                     self.queue_reply(
                         session,
@@ -1474,7 +1625,12 @@ impl Server {
             if let Some(session) = self.sessions.get(&id)
                 && let Err(error) = session.literal_report(&text, &self.config).await
             {
-                eprintln!("Lua source output: {error:#}");
+                self.config.log(
+                    &[crate::logging::Category::Bugs],
+                    "LUA",
+                    "ERROR",
+                    format!("Lua source output: {error:#}"),
+                );
                 self.tell(id, "Unable to deliver complete Lua source.\r\n");
             }
             return;
@@ -1535,9 +1691,14 @@ impl Server {
                 self.inspection_report(id, "Lua reloaded.".into()).await;
             }
             Err(error) => {
-                eprintln!(
-                    "Lua {} failed: {error:#}",
-                    if checking { "check" } else { "reload" }
+                self.config.log(
+                    &[crate::logging::Category::Bugs],
+                    "LUA",
+                    "ERROR",
+                    format!(
+                        "Lua {} failed: {error:#}",
+                        if checking { "check" } else { "reload" }
+                    ),
                 );
                 self.inspection_report(
                     id,
@@ -1556,7 +1717,12 @@ impl Server {
         if let Some(session) = self.sessions.get(&id) {
             let report = crate::help::HelpResponse::Message(text);
             if let Err(error) = session.help(&report, false, &self.config).await {
-                eprintln!("Inspection report: {error:#}");
+                self.config.log(
+                    &[crate::logging::Category::Problems],
+                    "SRV",
+                    "ERROR",
+                    format!("Inspection report: {error:#}"),
+                );
                 self.tell(id, "Unable to deliver complete report.\r\n");
             }
         }
@@ -1564,6 +1730,16 @@ impl Server {
 
     async fn command(&mut self, id: SessionId, p: ObjectId, line: &str) -> Result<()> {
         self.snapshots()?;
+        self.audit(
+            commands::ExecutionContext {
+                executor: p,
+                cause: p,
+                session: Some(id.0),
+                origin: commands::InputOrigin::Interactive,
+            },
+            line,
+        )
+        .await;
         let mut before = self.scripts.world.borrow().clone();
         let action = commands::run(&self.scripts, &self.config, p, id.0, line);
         if action.is_ok()
@@ -1600,7 +1776,12 @@ impl Server {
                         if let Some(session) = self.sessions.get(&id)
                             && let Err(error) = session.help(&response, ansi, &self.config).await
                         {
-                            eprintln!("Help rendering: {error:#}");
+                            self.config.log(
+                                &[crate::logging::Category::Problems],
+                                "SRV",
+                                "ERROR",
+                                format!("Help rendering: {error:#}"),
+                            );
                             self.tell(
                                 id,
                                 "Unable to render help article. See server diagnostics.\r\n",
@@ -1608,7 +1789,12 @@ impl Server {
                         }
                     }
                     error => {
-                        eprintln!("Help read: {error:?}");
+                        self.config.log(
+                            &[crate::logging::Category::Problems],
+                            "SRV",
+                            "ERROR",
+                            format!("Help read: {error:?}"),
+                        );
                         self.tell(
                             id,
                             "Unable to render help article. See server diagnostics.\r\n",
@@ -1620,6 +1806,10 @@ impl Server {
                 let text = self.configure(p, request);
                 self.inspection_report(id, text).await;
             }
+            Ok(Action::Log(request)) => {
+                let text = self.write_log(request).await;
+                self.inspection_report(id, text).await;
+            }
             Ok(Action::ReadCache) => self.readcache(Some(id), p).await,
             Ok(Action::HelpReload) => {
                 let config = self.config.clone();
@@ -1627,7 +1817,7 @@ impl Server {
                     .await
                 {
                     Ok(Ok(index)) => {
-                        index.report.log();
+                        index.report.log(&self.config);
                         let report = &index.report;
                         let mut lines: Vec<_> = report
                             .errors
@@ -1641,7 +1831,12 @@ impl Server {
                         if let Some(session) = self.sessions.get(&id)
                             && let Err(error) = session.help(&response, false, &self.config).await
                         {
-                            eprintln!("Help reload diagnostics: {error:#}");
+                            self.config.log(
+                                &[crate::logging::Category::Startup],
+                                "INI",
+                                "INFO",
+                                format!("Help reload diagnostics: {error:#}"),
+                            );
                             self.tell(
                                 id,
                                 "Help reindexed; see server diagnostics for details.\r\n",
@@ -1649,7 +1844,12 @@ impl Server {
                         }
                     }
                     error => {
-                        eprintln!("Help reload failed: {error:?}");
+                        self.config.log(
+                            &[crate::logging::Category::Startup],
+                            "INI",
+                            "INFO",
+                            format!("Help reload failed: {error:?}"),
+                        );
                         self.tell(id, "Help reload failed; previous index retained. See server diagnostics.\r\n");
                     }
                 }
@@ -1708,7 +1908,12 @@ impl Server {
                         .get(&p)
                         .is_some_and(|o| o.flags.contains(crate::flags::Flag::Ansi));
                     if let Err(error) = session.styled_report(&text, ansi, &self.config).await {
-                        eprintln!("Report delivery: {error:#}");
+                        self.config.log(
+                            &[crate::logging::Category::Network],
+                            "NET",
+                            "ERROR",
+                            format!("Report delivery: {error:#}"),
+                        );
                         session.raw(crate::find::bounded_error(
                             "Unable to deliver complete report.",
                             self.config.runtime.output_message_limit,
@@ -1720,7 +1925,12 @@ impl Server {
                 if let Some(session) = self.sessions.get(&id)
                     && let Err(error) = session.literal_report(&text, &self.config).await
                 {
-                    eprintln!("Report delivery: {error:#}");
+                    self.config.log(
+                        &[crate::logging::Category::Network],
+                        "NET",
+                        "ERROR",
+                        format!("Report delivery: {error:#}"),
+                    );
                     session.raw(crate::find::bounded_error(
                         "Unable to deliver complete report.",
                         self.config.runtime.output_message_limit,
@@ -1741,7 +1951,12 @@ impl Server {
                 match result {
                     Ok(text) => self.inspection_report(id, text).await,
                     Err(error) => {
-                        eprintln!("Debug examination: {error:#}");
+                        self.config.log(
+                            &[crate::logging::Category::Problems],
+                            "SRV",
+                            "ERROR",
+                            format!("Debug examination: {error:#}"),
+                        );
                         self.tell(id, "Unable to read object bookkeeping.\r\n");
                     }
                 }
@@ -1770,7 +1985,12 @@ impl Server {
                 self.reconcile_connections();
                 self.scripts.outbox.borrow_mut().clear();
                 self.scripts.flows.rollback();
-                eprintln!("Command callback failed: {e:#}");
+                self.config.log(
+                    &[crate::logging::Category::Bugs],
+                    "LUA",
+                    "ERROR",
+                    format!("Command callback failed: {e:#}"),
+                );
                 let report = self.config.lua.error_reporting;
                 let wizard = self.scripts.world.borrow().objects[&p]
                     .flags
@@ -1872,7 +2092,12 @@ impl Server {
     ) {
         if create && let Err(reason) = self.admission(false) {
             if let Err(error) = self.reject_admission(id, reason).await {
-                eprintln!("Admission close: {error:#}");
+                self.config.log(
+                    &[crate::logging::Category::Problems],
+                    "SRV",
+                    "ERROR",
+                    format!("Admission close: {error:#}"),
+                );
             }
             return;
         }
@@ -2014,6 +2239,18 @@ impl Server {
         let hash = match result {
             Ok(h) => h,
             Err(_) => {
+                self.config.log(
+                    &[
+                        crate::logging::Category::Logins,
+                        crate::logging::Category::Security,
+                    ],
+                    "CON",
+                    "BAD",
+                    format!(
+                        "Failed authentication for {} from {host}",
+                        crate::logging::clean(&name)
+                    ),
+                );
                 if let Some(p) = existing {
                     let mut w = self.scripts.world.borrow_mut();
                     let a = w.accounts.get_mut(&p).unwrap();
@@ -2050,6 +2287,12 @@ impl Server {
                 );
                 return Ok(());
             }
+            self.config.log(
+                &[crate::logging::Category::Create],
+                "CON",
+                "CREATE",
+                format!("Registering {}", crate::logging::clean(&name)),
+            );
             match self.create_account(name, hash) {
                 Ok(p) => p,
                 Err(e) => {
@@ -2057,7 +2300,12 @@ impl Server {
                     self.reconcile_connections();
                     self.scripts.outbox.borrow_mut().clear();
                     self.scripts.flows.rollback();
-                    eprintln!("Registration: {e:#}");
+                    self.config.log(
+                        &[crate::logging::Category::Problems],
+                        "SRV",
+                        "ERROR",
+                        format!("Registration: {e:#}"),
+                    );
                     self.prompt(
                         id,
                         LoginFlow::Name,
@@ -2130,7 +2378,12 @@ impl Server {
             self.scripts
                 .lifecycle("on_player_connect", Some(p), Some(id.0), reconnect, "")
         }) {
-            eprintln!("Connect hook: {e:#}");
+            self.config.log(
+                &[crate::logging::Category::Problems],
+                "SRV",
+                "ERROR",
+                format!("Connect hook: {e:#}"),
+            );
             *self.scripts.world.borrow_mut() = before.clone();
             self.reconcile_connections();
             self.scripts.outbox.borrow_mut().clear();

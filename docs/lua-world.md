@@ -158,3 +158,12 @@ or legacy directive name. Successful `@admin` edits are visible without Lua relo
 Existing state and channel handles use the current limits at each operation.
 Runtime configuration and policy edits survive Lua reload; restart restores files.
 Game Lua table edits do not register commands or alter server configuration.
+
+## Script file logging
+
+`mux.log(filename, message)` stages an append for the current transaction. `true`
+means accepted for commit, not written. Rollback discards requests, including
+nested callback and reload failures. Checking VMs and calls outside transactions
+reject logging. Empty messages are no-ops; requests share existing Lua output
+budgets. Files must already exist as readable/writable regular files under
+`game/logs`. See [logging](logging.md) for limits, security and post-commit errors.

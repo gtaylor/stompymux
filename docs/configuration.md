@@ -31,7 +31,7 @@ BattleTech switches remain integers. Permissions accept either a whitespace
 separated string or an array of strings. Site arrays retain order; aliases,
 access tables, colors and OSC presets retain dynamic names.
 
-BattleTech, extended rendering/OSC, logging and remaining legacy command-system
+BattleTech and remaining legacy command-system
 options are parsed and retained without enabling those features. A consolidated
 capability diagnostic reports this. IPv4 site, command/list and configuration-directive access policies are enforced.
 `@admin` supports runtime edits; configuration-file rereading and writing are not provided.
@@ -265,7 +265,7 @@ quotas and queues, names/password policy and hash parameters, notification depth
 channel lurking, default flags/homes/Lua parents, game name, Lua memory/state/error
 limits, and help/Lua directories. The checked-in directive registry and capability
 classification are the authoritative inventory. Settings for unused systems,
-including logging, BattleTech, dump/cache controls, retry counting and player-zone
+including BattleTech, dump/cache controls, retry counting and player-zone
 defaults, report unsupported. C-disabled paths/bootstrap/listener/rendering
 settings and all Rust-only infrastructure settings remain restart-only.
 

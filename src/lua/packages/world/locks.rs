@@ -14,8 +14,13 @@ pub(super) fn register(
 ) -> mlua::Result<()> {
     api.set(
         "lock_error",
-        lua.create_function(|_, message: String| {
-            eprintln!("Lua lock failed: {message}");
+        lua.create_function(|lua, message: String| {
+            crate::lua::configuration(lua).log(
+                &[crate::logging::Category::Bugs],
+                "LUA",
+                "ERROR",
+                format!("Lua lock failed: {message}"),
+            );
             Ok(())
         })?,
     )?;

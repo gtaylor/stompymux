@@ -19,6 +19,8 @@ pub use types::*;
 /// Validated effective settings together with game-root and source diagnostics.
 pub struct Config {
     pub root: PathBuf,
+    /// Bounded output service shared by effective snapshots and Lua reloads.
+    pub logger: crate::logging::Logger,
     settings: Settings,
     /// Exact pre-edit states permitted after a live quota reduction; never serialized.
     retained_state: std::sync::Arc<
@@ -63,6 +65,7 @@ impl Config {
         let effective = toml::Value::try_from(&settings)?;
         let mut config = Self {
             root,
+            logger: Default::default(),
             settings,
             retained_state: Default::default(),
             effective,
@@ -88,7 +91,7 @@ impl Config {
         if config.origins.contains_key("database.legacy_game_database") {
             config.warnings.push("database.legacy_game_database is deprecated and unused; database.game_database is the live schema-32 database".into());
         }
-        config.warnings.push("Configuration parsed completely; BattleTech, logging controls and remaining legacy command-system settings are retained for future implementation.".into());
+        config.warnings.push("Configuration parsed completely; BattleTech and remaining legacy command-system settings are retained for future implementation.".into());
         Ok(config)
     }
     /// Check structural invariants independently of implemented server capabilities.

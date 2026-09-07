@@ -199,15 +199,27 @@ impl Server {
             return;
         }
         self.flush();
-        eprintln!(
-            "Account administration: #{} {} #{}",
-            job.caller.0,
+        self.config.log(
             if created {
-                "created"
+                &[
+                    crate::logging::Category::Wizard,
+                    crate::logging::Category::Create,
+                ]
             } else {
-                "reset password for"
+                &[crate::logging::Category::Wizard]
             },
-            target.0
+            "WIZ",
+            "ACCOUNT",
+            format!(
+                "Account administration: #{} {} #{}",
+                job.caller.0,
+                if created {
+                    "created"
+                } else {
+                    "reset password for"
+                },
+                target.0
+            ),
         );
         if created {
             let name = self.scripts.world.borrow().objects[&target].name.clone();
@@ -277,9 +289,14 @@ impl Server {
             if !quiet {
                 self.tell(victim, &format!("{name} gently shows you the door.\r\n"));
             }
-            eprintln!(
-                "Account administration: #{} booted session {}",
-                caller.0, victim.0
+            self.config.log(
+                &[crate::logging::Category::Wizard],
+                "WIZ",
+                "ACCOUNT",
+                format!(
+                    "Account administration: #{} booted session {}",
+                    caller.0, victim.0
+                ),
             );
             self.disconnect(victim).await?;
         }

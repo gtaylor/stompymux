@@ -96,7 +96,12 @@ impl Server {
                 },
             );
             if let Err(error) = result {
-                eprintln!("Queued command reply: {error:#}");
+                self.config.log(
+                    &[crate::logging::Category::Problems],
+                    "SRV",
+                    "ERROR",
+                    format!("Queued command reply: {error:#}"),
+                );
             }
         }
     }
@@ -108,9 +113,15 @@ impl Server {
             return;
         }
         if let Err(error) = self.snapshots() {
-            eprintln!("Queued command snapshot: {error:#}");
+            self.config.log(
+                &[crate::logging::Category::Problems],
+                "SRV",
+                "ERROR",
+                format!("Queued command snapshot: {error:#}"),
+            );
             return;
         }
+        self.audit(work.execution, &work.text).await;
         let mut before = self.scripts.world.borrow().clone();
         let action = commands::execute(&self.scripts, &self.config, work.execution, &work.text);
         if action.is_ok()
@@ -181,7 +192,12 @@ impl Server {
                 match result {
                     Ok(text) => self.queue_reply(None, actor, &text),
                     Err(error) => {
-                        eprintln!("Queued examination: {error:#}");
+                        self.config.log(
+                            &[crate::logging::Category::Problems],
+                            "SRV",
+                            "ERROR",
+                            format!("Queued examination: {error:#}"),
+                        );
                         self.queue_reply(None, actor, "Unable to read object bookkeeping.");
                     }
                 }
@@ -197,6 +213,11 @@ impl Server {
             }
             Ok(Action::ConfigAdmin(request)) => {
                 let text = self.configure(actor, request);
+                self.queue_reply(None, actor, &text);
+                self.flush();
+            }
+            Ok(Action::Log(request)) => {
+                let text = self.write_log(request).await;
                 self.queue_reply(None, actor, &text);
                 self.flush();
             }
@@ -219,9 +240,14 @@ impl Server {
                 self.reconcile_connections();
                 self.scripts.outbox.borrow_mut().clear();
                 self.scripts.flows.rollback();
-                eprintln!(
-                    "Queued command for #{} (cause #{}): {error:#}",
-                    actor.0, work.execution.cause.0
+                self.config.log(
+                    &[crate::logging::Category::Problems],
+                    "SRV",
+                    "ERROR",
+                    format!(
+                        "Queued command for #{} (cause #{}): {error:#}",
+                        actor.0, work.execution.cause.0
+                    ),
                 );
                 self.queue_reply(None, actor, "That queued command could not be completed.");
                 self.flush();

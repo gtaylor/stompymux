@@ -64,6 +64,12 @@ impl Server {
             TransitionKind::PartialDisconnect => "partially disconnected",
             TransitionKind::Disconnected => "disconnected",
         };
+        self.config.log(
+            &[crate::logging::Category::Logins],
+            "CON",
+            "EVENT",
+            format!("{} has {verb} from {}", t.name, t.peer),
+        );
         let message = format!("GAME: {} has {verb}.\r\n", t.name);
         {
             let world = self.scripts.world.borrow();
@@ -113,7 +119,12 @@ impl Server {
             Ok(())
         })();
         if let Err(error) = result {
-            eprintln!("Suspect connection notification: {error:#}");
+            self.config.log(
+                &[crate::logging::Category::Problems],
+                "SRV",
+                "ERROR",
+                format!("Suspect connection notification: {error:#}"),
+            );
             *self.scripts.world.borrow_mut() = before;
             self.reconcile_connections();
             self.scripts.outbox.borrow_mut().clear();
@@ -121,7 +132,12 @@ impl Server {
             return;
         }
         if !self.commit(before).await {
-            eprintln!("Suspect connection notification was not saved");
+            self.config.log(
+                &[crate::logging::Category::Problems],
+                "SRV",
+                "ERROR",
+                "Suspect connection notification was not saved",
+            );
         }
         self.flush();
     }
@@ -157,7 +173,12 @@ pub(super) async fn reject_site(
                 }
             }
             Err(error) => {
-                eprintln!("Bad-site message rendering: {error:#}");
+                config.log(
+                    &[crate::logging::Category::Problems],
+                    "SRV",
+                    "ERROR",
+                    format!("Bad-site message rendering: {error:#}"),
+                );
                 let fallback = crate::find::bounded_error(
                     "Connection refused.",
                     config.runtime.output_message_limit,
@@ -187,7 +208,17 @@ pub(super) async fn reject_site(
     .await
     {
         Ok(Ok(())) => {}
-        Ok(Err(error)) => eprintln!("Bad-site message delivery: {error}"),
-        Err(_) => eprintln!("Bad-site message delivery timed out"),
+        Ok(Err(error)) => config.log(
+            &[crate::logging::Category::Network],
+            "NET",
+            "ERROR",
+            format!("Bad-site message delivery: {error}"),
+        ),
+        Err(_) => config.log(
+            &[crate::logging::Category::Network],
+            "NET",
+            "ERROR",
+            "Bad-site message delivery timed out",
+        ),
     }
 }
