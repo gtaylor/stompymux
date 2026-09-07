@@ -164,9 +164,32 @@ pub enum Document {
     Styled(String),
     Markdown(String),
     Literal(String),
+    /// Styled forwarding prefix around an explicitly formatted document.
+    Prefixed {
+        source: String,
+        prefix: String,
+        document: Box<Document>,
+    },
 }
 
 impl Document {
+    /// Prefix without interpreting a Markdown body as bracket markup or creating nested wrappers.
+    pub fn prefixed(&self, prefix: &str) -> Self {
+        let (prefix, document) = match self {
+            Self::Prefixed {
+                prefix: old,
+                document,
+                ..
+            } => (format!("{prefix}{old}"), document.clone()),
+            _ => (prefix.to_string(), Box::new(self.clone())),
+        };
+        Self::Prefixed {
+            source: format!("{prefix}{}", document.source()),
+            prefix,
+            document,
+        }
+    }
+
     /// Validate bounded Markdown at its API boundary.
     pub fn markdown(source: String, limit: usize) -> Result<Self> {
         ensure!(source.len() <= limit, "Markdown input limit exceeded");
@@ -192,6 +215,7 @@ impl Document {
     pub fn source(&self) -> &str {
         match self {
             Self::Styled(s) | Self::Markdown(s) | Self::Literal(s) => s,
+            Self::Prefixed { source, .. } => source,
         }
     }
 
@@ -210,6 +234,13 @@ impl Document {
         match self {
             Self::Styled(s) => parser::parse(palette, s, false).unwrap_or_default(),
             Self::Markdown(s) => markdown::spans(s, options),
+            Self::Prefixed {
+                prefix, document, ..
+            } => {
+                let mut spans = parser::parse(palette, prefix, false).unwrap_or_default();
+                spans.extend(document.spans(palette, options));
+                spans
+            }
             Self::Literal(s) => vec![Span {
                 text: parser::strip_controls(s),
                 ..Span::default()

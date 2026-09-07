@@ -1,0 +1,11 @@
+# C reference: src/mux/communication/speech.c do_say and speech_format.c.
+# command<TAB>message seen by another occupant; speaker is Alice.
+say hello	Alice says "hello"
+"hello	Alice says "hello"
+:waves	Alice waves
+;waves	Alicewaves
+; waves	Alice waves
+: waves	Alicewaves
+pose/n waves	Alicewaves
+\hello	hello
+say [fg=red]red[/]	Alice says "red"

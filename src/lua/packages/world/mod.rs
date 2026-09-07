@@ -306,24 +306,35 @@ pub(super) fn register(
     locks::register(lua, api, world, outbox).map_err(|e| anyhow::anyhow!(e.to_string()))?;
     state::register(lua, api, config, world).map_err(|e| anyhow::anyhow!(e.to_string()))?;
     let o = outbox.clone();
-    let output_settings = config.lua.clone();
-    let message_limit = config.runtime.output_message_limit;
+    let config = config.clone();
+    let w = world.clone();
     bind!(lua, api, "pemit", move |_, (id, value): (i64, Value)| {
-        let s = match value {
+        let document = match value {
             Value::String(s) => text::Document::Styled(s.to_str()?.to_string()),
             Value::UserData(u) => u.borrow::<super::text::LuaDocument>()?.document.clone(),
             _ => return Err(err("output must be text or a Markdown document")),
         };
-        let mut out = o.borrow_mut();
-        if s.len() > message_limit
-            || out.len() >= output_settings.output_entry_limit
-            || out.iter().map(|(_, s)| s.len()).sum::<usize>() + s.len()
-                > output_settings.output_byte_limit
+        let world = w.borrow();
+        if !world
+            .objects
+            .get(&ObjectId(id))
+            .is_some_and(|o| o.kind != Kind::Garbage)
         {
-            return Err(err("Lua output limit exceeded"));
+            return Err(err("object does not exist"));
         }
-        out.push((ObjectId(id), s));
-        Ok(())
+        crate::notification::send(
+            &world,
+            &o,
+            &config,
+            crate::notification::Request {
+                target: ObjectId(id),
+                sender: ObjectId(id),
+                document,
+                policy: crate::notification::Policy::DIRECT,
+                exclusions: None,
+            },
+        )
+        .map_err(err)
     });
     Ok(())
 }

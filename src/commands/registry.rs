@@ -252,7 +252,39 @@ impl CommandRegistry {
             CommandDefinition::native("look", P::EVERYONE, super::objects::look::look)
                 .matching(&["l"], None)
                 .policy(SwitchPolicy::Handler, true),
-            CommandDefinition::native("say", P::EVERYONE, native::say).matching(&[], Some('"')),
+            CommandDefinition::native("say", P::EVERYONE, crate::communication::speech::say)
+                .matching(&[], Some('"')),
+            CommandDefinition::native("pose", P::EVERYONE, crate::communication::speech::pose)
+                .matching(&[], Some(':'))
+                .policy(SwitchPolicy::Handler, false),
+            CommandDefinition::native(";", P::EVERYONE, crate::communication::speech::pose)
+                .matching(&[], Some(';')),
+            CommandDefinition::native(
+                "\\",
+                P::EVERYONE,
+                crate::communication::speech::emit_command,
+            )
+            .matching(&[], Some('\\')),
+            CommandDefinition::native(
+                "@emit",
+                P::WIZARD,
+                crate::communication::speech::emit_command,
+            )
+            .policy(SwitchPolicy::Handler, false),
+            CommandDefinition::native("@pemit", P::WIZARD, crate::communication::speech::pemit)
+                .policy(SwitchPolicy::Handler, false),
+            CommandDefinition::native("@npemit", P::WIZARD, crate::communication::speech::pemit)
+                .policy(SwitchPolicy::Handler, false),
+            CommandDefinition::native("@oemit", P::WIZARD, crate::communication::speech::oemit)
+                .policy(SwitchPolicy::Handler, false),
+            CommandDefinition::native("@fsay", P::WIZARD, crate::communication::speech::fsay)
+                .policy(SwitchPolicy::Handler, false),
+            CommandDefinition::native("@fpose", P::WIZARD, crate::communication::speech::fpose)
+                .policy(SwitchPolicy::Handler, false),
+            CommandDefinition::native("@femit", P::WIZARD, crate::communication::speech::femit)
+                .policy(SwitchPolicy::Handler, false),
+            CommandDefinition::native("@wall", P::WIZARD, crate::communication::speech::wall)
+                .policy(SwitchPolicy::Handler, false),
             CommandDefinition::native("@session", P::WIZARD, native::sessions)
                 .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("@telnet", P::WIZARD, native::telnet)
@@ -312,9 +344,14 @@ impl CommandRegistry {
         mut input: CommandInput,
     ) -> Option<(&CommandDefinition, CommandInput)> {
         for entry in &self.definitions {
-            if let CommandMatcher::Native { aliases, .. } = &entry.matcher
+            if let CommandMatcher::Native { aliases, prefix } = &entry.matcher
                 && (entry.name == input.name || aliases.contains(&input.name))
             {
+                if let Some(prefix) = prefix
+                    && let Some(args) = input.line.strip_prefix(*prefix)
+                {
+                    input.args = args.into();
+                }
                 return Some((entry, input));
             }
         }

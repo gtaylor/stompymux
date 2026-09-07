@@ -87,3 +87,12 @@ Structured testing errors expose `mux.error.new`, `wrap`, `is` and immutable
 `code_tree("testing")` codes for the unchanged `testing` package. This does not
 convert other native errors to structured codes. Interactive flows and destruction
 APIs remain outside this interface.
+
+## Message routing
+
+`mux.world.pemit(object, message)` uses the same bounded direct notification policy
+as the C binding. It can relay through AUDIBLE exits attached to the target; it
+does not implement the absent listener-only downward branch. Strings retain legacy
+styles; immutable Markdown documents retain their format when forwarding prefixes
+are added. Invalid objects, embedded NULs and output-budget failures raise errors.
+Fan-out is staged atomically even when a caller catches the Lua error with `pcall`.

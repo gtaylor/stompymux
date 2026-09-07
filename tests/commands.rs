@@ -72,6 +72,17 @@ async fn native_catalog_permissions_and_aliases() {
             "@chan",
             "look",
             "say",
+            "pose",
+            ";",
+            "\\",
+            "@emit",
+            "@pemit",
+            "@npemit",
+            "@oemit",
+            "@fsay",
+            "@fpose",
+            "@femit",
+            "@wall",
             "@session",
             "@telnet",
             "@shutdown",
@@ -134,6 +145,9 @@ async fn native_catalog_permissions_and_aliases() {
             if [
                 "look",
                 "say",
+                "pose",
+                ";",
+                "\\",
                 "quit",
                 "color",
                 "help",
@@ -196,7 +210,7 @@ async fn native_catalog_permissions_and_aliases() {
         Action::Find(_)
     ));
     assert!(run(&s, &c, 2, "l").contains("Staff Nexus"));
-    assert!(run(&s, &c, 2, "\"hello/there").contains("You say, \"hello/there\""));
+    assert!(run(&s, &c, 2, "\"hello/there").contains("You say \"hello/there\""));
     s.world
         .borrow_mut()
         .objects

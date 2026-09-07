@@ -428,7 +428,7 @@ async fn tcp_register_social_world_and_restart() {
     let who = alice.until("maximum.").await;
     assert!(who.contains("Alice") && who.contains("Bob"));
     alice.send("say Hello Bob").await;
-    bob.until("Alice says, \"Hello Bob\"").await;
+    bob.until("Alice says \"Hello Bob\"").await;
     alice.send("out").await;
     alice.until("You cannot go that way.").await;
     alice.send("global-hello").await;
@@ -2209,6 +2209,7 @@ async fn tcp_mccp2_stream_and_shutdown() {
             b"pub CompressedChannel\r\npage Nobody=CompressedPage\r\n".as_slice(),
             "You paged Nobody",
         ),
+        (b":CompressedPose\r\n".as_slice(), "Nobody CompressedPose"),
     ] {
         socket.write_all(input).await.unwrap();
         tokio::time::timeout(Duration::from_secs(10), async {
@@ -3357,4 +3358,81 @@ async fn tcp_account_administration_and_restart() {
     let mut player = Client::connect(&server).await;
     player.login("Offline").await;
     server.stop().await;
+}
+
+/// Native routed messages render per session, avoid writes, and roll back lock failures.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_speech_routing_styles_and_lock_persistence() {
+    use sqlx::Connection;
+    let (d, _) = populated().await;
+    let aliases = d.path().join("aliases.toml");
+    std::fs::write(
+        &aliases,
+        std::fs::read_to_string(&aliases).unwrap().replace(
+            "[aliases.commands]",
+            "[aliases.commands]\nspem='@pemit'\nspos='pose'\n",
+        ),
+    )
+    .unwrap();
+    let c = Config::load(d.path()).unwrap();
+    std::fs::write(d.path().join("lua/object_logic/speech_room.lua"),"return {locks={speak=function(ctx)local s=mux.world.object(ctx.object):state('speech');s:set('count',s:get('count',0)+1);return true end}}").unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(2)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
+    w.objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .flags
+        .insert(stompymux_rs::flags::Flag::Ansi);
+    w.objects.get_mut(&ObjectId(c.start())).unwrap().lua_parent = "speech_room.lua".into();
+    persistence::save(&c.database(), &w).await.unwrap();
+    let running = Running::start(&c).await;
+    let mut wizard = Client::connect(&running).await;
+    wizard.login("#2").await;
+    let mut second = Client::connect(&running).await;
+    second.login("#2").await;
+    let mut alice = Client::connect(&running).await;
+    alice.register("SpeechAlice").await;
+    wizard.send("color truecolor").await;
+    wizard.until("Color mode set to truecolor.").await;
+    second.send("color off").await;
+    second.until("Color mode set to off.").await;
+    let before = std::fs::read(c.database()).unwrap();
+    wizard
+        .send("spem me=[fg=red]StyledMessage[/] END-STYLE")
+        .await;
+    let styled = wizard.until("END-STYLE").await;
+    let plain = second.until("END-STYLE").await;
+    assert!(styled.contains("\x1b["));
+    assert!(!plain.contains("\x1b["));
+    assert!(plain.contains("StyledMessage"));
+    alice.send("spos waves").await;
+    wizard.until("SpeechAlice waves").await;
+    alice.send("\\LOCAL-EMIT").await;
+    wizard.until("LOCAL-EMIT").await;
+    alice.send("@emit DENIED-EMIT").await;
+    alice.until("Permission denied.").await;
+    wizard.send("@wall/wizard/emit WIZARD-ONLY").await;
+    wizard.until("WIZARD-ONLY").await;
+    second.until("WIZARD-ONLY").await;
+    wizard.send("@wall/emit PUBLIC-END").await;
+    let audience = alice.until("PUBLIC-END").await;
+    assert!(!audience.contains("WIZARD-ONLY"));
+    assert!(!audience.contains("DENIED-EMIT"));
+    assert_eq!(std::fs::read(c.database()).unwrap(), before);
+    wizard.send("@flag here=auditorium").await;
+    wizard.until("set.").await;
+    let mut db = sqlx::SqliteConnection::connect(c.database().to_str().unwrap())
+        .await
+        .unwrap();
+    sqlx::query("CREATE TRIGGER reject_speech BEFORE INSERT ON object_state BEGIN SELECT RAISE(FAIL,'injected speech failure'); END").execute(&mut db).await.unwrap();
+    db.close().await.unwrap();
+    let before = std::fs::read(c.database()).unwrap();
+    alice.send(":LEAKED-SPEECH").await;
+    alice.until("Unable to save your changes.").await;
+    wizard.send("@wall/emit AFTER-FAILURE").await;
+    let observer = wizard.until("AFTER-FAILURE").await;
+    assert!(!observer.contains("LEAKED-SPEECH"));
+    assert_eq!(std::fs::read(c.database()).unwrap(), before);
+    running.stop().await;
 }

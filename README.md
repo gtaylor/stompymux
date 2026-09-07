@@ -779,3 +779,27 @@ the existing disconnect hooks and session-owned CONNECTED reconciliation.
 `@last` defaults to the caller and reports lifetime success/failure counts and
 retained login records in newest-first order, formatted in UTC. Reports remain
 private and do not write the database. See the corresponding command help articles.
+
+## Speech and notification routing
+
+Public `say`, `pose` and the `"`, `:`, `;`, and backslash shorthands now use the
+C notification graph. Wizards also have `@emit`, `@pemit`, `@npemit`, `@oemit`,
+`@fsay`, `@fpose`, `@femit` and `@wall`, including their C switch catalogs and
+configured aliases. See `help speech` and `help message commands`.
+
+Routing supports direct recipients, selected contents, AUDIBLE containers and
+AUDIBLE exits, with C forwarding prefixes and exclusions. Distinct routes can
+produce repeated delivery. The existing `mux.notify_recursion_limit` limits path
+depth; existing Lua output entry/byte limits also bound native fan-out. Budget
+failure discards staged output. Listener-only forwarding remains inactive, as in
+this C fork. No listener callbacks or command queues are added.
+
+`mux.world.pemit` shares this routing while retaining explicit string and Markdown
+document formats. Forwarding adds typed prefixes without reparsing Markdown as
+bracket markup. Every recipient session renders before Telnet encoding and MCCP2.
+Pure messages do not write the database; SPEAK-lock mutations commit before output.
+
+Compatibility details: say formatting has no comma before its quote; public
+backslash emit remains available although `@emit` is Wizard-only; `: ` selects a
+no-space pose; and C's `@fpose/nospace` switch retains default spacing. Wall `/admin`
+has the same Wizard audience/authority as C and adds no new role.

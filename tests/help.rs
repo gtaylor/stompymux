@@ -41,7 +41,7 @@ fn supplied_corpus_is_reachable_and_renderable() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("game");
     let config = Config::load(&root).unwrap();
     let index = HelpIndex::load(&config).unwrap();
-    assert_eq!(index.report.articles, 89);
+    assert_eq!(index.report.articles, 91);
     assert!(index.report.errors.is_empty(), "{:?}", index.report);
     assert!(index.report.warnings.is_empty(), "{:?}", index.report);
     fn walk(path: &Path, out: &mut Vec<std::path::PathBuf>) {

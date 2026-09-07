@@ -3,6 +3,7 @@ mod commands;
 mod delivery;
 mod membership;
 mod page;
+pub mod speech;
 use crate::{
     config::Config,
     flags::Flag,

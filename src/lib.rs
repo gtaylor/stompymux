@@ -51,3 +51,6 @@ pub use lua::testing::{Report as LuaTestReport, Request as LuaTestRequest};
 
 /// Wizard account requests and login-history inspection.
 pub mod account_admin;
+
+/// Bounded container and audible-exit message routing.
+pub mod notification;
