@@ -89,7 +89,10 @@ impl Scripts {
                 .expect("context initialized for eligible module")
                 .clone();
             if let CommandHandler::Lua(handler) = &definition.handler
-                && self.call::<bool>(handler, (ctx, line)).map_err(|error| {
+                && super::flows::with_root(&self.lua, &definition.source, || {
+                    self.call::<bool>(handler, (ctx, line))
+                })
+                .map_err(|error| {
                     anyhow::anyhow!(
                         "{}: command {}: {}",
                         definition.source,

@@ -151,7 +151,13 @@ pub(super) fn install_parents(s: &Scripts) -> mlua::Result<()> {
                     .files
                     .get(&key)
                     .ok_or_else(|| mlua::Error::runtime(format!("Missing lock parent {path}")))?;
-                let module: Table = lua.load(source).set_name(&key).eval()?;
+                let flows = lua
+                    .app_data_ref::<super::flows::Engine>()
+                    .expect("flow engine installed")
+                    .clone();
+                let module: Table =
+                    flows.initializing(|| lua.load(source).set_name(&key).eval())?;
+                flows.register(&key, &module)?;
                 cache.raw_set(path, module.clone())?;
                 Ok(module)
             })?,
@@ -226,16 +232,25 @@ async fn invoke(
     c: &Config,
     function: Function,
     args: Table,
+    initializing: bool,
     deliver: &mut impl FnMut(),
 ) -> Outcome {
     let before = s.world.borrow().clone();
     let pending = s.outbox.borrow().clone();
+    let flow_effects = crate::lua::flows::snapshot(&s.lua);
     s.budget.reset();
-    let result = super::transactions::live_test(&s.lua, || {
-        let wrapper: Function = s.lua.named_registry_value("test_invoke")?;
-        // The wrapper catches script errors inside the transaction so they do not undo mutations.
-        wrapper.call::<Table>((function, args))
-    });
+    let work = || {
+        super::transactions::live_test(&s.lua, || {
+            let wrapper: Function = s.lua.named_registry_value("test_invoke")?;
+            // The wrapper catches script errors inside the transaction so they do not undo mutations.
+            wrapper.call::<Table>((function, args))
+        })
+    };
+    let result = if initializing {
+        s.flows.initializing(work)
+    } else {
+        work()
+    };
     let mut outcome = match result {
         Ok(t) => {
             let ok = t.get::<bool>("ok").unwrap_or(false);
@@ -260,6 +275,9 @@ async fn invoke(
     };
     let after = s.world.borrow().clone();
     let saved = async {
+        s.flows
+            .validate_output()
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
         after.validate(c)?;
         if serde_json::to_vec(&before)? != serde_json::to_vec(&after)? {
             persistence::persist(c.database(), after, c.database.busy_timeout_ms).await?;
@@ -270,6 +288,7 @@ async fn invoke(
     if let Err(e) = saved {
         *s.world.borrow_mut() = before;
         *s.outbox.borrow_mut() = pending;
+        crate::lua::flows::restore(&s.lua, flow_effects);
         outcome = Outcome::error(format!("validation/persistence: {e:#}"));
     }
     deliver();
@@ -292,7 +311,7 @@ async fn hook(
             value: Value::Nil,
         },
         Ok(Value::Function(f)) => match s.lua.create_sequence_from([ctx.clone()]) {
-            Ok(args) => invoke(s, c, f, args, deliver).await,
+            Ok(args) => invoke(s, c, f, args, false, deliver).await,
             Err(e) => Outcome::error(e),
         },
         _ => Outcome::error("hook must be a function"),
@@ -333,6 +352,7 @@ pub async fn run(
             s.lua
                 .create_table()
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?,
+            true,
             &mut deliver,
         )
         .await;
@@ -408,6 +428,7 @@ pub async fn run(
                             s.lua
                                 .create_sequence_from([ctx.clone(), expect])
                                 .map_err(|e| anyhow::anyhow!(e.to_string()))?,
+                            false,
                             &mut deliver,
                         )
                         .await

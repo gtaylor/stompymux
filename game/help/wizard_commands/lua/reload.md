@@ -27,3 +27,7 @@ minute remains recorded, so reload neither recollects that minute nor backfills
 missed work. New definitions apply on subsequent newly observed minutes.
 
 Sessions, terminal negotiation, help metadata and player macros remain intact.
+
+Interactive flows retain their step, scratch data and last prompt across reload.
+The next input uses the new module and step implementation. Removing a pending
+flow's module or step cancels it on its next input; a failed reload keeps it intact.

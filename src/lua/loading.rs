@@ -25,6 +25,9 @@ impl Scripts {
         {
             let name = path.strip_prefix("object_logic/").unwrap().to_string();
             let t = self.load_module(path, source)?;
+            self.flows
+                .register(path, &t)
+                .map_err(|e| anyhow::anyhow!("{e}"))?;
             Self::validate_locks(&t, &name, true)?;
             Self::validate_handlers(&t, &name)?;
             self.commands.register_lua(
@@ -76,6 +79,9 @@ impl Scripts {
             .filter(|(p, _)| p.starts_with("global_logic/"))
         {
             let t = self.load_module(source, text)?;
+            self.flows
+                .register(source, &t)
+                .map_err(|e| anyhow::anyhow!("{e}"))?;
             Self::validate_locks(&t, source, false)?;
             Self::validate_handlers(&t, source)?;
             self.commands.register_lua(

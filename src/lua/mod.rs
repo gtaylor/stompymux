@@ -7,6 +7,7 @@ pub use appearance::AppearanceMode;
 mod callbacks;
 pub use actions::ObjectAction;
 mod dispatch;
+pub mod flows;
 mod loading;
 mod packages;
 mod runtime;
@@ -32,6 +33,8 @@ pub type Outbox = Rc<RefCell<Vec<(ObjectId, text::Document)>>>;
 
 /// Lua owner and loaded game modules with runtime-only shared resources.
 pub struct Scripts {
+    /// Runtime-only session flows and staged effects.
+    pub flows: flows::Engine,
     /// Source identity and package contents captured when this runtime was built.
     pub sources: std::sync::Arc<sources::Sources>,
     /// VM handle for world-thread execution and session snapshot publication.
@@ -95,10 +98,21 @@ impl Scripts {
                 .map_err(|e| anyhow::anyhow!("{e}"))?,
             _ => transactions::descriptor(&self.lua),
         };
-        transactions::with_descriptor(&self.lua, descriptor, || {
-            transactions::run(&self.lua, &self.world, &self.outbox, || f.call(args))
+        let source = f.info().source.unwrap_or_default();
+        flows::with_root(&self.lua, &source, || {
+            transactions::with_descriptor(&self.lua, descriptor, || {
+                transactions::run(&self.lua, &self.world, &self.outbox, || f.call(args))
+            })
         })
         .map_err(|e| anyhow::anyhow!(e.to_string()))
+    }
+
+    /// Resume interactive input with a fresh budget shared by all immediate transitions.
+    pub fn flow_input(&self, session: u64, input: &str) -> anyhow::Result<()> {
+        self.budget.reset();
+        self.flows
+            .input(&self.lua, session, input)
+            .map_err(|e| anyhow::anyhow!("{e}"))
     }
 
     /// Execute a callback chunk with the same transaction and budget as game handlers.

@@ -136,9 +136,11 @@ impl Scripts {
         }
         let before = self.world.borrow().clone();
         let pending = self.outbox.borrow().len();
+        let flow_effects = crate::lua::flows::snapshot(&self.lua);
         if let Err(error) = self.call_event(t, name, ctx) {
             *self.world.borrow_mut() = before;
             self.outbox.borrow_mut().truncate(pending);
+            crate::lua::flows::restore(&self.lua, flow_effects);
             eprintln!("Lua {name} callback failed: {error:#}");
         }
         Ok(())

@@ -394,11 +394,13 @@ macro_rules! handler {
         pub fn $name(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
             let before = ctx.scripts.world.borrow().clone();
             let pending = ctx.scripts.outbox.borrow().clone();
+            let flow_effects = crate::lua::flows::snapshot(&ctx.scripts.lua);
             match perform(ctx, input, Mode::$mode) {
                 Ok(action) => Ok(action),
                 Err(error) => {
                     *ctx.scripts.world.borrow_mut() = before;
                     *ctx.scripts.outbox.borrow_mut() = pending;
+                    crate::lua::flows::restore(&ctx.scripts.lua, flow_effects);
                     Ok(Action::Reply(error.to_string()))
                 }
             }

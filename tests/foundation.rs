@@ -2210,6 +2210,8 @@ async fn tcp_mccp2_stream_and_shutdown() {
             "You paged Nobody",
         ),
         (b":CompressedPose\r\n".as_slice(), "Nobody CompressedPose"),
+        (b"flow-demo confirm\r\ny\r\n".as_slice(), "Done."),
+        (b"flow-demo menu\r\n".as_slice(), "Choice: "),
     ] {
         socket.write_all(input).await.unwrap();
         tokio::time::timeout(Duration::from_secs(10), async {
@@ -2239,6 +2241,10 @@ async fn tcp_mccp2_stream_and_shutdown() {
     let rendered = String::from_utf8_lossy(&plain);
     assert!(rendered.contains("[Public] Nobody: CompressedChannel"));
     assert!(rendered.contains("Nobody pages: CompressedPage"));
+    assert!(
+        rendered.contains("\x1b[1mReally do the thing? (y/n) \x1b[0mDone."),
+        "{rendered:?}"
+    );
     Command::new("kill")
         .args(["-TERM", &running.child.id().unwrap().to_string()])
         .status()
@@ -3591,5 +3597,186 @@ async fn tcp_queue_nondefault_limits_and_zero_chunks() {
     wizard.send("@wait 0=say NEVER-RUN\r\n@halt/all").await;
     let output = wizard.until("1 queue entries removed.").await;
     assert!(!output.contains("NEVER-RUN"));
+    running.stop().await;
+}
+
+/// Copied flows consume raw lines privately, including pipelined and empty input.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_interactive_flow_examples_and_independent_sessions() {
+    let (_d, c) = populated().await;
+    let running = Running::start(&c).await;
+    let mut a = Client::connect(&running).await;
+    a.register("FlowPlayer").await;
+    let mut b = Client::connect(&running).await;
+    b.login("FlowPlayer").await;
+    let before = std::fs::read(c.database()).unwrap();
+    a.send("flow-demo confirm").await;
+    a.until("Really do the thing? (y/n) ").await;
+    a.send("quit").await;
+    a.until("Please answer y or n: ").await;
+    b.send("global-hello").await;
+    let other = b.until("Hello, world").await;
+    assert!(!other.contains("Really do") && !other.contains("Please answer"));
+    a.send("").await;
+    a.until("Please answer y or n: ").await;
+    a.send("y").await;
+    a.until("Done.").await;
+    a.send("flow-demo menu").await;
+    a.until("Choice: ").await;
+    a.send("2").await;
+    a.until("Farewell!").await;
+    a.socket
+        .write_all(b"flow-demo signup\r\n  Ada  \r\n1\r\ny\r\n")
+        .await
+        .unwrap();
+    a.until("Recorded   Ada   (Inner Sphere).").await;
+    assert_eq!(
+        before,
+        std::fs::read(c.database()).unwrap(),
+        "flow-only input must not write SQLite"
+    );
+    a.send("flow-demo confirm").await;
+    a.until("Really do the thing? (y/n) ").await;
+    drop(a);
+    b.send("flow-demo menu").await;
+    b.until("Choice: ").await;
+    b.send("3").await;
+    b.until("Nevermind, then.").await;
+    running.stop().await;
+}
+
+/// Failed durable mutations keep the committed prompt/scratch; script failures cancel.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_flow_persistence_retry_reload_and_failure_cancellation() {
+    let (d, c) = populated().await;
+    let mut world = persistence::load(&c.database()).await.unwrap();
+    world.accounts.get_mut(&ObjectId(1)).unwrap().hash =
+        Some(accounts::hash("secret", &c).unwrap());
+    world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ObjectId(c.start()));
+    persistence::save(&c.database(), &world).await.unwrap();
+    let path = d.path().join("lua/global_logic/flow_transaction.lua");
+    let source = r#"return {
+      commands={{name='flow-test',permission='everyone',pattern='^flow%-test$',handler=function(ctx)
+        mux.session.flow_start(ctx.descriptor,'flow_transaction.lua','step'); return true
+      end}},
+      flows={step=function(ctx)
+        if ctx.input==nil then ctx.flow.n=10;return {prompt='Retry prompt: '} end
+        assert(ctx.flow.n=='10')
+        mux.world.object(ctx.enactor):state('flow_test'):set('answer',ctx.input)
+        if ctx.input=='error' then error('injected flow error') end
+        ctx.flow.n=99
+        return {action='done',message='Committed '..ctx.input}
+      end}}
+    "#;
+    std::fs::write(&path, source).unwrap();
+    let running = Running::start(&c).await;
+    let mut wizard = Client::connect(&running).await;
+    wizard.login("#1").await;
+    let mut player = Client::connect(&running).await;
+    player.register("FlowRetry").await;
+    player.send("flow-test").await;
+    player.until("Retry prompt: ").await;
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("CREATE TRIGGER reject_flow BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'flow persistence failure'); END;").execute(&mut db).await.unwrap();
+    player.send("first").await;
+    let response = player.until("Please try again.").await;
+    assert!(!response.contains("Committed"));
+    sqlx::raw_sql("DROP TRIGGER reject_flow")
+        .execute(&mut db)
+        .await
+        .unwrap();
+    player.send("second").await;
+    player.until("Committed second").await;
+    let saved = persistence::load(&c.database()).await.unwrap();
+    let id = saved.find_player("FlowRetry").unwrap();
+    assert_eq!(
+        saved.objects[&id].state["flow_test"]["answer"],
+        Scalar::String("second".into())
+    );
+    player.send("flow-test").await;
+    player.until("Retry prompt: ").await;
+    player.send("error").await;
+    player
+        .until("Interactive flow failed and was cancelled.")
+        .await;
+    player.send("global-hello").await;
+    player.until("Hello, world").await;
+    player.send("flow-test").await;
+    player.until("Retry prompt: ").await;
+    std::fs::write(&path, "return broken Lua").unwrap();
+    wizard.send("@lua/reload").await;
+    wizard.until("Lua reload failed").await;
+    std::fs::write(&path, source.replace("Committed ", "Reloaded ")).unwrap();
+    wizard.send("@lua/reload").await;
+    wizard.until("Lua reloaded.").await;
+    player.send("third").await;
+    player.until("Reloaded third").await;
+    player.send("flow-test").await;
+    player.until("Retry prompt: ").await;
+    std::fs::remove_file(&path).unwrap();
+    wizard.send("@lua/reload").await;
+    wizard.until("Lua reloaded.").await;
+    player.send("fourth").await;
+    player
+        .until("Interactive flow failed and was cancelled.")
+        .await;
+    sqlx::Connection::close(db).await.unwrap();
+    running.stop().await;
+}
+
+/// Live test callbacks and queued commands may explicitly target a real authenticated session.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_flow_from_hosted_test_and_background_command() {
+    let (d, c) = populated().await;
+    let mut world = persistence::load(&c.database()).await.unwrap();
+    world.accounts.get_mut(&ObjectId(1)).unwrap().hash =
+        Some(accounts::hash("secret", &c).unwrap());
+    world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ObjectId(c.start()));
+    world.objects.get_mut(&ObjectId(13)).unwrap().lua_parent = "hosted_flow.lua".into();
+    persistence::save(&c.database(), &world).await.unwrap();
+    std::fs::write(
+        d.path().join("lua/object_logic/hosted_flow.lua"),
+        r#"return {
+      locks={use=function(ctx) mux.session.flow_start(2,'hosted_flow.lua','step');return true end},
+      flows={step=function(ctx) if ctx.input==nil then return {prompt='Hosted TCP: '} end
+          return {action='done',message='Active VM '..ctx.input} end}}
+    "#,
+    )
+    .unwrap();
+    std::fs::write(d.path().join("lua/global_logic/remote_flow.lua"),r#"return {
+      commands={{name='flow-remote',permission='wizard',pattern='^flow%-remote$',handler=function(ctx)
+        assert(ctx.descriptor==nil); mux.session.flow_start(2,'remote_flow.lua','step'); return true end}},
+      flows={step=function(ctx) if ctx.input==nil then return {prompt='Background TCP: '} end
+          return {action='done',message='Background done'} end}}
+    "#).unwrap();
+    let tests = d.path().join("lua/tests/integration");
+    std::fs::create_dir_all(&tests).unwrap();
+    std::fs::write(
+        tests.join("hosted_flow.lua"),
+        r#"return {expect={},tests={{name='start',run=function()
+      assert(mux.world.lock_passes({object=13,enactor=1,lock=mux.world.locks.USE}))
+    end}}}"#,
+    )
+    .unwrap();
+    let running = Running::start(&c).await;
+    let mut wizard = Client::connect(&running).await;
+    wizard.login("#1").await;
+    let mut player = Client::connect(&running).await;
+    player.register("ExplicitTarget").await;
+    wizard.send("@lua/test/integration hosted_flow").await;
+    wizard.until("1 passed, 0 failed, 0 errored").await;
+    player.until("Hosted TCP: ").await;
+    player.send("resume").await;
+    player.until("Active VM resume").await;
+    wizard.send("@wait 0=flow-remote").await;
+    player.until("Background TCP: ").await;
+    player.send("done").await;
+    player.until("Background done").await;
     running.stop().await;
 }

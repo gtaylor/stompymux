@@ -181,9 +181,8 @@ other callback mutations.
   messages per connection. Slow clients are disconnected. Login throttles,
   hash concurrency/rate limits, command quotas and idle timeouts are active.
 
-BattleTech simulation, interactive Lua flows, additional GMCP packages, a
-webserver and browser-side action handling remain deferred. Flows report an
-explicit unavailable-feature error. Legacy help/type files describe a
+BattleTech simulation, additional GMCP packages, a webserver and browser-side
+action handling remain deferred. Legacy help/type files describe a
 larger API than this milestone implements. Deferred configuration is reported in one capability diagnostic. Site/access
 rules parse and pass configuration checks, but block serving before writes or
 listening because enforcement is not implemented.
@@ -847,3 +846,21 @@ budgets; failures discard its mutations/output and consume the attempt, without
 retrying or rolling back earlier commands. Purge, GOING, HALTED and incarnation
 checks prevent stale execution. Queues survive disconnects and Lua reloads,
 but remain outside database snapshots and are discarded on shutdown/restart.
+
+## Interactive Lua flows
+
+`mux.session.flow_start(descriptor, module, first_step)` starts an authenticated
+session's interactive conversation. Try `flow-demo confirm`, `flow-demo menu`
+or `flow-demo signup`; the supplied example runs unchanged. Prompts are private
+to the selected connection, even when the player has multiple sessions.
+
+Active flows consume all lines before normal commands, including blank lines and
+`quit`. Each step decides how to finish or cancel. There is no implicit escape or
+password/echo control. Disconnecting ends the flow.
+
+Flow state and output are staged with world mutations. Successful saves precede
+prompts; failed saves retain the prior step for retry. Script or validation errors
+cancel the flow after rollback. Flow-only input does not write the database.
+Successful Lua reload retains scratch data and resolves subsequent steps against
+new code. Restart does not retain flows. See [Lua flow authoring](docs/lua-flows.md)
+for contexts, limits, explicit targeting and hosted test behavior.

@@ -49,6 +49,7 @@ impl Server {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
                 self.scripts.outbox.borrow_mut().clear();
+                self.scripts.flows.rollback();
                 self.queue_reply(session, actor, &error.to_string());
                 self.flush();
             }
@@ -152,6 +153,7 @@ impl Server {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
                 self.scripts.outbox.borrow_mut().clear();
+                self.scripts.flows.rollback();
                 self.queue_reply(None, actor, "This command requires an interactive session.");
                 self.flush();
             }
@@ -159,6 +161,7 @@ impl Server {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
                 self.scripts.outbox.borrow_mut().clear();
+                self.scripts.flows.rollback();
                 eprintln!(
                     "Queued command for #{} (cause #{}): {error:#}",
                     actor.0, work.execution.cause.0

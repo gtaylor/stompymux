@@ -56,6 +56,7 @@ impl Scripts {
         super::testing::install(&lua).map_err(|e| anyhow::anyhow!(e.to_string()))?;
         lua.set_app_data(sources.clone());
         let outbox: Outbox = Default::default();
+        let flows = super::flows::Engine::install(&lua, config, &world, &outbox, mode);
         let api = packages::register_native(&lua, config, &world, &outbox, &palette)?;
         lua.globals()
             .set("_native", api.clone())
@@ -67,6 +68,7 @@ impl Scripts {
             packages::restrict_checking(&lua, &api)?;
         }
         let mut scripts = Self {
+            flows,
             sources,
             palette,
             help,
@@ -90,6 +92,7 @@ impl Scripts {
         if mode == RuntimeMode::Checking {
             super::testing::check(&scripts)?;
         }
+        scripts.flows.ready();
         Ok(scripts)
     }
 }

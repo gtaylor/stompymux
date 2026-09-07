@@ -45,10 +45,12 @@ pub fn perform(
 ) -> Result<()> {
     let before = s.world.borrow().clone();
     let pending = s.outbox.borrow().len();
+    let flow_effects = crate::lua::flows::snapshot(&s.lua);
     let result = apply(s, actor, object, destination, session, route);
     if result.is_err() {
         *s.world.borrow_mut() = before;
         s.outbox.borrow_mut().truncate(pending);
+        crate::lua::flows::restore(&s.lua, flow_effects);
     }
     result
 }

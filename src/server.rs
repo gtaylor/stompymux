@@ -440,6 +440,7 @@ impl Server {
             self.shutdown_failed = true;
         }
         self.shutdown = Some(request);
+        self.scripts.flows.stop();
         eprintln!("Graceful shutdown: {request:?}");
         if let ShutdownRequest::Player(player) = request {
             let name = self.scripts.world.borrow().objects[&player].name.clone();
@@ -450,6 +451,7 @@ impl Server {
     }
     /// The sole shutdown cleanup path, after acceptance and before task draining.
     async fn finish_shutdown(&mut self) {
+        self.scripts.flows.stop();
         for id in self.sessions.keys().copied().collect::<Vec<_>>() {
             if let Err(e) = self.disconnect(id).await {
                 eprintln!("Shutdown disconnect failed: {e:#}");
@@ -761,6 +763,23 @@ impl Server {
     }
     /// Session state is authoritative even when durable world mutations roll back.
     fn reconcile_connections(&self) {
+        self.scripts.flows.sessions(
+            self.sessions
+                .iter()
+                .filter_map(|(id, session)| {
+                    let player = session.player?;
+                    let world = self.scripts.world.borrow();
+                    let object = world.objects.get(&player)?;
+                    (object.kind == Kind::Player).then_some((
+                        id.0,
+                        crate::lua::flows::Identity {
+                            player,
+                            generation: object.generation,
+                        },
+                    ))
+                })
+                .collect(),
+        );
         let connected: std::collections::BTreeSet<_> =
             self.sessions.values().filter_map(|s| s.player).collect();
         for o in self.scripts.world.borrow_mut().objects.values_mut() {
@@ -790,14 +809,48 @@ impl Server {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
                 self.scripts.outbox.borrow_mut().clear();
+                self.scripts.flows.rollback();
                 eprintln!("Lua schedule failed: {error:#}");
+            }
+        }
+    }
+
+    /// Flow input owns one world transaction; only persistence failure permits retry.
+    async fn flow_input(&mut self, id: SessionId, input: &str) {
+        let before = self.scripts.world.borrow().clone();
+        let result = self
+            .scripts
+            .flow_input(id.0, input)
+            .and_then(|()| self.scripts.world.borrow().validate(&self.config));
+        match result {
+            Ok(()) => {
+                if self.commit(before).await {
+                    self.flush();
+                } else {
+                    self.tell(id, "Unable to save your changes. Please try again.\r\n");
+                }
+            }
+            Err(error) => {
+                *self.scripts.world.borrow_mut() = before;
+                self.scripts.outbox.borrow_mut().clear();
+                self.scripts.flows.rollback();
+                self.scripts.flows.cancel(id.0);
+                self.reconcile_connections();
+                eprintln!("Interactive flow failed for session {}: {error:#}", id.0);
+                self.tell(id, "Interactive flow failed and was cancelled.\r\n");
             }
         }
     }
 
     async fn commit(&mut self, before: World) -> bool {
         let after = self.scripts.world.borrow().clone();
-        let result = match after.validate(&self.config) {
+        let result = match self
+            .scripts
+            .flows
+            .validate_output()
+            .map_err(|e| anyhow::anyhow!("{e}"))
+            .and_then(|()| after.validate(&self.config))
+        {
             Err(e) => Err(e),
             Ok(()) => match (serde_json::to_vec(&before), serde_json::to_vec(&after)) {
                 (Ok(a), Ok(b)) if a == b => Ok(()),
@@ -819,14 +872,21 @@ impl Server {
             *self.scripts.world.borrow_mut() = before;
             self.reconcile_connections();
             self.scripts.outbox.borrow_mut().clear();
+            self.scripts.flows.rollback();
             false
         } else {
             true
         }
     }
     fn flush(&self) {
+        self.scripts.flows.commit();
+        let mut private = self.scripts.flows.drain().into_iter().peekable();
         let messages = std::mem::take(&mut *self.scripts.outbox.borrow_mut());
-        for (p, text) in messages {
+        let count = messages.len();
+        for (index, (p, text)) in messages.into_iter().enumerate() {
+            while private.peek().is_some_and(|output| output.after <= index) {
+                self.flow_output(private.next().unwrap());
+            }
             for (id, s) in &self.sessions {
                 if s.player == Some(p) {
                     let ansi = self.scripts.world.borrow().objects[&p]
@@ -836,6 +896,27 @@ impl Server {
                         self.sessions[id].close();
                     }
                 }
+            }
+        }
+        for output in private {
+            debug_assert!(output.after <= count);
+            self.flow_output(output);
+        }
+    }
+
+    fn flow_output(&self, output: crate::lua::flows::PrivateOutput) {
+        if let Some(session) = self.sessions.get(&SessionId(output.session))
+            && let Some(player) = session.player
+        {
+            let ansi = self
+                .scripts
+                .world
+                .borrow()
+                .objects
+                .get(&player)
+                .is_some_and(|o| o.flags.contains(crate::flags::Flag::Ansi));
+            if !session.document(&output.document, ansi, false) {
+                session.close();
             }
         }
     }
@@ -862,6 +943,7 @@ impl Server {
                     *self.scripts.world.borrow_mut() = before.clone();
                     self.reconcile_connections();
                     self.scripts.outbox.borrow_mut().clear();
+                    self.scripts.flows.rollback();
                 }
                 self.commit(before).await;
                 self.flush();
@@ -929,7 +1011,11 @@ impl Server {
                         }
                         s.quota -= 1;
                         if let Some(p) = s.player {
-                            self.command(id, p, &line).await?;
+                            if self.scripts.flows.active(id.0) {
+                                self.flow_input(id, &line).await;
+                            } else {
+                                self.command(id, p, &line).await?;
+                            }
                         } else {
                             self.login(id, &line).await?;
                         }
@@ -1107,6 +1193,7 @@ impl Server {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
                 self.scripts.outbox.borrow_mut().clear();
+                self.scripts.flows.rollback();
                 eprintln!("DBCK rolled back: {e:#}");
                 self.queue_reply(
                     session,
@@ -1127,7 +1214,7 @@ impl Server {
                     Sources::read(&config)?.with_tests(&config)
                 })
                 .await??;
-                let scripts = Scripts::from_sources_with(
+                let mut scripts = Scripts::from_sources_with(
                     &self.config,
                     self.scripts.world.clone(),
                     self.scripts.help.clone(),
@@ -1135,6 +1222,8 @@ impl Server {
                     RuntimeMode::Testing,
                     |candidate| self.snapshots_for(candidate),
                 )?;
+                scripts.flows = scripts.flows.hosted(&self.scripts.flows);
+                scripts.lua.set_app_data(scripts.flows.clone());
                 crate::lua::testing::run(&scripts, &self.config, &request, || {
                     self.scripts
                         .outbox
@@ -1221,6 +1310,7 @@ impl Server {
                     .await
             }
             Ok(Some(candidate)) => {
+                candidate.flows.inherit(&self.scripts.flows);
                 self.scripts = candidate;
                 self.reconcile_connections();
                 self.flush();
@@ -1401,24 +1491,18 @@ impl Server {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
                 self.scripts.outbox.borrow_mut().clear();
+                self.scripts.flows.rollback();
                 eprintln!("Command callback failed: {e:#}");
-                if e.to_string().contains("Interactive Lua flows") {
-                    self.tell(
-                        id,
-                        "Interactive Lua flows are unavailable in this milestone.\r\n",
-                    );
+                let report = self.config.lua.error_reporting;
+                let wizard = self.scripts.world.borrow().objects[&p]
+                    .flags
+                    .contains(crate::flags::Flag::Wizard);
+                if report == crate::config::ErrorReporting::All
+                    || (report == crate::config::ErrorReporting::Wizards && wizard)
+                {
+                    self.tell(id, &format!("Lua error: {e}\r\n"));
                 } else {
-                    let report = self.config.lua.error_reporting;
-                    let wizard = self.scripts.world.borrow().objects[&p]
-                        .flags
-                        .contains(crate::flags::Flag::Wizard);
-                    if report == crate::config::ErrorReporting::All
-                        || (report == crate::config::ErrorReporting::Wizards && wizard)
-                    {
-                        self.tell(id, &format!("Lua error: {e}\r\n"));
-                    } else {
-                        self.tell(id, "That command could not be completed.\r\n");
-                    }
+                    self.tell(id, "That command could not be completed.\r\n");
                 }
             }
         }
@@ -1674,6 +1758,7 @@ impl Server {
                     *self.scripts.world.borrow_mut() = before;
                     self.reconcile_connections();
                     self.scripts.outbox.borrow_mut().clear();
+                    self.scripts.flows.rollback();
                     eprintln!("Registration: {e:#}");
                     self.prompt(
                         id,
@@ -1741,6 +1826,7 @@ impl Server {
             *self.scripts.world.borrow_mut() = before.clone();
             self.reconcile_connections();
             self.scripts.outbox.borrow_mut().clear();
+            self.scripts.flows.rollback();
         }
         self.commit(before).await;
         self.flush();

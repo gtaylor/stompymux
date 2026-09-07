@@ -97,11 +97,13 @@ pub fn alias(
 fn transaction(service: &Service<'_>, work: impl FnOnce() -> Result<()>) -> Result<Action> {
     let before = service.world.borrow().clone();
     let pending = service.outbox.borrow().len();
+    let flow_effects = crate::lua::flows::snapshot(service.lua);
     match work() {
         Ok(()) => Ok(Action::Continue),
         Err(error) => {
             *service.world.borrow_mut() = before;
             service.outbox.borrow_mut().truncate(pending);
+            crate::lua::flows::restore(service.lua, flow_effects);
             Ok(Action::Reply(error.to_string()))
         }
     }
@@ -225,9 +227,11 @@ impl Service<'_> {
                 for c in channels {
                     let before = self.world.borrow().clone();
                     let pending = self.outbox.borrow().len();
+                    let flow_effects = crate::lua::flows::snapshot(self.lua);
                     if let Err(error) = self.say(who, &c, args) {
                         *self.world.borrow_mut() = before;
                         self.outbox.borrow_mut().truncate(pending);
+                        crate::lua::flows::restore(self.lua, flow_effects);
                         self.notify(who, error.to_string())?;
                     }
                 }

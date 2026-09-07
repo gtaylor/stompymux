@@ -35,12 +35,19 @@ pub fn run<T>(
         .clone();
     let before = world.borrow().clone();
     let pending = outbox.borrow().clone();
+    let flow_effects = super::flows::snapshot(lua);
     depth.set(depth.get() + 1);
-    let result = work();
+    let result = work().and_then(|value| {
+        if let Some(flows) = lua.app_data_ref::<super::flows::Engine>() {
+            flows.validate_output()?;
+        }
+        Ok(value)
+    });
     depth.set(depth.get() - 1);
     if result.is_err() {
         *world.borrow_mut() = before;
         *outbox.borrow_mut() = pending;
+        super::flows::restore(lua, flow_effects);
     }
     result
 }

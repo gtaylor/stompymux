@@ -18,14 +18,21 @@ impl UserData for Code {
         });
     }
 }
-struct Codes;
+struct Codes(String);
 impl UserData for Codes {
     fn add_methods<M: UserDataMethods<Self>>(m: &mut M) {
-        m.add_meta_method(MetaMethod::Index, |lua, _, key: String| {
-            if !["assertion", "runtime"].contains(&key.as_str()) {
-                return Err(mlua::Error::runtime("unknown testing error code"));
+        m.add_meta_method(MetaMethod::Index, |lua, codes, key: String| {
+            let names: &[&str] = match codes.0.as_str() {
+                "testing" => &["assertion", "runtime"],
+                "connection" => &["invalid", "unavailable"],
+                "module" => &["invalid"],
+                "unavailable" => &["checking"],
+                _ => &[],
+            };
+            if !names.contains(&key.as_str()) {
+                return Err(mlua::Error::runtime("unknown error code"));
             }
-            lua.create_userdata(Code(format!("testing.{key}")))
+            lua.create_userdata(Code(format!("{}.{key}", codes.0)))
         });
     }
 }
@@ -35,10 +42,10 @@ pub(super) fn install(lua: &Lua, mux: &Table) -> mlua::Result<()> {
     api.set(
         "code_tree",
         lua.create_function(|lua, root: String| {
-            if root != "testing" {
+            if !["testing", "connection", "module", "unavailable"].contains(&root.as_str()) {
                 return Err(mlua::Error::runtime("unknown error code root"));
             }
-            lua.create_userdata(Codes)
+            lua.create_userdata(Codes(root))
         })?,
     )?;
     mux.set("error", api)

@@ -180,6 +180,7 @@ impl Server {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
                 self.scripts.outbox.borrow_mut().clear();
+                self.scripts.flows.rollback();
                 self.tell(job.session, &format!("{e}\r\n"));
                 return;
             }

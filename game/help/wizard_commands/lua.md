@@ -12,8 +12,8 @@ index_style = "list_with_description"
 # @lua
 
 Wizard-only Lua administration provides `/parent`, `/viewparent`, `/check`,
-`/reload`, `/schedule` and `/test`. Bare `@lua` lists these switches. Interactive
-flows remain unavailable.
+`/reload`, `/schedule` and `/test`. Bare `@lua` lists these switches.
+See `help lua flows` for interactive conversation APIs.
 
 Use `/parent` to attach active object modules and `/reload` to discover new files
 or apply edits. `/viewparent` shows current disk source; `/check` validates a

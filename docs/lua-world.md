@@ -85,8 +85,9 @@ and runtime errors; validation or persistence failure rolls back only that
 invocation. Active game code, globals and scheduled jobs remain unchanged.
 Structured testing errors expose `mux.error.new`, `wrap`, `is` and immutable
 `code_tree("testing")` codes for the unchanged `testing` package. This does not
-convert other native errors to structured codes. Interactive flows and destruction
-APIs remain outside this interface.
+convert all other native errors to structured codes. Interactive flow startup
+exposes structured connection/module/unavailable errors; see [flows](lua-flows.md).
+Destruction APIs remain outside this interface.
 
 ## Message routing
 

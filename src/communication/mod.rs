@@ -324,6 +324,7 @@ impl Service<'_> {
             let f:mlua::Function=self.lua.load("return function(o,p,k,c) return mux.world.lock_passes({object=mux.world.object(o),enactor=p,subject=p,cause=c,lock=k}) end").eval().map_err(|e|anyhow::anyhow!(e.to_string()))?;
             let before = self.world.borrow().clone();
             let pending = self.outbox.borrow().len();
+            let flow_effects = crate::lua::flows::snapshot(self.lua);
             match f.call::<bool>((
                 object.0,
                 who.0,
@@ -335,6 +336,7 @@ impl Service<'_> {
                 Err(e) => {
                     *self.world.borrow_mut() = before;
                     self.outbox.borrow_mut().truncate(pending);
+                    crate::lua::flows::restore(self.lua, flow_effects);
                     eprintln!("Channel lock {}: {e}", access.lock().key());
                 }
             }
