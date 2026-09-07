@@ -78,6 +78,10 @@ async fn native_catalog_permissions_and_aliases() {
             "@dbck",
             "color",
             "help",
+            "@pcreate",
+            "@newpassword",
+            "@boot",
+            "@last",
             "@lua",
             "@help",
             "quit",
@@ -385,4 +389,75 @@ async fn lua_aliases_and_restricted_matches_fall_through_to_exits() {
         s.world.borrow().objects[&ObjectId(2)].location,
         Some(ObjectId(4))
     );
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn account_command_validation_and_history() {
+    use stompymux_rs::account_admin::{BootTarget, Request};
+    use stompymux_rs::world::Login;
+    let (_d, c, mut w) = fixture().await;
+    let a = w.accounts.get_mut(&ObjectId(2)).unwrap();
+    a.alias = Some("TestAlias".into());
+    a.successes = 99;
+    a.failures = 50;
+    a.history = vec![
+        Login {
+            success: true,
+            at: 1,
+            host: "older".into(),
+        },
+        Login {
+            success: false,
+            at: 3,
+            host: "failed".into(),
+        },
+        Login {
+            success: true,
+            at: 2,
+            host: "newer".into(),
+        },
+    ];
+    let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    let before = std::fs::read(c.database()).unwrap();
+    let history = run(&s, &c, 1, "@LAST tEsTaLiAs");
+    assert!(history.contains("Total successful connects: 99"));
+    assert!(history.contains("Total failed connects: 50"));
+    assert!(history.find("newer").unwrap() < history.find("older").unwrap());
+    assert!(history.contains("1970-01-01T00:00:02Z"));
+    assert_eq!(std::fs::read(c.database()).unwrap(), before);
+    assert_eq!(run(&s, &c, 1, "@last"), run(&s, &c, 1, "@last me"));
+    for command in [
+        "@pcreate/switch Person=secret",
+        "@newpassword/switch #2=secret",
+        "@last/quiet",
+        "@boot/nonsense #2",
+        "@boot//quiet #2",
+        "@newpassword #2=",
+        "@pcreate Person=",
+        "@pcreate 123=secret",
+        "@boot/port wrong",
+    ] {
+        assert!(
+            matches!(
+                commands::run(&s, &c, ObjectId(1), 1, command).unwrap(),
+                Action::Reply(_)
+            ),
+            "{command}"
+        );
+    }
+    assert!(matches!(
+        commands::run(&s, &c, ObjectId(1), 1, "@boot/p/q 42").unwrap(),
+        Action::AccountAdmin(Request::Boot {
+            target: BootTarget::Session(42),
+            quiet: true
+        })
+    ));
+    assert!(matches!(
+        commands::run(&s, &c, ObjectId(1), 1, "@newpassword TestAlias=secret").unwrap(),
+        Action::AccountAdmin(Request::Reset {
+            target: ObjectId(2),
+            ..
+        })
+    ));
+    assert!(run(&s, &c, 1, "@newpassword #1=secret").contains("You cannot change"));
 }

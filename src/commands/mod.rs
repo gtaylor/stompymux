@@ -13,6 +13,8 @@ use anyhow::{Context, Result};
 pub use registry::*;
 /// Result interpreted by the world/session owner.
 pub enum Action {
+    /// Administrative account hashing or session removal.
+    AccountAdmin(crate::account_admin::Request),
     /// Commit callback changes and flush player-directed output.
     Continue,
     /// Commit mutations before delivering a private confirmation.

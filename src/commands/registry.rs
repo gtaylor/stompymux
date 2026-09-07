@@ -265,6 +265,14 @@ impl CommandRegistry {
                 .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("help", P::EVERYONE, native::help)
                 .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
+            CommandDefinition::native("@pcreate", P::WIZARD, crate::account_admin::command)
+                .policy(SwitchPolicy::Handler, true),
+            CommandDefinition::native("@newpassword", P::WIZARD, crate::account_admin::command)
+                .policy(SwitchPolicy::Handler, true),
+            CommandDefinition::native("@boot", P::WIZARD, crate::account_admin::command)
+                .policy(SwitchPolicy::Handler, true),
+            CommandDefinition::native("@last", P::WIZARD, crate::account_admin::command)
+                .policy(SwitchPolicy::Handler, true),
             CommandDefinition::native("@lua", P::WIZARD, native::lua_admin)
                 .policy(SwitchPolicy::Handler, true),
             CommandDefinition::native("@help", P::WIZARD, native::help_admin)

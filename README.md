@@ -755,3 +755,27 @@ existing rollback behavior. Use a scratch database when authoring tests.
 `@lua/check` also validates test declarations without running hooks or tests.
 Reports are private, with bounded failure details, tracebacks, optional passing
 names and totals. See [Lua testing](game/help/wizard_commands/lua/test.md).
+
+## Player and account administration
+
+Wizards can use `@pcreate <name>=<password>`, `@newpassword <player>=<password>`,
+`@boot <player>` and `@last [player]`, including configured aliases.
+
+Creation shares registration defaults but leaves the player offline. Password
+hashing shares existing bounded workers and global limits. Creation and reset
+confirmations follow persistence; the caller must remain connected and authorized
+through completion. Empty passwords are rejected, and creation confirmations omit
+the supplied password. GOD's password cannot be reset by this command.
+
+A successful reset preserves existing sessions but invalidates pending login
+results checked against old credentials. Only one reset per account can be
+pending. Passwords are not included in administrative diagnostics.
+
+`@boot` closes all sessions for another player, protecting GOD. `/port` selects
+one stable Rust session ID (including unauthenticated sessions), and `/quiet`
+suppresses the victim message. Only GOD can boot a GOD session by ID. Booting uses
+the existing disconnect hooks and session-owned CONNECTED reconciliation.
+
+`@last` defaults to the caller and reports lifetime success/failure counts and
+retained login records in newest-first order, formatted in UTC. Reports remain
+private and do not write the database. See the corresponding command help articles.

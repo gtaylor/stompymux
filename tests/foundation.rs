@@ -3252,3 +3252,109 @@ local n=0;return {commands={{name='active-probe',permission='everyone',pattern='
     wizard.until("42").await;
     server.stop().await;
 }
+
+/// Account creation/reset/boot use the same durable world and session lifecycle as login.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_account_administration_and_restart() {
+    let (d, _) = populated().await;
+    let aliases = d.path().join("aliases.toml");
+    std::fs::write(
+        &aliases,
+        std::fs::read_to_string(&aliases).unwrap().replace(
+            "[aliases.commands]",
+            "[aliases.commands]\npc='@pcreate'\nnp='@newpassword'\nbt='@boot'\nll='@last'\n",
+        ),
+    )
+    .unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ObjectId(c.start()));
+    persistence::save(&c.database(), &w).await.unwrap();
+    let server = Running::start(&c).await;
+    let mut god = Client::connect(&server).await;
+    god.login("#1").await;
+    let mut second = Client::connect(&server).await;
+    second.login("#1").await;
+    let mut ordinary = Client::connect(&server).await;
+    ordinary.register("AccountUser").await;
+    for command in [
+        "pc Denied=secret",
+        "np #1=secret",
+        "bt #1",
+        "ll #1",
+        "@boot/port 1",
+    ] {
+        ordinary.send(command).await;
+        ordinary.until("Permission denied.").await;
+    }
+    god.send("pc Offline=secret").await;
+    let reply = god.until("created.").await;
+    assert!(reply.contains("New player 'Offline'"));
+    assert!(!reply.contains("secret"));
+    let w = persistence::load(&c.database()).await.unwrap();
+    let p = w.find_player("Offline").unwrap();
+    assert_eq!(w.objects[&p].location, Some(ObjectId(c.start())));
+    assert_eq!(w.objects[&p].home, Some(ObjectId(c.home())));
+    assert!(
+        !w.objects[&p]
+            .flags
+            .contains(stompymux_rs::flags::Flag::Connected)
+    );
+    assert_eq!(w.accounts[&p].successes, 0);
+    assert!(w.accounts[&p].history.is_empty());
+    assert!(!w.objects[&p].lua_parent.is_empty());
+    god.send("pc offline=secret").await;
+    god.until("That name is not available.").await;
+    god.send("np #1=changed").await;
+    god.until("You cannot change that player's password.").await;
+    god.send("np Offline=").await;
+    god.until("Invalid password:").await;
+    god.send("np Offline=changed").await;
+    god.until("Password changed.").await;
+    let mut offline = Client::connect(&server).await;
+    offline.send("Offline").await;
+    offline.until("Password: ").await;
+    offline.send("secret").await;
+    offline.until("different password.").await;
+    offline.send(&format!("#{}", p.0)).await;
+    offline.until("Password: ").await;
+    offline.send("changed").await;
+    offline.until("Starter Room").await;
+    god.send("np Offline=secret").await;
+    god.until("Password changed.").await;
+    offline.until("Your password has been changed by").await;
+    let mut another = Client::connect(&server).await;
+    another.login("Offline").await;
+    let before = std::fs::read(c.database()).unwrap();
+    god.send("ll Offline").await;
+    let history = god.until("Total failed connects: 1").await;
+    assert!(history.contains("Total successful connects: 2"));
+    assert!(history.contains("From: 127.0.0.1"));
+    assert!(history.contains('Z'));
+    assert_eq!(std::fs::read(c.database()).unwrap(), before);
+    god.send("bt #1").await;
+    god.until("You cannot boot that player!").await;
+    god.send("bt/port/quiet 2").await;
+    god.until("1 connection closed.").await;
+    let mut closed = Vec::new();
+    second.socket.read_to_end(&mut closed).await.unwrap();
+    assert!(!String::from_utf8_lossy(&closed).contains("gently shows"));
+    god.send("bt Offline").await;
+    god.until("2 connections closed.").await;
+    offline.until("gently shows you the door.").await;
+    another.until("gently shows you the door.").await;
+    let mut closed = Vec::new();
+    offline.socket.read_to_end(&mut closed).await.unwrap();
+    let w = persistence::load(&c.database()).await.unwrap();
+    assert!(
+        !w.objects[&p]
+            .flags
+            .contains(stompymux_rs::flags::Flag::Connected)
+    );
+    server.stop().await;
+    let server = Running::start(&c).await;
+    let mut player = Client::connect(&server).await;
+    player.login("Offline").await;
+    server.stop().await;
+}

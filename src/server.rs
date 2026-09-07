@@ -1,4 +1,5 @@
 //! Serialized world owner, connection lifecycle and common graceful shutdown coordinator.
+mod administration;
 use crate::{
     accounts,
     commands::{self, Action},
@@ -41,6 +42,7 @@ pub enum ShutdownRequest {
 }
 
 enum Event {
+    AdminHashed(administration::Job, Result<String>),
     Bytes(SessionId, Vec<u8>),
     Gone(SessionId),
     Authenticated(
@@ -48,6 +50,7 @@ enum Event {
         String,
         bool,
         Option<ObjectId>,
+        Option<String>,
         Result<Option<String>>,
     ),
 }
@@ -63,6 +66,7 @@ struct Server {
     addresses: BTreeMap<IpAddr, Bucket>,
     hashes: Bucket,
     inflight: usize,
+    pending_resets: std::collections::BTreeSet<ObjectId>,
     /// Runtime identity for MSSP replies.
     started_at: i64,
     listen_port: u16,
@@ -224,6 +228,7 @@ pub async fn run_with_schedule_clock(
             at: Instant::now() - HASH_RATE_WINDOW,
         },
         inflight: 0,
+        pending_resets: Default::default(),
         started_at: accounts::now(),
         listen_port: 0,
         shutdown: None,
@@ -281,10 +286,11 @@ pub async fn run_with_schedule_clock(
             },
             event = rx.recv() => {
                 if let Some(event)=event { match event {
+                    Event::AdminHashed(job,result) => server.admin_hashed(job,result).await,
                     Event::Gone(id) => server.disconnect(id).await?,
                     Event::Bytes(id,bytes) => server.input(id,&bytes).await?,
-                    Event::Authenticated(id,name,create,identity,result) => {
-                        server.authentication_result(id,name,create,identity,result).await?;
+                    Event::Authenticated(id,name,create,identity,credential,result) => {
+                        server.authentication_result(id,name,create,identity,credential,result).await?;
                     }
                 }}
             },
@@ -1220,6 +1226,7 @@ impl Server {
         self.snapshots()?;
         let before = self.scripts.world.borrow().clone();
         match commands::run(&self.scripts, &self.config, p, id.0, line) {
+            Ok(Action::AccountAdmin(request)) => self.account_admin(id, p, request).await?,
             Ok(Action::Color(mode)) => self.color(id, &mode),
             Ok(Action::Help(topic)) => {
                 let wizard = p.0 == 1
@@ -1520,6 +1527,7 @@ impl Server {
         self.prompt(id, LoginFlow::Pending, "", false);
         let c = self.config.clone();
         let tx = self.events.clone();
+        let credential = hash.clone();
         tokio::spawn(async move {
             let result = tokio::task::spawn_blocking(move || {
                 if create {
@@ -1533,7 +1541,9 @@ impl Server {
             .await
             .unwrap_or_else(|e| Err(e.into()));
             let _ = tx
-                .send(Event::Authenticated(id, name, create, identity, result))
+                .send(Event::Authenticated(
+                    id, name, create, identity, credential, result,
+                ))
                 .await;
         });
     }
@@ -1544,13 +1554,24 @@ impl Server {
         name: String,
         create: bool,
         identity: Option<ObjectId>,
+        credential: Option<String>,
         result: Result<Option<String>>,
     ) -> Result<()> {
         self.inflight = self.inflight.saturating_sub(1);
         if self.shutdown.is_some() {
             return Ok(());
         }
-        if !create && self.scripts.world.borrow().find_player(&name) != identity {
+        if !create
+            && (self.scripts.world.borrow().find_player(&name) != identity
+                || identity.and_then(|p| {
+                    self.scripts
+                        .world
+                        .borrow()
+                        .accounts
+                        .get(&p)
+                        .and_then(|a| a.hash.clone())
+                }) != credential)
+        {
             self.prompt(
                 id,
                 LoginFlow::Name,
@@ -1614,40 +1635,25 @@ impl Server {
                 );
                 return Ok(());
             }
-            let mut w = self.scripts.world.borrow_mut();
-            let p = w.create(&self.config, name, Kind::Player);
-            let o = w.objects.get_mut(&p).unwrap();
-            o.location = Some(ObjectId(self.config.start()));
-            o.home = Some(ObjectId(self.config.home()));
-            w.accounts.insert(
-                p,
-                Account {
-                    hash,
-                    ..Default::default()
-                },
-            );
-            p
+            match self.create_account(name, hash) {
+                Ok(p) => p,
+                Err(e) => {
+                    *self.scripts.world.borrow_mut() = before;
+                    self.reconcile_connections();
+                    self.scripts.outbox.borrow_mut().clear();
+                    eprintln!("Registration: {e:#}");
+                    self.prompt(
+                        id,
+                        LoginFlow::Name,
+                        "Unable to register.\r\nWho are you? ",
+                        false,
+                    );
+                    return Ok(());
+                }
+            }
         } else {
             existing.context("authenticated player disappeared")?
         };
-        if create && !self.config.mux.public_channel.is_empty() {
-            let service = self.scripts.communication(&self.config);
-            if service.name(&self.config.mux.public_channel).is_ok()
-                && let Err(error) =
-                    service.add(p, &self.config.mux.public_channel, "pub", true, true)
-            {
-                *self.scripts.world.borrow_mut() = before;
-                self.scripts.outbox.borrow_mut().clear();
-                eprintln!("Registration channel: {error:#}");
-                self.prompt(
-                    id,
-                    LoginFlow::Name,
-                    "Unable to register.\r\nWho are you? ",
-                    false,
-                );
-                return Ok(());
-            }
-        }
         {
             let mut w = self.scripts.world.borrow_mut();
             let a = w.accounts.get_mut(&p).unwrap();
@@ -1734,6 +1740,7 @@ mod tests {
                 at: Instant::now(),
             },
             inflight: 0,
+            pending_resets: Default::default(),
             started_at: accounts::now(),
             listen_port: 0,
             shutdown: None,
@@ -1786,6 +1793,7 @@ mod tests {
                 at: Instant::now(),
             },
             inflight: 1,
+            pending_resets: Default::default(),
             started_at: accounts::now(),
             listen_port: 0,
             shutdown: None,
@@ -1820,6 +1828,7 @@ mod tests {
                 "Wizard".into(),
                 false,
                 Some(ObjectId(2)),
+                None,
                 Ok(None),
             )
             .await
@@ -1852,6 +1861,7 @@ mod tests {
                     SessionId(1),
                     "LateRegistration".into(),
                     true,
+                    None,
                     None,
                     Ok(Some("unused".into())),
                 )
@@ -1927,6 +1937,7 @@ mod tests {
                     at: Instant::now(),
                 },
                 inflight: 0,
+                pending_resets: Default::default(),
                 started_at: accounts::now(),
                 listen_port: 0,
                 shutdown: None,

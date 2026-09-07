@@ -48,3 +48,6 @@ pub use locks::{LockInvocation, LockOutcome, LockType};
 
 /// Live-world Lua suite execution and bounded reports.
 pub use lua::testing::{Report as LuaTestReport, Request as LuaTestRequest};
+
+/// Wizard account requests and login-history inspection.
+pub mod account_admin;
