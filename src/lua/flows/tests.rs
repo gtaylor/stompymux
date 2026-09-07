@@ -114,7 +114,7 @@ async fn caught_nested_failure_restores_world_output_and_all_flow_effects() {
         s.eval_callback::<()>(
             r#"
       local ok,e=pcall(mux.session.flow_start,1,'probe.lua','bad')
-      assert(not ok and mux.error.is(e,'runtime'))
+      assert(not ok and mux.error.is(e,'mux.runtime'))
       assert(not mux.world.object(1):state('flow'):has('bad'))
     "#,
         )
@@ -319,8 +319,8 @@ async fn hosted_tests_background_calls_and_immutable_error_codes() {
     assert_eq!(output(&s), "resumed on active VM");
     s.eval_callback::<()>(
         r#"
-      local codes=mux.error.code_tree('connection')
-      assert(tostring(codes.invalid)=='connection.invalid')
+      local codes=mux.error.codes.connection
+      assert(tostring(codes.invalid)=='mux.connection.invalid')
       assert(not pcall(function() codes.invalid='fake' end))
       local ok,e=pcall(mux.session.flow_start,99,'probe.lua','step')
       assert(not ok and mux.error.is(e,codes.invalid))

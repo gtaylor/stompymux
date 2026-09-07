@@ -111,7 +111,7 @@ impl Scripts {
                     .get::<Option<Function>>(message)
                     .map_err(|e| anyhow::anyhow!("{e}"))?
             {
-                self.budget.reset();
+                self.reset_callback_budget();
                 let result: Table = self.call(&f, ctx.clone())?;
                 for pair in result.pairs::<Value, Value>() {
                     let (key, value) = pair.map_err(|e| anyhow::anyhow!("{e}"))?;

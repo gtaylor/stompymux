@@ -1,11 +1,12 @@
 //! Register built-in mux bindings and embedded facades without changing require lookup.
 mod comsys;
 mod config;
-mod error;
+pub(crate) mod error;
 mod logging;
 mod session;
+mod telnet;
 mod text;
-mod world;
+pub(crate) mod world;
 
 use super::{Outbox, SharedWorld};
 use crate::{config::Config, text::Palette};
@@ -53,15 +54,32 @@ pub(super) fn install_facades(lua: &Lua, api: Table) -> Result<()> {
         let id: Function = lua
             .load(include_str!("init.lua"))
             .set_name("@builtin/identity")
-            .eval()?;
+            .call(api.clone())?;
         lua.globals().set("mux", mux.clone())?;
         error::install(lua, &mux)?;
+        for pair in api.clone().pairs::<String, mlua::Value>() {
+            let (name, value) = pair?;
+            if let mlua::Value::Function(f) = value {
+                let code = match name.as_str() {
+                    "config" => "mux.config.not_found",
+                    "markup" | "width" | "truncate" | "strip" | "style" | "markdown"
+                    | "printable_ascii" => "mux.text.invalid",
+                    "state" => "mux.state.invalid",
+                    "lock_key" => "mux.access.invalid",
+                    "log" => "mux.arg.invalid",
+                    _ => "mux.object.invalid",
+                };
+                api.set(name, error::wrap(lua, f, code)?)?;
+            }
+        }
         world::install(lua, &api, &mux, &id)?;
         session::install(lua, &api, &mux, &id)?;
+        telnet::install(lua, &mux)?;
         config::install(lua, &api, &mux, &id)?;
         text::install(lua, &api, &mux, &id)?;
         comsys::install(lua, &api, &mux, &id)?;
         logging::install(lua, &api, &mux)?;
+        error::protected_calls(lua)?;
         let package: Table = lua.globals().get("package")?;
         package.get::<Table>("loaded")?.set("mux", mux)?;
         Ok(())
@@ -74,8 +92,9 @@ pub(super) fn restrict_checking(lua: &Lua, api: &Table) -> Result<()> {
     let apply = || -> mlua::Result<()> {
         let unavailable =
             lua.create_function(|_, _: mlua::MultiValue| -> mlua::Result<mlua::Value> {
-                Err(mlua::Error::external(
-                    "mux.unavailable.checking: live APIs are unavailable while checking",
+                Err(error::failure(
+                    "mux.unavailable.checking",
+                    "live APIs are unavailable while checking",
                 ))
             })?;
         let pure = [

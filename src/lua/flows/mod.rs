@@ -45,6 +45,7 @@ pub struct Snapshot {
     pub output: Vec<PrivateOutput>,
     /// Script file appends share every native and Lua rollback boundary.
     pub logs: Vec<crate::logging::FileRequest>,
+    pub maintenance: Option<crate::dbck::DbCheckReport>,
 }
 
 /// Session identity is authoritative and is never restored by world rollback.
@@ -72,7 +73,16 @@ pub struct Engine {
 
 /// Preserve an error code for conversion to a structured error by the session facade.
 fn error(_lua: &Lua, code: &str, message: impl Into<String>) -> mlua::Error {
-    mlua::Error::runtime(format!("{code}: {}", message.into()))
+    super::packages::error::failure(
+        match code {
+            "connection.invalid" => "mux.connection.invalid",
+            "connection.unavailable" => "mux.connection.unavailable",
+            "module.invalid" => "mux.module.invalid",
+            "unavailable.checking" => "mux.unavailable.checking",
+            _ => "mux.runtime",
+        },
+        message.into(),
+    )
 }
 
 impl Engine {
@@ -206,6 +216,7 @@ impl Engine {
             active: s.durable.clone(),
             output: Vec::new(),
             logs: Vec::new(),
+            maintenance: None,
         };
     }
     /// Whether this session currently consumes input through a flow.
@@ -240,6 +251,30 @@ impl Engine {
         pending.push(request);
         Ok(true)
     }
+    pub(crate) fn maintenance(&self) -> Option<crate::dbck::DbCheckReport> {
+        self.state.borrow().pending.maintenance.clone()
+    }
+    pub(crate) fn stage_maintenance(&self, mut report: crate::dbck::DbCheckReport) {
+        let mut state = self.state.borrow_mut();
+        if let Some(old) = state.pending.maintenance.take() {
+            report.findings.splice(0..0, old.findings);
+            report.plan.purges.extend(old.plan.purges);
+            report.plan.detachments.extend(old.plan.detachments);
+        }
+        // Repeated synchronous checks must not accumulate unbounded diagnostic strings.
+        let mut bytes = 0usize;
+        let mut entries = 0usize;
+        report.findings.retain(|finding| {
+            bytes = bytes.saturating_add(finding.len());
+            entries += 1;
+            entries <= self.config.lua.output_entry_limit
+                && bytes <= self.config.lua.output_byte_limit
+        });
+        state.pending.maintenance = Some(report);
+    }
+    pub(crate) fn drain_maintenance(&self) -> Option<crate::dbck::DbCheckReport> {
+        self.state.borrow_mut().pending.maintenance.take()
+    }
     /// Consume appends only after their enclosing transaction commits.
     pub fn drain_logs(&self) -> Vec<crate::logging::FileRequest> {
         std::mem::take(&mut self.state.borrow_mut().pending.logs)
@@ -253,12 +288,14 @@ impl Engine {
         let previous = previous.state.borrow();
         let mut s = self.state.borrow_mut();
         let logs = std::mem::take(&mut s.pending.logs);
+        let maintenance = s.pending.maintenance.take();
         s.sessions = previous.sessions.clone();
         s.durable = previous.durable.clone();
         s.pending = Snapshot {
             active: s.durable.clone(),
             output: Vec::new(),
             logs,
+            maintenance,
         };
     }
 

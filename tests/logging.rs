@@ -30,6 +30,24 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
     let c = Config::load(d.path()).unwrap();
     let w = persistence::load(&c.database()).await.unwrap();
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    s.lua
+        .globals()
+        .set(
+            "_parents",
+            s.lua
+                .named_registry_value::<mlua::Table>("mux.parents")
+                .unwrap(),
+        )
+        .unwrap();
+    s.lua
+        .globals()
+        .set(
+            "_object_parents",
+            s.lua
+                .named_registry_value::<mlua::Table>("mux.object_parents")
+                .unwrap(),
+        )
+        .unwrap();
     (d, c, s)
 }
 fn edit(c: &mut Config, s: &mut Scripts, name: &str, value: &str) -> Vec<String> {

@@ -11,16 +11,18 @@ pub(super) fn register(lua: &Lua, api: &Table) -> mlua::Result<()> {
                     .app_data_ref::<RuntimeMode>()
                     .is_some_and(|m| *m == RuntimeMode::Checking)
                 {
-                    return Err(mlua::Error::runtime(
-                        "mux.unavailable.checking: log is unavailable while checking",
+                    return Err(super::error::failure(
+                        "mux.unavailable.checking",
+                        "log is unavailable while checking",
                     ));
                 }
                 transactions::require(lua)?;
                 let filename = filename.as_bytes();
                 let message = message.as_bytes();
                 if filename.contains(&0) || message.contains(&0) {
-                    return Err(mlua::Error::runtime(
-                        "mux.arg.invalid: filename/message contains an embedded NUL byte",
+                    return Err(super::error::failure(
+                        "mux.arg.invalid",
+                        "filename/message contains an embedded NUL byte",
                     ));
                 }
                 if message.is_empty() {
@@ -30,7 +32,7 @@ pub(super) fn register(lua: &Lua, api: &Table) -> mlua::Result<()> {
                     return Ok(false);
                 };
                 let message = std::str::from_utf8(&message).map_err(|_| {
-                    mlua::Error::runtime("mux.arg.invalid: log message must be UTF-8")
+                    super::error::failure("mux.arg.invalid", "log message must be UTF-8")
                 })?;
                 let Ok(request) = crate::logging::FileRequest::new(filename, message) else {
                     return Ok(false);

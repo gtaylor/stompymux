@@ -1,11 +1,15 @@
 //! Immutable object-state handles and explicit, binary-safe Lua scalar conversion.
 use crate::{
     config::Config,
-    lua::{SharedWorld, err, transactions},
+    lua::{SharedWorld, transactions},
     state::{self, Generation},
     world::{Kind, ObjectId},
 };
 use mlua::{Lua, MetaMethod, Table, UserData, UserDataMethods, Value};
+
+fn err(e: impl std::fmt::Display) -> mlua::Error {
+    super::super::error::failure("mux.state.invalid", e)
+}
 
 /// A handle is tied to an incarnation, not just a recyclable provisional dbref.
 struct Handle {
@@ -26,7 +30,10 @@ impl Handle {
         {
             Ok(())
         } else {
-            Err(err("invalid state object"))
+            Err(super::super::error::failure(
+                "mux.object.invalid",
+                "invalid state object",
+            ))
         }
     }
     /// Validate even absent read keys.
@@ -86,6 +93,16 @@ fn from_lua(v: Value) -> mlua::Result<state::Value> {
         }
     })
 }
+fn checked_value(lua: &Lua, v: Value) -> mlua::Result<state::Value> {
+    let v = from_lua(v)?;
+    if v.bytes() > crate::lua::configuration(lua).lua.state_value_limit {
+        return Err(super::super::error::failure(
+            "mux.state.value_too_large",
+            "state value exceeds configured byte limit",
+        ));
+    }
+    Ok(v)
+}
 impl UserData for Handle {
     fn add_methods<M: UserDataMethods<Self>>(m: &mut M) {
         m.add_method("get", |lua, h, (key, default): (String, Value)| {
@@ -99,7 +116,7 @@ impl UserData for Handle {
             let value = if value.is_nil() {
                 None
             } else {
-                Some(from_lua(value)?)
+                Some(checked_value(lua, value)?)
             };
             h.change(lua, |s| state::set(s, &h.namespace, &key, value))
         });

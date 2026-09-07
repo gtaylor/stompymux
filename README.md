@@ -539,6 +539,15 @@ action handling. No HTTP server, browser interaction or network image fetching
 is included. HTML exceeding its byte limit returns an error rather than a broken
 fragment.
 
+### Lua API coverage
+
+The non-BattleTech `mux` callable catalog is covered by an executable inventory.
+Object handles are immutable and incarnation-checked. Structured errors, custom
+error namespaces, `mux.telnet.environment_has/get`, silent deferred
+`mux.world.destroy_object`, and synchronous `mux.check_db` use the shared runtime
+and transaction boundary. See [Lua API contracts](docs/lua-api-parity.md) for
+error handling, checking restrictions and intentional Rust extensions.
+
 ### Server-owned Lua code
 
 `src/lua` owns the LuaJIT runtime. Runtime construction installs the shared

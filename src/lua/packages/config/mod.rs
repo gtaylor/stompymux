@@ -2,16 +2,25 @@
 use super::bind;
 use crate::config::Config;
 use anyhow::Result;
-use mlua::{Lua, LuaSerdeExt, Table, Value};
+use mlua::{Lua, LuaSerdeExt, Table};
 
 /// Register native operations before the embedded facade is evaluated.
 pub(super) fn register(lua: &Lua, api: &Table, _config: &Config) -> Result<()> {
     bind!(lua, api, "config", move |lua, key: String| {
+        if key.contains('\0') {
+            return Err(super::error::failure(
+                "mux.arg.invalid",
+                "configuration name contains NUL",
+            ));
+        }
         let c = crate::lua::configuration(lua);
         if let Some(v) = c.effective_value(&key) {
             lua.to_value(v)
         } else {
-            Ok(Value::Nil)
+            Err(super::error::failure(
+                "mux.config.not_found",
+                format!("unknown configuration key {key}"),
+            ))
         }
     });
     Ok(())

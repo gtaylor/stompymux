@@ -32,7 +32,12 @@ pub(super) fn register(
     api.set(
         "lock_key",
         lua.create_function(|_, value: mlua::AnyUserData| {
-            Ok(value.borrow::<crate::LockType>()?.key())
+            Ok(value
+                .borrow::<crate::LockType>()
+                .map_err(|_| {
+                    super::super::error::failure("mux.access.invalid", "expected a typed lock")
+                })?
+                .key())
         })?,
     )?;
     let parents = world.clone();
@@ -130,13 +135,18 @@ impl mlua::UserData for LockNamespace {
     fn add_methods<M: mlua::UserDataMethods<Self>>(m: &mut M) {
         m.add_meta_method(mlua::MetaMethod::Index, |lua, _, value: Value| {
             let Value::String(name) = value else {
-                return Err(err("lock name must be a string"));
+                return Err(super::super::error::failure(
+                    "mux.access.invalid",
+                    "lock name must be a string",
+                ));
             };
             let name = name.to_str()?;
             let lock = crate::locks::LOCKS
                 .into_iter()
                 .find(|k| k.name() == name.as_ref())
-                .ok_or_else(|| err("unknown lock constant"))?;
+                .ok_or_else(|| {
+                    super::super::error::failure("mux.access.invalid", "unknown lock constant")
+                })?;
             lua.create_userdata(lock)
         });
     }

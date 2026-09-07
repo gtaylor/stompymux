@@ -51,7 +51,17 @@ fn object(w: &mut World, c: &Config, name: &str, kind: Kind, loc: ObjectId) -> O
     id
 }
 fn scripts(c: &Config, w: World) -> Scripts {
-    Scripts::new(c, Rc::new(RefCell::new(w))).unwrap()
+    let s = Scripts::new(c, Rc::new(RefCell::new(w))).unwrap();
+    s.lua
+        .globals()
+        .set(
+            "_parents",
+            s.lua
+                .named_registry_value::<mlua::Table>("mux.parents")
+                .unwrap(),
+        )
+        .unwrap();
+    s
 }
 fn run(s: &Scripts, c: &Config, who: i64, line: &str) -> String {
     let action = commands::run(s, c, ObjectId(who), 71, line).unwrap();

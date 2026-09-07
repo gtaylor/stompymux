@@ -251,7 +251,7 @@ impl Scripts {
             return Ok(false);
         }
         self.sync_parents()?;
-        self.budget.reset();
+        self.reset_callback_budget();
         let ctx = self.lua.create_table().map_err(lua_error)?;
         ctx.set(
             "scope",

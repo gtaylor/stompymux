@@ -264,3 +264,43 @@ pub async fn inspect_links(path: &Path, object: ObjectId, timeout: u64) -> Resul
     .await;
     finish(c, result).await
 }
+
+/// Persist a callback's approved maintenance effects with all ordinary mutations.
+pub(crate) async fn persist_effects(
+    path: PathBuf,
+    world: World,
+    timeout: u64,
+    report: Option<crate::dbck::DbCheckReport>,
+) -> Result<()> {
+    let Some(mut report) = report else {
+        return persist(path, world, timeout).await;
+    };
+    for id in &report.plan.purges {
+        let o = world
+            .objects
+            .get(id)
+            .context("callback removed a tombstone")?;
+        ensure!(
+            o.kind == crate::world::Kind::Garbage
+                && o.flags == [crate::flags::Flag::Going].into_iter().collect()
+                && o.powers == Default::default()
+                && o.state.is_empty()
+                && !world.accounts.contains_key(id),
+            "callback changed purged object #{}",
+            id.0
+        );
+    }
+    repair(&path, timeout, |raw| {
+        report.plan.links = crate::dbck::rebuild_links(&world, &report.plan.links);
+        report.plan.list_changes = report
+            .plan
+            .links
+            .iter()
+            .filter(|(id, links)| raw.get(id) != Some(*links))
+            .map(|(id, _)| *id)
+            .collect();
+        Ok((world, report))
+    })
+    .await
+    .map(|_| ())
+}

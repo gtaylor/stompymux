@@ -163,10 +163,9 @@ pub(super) fn install_parents(s: &Scripts) -> mlua::Result<()> {
             })?,
     )?;
     parents.set_metatable(Some(metatable))?;
-    s.lua.globals().set("_parents", parents)?;
+    s.lua.set_named_registry_value("mux.parents", parents)?;
     s.lua
-        .globals()
-        .set("_object_parents", s.lua.create_table()?)
+        .set_named_registry_value("mux.object_parents", s.lua.create_table()?)
 }
 
 fn valid_suite(suite: &Table) -> mlua::Result<Table> {
@@ -279,8 +278,16 @@ async fn invoke(
             .validate_output()
             .map_err(|e| anyhow::anyhow!("{e}"))?;
         after.validate(c)?;
-        if serde_json::to_vec(&before)? != serde_json::to_vec(&after)? {
-            persistence::persist(c.database(), after, c.database.busy_timeout_ms).await?;
+        if serde_json::to_vec(&before)? != serde_json::to_vec(&after)?
+            || s.flows.maintenance().is_some()
+        {
+            persistence::persist_effects(
+                c.database(),
+                after,
+                c.database.busy_timeout_ms,
+                s.flows.maintenance(),
+            )
+            .await?;
         }
         Ok::<_, anyhow::Error>(())
     }

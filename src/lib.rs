@@ -2,6 +2,7 @@
 pub mod accounts;
 pub mod commands;
 pub mod config;
+mod destruction;
 pub mod lua;
 pub use lua::sources::Sources as LuaSources;
 pub use lua::{AdminRequest as LuaAdminRequest, AppearanceMode, RuntimeMode};

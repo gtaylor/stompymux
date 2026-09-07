@@ -39,6 +39,7 @@ impl Scripts {
             self.schedules
                 .register(&format!("object_logic/{name}"), &t)?;
             self.parents.insert(name, t);
+            self.publish_services();
         }
         let table = self
             .lua
@@ -50,8 +51,7 @@ impl Scripts {
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         }
         self.lua
-            .globals()
-            .set("_parents", table)
+            .set_named_registry_value("mux.parents", table)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         let parent_map = self
             .lua
@@ -70,8 +70,7 @@ impl Scripts {
             }
         }
         self.lua
-            .globals()
-            .set("_object_parents", parent_map)
+            .set_named_registry_value("mux.object_parents", parent_map)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         for (source, text) in sources
             .files
@@ -92,13 +91,14 @@ impl Scripts {
             )?;
             self.schedules.register(source, &t)?;
             self.globals.push(t);
+            self.publish_services();
         }
         Ok(())
     }
 
     /// Load one named source with a fresh instruction budget and contextual errors.
     fn load_module(&self, path: &str, source: &str) -> Result<Table> {
-        self.budget.reset();
+        self.reset_callback_budget();
         let function = self
             .lua
             .load(source)
@@ -113,8 +113,7 @@ impl Scripts {
     pub fn sync_parents(&self) -> Result<()> {
         let t: Table = self
             .lua
-            .globals()
-            .get("_object_parents")
+            .named_registry_value("mux.object_parents")
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         for o in self.world.borrow().objects.values() {
             t.set(o.id.0, o.lua_parent.as_str())

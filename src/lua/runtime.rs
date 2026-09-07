@@ -60,9 +60,6 @@ impl Scripts {
         let outbox: Outbox = Default::default();
         let flows = super::flows::Engine::install(&lua, config, &world, &outbox, mode);
         let api = packages::register_native(&lua, config, &world, &outbox, &palette)?;
-        lua.globals()
-            .set("_native", api.clone())
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         sandbox::configure_search(&lua, &sources)?;
         packages::install_facades(&lua, api.clone())?;
         sandbox::restrict(&lua)?;
@@ -85,6 +82,7 @@ impl Scripts {
             budget,
             warnings: Vec::new(),
         };
+        scripts.publish_services();
         setup(&scripts)?;
         if mode != RuntimeMode::Testing {
             scripts.load_game_modules()?;
@@ -96,6 +94,7 @@ impl Scripts {
         if mode == RuntimeMode::Checking {
             super::testing::check(&scripts)?;
         }
+        scripts.publish_services();
         scripts.flows.ready();
         Ok(scripts)
     }

@@ -15,7 +15,6 @@ use crate::{
     world::*,
 };
 use anyhow::{Context, Result};
-use mlua::LuaSerdeExt;
 use presence::TransitionKind;
 use std::{
     cell::RefCell,
@@ -189,6 +188,7 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
             let _ = std::fs::remove_file(&credentials);
             return Err(e);
         }
+        scripts.flows.drain_maintenance();
         for request in scripts.flows.drain_logs() {
             c.logger.submit(c, request);
         }
@@ -204,7 +204,23 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
     let after = scripts.world.borrow().clone();
     after.validate(c)?;
     // Also clears stale stored CONNECTED values; unchanged durable fields are not rewritten.
-    persistence::persist(c.database(), after, c.database.busy_timeout_ms).await?;
+    persistence::persist_effects(
+        c.database(),
+        after,
+        c.database.busy_timeout_ms,
+        scripts.flows.maintenance(),
+    )
+    .await?;
+    if let Some(report) = scripts.flows.drain_maintenance() {
+        for finding in report.findings {
+            c.log(
+                &[crate::logging::Category::Checkpoints],
+                "DB",
+                "CHECK",
+                finding,
+            );
+        }
+    }
     scripts.outbox.borrow_mut().clear();
     for request in scripts.flows.drain_logs() {
         c.logger.submit(c, request);
@@ -852,34 +868,37 @@ impl Server {
             .set(self.controls.enabled(crate::controls::Control::Queueing));
         let w = scripts.world.borrow();
         let mut hidden = 0;
-        let list:Vec<_>=self.sessions.iter().filter_map(|(session_id,session)| {
-            let id=session.player?;
-            let object=&w.objects[&id];
-            if object.flags.contains(crate::flags::Flag::Dark) { hidden+=1; return None; }
-            Some(serde_json::json!({"name":object.name,"dbref":id.0,"session":session_id.0,"terminal_width":session.decoder.width,"connected_for":session.connected.elapsed().as_secs(),"idle_for":session.active.elapsed().as_secs()}))
-        }).collect();
-        scripts
-            .lua
-            .globals()
-            .set(
-                "_connected_players",
-                scripts
-                    .lua
-                    .to_value(&list)
-                    .map_err(|e| anyhow::anyhow!(e.to_string()))?,
-            )
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-        scripts
-            .lua
-            .globals()
-            .set(
-                "_who_summary",
-                scripts
-                    .lua
-                    .to_value(&serde_json::json!({"hidden":hidden,"record":w.record_players}))
-                    .map_err(|e| anyhow::anyhow!(e.to_string()))?,
-            )
-            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let players = self
+            .sessions
+            .iter()
+            .filter_map(|(session_id, session)| {
+                let id = session.player?;
+                let object = &w.objects[&id];
+                if object.flags.contains(crate::flags::Flag::Dark) {
+                    hidden += 1;
+                    return None;
+                }
+                Some(crate::lua::sessions::Player {
+                    name: object.name.clone(),
+                    dbref: id.0,
+                    session: session_id.0,
+                    terminal_width: session.decoder.width,
+                    connected_for: session.connected.elapsed().as_secs(),
+                    idle_for: session.active.elapsed().as_secs(),
+                })
+            })
+            .collect();
+        scripts.lua.set_app_data(crate::lua::sessions::Sessions {
+            players,
+            hidden,
+            record: w.record_players as i64,
+            maximum: (self.config.mux.max_players > 0).then_some(self.config.mux.max_players),
+            environments: self
+                .sessions
+                .iter()
+                .map(|(id, s)| (id.0, s.decoder.environment.clone()))
+                .collect(),
+        });
         Ok(())
     }
     /// Session state is authoritative even when durable world mutations roll back.
@@ -990,13 +1009,14 @@ impl Server {
         {
             Err(e) => Err(e),
             Ok(()) => match (serde_json::to_vec(&before), serde_json::to_vec(&after)) {
-                (Ok(a), Ok(b)) if a == b => Ok(()),
+                (Ok(a), Ok(b)) if a == b && self.scripts.flows.maintenance().is_none() => Ok(()),
                 _ => {
                     saved = true;
-                    persistence::persist(
+                    persistence::persist_effects(
                         self.config.database(),
                         after,
                         self.config.database.busy_timeout_ms,
+                        self.scripts.flows.maintenance(),
                     )
                     .await
                 }
@@ -1021,6 +1041,7 @@ impl Server {
             self.scripts.flows.rollback();
             false
         } else {
+            self.finish_lua_maintenance();
             if saved {
                 self.config.log(
                     &[crate::logging::Category::Checkpoints],
@@ -1031,6 +1052,41 @@ impl Server {
             }
             true
         }
+    }
+    /// Apply session effects only after the maintenance transaction is durable.
+    fn finish_lua_maintenance(&mut self) {
+        let Some(report) = self.scripts.flows.drain_maintenance() else {
+            return;
+        };
+        for finding in report.findings {
+            self.config.log(
+                &[
+                    crate::logging::Category::Checkpoints,
+                    crate::logging::Category::Problems,
+                ],
+                "DB",
+                "CHECK",
+                finding,
+            );
+        }
+        let ids: Vec<_> = self
+            .sessions
+            .iter()
+            .filter(|(_, s)| {
+                s.player
+                    .is_some_and(|p| report.plan.detachments.contains(&p))
+            })
+            .map(|(id, _)| *id)
+            .collect();
+        for id in ids {
+            self.tell(id, "Your character has been destroyed.\r\n");
+            if let Some(session) = self.sessions.remove(&id) {
+                session.close();
+            }
+            self.scripts.flows.cancel(id.0);
+        }
+        self.reconcile_connections();
+        self.command_queue.reconcile(&self.scripts.world.borrow());
     }
     fn flush(&self) {
         for request in self.scripts.flows.drain_logs() {
@@ -1455,6 +1511,11 @@ impl Server {
                             &movement,
                         )?;
                     }
+                    if let Some(nested) = self.scripts.flows.maintenance() {
+                        report.plan.purges.extend(nested.plan.purges);
+                        report.plan.detachments.extend(nested.plan.detachments);
+                        report.findings.extend(nested.findings);
+                    }
                     let after = self.scripts.world.borrow().clone();
                     after.validate(&self.config)?;
                     for id in &report.plan.purges {
@@ -1487,6 +1548,7 @@ impl Server {
         .await;
         match result {
             Ok(report) => {
+                self.scripts.flows.drain_maintenance();
                 for finding in &report.findings {
                     self.config.log(
                         &[
@@ -1592,8 +1654,11 @@ impl Server {
                     |candidate| self.snapshots_for(candidate),
                 )?;
                 scripts.flows = scripts.flows.hosted(&self.scripts.flows);
+                scripts.publish_services();
                 scripts.lua.set_app_data(scripts.flows.clone());
-                crate::lua::testing::run(&scripts, &self.config, &request, || {
+                let test_config = self.config.clone();
+                crate::lua::testing::run(&scripts, &test_config, &request, || {
+                    self.finish_lua_maintenance();
                     self.scripts
                         .outbox
                         .borrow_mut()
@@ -1667,11 +1732,14 @@ impl Server {
             self.snapshots_for(&candidate)?;
             let after = candidate.world.borrow().clone();
             after.validate(&self.config)?;
-            if serde_json::to_vec(&before)? != serde_json::to_vec(&after)? {
-                persistence::persist(
+            if serde_json::to_vec(&before)? != serde_json::to_vec(&after)?
+                || candidate.flows.maintenance().is_some()
+            {
+                persistence::persist_effects(
                     self.config.database(),
                     after,
                     self.config.database.busy_timeout_ms,
+                    candidate.flows.maintenance(),
                 )
                 .await?;
             }
@@ -1686,6 +1754,7 @@ impl Server {
             Ok(Some(candidate)) => {
                 candidate.flows.inherit(&self.scripts.flows);
                 self.scripts = candidate;
+                self.finish_lua_maintenance();
                 self.reconcile_connections();
                 self.flush();
                 self.inspection_report(id, "Lua reloaded.".into()).await;

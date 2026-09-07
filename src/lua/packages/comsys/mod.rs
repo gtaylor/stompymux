@@ -29,7 +29,7 @@ impl Bindings {
 
 /// Errors retain contextual domain messages without cross-thread Lua requirements.
 fn error(e: impl std::fmt::Display) -> mlua::Error {
-    mlua::Error::RuntimeError(e.to_string())
+    super::error::failure("mux.channel.invalid", e)
 }
 
 /// Identity is independent of channel name, and survives no provisional recreation.
@@ -47,11 +47,7 @@ impl Handle {
 
 /// Resolve the existing object facade and reject dead or foreign values.
 fn object(value: Value, b: &Bindings) -> mlua::Result<ObjectId> {
-    let id = ObjectId(match value {
-        Value::Integer(id) => id,
-        Value::Table(value) => value.get::<i64>("_id")?,
-        _ => return Err(error("expected a world object or dbref")),
-    });
+    let id = super::world::handles::identity(value)?;
     if !b
         .world
         .borrow()
@@ -59,7 +55,10 @@ fn object(value: Value, b: &Bindings) -> mlua::Result<ObjectId> {
         .get(&id)
         .is_some_and(|o| o.kind != Kind::Garbage)
     {
-        return Err(error("invalid object"));
+        return Err(super::error::failure(
+            "mux.object.invalid",
+            "invalid object",
+        ));
     }
     Ok(id)
 }
@@ -95,7 +94,10 @@ impl UserData for Handle {
                     .flags
                     .contains(Flag::Going)
             }) {
-                return Err(error("object is being destroyed"));
+                return Err(super::error::failure(
+                    "mux.object.unavailable",
+                    "object is being destroyed",
+                ));
             }
             h.bindings
                 .world
@@ -194,9 +196,13 @@ struct Constants;
 impl UserData for Constants {
     fn add_methods<M: UserDataMethods<Self>>(m: &mut M) {
         m.add_meta_method(MetaMethod::Index, |lua, _, name: String| {
-            let flag = ChannelFlag::parse(&name).map_err(error)?;
+            let flag = ChannelFlag::parse(&name)
+                .map_err(|e| super::error::failure("mux.channel_flag.invalid", e))?;
             if name != flag.name() {
-                return Err(error("channel constants require uppercase names"));
+                return Err(super::error::failure(
+                    "mux.channel_flag.invalid",
+                    "channel constants require uppercase names",
+                ));
             }
             lua.create_userdata(flag)
         });
@@ -232,13 +238,20 @@ impl UserData for Flags {
             Ok(result)
         });
         m.add_method("has", |lua, f, value: AnyUserData| {
-            let flag = *value.borrow::<ChannelFlag>()?;
+            let flag = *value.borrow::<ChannelFlag>().map_err(|_| {
+                super::error::failure("mux.channel_flag.invalid", "expected a typed ChannelFlag")
+            })?;
             let name = f.0.name(lua)?;
             Ok(f.0.bindings.world.borrow().channels[&name].flags.has(flag))
         });
         for (name, enabled) in [("add", true), ("remove", false)] {
             m.add_method(name, move |lua, f, value: AnyUserData| {
-                let flag = *value.borrow::<ChannelFlag>()?;
+                let flag = *value.borrow::<ChannelFlag>().map_err(|_| {
+                    super::error::failure(
+                        "mux.channel_flag.invalid",
+                        "expected a typed ChannelFlag",
+                    )
+                })?;
                 let name = f.0.name(lua)?;
                 Ok(f.0
                     .bindings

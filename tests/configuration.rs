@@ -276,7 +276,7 @@ async fn lua_sees_defaults_overrides_and_legacy_aliases() {
         .unwrap();
     let w = persistence::load(&c.database()).await.unwrap();
     let scripts = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
-    assert!(scripts.lua.load("return mux.config.get('port')==8765 and mux.config.get('server.port')==8765 and mux.config.get('btech_xp_usePilotBVMod')==1 and mux.config.get('runtime.input_line_limit')==8192 and mux.config.get('runtime.find_page_size')==nil").eval::<bool>().unwrap());
+    assert!(scripts.lua.load("return mux.config.get('port')==8765 and mux.config.get('server.port')==8765 and mux.config.get('btech_xp_usePilotBVMod')==1 and mux.config.get('runtime.input_line_limit')==8192 and not pcall(mux.config.get,'runtime.find_page_size')").eval::<bool>().unwrap());
 }
 #[tokio::test(flavor = "current_thread")]
 async fn configured_decoding_hashing_and_sqlite_timeouts_take_effect() {

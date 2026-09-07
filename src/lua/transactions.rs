@@ -8,15 +8,32 @@ pub fn install(lua: &Lua) {
     lua.set_app_data(Rc::new(Cell::new(0usize)));
 }
 
+/// Whether a host invocation is nested inside the current Lua transaction.
+pub(crate) fn active(lua: &Lua) -> bool {
+    lua.app_data_ref::<Rc<Cell<usize>>>()
+        .is_some_and(|depth| depth.get() > 0)
+}
+
 /// State enumeration and mutations require an active game callback.
 pub fn require(lua: &Lua) -> mlua::Result<()> {
+    if lua
+        .app_data_ref::<super::RuntimeMode>()
+        .is_some_and(|m| *m == super::RuntimeMode::Checking)
+    {
+        return Err(super::packages::error::failure(
+            "mux.unavailable.checking",
+            "live API is unavailable while checking",
+        ));
+    }
+
     if lua
         .app_data_ref::<Rc<Cell<usize>>>()
         .is_some_and(|depth| depth.get() > 0)
     {
         Ok(())
     } else {
-        Err(super::err(
+        Err(super::packages::error::failure(
+            "mux.state.unavailable",
             "state unavailable outside a callback transaction",
         ))
     }

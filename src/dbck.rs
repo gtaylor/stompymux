@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 /// Legacy contents head, exits head (or exit source), and next member.
 pub type Links = BTreeMap<ObjectId, [i64; 3]>;
 /// A reference or flag adjustment made by maintenance.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FieldRepair {
     /// Object being repaired.
     pub object: ObjectId,
@@ -18,7 +18,7 @@ pub struct FieldRepair {
     pub field: &'static str,
 }
 /// Occupant relocation requiring movement callbacks before commit.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Relocation {
     /// Moved occupant.
     pub object: ObjectId,
@@ -28,7 +28,7 @@ pub struct Relocation {
     pub destination: ObjectId,
 }
 /// Reviewable operations approved before destructive SQL is issued.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct RepairPlan {
     /// Reference and flag repairs.
     pub fields: Vec<FieldRepair>,
@@ -44,7 +44,7 @@ pub struct RepairPlan {
     pub detachments: BTreeSet<ObjectId>,
 }
 /// Diagnostic results, including observations that require no mutation.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct DbCheckReport {
     /// Detailed findings for server diagnostics.
     pub findings: Vec<String>,

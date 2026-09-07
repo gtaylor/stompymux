@@ -88,6 +88,9 @@ pub struct Login {
 pub use crate::communication::Channel;
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct World {
+    /// Transactional runtime view of legacy containment order.
+    #[serde(skip)]
+    pub links: crate::dbck::Links,
     /// Runtime-only palette, excluded from all storage formats.
     #[serde(skip)]
     pub palette: std::sync::Arc<crate::text::Palette>,

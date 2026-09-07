@@ -6,6 +6,7 @@ use mlua::{HookTriggers, Lua, Table, Value, VmState};
 use std::{cell::Cell, rc::Rc};
 
 /// One shared instruction counter, replenished at existing callback and module boundaries.
+#[derive(Clone)]
 pub(super) struct InstructionBudget {
     remaining: Rc<Cell<usize>>,
     limit: usize,

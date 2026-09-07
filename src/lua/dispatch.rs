@@ -137,7 +137,7 @@ impl Scripts {
                 continue;
             }
             if source != Some(definition.source.as_str()) {
-                self.budget.reset();
+                self.reset_callback_budget();
                 source = Some(definition.source.as_str());
                 let ctx = self.context(Some(player), object, session)?;
                 ctx.set(

@@ -6,10 +6,21 @@ pub(super) struct LuaPowers;
 
 impl mlua::UserData for LuaPowers {
     fn add_methods<M: mlua::UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_meta_method(
+            mlua::MetaMethod::NewIndex,
+            |_, _, _: (mlua::Value, mlua::Value)| -> mlua::Result<()> {
+                Err(super::super::error::failure(
+                    "mux.power.invalid",
+                    "constants are immutable",
+                ))
+            },
+        );
         methods.add_meta_method(mlua::MetaMethod::Index, |lua, _, key: String| {
-            let power = Power::parse(&key).map_err(mlua::Error::external)?;
+            let power = Power::parse(&key)
+                .map_err(|e| super::super::error::failure("mux.power.invalid", e))?;
             if power.name() != key {
-                return Err(mlua::Error::external(
+                return Err(super::super::error::failure(
+                    "mux.power.invalid",
                     "power constants require canonical uppercase names",
                 ));
             }

@@ -1,6 +1,9 @@
 //! Server-owned Lua runtime and built-in packages; editable game modules stay in game/lua.
 mod actions;
 pub(crate) mod admin;
+pub(crate) mod maintenance;
+pub(crate) mod sessions;
+mod view;
 pub use admin::AdminRequest;
 mod appearance;
 pub use appearance::AppearanceMode;
@@ -69,12 +72,21 @@ fn err(e: impl std::fmt::Display) -> mlua::Error {
 }
 
 impl Scripts {
+    /// Nested native-to-Lua callbacks share the caller's budget rather than replenishing it.
+    fn reset_callback_budget(&self) {
+        if !transactions::active(&self.lua) {
+            self.budget.reset();
+        }
+    }
+}
+
+impl Scripts {
     /// Begin a native communication operation with one shared callback budget.
     pub fn communication<'a>(
         &'a self,
         config: &'a crate::config::Config,
     ) -> crate::communication::Service<'a> {
-        self.budget.reset();
+        self.reset_callback_budget();
         crate::communication::Service {
             world: &self.world,
             outbox: &self.outbox,
@@ -111,7 +123,7 @@ impl Scripts {
 
     /// Resume interactive input with a fresh budget shared by all immediate transitions.
     pub fn flow_input(&self, session: u64, input: &str) -> anyhow::Result<()> {
-        self.budget.reset();
+        self.reset_callback_budget();
         self.flows
             .input(&self.lua, session, input)
             .map_err(|e| anyhow::anyhow!("{e}"))
@@ -119,7 +131,7 @@ impl Scripts {
 
     /// Execute a callback chunk with the same transaction and budget as game handlers.
     pub fn eval_callback<T: mlua::FromLuaMulti>(&self, source: &str) -> anyhow::Result<T> {
-        self.budget.reset();
+        self.reset_callback_budget();
         let f = self
             .lua
             .load(source)

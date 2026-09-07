@@ -107,7 +107,15 @@ impl Scripts {
     ) -> Result<()> {
         self.sync_parents()?;
         let parent = self.world.borrow().objects[&location].lua_parent.clone();
-        if let Some(t) = self.parents.get(&parent) {
+        let module = if parent.is_empty() {
+            None
+        } else {
+            self.lua
+                .named_registry_value::<Table>("mux.parents")
+                .and_then(|parents| parents.get::<Option<Table>>(parent))
+                .map_err(|e| anyhow::anyhow!("{e}"))?
+        };
+        if let Some(t) = module {
             let ctx = self.context(Some(movement.object), Some(location), movement.session)?;
             for (key, value) in [
                 (
@@ -124,7 +132,7 @@ impl Scripts {
                 ctx.set(key, value)
                     .map_err(|e| anyhow::anyhow!(e.to_string()))?;
             }
-            self.call_event(t, name, ctx)?;
+            self.call_event(&t, name, ctx)?;
         }
         Ok(())
     }
@@ -174,7 +182,7 @@ impl Scripts {
                 .get::<Option<Function>>(name)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?
         {
-            self.budget.reset();
+            self.reset_callback_budget();
             self.call::<()>(&f, ctx)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         }
@@ -198,7 +206,7 @@ impl Scripts {
         {
             return Ok(text);
         }
-        self.budget.reset();
+        self.reset_callback_budget();
         let f = self
             .lua
             .load("return require('object_appearances').render_internal_appearance")
@@ -253,8 +261,12 @@ impl Scripts {
     /// Evaluate the existing traversal policy for the player and exit.
     pub fn lock(&self, player: ObjectId, exit: ObjectId) -> Result<bool> {
         self.sync_parents()?;
-        let f:Function=self.lua.load("return function(o,p) return mux.world._lock_result({object=mux.world.object(o),enactor=p,lock='traverse'}).passes end").eval().map_err(|e|anyhow::anyhow!(e.to_string()))?;
-        self.budget.reset();
+        let lock: Function = self
+            .lua
+            .named_registry_value("mux.lock_result")
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        let f: Function = self.lua.load("local lock=...; return function(o,p) return lock({object=mux.world.object(o),enactor=p,lock='traverse'}).passes end").call(lock).map_err(|e|anyhow::anyhow!("{e}"))?;
+        self.reset_callback_budget();
         self.call(&f, (exit.0, player.0))
             .map_err(|e| anyhow::anyhow!(e.to_string()))
     }
@@ -265,11 +277,10 @@ impl Scripts {
     /// Evaluate a full policy result; malformed results cannot retain callback mutations.
     pub fn lock_outcome(&self, context: Table) -> Result<LockOutcome> {
         self.sync_parents()?;
-        self.budget.reset();
+        self.reset_callback_budget();
         let f: Function = self
             .lua
-            .load("return mux.world._lock_result")
-            .eval()
+            .named_registry_value("mux.lock_result")
             .map_err(|e| anyhow::anyhow!("{e}"))?;
         let t: Table = self.call(&f, context)?;
         Ok(LockOutcome {

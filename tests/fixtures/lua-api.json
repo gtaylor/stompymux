@@ -1,0 +1,536 @@
+[
+  {
+    "symbol": "mux.comsys.channel",
+    "arguments": "name",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.comsys.create_channel",
+    "arguments": "name",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.comsys.destroy_channel",
+    "arguments": "channel",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.comsys.list_channels",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Channel:name",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Channel:object",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Channel:user_count",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Channel:max_user_count",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Channel:message_count",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Channel:set_object",
+    "arguments": "object",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Channel:emit",
+    "arguments": "message, options",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Channel:who",
+    "arguments": "options",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Channel:boot_player",
+    "arguments": "object",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Channel:flags",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_channel_flag_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "ChannelFlags:list",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_channel_flag_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "ChannelFlags:has",
+    "arguments": "flag",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_channel_flag_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "ChannelFlags:add",
+    "arguments": "flag",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_channel_flag_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "ChannelFlags:remove",
+    "arguments": "flag",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_channel_flag_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Channel:add_player",
+    "arguments": "player, alias, quiet",
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_channel_membership_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.config.get",
+    "arguments": "name",
+    "reference": "src/mux/lua/packages/mux/config/mux_config_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.error.new",
+    "arguments": "fields",
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.error.raise",
+    "arguments": "code, message, detail",
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.error.is",
+    "arguments": "value, code",
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.error.check",
+    "arguments": "value, err",
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.error.wrap",
+    "arguments": "err, code, message",
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.error.namespace",
+    "arguments": "prefix, names",
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.error.code_tree",
+    "arguments": "root",
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.error.pcall",
+    "arguments": "fn, ...",
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.check_db",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/mux_package.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.log",
+    "arguments": "filename, message",
+    "reference": "src/mux/lua/packages/mux/mux_package.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.session.flow_start",
+    "arguments": "descriptor, module, first_step",
+    "reference": "src/mux/lua/packages/mux/session/mux_session_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.session.connected_players",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/session/mux_session_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.session.who_summary",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/session/mux_session_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.telnet.environment_has",
+    "arguments": "descriptor, kind, name",
+    "reference": "src/mux/lua/packages/mux/telnet/mux_telnet_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.telnet.environment_get",
+    "arguments": "descriptor, kind, name",
+    "reference": "src/mux/lua/packages/mux/telnet/mux_telnet_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.text.markup",
+    "arguments": "value",
+    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.text.is_printable_ascii",
+    "arguments": "value",
+    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.text.style",
+    "arguments": "value, options",
+    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.text.strip_style",
+    "arguments": "value",
+    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.text.width",
+    "arguments": "value",
+    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.text.truncate",
+    "arguments": "value, width",
+    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:flags",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:powers",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Flags:list",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Powers:list",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Flags:has",
+    "arguments": "flag",
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Powers:has",
+    "arguments": "power",
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Flags:add",
+    "arguments": "flag",
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Flags:remove",
+    "arguments": "flag",
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Powers:add",
+    "arguments": "power",
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Powers:remove",
+    "arguments": "power",
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.world.lock_passes",
+    "arguments": "options",
+    "reference": "src/mux/lua/packages/mux/world/mux_lock_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.world.object",
+    "arguments": "dbref",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:contents",
+    "arguments": "options",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:name",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:description",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:internal_description",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:set_description",
+    "arguments": "description",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:set_internal_description",
+    "arguments": "description",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:dbref",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:type",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:set_name",
+    "arguments": "name",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:destination",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:set_destination",
+    "arguments": "destination",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:home",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:set_home",
+    "arguments": "new_home",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:location",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:zone",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:set_zone",
+    "arguments": "zone",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:affiliation",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:set_affiliation",
+    "arguments": "affiliation",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:lua_parent",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:set_lua_parent",
+    "arguments": "parent",
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Object:state",
+    "arguments": "namespace",
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "State:get",
+    "arguments": "key, default",
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "State:has",
+    "arguments": "key",
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "State:set",
+    "arguments": "key, value",
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "State:delete",
+    "arguments": "key",
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "State:keys",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "State:entries",
+    "arguments": "",
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "State:get_many",
+    "arguments": "keys",
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "State:set_many",
+    "arguments": "values",
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.world.list_objects",
+    "arguments": "options",
+    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.world.create_object",
+    "arguments": "options",
+    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.world.teleport_object",
+    "arguments": "options",
+    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.world.destroy_object",
+    "arguments": "object, options",
+    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "mux.world.pemit",
+    "arguments": "object, message",
+    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
+    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+  },
+  {
+    "symbol": "Error:is",
+    "arguments": "code",
+    "reference": "src/mux/lua/lua_error.c",
+    "contract": "C implementation; bounded traceback/resource handling"
+  },
+  {
+    "symbol": "Error:root",
+    "arguments": "",
+    "reference": "src/mux/lua/lua_error.c",
+    "contract": "C implementation; bounded traceback/resource handling"
+  }
+]

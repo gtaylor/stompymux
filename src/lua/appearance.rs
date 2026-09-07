@@ -33,8 +33,10 @@ impl Scripts {
             return Ok(None);
         }
         let parent = self
-            .parents
-            .get(&path)
+            .lua
+            .named_registry_value::<mlua::Table>("mux.parents")
+            .and_then(|parents| parents.get::<Option<mlua::Table>>(path.as_str()))
+            .map_err(|e| anyhow::anyhow!("{e}"))?
             .ok_or_else(|| anyhow::anyhow!("appearance parent missing: {path}"))?;
         let name = match mode {
             AppearanceMode::Internal => "internal_appearance",
@@ -46,7 +48,7 @@ impl Scripts {
         let Some(renderer) = renderer else {
             return Ok(None);
         };
-        self.budget.reset();
+        self.reset_callback_budget();
         let value: Value = self.call(
             &renderer,
             self.context(Some(viewer), Some(object), session)?,

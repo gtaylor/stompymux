@@ -9,27 +9,17 @@ use std::sync::Arc;
 
 /// Decode an actual integer identity, accepting the embedded object wrapper.
 pub(super) fn identity(value: Value, world: &World, available: bool) -> mlua::Result<ObjectId> {
-    let value = if let Value::Table(t) = value {
-        t.raw_get("_id")?
-    } else {
-        value
-    };
-    let id = match value {
-        Value::Integer(n) => ObjectId(n),
-        Value::Number(n)
-            if n.is_finite() && n.fract() == 0.0 && n >= 0.0 && n < i64::MAX as f64 =>
-        {
-            ObjectId(n as i64)
-        }
-        _ => return Err(err("expected an object or integer dbref")),
-    };
+    let id = super::handles::identity_in(value, world)?;
     let o = world
         .objects
         .get(&id)
         .filter(|o| o.kind != Kind::Garbage)
         .ok_or_else(|| err("object does not exist"))?;
     if available && o.flags.contains(Flag::Going) {
-        return Err(err("object is being destroyed"));
+        return Err(super::super::error::failure(
+            "mux.object.unavailable",
+            "object is being destroyed",
+        ));
     }
     Ok(id)
 }

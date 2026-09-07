@@ -313,11 +313,8 @@ impl Service<'_> {
 /// Use live session snapshots; multiple sessions use the shortest idle interval.
 impl Service<'_> {
     fn idle(&self, who: ObjectId) -> u64 {
-        self.lua
-            .globals()
-            .get::<Option<mlua::Table>>("_connected_players")
+        crate::lua::sessions::players(self.lua)
             .ok()
-            .flatten()
             .map(|list| {
                 list.sequence_values::<mlua::Table>()
                     .filter_map(|row| row.ok())

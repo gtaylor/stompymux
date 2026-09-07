@@ -69,10 +69,10 @@ across its immediate steps. At most 32 immediate goto transitions and 32 nested
 starts are allowed. Starts may target another session, but cannot replace an
 active flow. Output uses the normal styled-text renderer and transport limits.
 
-Startup raises structured errors recognized by `mux.error.is`: `connection.invalid`,
-`connection.unavailable`, `module.invalid`, `unavailable.checking`, or `runtime`.
-The connection/module/unavailable roots support immutable `mux.error.code_tree`
-values. A Lua `pcall` catching a failed start cannot retain that start's world,
+Startup raises structured errors recognized by `mux.error.is`: `mux.connection.invalid`,
+`mux.connection.unavailable`, `mux.module.invalid`, `mux.unavailable.checking`, or
+`mux.runtime`. Use `mux.error.codes.connection.invalid` (or the equivalent
+`mux.error.code_tree("mux").connection.invalid`) for immutable typed codes. A Lua `pcall` catching a failed start cannot retain that start's world,
 flow or output effects.
 
 Flow startup is unavailable during module initialization, `@lua/check`, and an

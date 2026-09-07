@@ -1,10 +1,19 @@
 //! Immutable native object-kind constants and strict dense type filters.
-use crate::{lua::err, world::Kind};
+use crate::world::Kind;
+fn err(message: impl ToString) -> mlua::Error {
+    super::super::error::failure("mux.arg.invalid", message)
+}
 use mlua::{AnyUserData, MetaMethod, Table, UserData, UserDataMethods, Value};
 
 pub(super) struct Types;
 impl UserData for Types {
     fn add_methods<M: UserDataMethods<Self>>(m: &mut M) {
+        m.add_meta_method(
+            MetaMethod::NewIndex,
+            |_, _, _: (Value, Value)| -> mlua::Result<()> {
+                Err(err("object types are immutable"))
+            },
+        );
         m.add_meta_method(MetaMethod::Index, |lua, _, key: String| {
             let kind = match key.as_str() {
                 "ROOM" => Kind::Room,
@@ -32,7 +41,9 @@ pub(super) fn kind(value: Value) -> mlua::Result<Kind> {
     let Value::UserData(value) = value else {
         return Err(err("expected typed object kind"));
     };
-    Ok(*value.borrow::<Kind>()?)
+    Ok(*value
+        .borrow::<Kind>()
+        .map_err(|_| err("expected typed object kind"))?)
 }
 
 pub(super) fn filter(value: Value) -> mlua::Result<Option<Vec<Kind>>> {
@@ -69,10 +80,16 @@ pub(super) fn options(table: &Table, allowed: &[&str]) -> mlua::Result<()> {
     for pair in table.clone().pairs::<Value, Value>() {
         let (key, _) = pair?;
         let Value::String(key) = key else {
-            return Err(err("option names must be strings"));
+            return Err(super::super::error::failure(
+                "mux.arg.invalid",
+                "option names must be strings",
+            ));
         };
         if !allowed.contains(&key.to_str()?.as_ref()) {
-            return Err(err(format!("unknown option: {}", key.to_str()?)));
+            return Err(super::super::error::failure(
+                "mux.arg.invalid",
+                format!("unknown option: {}", key.to_str()?),
+            ));
         }
     }
     Ok(())

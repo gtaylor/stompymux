@@ -152,12 +152,8 @@ impl Service<'_> {
             Operation::List => {
                 ensure!(args.is_empty(), "Usage: comlist");
                 self.notify(who, "Alias     Channel             Status Description")?;
-                let width = self
-                    .lua
-                    .globals()
-                    .get::<Option<mlua::Table>>("_connected_players")
+                let width = crate::lua::sessions::players(self.lua)
                     .ok()
-                    .flatten()
                     .and_then(|list| {
                         list.sequence_values::<mlua::Table>()
                             .filter_map(|r| r.ok())

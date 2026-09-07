@@ -1,6 +1,6 @@
--- Shared object identity conversion used by embedded package facades.
-local function id(o)
-    if type(o) == 'table' then return o._id else return o end
+-- Private conversion validates generation-checked object handles.
+local native=...
+return function(value)
+    if value == nil then return nil end
+    return native.object_id(value)
 end
-
-return id
