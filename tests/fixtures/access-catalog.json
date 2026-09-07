@@ -1,0 +1,865 @@
+{
+  "sources": [
+    "btmux-khi/src/mux/commands/command_table.c",
+    "btmux-khi/src/mux/server/configuration_registry.c"
+  ],
+  "commands": {
+    "@admin": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@alias": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@boot": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "BOOT_SW"
+    },
+    "@btech": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "BTECH_SW"
+    },
+    "@chan": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "CHAN_SW"
+    },
+    "@chzone": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@clone": {
+      "c_permissions": "CA_WIZARD | CA_CONTENTS",
+      "switch_table": "CLONE_SW"
+    },
+    "@create": {
+      "c_permissions": "CA_WIZARD | CA_CONTENTS",
+      "switch_table": "nullptr"
+    },
+    "@dbck": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@description": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@destroy": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "DESTROY_SW"
+    },
+    "@dig": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "DIG_SW"
+    },
+    "@disable": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@dump": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "DUMP_SW"
+    },
+    "@emit": {
+      "c_permissions": "CA_WIZARD | CA_LOCATION",
+      "switch_table": "EMIT_SW"
+    },
+    "@enable": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@entrances": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@femit": {
+      "c_permissions": "CA_WIZARD | CA_LOCATION",
+      "switch_table": "FEMIT_SW"
+    },
+    "@find": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@force": {
+      "c_permissions": "CA_WIZARD | CA_QUEUE",
+      "switch_table": "nullptr"
+    },
+    "@fpose": {
+      "c_permissions": "CA_WIZARD | CA_LOCATION",
+      "switch_table": "FPOSE_SW"
+    },
+    "@fsay": {
+      "c_permissions": "CA_WIZARD | CA_LOCATION",
+      "switch_table": "nullptr"
+    },
+    "@halt": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "HALT_SW"
+    },
+    "@help": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "HELP_SW"
+    },
+    "@internal-description": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@last": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@link": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@lua": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "LUA_SW"
+    },
+    "@list": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@log": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@mech": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "MECH_ADMIN_SW"
+    },
+    "@name": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@newpassword": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@oemit": {
+      "c_permissions": "CA_WIZARD | CA_LOCATION",
+      "switch_table": "nullptr"
+    },
+    "@open": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "OPEN_SW"
+    },
+    "@pcreate": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@pemit": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "PEMIT_SW"
+    },
+    "@npemit": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "PEMIT_SW"
+    },
+    "@power": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@readcache": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@search": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@flag": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@shutdown": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@state": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "STATE_SW"
+    },
+    "@stats": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@teleport": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "TELEPORT_SW"
+    },
+    "@unlink": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@wait": {
+      "c_permissions": "CA_WIZARD | CA_QUEUE",
+      "switch_table": "nullptr"
+    },
+    "@wall": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "WALL_SW"
+    },
+    "@session": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@telnet": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@who": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "addcom": {
+      "c_permissions": "CA_NO_IC",
+      "switch_table": "nullptr"
+    },
+    "allcom": {
+      "c_permissions": "CA_NO_IC",
+      "switch_table": "nullptr"
+    },
+    "comlist": {
+      "c_permissions": "CA_NO_IC",
+      "switch_table": "nullptr"
+    },
+    "clearcom": {
+      "c_permissions": "CA_NO_IC",
+      "switch_table": "nullptr"
+    },
+    "color": {
+      "c_permissions": "0",
+      "switch_table": "nullptr"
+    },
+    "delcom": {
+      "c_permissions": "CA_NO_IC",
+      "switch_table": "nullptr"
+    },
+    "drop": {
+      "c_permissions": "CA_CONTENTS | CA_LOCATION",
+      "switch_table": "DROP_SW"
+    },
+    "enter": {
+      "c_permissions": "CA_LOCATION",
+      "switch_table": "ENTER_SW"
+    },
+    "@examine": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "EXAMINE_SW"
+    },
+    "get": {
+      "c_permissions": "CA_LOCATION",
+      "switch_table": "GET_SW"
+    },
+    "give": {
+      "c_permissions": "CA_LOCATION",
+      "switch_table": "GIVE_SW"
+    },
+    "goto": {
+      "c_permissions": "CA_LOCATION",
+      "switch_table": "GOTO_SW"
+    },
+    "help": {
+      "c_permissions": "0",
+      "switch_table": "nullptr"
+    },
+    "inventory": {
+      "c_permissions": "0",
+      "switch_table": "nullptr"
+    },
+    "leave": {
+      "c_permissions": "CA_LOCATION",
+      "switch_table": "LEAVE_SW"
+    },
+    "look": {
+      "c_permissions": "CA_LOCATION",
+      "switch_table": "LOOK_SW"
+    },
+    "page": {
+      "c_permissions": "0",
+      "switch_table": "nullptr"
+    },
+    "pose": {
+      "c_permissions": "CA_LOCATION",
+      "switch_table": "POSE_SW"
+    },
+    "quit": {
+      "c_permissions": "0",
+      "switch_table": "nullptr"
+    },
+    "say": {
+      "c_permissions": "CA_LOCATION",
+      "switch_table": "nullptr"
+    },
+    "use": {
+      "c_permissions": "0",
+      "switch_table": "nullptr"
+    },
+    "version": {
+      "c_permissions": "0",
+      "switch_table": "nullptr"
+    },
+    "+show": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "+rolls": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "+charclear": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "\\": {
+      "c_permissions": "CA_LOCATION | CF_DARK",
+      "switch_table": "nullptr"
+    },
+    "#": {
+      "c_permissions": "CA_QUEUE | CF_DARK",
+      "switch_table": "nullptr"
+    },
+    ":": {
+      "c_permissions": "CA_LOCATION | CF_DARK",
+      "switch_table": "nullptr"
+    },
+    ";": {
+      "c_permissions": "CA_LOCATION | CF_DARK",
+      "switch_table": "nullptr"
+    },
+    "\"": {
+      "c_permissions": "CA_LOCATION | CF_DARK",
+      "switch_table": "nullptr"
+    }
+  },
+  "switches": {
+    "BOOT_SW": {
+      "port": {
+        "minimum": 1,
+        "c_permissions": "CA_WIZARD"
+      },
+      "quiet": {
+        "minimum": 1,
+        "c_permissions": "CA_WIZARD"
+      }
+    },
+    "BTECH_SW": {
+      "info": {
+        "minimum": 1,
+        "c_permissions": "CA_WIZARD"
+      },
+      "register": {
+        "minimum": 1,
+        "c_permissions": "CA_WIZARD"
+      },
+      "unregister": {
+        "minimum": 1,
+        "c_permissions": "CA_WIZARD"
+      }
+    },
+    "MECH_ADMIN_SW": {
+      "loadnew": {
+        "minimum": 7,
+        "c_permissions": "CA_WIZARD"
+      },
+      "restore": {
+        "minimum": 7,
+        "c_permissions": "CA_WIZARD"
+      },
+      "savenew": {
+        "minimum": 7,
+        "c_permissions": "CA_WIZARD"
+      },
+      "setarmor": {
+        "minimum": 8,
+        "c_permissions": "CA_WIZARD"
+      },
+      "addweap": {
+        "minimum": 7,
+        "c_permissions": "CA_WIZARD"
+      },
+      "resetcrits": {
+        "minimum": 10,
+        "c_permissions": "CA_WIZARD"
+      },
+      "repair": {
+        "minimum": 6,
+        "c_permissions": "CA_WIZARD"
+      },
+      "reload": {
+        "minimum": 6,
+        "c_permissions": "CA_WIZARD"
+      },
+      "restock": {
+        "minimum": 7,
+        "c_permissions": "CA_WIZARD"
+      },
+      "firemode": {
+        "minimum": 8,
+        "c_permissions": "CA_WIZARD"
+      },
+      "addsp": {
+        "minimum": 5,
+        "c_permissions": "CA_WIZARD"
+      },
+      "display": {
+        "minimum": 7,
+        "c_permissions": "CA_WIZARD"
+      },
+      "showtech": {
+        "minimum": 8,
+        "c_permissions": "CA_WIZARD"
+      },
+      "addtech": {
+        "minimum": 7,
+        "c_permissions": "CA_WIZARD"
+      },
+      "deltech": {
+        "minimum": 7,
+        "c_permissions": "CA_WIZARD"
+      },
+      "addinftech": {
+        "minimum": 10,
+        "c_permissions": "CA_WIZARD"
+      },
+      "delinftech": {
+        "minimum": 10,
+        "c_permissions": "CA_WIZARD"
+      },
+      "settons": {
+        "minimum": 7,
+        "c_permissions": "CA_WIZARD"
+      },
+      "settype": {
+        "minimum": 7,
+        "c_permissions": "CA_WIZARD"
+      },
+      "setmove": {
+        "minimum": 7,
+        "c_permissions": "CA_WIZARD"
+      },
+      "setmaxspeed": {
+        "minimum": 11,
+        "c_permissions": "CA_WIZARD"
+      },
+      "setheatsinks": {
+        "minimum": 12,
+        "c_permissions": "CA_WIZARD"
+      },
+      "setjumpspeed": {
+        "minimum": 12,
+        "c_permissions": "CA_WIZARD"
+      },
+      "setlrsrange": {
+        "minimum": 11,
+        "c_permissions": "CA_WIZARD"
+      },
+      "settacrange": {
+        "minimum": 11,
+        "c_permissions": "CA_WIZARD"
+      },
+      "setscanrange": {
+        "minimum": 12,
+        "c_permissions": "CA_WIZARD"
+      },
+      "setradio": {
+        "minimum": 8,
+        "c_permissions": "CA_WIZARD"
+      },
+      "setradiorange": {
+        "minimum": 13,
+        "c_permissions": "CA_WIZARD"
+      },
+      "setcargospace": {
+        "minimum": 13,
+        "c_permissions": "CA_WIZARD"
+      }
+    },
+    "CHAN_SW": {
+      "boot": {
+        "minimum": 4,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "create": {
+        "minimum": 6,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "destroy": {
+        "minimum": 7,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "emit": {
+        "minimum": 4,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "list": {
+        "minimum": 4,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "object": {
+        "minimum": 6,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "oflags": {
+        "minimum": 6,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "pflags": {
+        "minimum": 6,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "flags": {
+        "minimum": 5,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "status": {
+        "minimum": 6,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "who": {
+        "minimum": 3,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "full": {
+        "minimum": 4,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "noheader": {
+        "minimum": 8,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "LUA_SW": {
+      "check": {
+        "minimum": 5,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "parent": {
+        "minimum": 6,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "reload": {
+        "minimum": 6,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "schedule": {
+        "minimum": 8,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "test": {
+        "minimum": 4,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "unit": {
+        "minimum": 4,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "integration": {
+        "minimum": 11,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "verbose": {
+        "minimum": 7,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "viewparent": {
+        "minimum": 10,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "STATE_SW": {
+      "examine": {
+        "minimum": 7,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "set": {
+        "minimum": 3,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "wipe": {
+        "minimum": 4,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "copy": {
+        "minimum": 4,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "move": {
+        "minimum": 4,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "HELP_SW": {
+      "reload": {
+        "minimum": 6,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "CLONE_SW": {
+      "inventory": {
+        "minimum": 3,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "location": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "DESTROY_SW": {
+      "override": {
+        "minimum": 8,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "recursive": {
+        "minimum": 9,
+        "c_permissions": "CA_WIZARD"
+      }
+    },
+    "DIG_SW": {
+      "teleport": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "DROP_SW": {
+      "quiet": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "DUMP_SW": {
+      "structure": {
+        "minimum": 1,
+        "c_permissions": "CA_WIZARD"
+      },
+      "text": {
+        "minimum": 1,
+        "c_permissions": "CA_WIZARD"
+      },
+      "optimize": {
+        "minimum": 1,
+        "c_permissions": "CA_WIZARD"
+      }
+    },
+    "EMIT_SW": {
+      "here": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "room": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "ENTER_SW": {
+      "quiet": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "EXAMINE_SW": {
+      "brief": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "debug": {
+        "minimum": 1,
+        "c_permissions": "CA_WIZARD"
+      }
+    },
+    "FEMIT_SW": {
+      "here": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "room": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "FPOSE_SW": {
+      "default": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "nospace": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "GET_SW": {
+      "quiet": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "GIVE_SW": {
+      "quiet": {
+        "minimum": 1,
+        "c_permissions": "CA_WIZARD"
+      }
+    },
+    "GOTO_SW": {
+      "quiet": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "HALT_SW": {
+      "all": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "LEAVE_SW": {
+      "quiet": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "LOOK_SW": {
+      "outside": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "OPEN_SW": {
+      "inventory": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "location": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "PEMIT_SW": {
+      "contents": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "object": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "silent": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "list": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "POSE_SW": {
+      "default": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "nospace": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "TELEPORT_SW": {
+      "loud": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      },
+      "quiet": {
+        "minimum": 1,
+        "c_permissions": "CA_PUBLIC"
+      }
+    },
+    "WALL_SW": {
+      "emit": {
+        "minimum": 1,
+        "c_permissions": "CA_WIZARD"
+      },
+      "no_prefix": {
+        "minimum": 1,
+        "c_permissions": "CA_WIZARD"
+      },
+      "pose": {
+        "minimum": 1,
+        "c_permissions": "CA_WIZARD"
+      },
+      "wizard": {
+        "minimum": 1,
+        "c_permissions": "CA_WIZARD"
+      },
+      "admin": {
+        "minimum": 1,
+        "c_permissions": "CA_ADMIN"
+      }
+    }
+  },
+  "lists": {
+    "bad_names": {
+      "minimum": 2,
+      "c_permissions": "CA_WIZARD"
+    },
+    "commands": {
+      "minimum": 3,
+      "c_permissions": "CA_PUBLIC"
+    },
+    "config_permissions": {
+      "minimum": 3,
+      "c_permissions": "CA_GOD"
+    },
+    "default_flags": {
+      "minimum": 1,
+      "c_permissions": "CA_PUBLIC"
+    },
+    "flags": {
+      "minimum": 2,
+      "c_permissions": "CA_PUBLIC"
+    },
+    "globals": {
+      "minimum": 1,
+      "c_permissions": "CA_WIZARD"
+    },
+    "logging": {
+      "minimum": 4,
+      "c_permissions": "CA_GOD"
+    },
+    "options": {
+      "minimum": 1,
+      "c_permissions": "CA_PUBLIC"
+    },
+    "permissions": {
+      "minimum": 2,
+      "c_permissions": "CA_WIZARD"
+    },
+    "powers": {
+      "minimum": 2,
+      "c_permissions": "CA_WIZARD"
+    },
+    "process": {
+      "minimum": 2,
+      "c_permissions": "CA_WIZARD"
+    },
+    "site_information": {
+      "minimum": 2,
+      "c_permissions": "CA_WIZARD"
+    },
+    "switches": {
+      "minimum": 2,
+      "c_permissions": "CA_PUBLIC"
+    },
+    "logfiles": {
+      "minimum": 4,
+      "c_permissions": "CA_WIZARD"
+    }
+  },
+  "rust_differences": {
+    "home": "Wizard-only native registration",
+    "color": "Everyone; Rust session rendering control",
+    "dot_commands": "Everyone except .chown (Wizard); domain macro checks retained",
+    "CA_NO_IC": "Existing communication domain checks retained, not configurable through ACCESS_NAMETAB",
+    "CA_ADMIN": "Equivalent to Wizard in this fork",
+    "session_requirements": "Preserved separately from configurable bits",
+    "omitted_commands": "Only currently implemented command/switch registrations are compared; no new gameplay commands"
+  }
+}

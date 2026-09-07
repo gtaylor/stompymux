@@ -899,3 +899,65 @@ async fn tcp_site_monitor_and_suspect_lifecycle() {
         task.await.unwrap().unwrap();
     }).await;
 }
+
+/// Real dispatch uses executor authority, configured aliases and preserved reload policies.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_access_policies_queue_reload_and_private_discovery() {
+    tokio::task::LocalSet::new().run_until(async {
+        let (d,old)=fixture().await;credentials(&old).await;
+        let path=d.path().join("stompymux.toml");
+        std::fs::rename(&path,d.path().join("base.toml")).unwrap();
+        std::fs::write(&path,r#"include=['base.toml']
+[security]
+login_attempt_burst=100
+login_hash_limit=100
+[aliases.commands]
+acl="acl-probe"
+[access.commands]
+"@list"="!wizard"
+say="wizard"
+"look/outside"="god"
+"acl-probe"="wizard queue_enabled"
+[access.lists]
+permissions="!wizard"
+"#).unwrap();
+        let c=Config::load(d.path()).unwrap();
+        let source=|label:&str|format!(r#"return {{commands={{{{name='acl-probe',permission='everyone',pattern='^acl%-probe$',handler=function(ctx) mux.world.pemit(ctx.enactor,'ACL_{label}');return true end}}}}}}"#);
+        module(&c,"global_logic/access_tcp.lua",&source("OLD"));
+        let (address,shutdown,task,_)=start(&c,Rc::new(Cell::new(0))).await;
+        let mut god=Client::connect(address,1).await;
+        let mut player=Client::connect(address,2).await;
+        let mut other=Client::connect(address,2).await;
+        let before=std::fs::read(c.database()).unwrap();
+        player.send("@list permissions").await;player.until("Object commands:").await;
+        other.send("look").await;
+        assert!(!other.until("Staff Nexus").await.contains("Built-in commands"));
+        player.send("say BLOCKED").await;player.until("Permission denied.").await;
+        player.send("l/outside").await;player.until("Permission denied.").await;
+        player.send("acl").await;player.until("Huh?").await;
+        assert_eq!(before,std::fs::read(c.database()).unwrap());
+        player.send(".create access").await;player.until("created in slot").await;
+        player.send(".def x=say BLOCKED_MACRO").await;player.until("defined.").await;
+        player.send(".x").await;player.until("Permission denied.").await;
+        god.send("@force #2=say BLOCKED_FORCE").await;player.until("Permission denied.").await;
+        god.send("@flag #2=wizard").await;god.until("WIZARD set.").await;
+        player.send("acl").await;player.until("ACL_OLD").await;
+        god.send("@wait 1=say DRAINED_QUEUE").await;
+        god.send("@disable qu").await;god.until("Disabled.").await;
+        god.until("DRAINED_QUEUE").await;
+        player.send("acl").await;player.until("Huh?").await;
+        module(&c,"global_logic/access_tcp.lua","return {}");
+        god.send("@lua/reload").await;god.until("Lua reload failed:").await;
+        god.send("@enable qu").await;god.until("Enabled.").await;
+        player.send("acl").await;player.until("ACL_OLD").await;
+        module(&c,"global_logic/access_tcp.lua",&source("NEW"));
+        god.send("@disable qu").await;god.until("Disabled.").await;
+        god.send("@lua/reload").await;god.until("Lua reloaded.").await;
+        player.send("acl").await;player.until("Huh?").await;
+        god.send("@enable qu").await;god.until("Enabled.").await;
+        player.send("acl").await;player.until("ACL_NEW").await;
+        god.send("@flag #2=!wizard").await;god.until("WIZARD cleared.").await;
+        player.send("acl").await;player.until("Huh?").await;
+        shutdown.send(ShutdownRequest::Sigterm).unwrap();task.await.unwrap().unwrap();
+    }).await;
+}

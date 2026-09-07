@@ -17,14 +17,16 @@ List commands available to you:
 The output has separate sections for built-in commands, global Lua commands,
 and object commands, including object-local native registrations. Lua entries show their command pattern and source.
 
-Entries are filtered by current `everyone`, `wizard` or `god` permissions.
+Entries are filtered by effective configured permissions. Dark and disabled commands
+are omitted. Wizard and GOD role bits are alternatives; `!wizard god` makes an
+existing Wizard command GOD-only.
 Object entries use the current dispatcher scope: the caller, immediate location
 nearby occupants, directly carried objects and zone fallbacks. Garbage, GOING,
 HALTED and NO_COMMAND sources are omitted. Each entry identifies its dispatch
 stage and source; zone entries are conditional fallbacks. Repeated Lua declarations retain their
 module and declaration identity.
 
-`@list permissions` shows roles and execution restrictions such as session
+`@list permissions` shows effective access bits and execution restrictions such as session
 requirements and macro exclusions. `@list switches` shows native switch names,
 permissions and minimum abbreviation lengths. Valid combinations are still
 checked by each command. Lua patterns are not interpreted as switch declarations.
@@ -40,3 +42,11 @@ Lua reload updates captured registrations; runtime table edits do not.
 
 `@list site_information` (`@list si`) shows IPv4 site access and suspicion rules
 in first-match order. Both lists default to unrestricted/trusted when no rule matches.
+
+The `@list` command and the requested topic must both permit you. Configuration
+can relax the command's default Wizard restriction while retaining private topics.
+Policies use ordered set/clear edits (`wizard`, `!wizard`, `disabled`, `dark`, and
+other supported access bits). They apply to native/Lua registrations and native
+switches at startup and Lua reload. Unknown targets reject a reload, preserving
+the active runtime. GOD may inspect disabled switch names; those switches remain
+unavailable for execution.

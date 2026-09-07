@@ -1,57 +1,10 @@
 //! Native and Lua command definitions, immutable registration and access metadata.
 use super::{Action, CommandContext, native};
-use crate::{
-    config::Config,
-    flags,
-    world::{ObjectId, World},
-};
+use crate::config::Config;
 use anyhow::{Context, Result, ensure};
 use mlua::{Function, Lua, Table, Value};
 
-/// Minimal required-role bits. Combined restrictions require GOD.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct CommandPermissions(u8);
-impl CommandPermissions {
-    /// Available to every authenticated player.
-    pub const EVERYONE: Self = Self(0);
-    /// Requires Wizard status; GOD also qualifies.
-    pub const WIZARD: Self = Self(1);
-    /// Requires dbref #1.
-    pub const GOD: Self = Self(2);
-    /// Evaluate current world authority, never cached session roles.
-    pub fn allows(self, world: &World, player: ObjectId) -> bool {
-        if self.0 & Self::GOD.0 != 0 {
-            player == ObjectId(1)
-        } else {
-            self.0 & Self::WIZARD.0 == 0 || flags::is_wizard(world, player)
-        }
-    }
-    /// Human-readable role for command catalogs.
-    pub fn name(self) -> &'static str {
-        if self.0 & Self::GOD.0 != 0 {
-            "god"
-        } else if self.0 & Self::WIZARD.0 != 0 {
-            "wizard"
-        } else {
-            "everyone"
-        }
-    }
-    /// Decode an explicit Lua declaration permission.
-    fn parse(name: &str) -> Result<Self> {
-        Ok(match name {
-            "everyone" => Self::EVERYONE,
-            "wizard" => Self::WIZARD,
-            "god" => Self::GOD,
-            _ => anyhow::bail!("invalid permission {name:?}"),
-        })
-    }
-}
-impl std::ops::BitOr for CommandPermissions {
-    type Output = Self;
-    fn bitor(self, rhs: Self) -> Self {
-        Self(self.0 | rhs.0)
-    }
-}
+pub use crate::access::Permissions as CommandPermissions;
 /// Where a definition is eligible for dispatch.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CommandScope {
@@ -98,6 +51,8 @@ pub struct CommandDefinition {
     pub listed: bool,
     /// Required authority.
     pub permission: CommandPermissions,
+    /// Original declaration, before configuration edits.
+    pub declared_permission: CommandPermissions,
     /// Exact or pattern-based matching metadata.
     pub matcher: CommandMatcher,
     /// Object attachment or server-wide eligibility, independent of handler language.
@@ -122,7 +77,9 @@ pub struct CommandDefinition {
 impl CommandDefinition {
     /// Describe a native handler with default exact matching and no switches.
     pub fn native(name: &str, permission: CommandPermissions, handler: NativeHandler) -> Self {
+        let permission = crate::access::native_defaults(name, permission);
         Self {
+            declared_permission: permission,
             name: name.into(),
             switch_definitions: super::discovery::switches(name),
             listed: !matches!(name, ";" | "\\"),
@@ -169,21 +126,42 @@ impl CommandDefinition {
     }
     /// Invoke a native function only after central permissions and switch checks.
     pub fn invoke_native(&self, ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
-        let error = if !self
+        let error = self
             .permission
-            .allows(&ctx.scripts.world.borrow(), ctx.player)
-        {
-            Some("Permission denied.")
-        } else if self.requires_session && ctx.session.is_none() {
-            Some("This command requires an interactive session.")
-        } else if input.switch.is_some() {
-            match self.switches {
-                SwitchPolicy::Reject(message) => Some(message),
-                SwitchPolicy::Handler => None,
-            }
-        } else {
-            None
-        };
+            .denial(
+                &ctx.scripts.world.borrow(),
+                ctx.player,
+                crate::access::Context {
+                    queue_enabled: ctx.scripts.queue_enabled.get(),
+                },
+            )
+            .or_else(|| {
+                if self.requires_session && ctx.session.is_none() {
+                    Some("This command requires an interactive session.")
+                } else {
+                    None
+                }
+            })
+            .or_else(|| {
+                let switch = input.switch.as_deref()?;
+                if let SwitchPolicy::Reject(message) = self.switches {
+                    return Some(message);
+                }
+                for part in switch.split('/') {
+                    let Some(definition) = self.switch_definitions.iter().find(|s| s.accepts(part))
+                    else {
+                        // The handler owns command-specific syntax diagnostics.
+                        break;
+                    };
+                    if !definition
+                        .permission
+                        .allows(&ctx.scripts.world.borrow(), ctx.player)
+                    {
+                        return Some("Permission denied.");
+                    }
+                }
+                None
+            });
         if let Some(error) = error {
             if self.private_errors {
                 return Ok(Action::Reply(error.into()));
@@ -253,6 +231,8 @@ impl CommandInput {
 /// Definitions are registered once at load, in deterministic dispatch order.
 pub struct CommandRegistry {
     definitions: Vec<CommandDefinition>,
+    /// Effective list topic catalog.
+    pub lists: Vec<super::discovery::ListDefinition>,
 }
 impl Default for CommandRegistry {
     fn default() -> Self {
@@ -395,7 +375,91 @@ impl CommandRegistry {
                     | "@last"
             );
         }
-        Self { definitions }
+        Self {
+            definitions,
+            lists: super::discovery::list_definitions(),
+        }
+    }
+    /// Resolve ordered configuration edits against the completed module registry.
+    pub fn configure_access(&mut self, config: &Config) -> Result<()> {
+        let mut masks: Vec<_> = self
+            .definitions
+            .iter()
+            .map(|d| d.declared_permission)
+            .collect();
+        let mut switches: Vec<_> = self
+            .definitions
+            .iter()
+            .map(|d| {
+                d.switch_definitions
+                    .iter()
+                    .map(|s| crate::access::switch_default(&d.name, s.name))
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        let mut lists = super::discovery::list_definitions();
+        for rule in &config.access_rules {
+            let result = (|| -> Result<()> {
+                if rule.list {
+                    let topic = lists
+                        .iter_mut()
+                        .find(|t| t.accepts(&rule.target))
+                        .ok_or_else(|| anyhow::anyhow!("unknown list topic {:?}", rule.target))?;
+                    topic.permission.edit(&rule.edits);
+                    return Ok(());
+                }
+                let input = CommandInput::parse(config, &rule.target);
+                let canonical = self
+                    .definitions
+                    .iter()
+                    .find(|d| d.name == input.name)
+                    .or_else(|| {
+                        self.definitions.iter().find(|d| match &d.matcher {
+                            CommandMatcher::Native { aliases, prefix } => {
+                                aliases.contains(&input.name)
+                                    || prefix.is_some_and(|p| input.name == p.to_string())
+                            }
+                            _ => false,
+                        })
+                    })
+                    .map(|d| d.name.as_str())
+                    .ok_or_else(|| anyhow::anyhow!("unknown command {:?}", rule.target))?;
+                let mut applied = false;
+                for (index, definition) in self
+                    .definitions
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, d)| d.name == canonical)
+                {
+                    if let Some(switch) = &input.switch {
+                        if let Some((i, _)) = definition
+                            .switch_definitions
+                            .iter()
+                            .enumerate()
+                            .find(|(_, s)| s.accepts(switch))
+                        {
+                            switches[index][i].edit(&rule.edits);
+                            applied = true;
+                        }
+                    } else {
+                        masks[index].edit(&rule.edits);
+                        applied = true;
+                    }
+                }
+                ensure!(applied, "unknown native switch {:?}", rule.target);
+                Ok(())
+            })();
+            result.with_context(|| rule.origin.clone())?;
+        }
+        for (i, d) in self.definitions.iter_mut().enumerate() {
+            d.permission = masks[i];
+            d.listed = !d.permission.contains(CommandPermissions::DARK);
+            for (sw, mask) in d.switch_definitions.iter_mut().zip(&switches[i]) {
+                sw.permission = *mask;
+            }
+        }
+        self.lists = lists;
+        Ok(())
     }
     /// Stable catalog including commands on currently unattached object modules.
     pub fn definitions(&self) -> impl Iterator<Item = &CommandDefinition> {
@@ -519,6 +583,7 @@ impl CommandRegistry {
                     switch_definitions: Vec::new(),
                     listed: true,
                     permission,
+                    declared_permission: permission,
                     matcher: CommandMatcher::LuaPattern(pattern),
                     scope: scope.clone(),
                     source: source.into(),

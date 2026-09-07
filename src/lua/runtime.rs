@@ -77,6 +77,7 @@ impl Scripts {
             outbox,
             globals: Vec::new(),
             commands: crate::commands::CommandRegistry::new(),
+            queue_enabled: std::cell::Cell::new(true),
             parents: BTreeMap::new(),
             schedules: Default::default(),
             budget,
@@ -85,6 +86,7 @@ impl Scripts {
         setup(&scripts)?;
         if mode != RuntimeMode::Testing {
             scripts.load_game_modules()?;
+            scripts.commands.configure_access(config)?;
         } else {
             super::testing::install_parents(&scripts)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;

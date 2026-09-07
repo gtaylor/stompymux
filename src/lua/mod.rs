@@ -47,6 +47,8 @@ pub struct Scripts {
     globals: Vec<Table>,
     /// Immutable native and Lua command catalog captured during module loading.
     pub commands: crate::commands::CommandRegistry,
+    /// Live queue prerequisite published by the world owner; excluded from rollback.
+    pub queue_enabled: std::cell::Cell<bool>,
     /// Object module tables keyed by relative parent path.
     parents: BTreeMap<String, Table>,
     /// Captured, validated schedules, independent of mutable module tables.

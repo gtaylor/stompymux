@@ -33,9 +33,8 @@ access tables, colors and OSC presets retain dynamic names.
 
 BattleTech, extended rendering/OSC, logging and remaining legacy command-system
 options are parsed and retained without enabling those features. A consolidated
-capability diagnostic reports this. Site and access rules pass configuration checks. IPv4 site rules are enforced;
-unsupported access rules still block `serve` before bootstrap, database writes or
-listening. There is no live reload or configuration editing command.
+capability diagnostic reports this. IPv4 site and command/list access policies are enforced. Nonempty `access.config`
+still blocks `serve` before bootstrap, database writes or listening. There is no live reload or configuration editing command.
 
 Rust callers use typed fields. Lua `mux.config` lookups accept dotted TOML
 names and legacy directive names, and see the same defaulted effective values,
@@ -154,3 +153,73 @@ players and suspected sites independently. Trust rules do not clear SUSPECT.
 No missing channel is automatically created. MONITOR notices describe actual
 session transitions even when callbacks fail; channel history and delivery remain
 transactional. Command auditing to `SuspectsLog` is not enabled by this feature.
+
+## Command, switch and list access
+
+`access.commands` edits the declared permissions of native and Lua commands;
+`access.lists` independently edits `@list` topic permissions. A value may be a
+whitespace-separated string or an array of strings. Tokens apply in order, adding
+bits by default and clearing them with `!`. An empty value leaves defaults intact.
+
+```toml
+[access.commands]
+"@shutdown" = "!wizard god" # GOD only; adding god alone retains Wizard access
+"@list" = "!wizard"        # permit ordinary players to request public topics
+"look/outside" = "god"     # both look and this switch must permit the caller
+"say" = ["no_suspect"]
+"@find" = "disabled"       # denies even GOD
+"look" = "dark"            # hidden in discovery, still executable
+
+[access.lists]
+site_information = "!wizard god"
+permissions = "!wizard"
+```
+
+The configurable tokens and minimum abbreviations are:
+
+| Token | Minimum | Meaning |
+| --- | --- | --- |
+| god | go | GOD role alternative |
+| wizard | wiz | Wizard role alternative; GOD also qualifies |
+| no_suspect | no_su | Deny SUSPECT executors except Wizards/GOD |
+| queue_enabled | queue_ | Require enabled runtime queueing |
+| disabled | disa | Deny everyone, including GOD |
+| need_location | need_l | Invoker type has a location slot |
+| need_contents | need_c | Invoker type supports contents |
+| need_player | need_p | Invoker is a Player |
+| dark | dark | Hide a command from discovery |
+
+Tokens and target names are case-insensitive. `everyone` is Lua declaration
+metadata, not a configurable bit; remove role bits to make a command public.
+GOD and Wizard bits are alternatives, not cumulative requirements. SUSPECT means
+the object flag, not suspected-site status. Type prerequisites do not require a
+nonempty inventory or a valid stored location. Queue/type prerequisites apply to
+command invocation; they do not add restrictions to list/switch name-table checks.
+`dark` hides commands, not list topics or switch names.
+
+Policies follow merged TOML declaration order, including overlapping canonical
+names and aliases. Aliases use the existing command resolver. A canonical name
+edits every registration with that name across native, global Lua and object Lua
+scopes. Switch policies address registered native switches; Lua patterns do not
+create switches. Unknown tokens fail configuration loading. Unresolved commands,
+switches and list topics fail runtime construction with source diagnostics, before
+startup hooks or database writes. Known deferred list topics stay unimplemented.
+
+Object-control rules, locks, session requirements and macro restrictions remain
+independent. Exits and Lua handlers retain their current dispatch precedence.
+Denied Lua declarations are skipped before pattern evaluation, allowing later
+handlers and fallback; a selected native denial stops dispatch. Forced and queued
+commands use the executor's authority, never the initiating Wizard's authority.
+
+`@list` still defaults to Wizard access. Command and topic permissions must both
+allow the caller. Discovery reports effective bits, hides dark/disabled commands,
+and filters switch access. As in C, GOD may inspect disabled switch names and see
+disabled topics in topic suggestions, while invocation remains denied. Reports
+remain private, bounded and read-only.
+
+Policies are compiled from declaration defaults at startup and Lua reload. A
+reload with unresolved targets retains the old VM and policies. Runtime table edits
+do not alter registrations, and no configuration reread or `@admin` command is
+provided. Nonempty `access.config` still blocks serving because configuration-edit
+permission enforcement is deferred. Existing IC/GAGGED domain behavior is retained;
+no additional BattleTech permission vocabulary is added.

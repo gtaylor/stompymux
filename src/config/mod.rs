@@ -22,6 +22,8 @@ pub struct Config {
     pub warnings: Vec<String>,
     /// Ordered site rules compiled from the merged document.
     pub site_policy: crate::sites::Policy,
+    /// Ordered command/list access edits, resolved after module registration.
+    pub access_rules: Vec<crate::access::Rule>,
     origins: BTreeMap<String, PathBuf>,
 }
 impl Deref for Config {
@@ -41,6 +43,7 @@ impl Config {
             &doc.origins,
             &mut doc.warnings,
         )?;
+        let access_rules = crate::access::rules(doc.values.get("access"), &doc.origins)?;
         let settings: Settings = toml::Value::Table(doc.values).try_into().with_context(|| {
             format!(
                 "{}: typed configuration",
@@ -54,6 +57,7 @@ impl Config {
             effective,
             warnings: doc.warnings,
             site_policy,
+            access_rules,
             origins: doc.origins,
         };
         config.validate()?;
@@ -70,7 +74,7 @@ impl Config {
         if config.origins.contains_key("database.legacy_game_database") {
             config.warnings.push("database.legacy_game_database is deprecated and unused; database.game_database is the live schema-32 database".into());
         }
-        config.warnings.push("Configuration parsed completely; BattleTech, logging controls, access policies, and remaining legacy command-system settings are retained for future implementation.".into());
+        config.warnings.push("Configuration parsed completely; BattleTech, logging controls, configuration-edit permissions, and remaining legacy command-system settings are retained for future implementation.".into());
         Ok(config)
     }
     /// Check structural invariants independently of implemented server capabilities.
@@ -191,10 +195,8 @@ impl Config {
         self.site_policy
             .validate_listener(self.server.listen_address)?;
         ensure!(
-            self.access.commands.is_empty()
-                && self.access.lists.is_empty()
-                && self.access.config.is_empty(),
-            "configured access rules cannot yet be enforced; refusing to serve"
+            self.access.config.is_empty(),
+            "configured access.config rules cannot yet be enforced; refusing to serve"
         );
         Ok(())
     }

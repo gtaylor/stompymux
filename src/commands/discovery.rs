@@ -2,6 +2,52 @@
 use super::*;
 use crate::{flags, reports::Report, world::ObjectId};
 
+/// One discoverable list topic, with independent effective access.
+#[derive(Clone, Debug)]
+pub struct ListDefinition {
+    /// Canonical C topic name.
+    pub name: &'static str,
+    /// Minimum accepted abbreviation length.
+    pub minimum: usize,
+    /// Effective name-table access, separate from the @list command.
+    pub permission: CommandPermissions,
+    /// Whether a report handler is currently available.
+    pub implemented: bool,
+}
+impl ListDefinition {
+    /// Use the C minimum abbreviation without hiding a denied match.
+    pub fn accepts(&self, name: &str) -> bool {
+        name.len() >= self.minimum && self.name.starts_with(name)
+    }
+}
+/// Defaults from configuration_registry.c LIST_OPTION_TEMPLATES.
+pub fn list_definitions() -> Vec<ListDefinition> {
+    use CommandPermissions as P;
+    [
+        ("bad_names", 2, P::WIZARD, false),
+        ("commands", 3, P::EVERYONE, true),
+        ("config_permissions", 3, P::GOD, false),
+        ("default_flags", 1, P::EVERYONE, false),
+        ("flags", 2, P::EVERYONE, true),
+        ("globals", 1, P::WIZARD, true),
+        ("logging", 4, P::GOD, false),
+        ("options", 1, P::EVERYONE, false),
+        ("permissions", 2, P::WIZARD, true),
+        ("powers", 2, P::WIZARD, true),
+        ("process", 2, P::WIZARD, false),
+        ("site_information", 2, P::WIZARD, true),
+        ("switches", 2, P::EVERYONE, true),
+        ("logfiles", 4, P::WIZARD, false),
+    ]
+    .into_iter()
+    .map(|(name, minimum, permission, implemented)| ListDefinition {
+        name,
+        minimum,
+        permission,
+        implemented,
+    })
+    .collect()
+}
 /// Accepted native switch spelling and minimum unambiguous abbreviation.
 #[derive(Clone, Debug)]
 pub struct SwitchDefinition {
@@ -65,11 +111,7 @@ pub fn switches(name: &str) -> Vec<SwitchDefinition> {
             } else {
                 switch.len()
             },
-            permission: if name.starts_with('@') || name == "give" {
-                CommandPermissions::WIZARD
-            } else {
-                CommandPermissions::EVERYONE
-            },
+            permission: crate::access::switch_default(name, switch),
         })
         .collect()
 }
@@ -95,36 +137,41 @@ pub(super) fn stats(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
 /// Only implemented topics are advertised, while C topic names retain explicit diagnostics.
 pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     let arg = input.args.trim().to_ascii_lowercase();
-    if !arg.is_empty() && "globals".starts_with(&arg) {
+    let Some(definition) = ctx.scripts.commands.lists.iter().find(|t| t.accepts(&arg)) else {
+        let topics = ctx
+            .scripts
+            .commands
+            .lists
+            .iter()
+            .filter(|t| {
+                t.implemented
+                    && (ctx.player == ObjectId(1)
+                        || t.permission.allows(&ctx.scripts.world.borrow(), ctx.player))
+            })
+            .map(|t| t.name)
+            .collect::<Vec<_>>()
+            .join(" ");
+        return Ok(Action::Reply(format!(
+            "Unknown option. Use one of: {topics}"
+        )));
+    };
+    if !definition
+        .permission
+        .allows(&ctx.scripts.world.borrow(), ctx.player)
+    {
+        return Ok(Action::Reply("Permission denied.".into()));
+    }
+    if !definition.implemented {
+        return Ok(Action::Reply(format!(
+            "@list {} is not implemented.",
+            definition.name
+        )));
+    }
+    let topic = definition.name;
+    if topic == "globals" {
         return Ok(Action::GlobalControl(None));
     }
     let result = (|| -> Result<String> {
-        let arg = input.args.trim().to_ascii_lowercase();
-        let topics = [
-            ("bad_names", 2),
-            ("commands", 3),
-            ("config_permissions", 3),
-            ("default_flags", 1),
-            ("flags", 2),
-            ("globals", 1),
-            ("logging", 4),
-            ("options", 1),
-            ("permissions", 2),
-            ("powers", 2),
-            ("process", 2),
-            ("site_information", 2),
-            ("switches", 2),
-            ("logfiles", 4),
-        ];
-        let topic = topics
-            .into_iter()
-            .find(|(name, min)| arg.len() >= *min && name.starts_with(&arg))
-            .map(|(name, _)| name)
-            .ok_or_else(|| {
-                anyhow::anyhow!(
-                    "Unknown option. Use one of: commands flags permissions powers site_information switches"
-                )
-            })?;
         if topic == "site_information" {
             return ctx
                 .config
@@ -177,7 +224,9 @@ pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
                     let switches = d
                         .switch_definitions
                         .iter()
-                        .filter(|s| s.permission.allows(&world, ctx.player))
+                        .filter(|s| {
+                            ctx.player == ObjectId(1) || s.permission.allows(&world, ctx.player)
+                        })
                         .map(|s| {
                             format!("/{} [{}; min {}]", s.name, s.permission.name(), s.minimum)
                         })
@@ -215,7 +264,10 @@ pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
                         let switches = d
                             .switch_definitions
                             .iter()
-                            .filter(|sw| sw.permission.allows(&world, ctx.player))
+                            .filter(|sw| {
+                                ctx.player == ObjectId(1)
+                                    || sw.permission.allows(&world, ctx.player)
+                            })
                             .map(|sw| {
                                 format!(
                                     "/{} [{}; min {}]",

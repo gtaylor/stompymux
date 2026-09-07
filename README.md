@@ -184,8 +184,8 @@ other callback mutations.
 
 BattleTech simulation, additional GMCP packages, a webserver and browser-side
 action handling remain deferred. Legacy help/type files describe a
-larger API than this milestone implements. Deferred configuration is reported in one capability diagnostic. IPv4 site rules are enforced. Command/configuration access rules parse but still
-block serving before writes or listening because their enforcement is deferred.
+larger API than this milestone implements. Deferred configuration is reported in one capability diagnostic. IPv4 site rules are enforced. Command/list access rules are enforced. Configuration-edit permissions still
+block serving because their enforcement is deferred.
 
 ## Validation
 
@@ -250,8 +250,10 @@ reload updates listings; editing runtime tables does not re-register declaration
 Native and Lua commands share an enumerable registry of names, permissions,
 matchers and sources. Native definitions in `src/commands/registry.rs` register
 function pointers; command handlers live separately from dispatch and target
-matching. Permission bits are `EVERYONE`, `WIZARD` and `GOD`; combining restricted
-bits requires GOD. Object control, flag policies and movement locks still apply.
+matching. Declared roles are `EVERYONE`, `WIZARD` and `GOD`; Wizard/GOD bits are
+alternatives. Configured edits also control disabled/hidden commands, SUSPECT
+restrictions and type/queue prerequisites. Object control, flag policies and
+movement locks still apply.
 
 Lua declarations now require explicit metadata:
 
@@ -978,3 +980,20 @@ produce notices on the existing `Suspect` channel. Channel delivery and history
 commit transactionally; MONITOR messages report actual transitions even after
 callback failures. Site edits require restart. `@admin` and suspect command
 auditing remain deferred.
+
+## Configured command access
+
+`access.commands` and `access.lists` now apply ordered C-style permission edits.
+For example, `"@shutdown" = "!wizard god"` makes shutdown GOD-only, `disabled`
+denies even GOD, and `dark` hides a command without disabling it. Policies cover
+configured aliases, native switches and every same-name Lua registration.
+`@list permissions` and `@list switches` show effective access. The `@list` command
+and its requested topic must both permit the caller.
+
+Queued/forced execution checks the executor's current authority. Queue/type
+prerequisites are checked before invocation, and existing ownership, locks,
+session and macro rules remain in force. Denied Lua declarations are skipped;
+selected native denials stop dispatch without changing existing exit precedence.
+Policies compile before startup hooks and again for Lua reload; an invalid reload
+retains the active runtime. Configuration editing and `access.config` remain deferred.
+See [the configuration reference](docs/configuration.md#command-switch-and-list-access).

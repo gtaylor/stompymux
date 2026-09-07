@@ -155,7 +155,7 @@ async fn native_catalog_permissions_and_aliases() {
     );
     for d in &definitions {
         assert_eq!(
-            d.permission,
+            d.permission.roles(),
             if [
                 "look",
                 "say",
@@ -192,7 +192,9 @@ async fn native_catalog_permissions_and_aliases() {
         assert!(permission.allows(&s.world.borrow(), ObjectId(1)));
         assert_eq!(
             permission.allows(&s.world.borrow(), ObjectId(2)),
-            permission == P::EVERYONE || permission == P::WIZARD
+            permission == P::EVERYONE
+                || permission == P::WIZARD
+                || permission == (P::GOD | P::WIZARD)
         );
         assert_eq!(
             permission.allows(&s.world.borrow(), ObjectId(4)),
@@ -686,7 +688,7 @@ async fn discovery_is_read_only_permission_filtered_and_scope_accurate() {
     let permissions = run(&s, &c, 2, "@list pe");
     assert!(permissions.contains("requires_session") && permissions.contains("no_macro"));
     let switches = run(&s, &c, 2, "@list sw");
-    assert!(switches.contains("@clone: /inventory [wizard; min 3]"));
+    assert!(switches.contains("@clone: /inventory [everyone; min 3]"));
     assert!(!switches.contains("@find:") && !switches.contains("catalog-local"));
     for command in [
         "@list commands",

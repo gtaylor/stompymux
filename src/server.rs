@@ -793,6 +793,9 @@ impl Server {
     }
 
     fn snapshots_for(&self, scripts: &Scripts) -> Result<()> {
+        scripts
+            .queue_enabled
+            .set(self.controls.enabled(crate::controls::Control::Queueing));
         let w = scripts.world.borrow();
         let mut hidden = 0;
         let list:Vec<_>=self.sessions.iter().filter_map(|(session_id,session)| {
@@ -1135,6 +1138,9 @@ impl Server {
                 self.idle_recheck = true;
             }
             self.controls.set(control, enabled);
+            self.scripts
+                .queue_enabled
+                .set(self.controls.enabled(crate::controls::Control::Queueing));
             if control == crate::controls::Control::Cleaning {
                 self.cleaning.enabled = enabled;
             }

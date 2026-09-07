@@ -100,10 +100,6 @@ fn quiet(
         "Unsupported command switch."
     );
     let w = ctx.scripts.world.borrow();
-    ensure!(
-        !wizard_only || flags::is_wizard(&w, ctx.player),
-        "Permission denied."
-    );
     Ok(if wizard_only {
         true
     } else {

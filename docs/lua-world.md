@@ -134,3 +134,18 @@ executor, cause and the actual optional session. No new Lua registration API is 
 `@list commands` and `@list permissions` enumerate these same sources without
 executing the listed handlers. Carried/zone exits and `#<dbref> command` shortcuts
 are not added to traversal or command dispatch.
+
+## Configured command permissions
+
+Lua command declarations still require `name`, `permission`, `pattern` and
+`handler`. Declaration permissions remain `everyone`, `wizard` or `god`.
+`access.commands` in TOML can then add or clear C access bits for the canonical
+name across all its scoped registrations. Configured aliases resolve to that name.
+Effective policies are checked before pattern evaluation; denied declarations are
+skipped, preserving subsequent handlers and dispatch fallback. Invocation checks
+use the executor's current flags, type and runtime queue control. No new Lua
+permission constants or runtime registration APIs are introduced.
+
+Successful Lua reload recompiles policies from the candidate's original declarations.
+Removing a name targeted by configuration makes reload fail and retains the active
+runtime. Native switch policies do not reinterpret Lua patterns as switches.

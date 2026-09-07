@@ -1,19 +1,19 @@
 @boot port:1:wizard quiet:1:wizard
-@chan boot:4:wizard create:6:wizard destroy:7:wizard emit:4:wizard list:4:wizard object:6:wizard oflags:6:wizard pflags:6:wizard flags:5:wizard status:6:wizard who:3:wizard full:4:wizard noheader:8:wizard
-@clone inventory:3:wizard location:1:wizard
-@destroy override:8:wizard
-@dig teleport:1:wizard
-@emit here:1:wizard room:1:wizard
-@examine brief:1:wizard debug:1:wizard
-@femit here:1:wizard room:1:wizard
-@fpose default:1:wizard nospace:1:wizard
-@halt all:1:wizard
-@help reload:6:wizard
-@lua parent:6:wizard viewparent:10:wizard check:5:wizard reload:6:wizard schedule:8:wizard test:4:wizard unit:4:wizard integration:11:wizard verbose:7:wizard
-@npemit contents:1:wizard object:1:wizard silent:1:wizard list:1:wizard
-@open inventory:1:wizard location:1:wizard
-@pemit contents:1:wizard object:1:wizard silent:1:wizard list:1:wizard
-@state examine:7:wizard set:3:wizard wipe:4:wizard copy:4:wizard move:4:wizard
+@chan boot:4:everyone create:6:everyone destroy:7:everyone emit:4:everyone list:4:everyone object:6:everyone oflags:6:everyone pflags:6:everyone flags:5:everyone status:6:everyone who:3:everyone full:4:everyone noheader:8:everyone
+@clone inventory:3:everyone location:1:everyone
+@destroy override:8:everyone
+@dig teleport:1:everyone
+@emit here:1:everyone room:1:everyone
+@examine brief:1:everyone debug:1:wizard
+@femit here:1:everyone room:1:everyone
+@fpose default:1:everyone nospace:1:everyone
+@halt all:1:everyone
+@help reload:6:everyone
+@lua parent:6:everyone viewparent:10:everyone check:5:everyone reload:6:everyone schedule:8:everyone test:4:everyone unit:4:everyone integration:11:everyone verbose:7:everyone
+@npemit contents:1:everyone object:1:everyone silent:1:everyone list:1:everyone
+@open inventory:1:everyone location:1:everyone
+@pemit contents:1:everyone object:1:everyone silent:1:everyone list:1:everyone
+@state examine:7:everyone set:3:everyone wipe:4:everyone copy:4:everyone move:4:everyone
 @wall emit:1:wizard pose:1:wizard wizard:1:wizard admin:1:wizard no_prefix:1:wizard
 drop quiet:1:everyone
 enter quiet:1:everyone

@@ -287,7 +287,10 @@ maximum_length = 30
 #  Command Security
 # -----------------------------------------------
 
-# Limit commands access.
+# Edit native/Lua command permissions in order; prefix ! to clear a bit.
+# Roles are alternatives: use "!wizard god" for GOD-only access.
+# Targets may be command aliases or command/switch; unknown targets reject startup.
+# [access.lists] independently controls @list topics; access.config is deferred.
 [access.commands]
 #"some_command" = "wizard"
 

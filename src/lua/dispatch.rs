@@ -123,7 +123,17 @@ impl Scripts {
                     break;
                 }
             }
-            if !definition.permission.allows(&self.world.borrow(), player) {
+            if definition
+                .permission
+                .denial(
+                    &self.world.borrow(),
+                    player,
+                    crate::access::Context {
+                        queue_enabled: self.queue_enabled.get(),
+                    },
+                )
+                .is_some()
+            {
                 continue;
             }
             if source != Some(definition.source.as_str()) {

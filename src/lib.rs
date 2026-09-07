@@ -64,3 +64,6 @@ pub mod message_cache;
 
 /// Ordered connection access policies.
 pub mod sites;
+
+/// Shared command and list access evaluation.
+pub mod access;

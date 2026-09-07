@@ -260,7 +260,7 @@ async fn custom_live_path_and_json_storage_diagnostic() {
 #[tokio::test(flavor = "current_thread")]
 async fn acl_parsing_succeeds_but_serve_has_no_side_effects() {
     let d = game();
-    append(d.path(), "\n[access.lists]\noptions='wizard'\n");
+    append(d.path(), "\n[access.config]\nport='god'\n");
     let c = Config::load(d.path()).unwrap();
     let before = std::fs::read(c.database()).unwrap();
     assert!(server::prepare(&c).await.is_err());
