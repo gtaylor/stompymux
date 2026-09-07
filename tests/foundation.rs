@@ -571,6 +571,7 @@ async fn bounded_output_marks_slow_clients_for_disconnect() {
     let (output, _receiver) = tokio::sync::mpsc::channel(1);
     let now = Instant::now();
     let session = Session {
+        retry_remaining: 3,
         output,
         stats: Default::default(),
         palette: Default::default(),
@@ -1959,6 +1960,15 @@ async fn telnet_until(socket: &mut TcpStream, marker: &[u8]) -> Vec<u8> {
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_q_echo_ordering_reversals_and_refusal() {
     let (_d, c) = populated().await;
+    // Exercise repeated protocol reversals without exhausting the credential policy.
+    let path = c.root.join("stompymux.toml");
+    let mut doc: toml::Value = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    doc["mux"]
+        .as_table_mut()
+        .unwrap()
+        .insert("retry_limit".into(), 10.into());
+    std::fs::write(&path, toml::to_string(&doc).unwrap()).unwrap();
+    let c = Config::load(&c.root).unwrap();
     let running = Running::start(&c).await;
     let mut socket = TcpStream::connect(&running.address).await.unwrap();
     let initial = telnet_until(&mut socket, b"Who are you? ").await;

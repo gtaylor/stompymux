@@ -41,7 +41,9 @@ pub fn support(d: &Directive) -> Support {
     }
     if matches!(
         d.name,
-        "access"
+        "retry_limit"
+            | "player_zone"
+            | "access"
             | "alias"
             | "bad_name"
             | "good_name"
@@ -475,6 +477,9 @@ impl Config {
                 }
             }
         }
+        if d.name == "player_zone" {
+            world.validate_player_zone(&c)?;
+        }
         c.refresh()?;
         let mut retained = std::collections::BTreeMap::new();
         for object in world.objects.values().filter(|o| o.kind != Kind::Garbage) {
@@ -580,6 +585,10 @@ pub fn report(ctx: &CommandContext<'_>, topic: &str) -> Option<String> {
                         c.mux.command_quota_interval,
                         c.mux.command_quota_max,
                         c.mux.command_quota_increment
+                    ),
+                    format!(
+                        "Login retries (new connections)...{} Player zone...{}",
+                        c.mux.retry_limit, c.mux.player_zone
                     ),
                     format!(
                         "Spaces...{}",

@@ -294,11 +294,20 @@ pub(super) fn register(
             }
             references.insert(key, target);
         }
-        let id = w.create(&c, name, kind);
+        let id = w
+            .create_with(
+                &c,
+                name,
+                kind,
+                crate::CreationContext::Object {
+                    creator: ObjectId(1),
+                    zone: references.get("zone").copied(),
+                },
+            )
+            .map_err(err)?;
         let o = w.objects.get_mut(&id).unwrap();
         o.location = references.get("location").copied();
         o.home = references.get("home").copied();
-        o.zone = references.get("zone").copied();
         o.destination = references.get("destination").copied();
         Ok(id.0)
     });

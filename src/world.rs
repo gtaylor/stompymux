@@ -104,7 +104,78 @@ pub struct World {
     pub record_players: usize,
     pub initialized: bool,
 }
+/// Policy source for allocation; foundational objects do not depend on an existing creator.
+#[derive(Clone, Copy, Debug)]
+pub enum CreationContext {
+    Bootstrap,
+    Player,
+    Object {
+        creator: ObjectId,
+        zone: Option<ObjectId>,
+    },
+}
+
 impl World {
+    /// Validate an available zone before a configuration edit or object allocation.
+    pub fn validate_zone(&self, zone: ObjectId) -> Result<()> {
+        ensure!(
+            self.objects
+                .get(&zone)
+                .is_some_and(|o| matches!(o.kind, Kind::Room | Kind::Thing)
+                    && !o.flags.contains(crate::flags::Flag::Going)),
+            "Invalid or unavailable zone #{}",
+            zone.0
+        );
+        Ok(())
+    }
+
+    /// Positive player-zone defaults must be usable once startup has established the world.
+    pub fn validate_player_zone(&self, c: &Config) -> Result<()> {
+        if c.mux.player_zone > 0 {
+            self.validate_zone(ObjectId(c.mux.player_zone))
+                .map_err(|e| anyhow::anyhow!("mux.player_zone: {e}"))?;
+        }
+        Ok(())
+    }
+
+    /// Resolve creation policy before allocating a dbref; explicit Lua zones override inheritance.
+    pub fn create_with(
+        &mut self,
+        c: &Config,
+        name: String,
+        kind: Kind,
+        context: CreationContext,
+    ) -> Result<ObjectId> {
+        let zone = match context {
+            CreationContext::Bootstrap => None,
+            CreationContext::Player => {
+                ensure!(kind == Kind::Player, "Player creation requires player type");
+                (c.mux.player_zone > 0).then_some(ObjectId(c.mux.player_zone))
+            }
+            CreationContext::Object { creator, zone } => {
+                ensure!(
+                    matches!(kind, Kind::Room | Kind::Thing | Kind::Exit),
+                    "Invalid created object type"
+                );
+                let creator = self
+                    .objects
+                    .get(&creator)
+                    .filter(|o| {
+                        o.kind != Kind::Garbage && !o.flags.contains(crate::flags::Flag::Going)
+                    })
+                    .context("Invalid object creator")?;
+                zone.or(creator.zone)
+            }
+        };
+        if let Some(zone) = zone {
+            self.validate_zone(zone)?;
+        }
+        let id = self.create(c, name, kind);
+        self.objects.get_mut(&id).unwrap().zone = zone;
+        Ok(id)
+    }
+
+    /// Foundational allocation without policy, also used by isolated world fixtures.
     pub fn create(&mut self, c: &Config, name: String, kind: Kind) -> ObjectId {
         let id = ObjectId(self.next_id);
         self.next_id += 1;

@@ -141,11 +141,15 @@ fn open_one(
         flags::controls(&ctx.scripts.world.borrow(), ctx.player, location),
         "Permission denied."
     );
-    let id = ctx
-        .scripts
-        .world
-        .borrow_mut()
-        .create(ctx.config, name, Kind::Exit);
+    let id = ctx.scripts.world.borrow_mut().create_with(
+        ctx.config,
+        name,
+        Kind::Exit,
+        crate::CreationContext::Object {
+            creator: ctx.player,
+            zone: None,
+        },
+    )?;
     ctx.scripts.world.borrow().validate_move(id, location)?;
     ctx.scripts
         .world
@@ -311,11 +315,15 @@ pub(super) fn clone_object(ctx: &CommandContext<'_>, input: &CommandInput) -> Re
                 .filter(|s| !s.trim().is_empty())
                 .unwrap_or(&original.name),
         )?;
-        let id = ctx
-            .scripts
-            .world
-            .borrow_mut()
-            .create(ctx.config, name, original.kind);
+        let id = ctx.scripts.world.borrow_mut().create_with(
+            ctx.config,
+            name,
+            original.kind,
+            crate::CreationContext::Object {
+                creator: ctx.player,
+                zone: None,
+            },
+        )?;
         {
             let mut w = ctx.scripts.world.borrow_mut();
             let clone = w.objects.get_mut(&id).unwrap();
@@ -376,11 +384,15 @@ pub(super) fn clone_object(ctx: &CommandContext<'_>, input: &CommandInput) -> Re
 pub(super) fn create(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     transaction(ctx, || {
         let name = object_name(ctx, &input.args)?;
-        let id = ctx
-            .scripts
-            .world
-            .borrow_mut()
-            .create(ctx.config, name, Kind::Thing);
+        let id = ctx.scripts.world.borrow_mut().create_with(
+            ctx.config,
+            name,
+            Kind::Thing,
+            crate::CreationContext::Object {
+                creator: ctx.player,
+                zone: None,
+            },
+        )?;
         let home = clone_home(ctx, None, id)?;
         ctx.scripts
             .world
@@ -415,11 +427,15 @@ pub(super) fn dig(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Acti
         );
         let name = object_name(ctx, name)?;
         let source = ctx.location().ok();
-        let room = ctx
-            .scripts
-            .world
-            .borrow_mut()
-            .create(ctx.config, name, Kind::Room);
+        let room = ctx.scripts.world.borrow_mut().create_with(
+            ctx.config,
+            name,
+            Kind::Room,
+            crate::CreationContext::Object {
+                creator: ctx.player,
+                zone: None,
+            },
+        )?;
         ctx.scripts.sync_parents()?;
         tell(
             ctx,

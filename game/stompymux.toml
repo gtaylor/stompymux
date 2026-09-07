@@ -195,6 +195,11 @@ modifier = 100
 # -----------------------------------------------
 
 [mux]
+# retry_limit defaults to 3 incorrect passwords per connection; <=0 closes on
+# the first failure. @admin edits affect new sockets, not existing allowances.
+# player_zone defaults to 0 (none); positive IDs must name an available room/thing.
+# New players use that zone; builders inherit their creator's zone (Lua uses GOD).
+# @admin player_zone affects subsequent creation only; no existing objects change.
 # max_players counts authenticated sessions; negative is unlimited. Wizard/GOD
 # logins bypass capacity and disabled logins; public registration does not.
 # Connection/down/full/quit files and optional connect_dir are cached; @readcache

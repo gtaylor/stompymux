@@ -391,6 +391,7 @@ mod tests {
         s.sessions.insert(
             SessionId(1),
             Session {
+                retry_remaining: 3,
                 output,
                 stats: Default::default(),
                 palette: Default::default(),

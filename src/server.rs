@@ -111,7 +111,12 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
                 crate::config::BootstrapKind::Room => Kind::Room,
                 crate::config::BootstrapKind::Player => Kind::Player,
             };
-            let id = w.create(c, entry.name.clone(), kind);
+            let id = w.create_with(
+                c,
+                entry.name.clone(),
+                kind,
+                crate::CreationContext::Bootstrap,
+            )?;
             if kind == Kind::Player {
                 let object = w.objects.get_mut(&id).unwrap();
                 object.location = Some(ObjectId(c.start()));
@@ -204,6 +209,7 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
     scripts.event("on_server_startup", None, None)?;
     let after = scripts.world.borrow().clone();
     after.validate(c)?;
+    after.validate_player_zone(c)?;
     // Also clears stale stored CONNECTED values; unchanged durable fields are not rewritten.
     persistence::persist_effects(
         c.database(),
@@ -377,7 +383,7 @@ pub async fn run_with_clocks(
                 let (output,receiver)=mpsc::channel(server.config.runtime.session_output_queue_capacity);
                 let now=Instant::now();
                 let stats=std::sync::Arc::new(telnet::transport::Stats::default());
-                server.sessions.insert(id,Session {
+                server.sessions.insert(id,Session { retry_remaining: server.config.mux.retry_limit,
                     palette:server.scripts.palette.clone(), color_override:Default::default(), presets_emitted:Default::default(),
                     stats:stats.clone(),output, site, peer:peer.ip(), player:None, flow:LoginFlow::Name,
                     connected:now, active:now, decoder:telnet::Decoder::new(&server.config.runtime),
@@ -2251,10 +2257,15 @@ impl Server {
             let result = tokio::task::spawn_blocking(move || {
                 if create {
                     accounts::hash(&password, &c).map(Some)
-                } else if hash.is_some_and(|h| accounts::verify(&password, &h)) {
+                } else if hash
+                    .as_deref()
+                    .map(|h| accounts::verify_checked(&password, h))
+                    .transpose()?
+                    .unwrap_or(false)
+                {
                     Ok(None)
                 } else {
-                    Err(anyhow::anyhow!("invalid credentials"))
+                    Err(accounts::IncorrectCredentials.into())
                 }
             })
             .await
@@ -2329,7 +2340,23 @@ impl Server {
         let host = self.sessions[&id].peer.to_string();
         let hash = match result {
             Ok(h) => h,
-            Err(_) => {
+            Err(error) => {
+                if create || !error.is::<accounts::IncorrectCredentials>() {
+                    self.config.log(
+                        &[crate::logging::Category::Problems],
+                        "CON",
+                        "HASH",
+                        format!("Authentication worker failed: {error:#}"),
+                    );
+                    self.prompt(
+                        id,
+                        LoginFlow::Name,
+                        "Authentication unavailable. Please try again.\r\nWho are you? ",
+                        false,
+                    );
+                    return Ok(());
+                }
+                let exhausted = self.sessions.get_mut(&id).unwrap().failed_login();
                 self.config.log(
                     &[
                         crate::logging::Category::Logins,
@@ -2358,7 +2385,17 @@ impl Server {
                     );
                 }
                 self.commit(before).await;
-                self.prompt(id,LoginFlow::Name,"Either that player does not exist, or has a different password.\r\nWho are you? ",false);
+                if exhausted {
+                    self.prompt(
+                        id,
+                        LoginFlow::Pending,
+                        "Either that player does not exist, or has a different password.\r\n",
+                        false,
+                    );
+                    self.disconnect(id).await?;
+                } else {
+                    self.prompt(id, LoginFlow::Name, "Either that player does not exist, or has a different password.\r\nWho are you? ", false);
+                }
                 return Ok(());
             }
         };
@@ -2589,6 +2626,7 @@ mod tests {
         server.sessions.insert(
             SessionId(1),
             Session {
+                retry_remaining: 3,
                 output,
                 stats: Default::default(),
                 palette: Default::default(),
@@ -2741,6 +2779,7 @@ mod tests {
                 server.sessions.insert(
                     SessionId(id),
                     Session {
+                        retry_remaining: 3,
                         output,
                         stats: Default::default(),
                         palette: Default::default(),
@@ -2844,6 +2883,7 @@ mod tests {
             server.sessions.insert(
                 SessionId(1),
                 Session {
+                    retry_remaining: 3,
                     output,
                     stats: Default::default(),
                     palette: Default::default(),

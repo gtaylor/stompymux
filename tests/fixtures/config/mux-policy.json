@@ -1,0 +1,297 @@
+[
+  {
+    "path": "mux.badsite_file",
+    "default": "text/badsite.txt",
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.allow_chanlurking",
+    "default": 0,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.cache_depth",
+    "default": 10,
+    "classification": "no active C consumer",
+    "evidence": "Parsed/registered/reported only; no non-BattleTech runtime consumer found."
+  },
+  {
+    "path": "mux.cache_trim",
+    "default": false,
+    "classification": "no active C consumer",
+    "evidence": "Parsed/registered/reported only; no non-BattleTech runtime consumer found."
+  },
+  {
+    "path": "mux.cache_width",
+    "default": 20,
+    "classification": "no active C consumer",
+    "evidence": "Parsed/registered/reported only; no non-BattleTech runtime consumer found."
+  },
+  {
+    "path": "mux.check_interval",
+    "default": 600,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.check_offset",
+    "default": 300,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.command_quota_increment",
+    "default": 5,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.command_quota_max",
+    "default": 100,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.conn_timeout",
+    "default": 120,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.connect_dir",
+    "default": "",
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.connect_file",
+    "default": "text/connect.txt",
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.connect_reg_file",
+    "default": "",
+    "classification": "no active C consumer",
+    "evidence": "Parsed/registered/reported only; no non-BattleTech runtime consumer found."
+  },
+  {
+    "path": "mux.default_home",
+    "default": 0,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.default_thing_lua_parent",
+    "default": "default_thing.lua",
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.default_room_lua_parent",
+    "default": "default_room.lua",
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.default_exit_lua_parent",
+    "default": "default_exit.lua",
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.default_player_lua_parent",
+    "default": "default_player.lua",
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.default_exit_flags",
+    "default": [
+      "no_command"
+    ],
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.default_player_flags",
+    "default": [
+      "ansi",
+      "in_character"
+    ],
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.default_room_flags",
+    "default": [
+      "no_command"
+    ],
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.default_thing_flags",
+    "default": [],
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.down_file",
+    "default": "text/down.txt",
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.down_message",
+    "default": "",
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.dump_offset",
+    "default": 0,
+    "classification": "intentionally deferred",
+    "evidence": "C checkpoint scheduling; Rust commits mutations directly."
+  },
+  {
+    "path": "mux.full_file",
+    "default": "text/full.txt",
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.full_message",
+    "default": "",
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.help_directory",
+    "default": "help",
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.idle_interval",
+    "default": 60,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.idle_timeout",
+    "default": 3600,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.initial_size",
+    "default": 1000,
+    "classification": "intentionally deferred",
+    "evidence": "C allocation sizing; Rust storage does not preallocate a legacy object array."
+  },
+  {
+    "path": "mux.max_players",
+    "default": -1,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.notify_recursion_limit",
+    "default": 20,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.output_limit",
+    "default": 16384,
+    "classification": "no active C consumer",
+    "evidence": "Parsed/registered/reported only; no non-BattleTech runtime consumer found."
+  },
+  {
+    "path": "mux.player_name_spaces",
+    "default": true,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.command_queue_limit",
+    "default": 100,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.player_starting_home",
+    "default": 4,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.player_starting_room",
+    "default": 4,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.public_channel",
+    "default": "Public",
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.command_queue_active_chunk",
+    "default": 10,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.command_queue_idle_chunk",
+    "default": 10,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.quit_file",
+    "default": "text/quit.txt",
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.retry_limit",
+    "default": 3,
+    "classification": "covered here",
+    "evidence": "network/telnet_socket.c initializes retries_left; network/connect_flow.c consumes credential failures."
+  },
+  {
+    "path": "mux.space_compress",
+    "default": true,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.stack_limit",
+    "default": 50,
+    "classification": "no active C consumer",
+    "evidence": "Parsed/registered/reported only; no non-BattleTech runtime consumer found."
+  },
+  {
+    "path": "mux.command_quota_interval",
+    "default": 100,
+    "classification": "implemented",
+    "evidence": "Existing Rust consumer retained; no policy change in this tranche."
+  },
+  {
+    "path": "mux.unowned_safe",
+    "default": false,
+    "classification": "no active C consumer",
+    "evidence": "Parsed/registered/reported only; no non-BattleTech runtime consumer found."
+  },
+  {
+    "path": "mux.player_zone",
+    "default": 0,
+    "classification": "covered here",
+    "evidence": "world/object.c assigns player default and non-player creator zone."
+  }
+]

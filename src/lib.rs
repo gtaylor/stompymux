@@ -12,6 +12,7 @@ pub mod sessions;
 pub mod telnet;
 pub mod text;
 pub mod world;
+pub use world::CreationContext;
 
 pub mod flags;
 pub mod movement;

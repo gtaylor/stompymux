@@ -25,6 +25,26 @@ pub fn verify(password: &str, hash: &str) -> bool {
             .is_ok()
     })
 }
+/// Distinguish a wrong password from malformed hashes and backend failures.
+pub fn verify_checked(password: &str, hash: &str) -> Result<bool> {
+    let hash = PasswordHash::new(hash).map_err(|e| anyhow::anyhow!(e.to_string()))?;
+    match Argon2::default().verify_password(password.as_bytes(), &hash) {
+        Ok(()) => Ok(true),
+        Err(argon2::password_hash::Error::PasswordInvalid) => Ok(false),
+        Err(e) => Err(anyhow::anyhow!(e.to_string())),
+    }
+}
+
+/// Typed marker for a completed authentication attempt with incorrect credentials.
+#[derive(Debug)]
+pub struct IncorrectCredentials;
+impl std::fmt::Display for IncorrectCredentials {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("invalid credentials")
+    }
+}
+impl std::error::Error for IncorrectCredentials {}
+
 pub fn validate_name(name: &str, c: &Config) -> Result<()> {
     ensure!(
         name.len() >= 2 && name.len() <= c.names.maximum_length,

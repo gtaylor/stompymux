@@ -29,7 +29,12 @@ impl Server {
         );
         let p = {
             let mut w = self.scripts.world.borrow_mut();
-            let p = w.create(&self.config, name, Kind::Player);
+            let p = w.create_with(
+                &self.config,
+                name,
+                Kind::Player,
+                crate::CreationContext::Player,
+            )?;
             let o = w.objects.get_mut(&p).unwrap();
             o.location = Some(ObjectId(self.config.start()));
             o.home = Some(ObjectId(self.config.home()));
@@ -323,6 +328,7 @@ mod tests {
         let now = Instant::now();
         (
             Session {
+                retry_remaining: 3,
                 output,
                 stats: Default::default(),
                 palette: Default::default(),
@@ -670,5 +676,118 @@ mod tests {
         // Keep output receivers alive for all session assertions.
         assert!(!output.is_empty());
         while output[0].try_recv().is_ok() {}
+    }
+    /// Runtime retry accounting survives history rollback and excludes worker/stale results.
+    #[tokio::test(flavor = "current_thread")]
+    async fn retries_ignore_internal_failures_and_survive_persistence_failure() {
+        use sqlx::Connection;
+        let (_d, mut s, _events, mut outputs) = fixture().await;
+        let id = SessionId(3);
+        s.sessions.get_mut(&id).unwrap().flow = LoginFlow::Pending;
+        s.authenticated(
+            id,
+            "GOD".into(),
+            false,
+            Err(anyhow::anyhow!("worker failed")),
+        )
+        .await
+        .unwrap();
+        assert_eq!(s.sessions[&id].retry_remaining, 3);
+        assert!(output(&mut outputs[2]).contains("Authentication unavailable"));
+        s.sessions.get_mut(&id).unwrap().flow = LoginFlow::Pending;
+        s.authentication_result(
+            id,
+            "GOD".into(),
+            false,
+            Some(ObjectId(999)),
+            None,
+            Err(accounts::IncorrectCredentials.into()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(s.sessions[&id].retry_remaining, 3);
+        let mut db = sqlx::SqliteConnection::connect_with(
+            &sqlx::sqlite::SqliteConnectOptions::new()
+                .filename(s.config.database())
+                .foreign_keys(false),
+        )
+        .await
+        .unwrap();
+        sqlx::raw_sql("CREATE TRIGGER reject_history BEFORE UPDATE ON player_state BEGIN SELECT RAISE(ABORT,'history blocked'); END").execute(&mut db).await.unwrap();
+        for remaining in [2, 1, 0] {
+            s.sessions.get_mut(&id).unwrap().flow = LoginFlow::Pending;
+            s.authenticated(
+                id,
+                "GOD".into(),
+                false,
+                Err(accounts::IncorrectCredentials.into()),
+            )
+            .await
+            .unwrap();
+            if remaining > 0 {
+                assert_eq!(s.sessions[&id].retry_remaining, remaining);
+            } else {
+                assert!(!s.sessions.contains_key(&id));
+            }
+        }
+        sqlx::raw_sql("DROP TRIGGER reject_history")
+            .execute(&mut db)
+            .await
+            .unwrap();
+        db.close().await.unwrap();
+    }
+    /// Registrations resolve current policy after hashing; unavailable zones roll back account creation.
+    #[tokio::test(flavor = "current_thread")]
+    async fn registration_rechecks_zone_after_hashing() {
+        let (_d, mut s, _events, mut outputs) = fixture().await;
+        let response = s.configure(
+            ObjectId(1),
+            crate::config::administration::Request {
+                directive: "player_zone".into(),
+                value: "4".into(),
+            },
+        );
+        assert_eq!(response, "Set.");
+        s.authenticated(
+            SessionId(3),
+            "FreshZone".into(),
+            true,
+            Ok(Some(accounts::hash("secret", &s.config).unwrap())),
+        )
+        .await
+        .unwrap();
+        let p = s.scripts.world.borrow().find_player("FreshZone").unwrap();
+        assert_eq!(s.scripts.world.borrow().objects[&p].zone, Some(ObjectId(4)));
+        assert_eq!(
+            persistence::load(&s.config.database())
+                .await
+                .unwrap()
+                .objects[&p]
+                .zone,
+            Some(ObjectId(4))
+        );
+        let (connection, _rx) = session(None);
+        s.sessions.insert(SessionId(4), connection);
+        s.scripts
+            .world
+            .borrow_mut()
+            .objects
+            .get_mut(&ObjectId(4))
+            .unwrap()
+            .flags
+            .insert(Flag::Going);
+        let next = s.scripts.world.borrow().next_id;
+        s.authenticated(
+            SessionId(4),
+            "NoZone".into(),
+            true,
+            Ok(Some("unused".into())),
+        )
+        .await
+        .unwrap();
+        assert_eq!(s.scripts.world.borrow().next_id, next);
+        assert!(s.scripts.world.borrow().find_player("NoZone").is_none());
+        assert_eq!(s.sessions[&SessionId(4)].retry_remaining, 3);
+        let _ = output(&mut outputs[2]);
     }
 }

@@ -1055,3 +1055,9 @@ IPC counters describe messages, not Telnet traffic. Unsupported metrics say
 blocking worker with the configured write deadline. Both commands support queued
 execution. Reports use bounded chunked output and perform no world writes;
 independent suspect-command auditing can still update its channel.
+
+Login attempts now honor `mux.retry_limit` (default 3) per connection. Runtime edits
+affect new connections. New players use `mux.player_zone` (default 0/no zone), and
+new non-player objects inherit their creator's zone, including clones. Trusted Lua
+creation inherits GOD's zone unless explicitly overridden. See
+[creation and login policies](docs/configuration.md#login-retries-and-creation-zones).

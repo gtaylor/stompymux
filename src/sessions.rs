@@ -21,6 +21,8 @@ pub enum Output {
     StartCompression,
 }
 pub struct Session {
+    /// Remaining credential failures, captured at acceptance and never rolled back.
+    pub retry_remaining: i64,
     pub output: mpsc::Sender<Output>,
     /// Shared with the socket task, containing counters only, never world state.
     pub stats: Arc<Stats>,
@@ -43,6 +45,12 @@ pub struct Session {
     pub presets_emitted: Cell<bool>,
 }
 impl Session {
+    /// Nonpositive configured limits still permit the first attempt, as in C.
+    pub fn failed_login(&mut self) -> bool {
+        self.retry_remaining = self.retry_remaining.saturating_sub(1);
+        self.retry_remaining <= 0
+    }
+
     /// Queue ordered Telnet output; metadata events are already reflected in the decoder.
     pub fn protocol(&self, events: Vec<crate::telnet::Input>, config: &crate::config::Config) {
         for event in events {

@@ -265,8 +265,7 @@ quotas and queues, names/password policy and hash parameters, notification depth
 channel lurking, default flags/homes/Lua parents, game name, Lua memory/state/error
 limits, and help/Lua directories. The checked-in directive registry and capability
 classification are the authoritative inventory. Settings for unused systems,
-including BattleTech, dump/cache controls, retry counting and player-zone
-defaults, report unsupported. C-disabled paths/bootstrap/listener/rendering
+including BattleTech and dump/cache controls, report unsupported. C-disabled paths/bootstrap/listener/rendering
 settings and all Rust-only infrastructure settings remain restart-only.
 
 Existing deadlines remain scheduled; changed intervals determine the next deadline.
@@ -300,3 +299,25 @@ Runtime site rules use address/mask syntax and are prepended ahead of older rule
 New connections use the new policy; existing sessions retain their classification.
 IPv6 listeners reject site additions. `good_name` removes a matching bad-name
 pattern, case-insensitively; it does not add an allow-list override.
+
+## Login retries and creation zones
+
+`mux.retry_limit` defaults to 3 completed incorrect-credential attempts per connection.
+Zero and negative values close after the first incorrect attempt. Each accepted
+connection captures its allowance; `@admin retry_limit` affects future connections.
+Changing login names does not replenish retries. Registration mistakes, throttling,
+stale results and internal hashing failures do not consume them. Failed-login history
+is persisted normally, but database rollback does not replenish consumed retries.
+
+`mux.player_zone` defaults to 0. Positive values assign that available room/thing
+as the zone of newly registered and administratively created players. Zero or
+negative values assign no zone. `@admin player_zone` validates positive targets
+before publishing and affects future creation, including registrations still hashing.
+Existing objects are not rezoned. Startup validates positive defaults after startup
+hooks, and creation rechecks references before allocation.
+
+Non-player objects inherit the invoking creator's zone, including clones and
+reverse exits. Lua creation uses GOD as creator; explicit `zone` overrides inheritance,
+while omission/nil inherits. Invalid or GOING zones fail creation transactionally.
+Foundational bootstrap objects are allocated without a creator or inherited zone.
+The policy inventory is recorded in `tests/fixtures/config/mux-policy.json`.
