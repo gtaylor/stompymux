@@ -1,10 +1,11 @@
-//! Registry-driven commands with transactional native/Lua handlers and exit fallback.
+//! Exit-first scoped command dispatch with transactional native and Lua handlers.
 pub mod discovery;
 pub(crate) mod inspection;
 mod native;
 mod objects;
 pub mod queue;
 mod registry;
+pub mod sources;
 pub(crate) mod target;
 use crate::{
     config::Config,
@@ -17,6 +18,8 @@ pub use registry::*;
 pub enum Action {
     /// Already bounded literal database/catalog output; delivery must not reflow its rows.
     LiteralReport(String),
+    /// Styled read-only report rendered separately for each recipient.
+    StyledReport(String),
     /// Transactional queue admission or cancellation.
     Queue(queue::Request),
     /// Administrative account hashing or session removal.
@@ -51,6 +54,7 @@ pub enum Action {
     ExamineDebug(ObjectId),
 }
 /// Shared inputs available to registered native handlers.
+#[derive(Clone)]
 pub struct CommandContext<'a> {
     /// Lua and world services owned by the world thread.
     pub scripts: &'a Scripts,
@@ -58,6 +62,8 @@ pub struct CommandContext<'a> {
     pub config: &'a Config,
     /// Authenticated invoking player.
     pub player: ObjectId,
+    /// Object providing a local native handler; absent for global built-ins.
+    pub object: Option<ObjectId>,
     /// Invoking session identifier.
     pub session: Option<u64>,
     /// Original causal actor, separate from execution authority.
@@ -121,11 +127,21 @@ pub fn execute(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str)
         execution.origin != InputOrigin::Queued || execution.session.is_none(),
         "Queued commands cannot borrow an interactive session."
     );
-    crate::lua::transactions::with_cause(&s.lua, execution.cause, || {
+    let before = s.world.borrow().clone();
+    let pending = s.outbox.borrow().clone();
+    let flows = crate::lua::flows::snapshot(&s.lua);
+    s.reset_command_callbacks();
+    let result = crate::lua::transactions::with_cause(&s.lua, execution.cause, || {
         crate::lua::transactions::with_descriptor(&s.lua, execution.session, || {
             run_inner(s, c, execution, line)
         })
-    })
+    });
+    if result.is_err() {
+        *s.world.borrow_mut() = before;
+        *s.outbox.borrow_mut() = pending;
+        crate::lua::flows::restore(&s.lua, flows);
+    }
+    result
 }
 
 fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -> Result<Action> {
@@ -133,6 +149,7 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
     let session = execution.session;
     let ctx = CommandContext {
         scripts: s,
+        object: None,
         config: c,
         player,
         session,
@@ -176,6 +193,41 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
         return Ok(action);
     }
     let input = CommandInput::parse(c, line);
+    if match_exit(&ctx, line)? {
+        return Ok(Action::Continue);
+    }
+    let sources = sources::sources(&s.world.borrow(), player);
+    let objects: Vec<_> = sources.iter().map(|s| s.object).collect();
+    if s.dispatch_local_sources(player, session, &input.line, &objects)? {
+        return Ok(Action::Continue);
+    }
+    for source in sources {
+        let parent = {
+            let world = s.world.borrow();
+            if !sources::eligible(&world, source.object) {
+                continue;
+            }
+            world.objects[&source.object].lua_parent.clone()
+        };
+        if let Some((definition, input)) = s
+            .commands
+            .native_match_scope(input.clone(), &CommandScope::Object(parent))
+        {
+            let local = CommandContext {
+                object: Some(source.object),
+                ..ctx.clone()
+            };
+            if expanded.is_some() && definition.no_macro {
+                return Ok(Action::Reply(
+                    "This command is unavailable as macro. Please use an alias instead.".into(),
+                ));
+            }
+            return definition.invoke_native(&local, &input);
+        }
+    }
+    if s.dispatch_global(player, session, &input.line)? {
+        return Ok(Action::Continue);
+    }
     if let Some((definition, input)) = s.commands.native_match(input.clone())
         && !definition.direct_input_only
     {
@@ -186,10 +238,28 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
         }
         return definition.invoke_native(&ctx, &input);
     }
-    if s.dispatch(player, session, &input.line)? {
-        return Ok(Action::Continue);
-    }
-    let room = ctx.location()?;
+    s.outbox.borrow_mut().push((
+        player,
+        "Huh? (Type look, say <message>, WHO, an exit name, or quit.)".into(),
+    ));
+    Ok(Action::Continue)
+}
+
+/// Exit matches consume the command even when traversal fails.
+fn match_exit(ctx: &CommandContext<'_>, line: &str) -> Result<bool> {
+    let s = ctx.scripts;
+    let player = ctx.player;
+    let session = ctx.session;
+    let Some(room) = s
+        .world
+        .borrow()
+        .objects
+        .get(&player)
+        .and_then(|o| o.location)
+    else {
+        return Ok(false);
+    };
+
     let line = line.trim();
     let exits: Vec<_> = s
         .world
@@ -216,7 +286,7 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
                 crate::movement::perform(
                     s,
                     player,
-                    player,
+                    ctx.cause,
                     *destination,
                     session,
                     crate::movement::Route::Exit,
@@ -227,14 +297,11 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
             .outbox
             .borrow_mut()
             .push((player, "You can't go that way.".into())),
-        [] => s.outbox.borrow_mut().push((
-            player,
-            "Huh? (Type look, say <message>, WHO, an exit name, or quit.)".into(),
-        )),
+        [] => return Ok(false),
         _ => s
             .outbox
             .borrow_mut()
             .push((player, "I don't know which exit you mean.".into())),
     }
-    Ok(Action::Continue)
+    Ok(true)
 }

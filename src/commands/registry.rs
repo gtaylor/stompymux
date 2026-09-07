@@ -55,11 +55,9 @@ impl std::ops::BitOr for CommandPermissions {
 /// Where a definition is eligible for dispatch.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum CommandScope {
-    /// Native exact commands always precede Lua matching.
-    Native,
     /// Object-local commands attached via the named Lua parent.
     Object(String),
-    /// Global modules in lexical load order.
+    /// Server-wide handlers; Lua modules retain lexical load order.
     Global,
 }
 /// Matching metadata without inferring command names from Lua patterns.
@@ -90,7 +88,7 @@ pub enum SwitchPolicy {
     /// Handler validates its supported switch syntax.
     Handler,
 }
-/// Complete enumerable definition for a future command-listing interface.
+/// Complete enumerable command definition used by dispatch and discovery.
 pub struct CommandDefinition {
     /// Lowercase canonical command name.
     pub name: String,
@@ -102,7 +100,7 @@ pub struct CommandDefinition {
     pub permission: CommandPermissions,
     /// Exact or pattern-based matching metadata.
     pub matcher: CommandMatcher,
-    /// Native or scoped Lua eligibility.
+    /// Object attachment or server-wide eligibility, independent of handler language.
     pub scope: CommandScope,
     /// Native marker or relative Lua module path.
     pub source: String,
@@ -133,7 +131,7 @@ impl CommandDefinition {
                 aliases: Vec::new(),
                 prefix: None,
             },
-            scope: CommandScope::Native,
+            scope: CommandScope::Global,
             source: "native".into(),
             declaration: None,
             handler: CommandHandler::Native(handler),
@@ -143,6 +141,17 @@ impl CommandDefinition {
             requires_session: false,
             no_macro: false,
         }
+    }
+    /// Attach a native handler to objects using this module identity.
+    pub fn object_native(
+        name: &str,
+        permission: CommandPermissions,
+        module: &str,
+        handler: NativeHandler,
+    ) -> Self {
+        let mut definition = Self::native(name, permission, handler);
+        definition.scope = CommandScope::Object(module.into());
+        definition
     }
     /// Attach built-in shorthand metadata without adding duplicate catalog entries.
     fn matching(mut self, aliases: &[&str], prefix: Option<char>) -> Self {
@@ -386,12 +395,32 @@ impl CommandRegistry {
     pub fn definitions(&self) -> impl Iterator<Item = &CommandDefinition> {
         self.definitions.iter()
     }
-    /// Match native names before shorthand prefixes.
-    pub fn native_match(
+    /// Register a native handler without changing Lua module registrations.
+    pub fn register_native(&mut self, definition: CommandDefinition) -> Result<()> {
+        ensure!(
+            matches!(definition.handler, CommandHandler::Native(_)),
+            "Expected native handler"
+        );
+        ensure!(
+            !self.definitions.iter().any(|d| d.scope == definition.scope
+                && d.name == definition.name
+                && matches!(d.handler, CommandHandler::Native(_))),
+            "Duplicate native command"
+        );
+        self.definitions.push(definition);
+        Ok(())
+    }
+    /// Match global native names before shorthand prefixes.
+    pub fn native_match(&self, input: CommandInput) -> Option<(&CommandDefinition, CommandInput)> {
+        self.native_match_scope(input, &CommandScope::Global)
+    }
+    /// Match a native command in one explicit scope.
+    pub fn native_match_scope(
         &self,
         mut input: CommandInput,
+        scope: &CommandScope,
     ) -> Option<(&CommandDefinition, CommandInput)> {
-        for entry in &self.definitions {
+        for entry in self.definitions.iter().filter(|d| &d.scope == scope) {
             if let CommandMatcher::Native { aliases, prefix } = &entry.matcher
                 && (entry.name == input.name || aliases.contains(&input.name))
             {
@@ -403,7 +432,7 @@ impl CommandRegistry {
                 return Some((entry, input));
             }
         }
-        for entry in &self.definitions {
+        for entry in self.definitions.iter().filter(|d| &d.scope == scope) {
             if let CommandMatcher::Native {
                 prefix: Some(prefix),
                 ..
@@ -468,8 +497,8 @@ impl CommandRegistry {
                     return function(find, pattern, handler, unpack)
                         return function(ctx, line)
                             local hits = {find(line, pattern)}
-                            if not hits[1] then return false end
-                            return handler(ctx, unpack(hits, 3)) == true
+                            if not hits[1] then return false, false end
+                            return handler(ctx, unpack(hits, 3)) == true, true
                         end
                     end
                 "#,

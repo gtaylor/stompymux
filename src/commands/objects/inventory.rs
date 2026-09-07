@@ -427,26 +427,41 @@ pub(super) fn inventory(ctx: &CommandContext<'_>, input: &CommandInput) -> Resul
     if !input.args.is_empty() {
         return Ok(Action::Reply("inventory takes no arguments.".into()));
     }
-    let mut report =
-        crate::telnet::diagnostics::Report::new(ctx.config.runtime.output_message_limit);
-    report.line("You are carrying:");
     let w = ctx.scripts.world.borrow();
-    let mut count = 0;
-    for o in w
+    let mut report = crate::reports::Report::new(ctx.config.lua.output_byte_limit, "")?;
+    let contents: Vec<_> = w
         .objects
         .values()
-        .filter(|o| o.kind != Kind::Garbage && o.location == Some(ctx.player))
-    {
-        count += 1;
-        report.line(&crate::text::plain_with(&w.palette, &o.name));
-        if report.full() {
-            break;
+        .filter(|o| {
+            o.kind != Kind::Garbage && o.kind != Kind::Exit && o.location == Some(ctx.player)
+        })
+        .collect();
+    report.row(if contents.is_empty() {
+        "You aren't carrying anything."
+    } else {
+        "You are carrying:"
+    });
+    for o in contents {
+        let name = format!("{}[reset]", o.name);
+        report.row(&if crate::flags::is_wizard(&w, ctx.player) {
+            format!("{name}{}", crate::find::suffix(o))
+        } else {
+            name
+        });
+    }
+    let exits: Vec<_> = w
+        .objects
+        .values()
+        .filter(|o| o.kind == Kind::Exit && o.location == Some(ctx.player))
+        .collect();
+    if !exits.is_empty() {
+        report.row("Exits:");
+        for exit in exits {
+            report.row(&format!(
+                "{}[reset]",
+                exit.name.split(';').next().unwrap_or_default()
+            ));
         }
     }
-    if count == 0 {
-        report.line("Nothing.");
-    }
-    Ok(Action::Reply(
-        String::from_utf8(report.finish()).unwrap_or_default(),
-    ))
+    Ok(Action::StyledReport(report.finish()?))
 }

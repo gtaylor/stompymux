@@ -93,114 +93,158 @@ pub(super) fn stats(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
 }
 /// Only implemented topics are advertised, while C topic names retain explicit diagnostics.
 pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
-    let result =
-        (|| -> Result<String> {
-            let arg = input.args.trim().to_ascii_lowercase();
-            let topics = [
-                ("bad_names", 2),
-                ("commands", 3),
-                ("config_permissions", 3),
-                ("default_flags", 1),
-                ("flags", 2),
-                ("globals", 1),
-                ("logging", 4),
-                ("options", 1),
-                ("permissions", 2),
-                ("powers", 2),
-                ("process", 2),
-                ("site_information", 2),
-                ("switches", 2),
-                ("logfiles", 4),
-            ];
-            let topic = topics
-                .into_iter()
-                .find(|(name, min)| arg.len() >= *min && name.starts_with(&arg))
-                .map(|(name, _)| name)
-                .ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "Unknown option. Use one of: commands flags permissions powers switches"
-                    )
-                })?;
-            if topic == "flags" {
-                return Ok(format!(
-                    "Flags: {}",
-                    flags::ALL
-                        .into_iter()
-                        .map(|f| format!("{}({})", f.world_name(), f.letter()))
-                        .collect::<Vec<_>>()
-                        .join(" ")
-                ));
+    let result = (|| -> Result<String> {
+        let arg = input.args.trim().to_ascii_lowercase();
+        let topics = [
+            ("bad_names", 2),
+            ("commands", 3),
+            ("config_permissions", 3),
+            ("default_flags", 1),
+            ("flags", 2),
+            ("globals", 1),
+            ("logging", 4),
+            ("options", 1),
+            ("permissions", 2),
+            ("powers", 2),
+            ("process", 2),
+            ("site_information", 2),
+            ("switches", 2),
+            ("logfiles", 4),
+        ];
+        let topic = topics
+            .into_iter()
+            .find(|(name, min)| arg.len() >= *min && name.starts_with(&arg))
+            .map(|(name, _)| name)
+            .ok_or_else(|| {
+                anyhow::anyhow!(
+                    "Unknown option. Use one of: commands flags permissions powers switches"
+                )
+            })?;
+        if topic == "flags" {
+            return Ok(format!(
+                "Flags: {}",
+                flags::ALL
+                    .into_iter()
+                    .map(|f| format!("{}({})", f.world_name(), f.letter()))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            ));
+        }
+        if topic == "powers" {
+            return Ok(format!(
+                "Powers: {}",
+                crate::powers::ALL
+                    .into_iter()
+                    .map(|p| p.display_name())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            ));
+        }
+        anyhow::ensure!(
+            ["commands", "permissions", "switches"].contains(&topic),
+            "@list {topic} is not implemented."
+        );
+        let world = ctx.scripts.world.borrow();
+        let mut report = Report::new(ctx.config.lua.output_byte_limit, "")?;
+        for (native, title) in [
+            (true, "Built-in commands (global native):"),
+            (false, "Global commands (global Lua):"),
+        ] {
+            if topic == "switches" && !native {
+                continue;
             }
-            if topic == "powers" {
-                return Ok(format!(
-                    "Powers: {}",
-                    crate::powers::ALL
-                        .into_iter()
-                        .map(|p| p.display_name())
-                        .collect::<Vec<_>>()
-                        .join(" ")
-                ));
-            }
-            anyhow::ensure!(
-                ["commands", "permissions", "switches"].contains(&topic),
-                "@list {topic} is not implemented."
-            );
-            let world = ctx.scripts.world.borrow();
-            let mut report = Report::new(ctx.config.lua.output_byte_limit, "")?;
-            for (scope, title) in [
-                (CommandScope::Native, "Built-in commands:"),
-                (CommandScope::Global, "Global commands:"),
-            ] {
-                if topic == "switches" && scope != CommandScope::Native {
-                    continue;
+            report.row(title);
+            let mut count = 0;
+            for d in ctx.scripts.commands.definitions().filter(|d| {
+                d.scope == CommandScope::Global
+                    && matches!(d.handler, CommandHandler::Native(_)) == native
+                    && d.listed
+                    && d.permission.allows(&world, ctx.player)
+            }) {
+                if topic == "switches" {
+                    let switches = d
+                        .switch_definitions
+                        .iter()
+                        .filter(|s| s.permission.allows(&world, ctx.player))
+                        .map(|s| {
+                            format!("/{} [{}; min {}]", s.name, s.permission.name(), s.minimum)
+                        })
+                        .collect::<Vec<_>>();
+                    if switches.is_empty() {
+                        continue;
+                    }
+                    report.row(&format!("  {}: {}", d.name, switches.join(" ")));
+                } else {
+                    report.row(&row(ctx, d, None, topic == "permissions"));
                 }
-                report.row(title);
-                let mut count = 0;
+                count += 1;
+            }
+            if count == 0 {
+                report.row("  (none)");
+            }
+        }
+        {
+            report.row("Object commands:");
+            let mut count = 0;
+            for source in super::sources::sources(&world, ctx.player) {
+                let id = source.object;
+                let object = &world.objects[&id];
                 for d in ctx.scripts.commands.definitions().filter(|d| {
-                    d.scope == scope && d.listed && d.permission.allows(&world, ctx.player)
+                    d.scope == CommandScope::Object(object.lua_parent.clone())
+                        && d.listed
+                        && d.permission.allows(&world, ctx.player)
                 }) {
                     if topic == "switches" {
+                        if !matches!(d.handler, CommandHandler::Native(_))
+                            || d.switch_definitions.is_empty()
+                        {
+                            continue;
+                        }
                         let switches = d
                             .switch_definitions
                             .iter()
-                            .filter(|s| s.permission.allows(&world, ctx.player))
-                            .map(|s| {
-                                format!("/{} [{}; min {}]", s.name, s.permission.name(), s.minimum)
+                            .filter(|sw| sw.permission.allows(&world, ctx.player))
+                            .map(|sw| {
+                                format!(
+                                    "/{} [{}; min {}]",
+                                    sw.name,
+                                    sw.permission.name(),
+                                    sw.minimum
+                                )
                             })
                             .collect::<Vec<_>>();
                         if switches.is_empty() {
                             continue;
                         }
-                        report.row(&format!("  {}: {}", d.name, switches.join(" ")));
-                    } else {
-                        report.row(&row(ctx, d, None, topic == "permissions"));
+                        report.row(&format!(
+                            "  {}: {}; object: {}; local native / {}",
+                            d.name,
+                            switches.join(" "),
+                            crate::find::identity(&world, Some(id)),
+                            source.stage
+                        ));
+                        count += 1;
+                        continue;
                     }
+                    report.row(&format!(
+                        "{}; {} / {}",
+                        row(ctx, d, Some(id), topic == "permissions"),
+                        if matches!(d.handler, CommandHandler::Native(_)) {
+                            "local native"
+                        } else {
+                            "local Lua"
+                        },
+                        source.stage
+                    ));
                     count += 1;
                 }
-                if count == 0 {
-                    report.row("  (none)");
-                }
             }
-            if topic != "switches" {
-                report.row("Object commands:");
-                let mut count = 0;
-                for id in ctx.scripts.command_objects(ctx.player) {
-                    let object = &world.objects[&id];
-                    for d in ctx.scripts.commands.definitions().filter(|d| {
-                        d.scope == CommandScope::Object(object.lua_parent.clone())
-                            && d.listed
-                            && d.permission.allows(&world, ctx.player)
-                    }) {
-                        report.row(&row(ctx, d, Some(id), topic == "permissions"));
-                        count += 1;
-                    }
-                }
-                if count == 0 {
-                    report.row("  (none)");
-                }
+            if count == 0 {
+                report.row("  (none)");
             }
-            report.finish()
-        })();
+        }
+        report.finish()
+    })();
     Ok(result
         .map(Action::LiteralReport)
         .unwrap_or_else(|e| Action::Reply(e.to_string())))

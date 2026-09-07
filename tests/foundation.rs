@@ -782,7 +782,8 @@ async fn flag_catalog_storage_commands_and_lua_contract() {
     ] {
         let action = commands::run(&s, &c, ObjectId(1), 1, input).unwrap();
         let text = match action {
-            commands::Action::Report(text)
+            commands::Action::StyledReport(text)
+            | commands::Action::Report(text)
             | commands::Action::LiteralReport(text)
             | commands::Action::Reply(text) => text,
             _ => s.outbox.borrow_mut().pop().unwrap().1.source().to_string(),
@@ -1120,7 +1121,8 @@ async fn power_commands_validate_targets_permissions_and_names() {
     ] {
         let action = commands::run(&scripts, &c, actor, 1, command).unwrap();
         let output = match action {
-            commands::Action::Report(text)
+            commands::Action::StyledReport(text)
+            | commands::Action::Report(text)
             | commands::Action::LiteralReport(text)
             | commands::Action::Reply(text) => text,
             _ => scripts
@@ -1558,7 +1560,6 @@ async fn tcp_search_reports_are_private_and_read_only() {
         );
     }
     persistence::save(&c.database(), &w).await.unwrap();
-    std::fs::write(d.path().join("lua/global_logic/find_trap.lua"),"return {commands={{name='find-trap',permission='everyone',pattern='^@fi',handler=function(ctx) error('find reached Lua') end}}}").unwrap();
     let running = Running::start(&c).await;
     let mut first = Client::connect(&running).await;
     let mut second = Client::connect(&running).await;
@@ -1591,7 +1592,7 @@ async fn tcp_search_reports_are_private_and_read_only() {
     first.send("@stats").await;
     first.until("garbage)").await;
     first.send("@list commands").await;
-    first.until("Global commands:").await;
+    first.until("Global commands (global Lua):").await;
     // A later command synchronizes with the entire preceding listing.
     first.send("@find missing").await;
     first.until("***End of List***").await;
@@ -3794,4 +3795,69 @@ async fn tcp_compressed_database_reports() {
     assert!(!text.contains("truncated"));
     assert_eq!(before, std::fs::read(c.database()).unwrap());
     running.stop().await;
+}
+
+/// Carried commands and false-returning callbacks remain transactional before native reports.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_portable_commands_inventory_and_report_rollback() {
+    use stompymux_rs::world::Kind;
+    let (d, c) = populated().await;
+    let mut world = persistence::load(&c.database()).await.unwrap();
+    world.accounts.get_mut(&ObjectId(1)).unwrap().hash =
+        Some(accounts::hash("secret", &c).unwrap());
+    let item = world.create(&c, "PortableWidget".into(), Kind::Thing);
+    let o = world.objects.get_mut(&item).unwrap();
+    o.location = Some(ObjectId(1));
+    o.lua_parent = "portable_tcp.lua".into();
+    o.flags.remove(stompymux_rs::flags::Flag::NoCommand);
+    persistence::save(&c.database(), &world).await.unwrap();
+    std::fs::write(d.path().join("lua/object_logic/portable_tcp.lua"), r#"return {commands={
+      {name='portable',permission='everyone',pattern='^portable$',handler=function(ctx) mux.world.pemit(ctx.enactor,'Portable active');return true end},
+      {name='inventory',permission='everyone',pattern='^inventory$',handler=function(ctx)
+        local s=mux.world.object(ctx.object):state('portable');s:set('calls',s:get('calls',0)+1)
+        mux.world.pemit(ctx.enactor,'Callback committed');return false end}
+    }}"#).unwrap();
+    let running = Running::start(&c).await;
+    let mut wizard = Client::connect(&running).await;
+    wizard.send("#1").await;
+    wizard.until("Password: ").await;
+    wizard.send("secret").await;
+    wizard.until("Staff Nexus").await;
+    wizard.send("portable").await;
+    wizard.until("Portable active").await;
+    wizard.send("inventory").await;
+    wizard.until("PortableWidget").await;
+    let saved = persistence::load(&c.database()).await.unwrap();
+    assert_eq!(
+        saved.objects[&item].state["portable"]["calls"],
+        Scalar::Integer(1)
+    );
+    let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("CREATE TRIGGER reject_portable BEFORE UPDATE ON object_state BEGIN SELECT RAISE(ABORT,'portable failure'); END;").execute(&mut db).await.unwrap();
+    wizard.send("inventory").await;
+    let failed = wizard.until("Please try again.").await;
+    assert!(!failed.contains("Callback committed") && !failed.contains("You are carrying:"));
+    sqlx::raw_sql("DROP TRIGGER reject_portable")
+        .execute(&mut db)
+        .await
+        .unwrap();
+    sqlx::Connection::close(db).await.unwrap();
+    wizard.send("drop PortableWidget").await;
+    wizard.until("Dropped.").await;
+    wizard.send("@teleport #4").await;
+    wizard.until("Starter Room").await;
+    wizard.send("portable").await;
+    wizard.until("Huh?").await;
+    running.stop().await;
+    let saved = persistence::load(&c.database()).await.unwrap();
+    assert_eq!(
+        saved.objects[&item].state["portable"]["calls"],
+        Scalar::Integer(1)
+    );
 }

@@ -40,6 +40,7 @@ fn run(s: &Scripts, c: &Config, player: i64, line: &str) -> String {
     let action = commands::run(s, c, ObjectId(player), 1, line).unwrap();
     if let Action::Reply(text)
     | Action::Report(text)
+    | Action::StyledReport(text)
     | Action::LiteralReport(text)
     | Action::CommitReply(text) = action
     {
@@ -59,7 +60,7 @@ async fn native_catalog_permissions_and_aliases() {
     let definitions: Vec<_> = s
         .commands
         .definitions()
-        .filter(|d| d.scope == CommandScope::Native)
+        .filter(|d| matches!(d.handler, commands::CommandHandler::Native(_)))
         .collect();
     assert_eq!(
         definitions
@@ -200,6 +201,7 @@ async fn native_catalog_permissions_and_aliases() {
         let action = god
             .invoke_native(
                 &CommandContext {
+                    object: None,
                     scripts: &s,
                     config: &c,
                     player: ObjectId(player),
@@ -340,7 +342,7 @@ async fn lua_scopes_permissions_captures_and_frozen_registration() {
     assert_eq!(defs[1].declaration, Some(2));
     assert_eq!(
         run(&s, &c, 2, "probe value"),
-        "local:1:value\nlocal:2:value\nfirst:value\nlast:value"
+        "local:2:value\nlocal:1:value\nfirst:value\nlast:value"
     );
     assert_eq!(
         run(&s, &c, 1, "probe value"),
@@ -382,7 +384,7 @@ async fn lua_aliases_and_restricted_matches_fall_through_to_exits() {
       {name='probe',permission='wizard',pattern='^probe%s+(.*)$',handler=function(ctx,value) mux.world.pemit(ctx.enactor,'wizard:'..value); return true end},
       {name='probe',permission='everyone',pattern='^probe%s+(.*)$',handler=function(ctx,value) mux.world.pemit(ctx.enactor,'everyone:'..value); return true end},
       {name='out',permission='god',pattern='^out$',handler=function() error('restricted handler ran') end},
-      {name='trap',permission='everyone',pattern='^@find',handler=function() error('native fallback ran') end}
+      {name='trap',permission='everyone',pattern='^@find',handler=function(ctx) mux.world.pemit(ctx.enactor,'Lua shadows native'); return true end}
     }}"#).unwrap();
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     assert_eq!(
@@ -398,10 +400,7 @@ async fn lua_aliases_and_restricted_matches_fall_through_to_exits() {
         .remove(Flag::Wizard);
     assert_eq!(run(&s, &c, 2, "p Hello World"), "everyone:Hello World");
     assert!(run(&s, &c, 2, "PROBE Hello World").contains("Huh?"));
-    assert!(matches!(
-        commands::run(&s, &c, ObjectId(2), 1, "f/unknown").unwrap(),
-        Action::Reply(_)
-    ));
+    assert_eq!(run(&s, &c, 2, "f/unknown"), "Lua shadows native");
     s.world
         .borrow_mut()
         .objects
@@ -668,15 +667,15 @@ async fn discovery_is_read_only_permission_filtered_and_scope_accurate() {
     let before = serde_json::to_vec(&*s.world.borrow()).unwrap();
     let text = run(&s, &c, 2, "@list com");
     assert!(
-        text.contains("Built-in commands:")
-            && text.contains("Global commands:")
+        text.contains("Built-in commands (global native):")
+            && text.contains("Global commands (global Lua):")
             && text.contains("Object commands:")
     );
     assert!(text.contains("catalog-public: everyone"));
     assert!(!text.contains("catalog-secret"));
     assert!(text.contains("CatalogNearby"));
-    assert!(!text.contains("CatalogInventory"));
-    assert_eq!(text.matches("catalog-local: wizard").count(), 2);
+    assert!(text.contains("CatalogInventory"));
+    assert_eq!(text.matches("catalog-local: wizard").count(), 4);
     assert!(text.contains("declaration 1") && text.contains("declaration 2"));
     assert!(text.contains("aliases:") && text.contains("prefix: \""));
     assert!(run(&s, &c, 1, "@list commands").contains("catalog-secret: god"));
@@ -748,4 +747,140 @@ fn native_switch_catalog_fixture() {
         let d = registry.definitions().find(|d| d.name == name).unwrap();
         assert!(!d.requires_session && d.switch_definitions.is_empty());
     }
+}
+
+/// Portable sources and zone fallbacks share deterministic, deduplicated discovery.
+#[tokio::test(flavor = "current_thread")]
+async fn portable_dispatch_stages_and_inventory() {
+    use stompymux_rs::world::Kind;
+    let (d, c, mut w) = fixture().await;
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(4));
+    let item = w.create(&c, "[bold]Portable[/]".into(), Kind::Thing);
+    let nested = w.create(&c, "Nested".into(), Kind::Thing);
+    let zone = w.create(&c, "CommandZone".into(), Kind::Room);
+    let zoned = w.create(&c, "ZoneSource".into(), Kind::Thing);
+    for (id, location, module) in [
+        (item, ObjectId(2), "portable.lua"),
+        (nested, item, "portable.lua"),
+        (zoned, zone, "zone_commands.lua"),
+    ] {
+        let o = w.objects.get_mut(&id).unwrap();
+        o.location = Some(location);
+        o.lua_parent = module.into();
+        o.flags.remove(Flag::NoCommand);
+    }
+    w.objects.get_mut(&ObjectId(4)).unwrap().zone = Some(zone);
+    std::fs::write(d.path().join("lua/object_logic/portable.lua"), r#"return {commands={
+      {name='look',permission='everyone',pattern='^look$',handler=function(ctx) mux.world.pemit(ctx.enactor,'portable look'); return true end},
+      {name='pass',permission='everyone',pattern='^pass$',handler=function(ctx) mux.world.pemit(ctx.enactor,'local false'); return false end}
+    }}"#).unwrap();
+    std::fs::write(d.path().join("lua/object_logic/zone_commands.lua"), r#"return {commands={{name='zoneprobe',permission='everyone',pattern='^zoneprobe$',handler=function(ctx) mux.world.pemit(ctx.enactor,'zone command');return true end}}}"#).unwrap();
+    std::fs::write(d.path().join("lua/global_logic/portable_global.lua"), r#"return {commands={
+      {name='pass',permission='everyone',pattern='^pass$',handler=function(ctx) mux.world.pemit(ctx.enactor,'global pass'); return true end},
+      {name='inventory',permission='everyone',pattern='^shadow$',handler=function(ctx) mux.world.pemit(ctx.enactor,'global shadow'); return true end}
+    }}"#).unwrap();
+    let mut s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    assert_eq!(run(&s, &c, 2, "look"), "portable look");
+    assert_eq!(run(&s, &c, 2, "zoneprobe"), "zone command");
+    assert_eq!(run(&s, &c, 2, "pass"), "local false\nglobal pass");
+    fn local(ctx: &CommandContext<'_>, _: &CommandInput) -> anyhow::Result<Action> {
+        assert!(ctx.object.is_some());
+        assert_eq!(ctx.cause, ObjectId(2));
+        Ok(Action::Reply("local native".into()))
+    }
+    s.commands
+        .register_native(CommandDefinition::object_native(
+            "pass",
+            P::EVERYONE,
+            "portable.lua",
+            local,
+        ))
+        .unwrap();
+    assert_eq!(run(&s, &c, 2, "pass"), "local native");
+    s.outbox.borrow_mut().clear();
+    let listing = run(&s, &c, 2, "@list commands");
+    assert!(listing.contains("local native / inventory"));
+    assert!(listing.contains("location-zone fallback"));
+    assert!(!listing.contains("Nested"));
+    for flag in [Flag::Halted, Flag::NoCommand, Flag::Going] {
+        s.world
+            .borrow_mut()
+            .objects
+            .get_mut(&item)
+            .unwrap()
+            .flags
+            .insert(flag);
+        assert!(!run(&s, &c, 2, "look").contains("portable look"));
+        s.world
+            .borrow_mut()
+            .objects
+            .get_mut(&item)
+            .unwrap()
+            .flags
+            .remove(flag);
+    }
+    let inv = run(&s, &c, 2, "inventory");
+    assert!(inv.contains("[bold]Portable[/]") && inv.contains(&format!("(#{}", item.0)));
+    assert!(!inv.contains("Nested"));
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .flags
+        .remove(Flag::Wizard);
+    assert!(!run(&s, &c, 2, "inventory").contains(&format!("(#{}", item.0)));
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&item)
+        .unwrap()
+        .location = Some(ObjectId(0));
+    assert!(!run(&s, &c, 2, "look").contains("portable look"));
+    assert!(run(&s, &c, 2, "inventory").contains("You aren't carrying anything."));
+}
+
+/// Zone references do not recurse or duplicate a room-zone source, and exits win before Lua.
+#[tokio::test(flavor = "current_thread")]
+async fn zone_source_identity_and_exit_precedence() {
+    use stompymux_rs::world::Kind;
+    let (d, c, mut w) = fixture().await;
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(4));
+    let zone = w.create(&c, "Zone".into(), Kind::Room);
+    let member = w.create(&c, "Member".into(), Kind::Thing);
+    let player_zone = w.create(&c, "PlayerZone".into(), Kind::Thing);
+    w.objects.get_mut(&member).unwrap().location = Some(zone);
+    w.objects.get_mut(&ObjectId(4)).unwrap().zone = Some(zone);
+    w.objects.get_mut(&ObjectId(2)).unwrap().zone = Some(zone);
+    let sources = commands::sources::sources(&w, ObjectId(2));
+    assert_eq!(sources[0].object, ObjectId(2));
+    assert!(sources.iter().any(|s| s.object == member));
+    assert!(!sources.iter().any(|s| s.object == zone));
+    w.objects.get_mut(&ObjectId(2)).unwrap().zone = Some(player_zone);
+    w.objects.get_mut(&player_zone).unwrap().zone = Some(player_zone);
+    let sources = commands::sources::sources(&w, ObjectId(2));
+    assert_eq!(sources.last().unwrap().object, player_zone);
+    w.objects.get_mut(&ObjectId(4)).unwrap().zone = Some(player_zone);
+    assert_eq!(
+        commands::sources::sources(&w, ObjectId(2))
+            .iter()
+            .filter(|s| s.object == player_zone)
+            .count(),
+        1
+    );
+    let exit = w.create(&c, "look;testexit".into(), Kind::Exit);
+    w.objects.get_mut(&exit).unwrap().location = Some(ObjectId(4));
+    std::fs::write(d.path().join("lua/global_logic/exit_collision.lua"), "return {commands={{name='look',permission='everyone',pattern='^look$',handler=function() error('exit must win') end}}}").unwrap();
+    let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    assert!(run(&s, &c, 2, "look").contains("You can't go that way."));
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&exit)
+        .unwrap()
+        .location = Some(ObjectId(2));
+    let inventory = run(&s, &c, 2, "inventory");
+    assert!(inventory.contains("Exits:\nlook"));
+    assert!(!inventory.contains("testexit"));
+    assert!(run(&s, &c, 2, "testexit").contains("Huh?"));
 }

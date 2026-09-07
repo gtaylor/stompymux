@@ -1297,8 +1297,23 @@ impl Server {
 
     async fn command(&mut self, id: SessionId, p: ObjectId, line: &str) -> Result<()> {
         self.snapshots()?;
-        let before = self.scripts.world.borrow().clone();
-        match commands::run(&self.scripts, &self.config, p, id.0, line) {
+        let mut before = self.scripts.world.borrow().clone();
+        let action = commands::run(&self.scripts, &self.config, p, id.0, line);
+        if action.is_ok()
+            && self.scripts.command_callbacks_invoked()
+            && !matches!(
+                &action,
+                Ok(Action::Continue | Action::CommitReply(_) | Action::Queue(_))
+            )
+        {
+            if !self.commit(before.clone()).await {
+                self.tell(id, "Unable to save your changes. Please try again.\r\n");
+                return Ok(());
+            }
+            self.flush();
+            before = self.scripts.world.borrow().clone();
+        }
+        match action {
             Ok(Action::Queue(request)) => self.queue_request(Some(id), p, request, before).await,
             Ok(Action::AccountAdmin(request)) => self.account_admin(id, p, request).await?,
             Ok(Action::Color(mode)) => self.color(id, &mode),
@@ -1393,6 +1408,24 @@ impl Server {
                     }
                 } else {
                     self.tell(id, "Unable to save your changes. Please try again.\r\n");
+                }
+            }
+            Ok(Action::StyledReport(text)) => {
+                if let Some(session) = self.sessions.get(&id) {
+                    let ansi = self
+                        .scripts
+                        .world
+                        .borrow()
+                        .objects
+                        .get(&p)
+                        .is_some_and(|o| o.flags.contains(crate::flags::Flag::Ansi));
+                    if let Err(error) = session.styled_report(&text, ansi, &self.config).await {
+                        eprintln!("Report delivery: {error:#}");
+                        session.raw(crate::find::bounded_error(
+                            "Unable to deliver complete report.",
+                            self.config.runtime.output_message_limit,
+                        ));
+                    }
                 }
             }
             Ok(Action::LiteralReport(text)) => {

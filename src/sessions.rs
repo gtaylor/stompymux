@@ -164,6 +164,25 @@ impl Session {
         self.deliver_spans(spans, false, config).await
     }
 
+    /// Render a styled report using the recipient's negotiated capabilities.
+    pub async fn styled_report(
+        &self,
+        text: &str,
+        ansi: bool,
+        config: &crate::config::Config,
+    ) -> anyhow::Result<()> {
+        let options = self.render_options(ansi);
+        let spans = crate::text::Document::Styled(text.into()).spans(&self.palette, &options);
+        let spans = bounded_styled_spans(
+            spans,
+            &self.palette,
+            &options,
+            self.output_message_limit,
+            config.lua.output_byte_limit,
+        )?;
+        self.deliver_spans(spans, ansi, config).await
+    }
+
     /// Reserve bounded queue slots under one deadline for a complete logical report.
     async fn deliver_spans(
         &self,
@@ -210,5 +229,84 @@ impl Session {
 
     pub fn close(&self) {
         let _ = self.output.try_send(Output::Close);
+    }
+}
+
+/// Reserve rendered controls and a visible omission notice when styled reports exceed their budget.
+fn bounded_styled_spans(
+    spans: Vec<crate::text::Span>,
+    palette: &crate::text::Palette,
+    options: &crate::text::RenderOptions,
+    message_limit: usize,
+    total_limit: usize,
+) -> anyhow::Result<Vec<crate::text::Span>> {
+    use unicode_segmentation::UnicodeSegmentation;
+    let fits = |spans: &[crate::text::Span]| {
+        let mut check = spans.to_vec();
+        check.push(crate::text::Span {
+            text: "\n".into(),
+            ..Default::default()
+        });
+        crate::text::telnet_chunks(&check, palette, options, message_limit, total_limit).is_ok()
+    };
+    if fits(&spans) {
+        return Ok(spans);
+    }
+    let visible: String = spans.iter().map(|s| s.text.as_str()).collect();
+    let boundaries: Vec<_> = visible
+        .grapheme_indices(true)
+        .map(|(i, _)| i)
+        .chain(std::iter::once(visible.len()))
+        .collect();
+    let prefix = |end: usize| {
+        let mut left = end;
+        let mut result = Vec::new();
+        for span in &spans {
+            if left == 0 {
+                break;
+            }
+            let mut span = span.clone();
+            let take = left.min(span.text.len());
+            span.text.truncate(take);
+            left -= take;
+            result.push(span);
+        }
+        result.push(crate::text::Span {
+            text: "\n***Report truncated: additional results omitted***".into(),
+            ..Default::default()
+        });
+        result
+    };
+    anyhow::ensure!(fits(&prefix(0)), "Report output limit too small.");
+    let (mut low, mut high) = (0, boundaries.len());
+    while low + 1 < high {
+        let mid = (low + high) / 2;
+        if fits(&prefix(boundaries[mid])) {
+            low = mid;
+        } else {
+            high = mid;
+        }
+    }
+    Ok(prefix(boundaries[low]))
+}
+
+#[cfg(test)]
+mod report_tests {
+    use super::*;
+    /// Rendered limits include style controls and preserve Unicode graphemes before notices.
+    #[test]
+    fn styled_reports_mark_aggregate_truncation() {
+        let palette = crate::text::Palette::default();
+        let options = crate::text::RenderOptions::default();
+        let spans = crate::text::Document::Styled(format!("[bold]{}[/]", "é👩‍🚀".repeat(100)))
+            .spans(&palette, &options);
+        let bounded = bounded_styled_spans(spans, &palette, &options, 80, 200).unwrap();
+        let visible: String = bounded.iter().map(|s| s.text.as_str()).collect();
+        assert!(visible.contains("Report truncated"));
+        let prefix = visible.split('\n').next().unwrap();
+        assert!(matches!(prefix.replace("é👩‍🚀", "").as_str(), "" | "é"));
+        let chunks = crate::text::telnet_chunks(&bounded, &palette, &options, 80, 200).unwrap();
+        assert!(chunks.iter().all(|c| c.len() <= 80));
+        assert!(chunks.iter().map(Vec::len).sum::<usize>() <= 200);
     }
 }

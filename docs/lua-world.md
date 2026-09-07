@@ -112,3 +112,25 @@ changes before delivering staged output. Failure discards that command's changes
 and output, but subsequent commands may still execute. Queues are runtime-only
 and survive Lua reloads; there is no Lua queue API in this tranche. Session-only
 APIs continue to require a real descriptor.
+
+## Portable and zone command sources
+
+Object command lookup visits the caller, other immediate-location occupants,
+immediate location, direct inventory, location-zone sources, then the player-zone
+object. Lists use ascending dbrefs and each source is visited once. Room-valued
+location zones contribute their direct occupants; non-room zones contribute the
+zone object. Sources are nonrecursive and exclude Garbage, GOING, HALTED and
+NO_COMMAND objects. Attachments and permissions are checked again before invocation.
+
+Dispatch order is current-location exits → local Lua → local native → global Lua
+→ global native. All existing Rust built-ins are global natives. `false` or nil
+continues matching; `true` ends it immediately. Earlier false-returning handlers'
+changes and output still belong to the same transaction, including when a later
+handler is a read-only native command. Callback or persistence failures discard
+staged success output. Native registration can attach a Rust function to a module
+identity with `CommandDefinition::object_native`; its context includes `object`,
+executor, cause and the actual optional session. No new Lua registration API is added.
+
+`@list commands` and `@list permissions` enumerate these same sources without
+executing the listed handlers. Carried/zone exits and `#<dbref> command` shortcuts
+are not added to traversal or command dispatch.

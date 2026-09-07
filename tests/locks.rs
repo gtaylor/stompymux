@@ -62,7 +62,9 @@ fn run(s: &Scripts, c: &Config, who: i64, line: &str) -> String {
         .drain(..)
         .map(|(_, m)| m.source().to_string())
         .collect::<Vec<_>>();
-    if let Action::Reply(t) | Action::CommitReply(t) | Action::Report(t) = action {
+    if let Action::Reply(t) | Action::CommitReply(t) | Action::Report(t) | Action::StyledReport(t) =
+        action
+    {
         messages.push(t);
     }
     messages.join("\n")

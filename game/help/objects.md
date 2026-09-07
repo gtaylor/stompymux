@@ -57,3 +57,17 @@ look displays descriptions and visible contents; an internal description takes
 precedence while inside a non-room object. Transparent exits can show their
 destination. Describe callbacks run transactionally, and failed callbacks or
 saves discard their changes and pending output.
+
+## Inventory and portable commands
+
+`inventory` lists direct possessions, with object identities available to Wizards.
+Names retain their styling. Carried exits appear separately under `Exits:` using
+their first alias; they cannot be traversed by typing their name. Large inventories
+arrive in bounded chunks, with an explicit notice if the total output limit is reached.
+
+A carried object's Lua commands are available to its carrier. Dropping or giving
+it away changes who can use those commands. Contents of carried containers are
+not searched recursively. Commands try current-location exits, local Lua, local
+native, global Lua, then built-in global native commands; the first handled match
+wins. Zone commands follow immediate surroundings and inventory in the local Lua
+stage. This lets game scripts intentionally override built-ins.

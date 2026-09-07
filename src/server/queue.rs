@@ -96,8 +96,28 @@ impl Server {
             eprintln!("Queued command snapshot: {error:#}");
             return;
         }
-        let before = self.scripts.world.borrow().clone();
-        match commands::execute(&self.scripts, &self.config, work.execution, &work.text) {
+        let mut before = self.scripts.world.borrow().clone();
+        let action = commands::execute(&self.scripts, &self.config, work.execution, &work.text);
+        if action.is_ok()
+            && self.scripts.command_callbacks_invoked()
+            && !matches!(
+                &action,
+                Ok(Action::Continue | Action::CommitReply(_) | Action::Queue(_))
+            )
+        {
+            if !self.commit(before.clone()).await {
+                self.queue_reply(
+                    None,
+                    actor,
+                    "Unable to save your changes. Please try again.",
+                );
+                self.flush();
+                return;
+            }
+            self.flush();
+            before = self.scripts.world.borrow().clone();
+        }
+        match action {
             Ok(Action::Queue(request)) => self.queue_request(None, actor, request, before).await,
             Ok(Action::Continue) => {
                 if self.commit(before).await {
@@ -124,7 +144,12 @@ impl Server {
                     self.flush();
                 }
             }
-            Ok(Action::Reply(text) | Action::Report(text) | Action::LiteralReport(text)) => {
+            Ok(
+                Action::Reply(text)
+                | Action::Report(text)
+                | Action::LiteralReport(text)
+                | Action::StyledReport(text),
+            ) => {
                 self.queue_reply(None, actor, &text);
                 self.flush();
             }

@@ -15,12 +15,13 @@ List commands available to you:
 ```
 
 The output has separate sections for built-in commands, global Lua commands,
-and object Lua commands. Lua entries show their command pattern and source.
+and object commands, including object-local native registrations. Lua entries show their command pattern and source.
 
 Entries are filtered by current `everyone`, `wizard` or `god` permissions.
 Object entries use the current dispatcher scope: the caller, immediate location
-and nearby objects. HALTED and NO_COMMAND sources are omitted. Inventory and
-command-zone expansion remain deferred. Repeated Lua declarations retain their
+nearby occupants, directly carried objects and zone fallbacks. Garbage, GOING,
+HALTED and NO_COMMAND sources are omitted. Each entry identifies its dispatch
+stage and source; zone entries are conditional fallbacks. Repeated Lua declarations retain their
 module and declaration identity.
 
 `@list permissions` shows roles and execution restrictions such as session

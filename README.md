@@ -240,8 +240,8 @@ not create objects for gaps. Search results enumerate actual stored objects.
 `@list commands`, `@list permissions` and `@list switches` describe active command
 registrations alongside existing flags/powers listings. Commands are grouped into
 built-in, global Lua and reachable object Lua entries, with aliases, permissions,
-patterns and source identity. Listings share current dispatch scope; inventory and
-command-zone expansion remain deferred. Switch listings show minimum accepted
+patterns and source identity. Listings share inventory and zone source enumeration
+with dispatch and identify local-native/local-Lua stages and zone fallbacks. Switch listings show minimum accepted
 abbreviation lengths; handlers still enforce valid combinations. Successful Lua
 reload updates listings; editing runtime tables does not re-register declarations.
 
@@ -281,12 +281,24 @@ Configured aliases work for both native and Lua commands, preserving arguments.
 Full-token aliases take precedence, followed by base-token aliases for switches;
 there is no recursive alias expansion. Unaliased Lua commands see original input.
 
-Native commands run first and reject unauthorized access or unsupported switches
-without falling through. Lua tries eligible local objects by dbref, then global
-modules in lexical order, preserving declaration order within modules. Restricted
-Lua entries are skipped; a handler returning false/nil allows later handlers and
-then exits to match. NO_COMMAND and HALTED still exclude object-local commands.
-The metadata API prepares for `@list commands`; that command is not added yet.
+Commands try current-location exits, local Lua, local native, global Lua, then
+global native handlers. The first handled command wins. Existing built-ins are
+global natives; the Rust registry can register object-local native handlers by
+module identity. Exits and Lua can shadow built-ins. A native permission or switch
+error terminates matching when that native stage is reached.
+
+Local sources are the caller, other nearby occupants, immediate location, directly
+carried objects, location-zone sources and the player-zone object. Occupants use
+ascending dbrefs; sources are deduplicated. Room zones contribute direct occupants,
+other zones contribute the zone object. There is no recursive inventory or zone
+lookup. Garbage, GOING, HALTED and NO_COMMAND sources are excluded. Global Lua
+modules retain lexical ordering; declarations retain registration order. Restricted
+Lua entries are skipped; false continues and true stops. Failures roll back the
+whole command, including earlier handlers that returned false.
+
+Only current-location exits participate in bare exit-name traversal. Carried
+exits remain visible in inventory. Macro/flow preprocessing and channel shortcuts
+retain their existing behavior; no `#<dbref> command` shortcut is provided.
 
 ## Shutdown and database maintenance
 
