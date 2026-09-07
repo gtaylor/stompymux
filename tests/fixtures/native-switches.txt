@@ -1,6 +1,7 @@
 @boot port:1:wizard quiet:1:wizard
 @chan boot:4:wizard create:6:wizard destroy:7:wizard emit:4:wizard list:4:wizard object:6:wizard oflags:6:wizard pflags:6:wizard flags:5:wizard status:6:wizard who:3:wizard full:4:wizard noheader:8:wizard
 @clone inventory:3:wizard location:1:wizard
+@destroy override:8:wizard
 @dig teleport:1:wizard
 @emit here:1:wizard room:1:wizard
 @examine brief:1:wizard debug:1:wizard

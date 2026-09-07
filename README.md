@@ -120,7 +120,7 @@ case-insensitive; one flag is changed per command.
 GOD controls all live objects. Wizards control themselves and non-Wizard
 objects, but cannot edit another Wizard or grant Wizard status. Only GOD can
 change WIZARD, and cannot clear its own WIZARD flag. GOING follows the legacy
-special clearing policy; destruction itself remains deferred. Ordinary players
+special clearing policy; `@destroy` schedules deferred destruction. Ordinary players
 cannot use these administrative commands. Successful durable changes are saved
 before acknowledgement.
 
@@ -896,3 +896,26 @@ cancel the flow after rollback. Flow-only input does not write the database.
 Successful Lua reload retains scratch data and resolves subsequent steps against
 new code. Restart does not retain flows. See [Lua flow authoring](docs/lua-flows.md)
 for contexts, limits, explicit targeting and hosted test behavior.
+
+## Deferred destruction and automatic cleaning
+
+Wizard-only `@destroy <target>` marks a controlled object GOING and persists
+before announcing that it begins to crumble. `/override` bypasses SAFE only;
+#0, GOD, configured starting/home destinations and Wizard players stay protected.
+`/recursive` and other switches are unsupported. Existing flag permissions govern
+cancellation through `@flag <target>=!going`.
+
+Automatic cleaning uses the same repair transaction as `@dbck`, including safe
+relocation, dependent-record cleanup, retained tombstones and post-commit session
+detachment. It starts enabled after every restart, first after `mux.check_offset`
+(default 300 seconds; zero uses the interval), then at `mux.check_interval`
+(default 600 seconds). These require a nonnegative offset and positive interval.
+Monotonic deadlines do not catch up missed runs; failed attempts wait another
+interval. No automatic check begins after shutdown starts.
+
+`@disable cleaning` and `@enable cleaning` (also `cl`) change only runtime state.
+Re-enabling overdue cleaning allows an attempt on the next maintenance tick.
+`@list globals` reports cleaning status. Other C controls are explicitly unsupported.
+Manual `@dbck` works while cleaning is disabled and leaves its timer unchanged.
+Automatic summaries/errors go to diagnostics, not unsolicited player replies.
+GOING survives restart; cleaning does not reuse dbrefs or migrate the database.

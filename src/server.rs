@@ -77,6 +77,7 @@ struct Server {
     shutdown_failed: bool,
     /// Runtime commands survive disconnect and Lua reload, but never restart.
     command_queue: commands::queue::Queue,
+    cleaning: crate::cleaning::Cleaning,
 }
 
 pub async fn prepare(c: &Config) -> Result<Scripts> {
@@ -215,6 +216,27 @@ pub async fn run_with_schedule_clock(
     shutdown: impl Future<Output = ShutdownRequest>,
     schedule_now: impl Fn() -> i64,
 ) -> Result<()> {
+    run_with_clocks(
+        c,
+        scripts,
+        listener,
+        shutdown,
+        schedule_now,
+        tokio::time::Instant::now,
+    )
+    .await
+}
+
+/// Inject independent UTC schedule and monotonic cleaning clocks; socket clocks stay real.
+pub async fn run_with_clocks(
+    c: Config,
+    scripts: Scripts,
+    listener: TcpListener,
+    shutdown: impl Future<Output = ShutdownRequest>,
+    schedule_now: impl Fn() -> i64,
+    cleaning_now: impl Fn() -> tokio::time::Instant,
+) -> Result<()> {
+    c.validate_for_serve()?;
     for warning in c.warnings.iter().chain(&scripts.warnings) {
         eprintln!("Warning: {warning}");
     }
@@ -237,7 +259,13 @@ pub async fn run_with_schedule_clock(
         shutdown: None,
         shutdown_failed: false,
         command_queue: Default::default(),
+        cleaning: Default::default(),
     };
+    server.cleaning = crate::cleaning::Cleaning::new(
+        cleaning_now(),
+        server.config.mux.check_interval as u64,
+        server.config.mux.check_offset as u64,
+    );
     server.listen_port = listener.local_addr()?.port();
     let mut next = 0;
     let mut tick = tokio::time::interval(Duration::from_millis(
@@ -313,6 +341,7 @@ pub async fn run_with_schedule_clock(
             },
             _ = tick.tick() => {
                 queue_credit = server.config.mux.command_queue_idle_chunk as usize;
+                if server.shutdown.is_none() && server.cleaning.take_due(cleaning_now()) { server.dbck(crate::cleaning::CheckOrigin::Automatic).await; }
                 schedules.observe(&server.scripts.schedules,&server.scripts.world.borrow(),schedule_now());
                 let timeout=Duration::from_secs(server.config.mux.conn_timeout);
                 let idle:Vec<_>=server.sessions.iter()
@@ -1024,8 +1053,39 @@ impl Server {
         }
         Ok(())
     }
+    /// Controls are runtime-only; status queries never write the database.
+    fn cleaning_control(&mut self, value: Option<bool>) -> String {
+        if let Some(enabled) = value {
+            self.cleaning.enabled = enabled;
+            return if enabled { "Enabled." } else { "Disabled." }.into();
+        }
+        self.cleaning.status()
+    }
     /// Stage repair callbacks under the database transaction, detaching destroyed players only after commit.
-    async fn dbck(&mut self, session: Option<SessionId>, actor: ObjectId, cause: ObjectId) {
+    async fn dbck(&mut self, origin: crate::cleaning::CheckOrigin) {
+        use crate::cleaning::CheckOrigin;
+        let (session, actor, cause) = match origin {
+            CheckOrigin::Interactive {
+                session,
+                actor,
+                cause,
+            } => (Some(session), actor, cause),
+            CheckOrigin::Queued { actor, cause } => (None, actor, cause),
+            CheckOrigin::Automatic => (None, ObjectId(1), ObjectId(1)),
+        };
+        let automatic = matches!(origin, CheckOrigin::Automatic);
+        if let Err(error) = self.snapshots() {
+            eprintln!("DBCK session snapshot failed: {error:#}");
+            if !automatic {
+                self.queue_reply(
+                    session,
+                    actor,
+                    "Database check failed; no repairs committed. See server diagnostics.",
+                );
+                self.flush();
+            }
+            return;
+        }
         let before = self.scripts.world.borrow().clone();
         let result = persistence::repair(
             &self.config.database(),
@@ -1135,6 +1195,8 @@ impl Server {
                 self.command_queue.reconcile(&self.scripts.world.borrow());
                 if let Some(session) = session.and_then(|id| self.sessions.get(&id)) {
                     session.raw(report.response(self.config.runtime.output_message_limit));
+                } else if automatic {
+                    eprintln!("Automatic {}", report.summary());
                 } else {
                     self.queue_reply(None, actor, &report.summary());
                     self.flush();
@@ -1146,11 +1208,13 @@ impl Server {
                 self.scripts.outbox.borrow_mut().clear();
                 self.scripts.flows.rollback();
                 eprintln!("DBCK rolled back: {e:#}");
-                self.queue_reply(
-                    session,
-                    actor,
-                    "Database check failed; no repairs committed. See server diagnostics.",
-                );
+                if !automatic {
+                    self.queue_reply(
+                        session,
+                        actor,
+                        "Database check failed; no repairs committed. See server diagnostics.",
+                    );
+                }
                 self.flush();
             }
         }
@@ -1397,7 +1461,23 @@ impl Server {
                 }
             }
             Ok(Action::Shutdown) => self.request_shutdown(ShutdownRequest::Player(p)).await,
-            Ok(Action::DbCheck) => self.dbck(Some(id), p, p).await,
+            Ok(Action::DbCheck) => {
+                self.dbck(crate::cleaning::CheckOrigin::Interactive {
+                    session: id,
+                    actor: p,
+                    cause: p,
+                })
+                .await
+            }
+            Ok(Action::Cleaning(value)) => {
+                let response = self.cleaning_control(value);
+                if let Some(session) = self.sessions.get(&id) {
+                    session.raw(crate::find::bounded_error(
+                        &response,
+                        self.config.runtime.output_message_limit,
+                    ));
+                }
+            }
             Ok(Action::CommitReply(text)) => {
                 if self.commit(before).await {
                     if let Some(session) = self.sessions.get(&id) {
@@ -1859,6 +1939,7 @@ mod tests {
             shutdown: None,
             shutdown_failed: false,
             command_queue: Default::default(),
+            cleaning: Default::default(),
         };
         server
             .authenticated(
@@ -1913,6 +1994,7 @@ mod tests {
             shutdown: None,
             shutdown_failed: false,
             command_queue: Default::default(),
+            cleaning: Default::default(),
         };
         let (output, mut receiver) = mpsc::channel(16);
         let now = Instant::now();
@@ -2057,6 +2139,7 @@ mod tests {
                 shutdown: None,
                 shutdown_failed: false,
                 command_queue: Default::default(),
+                cleaning: Default::default(),
             };
             let mut receivers = Vec::new();
             for id in [1, 2] {

@@ -162,6 +162,25 @@ impl Config {
     /// Reject policies the server cannot enforce before any serving side effects.
     pub fn validate_for_serve(&self) -> Result<()> {
         ensure!(
+            self.mux.check_interval > 0,
+            "mux.check_interval must be positive"
+        );
+        ensure!(
+            self.mux.check_offset >= 0,
+            "mux.check_offset must be nonnegative"
+        );
+        for (key, value) in [
+            ("mux.check_interval", self.mux.check_interval),
+            ("mux.check_offset", self.mux.check_offset),
+        ] {
+            ensure!(
+                std::time::Instant::now()
+                    .checked_add(std::time::Duration::from_secs(value as u64))
+                    .is_some(),
+                "{key} is too large for a monotonic deadline"
+            );
+        }
+        ensure!(
             self.sites.forbid.is_empty()
                 && self.sites.permit.is_empty()
                 && self.sites.suspect.is_empty()

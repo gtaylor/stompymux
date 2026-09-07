@@ -352,6 +352,7 @@ mod tests {
             shutdown: None,
             shutdown_failed: false,
             command_queue: Default::default(),
+            cleaning: Default::default(),
         };
         let mut outputs = Vec::new();
         for (id, p) in [(1, Some(ObjectId(1))), (2, Some(ObjectId(2))), (3, None)] {

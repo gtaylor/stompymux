@@ -343,6 +343,10 @@ impl CommandRegistry {
             ),
             CommandDefinition::native("@flag", P::WIZARD, native::flag),
             CommandDefinition::native("@power", P::WIZARD, native::power),
+            CommandDefinition::native("@enable", P::WIZARD, super::discovery::cleaning)
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
+            CommandDefinition::native("@disable", P::WIZARD, super::discovery::cleaning)
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("@list", P::WIZARD, super::discovery::list)
                 .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("@search", P::WIZARD, super::discovery::search)

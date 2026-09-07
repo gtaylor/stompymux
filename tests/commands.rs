@@ -105,6 +105,8 @@ async fn native_catalog_permissions_and_aliases() {
             "@teleport",
             "@flag",
             "@power",
+            "@enable",
+            "@disable",
             "@list",
             "@search",
             "@stats",
@@ -137,6 +139,7 @@ async fn native_catalog_permissions_and_aliases() {
             "leave",
             "inventory",
             "@create",
+            "@destroy",
             "@dig",
             "@name",
             "@alias",
@@ -883,4 +886,91 @@ async fn zone_source_identity_and_exit_precedence() {
     assert!(inventory.contains("Exits:\nlook"));
     assert!(!inventory.contains("testexit"));
     assert!(run(&s, &c, 2, "testexit").contains("Huh?"));
+}
+
+/// Destruction schedules only approved objects, with exact switch and C protection rules.
+#[tokio::test(flavor = "current_thread")]
+async fn deferred_destruction_and_cleaning_commands() {
+    use stompymux_rs::world::Kind;
+    let (_d, c, mut w) = fixture().await;
+    let mut ids = Vec::new();
+    for kind in [Kind::Thing, Kind::Room, Kind::Exit] {
+        let id = w.create(&c, format!("Destroy{kind:?}"), kind);
+        if kind != Kind::Room {
+            w.objects.get_mut(&id).unwrap().location = Some(ObjectId(0));
+        }
+        ids.push(id);
+    }
+    let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    for command in [
+        "@destroy",
+        "@destroy/recursive #0",
+        "@destroy/over #0",
+        "@destroy/override/recursive #0",
+    ] {
+        let before = serde_json::to_vec(&*s.world.borrow()).unwrap();
+        let result = run(&s, &c, 1, command);
+        assert!(
+            result.contains("Usage:") || result.contains("Unsupported"),
+            "{result}"
+        );
+        assert_eq!(before, serde_json::to_vec(&*s.world.borrow()).unwrap());
+    }
+    for id in [0, 1, c.start(), c.home(), c.mux.default_home] {
+        if id >= 0 {
+            assert!(run(&s, &c, 1, &format!("@destroy/override #{id}")).contains("can't destroy"));
+        }
+    }
+    assert!(run(&s, &c, 1, "@destroy #2").contains("Wizards"));
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&ids[0])
+        .unwrap()
+        .flags
+        .insert(Flag::Safe);
+    assert!(run(&s, &c, 1, &format!("@destroy #{}", ids[0].0)).contains("protected"));
+    for id in ids {
+        run(&s, &c, 1, &format!("@destroy/override #{}", id.0));
+        assert!(s.world.borrow().objects[&id].flags.contains(Flag::Going));
+        assert!(
+            run(&s, &c, 1, &format!("@destroy/override #{}", id.0))
+                .contains("No sense beating a dead")
+        );
+    }
+    for (command, value) in [
+        ("@enable cl", Some(true)),
+        ("@disable cleaning", Some(false)),
+        ("@list g", None),
+    ] {
+        assert!(
+            matches!(commands::run(&s,&c,ObjectId(1),1,command).unwrap(), Action::Cleaning(v) if v == value)
+        );
+    }
+    for command in [
+        "@enable log",
+        "@disable queueing",
+        "@enable checkpointing",
+        "@disable idlechecking",
+    ] {
+        assert!(run(&s, &c, 1, command).contains("not implemented"));
+    }
+    for command in ["@enable c", "@disable cleaning extra"] {
+        assert!(run(&s, &c, 1, command).contains("don't know"));
+    }
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .flags
+        .remove(Flag::Wizard);
+    for command in [
+        "@destroy #0",
+        "@enable cleaning",
+        "@disable cleaning",
+        "@list globals",
+    ] {
+        assert!(run(&s, &c, 2, command).contains("Permission denied"));
+    }
 }

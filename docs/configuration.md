@@ -89,3 +89,13 @@ constants.
 Login history remains bounded by the legacy schema: four successes and three
 failures, or fewer when `security.login_history_limit` is lower. The configured
 limit remains the total retained-history bound; lifetime counters are not pruned.
+
+## Database cleaning
+
+`mux.check_interval` is the positive number of seconds between automatic database
+check attempts (default 600). `mux.check_offset` is the nonnegative initial delay
+(default 300); zero uses the interval. Serve-readiness validation rejects invalid
+or unrepresentable monotonic deadlines before bootstrap or database writes.
+Cleaning starts enabled; runtime `@enable cleaning`/`@disable cleaning` do not
+change TOML. Manual `@dbck` does not reset the automatic deadline. No catch-up runs
+occur after delayed ticks, and failed attempts consume their interval.

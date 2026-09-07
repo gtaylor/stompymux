@@ -173,7 +173,18 @@ impl Server {
                 self.flush();
             }
             Ok(Action::Shutdown) => self.request_shutdown(ShutdownRequest::Player(actor)).await,
-            Ok(Action::DbCheck) => self.dbck(None, actor, work.execution.cause).await,
+            Ok(Action::DbCheck) => {
+                self.dbck(crate::cleaning::CheckOrigin::Queued {
+                    actor,
+                    cause: work.execution.cause,
+                })
+                .await
+            }
+            Ok(Action::Cleaning(value)) => {
+                let response = self.cleaning_control(value);
+                self.queue_reply(None, actor, &response);
+                self.flush();
+            }
             Ok(_) => {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
@@ -294,6 +305,7 @@ mod tests {
                 shutdown: None,
                 shutdown_failed: false,
                 command_queue: Default::default(),
+                cleaning: Default::default(),
             },
         )
     }

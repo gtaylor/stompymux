@@ -194,6 +194,9 @@ modifier = 100
 # -----------------------------------------------
 
 [mux]
+# Automatic cleaning starts enabled each restart. Seconds: check_interval=600
+# (positive), check_offset=300 (nonnegative; zero uses check_interval).
+# @enable/@disable cleaning affect runtime only; @dbck leaves the timer unchanged.
 idle_interval = 99999
 # Amount of time a player must be idle before being idlekicked.
 idle_timeout = 99999999

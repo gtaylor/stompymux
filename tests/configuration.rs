@@ -575,3 +575,23 @@ fn queue_settings_defaults_and_nonnegative_validation() {
         assert!(Config::load(d.path()).is_ok());
     }
 }
+
+/// Cleaning settings are parsed independently but must be usable before serving.
+#[test]
+fn cleaning_deadlines_require_valid_serve_values() {
+    for (text, key) in [
+        ("mux.check_interval=0", "check_interval"),
+        ("mux.check_interval=-1", "check_interval"),
+        ("mux.check_offset=-1", "check_offset"),
+    ] {
+        let (_d, c) = config(text);
+        assert!(
+            c.validate_for_serve()
+                .unwrap_err()
+                .to_string()
+                .contains(key)
+        );
+    }
+    let (_d, c) = config("mux.check_interval=1\nmux.check_offset=0");
+    c.validate_for_serve().unwrap();
+}

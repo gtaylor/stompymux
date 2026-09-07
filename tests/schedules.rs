@@ -597,3 +597,69 @@ async fn tcp_reload_schedule_queue_is_atomic() {
         shutdown.send(ShutdownRequest::Sigterm).unwrap();task.await.unwrap().unwrap();
     }).await;
 }
+
+/// Automatic cleaning shares manual repair semantics without real-minute sleeps or unsolicited summaries.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_cleaning_controls_purge_failure_and_connected_players() {
+    tokio::task::LocalSet::new().run_until(async {
+        let (_d, c) = fixture().await;
+        credentials(&c).await;
+        let mut world = persistence::load(&c.database()).await.unwrap();
+        let item = world.create(&c, "Doomed".into(), Kind::Thing);
+        world.objects.get_mut(&item).unwrap().location = Some(ObjectId(0));
+        persistence::save(&c.database(), &world).await.unwrap();
+        let scripts = server::prepare(&c).await.unwrap();
+        let shared = scripts.world.clone();
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let now = tokio::time::Instant::now();
+        let clock = Rc::new(Cell::new(now));
+        let ticking = clock.clone();
+        let config = c.clone();
+        let (tx, rx) = oneshot::channel();
+        let task = tokio::task::spawn_local(async move { server::run_with_clocks(config, scripts, listener, async { rx.await.unwrap() }, accounts::now, move || ticking.get()).await });
+        let mut god = Client::connect(address, 1).await;
+        let mut player = Client::connect(address, 2).await;
+        let mut second = Client::connect(address, 2).await;
+        god.send("@disable cl").await;god.until("Disabled.").await;
+        let mut failure = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()).foreign_keys(false)).await.unwrap();
+        sqlx::raw_sql("CREATE TRIGGER reject_destroy BEFORE UPDATE OF has_going_flag ON objects BEGIN SELECT RAISE(ABORT,'schedule failure'); END;").execute(&mut failure).await.unwrap();
+        god.send(&format!("@destroy #{}",item.0)).await;
+        let failed = god.until("Please try again.").await;
+        assert!(!failed.contains("begins to crumble"));
+        assert!(!shared.borrow().objects[&item].flags.contains(Flag::Going));
+        sqlx::raw_sql("DROP TRIGGER reject_destroy").execute(&mut failure).await.unwrap();failure.close().await.unwrap();
+        god.send(&format!("@destroy #{}",item.0)).await;god.until("begins to crumble.").await;
+        god.send(&format!("@flag #{}=!going", item.0)).await;god.until("GOING cleared.").await;
+        assert!(!persistence::load(&c.database()).await.unwrap().objects[&item].flags.contains(Flag::Going));
+        god.send(&format!("@destroy #{}",item.0)).await;god.until("begins to crumble.").await;
+        assert!(persistence::load(&c.database()).await.unwrap().objects[&item].flags.contains(Flag::Going));
+        clock.set(now + Duration::from_secs(10000));
+        tokio::time::sleep(Duration::from_millis(60)).await;
+        assert_eq!(shared.borrow().objects[&item].kind, Kind::Thing);
+        god.send("@list globals").await;god.until("cleaning...disabled").await;
+        let mut db = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()).foreign_keys(false)).await.unwrap();
+        sqlx::raw_sql("CREATE TRIGGER reject_cleaning BEFORE UPDATE ON objects WHEN NEW.type=5 BEGIN SELECT RAISE(ABORT,'cleaning failure'); END;").execute(&mut db).await.unwrap();
+        god.send("@enable cleaning").await;god.until("Enabled.").await;
+        tokio::time::sleep(Duration::from_millis(80)).await;
+        assert_eq!(shared.borrow().objects[&item].kind, Kind::Thing);
+        god.send("@list globals").await;
+        let status = god.until("cleaning...enabled").await;
+        assert!(!status.contains("Database check"));
+        sqlx::raw_sql("DROP TRIGGER reject_cleaning").execute(&mut db).await.unwrap();
+        db.close().await.unwrap();
+        god.send("@destroy #2").await;god.until("player shakes and begins to crumble.").await;
+        assert!(shared.borrow().objects[&ObjectId(2)].flags.contains(Flag::Connected));
+        clock.set(now + Duration::from_secs(20000));
+        player.until("You have been destroyed!").await;
+        second.until("You have been destroyed!").await;
+        let saved = persistence::load(&c.database()).await.unwrap();
+        assert_eq!(saved.objects[&item].kind, Kind::Garbage);
+        assert_eq!(saved.objects[&ObjectId(2)].kind, Kind::Garbage);
+        assert!(!saved.accounts.contains_key(&ObjectId(2)));
+        assert!(!shared.borrow().objects[&ObjectId(2)].flags.contains(Flag::Connected));
+        god.send("@list globals").await;
+        assert!(!god.until("cleaning...enabled").await.contains("Database check:"));
+        tx.send(ShutdownRequest::Sigterm).unwrap();task.await.unwrap().unwrap();
+    }).await;
+}

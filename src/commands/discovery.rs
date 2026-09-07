@@ -37,6 +37,7 @@ pub fn switches(name: &str) -> Vec<SwitchDefinition> {
             ],
             false,
         ),
+        "@destroy" => (&["override"], false),
         "@help" => (&["reload"], false),
         "@state" => (&["examine", "set", "wipe", "copy", "move"], false),
         "@examine" => (&["brief", "debug"], true),
@@ -93,6 +94,10 @@ pub(super) fn stats(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
 }
 /// Only implemented topics are advertised, while C topic names retain explicit diagnostics.
 pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    let arg = input.args.trim().to_ascii_lowercase();
+    if !arg.is_empty() && "globals".starts_with(&arg) {
+        return Ok(Action::Cleaning(None));
+    }
     let result = (|| -> Result<String> {
         let arg = input.args.trim().to_ascii_lowercase();
         let topics = [
@@ -319,4 +324,28 @@ fn row(
     row.chars()
         .map(|c| if c.is_control() { ' ' } else { c })
         .collect()
+}
+
+/// Toggle the implemented C global control; other known controls remain explicit errors.
+pub(super) fn cleaning(_ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    let arg = input.args.trim().to_ascii_lowercase();
+    if arg.len() >= 2 && "cleaning".starts_with(&arg) {
+        return Ok(Action::Cleaning(Some(input.name == "@enable")));
+    }
+    let known = [
+        ("checkpointing", 2),
+        ("idlechecking", 2),
+        ("queueing", 2),
+        ("logins", 3),
+    ];
+    Ok(Action::Reply(
+        if known
+            .iter()
+            .any(|(name, min)| arg.len() >= *min && name.starts_with(&arg))
+        {
+            format!("Global control {arg} is not implemented.")
+        } else {
+            "I don't know about that flag.".into()
+        },
+    ))
 }

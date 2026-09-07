@@ -44,6 +44,8 @@ pub enum Action {
     Shutdown,
     /// Run transactional database maintenance.
     DbCheck,
+    /// Runtime cleaning toggle or status query.
+    Cleaning(Option<bool>),
     /// Disconnect the invoking session.
     Quit,
     /// Bounded session-private response without persistence.

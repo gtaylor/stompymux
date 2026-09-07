@@ -186,7 +186,7 @@ pub fn plan(before: &World, raw: &Links, c: &Config) -> Result<(World, DbCheckRe
             .is_some_and(|o| o.kind == Kind::Player),
         "GOD #1 is missing or not a player"
     );
-    let protected: BTreeSet<_> = [1, c.start(), c.home(), c.mux.default_home]
+    let protected: BTreeSet<_> = [0, 1, c.start(), c.home(), c.mux.default_home]
         .into_iter()
         .filter(|id| *id >= 0)
         .map(ObjectId)

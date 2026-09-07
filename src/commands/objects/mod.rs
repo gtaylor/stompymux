@@ -1,5 +1,6 @@
 //! Inventory and builder operations sharing matching, locks and transactional output.
 mod builders;
+mod destruction;
 mod editing;
 mod inventory;
 pub(super) mod look;
@@ -25,6 +26,7 @@ pub fn definitions() -> Vec<CommandDefinition> {
         ("leave", inventory::leave, false),
         ("inventory", inventory::inventory, false),
         ("@create", builders::create, true),
+        ("@destroy", destruction::destroy, true),
         ("@dig", builders::dig, true),
         ("@name", editing::name, true),
         ("@alias", editing::alias, true),
@@ -49,7 +51,7 @@ pub fn definitions() -> Vec<CommandDefinition> {
         );
         if matches!(
             name,
-            "get" | "drop" | "give" | "enter" | "leave" | "@dig" | "@open" | "@clone"
+            "get" | "drop" | "give" | "enter" | "leave" | "@dig" | "@open" | "@clone" | "@destroy"
         ) {
             d.switches = SwitchPolicy::Handler;
         }
