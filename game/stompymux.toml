@@ -290,7 +290,10 @@ maximum_length = 30
 # Edit native/Lua command permissions in order; prefix ! to clear a bit.
 # Roles are alternatives: use "!wizard god" for GOD-only access.
 # Targets may be command aliases or command/switch; unknown targets reject startup.
-# [access.lists] independently controls @list topics; access.config is deferred.
+# [access.lists] independently controls @list topics.
+# [access.config] edits directive permissions, e.g. max_players = "!god wizard".
+# @admin edits are runtime-only: retained across Lua reload, lost on restart.
+# @list config_permissions shows live/restart-only/unsupported capabilities.
 [access.commands]
 #"some_command" = "wizard"
 

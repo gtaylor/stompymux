@@ -67,8 +67,9 @@ pub(super) fn register(
         text::validate(&p, &value).map_err(err)
     });
     let markdown_usage = Rc::new(Cell::new(0usize));
-    let markdown_memory_limit = config.lua.memory_limit.min(config.lua.output_byte_limit);
-    bind!(lua, api, "markdown", move |_, s: String| {
+    bind!(lua, api, "markdown", move |lua, s: String| {
+        let config = crate::lua::configuration(lua);
+        let markdown_memory_limit = config.lua.memory_limit.min(config.lua.output_byte_limit);
         let allocation = s.capacity();
         if allocation > markdown_memory_limit.saturating_sub(markdown_usage.get()) {
             return Err(err("Markdown document memory limit exceeded"));

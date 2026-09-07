@@ -1,7 +1,7 @@
 +++
 title = "@list commands"
 description = "List accessible built-in and Lua commands"
-keywords = ["@list commands", "@list", "list commands", "@list permissions", "@list switches"]
+keywords = ["@list commands", "@list", "list commands", "@list permissions", "@list switches", "@list config_permissions", "@list options", "@list default_flags", "@list bad_names"]
 article_tags = ["wizard_commands"]
 wizard_only = true
 +++
@@ -50,3 +50,9 @@ other supported access bits). They apply to native/Lua registrations and native
 switches at startup and Lua reload. Unknown targets reject a reload, preserving
 the active runtime. GOD may inspect disabled switch names; those switches remain
 unavailable for execution.
+
+
+`@list config_permissions` shows directive access and whether each directive is
+live, restart-only or unsupported. `@list options` shows implemented runtime
+settings, `@list default_flags` shows new-object defaults, and `@list bad_names`
+lists disallowed name patterns. See [runtime administration](admin.md).

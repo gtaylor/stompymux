@@ -42,6 +42,8 @@ pub enum Action {
     HelpReload,
     /// Reload connection messages without touching world storage.
     ReadCache,
+    /// Runtime-only configuration administration.
+    ConfigAdmin(crate::config::administration::Request),
     /// Request common graceful shutdown.
     Shutdown,
     /// Run transactional database maintenance.

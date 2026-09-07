@@ -149,3 +149,12 @@ permission constants or runtime registration APIs are introduced.
 Successful Lua reload recompiles policies from the candidate's original declarations.
 Removing a name targeted by configuration makes reload fail and retains the active
 runtime. Native switch policies do not reinterpret Lua patterns as switches.
+
+
+### Effective runtime configuration
+
+`mux.config.get` reads current effective values on each call, by dotted TOML path
+or legacy directive name. Successful `@admin` edits are visible without Lua reload.
+Existing state and channel handles use the current limits at each operation.
+Runtime configuration and policy edits survive Lua reload; restart restores files.
+Game Lua table edits do not register commands or alter server configuration.

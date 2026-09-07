@@ -10,7 +10,6 @@ use mlua::{Lua, MetaMethod, Table, UserData, UserDataMethods, Value};
 /// A handle is tied to an incarnation, not just a recyclable provisional dbref.
 struct Handle {
     world: SharedWorld,
-    config: Config,
     object: ObjectId,
     generation: Generation,
     namespace: String,
@@ -50,7 +49,7 @@ impl Handle {
         transactions::require(lua)?;
         state::change(
             &mut self.world.borrow_mut(),
-            &self.config,
+            &crate::lua::configuration(lua),
             self.object,
             work,
         )
@@ -176,9 +175,8 @@ impl UserData for Handle {
     }
 }
 /// Install the constructor; all subsequent operations validate the captured incarnation.
-pub(super) fn register(lua: &Lua, api: &Table, c: &Config, w: &SharedWorld) -> mlua::Result<()> {
+pub(super) fn register(lua: &Lua, api: &Table, _c: &Config, w: &SharedWorld) -> mlua::Result<()> {
     let world = w.clone();
-    let config = c.clone();
     api.set(
         "state",
         lua.create_function(move |lua, (id, namespace): (i64, String)| {
@@ -193,7 +191,6 @@ pub(super) fn register(lua: &Lua, api: &Table, c: &Config, w: &SharedWorld) -> m
                 .generation;
             lua.create_userdata(Handle {
                 world: world.clone(),
-                config: config.clone(),
                 object,
                 generation,
                 namespace,

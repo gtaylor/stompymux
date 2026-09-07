@@ -107,9 +107,9 @@ pub(super) fn register(
         Ok(())
     });
     let w = world.clone();
-    let c = config.clone();
     let p = palette.clone();
-    bind!(lua, api, "create", move |_, t: Table| {
+    bind!(lua, api, "create", move |lua, t: Table| {
+        let c = crate::lua::configuration(lua);
         let mut w = w.borrow_mut();
         let kind = types::kind(t.get("type")?)?;
         if kind == Kind::Player || kind == Kind::Garbage {
@@ -306,9 +306,9 @@ pub(super) fn register(
     locks::register(lua, api, world, outbox).map_err(|e| anyhow::anyhow!(e.to_string()))?;
     state::register(lua, api, config, world).map_err(|e| anyhow::anyhow!(e.to_string()))?;
     let o = outbox.clone();
-    let config = config.clone();
     let w = world.clone();
-    bind!(lua, api, "pemit", move |_, (id, value): (i64, Value)| {
+    bind!(lua, api, "pemit", move |lua, (id, value): (i64, Value)| {
+        let config = crate::lua::configuration(lua);
         let document = match value {
             Value::String(s) => text::Document::Styled(s.to_str()?.to_string()),
             Value::UserData(u) => u.borrow::<super::text::LuaDocument>()?.document.clone(),

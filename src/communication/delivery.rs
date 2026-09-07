@@ -59,7 +59,7 @@ impl Service<'_> {
                 w.objects.get(&user.who).is_some_and(|o| {
                     o.kind != Kind::Garbage
                         && (o.kind != Kind::Player || o.flags.contains(Flag::Connected))
-                        && (wizard(&w, user.who) || !in_character(&w, self.config, user.who))
+                        && (wizard(&w, user.who) || !in_character(&w, &self.config, user.who))
                 })
             };
             ensure!(
@@ -99,7 +99,7 @@ impl Service<'_> {
         ensure!(!message.is_empty(), "No message.");
         ensure!(
             wizard(&self.world.borrow(), who)
-                || !in_character(&self.world.borrow(), self.config, who),
+                || !in_character(&self.world.borrow(), &self.config, who),
             "Permission denied."
         );
         let on = self.world.borrow().channels[&name]

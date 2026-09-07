@@ -68,6 +68,7 @@ async fn native_catalog_permissions_and_aliases() {
             .map(|d| d.name.as_str())
             .collect::<Vec<_>>(),
         [
+            "@admin",
             "addcom",
             "delcom",
             "clearcom",

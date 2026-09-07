@@ -195,6 +195,11 @@ impl Server {
                 })
                 .await
             }
+            Ok(Action::ConfigAdmin(request)) => {
+                let text = self.configure(actor, request);
+                self.queue_reply(None, actor, &text);
+                self.flush();
+            }
             Ok(Action::ReadCache) => self.readcache(None, actor).await,
             Ok(Action::GlobalControl(value)) => {
                 let response = self.global_control(value);

@@ -17,6 +17,10 @@ impl Cleaning {
             interval: Duration::from_secs(interval),
         }
     }
+    /// Change the next interval without resetting the pending deadline.
+    pub fn set_interval(&mut self, seconds: u64) {
+        self.interval = Duration::from_secs(seconds);
+    }
     /// Consume one due attempt, regardless of its eventual success. Never catch up.
     pub fn take_due(&mut self, now: Instant) -> bool {
         if !self.enabled || now < self.deadline {
@@ -74,6 +78,12 @@ mod tests {
         assert!(c.take_due(now + Duration::from_secs(2000)));
         assert!(!c.take_due(now + Duration::from_secs(2599)));
         assert!(c.take_due(now + Duration::from_secs(2600)));
+        let mut changed = Cleaning::new(now, 10, 5);
+        changed.set_interval(20);
+        assert!(!changed.take_due(now + Duration::from_secs(4)));
+        assert!(changed.take_due(now + Duration::from_secs(5)));
+        assert!(!changed.take_due(now + Duration::from_secs(24)));
+        assert!(changed.take_due(now + Duration::from_secs(25)));
         let mut zero = Cleaning::new(now, 10, 0);
         assert!(!zero.take_due(now + Duration::from_secs(9)));
         assert!(zero.take_due(now + Duration::from_secs(10)));

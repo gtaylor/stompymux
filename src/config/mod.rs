@@ -1,5 +1,7 @@
 //! Complete legacy TOML catalog plus Rust operational settings.
+pub mod administration;
 pub mod catalog;
+pub mod directives;
 mod loader;
 mod model;
 mod types;
@@ -18,6 +20,10 @@ pub use types::*;
 pub struct Config {
     pub root: PathBuf,
     settings: Settings,
+    /// Exact pre-edit states permitted after a live quota reduction; never serialized.
+    retained_state: std::sync::Arc<
+        BTreeMap<crate::world::ObjectId, (crate::state::Generation, crate::state::State)>,
+    >,
     effective: toml::Value,
     pub warnings: Vec<String>,
     /// Ordered site rules compiled from the merged document.
@@ -25,6 +31,10 @@ pub struct Config {
     /// Ordered command/list access edits, resolved after module registration.
     pub access_rules: Vec<crate::access::Rule>,
     origins: BTreeMap<String, PathBuf>,
+    /// Effective directive permissions, including runtime edits.
+    /// Runtime aliases must still resolve in a candidate Lua registry.
+    pub runtime_aliases: Vec<String>,
+    pub directive_permissions: BTreeMap<String, crate::access::Permissions>,
 }
 impl Deref for Config {
     type Target = Settings;
@@ -54,12 +64,16 @@ impl Config {
         let mut config = Self {
             root,
             settings,
+            retained_state: Default::default(),
             effective,
             warnings: doc.warnings,
             site_policy,
             access_rules,
             origins: doc.origins,
+            directive_permissions: BTreeMap::new(),
+            runtime_aliases: Vec::new(),
         };
+        config.compile_directive_permissions()?;
         config.validate()?;
         crate::text::Palette::from_config(&config).with_context(|| {
             let origins = config
@@ -74,11 +88,15 @@ impl Config {
         if config.origins.contains_key("database.legacy_game_database") {
             config.warnings.push("database.legacy_game_database is deprecated and unused; database.game_database is the live schema-32 database".into());
         }
-        config.warnings.push("Configuration parsed completely; BattleTech, logging controls, configuration-edit permissions, and remaining legacy command-system settings are retained for future implementation.".into());
+        config.warnings.push("Configuration parsed completely; BattleTech, logging controls and remaining legacy command-system settings are retained for future implementation.".into());
         Ok(config)
     }
     /// Check structural invariants independently of implemented server capabilities.
     fn validate(&self) -> Result<()> {
+        self.validate_values(true)
+    }
+    /// Runtime edits validate live values independently of the unused bootstrap template.
+    fn validate_values(&self, bootstrap: bool) -> Result<()> {
         let fail = |key: &str| {
             format!(
                 "{}: {key}",
@@ -121,6 +139,9 @@ impl Config {
                 "{}: path must not be empty",
                 fail(key)
             );
+        }
+        if !bootstrap {
+            return Ok(());
         }
         let objects = &self.settings.database.bootstrap.objects;
         for (id, obj) in objects {
@@ -194,10 +215,7 @@ impl Config {
         }
         self.site_policy
             .validate_listener(self.server.listen_address)?;
-        ensure!(
-            self.access.config.is_empty(),
-            "configured access.config rules cannot yet be enforced; refusing to serve"
-        );
+
         Ok(())
     }
     /// Apply optional CLI overrides and refresh the Lua-visible effective snapshot.

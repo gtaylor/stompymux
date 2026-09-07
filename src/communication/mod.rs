@@ -194,7 +194,7 @@ pub struct Service<'a> {
     /// Output staged in the current transaction.
     pub outbox: &'a Outbox,
     /// Effective communication and output-limit configuration.
-    pub config: &'a Config,
+    pub config: Config,
     /// Current sandbox VM; callbacks share its instruction budget.
     pub lua: &'a mlua::Lua,
 }

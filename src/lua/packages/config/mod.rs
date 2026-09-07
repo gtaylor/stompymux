@@ -5,9 +5,9 @@ use anyhow::Result;
 use mlua::{Lua, LuaSerdeExt, Table, Value};
 
 /// Register native operations before the embedded facade is evaluated.
-pub(super) fn register(lua: &Lua, api: &Table, config: &Config) -> Result<()> {
-    let c = config.clone();
+pub(super) fn register(lua: &Lua, api: &Table, _config: &Config) -> Result<()> {
     bind!(lua, api, "config", move |lua, key: String| {
+        let c = crate::lua::configuration(lua);
         if let Some(v) = c.effective_value(&key) {
             lua.to_value(v)
         } else {

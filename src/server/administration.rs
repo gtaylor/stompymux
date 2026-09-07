@@ -12,6 +12,7 @@ pub(super) struct Job {
     caller: ObjectId,
     caller_generation: Generation,
     target: Target,
+    password_length: usize,
 }
 enum Target {
     Create(String),
@@ -101,6 +102,7 @@ impl Server {
             self.pending_resets.insert(p);
         }
         let job = Job {
+            password_length: password.len(),
             session: id,
             caller,
             caller_generation: self.scripts.world.borrow().objects[&caller].generation,
@@ -143,6 +145,13 @@ impl Server {
             });
         if !authorized {
             self.tell(job.session, "Permission denied.\r\n");
+            return;
+        }
+        if job.password_length > self.config.security.player_password_length_limit {
+            self.tell(
+                job.session,
+                "Password policy changed. Please try again.\r\n",
+            );
             return;
         }
         let Ok(hash) = result else {
@@ -369,6 +378,7 @@ mod tests {
     }
     fn job(s: &Server, target: Target) -> Job {
         Job {
+            password_length: 5,
             session: SessionId(1),
             caller: ObjectId(1),
             caller_generation: s.scripts.world.borrow().objects[&ObjectId(1)].generation,
@@ -483,6 +493,7 @@ mod tests {
         assert!(s.pending_resets.is_empty());
         s.shutdown = None;
         let j = Job {
+            password_length: 5,
             session: SessionId(2),
             caller: ObjectId(2),
             caller_generation: s.scripts.world.borrow().objects[&ObjectId(2)].generation,
@@ -585,5 +596,62 @@ mod tests {
         s.scripts
             .eval_callback::<()>("assert(mux.world.object(2):state('boot'):get('bad')==nil)")
             .unwrap();
+    }
+    /// Publication clamps balances without writing storage, and abandoned policy candidates stay invisible.
+    #[tokio::test(flavor = "current_thread")]
+    async fn runtime_configuration_clamps_and_pending_password_policy() {
+        let (_d, mut server, _events, mut output) = fixture().await;
+        let before = std::fs::read(server.config.database()).unwrap();
+        let edit = |name: &str, value: &str| crate::config::administration::Request {
+            directive: name.into(),
+            value: value.into(),
+        };
+        assert_eq!(
+            server.configure(ObjectId(1), edit("command_quota_max", "2")),
+            "Set."
+        );
+        assert!(server.sessions.values().all(|s| s.quota <= 2));
+        assert_eq!(
+            server.configure(ObjectId(1), edit("command_quota_max", "100")),
+            "Set."
+        );
+        assert!(server.sessions.values().all(|s| s.quota <= 2));
+        let limit = server.config.mux.check_interval;
+        assert_ne!(
+            server.configure(ObjectId(1), edit("check_interval", "0")),
+            "Set."
+        );
+        assert_eq!(server.config.mux.check_interval, limit);
+        assert_eq!(
+            server
+                .scripts
+                .lua
+                .app_data_ref::<Config>()
+                .unwrap()
+                .mux
+                .check_interval,
+            limit
+        );
+        let mut pending = job(&server, Target::Create("PolicyRace".into()));
+        pending.password_length = 40;
+        server.inflight = 1;
+        assert_eq!(
+            server.configure(ObjectId(1), edit("player_password_length_limit", "30")),
+            "Set."
+        );
+        server.admin_hashed(pending, Ok("unused hash".into())).await;
+        assert!(
+            server
+                .scripts
+                .world
+                .borrow()
+                .find_player("PolicyRace")
+                .is_none()
+        );
+        assert_eq!(server.inflight, 0);
+        assert_eq!(before, std::fs::read(server.config.database()).unwrap());
+        // Keep output receivers alive for all session assertions.
+        assert!(!output.is_empty());
+        while output[0].try_recv().is_ok() {}
     }
 }

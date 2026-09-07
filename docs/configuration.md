@@ -33,8 +33,8 @@ access tables, colors and OSC presets retain dynamic names.
 
 BattleTech, extended rendering/OSC, logging and remaining legacy command-system
 options are parsed and retained without enabling those features. A consolidated
-capability diagnostic reports this. IPv4 site and command/list access policies are enforced. Nonempty `access.config`
-still blocks `serve` before bootstrap, database writes or listening. There is no live reload or configuration editing command.
+capability diagnostic reports this. IPv4 site, command/list and configuration-directive access policies are enforced.
+`@admin` supports runtime edits; configuration-file rereading and writing are not provided.
 
 Rust callers use typed fields. Lua `mux.config` lookups accept dotted TOML
 names and legacy directive names, and see the same defaulted effective values,
@@ -217,9 +217,86 @@ and filters switch access. As in C, GOD may inspect disabled switch names and se
 disabled topics in topic suggestions, while invocation remains denied. Reports
 remain private, bounded and read-only.
 
-Policies are compiled from declaration defaults at startup and Lua reload. A
-reload with unresolved targets retains the old VM and policies. Runtime table edits
-do not alter registrations, and no configuration reread or `@admin` command is
-provided. Nonempty `access.config` still blocks serving because configuration-edit
-permission enforcement is deferred. Existing IC/GAGGED domain behavior is retained;
-no additional BattleTech permission vocabulary is added.
+Policies compile from declaration defaults, file edits and runtime edits at startup
+and Lua reload. Unresolved runtime targets retain the old VM and policies.
+Configuration directives have independent effective permissions through
+`access.config`. Existing IC/GAGGED domain behavior is retained; no additional
+BattleTech permission vocabulary is added.
+
+## Runtime administration
+
+`@admin <directive>=<value>` defaults to Wizard command access. Each directive
+also checks its own permissions, usually GOD-only. Directive names are exact C
+names (normally lowercase), not dotted TOML names. Switches are rejected.
+
+```text
+@admin max_players=50
+@admin config_access=max_players !god wizard
+@admin access=@shutdown !wizard god
+@admin list_access=options !god !wizard
+@admin alias=inspect @examine/brief
+@admin flag_alias=shiny ansi
+@admin default_thing_flags=shiny safe
+@admin bad_name=Guest*
+@admin good_name=Guest*
+@admin forbid_site=192.0.2.0 255.255.255.0
+```
+
+Runtime edits never rewrite TOML or touch the database. They survive Lua reload;
+restart restores file configuration and CLI overrides. A command's executor is
+used for permissions, including `@force` and `@wait`. Successful edits are visible
+before `Set.`. Reports and confirmations are private to the invoking session.
+
+`access.config` accepts the same permission tokens as command access:
+
+```toml
+[access.config]
+max_players = "!god wizard"
+```
+
+`@list config_permissions` reports the full C directive catalog with effective
+permissions and `live`, `restart-only` or `unsupported` capability. GOD can inspect
+disabled directives. Changing a permission cannot activate an unsupported or
+restart-only setting. `@list default_flags`, `@list bad_names` and `@list options`
+show effective supported settings, with the usual independent topic permissions.
+
+Live settings cover admission capacity/messages, timeouts and intervals, command
+quotas and queues, names/password policy and hash parameters, notification depth,
+channel lurking, default flags/homes/Lua parents, game name, Lua memory/state/error
+limits, and help/Lua directories. The checked-in directive registry and capability
+classification are the authoritative inventory. Settings for unused systems,
+including logging, BattleTech, dump/cache controls, retry counting and player-zone
+defaults, report unsupported. C-disabled paths/bootstrap/listener/rendering
+settings and all Rust-only infrastructure settings remain restart-only.
+
+Existing deadlines remain scheduled; changed intervals determine the next deadline.
+The cleaning offset is startup-only and rejects runtime edits. Reduced quota and login-token
+maxima clamp current balances without granting tokens. Existing connections observe
+new timeout policy at the next check. Reduced queue/state limits do not delete
+existing entries. Pending hash jobs retain captured cryptographic parameters;
+completion rechecks current admission, name and password-length constraints.
+
+Lua APIs read an effective snapshot for each operation, including previously created
+state/channel handles. Lua memory limits update the active VM. Help/Lua directory
+changes affect the next explicit reload, not already indexed/loaded content;
+failed reloads retain active content. Default flags and parents affect newly created
+objects; defaults must name valid destinations and registered parent modules.
+
+Command aliases target registered native or Lua commands, optionally a native
+switch. Existing names/aliases cannot be replaced. Resolution stays nonrecursive.
+Access edits affect all matching scoped Lua registrations. Runtime aliases and
+policy targets are revalidated during Lua reload; removing a referenced target
+rejects that reload.
+
+C multi-token access and default-flag edits preserve partial success: invalid tokens
+are reported, valid tokens apply in order, and successful/partially successful edits
+end with `Set.`. Flag lists replace defaults beginning with the first valid flag;
+empty or entirely invalid lists leave defaults unchanged. Structural validation
+failure discards the whole candidate. Integers and booleans are checked; malformed
+input does not silently turn into zero. C string capacities are retained; oversized
+strings report `String truncated` and stop at a valid UTF-8 boundary.
+
+Runtime site rules use address/mask syntax and are prepended ahead of older rules.
+New connections use the new policy; existing sessions retain their classification.
+IPv6 listeners reject site additions. `good_name` removes a matching bad-name
+pattern, case-insensitively; it does not add an allow-list override.

@@ -83,7 +83,7 @@ impl Service<'_> {
                 let Some(o) = w.objects.get(&target).filter(|o| o.kind == Kind::Player) else {
                     continue;
                 };
-                if in_character(&w, self.config, sender)
+                if in_character(&w, &self.config, sender)
                     && !wizard(&w, sender)
                     && !wizard(&w, target)
                 {
@@ -92,7 +92,7 @@ impl Service<'_> {
                     Some(format!("Sorry, {} is not connected.", o.name))
                 } else if !wizard(&w, sender)
                     && !wizard(&w, target)
-                    && in_character(&w, self.config, target)
+                    && in_character(&w, &self.config, target)
                 {
                     Some(format!("Sorry, {} is not accepting pages.", o.name))
                 } else {

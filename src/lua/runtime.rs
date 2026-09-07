@@ -52,6 +52,7 @@ impl Scripts {
         let palette = std::sync::Arc::new(text::Palette::from_config(config)?);
         world.borrow_mut().palette = palette.clone();
         let (lua, budget) = sandbox::create(config)?;
+        lua.set_app_data(config.clone());
         super::transactions::install(&lua);
         super::testing::install(&lua).map_err(|e| anyhow::anyhow!(e.to_string()))?;
         lua.set_app_data(sources.clone());

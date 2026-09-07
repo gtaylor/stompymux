@@ -250,8 +250,10 @@ impl World {
         }
         self.validate_accounts()?;
         for o in self.objects.values().filter(|o| o.kind != Kind::Garbage) {
-            crate::state::validate(&o.state, c)
-                .with_context(|| format!("object #{} state", o.id.0))?;
+            if !c.retains_state(o) {
+                crate::state::validate(&o.state, c)
+                    .with_context(|| format!("object #{} state", o.id.0))?;
+            }
             let chain = self.containment_chain(o.location)?;
             ensure!(!chain.contains(&o.id), "Containment cycle at #{}.", o.id.0);
             ensure!(

@@ -245,7 +245,7 @@ impl Service<'_> {
                     if (kind || admin) && o.flags.contains(Flag::Dark) && !wizard(&w, viewer) {
                         continue;
                     }
-                    if !admin && kind && in_character(&w, self.config, u.who) && !wizard(&w, u.who)
+                    if !admin && kind && in_character(&w, &self.config, u.who) && !wizard(&w, u.who)
                     {
                         continue;
                     }

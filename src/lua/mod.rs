@@ -78,7 +78,7 @@ impl Scripts {
         crate::communication::Service {
             world: &self.world,
             outbox: &self.outbox,
-            config,
+            config: config.clone(),
             lua: &self.lua,
         }
     }
@@ -126,5 +126,36 @@ impl Scripts {
             .into_function()
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         self.call(&f, ())
+    }
+}
+
+/// Read one effective configuration snapshot at a Lua operation boundary.
+pub(crate) fn configuration(lua: &Lua) -> crate::config::Config {
+    lua.app_data_ref::<crate::config::Config>()
+        .expect("configuration installed before packages")
+        .clone()
+}
+impl Scripts {
+    /// Prepare access and VM resource changes before publishing a live configuration.
+    pub fn configure(&mut self, config: &crate::config::Config) -> anyhow::Result<()> {
+        for parent in [
+            &config.mux.default_player_lua_parent,
+            &config.mux.default_thing_lua_parent,
+            &config.mux.default_room_lua_parent,
+            &config.mux.default_exit_lua_parent,
+        ] {
+            anyhow::ensure!(
+                parent.is_empty() || self.parents.contains_key(parent),
+                "Unknown default Lua parent {parent}"
+            );
+        }
+        let mut commands = self.commands.clone();
+        commands.configure_access(config)?;
+        self.lua
+            .set_memory_limit(config.lua.memory_limit)
+            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        self.commands = commands;
+        self.lua.set_app_data(config.clone());
+        Ok(())
     }
 }

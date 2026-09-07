@@ -27,6 +27,7 @@ pub enum CommandMatcher {
 /// Native function signature; registration requires no command-name branching.
 pub type NativeHandler = fn(&CommandContext<'_>, &CommandInput) -> Result<Action>;
 /// Executable implementation retained at registration time.
+#[derive(Clone)]
 pub enum CommandHandler {
     /// Ordinary Rust function pointer.
     Native(NativeHandler),
@@ -42,6 +43,7 @@ pub enum SwitchPolicy {
     Handler,
 }
 /// Complete enumerable command definition used by dispatch and discovery.
+#[derive(Clone)]
 pub struct CommandDefinition {
     /// Lowercase canonical command name.
     pub name: String,
@@ -204,7 +206,11 @@ impl CommandInput {
         let (base, switch) = token
             .split_once('/')
             .map_or((token.as_str(), None), |(a, b)| (a, Some(b)));
-        let base_alias = config.aliases.commands.get(base);
+        let base_alias = if full.is_none() {
+            config.aliases.commands.get(base)
+        } else {
+            None
+        };
         let resolved = match base_alias {
             Some(alias) => format!(
                 "{alias}{}",
@@ -229,6 +235,7 @@ impl CommandInput {
     }
 }
 /// Definitions are registered once at load, in deterministic dispatch order.
+#[derive(Clone)]
 pub struct CommandRegistry {
     definitions: Vec<CommandDefinition>,
     /// Effective list topic catalog.
@@ -244,6 +251,8 @@ impl CommandRegistry {
     pub fn new() -> Self {
         use CommandPermissions as P;
         let mut definitions = vec![
+            CommandDefinition::native("@admin", P::WIZARD, crate::config::administration::command)
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("addcom", P::EVERYONE, crate::communication::addcom),
             CommandDefinition::native("delcom", P::EVERYONE, crate::communication::delcom),
             CommandDefinition::native("clearcom", P::EVERYONE, crate::communication::clearcom),
@@ -382,6 +391,17 @@ impl CommandRegistry {
     }
     /// Resolve ordered configuration edits against the completed module registry.
     pub fn configure_access(&mut self, config: &Config) -> Result<()> {
+        for alias in &config.runtime_aliases {
+            let input = CommandInput::parse(config, alias);
+            ensure!(
+                self.definitions.iter().any(|d| d.name == input.name
+                    && input
+                        .switch
+                        .as_ref()
+                        .is_none_or(|sw| d.switch_definitions.iter().any(|s| s.accepts(sw)))),
+                "Runtime alias {alias} has an unknown command or switch target"
+            );
+        }
         let mut masks: Vec<_> = self
             .definitions
             .iter()

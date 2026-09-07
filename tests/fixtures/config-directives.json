@@ -1,0 +1,907 @@
+[
+  {
+    "name": "access",
+    "parser": "cf_access",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "alias",
+    "parser": "cf_cmd_alias",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "bad_name",
+    "parser": "cf_badname",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "badsite_file",
+    "parser": "cf_string",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "bootstrap_objects_clear",
+    "parser": "cf_bootstrap_objects_clear",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "bootstrap_object",
+    "parser": "cf_bootstrap_object",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "named_color",
+    "parser": "cf_named_color",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "osc8_preset",
+    "parser": "cf_osc8_preset",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "btech_explode_reactor",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_explode_time",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_explode_ammo",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_explode_stop",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_parts",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_ic",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_afterlife_dbref",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_vcrit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_dynspeed",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_slowdown",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_fasaturn",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_fasacrit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_fasaadvvtolcrit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_fasaadvvhlcrit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_fasaadvvhlfire",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_divrotordamage",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_moddamagewithrange",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_moddamagewithwoods",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_hotloadaddshalfbthmod",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_nofusionvtolfuel",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_tankfriendly",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_newcharge",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_tl3_charge",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_newterrain",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_xploss",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_critlevel",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_tankshield",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_newstagger",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_newstaggertons",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_newstaggertime",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "allow_chanlurking",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_skidcliff",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_xp_bthmod",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_xp_missilemod",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_xp_ammomod",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_defaultweapdam",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_xp_modifier",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_defaultweapbv",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_xp_usePilotBVMod",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_oldxpsystem",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_xp_vrtmod",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_extendedmovemod",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_stacking",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_stackdamage",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_mw_losmap",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_exile_stun_code",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_roll_on_backwalk",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_usedmechstore",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_ooc_comsys",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_idf_requires_spotter",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_perunit_xpmod",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_tsm_tow_bonus",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_heatcutoff",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_cost_debug",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_allow_cargo_commands",
+    "parser": "cf_bool",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_noisy_xpgain",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_xpgain_cap",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_transported_unit_death",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_mwpickup_action",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_standcareful",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_maxtechtime",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_sprint_bth",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_tsm_sprint_bonus",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_vtol_ice_causes_fire",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_glancing_blows",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_inferno_penalty",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_blzmapmode",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_extended_piloting",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_extended_gunnery",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_xploss_for_mw",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_variable_techtime",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_techtime_mod",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_techtime_multiplier",
+    "parser": "cf_techtime_multiplier",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_statengine_obj",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_seismic_see_stopped",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_limitedrepairs",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_stackpole",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_phys_use_pskill",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_erange",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_hit_arcs",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_dig_only_fs",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "btech_digbonus",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "cache_depth",
+    "parser": "cf_int",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "cache_trim",
+    "parser": "cf_bool",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "cache_width",
+    "parser": "cf_int",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "check_interval",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "check_offset",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "command_quota_increment",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "command_quota_max",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "config_access",
+    "parser": "cf_cf_access",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "conn_timeout",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "connect_dir",
+    "parser": "cf_string",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "connect_file",
+    "parser": "cf_string",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "default_home",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "down_file",
+    "parser": "cf_string",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "down_message",
+    "parser": "cf_string",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "dump_interval",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "dump_message",
+    "parser": "cf_string",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "postdump_message",
+    "parser": "cf_string",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "dump_offset",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "default_exit_flags",
+    "parser": "cf_set_flags",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "flag_alias",
+    "parser": "cf_flagalias",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "forbid_site",
+    "parser": "cf_site",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "fork_dump",
+    "parser": "cf_bool",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "full_file",
+    "parser": "cf_string",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "full_message",
+    "parser": "cf_string",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "game_database",
+    "parser": "cf_string",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "good_name",
+    "parser": "cf_badname",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "help_directory",
+    "parser": "cf_string",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "idle_interval",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "idle_timeout",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "initial_size",
+    "parser": "cf_int",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "list_access",
+    "parser": "cf_ntab_access",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "lua_directory",
+    "parser": "cf_string",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "lua_memory_limit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "lua_error_reporting",
+    "parser": "cf_lua_error_reporting",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "lua_state_value_limit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "lua_state_entry_limit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "lua_state_object_limit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "accounting",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "all_commands",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "suspect_commands",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "bad_commands",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "buffer_alloc",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "bugs",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "checkpoints",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "config_changes",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "create",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "logins",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "network",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "problems",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "security",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "shouts",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "startup",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "wizard",
+    "parser": "cf_bool_bit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "log_options",
+    "parser": "configuration_modify_bits",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "map_database",
+    "parser": "cf_string",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "default_thing_lua_parent",
+    "parser": "cf_string",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "default_room_lua_parent",
+    "parser": "cf_string",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "default_exit_lua_parent",
+    "parser": "cf_string",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "default_player_lua_parent",
+    "parser": "cf_string",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "max_players",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "mech_database",
+    "parser": "cf_string",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "mud_name",
+    "parser": "cf_string",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "notify_recursion_limit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "output_limit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "password_hash_memlimit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "password_hash_opslimit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "permit_site",
+    "parser": "cf_site",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "default_player_flags",
+    "parser": "cf_set_flags",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "player_name_length_limit",
+    "parser": "cf_player_name_length_limit",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "player_password_length_limit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "player_name_spaces",
+    "parser": "cf_bool",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "command_queue_limit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "player_starting_home",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "player_starting_room",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "public_channel",
+    "parser": "cf_string",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "port",
+    "parser": "cf_int",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "command_queue_active_chunk",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "command_queue_idle_chunk",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "quit_file",
+    "parser": "cf_string",
+    "permission": "CA_DISABLED"
+  },
+  {
+    "name": "retry_limit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "login_attempt_burst",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "login_attempt_refill",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "login_hash_limit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "default_room_flags",
+    "parser": "cf_set_flags",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "space_compress",
+    "parser": "cf_bool",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "stack_limit",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "suspect_site",
+    "parser": "cf_site",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "default_thing_flags",
+    "parser": "cf_set_flags",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "command_quota_interval",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "trust_site",
+    "parser": "cf_site",
+    "permission": "CA_GOD"
+  },
+  {
+    "name": "player_zone",
+    "parser": "cf_int",
+    "permission": "CA_GOD"
+  }
+]

@@ -184,8 +184,7 @@ other callback mutations.
 
 BattleTech simulation, additional GMCP packages, a webserver and browser-side
 action handling remain deferred. Legacy help/type files describe a
-larger API than this milestone implements. Deferred configuration is reported in one capability diagnostic. IPv4 site rules are enforced. Command/list access rules are enforced. Configuration-edit permissions still
-block serving because their enforcement is deferred.
+larger API than this milestone implements. Deferred configuration is reported in one capability diagnostic. IPv4 site rules are enforced. Command/list access rules are enforced. Configuration-directive permissions are enforced by `@admin`.
 
 ## Validation
 
@@ -978,8 +977,8 @@ in `@telnet`. MONITOR players receive first/repeated connection and partial/fina
 disconnection notices. SUSPECT players and suspected-site sessions independently
 produce notices on the existing `Suspect` channel. Channel delivery and history
 commit transactionally; MONITOR messages report actual transitions even after
-callback failures. Site edits require restart. `@admin` and suspect command
-auditing remain deferred.
+callback failures. Runtime site edits are available through `@admin`; suspect command auditing
+remains deferred.
 
 ## Configured command access
 
@@ -995,5 +994,20 @@ prerequisites are checked before invocation, and existing ownership, locks,
 session and macro rules remain in force. Denied Lua declarations are skipped;
 selected native denials stop dispatch without changing existing exit precedence.
 Policies compile before startup hooks and again for Lua reload; an invalid reload
-retains the active runtime. Configuration editing and `access.config` remain deferred.
+retains the active runtime. `access.config` controls configuration-directive permissions.
 See [the configuration reference](docs/configuration.md#command-switch-and-list-access).
+
+
+## Runtime configuration administration
+
+Wizard-only `@admin <directive>=<value>` applies runtime settings and registry edits.
+Most directives additionally require GOD. Use `@list config_permissions` to inspect
+permissions and live/restart-only/unsupported status, and `@list options`,
+`@list default_flags` or `@list bad_names` to inspect effective values.
+
+Supported edits include admission limits, timing, quotas, account policy, Lua limits,
+default flags/parents, command and flag aliases, access policies and IPv4 site rules.
+C multi-token partial success is retained. Changes are visible to Rust and Lua,
+survive Lua reload, and disappear on restart. They never rewrite configuration files
+or the database. See [runtime administration](docs/configuration.md#runtime-administration)
+for syntax, application timing and boundaries.

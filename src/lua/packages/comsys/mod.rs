@@ -14,7 +14,6 @@ use std::rc::Rc;
 struct Bindings {
     world: SharedWorld,
     outbox: Outbox,
-    config: Config,
 }
 
 impl Bindings {
@@ -22,7 +21,7 @@ impl Bindings {
         Service {
             world: &self.world,
             outbox: &self.outbox,
-            config: &self.config,
+            config: crate::lua::configuration(lua),
             lua,
         }
     }
@@ -259,14 +258,13 @@ impl UserData for Flags {
 pub(super) fn register(
     lua: &Lua,
     api: &Table,
-    config: &Config,
+    _config: &Config,
     world: &SharedWorld,
     outbox: &Outbox,
 ) -> Result<()> {
     let b = Rc::new(Bindings {
         world: world.clone(),
         outbox: outbox.clone(),
-        config: config.clone(),
     });
     let install = || -> mlua::Result<()> {
         let table = lua.create_table()?;

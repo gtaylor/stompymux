@@ -24,14 +24,14 @@ impl ListDefinition {
 pub fn list_definitions() -> Vec<ListDefinition> {
     use CommandPermissions as P;
     [
-        ("bad_names", 2, P::WIZARD, false),
+        ("bad_names", 2, P::WIZARD, true),
         ("commands", 3, P::EVERYONE, true),
-        ("config_permissions", 3, P::GOD, false),
-        ("default_flags", 1, P::EVERYONE, false),
+        ("config_permissions", 3, P::GOD, true),
+        ("default_flags", 1, P::EVERYONE, true),
         ("flags", 2, P::EVERYONE, true),
         ("globals", 1, P::WIZARD, true),
         ("logging", 4, P::GOD, false),
-        ("options", 1, P::EVERYONE, false),
+        ("options", 1, P::EVERYONE, true),
         ("permissions", 2, P::WIZARD, true),
         ("powers", 2, P::WIZARD, true),
         ("process", 2, P::WIZARD, false),
@@ -170,6 +170,9 @@ pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
     let topic = definition.name;
     if topic == "globals" {
         return Ok(Action::GlobalControl(None));
+    }
+    if let Some(report) = crate::config::administration::report(ctx, topic) {
+        return Ok(Action::LiteralReport(report));
     }
     let result = (|| -> Result<String> {
         if topic == "site_information" {

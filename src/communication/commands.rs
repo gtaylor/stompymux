@@ -122,7 +122,7 @@ impl Service<'_> {
         if !matches!(operation, Operation::Page | Operation::Admin) {
             ensure!(
                 wizard(&self.world.borrow(), who)
-                    || !in_character(&self.world.borrow(), self.config, who),
+                    || !in_character(&self.world.borrow(), &self.config, who),
                 "Permission denied."
             );
         }

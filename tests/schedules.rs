@@ -961,3 +961,52 @@ permissions="!wizard"
         shutdown.send(ShutdownRequest::Sigterm).unwrap();task.await.unwrap().unwrap();
     }).await;
 }
+
+/// Administration edits stay private and runtime-only across sessions and Lua replacement.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_runtime_administration_and_reload() {
+    tokio::task::LocalSet::new().run_until(async {
+        let (d,c)=fixture().await; credentials(&c).await;
+        let source=|label:&str| format!("return {{commands={{{{name='livecfg',permission='everyone',pattern='^livecfg$',handler=function(ctx) mux.world.pemit(ctx.enactor,'{label}:'..mux.config.get('max_players')); return true end}}}}}} ");
+        module(&c,"global_logic/livecfg.lua",&source("OLD"));
+        let (address,shutdown,task,_)=start(&c,Rc::new(Cell::new(0))).await;
+        let mut god=Client::connect(address,1).await;
+        let mut other=Client::connect(address,1).await;
+        let mut player=Client::connect(address,2).await;
+        let before=std::fs::read(c.database()).unwrap();
+        let toml=std::fs::read(d.path().join("stompymux.toml")).unwrap();
+        player.send("@admin max_players=10").await; player.until("Permission denied.").await;
+        god.send("@admin/no max_players=10").await;god.until("Unsupported command switch.").await;
+        god.send("@admin max_players=10").await;god.until("Set.").await;
+        player.send("livecfg").await;player.until("OLD:10").await;
+        other.send("livecfg").await;let text=other.until("OLD:10").await;assert!(!text.contains("Set."));
+        god.send("@admin alias=lc livecfg").await;god.until("Set.").await;
+        player.send("lc").await;player.until("OLD:10").await;
+        god.send("@admin access=livecfg wizard broken_token").await;let text=god.until("Set.").await;assert!(text.contains("broken_token"));
+        player.send("lc").await;player.until("Huh?").await;
+        module(&c,"global_logic/livecfg.lua","return {}");
+        god.send("@lua/reload").await;god.until("Lua reload failed:").await;
+        god.send("lc").await;god.until("OLD:10").await;
+        module(&c,"global_logic/livecfg.lua",&source("NEW"));
+        god.send("@lua/reload").await;god.until("Lua reloaded.").await;
+        god.send("lc").await;god.until("NEW:10").await;
+        god.send("@admin access=livecfg !wizard").await;god.until("Set.").await;
+        player.send("lc").await;player.until("NEW:10").await;
+        god.send("@admin forbid_site=127.0.0.0 255.0.0.0").await;god.until("Set.").await;
+        let mut banned=TcpStream::connect(address).await.unwrap();let mut bytes=Vec::new();
+        tokio::time::timeout(Duration::from_secs(3),banned.read_to_end(&mut bytes)).await.unwrap().unwrap();
+        assert!(!String::from_utf8_lossy(&bytes).contains("Who are you?"));
+        player.send("lc").await;player.until("NEW:10").await;
+        god.send("@admin permit_site=127.0.0.1 255.255.255.255").await;god.until("Set.").await;
+        let mut allowed=TcpStream::connect(address).await.unwrap();let mut bytes=[0;1024];
+        let count=tokio::time::timeout(Duration::from_secs(3),allowed.read(&mut bytes)).await.unwrap().unwrap(); assert!(count>0);
+        god.send("@list config_permissions").await;god.until("player_zone:").await;
+        god.send("@list options").await;god.until("Maximum authenticated sessions: 10").await;
+        assert_eq!(before,std::fs::read(c.database()).unwrap());
+        assert_eq!(toml,std::fs::read(d.path().join("stompymux.toml")).unwrap());
+        god.send("@force me=@admin max_players=11").await;god.until("Set.").await;
+        god.send("lc").await;god.until("NEW:11").await;
+        shutdown.send(ShutdownRequest::Sigterm).unwrap();task.await.unwrap().unwrap();
+        assert_ne!(Config::load(d.path()).unwrap().mux.max_players,11);
+    }).await;
+}

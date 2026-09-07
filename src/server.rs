@@ -1,5 +1,6 @@
 //! Serialized world owner, connection lifecycle and common graceful shutdown coordinator.
 mod administration;
+mod configuration;
 mod presence;
 mod queue;
 use crate::{
@@ -55,6 +56,7 @@ enum Event {
         Option<ObjectId>,
         Option<String>,
         Result<Option<String>>,
+        usize,
     ),
 }
 struct Bucket {
@@ -282,8 +284,7 @@ pub async fn run_with_clocks(
         server.config.runtime.maintenance_interval_ms,
     ));
     let mut tasks = tokio::task::JoinSet::new();
-    let mut idle_check =
-        tokio::time::interval(Duration::from_secs(server.config.mux.idle_interval));
+    let mut idle_deadline = tokio::time::Instant::now();
     tokio::pin!(shutdown);
     let cache_config = server.config.clone();
     let (cache, report) = tokio::task::spawn_blocking(move || {
@@ -359,8 +360,11 @@ pub async fn run_with_clocks(
                     Event::AdminHashed(job,result) => server.admin_hashed(job,result).await,
                     Event::Gone(id) => server.disconnect(id).await?,
                     Event::Bytes(id,bytes) => server.input(id,&bytes).await?,
-                    Event::Authenticated(id,name,create,identity,credential,result) => {
-                        server.authentication_result(id,name,create,identity,credential,result).await?;
+                    Event::Authenticated(id,name,create,identity,credential,result,password_length) => {
+                        if create && password_length > server.config.security.player_password_length_limit {
+                            server.inflight = server.inflight.saturating_sub(1);
+                            if server.sessions.get(&id).is_some_and(|s| matches!(s.flow, LoginFlow::Pending)) { server.prompt(id, LoginFlow::Name, "Password policy changed. Please try again.\r\nWho are you? ", false); }
+                        } else { server.authentication_result(id,name,create,identity,credential,result).await?; }
                     }
                 }}
             },
@@ -376,7 +380,7 @@ pub async fn run_with_clocks(
                 for id in idle { if server.sessions.get(&id).is_some_and(|s| s.player.is_none() && s.connected.elapsed()>timeout && !s.failed.get() && !s.output.is_closed()) { server.tell(id,"*** Login Timeout ***\r\n"); } server.disconnect(id).await?; }
                 server.addresses.retain(|_,b|b.at.elapsed()<Duration::from_secs(server.config.security.login_address_retention_seconds));
             },
-            _ = idle_check.tick() => { server.check_idle().await?; },
+            _ = tokio::time::sleep_until(idle_deadline) => { server.check_idle().await?; idle_deadline = tokio::time::Instant::now() + Duration::from_secs(server.config.mux.idle_interval); },
             _ = tasks.join_next(), if !tasks.is_empty() => {}
         }
         if !std::sync::Arc::ptr_eq(&runtime_sources, &server.scripts.sources) {
@@ -1612,6 +1616,10 @@ impl Server {
                     }
                 }
             }
+            Ok(Action::ConfigAdmin(request)) => {
+                let text = self.configure(p, request);
+                self.inspection_report(id, text).await;
+            }
             Ok(Action::ReadCache) => self.readcache(Some(id), p).await,
             Ok(Action::HelpReload) => {
                 let config = self.config.clone();
@@ -1922,6 +1930,7 @@ impl Server {
         let c = self.config.clone();
         let tx = self.events.clone();
         let credential = hash.clone();
+        let password_length = password.len();
         tokio::spawn(async move {
             let result = tokio::task::spawn_blocking(move || {
                 if create {
@@ -1936,7 +1945,13 @@ impl Server {
             .unwrap_or_else(|e| Err(e.into()));
             let _ = tx
                 .send(Event::Authenticated(
-                    id, name, create, identity, credential, result,
+                    id,
+                    name,
+                    create,
+                    identity,
+                    credential,
+                    result,
+                    password_length,
                 ))
                 .await;
         });
