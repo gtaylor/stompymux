@@ -714,7 +714,7 @@ async fn discovery_is_read_only_permission_filtered_and_scope_accurate() {
     assert!(run(&s, &c, 2, "@list commands").contains("catalog-public"));
     let reload = Scripts::new(&c, s.world.clone()).unwrap();
     assert!(!run(&reload, &c, 2, "@list commands").contains("catalog-public"));
-    assert!(run(&s, &c, 2, "@list site_information").contains("not implemented"));
+    assert!(run(&s, &c, 2, "@list site_information").contains("Site Access"));
     assert!(run(&s, &c, 2, "@stats extra").contains("Usage: @stats"));
 }
 

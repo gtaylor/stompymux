@@ -184,9 +184,8 @@ other callback mutations.
 
 BattleTech simulation, additional GMCP packages, a webserver and browser-side
 action handling remain deferred. Legacy help/type files describe a
-larger API than this milestone implements. Deferred configuration is reported in one capability diagnostic. Site/access
-rules parse and pass configuration checks, but block serving before writes or
-listening because enforcement is not implemented.
+larger API than this milestone implements. Deferred configuration is reported in one capability diagnostic. IPv4 site rules are enforced. Command/configuration access rules parse but still
+block serving before writes or listening because their enforcement is deferred.
 
 ## Validation
 
@@ -946,8 +945,8 @@ refreshes them off-thread and reports file sizes/errors. Failed entries retain
 last-good content; an over-budget aggregate leaves the whole cache unchanged.
 The cache uses `lua.output_byte_limit`; delivery uses the existing chunked styled
 renderer and Telnet/compression queues. Missing startup entries use an empty cache,
-with built-in admission/goodbye fallbacks where needed. Bad-site text is cached,
-but site-rule enforcement and `connect_reg_file` remain deferred.
+with built-in admission/goodbye fallbacks where needed. Forbidden sites receive cached bad-site text before negotiation or login.
+`connect_reg_file` remains deferred.
 
 A nonempty `mux.connect_dir` supplies random welcome banners: up to 100 nonhidden
 regular files whose names contain `.txt`, selected lexically before uniform choice.
@@ -958,3 +957,24 @@ removed, LF is encoded as CRLF on delivery, and unsupported controls are filtere
 Edits become visible after reload or restart; existing sessions are not rebannered.
 Admission refusal sends down/full file content plus its optional configured message
 before closing. Help reload remains independent of `@readcache`.
+
+## Site access and connection monitoring
+
+IPv4 `sites.forbid`/`permit` and `sites.suspect`/`trust` rules use independent,
+first-match address/mask lists in merged TOML declaration order. Unmatched peers
+are allowed and trusted. Forbidden connections receive the cached bad-site text
+and close before login; Wizards cannot bypass a site ban. Configured site rules
+require an IPv4 listener. IPv6 remains available when no site rules are configured.
+
+Includes use C merge semantics: tables merge recursively, arrays of tables append,
+other arrays replace, and table key order is preserved. Empty arrays do not clear
+inherited table arrays. Bootstrap maps merge too. See
+[configuration details](docs/configuration.md#loading-and-validation).
+
+Wizards can inspect `@list site_information` (`@list si`) and per-session status
+in `@telnet`. MONITOR players receive first/repeated connection and partial/final
+disconnection notices. SUSPECT players and suspected-site sessions independently
+produce notices on the existing `Suspect` channel. Channel delivery and history
+commit transactionally; MONITOR messages report actual transitions even after
+callback failures. Site edits require restart. `@admin` and suspect command
+auditing remain deferred.

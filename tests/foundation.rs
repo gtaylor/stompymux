@@ -577,6 +577,7 @@ async fn bounded_output_marks_slow_clients_for_disconnect() {
         color_override: Default::default(),
         presets_emitted: Default::default(),
         peer: "127.0.0.1".parse().unwrap(),
+        site: Default::default(),
         player: None,
         flow: LoginFlow::Name,
         connected: now,

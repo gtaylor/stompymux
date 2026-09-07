@@ -7,7 +7,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-/// The five C file-cache roles; site enforcement remains a separate feature.
+/// The five C file-cache roles used for connection admission and closure.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum File {
     Connect,

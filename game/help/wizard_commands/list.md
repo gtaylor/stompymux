@@ -37,3 +37,6 @@ Reports are private to your connection, automatically chunked and bounded. If th
 aggregate output budget is exceeded, omissions are explicitly marked. Patterns
 are displayed literally; no handlers run and no database writes occur. Successful
 Lua reload updates captured registrations; runtime table edits do not.
+
+`@list site_information` (`@list si`) shows IPv4 site access and suspicion rules
+in first-match order. Both lists default to unrestricted/trusted when no rule matches.

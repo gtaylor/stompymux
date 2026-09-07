@@ -112,7 +112,7 @@ async fn includes_merge_maps_replace_arrays_and_keep_parent_precedence() {
     assert_eq!(c.aliases.commands["c"], "quit");
 }
 #[tokio::test(flavor = "current_thread")]
-async fn bootstrap_map_replaces_included_map() {
+async fn bootstrap_map_merges_included_map() {
     let d = tempfile::tempdir().unwrap();
     std::fs::write(
         d.path().join("included.toml"),
@@ -135,9 +135,9 @@ async fn bootstrap_map_replaces_included_map() {
     )
     .unwrap();
     let c = Config::load(d.path()).unwrap();
-    assert_eq!(c.database.bootstrap.objects.len(), 6);
+    assert_eq!(c.database.bootstrap.objects.len(), 7);
     assert!(
-        !c.database
+        c.database
             .bootstrap
             .objects
             .contains_key(&stompymux_rs::config::BootstrapId(99))
@@ -152,6 +152,8 @@ async fn unknown_keys_warn_but_known_type_errors_report_the_included_file() {
         "include=['child.toml']\nserver.port=5555",
     )
     .unwrap();
+    assert_eq!(Config::load(d.path()).unwrap().server.port, 5555);
+    std::fs::write(d.path().join("stompymux.toml"), "include=['child.toml']").unwrap();
     let error = format!("{:#}", Config::load(d.path()).unwrap_err());
     assert!(error.contains("child.toml") && error.contains("server.port"));
     std::fs::write(d.path().join("child.toml"),"server.new_setting=123\nnew_feature.enabled=true\nsites.forbid=[{address='192.0.2.1',mask='255.255.255.255',typo=true}]").unwrap();
@@ -593,5 +595,124 @@ fn cleaning_deadlines_require_valid_serve_values() {
         );
     }
     let (_d, c) = config("mux.check_interval=1\nmux.check_offset=0");
+    c.validate_for_serve().unwrap();
+}
+
+/// C tomlc17 merges ordered tables, concatenates table arrays and replaces scalar arrays.
+#[test]
+fn c_include_order_arrays_empty_arrays_and_partial_bootstrap() {
+    let d = tempfile::tempdir().unwrap();
+    let defaults = toml::Value::try_from(stompymux_rs::config::BootstrapConfig::default()).unwrap();
+    let mut base = toml::Table::new();
+    let mut database = toml::Table::new();
+    database.insert("bootstrap".into(), defaults);
+    base.insert("database".into(), database.into());
+    std::fs::write(
+        d.path().join("defaults.toml"),
+        toml::to_string(&base).unwrap(),
+    )
+    .unwrap();
+    std::fs::write(d.path().join("first.toml"), "sites.permit=[{address='127.0.0.1',mask='255.255.255.255'}]\nsites.forbid=[{address='0.0.0.0',mask='0.0.0.0'}]\nnames.bad=['old']\ndatabase.bootstrap.objects.99={type='room'}").unwrap();
+    std::fs::write(
+        d.path().join("second.toml"),
+        "include=['first.toml']\nsites.forbid=[]\ndatabase.bootstrap.objects.99.name='Extra'",
+    )
+    .unwrap();
+    std::fs::write(d.path().join("stompymux.toml"), "include=['defaults.toml','first.toml','second.toml']\nnames.bad=[]\nsites.permit=[{address='192.0.2.1',mask='255.255.255.255'}]").unwrap();
+    let c = Config::load(d.path()).unwrap();
+    assert_eq!(c.sites.permit.len(), 3);
+    assert_eq!(c.sites.forbid.len(), 2);
+    assert!(c.names.bad.is_empty());
+    assert_eq!(
+        c.site_policy
+            .access
+            .iter()
+            .map(|r| r.marked)
+            .collect::<Vec<_>>(),
+        [false, false, false, true, true]
+    );
+    assert!(
+        !c.site_policy
+            .classify("127.0.0.1".parse().unwrap())
+            .forbidden
+    );
+    assert!(
+        c.site_policy
+            .classify("198.51.100.1".parse().unwrap())
+            .forbidden
+    );
+    assert_eq!(
+        c.database.bootstrap.objects[&stompymux_rs::config::BootstrapId(99)].name,
+        "Extra"
+    );
+    assert!(c.site_policy.access[0].origin.contains("first.toml"));
+    assert!(c.site_policy.access[2].origin.contains("stompymux.toml"));
+    std::fs::write(d.path().join("second.toml"), "sites.permit=[{address='bad',mask='255.255.255.255'}]\ndatabase.bootstrap.objects.99.name='Extra'").unwrap();
+    let error = format!("{:#}", Config::load(d.path()).unwrap_err());
+    assert!(
+        error.contains("second.toml") && error.contains("sites.permit[1]"),
+        "{error}"
+    );
+}
+
+#[test]
+fn c_include_depth_is_eight_edges() {
+    let d = tempfile::tempdir().unwrap();
+    for i in 0..=8 {
+        let path = if i == 0 {
+            "stompymux.toml".to_string()
+        } else {
+            format!("{i}.toml")
+        };
+        std::fs::write(
+            d.path().join(path),
+            if i == 8 {
+                String::new()
+            } else {
+                format!("include=['{}.toml']", i + 1)
+            },
+        )
+        .unwrap();
+    }
+    Config::load(d.path()).unwrap();
+    std::fs::write(d.path().join("8.toml"), "include=['9.toml']").unwrap();
+    std::fs::write(d.path().join("9.toml"), "").unwrap();
+    assert!(format!("{:#}", Config::load(d.path()).unwrap_err()).contains("nesting exceeds 8"));
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn ipv4_site_readiness_and_ipv6_rejection_precede_side_effects() {
+    for (rule, address, valid) in [
+        (
+            "{address='127.0.0.1',mask='255.255.255.255'}",
+            "127.0.0.1",
+            true,
+        ),
+        ("{address='127.0.0.1',mask='255.255.255.255'}", "::1", false),
+        (
+            "{address='::1',mask='ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'}",
+            "127.0.0.1",
+            false,
+        ),
+    ] {
+        let d = game();
+        let path = d.path().join("stompymux.toml");
+        let mut doc: toml::Value =
+            toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        doc["sites"] = toml::from_str::<toml::Value>(&format!("forbid=[{rule}]")).unwrap();
+        std::fs::write(path, toml::to_string(&doc).unwrap()).unwrap();
+        let c = Config::load(d.path())
+            .unwrap()
+            .with_listener_overrides(Some(address.parse().unwrap()), None)
+            .unwrap();
+        assert_eq!(c.validate_for_serve().is_ok(), valid);
+        if !valid {
+            let before = std::fs::read(c.database()).unwrap();
+            assert!(server::prepare(&c).await.is_err());
+            assert_eq!(before, std::fs::read(c.database()).unwrap());
+            assert!(!c.path(&c.database.bootstrap.credentials_file).exists());
+        }
+    }
+    let (_d, c) = config("server.listen_address='::1'");
     c.validate_for_serve().unwrap();
 }

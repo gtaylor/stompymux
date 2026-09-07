@@ -9,10 +9,19 @@ annotated game configuration intentionally overrides some defaults.
 ## Loading and validation
 
 Includes are recursive and resolved relative to the file containing `include`.
-Later includes override earlier includes, and the including file wins. Ordinary
-maps merge, arrays replace, and an explicit `database.bootstrap.objects` map
-replaces the entire inherited/default map. Defaults apply after merging. Cycles
-and excessive nesting are errors.
+Includes are applied in declaration order, followed by the including file. The
+merge follows C's tomlc17 behavior: tables merge recursively, scalars replace,
+and arrays concatenate when both contain only tables. Other arrays replace.
+An empty array therefore does not clear an inherited array of tables. Repeating
+an include repeats its table-array contributions. Bootstrap object maps merge
+recursively too; partial object fields may be supplied by separate files.
+Defaults and shape validation apply after merging. Overridden malformed values
+are not validated, but malformed TOML and include declarations always fail.
+
+Table keys retain their first position in the merged document, with new keys
+appended. This order determines site-rule precedence. Includes may descend eight
+edges from the root file; deeper nesting and cycles are errors. Diagnostics retain
+source files for merged values and concatenated rule entries.
 
 Unknown keys warn and are skipped. Malformed known values report the source file
 and configuration path. Types, numeric bounds, finite floats, RGB components,
@@ -24,8 +33,8 @@ access tables, colors and OSC presets retain dynamic names.
 
 BattleTech, extended rendering/OSC, logging and remaining legacy command-system
 options are parsed and retained without enabling those features. A consolidated
-capability diagnostic reports this. Site and access rules pass configuration
-checks, but nonempty rules block `serve` before bootstrap, database writes or
+capability diagnostic reports this. Site and access rules pass configuration checks. IPv4 site rules are enforced;
+unsupported access rules still block `serve` before bootstrap, database writes or
 listening. There is no live reload or configuration editing command.
 
 Rust callers use typed fields. Lua `mux.config` lookups accept dotted TOML
@@ -115,3 +124,33 @@ The existing `lua.output_byte_limit` bounds aggregate cached UTF-8 content; exce
 it rejects publication. Down/full responses append `mux.down_message` or
 `mux.full_message`. Banner discovery is lexical, nonrecursive and capped at 100
 regular nonhidden files containing `.txt`; each welcome selects uniformly.
+
+## IPv4 site access and monitoring
+
+`sites.forbid`/`sites.permit` form one ordered list; `sites.suspect`/`sites.trust`
+form another. Each array contains `{address="...", mask="..."}` entries. Categories
+follow merged TOML declaration order, and entries retain array order. The first
+match in each independent list wins. Put exceptions before broader rules.
+Unmatched peers are unrestricted and trusted. Matching uses literal
+`(peer & mask) == address`; noncontiguous masks are supported. Addresses with bits
+outside the mask are not normalized and produce an unmatchable-rule warning.
+
+Site enforcement is IPv4-only. IPv6 rule values remain parseable, but serving
+rejects them. Any nonempty site list also requires an IPv4 listener, including
+CLI overrides. These checks run before startup side effects. With no site rules,
+IPv6 listeners retain their ordinary behavior.
+
+Forbidden peers receive cached `mux.badsite_file` text and close before Telnet
+negotiation or login. Empty text falls back to `Connection refused.` There is no
+Wizard bypass and no login-history update. A permit does not override connection
+limits or disabled logins. Rules are fixed until restart; `@readcache` refreshes
+text only.
+
+`@list site_information` (`@list si`) displays effective lists in matching order.
+`@telnet <player>` shows each session's peer and captured site classification.
+MONITOR players receive connection/reconnection and partial/final disconnection
+notices. The existing `Suspect` channel receives per-session notices for SUSPECT
+players and suspected sites independently. Trust rules do not clear SUSPECT.
+No missing channel is automatically created. MONITOR notices describe actual
+session transitions even when callbacks fail; channel history and delivery remain
+transactional. Command auditing to `SuspectsLog` is not enabled by this feature.

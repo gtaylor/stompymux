@@ -16,27 +16,94 @@ pub struct Document {
     pub origins: BTreeMap<String, PathBuf>,
     pub warnings: Vec<String>,
 }
-/// Merge ordinary maps while replacing arrays and bootstrap object maps.
-fn merge(a: &mut toml::Table, b: toml::Table, prefix: &str) {
-    for (key, value) in b {
-        let path = if prefix.is_empty() {
-            key.clone()
-        } else {
-            format!("{prefix}.{key}")
-        };
-        if path != "database.bootstrap.objects"
-            && let Some(Value::Table(old)) = a.get_mut(&key)
-            && let Value::Table(new) = &value
-        {
-            merge(old, new.clone(), &path);
-            continue;
+/// Merge ordered values and provenance using the C TOML loader's rules.
+fn merge(a: &mut Document, b: Document) {
+    fn value(
+        a: &mut Value,
+        b: Value,
+        path: &str,
+        origins: &mut BTreeMap<String, PathBuf>,
+        source: &BTreeMap<String, PathBuf>,
+    ) {
+        if let (Value::Table(old), Value::Table(new)) = (&mut *a, &b) {
+            for (key, v) in new {
+                let child = if path.is_empty() {
+                    key.clone()
+                } else {
+                    format!("{path}.{key}")
+                };
+                value(
+                    old.entry(key.clone())
+                        .or_insert(Value::String(String::new())),
+                    v.clone(),
+                    &child,
+                    origins,
+                    source,
+                );
+            }
+            if let Some(file) = source.get(path) {
+                origins.insert(path.into(), file.clone());
+            }
+            return;
         }
-        a.insert(key, value);
+        if let (Value::Array(old), Value::Array(new)) = (&mut *a, &b)
+            && old.iter().all(Value::is_table)
+            && new.iter().all(Value::is_table)
+        {
+            let offset = old.len();
+            for (index, item) in new.iter().enumerate() {
+                let from = format!("{path}[{index}]");
+                let to = format!("{path}[{}]", offset + index);
+                for (key, file) in source {
+                    if key == &from || key.starts_with(&format!("{from}.")) {
+                        origins.insert(format!("{to}{}", &key[from.len()..]), file.clone());
+                    }
+                }
+                old.push(item.clone());
+            }
+            return;
+        }
+        origins.retain(|key, _| {
+            key != path
+                && !key.starts_with(&format!("{path}."))
+                && !key.starts_with(&format!("{path}["))
+        });
+        for (key, file) in source {
+            if key == path
+                || key.starts_with(&format!("{path}."))
+                || key.starts_with(&format!("{path}["))
+            {
+                origins.insert(key.clone(), file.clone());
+            }
+        }
+        *a = b;
     }
+    let mut root = Value::Table(std::mem::take(&mut a.values));
+    value(
+        &mut root,
+        Value::Table(b.values),
+        "",
+        &mut a.origins,
+        &b.origins,
+    );
+    a.values = root.as_table().unwrap().clone();
+    a.warnings.extend(b.warnings);
 }
 /// Read and merge a configuration file and its recursive includes.
 pub fn read(path: &Path) -> Result<Document> {
-    read_inner(path, &mut BTreeSet::new())
+    let mut doc = read_inner(path, &mut BTreeSet::new())?;
+    let mut values = toml::Table::new();
+    let origins = doc.origins.clone();
+    filter(
+        std::mem::take(&mut doc.values),
+        &mut values,
+        "",
+        path,
+        &origins,
+        &mut doc.warnings,
+    )?;
+    doc.values = values;
+    Ok(doc)
 }
 /// Expand one include while tracking recursion and source ownership.
 fn read_inner(path: &Path, stack: &mut BTreeSet<PathBuf>) -> Result<Document> {
@@ -44,8 +111,8 @@ fn read_inner(path: &Path, stack: &mut BTreeSet<PathBuf>) -> Result<Document> {
         .canonicalize()
         .with_context(|| format!("reading {}", path.display()))?;
     ensure!(
-        stack.len() < 64,
-        "{}: include nesting exceeds 64",
+        stack.len() <= 8,
+        "{}: include nesting exceeds 8",
         path.display()
     );
     ensure!(
@@ -65,23 +132,17 @@ fn read_inner(path: &Path, stack: &mut BTreeSet<PathBuf>) -> Result<Document> {
                 .as_str()
                 .with_context(|| format!("{}: include entries must be strings", path.display()))?;
             let next = read_inner(&path.parent().unwrap().join(relative), stack)?;
-            merge(&mut result.values, next.values, "");
-            result.origins.extend(next.origins);
-            result.warnings.extend(next.warnings);
+            merge(&mut result, next);
         }
     }
-    let mut own = Document::default();
-    filter(
-        table,
-        &mut own.values,
-        "",
-        &path,
-        &mut own.origins,
-        &mut own.warnings,
-    )?;
-    merge(&mut result.values, own.values, "");
-    result.origins.extend(own.origins);
-    result.warnings.extend(own.warnings);
+    let mut own = Document {
+        values: table,
+        ..Default::default()
+    };
+    for (key, value) in &own.values {
+        record_origins(key, value, &path, &mut own.origins);
+    }
+    merge(&mut result, own);
     stack.remove(&path);
     Ok(result)
 }
@@ -91,7 +152,7 @@ fn filter(
     out: &mut toml::Table,
     prefix: &str,
     source: &Path,
-    origins: &mut BTreeMap<String, PathBuf>,
+    origins: &BTreeMap<String, PathBuf>,
     warnings: &mut Vec<String>,
 ) -> Result<()> {
     for (key, mut value) in table {
@@ -100,12 +161,21 @@ fn filter(
         } else {
             format!("{prefix}.{key}")
         };
+        let source = origins.get(&path).map(PathBuf::as_path).unwrap_or(source);
         if let Some(spec) = KEYS.iter().find(|s| s.path == path) {
-            // Validate before merging, so invalid values in included files cannot be hidden.
             normalize(&path, &mut value);
             clean_entry_keys(&path, &mut value, source, warnings);
+            if spec.kind == "Vec<SiteRule>"
+                && let Some(entries) = value.as_array()
+            {
+                for (index, entry) in entries.iter().enumerate() {
+                    let item = format!("{path}[{index}]");
+                    let file = origins.get(&item).map(PathBuf::as_path).unwrap_or(source);
+                    validate(spec, &Value::Array(vec![entry.clone()]))
+                        .with_context(|| format!("{}: {item}", file.display()))?;
+                }
+            }
             validate(spec, &value).with_context(|| format!("{}: {path}", source.display()))?;
-            record_origins(&path, &value, source, origins);
             out.insert(key, value);
         } else if KEYS.iter().any(|s| s.path.starts_with(&format!("{path}."))) {
             let table = value
@@ -131,6 +201,11 @@ fn record_origins(
     origins: &mut BTreeMap<String, PathBuf>,
 ) {
     origins.insert(path.into(), source.into());
+    if let Value::Array(items) = value {
+        for (index, item) in items.iter().enumerate() {
+            record_origins(&format!("{path}[{index}]"), item, source, origins);
+        }
+    }
     if let Value::Table(t) = value {
         for (k, v) in t {
             record_origins(&format!("{path}.{k}"), v, source, origins);

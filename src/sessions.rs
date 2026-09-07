@@ -25,6 +25,8 @@ pub struct Session {
     /// Shared with the socket task, containing counters only, never world state.
     pub stats: Arc<Stats>,
     pub peer: IpAddr,
+    /// Immutable site classification captured at socket acceptance.
+    pub site: crate::sites::Classification,
     pub player: Option<ObjectId>,
     /// Interactive login state.
     pub flow: LoginFlow,

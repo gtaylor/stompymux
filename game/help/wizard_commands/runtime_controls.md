@@ -34,6 +34,20 @@ leaves the current cache unchanged. Help reload is separate.
 
 New connections choose among available cached banners, or use the connect file.
 Refused admissions receive the down/full file and optional configured message.
-Bad-site text is cached for future site enforcement. Edits appear after reload or
+Forbidden sites receive cached bad-site text before negotiation or login. Edits appear after reload or
 restart, and current sessions are not rebannered. Controls and cache reload do
 not write configuration or the world database.
+
+# Site access and monitoring
+
+`@list site_information` (or `@list si`) displays the IPv4 access and suspicion
+rules in first-match order. `@telnet <player>` shows captured site status and peer
+addresses for each connection. Site rules are loaded from configuration at startup;
+`@readcache` changes rejection text, not policy. A site ban applies even to GOD.
+
+Players with MONITOR receive `GAME:` messages for connections, reconnections,
+partial disconnects and final disconnects. DARK first connections are labeled
+DARK-connected. The existing `Suspect` channel receives notices for SUSPECT players
+and suspected-site sessions independently, including each reconnect and partial
+disconnect. Trust rules suppress site suspicion only. Missing channels are not
+created. Command auditing to `SuspectsLog` remains deferred.

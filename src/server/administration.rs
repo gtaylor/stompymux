@@ -303,6 +303,7 @@ mod tests {
                 color_override: Default::default(),
                 presets_emitted: Default::default(),
                 peer: "127.0.0.1".parse().unwrap(),
+                site: Default::default(),
                 player,
                 flow: LoginFlow::Pending,
                 connected: now,

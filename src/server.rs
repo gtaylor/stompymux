@@ -1,5 +1,6 @@
 //! Serialized world owner, connection lifecycle and common graceful shutdown coordinator.
 mod administration;
+mod presence;
 mod queue;
 use crate::{
     accounts,
@@ -13,6 +14,7 @@ use crate::{
 };
 use anyhow::{Context, Result};
 use mlua::LuaSerdeExt;
+use presence::TransitionKind;
 use std::{
     cell::RefCell,
     collections::BTreeMap,
@@ -240,6 +242,8 @@ pub async fn run_with_clocks(
     cleaning_now: impl Fn() -> tokio::time::Instant,
 ) -> Result<()> {
     c.validate_for_serve()?;
+    c.site_policy
+        .validate_listener(listener.local_addr()?.ip())?;
     for warning in c.warnings.iter().chain(&scripts.warnings) {
         eprintln!("Warning: {warning}");
     }
@@ -320,7 +324,13 @@ pub async fn run_with_clocks(
             request = &mut shutdown => { server.request_shutdown(request).await; },
             accepted = listener.accept() => {
                 let (stream,peer)=accepted?;
-                if server.sessions.len()>=server.config.runtime.max_connections { drop(stream); continue; }
+                if tasks.len()>=server.config.runtime.max_connections { drop(stream); continue; }
+                let site = server.config.site_policy.classify(peer.ip());
+                if site.forbidden {
+                    eprintln!("Connection refused from {peer}: forbidden site");
+                    tasks.spawn(presence::reject_site(stream, server.message_cache.text(crate::message_cache::File::BadSite).to_owned(), server.scripts.palette.clone(), server.config.clone()));
+                    continue;
+                }
                 next+=1;
                 let id=SessionId(next);
                 let (output,receiver)=mpsc::channel(server.config.runtime.session_output_queue_capacity);
@@ -328,7 +338,7 @@ pub async fn run_with_clocks(
                 let stats=std::sync::Arc::new(telnet::transport::Stats::default());
                 server.sessions.insert(id,Session {
                     palette:server.scripts.palette.clone(), color_override:Default::default(), presets_emitted:Default::default(),
-                    stats:stats.clone(),output, peer:peer.ip(), player:None, flow:LoginFlow::Name,
+                    stats:stats.clone(),output, site, peer:peer.ip(), player:None, flow:LoginFlow::Name,
                     connected:now, active:now, decoder:telnet::Decoder::new(&server.config.runtime),
                     output_message_limit:server.config.runtime.output_message_limit,
                     quota:server.config.mux.command_quota_increment.min(server.config.mux.command_quota_max),
@@ -721,6 +731,20 @@ impl Server {
                             .collect::<Vec<_>>()
                             .join(", ")
                     ));
+                    report.line(&format!(
+                        "Peer: {}; site access: {}; site status: {}",
+                        session.peer,
+                        if session.site.forbidden {
+                            "Forbidden"
+                        } else {
+                            "Unrestricted"
+                        },
+                        if session.site.suspect {
+                            "Suspected"
+                        } else {
+                            "Trusted"
+                        }
+                    ));
                     telnet::diagnostics::telnet(
                         &mut report,
                         &world.objects[&player].name,
@@ -965,7 +989,19 @@ impl Server {
             s.close();
             self.reconcile_connections();
             if let Some(p) = s.player {
-                if self.sessions.values().any(|s| s.player == Some(p)) {
+                let partial = self.sessions.values().any(|s| s.player == Some(p));
+                let transition = self.transition(
+                    p,
+                    if partial {
+                        TransitionKind::PartialDisconnect
+                    } else {
+                        TransitionKind::Disconnected
+                    },
+                    s.peer,
+                    s.site,
+                );
+                if partial {
+                    self.announce_transition(transition).await;
                     return Ok(());
                 }
                 let before = self.scripts.world.borrow().clone();
@@ -987,6 +1023,7 @@ impl Server {
                 }
                 self.commit(before).await;
                 self.flush();
+                self.announce_transition(transition).await;
             }
         }
         Ok(())
@@ -1313,6 +1350,7 @@ impl Server {
                 for finding in &report.findings {
                     eprintln!("DBCK: {finding}");
                 }
+                let mut transitions = Vec::new();
                 for id in self
                     .sessions
                     .iter()
@@ -1326,10 +1364,27 @@ impl Server {
                     self.tell(id, "You have been destroyed!\r\n");
                     if let Some(session) = self.sessions.remove(&id) {
                         session.close();
+                        if let Some(player) = session.player {
+                            let partial = self.sessions.values().any(|s| s.player == Some(player));
+                            transitions.push(presence::Transition::capture(
+                                &before,
+                                player,
+                                if partial {
+                                    TransitionKind::PartialDisconnect
+                                } else {
+                                    TransitionKind::Disconnected
+                                },
+                                session.peer,
+                                session.site,
+                            ));
+                        }
                     }
                 }
                 self.reconcile_connections();
                 self.flush();
+                for transition in transitions {
+                    self.announce_transition(transition).await;
+                }
                 self.command_queue.reconcile(&self.scripts.world.borrow());
                 if let Some(session) = session.and_then(|id| self.sessions.get(&id)) {
                     session.raw(report.response(self.config.runtime.output_message_limit));
@@ -2017,6 +2072,16 @@ impl Server {
             return Ok(());
         }
         let reconnect = self.sessions.values().any(|s| s.player == Some(p));
+        let transition = self.transition(
+            p,
+            if reconnect {
+                TransitionKind::Reconnected
+            } else {
+                TransitionKind::Connected
+            },
+            self.sessions[&id].peer,
+            self.sessions[&id].site,
+        );
         let session = self.sessions.get_mut(&id).unwrap();
         session.player = Some(p);
         session.connected = Instant::now();
@@ -2052,6 +2117,7 @@ impl Server {
         }
         self.commit(before).await;
         self.flush();
+        self.announce_transition(transition).await;
         self.tell(id, "Connected.\r\n");
         if !self.controls.enabled(crate::controls::Control::Logins) {
             self.tell(id, "*** Logins are disabled.\r\n");
@@ -2164,6 +2230,7 @@ mod tests {
                 color_override: Default::default(),
                 presets_emitted: Default::default(),
                 peer: "127.0.0.1".parse().unwrap(),
+                site: Default::default(),
                 player: None,
                 flow: LoginFlow::Pending,
                 connected: now,
@@ -2315,6 +2382,7 @@ mod tests {
                         color_override: Default::default(),
                         presets_emitted: Default::default(),
                         peer: "127.0.0.1".parse().unwrap(),
+                        site: Default::default(),
                         player: Some(ObjectId(1)),
                         flow: LoginFlow::Name,
                         connected: now,
@@ -2417,6 +2485,7 @@ mod tests {
                     color_override: Default::default(),
                     presets_emitted: Default::default(),
                     peer: "127.0.0.1".parse().unwrap(),
+                    site: Default::default(),
                     player: None,
                     flow: LoginFlow::Pending,
                     connected: now,

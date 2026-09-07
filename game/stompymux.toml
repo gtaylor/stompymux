@@ -8,7 +8,8 @@
 
 # Include the stock command and flag aliases. Add local
 # aliases in the [aliases.*] tables below instead of editing aliases.toml -
-# this file's own keys always win over anything pulled in via `include`.
+# This file overrides included scalars; maps merge and arrays of tables append.
+# Empty arrays do not clear inherited table arrays. Includes may nest eight levels.
 include = ["aliases.toml"]
 
 # -----------------------------------------------
@@ -275,6 +276,10 @@ maximum_length = 30
 # -----------------------------------------------
 
 [sites]
+# IPv4 only. Any nonempty site list requires an IPv4 listener.
+# First match wins independently in permit/forbid and trust/suspect lists.
+# Merged declaration order is significant: put exceptions before broader rules.
+# Matching is literal (peer & mask) == address. Rules require restart.
 # Example: Forbid this site from connecting.
 # forbid = [ { address = "216.184.159.82", mask = "255.255.255.255" } ]
 

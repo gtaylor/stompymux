@@ -122,9 +122,16 @@ pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
             .map(|(name, _)| name)
             .ok_or_else(|| {
                 anyhow::anyhow!(
-                    "Unknown option. Use one of: commands flags permissions powers switches"
+                    "Unknown option. Use one of: commands flags permissions powers site_information switches"
                 )
             })?;
+        if topic == "site_information" {
+            return ctx
+                .config
+                .site_policy
+                .report(ctx.config.lua.output_byte_limit)?
+                .finish();
+        }
         if topic == "flags" {
             return Ok(format!(
                 "Flags: {}",

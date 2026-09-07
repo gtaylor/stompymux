@@ -24,7 +24,7 @@ pub enum LogOption {
 /// Red, green and blue components in the inclusive range 0–255.
 pub type Rgb = [u8; 3];
 #[derive(Debug, Clone, Serialize, Deserialize)]
-/// Ordered address/mask policy entry, retained until enforcement is supported.
+/// Address/mask policy entry; declaration order is retained by the compiled site policy.
 pub struct SiteRule {
     pub address: IpAddr,
     pub mask: IpAddr,

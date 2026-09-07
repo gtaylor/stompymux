@@ -764,3 +764,138 @@ async fn tcp_admission_controls_cache_and_existing_queue() {
         })
         .await;
 }
+
+/// Forbidden connections get cached safe text before protocol negotiation or authentication.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_site_rejection_and_private_inspection() {
+    tokio::task::LocalSet::new()
+        .run_until(async {
+            let (d, old) = fixture().await;
+            credentials(&old).await;
+            let path = d.path().join("stompymux.toml");
+            let mut doc: toml::Value =
+                toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+            doc["sites"] = toml::from_str::<toml::Value>(
+                "forbid=[{address='127.0.0.2',mask='255.255.255.255'}]",
+            )
+            .unwrap();
+            std::fs::write(&path, toml::to_string(&doc).unwrap()).unwrap();
+            let c = Config::load(d.path()).unwrap();
+            std::fs::write(
+                c.path(&c.mux.badsite_file),
+                "[bold]DENIED[/bold]\r\n\u{1b}]0;unsafe\u{7}",
+            )
+            .unwrap();
+            let (address, shutdown, task, _) = start(&c, Rc::new(Cell::new(0))).await;
+            let mut god = Client::connect(address, 1).await;
+            let mut ordinary = Client::connect(address, 2).await;
+            let before = std::fs::read(c.database()).unwrap();
+            let socket = tokio::net::TcpSocket::new_v4().unwrap();
+            socket.bind("127.0.0.2:0".parse().unwrap()).unwrap();
+            let mut denied = socket.connect(address).await.unwrap();
+            let mut bytes = Vec::new();
+            tokio::time::timeout(Duration::from_secs(3), denied.read_to_end(&mut bytes))
+                .await
+                .unwrap()
+                .unwrap();
+            let text = String::from_utf8(bytes.clone()).unwrap();
+            assert!(text.contains("DENIED"), "{text:?}");
+            assert!(!bytes.contains(&255) && !bytes.contains(&27));
+            assert!(!text.contains("Who are you") && !text.contains("unsafe"));
+            god.send("@list si").await;
+            let report = god.until("----- Suspected Sites -----").await;
+            assert!(report.contains("127.0.0.2") && report.contains("Forbidden"));
+            god.send("@telnet #1").await;
+            god.until("site status: Trusted").await;
+            ordinary.send("@list si").await;
+            ordinary.until("Permission denied.").await;
+            assert_eq!(before, std::fs::read(c.database()).unwrap());
+            god.send("say responsive").await;
+            god.until("responsive").await;
+            shutdown.send(ShutdownRequest::Sigterm).unwrap();
+            task.await.unwrap().unwrap();
+        })
+        .await;
+}
+
+/// Monitor notices describe every actual session transition, while suspect-channel writes commit.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_site_monitor_and_suspect_lifecycle() {
+    tokio::task::LocalSet::new().run_until(async {
+        let (d, old) = fixture().await;
+        credentials(&old).await;
+        let path = d.path().join("stompymux.toml");
+        let mut doc: toml::Value = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+        for key in ["login_attempt_burst", "login_hash_limit"] {
+            doc["security"].as_table_mut().unwrap().insert(key.into(), toml::Value::Integer(100));
+        }
+        doc["sites"] = toml::from_str::<toml::Value>("suspect=[{address='127.0.0.0',mask='255.0.0.0'}]").unwrap();
+        std::fs::write(path, toml::to_string(&doc).unwrap()).unwrap();
+        let c = Config::load(d.path()).unwrap();
+        module(&c, "global_logic/monitor_failure.lua", r#"return {events={on_player_disconnect=function(ctx)
+            if fail_disconnect and ctx.enactor==2 then
+                mux.world.object(2):state('monitor_failure'):set('leak', true)
+                mux.world.pemit(1, 'LEAKED_MONITOR_CALLBACK')
+                error('injected disconnect callback failure')
+            end
+        end}}"#);
+        let s = scripts(&c).await;
+        let service = s.communication(&c);
+        service.create("Suspect").unwrap();
+        service.add(ObjectId(1), "Suspect", "sus", true, true).unwrap();
+        s.world.borrow_mut().objects.get_mut(&ObjectId(1)).unwrap().flags.insert(Flag::Monitor);
+        s.world.borrow_mut().objects.get_mut(&ObjectId(2)).unwrap().flags.insert(Flag::Suspect);
+        s.world.borrow_mut().objects.get_mut(&ObjectId(2)).unwrap().flags.insert(Flag::Dark);
+        let god_name = s.world.borrow().objects[&ObjectId(1)].name.clone();
+        let player_name = s.world.borrow().objects[&ObjectId(2)].name.clone();
+        let saved = s.world.borrow().clone();
+        persistence::save(&c.database(), &saved).await.unwrap();
+        let (address, shutdown, task, vm) = start(&c, Rc::new(Cell::new(0))).await;
+        let mut god = Client::connect(address, 1).await;
+        let mut other_monitor = Client::connect(address, 1).await;
+        let player = Client::connect(address, 2).await;
+        god.until(&format!("GAME: {player_name} has DARK-connected.")).await;
+        other_monitor.until(&format!("GAME: {player_name} has DARK-connected.")).await;
+        god.until(&format!("[Suspect] {player_name} has connected.")).await;
+        god.until(&format!("[Suspect site: 127.0.0.1] {player_name} has connected.")).await;
+        let mut second = Client::connect(address, 2).await;
+        god.until(&format!("GAME: {player_name} has reconnected.")).await;
+        second.send("quit").await;
+        god.until(&format!("GAME: {player_name} has partially disconnected.")).await;
+        assert!(persistence::load(&c.database()).await.unwrap().accounts.contains_key(&ObjectId(2)));
+        // Failure in channel persistence suppresses channel output, not the actual monitor notice.
+        let mut db = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()).foreign_keys(false)).await.unwrap();
+        sqlx::raw_sql("CREATE TRIGGER reject_site_channels BEFORE UPDATE ON comsys_channels BEGIN SELECT RAISE(ABORT,'notification failure'); END;").execute(&mut db).await.unwrap();
+        let count = persistence::load(&c.database()).await.unwrap().channels["Suspect"].messages;
+        vm.globals().set("fail_disconnect", true).unwrap();
+        drop(player);
+        god.until(&format!("GAME: {player_name} has disconnected.")).await;
+        god.send("@examine #2").await;
+        let output = god.until("Powers:").await;
+        assert!(!output.contains("CONNECTED") && !output.contains("LEAKED_MONITOR_CALLBACK"), "{output}");
+        assert!(!persistence::load(&c.database()).await.unwrap().objects[&ObjectId(2)].state.contains_key("monitor_failure"));
+        assert_eq!(count, persistence::load(&c.database()).await.unwrap().channels["Suspect"].messages);
+        sqlx::raw_sql("DROP TRIGGER reject_site_channels").execute(&mut db).await.unwrap();
+        db.close().await.unwrap();
+        for (flag, response) in [("!dark", "DARK cleared."), ("!suspect", "SUSPECT cleared."), ("monitor", "MONITOR set.")] {
+            god.send(&format!("@flag #2={flag}")).await;
+            god.until(response).await;
+        }
+        god.send("@chan/destroy Suspect").await;
+        god.until("Channel Suspect destroyed.").await;
+        // A non-Wizard monitor receives notices; a missing channel is not recreated.
+        let mut ordinary_monitor = Client::connect(address, 2).await;
+        god.until(&format!("GAME: {player_name} has connected.")).await;
+        let third = Client::connect(address, 1).await;
+        ordinary_monitor.until(&format!("GAME: {god_name} has reconnected.")).await;
+        god.send("@flag #2=!monitor").await;
+        god.until("MONITOR cleared.").await;
+        drop(third);
+        god.until(&format!("GAME: {god_name} has partially disconnected.")).await;
+        ordinary_monitor.send("look").await;
+        assert!(!ordinary_monitor.until("Staff Nexus").await.contains("GAME:"));
+        assert!(!persistence::load(&c.database()).await.unwrap().channels.contains_key("Suspect"));
+        shutdown.send(ShutdownRequest::Sigterm).unwrap();
+        task.await.unwrap().unwrap();
+    }).await;
+}
