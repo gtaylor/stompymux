@@ -1,0 +1,7 @@
+reorder_imports = true
+#reorder_impl_items = true
+reorder_modules = true
+#color = "Always"
+#hex_literal_case = "Upper"
+newline_style = "Unix"
+#group_imports = "StdExternalCrate"

@@ -1,8 +1,90 @@
+*.o
+*.lo
+*.la
+/.cache
+/CMakeFiles
+/CMakeCache.txt
+/cmake_install.cmake
+/CTestTestfile.cmake
+/Testing
+/.build*
+/.san-build
+/.iwyu-build
+/build
+/build-*
+*.in
+!/cmake/*.in
+!/src/cmake/*.in
+*.m4
+/btech/configure
+/btech/confutil
+/configure
+/confutil
+
+# /
+/autom4te.cache
+/config.status
+/config.log
+/libtool
+/autoconf.h
+/stamp-h1
+/Makefile
+/config.cache
+/game*/data/
+!/game/data/
+/game/data/*
+!/game/data/migrations/
+!/game/data/migrations/btech_v2_to_v3.sql
+/tests/fixtures/game/data/*.db*
+/game*/lib/
+/game*/stompymux
+/game*/text/*.indx
+/game*/logs/stompymux.log*
+/game*/logs/superset-run.pid
+/game*/stompymux.local.toml
+/buildnum.data
 /target/
-/game/stompymux
-/game/logs/
-/game/data/*-wal
-/game/data/*-shm
-/game/data/stompymux-rs.db*
-/game/bootstrap-credentials.txt
-/game/data/stompymux.db*
+
+# /btech/
+/btech/autom4te.cache
+/btech/config.status
+/btech/config.log
+/btech/config.cache
+/btech/libtool
+/btech/autoconf.h
+/btech/stamp-h1
+/btech/Makefile
+
+# /btech/btpr/
+/btech/btpr/Makefile
+/btech/btpr/.deps
+/btech/btpr/.libs
+/btech/btpr/pqtest
+
+# /btech/src/
+/btech/src/Makefile
+/btech/src/.deps
+/btech/src/.libs
+
+# /btech/src/btech/
+/btech/src/btech/*.d
+/btech/src/btech/cscope.*
+
+# /event/
+/event/*.d
+
+# /misc/
+/misc/*.d
+
+# /src/
+/src/Makefile
+/src/.deps
+/src/.libs
+/src/version.h
+/src/stompymux
+/docs/.hugo_build.lock
+/docs/node_modules/
+/docs/public/
+/docs/resources/
+
+/.claude/settings.local.json

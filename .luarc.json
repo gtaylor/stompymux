@@ -1,0 +1,13 @@
+{
+    "runtime.version": "LuaJIT",
+    "runtime.enableLuaJITExtensions": true,
+    "workspace.library": [
+        "game/lua/types"
+    ],
+    "workspace.checkThirdParty": false,
+    "workspace.ignoreSubmodules": true,
+    "workspace.useGitIgnore": true,
+    "diagnostics.enable": true,
+    "diagnostics.libraryFiles": "Enable",
+    "diagnostics.workspaceEvent": "OnSave"
+}
