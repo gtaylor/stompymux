@@ -38,7 +38,7 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
 /// Collect both private inspection replies and transaction-staged mutation acknowledgements.
 fn command(s: &Scripts, c: &Config, p: i64, line: &str) -> String {
     let action = commands::run(s, c, ObjectId(p), 1, line).unwrap();
-    let mut text = if let Action::Reply(t) = action {
+    let mut text = if let Action::Reply(t) | Action::Report(t) = action {
         t
     } else {
         String::new()

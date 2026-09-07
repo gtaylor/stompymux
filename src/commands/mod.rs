@@ -1,4 +1,5 @@
 //! Registry-driven commands with transactional native/Lua handlers and exit fallback.
+pub(crate) mod inspection;
 mod native;
 mod objects;
 mod registry;
@@ -36,6 +37,10 @@ pub enum Action {
     Find(crate::find::FindRequest),
     /// Bounded session-private response without persistence.
     Reply(String),
+    /// Complete literal report, chunked privately without a database write.
+    Report(String),
+    /// Read persisted list pointers for a private debug examination.
+    ExamineDebug(ObjectId),
 }
 /// Shared inputs available to registered native handlers.
 pub struct CommandContext<'a> {

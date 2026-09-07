@@ -100,7 +100,7 @@ object as `enactor`, initiator as `cause`, immediate `source` and `destination`,
 and the location hosting the callback as `object`. A descriptor is supplied
 only when the moved player initiated the command. Moving an exit or remaining
 in the same location does not fire occupant transition hooks. Containers without
-an appearance callback use the generic Lua renderer for `look` and arrival.
+an appearance callback use native description rendering for `look` and the generic Lua renderer on arrival.
 Connected moved players receive the appearance on all their sessions.
 
 Location changes and callback effects persist together before success output.
@@ -712,3 +712,27 @@ existing teleport/home transition interfaces remain supported. Quiet switches
 follow their operation's C policy and never bypass lock checks. Output stays
 staged until the final world validates and SQLite commits. Schema-32 storage,
 unknown-column preservation and session-owned CONNECTED are unchanged.
+
+### Basic building and inspection
+
+Wizards can build and edit objects with `@create`, `@dig[/teleport]`, `@name`,
+`@alias`, `@description`, `@internal-description`, and `@chzone`, alongside
+`@open`, `@link`, `@unlink`, and `@clone`. Configured command aliases apply.
+Creation uses configured defaults and the existing schema-32 database. Player
+renames and aliases share case-insensitive login-name uniqueness; `@alias` is
+player-only. Zoning a non-player clears WIZARD and its powers.
+
+`look <target>` supports local objects, exit aliases and possessive names.
+`look/outside` looks out of a player/thing container. Internal and external Lua
+appearances are selected separately; native fallback includes descriptions,
+describe callbacks and visible contents. Looking through a transparent exit can
+show its destination. Callback mutations and output share the command transaction.
+
+`@examine` defaults to `here` and shows descriptions as literal editable markup,
+relationships, Lua metadata and state namespace counts. `/brief` omits namespace
+counts; `/debug` includes actual stored containment pointers. `@entrances` lists
+incoming exits, homes and droptos with optional inclusive dbref bounds. Inspection
+reports are private, chunked through the bounded transport, and perform no writes
+or Lua callbacks. BattleTech fields, `@search` and `@stats` remain outside these
+commands' current coverage. See `help object building`, `help look` and
+`help @examine` for syntax and partial-success behavior.

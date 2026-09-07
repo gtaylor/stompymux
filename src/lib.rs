@@ -3,6 +3,7 @@ pub mod accounts;
 pub mod commands;
 pub mod config;
 pub mod lua;
+pub use lua::AppearanceMode;
 pub mod persistence;
 pub mod server;
 pub mod sessions;

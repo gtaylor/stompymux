@@ -1,6 +1,6 @@
 +++
 title = "Objects and containers"
-keywords = ["objects", "get", "take", "drop", "give", "use", "enter", "leave", "inventory"]
+keywords = ["objects", "get", "take", "drop", "give", "use", "enter", "leave", "inventory", "look", "look/outside"]
 article_tags = ["show_in_index"]
 description = "Carry, give and use objects; enter and leave containers"
 +++
@@ -41,3 +41,19 @@ why an operation was denied.
 A dropped object follows a room's configured dropto after the initial drop.
 Ordinary movement and droptos do not apply teleport policies. All changes save
 before success is delivered; failed saves restore the previous world state.
+
+## Looking
+
+`look` or `l` displays your immediate location. `look <object>` examines a local
+object, an exit alias, `me`, `here`, or a possession such as `Cabinet's Badge`.
+Targets must be within the visible local scope, including explicit dbrefs.
+
+From inside a player or thing, `look/outside` shows the enclosing location;
+`look/outside <object>` matches from that container's perspective. You cannot
+look outside a room. `/o` abbreviates `/outside`.
+
+Objects may supply internal and external Lua appearance callbacks. Otherwise,
+look displays descriptions and visible contents; an internal description takes
+precedence while inside a non-room object. Transparent exits can show their
+destination. Describe callbacks run transactionally, and failed callbacks or
+saves discard their changes and pending output.

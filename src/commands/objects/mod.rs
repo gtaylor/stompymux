@@ -1,6 +1,8 @@
 //! Inventory and builder operations sharing matching, locks and transactional output.
 mod builders;
+mod editing;
 mod inventory;
+pub(super) mod look;
 use super::{
     Action, CommandContext, CommandDefinition, CommandInput, CommandPermissions, NativeHandler,
     SwitchPolicy,
@@ -22,6 +24,13 @@ pub fn definitions() -> Vec<CommandDefinition> {
         ("enter", inventory::enter, false),
         ("leave", inventory::leave, false),
         ("inventory", inventory::inventory, false),
+        ("@create", builders::create, true),
+        ("@dig", builders::dig, true),
+        ("@name", editing::name, true),
+        ("@alias", editing::alias, true),
+        ("@description", editing::description, true),
+        ("@internal-description", editing::description, true),
+        ("@chzone", editing::zone, true),
         ("@open", builders::open, true),
         ("@link", builders::link, true),
         ("@unlink", builders::unlink, true),
@@ -38,7 +47,10 @@ pub fn definitions() -> Vec<CommandDefinition> {
             },
             handler,
         );
-        if !matches!(name, "use" | "inventory" | "@link" | "@unlink") {
+        if matches!(
+            name,
+            "get" | "drop" | "give" | "enter" | "leave" | "@dig" | "@open" | "@clone"
+        ) {
             d.switches = SwitchPolicy::Handler;
         }
         d.private_errors = true;

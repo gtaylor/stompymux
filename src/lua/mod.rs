@@ -1,5 +1,7 @@
 //! Server-owned Lua runtime and built-in packages; editable game modules stay in game/lua.
 mod actions;
+mod appearance;
+pub use appearance::AppearanceMode;
 mod callbacks;
 pub use actions::ObjectAction;
 mod dispatch;

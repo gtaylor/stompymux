@@ -242,3 +242,23 @@ pub async fn validate_lists(path: &Path, world: &World, timeout: u64) -> Result<
     .await;
     finish(c, result).await
 }
+
+/// Read one object's durable list slots without acquiring a write connection.
+pub async fn inspect_links(path: &Path, object: ObjectId, timeout: u64) -> Result<[i64; 3]> {
+    use sqlx::Row;
+    let mut c = connect(path, timeout, true, false).await?;
+    let result = async {
+        let row = sqlx::query("SELECT contents,exits,next FROM objects WHERE dbref=?")
+            .bind(object.0)
+            .fetch_one(&mut c)
+            .await
+            .with_context(|| format!("reading persisted bookkeeping for #{}", object.0))?;
+        Ok([
+            row.try_get("contents")?,
+            row.try_get("exits")?,
+            row.try_get("next")?,
+        ])
+    }
+    .await;
+    finish(c, result).await
+}

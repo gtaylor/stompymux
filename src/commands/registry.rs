@@ -249,7 +249,9 @@ impl CommandRegistry {
             CommandDefinition::native("page", P::EVERYONE, crate::communication::page),
             CommandDefinition::native("@chan", P::WIZARD, crate::communication::admin)
                 .policy(SwitchPolicy::Handler, true),
-            CommandDefinition::native("look", P::EVERYONE, native::look).matching(&["l"], None),
+            CommandDefinition::native("look", P::EVERYONE, super::objects::look::look)
+                .matching(&["l"], None)
+                .policy(SwitchPolicy::Handler, true),
             CommandDefinition::native("say", P::EVERYONE, native::say).matching(&[], Some('"')),
             CommandDefinition::native("@session", P::WIZARD, native::sessions)
                 .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
@@ -281,7 +283,10 @@ impl CommandRegistry {
             CommandDefinition::native("@list", P::WIZARD, native::list),
             CommandDefinition::native("@state", P::WIZARD, crate::state::commands::command)
                 .policy(SwitchPolicy::Handler, true),
-            CommandDefinition::native("@examine", P::WIZARD, native::examine),
+            CommandDefinition::native("@examine", P::WIZARD, super::inspection::examine)
+                .policy(SwitchPolicy::Handler, true),
+            CommandDefinition::native("@entrances", P::WIZARD, super::inspection::entrances)
+                .policy(SwitchPolicy::Reject("Unsupported command switch."), true),
             CommandDefinition::native("@find", P::WIZARD, native::find)
                 .policy(SwitchPolicy::Handler, true),
         ];

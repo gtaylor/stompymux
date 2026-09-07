@@ -174,24 +174,17 @@ impl Scripts {
         location: ObjectId,
         session: Option<u64>,
     ) -> Result<String> {
-        self.sync_parents()?;
-        let parent = self.world.borrow().objects[&location].lua_parent.clone();
-        let renderer = match self.parents.get(&parent) {
-            Some(t) => t
-                .get::<Option<Function>>("internal_appearance")
-                .map_err(|e| anyhow::anyhow!("{e}"))?,
-            None if parent.is_empty() => None,
-            None => anyhow::bail!("appearance parent missing"),
-        };
+        if let Some(text) =
+            self.render_appearance(player, location, session, super::AppearanceMode::Internal)?
+        {
+            return Ok(text);
+        }
         self.budget.reset();
-        let f = match renderer {
-            Some(f) => f,
-            None => self
-                .lua
-                .load("return require('object_appearances').render_internal_appearance")
-                .eval::<Function>()
-                .map_err(|e| anyhow::anyhow!(e.to_string()))?,
-        };
+        let f = self
+            .lua
+            .load("return require('object_appearances').render_internal_appearance")
+            .eval::<Function>()
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         self.call(&f, self.context(Some(player), Some(location), session)?)
             .map_err(|e| anyhow::anyhow!(e.to_string()))
     }

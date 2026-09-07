@@ -781,11 +781,12 @@ async fn flag_catalog_storage_commands_and_lua_contract() {
         ("@flag #4=not_a_flag", "don't understand"),
         ("@flag #999=dark", "No such object"),
     ] {
-        commands::run(&s, &c, ObjectId(1), 1, input).unwrap();
-        assert!(
-            s.outbox.borrow_mut().pop().unwrap().1.contains(expected),
-            "{input}"
-        );
+        let action = commands::run(&s, &c, ObjectId(1), 1, input).unwrap();
+        let text = match action {
+            commands::Action::Report(text) | commands::Action::Reply(text) => text,
+            _ => s.outbox.borrow_mut().pop().unwrap().1.source().to_string(),
+        };
+        assert!(text.contains(expected), "{input}: {text}");
     }
     {
         let mut w = world.borrow_mut();
@@ -1116,8 +1117,18 @@ async fn power_commands_validate_targets_permissions_and_names() {
         (ObjectId(1), "@list powers", "Powers: idle"),
         (ObjectId(1), "@examine #2", "Powers: idle"),
     ] {
-        commands::run(&scripts, &c, actor, 1, command).unwrap();
-        let output = scripts.outbox.borrow_mut().pop().unwrap().1;
+        let action = commands::run(&scripts, &c, actor, 1, command).unwrap();
+        let output = match action {
+            commands::Action::Report(text) | commands::Action::Reply(text) => text,
+            _ => scripts
+                .outbox
+                .borrow_mut()
+                .pop()
+                .unwrap()
+                .1
+                .source()
+                .to_string(),
+        };
         assert!(output.contains(expected), "{command}: {output}");
     }
     assert!(
@@ -2858,4 +2869,132 @@ async fn tcp_object_locks_builders_transfers_and_restart() {
     alice.send("use TcpWidget").await;
     alice.until("TCP activated").await;
     running.stop().await;
+}
+
+/// Build and inspect through real sessions, including bounded reports and write failure isolation.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_basic_building_inspection_and_alias_restart() {
+    use sqlx::Connection;
+    let (d, _) = populated().await;
+    let path = d.path().join("stompymux.toml");
+    let source = std::fs::read_to_string(&path).unwrap();
+    std::fs::write(
+        &path,
+        format!(
+            "{source}\n[runtime]\noutput_message_limit=512\nsession_output_queue_capacity=16\n"
+        ),
+    )
+    .unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    w.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ObjectId(c.start()));
+    persistence::save(&c.database(), &w).await.unwrap();
+    let server = Running::start(&c).await;
+    let mut wizard = Client::connect(&server).await;
+    wizard.login("#1").await;
+    let mut second = Client::connect(&server).await;
+    second.login("#1").await;
+    wizard.send("@create TcpChest").await;
+    wizard.until("created as object").await;
+    wizard
+        .send("@description TcpChest=[bold]A beautiful chest[/]")
+        .await;
+    wizard.until("Set.").await;
+    wizard.send("look TcpChest").await;
+    wizard.until("A beautiful chest").await;
+    wizard.send("@dig TcpWorkshop=tcpdoor,return").await;
+    wizard.until("Linked.").await;
+    let loaded = persistence::load(&c.database()).await.unwrap();
+    let room = loaded
+        .objects
+        .values()
+        .find(|o| o.name == "TcpWorkshop")
+        .unwrap()
+        .id;
+    let chest = loaded
+        .objects
+        .values()
+        .find(|o| o.name == "TcpChest")
+        .unwrap()
+        .id;
+    wizard.send(&format!("@link TcpChest=#{}", room.0)).await;
+    wizard.until("Home set.").await;
+    wizard.send(&format!("@chzone TcpChest=#{}", room.0)).await;
+    wizard.until("Zone changed.").await;
+    wizard.send(&format!("@entrances #{}", room.0)).await;
+    wizard.until("2 entrances found.").await;
+    wizard.send("@examine/debug TcpChest").await;
+    wizard.until("Lua state entries:").await;
+    wizard.send("@name me=MasterBuilder").await;
+    wizard.until("Name set.").await;
+    wizard.send("@alias me=BuilderLogin").await;
+    wizard.until("Alias set.").await;
+    let description = format!(
+        "[bold]{}END_DESCRIPTION[/]",
+        "日 e\u{301} text ".repeat(180)
+    );
+    wizard
+        .send(&format!("@description TcpChest={description}"))
+        .await;
+    wizard.until("Set.").await;
+    // Drain account-wide mutation confirmations before checking private report delivery.
+    loop {
+        let mut bytes = [0; 4096];
+        if tokio::time::timeout(Duration::from_millis(50), second.socket.read(&mut bytes))
+            .await
+            .is_err()
+        {
+            break;
+        }
+    }
+    let mut db = sqlx::SqliteConnection::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(c.database())
+            .foreign_keys(false),
+    )
+    .await
+    .unwrap();
+    sqlx::raw_sql("CREATE TRIGGER building_block BEFORE UPDATE ON objects BEGIN SELECT RAISE(FAIL,'blocked write'); END;").execute(&mut db).await.unwrap();
+    // Confirm NAWS before requesting a narrow, multi-chunk literal report.
+    wizard
+        .socket
+        .write_all(&[255, 251, 31, 255, 250, 31, 0, 24, 0, 20, 255, 240])
+        .await
+        .unwrap();
+    wizard.send("@examine TcpChest").await;
+    let report = wizard.until("END_DESCRIPTION[/]").await;
+    assert!(report.contains("[bold]"), "{report}");
+    let mut bytes = [0; 4096];
+    assert!(
+        tokio::time::timeout(Duration::from_millis(100), second.socket.read(&mut bytes))
+            .await
+            .is_err()
+    );
+    wizard.send("@name TcpChest=Unsaved").await;
+    wizard.until("Unable to save your changes").await;
+    assert_eq!(
+        persistence::load(&c.database()).await.unwrap().objects[&chest].name,
+        "TcpChest"
+    );
+    wizard.send("@examine/brief TcpChest").await;
+    wizard.until("END_DESCRIPTION[/]").await;
+    sqlx::query("DROP TRIGGER building_block")
+        .execute(&mut db)
+        .await
+        .unwrap();
+    db.close().await.unwrap();
+    server.stop().await;
+    let loaded = persistence::load(&c.database()).await.unwrap();
+    assert_eq!(loaded.objects[&chest].home, Some(room));
+    assert_eq!(loaded.objects[&chest].zone, Some(room));
+    assert_eq!(loaded.find_player("BuilderLogin"), Some(ObjectId(1)));
+    let server = Running::start(&c).await;
+    let mut by_alias = Client::connect(&server).await;
+    by_alias.login("builderlogin").await;
+    by_alias.send("look TcpChest").await;
+    by_alias.until("日").await;
+    let mut by_name = Client::connect(&server).await;
+    by_name.login("MasterBuilder").await;
+    server.stop().await;
 }

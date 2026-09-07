@@ -54,3 +54,40 @@ pub(crate) fn admin_target(
         _ => bail!("I don't know which object you mean."),
     }
 }
+
+/// Builder matching adds C player tokens and word-prefix names without invoking locks.
+pub(crate) fn builder_target(
+    w: &crate::world::World,
+    player: ObjectId,
+    name: &str,
+) -> Result<ObjectId> {
+    let name = name.trim();
+    if let Some(name) = name.strip_prefix('*') {
+        return w.find_player(name.trim()).context("No such player.");
+    }
+    match admin_target(w, player, name) {
+        Ok(id) => return Ok(id),
+        Err(error) if error.to_string() != "No such object." || name.starts_with('#') => {
+            return Err(error);
+        }
+        _ => {}
+    }
+    let location = w.objects.get(&player).and_then(|o| o.location);
+    let matches: Vec<_> = w
+        .objects
+        .values()
+        .filter(|o| {
+            o.kind != Kind::Garbage
+                && w.visible(o, player)
+                && (o.location == Some(player) || (location.is_some() && o.location == location))
+                && o.kind != Kind::Exit
+                && crate::find::matches(&crate::text::plain_with(&w.palette, &o.name), name)
+        })
+        .map(|o| o.id)
+        .collect();
+    match matches.as_slice() {
+        [id] => Ok(*id),
+        [] => anyhow::bail!("No such object."),
+        _ => anyhow::bail!("I don't know which object you mean."),
+    }
+}

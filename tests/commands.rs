@@ -37,7 +37,10 @@ async fn fixture() -> (tempfile::TempDir, Config, World) {
 }
 /// Execute through native matching and collect ordinary player-directed output.
 fn run(s: &Scripts, c: &Config, player: i64, line: &str) -> String {
-    commands::run(s, c, ObjectId(player), 1, line).unwrap();
+    let action = commands::run(s, c, ObjectId(player), 1, line).unwrap();
+    if let Action::Reply(text) | Action::Report(text) = action {
+        return text;
+    }
     s.outbox
         .borrow_mut()
         .drain(..)
@@ -85,6 +88,7 @@ async fn native_catalog_permissions_and_aliases() {
             "@list",
             "@state",
             "@examine",
+            "@entrances",
             "@find",
             ".add",
             ".clear",
@@ -107,6 +111,13 @@ async fn native_catalog_permissions_and_aliases() {
             "enter",
             "leave",
             "inventory",
+            "@create",
+            "@dig",
+            "@name",
+            "@alias",
+            "@description",
+            "@internal-description",
+            "@chzone",
             "@open",
             "@link",
             "@unlink",
@@ -173,7 +184,7 @@ async fn native_catalog_permissions_and_aliases() {
         assert_eq!(matches!(action, Action::Quit), allowed);
     }
     s.outbox.borrow_mut().clear();
-    assert!(run(&s, &c, 2, "@EX #2").contains("Wizard(#2)"));
+    assert!(run(&s, &c, 2, "@EX #2").contains("Wizard(#2:"));
     assert!(run(&s, &c, 2, "@flag/unknown me=dark").contains("Unsupported command switch"));
     assert!(run(&s, &c, 2, "home/quiet").contains("Movement command switches"));
     assert!(matches!(
@@ -206,7 +217,7 @@ async fn examine_defaults_to_here() {
     for command in ["@examine", "@examine   ", "@EX"] {
         assert_eq!(run(&s, &c, 2, command), expected, "{command}");
     }
-    assert!(run(&s, &c, 2, "@examine me").contains("Wizard(#2)"));
+    assert!(run(&s, &c, 2, "@examine me").contains("Wizard(#2:"));
     assert!(run(&s, &c, 4, "@examine").contains("Permission denied."));
 }
 

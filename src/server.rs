@@ -1059,6 +1059,17 @@ impl Server {
             }
         }
     }
+    /// Reports share bounded, grapheme-safe delivery with help and never enter persistence.
+    async fn inspection_report(&self, id: SessionId, text: String) {
+        if let Some(session) = self.sessions.get(&id) {
+            let report = crate::help::HelpResponse::Message(text);
+            if let Err(error) = session.help(&report, false, &self.config).await {
+                eprintln!("Inspection report: {error:#}");
+                self.tell(id, "Unable to deliver complete report.\r\n");
+            }
+        }
+    }
+
     async fn command(&mut self, id: SessionId, p: ObjectId, line: &str) -> Result<()> {
         self.snapshots()?;
         let before = self.scripts.world.borrow().clone();
@@ -1155,6 +1166,25 @@ impl Server {
                     }
                 } else {
                     self.tell(id, "Unable to save your changes. Please try again.\r\n");
+                }
+            }
+            Ok(Action::Report(text)) => self.inspection_report(id, text).await,
+            Ok(Action::ExamineDebug(object)) => {
+                let result = crate::persistence::inspect_links(
+                    &self.config.database(),
+                    object,
+                    self.config.database.busy_timeout_ms,
+                )
+                .await
+                .and_then(|links| {
+                    commands::inspection::debug(&self.scripts.world.borrow(), object, links)
+                });
+                match result {
+                    Ok(text) => self.inspection_report(id, text).await,
+                    Err(error) => {
+                        eprintln!("Debug examination: {error:#}");
+                        self.tell(id, "Unable to read object bookkeeping.\r\n");
+                    }
                 }
             }
             Ok(Action::Reply(text)) => {

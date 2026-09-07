@@ -2,8 +2,8 @@
 use super::*;
 use crate::flags::Flag;
 
-fn target(ctx: &CommandContext<'_>, name: &str) -> Result<ObjectId> {
-    super::super::target::admin_target(&ctx.scripts.world.borrow(), ctx.player, name)
+pub(super) fn target(ctx: &CommandContext<'_>, name: &str) -> Result<ObjectId> {
+    super::super::target::builder_target(&ctx.scripts.world.borrow(), ctx.player, name)
 }
 
 fn destination(ctx: &CommandContext<'_>, name: &str) -> Result<ObjectId> {
@@ -33,7 +33,7 @@ fn placement(ctx: &CommandContext<'_>, input: &CommandInput, clone: bool) -> Res
     }
 }
 
-fn object_name(ctx: &CommandContext<'_>, name: &str) -> Result<String> {
+pub(super) fn object_name(ctx: &CommandContext<'_>, name: &str) -> Result<String> {
     let name = name.trim();
     let plain = crate::text::plain_with(&ctx.scripts.palette, name);
     ensure!(
@@ -41,7 +41,11 @@ fn object_name(ctx: &CommandContext<'_>, name: &str) -> Result<String> {
             && name.len() < 8192
             && !plain.chars().any(char::is_control)
             && !plain.starts_with(['#', '*', '!'])
-            && !plain.contains('='),
+            && !plain.contains(['=', '&', '|'])
+            && plain.trim() == plain
+            && !["me", "here", "home"]
+                .iter()
+                .any(|v| plain.eq_ignore_ascii_case(v)),
         "That is not a reasonable name."
     );
     crate::text::validate(&ctx.scripts.palette, name)?;
@@ -271,7 +275,9 @@ fn clone_home(
     .flatten()
     {
         if flags::controls(&w, ctx.player, id)
-            && !w.objects[&id].flags.contains(Flag::Going)
+            && w.objects
+                .get(&id)
+                .is_some_and(|o| !o.flags.contains(Flag::Going))
             && w.validate_move(clone, id).is_ok()
         {
             return Ok(id);
@@ -362,6 +368,102 @@ pub(super) fn clone_object(ctx: &CommandContext<'_>, input: &CommandInput) -> Re
                 id.0
             ),
         );
+        Ok(())
+    })
+}
+
+/// Create a thing with configured defaults and move it into the actor's inventory.
+pub(super) fn create(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    transaction(ctx, || {
+        let name = object_name(ctx, &input.args)?;
+        let id = ctx
+            .scripts
+            .world
+            .borrow_mut()
+            .create(ctx.config, name, Kind::Thing);
+        let home = clone_home(ctx, None, id)?;
+        ctx.scripts
+            .world
+            .borrow_mut()
+            .objects
+            .get_mut(&id)
+            .unwrap()
+            .home = Some(home);
+        ctx.scripts.sync_parents()?;
+        relocate(ctx, id, ctx.player, false)?;
+        tell(
+            ctx,
+            format!("{} created as object #{}", display(ctx, id)?, id.0),
+        );
+        Ok(())
+    })
+}
+
+/// Build a room; optional exits and teleportation may be declined independently.
+pub(super) fn dig(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
+    transaction(ctx, || {
+        let teleport = match input.switch.as_deref() {
+            None => false,
+            Some(s) if !s.is_empty() && "teleport".starts_with(s) => true,
+            _ => anyhow::bail!("Unsupported command switch."),
+        };
+        let (name, exits) = input.args.split_once('=').unwrap_or((&input.args, ""));
+        let exits: Vec<_> = exits.split(',').collect();
+        ensure!(
+            exits.len() <= 2,
+            "Usage: @dig[/teleport] <room>[=<exit>[,<return exit>]]"
+        );
+        let name = object_name(ctx, name)?;
+        let source = ctx.location().ok();
+        let room = ctx
+            .scripts
+            .world
+            .borrow_mut()
+            .create(ctx.config, name, Kind::Room);
+        ctx.scripts.sync_parents()?;
+        tell(
+            ctx,
+            format!(
+                "{} created with room number {}.",
+                display(ctx, room)?,
+                room.0
+            ),
+        );
+        for (index, name) in exits
+            .iter()
+            .enumerate()
+            .filter(|(_, n)| !n.trim().is_empty())
+        {
+            let Some(source) = source else {
+                tell(ctx, "You have no location for an exit.");
+                continue;
+            };
+            let (from, to) = if index == 0 {
+                (source, room)
+            } else {
+                (room, source)
+            };
+            // Validate optional syntax/control before invoking callbacks; callback errors must abort.
+            if let Err(error) = object_name(ctx, name) {
+                tell(ctx, error.to_string());
+                continue;
+            }
+            if !flags::controls(&ctx.scripts.world.borrow(), ctx.player, from) {
+                tell(ctx, "Permission denied.");
+                continue;
+            }
+            open_one(ctx, name, from, Some(to))?;
+        }
+        if teleport {
+            crate::movement::perform(
+                ctx.scripts,
+                ctx.player,
+                ctx.player,
+                room,
+                Some(ctx.session),
+                crate::movement::Route::Teleport,
+            )?;
+        }
         Ok(())
     })
 }

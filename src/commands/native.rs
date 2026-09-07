@@ -48,30 +48,6 @@ pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
     )
 }
 
-/// Inspect an explicit target or the caller's location when no argument is supplied.
-pub(super) fn examine(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
-    response(
-        ctx,
-        (|| {
-            let args = input.args.trim();
-            let args = if args.is_empty() { "here" } else { args };
-            let player = ctx.player;
-            let w = ctx.scripts.world.borrow();
-            let target = admin_target(&w, player, args)?;
-            let o = &w.objects[&target];
-            Ok(format!(
-                "{}(#{})\r\nType: {} Flags: {}\r\nPowers: {}\r\n{}",
-                o.name,
-                o.id.0,
-                format!("{:?}", o.kind).to_uppercase(),
-                o.flags.names().join(" "),
-                o.powers.description(),
-                crate::state::commands::summary(&o.state)
-            ))
-        })(),
-    )
-}
-
 /// Handle the @power command after the registry permission check.
 pub(super) fn power(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     response(
@@ -140,17 +116,6 @@ pub(super) fn flag(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
             ))
         })(),
     )
-}
-/// Render the immediate container using Lua appearance callbacks.
-pub(super) fn look(ctx: &CommandContext<'_>, _: &CommandInput) -> Result<Action> {
-    let text = ctx
-        .scripts
-        .appearance(ctx.player, ctx.location()?, ctx.session)?;
-    ctx.scripts
-        .outbox
-        .borrow_mut()
-        .push((ctx.player, text.into()));
-    Ok(Action::Continue)
 }
 /// Speak to occupants of the immediate location.
 pub(super) fn say(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
