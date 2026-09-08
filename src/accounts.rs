@@ -46,17 +46,7 @@ impl std::fmt::Display for IncorrectCredentials {
 impl std::error::Error for IncorrectCredentials {}
 
 pub fn validate_name(name: &str, c: &Config) -> Result<()> {
-    ensure!(
-        name.len() >= 2 && name.len() <= c.names.maximum_length,
-        "New usernames must be between 2 and the configured maximum length."
-    );
-    ensure!(
-        name.as_bytes()[0].is_ascii_alphabetic()
-            && name.bytes().all(|b| b.is_ascii_alphanumeric()
-                || b"`$_-.,\'".contains(&b)
-                || (b == b' ' && c.mux.player_name_spaces)),
-        "New usernames must start with a letter and use valid player-name characters."
-    );
+    validate_name_syntax(name, c)?;
     for pattern in &c.names.bad {
         let re = format!(
             "(?i)^{}$",
@@ -69,6 +59,22 @@ pub fn validate_name(name: &str, c: &Config) -> Result<()> {
             "That name is not available."
         );
     }
+    Ok(())
+}
+
+/// The interactive username step checks syntax before the later creation policy check.
+pub fn validate_name_syntax(name: &str, c: &Config) -> Result<()> {
+    ensure!(
+        name.len() >= 2 && name.len() <= c.names.maximum_length,
+        "New usernames must be between 2 and the configured maximum length."
+    );
+    ensure!(
+        name.as_bytes()[0].is_ascii_alphabetic()
+            && name.bytes().all(|b| b.is_ascii_alphanumeric()
+                || b"`$_-.,\'".contains(&b)
+                || (b == b' ' && c.mux.player_name_spaces)),
+        "New usernames must start with a letter and use valid player-name characters."
+    );
     Ok(())
 }
 pub fn validate_password(password: &str, c: &Config) -> Result<()> {

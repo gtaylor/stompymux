@@ -97,12 +97,12 @@ pub fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action>
                     "Total {} connects: {count}",
                     if success { "successful" } else { "failed" }
                 ));
-                let mut records: Vec<_> = account
+                let records: Vec<_> = account
                     .history
                     .iter()
+                    .rev()
                     .filter(|r| r.success == success)
                     .collect();
-                records.sort_by_key(|r| std::cmp::Reverse(r.at));
                 for record in records {
                     if !record.host.is_empty()
                         && let Some(at) = chrono::DateTime::from_timestamp(record.at, 0)

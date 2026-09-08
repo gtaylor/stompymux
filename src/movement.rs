@@ -63,6 +63,100 @@ pub fn perform(s: &Scripts, request: Request) -> Result<()> {
     result
 }
 
+/// Run the generic departure used when a GOING player or thing moves to NOTHING.
+pub(crate) fn depart(
+    s: &Scripts,
+    object: ObjectId,
+    cause: ObjectId,
+    session: Option<u64>,
+) -> Result<()> {
+    let (source, generation, source_generation, hear) = {
+        let world = s.world.borrow();
+        let value = world
+            .objects
+            .get(&object)
+            .ok_or_else(|| anyhow::anyhow!("Departing object missing"))?;
+        ensure!(
+            matches!(value.kind, Kind::Player | Kind::Thing),
+            "Only players and things depart during purge."
+        );
+        let source = value.location;
+        (
+            source,
+            value.generation,
+            source.and_then(|id| world.objects.get(&id).map(|source| (id, source.generation))),
+            value.flags.contains(Flag::Connected),
+        )
+    };
+    let Some(source_id) = source else {
+        return Ok(());
+    };
+    let validate = || -> Result<()> {
+        let world = s.world.borrow();
+        let value = world
+            .objects
+            .get(&object)
+            .ok_or_else(|| anyhow::anyhow!("Departing object disappeared"))?;
+        ensure!(
+            value.generation == generation
+                && value.kind != Kind::Garbage
+                && value.location == Some(source_id),
+            "Departing object changed during callbacks."
+        );
+        if let Some((id, generation)) = source_generation {
+            ensure!(
+                world.objects.get(&id).is_some_and(|source| {
+                    source.generation == generation && source.kind != Kind::Garbage
+                }),
+                "Departure source changed during callbacks."
+            );
+        }
+        Ok(())
+    };
+    validate()?;
+    let movement = Move {
+        actor: object,
+        object,
+        source,
+        destination: ObjectId(-1),
+        session,
+    };
+    let transitions = crate::lua::TransitionContext {
+        cause,
+        hear,
+        excluded: cause,
+    };
+    s.transition_action_context(&movement, false, false, transitions)?;
+    validate()?;
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&object)
+        .unwrap()
+        .location = None;
+    s.action_message(
+        crate::lua::ObjectAction {
+            object,
+            enactor: object,
+            cause,
+            descriptor: session,
+            source,
+            destination: None,
+            operation: "move",
+            silent: false,
+        },
+        "move",
+        Some("on_move"),
+        None,
+        None,
+    )?;
+    s.transition_action_context(&movement, true, false, transitions)?;
+    s.world
+        .borrow()
+        .validate(&crate::lua::configuration(&s.lua))?;
+    Ok(())
+}
+
 /// Validate first, then run transition callbacks and render the resulting location.
 fn apply(s: &Scripts, request: Request) -> Result<()> {
     let Request {
@@ -116,9 +210,20 @@ fn apply(s: &Scripts, request: Request) -> Result<()> {
         }
         if let Route::Exit { exit } = route {
             let exit = &world.objects[&exit];
+            let location_zone = source
+                .and_then(|id| world.objects.get(&id))
+                .and_then(|o| o.zone);
+            let zone_origin = location_zone
+                .is_some_and(|zone| world.objects.get(&zone).map(|o| o.kind) == Some(Kind::Room))
+                && source != world.objects[&actor].zone
+                && world.objects[&actor].zone == exit.location
+                && exit
+                    .location
+                    .and_then(|id| world.objects.get(&id))
+                    .is_some_and(|o| matches!(o.kind, Kind::Room | Kind::Thing | Kind::Player));
             ensure!(
                 exit.kind == Kind::Exit
-                    && exit.location == source
+                    && (exit.location == source || zone_origin)
                     && exit.destination == Some(destination),
                 "Exit changed during traversal."
             );

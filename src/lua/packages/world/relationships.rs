@@ -8,8 +8,13 @@ use mlua::{Lua, MultiValue, Table, Value};
 use std::sync::Arc;
 
 /// Decode an actual integer identity, accepting the embedded object wrapper.
-pub(super) fn identity(value: Value, world: &World, available: bool) -> mlua::Result<ObjectId> {
-    let id = super::handles::identity_in(value, world)?;
+pub(super) fn identity(
+    lua: &Lua,
+    value: Value,
+    world: &World,
+    available: bool,
+) -> mlua::Result<ObjectId> {
+    let id = super::handles::identity_in(lua, value, world)?;
     let o = world
         .objects
         .get(&id)
@@ -30,7 +35,7 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
         "relationship",
         lua.create_function(move |lua, (object, key): (Value, String)| {
             let w = w.borrow();
-            let id = identity(object, &w, false)?;
+            let id = identity(lua, object, &w, false)?;
             let o = &w.objects[&id];
             if key == "lua_parent" {
                 return if o.lua_parent.is_empty() {
@@ -68,7 +73,7 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
             let key = key.to_str()?;
             let value = args.next().unwrap();
             let mut world = w.borrow_mut();
-            let id = identity(object, &world, true)?;
+            let id = identity(lua, object, &world, true)?;
             let kind = world.objects[&id].kind;
             if key.as_ref() == "lua_parent" {
                 let path = match value {
@@ -103,7 +108,7 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
                 }
                 None
             } else {
-                Some(identity(value, &world, true)?)
+                Some(identity(lua, value, &world, true)?)
             };
             if let Some(target) = target {
                 let target_kind = world.objects[&target].kind;

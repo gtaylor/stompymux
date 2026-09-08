@@ -1,5 +1,10 @@
 # Non-BattleTech behavioral parity audit
 
+The latest [six-area follow-up](behavioral-audit-six.md) records additional
+corrections and evidence against Rust `74246d9`. Historical baseline rows below
+retain their original scope; the machine-readable matrix also includes the new
+focused contracts.
+
 Baseline: C `2bbbe6fc`, Rust `3a1c559`, followed by this movement correction.
 Evidence consists of C source inspection and the named Rust regression tests.
 The initial movement audit did not start C. The [second comparison](behavioral-audit-round2.md)

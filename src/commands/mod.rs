@@ -1,4 +1,4 @@
-//! Exit-first scoped command dispatch with transactional native and Lua handlers.
+//! C-ordered native and scoped command dispatch with transactional handlers.
 pub mod discovery;
 mod exits;
 pub(crate) mod inspection;
@@ -119,6 +119,18 @@ pub struct ExecutionContext {
     pub origin: InputOrigin,
 }
 
+/// Whether the executor may enter command dispatch under the C lifecycle guard.
+pub fn executable(world: &crate::world::World, execution: ExecutionContext) -> bool {
+    let Some(object) = world.objects.get(&execution.executor) else {
+        return false;
+    };
+    if object.kind == Kind::Garbage || object.flags.contains(crate::flags::Flag::Going) {
+        return false;
+    }
+    !object.flags.contains(crate::flags::Flag::Halted)
+        || object.kind == Kind::Player && execution.origin == InputOrigin::Interactive
+}
+
 /// Dispatch an authenticated interactive command.
 pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, line: &str) -> Result<Action> {
     execute(
@@ -132,6 +144,35 @@ pub fn run(s: &Scripts, c: &Config, player: ObjectId, session: u64, line: &str) 
         },
         line,
     )
+}
+
+/// Render the connecting player's current location without command matching or audit/cost effects.
+pub(crate) fn look_in(
+    s: &Scripts,
+    c: &Config,
+    player: ObjectId,
+    session: u64,
+) -> Result<Option<String>> {
+    let ctx = CommandContext {
+        scripts: s,
+        config: c,
+        player,
+        object: None,
+        session: Some(session),
+        cause: player,
+        origin: InputOrigin::Interactive,
+    };
+    let input = CommandInput {
+        name: "look".into(),
+        args: String::new(),
+        switch: None,
+        line: "look".into(),
+    };
+    match objects::look::look(&ctx, &input)? {
+        Action::Continue => Ok(None),
+        Action::Reply(error) => Ok(Some(error)),
+        _ => unreachable!("look handler returned a server-only action"),
+    }
 }
 
 /// Dispatch with an explicit executor, causal actor and optional connection.
@@ -160,6 +201,20 @@ pub fn execute(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str)
 fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -> Result<Action> {
     let player = execution.executor;
     let session = execution.session;
+    if !executable(&s.world.borrow(), execution) {
+        if s.world
+            .borrow()
+            .objects
+            .get(&player)
+            .is_some_and(|object| object.kind != Kind::Garbage)
+        {
+            s.outbox.borrow_mut().push((
+                player,
+                format!("Attempt to execute command by halted object #{}", player.0).into(),
+            ));
+        }
+        return Ok(Action::Continue);
+    }
     let ctx = CommandContext {
         scripts: s,
         object: None,
@@ -169,7 +224,8 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
         cause: execution.cause,
         origin: execution.origin,
     };
-    if line.trim().starts_with('.')
+    if execution.origin == InputOrigin::Interactive
+        && line.trim().starts_with('.')
         && !s
             .world
             .borrow()
@@ -182,13 +238,14 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
         ));
     }
     let direct = CommandInput::parse(c, line);
-    if let Some((definition, input)) = s.commands.native_match(direct)
+    if execution.origin == InputOrigin::Interactive
+        && let Some((definition, input)) = s.commands.native_match(direct)
         && line.trim().starts_with('.')
         && definition.direct_input_only
     {
         return definition.invoke_native(&ctx, &input);
     }
-    let expanded =
+    let expanded = if execution.origin == InputOrigin::Interactive {
         match s
             .world
             .borrow()
@@ -197,7 +254,10 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
         {
             Ok(expanded) => expanded,
             Err(error) => return Ok(Action::Reply(error.to_string())),
-        };
+        }
+    } else {
+        None
+    };
     let line = expanded.as_deref().unwrap_or(line);
     if line.is_empty() {
         return Ok(Action::Reply(String::new()));
@@ -209,12 +269,36 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
     if exits::travel(&ctx, line, exits::Invocation::Bare)? {
         return Ok(Action::Continue);
     }
-    let sources = sources::sources(&s.world.borrow(), player);
-    let objects: Vec<_> = sources.iter().map(|s| s.object).collect();
-    if s.dispatch_local_sources(player, session, &input.line, &objects)? {
+    if let Some((definition, input)) = s.commands.native_match(input.clone())
+        && !definition.direct_input_only
+    {
+        if expanded.is_some() && definition.no_macro {
+            return Ok(Action::Reply(
+                "This command is unavailable as macro. Please use an alias instead.".into(),
+            ));
+        }
+        return definition.invoke_native(&ctx, &input);
+    }
+    let sources = sources::dispatch_sources(&s.world.borrow(), player);
+    let local: Vec<_> = sources
+        .iter()
+        .filter(|source| !source.fallback())
+        .copied()
+        .collect();
+    let location_fallback: Vec<_> = sources
+        .iter()
+        .filter(|source| source.stage == "location-zone fallback")
+        .copied()
+        .collect();
+    let player_fallback: Vec<_> = sources
+        .iter()
+        .filter(|source| source.stage == "player-zone fallback")
+        .copied()
+        .collect();
+    if s.dispatch_local_sources(player, session, &input.line, &local)? {
         return Ok(Action::Continue);
     }
-    for source in sources {
+    for source in sources.iter().filter(|source| !source.fallback()) {
         let parent = {
             let world = s.world.borrow();
             if !sources::eligible(&world, source.object) {
@@ -238,18 +322,71 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
             return definition.invoke_native(&local, &input);
         }
     }
-    if s.dispatch_global(player, session, &input.line)? {
+    if s.dispatch_local_sources(player, session, &input.line, &location_fallback)? {
         return Ok(Action::Continue);
     }
-    if let Some((definition, input)) = s.commands.native_match(input.clone())
-        && !definition.direct_input_only
+    for source in sources
+        .iter()
+        .filter(|source| source.stage == "location-zone fallback")
     {
-        if expanded.is_some() && definition.no_macro {
-            return Ok(Action::Reply(
-                "This command is unavailable as macro. Please use an alias instead.".into(),
-            ));
+        let parent = {
+            let world = s.world.borrow();
+            if !sources::eligible(&world, source.object) {
+                continue;
+            }
+            world.objects[&source.object].lua_parent.clone()
+        };
+        if let Some((definition, input)) = s
+            .commands
+            .native_match_scope(input.clone(), &CommandScope::Object(parent))
+        {
+            let local = CommandContext {
+                object: Some(source.object),
+                ..ctx.clone()
+            };
+            if expanded.is_some() && definition.no_macro {
+                return Ok(Action::Reply(
+                    "This command is unavailable as macro. Please use an alias instead.".into(),
+                ));
+            }
+            return definition.invoke_native(&local, &input);
         }
-        return definition.invoke_native(&ctx, &input);
+    }
+    if s.dispatch_local_sources(player, session, &input.line, &player_fallback)? {
+        return Ok(Action::Continue);
+    }
+    for source in sources
+        .iter()
+        .filter(|source| source.stage == "player-zone fallback")
+    {
+        let parent = {
+            let world = s.world.borrow();
+            if !sources::eligible(&world, source.object) {
+                continue;
+            }
+            world.objects[&source.object].lua_parent.clone()
+        };
+        if let Some((definition, input)) = s
+            .commands
+            .native_match_scope(input.clone(), &CommandScope::Object(parent))
+        {
+            let local = CommandContext {
+                object: Some(source.object),
+                ..ctx.clone()
+            };
+            if expanded.is_some() && definition.no_macro {
+                return Ok(Action::Reply(
+                    "This command is unavailable as macro. Please use an alias instead.".into(),
+                ));
+            }
+            return definition.invoke_native(&local, &input);
+        }
+    }
+    if exits::travel_zone(&ctx, line)? {
+        return Ok(Action::Continue);
+    }
+    if s.dispatch_global(player, session, &input.line)? {
+        return Ok(Action::Continue);
     }
     c.log(
         &[crate::logging::Category::BadCommands],

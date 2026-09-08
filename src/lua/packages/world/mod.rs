@@ -17,6 +17,28 @@ use anyhow::Result;
 use mlua::{Lua, LuaSerdeExt, Table, Value};
 use std::sync::Arc;
 
+/// Match the object-list visibility rules used by C's Lua contents binding.
+fn contents_visible(
+    world: &crate::world::World,
+    container: ObjectId,
+    object: &crate::world::Object,
+    viewer: ObjectId,
+) -> bool {
+    use crate::flags::Flag;
+    if object.kind == Kind::Exit {
+        return !object.flags.contains(Flag::Dark)
+            && (object.flags.contains(Flag::Light)
+                || !world.objects[&container].flags.contains(Flag::Dark));
+    }
+    if object.kind == Kind::Player && !object.flags.contains(Flag::Connected) {
+        return false;
+    }
+    if object.id == viewer || object.flags.contains(Flag::Dark) {
+        return false;
+    }
+    !world.objects[&container].flags.contains(Flag::Dark) || object.flags.contains(Flag::Light)
+}
+
 /// Register native operations before the embedded facade is evaluated.
 pub(super) fn register(
     lua: &Lua,
@@ -47,7 +69,7 @@ pub(super) fn register(
     )| {
         crate::lua::transactions::require(lua)?;
         let mut w = w.borrow_mut();
-        let id = relationships::identity(value, &w, false)?;
+        let id = relationships::identity(lua, value, &w, false)?;
         let override_safe = if let Some(t) = options {
             types::options(&t, &["override"])?;
             match t.raw_get::<Value>("override")? {
@@ -82,8 +104,8 @@ pub(super) fn register(
         let s = crate::lua::Scripts::services(lua)?;
         let (id, dest, source) = {
             let w = s.world.borrow();
-            let id = relationships::identity(t.get("object")?, &w, true)?;
-            let dest = relationships::identity(t.get("destination")?, &w, true)?;
+            let id = relationships::identity(lua, t.get("object")?, &w, true)?;
+            let dest = relationships::identity(lua, t.get("destination")?, &w, true)?;
             if !matches!(w.objects[&id].kind, Kind::Thing | Kind::Player) {
                 return Err(super::error::failure(
                     "mux.object.invalid",
@@ -230,8 +252,8 @@ pub(super) fn register(
                 }
             }
             "location" => {
-                let destination = relationships::identity(v, &w, true)?;
-                relationships::identity(Value::Integer(id), &w, true)?;
+                let destination = relationships::identity(lua, v, &w, true)?;
+                relationships::identity(lua, Value::Integer(id), &w, true)?;
                 w.validate_move(ObjectId(id), destination).map_err(err)?;
                 w.objects.get_mut(&ObjectId(id)).unwrap().location = Some(destination);
             }
@@ -286,7 +308,7 @@ pub(super) fn register(
             if value.is_nil() {
                 continue;
             }
-            let target = relationships::identity(value, &w, true)?;
+            let target = relationships::identity(lua, value, &w, true)?;
             let target_kind = w.objects[&target].kind;
             if key == "zone" {
                 if !matches!(target_kind, Kind::Room | Kind::Thing) {
@@ -321,12 +343,15 @@ pub(super) fn register(
         Table
     )| {
         let w = w.borrow();
-        let id = relationships::identity(id, &w, false)?;
+        let id = relationships::identity(lua, id, &w, false)?;
+        if !matches!(w.objects[&id].kind, Kind::Room | Kind::Thing | Kind::Player) {
+            return Err(err("object can hold neither contents nor exits"));
+        }
         types::options(&options, &["types", "visible_to"])?;
         let types = types::filter(options.raw_get("types")?)?;
         let viewer = match options.raw_get::<Value>("visible_to")? {
             Value::Nil => None,
-            v => Some(relationships::identity(v, &w, false)?),
+            v => Some(relationships::identity(lua, v, &w, false)?),
         };
         lua.to_value(
             &w.objects
@@ -335,7 +360,7 @@ pub(super) fn register(
                     o.kind != Kind::Garbage
                         && o.location == Some(id)
                         && types.as_ref().is_none_or(|types| types.contains(&o.kind))
-                        && viewer.is_none_or(|v| w.visible(o, v))
+                        && viewer.is_none_or(|v| contents_visible(&w, id, o, v))
                 })
                 .map(|o| o.id.0)
                 .collect::<Vec<_>>(),
@@ -353,12 +378,9 @@ pub(super) fn register(
             if let Some(options) = options {
                 types::options(&options, &["types", "in_zone"])?;
                 types = types::filter(options.raw_get("types")?)?;
-                if let value @ (Value::Integer(_) | Value::Number(_) | Value::UserData(_)) =
-                    options.raw_get::<Value>("in_zone")?
-                {
-                    zone = Some(relationships::identity(value, &w, true)?);
-                } else if !options.raw_get::<Value>("in_zone")?.is_nil() {
-                    return Err(err("invalid zone object"));
+                let value = options.raw_get::<Value>("in_zone")?;
+                if !value.is_nil() {
+                    zone = Some(relationships::identity(lua, value, &w, true)?);
                 }
             }
             lua.to_value(

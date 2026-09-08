@@ -43,6 +43,10 @@ pub(crate) fn schedule(
         "You may not destroy Wizards!"
     );
     let kind = o.kind;
-    w.objects.get_mut(&id).unwrap().flags.insert(Flag::Going);
+    let object = w.objects.get_mut(&id).unwrap();
+    object.flags.insert(Flag::Going);
+    if kind == Kind::Player {
+        object.pending_destroyer = Some(actor);
+    }
     Ok(kind)
 }

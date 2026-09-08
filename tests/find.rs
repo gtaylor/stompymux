@@ -47,6 +47,7 @@ fn world() -> World {
                 lua_parent: String::new(),
                 state: Default::default(),
                 generation: Default::default(),
+                pending_destroyer: None,
             },
         );
     }

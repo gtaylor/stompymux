@@ -339,7 +339,8 @@ async fn lua_scopes_permissions_captures_and_frozen_registration() {
     }
     std::fs::write(d.path().join("lua/object_logic/registry.lua"),r#"local module={commands={
       {name='probe',permission='god',pattern='^probe%s+(.*)$',handler=function(ctx,value) mux.world.pemit(ctx.enactor,'god:'..ctx.object..':'..value); return false end},
-      {name='probe',permission='everyone',pattern='^probe%s+(.*)$',handler=function(ctx,value) mux.world.pemit(ctx.enactor,'local:'..ctx.object..':'..value); return false end}
+      {name='probe',permission='everyone',pattern='^probe%s+(.*)$',handler=function(ctx,value) mux.world.pemit(ctx.enactor,'local:'..ctx.object..':'..value); return false end},
+      {name='all-local',permission='everyone',pattern='^all%-local$',handler=function(ctx) mux.world.pemit(ctx.enactor,'handled:'..ctx.object); return true end}
     }}; _registry_module=module; return module"#).unwrap();
     for (file, label) in [("aa_registry.lua", "first"), ("zz_registry.lua", "last")] {
         std::fs::write(d.path().join("lua/global_logic").join(file),format!(r#"return {{commands={{{{name='probe',permission='everyone',pattern='^probe%s+(.*)$',handler=function(ctx,value) assert(ctx.scope=='global'); mux.world.pemit(ctx.enactor,'{label}:'..value); return {} end}}}}}}"#,label=="last")).unwrap();
@@ -355,11 +356,15 @@ async fn lua_scopes_permissions_captures_and_frozen_registration() {
     assert_eq!(defs[1].declaration, Some(2));
     assert_eq!(
         run(&s, &c, 2, "probe value"),
-        "local:2:value\nlocal:1:value\nfirst:value\nlast:value"
+        "local:2:value\nlocal:1:value\nlocal:2:value\nfirst:value\nlast:value"
     );
     assert_eq!(
         run(&s, &c, 1, "probe value"),
-        "god:1:value\nlocal:1:value\ngod:2:value\nlocal:2:value\nfirst:value\nlast:value"
+        "god:1:value\nlocal:1:value\ngod:1:value\nlocal:1:value\ngod:2:value\nlocal:2:value\nfirst:value\nlast:value"
+    );
+    assert_eq!(
+        run(&s, &c, 2, "all-local"),
+        "handled:2\nhandled:1\nhandled:2"
     );
     s.lua.load("_registry_module.commands[2].permission='god'; _registry_module.commands[2].handler=function() error('replaced') end; _registry_module.commands[2].pattern='never'").exec().unwrap();
     s.world
@@ -371,7 +376,7 @@ async fn lua_scopes_permissions_captures_and_frozen_registration() {
         .insert(Flag::NoCommand);
     assert_eq!(
         run(&s, &c, 2, "probe frozen"),
-        "local:2:frozen\nfirst:frozen\nlast:frozen"
+        "local:2:frozen\nlocal:1:frozen\nlocal:2:frozen\nfirst:frozen\nlast:frozen"
     );
     s.world
         .borrow_mut()
@@ -380,10 +385,13 @@ async fn lua_scopes_permissions_captures_and_frozen_registration() {
         .unwrap()
         .flags
         .insert(Flag::Halted);
-    assert_eq!(run(&s, &c, 2, "probe halted"), "first:halted\nlast:halted");
+    assert_eq!(
+        run(&s, &c, 2, "probe halted"),
+        "local:1:halted\nfirst:halted\nlast:halted"
+    );
 }
 #[tokio::test(flavor = "current_thread")]
-async fn lua_aliases_and_restricted_matches_fall_through_to_exits() {
+async fn native_aliases_precede_lua_and_restricted_lua_falls_through_to_exits() {
     let (d, _c, w) = fixture().await;
     let path = d.path().join("stompymux.toml");
     let original = std::fs::read_to_string(&path).unwrap();
@@ -413,7 +421,7 @@ async fn lua_aliases_and_restricted_matches_fall_through_to_exits() {
         .remove(Flag::Wizard);
     assert_eq!(run(&s, &c, 2, "p Hello World"), "everyone:Hello World");
     assert!(run(&s, &c, 2, "PROBE Hello World").contains("Huh?"));
-    assert_eq!(run(&s, &c, 2, "f/unknown"), "Lua shadows native");
+    assert_eq!(run(&s, &c, 2, "f/unknown"), "Permission denied.");
     s.world
         .borrow_mut()
         .objects
@@ -450,7 +458,7 @@ async fn account_command_validation_and_history() {
         },
         Login {
             success: true,
-            at: 2,
+            at: 0,
             host: "newer".into(),
         },
     ];
@@ -460,7 +468,7 @@ async fn account_command_validation_and_history() {
     assert!(history.contains("Total successful connects: 99"));
     assert!(history.contains("Total failed connects: 50"));
     assert!(history.find("newer").unwrap() < history.find("older").unwrap());
-    assert!(history.contains("1970-01-01T00:00:02Z"));
+    assert!(history.contains("1970-01-01T00:00:00Z"));
     assert_eq!(std::fs::read(c.database()).unwrap(), before);
     assert_eq!(run(&s, &c, 1, "@last"), run(&s, &c, 1, "@last me"));
     for command in [
@@ -622,6 +630,25 @@ async fn queued_context_locks_callbacks_and_session_rejection() {
         executor: ObjectId(2),
         ..execution
     };
+    run(&s, &c, 2, ".create QueuedMacros");
+    run(&s, &c, 2, ".def queued=say MACRO-RAN");
+    s.outbox.borrow_mut().clear();
+    assert!(matches!(
+        commands::execute(&s, &c, wizard, ".queued").unwrap(),
+        Action::Continue
+    ));
+    let queued_macro_output = s
+        .outbox
+        .borrow()
+        .iter()
+        .map(|(_, d)| d.source())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(
+        queued_macro_output.contains("Huh?"),
+        "{queued_macro_output}"
+    );
+    assert!(!queued_macro_output.contains("MACRO-RAN"));
     for line in [
         "quit",
         "color off",
@@ -651,6 +678,58 @@ async fn queued_context_locks_callbacks_and_session_rejection() {
     let context = s.context(Some(ObjectId(2)), None, Some(99)).unwrap();
     assert_eq!(context.get::<i64>("cause").unwrap(), 2);
     assert_eq!(context.get::<u64>("descriptor").unwrap(), 99);
+}
+
+/// Direct dispatch applies the same GOING/HALTED lifecycle guard as the server loop.
+#[tokio::test(flavor = "current_thread")]
+async fn execution_lifecycle_guard_is_origin_and_type_aware() {
+    use commands::{ExecutionContext, InputOrigin};
+    let (_d, c, mut w) = fixture().await;
+    let thing = w.create(&c, "Guarded".into(), stompymux_rs::world::Kind::Thing);
+    w.objects
+        .get_mut(&thing)
+        .unwrap()
+        .flags
+        .insert(Flag::Halted);
+    let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    let queued = ExecutionContext {
+        executor: thing,
+        cause: ObjectId(1),
+        session: None,
+        origin: InputOrigin::Queued,
+    };
+    assert!(!commands::executable(&s.world.borrow(), queued));
+    commands::execute(&s, &c, queued, "say must-not-run").unwrap();
+    assert!(s.outbox.borrow().iter().any(|(_, text)| {
+        text.source()
+            .contains("Attempt to execute command by halted object")
+    }));
+    s.outbox.borrow_mut().clear();
+    s.world.borrow_mut().objects.get_mut(&thing).unwrap().kind = stompymux_rs::world::Kind::Garbage;
+    commands::execute(&s, &c, queued, "say must-not-run").unwrap();
+    assert!(s.outbox.borrow().is_empty());
+    let interactive = ExecutionContext {
+        executor: ObjectId(2),
+        cause: ObjectId(2),
+        session: Some(1),
+        origin: InputOrigin::Interactive,
+    };
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .flags
+        .insert(Flag::Halted);
+    assert!(commands::executable(&s.world.borrow(), interactive));
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .flags
+        .insert(Flag::Going);
+    assert!(!commands::executable(&s.world.borrow(), interactive));
 }
 
 /// Discovery uses captured registrations and the same source enumeration as dispatch.
@@ -762,7 +841,7 @@ fn native_switch_catalog_fixture() {
     }
 }
 
-/// Portable sources and zone fallbacks share deterministic, deduplicated discovery.
+/// Runtime traversal preserves C duplicates and list-specific flag handling.
 #[tokio::test(flavor = "current_thread")]
 async fn portable_dispatch_stages_and_inventory() {
     use stompymux_rs::world::Kind;
@@ -772,6 +851,7 @@ async fn portable_dispatch_stages_and_inventory() {
     let nested = w.create(&c, "Nested".into(), Kind::Thing);
     let zone = w.create(&c, "CommandZone".into(), Kind::Room);
     let zoned = w.create(&c, "ZoneSource".into(), Kind::Thing);
+    let player_zone = w.create(&c, "PlayerZone".into(), Kind::Thing);
     for (id, location, module) in [
         (item, ObjectId(2), "portable.lua"),
         (nested, item, "portable.lua"),
@@ -783,18 +863,30 @@ async fn portable_dispatch_stages_and_inventory() {
         o.flags.remove(Flag::NoCommand);
     }
     w.objects.get_mut(&ObjectId(4)).unwrap().zone = Some(zone);
+    w.objects.get_mut(&ObjectId(2)).unwrap().zone = Some(player_zone);
+    w.objects.get_mut(&player_zone).unwrap().lua_parent = "player_zone.lua".into();
     std::fs::write(d.path().join("lua/object_logic/portable.lua"), r#"return {commands={
-      {name='look',permission='everyone',pattern='^look$',handler=function(ctx) mux.world.pemit(ctx.enactor,'portable look'); return true end},
-      {name='pass',permission='everyone',pattern='^pass$',handler=function(ctx) mux.world.pemit(ctx.enactor,'local false'); return false end}
+      {name='local-look',permission='everyone',pattern='^local%-look$',handler=function(ctx) mux.world.pemit(ctx.enactor,'portable look'); return true end},
+      {name='pass',permission='everyone',pattern='^pass$',handler=function(ctx) mux.world.pemit(ctx.enactor,'local false'); return false end},
+      {name='fallback-stop',permission='everyone',pattern='^fallback%-stop$',handler=function(ctx) mux.world.pemit(ctx.enactor,'local handled'); return true end}
     }}"#).unwrap();
-    std::fs::write(d.path().join("lua/object_logic/zone_commands.lua"), r#"return {commands={{name='zoneprobe',permission='everyone',pattern='^zoneprobe$',handler=function(ctx) mux.world.pemit(ctx.enactor,'zone command');return true end}}}"#).unwrap();
+    std::fs::write(d.path().join("lua/object_logic/zone_commands.lua"), r#"return {commands={
+      {name='zoneprobe',permission='everyone',pattern='^zoneprobe$',handler=function(ctx) mux.world.pemit(ctx.enactor,'zone command');return true end},
+      {name='zone-stop',permission='everyone',pattern='^zone%-stop$',handler=function(ctx) mux.world.pemit(ctx.enactor,'zone stopped');return true end},
+      {name='fallback-stop',permission='everyone',pattern='^fallback%-stop$',handler=function() error('zone fallback must not run') end}
+    }}"#).unwrap();
+    std::fs::write(d.path().join("lua/object_logic/player_zone.lua"), r#"return {commands={
+      {name='zone-stop',permission='everyone',pattern='^zone%-stop$',handler=function() error('player-zone fallback must not run') end}
+    }}"#).unwrap();
     std::fs::write(d.path().join("lua/global_logic/portable_global.lua"), r#"return {commands={
       {name='pass',permission='everyone',pattern='^pass$',handler=function(ctx) mux.world.pemit(ctx.enactor,'global pass'); return true end},
       {name='inventory',permission='everyone',pattern='^shadow$',handler=function(ctx) mux.world.pemit(ctx.enactor,'global shadow'); return true end}
     }}"#).unwrap();
     let mut s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
-    assert_eq!(run(&s, &c, 2, "look"), "portable look");
+    assert_eq!(run(&s, &c, 2, "local-look"), "portable look");
     assert_eq!(run(&s, &c, 2, "zoneprobe"), "zone command");
+    assert_eq!(run(&s, &c, 2, "zone-stop"), "zone stopped");
+    assert_eq!(run(&s, &c, 2, "fallback-stop"), "local handled");
     assert_eq!(run(&s, &c, 2, "pass"), "local false\nglobal pass");
     fn local(ctx: &CommandContext<'_>, _: &CommandInput) -> anyhow::Result<Action> {
         assert!(ctx.object.is_some());
@@ -815,7 +907,11 @@ async fn portable_dispatch_stages_and_inventory() {
     assert!(listing.contains("local native / inventory"));
     assert!(listing.contains("location-zone fallback"));
     assert!(!listing.contains("Nested"));
-    for flag in [Flag::Halted, Flag::NoCommand, Flag::Going] {
+    for (flag, visible) in [
+        (Flag::Halted, false),
+        (Flag::NoCommand, true),
+        (Flag::Going, true),
+    ] {
         s.world
             .borrow_mut()
             .objects
@@ -823,7 +919,10 @@ async fn portable_dispatch_stages_and_inventory() {
             .unwrap()
             .flags
             .insert(flag);
-        assert!(!run(&s, &c, 2, "look").contains("portable look"));
+        assert_eq!(
+            run(&s, &c, 2, "local-look").contains("portable look"),
+            visible
+        );
         s.world
             .borrow_mut()
             .objects
@@ -849,7 +948,7 @@ async fn portable_dispatch_stages_and_inventory() {
         .get_mut(&item)
         .unwrap()
         .location = Some(ObjectId(0));
-    assert!(!run(&s, &c, 2, "look").contains("portable look"));
+    assert!(!run(&s, &c, 2, "local-look").contains("portable look"));
     assert!(run(&s, &c, 2, "inventory").contains("You aren't carrying anything."));
 }
 
@@ -898,6 +997,47 @@ async fn zone_source_identity_and_exit_precedence() {
     assert!(run(&s, &c, 2, "testexit").contains("Huh?"));
 }
 
+/// A room-valued location zone gates exits rooted independently at the player's zone.
+#[tokio::test(flavor = "current_thread")]
+async fn zone_exit_fallback_matches_working_c_preconditions() {
+    use stompymux_rs::world::Kind;
+    let (d, c, mut w) = fixture().await;
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(4));
+    let zone = w.create(&c, "Zone".into(), Kind::Room);
+    let exit_root = w.create(&c, "ExitRoot".into(), Kind::Thing);
+    w.objects.get_mut(&ObjectId(4)).unwrap().zone = Some(zone);
+    let exit = w.create(&c, "zonegate;zg".into(), Kind::Exit);
+    let object = w.objects.get_mut(&exit).unwrap();
+    object.location = Some(exit_root);
+    object.destination = Some(ObjectId(0));
+    object.lua_parent.clear();
+    std::fs::write(
+        d.path().join("lua/global_logic/zone_exit_collision.lua"),
+        "return {commands={{name='zonegate',permission='everyone',pattern='^zonegate$',handler=function(ctx) mux.world.pemit(ctx.enactor,'global fallback'); return true end}}}",
+    )
+    .unwrap();
+    let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    assert_eq!(run(&s, &c, 2, "zonegate"), "global fallback");
+    assert_eq!(
+        s.world.borrow().objects[&ObjectId(2)].location,
+        Some(ObjectId(4))
+    );
+    s.world
+        .borrow_mut()
+        .objects
+        .get_mut(&ObjectId(2))
+        .unwrap()
+        .zone = Some(exit_root);
+    assert!(matches!(
+        commands::run(&s, &c, ObjectId(2), 1, "zonegate").unwrap(),
+        Action::Continue
+    ));
+    assert_eq!(
+        s.world.borrow().objects[&ObjectId(2)].location,
+        Some(ObjectId(0))
+    );
+}
+
 /// Destruction schedules only approved objects, with exact switch and C protection rules.
 #[tokio::test(flavor = "current_thread")]
 async fn deferred_destruction_and_cleaning_commands() {
@@ -911,7 +1051,17 @@ async fn deferred_destruction_and_cleaning_commands() {
         }
         ids.push(id);
     }
+    let player = w.create(&c, "DestroyPlayer".into(), Kind::Player);
+    let object = w.objects.get_mut(&player).unwrap();
+    object.location = Some(ObjectId(0));
+    object.home = Some(ObjectId(0));
+    w.accounts.insert(player, Default::default());
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
+    run(&s, &c, 2, &format!("@destroy #{}", player.0));
+    assert_eq!(
+        s.world.borrow().objects[&player].pending_destroyer,
+        Some(ObjectId(2))
+    );
     for command in [
         "@destroy",
         "@destroy/recursive #0",
@@ -1059,25 +1209,44 @@ async fn goto_matching_switches_and_live_access() {
         .unwrap()
         .destination = None;
     assert_eq!(run(&s, &c, 2, "goto aw"), "You can't go that way.");
-    {
+    let other = {
         let mut w = s.world.borrow_mut();
         let other = w.create(&c, "auditway;aw".into(), Kind::Exit);
         let e = w.objects.get_mut(&other).unwrap();
         e.location = Some(ObjectId(4));
         e.destination = Some(ObjectId(0));
         e.lua_parent.clear();
-    }
+        other
+    };
     assert_eq!(
         run(&s, &c, 2, "goto aw"),
         "I don't know which way you mean!"
     );
+    {
+        let mut w = s.world.borrow_mut();
+        w.objects.get_mut(&exit).unwrap().destination = Some(ObjectId(0));
+        w.objects.get_mut(&other).unwrap().destination = Some(ObjectId(3));
+    }
+    for _ in 0..16 {
+        s.world
+            .borrow_mut()
+            .objects
+            .get_mut(&ObjectId(2))
+            .unwrap()
+            .location = Some(ObjectId(4));
+        run(&s, &c, 2, "aw");
+        assert!(matches!(
+            s.world.borrow().objects[&ObjectId(2)].location,
+            Some(ObjectId(0) | ObjectId(3))
+        ));
+    }
     assert!(run(&s, &c, 4, "goto aw").contains("Command incompatible with invoker type."));
     c.logger.shutdown(&c).await.unwrap();
 }
 
-/// A permitted exit wins duplicate-name matching; Lua shadowing keeps its existing precedence.
+/// A permitted exit wins duplicate-name matching and explicit goto stays native-first.
 #[tokio::test(flavor = "current_thread")]
-async fn goto_lock_preference_and_lua_shadowing() {
+async fn goto_lock_preference_and_native_precedence() {
     use stompymux_rs::world::Kind;
     let (d, c, mut w) = fixture().await;
     std::fs::write(
@@ -1101,7 +1270,7 @@ async fn goto_lock_preference_and_lua_shadowing() {
         e.lua_parent = parent.into();
     }
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
-    assert_eq!(run(&s, &c, 2, "go shadow"), "SHADOW");
+    assert!(run(&s, &c, 2, "go shadow").contains("You can't go that way."));
     assert_eq!(
         s.world.borrow().objects[&ObjectId(2)].location,
         Some(ObjectId(4))

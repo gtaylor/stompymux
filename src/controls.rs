@@ -107,6 +107,17 @@ impl Controls {
         }
         Ok(())
     }
+
+    /// C permits one registration at the configured count and rejects only overflow.
+    pub fn registration(&self, count: usize, maximum: i64) -> Result<(), Admission> {
+        if !self.enabled(Control::Logins) {
+            return Err(Admission::Down);
+        }
+        if maximum >= 0 && count as u128 > maximum as u128 {
+            return Err(Admission::Full);
+        }
+        Ok(())
+    }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Admission {
@@ -132,8 +143,11 @@ mod tests {
         assert_eq!(c.admission(0, 0, false), Err(Admission::Full));
         assert_eq!(c.admission(2, 2, false), Err(Admission::Full));
         assert!(c.admission(1, 2, false).is_ok());
+        assert!(c.registration(2, 2).is_ok());
+        assert_eq!(c.registration(3, 2), Err(Admission::Full));
         c.set(Control::Logins, false);
         assert_eq!(c.admission(0, 2, false), Err(Admission::Down));
+        assert_eq!(c.registration(0, 2), Err(Admission::Down));
         assert!(c.admission(100, 0, true).is_ok());
         assert!(Controls::default().enabled(Control::Logins));
         for (name, control) in [

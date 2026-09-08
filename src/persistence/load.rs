@@ -2,6 +2,7 @@
 use crate::world::*;
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
+use std::collections::{BTreeMap, VecDeque};
 /// Convert the legacy negative-reference sentinel.
 fn id(value: i64) -> Option<ObjectId> {
     (value >= 0).then_some(ObjectId(value))
@@ -60,6 +61,7 @@ pub(super) async fn read(c: &mut SqliteConnection) -> Result<World> {
             object_id,
             Object {
                 generation: Default::default(),
+                pending_destroyer: None,
                 id: object_id,
                 name: r.try_get("name")?,
                 kind,
@@ -112,20 +114,47 @@ pub(super) async fn read(c: &mut SqliteConnection) -> Result<World> {
             },
         );
     }
-    for r in
-        sqlx::query("SELECT * FROM player_login_history ORDER BY player_dbref,occurred_at,outcome,position DESC")
-            .fetch_all(&mut *c)
-            .await?
+    let mut histories: BTreeMap<ObjectId, (VecDeque<Login>, VecDeque<Login>)> = BTreeMap::new();
+    for r in sqlx::query(
+        "SELECT * FROM player_login_history ORDER BY player_dbref,outcome,position DESC",
+    )
+    .fetch_all(&mut *c)
+    .await?
     {
-        w.accounts
-            .get_mut(&ObjectId(r.try_get("player_dbref")?))
-            .context("login history account missing")?
-            .history
-            .push(Login {
-                success: r.try_get::<i64, _>("outcome")? == 0,
-                at: r.try_get("occurred_at")?,
-                host: r.try_get("host")?,
+        let player = ObjectId(r.try_get("player_dbref")?);
+        ensure!(
+            w.accounts.contains_key(&player),
+            "login history account missing"
+        );
+        let login = Login {
+            success: r.try_get::<i64, _>("outcome")? == 0,
+            at: r.try_get("occurred_at")?,
+            host: r.try_get("host")?,
+        };
+        let queues = histories.entry(player).or_default();
+        if login.success {
+            queues.0.push_back(login);
+        } else {
+            queues.1.push_back(login);
+        }
+    }
+    for (player, (mut successes, mut failures)) in histories {
+        let history = &mut w.accounts.get_mut(&player).unwrap().history;
+        // Positions define order within an outcome. Merge the two queues by time where the
+        // legacy schema retains enough information, without reordering either queue.
+        while !successes.is_empty() || !failures.is_empty() {
+            let success = match (successes.front(), failures.front()) {
+                (Some(success), Some(failure)) => success.at <= failure.at,
+                (Some(_), None) => true,
+                (None, Some(_)) => false,
+                (None, None) => break,
+            };
+            history.push(if success {
+                successes.pop_front().unwrap()
+            } else {
+                failures.pop_front().unwrap()
             });
+        }
     }
     for r in sqlx::query("SELECT *, typeof(value) AS storage_type FROM object_state")
         .fetch_all(&mut *c)

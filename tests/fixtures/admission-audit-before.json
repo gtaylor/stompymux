@@ -1,0 +1,85 @@
+{
+  "baseline": {
+    "c": "2bbbe6fc",
+    "rust": "74246d9"
+  },
+  "method": "Paired TCP against temporary public fixture worlds; only room renderer output omitted.",
+  "transcript": {
+    "c": [
+      {
+        "step": "god login",
+        "output_before_room": "Connected.\n\n**** 3 failed connects since your last successful connect. ****\nMost recent attempt was from audit-failure-host on 2023-11-14T22:13:20Z.\n"
+      },
+      {
+        "step": "limit",
+        "output": "Set.\n"
+      },
+      {
+        "step": "name",
+        "output": "No character named 'AuditRegistrant' exists. Create a new one? (Y/n) "
+      },
+      {
+        "step": "confirm",
+        "output": "Choose a password: "
+      },
+      {
+        "step": "password",
+        "output": "Retype password: "
+      },
+      {
+        "step": "retype",
+        "output_before_room": "Connected.\n\n"
+      },
+      {
+        "step": "registered",
+        "output": "AuditRegistrant(#16:PXc#)\n***End of List***\n"
+      },
+      {
+        "step": "existing name",
+        "output": "Password: "
+      },
+      {
+        "step": "existing password",
+        "output": "------------------------------------------------------------------------------\nSorry, there are too many players connected right now.  Please try again\nin a few minutes.\n"
+      }
+    ],
+    "rust": [
+      {
+        "step": "god login",
+        "output_before_room": "Connected.\n"
+      },
+      {
+        "step": "limit",
+        "output": "Set.\n"
+      },
+      {
+        "step": "name",
+        "output": "Create a new player named AuditRegistrant? [Y/n] "
+      },
+      {
+        "step": "confirm",
+        "output": "Choose a password: "
+      },
+      {
+        "step": "password",
+        "output": "Retype password: "
+      },
+      {
+        "step": "retype",
+        "output": "------------------------------------------------------------------------------\nSorry, there are too many players connected right now.  Please try again\nin a few minutes.\n\n"
+      },
+      {
+        "step": "registered",
+        "output": "***End of List***\n"
+      },
+      {
+        "step": "existing name",
+        "output": "Password: "
+      },
+      {
+        "step": "existing password",
+        "output": "------------------------------------------------------------------------------\nSorry, there are too many players connected right now.  Please try again\nin a few minutes.\n\n"
+      }
+    ]
+  }
+}

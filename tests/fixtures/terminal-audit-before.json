@@ -1,0 +1,144 @@
+{
+  "baseline": {
+    "c": "2bbbe6fc",
+    "rust": "74246d9"
+  },
+  "method": "Paired TCP; only TTYPE enabled. Diagnostic labels differ intentionally; values shown unnormalized.",
+  "cases": [
+    {
+      "ttype_hex": "4d54545320323635",
+      "c": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"XTERM\"",
+        "Color depth: truecolor",
+        "Screen reader: no"
+      ],
+      "rust_before": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"XTERM\"",
+        "Color depth (advertised): truecolor",
+        "Screen reader: no"
+      ]
+    },
+    {
+      "ttype_hex": "4d5454532020323635",
+      "c": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"XTERM\"",
+        "Color depth: truecolor",
+        "Screen reader: no"
+      ],
+      "rust_before": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"MTTS  265\"",
+        "Color depth (advertised): 16",
+        "Screen reader: no"
+      ]
+    },
+    {
+      "ttype_hex": "4d545453202b323635",
+      "c": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"XTERM\"",
+        "Color depth: truecolor",
+        "Screen reader: no"
+      ],
+      "rust_before": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"XTERM\"",
+        "Color depth (advertised): truecolor",
+        "Screen reader: no"
+      ]
+    },
+    {
+      "ttype_hex": "4d545453202d30",
+      "c": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"XTERM\"",
+        "Color depth: off",
+        "Screen reader: no"
+      ],
+      "rust_before": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"MTTS -0\"",
+        "Color depth (advertised): 16",
+        "Screen reader: no"
+      ]
+    },
+    {
+      "ttype_hex": "4d54545320",
+      "c": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"XTERM\"",
+        "Color depth: off",
+        "Screen reader: no"
+      ],
+      "rust_before": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"MTTS \"",
+        "Color depth (advertised): 16",
+        "Screen reader: no"
+      ]
+    },
+    {
+      "ttype_hex": "4d5454532034323934393637353630",
+      "c": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"XTERM\"",
+        "Color depth: truecolor",
+        "Screen reader: no"
+      ],
+      "rust_before": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"MTTS 4294967560\"",
+        "Color depth (advertised): 16",
+        "Screen reader: no"
+      ]
+    },
+    {
+      "ttype_hex": "4d5454532032363520",
+      "c": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"MTTS 265 \"",
+        "Color depth: 16",
+        "Screen reader: no"
+      ],
+      "rust_before": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"MTTS 265 \"",
+        "Color depth (advertised): 16",
+        "Screen reader: no"
+      ]
+    },
+    {
+      "ttype_hex": "4d545453203236350069676e6f726564",
+      "c": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"XTERM\"",
+        "Color depth: truecolor",
+        "Screen reader: no"
+      ],
+      "rust_before": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"MTTS 265\\x00ignored\"",
+        "Color depth (advertised): 16",
+        "Screen reader: no"
+      ]
+    },
+    {
+      "ttype_hex": "5858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585858585854525545434f4c4f52",
+      "c": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\"",
+        "Color depth: truecolor",
+        "Screen reader: no"
+      ],
+      "rust_before": [
+        "Client: \"AuditClient\"",
+        "Terminal type: \"XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXTRUECOLOR\"",
+        "Color depth (advertised): truecolor",
+        "Screen reader: no"
+      ]
+    }
+  ]
+}

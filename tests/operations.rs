@@ -283,11 +283,22 @@ fn who_fields_unicode_markers_and_hosts() {
     assert!(
         operations::who_report(&[], 5, 20).ends_with("0 Players logged in, 5 record, 20 maximum.")
     );
+    assert!(
+        operations::who_report(&[], 5, -2).ends_with("0 Players logged in, 5 record, -2 maximum.")
+    );
     let lines: Vec<_> = text.lines().collect();
     let a = lines[1].find("::1").unwrap();
     let b = lines[2].find("127.0.0.1").unwrap();
     use unicode_width::UnicodeWidthStr;
     assert_eq!(lines[1][..a].width(), lines[2][..b].width());
+}
+
+/// C hides short idle intervals only in the privileged session report.
+#[test]
+fn session_idle_hides_ten_minutes_or_less() {
+    assert_eq!(operations::session_idle(0), "0s");
+    assert_eq!(operations::session_idle(600), "0s");
+    assert_ne!(operations::session_idle(601), "0s");
 }
 
 /// Extract command counts without depending on display padding or connection time.

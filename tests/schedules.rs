@@ -712,6 +712,16 @@ async fn tcp_admission_controls_cache_and_existing_queue() {
             }
             let before =
                 persistence::load(&c.database()).await.unwrap().accounts[&ObjectId(2)].successes;
+            let mut wrong = Client {
+                socket: TcpStream::connect(address).await.unwrap(),
+                pending: Vec::new(),
+            };
+            wrong.until("Who are you? ").await;
+            wrong.send("#2").await;
+            wrong.until("Password: ").await;
+            wrong.send("wrong").await;
+            let failure = wrong.until("Who are you? ").await;
+            assert!(failure.contains("different password") && !failure.contains("FULL OLD"));
             attempt(address, "#2", "FULL OLD").await;
             let mut registration = Client {
                 socket: TcpStream::connect(address).await.unwrap(),
@@ -719,20 +729,33 @@ async fn tcp_admission_controls_cache_and_existing_queue() {
             };
             registration.until("Who are you? ").await;
             registration.send("CapacityCandidate").await;
-            registration.until("[Y/n] ").await;
+            registration.until("(Y/n) ").await;
             registration.send("y").await;
             registration.until("Choose a password: ").await;
             registration.send("secret").await;
             registration.until("Retype password: ").await;
             registration.send("secret").await;
-            registration.until("FULL OLD").await;
+            registration.until("Starter Room").await;
             assert!(
                 persistence::load(&c.database())
                     .await
                     .unwrap()
                     .find_player("CapacityCandidate")
-                    .is_none()
+                    .is_some()
             );
+            let mut invalid_at_overflow = Client {
+                socket: TcpStream::connect(address).await.unwrap(),
+                pending: Vec::new(),
+            };
+            invalid_at_overflow.until("Who are you? ").await;
+            invalid_at_overflow.send("OverflowCandidate").await;
+            invalid_at_overflow.until("(Y/n) ").await;
+            invalid_at_overflow.send("y").await;
+            invalid_at_overflow.until("Choose a password: ").await;
+            invalid_at_overflow.send("has space").await;
+            invalid_at_overflow.until("Retype password: ").await;
+            invalid_at_overflow.send("has space").await;
+            invalid_at_overflow.until("FULL OLD").await;
 
             assert_eq!(
                 persistence::load(&c.database()).await.unwrap().accounts[&ObjectId(2)].successes,

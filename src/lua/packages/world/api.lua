@@ -35,7 +35,7 @@ for _, key in ipairs({'destination', 'home', 'zone', 'affiliation', 'lua_parent'
 end
 
 function methods:contents(opts)
-    opts = opts or {}
+    if opts == nil then opts = {} end
     local result = {}
     for _, n in ipairs(native.contents(native.object_id(self), opts)) do
         result[#result + 1] = object(n)
@@ -79,8 +79,8 @@ end
 local function lock_result(t)
     local n = lock_identity(t.object)
     local enactor = lock_identity(t.enactor)
-    local subject = lock_identity(t.subject or enactor)
-    local cause = lock_identity(t.cause or enactor)
+    local subject = lock_identity(t.subject == nil and enactor or t.subject)
+    local cause = lock_identity(t.cause == nil and enactor or t.cause)
     local path = native.lock_parent(n)
     if not path then return {passes = true} end
     local parent = native.parent(path)
@@ -102,8 +102,8 @@ function mux.world.lock_passes(t)
     local allowed = {object=true,enactor=true,lock=true,cause=true,subject=true}
     for k in pairs(t) do if not allowed[k] then error('unknown lock option: '..tostring(k)) end end
     local ctx = {object=lock_identity(t.object), enactor=lock_identity(t.enactor), lock=native.lock_key(t.lock), silent=true, descriptor=native.callback_descriptor()}
-    ctx.subject=lock_identity(t.subject or ctx.enactor)
-    ctx.cause=lock_identity(t.cause or ctx.enactor)
+    ctx.subject=lock_identity(t.subject == nil and ctx.enactor or t.subject)
+    ctx.cause=lock_identity(t.cause == nil and ctx.enactor or t.cause)
     local ok, result = pcall(lock_result, ctx)
     if not ok then native.lock_error(tostring(result)); return false end
     return result.passes

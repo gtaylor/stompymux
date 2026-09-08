@@ -718,7 +718,7 @@ impl Server {
             rows.push([
                 telnet::diagnostics::escape(crate::text::literal_prefix(&name, 16).as_bytes()),
                 telnet::diagnostics::connected_time(session.connected.elapsed().as_secs()),
-                telnet::diagnostics::idle_time(session.active.elapsed().as_secs()),
+                crate::operations::session_idle(session.active.elapsed().as_secs()),
                 sid.0.to_string(),
                 stats.input[0].to_string(),
                 stats.input[1].to_string(),
@@ -763,7 +763,7 @@ impl Server {
             "{count} Player{} logged in, {} record, {} maximum.",
             if count == 1 { "" } else { "s" },
             world.record_players,
-            if self.config.mux.max_players < 0 {
+            if self.config.mux.max_players == -1 {
                 "no".into()
             } else {
                 self.config.mux.max_players.to_string()
@@ -899,7 +899,7 @@ impl Server {
             players,
             hidden,
             record: w.record_players as i64,
-            maximum: (self.config.mux.max_players > 0).then_some(self.config.mux.max_players),
+            maximum: (self.config.mux.max_players != -1).then_some(self.config.mux.max_players),
             environments: self
                 .sessions
                 .iter()
@@ -1233,10 +1233,10 @@ impl Server {
                     Input::StartCompression => {
                         self.sessions[&id].protocol(vec![Input::StartCompression], &self.config)
                     }
-                    Input::Diagnostic(message) => self.config.log(
-                        &[crate::logging::Category::Network],
-                        "NET",
-                        "ERROR",
+                    Input::Problem(secondary, message) => self.config.log(
+                        &[crate::logging::Category::Problems],
+                        "TELNET",
+                        secondary,
                         format!("Telnet session {}: {message}", id.0),
                     ),
                     Input::StatusRequest => self.mssp(id),
@@ -1424,6 +1424,15 @@ impl Server {
             privileged,
         )
     }
+    fn registration_admission(&self) -> std::result::Result<(), crate::controls::Admission> {
+        self.controls.registration(
+            self.sessions
+                .values()
+                .filter(|s| s.player.is_some())
+                .count(),
+            self.config.mux.max_players,
+        )
+    }
     async fn reject_admission(
         &mut self,
         id: SessionId,
@@ -1485,52 +1494,19 @@ impl Server {
                 crate::lua::transactions::with_cause(&self.scripts.lua, cause, || {
                     let (repaired, mut report) = crate::dbck::plan(&before, raw, &self.config)?;
                     *self.scripts.world.borrow_mut() = repaired;
-                    for relocation in &report.plan.relocations {
-                        let callable = |id: ObjectId| {
-                            self.scripts
-                                .world
-                                .borrow()
-                                .objects
-                                .get(&id)
-                                .is_some_and(|o| {
-                                    matches!(o.kind, Kind::Room | Kind::Player | Kind::Thing)
-                                })
-                        };
-                        let movement = crate::movement::Move {
-                            actor,
-                            object: relocation.object,
-                            source: relocation.source,
-                            destination: relocation.destination,
-                            session: session.and_then(|_| {
+                    crate::lua::maintenance::apply_relocations(
+                        &self.scripts,
+                        &before,
+                        &report,
+                        |object| {
+                            session.and_then(|_| {
                                 self.sessions
                                     .iter()
-                                    .find(|(_, s)| s.player == Some(relocation.object))
+                                    .find(|(_, s)| s.player == Some(object))
                                     .map(|(id, _)| id.0)
-                            }),
-                        };
-                        if let Some(source) = relocation.source.filter(|id| callable(*id)) {
-                            self.scripts
-                                .world
-                                .borrow_mut()
-                                .objects
-                                .get_mut(&relocation.object)
-                                .unwrap()
-                                .location = Some(source);
-                            self.scripts.movement_event("on_exit", source, &movement)?;
-                        }
-                        self.scripts
-                            .world
-                            .borrow_mut()
-                            .objects
-                            .get_mut(&relocation.object)
-                            .context("callback removed repaired occupant")?
-                            .location = Some(relocation.destination);
-                        self.scripts.movement_event(
-                            "on_enter",
-                            relocation.destination,
-                            &movement,
-                        )?;
-                    }
+                            })
+                        },
+                    )?;
                     if let Some(nested) = self.scripts.flows.maintenance() {
                         report.plan.purges.extend(nested.plan.purges);
                         report.plan.detachments.extend(nested.plan.detachments);
@@ -1819,16 +1795,15 @@ impl Server {
 
     async fn command(&mut self, id: SessionId, p: ObjectId, line: &str) -> Result<()> {
         self.snapshots()?;
-        self.audit(
-            commands::ExecutionContext {
-                executor: p,
-                cause: p,
-                session: Some(id.0),
-                origin: commands::InputOrigin::Interactive,
-            },
-            line,
-        )
-        .await;
+        let execution = commands::ExecutionContext {
+            executor: p,
+            cause: p,
+            session: Some(id.0),
+            origin: commands::InputOrigin::Interactive,
+        };
+        if commands::executable(&self.scripts.world.borrow(), execution) {
+            self.audit(execution, line).await;
+        }
         let mut before = self.scripts.world.borrow().clone();
         let action = commands::run(&self.scripts, &self.config, p, id.0, line);
         if action.is_ok()
@@ -2110,17 +2085,32 @@ impl Server {
         );
         match flow {
             LoginFlow::Name => {
-                if input.is_empty() {
+                if input.bytes().all(|byte| byte.is_ascii_whitespace()) {
                     self.prompt(id, LoginFlow::Name, "Who are you? ", false);
                 } else if self.scripts.world.borrow().find_player(input).is_some() {
                     self.prompt(id, LoginFlow::Password(input.into()), "Password: ", true);
-                } else if let Err(e) = accounts::validate_name(input, &self.config) {
-                    self.prompt(id, LoginFlow::Name, &format!("{e}\r\nWho are you? "), false);
+                } else if input.len() > self.config.names.maximum_length {
+                    self.prompt(
+                        id,
+                        LoginFlow::Name,
+                        &format!(
+                            "New usernames may be at most {} characters long.\r\nWho are you? ",
+                            self.config.names.maximum_length
+                        ),
+                        false,
+                    );
+                } else if accounts::validate_name_syntax(input, &self.config).is_err() {
+                    self.prompt(
+                        id,
+                        LoginFlow::Name,
+                        "New usernames must start with a letter and be at least two characters long.\r\nWho are you? ",
+                        false,
+                    );
                 } else {
                     self.prompt(
                         id,
                         LoginFlow::ConfirmCreate(input.into()),
-                        &format!("Create a new player named {input}? [Y/n] "),
+                        &format!("No character named '{input}' exists. Create a new one? (Y/n) "),
                         false,
                     );
                 }
@@ -2129,14 +2119,18 @@ impl Server {
                 self.authenticate(id, name, Zeroizing::new(input.into()), false)
                     .await
             }
-            LoginFlow::ConfirmCreate(name) => match input.to_ascii_lowercase().as_str() {
-                "" | "y" | "yes" => self.prompt(
+            LoginFlow::ConfirmCreate(name) => match input
+                .bytes()
+                .find(|byte| !byte.is_ascii_whitespace())
+                .map(|byte| byte.to_ascii_lowercase())
+            {
+                None | Some(b'y') => self.prompt(
                     id,
                     LoginFlow::NewPassword(name),
                     "Choose a password: ",
                     true,
                 ),
-                "n" | "no" => self.prompt(id, LoginFlow::Name, "Who are you? ", false),
+                Some(b'n') => self.prompt(id, LoginFlow::Name, "Who are you? ", false),
                 _ => self.prompt(
                     id,
                     LoginFlow::ConfirmCreate(name),
@@ -2145,21 +2139,12 @@ impl Server {
                 ),
             },
             LoginFlow::NewPassword(name) => {
-                if let Err(e) = accounts::validate_password(input, &self.config) {
-                    self.prompt(
-                        id,
-                        LoginFlow::NewPassword(name),
-                        &format!("{e}\r\nChoose a password: "),
-                        true,
-                    );
-                } else {
-                    self.prompt(
-                        id,
-                        LoginFlow::ConfirmPassword(name, Zeroizing::new(input.into())),
-                        "Retype password: ",
-                        true,
-                    );
-                }
+                self.prompt(
+                    id,
+                    LoginFlow::ConfirmPassword(name, Zeroizing::new(input.into())),
+                    "Retype password: ",
+                    true,
+                );
             }
             LoginFlow::ConfirmPassword(name, password) => {
                 if input != password.as_str() {
@@ -2187,7 +2172,7 @@ impl Server {
         password: Zeroizing<String>,
         create: bool,
     ) {
-        if create && let Err(reason) = self.admission(false) {
+        if create && let Err(reason) = self.registration_admission() {
             if let Err(error) = self.reject_admission(id, reason).await {
                 self.config.log(
                     &[crate::logging::Category::Problems],
@@ -2230,16 +2215,57 @@ impl Server {
             || self.hashes.tokens == 0
             || self.inflight >= self.config.security.login_hash_concurrency
         {
-            self.prompt(
-                id,
-                LoginFlow::Name,
-                "Too many login attempts. Please wait.\r\nWho are you? ",
-                false,
+            let message = if create {
+                "Either there is already a player with that name, or that name is illegal.\r\n"
+            } else {
+                "Either that player does not exist, or has a different password.\r\n"
+            };
+            self.config.log(
+                &[
+                    crate::logging::Category::Logins,
+                    crate::logging::Category::Security,
+                ],
+                if create { "CRE" } else { "CON" },
+                "RJCT",
+                format!(
+                    "Authentication throttled for {} from {address}",
+                    crate::logging::clean(&name)
+                ),
             );
+            if let Err(error) = self
+                .cache_close(id, crate::message_cache::File::Connect, message, message)
+                .await
+            {
+                self.config.log(
+                    &[crate::logging::Category::Problems],
+                    "SRV",
+                    "ERROR",
+                    format!("Authentication throttle close: {error:#}"),
+                );
+            }
             return;
         }
         bucket.tokens -= 1;
         self.hashes.tokens -= 1;
+        let password = if create {
+            let password = Zeroizing::new(
+                password
+                    .trim_matches(|character: char| character.is_ascii_whitespace())
+                    .to_owned(),
+            );
+            if accounts::validate_password(&password, &self.config).is_err() {
+                self.prompt(
+                    id,
+                    LoginFlow::Name,
+                    "Either there is already a player with that name, or that name is illegal.\r\nWho are you? ",
+                    false,
+                );
+                return;
+            }
+            password
+        } else {
+            password
+        };
         self.inflight += 1;
         let identity = self.scripts.world.borrow().find_player(&name);
         let hash = self
@@ -2338,6 +2364,21 @@ impl Server {
         let before = self.scripts.world.borrow().clone();
         let existing = self.scripts.world.borrow().find_player(&name);
         let host = self.sessions[&id].peer.to_string();
+        let failure_notice = existing.and_then(|p| {
+            let world = self.scripts.world.borrow();
+            let account = &world.accounts[&p];
+            (account.unreported_failures > 0).then(|| {
+                (
+                    account.unreported_failures,
+                    account
+                        .history
+                        .iter()
+                        .rev()
+                        .find(|record| !record.success)
+                        .cloned(),
+                )
+            })
+        });
         let hash = match result {
             Ok(h) => h,
             Err(error) => {
@@ -2372,8 +2413,8 @@ impl Server {
                 if let Some(p) = existing {
                     let mut w = self.scripts.world.borrow_mut();
                     let a = w.accounts.get_mut(&p).unwrap();
-                    a.failures += 1;
-                    a.unreported_failures += 1;
+                    a.failures = a.failures.saturating_add(1);
+                    a.unreported_failures = a.unreported_failures.saturating_add(1);
                     a.history.push(Login {
                         success: false,
                         at: accounts::now(),
@@ -2401,7 +2442,12 @@ impl Server {
         };
         let privileged = !create
             && existing.is_some_and(|p| crate::flags::is_wizard(&self.scripts.world.borrow(), p));
-        if let Err(reason) = self.admission(privileged) {
+        let admission = if create {
+            self.registration_admission()
+        } else {
+            self.admission(privileged)
+        };
+        if let Err(reason) = admission {
             self.reject_admission(id, reason).await?;
             return Ok(());
         }
@@ -2410,7 +2456,7 @@ impl Server {
                 self.prompt(
                     id,
                     LoginFlow::Name,
-                    "That name has just been registered.\r\nWho are you? ",
+                    "Either there is already a player with that name, or that name is illegal.\r\nWho are you? ",
                     false,
                 );
                 return Ok(());
@@ -2437,7 +2483,7 @@ impl Server {
                     self.prompt(
                         id,
                         LoginFlow::Name,
-                        "Unable to register.\r\nWho are you? ",
+                        "Either there is already a player with that name, or that name is illegal.\r\nWho are you? ",
                         false,
                     );
                     return Ok(());
@@ -2449,9 +2495,10 @@ impl Server {
         {
             let mut w = self.scripts.world.borrow_mut();
             let a = w.accounts.get_mut(&p).unwrap();
+            a.unreported_failures = 0;
             a.last_login = Some(accounts::now());
             a.last_site = Some(host.clone());
-            a.successes += 1;
+            a.successes = a.successes.saturating_add(1);
             a.history.push(Login {
                 success: true,
                 at: accounts::now(),
@@ -2521,10 +2568,63 @@ impl Server {
         self.flush();
         self.announce_transition(transition).await;
         self.tell(id, "Connected.\r\n");
+        if let Some((count, latest)) = failure_notice {
+            let mut notice = format!(
+                "\r\n**** {count} failed connect{} since your last successful connect. ****",
+                if count == 1 { "" } else { "s" }
+            );
+            if let Some(latest) = latest
+                && let Some(at) = chrono::DateTime::from_timestamp(latest.at, 0)
+            {
+                notice.push_str(&format!(
+                    "\r\nMost recent attempt was from {} on {}.",
+                    latest.host,
+                    at.format("%Y-%m-%dT%H:%M:%SZ")
+                ));
+            }
+            crate::notification::direct(
+                &self.scripts.outbox,
+                &self.config,
+                p,
+                crate::text::Document::Literal(notice),
+            )?;
+            // Successful-login notices use ordinary player routing, including other sessions.
+            self.flush();
+        }
         if !self.controls.enabled(crate::controls::Control::Logins) {
             self.tell(id, "*** Logins are disabled.\r\n");
         }
-        self.command(id, p, "look").await?;
+        let before = self.scripts.world.borrow().clone();
+        match commands::look_in(&self.scripts, &self.config, p, id.0) {
+            Ok(None) => {
+                if self.commit(before).await {
+                    self.flush();
+                } else {
+                    self.tell(id, "Unable to save your changes. Please try again.\r\n");
+                }
+            }
+            Ok(Some(error)) => {
+                if let Some(session) = self.sessions.get(&id) {
+                    session.raw(crate::find::bounded_error(
+                        &error,
+                        self.config.runtime.output_message_limit,
+                    ));
+                }
+            }
+            Err(error) => {
+                *self.scripts.world.borrow_mut() = before;
+                self.reconcile_connections();
+                self.scripts.outbox.borrow_mut().clear();
+                self.scripts.flows.rollback();
+                self.config.log(
+                    &[crate::logging::Category::Bugs],
+                    "LUA",
+                    "ERROR",
+                    format!("Connect appearance failed: {error:#}"),
+                );
+                self.tell(id, "Unable to render your location.\r\n");
+            }
+        }
         Ok(())
     }
 }

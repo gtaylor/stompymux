@@ -176,7 +176,7 @@ impl UserData for Handle {
             for pair in values.pairs::<String, Value>() {
                 let (key, v) = pair?;
                 state::address(&h.namespace, Some(&key)).map_err(err)?;
-                batch.push((key, from_lua(v)?));
+                batch.push((key, checked_value(lua, v)?));
             }
             h.change(lua, |s| {
                 for (key, v) in batch {

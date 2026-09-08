@@ -80,10 +80,10 @@ pub fn telnet(r: &mut Report, name: &str, player: i64, id: u64, d: &Decoder, t: 
         ));
         match option {
             super::TTYPE => {
-                r.line(&format!("    Client: \"{}\"", escape(d.client.as_bytes())));
+                r.line(&format!("    Client: \"{}\"", escape(&d.client_raw)));
                 r.line(&format!(
                     "    Terminal type: \"{}\"",
-                    escape(d.terminal.as_bytes())
+                    escape(&d.terminal_raw)
                 ));
                 r.line(&format!("    Responses: {}", d.ttype_responses));
                 r.line(&format!(
@@ -170,15 +170,15 @@ pub fn connected_time(seconds: u64) -> String {
         clock
     }
 }
-/// C @session hides idle intervals of ten minutes or less.
+/// C connection display uses the largest nonzero day/hour/minute unit, then seconds.
 pub fn idle_time(seconds: u64) -> String {
-    if seconds <= 600 {
-        "0s".into()
-    } else if seconds >= 86400 {
+    if seconds >= 86400 {
         format!("{}d", seconds / 86400)
     } else if seconds >= 3600 {
         format!("{}h", seconds / 3600)
-    } else {
+    } else if seconds >= 60 {
         format!("{}m", seconds / 60)
+    } else {
+        format!("{seconds}s")
     }
 }

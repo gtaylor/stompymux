@@ -389,7 +389,7 @@ impl Scripts {
             destination: if entering {
                 Some(location)
             } else {
-                Some(movement.destination)
+                (movement.destination.0 >= 0).then_some(movement.destination)
             },
             operation: "move",
             silent: quiet,
@@ -405,7 +405,7 @@ impl Scripts {
             let other = if entering {
                 movement.source
             } else {
-                Some(movement.destination)
+                (movement.destination.0 >= 0).then_some(movement.destination)
             };
             if let Some(other) = other {
                 self.action_message(

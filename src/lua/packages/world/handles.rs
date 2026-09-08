@@ -43,23 +43,22 @@ impl UserData for Object {
         });
     }
 }
-/// Decode a real handle or an integral numeric dbref, never a table with a forged _id.
-pub(crate) fn identity(value: Value) -> mlua::Result<ObjectId> {
+/// Decode a real handle or a Lua-coercible numeric dbref, never a forged table.
+pub(crate) fn identity(lua: &Lua, value: Value) -> mlua::Result<ObjectId> {
     match value {
         Value::UserData(u) => u
             .borrow::<Object>()
             .map_err(|_| failure("mux.object.invalid", "expected an Object handle"))?
             .id(),
-        Value::Integer(n) => Ok(ObjectId(n)),
-        Value::Number(n)
-            if n.is_finite() && n.fract() == 0.0 && n >= 0.0 && n < i64::MAX as f64 =>
-        {
-            Ok(ObjectId(n as i64))
-        }
-        _ => Err(failure(
-            "mux.object.invalid",
-            "expected an Object or integer dbref",
-        )),
+        value => match lua.coerce_number(value)? {
+            Some(n) if n.is_finite() && n >= i64::MIN as f64 && n < 9_223_372_036_854_775_808.0 => {
+                Ok(ObjectId(n as i64))
+            }
+            _ => Err(failure(
+                "mux.object.invalid",
+                "expected a finite in-range numeric dbref",
+            )),
+        },
     }
 }
 pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Result<()> {
@@ -86,7 +85,7 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
                     "world is unavailable while checking",
                 ));
             }
-            let id = identity(v)?;
+            let id = identity(lua, v)?;
             let generation = w
                 .borrow()
                 .objects
@@ -103,7 +102,7 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
     )?;
     api.set(
         "object_id",
-        lua.create_function(|_, v: Value| Ok(identity(v)?.0))?,
+        lua.create_function(|lua, v: Value| Ok(identity(lua, v)?.0))?,
     )?;
     api.set(
         "object_methods",
@@ -115,7 +114,11 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
 }
 
 /// Validate under an existing world borrow, avoiding nested RefCell borrowing during mutations.
-pub(crate) fn identity_in(value: Value, world: &crate::world::World) -> mlua::Result<ObjectId> {
+pub(crate) fn identity_in(
+    lua: &Lua,
+    value: Value,
+    world: &crate::world::World,
+) -> mlua::Result<ObjectId> {
     if let Value::UserData(u) = value {
         let h = u
             .borrow::<Object>()
@@ -129,7 +132,7 @@ pub(crate) fn identity_in(value: Value, world: &crate::world::World) -> mlua::Re
         }
         Ok(h.id)
     } else {
-        identity(value)
+        identity(lua, value)
     }
 }
 

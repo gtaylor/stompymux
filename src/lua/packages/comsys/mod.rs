@@ -47,8 +47,8 @@ impl Handle {
 }
 
 /// Resolve the existing object facade and reject dead or foreign values.
-fn object(value: Value, b: &Bindings) -> mlua::Result<ObjectId> {
-    let id = super::world::handles::identity(value)?;
+fn object(lua: &Lua, value: Value, b: &Bindings) -> mlua::Result<ObjectId> {
+    let id = super::world::handles::identity(lua, value)?;
     if !b
         .world
         .borrow()
@@ -91,7 +91,7 @@ impl UserData for Handle {
             let id = if matches!(value, Value::Nil) {
                 None
             } else {
-                Some(object(value, &h.bindings)?)
+                Some(object(lua, value, &h.bindings)?)
             };
             if id.is_some_and(|id| {
                 h.bindings.world.borrow().objects[&id]
@@ -158,7 +158,7 @@ impl UserData for Handle {
             "add_player",
             |lua, h, (value, alias, quiet): (Value, Value, Value)| {
                 let name = h.name(lua)?;
-                let who = object(value, &h.bindings)?;
+                let who = object(lua, value, &h.bindings)?;
                 let Value::String(alias) = alias else {
                     return Err(error("alias must be a string"));
                 };
@@ -185,7 +185,7 @@ impl UserData for Handle {
         );
         m.add_method("boot_player", |lua, h, value: Value| {
             let name = h.name(lua)?;
-            let who = object(value, &h.bindings)?;
+            let who = object(lua, value, &h.bindings)?;
             crate::lua::transactions::run(lua, &h.bindings.world, &h.bindings.outbox, || {
                 h.bindings
                     .service(lua)

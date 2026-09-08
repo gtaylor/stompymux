@@ -1,0 +1,12 @@
+{
+  "setup": "Temporary copies of tests/fixtures/game; location #0 zoned to room #17; player zoned to distinct room #20 containing zonegate2",
+  "command": "zonegate2",
+  "c": {
+    "sender": "\u001b[0m\u001b[97mStarter Room\u001b[0m\nWelcome to this new StompyMUX game. We're not ready for prime time quite yet but you are Welcome to explore if you'd like.\u001b[0m\n",
+    "observer": "GOD has left.\n"
+  },
+  "rust": {
+    "sender": "\u001b[0m\u001b[97mStarter Room\u001b[0m\nWelcome to this new StompyMUX game. We're not ready for prime time quite yet but you are Welcome to explore if you'd like.\u001b[0m\n",
+    "observer": "GOD has left.\n"
+  }
+}

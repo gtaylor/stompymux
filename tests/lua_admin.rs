@@ -80,6 +80,12 @@ async fn typed_objects_relationships_and_enumeration() {
     let bag = object(&mut w, &c, "Bag", Kind::Thing, room);
     let child = object(&mut w, &c, "Child", Kind::Thing, bag);
     let exit = object(&mut w, &c, "Exit", Kind::Exit, room);
+    let dark = object(&mut w, &c, "Dark", Kind::Thing, bag);
+    w.objects.get_mut(&dark).unwrap().flags.insert(Flag::Dark);
+    let light = object(&mut w, &c, "Light", Kind::Thing, bag);
+    w.objects.get_mut(&light).unwrap().flags.insert(Flag::Light);
+    let _nested_exit = object(&mut w, &c, "Nested Exit", Kind::Exit, bag);
+    w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(bag);
     let s = scripts(&c, w);
     lua(
         &s,
@@ -91,14 +97,24 @@ async fn typed_objects_relationships_and_enumeration() {
       assert(not pcall(function() types.THING=3 end))
       assert(not pcall(function() return types.GARBAGE end))
       assert(not pcall(function() return types.thing end))
-      assert(not pcall(world.object, '1'))
+      assert(world.object('1'):dbref()==1)
+      assert(world.object('1.9'):dbref()==1)
+      assert(not pcall(world.object, 'not-a-number'))
+      assert(not pcall(world.object, 0/0))
+      assert(not pcall(world.object, 1/0))
       assert(not pcall(world.create_object, {{type=1,name='invalid'}}))
       assert(not pcall(world.list_objects, {{types={{1}}}}))
       assert(not pcall(world.list_objects, {{types={{[2]=types.THING}}}}))
       assert(not pcall(world.list_objects, {{bad=true}}))
+      assert(#world.list_objects({{in_zone='1.9'}})==#world.list_objects({{in_zone=1}}))
       assert(#world.list_objects({{types={{}}}})==0)
       assert(#bag:contents({{types={{}}}})==0)
-      assert(bag:contents()[1]==child)
+      local found_child=false;for _,o in ipairs(bag:contents()) do found_child=found_child or o==child end;assert(found_child)
+      local visible=bag:contents({{visible_to=1}});assert(#visible==3 and visible[1]==child and visible[2]:name()=='Light' and visible[3]:name()=='Nested Exit')
+      local self_hidden=bag:contents({{visible_to=child}});for _,o in ipairs(self_hidden) do assert(o~=child and o:dbref()~=2) end
+      bag:flags():add(world.flags.DARK)
+      visible=bag:contents({{visible_to=1}});assert(#visible==1 and visible[1]:name()=='Light')
+      assert(not pcall(function() exit:contents() end))
       assert(not pcall(function() bag:contents({{other=true}}) end))
       assert(bag:location()==room)
       exit:set_destination(bag); assert(exit:destination()==bag)

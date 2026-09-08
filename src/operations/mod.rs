@@ -37,6 +37,11 @@ pub struct WhoRow {
     pub host: String,
 }
 
+/// Administrative session reports suppress idle values through ten minutes.
+pub fn session_idle(seconds: u64) -> String {
+    crate::telnet::diagnostics::idle_time(if seconds > 600 { seconds } else { 0 })
+}
+
 /// Preserve literal Unicode while preventing client-controlled terminal characters.
 fn visible(text: &str) -> String {
     text.chars()
@@ -98,7 +103,7 @@ pub fn who_report(rows: &[WhoRow], record: usize, maximum: i64) -> String {
         "{} Player{} logged in, {record} record, {} maximum.",
         rows.len(),
         if rows.len() == 1 { "" } else { "s" },
-        if maximum < 0 {
+        if maximum == -1 {
             "no".into()
         } else {
             maximum.to_string()

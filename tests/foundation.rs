@@ -10,7 +10,7 @@ use stompymux_rs::{
     lua::Scripts,
     persistence, server,
     telnet::{Decoder, Input},
-    world::{ObjectId, Scalar},
+    world::{Login, ObjectId, Scalar},
 };
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
@@ -401,7 +401,7 @@ impl Client {
     }
     async fn register(&mut self, name: &str) {
         self.send(name).await;
-        self.until("[Y/n] ").await;
+        self.until("(Y/n) ").await;
         self.send("y").await;
         self.until("Choose a password: ").await;
         self.send("secret").await;
@@ -461,7 +461,7 @@ async fn tcp_mismatch_bad_password_and_duplicate_registration() {
     let mut b = Client::connect(&running).await;
     for client in [&mut a, &mut b] {
         client.send("Racer").await;
-        client.until("[Y/n] ").await;
+        client.until("(Y/n) ").await;
         client.send("y").await;
         client.until("Choose a password: ").await;
         client.send("secret").await;
@@ -474,7 +474,8 @@ async fn tcp_mismatch_bad_password_and_duplicate_registration() {
     a.send("secret").await;
     a.until("Starter Room").await;
     b.send("secret").await;
-    b.until("That name has just been registered.").await;
+    b.until("Either there is already a player with that name, or that name is illegal.")
+        .await;
     b.send("Racer").await;
     b.until("Password: ").await;
     b.send("wrong").await;
@@ -512,7 +513,7 @@ async fn movement_persists_and_failed_registration_rolls_back() {
     sqlx::raw_sql("CREATE TRIGGER reject_write BEFORE UPDATE ON snapshot BEGIN SELECT RAISE(ABORT,'injected persistence failure'); END;").execute(&mut db).await.unwrap();
     let mut newcomer = Client::connect(&running).await;
     newcomer.send("Unsaved").await;
-    newcomer.until("[Y/n] ").await;
+    newcomer.until("(Y/n) ").await;
     newcomer.send("y").await;
     newcomer.until("Choose a password: ").await;
     newcomer.send("secret").await;
@@ -561,7 +562,10 @@ async fn login_throttle_utf8_and_echo_over_tcp() {
     a.send("GOD").await;
     a.until("Password: ").await;
     a.send("wrong").await;
-    a.until("Too many login attempts.").await;
+    a.until("Either that player does not exist, or has a different password.")
+        .await;
+    let mut closed = Vec::new();
+    a.socket.read_to_end(&mut closed).await.unwrap();
     running.stop().await;
 }
 #[tokio::test(flavor = "current_thread")]
@@ -607,7 +611,15 @@ async fn missing_required_parent_prevents_startup() {
 async fn connection_hooks_only_disconnect_last_session_and_shutdown_cleanly() {
     let (d, c) = populated().await;
     let mut w = persistence::load(&c.database()).await.unwrap();
-    w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
+    let god_account = w.accounts.get_mut(&ObjectId(1)).unwrap();
+    god_account.hash = Some(accounts::hash("secret", &c).unwrap());
+    god_account.failures = 3;
+    god_account.unreported_failures = 3;
+    god_account.history.push(Login {
+        success: false,
+        at: 1_700_000_000,
+        host: "audit-failure-host".into(),
+    });
     persistence::save(&c.database(), &w).await.unwrap();
     std::fs::write(d.path().join("lua/global_logic/session_test.lua"),r#"return {events={
  on_player_connect=function(ctx)
@@ -627,13 +639,27 @@ async fn connection_hooks_only_disconnect_last_session_and_shutdown_cleanly() {
     first.send("GOD").await;
     first.until("Password: ").await;
     first.send("secret").await;
-    first.until("Staff Nexus").await;
+    let notice = first.until("Staff Nexus").await;
+    assert!(notice.contains("3 failed connects since your last successful connect"));
+    assert!(notice.contains("audit-failure-host"));
+    assert!(notice.contains("2023-11-14T22:13:20Z"));
+    let mut failed = Client::connect(&running).await;
+    failed.send("GOD").await;
+    failed.until("Password: ").await;
+    failed.send("wrong").await;
+    failed.until("different password.").await;
     let mut second = Client::connect(&running).await;
     second.send("GOD").await;
     second.until("Password: ").await;
     second.send("secret").await;
-    second.until("Staff Nexus").await;
+    let notice = second.until("Staff Nexus").await;
+    assert!(notice.contains("1 failed connect since your last successful connect"));
+    // record_login uses ordinary player notification, so an existing session receives it too.
+    first
+        .until("1 failed connect since your last successful connect")
+        .await;
     let w = persistence::load(&c.database()).await.unwrap();
+    assert_eq!(w.accounts[&ObjectId(1)].unreported_failures, 0);
     assert_eq!(
         w.objects[&ObjectId(1)].state["connections"]["connects"],
         Scalar::Integer(2)
@@ -719,6 +745,66 @@ async fn tcp_login_by_dbref_authenticates_existing_player() {
     let world = persistence::load(&c.database()).await.unwrap();
     assert_eq!(world.accounts.len(), 2);
     assert_eq!(world.objects.len(), 16);
+    running.stop().await;
+}
+
+/// Automatic connect appearance bypasses configured command aliases.
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_connect_appearance_is_not_a_synthetic_look_command() {
+    let (d, _) = populated().await;
+    let config = d.path().join("stompymux.toml");
+    let mut text = std::fs::read_to_string(&config).unwrap();
+    text.push_str("\n[aliases.commands]\nlook='quit'\n");
+    std::fs::write(&config, text).unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let mut world = persistence::load(&c.database()).await.unwrap();
+    world.accounts.get_mut(&ObjectId(2)).unwrap().hash =
+        Some(accounts::hash("secret", &c).unwrap());
+    persistence::save(&c.database(), &world).await.unwrap();
+    let running = Running::start(&c).await;
+    let mut client = Client::connect(&running).await;
+    client.send("#2").await;
+    client.until("Password: ").await;
+    client.send("secret").await;
+    let appearance = client.until("Staff Nexus").await;
+    assert!(appearance.contains("Connected."));
+    running.stop().await;
+}
+
+#[tokio::test(flavor = "current_thread")]
+async fn tcp_registration_name_prompts_and_late_policy_match_c() {
+    let (d, _) = populated().await;
+    let config = d.path().join("stompymux.toml");
+    let text = std::fs::read_to_string(&config)
+        .unwrap()
+        .replace("# bad = [\"Admin*\", \"*wizard*\"]", "bad = [\"Blocked\"]");
+    std::fs::write(&config, text).unwrap();
+    let c = Config::load(d.path()).unwrap();
+    let running = Running::start(&c).await;
+    let mut client = Client::connect(&running).await;
+    client.send("A").await;
+    client
+        .until("New usernames must start with a letter and be at least two characters long.")
+        .await;
+    client.send(&"A".repeat(c.names.maximum_length + 1)).await;
+    client
+        .until(&format!(
+            "New usernames may be at most {} characters long.",
+            c.names.maximum_length
+        ))
+        .await;
+    client.send("Blocked").await;
+    client.until("Create a new one? (Y/n) ").await;
+    client.send("maybe").await;
+    client.until("Please answer y or n: ").await;
+    client.send("  yes-any-prefix").await;
+    client.until("Choose a password: ").await;
+    client.send("secret").await;
+    client.until("Retype password: ").await;
+    client.send("secret").await;
+    client
+        .until("Either there is already a player with that name, or that name is illegal.")
+        .await;
     running.stop().await;
 }
 
@@ -1741,7 +1827,7 @@ async fn shutdown_origins_share_cleanup_and_stop_pipelined_commands() {
         second.login("#2").await;
         let mut pending = Client::connect(&running).await;
         pending.send("Unfinished").await;
-        pending.until("[Y/n]").await;
+        pending.until("(Y/n)").await;
         if origin == "command" {
             first.send("@shutdown\r\n@flag me=DARK\r\n@shutdown").await;
         } else {
@@ -1884,7 +1970,9 @@ async fn tcp_dbck_permissions_aliases_purges_and_rollback() {
     wizard.send("repair").await;
     wizard.until("no repairs committed").await;
     player.send("look").await;
-    player.until("Starter Room").await;
+    player
+        .until("Attempt to execute command by halted object")
+        .await;
     assert!(
         persistence::load(&c.database())
             .await
@@ -1932,12 +2020,12 @@ async fn tcp_dbck_relocation_callbacks_rollback_and_context() {
     persistence::save(&c.database(), &w).await.unwrap();
     std::fs::write(d.path().join("lua/object_logic/repair_hooks.lua"),r#"return {
       locks={teleport=function() error('repair must bypass locks') end, teleport_out=function() error('repair must bypass locks') end},
-      events={on_exit=function(ctx)
-        assert(ctx.source==ctx.object and ctx.cause==2)
+      events={on_leave=function(ctx)
+        assert(ctx.source==ctx.object and ctx.cause==-1)
         local o=mux.world.object(ctx.enactor);o:state('repair'):set('exit',true)
         if ctx.enactor==2 then assert(ctx.descriptor~=nil);assert(o:flags():has(mux.world.flags.CONNECTED)) end
       end,on_enter=function(ctx)
-        assert(ctx.destination==ctx.object and ctx.cause==2)
+        assert(ctx.destination==ctx.object and ctx.cause==-1)
         local o=mux.world.object(ctx.enactor);o:state('repair'):set('enter',true)
         if not repair_allowed then mux.world.pemit(ctx.enactor,'LEAKED');error('repair callback failed') end
       end},commands={{name='allow-repair',permission='wizard',pattern='^allow%-repair$',handler=function(ctx)
@@ -2061,7 +2149,7 @@ async fn tcp_q_registration_allows_unanswered_echo_and_coalesces_prompts() {
     let mut socket = TcpStream::connect(&running.address).await.unwrap();
     telnet_until(&mut socket, b"Who are you? ").await;
     socket.write_all(b"QTester\r\n").await.unwrap();
-    telnet_until(&mut socket, b"[Y/n] ").await;
+    telnet_until(&mut socket, b"(Y/n) ").await;
     socket
         .write_all(b"y\r\nsecret\r\nsecret\r\n")
         .await
@@ -2184,7 +2272,7 @@ async fn tcp_mccp2_stream_and_shutdown() {
     let mut plain = Vec::new();
     let mut offset = 0;
     tokio::time::timeout(Duration::from_secs(10), async {
-        while !plain.windows(6).any(|v| v == b"[Y/n] ") {
+        while !plain.windows(6).any(|v| v == b"(Y/n) ") {
             if offset == compressed.len() {
                 let mut b = [0; 4096];
                 let n = socket.read(&mut b).await.unwrap();
@@ -2969,7 +3057,7 @@ async fn tcp_object_locks_builders_transfers_and_restart() {
     alice.until("Permission denied.").await;
     let copied = persistence::load(&c.database()).await.unwrap().next_id;
     wizard.send(&format!("@cl #{}=TcpCopy", item.0)).await;
-    wizard.until("cloned, new copy").await;
+    wizard.until("cloned as TcpCopy, new copy").await;
     wizard.send("enter LockAlice").await;
     wizard.until("LockAlice").await;
     wizard.send("leave").await;
@@ -3996,9 +4084,9 @@ async fn tcp_compressed_database_reports() {
     running.stop().await;
 }
 
-/// Carried commands and false-returning callbacks remain transactional before native reports.
+/// Global native reports precede carried Lua commands and do not invoke their callbacks.
 #[tokio::test(flavor = "current_thread")]
-async fn tcp_portable_commands_inventory_and_report_rollback() {
+async fn tcp_portable_commands_and_native_inventory_precedence() {
     use stompymux_rs::world::Kind;
     let (d, c) = populated().await;
     let mut world = persistence::load(&c.database()).await.unwrap();
@@ -4027,10 +4115,7 @@ async fn tcp_portable_commands_inventory_and_report_rollback() {
     wizard.send("inventory").await;
     wizard.until("PortableWidget").await;
     let saved = persistence::load(&c.database()).await.unwrap();
-    assert_eq!(
-        saved.objects[&item].state["portable"]["calls"],
-        Scalar::Integer(1)
-    );
+    assert!(!saved.objects[&item].state.contains_key("portable"));
     let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
         &sqlx::sqlite::SqliteConnectOptions::new()
             .filename(c.database())
@@ -4040,8 +4125,8 @@ async fn tcp_portable_commands_inventory_and_report_rollback() {
     .unwrap();
     sqlx::raw_sql("CREATE TRIGGER reject_portable BEFORE UPDATE ON object_state BEGIN SELECT RAISE(ABORT,'portable failure'); END;").execute(&mut db).await.unwrap();
     wizard.send("inventory").await;
-    let failed = wizard.until("Please try again.").await;
-    assert!(!failed.contains("Callback committed") && !failed.contains("You are carrying:"));
+    let inventory = wizard.until("PortableWidget").await;
+    assert!(!inventory.contains("Callback committed"));
     sqlx::raw_sql("DROP TRIGGER reject_portable")
         .execute(&mut db)
         .await
@@ -4055,10 +4140,7 @@ async fn tcp_portable_commands_inventory_and_report_rollback() {
     wizard.until("Huh?").await;
     running.stop().await;
     let saved = persistence::load(&c.database()).await.unwrap();
-    assert_eq!(
-        saved.objects[&item].state["portable"]["calls"],
-        Scalar::Integer(1)
-    );
+    assert!(!saved.objects[&item].state.contains_key("portable"));
 }
 
 /// D06: later-word look and inventory abbreviations work over TCP and retain durable locations.

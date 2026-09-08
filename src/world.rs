@@ -51,6 +51,9 @@ pub struct Object {
     /// Runtime incarnation retained across rollback but never persisted.
     #[serde(skip)]
     pub generation: crate::state::Generation,
+    /// Actor that scheduled a player's destruction; runtime-only like C's field.
+    #[serde(skip)]
+    pub pending_destroyer: Option<ObjectId>,
     pub id: ObjectId,
     pub name: String,
     pub kind: Kind,
@@ -197,6 +200,7 @@ impl World {
             id,
             Object {
                 generation: Default::default(),
+                pending_destroyer: None,
                 id,
                 name,
                 kind,

@@ -1,5 +1,11 @@
 # Broader behavioral comparison — round two
 
+The subsequent [six-area audit](behavioral-audit-six.md) resolves P01's dispatch
+precedence/accumulation difference and P02's zone-exit preconditions. The original
+unsuccessful zone probe remains historical evidence; the new distinct-zone
+[paired fixture](../tests/fixtures/dispatch-audit.json) demonstrates working C and
+Rust traversal. Other broad unverified combinations below retain their scope.
+
 This audit found **seven functional/API discrepancies (D06–D12)**. **D06–D12 are now resolved.** The highest-priority finding was D09: a private page reaches an unnamed player contained inside the recipient. The audit itself changed no server behavior; the subsequent D09 correction uses direct player delivery. The pending D01–D05 movement corrections remain the baseline.
 
 ## Baseline and evidence
@@ -116,11 +122,11 @@ The following distinguishes what was reviewed from what still needs a focused co
 
 | Area | Evidence this round | Still unverified |
 |---|---|---|
-| Dispatch and scoped permissions | Traced exit/native/Lua entry order, command registration, shadowing and aliases. D12 reproduced. | README explicitly documents Rust shadowing/first-handler semantics; native-first C behavior is a policy question P01, not silently classified as a bug. |
+| Dispatch and scoped permissions | Traced exit/native/Lua entry order, command registration, shadowing and aliases. D12 reproduced. | P01 is resolved by the six-area audit: native precedence and accumulated local handlers now follow C. Broader switch/access combinations remain outside the executed differential sample. |
 | Matching and visibility | Exact/leading-prefix controls match on TCP; D06 later-word matching fails. Read C match_list and Rust ordinary/builder matchers separately. | Ambiguous lock-preference/type combinations and possessive matching remain only partially covered. |
 | Object lifecycle and repair | Reviewed SAFE/GOING/Wizard/foundation guards, replacement-home selection and the supported ownership cleanup map against C destruction/home code. Existing malformed-list/purge regressions retained. | No new paired C/Rust malformed-database destruction run; do not promote full repair equivalence. Unknown-dependency failure and append ordering remain intentional. |
 | Channels and pages | Traced join/listening/receive/IC gates and direct vs recursive delivery. Paired page controls, partial targets and containment establish D09/D10. | Non-player channel recipient forwarding and partial/offline/repeated page combinations need focused follow-up. |
-| Macros, queues and fallback | Read macro expansion and common queued dispatch/commit paths; retained the recently executed nested-force regression. Checked zone-room fallback suspicion in both servers. | Zonegate was unknown in both probes (P02); C declaration alone is not proof of working zone exits. Multi-handler scope semantics depend on P01. |
+| Macros, queues and fallback | Read macro expansion and common queued dispatch/commit paths; retained the recently executed nested-force regression. Checked zone-room fallback suspicion in both servers. | P02 now has a working distinct-player/location-zone reproduction and correction; the earlier unsuccessful setup remains historical evidence. Arbitrary nested queue/zone combinations are not exhaustively paired. |
 | Lua coercions and callback results | Compared binary state scalar conversion, strict message fields, describe side effects and ASCII predicate validation. Paired evidence establishes D07/D11. | All API coercions, coroutine/reload cross-products and malformed-return combinations are not verified; Rust rollback/checking restrictions excluded. |
 | Configuration and runtime settings | Reviewed log_options partial edits and alias/directive plumbing; rebuilt and ran C configuration registry/value/interpreter/TOML tests, retaining Rust live-edit/include tests. | No exhaustive paired live reconfiguration across existing sessions; dormant directives and Rust-only runtime knobs excluded. |
 | Telnet and rendering | Compared startup option directions and declined negotiation on real TCP for both engines. Reviewed legacy rendering boundaries; D08 room-mode selection reproduced. Rebuilt C text/Telnet/environment tests. | Full ANSI/OSC/capability/environment cross-product remains unverified; raw SGR redundancy alone is not a rendering defect. |
@@ -131,9 +137,9 @@ The following distinguishes what was reviewed from what still needs a focused co
 
 ### Policy and C preconditions
 
-**P01 — dispatch precedence:** C dispatches global native commands before Lua and can accumulate matching local handlers. The existing Rust README documents Lua shadowing and first-handled behavior. This audit preserves that documented contract and asks for an explicit disposition; it neither silently changes it nor declares a new intentional exception. Source references: C `commands/command_dispatch.c`, Rust `commands/mod.rs`.
+**P01 — resolved dispatch precedence:** C dispatches global native commands before Lua and accumulates matching local handlers. The six-area audit corrected Rust precedence, repeated source visits, stage-specific eligibility and fallback. The old README description was not an approved compatibility exception. See [dispatch evidence](audit-dispatch.md).
 
-**P02 — zone exits:** source suggests C zone-room exit fallback, but the recorded `zonegate` setup returned unknown in both servers. A working C reproduction is required before treating zone fallback as a missing feature. The unsuccessful probe is retained as negative evidence.
+**P02 — resolved zone exits:** the original `zonegate` setup returned unknown in both servers because it did not configure the player zone searched by C. The six-area audit supplies the missing precondition and also verifies different player/location zones. Rust now uses the separate C gate and exit root. The unsuccessful original probe is retained as negative evidence; [the new fixture](../tests/fixtures/dispatch-audit.json) records matching successful traversal.
 
 Three additional presentation differences are recorded separately, pending disposition: `@open` includes the created dbref in Rust, `@state/examine` adds a trailing blank line, and unknown-command guidance differs. These are observed differences, not approved exceptions or additional functional port gaps.
 
@@ -155,7 +161,7 @@ The optional probe accepts `--c-binary` and `--rust-binary`. Normal Cargo tests 
 
 The current C server and 32 selected C test targets were rebuilt. All 32 passed: command/configuration catalogs and interpretation, commac/speech/flags/powers, password/accounts/cache/page recipients, validation/UTF-8/styled text/state/names, Lua modules/access/locks/logging/error handling, Telnet/environment, help front matter/rendering/indexing, and libuv TCP integration. Selection and exact test names are recorded in the audit fixture.
 
-Validation passed: `cargo fmt --check`, Clippy with warnings denied, and the full Rust suite (302 passed, zero failed or ignored), including eight new audit tests. Results are recorded in the fixture. No claim of complete non-BattleTech parity is made. D06–D12 are resolved; P01/P02 remain separate until their policy/preconditions are resolved.
+Validation passed: `cargo fmt --check`, Clippy with warnings denied, and the full Rust suite (302 passed, zero failed or ignored), including eight new audit tests. Results are recorded in the fixture. No claim of complete non-BattleTech parity is made. D06–D12 are resolved. The subsequent six-area audit also resolves P01/P02, with separately recorded evidence.
 
 ## D09 correction evidence
 
@@ -232,7 +238,7 @@ are not. No UTF-8 conversion or numeric coercion takes place.
 The original transcript remains historical. The [corrected paired run](../tests/fixtures/behavioral-wire-d10-d11-resolved.json)
 and positive regressions in `behavioral_audit` cover both fixes; the TCP communication
 regression covers partial-target formatting across multiple sessions and saved-page reuse.
-The seven recorded findings are resolved; broad unverified areas and P01/P02 remain explicit.
+The seven recorded findings are resolved; broad unverified areas remain explicit. P01/P02 were subsequently resolved by the six-area audit.
 
 D10–D11 validation: formatting, Clippy with warnings denied, and all 316 Rust tests passed.
 The isolated C/Rust probe matched both corrected responses exactly.

@@ -145,7 +145,7 @@ probe="no_suspect need_player queue_enabled"
         .get_mut(&ObjectId(2))
         .unwrap()
         .lua_parent = "access.lua".into();
-    assert_eq!(run(&s, &c, 2, "probe"), "local");
+    assert_eq!(run(&s, &c, 2, "probe"), "local\nlocal");
     s.queue_enabled.set(false);
     assert!(run(&s, &c, 2, "probe").contains("Huh?"));
     s.queue_enabled.set(true);
@@ -165,7 +165,7 @@ probe="no_suspect need_player queue_enabled"
         .unwrap()
         .flags
         .insert(Flag::Wizard);
-    assert_eq!(run(&s, &c, 2, "probe"), "local");
+    assert_eq!(run(&s, &c, 2, "probe"), "local\nlocal");
     assert!(
         s.commands
             .definitions()

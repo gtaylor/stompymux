@@ -1,7 +1,7 @@
 {
   "c_revision": "2bbbe6fc",
   "baseline_rust_revision": "3a1c559",
-  "evidence": "Initial rows use source inspection plus named Rust regressions. Round two adds optional paired C/Rust TCP execution, captured in behavioral-wire.json; each new finding identifies its evidence in behavioral-audit-round2.json. Verification claims apply only to the stated contract.",
+  "evidence": "Initial rows use source inspection plus named Rust regressions. Round two adds optional paired C/Rust TCP execution, captured in behavioral-wire.json; each new finding identifies its evidence in behavioral-audit-round2.json. Verification claims apply only to the stated contract. The six-area audit (docs/behavioral-audit-six.md) adds selected source-grounded corrections and paired admission, zone-exit and terminal fixtures; broad cross-product rows remain unverified.",
   "behaviors": [
     {
       "id": "M01",
@@ -637,7 +637,7 @@
       "id": "C01a",
       "area": "commands/switches",
       "behavior": "Native/Lua shadowing and first-handler versus accumulated local matches",
-      "status": "unverified",
+      "status": "verified equivalent",
       "c_source": "btmux-khi/src/mux/commands/command_dispatch.c",
       "rust_source": "src/commands/registry.rs",
       "tests": [
@@ -645,7 +645,7 @@
         "tests/access.rs",
         "tests/fixtures/native-switches.txt"
       ],
-      "note": "Policy question P01; source-confirmed order difference, disposition unresolved."
+      "note": "P01 resolved by tracing the working C dispatcher; global natives precede local Lua, local attachments accumulate, and zone/global fallback short-circuits by stage. See D13 and D17; object-local native extensions retain their existing place."
     },
     {
       "id": "C01b",
@@ -736,7 +736,7 @@
         "tests/macros.rs",
         "tests/foundation.rs"
       ],
-      "note": "Simple zone fixture failed in both engines (P02); working C preconditions unresolved."
+      "note": "P02 direct zone-exit setup now reproduced with independent location-zone and player-zone roots; see D16 and dispatch-audit.json. The broader nested queued zone/expansion cross-product remains unverified."
     },
     {
       "id": "L02a",
@@ -864,6 +864,331 @@
         "tests/failure_event_parity.rs"
       ],
       "note": "Narrowly scoped follow-up correction. See docs/lock-message-audit.md for C source, preserved intentional differences and test evidence."
+    },
+    {
+      "id": "D13",
+      "area": "dispatch",
+      "behavior": "Global native precedence and local Lua accumulation",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/commands/command_dispatch.c",
+      "rust_source": "src/commands/mod.rs",
+      "tests": [
+        "tests/commands.rs"
+      ],
+      "note": "Source tracing and Rust regressions; preserves transactional callback failure behavior."
+    },
+    {
+      "id": "D14",
+      "area": "queues",
+      "behavior": "Dot macros expand only for interactive execution",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/commands/command_dispatch.c",
+      "rust_source": "src/commands/mod.rs",
+      "tests": [
+        "tests/commands.rs"
+      ],
+      "note": "Queued and nested forced input retains executor/cause while leaving dot macros literal."
+    },
+    {
+      "id": "D15",
+      "area": "dispatch",
+      "behavior": "Invalid, GOING and origin-sensitive HALTED preflight",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/commands/command_dispatch.c",
+      "rust_source": "src/commands/mod.rs",
+      "tests": [
+        "tests/commands.rs",
+        "tests/logging.rs"
+      ],
+      "note": "Shared execution guard runs before dispatch and command audit."
+    },
+    {
+      "id": "D16",
+      "area": "dispatch",
+      "behavior": "Direct zone exits use independent location-zone gate and player-zone root",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/world/match.c",
+      "rust_source": "src/commands/exits.rs",
+      "tests": [
+        "tests/commands.rs",
+        "tests/fixtures/dispatch-audit.json"
+      ],
+      "note": "Paired isolated C/Rust TCP outputs match for distinct zone rooms; source and Rust tests cover gate failures."
+    },
+    {
+      "id": "D17",
+      "area": "dispatch",
+      "behavior": "Local attachment traversal duplicates and per-stage NO_COMMAND filtering",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/lua/lua_commands.c",
+      "rust_source": "src/commands/sources.rs",
+      "tests": [
+        "tests/commands.rs"
+      ],
+      "note": "Source-grounded route-specific accumulation and separate location/player-zone fallback."
+    },
+    {
+      "id": "LC01",
+      "area": "lifecycle",
+      "behavior": "Clone confirmation text and placement before clone callbacks",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/commands/builder_create_commands.c",
+      "rust_source": "src/commands/objects/builders.rs",
+      "tests": [
+        "tests/locks.rs"
+      ],
+      "note": "Source tracing plus callback/output ordering regression."
+    },
+    {
+      "id": "LC02",
+      "area": "lifecycle",
+      "behavior": "Valid GOING-container evacuation and own departure provider sequences",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/world/object.c",
+      "rust_source": "src/lua/maintenance.rs",
+      "tests": [
+        "tests/lua_parity.rs",
+        "tests/dbck.rs"
+      ],
+      "note": "Source tracing plus full live-source/state, callback relocation and rollback regressions. Arbitrary corrupt graph repair remains unverified; session detach remains staged."
+    },
+    {
+      "id": "LC03",
+      "area": "lifecycle",
+      "behavior": "Player destruction cause captured at scheduling and reset on load",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/world/object_lifecycle.c",
+      "rust_source": "src/destruction.rs",
+      "tests": [
+        "tests/commands.rs",
+        "tests/lua_parity.rs",
+        "tests/dbck.rs"
+      ],
+      "note": "Runtime-only scheduling identity; Thing departures use NOTHING. No schema change."
+    },
+    {
+      "id": "LE01",
+      "area": "lua",
+      "behavior": "Contents options distinguish false from nil",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/lua/packages/mux/world/mux_object_bindings.c",
+      "rust_source": "src/lua/packages/world/api.lua",
+      "tests": [
+        "tests/lua_parity.rs"
+      ],
+      "note": "Source and Rust error regression; false is invalid."
+    },
+    {
+      "id": "LE02",
+      "area": "lua",
+      "behavior": "Lock cause and subject default only when omitted or nil",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/lua/packages/mux/world/mux_lock_bindings.c",
+      "rust_source": "src/lua/packages/world/api.lua",
+      "tests": [
+        "tests/lua_parity.rs"
+      ],
+      "note": "Source and Rust argument-validation regression."
+    },
+    {
+      "id": "LE03",
+      "area": "lua",
+      "behavior": "Batched oversized state values use value_too_large error",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/lua/packages/mux/world/mux_state_bindings.c",
+      "rust_source": "src/lua/packages/world/state.rs",
+      "tests": [
+        "tests/lua_parity.rs"
+      ],
+      "note": "Atomic batch and exact structured error code regression."
+    },
+    {
+      "id": "LE05",
+      "area": "lua",
+      "behavior": "Finite in-range Lua numeric identities use Lua coercion",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/lua/packages/mux/world/mux_object_bindings.c",
+      "rust_source": "src/lua/packages/world/handles.rs",
+      "tests": [
+        "tests/lua_parity.rs"
+      ],
+      "note": "Numeric strings/fractions accepted with live generation checks; undefined/out-of-range C conversion is not reproduced."
+    },
+    {
+      "id": "LE12",
+      "area": "lua",
+      "behavior": "Contents enumeration uses C viewer, DARK, LIGHT and receiver rules",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/lua/packages/mux/world/mux_object_bindings.c",
+      "rust_source": "src/lua/packages/world/mod.rs",
+      "tests": [
+        "tests/lua_admin.rs"
+      ],
+      "note": "API-specific visibility; administrative target visibility is unchanged."
+    },
+    {
+      "id": "AC02",
+      "area": "accounts",
+      "behavior": "Registration permitted at equality with configured player maximum",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/network/connect_flow.c",
+      "rust_source": "src/controls.rs",
+      "tests": [
+        "tests/schedules.rs",
+        "tests/fixtures/admission-audit-after.json"
+      ],
+      "note": "Paired temporary-world comparison; existing-player login still rejects equality."
+    },
+    {
+      "id": "AC03",
+      "area": "accounts",
+      "behavior": "Successful login reports and clears unreported failures",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/world/player.c",
+      "rust_source": "src/server.rs",
+      "tests": [
+        "tests/foundation.rs",
+        "tests/fixtures/admission-audit-after.json"
+      ],
+      "note": "Paired output count/host/time; Rust regressions verify all-session routing and commit before delivery."
+    },
+    {
+      "id": "AC04",
+      "area": "accounts",
+      "behavior": "History and last report preserve per-outcome position order",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/objects/player_account.c",
+      "rust_source": "src/persistence/load.rs",
+      "tests": [
+        "tests/commands.rs",
+        "tests/persistence.rs"
+      ],
+      "note": "Backward/equal timestamps do not reorder an outcome; cross-outcome insertion order is not encoded in the schema."
+    },
+    {
+      "id": "AC05",
+      "area": "accounts",
+      "behavior": "Registration prompt and raw-password retype validation order",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/network/connect_flow.c",
+      "rust_source": "src/server.rs",
+      "tests": [
+        "tests/foundation.rs",
+        "tests/fixtures/admission-audit-after.json"
+      ],
+      "note": "Paired selected prompt text and focused malformed/boundary input regressions."
+    },
+    {
+      "id": "AC06",
+      "area": "accounts",
+      "behavior": "Throttle rejection sends generic outcome failure and closes",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/network/connect_flow.c",
+      "rust_source": "src/server.rs",
+      "tests": [
+        "tests/foundation.rs"
+      ],
+      "note": "Source plus TCP tests; bounded address-map overload remains a distinct resource failure."
+    },
+    {
+      "id": "AC07",
+      "area": "accounts",
+      "behavior": "Login appearance bypasses command matching and auditing",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/network/connection_events.c",
+      "rust_source": "src/commands/mod.rs",
+      "tests": [
+        "tests/commands.rs"
+      ],
+      "note": "Direct renderer preserves transaction/callback behavior without alias or exit dispatch."
+    },
+    {
+      "id": "OP01",
+      "area": "reports",
+      "behavior": "Who shows actual idle; session hides idle through 600 seconds",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/network/connection_commands.c",
+      "rust_source": "src/operations/mod.rs",
+      "tests": [
+        "tests/operations.rs",
+        "tests/telnet_extensions.rs"
+      ],
+      "note": "Source and duration-format regressions."
+    },
+    {
+      "id": "OP02",
+      "area": "reports",
+      "behavior": "Only minus one renders unlimited in report and Lua session maximum",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/network/connection_commands.c",
+      "rust_source": "src/sessions.rs",
+      "tests": [
+        "tests/operations.rs"
+      ],
+      "note": "Display behavior does not redefine admission policy."
+    },
+    {
+      "id": "OP04",
+      "area": "logging",
+      "behavior": "Audit macro classification follows input origin",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/commands/command_dispatch.c",
+      "rust_source": "src/logging/audit.rs",
+      "tests": [
+        "tests/logging.rs"
+      ],
+      "note": "Queued macros stay literal; approved password redaction retained."
+    },
+    {
+      "id": "OP05",
+      "area": "help",
+      "behavior": "Permissive C front matter coercion and delimiter behavior",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/help/help_frontmatter.c",
+      "rust_source": "src/help.rs",
+      "tests": [
+        "tests/help.rs"
+      ],
+      "note": "Source and corpus/error-shape regressions; approved relative lookup and fatal-reload index retention preserved."
+    },
+    {
+      "id": "OP06",
+      "area": "logging",
+      "behavior": "Nonsecret audit text preserves entered aliases and macros",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/commands/command_dispatch.c",
+      "rust_source": "src/logging/audit.rs",
+      "tests": [
+        "tests/logging.rs"
+      ],
+      "note": "Temporary expansion still classifies secret commands for approved redaction."
+    },
+    {
+      "id": "TR01",
+      "area": "telnet",
+      "behavior": "C-string MTTS parsing and bounded raw TTYPE metadata",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/support/styled_text/renderer.c",
+      "rust_source": "src/telnet.rs",
+      "tests": [
+        "tests/telnet.rs",
+        "tests/fixtures/terminal-audit-after.json"
+      ],
+      "note": "Fifteen paired metadata cases agree; confirmed-negotiation gating and safe display retained."
+    },
+    {
+      "id": "TR02",
+      "area": "telnet",
+      "behavior": "Peer environment/charset diagnostics use Problems category and TELNET tags",
+      "status": "verified equivalent",
+      "c_source": "btmux-khi/src/mux/network/telnet_handler.c",
+      "rust_source": "src/server.rs",
+      "tests": [
+        "tests/telnet.rs",
+        "tests/telnet_extensions.rs"
+      ],
+      "note": "Source and category-toggle/payload regressions; does not claim byte-identical complete report labels."
     }
-  ]
+  ],
+  "six_area_rust_baseline": "74246d92d570fb3e3b8778dc0e28071e9cca2548"
 }

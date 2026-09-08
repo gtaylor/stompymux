@@ -1,6 +1,12 @@
 //! C Lua contracts: symbols, typed errors, generational identities and transactional repair.
 use std::{cell::RefCell, path::Path, rc::Rc};
-use stompymux_rs::{config::Config, lua::Scripts, persistence, world::ObjectId};
+use stompymux_rs::{
+    CreationContext,
+    config::Config,
+    lua::Scripts,
+    persistence,
+    world::{Account, Kind, ObjectId},
+};
 fn copy(from: &Path, to: &Path) {
     std::fs::create_dir_all(to).unwrap();
     for e in std::fs::read_dir(from).unwrap() {
@@ -78,6 +84,17 @@ async fn public_catalog_and_structured_errors() {
  local value={};assert(mux.error.check(value)==value)
  ok,e=pcall(mux.error.check,false,value);assert(not ok and e==value)
  ok,e=pcall(mux.config.get,'does_not_exist');assert(not ok and e:is(mux.error.codes.config.not_found))
+ local room=mux.world.object(0)
+ assert(#room:contents()==#room:contents(nil))
+ ok,e=pcall(function() room:contents(false) end);assert(not ok)
+ for _,field in ipairs({'cause','subject'}) do
+   local options={object=room,enactor=1,lock=mux.world.locks.TAKE};options[field]=false
+   ok,e=pcall(mux.world.lock_passes,options);assert(not ok)
+ end
+ local state=room:state('edge')
+ ok,e=pcall(function() state:set_many{oversized=string.rep('x',65537)} end)
+ assert(not ok and e:is(mux.error.codes.state.value_too_large))
+ assert(not state:has('oversized'))
  "#).unwrap();
 }
 #[tokio::test(flavor = "current_thread")]
@@ -353,6 +370,259 @@ async fn movement_callbacks_and_maintenance_effects_are_atomic() {
             .values()
             .all(|o| o.kind != stompymux_rs::world::Kind::Garbage)
     );
+}
+
+/// Purging an occupied GOING container uses the complete generic movement path.
+#[tokio::test(flavor = "current_thread")]
+async fn maintenance_evacuates_occupied_container_before_tombstoning_it() {
+    let (_d, _c, s) = fixture().await;
+    let parents: mlua::Table = s.lua.named_registry_value("mux.parents").unwrap();
+    s.lua
+        .globals()
+        .set(
+            "thing_parent",
+            parents.get::<mlua::Table>("default_thing.lua").unwrap(),
+        )
+        .unwrap();
+    s.lua
+        .globals()
+        .set(
+            "room_parent",
+            parents.get::<mlua::Table>("default_room.lua").unwrap(),
+        )
+        .unwrap();
+    s.eval_callback::<()>(
+        r#"
+      local doomed=mux.world.create_object{type=mux.world.types.THING,name='Doomed',location=0,home=0}
+      local cargo=mux.world.create_object{type=mux.world.types.THING,name='Cargo',location=doomed,home=0}
+      trace={}
+      thing_parent.messages={
+        leave=function(ctx)
+          assert(ctx.object==doomed:dbref() and doomed:flags():has(mux.world.flags.GOING))
+          table.insert(trace,'leave')
+          return {enactor_message='evacuating'}
+        end,
+        move=function(ctx)
+          assert(ctx.cause==-1)
+          table.insert(trace,ctx.object==doomed:dbref() and 'doomed-move' or 'move')
+          return {}
+        end
+      }
+      thing_parent.events={
+        on_leave=function() table.insert(trace,'on_leave') end,
+        on_move=function(ctx) table.insert(trace,ctx.object==doomed:dbref() and 'doomed-on-move' or 'on_move') end
+      }
+      room_parent.messages={
+        leave=function(ctx) table.insert(trace,'doomed-leave');return {} end,
+        enter=function() table.insert(trace,'enter');return {} end
+      }
+      room_parent.events={
+        on_leave=function() table.insert(trace,'doomed-on-leave') end,
+        on_enter=function() table.insert(trace,'on_enter') end
+      }
+      mux.world.destroy_object(doomed)
+      mux.check_db()
+      assert(cargo:location()==mux.world.object(0))
+      assert(not pcall(function() return doomed:dbref() end))
+      assert(table.concat(trace,',')=='doomed-leave,doomed-on-leave,doomed-move,doomed-on-move,leave,on_leave,move,on_move,enter,on_enter',table.concat(trace,','))
+    "#,
+    )
+    .unwrap();
+    assert!(
+        s.outbox
+            .borrow()
+            .iter()
+            .any(|(_, document)| document.source() == "evacuating")
+    );
+}
+
+/// An earlier evacuation callback can move a later occupant out of the doomed container.
+#[tokio::test(flavor = "current_thread")]
+async fn maintenance_does_not_overwrite_callback_relocation() {
+    let (_d, _c, s) = fixture().await;
+    let parents: mlua::Table = s.lua.named_registry_value("mux.parents").unwrap();
+    s.lua
+        .globals()
+        .set(
+            "thing_parent",
+            parents.get::<mlua::Table>("default_thing.lua").unwrap(),
+        )
+        .unwrap();
+    s.eval_callback::<()>(
+        r#"
+      local elsewhere=mux.world.create_object{type=mux.world.types.ROOM,name='Elsewhere'}
+      local doomed=mux.world.create_object{type=mux.world.types.THING,name='Doomed',location=0,home=0}
+      local first=mux.world.create_object{type=mux.world.types.THING,name='First',location=doomed,home=0}
+      local later=mux.world.create_object{type=mux.world.types.THING,name='Later',location=doomed,home=0}
+      thing_parent.events={on_move=function(ctx)
+        if ctx.object==first:dbref() then
+          mux.world.teleport_object{object=later,destination=elsewhere}
+        end
+      end}
+      mux.world.destroy_object(doomed)
+      mux.check_db()
+      assert(first:location()==mux.world.object(0))
+      assert(later:location()==elsewhere)
+    "#,
+    )
+    .unwrap();
+}
+
+/// Player containers retain their account and owned state until evacuation callbacks finish.
+#[tokio::test(flavor = "current_thread")]
+async fn maintenance_replays_live_player_container_state_before_cleanup() {
+    let (_d, c, s) = fixture().await;
+    let player = {
+        let mut world = s.world.borrow_mut();
+        let id = world
+            .create_with(
+                &c,
+                "Doomed Player".into(),
+                Kind::Player,
+                CreationContext::Player,
+            )
+            .unwrap();
+        let object = world.objects.get_mut(&id).unwrap();
+        object.location = Some(ObjectId(0));
+        object.home = Some(ObjectId(0));
+        world.accounts.insert(id, Account::default());
+        id
+    };
+    s.sync_parents().unwrap();
+    s.lua.globals().set("doomed_player", player.0).unwrap();
+    let parents: mlua::Table = s.lua.named_registry_value("mux.parents").unwrap();
+    for (name, parent) in [
+        ("player_parent", "default_player.lua"),
+        ("thing_parent", "default_thing.lua"),
+        ("room_parent", "default_room.lua"),
+    ] {
+        s.lua
+            .globals()
+            .set(name, parents.get::<mlua::Table>(parent).unwrap())
+            .unwrap();
+    }
+    s.eval_callback::<()>(
+        r#"
+      local doomed=mux.world.object(doomed_player)
+      doomed:state('audit'):set('present','before')
+      local cargo=mux.world.create_object{type=mux.world.types.THING,name='Player cargo',location=doomed,home=0}
+      trace={}
+      player_parent.messages={
+        leave=function(ctx)
+          assert(ctx.object==doomed_player)
+          assert(doomed:state('audit'):get('present')=='before')
+          doomed:state('audit'):set('written','during evacuation')
+          table.insert(trace,'leave')
+          return {}
+        end,
+        move=function(ctx)
+          assert(ctx.object==doomed_player and ctx.cause==1 and ctx.destination==nil)
+          table.insert(trace,'player-move')
+          return {}
+        end
+      }
+      player_parent.events={
+        on_leave=function() table.insert(trace,'on_leave') end,
+        on_move=function(ctx) assert(ctx.cause==1);table.insert(trace,'player-on-move') end
+      }
+      thing_parent.messages={move=function() table.insert(trace,'move');return {} end}
+      thing_parent.events={on_move=function() table.insert(trace,'on_move') end}
+      room_parent.messages={enter=function() table.insert(trace,'enter');return {} end}
+      room_parent.events={on_enter=function() table.insert(trace,'on_enter') end}
+      mux.world.destroy_object(doomed,{override=true})
+      mux.check_db()
+      assert(cargo:location()==mux.world.object(0))
+      assert(not pcall(function() return doomed:state('audit'):get('written') end))
+      assert(table.concat(trace,',')=='player-move,player-on-move,leave,on_leave,move,on_move,enter,on_enter',table.concat(trace,','))
+    "#,
+    )
+    .unwrap();
+    let world = s.world.borrow();
+    assert_eq!(world.objects[&player].kind, Kind::Garbage);
+    assert!(!world.accounts.contains_key(&player));
+}
+
+/// A player found GOING without a runtime scheduler identity departs with NOTHING cause.
+#[tokio::test(flavor = "current_thread")]
+async fn maintenance_manual_going_player_uses_nothing_cause() {
+    let (_d, c, s) = fixture().await;
+    let player = {
+        let mut world = s.world.borrow_mut();
+        let id = world
+            .create_with(
+                &c,
+                "Manual GOING Player".into(),
+                Kind::Player,
+                CreationContext::Player,
+            )
+            .unwrap();
+        let object = world.objects.get_mut(&id).unwrap();
+        object.location = Some(ObjectId(0));
+        object.home = Some(ObjectId(0));
+        object.flags.insert(Flag::Going);
+        world.accounts.insert(id, Account::default());
+        id
+    };
+    s.sync_parents().unwrap();
+    s.lua.globals().set("manual_player", player.0).unwrap();
+    let parents: mlua::Table = s.lua.named_registry_value("mux.parents").unwrap();
+    s.lua
+        .globals()
+        .set(
+            "player_parent",
+            parents.get::<mlua::Table>("default_player.lua").unwrap(),
+        )
+        .unwrap();
+    s.eval_callback::<()>(
+        r#"
+      player_parent.messages={move=function(ctx)
+        if ctx.object==manual_player then
+          assert(ctx.cause==-1 and ctx.destination==nil)
+        end
+        return {}
+      end}
+      mux.check_db()
+    "#,
+    )
+    .unwrap();
+    assert_eq!(s.world.borrow().objects[&player].kind, Kind::Garbage);
+}
+
+/// A failure in the complete evacuation path restores the live graph and staged effects.
+#[tokio::test(flavor = "current_thread")]
+async fn maintenance_evacuation_provider_failure_rolls_back_every_effect() {
+    let (_d, _c, s) = fixture().await;
+    let parents: mlua::Table = s.lua.named_registry_value("mux.parents").unwrap();
+    s.lua
+        .globals()
+        .set(
+            "thing_parent",
+            parents.get::<mlua::Table>("default_thing.lua").unwrap(),
+        )
+        .unwrap();
+    s.eval_callback::<()>(
+        r#"
+      doomed=mux.world.create_object{type=mux.world.types.THING,name='Rollback container',location=0,home=0}
+      cargo=mux.world.create_object{type=mux.world.types.THING,name='Rollback cargo',location=doomed,home=0}
+      thing_parent.messages={leave=function()
+        cargo:state('audit'):set('leaked',true)
+        assert(mux.log('audit.log','discarded evacuation'))
+        error('evacuation failed')
+      end}
+    "#,
+    )
+    .unwrap();
+    let before = serde_json::to_value(&*s.world.borrow()).unwrap();
+    s.outbox.borrow_mut().clear();
+    assert!(
+        s.eval_callback::<()>("mux.world.destroy_object(doomed);mux.check_db()")
+            .unwrap_err()
+            .to_string()
+            .contains("evacuation failed")
+    );
+    assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
+    assert!(s.outbox.borrow().is_empty());
+    assert!(s.flows.drain_logs().is_empty());
 }
 
 /// Native movement must not replenish the budget on each nested callback.

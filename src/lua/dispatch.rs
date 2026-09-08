@@ -48,37 +48,58 @@ impl Scripts {
         session: Option<u64>,
         line: &str,
     ) -> Result<bool> {
-        let objects = self.command_objects(player);
-        self.dispatch_local_sources(player, session, line, &objects)
+        let sources = crate::commands::sources::dispatch_sources(&self.world.borrow(), player);
+        for stage in [
+            None,
+            Some("location-zone fallback"),
+            Some("player-zone fallback"),
+        ] {
+            let stage_sources: Vec<_> = sources
+                .iter()
+                .filter(|source| match stage {
+                    None => !source.fallback(),
+                    Some(stage) => source.stage == stage,
+                })
+                .copied()
+                .collect();
+            if self.dispatch_local_sources(player, session, line, &stage_sources)? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     /// Use the command's captured source list without adding objects during callbacks.
+    ///
+    /// Object command scopes accumulate every handled callback, as in the C
+    /// dispatcher. Global modules retain their first-handled short circuit.
     pub fn dispatch_local_sources(
         &self,
         player: ObjectId,
         session: Option<u64>,
         line: &str,
-        objects: &[ObjectId],
+        sources: &[crate::commands::sources::CommandSource],
     ) -> Result<bool> {
-        for &id in objects {
+        let mut handled = false;
+        for &source in sources {
+            let id = source.object;
             let parent = {
                 let world = self.world.borrow();
-                if !crate::commands::sources::eligible(&world, id) {
+                if !source.eligible(&world) {
                     continue;
                 }
                 world.objects[&id].lua_parent.clone()
             };
-            if self.dispatch_scope(
+            handled |= self.dispatch_scope(
                 player,
                 session,
                 line,
                 Some(id),
                 &crate::commands::CommandScope::Object(parent),
-            )? {
-                return Ok(true);
-            }
+                false,
+            )?;
         }
-        Ok(false)
+        Ok(handled)
     }
 
     /// Global Lua modules follow local native handlers.
@@ -94,6 +115,7 @@ impl Scripts {
             line,
             None,
             &crate::commands::CommandScope::Global,
+            true,
         )
     }
 
@@ -105,16 +127,18 @@ impl Scripts {
         line: &str,
         object: Option<ObjectId>,
         scope: &crate::commands::CommandScope,
+        stop_on_handled: bool,
     ) -> Result<bool> {
         use crate::commands::CommandHandler;
         let mut source = None;
         let mut context: Option<Table> = None;
+        let mut any_handled = false;
         for definition in self.commands.definitions().filter(|d| {
             &d.scope == scope && matches!(d.handler, crate::commands::CommandHandler::Lua(_))
         }) {
             if let Some(id) = object {
                 let world = self.world.borrow();
-                if !crate::commands::sources::eligible(&world, id)
+                if !world.objects.contains_key(&id)
                     || scope
                         != &crate::commands::CommandScope::Object(
                             world.objects[&id].lua_parent.clone(),
@@ -177,11 +201,12 @@ impl Scripts {
                 if invoked {
                     self.lua.set_app_data(CommandCallbackInvoked(true));
                 }
-                if handled {
+                if handled && stop_on_handled {
                     return Ok(true);
                 }
+                any_handled |= handled;
             }
         }
-        Ok(false)
+        Ok(any_handled)
     }
 }

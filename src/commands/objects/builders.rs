@@ -334,6 +334,17 @@ pub(super) fn clone_object(ctx: &CommandContext<'_>, input: &CommandInput) -> Re
             clone.flags.remove(Flag::Wizard);
         }
         ctx.scripts.sync_parents()?;
+        tell(
+            ctx,
+            if let Some(new_name) = new_name.filter(|s| !s.trim().is_empty()) {
+                format!(
+                    "{} cloned as {}, new copy is object #{}.",
+                    original.name, new_name, id.0
+                )
+            } else {
+                format!("{} cloned, new copy is object #{}.", original.name, id.0)
+            },
+        );
         match original.kind {
             Kind::Thing => {
                 let home = clone_home(ctx, original.home, id)?;
@@ -368,14 +379,6 @@ pub(super) fn clone_object(ctx: &CommandContext<'_>, input: &CommandInput) -> Re
         }
         ctx.scripts
             .object_event(action(ctx, id, "clone", None, None, false), "on_clone")?;
-        tell(
-            ctx,
-            format!(
-                "{} cloned, new copy is object #{}.",
-                display(ctx, source)?,
-                id.0
-            ),
-        );
         Ok(())
     })
 }

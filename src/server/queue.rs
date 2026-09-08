@@ -121,7 +121,9 @@ impl Server {
             );
             return;
         }
-        self.audit(work.execution, &work.text).await;
+        if commands::executable(&self.scripts.world.borrow(), work.execution) {
+            self.audit(work.execution, &work.text).await;
+        }
         let mut before = self.scripts.world.borrow().clone();
         let action = commands::execute(&self.scripts, &self.config, work.execution, &work.text);
         if action.is_ok()

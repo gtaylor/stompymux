@@ -146,7 +146,10 @@ def probe(engine, binary):
                     "look audit-window", "goto audit-window", "@teleport #0",
                     "go audit-window", "@teleport #0", "move audit-window", "@teleport #0",
                     "@teleport #17", "@open zonegate=#4", "@teleport #0",
-                    "@chzone here=#17", "zonegate", "@chzone #0=#0",
+                    "@chzone here=#17", "@chzone me=#17", "zonegate",
+                    "@dig Player Zone", "@teleport #20", "@open zonegate2=#4",
+                    "@teleport #0", "@chzone here=#17", "@chzone me=#20", "zonegate2",
+                    "@chzone #0=#0",
                     "@teleport #0", "@teleport Wizard=me", "page GOD=PRIVATE-PAGE",
                 ]:
                     results.append({"command": command, "sender": admin.send(command),

@@ -252,13 +252,46 @@ async fn history_capacity_order_and_extra_required_columns() {
             (1, 2, 15)
         ]
     );
-    persistence::trim_history(&mut w.accounts.get_mut(&ObjectId(1)).unwrap().history, 2);
-    persistence::save(&path, &w).await.unwrap();
+    let mut loaded = persistence::load(&path).await.unwrap();
+    persistence::trim_history(
+        &mut loaded.accounts.get_mut(&ObjectId(1)).unwrap().history,
+        2,
+    );
     assert_eq!(
-        persistence::load(&path).await.unwrap().accounts[&ObjectId(1)]
+        loaded.accounts[&ObjectId(1)]
             .history
-            .len(),
-        2
+            .iter()
+            .map(|entry| entry.host.as_str())
+            .collect::<Vec<_>>(),
+        ["host18", "host19"]
+    );
+    loaded.accounts.get_mut(&ObjectId(1)).unwrap().history = vec![
+        Login {
+            success: true,
+            at: 10,
+            host: "success-old".into(),
+        },
+        Login {
+            success: false,
+            at: 20,
+            host: "failure".into(),
+        },
+        Login {
+            success: true,
+            at: 5,
+            host: "success-new-clock-backward".into(),
+        },
+    ];
+    persistence::save(&path, &loaded).await.unwrap();
+    let reloaded = persistence::load(&path).await.unwrap();
+    assert_eq!(
+        reloaded.accounts[&ObjectId(1)]
+            .history
+            .iter()
+            .filter(|entry| entry.success)
+            .map(|entry| entry.host.as_str())
+            .collect::<Vec<_>>(),
+        ["success-old", "success-new-clock-backward"]
     );
     // Retain existing channels as an unknown archive, and introduce an unsupported required column.
     sqlx::raw_sql("ALTER TABLE comsys_channels RENAME TO archived_channels; CREATE TABLE comsys_channels(name TEXT PRIMARY KEY,type INTEGER NOT NULL,num_messages INTEGER NOT NULL,chan_obj INTEGER NOT NULL,extension TEXT NOT NULL)").execute(&mut db).await.unwrap();

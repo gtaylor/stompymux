@@ -79,6 +79,7 @@ async fn categories_live_controls_formatting_and_redaction() {
     assert_eq!(r.text.matches('\n').count(), 1);
     assert!(r.text.contains("\\nforged"));
     edit(&mut c, &mut s, "alias", "pw @newpassword");
+    edit(&mut c, &mut s, "alias", "fi @find");
     {
         use stompymux_rs::macros::{MacroEntry, MacroSet, MacroSlots};
         let mut w = s.world.borrow_mut();
@@ -97,6 +98,11 @@ async fn categories_live_controls_formatting_and_redaction() {
                     origin: Default::default(),
                     alias: "def".into(),
                     expansion: "say secret".into(),
+                },
+                MacroEntry {
+                    origin: Default::default(),
+                    alias: "safe".into(),
+                    expansion: "say expanded text".into(),
                 },
             ],
         });
@@ -138,6 +144,37 @@ async fn categories_live_controls_formatting_and_redaction() {
         "say hi",
     );
     assert!(message.contains("cause #2; session 9"));
+    for original in ["@fi Foo", ".safe"] {
+        let message = logging::audit::message(
+            &c,
+            &s.world.borrow(),
+            ExecutionContext {
+                executor: ObjectId(1),
+                cause: ObjectId(1),
+                session: Some(9),
+                origin: InputOrigin::Interactive,
+            },
+            original,
+        );
+        assert!(
+            message.contains(&format!("entered: '{original}'")),
+            "{message}"
+        );
+        assert!(!message.contains("expanded text"), "{message}");
+    }
+    let queued = logging::audit::message(
+        &c,
+        &s.world.borrow(),
+        ExecutionContext {
+            executor: ObjectId(1),
+            cause: ObjectId(1),
+            session: None,
+            origin: InputOrigin::Queued,
+        },
+        ".pw",
+    );
+    assert!(queued.contains(".pw [arguments redacted]"));
+    assert!(!queued.contains("@newpassword"));
     assert!(logging::report(&c).contains("all_commands: enabled"));
     for name in ["logging", "logfiles"] {
         let action = commands::run(&s, &c, ObjectId(1), 1, &format!("@list {name}")).unwrap();
@@ -429,6 +466,11 @@ async fn tcp_log_commands_commit_and_rollback() {
  player.send("say audit failure does not block commands").await;player.until("audit failure does not block commands").await;
  assert_eq!(count,persistence::load(&c.database()).await.unwrap().channels["SuspectsLog"].messages);
  sqlx::raw_sql("DROP TRIGGER reject_audits").execute(&mut db).await.unwrap();
+ wizard.send("@flag #2=going").await;wizard.until("GOING set.").await;
+ let count=persistence::load(&c.database()).await.unwrap().channels["SuspectsLog"].messages;
+ player.send("version").await;player.until("Attempt to execute command by halted object #2").await;
+ assert_eq!(count,persistence::load(&c.database()).await.unwrap().channels["SuspectsLog"].messages);
+ wizard.send("@flag #2=!going").await;wizard.until("GOING cleared.").await;
  db.close().await.unwrap();
  shutdown.send(ShutdownRequest::Sigterm).unwrap();
  tokio::time::timeout(Duration::from_secs(10),task).await.unwrap().unwrap().unwrap();

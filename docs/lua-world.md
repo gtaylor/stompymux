@@ -113,27 +113,39 @@ and output, but subsequent commands may still execute. Queues are runtime-only
 and survive Lua reloads; there is no Lua queue API in this tranche. Session-only
 APIs continue to require a real descriptor.
 
+Dot macros and macro-management commands are interactive input features. A queued
+or forced line beginning with `.` follows ordinary command lookup without expanding
+or editing the executor's macro sets.
+
 ## Portable and zone command sources
 
-Object command lookup visits the caller, other immediate-location occupants,
+Object command lookup visits the caller, immediate-location contents,
 immediate location, direct inventory, location-zone sources, then the player-zone
-object. Lists use ascending dbrefs and each source is visited once. Room-valued
-location zones contribute their direct occupants; non-room zones contribute the
-zone object. Sources are nonrecursive and exclude Garbage, GOING, HALTED and
-NO_COMMAND objects. Attachments and permissions are checked again before invocation.
+object. Runtime lists use ascending dbrefs and preserve duplicates between stages,
+so the caller can run directly and again as an immediate-location occupant.
+Direct-object stages honor NO_COMMAND; contents-list stages bypass it. HALTED
+sources are skipped, while GOING alone does not suppress a Lua attachment.
+Room-valued location zones contribute their direct occupants; non-room zones
+contribute the zone object. Sources are nonrecursive. Attachments and permissions
+are checked again before invocation.
 
-Dispatch order is current-location exits → local Lua → local native → global Lua
-→ global native. All existing Rust built-ins are global natives. `false` or nil
-continues matching; `true` ends it immediately. Earlier false-returning handlers'
-changes and output still belong to the same transaction, including when a later
-handler is a read-only native command. Callback or persistence failures discard
-staged success output. Native registration can attach a Rust function to a module
-identity with `CommandDefinition::object_native`; its context includes `object`,
-executor, cause and the actual optional session. No new Lua registration API is added.
+Dispatch order is current-location exits → global native → direct local Lua →
+local native → zone-fallback Lua/native → zone exits → global Lua. All existing
+Rust built-ins are global natives. `false` or nil continues matching. Direct local
+Lua handlers accumulate across eligible sources; a true result suppresses zone and
+global fallback only after all direct local handlers have run. Global Lua stops at
+the first true result. Earlier handlers' changes and output remain in the same
+transaction, including when a later handler is a read-only native command. Callback
+or persistence failures discard staged success output. Native registration can
+attach a Rust function to a module identity with `CommandDefinition::object_native`;
+its context includes `object`, executor, cause and the actual optional session.
+No new Lua registration API is added.
 
-`@list commands` and `@list permissions` enumerate these same sources without
-executing the listed handlers. Carried/zone exits and `#<dbref> command` shortcuts
-are not added to traversal or command dispatch.
+`@list commands` and `@list permissions` enumerate a deduplicated view without
+executing the listed handlers. Zone-exit admission requires the immediate
+location's zone to be a Room and the player's zone to differ from the immediate
+location. Exit matching then searches the player's zone, independently of the
+location-zone Room. Carried exits and `#<dbref> command` shortcuts are not added.
 
 ## Configured command permissions
 

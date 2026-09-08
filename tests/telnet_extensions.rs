@@ -91,7 +91,7 @@ fn options_direction_reenable_and_gmcp_c_behavior() {
         d.feed(&sub(39, b"\x02\x00USER\x01\x02"))
             .unwrap()
             .iter()
-            .any(|e| matches!(e, Input::Diagnostic(_)))
+            .any(|e| matches!(e, Input::Problem("ENVIRON", _)))
     );
     assert_eq!(d.environment.0.len(), 1);
     for payload in [b"Core.Ping".as_slice(), b"Core.Ping {}"] {
@@ -196,7 +196,11 @@ fn oversized_environment_drains_without_replacing_state() {
     let saved = d.environment.0.clone();
     let payload = [sub(39, b"\x00\x00X\x01toolong"), b"ok\r\n".to_vec()].concat();
     let events = d.feed(&payload).unwrap();
-    assert!(events.iter().any(|e| matches!(e, Input::Diagnostic(_))));
+    assert!(
+        events
+            .iter()
+            .any(|e| matches!(e, Input::Problem("ENVIRON", _)))
+    );
     assert!(events.iter().any(|e| matches!(e,Input::Line(s) if s=="ok")));
     assert_eq!(d.environment.0, saved);
     d.feed(&sub(39, b"\x02\x00X")).unwrap();
@@ -240,7 +244,8 @@ fn queue_counters_and_starting_compression_are_observable() {
     assert_eq!(s.stats.snapshot().output, [3, 2, 5]);
     assert!(s.failed.get());
     assert_eq!(telnet::diagnostics::connected_time(90060), "1d 01:01");
-    assert_eq!(telnet::diagnostics::idle_time(600), "0s");
+    assert_eq!(telnet::diagnostics::idle_time(5), "5s");
+    assert_eq!(telnet::diagnostics::idle_time(600), "10m");
     assert_eq!(telnet::diagnostics::idle_time(601), "10m");
 }
 #[tokio::test]

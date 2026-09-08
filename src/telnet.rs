@@ -27,6 +27,8 @@ const OPTIONS: &[(u8, Side)] = &[
 ];
 pub const IAC: u8 = 255;
 pub const ECHO: u8 = 1;
+/// C's 64-byte NUL-terminated client and terminal buffers retain 63 payload bytes.
+const TTYPE_TEXT_BYTES: usize = 63;
 #[derive(Debug, Clone)]
 enum State {
     Data,
@@ -45,19 +47,33 @@ pub enum Input {
     /// Writer control and world-owner status requests.
     StartCompression,
     StatusRequest,
-    Diagnostic(String),
+    /// A peer protocol problem with C's TELNET secondary category.
+    Problem(&'static str, String),
     /// Negotiation state changed; option effects have already been applied.
     Negotiated(q::Change),
+}
+impl Input {
+    /// Telnet peer diagnostics always use C's Problems event switch.
+    pub fn problem(&self) -> Option<(crate::logging::Category, &str, &str)> {
+        match self {
+            Self::Problem(secondary, message) => {
+                Some((crate::logging::Category::Problems, secondary, message))
+            }
+            _ => None,
+        }
+    }
 }
 #[derive(Debug, Clone)]
 pub struct Decoder {
     state: State,
     negotiation: Negotiator,
     initialized: bool,
-    pub ttype_responses: u8,
+    pub ttype_responses: u64,
     pub charset_pending: bool,
     pub environment: environment::Environment,
     pub client: String,
+    /// Exact bounded C-string bytes retained for escaped diagnostics.
+    pub client_raw: Vec<u8>,
     pub color_depth: u16,
     pub screen_reader: bool,
     pub echo_suppressed: bool,
@@ -72,6 +88,8 @@ pub struct Decoder {
     pub height: u16,
     pub ansi: bool,
     pub terminal: String,
+    /// Exact bounded C-string bytes retained for escaped diagnostics.
+    pub terminal_raw: Vec<u8>,
 }
 impl Default for Decoder {
     fn default() -> Self {
@@ -88,6 +106,7 @@ impl Decoder {
             charset_pending: false,
             environment: Default::default(),
             client: String::new(),
+            client_raw: Vec::new(),
             color_depth: 16,
             screen_reader: false,
             echo_suppressed: false,
@@ -99,6 +118,7 @@ impl Decoder {
             height: 25,
             ansi: true,
             terminal: "vt100".into(),
+            terminal_raw: b"vt100".to_vec(),
             input_line_limit: config.input_line_limit,
             subnegotiation_limit: config.telnet_subnegotiation_limit,
         }
@@ -159,7 +179,10 @@ impl Decoder {
                         }
                     } else if !change.after.enabled() {
                         match (change.option, change.side) {
-                            (TTYPE, Side::Remote) => self.terminal = "vt100".into(),
+                            (TTYPE, Side::Remote) => {
+                                self.terminal = "vt100".into();
+                                self.terminal_raw = b"vt100".to_vec();
+                            }
                             (NAWS, Side::Remote) => {
                                 self.width = 80;
                                 self.height = 25;
@@ -242,8 +265,9 @@ impl Decoder {
                         }
                         if payload.len() > self.subnegotiation_limit {
                             if option == NEW_ENVIRON {
-                                out.push(Input::Diagnostic(
-                                    "NEW-ENVIRON: subnegotiation limit exceeded".into(),
+                                out.push(Input::Problem(
+                                    "ENVIRON",
+                                    "sent an invalid or oversized NEW-ENVIRON update".into(),
                                 ));
                                 self.state = State::DiscardSub(false);
                                 continue;
@@ -310,7 +334,10 @@ impl Decoder {
         match option {
             NEW_ENVIRON if self.option_state(NEW_ENVIRON, Side::Remote).enabled() => {
                 if let Err(e) = self.environment.update(p) {
-                    out.push(Input::Diagnostic(format!("NEW-ENVIRON: {e}")));
+                    out.push(Input::Problem(
+                        "ENVIRON",
+                        format!("sent an invalid or oversized NEW-ENVIRON update: {e}"),
+                    ));
                 }
             }
             GMCP if self.option_state(GMCP, Side::Local).enabled()
@@ -323,11 +350,9 @@ impl Decoder {
                 self.height = u16::from_be_bytes([p[2], p[3]]);
             }
             TTYPE if self.option_state(TTYPE, Side::Remote).enabled() && p.first() == Some(&0) => {
-                let name = String::from_utf8_lossy(&p[1..]).into_owned();
-                let bits = name
-                    .get(..5)
-                    .filter(|prefix| prefix.eq_ignore_ascii_case("MTTS "))
-                    .and_then(|_| name[5..].parse::<u32>().ok());
+                // libtelnet exposes a C string: embedded NUL ends parsing and display storage.
+                let name = p[1..].split(|byte| *byte == 0).next().unwrap_or_default();
+                let bits = mtts_bits(name);
                 if let Some(bits) = bits {
                     self.screen_reader = bits & 64 != 0;
                     self.color_depth = if bits & 256 != 0 {
@@ -340,16 +365,21 @@ impl Decoder {
                         0
                     };
                 } else {
+                    let displayed = &name[..name.len().min(TTYPE_TEXT_BYTES)];
                     if self.ttype_responses == 0 {
-                        self.client = name.clone();
+                        self.client_raw = displayed.to_vec();
+                        self.client = String::from_utf8_lossy(displayed).into_owned();
                     }
-                    self.terminal = name;
-                    let upper = self.terminal.to_ascii_uppercase();
-                    self.color_depth = if upper.contains("TRUECOLOR") {
+                    self.terminal_raw = displayed.to_vec();
+                    self.terminal = String::from_utf8_lossy(displayed).into_owned();
+                    // Capability inference sees the full original C string before display truncation.
+                    self.color_depth = if contains_ascii_case_insensitive(name, b"TRUECOLOR") {
                         24
-                    } else if upper.contains("256COLOR") || upper == "XTERM" {
+                    } else if contains_ascii_case_insensitive(name, b"256COLOR")
+                        || name.eq_ignore_ascii_case(b"XTERM")
+                    {
                         256
-                    } else if upper == "DUMB" {
+                    } else if name.eq_ignore_ascii_case(b"DUMB") {
                         0
                     } else {
                         16
@@ -367,6 +397,12 @@ impl Decoder {
                     2 => {
                         self.charset_pending = false;
                         self.charset_utf8 = p[1..].eq_ignore_ascii_case(b"UTF-8");
+                        if !self.charset_utf8 {
+                            out.push(Input::Problem(
+                                "CHARSET",
+                                "accepted unsupported charset".into(),
+                            ));
+                        }
                     }
                     3 => self.charset_pending = false,
                     1 if p.len() > 2 && !self.charset_pending => {
@@ -387,6 +423,57 @@ impl Decoder {
             _ => {}
         }
     }
+}
+
+/// Parse the deliberately permissive nonnegative `strtol` form used by C MTTS.
+fn mtts_bits(name: &[u8]) -> Option<i64> {
+    if name.len() < 5 || !name[..5].eq_ignore_ascii_case(b"MTTS ") {
+        return None;
+    }
+    let suffix = &name[5..];
+    if suffix.is_empty() {
+        return Some(0);
+    }
+    let mut at = suffix
+        .iter()
+        .position(|byte| !matches!(byte, b'\t'..=b'\r' | b' '))
+        .unwrap_or(0);
+    if suffix
+        .iter()
+        .all(|byte| matches!(byte, b'\t'..=b'\r' | b' '))
+    {
+        return None;
+    }
+    let negative = match suffix[at] {
+        b'+' => {
+            at += 1;
+            false
+        }
+        b'-' => {
+            at += 1;
+            true
+        }
+        _ => false,
+    };
+    let start = at;
+    let mut value = 0i64;
+    while at < suffix.len() && suffix[at].is_ascii_digit() {
+        value = value
+            .checked_mul(10)?
+            .checked_add(i64::from(suffix[at] - b'0'))?;
+        at += 1;
+    }
+    if at == start || at != suffix.len() || (negative && value != 0) {
+        None
+    } else {
+        Some(value)
+    }
+}
+
+fn contains_ascii_case_insensitive(haystack: &[u8], needle: &[u8]) -> bool {
+    haystack
+        .windows(needle.len())
+        .any(|window| window.eq_ignore_ascii_case(needle))
 }
 pub fn encode(text: &str) -> Vec<u8> {
     let normalized = text.replace("\r\n", "\n").replace('\n', "\r\n");

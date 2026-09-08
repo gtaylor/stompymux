@@ -125,6 +125,87 @@ fn terminal_discovery_metadata_and_disabled_payloads() {
     sub(&mut d, NAWS, &[0, 120, 0, 40]);
     assert_eq!((d.width, d.height), (80, 25));
 }
+
+#[test]
+fn mtts_matches_c_strtol_and_preserves_invalid_bytes() {
+    fn discovered(name: &[u8]) -> Decoder {
+        let mut decoder = Decoder::default();
+        decoder.initial();
+        decoder.feed(&[255, 251, TTYPE]).unwrap();
+        sub(&mut decoder, TTYPE, b"\x00AuditClient");
+        sub(&mut decoder, TTYPE, b"\x00XTERM");
+        let mut payload = vec![0];
+        payload.extend_from_slice(name);
+        sub(&mut decoder, TTYPE, &payload);
+        decoder
+    }
+    for name in [
+        b"MTTS  265".as_slice(),
+        b"MTTS \t265",
+        b"MTTS \x0B265",
+        b"MTTS +265",
+        b"MTTS 4294967560",
+    ] {
+        let decoder = discovered(name);
+        assert_eq!(decoder.terminal_raw, b"XTERM");
+        assert_eq!(decoder.color_depth, 24);
+    }
+    for name in [b"MTTS ".as_slice(), b"MTTS -0"] {
+        let decoder = discovered(name);
+        assert_eq!(decoder.terminal_raw, b"XTERM");
+        assert_eq!(decoder.color_depth, 0);
+    }
+    for name in [b"MTTS 265 ".as_slice(), b"MTTS   ", b"MTTS -1"] {
+        let decoder = discovered(name);
+        assert_eq!(decoder.terminal_raw, name);
+        assert_eq!(decoder.color_depth, 16);
+    }
+    let decoder = discovered(b"MTTS 265\0ignored");
+    assert_eq!(decoder.terminal_raw, b"XTERM");
+    assert_eq!(decoder.color_depth, 24);
+
+    let decoder = discovered(b"MTTS 9223372036854775807");
+    assert_eq!(decoder.terminal_raw, b"XTERM");
+    assert_eq!(decoder.color_depth, 24);
+    assert!(decoder.screen_reader);
+    let overflow = b"MTTS 9223372036854775808";
+    let decoder = discovered(overflow);
+    assert_eq!(decoder.terminal_raw, overflow);
+
+    let mut long = vec![b'X'; 70];
+    long.extend_from_slice(b"TRUECOLOR");
+    let decoder = discovered(&long);
+    assert_eq!(decoder.terminal_raw, vec![b'X'; 63]);
+    assert_eq!(decoder.color_depth, 24);
+
+    let decoder = discovered(b"bad\xFFtype");
+    assert_eq!(decoder.terminal_raw, b"bad\xFFtype");
+    let mut report = stompymux_rs::telnet::diagnostics::Report::new(8192);
+    stompymux_rs::telnet::diagnostics::telnet(
+        &mut report,
+        "viewer",
+        1,
+        1,
+        &decoder,
+        &Default::default(),
+    );
+    assert!(
+        String::from_utf8(report.finish())
+            .unwrap()
+            .contains("bad\\xFFtype")
+    );
+}
+
+#[test]
+fn ttype_response_count_continues_after_discovery_requests_stop() {
+    let mut decoder = Decoder::default();
+    decoder.initial();
+    decoder.feed(&[255, 251, TTYPE]).unwrap();
+    for _ in 0..300 {
+        sub(&mut decoder, TTYPE, b"\x00XTERM");
+    }
+    assert_eq!(decoder.ttype_responses, 300);
+}
 #[test]
 fn charset_pending_collisions_and_utf8_only_policy() {
     let mut d = Decoder::default();
@@ -145,8 +226,25 @@ fn charset_pending_collisions_and_utf8_only_policy() {
         sub(&mut d, CHARSET, b"\x01;ASCII"),
         [255, 250, 42, 3, 255, 240]
     );
-    sub(&mut d, CHARSET, b"\x02LATIN1");
+    let payload = match Decoder::sub_reply(CHARSET, b"\x02LATIN1") {
+        Input::Reply(payload) => payload,
+        _ => unreachable!(),
+    };
+    let events = d.feed(&payload).unwrap();
     assert!(!d.charset_utf8);
+    assert!(events.iter().any(
+        |event| matches!(event, Input::Problem("CHARSET", message) if message.contains("unsupported charset"))
+    ));
+    let diagnostic = events.iter().find_map(Input::problem).unwrap();
+    assert_eq!(diagnostic.0, stompymux_rs::logging::Category::Problems);
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("stompymux.toml");
+    std::fs::write(&path, "[logging.topics]\nproblems=true\nnetwork=false\n").unwrap();
+    let config = stompymux_rs::config::Config::load(directory.path()).unwrap();
+    assert!(diagnostic.0.enabled(&config));
+    std::fs::write(&path, "[logging.topics]\nproblems=false\nnetwork=true\n").unwrap();
+    let config = stompymux_rs::config::Config::load(directory.path()).unwrap();
+    assert!(!diagnostic.0.enabled(&config));
     assert!(matches!(
         d.feed(&[0xfe, b'\n']).unwrap().as_slice(),
         [Input::InvalidUtf8]

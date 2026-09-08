@@ -329,7 +329,7 @@ async fn builder_creation_link_home_clone_and_dropto_roundtrip() {
             r#"
         seen={{}};_parents['default_room.lua'].locks={{link=function(ctx) assert(ctx.subject==1 and ctx.enactor==1);table.insert(seen,'link');return true end,set_home=function(ctx) table.insert(seen,'home');return true end}}
         mux.world.object({template}):state('copy'):set('value','content')
-        _parents['default_thing.lua'].events={{on_clone=function(ctx) assert(ctx.event=='on_clone' and ctx.enactor==1);mux.world.object(ctx.object):state('copy'):set('cloned',true) end}}
+        _parents['default_thing.lua'].events={{on_clone=function(ctx) assert(ctx.event=='on_clone' and ctx.enactor==1);mux.world.object(ctx.object):state('copy'):set('cloned',true);mux.world.pemit(1,'CLONE EVENT') end}}
     "#,
             template = template.0
         ),
@@ -355,7 +355,12 @@ async fn builder_creation_link_home_clone_and_dropto_roundtrip() {
     assert!(run(&s, &c, 1, &format!("@link #{}=#{}", template.0, target.0)).contains("Home set"));
     lua(&s, "assert(table.concat(seen,',')=='link,link,link,home')");
     let clone = ObjectId(s.world.borrow().next_id);
-    assert!(run(&s, &c, 1, &format!("@clone/inv #{}=Copy", template.0)).contains("cloned"));
+    let response = run(&s, &c, 1, &format!("@clone/inv #{}=Copy", template.0));
+    let confirmation = response.find("Template cloned as Copy").unwrap();
+    assert!(
+        confirmation < response.find("CLONE EVENT").unwrap(),
+        "{response}"
+    );
     let cloned = s.world.borrow().objects[&clone].clone();
     assert_eq!(cloned.location, Some(ObjectId(1)));
     assert_eq!(cloned.description.as_deref(), Some("copied description"));

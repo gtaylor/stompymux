@@ -37,7 +37,6 @@ pub(super) fn travel(ctx: &CommandContext<'_>, line: &str, invocation: Invocatio
         }
     }
     let player = ctx.player;
-    let session = ctx.session;
     let Some(room) = s
         .world
         .borrow()
@@ -54,6 +53,44 @@ pub(super) fn travel(ctx: &CommandContext<'_>, line: &str, invocation: Invocatio
         return Ok(false);
     };
 
+    travel_from(ctx, line, invocation, room)
+}
+
+/// Try exits in a room-valued location zone after every scoped local fallback.
+pub(super) fn travel_zone(ctx: &CommandContext<'_>, line: &str) -> Result<bool> {
+    let world = ctx.scripts.world.borrow();
+    let Some(location) = world.objects.get(&ctx.player).and_then(|o| o.location) else {
+        return Ok(false);
+    };
+    let Some(zone) = world.objects.get(&location).and_then(|o| o.zone) else {
+        return Ok(false);
+    };
+    let Some(exit_root) = world.objects.get(&ctx.player).and_then(|o| o.zone) else {
+        return Ok(false);
+    };
+    if location == exit_root
+        || world.objects.get(&zone).map(|o| o.kind) != Some(Kind::Room)
+        || !world
+            .objects
+            .get(&exit_root)
+            .is_some_and(|o| matches!(o.kind, Kind::Room | Kind::Thing | Kind::Player))
+    {
+        return Ok(false);
+    }
+    drop(world);
+    travel_from(ctx, line, Invocation::Bare, exit_root)
+}
+
+/// Match and traverse exits rooted at one explicit room.
+fn travel_from(
+    ctx: &CommandContext<'_>,
+    line: &str,
+    invocation: Invocation,
+    room: crate::world::ObjectId,
+) -> Result<bool> {
+    let s = ctx.scripts;
+    let player = ctx.player;
+    let session = ctx.session;
     let line = line.trim();
     let exits: Vec<_> = s
         .world
@@ -74,8 +111,19 @@ pub(super) fn travel(ctx: &CommandContext<'_>, line: &str, invocation: Invocatio
         .into_iter()
         .filter(|e| preferred.contains(&e.0))
         .collect();
-    match exits.as_slice() {
-        [(exit, Some(destination))] => {
+    if exits.len() > 1 && matches!(invocation, Invocation::Explicit) {
+        s.outbox
+            .borrow_mut()
+            .push((player, "I don't know which way you mean!".into()));
+        return Ok(true);
+    }
+    let selected = match exits.len() {
+        0 => None,
+        1 => exits.first(),
+        n => Some(&exits[rand::random_range(0..n)]),
+    };
+    match selected {
+        Some((exit, Some(destination))) => {
             if s.traversal(player, *exit, session)? {
                 crate::movement::perform(
                     s,
@@ -90,11 +138,11 @@ pub(super) fn travel(ctx: &CommandContext<'_>, line: &str, invocation: Invocatio
                 )?;
             }
         }
-        [(_, None)] => s
+        Some((_, None)) => s
             .outbox
             .borrow_mut()
             .push((player, "You can't go that way.".into())),
-        [] => {
+        None => {
             if matches!(invocation, Invocation::Bare) {
                 return Ok(false);
             }
@@ -102,14 +150,6 @@ pub(super) fn travel(ctx: &CommandContext<'_>, line: &str, invocation: Invocatio
                 .borrow_mut()
                 .push((player, "You can't go that way.".into()));
         }
-        _ => s.outbox.borrow_mut().push((
-            player,
-            match invocation {
-                Invocation::Bare => "I don't know which exit you mean.",
-                Invocation::Explicit => "I don't know which way you mean!",
-            }
-            .into(),
-        )),
     }
     Ok(true)
 }

@@ -255,6 +255,58 @@ fn live_bodies_reload_reports_and_failed_candidates() {
     assert_eq!(next.report.articles, 3);
 }
 
+/// Legacy frontmatter accepts empty strings and ignores malformed optional values.
+#[test]
+fn permissive_frontmatter_matches_c_coercions_and_warnings() {
+    let (d, c) = fixture();
+    std::fs::write(
+        d.path().join("help/index.md"),
+        "+++ \t\ntitle=''\ndescription=''\nkeywords=['help',7]\narticle_tags=4\nshow_index_for_article_tags=false\nindex_style='cards'\nweight='heavy'\nwizard_only='yes'\n+++\naccepted",
+    )
+    .unwrap();
+    std::fs::write(
+        d.path().join("help/mixed.md"),
+        "+++\ntitle='Mixed'\ndescription=''\nkeywords=['mixed',false]\narticle_tags=['group',9]\nshow_index_for_article_tags=[false]\nweight=false\nwizard_only=4\n+++\nmixed body",
+    )
+    .unwrap();
+    std::fs::write(
+        d.path().join("help/rejected.md"),
+        "+++\ntitle=7\ndescription='bad'\nkeywords=['rejected']\n+++\nrejected",
+    )
+    .unwrap();
+    let index = HelpIndex::reload(&c).unwrap();
+    assert_eq!(index.report.articles, 2);
+    assert_eq!(index.report.errors.len(), 1);
+    assert!(index.report.errors[0].contains("required frontmatter field 'title'"));
+    assert_eq!(index.report.warnings.len(), 2);
+    assert!(
+        index
+            .report
+            .warnings
+            .iter()
+            .any(|w| w.contains("index_style 'cards'"))
+    );
+    assert!(
+        index
+            .report
+            .warnings
+            .iter()
+            .any(|w| w.contains("keyword ''"))
+    );
+    assert!(matches!(
+        index.lookup("help", false).unwrap(),
+        HelpResponse::Article { .. }
+    ));
+    assert!(matches!(
+        index.lookup("mixed", false).unwrap(),
+        HelpResponse::Article { .. }
+    ));
+    assert!(matches!(
+        index.lookup("index", false).unwrap(),
+        HelpResponse::Article { .. }
+    ));
+}
+
 /// Shared Markdown blocks retain literal examples and nested continuation prefixes.
 #[test]
 fn markdown_block_layout_and_article_relative_links() {

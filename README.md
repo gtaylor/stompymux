@@ -288,23 +288,30 @@ Configured aliases work for both native and Lua commands, preserving arguments.
 Full-token aliases take precedence, followed by base-token aliases for switches;
 there is no recursive alias expansion. Unaliased Lua commands see original input.
 
-Commands try current-location exits, local Lua, local native, global Lua, then
-global native handlers. The first handled command wins. Existing built-ins are
-global natives; the Rust registry can register object-local native handlers by
-module identity. Exits and Lua can shadow built-ins. A native permission or switch
-error terminates matching when that native stage is reached.
+Commands try current-location exits, global native handlers, direct local Lua,
+local native handlers, zone-fallback Lua and native handlers, zone exits, then
+global Lua. Existing built-ins are global natives; the Rust registry can register
+object-local native handlers by module identity. A native permission or switch
+error consumes the command. Local Lua handlers accumulate across every eligible
+direct source; any true result suppresses zone and global fallback. Global Lua
+retains first-handled module ordering.
 
-Local sources are the caller, other nearby occupants, immediate location, directly
-carried objects, location-zone sources and the player-zone object. Occupants use
-ascending dbrefs; sources are deduplicated. Room zones contribute direct occupants,
+Runtime sources are the caller, immediate-location contents, immediate location,
+direct inventory, location-zone sources and the player-zone object. List traversal
+uses ascending dbrefs and preserves stage duplicates: the caller is visited once
+directly and again when present in its location's contents. Direct-object stages
+honor NO_COMMAND; contents-list stages do not. HALTED sources are always skipped,
+while GOING is not a Lua-source filter. Room zones contribute direct contents and
 other zones contribute the zone object. There is no recursive inventory or zone
-lookup. Garbage, GOING, HALTED and NO_COMMAND sources are excluded. Global Lua
-modules retain lexical ordering; declarations retain registration order. Restricted
-Lua entries are skipped; false continues and true stops. Failures roll back the
-whole command, including earlier handlers that returned false.
+lookup. Read-only command listings use a deduplicated view. Global Lua modules
+retain lexical ordering; declarations retain registration order. Restricted Lua
+entries are skipped; false continues and local true results still allow later
+sources in the same stage to run. Failures roll back the whole command, including
+earlier handlers that completed successfully.
 
-Only current-location exits participate in bare exit-name traversal. Carried
-exits remain visible in inventory. Macro/flow preprocessing and channel shortcuts
+Bare exit-name traversal first searches current-location exits. After local and
+zone command fallback, eligible zone exits use the player-zone root described in
+the [dispatch audit](docs/audit-dispatch.md). Carried exits remain visible in inventory. Macro/flow preprocessing and channel shortcuts
 retain their existing behavior; no `#<dbref> command` shortcut is provided.
 
 ## Shutdown and database maintenance
@@ -1085,6 +1092,11 @@ creation inherits GOD's zone unless explicitly overridden. See
 The [behavioral parity audit](docs/behavioral-parity.md) records selected verified
 contracts, intentional differences, the five resolved audit findings and unverified cases.
 It does not claim complete non-BattleTech behavioral equivalence.
+
+The [six-area follow-up](docs/behavioral-audit-six.md) audits dispatch and queues,
+object lifecycle, Lua edge cases, accounts/live configuration, terminal rendering,
+and operations/logging/help. Its area reports distinguish C source evidence from
+paired execution and record the corrected behavior and retained differences.
 
 The [broader comparison](docs/behavioral-audit-round2.md) records seven additional
 reproduced discrepancies, optional C/Rust TCP probes, and the remaining unverified

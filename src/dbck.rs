@@ -295,6 +295,7 @@ pub fn plan(before: &World, raw: &Links, c: &Config) -> Result<(World, DbCheckRe
             report.plan.detachments.insert(*id);
         }
         o.kind = Kind::Garbage;
+        o.pending_destroyer = None;
         o.name = "Garbage".into();
         o.flags = [Flag::Going].into_iter().collect();
         o.powers = Default::default();

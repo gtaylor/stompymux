@@ -70,10 +70,10 @@ impl Session {
                         self.stats.compression.store(0, Relaxed);
                     }
                 }
-                crate::telnet::Input::Diagnostic(message) => config.log(
-                    &[crate::logging::Category::Network],
-                    "NET",
+                crate::telnet::Input::Problem(secondary, message) => config.log(
+                    &[crate::logging::Category::Problems],
                     "TELNET",
+                    secondary,
                     message,
                 ),
                 _ => {}

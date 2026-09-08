@@ -566,7 +566,7 @@ pub fn report(ctx: &CommandContext<'_>, topic: &str) -> Option<String> {
                     ),
                     format!(
                         "Maximum authenticated sessions: {}",
-                        if c.mux.max_players < 0 {
+                        if c.mux.max_players == -1 {
                             "unlimited".into()
                         } else {
                             c.mux.max_players.to_string()

@@ -2,7 +2,6 @@
 mod render;
 use crate::{config::Config, text::Document};
 use anyhow::{Context, Result, ensure};
-use serde::Deserialize;
 use std::io::Read;
 use std::{
     collections::BTreeMap,
@@ -10,8 +9,7 @@ use std::{
 };
 
 /// Supported legacy generated-index layouts.
-#[derive(Clone, Copy, Debug, Default, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum IndexStyle {
     #[default]
     ListWithDescription,
@@ -19,21 +17,72 @@ pub enum IndexStyle {
 }
 
 /// Required front matter and cached lookup/visibility attributes.
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug)]
 struct Metadata {
-    title: String,
+    _title: String,
     description: String,
     keywords: Vec<String>,
-    #[serde(default)]
     article_tags: Vec<String>,
-    #[serde(default)]
     show_index_for_article_tags: Vec<String>,
-    #[serde(default)]
     index_style: IndexStyle,
-    #[serde(default)]
     weight: Option<i64>,
-    #[serde(default)]
     wizard_only: bool,
+}
+
+/// Match the legacy frontmatter reader's required fields and permissive option handling.
+fn metadata(source: &str) -> Result<(Metadata, Option<String>)> {
+    let value: toml::Value = toml::from_str(source)?;
+    let table = value
+        .as_table()
+        .context("help front matter must be a TOML table")?;
+    let required = |name: &str| {
+        table
+            .get(name)
+            .and_then(toml::Value::as_str)
+            .map(str::to_owned)
+            .with_context(|| format!("missing required frontmatter field '{name}'"))
+    };
+    let strings = |name: &str, required: bool| -> Result<Vec<String>> {
+        let Some(values) = table.get(name).and_then(toml::Value::as_array) else {
+            ensure!(!required, "missing required frontmatter field '{name}'");
+            return Ok(Vec::new());
+        };
+        ensure!(
+            !required || !values.is_empty(),
+            "missing required frontmatter field '{name}'"
+        );
+        Ok(values
+            .iter()
+            .map(|value| value.as_str().unwrap_or("").to_owned())
+            .collect())
+    };
+    let mut warning = None;
+    let index_style = match table.get("index_style").and_then(toml::Value::as_str) {
+        Some("columnar") => IndexStyle::Columnar,
+        Some("list_with_description") | None => IndexStyle::ListWithDescription,
+        Some(value) => {
+            warning = Some(format!(
+                "unrecognized index_style '{value}'; defaulting to list_with_description"
+            ));
+            IndexStyle::ListWithDescription
+        }
+    };
+    Ok((
+        Metadata {
+            _title: required("title")?,
+            description: required("description")?,
+            keywords: strings("keywords", true)?,
+            article_tags: strings("article_tags", false)?,
+            show_index_for_article_tags: strings("show_index_for_article_tags", false)?,
+            index_style,
+            weight: table.get("weight").and_then(toml::Value::as_integer),
+            wizard_only: table
+                .get("wizard_only")
+                .and_then(toml::Value::as_bool)
+                .unwrap_or(false),
+        },
+        warning,
+    ))
 }
 
 /// Stable root-relative identity and metadata; bodies are read when requested.
@@ -131,9 +180,16 @@ fn read_article(path: &Path, limit: usize) -> Result<(String, String)> {
         .read_to_string(&mut source)?;
     ensure!(source.len() <= limit, "help article exceeds text budget");
     let source = source.replace("\r\n", "\n");
-    let source = source
-        .strip_prefix("+++\n")
+    let (opening, source) = source
+        .split_once('\n')
         .context("missing TOML front matter")?;
+    ensure!(
+        opening.starts_with("+++")
+            && opening[3..]
+                .chars()
+                .all(|character| matches!(character, ' ' | '\t' | '\r')),
+        "missing TOML front matter"
+    );
     let end = source
         .lines()
         .scan(0usize, |offset, line| {
@@ -144,13 +200,17 @@ fn read_article(path: &Path, limit: usize) -> Result<(String, String)> {
         .find(|(_, line)| *line == "+++")
         .map(|(offset, _)| offset)
         .context("unclosed TOML front matter")?;
-    let body = source[end + 3..].trim_start_matches('\n').to_string();
+    let body = source[end + 3..]
+        .strip_prefix('\n')
+        .unwrap_or(&source[end + 3..])
+        .to_string();
     Document::markdown(body.clone(), limit)?;
     Ok((source[..end].to_string(), body))
 }
 
-/// Traverse once in lexical order; traversal errors abort the candidate build.
-fn files(dir: &Path, paths: &mut Vec<PathBuf>) -> Result<()> {
+/// Traverse once in lexical order; fatal traversal errors reject the candidate index.
+fn files(dir: &Path, paths: &mut Vec<PathBuf>, depth: usize) -> Result<()> {
+    ensure!(depth <= 64, "help directory nesting exceeds 64");
     for entry in std::fs::read_dir(dir).with_context(|| dir.display().to_string())? {
         let entry = entry?;
         let kind = entry.file_type()?;
@@ -158,7 +218,7 @@ fn files(dir: &Path, paths: &mut Vec<PathBuf>) -> Result<()> {
             continue;
         }
         if kind.is_dir() {
-            files(&entry.path(), paths)?;
+            files(&entry.path(), paths, depth + 1)?;
         } else if kind.is_file() && entry.path().extension().is_some_and(|e| e == "md") {
             paths.push(entry.path());
         }
@@ -184,7 +244,7 @@ impl HelpIndex {
         Ok(index)
     }
 
-    /// Build a new index; callers install it only after this operation succeeds.
+    /// Build an atomic candidate; callers install it only after traversal succeeds.
     pub fn reload(config: &Config) -> Result<Self> {
         let root = config
             .root
@@ -197,29 +257,33 @@ impl HelpIndex {
             ..Self::default()
         };
         let mut paths = Vec::new();
-        files(&index.root, &mut paths)?;
+        files(&index.root, &mut paths, 0)?;
         paths.sort();
         for path in paths {
-            let load = || -> Result<Article> {
+            let load = || -> Result<(Article, Option<String>)> {
                 let (front, _) = read_article(&path, index.text_limit)?;
-                let meta: Metadata = toml::from_str(&front)?;
-                ensure!(
-                    !meta.title.trim().is_empty()
-                        && !meta.description.trim().is_empty()
-                        && !meta.keywords.is_empty()
-                        && meta.keywords.iter().all(|s| !s.trim().is_empty()),
-                    "title, description and keywords are required"
-                );
-                Ok(Article {
-                    meta,
-                    path: path
-                        .strip_prefix(&index.root)?
-                        .to_string_lossy()
-                        .replace('\\', "/"),
-                })
+                let (meta, warning) = metadata(&front)?;
+                Ok((
+                    Article {
+                        meta,
+                        path: path
+                            .strip_prefix(&index.root)?
+                            .to_string_lossy()
+                            .replace('\\', "/"),
+                    },
+                    warning,
+                ))
             };
             match load().with_context(|| path.display().to_string()) {
-                Ok(article) => index.articles.push(article),
+                Ok((article, warning)) => {
+                    if let Some(warning) = warning {
+                        index
+                            .report
+                            .warnings
+                            .push(format!("{}: {warning}", article.path));
+                    }
+                    index.articles.push(article);
+                }
                 Err(error) => index.report.errors.push(format!("{error:#}")),
             }
         }
