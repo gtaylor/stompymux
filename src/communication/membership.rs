@@ -387,15 +387,10 @@ impl Service<'_> {
                 .map(|o| o.id)
                 .collect::<Vec<_>>()
         };
-        let scripts =
-            crate::lua::Scripts::services(self.lua).map_err(|e| anyhow::anyhow!(e.to_string()))?;
         for object in objects {
-            crate::lua::transactions::run(self.lua, self.world, self.outbox, || {
-                scripts
-                    .channel_leave_event(object, who)
-                    .map_err(mlua::Error::external)
-            })
-            .map_err(|e| anyhow::anyhow!("channel {channel} leave callback: {e}"))?;
+            self.host
+                .channel_leave(self.world, object, who)
+                .map_err(|error| anyhow::anyhow!("channel {channel} leave callback: {error}"))?;
         }
         Ok(())
     }
@@ -404,17 +399,7 @@ impl Service<'_> {
 /// Use live session snapshots; multiple sessions use the shortest idle interval.
 impl Service<'_> {
     fn idle(&self, who: ObjectId) -> u64 {
-        crate::lua::sessions::players(self.lua)
-            .ok()
-            .map(|list| {
-                list.sequence_values::<mlua::Table>()
-                    .filter_map(|row| row.ok())
-                    .filter(|row| row.get::<i64>("dbref").ok() == Some(who.0))
-                    .filter_map(|row| row.get::<u64>("idle_for").ok())
-                    .min()
-                    .unwrap_or(0)
-            })
-            .unwrap_or(0)
+        self.host.idle(who)
     }
 }
 

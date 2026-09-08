@@ -1,6 +1,5 @@
 //! Runtime admission and maintenance controls, independent of persistent configuration.
 use crate::{
-    flags,
     powers::Power,
     world::{ObjectId, World},
 };
@@ -126,7 +125,7 @@ pub enum Admission {
 }
 /// Current Wizard authority or IDLE metadata exempts authenticated players only.
 pub fn can_idle(world: &World, player: ObjectId) -> bool {
-    flags::is_wizard(world, player)
+    crate::authority::is_wizard(world, player)
         || world
             .objects
             .get(&player)

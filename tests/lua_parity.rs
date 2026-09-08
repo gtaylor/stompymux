@@ -1,38 +1,10 @@
 //! C Lua contracts: symbols, typed errors, generational identities and transactional repair.
-use std::{cell::RefCell, path::Path, rc::Rc};
-use stompymux_rs::{
-    CreationContext,
-    config::Config,
-    lua::Scripts,
-    persistence,
-    world::{Account, Kind, ObjectId},
-};
-fn copy(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for e in std::fs::read_dir(from).unwrap() {
-        let e = e.unwrap();
-        if e.path().is_dir() {
-            copy(&e.path(), &to.join(e.file_name()))
-        } else {
-            std::fs::copy(e.path(), to.join(e.file_name())).unwrap();
-        }
-    }
-}
+use std::rc::Rc;
+use stompymux_rs::{Account, Config, CreationContext, Kind, ObjectId, Scripts, persistence};
+mod support;
+use support::isolated_scripts;
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
-    let d = tempfile::tempdir().unwrap();
-    copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
-        d.path(),
-    );
-    let c = Config::load(d.path()).unwrap();
-    let s = Scripts::new(
-        &c,
-        Rc::new(RefCell::new(
-            persistence::load(&c.database()).await.unwrap(),
-        )),
-    )
-    .unwrap();
-    (d, c, s)
+    isolated_scripts().await
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -40,11 +12,11 @@ async fn public_catalog_and_structured_errors() {
     let (_d, _c, s) = fixture().await;
     let inventory: serde_json::Value =
         serde_json::from_str(include_str!("fixtures/lua-api.json")).unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set(
             "inventory",
-            mlua::LuaSerdeExt::to_value(&s.lua, &inventory).unwrap(),
+            mlua::LuaSerdeExt::to_value(&s.inspect_lua(), &inventory).unwrap(),
         )
         .unwrap();
     s.eval_callback::<()>(r#"
@@ -118,26 +90,25 @@ async fn object_handles_and_synchronous_repairs_roll_back() {
  "#,
     )
     .unwrap();
-    let before = s.world.borrow().clone();
+    let before = s.world().clone();
     assert!(s.eval_callback::<()>(r#"leaked=mux.world.create_object{type=mux.world.types.THING,name='Rollback',location=0,home=0};mux.world.destroy_object(leaked);mux.check_db();error('undo')"#).is_err());
-    assert_eq!(before.objects.len(), s.world.borrow().objects.len());
+    assert_eq!(before.objects.len(), s.world().objects.len());
     s.eval_callback::<()>(r#"local replacement=mux.world.create_object{type=mux.world.types.THING,name='Replacement',location=0,home=0};assert(not pcall(function()return leaked:dbref()end))"#).unwrap();
-    assert!(s.world.borrow().validate(&c).is_ok());
-    let before = s.world.borrow().clone();
+    assert!(s.world().validate(&c).is_ok());
+    let before = s.world().clone();
     assert!(
         s.eval_callback::<()>("mux.world.destroy_object(mux.world.object(1))")
             .is_err()
     );
     assert_eq!(
         before.objects[&ObjectId(1)].flags,
-        s.world.borrow().objects[&ObjectId(1)].flags
+        s.world().objects[&ObjectId(1)].flags
     );
 }
 
 use std::{cell::Cell, time::Duration};
 use stompymux_rs::{
-    accounts,
-    flags::Flag,
+    Flag, accounts,
     server::{self, ShutdownRequest},
 };
 use tokio::{
@@ -217,7 +188,7 @@ async fn start(
     mlua::Lua,
 ) {
     let scripts = server::prepare(c).await.unwrap();
-    let vm = scripts.lua.clone();
+    let vm = scripts.inspect_lua().clone();
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
     let (tx, rx) = oneshot::channel();
@@ -292,16 +263,16 @@ async fn tcp_environment_and_maintenance_commit_boundary() {
 #[tokio::test(flavor = "current_thread")]
 async fn checking_rejects_live_services_with_typed_errors() {
     let (_d, c, s) = fixture().await;
-    let checking = Scripts::from_sources(
-        &c,
-        s.world.clone(),
-        stompymux_rs::help::HelpIndex::load(&c).unwrap(),
-        std::sync::Arc::new(stompymux_rs::lua::sources::Sources::read(&c).unwrap()),
-        stompymux_rs::lua::RuntimeMode::Checking,
-    )
-    .unwrap();
+    let checking = s
+        .from_sources_for_inspection(
+            &c,
+            stompymux_rs::help::HelpIndex::load(&c).unwrap(),
+            std::sync::Arc::new(stompymux_rs::lua::sources::Sources::read(&c).unwrap()),
+            stompymux_rs::lua::RuntimeMode::Checking,
+        )
+        .unwrap();
     checking
-        .lua
+        .inspect_lua()
         .load(
             r#"
         assert(require('mux') == mux and debug == nil and _native == nil)
@@ -333,8 +304,8 @@ async fn checking_rejects_live_services_with_typed_errors() {
 async fn movement_callbacks_and_maintenance_effects_are_atomic() {
     let (_d, _c, s) = fixture().await;
     // Inject hooks from Rust without exposing the module registry to game scripts.
-    let parents: mlua::Table = s.lua.named_registry_value("mux.parents").unwrap();
-    s.lua
+    let parents: mlua::Table = s.inspect_lua().named_registry_value("mux.parents").unwrap();
+    s.inspect_lua()
         .globals()
         .set(
             "test_parent",
@@ -364,11 +335,10 @@ async fn movement_callbacks_and_maintenance_effects_are_atomic() {
     .unwrap();
     // A nested caught failure must discard its pending SQL cleanup as well.
     assert!(
-        s.world
-            .borrow()
+        s.world()
             .objects
             .values()
-            .all(|o| o.kind != stompymux_rs::world::Kind::Garbage)
+            .all(|o| o.kind != stompymux_rs::Kind::Garbage)
     );
 }
 
@@ -376,15 +346,15 @@ async fn movement_callbacks_and_maintenance_effects_are_atomic() {
 #[tokio::test(flavor = "current_thread")]
 async fn maintenance_evacuates_occupied_container_before_tombstoning_it() {
     let (_d, _c, s) = fixture().await;
-    let parents: mlua::Table = s.lua.named_registry_value("mux.parents").unwrap();
-    s.lua
+    let parents: mlua::Table = s.inspect_lua().named_registry_value("mux.parents").unwrap();
+    s.inspect_lua()
         .globals()
         .set(
             "thing_parent",
             parents.get::<mlua::Table>("default_thing.lua").unwrap(),
         )
         .unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set(
             "room_parent",
@@ -429,8 +399,7 @@ async fn maintenance_evacuates_occupied_container_before_tombstoning_it() {
     )
     .unwrap();
     assert!(
-        s.outbox
-            .borrow()
+        s.outbox()
             .iter()
             .any(|(_, document)| document.source() == "evacuating")
     );
@@ -440,8 +409,8 @@ async fn maintenance_evacuates_occupied_container_before_tombstoning_it() {
 #[tokio::test(flavor = "current_thread")]
 async fn maintenance_does_not_overwrite_callback_relocation() {
     let (_d, _c, s) = fixture().await;
-    let parents: mlua::Table = s.lua.named_registry_value("mux.parents").unwrap();
-    s.lua
+    let parents: mlua::Table = s.inspect_lua().named_registry_value("mux.parents").unwrap();
+    s.inspect_lua()
         .globals()
         .set(
             "thing_parent",
@@ -473,7 +442,7 @@ async fn maintenance_does_not_overwrite_callback_relocation() {
 async fn maintenance_replays_live_player_container_state_before_cleanup() {
     let (_d, c, s) = fixture().await;
     let player = {
-        let mut world = s.world.borrow_mut();
+        let mut world = s.world_mut();
         let id = world
             .create_with(
                 &c,
@@ -489,14 +458,17 @@ async fn maintenance_replays_live_player_container_state_before_cleanup() {
         id
     };
     s.sync_parents().unwrap();
-    s.lua.globals().set("doomed_player", player.0).unwrap();
-    let parents: mlua::Table = s.lua.named_registry_value("mux.parents").unwrap();
+    s.inspect_lua()
+        .globals()
+        .set("doomed_player", player.0)
+        .unwrap();
+    let parents: mlua::Table = s.inspect_lua().named_registry_value("mux.parents").unwrap();
     for (name, parent) in [
         ("player_parent", "default_player.lua"),
         ("thing_parent", "default_thing.lua"),
         ("room_parent", "default_room.lua"),
     ] {
-        s.lua
+        s.inspect_lua()
             .globals()
             .set(name, parents.get::<mlua::Table>(parent).unwrap())
             .unwrap();
@@ -537,7 +509,7 @@ async fn maintenance_replays_live_player_container_state_before_cleanup() {
     "#,
     )
     .unwrap();
-    let world = s.world.borrow();
+    let world = s.world();
     assert_eq!(world.objects[&player].kind, Kind::Garbage);
     assert!(!world.accounts.contains_key(&player));
 }
@@ -547,7 +519,7 @@ async fn maintenance_replays_live_player_container_state_before_cleanup() {
 async fn maintenance_manual_going_player_uses_nothing_cause() {
     let (_d, c, s) = fixture().await;
     let player = {
-        let mut world = s.world.borrow_mut();
+        let mut world = s.world_mut();
         let id = world
             .create_with(
                 &c,
@@ -564,9 +536,12 @@ async fn maintenance_manual_going_player_uses_nothing_cause() {
         id
     };
     s.sync_parents().unwrap();
-    s.lua.globals().set("manual_player", player.0).unwrap();
-    let parents: mlua::Table = s.lua.named_registry_value("mux.parents").unwrap();
-    s.lua
+    s.inspect_lua()
+        .globals()
+        .set("manual_player", player.0)
+        .unwrap();
+    let parents: mlua::Table = s.inspect_lua().named_registry_value("mux.parents").unwrap();
+    s.inspect_lua()
         .globals()
         .set(
             "player_parent",
@@ -585,15 +560,15 @@ async fn maintenance_manual_going_player_uses_nothing_cause() {
     "#,
     )
     .unwrap();
-    assert_eq!(s.world.borrow().objects[&player].kind, Kind::Garbage);
+    assert_eq!(s.world().objects[&player].kind, Kind::Garbage);
 }
 
 /// A failure in the complete evacuation path restores the live graph and staged effects.
 #[tokio::test(flavor = "current_thread")]
 async fn maintenance_evacuation_provider_failure_rolls_back_every_effect() {
     let (_d, _c, s) = fixture().await;
-    let parents: mlua::Table = s.lua.named_registry_value("mux.parents").unwrap();
-    s.lua
+    let parents: mlua::Table = s.inspect_lua().named_registry_value("mux.parents").unwrap();
+    s.inspect_lua()
         .globals()
         .set(
             "thing_parent",
@@ -612,17 +587,17 @@ async fn maintenance_evacuation_provider_failure_rolls_back_every_effect() {
     "#,
     )
     .unwrap();
-    let before = serde_json::to_value(&*s.world.borrow()).unwrap();
-    s.outbox.borrow_mut().clear();
+    let before = serde_json::to_value(&*s.world()).unwrap();
+    s.drain_outbox();
     assert!(
         s.eval_callback::<()>("mux.world.destroy_object(doomed);mux.check_db()")
             .unwrap_err()
             .to_string()
             .contains("evacuation failed")
     );
-    assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
-    assert!(s.outbox.borrow().is_empty());
-    assert!(s.flows.drain_logs().is_empty());
+    assert_eq!(before, serde_json::to_value(&*s.world()).unwrap());
+    assert!(s.outbox().is_empty());
+    assert!(s.drain_logs_for_inspection().is_empty());
 }
 
 /// Native movement must not replenish the budget on each nested callback.
@@ -637,8 +612,8 @@ async fn nested_movement_shares_instruction_budget() {
         .insert("instruction_limit".into(), toml::Value::Integer(20000));
     std::fs::write(path, toml::to_string(&doc).unwrap()).unwrap();
     let c = Config::load(&c.root).unwrap();
-    let s = Scripts::new(&c, s.world.clone()).unwrap();
-    let before = s.world.borrow().objects.len();
+    let s = s.rebuild_for_inspection(&c).unwrap();
+    let before = s.world().objects.len();
     let result = s.eval_callback::<()>(r#"
         local room=mux.world.create_object{type=mux.world.types.ROOM,name='Budget room'}
         local thing=mux.world.create_object{type=mux.world.types.THING,name='Budget cargo',location=0,home=0}
@@ -648,5 +623,5 @@ async fn nested_movement_shares_instruction_budget() {
         end
     "#);
     assert!(result.is_err());
-    assert_eq!(s.world.borrow().objects.len(), before);
+    assert_eq!(s.world().objects.len(), before);
 }

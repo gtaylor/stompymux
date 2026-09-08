@@ -1,5 +1,6 @@
 //! Bounded account hashing and administrative session lifecycle on the world owner.
 use super::*;
+use crate::Account;
 use crate::{
     account_admin::{BootTarget, Request},
     flags::Flag,
@@ -58,15 +59,17 @@ impl Server {
 
     /// Check global hashing capacity shared with registration and authentication.
     fn reserve_admin_hash(&mut self) -> bool {
-        if self.hashes.at.elapsed() >= HASH_RATE_WINDOW {
-            self.hashes.at = Instant::now();
-            self.hashes.tokens = self.config.security.login_hash_limit;
+        if self.authentication.hashes.at.elapsed() >= HASH_RATE_WINDOW {
+            self.authentication.hashes.at = Instant::now();
+            self.authentication.hashes.tokens = self.config.security.login_hash_limit;
         }
-        if self.hashes.tokens == 0 || self.inflight >= self.config.security.login_hash_concurrency {
+        if self.authentication.hashes.tokens == 0
+            || self.authentication.inflight >= self.config.security.login_hash_concurrency
+        {
             return false;
         }
-        self.hashes.tokens -= 1;
-        self.inflight += 1;
+        self.authentication.hashes.tokens -= 1;
+        self.authentication.inflight += 1;
         true
     }
 
@@ -82,7 +85,7 @@ impl Server {
         let (target, password) = match request {
             Request::Create { name, password } => (Target::Create(name), password),
             Request::Reset { target, password } => {
-                if self.pending_resets.contains(&target) {
+                if self.authentication.pending_resets.contains(&target) {
                     self.tell(
                         id,
                         "A password reset is already pending for that player.\r\n",
@@ -104,7 +107,7 @@ impl Server {
             return Ok(());
         }
         if let Target::Reset(p, _) = target {
-            self.pending_resets.insert(p);
+            self.authentication.pending_resets.insert(p);
         }
         let job = Job {
             password_length: password.len(),
@@ -125,9 +128,9 @@ impl Server {
     }
 
     pub(super) async fn admin_hashed(&mut self, job: Job, result: Result<String>) {
-        self.inflight = self.inflight.saturating_sub(1);
+        self.authentication.inflight = self.authentication.inflight.saturating_sub(1);
         if let Target::Reset(p, _) = job.target {
-            self.pending_resets.remove(&p);
+            self.authentication.pending_resets.remove(&p);
         }
         if self.shutdown.is_some()
             || !self
@@ -193,8 +196,7 @@ impl Server {
             Err(e) => {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
-                self.scripts.outbox.borrow_mut().clear();
-                self.scripts.flows.rollback();
+                self.scripts.effects.rollback();
                 self.tell(job.session, &format!("{e}\r\n"));
                 return;
             }
@@ -373,14 +375,8 @@ mod tests {
             scripts,
             sessions: BTreeMap::new(),
             events,
-            addresses: BTreeMap::new(),
-            hashes: Bucket {
-                tokens: 100,
-                at: Instant::now(),
-            },
-            inflight: 0,
-            pending_resets: Default::default(),
-            started_at: accounts::now(),
+            authentication: authentication::State::with_hash_capacity(100, Instant::now(), 0),
+            started_at: crate::clock::wall_time(),
             listen_port: 0,
             shutdown: None,
             shutdown_failed: false,
@@ -493,8 +489,8 @@ mod tests {
         )
         .await
         .unwrap();
-        assert!(s.pending_resets.contains(&ObjectId(2)));
-        let inflight = s.inflight;
+        assert!(s.authentication.pending_resets.contains(&ObjectId(2)));
+        let inflight = s.authentication.inflight;
         s.account_admin(
             SessionId(1),
             ObjectId(1),
@@ -505,7 +501,7 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(s.inflight, inflight);
+        assert_eq!(s.authentication.inflight, inflight);
         let Event::AdminHashed(j, r) = events.recv().await.unwrap() else {
             panic!("expected hash completion")
         };
@@ -513,7 +509,7 @@ mod tests {
         let before = s.scripts.world.borrow().accounts[&ObjectId(2)].hash.clone();
         s.admin_hashed(j, r).await;
         assert_eq!(s.scripts.world.borrow().accounts[&ObjectId(2)].hash, before);
-        assert!(s.pending_resets.is_empty());
+        assert!(s.authentication.pending_resets.is_empty());
         s.shutdown = None;
         let j = Job {
             password_length: 5,
@@ -657,7 +653,7 @@ mod tests {
         );
         let mut pending = job(&server, Target::Create("PolicyRace".into()));
         pending.password_length = 40;
-        server.inflight = 1;
+        server.authentication.inflight = 1;
         assert_eq!(
             server.configure(ObjectId(1), edit("player_password_length_limit", "30")),
             "Set."
@@ -671,7 +667,7 @@ mod tests {
                 .find_player("PolicyRace")
                 .is_none()
         );
-        assert_eq!(server.inflight, 0);
+        assert_eq!(server.authentication.inflight, 0);
         assert_eq!(before, std::fs::read(server.config.database()).unwrap());
         // Keep output receivers alive for all session assertions.
         assert!(!output.is_empty());

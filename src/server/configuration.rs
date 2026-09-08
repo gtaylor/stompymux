@@ -20,12 +20,13 @@ impl Server {
             for session in self.sessions.values_mut() {
                 session.quota = session.quota.min(candidate.config.mux.command_quota_max);
             }
-            for bucket in self.addresses.values_mut() {
+            for bucket in self.authentication.addresses.values_mut() {
                 bucket.tokens = bucket
                     .tokens
                     .min(candidate.config.security.login_attempt_burst);
             }
-            self.hashes.tokens = self
+            self.authentication.hashes.tokens = self
+                .authentication
                 .hashes
                 .tokens
                 .min(candidate.config.security.login_hash_limit);

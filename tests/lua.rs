@@ -1,19 +1,9 @@
 //! Built-in package initialization and sandbox ordering across editable game modules.
 use std::{cell::RefCell, path::Path, rc::Rc};
-use stompymux_rs::{config::Config, lua::Scripts, persistence};
+use stompymux_rs::{Config, Scripts, persistence};
 
-/// Copy game fixtures so module-loading probes never modify operator content.
-fn copy(source: &Path, target: &Path) {
-    std::fs::create_dir_all(target).unwrap();
-    for entry in std::fs::read_dir(source).unwrap() {
-        let entry = entry.unwrap();
-        if entry.path().is_dir() {
-            copy(&entry.path(), &target.join(entry.file_name()));
-        } else {
-            std::fs::copy(entry.path(), target.join(entry.file_name())).unwrap();
-        }
-    }
-}
+mod support;
+use support::copy;
 
 /// Every built-in and sandbox restriction must exist before the earliest game module runs.
 #[tokio::test(flavor = "current_thread")]
@@ -80,12 +70,12 @@ async fn builtins_and_sandbox_precede_lexical_game_loading() {
     }
     let world = persistence::load(&config.database()).await.unwrap();
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    let order: Vec<String> = scripts.lua.globals().get("_probe_order").unwrap();
+    let order: Vec<String> = scripts.inspect_lua().globals().get("_probe_order").unwrap();
     assert_eq!(
         order,
         ["object-first", "object-last", "global-first", "global-last"]
     );
-    let package: mlua::Table = scripts.lua.globals().get("package").unwrap();
+    let package: mlua::Table = scripts.inspect_lua().globals().get("package").unwrap();
     assert_eq!(package.get::<String>("path").unwrap(), "");
     assert_eq!(package.get::<mlua::Table>("loaders").unwrap().raw_len(), 1);
 }

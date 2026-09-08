@@ -1,52 +1,32 @@
 //! C-compatible state syntax, immutable Lua handles, atomic quotas and relational round trips.
 use sqlx::{Connection, Row};
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::path::Path;
 use stompymux_rs::{
+    Config, Kind, ObjectId, Scripts,
     commands::{self, Action},
-    config::Config,
-    lua::Scripts,
     persistence,
     state::{self, Value},
-    world::{Kind, ObjectId},
 };
 
-/// Copy the game before modifying either modules or relational fixtures.
-fn copy(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for e in std::fs::read_dir(from).unwrap() {
-        let e = e.unwrap();
-        let target = to.join(e.file_name());
-        if e.path().is_dir() {
-            copy(&e.path(), &target)
-        } else {
-            std::fs::copy(e.path(), target).unwrap();
-        }
-    }
-}
+mod support;
+use support::isolated_scripts;
 /// Shared isolated populated fixture with the copied, unchanged access-policy modules.
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
-    let d = tempfile::tempdir().unwrap();
-    copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
-        d.path(),
-    );
-    let c = Config::load(d.path()).unwrap();
-    let w = persistence::load(&c.database()).await.unwrap();
-    let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
-    s.lua
+    let (d, c, s) = isolated_scripts().await;
+    s.inspect_lua()
         .globals()
         .set(
             "_parents",
-            s.lua
+            s.inspect_lua()
                 .named_registry_value::<mlua::Table>("mux.parents")
                 .unwrap(),
         )
         .unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set(
             "_object_parents",
-            s.lua
+            s.inspect_lua()
                 .named_registry_value::<mlua::Table>("mux.object_parents")
                 .unwrap(),
         )
@@ -56,12 +36,14 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
 /// Collect both private inspection replies and transaction-staged mutation acknowledgements.
 fn command(s: &Scripts, c: &Config, p: i64, line: &str) -> String {
     let action = commands::run(s, c, ObjectId(p), 1, line).unwrap();
-    let mut text = if let Action::Reply(t) | Action::Report(t) = action {
+    let mut text = if let Action::Report(commands::Report::Reply(t))
+    | Action::Report(commands::Report::Inspection(t)) = action
+    {
         t
     } else {
         String::new()
     };
-    for (_, out) in s.outbox.borrow_mut().drain(..) {
+    for (_, out) in s.drain_outbox().into_iter() {
         text.push_str(out.source());
     }
     text
@@ -127,23 +109,18 @@ async fn commands_cover_inspection_types_copy_move_wipe_permissions_and_aliases(
     assert!(command(&s, &c, 1, "@state/wipe #2/other").contains("2 state values wiped."));
     assert!(command(&s, &c, 1, "@state/set #2/test k=true").contains("set"));
     assert!(command(&s, &c, 1, "@state/set #2/test k=").contains("cleared"));
-    assert!(
-        !s.world.borrow().objects[&ObjectId(2)]
-            .state
-            .contains_key("test")
-    );
+    assert!(!s.world().objects[&ObjectId(2)].state.contains_key("test"));
     assert!(command(&s, &c, 1, "@state/copy #2/test missing=other new").contains("not found"));
     assert!(command(&s, &c, 1, "@state/set #2/test 0bad=true").contains("invalid state key"));
     assert!(command(&s, &c, 1, "@state/wrong").contains("Invalid @state"));
     // Wizards can modify GOD's state, unlike flag control.
     assert!(command(&s, &c, 2, "@state/set #1/test k=1").contains("State value set"));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
-        .remove(stompymux_rs::flags::Flag::Wizard);
+        .remove(stompymux_rs::Flag::Wizard);
     assert_eq!(
         command(&s, &c, 2, "@state/set #1/test k=2"),
         "Permission denied."
@@ -153,7 +130,7 @@ async fn commands_cover_inspection_types_copy_move_wipe_permissions_and_aliases(
 #[tokio::test(flavor = "current_thread")]
 async fn lua_complete_api_binary_defaults_atomic_batches_and_incarnations() {
     let (_d, c, s) = fixture().await;
-    s.lua.load("handle=mux.world.object(1):state('test'); assert(handle:get('absent')==nil); assert(not pcall(function() handle:set('a',1) end)); assert(not pcall(function() handle:keys() end))").exec().unwrap();
+    s.inspect_lua().load("handle=mux.world.object(1):state('test'); assert(handle:get('absent')==nil); assert(not pcall(function() handle:set('a',1) end)); assert(not pcall(function() handle:keys() end))").exec().unwrap();
     s.eval_callback::<()>(r#"
       local t=handle
       assert(tostring(t)=='state(#1, test)')
@@ -171,7 +148,7 @@ async fn lua_complete_api_binary_defaults_atomic_batches_and_incarnations() {
       t:set('a',nil);assert(not t:has('a'))
       assert(not pcall(function() t:get('1invalid') end))
     "#).unwrap();
-    let before = s.world.borrow().clone();
+    let before = s.world().clone();
     assert!(
         s.eval_callback::<()>(
             "handle:set('rolled_back',true); mux.world.pemit(1,'must disappear'); error('stop')"
@@ -180,27 +157,21 @@ async fn lua_complete_api_binary_defaults_atomic_batches_and_incarnations() {
     );
     assert_eq!(
         before.objects[&ObjectId(1)].state,
-        s.world.borrow().objects[&ObjectId(1)].state
+        s.world().objects[&ObjectId(1)].state
     );
-    assert!(s.outbox.borrow().is_empty());
-    let id = s.world.borrow().next_id;
+    assert!(s.outbox().is_empty());
+    let id = s.world().next_id;
     assert!(s.eval_callback::<()>("local o=mux.world.create_object{type=mux.world.types.THING,name='provisional'}; stale=o:state('test'); error('rollback')").is_err());
     assert_eq!(
-        s.world
-            .borrow_mut()
+        s.world_mut()
             .create(&c, "replacement".into(), Kind::Thing)
             .0,
         id
     );
     assert!(s.eval_callback::<()>("stale:get('a')").is_err());
-    s.world
-        .borrow_mut()
-        .objects
-        .get_mut(&ObjectId(1))
-        .unwrap()
-        .kind = Kind::Garbage;
+    s.world_mut().objects.get_mut(&ObjectId(1)).unwrap().kind = Kind::Garbage;
     assert!(
-        s.lua
+        s.inspect_lua()
             .load("return tostring(handle)")
             .eval::<String>()
             .is_err()
@@ -221,7 +192,7 @@ async fn final_batch_quota_is_atomic_even_when_lua_catches_the_error() {
     }
     std::fs::write(path, toml::to_string(&doc).unwrap()).unwrap();
     let c = Config::load(&c.root).unwrap();
-    let s = Scripts::new(&c, s.world.clone()).unwrap();
+    let s = s.rebuild_for_inspection(&c).unwrap();
     s.eval_callback::<()>(
         r#"
        local s=mux.world.object(1):state('n')
@@ -248,9 +219,9 @@ async fn binary_storage_preserves_types_unchanged_storage_classes_and_unknown_co
     .await
     .unwrap();
     sqlx::raw_sql("ALTER TABLE object_state ADD COLUMN extension BLOB DEFAULT X'FF'; INSERT INTO object_state(object_dbref,namespace,key,value_type,value) VALUES(1,'test','text',1,'original'),(1,'test','rawtext',1,CAST(X'00FF' AS TEXT)),(1,'test','blob',1,X'00FF'),(1,'test','large',3,9223372036854775807),(1,'test','float',4,7.0)").execute(&mut db).await.unwrap();
-    *s.world.borrow_mut() = persistence::load(&c.database()).await.unwrap();
+    *s.world_mut() = persistence::load(&c.database()).await.unwrap();
     s.eval_callback::<()>("local s=mux.world.object(1):state('test');assert(s:get('blob')==string.char(0,255));s:set('added',string.char(255,0,128))").unwrap();
-    let world = s.world.borrow().clone();
+    let world = s.world().clone();
     persistence::save(&c.database(), &world).await.unwrap();
     let rows=sqlx::query("SELECT key,typeof(value) AS storage,hex(extension) AS extension FROM object_state WHERE namespace='test' ORDER BY key").fetch_all(&mut db).await.unwrap();
     assert_eq!(
@@ -278,7 +249,7 @@ async fn binary_storage_preserves_types_unchanged_storage_classes_and_unknown_co
     );
     sqlx::raw_sql("CREATE TRIGGER fail_state BEFORE UPDATE ON object_state BEGIN SELECT RAISE(ABORT,'state write blocked'); END").execute(&mut db).await.unwrap();
     command(&s, &c, 1, "@state/set #1/test text=changed");
-    let changed = s.world.borrow().clone();
+    let changed = s.world().clone();
     assert!(persistence::save(&c.database(), &changed).await.is_err());
     assert_eq!(
         persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)].state,
@@ -316,8 +287,7 @@ async fn unchanged_default_exit_policy_handles_all_predicates_and_fails_closed()
     assert!(s.lock(ObjectId(2), ObjectId(13)).unwrap());
     command(&s, &c, 1, "@state/set #13/locks.traverse affiliation=1");
     assert!(!s.lock(ObjectId(2), ObjectId(13)).unwrap());
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -359,7 +329,7 @@ async fn unchanged_default_exit_policy_handles_all_predicates_and_fails_closed()
 #[tokio::test(flavor = "current_thread")]
 async fn malformed_lock_returns_rollback_and_denial_hooks_receive_context() {
     let (_d, _c, s) = fixture().await;
-    s.lua
+    s.inspect_lua()
         .load(
             r#"
         local parent=_parents['default_exit.lua']
@@ -373,13 +343,9 @@ async fn malformed_lock_returns_rollback_and_denial_hooks_receive_context() {
         .exec()
         .unwrap();
     assert!(s.lock(ObjectId(2), ObjectId(13)).is_err());
-    assert!(
-        !s.world.borrow().objects[&ObjectId(13)]
-            .state
-            .contains_key("test")
-    );
-    assert!(s.outbox.borrow().is_empty());
-    s.lua
+    assert!(!s.world().objects[&ObjectId(13)].state.contains_key("test"));
+    assert!(s.outbox().is_empty());
+    s.inspect_lua()
         .load(
             r#"
         local parent=_parents['default_exit.lua']
@@ -397,37 +363,34 @@ async fn malformed_lock_returns_rollback_and_denial_hooks_receive_context() {
         .unwrap();
     assert!(!s.traversal(ObjectId(2), ObjectId(13), 7).unwrap());
     assert_eq!(
-        s.world.borrow().objects[&ObjectId(13)].state["test"]["failed"],
+        s.world().objects[&ObjectId(13)].state["test"]["failed"],
         Value::Boolean(true)
     );
     assert!(
-        s.outbox
-            .borrow()
+        s.outbox()
             .iter()
             .any(|(_, v)| v.source() == "Denied specifically.")
     );
-    s.outbox.borrow_mut().clear();
-    s.lua.load("_parents['default_exit.lua'].locks.traverse=function() return {passes=false,enactor_message='',other_message=''} end").exec().unwrap();
+    s.drain_outbox();
+    s.inspect_lua().load("_parents['default_exit.lua'].locks.traverse=function() return {passes=false,enactor_message='',other_message=''} end").exec().unwrap();
     assert!(!s.traversal(ObjectId(2), ObjectId(13), 7).unwrap());
-    assert!(s.outbox.borrow().is_empty());
-    s.world
-        .borrow_mut()
+    assert!(s.outbox().is_empty());
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
-        .insert(stompymux_rs::flags::Flag::Dark);
+        .insert(stompymux_rs::Flag::Dark);
     assert!(!s.traversal(ObjectId(2), ObjectId(13), 7).unwrap());
-    assert!(s.outbox.borrow().is_empty());
+    assert!(s.outbox().is_empty());
     // A failed failure-hook rolls back its own state mutations too.
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
-        .remove(stompymux_rs::flags::Flag::Dark);
-    s.lua.load("_parents['default_exit.lua'].events.on_fail=function(ctx) mux.world.object(13):state('test'):set('leak',true); error('failed hook') end").exec().unwrap();
+        .remove(stompymux_rs::Flag::Dark);
+    s.inspect_lua().load("_parents['default_exit.lua'].events.on_fail=function(ctx) mux.world.object(13):state('test'):set('leak',true); error('failed hook') end").exec().unwrap();
     assert!(s.traversal(ObjectId(2), ObjectId(13), 7).is_err());
-    assert!(!s.world.borrow().objects[&ObjectId(13)].state["test"].contains_key("leak"));
+    assert!(!s.world().objects[&ObjectId(13)].state["test"].contains_key("leak"));
 }

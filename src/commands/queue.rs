@@ -1,7 +1,7 @@
 //! Bounded, runtime-only command lists with monotonic deadlines and fair executor rotation.
 use super::{Action, CommandContext, CommandInput, ExecutionContext, InputOrigin};
 use crate::{
-    flags::{self, Flag},
+    flags::Flag,
     state::Generation,
     world::{Kind, ObjectId, World},
 };
@@ -37,7 +37,7 @@ pub enum Request {
 fn request(work: impl FnOnce() -> Result<Request>) -> Result<Action> {
     Ok(match work() {
         Ok(r) => Action::Queue(r),
-        Err(e) => Action::Reply(e.to_string()),
+        Err(e) => Action::Report(crate::commands::Report::Reply(e.to_string())),
     })
 }
 
@@ -51,7 +51,7 @@ pub fn force(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
         let w = ctx.scripts.world.borrow();
         let executor = super::target::builder_target(&w, ctx.player, target)?;
         ensure!(
-            flags::controls(&w, ctx.player, executor),
+            crate::authority::controls(&w, ctx.player, executor),
             "Permission denied."
         );
         Ok(Request::Add {

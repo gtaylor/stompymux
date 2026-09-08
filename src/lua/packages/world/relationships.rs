@@ -1,7 +1,8 @@
 //! Validated direct object relationships; trusted setters do not run locks or movement hooks.
 use crate::{
     flags::Flag,
-    lua::{SharedWorld, err, sources::Sources},
+    lua::{err, sources::Sources},
+    runtime::SharedWorld,
     world::{Kind, ObjectId, World},
 };
 use mlua::{Lua, MultiValue, Table, Value};

@@ -1,34 +1,16 @@
 //! Live-runtime characterizations of unresolved lock/message parity findings.
 use std::{cell::RefCell, path::Path, rc::Rc};
 use stompymux_rs::{
+    Config, Flag, Kind, ObjectId, Scripts,
     commands::{self, Action},
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
-    persistence,
-    world::{Kind, ObjectId},
 };
 
-fn copy(source: &Path, target: &Path) {
-    std::fs::create_dir_all(target).unwrap();
-    for entry in std::fs::read_dir(source).unwrap() {
-        let entry = entry.unwrap();
-        let path = target.join(entry.file_name());
-        if entry.path().is_dir() {
-            copy(&entry.path(), &path);
-        } else {
-            std::fs::copy(entry.path(), path).unwrap();
-        }
-    }
-}
+mod support;
+use support::isolated_world;
 
 /// A populated, isolated world with both accounts connected and no production writes.
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
-    let d = tempfile::tempdir().unwrap();
-    copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
-        d.path(),
-    );
+    let (d, c, mut w) = isolated_world().await;
     std::fs::write(
         d.path().join("lua/object_logic/lock_message.lua"),
         r#"return {
@@ -50,8 +32,6 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
         end}}"#,
     )
     .unwrap();
-    let c = Config::load(d.path()).unwrap();
-    let mut w = persistence::load(&c.database()).await.unwrap();
     for id in [ObjectId(1), ObjectId(2)] {
         w.objects
             .get_mut(&id)
@@ -70,12 +50,14 @@ fn run(s: &Scripts, c: &Config, command: &str) -> Vec<(ObjectId, String)> {
 fn run_as(s: &Scripts, c: &Config, who: ObjectId, command: &str) -> Vec<(ObjectId, String)> {
     let action = commands::run(s, c, who, 1, command).unwrap();
     let mut output = s
-        .outbox
-        .borrow_mut()
-        .drain(..)
+        .drain_outbox()
+        .into_iter()
         .map(|(id, doc)| (id, doc.source().to_owned()))
         .collect::<Vec<_>>();
-    if let Action::Reply(text) | Action::CommitReply(text) | Action::Report(text) = action {
+    if let Action::Report(commands::Report::Reply(text))
+    | Action::CommitReply(text)
+    | Action::Report(commands::Report::Inspection(text)) = action
+    {
         output.push((who, text));
     }
     output
@@ -98,50 +80,46 @@ async fn channel_thing_routes_only_through_audible_exits() {
     s.communication(&c)
         .add(ObjectId(16), "Probe", "box", true, true)
         .unwrap();
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .location = Some(ObjectId(16));
     {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         let id = w.create(&c, "ear".into(), Kind::Exit);
         let exit = w.objects.get_mut(&id).unwrap();
         exit.location = Some(ObjectId(16));
         exit.destination = Some(ObjectId(4));
         exit.flags.insert(Flag::Audible);
     }
-    s.outbox.borrow_mut().clear();
+    s.drain_outbox();
     s.communication(&c)
         .emit("Probe", "CHANNEL LEAK", false)
         .unwrap();
     let output = s
-        .outbox
-        .borrow()
+        .outbox()
         .iter()
         .map(|(id, d)| (*id, d.source().to_owned()))
         .collect::<Vec<_>>();
     assert!(text(&output, 2).is_empty());
     assert!(
-        !s.world.borrow().channels["Probe"]
+        !s.world().channels["Probe"]
             .users
             .iter()
             .any(|u| u.who == ObjectId(2))
     );
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .location = Some(ObjectId(4));
-    s.outbox.borrow_mut().clear();
+    s.drain_outbox();
     s.communication(&c)
         .emit("Probe", "AUDIBLE ROUTE", false)
         .unwrap();
     let output = s
-        .outbox
-        .borrow()
+        .outbox()
         .iter()
         .map(|(id, d)| (*id, d.source().to_owned()))
         .collect::<Vec<_>>();
@@ -149,19 +127,17 @@ async fn channel_thing_routes_only_through_audible_exits() {
     s.communication(&c)
         .add(ObjectId(2), "Probe", "p", true, true)
         .unwrap();
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .location = Some(ObjectId(16));
-    s.outbox.borrow_mut().clear();
+    s.drain_outbox();
     s.communication(&c)
         .emit("Probe", "ONE COPY", false)
         .unwrap();
     assert_eq!(
-        s.outbox
-            .borrow()
+        s.outbox()
             .iter()
             .filter(|(id, d)| *id == ObjectId(2) && d.source().contains("ONE COPY"))
             .count(),
@@ -184,7 +160,7 @@ async fn channel_leave_callbacks_work_in_live_runtime() {
         .add(ObjectId(2), "Probe", "p", true, true)
         .unwrap();
     let ordered = {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         (0..2)
             .map(|i| {
                 let id = w.create(&c, format!("Ordered{i}"), Kind::Thing);
@@ -199,13 +175,8 @@ async fn channel_leave_callbacks_work_in_live_runtime() {
             .unwrap();
     }
     let assert_callback = |s: &Scripts| {
-        assert!(
-            s.world.borrow().objects[&ObjectId(16)]
-                .state
-                .contains_key("audit")
-        );
-        s.world
-            .borrow_mut()
+        assert!(s.world().objects[&ObjectId(16)].state.contains_key("audit"));
+        s.world_mut()
             .objects
             .get_mut(&ObjectId(16))
             .unwrap()
@@ -215,8 +186,8 @@ async fn channel_leave_callbacks_work_in_live_runtime() {
     assert!(text(&run_as(&s, &c, ObjectId(2), "p off"), 2).contains("left channel Probe"));
     assert_callback(&s);
     assert_eq!(
-        s.world.borrow().objects[&ObjectId(1)].state["leave_order"]["ids"],
-        stompymux_rs::state::Value::String(
+        s.world().objects[&ObjectId(1)].state["leave_order"]["ids"],
+        stompymux_rs::StateValue::String(
             format!(",{},{}", ordered[1].0, ordered[0].0).into_bytes()
         )
     );
@@ -233,13 +204,12 @@ async fn channel_leave_callbacks_work_in_live_runtime() {
     );
     assert_callback(&s);
     assert!(
-        !s.world.borrow().channels["Probe"]
+        !s.world().channels["Probe"]
             .users
             .iter()
             .any(|u| u.who == ObjectId(2))
     );
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(16))
         .unwrap()
@@ -250,7 +220,7 @@ async fn channel_leave_callbacks_work_in_live_runtime() {
         .add(ObjectId(16), "IndexZero", "z", true, true)
         .unwrap();
     let newcomer = {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         let id = w.create(&c, "Newcomer".into(), Kind::Player);
         w.objects
             .get_mut(&id)
@@ -263,11 +233,7 @@ async fn channel_leave_callbacks_work_in_live_runtime() {
         .add(newcomer, "IndexZero", "n", true, true)
         .unwrap();
     s.communication(&c).leave(newcomer, "IndexZero").unwrap();
-    assert!(
-        !s.world.borrow().objects[&ObjectId(16)]
-            .state
-            .contains_key("audit")
-    );
+    assert!(!s.world().objects[&ObjectId(16)].state.contains_key("audit"));
     c.logger.shutdown(&c).await.unwrap();
 }
 
@@ -278,7 +244,7 @@ async fn direct_lock_messages_and_pages_use_audible_exits() {
     run(&s, &c, "@create LockBox");
     run(&s, &c, "@lua/parent #16=lock_message.lua");
     {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(4));
         let id = w.create(&c, "ear".into(), Kind::Exit);
         let exit = w.objects.get_mut(&id).unwrap();

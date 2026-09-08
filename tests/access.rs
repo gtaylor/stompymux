@@ -1,26 +1,14 @@
 //! Effective access policy, reload compilation, source diagnostics and C catalog compatibility.
 use std::{cell::RefCell, path::Path, rc::Rc};
 use stompymux_rs::{
+    Config, Flag, Kind, ObjectId, Scripts,
     access::Permissions as P,
     commands::{self, Action, CommandRegistry},
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
     persistence, server,
-    world::{Kind, ObjectId},
 };
 
-fn copy(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for entry in std::fs::read_dir(from).unwrap() {
-        let entry = entry.unwrap();
-        if entry.path().is_dir() {
-            copy(&entry.path(), &to.join(entry.file_name()));
-        } else {
-            std::fs::copy(entry.path(), to.join(entry.file_name())).unwrap();
-        }
-    }
-}
+mod support;
+use support::copy;
 /// Add an ordered, isolated overlay to the existing game configuration.
 fn game(policy: &str) -> tempfile::TempDir {
     let d = tempfile::tempdir().unwrap();
@@ -48,16 +36,15 @@ async fn scripts(c: &Config) -> Scripts {
 fn run(s: &Scripts, c: &Config, who: i64, line: &str) -> String {
     let action = commands::run(s, c, ObjectId(who), 1, line).unwrap();
     let mut output = s
-        .outbox
-        .borrow_mut()
-        .drain(..)
+        .drain_outbox()
+        .into_iter()
         .map(|(_, d)| d.source().to_string())
         .collect::<Vec<_>>()
         .join("\n");
     match action {
-        Action::Reply(t)
-        | Action::LiteralReport(t)
-        | Action::Report(t)
+        Action::Report(commands::Report::Reply(t))
+        | Action::Report(commands::Report::Literal(t))
+        | Action::Report(commands::Report::Inspection(t))
         | Action::CommitReply(t) => output.push_str(&t),
         _ => {}
     }
@@ -98,8 +85,7 @@ permissions="!wizard"
     );
     assert!(run(&s, &c, 1, "@find").contains("Permission denied"));
     assert!(!run(&s, &c, 2, "look").contains("Permission denied"));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -109,14 +95,16 @@ permissions="!wizard"
     assert!(run(&s, &c, 2, "@list si").contains("Permission denied"));
     assert!(run(&s, &c, 1, "@list si").contains("Site Access"));
     let before = s
-        .commands
+        .commands()
         .definitions()
         .map(|d| d.permission.name())
         .collect::<Vec<_>>();
-    s.commands.configure_access(&c).unwrap();
+    s.commands_mut_for_inspection()
+        .configure_access(&c)
+        .unwrap();
     assert_eq!(
         before,
-        s.commands
+        s.commands()
             .definitions()
             .map(|d| d.permission.name())
             .collect::<Vec<_>>()
@@ -139,18 +127,16 @@ probe="no_suspect need_player queue_enabled"
     }
     let c = Config::load(d.path()).unwrap();
     let s = scripts(&c).await;
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .lua_parent = "access.lua".into();
     assert_eq!(run(&s, &c, 2, "probe"), "local\nlocal");
-    s.queue_enabled.set(false);
+    s.set_queue_enabled(false);
     assert!(run(&s, &c, 2, "probe").contains("Huh?"));
-    s.queue_enabled.set(true);
-    s.world
-        .borrow_mut()
+    s.set_queue_enabled(true);
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -158,8 +144,7 @@ probe="no_suspect need_player queue_enabled"
         .insert(Flag::Suspect);
     assert!(run(&s, &c, 2, "probe").contains("Huh?"));
     assert!(run(&s, &c, 2, "@flag #1=dark").contains("Permission denied"));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -167,24 +152,19 @@ probe="no_suspect need_player queue_enabled"
         .insert(Flag::Wizard);
     assert_eq!(run(&s, &c, 2, "probe"), "local\nlocal");
     assert!(
-        s.commands
+        s.commands()
             .definitions()
             .filter(|d| d.name == "probe")
             .all(|d| d.permission.contains(P::NO_SUSPECT))
     );
     assert_eq!(
-        s.commands
+        s.commands()
             .definitions()
             .filter(|d| d.name == "probe")
             .count(),
         2
     );
-    s.world
-        .borrow_mut()
-        .objects
-        .get_mut(&ObjectId(2))
-        .unwrap()
-        .kind = Kind::Thing;
+    s.world_mut().objects.get_mut(&ObjectId(2)).unwrap().kind = Kind::Thing;
     assert!(run(&s, &c, 2, "probe").contains("Huh?"));
 }
 
@@ -291,7 +271,7 @@ look="!dark"
     let c = Config::load(d.path()).unwrap();
     let s = scripts(&c).await;
     assert!(
-        s.commands
+        s.commands()
             .definitions()
             .find(|d| d.name == "look")
             .unwrap()
@@ -310,6 +290,10 @@ look="!dark"
     .unwrap();
     let c = Config::load(d.path()).unwrap();
     let s = scripts(&c).await;
-    let entry = s.commands.definitions().find(|d| d.name == "look").unwrap();
+    let entry = s
+        .commands()
+        .definitions()
+        .find(|d| d.name == "look")
+        .unwrap();
     assert!(entry.listed && entry.permission.contains(P::WIZARD));
 }

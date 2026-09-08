@@ -1,6 +1,6 @@
 //! File-cache publication, bounded reads and last-good reload behavior on temporary content.
 use stompymux_rs::{
-    config::Config,
+    Config,
     message_cache::{File, MessageCache},
 };
 #[test]

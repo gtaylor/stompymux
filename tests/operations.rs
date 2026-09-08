@@ -6,31 +6,13 @@ use std::{
     time::Duration,
 };
 use stompymux_rs::{
-    accounts,
+    Config, Flag, ObjectId, Scripts, ShutdownRequest, accounts,
     commands::{self, Action, ExecutionContext, InputOrigin},
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
     operations, persistence,
-    server::{self, ShutdownRequest},
-    world::ObjectId,
 };
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::{TcpListener, TcpStream},
-    sync::oneshot,
-};
-fn copy(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for e in std::fs::read_dir(from).unwrap() {
-        let e = e.unwrap();
-        if e.path().is_dir() {
-            copy(&e.path(), &to.join(e.file_name()));
-        } else {
-            std::fs::copy(e.path(), to.join(e.file_name())).unwrap();
-        }
-    }
-}
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+mod support;
+use support::{Client, copy, start};
 async fn fixture() -> (tempfile::TempDir, Config) {
     let d = tempfile::tempdir().unwrap();
     copy(
@@ -59,95 +41,6 @@ async fn fixture() -> (tempfile::TempDir, Config) {
     credentials(&c).await;
     (d, c)
 }
-struct Client {
-    socket: TcpStream,
-    pending: Vec<u8>,
-}
-
-impl Client {
-    async fn connect(address: std::net::SocketAddr, player: i64) -> Self {
-        let mut client = Self {
-            socket: TcpStream::connect(address).await.unwrap(),
-            pending: Vec::new(),
-        };
-        client.until("Who are you? ").await;
-        client.send(&format!("#{player}")).await;
-        client.until("Password: ").await;
-        client.send("secret").await;
-        client.until("Staff Nexus").await;
-        client
-    }
-
-    async fn send(&mut self, text: &str) {
-        self.socket
-            .write_all(format!("{text}\r\n").as_bytes())
-            .await
-            .unwrap();
-    }
-
-    async fn until(&mut self, needle: &str) -> String {
-        tokio::time::timeout(Duration::from_secs(10), async {
-            loop {
-                if let Some(index) = self
-                    .pending
-                    .windows(needle.len())
-                    .position(|b| b == needle.as_bytes())
-                {
-                    let bytes = self
-                        .pending
-                        .drain(..index + needle.len())
-                        .collect::<Vec<_>>();
-                    return String::from_utf8_lossy(&bytes).into_owned();
-                }
-                let mut bytes = [0; 8192];
-                let count = self.socket.read(&mut bytes).await.unwrap();
-                assert!(
-                    count > 0,
-                    "closed waiting for {needle}: {:?}",
-                    String::from_utf8_lossy(&self.pending)
-                );
-                self.pending.extend_from_slice(&bytes[..count]);
-            }
-        })
-        .await
-        .unwrap_or_else(|_| {
-            panic!(
-                "timeout waiting for {needle}: {:?}",
-                String::from_utf8_lossy(&self.pending)
-            )
-        })
-    }
-}
-
-/// Keep the injected clock out of protocol/configuration; only the embedded test owner controls it.
-async fn start(
-    c: &Config,
-    clock: Rc<Cell<i64>>,
-) -> (
-    std::net::SocketAddr,
-    oneshot::Sender<ShutdownRequest>,
-    tokio::task::JoinHandle<anyhow::Result<()>>,
-    mlua::Lua,
-) {
-    let scripts = server::prepare(c).await.unwrap();
-    let vm = scripts.lua.clone();
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let address = listener.local_addr().unwrap();
-    let (tx, rx) = oneshot::channel();
-    let config = c.clone();
-    let task = tokio::task::spawn_local(async move {
-        server::run_with_schedule_clock(
-            config,
-            scripts,
-            listener,
-            async { rx.await.unwrap_or(ShutdownRequest::Sigterm) },
-            move || clock.get(),
-        )
-        .await
-    });
-    (address, tx, task, vm)
-}
-
 /// Seed known credentials and a non-Wizard exclusively in the temporary database.
 async fn credentials(c: &Config) {
     let mut world = persistence::load(&c.database()).await.unwrap();
@@ -180,21 +73,21 @@ async fn permissions_aliases_switches_and_background() {
         ("version/no", "Unsupported command switch."),
     ] {
         assert!(
-            matches!(commands::run(&s,&c,ObjectId(2),1,line).unwrap(),Action::Reply(ref x) if x==expected)
+            matches!(commands::run(&s,&c,ObjectId(2),1,line).unwrap(),Action::Report(commands::Report::Reply(ref x)) if x==expected)
         );
     }
     assert!(
-        matches!(commands::run(&s,&c,ObjectId(2),1,"@aw").unwrap(),Action::Reply(ref x) if x=="Permission denied.")
+        matches!(commands::run(&s,&c,ObjectId(2),1,"@aw").unwrap(),Action::Report(commands::Report::Reply(ref x)) if x=="Permission denied.")
     );
     assert!(
-        matches!(commands::run(&s,&c,ObjectId(1),1,"@aw wizard").unwrap(),Action::Who(ref x) if x=="wizard")
+        matches!(commands::run(&s,&c,ObjectId(1),1,"@aw wizard").unwrap(),Action::Server(commands::ServerRequest::Who(ref x)) if x=="wizard")
     );
     assert!(
-        matches!(commands::run(&s,&c,ObjectId(1),1,"@who/no").unwrap(),Action::Reply(ref x) if x.contains("switch"))
+        matches!(commands::run(&s,&c,ObjectId(1),1,"@who/no").unwrap(),Action::Report(commands::Report::Reply(ref x)) if x.contains("switch"))
     );
     assert!(matches!(
         commands::run(&s, &c, ObjectId(1), 1, "@list pr").unwrap(),
-        Action::ProcessReport
+        Action::Server(commands::ServerRequest::ProcessReport)
     ));
     let ctx = ExecutionContext {
         executor: ObjectId(1),
@@ -203,17 +96,16 @@ async fn permissions_aliases_switches_and_background() {
         origin: InputOrigin::Queued,
     };
     assert!(
-        matches!(commands::execute(&s,&c,ctx,"@who").unwrap(),Action::Reply(ref x) if x=="@who is only available from an active connection.")
+        matches!(commands::execute(&s,&c,ctx,"@who").unwrap(),Action::Report(commands::Report::Reply(ref x)) if x=="@who is only available from an active connection.")
     );
     assert!(
-        matches!(commands::execute(&s,&c,ctx,"version").unwrap(),Action::Reply(ref x) if x==operations::VERSION)
+        matches!(commands::execute(&s,&c,ctx,"version").unwrap(),Action::Report(commands::Report::Reply(ref x)) if x==operations::VERSION)
     );
     assert!(matches!(
         commands::execute(&s, &c, ctx, "@list process").unwrap(),
-        Action::ProcessReport
+        Action::Server(commands::ServerRequest::ProcessReport)
     ));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -221,7 +113,7 @@ async fn permissions_aliases_switches_and_background() {
         .insert(Flag::Wizard);
     assert!(matches!(
         commands::run(&s, &c, ObjectId(2), 1, "@aw").unwrap(),
-        Action::Who(_)
+        Action::Server(commands::ServerRequest::Who(_))
     ));
     for (directive, value) in [
         ("access", "@who !wizard god"),
@@ -233,9 +125,9 @@ async fn permissions_aliases_switches_and_background() {
                     directive: directive.into(),
                     value: value.into(),
                 },
-                &s.world.borrow(),
+                &s.world(),
                 ObjectId(1),
-                &s.commands,
+                s.commands(),
             )
             .unwrap();
         s.configure(&candidate.config).unwrap();
@@ -243,7 +135,7 @@ async fn permissions_aliases_switches_and_background() {
     }
     for line in ["@aw", "@list process"] {
         assert!(
-            matches!(commands::run(&s,&c,ObjectId(2),1,line).unwrap(),Action::Reply(ref x) if x=="Permission denied.")
+            matches!(commands::run(&s,&c,ObjectId(2),1,line).unwrap(),Action::Report(commands::Report::Reply(ref x)) if x=="Permission denied.")
         );
     }
     c.logger.shutdown(&c).await.unwrap();

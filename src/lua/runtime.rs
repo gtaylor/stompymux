@@ -1,6 +1,10 @@
 //! Construct the Lua owner in dependency order before evaluating editable game modules.
-use super::{Outbox, Scripts, SharedWorld, packages, sandbox};
-use crate::{config::Config, text};
+use super::{Scripts, packages, sandbox};
+use crate::{
+    config::Config,
+    runtime::{Effects, Outbox, SharedWorld},
+    text,
+};
 use anyhow::Result;
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -58,8 +62,10 @@ impl Scripts {
         super::testing::install(&lua).map_err(|e| anyhow::anyhow!(e.to_string()))?;
         lua.set_app_data(sources.clone());
         let outbox: Outbox = Default::default();
-        let flows = super::flows::Engine::install(&lua, config, &world, &outbox, mode);
-        let api = packages::register_native(&lua, config, &world, &outbox, &palette)?;
+        let effects = Effects::new(config, &outbox);
+        lua.set_app_data(effects.clone());
+        let flows = super::flows::Engine::install(&lua, &world, &effects, mode);
+        let api = packages::register_native(&lua, config, &world, &outbox, &effects, &palette)?;
         sandbox::configure_search(&lua, &sources)?;
         packages::install_facades(&lua, api.clone())?;
         sandbox::restrict(&lua)?;
@@ -74,6 +80,7 @@ impl Scripts {
             lua,
             world,
             outbox,
+            effects,
             globals: Vec::new(),
             commands: crate::commands::CommandRegistry::new(),
             queue_enabled: std::cell::Cell::new(true),

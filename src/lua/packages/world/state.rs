@@ -1,7 +1,8 @@
 //! Immutable object-state handles and explicit, binary-safe Lua scalar conversion.
 use crate::{
     config::Config,
-    lua::{SharedWorld, transactions},
+    lua::transactions,
+    runtime::SharedWorld,
     state::{self, Generation},
     world::{Kind, ObjectId},
 };

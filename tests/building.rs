@@ -1,34 +1,16 @@
 //! Basic building, appearance, inspection and selective persistence regressions.
 use sqlx::Connection;
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
+    Config, Flag, Kind, ObjectId, Scripts, World,
     commands::{self, Action},
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
     persistence,
-    world::{Kind, ObjectId, World},
 };
 
-fn copy(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for e in std::fs::read_dir(from).unwrap() {
-        let e = e.unwrap();
-        if e.path().is_dir() {
-            copy(&e.path(), &to.join(e.file_name()));
-        } else {
-            std::fs::copy(e.path(), to.join(e.file_name())).unwrap();
-        }
-    }
-}
+mod support;
+use support::{isolated_world, run_text};
 async fn fixture() -> (tempfile::TempDir, Config, World) {
-    let d = tempfile::tempdir().unwrap();
-    copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
-        d.path(),
-    );
-    let c = Config::load(d.path()).unwrap();
-    let mut w = persistence::load(&c.database()).await.unwrap();
+    let (d, c, mut w) = isolated_world().await;
     for id in [ObjectId(1), ObjectId(2)] {
         w.objects.get_mut(&id).unwrap().location = Some(ObjectId(c.start()));
     }
@@ -52,11 +34,11 @@ fn object(w: &mut World, c: &Config, name: &str, kind: Kind, loc: ObjectId) -> O
 }
 fn scripts(c: &Config, w: World) -> Scripts {
     let s = Scripts::new(c, Rc::new(RefCell::new(w))).unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set(
             "_parents",
-            s.lua
+            s.inspect_lua()
                 .named_registry_value::<mlua::Table>("mux.parents")
                 .unwrap(),
         )
@@ -64,23 +46,13 @@ fn scripts(c: &Config, w: World) -> Scripts {
     s
 }
 fn run(s: &Scripts, c: &Config, who: i64, line: &str) -> String {
-    let action = commands::run(s, c, ObjectId(who), 71, line).unwrap();
-    let mut messages = s
-        .outbox
-        .borrow_mut()
-        .drain(..)
-        .map(|(_, m)| m.source().to_string())
-        .collect::<Vec<_>>();
-    if let Action::Reply(t) | Action::CommitReply(t) | Action::Report(t) = action {
-        messages.push(t);
-    }
-    messages.join("\n")
+    run_text(s, c, ObjectId(who), 71, line)
 }
 fn lua(s: &Scripts, source: &str) {
     s.eval_callback::<()>(source).unwrap();
 }
 async fn save(s: &Scripts, c: &Config) -> anyhow::Result<()> {
-    let w = s.world.borrow().clone();
+    let w = s.world().clone();
     persistence::save(&c.database(), &w).await
 }
 
@@ -88,46 +60,39 @@ async fn save(s: &Scripts, c: &Config) -> anyhow::Result<()> {
 async fn create_dig_edit_zone_and_restart() {
     let (_d, c, w) = fixture().await;
     let s = scripts(&c, w);
-    let id = ObjectId(s.world.borrow().next_id);
+    let id = ObjectId(s.world().next_id);
     assert!(run(&s, &c, 2, "@create denied").contains("Permission denied"));
     assert!(run(&s, &c, 1, "@create Toolkit").contains("created as object"));
-    assert_eq!(s.world.borrow().objects[&id].location, Some(ObjectId(1)));
-    assert!(s.world.borrow().objects[&id].home.is_some());
+    assert_eq!(s.world().objects[&id].location, Some(ObjectId(1)));
+    assert!(s.world().objects[&id].home.is_some());
     assert!(run(&s, &c, 1, "@name Toolkit=Equipment").contains("Name set"));
     assert!(run(&s, &c, 1, "@description Equipment=[bold]Tools[/]").contains("Set."));
     assert!(run(&s, &c, 1, "@internal-description Equipment=Inside the box").contains("Set."));
-    let room = ObjectId(s.world.borrow().next_id);
+    let room = ObjectId(s.world().next_id);
     assert!(run(&s, &c, 1, "@dig Workshop=workshop;ws,out;o").contains("created with room number"));
     {
-        let w = s.world.borrow();
+        let w = s.world();
         assert_eq!(w.objects[&ObjectId(room.0 + 1)].destination, Some(room));
         assert_eq!(
             w.objects[&ObjectId(room.0 + 2)].destination,
             Some(ObjectId(c.start()))
         );
     }
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&id)
         .unwrap()
         .flags
         .insert(Flag::Wizard);
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&id)
         .unwrap()
         .powers
         .insert(stompymux_rs::powers::Power::Idle);
     assert!(run(&s, &c, 1, &format!("@chzone Equipment=#{}", room.0)).contains("Zone changed"));
-    assert!(!s.world.borrow().objects[&id].flags.contains(Flag::Wizard));
-    assert!(
-        s.world.borrow().objects[&id]
-            .powers
-            .description()
-            .is_empty()
-    );
+    assert!(!s.world().objects[&id].flags.contains(Flag::Wizard));
+    assert!(s.world().objects[&id].powers.description().is_empty());
     let report = run(&s, &c, 1, "@examine Equipment");
     assert!(report.contains("[bold]Tools[/]"), "{report}");
     assert!(report.contains("InternalDescription: Inside the box"));
@@ -144,7 +109,7 @@ async fn create_dig_edit_zone_and_restart() {
         Some("[bold]Tools[/]")
     );
     assert!(run(&s, &c, 1, "@description Equipment=").contains("Cleared."));
-    assert!(s.world.borrow().objects[&id].description.is_none());
+    assert!(s.world().objects[&id].description.is_none());
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -165,18 +130,14 @@ async fn player_names_aliases_and_control_are_atomic() {
     assert!(run(&s, &c, 1, "@alias #2=BuildAlias").contains("already in use"));
     assert!(run(&s, &c, 1, "@alias here=ZoneAlias").contains("Only players"));
     assert!(run(&s, &c, 1, "@chzone #2=here").contains("Zone changed"));
-    assert!(
-        s.world.borrow().objects[&ObjectId(2)]
-            .flags
-            .contains(Flag::Wizard)
-    );
+    assert!(s.world().objects[&ObjectId(2)].flags.contains(Flag::Wizard));
     save(&s, &c).await.unwrap();
     let loaded = persistence::load(&c.database()).await.unwrap();
     assert_eq!(loaded.find_player("BUILDALIAS"), Some(ObjectId(2)));
     assert_eq!(loaded.find_player("BuilderAlice"), Some(ObjectId(2)));
     assert_eq!(loaded.find_player("#2"), Some(ObjectId(2)));
     assert!(run(&s, &c, 1, "@alias #2=").contains("Alias removed"));
-    assert!(s.world.borrow().find_player("BuildAlias").is_none());
+    assert!(s.world().find_player("BuildAlias").is_none());
     for command in [
         "@create/x Thing",
         "@name/x #2=Name",
@@ -204,8 +165,7 @@ async fn look_modes_possessions_transparency_and_callback_rollback() {
     assert!(run(&s, &c, 2, "look Cabinet").contains("Outside cabinet"));
     assert!(run(&s, &c, 2, "look Cabinet's Badge").contains("Golden badge"));
     assert!(run(&s, &c, 2, "look/outside").contains("Unsupported command switch"));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -223,26 +183,20 @@ async fn look_modes_possessions_transparency_and_callback_rollback() {
         "_parents['default_thing.lua'].events={on_describe=function(ctx) mux.world.object(ctx.object):state('seen'):set('count',1); error('describe failed') end}",
     );
     assert!(run(&s, &c, 2, "look Badge").contains("describe failed"));
-    assert!(!s.world.borrow().objects[&item].state.contains_key("seen"));
+    assert!(!s.world().objects[&item].state.contains_key("seen"));
     lua(
         &s,
         "_parents['default_thing.lua'].events=nil; _parents['default_thing.lua'].external_appearance=nil; _parents['default_thing.lua'].internal_appearance=nil",
     );
-    let exit = object(
-        &mut s.world.borrow_mut(),
-        &c,
-        "Window;win",
-        Kind::Exit,
-        box_id,
-    );
+    let exit = object(&mut s.world_mut(), &c, "Window;win", Kind::Exit, box_id);
     {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         let o = w.objects.get_mut(&exit).unwrap();
         o.flags.insert(Flag::Transparent);
         o.destination = Some(room);
     }
     assert!(run(&s, &c, 2, "look win").contains("Starter Room"));
-    object(&mut s.world.borrow_mut(), &c, "Badge", Kind::Thing, box_id);
+    object(&mut s.world_mut(), &c, "Badge", Kind::Thing, box_id);
     assert!(run(&s, &c, 2, "look Badge").contains("which object"));
     assert!(run(&s, &c, 2, "look #1").contains("don't see"));
 }
@@ -255,34 +209,25 @@ async fn dig_partial_denial_and_callback_failure() {
         &s,
         "_parents['default_room.lua'].locks={link=function(ctx) return false end, teleport=function(ctx) return false end}",
     );
-    let id = ObjectId(s.world.borrow().next_id);
-    let before = s.world.borrow().objects[&ObjectId(1)].location;
+    let id = ObjectId(s.world().next_id);
+    let before = s.world().objects[&ObjectId(1)].location;
     run(&s, &c, 1, "@dig/t Locked=gate,back");
-    assert_eq!(s.world.borrow().objects[&id].kind, Kind::Room);
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(id.0 + 1)].destination,
-        None
-    );
-    assert_eq!(s.world.borrow().objects[&ObjectId(1)].location, before);
+    assert_eq!(s.world().objects[&id].kind, Kind::Room);
+    assert_eq!(s.world().objects[&ObjectId(id.0 + 1)].destination, None);
+    assert_eq!(s.world().objects[&ObjectId(1)].location, before);
     lua(
         &s,
         "_parents['default_room.lua'].locks.link=function(ctx) mux.world.object(ctx.object):state('failed'):set('x',1); error('link exploded') end",
     );
-    let next = s.world.borrow().next_id;
+    let next = s.world().next_id;
     assert!(run(&s, &c, 1, "@dig Abort=gate").contains("link exploded"));
-    assert_eq!(s.world.borrow().next_id, next);
-    assert!(!s.world.borrow().objects.values().any(|o| o.name == "Abort"));
+    assert_eq!(s.world().next_id, next);
+    assert!(!s.world().objects.values().any(|o| o.name == "Abort"));
     lua(&s, "_parents['default_room.lua'].locks=nil");
     assert!(run(&s, &c, 1, "@dig Partial=me,out").contains("reasonable"));
-    assert!(
-        s.world
-            .borrow()
-            .objects
-            .values()
-            .any(|o| o.name == "Partial")
-    );
+    assert!(s.world().objects.values().any(|o| o.name == "Partial"));
     assert!(run(&s, &c, 1, "@dig/t Destination").contains("Destination"));
-    let w = s.world.borrow();
+    let w = s.world();
     assert_eq!(
         w.objects[&w.objects[&ObjectId(1)].location.unwrap()].name,
         "Destination"
@@ -295,8 +240,7 @@ async fn inspection_ranges_brief_debug_and_unknown_column_preservation() {
     let s = scripts(&c, w);
     run(&s, &c, 1, "@dig Study=study,out");
     let room = s
-        .world
-        .borrow()
+        .world()
         .objects
         .values()
         .find(|o| o.name == "Study")
@@ -318,7 +262,7 @@ async fn inspection_ranges_brief_debug_and_unknown_column_preservation() {
     assert!(run(&s, &c, 2, "@examine").contains("Permission denied"));
     assert!(matches!(
         commands::run(&s, &c, ObjectId(1), 71, "@examine/d me").unwrap(),
-        Action::ExamineDebug(ObjectId(1))
+        Action::Server(commands::ServerRequest::ExamineDebug(ObjectId(1)))
     ));
     save(&s, &c).await.unwrap();
     let mut db = sqlx::SqliteConnection::connect_with(
@@ -338,7 +282,11 @@ async fn inspection_ranges_brief_debug_and_unknown_column_preservation() {
         persistence::inspect_links(&c.database(), ObjectId(1), 100)
             .await
             .unwrap(),
-        [expected.0, expected.1, expected.2]
+        stompymux_rs::LinkSlots {
+            contents: expected.0,
+            exits: expected.1,
+            next: expected.2,
+        }
     );
     run(&s, &c, 1, "@description me=Changed");
     save(&s, &c).await.unwrap();
@@ -366,7 +314,7 @@ async fn appearance_validation_visibility_and_read_only_metadata() {
         "_parents['default_thing.lua'].external_appearance=function(ctx) mux.world.object(ctx.object):state('bad'):set('x',1); return 42 end",
     );
     assert!(run(&s, &c, 2, "look Gold Medal").contains("must return a string"));
-    assert!(!s.world.borrow().objects[&item].state.contains_key("bad"));
+    assert!(!s.world().objects[&item].state.contains_key("bad"));
     lua(
         &s,
         "_parents['default_thing.lua'].external_appearance=function(ctx) while true do end end",
@@ -383,7 +331,7 @@ async fn appearance_validation_visibility_and_read_only_metadata() {
         "{report}"
     );
     assert!(!report.contains("metadata invoked"));
-    assert!(s.outbox.borrow().is_empty());
+    assert!(s.outbox().is_empty());
 }
 
 /// Removed switches are rejected centrally, including abbreviations and aliases, without side effects.
@@ -391,10 +339,10 @@ async fn appearance_validation_visibility_and_read_only_metadata() {
 async fn removed_inventory_and_look_switches_are_rejected() {
     let (_d, c, w) = fixture().await;
     let s = scripts(&c, w);
-    let before = serde_json::to_vec(&*s.world.borrow()).unwrap();
+    let before = serde_json::to_vec(&*s.world()).unwrap();
     for name in ["get", "drop", "give", "enter", "leave", "look"] {
         assert!(
-            s.commands
+            s.commands()
                 .definitions()
                 .find(|d| d.name == name)
                 .unwrap()
@@ -416,7 +364,7 @@ async fn removed_inventory_and_look_switches_are_rejected() {
         }
     }
     assert_eq!(run(&s, &c, 1, "l/o"), "Unsupported command switch.");
-    assert_eq!(serde_json::to_vec(&*s.world.borrow()).unwrap(), before);
+    assert_eq!(serde_json::to_vec(&*s.world()).unwrap(), before);
     for target in [
         "get/quiet",
         "drop/quiet",
@@ -430,7 +378,7 @@ async fn removed_inventory_and_look_switches_are_rejected() {
             value: format!("removed {target}"),
         };
         assert!(
-            c.administer(&request, &s.world.borrow(), ObjectId(1), &s.commands)
+            c.administer(&request, &s.world(), ObjectId(1), s.commands())
                 .is_err()
         );
     }
@@ -463,13 +411,13 @@ async fn ordinary_word_prefix_boundaries_scope_and_precedence() {
     assert!(run(&s, &c, 2, "get   ").contains("Specify an object."));
     assert!(run(&s, &c, 2, &format!("look #{}", sword.0)).contains("WORD MATCH"));
     let second = {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         let id = object(&mut w, &c, "Blue Sword", Kind::Thing, room);
         w.objects.get_mut(&id).unwrap().description = Some("OTHER MATCH".into());
         id
     };
     assert!(run(&s, &c, 2, "look sword").contains("I don't know which object you mean."));
-    s.world.borrow_mut().objects.get_mut(&second).unwrap().name = "Sword".into();
+    s.world_mut().objects.get_mut(&second).unwrap().name = "Sword".into();
     assert!(run(&s, &c, 2, "look sword").contains("OTHER MATCH"));
     assert!(!run(&s, &c, 2, "look sword").contains("WORD MATCH"));
     c.logger.shutdown(&c).await.unwrap();
@@ -502,20 +450,17 @@ async fn word_prefix_inventory_possessions_and_match_locks() {
     );
     assert!(run(&s, &c, 2, "look bag's sword").contains("POSSESSIVE MATCH"));
     assert!(run(&s, &c, 2, "get bag's sword").contains("Taken."));
-    assert_eq!(s.world.borrow().objects[&item].location, Some(ObjectId(2)));
+    assert_eq!(s.world().objects[&item].location, Some(ObjectId(2)));
     assert!(run(&s, &c, 2, "use sword").contains("USED SWORD"));
     assert!(run(&s, &c, 2, "drop sword").contains("Dropped."));
     assert!(run(&s, &c, 2, "get sword").contains("Taken."));
     assert!(run(&s, &c, 2, "give token=sword").contains("Given."));
-    assert_eq!(s.world.borrow().objects[&item].location, Some(player));
+    assert_eq!(s.world().objects[&item].location, Some(player));
     assert!(run(&s, &c, 2, "get token").contains("Taken."));
-    assert_eq!(
-        s.world.borrow().objects[&second].location,
-        Some(ObjectId(2))
-    );
-    assert_eq!(s.world.borrow().objects[&first].location, Some(room));
-    assert_eq!(s.world.borrow().objects[&player].location, Some(room));
+    assert_eq!(s.world().objects[&second].location, Some(ObjectId(2)));
+    assert_eq!(s.world().objects[&first].location, Some(room));
+    assert_eq!(s.world().objects[&player].location, Some(room));
     run(&s, &c, 2, "enter bag");
-    assert_eq!(s.world.borrow().objects[&ObjectId(2)].location, Some(bag));
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(bag));
     c.logger.shutdown(&c).await.unwrap();
 }

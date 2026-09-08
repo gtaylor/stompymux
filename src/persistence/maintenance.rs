@@ -1,5 +1,5 @@
 //! Explicit schema-32 ownership and dependency cleanup used only by approved maintenance.
-use crate::{dbck::Links, world::ObjectId};
+use crate::world::{LinkSlots, Links, ObjectId};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::collections::BTreeSet;
@@ -57,11 +57,11 @@ pub(super) async fn links(c: &mut SqliteConnection) -> Result<Links> {
     {
         result.insert(
             ObjectId(row.try_get("dbref")?),
-            [
-                row.try_get("contents")?,
-                row.try_get("exits")?,
-                row.try_get("next")?,
-            ],
+            LinkSlots {
+                contents: row.try_get("contents")?,
+                exits: row.try_get("exits")?,
+                next: row.try_get("next")?,
+            },
         );
     }
     Ok(result)

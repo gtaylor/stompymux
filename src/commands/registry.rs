@@ -42,13 +42,79 @@ pub enum SwitchPolicy {
     /// Handler validates its supported switch syntax.
     Handler,
 }
+/// Accepted native switch spelling and minimum unambiguous abbreviation.
+#[derive(Clone, Debug)]
+pub struct SwitchDefinition {
+    pub name: &'static str,
+    pub minimum: usize,
+    pub permission: CommandPermissions,
+}
+impl SwitchDefinition {
+    pub fn accepts(&self, spelling: &str) -> bool {
+        spelling.len() >= self.minimum && self.name.starts_with(spelling)
+    }
+}
+
+/// Native switch inventory; handlers retain operation-specific combination validation.
+pub fn native_switches(name: &str) -> Vec<SwitchDefinition> {
+    let (names, abbreviated): (&[&str], bool) = match name {
+        "pose" | "@fpose" => (&["default", "nospace"], true),
+        "@emit" | "@femit" => (&["here", "room"], true),
+        "@pemit" | "@npemit" => (&["contents", "object", "silent", "list"], true),
+        "@wall" => (&["emit", "pose", "wizard", "admin", "no_prefix"], true),
+        "@boot" => (&["port", "quiet"], true),
+        "@lua" => (
+            &[
+                "parent",
+                "viewparent",
+                "check",
+                "reload",
+                "schedule",
+                "test",
+                "unit",
+                "integration",
+                "verbose",
+            ],
+            false,
+        ),
+        "@destroy" => (&["override"], false),
+        "@help" => (&["reload"], false),
+        "@state" => (&["examine", "set", "wipe", "copy", "move"], false),
+        "@examine" => (&["brief", "debug"], true),
+        "@halt" => (&["all"], true),
+        "@dig" => (&["teleport"], true),
+        "@open" | "@clone" => (&["inventory", "location"], true),
+        "@chan" => (
+            &[
+                "boot", "create", "destroy", "emit", "list", "object", "oflags", "pflags", "flags",
+                "status", "who", "full", "noheader",
+            ],
+            false,
+        ),
+        _ => (&[], false),
+    };
+    names
+        .iter()
+        .map(|&switch| SwitchDefinition {
+            name: switch,
+            minimum: if name == "@clone" && switch == "inventory" {
+                3
+            } else if abbreviated {
+                1
+            } else {
+                switch.len()
+            },
+            permission: crate::access::switch_default(name, switch),
+        })
+        .collect()
+}
 /// Complete enumerable command definition used by dispatch and discovery.
 #[derive(Clone)]
 pub struct CommandDefinition {
     /// Lowercase canonical command name.
     pub name: String,
     /// Native switches available for discovery; handlers validate combinations.
-    pub switch_definitions: Vec<super::discovery::SwitchDefinition>,
+    pub switch_definitions: Vec<SwitchDefinition>,
     /// Whether this entry appears in command listings.
     pub listed: bool,
     /// Required authority.
@@ -85,7 +151,7 @@ impl CommandDefinition {
         Self {
             declared_permission: permission,
             name: name.into(),
-            switch_definitions: super::discovery::switches(name),
+            switch_definitions: native_switches(name),
             listed: !matches!(name, ";" | "\\"),
             permission,
             matcher: CommandMatcher::Native {
@@ -175,7 +241,7 @@ impl CommandDefinition {
             });
         if let Some(error) = error {
             if self.private_errors {
-                return Ok(Action::Reply(error.into()));
+                return Ok(Action::Report(crate::commands::Report::Reply(error.into())));
             }
             ctx.scripts
                 .outbox

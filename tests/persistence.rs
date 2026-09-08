@@ -2,10 +2,7 @@
 use sqlx::{Connection, SqliteConnection, sqlite::SqliteConnectOptions};
 use std::collections::BTreeSet;
 use stompymux_rs::{
-    config::Config,
-    flags::Flag,
-    persistence,
-    world::{Channel, Kind, Login, ObjectId, Scalar, World},
+    Channel, Config, Flag, Kind, Login, ObjectId, StateValue as Scalar, World, persistence,
 };
 
 /// Use an isolated copy of the populated relational fixture.

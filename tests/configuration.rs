@@ -7,12 +7,10 @@ use std::{
     time::{Duration, Instant},
 };
 use stompymux_rs::{
-    accounts,
+    Scripts, World, accounts,
     config::{Config, Flag, catalog::KEYS},
-    lua::Scripts,
     persistence, server,
     telnet::{Decoder, Input},
-    world::World,
 };
 fn config(text: &str) -> (tempfile::TempDir, Config) {
     let d = tempfile::tempdir().unwrap();
@@ -23,17 +21,8 @@ fn config(text: &str) -> (tempfile::TempDir, Config) {
 fn fixture_path() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game")
 }
-fn copy(source: &Path, dest: &Path) {
-    std::fs::create_dir_all(dest).unwrap();
-    for entry in std::fs::read_dir(source).unwrap() {
-        let entry = entry.unwrap();
-        if entry.path().is_dir() {
-            copy(&entry.path(), &dest.join(entry.file_name()));
-        } else {
-            std::fs::copy(entry.path(), dest.join(entry.file_name())).unwrap();
-        }
-    }
-}
+mod support;
+use support::copy;
 fn game() -> tempfile::TempDir {
     let d = tempfile::tempdir().unwrap();
     copy(&fixture_path(), d.path());
@@ -276,7 +265,7 @@ async fn lua_sees_defaults_overrides_and_legacy_aliases() {
         .unwrap();
     let w = persistence::load(&c.database()).await.unwrap();
     let scripts = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
-    assert!(scripts.lua.load("return mux.config.get('port')==8765 and mux.config.get('server.port')==8765 and mux.config.get('btech_xp_usePilotBVMod')==1 and mux.config.get('runtime.input_line_limit')==8192 and not pcall(mux.config.get,'runtime.find_page_size')").eval::<bool>().unwrap());
+    assert!(scripts.inspect_lua().load("return mux.config.get('port')==8765 and mux.config.get('server.port')==8765 and mux.config.get('btech_xp_usePilotBVMod')==1 and mux.config.get('runtime.input_line_limit')==8192 and not pcall(mux.config.get,'runtime.find_page_size')").eval::<bool>().unwrap());
 }
 #[tokio::test(flavor = "current_thread")]
 async fn configured_decoding_hashing_and_sqlite_timeouts_take_effect() {
@@ -322,7 +311,12 @@ async fn configured_lua_limits_take_effect() {
     let c = Config::load(d.path()).unwrap();
     let w = persistence::load(&c.database()).await.unwrap();
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
-    assert!(s.lua.load("mux.world.pemit(1,'123456789')").exec().is_err());
+    assert!(
+        s.inspect_lua()
+            .load("mux.world.pemit(1,'123456789')")
+            .exec()
+            .is_err()
+    );
 }
 
 fn put(dir: &Path, key: &str, value: toml::Value) {
@@ -372,15 +366,13 @@ async fn cli_uses_toml_listener_paths_and_optional_overrides() {
     let c = Config::load(d.path()).unwrap();
     persistence::load(&c.database()).await.unwrap();
     let mut w = persistence::load(&c.database()).await.unwrap();
+    w.accounts.get_mut(&stompymux_rs::ObjectId(2)).unwrap().hash =
+        Some(accounts::hash("secret", &c).unwrap());
     w.accounts
-        .get_mut(&stompymux_rs::world::ObjectId(2))
-        .unwrap()
-        .hash = Some(accounts::hash("secret", &c).unwrap());
-    w.accounts
-        .get_mut(&stompymux_rs::world::ObjectId(2))
+        .get_mut(&stompymux_rs::ObjectId(2))
         .unwrap()
         .history = (0..10)
-        .map(|_| stompymux_rs::world::Login {
+        .map(|_| stompymux_rs::Login {
             success: true,
             at: 0,
             host: "old".into(),
@@ -435,9 +427,7 @@ async fn cli_uses_toml_listener_paths_and_optional_overrides() {
         until(&mut stream, "Staff Nexus").await;
         let persisted = persistence::load(&c.database()).await.unwrap();
         assert_eq!(
-            persisted.accounts[&stompymux_rs::world::ObjectId(2)]
-                .history
-                .len(),
+            persisted.accounts[&stompymux_rs::ObjectId(2)].history.len(),
             1
         );
         stream.write_all(b"quit\r\n").await.unwrap();
@@ -476,13 +466,13 @@ async fn configured_bootstrap_objects_and_credentials_path_are_used() {
     let c = Config::load(d.path()).unwrap();
     let scripts = server::prepare(&c).await.unwrap();
     assert_eq!(
-        scripts.world.borrow().objects[&stompymux_rs::world::ObjectId(42)].name,
+        scripts.world().objects[&stompymux_rs::ObjectId(42)].name,
         "Configured room"
     );
     assert!(
-        !scripts.world.borrow().objects[&stompymux_rs::world::ObjectId(2)]
+        !scripts.world().objects[&stompymux_rs::ObjectId(2)]
             .flags
-            .contains(stompymux_rs::flags::Flag::Wizard)
+            .contains(stompymux_rs::Flag::Wizard)
     );
     assert!(d.path().join("private/initial.txt").exists());
     assert!(!d.path().join("bootstrap-credentials.txt").exists());
@@ -496,20 +486,20 @@ async fn instruction_and_output_entry_budgets_are_configurable() {
     let w = persistence::load(&c.database()).await.unwrap();
     let scripts = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     scripts
-        .lua
+        .inspect_lua()
         .load("mux.world.pemit(1,'first')")
         .exec()
         .unwrap();
     assert!(
         scripts
-            .lua
+            .inspect_lua()
             .load("mux.world.pemit(1,'second')")
             .exec()
             .is_err()
     );
     assert!(
         scripts
-            .lua
+            .inspect_lua()
             .load("for i=1,10000000 do local x=i*i end")
             .exec()
             .is_err()

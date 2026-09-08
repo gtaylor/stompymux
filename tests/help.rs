@@ -1,7 +1,7 @@
 //! C help-index compatibility, supplied corpus, live content and bounded rich delivery.
 use std::path::Path;
 use stompymux_rs::{
-    config::Config,
+    Config,
     help::{HelpIndex, HelpResponse},
     text::{self, Document, Palette, RenderOptions, Span},
 };

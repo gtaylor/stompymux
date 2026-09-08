@@ -165,6 +165,9 @@ other callback mutations.
 
 ## Implementation boundaries
 
+See [architecture and source ownership](docs/architecture.md) for dependency
+boundaries, transaction rules, and guidance on where new behavior belongs.
+
 - Tokio handles sockets and timers. A single owner serializes world and Lua
   work, using bounded channels. SQLx provides async SQLite access through its
   own worker threads; Argon2id runs on bounded blocking workers. Lua values

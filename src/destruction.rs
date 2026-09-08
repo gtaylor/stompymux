@@ -1,7 +1,7 @@
 //! Shared authorization and state change for deferred object destruction.
 use crate::{
     config::Config,
-    flags::{self, Flag},
+    flags::Flag,
     world::{Kind, ObjectId, World},
 };
 use anyhow::{Context, Result, ensure};
@@ -17,7 +17,10 @@ pub(crate) fn schedule(
     id: ObjectId,
     override_safe: bool,
 ) -> Result<Kind> {
-    ensure!(flags::controls(w, actor, id), "Permission denied.");
+    ensure!(
+        crate::authority::controls(w, actor, id),
+        "Permission denied."
+    );
     let o = w
         .objects
         .get(&id)

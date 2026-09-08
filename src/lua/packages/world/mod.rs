@@ -7,11 +7,14 @@ mod relationships;
 mod state;
 mod types;
 use super::bind;
-use crate::lua::{Outbox, SharedWorld, err};
 use crate::{
     config::Config,
     text,
     world::{Kind, ObjectId},
+};
+use crate::{
+    lua::err,
+    runtime::{Outbox, SharedWorld},
 };
 use anyhow::Result;
 use mlua::{Lua, LuaSerdeExt, Table, Value};
@@ -117,7 +120,7 @@ pub(super) fn register(
         if source == Some(dest) {
             return Ok(());
         }
-        crate::lua::transactions::run(lua, &s.world, &s.outbox, || {
+        crate::lua::transactions::run(lua, &s.world, || {
             crate::lua::transactions::with_cause(lua, ObjectId(1), || {
                 crate::movement::perform(
                     &s,
@@ -415,7 +418,7 @@ pub(super) fn register(
             .map_err(|e| anyhow::anyhow!(e.to_string()))?,
     )
     .map_err(|e| anyhow::anyhow!(e.to_string()))?;
-    locks::register(lua, api, world, outbox).map_err(|e| anyhow::anyhow!(e.to_string()))?;
+    locks::register(lua, api, world).map_err(|e| anyhow::anyhow!(e.to_string()))?;
     state::register(lua, api, config, world).map_err(|e| anyhow::anyhow!(e.to_string()))?;
     let o = outbox.clone();
     let w = world.clone();

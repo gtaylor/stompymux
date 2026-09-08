@@ -10,21 +10,17 @@ impl Engine {
         mut input: Option<&str>,
     ) -> mlua::Result<()> {
         {
-            let mut s = self.state.borrow_mut();
-            if s.depth >= TRANSITIONS {
+            let mut control = self.control.borrow_mut();
+            if control.depth >= TRANSITIONS {
                 return Err(error(lua, "runtime", "Flow nested-start limit exceeded"));
             }
-            s.depth += 1;
+            control.depth += 1;
         }
         let result = (|| {
             for transition in 0..=TRANSITIONS {
                 let mut active = self
-                    .state
-                    .borrow()
-                    .pending
-                    .active
-                    .get(&session)
-                    .cloned()
+                    .effects
+                    .flow(session)
                     .ok_or_else(|| error(lua, "connection.invalid", "flow is no longer active"))?;
                 let handler = self.handler(lua, &active.module, &active.step)?;
                 let ctx = lua.create_table()?;
@@ -85,18 +81,14 @@ impl Engine {
                             active.prompt = message;
                         }
                         self.output(session, &active.prompt, true)?;
-                        self.state
-                            .borrow_mut()
-                            .pending
-                            .active
-                            .insert(session, active);
+                        self.effects.insert_flow(session, active);
                         return Ok(());
                     }
                     "done" | "cancel" => {
                         if let Some(message) = message {
                             self.output(session, &message, false)?;
                         }
-                        self.state.borrow_mut().pending.active.remove(&session);
+                        self.effects.remove_flow(session);
                         return Ok(());
                     }
                     "goto" => {
@@ -115,11 +107,7 @@ impl Engine {
                             self.output(session, &message, false)?;
                         }
                         active.step = next;
-                        self.state
-                            .borrow_mut()
-                            .pending
-                            .active
-                            .insert(session, active);
+                        self.effects.insert_flow(session, active);
                         input = None;
                     }
                     _ => {
@@ -133,7 +121,7 @@ impl Engine {
             }
             unreachable!()
         })();
-        self.state.borrow_mut().depth -= 1;
+        self.control.borrow_mut().depth -= 1;
         result
     }
 }

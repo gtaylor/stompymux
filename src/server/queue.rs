@@ -1,12 +1,12 @@
 //! World-owner queue admission and background execution share persistence/output boundaries.
 use super::*;
-use crate::commands::queue::{Request, Work};
+use crate::commands::queue::Request;
 
 impl Server {
     /// Publish queue changes only after their associated durable mutations commit.
     pub(super) async fn queue_request(
         &mut self,
-        session: Option<SessionId>,
+        destination: ReplyDestination,
         actor: ObjectId,
         request: Request,
         before: World,
@@ -16,11 +16,9 @@ impl Server {
         {
             *self.scripts.world.borrow_mut() = before;
             self.reconcile_connections();
-            self.scripts.outbox.borrow_mut().clear();
-            self.scripts.flows.rollback();
+            self.scripts.effects.rollback();
             self.queue_reply(
-                session,
-                actor,
+                destination,
                 "Sorry, queueing and triggering are not allowed now.",
             );
             self.flush();
@@ -44,17 +42,17 @@ impl Server {
                     candidate.reconcile(&self.scripts.world.borrow());
                     self.command_queue = candidate;
                     if let Some(reply) = reply {
-                        self.queue_reply(
-                            if recipient == actor { session } else { None },
-                            recipient,
-                            &reply,
-                        );
+                        let destination = if recipient == actor {
+                            destination
+                        } else {
+                            ReplyDestination::Object(recipient)
+                        };
+                        self.queue_reply(destination, &reply);
                     }
                     self.flush();
                 } else {
                     self.queue_reply(
-                        session,
-                        actor,
+                        destination,
                         "Unable to save your changes. Please try again.",
                     );
                     self.flush();
@@ -63,19 +61,18 @@ impl Server {
             Err(error) => {
                 *self.scripts.world.borrow_mut() = before;
                 self.reconcile_connections();
-                self.scripts.outbox.borrow_mut().clear();
-                self.scripts.flows.rollback();
-                self.queue_reply(session, actor, &error.to_string());
+                self.scripts.effects.rollback();
+                self.queue_reply(destination, &error.to_string());
                 self.flush();
             }
         }
     }
 
     /// Interactive diagnostics stay private; background replies use ordinary object notification.
-    pub(super) fn queue_reply(&self, session: Option<SessionId>, actor: ObjectId, text: &str) {
-        if let Some(id) = session {
+    pub(super) fn queue_reply(&self, destination: ReplyDestination, text: &str) {
+        if let ReplyDestination::Session(id) = destination {
             self.tell(id, &format!("{text}\r\n"));
-        } else {
+        } else if let ReplyDestination::Object(actor) = destination {
             let result = crate::notification::send(
                 &self.scripts.world.borrow(),
                 &self.scripts.outbox,
@@ -102,162 +99,6 @@ impl Server {
                     "ERROR",
                     format!("Queued command reply: {error:#}"),
                 );
-            }
-        }
-    }
-
-    /// One ready command per loop turn, with no descriptor or borrowed connection.
-    pub(super) async fn queued(&mut self, work: Work) {
-        let actor = work.execution.executor;
-        if self.shutdown.is_some() {
-            return;
-        }
-        if let Err(error) = self.snapshots() {
-            self.config.log(
-                &[crate::logging::Category::Problems],
-                "SRV",
-                "ERROR",
-                format!("Queued command snapshot: {error:#}"),
-            );
-            return;
-        }
-        if commands::executable(&self.scripts.world.borrow(), work.execution) {
-            self.audit(work.execution, &work.text).await;
-        }
-        let mut before = self.scripts.world.borrow().clone();
-        let action = commands::execute(&self.scripts, &self.config, work.execution, &work.text);
-        if action.is_ok()
-            && self.scripts.command_callbacks_invoked()
-            && !matches!(
-                &action,
-                Ok(Action::Continue | Action::CommitReply(_) | Action::Queue(_))
-            )
-        {
-            if !self.commit(before.clone()).await {
-                self.queue_reply(
-                    None,
-                    actor,
-                    "Unable to save your changes. Please try again.",
-                );
-                self.flush();
-                return;
-            }
-            self.flush();
-            before = self.scripts.world.borrow().clone();
-        }
-        match action {
-            Ok(Action::Queue(request)) => self.queue_request(None, actor, request, before).await,
-            Ok(Action::Continue) => {
-                if self.commit(before).await {
-                    self.flush();
-                } else {
-                    self.queue_reply(
-                        None,
-                        actor,
-                        "Unable to save your changes. Please try again.",
-                    );
-                    self.flush();
-                }
-            }
-            Ok(Action::CommitReply(text)) => {
-                if self.commit(before).await {
-                    self.queue_reply(None, actor, &text);
-                    self.flush();
-                } else {
-                    self.queue_reply(
-                        None,
-                        actor,
-                        "Unable to save your changes. Please try again.",
-                    );
-                    self.flush();
-                }
-            }
-            Ok(
-                Action::Reply(text)
-                | Action::Report(text)
-                | Action::LiteralReport(text)
-                | Action::StyledReport(text),
-            ) => {
-                self.queue_reply(None, actor, &text);
-                self.flush();
-            }
-            Ok(Action::ProcessReport) => {
-                let text = crate::operations::process_report(&self.config).await;
-                self.queue_reply(None, actor, &text);
-                self.flush();
-            }
-            Ok(Action::ExamineDebug(object)) => {
-                let result = persistence::inspect_links(
-                    &self.config.database(),
-                    object,
-                    self.config.database.busy_timeout_ms,
-                )
-                .await
-                .and_then(|links| {
-                    commands::inspection::debug(&self.scripts.world.borrow(), object, links)
-                });
-                match result {
-                    Ok(text) => self.queue_reply(None, actor, &text),
-                    Err(error) => {
-                        self.config.log(
-                            &[crate::logging::Category::Problems],
-                            "SRV",
-                            "ERROR",
-                            format!("Queued examination: {error:#}"),
-                        );
-                        self.queue_reply(None, actor, "Unable to read object bookkeeping.");
-                    }
-                }
-                self.flush();
-            }
-            Ok(Action::Shutdown) => self.request_shutdown(ShutdownRequest::Player(actor)).await,
-            Ok(Action::DbCheck) => {
-                self.dbck(crate::cleaning::CheckOrigin::Queued {
-                    actor,
-                    cause: work.execution.cause,
-                })
-                .await
-            }
-            Ok(Action::ConfigAdmin(request)) => {
-                let text = self.configure(actor, request);
-                self.queue_reply(None, actor, &text);
-                self.flush();
-            }
-            Ok(Action::Log(request)) => {
-                let text = self.write_log(request).await;
-                self.queue_reply(None, actor, &text);
-                self.flush();
-            }
-            Ok(Action::ReadCache) => self.readcache(None, actor).await,
-            Ok(Action::GlobalControl(value)) => {
-                let response = self.global_control(value);
-                self.queue_reply(None, actor, &response);
-                self.flush();
-            }
-            Ok(_) => {
-                *self.scripts.world.borrow_mut() = before;
-                self.reconcile_connections();
-                self.scripts.outbox.borrow_mut().clear();
-                self.scripts.flows.rollback();
-                self.queue_reply(None, actor, "This command requires an interactive session.");
-                self.flush();
-            }
-            Err(error) => {
-                *self.scripts.world.borrow_mut() = before;
-                self.reconcile_connections();
-                self.scripts.outbox.borrow_mut().clear();
-                self.scripts.flows.rollback();
-                self.config.log(
-                    &[crate::logging::Category::Problems],
-                    "SRV",
-                    "ERROR",
-                    format!(
-                        "Queued command for #{} (cause #{}): {error:#}",
-                        actor.0, work.execution.cause.0
-                    ),
-                );
-                self.queue_reply(None, actor, "That queued command could not be completed.");
-                self.flush();
             }
         }
     }
@@ -293,6 +134,7 @@ fn reply_document(
 mod tests {
     use super::*;
     use crate::{
+        commands::queue::Work,
         commands::{ExecutionContext, InputOrigin},
         flags::Flag,
     };
@@ -347,14 +189,8 @@ mod tests {
                 scripts,
                 sessions: Default::default(),
                 events,
-                addresses: Default::default(),
-                hashes: Bucket {
-                    tokens: 100,
-                    at: Instant::now(),
-                },
-                inflight: 0,
-                pending_resets: Default::default(),
-                started_at: accounts::now(),
+                authentication: authentication::State::with_hash_capacity(100, Instant::now(), 0),
+                started_at: crate::clock::wall_time(),
                 listen_port: 0,
                 shutdown: None,
                 shutdown_failed: false,
@@ -467,7 +303,7 @@ mod tests {
         let saved = persistence::load(&s.config.database()).await.unwrap();
         assert_eq!(
             saved.objects[&ObjectId(2)].state["queue"]["saved"],
-            Scalar::Boolean(true)
+            crate::StateValue::Boolean(true)
         );
         assert!(!saved.objects[&ObjectId(2)].flags.contains(Flag::Connected));
     }
@@ -496,7 +332,13 @@ mod tests {
         }
         sql(&s, "CREATE TRIGGER reject_queue BEFORE UPDATE ON objects BEGIN SELECT RAISE(FAIL,'queue flag failure'); END").await;
         let before = s.scripts.world.borrow().clone();
-        s.queue_request(None, ObjectId(1), request(), before).await;
+        s.queue_request(
+            ReplyDestination::Object(ObjectId(1)),
+            ObjectId(1),
+            request(),
+            before,
+        )
+        .await;
         assert!(
             !s.scripts.world.borrow().objects[&ObjectId(2)]
                 .flags
@@ -512,8 +354,13 @@ mod tests {
             .get_mut(&ObjectId(2))
             .unwrap()
             .description = Some("unsaved".into());
-        s.queue_request(None, ObjectId(1), Request::Halt { target: None }, before)
-            .await;
+        s.queue_request(
+            ReplyDestination::Object(ObjectId(1)),
+            ObjectId(1),
+            Request::Halt { target: None },
+            before,
+        )
+        .await;
         assert!(s.command_queue.ready(now));
         assert_ne!(
             s.scripts.world.borrow().objects[&ObjectId(2)]
@@ -523,7 +370,13 @@ mod tests {
         );
         sql(&s, "DROP TRIGGER reject_queue").await;
         let before = s.scripts.world.borrow().clone();
-        s.queue_request(None, ObjectId(1), request(), before).await;
+        s.queue_request(
+            ReplyDestination::Object(ObjectId(1)),
+            ObjectId(1),
+            request(),
+            before,
+        )
+        .await;
         assert!(!s.command_queue.ready(now));
         assert!(
             persistence::load(&s.config.database())
@@ -547,7 +400,7 @@ mod tests {
             .unwrap()
             .location = Some(ObjectId(999999));
         s.queue_request(
-            None,
+            ReplyDestination::Object(ObjectId(2)),
             ObjectId(2),
             Request::Add {
                 executor: ObjectId(2),

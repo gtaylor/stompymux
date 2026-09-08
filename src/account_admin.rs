@@ -77,7 +77,9 @@ pub fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action>
                     &input.args,
                 )?)
             };
-            return Ok(Action::AccountAdmin(Request::Boot { target, quiet }));
+            return Ok(Action::Server(
+                crate::commands::ServerRequest::AccountAdmin(Request::Boot { target, quiet }),
+            ));
         }
         ensure!(input.switch.is_none(), "Unsupported command switch.");
         if input.name == "@last" {
@@ -115,7 +117,9 @@ pub fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action>
                     }
                 }
             }
-            return Ok(Action::Report(lines.join("\n")));
+            return Ok(Action::Report(crate::commands::Report::Inspection(
+                lines.join("\n"),
+            )));
         }
         let (name, password) = input
             .args
@@ -130,18 +134,22 @@ pub fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action>
                 ctx.scripts.world.borrow().find_player(name).is_none(),
                 "That name is not available."
             );
-            Ok(Action::AccountAdmin(Request::Create {
-                name: name.into(),
-                password,
-            }))
+            Ok(Action::Server(
+                crate::commands::ServerRequest::AccountAdmin(Request::Create {
+                    name: name.into(),
+                    password,
+                }),
+            ))
         } else {
             let target = player(&ctx.scripts.world.borrow(), ctx.player, name)?;
             ensure!(
                 target != ObjectId(1),
                 "You cannot change that player's password."
             );
-            Ok(Action::AccountAdmin(Request::Reset { target, password }))
+            Ok(Action::Server(
+                crate::commands::ServerRequest::AccountAdmin(Request::Reset { target, password }),
+            ))
         }
     })();
-    Ok(result.unwrap_or_else(|e| Action::Reply(e.to_string())))
+    Ok(result.unwrap_or_else(|e| Action::Report(crate::commands::Report::Reply(e.to_string()))))
 }

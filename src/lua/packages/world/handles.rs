@@ -1,7 +1,7 @@
 //! Generation-checked object identities; callers cannot manufacture handles from tables.
 use super::super::error::failure;
 use crate::{
-    lua::SharedWorld,
+    runtime::SharedWorld,
     state::Generation,
     world::{Kind, ObjectId},
 };

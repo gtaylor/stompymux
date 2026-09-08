@@ -235,8 +235,7 @@ async fn invoke(
     deliver: &mut impl FnMut(),
 ) -> Outcome {
     let before = s.world.borrow().clone();
-    let pending = s.outbox.borrow().clone();
-    let flow_effects = crate::lua::flows::snapshot(&s.lua);
+    let checkpoint = s.effects.checkpoint();
     s.budget.reset();
     let work = || {
         super::transactions::live_test(&s.lua, || {
@@ -274,18 +273,16 @@ async fn invoke(
     };
     let after = s.world.borrow().clone();
     let saved = async {
-        s.flows
-            .validate_output()
-            .map_err(|e| anyhow::anyhow!("{e}"))?;
+        s.effects.validate()?;
         after.validate(c)?;
         if serde_json::to_vec(&before)? != serde_json::to_vec(&after)?
-            || s.flows.maintenance().is_some()
+            || s.effects.maintenance().is_some()
         {
             persistence::persist_effects(
                 c.database(),
                 after,
                 c.database.busy_timeout_ms,
-                s.flows.maintenance(),
+                s.effects.maintenance(),
             )
             .await?;
         }
@@ -294,8 +291,7 @@ async fn invoke(
     .await;
     if let Err(e) = saved {
         *s.world.borrow_mut() = before;
-        *s.outbox.borrow_mut() = pending;
-        crate::lua::flows::restore(&s.lua, flow_effects);
+        s.effects.restore(checkpoint);
         outcome = Outcome::error(format!("validation/persistence: {e:#}"));
     }
     deliver();
@@ -483,6 +479,16 @@ pub async fn run(
     }
     report.elapsed_seconds = started.elapsed().as_secs_f64();
     Ok(report)
+}
+
+impl Scripts {
+    /// Share host flow state with a test VM while retaining test-local output staging.
+    pub(crate) fn host_effects(&mut self, host: &Scripts) {
+        self.flows = self.flows.hosted(&host.flows);
+        self.effects = self.flows.effects.clone();
+        self.publish_services();
+        self.lua.set_app_data(self.flows.clone());
+    }
 }
 
 #[cfg(test)]

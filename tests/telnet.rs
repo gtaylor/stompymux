@@ -240,10 +240,10 @@ fn charset_pending_collisions_and_utf8_only_policy() {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("stompymux.toml");
     std::fs::write(&path, "[logging.topics]\nproblems=true\nnetwork=false\n").unwrap();
-    let config = stompymux_rs::config::Config::load(directory.path()).unwrap();
+    let config = stompymux_rs::Config::load(directory.path()).unwrap();
     assert!(diagnostic.0.enabled(&config));
     std::fs::write(&path, "[logging.topics]\nproblems=false\nnetwork=true\n").unwrap();
-    let config = stompymux_rs::config::Config::load(directory.path()).unwrap();
+    let config = stompymux_rs::Config::load(directory.path()).unwrap();
     assert!(!diagnostic.0.enabled(&config));
     assert!(matches!(
         d.feed(&[0xfe, b'\n']).unwrap().as_slice(),

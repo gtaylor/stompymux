@@ -147,7 +147,10 @@ impl Counts {
     }
 }
 pub fn report(world: &World, player: ObjectId, args: &str, limit: usize) -> Result<String> {
-    ensure!(flags::is_wizard(world, player), "Permission denied.");
+    ensure!(
+        crate::authority::is_wizard(world, player),
+        "Permission denied."
+    );
     let criteria = Criteria::parse(world, player, args)?;
     let mut counts = Counts::default();
     for o in world

@@ -1,36 +1,17 @@
 //! C comsys semantics, typed Lua handles and selective relational durability.
 use sqlx::{Connection, Row};
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
+    Config, Flag, ObjectId, Scripts,
     commands::{self, Action},
     communication::{Access, ChannelFlag, ChannelFlags},
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
     persistence,
-    world::ObjectId,
 };
 
-/// Isolate every SQL and Lua mutation from the checked-in game.
-fn copy(source: &Path, target: &Path) {
-    std::fs::create_dir_all(target).unwrap();
-    for e in std::fs::read_dir(source).unwrap() {
-        let e = e.unwrap();
-        if e.path().is_dir() {
-            copy(&e.path(), &target.join(e.file_name()));
-        } else {
-            std::fs::copy(e.path(), target.join(e.file_name())).unwrap();
-        }
-    }
-}
+mod support;
+use support::isolated_world;
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
-    let d = tempfile::tempdir().unwrap();
-    copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
-        d.path(),
-    );
-    let c = Config::load(d.path()).unwrap();
-    let mut w = persistence::load(&c.database()).await.unwrap();
+    let (d, c, mut w) = isolated_world().await;
     for id in [ObjectId(1), ObjectId(2)] {
         w.objects
             .get_mut(&id)
@@ -44,20 +25,20 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
         .flags
         .remove(Flag::Wizard);
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set(
             "_parents",
-            s.lua
+            s.inspect_lua()
                 .named_registry_value::<mlua::Table>("mux.parents")
                 .unwrap(),
         )
         .unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set(
             "_object_parents",
-            s.lua
+            s.inspect_lua()
                 .named_registry_value::<mlua::Table>("mux.object_parents")
                 .unwrap(),
         )
@@ -69,12 +50,11 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
 fn run(s: &Scripts, c: &Config, who: i64, line: &str) -> String {
     let action = commands::run(s, c, ObjectId(who), 1, line).unwrap();
     let mut output = s
-        .outbox
-        .borrow_mut()
-        .drain(..)
-        .map(|(_, d)| stompymux_rs::text::plain_with(&s.palette, d.source()))
+        .drain_outbox()
+        .into_iter()
+        .map(|(_, d)| stompymux_rs::text::plain_with(s.palette(), d.source()))
         .collect::<Vec<_>>();
-    if let Action::Reply(text) = action {
+    if let Action::Report(commands::Report::Reply(text)) = action {
         output.push(text);
     }
     output.join("\n")
@@ -104,7 +84,7 @@ async fn commands_access_aliases_history_and_pages() {
     let c = Config::load(&c.root).unwrap();
     assert!(run(&s, &c, 2, "ch/create Test").contains("Permission denied"));
     assert!(run(&s, &c, 1, "@chan/create Test").contains("created"));
-    assert_eq!(s.world.borrow().channels["Test"].flags, ChannelFlags(127));
+    assert_eq!(s.world().channels["Test"].flags, ChannelFlags(127));
     assert!(run(&s, &c, 2, "cc t=Test").contains("joined"));
     run(&s, &c, 1, "addcom t=Test");
     assert!(run(&s, &c, 2, "T Hello [fg=red]world[/]").contains("[Test] Wizard: Hello world"));
@@ -119,14 +99,13 @@ async fn commands_access_aliases_history_and_pages() {
     for i in 0..25 {
         run(&s, &c, 1, &format!("t message {i}"));
     }
-    assert_eq!(s.world.borrow().channels["Test"].history.len(), 20);
+    assert_eq!(s.world().channels["Test"].history.len(), 20);
     let history = run(&s, &c, 2, "t last");
     assert!(history.find("message 24").unwrap() < history.find("message 23").unwrap());
     assert!(!history.contains("message 4\n"));
     let who = run(&s, &c, 2, "t who");
     assert!(who.contains("Wizard"));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(1))
         .unwrap()
@@ -135,18 +114,18 @@ async fn commands_access_aliases_history_and_pages() {
     assert!(!run(&s, &c, 2, "t who").contains("God(#1)"));
     run(&s, &c, 1, "@chan/flags Test=transparent");
     assert!(
-        s.world.borrow().channels["Test"]
+        s.world().channels["Test"]
             .flags
             .has(ChannelFlag::Transparent)
     );
     assert!(run(&s, &c, 2, "pc #1=hello").contains("You paged"));
-    assert_eq!(s.world.borrow().last_pages[&ObjectId(2)], vec![ObjectId(1)]);
+    assert_eq!(s.world().last_pages[&ObjectId(2)], vec![ObjectId(1)]);
     assert!(run(&s, &c, 2, "page :waves").contains("From afar"));
     assert!(run(&s, &c, 2, "page").contains("You last paged"));
     assert!(run(&s, &c, 2, "page Missing #1=partial").contains("don't recognize"));
     run(&s, &c, 2, "delcom t");
     assert!(
-        !s.world.borrow().channels["Test"]
+        !s.world().channels["Test"]
             .users
             .iter()
             .any(|u| u.who == ObjectId(2))
@@ -158,7 +137,7 @@ async fn commands_access_aliases_history_and_pages() {
 async fn lua_catalog_handles_and_argument_validation() {
     let (_d, c, s) = fixture().await;
     s.communication(&c);
-    s.lua
+    s.inspect_lua()
         .load(
             r#"
         local c=mux.comsys.create_channel('Lua')
@@ -205,13 +184,13 @@ async fn lua_catalog_handles_and_argument_validation() {
         )
         .exec()
         .unwrap();
-    let before = s.world.borrow().clone();
-    s.lua
+    let before = s.world().clone();
+    s.inspect_lua()
         .load("provisional=mux.comsys.create_channel('Provisional')")
         .exec()
         .unwrap();
-    *s.world.borrow_mut() = before;
-    s.lua.load("mux.comsys.create_channel('Provisional'); assert(not pcall(function() provisional:name() end))").exec().unwrap();
+    *s.world_mut() = before;
+    s.inspect_lua().load("mux.comsys.create_channel('Provisional'); assert(not pcall(function() provisional:name() end))").exec().unwrap();
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -223,26 +202,21 @@ async fn locks_grant_independently_errors_restore_and_output_limits_rollback() {
         run(&s, &c, 2, "addcom lock=Locked")
             .contains("Sorry, this channel type does not allow you to join.")
     );
-    s.world
-        .borrow_mut()
-        .channels
-        .get_mut("Locked")
-        .unwrap()
-        .object = Some(ObjectId(1));
+    s.world_mut().channels.get_mut("Locked").unwrap().object = Some(ObjectId(1));
     // Missing lock grants, just like the fork's comsys_test_access.
     assert!(
         s.communication(&c)
             .allowed(ObjectId(2), "Locked", Access::Join)
             .unwrap()
     );
-    s.lua.load(r#"_parents[_object_parents[1]].locks={channel_join=function(ctx) mux.world.object(2):set_description('leaked'); error('lock failed') end}"#).exec().unwrap();
-    let before = s.world.borrow().objects[&ObjectId(2)].description.clone();
+    s.inspect_lua().load(r#"_parents[_object_parents[1]].locks={channel_join=function(ctx) mux.world.object(2):set_description('leaked'); error('lock failed') end}"#).exec().unwrap();
+    let before = s.world().objects[&ObjectId(2)].description.clone();
     assert!(
         !s.communication(&c)
             .allowed(ObjectId(2), "Locked", Access::Join)
             .unwrap()
     );
-    assert_eq!(s.world.borrow().objects[&ObjectId(2)].description, before);
+    assert_eq!(s.world().objects[&ObjectId(2)].description, before);
     run(&s, &c, 1, "@chan/pflags Locked=join");
     assert!(
         s.communication(&c)
@@ -250,7 +224,7 @@ async fn locks_grant_independently_errors_restore_and_output_limits_rollback() {
             .unwrap()
     );
     run(&s, &c, 2, "addcom lock=Locked");
-    let before = serde_json::to_value(s.world.borrow().clone()).unwrap();
+    let before = serde_json::to_value(s.world().clone()).unwrap();
     assert!(
         run(
             &s,
@@ -260,24 +234,15 @@ async fn locks_grant_independently_errors_restore_and_output_limits_rollback() {
         )
         .contains("output limit")
     );
-    assert_eq!(
-        serde_json::to_value(s.world.borrow().clone()).unwrap(),
-        before
-    );
+    assert_eq!(serde_json::to_value(s.world().clone()).unwrap(), before);
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn pages_names_partial_delivery_ic_and_offline_saved_recipients() {
     let (_d, c, s) = fixture().await;
-    s.world
-        .borrow_mut()
-        .objects
-        .get_mut(&ObjectId(2))
-        .unwrap()
-        .name = "Long Player Name".into();
+    s.world_mut().objects.get_mut(&ObjectId(2)).unwrap().name = "Long Player Name".into();
     assert!(run(&s, &c, 1, "page Long Player Name=message").contains("You paged Long Player Name"));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -285,16 +250,14 @@ async fn pages_names_partial_delivery_ic_and_offline_saved_recipients() {
         .remove(Flag::Connected);
     let output = run(&s, &c, 1, "page #2 #1=partial");
     assert!(output.contains("not connected"));
-    assert_eq!(s.world.borrow().last_pages[&ObjectId(1)], vec![ObjectId(1)]);
-    s.world
-        .borrow_mut()
+    assert_eq!(s.world().last_pages[&ObjectId(1)], vec![ObjectId(1)]);
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
         .insert(Flag::Connected);
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -319,7 +282,7 @@ async fn relational_roundtrip_sparse_positions_unknown_fields_and_failed_writes(
     let image = std::fs::read(c.database()).unwrap();
     persistence::save(&c.database(), &w).await.unwrap();
     assert_eq!(std::fs::read(c.database()).unwrap(), image);
-    *s.world.borrow_mut() = w;
+    *s.world_mut() = w;
     run(&s, &c, 1, "@chan/flags Durable=public");
     run(&s, &c, 1, "dur next");
     save(&c, &s).await.unwrap();
@@ -368,7 +331,7 @@ async fn destroy_preserves_macros_and_rejects_unknown_dependencies() {
     save(&c, &s).await.unwrap();
     let mut db = connection(&c).await;
     sqlx::raw_sql("INSERT INTO macro_sets VALUES(0,1,0,'preserved'); UPDATE commac_entries SET macro_slot_4=0 WHERE who=1; CREATE TABLE extension(channel TEXT REFERENCES comsys_channels(name)); INSERT INTO extension VALUES('Delete')").execute(&mut db).await.unwrap();
-    s.world.borrow_mut().macros = persistence::load(&c.database()).await.unwrap().macros;
+    s.world_mut().macros = persistence::load(&c.database()).await.unwrap().macros;
     run(&s, &c, 1, "@chan/destroy Delete");
     assert!(
         format!("{:#}", save(&c, &s).await.unwrap_err()).contains("dependency extension.channel")
@@ -406,7 +369,7 @@ async fn destroy_preserves_macros_and_rejects_unknown_dependencies() {
 
 /// Drop the world borrow before SQLx yields to its worker.
 async fn save(c: &Config, s: &Scripts) -> anyhow::Result<()> {
-    let snapshot = s.world.borrow().clone();
+    let snapshot = s.world().clone();
     persistence::save(&c.database(), &snapshot).await
 }
 
@@ -417,8 +380,8 @@ async fn channel_leave_and_lua_command_failures_restore_state() {
     run(&s, &c, 1, "@chan/create Callback");
     run(&s, &c, 2, "addcom cb=Callback");
     let thing = {
-        let mut w = s.world.borrow_mut();
-        let id = w.create(&c, "Listener".into(), stompymux_rs::world::Kind::Thing);
+        let mut w = s.world_mut();
+        let id = w.create(&c, "Listener".into(), stompymux_rs::Kind::Thing);
         w.channels.get_mut("Callback").unwrap().users.push(
             stompymux_rs::communication::Membership {
                 who: id,
@@ -428,22 +391,19 @@ async fn channel_leave_and_lua_command_failures_restore_state() {
         id
     };
     s.sync_parents().unwrap();
-    s.lua.load(format!(r#"_parents[_object_parents[{}]].events={{on_leave=function(ctx) assert(ctx.subject==2 and ctx.cause==2); mux.world.object(2):set_description('must rollback'); error('leave failure') end}}"#,thing.0)).exec().unwrap();
-    let before = serde_json::to_value(s.world.borrow().clone()).unwrap();
+    s.inspect_lua().load(format!(r#"_parents[_object_parents[{}]].events={{on_leave=function(ctx) assert(ctx.subject==2 and ctx.cause==2); mux.world.object(2):set_description('must rollback'); error('leave failure') end}}"#,thing.0)).exec().unwrap();
+    let before = serde_json::to_value(s.world().clone()).unwrap();
     assert!(run(&s, &c, 2, "cb off").contains("leave failure"));
-    assert_eq!(
-        serde_json::to_value(s.world.borrow().clone()).unwrap(),
-        before
-    );
-    assert!(s.outbox.borrow().is_empty());
+    assert_eq!(serde_json::to_value(s.world().clone()).unwrap(), before);
+    assert!(s.outbox().is_empty());
     std::fs::write(d.path().join("lua/global_logic/comsys_test.lua"),r#"return {commands={{name='failcom',permission='everyone',pattern='^failcom$',handler=function(ctx) mux.comsys.create_channel('RolledBack'):emit('must not arrive'); error('comsys callback failure') end}}}"#).unwrap();
-    let scripts = Scripts::new(&c, s.world.clone()).unwrap();
-    let prior = scripts.world.borrow().clone();
+    let scripts = s.rebuild_for_inspection(&c).unwrap();
+    let prior = scripts.world().clone();
     assert!(commands::run(&scripts, &c, ObjectId(2), 1, "failcom").is_err());
     // The world owner restores its snapshot on callback failure, before any persistence or flush.
-    *scripts.world.borrow_mut() = prior;
-    scripts.outbox.borrow_mut().clear();
-    assert!(!scripts.world.borrow().channels.contains_key("RolledBack"));
+    *scripts.world_mut() = prior;
+    scripts.drain_outbox();
+    assert!(!scripts.world().channels.contains_key("RolledBack"));
 }
 
 /// Database maintenance must compact membership and page slots without deleting surviving entries.
@@ -454,28 +414,26 @@ async fn repair_purges_communication_ownership_and_retains_survivors() {
     run(&s, &c, 1, "addcom r=Repair");
     run(&s, &c, 2, "addcom r=Repair");
     let victim = {
-        let mut w = s.world.borrow_mut();
-        let id = w.create(&c, "PurgeMe".into(), stompymux_rs::world::Kind::Player);
+        let mut w = s.world_mut();
+        let id = w.create(&c, "PurgeMe".into(), stompymux_rs::Kind::Player);
         w.accounts.insert(id, Default::default());
         id
     };
     s.communication(&c)
         .add(victim, "Repair", "r", true, true)
         .unwrap();
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .last_pages
         .insert(ObjectId(1), vec![victim, ObjectId(2)]);
     save(&c, &s).await.unwrap();
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&victim)
         .unwrap()
         .flags
         .insert(Flag::Going);
     let report = persistence::repair(&c.database(), c.database.busy_timeout_ms, |links| {
-        stompymux_rs::dbck::plan(&s.world.borrow(), links, &c)
+        stompymux_rs::dbck::plan(&s.world(), links, &c)
     })
     .await
     .unwrap();
@@ -508,8 +466,8 @@ async fn pages_are_direct_for_all_forms_and_roll_back_output_limits() {
     c.logger.shutdown(&c).await.unwrap();
     let c = Config::load(d.path()).unwrap();
     let box_id = {
-        let mut w = s.world.borrow_mut();
-        let id = w.create(&c, "Page Box".into(), stompymux_rs::world::Kind::Thing);
+        let mut w = s.world_mut();
+        let id = w.create(&c, "Page Box".into(), stompymux_rs::Kind::Thing);
         w.objects.get_mut(&id).unwrap().location = Some(ObjectId(1));
         w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
         id
@@ -522,43 +480,41 @@ async fn pages_are_direct_for_all_forms_and_roll_back_output_limits() {
         "page #1=\"speech",
     ] {
         commands::run(&s, &c, ObjectId(1), 1, command).unwrap();
-        let output = s.outbox.borrow_mut().drain(..).collect::<Vec<_>>();
+        let output = s.drain_outbox().into_iter().collect::<Vec<_>>();
         assert_eq!(output.len(), 2, "{command}");
         assert!(output.iter().all(|(id, _)| *id == ObjectId(1)), "{command}");
     }
     // Explicitly naming a contained player still delivers to them once.
     commands::run(&s, &c, ObjectId(1), 1, "page #1 #2=addressed").unwrap();
     assert_eq!(
-        s.outbox
-            .borrow()
+        s.outbox()
             .iter()
             .filter(|(id, _)| *id == ObjectId(2))
             .count(),
         1
     );
-    s.outbox.borrow_mut().clear();
+    s.drain_outbox();
     // An ordinary player containing the sender gets the page, but no echoed copy
     // goes to the sender: only their normal confirmation is staged.
     {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(0));
         w.objects.get_mut(&box_id).unwrap().location = Some(ObjectId(2));
         w.objects.get_mut(&ObjectId(1)).unwrap().location = Some(box_id);
     }
     commands::run(&s, &c, ObjectId(1), 1, "page #2=ordinary").unwrap();
     assert_eq!(
-        s.outbox
-            .borrow()
+        s.outbox()
             .iter()
             .filter(|(id, _)| *id == ObjectId(1))
             .count(),
         1
     );
-    s.outbox.borrow_mut().clear();
+    s.drain_outbox();
     commands::run(&s, &c, ObjectId(2), 2, "page #2=self").unwrap();
-    assert!(s.outbox.borrow().iter().all(|(id, _)| *id == ObjectId(2)));
-    s.outbox.borrow_mut().clear();
-    let history = s.world.borrow().last_pages.clone();
+    assert!(s.outbox().iter().all(|(id, _)| *id == ObjectId(2)));
+    s.drain_outbox();
+    let history = s.world().last_pages.clone();
     // The direct page fits, but its confirmation exceeds the entry budget.
     let path = d.path().join("stompymux.toml");
     let mut config: toml::Value = toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
@@ -572,7 +528,7 @@ async fn pages_are_direct_for_all_forms_and_roll_back_output_limits() {
     let output = run(&s, &c, 1, "page #1=rollback");
     assert!(output.contains("output limit"));
     assert!(!output.contains("GOD pages:") && !output.contains("You paged"));
-    assert!(s.outbox.borrow().is_empty());
-    assert_eq!(s.world.borrow().last_pages, history);
+    assert!(s.outbox().is_empty());
+    assert_eq!(s.world().last_pages, history);
     c.logger.shutdown(&c).await.unwrap();
 }

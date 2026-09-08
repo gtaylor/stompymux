@@ -2,7 +2,6 @@
 use super::*;
 use crate::{
     commands::{Action, CommandContext, CommandDefinition, CommandInput, CommandPermissions},
-    flags,
     world::Kind,
 };
 
@@ -55,19 +54,21 @@ fn execute(
         .get(&ctx.player)
         .is_some_and(|o| o.kind == Kind::Player)
     {
-        return Ok(Action::Reply(
+        return Ok(Action::Report(crate::commands::Report::Reply(
             "MACRO: Only players may use macro sets.".into(),
-        ));
+        )));
     }
     let before = mutation.then(|| w.macros.clone());
     match operation(&mut w) {
         Ok(message) if mutation => Ok(Action::CommitReply(message)),
-        Ok(message) => Ok(Action::Reply(message)),
+        Ok(message) => Ok(Action::Report(crate::commands::Report::Reply(message))),
         Err(error) => {
             if let Some(before) = before {
                 w.macros = before;
             }
-            Ok(Action::Reply(format!("MACRO: {error}")))
+            Ok(Action::Report(crate::commands::Report::Reply(format!(
+                "MACRO: {error}"
+            ))))
         }
     }
 }
@@ -151,7 +152,8 @@ fn add(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
         |w| {
             let index = set_number(w, &input.args)?;
             ensure!(
-                w.macros.sets[index].readable(ctx.player, flags::is_wizard(w, ctx.player)),
+                w.macros.sets[index]
+                    .readable(ctx.player, crate::authority::is_wizard(w, ctx.player)),
                 "Permission denied."
             );
             let slot = empty_slot(w, ctx.player)?;
@@ -232,7 +234,7 @@ fn chmod(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
         ctx,
         |w| {
             let index = current(w, ctx.player)?;
-            let wizard = flags::is_wizard(w, ctx.player);
+            let wizard = crate::authority::is_wizard(w, ctx.player);
             let set = &mut w.macros.sets[index];
             ensure!(wizard || set.owner == ctx.player, "Permission denied.");
             let (enabled, value) = input
@@ -263,7 +265,10 @@ fn chown(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     execute(
         ctx,
         |w| {
-            ensure!(flags::is_wizard(w, ctx.player), "Permission denied.");
+            ensure!(
+                crate::authority::is_wizard(w, ctx.player),
+                "Permission denied."
+            );
             let index = current(w, ctx.player)?;
             let owner = crate::commands::target::admin_target(w, ctx.player, &input.args)?;
             w.macros.sets[index].owner = owner;
@@ -287,7 +292,7 @@ fn clear(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
                 );
             } else {
                 ensure!(
-                    flags::is_wizard(w, ctx.player),
+                    crate::authority::is_wizard(w, ctx.player),
                     "You may only CLEAR your own macro sets."
                 );
             }
@@ -419,7 +424,7 @@ fn global_list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action>
         ctx,
         |w| {
             no_args(input)?;
-            let wizard = flags::is_wizard(w, ctx.player);
+            let wizard = crate::authority::is_wizard(w, ctx.player);
             Ok(lines(
                 std::iter::once(
                     "Num  Description                         Owner                    LRW".into(),
@@ -508,7 +513,8 @@ fn global_examine(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Acti
         |w| {
             let index = set_number(w, &input.args)?;
             ensure!(
-                w.macros.sets[index].readable(ctx.player, flags::is_wizard(w, ctx.player)),
+                w.macros.sets[index]
+                    .readable(ctx.player, crate::authority::is_wizard(w, ctx.player)),
                 "Permission denied."
             );
             Ok(inspect(w, index, ctx.config.runtime.output_message_limit))

@@ -84,7 +84,7 @@ pub fn change(
     value: bool,
 ) -> Result<bool> {
     ensure!(
-        crate::flags::controls(world, actor, target),
+        crate::authority::controls(world, actor, target),
         "Permission denied."
     );
     let object = world

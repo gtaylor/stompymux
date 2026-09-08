@@ -486,3 +486,13 @@ pub fn encode(text: &str) -> Vec<u8> {
     }
     out
 }
+
+/// Encode a line within even very small output limits without splitting UTF-8.
+pub fn bounded_error(message: &str, limit: usize) -> Vec<u8> {
+    let encoded = encode(&format!("{message}\r\n"));
+    let mut end = encoded.len().min(limit);
+    while end > 0 && std::str::from_utf8(&encoded[..end]).is_err() {
+        end -= 1;
+    }
+    encoded[..end].to_vec()
+}

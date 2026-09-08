@@ -331,7 +331,7 @@ impl Scripts {
         hush: bool,
         context: TransitionContext,
     ) -> Result<()> {
-        use crate::flags::{self, Flag};
+        use crate::flags::Flag;
         let location = self
             .world
             .borrow()
@@ -361,11 +361,14 @@ impl Scripts {
                 .objects
                 .get(&location)
                 .ok_or_else(|| anyhow::anyhow!("Movement location missing"))?;
-            let dark_wizard = flags::is_wizard(&w, thing.id) && thing.flags.contains(Flag::Dark);
+            let dark_wizard =
+                crate::authority::is_wizard(&w, thing.id) && thing.flags.contains(Flag::Dark);
             let hear = context.hear;
             let visible = !thing.flags.contains(Flag::Dark) && !loc.flags.contains(Flag::Dark);
-            let quiet =
-                hush || !(flags::is_wizard(&w, location) || visible || (hear && !dark_wizard));
+            let quiet = hush
+                || !(crate::authority::is_wizard(&w, location)
+                    || visible
+                    || (hear && !dark_wizard));
             (
                 quiet,
                 !quiet

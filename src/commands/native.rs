@@ -26,7 +26,10 @@ pub(super) fn power(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
                 .split_once('=')
                 .context("Usage: @power <target>=<power> or !<power>")?;
             let target = admin_target(&w, player, target)?;
-            ensure!(flags::controls(&w, player, target), "Permission denied.");
+            ensure!(
+                crate::authority::controls(&w, player, target),
+                "Permission denied."
+            );
             let power = power.trim();
             let (value, name) = power
                 .strip_prefix('!')
@@ -61,7 +64,10 @@ pub(super) fn flag(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
                 .split_once('=')
                 .context("Usage: @flag <target>=<flag> or !<flag>")?;
             let target = admin_target(&w, player, target)?;
-            ensure!(flags::controls(&w, player, target), "Permission denied.");
+            ensure!(
+                crate::authority::controls(&w, player, target),
+                "Permission denied."
+            );
             let flag = flag.trim();
             let (value, name) = flag
                 .strip_prefix('!')
@@ -85,7 +91,7 @@ pub(super) fn flag(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
 }
 /// Ask the server to close this connection.
 pub(super) fn quit(_: &CommandContext<'_>, _: &CommandInput) -> Result<Action> {
-    Ok(Action::Quit)
+    Ok(Action::Server(crate::commands::ServerRequest::Quit))
 }
 /// Find results share the automatic report transport with other database inspections.
 pub(super) fn find(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
@@ -95,8 +101,8 @@ pub(super) fn find(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
         &input.args,
         ctx.config.lua.output_byte_limit,
     )
-    .map(Action::LiteralReport)
-    .unwrap_or_else(|e| Action::Reply(e.to_string())))
+    .map(|text| Action::Report(crate::commands::Report::Literal(text)))
+    .unwrap_or_else(|e| Action::Report(crate::commands::Report::Reply(e.to_string()))))
 }
 /// Return to the caller's configured home.
 pub(super) fn home(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
@@ -170,50 +176,62 @@ fn movement_response(ctx: &CommandContext<'_>, result: Result<()>) -> Result<Act
 /// Request shutdown without reasons or switches.
 pub(super) fn shutdown(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     Ok(if input.args.is_empty() {
-        Action::Shutdown
+        Action::Server(crate::commands::ServerRequest::Shutdown)
     } else {
-        Action::Reply("Usage: @shutdown".into())
+        Action::Report(crate::commands::Report::Reply("Usage: @shutdown".into()))
     })
 }
 /// Request semantic checking and repair from the world owner.
 pub(super) fn dbck(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     Ok(if input.args.is_empty() {
-        Action::DbCheck
+        Action::Server(crate::commands::ServerRequest::DbCheck)
     } else {
-        Action::Reply("Usage: @dbck".into())
+        Action::Report(crate::commands::Report::Reply("Usage: @dbck".into()))
     })
 }
 
 /// Inspect live sessions without entering the world transaction path.
 pub(super) fn sessions(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
-    Ok(Action::Sessions(input.args.clone()))
+    Ok(Action::Server(crate::commands::ServerRequest::Sessions(
+        input.args.clone(),
+    )))
 }
 /// Inspect negotiated options for every session belonging to a player.
 pub(super) fn telnet(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
-    Ok(Action::Telnet(input.args.clone()))
+    Ok(Action::Server(crate::commands::ServerRequest::Telnet(
+        input.args.clone(),
+    )))
 }
 
 /// Inspect or change the invoking connection's rendering preference.
 pub fn color(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
-    Ok(Action::Color(input.args.clone()))
+    Ok(Action::Server(crate::commands::ServerRequest::Color(
+        input.args.clone(),
+    )))
 }
 
 /// Resolve a help topic without invoking Lua or writing the database.
 pub fn help(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
-    Ok(Action::Help(input.args.clone()))
+    Ok(Action::Server(crate::commands::ServerRequest::Help(
+        input.args.clone(),
+    )))
 }
 
 /// Wizard-only help administration with explicit switch validation.
 pub(super) fn help_admin(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     if !input.args.trim().is_empty() {
-        return Ok(Action::Reply("Usage: @help or @help/reload".into()));
+        return Ok(Action::Report(crate::commands::Report::Reply(
+            "Usage: @help or @help/reload".into(),
+        )));
     }
     Ok(match input.switch.as_deref() {
-        None => {
-            Action::Reply("@help command switches:\r\n  /reload  Rebuild the help index.".into())
-        }
-        Some("reload") => Action::HelpReload,
-        _ => Action::Reply("Invalid @help switch combination.".into()),
+        None => Action::Report(crate::commands::Report::Reply(
+            "@help command switches:\r\n  /reload  Rebuild the help index.".into(),
+        )),
+        Some("reload") => Action::Server(crate::commands::ServerRequest::HelpReload),
+        _ => Action::Report(crate::commands::Report::Reply(
+            "Invalid @help switch combination.".into(),
+        )),
     })
 }
 

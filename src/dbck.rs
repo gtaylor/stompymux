@@ -1,14 +1,8 @@
 //! Deterministic semantic repair plans, separate from transaction execution and sessions.
-use crate::{
-    config::Config,
-    flags::{self, Flag},
-    world::*,
-};
+use crate::{config::Config, flags::Flag, world::*};
 use anyhow::{Context, Result, ensure};
 use std::collections::{BTreeMap, BTreeSet};
 
-/// Legacy contents head, exits head (or exit source), and next member.
-pub type Links = BTreeMap<ObjectId, [i64; 3]>;
 /// A reference or flag adjustment made by maintenance.
 #[derive(Debug, Clone)]
 pub struct FieldRepair {
@@ -56,14 +50,14 @@ impl DbCheckReport {
     pub fn response(&self, limit: usize) -> Vec<u8> {
         const FOOTER: &[u8] = b"Done.\r\n";
         if limit < FOOTER.len() {
-            return crate::find::bounded_error("Done.", limit);
+            return crate::telnet::bounded_error("Done.", limit);
         }
         let summary = self.summary();
         let summary = summary.strip_suffix("\nDone.").unwrap_or(&summary);
-        let mut bytes = crate::find::bounded_error(summary, limit - FOOTER.len());
+        let mut bytes = crate::telnet::bounded_error(summary, limit - FOOTER.len());
         // A truncated summary still needs a line break before the completion marker.
         if !bytes.is_empty() && !bytes.ends_with(b"\r\n") {
-            bytes = crate::find::bounded_error(summary, limit.saturating_sub(FOOTER.len() + 2));
+            bytes = crate::telnet::bounded_error(summary, limit.saturating_sub(FOOTER.len() + 2));
             if limit >= FOOTER.len() + 2 {
                 bytes.extend_from_slice(b"\r\n");
             }
@@ -105,7 +99,7 @@ fn home(w: &World, c: &Config, object: ObjectId) -> Result<ObjectId> {
     o.location
         .into_iter()
         .chain(o.home)
-        .filter(|id| flags::controls(w, object, *id))
+        .filter(|id| crate::authority::controls(w, object, *id))
         .chain([
             ObjectId(c.mux.default_home),
             ObjectId(c.home()),
@@ -118,7 +112,7 @@ fn home(w: &World, c: &Config, object: ObjectId) -> Result<ObjectId> {
 fn chain(w: &World, raw: &Links, owner: ObjectId, exits: bool) -> Vec<ObjectId> {
     let mut result = Vec::new();
     let mut seen = BTreeSet::new();
-    let mut next = raw.get(&owner).map_or(-1, |r| r[usize::from(exits)]);
+    let mut next = raw.get(&owner).map_or(-1, |slots| slots.head(exits));
     while next >= 0 {
         let id = ObjectId(next);
         if !seen.insert(id) {
@@ -135,16 +129,16 @@ fn chain(w: &World, raw: &Links, owner: ObjectId, exits: bool) -> Vec<ObjectId> 
             break;
         }
         result.push(id);
-        next = raw.get(&id).map_or(-1, |r| r[2]);
+        next = raw.get(&id).map_or(-1, |slots| slots.next);
     }
     result
 }
 /// Rebuild lists, keeping surviving members in their existing order then appending by dbref.
 pub fn rebuild_links(w: &World, raw: &Links) -> Links {
-    let mut links: Links = w.objects.keys().map(|id| (*id, [-1; 3])).collect();
+    let mut links: Links = w.objects.keys().map(|id| (*id, LinkSlots::EMPTY)).collect();
     for o in w.objects.values() {
         if o.kind == Kind::Exit {
-            links.get_mut(&o.id).unwrap()[1] = o.location.map_or(-1, |id| id.0);
+            links.get_mut(&o.id).unwrap().exits = o.location.map_or(-1, |id| id.0);
         }
         if !matches!(o.kind, Kind::Room | Kind::Player | Kind::Thing) {
             continue;
@@ -167,9 +161,9 @@ pub fn rebuild_links(w: &World, raw: &Links) -> Links {
             order.retain(|id| members.contains(id));
             let retained: BTreeSet<_> = order.iter().copied().collect();
             order.extend(members.difference(&retained).copied());
-            links.get_mut(&o.id).unwrap()[usize::from(exits)] = order.first().map_or(-1, |id| id.0);
+            *links.get_mut(&o.id).unwrap().head_mut(exits) = order.first().map_or(-1, |id| id.0);
             for (i, id) in order.iter().enumerate() {
-                links.get_mut(id).unwrap()[2] = order.get(i + 1).map_or(-1, |id| id.0);
+                links.get_mut(id).unwrap().next = order.get(i + 1).map_or(-1, |id| id.0);
             }
         }
     }
@@ -347,10 +341,14 @@ pub fn plan(before: &World, raw: &Links, c: &Config) -> Result<(World, DbCheckRe
                 destination: new.location.context("repaired occupant has no location")?,
             });
         }
-        if flags::is_wizard(&w, *id) {
+        if crate::authority::is_wizard(&w, *id) {
             report.findings.push(format!("Wizard object #{}", id.0));
         }
-        if !flags::is_wizard(&w, *id) && new.location.is_some_and(|loc| flags::is_wizard(&w, loc)) {
+        if !crate::authority::is_wizard(&w, *id)
+            && new
+                .location
+                .is_some_and(|loc| crate::authority::is_wizard(&w, loc))
+        {
             report
                 .findings
                 .push(format!("Non-Wizard #{} inside Wizard container", id.0));

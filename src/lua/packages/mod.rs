@@ -8,7 +8,7 @@ mod telnet;
 mod text;
 pub(crate) mod world;
 
-use super::{Outbox, SharedWorld};
+use crate::runtime::{Outbox, SharedWorld};
 use crate::{config::Config, text::Palette};
 use anyhow::Result;
 use mlua::{Function, Lua, Table};
@@ -34,6 +34,7 @@ pub(super) fn register_native(
     config: &Config,
     world: &SharedWorld,
     outbox: &Outbox,
+    effects: &crate::runtime::Effects,
     palette: &Arc<Palette>,
 ) -> Result<Table> {
     let api = lua
@@ -41,7 +42,7 @@ pub(super) fn register_native(
         .map_err(|e| anyhow::anyhow!(e.to_string()))?;
     world::register(lua, &api, config, world, outbox, palette)?;
     config::register(lua, &api, config)?;
-    comsys::register(lua, &api, config, world, outbox)?;
+    comsys::register(lua, &api, config, world, outbox, effects)?;
     text::register(lua, &api, config, palette)?;
     logging::register(lua, &api).map_err(|e| anyhow::anyhow!("{e}"))?;
     Ok(api)

@@ -1,43 +1,22 @@
 //! C-grounded native lock-failure event identities, suppression and rollback.
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
+    Config, Flag, Kind, ObjectId, Scripts, World,
     commands::{self, Action, ExecutionContext, InputOrigin},
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
     movement::{self, Request, Route},
-    persistence,
-    world::{Kind, ObjectId, World},
 };
 
-/// Copy only the checked-in integration world into an isolated temporary game.
-fn copy(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for entry in std::fs::read_dir(from).unwrap() {
-        let entry = entry.unwrap();
-        let target = to.join(entry.file_name());
-        if entry.path().is_dir() {
-            copy(&entry.path(), &target);
-        } else {
-            std::fs::copy(entry.path(), target).unwrap();
-        }
-    }
-}
+mod support;
+use support::isolated_world;
 
 /// Load the fixture world with a reusable object module for denial probes.
 async fn fixture() -> (tempfile::TempDir, Config, World) {
-    let dir = tempfile::tempdir().unwrap();
-    copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
-        dir.path(),
-    );
+    let (dir, config, mut world) = isolated_world().await;
     std::fs::write(
         dir.path().join("lua/object_logic/failure_parity.lua"),
         "return {locks={},events={}}",
     )
     .unwrap();
-    let config = Config::load(dir.path()).unwrap();
-    let mut world = persistence::load(&config.database()).await.unwrap();
     for id in [ObjectId(1), ObjectId(2)] {
         world.objects.get_mut(&id).unwrap().location = Some(ObjectId(4));
     }
@@ -74,15 +53,14 @@ fn execute(scripts: &Scripts, config: &Config, command: &str) -> String {
     )
     .unwrap();
     let mut output = scripts
-        .outbox
-        .borrow_mut()
-        .drain(..)
+        .drain_outbox()
+        .into_iter()
         .map(|(_, message)| message.source().to_string())
         .collect::<Vec<_>>();
-    if let Action::Reply(message)
+    if let Action::Report(commands::Report::Reply(message))
     | Action::CommitReply(message)
-    | Action::Report(message)
-    | Action::StyledReport(message) = action
+    | Action::Report(commands::Report::Inspection(message))
+    | Action::Report(commands::Report::Styled(message)) = action
     {
         output.push(message);
     }
@@ -96,14 +74,18 @@ async fn ordinary_and_receive_failures_keep_lock_subject_out_of_events() {
     world.objects.get_mut(&ObjectId(1)).unwrap().lua_parent = "failure_parity.lua".into();
     let scripts = scripts(&config, world);
     let parent = scripts
-        .lua
+        .inspect_lua()
         .named_registry_value::<mlua::Table>("mux.parents")
         .unwrap()
         .get::<mlua::Table>("failure_parity.lua")
         .unwrap();
-    scripts.lua.globals().set("parent", parent).unwrap();
     scripts
-        .lua
+        .inspect_lua()
+        .globals()
+        .set("parent", parent)
+        .unwrap();
+    scripts
+        .inspect_lua()
         .load(format!(
             r#"
             trace={{}}
@@ -148,14 +130,11 @@ async fn ordinary_and_receive_failures_keep_lock_subject_out_of_events() {
         .unwrap();
 
     assert!(execute(&scripts, &config, "give GOD=Parcel").contains("doesn't want Parcel"));
-    assert_eq!(
-        scripts.world.borrow().objects[&item].location,
-        Some(ObjectId(2))
-    );
+    assert_eq!(scripts.world().objects[&item].location, Some(ObjectId(2)));
     assert!(execute(&scripts, &config, "use Parcel").contains("can't figure"));
     assert_eq!(
         scripts
-            .lua
+            .inspect_lua()
             .load("return table.concat(trace,',')")
             .eval::<String>()
             .unwrap(),
@@ -177,14 +156,18 @@ async fn traversal_failure_omits_subject_and_dark_silence_suppresses_event() {
     }
     let scripts = scripts(&config, world);
     let parent = scripts
-        .lua
+        .inspect_lua()
         .named_registry_value::<mlua::Table>("mux.parents")
         .unwrap()
         .get::<mlua::Table>("failure_parity.lua")
         .unwrap();
-    scripts.lua.globals().set("parent", parent).unwrap();
     scripts
-        .lua
+        .inspect_lua()
+        .globals()
+        .set("parent", parent)
+        .unwrap();
+    scripts
+        .inspect_lua()
         .load(
             r#"
       locks=0;events=0
@@ -207,14 +190,14 @@ async fn traversal_failure_omits_subject_and_dark_silence_suppresses_event() {
     assert!(execute(&scripts, &config, "blocked").contains("TRAVERSE DENIED"));
     assert_eq!(
         scripts
-            .lua
+            .inspect_lua()
             .load("return locks..':'..events")
             .eval::<String>()
             .unwrap(),
         "1:1"
     );
     {
-        let mut world = scripts.world.borrow_mut();
+        let mut world = scripts.world_mut();
         let player = world.objects.get_mut(&ObjectId(2)).unwrap();
         player.flags.insert(Flag::Wizard);
         player.flags.insert(Flag::Dark);
@@ -222,7 +205,7 @@ async fn traversal_failure_omits_subject_and_dark_silence_suppresses_event() {
     assert!(!execute(&scripts, &config, "blocked").contains("TRAVERSE DENIED"));
     assert_eq!(
         scripts
-            .lua
+            .inspect_lua()
             .load("return locks..':'..events")
             .eval::<String>()
             .unwrap(),
@@ -237,14 +220,18 @@ async fn teleport_failure_keeps_movement_identity_and_omits_event_subject() {
     world.objects.get_mut(&ObjectId(0)).unwrap().lua_parent = "failure_parity.lua".into();
     let scripts = scripts(&config, world);
     let parent = scripts
-        .lua
+        .inspect_lua()
         .named_registry_value::<mlua::Table>("mux.parents")
         .unwrap()
         .get::<mlua::Table>("failure_parity.lua")
         .unwrap();
-    scripts.lua.globals().set("parent", parent).unwrap();
     scripts
-        .lua
+        .inspect_lua()
+        .globals()
+        .set("parent", parent)
+        .unwrap();
+    scripts
+        .inspect_lua()
         .load(
             r#"
       trace={}
@@ -277,12 +264,12 @@ async fn teleport_failure_keeps_movement_identity_and_omits_event_subject() {
     )
     .unwrap();
     assert_eq!(
-        scripts.world.borrow().objects[&ObjectId(2)].location,
+        scripts.world().objects[&ObjectId(2)].location,
         Some(ObjectId(4))
     );
     assert_eq!(
         scripts
-            .lua
+            .inspect_lua()
             .load("return table.concat(trace,',')")
             .eval::<String>()
             .unwrap(),
@@ -297,14 +284,18 @@ async fn failure_callback_error_rolls_back_world_and_staged_output() {
     let item = thing(&mut world, &config, "Faulty", ObjectId(4));
     let scripts = scripts(&config, world);
     let parent = scripts
-        .lua
+        .inspect_lua()
         .named_registry_value::<mlua::Table>("mux.parents")
         .unwrap()
         .get::<mlua::Table>("failure_parity.lua")
         .unwrap();
-    scripts.lua.globals().set("parent", parent).unwrap();
     scripts
-        .lua
+        .inspect_lua()
+        .globals()
+        .set("parent", parent)
+        .unwrap();
+    scripts
+        .inspect_lua()
         .load(format!(
             r#"
             parent.locks={{use=function(ctx)
@@ -327,7 +318,7 @@ async fn failure_callback_error_rolls_back_world_and_staged_output() {
     assert!(output.contains("failure event rollback probe"));
     assert!(!output.contains("STAGED DENIAL") && !output.contains("STAGED EVENT OUTPUT"));
     assert!(
-        !scripts.world.borrow().objects[&item]
+        !scripts.world().objects[&item]
             .state
             .contains_key("failure_event")
     );

@@ -9,7 +9,7 @@ use super::{
     SwitchPolicy,
 };
 use crate::{
-    LockInvocation, LockType, flags,
+    LockInvocation, LockType,
     lua::ObjectAction,
     world::{Kind, ObjectId},
 };
@@ -61,15 +61,15 @@ pub fn definitions() -> Vec<CommandDefinition> {
 /// Restore every provisional mutation on failed validation, callback or operation.
 fn transaction(ctx: &CommandContext<'_>, work: impl FnOnce() -> Result<()>) -> Result<Action> {
     let before = ctx.scripts.world.borrow().clone();
-    let pending = ctx.scripts.outbox.borrow().clone();
-    let flow_effects = crate::lua::flows::snapshot(&ctx.scripts.lua);
+    let checkpoint = ctx.scripts.effects.checkpoint();
     match work() {
         Ok(()) => Ok(Action::Continue),
         Err(e) => {
             *ctx.scripts.world.borrow_mut() = before;
-            *ctx.scripts.outbox.borrow_mut() = pending;
-            crate::lua::flows::restore(&ctx.scripts.lua, flow_effects);
-            Ok(Action::Reply(e.to_string()))
+            ctx.scripts.effects.restore(checkpoint);
+            Ok(Action::Report(crate::commands::Report::Reply(
+                e.to_string(),
+            )))
         }
     }
 }

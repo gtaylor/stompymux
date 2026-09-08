@@ -1,26 +1,14 @@
 //! C speech command and notification graph compatibility, on isolated worlds.
 use std::{cell::RefCell, path::Path, rc::Rc};
 use stompymux_rs::{
+    Account, Config, Flag, Kind, ObjectId, Scripts, World,
     commands::{self, Action},
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
-    notification::{self, Policy, Request},
+    notification::{Policy, Request},
     persistence,
     text::{Document, RenderOptions},
-    world::{Account, Kind, ObjectId, World},
 };
-fn copy(a: &Path, b: &Path) {
-    std::fs::create_dir_all(b).unwrap();
-    for e in std::fs::read_dir(a).unwrap() {
-        let e = e.unwrap();
-        if e.path().is_dir() {
-            copy(&e.path(), &b.join(e.file_name()));
-        } else {
-            std::fs::copy(e.path(), b.join(e.file_name())).unwrap();
-        }
-    }
-}
+mod support;
+use support::copy;
 fn create(w: &mut World, c: &Config, name: &str, kind: Kind, loc: Option<ObjectId>) -> ObjectId {
     let p = w.create(c, name.into(), kind);
     let o = w.objects.get_mut(&p).unwrap();
@@ -93,13 +81,12 @@ async fn fixture(settings: &str) -> (tempfile::TempDir, Config, Scripts, Ids) {
     )
 }
 fn take(s: &Scripts) -> Vec<(ObjectId, String)> {
-    s.outbox
-        .borrow_mut()
-        .drain(..)
+    s.drain_outbox()
+        .into_iter()
         .map(|(id, d)| {
             (
                 id,
-                d.spans(&s.palette, &RenderOptions::default())
+                d.spans(s.palette(), &RenderOptions::default())
                     .into_iter()
                     .map(|s| s.text)
                     .collect(),
@@ -113,15 +100,15 @@ fn run(
     p: ObjectId,
     line: &str,
 ) -> anyhow::Result<Vec<(ObjectId, String)>> {
-    let before = s.world.borrow().clone();
-    let pending = s.outbox.borrow().clone();
+    let before = s.world().clone();
+    let pending = s.outbox().clone();
     match commands::run(s, c, p, 1, line) {
-        Ok(Action::Reply(t)) => anyhow::bail!(t),
-        Ok(Action::Report(t)) => Ok(vec![(p, t)]),
+        Ok(Action::Report(commands::Report::Reply(t))) => anyhow::bail!(t),
+        Ok(Action::Report(commands::Report::Inspection(t))) => Ok(vec![(p, t)]),
         Ok(_) => Ok(take(s)),
         Err(e) => {
-            *s.world.borrow_mut() = before;
-            *s.outbox.borrow_mut() = pending;
+            *s.world_mut() = before;
+            s.replace_outbox(pending);
             Err(e)
         }
     }
@@ -151,8 +138,7 @@ async fn speech_prefixes_switches_authority_and_formatting() {
     ] {
         assert!(run(&s, &c, ObjectId(1), bad).is_err(), "{bad}");
     }
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&i.alice)
         .unwrap()
@@ -205,14 +191,14 @@ async fn targets_lists_exclusions_and_broadcasts() {
     let out = run(&s, &c, ObjectId(1), "@pemit/list #9999 me=mixed").unwrap();
     assert!(out.iter().any(|(_, t)| t == "mixed"));
     create(
-        &mut s.world.borrow_mut(),
+        &mut s.world_mut(),
         &c,
         "Duplicate",
         Kind::Thing,
         Some(i.room),
     );
     create(
-        &mut s.world.borrow_mut(),
+        &mut s.world_mut(),
         &c,
         "Duplicate",
         Kind::Thing,
@@ -223,16 +209,10 @@ async fn targets_lists_exclusions_and_broadcasts() {
 #[tokio::test(flavor = "current_thread")]
 async fn container_audibility_and_rich_lua_delivery() {
     let (_d, c, s, i) = fixture("").await;
-    s.world
-        .borrow_mut()
-        .objects
-        .get_mut(&i.alice)
-        .unwrap()
-        .location = Some(i.bag);
+    s.world_mut().objects.get_mut(&i.alice).unwrap().location = Some(i.bag);
     let out = run(&s, &c, i.alice, "say inside").unwrap();
     assert!(!out.iter().any(|(id, _)| *id == i.bob));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&i.bag)
         .unwrap()
@@ -240,8 +220,7 @@ async fn container_audibility_and_rich_lua_delivery() {
         .insert(Flag::Audible);
     let out = run(&s, &c, i.alice, "say inside").unwrap();
     assert!(out.contains(&(i.bob, "From Box, Alice says \"inside\"".into())));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&i.exit)
         .unwrap()
@@ -296,12 +275,7 @@ async fn container_audibility_and_rich_lua_delivery() {
     )
     .unwrap();
     assert!(out.contains(&(i.remote, "exit-destination".into())));
-    s.world
-        .borrow_mut()
-        .objects
-        .get_mut(&i.room)
-        .unwrap()
-        .dropto = Some(i.far);
+    s.world_mut().objects.get_mut(&i.room).unwrap().dropto = Some(i.far);
     let out = run(
         &s,
         &c,
@@ -317,30 +291,22 @@ async fn container_audibility_and_rich_lua_delivery() {
 async fn atomic_limits_recursion_and_lock_rollback() {
     let (_d, c, s, i) = fixture("output_entry_limit=2").await;
     assert!(run(&s, &c, i.alice, "say excessive").is_err());
-    assert!(s.outbox.borrow().is_empty());
+    assert!(s.outbox().is_empty());
     s.eval_callback::<()>(&format!(
         "local ok=pcall(mux.world.pemit,{},string.rep('x',70000));assert(not ok)",
         i.alice.0
     ))
     .unwrap();
-    assert!(s.outbox.borrow().is_empty());
+    assert!(s.outbox().is_empty());
     let (_d, c, s, i) = fixture("").await;
-    s.world
-        .borrow_mut()
-        .objects
-        .get_mut(&i.bag)
-        .unwrap()
-        .location = Some(i.bag);
-    s.world
-        .borrow_mut()
+    s.world_mut().objects.get_mut(&i.bag).unwrap().location = Some(i.bag);
+    s.world_mut()
         .objects
         .get_mut(&i.bag)
         .unwrap()
         .flags
         .insert(Flag::Audible);
-    notification::send(
-        &s.world.borrow(),
-        &s.outbox,
+    s.send_notification(
         &c,
         Request {
             target: i.bag,

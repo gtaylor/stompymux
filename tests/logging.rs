@@ -1,49 +1,32 @@
 //! Logging controls, conservative audit redaction, staged Lua effects and safe file appends.
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
+    Config, ObjectId, Scripts,
     commands::{self, Action, ExecutionContext, InputOrigin},
-    config::Config,
     logging::{self, Category, FileRequest, Record},
-    lua::Scripts,
     persistence,
-    world::ObjectId,
 };
-fn copy(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for e in std::fs::read_dir(from).unwrap() {
-        let e = e.unwrap();
-        if e.path().is_dir() {
-            copy(&e.path(), &to.join(e.file_name()));
-        } else {
-            std::fs::copy(e.path(), to.join(e.file_name())).unwrap();
-        }
-    }
-}
+mod support;
+use support::{Client, isolated_world, start};
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
-    let d = tempfile::tempdir().unwrap();
-    copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
-        d.path(),
-    );
+    let (d, c, w) = isolated_world().await;
     std::fs::create_dir_all(d.path().join("logs")).unwrap();
     std::fs::write(d.path().join("logs/test.log"), "").unwrap();
-    let c = Config::load(d.path()).unwrap();
-    let w = persistence::load(&c.database()).await.unwrap();
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set(
             "_parents",
-            s.lua
+            s.inspect_lua()
                 .named_registry_value::<mlua::Table>("mux.parents")
                 .unwrap(),
         )
         .unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set(
             "_object_parents",
-            s.lua
+            s.inspect_lua()
                 .named_registry_value::<mlua::Table>("mux.object_parents")
                 .unwrap(),
         )
@@ -56,7 +39,7 @@ fn edit(c: &mut Config, s: &mut Scripts, name: &str, value: &str) -> Vec<String>
         value: value.into(),
     };
     let candidate = c
-        .administer(&request, &s.world.borrow(), ObjectId(1), &s.commands)
+        .administer(&request, &s.world(), ObjectId(1), s.commands())
         .unwrap();
     s.configure(&candidate.config).unwrap();
     *c = candidate.config;
@@ -82,7 +65,7 @@ async fn categories_live_controls_formatting_and_redaction() {
     edit(&mut c, &mut s, "alias", "fi @find");
     {
         use stompymux_rs::macros::{MacroEntry, MacroSet, MacroSlots};
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         w.macros.sets.push(MacroSet {
             origin: Default::default(),
             owner: ObjectId(1),
@@ -124,17 +107,16 @@ async fn categories_live_controls_formatting_and_redaction() {
         "@force me=@wait 1=pw #2=secret",
         ".def x=pw #2=secret",
     ] {
-        let safe = logging::audit::safe_command(&c, &s.world.borrow(), ObjectId(1), command);
+        let safe = logging::audit::safe_command(&c, &s.world(), ObjectId(1), command);
         assert!(!safe.contains("secret"), "{safe}");
         assert!(safe.contains("redacted"), "{safe}");
     }
     assert!(
-        logging::audit::safe_command(&c, &s.world.borrow(), ObjectId(1), "say hello")
-            .contains("hello")
+        logging::audit::safe_command(&c, &s.world(), ObjectId(1), "say hello").contains("hello")
     );
     let message = logging::audit::message(
         &c,
-        &s.world.borrow(),
+        &s.world(),
         ExecutionContext {
             executor: ObjectId(1),
             cause: ObjectId(2),
@@ -147,7 +129,7 @@ async fn categories_live_controls_formatting_and_redaction() {
     for original in ["@fi Foo", ".safe"] {
         let message = logging::audit::message(
             &c,
-            &s.world.borrow(),
+            &s.world(),
             ExecutionContext {
                 executor: ObjectId(1),
                 cause: ObjectId(1),
@@ -164,7 +146,7 @@ async fn categories_live_controls_formatting_and_redaction() {
     }
     let queued = logging::audit::message(
         &c,
-        &s.world.borrow(),
+        &s.world(),
         ExecutionContext {
             executor: ObjectId(1),
             cause: ObjectId(1),
@@ -178,7 +160,10 @@ async fn categories_live_controls_formatting_and_redaction() {
     assert!(logging::report(&c).contains("all_commands: enabled"));
     for name in ["logging", "logfiles"] {
         let action = commands::run(&s, &c, ObjectId(1), 1, &format!("@list {name}")).unwrap();
-        assert!(matches!(action, Action::LiteralReport(_)));
+        assert!(matches!(
+            action,
+            Action::Report(commands::Report::Literal(_))
+        ));
     }
     c.logger.shutdown(&c).await.unwrap();
 }
@@ -250,7 +235,7 @@ async fn file_validation_appends_cache_and_failures() {
 async fn lua_staging_nested_rollback_and_checking() {
     let (d, c, s) = fixture().await;
     assert!(
-        s.lua
+        s.inspect_lua()
             .load("return mux.log('test.log','outside')")
             .eval::<bool>()
             .is_err()
@@ -265,15 +250,15 @@ async fn lua_staging_nested_rollback_and_checking() {
             .unwrap()
     );
     assert_eq!(std::fs::read(d.path().join("logs/test.log")).unwrap(), b"");
-    s.flows.rollback();
-    assert!(s.flows.drain_logs().is_empty());
+    s.rollback_effects_for_inspection();
+    assert!(s.drain_logs_for_inspection().is_empty());
     assert!(
         s.eval_callback::<()>("assert(mux.log('test.log','discarded'));error('rollback')")
             .is_err()
     );
-    assert!(s.flows.drain_logs().is_empty());
+    assert!(s.drain_logs_for_inspection().is_empty());
     s.eval_callback::<()>("_parents['default_thing.lua'].locks={take=function(ctx) mux.log('test.log','nested discarded');error('nested') end}; local o=mux.world.create_object{type=mux.world.types.THING,name='logger'}; mux.log('test.log','outer');mux.world.lock_passes{object=o,enactor=1,lock=mux.world.locks.TAKE};mux.log('test.log','last')").unwrap();
-    for request in s.flows.drain_logs() {
+    for request in s.drain_logs_for_inspection() {
         c.logger.submit(&c, request);
     }
     c.logger
@@ -283,14 +268,14 @@ async fn lua_staging_nested_rollback_and_checking() {
     let text = std::fs::read_to_string(d.path().join("logs/test.log")).unwrap();
     assert!(text.contains("outer\n") && text.contains("last\n"));
     assert!(!text.contains("discarded"));
-    let checking = Scripts::from_sources(
-        &c,
-        s.world.clone(),
-        s.help.clone(),
-        s.sources.clone(),
-        stompymux_rs::lua::RuntimeMode::Checking,
-    )
-    .unwrap();
+    let checking = s
+        .from_sources_for_inspection(
+            &c,
+            s.help().clone(),
+            s.sources().clone(),
+            stompymux_rs::lua::RuntimeMode::Checking,
+        )
+        .unwrap();
     assert!(
         checking
             .eval_callback::<bool>("return mux.log('test.log','check')")
@@ -302,106 +287,7 @@ async fn lua_staging_nested_rollback_and_checking() {
 }
 
 use std::{cell::Cell, time::Duration};
-use stompymux_rs::{
-    accounts,
-    flags::Flag,
-    server::{self, ShutdownRequest},
-};
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::{TcpListener, TcpStream},
-    sync::oneshot,
-};
-/// A real socket client that retains unread response bytes across assertions.
-struct Client {
-    socket: TcpStream,
-    pending: Vec<u8>,
-}
-
-impl Client {
-    async fn connect(address: std::net::SocketAddr, player: i64) -> Self {
-        let mut client = Self {
-            socket: TcpStream::connect(address).await.unwrap(),
-            pending: Vec::new(),
-        };
-        client.until("Who are you? ").await;
-        client.send(&format!("#{player}")).await;
-        client.until("Password: ").await;
-        client.send("secret").await;
-        client.until("Staff Nexus").await;
-        client
-    }
-
-    async fn send(&mut self, text: &str) {
-        self.socket
-            .write_all(format!("{text}\r\n").as_bytes())
-            .await
-            .unwrap();
-    }
-
-    async fn until(&mut self, needle: &str) -> String {
-        tokio::time::timeout(Duration::from_secs(10), async {
-            loop {
-                if let Some(index) = self
-                    .pending
-                    .windows(needle.len())
-                    .position(|b| b == needle.as_bytes())
-                {
-                    let bytes = self
-                        .pending
-                        .drain(..index + needle.len())
-                        .collect::<Vec<_>>();
-                    return String::from_utf8_lossy(&bytes).into_owned();
-                }
-                let mut bytes = [0; 8192];
-                let count = self.socket.read(&mut bytes).await.unwrap();
-                assert!(
-                    count > 0,
-                    "closed waiting for {needle}: {:?}",
-                    String::from_utf8_lossy(&self.pending)
-                );
-                self.pending.extend_from_slice(&bytes[..count]);
-            }
-        })
-        .await
-        .unwrap_or_else(|_| {
-            panic!(
-                "timeout waiting for {needle}: {:?}",
-                String::from_utf8_lossy(&self.pending)
-            )
-        })
-    }
-}
-
-/// Keep the injected clock out of protocol/configuration; only the embedded test owner controls it.
-async fn start(
-    c: &Config,
-    clock: Rc<Cell<i64>>,
-) -> (
-    std::net::SocketAddr,
-    oneshot::Sender<ShutdownRequest>,
-    tokio::task::JoinHandle<anyhow::Result<()>>,
-    mlua::Lua,
-) {
-    let scripts = server::prepare(c).await.unwrap();
-    let vm = scripts.lua.clone();
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let address = listener.local_addr().unwrap();
-    let (tx, rx) = oneshot::channel();
-    let config = c.clone();
-    let task = tokio::task::spawn_local(async move {
-        server::run_with_schedule_clock(
-            config,
-            scripts,
-            listener,
-            async { rx.await.unwrap_or(ShutdownRequest::Sigterm) },
-            move || clock.get(),
-        )
-        .await
-    });
-    (address, tx, task, vm)
-}
-
+use stompymux_rs::{Flag, ShutdownRequest, accounts};
 /// Seed known credentials and a non-Wizard exclusively in the temporary database.
 async fn credentials(c: &Config) {
     let mut world = persistence::load(&c.database()).await.unwrap();
@@ -431,7 +317,7 @@ async fn tcp_log_commands_commit_and_rollback() {
             let scripts=Scripts::new(&c,Rc::new(RefCell::new(persistence::load(&c.database()).await.unwrap()))).unwrap();
             scripts.communication(&c).create("SuspectsLog").unwrap();
             scripts.communication(&c).join(ObjectId(1),"SuspectsLog",true).unwrap();
-            let world=scripts.world.borrow().clone();persistence::save(&c.database(),&world).await.unwrap();
+            let world=scripts.world().clone();persistence::save(&c.database(),&world).await.unwrap();
  std::fs::write(c.lua_dir().join("global_logic/logtest.lua"),r#"return {commands={
  {name='logok',permission='everyone',pattern='^logok$',handler=function(ctx) assert(mux.log('test.log','lua committed'));return true end},
  {name='logmut',permission='everyone',pattern='^logmut$',handler=function(ctx) assert(mux.log('test.log','durable log'));mux.world.object(1):state('logtest'):set('written',1);return true end},

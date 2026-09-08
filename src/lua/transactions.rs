@@ -1,5 +1,5 @@
 //! Callback boundaries keep state availability and rollback independent of Lua pcall.
-use super::{Outbox, SharedWorld};
+use crate::runtime::SharedWorld;
 use mlua::Lua;
 use std::{cell::Cell, rc::Rc};
 
@@ -43,7 +43,6 @@ pub fn require(lua: &Lua) -> mlua::Result<()> {
 pub fn run<T>(
     lua: &Lua,
     world: &SharedWorld,
-    outbox: &Outbox,
     work: impl FnOnce() -> mlua::Result<T>,
 ) -> mlua::Result<T> {
     let depth = lua
@@ -51,20 +50,22 @@ pub fn run<T>(
         .expect("callback counter installed")
         .clone();
     let before = world.borrow().clone();
-    let pending = outbox.borrow().clone();
-    let flow_effects = super::flows::snapshot(lua);
+    let effects = lua
+        .app_data_ref::<crate::runtime::Effects>()
+        .expect("transaction effects installed")
+        .clone();
+    let checkpoint = effects.checkpoint();
     depth.set(depth.get() + 1);
     let result = work().and_then(|value| {
-        if let Some(flows) = lua.app_data_ref::<super::flows::Engine>() {
-            flows.validate_output()?;
-        }
+        effects
+            .validate()
+            .map_err(|error| mlua::Error::runtime(error.to_string()))?;
         Ok(value)
     });
     depth.set(depth.get() - 1);
     if result.is_err() {
         *world.borrow_mut() = before;
-        *outbox.borrow_mut() = pending;
-        super::flows::restore(lua, flow_effects);
+        effects.restore(checkpoint);
     }
     result
 }

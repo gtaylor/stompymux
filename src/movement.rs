@@ -52,13 +52,11 @@ pub struct Move {
 /// Apply movement as one command mutation, restoring callback changes on failure.
 pub fn perform(s: &Scripts, request: Request) -> Result<()> {
     let before = s.world.borrow().clone();
-    let pending = s.outbox.borrow().len();
-    let flow_effects = crate::lua::flows::snapshot(&s.lua);
+    let checkpoint = s.effects.checkpoint();
     let result = crate::lua::transactions::with_cause(&s.lua, request.cause, || apply(s, request));
     if result.is_err() {
         *s.world.borrow_mut() = before;
-        s.outbox.borrow_mut().truncate(pending);
-        crate::lua::flows::restore(&s.lua, flow_effects);
+        s.effects.restore(checkpoint);
     }
     result
 }
@@ -308,7 +306,7 @@ fn apply(s: &Scripts, request: Request) -> Result<()> {
         (
             flags.contains(Flag::Connected),
             flags.contains(Flag::Dark),
-            flags.contains(Flag::Dark) && crate::flags::is_wizard(&w, object),
+            flags.contains(Flag::Dark) && crate::authority::is_wizard(&w, object),
         )
     };
     let hush = route == Route::Teleport && dark;

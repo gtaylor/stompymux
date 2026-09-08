@@ -213,7 +213,7 @@ fn queue_counters_and_starting_compression_are_observable() {
     let now = std::time::Instant::now();
     let d = tempfile::tempdir().unwrap();
     std::fs::write(d.path().join("stompymux.toml"), "").unwrap();
-    let config = stompymux_rs::config::Config::load(d.path()).unwrap();
+    let config = stompymux_rs::Config::load(d.path()).unwrap();
     let s = Session {
         retry_remaining: 3,
         output,

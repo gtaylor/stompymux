@@ -2,7 +2,7 @@
 use crate::{
     config::Config,
     flags::Flag,
-    lua::Outbox,
+    runtime::Outbox,
     text::Document,
     world::{Kind, ObjectId, World},
 };

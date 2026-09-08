@@ -4,6 +4,7 @@ use super::*;
 struct View {
     world: SharedWorld,
     outbox: Outbox,
+    effects: crate::runtime::Effects,
     flows: flows::Engine,
     sources: std::sync::Arc<sources::Sources>,
     palette: std::sync::Arc<text::Palette>,
@@ -14,9 +15,11 @@ struct View {
 }
 impl Scripts {
     pub(crate) fn publish_services(&self) {
+        self.lua.set_app_data(self.effects.clone());
         self.lua.set_app_data(View {
             world: self.world.clone(),
             outbox: self.outbox.clone(),
+            effects: self.effects.clone(),
             flows: self.flows.clone(),
             sources: self.sources.clone(),
             palette: self.palette.clone(),
@@ -40,6 +43,7 @@ impl Scripts {
             lua: lua.clone(),
             world: v.world,
             outbox: v.outbox,
+            effects: v.effects,
             flows: v.flows,
             sources: v.sources,
             palette: v.palette,

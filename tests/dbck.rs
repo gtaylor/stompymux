@@ -1,34 +1,14 @@
 //! Maintenance repair, preservation, dependency and restart regressions on isolated databases.
 use sqlx::{Connection, Row, SqliteConnection};
-use std::{collections::BTreeMap, path::Path};
+use std::collections::BTreeMap;
 use stompymux_rs::{
-    config::Config,
-    dbck::{self, Links},
-    flags::Flag,
-    persistence,
-    world::*,
+    Account, Config, Flag, Kind, LinkSlots, Links, ObjectId, World, dbck, persistence,
 };
-/// Isolate every mutation from the supplied game database.
-fn copy(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for e in std::fs::read_dir(from).unwrap() {
-        let e = e.unwrap();
-        if e.path().is_dir() {
-            copy(&e.path(), &to.join(e.file_name()));
-        } else {
-            std::fs::copy(e.path(), to.join(e.file_name())).unwrap();
-        }
-    }
-}
+mod support;
+use support::isolated_world;
 /// Load the populated fixture and an operation-scoped SQL connection.
 async fn fixture() -> (tempfile::TempDir, Config, World, SqliteConnection) {
-    let d = tempfile::tempdir().unwrap();
-    copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
-        d.path(),
-    );
-    let c = Config::load(d.path()).unwrap();
-    let w = persistence::load(&c.database()).await.unwrap();
+    let (d, c, w) = isolated_world().await;
     let sql = SqliteConnection::connect_with(
         &sqlx::sqlite::SqliteConnectOptions::new()
             .filename(c.database())
@@ -66,7 +46,11 @@ async fn raw(c: &mut SqliteConnection) -> Links {
         .map(|r| {
             (
                 ObjectId(r.get("dbref")),
-                [r.get("contents"), r.get("exits"), r.get("next")],
+                LinkSlots {
+                    contents: r.get("contents"),
+                    exits: r.get("exits"),
+                    next: r.get("next"),
+                },
             )
         })
         .collect()
@@ -189,8 +173,8 @@ async fn malformed_lists_cycles_references_and_droptos_repair_deterministically(
     let mut slots = raw(&mut sql).await;
     w.objects.get_mut(&a).unwrap().location = Some(b);
     w.objects.get_mut(&b).unwrap().location = Some(a);
-    slots.get_mut(&a).unwrap()[0] = b.0;
-    slots.get_mut(&b).unwrap()[0] = a.0;
+    slots.get_mut(&a).unwrap().contents = b.0;
+    slots.get_mut(&b).unwrap().contents = a.0;
     w.objects.get_mut(&a).unwrap().home = Some(ObjectId(99999));
     w.objects.get_mut(&b).unwrap().zone = Some(ObjectId(99999));
     w.objects.get_mut(&b).unwrap().affiliation = Some(ObjectId(99999));

@@ -163,7 +163,7 @@ pub(crate) fn apply_relocations(
 pub(crate) fn check(lua: &mlua::Lua) -> mlua::Result<()> {
     transactions::require(lua)?;
     let s = Scripts::services(lua)?;
-    transactions::run(lua, &s.world, &s.outbox, || {
+    transactions::run(lua, &s.world, || {
         let config = super::configuration(lua);
         let before = s.world.borrow().clone();
         let links = crate::dbck::rebuild_links(&before, &before.links);
@@ -177,7 +177,7 @@ pub(crate) fn check(lua: &mlua::Lua) -> mlua::Result<()> {
             .map_err(|e| failure("mux.runtime", e))?;
         report.plan.links = crate::dbck::rebuild_links(&s.world.borrow(), &links);
         s.world.borrow_mut().links = report.plan.links.clone();
-        s.flows.stage_maintenance(report);
+        s.effects.stage_maintenance(report);
         Ok(())
     })
 }

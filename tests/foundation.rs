@@ -5,30 +5,16 @@ use std::{
     time::Duration,
 };
 use stompymux_rs::{
-    accounts,
-    config::Config,
-    lua::Scripts,
-    persistence, server,
+    Config, Login, ObjectId, Scripts, StateValue as Scalar, accounts, persistence, server,
     telnet::{Decoder, Input},
-    world::{Login, ObjectId, Scalar},
 };
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     net::TcpStream,
     process::{Child, Command},
 };
-fn copy(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for e in std::fs::read_dir(from).unwrap() {
-        let e = e.unwrap();
-        let dest = to.join(e.file_name());
-        if e.path().is_dir() {
-            copy(&e.path(), &dest)
-        } else {
-            std::fs::copy(e.path(), dest).unwrap();
-        }
-    }
-}
+mod support;
+use support::copy;
 fn fixture() -> tempfile::TempDir {
     let d = tempfile::tempdir().unwrap();
     copy(
@@ -249,16 +235,15 @@ async fn copied_lua_renders_rooms_locks_and_commands() {
     let appearance = s.appearance(ObjectId(1), ObjectId(4), 1).unwrap();
     assert!(appearance.contains("Starter Room"));
     assert!(s.lock(ObjectId(1), ObjectId(13)).unwrap());
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
-        .remove(stompymux_rs::flags::Flag::Wizard);
+        .remove(stompymux_rs::Flag::Wizard);
     assert!(!s.lock(ObjectId(2), ObjectId(13)).unwrap());
     assert!(s.dispatch(ObjectId(1), 1, "global-hello").unwrap());
-    assert!(s.outbox.borrow()[0].1.contains("Hello, world"));
+    assert!(s.outbox()[0].1.contains("Hello, world"));
     assert!(s.dispatch(ObjectId(1), 1, "flow-demo confirm").is_err());
 }
 #[tokio::test(flavor = "current_thread")]
@@ -268,24 +253,24 @@ async fn lua_resource_limits_and_fail_closed() {
         persistence::load(&c.database()).await.unwrap(),
     ));
     let s = Scripts::new(&c, w).unwrap();
-    assert!(s.lua.load("while true do end").exec().is_err());
-    let s = Scripts::new(&c, s.world.clone()).unwrap();
-    s.lua.set_memory_limit(s.lua.used_memory() + 32768).unwrap();
+    assert!(s.inspect_lua().load("while true do end").exec().is_err());
+    let s = s.rebuild_for_inspection(&c).unwrap();
+    let lua = s.inspect_lua();
+    lua.set_memory_limit(lua.used_memory() + 32768).unwrap();
     assert!(
-        s.lua
+        s.inspect_lua()
             .load("return string.rep('x',1000000)")
             .eval::<String>()
             .is_err()
     );
-    let s = Scripts::new(&c, s.world.clone()).unwrap();
+    let s = s.rebuild_for_inspection(&c).unwrap();
     assert!(
-        s.lua
+        s.inspect_lua()
             .load("mux.world.object(1):state('test'):set('too_big',string.rep('x',65537))")
             .exec()
             .is_err()
     );
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(13))
         .unwrap()
@@ -301,12 +286,12 @@ async fn bootstrap_once_and_existing_world_does_not_bootstrap() {
     std::fs::remove_file(d.path().join("data/stompymux.db")).unwrap();
     let c = Config::load(d.path()).unwrap();
     let s = server::prepare(&c).await.unwrap();
-    assert_eq!(s.world.borrow().objects.len(), 16);
-    assert_eq!(s.world.borrow().channels.len(), 2);
+    assert_eq!(s.world().objects.len(), 16);
+    assert_eq!(s.world().channels.len(), 2);
     let before = std::fs::read(c.database()).unwrap();
     drop(s);
     let s = server::prepare(&c).await.unwrap();
-    assert_eq!(s.world.borrow().objects.len(), 16);
+    assert_eq!(s.world().objects.len(), 16);
     assert_eq!(before, std::fs::read(c.database()).unwrap());
     use std::os::unix::fs::PermissionsExt;
     assert_eq!(
@@ -319,7 +304,7 @@ async fn bootstrap_once_and_existing_world_does_not_bootstrap() {
     );
     let (_d, c) = populated().await;
     let s = server::prepare(&c).await.unwrap();
-    assert_eq!(s.world.borrow().objects.len(), 16);
+    assert_eq!(s.world().objects.len(), 16);
     assert!(!c.root.join("bootstrap-credentials.txt").exists());
 }
 struct Running {
@@ -836,9 +821,9 @@ async fn flag_catalog_storage_commands_and_lua_contract() {
             flag.world_name(),
             flag.world_name()
         );
-        s.lua.load(code).exec().unwrap();
+        s.inspect_lua().load(code).exec().unwrap();
     }
-    s.lua
+    s.inspect_lua()
         .load(
             r#"
       local flags=mux.world.flags
@@ -870,25 +855,21 @@ async fn flag_catalog_storage_commands_and_lua_contract() {
     ] {
         let action = commands::run(&s, &c, ObjectId(1), 1, input).unwrap();
         let text = match action {
-            commands::Action::StyledReport(text)
-            | commands::Action::Report(text)
-            | commands::Action::LiteralReport(text)
-            | commands::Action::Reply(text) => text,
-            _ => s.outbox.borrow_mut().pop().unwrap().1.source().to_string(),
+            commands::Action::Report(commands::Report::Styled(text))
+            | commands::Action::Report(commands::Report::Inspection(text))
+            | commands::Action::Report(commands::Report::Literal(text))
+            | commands::Action::Report(commands::Report::Reply(text)) => text,
+            _ => s.pop_outbox().unwrap().1.source().to_string(),
         };
         assert!(text.contains(expected), "{input}: {text}");
     }
     {
         let mut w = world.borrow_mut();
         for _ in 0..2 {
-            let id = w.create(&c, "Twin".into(), stompymux_rs::world::Kind::Thing);
+            let id = w.create(&c, "Twin".into(), stompymux_rs::Kind::Thing);
             w.objects.get_mut(&id).unwrap().location = w.objects[&ObjectId(1)].location;
         }
-        let exit = w.create(
-            &c,
-            "Test exit;shortcut".into(),
-            stompymux_rs::world::Kind::Exit,
-        );
+        let exit = w.create(&c, "Test exit;shortcut".into(), stompymux_rs::Kind::Exit);
         w.objects.get_mut(&exit).unwrap().location = w.objects[&ObjectId(1)].location;
     }
     for (input, expected) in [
@@ -897,19 +878,23 @@ async fn flag_catalog_storage_commands_and_lua_contract() {
         ("@flag here=light", "LIGHT set."),
     ] {
         commands::run(&s, &c, ObjectId(1), 1, input).unwrap();
-        assert!(s.outbox.borrow_mut().pop().unwrap().1.contains(expected));
+        assert!(s.pop_outbox().unwrap().1.contains(expected));
     }
-    let player =
-        world
-            .borrow_mut()
-            .create(&c, "Ordinary".into(), stompymux_rs::world::Kind::Player);
+    let player = world
+        .borrow_mut()
+        .create(&c, "Ordinary".into(), stompymux_rs::Kind::Player);
     commands::run(&s, &c, player, 1, "@flag me=dark").unwrap();
-    assert_eq!(
-        s.outbox.borrow_mut().pop().unwrap().1.source(),
-        "Permission denied."
-    );
-    assert!(!flags::controls(&world.borrow(), ObjectId(2), ObjectId(1)));
-    assert!(flags::controls(&world.borrow(), ObjectId(2), ObjectId(2)));
+    assert_eq!(s.pop_outbox().unwrap().1.source(), "Permission denied.");
+    assert!(!stompymux_rs::authority::controls(
+        &world.borrow(),
+        ObjectId(2),
+        ObjectId(1)
+    ));
+    assert!(stompymux_rs::authority::controls(
+        &world.borrow(),
+        ObjectId(2),
+        ObjectId(2)
+    ));
     assert!(
         flags::change(
             &mut world.borrow_mut(),
@@ -1060,15 +1045,11 @@ async fn tcp_flags_follow_registration_and_multiple_sessions() {
     .unwrap();
     running.stop().await;
     let loaded = persistence::load(&c.database()).await.unwrap();
-    assert!(
-        loaded.objects[&id]
-            .flags
-            .contains(stompymux_rs::flags::Flag::Dark)
-    );
+    assert!(loaded.objects[&id].flags.contains(stompymux_rs::Flag::Dark));
     assert!(
         !loaded.objects[&id]
             .flags
-            .contains(stompymux_rs::flags::Flag::Connected)
+            .contains(stompymux_rs::Flag::Connected)
     );
     sqlx::Connection::close(db).await.unwrap();
 }
@@ -1104,7 +1085,7 @@ async fn powers_catalog_lua_and_relational_storage() {
     assert_eq!(powers::ALL, [Power::Idle]);
     assert_eq!(Power::parse("iDlE").unwrap(), Power::Idle);
     assert_eq!(serde_json::to_string(&PowerSet::default()).unwrap(), "[]");
-    s.lua
+    s.inspect_lua()
         .load(
             r#"
         local p=mux.world.powers
@@ -1170,7 +1151,7 @@ async fn powers_catalog_lua_and_relational_storage() {
 /// Administration reuses flag targeting and control permissions.
 #[tokio::test(flavor = "current_thread")]
 async fn power_commands_validate_targets_permissions_and_names() {
-    use stompymux_rs::{commands, powers::Power, world::Kind};
+    use stompymux_rs::{Kind, commands, powers::Power};
     let (d, _) = populated().await;
     let path = d.path().join("aliases.toml");
     let aliases = std::fs::read_to_string(&path)
@@ -1209,18 +1190,11 @@ async fn power_commands_validate_targets_permissions_and_names() {
     ] {
         let action = commands::run(&scripts, &c, actor, 1, command).unwrap();
         let output = match action {
-            commands::Action::StyledReport(text)
-            | commands::Action::Report(text)
-            | commands::Action::LiteralReport(text)
-            | commands::Action::Reply(text) => text,
-            _ => scripts
-                .outbox
-                .borrow_mut()
-                .pop()
-                .unwrap()
-                .1
-                .source()
-                .to_string(),
+            commands::Action::Report(commands::Report::Styled(text))
+            | commands::Action::Report(commands::Report::Inspection(text))
+            | commands::Action::Report(commands::Report::Literal(text))
+            | commands::Action::Report(commands::Report::Reply(text)) => text,
+            _ => scripts.pop_outbox().unwrap().1.source().to_string(),
         };
         assert!(output.contains(expected), "{command}: {output}");
     }
@@ -1329,7 +1303,7 @@ async fn idle_power_exempts_authenticated_player() {
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
-        .remove(stompymux_rs::flags::Flag::Wizard);
+        .remove(stompymux_rs::Flag::Wizard);
     w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
     persistence::save(&c.database(), &w).await.unwrap();
     let running = Running::start(&c).await;
@@ -1355,7 +1329,7 @@ async fn idle_power_exempts_authenticated_player() {
 /// Wizard movement handles containers, home, occupied containers and exit relocation.
 #[tokio::test(flavor = "current_thread")]
 async fn wizard_teleport_and_home_validate_containment() {
-    use stompymux_rs::{commands, world::Kind};
+    use stompymux_rs::{Kind, commands};
     let (_d, c) = populated().await;
     let mut w = persistence::load(&c.database()).await.unwrap();
     let stored_home = w.objects[&ObjectId(1)].home;
@@ -1368,16 +1342,13 @@ async fn wizard_teleport_and_home_validate_containment() {
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     for input in ["home", "@teleport #4", "@tel/quiet #4"] {
         commands::run(&s, &c, ordinary, 99, input).unwrap();
-        assert_eq!(
-            s.outbox.borrow_mut().pop().unwrap().1.source(),
-            "Permission denied."
-        );
+        assert_eq!(s.pop_outbox().unwrap().1.source(), "Permission denied.");
     }
     commands::run(&s, &c, ObjectId(1), 1, &format!("@tel #{}", cargo.0)).unwrap();
-    assert_eq!(s.world.borrow().objects[&ObjectId(1)].location, Some(cargo));
-    assert!(s.outbox.borrow().iter().any(|(_, t)| t.contains("Cargo")));
+    assert_eq!(s.world().objects[&ObjectId(1)].location, Some(cargo));
+    assert!(s.outbox().iter().any(|(_, t)| t.contains("Cargo")));
     commands::run(&s, &c, ObjectId(1), 1, "look").unwrap();
-    assert!(s.outbox.borrow_mut().pop().unwrap().1.contains("Inner"));
+    assert!(s.pop_outbox().unwrap().1.contains("Inner"));
     commands::run(&s, &c, ObjectId(1), 1, &format!("@teleport #{}", inner.0)).unwrap();
     for input in [
         format!("@teleport #{}=me", cargo.0),
@@ -1388,11 +1359,11 @@ async fn wizard_teleport_and_home_validate_containment() {
         "@tel/quiet #4".into(),
         "@teleport =#4".into(),
     ] {
-        let before = s.world.borrow().clone();
+        let before = s.world().clone();
         commands::run(&s, &c, ObjectId(1), 1, &input).unwrap();
         assert_eq!(
             serde_json::to_value(before).unwrap(),
-            serde_json::to_value(&*s.world.borrow()).unwrap(),
+            serde_json::to_value(&*s.world()).unwrap(),
             "{input}"
         );
     }
@@ -1412,8 +1383,8 @@ async fn wizard_teleport_and_home_validate_containment() {
         &format!("@teleport #{}=#4", cargo.0),
     )
     .unwrap();
-    assert_eq!(s.world.borrow().objects[&ObjectId(2)].location, Some(cargo));
-    let linked = s.world.borrow().objects[&ObjectId(13)].destination;
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(cargo));
+    let linked = s.world().objects[&ObjectId(13)].destination;
     commands::run(
         &s,
         &c,
@@ -1422,50 +1393,33 @@ async fn wizard_teleport_and_home_validate_containment() {
         &format!("@teleport #13=#{}", cargo.0),
     )
     .unwrap();
-    assert_eq!(s.world.borrow().objects[&ObjectId(13)].destination, linked);
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(13)].location,
-        Some(cargo)
-    );
-    s.outbox.borrow_mut().clear();
+    assert_eq!(s.world().objects[&ObjectId(13)].destination, linked);
+    assert_eq!(s.world().objects[&ObjectId(13)].location, Some(cargo));
+    s.drain_outbox();
     commands::run(&s, &c, ObjectId(1), 1, "HoMe").unwrap();
-    assert_eq!(s.world.borrow().objects[&ObjectId(1)].location, stored_home);
+    assert_eq!(s.world().objects[&ObjectId(1)].location, stored_home);
     assert_eq!(
-        s.outbox
-            .borrow()
+        s.outbox()
             .iter()
             .filter(|(_, t)| t.source() == "There's no place like home...")
             .count(),
         3
     );
     commands::run(&s, &c, ObjectId(1), 1, "@teleport #2").unwrap();
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(1)].location,
-        Some(ObjectId(2))
-    );
+    assert_eq!(s.world().objects[&ObjectId(1)].location, Some(ObjectId(2)));
     for home in [
         None,
         Some(ObjectId(13)),
         Some(ObjectId(999999)),
         Some(ObjectId(1)),
     ] {
-        s.world
-            .borrow_mut()
-            .objects
-            .get_mut(&ObjectId(1))
-            .unwrap()
-            .home = home;
-        let before = serde_json::to_value(&*s.world.borrow()).unwrap();
+        s.world_mut().objects.get_mut(&ObjectId(1)).unwrap().home = home;
+        let before = serde_json::to_value(&*s.world()).unwrap();
         commands::run(&s, &c, ObjectId(1), 1, "home").unwrap();
-        assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
+        assert_eq!(before, serde_json::to_value(&*s.world()).unwrap());
     }
-    s.world
-        .borrow_mut()
-        .objects
-        .get_mut(&ObjectId(1))
-        .unwrap()
-        .home = stored_home;
-    let snapshot = s.world.borrow().clone();
+    s.world_mut().objects.get_mut(&ObjectId(1)).unwrap().home = stored_home;
+    let snapshot = s.world().clone();
     persistence::save(&c.database(), &snapshot).await.unwrap();
     let mut loaded = persistence::load(&c.database()).await.unwrap();
     loaded.validate(&c).unwrap();
@@ -1479,7 +1433,7 @@ async fn wizard_teleport_and_home_validate_containment() {
 /// Nested locks get distinct subject/enactor identities and callbacks roll back atomically.
 #[tokio::test(flavor = "current_thread")]
 async fn teleport_locks_context_and_callbacks_are_transactional() {
-    use stompymux_rs::{commands, world::Kind};
+    use stompymux_rs::{Kind, commands};
     let (d, c) = populated().await;
     std::fs::write(d.path().join("lua/object_logic/movement_test.lua"),r#"
       return {locks={teleport=function(ctx)
@@ -1513,28 +1467,23 @@ async fn teleport_locks_context_and_callbacks_are_transactional() {
         "lock_error=false;deny_out=true",
         "deny_out=false;fail_enter=true",
     ] {
-        s.lua.load(globals).exec().unwrap();
-        let before = serde_json::to_value(&*s.world.borrow()).unwrap();
+        s.inspect_lua().load(globals).exec().unwrap();
+        let before = serde_json::to_value(&*s.world()).unwrap();
         commands::run(&s, &c, ObjectId(1), 1, request).unwrap();
-        assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
-        assert!(
-            !s.outbox
-                .borrow()
-                .iter()
-                .any(|(_, t)| t.source() == "LEAKED")
-        );
+        assert_eq!(before, serde_json::to_value(&*s.world()).unwrap());
+        assert!(!s.outbox().iter().any(|(_, t)| t.source() == "LEAKED"));
     }
-    s.lua
+    s.inspect_lua()
         .load("fail_enter=false;deny_out=false")
         .exec()
         .unwrap();
     commands::run(&s, &c, ObjectId(1), 1, request).unwrap();
     assert_eq!(
-        s.world.borrow().objects[&ObjectId(2)].state["movement"]["cause"],
+        s.world().objects[&ObjectId(2)].state["movement"]["cause"],
         Scalar::Integer(-1)
     );
-    s.lua.load("fail_exit=true").exec().unwrap();
-    let before = serde_json::to_value(&*s.world.borrow()).unwrap();
+    s.inspect_lua().load("fail_exit=true").exec().unwrap();
+    let before = serde_json::to_value(&*s.world()).unwrap();
     commands::run(
         &s,
         &c,
@@ -1543,32 +1492,28 @@ async fn teleport_locks_context_and_callbacks_are_transactional() {
         &format!("@teleport #2=#{}", boxid.0),
     )
     .unwrap();
-    assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
+    assert_eq!(before, serde_json::to_value(&*s.world()).unwrap());
     // Going home bypasses both destination and nested teleport-out locks.
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .location = Some(boxid);
-    s.lua
+    s.inspect_lua()
         .load("fail_exit=false;deny_destination=true;deny_out=true")
         .exec()
         .unwrap();
     commands::run(&s, &c, ObjectId(2), 2, "home").unwrap();
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(2)].location,
-        Some(ObjectId(4))
-    );
-    let before = serde_json::to_value(&*s.world.borrow()).unwrap();
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(4)));
+    let before = serde_json::to_value(&*s.world()).unwrap();
     commands::run(&s, &c, ObjectId(2), 2, "home").unwrap();
-    assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
+    assert_eq!(before, serde_json::to_value(&*s.world()).unwrap());
 }
 
 /// Connected targets see container appearance on every session; failed writes preserve location.
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_teleport_containers_and_home_persist() {
-    use stompymux_rs::world::Kind;
+    use stompymux_rs::Kind;
     let (_d, c) = populated().await;
     std::fs::create_dir_all(c.root.join("logs")).unwrap();
     std::fs::write(c.root.join("logs/movement.log"), "").unwrap();
@@ -1701,11 +1646,7 @@ async fn tcp_search_reports_are_private_and_read_only() {
             Some(accounts::hash("secret", &c).unwrap());
     }
     for i in 0..80 {
-        w.create(
-            &c,
-            format!("SearchRoom{i:03}"),
-            stompymux_rs::world::Kind::Room,
-        );
+        w.create(&c, format!("SearchRoom{i:03}"), stompymux_rs::Kind::Room);
     }
     persistence::save(&c.database(), &w).await.unwrap();
     let running = Running::start(&c).await;
@@ -1864,12 +1805,12 @@ async fn shutdown_origins_share_cleanup_and_stop_pipelined_commands() {
         assert!(
             !loaded.objects[&ObjectId(2)]
                 .flags
-                .contains(stompymux_rs::flags::Flag::Dark)
+                .contains(stompymux_rs::Flag::Dark)
         );
         assert!(
             !loaded.objects[&ObjectId(2)]
                 .flags
-                .contains(stompymux_rs::flags::Flag::Connected)
+                .contains(stompymux_rs::Flag::Connected)
         );
         assert!(loaded.find_player("Unfinished").is_none());
     }
@@ -2387,7 +2328,7 @@ return {commands={
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
-        .insert(stompymux_rs::flags::Flag::Ansi);
+        .insert(stompymux_rs::Flag::Ansi);
     w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
     persistence::save(&c.database(), &w).await.unwrap();
     let running = Running::start(&c).await;
@@ -2477,7 +2418,7 @@ async fn tcp_help_reload_navigation_and_compressed_chunks() {
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
-        .insert(stompymux_rs::flags::Flag::Ansi);
+        .insert(stompymux_rs::Flag::Ansi);
     persistence::save(&c.database(), &w).await.unwrap();
     let running = Running::start(&c).await;
     let mut wizard = Client::connect(&running).await;
@@ -3017,7 +2958,7 @@ async fn tcp_player_macros_shared_sessions_restart_and_write_failures() {
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_object_locks_builders_transfers_and_restart() {
     use sqlx::Connection;
-    use stompymux_rs::{flags::Flag, world::Kind};
+    use stompymux_rs::{Flag, Kind};
     let (d, c) = populated().await;
     std::fs::write(d.path().join("lua/object_logic/tcp_policy.lua"),r#"return {
       locks={take=function(ctx) return {passes=true} end,use=function(ctx) return true end,receive=function(ctx) return true end},
@@ -3328,7 +3269,7 @@ async fn tcp_lua_parent_check_reload_and_default_exit() {
     alice.until("VERSION_TWO").await;
     assert_eq!(
         persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)].state["startup"]["count"],
-        stompymux_rs::world::Scalar::Integer(1)
+        stompymux_rs::StateValue::Integer(1)
     );
     wizard
         .send(&format!("@lua/parent #{}=new_parent.lua", gate.0))
@@ -3459,7 +3400,7 @@ local n=0;return {commands={{name='active-probe',permission='everyone',pattern='
     assert!(!peer.contains("passed, 1 failed"));
     let w = persistence::load(&c.database()).await.unwrap();
     let scripts =
-        stompymux_rs::lua::Scripts::new(&c, std::rc::Rc::new(std::cell::RefCell::new(w))).unwrap();
+        stompymux_rs::Scripts::new(&c, std::rc::Rc::new(std::cell::RefCell::new(w))).unwrap();
     scripts
         .eval_callback::<()>("assert(mux.world.object(2):state('runner'):get('durable')==42)")
         .unwrap();
@@ -3526,11 +3467,7 @@ async fn tcp_account_administration_and_restart() {
     let p = w.find_player("Offline").unwrap();
     assert_eq!(w.objects[&p].location, Some(ObjectId(c.start())));
     assert_eq!(w.objects[&p].home, Some(ObjectId(c.home())));
-    assert!(
-        !w.objects[&p]
-            .flags
-            .contains(stompymux_rs::flags::Flag::Connected)
-    );
+    assert!(!w.objects[&p].flags.contains(stompymux_rs::Flag::Connected));
     assert_eq!(w.accounts[&p].successes, 0);
     assert!(w.accounts[&p].history.is_empty());
     assert!(!w.objects[&p].lua_parent.is_empty());
@@ -3577,11 +3514,7 @@ async fn tcp_account_administration_and_restart() {
     let mut closed = Vec::new();
     offline.socket.read_to_end(&mut closed).await.unwrap();
     let w = persistence::load(&c.database()).await.unwrap();
-    assert!(
-        !w.objects[&p]
-            .flags
-            .contains(stompymux_rs::flags::Flag::Connected)
-    );
+    assert!(!w.objects[&p].flags.contains(stompymux_rs::Flag::Connected));
     server.stop().await;
     let server = Running::start(&c).await;
     let mut player = Client::connect(&server).await;
@@ -3612,7 +3545,7 @@ async fn tcp_speech_routing_styles_and_lock_persistence() {
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
-        .insert(stompymux_rs::flags::Flag::Ansi);
+        .insert(stompymux_rs::Flag::Ansi);
     w.objects.get_mut(&ObjectId(c.start())).unwrap().lua_parent = "speech_room.lua".into();
     persistence::save(&c.database(), &w).await.unwrap();
     let running = Running::start(&c).await;
@@ -3695,7 +3628,7 @@ async fn tcp_command_queue_force_wait_halt_and_shutdown() {
     let mut w = persistence::load(&c.database()).await.unwrap();
     w.accounts.get_mut(&ObjectId(2)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
     w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
-    let thing = w.create(&c, "QueueRobot".into(), stompymux_rs::world::Kind::Thing);
+    let thing = w.create(&c, "QueueRobot".into(), stompymux_rs::Kind::Thing);
     w.objects.get_mut(&thing).unwrap().location = Some(ObjectId(c.start()));
     persistence::save(&c.database(), &w).await.unwrap();
     let mut running = Running::start(&c).await;
@@ -3767,7 +3700,7 @@ async fn tcp_command_queue_force_wait_halt_and_shutdown() {
     assert!(
         !world.objects[&ObjectId(2)]
             .flags
-            .contains(stompymux_rs::flags::Flag::Connected)
+            .contains(stompymux_rs::Flag::Connected)
     );
     let running = Running::start(&c).await;
     let mut wizard = Client::connect(&running).await;
@@ -3813,7 +3746,7 @@ async fn tcp_queue_nondefault_limits_and_zero_chunks() {
     assert!(
         persistence::load(&c.database()).await.unwrap().objects[&ObjectId(2)]
             .flags
-            .contains(stompymux_rs::flags::Flag::Halted)
+            .contains(stompymux_rs::Flag::Halted)
     );
     wizard.send("@flag me=!halted").await;
     wizard.until("cleared.").await;
@@ -4020,11 +3953,7 @@ async fn tcp_compressed_database_reports() {
     world.accounts.get_mut(&ObjectId(2)).unwrap().hash =
         Some(accounts::hash("secret", &c).unwrap());
     for i in 0..80 {
-        world.create(
-            &c,
-            format!("Unicode{i:03} é👩‍🚀"),
-            stompymux_rs::world::Kind::Room,
-        );
+        world.create(&c, format!("Unicode{i:03} é👩‍🚀"), stompymux_rs::Kind::Room);
     }
     persistence::save(&c.database(), &world).await.unwrap();
     let running = Running::start(&c).await;
@@ -4087,7 +4016,7 @@ async fn tcp_compressed_database_reports() {
 /// Global native reports precede carried Lua commands and do not invoke their callbacks.
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_portable_commands_and_native_inventory_precedence() {
-    use stompymux_rs::world::Kind;
+    use stompymux_rs::Kind;
     let (d, c) = populated().await;
     let mut world = persistence::load(&c.database()).await.unwrap();
     world.accounts.get_mut(&ObjectId(1)).unwrap().hash =
@@ -4096,7 +4025,7 @@ async fn tcp_portable_commands_and_native_inventory_precedence() {
     let o = world.objects.get_mut(&item).unwrap();
     o.location = Some(ObjectId(1));
     o.lua_parent = "portable_tcp.lua".into();
-    o.flags.remove(stompymux_rs::flags::Flag::NoCommand);
+    o.flags.remove(stompymux_rs::Flag::NoCommand);
     persistence::save(&c.database(), &world).await.unwrap();
     std::fs::write(d.path().join("lua/object_logic/portable_tcp.lua"), r#"return {commands={
       {name='portable',permission='everyone',pattern='^portable$',handler=function(ctx) mux.world.pemit(ctx.enactor,'Portable active');return true end},
@@ -4146,7 +4075,7 @@ async fn tcp_portable_commands_and_native_inventory_precedence() {
 /// D06: later-word look and inventory abbreviations work over TCP and retain durable locations.
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_ordinary_word_prefix_inventory() {
-    use stompymux_rs::world::Kind;
+    use stompymux_rs::Kind;
     let (_d, c) = populated().await;
     let mut w = persistence::load(&c.database()).await.unwrap();
     w.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
@@ -4189,7 +4118,7 @@ async fn tcp_ordinary_word_prefix_inventory() {
 /// Stored descriptions and remote-room callbacks retain C precedence on real connections.
 #[tokio::test(flavor = "current_thread")]
 async fn tcp_description_precedence_and_remote_room_appearance() {
-    use stompymux_rs::world::Kind;
+    use stompymux_rs::Kind;
     let (_d, c) = populated().await;
     std::fs::write(
         c.root.join("lua/object_logic/description_parity.lua"),
@@ -4227,7 +4156,7 @@ async fn tcp_description_precedence_and_remote_room_appearance() {
     let o = w.objects.get_mut(&exit).unwrap();
     o.location = Some(location);
     o.destination = Some(room);
-    o.flags.insert(stompymux_rs::flags::Flag::Transparent);
+    o.flags.insert(stompymux_rs::Flag::Transparent);
     o.lua_parent.clear();
     persistence::save(&c.database(), &w).await.unwrap();
     let running = Running::start(&c).await;
@@ -4249,7 +4178,7 @@ async fn tcp_description_precedence_and_remote_room_appearance() {
     let saved = persistence::load(&c.database()).await.unwrap();
     assert_eq!(
         saved.objects[&thing].state["description_parity"]["seen"],
-        stompymux_rs::world::Scalar::Boolean(true)
+        stompymux_rs::StateValue::Boolean(true)
     );
     let mut db = <sqlx::SqliteConnection as sqlx::Connection>::connect_with(
         &sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()),

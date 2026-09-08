@@ -60,16 +60,16 @@ fn link_to(
     kind: LockType,
 ) -> Result<bool> {
     let w = ctx.scripts.world.borrow();
-    if !flags::controls(&w, ctx.player, dest) {
+    if !crate::authority::controls(&w, ctx.player, dest) {
         drop(w);
         tell(ctx, "Permission denied.");
         return Ok(false);
     }
     let o = &w.objects[&object];
     let allowed = if o.kind == Kind::Exit {
-        o.destination.is_none() || flags::controls(&w, ctx.player, object)
+        o.destination.is_none() || crate::authority::controls(&w, ctx.player, object)
     } else {
-        flags::controls(&w, ctx.player, object)
+        crate::authority::controls(&w, ctx.player, object)
     };
     ensure!(allowed, "Permission denied.");
     if matches!(o.kind, Kind::Player | Kind::Thing) {
@@ -96,7 +96,7 @@ fn link_to(
     let mut w = ctx.scripts.world.borrow_mut();
     // A callback can change the identities and containment checked above.
     ensure!(
-        flags::controls(&w, ctx.player, dest),
+        crate::authority::controls(&w, ctx.player, dest),
         "Destination control changed during callback."
     );
     let object_kind = w
@@ -138,7 +138,7 @@ fn open_one(
 ) -> Result<ObjectId> {
     let name = object_name(ctx, name)?;
     ensure!(
-        flags::controls(&ctx.scripts.world.borrow(), ctx.player, location),
+        crate::authority::controls(&ctx.scripts.world.borrow(), ctx.player, location),
         "Permission denied."
     );
     let id = ctx.scripts.world.borrow_mut().create_with(
@@ -197,7 +197,7 @@ pub(super) fn open(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
         };
         open_one(ctx, name, location, dest)?;
         if let (Some(dest), Some(back)) = (dest, links.get(1)) {
-            if flags::controls(&ctx.scripts.world.borrow(), ctx.player, dest) {
+            if crate::authority::controls(&ctx.scripts.world.borrow(), ctx.player, dest) {
                 open_one(ctx, back, dest, Some(location))?;
             } else {
                 tell(ctx, "Permission denied.");
@@ -209,7 +209,10 @@ pub(super) fn open(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
 
 fn unlink_one(ctx: &CommandContext<'_>, id: ObjectId) -> Result<()> {
     let mut w = ctx.scripts.world.borrow_mut();
-    ensure!(flags::controls(&w, ctx.player, id), "Permission denied.");
+    ensure!(
+        crate::authority::controls(&w, ctx.player, id),
+        "Permission denied."
+    );
     let o = w.objects.get_mut(&id).context("Object missing")?;
     let message = match o.kind {
         Kind::Exit => {
@@ -278,7 +281,7 @@ fn clone_home(
     .into_iter()
     .flatten()
     {
-        if flags::controls(&w, ctx.player, id)
+        if crate::authority::controls(&w, ctx.player, id)
             && w.objects
                 .get(&id)
                 .is_some_and(|o| !o.flags.contains(Flag::Going))
@@ -305,7 +308,7 @@ pub(super) fn clone_object(ctx: &CommandContext<'_>, input: &CommandInput) -> Re
         );
         if original.kind == Kind::Exit {
             ensure!(
-                flags::controls(&ctx.scripts.world.borrow(), ctx.player, location),
+                crate::authority::controls(&ctx.scripts.world.borrow(), ctx.player, location),
                 "Permission denied."
             );
         }
@@ -467,7 +470,7 @@ pub(super) fn dig(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Acti
                 tell(ctx, error.to_string());
                 continue;
             }
-            if !flags::controls(&ctx.scripts.world.borrow(), ctx.player, from) {
+            if !crate::authority::controls(&ctx.scripts.world.borrow(), ctx.player, from) {
                 tell(ctx, "Permission denied.");
                 continue;
             }

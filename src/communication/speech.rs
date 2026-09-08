@@ -1,7 +1,7 @@
 //! Native speech formatting and authority, with shared bounded notification routing.
 use crate::{
-    commands::{Action, CommandContext, CommandInput},
-    flags::{self, Flag},
+    commands::{Action, CommandContext, CommandInput, Report},
+    flags::Flag,
     notification::{self, Policy, Request},
     text::{self, Document},
     world::{Kind, ObjectId},
@@ -132,7 +132,7 @@ fn target(ctx: &CommandContext<'_>, value: &str, controlled: bool) -> Result<Obj
             "Emit to whom?"
         })
     })?;
-    let control = flags::controls(&w, ctx.player, id);
+    let control = crate::authority::controls(&w, ctx.player, id);
     let near = id == ctx.player
         || w.objects[&id].location == Some(ctx.player)
         || w.objects[&ctx.player].location == Some(id)
@@ -151,8 +151,8 @@ fn target(ctx: &CommandContext<'_>, value: &str, controlled: bool) -> Result<Obj
 fn speaking(ctx: &CommandContext<'_>) -> Result<bool> {
     let location = ctx.location()?;
     let w = ctx.scripts.world.borrow();
-    let gagged =
-        w.objects[&ctx.player].flags.contains(Flag::Gagged) && !flags::is_wizard(&w, ctx.player);
+    let gagged = w.objects[&ctx.player].flags.contains(Flag::Gagged)
+        && !crate::authority::is_wizard(&w, ctx.player);
     let auditorium = w.objects[&location].flags.contains(Flag::Auditorium);
     drop(w);
     if gagged {
@@ -189,7 +189,7 @@ fn speaking(ctx: &CommandContext<'_>) -> Result<bool> {
     Ok(true)
 }
 fn perform(ctx: &CommandContext<'_>, input: &CommandInput, mode: Mode) -> Result<Action> {
-    let catalog = crate::commands::discovery::switches(match mode {
+    let catalog = crate::commands::native_switches(match mode {
         Mode::Pose | Mode::Fpose => "pose",
         Mode::Emit | Mode::Femit => "@emit",
         Mode::Pemit => "@pemit",
@@ -307,7 +307,7 @@ fn perform(ctx: &CommandContext<'_>, input: &CommandInput, mode: Mode) -> Result
             let contents = has("contents");
             if contents {
                 ensure!(
-                    flags::controls(&ctx.scripts.world.borrow(), ctx.player, speaker),
+                    crate::authority::controls(&ctx.scripts.world.borrow(), ctx.player, speaker),
                     "Permission denied."
                 );
             }
@@ -400,15 +400,13 @@ macro_rules! handler {
     ($name:ident,$mode:ident) => {
         pub fn $name(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
             let before = ctx.scripts.world.borrow().clone();
-            let pending = ctx.scripts.outbox.borrow().clone();
-            let flow_effects = crate::lua::flows::snapshot(&ctx.scripts.lua);
+            let checkpoint = ctx.scripts.effects.checkpoint();
             match perform(ctx, input, Mode::$mode) {
                 Ok(action) => Ok(action),
                 Err(error) => {
                     *ctx.scripts.world.borrow_mut() = before;
-                    *ctx.scripts.outbox.borrow_mut() = pending;
-                    crate::lua::flows::restore(&ctx.scripts.lua, flow_effects);
-                    Ok(Action::Reply(error.to_string()))
+                    ctx.scripts.effects.restore(checkpoint);
+                    Ok(Action::Report(Report::Reply(error.to_string())))
                 }
             }
         }

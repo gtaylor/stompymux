@@ -125,12 +125,16 @@ pub struct Request {
 /// Parse only syntax here; the owner checks live directive access before preparing changes.
 pub fn command(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     let Some((name, value)) = input.args.split_once('=') else {
-        return Ok(Action::Reply("Usage: @admin <directive>=<value>".into()));
+        return Ok(Action::Report(crate::commands::Report::Reply(
+            "Usage: @admin <directive>=<value>".into(),
+        )));
     };
-    Ok(Action::ConfigAdmin(Request {
-        directive: name.trim().into(),
-        value: value.trim().into(),
-    }))
+    Ok(Action::Server(crate::commands::ServerRequest::ConfigAdmin(
+        Request {
+            directive: name.trim().into(),
+            value: value.trim().into(),
+        },
+    )))
 }
 /// Unpublished configuration and C partial-success diagnostics.
 pub struct Candidate {
@@ -558,7 +562,7 @@ pub fn report(ctx: &CommandContext<'_>, topic: &str) -> Option<String> {
                     c.mux.command_queue_limit
                 ),
             ];
-            if crate::flags::is_wizard(&ctx.scripts.world.borrow(), ctx.player) {
+            if crate::authority::is_wizard(&ctx.scripts.world.borrow(), ctx.player) {
                 rows.extend([
                     format!(
                         "Queue chunks: Active...{} Idle...{}",

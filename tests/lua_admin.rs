@@ -1,33 +1,15 @@
 //! Typed Lua objects, isolated validation and snapshot-based module administration.
 use std::{cell::RefCell, path::Path, rc::Rc};
 use stompymux_rs::{
+    Config, Flag, Kind, ObjectId, Scripts, World,
     commands::{self, Action},
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
     persistence,
-    world::{Kind, ObjectId, World},
 };
 
-fn copy(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for e in std::fs::read_dir(from).unwrap() {
-        let e = e.unwrap();
-        if e.path().is_dir() {
-            copy(&e.path(), &to.join(e.file_name()));
-        } else {
-            std::fs::copy(e.path(), to.join(e.file_name())).unwrap();
-        }
-    }
-}
+mod support;
+use support::{isolated_world, run_text};
 async fn fixture() -> (tempfile::TempDir, Config, World) {
-    let d = tempfile::tempdir().unwrap();
-    copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
-        d.path(),
-    );
-    let c = Config::load(d.path()).unwrap();
-    let mut w = persistence::load(&c.database()).await.unwrap();
+    let (d, c, mut w) = isolated_world().await;
     for id in [ObjectId(1), ObjectId(2)] {
         w.objects.get_mut(&id).unwrap().location = Some(ObjectId(c.start()));
     }
@@ -53,23 +35,13 @@ fn scripts(c: &Config, w: World) -> Scripts {
     Scripts::new(c, Rc::new(RefCell::new(w))).unwrap()
 }
 fn run(s: &Scripts, c: &Config, who: i64, line: &str) -> String {
-    let action = commands::run(s, c, ObjectId(who), 71, line).unwrap();
-    let mut messages = s
-        .outbox
-        .borrow_mut()
-        .drain(..)
-        .map(|(_, m)| m.source().to_string())
-        .collect::<Vec<_>>();
-    if let Action::Reply(t) | Action::CommitReply(t) | Action::Report(t) = action {
-        messages.push(t);
-    }
-    messages.join("\n")
+    run_text(s, c, ObjectId(who), 71, line)
 }
 fn lua(s: &Scripts, source: &str) {
     s.eval_callback::<()>(source).unwrap();
 }
 async fn save(s: &Scripts, c: &Config) -> anyhow::Result<()> {
-    let w = s.world.borrow().clone();
+    let w = s.world().clone();
     persistence::save(&c.database(), &w).await
 }
 
@@ -155,8 +127,7 @@ async fn typed_objects_relationships_and_enumeration() {
             .powers
             .contains(stompymux_rs::powers::Power::Idle)
     );
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&child)
         .unwrap()
@@ -176,8 +147,7 @@ async fn parent_commands_use_active_catalog_and_preserve_c_authority() {
     let (d, c, w) = fixture().await;
     let s = scripts(&c, w);
     assert!(run(&s, &c, 2, "@lua/parent #1=default_exit.lua").contains("Permission denied"));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -185,7 +155,7 @@ async fn parent_commands_use_active_catalog_and_preserve_c_authority() {
         .insert(Flag::Wizard);
     assert!(run(&s, &c, 2, "@lua/parent #1=default_exit.lua").contains("parent set"));
     assert_eq!(
-        s.world.borrow().objects[&ObjectId(1)].lua_parent,
+        s.world().objects[&ObjectId(1)].lua_parent,
         "default_exit.lua"
     );
     assert!(run(&s, &c, 2, "@lua/parent #1").contains("parent cleared"));
@@ -209,12 +179,14 @@ async fn parent_commands_use_active_catalog_and_preserve_c_authority() {
     ] {
         assert!(matches!(
             commands::run(&s, &c, ObjectId(1), 1, command).unwrap(),
-            Action::Reply(_)
+            Action::Report(commands::Report::Reply(_))
         ));
     }
     assert!(matches!(
         commands::run(&s, &c, ObjectId(1), 1, "@lua/viewparent new.lua").unwrap(),
-        Action::LuaAdmin(stompymux_rs::lua::AdminRequest::View { .. })
+        Action::Server(commands::ServerRequest::LuaAdmin(
+            stompymux_rs::lua::AdminRequest::View { .. },
+        ))
     ));
     save(&s, &c).await.unwrap();
 }
@@ -234,8 +206,8 @@ async fn snapshots_checking_limits_and_mutation_isolation() {
     let build = |mode| {
         Scripts::from_sources(
             &c,
-            std::rc::Rc::new(std::cell::RefCell::new(active.world.borrow().clone())),
-            active.help.clone(),
+            std::rc::Rc::new(std::cell::RefCell::new(active.world().clone())),
+            active.help().clone(),
             sources.clone(),
             mode,
         )
@@ -244,12 +216,12 @@ async fn snapshots_checking_limits_and_mutation_isolation() {
     assert!(check.to_string().contains("global_logic/new.lua"));
     let candidate = build(RuntimeMode::Live).unwrap();
     assert!(
-        candidate.world.borrow().objects[&ObjectId(1)]
+        candidate.world().objects[&ObjectId(1)]
             .state
             .contains_key("reload")
     );
     assert!(
-        !active.world.borrow().objects[&ObjectId(1)]
+        !active.world().objects[&ObjectId(1)]
             .state
             .contains_key("reload")
     );
@@ -257,21 +229,22 @@ async fn snapshots_checking_limits_and_mutation_isolation() {
     assert!(build(RuntimeMode::Live).is_ok()); // captured source is immutable
     let snapshot = Sources::read(&c).unwrap();
     assert!(
-        Scripts::from_sources(
-            &c,
-            active.world.clone(),
-            active.help.clone(),
-            std::sync::Arc::new(snapshot),
-            RuntimeMode::Checking
-        )
-        .is_err()
+        active
+            .from_sources_for_inspection(
+                &c,
+                active.help().clone(),
+                std::sync::Arc::new(snapshot),
+                RuntimeMode::Checking
+            )
+            .is_err()
     );
     std::fs::write(&source_path, "return {events={on_connect=3}}").unwrap();
-    assert!(Scripts::new(&c, active.world.clone()).is_err());
+    assert!(active.rebuild_for_inspection(&c).is_err());
     std::fs::remove_file(&source_path).unwrap();
     std::fs::write(d.path().join("lua/packages/invalid.lua"), "local =").unwrap();
     assert!(
-        Scripts::new(&c, active.world.clone())
+        active
+            .rebuild_for_inspection(&c)
             .err()
             .unwrap()
             .to_string()
@@ -296,14 +269,14 @@ async fn snapshots_checking_limits_and_mutation_isolation() {
 async fn caught_invalid_creations_and_callback_errors_leave_no_partial_changes() {
     let (_d, c, w) = fixture().await;
     let s = scripts(&c, w);
-    let next = s.world.borrow().next_id;
+    let next = s.world().next_id;
     lua(
         &s,
         "local w=mux.world;assert(not pcall(w.create_object,{type=w.types.THING,name='bad',location=999999})); assert(not pcall(w.create_object,{type=w.types.ROOM,name='bad',bogus=true}))",
     );
-    assert_eq!(s.world.borrow().next_id, next);
+    assert_eq!(s.world().next_id, next);
     assert!(s.eval_callback::<()>("mux.world.object(1):set_zone(0); mux.world.object(1):set_lua_parent(nil); error('abort')").is_err());
-    assert!(!s.world.borrow().objects[&ObjectId(1)].lua_parent.is_empty());
+    assert!(!s.world().objects[&ObjectId(1)].lua_parent.is_empty());
 }
 
 async fn testing_vm(source: &str) -> (tempfile::TempDir, Config, Scripts) {
@@ -429,14 +402,14 @@ local t=require('testing'); return t.suite('hooks',{
     assert_eq!((report.passed, report.skipped, report.errored), (0, 0, 0));
     drop(d);
     let (_d,c,s)=testing_vm("local t=require('testing');return t.suite('limit',{tests={t.test('loop',function()while true do end end),t.test('later',function()end)}})").await;
-    let limited = Scripts::from_sources(
-        &c,
-        s.world.clone(),
-        s.help.clone(),
-        s.sources.clone(),
-        stompymux_rs::RuntimeMode::Testing,
-    )
-    .unwrap();
+    let limited = s
+        .from_sources_for_inspection(
+            &c,
+            s.help().clone(),
+            s.sources().clone(),
+            stompymux_rs::RuntimeMode::Testing,
+        )
+        .unwrap();
     let report = testing::run(&limited, &c, &Request::parse("test", "").unwrap(), || {})
         .await
         .unwrap();
@@ -468,7 +441,7 @@ async fn test_runner_write_failure_discards_output_and_world_changes() {
         report.render(true)
     );
     assert!(report.render(false).contains("injected runner failure"));
-    assert!(s.outbox.borrow().is_empty());
+    assert!(s.outbox().is_empty());
     lua(
         &s,
         "assert(mux.world.object(1):state('runner'):get('bad')==nil)",

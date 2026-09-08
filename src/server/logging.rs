@@ -52,8 +52,7 @@ impl Server {
         if let Err(e) = result {
             *self.scripts.world.borrow_mut() = before;
             self.reconcile_connections();
-            self.scripts.outbox.borrow_mut().clear();
-            self.scripts.flows.rollback();
+            self.scripts.effects.rollback();
             self.config.log(
                 &[Category::Problems],
                 "CMD",

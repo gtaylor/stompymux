@@ -1,54 +1,32 @@
 //! Registry metadata, access checks, aliases and scoped Lua dispatch regressions.
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
+    Config, Flag, ObjectId, Scripts, World,
     commands::{
         self, Action, CommandContext, CommandDefinition, CommandInput, CommandPermissions as P,
         CommandRegistry, CommandScope,
     },
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
-    persistence,
-    world::{ObjectId, World},
 };
 
-/// Copy fixtures so metadata validation and script edits never touch production data.
-fn copy(source: &Path, target: &Path) {
-    std::fs::create_dir_all(target).unwrap();
-    for entry in std::fs::read_dir(source).unwrap() {
-        let entry = entry.unwrap();
-        if entry.path().is_dir() {
-            copy(&entry.path(), &target.join(entry.file_name()));
-        } else {
-            std::fs::copy(entry.path(), target.join(entry.file_name())).unwrap();
-        }
-    }
-}
+mod support;
+use support::isolated_world;
 /// Load an isolated legacy world without starting a server.
 async fn fixture() -> (tempfile::TempDir, Config, World) {
-    let d = tempfile::tempdir().unwrap();
-    copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
-        d.path(),
-    );
-    let c = Config::load(d.path()).unwrap();
-    let w = persistence::load(&c.database()).await.unwrap();
-    (d, c, w)
+    isolated_world().await
 }
 /// Execute through native matching and collect ordinary player-directed output.
 fn run(s: &Scripts, c: &Config, player: i64, line: &str) -> String {
     let action = commands::run(s, c, ObjectId(player), 1, line).unwrap();
-    if let Action::Reply(text)
-    | Action::Report(text)
-    | Action::StyledReport(text)
-    | Action::LiteralReport(text)
+    if let Action::Report(commands::Report::Reply(text))
+    | Action::Report(commands::Report::Inspection(text))
+    | Action::Report(commands::Report::Styled(text))
+    | Action::Report(commands::Report::Literal(text))
     | Action::CommitReply(text) = action
     {
         return text;
     }
-    s.outbox
-        .borrow_mut()
-        .drain(..)
+    s.drain_outbox()
+        .into_iter()
         .map(|(_, s)| s.source().to_string())
         .collect::<Vec<_>>()
         .join("\n")
@@ -58,7 +36,7 @@ async fn native_catalog_permissions_and_aliases() {
     let (_d, c, w) = fixture().await;
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     let definitions: Vec<_> = s
-        .commands
+        .commands()
         .definitions()
         .filter(|d| matches!(d.handler, commands::CommandHandler::Native(_)))
         .collect();
@@ -196,19 +174,21 @@ async fn native_catalog_permissions_and_aliases() {
         );
     }
     for permission in [P::EVERYONE, P::WIZARD, P::GOD, P::GOD | P::WIZARD] {
-        assert!(permission.allows(&s.world.borrow(), ObjectId(1)));
+        assert!(permission.allows(&s.world(), ObjectId(1)));
         assert_eq!(
-            permission.allows(&s.world.borrow(), ObjectId(2)),
+            permission.allows(&s.world(), ObjectId(2)),
             permission == P::EVERYONE
                 || permission == P::WIZARD
                 || permission == (P::GOD | P::WIZARD)
         );
         assert_eq!(
-            permission.allows(&s.world.borrow(), ObjectId(4)),
+            permission.allows(&s.world(), ObjectId(4)),
             permission == P::EVERYONE
         );
     }
-    let god = CommandDefinition::native("god-test", P::GOD, |_, _| Ok(Action::Quit));
+    let god = CommandDefinition::native("god-test", P::GOD, |_, _| {
+        Ok(Action::Server(commands::ServerRequest::Quit))
+    });
     let input = CommandInput::parse(&c, "god-test");
     for (player, allowed) in [(1, true), (2, false), (4, false)] {
         let action = god
@@ -225,20 +205,22 @@ async fn native_catalog_permissions_and_aliases() {
                 &input,
             )
             .unwrap();
-        assert_eq!(matches!(action, Action::Quit), allowed);
+        assert_eq!(
+            matches!(action, Action::Server(commands::ServerRequest::Quit)),
+            allowed
+        );
     }
-    s.outbox.borrow_mut().clear();
+    s.drain_outbox();
     assert!(run(&s, &c, 2, "@EX #2").contains("Wizard(#2:"));
     assert!(run(&s, &c, 2, "@flag/unknown me=dark").contains("Unsupported command switch"));
     assert!(run(&s, &c, 2, "home/quiet").contains("Movement command switches"));
     assert!(matches!(
         commands::run(&s, &c, ObjectId(2), 1, "@FI/NeXt").unwrap(),
-        Action::Reply(ref text) if text.contains("Unsupported @find switch")
+        Action::Report(commands::Report::Reply(ref text)) if text.contains("Unsupported @find switch")
     ));
     assert!(run(&s, &c, 2, "l").contains("Staff Nexus"));
     assert!(run(&s, &c, 2, "\"hello/there").contains("You say \"hello/there\""));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -247,7 +229,7 @@ async fn native_catalog_permissions_and_aliases() {
     assert!(run(&s, &c, 2, "@EX/anything #2").contains("Permission denied."));
     assert!(matches!(
         commands::run(&s, &c, ObjectId(2), 1, "@find/next").unwrap(),
-        Action::Reply(_)
+        Action::Report(commands::Report::Reply(_))
     ));
 }
 
@@ -347,7 +329,7 @@ async fn lua_scopes_permissions_captures_and_frozen_registration() {
     }
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     let defs: Vec<_> = s
-        .commands
+        .commands()
         .definitions()
         .filter(|d| d.name == "probe")
         .collect();
@@ -366,9 +348,8 @@ async fn lua_scopes_permissions_captures_and_frozen_registration() {
         run(&s, &c, 2, "all-local"),
         "handled:2\nhandled:1\nhandled:2"
     );
-    s.lua.load("_registry_module.commands[2].permission='god'; _registry_module.commands[2].handler=function() error('replaced') end; _registry_module.commands[2].pattern='never'").exec().unwrap();
-    s.world
-        .borrow_mut()
+    s.inspect_lua().load("_registry_module.commands[2].permission='god'; _registry_module.commands[2].handler=function() error('replaced') end; _registry_module.commands[2].pattern='never'").exec().unwrap();
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(1))
         .unwrap()
@@ -378,8 +359,7 @@ async fn lua_scopes_permissions_captures_and_frozen_registration() {
         run(&s, &c, 2, "probe frozen"),
         "local:2:frozen\nlocal:1:frozen\nlocal:2:frozen\nfirst:frozen\nlast:frozen"
     );
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -412,8 +392,7 @@ async fn native_aliases_precede_lua_and_restricted_lua_falls_through_to_exits() 
         run(&s, &c, 2, "P/special Hello World"),
         "wizard:Hello World"
     );
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -422,24 +401,20 @@ async fn native_aliases_precede_lua_and_restricted_lua_falls_through_to_exits() 
     assert_eq!(run(&s, &c, 2, "p Hello World"), "everyone:Hello World");
     assert!(run(&s, &c, 2, "PROBE Hello World").contains("Huh?"));
     assert_eq!(run(&s, &c, 2, "f/unknown"), "Permission denied.");
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .location = Some(ObjectId(4));
     assert!(run(&s, &c, 2, "out").contains("You cannot go that way."));
     // Verify the Lua callback was skipped and the ordinary exit lock was reached.
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(2)].location,
-        Some(ObjectId(4))
-    );
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(4)));
 }
 
 #[tokio::test(flavor = "current_thread")]
 async fn account_command_validation_and_history() {
+    use stompymux_rs::Login;
     use stompymux_rs::account_admin::{BootTarget, Request};
-    use stompymux_rs::world::Login;
     let (_d, c, mut w) = fixture().await;
     let a = w.accounts.get_mut(&ObjectId(2)).unwrap();
     a.alias = Some("TestAlias".into());
@@ -485,24 +460,24 @@ async fn account_command_validation_and_history() {
         assert!(
             matches!(
                 commands::run(&s, &c, ObjectId(1), 1, command).unwrap(),
-                Action::Reply(_)
+                Action::Report(commands::Report::Reply(_))
             ),
             "{command}"
         );
     }
     assert!(matches!(
         commands::run(&s, &c, ObjectId(1), 1, "@boot/p/q 42").unwrap(),
-        Action::AccountAdmin(Request::Boot {
+        Action::Server(commands::ServerRequest::AccountAdmin(Request::Boot {
             target: BootTarget::Session(42),
             quiet: true
-        })
+        }))
     ));
     assert!(matches!(
         commands::run(&s, &c, ObjectId(1), 1, "@newpassword TestAlias=secret").unwrap(),
-        Action::AccountAdmin(Request::Reset {
+        Action::Server(commands::ServerRequest::AccountAdmin(Request::Reset {
             target: ObjectId(2),
             ..
-        })
+        }))
     ));
     assert!(run(&s, &c, 1, "@newpassword #1=secret").contains("You cannot change"));
 }
@@ -520,10 +495,10 @@ async fn queue_registration_syntax_aliases_and_macro_restrictions() {
     std::fs::write(aliases, contents).unwrap();
     let c = Config::load(d.path()).unwrap();
     w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
-    let ordinary = w.create(&c, "Ordinary".into(), stompymux_rs::world::Kind::Thing);
+    let ordinary = w.create(&c, "Ordinary".into(), stompymux_rs::Kind::Thing);
     w.objects.get_mut(&ordinary).unwrap().location = Some(ObjectId(c.start()));
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
-    assert!(!s.commands.definitions().any(|d| d.name == "#"));
+    assert!(!s.commands().definitions().any(|d| d.name == "#"));
     for line in ["@force me=say no", "@wait 0=say no", "@halt", "@halt/all"] {
         assert!(run(&s, &c, ordinary.0, line).contains("Permission denied"));
     }
@@ -551,7 +526,7 @@ async fn queue_registration_syntax_aliases_and_macro_restrictions() {
         assert!(
             matches!(
                 commands::run(&s, &c, ObjectId(2), 1, line).unwrap(),
-                Action::Reply(_)
+                Action::Report(commands::Report::Reply(_))
             ),
             "{line}"
         );
@@ -571,7 +546,7 @@ async fn queued_context_locks_callbacks_and_session_rejection() {
     use commands::{ExecutionContext, InputOrigin};
     let (d, c, mut w) = fixture().await;
     let start = ObjectId(c.start());
-    let thing = w.create(&c, "QueueThing".into(), stompymux_rs::world::Kind::Thing);
+    let thing = w.create(&c, "QueueThing".into(), stompymux_rs::Kind::Thing);
     w.objects.get_mut(&thing).unwrap().location = Some(start);
     w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(start);
     w.objects
@@ -609,22 +584,17 @@ async fn queued_context_locks_callbacks_and_session_rejection() {
         Action::Continue
     ));
     assert_eq!(
-        s.world.borrow().objects[&thing].state["queue"]["context"],
-        stompymux_rs::world::Scalar::Boolean(true)
+        s.world().objects[&thing].state["queue"]["context"],
+        stompymux_rs::StateValue::Boolean(true)
     );
     assert!(matches!(
         commands::execute(&s, &c, execution, "say test").unwrap(),
         Action::Continue
     ));
-    assert!(
-        s.outbox
-            .borrow()
-            .iter()
-            .any(|(_, d)| d.contains("says \"test\""))
-    );
+    assert!(s.outbox().iter().any(|(_, d)| d.contains("says \"test\"")));
     // A GOD cause does not confer GOD or Wizard authority on the executor.
     assert!(
-        matches!(commands::execute(&s, &c, execution, "@wait 0=say no").unwrap(), Action::Reply(ref text) if text.contains("Permission denied"))
+        matches!(commands::execute(&s, &c, execution, "@wait 0=say no").unwrap(), Action::Report(commands::Report::Reply(ref text)) if text.contains("Permission denied"))
     );
     let wizard = ExecutionContext {
         executor: ObjectId(2),
@@ -632,14 +602,13 @@ async fn queued_context_locks_callbacks_and_session_rejection() {
     };
     run(&s, &c, 2, ".create QueuedMacros");
     run(&s, &c, 2, ".def queued=say MACRO-RAN");
-    s.outbox.borrow_mut().clear();
+    s.drain_outbox();
     assert!(matches!(
         commands::execute(&s, &c, wizard, ".queued").unwrap(),
         Action::Continue
     ));
     let queued_macro_output = s
-        .outbox
-        .borrow()
+        .outbox()
         .iter()
         .map(|(_, d)| d.source())
         .collect::<Vec<_>>()
@@ -658,16 +627,15 @@ async fn queued_context_locks_callbacks_and_session_rejection() {
         "@lua/schedule",
         "@boot #2",
     ] {
-        s.outbox.borrow_mut().clear();
+        s.drain_outbox();
         let result = commands::execute(&s, &c, wizard, line).unwrap();
         let mut text = s
-            .outbox
-            .borrow()
+            .outbox()
             .iter()
             .map(|(_, d)| d.source().to_owned())
             .collect::<Vec<_>>()
             .join("\n");
-        if let Action::Reply(reply) = result {
+        if let Action::Report(commands::Report::Reply(reply)) = result {
             text.push_str(&reply);
         }
         assert!(
@@ -685,7 +653,7 @@ async fn queued_context_locks_callbacks_and_session_rejection() {
 async fn execution_lifecycle_guard_is_origin_and_type_aware() {
     use commands::{ExecutionContext, InputOrigin};
     let (_d, c, mut w) = fixture().await;
-    let thing = w.create(&c, "Guarded".into(), stompymux_rs::world::Kind::Thing);
+    let thing = w.create(&c, "Guarded".into(), stompymux_rs::Kind::Thing);
     w.objects
         .get_mut(&thing)
         .unwrap()
@@ -698,38 +666,36 @@ async fn execution_lifecycle_guard_is_origin_and_type_aware() {
         session: None,
         origin: InputOrigin::Queued,
     };
-    assert!(!commands::executable(&s.world.borrow(), queued));
+    assert!(!commands::executable(&s.world(), queued));
     commands::execute(&s, &c, queued, "say must-not-run").unwrap();
-    assert!(s.outbox.borrow().iter().any(|(_, text)| {
+    assert!(s.outbox().iter().any(|(_, text)| {
         text.source()
             .contains("Attempt to execute command by halted object")
     }));
-    s.outbox.borrow_mut().clear();
-    s.world.borrow_mut().objects.get_mut(&thing).unwrap().kind = stompymux_rs::world::Kind::Garbage;
+    s.drain_outbox();
+    s.world_mut().objects.get_mut(&thing).unwrap().kind = stompymux_rs::Kind::Garbage;
     commands::execute(&s, &c, queued, "say must-not-run").unwrap();
-    assert!(s.outbox.borrow().is_empty());
+    assert!(s.outbox().is_empty());
     let interactive = ExecutionContext {
         executor: ObjectId(2),
         cause: ObjectId(2),
         session: Some(1),
         origin: InputOrigin::Interactive,
     };
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
         .insert(Flag::Halted);
-    assert!(commands::executable(&s.world.borrow(), interactive));
-    s.world
-        .borrow_mut()
+    assert!(commands::executable(&s.world(), interactive));
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
         .insert(Flag::Going);
-    assert!(!commands::executable(&s.world.borrow(), interactive));
+    assert!(!commands::executable(&s.world(), interactive));
 }
 
 /// Discovery uses captured registrations and the same source enumeration as dispatch.
@@ -744,19 +710,15 @@ async fn discovery_is_read_only_permission_filtered_and_scope_accurate() {
       {name='catalog-local',permission='wizard',pattern='^local1$',handler=function()error('must not execute')end},
       {name='catalog-local',permission='wizard',pattern='^local2$',handler=function()error('must not execute')end}}}"#).unwrap();
     w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(4));
-    let nearby = w.create(&c, "CatalogNearby".into(), stompymux_rs::world::Kind::Thing);
-    let inventory = w.create(
-        &c,
-        "CatalogInventory".into(),
-        stompymux_rs::world::Kind::Thing,
-    );
+    let nearby = w.create(&c, "CatalogNearby".into(), stompymux_rs::Kind::Thing);
+    let inventory = w.create(&c, "CatalogInventory".into(), stompymux_rs::Kind::Thing);
     for (id, location) in [(nearby, ObjectId(4)), (inventory, ObjectId(2))] {
         let o = w.objects.get_mut(&id).unwrap();
         o.location = Some(location);
         o.lua_parent = "discovery.lua".into();
     }
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
-    let before = serde_json::to_vec(&*s.world.borrow()).unwrap();
+    let before = serde_json::to_vec(&*s.world()).unwrap();
     let text = run(&s, &c, 2, "@list com");
     assert!(
         text.contains("Built-in commands (global native):")
@@ -785,13 +747,12 @@ async fn discovery_is_read_only_permission_filtered_and_scope_accurate() {
     ] {
         assert!(matches!(
             commands::run(&s, &c, ObjectId(2), 1, command).unwrap(),
-            Action::LiteralReport(_)
+            Action::Report(commands::Report::Literal(_))
         ));
     }
-    assert_eq!(serde_json::to_vec(&*s.world.borrow()).unwrap(), before);
-    assert!(s.outbox.borrow().is_empty());
-    s.world
-        .borrow_mut()
+    assert_eq!(serde_json::to_vec(&*s.world()).unwrap(), before);
+    assert!(s.outbox().is_empty());
+    s.world_mut()
         .objects
         .get_mut(&nearby)
         .unwrap()
@@ -800,7 +761,7 @@ async fn discovery_is_read_only_permission_filtered_and_scope_accurate() {
     assert!(!run(&s, &c, 2, "@list commands").contains("CatalogNearby"));
     std::fs::write(&global, "return {}").unwrap();
     assert!(run(&s, &c, 2, "@list commands").contains("catalog-public"));
-    let reload = Scripts::new(&c, s.world.clone()).unwrap();
+    let reload = s.rebuild_for_inspection(&c).unwrap();
     assert!(!run(&reload, &c, 2, "@list commands").contains("catalog-public"));
     assert!(run(&s, &c, 2, "@list site_information").contains("Site Access"));
     assert!(run(&s, &c, 2, "@stats extra").contains("Usage: @stats"));
@@ -844,7 +805,7 @@ fn native_switch_catalog_fixture() {
 /// Runtime traversal preserves C duplicates and list-specific flag handling.
 #[tokio::test(flavor = "current_thread")]
 async fn portable_dispatch_stages_and_inventory() {
-    use stompymux_rs::world::Kind;
+    use stompymux_rs::Kind;
     let (d, c, mut w) = fixture().await;
     w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(4));
     let item = w.create(&c, "[bold]Portable[/]".into(), Kind::Thing);
@@ -891,9 +852,11 @@ async fn portable_dispatch_stages_and_inventory() {
     fn local(ctx: &CommandContext<'_>, _: &CommandInput) -> anyhow::Result<Action> {
         assert!(ctx.object.is_some());
         assert_eq!(ctx.cause, ObjectId(2));
-        Ok(Action::Reply("local native".into()))
+        Ok(Action::Report(commands::Report::Reply(
+            "local native".into(),
+        )))
     }
-    s.commands
+    s.commands_mut_for_inspection()
         .register_native(CommandDefinition::object_native(
             "pass",
             P::EVERYONE,
@@ -902,7 +865,7 @@ async fn portable_dispatch_stages_and_inventory() {
         ))
         .unwrap();
     assert_eq!(run(&s, &c, 2, "pass"), "local native");
-    s.outbox.borrow_mut().clear();
+    s.drain_outbox();
     let listing = run(&s, &c, 2, "@list commands");
     assert!(listing.contains("local native / inventory"));
     assert!(listing.contains("location-zone fallback"));
@@ -912,8 +875,7 @@ async fn portable_dispatch_stages_and_inventory() {
         (Flag::NoCommand, true),
         (Flag::Going, true),
     ] {
-        s.world
-            .borrow_mut()
+        s.world_mut()
             .objects
             .get_mut(&item)
             .unwrap()
@@ -923,8 +885,7 @@ async fn portable_dispatch_stages_and_inventory() {
             run(&s, &c, 2, "local-look").contains("portable look"),
             visible
         );
-        s.world
-            .borrow_mut()
+        s.world_mut()
             .objects
             .get_mut(&item)
             .unwrap()
@@ -934,20 +895,14 @@ async fn portable_dispatch_stages_and_inventory() {
     let inv = run(&s, &c, 2, "inventory");
     assert!(inv.contains("[bold]Portable[/]") && inv.contains(&format!("(#{}", item.0)));
     assert!(!inv.contains("Nested"));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
         .remove(Flag::Wizard);
     assert!(!run(&s, &c, 2, "inventory").contains(&format!("(#{}", item.0)));
-    s.world
-        .borrow_mut()
-        .objects
-        .get_mut(&item)
-        .unwrap()
-        .location = Some(ObjectId(0));
+    s.world_mut().objects.get_mut(&item).unwrap().location = Some(ObjectId(0));
     assert!(!run(&s, &c, 2, "local-look").contains("portable look"));
     assert!(run(&s, &c, 2, "inventory").contains("You aren't carrying anything."));
 }
@@ -955,7 +910,7 @@ async fn portable_dispatch_stages_and_inventory() {
 /// Zone references do not recurse or duplicate a room-zone source, and exits win before Lua.
 #[tokio::test(flavor = "current_thread")]
 async fn zone_source_identity_and_exit_precedence() {
-    use stompymux_rs::world::Kind;
+    use stompymux_rs::Kind;
     let (d, c, mut w) = fixture().await;
     w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(4));
     let zone = w.create(&c, "Zone".into(), Kind::Room);
@@ -985,12 +940,7 @@ async fn zone_source_identity_and_exit_precedence() {
     std::fs::write(d.path().join("lua/global_logic/exit_collision.lua"), "return {commands={{name='look',permission='everyone',pattern='^look$',handler=function() error('exit must win') end}}}").unwrap();
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     assert!(run(&s, &c, 2, "look").contains("You can't go that way."));
-    s.world
-        .borrow_mut()
-        .objects
-        .get_mut(&exit)
-        .unwrap()
-        .location = Some(ObjectId(2));
+    s.world_mut().objects.get_mut(&exit).unwrap().location = Some(ObjectId(2));
     let inventory = run(&s, &c, 2, "inventory");
     assert!(inventory.contains("Exits:\nlook"));
     assert!(!inventory.contains("testexit"));
@@ -1000,7 +950,7 @@ async fn zone_source_identity_and_exit_precedence() {
 /// A room-valued location zone gates exits rooted independently at the player's zone.
 #[tokio::test(flavor = "current_thread")]
 async fn zone_exit_fallback_matches_working_c_preconditions() {
-    use stompymux_rs::world::Kind;
+    use stompymux_rs::Kind;
     let (d, c, mut w) = fixture().await;
     w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(4));
     let zone = w.create(&c, "Zone".into(), Kind::Room);
@@ -1018,30 +968,19 @@ async fn zone_exit_fallback_matches_working_c_preconditions() {
     .unwrap();
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     assert_eq!(run(&s, &c, 2, "zonegate"), "global fallback");
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(2)].location,
-        Some(ObjectId(4))
-    );
-    s.world
-        .borrow_mut()
-        .objects
-        .get_mut(&ObjectId(2))
-        .unwrap()
-        .zone = Some(exit_root);
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(4)));
+    s.world_mut().objects.get_mut(&ObjectId(2)).unwrap().zone = Some(exit_root);
     assert!(matches!(
         commands::run(&s, &c, ObjectId(2), 1, "zonegate").unwrap(),
         Action::Continue
     ));
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(2)].location,
-        Some(ObjectId(0))
-    );
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(0)));
 }
 
 /// Destruction schedules only approved objects, with exact switch and C protection rules.
 #[tokio::test(flavor = "current_thread")]
 async fn deferred_destruction_and_cleaning_commands() {
-    use stompymux_rs::world::Kind;
+    use stompymux_rs::Kind;
     let (_d, c, mut w) = fixture().await;
     let mut ids = Vec::new();
     for kind in [Kind::Thing, Kind::Room, Kind::Exit] {
@@ -1059,7 +998,7 @@ async fn deferred_destruction_and_cleaning_commands() {
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     run(&s, &c, 2, &format!("@destroy #{}", player.0));
     assert_eq!(
-        s.world.borrow().objects[&player].pending_destroyer,
+        s.world().objects[&player].pending_destroyer,
         Some(ObjectId(2))
     );
     for command in [
@@ -1068,13 +1007,13 @@ async fn deferred_destruction_and_cleaning_commands() {
         "@destroy/over #0",
         "@destroy/override/recursive #0",
     ] {
-        let before = serde_json::to_vec(&*s.world.borrow()).unwrap();
+        let before = serde_json::to_vec(&*s.world()).unwrap();
         let result = run(&s, &c, 1, command);
         assert!(
             result.contains("Usage:") || result.contains("Unsupported"),
             "{result}"
         );
-        assert_eq!(before, serde_json::to_vec(&*s.world.borrow()).unwrap());
+        assert_eq!(before, serde_json::to_vec(&*s.world()).unwrap());
     }
     for id in [0, 1, c.start(), c.home(), c.mux.default_home] {
         if id >= 0 {
@@ -1082,8 +1021,7 @@ async fn deferred_destruction_and_cleaning_commands() {
         }
     }
     assert!(run(&s, &c, 1, "@destroy #2").contains("Wizards"));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ids[0])
         .unwrap()
@@ -1092,7 +1030,7 @@ async fn deferred_destruction_and_cleaning_commands() {
     assert!(run(&s, &c, 1, &format!("@destroy #{}", ids[0].0)).contains("protected"));
     for id in ids {
         run(&s, &c, 1, &format!("@destroy/override #{}", id.0));
-        assert!(s.world.borrow().objects[&id].flags.contains(Flag::Going));
+        assert!(s.world().objects[&id].flags.contains(Flag::Going));
         assert!(
             run(&s, &c, 1, &format!("@destroy/override #{}", id.0))
                 .contains("No sense beating a dead")
@@ -1104,15 +1042,14 @@ async fn deferred_destruction_and_cleaning_commands() {
         ("@list g", None),
     ] {
         assert!(
-            matches!(commands::run(&s,&c,ObjectId(1),1,command).unwrap(), Action::GlobalControl(v) if v == value.map(|b| (stompymux_rs::controls::Control::Cleaning,b)))
+            matches!(commands::run(&s,&c,ObjectId(1),1,command).unwrap(), Action::Server(commands::ServerRequest::GlobalControl(v)) if v == value.map(|b| (stompymux_rs::controls::Control::Cleaning,b)))
         );
     }
     assert!(run(&s, &c, 1, "@enable checkpointing").contains("not implemented"));
     for command in ["@enable c", "@disable cleaning extra"] {
         assert!(run(&s, &c, 1, command).contains("don't know"));
     }
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -1132,8 +1069,8 @@ async fn deferred_destruction_and_cleaning_commands() {
 #[tokio::test(flavor = "current_thread")]
 async fn goto_matching_switches_and_live_access() {
     use stompymux_rs::{
+        Kind,
         access::{Edit, Rule},
-        world::Kind,
     };
     let (_d, mut c, mut w) = fixture().await;
     w.objects
@@ -1153,18 +1090,11 @@ async fn goto_matching_switches_and_live_access() {
     }
     for command in ["goto/quiet aw", "go/loud aw", "goto/unknown aw"] {
         assert!(run(&s, &c, 2, command).contains("Unsupported command switch."));
-        assert_eq!(
-            s.world.borrow().objects[&ObjectId(2)].location,
-            Some(ObjectId(4))
-        );
+        assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(4)));
     }
     run(&s, &c, 2, "GoTo AW");
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(2)].location,
-        Some(ObjectId(0))
-    );
-    s.world
-        .borrow_mut()
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(0)));
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -1175,42 +1105,31 @@ async fn goto_matching_switches_and_live_access() {
         edits: vec![Edit::parse("wizard").unwrap()],
         origin: "test".into(),
     });
-    s.commands.configure_access(&c).unwrap();
+    s.commands_mut_for_inspection()
+        .configure_access(&c)
+        .unwrap();
     for command in ["goto aw", "go aw", "move aw"] {
         assert!(run(&s, &c, 2, command).contains("Permission denied."));
     }
     assert!(run(&s, &c, 2, "aw").contains("Huh?"));
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(2)].location,
-        Some(ObjectId(4))
-    );
-    s.world
-        .borrow_mut()
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(4)));
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
         .insert(Flag::Wizard);
     run(&s, &c, 2, "aw");
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(2)].location,
-        Some(ObjectId(0))
-    );
-    s.world
-        .borrow_mut()
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(0)));
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .location = Some(ObjectId(4));
-    s.world
-        .borrow_mut()
-        .objects
-        .get_mut(&exit)
-        .unwrap()
-        .destination = None;
+    s.world_mut().objects.get_mut(&exit).unwrap().destination = None;
     assert_eq!(run(&s, &c, 2, "goto aw"), "You can't go that way.");
     let other = {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         let other = w.create(&c, "auditway;aw".into(), Kind::Exit);
         let e = w.objects.get_mut(&other).unwrap();
         e.location = Some(ObjectId(4));
@@ -1223,20 +1142,19 @@ async fn goto_matching_switches_and_live_access() {
         "I don't know which way you mean!"
     );
     {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         w.objects.get_mut(&exit).unwrap().destination = Some(ObjectId(0));
         w.objects.get_mut(&other).unwrap().destination = Some(ObjectId(3));
     }
     for _ in 0..16 {
-        s.world
-            .borrow_mut()
+        s.world_mut()
             .objects
             .get_mut(&ObjectId(2))
             .unwrap()
             .location = Some(ObjectId(4));
         run(&s, &c, 2, "aw");
         assert!(matches!(
-            s.world.borrow().objects[&ObjectId(2)].location,
+            s.world().objects[&ObjectId(2)].location,
             Some(ObjectId(0) | ObjectId(3))
         ));
     }
@@ -1247,7 +1165,7 @@ async fn goto_matching_switches_and_live_access() {
 /// A permitted exit wins duplicate-name matching and explicit goto stays native-first.
 #[tokio::test(flavor = "current_thread")]
 async fn goto_lock_preference_and_native_precedence() {
-    use stompymux_rs::world::Kind;
+    use stompymux_rs::Kind;
     let (d, c, mut w) = fixture().await;
     std::fs::write(
         d.path().join("lua/object_logic/goto_denied.lua"),
@@ -1271,14 +1189,8 @@ async fn goto_lock_preference_and_native_precedence() {
     }
     let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
     assert!(run(&s, &c, 2, "go shadow").contains("You can't go that way."));
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(2)].location,
-        Some(ObjectId(4))
-    );
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(4)));
     run(&s, &c, 2, "goto chosen");
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(2)].location,
-        Some(ObjectId(0))
-    );
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(0)));
     c.logger.shutdown(&c).await.unwrap();
 }

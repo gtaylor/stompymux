@@ -2,25 +2,13 @@
 use sqlx::{Connection, SqliteConnection};
 use std::{cell::RefCell, path::Path, rc::Rc};
 use stompymux_rs::{
+    Config, Flag, ObjectId, Scripts,
     commands::{self, Action},
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
     persistence,
-    world::ObjectId,
 };
 
-fn copy(source: &Path, target: &Path) {
-    std::fs::create_dir_all(target).unwrap();
-    for entry in std::fs::read_dir(source).unwrap() {
-        let entry = entry.unwrap();
-        if entry.path().is_dir() {
-            copy(&entry.path(), &target.join(entry.file_name()));
-        } else {
-            std::fs::copy(entry.path(), target.join(entry.file_name())).unwrap();
-        }
-    }
-}
+mod support;
+use support::copy;
 
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
     let d = tempfile::tempdir().unwrap();
@@ -42,19 +30,18 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
 fn run(s: &Scripts, c: &Config, who: i64, line: &str) -> String {
     let action = commands::run(s, c, ObjectId(who), 1, line).unwrap();
     let mut output = s
-        .outbox
-        .borrow_mut()
-        .drain(..)
+        .drain_outbox()
+        .into_iter()
         .map(|(_, d)| d.source().to_string())
         .collect::<Vec<_>>();
-    if let Action::Reply(text) | Action::CommitReply(text) = action {
+    if let Action::Report(commands::Report::Reply(text)) | Action::CommitReply(text) = action {
         output.push(text);
     }
     output.join("\n")
 }
 
 async fn save(c: &Config, s: &Scripts) -> anyhow::Result<()> {
-    let snapshot = s.world.borrow().clone();
+    let snapshot = s.world().clone();
     persistence::save(&c.database(), &snapshot).await
 }
 
@@ -105,10 +92,9 @@ async fn commands_sharing_modes_slots_and_case_insensitive_expansion() {
     }
     assert!(run(&s, &c, 1, ".create full").contains("already have 5"));
     run(&s, &c, 1, ".clear");
-    assert!(s.world.borrow().macros.sets.is_empty());
+    assert!(s.world().macros.sets.is_empty());
     assert!(
-        s.world
-            .borrow()
+        s.world()
             .macros
             .players
             .values()
@@ -132,7 +118,7 @@ async fn slot_precedence_single_pass_limits_and_private_inspection() {
     assert!(run(&s, &c, 2, ".x").contains("first"));
     run(&s, &c, 2, ".def no=.create forbidden");
     run(&s, &c, 2, ".no");
-    assert_eq!(s.world.borrow().macros.sets.len(), 2);
+    assert_eq!(s.world().macros.sets.len(), 2);
     run(&s, &c, 2, ".def re=.x");
     assert!(!run(&s, &c, 2, ".re").contains("first"));
     run(&s, &c, 2, ".def lua=greet");
@@ -145,11 +131,11 @@ async fn slot_precedence_single_pass_limits_and_private_inspection() {
     assert!(run(&s, &c, 2, ".x").contains("second"));
     assert!(matches!(
         commands::run(&s, &c, ObjectId(2), 99, ".list").unwrap(),
-        Action::Reply(_)
+        Action::Report(commands::Report::Reply(_))
     ));
     assert!(matches!(
         commands::run(&s, &c, ObjectId(2), 99, ".list/bad").unwrap(),
-        Action::Reply(_)
+        Action::Report(commands::Report::Reply(_))
     ));
     assert!(run(&s, &c, 2, ".def toooo=look").contains("1–4"));
     assert!(run(&s, &c, 2, ".def é=look").contains("ASCII"));
@@ -168,7 +154,7 @@ async fn existing_rows_compact_with_extension_identity_and_restart() {
     let (_d, c, s) = fixture().await;
     let mut db = sql(&c).await;
     sqlx::raw_sql("ALTER TABLE macro_sets ADD COLUMN opaque BLOB; ALTER TABLE macro_entries ADD COLUMN opaque BLOB; INSERT INTO macro_sets VALUES(0,1,128,'same',X'00'),(1,1,128,'same',X'01'),(2,1,128,'same',X'02'); INSERT INTO macro_entries VALUES(2,0,'b','look',X'62'),(2,1,'d','global-hello',X'64'); INSERT INTO commac_entries VALUES(1,0,1,2,2,-1,-1),(2,1,2,1,-1,-1,-1);").execute(&mut db).await.unwrap();
-    *s.world.borrow_mut() = persistence::load(&c.database()).await.unwrap();
+    *s.world_mut() = persistence::load(&c.database()).await.unwrap();
     let image = std::fs::read(c.database()).unwrap();
     save(&c, &s).await.unwrap();
     assert_eq!(std::fs::read(c.database()).unwrap(), image);
@@ -224,7 +210,7 @@ async fn failed_reindex_rolls_back_keys_and_does_not_advance_row_origins() {
     run(&s, &c, 2, ".create second");
     run(&s, &c, 2, ".def b=look");
     save(&c, &s).await.unwrap();
-    let before = s.world.borrow().clone();
+    let before = s.world().clone();
     let mut db = sql(&c).await;
     sqlx::raw_sql("CREATE TRIGGER deny_macro BEFORE UPDATE ON commac_entries BEGIN SELECT RAISE(FAIL,'blocked macro slots'); END;").execute(&mut db).await.unwrap();
     run(&s, &c, 2, ".chslot 0");
@@ -235,7 +221,7 @@ async fn failed_reindex_rolls_back_keys_and_does_not_advance_row_origins() {
         serde_json::to_value(&unchanged.macros).unwrap(),
         serde_json::to_value(&before.macros).unwrap()
     );
-    *s.world.borrow_mut() = before;
+    *s.world_mut() = before;
     sqlx::query("DROP TRIGGER deny_macro")
         .execute(&mut db)
         .await
@@ -308,7 +294,7 @@ async fn purge_compacts_surviving_sets_and_resets_affected_selections() {
     save(&c, &s).await.unwrap();
     let mut db = sql(&c).await;
     sqlx::raw_sql("ALTER TABLE macro_sets ADD COLUMN extension TEXT; UPDATE macro_sets SET extension=description;").execute(&mut db).await.unwrap();
-    let mut w = s.world.borrow().clone();
+    let mut w = s.world().clone();
     w.objects
         .get_mut(&ObjectId(2))
         .unwrap()

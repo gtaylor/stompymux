@@ -146,14 +146,18 @@ impl Config {
 pub fn command(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     let (filename, message) = input.args.split_once('=').unwrap_or((&input.args, ""));
     if message.is_empty() {
-        return Ok(Action::Reply("Nothing to log!".into()));
+        return Ok(Action::Report(crate::commands::Report::Reply(
+            "Nothing to log!".into(),
+        )));
     }
     if filename.is_empty() {
-        return Ok(Action::Reply("Invalid logfile.".into()));
+        return Ok(Action::Report(crate::commands::Report::Reply(
+            "Invalid logfile.".into(),
+        )));
     }
     Ok(match FileRequest::new(filename, message) {
-        Ok(request) => Action::Log(request),
-        Err(_) => Action::Reply("Request failed.".into()),
+        Ok(request) => Action::Server(crate::commands::ServerRequest::Log(request)),
+        Err(_) => Action::Report(crate::commands::Report::Reply("Request failed.".into())),
     })
 }
 /// Effective C topic/decorator report, with no claims about unavailable producers.

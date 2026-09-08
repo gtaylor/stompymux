@@ -7,34 +7,19 @@ use std::{
     time::Duration,
 };
 use stompymux_rs::{
-    ScheduleQueue as Queue, accounts,
+    Config, Flag, Kind, ObjectId, ScheduleQueue as Queue, Scripts, StateValue as Scalar, accounts,
     commands::{self, Action},
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
     persistence, schedule_jitter as jitter,
     server::{self, ShutdownRequest},
-    world::{Kind, ObjectId, Scalar},
 };
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::AsyncReadExt,
     net::{TcpListener, TcpStream},
     sync::oneshot,
 };
 
-/// Isolate modules, configuration and SQL from operator data.
-fn copy(source: &Path, target: &Path) {
-    std::fs::create_dir_all(target).unwrap();
-    for entry in std::fs::read_dir(source).unwrap() {
-        let entry = entry.unwrap();
-        let to = target.join(entry.file_name());
-        if entry.path().is_dir() {
-            copy(&entry.path(), &to)
-        } else {
-            std::fs::copy(entry.path(), to).unwrap();
-        }
-    }
-}
+mod support;
+use support::{Client, copy, start};
 
 /// Use fast test maintenance and password hashing, without changing production defaults.
 async fn fixture() -> (tempfile::TempDir, Config) {
@@ -154,17 +139,21 @@ async fn registration_rejects_malformed_declarations_and_captures_handlers() {
         r#"local m={schedules={{name='tick',cron='* * * * *',handler=function(ctx) assert(ctx.scope=='global' and ctx.enactor==nil and ctx.cause==nil and ctx.object==nil and ctx.descriptor==nil and ctx.subject==nil and ctx.command==nil);assert(ctx.event=='schedule' and ctx.schedule=='tick' and ctx.cron=='* * * * *' and #ctx.args==0);mux.world.object(1):state('schedule'):set('captured',true) end}}}; schedule_module=m;return m"#,
     );
     let s = scripts(&c).await;
-    assert!(!s.warnings.iter().any(|w| w.contains("schedules deferred")));
-    s.lua.load("schedule_module.schedules[1].handler=function() error('replacement') end; schedule_module.schedules[1].cron='bad';schedule_module.schedules[1].name='changed'").exec().unwrap();
+    assert!(
+        !s.warnings()
+            .iter()
+            .any(|w| w.contains("schedules deferred"))
+    );
+    s.inspect_lua().load("schedule_module.schedules[1].handler=function() error('replacement') end; schedule_module.schedules[1].cron='bad';schedule_module.schedules[1].name='changed'").exec().unwrap();
     let mut q = Queue::default();
-    q.observe(&s.schedules, &s.world.borrow(), 120);
+    q.observe(s.schedules(), &s.world(), 120);
     assert!(q.take_due(174).is_none());
-    q.observe(&s.schedules, &s.world.borrow(), 234);
+    q.observe(s.schedules(), &s.world(), 234);
     let job = q.take_due(234).unwrap();
     assert!(s.run_schedule(&job).unwrap());
     assert!(q.take_due(234).is_none());
     assert_eq!(
-        s.world.borrow().objects[&ObjectId(1)].state["schedule"]["captured"],
+        s.world().objects[&ObjectId(1)].state["schedule"]["captured"],
         Scalar::Boolean(true)
     );
 }
@@ -183,23 +172,22 @@ async fn clock_jumps_expiry_objects_and_stable_order() {
         r#"return {schedules={{name='tick',cron='* * * * *',handler=function(ctx) assert(ctx.event=='schedule' and ctx.scope=='object' and ctx.enactor==1 and ctx.cause==1 and ctx.descriptor==nil and ctx.subject==nil and #ctx.args==0);table.insert(order,ctx.object) end}}}"#,
     );
     let s = scripts(&c).await;
-    s.lua.load("order={}").exec().unwrap();
+    s.inspect_lua().load("order={}").exec().unwrap();
     {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         let o = w.objects.get_mut(&ObjectId(2)).unwrap();
         o.lua_parent = "z/test.lua".into();
         o.flags.insert(Flag::Halted);
         o.flags.insert(Flag::NoCommand);
     }
     let mut q = Queue::default();
-    q.observe(&s.schedules, &s.world.borrow(), 120);
-    q.observe(&s.schedules, &s.world.borrow(), 180);
+    q.observe(s.schedules(), &s.world(), 120);
+    q.observe(s.schedules(), &s.world(), 180);
     assert!(!q.ready(187));
     let global = q.take_due(188).unwrap();
     assert_eq!(global.due, 188);
     s.run_schedule(&global).unwrap();
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -207,37 +195,28 @@ async fn clock_jumps_expiry_objects_and_stable_order() {
     let object = q.take_due(216).unwrap();
     s.run_schedule(&object).unwrap(); // retained original module after parent change
     assert_eq!(
-        s.lua
+        s.inspect_lua()
             .load("return table.concat(order,',')")
             .eval::<String>()
             .unwrap(),
         "global,2"
     );
-    q.observe(&s.schedules, &s.world.borrow(), 200);
+    q.observe(s.schedules(), &s.world(), 200);
     assert!(q.take_due(234).is_none());
-    q.observe(&s.schedules, &s.world.borrow(), 60);
-    q.observe(&s.schedules, &s.world.borrow(), 234);
+    q.observe(s.schedules(), &s.world(), 60);
+    q.observe(s.schedules(), &s.world(), 234);
     assert!(q.take_due(234).is_none());
-    q.observe(&s.schedules, &s.world.borrow(), 420);
+    q.observe(s.schedules(), &s.world(), 420);
     assert!(q.take_due(480).is_none()); // queued current minute expired
-    q.observe(&s.schedules, &s.world.borrow(), 594);
+    q.observe(s.schedules(), &s.world(), 594);
     assert_eq!(q.take_due(594).unwrap().expires, 600);
     assert!(q.take_due(594).is_none()); // no backfill
-    let id = s
-        .world
-        .borrow_mut()
-        .create(&c, "Scheduled".into(), Kind::Thing);
-    s.world
-        .borrow_mut()
-        .objects
-        .get_mut(&id)
-        .unwrap()
-        .lua_parent = "z/test.lua".into();
-    q.observe(&s.schedules, &s.world.borrow(), 654);
+    let id = s.world_mut().create(&c, "Scheduled".into(), Kind::Thing);
+    s.world_mut().objects.get_mut(&id).unwrap().lua_parent = "z/test.lua".into();
+    q.observe(s.schedules(), &s.world(), 654);
     while let Some(job) = q.take_due(654) {
         if job.description().contains("object_logic/") {
-            s.world
-                .borrow_mut()
+            s.world_mut()
                 .objects
                 .get_mut(&id)
                 .unwrap()
@@ -246,56 +225,48 @@ async fn clock_jumps_expiry_objects_and_stable_order() {
             assert!(!s.run_schedule(&job).unwrap());
         }
     }
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&id)
         .unwrap()
         .flags
         .remove(Flag::Going);
-    q.observe(&s.schedules, &s.world.borrow(), 714);
+    q.observe(s.schedules(), &s.world(), 714);
     while let Some(job) = q.take_due(714) {
         if job.description().contains("object_logic/") {
-            s.world
-                .borrow_mut()
-                .objects
-                .get_mut(&id)
-                .unwrap()
-                .generation = Default::default();
+            s.world_mut().objects.get_mut(&id).unwrap().generation = Default::default();
             assert!(!s.run_schedule(&job).unwrap());
         }
     }
     // Collection also excludes GOING and Garbage, without relying on execution checks.
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&id)
         .unwrap()
         .flags
         .insert(Flag::Going);
-    q.observe(&s.schedules, &s.world.borrow(), 774);
+    q.observe(s.schedules(), &s.world(), 774);
     while let Some(job) = q.take_due(774) {
         assert!(!job.description().contains("object_logic/"));
     }
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&id)
         .unwrap()
         .flags
         .remove(Flag::Going);
-    q.observe(&s.schedules, &s.world.borrow(), 834);
+    q.observe(s.schedules(), &s.world(), 834);
     while let Some(job) = q.take_due(834) {
         if job.description().contains("object_logic/") {
-            s.world.borrow_mut().objects.get_mut(&id).unwrap().kind = Kind::Garbage;
+            s.world_mut().objects.get_mut(&id).unwrap().kind = Kind::Garbage;
             assert!(!s.run_schedule(&job).unwrap());
         }
     }
-    q.observe(&s.schedules, &s.world.borrow(), 894);
+    q.observe(s.schedules(), &s.world(), 894);
     while let Some(job) = q.take_due(894) {
         assert!(!job.description().contains("object_logic/"));
     }
-    q.observe(&s.schedules, &s.world.borrow(), 900);
+    q.observe(s.schedules(), &s.world(), 900);
     q.clear();
     assert!(!q.ready(954));
 }
@@ -316,8 +287,8 @@ async fn errors_rollback_state_and_output_and_do_not_retry() {
     );
     let s = scripts(&c).await;
     let mut q = Queue::default();
-    q.observe(&s.schedules, &s.world.borrow(), 120);
-    q.observe(&s.schedules, &s.world.borrow(), 234);
+    q.observe(s.schedules(), &s.world(), 120);
+    q.observe(s.schedules(), &s.world(), 234);
     let mut errors = 0;
     while let Some(job) = q.take_due(234) {
         if s.run_schedule(&job).is_err() {
@@ -325,15 +296,15 @@ async fn errors_rollback_state_and_output_and_do_not_retry() {
         }
     }
     assert_eq!(errors, 4);
-    assert!(s.outbox.borrow().is_empty());
-    let w = s.world.borrow();
+    assert!(s.outbox().is_empty());
+    let w = s.world();
     assert_eq!(w.objects[&ObjectId(1)].state["schedule"].len(), 1);
     assert_eq!(
         w.objects[&ObjectId(1)].state["schedule"]["works"],
         Scalar::Boolean(true)
     );
     drop(w);
-    q.observe(&s.schedules, &s.world.borrow(), 234);
+    q.observe(s.schedules(), &s.world(), 234);
     assert!(q.take_due(234).is_none());
 }
 
@@ -346,16 +317,15 @@ async fn inspection_is_captured_bounded_and_permission_checked() {
         r#"return {schedules={{name='escaped\027name',cron='* * * * *',handler=function()end}}}"#,
     );
     let s = scripts(&c).await;
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .lua_parent = "inspect.lua".into();
     let report = |target: &str, limit| {
         String::from_utf8(
-            s.schedules
-                .inspect(&s.world.borrow(), ObjectId(1), target, limit),
+            s.schedules()
+                .inspect(&s.world(), ObjectId(1), target, limit),
         )
         .unwrap()
     };
@@ -376,115 +346,26 @@ async fn inspection_is_captured_bounded_and_permission_checked() {
     assert!(small.len() <= 50);
     assert!(small.contains("truncated"));
     assert!(
-        matches!(commands::run(&s,&c,ObjectId(1),1,"@lsched #2").unwrap(),Action::LuaSchedules(t) if t=="#2")
+        matches!(commands::run(&s,&c,ObjectId(1),1,"@lsched #2").unwrap(),Action::Server(commands::ServerRequest::LuaSchedules(t)) if t=="#2")
     );
     assert!(
-        matches!(commands::run(&s,&c,ObjectId(1),1,"@lua").unwrap(),Action::Reply(t) if t.contains("/schedule"))
+        matches!(commands::run(&s,&c,ObjectId(1),1,"@lua").unwrap(),Action::Report(commands::Report::Reply(t)) if t.contains("/schedule"))
     );
     assert!(matches!(
         commands::run(&s, &c, ObjectId(1), 1, "@lua/reload").unwrap(),
-        Action::LuaAdmin(stompymux_rs::lua::AdminRequest::Reload)
+        Action::Server(commands::ServerRequest::LuaAdmin(
+            stompymux_rs::lua::AdminRequest::Reload
+        ))
     ));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .flags
         .remove(Flag::Wizard);
     assert!(
-        matches!(commands::run(&s,&c,ObjectId(2),1,"@lua/schedule").unwrap(),Action::Reply(t) if t=="Permission denied.")
+        matches!(commands::run(&s,&c,ObjectId(2),1,"@lua/schedule").unwrap(),Action::Report(commands::Report::Reply(t)) if t=="Permission denied.")
     );
-}
-
-/// A real socket client that retains unread response bytes across assertions.
-struct Client {
-    socket: TcpStream,
-    pending: Vec<u8>,
-}
-
-impl Client {
-    async fn connect(address: std::net::SocketAddr, player: i64) -> Self {
-        let mut client = Self {
-            socket: TcpStream::connect(address).await.unwrap(),
-            pending: Vec::new(),
-        };
-        client.until("Who are you? ").await;
-        client.send(&format!("#{player}")).await;
-        client.until("Password: ").await;
-        client.send("secret").await;
-        client.until("Staff Nexus").await;
-        client
-    }
-
-    async fn send(&mut self, text: &str) {
-        self.socket
-            .write_all(format!("{text}\r\n").as_bytes())
-            .await
-            .unwrap();
-    }
-
-    async fn until(&mut self, needle: &str) -> String {
-        tokio::time::timeout(Duration::from_secs(10), async {
-            loop {
-                if let Some(index) = self
-                    .pending
-                    .windows(needle.len())
-                    .position(|b| b == needle.as_bytes())
-                {
-                    let bytes = self
-                        .pending
-                        .drain(..index + needle.len())
-                        .collect::<Vec<_>>();
-                    return String::from_utf8_lossy(&bytes).into_owned();
-                }
-                let mut bytes = [0; 8192];
-                let count = self.socket.read(&mut bytes).await.unwrap();
-                assert!(
-                    count > 0,
-                    "closed waiting for {needle}: {:?}",
-                    String::from_utf8_lossy(&self.pending)
-                );
-                self.pending.extend_from_slice(&bytes[..count]);
-            }
-        })
-        .await
-        .unwrap_or_else(|_| {
-            panic!(
-                "timeout waiting for {needle}: {:?}",
-                String::from_utf8_lossy(&self.pending)
-            )
-        })
-    }
-}
-
-/// Keep the injected clock out of protocol/configuration; only the embedded test owner controls it.
-async fn start(
-    c: &Config,
-    clock: Rc<Cell<i64>>,
-) -> (
-    std::net::SocketAddr,
-    oneshot::Sender<ShutdownRequest>,
-    tokio::task::JoinHandle<anyhow::Result<()>>,
-    mlua::Lua,
-) {
-    let scripts = server::prepare(c).await.unwrap();
-    let vm = scripts.lua.clone();
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let address = listener.local_addr().unwrap();
-    let (tx, rx) = oneshot::channel();
-    let config = c.clone();
-    let task = tokio::task::spawn_local(async move {
-        server::run_with_schedule_clock(
-            config,
-            scripts,
-            listener,
-            async { rx.await.unwrap_or(ShutdownRequest::Sigterm) },
-            move || clock.get(),
-        )
-        .await
-    });
-    (address, tx, task, vm)
 }
 
 /// Seed known credentials and a non-Wizard exclusively in the temporary database.
@@ -612,7 +493,7 @@ async fn tcp_cleaning_controls_purge_failure_and_connected_players() {
         world.objects.get_mut(&item).unwrap().location = Some(ObjectId(0));
         persistence::save(&c.database(), &world).await.unwrap();
         let scripts = server::prepare(&c).await.unwrap();
-        let shared = scripts.world.clone();
+        let shared = scripts.inspect_world();
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let address = listener.local_addr().unwrap();
         let now = tokio::time::Instant::now();
@@ -620,7 +501,7 @@ async fn tcp_cleaning_controls_purge_failure_and_connected_players() {
         let ticking = clock.clone();
         let config = c.clone();
         let (tx, rx) = oneshot::channel();
-        let task = tokio::task::spawn_local(async move { server::run_with_clocks(config, scripts, listener, async { rx.await.unwrap() }, accounts::now, move || ticking.get()).await });
+        let task = tokio::task::spawn_local(async move { server::run_with_clocks(config, scripts, listener, async { rx.await.unwrap() }, stompymux_rs::clock::wall_time, move || ticking.get()).await });
         let mut god = Client::connect(address, 1).await;
         let mut player = Client::connect(address, 2).await;
         let mut second = Client::connect(address, 2).await;
@@ -630,7 +511,7 @@ async fn tcp_cleaning_controls_purge_failure_and_connected_players() {
         god.send(&format!("@destroy #{}",item.0)).await;
         let failed = god.until("Please try again.").await;
         assert!(!failed.contains("begins to crumble"));
-        assert!(!shared.borrow().objects[&item].flags.contains(Flag::Going));
+        assert!(!shared.world().objects[&item].flags.contains(Flag::Going));
         sqlx::raw_sql("DROP TRIGGER reject_destroy").execute(&mut failure).await.unwrap();failure.close().await.unwrap();
         god.send(&format!("@destroy #{}",item.0)).await;god.until("begins to crumble.").await;
         god.send(&format!("@flag #{}=!going", item.0)).await;god.until("GOING cleared.").await;
@@ -639,20 +520,20 @@ async fn tcp_cleaning_controls_purge_failure_and_connected_players() {
         assert!(persistence::load(&c.database()).await.unwrap().objects[&item].flags.contains(Flag::Going));
         clock.set(now + Duration::from_secs(10000));
         tokio::time::sleep(Duration::from_millis(60)).await;
-        assert_eq!(shared.borrow().objects[&item].kind, Kind::Thing);
+        assert_eq!(shared.world().objects[&item].kind, Kind::Thing);
         god.send("@list globals").await;god.until("cleaning...disabled").await;
         let mut db = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()).foreign_keys(false)).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER reject_cleaning BEFORE UPDATE ON objects WHEN NEW.type=5 BEGIN SELECT RAISE(ABORT,'cleaning failure'); END;").execute(&mut db).await.unwrap();
         god.send("@enable cleaning").await;god.until("Enabled.").await;
         tokio::time::sleep(Duration::from_millis(80)).await;
-        assert_eq!(shared.borrow().objects[&item].kind, Kind::Thing);
+        assert_eq!(shared.world().objects[&item].kind, Kind::Thing);
         god.send("@list globals").await;
         let status = god.until("cleaning...enabled").await;
         assert!(!status.contains("Database check"));
         sqlx::raw_sql("DROP TRIGGER reject_cleaning").execute(&mut db).await.unwrap();
         db.close().await.unwrap();
         god.send("@destroy #2").await;god.until("player shakes and begins to crumble.").await;
-        assert!(shared.borrow().objects[&ObjectId(2)].flags.contains(Flag::Connected));
+        assert!(shared.world().objects[&ObjectId(2)].flags.contains(Flag::Connected));
         clock.set(now + Duration::from_secs(20000));
         player.until("You have been destroyed!").await;
         second.until("You have been destroyed!").await;
@@ -660,7 +541,7 @@ async fn tcp_cleaning_controls_purge_failure_and_connected_players() {
         assert_eq!(saved.objects[&item].kind, Kind::Garbage);
         assert_eq!(saved.objects[&ObjectId(2)].kind, Kind::Garbage);
         assert!(!saved.accounts.contains_key(&ObjectId(2)));
-        assert!(!shared.borrow().objects[&ObjectId(2)].flags.contains(Flag::Connected));
+        assert!(!shared.world().objects[&ObjectId(2)].flags.contains(Flag::Connected));
         god.send("@list globals").await;
         assert!(!god.until("cleaning...enabled").await.contains("Database check:"));
         tx.send(ShutdownRequest::Sigterm).unwrap();task.await.unwrap().unwrap();
@@ -869,12 +750,12 @@ async fn tcp_site_monitor_and_suspect_lifecycle() {
         let service = s.communication(&c);
         service.create("Suspect").unwrap();
         service.add(ObjectId(1), "Suspect", "sus", true, true).unwrap();
-        s.world.borrow_mut().objects.get_mut(&ObjectId(1)).unwrap().flags.insert(Flag::Monitor);
-        s.world.borrow_mut().objects.get_mut(&ObjectId(2)).unwrap().flags.insert(Flag::Suspect);
-        s.world.borrow_mut().objects.get_mut(&ObjectId(2)).unwrap().flags.insert(Flag::Dark);
-        let god_name = s.world.borrow().objects[&ObjectId(1)].name.clone();
-        let player_name = s.world.borrow().objects[&ObjectId(2)].name.clone();
-        let saved = s.world.borrow().clone();
+        s.world_mut().objects.get_mut(&ObjectId(1)).unwrap().flags.insert(Flag::Monitor);
+        s.world_mut().objects.get_mut(&ObjectId(2)).unwrap().flags.insert(Flag::Suspect);
+        s.world_mut().objects.get_mut(&ObjectId(2)).unwrap().flags.insert(Flag::Dark);
+        let god_name = s.world().objects[&ObjectId(1)].name.clone();
+        let player_name = s.world().objects[&ObjectId(2)].name.clone();
+        let saved = s.world().clone();
         persistence::save(&c.database(), &saved).await.unwrap();
         let (address, shutdown, task, vm) = start(&c, Rc::new(Cell::new(0))).await;
         let mut god = Client::connect(address, 1).await;

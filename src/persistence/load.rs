@@ -1,5 +1,10 @@
 //! Read the supported projection of schema-32 storage without touching deferred data.
-use crate::world::*;
+use crate::{
+    accounts::{Account, Login},
+    communication::Channel,
+    state::Value as Scalar,
+    world::*,
+};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Row, SqliteConnection};
 use std::collections::{BTreeMap, VecDeque};

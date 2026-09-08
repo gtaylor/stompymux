@@ -2,34 +2,16 @@
 //! C results are captured by the optional TCP probe; cargo test needs no C build.
 use std::{cell::RefCell, path::Path, rc::Rc};
 use stompymux_rs::{
+    Config, Flag, Kind, ObjectId, Scripts, StateValue as Scalar,
     commands::{self, Action},
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
-    persistence,
-    world::{Kind, ObjectId, Scalar},
 };
 
-fn copy(source: &Path, target: &Path) {
-    std::fs::create_dir_all(target).unwrap();
-    for entry in std::fs::read_dir(source).unwrap() {
-        let entry = entry.unwrap();
-        let path = target.join(entry.file_name());
-        if entry.path().is_dir() {
-            copy(&entry.path(), &path);
-        } else {
-            std::fs::copy(entry.path(), path).unwrap();
-        }
-    }
-}
+mod support;
+use support::isolated_world;
 
 /// A populated, isolated world with both accounts connected and no production writes.
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
-    let d = tempfile::tempdir().unwrap();
-    copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
-        d.path(),
-    );
+    let (d, c, mut w) = isolated_world().await;
     std::fs::write(
         d.path().join("lua/object_logic/audit.lua"),
         r#"return {
@@ -48,8 +30,6 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
     }"#,
     )
     .unwrap();
-    let c = Config::load(d.path()).unwrap();
-    let mut w = persistence::load(&c.database()).await.unwrap();
     for id in [ObjectId(1), ObjectId(2)] {
         w.objects
             .get_mut(&id)
@@ -65,12 +45,14 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
 fn run(s: &Scripts, c: &Config, command: &str) -> Vec<(ObjectId, String)> {
     let action = commands::run(s, c, ObjectId(1), 1, command).unwrap();
     let mut output = s
-        .outbox
-        .borrow_mut()
-        .drain(..)
+        .drain_outbox()
+        .into_iter()
         .map(|(id, doc)| (id, doc.source().to_owned()))
         .collect::<Vec<_>>();
-    if let Action::Reply(text) | Action::CommitReply(text) | Action::Report(text) = action {
+    if let Action::Report(commands::Report::Reply(text))
+    | Action::CommitReply(text)
+    | Action::Report(commands::Report::Inspection(text)) = action
+    {
         output.push((ObjectId(1), text));
     }
     output
@@ -106,7 +88,7 @@ async fn stored_description_overrides_provider_content() {
     let output = text(&run(&s, &c, "look Red Sword"), 1);
     assert!(output.contains("STORED DESCRIPTION") && !output.contains("PROVIDER DESCRIPTION"));
     assert_eq!(
-        s.world.borrow().objects[&ObjectId(16)].state["audit"]["provider"],
+        s.world().objects[&ObjectId(16)].state["audit"]["provider"],
         Scalar::Boolean(true)
     );
     c.logger.shutdown(&c).await.unwrap();
@@ -117,7 +99,7 @@ async fn stored_description_overrides_provider_content() {
 async fn remote_room_uses_internal_appearance() {
     let (_d, c, s) = fixture().await;
     {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         let room = w.create(&c, "Audit Room".into(), Kind::Room);
         w.objects.get_mut(&room).unwrap().lua_parent = "audit_room.lua".into();
         let exit = w.create(&c, "audit-window".into(), Kind::Exit);
@@ -135,8 +117,7 @@ async fn remote_room_uses_internal_appearance() {
 #[tokio::test(flavor = "current_thread")]
 async fn private_page_excludes_contained_bystander() {
     let (_d, c, s) = fixture().await;
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -144,7 +125,7 @@ async fn private_page_excludes_contained_bystander() {
     let output = run(&s, &c, "page GOD=PRIVATE-PAGE");
     assert!(text(&output, 1).contains("GOD pages: PRIVATE-PAGE"));
     assert!(text(&output, 2).is_empty());
-    assert_eq!(s.world.borrow().last_pages[&ObjectId(1)], vec![ObjectId(1)]);
+    assert_eq!(s.world().last_pages[&ObjectId(1)], vec![ObjectId(1)]);
     c.logger.shutdown(&c).await.unwrap();
 }
 
@@ -184,23 +165,13 @@ async fn mixed_recipient_page_preserves_group_annotation() {
             assert!(sender.contains("I don't recognize \"MissingPlayer\"."));
             assert!(sender.contains(confirmation), "{sender}");
             assert_eq!(text(&output, 2), expected);
-            assert_eq!(s.world.borrow().last_pages[&ObjectId(1)], vec![ObjectId(2)]);
+            assert_eq!(s.world().last_pages[&ObjectId(1)], vec![ObjectId(2)]);
         }
     }
     // Reusing the successful list is a single-recipient page, not the previous request's mode.
     assert_eq!(text(&run(&s, &c, "page again"), 2), "GOD pages: again");
-    s.world
-        .borrow_mut()
-        .objects
-        .get_mut(&ObjectId(2))
-        .unwrap()
-        .name = "Long Player Name".into();
-    s.world
-        .borrow_mut()
-        .accounts
-        .get_mut(&ObjectId(2))
-        .unwrap()
-        .alias = Some("LP".into());
+    s.world_mut().objects.get_mut(&ObjectId(2)).unwrap().name = "Long Player Name".into();
+    s.world_mut().accounts.get_mut(&ObjectId(2)).unwrap().alias = Some("LP".into());
     for target in ["Long Player Name", "LP", "#2"] {
         let output = run(&s, &c, &format!("page {target}=single"));
         assert_eq!(text(&output, 2), "GOD pages: single");
@@ -219,7 +190,7 @@ async fn mixed_recipient_page_preserves_group_annotation() {
         2
     );
     assert_eq!(
-        s.world.borrow().last_pages[&ObjectId(1)],
+        s.world().last_pages[&ObjectId(1)],
         vec![ObjectId(2), ObjectId(2)]
     );
     assert_eq!(
@@ -228,8 +199,7 @@ async fn mixed_recipient_page_preserves_group_annotation() {
             .count(),
         2
     );
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -241,10 +211,10 @@ async fn mixed_recipient_page_preserves_group_annotation() {
     assert!(sender.contains("To (Long Player Name, GOD), GOD pages you: offline"));
     assert!(sender.contains("You paged (Long Player Name, GOD) with 'offline'."));
     assert!(text(&output, 2).is_empty());
-    assert_eq!(s.world.borrow().last_pages[&ObjectId(1)], vec![ObjectId(1)]);
+    assert_eq!(s.world().last_pages[&ObjectId(1)], vec![ObjectId(1)]);
     let output = run(&s, &c, "page MissingPlayer NobodyHere=none");
     assert!(!text(&output, 1).contains("You paged"));
-    assert_eq!(s.world.borrow().last_pages[&ObjectId(1)], vec![ObjectId(1)]);
+    assert_eq!(s.world().last_pages[&ObjectId(1)], vec![ObjectId(1)]);
     c.logger.shutdown(&c).await.unwrap();
 }
 
@@ -252,7 +222,7 @@ async fn mixed_recipient_page_preserves_group_annotation() {
 #[tokio::test(flavor = "current_thread")]
 async fn printable_ascii_requires_strings() {
     let (_d, c, s) = fixture().await;
-    s.lua
+    s.inspect_lua()
         .load(
             r#"
         for _, value in ipairs({123, 1.5, true, {}, function() end, mux.world.object(1)}) do
@@ -272,12 +242,12 @@ async fn printable_ascii_requires_strings() {
         .exec()
         .unwrap();
     let predicate = s
-        .lua
+        .inspect_lua()
         .load("return mux.text.is_printable_ascii")
         .eval::<mlua::Function>()
         .unwrap();
     for byte in 0..=255u8 {
-        let value = s.lua.create_string([byte]).unwrap();
+        let value = s.inspect_lua().create_string([byte]).unwrap();
         assert_eq!(
             predicate.call::<bool>(value).unwrap(),
             (0x20..=0x7e).contains(&byte)
@@ -291,7 +261,7 @@ async fn printable_ascii_requires_strings() {
 async fn goto_and_aliases_dispatch_exit_travel() {
     let (_d, c, s) = fixture().await;
     {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         let exit = w.create(&c, "audit-window".into(), Kind::Exit);
         let o = w.objects.get_mut(&exit).unwrap();
         o.location = Some(ObjectId(0));
@@ -299,29 +269,21 @@ async fn goto_and_aliases_dispatch_exit_travel() {
         o.lua_parent.clear();
     }
     for verb in ["goto", "go", "got", "m", "mo", "mov", "move", "GoTo"] {
-        s.world
-            .borrow_mut()
+        s.world_mut()
             .objects
             .get_mut(&ObjectId(1))
             .unwrap()
             .location = Some(ObjectId(0));
         assert!(!text(&run(&s, &c, &format!("{verb} AUDIT-WINDOW")), 1).contains("Huh?"));
-        assert_eq!(
-            s.world.borrow().objects[&ObjectId(1)].location,
-            Some(ObjectId(4))
-        );
+        assert_eq!(s.world().objects[&ObjectId(1)].location, Some(ObjectId(4)));
     }
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(1))
         .unwrap()
         .location = Some(ObjectId(0));
     run(&s, &c, "audit-window");
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(1)].location,
-        Some(ObjectId(4))
-    );
+    assert_eq!(s.world().objects[&ObjectId(1)].location, Some(ObjectId(4)));
     c.logger.shutdown(&c).await.unwrap();
 }
 
@@ -494,8 +456,8 @@ async fn description_provider_live_content_order_and_rollback() {
     let (_d, c, s) = fixture().await;
     run(&s, &c, "@create Red Sword");
     run(&s, &c, "@lua/parent Red Sword=audit.lua");
-    let parents: mlua::Table = s.lua.named_registry_value("mux.parents").unwrap();
-    s.lua
+    let parents: mlua::Table = s.inspect_lua().named_registry_value("mux.parents").unwrap();
+    s.inspect_lua()
         .globals()
         .set(
             "audit_parent",
@@ -508,14 +470,13 @@ async fn description_provider_live_content_order_and_rollback() {
         (Some("STORED"), Some("PROVIDER"), "STORED"),
         (Some("STORED"), None, "STORED"),
     ] {
-        s.world
-            .borrow_mut()
+        s.world_mut()
             .objects
             .get_mut(&ObjectId(16))
             .unwrap()
             .description = stored.map(str::to_owned);
-        s.lua.globals().set("returned", returned).unwrap();
-        s.lua
+        s.inspect_lua().globals().set("returned", returned).unwrap();
+        s.inspect_lua()
             .load(
                 r#"audit_parent.messages.describe=function(ctx)
           assert(ctx.object==16 and ctx.enactor==1 and ctx.descriptor==1)
@@ -537,14 +498,13 @@ async fn description_provider_live_content_order_and_rollback() {
     }
     // Use Lua-facing description setters so mutations take the normal transaction path.
     for value in ["CHANGED", ""] {
-        s.world
-            .borrow_mut()
+        s.world_mut()
             .objects
             .get_mut(&ObjectId(16))
             .unwrap()
             .description = Some("BEFORE".into());
-        s.lua.globals().set("changed", value).unwrap();
-        s.lua
+        s.inspect_lua().globals().set("changed", value).unwrap();
+        s.inspect_lua()
             .load(
                 r#"audit_parent.messages.describe=function(ctx)
           mux.world.object(ctx.object):set_description(changed)
@@ -561,15 +521,18 @@ async fn description_provider_live_content_order_and_rollback() {
         }));
         assert!(!output.contains("BEFORE"));
     }
-    s.lua
+    s.inspect_lua()
         .load(r#"audit_parent.events.on_describe=function(ctx) error('DESCRIBE FAIL') end"#)
         .exec()
         .unwrap();
-    let before = s.world.borrow().objects[&ObjectId(16)].description.clone();
-    s.lua.globals().set("changed", "ROLLBACK").unwrap();
+    let before = s.world().objects[&ObjectId(16)].description.clone();
+    s.inspect_lua()
+        .globals()
+        .set("changed", "ROLLBACK")
+        .unwrap();
     let output = text(&run(&s, &c, "look Red Sword"), 1);
     assert!(output.contains("DESCRIBE FAIL") && !output.contains("ROLLBACK"));
-    assert_eq!(s.world.borrow().objects[&ObjectId(16)].description, before);
+    assert_eq!(s.world().objects[&ObjectId(16)].description, before);
     c.logger.shutdown(&c).await.unwrap();
 }
 
@@ -578,7 +541,7 @@ async fn description_provider_live_content_order_and_rollback() {
 async fn room_fallback_and_container_internal_content() {
     let (_d, c, s) = fixture().await;
     let (room, container) = {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         let room = w.create(&c, "Remote".into(), Kind::Room);
         w.objects.get_mut(&room).unwrap().lua_parent = "audit_room.lua".into();
         w.objects.get_mut(&room).unwrap().description = Some("REMOTE DESCRIPTION".into());
@@ -597,46 +560,40 @@ async fn room_fallback_and_container_internal_content() {
         o.internal_description = Some("INSIDE".into());
         (room, container)
     };
-    let parents: mlua::Table = s.lua.named_registry_value("mux.parents").unwrap();
-    s.lua
+    let parents: mlua::Table = s.inspect_lua().named_registry_value("mux.parents").unwrap();
+    s.inspect_lua()
         .globals()
         .set(
             "room_parent",
             parents.get::<mlua::Table>("audit_room.lua").unwrap(),
         )
         .unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set(
             "container_parent",
             parents.get::<mlua::Table>("audit.lua").unwrap(),
         )
         .unwrap();
-    s.lua
+    s.inspect_lua()
         .load("room_parent.internal_appearance=nil")
         .exec()
         .unwrap();
     assert!(text(&run(&s, &c, "look window"), 1).contains("REMOTE DESCRIPTION"));
-    s.lua
+    s.inspect_lua()
         .load("room_parent.internal_appearance=function() return '' end")
         .exec()
         .unwrap();
     let output = text(&run(&s, &c, "look window"), 1);
     assert!(!output.contains("REMOTE DESCRIPTION") && !output.contains("EXTERNAL ROOM VIEW"));
-    s.world
-        .borrow_mut()
-        .objects
-        .get_mut(&room)
-        .unwrap()
-        .lua_parent = "default_room.lua".into();
+    s.world_mut().objects.get_mut(&room).unwrap().lua_parent = "default_room.lua".into();
     assert!(text(&run(&s, &c, "look window"), 1).contains("REMOTE DESCRIPTION"));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(1))
         .unwrap()
         .location = Some(container);
-    s.lua
+    s.inspect_lua()
         .load(
             r#"container_parent.messages.describe=function(ctx)
       assert(ctx.operation=='inside_describe')
@@ -647,13 +604,12 @@ async fn room_fallback_and_container_internal_content() {
         .exec()
         .unwrap();
     assert!(text(&run(&s, &c, "look"), 1).contains("LIVE INSIDE"));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&container)
         .unwrap()
         .internal_description = Some("".into());
-    s.lua
+    s.inspect_lua()
         .load(
             r#"container_parent.messages.describe=function(ctx)
       assert(ctx.operation=='describe')

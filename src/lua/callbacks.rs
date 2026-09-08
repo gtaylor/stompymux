@@ -143,12 +143,10 @@ impl Scripts {
             return self.call_event(t, name, ctx);
         }
         let before = self.world.borrow().clone();
-        let pending = self.outbox.borrow().len();
-        let flow_effects = crate::lua::flows::snapshot(&self.lua);
+        let checkpoint = self.effects.checkpoint();
         if let Err(error) = self.call_event(t, name, ctx) {
             *self.world.borrow_mut() = before;
-            self.outbox.borrow_mut().truncate(pending);
-            crate::lua::flows::restore(&self.lua, flow_effects);
+            self.effects.restore(checkpoint);
             crate::lua::configuration(&self.lua).log(
                 &[crate::logging::Category::Bugs],
                 "LUA",
@@ -373,7 +371,7 @@ impl Scripts {
             .map_err(|e| anyhow::anyhow!("{e}"))?;
         let silent = {
             let w = self.world.borrow();
-            crate::flags::is_wizard(&w, player)
+            crate::authority::is_wizard(&w, player)
                 && w.objects[&player].flags.contains(crate::flags::Flag::Dark)
         };
         ctx.set("silent", silent)

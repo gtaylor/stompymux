@@ -1,7 +1,7 @@
 //! SQLx connection lifecycle, asynchronous contention and initialization guarantees.
 use sqlx::{Connection, SqliteConnection, sqlite::SqliteConnectOptions};
 use std::{cell::Cell, time::Duration};
-use stompymux_rs::{persistence, world::World};
+use stompymux_rs::{World, persistence};
 
 /// Waiting for a database lock leaves the single-thread Tokio runtime responsive.
 #[tokio::test(flavor = "current_thread")]

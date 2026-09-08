@@ -1,6 +1,6 @@
 //! Legacy word-prefix matching and read-only object reports.
 use crate::{
-    flags, telnet, text,
+    flags, text,
     world::{Kind, Object, ObjectId, World},
 };
 
@@ -91,7 +91,7 @@ pub fn report(world: &World, actor: ObjectId, args: &str, limit: usize) -> anyho
         .filter(|o| o.id.0 >= range.lower && o.id.0 <= range.upper)
     {
         if !matches!(o.kind, Kind::Exit | Kind::Garbage)
-            && flags::controls(world, actor, o.id)
+            && crate::authority::controls(world, actor, o.id)
             && matches(&display_name(o, &world.palette), &range.query)
         {
             report.row(&identity(world, Some(o.id)));
@@ -105,13 +105,4 @@ pub fn identity(world: &World, id: Option<ObjectId>) -> String {
         || "NOWHERE".into(),
         |o| format!("{}{}", display_name(o, &world.palette), suffix(o)),
     )
-}
-/// Encode an error within even very small message limits without evicting the client.
-pub fn bounded_error(message: &str, limit: usize) -> Vec<u8> {
-    let encoded = telnet::encode(&format!("{message}\r\n"));
-    let mut end = encoded.len().min(limit);
-    while end > 0 && std::str::from_utf8(&encoded[..end]).is_err() {
-        end -= 1;
-    }
-    encoded[..end].to_vec()
 }

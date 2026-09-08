@@ -29,8 +29,8 @@ pub(super) fn get(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Acti
         if kind == Kind::Exit {
             let w = ctx.scripts.world.borrow();
             ensure!(
-                flags::controls(&w, ctx.player, target)
-                    || flags::controls(&w, ctx.player, location),
+                crate::authority::controls(&w, ctx.player, target)
+                    || crate::authority::controls(&w, ctx.player, location),
                 "Permission denied."
             );
             std::mem::drop(w);
@@ -95,7 +95,7 @@ pub(super) fn drop(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
         let kind = ctx.scripts.world.borrow().objects[&target].kind;
         if kind == Kind::Exit {
             ensure!(
-                flags::controls(&ctx.scripts.world.borrow(), ctx.player, location),
+                crate::authority::controls(&ctx.scripts.world.borrow(), ctx.player, location),
                 "Permission denied."
             );
             relocate(ctx, target, location, false)?;
@@ -235,7 +235,7 @@ pub(super) fn use_object(ctx: &CommandContext<'_>, input: &CommandInput) -> Resu
         ids.extend(located(ctx, ctx.player));
         ids.push(ctx.player);
         ids.push(ctx.location()?);
-        if flags::is_wizard(&ctx.scripts.world.borrow(), ctx.player)
+        if crate::authority::is_wizard(&ctx.scripts.world.borrow(), ctx.player)
             && input.args.starts_with('#')
             && let Ok(id) = super::super::target::admin_target(
                 &ctx.scripts.world.borrow(),
@@ -245,7 +245,7 @@ pub(super) fn use_object(ctx: &CommandContext<'_>, input: &CommandInput) -> Resu
         {
             ids.push(id);
         }
-        if flags::is_wizard(&ctx.scripts.world.borrow(), ctx.player)
+        if crate::authority::is_wizard(&ctx.scripts.world.borrow(), ctx.player)
             && let Some(name) = input.args.strip_prefix('*')
         {
             let id = ctx
@@ -417,7 +417,9 @@ pub(super) fn leave(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Ac
 
 pub(super) fn inventory(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     if !input.args.is_empty() {
-        return Ok(Action::Reply("inventory takes no arguments.".into()));
+        return Ok(Action::Report(crate::commands::Report::Reply(
+            "inventory takes no arguments.".into(),
+        )));
     }
     let w = ctx.scripts.world.borrow();
     let mut report = crate::reports::Report::new(ctx.config.lua.output_byte_limit, "")?;
@@ -435,7 +437,7 @@ pub(super) fn inventory(ctx: &CommandContext<'_>, input: &CommandInput) -> Resul
     });
     for o in contents {
         let name = format!("{}[reset]", o.name);
-        report.row(&if crate::flags::is_wizard(&w, ctx.player) {
+        report.row(&if crate::authority::is_wizard(&w, ctx.player) {
             format!("{name}{}", crate::find::suffix(o))
         } else {
             name
@@ -455,5 +457,7 @@ pub(super) fn inventory(ctx: &CommandContext<'_>, input: &CommandInput) -> Resul
             ));
         }
     }
-    Ok(Action::StyledReport(report.finish()?))
+    Ok(Action::Report(crate::commands::Report::Styled(
+        report.finish()?,
+    )))
 }

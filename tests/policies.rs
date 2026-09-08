@@ -6,30 +6,12 @@ use std::{
     time::Duration,
 };
 use stompymux_rs::{
-    CreationContext, accounts, commands,
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
-    persistence,
+    Config, CreationContext, Flag, Kind, ObjectId, Scripts, accounts, commands, persistence,
     server::{self, ShutdownRequest},
-    world::{Kind, ObjectId},
 };
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::{TcpListener, TcpStream},
-    sync::oneshot,
-};
-fn copy(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for e in std::fs::read_dir(from).unwrap() {
-        let e = e.unwrap();
-        if e.path().is_dir() {
-            copy(&e.path(), &to.join(e.file_name()));
-        } else {
-            std::fs::copy(e.path(), to.join(e.file_name())).unwrap();
-        }
-    }
-}
+use tokio::{io::AsyncReadExt, net::TcpStream};
+mod support;
+use support::{Client, copy, start};
 async fn fixture(retries: i64, zone: i64) -> (tempfile::TempDir, Config) {
     let d = tempfile::tempdir().unwrap();
     copy(
@@ -59,96 +41,6 @@ async fn fixture(retries: i64, zone: i64) -> (tempfile::TempDir, Config) {
     credentials(&c).await;
     (d, c)
 }
-/// A real socket client that retains unread response bytes across assertions.
-struct Client {
-    socket: TcpStream,
-    pending: Vec<u8>,
-}
-
-impl Client {
-    async fn connect(address: std::net::SocketAddr, player: i64) -> Self {
-        let mut client = Self {
-            socket: TcpStream::connect(address).await.unwrap(),
-            pending: Vec::new(),
-        };
-        client.until("Who are you? ").await;
-        client.send(&format!("#{player}")).await;
-        client.until("Password: ").await;
-        client.send("secret").await;
-        client.until("Staff Nexus").await;
-        client
-    }
-
-    async fn send(&mut self, text: &str) {
-        self.socket
-            .write_all(format!("{text}\r\n").as_bytes())
-            .await
-            .unwrap();
-    }
-
-    async fn until(&mut self, needle: &str) -> String {
-        tokio::time::timeout(Duration::from_secs(10), async {
-            loop {
-                if let Some(index) = self
-                    .pending
-                    .windows(needle.len())
-                    .position(|b| b == needle.as_bytes())
-                {
-                    let bytes = self
-                        .pending
-                        .drain(..index + needle.len())
-                        .collect::<Vec<_>>();
-                    return String::from_utf8_lossy(&bytes).into_owned();
-                }
-                let mut bytes = [0; 8192];
-                let count = self.socket.read(&mut bytes).await.unwrap();
-                assert!(
-                    count > 0,
-                    "closed waiting for {needle}: {:?}",
-                    String::from_utf8_lossy(&self.pending)
-                );
-                self.pending.extend_from_slice(&bytes[..count]);
-            }
-        })
-        .await
-        .unwrap_or_else(|_| {
-            panic!(
-                "timeout waiting for {needle}: {:?}",
-                String::from_utf8_lossy(&self.pending)
-            )
-        })
-    }
-}
-
-/// Keep the injected clock out of protocol/configuration; only the embedded test owner controls it.
-async fn start(
-    c: &Config,
-    clock: Rc<Cell<i64>>,
-) -> (
-    std::net::SocketAddr,
-    oneshot::Sender<ShutdownRequest>,
-    tokio::task::JoinHandle<anyhow::Result<()>>,
-    mlua::Lua,
-) {
-    let scripts = server::prepare(c).await.unwrap();
-    let vm = scripts.lua.clone();
-    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let address = listener.local_addr().unwrap();
-    let (tx, rx) = oneshot::channel();
-    let config = c.clone();
-    let task = tokio::task::spawn_local(async move {
-        server::run_with_schedule_clock(
-            config,
-            scripts,
-            listener,
-            async { rx.await.unwrap_or(ShutdownRequest::Sigterm) },
-            move || clock.get(),
-        )
-        .await
-    });
-    (address, tx, task, vm)
-}
-
 /// Seed known credentials and a non-Wizard exclusively in the temporary database.
 async fn credentials(c: &Config) {
     let mut world = persistence::load(&c.database()).await.unwrap();
@@ -257,22 +149,15 @@ async fn builder_lua_and_player_defaults() {
         "@open passage=#4",
         "@clone Parcel=Copy",
     ] {
-        let before = s.world.borrow().next_id;
+        let before = s.world().next_id;
         let _action = commands::run(&s, &c, ObjectId(1), 1, command).unwrap();
-        assert!(s.world.borrow().next_id > before, "{command}");
-        for o in s
-            .world
-            .borrow()
-            .objects
-            .values()
-            .filter(|o| o.id.0 >= before)
-        {
+        assert!(s.world().next_id > before, "{command}");
+        for o in s.world().objects.values().filter(|o| o.id.0 >= before) {
             assert_eq!(o.zone, Some(ObjectId(4)), "{command}");
         }
-        s.outbox.borrow_mut().clear();
+        s.drain_outbox();
         if command == "@create Parcel" {
-            s.world
-                .borrow_mut()
+            s.world_mut()
                 .objects
                 .get_mut(&ObjectId(before))
                 .unwrap()
@@ -280,13 +165,13 @@ async fn builder_lua_and_player_defaults() {
         }
     }
     s.eval_callback::<()>(&format!("local a=mux.world.create_object{{type=mux.world.types.ROOM,name='Inherited'}};assert(a:zone():dbref()==4);local b=mux.world.create_object{{type=mux.world.types.ROOM,name='Explicit',zone={}}};assert(b:zone():dbref()=={})",source_zone.0,source_zone.0)).unwrap();
-    let stored = s.world.borrow().clone();
+    let stored = s.world().clone();
     persistence::save(&c.database(), &stored).await.unwrap();
     let loaded = persistence::load(&c.database()).await.unwrap();
     for o in stored.objects.values() {
         assert_eq!(loaded.objects[&o.id].zone, o.zone);
     }
-    let mut w = s.world.borrow_mut();
+    let mut w = s.world_mut();
     let player = w
         .create_with(
             &c,
@@ -356,8 +241,8 @@ async fn bootstrap_zone_forward_reference_and_restart() {
     let (_d, c) = fixture(3, 4).await;
     std::fs::remove_file(c.database()).unwrap();
     let s = server::prepare(&c).await.unwrap();
-    assert!(s.world.borrow().objects.contains_key(&ObjectId(4)));
-    assert_eq!(s.world.borrow().objects[&ObjectId(1)].zone, None);
+    assert!(s.world().objects.contains_key(&ObjectId(4)));
+    assert_eq!(s.world().objects[&ObjectId(1)].zone, None);
     let before = std::fs::read(c.database()).unwrap();
     drop(s);
     server::prepare(&c).await.unwrap();
@@ -391,8 +276,8 @@ async fn zone_sentinels_and_callback_rollback() {
             .unwrap();
         assert_eq!(world.objects[&thing].zone, None);
         let s = Scripts::new(&c, Rc::new(RefCell::new(world))).unwrap();
-        let before = s.world.borrow().next_id;
+        let before = s.world().next_id;
         assert!(s.eval_callback::<()>("mux.world.create_object{type=mux.world.types.ROOM,name='RolledBack',zone=4};error('cancel creation')").is_err());
-        assert_eq!(before, s.world.borrow().next_id);
+        assert_eq!(before, s.world().next_id);
     }
 }

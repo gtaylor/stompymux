@@ -1,6 +1,6 @@
 //! Registered communication handlers and player-local alias interception.
 use super::*;
-use crate::commands::{Action, CommandContext, CommandInput};
+use crate::commands::{Action, CommandContext, CommandInput, Report};
 
 /// C comlist uses at least 79 columns and caps layout at its LBUF size.
 const COMLIST_MIN_WIDTH: usize = 79;
@@ -96,15 +96,13 @@ pub fn alias(
 /// Errors are session-private and cannot leave lock-side effects behind.
 fn transaction(service: &Service<'_>, work: impl FnOnce() -> Result<()>) -> Result<Action> {
     let before = service.world.borrow().clone();
-    let pending = service.outbox.borrow().len();
-    let flow_effects = crate::lua::flows::snapshot(service.lua);
+    let checkpoint = service.effects.checkpoint();
     match work() {
         Ok(()) => Ok(Action::Continue),
         Err(error) => {
             *service.world.borrow_mut() = before;
-            service.outbox.borrow_mut().truncate(pending);
-            crate::lua::flows::restore(service.lua, flow_effects);
-            Ok(Action::Reply(error.to_string()))
+            service.effects.restore(checkpoint);
+            Ok(Action::Report(Report::Reply(error.to_string())))
         }
     }
 }
@@ -149,14 +147,9 @@ impl Service<'_> {
             }
             Operation::List => {
                 self.notify(who, "Alias     Channel             Status Description")?;
-                let width = crate::lua::sessions::players(self.lua)
-                    .ok()
-                    .and_then(|list| {
-                        list.sequence_values::<mlua::Table>()
-                            .filter_map(|r| r.ok())
-                            .find(|r| r.get::<u64>("session").ok() == session)
-                    })
-                    .and_then(|r| r.get::<usize>("terminal_width").ok())
+                let width = self
+                    .host
+                    .terminal_width(session)
                     .unwrap_or(COMLIST_MIN_WIDTH)
                     .clamp(COMLIST_MIN_WIDTH, COMLIST_MAX_WIDTH)
                     - 37;
@@ -222,12 +215,10 @@ impl Service<'_> {
                     .collect::<Vec<_>>();
                 for c in channels {
                     let before = self.world.borrow().clone();
-                    let pending = self.outbox.borrow().len();
-                    let flow_effects = crate::lua::flows::snapshot(self.lua);
+                    let checkpoint = self.effects.checkpoint();
                     if let Err(error) = self.say(who, &c, args) {
                         *self.world.borrow_mut() = before;
-                        self.outbox.borrow_mut().truncate(pending);
-                        crate::lua::flows::restore(self.lua, flow_effects);
+                        self.effects.restore(checkpoint);
                         self.notify(who, error.to_string())?;
                     }
                     if args.eq_ignore_ascii_case("who") {

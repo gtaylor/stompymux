@@ -139,10 +139,12 @@ pub fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action>
                     .push((ctx.player, crate::text::Document::Literal(text)));
                 Ok(Action::Continue)
             } else {
-                Ok(Action::Reply(text))
+                Ok(Action::Report(crate::commands::Report::Reply(text)))
             }
         }
-        Err(e) => Ok(Action::Reply(format!("Unable to access state: {e}."))),
+        Err(e) => Ok(Action::Report(crate::commands::Report::Reply(format!(
+            "Unable to access state: {e}."
+        )))),
     }
 }
 

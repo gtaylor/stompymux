@@ -1,35 +1,13 @@
 //! C-grounded movement action order, contexts, suppression and nested rollback.
 use std::{cell::RefCell, path::Path, rc::Rc};
-use stompymux_rs::{
-    commands,
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
-    persistence,
-    world::{Kind, ObjectId},
-};
+use stompymux_rs::{Config, Flag, Kind, ObjectId, Scripts, commands};
 
-/// Copy only the checked-in integration world; no operator files are mutated.
-fn copy(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for entry in std::fs::read_dir(from).unwrap() {
-        let entry = entry.unwrap();
-        let target = to.join(entry.file_name());
-        if entry.path().is_dir() {
-            copy(&entry.path(), &target);
-        } else {
-            std::fs::copy(entry.path(), target).unwrap();
-        }
-    }
-}
+mod support;
+use support::isolated_world;
 
 /// Install tracing providers on both rooms and the traveler.
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
-    let dir = tempfile::tempdir().unwrap();
-    copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
-        dir.path(),
-    );
+    let (dir, config, mut world) = isolated_world().await;
     std::fs::write(dir.path().join("lua/object_logic/parity.lua"),r#"
       local function record(ctx,key)
         trace=trace or {};table.insert(trace,key..(ctx.silent and ':silent' or ''))
@@ -59,8 +37,6 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
     "#).unwrap();
     std::fs::create_dir(dir.path().join("logs")).unwrap();
     std::fs::write(dir.path().join("logs/movement.log"), "").unwrap();
-    let config = Config::load(dir.path()).unwrap();
-    let mut world = persistence::load(&config.database()).await.unwrap();
     for id in [0, 4, 2] {
         world.objects.get_mut(&ObjectId(id)).unwrap().lua_parent = "parity.lua".into();
     }
@@ -81,7 +57,7 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
     world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ObjectId(4));
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
-        .lua
+        .inspect_lua()
         .load("traveler=2;source=4;destination=0;object_cause=1;operation='teleport';trace={}")
         .exec()
         .unwrap();
@@ -100,7 +76,7 @@ fn trace(s: &Scripts, key: &str) {
         .collect::<Vec<_>>()
         .join(",");
     assert_eq!(
-        s.lua
+        s.inspect_lua()
             .load("return table.concat(trace,',')")
             .eval::<String>()
             .unwrap(),
@@ -124,30 +100,31 @@ async fn native_teleport_home_dark_and_noop_match_c_actions() {
     ] {
         let (_d, c, s) = fixture().await;
         if dark {
-            s.world
-                .borrow_mut()
+            s.world_mut()
                 .objects
                 .get_mut(&ObjectId(2))
                 .unwrap()
                 .flags
                 .insert(Flag::Dark);
         }
-        s.lua
+        s.inspect_lua()
             .globals()
             .set("expected_descriptor", descriptor)
             .unwrap();
-        s.lua.globals().set("object_cause", cause).unwrap();
-        s.lua.globals().set("operation", operation).unwrap();
+        s.inspect_lua()
+            .globals()
+            .set("object_cause", cause)
+            .unwrap();
+        s.inspect_lua()
+            .globals()
+            .set("operation", operation)
+            .unwrap();
         let actor = if command == "home" { 2 } else { 1 };
         commands::run(&s, &c, ObjectId(actor), 7, command).unwrap();
         trace(&s, key);
-        assert_eq!(
-            s.world.borrow().objects[&ObjectId(2)].location,
-            Some(ObjectId(0))
-        );
+        assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(0)));
         let messages = s
-            .outbox
-            .borrow()
+            .outbox()
             .iter()
             .map(|(id, t)| (id.0, t.source().to_string()))
             .collect::<Vec<_>>();
@@ -170,9 +147,15 @@ async fn native_teleport_home_dark_and_noop_match_c_actions() {
                 3
             );
         }
-        s.lua.load("trace={}").exec().unwrap();
+        s.inspect_lua().load("trace={}").exec().unwrap();
         commands::run(&s, &c, ObjectId(actor), 7, command).unwrap();
-        assert_eq!(s.lua.load("return #trace").eval::<usize>().unwrap(), 0);
+        assert_eq!(
+            s.inspect_lua()
+                .load("return #trace")
+                .eval::<usize>()
+                .unwrap(),
+            0
+        );
         c.logger.shutdown(&c).await.unwrap();
     }
 }
@@ -191,26 +174,29 @@ async fn lua_caught_failure_discards_every_movement_phase() {
         "enter",
         "on_enter",
     ] {
-        s.lua.globals().set("fail_at", phase).unwrap();
-        let before = serde_json::to_value(&*s.world.borrow()).unwrap();
+        s.inspect_lua().globals().set("fail_at", phase).unwrap();
+        let before = serde_json::to_value(&*s.world()).unwrap();
         s.eval_callback::<()>(
             "local ok=pcall(mux.world.teleport_object,{object=2,destination=0});assert(not ok)",
         )
         .unwrap();
         assert_eq!(
             before,
-            serde_json::to_value(&*s.world.borrow()).unwrap(),
+            serde_json::to_value(&*s.world()).unwrap(),
             "{phase}"
         );
-        assert!(s.outbox.borrow().is_empty());
-        assert!(s.flows.drain_logs().is_empty());
+        assert!(s.outbox().is_empty());
+        assert!(s.drain_logs_for_inspection().is_empty());
     }
     assert_eq!(
         std::fs::read_to_string(d.path().join("logs/movement.log")).unwrap(),
         ""
     );
-    s.lua.globals().set("fail_at", mlua::Value::Nil).unwrap();
-    s.lua.load("trace={}").exec().unwrap();
+    s.inspect_lua()
+        .globals()
+        .set("fail_at", mlua::Value::Nil)
+        .unwrap();
+    s.inspect_lua().load("trace={}").exec().unwrap();
     s.eval_callback::<()>("mux.world.teleport_object{object=2,destination=0}")
         .unwrap();
     trace(&s, "teleport");
@@ -221,7 +207,7 @@ async fn lua_caught_failure_discards_every_movement_phase() {
 async fn nested_container_thing_and_exit_relocation() {
     let (_d, c, s) = fixture().await;
     let thing = {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         let id = w.create(&c, "Container".into(), Kind::Thing);
         let o = w.objects.get_mut(&id).unwrap();
         o.location = Some(ObjectId(4));
@@ -229,7 +215,7 @@ async fn nested_container_thing_and_exit_relocation() {
         w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(id);
         id
     };
-    s.lua.globals().set("traveler", thing.0).unwrap();
+    s.inspect_lua().globals().set("traveler", thing.0).unwrap();
     commands::run(
         &s,
         &c,
@@ -239,21 +225,27 @@ async fn nested_container_thing_and_exit_relocation() {
     )
     .unwrap();
     trace(&s, "teleport");
-    assert_eq!(s.world.borrow().objects[&ObjectId(2)].location, Some(thing));
-    s.lua.load("trace={}").exec().unwrap();
-    let linked = s.world.borrow().objects[&ObjectId(13)].destination;
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(thing));
+    s.inspect_lua().load("trace={}").exec().unwrap();
+    let linked = s.world().objects[&ObjectId(13)].destination;
     commands::run(&s, &c, ObjectId(1), 7, "@teleport #13=#0").unwrap();
-    assert_eq!(s.world.borrow().objects[&ObjectId(13)].destination, linked);
-    assert_eq!(s.lua.load("return #trace").eval::<usize>().unwrap(), 0);
+    assert_eq!(s.world().objects[&ObjectId(13)].destination, linked);
+    assert_eq!(
+        s.inspect_lua()
+            .load("return #trace")
+            .eval::<usize>()
+            .unwrap(),
+        0
+    );
     for command in [
         "goto/quiet x",
         "@teleport/quiet #4",
         "@teleport/loud #4",
         "@teleport #13",
     ] {
-        let before = serde_json::to_value(&*s.world.borrow()).unwrap();
+        let before = serde_json::to_value(&*s.world()).unwrap();
         commands::run(&s, &c, ObjectId(1), 7, command).unwrap();
-        assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
+        assert_eq!(before, serde_json::to_value(&*s.world()).unwrap());
     }
     c.logger.shutdown(&c).await.unwrap();
 }
@@ -262,52 +254,48 @@ async fn nested_container_thing_and_exit_relocation() {
 async fn appearance_precedes_arrival_and_callback_containment_is_rechecked() {
     let (_d, c, s) = fixture().await;
     let parents = s
-        .lua
+        .inspect_lua()
         .named_registry_value::<mlua::Table>("mux.parents")
         .unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set("parent", parents.get::<mlua::Table>("parity.lua").unwrap())
         .unwrap();
-    s.lua.load("parent.internal_appearance=function(ctx) table.insert(trace,'appearance');return 'ARRIVAL APPEARANCE' end").exec().unwrap();
+    s.inspect_lua().load("parent.internal_appearance=function(ctx) table.insert(trace,'appearance');return 'ARRIVAL APPEARANCE' end").exec().unwrap();
     commands::run(&s, &c, ObjectId(1), 7, "@teleport #2=#0").unwrap();
     assert!(
-        s.lua
+        s.inspect_lua()
             .load("return table.concat(trace,',')")
             .eval::<String>()
             .unwrap()
             .contains("enter_source,appearance,teleport,on_teleport,move,on_move,enter")
     );
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .location = Some(ObjectId(4));
-    s.outbox.borrow_mut().clear();
-    s.lua.load("parent.internal_appearance=function() assert(mux.log('movement.log','discarded appearance'));error('bad appearance') end").exec().unwrap();
+    s.drain_outbox();
+    s.inspect_lua().load("parent.internal_appearance=function() assert(mux.log('movement.log','discarded appearance'));error('bad appearance') end").exec().unwrap();
     s.eval_callback::<()>("assert(not pcall(mux.world.teleport_object,{object=2,destination=0}))")
         .unwrap();
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(2)].location,
-        Some(ObjectId(4))
-    );
-    assert!(s.outbox.borrow().is_empty());
-    assert!(s.flows.drain_logs().is_empty());
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(4)));
+    assert!(s.outbox().is_empty());
+    assert!(s.drain_logs_for_inspection().is_empty());
     let target = {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         let id = w.create(&c, "Changing destination".into(), Kind::Thing);
         w.objects.get_mut(&id).unwrap().location = Some(ObjectId(0));
         id
     };
-    s.lua.globals().set("target", target.0).unwrap();
-    s.lua.load("parent.internal_appearance=nil;parent.messages={};parent.events={on_leave=function(ctx) if ctx.enactor==2 then mux.world.teleport_object{object=target,destination=2} end end}").exec().unwrap();
-    let before = serde_json::to_value(&*s.world.borrow()).unwrap();
+    s.inspect_lua().globals().set("target", target.0).unwrap();
+    s.inspect_lua().load("parent.internal_appearance=nil;parent.messages={};parent.events={on_leave=function(ctx) if ctx.enactor==2 then mux.world.teleport_object{object=target,destination=2} end end}").exec().unwrap();
+    let before = serde_json::to_value(&*s.world()).unwrap();
     s.eval_callback::<()>(
         "assert(not pcall(mux.world.teleport_object,{object=2,destination=target}))",
     )
     .unwrap();
-    assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
+    assert_eq!(before, serde_json::to_value(&*s.world()).unwrap());
     c.logger.shutdown(&c).await.unwrap();
 }
 
@@ -316,21 +304,20 @@ async fn appearance_precedes_arrival_and_callback_containment_is_rechecked() {
 async fn generic_actions_match_c_silence_order_and_routing() {
     let (_d, c, s) = fixture().await;
     let parents = s
-        .lua
+        .inspect_lua()
         .named_registry_value::<mlua::Table>("mux.parents")
         .unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set("parent", parents.get::<mlua::Table>("parity.lua").unwrap())
         .unwrap();
-    s.lua.load(r#"
+    s.inspect_lua().load(r#"
       trace={};parent.messages={leave=function(ctx) table.insert(trace,'leave');return {enactor_message='silent direct'} end,
       enter=function(ctx) table.insert(trace,'enter');return {} end,
       move=function(ctx) table.insert(trace,'move');return {} end};parent.events={}
       parent.internal_appearance=function(ctx) table.insert(trace,'appearance');return '' end
     "#).exec().unwrap();
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -350,22 +337,21 @@ async fn generic_actions_match_c_silence_order_and_routing() {
     .unwrap();
     // C invokes silent leave/enter providers and renders before move.
     assert_eq!(
-        s.lua
+        s.inspect_lua()
             .load("return table.concat(trace,',')")
             .eval::<String>()
             .unwrap(),
         "leave,appearance,move,enter"
     );
     assert!(
-        s.outbox
-            .borrow()
+        s.outbox()
             .iter()
             .any(|(_, d)| d.source() == "silent direct")
     );
-    s.outbox.borrow_mut().clear();
+    s.drain_outbox();
     // An audible exit leads from the actor's room to the remote observer's room.
     {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         w.objects.get_mut(&ObjectId(1)).unwrap().location = Some(ObjectId(4));
         let e = w.objects.get_mut(&ObjectId(13)).unwrap();
         e.location = Some(ObjectId(0));
@@ -375,12 +361,11 @@ async fn generic_actions_match_c_silence_order_and_routing() {
     s.action_text(ObjectId(2), ObjectId(2), None, Some("ordinary action"))
         .unwrap();
     assert!(
-        s.outbox
-            .borrow()
+        s.outbox()
             .iter()
             .any(|(id, d)| *id == ObjectId(1) && d.source().contains("ordinary action"))
     );
-    assert!(!s.outbox.borrow().iter().any(|(id, _)| *id == ObjectId(2)));
+    assert!(!s.outbox().iter().any(|(id, _)| *id == ObjectId(2)));
     c.logger.shutdown(&c).await.unwrap();
 }
 
@@ -442,7 +427,7 @@ fn audit_matrix_has_evidence_and_all_requested_areas() {
 async fn exit_executor_and_action_sequence_match_c() {
     let (_d, c, s) = fixture().await;
     {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         for id in [0, 1, 2, 4, 13] {
             w.objects.get_mut(&ObjectId(id)).unwrap().lua_parent = String::new();
         }
@@ -463,31 +448,24 @@ async fn exit_executor_and_action_sequence_match_c() {
         "parityexit",
     )
     .unwrap();
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(1)].location,
-        Some(ObjectId(4))
-    );
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(2)].location,
-        Some(ObjectId(0))
-    );
-    s.world
-        .borrow_mut()
+    assert_eq!(s.world().objects[&ObjectId(1)].location, Some(ObjectId(4)));
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(0)));
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
         .location = Some(ObjectId(4));
     let parents = s
-        .lua
+        .inspect_lua()
         .named_registry_value::<mlua::Table>("mux.parents")
         .unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set("parent", parents.get::<mlua::Table>("parity.lua").unwrap())
         .unwrap();
-    s.lua.load("trace={};parent.messages={};parent.events={};for _,key in ipairs({'on_success','on_leave','on_exit','on_drop','on_move','on_enter'}) do parent.events[key]=function(ctx) table.insert(trace,key) end end").exec().unwrap();
+    s.inspect_lua().load("trace={};parent.messages={};parent.events={};for _,key in ipairs({'on_success','on_leave','on_exit','on_drop','on_move','on_enter'}) do parent.events[key]=function(ctx) table.insert(trace,key) end end").exec().unwrap();
     {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         for id in [0, 2, 4, 13] {
             w.objects.get_mut(&ObjectId(id)).unwrap().lua_parent = "parity.lua".into();
         }
@@ -495,7 +473,7 @@ async fn exit_executor_and_action_sequence_match_c() {
     commands::run(&s, &c, ObjectId(2), 7, "parityexit").unwrap();
     // No obsolete on_exit callback fires alongside the C action sequence.
     assert_eq!(
-        s.lua
+        s.inspect_lua()
             .load("return table.concat(trace,',')")
             .eval::<String>()
             .unwrap(),
@@ -509,14 +487,14 @@ async fn exit_executor_and_action_sequence_match_c() {
 async fn exit_contexts_suppression_and_callback_rollback() {
     let (_d, c, s) = fixture().await;
     let parents = s
-        .lua
+        .inspect_lua()
         .named_registry_value::<mlua::Table>("mux.parents")
         .unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set("parent", parents.get::<mlua::Table>("parity.lua").unwrap())
         .unwrap();
-    s.lua.load(r#"
+    s.inspect_lua().load(r#"
       local function record(ctx,key)
         table.insert(trace,key..(ctx.silent and ':silent' or ''))
         assert(ctx.enactor==2 and ctx.cause==expected_cause and ctx.descriptor==nil)
@@ -556,7 +534,7 @@ async fn exit_contexts_suppression_and_callback_rollback() {
       end}
     "#).exec().unwrap();
     {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         w.objects.get_mut(&ObjectId(1)).unwrap().lua_parent.clear();
         let exit = w.objects.get_mut(&ObjectId(13)).unwrap();
         exit.name = "parityexit".into();
@@ -578,7 +556,7 @@ async fn exit_contexts_suppression_and_callback_rollback() {
         (false, true, 2, "exit"),
     ] {
         {
-            let mut w = s.world.borrow_mut();
+            let mut w = s.world_mut();
             let traveler = w.objects.get_mut(&ObjectId(2)).unwrap();
             traveler.location = Some(ObjectId(4));
             if wizard {
@@ -592,35 +570,27 @@ async fn exit_contexts_suppression_and_callback_rollback() {
                 traveler.flags.remove(Flag::Dark);
             }
         }
-        s.outbox.borrow_mut().clear();
-        s.lua
+        s.drain_outbox();
+        s.inspect_lua()
             .load(format!(
                 "trace={{}}; expected_cause={cause};fail_at=nil;deny=false"
             ))
             .exec()
             .unwrap();
         commands::execute(&s, &c, execution(cause), "parityexit").unwrap();
-        let actual: Vec<String> = s.lua.load("return trace").eval().unwrap();
+        let actual: Vec<String> = s.inspect_lua().load("return trace").eval().unwrap();
         let expected: Vec<String> = serde_json::from_value(fixture[expected].clone()).unwrap();
         assert_eq!(actual, expected);
-        assert_eq!(
-            s.world.borrow().objects[&ObjectId(1)].location,
-            Some(ObjectId(4))
-        );
-        assert_eq!(
-            s.world.borrow().objects[&ObjectId(2)].location,
-            Some(ObjectId(0))
-        );
+        assert_eq!(s.world().objects[&ObjectId(1)].location, Some(ObjectId(4)));
+        assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(0)));
         if wizard && dark {
             assert!(
-                s.outbox
-                    .borrow()
+                s.outbox()
                     .iter()
                     .any(|(id, d)| *id == ObjectId(2) && d.source() == "direct success")
             );
             assert!(
-                !s.outbox
-                    .borrow()
+                !s.outbox()
                     .iter()
                     .any(|(_, d)| d.source().contains("neighbor success"))
             );
@@ -630,14 +600,14 @@ async fn exit_contexts_suppression_and_callback_rollback() {
     for phase in fixture["exit"].as_array().unwrap() {
         let phase = phase.as_str().unwrap();
         {
-            let mut w = s.world.borrow_mut();
+            let mut w = s.world_mut();
             let traveler = w.objects.get_mut(&ObjectId(2)).unwrap();
             traveler.location = Some(ObjectId(4));
             traveler.flags.remove(Flag::Dark);
         }
-        s.outbox.borrow_mut().clear();
-        let before = serde_json::to_value(&*s.world.borrow()).unwrap();
-        s.lua
+        s.drain_outbox();
+        let before = serde_json::to_value(&*s.world()).unwrap();
+        s.inspect_lua()
             .load(format!("trace={{}};expected_cause=1;fail_at='{phase}'"))
             .exec()
             .unwrap();
@@ -647,34 +617,34 @@ async fn exit_contexts_suppression_and_callback_rollback() {
         );
         assert_eq!(
             before,
-            serde_json::to_value(&*s.world.borrow()).unwrap(),
+            serde_json::to_value(&*s.world()).unwrap(),
             "{phase}"
         );
-        assert!(s.outbox.borrow().is_empty(), "{phase}");
-        assert!(s.flows.drain_logs().is_empty(), "{phase}");
+        assert!(s.outbox().is_empty(), "{phase}");
+        assert!(s.drain_logs_for_inspection().is_empty(), "{phase}");
     }
     // Changing the matched exit from a provider invalidates the pending move atomically.
-    s.lua.load("trace={};fail_at=nil;parent.messages.success=function(ctx) mux.world.object(13):set_destination(4);return {} end").exec().unwrap();
-    let before = serde_json::to_value(&*s.world.borrow()).unwrap();
+    s.inspect_lua().load("trace={};fail_at=nil;parent.messages.success=function(ctx) mux.world.object(13):set_destination(4);return {} end").exec().unwrap();
+    let before = serde_json::to_value(&*s.world()).unwrap();
     let error = commands::execute(&s, &c, execution(1), "parityexit")
         .err()
         .unwrap();
     assert!(error.to_string().contains("Exit changed"), "{error}");
-    assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
-    assert!(s.outbox.borrow().is_empty());
-    s.lua.load("trace={};fail_at=nil;deny=true").exec().unwrap();
+    assert_eq!(before, serde_json::to_value(&*s.world()).unwrap());
+    assert!(s.outbox().is_empty());
+    s.inspect_lua()
+        .load("trace={};fail_at=nil;deny=true")
+        .exec()
+        .unwrap();
     commands::execute(&s, &c, execution(1), "parityexit").unwrap();
     assert!(
-        s.lua
+        s.inspect_lua()
             .load("return trace")
             .eval::<Vec<String>>()
             .unwrap()
             .is_empty()
     );
-    assert_eq!(
-        s.world.borrow().objects[&ObjectId(2)].location,
-        Some(ObjectId(4))
-    );
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(ObjectId(4)));
     c.logger.shutdown(&c).await.unwrap();
     assert!(
         std::fs::read(_d.path().join("logs/movement.log"))
@@ -688,7 +658,7 @@ async fn exit_contexts_suppression_and_callback_rollback() {
 async fn generic_container_contexts_and_notification_limits() {
     let (d, c, mut s) = fixture().await;
     let cargo = {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         let id = w.create(&c, "Cargo".into(), Kind::Thing);
         let o = w.objects.get_mut(&id).unwrap();
         o.location = Some(ObjectId(4));
@@ -697,15 +667,15 @@ async fn generic_container_contexts_and_notification_limits() {
         id
     };
     let parents = s
-        .lua
+        .inspect_lua()
         .named_registry_value::<mlua::Table>("mux.parents")
         .unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set("parent", parents.get::<mlua::Table>("parity.lua").unwrap())
         .unwrap();
-    s.lua.globals().set("cargo", cargo.0).unwrap();
-    s.lua
+    s.inspect_lua().globals().set("cargo", cargo.0).unwrap();
+    s.inspect_lua()
         .load(
             r#"
       trace={};parent.events={};parent.messages={}
@@ -732,10 +702,10 @@ async fn generic_container_contexts_and_notification_limits() {
         route: stompymux_rs::movement::Route::Generic,
     };
     stompymux_rs::movement::perform(&s, request).unwrap();
-    assert_eq!(s.world.borrow().objects[&ObjectId(2)].location, Some(cargo));
-    assert_eq!(s.world.borrow().objects[&cargo].location, Some(ObjectId(0)));
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(cargo));
+    assert_eq!(s.world().objects[&cargo].location, Some(ObjectId(0)));
     assert_eq!(
-        s.lua
+        s.inspect_lua()
             .load("return table.concat(trace,',')")
             .eval::<String>()
             .unwrap(),
@@ -743,11 +713,11 @@ async fn generic_container_contexts_and_notification_limits() {
     );
     // A second observer makes neighbor routing exceed the configured traversal budget.
     {
-        let mut w = s.world.borrow_mut();
+        let mut w = s.world_mut();
         w.objects.get_mut(&cargo).unwrap().location = Some(ObjectId(4));
         w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(4));
     }
-    s.outbox.borrow_mut().clear();
+    s.drain_outbox();
     let path = d.path().join("stompymux.toml");
     let source = std::fs::read_to_string(&path)
         .unwrap()
@@ -755,9 +725,9 @@ async fn generic_container_contexts_and_notification_limits() {
     std::fs::write(path, source).unwrap();
     let limited = Config::load(d.path()).unwrap();
     s.configure(&limited).unwrap();
-    let before = serde_json::to_value(&*s.world.borrow()).unwrap();
+    let before = serde_json::to_value(&*s.world()).unwrap();
     assert!(stompymux_rs::movement::perform(&s, request).is_err());
-    assert_eq!(before, serde_json::to_value(&*s.world.borrow()).unwrap());
-    assert!(s.outbox.borrow().is_empty());
+    assert_eq!(before, serde_json::to_value(&*s.world()).unwrap());
+    assert!(s.outbox().is_empty());
     c.logger.shutdown(&c).await.unwrap();
 }

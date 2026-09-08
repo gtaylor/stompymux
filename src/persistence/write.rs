@@ -1,5 +1,7 @@
 //! Field-level relational changes and legacy containment-list maintenance.
-use crate::{flags::Flag, world::*};
+use crate::{
+    accounts::Account, communication::Channel, flags::Flag, state::Value as Scalar, world::*,
+};
 use anyhow::{Context, Result, ensure};
 use sqlx::{QueryBuilder, Row, Sqlite, SqliteConnection};
 use std::collections::{BTreeMap, BTreeSet};
@@ -135,7 +137,7 @@ pub(super) async fn delete(c: &mut SqliteConnection, table: &str, key: Fields) -
     Ok(())
 }
 /// Supported object fields; relationship-list slots are supplied from durable rows.
-fn object(o: &Object, links: [i64; 3]) -> Fields {
+fn object(o: &Object, links: LinkSlots) -> Fields {
     let mut result = fields([
         ("name", Cell::Text(o.name.clone())),
         ("type", Cell::Integer(o.kind.code())),
@@ -155,16 +157,16 @@ fn object(o: &Object, links: [i64; 3]) -> Fields {
         ("lua_parent", Cell::Text(o.lua_parent.clone())),
         ("description", text(&o.description)),
         ("internal_description", text(&o.internal_description)),
-        ("contents", Cell::Integer(links[0])),
+        ("contents", Cell::Integer(links.contents)),
         (
             "exits",
             if o.kind == Kind::Exit {
                 reference(o.location)
             } else {
-                Cell::Integer(links[1])
+                Cell::Integer(links.exits)
             },
         ),
-        ("next", Cell::Integer(links[2])),
+        ("next", Cell::Integer(links.next)),
         (
             "has_idle_power",
             Cell::Integer(i64::from(o.powers.contains(crate::powers::Power::Idle))),
@@ -262,11 +264,7 @@ fn history_key(id: ObjectId, key: (i64, i64)) -> Fields {
     ])
 }
 /// Validate and update only containment lists whose membership actually changed.
-fn relationships(
-    before: &World,
-    after: &World,
-    raw: &BTreeMap<ObjectId, [i64; 3]>,
-) -> Result<BTreeMap<ObjectId, [i64; 3]>> {
+fn relationships(before: &World, after: &World, raw: &Links) -> Result<Links> {
     let mut links = raw.clone();
     let mut affected = BTreeSet::new();
     for o in after.objects.values() {
@@ -282,13 +280,12 @@ fn relationships(
         if let Some(container) = o.location {
             affected.insert((container, o.kind == Kind::Exit));
         }
-        links.entry(o.id).or_insert([-1; 3])[2] = -1;
+        links.entry(o.id).or_default().next = -1;
     }
     for (container, exits) in affected {
-        let column = usize::from(exits);
         let mut ordered = Vec::new();
         let mut seen = BTreeSet::new();
-        let mut next = raw.get(&container).map_or(-1, |v| v[column]);
+        let mut next = raw.get(&container).map_or(-1, |slots| slots.head(exits));
         while next >= 0 {
             let id = ObjectId(next);
             ensure!(
@@ -307,7 +304,7 @@ fn relationships(
                 container.0
             );
             ordered.push(id);
-            next = raw.get(&id).context("linked object row missing")?[2];
+            next = raw.get(&id).context("linked object row missing")?.next;
         }
         let expected: BTreeSet<_> = before
             .objects
@@ -329,9 +326,10 @@ fn relationships(
         ordered.retain(|id| members.contains(id));
         let retained: BTreeSet<_> = ordered.iter().copied().collect();
         ordered.extend(members.difference(&retained).copied());
-        links.entry(container).or_insert([-1; 3])[column] = ordered.first().map_or(-1, |id| id.0);
+        *links.entry(container).or_default().head_mut(exits) =
+            ordered.first().map_or(-1, |id| id.0);
         for (index, id) in ordered.iter().enumerate() {
-            links.entry(*id).or_insert([-1; 3])[2] = ordered.get(index + 1).map_or(-1, |id| id.0);
+            links.entry(*id).or_default().next = ordered.get(index + 1).map_or(-1, |id| id.0);
         }
     }
     Ok(links)
@@ -372,11 +370,11 @@ pub(super) async fn apply_changes(
         let id = ObjectId(r.try_get("dbref")?);
         raw.insert(
             id,
-            [
-                r.try_get("contents")?,
-                r.try_get("exits")?,
-                r.try_get("next")?,
-            ],
+            LinkSlots {
+                contents: r.try_get("contents")?,
+                exits: r.try_get("exits")?,
+                next: r.try_get("next")?,
+            },
         );
         if r.try_get::<i64, _>("has_connected_flag")? != 0 {
             connected.insert(id);
@@ -391,7 +389,7 @@ pub(super) async fn apply_changes(
         let mut old = before
             .objects
             .get(id)
-            .map(|o| object(o, raw.get(id).copied().unwrap_or([-1; 3])));
+            .map(|o| object(o, raw.get(id).copied().unwrap_or_default()));
         if connected.contains(id)
             && let Some(old) = old.as_mut()
         {
@@ -402,7 +400,7 @@ pub(super) async fn apply_changes(
             "objects",
             fields([("dbref", Cell::Integer(id.0))]),
             old.as_ref(),
-            &object(o, links.get(id).copied().unwrap_or([-1; 3])),
+            &object(o, links.get(id).copied().unwrap_or_default()),
         )
         .await?;
     }
@@ -495,7 +493,7 @@ pub(super) async fn apply_changes(
         )
         .bind(next)
         .bind(i64::try_from(after.record_players)?)
-        .bind(crate::accounts::now())
+        .bind(crate::clock::wall_time())
         .execute(&mut *c)
         .await?;
     }

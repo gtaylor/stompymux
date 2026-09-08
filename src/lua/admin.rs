@@ -40,14 +40,14 @@ impl Scripts {
 pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     let result = (|| -> Result<Action> {
         Ok(match input.switch.as_deref() {
-            None if input.args.is_empty() => Action::Reply("@lua command switches:\n  /parent    Attach or clear a Lua parent.\n  /viewparent Display current source.\n  /check     Check modules in isolation.\n  /reload    Replace modules atomically.\n  /schedule  Inspect active schedules.\n  /test      Run live-world Lua test suites.".into()),
+            None if input.args.is_empty() => Action::Report(crate::commands::Report::Reply("@lua command switches:\n  /parent    Attach or clear a Lua parent.\n  /viewparent Display current source.\n  /check     Check modules in isolation.\n  /reload    Replace modules atomically.\n  /schedule  Inspect active schedules.\n  /test      Run live-world Lua test suites.".into())),
             Some(switch) if switch.split('/').any(|s| s == "test") => {
-                Action::LuaAdmin(AdminRequest::Test(super::testing::Request::parse(switch, &input.args)?))
+                Action::Server(crate::commands::ServerRequest::LuaAdmin(AdminRequest::Test(super::testing::Request::parse(switch, &input.args)?)))
             }
-            Some("schedule") => Action::LuaSchedules(input.args.clone()),
+            Some("schedule") => Action::Server(crate::commands::ServerRequest::LuaSchedules(input.args.clone())),
             Some("check" | "reload") => {
                 ensure!(input.args.is_empty(), "This @lua switch takes no arguments.");
-                Action::LuaAdmin(if input.switch.as_deref() == Some("check") { AdminRequest::Check } else { AdminRequest::Reload })
+                Action::Server(crate::commands::ServerRequest::LuaAdmin(if input.switch.as_deref() == Some("check") { AdminRequest::Check } else { AdminRequest::Reload }))
             }
             Some("parent") => {
                 let (target, path) = input.args.split_once('=').unwrap_or((&input.args, ""));
@@ -67,10 +67,10 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                     (path, Some(id))
                 } else { (arg.to_string(), None) };
                 super::sources::parent_path(&path)?;
-                Action::LuaAdmin(AdminRequest::View { path, object })
+                Action::Server(crate::commands::ServerRequest::LuaAdmin(AdminRequest::View { path, object }))
             }
             _ => anyhow::bail!("Invalid @lua switch combination."),
         })
     })();
-    Ok(result.unwrap_or_else(|e| Action::Reply(e.to_string())))
+    Ok(result.unwrap_or_else(|e| Action::Report(crate::commands::Report::Reply(e.to_string()))))
 }

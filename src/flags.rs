@@ -162,30 +162,6 @@ impl<'de> Deserialize<'de> for FlagSet {
             .collect()
     }
 }
-/// Shared Wizard/GOD command permission check.
-pub fn is_wizard(world: &World, actor: ObjectId) -> bool {
-    actor == ObjectId(1)
-        || world
-            .objects
-            .get(&actor)
-            .is_some_and(|o| o.flags.contains(Flag::Wizard))
-}
-/// Whether the actor has legacy administrative control of the target.
-pub fn controls(world: &World, actor: ObjectId, target: ObjectId) -> bool {
-    let Some(t) = world
-        .objects
-        .get(&target)
-        .filter(|o| o.kind != Kind::Garbage)
-    else {
-        return false;
-    };
-    let wizard = world
-        .objects
-        .get(&actor)
-        .is_some_and(|o| o.flags.contains(Flag::Wizard));
-    actor == ObjectId(1)
-        || wizard && (actor == target || target != ObjectId(1) && !t.flags.contains(Flag::Wizard))
-}
 /// Apply flag-specific policy. Trusted Lua uses GOD as its authority.
 pub fn change(
     world: &mut World,

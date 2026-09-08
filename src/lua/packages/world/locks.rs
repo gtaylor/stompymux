@@ -1,17 +1,15 @@
 //! Checked lock results retain denial metadata and roll back malformed callback results.
-use crate::lua::{Outbox, SharedWorld, err, transactions};
+use crate::{
+    lua::{err, transactions},
+    runtime::SharedWorld,
+};
 use mlua::{Function, Lua, Table, Value};
 
 /// C LBUF_SIZE bounds optional lock messages, excluding their terminator.
 const MESSAGE_LIMIT: usize = 8192;
 
 /// Install a private lock invoker; public Lua callers still receive a boolean.
-pub(super) fn register(
-    lua: &Lua,
-    api: &Table,
-    world: &SharedWorld,
-    outbox: &Outbox,
-) -> mlua::Result<()> {
+pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Result<()> {
     api.set(
         "lock_error",
         lua.create_function(|lua, message: String| {
@@ -81,11 +79,10 @@ pub(super) fn register(
         })?,
     )?;
     let w = world.clone();
-    let out = outbox.clone();
     api.set(
         "evaluate_lock",
         lua.create_function(move |lua, (f, ctx): (Function, Table)| {
-            transactions::run(lua, &w, &out, || {
+            transactions::run(lua, &w, || {
                 let value = f.call::<Value>(ctx)?;
                 let result = lua.create_table()?;
                 match value {

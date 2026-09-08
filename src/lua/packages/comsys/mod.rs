@@ -3,7 +3,7 @@ use crate::{
     communication::{ChannelFlag, ChannelId, Service},
     config::Config,
     flags::Flag,
-    lua::{Outbox, SharedWorld},
+    runtime::{Effects, Outbox, SharedWorld},
     world::{Kind, ObjectId},
 };
 use anyhow::Result;
@@ -14,6 +14,7 @@ use std::rc::Rc;
 struct Bindings {
     world: SharedWorld,
     outbox: Outbox,
+    effects: Effects,
 }
 
 impl Bindings {
@@ -21,8 +22,9 @@ impl Bindings {
         Service {
             world: &self.world,
             outbox: &self.outbox,
+            effects: &self.effects,
             config: crate::lua::configuration(lua),
-            lua,
+            host: lua,
         }
     }
 }
@@ -133,7 +135,7 @@ impl UserData for Handle {
             |lua, h, (message, options): (String, Option<Table>)| {
                 let name = h.name(lua)?;
                 let no_header = option(options, "no_header")?;
-                crate::lua::transactions::run(lua, &h.bindings.world, &h.bindings.outbox, || {
+                crate::lua::transactions::run(lua, &h.bindings.world, || {
                     h.bindings
                         .service(lua)
                         .emit(&name, &message, no_header)
@@ -175,7 +177,7 @@ impl UserData for Handle {
                 if h.bindings.world.borrow().objects[&who].kind != Kind::Player {
                     return Err(error("expected a player"));
                 }
-                crate::lua::transactions::run(lua, &h.bindings.world, &h.bindings.outbox, || {
+                crate::lua::transactions::run(lua, &h.bindings.world, || {
                     h.bindings
                         .service(lua)
                         .add(who, &name, &alias, quiet, true)
@@ -186,7 +188,7 @@ impl UserData for Handle {
         m.add_method("boot_player", |lua, h, value: Value| {
             let name = h.name(lua)?;
             let who = object(lua, value, &h.bindings)?;
-            crate::lua::transactions::run(lua, &h.bindings.world, &h.bindings.outbox, || {
+            crate::lua::transactions::run(lua, &h.bindings.world, || {
                 h.bindings
                     .service(lua)
                     .boot(ObjectId(1), who, &name)
@@ -287,10 +289,12 @@ pub(super) fn register(
     _config: &Config,
     world: &SharedWorld,
     outbox: &Outbox,
+    effects: &Effects,
 ) -> Result<()> {
     let b = Rc::new(Bindings {
         world: world.clone(),
         outbox: outbox.clone(),
+        effects: effects.clone(),
     });
     let install = || -> mlua::Result<()> {
         let table = lua.create_table()?;

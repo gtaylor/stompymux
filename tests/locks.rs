@@ -1,35 +1,14 @@
 //! Complete lock catalog, command ordering, callback identities and durable object operations.
 use sqlx::Connection;
-use std::{cell::RefCell, path::Path, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
-    LockInvocation, LockType,
-    commands::{self, Action},
-    config::Config,
-    flags::Flag,
-    lua::Scripts,
-    persistence,
-    world::{Kind, ObjectId, World},
+    Config, Flag, Kind, LockInvocation, LockType, ObjectId, Scripts, World, persistence,
 };
 
-fn copy(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for e in std::fs::read_dir(from).unwrap() {
-        let e = e.unwrap();
-        if e.path().is_dir() {
-            copy(&e.path(), &to.join(e.file_name()));
-        } else {
-            std::fs::copy(e.path(), to.join(e.file_name())).unwrap();
-        }
-    }
-}
+mod support;
+use support::{isolated_world, run_text};
 async fn fixture() -> (tempfile::TempDir, Config, World) {
-    let d = tempfile::tempdir().unwrap();
-    copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
-        d.path(),
-    );
-    let c = Config::load(d.path()).unwrap();
-    let mut w = persistence::load(&c.database()).await.unwrap();
+    let (d, c, mut w) = isolated_world().await;
     for id in [ObjectId(1), ObjectId(2)] {
         w.objects.get_mut(&id).unwrap().location = Some(ObjectId(c.start()));
     }
@@ -53,11 +32,11 @@ fn object(w: &mut World, c: &Config, name: &str, kind: Kind, loc: ObjectId) -> O
 }
 fn scripts(c: &Config, w: World) -> Scripts {
     let s = Scripts::new(c, Rc::new(RefCell::new(w))).unwrap();
-    s.lua
+    s.inspect_lua()
         .globals()
         .set(
             "_parents",
-            s.lua
+            s.inspect_lua()
                 .named_registry_value::<mlua::Table>("mux.parents")
                 .unwrap(),
         )
@@ -65,25 +44,13 @@ fn scripts(c: &Config, w: World) -> Scripts {
     s
 }
 fn run(s: &Scripts, c: &Config, who: i64, line: &str) -> String {
-    let action = commands::run(s, c, ObjectId(who), 71, line).unwrap();
-    let mut messages = s
-        .outbox
-        .borrow_mut()
-        .drain(..)
-        .map(|(_, m)| m.source().to_string())
-        .collect::<Vec<_>>();
-    if let Action::Reply(t) | Action::CommitReply(t) | Action::Report(t) | Action::StyledReport(t) =
-        action
-    {
-        messages.push(t);
-    }
-    messages.join("\n")
+    run_text(s, c, ObjectId(who), 71, line)
 }
 fn lua(s: &Scripts, source: &str) {
     s.eval_callback::<()>(source).unwrap();
 }
 async fn save(s: &Scripts, c: &Config) -> anyhow::Result<()> {
-    let w = s.world.borrow().clone();
+    let w = s.world().clone();
     persistence::save(&c.database(), &w).await
 }
 
@@ -97,12 +64,12 @@ async fn typed_catalog_public_validation_silence_and_failure_rollback() {
             .lines()
             .map(|l| l.split('\t').next().unwrap())
             .collect::<Vec<_>>(),
-        stompymux_rs::locks::LOCKS
+        stompymux_rs::LOCKS
             .iter()
             .map(|l| l.name())
             .collect::<Vec<_>>()
     );
-    for lock in stompymux_rs::locks::LOCKS {
+    for lock in stompymux_rs::LOCKS {
         lua(
             &s,
             &format!(
@@ -143,14 +110,9 @@ async fn typed_catalog_public_validation_silence_and_failure_rollback() {
         assert(mux.world.lock_passes{object=13,enactor=2,lock=mux.world.locks.TRAVERSE}==false)
     "#,
     );
-    assert!(s.outbox.borrow().is_empty());
-    assert!(
-        !s.world.borrow().objects[&ObjectId(13)]
-            .state
-            .contains_key("test")
-    );
-    s.world
-        .borrow_mut()
+    assert!(s.outbox().is_empty());
+    assert!(!s.world().objects[&ObjectId(13)].state.contains_key("test"));
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(13))
         .unwrap()
@@ -219,7 +181,7 @@ async fn transfers_locks_subjects_containment_and_use_messages() {
     assert!(run(&s, &c, 2, "get Widget").contains("Taken."));
     assert!(run(&s, &c, 2, "inventory").contains("Widget"));
     assert!(run(&s, &c, 2, "give Bag=Widget").contains("Given."));
-    assert_eq!(s.world.borrow().objects[&item].location, Some(bag));
+    assert_eq!(s.world().objects[&item].location, Some(bag));
     assert!(run(&s, &c, 2, "get Bag's Widget").contains("Taken."));
     assert!(run(&s, &c, 2, "drop Widget").contains("Dropped."));
     lua(
@@ -232,11 +194,11 @@ async fn transfers_locks_subjects_containment_and_use_messages() {
         "_parents['default_thing.lua'].locks.use=function() return true end",
     );
     assert!(run(&s, &c, 2, "use Widget").contains("activated"));
-    assert!(s.world.borrow().objects[&item].state.contains_key("use"));
+    assert!(s.world().objects[&item].state.contains_key("use"));
     run(&s, &c, 2, "get Bag");
     assert!(
         run(&s, &c, 2, "give Bag=Bag").contains("itself")
-            || s.world.borrow().objects[&bag].location == Some(ObjectId(2))
+            || s.world().objects[&bag].location == Some(ObjectId(2))
     );
     save(&s, &c).await.unwrap();
     let loaded = persistence::load(&c.database()).await.unwrap();
@@ -262,22 +224,18 @@ async fn enter_leave_speak_matching_and_callback_rollback() {
         ),
     );
     run(&s, &c, 2, "get Twin");
-    assert_eq!(
-        s.world.borrow().objects[&second].location,
-        Some(ObjectId(2))
-    );
-    assert_eq!(s.world.borrow().objects[&first].location, Some(room));
+    assert_eq!(s.world().objects[&second].location, Some(ObjectId(2)));
+    assert_eq!(s.world().objects[&first].location, Some(room));
     run(&s, &c, 2, "enter Cabin");
-    assert_eq!(s.world.borrow().objects[&ObjectId(2)].location, Some(bag));
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(bag));
     run(&s, &c, 2, "leave");
-    assert_eq!(s.world.borrow().objects[&ObjectId(2)].location, Some(room));
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(room));
     lua(
         &s,
         "assert(table.concat(trace,',')=='enter,room-leave,leave,room-enter')",
     );
     assert!(run(&s, &c, 2, "say outside").contains("outside"));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&room)
         .unwrap()
@@ -285,16 +243,14 @@ async fn enter_leave_speak_matching_and_callback_rollback() {
         .insert(Flag::Auditorium);
     assert!(run(&s, &c, 2, "\"blocked").contains("speech denied"));
     lua(&s, "_parents['default_room.lua'].locks.speak=nil");
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(1))
         .unwrap()
         .flags
         .insert(Flag::Gagged);
     assert!(run(&s, &c, 1, "say wizard").contains("wizard"));
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -306,8 +262,8 @@ async fn enter_leave_speak_matching_and_callback_rollback() {
         "_parents['default_thing.lua'].events={on_enter=function(ctx) mux.world.object(ctx.object):state('bad'):set('leak',true);error('movement failed') end}",
     );
     assert!(run(&s, &c, 2, "enter Cabin").contains("movement failed"));
-    assert_eq!(s.world.borrow().objects[&ObjectId(2)].location, Some(room));
-    assert!(!s.world.borrow().objects[&bag].state.contains_key("bad"));
+    assert_eq!(s.world().objects[&ObjectId(2)].location, Some(room));
+    assert!(!s.world().objects[&bag].state.contains_key("bad"));
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -335,7 +291,7 @@ async fn builder_creation_link_home_clone_and_dropto_roundtrip() {
         ),
     );
     assert!(run(&s, &c, 2, "@open forbidden").contains("Permission denied"));
-    let exit = ObjectId(s.world.borrow().next_id);
+    let exit = ObjectId(s.world().next_id);
     assert!(
         run(
             &s,
@@ -345,43 +301,43 @@ async fn builder_creation_link_home_clone_and_dropto_roundtrip() {
         )
         .contains("Linked.")
     );
-    assert_eq!(s.world.borrow().objects[&exit].destination, Some(target));
+    assert_eq!(s.world().objects[&exit].destination, Some(target));
     let back = ObjectId(exit.0 + 1);
-    assert_eq!(s.world.borrow().objects[&back].location, Some(target));
-    assert_eq!(s.world.borrow().objects[&back].destination, Some(room));
+    assert_eq!(s.world().objects[&back].location, Some(target));
+    assert_eq!(s.world().objects[&back].destination, Some(room));
     run(&s, &c, 1, &format!("@unlink #{}", exit.0));
-    assert_eq!(s.world.borrow().objects[&exit].destination, None);
+    assert_eq!(s.world().objects[&exit].destination, None);
     run(&s, &c, 1, &format!("@link #{}=#{}", exit.0, target.0));
     assert!(run(&s, &c, 1, &format!("@link #{}=#{}", template.0, target.0)).contains("Home set"));
     lua(&s, "assert(table.concat(seen,',')=='link,link,link,home')");
-    let clone = ObjectId(s.world.borrow().next_id);
+    let clone = ObjectId(s.world().next_id);
     let response = run(&s, &c, 1, &format!("@clone/inv #{}=Copy", template.0));
     let confirmation = response.find("Template cloned as Copy").unwrap();
     assert!(
         confirmation < response.find("CLONE EVENT").unwrap(),
         "{response}"
     );
-    let cloned = s.world.borrow().objects[&clone].clone();
+    let cloned = s.world().objects[&clone].clone();
     assert_eq!(cloned.location, Some(ObjectId(1)));
     assert_eq!(cloned.description.as_deref(), Some("copied description"));
     assert!(cloned.state["copy"].contains_key("cloned"));
     assert!(!cloned.flags.contains(Flag::Wizard));
     run(&s, &c, 1, &format!("@link here=#{}", target.0));
     run(&s, &c, 1, "drop Copy");
-    assert_eq!(s.world.borrow().objects[&clone].location, Some(target));
-    let room_clone = ObjectId(s.world.borrow().next_id);
+    assert_eq!(s.world().objects[&clone].location, Some(target));
+    let room_clone = ObjectId(s.world().next_id);
     run(&s, &c, 1, &format!("@clone #{}=Room Copy", room.0));
-    assert_eq!(s.world.borrow().objects[&room_clone].dropto, Some(target));
+    assert_eq!(s.world().objects[&room_clone].dropto, Some(target));
     lua(
         &s,
         "_parents['default_room.lua'].locks.link=function()return false end",
     );
-    let denied = ObjectId(s.world.borrow().next_id);
+    let denied = ObjectId(s.world().next_id);
     run(&s, &c, 1, &format!("@clone #{}=Blocked copy", exit.0));
-    assert_eq!(s.world.borrow().objects[&denied].destination, None);
+    assert_eq!(s.world().objects[&denied].destination, None);
     assert!(run(&s, &c, 1, "@clone #2").contains("cannot clone"));
     run(&s, &c, 1, "@unlink here");
-    assert_eq!(s.world.borrow().objects[&room].dropto, None);
+    assert_eq!(s.world().objects[&room].dropto, None);
     save(&s, &c).await.unwrap();
     let loaded = persistence::load(&c.database()).await.unwrap();
     loaded.validate(&c).unwrap();
@@ -402,18 +358,18 @@ async fn link_failure_partial_success_callback_rollback_and_write_failure() {
         &s,
         "_parents['default_room.lua'].locks={link=function() return false end}",
     );
-    let opened = ObjectId(s.world.borrow().next_id);
+    let opened = ObjectId(s.world().next_id);
     assert!(run(&s, &c, 1, &format!("@open door=#{}", target.0)).contains("can't link"));
-    assert_eq!(s.world.borrow().objects[&opened].destination, None);
+    assert_eq!(s.world().objects[&opened].destination, None);
     save(&s, &c).await.unwrap();
-    let before = s.world.borrow().clone();
+    let before = s.world().clone();
     lua(
         &s,
         "_parents['default_room.lua'].locks.link=function(ctx) mux.world.object(ctx.object):state('bad'):set('leak',1);error('link failed') end",
     );
     assert!(run(&s, &c, 1, &format!("@open aborted=#{}", target.0)).contains("link failed"));
-    assert_eq!(s.world.borrow().next_id, before.next_id);
-    assert!(!s.world.borrow().objects[&target].state.contains_key("bad"));
+    assert_eq!(s.world().next_id, before.next_id);
+    assert!(!s.world().objects[&target].state.contains_key("bad"));
     lua(
         &s,
         "_parents['default_room.lua'].locks.link=function()return true end",
@@ -470,11 +426,7 @@ async fn native_results_nested_policies_and_channel_descriptor() {
         "_parents['default_thing.lua'].locks={channel_join=function(ctx) assert(ctx.silent and ctx.descriptor==71 and #ctx.args==0);mux.world.object(ctx.object):state('channel'):set('checked',true);return true end}",
     );
     run(&s, &c, 2, "addcom pol=PolicyChan");
-    assert!(
-        s.world.borrow().objects[&item]
-            .state
-            .contains_key("channel")
-    );
+    assert!(s.world().objects[&item].state.contains_key("channel"));
 }
 
 #[tokio::test(flavor = "current_thread")]
@@ -494,7 +446,7 @@ async fn movement_exit_inventory_and_lock_resource_failure() {
     "#,
     );
     run(&s, &c, 1, "enter Quiet Cabin");
-    assert_eq!(s.world.borrow().objects[&ObjectId(1)].location, Some(cabin));
+    assert_eq!(s.world().objects[&ObjectId(1)].location, Some(cabin));
     run(&s, &c, 1, "leave");
     lua(
         &s,
@@ -502,7 +454,7 @@ async fn movement_exit_inventory_and_lock_resource_failure() {
     );
     assert!(run(&s, &c, 2, "get Loose Exit").contains("Permission denied"));
     assert!(run(&s, &c, 1, "get Loose Exit").contains("Exit taken"));
-    assert_eq!(s.world.borrow().objects[&exit].destination, Some(room));
+    assert_eq!(s.world().objects[&exit].destination, Some(room));
     assert!(run(&s, &c, 1, "drop Loose Exit").contains("Exit dropped"));
     assert!(run(&s, &c, 2, "give/q #1=anything").contains("Unsupported command switch"));
     assert!(run(&s, &c, 1, "enter/invalid Quiet Cabin").contains("Unsupported"));
@@ -514,11 +466,11 @@ async fn movement_exit_inventory_and_lock_resource_failure() {
     )
     .unwrap();
     let limited = Config::load(d.path()).unwrap();
-    let s = scripts(&limited, s.world.borrow().clone());
+    let s = scripts(&limited, s.world().clone());
     lua(
         &s,
         "_parents['default_thing.lua'].locks={use=function(ctx) mux.world.object(ctx.object):state('bad'):set('value',1);while true do end end}",
     );
     assert!(run(&s, &limited, 1, "use Quiet Cabin").contains("budget"));
-    assert!(!s.world.borrow().objects[&cabin].state.contains_key("bad"));
+    assert!(!s.world().objects[&cabin].state.contains_key("bad"));
 }

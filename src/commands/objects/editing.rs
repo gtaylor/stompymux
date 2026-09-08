@@ -13,7 +13,7 @@ fn assignment<'a>(
         .context("Specify <object>=<value>.")?;
     let id = builders::target(ctx, target)?;
     ensure!(
-        flags::controls(&ctx.scripts.world.borrow(), ctx.player, id),
+        crate::authority::controls(&ctx.scripts.world.borrow(), ctx.player, id),
         "Permission denied."
     );
     Ok((id, value))
@@ -124,7 +124,7 @@ pub(super) fn zone(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
                 "Invalid zone object type."
             );
             ensure!(
-                flags::controls(&world, ctx.player, zone),
+                crate::authority::controls(&world, ctx.player, zone),
                 "You cannot move that object to that zone."
             );
         }

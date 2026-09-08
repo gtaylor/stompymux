@@ -223,7 +223,7 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         std::fs::write(
             d.path().join("stompymux.toml"),
-            "[runtime]\nwrite_timeout_ms=10\n",
+            "[runtime]\nwrite_timeout_ms=1000\n",
         )
         .unwrap();
         let c = Config::load(d.path()).unwrap();
@@ -234,12 +234,25 @@ mod tests {
         })
         .await;
         assert!(text.contains("42") && text.contains("unavailable"));
-        let text = report_with(&c, || {
+        // The success case permits worker scheduling under a parallel test load.
+        // Only the deadline case needs a deliberately short timeout.
+        std::fs::write(
+            d.path().join("stompymux.toml"),
+            "[runtime]\nwrite_timeout_ms=10\n",
+        )
+        .unwrap();
+        let deadline_config = Config::load(d.path()).unwrap();
+        let text = report_with(&deadline_config, || {
             std::thread::sleep(Duration::from_millis(50));
             ProcessSnapshot::default()
         })
         .await;
         assert!(text.contains("deadline"));
         c.logger.shutdown(&c).await.unwrap();
+        deadline_config
+            .logger
+            .shutdown(&deadline_config)
+            .await
+            .unwrap();
     }
 }

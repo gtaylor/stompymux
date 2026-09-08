@@ -1,8 +1,7 @@
 //! Compatibility fixtures for C world/walkdb.c, objects/flags.c and match_helpers.c.
 use stompymux_rs::{
+    Flag, Kind, Object, ObjectId, World,
     find::{self, SearchRange},
-    flags::Flag,
-    world::{Kind, Object, ObjectId, World},
 };
 
 /// Small deterministic world with explicit flags and sparse identities.
@@ -20,7 +19,7 @@ fn world() -> World {
         (8, "[bold]Red[/] \x1b[31mApple\x1b[0m", Kind::Thing),
         (9, "*literal", Kind::Thing),
     ] {
-        let mut flags = stompymux_rs::flags::FlagSet::default();
+        let mut flags = stompymux_rs::FlagSet::default();
         if (1..=3).contains(&id) {
             flags.insert(Flag::Wizard);
         }
@@ -106,7 +105,7 @@ fn full_reports_are_bounded_and_explicit_about_omissions() {
     assert!(stompymux_rs::telnet::encode(&report).len() <= 200);
     assert!(find::report(&w, ObjectId(2), "", 10).is_err());
     for limit in 1..40 {
-        assert!(find::bounded_error("é error", limit).len() <= limit);
+        assert!(stompymux_rs::telnet::bounded_error("é error", limit).len() <= limit);
     }
 }
 

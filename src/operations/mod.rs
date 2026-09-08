@@ -11,19 +11,23 @@ pub const VERSION: &str = concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_V
 /// Native administrative WHO requires the actual invoking player's connection.
 pub fn who_command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
     Ok(if ctx.session.is_none() {
-        Action::Reply("@who is only available from an active connection.".into())
+        Action::Report(crate::commands::Report::Reply(
+            "@who is only available from an active connection.".into(),
+        ))
     } else {
-        Action::Who(input.args.clone())
+        Action::Server(crate::commands::ServerRequest::Who(input.args.clone()))
     })
 }
 
 /// Public build identity, usable by queued commands too.
 pub fn version_command(_: &CommandContext<'_>, input: &CommandInput) -> Result<Action> {
-    Ok(Action::Reply(if input.args.is_empty() {
-        VERSION.into()
-    } else {
-        "Usage: version".into()
-    }))
+    Ok(Action::Report(crate::commands::Report::Reply(
+        if input.args.is_empty() {
+            VERSION.into()
+        } else {
+            "Usage: version".into()
+        },
+    )))
 }
 
 /// One immutable connection row, already ordered by the owning session map.

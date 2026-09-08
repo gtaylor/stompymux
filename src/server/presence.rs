@@ -127,8 +127,7 @@ impl Server {
             );
             *self.scripts.world.borrow_mut() = before;
             self.reconcile_connections();
-            self.scripts.outbox.borrow_mut().clear();
-            self.scripts.flows.rollback();
+            self.scripts.effects.rollback();
             return;
         }
         if !self.commit(before).await {
@@ -179,7 +178,7 @@ pub(super) async fn reject_site(
                     "ERROR",
                     format!("Bad-site message rendering: {error:#}"),
                 );
-                let fallback = crate::find::bounded_error(
+                let fallback = crate::telnet::bounded_error(
                     "Connection refused.",
                     config.runtime.output_message_limit,
                 );

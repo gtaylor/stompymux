@@ -100,13 +100,14 @@ fn show(ctx: &CommandContext<'_>, id: ObjectId, through: bool) -> Result<()> {
             "on_describe",
         );
     }
-    if o.kind == Kind::Room || flags::is_wizard(&ctx.scripts.world.borrow(), ctx.player) {
+    if o.kind == Kind::Room || crate::authority::is_wizard(&ctx.scripts.world.borrow(), ctx.player)
+    {
         tell(
             ctx,
             format!(
                 "{}{}",
                 o.name,
-                if flags::is_wizard(&ctx.scripts.world.borrow(), ctx.player) {
+                if crate::authority::is_wizard(&ctx.scripts.world.borrow(), ctx.player) {
                     crate::find::suffix(&o)
                 } else {
                     String::new()

@@ -72,7 +72,7 @@ impl Permissions {
         if player == ObjectId(1) {
             return true;
         }
-        let wizard = flags::is_wizard(world, player);
+        let wizard = crate::authority::is_wizard(world, player);
         if self.roles() != Self::EVERYONE && !(wizard && self.contains(Self::WIZARD)) {
             return false;
         }

@@ -13,8 +13,7 @@ struct Fixture {
 }
 
 fn palette() -> Palette {
-    Palette::from_config(&stompymux_rs::config::Config::load("tests/fixtures/game").unwrap())
-        .unwrap()
+    Palette::from_config(&stompymux_rs::Config::load("tests/fixtures/game").unwrap()).unwrap()
 }
 
 #[test]
@@ -229,7 +228,7 @@ fn preset_merging_capability_fallback_and_escaping() {
 #[tokio::test]
 async fn lua_documents_are_immutable_bounded_and_palette_aware() {
     use std::{cell::RefCell, rc::Rc};
-    let c = stompymux_rs::config::Config::load("tests/fixtures/game").unwrap();
+    let c = stompymux_rs::Config::load("tests/fixtures/game").unwrap();
     let world = stompymux_rs::persistence::load(&c.database())
         .await
         .unwrap();
@@ -243,9 +242,9 @@ async fn lua_documents_are_immutable_bounded_and_palette_aware() {
         ),
     )
     .unwrap();
-    let c = stompymux_rs::config::Config::load(temp.path()).unwrap();
-    let s = stompymux_rs::lua::Scripts::new(&c, Rc::new(RefCell::new(world))).unwrap();
-    s.lua.load(r#"
+    let c = stompymux_rs::Config::load(temp.path()).unwrap();
+    let s = stompymux_rs::Scripts::new(&c, Rc::new(RefCell::new(world))).unwrap();
+    s.inspect_lua().load(r#"
       local d=mux.text.markdown('**value**')
       assert(not pcall(function() d.source='changed' end))
       mux.world.pemit(mux.world.object(2),d)
@@ -259,7 +258,7 @@ async fn lua_documents_are_immutable_bounded_and_palette_aware() {
       for i=1,10 do local ok,v=pcall(mux.text.markdown,string.rep('x',80));if not ok then failed=true;break end;docs[i]=v end
       assert(failed)
     "#).exec().unwrap();
-    assert!(matches!(&s.outbox.borrow()[0].1, Document::Markdown(_)));
+    assert!(matches!(&s.outbox()[0].1, Document::Markdown(_)));
 }
 
 #[test]
@@ -346,7 +345,7 @@ fn help_index_visibility_order_and_relative_topics() {
     ] {
         std::fs::write(help.join(format!("{path}.md")),format!("+++\ntitle='{keyword}'\ndescription='{keyword} description'\nkeywords=['{keyword}']\narticle_tags=['root']\nweight={weight}\nwizard_only={private}\n+++\n{keyword} body\n")).unwrap();
     }
-    let config = stompymux_rs::config::Config::load(temp.path()).unwrap();
+    let config = stompymux_rs::Config::load(temp.path()).unwrap();
     let index = stompymux_rs::help::HelpIndex::load(&config).unwrap();
     let lookup = |topic: &str, wizard: bool| {
         index
@@ -374,11 +373,11 @@ fn invalid_palette_has_configuration_source_and_limits() {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path().join("stompymux.toml");
     std::fs::write(&root, "[colors]\nred=[1,2,3]\n").unwrap();
-    let error = stompymux_rs::config::Config::load(temp.path()).unwrap_err();
+    let error = stompymux_rs::Config::load(temp.path()).unwrap_err();
     assert!(format!("{error:#}").contains("stompymux.toml"));
     assert!(format!("{error:#}").contains("colors.red"));
     std::fs::write(&root, "[osc8.presets]\nbutton='mystery=true'\n").unwrap();
-    let error = stompymux_rs::config::Config::load(temp.path()).unwrap_err();
+    let error = stompymux_rs::Config::load(temp.path()).unwrap_err();
     assert!(format!("{error:#}").contains("osc8.presets.button"));
     let p = Palette::default();
     for s in [

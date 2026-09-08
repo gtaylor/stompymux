@@ -45,7 +45,7 @@ impl Report {
         if self.truncated {
             self.text.push_str("***Output truncated***\r\n");
         }
-        crate::find::bounded_error(self.text.trim_end_matches(['\r', '\n']), self.limit)
+        super::bounded_error(self.text.trim_end_matches(['\r', '\n']), self.limit)
     }
 }
 /// Render live protocol state and a sampled writer state for one session.

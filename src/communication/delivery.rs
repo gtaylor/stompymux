@@ -96,7 +96,7 @@ impl Service<'_> {
             .ok_or_else(|| anyhow::anyhow!("channel removed by callback"))?;
         ensure!(ch.id == identity, "channel replaced by callback");
         ch.history.push(ChannelMessage {
-            at: crate::accounts::now(),
+            at: crate::clock::wall_time(),
             message,
         });
         let expired = ch.history.len().saturating_sub(HISTORY_LIMIT);

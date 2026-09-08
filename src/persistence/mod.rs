@@ -4,7 +4,7 @@ mod load;
 mod macros;
 mod maintenance;
 mod write;
-use crate::world::*;
+use crate::{accounts::Login, world::*};
 use anyhow::{Context, Result, ensure};
 use sqlx::{Connection, SqliteConnection, sqlite::SqliteConnectOptions};
 use std::path::{Path, PathBuf};
@@ -180,7 +180,7 @@ pub fn trim_history(history: &mut Vec<Login>, limit: usize) {
 /// The caller owns restoring its in-memory snapshot if any stage fails.
 pub async fn repair<F>(path: &Path, timeout: u64, apply: F) -> Result<crate::dbck::DbCheckReport>
 where
-    F: FnOnce(&crate::dbck::Links) -> Result<(World, crate::dbck::DbCheckReport)>,
+    F: FnOnce(&crate::world::Links) -> Result<(World, crate::dbck::DbCheckReport)>,
 {
     let mut c = connect(path, timeout, false, false).await?;
     let result = async {
@@ -214,7 +214,7 @@ where
             .await?;
         if changes_after > changes_before {
             sqlx::query("UPDATE snapshot SET dump_time=? WHERE id=1")
-                .bind(crate::accounts::now())
+                .bind(crate::clock::wall_time())
                 .execute(&mut *tx)
                 .await?;
         }
@@ -246,7 +246,11 @@ pub async fn validate_lists(path: &Path, world: &World, timeout: u64) -> Result<
 }
 
 /// Read one object's durable list slots without acquiring a write connection.
-pub async fn inspect_links(path: &Path, object: ObjectId, timeout: u64) -> Result<[i64; 3]> {
+pub async fn inspect_links(
+    path: &Path,
+    object: ObjectId,
+    timeout: u64,
+) -> Result<crate::world::LinkSlots> {
     use sqlx::Row;
     let mut c = connect(path, timeout, true, false).await?;
     let result = async {
@@ -255,11 +259,11 @@ pub async fn inspect_links(path: &Path, object: ObjectId, timeout: u64) -> Resul
             .fetch_one(&mut c)
             .await
             .with_context(|| format!("reading persisted bookkeeping for #{}", object.0))?;
-        Ok([
-            row.try_get("contents")?,
-            row.try_get("exits")?,
-            row.try_get("next")?,
-        ])
+        Ok(crate::world::LinkSlots {
+            contents: row.try_get("contents")?,
+            exits: row.try_get("exits")?,
+            next: row.try_get("next")?,
+        })
     }
     .await;
     finish(c, result).await

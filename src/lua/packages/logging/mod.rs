@@ -1,5 +1,5 @@
 //! Transaction-staged mux.log binding; no filesystem operations run in the Lua VM.
-use crate::lua::{RuntimeMode, flows, transactions};
+use crate::lua::{RuntimeMode, transactions};
 use mlua::{Lua, Table};
 /// Register argument validation and bounded admission to the callback's pending effects.
 pub(super) fn register(lua: &Lua, api: &Table) -> mlua::Result<()> {
@@ -38,8 +38,8 @@ pub(super) fn register(lua: &Lua, api: &Table) -> mlua::Result<()> {
                     return Ok(false);
                 };
                 let config = crate::lua::configuration(lua);
-                let engine = lua.app_data_ref::<flows::Engine>().unwrap();
-                engine.stage_log(request, &config)
+                let effects = lua.app_data_ref::<crate::runtime::Effects>().unwrap();
+                Ok(effects.stage_log(request, &config))
             },
         )?,
     )

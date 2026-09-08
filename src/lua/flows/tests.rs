@@ -1,6 +1,10 @@
 //! Flow state-machine, callback boundary and VM-replacement regression tests.
 use super::*;
-use crate::lua::{Scripts, sources::Sources};
+use crate::{
+    config::Config,
+    lua::{Scripts, sources::Sources},
+    world::ObjectId,
+};
 use std::{path::Path, sync::Arc};
 
 async fn setup(source: &str, change: impl FnOnce(&mut Config)) -> (Config, Scripts) {
@@ -46,8 +50,8 @@ fn start(s: &Scripts, session: u64, step: &str) -> anyhow::Result<()> {
     })
 }
 fn output(s: &Scripts) -> String {
-    s.flows
-        .drain()
+    s.effects
+        .drain_private()
         .into_iter()
         .map(|o| o.document.source().to_string())
         .collect::<Vec<_>>()
@@ -80,12 +84,12 @@ async fn contexts_input_scratch_outcomes_and_order() {
     )
     .await;
     start(&s, 1, "first").unwrap();
-    let pending = s.flows.drain();
+    let pending = s.effects.drain_private();
     assert_eq!(pending.iter().map(|p| p.after).collect::<Vec<_>>(), [1, 2]);
     assert!(pending[0].document.contains("transition"));
     assert!(pending[1].document.contains("question"));
     assert!(!pending[1].document.contains("ignored"));
-    s.flows.commit();
+    s.effects.commit();
     s.outbox.borrow_mut().clear();
     s.flow_input(1, "").unwrap();
     assert!(output(&s).contains("question"));
@@ -204,13 +208,13 @@ async fn committed_retry_reload_and_disconnect_identity() {
     )
     .await;
     start(&s, 1, "step").unwrap();
-    s.flows.commit();
+    s.effects.commit();
     output(&s);
     s.flow_input(1, "retry").unwrap();
-    s.flows.rollback();
+    s.effects.rollback();
     s.flow_input(1, "retry").unwrap();
     assert!(output(&s).contains("2retry"));
-    s.flows.rollback();
+    s.effects.rollback();
     let mut sources = (*s.sources).clone();
     sources.files.insert("global_logic/probe.lua".into(),r#"return {flows={step=function(ctx) assert(ctx.flow.counter=='1');return {action='done',message='new '..ctx.input} end}}"#.into());
     let next = Scripts::from_sources(
@@ -221,13 +225,13 @@ async fn committed_retry_reload_and_disconnect_identity() {
         RuntimeMode::Live,
     )
     .unwrap();
-    next.flows.inherit(&s.flows);
+    next.effects.inherit(&s.effects);
     next.flow_input(1, "code").unwrap();
     assert_eq!(output(&next), "new code");
-    let saved = s.flows.snapshot();
+    let saved = s.effects.checkpoint();
     s.flows.sessions(Default::default());
-    s.flows.restore(saved);
-    s.flows.rollback();
+    s.effects.restore(saved);
+    s.effects.rollback();
     assert!(!s.flows.active(1));
 }
 
@@ -239,7 +243,7 @@ async fn removed_steps_and_initialization_validation() {
     )
     .await;
     start(&s, 1, "step").unwrap();
-    s.flows.commit();
+    s.effects.commit();
     output(&s);
     let mut sources = (*s.sources).clone();
     sources.files.remove("global_logic/probe.lua");
@@ -251,7 +255,7 @@ async fn removed_steps_and_initialization_validation() {
         RuntimeMode::Live,
     )
     .unwrap();
-    next.flows.inherit(&s.flows);
+    next.effects.inherit(&s.effects);
     assert!(
         next.flow_input(1, "x")
             .unwrap_err()
@@ -308,13 +312,12 @@ async fn hosted_tests_background_calls_and_immutable_error_codes() {
             .to_string()
             .contains("unavailable.checking")
     );
-    testing.flows = testing.flows.hosted(&s.flows);
-    testing.lua.set_app_data(testing.flows.clone());
+    testing.host_effects(&s);
     // No dynamically scoped descriptor: the explicitly named authenticated connection is sufficient.
     start(&testing, 2, "step").unwrap();
     assert!(s.flows.active(2));
     assert!(output(&testing).contains("hosted"));
-    s.flows.commit();
+    s.effects.commit();
     s.flow_input(2, "resumed on active VM").unwrap();
     assert_eq!(output(&s), "resumed on active VM");
     s.eval_callback::<()>(
@@ -339,7 +342,7 @@ async fn nested_starts_invalid_outcomes_and_prompt_limits() {
         |_| {},
     )
     .await;
-    let identity = s.flows.state.borrow().sessions[&1];
+    let identity = s.effects.session(1).unwrap();
     s.flows
         .sessions((1..=40).map(|id| (id, identity)).collect());
     assert!(
@@ -348,7 +351,7 @@ async fn nested_starts_invalid_outcomes_and_prompt_limits() {
             .to_string()
             .contains("nested-start limit")
     );
-    assert!(s.flows.state.borrow().pending.active.is_empty());
+    assert!((1..=40).all(|session| !s.flows.active(session)));
     for outcome in [
         "nil",
         "{action='unknown'}",
@@ -394,7 +397,7 @@ async fn object_root_resolution_dynamic_steps_and_shutdown() {
         RuntimeMode::Live,
     )
     .unwrap();
-    object.flows.inherit(&s.flows);
+    object.effects.inherit(&s.effects);
     let f = object
         .lua
         .load("mux.session.flow_start(1,'probe.lua','step')")
@@ -406,9 +409,9 @@ async fn object_root_resolution_dynamic_steps_and_shutdown() {
     object.flow_input(1, "x").unwrap();
     assert_eq!(output(&object), "dynamic");
     start(&object, 2, "step").unwrap();
-    object.flows.commit();
+    object.effects.commit();
     object.flows.stop();
-    object.flows.rollback();
+    object.effects.rollback();
     assert!(!object.flows.active(2));
     assert!(start(&object, 1, "step").is_err());
 }

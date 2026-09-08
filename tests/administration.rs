@@ -1,38 +1,17 @@
 //! Runtime directives, effective Lua snapshots and C permission/parser compatibility.
-use std::{cell::RefCell, path::Path, rc::Rc};
 use stompymux_rs::{
+    Flag, ObjectId, Scripts,
     commands::{self, Action},
     config::{
         Config,
         administration::{Request, Support, support},
         directives::DIRECTIVES,
     },
-    flags::Flag,
-    lua::Scripts,
-    persistence,
-    world::ObjectId,
 };
-fn copy(from: &Path, to: &Path) {
-    std::fs::create_dir_all(to).unwrap();
-    for e in std::fs::read_dir(from).unwrap() {
-        let e = e.unwrap();
-        if e.path().is_dir() {
-            copy(&e.path(), &to.join(e.file_name()));
-        } else {
-            std::fs::copy(e.path(), to.join(e.file_name())).unwrap();
-        }
-    }
-}
+mod support;
+use support::isolated_scripts;
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
-    let d = tempfile::tempdir().unwrap();
-    copy(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"),
-        d.path(),
-    );
-    let c = Config::load(d.path()).unwrap();
-    let w = persistence::load(&c.database()).await.unwrap();
-    let s = Scripts::new(&c, Rc::new(RefCell::new(w))).unwrap();
-    (d, c, s)
+    isolated_scripts().await
 }
 fn edit(
     c: &mut Config,
@@ -46,9 +25,9 @@ fn edit(
             directive: name.into(),
             value: value.into(),
         },
-        &s.world.borrow(),
+        &s.world(),
         ObjectId(who),
-        &s.commands,
+        s.commands(),
     )?;
     s.configure(&candidate.config)?;
     *c = candidate.config;
@@ -57,14 +36,15 @@ fn edit(
 fn run(s: &Scripts, c: &Config, who: i64, line: &str) -> String {
     let action = commands::run(s, c, ObjectId(who), 1, line).unwrap();
     let output = s
-        .outbox
-        .borrow_mut()
-        .drain(..)
+        .drain_outbox()
+        .into_iter()
         .map(|(_, d)| d.source().to_string())
         .collect::<Vec<_>>()
         .join("\n");
     match action {
-        Action::Reply(v) | Action::LiteralReport(v) | Action::Report(v) => v,
+        Action::Report(commands::Report::Reply(v))
+        | Action::Report(commands::Report::Literal(v))
+        | Action::Report(commands::Report::Inspection(v)) => v,
         _ => output,
     }
 }
@@ -131,8 +111,7 @@ async fn edits_partial_success_aliases_and_live_handles() {
     let (_d, mut c, mut s) = fixture().await;
     let warnings = edit(&mut c, &mut s, 1, "access", "say wizard unknown").unwrap();
     assert_eq!(warnings.len(), 1);
-    s.world
-        .borrow_mut()
+    s.world_mut()
         .objects
         .get_mut(&ObjectId(2))
         .unwrap()
@@ -156,11 +135,7 @@ async fn edits_partial_success_aliases_and_live_handles() {
     );
     assert_eq!(c.mux.default_thing_flags, [Flag::Ansi]);
     let id = s.eval_callback::<i64>("return mux.world.create_object{type=mux.world.types.THING,name='Live defaults'}:dbref()").unwrap();
-    assert!(
-        s.world.borrow().objects[&ObjectId(id)]
-            .flags
-            .contains(Flag::Ansi)
-    );
+    assert!(s.world().objects[&ObjectId(id)].flags.contains(Flag::Ansi));
     assert!(edit(&mut c, &mut s, 1, "alias", "l say").is_err());
     edit(&mut c, &mut s, 1, "alias", "view l").unwrap();
     assert_eq!(c.aliases.commands["view"], "look");
@@ -181,16 +156,16 @@ async fn edits_partial_success_aliases_and_live_handles() {
     s.eval_callback::<()>("held_state:set('key','long')")
         .unwrap();
     edit(&mut c, &mut s, 1, "lua_state_value_limit", "2").unwrap();
-    assert!(s.world.borrow().validate(&c).is_ok());
+    assert!(s.world().validate(&c).is_ok());
     assert!(
         s.eval_callback::<()>("held_state:set('key','longer')")
             .is_err()
     );
-    assert!(s.world.borrow().validate(&c).is_ok());
+    assert!(s.world().validate(&c).is_ok());
     assert!(edit(&mut c, &mut s, 1, "default_thing_lua_parent", "missing.lua").is_err());
-    let commands = s.commands.definitions().count();
+    let commands = s.commands().definitions().count();
     assert!(edit(&mut c, &mut s, 1, "access", "missing wizard").is_err());
-    assert_eq!(commands, s.commands.definitions().count());
+    assert_eq!(commands, s.commands().definitions().count());
 }
 #[tokio::test(flavor = "current_thread")]
 async fn sites_prepend_and_live_destinations() {
@@ -216,10 +191,9 @@ async fn sites_prepend_and_live_destinations() {
     assert!(!c.site_policy.classify("127.0.0.1".parse().unwrap()).suspect);
     assert!(edit(&mut c, &mut s, 1, "forbid_site", "::1 ::1").is_err());
     assert!(edit(&mut c, &mut s, 1, "default_home", "999999").is_err());
-    let room =
-        s.world
-            .borrow_mut()
-            .create(&c, "Runtime room".into(), stompymux_rs::world::Kind::Room);
+    let room = s
+        .world_mut()
+        .create(&c, "Runtime room".into(), stompymux_rs::Kind::Room);
     edit(
         &mut c,
         &mut s,

@@ -1,9 +1,6 @@
 //! Read-only object reports; debug bookkeeping is fetched by the asynchronous world owner.
 use super::{Action, CommandContext, CommandInput, target::builder_target};
-use crate::{
-    flags,
-    world::{Kind, ObjectId, World},
-};
+use crate::world::{Kind, ObjectId, World};
 use anyhow::{Context, Result};
 
 /// Stable object identity including type and flag letters, retaining stored markup for inspection.
@@ -37,7 +34,9 @@ pub(super) fn examine(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
         };
         let id = target(ctx, &input.args)?;
         if mode == "debug" {
-            return Ok(Action::ExamineDebug(id));
+            return Ok(Action::Server(
+                crate::commands::ServerRequest::ExamineDebug(id),
+            ));
         }
         let world = ctx.scripts.world.borrow();
         let o = &world.objects[&id];
@@ -122,9 +121,11 @@ pub(super) fn examine(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
             }
             _ => {}
         }
-        Ok(Action::Report(lines.join("\n")))
+        Ok(Action::Report(crate::commands::Report::Inspection(
+            lines.join("\n"),
+        )))
     })();
-    Ok(result.unwrap_or_else(|e| Action::Reply(e.to_string())))
+    Ok(result.unwrap_or_else(|e| Action::Report(crate::commands::Report::Reply(e.to_string()))))
 }
 
 /// List incoming homes, droptos and exits with shared legacy bounds.
@@ -146,7 +147,7 @@ pub(super) fn entrances(ctx: &CommandContext<'_>, input: &CommandInput) -> Resul
                 .objects
                 .range(ObjectId(range.lower)..=ObjectId(range.upper))
             {
-                if !flags::is_wizard(&world, ctx.player) {
+                if !crate::authority::is_wizard(&world, ctx.player) {
                     continue;
                 }
                 match o.kind {
@@ -171,13 +172,13 @@ pub(super) fn entrances(ctx: &CommandContext<'_>, input: &CommandInput) -> Resul
         Ok(lines.join("\n"))
     })();
     Ok(match result {
-        Ok(text) => Action::Report(text),
-        Err(e) => Action::Reply(e.to_string()),
+        Ok(text) => Action::Report(crate::commands::Report::Inspection(text)),
+        Err(e) => Action::Report(crate::commands::Report::Reply(e.to_string())),
     })
 }
 
 /// Use actual durable list pointers rather than reconstructing their order from object IDs.
-pub(crate) fn debug(world: &World, id: ObjectId, links: [i64; 3]) -> Result<String> {
+pub(crate) fn debug(world: &World, id: ObjectId, links: crate::world::LinkSlots) -> Result<String> {
     let o = world.objects.get(&id).context("Object missing")?;
     let raw = |id: Option<ObjectId>| id.map_or(-1, |v| v.0);
     Ok(format!(
@@ -189,10 +190,10 @@ pub(crate) fn debug(world: &World, id: ObjectId, links: [i64; 3]) -> Result<Stri
             Kind::Exit => o.destination,
             _ => o.location,
         }),
-        links[0],
-        links[1],
+        links.contents,
+        links.exits,
         raw(o.home),
-        links[2],
+        links.next,
         raw(o.zone),
         raw(o.affiliation),
         o.flags.names().join(" "),
