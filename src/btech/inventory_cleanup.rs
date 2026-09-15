@@ -1,0 +1,180 @@
+//! Operator cleanup of loose stock records, independent of unit repair and installed equipment.
+use super::{BattleInventoryEntry, BattlePart};
+use crate::{Config, ObjectId, World};
+use anyhow::{Context, Result, ensure};
+use serde::Serialize;
+use std::{collections::BTreeMap, sync::Arc};
+
+/// Detached cleanup totals; quantities are wide enough to count multiple full stock rows.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct BattleInventoryCleanup {
+    pub original_entries: usize,
+    pub new_entries: usize,
+    pub items: u64,
+}
+
+impl BattleInventoryCleanup {
+    /// Operator feedback retains the two inventory-consistency summary lines.
+    pub fn text(&self) -> String {
+        format!(
+            "Fixing done. Original entries: {}. New entries: {}.\nItems in new: {}. Unique items in new: {}.",
+            self.original_entries, self.new_entries, self.items, self.new_entries
+        )
+    }
+}
+
+/// Structural critical placeholders are not loose repair parts and are removed by FIXSTUFF.
+fn structural_placeholder(id: i32) -> bool {
+    matches!(id, 406 | 407 | 408 | 428 | 432 | 433 | 443 | 444)
+}
+
+/// Rebuild ordered positive stock, retaining manufacturer identities and rejecting quantity overflow.
+fn normalized(entries: &[BattleInventoryEntry]) -> Result<Vec<BattleInventoryEntry>> {
+    let mut quantities = BTreeMap::<(i32, u8), i64>::new();
+    for entry in entries {
+        if entry.brand_id > 5
+            || structural_placeholder(entry.part_id)
+            || BattlePart::from_id(entry.part_id).is_none()
+        {
+            continue;
+        }
+        let quantity = quantities.entry(entry.key()).or_default();
+        *quantity = quantity
+            .checked_add(i64::from(entry.quantity))
+            .context("Inventory quantity overflow")?;
+    }
+    quantities
+        .into_iter()
+        .filter(|(_, quantity)| *quantity > 0)
+        .map(|((part_id, brand_id), quantity)| {
+            Ok(BattleInventoryEntry {
+                part_id,
+                brand_id,
+                quantity: i32::try_from(quantity).context("Inventory quantity overflow")?,
+            })
+        })
+        .collect()
+}
+
+/// Wizard cleanup applies to any inventory holder; unit load is reconciled before atomic commit.
+/// This never changes installed equipment, armor, ammunition bins or repair state.
+pub fn clean_inventory(
+    world: &mut World,
+    config: &Config,
+    actor: ObjectId,
+    object: ObjectId,
+) -> Result<BattleInventoryCleanup> {
+    ensure!(
+        crate::authority::is_wizard(world, actor),
+        "Permission denied."
+    );
+    let entries = super::inventory(world, object)?;
+    let cleaned = normalized(entries)?;
+    let report = BattleInventoryCleanup {
+        original_entries: entries.len(),
+        new_entries: cleaned.len(),
+        items: cleaned.iter().try_fold(0u64, |sum, row| {
+            sum.checked_add(row.quantity as u64)
+                .context("Inventory item count overflow")
+        })?,
+    };
+    let mut candidate = world.clone();
+    let inventories = Arc::make_mut(&mut candidate.btech.inventories);
+    if cleaned.is_empty() {
+        inventories.remove(&object);
+    } else {
+        inventories.insert(object, cleaned);
+    }
+    if candidate.btech.constructed_units().contains_key(&object)
+        || candidate.btech.vehicles().contains_key(&object)
+    {
+        super::load::reconcile(&mut candidate, object, config.battletech.tsm_tow_bonus != 0)?;
+    }
+    candidate.btech.validate(&candidate)?;
+    *world = candidate;
+    Ok(report)
+}
+
+/// Stage the private summary with cleanup so output and callback failures restore both.
+pub fn clean_inventory_action(
+    scripts: &crate::Scripts,
+    config: &Config,
+    actor: ObjectId,
+    object: ObjectId,
+) -> Result<BattleInventoryCleanup> {
+    let before = scripts.world().clone();
+    let checkpoint = scripts.effects.checkpoint();
+    let result = (|| {
+        let report = clean_inventory(&mut scripts.world_mut(), config, actor, object)?;
+        super::notify_message(
+            scripts,
+            super::BattleMessageTarget::Player(actor),
+            &report.text(),
+        )?;
+        scripts.effects.validate()?;
+        Ok(report)
+    })();
+    if result.is_err() {
+        *scripts.world_mut() = before;
+        scripts.effects.restore(checkpoint);
+    }
+    result
+}
+
+/// FIXSTUFF operates on the operator's location and ignores arguments, as does the reference command.
+pub(crate) fn command(
+    ctx: &crate::CommandContext<'_>,
+    _input: &crate::CommandInput,
+) -> Result<crate::CommandAction> {
+    let result = (|| {
+        let object = ctx
+            .scripts
+            .world()
+            .objects
+            .get(&ctx.player)
+            .and_then(|player| player.location)
+            .context("Player has no location")?;
+        clean_inventory_action(ctx.scripts, ctx.config, ctx.player, object)
+    })();
+    Ok(match result {
+        Ok(_) => crate::CommandAction::Continue,
+        Err(error) => {
+            crate::CommandAction::Report(crate::CommandReport::Reply(format!("{error:#}")))
+        }
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Cleanup sums signed duplicate rows, discards placeholders and unknowns, and preserves brands.
+    #[test]
+    fn normalizes_stock_without_changing_part_or_brand_identity() {
+        let row = |part_id, brand_id, quantity| BattleInventoryEntry {
+            part_id,
+            brand_id,
+            quantity,
+        };
+        let mut entries = vec![
+            row(528, 0, 9),
+            row(528, 0, -4),
+            row(528, 1, 3),
+            row(528, 6, 8),
+            row(-1, 0, 1),
+            row(i32::MAX, 0, 1),
+            row(529, 0, -1),
+            row(530, 0, 0),
+        ];
+        entries.extend(
+            [406, 407, 408, 428, 432, 433, 443, 444]
+                .into_iter()
+                .map(|id| row(id, 0, 5)),
+        );
+        assert_eq!(
+            normalized(&entries).unwrap(),
+            vec![row(528, 0, 5), row(528, 1, 3)]
+        );
+        assert!(normalized(&[row(528, 0, i32::MAX), row(528, 0, 1)]).is_err());
+    }
+}

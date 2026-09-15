@@ -30,5 +30,5 @@ Turret
   Internals        { 4 }
     CRIT_1		  { CL.StreakSRM-4 - - }
     CRIT_2		  { CL.StreakSRM-4 - - }
-    CRIT_3		  { Ammo_CL.StreakSRM-4 50 - }
+    CRIT_3		  { Ammo_CL.StreakSRM-4 25 - }
 

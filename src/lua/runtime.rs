@@ -103,6 +103,15 @@ impl Scripts {
         }
         scripts.publish_services();
         scripts.flows.ready();
+        crate::configure_battle_sensor_policy(
+            &mut scripts.world.borrow_mut(),
+            config.battletech.seismic_see_stopped != 0,
+        );
+        crate::configure_battle_reactor_policy(
+            &mut scripts.world.borrow_mut(),
+            config.battletech.stackpole != 0,
+            config.battletech.explode_reactor > 1,
+        );
         Ok(scripts)
     }
 }

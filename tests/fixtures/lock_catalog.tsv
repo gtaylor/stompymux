@@ -15,3 +15,4 @@ SPEAK	say,quote	auditorium	player	player	false	none
 CHANNEL_JOIN	addcom	channel object	joining object	joining object	true	independent flags grant
 CHANNEL_TRANSMIT	channel speech	channel object	sender	sender	true	independent flags grant
 CHANNEL_RECEIVE	channel delivery	channel object	recipient	recipient	true	independent flags grant
+IDENTIFY_BUILDING	contacts b	interior map	pilot	pilot	true	concealment policy

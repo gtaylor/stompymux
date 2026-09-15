@@ -15,7 +15,13 @@ impl Server {
         {
             Err(e) => Err(e),
             Ok(()) => match (serde_json::to_vec(&before), serde_json::to_vec(&after)) {
-                (Ok(a), Ok(b)) if a == b && self.scripts.effects.maintenance().is_none() => Ok(()),
+                (Ok(a), Ok(b))
+                    if a == b
+                        && self.scripts.effects.maintenance().is_none()
+                        && !self.scripts.effects.save_requested() =>
+                {
+                    Ok(())
+                }
                 _ => {
                     saved = true;
                     persistence::persist_effects(
@@ -94,8 +100,21 @@ impl Server {
         self.command_queue.reconcile(&self.scripts.world.borrow());
     }
     pub(super) fn flush(&self) {
+        for record in self.scripts.effects.drain_records() {
+            self.config.logger.record(&self.config, record);
+        }
         for request in self.scripts.effects.drain_logs() {
             self.config.logger.submit(&self.config, request);
+        }
+        for request in self.scripts.effects.drain_map_writes() {
+            let message = match request.publish(&self.config) {
+                Ok(()) => "Saving complete!".to_owned(),
+                Err(error) => format!("Unable to finish saving the map file: {error:#}"),
+            };
+            self.scripts
+                .outbox
+                .borrow_mut()
+                .push((request.actor, message.into()));
         }
         self.scripts.effects.commit();
         let mut private = self.scripts.effects.drain_private().into_iter().peekable();

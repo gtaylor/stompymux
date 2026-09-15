@@ -23,7 +23,7 @@ Left_Torso
   Armor            { 15 }
   Internals        { 14 }
   Rear             { 2 }
-    CRIT_1		  { HeatSink - - }
+    CRIT_1-2		  { HeatSink - - }
 Right_Torso
   Armor            { 15 }
   Internals        { 14 }

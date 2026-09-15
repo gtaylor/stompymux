@@ -80,6 +80,19 @@ pub(super) async fn cleanup(c: &mut SqliteConnection, purges: &BTreeSet<ObjectId
     if purges.is_empty() {
         return Ok(());
     }
+    super::btech_entrances::purge(c, purges).await?;
+    super::btech_building_repair::purge(c, purges).await?;
+    super::btech_artillery::purge(c, purges).await?;
+    super::btech_terrain::purge(c, purges).await?;
+    super::btech_units::purge(c, purges).await?;
+    super::btech_vehicles::purge(c, purges).await?;
+    super::btech_tows::purge(c, purges).await?;
+    super::btech_wrecks::purge(c, purges).await?;
+    super::btech_recovery::purge(c, purges).await?;
+    super::btech_gunner_stations::purge(c, purges).await?;
+    super::btech_decorations::purge(c, purges).await?;
+    super::btech_map_random::purge(c, purges).await?;
+    super::btech_object_order::purge(c, purges).await?;
     // Unknown foreign keys into object tombstones must not silently retain destroyed identities.
     let tables: Vec<String> =
         sqlx::query_scalar("SELECT name FROM sqlite_master WHERE type='table'")

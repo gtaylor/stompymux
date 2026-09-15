@@ -1,0 +1,44 @@
+//! Inferno ammunition controls share ordinary readiness and exclusive ammunition selection.
+use super::BattleAmmunitionMode;
+use crate::{ObjectId, World};
+use anyhow::{Result, ensure};
+
+impl BattleAmmunitionMode {
+    /// Cockpit feedback shared by native and Lua controls.
+    pub(crate) fn inferno_message(self, index: usize) -> String {
+        if self == Self::Inferno {
+            return format!("Weapon {index} has been set to fire Inferno missiles.");
+        }
+        format!("Weapon {index} has been set to fire normal missiles")
+    }
+}
+
+/// Toggle a recycled missile launcher; disposable launchers cannot change ammunition.
+pub fn toggle_inferno(
+    world: &mut World,
+    id: ObjectId,
+    pilot: ObjectId,
+    index: usize,
+) -> Result<BattleAmmunitionMode> {
+    let ready = super::weapon_controls::ready_weapon(world, id, pilot, index)?;
+    ensure!(
+        BattleAmmunitionMode::Inferno.supports(ready.weapon),
+        "That weapon cannot be set to fire Inferno missiles!"
+    );
+    Ok(super::weapon_controls::toggle_ammunition_mode(
+        world,
+        id,
+        index,
+        BattleAmmunitionMode::Inferno,
+    ))
+}
+
+/// Native controls preserve shared selection ordering and partial-error feedback.
+pub(crate) fn command(
+    ctx: &crate::CommandContext<'_>,
+    input: &crate::CommandInput,
+) -> Result<crate::CommandAction> {
+    super::fire_mode::selected_command(ctx, input, |world, id, pilot, index| {
+        toggle_inferno(world, id, pilot, index).map(|mode| mode.inferno_message(index))
+    })
+}

@@ -36,7 +36,7 @@ Left_Torso
   Rear             { 8 }
     CRIT_1-3		  { Engine - - 3 }
     CRIT_4-5		  { IS.iNarcBeacon - - 3 }
-    CRIT_6		  { IS.iNarcBeacon - - 0 }
+    CRIT_6		  { IS.iNarcBeacon - - 3 }
     CRIT_7-12		  { EndoSteel - - 3 }
 Right_Torso
   Armor            { 22 }

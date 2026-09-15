@@ -1,0 +1,30 @@
+Mech Name: Warhammer           ID:[AA]   Mech Reference: WHM-6R
+Tonnage:    70     MaxSpeed:  64       JumpRange: 0
+Pilot Name: GOD                          Pilot Injury: 0
+SHUTDOWN
+         FRONT                REAR                INTERNAL
+          __                   __                    __
+       __( 9)__             __(**)__              __( 3)__
+      /17|22|17\           / 8| 9| 8\            /15|22|15\
+     (20/|==|\20)         (   |==|   )          (11/|==|\11)
+       /  /\  \               /  \                /  /\  \
+      (15/  \15)             /    \              (15/  \15)
+ 
+X, Y, Z:  0,  0,  0  Excess Heat:    0 deg C.  Heat Production:    0 deg C.
+Speed:        0 KPH  Heading:        0 deg     Heat Sinks:        18
+Des. Speed:   0 KPH  Des. Heading:   0 deg     Heat Dissipation:   0 deg C.
+Temp: |.............|.....|......................|
+  
+AdvTech: SLITE(Off)  
+LARM: Ready RARM: Ready LLEG: Ready RLEG: Ready 
+==================WEAPON SYSTEMS===========================AMMUNITION========
+------ Weapon --------- [##] Location ---- Status ||--- Ammo Type ---- Rounds
+ PPC                    [ 0] Left Arm      Ready  || SRM-6                15
+ PPC                    [ 1] Right Arm     Ready  || MachineGun          200
+ MediumLaser            [ 2] Left Torso    Ready  ||    
+ SmallLaser             [ 3] Left Torso    Ready  ||    
+ MachineGun             [ 4] Left Torso    Ready  ||    
+ MediumLaser            [ 5] Right Torso   Ready  ||    
+ SmallLaser             [ 6] Right Torso   Ready  ||    
+ SRM-6                  [ 7] Right Torso   Ready  ||    
+ MachineGun             [ 8] Right Torso   Ready  ||    

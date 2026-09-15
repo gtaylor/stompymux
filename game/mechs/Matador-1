@@ -40,7 +40,7 @@ Right_Torso
   Internals        { 14 }
   Rear             { 6 }
     CRIT_1-2		  { CL.StreakSRM-6 - - }
-    CRIT_3		  { Ammo_CL.MachineGun 100 HotLoad }
+    CRIT_3		  { Ammo_CL.MachineGun 100 Hotload }
     CRIT_4		  { Ammo_CL.StreakSRM-4 25 - }
     CRIT_5		  { Ammo_CL.StreakSRM-6 15 - }
 Center_Torso

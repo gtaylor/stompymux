@@ -28,8 +28,8 @@ Left_Torso
   Armor          { 21 }
   Internals      { 17 }
   Rear           { 7 }
-    CRIT_1       { Engine - - }
-    CRIT_2-12    { IS.LB20-XAC - - }
+    CRIT_1-2     { Engine - - }
+    CRIT_3-12    { IS.LB20-XAC - - }
 Right_Torso
   Armor          { 21 }
   Internals      { 17 }
@@ -59,7 +59,7 @@ Rear_Left_Leg
     CRIT_2       { UpperActuator - - }
     CRIT_3       { LowerActuator - - }
     CRIT_4       { HandOrFootActuator - - }
-    CRIT_5       { Engine - - }
+    CRIT_5       { SplitCrit_Left 2 - }
 Rear_Right_Leg
   Armor          { 28 }
   Internals      { 17 }

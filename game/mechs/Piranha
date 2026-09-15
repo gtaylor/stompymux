@@ -48,6 +48,7 @@ Right_Torso
     CRIT_7		  { CL.MachineGun - - }
     CRIT_8		  { CL.MachineGun - - }
     CRIT_9		  { EndoSteel - - }
+    CRIT_11-12		  { HeatSink - - }
 Center_Torso
   Armor            { 9 }
   Internals        { 6 }
@@ -79,7 +80,6 @@ Head
     CRIT_1		  { LifeSupport - - }
     CRIT_2		  { Sensors - - }
     CRIT_3		  { Cockpit - - }
-    CRIT_4		  { HeatSink - - }
     CRIT_5		  { Sensors - - }
     CRIT_6		  { LifeSupport - - }
 Specials { Clan }

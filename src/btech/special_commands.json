@@ -1,0 +1,1839 @@
+{
+  "MECH": [
+    {
+      "class_mask": 0,
+      "syntax": "Movement",
+      "description": "Movement",
+      "restricted": false,
+      "category": true
+    },
+    {
+      "class_mask": 0,
+      "syntax": "HEADING [num]",
+      "description": "Shows/Changes your heading to <NUM> (<NUM> in degrees)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SPEED [num | walk | run | stop | back | flank | cruise]",
+      "description": "Without arguments shows your present speed, otherwise changes your speed to <NUM> or the specified speed (run/cruise = 1x maxspeed, walk/flank = 2/3x maxspeed, stop = 0, back = -2/3x maxspeed)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 48,
+      "syntax": "VERTICAL [num]",
+      "description": "Shows/Changes your vertical speed to <NUM>.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 12,
+      "syntax": "CLIMB [angle]",
+      "description": "Shows/Changes the climbing angle to <NUM>.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 12,
+      "syntax": "DIVE [angle]",
+      "description": "Shows/Changes the diving angle to <NUM>.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 12,
+      "syntax": "THRUST [num]",
+      "description": "Shows/Changes the thrust to <NUM>.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "LATERAL [fl|fr|rl|rr|-]",
+      "description": "Change your lateral movement mode (quad only/vtol/hover, or with Maneuvering_ace). fl/fr/rl/rr = Directions, - = Disable lateral movement.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 129,
+      "syntax": "STAND",
+      "description": "Stand up after a fall or dropping prone.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "PRONE",
+      "description": "Force your 'mech to drop prone where it is.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "THRASH",
+      "description": "Thrash around and try to kill nearby battle suits.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 65,
+      "syntax": "JUMP [<TARGET-ID> | <BEARING> <RANGE>]",
+      "description": "Jump on default target / given target / bearing + range.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "HULLDOWN [- | STOP]",
+      "description": "Allows a QUAD to go hull down behind a hill to gain better protection.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ENTERBASE [N|W|S|E]",
+      "description": "Enters base/hangar/whatnever from selected dir.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ENTERBAY [REF]",
+      "description": "Enters bay of a moving(?) hangar (DropShip for example). Ref is target ref, and it is optional.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "BOOTLEGGER [R|L]",
+      "description": "Performs a bootlegger turn. This will turn you instantly 90 degrees in the desired direction, but requires a pilot roll. Roll BTH is based on tonnage and speed. Legs must not be recycling.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "Radio",
+      "description": "Radio",
+      "restricted": false,
+      "category": true
+    },
+    {
+      "class_mask": 0,
+      "syntax": "LISTCHANNELS",
+      "description": "Lists set frequencies + comtitles for them.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SENDCHANNEL <LETTER> = <STRING>",
+      "description": "Sends <string> on channel <letter>'s freq.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "RADIO <ID> = <STRING>",
+      "description": "Radioes (LOS) <ID> with <STRING>",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SETCHANNELFREQ <LETTER> = <NUMBER>",
+      "description": "Sets channel <letter> to frequency <number>.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SETCHANNELMODE <LETTER> = <STRING>",
+      "description": "Sets channel <letter> mode <string> (available letters: DIUES, color codes).",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SETCHANNELTITLE <LETTER> = <STRING>",
+      "description": "Sets channel <letter> comtitle to <string>.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "Weapons",
+      "description": "Weapons",
+      "restricted": false,
+      "category": true
+    },
+    {
+      "class_mask": 0,
+      "syntax": "LOCK [<TARGET-ID> | <X> <Y> | <X> <Y> <B|H|I|C> | -]",
+      "description": "Sets the target to the (3rd argument :  B = building, C = clear, I = ignite, H = hex (clear/ignite/break ice/destroy bridge)) /, - = Clears present lock.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SIGHT <WEAPNUM> [<TARGET-ID> | <X> <Y>]",
+      "description": "Computes base-to-hit for given weapon and target.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIRE <WEAPNUM> [<TARGET-ID> | <X> <Y>]",
+      "description": "Fires weapon <weapnum> at def. target or specified target.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "TARGET <SECTION | ->",
+      "description": "Sets your aimed shot target / Disables targetting.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "TAG [ID|-]",
+      "description": "Lights an enemy unit with your TAG / Disables current TAG.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "AMS <weapnum>",
+      "description": "Toggles Anti-Missile System on and off.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "AP <weapnum>",
+      "description": "Sets/Unsets the autocannon to fire armor piercing rounds.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ARTEMIS <weapnum>",
+      "description": "Sets Weapon to and from ARTEMIS Mode.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "CASELESS <weaponum>",
+      "description": "Sets Weapons to and from CASELESS Mode.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "EXPLOSIVE <weapnum>",
+      "description": "Toggles between explosive/normal rounds",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIRECLUSTER <weapnum>",
+      "description": "Sets/unsets artillery weapon to fire cluster rounds.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIREMINE <weapnum>",
+      "description": "Sets/unsets artillery weapon to fire mine rounds.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIRESMOKE <weapnum>",
+      "description": "Sets/unsets artillery weapon to fire smoke rounds.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIRESWARM <weapnum>",
+      "description": "Sets/Unsets the LRM launcher to shoot swarm missiles",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIRESWARM1 <weapnum>",
+      "description": "Sets/Unsets the LRM launcher to shoot swarm missiles",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FLECHETTE <weapnum>",
+      "description": "Sets/Unsets the autocannon to fire flechette rounds.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "GATTLING <weapnum>",
+      "description": "Sets weapon to and from Gattling Mode (machineguns only).",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "HEAT <weapnum>",
+      "description": "Sets a flamer to and from heat mode`.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "HOTLOAD <weapnum>",
+      "description": "Sets/Unsets the LRM launcher to hotload missiles, removing short-range penalties, but adding to chance of jamming.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "INARC <weapnum> <-|X|Y|E>",
+      "description": "Sets the type of ammo to fire from your iNarc weapon. '-': standard Homing, 'X': Explosive, 'Y': Haywire, 'E': ECM",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "INCENDIARY <weapnum>",
+      "description": "Sets/Unsets the autocannon to fire incendiary rounds.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "INFERNO <weapnum>",
+      "description": "Sets/Unsets the SRM launcher to shoot inferno missiles",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "LBX <weapnum>",
+      "description": "Sets weapon to and from LBX Mode.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "NARC <weapnum>",
+      "description": "Sets weapon to and from NARC Mode.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SGUIDED <weapnum>",
+      "description": "Sets weapon to and from Sguide Mode",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "STINGER <weaponum>",
+      "description": "Sets weapon to and from Stinger Mode.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ATMRANGE <weapnum>",
+      "description": "Sets weapon to and from Extended Range Mode",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ATMEXPLOSIVE <weapnum>",
+      "description": "Sets weapon to and from High Explosive Mode",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "PRECISION <weapnum>",
+      "description": "Sets/Unsets the autocannon to fire precision rounds.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "RAC <weapnum> <-/2/4/6>",
+      "description": "Sets the Rotary AutoCannon to fire either 1, 2, 4 or 6 shots at a time.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "RAPIDFIRE <weapnum>",
+      "description": "Sets weapon to and from Rapid Fire Mode (std and light ACs only).",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ULTRA <weapnum>",
+      "description": "Sets weapon to and from Ultra Mode.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "DISABLE <weapnum>",
+      "description": "Disables the weapon (Gauss only).",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "UNJAM <weapnum>",
+      "description": "Fixes ammo loader jams.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "USEBIN <weapnum> <location>",
+      "description": "Draw ammo from <location> first for <weapnum>.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ADDTIC  <NUM> <WEAPNUM | LOWNUM-HIGHNUM>",
+      "description": "Adds weapon <weapnum>, or weapons from <lownum> to <highnum> to TIC <num>.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "CLEARTIC <NUM>",
+      "description": "Clears the TIC <num>.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "DELTIC <NUM> <WEAPNUM>",
+      "description": "Deletes weapon number <weapnum> from TIC <num>.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIRETIC <NUM> [<TARGET> or <X Y>]",
+      "description": "Fires the weapons in TIC <num>.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "LISTTIC <NUM>",
+      "description": "Lists weapons in the TIC <num>.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "Information",
+      "description": "Information",
+      "restricted": false,
+      "category": true
+    },
+    {
+      "class_mask": 0,
+      "syntax": "BRIEF [<LTR> <VAL>]",
+      "description": "Shows brief status / Sets brief for <ltr> to <val>.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "CONTACTS [<Prefix> | <TARGET-ID>]",
+      "description": "List all current contacts",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "CRITSTATUS <SECTION>",
+      "description": "Shows the Critical hits status",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "REPORT [<TARGET-ID> | <X Y>]",
+      "description": "Information on default target, num, or x,y",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SCAN [<TARGET-ID> | <X Y> | <X Y> <B|H>]",
+      "description": "Scans the default target, chosen target, or hex",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SENSOR [LONG | [<V|L|I|E|S> <V|L|I|E|S>]]",
+      "description": "Shows/Changes your sensor mode (1 argument: Long, otherwise Short description about sensor mode)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "STATUS [A(rmor) | I(nfo)] | W(eapons)]",
+      "description": "Prints the mech's status",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "VIEW [<TARGET-ID>]",
+      "description": "View the war painting on the target",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "WEAPONSPECS",
+      "description": "Shows the specifications for your weapons",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "WEAPONSTATUS",
+      "description": "Shows the status of all your weapons",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "Navigation",
+      "description": "Navigation",
+      "restricted": false,
+      "category": true
+    },
+    {
+      "class_mask": 0,
+      "syntax": "BEARING [<X Y>] [<X Y>]",
+      "description": "Same format as range.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ETA [<X> <Y>]",
+      "description": "Estimates time to target (/default target)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FINDCENTER",
+      "description": "Shows distance/bearing to center of hex.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "NAVIGATE",
+      "description": "Shows the hex and surroundings graphically",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "RANGE [<X Y>] [<X Y>]",
+      "description": "Range to def. target / range to x y / range to x,y from x,y",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "LRS <M|T|E|L|S|H|C> [<BEARING> <RANGE> | <TARGET-ID>]",
+      "description": "Shows the (Mech/Terrain/Elevation/LOS/Sensors/Height/Combined) long range map",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "TACTICAL [C | T | L] [<BEARING> <RANGE> | <TARGET-ID>]",
+      "description": "Shows the tactical map at the mech's location / at bearing and range / around chosen target",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "VECTOR [<X Y> <X Y>]",
+      "description": "Same format as range.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "Special",
+      "description": "Special",
+      "restricted": false,
+      "category": true
+    },
+    {
+      "class_mask": 12,
+      "syntax": "CHECKLZ",
+      "description": "Checks if the landing-zone is good for a landing",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "@OOD <X> <Y> [Z]",
+      "description": "Initiates OOD drop at the orbit altitude to <X> <Y> (optional Z altitude to start from)",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "@LOSEMIT <MESSAGE>",
+      "description": "Sends message to everyone seeing the 'mech right now",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "@DAMAGE <NUM> <CLUSTERSIZE> <ISREAR> <ISCRITICAL>",
+      "description": "Causes <NUM> pt of damage to be done to 'mech in <CLUSTERSIZE> point clusters (if <ISREAR> is 1, damage is done to rear arc ; if <ISCRITICAL> is 1, damage does crit-thru-armor)",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "@DAMAGESECTION <SECTION> <DAMAGE> <ISREAR> <ISCRITICAL>",
+      "description": "Causes <DAMAGE> pts of damage to be done to unit's <SECTION>. <ISREAR> = 1 for REAR, <ISCRITICAL> = 1 for critical",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "@WEIGHT",
+      "description": "Checks the weight allocated in the mech",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 4,
+      "syntax": "BOMB [list | drop <num> | aim]",
+      "description": "Lists bombs / drops bomb <num> / aims where a bomb would fall.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 2,
+      "syntax": "DIG",
+      "description": "Starts burrowing for cover [non-hovers only].",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 2,
+      "syntax": "FIXTURRET",
+      "description": "Starts to fix a turret. Only works on jammed turrets, not locked turrets.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "EXPLODE <AMMO|REACTOR|STOP>",
+      "description": "<AMMO|REACTOR> specifies which to ignite ; ammo causes all ammo on your mech to go *bang* (in no particular order), reactor disables control systems. Do note that neither are instant. STOP allows you to stop existing countdown.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SAFETY [ON|OFF]",
+      "description": "Enable/Disable Safeties against killing MechWarriors.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "MECHPREFS [SETTING [ON|OFF]]",
+      "description": "Toggle the mechpref setting of SETTING",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 51,
+      "syntax": "TURNMODE [TIGHT | NORMAL]",
+      "description": "Sets turnmode.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "DROPOFF",
+      "description": "Drops the mech you are carrying.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "PICKUP [ID]",
+      "description": "Picks up [ID].",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 128,
+      "syntax": "ATTACHCABLES <ID1> <ID2>",
+      "description": "Attaches tow cables so that [ID1] can tow [ID2].",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 128,
+      "syntax": "DETACHCABLES <ID>",
+      "description": "Detaches the tow cables from [ID].",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "DUMP <WEAPNUM|LOCATION|ALL|STOP> [<CRIT>]",
+      "description": "Dumps the ammunition for the weapon / in the location [ crit ] / all ammunition in the 'mech / stops all dumping in progress.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "FLIPARMS",
+      "description": "Flips the arms to and from the rear arcs, if possible.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ECM",
+      "description": "Toggles the ECM status of your Guardian ECM suite (only applicable if you have one)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ECCM",
+      "description": "Toggles the ECCM status of your Guardian ECM suite (only applicable if you have one)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ANGELECM",
+      "description": "Toggles the ECM status of your Angel ECM suite (only applicable if you have one)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ANGELECCM",
+      "description": "Toggles the ECCM status of your Angel ECM suite (only applicable if you have one)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "PERECM",
+      "description": "Toggles the ECM status of your Personal ECM suite (only applicable if you have one)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "PERECCM",
+      "description": "Toggles the ECCM status of your Personal ECM suite (only applicable if you have one)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "STEALTH",
+      "description": "Toggles status of Stealth Armor for those mechs equipped with it.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "NSS",
+      "description": "Toggles status of the Null Signature System for those mechs equipped with it.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "DISEMBARK",
+      "description": "Gets the hell out of the 'mech / vehicle.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "UDISEMBARK",
+      "description": "Get the unit out of it's carrier.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "EMBARK",
+      "description": "Climb into a 'mech / vehicle",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "MASC",
+      "description": "Toggles MASC on and off",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SCHARGE",
+      "description": "Toggles Supercharger on and off",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": -2,
+      "syntax": "LAND",
+      "description": "Terminate your jump or land a VTOL/Aero/DS",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": -35,
+      "syntax": "TAKEOFF",
+      "description": "VTOL/Aero take off command",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "ROTTORSO <L(eft) | R(ight) | C(enter)>",
+      "description": "Rotates the torso 60 degrees right or left.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SLITE",
+      "description": "Turns your searchlight on/off",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SPOT [ID|-|OWNID]",
+      "description": "Sets someone as your spotter / makes you stop spotting / sets you as a spotter.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "STARTUP [OVERRIDE]",
+      "description": "Commences startup cycle.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SHUTDOWN",
+      "description": "Shuts down the mech.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 34,
+      "syntax": "TURRET",
+      "description": "Set the turret facing.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 34,
+      "syntax": "AUTOTURRET",
+      "description": "Forces your turret to stay facing the locked target.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 18,
+      "syntax": "EXTINGUISH",
+      "description": "Puts out the fires on your vehicle. You must be shut down to do this.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "C3 [ID|-]",
+      "description": "Joins/Leaves a C3 network which the target mech is in. You will be assigned to a master computer within the network.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "C3MESSAGE <MSG>",
+      "description": "Sends a message to all others in your C3 network",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "C3TARGETS",
+      "description": "Shows available C3 targeting information",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "C3NETWORK",
+      "description": "Displays information about your C3 network",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "C3I [ID|-]",
+      "description": "Joins/Leaves the C3i network connected to the target",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "C3IMESSAGE <MSG>",
+      "description": "Sends a message to all others in your C3i network",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "C3ITARGETS",
+      "description": "Shows available C3i targeting information",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "C3INETWORK",
+      "description": "Displays information about your C3i network",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "HEATCUTOFF",
+      "description": "Sets your heat dissipation so that you wont go under 9 heat for TSM",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "PODS",
+      "description": "Shows the location of NARC and iNARC pods that attached to you",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "REMOVEPOD <LOCATION> <TYPE>",
+      "description": "Remove one of the pods from the selected location. Possible types are: 'H' - Homing, 'Y' - Haywire, 'E' - ECM",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 18,
+      "syntax": "REMOVEPODS",
+      "description": "Removes all iNARC pods from the unit.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "Physical",
+      "description": "Physical",
+      "restricted": false,
+      "category": true
+    },
+    {
+      "class_mask": 1,
+      "syntax": "AXE [R | L | B] [<TARGET-ID>]",
+      "description": "Axes a target",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 3,
+      "syntax": "CHARGE [<TARGET-ID> | - ]",
+      "description": "Charges a target. '-' removes charge command.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "CHOP [R | L | B] [<TARGET-ID>]",
+      "description": "Chops target with a sword",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "CLAW [R | L |B] [<TARGET-ID>]",
+      "description": "Claws a target",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "CLUB [<TARGET-ID>]",
+      "description": "Clubs a target with a tree",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "MACE [<TARGET-ID>]",
+      "description": "Maces your target",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "SAW [<TARGET-ID>]",
+      "description": "Saws a target with a Dual Saw",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "KICK [R | L] [<TARGET-ID>]",
+      "description": "Kicks a target",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "TRIP [R | L] [<TARGET-ID>]",
+      "description": "Trips a target mech",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "PUNCH [R | L | B] [<TARGET-ID>]",
+      "description": "Punches a target",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 1,
+      "syntax": "GRABCLUB [R | L | -]",
+      "description": "Grabs a tree and carries it around as a club",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 64,
+      "syntax": "ATTACKLEG [<TARGET-ID>]",
+      "description": "Attacks legs of the target battlemech",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "HIDE",
+      "description": "Attempts to hide your team ; doesn't work if any hostiles have their eyeballs on you",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 64,
+      "syntax": "SWARM [<TARGET-ID> | -]",
+      "description": "Swarms the target / drop off target (-)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 64,
+      "syntax": "JETTISON",
+      "description": "Jettison your backpack",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "Repair",
+      "description": "Repair",
+      "restricted": false,
+      "category": true
+    },
+    {
+      "class_mask": 0,
+      "syntax": "CHECKSTATUS",
+      "description": "Checks mech's techstatus",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "DAMAGES",
+      "description": "Shows the mech's damages",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIX [<NUM> | <LOW-HI>]",
+      "description": "Fixes entry <NUM> from mech's damages",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIXARMOR <LOC>",
+      "description": "Repairs armor in <loc>",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIXINTERNAL <LOC>",
+      "description": "Repairs internals in <loc>",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "REATTACH <LOC>",
+      "description": "Reattaches the limb",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 64,
+      "syntax": "REPLACESUIT <SUIT>",
+      "description": "Replaces the missing suit",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "RESEAL <LOC>",
+      "description": "Reseals the limb",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "RELOAD <LOC> <POS> [TYPE]",
+      "description": "Reloads the ammo compartment in <loc>/<pos> (optionally with [type])",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "TOGGLETYPE <loc> <pos> <type>",
+      "description": "Set the type of ammo in ammobin <loc>/<pos> to type <type>",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "REMOVEGUN <NUM>",
+      "description": "Removes the gun",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "REMOVEPART <LOC> <POS>",
+      "description": "Removes the part",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "REMOVESECTION <LOC>",
+      "description": "Removes the section",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "REPLACEGUN [<NUM> | <LOC> <POS>] [ITEM]",
+      "description": "Replaces the gun in the position (optionally with [ITEM], like Martell.MediumLaser)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "REPAIRGUN [<NUM> | <LOC> <POS>]",
+      "description": "Repairs the gun in the position",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "REPLACEPART <LOC> <POS>",
+      "description": "Replaces the part in the position",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "REPAIRPART <LOC> <POS>",
+      "description": "Repairs the part in the position",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "REPAIRS",
+      "description": "Shows repairs/scrapping in progress",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "UNLOAD <LOC> <POS>",
+      "description": "Unloads the ammo compartment in <loc>/<pos>",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "@MAGIC",
+      "description": "Fixes the unfixable - skirt crits etc (wiz-only)",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "@FIXEXTRA",
+      "description": "fixes extra stuff, like reseal, ammo feeds, etc",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "Cargo",
+      "description": "Cargo",
+      "restricted": false,
+      "category": true
+    },
+    {
+      "class_mask": 0,
+      "syntax": "LOADCARGO <NAME> <COUNT>",
+      "description": "Loads up <COUNT> <NAME>s from the bay.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "MANIFEST",
+      "description": "Lists stuff carried by mech.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "STORES",
+      "description": "Lists stuff in the bay.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "UNLOADCARGO <NAME> <COUNT>",
+      "description": "Unloads <COUNT> <NAME>s to the bay.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "@Restricted",
+      "description": "Restricted",
+      "restricted": true,
+      "category": true
+    },
+    {
+      "class_mask": 0,
+      "syntax": "@CREATEBAYS [.. list of DBrefs, seperated by space]",
+      "description": "Creates / Disables bays on a DS",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "@SETMECH <NAME> <VALUE|DATA>",
+      "description": "Sets a unit field",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "@VIEWMECH",
+      "description": "Views unit fields",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SNIPE <ID> <WEAPON>",
+      "description": "Lets you 'snipe' (=shoot artillery weapons with movement prediction)",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ADDSTUFF <NAME> <COUNT>",
+      "description": "Adds <COUNT> <NAME> to mech's inventory",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIXSTUFF",
+      "description": "Fixes consistency errors in econ data",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "CLEARSTUFF",
+      "description": "Removes all stuff from 'mech",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "REMOVESTUFF <NAME> <COUNT>",
+      "description": "Removes <COUNT> <NAME> from mech's inventory",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SETMAPINDX <NUM>",
+      "description": "Sets the mech's map index to num.",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SETTEAM <NUM>",
+      "description": "Sets the teams.",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SETXY <X> <Y>",
+      "description": "Sets the x & y value of the mech.",
+      "restricted": true,
+      "category": false
+    }
+  ],
+  "DEBUG": [
+    {
+      "class_mask": 0,
+      "syntax": "EVENTSTATS",
+      "description": "Shows event statistics",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "MEMSTATS [LONG]",
+      "description": "Shows memory statistics (optionally in long form)",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SAVEDB",
+      "description": "Writes a SQLite game checkpoint",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "LISTFORMS",
+      "description": "Shows forms",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SETVRT <WEAPON> <NUM>",
+      "description": "Sets the VariableRecycleTime for weapon <WEAPON> to <NUM>",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SETXPLEVEL <SKILL> <NUM>",
+      "description": "Sets the XP threshold for skill <skill> to <num>",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SETWBV <WEAPON> <NUM>",
+      "description": "Sets the BattleValue for weapon <WEAPON> to <NUM",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SHUTDOWN <MAP#>",
+      "description": "Shutdown all mechs on the map and clear it.",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "XPTOP <SKILL>",
+      "description": "Shows list of people champ in the <SKILL>",
+      "restricted": true,
+      "category": false
+    }
+  ],
+  "MAP": [
+    {
+      "class_mask": 0,
+      "syntax": "@VIEWMAP",
+      "description": "Views map fields",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "@SETMAP <NAME> <VALUE|DATA>",
+      "description": "Sets a map field",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ADDICE <NUMBER>",
+      "description": "Adds ice (<NUMBER> percent chance for each watery hex connected to land/ice)",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "DELICE <NUMBER>",
+      "description": "Deletes first-melting ices at <NUMBER> chance",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SETCOND <GRAV> <TEMP> [CLOUDBASE [VACUUM]]",
+      "description": "Sets the map attributes (gravity: in 1/100'ths of Earth gravity, temperature: in Celsius, vacuum: optional, number (0 or 1)",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "VIEW <X> <Y>",
+      "description": "Shows the map centered at X,Y",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ADDBLOCK <X> <Y> <DIST> [TEAM#_TO_ALLOW]",
+      "description": "Adds no-landings zone of DIST hexes to X Y",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ADDMINE <X> <Y> <TYPE> <STRENGTH> [OPT]",
+      "description": "Adds mine to X,Y",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ADDHEX <X> <Y> <TERRAIN> <ELEV>",
+      "description": "Changes the terrain and elevation of the given hex",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SETLINKED",
+      "description": "Sets the map linked",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "@MAPEMIT <MESSAGE>",
+      "description": "Emits stuff to the map",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIXMAP",
+      "description": "Fixes inconsistencies in map",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "LOADMAP <NAME>",
+      "description": "Loads the named map",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SAVEMAP <NAME>",
+      "description": "Saves the map as name",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SETMAPSIZE <X> <Y>",
+      "description": "Sets x and y size of map",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "LIST [MECHS | OBJS]",
+      "description": "Lists mechs/objects on the map",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "CLEARMECHS [DBNUM]",
+      "description": "Clears mechs from the map",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ADDFIRE [X] [Y] [DURATION]",
+      "description": "Adds fire that lasts <duration> secs",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ADDSMOKE [X] [Y] [DURATION]",
+      "description": "Adds smoke that lasts <duration> secs",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "DELOBJ [[TYPE] | [X] [Y] | [TYPE] [X] [Y]]",
+      "description": "Deletes objects of either type or at x/y",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "UPDATELINKS",
+      "description": "Updates CodeLinks recursively and reports skipped descents",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "STORES",
+      "description": "Lists stuff in the hangar.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ADDSTUFF <NAME> <COUNT>",
+      "description": "Adds <COUNT> <NAME> to map",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIXSTUFF",
+      "description": "Fixes consistency errors in econ data",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "REMOVESTUFF <NAME> <COUNT>",
+      "description": "Removes <COUNT> <NAME> from map",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "CLEARSTUFF",
+      "description": "Removes all stuff from map",
+      "restricted": true,
+      "category": false
+    }
+  ],
+  "AUTOPILOT": [
+    {
+      "class_mask": 0,
+      "syntax": "ENGAGE",
+      "description": "Engages the autopilot",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "DISENGAGE",
+      "description": "Disengages the autopilot",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ADDCOMMAND <NAME> [ARGS]",
+      "description": "Adds a command to queue",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "DELCOMMAND <NUM>",
+      "description": "Removes command <NUM> from queue (-1 = all)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "LISTCOMMANDS",
+      "description": "Lists whole command queue of the autopilot",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "JUMP <NUM>",
+      "description": "Sets current instruction to <NUM>",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "EVENTSTATS",
+      "description": "Lists current events for this AI",
+      "restricted": false,
+      "category": false
+    }
+  ],
+  "TURRET": [
+    {
+      "class_mask": 0,
+      "syntax": "@SETTURRET <NAME> <VALUE|DATA>",
+      "description": "Sets a turret field",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "@VIEWTURRET",
+      "description": "Views turret fields",
+      "restricted": true,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "DEINITIALIZE",
+      "description": "De-initializes you as gunner",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "INITIALIZE",
+      "description": "Sets you as the gunner",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ADDTIC  <NUM> <WEAPNUM | LOWNUM-HIGHNUM>",
+      "description": "Adds weapnum, or lownum-highnum to given TIC",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "BEARING [<X Y>] [<X Y>]",
+      "description": "Same format as range.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "CLEARTIC <NUM>",
+      "description": "Clears the TIC number given ",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "CONTACTS [<Prefix> | <TARGET-ID>]",
+      "description": "List all current contacts",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "CRITSTATUS <SECTION>",
+      "description": "Shows the Critical hits status",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "DELTIC <NUM> <WEAPNUM>",
+      "description": "Deletes weapnum from given TIC",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "ETA [<X> <Y>]",
+      "description": "Estimates time to target (/default target)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FINDCENTER",
+      "description": "Shows distance/bearing to center of hex.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIRE <WEAPNUM> [<TARGET-ID> | <X> <Y>]",
+      "description": "Fires Weap at loc at def. target or specified target.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "FIRETIC <NUM> [<TARGET> or <X Y>]",
+      "description": "Fires the given TIC",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "LISTTIC <NUM>",
+      "description": "Lists weapons in the given TIC",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "LOCK [<TARGET-ID> | <X> <Y> | <X> <Y> <B|H> | -]",
+      "description": "Sets the target to the arg (in 3rd, B = building, H = hex (clear/ignite)) / Clears lock (-)",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "LRS <M(ech) | T(errain) | E(lev)> [<BEARING> <RANGE> | <TARGET-ID>]",
+      "description": "Shows the long range map",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "NAVIGATE",
+      "description": "Shows the hex and surroundings graphically",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "RANGE [<X Y>] [<X Y>]",
+      "description": "Range to def. target / range to x y / range to x,y from x,y",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "REPORT [<TARGET-ID> | <X Y>]",
+      "description": "Information on default target, num, or x,y",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SCAN [<TARGET-ID> | <X Y> | <X Y> <B|H>]",
+      "description": "Scans the default target, chosen target, or hex",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "SIGHT <WEAPNUM> [<TARGET-ID> | <X> <Y>]",
+      "description": "Computes base-to-hit for given weapon and target.",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "STATUS [A(rmor)|I(nfo)]|W(eapons)|S(hort)]",
+      "description": "Prints the mech's status",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "TACTICAL [<BEARING> <RANGE> | <TARGET-ID>]",
+      "description": "Shows the tactical map at the mech's location / at bearing and range / around chosen target",
+      "restricted": false,
+      "category": false
+    },
+    {
+      "class_mask": 0,
+      "syntax": "WEAPONSPECS",
+      "description": "Shows the specifications for your weapons",
+      "restricted": false,
+      "category": false
+    }
+  ]
+}

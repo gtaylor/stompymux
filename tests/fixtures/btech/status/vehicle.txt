@@ -1,0 +1,21 @@
+Vehicle Name: Demolisher       ID:[AA]   Vehicle Reference: Demolisher
+Tonnage:    80      FlankSpeed:  53       Movement Type: Tracked
+Pilot Name: GOD                          Pilot Injury: 0
+SHUTDOWN
+          FRONT                                INTERNAL
+         ,`.40,'.                              ,`. 8,'.
+        |  |__|  |                            |  |__|  |
+        |  |40|  |                            |  | 8|  |
+        |30|~~|30|                            | 8|~~| 8|
+         \,'20`./                              \,' 8`./
+          ~~~~~~                                ~~~~~~
+ 
+X, Y, Z:  0,  0,  0  Heat Sinks:            0       
+Speed:        0 KPH  Heading:        0 deg
+Des. Speed:   0 KPH  Des. Heading:   0 deg
+      Turret Facing: 0 degrees
+  
+==================WEAPON SYSTEMS===========================AMMUNITION========
+------ Weapon --------- [##] Location ---- Status ||--- Ammo Type ---- Rounds
+ AC/20                  [ 0] Turret        Ready  || AC/20                20
+ AC/20                  [ 1] Turret        Ready  ||    

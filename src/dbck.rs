@@ -133,6 +133,33 @@ fn chain(w: &World, raw: &Links, owner: ObjectId, exits: bool) -> Vec<ObjectId> 
     }
     result
 }
+/// Read current relationship members in persisted order, followed by unsaved additions by dbref.
+pub(crate) fn ordered_members(
+    w: &World,
+    raw: &Links,
+    owner: ObjectId,
+    exits: bool,
+) -> Vec<ObjectId> {
+    let members: BTreeSet<_> = w
+        .objects
+        .values()
+        .filter(|v| {
+            v.location == Some(owner)
+                && if exits {
+                    v.kind == Kind::Exit
+                } else {
+                    matches!(v.kind, Kind::Player | Kind::Thing)
+                }
+        })
+        .map(|v| v.id)
+        .collect();
+    let mut order = chain(w, raw, owner, exits);
+    order.retain(|id| members.contains(id));
+    let retained: BTreeSet<_> = order.iter().copied().collect();
+    order.extend(members.difference(&retained).copied());
+    order
+}
+
 /// Rebuild lists, keeping surviving members in their existing order then appending by dbref.
 pub fn rebuild_links(w: &World, raw: &Links) -> Links {
     let mut links: Links = w.objects.keys().map(|id| (*id, LinkSlots::EMPTY)).collect();
@@ -144,23 +171,7 @@ pub fn rebuild_links(w: &World, raw: &Links) -> Links {
             continue;
         }
         for exits in [false, true] {
-            let members: BTreeSet<_> = w
-                .objects
-                .values()
-                .filter(|v| {
-                    v.location == Some(o.id)
-                        && if exits {
-                            v.kind == Kind::Exit
-                        } else {
-                            matches!(v.kind, Kind::Player | Kind::Thing)
-                        }
-                })
-                .map(|v| v.id)
-                .collect();
-            let mut order = chain(w, raw, o.id, exits);
-            order.retain(|id| members.contains(id));
-            let retained: BTreeSet<_> = order.iter().copied().collect();
-            order.extend(members.difference(&retained).copied());
+            let order = ordered_members(w, raw, o.id, exits);
             *links.get_mut(&o.id).unwrap().head_mut(exits) = order.first().map_or(-1, |id| id.0);
             for (i, id) in order.iter().enumerate() {
                 links.get_mut(id).unwrap().next = order.get(i + 1).map_or(-1, |id| id.0);
@@ -307,6 +318,8 @@ pub fn plan(before: &World, raw: &Links, c: &Config) -> Result<(World, DbCheckRe
         report.findings.push(format!("Purged #{}", id.0));
     }
     w.macros.purge(&report.plan.purges);
+    w.retain_battle_rolls(&report.plan.purges)?;
+    w.btech.purge(&report.plan.purges);
     w.channel_aliases.retain(|id, _| live.contains(id));
     w.last_pages.retain(|id, _| live.contains(id));
     for recipients in w.last_pages.values_mut() {

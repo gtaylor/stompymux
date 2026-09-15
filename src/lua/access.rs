@@ -146,6 +146,11 @@ impl Scripts {
         self.effects.rollback();
     }
 
+    /// Drain categorized diagnostics during embedding transaction inspection.
+    pub fn drain_records_for_inspection(&self) -> Vec<crate::logging::Record> {
+        self.effects.drain_records()
+    }
+
     /// Drain staged transaction log effects during integration inspection.
     pub fn drain_logs_for_inspection(&self) -> Vec<crate::logging::FileRequest> {
         self.effects.drain_logs()

@@ -1,0 +1,167 @@
+//! Runtime diagnostics measure saved Rust data and share the server's live-work admission.
+use std::{cell::RefCell, rc::Rc};
+use stompymux_rs::*;
+#[path = "support/btech_firing.rs"]
+mod firing;
+mod support;
+
+/// Empty and active worlds expose measured counts without changing simulation state or dice.
+#[tokio::test]
+async fn runtime_statistics_match_live_state_native_lua_and_restart() {
+    let (_dir, config, mut world) = support::isolated_world().await;
+    let empty = battle_runtime_stats(&world, &config, ObjectId(1)).unwrap();
+    assert!(empty.simulation_pending);
+    assert_eq!(empty.reactor_startup_remaining, 31);
+    for _ in 0..31 {
+        advance_battle_reactor_windows(&mut world);
+    }
+    assert!(
+        !battle_runtime_stats(&world, &config, ObjectId(1))
+            .unwrap()
+            .simulation_pending
+    );
+    assert_eq!(
+        (empty.mechs, empty.vehicles, empty.maps, empty.stations),
+        (0, 0, 0, 0)
+    );
+    for template in firing::templates() {
+        let (_dir, config, mut world, parent, target, _) =
+            firing::fixture_with_target(&template, Some(BattleWeapon::MediumLaser), &template)
+                .await;
+        let station = world.create(&config, "Station".into(), Kind::Thing);
+        let gunner = world.create(&config, "Gunner".into(), Kind::Player);
+        world.objects.get_mut(&gunner).unwrap().location = Some(station);
+        register_gunner_station(&mut world, ObjectId(1), station, parent, 0).unwrap();
+        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        gunner_station_action(&scripts, station, gunner, true).unwrap();
+        scripts.drain_outbox();
+        select_battle_target(&mut scripts.world_mut(), station, gunner, Some(target)).unwrap();
+        let before = scripts.world().btech.clone();
+        let stats = battle_runtime_stats(&scripts.world(), &config, ObjectId(1)).unwrap();
+        assert!(stats.simulation_pending);
+        assert_eq!(stats.mechs + stats.vehicles, 2);
+        assert_eq!(stats.stations, 1);
+        assert_eq!(stats.station_locks, 1);
+        assert_eq!(stats.artillery_shots, 0);
+        assert_eq!(
+            stats.encoded_state_bytes,
+            serde_json::to_vec(&before).unwrap().len() as u64
+        );
+        assert!(stats.inline_record_bytes > std::mem::size_of_val(&before));
+        assert_eq!(stats.registration_kinds["TURRET"], 1);
+        let lua: mlua::Table = scripts
+            .eval_callback("return btech.runtime.stats(1)")
+            .unwrap();
+        assert_eq!(
+            serde_json::to_value(lua).unwrap(),
+            serde_json::to_value(&stats).unwrap()
+        );
+        let events = support::run_text(&scripts, &config, ObjectId(1), 1, "eventstats");
+        assert!(events.contains("Station locks settling: 1"), "{events}");
+        let memory = support::run_text(&scripts, &config, ObjectId(1), 1, "memstats LONG");
+        assert!(
+            memory.contains(&format!(
+                "Encoded state bytes (JSON): {}",
+                stats.encoded_state_bytes
+            )),
+            "{memory}"
+        );
+        assert!(memory.contains("TURRET: 1 registrations"));
+        assert!(memory.contains("Allocator totals: unavailable"));
+        assert!(battle_runtime_stats(&scripts.world(), &config, gunner).is_err());
+        assert!(
+            scripts
+                .eval_callback::<mlua::Table>(&format!("return btech.runtime.stats({})", gunner.0))
+                .is_err()
+        );
+        assert_eq!(scripts.world().btech, before);
+        assert!(scripts.drain_outbox().is_empty());
+        let saved = scripts.world().clone();
+        persistence::save(&config.database(), &saved).await.unwrap();
+        let restored = persistence::load(&config.database()).await.unwrap();
+        assert_eq!(
+            battle_runtime_stats(&restored, &config, ObjectId(1)).unwrap(),
+            stats
+        );
+    }
+}
+
+/// A solitary digging vehicle must keep ticking without scanner peers or unrelated timers.
+#[tokio::test]
+async fn digging_alone_keeps_simulation_pending_until_completion() {
+    for movement in ["Track", "Wheel"] {
+        let (_dir, config, mut world) = support::isolated_world().await;
+        for _ in 0..31 {
+            advance_battle_reactor_windows(&mut world);
+        }
+        let map = world.create(&config, "Digging field".into(), Kind::Room);
+        create_battle_map(
+            &mut world,
+            map,
+            "dig",
+            BattleMapAsset::parse("1 1\n.0\n").unwrap(),
+        )
+        .unwrap();
+        let id = world.create(&config, "Digger".into(), Kind::Thing);
+        let source = include_str!("../game/mechs/Demolisher")
+            .replace("{ Track }", &format!("{{ {movement} }}"));
+        BattleUnitTemplate::parse(&source)
+            .unwrap()
+            .create(&mut world, id)
+            .unwrap();
+        place_battle_unit(&mut world, id, map, 0, 0).unwrap();
+        world.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
+        assign_battle_pilot(&mut world, id, ObjectId(1)).unwrap();
+        start_battle_unit(&mut world, id, ObjectId(1), true).unwrap();
+        for _ in 0..5 {
+            advance_battle_units(&mut world, 0);
+        }
+        assert!(optical_scanner_observers(&world).is_empty());
+        // Running vehicle computers need ticks independently of digging when parts are enabled.
+        assert!(
+            battle_runtime_stats(&world, &config, ObjectId(1))
+                .unwrap()
+                .simulation_pending
+        );
+        let path = _dir.path().join("stompymux.toml");
+        let mut table: toml::Table = std::fs::read_to_string(&path).unwrap().parse().unwrap();
+        table
+            .entry("battletech")
+            .or_insert(toml::Value::Table(toml::Table::new()))
+            .as_table_mut()
+            .unwrap()
+            .insert("parts".into(), 0.into());
+        std::fs::write(path, toml::to_string(&table).unwrap()).unwrap();
+        let config = Config::load(_dir.path()).unwrap();
+        assert!(
+            !battle_runtime_stats(&world, &config, ObjectId(1))
+                .unwrap()
+                .simulation_pending
+        );
+        dig_battle_unit(&mut world, id, ObjectId(1)).unwrap();
+        for elapsed in 0..20 {
+            assert!(
+                battle_runtime_stats(&world, &config, ObjectId(1))
+                    .unwrap()
+                    .simulation_pending,
+                "digging must retain the next tick at {elapsed}s"
+            );
+            if elapsed == 7 {
+                persistence::save(&config.database(), &world).await.unwrap();
+                let loaded = persistence::load(&config.database()).await.unwrap();
+                assert_eq!(loaded.btech, world.btech);
+                world = loaded;
+            }
+            advance_battle_units(&mut world, 0);
+        }
+        assert_eq!(
+            world.btech.vehicles()[&id].dig_state(),
+            BattleDigState::covered()
+        );
+        assert!(
+            !battle_runtime_stats(&world, &config, ObjectId(1))
+                .unwrap()
+                .simulation_pending
+        );
+    }
+}

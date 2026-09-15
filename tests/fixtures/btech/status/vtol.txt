@@ -1,0 +1,24 @@
+Vehicle Name: Kestrel          ID:[AA]   Vehicle Reference: Kestrel
+Tonnage:    25      FlankSpeed: 193       Movement Type: VTOL
+Pilot Name: GOD                          Pilot Injury: 0
+LANDED
+SHUTDOWN
+        FRONT                               INTERNAL
+     .   ..   .                            .   ..   .   
+     \\ `__` //                            \\ `__` //   
+      \\. 8.//                              \\. 3.//    
+     __\\  //__                            __\\  //__   
+    ( 5|( 2)| 5)                          ( 3|( 3)| 3)  
+    *--|// \\--*                          *--|// \\--*  
+       // 4 \\                               // 3 \\    
+      //\__/ \\                             //\__/ \\   
+      ~       ~                             ~       ~
+ 
+X, Y, Z:  0,  0,  0  Heat Sinks:            0       
+Speed:        0 KPH  Vertical Speed:        0 KPH   Des. Speed   0 KPH
+Heading:      0 deg  Des. Heading:          0 deg   Fuel: 4000 (100.00 %)
+  
+==================WEAPON SYSTEMS===========================AMMUNITION========
+------ Weapon --------- [##] Location ---- Status ||--- Ammo Type ---- Rounds
+ MachineGun             [ 0] Front Side    Ready  || MachineGun          100
+ MachineGun             [ 1] Front Side    Ready  ||    

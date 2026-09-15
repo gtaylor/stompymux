@@ -31,7 +31,7 @@ Left_Torso
   Rear		   { 10 }
     CRIT_1-2		  { Engine - - }
     CRIT_3-4		  { JumpJet - - }
-    CRIT_5-8		  { CL.LRM-10 - }
+    CRIT_5-8		  { CL.LRM-10 - - }
     CRIT_9-11		  { Ammo_CL.LRM-10 12 - }
     CRIT_12		  { Ammo_CL.MachineGun 100 Hotload }
 Right_Torso
@@ -40,7 +40,7 @@ Right_Torso
   Rear		   { 10 }
     CRIT_1-2		  { Engine - - }
     CRIT_3-4		  { JumpJet - - }
-    CRIT_5-8		  { CL.LRM-10 - }
+    CRIT_5-8		  { CL.LRM-10 - - }
     CRIT_9-11		  { Ammo_CL.LRM-10 12 - }
     CRIT_12		  { FerroFibrous - - }
 Center_Torso

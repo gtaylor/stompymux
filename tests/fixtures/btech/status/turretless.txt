@@ -1,0 +1,19 @@
+Vehicle Name: Savannah_Master  ID:[AA]   Vehicle Reference: Savannah_Master
+Tonnage:     5      FlankSpeed: 216       Movement Type: Hover
+Pilot Name: GOD                          Pilot Injury: 0
+SHUTDOWN
+          FRONT                                INTERNAL
+         ,`.10,'.                              ,`. 1,'.
+        |  |__|  |                            |  |__|  |
+        |  |  |  |                            |  |  |  |
+        | 6|~~| 6|                            | 1|~~| 1|
+         \,' 2`./                              \,' 1`./
+          ~~~~~~                                ~~~~~~
+ 
+X, Y, Z:  0,  0,  0  Heat Sinks:           10       
+Speed:        0 KPH  Heading:        0 deg
+Des. Speed:   0 KPH  Des. Heading:   0 deg
+  
+==================WEAPON SYSTEMS===========================AMMUNITION========
+------ Weapon --------- [##] Location ---- Status ||--- Ammo Type ---- Rounds
+ MediumLaser            [ 0] Front Side    Ready  ||    

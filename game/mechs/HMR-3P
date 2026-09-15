@@ -29,7 +29,7 @@ Right_Arm
     CRIT_3		  { LowerActuator - - }
     CRIT_4		  { HandOrFootActuator - - }
     CRIT_5		  { IS.ERMediumLaser - - }
-    CRIT_6-7		  { HeatSink - - }
+    CRIT_6-8		  { HeatSink - - }
     CRIT_9-10		  { EndoSteel - - }
 Left_Torso
   Armor            { 11 }

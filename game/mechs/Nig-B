@@ -15,7 +15,7 @@ Left_Arm
     CRIT_1		  { ShoulderOrHip - - 5 }
     CRIT_2		  { UpperActuator - - 5 }
     CRIT_3-8		  { CL.GaussRifle - - 5 }
-    CRIT_10		  { HeatSink - - 5 }
+    CRIT_9-10		  { HeatSink - - 5 }
     CRIT_11-12		  { FerroFibrous - - 5 }
 Right_Arm
   Armor            { 24 }

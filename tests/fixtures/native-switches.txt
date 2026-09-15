@@ -1,4 +1,5 @@
 @boot port:1:wizard quiet:1:wizard
+@btech info:1:wizard register:1:wizard unregister:1:wizard
 @chan boot:4:everyone create:6:everyone destroy:7:everyone emit:4:everyone list:4:everyone object:6:everyone oflags:6:everyone pflags:6:everyone flags:5:everyone status:6:everyone who:3:everyone full:4:everyone noheader:8:everyone
 @clone inventory:3:everyone location:1:everyone
 @destroy override:8:everyone

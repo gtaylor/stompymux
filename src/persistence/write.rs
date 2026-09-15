@@ -345,6 +345,7 @@ pub(super) async fn apply_changes(
     after: &World,
     maintenance: Option<&crate::dbck::RepairPlan>,
 ) -> Result<()> {
+    super::btech::validate_changes(before, after, maintenance.map(|plan| &plan.purges))?;
     ensure!(
         before.objects.keys().all(|k| after.objects.contains_key(k)),
         "object deletion is not supported; deferred rows must be preserved"
@@ -483,6 +484,7 @@ pub(super) async fn apply_changes(
     }
     changed |= super::communication::save(c, before, after).await?;
     changed |= super::macros::save(c, before, after).await?;
+    changed |= super::btech::save(c, before, after).await?;
     let next = after
         .next_id
         .max(before.next_id)

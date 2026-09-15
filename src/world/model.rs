@@ -92,6 +92,12 @@ pub struct World {
     pub channels: BTreeMap<String, Channel>,
     pub channel_aliases: BTreeMap<ObjectId, Vec<crate::communication::ChannelAlias>>,
     pub macros: crate::macros::PlayerMacros,
+    /// Saved BattleTech identities shared by transaction checkpoints.
+    #[serde(default)]
+    pub btech: crate::btech::BtechState,
+    /// Process-local generic rolls retained after their unit or map stream is retired.
+    #[serde(skip)]
+    pub btech_retired_rolls: crate::BattleRollStatistics,
     pub last_pages: BTreeMap<ObjectId, Vec<ObjectId>>,
     pub next_id: i64,
     pub record_players: usize,

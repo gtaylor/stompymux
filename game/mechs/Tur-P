@@ -33,7 +33,7 @@ Left_Torso
     CRIT_1-2		  { Engine - - }
     CRIT_3-6		  { HeatSink - - }
     CRIT_7		  { JumpJet - - }
-    CRIT_8		  { CL.LRM-15 - - }
+    CRIT_8		  { CL.LRM-15 - - 0 }
     CRIT_9		  { CL.LRM-15 - - 0 }
     CRIT_10-11		  { Ammo_CL.LRM-15 8 - - }
 Right_Torso
@@ -43,7 +43,7 @@ Right_Torso
     CRIT_1-2		  { Engine - - }
     CRIT_3-6		  { HeatSink - - }
     CRIT_7		  { JumpJet - - }
-    CRIT_8		  { CL.LRM-15 - - }
+    CRIT_8		  { CL.LRM-15 - - 0 }
     CRIT_9		  { CL.LRM-15 - - 0 }
     CRIT_10		  { Ammo_CL.LRM-15 8 - - }
 Center_Torso

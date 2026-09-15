@@ -50,8 +50,8 @@ Center_Torso
     CRIT_1-3     { Engine - - }
     CRIT_4-7     { Gyro - - }
     CRIT_8-10    { Engine - - }
-    CRIT_11      { IS.RL-10 - RearMount OneShot }
-    CRIT_12      { IS.RL-10 - RearMount OneShot }
+    CRIT_11      { IS.RL-10 - RearMount|OneShot }
+    CRIT_12      { IS.RL-10 - RearMount|OneShot }
 Left_Leg
   Armor          { 30 }
   Internals      { 15 }

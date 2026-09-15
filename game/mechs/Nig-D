@@ -36,7 +36,7 @@ Left_Torso
   Rear             { 10 }
     CRIT_1-2		  { Engine - - 5 }
     CRIT_3-5		  { CL.LRM-20 - - 5 }
-    CRIT_6		  { CL.LRM-20 - - 0 }
+    CRIT_6		  { CL.LRM-20 - - 5 }
     CRIT_7		  { ArtemisIV - - 0 }
     CRIT_8-12		  { FerroFibrous - - 5 }
 Right_Torso
@@ -45,7 +45,7 @@ Right_Torso
   Rear             { 10 }
     CRIT_1-2		  { Engine - - 5 }
     CRIT_3-5		  { CL.LRM-20 - - 5 }
-    CRIT_6		  { CL.LRM-20 - - 0 }
+    CRIT_6		  { CL.LRM-20 - - 5 }
     CRIT_7		  { ArtemisIV - - 0 }
     CRIT_8-12		  { EndoSteel - - 5 }
 Center_Torso

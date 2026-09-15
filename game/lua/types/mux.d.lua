@@ -419,6 +419,7 @@ local State = {}
 ---@field CHANNEL_JOIN Lock Join a channel.
 ---@field CHANNEL_TRANSMIT Lock Transmit on a channel.
 ---@field CHANNEL_RECEIVE Lock Receive channel traffic.
+---@field IDENTIFY_BUILDING Lock Silently identify a visible BattleTech structure.
 ---@field IDENTIFY_BUILDING Lock Identify a BattleTech building contact.
 ---@see mux.error.codes.arg.invalid
 

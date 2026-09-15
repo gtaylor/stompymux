@@ -41,7 +41,10 @@ fn supplied_corpus_is_reachable_and_renderable() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("game");
     let config = Config::load(&root).unwrap();
     let index = HelpIndex::load(&config).unwrap();
-    assert_eq!(index.report.articles, 100);
+    assert!(matches!(
+        index.lookup("pilot", false).unwrap(),
+        HelpResponse::Article { .. }
+    ));
     assert!(index.report.errors.is_empty(), "{:?}", index.report);
     assert!(index.report.warnings.is_empty(), "{:?}", index.report);
     fn walk(path: &Path, out: &mut Vec<std::path::PathBuf>) {
@@ -56,6 +59,8 @@ fn supplied_corpus_is_reachable_and_renderable() {
     }
     let mut files = Vec::new();
     walk(&root.join("help"), &mut files);
+    assert!(!files.is_empty());
+    assert_eq!(index.report.articles, files.len());
     for file in files {
         let source = std::fs::read_to_string(&file).unwrap();
         let metadata: toml::Value = toml::from_str(source.split("+++").nth(1).unwrap()).unwrap();

@@ -15,7 +15,7 @@ Left_Arm
     CRIT_4		  { HandOrFootActuator - - }
     CRIT_5-6		  { CL.LRM-15 - - }
     CRIT_7		  { CL.LRM-5 - - }
-    CRIT_8-0		  { Ammo_CL.LRM-15 8 Narc/Smoke }
+    CRIT_8-9		  { Ammo_CL.LRM-15 8 Narc/Smoke }
     CRIT_10		  { EndoSteel - - }
     CRIT_11		  { FerroFibrous - - }
 Right_Arm

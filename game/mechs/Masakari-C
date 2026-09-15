@@ -11,7 +11,7 @@ Left_Arm
   Internals        { 14 }
     CRIT_1		  { ShoulderOrHip - - }
     CRIT_2		  { UpperActuator - - }
-    CRIT_3-7		  { HeatSink - - }
+    CRIT_3-6		  { HeatSink - - }
     CRIT_8-9		  { CL.ERPPC - OnTC }
     CRIT_10-11		  { CL.ERPPC - OnTC }
     CRIT_12		  { FerroFibrous - - }
@@ -25,6 +25,7 @@ Right_Arm
     CRIT_6-7		  { CL.LargePulseLaser - - }
     CRIT_8-9		  { CL.LargePulseLaser - - }
     CRIT_10		  { FerroFibrous - - }
+    CRIT_11-12		  { HeatSink - - }
 Left_Torso
   Armor            { 26 }
   Internals        { 18 }

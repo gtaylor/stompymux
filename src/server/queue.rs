@@ -262,6 +262,65 @@ mod tests {
         text
     }
 
+    /// Semantic diagnostics survive successful persistence and disappear on a rejected write.
+    #[tokio::test]
+    async fn operator_audit_waits_for_commit_and_discards_failed_changes() {
+        let (_dir, mut server) = fixture().await;
+        let candidate = server
+            .config
+            .administer(
+                &crate::config::administration::Request {
+                    directive: "wizard".into(),
+                    value: "yes".into(),
+                },
+                &server.scripts.world(),
+                ObjectId(1),
+                server.scripts.commands(),
+            )
+            .unwrap();
+        server.scripts.configure(&candidate.config).unwrap();
+        server.config = candidate.config;
+        let before = server.scripts.world().clone();
+        crate::edit_battle_weapon_settings(
+            &server.scripts,
+            &server.config,
+            ObjectId(1),
+            "IS.SmallLaser",
+            17,
+            true,
+        )
+        .unwrap();
+        assert_eq!(server.scripts.effects.checkpoint().records.len(), 1);
+        server
+            .scripts
+            .world_mut()
+            .objects
+            .get_mut(&ObjectId(1))
+            .unwrap()
+            .name = "Changed operator".into();
+        sql(&server, "CREATE TRIGGER reject_audit BEFORE UPDATE ON objects BEGIN SELECT RAISE(FAIL,'audit write failure'); END").await;
+        assert!(!server.commit(before.clone()).await);
+        assert_eq!(server.scripts.world().btech, before.btech);
+        assert!(server.scripts.effects.drain_records().is_empty());
+        sql(&server, "DROP TRIGGER reject_audit").await;
+        crate::edit_battle_skill_threshold(
+            &server.scripts,
+            &server.config,
+            ObjectId(1),
+            "PilBip",
+            17,
+        )
+        .unwrap();
+        assert!(server.commit(before).await);
+        assert_eq!(server.scripts.effects.checkpoint().records.len(), 1);
+        server.flush();
+        assert!(server.scripts.effects.drain_records().is_empty());
+        assert_eq!(
+            crate::battle_skill_threshold(&server.scripts.world(), "PilBip").unwrap(),
+            17
+        );
+    }
+
     #[tokio::test]
     async fn queued_lua_and_persistence_failure_consume_work_and_rollback_output() {
         let (_d, mut s) = fixture().await;

@@ -41,6 +41,32 @@ pub async fn prepare(c: &Config) -> Result<Scripts> {
             }
         }
     }
+    crate::btech::map_bits::rebuild_mine_lookups(&mut world.borrow_mut())?;
+    // Seed imported characters and assigned pilots before startup's commit admits gameplay.
+    {
+        let mut loaded = world.borrow_mut();
+        let players: std::collections::BTreeSet<_> = loaded
+            .btech
+            .characters()
+            .keys()
+            .copied()
+            .chain(
+                loaded
+                    .btech
+                    .constructed_units()
+                    .values()
+                    .filter_map(|unit| unit.pilot()),
+            )
+            .filter(|id| {
+                loaded.objects.get(id).is_some_and(|object| {
+                    object.kind == Kind::Player && !object.flags.contains(crate::Flag::Going)
+                })
+            })
+            .collect();
+        for player in players {
+            crate::prepare_battle_recovery(&mut loaded, player)?;
+        }
+    }
     let help_config = c.clone();
     let help =
         tokio::task::spawn_blocking(move || crate::help::HelpIndex::load(&help_config)).await??;

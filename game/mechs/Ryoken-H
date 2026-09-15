@@ -28,7 +28,7 @@ Left_Torso
   Rear             { 9 }
     CRIT_1-2		  { Engine - - }
     CRIT_3-6		  { HeatSink - - }
-Comment { CRIT_3-8		  { HeatSink - - }
+Comment { CRIT_3-8		  : HeatSink - - }
     CRIT_9		  { EndoSteel - - }
     CRIT_10-12		  { FerroFibrous - - }
 Right_Torso
@@ -37,7 +37,7 @@ Right_Torso
   Rear             { 9 }
     CRIT_1-2		  { Engine - - }
     CRIT_3-4		  { HeatSink - - }
-Comment { CRIT_3-8		  { HeatSink - - }
+Comment { CRIT_3-8		  : HeatSink - - }
     CRIT_9		  { EndoSteel - - }
     CRIT_10-12		  { FerroFibrous - - }
 Center_Torso

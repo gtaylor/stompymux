@@ -13,7 +13,7 @@ Left_Arm
   Armor            { 30 }
   Internals        { 15 }
     CRIT_1		  { ShoulderOrHip - - }
-Comment {    CRIT_2                { UpperActuator - - }
+Comment {    CRIT_2                : UpperActuator - - }
     CRIT_2-12             { IS.LB20-XAC - - }
 Right_Arm
   Armor            { 30 }
@@ -29,7 +29,7 @@ Left_Torso
   Rear             { 10 }
     CRIT_1-3		  { Engine - - }
     CRIT_4                { JumpJet - - }
-Comment {    CRIT_5                { IS.LB20-XAC - - }
+Comment {    CRIT_5                : IS.LB20-XAC - - }
     CRIT_6                { Ammo_IS.LB20-XAC 5 - }
     CRIT_7                { Ammo_IS.LB20-XAC 5 LBX/Cluster }
 Right_Torso

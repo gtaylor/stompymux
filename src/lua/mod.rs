@@ -169,6 +169,10 @@ impl Scripts {
             .map_err(|e| anyhow::anyhow!("{e}"))?;
         self.commands = commands;
         self.lua.set_app_data(config.clone());
+        crate::configure_battle_sensor_policy(
+            &mut self.world.borrow_mut(),
+            config.battletech.seismic_see_stopped != 0,
+        );
         Ok(())
     }
 }

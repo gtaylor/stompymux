@@ -42,6 +42,8 @@ pub struct PrivateOutput {
 /// A complete candidate-effect savepoint for nested rollback.
 #[derive(Clone, Default)]
 pub struct EffectBatch {
+    /// Require durable persistence even when the world candidate is unchanged.
+    pub save_requested: bool,
     /// Object-directed output at the savepoint.
     pub normal: Vec<(ObjectId, Document)>,
     pub(crate) flows: BTreeMap<u64, ActiveFlow>,
@@ -49,6 +51,10 @@ pub struct EffectBatch {
     pub private: Vec<PrivateOutput>,
     /// Deferred logfile appends.
     pub logs: Vec<crate::logging::FileRequest>,
+    /// Categorized diagnostics published only after world commit.
+    pub records: Vec<crate::logging::Record>,
+    /// Prepared map replacements, published only after world commit.
+    pub map_writes: Vec<super::MapAssetWrite>,
     /// Merged semantic maintenance request.
     pub maintenance: Option<crate::dbck::DbCheckReport>,
 }
@@ -128,6 +134,17 @@ impl Effects {
     pub fn commit(&self) {
         let mut state = self.state.borrow_mut();
         state.durable = state.pending.flows.clone();
+        state.pending.save_requested = false;
+    }
+
+    /// Coalesce explicit save requests into the enclosing world transaction.
+    pub fn request_save(&self) {
+        self.state.borrow_mut().pending.save_requested = true;
+    }
+
+    /// Whether the host must persist an otherwise unchanged candidate.
+    pub fn save_requested(&self) -> bool {
+        self.state.borrow().pending.save_requested
     }
 
     /// Return flow candidates to their durable state and discard other effects.
@@ -193,6 +210,38 @@ impl Effects {
         true
     }
 
+    /// Admit a categorized diagnostic under the aggregate transaction output budget.
+    pub fn stage_record(&self, record: crate::logging::Record) -> anyhow::Result<()> {
+        let before = self.checkpoint();
+        self.state.borrow_mut().pending.records.push(record);
+        if let Err(error) = self.validate() {
+            self.restore(before);
+            return Err(error);
+        }
+        Ok(())
+    }
+
+    /// Consume categorized diagnostics after successful persistence.
+    pub fn drain_records(&self) -> Vec<crate::logging::Record> {
+        std::mem::take(&mut self.state.borrow_mut().pending.records)
+    }
+
+    /// Stage a map replacement under the same savepoint and aggregate limits as other effects.
+    pub fn stage_map_write(&self, request: super::MapAssetWrite) -> anyhow::Result<()> {
+        let before = self.checkpoint();
+        self.state.borrow_mut().pending.map_writes.push(request);
+        if let Err(error) = self.validate() {
+            self.restore(before);
+            return Err(error);
+        }
+        Ok(())
+    }
+
+    /// Consume map replacements after the host has durably committed the world candidate.
+    pub fn drain_map_writes(&self) -> Vec<super::MapAssetWrite> {
+        std::mem::take(&mut self.state.borrow_mut().pending.map_writes)
+    }
+
     /// Stop all interactive work and discard staged effects.
     pub fn stop(&self) {
         self.outbox.borrow_mut().clear();
@@ -243,44 +292,64 @@ impl Effects {
         let previous = previous.state.borrow();
         let mut state = self.state.borrow_mut();
         let logs = std::mem::take(&mut state.pending.logs);
+        let records = std::mem::take(&mut state.pending.records);
+        let map_writes = std::mem::take(&mut state.pending.map_writes);
         let maintenance = state.pending.maintenance.take();
         state.sessions = previous.sessions.clone();
         state.durable = previous.durable.clone();
         state.pending = EffectBatch {
             flows: state.durable.clone(),
             logs,
+            records,
+            map_writes,
             maintenance,
             ..Default::default()
         };
     }
 
-    /// Enforce the aggregate ordinary, private, and log effect allowance.
+    /// Enforce the aggregate allowance for notifications, private output, logs and map assets.
     pub fn validate(&self) -> anyhow::Result<()> {
         let normal = self.outbox.borrow();
         let state = self.state.borrow();
         let pending = &state.pending;
-        let bytes = normal
+        let bytes = pending
+            .map_writes
             .iter()
-            .map(|(_, document)| document.len())
+            .map(|request| request.bytes())
             .sum::<usize>()
             .saturating_add(
                 pending
-                    .private
+                    .records
                     .iter()
-                    .map(|output| output.document.len())
+                    .map(|record| record.text.len())
                     .sum::<usize>(),
             )
             .saturating_add(
-                pending
-                    .logs
+                normal
                     .iter()
-                    .map(|entry| entry.filename.len() + entry.message.len())
-                    .sum::<usize>(),
+                    .map(|(_, document)| document.len())
+                    .sum::<usize>()
+                    .saturating_add(
+                        pending
+                            .private
+                            .iter()
+                            .map(|output| output.document.len())
+                            .sum::<usize>(),
+                    )
+                    .saturating_add(
+                        pending
+                            .logs
+                            .iter()
+                            .map(|entry| entry.filename.len() + entry.message.len())
+                            .sum::<usize>(),
+                    ),
             );
         if normal
             .len()
             .saturating_add(pending.private.len())
             .saturating_add(pending.logs.len())
+            .saturating_add(pending.records.len())
+            .saturating_add(pending.map_writes.len())
             > self.config.lua.output_entry_limit
             || bytes > self.config.lua.output_byte_limit
         {

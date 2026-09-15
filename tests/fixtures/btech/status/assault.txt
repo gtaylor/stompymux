@@ -1,0 +1,27 @@
+Mech Name: Atlas               ID:[AA]   Mech Reference: AS7-D
+Tonnage:   100     MaxSpeed:  53       JumpRange: 0
+Pilot Name: GOD                          Pilot Injury: 0
+SHUTDOWN
+         FRONT                REAR                INTERNAL
+          __                   __                    __
+       __[ 9]__             __[**]__              __[ 3]__
+      /32|47|32\           /10|14|10\            /21|31|21\
+     (34||==||34)         (   ||||   )          (17||==||17)
+       / \||/ \               \||/                / \||/ \
+      (41/  \41)             /    \              (21/  \21)
+ 
+X, Y, Z:  0,  0,  0  Excess Heat:    0 deg C.  Heat Production:    0 deg C.
+Speed:        0 KPH  Heading:        0 deg     Heat Sinks:        20
+Des. Speed:   0 KPH  Des. Heading:   0 deg     Heat Dissipation:   0 deg C.
+Temp: |.............|.....|......................|
+  
+LARM: Ready RARM: Ready LLEG: Ready RLEG: Ready 
+==================WEAPON SYSTEMS===========================AMMUNITION========
+------ Weapon --------- [##] Location ---- Status ||--- Ammo Type ---- Rounds
+ MediumLaser            [ 0] Left Arm      Ready  || SRM-6                15
+ MediumLaser            [ 1] Right Arm     Ready  || LRM-20               12
+ LRM-20                 [ 2] Left Torso    Ready  || AC/20                10
+ SRM-6                  [ 3] Left Torso    Ready  ||    
+ AC/20                  [ 4] Right Torso   Ready  ||    
+ MediumLaser      R     [ 5] Center Torso  Ready  ||    
+ MediumLaser      R     [ 6] Center Torso  Ready  ||    

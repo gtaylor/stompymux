@@ -17,7 +17,7 @@ Left_Arm
     CRIT_4		  { HandOrFootActuator - - }
     CRIT_5		  { FerroFibrous - - }
     CRIT_6-7		  { CL.StreakSRM-6 - - }
-    CRIT_8		  { Ammo_CL.StreakSRM-6 15  }
+    CRIT_8		  { Ammo_CL.StreakSRM-6 15 - }
     CRIT_9-12             { EndoSteel - - }
 Right_Arm
   Armor            { 12 }

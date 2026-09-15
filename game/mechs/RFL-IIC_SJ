@@ -15,7 +15,7 @@ Left_Arm
     CRIT_1		  { ShoulderOrHip - - 5 }
     CRIT_2-3		  { CL.UltraAC/2 - - 5 }
     CRIT_4		  { CL.UltraAC/2 - - 5 }
-    CRIT_5		  { CL.UltraAC/2 - - 0 }
+    CRIT_5		  { CL.UltraAC/2 - - 5 }
     CRIT_6-8		  { FerroFibrous - - 0 }
 Right_Arm
   Armor            { 20 }
@@ -23,7 +23,7 @@ Right_Arm
     CRIT_1		  { ShoulderOrHip - - 5 }
     CRIT_2-3		  { CL.UltraAC/2 - - 5 }
     CRIT_4		  { CL.UltraAC/2 - - 5 }
-    CRIT_5		  { CL.UltraAC/2 - - 0 }
+    CRIT_5		  { CL.UltraAC/2 - - 5 }
     CRIT_6-8		  { FerroFibrous - - 0 }
 Left_Torso
   Armor            { 20 }

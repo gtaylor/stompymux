@@ -1,4 +1,14 @@
 //! Direct asynchronous schema-32 persistence with selective, atomic updates.
+mod btech;
+mod btech_character;
+mod btech_decorations;
+mod btech_map_lifecycle;
+mod btech_map_random;
+mod btech_reactor;
+mod btech_recovery;
+mod btech_terrain;
+mod btech_units;
+mod btech_vehicles;
 mod communication;
 mod load;
 mod macros;
@@ -137,6 +147,12 @@ pub async fn initialize_with_timeout(path: &Path, world: &World, timeout: u64) -
         let result = async {
             let mut tx = c.begin_with("BEGIN IMMEDIATE").await?;
             sqlx::raw_sql(include_str!("schema32.sql"))
+                .execute(&mut *tx)
+                .await?;
+            sqlx::raw_sql(include_str!("btech_units.sql"))
+                .execute(&mut *tx)
+                .await?;
+            sqlx::raw_sql(include_str!("btech_terrain.sql"))
                 .execute(&mut *tx)
                 .await?;
             sqlx::query("INSERT INTO snapshot VALUES(1,32,1,32,0,0,0,0,0)")
@@ -308,3 +324,40 @@ pub(crate) async fn persist_effects(
     .await
     .map(|_| ())
 }
+
+mod btech_values;
+
+mod btech_entrances;
+
+mod btech_artillery;
+mod btech_building_repair;
+
+mod btech_minefields;
+
+mod btech_landing_exclusions;
+mod btech_map_bits;
+mod btech_object_order;
+
+mod btech_view_preferences;
+
+mod btech_wrapping;
+
+mod btech_building_routes;
+
+mod btech_tows;
+
+mod btech_wrecks;
+
+mod btech_inventory;
+
+mod btech_cargo_bay;
+
+mod btech_static_decorations;
+
+mod btech_map_links;
+
+mod btech_gunner_stations;
+
+mod btech_turn_clock;
+
+mod btech_sensor_recovery;

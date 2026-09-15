@@ -12,6 +12,8 @@ pub enum Route {
     Home,
     /// Administrative movement with teleport policies.
     Teleport,
+    /// Host teleport with quiet transitions, retaining source teleport-out policies.
+    SilentTeleport,
     /// Exit travel, after its traversal lock has passed.
     Exit { exit: ObjectId },
     /// Ordinary inventory/container relocation with policies evaluated by its caller.
@@ -51,14 +53,85 @@ pub struct Move {
 
 /// Apply movement as one command mutation, restoring callback changes on failure.
 pub fn perform(s: &Scripts, request: Request) -> Result<()> {
+    perform_with_relocation(s, request, |_| Ok(()))
+}
+
+/// Commit domain placement after departure callbacks and before arrival callbacks.
+/// The hook shares the movement rollback boundary and is skipped on policy denial.
+pub(crate) fn perform_with_relocation(
+    s: &Scripts,
+    request: Request,
+    relocate: impl FnOnce(&mut crate::World) -> Result<()>,
+) -> Result<()> {
     let before = s.world.borrow().clone();
     let checkpoint = s.effects.checkpoint();
-    let result = crate::lua::transactions::with_cause(&s.lua, request.cause, || apply(s, request));
+    let result = crate::lua::transactions::with_cause(&s.lua, request.cause, || {
+        apply(s, request, || relocate(&mut s.world.borrow_mut()))
+    });
     if result.is_err() {
         *s.world.borrow_mut() = before;
         s.effects.restore(checkpoint);
     }
     result
+}
+
+/// A denied participant cancels the entire movement batch without publishing staged effects.
+#[derive(Debug)]
+struct BatchDenied;
+
+impl std::fmt::Display for BatchDenied {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Movement batch denied")
+    }
+}
+
+impl std::error::Error for BatchDenied {}
+
+/// Run paired domain movement through the ordinary policy and callback pipeline.
+/// All departure hooks precede one domain commit; arrival hooks unwind in reverse order.
+/// Denial, no-op, or callback failure restores both world state and staged effects.
+pub(crate) fn perform_pair_with_relocation(
+    s: &Scripts,
+    requests: [Request; 2],
+    relocate: impl FnOnce(&mut crate::World) -> Result<()>,
+) -> Result<bool> {
+    ensure!(
+        requests[0].object != requests[1].object,
+        "Duplicate movement participant"
+    );
+    let before = s.world.borrow().clone();
+    let checkpoint = s.effects.checkpoint();
+    let result = (|| {
+        let mut first = false;
+        crate::lua::transactions::with_cause(&s.lua, requests[0].cause, || {
+            apply(s, requests[0], || {
+                let mut second = false;
+                crate::lua::transactions::with_cause(&s.lua, requests[1].cause, || {
+                    apply(s, requests[1], || {
+                        relocate(&mut s.world.borrow_mut())?;
+                        second = true;
+                        Ok(())
+                    })
+                })?;
+                ensure!(second, BatchDenied);
+                first = true;
+                Ok(())
+            })
+        })?;
+        ensure!(first, BatchDenied);
+        Ok(())
+    })();
+    match result {
+        Ok(()) => Ok(true),
+        Err(error) => {
+            *s.world.borrow_mut() = before;
+            s.effects.restore(checkpoint);
+            if error.is::<BatchDenied>() {
+                return Ok(false);
+            }
+            Err(error)
+        }
+    }
 }
 
 /// Run the generic departure used when a GOING player or thing moves to NOTHING.
@@ -126,12 +199,22 @@ pub(crate) fn depart(
     };
     s.transition_action_context(&movement, false, false, transitions)?;
     validate()?;
+    // Purged units leave tactical membership after departure callbacks and before losing containment.
+    // Retain their final rolls before removing the simulation identity from this transaction.
+    {
+        let mut world = s.world.borrow_mut();
+        if world.btech.units().contains_key(&object) {
+            world.retain_battle_rolls(&[object].into_iter().collect())?;
+            crate::btech::wreck_cleanup::forget(&mut world.btech, object);
+        }
+    }
     s.world
         .borrow_mut()
         .objects
         .get_mut(&object)
         .unwrap()
         .location = None;
+    crate::btech::player_moved(&mut s.world.borrow_mut(), object);
     s.action_message(
         crate::lua::ObjectAction {
             object,
@@ -156,7 +239,7 @@ pub(crate) fn depart(
 }
 
 /// Validate first, then run transition callbacks and render the resulting location.
-fn apply(s: &Scripts, request: Request) -> Result<()> {
+fn apply(s: &Scripts, request: Request, relocate: impl FnOnce() -> Result<()>) -> Result<()> {
     let Request {
         actor,
         object,
@@ -236,13 +319,16 @@ fn apply(s: &Scripts, request: Request) -> Result<()> {
         destination,
         session,
     };
-    if route == Route::Teleport {
+    if matches!(route, Route::Teleport | Route::SilentTeleport) {
         let mut policies = vec![(
             destination,
             crate::LockType::Teleport,
             actor,
             "You can't teleport there!",
         )];
+        if route == Route::SilentTeleport {
+            policies.clear();
+        }
         if kind != Kind::Exit {
             for location in s.world.borrow().containment_chain(source)? {
                 policies.push((
@@ -299,7 +385,8 @@ fn apply(s: &Scripts, request: Request) -> Result<()> {
                 .push((object, "There's no place like home...".into()));
         }
     }
-    let generic = matches!(route, Route::Generic);
+    let generic = matches!(route, Route::Generic | Route::SilentTeleport);
+    let teleport = matches!(route, Route::Teleport | Route::SilentTeleport);
     let (hear, dark, dark_wizard) = {
         let w = s.world.borrow();
         let flags = &w.objects[&object].flags;
@@ -309,9 +396,10 @@ fn apply(s: &Scripts, request: Request) -> Result<()> {
             flags.contains(Flag::Dark) && crate::authority::is_wizard(&w, object),
         )
     };
-    let hush = route == Route::Teleport && dark;
+    let hush = route == Route::SilentTeleport || teleport && dark;
     // Home and teleport transitions use NOTHING; ordinary travel retains its cause.
-    let transition_cause = if matches!(route, Route::Home | Route::Teleport) {
+    let transition_cause = if matches!(route, Route::Home | Route::Teleport | Route::SilentTeleport)
+    {
         ObjectId(-1)
     } else {
         cause
@@ -332,11 +420,7 @@ fn apply(s: &Scripts, request: Request) -> Result<()> {
         descriptor: session,
         source,
         destination: Some(destination),
-        operation: if route == Route::Teleport {
-            "teleport"
-        } else {
-            "move"
-        },
+        operation: if teleport { "teleport" } else { "move" },
         silent: false,
     };
     if route == Route::Teleport && kind != Kind::Exit && !hush {
@@ -362,12 +446,14 @@ fn apply(s: &Scripts, request: Request) -> Result<()> {
     }
     // Providers can mutate the world; recheck before assigning the location.
     validate()?;
+    relocate()?;
     s.world
         .borrow_mut()
         .objects
         .get_mut(&object)
         .unwrap()
         .location = Some(destination);
+    crate::btech::player_moved(&mut s.world.borrow_mut(), object);
     let render = || -> Result<()> {
         if kind == Kind::Player
             && (session.is_some()

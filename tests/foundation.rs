@@ -1614,6 +1614,21 @@ async fn tcp_teleport_containers_and_home_persist() {
     );
     admin.send(&format!("@teleport #{}", cargo.0)).await;
     admin.until("Teleport Cargo").await;
+    // A room name can be buffered from earlier output; wait for durable effects before killing the child.
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            let saved = persistence::load(&c.database()).await.unwrap();
+            let log = std::fs::read_to_string(c.root.join("logs/movement.log")).unwrap();
+            if saved.objects[&ObjectId(1)].location == Some(cargo)
+                && log == "committed move\ncommitted move\ncommitted move\n"
+            {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    })
+    .await
+    .expect("final teleport and movement logs must commit before shutdown");
     running.stop().await;
     assert_eq!(
         std::fs::read_to_string(c.root.join("logs/movement.log")).unwrap(),
@@ -2419,6 +2434,10 @@ async fn tcp_help_reload_navigation_and_compressed_chunks() {
         .unwrap()
         .flags
         .insert(stompymux_rs::Flag::Ansi);
+    // Settle startup simulation before checking that help leaves persistent game state unchanged.
+    for _ in 0..31 {
+        stompymux_rs::advance_battle_reactor_windows(&mut w);
+    }
     persistence::save(&c.database(), &w).await.unwrap();
     let running = Running::start(&c).await;
     let mut wizard = Client::connect(&running).await;
@@ -2431,7 +2450,8 @@ async fn tcp_help_reload_navigation_and_compressed_chunks() {
     reader.until("Permission denied.").await;
     wizard.send("color off").await;
     wizard.until("Color mode set to off.").await;
-    let db = std::fs::read(c.database()).unwrap();
+    let before_help =
+        serde_json::to_value(persistence::load(&c.database()).await.unwrap()).unwrap();
     wizard.send("hh").await;
     wizard.until("Rebuild the help index.").await;
     wizard.send("@help/bogus").await;
@@ -2524,7 +2544,12 @@ async fn tcp_help_reload_navigation_and_compressed_chunks() {
             2500
         );
     }
-    assert_eq!(db, std::fs::read(c.database()).unwrap());
+    let mut after_help =
+        serde_json::to_value(persistence::load(&c.database()).await.unwrap()).unwrap();
+    // The independent heartbeat persists its phase even without active units.
+    // Compare every game-state field while allowing only that clock to advance.
+    after_help["btech"]["turn_clock"] = before_help["btech"]["turn_clock"].clone();
+    assert_eq!(before_help, after_help);
     running.stop().await;
 }
 
@@ -3493,13 +3518,20 @@ async fn tcp_account_administration_and_restart() {
     offline.until("Your password has been changed by").await;
     let mut another = Client::connect(&server).await;
     another.login("Offline").await;
-    let before = std::fs::read(c.database()).unwrap();
+    let before = serde_json::to_value(persistence::load(&c.database()).await.unwrap()).unwrap();
     god.send("ll Offline").await;
     let history = god.until("Total failed connects: 1").await;
     assert!(history.contains("Total successful connects: 2"));
     assert!(history.contains("From: 127.0.0.1"));
     assert!(history.contains('Z'));
-    assert_eq!(std::fs::read(c.database()).unwrap(), before);
+    let mut after = serde_json::to_value(persistence::load(&c.database()).await.unwrap()).unwrap();
+    // A live heartbeat may commit its phase while the account report is delivered.
+    // The report must leave every other saved game-state field unchanged.
+    after["btech"]["turn_clock"] = before["btech"]["turn_clock"].clone();
+    assert!(
+        after == before,
+        "Account history inspection changed saved game state"
+    );
     god.send("bt #1").await;
     god.until("You cannot boot that player!").await;
     god.send("bt/port/quiet 2").await;

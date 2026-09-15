@@ -108,6 +108,8 @@ pub(crate) fn apply_relocations(
             .map(|o| o.id)
             .collect();
         world.macros.purge(&report.plan.purges);
+        world.retain_battle_rolls(&report.plan.purges)?;
+        world.btech.purge(&report.plan.purges);
         world.channel_aliases.retain(|id, _| live.contains(id));
         world.last_pages.retain(|id, _| live.contains(id));
         for recipients in world.last_pages.values_mut() {

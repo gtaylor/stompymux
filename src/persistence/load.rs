@@ -216,6 +216,8 @@ pub(super) async fn read(c: &mut SqliteConnection) -> Result<World> {
     }
     super::communication::load(c, &mut w).await?;
     super::macros::load(c, &mut w).await?;
+    w.btech = super::btech::load(c).await?;
+    w.btech.validate(&w)?;
     w.next_id = w
         .next_id
         .max(w.objects.keys().next_back().map_or(0, |id| id.0 + 1));

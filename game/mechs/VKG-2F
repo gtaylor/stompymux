@@ -43,7 +43,7 @@ Right_Torso
     CRIT_1		  { IS.SmallLaser - - 3 }
     CRIT_2-4		  { IS.LRM-15 - - 3 }
     CRIT_5		  { ArtemisIV - - 3 }
-    CRIT_6		  { Ammo_IS.MachineGun 100 halfton - }
+    CRIT_6		  { Ammo_IS.MachineGun 100 Halfton - }
     CRIT_7		  { Ammo_IS.LRM-15 8 Artemis/Mine - }
     CRIT_8-9		  { Ammo_IS.LRM-20 6 Artemis/Mine - }
     CRIT_10-11		  { EndoSteel - - 3 }

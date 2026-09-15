@@ -1,4 +1,4 @@
-//! Shared non-BattleTech lock identities and invocation contracts.
+//! Shared object and BattleTech lock identities and invocation contracts.
 use crate::world::ObjectId;
 
 /// Catalog of policies understood by both native operations and Lua modules.
@@ -21,10 +21,11 @@ pub enum LockType {
     ChannelJoin,
     ChannelTransmit,
     ChannelReceive,
+    IdentifyBuilding,
 }
 
 /// Canonical registration order from the object-lock catalog.
-pub const LOCKS: [LockType; 17] = [
+pub const LOCKS: [LockType; 18] = [
     LockType::Match,
     LockType::Traverse,
     LockType::Take,
@@ -42,6 +43,7 @@ pub const LOCKS: [LockType; 17] = [
     LockType::ChannelJoin,
     LockType::ChannelTransmit,
     LockType::ChannelReceive,
+    LockType::IdentifyBuilding,
 ];
 
 impl LockType {
@@ -64,6 +66,7 @@ impl LockType {
             Self::ChannelJoin => "channel_join",
             Self::ChannelTransmit => "channel_transmit",
             Self::ChannelReceive => "channel_receive",
+            Self::IdentifyBuilding => "identify_building",
         }
     }
     pub fn name(self) -> String {

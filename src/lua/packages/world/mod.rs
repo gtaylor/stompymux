@@ -259,6 +259,7 @@ pub(super) fn register(
                 relationships::identity(lua, Value::Integer(id), &w, true)?;
                 w.validate_move(ObjectId(id), destination).map_err(err)?;
                 w.objects.get_mut(&ObjectId(id)).unwrap().location = Some(destination);
+                crate::btech::player_moved(&mut w, ObjectId(id));
             }
             _ => return Err(err("unsupported object mutation")),
         }

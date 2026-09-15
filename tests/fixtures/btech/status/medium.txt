@@ -1,0 +1,25 @@
+Mech Name: Shadow Hawk         ID:[AA]   Mech Reference: SHD-2H
+Tonnage:    55     MaxSpeed:  86       JumpRange: 3
+Pilot Name: GOD                          Pilot Injury: 0
+SHUTDOWN
+         FRONT                REAR                INTERNAL
+          __                   __                    __
+       __( 9)__             __(**)__              __( 3)__
+      /18|23|18\           / 6| 8| 6\            /13|18|13\
+     (16/\__/\16)         (   \__/   )          ( 9/\__/\ 9)
+       / /  \ \               /  \                / /  \ \
+      (16|  |16)             /    \              (13|  |13)
+ 
+X, Y, Z:  0,  0,  0  Excess Heat:    0 deg C.  Heat Production:    0 deg C.
+Speed:        0 KPH  Heading:        0 deg     Heat Sinks:        12
+Des. Speed:   0 KPH  Des. Heading:   0 deg     Heat Dissipation:   0 deg C.
+Temp: |.............|.....|......................|
+  
+AdvTech: SLITE(Off)  
+LARM: Ready RARM: Ready LLEG: Ready RLEG: Ready 
+==================WEAPON SYSTEMS===========================AMMUNITION========
+------ Weapon --------- [##] Location ---- Status ||--- Ammo Type ---- Rounds
+ MediumLaser            [ 0] Right Arm     Ready  || AC/5                 20
+ AC/5                   [ 1] Left Torso    Ready  || LRM-5                24
+ LRM-5                  [ 2] Right Torso   Ready  || SRM-2                50
+ SRM-2                  [ 3] Head          Ready  ||    

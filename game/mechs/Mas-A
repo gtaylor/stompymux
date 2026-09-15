@@ -44,7 +44,7 @@ Right_Torso
     CRIT_3		  { FerroFibrous - - 5 }
     CRIT_4-5		  { HeatSink - - 5 }
     CRIT_6		  { CL.LRM-15 - - 5 }
-    CRIT_7		  { CL.LRM-15 - - 0 }
+    CRIT_7		  { CL.LRM-15 - - 5 }
     CRIT_8-11		  { TargetingComputer - - 5 }
     CRIT_12		  { Ammo_CL.LRM-15 8 - - }
 Center_Torso

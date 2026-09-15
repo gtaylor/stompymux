@@ -331,6 +331,194 @@
     "\"": {
       "c_permissions": "CA_LOCATION | CF_DARK",
       "switch_table": "nullptr"
+    },
+    "addstuff": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "removestuff": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "clearstuff": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "fixstuff": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "view": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "updatelinks": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "list": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "delobj": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "addfire": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "addsmoke": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "addmine": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "addblock": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "setlinked": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "loadmap": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "savemap": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "setmapsize": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "clearmechs": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@mapemit": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "addhex": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "addice": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "delice": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "setcond": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "setmapindx": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@ood": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "setxy": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@weight": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@damage": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@damagesection": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@losemit": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "setteam": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "eventstats": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "memstats": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@setturret": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@viewturret": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@setmap": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "fixmap": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@setspecial": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@viewspecial": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@setmech": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@viewmech": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "@viewmap": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "setvrt": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "setwbv": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "setxplevel": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "xptop": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "savedb": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
+    },
+    "listforms": {
+      "c_permissions": "CA_WIZARD",
+      "switch_table": "nullptr"
     }
   },
   "switches": {
@@ -854,12 +1042,152 @@
     }
   },
   "rust_differences": {
+    "explode": "BattleTech cockpit command; EVERYONE entry with cockpit, power, vision and IC pilot checks, with wizard and OOC ownership exceptions.",
+    "autoturret": "BattleTech cockpit command; EVERYONE entry with conscious assigned-pilot checks in the handler.",
+    "disable": "BattleTech cockpit command; EVERYONE entry with conscious assigned-pilot checks in the handler.",
+    "usebin": "BattleTech cockpit command; EVERYONE entry with conscious assigned-pilot checks in the handler.",
+    "heatcutoff": "BattleTech cockpit command; EVERYONE entry with conscious assigned-pilot checks in the handler.",
+    "firetic": "BattleTech cockpit command; EVERYONE entry with conscious assigned-pilot checks in the handler.",
+    "addtic": "BattleTech cockpit command; EVERYONE entry with conscious assigned-pilot checks in the handler.",
+    "deltic": "BattleTech cockpit command; EVERYONE entry with conscious assigned-pilot checks in the handler.",
+    "cleartic": "BattleTech cockpit command; EVERYONE entry with conscious assigned-pilot checks in the handler.",
+    "listtic": "BattleTech cockpit command; EVERYONE entry with conscious assigned-pilot checks in the handler.",
+    "hulldown": "Everyone; conscious assigned quad pilot and stance admission required",
+    "dig": "Everyone; stationary tracked/wheeled vehicle, conscious assigned pilot and diggable terrain required",
+    "pickup": "Everyone; conscious assigned pilot, pickup equipment, visibility and towing admission required",
+    "dropoff": "Everyone; conscious assigned pilot, running carrier and existing tow required",
+    "enterbase": "Everyone; conscious assigned pilot, running grounded unit, entry speed and building locks required",
+    "prone": "Everyone; conscious assigned pilot, running grounded Mech and no pending stand required",
+    "stand": "Everyone; conscious assigned pilot and running prone unit required",
+    "target": "Everyone; running unit and conscious assigned pilot required",
+    "sight": "Everyone; running unit and conscious assigned pilot required",
+    "fire": "Everyone; running unit and conscious assigned pilot required",
+    "land": "Everyone; airborne unit and conscious assigned pilot required",
+    "takeoff": "Everyone; running VTOL and assigned pilot; nonzero delay requires wizard",
+    "vertical": "Everyone; running VTOL; assigned pilot required to change vertical speed",
+    "jump": "Everyone; running unit and conscious assigned pilot required",
+    "critstatus": "Everyone; conscious assigned pilot of a constructed unit required",
+    "weaponspecs": "Everyone; occupant of a constructed unit required",
+    "weaponstatus": "Everyone; conscious occupant of a constructed unit on a map required",
+    "weapons": "Everyone; conscious occupant of a constructed unit required",
+    "lock": "Everyone; running unit and conscious assigned pilot required",
+    "contacts": "Everyone; conscious occupant and running unit required",
+    "sensor": "Everyone; local unit inspection, running unit and assigned pilot required for changes",
+    "nss": "Everyone; assigned conscious pilot, running placed unit and intact installed null signature equipment required",
+    "stealth": "Everyone; assigned conscious pilot, running placed unit, complete stealth armor and working Guardian ECM required",
+    "snipe": "Everyone dispatch; wizard and assigned pilot admission inside action; no switches",
+    "safety": "Everyone; present assigned pilot required; no switches",
+    "slite": "Everyone; running unit, assigned pilot and intact installed searchlight required",
+    "status": "Everyone; read-only local constructed unit inspection",
+    "charge": "Everyone; controlled running biped, intact legs and selected/acquired target required",
+    "club": "Everyone; controlled running biped, both working arms and a tree required",
+    "grabclub": "Everyone; controlled running biped and suitable arm required",
+    "claw": "Everyone; running biped, assigned pilot and usable claw arm required",
+    "saw": "Everyone; running biped, assigned pilot and usable saw arm required",
+    "mace": "Everyone; running biped, assigned pilot and usable physical weapon arm required",
+    "axe": "Everyone; running biped, assigned pilot and usable physical weapon arm required",
+    "chop": "Everyone; running biped, assigned pilot and usable physical weapon arm required",
+    "sword": "Everyone; running biped, assigned pilot and usable physical weapon arm required",
+    "punch": "Everyone; running biped, assigned pilot, usable arms and physical targeting checks required",
+    "trip": "Everyone; running biped, assigned pilot, usable legs and standing target required",
+    "kick": "Everyone; running biped, assigned pilot, usable legs and physical targeting checks required",
+    "rottorso": "Everyone; running unit and assigned pilot required",
+    "gattling": "Everyone; conscious assigned pilot, running unit and intact recycled unjammed machine gun required",
+    "flechette": "Everyone; conscious assigned pilot, running unit and intact recycled unjammed conventional or light autocannon required",
+    "armorpiercing": "Everyone; conscious assigned pilot, running unit and intact recycled unjammed conventional or light autocannon required",
+    "caseless": "Everyone; conscious assigned pilot, running unit and intact recycled unjammed conventional or light autocannon required",
+    "mapdisplay": "Everyone; changes only the invoking player's display dimensions",
+    "brief": "Everyone; conscious cockpit occupant",
+    "lateral": "Everyone; running unit and assigned Maneuvering Ace pilot required",
+    "c3targets": "Everyone; assigned pilot required",
+    "c3network": "Everyone; assigned pilot required",
+    "c3itargets": "Everyone; assigned pilot required",
+    "c3inetwork": "Everyone; assigned pilot required",
+    "c3message": "Everyone; assigned pilot required",
+    "c3imessage": "Everyone; assigned pilot required",
+    "c3": "Everyone; assigned pilot required",
+    "c3i": "Everyone; assigned pilot required",
+    "scharge": "Everyone; assigned pilot required",
+    "masc": "Everyone; assigned pilot required",
+    "dump": "Everyone; assigned pilot required",
+    "turnmode": "Everyone; assigned Maneuvering Ace pilot required",
+    "bootlegger": "Everyone; running unit, assigned pilot, intact ready legs and minimum speed required",
+    "eta": "Everyone; conscious cockpit occupant and running unit required",
+    "bearing": "Everyone; conscious cockpit occupant and running unit required",
+    "range": "Everyone; conscious cockpit occupant and running unit required",
+    "vector": "Everyone; conscious cockpit occupant and running unit required",
+    "findcenter": "Everyone; conscious assigned cockpit pilot, running unit required",
+    "navigate": "Everyone; conscious assigned cockpit pilot and running unit required",
+    "tactical": "Everyone; conscious assigned cockpit pilot, running unit and operational display hardware required",
+    "lrs": "Everyone; conscious assigned cockpit pilot, running unit and operational display hardware required",
+    "report": "Everyone; conscious assigned cockpit pilot, operational scanner and acquired visible target required",
+    "scan": "Everyone; conscious assigned cockpit pilot, operational scanner and acquired visible target required",
+    "radio": "Everyone; conscious assigned cockpit pilot, running non-observer sender and visible acquired target required",
+    "sendchannel": "Everyone; conscious assigned cockpit pilot, usable radio and no crew stun required",
+    "setchannelfreq": "Everyone; conscious assigned cockpit pilot and an active hardware channel required",
+    "setchanneltitle": "Everyone; conscious assigned cockpit pilot and an active hardware channel required",
+    "setchannelmode": "Everyone; conscious assigned cockpit pilot and an active hardware channel required",
+    "listchannels": "Everyone; conscious assigned cockpit pilot and an active hardware channel required",
+    "listfreqs": "Everyone; conscious assigned cockpit pilot and an active hardware channel required",
+    "inferno": "Everyone; conscious assigned pilot, running unit and intact recycled unjammed missile launcher required; one-shot mode changes rejected",
+    "incendiary": "Everyone; conscious assigned pilot, running unit and intact recycled unjammed conventional or light autocannon required",
+    "precision": "Everyone; conscious assigned pilot, running unit and intact recycled unjammed conventional or light autocannon required",
+    "rac": "Everyone; conscious assigned pilot, running unit and intact recycled unjammed rotary autocannon required",
+    "rapidfire": "Everyone; conscious assigned pilot, running unit and intact recycled unjammed conventional or light autocannon required",
+    "ultra": "Everyone; conscious assigned pilot, running unit and intact recycled unjammed Ultra autocannon required",
+    "hotload": "Everyone; conscious assigned pilot, running unit and intact recycled unjammed indirect-fire launcher required",
+    "ecm": "Everyone; conscious assigned pilot, running placed unit and working electronic suite required",
+    "eccm": "Everyone; conscious assigned pilot, running placed unit and working electronic suite required",
+    "angelecm": "Everyone; conscious assigned pilot, running placed unit and working electronic suite required",
+    "angeleccm": "Everyone; conscious assigned pilot, running placed unit and working electronic suite required",
+    "pods": "Everyone; conscious assigned pilot in a running placed unit required",
+    "extinguish": "Everyone; conscious assigned vehicle pilot, vehicle not running, active section fire and no existing extinguishing attempt required",
+    "removepods": "Everyone; conscious assigned vehicle pilot, running placed vehicle, no forward motion, unstunned idle crew and attached iNarc required",
+    "removepod": "Everyone; conscious assigned pilot, running biped, attached iNarc pod and available arm required",
+    "inarc": "Everyone; conscious assigned pilot and ready running iNarc weapon required",
+    "narc": "Everyone; conscious assigned pilot, running unit and ready missile weapon required",
+    "explosive": "Everyone; conscious assigned pilot, running unit and ready Narc launcher required",
+    "ams": "Everyone; conscious assigned pilot, running unit and intact AMS capability required",
+    "unjam": "Everyone; conscious assigned pilot, running unit, jammed weapon, walking or slower and no recycling weapons required",
+    "sguided": "Everyone; conscious assigned pilot, running unit and intact recycled indirect-fire missile launcher required",
+    "fireswarm": "Everyone; conscious assigned pilot, running unit and intact recycled indirect-fire missile launcher required",
+    "fireswarm1": "Everyone; conscious assigned pilot, running unit and intact recycled indirect-fire missile launcher required",
+    "atmrange": "Everyone; conscious assigned pilot, running unit and intact recycled indirect-fire missile launcher required",
+    "atmexplosive": "Everyone; conscious assigned pilot, running unit and intact recycled indirect-fire missile launcher required",
+    "stinger": "Everyone; conscious assigned pilot, running unit and intact recycled indirect-fire missile launcher required",
+    "spot": "Everyone; conscious assigned pilot, running unit, acquired friendly observer or recycled self declaration required",
+    "tag": "Everyone; conscious assigned pilot, running unit and working TAG required",
+    "artemis": "Everyone; conscious assigned pilot, running unit and intact recycled missile launcher with linked Artemis controller required",
+    "cluster": "Everyone; conscious assigned pilot, running unit and intact recycled artillery required",
+    "firesmoke": "Everyone; conscious assigned pilot, running unit and intact recycled missile launcher required",
+    "firemine": "Everyone; conscious assigned pilot, running unit and intact recycled missile launcher required",
+    "firecluster": "Everyone; conscious assigned pilot, running unit and intact recycled artillery required",
+    "lbx": "Everyone; conscious assigned pilot, running unit and intact recycled LB-X autocannon required",
+    "flamerheat": "Everyone; conscious assigned pilot, running unit and intact recycled flamer required",
+    "fliparms": "Everyone; running unit and assigned pilot required",
+    "mechprefs": "Everyone; present assigned pilot required",
+    "heading": "Everyone; running unit and assigned pilot required",
+    "fixturret": "Everyone; running vehicle, conscious assigned pilot and jammed unlocked turret required",
+    "turret": "Everyone; running vehicle, assigned pilot and surviving unlocked turret required",
+    "speed": "Everyone; running unit and assigned pilot required",
+    "initialize": "Everyone; station presence and supported parent required, occupied stations reject takeover",
+    "deinitialize": "Everyone; present registered gunner and supported parent required",
+    "startup": "Everyone; assigned pilot required, override requires Wizard",
+    "shutdown": "Everyone; assigned pilot required",
+    "pilot": "Everyone; cockpit access uses the unit USE policy and physical presence",
+    "unpilot": "Everyone; release requires the current pilot identity",
     "home": "Wizard-only native registration",
     "color": "Everyone; Rust session rendering control",
     "dot_commands": "Everyone except .chown (Wizard); domain macro checks retained",
     "CA_NO_IC": "Existing communication domain checks retained, not configurable through ACCESS_NAMETAB",
     "CA_ADMIN": "Equivalent to Wizard in this fork",
     "session_requirements": "Preserved separately from configurable bits",
-    "omitted_commands": "Only currently implemented command/switch registrations are compared; no new gameplay commands"
+    "omitted_commands": "Only currently implemented command/switch registrations are compared; Rust gameplay additions are recorded separately",
+    "hide": "BattleTech cockpit command; EVERYONE entry with running pilot and camouflage or wizard checks in the handler.",
+    "manifest": "Native cockpit cargo command; shared domain checks enforce configured access and operation-specific unit admission.",
+    "stores": "Native cockpit cargo command; shared domain checks enforce configured access and operation-specific unit admission.",
+    "loadcargo": "Native cockpit cargo command; shared domain checks enforce configured access and operation-specific unit admission.",
+    "unloadcargo": "Native cockpit cargo command; shared domain checks enforce configured access and operation-specific unit admission.",
+    "mml": "Everyone; conscious assigned pilot, running unit and intact recycled MML launcher required"
   }
 }

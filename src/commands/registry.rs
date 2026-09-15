@@ -77,6 +77,7 @@ pub fn native_switches(name: &str) -> Vec<SwitchDefinition> {
             ],
             false,
         ),
+        "@btech" => (&["info", "register", "unregister"], true),
         "@destroy" => (&["override"], false),
         "@help" => (&["reload"], false),
         "@state" => (&["examine", "set", "wipe", "copy", "move"], false),
@@ -326,6 +327,708 @@ impl CommandRegistry {
     pub fn new() -> Self {
         use CommandPermissions as P;
         let mut definitions = vec![
+            CommandDefinition::native("hulldown", P::EVERYONE, crate::btech::hull_down::command)
+                .policy(SwitchPolicy::Reject("hulldown takes no switches."), false),
+            CommandDefinition::native("dig", P::EVERYONE, crate::btech::dig::command)
+                .policy(SwitchPolicy::Reject("dig takes no switches."), false),
+            CommandDefinition::native("pickup", P::EVERYONE, crate::btech::tow_actions::command)
+                .policy(SwitchPolicy::Reject("pickup takes no switches."), false),
+            CommandDefinition::native("dropoff", P::EVERYONE, crate::btech::tow_actions::command)
+                .policy(SwitchPolicy::Reject("dropoff takes no switches."), false),
+            CommandDefinition::native(
+                "enterbase",
+                P::EVERYONE,
+                crate::btech::building_actions::command,
+            )
+            .policy(SwitchPolicy::Reject("enterbase takes no switches."), false),
+            CommandDefinition::native("addtic", P::EVERYONE, crate::btech::tic::command)
+                .policy(SwitchPolicy::Reject("addtic takes no switches."), false),
+            CommandDefinition::native("deltic", P::EVERYONE, crate::btech::tic::command)
+                .policy(SwitchPolicy::Reject("deltic takes no switches."), false),
+            CommandDefinition::native("cleartic", P::EVERYONE, crate::btech::tic::command)
+                .policy(SwitchPolicy::Reject("cleartic takes no switches."), false),
+            CommandDefinition::native("listtic", P::EVERYONE, crate::btech::tic::command)
+                .policy(SwitchPolicy::Reject("listtic takes no switches."), false),
+            CommandDefinition::native(
+                "autoturret",
+                P::EVERYONE,
+                crate::btech::automatic_turret::command,
+            )
+            .policy(SwitchPolicy::Reject("autoturret takes no switches."), false),
+            CommandDefinition::native("disable", P::EVERYONE, crate::btech::weapon_power::command)
+                .policy(SwitchPolicy::Reject("disable takes no switches."), false),
+            CommandDefinition::native(
+                "usebin",
+                P::EVERYONE,
+                crate::btech::ammunition_preference::command,
+            )
+            .policy(SwitchPolicy::Reject("usebin takes no switches."), false),
+            CommandDefinition::native("hide", P::EVERYONE, crate::btech::hiding::command)
+                .policy(SwitchPolicy::Reject("hide takes no switches."), false),
+            CommandDefinition::native(
+                "heatcutoff",
+                P::EVERYONE,
+                crate::btech::heat_cutoff::command,
+            )
+            .policy(SwitchPolicy::Reject("heatcutoff takes no switches."), false),
+            CommandDefinition::native("explode", P::EVERYONE, crate::btech::self_destruct::command)
+                .policy(SwitchPolicy::Reject("explode takes no switches."), false),
+            CommandDefinition::native("firetic", P::EVERYONE, crate::btech::tic::fire_command)
+                .policy(SwitchPolicy::Reject("firetic takes no switches."), false),
+            CommandDefinition::native("target", P::EVERYONE, crate::btech::aimed_target::command)
+                .policy(SwitchPolicy::Reject("target takes no switches."), false),
+            CommandDefinition::native("sight", P::EVERYONE, crate::btech::sight::command)
+                .policy(SwitchPolicy::Reject("sight takes no switches."), false),
+            CommandDefinition::native("fire", P::EVERYONE, crate::btech::firing::fire_command)
+                .policy(SwitchPolicy::Reject("fire takes no switches."), false),
+            CommandDefinition::native("land", P::EVERYONE, crate::btech::landing::command)
+                .policy(SwitchPolicy::Reject("land takes no switches."), false),
+            CommandDefinition::native("takeoff", P::EVERYONE, crate::btech::vtol_controls::command)
+                .policy(SwitchPolicy::Reject("takeoff takes no switches."), false),
+            CommandDefinition::native(
+                "vertical",
+                P::EVERYONE,
+                crate::btech::vtol_controls::command,
+            )
+            .policy(SwitchPolicy::Reject("vertical takes no switches."), false),
+            CommandDefinition::native("jump", P::EVERYONE, crate::btech::jumping::command)
+                .policy(SwitchPolicy::Reject("jump takes no switches."), false),
+            CommandDefinition::native(
+                "weapons",
+                P::EVERYONE,
+                crate::btech::firing::weapons_command,
+            )
+            .policy(SwitchPolicy::Reject("weapons takes no switches."), false),
+            CommandDefinition::native(
+                "weaponstatus",
+                P::EVERYONE,
+                crate::btech::weapon_reports::status_command,
+            )
+            .policy(
+                SwitchPolicy::Reject("weaponstatus takes no switches."),
+                false,
+            ),
+            CommandDefinition::native(
+                "weaponspecs",
+                P::EVERYONE,
+                crate::btech::weapon_reports::specs_command,
+            )
+            .policy(
+                SwitchPolicy::Reject("weaponspecs takes no switches."),
+                false,
+            ),
+            CommandDefinition::native(
+                "critstatus",
+                P::EVERYONE,
+                crate::btech::critical_report::command,
+            )
+            .policy(SwitchPolicy::Reject("critstatus takes no switches."), false),
+            CommandDefinition::native(
+                "addstuff",
+                P::WIZARD,
+                crate::btech::stock_commands::add_command,
+            )
+            .policy(SwitchPolicy::Reject("addstuff takes no switches."), false),
+            CommandDefinition::native(
+                "removestuff",
+                P::WIZARD,
+                crate::btech::stock_commands::remove_command,
+            )
+            .policy(
+                SwitchPolicy::Reject("removestuff takes no switches."),
+                false,
+            ),
+            CommandDefinition::native("@setturret", P::WIZARD, |ctx, input| {
+                crate::btech::gunner_fields::command(ctx, input, true)
+            })
+            .policy(SwitchPolicy::Reject("@SETTURRET takes no switches."), false),
+            CommandDefinition::native("@viewturret", P::WIZARD, |ctx, input| {
+                crate::btech::gunner_fields::command(ctx, input, false)
+            })
+            .policy(
+                SwitchPolicy::Reject("@VIEWTURRET takes no switches."),
+                false,
+            ),
+            CommandDefinition::native(
+                "initialize",
+                P::EVERYONE,
+                crate::btech::gunner_station::initialize_command,
+            )
+            .policy(SwitchPolicy::Reject("INITIALIZE takes no switches."), false),
+            CommandDefinition::native(
+                "deinitialize",
+                P::EVERYONE,
+                crate::btech::gunner_station::deinitialize_command,
+            )
+            .policy(
+                SwitchPolicy::Reject("DEINITIALIZE takes no switches."),
+                false,
+            ),
+            CommandDefinition::native("setteam", P::WIZARD, crate::btech::scenario_team::command)
+                .policy(SwitchPolicy::Reject("SETTEAM takes no switches."), false),
+            CommandDefinition::native(
+                "@damage",
+                P::WIZARD,
+                crate::btech::scenario_packets::command,
+            )
+            .policy(SwitchPolicy::Reject("@DAMAGE takes no switches."), false),
+            CommandDefinition::native("@weight", P::WIZARD, crate::btech::weight_report::command)
+                .policy(SwitchPolicy::Reject("@WEIGHT takes no switches."), false),
+            CommandDefinition::native("setmapindx", P::WIZARD, crate::btech::scenario_map::command)
+                .policy(SwitchPolicy::Reject("SETMAPINDX takes no switches."), false),
+            CommandDefinition::native(
+                "@ood",
+                P::WIZARD,
+                crate::btech::orbital_drop_launch::command,
+            )
+            .policy(SwitchPolicy::Reject("@OOD takes no switches."), false),
+            CommandDefinition::native("setxy", P::WIZARD, crate::btech::scenario_position::command)
+                .policy(SwitchPolicy::Reject("SETXY takes no switches."), false),
+            CommandDefinition::native("@losemit", P::WIZARD, crate::btech::losemit::command)
+                .policy(SwitchPolicy::Reject("@LOSEMIT takes no switches."), false),
+            CommandDefinition::native(
+                "@damagesection",
+                P::WIZARD,
+                crate::btech::scenario_damage::command,
+            )
+            .policy(
+                SwitchPolicy::Reject("@DAMAGESECTION takes no switches."),
+                false,
+            ),
+            CommandDefinition::native(
+                "eventstats",
+                P::WIZARD,
+                crate::btech::runtime_stats::command,
+            )
+            .policy(SwitchPolicy::Reject("EVENTSTATS takes no switches."), false),
+            CommandDefinition::native("memstats", P::WIZARD, crate::btech::runtime_stats::command)
+                .policy(SwitchPolicy::Reject("MEMSTATS takes no switches."), false),
+            CommandDefinition::native("listforms", P::WIZARD, crate::btech::forms_report::command)
+                .policy(SwitchPolicy::Reject("LISTFORMS takes no switches."), false),
+            CommandDefinition::native("savedb", P::WIZARD, crate::btech::database_save::command)
+                .policy(SwitchPolicy::Reject("SAVEDB takes no switches."), false),
+            CommandDefinition::native(
+                "+charclear",
+                P::WIZARD,
+                crate::btech::character_clear::command,
+            )
+            .policy(SwitchPolicy::Reject("+CHARCLEAR takes no switches."), false),
+            CommandDefinition::native("+show", P::WIZARD, crate::btech::character_show::command)
+                .policy(SwitchPolicy::Reject("+SHOW takes no switches."), false),
+            CommandDefinition::native("xptop", P::WIZARD, crate::btech::xp_ranking::command)
+                .policy(SwitchPolicy::Reject("XPTOP takes no switches."), false),
+            CommandDefinition::native(
+                "setxplevel",
+                P::WIZARD,
+                crate::btech::skill_catalog::threshold_command,
+            )
+            .policy(SwitchPolicy::Reject("SETXPLEVEL takes no switches."), false),
+            CommandDefinition::native(
+                "setvrt",
+                P::WIZARD,
+                crate::btech::weapon_settings::recycle_command,
+            )
+            .policy(SwitchPolicy::Reject("SETVRT takes no switches."), false),
+            CommandDefinition::native(
+                "setwbv",
+                P::WIZARD,
+                crate::btech::weapon_settings::battle_value_command,
+            )
+            .policy(SwitchPolicy::Reject("SETWBV takes no switches."), false),
+            CommandDefinition::native("@setspecial", P::WIZARD, |ctx, input| {
+                crate::btech::special_fields::command(ctx, input, true)
+            })
+            .policy(
+                SwitchPolicy::Reject("@SETSPECIAL takes no switches."),
+                false,
+            ),
+            CommandDefinition::native("@viewspecial", P::WIZARD, |ctx, input| {
+                crate::btech::special_fields::command(ctx, input, false)
+            })
+            .policy(
+                SwitchPolicy::Reject("@VIEWSPECIAL takes no switches."),
+                false,
+            ),
+            CommandDefinition::native(
+                "@setmech",
+                P::WIZARD,
+                crate::btech::unit_fields::set_command,
+            )
+            .policy(SwitchPolicy::Reject("@SETMECH takes no switches."), false),
+            CommandDefinition::native("@viewmech", P::WIZARD, crate::btech::unit_fields::command)
+                .policy(SwitchPolicy::Reject("@VIEWMECH takes no switches."), false),
+            CommandDefinition::native(
+                "@viewmap",
+                P::WIZARD,
+                crate::btech::map_field_report::command,
+            )
+            .policy(SwitchPolicy::Reject("@VIEWMAP takes no switches."), false),
+            CommandDefinition::native("fixmap", P::WIZARD, crate::btech::map_check::command)
+                .policy(SwitchPolicy::Reject("FIXMAP takes no switches."), false),
+            CommandDefinition::native("@setmap", P::WIZARD, crate::btech::map_fields::command)
+                .policy(SwitchPolicy::Reject("@SETMAP takes no switches."), false),
+            CommandDefinition::native("view", P::EVERYONE, crate::btech::markings::command)
+                .policy(SwitchPolicy::Reject("VIEW takes no switches."), false),
+            CommandDefinition::native(
+                "updatelinks",
+                P::WIZARD,
+                crate::btech::map_update_links::command,
+            )
+            .policy(
+                SwitchPolicy::Reject("UPDATELINKS takes no switches."),
+                false,
+            ),
+            CommandDefinition::native("list", P::WIZARD, crate::btech::map_list::command)
+                .policy(SwitchPolicy::Reject("LIST takes no switches."), false),
+            CommandDefinition::native(
+                "delobj",
+                P::WIZARD,
+                crate::btech::map_object_delete::command,
+            )
+            .policy(SwitchPolicy::Reject("DELOBJ takes no switches."), false),
+            CommandDefinition::native("addfire", P::WIZARD, crate::btech::map_decoration::command)
+                .policy(SwitchPolicy::Reject("ADDFIRE takes no switches."), false),
+            CommandDefinition::native("addsmoke", P::WIZARD, crate::btech::map_decoration::command)
+                .policy(SwitchPolicy::Reject("ADDSMOKE takes no switches."), false),
+            CommandDefinition::native("addmine", P::WIZARD, crate::btech::map_mine::command)
+                .policy(SwitchPolicy::Reject("ADDMINE takes no switches."), false),
+            CommandDefinition::native("addblock", P::WIZARD, crate::btech::map_block::command)
+                .policy(SwitchPolicy::Reject("ADDBLOCK takes no switches."), false),
+            CommandDefinition::native("setlinked", P::WIZARD, crate::btech::map_link::command)
+                .policy(SwitchPolicy::Reject("SETLINKED takes no switches."), false),
+            CommandDefinition::native("loadmap", P::WIZARD, crate::btech::map_load::command)
+                .policy(SwitchPolicy::Reject("LOADMAP takes no switches."), false),
+            CommandDefinition::native("savemap", P::WIZARD, crate::btech::map_save::command)
+                .policy(SwitchPolicy::Reject("SAVEMAP takes no switches."), false),
+            CommandDefinition::native("setmapsize", P::WIZARD, crate::btech::map_resize::command)
+                .policy(SwitchPolicy::Reject("SETMAPSIZE takes no switches."), false),
+            CommandDefinition::native("clearmechs", P::WIZARD, crate::btech::map_clear::command)
+                .policy(SwitchPolicy::Reject("CLEARMECHS takes no switches."), false),
+            CommandDefinition::native("@mapemit", P::WIZARD, crate::btech::map_emit::command)
+                .policy(SwitchPolicy::Reject("@mapemit takes no switches."), false),
+            CommandDefinition::native("addhex", P::WIZARD, crate::btech::terrain_edit::command)
+                .policy(SwitchPolicy::Reject("addhex takes no switches."), false),
+            CommandDefinition::native("addice", P::WIZARD, crate::btech::map_ice::add_command)
+                .policy(SwitchPolicy::Reject("addice takes no switches."), false),
+            CommandDefinition::native("delice", P::WIZARD, crate::btech::map_ice::remove_command)
+                .policy(SwitchPolicy::Reject("delice takes no switches."), false),
+            CommandDefinition::native("setcond", P::WIZARD, crate::btech::map_environment::command)
+                .policy(SwitchPolicy::Reject("setcond takes no switches."), false),
+            CommandDefinition::native(
+                "fixstuff",
+                P::WIZARD,
+                crate::btech::inventory_cleanup::command,
+            )
+            .policy(SwitchPolicy::Reject("fixstuff takes no switches."), false),
+            CommandDefinition::native(
+                "clearstuff",
+                P::WIZARD,
+                crate::btech::stock_commands::clear_command,
+            )
+            .policy(SwitchPolicy::Reject("clearstuff takes no switches."), false),
+            CommandDefinition::native(
+                "manifest",
+                P::EVERYONE,
+                crate::btech::cargo::manifest_command,
+            )
+            .policy(SwitchPolicy::Reject("manifest takes no switches."), false),
+            CommandDefinition::native("stores", P::EVERYONE, crate::btech::cargo::stores_command)
+                .policy(SwitchPolicy::Reject("stores takes no switches."), false),
+            CommandDefinition::native("loadcargo", P::EVERYONE, crate::btech::cargo::load_command)
+                .policy(SwitchPolicy::Reject("loadcargo takes no switches."), false),
+            CommandDefinition::native(
+                "unloadcargo",
+                P::EVERYONE,
+                crate::btech::cargo::unload_command,
+            )
+            .policy(
+                SwitchPolicy::Reject("unloadcargo takes no switches."),
+                false,
+            ),
+            CommandDefinition::native("status", P::EVERYONE, crate::btech::status::command)
+                .policy(SwitchPolicy::Reject("status takes no switches."), false),
+            CommandDefinition::native(
+                "charge",
+                P::EVERYONE,
+                crate::btech::physical::charge_command,
+            )
+            .policy(SwitchPolicy::Reject("charge takes no switches."), false),
+            CommandDefinition::native("club", P::EVERYONE, crate::btech::physical::club_command)
+                .policy(SwitchPolicy::Reject("club takes no switches."), false),
+            CommandDefinition::native(
+                "grabclub",
+                P::EVERYONE,
+                crate::btech::physical::grabclub_command,
+            )
+            .policy(SwitchPolicy::Reject("grabclub takes no switches."), false),
+            CommandDefinition::native("claw", P::EVERYONE, crate::btech::physical::claw_command)
+                .policy(SwitchPolicy::Reject("claw takes no switches."), false),
+            CommandDefinition::native("saw", P::EVERYONE, crate::btech::physical::saw_command)
+                .policy(SwitchPolicy::Reject("saw takes no switches."), false),
+            CommandDefinition::native("mace", P::EVERYONE, crate::btech::physical::mace_command)
+                .policy(SwitchPolicy::Reject("mace takes no switches."), false),
+            CommandDefinition::native("axe", P::EVERYONE, crate::btech::physical::axe_command)
+                .policy(SwitchPolicy::Reject("axe takes no switches."), false),
+            CommandDefinition::native("chop", P::EVERYONE, crate::btech::physical::sword_command)
+                .policy(SwitchPolicy::Reject("chop takes no switches."), false),
+            CommandDefinition::native("sword", P::EVERYONE, crate::btech::physical::sword_command)
+                .policy(SwitchPolicy::Reject("sword takes no switches."), false),
+            CommandDefinition::native("punch", P::EVERYONE, crate::btech::physical::punch_command)
+                .policy(SwitchPolicy::Reject("punch takes no switches."), false),
+            CommandDefinition::native("trip", P::EVERYONE, crate::btech::physical::trip_command)
+                .policy(SwitchPolicy::Reject("trip takes no switches."), false),
+            CommandDefinition::native("kick", P::EVERYONE, crate::btech::physical::command)
+                .policy(SwitchPolicy::Reject("kick takes no switches."), false),
+            CommandDefinition::native("prone", P::EVERYONE, crate::btech::prone::command)
+                .policy(SwitchPolicy::Reject("prone takes no switches."), false),
+            CommandDefinition::native("stand", P::EVERYONE, crate::btech::commands::stand_command)
+                .policy(SwitchPolicy::Reject("stand takes no switches."), false),
+            CommandDefinition::native("lock", P::EVERYONE, crate::btech::commands::lock_command)
+                .policy(SwitchPolicy::Reject("lock takes no switches."), false),
+            CommandDefinition::native("tag", P::EVERYONE, crate::btech::commands::tag_command)
+                .policy(SwitchPolicy::Reject("tag takes no switches."), false),
+            CommandDefinition::native("spot", P::EVERYONE, crate::btech::commands::spot_command)
+                .policy(SwitchPolicy::Reject("spot takes no switches."), false),
+            CommandDefinition::native(
+                "contacts",
+                P::EVERYONE,
+                crate::btech::commands::contacts_command,
+            )
+            .policy(SwitchPolicy::Reject("contacts takes no switches."), false),
+            CommandDefinition::native(
+                "sensor",
+                P::EVERYONE,
+                crate::btech::commands::sensor_command,
+            )
+            .policy(SwitchPolicy::Reject("sensor takes no switches."), false),
+            CommandDefinition::native("nss", P::EVERYONE, crate::btech::commands::facing_command)
+                .policy(SwitchPolicy::Reject("nss takes no switches."), false),
+            CommandDefinition::native(
+                "stealth",
+                P::EVERYONE,
+                crate::btech::commands::facing_command,
+            )
+            .policy(SwitchPolicy::Reject("stealth takes no switches."), false),
+            CommandDefinition::native("snipe", P::EVERYONE, crate::btech::snipe::command)
+                .policy(SwitchPolicy::Reject("snipe takes no switches."), false),
+            CommandDefinition::native("safety", P::EVERYONE, crate::btech::safety::command)
+                .policy(SwitchPolicy::Reject("safety takes no switches."), false),
+            CommandDefinition::native("slite", P::EVERYONE, crate::btech::commands::facing_command)
+                .policy(SwitchPolicy::Reject("slite takes no switches."), false),
+            CommandDefinition::native(
+                "rottorso",
+                P::EVERYONE,
+                crate::btech::commands::facing_command,
+            )
+            .policy(SwitchPolicy::Reject("rottorso takes no switches."), false),
+            CommandDefinition::native(
+                "hotload",
+                P::EVERYONE,
+                crate::btech::fire_mode::hotload_command,
+            )
+            .policy(SwitchPolicy::Reject("hotload takes no switches."), false),
+            CommandDefinition::native("gattling", P::EVERYONE, crate::btech::gatling::command)
+                .policy(SwitchPolicy::Reject("gattling takes no switches."), false),
+            CommandDefinition::native("flechette", P::EVERYONE, crate::btech::flechette::command)
+                .policy(SwitchPolicy::Reject("flechette takes no switches."), false),
+            CommandDefinition::native(
+                "armorpiercing",
+                P::EVERYONE,
+                crate::btech::armor_piercing::command,
+            )
+            .matching(&["ap"], None)
+            .policy(
+                SwitchPolicy::Reject("armorpiercing takes no switches."),
+                false,
+            ),
+            CommandDefinition::native("caseless", P::EVERYONE, crate::btech::caseless::command)
+                .policy(SwitchPolicy::Reject("caseless takes no switches."), false),
+            CommandDefinition::native("vector", P::EVERYONE, crate::btech::vector_display::command)
+                .policy(SwitchPolicy::Reject("vector takes no switches."), false),
+            CommandDefinition::native("range", P::EVERYONE, crate::btech::range_display::command)
+                .policy(SwitchPolicy::Reject("range takes no switches."), false),
+            CommandDefinition::native("bearing", P::EVERYONE, crate::btech::bearing::command)
+                .policy(SwitchPolicy::Reject("bearing takes no switches."), false),
+            CommandDefinition::native("eta", P::EVERYONE, crate::btech::eta::command)
+                .policy(SwitchPolicy::Reject("eta takes no switches."), false),
+            CommandDefinition::native("bootlegger", P::EVERYONE, crate::btech::bootlegger::command)
+                .policy(SwitchPolicy::Reject("bootlegger takes no switches."), false),
+            CommandDefinition::native(
+                "c3targets",
+                P::EVERYONE,
+                crate::btech::network_targets::c3_command,
+            )
+            .policy(SwitchPolicy::Reject("c3targets takes no switches."), false),
+            CommandDefinition::native(
+                "c3network",
+                P::EVERYONE,
+                crate::btech::network_status::c3_command,
+            )
+            .policy(SwitchPolicy::Reject("c3network takes no switches."), false),
+            CommandDefinition::native(
+                "c3itargets",
+                P::EVERYONE,
+                crate::btech::network_targets::command,
+            )
+            .policy(SwitchPolicy::Reject("c3itargets takes no switches."), false),
+            CommandDefinition::native(
+                "c3inetwork",
+                P::EVERYONE,
+                crate::btech::network_status::command,
+            )
+            .policy(SwitchPolicy::Reject("c3inetwork takes no switches."), false),
+            CommandDefinition::native(
+                "c3message",
+                P::EVERYONE,
+                crate::btech::network_message::c3_command,
+            )
+            .policy(SwitchPolicy::Reject("c3message takes no switches."), false),
+            CommandDefinition::native(
+                "c3imessage",
+                P::EVERYONE,
+                crate::btech::network_message::command,
+            )
+            .policy(SwitchPolicy::Reject("c3imessage takes no switches."), false),
+            CommandDefinition::native("c3", P::EVERYONE, crate::btech::command_network::c3_command)
+                .policy(SwitchPolicy::Reject("c3 takes no switches."), false),
+            CommandDefinition::native("c3i", P::EVERYONE, crate::btech::command_network::command)
+                .policy(SwitchPolicy::Reject("c3i takes no switches."), false),
+            CommandDefinition::native(
+                "scharge",
+                P::EVERYONE,
+                crate::btech::booster_control::supercharger_command,
+            )
+            .policy(SwitchPolicy::Reject("scharge takes no switches."), false),
+            CommandDefinition::native(
+                "masc",
+                P::EVERYONE,
+                crate::btech::booster_control::masc_command,
+            )
+            .policy(SwitchPolicy::Reject("masc takes no switches."), false),
+            CommandDefinition::native("dump", P::EVERYONE, crate::btech::dumping::command)
+                .policy(SwitchPolicy::Reject("dump takes no switches."), false),
+            CommandDefinition::native("turnmode", P::EVERYONE, crate::btech::turnmode::command)
+                .policy(SwitchPolicy::Reject("turnmode takes no switches."), false),
+            CommandDefinition::native("lateral", P::EVERYONE, crate::btech::lateral::command)
+                .policy(SwitchPolicy::Reject("lateral takes no switches."), false),
+            CommandDefinition::native("brief", P::EVERYONE, crate::btech::brief::command)
+                .policy(SwitchPolicy::Reject("brief takes no switches."), false),
+            CommandDefinition::native(
+                "mapdisplay",
+                P::EVERYONE,
+                crate::btech::view_preferences::command,
+            )
+            .policy(SwitchPolicy::Reject("mapdisplay takes no switches."), false),
+            CommandDefinition::native(
+                "findcenter",
+                P::EVERYONE,
+                crate::btech::find_center::command,
+            )
+            .policy(SwitchPolicy::Reject("findcenter takes no switches."), false),
+            CommandDefinition::native("navigate", P::EVERYONE, crate::btech::navigation::command)
+                .policy(SwitchPolicy::Reject("navigate takes no switches."), false),
+            CommandDefinition::native("tactical", P::EVERYONE, crate::btech::tactical_map::command)
+                .policy(SwitchPolicy::Reject("tactical takes no switches."), false),
+            CommandDefinition::native("lrs", P::EVERYONE, crate::btech::long_range_map::command)
+                .matching(&["lrsmap"], None)
+                .policy(SwitchPolicy::Reject("lrs takes no switches."), false),
+            CommandDefinition::native("report", P::EVERYONE, crate::btech::report::command)
+                .policy(SwitchPolicy::Reject("report takes no switches."), false),
+            CommandDefinition::native("scan", P::EVERYONE, crate::btech::scan::command)
+                .policy(SwitchPolicy::Reject("scan takes no switches."), false),
+            CommandDefinition::native("radio", P::EVERYONE, crate::btech::radio_targeted::command)
+                .policy(SwitchPolicy::Reject("radio takes no switches."), false),
+            CommandDefinition::native(
+                "sendchannel",
+                P::EVERYONE,
+                crate::btech::radio_transmission::command,
+            )
+            .policy(
+                SwitchPolicy::Reject("sendchannel takes no switches."),
+                false,
+            ),
+            CommandDefinition::native("setchannelfreq", P::EVERYONE, crate::btech::radio::command)
+                .policy(
+                    SwitchPolicy::Reject("setchannelfreq takes no switches."),
+                    false,
+                ),
+            CommandDefinition::native("setchanneltitle", P::EVERYONE, crate::btech::radio::command)
+                .policy(
+                    SwitchPolicy::Reject("setchanneltitle takes no switches."),
+                    false,
+                ),
+            CommandDefinition::native("setchannelmode", P::EVERYONE, crate::btech::radio::command)
+                .policy(
+                    SwitchPolicy::Reject("setchannelmode takes no switches."),
+                    false,
+                ),
+            CommandDefinition::native("listchannels", P::EVERYONE, crate::btech::radio::command)
+                .policy(
+                    SwitchPolicy::Reject("listchannels takes no switches."),
+                    false,
+                ),
+            CommandDefinition::native("listfreqs", P::EVERYONE, crate::btech::radio::command)
+                .policy(SwitchPolicy::Reject("listfreqs takes no switches."), false),
+            CommandDefinition::native(
+                "inferno",
+                P::EVERYONE,
+                crate::btech::inferno_ammunition::command,
+            )
+            .policy(SwitchPolicy::Reject("inferno takes no switches."), false),
+            CommandDefinition::native("incendiary", P::EVERYONE, crate::btech::incendiary::command)
+                .policy(SwitchPolicy::Reject("incendiary takes no switches."), false),
+            CommandDefinition::native("precision", P::EVERYONE, crate::btech::precision::command)
+                .policy(SwitchPolicy::Reject("precision takes no switches."), false),
+            CommandDefinition::native("fireswarm", P::EVERYONE, crate::btech::swarm::command)
+                .policy(SwitchPolicy::Reject("fireswarm takes no switches."), false),
+            CommandDefinition::native("fireswarm1", P::EVERYONE, crate::btech::swarm::command)
+                .policy(SwitchPolicy::Reject("fireswarm1 takes no switches."), false),
+            CommandDefinition::native("sguided", P::EVERYONE, crate::btech::semiguided::command)
+                .policy(SwitchPolicy::Reject("sguided takes no switches."), false),
+            CommandDefinition::native("mml", P::EVERYONE, crate::btech::mml::command)
+                .policy(SwitchPolicy::Reject("mml takes no switches."), false),
+            CommandDefinition::native("atmrange", P::EVERYONE, crate::btech::atm::command)
+                .policy(SwitchPolicy::Reject("atmrange takes no switches."), false),
+            CommandDefinition::native("atmexplosive", P::EVERYONE, crate::btech::atm::command)
+                .policy(
+                    SwitchPolicy::Reject("atmexplosive takes no switches."),
+                    false,
+                ),
+            CommandDefinition::native("stinger", P::EVERYONE, crate::btech::stinger::command)
+                .policy(SwitchPolicy::Reject("stinger takes no switches."), false),
+            CommandDefinition::native("rac", P::EVERYONE, crate::btech::rotary::command)
+                .policy(SwitchPolicy::Reject("rac takes no switches."), false),
+            CommandDefinition::native("rapidfire", P::EVERYONE, crate::btech::rapid::command)
+                .policy(SwitchPolicy::Reject("rapidfire takes no switches."), false),
+            CommandDefinition::native("ultra", P::EVERYONE, crate::btech::ultra::command)
+                .policy(SwitchPolicy::Reject("ultra takes no switches."), false),
+            CommandDefinition::native("ecm", P::EVERYONE, crate::btech::electronics::command)
+                .policy(SwitchPolicy::Reject("ecm takes no switches."), false),
+            CommandDefinition::native("eccm", P::EVERYONE, crate::btech::electronics::command)
+                .policy(SwitchPolicy::Reject("eccm takes no switches."), false),
+            CommandDefinition::native("angelecm", P::EVERYONE, crate::btech::electronics::command)
+                .policy(SwitchPolicy::Reject("angelecm takes no switches."), false),
+            CommandDefinition::native("angeleccm", P::EVERYONE, crate::btech::electronics::command)
+                .policy(SwitchPolicy::Reject("angeleccm takes no switches."), false),
+            CommandDefinition::native(
+                "extinguish",
+                P::EVERYONE,
+                crate::btech::vehicle_burning::command,
+            )
+            .policy(SwitchPolicy::Reject("extinguish takes no switches."), false),
+            CommandDefinition::native("pods", P::EVERYONE, crate::btech::pods::command)
+                .policy(SwitchPolicy::Reject("pods takes no switches."), false),
+            CommandDefinition::native(
+                "removepods",
+                P::EVERYONE,
+                crate::btech::vehicle_pods::command,
+            )
+            .policy(SwitchPolicy::Reject("removepods takes no switches."), false),
+            CommandDefinition::native("removepod", P::EVERYONE, crate::btech::pods::command)
+                .policy(SwitchPolicy::Reject("removepod takes no switches."), false),
+            CommandDefinition::native("inarc", P::EVERYONE, crate::btech::inarc::command)
+                .policy(SwitchPolicy::Reject("inarc takes no switches."), false),
+            CommandDefinition::native("narc", P::EVERYONE, crate::btech::narc::command)
+                .policy(SwitchPolicy::Reject("narc takes no switches."), false),
+            CommandDefinition::native("explosive", P::EVERYONE, crate::btech::narc::command)
+                .policy(SwitchPolicy::Reject("explosive takes no switches."), false),
+            CommandDefinition::native("ams", P::EVERYONE, crate::btech::ams::command)
+                .policy(SwitchPolicy::Reject("ams takes no switches."), false),
+            CommandDefinition::native("unjam", P::EVERYONE, crate::btech::unjam::command)
+                .policy(SwitchPolicy::Reject("unjam takes no switches."), false),
+            CommandDefinition::native(
+                "artemis",
+                P::EVERYONE,
+                crate::btech::ammunition_mode::artemis_command,
+            )
+            .policy(SwitchPolicy::Reject("artemis takes no switches."), false),
+            CommandDefinition::native(
+                "cluster",
+                P::EVERYONE,
+                crate::btech::ammunition_mode::cluster_command,
+            )
+            .policy(SwitchPolicy::Reject("cluster takes no switches."), false),
+            CommandDefinition::native(
+                "firesmoke",
+                P::EVERYONE,
+                crate::btech::special_rounds::command,
+            )
+            .policy(SwitchPolicy::Reject("firesmoke takes no switches."), false),
+            CommandDefinition::native(
+                "firemine",
+                P::EVERYONE,
+                crate::btech::special_rounds::command,
+            )
+            .policy(SwitchPolicy::Reject("firemine takes no switches."), false),
+            CommandDefinition::native(
+                "firecluster",
+                P::EVERYONE,
+                crate::btech::ammunition_mode::cluster_command,
+            )
+            .policy(
+                SwitchPolicy::Reject("firecluster takes no switches."),
+                false,
+            ),
+            CommandDefinition::native("lbx", P::EVERYONE, crate::btech::ammunition_mode::command)
+                .policy(SwitchPolicy::Reject("lbx takes no switches."), false),
+            CommandDefinition::native("flamerheat", P::EVERYONE, crate::btech::fire_mode::command)
+                .matching(&["heat"], None)
+                .policy(SwitchPolicy::Reject("flamerheat takes no switches."), false),
+            CommandDefinition::native(
+                "fliparms",
+                P::EVERYONE,
+                crate::btech::commands::facing_command,
+            )
+            .policy(SwitchPolicy::Reject("fliparms takes no switches."), false),
+            CommandDefinition::native(
+                "heading",
+                P::EVERYONE,
+                crate::btech::commands::motion_command,
+            ),
+            CommandDefinition::native(
+                "mechprefs",
+                P::EVERYONE,
+                crate::btech::commands::preferences_command,
+            )
+            .policy(SwitchPolicy::Reject("mechprefs takes no switches."), false),
+            CommandDefinition::native(
+                "turret",
+                P::EVERYONE,
+                crate::btech::commands::motion_command,
+            )
+            .policy(SwitchPolicy::Reject("turret takes no switches."), false),
+            CommandDefinition::native(
+                "fixturret",
+                P::EVERYONE,
+                crate::btech::commands::motion_command,
+            )
+            .policy(SwitchPolicy::Reject("fixturret takes no switches."), false),
+            CommandDefinition::native("speed", P::EVERYONE, crate::btech::commands::motion_command),
+            CommandDefinition::native(
+                "startup",
+                P::EVERYONE,
+                crate::btech::commands::power_command,
+            ),
+            CommandDefinition::native(
+                "shutdown",
+                P::EVERYONE,
+                crate::btech::commands::power_command,
+            ),
+            CommandDefinition::native("pilot", P::EVERYONE, crate::btech::commands::pilot_command)
+                .policy(SwitchPolicy::Reject("pilot takes no switches."), false),
+            CommandDefinition::native(
+                "unpilot",
+                P::EVERYONE,
+                crate::btech::commands::pilot_command,
+            )
+            .policy(SwitchPolicy::Reject("unpilot takes no switches."), false),
+            CommandDefinition::native("@btech", P::WIZARD, crate::btech::commands::command)
+                .policy(SwitchPolicy::Handler, true),
+            CommandDefinition::native("+rolls", P::WIZARD, crate::btech::commands::rolls_command)
+                .policy(
+                    SwitchPolicy::Reject("Command +rolls does not take switches."),
+                    true,
+                ),
             CommandDefinition::native("@who", P::WIZARD, crate::operations::who_command)
                 .requiring_session("@who is only available from an active connection.")
                 .policy(SwitchPolicy::Reject("Unsupported command switch."), true),

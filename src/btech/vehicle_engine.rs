@@ -1,0 +1,113 @@
+//! Vehicle and rotorcraft engine diagnostics share catalogue mass and suspension arithmetic.
+use super::{BattleEngine, BattleVehicleMovement, BattleVehicleTemplate};
+use anyhow::Result;
+use serde::Serialize;
+
+/// Vehicle engines derive their technology from chassis flags rather than Mech critical allocation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", content = "family", rename_all = "snake_case")]
+pub enum BattleVehiclePowerplant {
+    Combustion,
+    Fusion(BattleEngine),
+}
+
+/// Intact engine mass in 1/1024-ton units; this is not a complete vehicle construction check.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct BattleVehicleEngine {
+    pub powerplant: BattleVehiclePowerplant,
+    /// Rounded walking movement points multiplied by nominal tonnage.
+    pub nominal_rating: u32,
+    pub suspension: u16,
+    /// Catalogue lookup rating after suspension; retained even when negative or absent from the table.
+    pub weight_rating: i32,
+    /// Unmodified standard engine mass, absent when the lookup rating has no catalogue entry.
+    /// Stationary zero-rating construction needs no propulsion and therefore also has no entry.
+    pub standard_mass: Option<u32>,
+    /// Engine technology and shielding applied, before the hovercraft minimum.
+    pub engine_mass: u32,
+    pub hover_minimum: u32,
+    pub installed_mass: u32,
+}
+
+impl BattleVehicleMovement {
+    /// Suspension reduces the mass rating without changing the effective movement rating.
+    pub fn suspension(self, tons: u16) -> u16 {
+        match self {
+            Self::Tracked | Self::Stationary => 0,
+            Self::Wheeled => 20,
+            Self::Vtol => match tons {
+                0..=10 => 50,
+                11..=20 => 95,
+                _ => 140,
+            },
+            Self::Hover => match tons {
+                0..=10 => 40,
+                11..=20 => 85,
+                21..=30 => 130,
+                31..=40 => 175,
+                _ => 235,
+            },
+        }
+    }
+}
+
+impl BattleVehicleTemplate {
+    /// Inspect case-insensitive chassis flags while retaining their original text in the definition.
+    pub(crate) fn has_special(&self, flag: &str) -> bool {
+        self.attributes.get("specials").is_some_and(|value| {
+            value
+                .split_ascii_whitespace()
+                .any(|value| value.eq_ignore_ascii_case(flag))
+        })
+    }
+
+    /// Calculate engine mass, including the hover minimum when no catalogue entry exists.
+    pub fn engine(&self) -> Result<BattleVehicleEngine> {
+        let nominal_rating = super::engine::rated_output(self.tons, self.max_speed)?;
+        let suspension = self.movement.suspension(self.tons);
+        let weight_rating = nominal_rating as i32 - i32::from(suspension);
+        let standard_mass = u32::try_from(weight_rating)
+            .ok()
+            .map(super::mass::engine_mass)
+            .filter(|mass| *mass > 0);
+        let powerplant = if self.has_special("ICEEngine_Tech") {
+            BattleVehiclePowerplant::Combustion
+        } else {
+            let family = if self.has_special("XLEngine_Tech") {
+                BattleEngine::Xl
+            } else if self.has_special("XXL_Tech") {
+                BattleEngine::Xxl
+            } else if self.has_special("LightEngine_Tech") {
+                BattleEngine::Light
+            } else if self.has_special("CompactEngine_Tech") {
+                BattleEngine::Compact
+            } else {
+                BattleEngine::Standard
+            };
+            BattleVehiclePowerplant::Fusion(family)
+        };
+        let base = standard_mass.unwrap_or(0);
+        let engine_mass = match powerplant {
+            BattleVehiclePowerplant::Combustion => base * 2,
+            BattleVehiclePowerplant::Fusion(family) => {
+                let shielded = super::mass::half_ton(base + base / 2);
+                super::mass::half_ton(family.unrounded_mass(shielded))
+            }
+        };
+        let hover_minimum = if self.movement == BattleVehicleMovement::Hover {
+            u32::from(self.tons) * 1024 / 5
+        } else {
+            0
+        };
+        Ok(BattleVehicleEngine {
+            powerplant,
+            nominal_rating,
+            suspension,
+            weight_rating,
+            standard_mass,
+            engine_mass,
+            hover_minimum,
+            installed_mass: engine_mass.max(hover_minimum),
+        })
+    }
+}

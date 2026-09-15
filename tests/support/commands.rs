@@ -10,10 +10,35 @@ pub fn run_text(
     descriptor: u64,
     line: &str,
 ) -> String {
+    run_filtered(scripts, config, player, descriptor, line, None)
+}
+
+/// Collect only the actor's output when a command also publishes to other occupants.
+#[allow(dead_code)]
+pub fn run_text_for_player(
+    scripts: &Scripts,
+    config: &Config,
+    player: ObjectId,
+    descriptor: u64,
+    line: &str,
+) -> String {
+    run_filtered(scripts, config, player, descriptor, line, Some(player))
+}
+
+/// Preserve direct command reports while optionally selecting one staged recipient.
+fn run_filtered(
+    scripts: &Scripts,
+    config: &Config,
+    player: ObjectId,
+    descriptor: u64,
+    line: &str,
+    recipient: Option<ObjectId>,
+) -> String {
     let action = commands::run(scripts, config, player, descriptor, line).unwrap();
     let mut messages = scripts
         .drain_outbox()
         .into_iter()
+        .filter(|(id, _)| recipient.is_none_or(|recipient| *id == recipient))
         .map(|(_, message)| message.source().to_owned())
         .collect::<Vec<_>>();
     match action {

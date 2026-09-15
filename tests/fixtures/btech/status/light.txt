@@ -1,0 +1,25 @@
+Mech Name: Jenner              ID:[AA]   Mech Reference: JR7-D
+Tonnage:    35     MaxSpeed: 118       JumpRange: 5
+Pilot Name: GOD                          Pilot Injury: 0
+SHUTDOWN
+         FRONT                REAR                INTERNAL
+          __                   __                    __
+       __( 7)__             __(**)__              __( 3)__
+      / 8|10| 8\           / 4| 3| 4\            / 8|11| 8\
+     ( 4/-\/-\ 4)         (    \/    )          ( 6/-\/-\ 6)
+       / /  \ \               /  \                / /  \ \
+      ( 6|  | 6)             /    \              ( 8|  | 8)
+ 
+X, Y, Z:  0,  0,  0  Excess Heat:    0 deg C.  Heat Production:    0 deg C.
+Speed:        0 KPH  Heading:        0 deg     Heat Sinks:        10
+Des. Speed:   0 KPH  Des. Heading:   0 deg     Heat Dissipation:   0 deg C.
+Temp: |.............|.....|......................|
+  
+LARM: Ready RARM: Ready LLEG: Ready RLEG: Ready 
+==================WEAPON SYSTEMS===========================AMMUNITION========
+------ Weapon --------- [##] Location ---- Status ||--- Ammo Type ---- Rounds
+ MediumLaser            [ 0] Left Arm      Ready  || SRM-4                25
+ MediumLaser            [ 1] Left Arm      Ready  ||    
+ MediumLaser            [ 2] Right Arm     Ready  ||    
+ MediumLaser            [ 3] Right Arm     Ready  ||    
+ SRM-4                  [ 4] Center Torso  Ready  ||    

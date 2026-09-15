@@ -163,6 +163,30 @@ Use power constants rather than strings or flag constants. Trusted Lua can
 change powers on any live object, with the same transactional rollback used by
 other callback mutations.
 
+## BattleTech
+
+Mechs, ground vehicles and VTOLs have native Rust movement, sensors, combat,
+damage and persistent runtime state. See the [first implementation summary and
+prioritized follow-ups](docs/btech-first-implementation.md) for supported scope,
+known limitations and closing validation. Complete reference parity is deferred.
+
+Wizard `@btech status`, `@btech template JR7-D`, `@btech mapfile <name>` and
+`@btech inspect #object` inspect assets and saved identities. Trusted Lua has
+matching inspection through `require("btech")`. `@btech map-create #object=<asset>`
+and `@btech map-reload #object=<asset>` create or explicitly reload a map on an
+existing room or thing; Lua adds `map.create`, `map.reload`, and `map.hex`.
+
+Template and map-file parsing are implemented in native Rust. Players can enter units, take the cockpit with
+`pilot`, start the engine with `startup`, stop it with `shutdown`, and leave
+through ordinary movement. Startup progress is durable and advances on the
+server’s one-second tick. `@btech unit-create #object=JR7-D`
+constructs a persistent, undamaged unit on an existing thing.
+`@btech unit-place #unit=#map,x,y` places it on decoded terrain;
+`@btech unit-remove #unit=#destination` takes it off the battlefield. Saved terrain codes are
+preserved until explicitly reloaded. Map creation/reload installs a versioned
+terrain dictionary atomically; no C bridge or automatic map reload is introduced. See [BattleTech behavior and APIs](docs/btech.md)
+and the [implementation coverage inventory](docs/btech-coverage.md).
+
 ## Implementation boundaries
 
 See [architecture and source ownership](docs/architecture.md) for dependency
@@ -191,8 +215,9 @@ boundaries, transaction rules, and guidance on where new behavior belongs.
   messages per connection. Slow clients are disconnected. Login throttles,
   hash concurrency/rate limits, command quotas and idle timeouts are active.
 
-BattleTech simulation, additional GMCP packages, a webserver and browser-side
-action handling remain deferred. Legacy help/type files describe a
+Additional GMCP packages, a webserver and browser-side
+action handling remain deferred. BattleTech exclusions and parity gaps are listed
+in the milestone summary above. Legacy help/type files describe a
 larger API than this milestone implements. Deferred configuration is reported in one capability diagnostic. IPv4 site rules are enforced. Command/list access rules are enforced. Configuration-directive permissions are enforced by `@admin`.
 
 ## Validation

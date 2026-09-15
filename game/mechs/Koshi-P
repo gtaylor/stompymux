@@ -14,10 +14,10 @@ Left_Arm
     CRIT_2		  { UpperActuator - - }
     CRIT_3		  { LowerActuator - - }
     CRIT_4		  { HandOrFootActuator - - }
-Comment {    CRIT_5		  { CL.ERMicroLaser - - }
-Comment {    CRIT_6		  { CL.ERMicroLaser - - }
-Comment {    CRIT_7		  { CL.MicroPulseLaser - - }
-Comment {    CRIT_8		  { CL.MicroPulseLaser - - }
+Comment {    CRIT_5		  : CL.ERMicroLaser - - }
+Comment {    CRIT_6		  : CL.ERMicroLaser - - }
+Comment {    CRIT_7		  : CL.MicroPulseLaser - - }
+Comment {    CRIT_8		  : CL.MicroPulseLaser - - }
     CRIT_9		  { EndoSteel - - }
     CRIT_10		  { FerroFibrous - - }
 Right_Arm
@@ -27,10 +27,10 @@ Right_Arm
     CRIT_2		  { UpperActuator - - }
     CRIT_3		  { LowerActuator - - }
     CRIT_4		  { HandOrFootActuator - - }
-Comment {    CRIT_5		  { CL.ERMicroLaser - - }
-Comment {    CRIT_6		  { CL.ERMicroLaser - - }
-Comment {    CRIT_7		  { CL.MicroPulseLaser - - }
-Comment {    CRIT_8		  { CL.MicroPulseLaser - - }
+Comment {    CRIT_5		  : CL.ERMicroLaser - - }
+Comment {    CRIT_6		  : CL.ERMicroLaser - - }
+Comment {    CRIT_7		  : CL.MicroPulseLaser - - }
+Comment {    CRIT_8		  : CL.MicroPulseLaser - - }
     CRIT_9		  { EndoSteel - - }
     CRIT_10		  { FerroFibrous - - }
 Left_Torso

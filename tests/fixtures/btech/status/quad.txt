@@ -1,0 +1,25 @@
+Mech Name: Goliath             ID:[AA]   Mech Reference: GOL-1H
+Tonnage:    80     MaxSpeed:  64       JumpRange: 0
+Pilot Name: GOD                          Pilot Injury: 0
+SHUTDOWN
+         FRONT                REAR                INTERNAL
+           ___                                      ___
+   ___  __/ 9 \_  ___                       ___  __/ 3 \_  ___
+  ( 30\(20|30|20)/30 )     (13|19|13)      ( 17\(17|25|17)/17 )
+   \ \(24/    \24)/ /                       \ \(17/    \17)/ /
+    \ \||      ||/ /                         \ \||      ||/ /
+    /_/__\    /__\_\                         /_/__\    /__\_\
+ 
+X, Y, Z:  0,  0,  0  Excess Heat:    0 deg C.  Heat Production:    0 deg C.
+Speed:        0 KPH  Heading:        0 deg     Heat Sinks:        17
+Des. Speed:   0 KPH  Des. Heading:   0 deg     Heat Dissipation:   0 deg C.
+Temp: |.............|.....|......................|
+  
+FLLEG: Ready FRLEG: Ready RLLEG: Ready RRLEG: Ready 
+==================WEAPON SYSTEMS===========================AMMUNITION========
+------ Weapon --------- [##] Location ---- Status ||--- Ammo Type ---- Rounds
+ LRM-10                 [ 0] Left Torso    Ready  || MachineGun          200
+ MachineGun             [ 1] Left Torso    Ready  || LRM-10               24
+ PPC                    [ 2] Right Torso   Ready  ||    
+ LRM-10                 [ 3] Right Torso   Ready  ||    
+ MachineGun             [ 4] Right Torso   Ready  ||    

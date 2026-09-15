@@ -137,8 +137,8 @@ async fn edits_partial_success_aliases_and_live_handles() {
     let id = s.eval_callback::<i64>("return mux.world.create_object{type=mux.world.types.THING,name='Live defaults'}:dbref()").unwrap();
     assert!(s.world().objects[&ObjectId(id)].flags.contains(Flag::Ansi));
     assert!(edit(&mut c, &mut s, 1, "alias", "l say").is_err());
-    edit(&mut c, &mut s, 1, "alias", "view l").unwrap();
-    assert_eq!(c.aliases.commands["view"], "look");
+    edit(&mut c, &mut s, 1, "alias", "inspectroom l").unwrap();
+    assert_eq!(c.aliases.commands["inspectroom"], "look");
     assert!(edit(&mut c, &mut s, 1, "default_thing_flags", "missing").is_err());
     assert!(run(&s, &c, 1, "@list default_flags").contains("Things: ANSI"));
     edit(&mut c, &mut s, 1, "bad_name", "Bad*").unwrap();

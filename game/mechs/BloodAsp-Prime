@@ -21,7 +21,6 @@ Right_Arm
     CRIT_1		  { ShoulderOrHip - - }
     CRIT_2		  { UpperActuator - - }
     CRIT_3		  { LowerActuator - - }
-    CRIT_4		  { HandOrFootActuator - - }
     CRIT_4-5		  { CL.HeavyMediumLaser - - }
     CRIT_6		  { CL.MediumPulseLaser - - }
     CRIT_7-8		  { HeatSink - - }

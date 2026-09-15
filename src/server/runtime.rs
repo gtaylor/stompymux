@@ -78,6 +78,11 @@ pub async fn run_with_clocks(
     let mut tick = tokio::time::interval(Duration::from_millis(
         server.config.runtime.maintenance_interval_ms,
     ));
+    let mut btech_tick = tokio::time::interval_at(
+        tokio::time::Instant::now() + Duration::from_secs(1),
+        Duration::from_secs(1),
+    );
+    btech_tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
     let mut tasks = tokio::task::JoinSet::new();
     let mut idle_deadline = tokio::time::Instant::now();
     tokio::pin!(shutdown);
@@ -169,6 +174,7 @@ pub async fn run_with_clocks(
                     }
                 }}
             },
+            _ = btech_tick.tick(), if server.shutdown.is_none() => { server.btech_tick(schedule_now()).await; },
             _ = tick.tick() => {
                 queue_credit = server.config.mux.command_queue_idle_chunk as usize;
                 if server.shutdown.is_none() && server.cleaning.take_due(cleaning_now()) { server.dbck(crate::cleaning::CheckOrigin::Automatic).await; }

@@ -26,7 +26,7 @@ Right_Arm
   Armor            { 15 }
   Internals        { 10 }
     CRIT_1-9		  { CL.ArrowIVSystem - - 3 }
-    CRIT_10-12		  { CL.ArrowIVSystem - - 0 }
+    CRIT_10-12		  { CL.ArrowIVSystem - - 3 }
 Left_Torso
   Armor            { 19 }
   Internals        { 14 }

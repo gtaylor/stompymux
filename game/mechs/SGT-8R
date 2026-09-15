@@ -48,7 +48,7 @@ Center_Torso
     CRIT_4-7     { Gyro - - }
     CRIT_8-10    { Engine - - }
     CRIT_11      { JumpJet - - }
-    CRIT_12      { IS.MediumPulseLaser - RearMount OnTC }
+    CRIT_12      { IS.MediumPulseLaser - RearMount|OnTC }
 Left_Leg
   Armor          { 39 }
   Internals      { 20 }
@@ -71,6 +71,6 @@ Head
     CRIT_1       { LifeSupport - - }
     CRIT_2       { Sensors - - }
     CRIT_3       { Cockpit - - }
-    CRIT_4       { IS.MediumPulseLaser - RearMount OnTC }
+    CRIT_4       { IS.MediumPulseLaser - RearMount|OnTC }
     CRIT_5       { Sensors - - }
     CRIT_6       { LifeSupport - - }

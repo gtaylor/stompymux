@@ -1,6 +1,7 @@
 //! Serialized world owner, connection lifecycle and common graceful shutdown coordinator.
 mod administration;
 mod authentication;
+mod btech;
 mod configuration;
 mod connection;
 mod diagnostics;

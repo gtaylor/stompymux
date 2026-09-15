@@ -10,7 +10,7 @@ Heat_Sinks       { 40 }
 Cargo_Space      { 0 }
 Max_Suits        { 0 }
 Max_Speed        { 53.75 }
-Specials         { Clan|FlipArms }
+Specials         { Clan FlipArms }
 Left_Arm
   Armor            { 34 }
   Internals        { 17 }

@@ -14,7 +14,7 @@ Left_Arm
     CRIT_1		  { ShoulderOrHip - - 5 }
     CRIT_2		  { UpperActuator - - 5 }
     CRIT_3-4		  { CL.LRM-20 - - 5 }
-    CRIT_5-6		  { CL.LRM-20 - - 0 }
+    CRIT_5-6		  { CL.LRM-20 - - 5 }
     CRIT_11-12		  { FerroFibrous - - 5 }
 Right_Arm
   Armor            { 13 }
@@ -22,7 +22,7 @@ Right_Arm
     CRIT_1		  { ShoulderOrHip - - 5 }
     CRIT_2		  { UpperActuator - - 5 }
     CRIT_3		  { CL.LRM-20 - - 5 }
-    CRIT_4-6		  { CL.LRM-20 - - 0 }
+    CRIT_4-6		  { CL.LRM-20 - - 5 }
     CRIT_11-12		  { EndoSteel - - 5 }
 Left_Torso
   Armor            { 16 }

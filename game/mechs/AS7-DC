@@ -14,7 +14,7 @@ Left_Arm
     CRIT_2		  { UpperActuator - - }
     CRIT_3		  { LowerActuator - - }
     CRIT_4		  { HandOrFootActuator - - }
-    CRIT_5		  { CL.MediumLaser - - }
+    CRIT_5		  { CL.ERMediumLaser - - }
 Right_Arm
   Armor            { 32 }
   Internals        { 17 }
@@ -22,7 +22,7 @@ Right_Arm
     CRIT_2		  { UpperActuator - - }
     CRIT_3		  { LowerActuator - - }
     CRIT_4		  { HandOrFootActuator - - }
-    CRIT_5		  { CL.MediumLaser - - }
+    CRIT_5		  { CL.ERMediumLaser - - }
 Left_Torso
   Armor            { 32 }
   Internals        { 21 }
@@ -48,8 +48,8 @@ Center_Torso
     CRIT_1-3		  { Engine - - }
     CRIT_4-7		  { Gyro - - }
     CRIT_8-10		  { Engine - - }
-    CRIT_11		  { CL.MediumLaser - RearMount }
-    CRIT_12		  { CL.MediumLaser - RearMount }
+    CRIT_11		  { CL.ERMediumLaser - RearMount }
+    CRIT_12		  { CL.ERMediumLaser - RearMount }
 Left_Leg
   Armor            { 41 }
   Internals        { 21 }

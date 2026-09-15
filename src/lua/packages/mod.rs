@@ -1,4 +1,5 @@
 //! Register built-in mux bindings and embedded facades without changing require lookup.
+mod btech;
 mod comsys;
 mod config;
 pub(crate) mod error;
@@ -45,6 +46,7 @@ pub(super) fn register_native(
     comsys::register(lua, &api, config, world, outbox, effects)?;
     text::register(lua, &api, config, palette)?;
     logging::register(lua, &api).map_err(|e| anyhow::anyhow!("{e}"))?;
+    btech::register(lua, &api, world).map_err(|e| anyhow::anyhow!("{e}"))?;
     Ok(api)
 }
 
@@ -58,6 +60,7 @@ pub(super) fn install_facades(lua: &Lua, api: Table) -> Result<()> {
             .call(api.clone())?;
         lua.globals().set("mux", mux.clone())?;
         error::install(lua, &mux)?;
+        btech::install(lua, &api, &mux)?;
         for pair in api.clone().pairs::<String, mlua::Value>() {
             let (name, value) = pair?;
             if let mlua::Value::Function(f) = value {

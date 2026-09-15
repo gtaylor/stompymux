@@ -157,6 +157,9 @@ fn run_inner(s: &Scripts, c: &Config, execution: ExecutionContext, line: &str) -
     if let Some(action) = crate::communication::alias(s, c, player, line)? {
         return Ok(action);
     }
+    if let Some(action) = crate::btech::special_dispatch::admit(&ctx, line)? {
+        return Ok(action);
+    }
     let input = CommandInput::parse(c, line);
     if exits::travel(&ctx, line, exits::Invocation::Bare)? {
         return Ok(Action::Continue);

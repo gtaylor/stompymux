@@ -35,7 +35,7 @@ Left_Torso
   Armor            { 18 }
   Internals        { 13 }
   Rear             { 6 }
-    CRIT_1-2		  { IS.iNarcBeacon - - 0 }
+    CRIT_1-2		  { IS.iNarcBeacon - - 3 }
     CRIT_3		  { IS.iNarcBeacon - - 3 }
     CRIT_4-9		  { FerroFibrous - - 3 }
     CRIT_10-12		  { FerroFibrous - - 0 }

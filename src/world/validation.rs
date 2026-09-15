@@ -59,6 +59,7 @@ impl World {
 
     /// Validate the complete transactional world projection.
     pub fn validate(&self, config: &Config) -> Result<()> {
+        self.btech.validate(self)?;
         self.macros.validate(self)?;
         for id in [config.start(), config.home()] {
             ensure!(

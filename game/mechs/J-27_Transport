@@ -26,6 +26,3 @@ Aft_Side
 Turret
   Armor            { 2 }
   Internals        { 1 }
-Rotor
-  Armor            { 2 }
-  Internals        { 1 }

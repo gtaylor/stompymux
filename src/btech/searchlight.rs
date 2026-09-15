@@ -1,0 +1,386 @@
+//! Owned searchlight switching and damage state, with illumination derived from current geometry.
+use super::{BattleNotice, BattlePower, BattleUnit};
+use crate::{ObjectId, World};
+use anyhow::{Context, Result, ensure};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+
+/// Durable hardware state; pending transitions invert the current setting after five seconds.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BattleSearchlight {
+    pub on: bool,
+    pub destroyed: bool,
+    pub remaining: u8,
+}
+
+impl BattleSearchlight {
+    /// Reject impossible hardware or countdown combinations at the ownership boundary.
+    pub(super) fn validate(self, installed: bool) -> Result<()> {
+        ensure!(
+            installed || self == Self::default(),
+            "Searchlight state without installed equipment"
+        );
+        ensure!(self.remaining <= 5, "Invalid searchlight countdown");
+        ensure!(
+            !self.destroyed || (!self.on && self.remaining == 0),
+            "Destroyed searchlight is active"
+        );
+        Ok(())
+    }
+}
+
+impl BattleUnit {
+    /// Persisted lamp and switch state, independent of the unit's current illumination.
+    pub fn searchlight(&self) -> BattleSearchlight {
+        self.searchlight
+    }
+}
+
+impl super::BattleVehicle {
+    /// Saved searchlight hardware and pending switch state.
+    pub fn searchlight(&self) -> BattleSearchlight {
+        self.searchlight
+    }
+}
+
+/// Read installed hardware independently of anatomy and cockpit admission.
+fn hardware(world: &World, id: ObjectId) -> Option<(BattleSearchlight, bool)> {
+    if let Some(unit) = world.btech.constructed_units().get(&id) {
+        return Some((
+            unit.searchlight,
+            unit.definition().has_special("Searchlight"),
+        ));
+    }
+    world.btech.vehicles().get(&id).map(|unit| {
+        (
+            unit.searchlight,
+            unit.definition().has_special("Searchlight"),
+        )
+    })
+}
+
+/// Borrow admitted hardware without duplicating switch or damage rules.
+fn hardware_mut(world: &mut World, id: ObjectId) -> &mut BattleSearchlight {
+    if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+        return &mut unit.searchlight;
+    }
+    &mut Arc::make_mut(&mut world.btech.vehicles)
+        .get_mut(&id)
+        .expect("admitted lamp")
+        .searchlight
+}
+
+/// Constructed emitter identities in stable order across anatomy stores.
+pub(super) fn emitter_ids(world: &World) -> impl Iterator<Item = ObjectId> + '_ {
+    world
+        .btech
+        .constructed_units()
+        .keys()
+        .chain(world.btech.vehicles().keys())
+        .copied()
+}
+
+/// Current emitter state shared by unit and terrain illumination.
+pub(super) fn beam(
+    world: &World,
+    id: ObjectId,
+) -> Option<(super::BattlePosition, super::BattlePoint, f64)> {
+    let scanner = super::scanner::scanner_unit(world, id)?;
+    let (lamp, _) = hardware(world, id)?;
+    if !lamp.on
+        || lamp.destroyed
+        || scanner.destroyed
+        || world
+            .objects
+            .get(&id)
+            .is_none_or(|o| o.flags.contains(crate::Flag::Going))
+    {
+        return None;
+    }
+    Some((
+        scanner.position?,
+        scanner.point?,
+        scanner.heading? + scanner.facing.torso.offset(),
+    ))
+}
+
+/// Inferno lifetime is shared across unit and terrain lighting.
+fn inferno(world: &World, id: ObjectId) -> u32 {
+    world.btech.constructed_units().get(&id).map_or_else(
+        || {
+            world
+                .btech
+                .vehicles()
+                .get(&id)
+                .map_or(0, |u| u.inferno_remaining())
+        },
+        |u| u.inferno_remaining(),
+    )
+}
+
+/// Request a guarded toggle; repeated requests preserve the existing transition.
+pub fn toggle_searchlight(
+    world: &mut World,
+    id: ObjectId,
+    pilot: ObjectId,
+) -> Result<BattleNotice> {
+    super::radio::controlled(world, id, pilot)?;
+    super::power::require_running_unit(world, id)?;
+    let (lamp, installed) = hardware(world, id).context("Unit is unavailable")?;
+    ensure!(installed, "Your 'mech isn't equipped with searchlight!");
+    ensure!(
+        !lamp.destroyed,
+        "Your searchlight has been destroyed already!"
+    );
+    let on = lamp.on;
+    let text = if lamp.remaining > 0 {
+        if on {
+            "Your searchlight is already in the process of turning off."
+        } else {
+            "Your searchlight is already in the process of turning on."
+        }
+    } else {
+        hardware_mut(world, id).remaining = 5;
+        if on {
+            "Your searchlight starts to cool down."
+        } else {
+            "Your searchlight starts to warm up."
+        }
+    };
+    Ok(BattleNotice {
+        unit: id,
+        text: text.into(),
+    })
+}
+
+/// Advance switches atomically with the server tick; an unpowered expiry leaves the lamp unchanged.
+pub fn advance_searchlights(world: &mut World) -> Vec<BattleNotice> {
+    let ids: Vec<_> = emitter_ids(world)
+        .filter(|&id| hardware(world, id).is_some_and(|(lamp, _)| lamp.remaining > 0))
+        .collect();
+    let mut notices = Vec::new();
+    for id in ids {
+        let scanner = super::scanner::scanner_unit(world, id).expect("constructed emitter");
+        let running = scanner.power == BattlePower::Running && !scanner.destroyed;
+        let lamp = hardware_mut(world, id);
+        lamp.remaining -= 1;
+        if lamp.remaining > 0 || !running {
+            continue;
+        }
+        lamp.on = !lamp.on;
+        let on = lamp.on;
+        notices.push(BattleNotice {
+            unit: id,
+            text: if on {
+                "Your searchlight comes on to full power."
+            } else {
+                "Your searchlight shuts off."
+            }
+            .into(),
+        });
+        notices.extend(super::broadcast::observer_notices(
+            world,
+            id,
+            if on {
+                "turns on a searchlight!"
+            } else {
+                "turns off a searchlight!"
+            },
+        ));
+    }
+    notices
+}
+
+/// A target is lit by inferno fire, its own lamp, scenario lighting or an unobstructed forward beam.
+pub fn unit_illuminated(world: &World, target: ObjectId) -> bool {
+    if !world
+        .objects
+        .get(&target)
+        .is_some_and(|o| !o.flags.contains(crate::Flag::Going))
+    {
+        return false;
+    }
+    hardware(world, target).is_some_and(|_| {
+        inferno(world, target) > 0
+            || beam(world, target).is_some()
+            || externally_illuminated(world, target)
+    })
+}
+
+/// Scenario lighting, nearby infernos and other lamps can trigger external-light warnings.
+fn externally_illuminated(world: &World, target: ObjectId) -> bool {
+    if world
+        .objects
+        .get(&target)
+        .is_none_or(|o| o.flags.contains(crate::Flag::Going))
+    {
+        return false;
+    }
+    let unit = world.btech.constructed_units().get(&target);
+    if unit.is_some_and(|unit| unit.sensor_signature().illuminated)
+        || world
+            .btech
+            .vehicles()
+            .get(&target)
+            .is_some_and(|vehicle| vehicle.sensor_signature().illuminated)
+    {
+        return true;
+    }
+    let Some(position) = unit.and_then(|unit| unit.position()).or_else(|| {
+        world
+            .btech
+            .vehicles()
+            .get(&target)
+            .and_then(|vehicle| vehicle.position())
+    }) else {
+        return false;
+    };
+    emitter_ids(world).any(|source| {
+        if source == target
+            || world
+                .objects
+                .get(&source)
+                .is_none_or(|o| o.flags.contains(crate::Flag::Going))
+        {
+            return false;
+        }
+        let Some(scanner) = super::scanner::scanner_unit(world, source) else {
+            return false;
+        };
+        let Some(source_position) = scanner.position.filter(|p| p.map == position.map) else {
+            return false;
+        };
+        let source_hex = super::BattleHexCoordinate {
+            x: i32::from(source_position.x),
+            y: i32::from(source_position.y),
+        };
+        let target_hex = super::BattleHexCoordinate {
+            x: i32::from(position.x),
+            y: i32::from(position.y),
+        };
+        if inferno(world, source) > 0 && source_hex.distance(target_hex) <= 1 {
+            return true;
+        }
+        let Some((_, _, heading)) = beam(world, source) else {
+            return false;
+        };
+        let Ok(range) = super::unit_range(world, source, target) else {
+            return false;
+        };
+        let angle = (range.bearing.unwrap_or(heading) - heading).rem_euclid(360.0);
+        range.spatial <= 30.0
+            && !(angle > 60.0 && angle < 300.0)
+            && super::unit_terrain_los(world, source, target)
+                .is_ok_and(|los| !los.blocked && los.woods <= 2 && los.water == 0)
+    })
+}
+
+impl BattleUnit {
+    /// Whether changes in external illumination notify the occupants.
+    pub fn searchlight_warning(&self) -> bool {
+        self.searchlight_warning
+    }
+}
+
+/// Iterate saved observation cursors without imposing a chassis-specific sensor policy.
+fn illumination_observations(world: &World) -> impl Iterator<Item = (ObjectId, bool)> + '_ {
+    world
+        .btech
+        .constructed_units()
+        .iter()
+        .map(|(&id, unit)| (id, unit.illumination_observed))
+        .chain(
+            world
+                .btech
+                .vehicles()
+                .iter()
+                .map(|(&id, unit)| (id, unit.illumination_observed)),
+        )
+}
+
+/// Detect notification work even when both the lamps and their targets are stationary.
+pub fn illumination_pending(world: &World) -> bool {
+    illumination_observations(world)
+        .any(|(id, observed)| observed != externally_illuminated(world, id))
+}
+
+/// Commit illumination observations and emit each opted-in transition once.
+/// Notification cursors share the world transaction; they never decide visibility.
+pub fn refresh_illumination(world: &mut World) -> Vec<BattleNotice> {
+    let changes: Vec<_> = illumination_observations(world)
+        .filter_map(|(id, observed)| {
+            let lit = externally_illuminated(world, id);
+            (observed != lit).then_some((id, lit))
+        })
+        .collect();
+    let mut notices = Vec::new();
+    for (id, lit) in changes {
+        let warning = if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+            unit.illumination_observed = lit;
+            unit.searchlight_warning
+        } else {
+            let unit = Arc::make_mut(&mut world.btech.vehicles)
+                .get_mut(&id)
+                .expect("observed vehicle");
+            unit.illumination_observed = lit;
+            unit.searchlight_warning
+        };
+        if warning
+            && world
+                .objects
+                .get(&id)
+                .is_some_and(|o| !o.flags.contains(crate::Flag::Going))
+        {
+            notices.push(BattleNotice {
+                unit: id,
+                text: if lit {
+                    "You are being illuminated!"
+                } else {
+                    "You are no longer being illuminated."
+                }
+                .into(),
+            });
+        }
+    }
+    notices
+}
+
+/// Resolve an exposed lamp's common destruction rolls before the caller applies armor damage.
+/// Return notices separately so material-only callers can discard publication.
+pub(super) fn strike(
+    world: &mut World,
+    id: ObjectId,
+) -> Option<(Vec<BattleNotice>, Vec<BattleNotice>)> {
+    let (lamp, installed) = hardware(world, id)?;
+    if !installed || lamp.destroyed {
+        return None;
+    }
+    let dice = if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
+        &mut unit.dice
+    } else {
+        &mut Arc::make_mut(&mut world.btech.vehicles).get_mut(&id)?.dice
+    };
+    if dice.generic_roll() <= 6 || (!lamp.on && dice.generic_roll() <= 5) {
+        return None;
+    }
+    let broadcasts =
+        super::broadcast::observer_notices(world, id, "'s searchlight is blown apart!");
+    *hardware_mut(world, id) = BattleSearchlight {
+        destroyed: true,
+        ..Default::default()
+    };
+    Some((
+        vec![BattleNotice {
+            unit: id,
+            text: "[fg=yellow bold]Your searchlight is destroyed![reset]".into(),
+        }],
+        broadcasts,
+    ))
+}
+
+impl BattleSearchlight {
+    /// Cut lamp power during shutdown; any pending countdown can expire without switching on.
+    pub(super) fn shutdown(&mut self) -> bool {
+        std::mem::take(&mut self.on)
+    }
+}

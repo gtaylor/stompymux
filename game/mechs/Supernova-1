@@ -13,7 +13,7 @@ Left_Arm
     CRIT_1		  { ShoulderOrHip - - }
     CRIT_2		  { UpperActuator - - }
     CRIT_3		  { LowerActuator - - }
-    CRIT_4-7		  { HeatSink - - }
+    CRIT_8-11		  { HeatSink - - }
     CRIT_5		  { CL.ERLargeLaser - - }
     CRIT_6		  { CL.ERLargeLaser - - }
     CRIT_7		  { CL.ERLargeLaser - - }
@@ -23,7 +23,7 @@ Right_Arm
     CRIT_1		  { ShoulderOrHip - - }
     CRIT_2		  { UpperActuator - - }
     CRIT_3		  { LowerActuator - - }
-    CRIT_4-7		  { HeatSink - - }
+    CRIT_8-11		  { HeatSink - - }
     CRIT_5		  { CL.ERLargeLaser - - }
     CRIT_6		  { CL.ERLargeLaser - - }
     CRIT_7		  { CL.ERLargeLaser - - }

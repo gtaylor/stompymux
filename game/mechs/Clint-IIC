@@ -32,8 +32,8 @@ Right_Torso
   Internals        { 10 }
   Rear             { 4 }
     CRIT_1-2		  { Engine - - }
-    CRIT_3		  { HeatSink - - }
-    CRIT_4		  { JumpJet - - }
+    CRIT_3-4		  { HeatSink - - }
+    CRIT_12		  { JumpJet - - }
     CRIT_5-6		  { Ammo_CL.LB10-XAC 10 - }
     CRIT_7-8		  { Ammo_CL.LB10-XAC 10 LBX/Cluster }
     CRIT_9-11		  { EndoSteel - - }

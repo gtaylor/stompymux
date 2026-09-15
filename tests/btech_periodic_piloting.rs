@@ -1,0 +1,533 @@
+//! Heartbeat control cadence, gravity stress and ordinary fall consequences replay from saved state.
+use stompymux_rs::*;
+#[allow(dead_code)]
+#[path = "support/btech_firing.rs"]
+mod firing;
+mod support;
+
+/// Actual heartbeat rolls are private to the captured pilot, with the reference empty-pilot fallback.
+#[tokio::test]
+async fn control_feedback_is_ordered_and_respects_pilot_audience() {
+    use std::{cell::RefCell, rc::Rc};
+    for template in firing::templates().into_iter().take(2) {
+        let (_dir, config, mut base, unit, _, _) =
+            firing::fixture_with_target(&template, None, &template).await;
+        damage_gyro(&mut base, unit);
+        base.objects.get_mut(&ObjectId(2)).unwrap().location = Some(unit);
+        for player in [ObjectId(1), ObjectId(2)] {
+            base.objects
+                .get_mut(&player)
+                .unwrap()
+                .flags
+                .insert(Flag::Connected);
+        }
+        let mut channel = Channel::new("MechDebugInfo".into());
+        channel.users.push(communication::Membership {
+            who: ObjectId(2),
+            listening: true,
+        });
+        base.channels.insert("MechDebugInfo".into(), channel);
+        for assigned in [false, true] {
+            for success in [false, true] {
+                let mut world = base.clone();
+                if !assigned {
+                    release_battle_pilot(&mut world, unit, ObjectId(1)).unwrap();
+                }
+                phase(&mut world, 7);
+                let speed = world.btech.constructed_units()[&unit]
+                    .mobility()
+                    .maximum_speed;
+                firing::edit(&mut world, unit, |state| {
+                    state["motion"]["speed"] = speed.into();
+                    state["motion"]["desired_speed"] = speed.into();
+                });
+                seed(&mut world, unit, success);
+                let before = world.clone();
+                let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+                let reports = advance_battle_periodic_piloting_action(&scripts, &config).unwrap();
+                assert_eq!(reports.len(), 1);
+                assert_eq!(reports[0].pilot, assigned.then_some(ObjectId(1)));
+                let mut expected = reports[0].check.messages().unwrap().to_vec();
+                if let Some(messages) = reports[0]
+                    .fall
+                    .as_ref()
+                    .and_then(|fall| fall.avoidance.as_ref())
+                    .and_then(|check| check.messages())
+                {
+                    expected.extend(messages);
+                }
+                let messages = scripts.drain_outbox();
+                let check = reports[0].check;
+                let diagnostic = format!(
+                    "Attempting to make pilot (noxp) skill roll. SPilot: {}, mods: {}, MechPilot: {}, BTH: {}",
+                    check.skill, check.situational, check.damage, check.target
+                );
+                assert_eq!(scripts.world().channels["MechDebugInfo"].messages, 1);
+                let debug_index = messages
+                    .iter()
+                    .position(|(who, text)| {
+                        *who == ObjectId(2) && text.source().contains(&diagnostic)
+                    })
+                    .unwrap();
+                let cockpit_index = messages
+                    .iter()
+                    .position(|(_, text)| text.source() == expected[0])
+                    .unwrap();
+                assert!(debug_index < cockpit_index);
+                assert!(
+                    !messages
+                        .iter()
+                        .any(|(who, text)| *who == ObjectId(1)
+                            && text.source().contains(&diagnostic))
+                );
+
+                for player in [ObjectId(1), ObjectId(2)] {
+                    let feedback: Vec<_> = messages
+                        .iter()
+                        .filter(|(who, text)| {
+                            *who == player
+                                && (text.source().starts_with("You make a piloting")
+                                    || text.source().starts_with("Modified Pilot Skill:"))
+                        })
+                        .map(|(_, text)| text.source().to_owned())
+                        .collect();
+                    if player == ObjectId(1) || !assigned {
+                        assert_eq!(feedback, expected);
+                    } else {
+                        assert!(feedback.is_empty());
+                    }
+                }
+                let pilot_messages: Vec<_> = messages
+                    .iter()
+                    .filter(|(who, _)| *who == ObjectId(1))
+                    .map(|(_, text)| text.source())
+                    .collect();
+                assert_eq!(pilot_messages[0], expected[0]);
+                assert_eq!(pilot_messages[1], expected[1]);
+                *scripts.world_mut() = before.clone();
+                scripts
+                    .world_mut()
+                    .channels
+                    .get_mut("MechDebugInfo")
+                    .unwrap()
+                    .messages = i64::MAX;
+                let error = advance_battle_periodic_piloting_action(&scripts, &config).unwrap_err();
+                assert!(format!("{error:#}").contains("channel message counter overflow"));
+                assert_eq!(scripts.world().btech, before.btech);
+                assert_eq!(scripts.world().channels["MechDebugInfo"].messages, i64::MAX);
+                assert!(scripts.drain_outbox().is_empty());
+            }
+        }
+    }
+}
+
+/// Edit only the committed global phase, exercising the same persisted validation as database load.
+fn phase(world: &mut World, value: u8) {
+    let mut saved = serde_json::to_value(&world.btech).unwrap();
+    saved["turn_clock"] = value.into();
+    world.btech = serde_json::from_value(saved).unwrap();
+}
+
+/// Install one real damaged gyro without applying an unrelated immediate critical-balance action.
+fn damage_gyro(world: &mut World, unit: ObjectId) {
+    let part = world.btech.constructed_units()[&unit]
+        .loadout()
+        .unwrap()
+        .systems
+        .iter()
+        .find(|p| p.system == BattleSystem::Gyro)
+        .unwrap()
+        .location;
+    destroy_battle_critical(world, unit, part).unwrap();
+}
+
+/// Force a first control result while leaving fall or impact draws on the same private stream.
+fn seed(world: &mut World, unit: ObjectId, success: bool) {
+    let seed = (0..=255)
+        .find(|&seed| BattleDice::seeded([seed; 32]).two_d6() == if success { 12 } else { 2 })
+        .unwrap();
+    firing::edit(world, unit, |s| {
+        s["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+    });
+}
+
+/// Damaged-running checks happen off the turn boundary and failed checks use the ordinary fall engine.
+#[tokio::test]
+async fn damaged_running_checks_use_each_heartbeat_and_preserve_reverse_and_walk_gates() {
+    for template in firing::templates().into_iter().take(2) {
+        let (_dir, config, mut base, unit, _, _) =
+            firing::fixture_with_target(&template, None, &template).await;
+        damage_gyro(&mut base, unit);
+        let maximum = base.btech.constructed_units()[&unit]
+            .mobility()
+            .maximum_speed;
+        let walk = maximum * 2.0 / 3.0;
+        for speed in [-walk, 0.0, walk, walk + 0.2] {
+            for success in [false, true] {
+                let mut world = base.clone();
+                phase(&mut world, 7);
+                firing::edit(&mut world, unit, |s| {
+                    s["motion"]["speed"] = speed.into();
+                    s["motion"]["desired_speed"] = speed.into();
+                });
+                seed(&mut world, unit, success);
+                persistence::save(&config.database(), &world).await.unwrap();
+                let mut replay = persistence::load(&config.database()).await.unwrap();
+                let before = world.btech.clone();
+                let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
+                assert_eq!(
+                    reports,
+                    advance_battle_periodic_piloting(&mut replay, &config).unwrap()
+                );
+                assert_eq!(world.btech, replay.btech);
+                if speed <= walk + 0.1 {
+                    assert!(reports.is_empty());
+                    assert_eq!(world.btech, before);
+                    continue;
+                }
+                assert_eq!(reports.len(), 1);
+                assert_eq!(reports[0].check.situational, 0);
+                assert_eq!(reports[0].check.success, success);
+                assert_eq!(reports[0].fall.is_some(), !success);
+                if !success {
+                    assert_eq!(
+                        reports[0].notices[0].text,
+                        "Your damaged mech falls as you try to run!"
+                    );
+                    assert_eq!(
+                        world.btech.constructed_units()[&unit].posture(),
+                        BattlePosture::Prone
+                    );
+                    assert_eq!(
+                        world.btech.constructed_units()[&unit]
+                            .motion()
+                            .unwrap()
+                            .speed,
+                        0.0
+                    );
+                }
+            }
+        }
+    }
+}
+
+/// Installed boosters permit an overspeed state; the gravity rule still compares against unloaded speed.
+#[tokio::test]
+async fn gravity_stress_obeys_global_boundary_and_hits_each_chassis_leg_in_order() {
+    for template in [
+        include_str!("../game/mechs/CTF-3L"),
+        include_str!("../game/mechs/StalkingSpider-1"),
+    ] {
+        let (_dir, config, mut base, unit, _, _) =
+            firing::fixture_with_target(template, None, template).await;
+        let map = base.btech.units()[&unit].map.unwrap();
+        let maximum = base.btech.constructed_units()[&unit]
+            .mobility()
+            .maximum_speed;
+        let legs = base.btech.constructed_units()[&unit].chassis().legs().len();
+        let seed = (0..=255)
+            .find(|&seed| {
+                let mut dice = BattleDice::seeded([seed; 32]);
+                dice.two_d6() <= 4 && (0..legs).all(|_| dice.two_d6() < 8)
+            })
+            .unwrap();
+        firing::edit(&mut base, unit, |s| {
+            s["motion"]["speed"] = (maximum + 1.0).into();
+            s["motion"]["desired_speed"] = (maximum + 1.0).into();
+            s["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap();
+        });
+        for gravity in [50, 100, 150] {
+            for tick in [0, 1, 28, 29] {
+                let mut world = base.clone();
+                let mut saved = serde_json::to_value(&world.btech).unwrap();
+                saved["maps"][map.0.to_string()]["flags"] = 2.into();
+                saved["maps"][map.0.to_string()]["gravity"] = gravity.into();
+                world.btech = serde_json::from_value(saved).unwrap();
+                phase(&mut world, tick);
+                let before = world.btech.clone();
+                let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
+                if gravity == 100 || ![0, 29].contains(&tick) {
+                    assert!(reports.is_empty());
+                    assert_eq!(world.btech, before);
+                    continue;
+                }
+                assert_eq!(reports.len(), 1);
+                let report = &reports[0];
+                assert_eq!(report.gravity_damage, 1);
+                assert!(!report.check.success);
+                assert!(report.fall.is_none());
+                assert_eq!(report.impacts.len(), legs);
+                assert_eq!(report.notices[0].text, "Your legs take some damage!");
+                let order: Vec<_> = report
+                    .impacts
+                    .iter()
+                    .map(|i| i.impact.phases[0].section)
+                    .collect();
+                assert_eq!(
+                    order,
+                    if legs == 4 {
+                        vec![
+                            BattleSection::LeftArm,
+                            BattleSection::RightArm,
+                            BattleSection::LeftLeg,
+                            BattleSection::RightLeg,
+                        ]
+                    } else {
+                        vec![BattleSection::LeftLeg, BattleSection::RightLeg]
+                    }
+                );
+                for section in order {
+                    let old = &before.constructed_units()[&unit].sections()[&section];
+                    let new = &world.btech.constructed_units()[&unit].sections()[&section];
+                    assert_eq!(new.armor, old.armor);
+                    assert_eq!(new.internal, old.internal - 1);
+                }
+            }
+        }
+    }
+}
+
+/// The hot-myomer running threshold changes only on the guarded turn ticks.
+#[tokio::test]
+async fn hot_myomer_turn_threshold_and_shutdown_crew_gates() {
+    let template = include_str!("../game/mechs/OTL-6D");
+    let (_dir, config, mut base, unit, _, _) =
+        firing::fixture_with_target(template, None, template).await;
+    damage_gyro(&mut base, unit);
+    let speed = base.btech.constructed_units()[&unit]
+        .mobility()
+        .maximum_speed
+        * 2.0
+        / 3.0
+        + 1.0;
+    firing::edit(&mut base, unit, |s| {
+        s["motion"]["speed"] = speed.into();
+        s["motion"]["desired_speed"] = speed.into();
+        s["heat"]["excess"] = 9.0.into();
+        s["heat"]["stored"] = 9.0.into();
+    });
+    for tick in [1, 28, 29, 0] {
+        let mut world = base.clone();
+        phase(&mut world, tick);
+        seed(&mut world, unit, true);
+        let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
+        assert_eq!(reports.is_empty(), [29, 0].contains(&tick));
+    }
+    for template in firing::templates() {
+        let (_dir, config, mut base, unit, _, _) =
+            firing::fixture_with_target(&template, None, &template).await;
+        stop_battle_unit(
+            &mut base,
+            unit,
+            ObjectId(1),
+            BattleMovementRules::STANDARD.fall,
+        )
+        .unwrap();
+        let recovery_seed = (0..=255)
+            .find(|&seed| BattleDice::seeded([seed; 32]).two_d6() < 7)
+            .unwrap();
+        for unconscious in [false, true] {
+            let mut ready = base.clone();
+            if unconscious {
+                firing::edit(&mut ready, unit, |s| {
+                    s["crew_recovery"]["dice"] =
+                        serde_json::to_value(BattleDice::seeded([recovery_seed; 32])).unwrap()
+                });
+                assert!(
+                    !injure_battle_tactical_pilot(&mut ready, unit, 3, false)
+                        .unwrap()
+                        .consciousness
+                        .unwrap()
+                        .conscious
+                );
+            }
+            for tick in [28, 29, 0, 1] {
+                let mut world = ready.clone();
+                phase(&mut world, tick);
+                let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
+                let expected = unconscious && [29, 0].contains(&tick);
+                assert_eq!(reports.len(), usize::from(expected));
+                if expected {
+                    assert_eq!(reports[0].check.roll, None);
+                    assert_eq!(reports[0].check.situational, 3);
+                    assert!(!reports[0].check.success);
+                    assert!(reports[0].fall.is_some() || reports[0].vehicle_fall.is_some());
+                }
+            }
+        }
+    }
+}
+
+/// A failed committed fall retains the turn phase and all material/dice state until retry.
+#[tokio::test(flavor = "current_thread")]
+async fn server_clock_and_fall_retry_are_one_transaction() {
+    use sqlx::{Connection, SqliteConnection};
+    use std::{cell::Cell, rc::Rc, time::Duration};
+    tokio::task::LocalSet::new().run_until(async {
+        let template = include_str!("../game/mechs/JR7-D");
+        let (_dir,config,mut world,unit,_,_) = firing::fixture_with_target(template,None,template).await;
+        damage_gyro(&mut world,unit); phase(&mut world,28); seed(&mut world,unit,false);
+        firing::edit(&mut world,unit,|s| {s["motion"]["speed"] = 100.0.into();s["motion"]["desired_speed"] = 100.0.into();});
+        world.accounts.get_mut(&ObjectId(1)).unwrap().hash = Some(accounts::hash("secret",&config).unwrap());
+        persistence::save(&config.database(),&world).await.unwrap();
+        let before = world.btech.constructed_units()[&unit].clone();
+        let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()).foreign_keys(false)).await.unwrap();
+        sqlx::query("CREATE TRIGGER deny_phase BEFORE UPDATE ON btech_turn_clock BEGIN SELECT RAISE(ABORT,'phase failure'); END").execute(&mut sql).await.unwrap();
+        let (addr,shutdown,task,_) = support::start(&config,Rc::new(Cell::new(1))).await;
+        let mut client = support::Client {socket:tokio::net::TcpStream::connect(addr).await.unwrap(),pending:Vec::new()};
+        client.until("Who are you? ").await; client.send("#1").await; client.until("Password: ").await; client.send("secret").await; client.until("Sighter").await;
+        tokio::time::sleep(Duration::from_millis(1200)).await;
+        let loaded = persistence::load(&config.database()).await.unwrap();
+        assert_eq!(serde_json::to_value(&loaded.btech).unwrap()["turn_clock"],28);
+        assert_eq!(&loaded.btech.constructed_units()[&unit],&before);
+        client.send("look").await;
+        let rejected = client.until("Sighter").await;
+        assert!(!rejected.contains("Your damaged mech falls"));
+        assert!(!rejected.contains("You make a piloting skill roll!"));
+        assert!(!rejected.contains("Modified Pilot Skill:"));
+        sqlx::query("DROP TRIGGER deny_phase").execute(&mut sql).await.unwrap();
+        let accepted = client.until("Your damaged mech falls as you try to run!").await;
+        assert!(accepted.contains("You make a piloting skill roll!"));
+        assert!(accepted.contains("Modified Pilot Skill:"));
+        let loaded = persistence::load(&config.database()).await.unwrap();
+        assert_eq!(loaded.btech.constructed_units()[&unit].posture(),BattlePosture::Prone);
+        assert_eq!(serde_json::to_value(&loaded.btech).unwrap()["turn_clock"],29);
+        shutdown.send(ShutdownRequest::Sigterm).unwrap(); task.await.unwrap().unwrap();
+    }).await;
+}
+
+/// A damaged hip triggers the same heartbeat check without requiring gyro damage.
+#[tokio::test]
+async fn damaged_hips_use_running_threshold_for_both_mech_chassis() {
+    for template in firing::templates().into_iter().take(2) {
+        let (_dir, config, mut base, unit, _, _) =
+            firing::fixture_with_target(&template, None, &template).await;
+        let mech = &base.btech.constructed_units()[&unit];
+        let hip = mech
+            .loadout()
+            .unwrap()
+            .systems
+            .iter()
+            .find(|p| {
+                p.system == BattleSystem::ShoulderOrHip
+                    && mech.chassis().legs().contains(&p.location.section)
+            })
+            .unwrap()
+            .location;
+        destroy_battle_critical(&mut base, unit, hip).unwrap();
+        assert_eq!(base.btech.constructed_units()[&unit].gyro_damage(), 0);
+        let maximum = base.btech.constructed_units()[&unit]
+            .mobility()
+            .maximum_speed;
+        let threshold = 2.0 * maximum / 3.0 + 0.1;
+        for speed in [-maximum / 2.0, threshold, threshold + 0.01] {
+            let mut world = base.clone();
+            phase(&mut world, 7);
+            firing::edit(&mut world, unit, |s| {
+                s["motion"]["speed"] = speed.into();
+                s["motion"]["desired_speed"] = speed.into();
+            });
+            seed(&mut world, unit, true);
+            let before = world.btech.clone();
+            let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
+            assert_eq!(reports.len(), usize::from(speed > threshold));
+            if reports.is_empty() {
+                assert_eq!(world.btech, before);
+            } else {
+                assert!(reports[0].check.success);
+                assert!(reports[0].fall.is_none());
+                assert_eq!(reports[0].check.situational, 0);
+            }
+        }
+    }
+}
+
+/// Special rules gate gravity stress, and a successful control check does not apply leg damage.
+#[tokio::test]
+async fn gravity_success_and_disabled_special_rules_preserve_material() {
+    for template in [
+        include_str!("../game/mechs/CTF-3L"),
+        include_str!("../game/mechs/StalkingSpider-1"),
+    ] {
+        let (_dir, config, base, unit, _, _) =
+            firing::fixture_with_target(template, None, template).await;
+        let map = base.btech.units()[&unit].map.unwrap();
+        let maximum = base.btech.constructed_units()[&unit]
+            .mobility()
+            .maximum_speed;
+        for special in [false, true] {
+            let mut world = base.clone();
+            let mut saved = serde_json::to_value(&world.btech).unwrap();
+            saved["maps"][map.0.to_string()]["flags"] = if special { 2 } else { 0 }.into();
+            saved["maps"][map.0.to_string()]["gravity"] = 50.into();
+            world.btech = serde_json::from_value(saved).unwrap();
+            phase(&mut world, 29);
+            firing::edit(&mut world, unit, |s| {
+                s["motion"]["speed"] = (maximum + 1.0).into();
+                s["motion"]["desired_speed"] = (maximum + 1.0).into();
+            });
+            seed(&mut world, unit, true);
+            let before = world.btech.clone();
+            let reports = advance_battle_periodic_piloting(&mut world, &config).unwrap();
+            assert_eq!(reports.len(), usize::from(special));
+            assert_eq!(
+                world.btech.constructed_units()[&unit].sections(),
+                before.constructed_units()[&unit].sections()
+            );
+            if special {
+                assert!(reports[0].check.success);
+                assert!(reports[0].impacts.is_empty());
+                assert!(reports[0].notices.is_empty());
+            } else {
+                assert_eq!(world.btech, before);
+            }
+        }
+    }
+}
+
+/// Idle ticks commit the global clock atomically, wrap at thirty, and resume without offline catch-up.
+#[tokio::test(flavor = "current_thread")]
+async fn idle_clock_wraps_retries_and_resumes_from_saved_phase() {
+    use sqlx::{Connection, SqliteConnection};
+    use std::{cell::Cell, rc::Rc, time::Duration};
+    tokio::task::LocalSet::new().run_until(async {
+        let (_dir, config, mut world) = support::isolated_world().await;
+        assert!(world.btech.constructed_units().is_empty());
+        assert!(world.btech.vehicles().is_empty());
+        // Expire the separate startup grace so the host takes its otherwise-idle branch.
+        for _ in 0..31 { advance_battle_reactor_windows(&mut world); }
+        assert!(!battle_reactor_windows_pending(&world));
+        phase(&mut world, 29);
+        persistence::save(&config.database(), &world).await.unwrap();
+        let mut sql = SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
+        sqlx::query("CREATE TRIGGER deny_idle_phase BEFORE UPDATE ON btech_turn_clock BEGIN SELECT RAISE(ABORT,'idle phase failure'); END").execute(&mut sql).await.unwrap();
+        let (_, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(1))).await;
+        tokio::time::sleep(Duration::from_millis(1200)).await;
+        assert_eq!(persistence::load(&config.database()).await.unwrap().btech, world.btech);
+        sqlx::query("DROP TRIGGER deny_idle_phase").execute(&mut sql).await.unwrap();
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                let saved = persistence::load(&config.database()).await.unwrap();
+                if serde_json::to_value(&saved.btech).unwrap()["turn_clock"] == 0 { break; }
+                tokio::time::sleep(Duration::from_millis(25)).await;
+            }
+        }).await.unwrap();
+        shutdown.send(ShutdownRequest::Sigterm).unwrap(); task.await.unwrap().unwrap();
+        phase(&mut world, 0);
+        assert_eq!(persistence::load(&config.database()).await.unwrap().btech, world.btech);
+        // A large wall-clock change must not simulate thousands of offline turns.
+        let (_, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(900_000))).await;
+        tokio::time::timeout(Duration::from_secs(5), async {
+            loop {
+                let saved = persistence::load(&config.database()).await.unwrap();
+                let tick = serde_json::to_value(&saved.btech).unwrap()["turn_clock"].as_u64().unwrap();
+                assert!(tick <= 1);
+                if tick == 1 { break; }
+                tokio::time::sleep(Duration::from_millis(25)).await;
+            }
+        }).await.unwrap();
+        shutdown.send(ShutdownRequest::Sigterm).unwrap(); task.await.unwrap().unwrap();
+        phase(&mut world, 1);
+        assert_eq!(persistence::load(&config.database()).await.unwrap().btech, world.btech);
+    }).await;
+}

@@ -66,6 +66,7 @@ Head
     CRIT_1		  { LifeSupport - - }
     CRIT_2		  { Sensors - - }
     CRIT_3		  { Cockpit - - }
+    CRIT_4		  { LifeSupport - - }
     CRIT_5		  { Sensors - - }
     CRIT_6		  { CL.MediumPulseLaser - - }
 Specials { Clan }
