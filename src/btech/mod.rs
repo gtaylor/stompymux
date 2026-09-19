@@ -4,6 +4,8 @@ mod special_commands;
 pub(crate) mod special_dispatch;
 mod special_help;
 mod special_registration;
+pub(crate) use special_registration::unregister_special;
+pub(crate) mod unit_lifecycle;
 pub use special_commands::{BattleCommandClass, BattleSpecialCommand, BattleSpecialType};
 pub(crate) mod electronics;
 pub use electronics::{
@@ -178,8 +180,8 @@ pub use assets::{read_map, read_template, read_unit_template, read_vehicle_templ
 mod unit_template;
 pub use map::{BattleHex, BattleMapAsset, Terrain};
 pub use state::{
-    BtechState, StoredBattleMap, StoredBattleUnit, create_map, create_unit, reload_map,
-    set_map_optical_sensor, set_map_visibility,
+    BtechState, StoredBattleMap, StoredBattleUnit, create_map, create_unit,
+    register_empty_battle_unit, reload_map, set_map_optical_sensor, set_map_visibility,
 };
 pub use unit_template::BattleUnitTemplate;
 mod vehicle;
@@ -777,6 +779,83 @@ pub use navigation::{BattleNavigationReport, navigate};
 
 pub(crate) mod view_preferences;
 pub use view_preferences::{BattlePlayerPreferences, set_view_dimensions, view_dimensions};
+mod player_configuration;
+pub use player_configuration::{
+    BattlePersonalEquipment, BattlePersonalLoadout, BattlePlayerConfiguration,
+    player_configuration, set_player_configuration,
+};
+mod inspection;
+pub use inspection::{
+    InspectionArmor, InspectionCritical, InspectionPart, InspectionTechnology, InspectionWeapon,
+    compose_unit_raw_inspection, compose_vehicle_raw_inspection, inspect_composed_unit_armor,
+    inspect_composed_vehicle_armor, inspect_raw_template_armor, inspect_raw_template_battle_value,
+    inspect_raw_template_criticals, inspect_raw_template_engine, inspect_raw_template_inventory,
+    inspect_raw_template_technologies, inspect_raw_template_weapons, inspect_section_condition,
+    inspect_technologies, inspect_template_armor, inspect_template_critical_text,
+    inspect_template_criticals, inspect_template_inventory, inspect_template_status_text,
+    inspect_template_weapon_text, inspect_template_weapons, inspect_unit_armor,
+    inspect_unit_criticals, inspect_unit_inventory, inspect_unit_tic, inspect_unit_weapons,
+    inspect_vehicle_armor, inspect_vehicle_criticals, inspect_vehicle_inventory,
+    inspect_vehicle_section_condition, inspect_vehicle_technologies,
+    inspect_vehicle_template_armor, inspect_vehicle_template_critical_text,
+    inspect_vehicle_template_criticals, inspect_vehicle_template_inventory,
+    inspect_vehicle_template_status_text, inspect_vehicle_template_weapon_text,
+    inspect_vehicle_template_weapons, inspect_vehicle_tic, inspect_vehicle_weapons,
+    inspection_battle_value, inspection_effective_maximum_speed, inspection_engine_rating,
+    inspection_section, inspection_section_code, inspection_template_battle_value,
+    inspection_vehicle_engine_rating, inspection_vehicle_engine_values, inspection_vehicle_section,
+    inspection_vehicle_section_code, inspection_vehicle_section_for,
+    inspection_vehicle_template_battle_value,
+};
+mod unit_operations_contract;
+pub(crate) use unit_operations_contract::{
+    UnitDamageRequest, apply_unit_damage_action, configure_unit_ammunition,
+    configure_vehicle_ammunition, install_unit_special, install_unit_weapon_named,
+    install_vehicle_special, install_vehicle_weapon_named, load_unit_template,
+    reset_unit_criticals, restock_unit_ammunition, restock_vehicle_ammunition,
+    set_unit_weapon_modes, unit_piloting_check_action, unit_template_source,
+    vehicle_template_source,
+};
+mod admin_contract;
+pub use admin_contract::{
+    AdministrativeRepairKind, ReattachHull, administrative_assigned_pilot,
+    administrative_is_fixable, administrative_section_info, administrative_section_valid,
+    administrative_template_movement, administrative_template_tonnage, administrative_unit_class,
+    administrative_unit_movement, administrative_unit_tonnage, apply_administrative_repair,
+    clear_administrative_technologies, set_administrative_armor, set_administrative_assigned_pilot,
+    set_administrative_cargo, set_administrative_heat_sinks, set_administrative_movement_type,
+    set_administrative_radio_quality, set_administrative_scalar, set_administrative_technology,
+    set_administrative_unit_type,
+};
+mod unit_configuration;
+pub use unit_configuration::{
+    BattleUnitConfiguration, set_unit_configuration, set_unit_identity_configuration,
+    unit_configuration,
+};
+mod template_contract_assets;
+pub use template_contract_assets::{
+    TemplateRegistryCache, read_resolved_raw_template, read_resolved_template,
+    resolve_template_path, resolve_template_path_bytes_cached, resolve_template_path_cached,
+    write_template,
+};
+mod template_cost;
+pub use template_cost::{raw_template_base_cost, template_base_cost, vehicle_template_base_cost};
+mod event_telemetry;
+pub use event_telemetry::BattleEventTelemetry;
+mod character_value_contract;
+pub use character_value_contract::{
+    CharacterValueDefinition, character_raw_value, character_saved_value,
+    character_value_definition, character_value_definition_code, character_value_definitions,
+    set_character_raw_value, set_character_skill_experience, set_character_skill_target,
+};
+mod lua_map_contract;
+pub use lua_map_contract::{
+    BattleMapEmitAudience, BattleMapLos, BattleMapMember, BattleMapSpatialPoint,
+    battle_map_hex_los, battle_map_hex_point, battle_map_members, battle_map_spatial_range,
+    battle_map_unit_by_label, battle_map_unit_los, battle_map_unit_map, battle_map_unit_point,
+    emit_battle_map_trusted_action, load_battle_map_trusted_action, place_battle_map_unit,
+    update_battle_map_links_trusted_action,
+};
 
 mod contact_preferences;
 pub(crate) mod contact_report;
@@ -1156,7 +1235,8 @@ pub use weapon_settings::{
 
 mod inventory;
 pub use inventory::{
-    BattleInventoryEntry, inventory, set_inventory_quantity, set_inventory_quantity_action,
+    BattleInventoryEntry, inventory, part_cost, set_inventory_quantity,
+    set_inventory_quantity_action, set_part_cost, set_part_store_quantity,
 };
 
 mod parts;
@@ -1259,7 +1339,7 @@ pub(crate) mod database_save;
 pub use database_save::request_database_save;
 
 pub(crate) mod forms_report;
-pub use stock_selection::{BattlePartForm, part_forms};
+pub use stock_selection::{BattlePartForm, part_catalogue, part_forms};
 
 mod operator_settings;
 pub use operator_settings::{edit_skill_threshold, edit_weapon_settings};
@@ -1372,6 +1452,18 @@ mod status_fields;
 mod motion_fields;
 
 mod template_speed;
+
+mod registered_unit_defaults;
+pub use registered_unit_defaults::{
+    ensure_registered_unit_runtime, registered_unit_default_template,
+};
+
+mod raw_template;
+pub use raw_template::{
+    RawMovement, RawSectionCode, RawTemplate, RawUnitClass, raw_default_mech_criticals,
+};
+mod administrative_raw;
+pub use administrative_raw::{AdministrativeRawSection, AdministrativeRawUnit};
 
 mod propulsion;
 

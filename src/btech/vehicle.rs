@@ -66,6 +66,10 @@ pub struct BattleVehicle {
     #[serde(default)]
     pub(super) visibility: super::BattleVisibility,
     pub(super) dig: super::BattleDigState,
+    #[serde(default)]
+    contract_loadout: bool,
+    #[serde(default)]
+    administrative_raw: Option<super::AdministrativeRawUnit>,
     definition: BattleVehicleTemplate,
     pub(super) sections: BTreeMap<BattleVehicleSection, BattleSectionState>,
     pub(super) ammunition: Vec<u16>,
@@ -82,6 +86,9 @@ pub struct BattleVehicle {
     pub(super) pilot: Option<crate::ObjectId>,
     pub(super) power: super::BattlePower,
     pub(super) motion: Option<super::BattleMotion>,
+    /// Facing retained while the vehicle has no map motion, as in the native Mech record.
+    #[serde(default)]
+    pub(super) detached_heading: f64,
     pub(super) under_bridge: bool,
     pub(super) ground_elevation: Option<f64>,
     /// Ground chassis use the same forced-descent clock as aircraft after losing support.
@@ -183,6 +190,10 @@ pub struct BattleVehicle {
 #[derive(Deserialize)]
 struct VehicleRecord {
     #[serde(default)]
+    contract_loadout: bool,
+    #[serde(default)]
+    administrative_raw: Option<super::AdministrativeRawUnit>,
+    #[serde(default)]
     auxiliary_preferences: super::auxiliary_preferences::AuxiliaryPreferences,
     #[serde(default)]
     base_movement_fields: super::base_movement_fields::BaseMovementFields,
@@ -257,6 +268,8 @@ struct VehicleRecord {
     pilot: Option<crate::ObjectId>,
     power: super::BattlePower,
     motion: Option<super::BattleMotion>,
+    #[serde(default)]
+    detached_heading: f64,
     under_bridge: bool,
     ground_elevation: Option<f64>,
     #[serde(default)]
@@ -358,13 +371,304 @@ struct VehicleRecord {
 }
 
 impl BattleVehicle {
+    pub(crate) fn administrative_raw(&self) -> Option<&super::AdministrativeRawUnit> {
+        self.administrative_raw.as_ref()
+    }
+
+    pub(crate) fn administrative_raw_mut(
+        &mut self,
+        class: super::RawUnitClass,
+        movement: super::RawMovement,
+    ) -> &mut super::AdministrativeRawUnit {
+        self.administrative_raw
+            .get_or_insert_with(|| super::AdministrativeRawUnit::new(class, movement))
+    }
+    pub(super) fn set_contract_weapon_mode_names(
+        &mut self,
+        index: usize,
+        fire: Vec<String>,
+        ammunition: Vec<String>,
+    ) -> Result<()> {
+        let first = self
+            .loadout()?
+            .weapons
+            .get(index)
+            .and_then(|mount| mount.criticals.first())
+            .copied()
+            .context("weapon number is not mounted")?;
+        if fire.iter().any(|mode| mode == "Destroyed") {
+            self.lost_criticals.insert(first);
+        } else {
+            self.lost_criticals.remove(&first);
+        }
+        let failure = if fire.iter().any(|mode| mode == "Disabled") {
+            Some(super::BattleEquipmentFailure::Disabled)
+        } else if fire.iter().any(|mode| mode == "Broken") {
+            Some(super::BattleEquipmentFailure::Dud)
+        } else {
+            None
+        };
+        if let Some(failure) = failure {
+            self.weapon_failures.insert(index, failure);
+        } else {
+            self.weapon_failures.remove(&index);
+        }
+        if fire
+            .iter()
+            .any(|mode| matches!(mode.as_str(), "OneShot_Used" | "RocketFired"))
+        {
+            self.spent_launchers.insert(index);
+        } else {
+            self.spent_launchers.remove(&index);
+        }
+        let modes = &mut self
+            .definition
+            .sections
+            .get_mut(&first.section)
+            .expect("validated weapon section")
+            .criticals
+            .get_mut(&first.slot)
+            .expect("validated weapon slot")
+            .modes;
+        super::unit::replace_critical_modes(modes, fire, ammunition);
+        Ok(())
+    }
+    /// Replace authored equipment through the vehicle constructor while retaining tactical state.
+    pub(super) fn replace_construction(
+        &mut self,
+        definition: BattleVehicleTemplate,
+        touched: &[super::VehicleCriticalLocation],
+    ) -> Result<()> {
+        self.replace_construction_mode(definition, touched, false)
+    }
+
+    pub(super) fn replace_construction_contract(
+        &mut self,
+        definition: BattleVehicleTemplate,
+        touched: &[super::VehicleCriticalLocation],
+    ) -> Result<()> {
+        self.replace_construction_mode(definition, touched, true)
+    }
+
+    fn replace_construction_mode(
+        &mut self,
+        definition: BattleVehicleTemplate,
+        touched: &[super::VehicleCriticalLocation],
+        contract: bool,
+    ) -> Result<()> {
+        let old = self.loadout()?.clone();
+        let replacement = if contract {
+            Self::new_contract(definition)?
+        } else {
+            Self::new(definition)?
+        };
+        let new = replacement.loadout()?.clone();
+        let remap: Vec<_> = new
+            .weapons
+            .iter()
+            .map(|mount| {
+                old.weapons.iter().position(|prior| {
+                    prior.weapon == mount.weapon
+                        && prior.criticals == mount.criticals
+                        && !mount.criticals.iter().any(|slot| touched.contains(slot))
+                })
+            })
+            .collect();
+        let ammunition = new
+            .ammunition
+            .iter()
+            .map(|bin| {
+                old.ammunition
+                    .iter()
+                    .position(|prior| {
+                        prior.location == bin.location
+                            && prior.weapon == bin.weapon
+                            && !touched.contains(&bin.location)
+                    })
+                    .map_or(bin.rounds, |old| self.ammunition[old].min(bin.capacity))
+            })
+            .collect();
+        self.definition = replacement.definition;
+        self.contract_loadout = replacement.contract_loadout;
+        self.ammunition = ammunition;
+        self.fire_modes = super::unit::remap_map(&remap, &self.fire_modes);
+        self.ammunition_modes = super::unit::remap_map(&remap, &self.ammunition_modes);
+        self.ammunition_sections = super::unit::remap_map(&remap, &self.ammunition_sections);
+        self.weapon_recycle = super::unit::remap_map(&remap, &self.weapon_recycle);
+        self.jammed_weapons = super::unit::remap_set(&remap, &self.jammed_weapons);
+        self.spent_launchers = super::unit::remap_set(&remap, &self.spent_launchers);
+        self.powered_down_weapons = super::unit::remap_set(&remap, &self.powered_down_weapons);
+        self.weapon_failures = super::unit::remap_map(&remap, &self.weapon_failures);
+        self.lost_criticals.retain(|slot| !touched.contains(slot));
+        self.component_failures
+            .retain(|failure| !touched.contains(&failure.location));
+        self.live_mass.invalidate();
+        Ok(())
+    }
+
+    pub(super) fn set_administrative_heat_sinks(&mut self, count: u16) {
+        self.definition.heat_sinks = Some(count);
+    }
+
+    pub(super) fn set_administrative_special(
+        &mut self,
+        attribute: &str,
+        flag: &str,
+        enabled: bool,
+    ) {
+        super::unit::edit_special(&mut self.definition.attributes, attribute, flag, enabled);
+    }
+
+    pub(super) fn set_administrative_attribute(&mut self, name: &str, value: impl ToString) {
+        self.definition
+            .attributes
+            .insert(name.into(), value.to_string());
+    }
+
+    pub(super) fn administrative_attribute(&self, name: &str) -> Option<&str> {
+        self.definition.attributes.get(name).map(String::as_str)
+    }
+
+    pub(super) fn set_administrative_armor(
+        &mut self,
+        section: BattleVehicleSection,
+        armor: Option<u16>,
+        internal: Option<u16>,
+        rear: Option<u16>,
+    ) {
+        let original = self
+            .definition
+            .sections
+            .get_mut(&section)
+            .expect("validated section");
+        let current = self.sections.get_mut(&section).expect("validated section");
+        if let Some(value) = armor {
+            original.armor = value;
+            current.armor = value;
+        }
+        if let Some(value) = internal {
+            original.internal = value;
+            current.internal = value;
+        }
+        if let Some(value) = rear {
+            original.rear = value;
+            current.rear = value;
+        }
+    }
+
+    pub(super) fn apply_immediate_repair(
+        &mut self,
+        section: BattleVehicleSection,
+        kind: super::AdministrativeRepairKind,
+        value: u16,
+        hull: super::ReattachHull,
+    ) -> Result<()> {
+        if kind == super::AdministrativeRepairKind::Part {
+            self.repair_critical(super::VehicleCriticalLocation {
+                section,
+                slot: value as u8,
+            })?;
+            return Ok(());
+        }
+        let current = self.sections.get_mut(&section).expect("validated section");
+        match kind {
+            super::AdministrativeRepairKind::Armor => current.armor = value,
+            super::AdministrativeRepairKind::Internal => current.internal = value,
+            super::AdministrativeRepairKind::RearArmor => current.rear = value,
+            super::AdministrativeRepairKind::Reattach => {
+                // C mech_re_attach (mech_maintenance.c:501-514) restores only
+                // sections reading as destroyed; aerospace hulls reset to one.
+                if hull.destroyed(current.armor, current.internal) {
+                    current.internal = if hull == super::ReattachHull::Aerospace {
+                        1
+                    } else {
+                        self.definition.sections[&section].internal
+                    };
+                }
+            }
+            super::AdministrativeRepairKind::Part => unreachable!(),
+        }
+        Ok(())
+    }
+
+    fn repair_critical(&mut self, location: super::VehicleCriticalLocation) -> Result<()> {
+        let loadout = self.loadout()?.clone();
+        let weapon = loadout
+            .weapons
+            .iter()
+            .position(|mount| mount.criticals.contains(&location));
+        let ammunition = loadout
+            .ammunition
+            .iter()
+            .position(|bin| bin.location == location);
+        let critical = self
+            .definition
+            .sections
+            .get_mut(&location.section)
+            .and_then(|section| section.criticals.get_mut(&location.slot));
+        // C mech_repair_part (mech_maintenance.c:450-489) restores whatever the
+        // slot holds; empty slots clear already-clear bits and succeed silently.
+        let Some(critical) = critical else {
+            return Ok(());
+        };
+        critical.modes.retain(|mode| {
+            !matches!(
+                mode.as_str(),
+                "Destroyed"
+                    | "Disabled"
+                    | "Broken"
+                    | "Damaged"
+                    | "OneShot_Used"
+                    | "Jettisoned"
+                    | "RocketFired"
+            )
+        });
+        critical.brand = critical.brand.map(|brand| brand % 16);
+        if weapon.is_some() || ammunition.is_some() {
+            critical.data = "0".into();
+        }
+        self.lost_criticals.remove(&location);
+        self.component_failures
+            .retain(|failure| failure.location != location);
+        if let Some(index) = weapon {
+            self.weapon_failures.remove(&index);
+            self.jammed_weapons.remove(&index);
+            self.spent_launchers.remove(&index);
+            self.powered_down_weapons.remove(&index);
+            self.weapon_recycle.remove(&index);
+        }
+        if let Some(index) = ammunition {
+            self.ammunition[index] = 0;
+        }
+        self.contract_loadout = true;
+        self.live_mass.invalidate();
+        Ok(())
+    }
     /// Construct intact material state only when the template has complete equipment and mass rules.
     /// This does not certify construction legality or add a vehicle to the running world.
     pub fn new(definition: BattleVehicleTemplate) -> Result<Self> {
+        Self::new_mode(definition, false)
+    }
+
+    pub(crate) fn new_contract(definition: BattleVehicleTemplate) -> Result<Self> {
+        Self::new_mode(definition, true)
+    }
+
+    fn new_mode(definition: BattleVehicleTemplate, contract_loadout: bool) -> Result<Self> {
+        // The (tons + 5, at least 10) / 10 internal structure
+        // (vehicle_int_check) is forced while the template file is read;
+        // construction and saved-definition restore keep the stored internals
+        // verbatim.
         definition.validate_anatomy()?;
         super::radio::validate_attributes(&definition.attributes)?;
-        definition.mass()?;
-        let loadout = BattleVehicleLoadout::resolve(&definition)?;
+        if !contract_loadout {
+            definition.mass()?;
+        }
+        let loadout = if contract_loadout {
+            BattleVehicleLoadout::resolve_contract(&definition)?
+        } else {
+            BattleVehicleLoadout::resolve(&definition)?
+        };
         let vtol_fuel = definition
             .is_vtol()
             .then(|| super::BattleVtolFuel::from_template(&definition))
@@ -444,6 +748,8 @@ impl BattleVehicle {
             sixth_sense: Default::default(),
             cockpit_links: Default::default(),
             hardware: Default::default(),
+            contract_loadout,
+            administrative_raw: None,
             definition,
             sections,
             ammunition,
@@ -455,6 +761,7 @@ impl BattleVehicle {
             pilot: None,
             power: super::BattlePower::Off,
             motion: None,
+            detached_heading: 0.0,
             under_bridge: false,
             ground_elevation: None,
             free_fall: None,
@@ -548,10 +855,7 @@ impl BattleVehicle {
         self.sections
             .get(&BattleVehicleSection::Turret)
             .filter(|state| state.internal > 0)
-            .map(|_| {
-                (self.motion.map_or(0.0, |motion| motion.heading) + self.turret_offset)
-                    .rem_euclid(360.0)
-            })
+            .map(|_| (self.heading() + self.turret_offset).rem_euclid(360.0))
     }
 
     /// Current conditions used to suppress repeated hit-table effects.
@@ -815,6 +1119,12 @@ impl BattleVehicle {
         self.motion
     }
 
+    /// Current facing, including the persisted off-map native heading.
+    pub fn heading(&self) -> f64 {
+        self.motion
+            .map_or(self.detached_heading, |motion| motion.heading)
+    }
+
     /// Commit a traced movement segment without resetting battlefield membership.
     pub(super) fn update_motion(
         &mut self,
@@ -826,6 +1136,7 @@ impl BattleVehicle {
             self.ground_elevation = None;
         }
         self.under_bridge = under_bridge;
+        self.detached_heading = motion.heading;
         self.motion = Some(motion);
         self.position = Some(position);
     }
@@ -878,13 +1189,16 @@ impl BattleVehicle {
             *flight = super::BattleVtolFlight::default();
         }
         self.motion = placement.map(|(position, _)| {
-            super::BattleMotion::stationary(
+            let mut motion = super::BattleMotion::stationary(
                 super::BattleHexCoordinate {
                     x: i32::from(position.x),
                     y: i32::from(position.y),
                 }
                 .center(),
-            )
+            );
+            motion.heading = self.detached_heading;
+            motion.desired_heading = self.detached_heading;
+            motion
         });
         self.detached = false;
         self.battlefield_label = None;
@@ -1008,7 +1322,11 @@ impl BattleVehicle {
 
     /// Resolve derived equipment without storing a second copy in the snapshot.
     pub fn loadout(&self) -> Result<BattleVehicleLoadout> {
-        BattleVehicleLoadout::resolve(&self.definition)
+        if self.contract_loadout {
+            BattleVehicleLoadout::resolve_contract(&self.definition)
+        } else {
+            BattleVehicleLoadout::resolve(&self.definition)
+        }
     }
 
     /// Flooding, crew loss or any lost hull face destroys a vehicle; turret loss alone does not.
@@ -1152,7 +1470,11 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
 
     /// Reject snapshots whose protection or ammunition cannot belong to the supplied construction.
     fn try_from(record: VehicleRecord) -> Result<Self> {
-        let mut vehicle = Self::new(record.definition)?;
+        let mut vehicle = if record.contract_loadout {
+            Self::new_contract(record.definition)?
+        } else {
+            Self::new(record.definition)?
+        };
         ensure!(
             record.vtol_fuel.is_some() == vehicle.definition.is_vtol(),
             "Fuel state does not match vehicle class"
@@ -1209,14 +1531,17 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
         for (&section, state) in &record.sections {
             let original = &vehicle.sections[&section];
             ensure!(
-                state.armor <= original.armor
-                    && state.internal <= original.internal
-                    && state.rear <= original.rear,
+                record.contract_loadout
+                    || (state.armor <= original.armor
+                        && state.internal <= original.internal
+                        && state.rear <= original.rear),
                 "Vehicle snapshot protection exceeds definition in {}",
                 section.name()
             );
             ensure!(
-                state.internal > 0 || (state.armor == 0 && state.rear == 0),
+                record.contract_loadout
+                    || state.internal > 0
+                    || (state.armor == 0 && state.rear == 0),
                 "Destroyed vehicle section retains armor"
             );
         }
@@ -1373,6 +1698,12 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
         vehicle.ground_elevation = record.ground_elevation;
         vehicle.under_bridge = record.under_bridge;
         vehicle.dice = record.dice;
+        ensure!(
+            record.detached_heading.is_finite() && (0.0..360.0).contains(&record.detached_heading),
+            "Invalid retained vehicle heading"
+        );
+        vehicle.detached_heading = record.detached_heading;
+        vehicle.administrative_raw = record.administrative_raw;
         vehicle.motion = record.motion;
         vehicle.pilot = record.pilot;
         vehicle.flooded = record.flooded;
@@ -1457,7 +1788,7 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
             record.spent_launchers.iter().all(|index| loadout
                 .weapons
                 .get(*index)
-                .is_some_and(|mount| mount.one_shot)),
+                .is_some_and(|mount| record.contract_loadout || mount.one_shot)),
             "Invalid spent vehicle launcher"
         );
         ensure!(
@@ -1465,7 +1796,8 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
                 .weapons
                 .iter()
                 .enumerate()
-                .all(|(index, mount)| !mount.initially_spent
+                .all(|(index, mount)| record.contract_loadout
+                    || !mount.initially_spent
                     || record.spent_launchers.contains(&index)),
             "Initially spent vehicle launcher was reloaded"
         );
@@ -1474,10 +1806,9 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
                 .fire_modes
                 .iter()
                 .all(|(index, mode)| *mode != super::BattleFireMode::Normal
-                    && loadout
-                        .weapons
-                        .get(*index)
-                        .is_some_and(|mount| mode.supports(mount.weapon))),
+                    && loadout.weapons.get(*index).is_some_and(
+                        |mount| record.contract_loadout || mode.supports(mount.weapon)
+                    )),
             "Invalid vehicle firing mode"
         );
         ensure!(
@@ -1486,7 +1817,7 @@ impl TryFrom<VehicleRecord> for BattleVehicle {
                 && loadout
                     .weapons
                     .get(*index)
-                    .is_some_and(|mount| mode.supports(mount.weapon))),
+                    .is_some_and(|mount| record.contract_loadout || mode.supports(mount.weapon))),
             "Invalid vehicle ammunition selection"
         );
         super::component_failure::validate(&record.component_failures, |location| {

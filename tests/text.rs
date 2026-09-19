@@ -249,7 +249,8 @@ async fn lua_documents_are_immutable_bounded_and_palette_aware() {
       assert(not pcall(function() d.source='changed' end))
       mux.world.pemit(mux.world.object(2),d)
       assert(mux.text.strip_style('[fg=red]red[/]')=='red')
-      assert(mux.text.width('[bold]界[/]')==2)
+      -- C styled_text_width measures plain-render bytes: U+754C is three bytes.
+      assert(mux.text.width('[bold]界[/]')==3)
       assert(mux.text.markup('[bold]ok[/]')=='[bold]ok[/]')
       assert(not pcall(mux.text.markup,'[bad]x[/]'))
       assert(not pcall(mux.text.markup,string.char(255)))
@@ -388,4 +389,84 @@ fn invalid_palette_has_configuration_source_and_limits() {
         assert!(text::validate(&p, s).is_err(), "{s}");
     }
     assert!(text::validate(&p, "[UNDERLINE=WAVY BOLD=TRUE]x[/]").is_ok());
+}
+
+#[test]
+fn native_styled_preserves_redundant_and_textless_controls() {
+    let document = Document::NativeStyled("[fg=black bold][fg=black bold]x[reset]".to_owned());
+    let output = document.telnet(
+        &Palette::default(),
+        &RenderOptions {
+            color: ColorDepth::Ansi16,
+            ..Default::default()
+        },
+        1024,
+    );
+    assert_eq!(
+        output,
+        b"\x1b[0m\x1b[1m\x1b[30m\x1b[0m\x1b[1m\x1b[30mx\x1b[0m\x1b[0m"
+    );
+    assert_eq!(
+        document.html(&Palette::default(), 1024).unwrap(),
+        Document::Styled(document.source().to_owned())
+            .html(&Palette::default(), 1024)
+            .unwrap()
+    );
+}
+
+#[test]
+fn native_styled_truncation_reserves_the_final_reset() {
+    let document = Document::NativeStyled("[fg=red]abcdef".to_owned());
+    let options = RenderOptions {
+        color: ColorDepth::Ansi16,
+        ..Default::default()
+    };
+    let output = document.telnet(&Palette::default(), &options, 14);
+    assert_eq!(output, b"\x1b[0m\x1b[91ma\x1b[0m");
+    assert!(output.len() <= 14);
+    assert!(output.ends_with(b"\x1b[0m"));
+}
+
+#[test]
+fn native_styled_forwarding_preserves_explicit_controls() {
+    let document = Document::native_styled("[bold][bold]report[/]".into(), 64)
+        .unwrap()
+        .prefixed("From here, ");
+    assert_eq!(
+        String::from_utf8(document.telnet(
+            &Palette::default(),
+            &RenderOptions {
+                color: ColorDepth::Ansi16,
+                ..Default::default()
+            },
+            128,
+        ))
+        .unwrap(),
+        "From here, \x1b[0m\x1b[1m\x1b[0m\x1b[1mreport\x1b[0m\x1b[1m\x1b[0m"
+    );
+}
+
+#[test]
+fn native_styled_rejects_oversized_sources_at_construction() {
+    assert!(Document::native_styled("12345".into(), 4).is_err());
+}
+
+#[test]
+fn native_styled_forwarding_closes_prefix_style_before_plain_body() {
+    let document = Document::native_styled("report".into(), 64)
+        .unwrap()
+        .prefixed("[bold]From here, ");
+    let ansi = document.telnet(
+        &Palette::default(),
+        &RenderOptions {
+            color: ColorDepth::Ansi16,
+            ..Default::default()
+        },
+        128,
+    );
+    assert_eq!(ansi, b"\x1b[0m\x1b[1mFrom here, \x1b[0mreport\x1b[0m");
+    assert_eq!(
+        document.telnet(&Palette::default(), &RenderOptions::default(), 128),
+        b"From here, report"
+    );
 }

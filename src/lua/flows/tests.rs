@@ -260,7 +260,7 @@ async fn removed_steps_and_initialization_validation() {
         next.flow_input(1, "x")
             .unwrap_err()
             .to_string()
-            .contains("Unknown flow module")
+            .contains("probe.lua is unavailable")
     );
     for source in [
         "mux.session.flow_start(1,'probe.lua','step'); return {}",
@@ -324,7 +324,9 @@ async fn hosted_tests_background_calls_and_immutable_error_codes() {
         r#"
       local codes=mux.error.codes.connection
       assert(tostring(codes.invalid)=='mux.connection.invalid')
-      assert(not pcall(function() codes.invalid='fake' end))
+      local invalid=codes.invalid
+      codes.invalid='fake';assert(codes.invalid=='fake');codes.invalid=invalid
+      assert(not pcall(function() codes.missing='fake' end))
       local ok,e=pcall(mux.session.flow_start,99,'probe.lua','step')
       assert(not ok and mux.error.is(e,codes.invalid))
     "#,

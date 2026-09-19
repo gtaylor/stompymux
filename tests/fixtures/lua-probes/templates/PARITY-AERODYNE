@@ -1,0 +1,25 @@
+Name { Parity Aerodyne }
+Reference { PARITY-AERODYNE }
+Type { Aerodyne_DropShip }
+Move_Type { Fly }
+Tons { 5000 }
+Max_Speed { 32.5 }
+Right_Wing
+Armor { 41 }
+Internals { 21 }
+CRIT_1 { Agra.IS.PPC - - 5 }
+Left_Wing
+Armor { 42 }
+Internals { 22 }
+Left_Rear_Wing
+Armor { 43 }
+Internals { 23 }
+Right_Rear_Wing
+Armor { 44 }
+Internals { 24 }
+Aft
+Armor { 45 }
+Internals { 25 }
+Nose
+Armor { 46 }
+Internals { 26 }

@@ -159,21 +159,26 @@ impl Engine {
     /// Validate and prime the target synchronously; nested Lua pcall cannot retain failed effects.
     pub fn start(&self, lua: &Lua, session: u64, module: &str, step: &str) -> mlua::Result<()> {
         if !self.live || !self.control.borrow().ready {
+            let checking = lua
+                .app_data_ref::<super::RuntimeMode>()
+                .is_some_and(|mode| *mode == super::RuntimeMode::Checking);
+            // C rejects checking after its luaL type checks with this exact message.
             return Err(error(
                 lua,
                 "unavailable.checking",
-                "mux.session.flow_start is unavailable during initialization, checking or isolated testing",
+                if checking {
+                    "mux.session.flow_start is unavailable during @lua/check"
+                } else {
+                    "mux.session.flow_start is unavailable during initialization, checking or isolated testing"
+                },
             ));
         }
         transactions::require(lua)?;
         transactions::run(lua, &self.world, || {
-            let identity = self.effects.session(session).ok_or_else(|| {
-                error(
-                    lua,
-                    "connection.invalid",
-                    "no such authenticated descriptor",
-                )
-            })?;
+            let identity = self
+                .effects
+                .session(session)
+                .ok_or_else(|| error(lua, "connection.invalid", "no such descriptor"))?;
             if self.active(session) {
                 return Err(error(
                     lua,
@@ -181,12 +186,11 @@ impl Engine {
                     "descriptor already has an active flow",
                 ));
             }
-            validate_string(step, STEP_BYTES, true)
-                .map_err(|e| error(lua, "module.invalid", e.to_string()))?;
             let root = calling_root(lua).unwrap_or_else(|| self.control.borrow().root.clone());
+            let module_name = module;
             let module = module_path(&root, module)
                 .map_err(|e| error(lua, "module.invalid", e.to_string()))?;
-            self.handler(lua, &module, step)?;
+            self.handler(lua, &module, module_name, step)?;
             self.effects.insert_flow(
                 session,
                 ActiveFlow {
@@ -201,7 +205,13 @@ impl Engine {
         })
     }
 
-    fn handler(&self, lua: &Lua, module: &str, step: &str) -> mlua::Result<mlua::Function> {
+    fn handler(
+        &self,
+        lua: &Lua,
+        module: &str,
+        name: &str,
+        step: &str,
+    ) -> mlua::Result<mlua::Function> {
         if self.lazy && !self.modules.borrow().contains_key(module) {
             let sources = lua
                 .app_data_ref::<std::sync::Arc<super::sources::Sources>>()
@@ -211,7 +221,7 @@ impl Engine {
                 error(
                     lua,
                     "module.invalid",
-                    format!("Unknown flow module {module}"),
+                    format!("Lua file {name} is unavailable"),
                 )
             })?;
             let result = self.initializing(|| lua.load(source).set_name(module).eval::<Table>());
@@ -222,17 +232,19 @@ impl Engine {
             return Err(error(
                 lua,
                 "module.invalid",
-                format!("Unknown flow module {module}"),
+                format!("Lua file {name} is unavailable"),
             ));
         };
+        // C reports any missing flows table or step with one shared message.
         module_table
             .raw_get::<Table>("flows")
-            .and_then(|t| t.raw_get(step))
-            .map_err(|e| {
+            .ok()
+            .and_then(|flows| flows.raw_get::<mlua::Function>(step).ok())
+            .ok_or_else(|| {
                 error(
                     lua,
                     "module.invalid",
-                    format!("{module}: flow {step:?}: {e}"),
+                    format!("{name} has no flow step '{step}'"),
                 )
             })
     }

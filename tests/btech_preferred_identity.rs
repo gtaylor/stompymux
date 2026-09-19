@@ -26,6 +26,10 @@ async fn preferred_identity_configuration_selection_and_restart() {
         assert_eq!(battle_preferred_id(&world, unit).unwrap(), Some("QX"));
         let mut after = serde_json::to_value(&world.btech).unwrap();
         after[key][unit.0.to_string()]["preferred_id"] = serde_json::Value::Null;
+        after["unit_configuration"]
+            .as_object_mut()
+            .unwrap()
+            .remove(&unit.0.to_string());
         assert_eq!(after, before);
         for argument in [None, Some(""), Some("x")] {
             assert_eq!(
@@ -88,7 +92,7 @@ async fn preferred_identity_lua_authority_and_native_selection() {
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         let value: String = scripts
             .eval_callback(&format!(
-                "return btech.unit.set_preferred_id(1, {}, 'zq')",
+                "return btech.unit.set_preferred_id_as(1, {}, 'zq')",
                 unit.0
             ))
             .unwrap();
@@ -123,7 +127,7 @@ async fn preferred_identity_lua_authority_and_native_selection() {
         assert!(
             scripts
                 .eval_callback::<()>(&format!(
-                    "btech.unit.set_preferred_id(1, {}, 'AB'); error('rollback')",
+                    "btech.unit.set_preferred_id_as(1, {}, 'AB'); error('rollback')",
                     unit.0
                 ))
                 .is_err()
@@ -141,7 +145,7 @@ async fn preferred_identity_lua_authority_and_native_selection() {
         assert!(set_battle_preferred_id_action(&scripts, visitor, unit, Some("AB")).is_err());
         let cleared: Option<String> = scripts
             .eval_callback(&format!(
-                "return btech.unit.set_preferred_id(1, {}, nil)",
+                "return btech.unit.set_preferred_id_as(1, {}, nil)",
                 unit.0
             ))
             .unwrap();

@@ -37,8 +37,11 @@ async fn authored_eternal_fire_survives_load_save_and_restart() {
     let output = support::run_text(&native, &config, ObjectId(1), 1, "loadmap fire.map");
     assert!(output.contains("Loading fire.map"), "{output}");
     assert!(
-        lua.eval_callback::<bool>(&format!("return btech.map.load(1, {}, 'fire.map')", map.0))
-            .unwrap()
+        lua.eval_callback::<bool>(&format!(
+            "return btech.map.load_as(1, {}, 'fire.map')",
+            map.0
+        ))
+        .unwrap()
     );
     assert_eq!(native.world().btech, lua.world().btech);
     assert_eq!(native.world().btech.maps()[&map].flags & 8, 8);

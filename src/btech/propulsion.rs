@@ -29,6 +29,11 @@ impl Propulsion {
     pub(super) fn set_jump(&mut self, speed: f64, lost: usize) {
         self.jump = Some(speed + lost as f64 * 10.75);
     }
+
+    /// Set the raw administrator-owned jump baseline, matching the C mechrep setter.
+    pub(super) fn set_jump_raw(&mut self, speed: f64) {
+        self.jump = Some(speed);
+    }
     /// Construction is the baseline until a damage event adopts an edited template speed.
     pub(super) fn baseline(self, authored: f64) -> f64 {
         self.baseline.unwrap_or(authored)

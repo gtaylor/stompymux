@@ -400,7 +400,7 @@ fn break_surface(
             let fall = super::fall::resolve_material(
                 &mut candidate,
                 id,
-                i16::from(fall_levels),
+                i32::from(fall_levels),
                 rules,
                 character,
             )?;

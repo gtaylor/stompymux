@@ -98,6 +98,27 @@ impl Scripts {
 
     /// Load one named source with a fresh instruction budget and contextual errors.
     fn load_module(&self, path: &str, source: &str) -> Result<Table> {
+        let cache: Table = self
+            .lua
+            .named_registry_value("mux.modules")
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        if let Some(module) = cache
+            .get::<Option<Table>>(path)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?
+        {
+            return Ok(module);
+        }
+        let loading: Table = self
+            .lua
+            .named_registry_value("mux.modules.loading")
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        if loading
+            .get::<Option<bool>>(path)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?
+            .unwrap_or(false)
+        {
+            anyhow::bail!("recursive load of Lua module {path}");
+        }
         self.reset_callback_budget();
         let function = self
             .lua
@@ -105,8 +126,27 @@ impl Scripts {
             .set_name(path)
             .into_function()
             .map_err(|e| anyhow::anyhow!("loading {path}: {e}"))?;
-        self.call(&function, ())
-            .with_context(|| format!("loading {path}"))
+        let root = path.split('/').next().unwrap_or("packages");
+        let environment = super::sandbox::module_environment(&self.lua, root)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        function
+            .set_environment(environment)
+            .map_err(|e| anyhow::anyhow!("loading {path}: {e}"))?;
+        loading
+            .set(path, true)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let result: Result<Table> = super::sandbox::with_module_root(&self.lua, root, || {
+            self.call(&function, ())
+                .with_context(|| format!("loading {path}"))
+        });
+        loading
+            .set(path, mlua::Value::Nil)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let module = result?;
+        cache
+            .set(path, module.clone())
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        Ok(module)
     }
 
     /// Refresh Lua parent references after world mutations.

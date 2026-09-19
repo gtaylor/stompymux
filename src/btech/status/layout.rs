@@ -52,7 +52,13 @@ fn facts(
             name: if reference {
                 &def.name
             } else {
-                unit.display_name.effective(&def.name)
+                world
+                    .btech
+                    .unit_configuration
+                    .get(&id)
+                    .and_then(|configuration| configuration.display_name.as_deref())
+                    .filter(|value| !value.is_empty())
+                    .unwrap_or_else(|| unit.display_name.effective(&def.name))
             },
             reference: &def.reference,
             tons: def.tons,
@@ -80,7 +86,13 @@ fn facts(
         name: if reference {
             &def.name
         } else {
-            unit.display_name.effective(&def.name)
+            world
+                .btech
+                .unit_configuration
+                .get(&id)
+                .and_then(|configuration| configuration.display_name.as_deref())
+                .filter(|value| !value.is_empty())
+                .unwrap_or_else(|| unit.display_name.effective(&def.name))
         },
         reference: &def.reference,
         tons: def.tons,

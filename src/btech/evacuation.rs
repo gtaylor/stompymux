@@ -633,23 +633,34 @@ pub fn fall_unit_action(
     rules: super::BattleFallRules,
 ) -> Result<super::BattleFallReport> {
     ensure!(levels > 0, "Fall multiplier must be positive");
+    fall_unit_contract_action(scripts, config, unit, i32::from(levels), rules)
+}
+
+/// C Lua contract fall: signed `int` severity, including zero and negative values.
+pub(super) fn fall_unit_contract_action(
+    scripts: &Scripts,
+    config: &Config,
+    unit: ObjectId,
+    levels: i32,
+    rules: super::BattleFallRules,
+) -> Result<super::BattleFallReport> {
     let before = scripts.world.borrow().clone();
+    let tons =
+        super::administrative_unit_tonnage(&before, unit).context("unit tonnage is unavailable")?;
     let checkpoint = scripts.effects.checkpoint();
     let result = (|| {
         let character = before
             .objects
             .get(&unit)
             .is_some_and(|object| object.flags.contains(Flag::InCharacter));
-        let report = if character {
-            super::fall::resolve_character_fall(
-                &mut scripts.world.borrow_mut(),
-                unit,
-                levels,
-                rules,
-            )?
-        } else {
-            super::resolve_fall(&mut scripts.world.borrow_mut(), unit, levels, rules)?
-        };
+        let report = super::fall::resolve_contract_fall(
+            &mut scripts.world.borrow_mut(),
+            unit,
+            levels,
+            rules,
+            character,
+            tons,
+        )?;
         let mut notices = Vec::new();
         let mut private = Vec::new();
         report.append_notices(unit, &mut notices, &mut private);
@@ -1740,15 +1751,57 @@ pub fn vehicle_fall_action(
     levels: u8,
     rules: super::BattleFallRules,
 ) -> Result<super::BattleVehicleFallReport> {
+    vehicle_fall_action_inner(scripts, config, unit, i32::from(levels), rules, true)
+}
+
+pub(super) fn vehicle_fall_contract_action(
+    scripts: &Scripts,
+    config: &Config,
+    unit: ObjectId,
+    levels: i32,
+    rules: super::BattleFallRules,
+) -> Result<super::BattleVehicleFallReport> {
+    let character = scripts
+        .world()
+        .objects
+        .get(&unit)
+        .is_some_and(|object| object.flags.contains(Flag::InCharacter));
+    vehicle_fall_action_inner_with_tonnage(scripts, config, unit, levels, rules, character, true)
+}
+
+fn vehicle_fall_action_inner(
+    scripts: &Scripts,
+    config: &Config,
+    unit: ObjectId,
+    levels: i32,
+    rules: super::BattleFallRules,
+    character: bool,
+) -> Result<super::BattleVehicleFallReport> {
+    vehicle_fall_action_inner_with_tonnage(scripts, config, unit, levels, rules, character, false)
+}
+
+fn vehicle_fall_action_inner_with_tonnage(
+    scripts: &Scripts,
+    config: &Config,
+    unit: ObjectId,
+    levels: i32,
+    rules: super::BattleFallRules,
+    character: bool,
+    administrative_tonnage: bool,
+) -> Result<super::BattleVehicleFallReport> {
     let before = scripts.world.borrow().clone();
+    let tons = administrative_tonnage
+        .then(|| super::administrative_unit_tonnage(&before, unit))
+        .flatten();
     let checkpoint = scripts.effects.checkpoint();
     let result = (|| {
-        let report = super::vehicle_fall::resolve_in_candidate(
+        let report = super::vehicle_fall::resolve_material_signed_with_tonnage(
             &mut scripts.world.borrow_mut(),
             unit,
             levels,
             rules,
-            true,
+            character,
+            tons,
         )?;
         super::piloting::publish_ordered_notices(scripts, &report.notices, &report.pilot_notices)?;
         publish_vehicle_fall_consequences(scripts, config, &report)?;

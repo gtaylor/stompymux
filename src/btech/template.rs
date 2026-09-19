@@ -148,7 +148,7 @@ impl BattleTemplate {
         );
         let tons = required("tons")?.parse().context("invalid tonnage")?;
         ensure!(tons > 0, "tonnage must be positive");
-        let template = Self {
+        let mut template = Self {
             name: required("name")?,
             reference: required("reference")?,
             tons,
@@ -163,7 +163,60 @@ impl BattleTemplate {
             sections,
             attributes: fields,
         };
+        // The reference load always forces the tonnage-chart internal structure
+        // (mech_int_check) while reading the template file, overriding authored
+        // Internals lines for both the original and the live value. Keeping the
+        // rewrite here, where C's parse and finalize are one operation, leaves
+        // saved definitions and later construction edits restored verbatim.
+        let quad = chassis == super::BattleMechChassis::Quad;
+        for section in BattleSection::ALL {
+            if let Some(expected) = Self::chart_internal(template.tons, section, quad) {
+                if let Some(layout) = template.sections.get_mut(&section) {
+                    layout.internal = expected;
+                }
+            }
+        }
         Ok(template)
+    }
+
+    /// Expected mech internal structure from the reference tonnage chart.
+    ///
+    /// Rows are `[tons, center torso, side torsos, arms, legs]`; quad chassis
+    /// use the leg column for arms. Head structure is always three and unknown
+    /// tonnage leaves authored internals untouched, matching mech_int_check.
+    fn chart_internal(tons: u16, section: BattleSection, quad: bool) -> Option<u16> {
+        const STRUCTURE: [[i16; 5]; 20] = [
+            [10, 4, 3, 1, 2],
+            [15, 5, 4, 2, 3],
+            [20, 6, 5, 3, 4],
+            [25, 8, 6, 4, 6],
+            [30, 10, 7, 5, 7],
+            [35, 11, 8, 6, 8],
+            [40, 12, 10, 6, 10],
+            [45, 14, 11, 7, 11],
+            [50, 16, 12, 8, 12],
+            [55, 18, 13, 9, 13],
+            [60, 20, 14, 10, 14],
+            [65, 21, 15, 10, 15],
+            [70, 22, 15, 11, 15],
+            [75, 23, 16, 12, 16],
+            [80, 25, 17, 13, 17],
+            [85, 27, 18, 14, 18],
+            [90, 29, 19, 15, 19],
+            [95, 30, 20, 16, 20],
+            [100, 31, 21, 17, 21],
+            [-1, 0, 0, 0, 0],
+        ];
+        let row = STRUCTURE.iter().find(|row| row[0] == tons as i16)?;
+        let column = match section {
+            BattleSection::Head => return Some(3),
+            BattleSection::CenterTorso => 1,
+            BattleSection::LeftTorso | BattleSection::RightTorso => 2,
+            BattleSection::LeftArm | BattleSection::RightArm if quad => 4,
+            BattleSection::LeftArm | BattleSection::RightArm => 3,
+            BattleSection::LeftLeg | BattleSection::RightLeg => 4,
+        };
+        u16::try_from(row[column]).ok()
     }
 }
 

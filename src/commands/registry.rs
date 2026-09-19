@@ -120,6 +120,8 @@ pub struct CommandDefinition {
     pub listed: bool,
     /// Required authority.
     pub permission: CommandPermissions,
+    /// Canonical typed Lua access gate, evaluated against the live invoker.
+    pub(crate) lua_access: crate::lua::command_access::CommandAccess,
     /// Original declaration, before configuration edits.
     pub declared_permission: CommandPermissions,
     /// Exact or pattern-based matching metadata.
@@ -151,6 +153,7 @@ impl CommandDefinition {
         let permission = crate::access::native_defaults(name, permission);
         Self {
             declared_permission: permission,
+            lua_access: Default::default(),
             name: name.into(),
             switch_definitions: native_switches(name),
             listed: !matches!(name, ";" | "\\"),
@@ -1353,15 +1356,30 @@ impl CommandRegistry {
         for index in 1..=count {
             let definition = (|| -> Result<CommandDefinition> {
                 let command = checked(commands.raw_get::<Table>(index))?;
-                let name = string_field(&command, "name")?;
+                let name = match checked(command.get::<Option<Value>>("name"))? {
+                    None | Some(Value::Nil) => String::new(),
+                    Some(Value::String(value)) => checked(value.to_str())?.to_string(),
+                    Some(_) => anyhow::bail!("name must be a string"),
+                };
                 ensure!(
-                    !name.is_empty()
-                        && !name
+                    name.is_empty()
+                        || !name
                             .chars()
                             .any(|c| c.is_whitespace() || c.is_control() || c == '/'),
                     "invalid command name {name:?}"
                 );
-                let permission = CommandPermissions::parse(&string_field(&command, "permission")?)?;
+                let permission = match checked(command.get::<Option<Value>>("permission"))? {
+                    None | Some(Value::Nil) => CommandPermissions::EVERYONE,
+                    Some(Value::String(value)) => {
+                        CommandPermissions::parse(checked(value.to_str())?.as_ref())?
+                    }
+                    Some(_) => anyhow::bail!("permission must be a string"),
+                };
+                let lua_access = crate::lua::command_access::read(&command).map_err(|_| {
+                    anyhow::anyhow!(
+                        "command access in {source} must be a mux.world.access constant"
+                    )
+                })?;
                 let pattern = string_field(&command, "pattern")?;
                 validate_pattern(&pattern)?;
                 let find: Function =
@@ -1389,6 +1407,7 @@ impl CommandRegistry {
                     switch_definitions: Vec::new(),
                     listed: true,
                     permission,
+                    lua_access,
                     declared_permission: permission,
                     matcher: CommandMatcher::LuaPattern(pattern),
                     scope: scope.clone(),

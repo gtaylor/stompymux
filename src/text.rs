@@ -162,6 +162,8 @@ pub struct Span {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Document {
     Styled(String),
+    /// Trusted compatibility report whose explicit style transitions are observable.
+    NativeStyled(String),
     Markdown(String),
     Literal(String),
     /// Styled forwarding prefix around an explicitly formatted document.
@@ -173,6 +175,12 @@ pub enum Document {
 }
 
 impl Document {
+    /// Construct a bounded native compatibility report.
+    pub fn native_styled(source: String, limit: usize) -> Result<Self> {
+        ensure!(source.len() <= limit, "native styled input limit exceeded");
+        Ok(Self::NativeStyled(source))
+    }
+
     /// Prefix without interpreting a Markdown body as bracket markup or creating nested wrappers.
     pub fn prefixed(&self, prefix: &str) -> Self {
         let (prefix, document) = match self {
@@ -214,7 +222,7 @@ impl Document {
     /// Original source retained independently of the selected renderer.
     pub fn source(&self) -> &str {
         match self {
-            Self::Styled(s) | Self::Markdown(s) | Self::Literal(s) => s,
+            Self::Styled(s) | Self::NativeStyled(s) | Self::Markdown(s) | Self::Literal(s) => s,
             Self::Prefixed { source, .. } => source,
         }
     }
@@ -232,7 +240,9 @@ impl Document {
     /// Parse explicit input into semantic inline runs for this recipient.
     pub fn spans(&self, palette: &Palette, options: &RenderOptions) -> Vec<Span> {
         match self {
-            Self::Styled(s) => parser::parse(palette, s, false).unwrap_or_default(),
+            Self::Styled(s) | Self::NativeStyled(s) => {
+                parser::parse(palette, s, false).unwrap_or_default()
+            }
             Self::Markdown(s) => markdown::spans(s, options),
             Self::Prefixed {
                 prefix, document, ..
@@ -250,7 +260,26 @@ impl Document {
 
     /// Render within the encoded byte budget, reserving terminal closures.
     pub fn telnet(&self, palette: &Palette, options: &RenderOptions, limit: usize) -> Vec<u8> {
-        render::telnet(&self.spans(palette, options), palette, options, limit)
+        match self {
+            Self::NativeStyled(source) => {
+                render::native_telnet(&parser::native_events(palette, source), options, limit)
+            }
+            Self::Prefixed {
+                prefix, document, ..
+            } if matches!(document.as_ref(), Self::NativeStyled(_)) => {
+                let mut events = parser::native_events(palette, prefix);
+                let prefix_style = events.iter().rev().find_map(|event| match event {
+                    parser::NativeEvent::Style(style) => Some(style),
+                    parser::NativeEvent::Text(_) => None,
+                });
+                if prefix_style.is_some_and(|style| *style != Style::default()) {
+                    events.push(parser::NativeEvent::Style(Style::default()));
+                }
+                events.extend(parser::native_events(palette, document.source()));
+                render::native_telnet(&events, options, limit)
+            }
+            _ => render::telnet(&self.spans(palette, options), palette, options, limit),
+        }
     }
 
     /// Render a safe HTML fragment or fail if its output exceeds the budget.
@@ -293,6 +322,219 @@ impl std::fmt::Display for Document {
 pub fn validate(palette: &Palette, s: &str) -> Result<String> {
     parser::parse(palette, s, true)?;
     Ok(s.into())
+}
+
+/// Byte length of one UTF-8 character from its leading byte.
+fn utf8_step(byte: u8) -> usize {
+    match byte {
+        0x00..=0x7f => 1,
+        0xc0..=0xdf => 2,
+        0xe0..=0xef => 3,
+        _ => 4,
+    }
+}
+
+/// C styled_append_utf8_codepoint (src/mux/support/styled_text/output.c):
+/// strict UTF-8 is decoded at each byte and every byte that fails to begin a
+/// valid sequence becomes exactly one U+FFFD. Rust's from_utf8_lossy instead
+/// coalesces maximal invalid subparts, so truncated multi-byte prefixes would
+/// produce fewer replacement characters than the C renderer.
+pub fn c_utf8_lossy(bytes: &[u8]) -> String {
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut cursor = 0;
+    while cursor < bytes.len() {
+        match utf8_decode_step(&bytes[cursor..]) {
+            Some(length) => {
+                out.extend_from_slice(&bytes[cursor..cursor + length]);
+                cursor += length;
+            }
+            None => {
+                out.extend_from_slice(b"\xef\xbf\xbd");
+                cursor += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// Length of the strict UTF-8 sequence starting at the first byte, if any
+/// (utf8.c utf8_decode: lead range C2..F4, all continuations present, and no
+/// overlong, surrogate, or out-of-range codepoint).
+fn utf8_decode_step(bytes: &[u8]) -> Option<usize> {
+    let first = *bytes.first()?;
+    let needed = match first {
+        0x00..=0x7f => return Some(1),
+        0xc2..=0xdf => 2,
+        0xe0..=0xef => 3,
+        0xf0..=0xf4 => 4,
+        _ => return None,
+    };
+    let prefix = bytes.get(..needed)?;
+    std::str::from_utf8(prefix).is_ok().then_some(needed)
+}
+
+/// Longest strict UTF-8 prefix of the raw bytes. C styled_text_truncate stops
+/// at the first byte that does not begin a valid sequence instead of
+/// substituting replacement characters, so truncation runs on this prefix.
+pub fn utf8_valid_prefix(bytes: &[u8]) -> String {
+    match std::str::from_utf8(bytes) {
+        Ok(text) => text.to_owned(),
+        Err(error) => {
+            let end = error.valid_up_to();
+            String::from_utf8_lossy(&bytes[..end]).into_owned()
+        }
+    }
+}
+
+/// Length and SGR classification of one escape sequence starting at ESC.
+fn ansi_step(s: &str) -> (usize, bool) {
+    let bytes = s.as_bytes();
+    if bytes.len() < 2 {
+        return (bytes.len(), false);
+    }
+    match bytes[1] {
+        b'[' => {
+            for (offset, byte) in bytes.iter().enumerate().skip(2) {
+                if (0x40..=0x7e).contains(byte) {
+                    return (offset + 1, *byte == b'm');
+                }
+            }
+            (bytes.len(), false)
+        }
+        b']' => {
+            for (offset, byte) in bytes.iter().enumerate().skip(2) {
+                if *byte == 0x07 {
+                    return (offset + 1, false);
+                }
+                if *byte == 0x1b && bytes.get(offset + 1) == Some(&b'\\') {
+                    return (offset + 2, false);
+                }
+            }
+            (bytes.len(), false)
+        }
+        _ => (2, false),
+    }
+}
+
+/// Apply one raw markup tag exactly as C's apply_tag candidate check does.
+fn mux_tag_applies(palette: &Palette, inner: &str, stack: &mut Vec<bool>) -> bool {
+    if inner == "/" {
+        return stack.pop().is_some();
+    }
+    let Ok(list) = parser::directives(inner) else {
+        return false;
+    };
+    let mut style = Style::default();
+    let mut applied = false;
+    for directive in list {
+        if parser::apply_style(palette, &mut style, &directive).is_err() {
+            return false;
+        }
+        applied = true;
+    }
+    if applied {
+        stack.push(true);
+    }
+    applied
+}
+
+/// C styled_text_strip: plain rendering keeps every non-markup byte, control
+/// characters included, and drops valid tags plus escape sequences.
+pub fn mux_plain(palette: &Palette, s: &str) -> String {
+    let bytes = s.as_bytes();
+    let mut out = Vec::new();
+    let mut stack = Vec::new();
+    let mut cursor = 0;
+    while cursor < bytes.len() {
+        match bytes[cursor] {
+            0x1b => cursor += ansi_step(&s[cursor..]).0,
+            b'[' if bytes.get(cursor + 1) == Some(&b'[') => {
+                out.push(b'[');
+                cursor += 2;
+            }
+            b'[' => {
+                let matched = s[cursor..]
+                    .find(']')
+                    .filter(|close| close > &1)
+                    .is_some_and(|close| {
+                        mux_tag_applies(palette, &s[cursor + 1..cursor + close], &mut stack)
+                    });
+                if let Some(close) = matched.then(|| s[cursor..].find(']').unwrap()) {
+                    cursor += close + 1;
+                } else {
+                    out.push(b'[');
+                    cursor += 1;
+                }
+            }
+            _ => {
+                let step = utf8_step(bytes[cursor]).min(bytes.len() - cursor);
+                out.extend_from_slice(&bytes[cursor..cursor + step]);
+                cursor += step;
+            }
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+/// C styled_text_truncate: original markup is copied verbatim while a visible
+/// byte budget lasts; unclosed tags are re-closed and SGR sequences reset.
+pub fn mux_truncate(palette: &Palette, s: &str, width: usize) -> String {
+    let bytes = s.as_bytes();
+    let mut out = Vec::new();
+    let mut stack = Vec::new();
+    let mut visible = 0usize;
+    let mut saw_sgr = false;
+    let mut cursor = 0;
+    while cursor < bytes.len() && visible < width {
+        match bytes[cursor] {
+            0x1b => {
+                let (step, is_sgr) = ansi_step(&s[cursor..]);
+                if is_sgr {
+                    out.extend_from_slice(&bytes[cursor..cursor + step]);
+                    saw_sgr = true;
+                }
+                cursor += step;
+            }
+            b'[' if bytes.get(cursor + 1) == Some(&b'[') => {
+                out.push(b'[');
+                cursor += 2;
+                visible += 1;
+            }
+            b'[' => {
+                let tag = s[cursor..]
+                    .find(']')
+                    .filter(|close| close > &1 && close < &1024)
+                    .and_then(|close| {
+                        mux_tag_applies(palette, &s[cursor + 1..cursor + close], &mut stack)
+                            .then_some(close)
+                    });
+                if let Some(close) = tag {
+                    out.extend_from_slice(&bytes[cursor..cursor + close + 1]);
+                    cursor += close + 1;
+                } else {
+                    out.push(b'[');
+                    cursor += 1;
+                    visible += 1;
+                }
+            }
+            _ => {
+                let step = utf8_step(bytes[cursor]).min(bytes.len() - cursor);
+                if visible + step > width {
+                    break;
+                }
+                out.extend_from_slice(&bytes[cursor..cursor + step]);
+                cursor += step;
+                visible += step;
+            }
+        }
+    }
+    for _ in 0..stack.len() {
+        out.extend_from_slice(b"[/]");
+    }
+    if saw_sgr {
+        out.extend_from_slice(b"\x1b[0m");
+    }
+    String::from_utf8_lossy(&out).into_owned()
 }
 
 /// Visible text ignores markup and terminal escapes.

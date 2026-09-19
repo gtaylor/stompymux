@@ -257,7 +257,7 @@ async fn lua_staging_nested_rollback_and_checking() {
             .is_err()
     );
     assert!(s.drain_logs_for_inspection().is_empty());
-    s.eval_callback::<()>("_parents['default_thing.lua'].locks={take=function(ctx) mux.log('test.log','nested discarded');error('nested') end}; local o=mux.world.create_object{type=mux.world.types.THING,name='logger'}; mux.log('test.log','outer');mux.world.lock_passes{object=o,enactor=1,lock=mux.world.locks.TAKE};mux.log('test.log','last')").unwrap();
+    s.eval_callback::<()>("_parents['default_thing.lua'].locks={take=function(ctx) mux.log('test.log','nested discarded');error('nested') end}; local o=mux.world.create_object{type=mux.world.types.THING,name='logger',location=0,home=0}; mux.log('test.log','outer');mux.world.lock_passes{object=o,enactor=1,lock=mux.world.locks.TAKE};mux.log('test.log','last')").unwrap();
     for request in s.drain_logs_for_inspection() {
         c.logger.submit(&c, request);
     }

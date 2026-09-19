@@ -1,6 +1,8 @@
 //! DEBUG registration is usable without SQL imports and persists through creation and teardown.
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
+#[path = "support/btech_firing.rs"]
+mod firing;
 mod support;
 
 /// Register, use, reload and unregister a carried tool without changing its game containment.
@@ -265,4 +267,166 @@ async fn map_registration_defaults_view_load_and_restart() {
     persistence::save(&config.database(), &saved).await.unwrap();
     let restored = persistence::load(&config.database()).await.unwrap();
     assert_eq!(restored.btech, saved.btech);
+}
+
+/// MECH teardown disposes the raw registration, forgets administrative identity, and
+/// succeeds identically for a second unregister (C registry.c:512-527 always returns
+/// true after the control check and runs btech_configuration_forget on both paths).
+#[tokio::test]
+async fn mech_registration_teardown_is_idempotent_and_forgets_configuration() {
+    let (_dir, config, mut world) = support::isolated_world().await;
+    let unit = world.create(&config, "Bare mech".into(), Kind::Thing);
+    world.objects.get_mut(&unit).unwrap().location = Some(ObjectId(1));
+    let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+    assert_eq!(
+        support::run_text(&scripts, &config, ObjectId(1), 1, "@btech/r Bare mech=MECH"),
+        format!("Registered #{} as BTech type MECH.", unit.0)
+    );
+    assert_eq!(
+        support::run_text(
+            &scripts,
+            &config,
+            ObjectId(1),
+            1,
+            &format!("@btech #{}", unit.0)
+        ),
+        format!("#{} BTech type: MECH", unit.0)
+    );
+    btech::set_unit_identity_configuration(
+        &mut scripts.world_mut(),
+        unit,
+        "preferred_id",
+        Some("ab".into()),
+    );
+    btech::set_unit_configuration(&mut scripts.world_mut(), unit, |configuration| {
+        configuration.display_name = Some("Display".into());
+        configuration.assigned_pilot = Some(ObjectId(1));
+    });
+    // The unregister switch ignores a trailing =argument (C never parses the second
+    // argument for BTECH_UNREGISTER), and teardown of a raw registration succeeds.
+    for command in [
+        format!("@btech/u #{}=ignored", unit.0),
+        format!("@btech/unregister #{}", unit.0),
+    ] {
+        assert_eq!(
+            support::run_text(&scripts, &config, ObjectId(1), 1, &command),
+            format!("Unregistered #{} from BTech.", unit.0)
+        );
+    }
+    assert_eq!(
+        support::run_text(
+            &scripts,
+            &config,
+            ObjectId(1),
+            1,
+            &format!("@btech #{}", unit.0)
+        ),
+        format!("#{} is not registered with BTech.", unit.0)
+    );
+    let after = scripts.world();
+    assert!(!after.btech.registrations().contains_key(&unit));
+    assert!(!after.btech.units().contains_key(&unit));
+    assert!(!after.btech.constructed_units().contains_key(&unit));
+    assert!(!after.btech.vehicles().contains_key(&unit));
+    assert_eq!(
+        btech::unit_configuration(&after, unit),
+        BattleUnitConfiguration::default()
+    );
+    // Teardown never moves or destroys the container thing (C only frees the special object).
+    assert_eq!(after.objects[&unit].location, Some(ObjectId(1)));
+    assert_eq!(after.objects[&unit].kind, Kind::Thing);
+    drop(after);
+    persistence::save(&config.database(), &scripts.world())
+        .await
+        .unwrap();
+    let restored = persistence::load(&config.database()).await.unwrap();
+    assert!(!restored.btech.registrations().contains_key(&unit));
+    assert!(!restored.btech.units().contains_key(&unit));
+    assert_eq!(restored.objects[&unit].location, Some(ObjectId(1)));
+    // The role can be re-established after teardown, exactly like the reference registrar.
+    let scripts = Scripts::new(&config, Rc::new(RefCell::new(restored))).unwrap();
+    assert_eq!(
+        support::run_text(
+            &scripts,
+            &config,
+            ObjectId(1),
+            1,
+            &format!("@btech/register #{}=MECH", unit.0)
+        ),
+        format!("Registered #{} as BTech type MECH.", unit.0)
+    );
+}
+
+/// Unregistering a placed, piloted unit removes its battlefield identity while the map,
+/// the surviving unit and the object's containment keep running (C newfreemech SPECIAL_FREE
+/// clears the map slot, then btech_configuration_forget clears pilot references).
+#[tokio::test]
+async fn unregister_constructed_unit_releases_map_and_pilot_references() {
+    for source in firing::templates() {
+        let (_dir, config, world, unit, target, _) =
+            firing::fixture_with_target(&source, None, include_str!("../game/mechs/AS7-D")).await;
+        let map = world.btech.units()[&unit].map.unwrap();
+        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        btech::set_unit_configuration(&mut scripts.world_mut(), unit, |configuration| {
+            configuration.assigned_pilot = Some(ObjectId(1));
+        });
+        // The surviving unit keeps its own administrative identity and placement.
+        btech::set_unit_configuration(&mut scripts.world_mut(), target, |configuration| {
+            configuration.display_name = Some("Survivor".into());
+        });
+        let before = scripts.world().clone();
+        persistence::save(&config.database(), &before)
+            .await
+            .unwrap();
+        assert_eq!(
+            support::run_text(
+                &scripts,
+                &config,
+                ObjectId(1),
+                1,
+                &format!("@btech/unregister #{}", unit.0)
+            ),
+            format!("Unregistered #{} from BTech.", unit.0)
+        );
+        let after = scripts.world();
+        assert!(!after.btech.registrations().contains_key(&unit), "{source}");
+        assert!(!after.btech.units().contains_key(&unit));
+        assert!(!after.btech.constructed_units().contains_key(&unit));
+        assert!(!after.btech.vehicles().contains_key(&unit));
+        assert_eq!(
+            btech::unit_configuration(&after, unit),
+            BattleUnitConfiguration::default()
+        );
+        // The other unit keeps its identity; pilots are always players in this model, so
+        // no valid state can dangle from the unregistered unit.
+        let survivor = btech::unit_configuration(&after, target);
+        assert_eq!(survivor.display_name.as_deref(), Some("Survivor"));
+        assert_eq!(survivor.assigned_pilot, None);
+        // Map membership and the map itself survive the unit teardown.
+        assert!(after.btech.maps().contains_key(&map));
+        assert!(
+            after
+                .btech
+                .registrations()
+                .get(&map)
+                .is_some_and(|kind| kind == "MAP")
+        );
+        assert_eq!(after.btech.units()[&target].map, Some(map));
+        assert_eq!(after.objects[&unit].location, Some(map));
+        drop(after);
+        persistence::save(&config.database(), &scripts.world())
+            .await
+            .unwrap();
+        let restored = persistence::load(&config.database()).await.unwrap();
+        assert!(!restored.btech.registrations().contains_key(&unit));
+        assert!(!restored.btech.units().contains_key(&unit));
+        assert_eq!(restored.btech.units()[&target].map, Some(map));
+        assert_eq!(restored.objects[&unit].location, Some(map));
+        assert_eq!(
+            btech::unit_configuration(&restored, target)
+                .display_name
+                .as_deref(),
+            Some("Survivor")
+        );
+    }
 }

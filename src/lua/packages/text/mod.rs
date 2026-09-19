@@ -4,7 +4,7 @@ use super::bind;
 use crate::{config::Config, lua::err, text};
 use anyhow::Result;
 pub(super) use document::LuaDocument;
-use mlua::{Lua, Table, Value};
+use mlua::{FromLua, Lua, MultiValue, Table, Value};
 use std::{cell::Cell, rc::Rc, sync::Arc};
 
 /// Register native operations before the embedded facade is evaluated.
@@ -16,36 +16,108 @@ pub(super) fn register(
 ) -> Result<()> {
     let message_limit = config.runtime.output_message_limit;
     let p = palette.clone();
-    bind!(lua, api, "markup", move |_, s: String| text::validate(
-        &p, &s
-    )
-    .map_err(err));
-    let p = palette.clone();
-    bind!(lua, api, "width", move |_, s: String| {
-        let plain: String = text::Document::Styled(s)
-            .spans(&p, &text::RenderOptions::default())
-            .iter()
-            .map(|s| s.text.as_str())
-            .collect();
-        Ok(unicode_width::UnicodeWidthStr::width(plain.as_str()))
+    bind!(lua, api, "markup", move |lua, values: mlua::MultiValue| {
+        let value = super::error::check_string_arg(lua, &values, 1)?;
+        let s = std::str::from_utf8(&value).map_err(|_| {
+            super::error::failure(
+                "mux.text.invalid",
+                "invalid styled-text markup: text is not valid UTF-8",
+            )
+        })?;
+        text::validate(&p, s).map_err(|error| {
+            super::error::failure(
+                "mux.text.invalid",
+                format!("invalid styled-text markup: {error}"),
+            )
+        })?;
+        Ok(Value::String(lua.create_string(&s)?))
     });
     let p = palette.clone();
-    bind!(lua, api, "truncate", move |_, (s, n): (String, usize)| Ok(
-        text::truncate_with(&p, &s, n)
-    ));
+    bind!(lua, api, "width", move |lua, values: mlua::MultiValue| {
+        let s = super::error::check_string_arg(lua, &values, 1)?;
+        // C measures the byte length of the plain render, whose invalid UTF-8
+        // bytes each become one U+FFFD (styled_append_utf8_codepoint).
+        Ok(text::mux_plain(&p, &text::c_utf8_lossy(&s)).len())
+    });
     let p = palette.clone();
-    bind!(lua, api, "strip", move |_, s: String| Ok(
-        text::Document::Styled(s)
-            .spans(&p, &text::RenderOptions::default())
-            .iter()
-            .map(|s| s.text.as_str())
-            .collect::<String>()
-    ));
+    bind!(
+        lua,
+        api,
+        "truncate",
+        move |lua, values: mlua::MultiValue| {
+            let s = super::error::check_string_arg(lua, &values, 1)?;
+            let width = super::error::check_integer_arg(lua, &values, 2)?;
+            // C raises a structured text.invalid rejection for negative widths.
+            if width < 0 {
+                return Err(super::error::argument_failure(
+                    lua,
+                    2,
+                    "mux.text.invalid",
+                    "width must not be negative",
+                ));
+            }
+            Ok(text::mux_truncate(
+                &p,
+                &text::utf8_valid_prefix(&s),
+                width as usize,
+            ))
+        }
+    );
     let p = palette.clone();
-    bind!(lua, api, "style", move |_, (s, t): (String, Table)| {
+    bind!(lua, api, "strip", move |lua, values: mlua::MultiValue| {
+        let s = super::error::check_string_arg(lua, &values, 1)?;
+        // C replaces each invalid UTF-8 byte with one U+FFFD while rendering.
+        Ok(text::mux_plain(&p, &text::c_utf8_lossy(&s)))
+    });
+    let p = palette.clone();
+    bind!(lua, api, "style", move |lua, values: MultiValue| {
+        let bytes = super::error::check_string_arg(lua, &values, 1)?;
+        if bytes.contains(&0) {
+            return Err(super::error::argument_failure(
+                lua,
+                1,
+                "mux.text.invalid",
+                "value contains an embedded NUL byte",
+            ));
+        }
+        let s = std::str::from_utf8(&bytes).map_err(|_| {
+            super::error::failure(
+                "mux.text.invalid",
+                "invalid style: invalid UTF-8 styled text",
+            )
+        })?;
+        // C luaL_checktype(2, LUA_TTABLE) raises a plain '?'-named type error.
+        let Value::Table(t) = values.get(1).cloned().unwrap_or(Value::Nil) else {
+            return Err(super::error::plain_type_error(
+                2,
+                "table",
+                super::error::lua_type_at(&values, 2),
+            ));
+        };
         let mut tags = Vec::new();
         for (field, tag) in [("foreground", "fg"), ("background", "bg")] {
-            if let Some(v) = t.get::<Option<String>>(field)? {
+            let value = t.get::<Value>(field)?;
+            if !matches!(value, Value::Nil) {
+                let Some(v) = lua.coerce_string(value)? else {
+                    return Err(super::error::failure(
+                        "mux.text.invalid",
+                        "style fields have invalid types",
+                    ));
+                };
+                let bytes = v.as_bytes();
+                let end = bytes
+                    .iter()
+                    .position(|byte| *byte == 0)
+                    .unwrap_or(bytes.len());
+                let v = std::str::from_utf8(&bytes[..end]).map_err(|_| {
+                    super::error::failure("mux.text.invalid", "style fields have invalid types")
+                })?;
+                if v.contains('[') || v.contains(']') {
+                    return Err(super::error::failure(
+                        "mux.text.invalid",
+                        "style fields have invalid types",
+                    ));
+                }
                 tags.push(format!("{tag}={v}"));
             }
         }
@@ -53,18 +125,36 @@ pub(super) fn register(
             match t.get::<Value>(field)? {
                 Value::Nil | Value::Boolean(false) => {}
                 Value::Boolean(true) => tags.push(field.into()),
-                _ => return Err(err("style fields have invalid types")),
+                _ => {
+                    return Err(super::error::failure(
+                        "mux.text.invalid",
+                        "style fields have invalid types",
+                    ));
+                }
             }
         }
         let value = if tags.is_empty() {
-            s
+            s.to_owned()
         } else {
-            format!("[{}]{s}[/]", tags.join(" "))
+            let mut value = tags
+                .iter()
+                .map(|tag| format!("[{tag}]"))
+                .collect::<String>();
+            value.push_str(s);
+            for _ in &tags {
+                value.push_str("[/]");
+            }
+            value
         };
         if value.len() > message_limit {
-            return Err(err("styled text output limit exceeded"));
+            return Err(super::error::failure(
+                "mux.text.invalid",
+                "styled text output limit exceeded",
+            ));
         }
-        text::validate(&p, &value).map_err(err)
+        text::validate(&p, &value).map_err(|error| {
+            super::error::failure("mux.text.invalid", format!("invalid style: {error}"))
+        })
     });
     let markdown_usage = Rc::new(Cell::new(0usize));
     bind!(lua, api, "markdown", move |lua, s: String| {
@@ -82,22 +172,22 @@ pub(super) fn register(
             usage: markdown_usage.clone(),
         })
     });
-    bind!(lua, api, "printable_ascii", |_, value: Value| {
-        let Value::String(s) = value else {
-            return Err(mlua::Error::BadArgument {
-                to: Some("mux.text.is_printable_ascii".into()),
-                pos: 1,
-                name: None,
-                cause: mlua::Error::FromLuaConversionError {
-                    from: value.type_name(),
-                    to: "string".into(),
-                    message: Some("expected an actual Lua string".into()),
-                }
-                .into(),
-            });
-        };
-        Ok(s.as_bytes().iter().all(|b| (0x20..=0x7e).contains(b)))
-    });
+    bind!(
+        lua,
+        api,
+        "printable_ascii",
+        |_, values: mlua::MultiValue| {
+            // C luaL_checktype raises the ordinary '?'-named string type error.
+            let Some(Value::String(s)) = values.get(0) else {
+                return Err(super::error::plain_type_error(
+                    1,
+                    "string",
+                    super::error::lua_type_at(&values, 1),
+                ));
+            };
+            Ok(s.as_bytes().iter().all(|b| (0x20..=0x7e).contains(b)))
+        }
+    );
     Ok(())
 }
 

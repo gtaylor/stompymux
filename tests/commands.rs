@@ -587,6 +587,24 @@ fn lua_metadata_is_required_and_patterns_are_validated() {
     for declaration in [
         "pattern='^x$',handler=function()end",
         "name='x',pattern='^x$',handler=function()end",
+    ] {
+        let module = lua
+            .load(format!("return {{commands={{{{{declaration}}}}}}}"))
+            .eval::<mlua::Table>()
+            .unwrap();
+        let mut registry = CommandRegistry::new();
+        let before = registry.definitions().count();
+        registry
+            .register_lua(
+                &lua,
+                &module,
+                "global_logic/valid.lua",
+                CommandScope::Global,
+            )
+            .unwrap();
+        assert_eq!(registry.definitions().count(), before + 1);
+    }
+    for declaration in [
         "name=42,permission='everyone',pattern='x',handler=function()end",
         "name='bad/name',permission='everyone',pattern='x',handler=function()end",
         "name='x',permission='admin',pattern='x',handler=function()end",
@@ -682,6 +700,17 @@ async fn lua_scopes_permissions_captures_and_frozen_registration() {
         run(&s, &c, 2, "all-local"),
         "handled:2\nhandled:1\nhandled:2"
     );
+    // Game modules own a private write scope (C lua_load_module setfenv), so the
+    // chunk global set by registry.lua is invisible to flat chunks. Reach the
+    // cached module table through the host's parent registry instead.
+    let parents: mlua::Table = s.inspect_lua().named_registry_value("mux.parents").unwrap();
+    s.inspect_lua()
+        .globals()
+        .set(
+            "_registry_module",
+            parents.get::<mlua::Table>("registry.lua").unwrap(),
+        )
+        .unwrap();
     s.inspect_lua().load("_registry_module.commands[2].permission='god'; _registry_module.commands[2].handler=function() error('replaced') end; _registry_module.commands[2].pattern='never'").exec().unwrap();
     s.world_mut()
         .objects

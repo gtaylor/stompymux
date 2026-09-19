@@ -22,7 +22,7 @@ impl Engine {
                     .effects
                     .flow(session)
                     .ok_or_else(|| error(lua, "connection.invalid", "flow is no longer active"))?;
-                let handler = self.handler(lua, &active.module, &active.step)?;
+                let handler = self.handler(lua, &active.module, &active.module, &active.step)?;
                 let ctx = lua.create_table()?;
                 ctx.set("scope", "flow")?;
                 ctx.set("enactor", active.identity.player.0)?;
@@ -102,7 +102,7 @@ impl Engine {
                         let next: mlua::LuaString = result.raw_get("step")?;
                         let next = next.to_str()?.to_owned();
                         validate_string(&next, STEP_BYTES, true)?;
-                        self.handler(lua, &active.module, &next)?;
+                        self.handler(lua, &active.module, &active.module, &next)?;
                         if let Some(message) = message {
                             self.output(session, &message, false)?;
                         }

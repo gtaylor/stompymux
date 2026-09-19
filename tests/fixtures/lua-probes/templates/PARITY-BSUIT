@@ -1,0 +1,32 @@
+Name { Parity BattleSuit }
+Reference { PARITY-BSUIT }
+Type { Battlesuit }
+Move_Type { Biped }
+Tons { 1 }
+Max_Suits { 8 }
+Max_Speed { 21.5 }
+Suit_1
+Armor { 1 }
+Internals { 1 }
+CRIT_1 { Agra.IS.PPC - - 5 }
+Suit_2
+Armor { 2 }
+Internals { 1 }
+Suit_3
+Armor { 3 }
+Internals { 1 }
+Suit_4
+Armor { 4 }
+Internals { 1 }
+Suit_5
+Armor { 5 }
+Internals { 1 }
+Suit_6
+Armor { 6 }
+Internals { 1 }
+Suit_7
+Armor { 7 }
+Internals { 1 }
+Suit_8
+Armor { 8 }
+Internals { 1 }

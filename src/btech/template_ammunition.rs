@@ -4,6 +4,16 @@ use anyhow::{Context, Result};
 
 /// Infer small bins and normalize initial salvo counts using the biped template-loader rules.
 pub(super) fn normalize(template: &mut BattleTemplate) -> Result<()> {
+    normalize_with(template, false)
+}
+
+/// Apply the native administrator's broader ammunition flag admission while
+/// preserving the strict constructor's compatibility checks.
+pub(super) fn normalize_contract(template: &mut BattleTemplate) -> Result<()> {
+    normalize_with(template, true)
+}
+
+fn normalize_with(template: &mut BattleTemplate, contract: bool) -> Result<()> {
     for (location, section) in &mut template.sections {
         for (slot, part) in &mut section.criticals {
             let Some(name) = super::equipment::strip_name_prefix(&part.equipment, "Ammo_") else {
@@ -17,9 +27,23 @@ pub(super) fn normalize(template: &mut BattleTemplate) -> Result<()> {
                     part.equipment
                 )
             };
-            let weapon = BattleWeapon::parse(name).with_context(context)?;
-            let (mut capacity, half_ton, mode) =
-                AmmunitionBin::configuration(weapon, &part.modes).with_context(context)?;
+            let weapon = match BattleWeapon::parse(name) {
+                Ok(weapon) => weapon,
+                Err(_)
+                    if contract
+                        && super::BattlePart::parse(&part.equipment)
+                            .is_ok_and(|part| part.kind == super::BattlePartKind::Ammunition) =>
+                {
+                    continue;
+                }
+                Err(error) => return Err(error).with_context(context),
+            };
+            let (mut capacity, half_ton, mode) = if contract {
+                AmmunitionBin::configuration_contract(weapon, &part.modes)
+            } else {
+                AmmunitionBin::configuration(weapon, &part.modes)
+            }
+            .with_context(context)?;
             let rounds: u16 = part
                 .data
                 .parse()

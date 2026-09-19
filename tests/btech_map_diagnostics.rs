@@ -83,7 +83,7 @@ async fn native_and_lua_map_activation_share_substitutions_and_channels() {
                 format!("@btech map-{operation} #{}=unknown.map", map.0)
             };
             let call = if operation == "load" {
-                format!("btech.map.load(1, {}, 'unknown.map')", map.0)
+                format!("btech.map.load_as(1, {}, 'unknown.map')", map.0)
             } else {
                 format!("btech.map.{operation}({}, 'unknown.map')", map.0)
             };
@@ -146,7 +146,7 @@ async fn terrain_diagnostics_obey_action_and_callback_rollback() {
         let (_dir, config, world, map) = fixture(operation == "create").await;
         let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let call = if operation == "load" {
-            format!("btech.map.load(1, {}, 'unknown.map')", map.0)
+            format!("btech.map.load_as(1, {}, 'unknown.map')", map.0)
         } else {
             format!("btech.map.{operation}({}, 'unknown.map')", map.0)
         };
@@ -234,7 +234,7 @@ async fn failed_load_diagnostics_commit_only_with_the_enclosing_callback() {
             )
             .unwrap();
         }
-        let call = format!("btech.map.load(1,{},'{name}')", map.0);
+        let call = format!("btech.map.load_as(1,{},'{name}')", map.0);
         let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let output =

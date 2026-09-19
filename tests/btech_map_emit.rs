@@ -105,7 +105,7 @@ async fn map_broadcast_audience_native_lua_and_restart() {
             )
             .unwrap();
             let call = format!(
-                "btech.map.emit({},{},'   Battlefield announcement')",
+                "btech.map.emit_as({},{},'   Battlefield announcement')",
                 actor.0, map.0
             );
             assert!(
@@ -258,7 +258,7 @@ async fn failed_map_confirmation_rolls_back_every_recipient() {
     assert_eq!(scripts.world().btech, before);
     assert!(
         scripts
-            .eval_callback::<()>(&format!("btech.map.emit({},{},'X')", actor.0, map.0))
+            .eval_callback::<()>(&format!("btech.map.emit_as({},{},'X')", actor.0, map.0))
             .is_err()
     );
     assert!(output(&scripts).is_empty());

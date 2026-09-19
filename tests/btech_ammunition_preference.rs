@@ -139,7 +139,7 @@ async fn preferred_sections_controls_feed_and_restart() {
         assert!(text.contains("Preferred ammo source set"), "{text}");
         let inspected: String = scripts
             .eval_callback(&format!(
-                "return btech.unit.weapons({})[{}].preferred_ammunition_section",
+                "return btech.unit.weapon_states({})[{}].preferred_ammunition_section",
                 id.0,
                 weapon + 1
             ))

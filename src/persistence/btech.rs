@@ -12,10 +12,11 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
             .fetch_all(&mut *c)
             .await?
     {
-        registrations.insert(
-            ObjectId(row.try_get("dbref")?),
-            row.try_get("special_type")?,
-        );
+        // The reference restore ignores legacy MECHREP rows (registration_restore.c:41-42).
+        let kind: String = row.try_get("special_type")?;
+        if kind != "MECHREP" {
+            registrations.insert(ObjectId(row.try_get("dbref")?), kind);
+        }
     }
     let mut maps = BTreeMap::new();
     for row in sqlx::query(
@@ -103,16 +104,30 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
     super::btech_static_decorations::load(c, &mut maps).await?;
     super::btech_map_random::load(c, &mut maps).await?;
     super::btech_artillery::load(c, &mut maps).await?;
+    let (mut player_preferences, invalid_ui) = super::btech_view_preferences::load(c).await?;
+    let (mut player_configuration, invalid_configuration) =
+        super::btech_player_configuration::load(c).await?;
+    for player in &invalid_ui {
+        player_preferences.remove(player);
+    }
+    for player in invalid_ui.union(&invalid_configuration) {
+        player_configuration.remove(player);
+    }
     let mut state = BtechState {
+        template_registry: Default::default(),
+        retire_sanctions: Default::default(),
         sensor_recoveries: super::btech_sensor_recovery::load(c).await?.into(),
         turn_clock: super::btech_turn_clock::load(c).await?,
         gunner_stations: super::btech_gunner_stations::load(c).await?.into(),
         inventories: super::btech_inventory::load(c).await?.into(),
+        part_costs: super::btech_part_costs::load(c).await?.into(),
         weapon_settings: Default::default(),
         reactor: super::btech_reactor::load(c).await?,
         wrecks: super::btech_wrecks::load(c).await?.into(),
         tows: super::btech_tows::load(c).await?.into(),
-        player_preferences: super::btech_view_preferences::load(c).await?.into(),
+        player_preferences: player_preferences.into(),
+        player_configuration: player_configuration.into(),
+        unit_configuration: super::btech_unit_configuration::load(c).await?.into(),
         seismic_detect_stopped: false,
         skill_thresholds: Default::default(),
         character_values: super::btech_values::load(c).await?.into(),
@@ -139,8 +154,17 @@ pub(super) fn validate_changes(
     expected.sensor_recoveries = after.btech.sensor_recoveries.clone();
     expected.turn_clock = after.btech.turn_clock;
     expected.reactor = after.btech.reactor.clone();
-    for id in crate::btech::wreck_cleanup::retired(before, after)? {
+    // Runtime-only sanction stamps never round-trip through the database.
+    expected.retire_sanctions = after.btech.retire_sanctions.clone();
+    // Administratively unregistered MECH roles dispose the full unit identity; wreck
+    // retirements keep their own stricter admission gate for the remaining candidates.
+    let unregistered = crate::btech::unit_lifecycle::unregistered(before, after);
+    for id in crate::btech::wreck_cleanup::retired(before, after, &unregistered)? {
         crate::btech::wreck_cleanup::forget(&mut expected, id);
+    }
+    for id in &unregistered {
+        crate::btech::wreck_cleanup::forget(&mut expected, *id);
+        crate::btech::unit_lifecycle::forget_configuration(&mut expected, *id);
     }
     crate::btech::map_lifecycle::forget(
         &mut expected,
@@ -179,6 +203,7 @@ pub(super) fn validate_changes(
     // Runtime policy participates in transactions but is not saved in the database.
     expected.tows = after.btech.tows.clone();
     expected.inventories = after.btech.inventories.clone();
+    expected.part_costs = after.btech.part_costs.clone();
     expected.skill_thresholds = after.btech.skill_thresholds.clone();
     expected.weapon_settings = after.btech.weapon_settings.clone();
     expected.seismic_detect_stopped = after.btech.seismic_detect_stopped;
@@ -205,6 +230,24 @@ pub(super) fn validate_changes(
     super::btech_gunner_stations::validate_changes(&mut expected, &after.btech)?;
     super::btech_units::validate_changes(&mut expected, &after.btech)?;
     super::btech_vehicles::validate_changes(&mut expected, &after.btech)?;
+    // A standalone @btech MECH registration carries no unit row until a template
+    // loads, mirroring the reference registrar's raw special object.
+    for (id, kind) in after.btech.registrations() {
+        if kind != "MECH" || expected.registrations().get(id).map(String::as_str) == Some("MECH") {
+            continue;
+        }
+        ensure!(
+            !expected.registrations().contains_key(id),
+            "Object already has BattleTech state"
+        );
+        ensure!(
+            after.objects.get(id).is_some_and(|object| {
+                object.kind == crate::Kind::Thing && !object.flags.contains(crate::Flag::Going)
+            }),
+            "MECH registration requires a live thing object"
+        );
+        std::sync::Arc::make_mut(&mut expected.registrations).insert(*id, "MECH".into());
+    }
     for (&id, recovery) in after.btech.recoveries() {
         std::sync::Arc::make_mut(&mut expected.recoveries).insert(id, recovery.clone());
     }
@@ -214,9 +257,10 @@ pub(super) fn validate_changes(
             .or_default()
             .extend(entries.iter().map(|(name, value)| (name.clone(), *value)));
     }
-    for (&id, &dimensions) in after.btech.player_preferences.iter() {
-        std::sync::Arc::make_mut(&mut expected.player_preferences).insert(id, dimensions);
-    }
+    // These preference records support explicit reset as well as replacement.
+    expected.player_preferences = after.btech.player_preferences.clone();
+    expected.player_configuration = after.btech.player_configuration.clone();
+    expected.unit_configuration = after.btech.unit_configuration.clone();
     for (&id, &profile) in after.btech.characters() {
         std::sync::Arc::make_mut(&mut expected.characters).insert(id, profile);
     }
@@ -228,10 +272,54 @@ pub(super) fn validate_changes(
     Ok(())
 }
 
+/// Insert the MECH registration row for a unit when no registration exists yet.
+///
+/// Both standalone @btech registrations and first construction persist the same
+/// row, so the write is idempotent and never replaces another special type.
+pub(super) async fn ensure_mech_registration(
+    c: &mut SqliteConnection,
+    id: ObjectId,
+) -> Result<bool> {
+    let existing: Option<String> =
+        sqlx::query_scalar("SELECT special_type FROM btech_special_registrations WHERE dbref=?")
+            .bind(id.0)
+            .fetch_optional(&mut *c)
+            .await?;
+    if existing.is_some() {
+        return Ok(false);
+    }
+    sqlx::query("INSERT INTO btech_special_registrations(dbref,special_type) VALUES(?,'MECH')")
+        .bind(id.0)
+        .execute(&mut *c)
+        .await?;
+    Ok(true)
+}
+
 /// Write changed maps after their world objects exist, preserving unowned columns.
 pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World) -> Result<bool> {
     use super::write::{Cell, fields, row};
     let mut changed = super::btech_map_lifecycle::save(c, before, after).await?;
+    // MECH-role teardown removes the whole unit record: the reference snapshot rebuild
+    // drops registration, unit and identity rows together when the special object is
+    // disposed (snapshot_store.c walks the live special-object tree only).
+    let unregistered = crate::btech::unit_lifecycle::unregistered(before, after);
+    if !unregistered.is_empty() {
+        super::btech_units::purge(c, &unregistered).await?;
+        super::btech_vehicles::purge(c, &unregistered).await?;
+        for id in &unregistered {
+            sqlx::query("DELETE FROM btech_mechs WHERE dbref=?")
+                .bind(id.0)
+                .execute(&mut *c)
+                .await?;
+            sqlx::query(
+                "DELETE FROM btech_special_registrations WHERE dbref=? AND special_type='MECH'",
+            )
+            .bind(id.0)
+            .execute(&mut *c)
+            .await?;
+        }
+        changed = true;
+    }
     for (id, kind) in before.btech.registrations() {
         if kind == "DEBUG"
             && after.btech.registrations().get(id).map(String::as_str) != Some("DEBUG")
@@ -257,6 +345,13 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
             .execute(&mut *c)
             .await?;
             changed = true;
+        }
+    }
+    for (id, kind) in after.btech.registrations() {
+        if kind == "MECH"
+            && before.btech.registrations().get(id).map(String::as_str) != Some("MECH")
+        {
+            changed |= ensure_mech_registration(c, *id).await?;
         }
     }
     for (id, map) in after.btech.maps() {
@@ -331,10 +426,13 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     changed |= super::btech_units::save(c, before, after).await?;
     changed |= super::btech_vehicles::save(c, before, after).await?;
     changed |= super::btech_view_preferences::save(c, before, after).await?;
+    changed |= super::btech_player_configuration::save(c, before, after).await?;
+    changed |= super::btech_unit_configuration::save(c, before, after).await?;
     changed |= super::btech_character::save(c, before, after).await?;
     changed |= super::btech_values::save(c, before, after).await?;
     changed |= super::btech_tows::save(c, before, after).await?;
     changed |= super::btech_inventory::save(c, before, after).await?;
+    changed |= super::btech_part_costs::save(c, before, after).await?;
     changed |= super::btech_cargo_bay::save(c, before, after).await?;
     changed |= super::btech_recovery::save(c, before, after).await?;
     changed |= super::btech_reactor::save(c, before, after).await?;

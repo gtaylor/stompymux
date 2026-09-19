@@ -101,7 +101,17 @@ impl BattleUnit {
         let definition = self.definition();
         let loadout = self.loadout()?;
         let clan = definition.has_special("Clan");
-        let engine = self.engine()?;
+        // C derives the engine mass family from technology flags alone
+        // (battle_value.c); reference builds without engine criticals still
+        // produce a value, so fall back to the flag spelling there.
+        let engine = self.engine().unwrap_or_else(|_| {
+            BattleEngine::display_from_flags(
+                definition.has_special("LightEngine_Tech"),
+                definition.has_special("CompactEngine_Tech"),
+                definition.has_special("XXL_Tech"),
+                definition.has_special("XLEngine_Tech"),
+            )
+        });
         let engine_factor = match engine {
             BattleEngine::Light => 0.75,
             BattleEngine::Xl if clan => 0.75,

@@ -174,8 +174,13 @@ pub(super) fn resolve_signed_in_candidate(
         vertical_speed: 0.0,
         fall: None,
     });
-    let mut report =
-        super::vehicle_fall::resolve_material_signed(&mut candidate, id, levels, rules, character)?;
+    let mut report = super::vehicle_fall::resolve_material_signed(
+        &mut candidate,
+        id,
+        i32::from(levels),
+        rules,
+        character,
+    )?;
     if !rules.vehicle_impact.criticals.combat_safe && !super::battle_combat_safe(&candidate, id)? {
         Arc::make_mut(&mut candidate.btech.vehicles)
             .get_mut(&id)

@@ -2,6 +2,7 @@
 use super::*;
 #[derive(Clone)]
 struct View {
+    event_telemetry: std::rc::Rc<std::cell::Cell<crate::BattleEventTelemetry>>,
     world: SharedWorld,
     outbox: Outbox,
     effects: crate::runtime::Effects,
@@ -17,6 +18,7 @@ impl Scripts {
     pub(crate) fn publish_services(&self) {
         self.lua.set_app_data(self.effects.clone());
         self.lua.set_app_data(View {
+            event_telemetry: self.event_telemetry.clone(),
             world: self.world.clone(),
             outbox: self.outbox.clone(),
             effects: self.effects.clone(),
@@ -40,6 +42,7 @@ impl Scripts {
             })?
             .clone();
         Ok(Self {
+            event_telemetry: v.event_telemetry,
             lua: lua.clone(),
             world: v.world,
             outbox: v.outbox,

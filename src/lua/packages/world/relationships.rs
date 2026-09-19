@@ -8,6 +8,10 @@ use crate::{
 use mlua::{Lua, MultiValue, Table, Value};
 use std::sync::Arc;
 
+fn failure(code: &'static str, message: impl ToString) -> mlua::Error {
+    super::super::error::failure(code, message)
+}
+
 /// Decode an actual integer identity, accepting the embedded object wrapper.
 pub(super) fn identity(
     lua: &Lua,
@@ -20,7 +24,7 @@ pub(super) fn identity(
         .objects
         .get(&id)
         .filter(|o| o.kind != Kind::Garbage)
-        .ok_or_else(|| err("object does not exist"))?;
+        .ok_or_else(|| failure("mux.object.invalid", "object does not exist"))?;
     if available && o.flags.contains(Flag::Going) {
         return Err(super::super::error::failure(
             "mux.object.unavailable",
@@ -52,7 +56,14 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
                 "destination" if o.kind == Kind::Exit => o.destination,
                 "zone" => o.zone,
                 "affiliation" => o.affiliation,
-                _ => return Err(err("relationship is not valid for this object type")),
+                _ => {
+                    let message = match key.as_str() {
+                        "home" | "location" => "object is not a thing or player",
+                        "destination" => "object is not an exit",
+                        _ => "unknown relationship",
+                    };
+                    return Err(failure("mux.object.invalid", message));
+                }
             };
             Ok(target.map_or(Value::Nil, |id| Value::Integer(id.0)))
         })?,
@@ -61,10 +72,8 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
     api.set(
         "set_relationship",
         lua.create_function(move |lua, args: MultiValue| {
-            if args.len() != 3 {
-                return Err(err(
-                    "relationship value is required; supply nil explicitly to clear",
-                ));
+            if args.len() < 2 {
+                return Err(err("invalid relationship"));
             }
             let mut args = args.into_iter();
             let object = args.next().unwrap();
@@ -72,40 +81,88 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
                 return Err(err("invalid relationship"));
             };
             let key = key.to_str()?;
-            let value = args.next().unwrap();
+            let Some(value) = args.next() else {
+                let detail = match key.as_ref() {
+                    "destination" => "destination is required; pass nil to unlink",
+                    "home" => "home is required",
+                    "zone" => "zone is required; pass nil to clear",
+                    "affiliation" => "affiliation is required; pass nil to clear",
+                    "lua_parent" => "parent is required; pass nil to clear",
+                    _ => "relationship value is required",
+                };
+                return Err(super::super::error::failure_with_detail(
+                    "mux.arg.invalid",
+                    detail,
+                    serde_json::json!({"argument":2}),
+                ));
+            };
             let mut world = w.borrow_mut();
-            let id = identity(lua, object, &world, true)?;
+            let id = identity(lua, object, &world, false)?;
             let kind = world.objects[&id].kind;
+            if (key.as_ref() == "home" && !matches!(kind, Kind::Thing | Kind::Player))
+                || (key.as_ref() == "destination" && kind != Kind::Exit)
+            {
+                return Err(failure(
+                    "mux.object.invalid",
+                    if key.as_ref() == "home" {
+                        "object is not a thing or player"
+                    } else {
+                        "object is not an exit"
+                    },
+                ));
+            }
+            if world.objects[&id].flags.contains(Flag::Going) {
+                return Err(failure(
+                    "mux.object.unavailable",
+                    if key.as_ref() == "destination" {
+                        "exit is being destroyed"
+                    } else {
+                        "object is being destroyed"
+                    },
+                ));
+            }
             if key.as_ref() == "lua_parent" {
                 let path = match value {
                     Value::Nil => String::new(),
                     Value::String(s) => {
                         let path = s.to_str()?.to_string();
                         if path.is_empty() {
-                            return Err(err("parent must not be empty; use nil to clear"));
+                            return Err(super::super::error::argument_failure(
+                                lua,
+                                2,
+                                "mux.module.invalid",
+                                "module path is empty",
+                            ));
                         }
                         path
                     }
-                    _ => return Err(err("parent must be a string or nil")),
+                    _ => {
+                        return Err(super::super::error::argument_failure(
+                            lua,
+                            2,
+                            "mux.arg.invalid",
+                            "parent must be a string or nil",
+                        ));
+                    }
                 };
                 if !path.is_empty() {
                     lua.app_data_ref::<Arc<Sources>>()
                         .ok_or_else(|| err("source registry unavailable"))?
                         .contains_parent(&path)
-                        .map_err(err)?;
+                        .map_err(|error| failure("mux.module.invalid", error))?;
                 }
                 // An empty string is a malformed path; only explicit nil clears the parent.
                 world.objects.get_mut(&id).unwrap().lua_parent = path;
                 return Ok(());
             }
-            if (key.as_ref() == "home" && !matches!(kind, Kind::Thing | Kind::Player))
-                || (key.as_ref() == "destination" && kind != Kind::Exit)
-            {
-                return Err(err("relationship is not valid for this object type"));
-            }
             let target = if value.is_nil() {
                 if key.as_ref() == "home" {
-                    return Err(err("home is required"));
+                    return Err(super::super::error::argument_failure(
+                        lua,
+                        2,
+                        "mux.object.invalid",
+                        "new_home must be an object that can contain objects",
+                    ));
                 }
                 None
             } else {
@@ -116,13 +173,34 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
                 if matches!(key.as_ref(), "home" | "destination")
                     && !matches!(target_kind, Kind::Room | Kind::Player | Kind::Thing)
                 {
-                    return Err(err("target cannot contain objects"));
+                    return Err(super::super::error::argument_failure(
+                        lua,
+                        2,
+                        "mux.object.invalid",
+                        if key.as_ref() == "home" {
+                            "new_home must be an object that can contain objects"
+                        } else {
+                            "destination must be an object that can contain objects"
+                        },
+                    ));
                 }
                 if key.as_ref() == "home" {
-                    world.validate_move(id, target).map_err(err)?;
+                    if id == target {
+                        return Err(super::super::error::argument_failure(
+                            lua,
+                            2,
+                            "mux.object.invalid",
+                            "object cannot be its own home",
+                        ));
+                    }
                 }
                 if key.as_ref() == "zone" && !matches!(target_kind, Kind::Room | Kind::Thing) {
-                    return Err(err("zone must be a room or thing"));
+                    return Err(super::super::error::argument_failure(
+                        lua,
+                        2,
+                        "mux.object.invalid",
+                        "zone must be a thing or room",
+                    ));
                 }
             }
             let o = world.objects.get_mut(&id).unwrap();
@@ -131,7 +209,7 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
                 "destination" => o.destination = target,
                 "zone" => o.zone = target,
                 "affiliation" => o.affiliation = target,
-                _ => return Err(err("unknown relationship")),
+                _ => return Err(failure("mux.internal", "unknown relationship")),
             }
             Ok(())
         })?,

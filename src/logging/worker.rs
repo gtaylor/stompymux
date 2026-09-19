@@ -21,10 +21,23 @@ const MESSAGE_BYTES: usize = 4094;
 /// An already validated, bounded append request.
 pub struct FileRequest {
     pub(crate) filename: String,
-    pub(crate) message: String,
+    pub(crate) message: Vec<u8>,
 }
 impl FileRequest {
+    pub fn filename(&self) -> &str {
+        &self.filename
+    }
+
+    pub fn message(&self) -> &[u8] {
+        &self.message
+    }
+
     pub fn new(filename: &str, message: &str) -> Result<Self> {
+        Self::new_bytes(filename, message.as_bytes())
+    }
+
+    /// Construct a C-compatible request from a binary-safe Lua message.
+    pub fn new_bytes(filename: &str, message: &[u8]) -> Result<Self> {
         ensure!(
             !filename.is_empty()
                 && filename.len() <= 200
@@ -33,13 +46,16 @@ impl FileRequest {
             "Invalid logfile."
         );
         ensure!(
-            !message.contains('\0'),
+            !message.contains(&0),
             "Log message contains an embedded NUL byte"
         );
-        let n = message.floor_char_boundary(message.len().min(MESSAGE_BYTES));
+        let n = message.len().min(MESSAGE_BYTES);
+        let mut bounded = Vec::with_capacity(n + 1);
+        bounded.extend_from_slice(&message[..n]);
+        bounded.push(b'\n');
         Ok(Self {
             filename: filename.into(),
-            message: format!("{}\n", &message[..n]),
+            message: bounded,
         })
     }
 }
@@ -148,7 +164,7 @@ impl Cache {
                 .insert(r.filename.clone(), Cached { file, last: now });
         }
         let entry = self.files.get_mut(&r.filename).unwrap();
-        if let Err(e) = entry.file.write_all(r.message.as_bytes()) {
+        if let Err(e) = entry.file.write_all(&r.message) {
             self.files.remove(&r.filename);
             return Err(e.into());
         }
@@ -352,6 +368,14 @@ mod tests {
         assert!(cache.files.contains_key("b"));
         cache.expire(now + Duration::from_secs(301));
         assert!(cache.files.is_empty());
+    }
+    #[test]
+    fn binary_file_request_preserves_bytes_and_truncates_before_newline() {
+        let request = FileRequest::new_bytes("binary", &[0xff, b'x']).unwrap();
+        assert_eq!(request.message, vec![0xff, b'x', b'\n']);
+        let request = FileRequest::new_bytes("bounded", &vec![b'x'; MESSAGE_BYTES + 20]).unwrap();
+        assert_eq!(request.message.len(), MESSAGE_BYTES + 1);
+        assert_eq!(request.message.last(), Some(&b'\n'));
     }
     #[tokio::test]
     async fn saturation_and_shutdown_deadline_are_bounded() {

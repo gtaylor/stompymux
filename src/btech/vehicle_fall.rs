@@ -19,7 +19,7 @@ pub struct BattleVehicleFallReport {
     pub character_injury: Option<BattleCharacterPilotInjury>,
     pub direction_roll: u8,
     pub arc: BattleHitArc,
-    pub damage: u16,
+    pub damage: u32,
     pub impacts: Vec<BattleVehicleImpact>,
     pub mines: BattleMineEventReport,
     /// Private protection and neighboring fall checks ordered among notices.
@@ -72,7 +72,7 @@ pub(super) fn resolve_material(
     rules: BattleFallRules,
     character: bool,
 ) -> Result<BattleVehicleFallReport> {
-    let levels = i16::try_from(levels).context("Fall severity exceeds pilot-check range")?;
+    let levels = i32::try_from(levels).context("Fall severity exceeds pilot-check range")?;
     resolve_material_signed(world, id, levels, rules, character)
 }
 
@@ -80,9 +80,20 @@ pub(super) fn resolve_material(
 pub(super) fn resolve_material_signed(
     world: &mut World,
     id: ObjectId,
-    levels: i16,
+    levels: i32,
     rules: BattleFallRules,
     character: bool,
+) -> Result<BattleVehicleFallReport> {
+    resolve_material_signed_with_tonnage(world, id, levels, rules, character, None)
+}
+
+pub(super) fn resolve_material_signed_with_tonnage(
+    world: &mut World,
+    id: ObjectId,
+    levels: i32,
+    rules: BattleFallRules,
+    character: bool,
+    tonnage: Option<u32>,
 ) -> Result<BattleVehicleFallReport> {
     let object = world.objects.get(&id).context("Vehicle is unavailable")?;
     ensure!(
@@ -95,16 +106,24 @@ pub(super) fn resolve_material_signed(
         .vehicles()
         .get(&id)
         .context("Vehicle is unavailable")?;
-    let position = unit.position().context("Vehicle is not placed")?;
-    let map = world
-        .btech
-        .maps()
-        .get(&position.map)
-        .context("Map is unavailable")?;
-    let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-    let below_ice = tile.terrain == Terrain::Ice && unit.elevation_level(tile) < 0;
-    let tons = unit.definition().tons;
-    let gravity = map.uses_special_rules().then_some(map.gravity);
+    let position = unit.position();
+    let tile = position
+        .map(|position| {
+            world
+                .btech
+                .maps()
+                .get(&position.map)
+                .context("Map is unavailable")?
+                .base_hex(i64::from(position.x), i64::from(position.y))
+        })
+        .transpose()?;
+    let below_ice =
+        tile.is_some_and(|tile| tile.terrain == Terrain::Ice && unit.elevation_level(tile) < 0);
+    let tons = tonnage.unwrap_or(u32::from(unit.definition().tons));
+    let gravity = position.and_then(|position| {
+        let map = &world.btech.maps()[&position.map];
+        map.uses_special_rules().then_some(map.gravity)
+    });
     let pilot = unit.pilot();
     let has_pilot = pilot.is_some();
     let safe = rules.vehicle_impact.criticals.combat_safe || unit.combat_safe;
@@ -158,16 +177,21 @@ pub(super) fn resolve_material_signed(
         .get_mut(&id)
         .unwrap();
     unit.orbital_drop = None;
-    unit.ground_elevation =
-        (below_ice && !unit.definition().is_vtol()).then_some(f64::from(tile.surface_height()));
+    unit.ground_elevation = (below_ice && !unit.definition().is_vtol())
+        .then(|| tile.map(|tile| f64::from(tile.surface_height())))
+        .flatten();
     unit.under_bridge = false;
     unit.halt();
-    let check_ice = if character {
-        super::surface_break::check_ice_landing_in_action
+    let ice_break = if position.is_none() {
+        None
     } else {
-        super::surface_break::check_ice_landing
+        let check_ice = if character {
+            super::surface_break::check_ice_landing_in_action
+        } else {
+            super::surface_break::check_ice_landing
+        };
+        check_ice(&mut candidate, id, rules)?.map(Box::new)
     };
-    let ice_break = check_ice(&mut candidate, id, rules)?.map(Box::new);
     if let Some(fracture) = &ice_break {
         super::piloting::append_feedback(
             &mut pilot_notices,
@@ -176,22 +200,36 @@ pub(super) fn resolve_material_signed(
         );
         notices.extend(fracture.notices.iter().cloned());
     }
-    let tile = candidate.btech.maps()[&position.map]
-        .base_hex(i64::from(position.x), i64::from(position.y))?;
+    // C measures fall-damage wetness from the live hex after ice breakage turns
+    // it to water (mech_ice.c break_sub precedes mech_fall's damage roll).
+    let tile = position
+        .map(|position| {
+            candidate
+                .btech
+                .maps()
+                .get(&position.map)
+                .context("Map is unavailable")?
+                .base_hex(i64::from(position.x), i64::from(position.y))
+        })
+        .transpose()?;
     let unit = Arc::make_mut(&mut candidate.btech.vehicles)
         .get_mut(&id)
         .unwrap();
-    let wet = (matches!(
-        tile.terrain,
-        Terrain::Water | Terrain::Ice | Terrain::Bridge
-    ) && unit.elevation_level(tile) < 0)
-        || tile.terrain == Terrain::HighWater;
+    let wet = tile.is_some_and(|tile| {
+        (matches!(
+            tile.terrain,
+            Terrain::Water | Terrain::Ice | Terrain::Bridge
+        ) && unit.elevation_level(tile) < 0)
+            || tile.terrain == Terrain::HighWater
+    });
     let damage = super::fall_profile::damage(tons, levels, wet, gravity)?;
     let direction_roll = unit.dice.d6();
     let (arc, offset) = super::fall_profile::direction(direction_roll)?;
-    let motion = unit.motion.as_mut().context("Vehicle has no motion")?;
-    motion.heading = (motion.heading + f64::from(offset)).rem_euclid(360.0);
-    motion.desired_heading = motion.heading;
+    unit.detached_heading = (unit.heading() + f64::from(offset)).rem_euclid(360.0);
+    if let Some(motion) = unit.motion.as_mut() {
+        motion.heading = unit.detached_heading;
+        motion.desired_heading = motion.heading;
+    }
     let mut impacts = Vec::new();
     let mut remaining = if safe { 0 } else { damage };
     while remaining > 0 {
@@ -223,13 +261,24 @@ pub(super) fn resolve_material_signed(
                 .inferno_remaining = 0;
         }
     }
-    let mines = super::mine_event::resolve(
-        &mut candidate,
-        id,
-        BattleMineTriggerReason::Fall,
-        rules,
-        character,
-    )?;
+    let mines = if position.is_some() {
+        super::mine_event::resolve(
+            &mut candidate,
+            id,
+            BattleMineTriggerReason::Fall,
+            rules,
+            character,
+        )?
+    } else {
+        super::BattleMineEventReport {
+            unit: id,
+            reason: BattleMineTriggerReason::Fall,
+            blasts: Vec::new(),
+            triggers: 0,
+            notices: Vec::new(),
+            pilot_notices: Vec::new(),
+        }
+    };
     super::piloting::append_feedback(
         &mut pilot_notices,
         mines.pilot_notices.iter().cloned(),

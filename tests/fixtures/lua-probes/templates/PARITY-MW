@@ -1,0 +1,31 @@
+Name { Parity MechWarrior }
+Reference { PARITY-MW }
+Type { Mechwarrior }
+Move_Type { Biped }
+Tons { 1 }
+Max_Speed { 10.75 }
+Left_Arm
+Armor { 1 }
+Internals { 1 }
+CRIT_1 { Agra.IS.PPC - - 5 }
+Right_Arm
+Armor { 2 }
+Internals { 1 }
+Left_Torso
+Armor { 3 }
+Internals { 1 }
+Right_Torso
+Armor { 4 }
+Internals { 1 }
+Center_Torso
+Armor { 5 }
+Internals { 1 }
+Left_Leg
+Armor { 6 }
+Internals { 1 }
+Right_Leg
+Armor { 7 }
+Internals { 1 }
+Head
+Armor { 8 }
+Internals { 1 }

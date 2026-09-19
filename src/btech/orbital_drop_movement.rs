@@ -336,8 +336,10 @@ fn touchdown(
             let fall = super::fall::resolve_material(
                 world,
                 id,
-                i16::try_from(landing.fall_levels)
-                    .context("Drop impact exceeds supported severity")?,
+                i32::from(
+                    i16::try_from(landing.fall_levels)
+                        .context("Drop impact exceeds supported severity")?,
+                ),
                 rules,
                 character && world.objects[&id].flags.contains(Flag::InCharacter),
             )?;

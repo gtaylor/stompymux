@@ -31,7 +31,11 @@ async fn public_catalog_and_structured_errors() {
  assert(require('mux')==mux and _native==nil and _connected_players==nil and _parents==nil and _object_parents==nil and mux.world._lock_result==nil)
  assert(mux.error.codes==mux.error.code_tree('mux'))
  assert(tostring(mux.error.codes.object.invalid)=='mux.object.invalid')
- assert(not pcall(function() mux.error.codes.object.invalid='forged' end))
+ local invalid=mux.error.codes.object.invalid
+ mux.error.codes.object.invalid='forged';assert(mux.error.codes.object.invalid=='forged')
+ mux.error.codes.object.invalid=invalid
+ local missing_ok,missing_error=pcall(function() mux.error.codes.object.invented='forged' end)
+ assert(not missing_ok and missing_error.message=='Lua error code nodes are immutable')
  assert(not pcall(function() return mux.error.codes.object.invented end))
  local custom=mux.error.namespace('mygame',{'access.denied','input.invalid'})
  assert(tostring(custom.access.denied)=='mygame.access.denied')
@@ -41,7 +45,9 @@ async fn public_catalog_and_structured_errors() {
  assert(not ok and e.detail==detail and e:is('mygame.access'))
  local wrapped=mux.error.wrap(e,'mygame.outer','outer');assert(wrapped:root()==e)
  local arbitrary={code='mygame.test',x=1};ok,e=mux.error.pcall(function() error(arbitrary) end)
- assert(not ok and e==arbitrary and type(e.traceback)=='string')
+ -- LuaJIT debug.traceback returns non-string messages untouched, so the
+ -- table error itself becomes its own traceback field (lib_debug.c:385-395).
+ assert(not ok and e==arbitrary and e.traceback==arbitrary)
  local yes,a,b,c=mux.error.pcall(function() return 'a',nil,'c' end)
  assert(yes and a=='a' and b==nil and c=='c')
  ok,e=mux.error.pcall(function() error('ordinary') end)
@@ -65,8 +71,8 @@ async fn public_catalog_and_structured_errors() {
  end
  local state=room:state('edge')
  ok,e=pcall(function() state:set_many{oversized=string.rep('x',65537)} end)
- assert(not ok and e:is(mux.error.codes.state.value_too_large))
- assert(not state:has('oversized'))
+ assert(not ok and e:is(mux.error.codes.state.value_too_large),tostring(e)..' '..tostring(e.code))
+ assert(not state:has('oversized'),'oversized state was published')
  "#).unwrap();
 }
 #[tokio::test(flavor = "current_thread")]
@@ -277,7 +283,7 @@ async fn checking_rejects_live_services_with_typed_errors() {
             r#"
         assert(require('mux') == mux and debug == nil and _native == nil)
         assert(type(mux.text.width('test')) == 'number')
-        assert(mux.config.get('server.port'))
+        assert(mux.config.get('port'))
         for _, call in ipairs({
             function() return mux.world.object(1) end,
             function() return mux.world.list_objects() end,
@@ -292,6 +298,24 @@ async fn checking_rejects_live_services_with_typed_errors() {
         }) do
             local ok, e = pcall(call)
             assert(not ok and mux.error.is(e, mux.error.codes.unavailable.checking), tostring(e))
+        end
+        -- C raises per-entry "btech.<qualified_name> is unavailable during
+        -- @lua/check" for every btech binding (btech_package.c:29-33).
+        for _, entry in ipairs({
+            {'unit', 'armor', 'btech.unit.armor is unavailable during @lua/check'},
+            {'unit', 'set_movement_type', 'btech.unit.set_movement_type is unavailable during @lua/check'},
+            {'template', 'exists', 'btech.template.exists is unavailable during @lua/check'},
+            {'map', 'inspect', 'btech.map.inspect is unavailable during @lua/check'},
+            {'parts', 'resolve', 'btech.parts.resolve is unavailable during @lua/check'},
+            {'system', 'units_in_zone', 'btech.system.units_in_zone is unavailable during @lua/check'},
+            {'character', 'value', 'btech.character.value is unavailable during @lua/check'},
+            {'repair', 'apply', 'btech.repair.apply is unavailable during @lua/check'},
+            {'unit', 'fire', 'btech.unit.fire is unavailable during @lua/check'},
+            {'unit', 'scan_hex', 'btech.unit.scan_hex is unavailable during @lua/check'},
+        }) do
+            local ok, e = pcall(btech[entry[1]][entry[2]])
+            assert(not ok and mux.error.is(e, mux.error.codes.unavailable.checking)
+                and e.message == entry[3], tostring(e))
         end
     "#,
         )
@@ -566,7 +590,11 @@ async fn maintenance_manual_going_player_uses_nothing_cause() {
 /// A failure in the complete evacuation path restores the live graph and staged effects.
 #[tokio::test(flavor = "current_thread")]
 async fn maintenance_evacuation_provider_failure_rolls_back_every_effect() {
-    let (_d, _c, s) = fixture().await;
+    let (_d, c, s) = fixture().await;
+    // C log_to_file only admits names of pre-existing writable files under
+    // logs/ (server/log.c access check), so create the audit log for staging.
+    std::fs::create_dir_all(c.root.join("logs")).unwrap();
+    std::fs::write(c.root.join("logs/audit.log"), b"").unwrap();
     let parents: mlua::Table = s.inspect_lua().named_registry_value("mux.parents").unwrap();
     s.inspect_lua()
         .globals()
@@ -589,12 +617,11 @@ async fn maintenance_evacuation_provider_failure_rolls_back_every_effect() {
     .unwrap();
     let before = serde_json::to_value(&*s.world()).unwrap();
     s.drain_outbox();
-    assert!(
-        s.eval_callback::<()>("mux.world.destroy_object(doomed);mux.check_db()")
-            .unwrap_err()
-            .to_string()
-            .contains("evacuation failed")
-    );
+    let failure = s
+        .eval_callback::<()>("mux.world.destroy_object(doomed);mux.check_db()")
+        .unwrap_err();
+    let text = format!("{failure:#}");
+    assert!(text.contains("evacuation failed"), "{text}");
     assert_eq!(before, serde_json::to_value(&*s.world()).unwrap());
     assert!(s.outbox().is_empty());
     assert!(s.drain_logs_for_inspection().is_empty());

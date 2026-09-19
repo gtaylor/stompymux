@@ -1,536 +1,1384 @@
 [
   {
-    "symbol": "mux.comsys.channel",
-    "arguments": "name",
+    "symbol": "Channel:add_player",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "player, alias, quiet",
+    "returns": [],
     "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.comsys.create_channel",
-    "arguments": "name",
-    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.comsys.destroy_channel",
-    "arguments": "channel",
-    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.comsys.list_channels",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Channel:name",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Channel:object",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Channel:user_count",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Channel:max_user_count",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Channel:message_count",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Channel:set_object",
-    "arguments": "object",
-    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Channel:emit",
-    "arguments": "message, options",
-    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Channel:who",
-    "arguments": "options",
-    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+    "contract": "Adds a player to this channel with a player-local command alias. The trusted operation bypasses the channel join lock. A quiet join suppresses only the channel-wide announcement; direct confirmations are still sent to the player. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`mux.error.codes.internal`](lua://mux.error.codes.internal).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
   },
   {
     "symbol": "Channel:boot_player",
+    "kind": "callable",
+    "package": "mux.userdata",
     "arguments": "object",
+    "returns": [],
     "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+    "contract": "Announces a God-administered boot and removes a current member's channel aliases using the native side-effect path. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Channel:emit",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "message, options",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "Emits an administrative channel message through native delivery, history, receive-lock, and message-count behavior. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
   },
   {
     "symbol": "Channel:flags",
+    "kind": "callable",
+    "package": "mux.userdata",
     "arguments": "",
+    "returns": [
+      "ChannelFlags flags"
+    ],
     "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_channel_flag_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+    "contract": "Opens the live administrative flag collection for this channel. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
   },
   {
-    "symbol": "ChannelFlags:list",
+    "symbol": "Channel:max_user_count",
+    "kind": "callable",
+    "package": "mux.userdata",
     "arguments": "",
-    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_channel_flag_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+    "returns": [
+      "integer count"
+    ],
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "Returns the channel's currently allocated membership capacity. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
   },
   {
-    "symbol": "ChannelFlags:has",
-    "arguments": "flag",
-    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_channel_flag_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+    "symbol": "Channel:message_count",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "integer count"
+    ],
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "Returns the channel's lifetime delivered-message count. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Channel:name",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "string name"
+    ],
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "Returns the channel's exact name. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Channel:object",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "Object? object The attached object, or nil when none is attached."
+    ],
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "Returns the object that supplies the channel description and locks. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Channel:set_object",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "object",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "Attaches an object that supplies channel locks and description, or detaches the current object when passed nil. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `object` is omitted, [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Channel:user_count",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "integer count"
+    ],
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "Returns the number of channel membership records. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Channel:who",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "options",
+    "returns": [
+      "ChannelMember[] members"
+    ],
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "Returns channel membership records. By default the native active-member filter is applied; `options.all` includes inactive records. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
   },
   {
     "symbol": "ChannelFlags:add",
+    "kind": "callable",
+    "package": "mux.userdata",
     "arguments": "flag",
+    "returns": [
+      "boolean changed Whether the flag changed from unset to set."
+    ],
     "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_channel_flag_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+    "contract": "Sets a typed channel flag. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.channel_flag.invalid`](lua://mux.error.codes.channel_flag.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "ChannelFlags:has",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "flag",
+    "returns": [
+      "boolean present"
+    ],
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_channel_flag_bindings.c",
+    "contract": "Tests whether the channel has a typed flag. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.channel_flag.invalid`](lua://mux.error.codes.channel_flag.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "ChannelFlags:list",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "ChannelFlag[] flags"
+    ],
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_channel_flag_bindings.c",
+    "contract": "Lists set flags in `PUBLIC`, `LOUD`, `TRANSPARENT` order. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
   },
   {
     "symbol": "ChannelFlags:remove",
+    "kind": "callable",
+    "package": "mux.userdata",
     "arguments": "flag",
+    "returns": [
+      "boolean changed Whether the flag changed from set to unset."
+    ],
     "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_channel_flag_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Channel:add_player",
-    "arguments": "player, alias, quiet",
-    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_channel_membership_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.config.get",
-    "arguments": "name",
-    "reference": "src/mux/lua/packages/mux/config/mux_config_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.error.new",
-    "arguments": "fields",
-    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.error.raise",
-    "arguments": "code, message, detail",
-    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.error.is",
-    "arguments": "value, code",
-    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.error.check",
-    "arguments": "value, err",
-    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.error.wrap",
-    "arguments": "err, code, message",
-    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.error.namespace",
-    "arguments": "prefix, names",
-    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.error.code_tree",
-    "arguments": "root",
-    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.error.pcall",
-    "arguments": "fn, ...",
-    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.check_db",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/mux_package.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.log",
-    "arguments": "filename, message",
-    "reference": "src/mux/lua/packages/mux/mux_package.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.session.flow_start",
-    "arguments": "descriptor, module, first_step",
-    "reference": "src/mux/lua/packages/mux/session/mux_session_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.session.connected_players",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/session/mux_session_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.session.who_summary",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/session/mux_session_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.telnet.environment_has",
-    "arguments": "descriptor, kind, name",
-    "reference": "src/mux/lua/packages/mux/telnet/mux_telnet_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.telnet.environment_get",
-    "arguments": "descriptor, kind, name",
-    "reference": "src/mux/lua/packages/mux/telnet/mux_telnet_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.text.markup",
-    "arguments": "value",
-    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.text.is_printable_ascii",
-    "arguments": "value",
-    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.text.style",
-    "arguments": "value, options",
-    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.text.strip_style",
-    "arguments": "value",
-    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.text.width",
-    "arguments": "value",
-    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.text.truncate",
-    "arguments": "value, width",
-    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:flags",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:powers",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Flags:list",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Powers:list",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Flags:has",
-    "arguments": "flag",
-    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Powers:has",
-    "arguments": "power",
-    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Flags:add",
-    "arguments": "flag",
-    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Flags:remove",
-    "arguments": "flag",
-    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Powers:add",
-    "arguments": "power",
-    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Powers:remove",
-    "arguments": "power",
-    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.world.lock_passes",
-    "arguments": "options",
-    "reference": "src/mux/lua/packages/mux/world/mux_lock_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.world.object",
-    "arguments": "dbref",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:contents",
-    "arguments": "options",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:name",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:description",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:internal_description",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:set_description",
-    "arguments": "description",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:set_internal_description",
-    "arguments": "description",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:dbref",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:type",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:set_name",
-    "arguments": "name",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:destination",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:set_destination",
-    "arguments": "destination",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:home",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:set_home",
-    "arguments": "new_home",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:location",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:zone",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:set_zone",
-    "arguments": "zone",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:affiliation",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:set_affiliation",
-    "arguments": "affiliation",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:lua_parent",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:set_lua_parent",
-    "arguments": "parent",
-    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "Object:state",
-    "arguments": "namespace",
-    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "State:get",
-    "arguments": "key, default",
-    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "State:has",
-    "arguments": "key",
-    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "State:set",
-    "arguments": "key, value",
-    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "State:delete",
-    "arguments": "key",
-    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "State:keys",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "State:entries",
-    "arguments": "",
-    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "State:get_many",
-    "arguments": "keys",
-    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "State:set_many",
-    "arguments": "values",
-    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.world.list_objects",
-    "arguments": "options",
-    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.world.create_object",
-    "arguments": "options",
-    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.world.teleport_object",
-    "arguments": "options",
-    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.world.destroy_object",
-    "arguments": "object, options",
-    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
-  },
-  {
-    "symbol": "mux.world.pemit",
-    "arguments": "object, message",
-    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
-    "contract": "C implementation; Rust transaction/output extensions are listed in docs/lua-api-parity.md"
+    "contract": "Clears a typed channel flag. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid), or [`mux.error.codes.channel_flag.invalid`](lua://mux.error.codes.channel_flag.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
   },
   {
     "symbol": "Error:is",
+    "kind": "callable",
+    "package": "mux.userdata",
     "arguments": "code",
+    "returns": [
+      "boolean matches"
+    ],
     "reference": "src/mux/lua/lua_error.c",
-    "contract": "C implementation; bounded traceback/resource handling"
+    "contract": "Tests this error's code using dotted-prefix matching.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
   },
   {
     "symbol": "Error:root",
+    "kind": "callable",
+    "package": "mux.userdata",
     "arguments": "",
+    "returns": [
+      "any root"
+    ],
     "reference": "src/mux/lua/lua_error.c",
-    "contract": "C implementation; bounded traceback/resource handling"
+    "contract": "Returns the deepest table-valued cause, or this error when it has none.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Flags:add",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "flag",
+    "returns": [
+      "boolean changed"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "Adds a flag and reports whether the object changed. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.flag.invalid`](lua://mux.error.codes.flag.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Flags:has",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "flag",
+    "returns": [
+      "boolean present"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "Tests whether this object has a flag. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) or [`mux.error.codes.flag.invalid`](lua://mux.error.codes.flag.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Flags:list",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "Flag[] values"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "Lists set flags in native registry order. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Flags:remove",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "flag",
+    "returns": [
+      "boolean changed"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "Removes a flag and reports whether the object changed. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.flag.invalid`](lua://mux.error.codes.flag.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:affiliation",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "Object? affiliation Assigned affiliation."
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "Returns this object's assigned affiliation, or nil when none is assigned or the affiliate is being destroyed. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) for an invalid receiver or stored affiliation.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:contents",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "options",
+    "returns": [
+      "Object[] contents"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "Returns matching objects directly contained by or attached to this object. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:dbref",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "DbRef dbref"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "Returns this object's native database reference. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:description",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "string? description"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "Returns this object's styled description, or nil when it is unset. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) for a stale Object.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:destination",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "Object? destination"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "Returns this exit's destination, or nil when it is unlinked or the destination is being destroyed. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when the receiver is not an exit or its stored destination is invalid.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:flags",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "Flags flags"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "Creates a handle for this object's flags. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) or [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:home",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "Object? home"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "Returns this thing or player's home, or nil when no home is assigned or the home is being destroyed. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when the receiver is not a thing or player or its stored home is invalid.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:internal_description",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "string? description"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "Returns this object's styled internal description, or nil when it is unset. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) for a stale Object.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:location",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "Object? location"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "Returns this thing or player's current location, or nil when no location is assigned or the location is being destroyed. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when the receiver is not a thing or player or its stored location is invalid.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:lua_parent",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "string? parent `object_logic`-relative parent path."
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "Returns this object's direct Lua parent path, or nil when none is assigned. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:name",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "string name"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "Returns this object's current stored name. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:powers",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "Powers powers"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "Creates a handle for this object's powers. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) or [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:set_affiliation",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "affiliation",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "Assigns this object's affiliation, or clears it when `affiliation` is nil. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `affiliation` is omitted, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) for an invalid reference, or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable) when either object is being destroyed.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:set_description",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "description",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "Sets this object's styled description. Nil or an empty string clears it. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) for a stale Object, [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable) when the object is being destroyed, or [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) for text that is too long or has invalid UTF-8 or styled-text markup.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:set_destination",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "destination",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "Sets this exit's destination, or clears it when `destination` is nil. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `destination` is omitted, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when the receiver is not an exit or the destination cannot contain objects, or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable) when the receiver or destination is being destroyed.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:set_home",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "new_home",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "Sets this thing or player's home to a live object capable of containing objects. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `new_home` is omitted, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) when the receiver is not a thing or player, the home cannot contain objects, or the object would be its own home, or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable) when the receiver or home is being destroyed.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:set_internal_description",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "description",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "Sets this object's styled internal description. Nil or an empty string clears it. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) during `@lua/check`, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) for a stale Object, [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable) when the object is being destroyed, or [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) for text that is too long or has invalid UTF-8 or styled-text markup.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:set_lua_parent",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "parent",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "Assigns this object's direct Lua parent path, or clears it when `parent` is nil. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `parent` is omitted or malformed, [`mux.error.codes.module.invalid`](lua://mux.error.codes.module.invalid) for an invalid or unavailable path, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:set_name",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "name",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "Changes this object's name using native object-name validation. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:set_zone",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "zone",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "Assigns this object's zone, or clears it when `zone` is nil. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid) when `zone` is omitted, [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:state",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "namespace",
+    "returns": [
+      "State state"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "Creates a persistent-state handle for an exact, case-sensitive namespace. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.state.invalid`](lua://mux.error.codes.state.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:type",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "ObjectType? type"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "Returns this object's native object type. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Object:zone",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "Object? zone Assigned zone."
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_relationship_bindings.c",
+    "contract": "Returns this object's assigned zone, or nil when no zone is assigned or the zone is being destroyed. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Powers:add",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "power",
+    "returns": [
+      "boolean changed"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "Grants a power and reports whether the object changed. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), or [`mux.error.codes.power.invalid`](lua://mux.error.codes.power.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Powers:has",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "power",
+    "returns": [
+      "boolean present"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "Tests whether this object has a power. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) or [`mux.error.codes.power.invalid`](lua://mux.error.codes.power.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Powers:list",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "Power[] values"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "Lists granted powers in native registry order. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "Powers:remove",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "power",
+    "returns": [
+      "boolean changed"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_flag_power_bindings.c",
+    "contract": "Removes a power and reports whether the object changed. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), or [`mux.error.codes.power.invalid`](lua://mux.error.codes.power.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "State:delete",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "key",
+    "returns": [
+      "boolean existed"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "Deletes a state key and reports whether it existed. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.state.invalid`](lua://mux.error.codes.state.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "State:entries",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "StateEntry[] entries"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "Lists key/value records sorted by key. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.state.unavailable`](lua://mux.error.codes.state.unavailable).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "State:get",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "key, default",
+    "returns": [
+      "StateValue|T|nil value"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "Gets a stored value, an optional default, or nil. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid) or [`mux.error.codes.state.invalid`](lua://mux.error.codes.state.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "State:get_many",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "keys",
+    "returns": [
+      "table<string, StateValue> values"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "Returns only the requested keys that are present. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.state.invalid`](lua://mux.error.codes.state.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "State:has",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "key",
+    "returns": [
+      "boolean exists"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "Tests whether a state key is present. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.state.invalid`](lua://mux.error.codes.state.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "State:keys",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "",
+    "returns": [
+      "string[] keys"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "Lists keys sorted in native key order. Raises [`mux.error.codes.state.unavailable`](lua://mux.error.codes.state.unavailable) outside a callback transaction or if state changes while enumerating.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "State:set",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "key, value",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "Sets a supported value, or deletes the key when `value` is nil. The `value` argument is required; omission raises [`mux.error.codes.state.invalid`](lua://mux.error.codes.state.invalid). Raises invalid-object/key/value errors or [`mux.error.codes.state.value_too_large`](lua://mux.error.codes.state.value_too_large).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "State:set_many",
+    "kind": "callable",
+    "package": "mux.userdata",
+    "arguments": "values",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/world/mux_state_bindings.c",
+    "contract": "Applies several persistent state updates. Use `State:set` or `State:delete` for removals. Raises [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.state.invalid`](lua://mux.error.codes.state.invalid), [`mux.error.codes.state.value_too_large`](lua://mux.error.codes.state.value_too_large).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.check_db",
+    "kind": "callable",
+    "package": "mux",
+    "arguments": "",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/mux_package.c",
+    "contract": "Checks the database for inconsistencies and repairs damage found by the default native `@dbck` pass. Findings are written to the server log. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.comsys.channel",
+    "kind": "callable",
+    "package": "mux.comsys",
+    "arguments": "name",
+    "returns": [
+      "Channel channel"
+    ],
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "Retrieves an existing communication channel by case-insensitive name. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.comsys.create_channel",
+    "kind": "callable",
+    "package": "mux.comsys",
+    "arguments": "name",
+    "returns": [
+      "Channel channel"
+    ],
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "Creates a private communication channel using the native channel-name rules. Names must be non-empty printable ASCII, contain no spaces, and be shorter than 50 bytes. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid) when the name already exists.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.comsys.destroy_channel",
+    "kind": "callable",
+    "package": "mux.comsys",
+    "arguments": "channel",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "Permanently removes a live channel and its membership storage. The supplied handle and every flag handle derived from it become stale. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.channel.invalid`](lua://mux.error.codes.channel.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.comsys.list_channels",
+    "kind": "callable",
+    "package": "mux.comsys",
+    "arguments": "",
+    "returns": [
+      "Channel[] channels"
+    ],
+    "reference": "src/mux/lua/packages/mux/comsys/mux_comsys_bindings.c",
+    "contract": "Lists every live communication channel in case-insensitive name order, with original spelling used as the tie-breaker. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.internal`](lua://mux.error.codes.internal) if the native registry count changes while it is copied.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.config.get",
+    "kind": "callable",
+    "package": "mux.config",
+    "arguments": "name",
+    "returns": [
+      "ConfigValue value Current value represented by its native Lua scalar type."
+    ],
+    "reference": "src/mux/lua/packages/mux/config/mux_config_bindings.c",
+    "contract": "Returns the live scalar value of an exact, case-sensitive configuration directive. Raises [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.config.not_found`](lua://mux.error.codes.config.not_found), [`mux.error.codes.config.unsupported`](lua://mux.error.codes.config.unsupported), or [`mux.error.codes.internal`](lua://mux.error.codes.internal).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.error.check",
+    "kind": "callable",
+    "package": "mux.error",
+    "arguments": "value, err",
+    "returns": [
+      "T value"
+    ],
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "Returns a truthy value unchanged or raises `err` unchanged. Raises `err` unchanged when `value` is false or nil.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.error.code_tree",
+    "kind": "callable",
+    "package": "mux.error",
+    "arguments": "root",
+    "returns": [
+      "ErrorCodeTree codes"
+    ],
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "Returns the cached checked native code tree for a root. Raises [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.error.is",
+    "kind": "callable",
+    "package": "mux.error",
+    "arguments": "value, code",
+    "returns": [
+      "boolean matches"
+    ],
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "Tests a table's code using exact or dotted-prefix matching. Raises an ordinary Lua type error when `code` cannot be converted to a string.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.error.namespace",
+    "kind": "callable",
+    "package": "mux.error",
+    "arguments": "prefix, names",
+    "returns": [
+      "ErrorCodeTree codes"
+    ],
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "Builds a checked code-symbol tree for an author-defined namespace. Raises [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.error.new",
+    "kind": "callable",
+    "package": "mux.error",
+    "arguments": "fields",
+    "returns": [
+      "Error error"
+    ],
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "Creates a structured error without raising it.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.error.pcall",
+    "kind": "callable",
+    "package": "mux.error",
+    "arguments": "fn, ...",
+    "returns": [
+      "true, R..."
+    ],
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "Calls a function, returning all results on success or a normalized traced error.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.error.raise",
+    "kind": "callable",
+    "package": "mux.error",
+    "arguments": "code, message, detail",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "Raises a structured error with the requested code. Raises the requested code. Ordinary Lua type errors are raised when `code` or `message` cannot be converted to a string.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.error.wrap",
+    "kind": "callable",
+    "package": "mux.error",
+    "arguments": "err, code, message",
+    "returns": [
+      "Error error"
+    ],
+    "reference": "src/mux/lua/packages/mux/error/mux_error_bindings.c",
+    "contract": "Wraps a failure as the cause of a new structured error. Non-error causes are normalized to [`mux.error.codes.runtime`](lua://mux.error.codes.runtime). Ordinary Lua type errors are raised when `code` or `message` cannot be converted to a string.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.log",
+    "kind": "callable",
+    "package": "mux",
+    "arguments": "filename, message",
+    "returns": [
+      "boolean written"
+    ],
+    "reference": "src/mux/lua/packages/mux/mux_package.c",
+    "contract": "Appends a newline-terminated message to a permitted file under `game/logs`. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.session.connected_players",
+    "kind": "callable",
+    "package": "mux.session",
+    "arguments": "",
+    "returns": [
+      "Connection[] players"
+    ],
+    "reference": "src/mux/lua/packages/mux/session/mux_session_bindings.c",
+    "contract": "Lists connected players visible to the ordinary WHO command.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.session.flow_start",
+    "kind": "callable",
+    "package": "mux.session",
+    "arguments": "descriptor, module, first_step",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/session/mux_session_bindings.c",
+    "contract": "Attaches an interactive flow to a descriptor and displays its first prompt. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.connection.invalid`](lua://mux.error.codes.connection.invalid), [`mux.error.codes.connection.unavailable`](lua://mux.error.codes.connection.unavailable), or [`mux.error.codes.module.invalid`](lua://mux.error.codes.module.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.session.who_summary",
+    "kind": "callable",
+    "package": "mux.session",
+    "arguments": "",
+    "returns": [
+      "WhoSummary summary"
+    ],
+    "reference": "src/mux/lua/packages/mux/session/mux_session_bindings.c",
+    "contract": "Returns the non-privileged WHO summary.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.telnet.environment_get",
+    "kind": "callable",
+    "package": "mux.telnet",
+    "arguments": "descriptor, kind, name",
+    "returns": [
+      "string? value Binary-safe value, or nil when the variable is absent."
+    ],
+    "reference": "src/mux/lua/packages/mux/telnet/mux_telnet_bindings.c",
+    "contract": "Gets a binary-safe RFC 1572 NEW-ENVIRON value. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.connection.invalid`](lua://mux.error.codes.connection.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.telnet.environment_has",
+    "kind": "callable",
+    "package": "mux.telnet",
+    "arguments": "descriptor, kind, name",
+    "returns": [
+      "boolean defined Whether the variable is present, including with an empty value."
+    ],
+    "reference": "src/mux/lua/packages/mux/telnet/mux_telnet_bindings.c",
+    "contract": "Tests whether a binary-safe RFC 1572 NEW-ENVIRON variable is defined. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking) or [`mux.error.codes.connection.invalid`](lua://mux.error.codes.connection.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.text.is_printable_ascii",
+    "kind": "callable",
+    "package": "mux.text",
+    "arguments": "value",
+    "returns": [
+      "boolean printable"
+    ],
+    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
+    "contract": "Tests whether every byte is printable ASCII (0x20 through 0x7e).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.text.markup",
+    "kind": "callable",
+    "package": "mux.text",
+    "arguments": "value",
+    "returns": [
+      "string markup"
+    ],
+    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
+    "contract": "Validates styled-text markup and returns it unchanged. Raises [`mux.error.codes.text.invalid`](lua://mux.error.codes.text.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.text.strip_style",
+    "kind": "callable",
+    "package": "mux.text",
+    "arguments": "value",
+    "returns": [
+      "string plain"
+    ],
+    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
+    "contract": "Removes styled-text markup and ANSI styling.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.text.style",
+    "kind": "callable",
+    "package": "mux.text",
+    "arguments": "value, options",
+    "returns": [
+      "string styled"
+    ],
+    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
+    "contract": "Wraps text in markup described by the supplied style options. Raises [`mux.error.codes.text.invalid`](lua://mux.error.codes.text.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.text.truncate",
+    "kind": "callable",
+    "package": "mux.text",
+    "arguments": "value, width",
+    "returns": [
+      "string truncated"
+    ],
+    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
+    "contract": "Safely truncates styled text to a non-negative visible byte width. Raises [`mux.error.codes.text.invalid`](lua://mux.error.codes.text.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.text.width",
+    "kind": "callable",
+    "package": "mux.text",
+    "arguments": "value",
+    "returns": [
+      "integer width"
+    ],
+    "reference": "src/mux/lua/packages/mux/text/mux_text_bindings.c",
+    "contract": "Measures visible byte width, excluding markup and ANSI styling.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.world.create_object",
+    "kind": "callable",
+    "package": "mux.world",
+    "arguments": "options",
+    "returns": [
+      "Object object Newly created object."
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
+    "contract": "Creates a room, thing, or exit selected by a typed object-kind constant. Rooms are detached; things require a container and receive a home; exits require a source and may be linked to a destination. Unknown fields and fields that do not apply to the selected type are rejected. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable), or [`mux.error.codes.internal`](lua://mux.error.codes.internal) if a validated object kind reaches an unsupported native creation branch.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.world.destroy_object",
+    "kind": "callable",
+    "package": "mux.world",
+    "arguments": "object, options",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
+    "contract": "Silently schedules a live object for destruction by the normal maintenance purge. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable), or [`mux.error.codes.internal`](lua://mux.error.codes.internal) for an unexpected native destruction result.",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.world.list_objects",
+    "kind": "callable",
+    "package": "mux.world",
+    "arguments": "options",
+    "returns": [
+      "Object[] objects Matching objects in ascending dbref order."
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
+    "contract": "Lists database objects matching optional type and direct-zone filters. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.world.lock_passes",
+    "kind": "callable",
+    "package": "mux.world",
+    "arguments": "options",
+    "returns": [
+      "boolean passes Whether the selected lock passes."
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_lock_bindings.c",
+    "contract": "Tests a native object lock without emitting lock messages or performing the associated action. The lock runs with a silent callback context. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.world.object",
+    "kind": "callable",
+    "package": "mux.world",
+    "arguments": "dbref",
+    "returns": [
+      "Object object"
+    ],
+    "reference": "src/mux/lua/packages/mux/world/mux_object_bindings.c",
+    "contract": "Creates a validated object handle from a dbref or existing handle. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.world.pemit",
+    "kind": "callable",
+    "package": "mux.world",
+    "arguments": "object, message",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
+    "contract": "Sends valid UTF-8 text to an object. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.connection.invalid`](lua://mux.error.codes.connection.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
+  },
+  {
+    "symbol": "mux.world.teleport_object",
+    "kind": "callable",
+    "package": "mux.world",
+    "arguments": "options",
+    "returns": [],
+    "reference": "src/mux/lua/packages/mux/world/mux_world_bindings.c",
+    "contract": "Teleports a thing or player through the native movement path. Raises [`mux.error.codes.unavailable.checking`](lua://mux.error.codes.unavailable.checking), [`mux.error.codes.arg.invalid`](lua://mux.error.codes.arg.invalid), [`mux.error.codes.object.invalid`](lua://mux.error.codes.object.invalid), or [`mux.error.codes.object.unavailable`](lua://mux.error.codes.object.unavailable).",
+    "status": "actionable",
+    "prerequisite": "",
+    "rust_evidence": "Rust binding is present; per-callable C contract audit is still pending",
+    "acceptance": "compare argument conversion, return count/shape, structured errors, and state/output effects against the pinned C contract",
+    "accepted_difference_ids": []
   }
 ]

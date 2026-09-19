@@ -389,7 +389,7 @@ async fn forest_entry_replays_pilot_avoidance_and_one_level_crashes() {
             );
             assert_eq!(
                 fall.as_ref().unwrap().damage,
-                (unit.definition().tons + 5) / 10
+                u32::from((unit.definition().tons + 5) / 10)
             );
             assert_eq!(unit.position().unwrap().y, 1);
             assert_eq!(

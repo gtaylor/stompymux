@@ -1970,7 +1970,7 @@ async fn tcp_dbck_relocation_callbacks_rollback_and_context() {
     w.accounts.get_mut(&ObjectId(2)).unwrap().hash = Some(accounts::hash("secret", &c).unwrap());
     w.objects.get_mut(&ObjectId(2)).unwrap().location = Some(ObjectId(c.start()));
     w.objects.get_mut(&ObjectId(2)).unwrap().home = Some(ObjectId(0));
-    for id in [c.start(), 0] {
+    for id in [c.start(), 0, 2] {
         w.objects.get_mut(&ObjectId(id)).unwrap().lua_parent = "repair_hooks.lua".into();
     }
     persistence::save(&c.database(), &w).await.unwrap();
@@ -1987,9 +1987,10 @@ async fn tcp_dbck_relocation_callbacks_rollback_and_context() {
       end},commands={{name='allow-repair',permission='wizard',pattern='^allow%-repair$',handler=function(ctx)
         repair_allowed=true;mux.world.pemit(ctx.enactor,'Repair enabled.');return true
       end}}}"#).unwrap();
-    std::fs::write(d.path().join("lua/global_logic/repair_control.lua"), r#"return {commands={{name='allow-repair',permission='wizard',pattern='^allow%-repair$',handler=function(ctx)
-      repair_allowed=true;mux.world.pemit(ctx.enactor,'Repair enabled.');return true
-    end}}}"#).unwrap();
+    // The corruption detaches the wizard's location at load, so room-scoped
+    // commands are unreachable; the module is also the wizard's parent, making
+    // allow-repair dispatchable through the player source while the flag and
+    // the on_enter check stay in one module's isolated environment.
     let running = Running::start(&c).await;
     let mut wizard = Client::connect(&running).await;
     wizard.login("#2").await;
@@ -3202,8 +3203,8 @@ async fn tcp_lua_parent_check_reload_and_default_exit() {
     let (d, c) = populated().await;
     let package = d.path().join("lua/packages/reload_value.lua");
     let module = d.path().join("lua/global_logic/reload_probe.lua");
-    std::fs::write(&package, "return 'VERSION_ONE'").unwrap();
-    std::fs::write(&module,r#"local value=require('reload_value');return {
+    std::fs::write(&package, "return {value='VERSION_ONE'}").unwrap();
+    std::fs::write(&module,r#"local value=require('reload_value').value;return {
       commands={{name='reload-probe',permission='everyone',pattern='^reload%-probe$',handler=function(ctx)
         assert(mux.world.object(ctx.enactor):flags():has(mux.world.flags.CONNECTED));mux.world.pemit(ctx.enactor,value);return true end}},
       events={on_server_startup=function() local s=mux.world.object(1):state('startup');s:set('count',s:get('count',0)+1) end}
@@ -3273,7 +3274,7 @@ async fn tcp_lua_parent_check_reload_and_default_exit() {
     alice.until("Starter Room").await;
     wizard.send("@lua/check").await;
     wizard.until("All Lua module checks passed.").await;
-    std::fs::write(&package, "return 'VERSION_TWO'").unwrap();
+    std::fs::write(&package, "return {value='VERSION_TWO'}").unwrap();
     alice.send("reload-probe").await;
     alice.until("VERSION_ONE").await;
     std::fs::write(

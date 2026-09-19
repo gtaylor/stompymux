@@ -1,0 +1,36 @@
+Name { Parity Probe }
+Reference { PARITY }
+Type { Mech }
+Move_Type { Biped }
+Tons { 75 }
+Heat_Sinks { 10 }
+Max_Speed { 64.50 }
+Specials { ICEEngine_Tech }
+Left_Arm
+Armor { 10 }
+Internals { 5 }
+CRIT_1-3 { Agra.IS.PPC - - 5 }
+Right_Arm
+Armor { 11 }
+Internals { 6 }
+Left_Torso
+Armor { 12 }
+Internals { 7 }
+Rear { 3 }
+Right_Torso
+Armor { 13 }
+Internals { 8 }
+Rear { 4 }
+Center_Torso
+Armor { 20 }
+Internals { 12 }
+Rear { 5 }
+Left_Leg
+Armor { 14 }
+Internals { 9 }
+Right_Leg
+Armor { 15 }
+Internals { 10 }
+Head
+Armor { 9 }
+Internals { 3 }

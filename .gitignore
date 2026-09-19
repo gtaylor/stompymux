@@ -88,3 +88,5 @@
 /docs/resources/
 
 /.claude/settings.local.json
+
+tools/__pycache__/

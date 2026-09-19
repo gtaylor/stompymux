@@ -35,6 +35,15 @@ impl AsRef<str> for BattlePreferredId {
 
 /// Read the configured preference without substituting the current battlefield ID.
 pub fn preferred_id(world: &World, id: ObjectId) -> Result<Option<&str>> {
+    if let Some(value) = world
+        .btech
+        .unit_configuration
+        .get(&id)
+        .and_then(|configuration| configuration.preferred_id.as_deref())
+        .filter(|value| !value.is_empty())
+    {
+        return Ok(Some(value));
+    }
     if let Some(unit) = world.btech.vehicles().get(&id) {
         return Ok(unit.preferred_id.as_ref().map(AsRef::as_ref));
     }
@@ -60,6 +69,7 @@ pub fn set_preferred_id(
         .map(|value| BattlePreferredId::try_from(value.to_owned()))
         .transpose()?;
     let result = value.as_ref().map(|value| value.as_ref().to_owned());
+    let configured = result.clone();
     if let Some(unit) = Arc::make_mut(&mut world.btech.vehicles).get_mut(&id) {
         unit.preferred_id = value;
     } else {
@@ -68,6 +78,7 @@ pub fn set_preferred_id(
             .context("Unit is not constructed")?;
         unit.preferred_id = value;
     }
+    super::set_unit_identity_configuration(world, id, "preferred_id", configured);
     Ok(result)
 }
 

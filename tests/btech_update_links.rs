@@ -102,7 +102,7 @@ async fn rebuild_order_native_lua_rollback_and_restart() {
     let before = world.btech.clone();
     let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
     let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-    let call = format!("btech.map.update_links(1,{})", root.0);
+    let call = format!("btech.map.update_links_as(1,{})", root.0);
     assert!(
         lua.eval_callback::<()>(&format!("{call};error('abort')"))
             .is_err()
@@ -202,7 +202,7 @@ async fn configuration_lua_preserves_inactive_columns_and_missing_default_rows()
     let child = add_map(&mut world, &config, "child", 3, 3);
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     let call = format!(
-        "btech.map.set_link({},{{parent={},coordinate={{x=1,y=1}}}})",
+        "btech.map.set_authored_link({},{{parent={},coordinate={{x=1,y=1}}}})",
         child.0, parent.0
     );
     let before = scripts.world().btech.clone();
@@ -215,7 +215,10 @@ async fn configuration_lua_preserves_inactive_columns_and_missing_default_rows()
     scripts.eval_callback::<()>(&call).unwrap();
     assert_eq!(
         scripts
-            .eval_callback::<i64>(&format!("return btech.map.link({}).parent", child.0))
+            .eval_callback::<i64>(&format!(
+                "return btech.map.authored_link({}).parent",
+                child.0
+            ))
             .unwrap(),
         parent.0
     );

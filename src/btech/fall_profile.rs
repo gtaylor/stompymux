@@ -15,13 +15,13 @@ pub(super) fn surface(tile: BattleHex, elevation: i32) -> i16 {
 }
 
 /// Water halves structural damage; special gravity reduces it but never increases it.
-pub(super) fn damage(tons: u16, levels: i16, wet: bool, gravity: Option<i64>) -> Result<u16> {
+pub(super) fn damage(tons: u32, levels: i32, wet: bool, gravity: Option<i64>) -> Result<u32> {
     let mut damage =
-        u64::from(levels.max(0) as u16) * (u64::from(tons) + 5) / if wet { 20 } else { 10 };
+        u64::from(levels.max(0) as u32) * (u64::from(tons) + 5) / if wet { 20 } else { 10 };
     if let Some(gravity) = gravity {
         damage = damage * gravity.clamp(0, 100) as u64 / 100;
     }
-    u16::try_from(damage).context("Fall damage exceeds supported range")
+    u32::try_from(damage).context("Fall damage exceeds supported range")
 }
 
 /// One d6 chooses the struck side and rotates heading in sixty-degree steps.

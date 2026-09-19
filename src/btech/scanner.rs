@@ -218,7 +218,13 @@ pub(super) fn scanner_unit(world: &World, id: ObjectId) -> Option<ScannerUnit<'_
             pair: unit.sensor_selection().active,
             heading: unit.motion().map(|m| m.heading),
             facing: Default::default(),
-            name: unit.display_name.effective(&unit.definition().name),
+            name: world
+                .btech
+                .unit_configuration
+                .get(&id)
+                .and_then(|configuration| configuration.display_name.as_deref())
+                .filter(|value| !value.is_empty())
+                .unwrap_or_else(|| unit.display_name.effective(&unit.definition().name)),
             label: unit.battlefield_id(),
             brief: unit.brief_settings(),
             observer: unit.is_observer(),
@@ -247,7 +253,13 @@ pub(super) fn scanner_unit(world: &World, id: ObjectId) -> Option<ScannerUnit<'_
         pair: unit.sensor_selection().active,
         heading: unit.motion().map(|m| m.heading),
         facing: unit.facing(),
-        name: unit.display_name.effective(&unit.definition().name),
+        name: world
+            .btech
+            .unit_configuration
+            .get(&id)
+            .and_then(|configuration| configuration.display_name.as_deref())
+            .filter(|value| !value.is_empty())
+            .unwrap_or_else(|| unit.display_name.effective(&unit.definition().name)),
         label: unit.battlefield_id(),
         brief: unit.brief_settings(),
         observer: unit.is_observer(),

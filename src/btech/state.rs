@@ -345,6 +345,14 @@ pub struct StoredBattleUnit {
 /// Registration is not a claim that a unit's behavior is implemented.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct BtechState {
+    /// Runtime-only per-context template registry. Reloaded state scans lazily.
+    #[serde(skip)]
+    pub(crate) template_registry: super::TemplateRegistryCache,
+    /// Runtime-only sanction marking MECH roles retired by the `@btech
+    /// unregister` command, letting persistence distinguish command-driven
+    /// teardown from accidental state loss. Cleared when a save commits.
+    #[serde(skip)]
+    pub(crate) retire_sanctions: Arc<std::cell::RefCell<BTreeSet<ObjectId>>>,
     /// Independent, insertion-ordered computer display recovery events.
     #[serde(default)]
     pub(crate) sensor_recoveries: Arc<Vec<super::computer_runtime::SensorRecovery>>,
@@ -357,6 +365,8 @@ pub struct BtechState {
     /// Loose parts shared by rooms, units and other game objects.
     #[serde(default)]
     pub(crate) inventories: Arc<BTreeMap<ObjectId, Vec<super::BattleInventoryEntry>>>,
+    #[serde(default)]
+    pub(crate) part_costs: Arc<BTreeMap<i32, u64>>,
     /// Runtime catalogue overrides reset on reload; saved countdowns retain their remaining time.
     #[serde(default)]
     pub(crate) weapon_settings: super::BattleWeaponSettings,
@@ -371,6 +381,12 @@ pub struct BtechState {
     /// Saved player map dimensions and contact-list categories.
     #[serde(default)]
     pub(crate) player_preferences: Arc<BTreeMap<ObjectId, super::BattlePlayerPreferences>>,
+    /// Player-owned template and personal-combat configuration; UI configuration is tracked
+    /// independently by presence in `player_preferences`.
+    #[serde(default)]
+    pub(crate) player_configuration: Arc<BTreeMap<ObjectId, super::BattlePlayerConfiguration>>,
+    #[serde(default)]
+    pub(crate) unit_configuration: Arc<BTreeMap<ObjectId, super::BattleUnitConfiguration>>,
     /// Runtime sensor policy supplied by the host configuration; not stored in database tables.
     #[serde(default)]
     pub(crate) seismic_detect_stopped: bool,
@@ -469,6 +485,38 @@ impl BtechState {
                 "View dimensions reference missing player"
             );
             dimensions.dimensions.validate()?;
+        }
+        for (player, configuration) in self.player_configuration.iter() {
+            ensure!(
+                world.objects.get(player).is_some_and(|object| {
+                    object.kind == Kind::Player && !object.flags.contains(crate::Flag::Going)
+                }),
+                "Player configuration references unavailable player"
+            );
+            configuration.validate()?;
+        }
+        for (unit, configuration) in self.unit_configuration.iter() {
+            ensure!(
+                self.registrations.get(unit).map(String::as_str) == Some("MECH"),
+                "Unit configuration references an unavailable unit"
+            );
+            ensure!(
+                configuration
+                    .preferred_id
+                    .as_ref()
+                    .is_none_or(|value| value.len() <= 2),
+                "Invalid preferred unit id"
+            );
+            if let Some(pilot) = configuration.assigned_pilot {
+                ensure!(
+                    world
+                        .objects
+                        .get(&pilot)
+                        .is_some_and(|object| object.kind == Kind::Player
+                            && !object.flags.contains(crate::Flag::Going)),
+                    "Assigned pilot is unavailable"
+                );
+            }
         }
         for (name, threshold) in self.skill_thresholds.iter() {
             let skill = super::skill_definition(name).context("Unknown threshold skill")?;
@@ -872,6 +920,16 @@ impl BtechState {
         });
         Arc::make_mut(&mut self.character_values).retain(|id, _| !ids.contains(id));
         Arc::make_mut(&mut self.player_preferences).retain(|id, _| !ids.contains(id));
+        Arc::make_mut(&mut self.player_configuration).retain(|id, _| !ids.contains(id));
+        Arc::make_mut(&mut self.unit_configuration).retain(|id, _| !ids.contains(id));
+        for configuration in Arc::make_mut(&mut self.unit_configuration).values_mut() {
+            if configuration
+                .assigned_pilot
+                .is_some_and(|pilot| ids.contains(&pilot))
+            {
+                configuration.assigned_pilot = None;
+            }
+        }
         Arc::make_mut(&mut self.characters).retain(|id, _| !ids.contains(id));
         Arc::make_mut(&mut self.wrecks).retain(|id, _| !ids.contains(id));
         Arc::make_mut(&mut self.recoveries).retain(|id, _| !ids.contains(id));
@@ -1147,6 +1205,31 @@ pub fn create_unit(world: &mut World, id: ObjectId, definition: BattleTemplate) 
     let unit = BattleUnit::from_template(definition)?;
     Arc::make_mut(&mut world.btech.units).insert(id, unit.identity());
     Arc::make_mut(&mut world.btech.constructed).insert(id, unit);
+    Arc::make_mut(&mut world.btech.registrations).insert(id, "MECH".into());
+    Ok(())
+}
+
+/// Register a live thing as an empty BattleTech unit before a template is loaded.
+///
+/// The reference server creates the raw MECH registration immediately and exposes
+/// its zeroed/default critical layout through inspection APIs. Construction remains
+/// absent until a template is loaded.
+pub fn register_empty_battle_unit(world: &mut World, id: ObjectId) -> Result<()> {
+    ensure!(
+        world.objects.get(&id).is_some_and(
+            |object| object.kind == Kind::Thing && !object.flags.contains(crate::Flag::Going)
+        ),
+        "Unit target must be a live thing"
+    );
+    ensure!(
+        !world.btech.registrations.contains_key(&id)
+            && !world.btech.maps.contains_key(&id)
+            && !world.btech.units.contains_key(&id)
+            && !world.btech.constructed.contains_key(&id)
+            && !world.btech.vehicles.contains_key(&id),
+        "Object already has BattleTech state"
+    );
+    super::inventory_mass(world, id)?;
     Arc::make_mut(&mut world.btech.registrations).insert(id, "MECH".into());
     Ok(())
 }

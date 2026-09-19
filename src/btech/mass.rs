@@ -26,11 +26,22 @@ impl BattleUnit {
         let loadout = self.loadout()?;
         let survives = |section| self.sections()[&section].internal > 0;
         let rating = super::engine::rated_output(definition.tons, definition.max_speed)?;
-        let engine = if survives(BattleSection::CenterTorso) {
-            half_ton(
-                super::BattleEngine::resolve(&loadout, definition.has_special("Clan"))?
-                    .unrounded_mass(engine_mass(rating)),
+        // C derives the engine mass family from technology flags alone; reference
+        // builds without engine criticals still carry a nominal engine mass.
+        let engine_family = || {
+            super::BattleEngine::resolve(&loadout, definition.has_special("Clan")).unwrap_or_else(
+                |_| {
+                    super::BattleEngine::display_from_flags(
+                        definition.has_special("LightEngine_Tech"),
+                        definition.has_special("CompactEngine_Tech"),
+                        definition.has_special("XXL_Tech"),
+                        definition.has_special("XLEngine_Tech"),
+                    )
+                },
             )
+        };
+        let engine = if survives(BattleSection::CenterTorso) {
+            half_ton(engine_family().unrounded_mass(engine_mass(rating)))
         } else {
             0
         };

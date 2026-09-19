@@ -76,7 +76,7 @@ async fn markings_configuration_validates_and_rolls_back() {
         assert!(
             scripts
                 .eval_callback::<()>(&format!(
-                    "btech.unit.set_markings(1,{},'temporary'); error('abort')",
+                    "btech.unit.set_markings_as(1,{},'temporary'); error('abort')",
                     target.0
                 ))
                 .is_err()
@@ -85,7 +85,7 @@ async fn markings_configuration_validates_and_rolls_back() {
         assert!(scripts.drain_outbox().is_empty());
         let result: String = scripts
             .eval_callback(&format!(
-                "btech.unit.set_markings(1,{},'Blue shield'); return btech.unit.markings({})",
+                "btech.unit.set_markings_as(1,{},'Blue shield'); return btech.unit.markings({})",
                 target.0, target.0
             ))
             .unwrap();
@@ -149,7 +149,7 @@ async fn markings_keep_gunner_selection_and_map_view_authority_separate() {
             .location = Some(map);
         assert!(
             support::run_text(&scripts, &config, gunner, 1, "view 0 0")
-                .contains("Permission denied.")
+                .contains("Sorry, that command is restricted!")
         );
     }
 }

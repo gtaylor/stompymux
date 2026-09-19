@@ -61,14 +61,11 @@ async fn crashes_share_packets_water_reduction_and_saved_replay() {
                 let mut rules = BattleMovementRules::STANDARD.fall;
                 rules.vehicle_impact.criticals.enabled = false;
                 let report = resolve_battle_vtol_crash(&mut world, id, levels, rules).unwrap();
-                assert_eq!(
-                    report.damage,
-                    (levels * (u32::from(tons) + 5) / divisor) as u16
-                );
-                assert_eq!(report.impacts.len(), usize::from(report.damage).div_ceil(5));
+                assert_eq!(report.damage, levels * (u32::from(tons) + 5) / divisor);
+                assert_eq!(report.impacts.len(), (report.damage as usize).div_ceil(5));
                 assert_eq!(
                     report.avoidance.as_ref().unwrap().situational,
-                    levels as i16
+                    levels as i32
                 );
                 assert_eq!(
                     resolve_battle_vtol_crash(&mut replay, id, levels, rules).unwrap(),

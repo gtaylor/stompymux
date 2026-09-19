@@ -90,7 +90,7 @@ async fn vehicle_weapon_inspection_preserves_indices_failure_details_and_replay(
             expected
         );
         let report: mlua::Table = scripts
-            .eval_callback(&format!("return btech.unit.weapons({})", id.0))
+            .eval_callback(&format!("return btech.unit.weapon_states({})", id.0))
             .unwrap();
         let json = serde_json::to_value(report).unwrap();
         assert_eq!(json.as_array().unwrap().len(), 2);
@@ -101,7 +101,7 @@ async fn vehicle_weapon_inspection_preserves_indices_failure_details_and_replay(
             assert_eq!(json[0]["failure"], "disabled");
             assert_eq!(json[0]["readiness"]["intact"], true);
         }
-        scripts.eval_callback::<()>(&format!("local w=btech.unit.weapons({}); w[1].readiness.ammunition=999; w[1].failure='disabled'", id.0)).unwrap();
+        scripts.eval_callback::<()>(&format!("local w=btech.unit.weapon_states({}); w[1].readiness.ammunition=999; w[1].failure='disabled'", id.0)).unwrap();
         assert_eq!(scripts.world().btech, before);
         assert!(scripts.drain_outbox().is_empty());
     }
@@ -129,7 +129,7 @@ async fn electrical_vehicle_failures_display_shorted_without_claiming_physical_l
     let scripts = Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
     let intact: bool = scripts
         .eval_callback(&format!(
-            "return btech.unit.weapons({})[1].readiness.intact",
+            "return btech.unit.weapon_states({})[1].readiness.intact",
             id.0
         ))
         .unwrap();

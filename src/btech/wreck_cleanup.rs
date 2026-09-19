@@ -84,13 +84,20 @@ pub(crate) fn forget(state: &mut BtechState, id: ObjectId) {
 }
 
 /// Only completed, previously scheduled retirements authorize removal of native unit records.
-pub(crate) fn retired(before: &World, after: &World) -> Result<BTreeSet<ObjectId>> {
+/// Administratively unregistered roles (`unit_lifecycle::unregistered`) are exempt: their
+/// disposal is sanctioned by the registrar teardown instead of the wreck admission gate.
+pub(crate) fn retired(
+    before: &World,
+    after: &World,
+    exempt: &BTreeSet<ObjectId>,
+) -> Result<BTreeSet<ObjectId>> {
     let ids: BTreeSet<_> = before
         .btech
         .units()
         .keys()
         .filter(|id| {
-            !after.btech.units().contains_key(id)
+            !exempt.contains(id)
+                && !after.btech.units().contains_key(id)
                 && after
                     .objects
                     .get(id)

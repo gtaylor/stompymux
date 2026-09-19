@@ -57,7 +57,7 @@ pub struct BattleFallReport {
     pub character_injury: Option<super::BattleCharacterPilotInjury>,
     pub direction_roll: u8,
     pub arc: BattleHitArc,
-    pub damage: u16,
+    pub damage: u32,
     pub groups: Vec<BattleSalvoGroup>,
     pub flooding: Vec<super::BattleSectionExposureReport>,
     pub inferno_notices: Vec<super::BattleNotice>,
@@ -76,7 +76,7 @@ pub fn resolve_fall(
     rules: BattleFallRules,
 ) -> Result<BattleFallReport> {
     ensure!(levels > 0, "Fall multiplier must be positive");
-    resolve_fall_inner(world, id, i16::from(levels), rules, false)
+    resolve_fall_inner(world, id, i32::from(levels), rules, false)
 }
 
 /// Zero-multiplier falls still change posture, roll pilot protection and apply immersion.
@@ -95,7 +95,7 @@ pub(super) fn resolve_signed_fall(
     levels: i16,
     rules: BattleFallRules,
 ) -> Result<BattleFallReport> {
-    resolve_fall_inner(world, id, levels, rules, false)
+    resolve_fall_inner(world, id, i32::from(levels), rules, false)
 }
 
 /// Character-enabled fall for an action that owns casualty publication and rollback.
@@ -105,7 +105,7 @@ pub(super) fn resolve_character_fall(
     levels: u8,
     rules: BattleFallRules,
 ) -> Result<BattleFallReport> {
-    resolve_fall_inner(world, id, i16::from(levels), rules, true)
+    resolve_fall_inner(world, id, i32::from(levels), rules, true)
 }
 
 /// Character-enabled signed severity used by accelerated free-fall impacts.
@@ -115,16 +115,38 @@ pub(super) fn resolve_character_signed_fall(
     levels: i16,
     rules: BattleFallRules,
 ) -> Result<BattleFallReport> {
-    resolve_fall_inner(world, id, levels, rules, true)
+    resolve_fall_inner(world, id, i32::from(levels), rules, true)
+}
+
+pub(super) fn resolve_contract_fall(
+    world: &mut World,
+    id: ObjectId,
+    levels: i32,
+    rules: BattleFallRules,
+    character: bool,
+    tons: u32,
+) -> Result<BattleFallReport> {
+    resolve_fall_inner_with_tonnage(world, id, levels, rules, character, Some(tons))
 }
 
 /// Shared posture, injury, flooding and direction resolution for both fall causes.
 fn resolve_fall_inner(
     world: &mut World,
     id: ObjectId,
-    levels: i16,
+    levels: i32,
     rules: BattleFallRules,
     character: bool,
+) -> Result<BattleFallReport> {
+    resolve_fall_inner_with_tonnage(world, id, levels, rules, character, None)
+}
+
+fn resolve_fall_inner_with_tonnage(
+    world: &mut World,
+    id: ObjectId,
+    levels: i32,
+    rules: BattleFallRules,
+    character: bool,
+    tonnage: Option<u32>,
 ) -> Result<BattleFallReport> {
     let unit = world
         .btech
@@ -135,7 +157,7 @@ fn resolve_fall_inner(
         !unit.is_destroyed() || unit.free_fall().is_some(),
         "Unit is destroyed"
     );
-    resolve_material(world, id, levels, rules, character)
+    resolve_material_with_tonnage(world, id, levels, rules, character, tonnage)
 }
 
 /// Resolve an admitted environmental fall even if an earlier casualty destroyed this unit.
@@ -143,9 +165,20 @@ fn resolve_fall_inner(
 pub(super) fn resolve_material(
     world: &mut World,
     id: ObjectId,
-    levels: i16,
+    levels: i32,
     rules: BattleFallRules,
     character: bool,
+) -> Result<BattleFallReport> {
+    resolve_material_with_tonnage(world, id, levels, rules, character, None)
+}
+
+fn resolve_material_with_tonnage(
+    world: &mut World,
+    id: ObjectId,
+    levels: i32,
+    rules: BattleFallRules,
+    character: bool,
+    tonnage: Option<u32>,
 ) -> Result<BattleFallReport> {
     let object = world.objects.get(&id).context("Unit is unavailable")?;
     ensure!(
@@ -159,17 +192,27 @@ pub(super) fn resolve_material(
         .get(&id)
         .context("Unit construction state is unavailable")?;
     unit.validate()?;
-    let position = unit.position().context("Unit is not on a battlefield")?;
-    let map = world
-        .btech
-        .maps()
-        .get(&position.map)
-        .context("Map not found")?;
-    let tile = map.base_hex(i64::from(position.x), i64::from(position.y))?;
-    let below_bridge = tile.terrain == super::Terrain::Bridge
-        && unit.elevation_level(tile) < i32::from(tile.elevation) - 2;
-    let below_ice = tile.terrain == super::Terrain::Ice && unit.elevation_level(tile) < 0;
-    let tons = unit.definition().tons;
+    let position = unit.position();
+    let (tile, gravity) = if let Some(position) = position {
+        let map = world
+            .btech
+            .maps()
+            .get(&position.map)
+            .context("Map not found")?;
+        (
+            Some(map.base_hex(i64::from(position.x), i64::from(position.y))?),
+            map.uses_special_rules().then_some(map.gravity),
+        )
+    } else {
+        (None, None)
+    };
+    let below_bridge = tile.is_some_and(|tile| {
+        tile.terrain == super::Terrain::Bridge
+            && unit.elevation_level(tile) < i32::from(tile.elevation) - 2
+    });
+    let below_ice = tile
+        .is_some_and(|tile| tile.terrain == super::Terrain::Ice && unit.elevation_level(tile) < 0);
+    let tons = tonnage.unwrap_or(u32::from(unit.definition().tons));
     let pilot = unit.pilot();
     let has_pilot = pilot.is_some();
     let safe = unit.combat_safe;
@@ -177,7 +220,7 @@ pub(super) fn resolve_material(
     let mut avoidance = if safe {
         None
     } else {
-        Some(super::roll_piloting(
+        Some(super::piloting::roll_piloting_i32(
             &mut candidate,
             id,
             levels,
@@ -225,7 +268,9 @@ pub(super) fn resolve_material(
     unit.ground_elevation = if below_bridge {
         Some(-1.0)
     } else if below_ice {
-        Some(f64::from(tile.surface_height()))
+        Some(f64::from(
+            tile.expect("ice fall has a terrain tile").surface_height(),
+        ))
     } else {
         None
     };
@@ -239,50 +284,62 @@ pub(super) fn resolve_material(
         unit.jump_stabilization = 12;
     }
     set_prone(unit);
-    let motion = unit.motion.as_mut().context("Unit has no motion state")?;
-    motion.speed = 0.0;
-    motion.desired_speed = 0.0;
-    motion.desired_heading = motion.heading;
-    let ice_break = if character {
-        super::surface_break::check_ice_landing_in_action(&mut candidate, id, rules)?
-    } else {
-        super::surface_break::check_ice_landing(&mut candidate, id, rules)?
+    if let Some(motion) = &mut unit.motion {
+        motion.speed = 0.0;
+        motion.desired_speed = 0.0;
+        motion.desired_heading = motion.heading;
     }
-    .map(Box::new);
-    let tile = candidate.btech.maps()[&position.map]
-        .base_hex(i64::from(position.x), i64::from(position.y))?;
-    let wet = (matches!(
-        tile.terrain,
-        super::Terrain::Water | super::Terrain::Ice | super::Terrain::Bridge
-    ) && candidate.btech.constructed_units()[&id].elevation_level(tile) < 0)
-        || tile.terrain == super::Terrain::HighWater;
-    let damage = super::fall_profile::damage(
-        tons,
-        levels,
-        wet,
-        map.uses_special_rules().then_some(map.gravity),
-    )?;
-    let flooding = if character {
+    let ice_break = if position.is_some() {
+        if character {
+            super::surface_break::check_ice_landing_in_action(&mut candidate, id, rules)?
+        } else {
+            super::surface_break::check_ice_landing(&mut candidate, id, rules)?
+        }
+        .map(Box::new)
+    } else {
+        None
+    };
+    let wet = if let Some(position) = position {
+        let tile = candidate.btech.maps()[&position.map]
+            .base_hex(i64::from(position.x), i64::from(position.y))?;
+        (matches!(
+            tile.terrain,
+            super::Terrain::Water | super::Terrain::Ice | super::Terrain::Bridge
+        ) && candidate.btech.constructed_units()[&id].elevation_level(tile) < 0)
+            || tile.terrain == super::Terrain::HighWater
+    } else {
+        false
+    };
+    let damage = super::fall_profile::damage(tons, levels, wet, gravity)?;
+    let flooding = if position.is_none() {
+        Vec::new()
+    } else if character {
         super::flooding::flood_unit_in_action(&mut candidate, id, rules)?
     } else {
         super::flood_unit(&mut candidate, id, rules)?
     };
-    let inferno_notices = super::extinguish_inferno_in_water(&mut candidate, id)?;
+    let inferno_notices = if position.is_some() {
+        super::extinguish_inferno_in_water(&mut candidate, id)?
+    } else {
+        Vec::new()
+    };
     let unit = Arc::make_mut(&mut candidate.btech.constructed)
         .get_mut(&id)
         .unwrap();
     let direction_roll = unit.dice.d6();
     let (arc, offset) = super::fall_profile::direction(direction_roll)?;
-    let motion = unit.motion.as_mut().context("Unit has no motion state")?;
-    motion.speed = 0.0;
-    motion.desired_speed = 0.0;
-    motion.heading = (motion.heading + f64::from(offset)).rem_euclid(360.0);
-    motion.desired_heading = motion.heading;
+    if let Some(motion) = &mut unit.motion {
+        motion.speed = 0.0;
+        motion.desired_speed = 0.0;
+        motion.heading = (motion.heading + f64::from(offset)).rem_euclid(360.0);
+        motion.desired_heading = motion.heading;
+    }
     let mut groups = Vec::new();
     let mut remaining = if safe { 0 } else { damage };
-    while remaining > 0 && !candidate.btech.constructed_units()[&id].is_destroyed() {
+    while remaining > 0 {
         let amount = remaining.min(5);
         remaining -= amount;
+        let amount = amount as u16;
         let unit = &candidate.btech.constructed_units()[&id];
         let mut dice = unit.dice.clone();
         let roll = dice.generic_roll();
@@ -291,6 +348,11 @@ pub(super) fn resolve_material(
             .get_mut(&id)
             .unwrap()
             .dice = dice;
+        // Native falling continues rolling each five-point group after a lethal packet;
+        // its damage entry point then ignores the already destroyed unit.
+        if candidate.btech.constructed_units()[&id].is_destroyed() {
+            continue;
+        }
         let outcome = if character {
             super::impact::resolve_character_impact_with_rules(
                 &mut candidate,
@@ -320,13 +382,24 @@ pub(super) fn resolve_material(
             flooding: outcome.flooding,
         });
     }
-    let mines = super::mine_event::resolve(
-        &mut candidate,
-        id,
-        super::BattleMineTriggerReason::Fall,
-        rules,
-        character,
-    )?;
+    let mines = if position.is_some() {
+        super::mine_event::resolve(
+            &mut candidate,
+            id,
+            super::BattleMineTriggerReason::Fall,
+            rules,
+            character,
+        )?
+    } else {
+        super::BattleMineEventReport {
+            unit: id,
+            reason: super::BattleMineTriggerReason::Fall,
+            blasts: Vec::new(),
+            triggers: 0,
+            notices: Vec::new(),
+            pilot_notices: Vec::new(),
+        }
+    };
     *world = candidate;
     Ok(BattleFallReport {
         experience_messages,

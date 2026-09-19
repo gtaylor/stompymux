@@ -462,7 +462,7 @@ async fn movement_exit_inventory_and_lock_resource_failure() {
     let source = std::fs::read_to_string(&path).unwrap();
     std::fs::write(
         &path,
-        source.replace("[lua]", "[lua]\ninstruction_limit=5000"),
+        source.replace("[lua]", "[lua]\ninstruction_limit=20000"),
     )
     .unwrap();
     // Leave room for API initialization while bounding the deliberately infinite lock below.

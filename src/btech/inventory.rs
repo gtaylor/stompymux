@@ -63,6 +63,39 @@ pub fn set_inventory_quantity(
     edit_quantity(world, object, part_id, brand_id, quantity)
 }
 
+/// Set a stock row after the caller has established authority; zero removes it.
+pub fn set_part_store_quantity(
+    world: &mut World,
+    object: ObjectId,
+    part_id: i32,
+    brand_id: u8,
+    quantity: i32,
+) -> Result<()> {
+    edit_quantity(world, object, part_id, brand_id, quantity)
+}
+
+pub fn part_cost(world: &World, part_id: i32) -> Result<u64> {
+    ensure!(
+        super::BattlePart::from_id(part_id).is_some(),
+        "Unknown inventory part"
+    );
+    Ok(world.btech.part_costs.get(&part_id).copied().unwrap_or(0))
+}
+
+pub fn set_part_cost(world: &mut World, part_id: i32, cost: u64) -> Result<()> {
+    ensure!(
+        super::BattlePart::from_id(part_id).is_some(),
+        "Unknown inventory part"
+    );
+    let costs = Arc::make_mut(&mut world.btech.part_costs);
+    if cost == 0 {
+        costs.remove(&part_id);
+    } else {
+        costs.insert(part_id, cost);
+    }
+    Ok(())
+}
+
 /// Wizard correction with immediate load reconciliation and transactional economy publication.
 pub fn set_inventory_quantity_action(
     scripts: &crate::Scripts,

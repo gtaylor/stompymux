@@ -89,13 +89,23 @@ pub fn boolean(d: &Directive) -> Result<bool> {
 
 /// Apply one validated style property to the current style.
 pub fn apply_style(p: &Palette, style: &mut Style, d: &Directive) -> Result<()> {
+    // The C compiler reports unknown palette members per color role.
+    let ground = |role: &'static str, name: &str| {
+        p.color(name).map_err(|error| {
+            if error.to_string().starts_with("unknown color") {
+                anyhow::anyhow!("unknown {role} color")
+            } else {
+                error
+            }
+        })
+    };
     match d.name.as_str() {
         "fg" | "color" => {
-            style.foreground = p.color(d.value.as_deref().unwrap_or(""))?;
+            style.foreground = ground("foreground", d.value.as_deref().unwrap_or(""))?;
             style.foreground_ansi = None;
         }
         "bg" => {
-            style.background = p.color(d.value.as_deref().unwrap_or(""))?;
+            style.background = ground("background", d.value.as_deref().unwrap_or(""))?;
             style.background_ansi = None;
         }
         "bold" => style.bold = boolean(d)?,
@@ -126,7 +136,7 @@ pub fn apply_style(p: &Palette, style: &mut Style, d: &Directive) -> Result<()> 
         "text-decoration-color" => {
             p.color(d.value.as_deref().unwrap_or(""))?;
         }
-        _ => anyhow::bail!("unknown style tag {}", d.name),
+        _ => anyhow::bail!("unknown style tag"),
     }
     Ok(())
 }
@@ -266,6 +276,96 @@ fn sgr(style: &mut Style, s: &str) {
     }
 }
 
+/// One trusted native-display event. Unlike semantic spans, style events are
+/// retained even when they are repeated or have no visible text between them.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum NativeEvent {
+    Text(String),
+    Style(Style),
+}
+
+/// Parse the style-only markup emitted by native compatibility reports while
+/// retaining every explicit control transition. Links remain on the semantic
+/// document path; malformed or unsupported tags are displayed literally.
+pub(crate) fn native_events(p: &Palette, source: &str) -> Vec<NativeEvent> {
+    let mut events = Vec::new();
+    let mut text = String::new();
+    let mut style = Style::default();
+    let mut stack = Vec::new();
+    let mut rest = source;
+    let flush = |events: &mut Vec<NativeEvent>, text: &mut String| {
+        if !text.is_empty() {
+            events.push(NativeEvent::Text(std::mem::take(text)));
+        }
+    };
+    while !rest.is_empty() {
+        if rest.starts_with('\x1b') {
+            let len = escape_len(rest);
+            let seq = &rest[..len];
+            if seq.starts_with("\x1b[") && seq.ends_with('m') {
+                flush(&mut events, &mut text);
+                sgr(&mut style, seq);
+                events.push(NativeEvent::Style(style.clone()));
+            }
+            rest = &rest[len..];
+            continue;
+        }
+        if rest.starts_with("[[") {
+            text.push('[');
+            rest = &rest[2..];
+            continue;
+        }
+        if rest.starts_with('[')
+            && let Some(end) = rest
+                .char_indices()
+                .skip(1)
+                .take_while(|(index, _)| *index < super::OSC8_URI_LIMIT + 32)
+                .find_map(|(index, value)| (value == ']').then_some(index))
+        {
+            let tag = rest[1..end].trim();
+            let next = if tag == "/" {
+                stack.pop()
+            } else if tag.eq_ignore_ascii_case("reset") {
+                stack.clear();
+                Some(Style::default())
+            } else if stack.len() < super::MAX_NESTING {
+                directives(tag).ok().and_then(|directives| {
+                    if directives.is_empty()
+                        || matches!(
+                            directives[0].name.as_str(),
+                            "url" | "link" | "send" | "prompt"
+                        )
+                    {
+                        return None;
+                    }
+                    let mut next = style.clone();
+                    for directive in directives {
+                        apply_style(p, &mut next, &directive).ok()?;
+                    }
+                    stack.push(style.clone());
+                    Some(next)
+                })
+            } else {
+                None
+            };
+            if let Some(next) = next {
+                flush(&mut events, &mut text);
+                style = next;
+                events.push(NativeEvent::Style(style.clone()));
+                rest = &rest[end + 1..];
+                continue;
+            }
+        }
+        let value = rest.chars().next().unwrap();
+        if !value.is_control() || matches!(value, '\n' | '\r' | '\t') {
+            text.push(value);
+        }
+        rest = &rest[value.len_utf8()..];
+    }
+    flush(&mut events, &mut text);
+    events
+}
+
 /// Parse without changing state on malformed tags in permissive mode.
 pub fn parse(p: &Palette, source: &str, strict: bool) -> Result<Vec<Span>> {
     ensure!(
@@ -325,7 +425,7 @@ pub fn parse(p: &Palette, source: &str, strict: bool) -> Result<Vec<Span>> {
                 }
             }
             let tag_result = (|| -> Result<(Style, Option<Link>, bool, bool)> {
-                let end = end.ok_or_else(|| anyhow::anyhow!("unclosed style tag"))?;
+                let end = end.ok_or_else(|| anyhow::anyhow!("style tag is not closed"))?;
                 ensure!(end < super::OSC8_URI_LIMIT + 32, "oversized style tag");
                 let tag = rest[1..end].trim();
                 if tag == "/" {
@@ -438,7 +538,7 @@ pub fn parse(p: &Palette, source: &str, strict: bool) -> Result<Vec<Span>> {
         }
         rest = &rest[c.len_utf8()..];
     }
-    ensure!(!strict || stack.is_empty(), "unclosed style tag");
+    ensure!(!strict || stack.is_empty(), "style tag is not closed");
     if !current.text.is_empty() {
         spans.push(current);
     }

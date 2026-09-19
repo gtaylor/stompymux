@@ -50,8 +50,11 @@ pub(super) fn validate_changes(expected: &mut BtechState, after: &BtechState) ->
         }
 
         if !expected.vehicles.contains_key(&id) {
+            // A registered raw unit gains its construction here; only its own
+            // earlier MECH registration may precede the vehicle row.
             ensure!(
-                !expected.registrations.contains_key(&id)
+                (!expected.registrations.contains_key(&id)
+                    || expected.registrations().get(&id).map(String::as_str) == Some("MECH"))
                     && !expected.units.contains_key(&id)
                     && !expected.maps.contains_key(&id),
                 "Object already has BattleTech state"
@@ -103,14 +106,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
         )
         .await?;
         if previous.is_none() {
-            row(
-                c,
-                "btech_special_registrations",
-                fields([("dbref", Cell::Integer(id.0))]),
-                None,
-                &fields([("special_type", Cell::Text("MECH".into()))]),
-            )
-            .await?;
+            super::btech::ensure_mech_registration(c, id).await?;
         }
         changed = true;
     }

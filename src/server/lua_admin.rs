@@ -89,7 +89,12 @@ impl Server {
                 } else {
                     RuntimeMode::Live
                 },
-                |candidate| self.snapshots_for(candidate),
+                |candidate| {
+                    candidate
+                        .event_telemetry
+                        .set(self.scripts.event_telemetry.get());
+                    self.snapshots_for(candidate)
+                },
             )?;
             if checking {
                 return Ok::<_, anyhow::Error>(None);

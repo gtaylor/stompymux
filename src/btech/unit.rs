@@ -5,6 +5,34 @@ use anyhow::{Result, ensure};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+/// Toggle one technology flag in the named specials attribute ("specials",
+/// "specials2", or "infantry_specials"), mirroring the native per-group flags.
+pub(super) fn edit_special(
+    attributes: &mut BTreeMap<String, String>,
+    attribute: &str,
+    flag: &str,
+    enabled: bool,
+) {
+    let mut values: Vec<String> = attributes
+        .get(attribute)
+        .into_iter()
+        .flat_map(|value| value.split_ascii_whitespace())
+        .filter(|value| *value != "-" && !value.eq_ignore_ascii_case(flag))
+        .map(str::to_owned)
+        .collect();
+    if enabled {
+        values.push(flag.to_owned());
+    }
+    attributes.insert(
+        attribute.into(),
+        if values.is_empty() {
+            "-".into()
+        } else {
+            values.join(" ")
+        },
+    );
+}
+
 /// Ground hex occupied by a unit; coordinates are zero-based columns and rows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct BattlePosition {
@@ -313,12 +341,323 @@ pub struct BattleUnit {
     /// Optional configured identity, used only when selecting a new battlefield ID.
     #[serde(default)]
     pub(super) preferred_id: Option<super::BattlePreferredId>,
+    #[serde(default)]
+    contract_loadout: bool,
+    #[serde(default)]
+    administrative_raw: Option<super::AdministrativeRawUnit>,
     definition: BattleTemplate,
     pub(super) sections: BTreeMap<BattleSection, BattleSectionState>,
     pub(super) ammunition: Vec<u16>,
 }
 
 impl BattleUnit {
+    pub(crate) fn administrative_raw(&self) -> Option<&super::AdministrativeRawUnit> {
+        self.administrative_raw.as_ref()
+    }
+
+    pub(crate) fn administrative_raw_mut(
+        &mut self,
+        class: super::RawUnitClass,
+        movement: super::RawMovement,
+    ) -> &mut super::AdministrativeRawUnit {
+        self.administrative_raw
+            .get_or_insert_with(|| super::AdministrativeRawUnit::new(class, movement))
+    }
+    pub(super) fn set_contract_weapon_mode_names(
+        &mut self,
+        index: usize,
+        fire: Vec<String>,
+        ammunition: Vec<String>,
+    ) -> Result<()> {
+        let first = self
+            .loadout()?
+            .weapons
+            .get(index)
+            .and_then(|mount| mount.criticals.first())
+            .copied()
+            .ok_or_else(|| anyhow::anyhow!("weapon number is not mounted"))?;
+        if fire.iter().any(|mode| mode == "Destroyed") {
+            self.lost_criticals.insert(first);
+        } else {
+            self.lost_criticals.remove(&first);
+        }
+        let failure = if fire.iter().any(|mode| mode == "Disabled") {
+            Some(super::BattleEquipmentFailure::Disabled)
+        } else if fire.iter().any(|mode| mode == "Broken") {
+            Some(super::BattleEquipmentFailure::Dud)
+        } else {
+            None
+        };
+        if let Some(failure) = failure {
+            self.weapon_failures.insert(index, failure);
+        } else {
+            self.weapon_failures.remove(&index);
+        }
+        if fire
+            .iter()
+            .any(|mode| matches!(mode.as_str(), "OneShot_Used" | "RocketFired"))
+        {
+            self.spent_launchers.insert(index);
+        } else {
+            self.spent_launchers.remove(&index);
+        }
+        let modes = &mut self
+            .definition
+            .sections
+            .get_mut(&first.section)
+            .expect("validated weapon section")
+            .criticals
+            .get_mut(&first.slot)
+            .expect("validated weapon slot")
+            .modes;
+        replace_critical_modes(modes, fire, ammunition);
+        Ok(())
+    }
+    pub(super) fn set_administrative_heat_sinks(&mut self, count: u16) {
+        self.definition.heat_sinks = count;
+        self.reconstructed_cooling = None;
+    }
+
+    pub(super) fn set_administrative_special(
+        &mut self,
+        attribute: &str,
+        flag: &str,
+        enabled: bool,
+    ) {
+        edit_special(&mut self.definition.attributes, attribute, flag, enabled);
+    }
+
+    pub(super) fn set_administrative_attribute(&mut self, name: &str, value: impl ToString) {
+        self.definition
+            .attributes
+            .insert(name.into(), value.to_string());
+    }
+
+    pub(super) fn administrative_attribute(&self, name: &str) -> Option<&str> {
+        self.definition.attributes.get(name).map(String::as_str)
+    }
+
+    pub(super) fn set_administrative_armor(
+        &mut self,
+        section: BattleSection,
+        armor: Option<u16>,
+        internal: Option<u16>,
+        rear: Option<u16>,
+    ) {
+        let original = self
+            .definition
+            .sections
+            .get_mut(&section)
+            .expect("validated section");
+        let current = self.sections.get_mut(&section).expect("validated section");
+        if let Some(value) = armor {
+            original.armor = value;
+            current.armor = value;
+        }
+        if let Some(value) = internal {
+            original.internal = value;
+            current.internal = value;
+        }
+        if let Some(value) = rear {
+            original.rear = value;
+            current.rear = value;
+        }
+    }
+
+    pub(super) fn apply_immediate_repair(
+        &mut self,
+        section: BattleSection,
+        kind: super::AdministrativeRepairKind,
+        value: u16,
+        hull: super::ReattachHull,
+    ) -> Result<()> {
+        if kind == super::AdministrativeRepairKind::Part {
+            self.repair_critical(super::CriticalLocation {
+                section,
+                slot: value as u8,
+            })?;
+            return Ok(());
+        }
+        let current = self.sections.get_mut(&section).expect("validated section");
+        match kind {
+            super::AdministrativeRepairKind::Armor => current.armor = value,
+            super::AdministrativeRepairKind::Internal => current.internal = value,
+            super::AdministrativeRepairKind::RearArmor => current.rear = value,
+            super::AdministrativeRepairKind::Reattach => {
+                // C mech_re_attach (mech_maintenance.c:501-514) restores only
+                // sections reading as destroyed; aerospace hulls reset to one.
+                if hull.destroyed(current.armor, current.internal) {
+                    current.internal = if hull == super::ReattachHull::Aerospace {
+                        1
+                    } else {
+                        self.definition.sections[&section].internal
+                    };
+                    self.flooded_sections.remove(&section);
+                }
+            }
+            super::AdministrativeRepairKind::Part => unreachable!(),
+        }
+        Ok(())
+    }
+
+    fn repair_critical(&mut self, location: super::CriticalLocation) -> Result<()> {
+        // Failure/mode bits can make an authored weapon run deliberately inconsistent
+        // across its criticals. Resolve a diagnostic copy with only the transient C
+        // repair bits removed so we can identify the affected mount before repairing
+        // the selected raw slot.
+        let mut resolvable = self.definition.clone();
+        for section in resolvable.sections.values_mut() {
+            for critical in section.criticals.values_mut() {
+                if super::equipment::strip_name_prefix(&critical.equipment, "IS.").is_some()
+                    || super::equipment::strip_name_prefix(&critical.equipment, "CL.").is_some()
+                {
+                    // C stores mount modes on the first critical while the remaining
+                    // slots can retain older raw values. Emptying weapon modes in the
+                    // diagnostic copy keeps grouping based on equipment/data/brand.
+                    critical.modes.clear();
+                }
+            }
+        }
+        let loadout = if self.contract_loadout {
+            BattleLoadout::resolve_contract(&resolvable)?
+        } else {
+            BattleLoadout::resolve(&resolvable)?
+        };
+        let weapon = loadout
+            .weapons
+            .iter()
+            .position(|mount| mount.criticals.contains(&location));
+        let ammunition = loadout
+            .ammunition
+            .iter()
+            .position(|bin| bin.location == location);
+        let critical = self
+            .definition
+            .sections
+            .get_mut(&location.section)
+            .and_then(|section| section.criticals.get_mut(&location.slot));
+        // C mech_repair_part (mech_maintenance.c:450-489) restores whatever the
+        // slot holds; empty slots clear already-clear bits and succeed silently.
+        let Some(critical) = critical else {
+            return Ok(());
+        };
+        critical.modes.retain(|mode| {
+            !matches!(
+                mode.as_str(),
+                "Destroyed"
+                    | "Disabled"
+                    | "Broken"
+                    | "Damaged"
+                    | "OneShot_Used"
+                    | "Jettisoned"
+                    | "RocketFired"
+            )
+        });
+        critical.brand = critical.brand.map(|brand| brand % 16);
+        if weapon.is_some() || ammunition.is_some() {
+            critical.data = "0".into();
+        }
+        self.lost_criticals.remove(&location);
+        self.component_failures
+            .retain(|failure| failure.location != location);
+        self.weapon_damage
+            .retain(|damage| damage.location != location);
+        if let Some(index) = weapon {
+            self.weapon_failures.remove(&index);
+            self.weapon_damage_jams.remove(&index);
+            self.jammed_weapons.remove(&index);
+            self.spent_launchers.remove(&index);
+            self.powered_down_weapons.remove(&index);
+            self.weapon_recycle.remove(&index);
+        }
+        if let Some(index) = ammunition {
+            self.ammunition[index] = 0;
+        }
+        // C repair writes raw zero auxiliary data for weapon/ammunition slots.
+        // That representation is intentionally broader than strict authored MML.
+        self.contract_loadout = true;
+        // C's do_magic rebuilds equipment-derived state for repaired special criticals.
+        self.reconstructed_cooling = None;
+        self.live_mass.invalidate();
+        Ok(())
+    }
+    /// Replace authored construction through the ordinary template validator while retaining
+    /// live tactical state. Administration callers use this after editing critical slots.
+    pub(super) fn replace_construction(
+        &mut self,
+        definition: BattleTemplate,
+        touched: &[super::CriticalLocation],
+    ) -> Result<()> {
+        self.replace_construction_mode(definition, touched, false)
+    }
+
+    pub(super) fn replace_construction_contract(
+        &mut self,
+        definition: BattleTemplate,
+        touched: &[super::CriticalLocation],
+    ) -> Result<()> {
+        self.replace_construction_mode(definition, touched, true)
+    }
+
+    fn replace_construction_mode(
+        &mut self,
+        definition: BattleTemplate,
+        touched: &[super::CriticalLocation],
+        contract: bool,
+    ) -> Result<()> {
+        let old = self.loadout()?.clone();
+        let replacement = if contract {
+            Self::from_contract_template(definition)?
+        } else {
+            Self::from_template(definition)?
+        };
+        let new = replacement.loadout()?.clone();
+        let remap: Vec<_> = new
+            .weapons
+            .iter()
+            .map(|mount| {
+                old.weapons.iter().position(|prior| {
+                    prior.weapon == mount.weapon
+                        && prior.criticals == mount.criticals
+                        && !mount.criticals.iter().any(|slot| touched.contains(slot))
+                })
+            })
+            .collect();
+        let ammunition = new
+            .ammunition
+            .iter()
+            .map(|bin| {
+                old.ammunition
+                    .iter()
+                    .position(|prior| {
+                        prior.location == bin.location
+                            && prior.weapon == bin.weapon
+                            && !touched.contains(&bin.location)
+                    })
+                    .map_or(bin.rounds, |old| self.ammunition[old].min(bin.capacity))
+            })
+            .collect();
+        self.definition = replacement.definition;
+        self.contract_loadout = replacement.contract_loadout;
+        self.ammunition = ammunition;
+        self.fire_modes = remap_map(&remap, &self.fire_modes);
+        self.ammunition_modes = remap_map(&remap, &self.ammunition_modes);
+        self.ammunition_sections = remap_map(&remap, &self.ammunition_sections);
+        self.weapon_recycle = remap_map(&remap, &self.weapon_recycle);
+        self.jammed_weapons = remap_set(&remap, &self.jammed_weapons);
+        self.spent_launchers = remap_set(&remap, &self.spent_launchers);
+        self.powered_down_weapons = remap_set(&remap, &self.powered_down_weapons);
+        self.weapon_failures = remap_map(&remap, &self.weapon_failures);
+        self.weapon_damage_jams = remap_set(&remap, &self.weapon_damage_jams);
+        self.lost_criticals.retain(|slot| !touched.contains(slot));
+        self.weapon_damage
+            .retain(|damage| !touched.contains(&damage.location));
+        self.component_failures
+            .retain(|failure| !touched.contains(&failure.location));
+        self.live_mass.invalidate();
+        Ok(())
+    }
+
     /// Saved character-mode injury count and fatal status, separate from tactical injury rules.
     pub fn character_pilot_status(&self) -> Option<super::BattleCharacterPilotStatus> {
         self.character_pilot
@@ -380,10 +719,32 @@ impl BattleUnit {
     }
 
     /// Construct an undamaged conventional biped from a fully resolved supported definition.
-    pub fn from_template(mut definition: BattleTemplate) -> Result<Self> {
-        super::template_ammunition::normalize(&mut definition)?;
-        validate_definition(&definition)?;
-        let loadout = BattleLoadout::resolve(&definition)?;
+    pub fn from_template(definition: BattleTemplate) -> Result<Self> {
+        Self::from_template_mode(definition, false)
+    }
+
+    /// Admit the broader raw critical layouts accepted by the canonical C administrator.
+    pub(crate) fn from_contract_template(definition: BattleTemplate) -> Result<Self> {
+        Self::from_template_mode(definition, true)
+    }
+
+    fn from_template_mode(mut definition: BattleTemplate, contract_loadout: bool) -> Result<Self> {
+        if contract_loadout {
+            super::template_ammunition::normalize_contract(&mut definition)?;
+        } else {
+            super::template_ammunition::normalize(&mut definition)?;
+        }
+        // The tonnage-chart internal structure (mech_int_check) is forced while
+        // the template file is read; construction and saved-definition restore
+        // keep the stored internals verbatim.
+        if !contract_loadout {
+            validate_definition(&definition)?;
+        }
+        let loadout = if contract_loadout {
+            BattleLoadout::resolve_contract(&definition)?
+        } else {
+            BattleLoadout::resolve(&definition)?
+        };
         let sections = definition
             .sections
             .iter()
@@ -537,15 +898,18 @@ impl BattleUnit {
             map_slot: None,
             battlefield_label: None,
             preferred_id: None,
+            contract_loadout,
+            administrative_raw: None,
             definition,
             sections,
             ammunition,
         };
-        if unit
-            .definition
-            .attributes
-            .get("cargo_space")
-            .is_some_and(|value| value != "0")
+        if !contract_loadout
+            && unit
+                .definition
+                .attributes
+                .get("cargo_space")
+                .is_some_and(|value| value != "0")
         {
             unit.mass()?;
         }
@@ -625,7 +989,11 @@ impl BattleUnit {
 
     /// Inspect typed equipment from the owned definition.
     pub fn loadout(&self) -> Result<BattleLoadout> {
-        BattleLoadout::resolve(&self.definition)
+        if self.contract_loadout {
+            BattleLoadout::resolve_contract(&self.definition)
+        } else {
+            BattleLoadout::resolve(&self.definition)
+        }
     }
 
     /// Reject corrupt or unsupported persisted construction state.
@@ -881,19 +1249,23 @@ impl BattleUnit {
                 "Unpowered unit cannot propel itself"
             );
         }
-        validate_definition(&self.definition)?;
+        if !self.contract_loadout {
+            validate_definition(&self.definition)?;
+        }
         self.critical_conditions.validate(
             (self.gyro() == super::BattleGyro::Hardened)
                 .then(|| self.system_hits(BattleSystem::Gyro)),
         )?;
-        self.jump_capacity(50)?;
-        if self
-            .definition
-            .attributes
-            .get("cargo_space")
-            .is_some_and(|value| value != "0")
-        {
-            self.mass()?;
+        if !self.contract_loadout {
+            self.jump_capacity(50)?;
+            if self
+                .definition
+                .attributes
+                .get("cargo_space")
+                .is_some_and(|value| value != "0")
+            {
+                self.mass()?;
+            }
         }
         ensure!(
             !self.facing.arms_flipped || self.definition.has_special("FlipArms"),
@@ -912,13 +1284,13 @@ impl BattleUnit {
             },
         )?;
         ensure!(
-            self.fire_modes
-                .iter()
-                .all(|(index, mode)| *mode != super::BattleFireMode::Normal
+            self.fire_modes.iter().all(|(index, mode)| {
+                *mode != super::BattleFireMode::Normal
                     && loadout
                         .weapons
                         .get(*index)
-                        .is_some_and(|mount| mode.supports(mount.weapon))),
+                        .is_some_and(|mount| self.contract_loadout || mode.supports(mount.weapon))
+            }),
             "Invalid weapon firing mode"
         );
         ensure!(
@@ -926,14 +1298,14 @@ impl BattleUnit {
                 .weapons
                 .get(*index)
                 .is_some_and(|mount| *mode != super::BattleAmmunitionMode::Normal
-                    && mode.supports(mount.weapon))),
+                    && (self.contract_loadout || mode.supports(mount.weapon)))),
             "Invalid weapon ammunition mode"
         );
         ensure!(
             self.spent_launchers.iter().all(|index| loadout
                 .weapons
                 .get(*index)
-                .is_some_and(|mount| mount.one_shot)),
+                .is_some_and(|mount| self.contract_loadout || mount.one_shot)),
             "Invalid spent launcher"
         );
         ensure!(
@@ -1044,13 +1416,16 @@ impl BattleUnit {
                 .get(section)
                 .ok_or_else(|| anyhow::anyhow!("Missing unit section"))?;
             ensure!(
-                state.internal != 0 || (state.armor == 0 && state.rear == 0),
+                self.contract_loadout
+                    || state.internal != 0
+                    || (state.armor == 0 && state.rear == 0),
                 "Destroyed section retains armor"
             );
             ensure!(
-                state.armor <= original.armor
-                    && state.internal <= original.internal
-                    && state.rear <= original.rear,
+                self.contract_loadout
+                    || (state.armor <= original.armor
+                        && state.internal <= original.internal
+                        && state.rear <= original.rear),
                 "Unit protection exceeds its definition"
             );
         }
@@ -1100,6 +1475,84 @@ impl BattleUnit {
     }
 }
 
+pub(super) fn replace_critical_modes(
+    modes: &mut Vec<String>,
+    fire: Vec<String>,
+    ammunition: Vec<String>,
+) {
+    const ALL: &[&str] = &[
+        "Destroyed",
+        "Disabled",
+        "Broken",
+        "Damaged",
+        "OnTC",
+        "RearMount",
+        "Hotload",
+        "Halfton",
+        "OneShot",
+        "OneShot_Used",
+        "UltraMode",
+        "RapidFire",
+        "Gattling",
+        "Rotary_TwoShot",
+        "Rotary_FourShot",
+        "Rotary_SixShot",
+        "Heat",
+        "BackPack",
+        "Jettisoned",
+        "OmniBase",
+        "RocketFired",
+        "LBX/Cluster",
+        "Artemis/Mine",
+        "Narc/Smoke",
+        "Cluster",
+        "Mine",
+        "Smoke",
+        "Inferno",
+        "Swarm",
+        "Swarm1",
+        "iNarc_Explosive",
+        "iNarc_Haywire",
+        "iNarc_ECM",
+        "iNarc_Nemesis",
+        "AP",
+        "Flechette",
+        "Incendiary",
+        "Precision",
+        "Stinger",
+        "Caseless",
+        "Sguided",
+        "ExtendedRange",
+        "HighExplosive",
+        "MML_LRM",
+    ];
+    modes.retain(|mode| !ALL.contains(&mode.as_str()));
+    modes.extend(fire);
+    modes.extend(ammunition);
+}
+
+pub(super) fn remap_set(
+    remap: &[Option<usize>],
+    values: &std::collections::BTreeSet<usize>,
+) -> std::collections::BTreeSet<usize> {
+    remap
+        .iter()
+        .enumerate()
+        .filter_map(|(new, old)| old.filter(|old| values.contains(old)).map(|_| new))
+        .collect()
+}
+
+pub(super) fn remap_map<T: Clone>(
+    remap: &[Option<usize>],
+    values: &BTreeMap<usize, T>,
+) -> BTreeMap<usize, T> {
+    remap
+        .iter()
+        .enumerate()
+        .filter_map(|(new, old)| old.and_then(|old| values.get(&old).cloned().map(|v| (new, v))))
+        .collect()
+}
+
 /// Gate the initial conventional chassis features without silently discarding unknown fields.
 fn validate_definition(definition: &BattleTemplate) -> Result<()> {
     super::unit_identity::validate_metadata(&definition.attributes)?;
@@ -1146,7 +1599,15 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
                 value.parse::<u8>().is_ok_and(|range| range <= 127),
                 "Invalid sensor range {field}"
             ),
-            "unit_era" | "unit_tro" | "radio_range" | "radiotype" | "radio" => {}
+            "unit_era"
+            | "unit_tro"
+            | "radio_range"
+            | "radiotype"
+            | "radio"
+            | "administrative_tonnage"
+            | "administrative_unit_type"
+            | "administrative_movement_type"
+            | "carrier_maximum_tonnage" => {}
             "computer" => {
                 ensure!(value.parse::<u8>().is_ok(), "Invalid electronics rating")
             }
@@ -1199,7 +1660,11 @@ fn validate_definition(definition: &BattleTemplate) -> Result<()> {
                             || flag.eq_ignore_ascii_case("XLEngine_Tech")
                             || flag.eq_ignore_ascii_case("LightEngine_Tech")
                             || flag.eq_ignore_ascii_case("XXL_Tech")
-                            || flag.eq_ignore_ascii_case("CompactEngine_Tech"))),
+                            || flag.eq_ignore_ascii_case("CompactEngine_Tech")
+                            || (0..=56).any(|code| {
+                                super::admin_contract::administrative_technology(code)
+                                    .is_some_and(|(name, _)| flag.eq_ignore_ascii_case(name))
+                            }))),
                 "Unsupported chassis specials {value}"
             ),
             _ => anyhow::bail!("Unsupported chassis field {field}"),

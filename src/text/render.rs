@@ -190,6 +190,44 @@ pub fn telnet(spans: &[Span], p: &Palette, o: &RenderOptions, limit: usize) -> V
         .unwrap_or_default()
 }
 
+/// Render trusted native report markup without coalescing explicit style
+/// transitions. This preserves repeated reset/color controls used by the C UI.
+pub(crate) fn native_telnet(
+    events: &[super::parser::NativeEvent],
+    o: &RenderOptions,
+    limit: usize,
+) -> Vec<u8> {
+    let mut out = Vec::new();
+    let mut styled = false;
+    for event in events {
+        match event {
+            super::parser::NativeEvent::Style(style) => {
+                let encoded = crate::telnet::encode(&ansi(style, o.color));
+                let next_styled = styled || o.color != ColorDepth::None;
+                let reserve = usize::from(next_styled) * 4;
+                if out.len() + encoded.len() + reserve > limit {
+                    break;
+                }
+                out.extend(encoded);
+                styled = next_styled;
+            }
+            super::parser::NativeEvent::Text(text) => {
+                for grapheme in text.graphemes(true) {
+                    let encoded = crate::telnet::encode(grapheme);
+                    let reserve = usize::from(styled) * 4;
+                    if out.len() + encoded.len() + reserve > limit {
+                        close(&mut out, false, styled);
+                        return out;
+                    }
+                    out.extend(encoded);
+                }
+            }
+        }
+    }
+    close(&mut out, false, styled);
+    out
+}
+
 /// Render complete text in bounded, independently closed transport messages.
 pub fn telnet_chunks(
     spans: &[Span],

@@ -7,6 +7,7 @@ mod btech_map_random;
 mod btech_reactor;
 mod btech_recovery;
 mod btech_terrain;
+mod btech_unit_configuration;
 mod btech_units;
 mod btech_vehicles;
 mod communication;
@@ -111,6 +112,8 @@ pub async fn save_with_timeout(path: &Path, world: &World, timeout: u64) -> Resu
         write::apply(&mut tx, &before, world).await?;
         tx.commit().await?;
         world.macros.committed();
+        // Unregister sanctions served their purpose once the teardown is durable.
+        world.btech.retire_sanctions.borrow_mut().clear();
         Ok(())
     }
     .await;
@@ -338,6 +341,7 @@ mod btech_landing_exclusions;
 mod btech_map_bits;
 mod btech_object_order;
 
+mod btech_player_configuration;
 mod btech_view_preferences;
 
 mod btech_wrapping;
@@ -349,6 +353,7 @@ mod btech_tows;
 mod btech_wrecks;
 
 mod btech_inventory;
+mod btech_part_costs;
 
 mod btech_cargo_bay;
 

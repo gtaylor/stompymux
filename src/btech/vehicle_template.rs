@@ -212,7 +212,7 @@ impl BattleVehicleTemplate {
             .get("heat_sinks")
             .map(|value| value.parse::<u16>().context("invalid vehicle heat sinks"))
             .transpose()?;
-        let sections: BTreeMap<_, _> = parsed
+        let mut sections: BTreeMap<_, _> = parsed
             .sections
             .into_iter()
             .map(|(name, section)| Ok((BattleVehicleSection::parse(&name)?, section)))
@@ -230,6 +230,18 @@ impl BattleVehicleTemplate {
                 "Vehicle hull face {} requires positive internals",
                 section.name()
             );
+        }
+        // The reference load forces vehicle internal structure to
+        // (tons + 5, at least 10) / 10 for every section that has any
+        // (vehicle_int_check), overriding authored Internals lines. Keeping the
+        // rewrite here, where C's parse and finalize are one operation, leaves
+        // saved definitions and later construction edits restored verbatim.
+        let expected_internal =
+            u16::try_from((i32::from(tons) + 5).max(10) / 10).expect("vehicle tonnage is bounded");
+        for layout in sections.values_mut() {
+            if layout.internal != 0 {
+                layout.internal = expected_internal;
+            }
         }
         let template = Self {
             name,

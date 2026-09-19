@@ -1,7 +1,56 @@
 //! Controlled special-object lifecycle with shared map initialization and DEBUG registration.
-use crate::{CommandAction, CommandContext, CommandInput, CommandReport, Flag, Kind};
+use crate::{
+    CommandAction, CommandContext, CommandInput, CommandReport, Config, Flag, Kind, ObjectId,
+    Scripts,
+};
 use anyhow::{Result, bail, ensure};
 use std::sync::Arc;
+
+/// Tear down `id`'s BattleTech registration and forget its configuration references.
+///
+/// The reference unregister (registry.c:512) always succeeds after the caller's
+/// control check: it disposes the special object per type and forgets
+/// configuration references, and a second unregister of an already-plain object
+/// is a silent success. The native command performs the wizard/control gate and
+/// reply text around this helper; trusted host APIs call it directly with host
+/// authority. `actor` only feeds the map teardown's admission and GOD report.
+pub(crate) fn unregister_special(
+    scripts: &Scripts,
+    config: &Config,
+    actor: ObjectId,
+    id: ObjectId,
+) -> Result<()> {
+    let existing = scripts.world().btech.registrations().get(&id).cloned();
+    if existing.as_deref() == Some("MAP") {
+        super::map_lifecycle::unregister(scripts, config, actor, id)?;
+        super::unit_lifecycle::forget_configuration(&mut scripts.world_mut().btech, id);
+        return Ok(());
+    }
+    let mut world = scripts.world_mut();
+    match existing.as_deref() {
+        // The turret lifecycle's SPECIAL_FREE case is empty (ds_turret.c:276).
+        Some("TURRET") => {
+            Arc::make_mut(&mut world.btech.gunner_stations).remove(&id);
+            Arc::make_mut(&mut world.btech.registrations).remove(&id);
+        }
+        // newfreemech SPECIAL_FREE (mech_restrict.c:437) releases battlefield
+        // membership, contacts, tow links and scheduled events before the tree
+        // entry disappears; wreck_cleanup::forget performs the same disposal.
+        // The stamped sanction admits the removal at the next save.
+        Some("MECH") => {
+            super::wreck_cleanup::forget(&mut world.btech, id);
+            world.btech.retire_sanctions.borrow_mut().insert(id);
+        }
+        // DEBUG carries no domain record; the Rust port has no autopilot runtime,
+        // so an AUTOPILOT role reduces to its registration entry.
+        None | Some("DEBUG" | "AUTOPILOT") => {
+            Arc::make_mut(&mut world.btech.registrations).remove(&id);
+        }
+        _ => bail!("Teardown for this BTech type is not implemented."),
+    }
+    super::unit_lifecycle::forget_configuration(&mut world.btech, id);
+    Ok(())
+}
 
 /// Resolve administrative targets and keep registration changes inside the ordinary world transaction.
 pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<CommandAction> {
@@ -29,21 +78,8 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
             ));
         }
         if operation == "unregister" {
-            if existing.as_deref() == Some("MAP") {
-                drop(world);
-                super::map_lifecycle::unregister(ctx.scripts, ctx.config, ctx.player, id)?;
-                return Ok(format!("Unregistered #{} from BTech.", id.0));
-            }
-            if existing.as_deref() == Some("TURRET") {
-                Arc::make_mut(&mut world.btech.gunner_stations).remove(&id);
-                Arc::make_mut(&mut world.btech.registrations).remove(&id);
-                return Ok(format!("Unregistered #{} from BTech.", id.0));
-            }
-            ensure!(
-                existing.as_deref().is_none_or(|kind| kind == "DEBUG"),
-                "Teardown for this BTech type is not implemented."
-            );
-            Arc::make_mut(&mut world.btech.registrations).remove(&id);
+            drop(world);
+            unregister_special(ctx.scripts, ctx.config, ctx.player, id)?;
             return Ok(format!("Unregistered #{} from BTech.", id.0));
         }
         ensure!(
@@ -103,6 +139,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
                     },
                 )?;
             }
+            "MECH" => super::register_empty_battle_unit(&mut world, id)?,
             _ => bail!("Initialization for this BTech type is not implemented."),
         }
         Ok(format!("Registered #{} as BTech type {kind}.", id.0))

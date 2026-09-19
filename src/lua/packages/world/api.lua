@@ -5,6 +5,16 @@ local object = native.object
 native.object_methods(methods)
 
 function methods:dbref() return native.object_id(self) end
+function methods.__tostring(...)
+    local ok, value = native.object_tostring(...)
+    if not ok then error(value, 0) end
+    return value
+end
+function methods.__eq(...)
+    local ok, value = native.object_equal(...)
+    if not ok then error(value, 0) end
+    return value
+end
 
 function methods:name() return native.get(native.object_id(self), 'name') end
 
@@ -12,13 +22,13 @@ function methods:type() return native.get(native.object_id(self), 'type') end
 
 function methods:description() return native.get(native.object_id(self), 'description') end
 
-function methods:set_name(s) native.set(native.object_id(self), 'name', s) end
+function methods:set_name(...) native.set(native.object_id(self), 'name', ...) end
 
-function methods:set_description(...) if select('#',...)~=1 then mux.error.raise(mux.error.codes.arg.invalid,'description is required; use nil to clear') end; native.set(native.object_id(self), 'description', ...) end
+function methods:set_description(...) native.set(native.object_id(self), 'description', ...) end
 
 function methods:internal_description() return native.get(native.object_id(self), 'internal_description') end
 
-function methods:set_internal_description(...) if select('#',...)~=1 then mux.error.raise(mux.error.codes.arg.invalid,'description is required; use nil to clear') end; native.set(native.object_id(self), 'internal_description', ...) end
+function methods:set_internal_description(...) native.set(native.object_id(self), 'internal_description', ...) end
 
 for _, key in ipairs({'destination', 'home', 'location', 'zone', 'affiliation'}) do
     methods[key] = function(self)
@@ -29,7 +39,6 @@ end
 function methods:lua_parent() return native.relationship(native.object_id(self), 'lua_parent') end
 for _, key in ipairs({'destination', 'home', 'zone', 'affiliation', 'lua_parent'}) do
     methods['set_' .. key] = function(self, ...)
-        if select('#', ...) ~= 1 then mux.error.raise(mux.error.codes.arg.invalid, 'value is required; supply nil explicitly to clear') end
         native.set_relationship(native.object_id(self), key, ...)
     end
 end
@@ -49,6 +58,7 @@ function methods:powers() return native.power_set(self) end
 function methods:state(ns) return native.state(native.object_id(self), ns) end
 
 mux.world = {
+    access = native.access,
     types = native.types,
     flags = native.flags,
     powers = native.powers,
@@ -70,7 +80,15 @@ function mux.world.teleport_object(t)
     native.teleport_object(t)
 end
 
-function mux.world.pemit(o, s) native.pemit(id(o), s) end
+function mux.world.pemit(...)
+    local count = select('#', ...)
+    local o, s = ...
+    if not native.pemit_accepts(s) then
+        local got = count < 2 and 'no value' or type(s)
+        error("bad argument #2 to '?' (string expected, got " .. got .. ')', 0)
+    end
+    native.pemit(...)
+end
 
 -- Private evaluation accepts canonical keys; public calls require typed constants.
 local function lock_identity(value)

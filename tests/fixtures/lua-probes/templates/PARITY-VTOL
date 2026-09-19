@@ -1,0 +1,27 @@
+Name { Parity VTOL }
+Reference { PARITY-VTOL }
+Type { VTOL }
+Move_Type { VTOL }
+Tons { 25 }
+Heat_Sinks { 10 }
+Max_Speed { 107.50 }
+Specials { ICEEngine_Tech SearchLight }
+Left_Side
+Armor { 12 }
+Internals { 3 }
+Right_Side
+Armor { 13 }
+Internals { 3 }
+Front_Side
+Armor { 20 }
+Internals { 3 }
+CRIT_1 { Agra.IS.PPC - - 5 }
+Aft_Side
+Armor { 10 }
+Internals { 3 }
+Turret
+Armor { 8 }
+Internals { 3 }
+Rotor
+Armor { 2 }
+Internals { 3 }

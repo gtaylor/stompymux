@@ -27,7 +27,10 @@ pub(super) fn engine_landing(
         let modifier = i16::try_from(unit.elevation_level(tile) - i32::from(height))
             .context("Emergency landing height exceeds pilot-check range")?;
         Some(super::vehicle_piloting::roll(
-            world, id, modifier, extended,
+            world,
+            id,
+            i32::from(modifier),
+            extended,
         )?)
     } else {
         None

@@ -20,7 +20,7 @@ pub struct BattlePilotingCheck {
     pub damage: u8,
     /// Construction penalty from a small cockpit, separate from damage.
     pub cockpit: u8,
-    pub situational: i16,
+    pub situational: i32,
     pub absent_character_pilot: u8,
     pub target: i32,
     pub roll: Option<u8>,
@@ -189,6 +189,16 @@ pub fn roll_piloting(
     modifier: i16,
     extended: bool,
 ) -> Result<BattlePilotingCheck> {
+    roll_piloting_i32(world, unit, i32::from(modifier), extended)
+}
+
+/// C contract entry point whose public modifier is a full signed `int`.
+pub(super) fn roll_piloting_i32(
+    world: &mut World,
+    unit: ObjectId,
+    modifier: i32,
+    extended: bool,
+) -> Result<BattlePilotingCheck> {
     if world.btech.vehicles().contains_key(&unit) {
         return super::vehicle_piloting::roll(world, unit, modifier, extended);
     }
@@ -208,14 +218,14 @@ pub(super) fn roll_standing(
         .get(&unit)
         .context("Unit construction state is unavailable")?
         .stand_requires_roll()?;
-    roll_check(world, unit, modifier, extended, automatic)
+    roll_check(world, unit, i32::from(modifier), extended, automatic)
 }
 
 /// Shared check evaluation; automatic success still respects blocked crew except the prone rule.
 fn roll_check(
     world: &mut World,
     unit: ObjectId,
-    modifier: i16,
+    modifier: i32,
     extended: bool,
     automatic: bool,
 ) -> Result<BattlePilotingCheck> {
@@ -241,10 +251,10 @@ fn roll_check(
         0
     };
     let target = i32::from(skill)
-        + i32::from(damage)
-        + i32::from(cockpit)
-        + i32::from(modifier)
-        + i32::from(absent_character_pilot);
+        .wrapping_add(i32::from(damage))
+        .wrapping_add(i32::from(cockpit))
+        .wrapping_add(modifier)
+        .wrapping_add(i32::from(absent_character_pilot));
     let blocked = controls_blocked(world, unit, state.power());
     let prone = state.posture() == super::BattlePosture::Prone;
     let automatic_success = prone || (automatic && !blocked);

@@ -10,6 +10,7 @@ pub use admin::AdminRequest;
 mod appearance;
 pub use appearance::AppearanceMode;
 mod callbacks;
+pub(crate) mod command_access;
 mod communication;
 pub(crate) use actions::ActionContent;
 pub use actions::{ObjectAction, TransitionContext};
@@ -34,6 +35,8 @@ use std::collections::BTreeMap;
 
 /// Lua owner and loaded game modules with runtime-only shared resources.
 pub struct Scripts {
+    /// Process-local tick timing shared by reloads of this Lua owner.
+    pub(crate) event_telemetry: std::rc::Rc<std::cell::Cell<crate::BattleEventTelemetry>>,
     /// Runtime-only session flows and staged effects.
     pub(crate) flows: flows::Engine,
     /// Source identity and package contents captured when this runtime was built.
@@ -72,6 +75,20 @@ fn err(e: impl std::fmt::Display) -> mlua::Error {
 }
 
 impl Scripts {
+    /// Override process-local event timing for diagnostics and contract tests.
+    pub fn configure_battle_event_telemetry(&self, process_start: i64, ticks: u64) {
+        self.event_telemetry.set(crate::BattleEventTelemetry {
+            process_start,
+            ticks,
+        });
+    }
+
+    pub(crate) fn record_battle_event_tick(&self) {
+        let mut telemetry = self.event_telemetry.get();
+        telemetry.ticks = telemetry.ticks.saturating_add(1);
+        self.event_telemetry.set(telemetry);
+    }
+
     /// Nested native-to-Lua callbacks share the caller's budget rather than replenishing it.
     fn reset_callback_budget(&self) {
         if !transactions::active(&self.lua) {

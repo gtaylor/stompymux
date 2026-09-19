@@ -147,6 +147,9 @@ impl Scripts {
                     break;
                 }
             }
+            if !definition.lua_access.allows(&self.world.borrow(), player) {
+                continue;
+            }
             if definition
                 .permission
                 .denial(

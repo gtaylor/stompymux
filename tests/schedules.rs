@@ -144,6 +144,19 @@ async fn registration_rejects_malformed_declarations_and_captures_handlers() {
             .iter()
             .any(|w| w.contains("schedules deferred"))
     );
+    // Game modules own a private write scope (C lua_load_module setfenv), so the
+    // global set by probe.lua is invisible to flat chunks; reach the cached
+    // module table through the host's module registry instead.
+    let modules: mlua::Table = s.inspect_lua().named_registry_value("mux.modules").unwrap();
+    s.inspect_lua()
+        .globals()
+        .set(
+            "schedule_module",
+            modules
+                .get::<mlua::Table>("global_logic/probe.lua")
+                .unwrap(),
+        )
+        .unwrap();
     s.inspect_lua().load("schedule_module.schedules[1].handler=function() error('replacement') end; schedule_module.schedules[1].cron='bad';schedule_module.schedules[1].name='changed'").exec().unwrap();
     let mut q = Queue::default();
     q.observe(s.schedules(), &s.world(), 120);
@@ -418,15 +431,18 @@ async fn tcp_scheduled_persistence_failure_consumes_job_and_discards_messages() 
         let (_d,c)=fixture().await;credentials(&c).await;
         std::fs::create_dir_all(c.root.join("logs")).unwrap();std::fs::write(c.root.join("logs/schedule.log"),"").unwrap();
         module(&c,"global_logic/write.lua",r#"return {schedules={{name='write',cron='* * * * *',handler=function()
-            assert(mux.log('schedule.log','scheduled commit'));schedule_attempts=(schedule_attempts or 0)+1;local state=mux.world.object(1):state('scheduled');state:set('written',state:get('written',0)+1);mux.world.pemit(1,'SCHEDULE SAVED')
+            assert(mux.log('schedule.log','scheduled commit'));attempts.n=attempts.n+1;local state=mux.world.object(1):state('scheduled');state:set('written',state:get('written',0)+1);mux.world.pemit(1,'SCHEDULE SAVED')
         end}}}"#);
         let clock=Rc::new(Cell::new(120));let (address,shutdown,task,vm)=start(&c,clock.clone()).await;let mut client=Client::connect(address,1).await;
+        let attempts=vm.create_table().unwrap();attempts.set("n",0).unwrap();vm.globals().set("attempts",attempts).unwrap();
         let mut db=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()).foreign_keys(false)).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER reject_schedule BEFORE INSERT ON object_state WHEN NEW.namespace='scheduled' BEGIN SELECT RAISE(ABORT,'schedule blocked'); END").execute(&mut db).await.unwrap();
         clock.set(234);
-        // Lua globals intentionally outlive world rollback, so this observes an actual attempt.
+        // Lua table mutations resolve through the module env's inherited globals
+        // (assignments stay module-private as in C), so this observes an actual
+        // attempt that outlives world rollback.
         tokio::time::timeout(Duration::from_secs(5),async {
-            while vm.globals().get::<Option<i64>>("schedule_attempts").unwrap()!=Some(1) {tokio::task::yield_now().await;}
+            while vm.globals().get::<mlua::Table>("attempts").unwrap().get::<i64>("n").unwrap()!=1 {tokio::task::yield_now().await;}
         }).await.unwrap();
         client.send("@state/examine #1/scheduled").await;let text=client.until("No state namespace named scheduled.").await;assert!(!text.contains("SCHEDULE SAVED"));
         assert!(!persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)].state.contains_key("scheduled"));

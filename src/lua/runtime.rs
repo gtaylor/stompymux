@@ -58,6 +58,11 @@ impl Scripts {
         let (lua, budget) = sandbox::create(config)?;
         lua.set_app_data(config.clone());
         lua.set_app_data(mode);
+        let event_telemetry = std::rc::Rc::new(std::cell::Cell::new(crate::BattleEventTelemetry {
+            process_start: crate::clock::wall_time(),
+            ticks: 0,
+        }));
+        lua.set_app_data(event_telemetry.clone());
         super::transactions::install(&lua);
         super::testing::install(&lua).map_err(|e| anyhow::anyhow!(e.to_string()))?;
         lua.set_app_data(sources.clone());
@@ -73,6 +78,7 @@ impl Scripts {
             packages::restrict_checking(&lua, &api)?;
         }
         let mut scripts = Self {
+            event_telemetry,
             flows,
             sources,
             palette,

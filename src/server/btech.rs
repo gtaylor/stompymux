@@ -4,6 +4,7 @@ use super::*;
 impl Server {
     /// Apply one simulation step; failed saves restore the countdown and discard its notices.
     pub(super) async fn btech_tick(&mut self, now: i64) {
+        self.scripts.record_battle_event_tick();
         let mut scanner_observers = crate::optical_scanner_observers(&self.scripts.world.borrow());
         let starting_scanners: std::collections::BTreeSet<_> = {
             let world = self.scripts.world.borrow();

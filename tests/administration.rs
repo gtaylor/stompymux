@@ -74,10 +74,13 @@ async fn live_settings_permissions_reports_and_restart() {
             .unwrap(),
         7
     );
-    assert_eq!(
+    // C's registry only knows flat legacy directive names; section-qualified
+    // spellings are unknown (configuration_registry.c strcmp on entry->pname).
+    assert!(
         s.eval_callback::<i64>("return mux.config.get('mux.max_players')")
-            .unwrap(),
-        7
+            .unwrap_err()
+            .to_string()
+            .contains("mux.config.not_found: unknown configuration directive 'mux.max_players'")
     );
     assert!(run(&s, &c, 1, "@list config_permissions").contains("max_players: wizard (live)"));
     assert!(run(&s, &c, 1, "@list options").contains("sessions: 7"));
@@ -134,7 +137,7 @@ async fn edits_partial_success_aliases_and_live_handles() {
         1
     );
     assert_eq!(c.mux.default_thing_flags, [Flag::Ansi]);
-    let id = s.eval_callback::<i64>("return mux.world.create_object{type=mux.world.types.THING,name='Live defaults'}:dbref()").unwrap();
+    let id = s.eval_callback::<i64>("return mux.world.create_object{type=mux.world.types.THING,name='Live defaults',location=0,home=0}:dbref()").unwrap();
     assert!(s.world().objects[&ObjectId(id)].flags.contains(Flag::Ansi));
     assert!(edit(&mut c, &mut s, 1, "alias", "l say").is_err());
     edit(&mut c, &mut s, 1, "alias", "inspectroom l").unwrap();

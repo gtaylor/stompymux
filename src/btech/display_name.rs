@@ -33,6 +33,14 @@ impl DisplayName {
 
 /// Read the configured override; an empty result distinguishes an unset name from its fallback.
 pub fn display_name(world: &World, id: ObjectId) -> Result<&str> {
+    if let Some(value) = world
+        .btech
+        .unit_configuration
+        .get(&id)
+        .and_then(|configuration| configuration.display_name.as_deref())
+    {
+        return Ok(value);
+    }
     if let Some(unit) = world.btech.constructed_units().get(&id) {
         return Ok(&unit.display_name.0);
     }
@@ -48,6 +56,7 @@ pub fn display_name(world: &World, id: ObjectId) -> Result<&str> {
 /// Assign or clear the override after the enclosing administrative action admits the caller.
 pub(super) fn set(world: &mut World, id: ObjectId, value: &str) -> Result<()> {
     let value = DisplayName::try_from(value.to_owned())?;
+    let configured = (!value.0.is_empty()).then(|| value.0.clone());
     if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&id) {
         unit.display_name = value;
     } else {
@@ -56,5 +65,6 @@ pub(super) fn set(world: &mut World, id: ObjectId, value: &str) -> Result<()> {
             .context("Unit is unavailable")?
             .display_name = value;
     }
+    super::set_unit_identity_configuration(world, id, "display_name", configured);
     Ok(())
 }

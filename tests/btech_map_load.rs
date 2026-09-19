@@ -44,7 +44,7 @@ async fn load_map_native_lua_and_restart_across_chassis() {
             let before = world.btech.clone();
             let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
             let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-            let call = format!("btech.map.load({},{},'loaded.map')", actor.0, map.0);
+            let call = format!("btech.map.load_as({},{},'loaded.map')", actor.0, map.0);
             assert!(
                 lua.eval_callback::<()>(&format!("{call}; error('abort load')"))
                     .is_err()
@@ -125,7 +125,7 @@ async fn invalid_loads_preserve_map_membership_and_messages() {
         ("eof.map", "#-1 Map invalid - Height not loaded properly"),
     ] {
         let error = scripts
-            .eval_callback::<bool>(&format!("return btech.map.load(1,{},'{name}')", map.0))
+            .eval_callback::<bool>(&format!("return btech.map.load_as(1,{},'{name}')", map.0))
             .unwrap_err();
         assert!(error.to_string().contains(expected), "{error}");
         assert_eq!(

@@ -8,7 +8,7 @@ use std::sync::Arc;
 pub(super) fn roll(
     world: &mut World,
     id: ObjectId,
-    modifier: i16,
+    modifier: i32,
     extended: bool,
 ) -> Result<BattlePilotingCheck> {
     let object = world.objects.get(&id).context("Unit is unavailable")?;
@@ -32,10 +32,10 @@ pub(super) fn roll(
     };
     let damage = vehicle.piloting_damage();
     let target = i32::from(skill)
-        + i32::from(damage)
-        + i32::from(cockpit)
-        + i32::from(modifier)
-        + i32::from(absent_character_pilot);
+        .wrapping_add(i32::from(damage))
+        .wrapping_add(i32::from(cockpit))
+        .wrapping_add(modifier)
+        .wrapping_add(i32::from(absent_character_pilot));
     let blocked =
         super::piloting::controls_blocked(world, id, vehicle.power()) || vehicle.is_destroyed();
     let roll = if blocked {

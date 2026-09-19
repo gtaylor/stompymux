@@ -10,7 +10,9 @@ async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
     let (dir, config, mut world) = isolated_world().await;
     std::fs::write(dir.path().join("lua/object_logic/parity.lua"),r#"
       local function record(ctx,key)
-        trace=trace or {};table.insert(trace,key..(ctx.silent and ':silent' or ''))
+        -- Modules own a private write scope (C lua_load_module setfenv), so
+        -- mutate the inherited host global instead of assigning a local one.
+        table.insert(trace,key..(ctx.silent and ':silent' or ''))
         assert(ctx.enactor==traveler and ctx.descriptor==expected_descriptor)
         assert(ctx.source==source and ctx.destination==destination)
         assert(ctx.cause==((key=='teleport_source' or key=='teleport' or key=='on_teleport' or key=='move' or key=='on_move') and object_cause or -1))

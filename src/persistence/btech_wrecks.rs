@@ -35,7 +35,11 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BTreeMap<ObjectId, 
 
 /// Retire native records and timers inside the existing atomic world save.
 pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World) -> Result<bool> {
-    let retired = crate::btech::wreck_cleanup::retired(before, after)?;
+    let retired = crate::btech::wreck_cleanup::retired(
+        before,
+        after,
+        &crate::btech::unit_lifecycle::unregistered(before, after),
+    )?;
     if !retired.is_empty() {
         super::btech_units::purge(c, &retired).await?;
         super::btech_vehicles::purge(c, &retired).await?;

@@ -561,35 +561,53 @@ function btech_unit.set_team(actor, unit, team) end
 function btech_unit.losemit(actor, unit, message) end
 
 ---Wizard-only saved ID preference; does not change the current label or consume dice.
+---Rust extension retained under its descriptive name; the canonical setter follows the C contract.
 ---@param actor integer Wizard actor.
 ---@param unit integer Constructed unit; no placement or power requirement.
 ---@param value? string Exactly two ASCII letters; nil or empty clears the preference.
 ---@return string? preferred_id Normalized uppercase preference, or nil when cleared.
-function btech_unit.set_preferred_id(actor, unit, value) end
+function btech_unit.set_preferred_id_as(actor, unit, value) end
 
----Read the configured display override; an empty string means template-name fallback.
----@param unit integer
----@return string name
+---Set the saved two-letter battlefield ID preference; nil clears it without consuming dice.
+---@param unit DbRef|Object Constructed unit.
+---@param id string|nil Exactly two ASCII letters; nil clears the preference.
+function btech_unit.set_preferred_id(unit, id) end
+
+---Read the saved display-name override, or nil when the template name is in use.
+---@param unit DbRef|Object
+---@return string|nil name
 function btech_unit.display_name(unit) end
 
 ---Set a display override of at most 120 bytes; an empty string clears it. Wizard only.
+---Rust extension retained under its descriptive name; the canonical setter follows the C contract.
 ---@param actor integer
 ---@param unit integer
 ---@param name string
 ---@return boolean success
-function btech_unit.set_display_name(actor, unit, name) end
+function btech_unit.set_display_name_as(actor, unit, name) end
 
----Read raw configured markings; empty means no markings. This is configuration inspection.
----@param unit integer
----@return string markings
+---Replace the saved display-name override; nil or an empty string clears it.
+---@param unit DbRef|Object Constructed unit.
+---@param name string|nil At most 120 bytes.
+function btech_unit.set_display_name(unit, name) end
+
+---Read the saved markings string, or nil when no markings are configured.
+---@param unit DbRef|Object
+---@return string|nil markings
 function btech_unit.markings(unit) end
 
 ---Wizard-only literal markings, at most 16383 bytes; empty clears. Callback failures roll back.
+---Rust extension retained under its descriptive name; the canonical setter follows the C contract.
 ---@param actor integer
 ---@param unit integer
 ---@param markings string
 ---@return boolean success
-function btech_unit.set_markings(actor, unit, markings) end
+function btech_unit.set_markings_as(actor, unit, markings) end
+
+---Replace the saved markings, at most 16383 bytes; nil or an empty string clears them.
+---@param unit DbRef|Object Constructed unit.
+---@param markings string|nil
+function btech_unit.set_markings(unit, markings) end
 
 ---View escaped markings through running cockpit/gunner contact and unblocked-LOS admission.
 ---No scan-range limit; omitted target uses this operator's selected unit.
@@ -816,11 +834,23 @@ function btech_map.cloud_base(actor, dbref, altitude) end
 
 ---Wizard broadcast to occupants of running, conscious, unblinded units in map-slot order.
 ---Does not require sensor contacts; all notices and the private confirmation roll back together.
+---Rust extension retained under its descriptive name; the canonical emit follows the C contract.
 ---@param actor integer
 ---@param dbref integer
 ---@param text string Leading spaces are removed; empty messages are rejected.
 ---@return integer[] Eligible unit dbrefs, including units with empty cockpits.
-function btech_map.emit(actor, dbref, text) end
+function btech_map.emit_as(actor, dbref, text) end
+
+---@class BattleMapEmitOptions
+---@field audience? "all"|"range"|"line_of_sight" Recipient selection; defaults to all.
+---@field origin? BattleHexCoordinate Required anchor for range and line_of_sight audiences.
+---@field range? number Nonnegative hex radius; required with the range audience.
+
+---Deliver a cockpit message to occupants of running units using the shared transactional emitter.
+---@param map DbRef|Object
+---@param message string One through 8191 bytes; leading spaces are removed.
+---@param options? BattleMapEmitOptions
+function btech_map.emit(map, message, options) end
 
 ---Wizard-only shutdown and removal in map-slot order; game objects stay in the map room.
 ---@param actor integer
@@ -844,11 +874,17 @@ function btech_map.resize(actor, dbref, width, height) end
 function btech_map.save(actor, dbref, name) end
 
 ---Load an asset; GOD keeps membership, while other wizards shut down and clear units.
+---Rust extension retained under its descriptive name; the canonical loader follows the C contract.
 ---@param actor integer
 ---@param dbref integer
 ---@param name string Relative asset name.
 ---@return boolean
-function btech_map.load(actor, dbref, name) end
+function btech_map.load_as(actor, dbref, name) end
+
+---Replace map terrain from a saved asset using the strict C contract.
+---@param map DbRef|Object
+---@param name string Relative name under database.map_database.
+function btech_map.load(map, name) end
 
 ---Install wizard fire; zero duration is permanent. Off-map coordinates leave the map unchanged.
 ---@param actor integer
@@ -896,26 +932,58 @@ function btech_map.set_field(actor, map, field, value) end
 ---@return boolean
 function btech_map.add_smoke(actor, dbref, x, y, duration) end
 
----@class BattleMapLink
+---@class BattleAuthoredMapLink
 ---@field parent integer Parent map.
 ---@field coordinate BattleHexCoordinate Placement on the parent.
 ---@field entrances? table[] Four cardinal modes, north/east/south/west: {kind="none"}, {kind="offset",distance=N}, or {kind="exact",coordinate={x=X,y=Y}}.
 
+---Read the authored link configuration saved by the wizard editor. Rust extension retained
+---under its descriptive name; the canonical link follows the C contract.
 ---@param child integer
+---@return BattleAuthoredMapLink|nil
+function btech_map.authored_link(child) end
+
+---Configure an authored link without rebuilding live routes; nil removes the configuration.
+---Rust extension retained under its descriptive name; the canonical setter follows the C contract.
+---@param child integer
+---@param link BattleAuthoredMapLink|nil
+---@return boolean
+function btech_map.set_authored_link(child, link) end
+
+---@alias BattleMapEntrance {mode: "offset", offset: integer}|{mode: "exact", x: integer, y: integer}
+
+---@class BattleMapEntrances
+---@field north? BattleMapEntrance
+---@field east? BattleMapEntrance
+---@field south? BattleMapEntrance
+---@field west? BattleMapEntrance
+
+---@class BattleMapLink
+---@field parent Object Parent map object.
+---@field x integer Placement column on the parent.
+---@field y integer Placement row on the parent.
+---@field entrances? BattleMapEntrances
+
+---Read the strict C-contract link configuration of a child map, or nil when none is authored.
+---@param child DbRef|Object
 ---@return BattleMapLink|nil
 function btech_map.link(child) end
 
----Configure an authored link without rebuilding live routes; nil removes the configuration.
----@param child integer
+---Replace the C-contract link configuration of a child map; nil removes it.
+---@param child DbRef|Object
 ---@param link BattleMapLink|nil
----@return boolean
 function btech_map.set_link(child, link) end
 
 ---Rebuild reachable map routes with cycle/depth protection and atomic publication.
+---Rust extension retained under its descriptive name; the canonical rebuild follows the C contract.
 ---@param actor integer
 ---@param map integer
 ---@return {buildings:integer,leaves:integer,entrances:integer,skipped:integer}
-function btech_map.update_links(actor, map) end
+function btech_map.update_links_as(actor, map) end
+
+---Rebuild reachable map routes with cycle/depth protection and atomic publication.
+---@param map DbRef|Object
+function btech_map.update_links(map) end
 
 ---Publish a wizard map listing without advancing simulation or changing contacts.
 ---@param actor integer
@@ -997,6 +1065,85 @@ function btech_map.environment(actor, dbref, conditions) end
 ---@param enabled boolean
 ---@return boolean
 function btech_map.wrapping(dbref, enabled) end
+
+---@class BattleBlastZone
+---@field x integer
+---@field y integer
+---@field radius integer
+
+---List saved artillery blast zones in saved order.
+---@param map DbRef|Object
+---@return BattleBlastZone[]
+function btech_map.blast_zones(map) end
+
+---Read the saved cargo transfer point, or nil when the map has no location restriction.
+---@param map DbRef|Object
+---@return BattleCargoTransferPoint|nil
+function btech_map.cargo_transfer_point(map) end
+
+---Replace the saved cargo transfer point; nil clears the restriction.
+---@param map DbRef|Object
+---@param point BattleCargoTransferPoint|nil
+function btech_map.set_cargo_transfer_point(map, point) end
+
+---Read one tile elevation; water and ice report depth.
+---@param map DbRef|Object
+---@param hex BattleHexCoordinate
+---@return integer elevation
+function btech_map.elevation(map, hex) end
+
+---@alias BattleTerrainName "grassland"|"road"|"light_forest"|"heavy_forest"|"water"|"ice"|"bridge"|"high_water"|"rough"|"mountains"|"fire"|"smoke"|"snow"|"building"|"wall"
+
+---Read one decoded terrain kind.
+---@param map DbRef|Object
+---@param hex BattleHexCoordinate
+---@return BattleTerrainName terrain
+function btech_map.terrain(map, hex) end
+
+---Report whether a coordinate lies inside a saved blast zone.
+---@param map DbRef|Object
+---@param hex BattleHexCoordinate
+---@return boolean inside
+function btech_map.in_blast_zone(map, hex) end
+
+---@alias BattleLineOfSight "none"|"blocked"|"clear"
+
+---Report line of sight from one placed unit toward a unit or hex.
+---@param observer DbRef|Object
+---@param target DbRef|Object|BattleHexCoordinate
+---@return BattleLineOfSight state
+function btech_map.line_of_sight(observer, target) end
+
+---@alias BattlePlacement {x: integer, y: integer, z?: integer}
+
+---Place a unit on decoded terrain using the shared placement rules.
+---@param unit DbRef|Object
+---@param map DbRef|Object
+---@param position BattlePlacement
+function btech_map.place_unit(unit, map, position) end
+
+---Measure the spatial range between two units or positions on one map.
+---@param map DbRef|Object
+---@param from DbRef|Object|BattlePlacement
+---@param to DbRef|Object|BattlePlacement
+---@return number range
+function btech_map.range(map, from, to) end
+
+---Resolve the first unit matching a two-character battlefield ID from a unit or map origin.
+---@param origin DbRef|Object Registered unit or map.
+---@param id string Exactly two ASCII characters.
+---@return Object|nil unit
+function btech_map.unit_by_id(origin, id) end
+
+---@class BattleMapUnitFilter
+---@field origin BattleHexCoordinate Filter anchor.
+---@field range number Nonnegative hex radius.
+
+---List units placed on a map in saved slot order; an optional filter omits distant units.
+---@param map DbRef|Object
+---@param filter? BattleMapUnitFilter
+---@return Object[] units
+function btech_map.units(map, filter) end
 
 ---Request a ten-second optical mode change for a running unit's conscious pilot.
 ---@param dbref integer
@@ -1099,9 +1246,16 @@ function btech_unit.gunnery(dbref, weapon) end
 ---@field fire_mode BattleFireMode
 
 ---Inspect mounted weapons without acquiring targets or consuming dice; calling scripts own access policy.
+---Rust extension retained under its descriptive name; the canonical weapons list follows the C contract.
 ---@param dbref integer
 ---@return BattleWeaponInspection[] Lua array positions start at one; use each entry's index to fire.
-function btech_unit.weapons(dbref) end
+function btech_unit.weapon_states(dbref) end
+
+---List mounted weapons in mounting order; an optional section restricts the result.
+---@param unit DbRef|Object
+---@param section? BattleSection Typed section constant from btech.unit.sections.
+---@return BattleMountedWeapon[]
+function btech_unit.weapons(unit, section) end
 
 ---Read a TIC's ordered weapon numbers; requires the conscious assigned pilot.
 ---@param dbref integer
@@ -1740,6 +1894,10 @@ local btech_runtime = {}
 ---@field map table
 ---@field player table Saved player preferences.
 ---@field unit table
+---@field parts table Registered part catalogue and stock queries.
+---@field repair table Immediate repair requests and technician scheduling.
+---@field system table World event telemetry.
+---@field autopilot table Autopilot order constants; queue callables await their runtime.
 ---@field errors table Structured btech error-code tree from mux.error.code_tree('btech').
 btech = {
     gunner = btech_gunner,
@@ -3274,5 +3432,810 @@ function btech_unit.fields(actor, unit, arguments) end
 ---@param field string
 ---@param value string
 function btech_unit.set_field(actor, unit, field, value) end
+
+-- C-parity contract surface shared by several groups below.
+
+---Typed unit-layout section constant from btech.unit.sections.
+---@class BattleSection
+---Typed unit class constant from btech.unit.types.
+---@class BattleUnitType
+---Typed movement class constant from btech.unit.movement_types.
+---@class BattleMovementType
+---Typed technology code from btech.unit.technology.
+---@class BattleTechnologyCode
+---Typed technology group from btech.unit.technology_groups.
+---@class BattleTechnologyGroup
+---Typed weapon fire-mode constant from btech.unit.fire_modes.
+---@class BattleFireModeConstant
+---Typed ammunition-mode constant from btech.unit.ammunition_modes.
+---@class BattleAmmunitionModeConstant
+---Typed repair operation from btech.repair.operations.
+---@class BattleRepairOperation
+
+---@class BattleValuePair
+---@field current integer
+---@field original integer
+
+---@class BattleArmorStatus
+---@field section? BattleSection Omitted when the request did not select one.
+---@field armor BattleValuePair
+---@field internal BattleValuePair
+---@field rear_armor BattleValuePair
+
+---@class BattleAmmunitionStatus
+---@field rounds integer
+---@field capacity integer
+
+---@class BattleWeaponStats
+---@field kind string
+---@field heat integer
+---@field damage integer
+---@field minimum_range integer
+---@field short_range integer
+---@field medium_range integer
+---@field long_range integer
+---@field critical_slots integer
+---@field ammunition_per_ton integer
+---@field recycle_time integer
+---@field battle_value integer
+
+---@class BattlePartDefinition
+---@field id integer Stable catalogue part identifier.
+---@field brand integer Manufacturer identifier.
+---@field packed_id integer Brand-major combined identifier.
+---@field short_name string
+---@field long_name string
+---@field very_long_name string
+---@field category string
+---@field weight_tons number
+---@field cost integer
+---@field weapon? BattleWeaponStats Present for weapon parts.
+
+---@alias BattlePartRef BattlePartDefinition|integer|string
+
+---@class BattlePartStack
+---@field part BattlePartDefinition
+---@field quantity integer
+
+---@class BattlePartCategory
+---@field code string
+---@field name string
+
+---@class BattleCriticalSlot
+---@field section BattleSection
+---@field slot integer
+---@field kind string
+---@field part? BattlePartDefinition
+---@field operational boolean
+---@field temporary_failure boolean
+---@field auxiliary_data integer
+---@field ammunition? BattleAmmunitionStatus
+---@field fire_modes BattleFireModeConstant[]
+---@field ammunition_modes BattleAmmunitionModeConstant[]
+
+---@class BattleMountedWeapon
+---@field number integer Zero-based stable weapon number.
+---@field section BattleSection
+---@field first_slot integer Zero-based first occupied critical slot.
+---@field part BattlePartDefinition
+---@field slot_count integer
+---@field recycle integer Seconds remaining in the current cycle.
+---@field recycle_time integer Full recycle time in seconds.
+---@field operational boolean
+
+---@class BattleEngine
+---@field rating integer
+---@field suspension_factor integer
+
+---@class BattleRadioChannelReport
+---@field channel integer One-based channel position.
+---@field frequency integer Frequency from 0 through 999999.
+---@field title string At most fifteen UTF-8 bytes.
+---@field modes string[] Active mode names: digital, mute, relay, information, scan.
+
+---@class BattleBattleValue
+---@field total number
+---@field offensive number
+---@field defensive number
+
+---@class BattleTechnology
+---@field code BattleTechnologyCode
+---@field name string
+---@field group "primary"|"secondary"|"infantry"
+---@field source "configured"|"inferred"
+
+---@class BattleRepairNeed
+---@field operation BattleRepairOperation
+---@field section BattleSection
+---@field slot? integer One-based; absent for whole-section operations.
+---@field amount? integer Armor, rear-armor and internal repair quantities.
+---@field in_progress boolean
+
+-- C-parity character value and progress contracts.
+
+---@class BattleCharacterValueDefinition
+---@field code integer
+---@field name string
+---@field kind string Char_value, Char_skill, Char_advantage or Char_attribute.
+---@field default_experience_threshold integer
+
+---@class BattleCharacterValueReport
+---@field definition BattleCharacterValueDefinition
+---@field amount integer
+---@field target? integer Skill targets including earned levels.
+---@field experience? integer
+---@field experience_to_next_level? integer
+
+---Add signed skill experience using the shared C range semantics.
+---@param character DbRef|Object Player object.
+---@param skill string Canonical name or alias.
+---@param amount integer
+function btech_character.add_skill_experience(character, skill, amount) end
+
+---Return ordered value definitions of one kind; a supplied player filters unsaved
+---skills and advantages while attributes stay complete.
+---@param kind string Char_value, Char_skill, Char_advantage or Char_attribute.
+---@param character? DbRef|Object
+---@return BattleCharacterValueDefinition[] definitions
+function btech_character.catalog(kind, character) end
+
+---Read the configured runtime experience threshold of one skill.
+---@param skill string Canonical name or alias.
+---@return integer threshold
+function btech_character.experience_threshold(skill) end
+
+---Replace the stored unsigned 32-bit skill experience.
+---@param character DbRef|Object Player object.
+---@param skill string
+---@param experience integer
+function btech_character.set_skill_experience(character, skill, experience) end
+
+---Set the raw skill amount needed for the requested target; rejects non-skills and
+---unreachable targets.
+---@param character DbRef|Object Player object.
+---@param skill string
+---@param target integer
+function btech_character.set_skill_target(character, skill, target) end
+
+---Set one character value by name or code, preserving the C unsigned-byte storage.
+---@param character DbRef|Object Player object.
+---@param value string|integer Character-value name or code.
+---@param amount integer
+function btech_character.set_value(character, value, amount) end
+
+---Read one character value; skills additionally report target and experience progress.
+---@param character DbRef|Object Player object.
+---@param value string|integer Character-value name, prefix or code.
+---@return BattleCharacterValueReport result
+function btech_character.value(character, value) end
+
+-- C-parity personal-combat and player-preference contracts.
+
+---@class BattlePersonalCombatArmor
+---@field head integer
+---@field torso integer
+---@field hands integer
+---@field feet integer
+
+---@class BattlePersonalCombatEquipment
+---@field weapon BattlePartDefinition
+---@field ammunition? integer
+
+---@class BattlePersonalCombatLoadout
+---@field armor BattlePersonalCombatArmor
+---@field right? BattlePersonalCombatEquipment
+---@field left? BattlePersonalCombatEquipment
+
+---@class BattleUiPreferencesState
+---@field tactical_height integer
+---@field tactical_width integer
+---@field lrs_height integer
+---@field include_dead boolean
+---@field include_shutdown boolean
+---@field include_enemies boolean
+---@field include_allies boolean
+---@field include_target boolean
+---@field buildings "follow_brief"|"include"|"exclude"
+---@field configured boolean
+
+---Read the saved personal-combat loadout, or nil when none is configured.
+---@param player DbRef|Object
+---@return BattlePersonalCombatLoadout|nil loadout
+function btech_player.loadout(player) end
+
+---Replace the saved personal-combat loadout; nil clears it.
+---@param player DbRef|Object
+---@param loadout BattlePersonalCombatLoadout|nil
+function btech_player.set_loadout(player, loadout) end
+
+---Read the saved MechWarrior template reference, or nil when unset.
+---@param player DbRef|Object
+---@return string|nil reference
+function btech_player.mechwarrior_template(player) end
+
+---Replace the saved MechWarrior template reference; nil clears it.
+---@param player DbRef|Object
+---@param reference string|nil
+function btech_player.set_mechwarrior_template(player, reference) end
+
+---Read the saved tactical contact and display preferences.
+---@param player DbRef|Object
+---@return BattleUiPreferencesState preferences
+function btech_player.ui_preferences(player) end
+
+---Replace the saved tactical contact and display preferences; nil clears them.
+---@param player DbRef|Object
+---@param preferences BattleUiPreferencesState|nil
+function btech_player.set_ui_preferences(player, preferences) end
+
+-- C-parity template inspection contracts.
+
+---Read current, original and rear armor values; an omitted section reports the totals.
+---@param reference string Relative name under database.mech_database.
+---@param section? BattleSection Typed section constant from btech.unit.sections.
+---@return BattleArmorStatus status
+function btech_template.armor(reference, section) end
+
+---Read the constructed base cost in C-bills.
+---@param reference string
+---@return integer cost
+function btech_template.base_cost(reference) end
+
+---Read offensive, defensive and total Battle Value.
+---@param reference string
+---@return BattleBattleValue value
+function btech_template.battle_value(reference) end
+
+---List one section's critical slots with resolved parts, modes and ammunition state.
+---@param reference string
+---@param section BattleSection Typed section constant from btech.unit.sections.
+---@return BattleCriticalSlot[] slots
+function btech_template.critical_slots(reference, section) end
+
+---Read the engine rating and suspension factor.
+---@param reference string
+---@return BattleEngine engine
+function btech_template.engine(reference) end
+
+---Report whether the reference resolves to a loadable template.
+---@param reference string
+---@return boolean exists
+function btech_template.exists(reference) end
+
+---List installed equipment in catalogue order.
+---@param reference string
+---@return BattlePartStack[] parts
+function btech_template.installed_parts(reference) end
+
+---List carried ammunition stock in catalogue order.
+---@param reference string
+---@return BattlePartStack[] parts
+function btech_template.payload(reference) end
+
+---Publish the full template status report to a player.
+---@param reference string
+---@param player DbRef|Object
+function btech_template.show_status(reference, player) end
+
+---Publish the template weapon specifications to a player.
+---@param reference string
+---@param player DbRef|Object
+function btech_template.show_weapon_specs(reference, player) end
+
+---Publish one section's critical status report to a player.
+---@param reference string
+---@param player DbRef|Object
+---@param section BattleSection Typed section constant from btech.unit.sections.
+function btech_template.show_critical_status(reference, player, section) end
+
+---List configured and inferred technologies.
+---@param reference string
+---@return BattleTechnology[] technologies
+function btech_template.technologies(reference) end
+
+---List mounted weapons in mounting order; an optional section restricts the result.
+---@param reference string
+---@param section? BattleSection Typed section constant from btech.unit.sections.
+---@return BattleMountedWeapon[] weapons
+function btech_template.weapons(reference, section) end
+
+-- C-parity unit inspection and administration contracts.
+
+---Install one technology code on the unit.
+---@param unit DbRef|Object
+---@param technology BattleTechnologyCode Typed constant from btech.unit.technology.
+function btech_unit.add_technology(unit, technology) end
+
+---Remove one installed technology code.
+---@param unit DbRef|Object
+---@param technology BattleTechnologyCode Typed constant from btech.unit.technology.
+function btech_unit.remove_technology(unit, technology) end
+
+---Remove every technology in one group.
+---@param unit DbRef|Object
+---@param group BattleTechnologyGroup Typed constant from btech.unit.technology_groups.
+function btech_unit.clear_technologies(unit, group) end
+
+---List configured and inferred unit technologies.
+---@param unit DbRef|Object
+---@return BattleTechnology[] technologies
+function btech_unit.technologies(unit) end
+
+---Apply a C-contract damage request to a live unit.
+---@param unit DbRef|Object
+---@param request table Damage request record.
+function btech_unit.apply_damage(unit, request) end
+
+---Read current, original and rear armor values; an omitted section reports the totals.
+---@param unit DbRef|Object
+---@param section? BattleSection Typed section constant from btech.unit.sections.
+---@return BattleArmorStatus status
+function btech_unit.armor(unit, section) end
+
+---Read the assigned pilot object, or nil when the cockpit is unassigned.
+---@param unit DbRef|Object
+---@return Object|nil pilot
+function btech_unit.assigned_pilot(unit) end
+
+---Read offensive, defensive and total Battle Value.
+---@param unit DbRef|Object
+---@return BattleBattleValue value
+function btech_unit.battle_value(unit) end
+
+---List one section's critical slots with resolved parts, modes and ammunition state.
+---@param unit DbRef|Object
+---@param section BattleSection Typed section constant from btech.unit.sections.
+---@return BattleCriticalSlot[] slots
+function btech_unit.critical_slots(unit, section) end
+
+---Read the engine rating and suspension factor.
+---@param unit DbRef|Object
+---@return BattleEngine engine
+function btech_unit.engine(unit) end
+
+---List installed equipment in catalogue order.
+---@param unit DbRef|Object
+---@return BattlePartStack[] parts
+function btech_unit.installed_parts(unit) end
+
+---List carried ammunition stock in catalogue order.
+---@param unit DbRef|Object
+---@return BattlePartStack[] parts
+function btech_unit.payload(unit) end
+
+---Replace the unit definition from a saved template reference.
+---@param unit DbRef|Object
+---@param reference string Relative name under database.mech_database.
+function btech_unit.load_template(unit, reference) end
+
+---Save the unit definition under a template reference in the mech database.
+---@param unit DbRef|Object
+---@param reference string Relative name under database.mech_database.
+function btech_unit.save_template(unit, reference) end
+
+---Run one shared piloting check; returns whether it succeeded.
+---@param unit DbRef|Object
+---@param options table Situational modifier request.
+---@return boolean succeeded
+function btech_unit.piloting_check(unit, options) end
+
+---Read the saved two-letter battlefield ID preference, or nil when unset.
+---@param unit DbRef|Object
+---@return string|nil id
+function btech_unit.preferred_id(unit) end
+
+---List configured radio channels with active mode names.
+---@param unit DbRef|Object
+---@return BattleRadioChannelReport[] channels
+function btech_unit.radio_channels(unit) end
+
+---Restore destroyed critical slots to their original equipment.
+---@param unit DbRef|Object
+function btech_unit.reset_critical_slots(unit) end
+
+---Refill one ammunition bin to its installed capacity.
+---@param unit DbRef|Object
+---@param section BattleSection Typed section constant from btech.unit.sections.
+---@param slot integer One-based critical slot.
+function btech_unit.restock_ammunition(unit, section, slot) end
+
+---Restore armor, internal structure, critical slots and ammunition to template values.
+---@param unit DbRef|Object
+function btech_unit.restore(unit) end
+
+---Read a section's damage condition.
+---@param unit DbRef|Object
+---@param section BattleSection Typed section constant from btech.unit.sections.
+---@return "operational"|"destroyed"|"flooded" condition
+function btech_unit.section_condition(unit, section) end
+
+---@class BattleWeaponInstall
+---@field part BattlePartRef Weapon part reference.
+---@field section BattleSection
+---@field slots integer[] Zero-based critical slots.
+---@field rear_facing? boolean
+---@field targeting_computer? boolean
+---@field one_shot? boolean
+
+---@class BattleAmmunitionConfiguration
+---@field weapon BattlePartRef Launcher part reference.
+---@field section BattleSection
+---@field slot integer Zero-based critical slot.
+---@field half_ton? boolean
+---@field ammunition_modes? BattleAmmunitionModeConstant[]
+
+---@class BattleWeaponModes
+---@field fire_modes? BattleFireModeConstant[]
+---@field ammunition_modes? BattleAmmunitionModeConstant[]
+
+---@class BattleSpecialInstall
+---@field part? BattlePartRef Omit to empty the slot.
+---@field section BattleSection
+---@field slot integer Zero-based critical slot.
+---@field auxiliary_data? integer
+
+---Install a weapon into explicit critical slots.
+---@param unit DbRef|Object
+---@param request BattleWeaponInstall
+function btech_unit.install_weapon(unit, request) end
+
+---Install or clear non-weapon equipment in one critical slot.
+---@param unit DbRef|Object
+---@param request BattleSpecialInstall
+function btech_unit.install_special(unit, request) end
+
+---Configure one ammunition bin's half-ton flag and selected modes.
+---@param unit DbRef|Object
+---@param request BattleAmmunitionConfiguration
+function btech_unit.configure_ammunition(unit, request) end
+
+---Replace the selected fire and ammunition modes of one mounted weapon.
+---@param unit DbRef|Object
+---@param weapon_number integer Zero-based stable weapon number.
+---@param modes BattleWeaponModes
+function btech_unit.set_weapon_modes(unit, weapon_number, modes) end
+
+---Patch armor values on one section.
+---@param unit DbRef|Object
+---@param section BattleSection Typed section constant from btech.unit.sections.
+---@param patch table Current-armor, internal or rear-armor integers, each 0 through 255.
+function btech_unit.set_armor(unit, section, patch) end
+
+---Assign or clear the saved pilot; the player need not enter the cockpit.
+---@param unit DbRef|Object
+---@param pilot DbRef|Object|nil Player object.
+function btech_unit.set_assigned_pilot(unit, pilot) end
+
+---Set cargo space and the maximum carried tonnage.
+---@param unit DbRef|Object
+---@param space integer
+---@param maximum_tons integer
+function btech_unit.set_cargo_capacity(unit, space, maximum_tons) end
+
+---Set the installed heat-sink count.
+---@param unit DbRef|Object
+---@param count integer
+function btech_unit.set_heat_sinks(unit, count) end
+
+---Set the jump speed in movement points.
+---@param unit DbRef|Object
+---@param movement_points number
+function btech_unit.set_jump_speed(unit, movement_points) end
+
+---Set the long-range sensor ceiling in hexes.
+---@param unit DbRef|Object
+---@param range integer
+function btech_unit.set_long_range_sensor_range(unit, range) end
+
+---Set the tactical sensor range in hexes.
+---@param unit DbRef|Object
+---@param range integer
+function btech_unit.set_tactical_range(unit, range) end
+
+---Set the scan range in hexes.
+---@param unit DbRef|Object
+---@param range integer
+function btech_unit.set_scan_range(unit, range) end
+
+---Set the radio range in hexes.
+---@param unit DbRef|Object
+---@param range integer
+function btech_unit.set_radio_range(unit, range) end
+
+---Set the maximum ground speed in movement points.
+---@param unit DbRef|Object
+---@param movement_points number
+function btech_unit.set_max_speed(unit, movement_points) end
+
+---Replace the movement class.
+---@param unit DbRef|Object
+---@param movement_type BattleMovementType Typed constant from btech.unit.movement_types.
+function btech_unit.set_movement_type(unit, movement_type) end
+
+---Set the unit tonnage.
+---@param unit DbRef|Object
+---@param tons integer
+function btech_unit.set_tonnage(unit, tons) end
+
+---Replace the unit class.
+---@param unit DbRef|Object
+---@param unit_type BattleUnitType Typed constant from btech.unit.types.
+function btech_unit.set_unit_type(unit, unit_type) end
+
+---Set the radio quality grade.
+---@param unit DbRef|Object
+---@param quality integer
+function btech_unit.set_radio_quality(unit, quality) end
+
+---Remove the object's BattleTech registration and forget its configuration
+---references. Rust extension without a C Lua counterpart: the reference exposes
+---teardown only through the native wizard command, and this binding shares that
+---command's teardown exactly. Succeeds silently for an already-plain object and
+---never moves or destroys the container thing; mutations join the surrounding
+---callback transaction.
+---@param unit DbRef|Object Live thing to tear down.
+---@return boolean true
+function btech_unit.unregister(unit) end
+
+---Read the damage-adjusted maximum speed in movement points.
+---@param unit DbRef|Object
+---@return number movement_points
+function btech_unit.effective_max_speed(unit) end
+
+---Read the damage-adjusted maximum speed in kilometers per hour.
+---@param unit DbRef|Object
+---@return number kilometers_per_hour
+function btech_unit.effective_max_speed_kph(unit) end
+
+---List the weapons of one trigger group in mounting order.
+---@param unit DbRef|Object
+---@param tic integer Group number from 0 through 3.
+---@return BattleMountedWeapon[] weapons
+function btech_unit.tic_weapons(unit, tic) end
+
+-- C-parity part catalogue contracts.
+
+local btech_parts = {}
+
+---Apply one signed atomic stock edit; a nonzero integral delta is required.
+---@param target DbRef|Object Live object holding stock.
+---@param part BattlePartRef
+---@param delta integer
+function btech_parts.adjust_stores(target, part, delta) end
+
+---Return the six detached part categories in canonical order.
+---@return BattlePartCategory[] categories
+function btech_parts.categories() end
+
+---List registered branded forms in catalogue order; a case-insensitive category filters them.
+---@param category? string
+---@return BattlePartDefinition[] parts
+function btech_parts.list(category) end
+
+---Resolve one registered part by packed ID, case-insensitive name or {id, brand} record.
+---@param part BattlePartRef
+---@return BattlePartDefinition|nil part
+function btech_parts.resolve(part) end
+
+---Search names with *, ? and backslash-escaped quick-wild matching.
+---@param query string Nonempty query.
+---@return BattlePartDefinition[] parts
+function btech_parts.search(query) end
+
+---Set the cost shared by every brand of one registered part.
+---@param part BattlePartRef
+---@param cost integer From 0 through 2^53-1.
+function btech_parts.set_cost(part, cost) end
+
+---Read one part's stored quantity; absent stock reports zero.
+---@param target DbRef|Object
+---@param part BattlePartRef
+---@return integer quantity
+function btech_parts.store_quantity(target, part) end
+
+---List positive registered stock rows in native inventory order.
+---@param target DbRef|Object
+---@return BattlePartStack[] stores
+function btech_parts.stores(target) end
+
+-- C-parity repair contracts.
+
+local btech_repair = {}
+
+---@class BattleRepairArmorRequest
+---@field operation BattleRepairOperation
+---@field section BattleSection
+---@field value integer
+---@class BattleRepairInternalRequest
+---@field operation BattleRepairOperation
+---@field section BattleSection
+---@field value integer
+---@class BattleRepairRearArmorRequest
+---@field operation BattleRepairOperation
+---@field section BattleSection
+---@field value integer
+---@class BattleRepairPartRequest
+---@field operation BattleRepairOperation
+---@field section BattleSection
+---@field slot integer
+---@class BattleRepairReattachRequest
+---@field operation BattleRepairOperation
+---@field section BattleSection
+
+---@alias BattleImmediateRepair BattleRepairArmorRequest|BattleRepairInternalRequest|BattleRepairRearArmorRequest|BattleRepairPartRequest|BattleRepairReattachRequest
+
+---Apply one immediate repair with operation from btech.repair.operations.
+---@param unit DbRef|Object
+---@param repair BattleImmediateRepair
+function btech_repair.apply(unit, repair) end
+
+---Report whether no original nonexempt section is destroyed; Mechs exempt all but the
+---center torso, ground vehicles exempt the turret and VTOLs exempt the rotor.
+---@param unit DbRef|Object
+---@return boolean fixable
+function btech_repair.is_fixable(unit) end
+
+---Seconds until the player's configured technician becomes available.
+---@param player DbRef|Object
+---@return integer seconds
+function btech_repair.technician_available_in(player) end
+
+---List pending repair work with typed operations and sections.
+---Prerequisite-blocked: the technician event queue is not implemented in the Rust runtime yet.
+---@param unit DbRef|Object
+---@return BattleRepairNeed[] needs
+function btech_repair.needs(unit) end
+
+---Report whether a technician event is queued for the unit.
+---Prerequisite-blocked: the technician event queue is not implemented in the Rust runtime yet.
+---@param unit DbRef|Object
+---@return boolean under_repair
+function btech_repair.is_under_repair(unit) end
+
+-- C-parity world telemetry contracts.
+
+local btech_system = {}
+
+---Seconds of event lag accumulated by the running event queue.
+---@return integer seconds
+function btech_system.event_lag() end
+
+---List registered BattleTech units contained in a zone.
+---@param zone DbRef|Object
+---@return Object[] units
+function btech_system.units_in_zone(zone) end
+
+-- C-parity autopilot order-queue contracts. The queue, association and event
+-- runtime they require is a recorded prerequisite gap; the typed order,
+-- direction, roaming and autogun catalogs below are already installed.
+
+---@class BattleAutopilotOrderName
+---@class BattleAutopilotDirection
+---@class BattleAutopilotRoamMode
+---@class BattleAutopilotAutogunMode
+
+---@class BattleAutopilotTargetOrder
+---@field name BattleAutopilotOrderName
+---@field target DbRef|Object
+---@class BattleAutopilotDestinationOrder
+---@field name BattleAutopilotOrderName
+---@field x integer Nonnegative coordinate (0 through 2147483647).
+---@field y integer Nonnegative coordinate (0 through 2147483647).
+---@class BattleAutopilotEnterBaseOrder
+---@field name BattleAutopilotOrderName
+---@field direction BattleAutopilotDirection
+---@class BattleAutopilotLeaveBaseOrder
+---@field name BattleAutopilotOrderName
+---@field heading integer Heading from 0 through 359.
+---@class BattleAutopilotMapRoamOrder
+---@field name BattleAutopilotOrderName
+---@field mode BattleAutopilotRoamMode
+---@class BattleAutopilotRadiusRoamOrder
+---@field name BattleAutopilotOrderName
+---@field mode BattleAutopilotRoamMode
+---@field x integer Nonnegative coordinate (0 through 2147483647).
+---@field y integer Nonnegative coordinate (0 through 2147483647).
+---@field radius integer Radius from 1 through 30.
+---@class BattleAutopilotAutomaticAutogunOrder
+---@field name BattleAutopilotOrderName
+---@field mode BattleAutopilotAutogunMode
+---@class BattleAutopilotTargetAutogunOrder
+---@field name BattleAutopilotOrderName
+---@field mode BattleAutopilotAutogunMode
+---@field target DbRef|Object
+---@class BattleAutopilotSimpleOrder
+---@field name BattleAutopilotOrderName
+---@class BattleAutopilotSpeedOrder
+---@field name BattleAutopilotOrderName
+---@field percent integer Speed percentage from 1 through 100.
+---@class BattleAutopilotResolvedTargetOrder: BattleAutopilotTargetOrder
+---@field target Object
+---@class BattleAutopilotResolvedTargetAutogunOrder: BattleAutopilotTargetAutogunOrder
+---@field target Object
+
+---@alias BattleAutopilotOrder BattleAutopilotTargetOrder|BattleAutopilotDestinationOrder|BattleAutopilotEnterBaseOrder|BattleAutopilotLeaveBaseOrder|BattleAutopilotMapRoamOrder|BattleAutopilotRadiusRoamOrder|BattleAutopilotAutomaticAutogunOrder|BattleAutopilotTargetAutogunOrder|BattleAutopilotSimpleOrder|BattleAutopilotSpeedOrder
+---@alias BattleAutopilotStatusOrder BattleAutopilotResolvedTargetOrder|BattleAutopilotDestinationOrder|BattleAutopilotEnterBaseOrder|BattleAutopilotLeaveBaseOrder|BattleAutopilotMapRoamOrder|BattleAutopilotRadiusRoamOrder|BattleAutopilotAutomaticAutogunOrder|BattleAutopilotResolvedTargetAutogunOrder|BattleAutopilotSimpleOrder|BattleAutopilotSpeedOrder
+
+---@class BattleAutopilotModes
+---@field autogun_enabled boolean
+---@field autogun_suspended boolean
+---@field piloting_suspended boolean
+---@field roaming boolean
+---@field manual_sensors boolean
+---@field chasing_target boolean
+---@field chase_resume_pending boolean
+---@field swarm_charging boolean
+---@field assigned_target boolean
+
+---@class BattleAutopilotStatus
+---@field container_unit? Object
+---@field associated_unit? Object
+---@field map? Object
+---@field association "none"|"ready"|"associated"|"conflict"
+---@field engaged boolean
+---@field speed_percent integer
+---@field order_count integer
+---@field order_capacity integer Always 100.
+---@field orders BattleAutopilotStatusOrder[]
+---@field modes BattleAutopilotModes
+
+---@class BattleAutopilotEventStats
+---@field goto integer
+---@field leave integer
+---@field command integer
+---@field autogun integer
+---@field sensor integer
+---@field follow integer
+---@field enter_base integer
+---@field reply integer
+---@field profile integer
+---@field roam integer
+---@field total integer
+
+local btech_autopilot = {}
+
+---Append one order to the autopilot queue. Prerequisite-blocked: the autopilot
+---queue runtime is not implemented in the Rust runtime yet.
+---@param autopilot DbRef|Object Object registered as AUTOPILOT.
+---@param order BattleAutopilotOrder
+function btech_autopilot.add_order(autopilot, order) end
+
+---Clear the queued orders. Prerequisite-blocked: the autopilot queue runtime is
+---not implemented in the Rust runtime yet.
+---@param autopilot DbRef|Object Object registered as AUTOPILOT.
+function btech_autopilot.clear_orders(autopilot) end
+
+---Engage the autopilot. Prerequisite-blocked: the autopilot engagement runtime is
+---not implemented in the Rust runtime yet.
+---@param autopilot DbRef|Object Object registered as AUTOPILOT.
+function btech_autopilot.engage(autopilot) end
+
+---Disengage the autopilot. Prerequisite-blocked: the autopilot engagement runtime
+---is not implemented in the Rust runtime yet.
+---@param autopilot DbRef|Object Object registered as AUTOPILOT.
+function btech_autopilot.disengage(autopilot) end
+
+---Read the queued autopilot event counters. Prerequisite-blocked: the autopilot
+---event runtime is not implemented in the Rust runtime yet.
+---@param autopilot DbRef|Object Object registered as AUTOPILOT.
+---@return BattleAutopilotEventStats stats
+function btech_autopilot.event_stats(autopilot) end
+
+---Remove one occupied nonactive queue position, preserving order. Prerequisite-blocked:
+---the autopilot queue runtime is not implemented in the Rust runtime yet.
+---@param autopilot DbRef|Object Object registered as AUTOPILOT.
+---@param position integer Queue position from 1 through 100.
+function btech_autopilot.remove_order(autopilot, position) end
+
+---Read association, engagement, orders and mode flags. Prerequisite-blocked: the
+---autopilot status runtime is not implemented in the Rust runtime yet.
+---@param autopilot DbRef|Object Object registered as AUTOPILOT.
+---@return BattleAutopilotStatus status
+function btech_autopilot.status(autopilot) end
+
+btech.parts = btech_parts
+btech.repair = btech_repair
+btech.system = btech_system
+btech.autopilot = btech_autopilot
 
 return btech

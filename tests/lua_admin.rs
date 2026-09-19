@@ -82,7 +82,7 @@ async fn typed_objects_relationships_and_enumeration() {
       assert(#world.list_objects({{types={{}}}})==0)
       assert(#bag:contents({{types={{}}}})==0)
       local found_child=false;for _,o in ipairs(bag:contents()) do found_child=found_child or o==child end;assert(found_child)
-      local visible=bag:contents({{visible_to=1}});assert(#visible==3 and visible[1]==child and visible[2]:name()=='Light' and visible[3]:name()=='Nested Exit')
+      local visible=bag:contents({{visible_to=1}});assert(#visible==3 and visible[1]:name()=='Light' and visible[2]==child and visible[3]:name()=='Nested Exit')
       local self_hidden=bag:contents({{visible_to=child}});for _,o in ipairs(self_hidden) do assert(o~=child and o:dbref()~=2) end
       bag:flags():add(world.flags.DARK)
       visible=bag:contents({{visible_to=1}});assert(#visible==1 and visible[1]:name()=='Light')
@@ -95,7 +95,8 @@ async fn typed_objects_relationships_and_enumeration() {
       assert(not pcall(function() bag:destination() end))
       assert(not pcall(function() room:location() end))
       bag:set_home(room); assert(bag:home()==room)
-      for _,value in ipairs({{bag,child,exit}}) do assert(not pcall(function() bag:set_home(value) end)) end
+      bag:set_home(child); assert(bag:home()==child); bag:set_home(room)
+      for _,value in ipairs({{bag,exit}}) do assert(not pcall(function() bag:set_home(value) end)) end
       assert(not pcall(function() bag:set_home(nil) end))
       assert(bag:home()==room)
       bag:flags():add(world.flags.WIZARD);bag:powers():add(world.powers.IDLE)
@@ -325,7 +326,8 @@ return t.suite('live',{
  e.error_matches(function()error('needle')end,'needle');e.no_error(function()end)
  local codes=t.error.codes
  e.equal(tostring(codes.assertion),'testing.assertion')
- e.falsy(pcall(function()codes.assertion=3 end));e.falsy(pcall(function()return codes.unknown end))
+ local assertion=codes.assertion;codes.assertion=3;e.equal(codes.assertion,3);codes.assertion=assertion
+ e.falsy(pcall(function()codes.unknown=3 end));e.falsy(pcall(function()return codes.unknown end))
  e.raises_code(function()e.equal(1,2)end,codes.assertion)
  e.is_error(mux.error.wrap('cause',codes.runtime,'wrapped'),'testing')
  e.raises(function()error('plain')end)

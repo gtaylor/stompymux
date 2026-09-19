@@ -6537,7 +6537,7 @@ async fn lua_firing_matches_native_commands_and_returns_detached_weapon_and_shot
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(world))).unwrap();
         let before = scripts.world().btech.clone();
-        let inspection: (usize, String, bool) = scripts.eval_callback(&format!("local w=btech.unit.weapons({id}); assert(w[1].index==0); w[1].index=100; w[1].readiness.ready=false; local actual=btech.unit.weapons({id})[1]; return actual.index,actual.name,actual.readiness.ready", id=id.0)).unwrap();
+        let inspection: (usize, String, bool) = scripts.eval_callback(&format!("local w=btech.unit.weapon_states({id}); assert(w[1].index==0); w[1].index=100; w[1].readiness.ready=false; local actual=btech.unit.weapon_states({id})[1]; return actual.index,actual.name,actual.readiness.ready", id=id.0)).unwrap();
         assert_eq!(inspection, (0, "IS.MediumLaser".into(), true));
         assert_eq!(scripts.world().btech, before);
         let command = if selected {
@@ -6584,7 +6584,7 @@ async fn lua_firing_matches_native_commands_and_returns_detached_weapon_and_shot
         assert_eq!(scripts.world().btech, native.world().btech);
         let ready: bool = scripts
             .eval_callback(&format!(
-                "return btech.unit.weapons({})[1].readiness.ready",
+                "return btech.unit.weapon_states({})[1].readiness.ready",
                 id.0
             ))
             .unwrap();
@@ -6649,7 +6649,7 @@ async fn lua_firing_errors_and_callback_abort_restore_damage_dice_and_output() {
         .unwrap();
     for call in [
         format!("btech.unit.fire,{},1,0,{}", id.0, target.0),
-        format!("btech.unit.weapons,{}", id.0),
+        format!("btech.unit.weapon_states,{}", id.0),
     ] {
         let code: String = checking
             .inspect_lua()
@@ -7039,7 +7039,10 @@ async fn flamer_heat_mode_native_lua_persistence_and_recycle_guards() {
     assert_eq!(mode, "heat");
     assert_eq!(native.world().btech, lua.world().btech);
     let mode: String = lua
-        .eval_callback(&format!("return btech.unit.weapons({})[1].fire_mode", id.0))
+        .eval_callback(&format!(
+            "return btech.unit.weapon_states({})[1].fire_mode",
+            id.0
+        ))
         .unwrap();
     assert_eq!(mode, "heat");
     assert!(support::run_text(&native, &config, ObjectId(1), 1, "weapons").contains("[HEAT]"));
@@ -16292,16 +16295,16 @@ async fn kick_roll_boundaries_replay_and_shutdown_recovery() {
             assert_eq!(report.impact.is_some(), hit);
             // Only the admitted kick belongs to the attacker. A resulting balance
             // fall is self-attributed, including a miss that drops the attacker.
-            let direct_damage = if !hit {
+            let direct_damage = u32::from(if !hit {
                 0
             } else if glancing {
                 report.profile.damage.div_ceil(2)
             } else {
                 report.profile.damage
-            };
+            });
             let fall_damage = report.fall.as_ref().map_or(0, |fall| fall.damage);
             // Criticals can force a fall during impact, before the final kick balance check.
-            let critical_fall_damage: u16 = report.impact.as_ref().map_or(0, |impact| {
+            let critical_fall_damage: u32 = report.impact.as_ref().map_or(0, |impact| {
                 impact
                     .balance
                     .iter()

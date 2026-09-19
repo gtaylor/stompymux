@@ -1,0 +1,24 @@
+Name { Parity Ground Vehicle }
+Reference { PARITY-GROUND }
+Type { Vehicle }
+Move_Type { Track }
+Tons { 60 }
+Heat_Sinks { 10 }
+Max_Speed { 43.00 }
+Specials { ICEEngine_Tech }
+Left_Side
+Armor { 24 }
+Internals { 6 }
+Right_Side
+Armor { 25 }
+Internals { 6 }
+Front_Side
+Armor { 36 }
+Internals { 6 }
+Aft_Side
+Armor { 18 }
+Internals { 6 }
+Turret
+Armor { 30 }
+Internals { 6 }
+CRIT_1 { Agra.IS.PPC - - 5 }

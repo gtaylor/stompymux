@@ -26,6 +26,14 @@ impl From<Markings> for String {
 
 /// Read configuration independently of contact disclosure; empty means no markings.
 pub fn unit_markings(world: &World, unit: ObjectId) -> Result<&str> {
+    if let Some(value) = world
+        .btech
+        .unit_configuration
+        .get(&unit)
+        .and_then(|configuration| configuration.markings.as_deref())
+    {
+        return Ok(value);
+    }
     if let Some(unit) = world.btech.constructed_units().get(&unit) {
         return Ok(&unit.markings.0);
     }
@@ -57,6 +65,7 @@ pub fn set_unit_markings(
         "Unit is unavailable"
     );
     let value = Markings::try_from(value.to_owned())?;
+    let configured = (!value.0.is_empty()).then(|| value.0.clone());
     if let Some(unit) = Arc::make_mut(&mut world.btech.constructed).get_mut(&unit) {
         unit.markings = value;
     } else {
@@ -65,6 +74,7 @@ pub fn set_unit_markings(
             .context("Unit is unavailable")?
             .markings = value;
     }
+    super::set_unit_identity_configuration(world, unit, "markings", configured);
     Ok(())
 }
 

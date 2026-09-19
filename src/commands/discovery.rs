@@ -175,6 +175,7 @@ pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
                 d.scope == CommandScope::Global
                     && matches!(d.handler, CommandHandler::Native(_)) == native
                     && d.listed
+                    && d.lua_access.allows(&world, ctx.player)
                     && d.permission.allows(&world, ctx.player)
             }) {
                 if topic == "switches" {
@@ -210,6 +211,7 @@ pub(super) fn list(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<Act
                 for d in ctx.scripts.commands.definitions().filter(|d| {
                     d.scope == CommandScope::Object(object.lua_parent.clone())
                         && d.listed
+                        && d.lua_access.allows(&world, ctx.player)
                         && d.permission.allows(&world, ctx.player)
                 }) {
                     if topic == "switches" {

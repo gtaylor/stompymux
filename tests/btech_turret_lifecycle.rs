@@ -173,8 +173,8 @@ async fn failed_turret_save_restores_previous_records() {
 /// Explicit unregister/register transitions do not require an intermediate database save.
 #[tokio::test]
 async fn supported_role_changes_commit_in_one_save() {
-    for previous in ["DEBUG", "MAP", "TURRET"] {
-        for current in ["DEBUG", "MAP", "TURRET"] {
+    for previous in ["DEBUG", "MAP", "TURRET", "MECH"] {
+        for current in ["DEBUG", "MAP", "TURRET", "MECH"] {
             let (_dir, config, mut world) = support::isolated_world().await;
             let object = world.create(&config, "Changeable role".into(), Kind::Thing);
             let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();

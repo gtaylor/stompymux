@@ -81,6 +81,52 @@ impl AmmunitionBin {
         );
         Ok((capacity, half_ton, mode))
     }
+
+    pub(super) fn configuration_contract(
+        weapon: BattleWeapon,
+        flags: &[String],
+    ) -> Result<(u16, bool, super::BattleAmmunitionMode)> {
+        let full_capacity = weapon.profile().ammunition_per_ton;
+        ensure!(full_capacity > 0, "Weapon does not use ammunition");
+        ensure!(
+            flags.iter().collect::<BTreeSet<_>>().len() == flags.len(),
+            "Duplicate ammunition flags"
+        );
+        let half_ton = flags.iter().any(|mode| mode == "Halfton");
+        let ammunition_flags: Vec<_> = flags
+            .iter()
+            .filter(|mode| !is_contract_fire_mode(mode))
+            .cloned()
+            .collect();
+        ensure!(
+            ammunition_flags
+                .iter()
+                .all(|mode| is_contract_ammunition_mode(mode)),
+            "Unsupported ammunition mode {:?} for {}",
+            ammunition_flags,
+            weapon.name()
+        );
+        // The native administrator stores an unrestricted ammunition bit mask. The combat
+        // projection uses its normal precedence while the critical retains every bit.
+        let mode = super::BattleAmmunitionMode::initial_selection(weapon, &ammunition_flags);
+        let full_capacity = weapon.profile_for_ammunition(mode).ammunition_per_ton;
+        let capacity = u16::from(
+            if half_ton
+                || matches!(
+                    mode,
+                    super::BattleAmmunitionMode::Precision
+                        | super::BattleAmmunitionMode::ArmorPiercing
+                )
+            {
+                full_capacity / 2
+            } else if mode == super::BattleAmmunitionMode::Caseless {
+                full_capacity * 2
+            } else {
+                full_capacity
+            },
+        );
+        Ok((capacity, half_ton, mode))
+    }
 }
 
 /// One system critical, retaining optional manufacturer information.
@@ -158,7 +204,31 @@ impl<L> WeaponMount<L> {
             !weapon.is_rocket() || one_shot,
             "Rocket launcher requires OneShot"
         );
-        Ok(Self {
+        Ok(Self::project(weapon, critical, criticals))
+    }
+
+    pub(super) fn from_critical_contract(
+        weapon: BattleWeapon,
+        critical: &super::CriticalDefinition,
+        criticals: Vec<L>,
+    ) -> Result<Self> {
+        ensure!(
+            critical.modes.iter().collect::<BTreeSet<_>>().len() == critical.modes.len()
+                && critical.modes.iter().all(|mode| is_contract_mode(mode)),
+            "Unsupported weapon modes {:?}",
+            critical.modes
+        );
+        Ok(Self::project(weapon, critical, criticals))
+    }
+
+    fn project(
+        weapon: BattleWeapon,
+        critical: &super::CriticalDefinition,
+        criticals: Vec<L>,
+    ) -> Self {
+        let one_shot = critical.modes.iter().any(|mode| mode == "OneShot");
+        let initially_spent = critical.modes.iter().any(|mode| mode == "OneShot_Used");
+        Self {
             weapon,
             criticals,
             one_shot,
@@ -189,8 +259,68 @@ impl<L> WeaponMount<L> {
                 &critical.modes,
             ),
             brand: critical.brand,
-        })
+        }
     }
+}
+
+fn is_contract_ammunition_mode(mode: &str) -> bool {
+    matches!(
+        mode,
+        "LBX/Cluster"
+            | "Artemis/Mine"
+            | "Narc/Smoke"
+            | "Cluster"
+            | "Mine"
+            | "Smoke"
+            | "Inferno"
+            | "Swarm"
+            | "Swarm1"
+            | "iNarc_Explosive"
+            | "iNarc_Haywire"
+            | "iNarc_ECM"
+            | "iNarc_Nemesis"
+            | "AP"
+            | "Flechette"
+            | "Incendiary"
+            | "Precision"
+            | "Stinger"
+            | "Caseless"
+            | "Sguided"
+            | "ExtendedRange"
+            | "HighExplosive"
+            | "MML_LRM"
+    )
+}
+
+fn is_contract_mode(mode: &str) -> bool {
+    is_contract_fire_mode(mode) || is_contract_ammunition_mode(mode)
+}
+
+fn is_contract_fire_mode(mode: &str) -> bool {
+    matches!(
+        mode,
+        "Destroyed"
+            | "Disabled"
+            | "Broken"
+            | "Damaged"
+            | "OnTC"
+            | "RearMount"
+            | "Hotload"
+            | "Halfton"
+            | "OneShot"
+            | "OneShot_Used"
+            | "UltraMode"
+            | "RapidFire"
+            | "Gattling"
+            | "Rotary_TwoShot"
+            | "Rotary_FourShot"
+            | "Rotary_SixShot"
+            | "Heat"
+            | "BackPack"
+            | "Jettisoned"
+            | "OmniBase"
+            | "RocketFired"
+    )
 }
 
 impl<L> AmmunitionBin<L> {
@@ -202,6 +332,28 @@ impl<L> AmmunitionBin<L> {
     ) -> Result<Self> {
         let weapon = BattleWeapon::parse(name)?;
         let (capacity, half_ton, mode) = AmmunitionBin::configuration(weapon, &critical.modes)?;
+        let rounds: u16 = critical.data.parse().context("Invalid ammunition count")?;
+        ensure!(rounds <= capacity, "Ammunition exceeds bin capacity");
+        Ok(Self {
+            location,
+            weapon,
+            rounds,
+            capacity,
+            half_ton,
+            hotload: critical.modes.iter().any(|mode| mode == "Hotload"),
+            mode,
+            brand: critical.brand,
+        })
+    }
+
+    pub(super) fn from_critical_contract(
+        name: &str,
+        critical: &super::CriticalDefinition,
+        location: L,
+    ) -> Result<Self> {
+        let weapon = BattleWeapon::parse(name)?;
+        let (capacity, half_ton, mode) =
+            AmmunitionBin::configuration_contract(weapon, &critical.modes)?;
         let rounds: u16 = critical.data.parse().context("Invalid ammunition count")?;
         ensure!(rounds <= capacity, "Ammunition exceeds bin capacity");
         Ok(Self {
@@ -313,10 +465,16 @@ impl BattleLoadout {
                         "Unsupported critical data {}",
                         critical.data
                     );
-                    if super::equipment::strip_name_prefix(&critical.equipment, "IS.").is_some()
-                        || super::equipment::strip_name_prefix(&critical.equipment, "CL.").is_some()
+                    // Manufacturer-qualified spellings name the same weapon as
+                    // their technology-prefixed form; the brand column carries
+                    // the manufacturer identity.
+                    let equipment = unbranded_weapon_name(&critical.equipment)
+                        .map(str::to_owned)
+                        .unwrap_or_else(|| critical.equipment.clone());
+                    if super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
+                        || super::equipment::strip_name_prefix(&equipment, "CL.").is_some()
                     {
-                        let weapon = BattleWeapon::parse(&critical.equipment)?;
+                        let weapon = BattleWeapon::parse(&equipment)?;
                         let mut mount = WeaponMount::from_critical(weapon, critical, Vec::new())?;
                         let count = weapon.profile().critical_slots;
                         let extension = split.remove(&location).unwrap_or_default();
@@ -397,6 +555,199 @@ impl BattleLoadout {
         loadout.heat_sink_groups(template.heat_sink_slots())?;
         loadout.jump_jet_groups(template.has_special("ImprovedJJ_Tech"))?;
         Ok(loadout)
+    }
+
+    pub(crate) fn resolve_contract(template: &BattleTemplate) -> Result<Self> {
+        let chassis = template.chassis()?;
+        let mut loadout = Self {
+            weapons: Vec::new(),
+            ammunition: Vec::new(),
+            systems: Vec::new(),
+        };
+        let mut split = split_criticals(template)?;
+        for (&section, definition) in &template.sections {
+            let mut consumed = BTreeSet::new();
+            for (&slot, critical) in &definition.criticals {
+                if consumed.contains(&slot)
+                    || critical.equipment.eq_ignore_ascii_case("SplitCrit_Left")
+                    || critical.equipment.eq_ignore_ascii_case("SplitCrit_Right")
+                {
+                    continue;
+                }
+                let location = CriticalLocation { section, slot };
+                (|| -> Result<()> {
+                    if let Some(name) =
+                        super::equipment::strip_name_prefix(&critical.equipment, "Ammo_")
+                    {
+                        match AmmunitionBin::from_critical_contract(name, critical, location) {
+                            Ok(bin) => loadout.ammunition.push(bin),
+                            Err(_)
+                                if super::BattlePart::parse(&critical.equipment).is_ok_and(
+                                    |part| part.kind == super::BattlePartKind::Ammunition,
+                                ) => {}
+                            Err(error) => return Err(error),
+                        }
+                        return Ok(());
+                    }
+                    // C administration stores signed auxiliary metadata on any special slot.
+                    // Artemis consumes only a one-byte link later; retaining the integer here
+                    // lets construction and inspection round-trip other registered specials.
+                    ensure!(
+                        critical.data == "-" || critical.data.parse::<i32>().is_ok(),
+                        "Unsupported critical data {}",
+                        critical.data
+                    );
+                    // Manufacturer-qualified spellings (for example "Agra.IS.PPC") name the
+                    // same weapon as their technology-prefixed form; the brand column
+                    // already carries the manufacturer identity.
+                    let equipment = unbranded_weapon_name(&critical.equipment)
+                        .map(str::to_owned)
+                        .unwrap_or_else(|| critical.equipment.clone());
+                    if super::equipment::strip_name_prefix(&equipment, "IS.").is_some()
+                        || super::equipment::strip_name_prefix(&equipment, "CL.").is_some()
+                    {
+                        let weapon = match BattleWeapon::parse(&equipment) {
+                            Ok(weapon) => weapon,
+                            Err(_)
+                                if contract_raw_weapon(&critical.equipment)
+                                    || super::BattlePart::parse(&critical.equipment).is_ok_and(
+                                        |part| part.kind == super::BattlePartKind::Weapon,
+                                    ) =>
+                            {
+                                return Ok(());
+                            }
+                            Err(error) => return Err(error),
+                        };
+                        let mut mount =
+                            WeaponMount::from_critical_contract(weapon, critical, Vec::new())?;
+                        let count = weapon.profile().critical_slots;
+                        let extension = split.remove(&location).unwrap_or_default();
+                        ensure!(
+                            extension.is_empty() || weapon.supports_split_mount(),
+                            "Weapon does not support split criticals"
+                        );
+                        ensure!(
+                            extension.len() < usize::from(count),
+                            "Incorrect split weapon slot count"
+                        );
+                        let local_count = usize::from(count) - extension.len();
+                        // Native administration accepts the requested critical indices in any
+                        // order and, for weapons requiring at least nine slots, accepts a partial
+                        // installation. Group matching slots in authored order so that exact C
+                        // layouts remain usable by the runtime. Per-slot auxiliary data is not
+                        // part of C weapon identity (find_weapons_advanced groups contiguous
+                        // same-type runs, mech_weapons.c:349-399), so repaired weapons whose
+                        // mech_repair_part zeroed one slot's data still resolve.
+                        let local: Vec<_> = definition
+                            .criticals
+                            .range(slot..)
+                            .filter(|(index, part)| {
+                                !consumed.contains(*index)
+                                    && part.equipment.eq_ignore_ascii_case(&critical.equipment)
+                                    && part.brand == critical.brand
+                                    && (part.modes.is_empty() || part.modes == critical.modes)
+                            })
+                            .map(|(&index, _)| index)
+                            .take(local_count)
+                            .collect();
+                        ensure!(
+                            local.len() + extension.len() == usize::from(count)
+                                || (extension.is_empty() && count >= 9 && !local.is_empty()),
+                            "Incomplete or inconsistent {} criticals",
+                            weapon.name()
+                        );
+                        let mut criticals: Vec<_> = local
+                            .iter()
+                            .map(|&index| CriticalLocation {
+                                section,
+                                slot: index,
+                            })
+                            .collect();
+                        criticals.extend(extension);
+                        consumed.extend(local);
+                        mount.criticals = criticals;
+                        loadout.weapons.push(mount);
+                        return Ok(());
+                    }
+                    let system = match BattleSystem::parse(&critical.equipment) {
+                        Ok(system) => system,
+                        Err(_)
+                            if super::BattlePart::parse(&critical.equipment).is_ok_and(
+                                |part| {
+                                    matches!(
+                                        part.kind,
+                                        super::BattlePartKind::Component
+                                            | super::BattlePartKind::Bomb
+                                    )
+                                },
+                            ) =>
+                        {
+                            return Ok(());
+                        }
+                        Err(error) => return Err(error),
+                    };
+                    ensure!(critical.modes.is_empty(), "Unsupported system mode");
+                    loadout.systems.push(SystemCritical {
+                        location,
+                        system,
+                        brand: critical.brand,
+                    });
+                    Ok(())
+                })()
+                .with_context(|| {
+                    format!(
+                        "{} critical {} ({})",
+                        chassis.section_name(section),
+                        slot + 1,
+                        critical.equipment
+                    )
+                })?;
+            }
+        }
+        ensure!(
+            split.is_empty(),
+            "Split critical does not refer to the start of a weapon"
+        );
+        Ok(loadout)
+    }
+}
+
+/// C registers these raw infantry weapon identities even though the simulator has no
+/// corresponding combat enum yet.  Contract construction retains their criticals for
+/// administration, inspection and persistence while strict construction still rejects them.
+pub(super) fn contract_raw_weapon(name: &str) -> bool {
+    let name = unbranded_weapon_name(name)
+        .map(str::to_owned)
+        .unwrap_or_else(|| name.to_owned());
+    let name = super::equipment::strip_name_prefix(&name, "IS.")
+        .or_else(|| super::equipment::strip_name_prefix(&name, "CL."));
+    name.is_some_and(|name| {
+        matches!(
+            name.to_ascii_lowercase().as_str(),
+            "infantrylaser"
+                | "heavyinfantryrifle"
+                | "infantrymachinegun"
+                | "infantryrifle"
+                | "lightinfantryrifle"
+                | "infantrylrm"
+                | "infantrysrm"
+                | "infantryflamer"
+        )
+    })
+}
+
+/// Strip a leading manufacturer qualifier from a fully qualified weapon spelling,
+/// keeping the technology segment: `Agra.IS.PPC` becomes `IS.PPC`.
+pub(super) fn unbranded_weapon_name(equipment: &str) -> Option<&str> {
+    let (manufacturer, rest) = equipment.split_once('.')?;
+    if manufacturer.is_empty() {
+        return None;
+    }
+    let technology = rest.split('.').next().unwrap_or_default();
+    if technology.eq_ignore_ascii_case("IS") || technology.eq_ignore_ascii_case("CL") {
+        Some(rest)
+    } else {
+        None
     }
 }
 

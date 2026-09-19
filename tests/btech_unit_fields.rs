@@ -949,7 +949,7 @@ async fn display_name_edits_share_chassis_reports_and_restore_template_fallback(
         );
         let success: bool = lua
             .eval_callback(&format!(
-                "return btech.unit.set_display_name(1, {}, 'Silver Fox')",
+                "return btech.unit.set_display_name_as(1, {}, 'Silver Fox')",
                 id.0
             ))
             .unwrap();
@@ -973,6 +973,10 @@ async fn display_name_edits_share_chassis_reports_and_restore_template_fallback(
         };
         let mut after = serde_json::to_value(&native.world().btech).unwrap();
         after[key][id.0.to_string()]["display_name"] = serde_json::json!("");
+        after["unit_configuration"]
+            .as_object_mut()
+            .unwrap()
+            .remove(&id.0.to_string());
         assert_eq!(after, before);
         set_battle_unit_field_action(
             &native,
@@ -1017,13 +1021,13 @@ async fn display_name_edits_share_chassis_reports_and_restore_template_fallback(
         assert_eq!(native.world().btech, saved.btech);
         assert!(
             lua.eval_callback::<()>(&format!(
-                "btech.unit.set_display_name(1, {}, 'Discard'); error('abort')",
+                "btech.unit.set_display_name_as(1, {}, 'Discard'); error('abort')",
                 id.0
             ))
             .is_err()
         );
         assert_eq!(battle_display_name(&lua.world(), id).unwrap(), "Silver Fox");
-        lua.eval_callback::<()>(&format!("btech.unit.set_display_name(1, {}, '')", id.0))
+        lua.eval_callback::<()>(&format!("btech.unit.set_display_name_as(1, {}, '')", id.0))
             .unwrap();
         assert_eq!(
             battle_unit_status(&lua.world(), id, "").unwrap(),

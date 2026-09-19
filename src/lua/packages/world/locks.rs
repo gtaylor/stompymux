@@ -26,7 +26,9 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
         "callback_descriptor",
         lua.create_function(|lua, ()| Ok(crate::lua::transactions::descriptor(lua)))?,
     )?;
-    api.set("locks", lua.create_userdata(LockNamespace)?)?;
+    let locks = lua.create_userdata(LockNamespace)?;
+    super::protect_userdata_metatable(lua, &locks, "protected lock namespace metatable")?;
+    api.set("locks", locks)?;
     api.set(
         "lock_key",
         lua.create_function(|_, value: mlua::AnyUserData| {
@@ -131,28 +133,58 @@ struct LockNamespace;
 impl mlua::UserData for LockNamespace {
     fn add_methods<M: mlua::UserDataMethods<Self>>(m: &mut M) {
         m.add_meta_method(mlua::MetaMethod::Index, |lua, _, value: Value| {
-            let Value::String(name) = value else {
-                return Err(super::super::error::failure(
-                    "mux.access.invalid",
+            let name = lua.coerce_string(value)?.ok_or_else(|| {
+                super::super::error::argument_failure(
+                    lua,
+                    2,
+                    "mux.arg.invalid",
                     "lock name must be a string",
-                ));
-            };
-            let name = name.to_str()?;
+                )
+            })?;
+            let bytes = name.as_bytes();
+            let bytes = bytes.split(|byte| *byte == 0).next().unwrap_or_default();
+            let name = String::from_utf8_lossy(bytes);
             let lock = crate::locks::LOCKS
                 .into_iter()
                 .find(|k| k.name() == name.as_ref())
                 .ok_or_else(|| {
-                    super::super::error::failure("mux.access.invalid", "unknown lock constant")
+                    super::super::error::argument_failure(
+                        lua,
+                        2,
+                        "mux.arg.invalid",
+                        format!("unknown lock '{name}'"),
+                    )
                 })?;
-            lua.create_userdata(lock)
+            let value = lua.create_userdata(lock)?;
+            super::protect_userdata_metatable(lua, &value, "protected lock constant metatable")?;
+            Ok(value)
         });
+        m.add_meta_method(
+            mlua::MetaMethod::NewIndex,
+            |_, _, _: (Value, Value)| -> mlua::Result<()> {
+                Err(super::super::error::failure(
+                    "mux.arg.invalid",
+                    "mux.world.locks constants are immutable",
+                ))
+            },
+        );
     }
 }
 impl mlua::UserData for crate::LockType {
     fn add_methods<M: mlua::UserDataMethods<Self>>(m: &mut M) {
         m.add_meta_method(mlua::MetaMethod::ToString, |_, lock, ()| Ok(lock.name()));
-        m.add_meta_method(mlua::MetaMethod::Eq, |_, lock, other: mlua::AnyUserData| {
-            Ok(other.borrow::<Self>().is_ok_and(|v| *lock == *v))
+        m.add_meta_function(mlua::MetaMethod::Eq, |_, (left, right): (Value, Value)| {
+            // C's lock __eq luaL_checkudatas both operands (mux_lock_bindings.c).
+            super::super::error::typed_eq::<Self, _>("btmux.lock", left, right, |a, b| a == b)
         });
+        m.add_meta_method(
+            mlua::MetaMethod::NewIndex,
+            |_, _, _: (Value, Value)| -> mlua::Result<()> {
+                Err(super::super::error::failure(
+                    "mux.arg.invalid",
+                    "mux.world.locks constants are immutable",
+                ))
+            },
+        );
     }
 }

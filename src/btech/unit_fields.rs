@@ -123,7 +123,9 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
         if let Some(unit) = mech {
             (
                 unit.definition().name.as_str(),
-                unit.definition().tons,
+                unit.administrative_attribute("administrative_tonnage")
+                    .and_then(|value| value.parse::<u32>().ok())
+                    .unwrap_or(u32::from(unit.definition().tons)),
                 unit.definition().reference.as_str(),
                 unit.template_speed(),
                 unit.pilot(),
@@ -134,7 +136,9 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
             let unit = vehicle.unwrap();
             (
                 unit.definition().name.as_str(),
-                unit.definition().tons,
+                unit.administrative_attribute("administrative_tonnage")
+                    .and_then(|value| value.parse::<u32>().ok())
+                    .unwrap_or(u32::from(unit.definition().tons)),
                 unit.definition().reference.as_str(),
                 unit.template_speed(),
                 unit.pilot(),
@@ -333,7 +337,15 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
         ),
         "maxjumpspeed" => float(super::jump_thrust::speed(world, id)?),
         "mechtype" => Some(
-            if mech.is_some() {
+            if let Some(value) = mech
+                .and_then(|unit| unit.administrative_attribute("administrative_unit_type"))
+                .or_else(|| {
+                    vehicle
+                        .and_then(|unit| unit.administrative_attribute("administrative_unit_type"))
+                })
+            {
+                value
+            } else if mech.is_some() {
                 "Mech"
             } else if vehicle.unwrap().definition().is_vtol() {
                 "VTOL"
@@ -343,7 +355,16 @@ fn value(world: &World, config: &Config, id: ObjectId, field: &str) -> Result<Op
             .into(),
         ),
         "mechmovetype" => Some(
-            if let Some(unit) = mech {
+            if let Some(value) = mech
+                .and_then(|unit| unit.administrative_attribute("administrative_movement_type"))
+                .or_else(|| {
+                    vehicle.and_then(|unit| {
+                        unit.administrative_attribute("administrative_movement_type")
+                    })
+                })
+            {
+                value
+            } else if let Some(unit) = mech {
                 if unit.chassis() == BattleMechChassis::Quad {
                     "Quad"
                 } else {

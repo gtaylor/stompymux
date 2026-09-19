@@ -11,18 +11,41 @@ impl UserData for Types {
         m.add_meta_method(
             MetaMethod::NewIndex,
             |_, _, _: (Value, Value)| -> mlua::Result<()> {
-                Err(err("object types are immutable"))
+                Err(err("mux.world.types constants are immutable"))
             },
         );
-        m.add_meta_method(MetaMethod::Index, |lua, _, key: String| {
-            let kind = match key.as_str() {
-                "ROOM" => Kind::Room,
-                "THING" => Kind::Thing,
-                "EXIT" => Kind::Exit,
-                "PLAYER" => Kind::Player,
-                _ => return Err(err("unknown object type constant")),
+        m.add_meta_method(MetaMethod::Index, |lua, _, key: Value| {
+            let Value::String(key) = key else {
+                return Err(super::super::error::argument_failure(
+                    lua,
+                    2,
+                    "mux.arg.invalid",
+                    "object type name must be a string",
+                ));
             };
-            lua.create_userdata(kind)
+            let bytes = key.as_bytes();
+            let key = bytes.split(|byte| *byte == 0).next().unwrap_or_default();
+            let kind = match key {
+                b"ROOM" => Kind::Room,
+                b"THING" => Kind::Thing,
+                b"EXIT" => Kind::Exit,
+                b"PLAYER" => Kind::Player,
+                _ => {
+                    return Err(super::super::error::argument_failure(
+                        lua,
+                        2,
+                        "mux.arg.invalid",
+                        format!("unknown object type '{}'", String::from_utf8_lossy(key)),
+                    ));
+                }
+            };
+            let value = lua.create_userdata(kind)?;
+            super::protect_userdata_metatable(
+                lua,
+                &value,
+                "protected object type constant metatable",
+            )?;
+            Ok(value)
         });
     }
 }
@@ -31,9 +54,19 @@ impl UserData for Kind {
         m.add_meta_method(MetaMethod::ToString, |_, value, ()| {
             Ok(format!("{value:?}").to_uppercase())
         });
-        m.add_meta_method(MetaMethod::Eq, |_, value, other: AnyUserData| {
-            Ok(other.borrow::<Kind>().is_ok_and(|other| *value == *other))
+        m.add_meta_function(MetaMethod::Eq, |_, (left, right): (Value, Value)| {
+            // C's object type __eq luaL_checkudatas both operands
+            // (mux_object_type_bindings.c lua_mux_object_type_equal).
+            super::super::error::typed_eq::<Self, _>("btmux.object_type", left, right, |a, b| {
+                a == b
+            })
         });
+        m.add_meta_method(
+            MetaMethod::NewIndex,
+            |_, _, _: (Value, Value)| -> mlua::Result<()> {
+                Err(err("mux.world.types constants are immutable"))
+            },
+        );
     }
 }
 
@@ -46,12 +79,21 @@ pub(super) fn kind(value: Value) -> mlua::Result<Kind> {
         .map_err(|_| err("expected typed object kind"))?)
 }
 
-pub(super) fn filter(value: Value) -> mlua::Result<Option<Vec<Kind>>> {
+pub(super) fn filter(
+    lua: &mlua::Lua,
+    value: Value,
+    argument: usize,
+) -> mlua::Result<Option<Vec<Kind>>> {
     if value.is_nil() {
         return Ok(None);
     }
     let Value::Table(table) = value else {
-        return Err(err("types must be a dense array"));
+        return Err(super::super::error::argument_failure(
+            lua,
+            argument,
+            "mux.arg.invalid",
+            "options.types must be an array",
+        ));
     };
     let count = table.raw_len();
     let mut seen = 0;
@@ -63,12 +105,22 @@ pub(super) fn filter(value: Value) -> mlua::Result<Option<Vec<Kind>>> {
             _ => false,
         };
         if !valid {
-            return Err(err("types must be a dense array"));
+            return Err(super::super::error::argument_failure(
+                lua,
+                argument,
+                "mux.arg.invalid",
+                "options.types must be a dense array",
+            ));
         }
         seen += 1;
     }
     if count != seen {
-        return Err(err("types must be a dense array"));
+        return Err(super::super::error::argument_failure(
+            lua,
+            argument,
+            "mux.arg.invalid",
+            "options.types must be a dense array",
+        ));
     }
     (1..=count)
         .map(|i| kind(table.raw_get(i)?))
@@ -76,19 +128,31 @@ pub(super) fn filter(value: Value) -> mlua::Result<Option<Vec<Kind>>> {
         .map(Some)
 }
 
-pub(super) fn options(table: &Table, allowed: &[&str]) -> mlua::Result<()> {
+pub(super) fn options(
+    lua: &mlua::Lua,
+    table: &Table,
+    argument: usize,
+    allowed: &[&str],
+) -> mlua::Result<()> {
     for pair in table.clone().pairs::<Value, Value>() {
         let (key, _) = pair?;
         let Value::String(key) = key else {
-            return Err(super::super::error::failure(
+            return Err(super::super::error::argument_failure(
+                lua,
+                argument,
                 "mux.arg.invalid",
-                "option names must be strings",
+                "unknown options field '<non-string>'",
             ));
         };
-        if !allowed.contains(&key.to_str()?.as_ref()) {
-            return Err(super::super::error::failure(
+        let bytes = key.as_bytes();
+        let bytes = bytes.split(|byte| *byte == 0).next().unwrap_or_default();
+        let name = String::from_utf8_lossy(bytes);
+        if !allowed.contains(&name.as_ref()) {
+            return Err(super::super::error::argument_failure(
+                lua,
+                argument,
                 "mux.arg.invalid",
-                format!("unknown option: {}", key.to_str()?),
+                format!("unknown options field '{name}'"),
             ));
         }
     }
