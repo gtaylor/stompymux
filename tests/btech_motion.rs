@@ -32322,10 +32322,32 @@ async fn hex_surface_weapon_native_lua_character_rollback() {
     );
     assert_eq!(lua.world().btech, world.btech);
     assert!(lua.drain_outbox().is_empty());
+    let started = chrono::Utc::now().timestamp();
     commands::run(&native, &config, ObjectId(1), 1, &format!("fire {index}")).unwrap();
     lua.eval_callback::<()>(&format!("btech.unit.fire({},1,{index})", shooter.0))
         .unwrap();
-    assert_eq!(native.world().btech, lua.world().btech);
+    let finished = chrono::Utc::now().timestamp();
+    // Separate wall-clock award times from deterministic gameplay state.
+    let mut states = [
+        serde_json::to_value(&lua.world().btech).unwrap(),
+        serde_json::to_value(&native.world().btech).unwrap(),
+    ];
+    for state in &mut states {
+        for values in state["character_values"]
+            .as_object_mut()
+            .unwrap()
+            .values_mut()
+        {
+            for value in values.as_object_mut().unwrap().values_mut() {
+                let timestamp = value["last_used"].as_i64().unwrap();
+                if timestamp != 0 {
+                    assert!((started..=finished).contains(&timestamp));
+                    value["last_used"] = 0.into();
+                }
+            }
+        }
+    }
+    assert_eq!(states[1], states[0]);
     assert_eq!(
         lua.world().btech.maps()[&map]
             .base_hex(5, 4)

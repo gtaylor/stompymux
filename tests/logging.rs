@@ -7,7 +7,7 @@ use stompymux_rs::{
     persistence,
 };
 mod support;
-use support::{Client, isolated_world, start};
+use support::{Client, isolated_world, stable_world, start};
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
     let (d, c, w) = isolated_world().await;
     std::fs::create_dir_all(d.path().join("logs")).unwrap();
@@ -326,7 +326,7 @@ async fn tcp_log_commands_commit_and_rollback() {
  let (address,shutdown,task,_)=start(&c,Rc::new(Cell::new(120))).await;
  let mut wizard=Client::connect(address,1).await;
  let mut player=Client::connect(address,2).await;
- let before=std::fs::read(c.database()).unwrap();
+ let before=stable_world(&c.database()).await;
  player.send("@log test.log=forbidden").await;player.until("Permission denied.").await;
  wizard.send("@lg test.log=native").await;wizard.until("Message logged.").await;
  wizard.send("@log missing=no").await;wizard.until("Request failed.").await;
@@ -336,7 +336,7 @@ async fn tcp_log_commands_commit_and_rollback() {
  wizard.send("logfail").await;
  wizard.send("@log test.log=barrier").await;wizard.until("Message logged.").await;
  assert_eq!(std::fs::read_to_string(c.root.join("logs/test.log")).unwrap(),"native\nlua committed\nbarrier\n");
- assert_eq!(before,std::fs::read(c.database()).unwrap());
+ assert_eq!(before,stable_world(&c.database()).await);
  use sqlx::Connection;
  let mut db=sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(c.database()).foreign_keys(false)).await.unwrap();
  sqlx::raw_sql("CREATE TRIGGER reject_logs BEFORE INSERT ON object_state WHEN NEW.namespace='logtest' BEGIN SELECT RAISE(ABORT,'blocked'); END").execute(&mut db).await.unwrap();

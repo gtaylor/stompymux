@@ -268,6 +268,9 @@ async fn masc_failure_breaks_both_hips_and_falls_only_above_one_mp() {
         state["constructed"][id.0.to_string()]["motion"]["speed"] = serde_json::json!(speed);
         state["constructed"][id.0.to_string()]["dice"] =
             serde_json::to_value(BattleDice::seeded([2; 32])).unwrap();
+        // The failed fall injures the pilot; pin the consciousness stream too.
+        state["recoveries"][ObjectId(1).0.to_string()]["dice"] =
+            serde_json::to_value(BattleDice::seeded([2; 32])).unwrap();
         trial.btech = serde_json::from_value(state).unwrap();
         let scripts =
             Scripts::new(&config, std::rc::Rc::new(std::cell::RefCell::new(trial))).unwrap();

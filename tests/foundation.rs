@@ -14,7 +14,7 @@ use tokio::{
     process::{Child, Command},
 };
 mod support;
-use support::copy;
+use support::{copy, stable_world};
 fn fixture() -> tempfile::TempDir {
     let d = tempfile::tempdir().unwrap();
     copy(
@@ -288,11 +288,11 @@ async fn bootstrap_once_and_existing_world_does_not_bootstrap() {
     let s = server::prepare(&c).await.unwrap();
     assert_eq!(s.world().objects.len(), 16);
     assert_eq!(s.world().channels.len(), 2);
-    let before = std::fs::read(c.database()).unwrap();
+    let before = stable_world(&c.database()).await;
     drop(s);
     let s = server::prepare(&c).await.unwrap();
     assert_eq!(s.world().objects.len(), 16);
-    assert_eq!(before, std::fs::read(c.database()).unwrap());
+    assert_eq!(before, stable_world(&c.database()).await);
     use std::os::unix::fs::PermissionsExt;
     assert_eq!(
         std::fs::metadata(d.path().join("bootstrap-credentials.txt"))
@@ -1675,7 +1675,7 @@ async fn tcp_search_reports_are_private_and_read_only() {
     }
     let mut ordinary = Client::connect(&running).await;
     ordinary.register("Finder").await;
-    let before = std::fs::read(c.database()).unwrap();
+    let before = stable_world(&c.database()).await;
     for command in ["@find", "@find/next", "@search", "@stats", "@list commands"] {
         ordinary.send(command).await;
         ordinary.until("Permission denied.").await;
@@ -1700,7 +1700,7 @@ async fn tcp_search_reports_are_private_and_read_only() {
     // A later command synchronizes with the entire preceding listing.
     first.send("@find missing").await;
     first.until("***End of List***").await;
-    assert_eq!(before, std::fs::read(c.database()).unwrap());
+    assert_eq!(before, stable_world(&c.database()).await);
     running.stop().await;
 }
 
@@ -2004,11 +2004,11 @@ async fn tcp_dbck_relocation_callbacks_rollback_and_context() {
         .execute(&mut sql)
         .await
         .unwrap();
-    let bytes = std::fs::read(c.database()).unwrap();
+    let bytes = stable_world(&c.database()).await;
     wizard.send("@dbck").await;
     let failed = wizard.until("no repairs committed").await;
     assert!(!failed.contains("LEAKED"));
-    assert_eq!(bytes, std::fs::read(c.database()).unwrap());
+    assert_eq!(bytes, stable_world(&c.database()).await);
     let loaded = persistence::load(&c.database()).await.unwrap();
     assert!(!loaded.objects[&ObjectId(2)].state.contains_key("repair"));
     wizard.send("allow-repair").await;
@@ -2179,7 +2179,7 @@ async fn tcp_extended_telnet_and_session_diagnostics() {
     wizard.until("No such player.").await;
     wizard.send("@telnet GOD").await;
     wizard.until("That player is not connected.").await;
-    let db = std::fs::read(c.database()).unwrap();
+    let db = stable_world(&c.database()).await;
     wizard.socket.write_all(b"\xff\xfb\x27\xff\xfa\x27\x00\x00CLIENT\x01hello\xff\xf0\xff\xfd\x46\xff\xfd\xc9\xff\xfa\xc9Core.Ping {}\xff\xf0").await.unwrap();
     wizard.send("tn #2").await;
     let bytes = telnet_until(&mut wizard.socket, b"Client echo (requested): enabled").await;
@@ -2200,7 +2200,7 @@ async fn tcp_extended_telnet_and_session_diagnostics() {
     other.send("@telnet #2").await;
     let second = other.until("Client echo (requested): enabled").await;
     assert!(second.contains("session"));
-    assert_eq!(db, std::fs::read(c.database()).unwrap());
+    assert_eq!(db, stable_world(&c.database()).await);
     running.stop().await;
 }
 
@@ -2361,13 +2361,13 @@ return {commands={
     let prefs = first.until("Client capability: 16.").await;
     assert!(prefs.contains("truecolor (override)"));
     assert!(prefs.contains("preset:osc8-demo-button"));
-    let db = std::fs::read(c.database()).unwrap();
+    let db = stable_world(&c.database()).await;
     first.send("h @session").await;
     let help = first.until("Pending output").await;
     assert!(help.contains("@session"));
     first.send("color").await;
     first.until("Client capability: 16.").await;
-    assert_eq!(db, std::fs::read(c.database()).unwrap());
+    assert_eq!(db, stable_world(&c.database()).await);
     first.send("rich").await;
     let rich = first.until("RICH-END").await;
     let plain = second.until("RICH-END").await;
@@ -3592,7 +3592,7 @@ async fn tcp_speech_routing_styles_and_lock_persistence() {
     wizard.until("Color mode set to truecolor.").await;
     second.send("color off").await;
     second.until("Color mode set to off.").await;
-    let before = std::fs::read(c.database()).unwrap();
+    let before = stable_world(&c.database()).await;
     wizard
         .send("spem me=[fg=red]StyledMessage[/] END-STYLE")
         .await;
@@ -3614,7 +3614,7 @@ async fn tcp_speech_routing_styles_and_lock_persistence() {
     let audience = alice.until("PUBLIC-END").await;
     assert!(!audience.contains("WIZARD-ONLY"));
     assert!(!audience.contains("DENIED-EMIT"));
-    assert_eq!(std::fs::read(c.database()).unwrap(), before);
+    assert_eq!(stable_world(&c.database()).await, before);
     wizard.send("@flag here=auditorium").await;
     wizard.until("set.").await;
     let mut db = sqlx::SqliteConnection::connect(c.database().to_str().unwrap())
@@ -3622,13 +3622,13 @@ async fn tcp_speech_routing_styles_and_lock_persistence() {
         .unwrap();
     sqlx::query("CREATE TRIGGER reject_speech BEFORE INSERT ON object_state BEGIN SELECT RAISE(FAIL,'injected speech failure'); END").execute(&mut db).await.unwrap();
     db.close().await.unwrap();
-    let before = std::fs::read(c.database()).unwrap();
+    let before = stable_world(&c.database()).await;
     alice.send(":LEAKED-SPEECH").await;
     alice.until("Unable to save your changes.").await;
     wizard.send("@wall/emit AFTER-FAILURE").await;
     let observer = wizard.until("AFTER-FAILURE").await;
     assert!(!observer.contains("LEAKED-SPEECH"));
-    assert_eq!(std::fs::read(c.database()).unwrap(), before);
+    assert_eq!(stable_world(&c.database()).await, before);
     running.stop().await;
 }
 
@@ -3673,12 +3673,12 @@ async fn tcp_command_queue_force_wait_halt_and_shutdown() {
     alice.register("QueueAlice").await;
     alice.send("@wait 0=say DENIED").await;
     alice.until("Permission denied.").await;
-    let before = std::fs::read(c.database()).unwrap();
+    let before = stable_world(&c.database()).await;
     wizard
         .send(&format!("qforce #{}=say ROBOT-SPEAKS", thing.0))
         .await;
     wizard.until("QueueRobot says \"ROBOT-SPEAKS\"").await;
-    assert_eq!(before, std::fs::read(c.database()).unwrap());
+    assert_eq!(before, stable_world(&c.database()).await);
     wizard.send("qforce me=quit;say STILL-CONNECTED").await;
     wizard.until("STILL-CONNECTED").await;
     let rejection = other.until("STILL-CONNECTED").await;
@@ -3798,7 +3798,7 @@ async fn tcp_interactive_flow_examples_and_independent_sessions() {
     a.register("FlowPlayer").await;
     let mut b = Client::connect(&running).await;
     b.login("FlowPlayer").await;
-    let before = std::fs::read(c.database()).unwrap();
+    let before = stable_world(&c.database()).await;
     a.send("flow-demo confirm").await;
     a.until("Really do the thing? (y/n) ").await;
     a.send("quit").await;
@@ -3821,8 +3821,8 @@ async fn tcp_interactive_flow_examples_and_independent_sessions() {
     a.until("Recorded   Ada   (Inner Sphere).").await;
     assert_eq!(
         before,
-        std::fs::read(c.database()).unwrap(),
-        "flow-only input must not write SQLite"
+        stable_world(&c.database()).await,
+        "flow-only input must not write SQLite",
     );
     a.send("flow-demo confirm").await;
     a.until("Really do the thing? (y/n) ").await;
@@ -3995,7 +3995,7 @@ async fn tcp_compressed_database_reports() {
     client.until("Password: ").await;
     client.send("secret").await;
     client.until("Staff Nexus").await;
-    let before = std::fs::read(c.database()).unwrap();
+    let before = stable_world(&c.database()).await;
     let mut socket = client.socket;
     socket.write_all(&[255, 253, 86]).await.unwrap();
     let marker = telnet_until(&mut socket, &[255, 250, 86, 255, 240]).await;
@@ -4042,7 +4042,7 @@ async fn tcp_compressed_database_reports() {
             && text.contains("@clone: /inventory")
     );
     assert!(!text.contains("truncated"));
-    assert_eq!(before, std::fs::read(c.database()).unwrap());
+    assert_eq!(before, stable_world(&c.database()).await);
     running.stop().await;
 }
 

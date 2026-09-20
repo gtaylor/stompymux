@@ -12,7 +12,7 @@ use stompymux_rs::{
 };
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 mod support;
-use support::{Client, copy, start};
+use support::{Client, copy, stable_world, start};
 async fn fixture() -> (tempfile::TempDir, Config) {
     let d = tempfile::tempdir().unwrap();
     copy(
@@ -240,7 +240,7 @@ async fn tcp_private_reports_counts_idle_and_queue() {
             let mut first = Client::connect(address, 1).await;
             let mut second = Client::connect(address, 1).await;
             let mut player = Client::connect(address, 2).await;
-            let before = std::fs::read(c.database()).unwrap();
+            let before = stable_world(&c.database()).await;
             first.send("@aw").await;
             let text = first.until("maximum.").await;
             assert_eq!(counts(&text), [1, 0, 0]);
@@ -268,7 +268,7 @@ async fn tcp_private_reports_counts_idle_and_queue() {
             second.send("ver").await;
             let own = second.until(operations::VERSION).await;
             assert!(!own.contains("Player Name") && !own.contains("Process ID:"));
-            assert_eq!(before, std::fs::read(c.database()).unwrap());
+            assert_eq!(before, stable_world(&c.database()).await);
             first.send("@wait 0={version;@list process;@who}").await;
             first
                 .until("@who is only available from an active connection.")

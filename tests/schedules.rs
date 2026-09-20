@@ -19,7 +19,7 @@ use tokio::{
 };
 
 mod support;
-use support::{Client, copy, start};
+use support::{Client, copy, stable_world, start};
 
 /// Use fast test maintenance and password hashing, without changing production defaults.
 async fn fixture() -> (tempfile::TempDir, Config) {
@@ -409,8 +409,8 @@ async fn tcp_schedules_commit_before_output_private_inspection_restart_and_shutd
         let mut first=Client::connect(address,1).await;let mut second=Client::connect(address,1).await;let mut ordinary=Client::connect(address,2).await;
         first.send("@lsched global_logic/tcp.lua").await;first.until("delivery: * * * * *").await;
         ordinary.send("@lua/schedule").await;ordinary.until("Permission denied.").await;
-        // A read-only inspection must not even update snapshot metadata.
-        let before=std::fs::read(c.database()).unwrap();first.send("@lua/schedule #1").await;first.until("(none)").await;assert_eq!(before,std::fs::read(c.database()).unwrap());
+        // A read-only inspection must not update anything but the idle tick.
+        let before=stable_world(&c.database()).await;first.send("@lua/schedule #1").await;first.until("(none)").await;assert_eq!(before,stable_world(&c.database()).await);
         clock.set(234);first.until("Scheduled delivery 1").await;let other=second.until("Scheduled delivery 1").await;assert!(!other.contains("Schedules for"));
         assert_eq!(persistence::load(&c.database()).await.unwrap().objects[&ObjectId(1)].state["scheduled"]["count"],Scalar::Integer(1));
         first.send("say still responsive").await;first.until("still responsive").await;
@@ -488,9 +488,9 @@ async fn tcp_reload_schedule_queue_is_atomic() {
         assert_eq!(world.objects[&ObjectId(1)].state["reload_queue"]["OLD"],Scalar::Integer(1));
         assert!(!world.objects[&ObjectId(1)].state["reload_queue"].contains_key("NEW"));
         client.send("@lua/reload").await;client.until("Lua reloaded.").await;
-        let before=std::fs::read(c.database()).unwrap();
+        let before=stable_world(&c.database()).await;
         client.send("@lua/check").await;client.until("All Lua module checks passed.").await;
-        assert_eq!(before,std::fs::read(c.database()).unwrap());
+        assert_eq!(before,stable_world(&c.database()).await);
         clock.set(354);client.until("NEW_JOB").await;
         let world=persistence::load(&c.database()).await.unwrap();
         assert_eq!(world.objects[&ObjectId(1)].state["reload_queue"]["NEW"],Scalar::Integer(1));
@@ -678,10 +678,10 @@ async fn tcp_admission_controls_cache_and_existing_queue() {
             privileged.until("logins...disabled").await;
             player.send("look").await;
             player.until("Staff Nexus").await;
-            let database = std::fs::read(c.database()).unwrap();
+            let database = stable_world(&c.database()).await;
             god.send("@list globals").await;
             god.until("logins...disabled").await;
-            assert_eq!(database, std::fs::read(c.database()).unwrap());
+            assert_eq!(database, stable_world(&c.database()).await);
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
         })
@@ -712,7 +712,7 @@ async fn tcp_site_rejection_and_private_inspection() {
             let (address, shutdown, task, _) = start(&c, Rc::new(Cell::new(0))).await;
             let mut god = Client::connect(address, 1).await;
             let mut ordinary = Client::connect(address, 2).await;
-            let before = std::fs::read(c.database()).unwrap();
+            let before = stable_world(&c.database()).await;
             let socket = tokio::net::TcpSocket::new_v4().unwrap();
             socket.bind("127.0.0.2:0".parse().unwrap()).unwrap();
             let mut denied = socket.connect(address).await.unwrap();
@@ -732,7 +732,7 @@ async fn tcp_site_rejection_and_private_inspection() {
             god.until("site status: Trusted").await;
             ordinary.send("@list si").await;
             ordinary.until("Permission denied.").await;
-            assert_eq!(before, std::fs::read(c.database()).unwrap());
+            assert_eq!(before, stable_world(&c.database()).await);
             god.send("say responsive").await;
             god.until("responsive").await;
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
@@ -851,14 +851,14 @@ permissions="!wizard"
         let mut god=Client::connect(address,1).await;
         let mut player=Client::connect(address,2).await;
         let mut other=Client::connect(address,2).await;
-        let before=std::fs::read(c.database()).unwrap();
+        let before=stable_world(&c.database()).await;
         player.send("@list permissions").await;player.until("Object commands:").await;
         other.send("look").await;
         assert!(!other.until("Staff Nexus").await.contains("Built-in commands"));
         player.send("say BLOCKED").await;player.until("Permission denied.").await;
         player.send("pose/nospace").await;player.until("Permission denied.").await;
         player.send("acl").await;player.until("Huh?").await;
-        assert_eq!(before,std::fs::read(c.database()).unwrap());
+        assert_eq!(before,stable_world(&c.database()).await);
         player.send(".create access").await;player.until("created in slot").await;
         player.send(".def x=say BLOCKED_MACRO").await;player.until("defined.").await;
         player.send(".x").await;player.until("Permission denied.").await;
@@ -896,7 +896,7 @@ async fn tcp_runtime_administration_and_reload() {
         let mut god=Client::connect(address,1).await;
         let mut other=Client::connect(address,1).await;
         let mut player=Client::connect(address,2).await;
-        let before=std::fs::read(c.database()).unwrap();
+        let before=stable_world(&c.database()).await;
         let toml=std::fs::read(d.path().join("stompymux.toml")).unwrap();
         player.send("@admin max_players=10").await; player.until("Permission denied.").await;
         god.send("@admin/no max_players=10").await;god.until("Unsupported command switch.").await;
@@ -925,7 +925,7 @@ async fn tcp_runtime_administration_and_reload() {
         let count=tokio::time::timeout(Duration::from_secs(3),allowed.read(&mut bytes)).await.unwrap().unwrap(); assert!(count>0);
         god.send("@list config_permissions").await;god.until("player_zone:").await;
         god.send("@list options").await;god.until("Maximum authenticated sessions: 10").await;
-        assert_eq!(before,std::fs::read(c.database()).unwrap());
+        assert_eq!(before,stable_world(&c.database()).await);
         assert_eq!(toml,std::fs::read(d.path().join("stompymux.toml")).unwrap());
         god.send("@force me=@admin max_players=11").await;god.until("Set.").await;
         god.send("lc").await;god.until("NEW:11").await;

@@ -3,10 +3,12 @@
 #![allow(dead_code, unused_imports)]
 mod client;
 mod commands;
+mod database;
 mod fixtures;
 mod server;
 pub use client::Client;
 pub use commands::{run_text, run_text_for_player};
+pub use database::stable_world;
 pub use fixtures::{copy, isolated_scripts, isolated_world};
 pub use server::start;
 
