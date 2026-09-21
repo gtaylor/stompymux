@@ -8,7 +8,7 @@ use stompymux_rs::{
     },
 };
 
-mod support;
+use crate::support;
 use support::isolated_world;
 /// Load an isolated legacy world without starting a server.
 async fn fixture() -> (tempfile::TempDir, Config, World) {

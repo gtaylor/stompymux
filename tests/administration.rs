@@ -1,4 +1,5 @@
 //! Runtime directives, effective Lua snapshots and C permission/parser compatibility.
+use crate::support;
 use stompymux_rs::{
     Flag, ObjectId, Scripts,
     commands::{self, Action},
@@ -8,7 +9,6 @@ use stompymux_rs::{
         directives::DIRECTIVES,
     },
 };
-mod support;
 use support::isolated_scripts;
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
     isolated_scripts().await

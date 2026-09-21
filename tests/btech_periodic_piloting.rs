@@ -3,7 +3,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Actual heartbeat rolls are private to the captured pilot, with the reference empty-pilot fallback.
 #[tokio::test]

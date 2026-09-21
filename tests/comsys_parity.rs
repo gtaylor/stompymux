@@ -6,7 +6,7 @@ use stompymux_rs::{
     persistence,
 };
 
-mod support;
+use crate::support;
 use support::isolated_world;
 
 /// A populated, isolated world with both accounts connected and no production writes.

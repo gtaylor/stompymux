@@ -72,8 +72,8 @@ fixtures rather than regenerating them to conceal a failing test. To intentional
 refresh them after reviewing a layout change:
 
 ```sh
-UPDATE_STATUS_SNAPSHOTS=1 cargo test --test btech_status status_layout_snapshots
-cargo test --test btech_status
+UPDATE_STATUS_SNAPSHOTS=1 cargo test --test btech_08 btech_status::status_layout_snapshots
+cargo test --test btech_08 btech_status::
 ```
 
 Broader report regression tests cover gunner selection, movement, towing,

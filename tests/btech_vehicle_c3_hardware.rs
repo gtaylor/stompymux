@@ -1,7 +1,7 @@
 //! Vehicle command computers use the shared inventory rules with single-slot installations.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Install independent computers in a turret and surviving hull face.
 fn design() -> BattleVehicleTemplate {

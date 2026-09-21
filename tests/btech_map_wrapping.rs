@@ -1,6 +1,6 @@
 //! Wrapped movement shares virtual-coordinate traversal and the saved linked-map marker.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn linked_map_movement_replays_for_mechs_ground_vehicles_and_aircraft() {

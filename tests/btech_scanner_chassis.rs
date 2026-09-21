@@ -1,6 +1,6 @@
 //! Automatic acquisition uses the same sensor rules for all supported observer and target classes.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Representative supported chassis with stationary movement explicitly authored.
 fn templates() -> Vec<String> {

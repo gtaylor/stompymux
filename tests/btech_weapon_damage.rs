@@ -1,6 +1,6 @@
 //! Critical degradation enters real impact transactions and survives database persistence.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A weapon-only torso isolates random critical selection while retaining a viable chassis.
 async fn fixture(weapon: BattleWeapon) -> (tempfile::TempDir, Config, World, ObjectId, usize) {

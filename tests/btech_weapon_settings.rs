@@ -5,7 +5,7 @@ use stompymux_rs::*;
 mod defense;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Both anatomies expose the same saved countdown without changing the unit.
 fn recycle(world: &World, id: ObjectId, index: usize) -> Option<u16> {

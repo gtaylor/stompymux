@@ -1,6 +1,6 @@
 //! Vehicle deck and hovercraft under-span travel retain distinct support height through replay.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A running vehicle faces east toward a sequence of bridge spans.
 async fn fixture(hover: bool) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {

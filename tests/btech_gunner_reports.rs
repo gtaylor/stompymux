@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Every supported chassis exposes identical reports to its pilot and registered gunner.
 #[tokio::test]

@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Keep the assigned pilot in its cockpit while a separate wizard edits its map.
 fn operator(world: &mut World, config: &Config, map: ObjectId) -> ObjectId {

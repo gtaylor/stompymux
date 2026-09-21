@@ -1,6 +1,6 @@
 //! Shared building admission, delayed readiness and durable rechecks for each included chassis.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn entry_delay_replays_and_rechecks_live_routes_for_every_chassis() {

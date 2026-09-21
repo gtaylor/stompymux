@@ -4,7 +4,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Read the durable owner directly so detached script tables cannot conceal missed writes.
 fn counters(world: &World, id: ObjectId) -> serde_json::Value {

@@ -4,7 +4,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Find reproducible real random streams once; host tests do not bypass the failure selector.
 fn stream(effect: BattleComputerFailure) -> BattleDice {

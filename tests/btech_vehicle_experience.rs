@@ -1,6 +1,6 @@
 //! Shared classic gunnery awards and persisted unit policy across mixed construction types.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Construct independent award participants without introducing firing or hit-location dice.
 async fn fixture(

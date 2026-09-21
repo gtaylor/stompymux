@@ -21,7 +21,7 @@ fn config(text: &str) -> (tempfile::TempDir, Config) {
 fn fixture_path() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game")
 }
-mod support;
+use crate::support;
 use support::copy;
 fn game() -> tempfile::TempDir {
     let d = tempfile::tempdir().unwrap();

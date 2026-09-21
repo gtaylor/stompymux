@@ -1,8 +1,8 @@
 //! Conventional weapon catalogs, ammunition limits and existing biped asset loadouts.
+use crate::support;
 use stompymux_rs::{
     BattleLoadout, BattleSection, BattleSystem, BattleTemplate, BattleWeapon, ObjectId,
 };
-mod support;
 
 const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D");
 const ATLAS: &str = include_str!("fixtures/btech/mechs/AS7-D");

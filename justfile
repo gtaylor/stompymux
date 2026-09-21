@@ -28,6 +28,9 @@ test:
 build:
     cargo build
 
+build-lua-type-updater:
+    cargo build --features lua-type-updater --bin lua-type-updater
+
 run:
     cargo run serve
 
@@ -35,12 +38,12 @@ build-and-run: build run
 
 # Regenerate LuaLS libraries and their isolated test fixtures from Rust contracts.
 update-lua-types:
-    cargo run --quiet --bin lua-type-updater -- --write
+    cargo run --quiet --features lua-type-updater --bin lua-type-updater -- --write
     {{stylua}} --check game/lua/types/mux.d.lua game/lua/types/btech.d.lua
 
 # Fail when any checked-in LuaLS library or test fixture is stale.
 check-lua-types:
-    cargo run --quiet --bin lua-type-updater -- --check
+    cargo run --quiet --features lua-type-updater --bin lua-type-updater -- --check
     {{stylua}} --check game/lua/types/mux.d.lua game/lua/types/btech.d.lua
 
 # Runs a differential Lua parity probe against the pinned C reference.

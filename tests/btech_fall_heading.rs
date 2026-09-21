@@ -1,7 +1,7 @@
 //! Facing controls share ordinary turning rates while forced descent retains its own cursor.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn falling_units_turn_without_translation_and_replay_shared_chassis_rates() {

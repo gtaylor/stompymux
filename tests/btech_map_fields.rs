@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 #[tokio::test]
 async fn every_writable_field_matches_lua_and_restarts_across_chassis() {

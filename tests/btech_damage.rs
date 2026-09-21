@@ -1,9 +1,9 @@
 //! Material damage, transfer accounting, section loss and durable core destruction.
+use crate::support;
 use stompymux_rs::{
     BattleDamagePhase as Phase, BattleSection as Section, BattleTemplate, BattleUnit, Kind,
     ObjectId, apply_damage_phase, create_battle_unit, persistence,
 };
-mod support;
 
 /// A fresh Jenner with reference armor and structure quantities.
 fn jenner() -> BattleUnit {

@@ -1,6 +1,6 @@
 //! Mech material entries preserve diagnostic dice across phases, transfers and durable replay.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A chosen location lets these scenarios isolate material dice from hit-table dice.
 fn hit(section: BattleSection) -> BattleHit {

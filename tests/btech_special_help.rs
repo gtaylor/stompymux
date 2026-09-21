@@ -1,8 +1,8 @@
 //! Live special-object HELP routing, persisted candidate order and general-help fallback.
+use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Current chassis use their saved class, with uppercase special help and ordinary lowercase help.
 #[tokio::test]

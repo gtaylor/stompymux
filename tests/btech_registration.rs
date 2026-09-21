@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Register, use, reload and unregister a carried tool without changing its game containment.
 #[tokio::test]

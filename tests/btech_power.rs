@@ -1,11 +1,11 @@
 //! Deterministic startup cadence, durable countdowns and server tick save-failure recovery.
+use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use stompymux_rs::{
     BattleMapAsset, BattlePower, BattleTemplate, Config, Kind, ObjectId, Scripts, ShutdownRequest,
     World, advance_battle_units, assign_battle_pilot, create_battle_map, create_battle_unit,
     persistence, place_battle_unit, remove_battle_unit, start_battle_unit, stop_battle_unit,
 };
-mod support;
 
 /// A piloted, placed Jenner in an isolated database, ready for a power transition.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {

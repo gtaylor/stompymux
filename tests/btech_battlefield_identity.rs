@@ -2,7 +2,7 @@
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Resolve the shared identity without depending on chassis storage.
 fn identity(world: &World, id: ObjectId) -> String {

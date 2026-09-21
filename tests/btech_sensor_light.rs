@@ -4,7 +4,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 const WARNING: &str = "The light's kinda too bright now to use Light-amplification!";
 

@@ -1,8 +1,8 @@
 //! Jump thrust, gravity, continuous trajectory boundaries and detached persisted inspection.
+use crate::support;
 use stompymux_rs::{
     BattleJumpPath, BattlePoint, BattleSection, BattleSystem, BattleTemplate, BattleUnit,
 };
-mod support;
 
 /// Loose stock uses the shared load calculation for both projected and targeted jumps.
 #[tokio::test]

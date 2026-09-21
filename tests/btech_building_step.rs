@@ -3,7 +3,6 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 /// Ordinary structures report once per entered hex; concealed and dropship structures stay quiet.
 #[tokio::test]

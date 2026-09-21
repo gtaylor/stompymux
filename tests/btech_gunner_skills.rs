@@ -3,7 +3,6 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 /// Distinct attribute and skill values make accidental parent-operator lookup observable.
 fn profile(world: &mut World, player: ObjectId, gunner: bool) {

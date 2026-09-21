@@ -1,6 +1,6 @@
 //! Sandbox removal contract: the eight runtime-control globals stay absent while
 //! the permitted library tables and the module loader remain installed.
-mod support;
+use crate::support;
 use support::isolated_scripts;
 
 /// C lua_install_sandbox (lua_runtime.c:270-313) nils sixteen runtime-control

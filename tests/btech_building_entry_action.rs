@@ -1,7 +1,7 @@
 //! Host entry countdowns share movement callbacks and rollback across all admitted chassis.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Create a piloted running unit at an authored entrance.
 async fn fixture(

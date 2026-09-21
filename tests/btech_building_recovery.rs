@@ -1,7 +1,7 @@
 //! Missing building repair clocks resume on load without resetting committed progress.
+use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use stompymux_rs::*;
-mod support;
 
 /// One referenced interior and one unrelated map with equal construction state.
 async fn fixture(integrity: i64) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {

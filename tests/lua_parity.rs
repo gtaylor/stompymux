@@ -1,7 +1,7 @@
 //! C Lua contracts: symbols, typed errors, generational identities and transactional repair.
+use crate::support;
 use std::rc::Rc;
 use stompymux_rs::{Account, Config, CreationContext, Kind, ObjectId, Scripts, persistence};
-mod support;
 use support::isolated_scripts;
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
     isolated_scripts().await

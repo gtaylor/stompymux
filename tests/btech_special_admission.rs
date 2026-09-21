@@ -1,8 +1,8 @@
 //! Restricted special commands consume input before general dispatch and never borrow cause authority.
+use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 const DENIED: &str = "Sorry, that command is restricted!";
 

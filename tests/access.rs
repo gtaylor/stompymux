@@ -7,7 +7,7 @@ use stompymux_rs::{
     persistence, server,
 };
 
-mod support;
+use crate::support;
 use support::copy;
 /// Add an ordered, isolated overlay to the existing game configuration.
 fn game(policy: &str) -> tempfile::TempDir {

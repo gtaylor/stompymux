@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Raise only the target's terrain hex, keeping both units valid at their natural ground heights.
 fn raised_target(world: &mut World, map: ObjectId, target: ObjectId) {

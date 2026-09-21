@@ -1,6 +1,6 @@
 //! Repeated template comments retain authored notes without changing equipment or field validation.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 #[test]
 fn comments_preserve_section_context_and_do_not_relax_unit_fields() {

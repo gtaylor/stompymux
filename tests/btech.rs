@@ -1,11 +1,11 @@
 //! BattleTech asset, command, scripting, persistence-preservation and lifecycle scenarios.
+use crate::support;
 use sqlx::{Connection, Row, SqliteConnection};
 use std::path::Path;
 use stompymux_rs::{
     BattleMapAsset, BattleSection, BattleTemplate, BtechState, Flag, Kind, ObjectId, Scripts,
     Terrain, dbck, persistence, read_battle_map, read_battle_template,
 };
-mod support;
 
 /// Install only isolated BattleTech fixture assets into a temporary game directory.
 fn assets(root: &Path) {

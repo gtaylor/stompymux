@@ -1,7 +1,7 @@
 //! Hiding shares cockpit authority, cached visibility, elapsed events and cover loss across chassis.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Edit isolated scenario facts without bypassing final world validation.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {

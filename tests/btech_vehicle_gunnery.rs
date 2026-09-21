@@ -1,6 +1,6 @@
 //! Vehicle gunnery uses class-specific basic skills and shared extended weapon families.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A vehicle with a single weapon family and a present assigned operator.
 async fn fixture(weapon: &str) -> (tempfile::TempDir, Config, World, ObjectId) {

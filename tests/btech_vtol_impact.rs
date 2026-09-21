@@ -1,6 +1,6 @@
 //! Standard and FASA aircraft impacts share weapon ranking, armor and critical transactions.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn aircraft_impacts_apply_location_rotor_and_armor_effects_with_saved_replay() {

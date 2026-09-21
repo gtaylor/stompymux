@@ -1,6 +1,6 @@
 //! Shared cockpit maps and navigation retain mixed-chassis contacts, authority and replay.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Read the staggered LRS cell for a known coordinate, independently of contact marker choice.
 fn cell(report: &BattleLongRangeMap, x: i32, y: i32) -> char {

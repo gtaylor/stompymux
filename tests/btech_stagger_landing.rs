@@ -3,7 +3,6 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 /// Advance to settlement while verifying every committed flight sample against a saved replay.
 fn land(

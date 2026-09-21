@@ -5,7 +5,7 @@ use stompymux_rs::*;
 mod firing;
 #[path = "support/btech_map_objects.rs"]
 mod map_objects;
-mod support;
+use crate::support;
 
 /// New effects prepend their kind's list, including replacements, independent of tile coordinates.
 #[tokio::test]

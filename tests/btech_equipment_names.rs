@@ -1,6 +1,6 @@
 //! Equipment identifiers are case-insensitive without changing authored metadata or typed rules.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 #[test]
 fn weapon_names_fold_ascii_case_without_accepting_unknown_identities() {

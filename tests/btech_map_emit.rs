@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Inspect recipient identity and exact message source without socket rendering.
 fn output(scripts: &Scripts) -> Vec<(ObjectId, String)> {

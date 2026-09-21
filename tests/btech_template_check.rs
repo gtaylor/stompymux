@@ -1,6 +1,6 @@
 //! Construction diagnostics, normalization previews and read-only native/Lua inspection.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Template checks share construction rejection and retain the original source facts.
 #[test]

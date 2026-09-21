@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Keep the operator outside the assigned cockpit.
 fn operator(world: &mut World, config: &Config, map: ObjectId) -> ObjectId {

@@ -1,7 +1,7 @@
 //! Authored link persistence and bounded, atomic rebuilding of shared building routes.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 fn add_map(
     world: &mut World,

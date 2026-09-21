@@ -1,6 +1,6 @@
 //! Scenario fortification shares administration, movement admission and immobile aiming across chassis.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 const CHASSIS: [&str; 4] = [
     include_str!("fixtures/btech/mechs/JR7-D"),
     include_str!("../game/mechs/SCP-1N"),

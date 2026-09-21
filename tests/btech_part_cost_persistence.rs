@@ -1,4 +1,4 @@
-mod support;
+use crate::support;
 use sqlx::{Connection, Row, SqliteConnection};
 use support::isolated_world;
 

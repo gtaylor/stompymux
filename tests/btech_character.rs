@@ -1,9 +1,9 @@
 //! Character injury arithmetic, selective persistence and failed-save recovery.
+use crate::support;
 use sqlx::Connection;
 use stompymux_rs::{
     BattleCharacter, ObjectId, injure_battle_character, persistence, set_battle_character,
 };
-mod support;
 
 /// Explicit ordinary character profile; no implicit character creation is assumed.
 fn profile() -> BattleCharacter {

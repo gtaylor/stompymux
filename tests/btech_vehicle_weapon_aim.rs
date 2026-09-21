@@ -1,6 +1,6 @@
 //! Vehicle weapon aim shares numeric terms without mutating combat state or authorizing fire.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Two Mechs and two vehicles at opposite ends of a north/south lane.
 async fn fixture(

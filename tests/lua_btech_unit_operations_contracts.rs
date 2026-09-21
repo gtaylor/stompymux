@@ -4,7 +4,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 #[tokio::test]
 async fn damage_piloting_and_template_lifecycle_match_zero_return_contracts() {

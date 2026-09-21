@@ -1,6 +1,6 @@
 //! Empty tactical crews retain injury and recovery without manufacturing player identities.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Construct an unoccupied running unit with a deterministic private recovery stream.
 async fn fixture(vehicle: bool) -> (tempfile::TempDir, Config, World, ObjectId, u8) {

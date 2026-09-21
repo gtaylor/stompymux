@@ -18,7 +18,7 @@ use tokio::{
     sync::oneshot,
 };
 
-mod support;
+use crate::support;
 use support::{Client, copy, stable_world, start};
 
 /// Use fast test maintenance and password hashing, without changing production defaults.

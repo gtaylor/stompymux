@@ -1,6 +1,6 @@
 //! Advanced rotor criticals use the shared critical transaction while live aircraft remain gated.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn advanced_rotor_criticals_commit_saved_dice_and_material_effects_together() {

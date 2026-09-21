@@ -2,6 +2,15 @@
 name = "stompymux-rs"
 version = "0.1.0"
 edition = "2024"
+autotests = false
+
+[features]
+lua-type-updater = []
+
+[[bin]]
+name = "lua-type-updater"
+path = "src/bin/lua-type-updater.rs"
+required-features = ["lua-type-updater"]
 
 [dependencies]
 tempfile = "3.27.0"
@@ -29,5 +38,78 @@ rand_chacha = { version = "0.10.0", features = ["serde"] }
 [dev-dependencies]
 tokio = { version = "1.53.1", features = ["test-util"] }
 
+[profile.dev]
+debug = "line-tables-only"
+
 [profile.test]
 opt-level = 1
+debug = "line-tables-only"
+incremental = false
+
+[profile.test.package."*"]
+debug = 0
+
+# Consolidated integration suites; scenario files stay in tests/ for fixture paths.
+[[test]]
+name = "btech_01"
+path = "tests/suites/btech_01.rs"
+
+[[test]]
+name = "btech_02"
+path = "tests/suites/btech_02.rs"
+
+[[test]]
+name = "btech_03"
+path = "tests/suites/btech_03.rs"
+
+[[test]]
+name = "btech_04"
+path = "tests/suites/btech_04.rs"
+
+[[test]]
+name = "btech_05"
+path = "tests/suites/btech_05.rs"
+
+[[test]]
+name = "btech_06"
+path = "tests/suites/btech_06.rs"
+
+[[test]]
+name = "btech_07"
+path = "tests/suites/btech_07.rs"
+
+[[test]]
+name = "btech_08"
+path = "tests/suites/btech_08.rs"
+
+[[test]]
+name = "btech_09"
+path = "tests/suites/btech_09.rs"
+
+[[test]]
+name = "btech_10"
+path = "tests/suites/btech_10.rs"
+
+[[test]]
+name = "btech_11"
+path = "tests/suites/btech_11.rs"
+
+[[test]]
+name = "btech_12"
+path = "tests/suites/btech_12.rs"
+
+[[test]]
+name = "core_01"
+path = "tests/suites/core_01.rs"
+
+[[test]]
+name = "core_02"
+path = "tests/suites/core_02.rs"
+
+[[test]]
+name = "core_03"
+path = "tests/suites/core_03.rs"
+
+[[test]]
+name = "btech_motion"
+path = "tests/suites/btech_motion.rs"

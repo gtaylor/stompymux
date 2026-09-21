@@ -4,7 +4,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Read the administrative projection without depending on unit-store layout.
 fn status(scripts: &Scripts, config: &Config, id: ObjectId) -> String {

@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde_json::Value;
 use stompymux_rs::Scripts;
 
-mod support;
+use crate::support;
 
 const REFERENCE_REVISION: &str = "2bbbe6fcdbabe69e229d73089f44bf38f91c0591";
 const RUST_BASELINE_REVISION: &str = "7917a95642e2fe690bf0ac03a018a0e2b7342b21";

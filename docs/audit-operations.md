@@ -124,15 +124,15 @@ claim byte-for-byte equivalence for every Markdown construct or terminal width.
 
 ## Executed Rust evidence
 
-- `cargo test --test help`: seven corpus, index, visibility, live-read/reload,
+- `cargo test --test core_01 help::`: seven corpus, index, visibility, live-read/reload,
   permissive-metadata, Markdown-link, and bounded-render tests passed. The
   supplied tree indexed 100 articles and resolved all 246 declared keywords.
-- `cargo test --test operations`: four registry/permission, report layout,
+- `cargo test --test core_03 operations::`: four registry/permission, report layout,
   idle/footer, and loopback private-delivery/count tests passed.
-- `cargo test --test logging`: five category/configuration, redaction/origin,
+- `cargo test --test core_02 logging::`: five category/configuration, redaction/origin,
   safe-file/cache, transactional Lua, and loopback persistence/failure tests
   passed.
-- `cargo test --test telnet_extensions`: eight transport and duration-format
+- `cargo test --test core_02 telnet_extensions::`: eight transport and duration-format
   tests passed.
 - `cargo check` and `git diff --check` passed for the combined working tree at
   the end of this tranche.

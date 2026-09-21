@@ -4,7 +4,6 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 /// All stagger policies retain the same diagnostic order, including unassigned cockpit fallback.
 #[tokio::test]

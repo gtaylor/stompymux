@@ -1,6 +1,6 @@
 //! Explicit split weapon links, stable mounts and damage across section boundaries.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Install a supported split mount with a zero-based parent pointer in each extension slot.
 fn definition(

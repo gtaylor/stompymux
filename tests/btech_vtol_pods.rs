@@ -5,7 +5,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 // The shared fixture also exposes a full chassis matrix unused by this VTOL test.
 mod firing;
-mod support;
+use crate::support;
 
 /// Native and Lua requests distinguish launch preparation from flight without altering rejected state.
 #[tokio::test]

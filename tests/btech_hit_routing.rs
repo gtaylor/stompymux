@@ -1,7 +1,7 @@
 //! Configured Mech hit routing and critical-proof construction share host actions and durable state.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Update either anatomy's saved runtime facts without duplicating combat mechanics.
 fn edit(world: &mut World, id: ObjectId, update: impl FnOnce(&mut serde_json::Value)) {

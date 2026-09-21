@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Native and Lua transitions retain unrelated map fields and exact unit state across all supported chassis.
 #[tokio::test]

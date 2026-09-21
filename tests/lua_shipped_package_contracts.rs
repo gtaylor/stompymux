@@ -2,7 +2,7 @@
 //! and object_appearances. The pinned Lua sources are the behavioral oracle; these
 //! tests audit module loading, cache identity, and the callable contracts over
 //! fixed inputs against the Rust host.
-mod support;
+use crate::support;
 use support::isolated_scripts;
 
 /// require loads each shipped module once, caches it, and keeps its environment

@@ -3,7 +3,6 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 /// Install deterministic protection through the validated durable state format.
 fn protect(world: &mut World, id: ObjectId, mass: i64, seed: u8) {

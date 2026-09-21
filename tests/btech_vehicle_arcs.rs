@@ -1,6 +1,6 @@
 //! Hull and turret firing arcs, damage eligibility, angle boundaries and persisted facing.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A running vehicle with a present pilot, initially disconnected from a session.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {

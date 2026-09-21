@@ -1,4 +1,5 @@
 //! C connection-report semantics and real TCP operational commands.
+use crate::support;
 use std::{
     cell::{Cell, RefCell},
     path::Path,
@@ -10,9 +11,8 @@ use stompymux_rs::{
     commands::{self, Action, ExecutionContext, InputOrigin},
     operations, persistence,
 };
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-mod support;
 use support::{Client, copy, stable_world, start};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 async fn fixture() -> (tempfile::TempDir, Config) {
     let d = tempfile::tempdir().unwrap();
     copy(

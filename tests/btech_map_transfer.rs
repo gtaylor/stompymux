@@ -1,6 +1,6 @@
 //! Powered map transfers reuse administrative placement while preserving crew and combat material.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn transfer_preserves_running_controls_and_crew_across_all_admitted_chassis() {

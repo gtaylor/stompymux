@@ -1,7 +1,7 @@
 //! Vehicle Artemis controller geometry, shared cockpit admission and durable selections.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Ground movement classes and rotorcraft, including stationary rotorcraft anatomy.
 fn templates() -> Vec<String> {

@@ -273,7 +273,7 @@ fn mixed_relocated_asset_engines_construct_and_preserve_saved_damage() {
     }
 }
 
-mod support;
+use crate::support;
 
 /// Cockpit naming preserves display precedence without changing the effective mass/combat family.
 #[tokio::test]

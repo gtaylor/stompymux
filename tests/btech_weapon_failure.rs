@@ -2,7 +2,6 @@
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 /// Observe either owned unit through the common temporary-failure contract.
 fn failure(world: &World, id: ObjectId, index: usize) -> Option<BattleEquipmentFailure> {

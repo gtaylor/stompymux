@@ -1,7 +1,7 @@
 //! Wreck retirement preserves objects, shared chassis behavior and transactional callbacks.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Inspect the durable shared timer without exposing a mutable production interface.
 fn remaining(world: &World, id: ObjectId) -> Option<u64> {

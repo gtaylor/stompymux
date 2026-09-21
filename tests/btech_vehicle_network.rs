@@ -1,6 +1,6 @@
 //! Mixed Mech/vehicle networks share membership, reports, communication and weapon range.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Seven running friendly computers with individually assigned pilots and retained contacts.
 async fn field() -> (tempfile::TempDir, Config, World, Vec<(ObjectId, ObjectId)>) {

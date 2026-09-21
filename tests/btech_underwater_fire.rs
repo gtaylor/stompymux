@@ -4,7 +4,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Place both units below the surface without advancing unrelated simulation clocks.
 async fn field(

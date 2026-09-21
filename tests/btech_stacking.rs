@@ -1,6 +1,6 @@
 //! Crowding thresholds, physical collision inputs and atomic damage/restart contracts.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A supplied team roster shares one hex; the first unit has the active cockpit.
 async fn fixture(teams: &[i32]) -> (tempfile::TempDir, Config, World, Vec<ObjectId>) {

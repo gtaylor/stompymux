@@ -1,5 +1,5 @@
 //! Focused C-shape coverage for the btech.system Lua namespace.
-mod support;
+use crate::support;
 use stompymux_rs::{ObjectId, accounts, persistence};
 use support::{Client, isolated_scripts, isolated_world};
 use tokio::{net::TcpListener, sync::oneshot};

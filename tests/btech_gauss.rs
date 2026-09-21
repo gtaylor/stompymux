@@ -1,6 +1,6 @@
 //! Gauss catalog facts, inert ammunition and atomic weapon-explosion cascades.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Install one supported Gauss mount and matching inert ammunition in an isolated biped template.
 fn definition(weapon: BattleWeapon, case: bool) -> BattleTemplate {

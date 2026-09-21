@@ -1,6 +1,6 @@
 //! Shared TIC membership survives chassis-specific persistence and callback rollback.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Membership has one authority, mutation and persistence contract on all supported chassis.
 #[tokio::test]

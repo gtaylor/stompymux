@@ -1,10 +1,10 @@
 //! Maintenance repair, preservation, dependency and restart regressions on isolated databases.
+use crate::support;
 use sqlx::{Connection, Row, SqliteConnection};
 use std::collections::BTreeMap;
 use stompymux_rs::{
     Account, Config, Flag, Kind, LinkSlots, Links, ObjectId, World, dbck, persistence,
 };
-mod support;
 use support::isolated_world;
 /// Load the populated fixture and an operation-scoped SQL connection.
 async fn fixture() -> (tempfile::TempDir, Config, World, SqliteConnection) {

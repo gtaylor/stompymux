@@ -1,6 +1,6 @@
 //! Quad hull-down timing, action rollback, movement admission and shared sensor cover.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 const QUAD: &str = include_str!("../game/mechs/SCP-1N");
 const MECH: &str = include_str!("fixtures/btech/mechs/JR7-D");
 const VEHICLE: &str = include_str!("../game/mechs/Demolisher");

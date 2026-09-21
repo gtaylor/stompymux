@@ -1,6 +1,6 @@
 //! Ground-vehicle critical table outcomes, suppression and saved random stream replay.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A running vehicle with a present pilot, initially disconnected from a session.
 async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId) {

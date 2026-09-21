@@ -1,7 +1,7 @@
 //! Vehicle RPG crew injuries reuse character health, consciousness and transactional evacuation.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// A running tactical chassis with an in-character non-wizard pilot and mixed occupants.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {

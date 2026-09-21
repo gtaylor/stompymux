@@ -1,4 +1,4 @@
-mod support;
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use support::isolated_scripts;
 

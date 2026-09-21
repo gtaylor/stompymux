@@ -1,6 +1,6 @@
 //! Source-backed edge contracts for the non-world MUX service packages.
 
-mod support;
+use crate::support;
 use support::isolated_scripts;
 
 #[tokio::test(flavor = "current_thread")]

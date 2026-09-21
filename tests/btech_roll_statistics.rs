@@ -4,7 +4,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Empty reports need no cockpit; argument text is ignored and switches are rejected after permission.
 #[tokio::test]

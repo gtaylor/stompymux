@@ -1,7 +1,7 @@
 //! Operator visibility persists across chassis without replacing ordinary sensor acquisition.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Representative construction for every supported movement class.
 fn templates() -> Vec<String> {

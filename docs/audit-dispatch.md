@@ -134,7 +134,7 @@ inventory discovery, which remain outside this tranche.
 
 ## Validation
 
-Focused validation covers `cargo test --test commands`, `cargo test --test macros`,
+Focused validation covers `cargo test --test core_02 commands::`, `cargo test --test core_03 macros::`,
 `cargo test commands::queue::tests` and `cargo test server::queue::tests`. The C TCP
 probe ran against `../btmux-khi/build/stompymux` with a temporary copied world;
 the distinct zone setup and `zonegate2` established the working C fallback described

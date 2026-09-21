@@ -4,7 +4,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Saved XP, use timestamps and health clear; recovery resumes from its existing stream.
 #[tokio::test]

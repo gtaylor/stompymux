@@ -1,7 +1,7 @@
 //! TURRET role lifecycle preserves world objects and independently owned station state.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Unattached defaults, edited stations, independent timers and restart share one native lifecycle.
 #[tokio::test]

@@ -1,6 +1,6 @@
 //! Bulk engine-loss explosions retain timing, shared blast consequences and atomic replay.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Adjust isolated saved scenario facts while retaining production construction and impact paths.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {

@@ -1,11 +1,11 @@
 //! Explicit checkpoints use serialized persistence and publish success only after it completes.
+use crate::support;
 use sqlx::Connection;
 use std::{
     cell::{Cell, RefCell},
     rc::Rc,
 };
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn save_requests_follow_effect_savepoints_and_lua_rollback() {
@@ -81,7 +81,7 @@ async fn server_forces_unchanged_checkpoint_and_retries_after_database_lock() {
             let mut client = support::Client::connect(address, 1).await;
             client.send("savedb ignored").await;
             client.until("SQLite checkpoint complete.").await;
-            let before = persistence::load(&config.database()).await.unwrap();
+            let before = support::stable_world(&config.database()).await;
             let mut lock = sqlx::SqliteConnection::connect_with(
                 &sqlx::sqlite::SqliteConnectOptions::new().filename(config.database()),
             )
@@ -98,16 +98,10 @@ async fn server_forces_unchanged_checkpoint_and_retries_after_database_lock() {
             assert!(!failure.contains("SQLite checkpoint complete."));
             sqlx::query("ROLLBACK").execute(&mut lock).await.unwrap();
             lock.close().await.unwrap();
-            assert_eq!(
-                persistence::load(&config.database()).await.unwrap().btech,
-                before.btech
-            );
+            assert_eq!(support::stable_world(&config.database()).await, before);
             client.send("savedb").await;
             client.until("SQLite checkpoint complete.").await;
-            assert_eq!(
-                persistence::load(&config.database()).await.unwrap().btech,
-                before.btech
-            );
+            assert_eq!(support::stable_world(&config.database()).await, before);
             shutdown.send(ShutdownRequest::Sigterm).unwrap();
             task.await.unwrap().unwrap();
         })

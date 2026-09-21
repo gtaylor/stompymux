@@ -5,7 +5,7 @@ use stompymux_rs::*;
 mod defense;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Catalogue cluster rows and ammo markers preserve the reference's range and damage profile.
 #[test]

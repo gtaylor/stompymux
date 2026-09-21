@@ -1,7 +1,7 @@
 //! Saved cargo transfer locations, selective persistence and coordinate disclosure.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// A decoded map supports both authored transfer locations and ordinary stock.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {

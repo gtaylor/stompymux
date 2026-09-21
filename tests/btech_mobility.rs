@@ -198,7 +198,7 @@ fn quad_actuators_hips_and_gyro_preserve_order_and_restart_calculation() {
     assert_eq!(unit().chassis().piloting_skill(true), "Piloting-Biped");
 }
 
-mod support;
+use crate::support;
 
 /// Shallow water cools surviving sinks in all four quad legs, including the front pair.
 #[tokio::test]

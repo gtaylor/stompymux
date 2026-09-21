@@ -1,6 +1,6 @@
 //! Source-backed table identity and mutable Error behavior from lua_error.c.
 
-mod support;
+use crate::support;
 use support::isolated_scripts;
 
 #[tokio::test(flavor = "current_thread")]

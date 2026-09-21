@@ -1,6 +1,6 @@
 //! Clan chassis technology derives sink groups, containment and construction mass from owned facts.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A complete Clan biped with two external double sinks and ordinary fusion construction.
 fn definition() -> BattleTemplate {

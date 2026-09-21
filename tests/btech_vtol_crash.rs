@@ -1,6 +1,6 @@
 //! Crash material reuses fall packets and preserves transactional replay and world placement checks.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Install placed material for component tests without admitting an aircraft to live simulation.
 fn aircraft(world: &mut World, id: ObjectId, map: ObjectId, falling: bool) {

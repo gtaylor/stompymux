@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_map_objects.rs"]
 mod map_objects;
-mod support;
+use crate::support;
 
 /// Newly authored blocks prepend without moving imported rows or their extension columns.
 #[tokio::test]

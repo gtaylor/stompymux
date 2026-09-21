@@ -1,4 +1,5 @@
 //! Logging controls, conservative audit redaction, staged Lua effects and safe file appends.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{
     Config, ObjectId, Scripts,
@@ -6,7 +7,6 @@ use stompymux_rs::{
     logging::{self, Category, FileRequest, Record},
     persistence,
 };
-mod support;
 use support::{Client, isolated_world, stable_world, start};
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
     let (d, c, w) = isolated_world().await;

@@ -1,8 +1,8 @@
 //! Selected DEBUG commands keep reference permissions without broadening operator APIs.
+use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Imported DEBUG objects expose public Battle Value edits while other controls remain restricted.
 #[tokio::test]

@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Set one trusted administrative field under normal authorization and rollback.
 fn set(scripts: &Scripts, config: &Config, id: ObjectId, field: &str, value: &str) {

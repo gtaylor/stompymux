@@ -1,7 +1,7 @@
 //! Live pilot flight commands share domain controls and callback rollback.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Create, place and start an aircraft through the shared vehicle lifecycle.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {

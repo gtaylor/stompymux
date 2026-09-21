@@ -1,7 +1,7 @@
 //! Non-BattleTech Lua userdata, sandbox and shipped-package compatibility contracts.
 use stompymux_rs::Scripts;
 
-mod support;
+use crate::support;
 use support::isolated_scripts;
 
 /// The sandbox retains safe language helpers while hiding runtime control and loader state.

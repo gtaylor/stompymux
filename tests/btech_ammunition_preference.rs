@@ -1,7 +1,7 @@
 //! Preferred sections preserve shared feed fallback, cockpit admission and persistence.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Native/Lua controls and multi-bin plans share one contract on Mechs, ground vehicles and VTOLs.
 #[tokio::test]

@@ -1,4 +1,5 @@
 //! C retry and creation-zone policies against isolated SQLite worlds and real sockets.
+use crate::support;
 use std::{
     cell::{Cell, RefCell},
     path::Path,
@@ -9,9 +10,8 @@ use stompymux_rs::{
     Config, CreationContext, Flag, Kind, ObjectId, Scripts, accounts, commands, persistence,
     server::{self, ShutdownRequest},
 };
-use tokio::{io::AsyncReadExt, net::TcpStream};
-mod support;
 use support::{Client, copy, start};
+use tokio::{io::AsyncReadExt, net::TcpStream};
 async fn fixture(retries: i64, zone: i64) -> (tempfile::TempDir, Config) {
     let d = tempfile::tempdir().unwrap();
     copy(

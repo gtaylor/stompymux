@@ -1,6 +1,6 @@
 //! Live vehicle controls, continuous travel, boundary stops, and deterministic persisted replay.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A running wheeled vehicle in a long, level corridor.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {

@@ -1,6 +1,6 @@
 //! Vehicle mine selection shares ordered fields and live-mass thresholds with Mechs.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn vehicle_mine_queries_use_live_mass_and_preserve_saved_state() {

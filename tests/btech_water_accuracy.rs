@@ -3,7 +3,6 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 /// Conventional preview rules preserve the water term without weapon arc overrides.
 fn rules() -> BattleAimRules {

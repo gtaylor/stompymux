@@ -1,7 +1,7 @@
 //! Map command routing retains the selected registration without relocating the invoking actor.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Distinct map names and terrain reveal accidental fallback to the actor's location.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {

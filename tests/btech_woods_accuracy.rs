@@ -3,7 +3,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Standard aim policy with an explicit woods-damage switch.
 fn rules(enabled: bool) -> BattleAimRules {

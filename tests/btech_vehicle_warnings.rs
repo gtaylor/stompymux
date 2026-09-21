@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Suppress critical side effects while retaining ordinary armor admission and warning ordering.
 fn rules() -> BattleVehicleCriticalRules {

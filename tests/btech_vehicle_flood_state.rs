@@ -1,7 +1,7 @@
 //! Water destruction preserves material and crew facts while using ordinary wreck cleanup.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Intact vehicle with a working electronic suite and command computer.
 fn template() -> BattleVehicleTemplate {

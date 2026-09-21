@@ -1,7 +1,7 @@
 //! Jump facing uses shared rotation without steering the committed flight path.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn jump_heading_rates_preserve_trajectory_and_replay_across_chassis() {

@@ -3,7 +3,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// An empty artillery mount is inspected by a separately piloted scanner with an acquired contact.
 async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {

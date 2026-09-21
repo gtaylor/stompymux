@@ -1,6 +1,6 @@
 //! Vehicle turret facing, native/Lua control transactions, damage locks, and saved replay.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A running vehicle with a present pilot, initially disconnected from a session.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {

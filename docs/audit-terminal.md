@@ -124,11 +124,11 @@ cmark and fixed-buffer output.
 - Rebuilt `target/debug/stompymux-rs`, then ran
   `PYTHONDONTWRITEBYTECODE=1 python3 tests/tools/terminal_probe.py`; all fifteen
   paired TTYPE cases matched the C metadata semantics described above.
-- `cargo test --test telnet`: seven Q-state, echo, TTYPE/MTTS, CHARSET, and
+- `cargo test --test core_03 telnet::`: seven Q-state, echo, TTYPE/MTTS, CHARSET, and
   malformed-subnegotiation tests passed.
-- `cargo test --test telnet_extensions`: eight NEW-ENVIRON, GMCP, MCCP2,
+- `cargo test --test core_02 telnet_extensions::`: eight NEW-ENVIRON, GMCP, MCCP2,
   diagnostic, counter, duration, and slow-writer tests passed.
-- `cargo test --test text`: twelve C-derived styled-text, OSC, preset,
+- `cargo test --test core_01 text::`: twelve C-derived styled-text, OSC, preset,
   Markdown, Unicode, HTML, and compression tests passed.
 - Focused loopback server coverage for extended telnet/session diagnostics and
   negotiated rendering is retained in `tests/foundation.rs`; the root agent

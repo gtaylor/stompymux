@@ -3,7 +3,6 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 /// A real tactical injury starts the unit-owned recovery clock without a fictitious pilot.
 fn unconscious_crew(world: &mut World, unit: ObjectId) {

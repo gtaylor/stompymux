@@ -1,6 +1,6 @@
 //! Mixed artillery occupants share blast packets, heat policy, and atomic saved arrivals.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Stable slot order puts a vehicle before a Mech, with a second vehicle in a neighboring cell.
 async fn fixture(

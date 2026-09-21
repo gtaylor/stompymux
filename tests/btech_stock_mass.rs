@@ -1,7 +1,7 @@
 //! Shared stock names, integer cargo mass, propulsion limits and native/Lua transactions.
+use crate::support;
 use std::{cell::RefCell, collections::BTreeSet, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Every supported movement class uses the same inventory and load projection.
 fn templates() -> Vec<String> {

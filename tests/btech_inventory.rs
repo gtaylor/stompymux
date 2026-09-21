@@ -1,7 +1,7 @@
 //! Object-owned stock persists and rolls back without coupling rooms or chassis to installed parts.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Native and Lua stock edits share authority, validation, ordering and callback rollback.
 #[tokio::test]

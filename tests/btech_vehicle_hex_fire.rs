@@ -1,7 +1,7 @@
 //! Vehicle coordinate shots reuse launch, packet, terrain and host publication rules.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// A running turreted gun platform faces an empty forest cell.
 async fn fixture(

@@ -1,9 +1,9 @@
 //! Cockpit claims through normal entry/exit, persisted pilots and callback rollback.
+use crate::support;
 use stompymux_rs::{
     BattleMapAsset, BattleTemplate, Flag, Kind, ObjectId, Scripts, assign_battle_pilot,
     create_battle_map, create_battle_unit, dbck, persistence, place_battle_unit,
 };
-mod support;
 const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D");
 
 #[tokio::test]

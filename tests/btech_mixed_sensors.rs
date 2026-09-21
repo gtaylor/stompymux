@@ -1,6 +1,6 @@
 //! Physical sensors share mixed-unit facts, emission lifetime and independent signal replay.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Change saved scenario inputs for either chassis without duplicating test logic.
 fn fact(world: &mut World, id: ObjectId, edit: impl FnOnce(&mut serde_json::Value)) {

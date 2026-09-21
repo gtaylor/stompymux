@@ -3,7 +3,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Inspect the serialized authority rather than maintaining a parallel test event queue.
 fn state(world: &World, id: ObjectId) -> serde_json::Value {

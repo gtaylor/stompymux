@@ -1,7 +1,7 @@
 //! Self-destruction shares cockpit authority, scheduling, blast paths and committed replay across chassis.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Isolate event scheduling from unrelated movement and combat setup.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {

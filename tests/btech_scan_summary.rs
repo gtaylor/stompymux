@@ -3,7 +3,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Every supported chassis uses the same name field, indentation, tabs and read-only native/Lua report.
 #[tokio::test]

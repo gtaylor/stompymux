@@ -3,7 +3,6 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 /// Ordinary aim policy leaves the target's air bonuses visible without range extensions.
 fn rules() -> BattleAimRules {

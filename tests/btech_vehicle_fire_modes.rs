@@ -1,6 +1,6 @@
 //! Vehicle cockpit firing modes share authorization, persist live selections and drive critical eligibility.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A running vehicle with a present pilot, initially disconnected from a session.
 async fn fixture(template: &str) -> (tempfile::TempDir, Config, World, ObjectId) {

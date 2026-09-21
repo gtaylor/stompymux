@@ -1,7 +1,7 @@
 //! Equipment reports reuse durable conditions and catalogue facts across supported chassis.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Representative assets, including stationary construction authored from a tracked chassis.
 fn templates() -> Vec<String> {

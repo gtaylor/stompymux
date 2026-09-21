@@ -1,6 +1,6 @@
 //! Map export encodes transient effects and metadata without mutating the running map.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Export every tile spelling, including the distinct permanent and temporary effect cases.
 #[tokio::test]

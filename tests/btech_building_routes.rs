@@ -1,6 +1,6 @@
 //! Shared building route selection and selective map-object persistence.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Copying authored records preserves their complete payload, including signed scalar bounds.
 #[tokio::test]

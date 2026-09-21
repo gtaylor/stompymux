@@ -1,6 +1,6 @@
 //! Persistent motive damage limits live vehicle speed and survives restarts without changing construction.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A running wheeled vehicle in a long, level corridor.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {

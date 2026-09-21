@@ -1,7 +1,7 @@
 //! Shared map-object selection, typed cleanup, native/Lua atomicity and restart.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 #[path = "support/btech_map_objects.rs"]
 mod map_objects;

@@ -1,7 +1,7 @@
 //! Installed tanks and loose stock contribute to one derived VTOL fuel capacity and cargo load.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Two distinct tank slots share the left hull face without replacing weapon equipment.
 fn aircraft(cargo_tech: bool) -> BattleVehicleTemplate {

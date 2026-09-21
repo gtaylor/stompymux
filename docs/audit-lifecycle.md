@@ -118,11 +118,11 @@ same commit.
 
 Executed Rust evidence:
 
-- `cargo test --test dbck`: six repair, preservation, atomic-failure, foundation, bounded
+- `cargo test --test core_03 dbck::`: six repair, preservation, atomic-failure, foundation, bounded
   report, and startup refusal tests passed.
-- `cargo test --test lua_parity maintenance_`: seven synchronous/TCP maintenance tests,
+- `cargo test --test core_02 lua_parity::maintenance_`: seven synchronous/TCP maintenance tests,
   including departure, callback relocation, evacuation, and rollback cases, passed.
-- `cargo test --test locks builder_creation_link_home_clone_and_dropto_roundtrip`: clone,
+- `cargo test --test core_03 locks::builder_creation_link_home_clone_and_dropto_roundtrip`: clone,
   linking, permissions, state, callback order, persistence, and reload passed.
 
 ## Remaining limits

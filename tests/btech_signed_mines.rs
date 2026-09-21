@@ -1,6 +1,6 @@
 //! Signed mine strengths preserve shared blast geometry, heat checks and durable burn timers.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Ordinary blast rules, with both mobile-vehicle fire policies exercised below.
 fn rules(advanced_fire: bool) -> BattleFallRules {

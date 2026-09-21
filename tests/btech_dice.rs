@@ -1,10 +1,10 @@
 //! Durable dice streams, transactional retries, invalid requests and script privacy.
+use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use stompymux_rs::{
     BattleDice, BattleTemplate, BattleVehicleTemplate, Kind, ObjectId, Scripts, create_battle_unit,
     create_battle_vehicle, persistence, roll_unit_dice,
 };
-mod support;
 
 #[test]
 fn seeded_dice_resume_across_serialization_and_cover_all_two_dice_results() {

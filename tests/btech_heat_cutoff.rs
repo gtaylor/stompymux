@@ -1,11 +1,11 @@
 //! Heat cutoff preserves delayed cockpit intent and regulates existing thermal samples.
+use crate::support;
 use std::{
     cell::{Cell, RefCell},
     rc::Rc,
     time::Duration,
 };
 use stompymux_rs::*;
-mod support;
 
 /// Isolate thermal sampling from startup timers without changing any other saved state.
 fn reactor(world: &mut World, id: ObjectId, power: BattlePower) {

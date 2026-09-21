@@ -1,6 +1,6 @@
 //! Shared tow ownership, validation, selective persistence, and destruction cleanup.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 const CHASSIS: [&str; 3] = [
     include_str!("fixtures/btech/mechs/JR7-D"),

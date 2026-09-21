@@ -1,6 +1,6 @@
 //! Vehicle observations retain acquisition and reconcile cross-class placement and object cleanup.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Two Mechs and two vehicles at opposite ends of a north/south lane.
 async fn fixture(

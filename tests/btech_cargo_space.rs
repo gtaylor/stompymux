@@ -1,7 +1,7 @@
 //! Cargo installations share construction accounting across chassis without absorbing loose-stock mass.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// All admitted movement classes use the same cargo-space definition.
 fn templates() -> Vec<String> {

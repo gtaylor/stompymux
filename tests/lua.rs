@@ -2,7 +2,7 @@
 use std::{cell::RefCell, path::Path, rc::Rc};
 use stompymux_rs::{Config, Scripts, persistence};
 
-mod support;
+use crate::support;
 use support::copy;
 
 /// Every built-in and sandbox restriction must exist before the earliest game module runs.

@@ -1,6 +1,6 @@
 //! Focused C-shape coverage for live-unit and template inspection namespaces.
 
-mod support;
+use crate::support;
 use std::{cell::RefCell, rc::Rc, sync::Arc};
 use stompymux_rs::{
     Scripts,

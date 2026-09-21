@@ -1,6 +1,6 @@
 //! C3i admission, capacity, persistence, and shared native/Lua transactions.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Seven running friendly computers with individually assigned pilots and retained contacts.
 async fn field() -> (tempfile::TempDir, Config, World, Vec<(ObjectId, ObjectId)>) {

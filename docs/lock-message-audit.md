@@ -119,7 +119,7 @@ From the Rust directory, with the sibling C server built:
 ```sh
 cargo build
 python3 tests/tools/lock_message_probe.py > /tmp/lock-message-wire.json
-cargo test --test lock_message_audit
+cargo test --test core_03 lock_message_audit::
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test

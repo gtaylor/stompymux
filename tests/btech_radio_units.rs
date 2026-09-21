@@ -1,6 +1,6 @@
 //! Targeted radio shares admission, identity visibility and publication across unit types.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Update one chassis's saved facts without duplicating the mixed-pair scenarios.
 fn fact(world: &mut World, id: ObjectId, update: impl FnOnce(&mut serde_json::Value)) {

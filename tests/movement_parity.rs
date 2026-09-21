@@ -2,7 +2,7 @@
 use std::{cell::RefCell, path::Path, rc::Rc};
 use stompymux_rs::{Config, Flag, Kind, ObjectId, Scripts, commands};
 
-mod support;
+use crate::support;
 use support::isolated_world;
 
 /// Install tracing providers on both rooms and the traveler.

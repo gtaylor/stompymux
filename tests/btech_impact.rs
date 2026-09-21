@@ -1,9 +1,9 @@
 //! Whole-hit material/critical cascades, deterministic replay and database transaction boundaries.
+use crate::support;
 use stompymux_rs::{
     BattleDice, BattleHit, BattleImpactEffect as Effect, BattleSection as Section, BattleTemplate,
     Kind, ObjectId, create_battle_unit, persistence, resolve_battle_impact,
 };
-mod support;
 
 /// Seed an isolated owned unit stream for deterministic damage scenarios.
 fn seed(world: &mut stompymux_rs::World, id: ObjectId, value: u8) {

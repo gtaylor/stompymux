@@ -1,10 +1,10 @@
 //! Unit construction, durable definitions, callback rollback, and purge integration.
+use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use stompymux_rs::{
     BattleSection, BattleTemplate, BattleUnit, Flag, Kind, ObjectId, Scripts, create_battle_unit,
     dbck, persistence,
 };
-mod support;
 const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D");
 const ATLAS: &str = include_str!("fixtures/btech/mechs/AS7-D");
 

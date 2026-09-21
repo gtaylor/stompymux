@@ -7,7 +7,7 @@ use stompymux_rs::{
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// A live pilot with maximum bruising and a reproducible recovery stream.
 async fn fixture() -> (tempfile::TempDir, stompymux_rs::Config, World, [u8; 32]) {

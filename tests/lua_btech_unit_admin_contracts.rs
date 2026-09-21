@@ -5,7 +5,7 @@
 //! set_tonnage), and btech_unit_bindings.c (set_preferred_id/set_markings/
 //! set_display_name/set_assigned_pilot) at the pinned revision.
 
-mod support;
+use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use stompymux_rs::Scripts;
 use support::isolated_scripts;

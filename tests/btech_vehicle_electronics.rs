@@ -1,7 +1,7 @@
 //! Mixed electronic emitters share field transitions, controls and persistent equipment loss.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Equip a vehicle with independent Guardian and Angel slots beside a hostile Mech and vehicle.
 async fn fixture() -> (tempfile::TempDir, Config, World, [ObjectId; 3]) {

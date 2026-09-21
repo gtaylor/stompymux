@@ -5,7 +5,7 @@ use stompymux_rs::*;
 mod defense;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Mech and vehicle reports expose their common launch result at different existing nesting levels.
 fn launched(report: &mlua::Table) -> bool {

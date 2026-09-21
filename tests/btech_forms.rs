@@ -1,11 +1,11 @@
 //! Catalogue forms share selection identities and reach clients through paced report delivery.
+use crate::support;
 use std::{
     cell::{Cell, RefCell},
     collections::BTreeSet,
     rc::Rc,
 };
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn forms_cover_stock_and_share_native_lua_names_without_mutation() {

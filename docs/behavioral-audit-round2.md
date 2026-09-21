@@ -151,7 +151,7 @@ Run from `stompymux-rs` after configuring the sibling C CMake build:
 cmake --build ../btmux-khi/build --target stompymux -j 2
 cargo build
 python3 tests/tools/behavioral_probe.py > /tmp/behavioral-wire.json
-cargo test --test behavioral_audit
+cargo test --test core_02 behavioral_audit::
 cargo fmt --check
 cargo clippy --all-targets -- -D warnings
 cargo test

@@ -9,7 +9,7 @@ use stompymux_rs::{
     lua::{RuntimeMode, sources::Sources},
 };
 
-mod support;
+use crate::support;
 use support::isolated_scripts;
 
 /// The immutable namespace contract holds in live and checking runtimes.

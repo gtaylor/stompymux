@@ -4,7 +4,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Projected and DFA attempts use the same scalar, messages, replay and fall publication.
 #[tokio::test]

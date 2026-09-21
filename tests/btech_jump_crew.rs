@@ -3,7 +3,6 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 /// Departure never makes a conscious crew fall; actual crew injuries still do, including after load.
 #[tokio::test]

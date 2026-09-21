@@ -1,6 +1,6 @@
 //! Shared LOS ceilings use spatial distance and radar installation on either endpoint.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Unobstructed north/south lane with a constructed observer and a Mech target.
 async fn fixture(

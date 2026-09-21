@@ -7,7 +7,7 @@ use stompymux_rs::{
     persistence,
 };
 
-mod support;
+use crate::support;
 use support::copy;
 
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {

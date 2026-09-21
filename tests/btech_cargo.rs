@@ -1,7 +1,7 @@
 //! Shared cargo command admission, all-or-nothing transfers and native/Lua replay across chassis.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Supported carrier constructions exercise shared rules rather than separate transfer implementations.
 fn templates() -> Vec<String> {

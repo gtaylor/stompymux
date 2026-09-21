@@ -4,7 +4,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 use firing::{edit, fixture_with_target, templates};
 
 /// Install TAG in a spare section slot through the ordinary template validation path.

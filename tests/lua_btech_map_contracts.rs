@@ -4,7 +4,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 #[tokio::test]
 async fn terrain_zones_cargo_links_and_strict_errors_match_c_shapes() {

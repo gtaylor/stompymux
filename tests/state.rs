@@ -8,7 +8,7 @@ use stompymux_rs::{
     state::{self, Value},
 };
 
-mod support;
+use crate::support;
 use support::isolated_scripts;
 /// Shared isolated populated fixture with the copied, unchanged access-policy modules.
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {

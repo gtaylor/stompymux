@@ -1,7 +1,7 @@
 //! Slot reports preserve anatomy, durable equipment state and native/Lua access semantics.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Supported chassis share the same report fixtures, including an authored stationary vehicle.
 fn templates() -> Vec<String> {

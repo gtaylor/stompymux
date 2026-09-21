@@ -1,6 +1,6 @@
 //! Bridge activation preserves parser bytes and checks opposite water corridors independently.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Vertical corridors characterize every accepted distance and both forms of water.
 #[test]

@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Native and Lua use independent checkpoints over the identical initial world.
 fn scripts(config: &Config, world: &World) -> Scripts {

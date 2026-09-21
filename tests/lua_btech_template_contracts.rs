@@ -1,5 +1,5 @@
 //! Focused C-shape coverage for the btech.template Lua namespace.
-mod support;
+use crate::support;
 use support::isolated_scripts;
 
 /// The pinned C part-name registry resolves manufacturer-qualified rows only,

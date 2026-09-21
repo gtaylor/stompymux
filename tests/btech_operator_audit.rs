@@ -1,7 +1,7 @@
 //! Operator diagnostics share native/Lua actions and obey transaction output limits.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Enable wizard diagnostics explicitly; the fixture defaults to disabled.
 fn enable(config: &Config, scripts: &mut Scripts) -> Config {

@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Set a legal actual speed while leaving the requested throttle at rest.
 fn speed(world: &mut World, id: ObjectId, value: f64) {

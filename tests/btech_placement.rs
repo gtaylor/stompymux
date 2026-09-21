@@ -1,10 +1,10 @@
 //! Battlefield placement, persisted containment, failure atomicity and map destruction.
+use crate::support;
 use stompymux_rs::{
     BattleMapAsset, BattleTemplate, Flag, Kind, ObjectId, Scripts, create_battle_map,
     create_battle_unit, dbck, persistence, place_battle_unit, reload_battle_map,
     remove_battle_unit,
 };
-mod support;
 const JENNER: &str = include_str!("fixtures/btech/mechs/JR7-D");
 const MAP: &str = "3 2\n.0.0.0\n.0~2.0\n";
 

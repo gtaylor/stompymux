@@ -1,6 +1,6 @@
 //! Digging cover shares timers, controls, firing readiness, target aim and hit routing.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 const VEHICLE: &str = include_str!("../game/mechs/Demolisher");
 const MECH: &str = include_str!("fixtures/btech/mechs/JR7-D");
 

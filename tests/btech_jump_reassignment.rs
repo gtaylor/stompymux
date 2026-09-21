@@ -2,7 +2,7 @@
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Both jump-capable anatomies survive changes in map size and wrapping, including saved continuation.
 #[tokio::test]

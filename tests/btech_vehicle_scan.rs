@@ -1,6 +1,6 @@
 //! Mixed-class detailed unit scans preserve range, disclosure and native/Lua transaction rules.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Two Mechs and two vehicles at opposite ends of a north/south lane.
 async fn fixture(

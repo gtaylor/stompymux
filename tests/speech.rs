@@ -1,4 +1,5 @@
 //! C speech command and notification graph compatibility, on isolated worlds.
+use crate::support;
 use std::{cell::RefCell, path::Path, rc::Rc};
 use stompymux_rs::{
     Account, Config, Flag, Kind, ObjectId, Scripts, World,
@@ -7,7 +8,6 @@ use stompymux_rs::{
     persistence,
     text::{Document, RenderOptions},
 };
-mod support;
 use support::copy;
 fn create(w: &mut World, c: &Config, name: &str, kind: Kind, loc: Option<ObjectId>) -> ObjectId {
     let p = w.create(c, name.into(), kind);

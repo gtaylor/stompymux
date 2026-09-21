@@ -1,6 +1,6 @@
 //! Ice and bridge breakage own terrain, neighboring falls and durable rollback together.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Two running bipeds occupy the same ice tile, with independent persisted dice and pilots.
 async fn fixture(depth: u8) -> (tempfile::TempDir, Config, World, ObjectId, [ObjectId; 2]) {

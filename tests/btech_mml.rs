@@ -5,7 +5,7 @@ use stompymux_rs::*;
 mod defense;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Published MML cluster columns and both ammunition profiles are independent of chassis.
 #[test]

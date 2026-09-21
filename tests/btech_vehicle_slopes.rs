@@ -1,6 +1,6 @@
 //! Vehicle slopes share reverse control checks and retain deterministic fall and placement effects.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A vehicle facing east beside a short sequence of one-level rises and descents.
 async fn fixture(

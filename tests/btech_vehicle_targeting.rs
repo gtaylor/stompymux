@@ -1,6 +1,6 @@
 //! Vehicle target selections own countdowns and survive transactional scan and persistence paths.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Two Mechs and two vehicles at opposite ends of a north/south lane.
 async fn fixture(

@@ -3,7 +3,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// An empty Arrow IV still qualifies for a datalink, independently of firing admission.
 async fn fixture(

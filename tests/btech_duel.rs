@@ -1,4 +1,5 @@
 //! Two real cockpit clients fight through the committed server heartbeat and restart.
+use crate::support;
 use sqlx::Connection;
 use std::{cell::Cell, rc::Rc, time::Duration};
 use stompymux_rs::{
@@ -7,7 +8,6 @@ use stompymux_rs::{
     create_battle_unit, persistence, place_battle_unit, set_battle_character,
     set_battle_character_value,
 };
-mod support;
 
 /// Set up ordinary, fully armored opposing units; gameplay starts with both reactors off.
 async fn battlefield() -> (tempfile::TempDir, Config, [ObjectId; 2]) {

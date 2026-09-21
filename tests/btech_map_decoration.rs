@@ -1,7 +1,7 @@
 //! Operator decoration boundaries, shared native/Lua effects and restart replay.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Both native marker commands use exact diagnostics and ignore arguments after duration.
 #[tokio::test]

@@ -1,6 +1,6 @@
 //! Saved rotor material state preserves hull and crew while making new lift loss explicit.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A rotorcraft whose equipment uses the ordinary vehicle loadout and material model.
 fn aircraft() -> BattleVehicle {

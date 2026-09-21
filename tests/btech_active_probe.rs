@@ -102,7 +102,7 @@ fn active_probe_hidden_detection_retains_arc_and_secondary_weighting() {
     );
 }
 
-mod support;
+use crate::support;
 
 /// Fixed-installation reach uses integer 140% boundaries; merely stopping a mobile vehicle does not qualify.
 #[tokio::test]

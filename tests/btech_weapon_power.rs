@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod btech_firing;
-mod support;
+use crate::support;
 use btech_firing::{edit, fixture_with_supply, fixture_with_target, templates};
 
 /// Observe readiness through the chassis boundary without duplicating control rules.

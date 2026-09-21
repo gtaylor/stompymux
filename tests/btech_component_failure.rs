@@ -3,7 +3,6 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 #[tokio::test]
 async fn component_failures_round_trip_without_changing_gameplay_on_any_chassis() {

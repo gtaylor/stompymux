@@ -4,7 +4,7 @@ use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 #[allow(dead_code)]
 mod firing;
-mod support;
+use crate::support;
 
 /// Report totals count intact parts and installed bins rather than depleted live ammunition.
 #[tokio::test]

@@ -1,8 +1,8 @@
 //! Imported decoration records retain source identity, terrain restoration, and unscheduled lifetimes.
+use crate::support;
 use sqlx::Connection;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Restore duplicate records whose saved budget fields must not become live timers.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {

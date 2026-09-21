@@ -1,9 +1,9 @@
 //! Reference coordinate anchors and range adapters on signed-elevation battlefields.
+use crate::support;
 use stompymux_rs::{
     BattleHexCoordinate, BattleMapAsset, BattleTemplate, Flag, Kind, ObjectId, Scripts,
     battle_unit_range, create_battle_map, create_battle_unit, place_battle_unit,
 };
-mod support;
 
 #[test]
 fn normalized_centers_match_reference_coordinate_anchors() {

@@ -1,4 +1,4 @@
-mod support;
+use crate::support;
 use sqlx::{Connection, sqlite::SqliteConnectOptions};
 use std::{cell::RefCell, path::Path, rc::Rc};
 use support::{copy, isolated_scripts};

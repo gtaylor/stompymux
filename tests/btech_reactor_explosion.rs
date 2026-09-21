@@ -1,7 +1,7 @@
 //! Reactor blasts share damage across chassis and persist temporary observer blindness.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Change isolated scenario facts without altering the production control interfaces.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {

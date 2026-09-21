@@ -1,7 +1,7 @@
 //! Sighting preserves combat state while sharing target selection, aim and saved dice across chassis.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 #[path = "support/btech_firing.rs"]
 mod firing_support;

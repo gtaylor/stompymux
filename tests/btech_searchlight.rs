@@ -1,6 +1,6 @@
 //! Searchlight switch persistence, command transactions, live geometry and damage dice.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Build a running lamp carrier and an unpowered target on open terrain.
 async fn fixture() -> (

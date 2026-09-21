@@ -228,6 +228,12 @@ cargo clippy --all-targets -- -D warnings
 cargo test
 ```
 
+Integration scenarios are grouped into the targets in `tests/suites/` so the
+full suite builds fewer executables. To run one scenario file, find its suite
+and filter by its module name. For example, `tests/btech_status.rs` runs with
+`cargo test --test btech_08 btech_status::`. Search for
+`mod btech_status;` in `tests/suites/` to find the suite when files move.
+
 Tests use `tests/fixtures/game` copied into temporary directories, ephemeral
 TCP ports and controlled credentials. They cover relational data preservation and schema
 rejection, bootstrap idempotence, Lua limits/locks, real registration and login,

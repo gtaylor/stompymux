@@ -1,7 +1,7 @@
 //! Generic decoration ownership preserves restoration metadata and unrelated saved fields.
+use crate::support;
 use sqlx::Connection;
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn generic_decoration_records_survive_reload_and_clear_on_resize() {

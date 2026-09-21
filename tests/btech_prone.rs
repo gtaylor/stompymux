@@ -1,7 +1,7 @@
 //! Controlled drops share native/Lua admission, physical consequences and world rollback.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Edit isolated scenario state without introducing production mutation helpers.
 fn edit(world: &mut World, id: ObjectId, change: impl FnOnce(&mut serde_json::Value)) {

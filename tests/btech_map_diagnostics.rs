@@ -1,7 +1,7 @@
 //! Terrain substitutions share transactional diagnostics across map activation paths.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// A map-error listener and an asset with two distinct substitutions in source order.
 async fn fixture(create: bool) -> (tempfile::TempDir, Config, World, ObjectId) {

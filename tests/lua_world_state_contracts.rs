@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{RuntimeMode, Scripts, lua::sources::Sources};
 
-mod support;
+use crate::support;
 use support::isolated_scripts;
 
 fn callback(scripts: &Scripts, source: &str) {

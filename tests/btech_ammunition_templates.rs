@@ -1,6 +1,6 @@
 //! Construction-only ammunition normalization and separation from persisted live ammunition.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A bounded ammunition template with independently supplied quantity and bin flags.
 fn definition(weapon: BattleWeapon, quantity: u16, flags: &[&str]) -> BattleTemplate {

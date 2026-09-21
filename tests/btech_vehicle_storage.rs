@@ -1,7 +1,7 @@
 //! Ground-vehicle ownership, transactional storage, replay, and owning-object cleanup.
+use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn vehicles_save_damage_replay_and_purge_with_their_objects() {

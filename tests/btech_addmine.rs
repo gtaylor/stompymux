@@ -4,7 +4,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 #[tokio::test]
 async fn native_lua_mines_share_clamping_order_and_leave_every_chassis_untouched() {

@@ -1,6 +1,6 @@
 //! Plasma heat follows primary damage transfers and shares persistent target dice.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Compare identical material hits, then account for exactly the post-damage plasma rolls.
 #[tokio::test]

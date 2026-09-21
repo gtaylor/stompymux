@@ -100,7 +100,7 @@ fn radar_flying_type_bonus_applies_below_ten_without_relaxing_detection() {
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Live target sampling carries rotorcraft identity into the common radar evaluation.
 #[tokio::test]

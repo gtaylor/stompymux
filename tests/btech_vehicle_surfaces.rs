@@ -1,6 +1,6 @@
 //! Mixed surface failures share terrain transactions while retaining chassis consequences.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// One Mech and two vehicle movement types occupy the same breakable hex.
 async fn fixture(

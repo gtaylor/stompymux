@@ -4,7 +4,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Ordinary character health; three cockpit hits reach the seven-point consciousness threshold.
 fn profile() -> BattleCharacter {

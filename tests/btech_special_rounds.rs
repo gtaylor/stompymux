@@ -1,7 +1,7 @@
 //! Shared artillery cluster and missile Smoke/Mine controls retain their distinct reference behavior.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 /// Representative construction for every supported movement class.
 fn templates() -> Vec<String> {
     let tracked = include_str!("../game/mechs/Demolisher");

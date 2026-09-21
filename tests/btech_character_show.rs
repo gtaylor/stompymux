@@ -1,7 +1,7 @@
 //! Wizard catalog reports preserve native admission and never initialize character records.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Categories, ignored second arguments and denied access survive native dispatch and restart.
 #[tokio::test]

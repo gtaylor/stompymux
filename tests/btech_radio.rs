@@ -1,6 +1,6 @@
 //! Radio hardware limits, saved settings and native/Lua configuration parity.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A constructed Jenner with its pilot in the cockpit; channel configuration works while shut down.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {

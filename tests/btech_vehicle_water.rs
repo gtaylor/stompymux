@@ -1,6 +1,6 @@
 //! Hovercraft surface travel preserves water and ice, support height, and saved motion replay.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn hovercraft_cross_deep_water_and_level_shore_with_mixed_unit_range() {

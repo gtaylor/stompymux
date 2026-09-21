@@ -4,7 +4,6 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 /// Inspect the durable owner without invoking another gameplay action.
 fn counters(world: &World, id: ObjectId) -> serde_json::Value {

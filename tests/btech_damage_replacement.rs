@@ -2,7 +2,7 @@
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Replacement is complete, ordered and independent of the current damaged material.
 #[tokio::test]

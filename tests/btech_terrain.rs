@@ -1,11 +1,11 @@
 //! Terrain dictionary creation, explicit recovery, corruption handling and transactional delivery.
+use crate::support;
 use sqlx::{Connection, SqliteConnection};
 use std::{cell::Cell, rc::Rc};
 use stompymux_rs::{
     BattleMapAsset, Config, Flag, Kind, ObjectId, Scripts, ShutdownRequest, Terrain, World,
     create_battle_map, dbck, persistence, reload_battle_map,
 };
-mod support;
 
 const SOURCE: &str = "3 2\n.0~2'1\n#0-3^9\n32: 75 -12\n";
 const RELOAD: &str = "3 2\n.0~2'1\n#0-3%4\n64: 80 15\n";

@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Find a full field name independently of the selected display width.
 fn field<'a>(report: &'a BattleUnitFieldReport, name: &str) -> Option<&'a str> {

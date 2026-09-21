@@ -4,7 +4,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Activate the persisted server settings without changing unrelated fixture policy.
 fn configured(dir: &tempfile::TempDir, enabled: bool, glancing: bool) -> Config {

@@ -2,7 +2,7 @@
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::{Flag, Kind, Scripts};
 
-mod support;
+use crate::support;
 use support::{isolated_world, run_text};
 
 #[tokio::test(flavor = "current_thread")]

@@ -1,7 +1,7 @@
 //! Vehicle inferno modes, section pulses and crew fire suppression retain saved transaction state.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// A placed, shutdown vehicle with an assigned operator and no active scanners.
 async fn fixture(stationary: bool) -> (tempfile::TempDir, Config, World, ObjectId) {

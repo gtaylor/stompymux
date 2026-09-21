@@ -1,7 +1,7 @@
 //! Native/Lua vehicle administration shares asset dispatch, transaction rollback and detached state.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn vehicle_commands_and_lua_share_creation_placement_and_snapshot_state() {

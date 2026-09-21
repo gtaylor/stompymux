@@ -1,6 +1,6 @@
 //! Booster construction, live critical eligibility and durable hardware inspection.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Install booster slots only in genuinely vacant torso/arm positions.
 fn with_masc(count: usize, clan: bool) -> (BattleTemplate, Vec<CriticalLocation>) {

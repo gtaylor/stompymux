@@ -1,6 +1,6 @@
 //! Observer administration and disclosure share the same role across supported chassis.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn observers_share_admin_disclosure_radio_and_saved_role() {

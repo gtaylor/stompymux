@@ -1,7 +1,7 @@
 //! Character list queries share catalogs and preserve the reference's skill-only filtering.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Queries preserve raw values, XP, recovery and detached catalog order across restart.
 #[tokio::test]

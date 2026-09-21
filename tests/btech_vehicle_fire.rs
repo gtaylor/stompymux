@@ -1,6 +1,6 @@
 //! Complete vehicle shots reuse shared aim, launch, defenses and target damage with atomic replay.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Two Mechs and two vehicles at opposite ends of a north/south lane.
 async fn fixture(

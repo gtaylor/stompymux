@@ -3,7 +3,7 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Every silhouette has a fixed three-column legend and identical native/Lua disclosure after restart.
 #[tokio::test]

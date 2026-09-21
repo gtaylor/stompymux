@@ -4,7 +4,6 @@ use stompymux_rs::*;
 #[allow(dead_code)]
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 /// Thermal admission uses the standard impact and movement policy in every scenario.
 fn rules() -> BattleOverheatRules {

@@ -2,7 +2,7 @@
 use stompymux_rs::*;
 #[path = "support/btech_station_sight.rs"]
 mod station_sight;
-mod support;
+use crate::support;
 
 /// A running artillery platform and friendly observer on an open field.
 async fn fixture(flags: &[&str]) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {

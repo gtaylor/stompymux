@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Source text preserves styled output for native/Lua publication comparisons.
 fn output(scripts: &Scripts) -> String {

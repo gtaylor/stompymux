@@ -1,8 +1,8 @@
 //! Lookup-object allocation, row persistence and explicit rebuilds agree across map callers.
+use crate::support;
 use sqlx::Connection;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// A five-wide map exercises partially occupied packed bytes as well as independent rows.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId, ObjectId) {

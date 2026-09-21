@@ -1,3 +1,4 @@
+use crate::support;
 use std::{
     cell::RefCell,
     path::{Path, PathBuf},
@@ -8,13 +9,12 @@ use stompymux_rs::{
     Config, Login, ObjectId, Scripts, StateValue as Scalar, accounts, persistence, server,
     telnet::{Decoder, Input},
 };
+use support::{copy, stable_world};
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader},
     net::TcpStream,
     process::{Child, Command},
 };
-mod support;
-use support::{copy, stable_world};
 fn fixture() -> tempfile::TempDir {
     let d = tempfile::tempdir().unwrap();
     copy(

@@ -1,6 +1,6 @@
 //! Mixed-class contact display, live visibility, filtering and native/Lua presentation.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Two Mechs and two vehicles at opposite ends of a north/south lane.
 async fn fixture(

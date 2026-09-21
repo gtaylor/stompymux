@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// HEAT is the same ordered flamer control as FLAMERHEAT, including failures and duplicate selections.
 #[tokio::test]

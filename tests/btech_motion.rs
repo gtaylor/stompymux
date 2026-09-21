@@ -1,11 +1,11 @@
 //! Ground motion cadence, continuous positions, transactional controls and explicit transition stops.
+use crate::support;
 use stompymux_rs::{
     BattleMapAsset, BattleMovementRules, BattlePower, BattleTemplate, Kind, ObjectId, Scripts,
     advance_battle_motion, advance_battle_units, assign_battle_pilot, create_battle_map,
     create_battle_unit, persistence, place_battle_unit, set_battle_heading, set_battle_speed,
     start_battle_unit, stop_battle_unit,
 };
-mod support;
 const RULES: BattleMovementRules = BattleMovementRules {
     fasa_turning: false,
     slowdown: 2,

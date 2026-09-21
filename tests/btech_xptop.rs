@@ -1,7 +1,7 @@
 //! XP leaderboard selection, balance arithmetic, limits and transactional publication.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 fn player(world: &mut World, config: &Config, name: &str, experience: u32) -> ObjectId {
     let id = world.create(config, name.into(), Kind::Player);

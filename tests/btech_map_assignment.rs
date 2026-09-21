@@ -2,7 +2,7 @@
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Running chassis keep crew and controls across same-map and cross-map ID assignment.
 #[tokio::test]

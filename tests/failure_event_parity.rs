@@ -6,7 +6,7 @@ use stompymux_rs::{
     movement::{self, Request, Route},
 };
 
-mod support;
+use crate::support;
 use support::isolated_world;
 
 /// Load the fixture world with a reusable object module for denial probes.

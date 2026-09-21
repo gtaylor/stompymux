@@ -1,10 +1,10 @@
 //! Slot loss, broken multi-slot weapons, selection depletion, secondary effects and restart.
+use crate::support;
 use stompymux_rs::{
     BattleCriticalLoss as Loss, BattleSection as Section, BattleSystem as System, BattleTemplate,
     BattleUnit, CriticalLocation, Kind, ObjectId, create_battle_unit, destroy_battle_critical,
     persistence,
 };
-mod support;
 
 /// Independent scenario unit with a conventional supported loadout.
 fn unit(source: &str) -> BattleUnit {

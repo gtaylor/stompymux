@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// Packet counts, truncation, flags, lethal traversal and restart agree for every supported chassis.
 #[tokio::test]

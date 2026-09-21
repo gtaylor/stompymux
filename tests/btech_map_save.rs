@@ -1,11 +1,11 @@
 //! Map saves stage file effects through callback rollback and publish only after world commit.
+use crate::support;
 use sqlx::Connection;
 use std::{
     cell::{Cell, RefCell},
     rc::Rc,
 };
 use stompymux_rs::*;
-mod support;
 
 /// An operator on a map with stale fire ensures saving also changes durable terrain.
 async fn fixture() -> (tempfile::TempDir, Config, World, ObjectId) {

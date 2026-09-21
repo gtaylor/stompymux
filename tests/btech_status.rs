@@ -1,6 +1,6 @@
 //! Cockpit reports share admission, weapon formatting and compact export across chassis.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// Guardian and Angel status lamps use the committed countermeasure field on both chassis stores.
 #[tokio::test]

@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
+use crate::support;
 
 /// One shared VM per chassis shard: every scenario installs its candidate world,
 /// and the restart probe fires once per shard, per the sandbox-reuse convention.

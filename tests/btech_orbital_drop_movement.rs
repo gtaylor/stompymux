@@ -3,7 +3,6 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 /// Saved scenario setup exercises production deserialization without adding an unguarded launch API.
 fn prepare(world: &mut World, id: ObjectId, elevation: i32, safe: bool, roll: u8) {

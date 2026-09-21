@@ -1,6 +1,6 @@
 //! Detailed scan disclosure, hardware ranges, observer privileges and native/Lua parity.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 /// A piloted running scanner and an acquired shutdown target on a clear north/south map.
 async fn fixture() -> (

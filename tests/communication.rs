@@ -8,7 +8,7 @@ use stompymux_rs::{
     persistence,
 };
 
-mod support;
+use crate::support;
 use support::isolated_world;
 async fn fixture() -> (tempfile::TempDir, Config, Scripts) {
     let (d, c, mut w) = isolated_world().await;

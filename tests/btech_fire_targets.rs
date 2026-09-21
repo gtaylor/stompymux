@@ -1,7 +1,7 @@
 //! Explicit coordinates share native, Lua and TIC target resolution across supported chassis.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// A piloted unit faces an occupied and an empty hex, independently of its saved hex lock.
 async fn fixture(

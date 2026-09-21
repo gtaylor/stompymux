@@ -84,8 +84,8 @@ The automated two-client scenario exercises login, cockpit control, acquisition,
 firing, destruction and restart:
 
 ```sh
-cargo test --test btech_duel
-cargo test --test btech_mml
+cargo test --test btech_06 btech_duel::
+cargo test --test btech_05 btech_mml::
 ```
 
 These are regression checks, not a claim that every mixed-unit battle or

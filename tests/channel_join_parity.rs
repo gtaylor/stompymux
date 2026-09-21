@@ -5,7 +5,7 @@ use stompymux_rs::{
     commands::{self, Action},
 };
 
-mod support;
+use crate::support;
 use support::isolated_world;
 
 /// Load an isolated world with the ordinary test player connected.

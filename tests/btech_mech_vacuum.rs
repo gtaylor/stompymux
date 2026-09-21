@@ -3,7 +3,6 @@ use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
 #[path = "support/btech_firing.rs"]
 mod firing;
-mod support;
 
 /// A located hit with no additional hit-table effects.
 fn hit(section: BattleSection) -> BattleHit {

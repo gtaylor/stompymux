@@ -6,7 +6,7 @@ use stompymux_rs::{
     persistence,
 };
 
-mod support;
+use crate::support;
 use support::{isolated_world, run_text};
 async fn fixture() -> (tempfile::TempDir, Config, World) {
     let (d, c, mut w) = isolated_world().await;

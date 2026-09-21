@@ -1,6 +1,6 @@
 //! Mixed Mech/vehicle placement preserves shared membership and durable containment.
+use crate::support;
 use stompymux_rs::*;
-mod support;
 
 #[tokio::test]
 async fn vehicles_share_map_slots_and_survive_placement_replay_and_map_purge() {

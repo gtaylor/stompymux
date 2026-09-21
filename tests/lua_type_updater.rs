@@ -1,6 +1,6 @@
 //! Check that generated LuaLS package functions exist in the Rust runtime.
 
-mod support;
+use crate::support;
 
 use std::collections::BTreeSet;
 

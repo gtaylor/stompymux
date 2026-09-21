@@ -1,7 +1,7 @@
 //! Shared explicit observer links support both shooter anatomies without duplicate indirect aim.
+use crate::support;
 use std::{cell::RefCell, rc::Rc};
 use stompymux_rs::*;
-mod support;
 
 /// Friendly mixed-class shooter/observer and an enemy, all within acquisition distance.
 async fn fixture(
