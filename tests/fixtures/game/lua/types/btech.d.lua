@@ -1,5 +1,7 @@
 ---@meta _
 
+---Generated from Rust LuaLS contracts; run `just update-lua-types`.
+
 ---BattleTech inspection and supported tactical control APIs implemented by the Rust runtime.
 ---Results are detached values, available only inside game callbacks.
 
@@ -139,7 +141,6 @@ function btech_map.cargo_point(map) end
 ---@param map integer
 ---@param point BattleCargoTransferPoint|nil
 function btech_map.set_cargo_point(actor, map, point) end
-
 
 ---Read source-map metadata without decoding saved terrain or applying overlays.
 ---@param name string Relative name under database.map_database.
@@ -617,8 +618,6 @@ function btech_unit.set_markings(unit, markings) end
 ---@return string text Styled report safe for normal output.
 function btech_unit.view(unit, actor, target) end
 
-
-
 ---Wizard map assignment; -1 removes membership and retains the pose for re-entry.
 ---A removed running unit shuts down on the next simulation update.
 ---@param actor integer Wizard and private confirmation recipient.
@@ -766,7 +765,6 @@ function btech_character.skills() end
 ---@param player? integer|string Live player id, name, account alias or #dbref; omit rather than passing explicit nil.
 ---@return string[]
 function btech_character.list(kind, player) end
-
 
 ---@class BattleSkillProgress
 ---@field name string Canonical skill name.
@@ -921,8 +919,6 @@ function btech_map.view(actor, map, x, y) end
 ---@param value string
 function btech_map.set_field(actor, map, field, value) end
 
-
-
 ---Install wizard smoke; zero duration is permanent. Off-map coordinates leave the map unchanged.
 ---@param actor integer
 ---@param dbref integer
@@ -1058,7 +1054,6 @@ function btech_map.remove_ice(actor, dbref, percentage) end
 ---@param conditions BattleMapEnvironment
 ---@return BattleMapEnvironment Actual resulting state, including retained underground status.
 function btech_map.environment(actor, dbref, conditions) end
-
 
 ---Enable or disable saved opposite-edge wrapping.
 ---@param dbref integer
@@ -1334,11 +1329,6 @@ function btech_unit.usebin(dbref, pilot, weapon, section) end
 ---@param pilot integer
 ---@return boolean
 function btech_unit.autoturret(dbref, pilot) end
-
-
-
-
-
 
 ---@class BattleAimModifiers
 ---@field self_target boolean Coolant self-application bypasses contact acquisition.
@@ -1644,7 +1634,6 @@ function btech_unit.aimed_section(dbref) end
 ---@return BattleSightReport
 function btech_unit.sight(dbref, pilot, weapon, target) end
 
-
 ---Rotate one step left/right or center the torso; stages the native cockpit message.
 ---@param dbref integer
 ---@param pilot integer Conscious assigned pilot; scripts own authority to act for them.
@@ -1657,7 +1646,6 @@ function btech_unit.rottorso(dbref, pilot, direction) end
 ---@param pilot integer
 ---@return boolean
 function btech_unit.slite(dbref, pilot) end
-
 
 ---Toggle forward/backward arms on a capable standing, running chassis.
 ---@param dbref integer
@@ -1805,8 +1793,6 @@ function btech_inventory.clear(actor, object) end
 ---@return BattleInventoryCleanup
 function btech_inventory.fix(actor, object) end
 
-
-
 ---Describe stock by exact name or stored identifier; names ignore ASCII case.
 ---@param part string|integer
 ---@return BattlePart
@@ -1824,7 +1810,6 @@ function btech_inventory.mass(object) end
 ---@param brand integer From zero through five.
 ---@param quantity integer From zero through 2147483647.
 function btech_inventory.set_named(actor, object, name, brand, quantity) end
-
 
 ---Read an object's detached, ordered loose-parts stock in a callback.
 ---@param object integer
@@ -1900,19 +1885,18 @@ local btech_runtime = {}
 ---@field autopilot table Autopilot order constants; queue callables await their runtime.
 ---@field errors table Structured btech error-code tree from mux.error.code_tree('btech').
 btech = {
-    gunner = btech_gunner,
-    runtime = btech_runtime,
-    database = btech_database,
-    cargo = btech_cargo,
-    inventory = btech_inventory,
-    weapon = btech_weapon,
-    player = btech_player,
-    character = btech_character,
-    template = btech_template,
-    map = btech_map,
-    unit = btech_unit,
+  gunner = btech_gunner,
+  runtime = btech_runtime,
+  database = btech_database,
+  cargo = btech_cargo,
+  inventory = btech_inventory,
+  weapon = btech_weapon,
+  player = btech_player,
+  character = btech_character,
+  template = btech_template,
+  map = btech_map,
+  unit = btech_unit,
 }
-
 
 ---Set the unit's downhill cliff preference; requires its present pilot.
 ---@param dbref integer
@@ -1920,7 +1904,6 @@ btech = {
 ---@param enabled boolean
 ---@return boolean
 function btech_unit.auto_fall(dbref, player, enabled) end
-
 
 ---Toggle an intact, recycled flamer between damage and heat-transfer modes; stages cockpit notices.
 ---@param dbref integer
@@ -1942,8 +1925,6 @@ function btech_unit.lbx(dbref, pilot, weapon) end
 ---@param weapon integer Zero-based weapon index.
 ---@return BattleAmmunitionMode
 function btech_unit.cluster(dbref, pilot, weapon) end
-
-
 
 ---@class BattleAmmunitionAdjustment
 ---@field location BattleCriticalLocation
@@ -2103,7 +2084,6 @@ function btech_unit.mw_safety(dbref, player, enabled) end
 ---@return boolean success
 function btech_unit.bth_debug(dbref, player, enabled) end
 
-
 ---Set the assigned pilot's friendly-fire safety. Coolant guns are exempt.
 ---@param dbref integer
 ---@param player integer
@@ -2188,8 +2168,6 @@ function btech_unit.weapon_specifications(dbref) end
 ---@param section string
 ---@return BattleCriticalReport
 function btech_unit.criticals(dbref, section) end
-
-
 
 ---Attempt a biped kick; rolls back damage, falls, recovery and notices with the callback.
 ---@param dbref integer
@@ -2349,7 +2327,7 @@ function btech_unit.angeleccm(dbref, pilot) end
 ---@param weapon integer
 ---@param selector? string
 ---@return BattleAmmunitionMode
-function btech_unit.inarc(dbref,pilot,weapon,selector) end
+function btech_unit.inarc(dbref, pilot, weapon, selector) end
 
 ---@class BattlePodRow
 ---@field section BattleSection|BattleVehicleSectionName
@@ -2370,7 +2348,7 @@ function btech_unit.inarc(dbref,pilot,weapon,selector) end
 ---@param dbref integer
 ---@param pilot integer
 ---@return BattlePodRow[]
-function btech_unit.pods(dbref,pilot) end
+function btech_unit.pods(dbref, pilot) end
 
 ---Swat one iNarc pod; a failed attempt deals self-damage. H selects homing, Y haywire, E ECM.
 ---@param dbref integer
@@ -2378,7 +2356,7 @@ function btech_unit.pods(dbref,pilot) end
 ---@param section string
 ---@param kind string
 ---@return BattlePodRemoval
-function btech_unit.removepod(dbref,pilot,section,kind) end
+function btech_unit.removepod(dbref, pilot, section, kind) end
 
 ---Begin the vehicle crew's saved 60-second action; ordinary Narc pods remain attached.
 ---The assigned conscious pilot must be running and placed, with no forward motion or conflicting crew action. VTOLs must be landed (launch preparation is still landed).
@@ -2481,7 +2459,6 @@ function btech_unit.radio_title(dbref, pilot, channel, title) end
 ---@return boolean
 function btech_unit.radio_mode(dbref, pilot, channel, mode) end
 
-
 ---@class BattleRadioReception
 ---@field receiver integer
 ---@field channel integer Zero-based receiving channel.
@@ -2507,7 +2484,6 @@ function btech_unit.radio_mode(dbref, pilot, channel, mode) end
 ---@param message string Nonempty text without control characters.
 ---@return BattleRadioTransmission
 function btech_unit.radio_send(dbref, pilot, channel, message) end
-
 
 ---@class BattleTargetedRadioReport
 ---@field sender integer
@@ -2684,7 +2660,6 @@ function btech_unit.findcenter(dbref, pilot) end
 ---@return BattleNavigationReport
 function btech_unit.navigate(dbref, pilot, arguments) end
 
-
 ---Read saved map dimensions or replace them; omitted fields in a replacement use standard defaults.
 ---Trusted callback code owns authorization to change the selected player's preferences.
 ---Native tactical/LRS and Lua tactical/LRS/viewport use these defaults; navigate stays radius two.
@@ -2692,7 +2667,6 @@ function btech_unit.navigate(dbref, pilot, arguments) end
 ---@param dimensions BattleViewDimensions? Validated replacement; omit for a read-only query.
 ---@return BattleViewDimensions
 function btech_player.view_dimensions(player, dimensions) end
-
 
 ---@alias BattleBuildingContactMode "follow_brief" | "include" | "exclude"
 
@@ -2711,7 +2685,6 @@ function btech_player.view_dimensions(player, dimensions) end
 ---@return BattleContactPreferences
 function btech_player.contact_preferences(player, preferences) end
 
-
 ---@class BattleContactOptions
 ---@field buildings boolean Include building contacts for native output.
 ---@field preferences BattleContactPreferences Decoded unit categories.
@@ -2723,7 +2696,6 @@ function btech_player.contact_preferences(player, preferences) end
 ---@param brief_buildings boolean? Initial building inclusion from unit brief settings; defaults false.
 ---@return BattleContactOptions
 function btech_player.contact_options(options, brief_buildings) end
-
 
 ---@class BattleBuildingContact
 ---@field sensors BattleContactSensors Terrain sensor roles.
@@ -2747,7 +2719,6 @@ function btech_player.contact_options(options, brief_buildings) end
 ---@return BattleBuildingContact[]
 function btech_unit.building_contacts(unit, pilot) end
 
-
 ---@class BattleBriefSettings
 ---@field contacts integer Contact mode 0..3; defaults 1.
 ---@field automatic integer Routine notice mode 0..6; defaults 0.
@@ -2764,7 +2735,6 @@ function btech_unit.building_contacts(unit, pilot) end
 ---@param arguments string? Empty for query, A 0..6 or C 0..3 for edits.
 ---@return BattleBriefReport
 function btech_unit.brief(unit, pilot, arguments) end
-
 
 ---Set whether routine contact notices include shutdown targets. Acquisition is unchanged.
 ---@param dbref integer
@@ -3031,7 +3001,6 @@ function btech_unit.hulldown(dbref, pilot, argument) end
 ---@return boolean Current fortification state.
 function btech_unit.fortified(dbref, enabled) end
 
-
 ---Inspect or set observer role. Trusted scripts own authorization; cockpit pilots cannot grant this role.
 ---@param dbref integer
 ---@param enabled boolean? Omit to inspect the saved role.
@@ -3045,7 +3014,6 @@ function btech_unit.observer(dbref, enabled) end
 ---@param enabled boolean|nil Omit to inspect without changing the setting.
 ---@return boolean enabled
 function btech_unit.weapons_hold(dbref, enabled) end
-
 
 ---Detonate a Mech reactor in a trusted callback; damage, sensor flashes and casualties commit together.
 ---This scenario action bypasses cockpit self-destruct configuration and countdown admission.
@@ -3066,7 +3034,6 @@ function btech_unit.explode(dbref, pilot, argument) end
 ---@param enabled boolean
 ---@return boolean
 function btech_unit.explode_safe(dbref, enabled) end
-
 
 ---Read or replace trusted scenario visibility. Both fields are required when replacing it.
 ---Clairvoyance bypasses visibility checks; ordinary sensor acquisition still rejects invisible targets.
@@ -3397,7 +3364,6 @@ function btech_gunner.scan_selected(station, gunner, options) end
 ---@return BattleRuntimeStats
 function btech_runtime.stats(actor) end
 
-
 ---Wizard-only predictive firing using fixed horizontal target orders and normal weapon launches.
 ---Sets the cockpit hex target. Does not simulate future damage or order changes.
 ---@param dbref integer Shooter unit
@@ -3406,8 +3372,6 @@ function btech_runtime.stats(actor) end
 ---@param selection string Comma-separated weapon numbers and inclusive ranges
 ---@return boolean success
 function btech_unit.snipe(dbref, player, target, selection) end
-
-
 
 ---@class BattleUnitField
 ---@field name string Full field name, independent of display width.
@@ -3543,13 +3507,6 @@ function btech_unit.set_field(actor, unit, field, value) end
 ---@field name string
 ---@field group "primary"|"secondary"|"infantry"
 ---@field source "configured"|"inferred"
-
----@class BattleRepairNeed
----@field operation BattleRepairOperation
----@field section BattleSection
----@field slot? integer One-based; absent for whole-section operations.
----@field amount? integer Armor, rear-armor and internal repair quantities.
----@field in_progress boolean
 
 -- C-parity character value and progress contracts.
 
@@ -4080,18 +4037,6 @@ function btech_repair.is_fixable(unit) end
 ---@return integer seconds
 function btech_repair.technician_available_in(player) end
 
----List pending repair work with typed operations and sections.
----Prerequisite-blocked: the technician event queue is not implemented in the Rust runtime yet.
----@param unit DbRef|Object
----@return BattleRepairNeed[] needs
-function btech_repair.needs(unit) end
-
----Report whether a technician event is queued for the unit.
----Prerequisite-blocked: the technician event queue is not implemented in the Rust runtime yet.
----@param unit DbRef|Object
----@return boolean under_repair
-function btech_repair.is_under_repair(unit) end
-
 -- C-parity world telemetry contracts.
 
 local btech_system = {}
@@ -4105,133 +4050,14 @@ function btech_system.event_lag() end
 ---@return Object[] units
 function btech_system.units_in_zone(zone) end
 
--- C-parity autopilot order-queue contracts. The queue, association and event
--- runtime they require is a recorded prerequisite gap; the typed order,
--- direction, roaming and autogun catalogs below are already installed.
+-- Typed autopilot constant catalogs installed by the Rust runtime.
 
 ---@class BattleAutopilotOrderName
 ---@class BattleAutopilotDirection
 ---@class BattleAutopilotRoamMode
 ---@class BattleAutopilotAutogunMode
 
----@class BattleAutopilotTargetOrder
----@field name BattleAutopilotOrderName
----@field target DbRef|Object
----@class BattleAutopilotDestinationOrder
----@field name BattleAutopilotOrderName
----@field x integer Nonnegative coordinate (0 through 2147483647).
----@field y integer Nonnegative coordinate (0 through 2147483647).
----@class BattleAutopilotEnterBaseOrder
----@field name BattleAutopilotOrderName
----@field direction BattleAutopilotDirection
----@class BattleAutopilotLeaveBaseOrder
----@field name BattleAutopilotOrderName
----@field heading integer Heading from 0 through 359.
----@class BattleAutopilotMapRoamOrder
----@field name BattleAutopilotOrderName
----@field mode BattleAutopilotRoamMode
----@class BattleAutopilotRadiusRoamOrder
----@field name BattleAutopilotOrderName
----@field mode BattleAutopilotRoamMode
----@field x integer Nonnegative coordinate (0 through 2147483647).
----@field y integer Nonnegative coordinate (0 through 2147483647).
----@field radius integer Radius from 1 through 30.
----@class BattleAutopilotAutomaticAutogunOrder
----@field name BattleAutopilotOrderName
----@field mode BattleAutopilotAutogunMode
----@class BattleAutopilotTargetAutogunOrder
----@field name BattleAutopilotOrderName
----@field mode BattleAutopilotAutogunMode
----@field target DbRef|Object
----@class BattleAutopilotSimpleOrder
----@field name BattleAutopilotOrderName
----@class BattleAutopilotSpeedOrder
----@field name BattleAutopilotOrderName
----@field percent integer Speed percentage from 1 through 100.
----@class BattleAutopilotResolvedTargetOrder: BattleAutopilotTargetOrder
----@field target Object
----@class BattleAutopilotResolvedTargetAutogunOrder: BattleAutopilotTargetAutogunOrder
----@field target Object
-
----@alias BattleAutopilotOrder BattleAutopilotTargetOrder|BattleAutopilotDestinationOrder|BattleAutopilotEnterBaseOrder|BattleAutopilotLeaveBaseOrder|BattleAutopilotMapRoamOrder|BattleAutopilotRadiusRoamOrder|BattleAutopilotAutomaticAutogunOrder|BattleAutopilotTargetAutogunOrder|BattleAutopilotSimpleOrder|BattleAutopilotSpeedOrder
----@alias BattleAutopilotStatusOrder BattleAutopilotResolvedTargetOrder|BattleAutopilotDestinationOrder|BattleAutopilotEnterBaseOrder|BattleAutopilotLeaveBaseOrder|BattleAutopilotMapRoamOrder|BattleAutopilotRadiusRoamOrder|BattleAutopilotAutomaticAutogunOrder|BattleAutopilotResolvedTargetAutogunOrder|BattleAutopilotSimpleOrder|BattleAutopilotSpeedOrder
-
----@class BattleAutopilotModes
----@field autogun_enabled boolean
----@field autogun_suspended boolean
----@field piloting_suspended boolean
----@field roaming boolean
----@field manual_sensors boolean
----@field chasing_target boolean
----@field chase_resume_pending boolean
----@field swarm_charging boolean
----@field assigned_target boolean
-
----@class BattleAutopilotStatus
----@field container_unit? Object
----@field associated_unit? Object
----@field map? Object
----@field association "none"|"ready"|"associated"|"conflict"
----@field engaged boolean
----@field speed_percent integer
----@field order_count integer
----@field order_capacity integer Always 100.
----@field orders BattleAutopilotStatusOrder[]
----@field modes BattleAutopilotModes
-
----@class BattleAutopilotEventStats
----@field goto integer
----@field leave integer
----@field command integer
----@field autogun integer
----@field sensor integer
----@field follow integer
----@field enter_base integer
----@field reply integer
----@field profile integer
----@field roam integer
----@field total integer
-
 local btech_autopilot = {}
-
----Append one order to the autopilot queue. Prerequisite-blocked: the autopilot
----queue runtime is not implemented in the Rust runtime yet.
----@param autopilot DbRef|Object Object registered as AUTOPILOT.
----@param order BattleAutopilotOrder
-function btech_autopilot.add_order(autopilot, order) end
-
----Clear the queued orders. Prerequisite-blocked: the autopilot queue runtime is
----not implemented in the Rust runtime yet.
----@param autopilot DbRef|Object Object registered as AUTOPILOT.
-function btech_autopilot.clear_orders(autopilot) end
-
----Engage the autopilot. Prerequisite-blocked: the autopilot engagement runtime is
----not implemented in the Rust runtime yet.
----@param autopilot DbRef|Object Object registered as AUTOPILOT.
-function btech_autopilot.engage(autopilot) end
-
----Disengage the autopilot. Prerequisite-blocked: the autopilot engagement runtime
----is not implemented in the Rust runtime yet.
----@param autopilot DbRef|Object Object registered as AUTOPILOT.
-function btech_autopilot.disengage(autopilot) end
-
----Read the queued autopilot event counters. Prerequisite-blocked: the autopilot
----event runtime is not implemented in the Rust runtime yet.
----@param autopilot DbRef|Object Object registered as AUTOPILOT.
----@return BattleAutopilotEventStats stats
-function btech_autopilot.event_stats(autopilot) end
-
----Remove one occupied nonactive queue position, preserving order. Prerequisite-blocked:
----the autopilot queue runtime is not implemented in the Rust runtime yet.
----@param autopilot DbRef|Object Object registered as AUTOPILOT.
----@param position integer Queue position from 1 through 100.
-function btech_autopilot.remove_order(autopilot, position) end
-
----Read association, engagement, orders and mode flags. Prerequisite-blocked: the
----autopilot status runtime is not implemented in the Rust runtime yet.
----@param autopilot DbRef|Object Object registered as AUTOPILOT.
----@return BattleAutopilotStatus status
-function btech_autopilot.status(autopilot) end
 
 btech.parts = btech_parts
 btech.repair = btech_repair

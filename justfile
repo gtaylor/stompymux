@@ -4,7 +4,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks
 
-checks: fmt-check test
+checks: fmt-check check-lua-types test
 
 fmt: fmt-lua fmt-rust
 
@@ -32,6 +32,16 @@ run:
     cargo run serve
 
 build-and-run: build run
+
+# Regenerate LuaLS libraries and their isolated test fixtures from Rust contracts.
+update-lua-types:
+    cargo run --quiet --bin lua-type-updater -- --write
+    {{stylua}} --check game/lua/types/mux.d.lua game/lua/types/btech.d.lua
+
+# Fail when any checked-in LuaLS library or test fixture is stale.
+check-lua-types:
+    cargo run --quiet --bin lua-type-updater -- --check
+    {{stylua}} --check game/lua/types/mux.d.lua game/lua/types/btech.d.lua
 
 # Runs a differential Lua parity probe against the pinned C reference.
 # Requires the pinned C binary at ../btmux-khi/build/stompymux (revision

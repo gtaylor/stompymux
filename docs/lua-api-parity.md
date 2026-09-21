@@ -1,5 +1,19 @@
 # Lua API contracts
 
+## LuaLS type definitions
+
+The checked-in `game/lua/types/mux.d.lua` and `btech.d.lua` describe the Rust
+runtime's public Lua API. Their source blocks live in `type_contracts*.rs` files
+beside the relevant Rust Lua binding modules. Each numbered block starts with
+`// lua-types-begin <module> <index>`, uses `//|` for every LuaLS line, and ends
+with `// lua-types-end`. The updater assembles blocks by index, checks duplicate
+callables, and writes the game files and isolated test fixtures together.
+
+Run `just update-lua-types` after changing a public Lua signature, constant, or
+type. Run `just check-lua-types` to check for stale generated files. The
+`lua_type_updater` integration test also verifies that declared package
+functions resolve against the Rust runtime.
+
 The C bindings under `btmux-khi/src/mux/lua/packages/mux` define the non-BattleTech
 API. The checked-in [callable inventory](../tests/fixtures/lua-api.json) records
 functions and methods with their C source references. Integration tests resolve
