@@ -1,0 +1,23 @@
+---
+title: "btech.unit.set_movement_type"
+type: docs
+---
+
+Replace the movement class.
+
+## Signature
+
+```lua
+btech.unit.set_movement_type(unit, movement_type)
+```
+
+## Parameters
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `unit` | `DbRef\|Object` |  |
+| `movement_type` | `BattleMovementType` | Typed constant from btech.unit.movement_types. |
+
+## Returns
+
+No values.

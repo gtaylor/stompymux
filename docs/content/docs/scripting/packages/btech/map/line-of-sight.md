@@ -1,0 +1,23 @@
+---
+title: "btech.map.line_of_sight"
+type: docs
+---
+
+Report line of sight from one placed unit toward a unit or hex.
+
+## Signature
+
+```lua
+btech.map.line_of_sight(observer, target)
+```
+
+## Parameters
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `observer` | `DbRef\|Object` |  |
+| `target` | `DbRef\|Object\|BattleHexCoordinate` |  |
+
+## Returns
+
+- `BattleLineOfSight state`

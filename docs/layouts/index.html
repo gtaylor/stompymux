@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="{{ .Site.Language.Lang }}">
+  <head>
+    {{ $destination := "docs/introduction/" | relLangURL }}
+    <meta charset="utf-8">
+    <meta http-equiv="refresh" content="0; url={{ $destination }}">
+    <link rel="canonical" href="{{ $destination }}">
+    <title>Introduction | {{ .Site.Title }}</title>
+    <script>window.location.replace('{{ $destination }}');</script>
+  </head>
+  <body>
+    <p><a href="{{ $destination }}">Continue to the introduction.</a></p>
+  </body>
+</html>

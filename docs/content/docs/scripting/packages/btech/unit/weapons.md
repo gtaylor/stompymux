@@ -1,0 +1,23 @@
+---
+title: "btech.unit.weapons"
+type: docs
+---
+
+List mounted weapons in mounting order; an optional section restricts the result.
+
+## Signature
+
+```lua
+btech.unit.weapons(unit, section)
+```
+
+## Parameters
+
+| Name | Type | Description |
+| --- | --- | --- |
+| `unit` | `DbRef\|Object` |  |
+| `section?` | `BattleSection` | Typed section constant from btech.unit.sections. |
+
+## Returns
+
+- `BattleMountedWeapon[]`

@@ -1,0 +1,58 @@
+---
+title: "btech.map"
+type: docs
+no_list: true
+---
+
+`require("btech")` provides this Lua API.
+
+## Functions
+
+- [`btech.map.add_block`](add-block/)
+- [`btech.map.add_fire`](add-fire/)
+- [`btech.map.add_ice`](add-ice/)
+- [`btech.map.add_mine`](add-mine/)
+- [`btech.map.add_smoke`](add-smoke/)
+- [`btech.map.authored_link`](authored-link/)
+- [`btech.map.blast_zones`](blast-zones/)
+- [`btech.map.cargo_point`](cargo-point/)
+- [`btech.map.cargo_transfer_point`](cargo-transfer-point/)
+- [`btech.map.check`](check/)
+- [`btech.map.clear_units`](clear-units/)
+- [`btech.map.cloud_base`](cloud-base/)
+- [`btech.map.conditions`](conditions/)
+- [`btech.map.create`](create/)
+- [`btech.map.delete_objects`](delete-objects/)
+- [`btech.map.elevation`](elevation/)
+- [`btech.map.emit`](emit/)
+- [`btech.map.emit_as`](emit-as/)
+- [`btech.map.environment`](environment/)
+- [`btech.map.fields`](fields/)
+- [`btech.map.hex`](hex/)
+- [`btech.map.in_blast_zone`](in-blast-zone/)
+- [`btech.map.inspect`](inspect/)
+- [`btech.map.inspect_file`](inspect-file/)
+- [`btech.map.line_of_sight`](line-of-sight/)
+- [`btech.map.link`](link/)
+- [`btech.map.list`](list/)
+- [`btech.map.load`](load/)
+- [`btech.map.load_as`](load-as/)
+- [`btech.map.place_unit`](place-unit/)
+- [`btech.map.range`](range/)
+- [`btech.map.reload`](reload/)
+- [`btech.map.remove_ice`](remove-ice/)
+- [`btech.map.resize`](resize/)
+- [`btech.map.save`](save/)
+- [`btech.map.set_authored_link`](set-authored-link/)
+- [`btech.map.set_cargo_point`](set-cargo-point/)
+- [`btech.map.set_cargo_transfer_point`](set-cargo-transfer-point/)
+- [`btech.map.set_field`](set-field/)
+- [`btech.map.set_hex`](set-hex/)
+- [`btech.map.set_link`](set-link/)
+- [`btech.map.terrain`](terrain/)
+- [`btech.map.unit_by_id`](unit-by-id/)
+- [`btech.map.units`](units/)
+- [`btech.map.update_links`](update-links/)
+- [`btech.map.update_links_as`](update-links-as/)
+- [`btech.map.view`](view/)
+- [`btech.map.wrapping`](wrapping/)

@@ -1,0 +1,78 @@
+---
+title: Global logic
+linkTitle: Global logic
+description: How to write global logic that is not attached to an in-game object
+type: docs
+weight: 20
+---
+
+Global Lua logic modules live under `game/lua/global_logic`. Every
+`.lua` file in that tree is discovered recursively during startup and
+`@lua/reload`. Files are loaded in lexical relative-path order, so use
+domain-oriented paths such as `player/help.lua`, `world/travel.lua`, and
+`wizard/maintenance.lua`. Use numeric prefixes only when deliberate
+cross-domain priority is necessary.
+Use [`@lua/check`](validating-and-reloading/) to validate every Lua module before reloading.
+
+Each global module returns a table containing one or more of `commands`,
+`events`, `schedules`, or `flows`:
+
+```lua
+return {
+  commands = {
+    {
+      pattern = "^global%-hello$",
+      handler = function(ctx)
+        mux.world.pemit(ctx.enactor, "Hello, world, from a global Lua command!")
+        return true
+      end,
+    },
+  },
+}
+```
+
+Global handlers run after local and zone Lua command matching declines the
+command. Master-room exits and other non-command behavior are unchanged.
+Matching stops at the first global handler that returns `true`; `false` or
+`nil` allows the next handler to try.
+
+Global command contexts include `ctx.scope == "global"`, `ctx.enactor`,
+`ctx.cause`, and `ctx.command`; `ctx.object` is `nil`.
+
+Global modules may define the lifecycle events `on_server_first_startup`,
+`on_server_startup`, `on_player_connect`, and `on_player_disconnect`:
+
+```lua
+return {
+  events = {
+    on_player_connect = function(ctx)
+      mux.world.pemit(ctx.enactor, "Welcome!")
+    end,
+  },
+}
+```
+
+Global event handlers run in lexical module-path order before object-scoped
+handlers. An error is logged without preventing later global handlers from
+running. Their context has `ctx.scope == "global"` and no `ctx.object`.
+Startup uses God for `ctx.enactor` and `ctx.cause`. Player connection events
+use the player for both fields and provide `ctx.descriptor`;
+`on_player_connect` also provides boolean `ctx.reconnect`, while
+`on_player_disconnect` provides string `ctx.reason` and runs only when the
+player's final descriptor disconnects. `on_server_first_startup` runs only when
+the configured database file was missing, after the server has populated and
+committed the initial database. All of its global and object handlers finish
+before `on_server_startup`, which runs on the first and every later startup.
+Neither startup event runs after `@lua/reload`.
+
+See [Commands](commands/) for Lua-pattern syntax, capture arguments, and the
+handler context table.
+
+Global modules resolve `require("name")` in `global_logic` before the
+shared `packages` root. Put shared parsing, formatting, and policy helpers in
+`packages`. The working `game/lua/global_logic/example.lua` module
+defines the `global-hello` command.
+
+Global logic modules may also define `schedules`. See
+[Scheduled events](scheduled-events/) for the shared schedule format and the
+differences between global and object-attached execution.

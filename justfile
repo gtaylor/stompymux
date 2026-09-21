@@ -4,7 +4,7 @@ stylua := env("STYLUA", "stylua")
 
 default: checks
 
-checks: fmt-check check-lua-types test
+checks: fmt-check check-lua-types check-lua-docs test
 
 fmt: fmt-lua fmt-rust
 
@@ -27,6 +27,21 @@ test:
 
 build:
     cargo build
+
+docsite:
+    npm --prefix docs run build
+
+docsite-serve:
+    npm --prefix docs run serve
+
+update-lua-docs:
+    cargo run --quiet --features lua-doc-updater --bin lua-doc-updater -- --write
+
+check-lua-docs:
+    cargo run --quiet --features lua-doc-updater --bin lua-doc-updater -- --check
+
+build-lua-doc-updater:
+    cargo build --features lua-doc-updater --bin lua-doc-updater
 
 build-lua-type-updater:
     cargo build --features lua-type-updater --bin lua-type-updater

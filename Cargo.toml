@@ -6,11 +6,17 @@ autotests = false
 
 [features]
 lua-type-updater = []
+lua-doc-updater = []
 
 [[bin]]
 name = "lua-type-updater"
 path = "src/bin/lua-type-updater.rs"
 required-features = ["lua-type-updater"]
+
+[[bin]]
+name = "lua-doc-updater"
+path = "src/bin/lua-doc-updater.rs"
+required-features = ["lua-doc-updater"]
 
 [dependencies]
 tempfile = "3.27.0"
