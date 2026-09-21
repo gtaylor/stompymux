@@ -28,3 +28,6 @@ rand_chacha = { version = "0.10.0", features = ["serde"] }
 
 [dev-dependencies]
 tokio = { version = "1.53.1", features = ["test-util"] }
+
+[profile.test]
+opt-level = 1
