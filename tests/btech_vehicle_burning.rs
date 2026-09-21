@@ -685,8 +685,7 @@ async fn blast_heat_checks_zero_heat_and_existing_wrecks() {
 }
 
 /// Heat, terrain exposure and inferno share private emergency feedback from burning sections.
-#[tokio::test]
-async fn aircraft_fire_feedback_reaches_only_the_pilot() {
+async fn aircraft_fire_feedback_matrix(source: usize) {
     let (_dir, config, mut base, id) = fixture_movement(BattleVehicleMovement::Vtol).await;
     base.objects
         .get_mut(&ObjectId(1))
@@ -717,81 +716,98 @@ async fn aircraft_fire_feedback_reaches_only_the_pilot() {
     policy.criticals.table = BattleVehicleCriticalTable::Standard;
     policy.criticals.vtol_table = None;
     policy.criticals.enabled = true;
-    for source in [0, 1, 2, 3] {
-        let resolve = |scripts: &Scripts| -> Vec<BattlePilotNotice> {
-            match source {
-                0 => {
-                    resolve_battle_vehicle_heat_exposure_action(scripts, &config, id, 5, policy)
-                        .unwrap()
-                        .pilot_notices
-                }
-                1 => {
-                    resolve_battle_vehicle_fire_exposure_action(
-                        scripts,
-                        &config,
-                        id,
-                        policy.criticals,
-                    )
+    // One VM pair per shard; each seed candidate installs its world, per the
+    // sandbox-reuse convention, instead of booting fresh VMs.
+    let scripts = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
+    let replay = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
+    let resolve = |scripts: &Scripts| -> Vec<BattlePilotNotice> {
+        match source {
+            0 => {
+                resolve_battle_vehicle_heat_exposure_action(scripts, &config, id, 5, policy)
+                    .unwrap()
+                    .pilot_notices
+            }
+            1 => {
+                resolve_battle_vehicle_fire_exposure_action(scripts, &config, id, policy.criticals)
                     .unwrap()
                     .effects
                     .pilot_notices
-                }
-                2 => {
-                    resolve_battle_vehicle_inferno_hit_action(scripts, &config, id, 2, policy)
-                        .unwrap()
-                        .pilot_notices
-                }
-                _ => {
-                    advance_battle_vehicle_fires_action(scripts, &config)
-                        .unwrap()
-                        .pilot_notices
-                }
             }
-        };
-        let mut covered = false;
-        for seed in 0..=255 {
-            let mut world = base.clone();
-            edit(&mut world, id, |state| {
-                state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
-            });
-            if source == 3 {
-                edit(&mut world, id, |state| {
-                    state["burning_sections"] = serde_json::json!({"left":1})
-                });
+            2 => {
+                resolve_battle_vehicle_inferno_hit_action(scripts, &config, id, 2, policy)
+                    .unwrap()
+                    .pilot_notices
             }
-            let scripts = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-            let expected = resolve(&scripts);
-            if expected.is_empty() {
-                continue;
+            _ => {
+                advance_battle_vehicle_fires_action(scripts, &config)
+                    .unwrap()
+                    .pilot_notices
             }
-            let output = scripts.drain_outbox();
-            let actual: Vec<_> = output
-                .iter()
-                .filter(|(_, message)| {
-                    message.source() == "You make a piloting skill roll!"
-                        || message.source().starts_with("Modified Pilot Skill:")
-                })
-                .map(|(who, message)| (*who, message.source().to_owned()))
-                .collect();
-            assert_eq!(
-                actual,
-                expected
-                    .iter()
-                    .map(|notice| (notice.pilot, notice.text.clone()))
-                    .collect::<Vec<_>>()
-            );
-            assert!(actual.iter().all(|(who, _)| *who == ObjectId(1)));
-            assert!(output.iter().any(|(who, _)| *who == passenger));
-            let replay = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-            assert_eq!(resolve(&replay), expected);
-            assert_eq!(scripts.world().btech, replay.world().btech);
-            assert_eq!(output, replay.drain_outbox());
-            covered = true;
-            break;
         }
-        assert!(
-            covered,
-            "fire source {source} must exercise an emergency roll"
+    };
+    let mut covered = false;
+    for seed in 0..=255 {
+        let mut world = base.clone();
+        edit(&mut world, id, |state| {
+            state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+        });
+        if source == 3 {
+            edit(&mut world, id, |state| {
+                state["burning_sections"] = serde_json::json!({"left":1})
+            });
+        }
+        support::install(&scripts, world.clone());
+        let expected = resolve(&scripts);
+        if expected.is_empty() {
+            continue;
+        }
+        let output = scripts.drain_outbox();
+        let actual: Vec<_> = output
+            .iter()
+            .filter(|(_, message)| {
+                message.source() == "You make a piloting skill roll!"
+                    || message.source().starts_with("Modified Pilot Skill:")
+            })
+            .map(|(who, message)| (*who, message.source().to_owned()))
+            .collect();
+        assert_eq!(
+            actual,
+            expected
+                .iter()
+                .map(|notice| (notice.pilot, notice.text.clone()))
+                .collect::<Vec<_>>()
         );
+        assert!(actual.iter().all(|(who, _)| *who == ObjectId(1)));
+        assert!(output.iter().any(|(who, _)| *who == passenger));
+        support::install(&replay, world);
+        assert_eq!(resolve(&replay), expected);
+        assert_eq!(scripts.world().btech, replay.world().btech);
+        assert_eq!(output, replay.drain_outbox());
+        covered = true;
+        break;
     }
+    assert!(
+        covered,
+        "fire source {source} must exercise an emergency roll"
+    );
+}
+
+#[tokio::test]
+async fn aircraft_fire_feedback_reaches_only_the_pilot_heat() {
+    aircraft_fire_feedback_matrix(0).await;
+}
+
+#[tokio::test]
+async fn aircraft_fire_feedback_reaches_only_the_pilot_fire() {
+    aircraft_fire_feedback_matrix(1).await;
+}
+
+#[tokio::test]
+async fn aircraft_fire_feedback_reaches_only_the_pilot_inferno() {
+    aircraft_fire_feedback_matrix(2).await;
+}
+
+#[tokio::test]
+async fn aircraft_fire_feedback_reaches_only_the_pilot_advance() {
+    aircraft_fire_feedback_matrix(3).await;
 }

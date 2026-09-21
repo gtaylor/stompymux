@@ -66,79 +66,85 @@ fn streak_lrm_catalogue_and_packet_facts() {
 }
 
 /// Supply and recycle change only as the shared lock result dictates; both adapters replay the same shot.
-#[tokio::test]
-async fn streak_lrm_native_lua_launch_and_restart() {
+async fn streak_lrm_matrix(weapon: BattleWeapon) {
+    let seeds = [2u8, 12].map(|roll| {
+        let seed = (0..=255)
+            .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == roll)
+            .unwrap();
+        [seed; 32]
+    });
+    let (_dir, config, base_world) = support::isolated_world().await;
+    let native = Scripts::new(&config, Rc::new(RefCell::new(base_world.clone()))).unwrap();
+    let lua = Scripts::new(&config, Rc::new(RefCell::new(base_world.clone()))).unwrap();
+    let pristine_db = support::snapshot_database(&config);
+    let mut probed_fidelity = [false; 2];
     for source in firing::templates() {
-        for weapon in [
-            BattleWeapon::ClanStreakLrm5,
-            BattleWeapon::ClanStreakLrm10,
-            BattleWeapon::ClanStreakLrm15,
-            BattleWeapon::ClanStreakLrm20,
-        ] {
-            let (_dir, config, mut base, shooter, target, index) = firing::fixture_with_supply(
-                &source,
-                Some(weapon),
-                include_str!("../game/mechs/AS7-D"),
-                false,
-                Some(""),
-            )
-            .await;
-            firing::edit(&mut base, target, |state| {
-                state["position"]["y"] = 4.into();
-                state["motion"]["point"] =
-                    serde_json::to_value(BattleHexCoordinate { x: 0, y: 4 }.center()).unwrap();
+        let (mut base, shooter, target, index) = firing::supply_fixture_on(
+            base_world.clone(),
+            &config,
+            &source,
+            Some(weapon),
+            include_str!("../game/mechs/AS7-D"),
+            false,
+            Some(""),
+        );
+        firing::edit(&mut base, target, |state| {
+            state["position"]["y"] = 4.into();
+            state["motion"]["point"] =
+                serde_json::to_value(BattleHexCoordinate { x: 0, y: 4 }.center()).unwrap();
+        });
+        refresh_optical_scanners(&mut base, &[shooter]).unwrap();
+        for (shape, roll) in [2u8, 12].into_iter().enumerate() {
+            support::restore_database(&config, &pristine_db);
+            let mut world = base.clone();
+            firing::edit(&mut world, shooter, |state| {
+                state["dice"] = serde_json::to_value(BattleDice::seeded(seeds[shape])).unwrap()
             });
-            refresh_optical_scanners(&mut base, &[shooter]).unwrap();
-            for roll in [2, 12] {
-                let seed = (0..=255)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == roll)
-                    .unwrap();
-                let mut world = base.clone();
-                firing::edit(&mut world, shooter, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
-                });
-                let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-                let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-                let before = lua.world().btech.clone();
-                let call = format!("btech.unit.fire({},1,{index},{})", shooter.0, target.0);
-                assert!(
-                    lua.eval_callback::<()>(&format!("{call}; error('abort')"))
-                        .is_err()
-                );
-                assert_eq!(lua.world().btech, before);
-                assert!(lua.drain_outbox().is_empty());
-                let report: mlua::Table = lua.eval_callback(&format!("return {call}")).unwrap();
-                let launch = report
-                    .get::<Option<mlua::Table>>("launch")
-                    .unwrap()
-                    .unwrap_or(report.clone());
-                assert_eq!(launch.get::<u8>("roll").unwrap(), roll);
-                let expenditure: mlua::Table = launch.get("expenditure").unwrap();
-                assert_eq!(launched(&report), roll == 12);
-                assert_eq!(
-                    expenditure.get::<u8>("heat").unwrap(),
-                    if roll == 12 { weapon.profile().heat } else { 0 }
-                );
-                let draws: mlua::Table = expenditure.get("ammunition").unwrap();
-                assert_eq!(draws.raw_len(), usize::from(roll == 12));
-                commands::run(
-                    &native,
-                    &config,
-                    ObjectId(1),
-                    1,
-                    &format!("fire {index} #{}", target.0),
-                )
-                .unwrap();
-                assert_eq!(native.world().btech, lua.world().btech);
-                let recycle = if let Some(unit) = lua.world().btech.vehicles().get(&shooter) {
-                    unit.weapon_recycle().get(&index).copied()
-                } else {
-                    lua.world().btech.constructed_units()[&shooter]
-                        .weapon_recycle()
-                        .get(&index)
-                        .copied()
-                };
-                assert_eq!(recycle, Some(u16::from(weapon.profile().recycle_seconds)));
+            support::install(&native, world.clone());
+            support::install(&lua, world);
+            let before = lua.world().btech.clone();
+            let call = format!("btech.unit.fire({},1,{index},{})", shooter.0, target.0);
+            assert!(
+                lua.eval_callback::<()>(&format!("{call}; error('abort')"))
+                    .is_err()
+            );
+            assert_eq!(lua.world().btech, before);
+            assert!(lua.drain_outbox().is_empty());
+            let report: mlua::Table = lua.eval_callback(&format!("return {call}")).unwrap();
+            let launch = report
+                .get::<Option<mlua::Table>>("launch")
+                .unwrap()
+                .unwrap_or(report.clone());
+            assert_eq!(launch.get::<u8>("roll").unwrap(), roll);
+            let expenditure: mlua::Table = launch.get("expenditure").unwrap();
+            assert_eq!(launched(&report), roll == 12);
+            assert_eq!(
+                expenditure.get::<u8>("heat").unwrap(),
+                if roll == 12 { weapon.profile().heat } else { 0 }
+            );
+            let draws: mlua::Table = expenditure.get("ammunition").unwrap();
+            assert_eq!(draws.raw_len(), usize::from(roll == 12));
+            commands::run(
+                &native,
+                &config,
+                ObjectId(1),
+                1,
+                &format!("fire {index} #{}", target.0),
+            )
+            .unwrap();
+            assert_eq!(native.world().btech, lua.world().btech);
+            let recycle = if let Some(unit) = lua.world().btech.vehicles().get(&shooter) {
+                unit.weapon_recycle().get(&index).copied()
+            } else {
+                lua.world().btech.constructed_units()[&shooter]
+                    .weapon_recycle()
+                    .get(&index)
+                    .copied()
+            };
+            assert_eq!(recycle, Some(u16::from(weapon.profile().recycle_seconds)));
+            // Fidelity probe once per roll outcome per shard.
+            if !probed_fidelity[shape] {
+                probed_fidelity[shape] = true;
                 let saved = lua.world().clone();
                 persistence::save(&config.database(), &saved).await.unwrap();
                 assert_eq!(
@@ -148,6 +154,26 @@ async fn streak_lrm_native_lua_launch_and_restart() {
             }
         }
     }
+}
+
+#[tokio::test]
+async fn streak_lrm_native_lua_launch_and_restart_lrm5() {
+    streak_lrm_matrix(BattleWeapon::ClanStreakLrm5).await;
+}
+
+#[tokio::test]
+async fn streak_lrm_native_lua_launch_and_restart_lrm10() {
+    streak_lrm_matrix(BattleWeapon::ClanStreakLrm10).await;
+}
+
+#[tokio::test]
+async fn streak_lrm_native_lua_launch_and_restart_lrm15() {
+    streak_lrm_matrix(BattleWeapon::ClanStreakLrm15).await;
+}
+
+#[tokio::test]
+async fn streak_lrm_native_lua_launch_and_restart_lrm20() {
+    streak_lrm_matrix(BattleWeapon::ClanStreakLrm20).await;
 }
 
 /// Streak salvos activate the same automatic defense on every supported attacker/defender pairing.

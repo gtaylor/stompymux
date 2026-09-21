@@ -61,16 +61,30 @@ fn supplied_corpus_is_reachable_and_renderable() {
     walk(&root.join("help"), &mut files);
     assert!(!files.is_empty());
     assert_eq!(index.report.articles, files.len());
+    // Every keyword resolves and honors visibility; one article renders once,
+    // however many keywords reach it, because the response is keyword-independent.
+    let mut rendered = std::collections::HashSet::new();
     for file in files {
         let source = std::fs::read_to_string(&file).unwrap();
         let metadata: toml::Value = toml::from_str(source.split("+++").nth(1).unwrap()).unwrap();
         for keyword in metadata["keywords"].as_array().unwrap() {
             let keyword = keyword.as_str().unwrap();
             let response = index.lookup(keyword, true).unwrap();
-            assert!(
-                matches!(response, HelpResponse::Article { .. }),
-                "{keyword}"
-            );
+            let HelpResponse::Article { path, .. } = &response else {
+                panic!("{keyword} did not resolve to an article");
+            };
+            if metadata.get("wizard_only").and_then(toml::Value::as_bool) == Some(true) {
+                assert!(
+                    matches!(
+                        index.lookup(keyword, false).unwrap(),
+                        HelpResponse::Message(_)
+                    ),
+                    "{keyword}"
+                );
+            }
+            if !rendered.insert(path.clone()) {
+                continue;
+            }
             for width in [24, 80] {
                 let options = RenderOptions {
                     width,
@@ -94,15 +108,6 @@ fn supplied_corpus_is_reachable_and_renderable() {
                     .unwrap()
                     .is_empty()
             );
-            if metadata.get("wizard_only").and_then(toml::Value::as_bool) == Some(true) {
-                assert!(
-                    matches!(
-                        index.lookup(keyword, false).unwrap(),
-                        HelpResponse::Message(_)
-                    ),
-                    "{keyword}"
-                );
-            }
         }
     }
 }

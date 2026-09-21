@@ -449,6 +449,11 @@ async fn unavailable_directed_locations_fall_back_to_normal_hits() {
 async fn special_weapons_preserve_aim_preparation_and_normal_resolution() {
     let targets = templates();
     let target_seed = seed_for(|roll| (6..=8).contains(&roll));
+    let hit_seed = seed_for(|roll| roll == 12);
+    let miss_seed = seed_for(|roll| roll == 2);
+    let (_dir, config, base) = support::isolated_world().await;
+    let directed = scripts(&config, &base);
+    let ordinary = scripts(&config, &base);
     for source in templates() {
         for target_source in [&targets[0], &targets[2], &targets[6]] {
             for (weapon, mode, ammunition, flag, miss) in [
@@ -495,19 +500,21 @@ async fn special_weapons_preserve_aim_preparation_and_normal_resolution() {
                     false,
                 ),
             ] {
-                let (_dir, config, mut world, shooter, target, index) =
-                    firing_support::fixture_with_supply(
-                        &source,
-                        Some(weapon),
-                        target_source,
-                        false,
-                        Some(flag),
-                    )
-                    .await;
+                let (mut world, shooter, target, index) = firing_support::supply_fixture_on(
+                    base.clone(),
+                    &config,
+                    &source,
+                    Some(weapon),
+                    target_source,
+                    false,
+                    Some(flag),
+                );
                 edit(&mut world, shooter, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded(seed_for(|roll| {
-                        roll == if miss { 2 } else { 12 }
-                    })))
+                    state["dice"] = serde_json::to_value(BattleDice::seeded(if miss {
+                        miss_seed
+                    } else {
+                        hit_seed
+                    }))
                     .unwrap();
                     if mode != BattleFireMode::Normal {
                         state["fire_modes"][index.to_string()] =
@@ -536,15 +543,17 @@ async fn special_weapons_preserve_aim_preparation_and_normal_resolution() {
                     select_battle_target(&mut world, shooter, ObjectId(1), Some(target)).unwrap();
                 }
                 edit(&mut world, shooter, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded(seed_for(|roll| {
-                        roll == if miss { 2 } else { 12 }
-                    })))
+                    state["dice"] = serde_json::to_value(BattleDice::seeded(if miss {
+                        miss_seed
+                    } else {
+                        hit_seed
+                    }))
                     .unwrap();
                 });
-                let mut ordinary = world.clone();
+                let mut baseline = world.clone();
                 let mut dice = BattleDice::seeded(target_seed);
                 dice.two_d6();
-                edit(&mut ordinary, target, |state| {
+                edit(&mut baseline, target, |state| {
                     state["dice"] = serde_json::to_value(dice).unwrap()
                 });
                 let vehicle = world.btech.vehicles().contains_key(&target);
@@ -555,8 +564,8 @@ async fn special_weapons_preserve_aim_preparation_and_normal_resolution() {
                     Some(if vehicle { "as" } else { "ct" }),
                 )
                 .unwrap();
-                let directed = scripts(&config, &world);
-                let ordinary = scripts(&config, &ordinary);
+                support::install(&directed, world.clone());
+                support::install(&ordinary, baseline);
                 let action = format!("return btech.unit.fire({},1,{index})", shooter.0);
                 let a: mlua::Table = directed.eval_callback(&action).unwrap();
                 let b: mlua::Table = ordinary.eval_callback(&action).unwrap();
@@ -680,30 +689,38 @@ mod defense_support;
 /// Aimed missiles preserve initial target preparation, attacker-owned interception and atomic publication.
 #[tokio::test]
 async fn aimed_missiles_share_active_defense_dice_rollback_and_restart() {
+    let target_seed = seed_for(|roll| (6..=8).contains(&roll));
+    let hit_seed = seed_for(|roll| roll == 12);
+    let miss_seed = seed_for(|roll| roll == 2);
+    let (_dir, config, base_world) = support::isolated_world().await;
+    let directed = scripts(&config, &base_world);
+    let ordinary = scripts(&config, &base_world);
+    let native = scripts(&config, &base_world);
+    let pristine_db = support::snapshot_database(&config);
     for source in templates() {
         for recipient in defense_support::templates() {
-            let (_dir, config, base, shooter, target, index) = firing_support::fixture_with_supply(
+            let (base, shooter, target, index) = firing_support::supply_fixture_on(
+                base_world.clone(),
+                &config,
                 &source,
                 Some(BattleWeapon::ClanLrm20),
                 &recipient,
                 false,
                 Some(""),
-            )
-            .await;
+            );
             for miss in [false, true] {
                 let mut world = base.clone();
                 edit(&mut world, target, |state| {
                     state["fortified"] = true.into();
                     state["ams_enabled"] = true.into();
-                    state["dice"] = serde_json::to_value(BattleDice::seeded(seed_for(|roll| {
-                        (6..=8).contains(&roll)
-                    })))
-                    .unwrap();
+                    state["dice"] = serde_json::to_value(BattleDice::seeded(target_seed)).unwrap();
                 });
                 edit(&mut world, shooter, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded(seed_for(|roll| {
-                        roll == if miss { 2 } else { 12 }
-                    })))
+                    state["dice"] = serde_json::to_value(BattleDice::seeded(if miss {
+                        miss_seed
+                    } else {
+                        hit_seed
+                    }))
                     .unwrap();
                 });
                 let mut baseline = world.clone();
@@ -716,7 +733,7 @@ async fn aimed_missiles_share_active_defense_dice_rollback_and_restart() {
                     Some(if vehicle { "as" } else { "h" }),
                 )
                 .unwrap();
-                let directed = scripts(&config, &world);
+                support::install(&directed, world.clone());
                 let before = directed.world().btech.clone();
                 let action = format!("btech.unit.fire({},1,{index})", shooter.0);
                 assert!(
@@ -729,7 +746,7 @@ async fn aimed_missiles_share_active_defense_dice_rollback_and_restart() {
                 let result: mlua::Table =
                     directed.eval_callback(&format!("return {action}")).unwrap();
                 let result = serde_json::to_value(result).unwrap();
-                let ordinary = scripts(&config, &baseline);
+                support::install(&ordinary, baseline);
                 let expected: mlua::Table =
                     ordinary.eval_callback(&format!("return {action}")).unwrap();
                 assert_eq!(result, serde_json::to_value(expected).unwrap());
@@ -754,10 +771,11 @@ async fn aimed_missiles_share_active_defense_dice_rollback_and_restart() {
                     without_aim,
                     serde_json::to_value(&ordinary.world().btech).unwrap()
                 );
-                let native = scripts(&config, &world);
+                support::install(&native, world.clone());
                 support::run_text(&native, &config, ObjectId(1), 1, &format!("fire {index}"));
                 assert_eq!(native.world().btech, directed.world().btech);
                 let saved = directed.world().clone();
+                support::restore_database(&config, &pristine_db);
                 persistence::save(&config.database(), &saved).await.unwrap();
                 assert_eq!(
                     persistence::load(&config.database()).await.unwrap().btech,
@@ -772,6 +790,19 @@ async fn aimed_missiles_share_active_defense_dice_rollback_and_restart() {
 #[tokio::test]
 async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
     let defenders = defense_support::templates();
+    let (_dir, mut config, base_world) = support::isolated_world().await;
+    let path = config.root.join("stompymux.toml");
+    let mut settings: toml::Value =
+        toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    settings["battletech"]
+        .as_table_mut()
+        .unwrap()
+        .insert("glancing_blows".into(), 2.into());
+    std::fs::write(&path, toml::to_string(&settings).unwrap()).unwrap();
+    config = Config::load(&config.root).unwrap();
+    let probe = scripts(&config, &base_world);
+    let lua = scripts(&config, &base_world);
+    let native = scripts(&config, &base_world);
     for source in templates() {
         for recipient in [&defenders[0], &defenders[2], &defenders[6]] {
             for (ammunition, flag) in [
@@ -779,24 +810,15 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                 (BattleAmmunitionMode::Swarm, "Swarm"),
                 (BattleAmmunitionMode::Swarm1, "Swarm1"),
             ] {
-                let (_dir, config, mut base, shooter, target, index) =
-                    firing_support::fixture_with_supply(
-                        &source,
-                        Some(BattleWeapon::ClanLrm20),
-                        recipient,
-                        false,
-                        Some(flag),
-                    )
-                    .await;
-                let path = config.root.join("stompymux.toml");
-                let mut settings: toml::Value =
-                    toml::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-                settings["battletech"]
-                    .as_table_mut()
-                    .unwrap()
-                    .insert("glancing_blows".into(), 2.into());
-                std::fs::write(&path, toml::to_string(&settings).unwrap()).unwrap();
-                let config = Config::load(&config.root).unwrap();
+                let (mut base, shooter, target, index) = firing_support::supply_fixture_on(
+                    base_world.clone(),
+                    &config,
+                    &source,
+                    Some(BattleWeapon::ClanLrm20),
+                    recipient,
+                    false,
+                    Some(flag),
+                );
                 edit(&mut base, target, |state| {
                     state["fortified"] = true.into();
                     state["ams_enabled"] = true.into();
@@ -814,7 +836,7 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                     "h"
                 };
                 set_battle_aimed_section(&mut base, shooter, ObjectId(1), Some(section)).unwrap();
-                let probe = scripts(&config, &base);
+                support::install(&probe, base.clone());
                 let sight: mlua::Table = probe
                     .eval_callback(&format!("return btech.unit.sight({},1,{index})", shooter.0))
                     .unwrap();
@@ -829,7 +851,7 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                             })))
                             .unwrap()
                     });
-                    let lua = scripts(&config, &world);
+                    support::install(&lua, world.clone());
                     let value: mlua::Table = lua
                         .eval_callback(&format!("return btech.unit.fire({},1,{index})", shooter.0))
                         .unwrap();
@@ -858,7 +880,7 @@ async fn missile_base_boundary_controls_ams_swarm_and_cluster_glancing() {
                             );
                         }
                     }
-                    let native = scripts(&config, &world);
+                    support::install(&native, world.clone());
                     support::run_text(&native, &config, ObjectId(1), 1, &format!("fire {index}"));
                     assert_eq!(native.world().btech, lua.world().btech);
                 }

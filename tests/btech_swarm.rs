@@ -808,122 +808,136 @@ fn swarm_template_modes_cover_compatible_catalogue() {
 #[path = "support/btech_defense.rs"]
 mod defense_support;
 
+/// Dice seeds for the swarm flight shapes; pure rolls, shared across shards.
+fn aimed_swarm_seeds() -> ([u8; 32], [u8; 32], [u8; 32]) {
+    static SEEDS: std::sync::OnceLock<([u8; 32], [u8; 32], [u8; 32])> = std::sync::OnceLock::new();
+    *SEEDS.get_or_init(|| {
+        let seed_for = |predicate: &dyn Fn(&mut BattleDice) -> bool| {
+            (0u32..65536)
+                .find_map(|n| {
+                    let mut seed = [0; 32];
+                    seed[..4].copy_from_slice(&n.to_le_bytes());
+                    predicate(&mut BattleDice::seeded(seed)).then_some(seed)
+                })
+                .unwrap()
+        };
+        (
+            seed_for(&|dice| dice.two_d6() == 12 && dice.two_d6() >= 8 && dice.two_d6() >= 8),
+            seed_for(&|dice| dice.two_d6() == 12 && dice.two_d6() == 2 && dice.two_d6() >= 8),
+            seed_for(&|dice| (6..=8).contains(&dice.two_d6()) && dice.two_d6() == 2),
+        )
+    })
+}
+
 /// Aimed Swarm flights prepare only their first target and bypass active defenses on every hop.
-#[tokio::test]
-async fn aimed_swarm_prepares_once_across_defended_immobile_targets() {
-    let seed_for = |predicate: &dyn Fn(&mut BattleDice) -> bool| {
-        (0u32..65536)
-            .find_map(|n| {
-                let mut seed = [0; 32];
-                seed[..4].copy_from_slice(&n.to_le_bytes());
-                predicate(&mut BattleDice::seeded(seed)).then_some(seed)
-            })
-            .unwrap()
-    };
-    let attack = seed_for(&|dice| dice.two_d6() == 12 && dice.two_d6() >= 8 && dice.two_d6() >= 8);
-    let near_attack =
-        seed_for(&|dice| dice.two_d6() == 12 && dice.two_d6() == 2 && dice.two_d6() >= 8);
-    let preparation = seed_for(&|dice| (6..=8).contains(&dice.two_d6()) && dice.two_d6() == 2);
+async fn aimed_swarm_matrix(source: &str) {
+    let (attack, near_attack, preparation) = aimed_swarm_seeds();
     let defenders = defense_support::templates();
-    for source in templates() {
-        for (index, recipient) in defenders.iter().enumerate() {
-            let (_dir, config, mut base, shooter, target) =
-                fixture(&source, recipient, false).await;
-            let second = candidate(
+    let mut probed_fidelity = [false; 4];
+    for (index, recipient) in defenders.iter().enumerate() {
+        let (_dir, config, mut base, shooter, target) = fixture(source, recipient, false).await;
+        let second = candidate(
+            &mut base,
+            &config,
+            target,
+            &defenders[(index + 1) % defenders.len()],
+            1,
+        );
+        let third = candidate(
+            &mut base,
+            &config,
+            target,
+            &defenders[(index + 2) % defenders.len()],
+            1,
+        );
+        for id in [target, second, third] {
+            edit(&mut base, id, |state| {
+                state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
+                state["fortified"] = true.into();
+                state["ams_enabled"] = true.into();
+                state["motion"]["heading"] = 180.0.into();
+                state["motion"]["desired_heading"] = 180.0.into();
+            });
+            set_battle_visibility(
                 &mut base,
-                &config,
-                target,
-                &defenders[(index + 1) % defenders.len()],
-                1,
-            );
-            let third = candidate(
-                &mut base,
-                &config,
-                target,
-                &defenders[(index + 2) % defenders.len()],
-                1,
-            );
-            for id in [target, second, third] {
-                edit(&mut base, id, |state| {
-                    state["power"] = serde_json::to_value(BattlePower::Running).unwrap();
-                    state["fortified"] = true.into();
-                    state["ams_enabled"] = true.into();
-                    state["motion"]["heading"] = 180.0.into();
-                    state["motion"]["desired_heading"] = 180.0.into();
-                });
-                set_battle_visibility(
-                    &mut base,
-                    id,
-                    BattleVisibility {
-                        clairvoyant: true,
-                        invisible: false,
-                    },
-                )
-                .unwrap();
+                id,
+                BattleVisibility {
+                    clairvoyant: true,
+                    invisible: false,
+                },
+            )
+            .unwrap();
+        }
+        acquire(&mut base, shooter, target);
+        select_battle_target(&mut base, shooter, ObjectId(1), Some(target)).unwrap();
+        for (shape, (smart, near_miss)) in
+            [(false, false), (true, false), (false, true), (true, true)]
+                .into_iter()
+                .enumerate()
+        {
+            let mut world = base.clone();
+            if smart {
+                toggle_battle_swarm(&mut world, shooter, ObjectId(1), 0, true).unwrap();
             }
-            acquire(&mut base, shooter, target);
-            select_battle_target(&mut base, shooter, ObjectId(1), Some(target)).unwrap();
-            for (smart, near_miss) in [(false, false), (true, false), (false, true), (true, true)] {
-                let mut world = base.clone();
-                if smart {
-                    toggle_battle_swarm(&mut world, shooter, ObjectId(1), 0, true).unwrap();
-                }
-                edit(&mut world, shooter, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded(if near_miss {
-                        near_attack
-                    } else {
-                        attack
-                    }))
-                    .unwrap()
-                });
-                edit(&mut world, target, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded(preparation)).unwrap()
-                });
-                dice(&mut world, second, 2);
-                dice(&mut world, third, 12);
-                let mut ordinary = world.clone();
-                roll_unit_dice(&mut ordinary, target, 2).unwrap();
-                let section = if world.btech.vehicles().contains_key(&target) {
-                    "as"
+            edit(&mut world, shooter, |state| {
+                state["dice"] = serde_json::to_value(BattleDice::seeded(if near_miss {
+                    near_attack
                 } else {
-                    "h"
-                };
-                set_battle_aimed_section(&mut world, shooter, ObjectId(1), Some(section)).unwrap();
-                let mut rules = shot_rules();
-                if near_miss {
-                    rules.glancing = BattleGlancingMode::BelowTarget;
-                }
-                let report = fire_with_rules(&mut world, shooter, target, rules).unwrap();
-                let baseline = fire_with_rules(&mut ordinary, shooter, target, rules).unwrap();
-                if near_miss {
-                    assert!(report.hops[1].salvo.is_none());
-                    assert_eq!(report.hops[1].roll, 2);
-                    assert_eq!(report.hops[1].remaining, 14);
-                    assert_eq!(report.hops[2].incoming, 14);
-                }
-                assert_eq!(report, baseline);
-                assert_eq!(
-                    report.hops.iter().map(|hop| hop.target).collect::<Vec<_>>(),
-                    [target, second, third]
-                );
-                assert_eq!(report.hops[1].incoming, 14);
-                assert_eq!(report.remaining, 0);
-                let mut actual = serde_json::to_value(&world.btech).unwrap();
-                let key = if world.btech.vehicles().contains_key(&shooter) {
-                    "vehicles"
+                    attack
+                }))
+                .unwrap()
+            });
+            edit(&mut world, target, |state| {
+                state["dice"] = serde_json::to_value(BattleDice::seeded(preparation)).unwrap()
+            });
+            dice(&mut world, second, 2);
+            dice(&mut world, third, 12);
+            let mut ordinary = world.clone();
+            roll_unit_dice(&mut ordinary, target, 2).unwrap();
+            let section = if world.btech.vehicles().contains_key(&target) {
+                "as"
+            } else {
+                "h"
+            };
+            set_battle_aimed_section(&mut world, shooter, ObjectId(1), Some(section)).unwrap();
+            let mut rules = shot_rules();
+            if near_miss {
+                rules.glancing = BattleGlancingMode::BelowTarget;
+            }
+            let report = fire_with_rules(&mut world, shooter, target, rules).unwrap();
+            let baseline = fire_with_rules(&mut ordinary, shooter, target, rules).unwrap();
+            if near_miss {
+                assert!(report.hops[1].salvo.is_none());
+                assert_eq!(report.hops[1].roll, 2);
+                assert_eq!(report.hops[1].remaining, 14);
+                assert_eq!(report.hops[2].incoming, 14);
+            }
+            assert_eq!(report, baseline);
+            assert_eq!(
+                report.hops.iter().map(|hop| hop.target).collect::<Vec<_>>(),
+                [target, second, third]
+            );
+            assert_eq!(report.hops[1].incoming, 14);
+            assert_eq!(report.remaining, 0);
+            let mut actual = serde_json::to_value(&world.btech).unwrap();
+            let key = if world.btech.vehicles().contains_key(&shooter) {
+                "vehicles"
+            } else {
+                "constructed"
+            };
+            actual[key][shooter.0.to_string()]["aimed_section"] = serde_json::Value::Null;
+            assert_eq!(actual, serde_json::to_value(&ordinary.btech).unwrap());
+            for id in [target, second, third] {
+                let recycle = if let Some(unit) = world.btech.vehicles().get(&id) {
+                    unit.weapon_recycle()
                 } else {
-                    "constructed"
+                    world.btech.constructed_units()[&id].weapon_recycle()
                 };
-                actual[key][shooter.0.to_string()]["aimed_section"] = serde_json::Value::Null;
-                assert_eq!(actual, serde_json::to_value(&ordinary.btech).unwrap());
-                for id in [target, second, third] {
-                    let recycle = if let Some(unit) = world.btech.vehicles().get(&id) {
-                        unit.weapon_recycle()
-                    } else {
-                        world.btech.constructed_units()[&id].weapon_recycle()
-                    };
-                    assert!(recycle.is_empty(), "Swarm must not activate AMS on any hop");
-                }
+                assert!(recycle.is_empty(), "Swarm must not activate AMS on any hop");
+            }
+            // Fidelity probe once per flight shape per shard.
+            if !probed_fidelity[shape] {
+                probed_fidelity[shape] = true;
                 persistence::save(&config.database(), &world).await.unwrap();
                 assert_eq!(
                     persistence::load(&config.database()).await.unwrap().btech,
@@ -932,6 +946,42 @@ async fn aimed_swarm_prepares_once_across_defended_immobile_targets() {
             }
         }
     }
+}
+
+/// One shard per shooter chassis; templates are listed in `templates`.
+#[tokio::test]
+async fn aimed_swarm_prepares_once_across_defended_immobile_targets_01() {
+    aimed_swarm_matrix(&templates()[0]).await;
+}
+
+#[tokio::test]
+async fn aimed_swarm_prepares_once_across_defended_immobile_targets_02() {
+    aimed_swarm_matrix(&templates()[1]).await;
+}
+
+#[tokio::test]
+async fn aimed_swarm_prepares_once_across_defended_immobile_targets_03() {
+    aimed_swarm_matrix(&templates()[2]).await;
+}
+
+#[tokio::test]
+async fn aimed_swarm_prepares_once_across_defended_immobile_targets_04() {
+    aimed_swarm_matrix(&templates()[3]).await;
+}
+
+#[tokio::test]
+async fn aimed_swarm_prepares_once_across_defended_immobile_targets_05() {
+    aimed_swarm_matrix(&templates()[4]).await;
+}
+
+#[tokio::test]
+async fn aimed_swarm_prepares_once_across_defended_immobile_targets_06() {
+    aimed_swarm_matrix(&templates()[5]).await;
+}
+
+#[tokio::test]
+async fn aimed_swarm_prepares_once_across_defended_immobile_targets_07() {
+    aimed_swarm_matrix(&templates()[6]).await;
 }
 
 /// Later Swarm targets retain private checks through hop and launcher feedback prefixes.

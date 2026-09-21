@@ -120,98 +120,103 @@ fn atm_profiles_tables_and_ammunition_markers() {
 }
 
 /// Both native selectors and Lua calls use the same saved ammo mode and match the same supplied bin.
-#[tokio::test]
-async fn atm_modes_firing_and_restart_across_chassis() {
+async fn atm_modes_matrix(weapon: BattleWeapon) {
+    let seed = (0..=255)
+        .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
+        .unwrap();
+    let (_dir, config, base) = support::isolated_world().await;
+    let native = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
+    let lua = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
+    let pristine_db = support::snapshot_database(&config);
+    let mut probed_fidelity = [false; 2];
     for source in firing::templates() {
-        for weapon in [
-            BattleWeapon::ClanAtm3,
-            BattleWeapon::ClanAtm6,
-            BattleWeapon::ClanAtm9,
-            BattleWeapon::ClanAtm12,
-        ] {
-            for (command, flag, mode) in [
-                (
-                    "atmrange",
-                    "ExtendedRange",
-                    BattleAmmunitionMode::ExtendedRange,
-                ),
-                (
-                    "atmexplosive",
-                    "HighExplosive",
-                    BattleAmmunitionMode::HighExplosive,
-                ),
-            ] {
-                let (_dir, config, mut world, shooter, target, index) =
-                    firing::fixture_with_supply(
-                        &source,
-                        Some(weapon),
-                        include_str!("../game/mechs/AS7-D"),
-                        false,
-                        Some(flag),
-                    )
-                    .await;
-                let seed = (0..=255)
-                    .find(|seed| BattleDice::seeded([*seed; 32]).two_d6() == 12)
-                    .unwrap();
-                firing::edit(&mut world, shooter, |state| {
-                    state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
-                });
-                let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-                let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-                let before = lua.world().btech.clone();
-                let call = format!("btech.unit.{command}({},1,{index})", shooter.0);
-                assert!(
-                    lua.eval_callback::<()>(&format!("{call}; error('abort')"))
-                        .is_err()
-                );
-                assert_eq!(lua.world().btech, before);
-                assert!(lua.drain_outbox().is_empty());
-                let actual: String = lua.eval_callback(&format!("return {call}")).unwrap();
-                assert_eq!(
-                    actual,
-                    serde_json::to_value(mode).unwrap().as_str().unwrap()
-                );
-                let output = support::run_text(
-                    &native,
-                    &config,
-                    ObjectId(1),
-                    1,
-                    &format!("{command} {index}"),
-                );
-                assert!(output.contains("set to fire"), "{output}");
-                assert_eq!(native.world().btech, lua.world().btech);
-                let fire = format!("btech.unit.fire({},1,{index},{})", shooter.0, target.0);
-                let selected = lua.world().btech.clone();
-                assert!(
-                    lua.eval_callback::<()>(&format!("{fire}; error('abort')"))
-                        .is_err()
-                );
-                assert_eq!(lua.world().btech, selected);
-                let report: mlua::Table = lua.eval_callback(&format!("return {fire}")).unwrap();
-                let launch = report
-                    .get::<Option<mlua::Table>>("launch")
-                    .unwrap()
-                    .unwrap_or(report);
-                let expenditure: mlua::Table = launch.get("expenditure").unwrap();
-                assert_eq!(
-                    expenditure.get::<u8>("heat").unwrap(),
-                    weapon.profile().heat
-                );
-                assert_eq!(
-                    expenditure.get::<String>("ammunition_mode").unwrap(),
-                    actual
-                );
-                let draws: mlua::Table = expenditure.get("ammunition").unwrap();
-                assert_eq!(draws.raw_len(), 1);
-                commands::run(
-                    &native,
-                    &config,
-                    ObjectId(1),
-                    1,
-                    &format!("fire {index} #{}", target.0),
-                )
-                .unwrap();
-                assert_eq!(native.world().btech, lua.world().btech);
+        for (shape, (command, flag, mode)) in [
+            (
+                "atmrange",
+                "ExtendedRange",
+                BattleAmmunitionMode::ExtendedRange,
+            ),
+            (
+                "atmexplosive",
+                "HighExplosive",
+                BattleAmmunitionMode::HighExplosive,
+            ),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            support::restore_database(&config, &pristine_db);
+            let (mut world, shooter, target, index) = firing::supply_fixture_on(
+                base.clone(),
+                &config,
+                &source,
+                Some(weapon),
+                include_str!("../game/mechs/AS7-D"),
+                false,
+                Some(flag),
+            );
+            firing::edit(&mut world, shooter, |state| {
+                state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+            });
+            support::install(&native, world.clone());
+            support::install(&lua, world);
+            let before = lua.world().btech.clone();
+            let call = format!("btech.unit.{command}({},1,{index})", shooter.0);
+            assert!(
+                lua.eval_callback::<()>(&format!("{call}; error('abort')"))
+                    .is_err()
+            );
+            assert_eq!(lua.world().btech, before);
+            assert!(lua.drain_outbox().is_empty());
+            let actual: String = lua.eval_callback(&format!("return {call}")).unwrap();
+            assert_eq!(
+                actual,
+                serde_json::to_value(mode).unwrap().as_str().unwrap()
+            );
+            let output = support::run_text(
+                &native,
+                &config,
+                ObjectId(1),
+                1,
+                &format!("{command} {index}"),
+            );
+            assert!(output.contains("set to fire"), "{output}");
+            assert_eq!(native.world().btech, lua.world().btech);
+            let fire = format!("btech.unit.fire({},1,{index},{})", shooter.0, target.0);
+            let selected = lua.world().btech.clone();
+            assert!(
+                lua.eval_callback::<()>(&format!("{fire}; error('abort')"))
+                    .is_err()
+            );
+            assert_eq!(lua.world().btech, selected);
+            let report: mlua::Table = lua.eval_callback(&format!("return {fire}")).unwrap();
+            let launch = report
+                .get::<Option<mlua::Table>>("launch")
+                .unwrap()
+                .unwrap_or(report);
+            let expenditure: mlua::Table = launch.get("expenditure").unwrap();
+            assert_eq!(
+                expenditure.get::<u8>("heat").unwrap(),
+                weapon.profile().heat
+            );
+            assert_eq!(
+                expenditure.get::<String>("ammunition_mode").unwrap(),
+                actual
+            );
+            let draws: mlua::Table = expenditure.get("ammunition").unwrap();
+            assert_eq!(draws.raw_len(), 1);
+            commands::run(
+                &native,
+                &config,
+                ObjectId(1),
+                1,
+                &format!("fire {index} #{}", target.0),
+            )
+            .unwrap();
+            assert_eq!(native.world().btech, lua.world().btech);
+            // Fidelity probe once per ammo mode per shard.
+            if !probed_fidelity[shape] {
+                probed_fidelity[shape] = true;
                 let saved = lua.world().clone();
                 persistence::save(&config.database(), &saved).await.unwrap();
                 assert_eq!(
@@ -221,6 +226,26 @@ async fn atm_modes_firing_and_restart_across_chassis() {
             }
         }
     }
+}
+
+#[tokio::test]
+async fn atm_modes_firing_and_restart_across_chassis_atm3() {
+    atm_modes_matrix(BattleWeapon::ClanAtm3).await;
+}
+
+#[tokio::test]
+async fn atm_modes_firing_and_restart_across_chassis_atm6() {
+    atm_modes_matrix(BattleWeapon::ClanAtm6).await;
+}
+
+#[tokio::test]
+async fn atm_modes_firing_and_restart_across_chassis_atm9() {
+    atm_modes_matrix(BattleWeapon::ClanAtm9).await;
+}
+
+#[tokio::test]
+async fn atm_modes_firing_and_restart_across_chassis_atm12() {
+    atm_modes_matrix(BattleWeapon::ClanAtm12).await;
 }
 
 /// Every supported defender can intercept ATM salvos through the existing AMS path.

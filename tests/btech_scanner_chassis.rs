@@ -148,130 +148,169 @@ async fn fixture(
 }
 
 /// Nine modes on all 49 chassis pairs enter the automatic scanner and retain the same state after restart.
-#[tokio::test]
-async fn automatic_nonvisual_scanning_covers_all_supported_chassis_pairs() {
-    for source in templates() {
-        for target_source in templates() {
-            let (_dir, config, base, observer, target) =
-                fixture(&source, &target_source, 3, false).await;
-            for mode in [
-                BattleSensorMode::Visual,
-                BattleSensorMode::LightAmplification,
-                BattleSensorMode::Infrared,
-                BattleSensorMode::Electromagnetic,
-                BattleSensorMode::Seismic,
-                BattleSensorMode::Radar,
-                BattleSensorMode::BeagleProbe,
-                BattleSensorMode::LightProbe,
-                BattleSensorMode::BloodhoundProbe,
-            ] {
-                let mut world = base.clone();
-                let vtol = world
-                    .btech
-                    .vehicles()
-                    .get(&target)
-                    .is_some_and(|unit| unit.definition().is_vtol());
-                if mode == BattleSensorMode::Radar && vtol {
-                    edit(&mut world, target, |state| {
-                        state["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
-                            phase: BattleVtolFlightPhase::Airborne,
-                            altitude: 5.0,
-                            ..Default::default()
-                        })
-                        .unwrap()
-                    });
-                }
-                edit(&mut world, observer, |state| {
-                    state["sensor_selection"]["active"] = serde_json::to_value(BattleSensorPair {
-                        primary: mode,
-                        secondary: mode,
+async fn automatic_scanning_matrix(source: &str) {
+    for target_source in templates() {
+        let (_dir, config, base, observer, target) =
+            fixture(source, &target_source, 3, false).await;
+        for mode in [
+            BattleSensorMode::Visual,
+            BattleSensorMode::LightAmplification,
+            BattleSensorMode::Infrared,
+            BattleSensorMode::Electromagnetic,
+            BattleSensorMode::Seismic,
+            BattleSensorMode::Radar,
+            BattleSensorMode::BeagleProbe,
+            BattleSensorMode::LightProbe,
+            BattleSensorMode::BloodhoundProbe,
+        ] {
+            let mut world = base.clone();
+            let vtol = world
+                .btech
+                .vehicles()
+                .get(&target)
+                .is_some_and(|unit| unit.definition().is_vtol());
+            if mode == BattleSensorMode::Radar && vtol {
+                edit(&mut world, target, |state| {
+                    state["vtol_flight"] = serde_json::to_value(BattleVtolFlight {
+                        phase: BattleVtolFlightPhase::Airborne,
+                        altitude: 5.0,
+                        ..Default::default()
                     })
                     .unwrap()
                 });
-                assert!(
-                    optical_scanner_observers(&world).contains(&observer),
-                    "{mode:?} must enter the scanner"
-                );
-                let expected = match mode {
-                    BattleSensorMode::Radar => vtol,
-                    BattleSensorMode::Seismic => {
-                        world.btech.vehicles().get(&target).is_none_or(|unit| {
-                            !matches!(
-                                unit.definition().movement,
-                                BattleVehicleMovement::Hover | BattleVehicleMovement::Stationary
-                            )
-                        })
-                    }
-                    _ => true,
-                };
-                assert_eq!(
-                    battle_map_optical_contact(&world, observer, target, mode, false, false)
-                        .unwrap()
-                        .eligible,
-                    expected,
-                    "{mode:?}"
-                );
-                if expected {
-                    let seed = (0..=255)
-                        .find(|value| {
-                            let mut trial = world.clone();
-                            edit(&mut trial, observer, |state| {
-                                state["dice"] =
-                                    serde_json::to_value(BattleDice::seeded([*value; 32])).unwrap()
-                            });
-                            scan_battle_optical_target(
-                                &mut trial,
-                                observer,
-                                target,
-                                BattleSensorScan {
-                                    primary: mode,
-                                    secondary: mode,
-                                    visual_disabled: false,
-                                    amplification_disabled: false,
-                                    perception: 18,
-                                    target: BattleScanTarget {
-                                        lit: false,
-                                        hostile: false,
-                                        hidden: false,
-                                    },
-                                },
-                            )
-                            .unwrap()
-                            .detected_by
-                            .is_some()
-                        })
-                        .unwrap();
-                    edit(&mut world, observer, |state| {
-                        state["dice"] =
-                            serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
-                    });
-                }
-                persistence::save(&config.database(), &world).await.unwrap();
-                let mut replay = persistence::load(&config.database()).await.unwrap();
-                configure_battle_sensor_policy(&mut replay, true);
-                let events = refresh_optical_scanners(&mut world, &[observer]).unwrap();
-                assert_eq!(
-                    events
-                        .iter()
-                        .any(|event| event.target == target && event.acquired),
-                    expected,
-                    "{mode:?}"
-                );
-                assert_eq!(
-                    events,
-                    refresh_optical_scanners(&mut replay, &[observer]).unwrap()
-                );
-                assert_eq!(world.btech, replay.btech);
-                assert_eq!(
-                    visible_battle_contact(&world, observer, target)
-                        .unwrap()
-                        .is_some(),
-                    expected
-                );
-                world.validate(&config).unwrap();
             }
+            edit(&mut world, observer, |state| {
+                state["sensor_selection"]["active"] = serde_json::to_value(BattleSensorPair {
+                    primary: mode,
+                    secondary: mode,
+                })
+                .unwrap()
+            });
+            assert!(
+                optical_scanner_observers(&world).contains(&observer),
+                "{mode:?} must enter the scanner"
+            );
+            let expected = match mode {
+                BattleSensorMode::Radar => vtol,
+                BattleSensorMode::Seismic => {
+                    world.btech.vehicles().get(&target).is_none_or(|unit| {
+                        !matches!(
+                            unit.definition().movement,
+                            BattleVehicleMovement::Hover | BattleVehicleMovement::Stationary
+                        )
+                    })
+                }
+                _ => true,
+            };
+            assert_eq!(
+                battle_map_optical_contact(&world, observer, target, mode, false, false)
+                    .unwrap()
+                    .eligible,
+                expected,
+                "{mode:?}"
+            );
+            if expected {
+                // Serialize once per scenario; each trial only swaps the observer dice.
+                let template = serde_json::to_value(&world.btech).unwrap();
+                let key = if world.btech.vehicles().contains_key(&observer) {
+                    "vehicles"
+                } else {
+                    "constructed"
+                };
+                let seed = (0..=255)
+                    .find(|value| {
+                        let mut state = template.clone();
+                        state[key][observer.0.to_string()]["dice"] =
+                            serde_json::to_value(BattleDice::seeded([*value; 32])).unwrap();
+                        let mut trial = world.clone();
+                        trial.btech = serde_json::from_value(state).unwrap();
+                        scan_battle_optical_target(
+                            &mut trial,
+                            observer,
+                            target,
+                            BattleSensorScan {
+                                primary: mode,
+                                secondary: mode,
+                                visual_disabled: false,
+                                amplification_disabled: false,
+                                perception: 18,
+                                target: BattleScanTarget {
+                                    lit: false,
+                                    hostile: false,
+                                    hidden: false,
+                                },
+                            },
+                        )
+                        .unwrap()
+                        .detected_by
+                        .is_some()
+                    })
+                    .unwrap();
+                edit(&mut world, observer, |state| {
+                    state["dice"] = serde_json::to_value(BattleDice::seeded([seed; 32])).unwrap()
+                });
+            }
+            persistence::save(&config.database(), &world).await.unwrap();
+            let mut replay = persistence::load(&config.database()).await.unwrap();
+            configure_battle_sensor_policy(&mut replay, true);
+            let events = refresh_optical_scanners(&mut world, &[observer]).unwrap();
+            assert_eq!(
+                events
+                    .iter()
+                    .any(|event| event.target == target && event.acquired),
+                expected,
+                "{mode:?}"
+            );
+            assert_eq!(
+                events,
+                refresh_optical_scanners(&mut replay, &[observer]).unwrap()
+            );
+            assert_eq!(world.btech, replay.btech);
+            assert_eq!(
+                visible_battle_contact(&world, observer, target)
+                    .unwrap()
+                    .is_some(),
+                expected
+            );
+            world.validate(&config).unwrap();
         }
     }
+}
+
+/// One shard per observer chassis; templates are listed in `templates`.
+#[tokio::test]
+async fn automatic_nonvisual_scanning_covers_all_supported_chassis_pairs_01() {
+    automatic_scanning_matrix(&templates()[0]).await;
+}
+
+#[tokio::test]
+async fn automatic_nonvisual_scanning_covers_all_supported_chassis_pairs_02() {
+    automatic_scanning_matrix(&templates()[1]).await;
+}
+
+#[tokio::test]
+async fn automatic_nonvisual_scanning_covers_all_supported_chassis_pairs_03() {
+    automatic_scanning_matrix(&templates()[2]).await;
+}
+
+#[tokio::test]
+async fn automatic_nonvisual_scanning_covers_all_supported_chassis_pairs_04() {
+    automatic_scanning_matrix(&templates()[3]).await;
+}
+
+#[tokio::test]
+async fn automatic_nonvisual_scanning_covers_all_supported_chassis_pairs_05() {
+    automatic_scanning_matrix(&templates()[4]).await;
+}
+
+#[tokio::test]
+async fn automatic_nonvisual_scanning_covers_all_supported_chassis_pairs_06() {
+    automatic_scanning_matrix(&templates()[5]).await;
+}
+
+#[tokio::test]
+async fn automatic_nonvisual_scanning_covers_all_supported_chassis_pairs_07() {
+    automatic_scanning_matrix(&templates()[6]).await;
 }
 
 /// Fixed probes extend their reach; the shared LOS ceiling still bounds both mobile and fixed radar.

@@ -57,8 +57,30 @@ pub async fn fixture_with_supply(
     computer: bool,
     ammunition_flag: Option<&str>,
 ) -> (tempfile::TempDir, Config, World, ObjectId, ObjectId, usize) {
-    let (dir, config, mut world) = support::isolated_world().await;
-    let map = world.create(&config, "Sight lane".into(), Kind::Room);
+    let (dir, config, world) = support::isolated_world().await;
+    let (world, shooter, target, index) = supply_fixture_on(
+        world,
+        &config,
+        source,
+        weapon,
+        target_source,
+        computer,
+        ammunition_flag,
+    );
+    (dir, config, world, shooter, target, index)
+}
+
+/// Construct the sighting lane, shooter and target on a supplied base world.
+pub fn supply_fixture_on(
+    mut world: World,
+    config: &Config,
+    source: &str,
+    weapon: Option<BattleWeapon>,
+    target_source: &str,
+    computer: bool,
+    ammunition_flag: Option<&str>,
+) -> (World, ObjectId, ObjectId, usize) {
+    let map = world.create(config, "Sight lane".into(), Kind::Room);
     create_battle_map(
         &mut world,
         map,
@@ -127,8 +149,8 @@ pub async fn fixture_with_supply(
             );
         }
     }
-    let shooter = world.create(&config, "Sighter".into(), Kind::Thing);
-    let target = world.create(&config, "Target".into(), Kind::Thing);
+    let shooter = world.create(config, "Sighter".into(), Kind::Thing);
+    let target = world.create(config, "Target".into(), Kind::Thing);
     for id in [shooter, target] {
         world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
     }
@@ -169,6 +191,6 @@ pub async fn fixture_with_supply(
     } else {
         0
     };
-    world.validate(&config).unwrap();
-    (dir, config, world, shooter, target, index)
+    world.validate(config).unwrap();
+    (world, shooter, target, index)
 }

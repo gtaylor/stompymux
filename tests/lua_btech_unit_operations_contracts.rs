@@ -325,6 +325,12 @@ async fn off_map_vehicle_piloting_failure_still_applies_fall_damage() {
     let pilot = world.create(&config, "Pilot".into(), Kind::Player);
     world.objects.get_mut(&pilot).unwrap().location = Some(id);
     assign_battle_pilot(&mut world, id, pilot).unwrap();
+    // Pin the fall dice: fresh streams are random, and occasionally route the
+    // off-map fall through a critical or injury path, breaking the exact
+    // eight-point full-damage contract asserted below.
+    firing::edit(&mut world, id, |state| {
+        state["dice"] = serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
+    });
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
         .inspect_lua()
@@ -485,6 +491,12 @@ async fn signed_integer_boundaries_and_array_holes_follow_c_contracts() {
         BattleTemplate::parse(include_str!("../game/mechs/JR7-D")).unwrap(),
     )
     .unwrap();
+    // Pin the fall dice: fresh streams are random, and about one run in thirty
+    // routes a five-point fall group into a through-armor critical (hit roll 2
+    // with a d12 confirmation), breaking the exact tonnage contract below.
+    firing::edit(&mut world, id, |state| {
+        state["dice"] = serde_json::to_value(BattleDice::seeded([42; 32])).unwrap();
+    });
     let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
     scripts
         .inspect_lua()

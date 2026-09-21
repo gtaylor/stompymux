@@ -25,6 +25,9 @@ fn scripts(config: &Config, world: &World) -> Scripts {
 async fn sight_all_chassis_targets_preserve_state_and_replay() {
     for source in templates() {
         let (_dir, config, base, shooter, target, index) = fixture(&source, None).await;
+        let lua = scripts(&config, &base);
+        let native = scripts(&config, &base);
+        let pristine_db = support::snapshot_database(&config);
         for condition in ["normal", "recycle", "empty", "hidden", "hiding", "hold"] {
             let mut world = base.clone();
             edit(&mut world, shooter, |state| match condition {
@@ -50,7 +53,7 @@ async fn sight_all_chassis_targets_preserve_state_and_replay() {
                 ("{x=0,y=9}".into(), "0 9".into(), None),
                 ("{x=0,y=0}".into(), "0 0".into(), None),
             ] {
-                let lua = scripts(&config, &world);
+                support::install(&lua, world.clone());
                 let before = lua.world().clone();
                 let command = format!("btech.unit.sight({},1,{index},{lua_target})", shooter.0);
                 assert!(
@@ -59,11 +62,12 @@ async fn sight_all_chassis_targets_preserve_state_and_replay() {
                 );
                 assert_eq!(lua.world().btech, before.btech);
                 assert!(lua.drain_outbox().is_empty());
+                support::restore_database(&config, &pristine_db);
                 persistence::save(&config.database(), &before)
                     .await
                     .unwrap();
                 let restored = persistence::load(&config.database()).await.unwrap();
-                let native = scripts(&config, &restored);
+                support::install(&native, restored);
                 let actual: (u8, Option<i64>) = lua
                     .eval_callback(&format!("local r={command}; return r.roll,r.target"))
                     .unwrap();

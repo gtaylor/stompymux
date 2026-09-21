@@ -16,11 +16,83 @@ fn field<'a>(report: &'a BattleUnitFieldReport, name: &str) -> Option<&'a str> {
         .as_deref()
 }
 
-#[tokio::test]
-async fn all_chassis_field_reports_share_live_values_native_lua_and_restart() {
+/// One shared fixture, VM pair and database snapshot per harness; scenarios
+/// install prepared worlds, per the sandbox-reuse convention. Panic messages
+/// carry the chassis template so failures stay attributable.
+struct UnitFields {
+    _dir: tempfile::TempDir,
+    config: Config,
+    base: World,
+    native: Scripts,
+    lua: Scripts,
+    pristine_db: std::path::PathBuf,
+}
+
+impl UnitFields {
+    async fn new() -> Self {
+        let (_dir, config, base) = support::isolated_world().await;
+        let native = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
+        let lua = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
+        let pristine_db = support::snapshot_database(&config);
+        Self {
+            _dir,
+            config,
+            base,
+            native,
+            lua,
+            pristine_db,
+        }
+    }
+
+    /// Fresh scenario world for a chassis pair over the shared fixture.
+    fn world(&self, source: &str) -> (World, ObjectId, ObjectId, usize) {
+        self.pair(source, source)
+    }
+
+    /// Fresh scenario world with an explicit target template over the shared fixture.
+    fn pair(&self, source: &str, target: &str) -> (World, ObjectId, ObjectId, usize) {
+        support::restore_database(&self.config, &self.pristine_db);
+        firing::supply_fixture_on(
+            self.base.clone(),
+            &self.config,
+            source,
+            None,
+            target,
+            false,
+            None,
+        )
+    }
+
+    /// Fresh scenario world with an injected weapon, optional computer and ammo flag.
+    fn supply(
+        &self,
+        source: &str,
+        weapon: Option<BattleWeapon>,
+        target_source: &str,
+        ammunition_flag: Option<&str>,
+    ) -> (World, ObjectId, ObjectId, usize) {
+        support::restore_database(&self.config, &self.pristine_db);
+        firing::supply_fixture_on(
+            self.base.clone(),
+            &self.config,
+            source,
+            weapon,
+            target_source,
+            false,
+            ammunition_flag,
+        )
+    }
+
+    fn install(&self, world: &World) {
+        support::install(&self.native, world.clone());
+        support::install(&self.lua, world.clone());
+    }
+}
+
+async fn all_chassis_field_reports_scenario(f: &UnitFields) {
+    let config = &f.config;
     for (index, source) in firing::templates().into_iter().enumerate() {
-        let (_dir, config, mut world, id, target, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (mut world, id, target, _) = f.world(&source);
         set_battle_unit_experience(
             &mut world,
             id,
@@ -31,8 +103,9 @@ async fn all_chassis_field_reports_share_live_values_native_lua_and_restart() {
         )
         .unwrap();
         let before = world.btech.clone();
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         let report = view_battle_unit_fields_action(&native, &config, ObjectId(1), id, "").unwrap();
         let lua_report: mlua::Table = lua
             .eval_callback(&format!("return btech.unit.fields(1,{})", id.0))
@@ -91,11 +164,10 @@ async fn all_chassis_field_reports_share_live_values_native_lua_and_restart() {
     }
 }
 
-#[tokio::test]
-async fn field_layout_filters_permissions_and_callback_failure_preserve_state_and_output() {
+async fn field_layout_filters_scenario(f: &UnitFields) {
     let sources = firing::templates();
-    let (_dir, config, mut world, id, _, _) =
-        firing::fixture_with_target(&sources[0], None, &sources[0]).await;
+    let config = &f.config;
+    let (mut world, id, _, _) = f.world(&sources[0]);
     world
         .objects
         .get_mut(&ObjectId(2))
@@ -103,7 +175,8 @@ async fn field_layout_filters_permissions_and_callback_failure_preserve_state_an
         .flags
         .remove(Flag::Wizard);
     world.objects.get_mut(&id).unwrap().name = "[fg=red]Hostile name[reset]".into();
-    let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+    let scripts = &f.native;
+    support::install(scripts, world.clone());
     let before = serde_json::to_value(&*scripts.world()).unwrap();
     for (query, columns, names) in [
         ("1XP", 1, vec!["xpmod"]),
@@ -160,13 +233,13 @@ async fn field_layout_filters_permissions_and_callback_failure_preserve_state_an
     assert_eq!(serde_json::to_value(&*scripts.world()).unwrap(), before);
 }
 
-#[tokio::test]
-async fn named_edits_share_validation_native_lua_and_transaction_rollback() {
+async fn named_edits_share_validation_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let (world, id, _, _) = f.world(&source);
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         for (name, value) in [("TEAM", "-7"), ("xpmod", "2.5")] {
             let command = format!("@setmech {name} {value}");
             assert!(support::run_text(&native, &config, ObjectId(1), 1, &command).is_empty());
@@ -213,12 +286,12 @@ async fn named_edits_share_validation_native_lua_and_transaction_rollback() {
     }
 }
 
-#[tokio::test]
-async fn detached_field_geometry_retains_scenario_pose_and_allows_administrative_edits() {
+async fn detached_field_geometry_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let (world, id, _, _) = f.world(&source);
+        let scripts = &f.native;
+        support::install(scripts, world.clone());
         scripts
             .eval_callback::<()>(&format!(
                 "btech.unit.setxy(1,{},0,9,7); btech.unit.setmapindex(1,{},-1)",
@@ -242,11 +315,10 @@ async fn detached_field_geometry_retains_scenario_pose_and_allows_administrative
     }
 }
 
-#[tokio::test]
-async fn special_field_commands_delegate_to_existing_map_station_and_unit_services() {
+async fn special_field_commands_scenario(f: &UnitFields) {
     let sources = firing::templates();
-    let (_dir, config, mut world, unit, _, _) =
-        firing::fixture_with_target(&sources[0], None, &sources[0]).await;
+    let config = &f.config;
+    let (mut world, unit, _, _) = f.world(&sources[0]);
     let map = world.btech.constructed_units()[&unit]
         .position()
         .unwrap()
@@ -267,8 +339,10 @@ async fn special_field_commands_delegate_to_existing_map_station_and_unit_servic
     ] {
         let mut base = world.clone();
         base.objects.get_mut(&ObjectId(1)).unwrap().location = Some(id);
-        let specific = Scripts::new(&config, Rc::new(RefCell::new(base.clone()))).unwrap();
-        let generic = Scripts::new(&config, Rc::new(RefCell::new(base))).unwrap();
+        let specific = &f.native;
+        let generic = &f.lua;
+        support::install(specific, base.clone());
+        support::install(generic, base.clone());
         let expected = support::run_text(
             &specific,
             &config,
@@ -302,11 +376,12 @@ async fn special_field_commands_delegate_to_existing_map_station_and_unit_servic
     }
 }
 
-#[tokio::test]
-async fn hardware_fields_share_gameplay_ranges_and_vtol_fuel_edits_are_atomic() {
+async fn hardware_fields_share_gameplay_ranges_and_vtol_fuel_edits_are_atomic_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (world, id, _, _) = f.pair(&source, &source);
         let ranges = world.btech.constructed_units().get(&id).map_or_else(
             || world.btech.vehicles()[&id].sensor_ranges(),
             BattleUnit::sensor_ranges,
@@ -320,7 +395,8 @@ async fn hardware_fields_share_gameplay_ranges_and_vtol_fuel_edits_are_atomic() 
             .vehicles()
             .get(&id)
             .and_then(BattleVehicle::vtol_fuel);
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let scripts = &f.native;
+        support::install(scripts, world.clone());
         let report =
             view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "").unwrap();
         for (name, expected) in [
@@ -373,13 +449,15 @@ async fn hardware_fields_share_gameplay_ranges_and_vtol_fuel_edits_are_atomic() 
     }
 }
 
-#[tokio::test]
-async fn identity_edits_preserve_combat_state_and_survive_restart_for_every_chassis() {
+async fn identity_edits_preserve_combat_state_and_survive_restart_for_every_chassis_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let (world, id, _, _) = f.pair(&source, &source);
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         let before = serde_json::to_value(&native.world().btech).unwrap();
         let name = "Custom %cr name with spaces";
         let reference = "CUSTOM-1";
@@ -443,13 +521,13 @@ async fn identity_edits_preserve_combat_state_and_survive_restart_for_every_chas
     }
 }
 
-#[tokio::test]
-async fn runtime_hardware_zeroes_change_gameplay_and_survive_restart() {
+async fn runtime_hardware_zeroes_change_gameplay_and_survive_restart_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let (world, id, _, _) = f.pair(&source, &source);
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         for (name, value) in [
             ("tacrange", "0"),
             ("lrsrange", "17"),
@@ -528,15 +606,17 @@ async fn runtime_hardware_zeroes_change_gameplay_and_survive_restart() {
     }
 }
 
-#[tokio::test]
-async fn thermal_fields_retain_committed_samples_and_share_cooling_with_status() {
+async fn thermal_fields_retain_committed_samples_and_share_cooling_with_status_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for (index, source) in firing::templates().into_iter().enumerate() {
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (mut world, id, _, _) = f.pair(&source, &source);
         if index < 2 {
             firing::edit(&mut world, id, |unit| unit["heat"]["stored"] = 40.0.into());
         }
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let scripts = &f.native;
+        support::install(scripts, world.clone());
         let initial =
             view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "").unwrap();
         assert_eq!(field(&initial, "heat"), Some("0.00"));
@@ -607,16 +687,18 @@ async fn thermal_fields_retain_committed_samples_and_share_cooling_with_status()
     }
 }
 
-#[tokio::test]
-async fn thermal_edits_share_native_lua_validation_and_preserve_stored_heat() {
+async fn thermal_edits_share_native_lua_validation_and_preserve_stored_heat_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for (index, source) in firing::templates().into_iter().enumerate() {
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (mut world, id, _, _) = f.pair(&source, &source);
         if index < 2 {
             firing::edit(&mut world, id, |unit| unit["heat"]["stored"] = 40.0.into());
         }
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         if index >= 2 {
             let before = native.world().btech.clone();
             for field in ["heat", "dissheat", "overheat", "disabled_hs"] {
@@ -692,11 +774,12 @@ async fn thermal_edits_share_native_lua_validation_and_preserve_stored_heat() {
     }
 }
 
-#[tokio::test]
-async fn navigation_and_sensor_fields_share_live_services_without_advancing_them() {
+async fn navigation_and_sensor_fields_share_live_services_without_advancing_them_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (mut world, id, _, _) = f.pair(&source, &source);
         let center = BattleHexCoordinate { x: 0, y: 11 }.center();
         firing::edit(&mut world, id, |unit| {
             unit["motion"]["point"] =
@@ -713,7 +796,8 @@ async fn navigation_and_sensor_fields_share_live_services_without_advancing_them
             },
         )
         .unwrap();
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let scripts = &f.native;
+        support::install(scripts, world.clone());
         let before = scripts.world().btech.clone();
         let report =
             view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "").unwrap();
@@ -750,14 +834,16 @@ async fn navigation_and_sensor_fields_share_live_services_without_advancing_them
     }
 }
 
-#[tokio::test]
-async fn authored_and_edited_metadata_share_validation_across_chassis_and_restart() {
+async fn authored_and_edited_metadata_share_validation_across_chassis_and_restart_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for source in firing::templates() {
         let source = format!("{source}\nUnit_Era {{ Clan Invasion }}\nUnit_TRO {{ TRO 3050 }}\n");
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let (world, id, _, _) = f.pair(&source, &source);
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         let original =
             view_battle_unit_fields_action(&native, &config, ObjectId(1), id, "unit_").unwrap();
         assert_eq!(field(&original, "unit_era"), Some("Clan Invasion"));
@@ -812,13 +898,15 @@ async fn authored_and_edited_metadata_share_validation_across_chassis_and_restar
     }
 }
 
-#[tokio::test]
-async fn enemy_contact_count_follows_acquisition_and_teams_without_rescanning() {
+async fn enemy_contact_count_follows_acquisition_and_teams_without_rescanning_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     let sources = firing::templates();
     for (index, source) in sources.iter().enumerate() {
-        let (_dir, config, world, id, target, _) =
-            firing::fixture_with_target(source, None, &sources[(index + 1) % sources.len()]).await;
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let (world, id, target, _) = f.pair(source, &sources[(index + 1) % sources.len()]);
+        let scripts = &f.native;
+        support::install(scripts, world.clone());
         for (edited, team, expected) in [
             (target, "0", "0"),
             (target, "1", "1"),
@@ -862,13 +950,15 @@ async fn enemy_contact_count_follows_acquisition_and_teams_without_rescanning() 
     }
 }
 
-#[tokio::test]
-async fn explicit_cockpit_links_share_named_edits_and_preserve_deferred_references() {
+async fn explicit_cockpit_links_share_named_edits_and_preserve_deferred_references_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, target, _) =
-            firing::fixture_with_target(&source, None, &source).await;
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let (world, id, target, _) = f.pair(&source, &source);
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         for (name, value) in [
             ("turret0", target.0.to_string()),
             ("turret1", id.0.to_string()),
@@ -927,15 +1017,17 @@ async fn explicit_cockpit_links_share_named_edits_and_preserve_deferred_referenc
 }
 
 /// Presentation overrides preserve template identity, share contact naming, and survive restart.
-#[tokio::test]
-async fn display_name_edits_share_chassis_reports_and_restore_template_fallback() {
+async fn display_name_edits_share_chassis_reports_and_restore_template_fallback_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, target, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (world, id, target, _) = f.pair(&source, &source);
         let original_status = battle_unit_status(&world, id, "").unwrap();
         let before = serde_json::to_value(&world.btech).unwrap();
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         assert_eq!(battle_display_name(&native.world(), id).unwrap(), "");
         assert!(
             support::run_text(
@@ -1037,13 +1129,15 @@ async fn display_name_edits_share_chassis_reports_and_restore_template_fallback(
 }
 
 /// Startup history changes only at completion, across chassis, interruption and database reload.
-#[tokio::test]
-async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_history() {
+async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_history_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let (world, id, _, _) = f.pair(&source, &source);
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         assert!(
             support::run_text(
                 &native,
@@ -1144,7 +1238,8 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
             )
             .unwrap();
         }
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let scripts = &f.native;
+        support::install(scripts, world.clone());
         let report =
             view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "last_startup")
                 .unwrap();
@@ -1153,11 +1248,10 @@ async fn startup_history_uses_supplied_completion_time_and_preserves_aborted_his
 }
 
 /// Administrative bitvectors and cockpit commands mutate one set of gameplay preferences.
-#[tokio::test]
-async fn preference_fields_share_cockpit_state_validation_and_restart() {
+async fn preference_fields_share_cockpit_state_validation_and_restart_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (world, id, _, _) = f.pair(&source, &source);
         let named = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let cockpit = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
         let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
@@ -1247,11 +1341,11 @@ async fn preference_fields_share_cockpit_state_validation_and_restart() {
 }
 
 /// Named BV follows saved damage and current runtime weapon values, which reset on reload.
-#[tokio::test]
-async fn battle_value_field_tracks_live_damage_and_weapon_configuration() {
+async fn battle_value_field_tracks_live_damage_and_weapon_configuration_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, Some(BattleWeapon::MediumLaser), &source).await;
+        let (mut world, id, _, _) =
+            f.supply(&source, Some(BattleWeapon::MediumLaser), &source, None);
         let baseline = battle_unit_value(&world, id, config.battletech.tsm_tow_bonus != 0)
             .unwrap()
             .total;
@@ -1274,7 +1368,8 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration() {
         assert!(increased > damaged);
         let expected = format!("{increased:.2}");
         let before = world.btech.clone();
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let scripts = &f.native;
+        support::install(scripts, world.clone());
         let report =
             view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "BV").unwrap();
         assert_eq!(field(&report, "bv"), Some(expected.as_str()));
@@ -1324,13 +1419,15 @@ async fn battle_value_field_tracks_live_damage_and_weapon_configuration() {
 }
 
 /// Administrative movement and engine allocation fields round-trip without changing live physics.
-#[tokio::test]
-async fn construction_fields_share_storage_authority_and_restart_without_changing_physics() {
+async fn construction_fields_share_storage_authority_and_restart_without_changing_physics_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let (world, id, _, _) = f.pair(&source, &source);
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         let original =
             view_battle_unit_fields_action(&native, &config, ObjectId(1), id, "").unwrap();
         for name in ["basewalkspeed", "baserunspeed", "hsengoverride"] {
@@ -1397,12 +1494,11 @@ async fn construction_fields_share_storage_authority_and_restart_without_changin
 }
 
 /// Authored overrides survive construction, while invalid template values fail before unit insertion.
-#[tokio::test]
-async fn engine_sink_override_validates_authored_values_across_chassis() {
+async fn engine_sink_override_validates_authored_values_across_chassis_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
         let authored = format!("HSEngOverRide {{ 14 }}\n{source}");
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&authored, None, &source).await;
+        let (mut world, id, _, _) = f.pair(&authored, &source);
         let candidate = world.create(&config, "Invalid construction".into(), Kind::Thing);
         let before = world.btech.clone();
         for value in ["no", "2147483648", "-2147483649", "1.5"] {
@@ -1417,7 +1513,8 @@ async fn engine_sink_override_validates_authored_values_across_chassis() {
             );
             assert_eq!(world.btech, before);
         }
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let scripts = &f.native;
+        support::install(scripts, world.clone());
         let report =
             view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, "hsengoverride")
                 .unwrap();
@@ -1426,11 +1523,12 @@ async fn engine_sink_override_validates_authored_values_across_chassis() {
 }
 
 /// Inactive read-only counters do not alias active damage history or physical weapon arcs.
-#[tokio::test]
-async fn inactive_readonly_fields_stay_zero_with_damage_and_across_restart() {
+async fn inactive_readonly_fields_stay_zero_with_damage_and_across_restart_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (mut world, id, _, _) = f.pair(&source, &source);
         if world.btech.constructed_units().contains_key(&id) {
             firing::edit(&mut world, id, |unit| {
                 unit["stagger"]["turn_damage"] = 35.into();
@@ -1441,7 +1539,8 @@ async fn inactive_readonly_fields_stay_zero_with_damage_and_across_restart() {
             });
         }
         let before = world.btech.clone();
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let scripts = &f.native;
+        support::install(scripts, world.clone());
         for name in ["StaggerDamage", "unusablearcs"] {
             let report =
                 view_battle_unit_fields_action(&scripts, &config, ObjectId(1), id, name).unwrap();
@@ -1495,11 +1594,10 @@ async fn inactive_readonly_fields_stay_zero_with_damage_and_across_restart() {
 }
 
 /// Administrative crew and target edits share transactions without requiring acquired contacts.
-#[tokio::test]
-async fn crew_and_target_fields_share_native_lua_validation_and_restart() {
+async fn crew_and_target_fields_share_native_lua_validation_and_restart_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, mut world, id, target, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (mut world, id, target, _) = f.pair(&source, &source);
         let replacement = world.create(&config, "Relief pilot".into(), Kind::Player);
         world.objects.get_mut(&replacement).unwrap().location = Some(id);
         world.objects.get_mut(&replacement).unwrap().home = Some(ObjectId(config.home()));
@@ -1514,8 +1612,9 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart() {
         firing::edit(&mut world, id, |unit| {
             unit["contacts"] = serde_json::json!({})
         });
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         for (name, value) in [
             ("pilotnum", replacement.0),
             ("pilotnum", -1),
@@ -1613,18 +1712,20 @@ async fn crew_and_target_fields_share_native_lua_validation_and_restart() {
 }
 
 /// Catalog read-only fields reject even otherwise-valid values through every administrative interface.
-#[tokio::test]
-async fn readonly_unit_fields_reject_native_and_lua_writes_on_every_chassis() {
+async fn readonly_unit_fields_reject_native_and_lua_writes_on_every_chassis_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (mut world, id, _, _) = f.pair(&source, &source);
         if world.btech.constructed_units().contains_key(&id) {
             firing::edit(&mut world, id, |unit| {
                 unit["heat_cutoff"]["disabled"] = 3.into()
             });
         }
         let before = world.btech.clone();
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let scripts = &f.native;
+        support::install(scripts, world.clone());
         for name in [
             "mapindex",
             "towing",
@@ -1677,12 +1778,12 @@ async fn readonly_unit_fields_reject_native_and_lua_writes_on_every_chassis() {
 }
 
 /// Deferred administrative transitions remain inspectable and reject edits without side effects.
-#[tokio::test]
-async fn deferred_field_writes_reject_native_and_lua_edits_across_chassis() {
+async fn deferred_field_writes_reject_native_and_lua_edits_across_chassis_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let (world, id, _, _) = f.pair(&source, &source);
+        let scripts = &f.native;
+        support::install(scripts, world.clone());
         let before = scripts.world().btech.clone();
         for (name, value) in [("status", "0"), ("critstatus", "a"), ("mechtype", "Mech")] {
             let report =
@@ -1731,11 +1832,10 @@ async fn deferred_field_writes_reject_native_and_lua_edits_across_chassis() {
 }
 
 /// Cargo edits retain stock while updating shared mass, movement limits and saved construction.
-#[tokio::test]
-async fn cargo_field_edits_share_load_rules_and_atomic_publication() {
+async fn cargo_field_edits_share_load_rules_and_atomic_publication_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (mut world, id, _, _) = f.pair(&source, &source);
         set_battle_inventory_named(&mut world, ObjectId(1), id, "Gold", 0, 2).unwrap();
         let moving = world.btech.constructed_units().contains_key(&id)
             || world
@@ -1801,8 +1901,9 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication() {
             500.0
         };
         let stock = battle_inventory(&world, id).unwrap().to_vec();
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         for value in [123, 100_000, 0] {
             let before = lua.world().btech.clone();
             lua.drain_outbox();
@@ -1887,18 +1988,18 @@ async fn cargo_field_edits_share_load_rules_and_atomic_publication() {
 }
 
 /// Tank baseline edits preserve actual fuel and share load accounting, rollback and restart.
-#[tokio::test]
-async fn original_fuel_field_preserves_inventory_and_updates_surplus_load() {
+async fn original_fuel_field_preserves_inventory_and_updates_surplus_load_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (world, id, _, _) = f.pair(&source, &source);
         let is_vtol = world
             .btech
             .vehicles()
             .get(&id)
             .is_some_and(|unit| unit.definition().is_vtol());
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         if !is_vtol {
             let before = lua.world().btech.clone();
             assert!(
@@ -1987,11 +2088,10 @@ async fn original_fuel_field_preserves_inventory_and_updates_surplus_load() {
 }
 
 /// Actual motion fields retain controls and position, with one transaction on every chassis.
-#[tokio::test]
-async fn motion_fields_edit_actual_state_without_advancing_controls() {
+async fn motion_fields_edit_actual_state_without_advancing_controls_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (world, id, _, _) = f.pair(&source, &source);
         let movable = world
             .btech
             .vehicles()
@@ -2010,8 +2110,9 @@ async fn motion_fields_edit_actual_state_without_advancing_controls() {
                     .and_then(BattleVehicle::motion)
             })
             .unwrap();
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         for (name, value) in [
             ("heading", "359"),
             ("speed", "1.25"),
@@ -2114,13 +2215,13 @@ async fn motion_fields_edit_actual_state_without_advancing_controls() {
 }
 
 /// Integer coordinate edits compose the existing scenario service instead of bypassing placement.
-#[tokio::test]
-async fn coordinate_fields_share_scenario_placement_and_rollback() {
+async fn coordinate_fields_share_scenario_placement_and_rollback_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
+        let (world, id, _, _) = f.pair(&source, &source);
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         let scenario = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
         for (name, value, x, y, z) in [
             ("y", 9, 0, 9, 0),
@@ -2204,11 +2305,12 @@ async fn coordinate_fields_share_scenario_placement_and_rollback() {
 }
 
 /// Continuous field edits retain fractional geometry and the other axes across all chassis.
-#[tokio::test]
-async fn precise_coordinate_fields_preserve_fractional_position_and_restart() {
+async fn precise_coordinate_fields_preserve_fractional_position_and_restart_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (world, id, _, _) = f.pair(&source, &source);
         let initial = world
             .btech
             .constructed_units()
@@ -2222,8 +2324,9 @@ async fn precise_coordinate_fields_preserve_fractional_position_and_restart() {
                     .and_then(BattleVehicle::motion)
             })
             .unwrap();
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         let mut expected = initial.point;
         let mut height = 0.0;
         for (name, scaled) in [
@@ -2327,11 +2430,12 @@ async fn precise_coordinate_fields_preserve_fractional_position_and_restart() {
 }
 
 /// Template speed changes the firing threshold while preserving actual motion and live mobility.
-#[tokio::test]
-async fn template_speed_field_changes_shared_attack_penalty_without_propulsion_edits() {
+async fn template_speed_field_changes_shared_attack_penalty_without_propulsion_edits_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (mut world, id, _, _) = f.pair(&source, &source);
         let movable = world
             .btech
             .vehicles()
@@ -2341,8 +2445,9 @@ async fn template_speed_field_changes_shared_attack_penalty_without_propulsion_e
             firing::edit(&mut world, id, |unit| unit["motion"]["speed"] = 1.0.into());
         }
         let original = serde_json::to_value(&world.btech).unwrap();
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         for baseline in [0, 100] {
             let before = lua.world().btech.clone();
             lua.drain_outbox();
@@ -2424,19 +2529,21 @@ async fn template_speed_field_changes_shared_attack_penalty_without_propulsion_e
 }
 
 /// Live propulsion survives restart independently of construction and follows chassis damage rules.
-#[tokio::test]
-async fn maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_baseline() {
+async fn maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_baseline_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (world, id, _, _) = f.pair(&source, &source);
         let movable = world
             .btech
             .vehicles()
             .get(&id)
             .is_none_or(|unit| unit.maximum_speed() > 0.0);
         let original_load = battle_unit_load(&world, id, true).unwrap();
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         let before = lua.world().btech.clone();
         if !movable {
             assert!(
@@ -2533,11 +2640,10 @@ async fn maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_bas
 }
 
 /// Jump edits preserve equipment, survive restart and apply subsequent jet losses once.
-#[tokio::test]
-async fn jump_speed_fields_share_thrust_without_rebuilding_equipment() {
+async fn jump_speed_fields_share_thrust_without_rebuilding_equipment_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (mut world, id, _, _) = f.pair(&source, &source);
         let jets: Vec<_> = world
             .btech
             .constructed_units()
@@ -2556,8 +2662,9 @@ async fn jump_speed_fields_share_thrust_without_rebuilding_equipment() {
             destroy_battle_critical(&mut world, id, location).unwrap();
         }
         let load = battle_unit_load(&world, id, true).unwrap();
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         for speed in [21.5, 0.0, 21.5] {
             let before = lua.world().btech.clone();
             lua.drain_outbox();
@@ -2641,12 +2748,11 @@ async fn jump_speed_fields_share_thrust_without_rebuilding_equipment() {
 }
 
 /// Injury edits preserve recovery clocks and dice for player-owned and empty cockpit crews.
-#[tokio::test]
-async fn pilot_damage_fields_share_recovery_and_fatal_cleanup() {
+async fn pilot_damage_fields_share_recovery_and_fatal_cleanup_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
         for assigned in [true, false] {
-            let (_dir, config, mut world, id, _, _) =
-                firing::fixture_with_target(&source, None, &source).await;
+            let (mut world, id, _, _) = f.pair(&source, &source);
             firing::edit(&mut world, id, |unit| {
                 unit["pilot_injuries"] = 3.into();
                 if !assigned {
@@ -2663,8 +2769,9 @@ async fn pilot_damage_fields_share_recovery_and_fatal_cleanup() {
                 state["recoveries"]["1"]["remaining"] = 17.into();
                 world.btech = serde_json::from_value(state).unwrap();
             }
-            let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-            let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+            let native = &f.native;
+            let lua = &f.lua;
+            f.install(&world);
             for value in [5, 1, 0] {
                 let before = lua.world().btech.clone();
                 lua.drain_outbox();
@@ -2757,11 +2864,10 @@ async fn pilot_damage_fields_share_recovery_and_fatal_cleanup() {
 }
 
 /// Saved propulsion must satisfy the same low-gravity capacity bounds as administrative edits.
-#[tokio::test]
-async fn saved_jump_override_rejects_capacity_overflow_before_runtime() {
+async fn saved_jump_override_rejects_capacity_overflow_before_runtime_scenario(f: &UnitFields) {
+    let config = &f.config;
     let source = include_str!("../game/mechs/JR7-D");
-    let (_dir, config, mut world, id, _, _) =
-        firing::fixture_with_target(source, None, source).await;
+    let (mut world, id, _, _) = f.pair(source, source);
     let location = world.btech.constructed_units()[&id]
         .loadout()
         .unwrap()
@@ -2771,7 +2877,8 @@ async fn saved_jump_override_rejects_capacity_overflow_before_runtime() {
         .unwrap()
         .location;
     destroy_battle_critical(&mut world, id, location).unwrap();
-    let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+    let scripts = &f.native;
+    support::install(scripts, world.clone());
     // The stored baseline includes the destroyed jet, so it can exceed the live-speed bound.
     set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "maxjumpspeed", "352255")
         .unwrap();
@@ -2788,15 +2895,17 @@ async fn saved_jump_override_rejects_capacity_overflow_before_runtime() {
 }
 
 /// Secondary mask edits preserve observed fields and reject partial changes atomically.
-#[tokio::test]
-async fn secondary_status_edits_preserve_observations_and_validate_controls() {
+async fn secondary_status_edits_preserve_observations_and_validate_controls_scenario(
+    f: &UnitFields,
+) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (mut world, id, _, _) = f.pair(&source, &source);
         firing::edit(&mut world, id, |unit| {
             unit["electronics"]["field"]["disturbed"] = true.into()
         });
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let scripts = &f.native;
+        support::install(scripts, world.clone());
         for value in ["cwxy", "c", "-", "cdekl"] {
             set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "status2", value)
                 .unwrap();
@@ -2831,20 +2940,19 @@ async fn secondary_status_edits_preserve_observations_and_validate_controls() {
 }
 
 /// Live mass edits share load, persistence and rollback without changing construction.
-#[tokio::test]
-async fn live_mass_fields_share_load_and_expire_on_material_changes() {
+async fn live_mass_fields_share_load_and_expire_on_material_changes_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, world, id, target, index) = firing::fixture_with_supply(
+        let (world, id, target, index) = f.supply(
             &source,
             Some(BattleWeapon::Mml3),
             include_str!("../game/mechs/AS7-D"),
-            false,
             Some(""),
-        )
-        .await;
+        );
         let original = battle_unit_load(&world, id, false).unwrap();
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         for mass in [0, 1, 12345, i32::MAX] {
             let value = mass.to_string();
             let before = lua.world().btech.clone();
@@ -2965,11 +3073,10 @@ async fn live_mass_fields_share_load_and_expire_on_material_changes() {
 }
 
 /// Nominal tonnage edits change construction-derived mass without rebuilding live unit state.
-#[tokio::test]
-async fn tonnage_fields_preserve_equipment_damage_and_live_corrections() {
+async fn tonnage_fields_preserve_equipment_damage_and_live_corrections_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (mut world, id, _, _) = f.pair(&source, &source);
         let mech = world.btech.constructed_units().contains_key(&id);
         firing::edit(&mut world, id, |state| {
             let section = if mech { "CenterTorso" } else { "front" };
@@ -2977,8 +3084,9 @@ async fn tonnage_fields_preserve_equipment_damage_and_live_corrections() {
             state["sections"][section]["armor"] = (armor - 1).into();
         });
         let original = battle_unit_load(&world, id, false).unwrap();
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         for tons in [original.nominal_tons + 5, original.nominal_tons] {
             let value = tons.to_string();
             let before = lua.world().btech.clone();
@@ -3072,11 +3180,10 @@ async fn tonnage_fields_preserve_equipment_damage_and_live_corrections() {
 }
 
 /// Locomotion edits retain material and use the same transaction for every chassis.
-#[tokio::test]
-async fn movement_fields_preserve_material_and_validate_anatomy() {
+async fn movement_fields_preserve_material_and_validate_anatomy_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (mut world, id, _, _) = f.pair(&source, &source);
         let mech = world.btech.constructed_units().contains_key(&id);
         let vtol = !mech && world.btech.vehicles()[&id].definition().is_vtol();
         firing::edit(&mut world, id, |state| {
@@ -3084,8 +3191,9 @@ async fn movement_fields_preserve_material_and_validate_anatomy() {
             let armor = state["sections"][section]["armor"].as_u64().unwrap();
             state["sections"][section]["armor"] = (armor - 1).into();
         });
-        let native = Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-        let lua = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let native = &f.native;
+        let lua = &f.lua;
+        f.install(&world);
         let values: &[&str] = if mech {
             &["Biped", "Quad", "Biped"]
         } else if vtol {
@@ -3170,17 +3278,17 @@ async fn movement_fields_preserve_material_and_validate_anatomy() {
 }
 
 /// Reducing limb capacity must never discard installed critical slots.
-#[tokio::test]
-async fn movement_field_rejects_overfilled_quad_limbs_atomically() {
+async fn movement_field_rejects_overfilled_quad_limbs_atomically_scenario(f: &UnitFields) {
+    let config = &f.config;
     let source = &firing::templates()[0];
-    let (_dir, config, mut world, id, _, _) =
-        firing::fixture_with_target(source, None, source).await;
+    let (mut world, id, _, _) = f.pair(source, source);
     firing::edit(&mut world, id, |state| {
         let slots = &mut state["definition"]["sections"]["LeftArm"]["criticals"];
         slots["11"] = slots["0"].clone();
     });
     world.validate(&config).unwrap();
-    let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+    let scripts = &f.native;
+    support::install(scripts, world.clone());
     let before = scripts.world().btech.clone();
     let error =
         set_battle_unit_field_action(&scripts, &config, ObjectId(1), id, "mechmovetype", "Quad")
@@ -3190,15 +3298,14 @@ async fn movement_field_rejects_overfilled_quad_limbs_atomically() {
 }
 
 /// A construction edit cannot strand chassis-specific posture or a pending event.
-#[tokio::test]
-async fn movement_field_rejects_incompatible_live_conditions() {
+async fn movement_field_rejects_incompatible_live_conditions_scenario(f: &UnitFields) {
+    let config = &f.config;
     let templates = firing::templates();
     for (source, movement, expected) in [
         (&templates[1], "Biped", "Invalid hull-down posture"),
         (&templates[2], "Hover", "Digging requires"),
     ] {
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(source, None, source).await;
+        let (mut world, id, _, _) = f.pair(source, source);
         let mech = world.btech.constructed_units().contains_key(&id);
         firing::edit(&mut world, id, |state| {
             if mech {
@@ -3210,7 +3317,8 @@ async fn movement_field_rejects_incompatible_live_conditions() {
             }
         });
         world.validate(&config).unwrap();
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let scripts = &f.native;
+        support::install(scripts, world.clone());
         let before = scripts.world().btech.clone();
         let error = set_battle_unit_field_action(
             &scripts,
@@ -3227,12 +3335,12 @@ async fn movement_field_rejects_incompatible_live_conditions() {
 }
 
 /// Vehicles expose no conventional jump course and must not acquire a fabricated flight.
-#[tokio::test]
-async fn vehicle_jump_course_edits_reject_without_mutation() {
+async fn vehicle_jump_course_edits_reject_without_mutation_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates().into_iter().skip(2) {
-        let (_dir, config, world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
-        let scripts = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+        let (world, id, _, _) = f.pair(&source, &source);
+        let scripts = &f.native;
+        support::install(scripts, world.clone());
         let before = scripts.world().btech.clone();
         for field in ["jumpheading", "jumplength"] {
             for value in ["0", "1"] {
@@ -3255,11 +3363,10 @@ async fn vehicle_jump_course_edits_reject_without_mutation() {
 }
 
 /// Every supported anatomy emits the same ordered damage-record grammar without side effects.
-#[tokio::test]
-async fn compact_damage_reports_round_trip_through_the_shared_codec() {
+async fn compact_damage_reports_round_trip_through_the_shared_codec_scenario(f: &UnitFields) {
+    let config = &f.config;
     for source in firing::templates() {
-        let (_dir, config, mut world, id, _, _) =
-            firing::fixture_with_target(&source, None, &source).await;
+        let (mut world, id, _, _) = f.pair(&source, &source);
         let mech = world.btech.constructed_units().contains_key(&id);
         firing::edit(&mut world, id, |state| {
             let section = if mech { "CenterTorso" } else { "front" };
@@ -3301,4 +3408,89 @@ async fn compact_damage_reports_round_trip_through_the_shared_codec() {
         );
         assert_eq!(world.btech, before);
     }
+}
+
+/// One shared sandbox per theme; each scenario installs its worlds over it.
+
+#[tokio::test]
+async fn unit_fields_layout_filters_and_administrative_edits_harness() {
+    let f = UnitFields::new().await;
+    all_chassis_field_reports_scenario(&f).await;
+    field_layout_filters_scenario(&f).await;
+    named_edits_share_validation_scenario(&f).await;
+    detached_field_geometry_scenario(&f).await;
+    special_field_commands_scenario(&f).await;
+}
+
+#[tokio::test]
+async fn unit_fields_hardware_identity_and_thermal_harness() {
+    let f = UnitFields::new().await;
+    hardware_fields_share_gameplay_ranges_and_vtol_fuel_edits_are_atomic_scenario(&f).await;
+    identity_edits_preserve_combat_state_and_survive_restart_for_every_chassis_scenario(&f).await;
+    runtime_hardware_zeroes_change_gameplay_and_survive_restart_scenario(&f).await;
+    thermal_fields_retain_committed_samples_and_share_cooling_with_status_scenario(&f).await;
+    thermal_edits_share_native_lua_validation_and_preserve_stored_heat_scenario(&f).await;
+}
+
+#[tokio::test]
+async fn unit_fields_sensors_metadata_and_history_harness() {
+    let f = UnitFields::new().await;
+    navigation_and_sensor_fields_share_live_services_without_advancing_them_scenario(&f).await;
+    authored_and_edited_metadata_share_validation_across_chassis_and_restart_scenario(&f).await;
+    enemy_contact_count_follows_acquisition_and_teams_without_rescanning_scenario(&f).await;
+    explicit_cockpit_links_share_named_edits_and_preserve_deferred_references_scenario(&f).await;
+    display_name_edits_share_chassis_reports_and_restore_template_fallback_scenario(&f).await;
+    startup_history_uses_supplied_completion_time_and_preserves_aborted_history_scenario(&f).await;
+}
+
+#[tokio::test]
+async fn unit_fields_preferences_values_and_construction_harness() {
+    let f = UnitFields::new().await;
+    preference_fields_share_cockpit_state_validation_and_restart_scenario(&f).await;
+    battle_value_field_tracks_live_damage_and_weapon_configuration_scenario(&f).await;
+    construction_fields_share_storage_authority_and_restart_without_changing_physics_scenario(&f)
+        .await;
+    engine_sink_override_validates_authored_values_across_chassis_scenario(&f).await;
+    inactive_readonly_fields_stay_zero_with_damage_and_across_restart_scenario(&f).await;
+    crew_and_target_fields_share_native_lua_validation_and_restart_scenario(&f).await;
+}
+
+#[tokio::test]
+async fn unit_fields_rejections_cargo_and_motion_harness() {
+    let f = UnitFields::new().await;
+    readonly_unit_fields_reject_native_and_lua_writes_on_every_chassis_scenario(&f).await;
+    deferred_field_writes_reject_native_and_lua_edits_across_chassis_scenario(&f).await;
+    cargo_field_edits_share_load_rules_and_atomic_publication_scenario(&f).await;
+    original_fuel_field_preserves_inventory_and_updates_surplus_load_scenario(&f).await;
+    motion_fields_edit_actual_state_without_advancing_controls_scenario(&f).await;
+}
+
+#[tokio::test]
+async fn unit_fields_coordinates_speed_and_pilot_damage_harness() {
+    let f = UnitFields::new().await;
+    coordinate_fields_share_scenario_placement_and_rollback_scenario(&f).await;
+    precise_coordinate_fields_preserve_fractional_position_and_restart_scenario(&f).await;
+    template_speed_field_changes_shared_attack_penalty_without_propulsion_edits_scenario(&f).await;
+    maximum_speed_fields_preserve_mass_and_recalculate_from_the_correct_baseline_scenario(&f).await;
+    jump_speed_fields_share_thrust_without_rebuilding_equipment_scenario(&f).await;
+    pilot_damage_fields_share_recovery_and_fatal_cleanup_scenario(&f).await;
+}
+
+#[tokio::test]
+async fn unit_fields_overrides_mass_and_anatomy_harness() {
+    let f = UnitFields::new().await;
+    saved_jump_override_rejects_capacity_overflow_before_runtime_scenario(&f).await;
+    secondary_status_edits_preserve_observations_and_validate_controls_scenario(&f).await;
+    live_mass_fields_share_load_and_expire_on_material_changes_scenario(&f).await;
+    tonnage_fields_preserve_equipment_damage_and_live_corrections_scenario(&f).await;
+    movement_fields_preserve_material_and_validate_anatomy_scenario(&f).await;
+}
+
+#[tokio::test]
+async fn unit_fields_live_rejections_and_codec_harness() {
+    let f = UnitFields::new().await;
+    movement_field_rejects_overfilled_quad_limbs_atomically_scenario(&f).await;
+    movement_field_rejects_incompatible_live_conditions_scenario(&f).await;
+    vehicle_jump_course_edits_reject_without_mutation_scenario(&f).await;
+    compact_damage_reports_round_trip_through_the_shared_codec_scenario(&f).await;
 }

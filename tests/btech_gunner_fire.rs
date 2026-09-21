@@ -42,9 +42,69 @@ async fn fixture(
     (dir, config, world, parent, target, station, gunner, index)
 }
 
+/// Build a claimed, settled station on a supplied base world through one reused
+/// setup sandbox; identities stay stable because every scenario re-clones.
+#[allow(clippy::too_many_arguments)]
+fn station_fixture_on(
+    base: &World,
+    config: &Config,
+    setup: &Scripts,
+    template: &str,
+    weapon: BattleWeapon,
+    arcs: i32,
+) -> (World, ObjectId, ObjectId, ObjectId, ObjectId, usize) {
+    let target_source = include_str!("../game/mechs/AS7-D");
+    let (mut world, parent, target, index) = if weapon.profile().ammunition_per_ton == 0 {
+        firing::supply_fixture_on(
+            base.clone(),
+            config,
+            template,
+            Some(weapon),
+            target_source,
+            false,
+            None,
+        )
+    } else {
+        firing::supply_fixture_on(
+            base.clone(),
+            config,
+            template,
+            Some(weapon),
+            target_source,
+            false,
+            Some(""),
+        )
+    };
+    let station = world.create(config, "Station".into(), Kind::Thing);
+    let gunner = world.create(config, "Gunner".into(), Kind::Player);
+    world.objects.get_mut(&gunner).unwrap().location = Some(station);
+    register_gunner_station(&mut world, ObjectId(1), station, parent, arcs).unwrap();
+    support::install(setup, world);
+    gunner_station_action(setup, station, gunner, true).unwrap();
+    select_battle_target(&mut setup.world_mut(), station, gunner, Some(target)).unwrap();
+    for _ in 0..8 {
+        advance_battle_target_locks(&mut setup.world_mut());
+    }
+    (
+        setup.world().clone(),
+        parent,
+        target,
+        station,
+        gunner,
+        index,
+    )
+}
+
 /// Native and Lua station shots must produce the same physical results as the existing pilot path.
 #[tokio::test]
 async fn station_direct_fire_shares_all_chassis_and_weapon_families() {
+    let (_dir, config, base) = support::isolated_world().await;
+    let boot = |world: World| Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+    let setup = boot(base.clone());
+    let pilot = boot(base.clone());
+    let gun = boot(base.clone());
+    let native = boot(base.clone());
+    let restored = boot(base.clone());
     for template in firing::templates() {
         for weapon in [
             BattleWeapon::MediumLaser,
@@ -52,12 +112,11 @@ async fn station_direct_fire_shares_all_chassis_and_weapon_families() {
             BattleWeapon::Ac5,
             BattleWeapon::Mml5,
         ] {
-            let (_dir, config, world, parent, target, station, gunner, index) =
-                fixture(&template, weapon, 0).await;
-            let make = || Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-            let pilot = make();
-            let gun = make();
-            let native = make();
+            let (world, parent, target, station, gunner, index) =
+                station_fixture_on(&base, &config, &setup, &template, weapon, 0);
+            support::install(&pilot, world.clone());
+            support::install(&gun, world.clone());
+            support::install(&native, world.clone());
             assert_eq!(
                 support::run_text(&native, &config, gunner, 1, "weapons"),
                 support::run_text(&pilot, &config, ObjectId(1), 1, "weapons"),
@@ -93,7 +152,7 @@ async fn station_direct_fire_shares_all_chassis_and_weapon_families() {
                 world.btech.gunner_stations()
             );
             assert_ne!(gun.world().btech, world.btech);
-            let restored = make();
+            support::install(&restored, world.clone());
             assert!(
                 restored
                     .eval_callback::<()>(&format!(
@@ -475,12 +534,20 @@ async fn live_station_damage_awards_gunner_experience() {
 /// All terrain purposes use station intent with the same launch, terrain effects and publication as pilots.
 #[tokio::test]
 async fn station_terrain_fire_shares_modes_and_physical_effects() {
+    let (_dir, config, base) = support::isolated_world().await;
+    let boot = |world: World| Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+    let setup = boot(base.clone());
+    let pilot = boot(base.clone());
+    let gun = boot(base.clone());
+    let native = boot(base.clone());
+    let independent = boot(base.clone());
+    let failed = boot(base.clone());
+    let pristine_db = support::snapshot_database(&config);
     for template in firing::templates() {
         for weapon in [BattleWeapon::MediumLaser, BattleWeapon::Lrm5] {
-            let (_dir, config, world, parent, _, station, gunner, index) =
-                fixture(&template, weapon, 0).await;
-            let setup = Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
-            let map = setup.world().btech.units()[&parent].map.unwrap();
+            let (settled, parent, _, station, gunner, index) =
+                station_fixture_on(&base, &config, &setup, &template, weapon, 0);
+            let map = settled.btech.units()[&parent].map.unwrap();
             let coordinate = BattleHexCoordinate { x: 0, y: 9 };
             set_battle_map_hex_action(
                 &setup,
@@ -492,7 +559,7 @@ async fn station_terrain_fire_shares_modes_and_physical_effects() {
                 0,
             )
             .unwrap();
-            let base = setup.world().clone();
+            let scenario = setup.world().clone();
             for mode in [
                 BattleHexTargetMode::UnitAtHex,
                 BattleHexTargetMode::Hex,
@@ -500,14 +567,13 @@ async fn station_terrain_fire_shares_modes_and_physical_effects() {
                 BattleHexTargetMode::Ignite,
                 BattleHexTargetMode::Clear,
             ] {
-                let mut world = base.clone();
+                let mut world = scenario.clone();
                 select_battle_hex_target(&mut world, parent, ObjectId(1), coordinate, mode)
                     .unwrap();
                 select_battle_hex_target(&mut world, station, gunner, coordinate, mode).unwrap();
-                let make = || Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-                let pilot = make();
-                let gun = make();
-                let native = make();
+                support::install(&pilot, world.clone());
+                support::install(&gun, world.clone());
+                support::install(&native, world.clone());
                 let query = format!("btech.gunner.fire({},{},{index})", station.0, gunner.0);
                 let expected: mlua::Table = pilot
                     .eval_callback(&format!("return btech.unit.fire({},1,{index})", parent.0))
@@ -524,7 +590,7 @@ async fn station_terrain_fire_shares_modes_and_physical_effects() {
                     "{text}"
                 );
                 assert_eq!(native.world().btech, gun.world().btech);
-                let independent = make();
+                support::install(&independent, world.clone());
                 select_battle_target(&mut independent.world_mut(), parent, ObjectId(1), None)
                     .unwrap();
                 let report: mlua::Table = independent
@@ -535,7 +601,7 @@ async fn station_terrain_fire_shares_modes_and_physical_effects() {
                     aim.get::<String>("mode").unwrap(),
                     serde_json::to_value(mode).unwrap().as_str().unwrap()
                 );
-                let failed = make();
+                support::install(&failed, world.clone());
                 assert!(
                     failed
                         .eval_callback::<()>(&format!("{query}; error('abort')"))
@@ -545,6 +611,7 @@ async fn station_terrain_fire_shares_modes_and_physical_effects() {
                 assert!(failed.drain_outbox().is_empty());
                 if mode == BattleHexTargetMode::Clear {
                     let saved = gun.world().clone();
+                    support::restore_database(&config, &pristine_db);
                     persistence::save(&config.database(), &saved).await.unwrap();
                     let loaded = persistence::load(&config.database()).await.unwrap();
                     assert_eq!(loaded.btech, saved.btech);
@@ -579,6 +646,13 @@ async fn station_terrain_rejects_unassigned_arcs() {
 /// SIGHT shares cockpit arithmetic and preparation dice while leaving equipment and cover untouched.
 #[tokio::test]
 async fn station_sight_shares_chassis_targets_and_preserves_combat_state() {
+    let (_dir, config, base) = support::isolated_world().await;
+    let boot = |world: World| Scripts::new(&config, Rc::new(RefCell::new(world))).unwrap();
+    let setup = boot(base.clone());
+    let pilot = boot(base.clone());
+    let gun = boot(base.clone());
+    let native = boot(base.clone());
+    let pristine_db = support::snapshot_database(&config);
     for template in firing::templates() {
         for weapon in [
             BattleWeapon::MediumLaser,
@@ -586,8 +660,8 @@ async fn station_sight_shares_chassis_targets_and_preserves_combat_state() {
             BattleWeapon::Ac5,
             BattleWeapon::Mml5,
         ] {
-            let (_dir, config, mut world, parent, target, station, gunner, index) =
-                fixture(&template, weapon, 0).await;
+            let (mut world, parent, target, station, gunner, index) =
+                station_fixture_on(&base, &config, &setup, &template, weapon, 0);
             firing::edit(&mut world, parent, |state| {
                 state["weapons_hold"] = true.into();
                 state["weapon_recycle"][index.to_string()] = 30.into();
@@ -601,10 +675,9 @@ async fn station_sight_shares_chassis_targets_and_preserves_combat_state() {
                 (target.0.to_string(), format!("#{}", target.0)),
                 ("{x=0,y=9}".into(), "0 9".into()),
             ] {
-                let make = || Scripts::new(&config, Rc::new(RefCell::new(world.clone()))).unwrap();
-                let pilot = make();
-                let gun = make();
-                let native = make();
+                support::install(&pilot, world.clone());
+                support::install(&gun, world.clone());
+                support::install(&native, world.clone());
                 let query = format!(
                     "btech.gunner.sight({},{},{index},{arg})",
                     station.0, gunner.0
@@ -644,6 +717,7 @@ async fn station_sight_shares_chassis_targets_and_preserves_combat_state() {
                 });
                 assert_eq!(gun.world().btech, expected.btech);
                 let saved = gun.world().clone();
+                support::restore_database(&config, &pristine_db);
                 persistence::save(&config.database(), &saved).await.unwrap();
                 assert_eq!(
                     persistence::load(&config.database()).await.unwrap().btech,

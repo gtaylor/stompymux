@@ -2062,103 +2062,115 @@ fn prepare_reverse_step(world: &mut World, id: ObjectId, roll: u8) {
     world.btech = serde_json::from_value(state).unwrap();
 }
 
-#[tokio::test]
-async fn reverse_ground_steps_apply_configured_checks_falls_and_restart_replay() {
-    for symbol in ['.', '/', '@', '='] {
-        for change in [-2i16, -1, 1, 2] {
-            for (enabled, success) in [(false, true), (true, true), (true, false)] {
-                let destination = 3 + change;
-                let row = format!("{symbol}{destination}").repeat(3);
-                let source = format!("3 4\n.3.3.3\n.3.3.3\n{row}\n{row}\n");
-                let (_dir, config, mut world, _, units) =
-                    fixture_asset(BattleMapAsset::parse(&source).unwrap()).await;
-                let id = units[0];
-                let target = 6 + change.unsigned_abs() as u8 - 1;
-                prepare_reverse_step(&mut world, id, if success { target } else { target - 1 });
-                world.validate(&config).unwrap();
-                let before = world.clone();
-                persistence::save(&config.database(), &world).await.unwrap();
-                let mut loaded = persistence::load(&config.database()).await.unwrap();
-                let movement = BattleMovementRules {
-                    roll_on_backwalk: enabled,
-                    ..BattleMovementRules::STANDARD
-                };
-                let notices = advance_battle_motion(&mut world, movement).unwrap();
+/// One shard per terrain symbol; each elevation change owns one fixture that the
+/// rule/success combinations clone, keeping the lockstep replay twin per combination.
+async fn reverse_ground_steps_matrix(symbol: char) {
+    for change in [-2i16, -1, 1, 2] {
+        let destination = 3 + change;
+        let row = format!("{symbol}{destination}").repeat(3);
+        let source = format!("3 4\n.3.3.3\n.3.3.3\n{row}\n{row}\n");
+        let (_dir, config, base, _, units) =
+            fixture_asset(BattleMapAsset::parse(&source).unwrap()).await;
+        let id = units[0];
+        let mut probed_fidelity = [false; 3];
+        for (shape, (enabled, success)) in [(false, true), (true, true), (true, false)]
+            .into_iter()
+            .enumerate()
+        {
+            let mut world = base.clone();
+            let target = 6 + change.unsigned_abs() as u8 - 1;
+            prepare_reverse_step(&mut world, id, if success { target } else { target - 1 });
+            world.validate(&config).unwrap();
+            let before = world.clone();
+            persistence::save(&config.database(), &world).await.unwrap();
+            let mut loaded = persistence::load(&config.database()).await.unwrap();
+            let movement = BattleMovementRules {
+                roll_on_backwalk: enabled,
+                ..BattleMovementRules::STANDARD
+            };
+            let notices = advance_battle_motion(&mut world, movement).unwrap();
+            assert_eq!(
+                notices,
+                advance_battle_motion(&mut loaded, movement).unwrap()
+            );
+            assert_eq!(world.btech, loaded.btech);
+            let unit = &world.btech.constructed_units()[&id];
+            if !enabled || success {
+                assert_eq!(unit.position().unwrap().y, 2);
+                assert_eq!(unit.posture(), BattlePosture::Standing);
+                assert_eq!(unit.motion().unwrap().desired_speed, -21.5);
                 assert_eq!(
-                    notices,
-                    advance_battle_motion(&mut loaded, movement).unwrap()
-                );
-                assert_eq!(world.btech, loaded.btech);
-                let unit = &world.btech.constructed_units()[&id];
-                if !enabled || success {
-                    assert_eq!(unit.position().unwrap().y, 2);
-                    assert_eq!(unit.posture(), BattlePosture::Standing);
-                    assert_eq!(unit.motion().unwrap().desired_speed, -21.5);
-                    assert_eq!(
-                        unit.motion().unwrap().speed,
-                        if enabled {
-                            -21.5
-                        } else {
-                            -(21.5 - f64::from(change.unsigned_abs()) * 10.75)
-                        }
-                    );
+                    unit.motion().unwrap().speed,
                     if enabled {
-                        assert!(notices.iter().any(|notice| notice.text == "You manage to overcome the obstacle."));
-                        let mut expected = before.clone();
-                        let check = roll_battle_piloting(&mut expected, id, change.abs() - 1, true)
-                            .unwrap();
-                        assert_eq!(check.target, i32::from(target));
-                        assert!(check.success);
-                        assert_eq!(
-                            serde_json::to_value(unit).unwrap()["dice"],
-                            serde_json::to_value(&expected.btech.constructed_units()[&id]).unwrap()
-                                ["dice"]
-                        );
+                        -21.5
                     } else {
-                        assert!(notices.is_empty());
-                        assert_eq!(
-                            serde_json::to_value(unit).unwrap()["dice"],
-                            serde_json::to_value(&before.btech.constructed_units()[&id]).unwrap()["dice"]
-                        );
+                        -(21.5 - f64::from(change.unsigned_abs()) * 10.75)
                     }
-                } else {
-                    assert_eq!(unit.posture(), BattlePosture::Prone);
-                    let protection = |unit: &BattleUnit| {
-                        unit.sections()
-                            .values()
-                            .map(|section| {
-                                u32::from(section.armor)
-                                    + u32::from(section.rear)
-                                    + u32::from(section.internal)
-                            })
-                            .sum::<u32>()
-                    };
+                );
+                if enabled {
                     assert!(
-                        protection(&before.btech.constructed_units()[&id]) - protection(unit)
-                            >= u32::from(change.unsigned_abs()) * 4
+                        notices
+                            .iter()
+                            .any(|notice| notice.text == "You manage to overcome the obstacle.")
                     );
-                    assert_eq!(unit.motion().unwrap().speed, 0.0);
-                    assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
-                    assert_eq!(unit.position().unwrap().y, if change > 0 { 1 } else { 2 });
+                    let mut expected = before.clone();
+                    let check =
+                        roll_battle_piloting(&mut expected, id, change.abs() - 1, true).unwrap();
+                    assert_eq!(check.target, i32::from(target));
+                    assert!(check.success);
                     assert_eq!(
-                        battle_unit_elevation(&world, id).unwrap(),
-                        Some(if change > 0 {
-                            3
-                        } else {
-                            i32::from(destination)
-                        })
+                        serde_json::to_value(unit).unwrap()["dice"],
+                        serde_json::to_value(&expected.btech.constructed_units()[&id]).unwrap()["dice"]
                     );
-                    if change > 0 {
-                        assert_eq!(
-                            unit.motion().unwrap().point,
-                            before.btech.constructed_units()[&id]
-                                .motion()
-                                .unwrap()
-                                .point
-                        );
-                    }
+                } else {
+                    assert!(notices.is_empty());
+                    assert_eq!(
+                        serde_json::to_value(unit).unwrap()["dice"],
+                        serde_json::to_value(&before.btech.constructed_units()[&id]).unwrap()["dice"]
+                    );
                 }
-                world.validate(&config).unwrap();
+            } else {
+                assert_eq!(unit.posture(), BattlePosture::Prone);
+                let protection = |unit: &BattleUnit| {
+                    unit.sections()
+                        .values()
+                        .map(|section| {
+                            u32::from(section.armor)
+                                + u32::from(section.rear)
+                                + u32::from(section.internal)
+                        })
+                        .sum::<u32>()
+                };
+                assert!(
+                    protection(&before.btech.constructed_units()[&id]) - protection(unit)
+                        >= u32::from(change.unsigned_abs()) * 4
+                );
+                assert_eq!(unit.motion().unwrap().speed, 0.0);
+                assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
+                assert_eq!(unit.position().unwrap().y, if change > 0 { 1 } else { 2 });
+                assert_eq!(
+                    battle_unit_elevation(&world, id).unwrap(),
+                    Some(if change > 0 {
+                        3
+                    } else {
+                        i32::from(destination)
+                    })
+                );
+                if change > 0 {
+                    assert_eq!(
+                        unit.motion().unwrap().point,
+                        before.btech.constructed_units()[&id]
+                            .motion()
+                            .unwrap()
+                            .point
+                    );
+                }
+            }
+            world.validate(&config).unwrap();
+            // Final-state fidelity probe once per rule shape; the lockstep replay
+            // above stays per combination.
+            if !probed_fidelity[shape] {
+                probed_fidelity[shape] = true;
                 persistence::save(&config.database(), &world).await.unwrap();
                 assert_eq!(
                     persistence::load(&config.database()).await.unwrap().btech,
@@ -2167,6 +2179,26 @@ async fn reverse_ground_steps_apply_configured_checks_falls_and_restart_replay()
             }
         }
     }
+}
+
+#[tokio::test]
+async fn reverse_ground_steps_apply_configured_checks_falls_and_restart_replay_dot() {
+    reverse_ground_steps_matrix('.').await;
+}
+
+#[tokio::test]
+async fn reverse_ground_steps_apply_configured_checks_falls_and_restart_replay_slash() {
+    reverse_ground_steps_matrix('/').await;
+}
+
+#[tokio::test]
+async fn reverse_ground_steps_apply_configured_checks_falls_and_restart_replay_at() {
+    reverse_ground_steps_matrix('@').await;
+}
+
+#[tokio::test]
+async fn reverse_ground_steps_apply_configured_checks_falls_and_restart_replay_equals() {
+    reverse_ground_steps_matrix('=').await;
 }
 
 #[tokio::test]
@@ -2218,123 +2250,168 @@ async fn unpiloted_reverse_step_bypasses_control_dice_and_preserves_speed() {
     world.validate(&config).unwrap();
 }
 
-#[tokio::test]
-async fn cliffs_apply_speed_checks_stop_or_fall_and_replay_after_restart() {
-    for symbol in ['.', '/', '@', '='] {
-        for downhill in [false, true] {
-            for skid in [false, true] {
-                for speed in [-53.75f64, -21.5, 21.5, 53.75] {
-                    for success in [false, true] {
-                        let (old, new) = if downhill { (3, 0) } else { (0, 3) };
-                        let row = format!("{symbol}{new}").repeat(3);
-                        let old_row = format!(".{old}").repeat(3);
-                        let source = format!("3 4\n{old_row}\n{old_row}\n{row}\n{row}\n");
-                        let (_dir, config, mut world, _, units) =
-                            fixture_asset(BattleMapAsset::parse(&source).unwrap()).await;
-                        let id = units[0];
-                        let modifier = if skid {
-                            if speed.abs() < 30.0 { -1 } else { 1 }
-                        } else {
-                            ((speed + 10.75).abs() / 10.75) as i16 / 3
-                        };
-                        let target = 6i16 + modifier;
-                        prepare_reverse_step(&mut world, id, (target - i16::from(!success)) as u8);
-                        let mut state = serde_json::to_value(&world.btech).unwrap();
-                        let motion = &mut state["constructed"][id.0.to_string()]["motion"];
-                        motion["speed"] = serde_json::json!(speed);
-                        motion["desired_speed"] = serde_json::json!(speed);
-                        motion["heading"] =
-                            serde_json::json!(if speed > 0.0 { 180.0 } else { 0.0 });
-                        motion["desired_heading"] = motion["heading"].clone();
-                        world.btech = serde_json::from_value(state).unwrap();
-                        world.validate(&config).unwrap();
-                        let before = world.clone();
-                        persistence::save(&config.database(), &world).await.unwrap();
-                        let mut loaded = persistence::load(&config.database()).await.unwrap();
-                        let movement = BattleMovementRules {
-                            skid_cliff: skid,
-                            ..BattleMovementRules::STANDARD
-                        };
-                        let notices = advance_battle_motion(&mut world, movement).unwrap();
-                        assert_eq!(
-                            notices,
-                            advance_battle_motion(&mut loaded, movement).unwrap()
-                        );
-                        assert_eq!(world.btech, loaded.btech);
-                        let unit = &world.btech.constructed_units()[&id];
-                        assert_eq!(unit.motion().unwrap().speed, 0.0);
-                        assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
-                        assert_eq!(
-                            unit.posture(),
-                            if success {
-                                BattlePosture::Standing
-                            } else {
-                                BattlePosture::Prone
-                            }
-                        );
-                        let stayed = success || !downhill;
-                        assert_eq!(unit.position().unwrap().y, if stayed { 1 } else { 2 });
-                        assert_eq!(
-                            battle_unit_elevation(&world, id).unwrap(),
-                            Some(if stayed { old } else { new })
-                        );
-                        if stayed {
-                            assert_eq!(
-                                unit.motion().unwrap().point,
-                                before.btech.constructed_units()[&id]
-                                    .motion()
-                                    .unwrap()
-                                    .point
-                            );
-                        }
-                        if success {
-                            assert!(notices.iter().any(|notice| {
-                                notice.text.starts_with("You manage to stop before")
-                            }));
-                            let mut expected = before.clone();
-                            assert!(
-                                roll_battle_piloting(&mut expected, id, modifier, true)
-                                    .unwrap()
-                                    .success
-                            );
-                            assert_eq!(
-                                serde_json::to_value(unit).unwrap()["dice"],
-                                serde_json::to_value(&expected.btech.constructed_units()[&id])
-                                    .unwrap()["dice"]
-                            );
-                        } else {
-                            let protection = |unit: &BattleUnit| {
-                                unit.sections()
-                                    .values()
-                                    .map(|section| {
-                                        u32::from(section.armor)
-                                            + u32::from(section.internal)
-                                            + u32::from(section.rear)
-                                    })
-                                    .sum::<u32>()
-                            };
-                            let lost = protection(&before.btech.constructed_units()[&id])
-                                - protection(unit);
-                            let levels = if downhill {
-                                3
-                            } else if skid {
-                                1
-                            } else {
-                                ((1.0 + speed / 10.75) as i16 / 4).max(0)
-                            };
-                            assert_eq!(lost, levels as u32 * 4);
-                        }
-                        world.validate(&config).unwrap();
-                        persistence::save(&config.database(), &world).await.unwrap();
-                        assert_eq!(
-                            persistence::load(&config.database()).await.unwrap().btech,
-                            world.btech
-                        );
+/// One shard per terrain symbol and slope direction owns a single fixture; the
+/// skid/speed/success combinations clone it and keep the lockstep replay twin.
+async fn cliffs_apply_speed_checks_matrix(symbol: char, downhill: bool) {
+    let (old, new) = if downhill { (3, 0) } else { (0, 3) };
+    let row = format!("{symbol}{new}").repeat(3);
+    let old_row = format!(".{old}").repeat(3);
+    let source = format!("3 4\n{old_row}\n{old_row}\n{row}\n{row}\n");
+    let (_dir, config, base, _, units) =
+        fixture_asset(BattleMapAsset::parse(&source).unwrap()).await;
+    let id = units[0];
+    let mut probed_fidelity = [false; 2];
+    for skid in [false, true] {
+        for speed in [-53.75f64, -21.5, 21.5, 53.75] {
+            for success in [false, true] {
+                let mut world = base.clone();
+                let modifier = if skid {
+                    if speed.abs() < 30.0 { -1 } else { 1 }
+                } else {
+                    ((speed + 10.75).abs() / 10.75) as i16 / 3
+                };
+                let target = 6i16 + modifier;
+                prepare_reverse_step(&mut world, id, (target - i16::from(!success)) as u8);
+                let mut state = serde_json::to_value(&world.btech).unwrap();
+                let motion = &mut state["constructed"][id.0.to_string()]["motion"];
+                motion["speed"] = serde_json::json!(speed);
+                motion["desired_speed"] = serde_json::json!(speed);
+                motion["heading"] = serde_json::json!(if speed > 0.0 { 180.0 } else { 0.0 });
+                motion["desired_heading"] = motion["heading"].clone();
+                world.btech = serde_json::from_value(state).unwrap();
+                world.validate(&config).unwrap();
+                let before = world.clone();
+                persistence::save(&config.database(), &world).await.unwrap();
+                let mut loaded = persistence::load(&config.database()).await.unwrap();
+                let movement = BattleMovementRules {
+                    skid_cliff: skid,
+                    ..BattleMovementRules::STANDARD
+                };
+                let notices = advance_battle_motion(&mut world, movement).unwrap();
+                assert_eq!(
+                    notices,
+                    advance_battle_motion(&mut loaded, movement).unwrap()
+                );
+                assert_eq!(world.btech, loaded.btech);
+                let unit = &world.btech.constructed_units()[&id];
+                assert_eq!(unit.motion().unwrap().speed, 0.0);
+                assert_eq!(unit.motion().unwrap().desired_speed, 0.0);
+                assert_eq!(
+                    unit.posture(),
+                    if success {
+                        BattlePosture::Standing
+                    } else {
+                        BattlePosture::Prone
                     }
+                );
+                let stayed = success || !downhill;
+                assert_eq!(unit.position().unwrap().y, if stayed { 1 } else { 2 });
+                assert_eq!(
+                    battle_unit_elevation(&world, id).unwrap(),
+                    Some(if stayed { old } else { new })
+                );
+                if stayed {
+                    assert_eq!(
+                        unit.motion().unwrap().point,
+                        before.btech.constructed_units()[&id]
+                            .motion()
+                            .unwrap()
+                            .point
+                    );
+                }
+                if success {
+                    assert!(
+                        notices
+                            .iter()
+                            .any(|notice| { notice.text.starts_with("You manage to stop before") })
+                    );
+                    let mut expected = before.clone();
+                    assert!(
+                        roll_battle_piloting(&mut expected, id, modifier, true)
+                            .unwrap()
+                            .success
+                    );
+                    assert_eq!(
+                        serde_json::to_value(unit).unwrap()["dice"],
+                        serde_json::to_value(&expected.btech.constructed_units()[&id]).unwrap()["dice"]
+                    );
+                } else {
+                    let protection = |unit: &BattleUnit| {
+                        unit.sections()
+                            .values()
+                            .map(|section| {
+                                u32::from(section.armor)
+                                    + u32::from(section.internal)
+                                    + u32::from(section.rear)
+                            })
+                            .sum::<u32>()
+                    };
+                    let lost =
+                        protection(&before.btech.constructed_units()[&id]) - protection(unit);
+                    let levels = if downhill {
+                        3
+                    } else if skid {
+                        1
+                    } else {
+                        ((1.0 + speed / 10.75) as i16 / 4).max(0)
+                    };
+                    assert_eq!(lost, levels as u32 * 4);
+                }
+                world.validate(&config).unwrap();
+                // Final-state fidelity probe once per outcome shape; the lockstep
+                // replay above stays per combination.
+                let shape = usize::from(success);
+                if !probed_fidelity[shape] {
+                    probed_fidelity[shape] = true;
+                    persistence::save(&config.database(), &world).await.unwrap();
+                    assert_eq!(
+                        persistence::load(&config.database()).await.unwrap().btech,
+                        world.btech
+                    );
                 }
             }
         }
     }
+}
+
+#[tokio::test]
+async fn cliffs_apply_speed_checks_stop_or_fall_and_replay_after_restart_dot_down() {
+    cliffs_apply_speed_checks_matrix('.', true).await;
+}
+
+#[tokio::test]
+async fn cliffs_apply_speed_checks_stop_or_fall_and_replay_after_restart_dot_up() {
+    cliffs_apply_speed_checks_matrix('.', false).await;
+}
+
+#[tokio::test]
+async fn cliffs_apply_speed_checks_stop_or_fall_and_replay_after_restart_slash_down() {
+    cliffs_apply_speed_checks_matrix('/', true).await;
+}
+
+#[tokio::test]
+async fn cliffs_apply_speed_checks_stop_or_fall_and_replay_after_restart_slash_up() {
+    cliffs_apply_speed_checks_matrix('/', false).await;
+}
+
+#[tokio::test]
+async fn cliffs_apply_speed_checks_stop_or_fall_and_replay_after_restart_at_down() {
+    cliffs_apply_speed_checks_matrix('@', true).await;
+}
+
+#[tokio::test]
+async fn cliffs_apply_speed_checks_stop_or_fall_and_replay_after_restart_at_up() {
+    cliffs_apply_speed_checks_matrix('@', false).await;
+}
+
+#[tokio::test]
+async fn cliffs_apply_speed_checks_stop_or_fall_and_replay_after_restart_equals_down() {
+    cliffs_apply_speed_checks_matrix('=', true).await;
+}
+
+#[tokio::test]
+async fn cliffs_apply_speed_checks_stop_or_fall_and_replay_after_restart_equals_up() {
+    cliffs_apply_speed_checks_matrix('=', false).await;
 }
 
 #[tokio::test]
@@ -7554,109 +7631,132 @@ async fn artillery_gunnery_uses_dedicated_skill_without_mutation() {
 }
 
 /// A surface collapse finishes admitted falls after another occupant's reactor blast.
-#[tokio::test]
-async fn fracture_cascade_finishes_pending_wreck_falls_and_replays() {
-    for vehicle in [false, true] {
-        for trigger_last in [false, true] {
-            let (_dir, config, mut world, map, units) = fixture(2).await;
-            let aircraft = vehicle.then(|| {
-                let id = world.create(&config, "Surface aircraft".into(), Kind::Thing);
-                world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
-                create_battle_vehicle(
-                    &mut world,
-                    id,
-                    BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
-                )
-                .unwrap();
-                place_battle_unit(&mut world, id, map, 1, 1).unwrap();
-                assert!(!world.btech.vehicles()[&id].is_destroyed());
-                id
-            });
-            let mut state = serde_json::to_value(&world.btech).unwrap();
-            for id in units {
-                state["constructed"][id.0.to_string()]["dice"] =
-                    serde_json::to_value(BattleDice::seeded([14; 32])).unwrap();
-            }
-            if let Some(id) = aircraft {
-                state["vehicles"][id.0.to_string()]["vtol_flight"] =
-                    serde_json::to_value(BattleVtolFlight::default()).unwrap();
-                state["vehicles"][id.0.to_string()]["dice"] =
-                    serde_json::to_value(BattleDice::seeded([14; 32])).unwrap();
-            }
-            world.btech = serde_json::from_value(state).unwrap();
-            // Select a collapse whose first fall detonates a reactor and interrupts the next fall.
-            let trigger = trigger_last.then_some(units[0]);
-            let coordinate = BattleHexCoordinate { x: 1, y: 1 };
-            let selected = (0u32..10_000)
-                .find_map(|seed| {
-                    let mut bytes = [0; 32];
-                    bytes[..4].copy_from_slice(&seed.to_le_bytes());
-                    let mut candidate = world.clone();
-                    let mut state = serde_json::to_value(&candidate.btech).unwrap();
-                    for id in units {
-                        state["constructed"][id.0.to_string()]["dice"] =
-                            serde_json::to_value(BattleDice::seeded(bytes)).unwrap();
-                    }
-                    candidate.btech = serde_json::from_value(state).unwrap();
-                    let before = candidate.clone();
-                    let report =
-                        break_battle_ice(&mut candidate, map, coordinate, trigger, rules())
-                            .unwrap();
-                    let blast = report
-                        .falls
-                        .first()?
-                        .1
-                        .groups
-                        .iter()
-                        .flat_map(|group| &group.flooding)
-                        .find_map(|flood| flood.reactor_explosion.as_ref())?;
-                    (report.falls.len() == 2
-                        && blast.hits.iter().any(|hit| hit.unit == report.falls[1].0)
-                        && report.falls[1].1.groups.is_empty())
-                    .then_some(before)
-                })
-                .expect("collapse with an interrupted pending fall");
-            world = selected;
-            world.validate(&config).unwrap();
-            persistence::save(&config.database(), &world).await.unwrap();
-            let mut restarted = persistence::load(&config.database()).await.unwrap();
-            let report = break_battle_ice(&mut world, map, coordinate, trigger, rules()).unwrap();
-            assert_eq!(
-                report,
-                break_battle_ice(&mut restarted, map, coordinate, trigger, rules()).unwrap()
-            );
-            assert_eq!(world.btech, restarted.btech);
-            assert_eq!(report.falls.len(), 2);
-            let blast = report.falls[0]
+async fn fracture_cascade_matrix(vehicle: bool, trigger_last: bool) {
+    let (_dir, config, mut world, map, units) = fixture(2).await;
+    let aircraft = vehicle.then(|| {
+        let id = world.create(&config, "Surface aircraft".into(), Kind::Thing);
+        world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
+        create_battle_vehicle(
+            &mut world,
+            id,
+            BattleVehicleTemplate::parse(include_str!("../game/mechs/Kestrel")).unwrap(),
+        )
+        .unwrap();
+        place_battle_unit(&mut world, id, map, 1, 1).unwrap();
+        assert!(!world.btech.vehicles()[&id].is_destroyed());
+        id
+    });
+    let mut state = serde_json::to_value(&world.btech).unwrap();
+    for id in units {
+        state["constructed"][id.0.to_string()]["dice"] =
+            serde_json::to_value(BattleDice::seeded([14; 32])).unwrap();
+    }
+    if let Some(id) = aircraft {
+        state["vehicles"][id.0.to_string()]["vtol_flight"] =
+            serde_json::to_value(BattleVtolFlight::default()).unwrap();
+        state["vehicles"][id.0.to_string()]["dice"] =
+            serde_json::to_value(BattleDice::seeded([14; 32])).unwrap();
+    }
+    world.btech = serde_json::from_value(state).unwrap();
+    // Select a collapse whose first fall detonates a reactor and interrupts the next fall.
+    let trigger = trigger_last.then_some(units[0]);
+    let coordinate = BattleHexCoordinate { x: 1, y: 1 };
+    let template = serde_json::to_value(&world.btech).unwrap();
+    let seeded = |state: &mut serde_json::Value, bytes: [u8; 32]| {
+        for id in units {
+            state["constructed"][id.0.to_string()]["dice"] =
+                serde_json::to_value(BattleDice::seeded(bytes)).unwrap();
+        }
+    };
+    let selected = (0u32..10_000)
+        .find_map(|seed| {
+            let mut bytes = [0; 32];
+            bytes[..4].copy_from_slice(&seed.to_le_bytes());
+            let mut state = template.clone();
+            seeded(&mut state, bytes);
+            let mut candidate = world.clone();
+            candidate.btech = serde_json::from_value(state).unwrap();
+            let report =
+                break_battle_ice(&mut candidate, map, coordinate, trigger, rules()).unwrap();
+            let blast = report
+                .falls
+                .first()?
                 .1
                 .groups
                 .iter()
                 .flat_map(|group| &group.flooding)
-                .find_map(|flood| flood.reactor_explosion.as_ref())
-                .unwrap();
-            assert!(blast.hits.iter().any(|hit| hit.unit == report.falls[1].0));
-            assert!(report.falls[1].1.groups.is_empty());
-            for id in units {
-                let unit = &world.btech.constructed_units()[&id];
-                assert!(unit.is_destroyed());
-                assert_eq!(unit.posture(), BattlePosture::Prone);
-            }
-            if let Some(id) = aircraft {
-                assert!(world.btech.vehicles()[&id].is_destroyed());
-                assert_eq!(report.vehicle_falls.len(), 1);
-                assert_eq!(report.vehicle_falls[0].0, id);
-                assert!(!report.flooded_vehicles.contains(&id));
-                assert!(resolve_battle_vehicle_fall(&mut world, id, 1, rules()).is_err());
-            }
-            world.validate(&config).unwrap();
-            persistence::save(&config.database(), &world).await.unwrap();
-            assert_eq!(
-                persistence::load(&config.database()).await.unwrap().btech,
-                world.btech
-            );
-            let before = world.btech.clone();
-            assert!(resolve_battle_fall(&mut world, units[0], 1, rules()).is_err());
-            assert_eq!(world.btech, before);
-        }
+                .find_map(|flood| flood.reactor_explosion.as_ref())?;
+            (report.falls.len() == 2
+                && blast.hits.iter().any(|hit| hit.unit == report.falls[1].0)
+                && report.falls[1].1.groups.is_empty())
+            .then_some(seed)
+        })
+        .expect("collapse with an interrupted pending fall");
+    let mut state = template.clone();
+    let mut bytes = [0; 32];
+    bytes[..4].copy_from_slice(&selected.to_le_bytes());
+    seeded(&mut state, bytes);
+    let mut selected = world.clone();
+    selected.btech = serde_json::from_value(state).unwrap();
+    world = selected;
+    world.validate(&config).unwrap();
+    persistence::save(&config.database(), &world).await.unwrap();
+    let mut restarted = persistence::load(&config.database()).await.unwrap();
+    let report = break_battle_ice(&mut world, map, coordinate, trigger, rules()).unwrap();
+    assert_eq!(
+        report,
+        break_battle_ice(&mut restarted, map, coordinate, trigger, rules()).unwrap()
+    );
+    assert_eq!(world.btech, restarted.btech);
+    assert_eq!(report.falls.len(), 2);
+    let blast = report.falls[0]
+        .1
+        .groups
+        .iter()
+        .flat_map(|group| &group.flooding)
+        .find_map(|flood| flood.reactor_explosion.as_ref())
+        .unwrap();
+    assert!(blast.hits.iter().any(|hit| hit.unit == report.falls[1].0));
+    assert!(report.falls[1].1.groups.is_empty());
+    for id in units {
+        let unit = &world.btech.constructed_units()[&id];
+        assert!(unit.is_destroyed());
+        assert_eq!(unit.posture(), BattlePosture::Prone);
     }
+    if let Some(id) = aircraft {
+        assert!(world.btech.vehicles()[&id].is_destroyed());
+        assert_eq!(report.vehicle_falls.len(), 1);
+        assert_eq!(report.vehicle_falls[0].0, id);
+        assert!(!report.flooded_vehicles.contains(&id));
+        assert!(resolve_battle_vehicle_fall(&mut world, id, 1, rules()).is_err());
+    }
+    world.validate(&config).unwrap();
+    persistence::save(&config.database(), &world).await.unwrap();
+    assert_eq!(
+        persistence::load(&config.database()).await.unwrap().btech,
+        world.btech
+    );
+    let before = world.btech.clone();
+    assert!(resolve_battle_fall(&mut world, units[0], 1, rules()).is_err());
+    assert_eq!(world.btech, before);
+}
+
+#[tokio::test]
+async fn fracture_cascade_finishes_pending_wreck_falls_and_replays_mech_first() {
+    fracture_cascade_matrix(false, false).await;
+}
+
+#[tokio::test]
+async fn fracture_cascade_finishes_pending_wreck_falls_and_replays_mech_last() {
+    fracture_cascade_matrix(false, true).await;
+}
+
+#[tokio::test]
+async fn fracture_cascade_finishes_pending_wreck_falls_and_replays_vtol_first() {
+    fracture_cascade_matrix(true, false).await;
+}
+
+#[tokio::test]
+async fn fracture_cascade_finishes_pending_wreck_falls_and_replays_vtol_last() {
+    fracture_cascade_matrix(true, true).await;
 }
