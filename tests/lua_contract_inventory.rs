@@ -121,9 +121,11 @@ fn ledger_is_complete_well_formed_and_keeps_the_legacy_fixture_compatible() {
             !string(entry, "acceptance").is_empty(),
             "{symbol}: acceptance"
         );
+        // Superseded entries describe pinned C symbols deliberately replaced
+        // by the new unit-attached autopilot contract without legacy aliases.
         assert!(matches!(
             status,
-            "verified" | "actionable" | "prerequisite-blocked"
+            "verified" | "actionable" | "prerequisite-blocked" | "superseded"
         ));
         if status == "prerequisite-blocked" {
             assert!(

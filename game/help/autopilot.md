@@ -1,44 +1,28 @@
 +++
 title = "Autopilot"
-description = "Queue movement and combat orders for an automated BattleTech unit"
-keywords = ["autopilot", "autogun", "addcommand", "delcommand", "listcommands"]
+description = "Direct automated BattleTech units from Lua"
+keywords = ["autopilot", "lua", "orders", "navigation"]
 article_tags = ["battletech"]
 +++
 
 # Autopilot
 
-An autopilot executes supported orders in queue order. Use `ADDCOMMAND` to add
-an order, `LISTCOMMANDS` to inspect the queue, `DELCOMMAND <number>` to remove
-one order, and `DELCOMMAND -1` to clear the queue. A queue holds at most 100
-orders. Commands that are recognized but not implemented are rejected instead
-of being left in the queue.
+Trusted in-game Lua scripts manage one autopilot controller per Mech or ground
+vehicle through `btech.autopilot`. Attach a controller, submit typed orders, and
+resume it to begin execution. The controller retains its orders across restarts.
 
-`ENGAGE` requires the autopilot object to be physically installed in a
-registered unit and starts its queued activity. `DISENGAGE` stops activity but
-preserves both the unit association and the queue. While engaged, the first
-queued order is active: it cannot be deleted, and a nonempty queue cannot be
-cleared. Orders may still be appended and later pending orders removed. These
-rules are shared by the legacy commands and the typed `btech.autopilot` Lua API.
-Legacy radio `autogun on` and `target` commands re-engage a disengaged autopilot
-when its preserved installation and association remain valid; failure leaves
-its firing state unchanged.
+The initial orders are move, hold, follow, patrol, attack, and attack-move.
+Use `btech.autopilot.status(unit)` to inspect the queue and execution state,
+`observe(unit)` for the unit's sensor-limited battlefield view, and
+`feedback(unit)` for order outcomes. Fire control starts in weapons-hold mode;
+Lua must enable assigned-target or opportunistic fire explicitly.
 
-Supported movement goals are `chasetarget`, `dumbfollow`, `dumbgoto`,
-`enterbase`, `follow`, `goto`, `leavebase`, `oldgoto`, and `roam`. Supported
-immediate orders are `autogun`, `dropoff`, `embark`, `pickup`, `shutdown`,
-`speed`, `startup`, and `udisembark`.
+A successful manual movement or combat control pauses automation. Resume it
+explicitly after the player is done. Radio and cockpit command interfaces do
+not manage this subsystem.
 
-Lua scripts can use `btech.autopilot.status`, `add_order`, `remove_order`,
-`clear_orders`, `engage`, `disengage`, and `event_stats`. Typed orders reject
-unknown fields and invalid values before changing the queue. Coordinates,
-headings, percentages, directions, modes, and registered unit targets are
-validated immediately; mutable map, terrain, damage, carrier, and startup
-conditions are checked when the order executes.
-
-Autogun selects working, recycled weapons that can engage the target without
-exceeding its heat limit. Weapons that require ammunition are skipped when no
-compatible rounds remain. It does not reserve scarce ammunition. Automatic
-sensors choose among visual, light-amplification, infrared, electromagnetic,
-radar, and probe sensors based on visibility and the current target. A manual
-sensor selection disables automatic changes until automatic sensor judgment is
-enabled again.
+For group objectives, `btech.tactical.observe(units, feedback_cursors)` returns a
+filtered friendly-force snapshot, and `btech.tactical.submit(intentions)` applies
+revision-guarded unit orders atomically. Shared sightings retain their observer;
+an attack still requires the receiving unit's own acquired hostile contact.
+See [Lua tactical director](help:tactical_director) for the opt-in scripted example.

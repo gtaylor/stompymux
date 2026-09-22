@@ -359,9 +359,18 @@ pub struct BtechState {
     /// Shared committed phase for turn-boundary rules.
     #[serde(default)]
     pub(crate) turn_clock: super::turn_clock::TurnClock,
+    /// Committed simulation seconds; never advanced by wall time or loading.
+    #[serde(default)]
+    pub(crate) simulation_seconds: i64,
     /// Independently occupied weapon-control stations.
     #[serde(default)]
     pub(crate) gunner_stations: Arc<BTreeMap<ObjectId, super::BattleGunnerStation>>,
+    /// Ground autopilot intent keyed by the directly controlled unit.
+    #[serde(default)]
+    pub(crate) controllers: Arc<BTreeMap<ObjectId, super::autopilot::AutopilotController>>,
+    /// Runtime-only path searches and steering cursors; rebuilt from active orders after load.
+    #[serde(skip)]
+    pub(crate) autopilot_plans: Arc<BTreeMap<ObjectId, super::autopilot::runtime::AutopilotPlan>>,
     /// Loose parts shared by rooms, units and other game objects.
     #[serde(default)]
     pub(crate) inventories: Arc<BTreeMap<ObjectId, Vec<super::BattleInventoryEntry>>>,
@@ -411,9 +420,19 @@ pub struct BtechState {
 }
 
 impl BtechState {
+    /// Elapsed committed simulation seconds, shared by observations and outcomes.
+    pub fn simulation_time(&self) -> i64 {
+        self.simulation_seconds
+    }
+
     /// Shared effective weapon values for the current runtime.
     pub fn weapon_settings(&self) -> &super::BattleWeaponSettings {
         &self.weapon_settings
+    }
+
+    /// Ground autopilot controllers keyed by controlled unit identity.
+    pub fn controllers(&self) -> &BTreeMap<ObjectId, super::autopilot::AutopilotController> {
+        &self.controllers
     }
     /// Exact named skill/advantage records, separate from fixed health and attributes.
     pub fn character_values(
@@ -466,6 +485,9 @@ impl BtechState {
 
     /// Validate decoded maps without interpreting deferred identities or opaque terrain.
     pub(crate) fn validate(&self, world: &World) -> Result<()> {
+        let _loadouts = super::loadout_context::LoadoutScope::state(self);
+        ensure!(self.simulation_seconds >= 0, "Invalid simulation time");
+        super::autopilot::validate_controllers(&self.controllers)?;
         super::gunner_station::validate(world)?;
         super::battlefield_identity::validate(self)?;
         self.weapon_settings.validate()?;
@@ -883,6 +905,8 @@ impl BtechState {
             return;
         }
         Arc::make_mut(&mut self.gunner_stations).retain(|station, _| !ids.contains(station));
+        Arc::make_mut(&mut self.controllers).retain(|unit, _| !ids.contains(unit));
+        Arc::make_mut(&mut self.autopilot_plans).retain(|unit, _| !ids.contains(unit));
         for station in Arc::make_mut(&mut self.gunner_stations).values_mut() {
             if ids.contains(&station.parent) || ids.contains(&station.target) {
                 station.lock_remaining = 0;

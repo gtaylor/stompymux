@@ -89,6 +89,15 @@ impl BattleUnit {
     /// Aggregate one mount's slots, including any split sections, without consuming dice.
     pub fn weapon_damage_effects(&self, index: usize) -> Result<BattleWeaponDamageEffects> {
         let loadout = self.loadout()?;
+        self.weapon_damage_with_loadout(&loadout, index)
+    }
+
+    /// Inspect live slot damage using the caller's immutable equipment projection.
+    pub(crate) fn weapon_damage_with_loadout(
+        &self,
+        loadout: &super::BattleLoadout,
+        index: usize,
+    ) -> Result<BattleWeaponDamageEffects> {
         let mount = loadout
             .weapons
             .get(index)

@@ -43,6 +43,16 @@ impl super::BattleVehicle {
     }
 }
 
+/// Read live lamp state without resolving static equipment flags.
+fn lamp_state(world: &World, id: ObjectId) -> Option<BattleSearchlight> {
+    world
+        .btech
+        .constructed_units()
+        .get(&id)
+        .map(|unit| unit.searchlight)
+        .or_else(|| world.btech.vehicles().get(&id).map(|unit| unit.searchlight))
+}
+
 /// Read installed hardware independently of anatomy and cockpit admission.
 fn hardware(world: &World, id: ObjectId) -> Option<(BattleSearchlight, bool)> {
     if let Some(unit) = world.btech.constructed_units().get(&id) {
@@ -85,11 +95,14 @@ pub(super) fn beam(
     world: &World,
     id: ObjectId,
 ) -> Option<(super::BattlePosition, super::BattlePoint, f64)> {
+    let lamp = lamp_state(world, id)?;
+    // Most battlefield units have no active beam. Reject them before building
+    // a full scanner view; illumination is queried for every sensor pair.
+    if !lamp.on || lamp.destroyed {
+        return None;
+    }
     let scanner = super::scanner::scanner_unit(world, id)?;
-    let (lamp, _) = hardware(world, id)?;
-    if !lamp.on
-        || lamp.destroyed
-        || scanner.destroyed
+    if scanner.destroyed
         || world
             .objects
             .get(&id)
@@ -147,10 +160,12 @@ pub fn toggle_searchlight(
             "Your searchlight starts to warm up."
         }
     };
-    Ok(BattleNotice {
+    let notice = BattleNotice {
         unit: id,
         text: text.into(),
-    })
+    };
+    let _ = super::autopilot::manual_takeover(world, id);
+    Ok(notice)
 }
 
 /// Advance switches atomically with the server tick; an unpowered expiry leaves the lamp unchanged.
@@ -193,6 +208,9 @@ pub fn advance_searchlights(world: &mut World) -> Vec<BattleNotice> {
 
 /// A target is lit by inferno fire, its own lamp, scenario lighting or an unobstructed forward beam.
 pub fn unit_illuminated(world: &World, target: ObjectId) -> bool {
+    let _measurement = crate::btech::autopilot::diagnostics::measure(
+        crate::btech::autopilot::diagnostics::Category::Illumination,
+    );
     if !world
         .objects
         .get(&target)
@@ -200,7 +218,7 @@ pub fn unit_illuminated(world: &World, target: ObjectId) -> bool {
     {
         return false;
     }
-    hardware(world, target).is_some_and(|_| {
+    lamp_state(world, target).is_some_and(|_| {
         inferno(world, target) > 0
             || beam(world, target).is_some()
             || externally_illuminated(world, target)
@@ -209,6 +227,14 @@ pub fn unit_illuminated(world: &World, target: ObjectId) -> bool {
 
 /// Scenario lighting, nearby infernos and other lamps can trigger external-light warnings.
 fn externally_illuminated(world: &World, target: ObjectId) -> bool {
+    externally_illuminated_with_sources(world, target, illumination_sources(world))
+}
+
+fn externally_illuminated_with_sources(
+    world: &World,
+    target: ObjectId,
+    emitters: impl Iterator<Item = (ObjectId, bool)>,
+) -> bool {
     if world
         .objects
         .get(&target)
@@ -235,7 +261,34 @@ fn externally_illuminated(world: &World, target: ObjectId) -> bool {
     }) else {
         return false;
     };
-    emitter_ids(world).any(|source| {
+    external_sources_illuminate(world, target, position, emitters)
+}
+
+/// Candidates are derived once while the caller holds an immutable world borrow.
+fn illumination_sources(world: &World) -> impl Iterator<Item = (ObjectId, bool)> + '_ {
+    world
+        .btech
+        .constructed_units()
+        .iter()
+        .filter_map(|(&id, unit)| {
+            let burning = unit.inferno_remaining() > 0;
+            (burning || (unit.searchlight.on && !unit.searchlight.destroyed))
+                .then_some((id, burning))
+        })
+        .chain(world.btech.vehicles().iter().filter_map(|(&id, unit)| {
+            let burning = unit.inferno_remaining() > 0;
+            (burning || (unit.searchlight.on && !unit.searchlight.destroyed))
+                .then_some((id, burning))
+        }))
+}
+
+fn external_sources_illuminate(
+    world: &World,
+    target: ObjectId,
+    position: super::BattlePosition,
+    emitters: impl Iterator<Item = (ObjectId, bool)>,
+) -> bool {
+    emitters.into_iter().any(|(source, burning)| {
         if source == target
             || world
                 .objects
@@ -258,7 +311,7 @@ fn externally_illuminated(world: &World, target: ObjectId) -> bool {
             x: i32::from(position.x),
             y: i32::from(position.y),
         };
-        if inferno(world, source) > 0 && source_hex.distance(target_hex) <= 1 {
+        if burning && source_hex.distance(target_hex) <= 1 {
             return true;
         }
         let Some((_, _, heading)) = beam(world, source) else {
@@ -382,5 +435,49 @@ impl BattleSearchlight {
     /// Cut lamp power during shutdown; any pending countdown can expire without switching on.
     pub(super) fn shutdown(&mut self) -> bool {
         std::mem::take(&mut self.on)
+    }
+}
+
+/// Illumination reused only inside one read-only observation, never across world mutations.
+pub(super) struct IlluminationContext<'w> {
+    world: &'w World,
+    sources: std::cell::OnceCell<Vec<(ObjectId, bool)>>,
+    targets: std::cell::RefCell<std::collections::BTreeMap<ObjectId, bool>>,
+}
+impl<'w> IlluminationContext<'w> {
+    pub(super) fn new(world: &'w World) -> Self {
+        Self {
+            world,
+            sources: Default::default(),
+            targets: Default::default(),
+        }
+    }
+    pub(super) fn illuminated(&self, target: ObjectId) -> bool {
+        let _measurement = crate::btech::autopilot::diagnostics::measure(
+            crate::btech::autopilot::diagnostics::Category::Illumination,
+        );
+        if let Some(value) = self.targets.borrow().get(&target) {
+            return *value;
+        }
+        let world = self.world;
+        let live = world
+            .objects
+            .get(&target)
+            .is_some_and(|o| !o.flags.contains(crate::Flag::Going));
+        let value = live
+            && lamp_state(world, target).is_some_and(|_| {
+                inferno(world, target) > 0
+                    || beam(world, target).is_some()
+                    || externally_illuminated_with_sources(
+                        world,
+                        target,
+                        self.sources
+                            .get_or_init(|| illumination_sources(world).collect())
+                            .iter()
+                            .copied(),
+                    )
+            });
+        self.targets.borrow_mut().insert(target, value);
+        value
     }
 }

@@ -75,8 +75,9 @@ It preserves the game object, inventory and physical contents. Cleanup notices
 go to GOD; the invoking wizard receives the unregistration confirmation.
 External entrance/exit markers remain attached to their target object, while
 authored links to the removed map are cleared. Initialization and teardown for
-MECH and AUTOPILOT remain unfinished; use the existing unit-creation commands
-above for supported constructed units.
+The legacy AUTOPILOT registration role does not manage the new unit-attached
+controller; use the in-game `btech.autopilot` Lua API. Use the unit-creation
+commands above for supported constructed units.
 
 `@btech/register #44=TURRET` creates an unattached gunner station. Its parent and
 gunner fields initially contain zero; use the gunner field controls to configure
@@ -87,7 +88,8 @@ changes among DEBUG, MAP and TURRET can be committed in one save.
 
 Supported Mechs, ground vehicles and VTOLs have movement and combat controls;
 see `help piloting` and `help flight`. Full gameplay parity remains under
-development. Repairs, autopilots and loading units into other units are deferred. A successfully parsed
+development. Ground autopilots are available through in-game Lua; repairs and
+loading units into other units are deferred. A successfully parsed
 template has not yet had its equipment and rule support validated. Use
 `template-check <name>` to preview the unit-construction checks, the first
 rejection reason and any ammunition normalization. A successful check means the

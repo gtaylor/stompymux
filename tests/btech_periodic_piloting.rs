@@ -514,6 +514,9 @@ async fn idle_clock_wraps_retries_and_resumes_from_saved_phase() {
         }).await.unwrap();
         shutdown.send(ShutdownRequest::Sigterm).unwrap(); task.await.unwrap().unwrap();
         phase(&mut world, 0);
+        let mut expected = serde_json::to_value(&world.btech).unwrap();
+        expected["simulation_seconds"] = 1.into();
+        world.btech = serde_json::from_value(expected).unwrap();
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, world.btech);
         // A large wall-clock change must not simulate thousands of offline turns.
         let (_, shutdown, task, _) = support::start(&config, Rc::new(Cell::new(900_000))).await;
@@ -528,6 +531,9 @@ async fn idle_clock_wraps_retries_and_resumes_from_saved_phase() {
         }).await.unwrap();
         shutdown.send(ShutdownRequest::Sigterm).unwrap(); task.await.unwrap().unwrap();
         phase(&mut world, 1);
+        let mut expected = serde_json::to_value(&world.btech).unwrap();
+        expected["simulation_seconds"] = 2.into();
+        world.btech = serde_json::from_value(expected).unwrap();
         assert_eq!(persistence::load(&config.database()).await.unwrap().btech, world.btech);
     }).await;
 }

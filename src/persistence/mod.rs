@@ -1,5 +1,6 @@
 //! Direct asynchronous schema-32 persistence with selective, atomic updates.
 mod btech;
+mod btech_autopilot;
 mod btech_character;
 mod btech_decorations;
 mod btech_map_lifecycle;

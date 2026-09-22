@@ -17,6 +17,20 @@ pub(super) struct Catalog {
     pub(super) entries: &'static [Entry],
 }
 
+/// One stable Lua spelling for a serialized state or reason.
+#[derive(Debug)]
+pub(super) struct StringEntry {
+    pub(super) name: &'static str,
+    pub(super) value: &'static str,
+}
+
+/// Identity and inventory for one string-valued constant family.
+#[derive(Debug)]
+pub(super) struct StringCatalog {
+    pub(super) qualified_name: &'static str,
+    pub(super) entries: &'static [StringEntry],
+}
+
 #[derive(Clone, Copy)]
 struct Constant {
     catalog: &'static Catalog,
@@ -80,6 +94,52 @@ impl UserData for Namespace {
                     )
                 })?;
             push(lua, namespace.catalog, entry.value)
+        });
+        methods.add_meta_method(
+            MetaMethod::NewIndex,
+            |_, _, _: (Value, Value)| -> mlua::Result<()> {
+                Err(error::failure(
+                    "mux.arg.invalid",
+                    "BattleTech constants are immutable",
+                ))
+            },
+        );
+    }
+}
+
+#[derive(Clone, Copy)]
+struct StringNamespace {
+    catalog: &'static StringCatalog,
+}
+
+impl UserData for StringNamespace {
+    fn add_methods<M: UserDataMethods<Self>>(methods: &mut M) {
+        methods.add_meta_method(MetaMethod::Index, |lua, namespace, key: Value| {
+            let Value::String(key) = key else {
+                return Err(namespace_failure(
+                    lua,
+                    format!(
+                        "{} constant name must be a string",
+                        namespace.catalog.qualified_name
+                    ),
+                ));
+            };
+            let entry = namespace
+                .catalog
+                .entries
+                .iter()
+                .find(|entry| entry.name.as_bytes() == key.as_bytes().as_ref())
+                .ok_or_else(|| {
+                    namespace_failure(
+                        lua,
+                        format!(
+                            "unknown {} constant '{}'",
+                            namespace.catalog.qualified_name,
+                            String::from_utf8_lossy(&key.as_bytes())
+                        ),
+                    )
+                })?;
+            Ok(Value::String(lua.create_string(entry.value)?))
         });
         methods.add_meta_method(
             MetaMethod::NewIndex,
@@ -823,126 +883,162 @@ pub(super) static AUTOPILOT_ORDERS: Catalog = Catalog {
     qualified_name: "btech.autopilot.orders",
     entries: &[
         Entry {
-            name: "CHASE_TARGET",
+            name: "MOVE",
             value: 0,
         },
         Entry {
-            name: "DUMB_FOLLOW",
+            name: "HOLD",
             value: 1,
         },
         Entry {
             name: "FOLLOW",
+            value: 2,
+        },
+        Entry {
+            name: "PATROL",
+            value: 3,
+        },
+        Entry {
+            name: "ATTACK",
             value: 4,
         },
         Entry {
-            name: "EMBARK",
-            value: 11,
-        },
-        Entry {
-            name: "PICK_UP",
-            value: 12,
-        },
-        Entry {
-            name: "DUMB_GOTO",
-            value: 2,
-        },
-        Entry {
-            name: "GOTO",
+            name: "ATTACK_MOVE",
             value: 5,
         },
+    ],
+};
+
+pub(super) static AUTOPILOT_SUBMISSION_MODES: Catalog = Catalog {
+    qualified_name: "btech.autopilot.submission_modes",
+    entries: &[
         Entry {
-            name: "OLD_GOTO",
-            value: 7,
+            name: "APPEND",
+            value: 0,
         },
         Entry {
-            name: "ENTER_BASE",
-            value: 3,
-        },
-        Entry {
-            name: "LEAVE_BASE",
-            value: 6,
-        },
-        Entry {
-            name: "ROAM",
-            value: 8,
-        },
-        Entry {
-            name: "AUTO_GUN",
-            value: 9,
-        },
-        Entry {
-            name: "DROP_OFF",
-            value: 10,
-        },
-        Entry {
-            name: "SHUT_DOWN",
-            value: 13,
-        },
-        Entry {
-            name: "START_UP",
-            value: 15,
-        },
-        Entry {
-            name: "UNIT_DISEMBARK",
-            value: 16,
-        },
-        Entry {
-            name: "SPEED",
-            value: 14,
+            name: "REPLACE",
+            value: 1,
         },
     ],
 };
 
-pub(super) static AUTOPILOT_DIRECTIONS: Catalog = Catalog {
-    qualified_name: "btech.autopilot.directions",
+pub(super) static AUTOPILOT_FIRE_MODES: Catalog = Catalog {
+    qualified_name: "btech.autopilot.fire_modes",
     entries: &[
         Entry {
-            name: "NORTH",
+            name: "HOLD",
             value: 0,
         },
         Entry {
-            name: "EAST",
+            name: "ASSIGNED_TARGET",
             value: 1,
         },
         Entry {
-            name: "SOUTH",
+            name: "OPPORTUNISTIC",
             value: 2,
         },
-        Entry {
-            name: "WEST",
-            value: 3,
+    ],
+};
+
+pub(super) static AUTOPILOT_STATES: StringCatalog = StringCatalog {
+    qualified_name: "btech.autopilot.states",
+    entries: &[
+        StringEntry {
+            name: "PAUSED",
+            value: "paused",
+        },
+        StringEntry {
+            name: "IDLE",
+            value: "idle",
+        },
+        StringEntry {
+            name: "EXECUTING",
+            value: "executing",
+        },
+        StringEntry {
+            name: "BLOCKED",
+            value: "blocked",
         },
     ],
 };
 
-pub(super) static AUTOPILOT_ROAM_MODES: Catalog = Catalog {
-    qualified_name: "btech.autopilot.roam_modes",
+pub(super) static AUTOPILOT_ORDER_STATES: StringCatalog = StringCatalog {
+    qualified_name: "btech.autopilot.order_states",
     entries: &[
-        Entry {
-            name: "MAP",
-            value: 0,
+        StringEntry {
+            name: "QUEUED",
+            value: "queued",
         },
-        Entry {
-            name: "RADIUS",
-            value: 1,
+        StringEntry {
+            name: "RUNNING",
+            value: "running",
+        },
+        StringEntry {
+            name: "SUCCEEDED",
+            value: "succeeded",
+        },
+        StringEntry {
+            name: "FAILED",
+            value: "failed",
+        },
+        StringEntry {
+            name: "CANCELED",
+            value: "canceled",
         },
     ],
 };
 
-pub(super) static AUTOPILOT_AUTOGUN_MODES: Catalog = Catalog {
-    qualified_name: "btech.autopilot.autogun_modes",
+pub(super) static AUTOPILOT_REASONS: StringCatalog = StringCatalog {
+    qualified_name: "btech.autopilot.reasons",
     entries: &[
-        Entry {
-            name: "AUTOMATIC",
-            value: 0,
+        StringEntry {
+            name: "MANUAL_TAKEOVER",
+            value: "manual_takeover",
         },
-        Entry {
-            name: "OFF",
-            value: 1,
+        StringEntry {
+            name: "CONTACT_LOST",
+            value: "contact_lost",
         },
-        Entry {
-            name: "TARGET",
-            value: 2,
+        StringEntry {
+            name: "STUCK",
+            value: "stuck",
+        },
+        StringEntry {
+            name: "UNREACHABLE",
+            value: "unreachable",
+        },
+        StringEntry {
+            name: "INVALIDATED",
+            value: "invalidated",
+        },
+        StringEntry {
+            name: "RESOURCE_LIMIT",
+            value: "resource_limit",
+        },
+        StringEntry {
+            name: "CONGESTED",
+            value: "congested",
+        },
+        StringEntry {
+            name: "INVALID_TARGET",
+            value: "invalid_target",
+        },
+        StringEntry {
+            name: "UNIT_UNAVAILABLE",
+            value: "unit_unavailable",
+        },
+        StringEntry {
+            name: "MAP_CHANGED",
+            value: "map_changed",
+        },
+        StringEntry {
+            name: "UNSUPPORTED",
+            value: "unsupported",
+        },
+        StringEntry {
+            name: "STALE_REVISION",
+            value: "stale_revision",
         },
     ],
 };
@@ -1094,6 +1190,16 @@ fn namespace(lua: &Lua, catalog: &'static Catalog) -> mlua::Result<AnyUserData> 
     Ok(namespace)
 }
 
+fn string_namespace(lua: &Lua, catalog: &'static StringCatalog) -> mlua::Result<AnyUserData> {
+    let namespace = lua.create_userdata(StringNamespace { catalog })?;
+    protect_metatable(
+        lua,
+        &namespace,
+        "protected BattleTech constant namespace metatable",
+    )?;
+    Ok(namespace)
+}
+
 fn protect_metatable(lua: &Lua, value: &AnyUserData, label: &'static str) -> mlua::Result<()> {
     // mlua protects userdata metatables with boolean false. The C contract exposes a
     // descriptive protection string, so replace only that protected sentinel while the
@@ -1134,11 +1240,17 @@ pub(super) fn install(lua: &Lua, package: &Table) -> mlua::Result<()> {
     let autopilot = table(lua, package, "autopilot")?;
     for (name, catalog) in [
         ("orders", &AUTOPILOT_ORDERS),
-        ("directions", &AUTOPILOT_DIRECTIONS),
-        ("roam_modes", &AUTOPILOT_ROAM_MODES),
-        ("autogun_modes", &AUTOPILOT_AUTOGUN_MODES),
+        ("submission_modes", &AUTOPILOT_SUBMISSION_MODES),
+        ("fire_modes", &AUTOPILOT_FIRE_MODES),
     ] {
         autopilot.raw_set(name, namespace(lua, catalog)?)?;
+    }
+    for (name, catalog) in [
+        ("states", &AUTOPILOT_STATES),
+        ("order_states", &AUTOPILOT_ORDER_STATES),
+        ("reasons", &AUTOPILOT_REASONS),
+    ] {
+        autopilot.raw_set(name, string_namespace(lua, catalog)?)?;
     }
     package.raw_set("autopilot", autopilot)?;
 

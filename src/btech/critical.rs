@@ -190,6 +190,19 @@ impl BattleUnit {
     /// Count effective losses: sink cooling capacity and jump jets, rather than their grouped slots.
     /// Flooded and vacuum-exposed engines, heat sinks and jump jets also count.
     pub fn system_hits(&self, system: BattleSystem) -> u8 {
+        // Undamaged units are the common case in scanner and movement queries.
+        // No installed system can be lost without one of these live conditions.
+        if self.lost_criticals.is_empty()
+            && self.flooded_sections.is_empty()
+            && self.breached_sections.is_empty()
+            && self.definition().sections.keys().all(|section| {
+                self.sections
+                    .get(section)
+                    .is_some_and(|state| state.internal > 0)
+            })
+        {
+            return 0;
+        }
         if system == BattleSystem::JumpJet && self.definition().has_special("ImprovedJJ_Tech") {
             return self
                 .loadout()
@@ -229,12 +242,14 @@ impl BattleUnit {
                     .map(move |(&slot, part)| (CriticalLocation { section, slot }, part))
             })
             .filter(|(location, part)| {
-                BattleSystem::parse(&part.equipment).ok() == Some(system)
-                    && (self.critical_destroyed(*location)
-                        || (matches!(
-                            system,
-                            BattleSystem::Engine | BattleSystem::HeatSink | BattleSystem::JumpJet
-                        ) && self.section_disabled(location.section)))
+                // Destruction checks run for every sensor snapshot. Most slots are
+                // intact: inspect their live condition before parsing equipment names.
+                (self.critical_destroyed(*location)
+                    || (matches!(
+                        system,
+                        BattleSystem::Engine | BattleSystem::HeatSink | BattleSystem::JumpJet
+                    ) && self.section_disabled(location.section)))
+                    && BattleSystem::parse(&part.equipment).ok() == Some(system)
             })
             .count() as u8
     }

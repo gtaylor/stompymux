@@ -160,6 +160,7 @@ pub fn select_optical_sensors(
             wanted,
             remaining: 10,
         });
+        let _ = super::autopilot::manual_takeover(world, unit);
         return Ok(());
     }
     super::power::controlled_unit(world, unit, pilot)?;
@@ -193,6 +194,7 @@ pub fn select_optical_sensors(
         wanted,
         remaining: 10,
     });
+    let _ = super::autopilot::manual_takeover(world, unit);
     Ok(())
 }
 

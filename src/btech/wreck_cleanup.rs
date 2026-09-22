@@ -79,6 +79,8 @@ pub(crate) fn forget(state: &mut BtechState, id: ObjectId) {
     Arc::make_mut(&mut state.constructed).remove(&id);
     Arc::make_mut(&mut state.vehicles).remove(&id);
     Arc::make_mut(&mut state.units).remove(&id);
+    Arc::make_mut(&mut state.controllers).remove(&id);
+    Arc::make_mut(&mut state.autopilot_plans).remove(&id);
     Arc::make_mut(&mut state.registrations).remove(&id);
     Arc::make_mut(&mut state.wrecks).remove(&id);
 }

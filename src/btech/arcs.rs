@@ -190,6 +190,7 @@ pub fn rotate_torso(
         .unwrap()
         .facing
         .torso = torso;
+    let _ = super::autopilot::manual_takeover(world, id);
     Ok(BattleNotice {
         unit: id,
         text: (match direction {
@@ -219,9 +220,11 @@ pub fn flip_arms(world: &mut World, id: ObjectId, pilot: ObjectId) -> Result<Bat
         .get_mut(&id)
         .unwrap();
     unit.facing.arms_flipped = !unit.facing.arms_flipped;
+    let flipped = unit.facing.arms_flipped;
+    let _ = super::autopilot::manual_takeover(world, id);
     Ok(BattleNotice {
         unit: id,
-        text: (if unit.facing.arms_flipped {
+        text: (if flipped {
             "Arms have been flipped to BACKWARD position"
         } else {
             "Arms have been flipped to FORWARD position"

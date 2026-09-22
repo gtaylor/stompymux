@@ -48,10 +48,39 @@ pub fn fire_vehicle_shot(
     weapon_index: usize,
     rules: BattleVehicleShotRules,
 ) -> Result<BattleVehicleShotReport> {
-    fire_shot(
+    anyhow::ensure!(
+        !(pilot == shooter && world.btech.controllers().contains_key(&shooter)),
+        "Autopilot actor token is internal"
+    );
+    let report = fire_shot(
         world,
         shooter,
         pilot,
+        super::shot::ShotTarget {
+            unit: target,
+            coordinate: None,
+        },
+        weapon_index,
+        rules,
+        None,
+    )?;
+    let _ = super::autopilot::manual_takeover(world, shooter);
+    Ok(report)
+}
+
+/// Fire one ordinary direct weapon for an attached autopilot.  The shooter ID
+/// is used as the internal actor token; it is never treated as a player.
+pub(crate) fn fire_vehicle_shot_autopilot(
+    world: &mut World,
+    shooter: ObjectId,
+    target: ObjectId,
+    weapon_index: usize,
+    rules: BattleVehicleShotRules,
+) -> Result<BattleVehicleShotReport> {
+    fire_shot(
+        world,
+        shooter,
+        shooter,
         super::shot::ShotTarget {
             unit: target,
             coordinate: None,
@@ -72,7 +101,15 @@ pub(super) fn fire_vehicle_shot_in_action(
     rules: BattleVehicleShotRules,
     xp: &crate::config::XpConfig,
 ) -> Result<BattleVehicleShotReport> {
-    fire_shot(world, shooter, pilot, target, weapon_index, rules, Some(xp))
+    anyhow::ensure!(
+        !(pilot == shooter && world.btech.controllers().contains_key(&shooter)),
+        "Autopilot actor token is internal"
+    );
+    let report = fire_shot(world, shooter, pilot, target, weapon_index, rules, Some(xp))?;
+    if pilot != shooter {
+        let _ = super::autopilot::manual_takeover(world, shooter);
+    }
+    Ok(report)
 }
 
 /// Share launch, defenses and target damage regardless of publication policy.
@@ -85,6 +122,7 @@ fn fire_shot(
     rules: BattleVehicleShotRules,
     xp: Option<&crate::config::XpConfig>,
 ) -> Result<BattleVehicleShotReport> {
+    let loadouts = super::loadout_context::LoadoutScope::state(&world.btech);
     let operator = super::combat_operator::controlled(world, shooter, pilot)?;
     let character = xp.is_some();
     let attacker = world
@@ -129,6 +167,7 @@ fn fire_shot(
     let target_field = electronic_field(world, target)?;
     let angel_blocked = source_field.angel_disturbed || target_field.angel_protected;
     let submerged = super::weapon_geometry::submerged(world, shooter, weapon_index)?;
+    drop(loadouts);
     let mut candidate = world.clone();
     let experience_messages = if character && let Some(link) = indirect {
         super::spotter::award_indirect_experience(&mut candidate, shooter, link, &mut aim)?

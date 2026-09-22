@@ -2550,6 +2550,7 @@ async fn tcp_help_reload_navigation_and_compressed_chunks() {
     // The independent heartbeat persists its phase even without active units.
     // Compare every game-state field while allowing only that clock to advance.
     after_help["btech"]["turn_clock"] = before_help["btech"]["turn_clock"].clone();
+    after_help["btech"]["simulation_seconds"] = before_help["btech"]["simulation_seconds"].clone();
     assert_eq!(before_help, after_help);
     running.stop().await;
 }
@@ -3529,6 +3530,7 @@ async fn tcp_account_administration_and_restart() {
     // A live heartbeat may commit its phase while the account report is delivered.
     // The report must leave every other saved game-state field unchanged.
     after["btech"]["turn_clock"] = before["btech"]["turn_clock"].clone();
+    after["btech"]["simulation_seconds"] = before["btech"]["simulation_seconds"].clone();
     assert!(
         after == before,
         "Account history inspection changed saved game state"

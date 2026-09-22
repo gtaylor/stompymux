@@ -5,6 +5,7 @@ use sqlx::{Row, SqliteConnection};
 use std::collections::BTreeSet;
 /// Owned records, as defined by the current schema and object destruction contract.
 const OWNED: &[(&str, &str)] = &[
+    ("btech_autopilot_controllers", "unit_dbref"),
     ("btech_autopilot_command_args", "autopilot_dbref"),
     ("btech_autopilot_commands", "autopilot_dbref"),
     ("btech_autopilot_path", "autopilot_dbref"),
@@ -81,6 +82,7 @@ pub(super) async fn cleanup(c: &mut SqliteConnection, purges: &BTreeSet<ObjectId
         return Ok(());
     }
     super::btech_entrances::purge(c, purges).await?;
+    super::btech_autopilot::purge(c, purges).await?;
     super::btech_building_repair::purge(c, purges).await?;
     super::btech_artillery::purge(c, purges).await?;
     super::btech_terrain::purge(c, purges).await?;
@@ -98,7 +100,8 @@ pub(super) async fn cleanup(c: &mut SqliteConnection, purges: &BTreeSet<ObjectId
         sqlx::query_scalar("SELECT name FROM sqlite_master WHERE type='table'")
             .fetch_all(&mut *c)
             .await?;
-    for table in tables {
+    let present: BTreeSet<&str> = tables.iter().map(String::as_str).collect();
+    for table in &tables {
         let fks = sqlx::query(sqlx::AssertSqlSafe(format!(
             "PRAGMA foreign_key_list({})",
             identifier(&table)
@@ -108,7 +111,11 @@ pub(super) async fn cleanup(c: &mut SqliteConnection, purges: &BTreeSet<ObjectId
         for fk in fks {
             let target: String = fk.try_get("table")?;
             let column: String = fk.try_get("from")?;
-            if target != "objects" || OWNED.iter().any(|(t, k)| *t == table && *k == column) {
+            if target != "objects"
+                || OWNED
+                    .iter()
+                    .any(|(t, k)| *t == table.as_str() && *k == column)
+            {
                 continue;
             }
             for id in purges {
@@ -130,6 +137,9 @@ pub(super) async fn cleanup(c: &mut SqliteConnection, purges: &BTreeSet<ObjectId
     }
     for id in purges {
         for (table, column) in OWNED {
+            if !present.contains(table) {
+                continue;
+            }
             sqlx::query(sqlx::AssertSqlSafe(format!(
                 "DELETE FROM {table} WHERE {column}=?"
             )))

@@ -5226,6 +5226,7 @@ async fn stagger_server_water_fall_retries_failed_save_without_losing_history() 
         // The successful retry commits exactly one global turn phase; rejected ticks remain at zero.
         let mut phase_state = serde_json::to_value(&world.btech).unwrap();
         phase_state["turn_clock"] = 1.into();
+        phase_state["simulation_seconds"] = 1.into();
         world.btech = serde_json::from_value(phase_state).unwrap();
         let expected = world.btech.clone();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
@@ -6516,6 +6517,7 @@ async fn overheat_server_retries_shutdown_without_advancing_the_failed_clock_or_
         // The successful retry commits exactly one global turn phase; rejected ticks remain at zero.
         let mut phase_state = serde_json::to_value(&world.btech).unwrap();
         phase_state["turn_clock"] = 1.into();
+        phase_state["simulation_seconds"] = 1.into();
         world.btech = serde_json::from_value(phase_state).unwrap();
         let expected = world.btech.clone();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
@@ -22852,6 +22854,7 @@ async fn character_thermal_server_retries_fatal_heat_commit() {
         // The successful retry commits exactly one global turn phase; rejected ticks remain at zero.
         let mut phase_state = serde_json::to_value(&expected.btech).unwrap();
         phase_state["turn_clock"] = 1.into();
+        phase_state["simulation_seconds"] = 1.into();
         expected.btech = serde_json::from_value(phase_state).unwrap();
         advance_battle_reactor_windows(&mut expected);
         advance_battle_heat(&mut expected);

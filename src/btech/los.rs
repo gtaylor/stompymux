@@ -102,7 +102,7 @@ fn terrain_los_with_endpoint(
     if observer == target {
         return Ok(report);
     }
-    let cells = observer.center().trace(target.center())?;
+    let cells = super::los_trace::center_trace(observer, target)?;
     let steps = cells.len() - 1;
     let mut submerged = 0;
     for (index, &point) in cells.iter().enumerate().skip(1) {
@@ -267,6 +267,9 @@ pub fn unit_terrain_los(
     observer: ObjectId,
     target: ObjectId,
 ) -> Result<BattleTerrainLos> {
+    let _measurement = crate::btech::autopilot::diagnostics::measure(
+        crate::btech::autopilot::diagnostics::Category::Geometry,
+    );
     let observer_id = observer;
     let target_id = target;
     let distance = super::unit_range(world, observer, target)?.spatial;
@@ -456,6 +459,33 @@ mod tests {
             },
         )
         .unwrap()
+    }
+
+    #[test]
+    fn cached_topology_still_reads_current_terrain_and_eye_heights() {
+        use Terrain::*;
+        let from = BattleHexCoordinate { x: 1, y: 0 };
+        let to = BattleHexCoordinate { x: 1, y: 2 };
+        super::super::los_trace::clear();
+        assert!(!sight(&[(Grassland, 0); 3]).blocked);
+        assert!(sight(&[(Grassland, 0), (Grassland, 2), (Grassland, 0)]).blocked);
+        assert!(!sight(&[(Grassland, 0); 3]).blocked);
+        let map = lane(&[(Grassland, 0), (Grassland, 1), (Grassland, 0)]);
+        assert!(
+            !ground_posture_los(&map, from, to, false, false, (None, None))
+                .unwrap()
+                .blocked
+        );
+        assert!(
+            ground_posture_los(&map, from, to, true, true, (None, None))
+                .unwrap()
+                .blocked
+        );
+        assert!(
+            !ground_posture_los(&map, from, to, false, false, (None, None))
+                .unwrap()
+                .blocked
+        );
     }
 
     #[test]

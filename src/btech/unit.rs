@@ -989,15 +989,21 @@ impl BattleUnit {
 
     /// Inspect typed equipment from the owned definition.
     pub fn loadout(&self) -> Result<BattleLoadout> {
-        if self.contract_loadout {
+        if let Some(projection) = super::loadout_context::mech(self) {
+            return Ok(projection);
+        }
+        let projection = (if self.contract_loadout {
             BattleLoadout::resolve_contract(&self.definition)
         } else {
             BattleLoadout::resolve(&self.definition)
-        }
+        })?;
+        super::loadout_context::remember_mech(self, &projection);
+        Ok(projection)
     }
 
     /// Reject corrupt or unsupported persisted construction state.
     pub(crate) fn validate(&self) -> Result<()> {
+        let _loadouts = super::loadout_context::LoadoutScope::unit(self);
         self.last_jump.validate()?;
         self.propulsion.validate()?;
         self.live_mass.validate()?;

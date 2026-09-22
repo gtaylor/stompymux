@@ -7,14 +7,28 @@ sidebar_root_for: self
 no_list: true
 ---
 
-`btech.autopilot`: Typed autopilot constants; queue and control calls are not implemented.
+`btech.autopilot`: Lua control of unit-attached ground autopilots.
 
+## Functions
+
+- [`attach`](attach/)
+- [`cancel`](cancel/)
+- [`configure`](configure/)
+- [`detach`](detach/)
+- [`feedback`](feedback/)
+- [`observe`](observe/)
+- [`pause`](pause/)
+- [`resume`](resume/)
+- [`status`](status/)
+- [`submit`](submit/)
 
 ## Constants
 
-- [`btech.autopilot.autogun_modes`](autogun_modes/)
-- [`btech.autopilot.directions`](directions/)
+- [`btech.autopilot.fire_modes`](fire_modes/)
+- [`btech.autopilot.order_states`](order_states/)
 - [`btech.autopilot.orders`](orders/)
-- [`btech.autopilot.roam_modes`](roam_modes/)
+- [`btech.autopilot.reasons`](reasons/)
+- [`btech.autopilot.states`](states/)
+- [`btech.autopilot.submission_modes`](submission_modes/)
 
-Autopilot currently exposes typed constants. Queue and control callables are not implemented.
+Attach a controller to a ground unit, submit typed orders, and inspect its observations and feedback. Controllers resume persisted work after restart.

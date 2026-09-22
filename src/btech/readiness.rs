@@ -47,15 +47,45 @@ impl BattleUnit {
 
     /// Inspect functioning equipment, remaining matching salvos and recycle time.
     pub fn weapon_readiness(&self, index: usize) -> Result<BattleWeaponReadiness> {
+        let _measurement = crate::btech::autopilot::diagnostics::measure(
+            crate::btech::autopilot::diagnostics::Category::Readiness,
+        );
         let loadout = self.loadout()?;
+        self.weapon_readiness_with_loadout(&loadout, index)
+    }
+
+    /// Inspect every resolved mount while sharing one immutable equipment projection.
+    pub(crate) fn weapon_readiness_batch(&self) -> Result<Vec<BattleWeaponReadiness>> {
+        let _measurement = crate::btech::autopilot::diagnostics::measure(
+            crate::btech::autopilot::diagnostics::Category::Readiness,
+        );
+        let loadout = self.loadout()?;
+        loadout
+            .weapons
+            .iter()
+            .enumerate()
+            .map(|(index, _)| self.weapon_readiness_with_loadout(&loadout, index))
+            .collect()
+    }
+
+    /// Inspect live state against an equipment projection from the same immutable unit.
+    pub(crate) fn weapon_readiness_with_loadout(
+        &self,
+        loadout: &super::BattleLoadout,
+        index: usize,
+    ) -> Result<BattleWeaponReadiness> {
         let weapon = loadout
             .weapons
             .get(index)
             .context("Weapon index out of bounds")?
             .weapon;
-        let mechanics = self.weapon_mechanics(index)?;
+        let mechanics = self.weapon_mechanics_with_loadout(loadout, index)?;
         let intact = mechanics.intact;
-        let mode = self.ammunition_mode(index)?;
+        let mode = self
+            .ammunition_modes
+            .get(&index)
+            .copied()
+            .unwrap_or_default();
         let spent = self.spent_launchers.contains(&index);
         let one_shot = loadout.weapons[index].one_shot;
         let ammunition = if one_shot {
@@ -101,6 +131,14 @@ impl BattleUnit {
         index: usize,
     ) -> Result<super::weapon_admission::WeaponMechanics> {
         let loadout = self.loadout()?;
+        self.weapon_mechanics_with_loadout(&loadout, index)
+    }
+
+    fn weapon_mechanics_with_loadout(
+        &self,
+        loadout: &super::BattleLoadout,
+        index: usize,
+    ) -> Result<super::weapon_admission::WeaponMechanics> {
         let mount = loadout
             .weapons
             .get(index)
@@ -108,7 +146,11 @@ impl BattleUnit {
         let section = mount.criticals[0].section;
         Ok(super::weapon_admission::WeaponMechanics {
             weapon: mount.weapon,
-            intact: self.weapon_intact(index)? && !self.powered_down_weapons.contains(&index),
+            intact: mount
+                .criticals
+                .iter()
+                .all(|location| !self.critical_unavailable(*location))
+                && !self.powered_down_weapons.contains(&index),
             stunned: self.stun_remaining() > 0,
             temporary_failure: self.weapon_damage_jams.contains(&index)
                 || self.weapon_failures.contains_key(&index),
@@ -341,4 +383,61 @@ pub fn advance_recycle(world: &mut World) -> Vec<BattleNotice> {
         }
     }
     notices
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{BattleUnitTemplate, Config, Kind, ObjectId, World};
+    use std::sync::Arc;
+
+    #[test]
+    fn batch_readiness_matches_each_mount_after_live_changes() {
+        let config = Config::load("tests/fixtures/game").unwrap();
+        let mut world = World::default();
+        let id = world.create(&config, "Readiness batch test".into(), Kind::Thing);
+        world.objects.get_mut(&id).unwrap().home = Some(ObjectId(config.home()));
+        BattleUnitTemplate::parse(include_str!("../../tests/fixtures/btech/mechs/JR7-D"))
+            .unwrap()
+            .create(&mut world, id)
+            .unwrap();
+
+        let (ammo_index, ammo_bin, damaged_location, weapon_count) = {
+            let unit = world.btech.constructed_units().get(&id).unwrap();
+            let loadout = unit.loadout().unwrap();
+            let ammo_index = loadout
+                .weapons
+                .iter()
+                .position(|mount| mount.weapon.profile().ammunition_per_ton > 0)
+                .unwrap();
+            let weapon = loadout.weapons[ammo_index].weapon;
+            let ammo_bin = loadout
+                .ammunition
+                .iter()
+                .position(|bin| bin.weapon == weapon)
+                .unwrap();
+            (
+                ammo_index,
+                ammo_bin,
+                loadout.weapons[ammo_index].criticals[0],
+                loadout.weapons.len(),
+            )
+        };
+        Arc::make_mut(&mut world.btech.constructed)
+            .get_mut(&id)
+            .unwrap()
+            .power = BattlePower::Running;
+        let unit = Arc::make_mut(&mut world.btech.constructed)
+            .get_mut(&id)
+            .unwrap();
+        unit.ammunition[ammo_bin] = 0;
+        unit.weapon_recycle.insert(ammo_index, 3);
+        unit.lost_criticals.insert(damaged_location);
+
+        let unit = world.btech.constructed_units().get(&id).unwrap();
+        let individual: Vec<_> = (0..weapon_count)
+            .map(|index| unit.weapon_readiness(index).unwrap())
+            .collect();
+        assert_eq!(unit.weapon_readiness_batch().unwrap(), individual);
+    }
 }

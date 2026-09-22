@@ -1322,11 +1322,16 @@ impl BattleVehicle {
 
     /// Resolve derived equipment without storing a second copy in the snapshot.
     pub fn loadout(&self) -> Result<BattleVehicleLoadout> {
-        if self.contract_loadout {
+        if let Some(projection) = super::loadout_context::vehicle(self) {
+            return Ok(projection);
+        }
+        let projection = (if self.contract_loadout {
             BattleVehicleLoadout::resolve_contract(&self.definition)
         } else {
             BattleVehicleLoadout::resolve(&self.definition)
-        }
+        })?;
+        super::loadout_context::remember_vehicle(self, &projection);
+        Ok(projection)
     }
 
     /// Flooding, crew loss or any lost hull face destroys a vehicle; turret loss alone does not.

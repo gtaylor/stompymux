@@ -1,5 +1,5 @@
 ---
-title: "btech.autopilot.autogun_modes"
+title: "btech.autopilot.submission_modes"
 type: docs
 ---
 
@@ -9,6 +9,5 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 
 | Constant | Type or native code | Description |
 | --- | --- | --- |
-| `btech.autopilot.autogun_modes.AUTOMATIC` | `0` |  |
-| `btech.autopilot.autogun_modes.OFF` | `1` |  |
-| `btech.autopilot.autogun_modes.TARGET` | `2` |  |
+| `btech.autopilot.submission_modes.APPEND` | `0` |  |
+| `btech.autopilot.submission_modes.REPLACE` | `1` |  |

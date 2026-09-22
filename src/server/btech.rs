@@ -4,6 +4,15 @@ use super::*;
 impl Server {
     /// Apply one simulation step; failed saves restore the countdown and discard its notices.
     pub(super) async fn btech_tick(&mut self, now: i64) {
+        self.btech_tick_measured(now, None).await;
+    }
+
+    /// The production step with optional diagnostic timings; scheduling semantics are identical.
+    pub(super) async fn btech_tick_measured(
+        &mut self,
+        now: i64,
+        mut metrics: Option<&mut super::heartbeat_harness::HeartbeatMetrics>,
+    ) {
         self.scripts.record_battle_event_tick();
         let mut scanner_observers = crate::optical_scanner_observers(&self.scripts.world.borrow());
         let starting_scanners: std::collections::BTreeSet<_> = {
@@ -26,9 +35,14 @@ impl Server {
             !scanner_observers.is_empty(),
         );
         let before = self.scripts.world.borrow().clone();
-        self.scripts.world.borrow_mut().btech.turn_clock.advance();
+        let simulation_time = {
+            let mut world = self.scripts.world.borrow_mut();
+            world.btech.turn_clock.advance();
+            world.btech.simulation_seconds = world.btech.simulation_seconds.saturating_add(1);
+            world.btech.simulation_time()
+        };
         if !active {
-            if self.commit(before).await {
+            if self.commit_heartbeat(before, metrics.as_deref_mut()).await {
                 self.flush();
             }
             return;
@@ -41,6 +55,8 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
+            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+                .clear();
             self.scripts.effects.rollback();
             return;
         }
@@ -56,6 +72,8 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
+            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+                .clear();
             self.scripts.effects.rollback();
             return;
         }
@@ -89,6 +107,8 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
+            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+                .clear();
             self.scripts.effects.rollback();
             return;
         }
@@ -103,6 +123,10 @@ impl Server {
                         error.to_string(),
                     );
                     *self.scripts.world.borrow_mut() = before;
+                    std::sync::Arc::make_mut(
+                        &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                    )
+                    .clear();
                     self.scripts.effects.rollback();
                     return;
                 }
@@ -121,6 +145,8 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
+            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+                .clear();
             self.scripts.effects.rollback();
             return;
         }
@@ -134,6 +160,8 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
+            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+                .clear();
             self.scripts.effects.rollback();
             return;
         }
@@ -142,6 +170,37 @@ impl Server {
         notices.extend(crate::advance_battle_standing(
             &mut self.scripts.world.borrow_mut(),
         ));
+        let autopilot_result = match metrics.as_deref_mut() {
+            Some(metrics) => crate::btech::autopilot::runtime::advance_with_metrics(
+                &mut self.scripts.world.borrow_mut(),
+                &self.config,
+                simulation_time,
+                &mut metrics.autopilot,
+            ),
+            None => crate::btech::autopilot::runtime::advance(
+                &mut self.scripts.world.borrow_mut(),
+                &self.config,
+                simulation_time,
+            ),
+        };
+        match autopilot_result {
+            Ok(autopilot_notices) => notices.extend(autopilot_notices),
+            Err(error) => {
+                self.config.log(
+                    &[crate::logging::Category::Problems],
+                    "BTECH",
+                    "AUTOPILOT",
+                    error.to_string(),
+                );
+                *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
+                self.scripts.effects.rollback();
+                return;
+            }
+        }
         match crate::advance_battle_motion_action(
             &self.scripts,
             &self.config,
@@ -202,6 +261,10 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -229,6 +292,8 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
+            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+                .clear();
             self.scripts.effects.rollback();
             return;
         }
@@ -243,6 +308,10 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -262,6 +331,10 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -280,6 +353,10 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -345,6 +422,10 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -366,6 +447,10 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -380,6 +465,8 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
+            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+                .clear();
             self.scripts.effects.rollback();
             return;
         }
@@ -413,6 +500,10 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -443,6 +534,10 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -457,6 +552,8 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
+            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+                .clear();
             self.scripts.effects.rollback();
             return;
         }
@@ -473,6 +570,10 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -488,6 +589,10 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -510,6 +615,8 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
+            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+                .clear();
             self.scripts.effects.rollback();
             return;
         }
@@ -528,6 +635,10 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -542,6 +653,10 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -549,6 +664,37 @@ impl Server {
         notices.extend(crate::advance_battle_target_locks(
             &mut self.scripts.world.borrow_mut(),
         ));
+        let autopilot_result = match metrics.as_deref_mut() {
+            Some(metrics) => crate::btech::autopilot::runtime::advance_combat_with_metrics(
+                &mut self.scripts.world.borrow_mut(),
+                &self.config,
+                simulation_time,
+                &mut metrics.autopilot,
+            ),
+            None => crate::btech::autopilot::runtime::advance_combat(
+                &mut self.scripts.world.borrow_mut(),
+                &self.config,
+                simulation_time,
+            ),
+        };
+        match autopilot_result {
+            Ok(autopilot_notices) => notices.extend(autopilot_notices),
+            Err(error) => {
+                self.config.log(
+                    &[crate::logging::Category::Problems],
+                    "BTECH",
+                    "AUTOPILOT",
+                    error.to_string(),
+                );
+                *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
+                self.scripts.effects.rollback();
+                return;
+            }
+        }
         for event in contact_events {
             if let Err(error) = crate::btech::notify_contact(&self.scripts, &self.config, event) {
                 self.config.log(
@@ -558,6 +704,10 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -572,6 +722,8 @@ impl Server {
                 error.to_string(),
             );
             *self.scripts.world.borrow_mut() = before;
+            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+                .clear();
             self.scripts.effects.rollback();
             return;
         }
@@ -584,6 +736,10 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
@@ -600,12 +756,34 @@ impl Server {
                     error.to_string(),
                 );
                 *self.scripts.world.borrow_mut() = before;
+                std::sync::Arc::make_mut(
+                    &mut self.scripts.world.borrow_mut().btech.autopilot_plans,
+                )
+                .clear();
                 self.scripts.effects.rollback();
                 return;
             }
         }
-        if self.commit(before).await {
+        if self.commit_heartbeat(before, metrics.as_deref_mut()).await {
             self.flush();
         }
+    }
+    /// Measure the actual validated database commit, with no benchmark substitute.
+    async fn commit_heartbeat(
+        &mut self,
+        before: World,
+        metrics: Option<&mut super::heartbeat_harness::HeartbeatMetrics>,
+    ) -> bool {
+        let started = metrics.as_ref().map(|_| Instant::now());
+        let committed = self.commit(before).await;
+        if !committed {
+            std::sync::Arc::make_mut(&mut self.scripts.world.borrow_mut().btech.autopilot_plans)
+                .clear();
+        }
+        if let (Some(metrics), Some(started)) = (metrics, started) {
+            metrics.persistence = started.elapsed();
+            metrics.committed = committed;
+        }
+        committed
     }
 }

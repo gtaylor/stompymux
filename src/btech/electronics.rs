@@ -199,13 +199,17 @@ pub fn toggle_electronics(
         available(world, id, suite)?,
         "This unit does not have a working {suite:?} ECM suite"
     );
-    let electronics = state_mut(world, id);
-    let mode = match suite {
-        BattleElectronicSuite::Guardian => &mut electronics.guardian,
-        BattleElectronicSuite::Angel => &mut electronics.angel,
+    let mode = {
+        let electronics = state_mut(world, id);
+        let mode = match suite {
+            BattleElectronicSuite::Guardian => &mut electronics.guardian,
+            BattleElectronicSuite::Angel => &mut electronics.angel,
+        };
+        *mode = mode.toggle(requested);
+        *mode
     };
-    *mode = mode.toggle(requested);
-    Ok(*mode)
+    let _ = super::autopilot::manual_takeover(world, id);
+    Ok(mode)
 }
 
 /// Compute current effects from same-map emitters without consuming dice or changing observations.

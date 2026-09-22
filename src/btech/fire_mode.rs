@@ -251,9 +251,21 @@ pub(crate) fn hotload_command(
 impl BattleUnit {
     /// Select the firing behavior a supply check permits; the firing transaction persists fallback.
     pub(super) fn effective_fire_mode(&self, index: usize) -> Result<BattleFireMode> {
-        effective_mode(self.fire_mode(index)?, |rounds| {
-            self.ammunition_feed(index, rounds)
-        })
+        let loadout = self.loadout()?;
+        self.effective_fire_mode_with_loadout(&loadout, index)
+    }
+
+    /// Preserve live supply fallback while sharing this immutable equipment projection.
+    pub(crate) fn effective_fire_mode_with_loadout(
+        &self,
+        loadout: &super::BattleLoadout,
+        index: usize,
+    ) -> Result<BattleFireMode> {
+        ensure!(index < loadout.weapons.len(), "Weapon index out of bounds");
+        effective_mode(
+            self.fire_modes.get(&index).copied().unwrap_or_default(),
+            |rounds| self.ammunition_feed_with_loadout(loadout, index, rounds),
+        )
     }
 }
 

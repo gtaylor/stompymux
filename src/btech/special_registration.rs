@@ -41,8 +41,8 @@ pub(crate) fn unregister_special(
             super::wreck_cleanup::forget(&mut world.btech, id);
             world.btech.retire_sanctions.borrow_mut().insert(id);
         }
-        // DEBUG carries no domain record; the Rust port has no autopilot runtime,
-        // so an AUTOPILOT role reduces to its registration entry.
+        // DEBUG and legacy AUTOPILOT registrations carry no domain record. The
+        // new controller is attached directly to a MECH unit through Lua.
         None | Some("DEBUG" | "AUTOPILOT") => {
             Arc::make_mut(&mut world.btech.registrations).remove(&id);
         }

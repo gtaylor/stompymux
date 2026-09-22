@@ -208,10 +208,37 @@ pub fn resolve_shot(
     weapon_index: usize,
     rules: BattleShotRules,
 ) -> Result<BattleShotReport> {
-    resolve_shot_inner(
+    ensure!(
+        !(pilot == shooter && world.btech.controllers().contains_key(&shooter)),
+        "Autopilot actor token is internal"
+    );
+    let report = resolve_shot_inner(
         world,
         shooter,
         pilot,
+        target,
+        weapon_index,
+        rules,
+        ShotEffects::default(),
+    )?;
+    let _ = super::autopilot::manual_takeover(world, shooter);
+    Ok(report)
+}
+
+/// Resolve a direct shot for an attached autopilot.  The unit remains the
+/// actor token so all nested launch/readiness admission paths recognize the
+/// request without inventing a player object.
+pub(crate) fn resolve_shot_autopilot(
+    world: &mut World,
+    shooter: ObjectId,
+    target: ObjectId,
+    weapon_index: usize,
+    rules: BattleShotRules,
+) -> Result<BattleShotReport> {
+    resolve_shot_inner(
+        world,
+        shooter,
+        shooter,
         target,
         weapon_index,
         rules,
@@ -237,7 +264,11 @@ pub(super) fn resolve_shot_in_action(
     rules: BattleShotRules,
     xp: &crate::config::XpConfig,
 ) -> Result<BattleShotReport> {
-    resolve_shot_inner(
+    ensure!(
+        !(pilot == shooter && world.btech.controllers().contains_key(&shooter)),
+        "Autopilot actor token is internal"
+    );
+    let report = resolve_shot_inner(
         world,
         shooter,
         pilot,
@@ -249,7 +280,14 @@ pub(super) fn resolve_shot_in_action(
             xp: Some(xp),
             coordinate: target.coordinate,
         },
-    )
+    )?;
+    // Autopilot actions use the shooter as their internal actor token.  A
+    // successful player action carries a distinct cockpit occupant and pauses
+    // the controller after the enclosing candidate has succeeded.
+    if pilot != shooter {
+        let _ = super::autopilot::manual_takeover(world, shooter);
+    }
+    Ok(report)
 }
 
 /// Publication capability and configured award policy for a complete shot.
@@ -270,6 +308,7 @@ fn resolve_shot_inner(
     rules: BattleShotRules,
     effects: ShotEffects<'_>,
 ) -> Result<BattleShotReport> {
+    let loadouts = super::loadout_context::LoadoutScope::state(&world.btech);
     let character = effects.character;
     let operator = super::combat_operator::controlled_mech(world, shooter, pilot)?;
     let mut rules = rules;
@@ -350,11 +389,13 @@ fn resolve_shot_inner(
     if !self_cooling {
         operator.check_arc(world, target)?;
     }
+    let loadout = attacker.loadout()?;
     ensure!(
-        attacker.weapon_readiness(weapon_index)?.ready,
+        attacker
+            .weapon_readiness_with_loadout(&loadout, weapon_index)?
+            .ready,
         "Weapon is not ready"
     );
-    let loadout = attacker.loadout()?;
     let mount = &loadout.weapons[weapon_index];
     let position = attacker.position().unwrap();
     let tile =
@@ -392,6 +433,7 @@ fn resolve_shot_inner(
         mode: rules.hit_arc_mode,
     }
     .current(world, target)?;
+    drop(loadouts);
     let mut candidate = world.clone();
     let experience_messages = if character && let Some(link) = indirect {
         super::spotter::award_indirect_experience(&mut candidate, shooter, link, &mut aim)?

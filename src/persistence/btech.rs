@@ -113,11 +113,13 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
     for player in invalid_ui.union(&invalid_configuration) {
         player_configuration.remove(player);
     }
+    let (turn_clock, simulation_seconds) = super::btech_turn_clock::load(c).await?;
     let mut state = BtechState {
         template_registry: Default::default(),
         retire_sanctions: Default::default(),
         sensor_recoveries: super::btech_sensor_recovery::load(c).await?.into(),
-        turn_clock: super::btech_turn_clock::load(c).await?,
+        turn_clock,
+        simulation_seconds,
         gunner_stations: super::btech_gunner_stations::load(c).await?.into(),
         inventories: super::btech_inventory::load(c).await?.into(),
         part_costs: super::btech_part_costs::load(c).await?.into(),
@@ -135,6 +137,8 @@ pub(super) async fn load(c: &mut SqliteConnection) -> Result<BtechState> {
         recoveries: super::btech_recovery::load(c).await?.into(),
         constructed: Default::default(),
         vehicles: Default::default(),
+        controllers: super::btech_autopilot::load(c).await?.into(),
+        autopilot_plans: Default::default(),
         registrations: registrations.into(),
         maps: maps.into(),
         units: units.into(),
@@ -153,6 +157,7 @@ pub(super) fn validate_changes(
     let mut expected = before.btech.clone();
     expected.sensor_recoveries = after.btech.sensor_recoveries.clone();
     expected.turn_clock = after.btech.turn_clock;
+    expected.simulation_seconds = after.btech.simulation_seconds;
     expected.reactor = after.btech.reactor.clone();
     // Runtime-only sanction stamps never round-trip through the database.
     expected.retire_sanctions = after.btech.retire_sanctions.clone();
@@ -261,6 +266,9 @@ pub(super) fn validate_changes(
     expected.player_preferences = after.btech.player_preferences.clone();
     expected.player_configuration = after.btech.player_configuration.clone();
     expected.unit_configuration = after.btech.unit_configuration.clone();
+    super::btech_autopilot::validate_changes(&mut expected, &after.btech)?;
+    // Search frontiers are transaction-local and intentionally have no database projection.
+    expected.autopilot_plans = after.btech.autopilot_plans.clone();
     for (&id, &profile) in after.btech.characters() {
         std::sync::Arc::make_mut(&mut expected.characters).insert(id, profile);
     }
@@ -425,6 +433,7 @@ pub(super) async fn save(c: &mut SqliteConnection, before: &World, after: &World
     }
     changed |= super::btech_units::save(c, before, after).await?;
     changed |= super::btech_vehicles::save(c, before, after).await?;
+    changed |= super::btech_autopilot::save(c, &before.btech, &after.btech).await?;
     changed |= super::btech_view_preferences::save(c, before, after).await?;
     changed |= super::btech_player_configuration::save(c, before, after).await?;
     changed |= super::btech_unit_configuration::save(c, before, after).await?;

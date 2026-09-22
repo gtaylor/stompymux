@@ -18,6 +18,10 @@ name = "lua-doc-updater"
 path = "src/bin/lua-doc-updater.rs"
 required-features = ["lua-doc-updater"]
 
+[[bin]]
+name = "autopilot-bench"
+path = "src/bin/autopilot-bench.rs"
+
 [dependencies]
 tempfile = "3.27.0"
 nix = { version = "0.31.3", default-features = false, features = ["resource", "feature"] }

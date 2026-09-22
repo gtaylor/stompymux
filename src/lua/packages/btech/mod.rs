@@ -1,5 +1,6 @@
 //! BattleTech Lua bindings, split by package responsibility while sharing one native table.
 
+mod autopilot_contract;
 mod character_contract;
 mod characters;
 mod constants;
@@ -15,6 +16,7 @@ mod player_contract;
 mod repair_contract;
 mod system_contract;
 mod systems;
+mod tactical_contract;
 mod template_contract;
 mod templates;
 mod unit;
@@ -35,6 +37,8 @@ pub(super) fn register(lua: &Lua, api: &Table, world: &SharedWorld) -> mlua::Res
     systems::register(lua, &native, world)?;
     characters::register(lua, &native, world)?;
     character_contract::register(lua, &native, world)?;
+    autopilot_contract::register(lua, &native, world)?;
+    tactical_contract::register(lua, &native, world)?;
     templates::register(lua, &native, world)?;
     template_contract::register(lua, &native, world)?;
     inspection_admin::register(lua, &native, world)?;

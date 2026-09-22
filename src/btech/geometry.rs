@@ -88,17 +88,33 @@ impl BattlePoint {
         }
         let column = ((self.x - 1.0 / 3.0_f64.sqrt()) / (3.0_f64.sqrt() / 2.0)).floor() as i32;
         let mut best = None;
-        for x in column - 1..=column + 2 {
+        // A center in either enclosing column is at most sqrt(7)/4 hex
+        // heights away. Centers outside these columns are at least sqrt(3)/2
+        // away, so they cannot win even at a boundary tolerance.
+        for x in column..=column + 1 {
             let offset = if x.rem_euclid(2) == 0 { 0.5 } else { 0.0 };
             let row = (self.y - offset).floor() as i32;
             for y in row..=row + 1 {
                 let hex = BattleHexCoordinate { x, y };
-                let distance = self.range(hex.center())?;
-                if best.is_none_or(|(old_distance, old): (f64, BattleHexCoordinate)| {
+                let center = hex.center();
+                let dx = center.x - self.x;
+                let dy = center.y - self.y;
+                let squared = dx * dx + dy * dy;
+                if best.is_none_or(|(old_squared, old): (f64, BattleHexCoordinate)| {
+                    // All four candidate centers are less than three hex heights
+                    // away. Outside this conservative squared-distance margin,
+                    // ordering cannot be affected by the 1e-12 boundary tolerance.
+                    // Near a shared edge retain the exact hypot-based tie rule.
+                    if (squared - old_squared).abs() > 1e-10 {
+                        return squared < old_squared;
+                    }
+                    let distance = dx.hypot(dy);
+                    let old_center = old.center();
+                    let old_distance = (old_center.x - self.x).hypot(old_center.y - self.y);
                     distance < old_distance - 1e-12
                         || ((distance - old_distance).abs() <= 1e-12 && (y, x) > (old.y, old.x))
                 }) {
-                    best = Some((distance, hex));
+                    best = Some((squared, hex));
                 }
             }
         }
@@ -419,6 +435,66 @@ pub fn unit_altitude(world: &World, id: ObjectId) -> Result<Option<f64>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Independent Euclidean-distance oracle for the optimized nearest-center query.
+    fn reference_containment(point: BattlePoint) -> BattleHexCoordinate {
+        if point.x < 3.0_f64.sqrt() / 6.0 {
+            return BattleHexCoordinate {
+                x: if point.x < 0.0 { -1 } else { 0 },
+                y: point.y.floor() as i32,
+            };
+        }
+        let column = ((point.x - 1.0 / 3.0_f64.sqrt()) / (3.0_f64.sqrt() / 2.0)).floor() as i32;
+        let mut best: Option<(f64, BattleHexCoordinate)> = None;
+        for x in column - 1..=column + 2 {
+            let row = (point.y - if x.rem_euclid(2) == 0 { 0.5 } else { 0.0 }).floor() as i32;
+            for y in row..=row + 1 {
+                let hex = BattleHexCoordinate { x, y };
+                let distance = point.range(hex.center()).unwrap();
+                if best.is_none_or(|(old_distance, old)| {
+                    distance < old_distance - 1e-12
+                        || ((distance - old_distance).abs() <= 1e-12 && (y, x) > (old.y, old.x))
+                }) {
+                    best = Some((distance, hex));
+                }
+            }
+        }
+        best.unwrap().1
+    }
+
+    #[test]
+    fn fast_containment_preserves_euclidean_boundary_ownership() {
+        let check = |point: BattlePoint| {
+            assert_eq!(
+                point.containing_hex().unwrap(),
+                reference_containment(point),
+                "{point:?}"
+            );
+        };
+        let mut seed = 0x5eed_u64;
+        for _ in 0..25_000 {
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+            let x = (seed >> 32) as u32;
+            seed = seed.wrapping_mul(6364136223846793005).wrapping_add(1);
+            let y = (seed >> 32) as u32;
+            check(BattlePoint {
+                x: f64::from(x) / 43.0,
+                y: f64::from(y) / 43.0 - 5e7,
+            });
+        }
+        for x in [0, 1, 2, 99, 999, 10_000_000] {
+            let center = BattleHexCoordinate { x, y: 10 }.center();
+            for neighbor in (BattleHexCoordinate { x, y: 10 }).neighbors().unwrap() {
+                let other = neighbor.center();
+                for offset in [-1e-10, -1e-12, -1e-14, 0.0, 1e-14, 1e-12, 1e-10] {
+                    check(BattlePoint {
+                        x: (center.x + other.x) / 2.0 + offset,
+                        y: (center.y + other.y) / 2.0 + offset,
+                    });
+                }
+            }
+        }
+    }
 
     /// Both column parities have six unit-distance neighbors at the expected compass bearings.
     #[test]

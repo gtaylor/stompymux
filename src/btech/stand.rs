@@ -32,6 +32,21 @@ pub enum BattleStandMode {
     Careful,
 }
 
+#[derive(Clone, Copy)]
+enum StandActor {
+    Player(ObjectId),
+    Autopilot,
+}
+
+impl StandActor {
+    fn pilot(self) -> Option<ObjectId> {
+        match self {
+            Self::Player(pilot) => Some(pilot),
+            Self::Autopilot => None,
+        }
+    }
+}
+
 /// Fully resolved attempt; the caller stages its fall/injury notices with the world commit.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[must_use = "Stage attempt and fall notices before committing"]
@@ -54,7 +69,25 @@ impl super::BattleUnit {
 
 /// Validate local pilot and physical support, returning the unmodified stand target without dice.
 pub fn stand_target(world: &World, id: ObjectId, pilot: ObjectId, extended: bool) -> Result<i32> {
-    super::power::controlled_unit(world, id, pilot)?;
+    stand_target_by_actor(world, id, StandActor::Player(pilot), extended)
+}
+
+fn stand_target_by_actor(
+    world: &World,
+    id: ObjectId,
+    actor: StandActor,
+    extended: bool,
+) -> Result<i32> {
+    match actor {
+        StandActor::Player(pilot) => super::power::controlled_unit(world, id, pilot)?,
+        StandActor::Autopilot => {
+            super::power::autopilot_controlled_unit(world, id)?;
+            ensure!(
+                !super::battle_unit_blinded(world, id),
+                "You are momentarily blinded!"
+            );
+        }
+    }
     let unit = &world.btech.constructed_units()[&id];
     ensure!(unit.power() == BattlePower::Running, "Start the unit first");
     unit.hull_down.require_mobile()?;
@@ -84,7 +117,36 @@ pub fn begin_stand(
     careful_enabled: bool,
     rules: BattleFallRules,
 ) -> Result<BattleStandAttempt> {
-    begin_stand_inner(world, id, pilot, mode, careful_enabled, rules, false)
+    begin_stand_inner(
+        world,
+        id,
+        StandActor::Player(pilot),
+        mode,
+        careful_enabled,
+        rules,
+        false,
+    )
+}
+
+/// Begin a normal standing attempt for an attached ground autopilot.  The
+/// controller supplies only cockpit authority; power, mobility, blindness,
+/// damage, and the ordinary no-pilot skill fallback remain in force.
+pub(crate) fn begin_stand_autopilot(
+    world: &mut World,
+    id: ObjectId,
+    mode: BattleStandMode,
+    careful_enabled: bool,
+    rules: BattleFallRules,
+) -> Result<BattleStandAttempt> {
+    begin_stand_inner(
+        world,
+        id,
+        StandActor::Autopilot,
+        mode,
+        careful_enabled,
+        rules,
+        false,
+    )
 }
 
 /// Resolve a stand attempt inside a host action that publishes character consequences.
@@ -96,20 +158,28 @@ pub(super) fn begin_stand_in_action(
     careful_enabled: bool,
     rules: BattleFallRules,
 ) -> Result<BattleStandAttempt> {
-    begin_stand_inner(world, id, pilot, mode, careful_enabled, rules, true)
+    begin_stand_inner(
+        world,
+        id,
+        StandActor::Player(pilot),
+        mode,
+        careful_enabled,
+        rules,
+        true,
+    )
 }
 
 /// Shared stand eligibility, control roll, fall and recovery scheduling.
 fn begin_stand_inner(
     world: &mut World,
     id: ObjectId,
-    pilot: ObjectId,
+    actor: StandActor,
     mode: BattleStandMode,
     careful_enabled: bool,
     rules: BattleFallRules,
     character: bool,
 ) -> Result<BattleStandAttempt> {
-    let target = stand_target(world, id, pilot, rules.extended_piloting)?;
+    let target = stand_target_by_actor(world, id, actor, rules.extended_piloting)?;
     ensure!(
         mode != BattleStandMode::Careful || careful_enabled,
         "Careful standing is disabled"
@@ -139,7 +209,7 @@ fn begin_stand_inner(
         },
         rules.extended_piloting,
     )?;
-    super::piloting::capture_feedback(id, Some(pilot), &check, &mut notices, &mut pilot_notices);
+    super::piloting::capture_feedback(id, actor.pilot(), &check, &mut notices, &mut pilot_notices);
     notices.push(BattleNotice {
         unit: id,
         text: if check.success {

@@ -7,6 +7,32 @@ use std::collections::BTreeSet;
 use mlua::{Table, Value};
 use support::isolated_scripts;
 
+/// Gather standalone LuaLS functions and callable fields on the typed
+/// autopilot facade. Both spellings are public functions in the live package.
+fn declared_functions(source: &str) -> BTreeSet<String> {
+    let mut declared = BTreeSet::new();
+    let mut autopilot_api = false;
+    for line in source.lines() {
+        if let Some(class) = line.strip_prefix("---@class ") {
+            autopilot_api = class == "BtechAutopilotAPI";
+        }
+        if autopilot_api
+            && let Some(field) = line.strip_prefix("---@field ")
+            && let Some((name, shape)) = field.split_once(' ')
+            && shape.starts_with("fun(")
+        {
+            declared.insert(format!("btech.autopilot.{name}"));
+        }
+        if let Some(declaration) = line.strip_prefix("function ")
+            && let Some((symbol, _)) = declaration.split_once('(')
+            && !symbol.contains(':')
+        {
+            declared.insert(symbol.replace("mux_", "mux.").replace("btech_", "btech."));
+        }
+    }
+    declared
+}
+
 /// Resolve each package function through its public Lua namespace.
 #[tokio::test(flavor = "current_thread")]
 async fn declared_package_functions_exist() {
@@ -17,17 +43,7 @@ async fn declared_package_functions_exist() {
         include_str!("../game/lua/types/mux.d.lua"),
         include_str!("../game/lua/types/btech.d.lua"),
     ] {
-        for line in source.lines() {
-            let Some(declaration) = line.strip_prefix("function ") else {
-                continue;
-            };
-            let Some((symbol, _)) = declaration.split_once('(') else {
-                continue;
-            };
-            if symbol.contains(':') {
-                continue;
-            }
-            let public = symbol.replace("mux_", "mux.").replace("btech_", "btech.");
+        for public in declared_functions(source) {
             let mut value = Value::Table(lua.globals());
             for segment in public.split('.') {
                 value = match value {
@@ -70,23 +86,13 @@ async fn all_public_package_functions_have_declarations() {
         let package = lua.globals().get::<Table>(module).unwrap();
         package_functions(package, module, &mut actual);
     }
-    let mut declared = BTreeSet::new();
-    for source in [
+    let declared = [
         include_str!("../game/lua/types/mux.d.lua"),
         include_str!("../game/lua/types/btech.d.lua"),
-    ] {
-        for line in source.lines() {
-            let Some(declaration) = line.strip_prefix("function ") else {
-                continue;
-            };
-            let Some((symbol, _)) = declaration.split_once('(') else {
-                continue;
-            };
-            if !symbol.contains(':') {
-                declared.insert(symbol.replace("mux_", "mux.").replace("btech_", "btech."));
-            }
-        }
-    }
+    ]
+    .into_iter()
+    .flat_map(declared_functions)
+    .collect::<BTreeSet<_>>();
     let missing = actual.difference(&declared).collect::<Vec<_>>();
     assert!(
         missing.is_empty(),

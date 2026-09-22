@@ -52,6 +52,8 @@ mod foundation;
 #[path = "../help.rs"]
 mod help;
 
+#[path = "../lua_autopilot.rs"]
+mod lua_autopilot;
 #[path = "../lua_btech_constants.rs"]
 mod lua_btech_constants;
 
@@ -87,3 +89,8 @@ mod sqlite;
 
 #[path = "../text.rs"]
 mod text;
+
+#[path = "../lua_tactical.rs"]
+mod lua_tactical;
+#[path = "../lua_tactical_director.rs"]
+mod lua_tactical_director;

@@ -124,6 +124,7 @@ async fn recovery_ticks_without_a_unit_and_failed_save_replays_the_same_roll() {
         // A successful server heartbeat also advances the shared turn phase.
         let mut phase_state = serde_json::to_value(&expected.btech).unwrap();
         phase_state["turn_clock"] = 1.into();
+        phase_state["simulation_seconds"] = 1.into();
         expected.btech = serde_json::from_value(phase_state).unwrap();
         let mut sql = sqlx::SqliteConnection::connect_with(&sqlx::sqlite::SqliteConnectOptions::new().filename(config.database())).await.unwrap();
         sqlx::raw_sql("CREATE TRIGGER deny_recovery BEFORE UPDATE ON btech_character_recovery BEGIN SELECT RAISE(ABORT,'recovery failure'); END;").execute(&mut sql).await.unwrap();

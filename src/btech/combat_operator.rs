@@ -2,6 +2,15 @@
 use crate::{ObjectId, World};
 use anyhow::{Context, Result, ensure};
 
+/// The source of a control request.  A tactical autopilot is admitted through
+/// the same mechanical checks as a cockpit operator, but it has no character
+/// object, health, or cockpit location to validate.
+#[derive(Clone, Copy)]
+pub(super) enum ControlActor {
+    Player(ObjectId),
+    Autopilot,
+}
+
 /// A current operator and the physical equipment and targeting state that operator controls.
 #[derive(Clone, Copy)]
 pub(super) struct CombatOperator {
@@ -11,17 +20,47 @@ pub(super) struct CombatOperator {
 
 /// Revalidate weapon authority at each mechanical boundary without substituting the parent pilot.
 pub(super) fn controlled(world: &World, unit: ObjectId, actor: ObjectId) -> Result<CombatOperator> {
-    let location = world.objects.get(&actor).and_then(|object| object.location);
-    if let Some(station) = location.filter(|id| world.btech.gunner_stations().contains_key(id)) {
-        let context = super::gunner_context(world, station, actor)?;
-        ensure!(context.parent == unit, "Station does not control this unit");
-        super::power::control_health(world, unit, actor)?;
-        return Ok(CombatOperator {
-            source: context.target_source(world)?,
-            station: Some(context),
-        });
+    // Internal autopilot adapters use the controlled unit as their actor token.
+    // A real cockpit occupant is always a distinct player object, so this
+    // preserves the ordinary public signature for all player callers while
+    // allowing nested launch/readiness admission to retain the actor context.
+    let actor = if actor == unit && world.btech.controllers().contains_key(&unit) {
+        ControlActor::Autopilot
+    } else {
+        ControlActor::Player(actor)
+    };
+    controlled_by(world, unit, actor)
+}
+
+/// Admit a direct unit action issued by an attached ground autopilot.
+pub(crate) fn controlled_autopilot(world: &World, unit: ObjectId) -> Result<CombatOperator> {
+    controlled_by(world, unit, ControlActor::Autopilot)
+}
+
+fn controlled_by(world: &World, unit: ObjectId, actor: ControlActor) -> Result<CombatOperator> {
+    if let ControlActor::Player(actor_id) = actor {
+        let location = world
+            .objects
+            .get(&actor_id)
+            .and_then(|object| object.location);
+        if let Some(station) = location.filter(|id| world.btech.gunner_stations().contains_key(id))
+        {
+            let context = super::gunner_context(world, station, actor_id)?;
+            ensure!(context.parent == unit, "Station does not control this unit");
+            super::power::control_health(world, unit, actor_id)?;
+            return Ok(CombatOperator {
+                source: context.target_source(world)?,
+                station: Some(context),
+            });
+        }
+        super::radio::controlled(world, unit, actor_id)?;
+    } else {
+        if world.btech.vehicles().contains_key(&unit) {
+            super::power::autopilot_controlled_vehicle(world, unit)?;
+        } else {
+            super::power::autopilot_controlled_unit(world, unit)?;
+        }
     }
-    super::radio::controlled(world, unit, actor)?;
     Ok(CombatOperator {
         source: unit.into(),
         station: None,
@@ -39,6 +78,15 @@ pub(super) fn controlled_mech(
         "Unit construction state is unavailable"
     );
     controlled(world, unit, actor)
+}
+
+/// Mech-only admission for autonomous direct fire.
+pub(crate) fn controlled_mech_autopilot(world: &World, unit: ObjectId) -> Result<CombatOperator> {
+    ensure!(
+        world.btech.constructed_units().contains_key(&unit),
+        "Unit construction state is unavailable"
+    );
+    controlled_autopilot(world, unit)
 }
 
 /// Resolve an owning cockpit or station without imposing operation-specific power or weapon gates.

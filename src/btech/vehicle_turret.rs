@@ -43,6 +43,7 @@ pub fn set_turret(
         .unwrap();
     let heading = heading.rem_euclid(360.0);
     vehicle.turret_offset = (heading - vehicle.motion().unwrap().heading).rem_euclid(360.0);
+    let _ = super::autopilot::manual_takeover(world, id);
     Ok(BattleNotice {
         unit: id,
         text: format!("Turret facing changed to {}.", heading as u16),

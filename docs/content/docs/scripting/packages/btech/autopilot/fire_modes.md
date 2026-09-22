@@ -1,5 +1,5 @@
 ---
-title: "btech.autopilot.roam_modes"
+title: "btech.autopilot.fire_modes"
 type: docs
 ---
 
@@ -9,5 +9,6 @@ The numbers below are native identifiers; pass the typed constants to Lua APIs.
 
 | Constant | Type or native code | Description |
 | --- | --- | --- |
-| `btech.autopilot.roam_modes.MAP` | `0` |  |
-| `btech.autopilot.roam_modes.RADIUS` | `1` |  |
+| `btech.autopilot.fire_modes.HOLD` | `0` |  |
+| `btech.autopilot.fire_modes.ASSIGNED_TARGET` | `1` |  |
+| `btech.autopilot.fire_modes.OPPORTUNISTIC` | `2` |  |

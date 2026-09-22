@@ -53,14 +53,43 @@ pub fn start_unit(
     pilot: ObjectId,
     fast: bool,
 ) -> Result<BattleNotice> {
+    start_unit_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Player(pilot),
+        fast,
+    )
+}
+
+/// Start a unit through an attached autopilot.  Startup still uses the ordinary
+/// map, heat, damage, and lifecycle checks; only cockpit ownership is replaced.
+pub(crate) fn start_unit_autopilot(
+    world: &mut World,
+    id: ObjectId,
+    fast: bool,
+) -> Result<BattleNotice> {
+    start_unit_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Autopilot,
+        fast,
+    )
+}
+
+fn start_unit_by_actor(
+    world: &mut World,
+    id: ObjectId,
+    actor: super::combat_operator::ControlActor,
+    fast: bool,
+) -> Result<BattleNotice> {
     ensure!(
         world.btech.towed_by(id).is_none(),
         "Detach tow cables before starting"
     );
     if world.btech.vehicles().contains_key(&id) {
-        return super::vehicle_power::start(world, id, pilot, fast);
+        return super::vehicle_power::start_by_actor(world, id, actor, fast);
     }
-    controlled_unit(world, id, pilot)?;
+    controlled_unit_by_actor(world, id, actor)?;
     let unit = &world.btech.constructed_units()[&id];
     ensure!(
         unit.power == BattlePower::Off,
@@ -98,7 +127,9 @@ pub fn start_unit(
         .unwrap()
         .limb_recycle
         .clear();
-    super::pilot_health::synchronize(world, id, pilot);
+    if let super::combat_operator::ControlActor::Player(pilot) = actor {
+        super::pilot_health::synchronize(world, id, pilot);
+    }
     Ok(BattleNotice {
         unit: id,
         text: "Startup Cycle commencing...".to_owned(),
@@ -397,6 +428,25 @@ pub fn advance_units(world: &mut World, now: i64) -> Vec<BattleNotice> {
 
 /// Require the currently assigned, physically present pilot of an available unit.
 pub(super) fn controlled_unit(world: &World, id: ObjectId, pilot: ObjectId) -> Result<()> {
+    controlled_unit_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Player(pilot),
+    )
+}
+
+/// Shared cockpit/autopilot admission for ordinary mechanical actions.
+pub(super) fn controlled_unit_by_actor(
+    world: &World,
+    id: ObjectId,
+    actor: super::combat_operator::ControlActor,
+) -> Result<()> {
+    if let super::combat_operator::ControlActor::Autopilot = actor {
+        return autopilot_controlled_unit(world, id);
+    }
+    let super::combat_operator::ControlActor::Player(pilot) = actor else {
+        unreachable!()
+    };
     control_health(world, id, pilot)?;
     let unit = world
         .btech
@@ -416,6 +466,69 @@ pub(super) fn controlled_unit(world: &World, id: ObjectId, pilot: ObjectId) -> R
                 |player| player.location == Some(id) && !player.flags.contains(Flag::Going)
             ),
         "Take the cockpit with pilot first"
+    );
+    Ok(())
+}
+
+/// Admit a unit attached to the ground autopilot.  The controller is the
+/// internal actor; it does not need a player object in the cockpit.
+pub(super) fn autopilot_controlled_unit(world: &World, id: ObjectId) -> Result<()> {
+    ensure!(
+        world.btech.controllers().contains_key(&id),
+        "Unit has no attached autopilot"
+    );
+    ensure!(
+        world
+            .objects
+            .get(&id)
+            .is_some_and(|object| !object.flags.contains(Flag::Going)),
+        "Unit is unavailable"
+    );
+    let unit = world
+        .btech
+        .constructed_units()
+        .get(&id)
+        .context("Unit construction state is unavailable")?;
+    ensure!(!unit.is_destroyed(), "Unit is destroyed");
+    // Autopilot replaces cockpit ownership, but it does not bypass the
+    // ordinary pilot-health and crew-recovery gates.  An assigned pilot can
+    // still become unconscious while the controller remains attached; an
+    // uncrewed unit continues to use the normal no-pilot skill path.
+    if let Some(pilot) = unit.pilot() {
+        control_health(world, id, pilot)?;
+    }
+    ensure!(unit.crew_recovery().remaining == 0, "Crew is unconscious");
+    Ok(())
+}
+
+pub(super) fn autopilot_controlled_vehicle(world: &World, id: ObjectId) -> Result<()> {
+    ensure!(
+        world.btech.controllers().contains_key(&id),
+        "Unit has no attached autopilot"
+    );
+    ensure!(
+        world
+            .objects
+            .get(&id)
+            .is_some_and(|object| !object.flags.contains(Flag::Going)),
+        "Unit is unavailable"
+    );
+    let vehicle = world
+        .btech
+        .vehicles()
+        .get(&id)
+        .context("Vehicle state is unavailable")?;
+    ensure!(!vehicle.is_destroyed(), "Unit is destroyed");
+    // Keep autopilot admission aligned with the staffed vehicle controls:
+    // replacing the driver does not make an assigned unconscious pilot or
+    // recovering crew operational.  With no assigned pilot, the existing
+    // uncrewed-vehicle behavior remains available.
+    if let Some(pilot) = vehicle.pilot() {
+        control_health(world, id, pilot)?;
+    }
+    ensure!(
+        vehicle.crew_recovery().remaining == 0,
+        "Crew is unconscious"
     );
     Ok(())
 }
@@ -454,4 +567,74 @@ pub(super) fn require_running_unit(world: &World, shooter: ObjectId) -> Result<(
     );
     ensure!(unit.position.is_some(), "Unit must be on a map");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{BattleRecovery, BattleUnitTemplate, Config, Kind};
+    use std::sync::Arc;
+
+    fn config() -> Config {
+        Config::load(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/game"))
+            .expect("test configuration")
+    }
+
+    fn attach(world: &mut World, unit: ObjectId) {
+        Arc::make_mut(&mut world.btech.controllers)
+            .insert(unit, super::super::autopilot::AutopilotController::new());
+    }
+
+    fn unconscious_pilot(world: &mut World, config: &Config) -> ObjectId {
+        let pilot = world.create(config, "Unconscious autopilot pilot".into(), Kind::Player);
+        let mut recovery = BattleRecovery::fresh();
+        recovery.remaining = 1;
+        Arc::make_mut(&mut world.btech.recoveries).insert(pilot, recovery);
+        pilot
+    }
+
+    #[test]
+    fn autopilot_unit_admission_retains_pilot_health_and_uncrewed_behavior() {
+        let config = config();
+        let mut world = World::default();
+        let unit = world.create(&config, "Autopilot health mech".into(), Kind::Thing);
+        BattleUnitTemplate::parse(include_str!("../../game/mechs/JR7-D"))
+            .unwrap()
+            .create(&mut world, unit)
+            .unwrap();
+        attach(&mut world, unit);
+
+        // An uncrewed unit follows the ordinary no-pilot skill path.
+        assert!(autopilot_controlled_unit(&world, unit).is_ok());
+
+        let pilot = unconscious_pilot(&mut world, &config);
+        Arc::make_mut(&mut world.btech.constructed)
+            .get_mut(&unit)
+            .unwrap()
+            .pilot = Some(pilot);
+        let error = autopilot_controlled_unit(&world, unit).unwrap_err();
+        assert!(error.to_string().contains("unconscious"));
+    }
+
+    #[test]
+    fn autopilot_vehicle_admission_retains_pilot_health_and_uncrewed_behavior() {
+        let config = config();
+        let mut world = World::default();
+        let unit = world.create(&config, "Autopilot health vehicle".into(), Kind::Thing);
+        BattleUnitTemplate::parse(include_str!("../../game/mechs/Demolisher"))
+            .unwrap()
+            .create(&mut world, unit)
+            .unwrap();
+        attach(&mut world, unit);
+
+        assert!(autopilot_controlled_vehicle(&world, unit).is_ok());
+
+        let pilot = unconscious_pilot(&mut world, &config);
+        Arc::make_mut(&mut world.btech.vehicles)
+            .get_mut(&unit)
+            .unwrap()
+            .pilot = Some(pilot);
+        let error = autopilot_controlled_vehicle(&world, unit).unwrap_err();
+        assert!(error.to_string().contains("unconscious"));
+    }
 }

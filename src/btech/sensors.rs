@@ -308,8 +308,49 @@ pub fn map_optical_contact(
     target_lit: bool,
     disabled: bool,
 ) -> Result<BattleSensorReport> {
-    let report =
-        evaluate_map_optical_contact(world, observer, target, sensor, target_lit, disabled)?;
+    map_optical_contact_with_geometry(world, observer, target, sensor, target_lit, disabled, None)
+}
+
+/// Reuse immutable pair geometry within one observation. Physical sensor modes
+/// still use their ordinary specialized admission, and visibility is always live.
+pub(super) fn map_optical_contact_with_geometry(
+    world: &World,
+    observer: ObjectId,
+    target: ObjectId,
+    sensor: BattleSensorMode,
+    target_lit: bool,
+    disabled: bool,
+    geometry: Option<(super::BattleTerrainLos, super::BattleRange)>,
+) -> Result<BattleSensorReport> {
+    map_optical_contact_prepared(
+        world, observer, target, sensor, target_lit, disabled, geometry, None,
+    )
+}
+
+/// Observation-local preparation shares lighting while retaining every live sensor gate.
+pub(super) fn map_optical_contact_prepared(
+    world: &World,
+    observer: ObjectId,
+    target: ObjectId,
+    sensor: BattleSensorMode,
+    target_lit: bool,
+    disabled: bool,
+    geometry: Option<(super::BattleTerrainLos, super::BattleRange)>,
+    illumination: Option<&super::searchlight::IlluminationContext<'_>>,
+) -> Result<BattleSensorReport> {
+    let _measurement = crate::btech::autopilot::diagnostics::measure(
+        crate::btech::autopilot::diagnostics::Category::Sensors,
+    );
+    let report = evaluate_map_optical_contact(
+        world,
+        observer,
+        target,
+        sensor,
+        target_lit,
+        disabled,
+        geometry,
+        illumination,
+    )?;
     Ok(super::visibility::sensor_report(world, target, report))
 }
 
@@ -321,6 +362,8 @@ fn evaluate_map_optical_contact(
     sensor: BattleSensorMode,
     target_lit: bool,
     disabled: bool,
+    geometry: Option<(super::BattleTerrainLos, super::BattleRange)>,
+    illumination: Option<&super::searchlight::IlluminationContext<'_>>,
 ) -> Result<BattleSensorReport> {
     if super::clouds::blocks_contact(world, observer, target, sensor)? {
         return Ok(BattleSensorReport {
@@ -386,8 +429,13 @@ fn evaluate_map_optical_contact(
         return Ok(report);
     }
 
-    let terrain = super::unit_terrain_los(world, observer, target)?;
-    let range = super::unit_range(world, observer, target)?;
+    let (terrain, range) = match geometry {
+        Some(geometry) => geometry,
+        None => (
+            super::unit_terrain_los(world, observer, target)?,
+            super::unit_range(world, observer, target)?,
+        ),
+    };
     let sight = super::los::unit_sight_point(world, target)?;
     let position = sight.position;
     let map = &world.btech.maps()[&position.map];
@@ -404,7 +452,11 @@ fn evaluate_map_optical_contact(
         BattleSensorConditions {
             light,
             visibility: u8::try_from(map.visibility)?,
-            target_lit: target_lit || super::unit_illuminated(world, target),
+            target_lit: target_lit
+                || illumination.map_or_else(
+                    || super::unit_illuminated(world, target),
+                    |context| context.illuminated(target),
+                ),
             disabled: disabled || map.optical_sensor_disabled(sensor),
         },
         u16::try_from(map.maximum_visibility)?,

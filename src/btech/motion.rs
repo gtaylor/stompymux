@@ -215,30 +215,54 @@ pub fn set_speed(
     pilot: ObjectId,
     speed: f64,
 ) -> Result<BattleNotice> {
-    set_speed_configured(world, id, pilot, speed, super::SpeedPolicy::STANDARD, false)
+    let notice = set_speed_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Player(pilot),
+        speed,
+        super::SpeedPolicy::STANDARD,
+        false,
+    )?;
+    let _ = super::autopilot::manual_takeover(world, id);
+    Ok(notice)
 }
 
-/// Set speed using the host's towing assistance and fusion-aircraft fuel policies.
-pub(crate) fn set_speed_configured(
+/// Set speed from the attached autopilot while retaining all ordinary motion checks.
+pub(crate) fn set_speed_autopilot(
     world: &mut World,
     id: ObjectId,
-    pilot: ObjectId,
+    speed: f64,
+) -> Result<BattleNotice> {
+    set_speed_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Autopilot,
+        speed,
+        super::SpeedPolicy::STANDARD,
+        false,
+    )
+}
+
+fn set_speed_by_actor(
+    world: &mut World,
+    id: ObjectId,
+    actor: super::combat_operator::ControlActor,
     speed: f64,
     policy: super::SpeedPolicy,
     free_fusion_fuel: bool,
 ) -> Result<BattleNotice> {
     if world.btech.vehicles().contains_key(&id) {
-        return super::vehicle_driving::set_control(
+        return super::vehicle_driving::set_control_by_actor(
             world,
             id,
-            pilot,
+            actor,
             Some(speed),
             None,
             policy,
             free_fusion_fuel,
         );
     }
-    super::power::controlled_unit(world, id, pilot)?;
+    super::power::controlled_unit_by_actor(world, id, actor)?;
     super::fortification::require_mobile(world, id)?;
     ensure!(
         !world.btech.constructed_units()[&id].airborne(),
@@ -300,6 +324,27 @@ pub(crate) fn set_speed_configured(
     })
 }
 
+/// Set speed using the host's towing assistance and fusion-aircraft fuel policies.
+pub(crate) fn set_speed_configured(
+    world: &mut World,
+    id: ObjectId,
+    pilot: ObjectId,
+    speed: f64,
+    policy: super::SpeedPolicy,
+    free_fusion_fuel: bool,
+) -> Result<BattleNotice> {
+    let notice = set_speed_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Player(pilot),
+        speed,
+        policy,
+        free_fusion_fuel,
+    )?;
+    let _ = super::autopilot::manual_takeover(world, id);
+    Ok(notice)
+}
+
 /// Set a desired compass heading, including jump facing, prone pivots and stand countdowns.
 pub fn set_heading(
     world: &mut World,
@@ -307,18 +352,48 @@ pub fn set_heading(
     pilot: ObjectId,
     heading: f64,
 ) -> Result<BattleNotice> {
+    let notice = set_heading_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Player(pilot),
+        heading,
+    )?;
+    let _ = super::autopilot::manual_takeover(world, id);
+    Ok(notice)
+}
+
+/// Set heading from the attached autopilot while retaining ordinary turning gates.
+pub(crate) fn set_heading_autopilot(
+    world: &mut World,
+    id: ObjectId,
+    heading: f64,
+) -> Result<BattleNotice> {
+    set_heading_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Autopilot,
+        heading,
+    )
+}
+
+fn set_heading_by_actor(
+    world: &mut World,
+    id: ObjectId,
+    actor: super::combat_operator::ControlActor,
+    heading: f64,
+) -> Result<BattleNotice> {
     if world.btech.vehicles().contains_key(&id) {
-        return super::vehicle_driving::set_control(
+        return super::vehicle_driving::set_control_by_actor(
             world,
             id,
-            pilot,
+            actor,
             None,
             Some(heading),
             super::SpeedPolicy::STANDARD,
             false,
         );
     }
-    super::power::controlled_unit(world, id, pilot)?;
+    super::power::controlled_unit_by_actor(world, id, actor)?;
     super::fortification::require_mobile(world, id)?;
     let unit = &world.btech.constructed_units()[&id];
     ensure!(unit.power() == BattlePower::Running, "Start the unit first");

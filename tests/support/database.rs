@@ -7,7 +7,7 @@ use stompymux_rs::persistence;
 /// otherwise idle worlds (`Server::btech_tick`), so raw database bytes are
 /// never stable across a live connection. Read-only scenarios assert the
 /// strongest stable invariant instead: logical world equality with only the
-/// two wall-clock tick counters normalized.
+/// committed simulation counters normalized.
 pub async fn stable_world(database: &std::path::Path) -> serde_json::Value {
     let world = persistence::load(database).await.unwrap();
     let mut value = serde_json::to_value(&world).unwrap();
@@ -17,6 +17,7 @@ pub async fn stable_world(database: &std::path::Path) -> serde_json::Value {
         .as_object_mut()
         .expect("btech state object");
     btech.insert("turn_clock".into(), 0.into());
+    btech.insert("simulation_seconds".into(), 0.into());
     if let Some(reactor) = btech.get_mut("reactor").and_then(|r| r.as_object_mut()) {
         reactor.insert("startup_remaining".into(), 0.into());
     }

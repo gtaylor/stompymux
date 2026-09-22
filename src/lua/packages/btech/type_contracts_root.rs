@@ -1154,7 +1154,8 @@
 //|---@field parts table Registered part catalogue and stock queries.
 //|---@field repair table Immediate repair requests and technician scheduling.
 //|---@field system table World event telemetry.
-//|---@field autopilot table Autopilot order constants; queue callables await their runtime.
+//|---@field autopilot BtechAutopilotAPI Lua control of unit-attached ground autopilots.
+//|---@field tactical BtechTacticalAPI Filtered group observations and atomic intentions.
 //|---@field errors table Structured btech error-code tree from mux.error.code_tree('btech').
 //|btech = {
 //|  gunner = btech_gunner,
@@ -1918,18 +1919,157 @@
 // lua-types-end
 
 // lua-types-begin btech 00577
-//|-- Typed autopilot constant catalogs installed by the Rust runtime.
+//|-- Typed autopilot constants and unit-attached controller operations.
 // lua-types-end
 
 // lua-types-begin btech 00578
 //|---@class BattleAutopilotOrderName
-//|---@class BattleAutopilotDirection
-//|---@class BattleAutopilotRoamMode
-//|---@class BattleAutopilotAutogunMode
+//|---@class BattleAutopilotSubmissionMode
+//|---@class BattleAutopilotFireMode
+//|---@class BattleAutopilotStates
+//|---@field PAUSED "paused"
+//|---@field IDLE "idle"
+//|---@field EXECUTING "executing"
+//|---@field BLOCKED "blocked"
+//|---@class BattleAutopilotOrderStates
+//|---@field QUEUED "queued"
+//|---@field RUNNING "running"
+//|---@field SUCCEEDED "succeeded"
+//|---@field FAILED "failed"
+//|---@field CANCELED "canceled"
+//|---@class BattleAutopilotReasons
+//|---@field MANUAL_TAKEOVER "manual_takeover"
+//|---@field CONTACT_LOST "contact_lost"
+//|---@field STUCK "stuck"
+//|---@field UNREACHABLE "unreachable"
+//|---@field INVALIDATED "invalidated"
+//|---@field RESOURCE_LIMIT "resource_limit"
+//|---@field CONGESTED "congested"
+//|---@field INVALID_TARGET "invalid_target"
+//|---@field UNIT_UNAVAILABLE "unit_unavailable"
+//|---@field MAP_CHANGED "map_changed"
+//|---@field UNSUPPORTED "unsupported"
+//|---@field STALE_REVISION "stale_revision"
+//|---@class BattleAutopilotRangeBand
+//|---@field minimum integer Inclusive minimum engagement range in hexes.
+//|---@field maximum integer Inclusive maximum engagement range in hexes.
+//|---@class BattleAutopilotConfig
+//|---@field speed_percent integer Desired speed as a percentage from 0 through 100.
+//|---@field fire_mode "hold"|"assigned_target"|"opportunistic" Current serialized weapon policy.
+//|---@field heat_ceiling integer Projected heat limit for autonomous fire.
+//|---@field preferred_range BattleAutopilotRangeBand|nil Optional engagement band.
+//|---@class BattleAutopilotConfigPatch
+//|---@field speed_percent integer|nil Optional speed update.
+//|---@field fire_mode BattleAutopilotFireMode|nil Optional weapon-policy update.
+//|---@field heat_ceiling integer|nil Optional projected heat limit.
+//|---@field preferred_range BattleAutopilotRangeBand|false|nil Set or clear the preferred band.
+//|---@alias BattleAutopilotControllerState "paused"|"idle"|"executing"|"blocked"
+//|---@alias BattleAutopilotOrderState "queued"|"running"|"succeeded"|"failed"|"canceled"
+//|---@alias BattleAutopilotFeedbackEvent "configured"|"paused"|"resumed"|"manual_takeover"|"order_queued"|"order_started"|"order_succeeded"|"order_failed"|"order_canceled"|"blocked"
+//|---@alias BattleAutopilotReason "manual_takeover"|"contact_lost"|"stuck"|"unreachable"|"invalidated"|"resource_limit"|"congested"|"invalid_target"|"unit_unavailable"|"map_changed"|"unsupported"|"stale_revision"
+//|---@class BattleAutopilotOrder
+//|---@field kind BattleAutopilotOrderName
+//|---@field destination BattlePosition|nil Move or attack-move destination.
+//|---@field arrival_radius integer|nil Destination tolerance in hexes.
+//|---@field target integer|nil Follow or attack target unit.
+//|---@field separation integer|nil Follow distance in hexes.
+//|---@field waypoints BattlePosition[]|nil Patrol route.
+//|---@field range BattleAutopilotRangeBand|nil Optional attack engagement band.
+//|---@class BattleAutopilotStoredOrder
+//|---@field kind "move"|"hold"|"follow"|"patrol"|"attack"|"attack_move" Serialized intent kind.
+//|---@field destination BattlePosition|nil Move or attack-move destination.
+//|---@field arrival_radius integer|nil Destination tolerance in hexes.
+//|---@field target integer|nil Follow or attack target unit.
+//|---@field separation integer|nil Follow distance in hexes.
+//|---@field waypoints BattlePosition[]|nil Patrol route.
+//|---@field range BattleAutopilotRangeBand|nil Optional engagement band.
+//|---@class BattleAutopilotOrderProgress
+//|---@field waypoint_index integer Current waypoint cursor.
+//|---@field recovery_attempts integer Replanning attempts for the active order.
+//|---@field stagnant_ticks integer Ticks without route progress.
+//|---@field attack_move_origin BattlePosition|nil Position where attack-move pursuit began.
+//|---@field attack_move_suppressed_target integer|nil Contact already engaged during attack-move.
+//|---@class BattleAutopilotOrderRecord
+//|---@field id integer Stable controller-local order ID.
+//|---@field order BattleAutopilotStoredOrder Serialized order intent; submissions use typed constants.
+//|---@field state BattleAutopilotOrderState Lifecycle state.
+//|---@field progress BattleAutopilotOrderProgress Durable execution cursor.
+//|---@class BattleAutopilotStatus
+//|---@field config BattleAutopilotConfig Controller settings.
+//|---@field state BattleAutopilotControllerState Controller lifecycle state.
+//|---@field blocking_reason BattleAutopilotReason|nil Reason the controller is blocked, if any.
+//|---@field revision integer Management revision.
+//|---@field next_order_id integer Next order ID that will be assigned.
+//|---@field active BattleAutopilotOrderRecord|nil Current order.
+//|---@field queue BattleAutopilotOrderRecord[] Queued orders.
+//|---@field feedback BattleAutopilotFeedback[] Recently retained outcomes.
+//|---@field next_feedback_sequence integer Next feedback sequence that will be assigned.
+//|---@field sightings table<integer, BattleAutopilotSighting> Retained contact memory keyed by unit ID.
+//|---@class BattleAutopilotSubmitResult
+//|---@field ids integer[] Assigned order IDs.
+//|---@field revision integer New management revision.
+//|---@class BattleAutopilotContact
+//|---@field unit integer Acquired unit identity.
+//|---@field position BattlePosition Observed position.
+//|---@field friendly boolean Whether the contact is allied.
+//|---@field identified boolean Whether sensors identified the contact well enough to determine allegiance.
+//|---@field known_destroyed boolean Whether the visible contact status reports destruction.
+//|---@field range number Observed range in map units.
+//|---@field seen_at integer Simulation time of the observation.
+//|---@class BattleAutopilotMemory
+//|---@field unit integer Previously acquired unit identity.
+//|---@field position BattlePosition Last sensor-confirmed position.
+//|---@field seen_at integer Simulation time of the last sighting.
+//|---@class BattleHeat
+//|---@field stored number Current stored weapon heat.
+//|---@field excess number Sampled excess heat.
+//|---@class BattleAutopilotOwnReadiness
+//|---@field power BattlePower Current power state.
+//|---@field maximum_speed number Damage-adjusted maximum speed.
+//|---@field heat BattleHeat|nil Conventional heat state; nil for ground vehicles.
+//|---@field weapons BattleWeaponReadiness[] Readiness for installed weapons.
+//|---@class BattleAutopilotSighting
+//|---@field position BattlePosition Last sensor-confirmed position.
+//|---@field seen_at integer Simulation time of the last sighting.
+//|---@class BattleAutopilotObservation
+//|---@field unit integer Observing unit.
+//|---@field time integer Current simulation time.
+//|---@field position BattlePosition|nil Own position, if placed.
+//|---@field heading number|nil Own heading, if motion is available.
+//|---@field speed number Own current speed.
+//|---@field own BattleAutopilotOwnReadiness Own mechanical and weapon readiness.
+//|---@field contacts BattleAutopilotContact[] Current sensor contacts.
+//|---@field remembered BattleAutopilotMemory[] Fresh retained sightings.
+//|---@class BattleAutopilotFeedback
+//|---@field sequence integer Monotonic feedback sequence.
+//|---@field simulation_time integer Simulation time of the event.
+//|---@field order_id integer|nil Related order ID.
+//|---@field event BattleAutopilotFeedbackEvent Event kind.
+//|---@field reason BattleAutopilotReason|nil Optional event reason.
+//|---@class BattleAutopilotFeedbackPage
+//|---@field records BattleAutopilotFeedback[] Retained feedback records after the cursor.
+//|---@field history_gap boolean Whether older records fell outside the retention window.
+//|---@class BtechAutopilotAPI
+//|---@field orders table
+//|---@field submission_modes table
+//|---@field fire_modes table
+//|---@field states BattleAutopilotStates Controller lifecycle strings.
+//|---@field order_states BattleAutopilotOrderStates Order lifecycle strings.
+//|---@field reasons BattleAutopilotReasons Blocking and outcome reason strings.
+//|---@field attach fun(unit: integer, options?: BattleAutopilotConfigPatch)
+//|---@field detach fun(unit: integer)
+//|---@field configure fun(unit: integer, patch: BattleAutopilotConfigPatch, expected_revision?: integer): integer
+//|---@field submit fun(unit: integer, orders: BattleAutopilotOrder[], mode: BattleAutopilotSubmissionMode, expected_revision?: integer): BattleAutopilotSubmitResult
+//|---@field cancel fun(unit: integer, order_id: integer, expected_revision?: integer): boolean
+//|---@field pause fun(unit: integer)
+//|---@field resume fun(unit: integer)
+//|---@field status fun(unit: integer): BattleAutopilotStatus
+//|---@field observe fun(unit: integer): BattleAutopilotObservation
+//|---@field feedback fun(unit: integer, after_sequence?: integer): BattleAutopilotFeedbackPage
 // lua-types-end
 
 // lua-types-begin btech 00579
-//|local btech_autopilot = {}
+//|local btech_autopilot = {} ---@type BtechAutopilotAPI
 // lua-types-end
 
 // lua-types-begin btech 00580
@@ -1940,5 +2080,51 @@
 // lua-types-end
 
 // lua-types-begin btech 00581
+//|---@class BattleTacticalUnitSnapshot
+//|---@field unit integer Assigned friendly unit ID.
+//|---@field revision integer Management revision used for stale-intention protection.
+//|---@field status BattleAutopilotStatus Controller state; sightings are supplied through observation instead.
+//|---@field observation BattleAutopilotObservation Per-unit permitted intelligence.
+//|---@field feedback BattleAutopilotFeedbackPage Outcome page after the requested cursor.
+//|---@class BattleTacticalSighting
+//|---@field observer integer Unit that acquired this sighting.
+//|---@field position BattlePosition Last observed position.
+//|---@field seen_at integer Committed simulation seconds.
+//|---@field current boolean Whether this observer currently acquires the contact.
+//|---@field friendly boolean|nil Present only for a current observation.
+//|---@field identified boolean|nil Present only for a current observation.
+//|---@field known_destroyed boolean|nil Present only for a current observation.
+//|---@class BattleTacticalContact
+//|---@field unit integer Contact identity.
+//|---@field observations BattleTacticalSighting[] Source observations, ordered by observer ID.
+//|---@class BattleTacticalSnapshot
+//|---@field version integer Snapshot schema version, currently 1.
+//|---@field time integer Committed simulation seconds; restart does not advance this clock.
+//|---@field units BattleTacticalUnitSnapshot[] Assigned controllers, ordered by unit ID.
+//|---@field contacts BattleTacticalContact[] Aggregated sightings, ordered by contact ID.
+//|---@class BattleTacticalIntention
+//|---@field unit integer Assigned unit ID.
+//|---@field expected_revision integer Required current management revision.
+//|---@field mode BattleAutopilotSubmissionMode Append or replace using typed constants.
+//|---@field orders BattleAutopilotOrder[] Ordinary unit orders, at most 64.
+//|---@class BattleTacticalSubmitResult : BattleAutopilotSubmitResult
+//|---@field unit integer Controller receiving these order IDs.
+//|---@class BtechTacticalAPI
+//|local btech_tactical = {}
+//|---Read a detached tactical snapshot for 1 to 100 distinct friendly controllers on one map.
+//|---Shared sightings retain observer provenance and do not grant another unit attack admission.
+//|---@param units integer[] Explicit assigned unit IDs; every unit must be attached and placed.
+//|---@param feedback_cursors table<integer, integer>|nil Optional per-unit feedback sequence cursors.
+//|---@return BattleTacticalSnapshot snapshot Versioned intelligence and controller outcomes.
+//|function btech_tactical.observe(units, feedback_cursors) end
+//|---Atomically validate and submit intentions for 1 to 100 distinct friendly controllers.
+//|---Any invalid order or stale revision rejects the whole batch. Paused units stay paused.
+//|---@param intentions BattleTacticalIntention[] One intention per unit; revisions are required.
+//|---@return BattleTacticalSubmitResult[] results Assigned IDs and revisions in request order.
+//|function btech_tactical.submit(intentions) end
+//|btech.tactical = btech_tactical
+// lua-types-end
+
+// lua-types-begin btech 00582
 //|return btech
 // lua-types-end

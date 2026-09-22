@@ -36,11 +36,25 @@ impl BattleUnit {
     /// A short plan exposes shortage so a firing mode can choose its specified fallback atomically.
     pub fn ammunition_feed(&self, index: usize, rounds: u16) -> Result<Vec<BattleAmmunitionDraw>> {
         let loadout = self.loadout()?;
+        self.ammunition_feed_with_loadout(&loadout, index, rounds)
+    }
+
+    /// Resolve the live feed using an equipment projection from this immutable unit.
+    pub(crate) fn ammunition_feed_with_loadout(
+        &self,
+        loadout: &super::BattleLoadout,
+        index: usize,
+        rounds: u16,
+    ) -> Result<Vec<BattleAmmunitionDraw>> {
         let mount = loadout
             .weapons
             .get(index)
             .context("Weapon index out of bounds")?;
-        let mode = self.ammunition_mode(index)?;
+        let mode = self
+            .ammunition_modes
+            .get(&index)
+            .copied()
+            .unwrap_or_default();
         let bins = loadout
             .ammunition
             .iter()
@@ -75,11 +89,25 @@ impl BattleVehicle {
     /// A short plan exposes shortage so a firing mode can choose its specified fallback atomically.
     pub fn ammunition_feed(&self, index: usize, rounds: u16) -> Result<Vec<BattleAmmunitionDraw>> {
         let loadout = self.loadout()?;
+        self.ammunition_feed_with_loadout(&loadout, index, rounds)
+    }
+
+    /// Resolve the live feed using an equipment projection from this immutable unit.
+    pub(crate) fn ammunition_feed_with_loadout(
+        &self,
+        loadout: &super::BattleVehicleLoadout,
+        index: usize,
+        rounds: u16,
+    ) -> Result<Vec<BattleAmmunitionDraw>> {
         let mount = loadout
             .weapons
             .get(index)
             .context("Weapon index out of bounds")?;
-        let mode = self.ammunition_mode(index)?;
+        let mode = self
+            .ammunition_modes
+            .get(&index)
+            .copied()
+            .unwrap_or_default();
         let bins = loadout
             .ammunition
             .iter()

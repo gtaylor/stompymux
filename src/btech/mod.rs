@@ -1,4 +1,5 @@
 //! BattleTech domain models, asset codecs, and command/notification adapters.
+pub mod autopilot;
 pub(crate) mod map_lifecycle;
 mod special_commands;
 pub(crate) mod special_dispatch;
@@ -41,6 +42,13 @@ pub use artillery_impact::{
 };
 pub use artillery_queue::{
     BattleArtilleryShot, advance_artillery_action, artillery_pending, enqueue_artillery,
+};
+pub use autopilot::{
+    AutopilotConfig, AutopilotConfigPatch, AutopilotController, AutopilotFeedback,
+    AutopilotFeedbackEvent, AutopilotFeedbackPage, AutopilotFireMode, AutopilotLastSighting,
+    AutopilotOrder, AutopilotOrderProgress, AutopilotOrderRecord, AutopilotOrderState,
+    AutopilotRangeBand, AutopilotReason, AutopilotState, AutopilotSubmissionMode, LastSighting,
+    MAX_FEEDBACK,
 };
 pub use evacuation::advance_artillery_flight_action;
 
@@ -141,6 +149,7 @@ pub(crate) mod landing;
 pub use landing::land_jump;
 mod ground_proposal;
 mod loadout;
+mod loadout_context;
 mod map;
 mod mobility;
 mod motion;
@@ -267,6 +276,7 @@ pub(crate) fn notify_message(
 
 pub use geometry::{BattleHexCoordinate, BattlePoint, BattleRange, unit_elevation, unit_range};
 
+pub(crate) use motion::set_speed_autopilot;
 pub use motion::{BattleMotion, BattleMovementRules, advance_motion, set_heading, set_speed};
 
 /// Stage a player-owned condition notice through the normal notification boundary.
@@ -278,6 +288,7 @@ pub(crate) fn notify_character(
 }
 
 mod los;
+mod los_trace;
 pub use los::{BattleTerrainLos, ground_terrain_los, unit_terrain_los};
 
 mod sensors;
@@ -299,6 +310,7 @@ pub use sensor_selection::{
 };
 
 mod contacts;
+pub(crate) use contacts::contact_facts;
 pub use contacts::{
     BattleContact, BattleContactRules, BattleContactSensors, BattleContactTransition,
     BattleContactUpdate, BattleContactView, update_optical_contact, visible_contact,
@@ -1536,3 +1548,9 @@ pub use computer_failure::{
 
 pub(crate) mod computer_runtime;
 pub use computer_runtime::advance_battle_computer_failures_action;
+
+mod tactical;
+pub use tactical::{
+    MAX_TACTICAL_UNITS, TacticalContact, TacticalIntention, TacticalSighting, TacticalSnapshot,
+    TacticalSubmitResult, TacticalUnitSnapshot, observe_tactical, submit_tactical,
+};

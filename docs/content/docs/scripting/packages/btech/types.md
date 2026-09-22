@@ -1024,7 +1024,8 @@ Alias: `{class: "mech", section: string}|{class: "ground_vehicle"|"vtol", sectio
 - `parts`: `table` — Registered part catalogue and stock queries.
 - `repair`: `table` — Immediate repair requests and technician scheduling.
 - `system`: `table` — World event telemetry.
-- `autopilot`: `table` — Autopilot order constants; queue callables await their runtime.
+- `autopilot`: `BtechAutopilotAPI` — Lua control of unit-attached ground autopilots.
+- `tactical`: `BtechTacticalAPI` — Filtered group observations and atomic intentions.
 - `errors`: `table` — Structured btech error-code tree from mux.error.code_tree('btech').
 
 ## BattleAmmunitionAdjustment
@@ -1654,3 +1655,238 @@ Alias: `BattlePartDefinition|integer|string`
 ## BattleImmediateRepair
 
 Alias: `BattleRepairArmorRequest|BattleRepairInternalRequest|BattleRepairRearArmorRequest|BattleRepairPartRequest|BattleRepairReattachRequest`
+
+## BattleAutopilotStates
+
+- `PAUSED`: `"paused"`
+- `IDLE`: `"idle"`
+- `EXECUTING`: `"executing"`
+- `BLOCKED`: `"blocked"`
+
+## BattleAutopilotOrderStates
+
+- `QUEUED`: `"queued"`
+- `RUNNING`: `"running"`
+- `SUCCEEDED`: `"succeeded"`
+- `FAILED`: `"failed"`
+- `CANCELED`: `"canceled"`
+
+## BattleAutopilotReasons
+
+- `MANUAL_TAKEOVER`: `"manual_takeover"`
+- `CONTACT_LOST`: `"contact_lost"`
+- `STUCK`: `"stuck"`
+- `UNREACHABLE`: `"unreachable"`
+- `INVALIDATED`: `"invalidated"`
+- `RESOURCE_LIMIT`: `"resource_limit"`
+- `CONGESTED`: `"congested"`
+- `INVALID_TARGET`: `"invalid_target"`
+- `UNIT_UNAVAILABLE`: `"unit_unavailable"`
+- `MAP_CHANGED`: `"map_changed"`
+- `UNSUPPORTED`: `"unsupported"`
+- `STALE_REVISION`: `"stale_revision"`
+
+## BattleAutopilotRangeBand
+
+- `minimum`: `integer` — Inclusive minimum engagement range in hexes.
+- `maximum`: `integer` — Inclusive maximum engagement range in hexes.
+
+## BattleAutopilotConfig
+
+- `speed_percent`: `integer` — Desired speed as a percentage from 0 through 100.
+- `fire_mode`: `"hold"|"assigned_target"|"opportunistic"` — Current serialized weapon policy.
+- `heat_ceiling`: `integer` — Projected heat limit for autonomous fire.
+- `preferred_range`: `BattleAutopilotRangeBand|nil` — Optional engagement band.
+
+## BattleAutopilotConfigPatch
+
+- `speed_percent`: `integer|nil` — Optional speed update.
+- `fire_mode`: `BattleAutopilotFireMode|nil` — Optional weapon-policy update.
+- `heat_ceiling`: `integer|nil` — Optional projected heat limit.
+- `preferred_range`: `BattleAutopilotRangeBand|false|nil` — Set or clear the preferred band.
+
+## BattleAutopilotControllerState
+
+Alias: `"paused"|"idle"|"executing"|"blocked"`
+
+## BattleAutopilotOrderState
+
+Alias: `"queued"|"running"|"succeeded"|"failed"|"canceled"`
+
+## BattleAutopilotFeedbackEvent
+
+Alias: `"configured"|"paused"|"resumed"|"manual_takeover"|"order_queued"|"order_started"|"order_succeeded"|"order_failed"|"order_canceled"|"blocked"`
+
+## BattleAutopilotReason
+
+Alias: `"manual_takeover"|"contact_lost"|"stuck"|"unreachable"|"invalidated"|"resource_limit"|"congested"|"invalid_target"|"unit_unavailable"|"map_changed"|"unsupported"|"stale_revision"`
+
+## BattleAutopilotOrder
+
+- `kind`: `BattleAutopilotOrderName`
+- `destination`: `BattlePosition|nil` — Move or attack-move destination.
+- `arrival_radius`: `integer|nil` — Destination tolerance in hexes.
+- `target`: `integer|nil` — Follow or attack target unit.
+- `separation`: `integer|nil` — Follow distance in hexes.
+- `waypoints`: `BattlePosition[]|nil` — Patrol route.
+- `range`: `BattleAutopilotRangeBand|nil` — Optional attack engagement band.
+
+## BattleAutopilotStoredOrder
+
+- `kind`: `"move"|"hold"|"follow"|"patrol"|"attack"|"attack_move"` — Serialized intent kind.
+- `destination`: `BattlePosition|nil` — Move or attack-move destination.
+- `arrival_radius`: `integer|nil` — Destination tolerance in hexes.
+- `target`: `integer|nil` — Follow or attack target unit.
+- `separation`: `integer|nil` — Follow distance in hexes.
+- `waypoints`: `BattlePosition[]|nil` — Patrol route.
+- `range`: `BattleAutopilotRangeBand|nil` — Optional engagement band.
+
+## BattleAutopilotOrderProgress
+
+- `waypoint_index`: `integer` — Current waypoint cursor.
+- `recovery_attempts`: `integer` — Replanning attempts for the active order.
+- `stagnant_ticks`: `integer` — Ticks without route progress.
+- `attack_move_origin`: `BattlePosition|nil` — Position where attack-move pursuit began.
+- `attack_move_suppressed_target`: `integer|nil` — Contact already engaged during attack-move.
+
+## BattleAutopilotOrderRecord
+
+- `id`: `integer` — Stable controller-local order ID.
+- `order`: `BattleAutopilotStoredOrder` — Serialized order intent; submissions use typed constants.
+- `state`: `BattleAutopilotOrderState` — Lifecycle state.
+- `progress`: `BattleAutopilotOrderProgress` — Durable execution cursor.
+
+## BattleAutopilotStatus
+
+- `config`: `BattleAutopilotConfig` — Controller settings.
+- `state`: `BattleAutopilotControllerState` — Controller lifecycle state.
+- `blocking_reason`: `BattleAutopilotReason|nil` — Reason the controller is blocked, if any.
+- `revision`: `integer` — Management revision.
+- `next_order_id`: `integer` — Next order ID that will be assigned.
+- `active`: `BattleAutopilotOrderRecord|nil` — Current order.
+- `queue`: `BattleAutopilotOrderRecord[]` — Queued orders.
+- `feedback`: `BattleAutopilotFeedback[]` — Recently retained outcomes.
+- `next_feedback_sequence`: `integer` — Next feedback sequence that will be assigned.
+- `sightings`: `table<integer, BattleAutopilotSighting>` — Retained contact memory keyed by unit ID.
+
+## BattleAutopilotSubmitResult
+
+- `ids`: `integer[]` — Assigned order IDs.
+- `revision`: `integer` — New management revision.
+
+## BattleAutopilotContact
+
+- `unit`: `integer` — Acquired unit identity.
+- `position`: `BattlePosition` — Observed position.
+- `friendly`: `boolean` — Whether the contact is allied.
+- `identified`: `boolean` — Whether sensors identified the contact well enough to determine allegiance.
+- `known_destroyed`: `boolean` — Whether the visible contact status reports destruction.
+- `range`: `number` — Observed range in map units.
+- `seen_at`: `integer` — Simulation time of the observation.
+
+## BattleAutopilotMemory
+
+- `unit`: `integer` — Previously acquired unit identity.
+- `position`: `BattlePosition` — Last sensor-confirmed position.
+- `seen_at`: `integer` — Simulation time of the last sighting.
+
+## BattleHeat
+
+- `stored`: `number` — Current stored weapon heat.
+- `excess`: `number` — Sampled excess heat.
+
+## BattleAutopilotOwnReadiness
+
+- `power`: `BattlePower` — Current power state.
+- `maximum_speed`: `number` — Damage-adjusted maximum speed.
+- `heat`: `BattleHeat|nil` — Conventional heat state; nil for ground vehicles.
+- `weapons`: `BattleWeaponReadiness[]` — Readiness for installed weapons.
+
+## BattleAutopilotSighting
+
+- `position`: `BattlePosition` — Last sensor-confirmed position.
+- `seen_at`: `integer` — Simulation time of the last sighting.
+
+## BattleAutopilotObservation
+
+- `unit`: `integer` — Observing unit.
+- `time`: `integer` — Current simulation time.
+- `position`: `BattlePosition|nil` — Own position, if placed.
+- `heading`: `number|nil` — Own heading, if motion is available.
+- `speed`: `number` — Own current speed.
+- `own`: `BattleAutopilotOwnReadiness` — Own mechanical and weapon readiness.
+- `contacts`: `BattleAutopilotContact[]` — Current sensor contacts.
+- `remembered`: `BattleAutopilotMemory[]` — Fresh retained sightings.
+
+## BattleAutopilotFeedback
+
+- `sequence`: `integer` — Monotonic feedback sequence.
+- `simulation_time`: `integer` — Simulation time of the event.
+- `order_id`: `integer|nil` — Related order ID.
+- `event`: `BattleAutopilotFeedbackEvent` — Event kind.
+- `reason`: `BattleAutopilotReason|nil` — Optional event reason.
+
+## BattleAutopilotFeedbackPage
+
+- `records`: `BattleAutopilotFeedback[]` — Retained feedback records after the cursor.
+- `history_gap`: `boolean` — Whether older records fell outside the retention window.
+
+## BtechAutopilotAPI
+
+- `orders`: `table`
+- `submission_modes`: `table`
+- `fire_modes`: `table`
+- `states`: `BattleAutopilotStates` — Controller lifecycle strings.
+- `order_states`: `BattleAutopilotOrderStates` — Order lifecycle strings.
+- `reasons`: `BattleAutopilotReasons` — Blocking and outcome reason strings.
+- `attach`: `fun(unit: integer, options?: BattleAutopilotConfigPatch)`
+- `detach`: `fun(unit: integer)`
+- `configure`: `fun(unit: integer, patch: BattleAutopilotConfigPatch, expected_revision?: integer):` — integer
+- `submit`: `fun(unit: integer, orders: BattleAutopilotOrder[], mode: BattleAutopilotSubmissionMode, expected_revision?: integer):` — BattleAutopilotSubmitResult
+- `cancel`: `fun(unit: integer, order_id: integer, expected_revision?: integer):` — boolean
+- `pause`: `fun(unit: integer)`
+- `resume`: `fun(unit: integer)`
+- `status`: `fun(unit: integer):` — BattleAutopilotStatus
+- `observe`: `fun(unit: integer):` — BattleAutopilotObservation
+- `feedback`: `fun(unit: integer, after_sequence?: integer):` — BattleAutopilotFeedbackPage
+
+## BattleTacticalUnitSnapshot
+
+- `unit`: `integer` — Assigned friendly unit ID.
+- `revision`: `integer` — Management revision used for stale-intention protection.
+- `status`: `BattleAutopilotStatus` — Controller state; sightings are supplied through observation instead.
+- `observation`: `BattleAutopilotObservation` — Per-unit permitted intelligence.
+- `feedback`: `BattleAutopilotFeedbackPage` — Outcome page after the requested cursor.
+
+## BattleTacticalSighting
+
+- `observer`: `integer` — Unit that acquired this sighting.
+- `position`: `BattlePosition` — Last observed position.
+- `seen_at`: `integer` — Committed simulation seconds.
+- `current`: `boolean` — Whether this observer currently acquires the contact.
+- `friendly`: `boolean|nil` — Present only for a current observation.
+- `identified`: `boolean|nil` — Present only for a current observation.
+- `known_destroyed`: `boolean|nil` — Present only for a current observation.
+
+## BattleTacticalContact
+
+- `unit`: `integer` — Contact identity.
+- `observations`: `BattleTacticalSighting[]` — Source observations, ordered by observer ID.
+
+## BattleTacticalSnapshot
+
+- `version`: `integer` — Snapshot schema version, currently 1.
+- `time`: `integer` — Committed simulation seconds; restart does not advance this clock.
+- `units`: `BattleTacticalUnitSnapshot[]` — Assigned controllers, ordered by unit ID.
+- `contacts`: `BattleTacticalContact[]` — Aggregated sightings, ordered by contact ID.
+
+## BattleTacticalIntention
+
+- `unit`: `integer` — Assigned unit ID.
+- `expected_revision`: `integer` — Required current management revision.
+- `mode`: `BattleAutopilotSubmissionMode` — Append or replace using typed constants.
+- `orders`: `BattleAutopilotOrder[]` — Ordinary unit orders, at most 64.
+
+## BattleTacticalSubmitResult
+
+- `unit`: `integer` — Controller receiving these order IDs.

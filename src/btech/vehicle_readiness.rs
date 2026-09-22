@@ -44,9 +44,21 @@ impl From<BattleVehicleWeaponUse> for BattleWeaponUse {
 impl BattleVehicle {
     /// Resolve burst fallback with the common firing rule and this vehicle's ammunition feed.
     pub(super) fn effective_fire_mode(&self, index: usize) -> Result<BattleFireMode> {
-        super::fire_mode::effective_mode(self.fire_mode(index)?, |rounds| {
-            self.ammunition_feed(index, rounds)
-        })
+        let loadout = self.loadout()?;
+        self.effective_fire_mode_with_loadout(&loadout, index)
+    }
+
+    /// Preserve live supply fallback while sharing this immutable equipment projection.
+    pub(crate) fn effective_fire_mode_with_loadout(
+        &self,
+        loadout: &super::BattleVehicleLoadout,
+        index: usize,
+    ) -> Result<BattleFireMode> {
+        ensure!(index < loadout.weapons.len(), "Weapon index out of bounds");
+        super::fire_mode::effective_mode(
+            self.fire_modes.get(&index).copied().unwrap_or_default(),
+            |rounds| self.ammunition_feed_with_loadout(loadout, index, rounds),
+        )
     }
 
     /// Non-normal firing selections keyed by zero-based weapon index.
@@ -93,12 +105,38 @@ impl BattleVehicle {
 
     /// Mechanical readiness; full firing authority and targeting remain separate.
     pub fn weapon_readiness(&self, index: usize) -> Result<BattleWeaponReadiness> {
+        let _measurement = crate::btech::autopilot::diagnostics::measure(
+            crate::btech::autopilot::diagnostics::Category::Readiness,
+        );
         let loadout = self.loadout()?;
+        self.weapon_readiness_with_loadout(&loadout, index)
+    }
+
+    /// Inspect every resolved mount while sharing one immutable equipment projection.
+    pub(crate) fn weapon_readiness_batch(&self) -> Result<Vec<BattleWeaponReadiness>> {
+        let _measurement = crate::btech::autopilot::diagnostics::measure(
+            crate::btech::autopilot::diagnostics::Category::Readiness,
+        );
+        let loadout = self.loadout()?;
+        loadout
+            .weapons
+            .iter()
+            .enumerate()
+            .map(|(index, _)| self.weapon_readiness_with_loadout(&loadout, index))
+            .collect()
+    }
+
+    /// Inspect live state against an equipment projection from the same immutable unit.
+    pub(crate) fn weapon_readiness_with_loadout(
+        &self,
+        loadout: &BattleVehicleLoadout,
+        index: usize,
+    ) -> Result<BattleWeaponReadiness> {
         let mount = loadout
             .weapons
             .get(index)
             .context("Weapon index out of bounds")?;
-        let mechanics = self.weapon_mechanics(index)?;
+        let mechanics = self.weapon_mechanics_with_loadout(loadout, index)?;
         let intact = mechanics.intact;
         let spent = self.spent_launchers.contains(&index);
         let ammunition = if mount.one_shot {
@@ -149,6 +187,14 @@ impl BattleVehicle {
         index: usize,
     ) -> Result<super::weapon_admission::WeaponMechanics> {
         let loadout = self.loadout()?;
+        self.weapon_mechanics_with_loadout(&loadout, index)
+    }
+
+    fn weapon_mechanics_with_loadout(
+        &self,
+        loadout: &BattleVehicleLoadout,
+        index: usize,
+    ) -> Result<super::weapon_admission::WeaponMechanics> {
         let mount = loadout
             .weapons
             .get(index)

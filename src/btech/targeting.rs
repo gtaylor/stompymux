@@ -132,10 +132,22 @@ impl super::BattleVehicle {
 
 /// Check pilot control and running power before changing a selection.
 pub(super) fn controlled(world: &World, unit: ObjectId, pilot: ObjectId) -> Result<()> {
+    controlled_by_actor(
+        world,
+        unit,
+        super::combat_operator::ControlActor::Player(pilot),
+    )
+}
+
+fn controlled_by_actor(
+    world: &World,
+    unit: ObjectId,
+    actor: super::combat_operator::ControlActor,
+) -> Result<()> {
     if world.btech.vehicles().contains_key(&unit) {
-        super::vehicle_power::controlled(world, unit, pilot)?;
+        super::vehicle_power::controlled_by_actor(world, unit, actor)?;
     } else {
-        super::power::controlled_unit(world, unit, pilot)?;
+        super::power::controlled_unit_by_actor(world, unit, actor)?;
     }
     let state = super::scanner::scanner_unit(world, unit).context("Unit is unavailable")?;
     ensure!(
@@ -147,7 +159,22 @@ pub(super) fn controlled(world: &World, unit: ObjectId, pilot: ObjectId) -> Resu
 
 /// Resolve independent selection ownership while retaining the parent's shared sensor rules.
 fn controlled_source(world: &World, owner: ObjectId, actor: ObjectId) -> Result<ObjectId> {
+    controlled_source_by_actor(
+        world,
+        owner,
+        super::combat_operator::ControlActor::Player(actor),
+    )
+}
+
+fn controlled_source_by_actor(
+    world: &World,
+    owner: ObjectId,
+    actor: super::combat_operator::ControlActor,
+) -> Result<ObjectId> {
     if world.btech.gunner_stations().contains_key(&owner) {
+        let super::combat_operator::ControlActor::Player(actor) = actor else {
+            anyhow::bail!("Autopilot cannot operate an independent gunner station")
+        };
         let context = super::gunner_context(world, owner, actor)?;
         super::power::control_health(world, context.parent, actor)?;
         let source =
@@ -158,7 +185,7 @@ fn controlled_source(world: &World, owner: ObjectId, actor: ObjectId) -> Result<
         );
         return Ok(context.parent);
     }
-    controlled(world, owner, actor)?;
+    controlled_by_actor(world, owner, actor)?;
     Ok(owner)
 }
 
@@ -274,6 +301,44 @@ pub fn select_target(
         unit,
         target.map(|target| BattleTargetSelection::Unit(BattleTargetLock { target, remaining })),
     );
+    let notice = BattleNotice {
+        unit,
+        text: (if target.is_some() && remaining > 0 {
+            "Target set; sensors are acquiring a stable lock."
+        } else if target.is_some() {
+            "Target set."
+        } else {
+            "All locks cleared."
+        })
+        .to_owned(),
+    };
+    let _ = super::autopilot::manual_takeover(world, unit);
+    Ok(notice)
+}
+
+/// Select a visible target on behalf of the attached autopilot.
+pub(crate) fn select_target_autopilot(
+    world: &mut World,
+    unit: ObjectId,
+    target: Option<ObjectId>,
+) -> Result<BattleNotice> {
+    let source =
+        controlled_source_by_actor(world, unit, super::combat_operator::ControlActor::Autopilot)?;
+    if let Some(target) = target {
+        ensure!(
+            super::visible_contacts(world, source)?
+                .iter()
+                .any(|contact| contact.target == target),
+            "Target is not a current acquired contact"
+        );
+        super::sixth_sense::schedule(world, source, target)?;
+    }
+    let remaining = settling_delay(world, unit);
+    set_selection(
+        world,
+        unit,
+        target.map(|target| BattleTargetSelection::Unit(BattleTargetLock { target, remaining })),
+    );
     Ok(BattleNotice {
         unit,
         text: (if target.is_some() && remaining > 0 {
@@ -326,12 +391,48 @@ pub fn select_hex_target(
         BattleHexTargetMode::Ignite => "to igniting hex at",
         BattleHexTargetMode::Clear => "to clearing hex at",
     };
-    Ok(BattleNotice {
+    let notice = BattleNotice {
         unit,
         text: format!(
             "Target coordinates set {purpose} (X,Y) {}, {}",
             hex.x, hex.y
         ),
+    };
+    let _ = super::autopilot::manual_takeover(world, unit);
+    Ok(notice)
+}
+
+/// Select coordinates on behalf of the attached autopilot.
+pub(crate) fn select_hex_target_autopilot(
+    world: &mut World,
+    unit: ObjectId,
+    hex: super::BattleHexCoordinate,
+    mode: BattleHexTargetMode,
+) -> Result<BattleNotice> {
+    let source =
+        controlled_source_by_actor(world, unit, super::combat_operator::ControlActor::Autopilot)?;
+    let position = super::scanner::scanner_unit(world, source)
+        .and_then(|state| state.position)
+        .context("Unit is not on a battlefield")?;
+    let elevation = world.btech.maps()[&position.map]
+        .hex(i64::from(hex.x), i64::from(hex.y))?
+        .elevation;
+    let remaining = settling_delay(world, unit);
+    set_selection(
+        world,
+        unit,
+        Some(BattleTargetSelection::Hex(BattleHexLock {
+            hex,
+            mode,
+            remaining,
+        })),
+    );
+    if let Some(station) = Arc::make_mut(&mut world.btech.gunner_stations).get_mut(&unit) {
+        station.target_coordinates[2] = i16::from(elevation);
+    }
+    Ok(BattleNotice {
+        unit,
+        text: format!("Target coordinates set (X,Y) {}, {}", hex.x, hex.y),
     })
 }
 

@@ -195,9 +195,8 @@ fn subpackage_description(path: &str) -> Option<&'static str> {
         "mux/telnet" => Some("Telnet protocol state and capabilities."),
         "mux/text" => Some("Styled-text validation, formatting, and measurement helpers."),
         "mux/world" => Some("Database objects and their persistent state."),
-        "btech/autopilot" => {
-            Some("Typed autopilot constants; queue and control calls are not implemented.")
-        }
+        "btech/autopilot" => Some("Lua control of unit-attached ground autopilots."),
+        "btech/tactical" => Some("Filtered friendly-force snapshots and atomic unit intentions."),
         "btech/cargo" => Some("Cockpit stock reports and cargo transfers."),
         "btech/character" => Some("Character values, skills, and experience."),
         "btech/database" => Some("Explicit BattleTech world checkpoints."),
@@ -284,6 +283,156 @@ fn parse_functions(source: &Path) -> Result<Vec<ApiFunction>> {
             });
         }
         comments.clear();
+    }
+    Ok(result)
+}
+
+/// Read callable fields from the typed autopilot facade.
+///
+/// Most Lua APIs are declared as `function` statements in the LuaLS library.
+/// The autopilot facade is represented as a typed API record instead, because
+/// its functions are installed on a table at runtime. Keep the generated
+/// reference complete without requiring a second, hand-maintained signature
+/// inventory.
+fn parse_autopilot_functions(source: &Path) -> Result<Vec<ApiFunction>> {
+    let mut in_api = false;
+    let mut result = Vec::new();
+    for line in fs::read_to_string(source)?.lines() {
+        if let Some(class) = class_name(line) {
+            in_api = class == "BtechAutopilotAPI";
+            continue;
+        }
+        if !in_api {
+            continue;
+        }
+        let Some(rest) = line.strip_prefix("---@field ") else {
+            if !line.starts_with("---") {
+                in_api = false;
+            }
+            continue;
+        };
+        let Some((name, declaration)) = rest.split_once(' ') else {
+            continue;
+        };
+        let Some(signature) = declaration.strip_prefix("fun(") else {
+            continue;
+        };
+        let Some((parameters, return_type)) = signature.split_once(')') else {
+            bail!("{}: malformed autopilot callable {name}", source.display());
+        };
+        let parameter_types = parameters
+            .split(',')
+            .filter_map(|parameter| {
+                parameter.trim().split_once(':').map(|(name, kind)| {
+                    (
+                        name.trim().trim_end_matches('?').to_owned(),
+                        kind.trim().to_owned(),
+                    )
+                })
+            })
+            .collect::<Vec<_>>();
+        let parameters = parameter_types
+            .iter()
+            .map(|(name, _)| name.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+        let return_type = return_type
+            .strip_prefix(": ")
+            .or_else(|| return_type.strip_prefix(":"));
+        let mut comments = Vec::new();
+        let (summary, params, returns) = match name {
+            "attach" => (
+                "Attach a paused ground autopilot controller to a supported Mech or ground vehicle.",
+                vec![
+                    ("unit", "The unit to control."),
+                    ("options", "Optional initial configuration."),
+                ],
+                None,
+            ),
+            "detach" => (
+                "Detach the unit's controller, stop autonomous movement, and clear its durable state.",
+                vec![("unit", "The controlled unit.")],
+                None,
+            ),
+            "configure" => (
+                "Atomically update controller settings and return the new management revision.",
+                vec![
+                    ("unit", "The controlled unit."),
+                    ("patch", "Settings to change."),
+                    ("expected_revision", "Optional revision guard."),
+                ],
+                Some("integer New management revision."),
+            ),
+            "submit" => (
+                "Validate and queue typed movement or combat orders.",
+                vec![
+                    ("unit", "The controlled unit."),
+                    ("orders", "Order specification tables."),
+                    ("mode", "Append or replace the existing queue."),
+                    ("expected_revision", "Optional revision guard."),
+                ],
+                Some("BattleAutopilotSubmitResult Order IDs and the new management revision."),
+            ),
+            "cancel" => (
+                "Cancel an active or queued order.",
+                vec![
+                    ("unit", "The controlled unit."),
+                    ("order_id", "The stable order ID."),
+                    ("expected_revision", "Optional revision guard."),
+                ],
+                Some("boolean True when an order was canceled."),
+            ),
+            "pause" => (
+                "Pause the controller and request a normal movement stop.",
+                vec![("unit", "The controlled unit.")],
+                None,
+            ),
+            "resume" => (
+                "Resume a paused controller after rechecking its unit and order prerequisites.",
+                vec![("unit", "The controlled unit.")],
+                None,
+            ),
+            "status" => (
+                "Read detached controller settings, state, orders, progress, and blocking information.",
+                vec![("unit", "The controlled unit.")],
+                Some("BattleAutopilotStatus Controller status."),
+            ),
+            "observe" => (
+                "Read the controller's filtered own-unit, visible-contact, and remembered-sighting observations.",
+                vec![("unit", "The controlled unit.")],
+                Some("BattleAutopilotObservation Filtered observation snapshot."),
+            ),
+            "feedback" => (
+                "Read bounded order transitions and outcome records.",
+                vec![
+                    ("unit", "The controlled unit."),
+                    ("after_sequence", "Optional sequence cursor."),
+                ],
+                Some("BattleAutopilotFeedbackPage Feedback records and a history-gap indicator."),
+            ),
+            _ => continue,
+        };
+        comments.push(format!("---{summary}"));
+        for (parameter, detail) in params {
+            let kind = parameter_types
+                .iter()
+                .find(|(name, _)| name == parameter)
+                .map_or("any", |(_, kind)| kind.as_str());
+            comments.push(format!("---@param {parameter} {kind} {detail}"));
+        }
+        let return_value = returns.or_else(|| {
+            let value = return_type?.trim();
+            (!value.is_empty()).then_some(value)
+        });
+        if let Some(return_value) = return_value {
+            comments.push(format!("---@return {return_value}"));
+        }
+        result.push(ApiFunction {
+            name: format!("btech.autopilot.{name}"),
+            path: "btech/autopilot".to_owned(),
+            parameters,
+            comments,
+        });
     }
     Ok(result)
 }
@@ -413,7 +562,9 @@ fn parse_mux_constants(source: &Path) -> Result<BTreeMap<String, Vec<Constant>>>
 fn parse_btech_constants(source: &Path) -> Result<BTreeMap<String, Vec<Constant>>> {
     let input = fs::read_to_string(source)?;
     let catalog = pattern(r#"(?s)qualified_name: "(btech\.[\w.]+)",\s*entries: &\[(.*?)\],"#);
-    let entry = pattern(r#"(?s)Entry\s*\{\s*name: "([\w]+)",\s*value: (\d+),\s*\}"#);
+    let entry = pattern(
+        r#"(?s)(?:String)?Entry\s*\{\s*name: "([\w]+)",\s*value: (?:"([\w]+)"|(\d+)),\s*\}"#,
+    );
     let mut result = BTreeMap::new();
     for found in catalog.captures_iter(&input) {
         let path = found[1].replace('.', "/");
@@ -421,7 +572,10 @@ fn parse_btech_constants(source: &Path) -> Result<BTreeMap<String, Vec<Constant>
             .captures_iter(&found[2])
             .map(|item| Constant {
                 name: item[1].to_owned(),
-                value: item[2].to_owned(),
+                value: item
+                    .get(2)
+                    .map(|value| format!("\"{}\"", value.as_str()))
+                    .unwrap_or_else(|| item[3].to_owned()),
                 detail: String::new(),
             })
             .collect();
@@ -529,6 +683,7 @@ fn render(root: &Path) -> Result<BTreeMap<String, String>> {
     let types = root.join("game/lua/types");
     let mut functions = parse_functions(&types.join("mux.d.lua"))?;
     functions.extend(parse_functions(&types.join("btech.d.lua"))?);
+    functions.extend(parse_autopilot_functions(&types.join("btech.d.lua"))?);
     let mut constants = parse_mux_constants(&types.join("mux.d.lua"))?;
     constants.extend(parse_btech_constants(
         &root.join("src/lua/packages/btech/constants.rs"),
@@ -569,10 +724,22 @@ fn render(root: &Path) -> Result<BTreeMap<String, String>> {
     }
 
     for (path, fields) in &constants {
-        let mut body =
-            "Immutable typed constants available in the Stompymux-rs Lua runtime.\n\n".to_owned();
+        let string_catalog = path.starts_with("btech/autopilot/")
+            && fields.iter().all(|field| field.value.starts_with('"'));
+        let mut body = if string_catalog {
+            "Immutable string constants available in the Stompymux-rs Lua runtime.\n\n"
+        } else {
+            "Immutable typed constants available in the Stompymux-rs Lua runtime.\n\n"
+        }
+        .to_owned();
         if path.starts_with("btech/") && !path.ends_with("codes") && !path.ends_with("errors") {
-            body.push_str("The numbers below are native identifiers; pass the typed constants to Lua APIs.\n\n");
+            if string_catalog {
+                body.push_str(
+                    "The values below are serialized strings returned by this namespace.\n\n",
+                );
+            } else {
+                body.push_str("The numbers below are native identifiers; pass the typed constants to Lua APIs.\n\n");
+            }
         }
         body.push_str("| Constant | Type or native code | Description |\n| --- | --- | --- |\n");
         for field in fields {
@@ -674,7 +841,7 @@ fn render(root: &Path) -> Result<BTreeMap<String, String>> {
             }
         }
         if path == "btech/autopilot" {
-            body.push_str("\nAutopilot currently exposes typed constants. Queue and control callables are not implemented.\n");
+            body.push_str("\nAttach a controller to a ground unit, submit typed orders, and inspect its observations and feedback. Controllers resume persisted work after restart.\n");
         }
         if path == "btech" {
             body.push_str("\nFunctions require a live game callback unless their page states otherwise. `DbRef` is an integer object reference; `Object` is a live world handle.\n");
@@ -856,7 +1023,9 @@ mod tests {
         );
         assert!(mux.contains("weight: 10\nsidebar_root_for: self\nno_list: true"));
         let btech = &pages["btech/_index.md"];
-        assert!(btech.contains("| [`btech.autopilot`](autopilot/) | Typed autopilot constants; queue and control calls are not implemented. |"));
+        assert!(btech.contains(
+            "| [`btech.autopilot`](autopilot/) | Lua control of unit-attached ground autopilots. |"
+        ));
         assert!(
             btech.contains(
                 "| [`btech.cargo`](cargo/) | Cockpit stock reports and cargo transfers. |"
@@ -864,6 +1033,21 @@ mod tests {
         );
         let package_root = &pages["_index.md"];
         assert!(package_root.contains("weight: 1000\nno_list: true"));
+        Ok(())
+    }
+
+    #[test]
+    fn autopilot_typed_fields_get_reference_pages() -> Result<()> {
+        let pages = render(Path::new(env!("CARGO_MANIFEST_DIR")))?;
+        let index = &pages["btech/autopilot/_index.md"];
+        assert!(index.contains("- [`attach`](attach/)"));
+        assert!(index.contains("- [`feedback`](feedback/)"));
+        let attach = &pages["btech/autopilot/attach.md"];
+        assert!(attach.contains("btech.autopilot.attach(unit, options)"));
+        assert!(attach.contains("supported Mech or ground vehicle"));
+        assert!(pages["btech/autopilot/states.md"].contains("`\"paused\"`"));
+        assert!(pages["btech/autopilot/order_states.md"].contains("`\"running\"`"));
+        assert!(pages["btech/autopilot/reasons.md"].contains("`\"contact_lost\"`"));
         Ok(())
     }
 }

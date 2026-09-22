@@ -6,6 +6,25 @@ use std::sync::Arc;
 
 /// Require a conscious, assigned operator physically inside a live vehicle.
 pub(super) fn controlled(world: &World, id: ObjectId, pilot: ObjectId) -> Result<()> {
+    controlled_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Player(pilot),
+    )
+}
+
+pub(super) fn controlled_by_actor(
+    world: &World,
+    id: ObjectId,
+    actor: super::combat_operator::ControlActor,
+) -> Result<()> {
+    if let super::combat_operator::ControlActor::Autopilot = actor {
+        super::power::autopilot_controlled_vehicle(world, id)?;
+        return Ok(());
+    }
+    let super::combat_operator::ControlActor::Player(pilot) = actor else {
+        unreachable!()
+    };
     super::power::control_health(world, id, pilot)?;
     ensure!(
         world
@@ -36,7 +55,21 @@ pub(super) fn start(
     pilot: ObjectId,
     fast: bool,
 ) -> Result<BattleNotice> {
-    controlled(world, id, pilot)?;
+    start_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Player(pilot),
+        fast,
+    )
+}
+
+pub(super) fn start_by_actor(
+    world: &mut World,
+    id: ObjectId,
+    actor: super::combat_operator::ControlActor,
+    fast: bool,
+) -> Result<BattleNotice> {
+    controlled_by_actor(world, id, actor)?;
     let unit = &world.btech.vehicles()[&id];
     ensure!(
         unit.power() == BattlePower::Off,
@@ -65,7 +98,9 @@ pub(super) fn start(
         .power = BattlePower::Starting {
         remaining: if fast { 5 } else { 30 },
     };
-    super::pilot_health::synchronize(world, id, pilot);
+    if let super::combat_operator::ControlActor::Player(pilot) = actor {
+        super::pilot_health::synchronize(world, id, pilot);
+    }
     Ok(BattleNotice {
         unit: id,
         text: "Startup Cycle commencing...".into(),

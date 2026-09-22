@@ -3,8 +3,17 @@
 #[path = "../support/mod.rs"]
 mod support;
 
+#[path = "../support/autopilot.rs"]
+mod autopilot_support;
+
 #[path = "../btech_ammunition_preference.rs"]
 mod btech_ammunition_preference;
+
+#[path = "../btech_autopilot_runtime.rs"]
+mod btech_autopilot_runtime;
+
+#[path = "../btech_autopilot_orders.rs"]
+mod btech_autopilot_orders;
 
 #[path = "../btech_battlefield_identity.rs"]
 mod btech_battlefield_identity;
@@ -62,3 +71,6 @@ mod btech_weapon_failure;
 
 #[path = "../btech_weapon_reports.rs"]
 mod btech_weapon_reports;
+
+#[path = "../btech_autopilot_audit.rs"]
+mod btech_autopilot_audit;

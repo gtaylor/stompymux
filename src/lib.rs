@@ -1257,3 +1257,20 @@ pub use btech::{BattleComputerFailure, BattleComputerFailureInput, select_comput
 
 pub use btech::BattleEventTelemetry;
 pub use btech::advance_battle_computer_failures_action;
+
+pub use btech::{
+    MAX_TACTICAL_UNITS, TacticalContact, TacticalIntention, TacticalSighting, TacticalSnapshot,
+    TacticalSubmitResult, TacticalUnitSnapshot, observe_tactical, submit_tactical,
+};
+
+pub use server::{HeartbeatHarness, HeartbeatMetrics};
+
+/// Isolated production-heartbeat performance diagnostics for ground controllers.
+pub use btech::autopilot::benchmark::{
+    BenchmarkOptions as AutopilotBenchmarkOptions, BenchmarkReport as AutopilotBenchmarkReport,
+    BenchmarkResult as AutopilotBenchmarkResult, BenchmarkScenario as AutopilotBenchmarkScenario,
+    run as run_autopilot_benchmark,
+};
+pub use btech::autopilot::runtime::AutopilotRuntimeMetrics;
+
+pub use btech::autopilot::diagnostics::AutopilotDiagnostics;

@@ -20,7 +20,21 @@ struct VehicleStep {
 
 /// Read motion for a conscious player physically inside an available, running vehicle.
 pub(super) fn readout(world: &World, id: ObjectId, viewer: ObjectId) -> Result<BattleMotion> {
-    ensure!(!world.btech.unconscious(viewer), "You are unconscious");
+    readout_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Player(viewer),
+    )
+}
+
+fn readout_by_actor(
+    world: &World,
+    id: ObjectId,
+    actor: super::combat_operator::ControlActor,
+) -> Result<BattleMotion> {
+    if let super::combat_operator::ControlActor::Autopilot = actor {
+        super::power::autopilot_controlled_vehicle(world, id)?;
+    }
     ensure!(
         !super::battle_unit_blinded(world, id),
         "You are momentarily blinded!"
@@ -32,15 +46,18 @@ pub(super) fn readout(world: &World, id: ObjectId, viewer: ObjectId) -> Result<B
             .is_some_and(|object| !object.flags.contains(Flag::Going)),
         "Unit is unavailable"
     );
-    ensure!(
-        world
-            .objects
-            .get(&viewer)
-            .is_some_and(|object| object.kind == Kind::Player
-                && object.location == Some(id)
-                && !object.flags.contains(Flag::Going)),
-        "Enter the unit first"
-    );
+    if let super::combat_operator::ControlActor::Player(viewer) = actor {
+        ensure!(!world.btech.unconscious(viewer), "You are unconscious");
+        ensure!(
+            world
+                .objects
+                .get(&viewer)
+                .is_some_and(|object| object.kind == Kind::Player
+                    && object.location == Some(id)
+                    && !object.flags.contains(Flag::Going)),
+            "Enter the unit first"
+        );
+    }
     let vehicle = &world.btech.vehicles()[&id];
     ensure!(
         vehicle.power() == BattlePower::Running && !vehicle.is_destroyed(),
@@ -59,9 +76,31 @@ pub(super) fn set_control(
     policy: super::SpeedPolicy,
     free_fusion_fuel: bool,
 ) -> Result<BattleNotice> {
-    super::vehicle_power::controlled(world, id, pilot)?;
+    let notice = set_control_by_actor(
+        world,
+        id,
+        super::combat_operator::ControlActor::Player(pilot),
+        speed,
+        heading,
+        policy,
+        free_fusion_fuel,
+    )?;
+    let _ = super::autopilot::manual_takeover(world, id);
+    Ok(notice)
+}
+
+pub(crate) fn set_control_by_actor(
+    world: &mut World,
+    id: ObjectId,
+    actor: super::combat_operator::ControlActor,
+    speed: Option<f64>,
+    heading: Option<f64>,
+    policy: super::SpeedPolicy,
+    free_fusion_fuel: bool,
+) -> Result<BattleNotice> {
+    super::vehicle_power::controlled_by_actor(world, id, actor)?;
     super::fortification::require_mobile(world, id)?;
-    let mut motion = readout(world, id, pilot)?;
+    let mut motion = readout_by_actor(world, id, actor)?;
     let vehicle = &world.btech.vehicles()[&id];
     ensure!(
         speed.is_none() || (vehicle.free_fall().is_none() && vehicle.orbital_drop().is_none()),

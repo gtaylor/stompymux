@@ -553,7 +553,7 @@ pub(crate) fn command(ctx: &CommandContext<'_>, input: &CommandInput) -> Result<
             "status" if argument.is_empty() => {
                 let world = ctx.scripts.world.borrow();
                 Ok(format!(
-                    "BattleTech: map persistence and asset inspection available.\r\n{} registrations; {} maps; {} units.\r\n{} maps have decoded terrain.\r\nSupported Mechs, ground vehicles and VTOLs have movement and combat controls. Full gameplay parity remains under development. Repairs, autopilots and unit loading are deferred.",
+                    "BattleTech: map persistence and asset inspection available.\r\n{} registrations; {} maps; {} units.\r\n{} maps have decoded terrain.\r\nSupported Mechs, ground vehicles and VTOLs have movement and combat controls. Ground-unit autopilots are managed through in-game Lua. Full gameplay parity remains under development; repairs and unit loading are deferred.",
                     world.btech.registrations().len(),
                     world.btech.maps().len(),
                     world.btech.units().len(),

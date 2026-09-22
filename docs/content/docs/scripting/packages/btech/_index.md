@@ -13,7 +13,7 @@ no_list: true
 
 | Package | Description |
 | --- | --- |
-| [`btech.autopilot`](autopilot/) | Typed autopilot constants; queue and control calls are not implemented. |
+| [`btech.autopilot`](autopilot/) | Lua control of unit-attached ground autopilots. |
 | [`btech.cargo`](cargo/) | Cockpit stock reports and cargo transfers. |
 | [`btech.character`](character/) | Character values, skills, and experience. |
 | [`btech.database`](database/) | Explicit BattleTech world checkpoints. |
@@ -26,6 +26,7 @@ no_list: true
 | [`btech.repair`](repair/) | Immediate repairs and technician scheduling. |
 | [`btech.runtime`](runtime/) | Wizard runtime diagnostics. |
 | [`btech.system`](system/) | Server-wide BattleTech queries. |
+| [`btech.tactical`](tactical/) | Filtered friendly-force snapshots and atomic unit intentions. |
 | [`btech.template`](template/) | Unit-template inspection and displays. |
 | [`btech.unit`](unit/) | Live-unit state, combat queries, and mutations. |
 | [`btech.weapon`](weapon/) | Runtime weapon settings. |
